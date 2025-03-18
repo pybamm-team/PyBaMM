@@ -1048,6 +1048,24 @@
         "doc",
         "test"
       ]
+    },
+    {
+      "login": "d-cogswell",
+      "name": "Dan Cogswell",
+      "avatar_url": "https://avatars.githubusercontent.com/u/51965251?v=4",
+      "profile": "https://dancogswell.com",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
+      "login": "Prtm2110",
+      "name": "Pratham Hole",
+      "avatar_url": "https://avatars.githubusercontent.com/u/139000226?v=4",
+      "profile": "https://github.com/Prtm2110",
+      "contributions": [
+        "test"
+      ]
     }
   ],
   "contributorsPerLine": 7,

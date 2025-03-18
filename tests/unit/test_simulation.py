@@ -3,7 +3,6 @@ import numpy as np
 import pandas as pd
 import os
 import pytest
-from tempfile import TemporaryDirectory
 from scipy.integrate import cumulative_trapezoid
 from tests import no_internet_connection
 
@@ -458,37 +457,36 @@ class TestSimulation:
             with pytest.raises(TypeError):
                 operating_mode(g)
 
-    def test_save_load(self):
-        with TemporaryDirectory() as dir_name:
-            test_name = os.path.join(dir_name, "tests.pickle")
+    def test_save_load(self, tmp_path):
+        test_name = tmp_path / "tests.pickle"
 
-            model = pybamm.lead_acid.LOQS()
-            model.use_jacobian = True
-            sim = pybamm.Simulation(model)
+        model = pybamm.lead_acid.LOQS()
+        model.use_jacobian = True
+        sim = pybamm.Simulation(model)
 
+        sim.save(test_name)
+        sim_load = pybamm.load_sim(test_name)
+        assert sim.model.name == sim_load.model.name
+
+        # Save after solving
+        sim.solve([0, 600])
+        sim.save(test_name)
+        sim_load = pybamm.load_sim(test_name)
+        assert sim.model.name == sim_load.model.name
+
+        # with python formats
+        model.convert_to_format = None
+        sim = pybamm.Simulation(model)
+        sim.solve([0, 600])
+        sim.save(test_name)
+        model.convert_to_format = "python"
+        sim = pybamm.Simulation(model)
+        sim.solve([0, 600])
+        with pytest.raises(
+            NotImplementedError,
+            match="Cannot save simulation if model format is python",
+        ):
             sim.save(test_name)
-            sim_load = pybamm.load_sim(test_name)
-            assert sim.model.name == sim_load.model.name
-
-            # save after solving
-            sim.solve([0, 600])
-            sim.save(test_name)
-            sim_load = pybamm.load_sim(test_name)
-            assert sim.model.name == sim_load.model.name
-
-            # with python formats
-            model.convert_to_format = None
-            sim = pybamm.Simulation(model)
-            sim.solve([0, 600])
-            sim.save(test_name)
-            model.convert_to_format = "python"
-            sim = pybamm.Simulation(model)
-            sim.solve([0, 600])
-            with pytest.raises(
-                NotImplementedError,
-                match="Cannot save simulation if model format is python",
-            ):
-                sim.save(test_name)
 
     def test_load_param(self, tmp_path):
         filename = str(tmp_path / "test.pkl")
@@ -505,37 +503,36 @@ class TestSimulation:
             ].__name__
         )
 
-    def test_save_load_dae(self):
-        with TemporaryDirectory() as dir_name:
-            test_name = os.path.join(dir_name, "test.pickle")
+    def test_save_load_dae(self, tmp_path):
+        test_name = tmp_path / "test.pickle"
 
-            model = pybamm.lead_acid.LOQS({"surface form": "algebraic"})
-            model.use_jacobian = True
-            sim = pybamm.Simulation(model)
+        model = pybamm.lead_acid.LOQS({"surface form": "algebraic"})
+        model.use_jacobian = True
+        sim = pybamm.Simulation(model)
 
-            # save after solving
-            sim.solve([0, 600])
-            sim.save(test_name)
-            sim_load = pybamm.load_sim(test_name)
-            assert sim.model.name == sim_load.model.name
+        # save after solving
+        sim.solve([0, 600])
+        sim.save(test_name)
+        sim_load = pybamm.load_sim(test_name)
+        assert sim.model.name == sim_load.model.name
 
-            # with python format
-            model.convert_to_format = None
-            sim = pybamm.Simulation(model)
-            sim.solve([0, 600])
-            sim.save(test_name)
+        # with python format
+        model.convert_to_format = None
+        sim = pybamm.Simulation(model)
+        sim.solve([0, 600])
+        sim.save(test_name)
 
-            # with Casadi solver & experiment
-            model.convert_to_format = "casadi"
-            sim = pybamm.Simulation(
-                model,
-                experiment="Discharge at 1C for 20 minutes",
-                solver=pybamm.CasadiSolver(),
-            )
-            sim.solve([0, 600])
-            sim.save(test_name)
-            sim_load = pybamm.load_sim(test_name)
-            assert sim.model.name == sim_load.model.name
+        # with Casadi solver & experiment
+        model.convert_to_format = "casadi"
+        sim = pybamm.Simulation(
+            model,
+            experiment="Discharge at 1C for 20 minutes",
+            solver=pybamm.CasadiSolver(),
+        )
+        sim.solve([0, 600])
+        sim.save(test_name)
+        sim_load = pybamm.load_sim(test_name)
+        assert sim.model.name == sim_load.model.name
 
     def test_save_load_model(self):
         model = pybamm.lead_acid.LOQS({"surface form": "algebraic"})
@@ -569,24 +566,21 @@ class TestSimulation:
         sim.solve(t_eval=t_eval)
         sim.plot(show_plot=False)
 
-    def test_create_gif(self):
-        with TemporaryDirectory() as dir_name:
-            sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
-            with pytest.raises(
-                ValueError, match="The simulation has not been solved yet."
-            ):
-                sim.create_gif()
-            sim.solve(t_eval=[0, 10])
+    def test_create_gif(self, tmp_path):
+        sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
+        with pytest.raises(ValueError, match="The simulation has not been solved yet."):
+            sim.create_gif()
+        sim.solve(t_eval=[0, 10])
 
-            # Create a temporary file name
-            test_file = os.path.join(dir_name, "test_sim.gif")
+        # Create a temporary file name
+        test_file = tmp_path / "test_sim.gif"
 
-            # create a GIF without calling the plot method
-            sim.create_gif(number_of_images=3, duration=1, output_filename=test_file)
+        # create a GIF without calling the plot method
+        sim.create_gif(number_of_images=3, duration=1, output_filename=test_file)
 
-            # call the plot method before creating the GIF
-            sim.plot(show_plot=False)
-            sim.create_gif(number_of_images=3, duration=1, output_filename=test_file)
+        # call the plot method before creating the GIF
+        sim.plot(show_plot=False)
+        sim.create_gif(number_of_images=3, duration=1, output_filename=test_file)
 
     @pytest.mark.skipif(
         no_internet_connection(),

@@ -976,7 +976,7 @@ class Simulation:
 
         # Make sure we take at least 2 timesteps. The period is hardcoded to 10
         # minutes,the user can always override it by adding a rest step
-        npts = max(int(round(rest_time / 600)) + 1, 2)
+        npts = max(round(rest_time / 600) + 1, 2)
 
         step_solution_with_rest = solver.step(
             step_solution,
