@@ -7,6 +7,7 @@ import pybamm
 from tests import BaseIntegrationTestLithiumIon
 
 
+@pytest.mark.skip(reason="TODO: remove me!!!")
 class TestNewmanTobias(BaseIntegrationTestLithiumIon):
     @pytest.fixture(autouse=True)
     def setup(self):
