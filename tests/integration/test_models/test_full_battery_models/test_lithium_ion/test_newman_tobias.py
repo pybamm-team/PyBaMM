@@ -49,3 +49,6 @@ class TestNewmanTobias(BaseIntegrationTestLithiumIon):
 
     def test_constant_utilisation(self):
         pass
+
+    def test_particle_quadratic(self):
+        pass
