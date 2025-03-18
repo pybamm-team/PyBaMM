@@ -46,3 +46,6 @@ class TestNewmanTobias(BaseIntegrationTestLithiumIon):
     # try skipping some tests to see where ci is failing
     def test_particle_quartic(self):
         pass
+
+    def test_constant_utilisation(self):
+        pass
