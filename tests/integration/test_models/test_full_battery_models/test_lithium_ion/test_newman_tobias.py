@@ -7,7 +7,6 @@ import pybamm
 from tests import BaseIntegrationTestLithiumIon
 
 
-@pytest.mark.skip(reason="TODO: remove me!!!")
 class TestNewmanTobias(BaseIntegrationTestLithiumIon):
     @pytest.fixture(autouse=True)
     def setup(self):
@@ -43,22 +42,3 @@ class TestNewmanTobias(BaseIntegrationTestLithiumIon):
 
     def test_sei_tunnelling_limited(self):
         pass  # skip this test
-
-    # try skipping some tests to see where ci is failing
-    def test_particle_quartic(self):
-        pass
-
-    def test_constant_utilisation(self):
-        pass
-
-    def test_particle_quadratic(self):
-        pass
-
-    def test_current_driven_utilisation(self):
-        pass
-
-    def test_full_thermal(self):
-        pass
-
-    def test_lumped_thermal(self):
-        pass
