@@ -211,8 +211,8 @@ class QuickPlot:
         else:
             raise ValueError(f"time unit '{time_unit}' not recognized")
         self.time_scaling_factor = time_scaling_factor
-        self.min_t = min_t / time_scaling_factor
-        self.max_t = max_t / time_scaling_factor
+        self.min_t_unscaled = min_t
+        self.max_t_unscaled = max_t
 
         # Prepare dictionary of variables
         # output_variables is a list of strings or lists, e.g.
@@ -496,6 +496,7 @@ class QuickPlot:
         colors = import_optional_dependency("matplotlib", "colors")
 
         t_in_seconds = t * self.time_scaling_factor
+        t_in_seconds = np.clip(t_in_seconds, self.min_t_unscaled, self.max_t_unscaled)
         self.fig = plt.figure(figsize=self.figsize)
 
         self.gridspec = gridspec.GridSpec(self.n_rows, self.n_cols)
@@ -542,10 +543,7 @@ class QuickPlot:
                 y_min, y_max = ax.get_ylim()
                 ax.set_ylim(y_min, y_max)
                 (self.time_lines[key],) = ax.plot(
-                    [
-                        t_in_seconds / self.time_scaling_factor,
-                        t_in_seconds / self.time_scaling_factor,
-                    ],
+                    [t, t],
                     [y_min, y_max],
                     "k--",
                     lw=1.5,
@@ -811,6 +809,14 @@ class QuickPlot:
             frames=number_of_images,
         )
         ani.save(output_filename, dpi=300)
+
+    @property
+    def min_t(self):
+        return self.min_t_unscaled / self.time_scaling_factor
+
+    @property
+    def max_t(self):
+        return self.max_t_unscaled / self.time_scaling_factor
 
 
 class QuickPlotAxes:
