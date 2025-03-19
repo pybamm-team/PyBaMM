@@ -88,10 +88,7 @@ class TestDFNWithSizeDistribution:
         )
         # self.run_basic_processing_test(options, parameter_values=parameter_values)
         model = pybamm.lithium_ion.DFN(options)
-        solver = pybamm.CasadiSolver()
-        modeltest = tests.StandardModelTest(
-            model, parameter_values=parameter_values, solver=solver
-        )
+        modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
         modeltest.test_all()
 
     def test_basic_processing_tuple(self):
