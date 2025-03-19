@@ -259,7 +259,7 @@ class IDAKLUJax:
 
     def jax_value(
         self,
-        t: npt.NDArray[np.float64] = None,
+        t: npt.NDArray[np.float64] | None = None,
         inputs: Union[dict, None] = None,
         output_variables: Union[list[str], None] = None,
     ):
@@ -292,7 +292,7 @@ class IDAKLUJax:
 
     def jax_grad(
         self,
-        t: npt.NDArray[np.float64] = None,
+        t: npt.NDArray[np.float64] | None = None,
         inputs: Union[dict, None] = None,
         output_variables: Union[list[str], None] = None,
     ):
@@ -396,7 +396,7 @@ class IDAKLUJax:
 
     def _jax_solve(
         self,
-        t: Union[float, npt.NDArray[np.float64]],
+        t: float | npt.NDArray[np.float64],
         *inputs,
     ) -> npt.NDArray[np.float64]:
         """Solver implementation used by f-bind"""
@@ -410,7 +410,7 @@ class IDAKLUJax:
 
     def _jax_jvp_impl(
         self,
-        *args: Union[npt.NDArray[np.float64]],
+        *args: npt.NDArray[np.float64],
     ):
         """JVP implementation used by f_jvp bind"""
         primals = args[: len(args) // 2]
@@ -456,7 +456,7 @@ class IDAKLUJax:
     def _jax_vjp_impl(
         self,
         y_bar: npt.NDArray[np.float64],
-        invar: Union[str, int],  # index or name of input variable
+        invar: str | int,  # index or name of input variable
         *primals: npt.NDArray[np.float64],
     ):
         """VJP implementation used by f_vjp bind"""
