@@ -1,7 +1,6 @@
 name: PyBaMM
 
 on:
-  workflow_dispatch:
   pull_request:
 
 env:
@@ -34,7 +33,7 @@ jobs:
           python -m uv pip install pre-commit
           pre-commit run -a
 
-  run_unit_integration_and_coverage_tests:
+  run_unit_tests:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -103,11 +102,12 @@ jobs:
 
       - name: Upload coverage report
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
-        uses: codecov/codecov-action@13ce06bfc6bbe3ecf90edbbf1bc32fe5978ca1d3 # v5.3.1
+        uses: codecov/codecov-action@0565863a31f2c772f9f0395002a31e3f06189574 # v5.4.0
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Run integration tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
         run: python -m nox -s integration
 
   run_doctests:

@@ -38,6 +38,20 @@ class TestBaseSolver:
         ):
             pybamm.BaseSolver(root_method=pybamm.ScipySolver())
 
+    def test_additional_inputs_provided(self):
+        # if additional inputs are provided that are not in the model, this should run as normal
+        sim = pybamm.Simulation(pybamm.lithium_ion.SPM(), solver=pybamm.IDAKLUSolver())
+        sol1 = sim.solve([0, 3600])["Voltage [V]"].entries
+        sol2 = sim.solve([0, 3600], inputs={"Current function [A]": 1})[
+            "Voltage [V]"
+        ].entries
+        sol3 = sim.solve(
+            [0, 3600], inputs=[{"Current function [A]": 1}, {"Current function [A]": 2}]
+        )[0]["Voltage [V]"].entries
+        # check that the solutions are the same
+        np.testing.assert_array_almost_equal(sol1, sol2)
+        np.testing.assert_array_almost_equal(sol2, sol3)
+
     def test_step_or_solve_empty_model(self):
         model = pybamm.BaseModel()
         solver = pybamm.BaseSolver()
@@ -182,10 +196,12 @@ class TestBaseSolver:
 
         model = VectorModel()
         init_states = solver.calculate_consistent_state(model)
-        np.testing.assert_array_almost_equal(init_states.flatten(), vec)
+        np.testing.assert_allclose(init_states.flatten(), vec, rtol=1e-7, atol=1e-6)
         # with casadi
         init_states = solver_with_casadi.calculate_consistent_state(model)
-        np.testing.assert_array_almost_equal(init_states.full().flatten(), vec)
+        np.testing.assert_allclose(
+            init_states.full().flatten(), vec, rtol=1e-7, atol=1e-6
+        )
 
         # With Jacobian
         def jac_dense(t, y, inputs):
@@ -193,7 +209,7 @@ class TestBaseSolver:
 
         model.jac_algebraic_eval = jac_dense
         init_states = solver.calculate_consistent_state(model)
-        np.testing.assert_array_almost_equal(init_states.flatten(), vec)
+        np.testing.assert_allclose(init_states.flatten(), vec, rtol=1e-7, atol=1e-6)
 
         # With sparse Jacobian
         def jac_sparse(t, y, inputs):
@@ -203,7 +219,7 @@ class TestBaseSolver:
 
         model.jac_algebraic_eval = jac_sparse
         init_states = solver.calculate_consistent_state(model)
-        np.testing.assert_array_almost_equal(init_states.flatten(), vec)
+        np.testing.assert_allclose(init_states.flatten(), vec, rtol=1e-7, atol=1e-6)
 
     def test_fail_consistent_initialization(self):
         class Model:
