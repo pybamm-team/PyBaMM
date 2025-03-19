@@ -66,7 +66,6 @@ class TestDFNWithSizeDistribution:
         )
         modeltest.test_all()
 
-    @pytest.mark.skip(reason="TODO remove me!")
     def test_composite(self):
         options = {
             "particle phases": ("2", "1"),
@@ -89,7 +88,7 @@ class TestDFNWithSizeDistribution:
         )
         # self.run_basic_processing_test(options, parameter_values=parameter_values)
         model = pybamm.lithium_ion.DFN(options)
-        solver = pybamm.IDAKLUSolver(rtol=1e-6, atol=1e-6)
+        solver = pybamm.CasadiSolver()
         modeltest = tests.StandardModelTest(
             model, parameter_values=parameter_values, solver=solver
         )
