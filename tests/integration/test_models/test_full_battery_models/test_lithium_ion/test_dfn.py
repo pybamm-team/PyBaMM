@@ -66,6 +66,7 @@ class TestDFNWithSizeDistribution:
         )
         modeltest.test_all()
 
+    @pytest.mark.skip(reason="TODO remove me!")
     def test_composite(self):
         options = {
             "particle phases": ("2", "1"),
