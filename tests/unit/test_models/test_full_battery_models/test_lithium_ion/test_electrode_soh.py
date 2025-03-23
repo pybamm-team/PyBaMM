@@ -7,7 +7,7 @@ import pybamm
 
 
 # Fixture for TestElectrodeSOHMSMR, TestCalculateTheoreticalEnergy and TestGetInitialOCPMSMR class.
-@pytest.fixture()
+@pytest.fixture
 def options():
     options = {
         "open-circuit potential": "MSMR",
@@ -363,13 +363,11 @@ class TestGetInitialSOC:
                 parameter_values, known_value="something else"
             )
 
+        param_MSMR = pybamm.lithium_ion.MSMR({"number of MSMR reactions": "3"}).param
         with pytest.raises(
             ValueError,
             match="Known value must be cell capacity or cyclable lithium capacity",
         ):
-            param_MSMR = pybamm.lithium_ion.MSMR(
-                {"number of MSMR reactions": "3"}
-            ).param
             pybamm.models.full_battery_models.lithium_ion.electrode_soh._ElectrodeSOHMSMR(
                 param=param_MSMR, known_value="something else"
             )

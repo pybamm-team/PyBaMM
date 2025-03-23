@@ -191,7 +191,7 @@ class TestBaseModel:
         assert parameter_info["g"][1] == "Parameter"
 
     @pytest.mark.parametrize(
-        "sub, key, parameter_value",
+        ("sub", "key", "parameter_value"),
         [
             ("sub1", "a", "InputParameter"),
             ("sub1", "w", "InputParameter"),

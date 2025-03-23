@@ -218,7 +218,7 @@ class TestJaxSolver:
         disc.process_model(model)
 
         # test that another method string gives error
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Invalid solver method"):
             solver = pybamm.JaxSolver(method="not_real")
 
         # Solve

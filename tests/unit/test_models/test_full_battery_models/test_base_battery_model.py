@@ -477,7 +477,10 @@ class TestBaseBatteryModel:
         )
 
         # raises error if variables are saved without mesh
-        with pytest.raises(ValueError):
+        with pytest.raises(
+            ValueError,
+            match="Serialisation: Please provide the mesh if variables are required",
+        ):
             model.save_model(
                 filename="test_base_battery_model", variables=model.variables
             )

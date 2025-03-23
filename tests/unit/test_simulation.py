@@ -448,13 +448,19 @@ class TestSimulation:
                 def f(t, x=x):
                     return x + t
 
-                with pytest.raises(ValueError):
+                with pytest.raises(
+                    ValueError,
+                    match="Input function must return a real number output at t = 0",
+                ):
                     operating_mode(f)
 
             def g(t, y):
                 return t
 
-            with pytest.raises(TypeError):
+            with pytest.raises(
+                TypeError,
+                match="Input function must have only 1 positional argument for time",
+            ):
                 operating_mode(g)
 
     def test_save_load(self, tmp_path):
@@ -558,7 +564,10 @@ class TestSimulation:
         sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
 
         # test exception if not solved
-        with pytest.raises(ValueError):
+        with pytest.raises(
+            ValueError,
+            match="Model has not been solved, please solve the model before plotting.",
+        ):
             sim.plot()
 
         # now solve and plot

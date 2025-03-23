@@ -88,7 +88,7 @@ class TestCoupledVariable:
         coupled_variables = {"a": a}
         model.coupled_variables = coupled_variables
         assert model.coupled_variables == coupled_variables
+        coupled_variables = {"b": a}
 
         with pytest.raises(ValueError, match="Coupled variable with name"):
-            coupled_variables = {"b": a}
             model.coupled_variables = coupled_variables

@@ -35,7 +35,9 @@ class TestConfig:
         else:
             assert config_dict["enable_telemetry"] is False
 
-    @pytest.mark.parametrize("user_opted_in, user_input", [(True, "y"), (False, "n")])
+    @pytest.mark.parametrize(
+        ("user_opted_in", "user_input"), [(True, "y"), (False, "n")]
+    )
     def test_ask_user_opt_in(self, monkeypatch, capsys, user_opted_in, user_input):
         # Mock select.select to simulate user input
         def mock_select(*args, **kwargs):

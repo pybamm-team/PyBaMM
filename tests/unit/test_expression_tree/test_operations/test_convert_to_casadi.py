@@ -189,8 +189,8 @@ class TestCasadiConverter:
             )
 
         # error for not recognized interpolator
+        interp = pybamm.Interpolant(x, data, y, interpolator="idonotexist")
         with pytest.raises(ValueError, match="interpolator"):
-            interp = pybamm.Interpolant(x, data, y, interpolator="idonotexist")
             interp_casadi = interp.to_casadi(y=casadi_y)
 
         # error for converted children count
@@ -203,8 +203,8 @@ class TestCasadiConverter:
         x4_ = [np.linspace(0, 1) for _ in range(4)]
         x4 = np.column_stack(x4_)
         data4 = 2 * x4  # np.tile(2 * x3, (10, 1)).T
+        interp = pybamm.Interpolant(x4_, data4, y4, interpolator="linear")
         with pytest.raises(ValueError, match="Invalid dimension of x"):
-            interp = pybamm.Interpolant(x4_, data4, y4, interpolator="linear")
             interp_casadi = interp.to_casadi(y=casadi_y)
 
     def test_interpolation_2d(self):
@@ -247,8 +247,8 @@ class TestCasadiConverter:
         #     np.testing.assert_allclose(interp.evaluate(y=y_test), f(y_test), rtol=1e-7, atol=1e-6)
 
         # error for pchip interpolator
+        interp = pybamm.Interpolant(x_, Y, y, interpolator="pchip")
         with pytest.raises(ValueError, match="interpolator should be"):
-            interp = pybamm.Interpolant(x_, Y, y, interpolator="pchip")
             interp_casadi = interp.to_casadi(y=casadi_y)
 
     def test_interpolation_3d(self):

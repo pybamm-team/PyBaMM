@@ -325,16 +325,13 @@ class TestParameterValues:
 
         # not found
         with pytest.raises(KeyError):
-            x = pybamm.Parameter("x")
-            parameter_values.process_symbol(x)
+            parameter_values.process_symbol(pybamm.Parameter("x"))
 
         parameter_values = pybamm.ParameterValues({"x": np.nan})
         with pytest.raises(ValueError, match="Parameter 'x' not found"):
-            x = pybamm.Parameter("x")
-            parameter_values.process_symbol(x)
+            parameter_values.process_symbol(pybamm.Parameter("x"))
         with pytest.raises(ValueError, match="possibly a function"):
-            x = pybamm.FunctionParameter("x", {})
-            parameter_values.process_symbol(x)
+            parameter_values.process_symbol(pybamm.FunctionParameter("x", {}))
 
     def test_process_parameter_in_parameter(self):
         parameter_values = pybamm.ParameterValues(
@@ -1003,7 +1000,9 @@ class TestParameterValues:
         )
 
         y = pybamm.StateVector(slice(0, 1))
-        with pytest.raises(ValueError):
+        with pytest.raises(
+            ValueError, match="symbol must evaluate to a constant scalar or array"
+        ):
             parameter_values.evaluate(y)
 
     def test_exchange_current_density_plating(self):
