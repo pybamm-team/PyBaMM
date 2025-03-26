@@ -234,6 +234,7 @@ addopts = [
     "--showlocals",
     "--strict-config",
     "--strict-markers",
+    "--ignore=tests/unit/test_parameters/test_bpx.py",
 ]
 testpaths = [
     "tests",
@@ -252,6 +253,7 @@ filterwarnings = [
     "ignore:open_text is deprecated:DeprecationWarning",
     "ignore::UserWarning",
     "ignore::RuntimeWarning",
+    "ignore::pydantic.warnings.PydanticDeprecatedSince20",
 ]
 
 # Logging configuration

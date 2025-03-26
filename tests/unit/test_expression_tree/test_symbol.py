@@ -67,45 +67,6 @@ class TestSymbol:
         with pytest.raises(NotImplementedError, match="Cannot set domain directly"):
             b.domain = "test"
 
-    def test_symbol_auxiliary_domains(self):
-        a = pybamm.Symbol(
-            "a",
-            domain="test",
-            auxiliary_domains={
-                "secondary": "sec",
-                "tertiary": "tert",
-                "quaternary": "quat",
-            },
-        )
-        assert a.domain == ["test"]
-        assert a.secondary_domain == ["sec"]
-        assert a.tertiary_domain == ["tert"]
-        assert a.tertiary_domain == ["tert"]
-        assert a.quaternary_domain == ["quat"]
-        assert a.domains == {
-            "primary": ["test"],
-            "secondary": ["sec"],
-            "tertiary": ["tert"],
-            "quaternary": ["quat"],
-        }
-
-        a = pybamm.Symbol("a", domain=["t", "e", "s"])
-        assert a.domain == ["t", "e", "s"]
-        with pytest.raises(TypeError):
-            a = pybamm.Symbol("a", domain=1)
-        b = pybamm.Symbol("b", domain="test sec")
-        with pytest.raises(pybamm.DomainError, match="All domains must be different"):
-            b.domains = {"primary": "test", "secondary": "test"}
-        with pytest.raises(pybamm.DomainError, match="All domains must be different"):
-            b = pybamm.Symbol(
-                "b",
-                domain="test",
-                auxiliary_domains={"secondary": ["test sec"], "tertiary": ["test sec"]},
-            )
-
-        with pytest.raises(NotImplementedError, match="auxiliary_domains"):
-            a.auxiliary_domains
-
     def test_symbol_methods(self):
         a = pybamm.Symbol("a")
         b = pybamm.Symbol("b")

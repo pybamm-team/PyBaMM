@@ -70,8 +70,8 @@ class TestUtil:
         )
 
         assert (
-            d2["Positive electrode diffusivity [m2.s-1]"]
-            == d["Positive electrode diffusivity [m2.s-1]"]
+            d2["Positive particle diffusivity [m2.s-1]"]
+            == d["Positive particle diffusivity [m2.s-1]"]
         )
 
         with pytest.warns(DeprecationWarning):
