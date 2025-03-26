@@ -7,7 +7,7 @@ import pybamm
 @dataclass
 class ProcessedVariableTimeIntegral:
     method: Literal["discrete", "continuous"]
-    initial_condition: npt.NDArray
+    initial_condition: Union[npt.NDArray, float]
     discrete_times: Optional[npt.NDArray]
 
     @staticmethod

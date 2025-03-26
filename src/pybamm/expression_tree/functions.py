@@ -7,7 +7,7 @@ import numpy as np
 import numpy.typing as npt
 from scipy import special
 import sympy
-from typing import Callable
+from typing import Callable, cast
 from collections.abc import Sequence
 from typing_extensions import TypeVar
 
@@ -33,7 +33,7 @@ class Function(pybamm.Symbol):
     def __init__(
         self,
         function: Callable,
-        *children: pybamm.Symbol,
+        *children: pybamm.Symbol | float | int,
         name: str | None = None,
         differentiated_function: Callable | None = None,
     ):
@@ -43,6 +43,7 @@ class Function(pybamm.Symbol):
             if isinstance(child, (float, int, np.number)):
                 children[idx] = pybamm.Scalar(child)
 
+        children = cast(Sequence[pybamm.Symbol], children)
         if name is not None:
             self.name = name
         else:

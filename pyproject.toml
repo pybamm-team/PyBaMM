@@ -263,6 +263,10 @@ concurrency = ["multiprocessing"]
 ignore_missing_imports = true
 allow_redefinition = true
 disable_error_code = ["call-overload", "operator"]
+strict = false
+warn_unreachable = true
+enable_error_code = ["ignore-without-code", "redundant-expr", "truthy-bool"]
+exclude = "^(build/|docs/conf\\.py)$"
 
 [[tool.mypy.overrides]]
 module = [

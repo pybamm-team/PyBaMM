@@ -5,7 +5,8 @@ from __future__ import annotations
 import sys
 
 import numpy as np
-from typing import Literal
+from typing import Literal, cast
+from collections.abc import Sequence
 
 import sympy
 
@@ -97,7 +98,7 @@ class FunctionParameter(pybamm.Symbol):
     def __init__(
         self,
         name: str,
-        inputs: dict[str, pybamm.Symbol],
+        inputs: dict[str, pybamm.Symbol | float | int],
         diff_variable: pybamm.Symbol | None = None,
         print_name="calculate",
     ) -> None:
@@ -110,6 +111,7 @@ class FunctionParameter(pybamm.Symbol):
             if isinstance(child, (float, int, np.number)):
                 children_list[idx] = pybamm.Scalar(child)
 
+        children_list = cast(Sequence[pybamm.Symbol], children_list)
         domains = self.get_children_domains(children_list)
         super().__init__(name, children=children_list, domains=domains)
 
