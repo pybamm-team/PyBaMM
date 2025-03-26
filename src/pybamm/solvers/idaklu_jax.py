@@ -259,7 +259,7 @@ class IDAKLUJax:
 
     def jax_value(
         self,
-        t: npt.NDArray = None,
+        t: Union[npt.NDArray, None] = None,
         inputs: Union[dict, None] = None,
         output_variables: Union[list[str], None] = None,
     ):
@@ -292,7 +292,7 @@ class IDAKLUJax:
 
     def jax_grad(
         self,
-        t: npt.NDArray = None,
+        t: Union[npt.NDArray, None] = None,
         inputs: Union[dict, None] = None,
         output_variables: Union[list[str], None] = None,
     ):
