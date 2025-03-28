@@ -10,12 +10,15 @@ on:
     # Run everyday at 3 am UTC
     - cron: "0 3 * * *"
 
+
+permissions: {}
+
 jobs:
   linkChecker:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      issues: write  # Only if needed for reporting
+      issues: write  
     steps:
 
       # cache Lychee results to avoid hitting rate limits

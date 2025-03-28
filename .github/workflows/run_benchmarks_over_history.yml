@@ -25,6 +25,10 @@ on:
         type: string
         pattern: '^[0-9]+$'
 
+
+permissions:
+  contents: read
+
 env:
   PYBAMM_DISABLE_TELEMETRY: "true"
 
@@ -53,46 +57,52 @@ jobs:
         run: |
           git fetch origin develop:develop
 
-      - name: Validate and set benchmark parameters
+      - name: Validate commit_start
+        id: validate_start
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        with:
+          script: |
+            const input = context.payload.inputs.commit_start;
+            if (!input || !/^[a-zA-Z0-9._-]+$/.test(input)) {
+              core.setFailed('Invalid commit_start format');
+              return;
+            }
+            core.setOutput('commit_start', input);
+
+      - name: Validate commit_end
+        id: validate_end
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        with:
+          script: |
+            const input = context.payload.inputs.commit_end;
+            if (!input || !/^[a-zA-Z0-9._-]+$/.test(input)) {
+              core.setFailed('Invalid commit_end format');
+              return;
+            }
+            core.setOutput('commit_end', input);
+
+      - name: Validate ncommits
+        id: validate_ncommits
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        with:
+          script: |
+            const input = context.payload.inputs.ncommits;
+            if (!input || !/^[0-9]+$/.test(input)) {
+              core.setFailed('Invalid ncommits format');
+              return;
+            }
+            const numValue = parseInt(input, 10);
+            if (numValue < 1 || numValue > 1000) {
+              core.setFailed('ncommits must be between 1 and 1000');
+              return;
+            }
+            core.setOutput('ncommits', numValue.toString());
+            
+      - name: Set environment variables
         run: |
-          # Function to validate input
-          validate_input() {
-            local input="$1"
-            local pattern="$2"
-            local name="$3"
-            local min="$4"
-            local max="$5"
-            
-            # Remove any potential command injection
-            cleaned_input=$(echo "$input" | tr -cd '[:alnum:]._-')
-            
-            if [[ ! "$cleaned_input" =~ $pattern ]]; then
-              echo "Invalid $name format"
-              exit 1
-            fi
-            
-            if [ -n "$min" ] && [ -n "$max" ]; then
-              # For numeric inputs, validate range
-              numeric_val=$(echo "$cleaned_input" | sed 's/^0*//')
-              if [ "$numeric_val" -lt "$min" ] || [ "$numeric_val" -gt "$max" ]; then
-                echo "$name must be between $min and $max"
-                exit 1
-              fi
-              echo "$numeric_val"
-            else
-              echo "$cleaned_input"
-            fi
-          }
-          
-          # Validate inputs
-          COMMIT_START=$(validate_input "${{ github.event.inputs.commit_start }}" '^[a-zA-Z0-9._-]+$' 'commit_start')
-          COMMIT_END=$(validate_input "${{ github.event.inputs.commit_end }}" '^[a-zA-Z0-9._-]+$' 'commit_end')
-          NCOMMITS=$(validate_input "${{ github.event.inputs.ncommits }}" '^[0-9]+$' 'ncommits' 1 1000)
-          
-          # Set validated parameters as environment variables
-          echo "COMMIT_START=${COMMIT_START}" >> "$GITHUB_ENV"
-          echo "COMMIT_END=${COMMIT_END}" >> "$GITHUB_ENV"
-          echo "NCOMMITS=${NCOMMITS}" >> "$GITHUB_ENV"
+          echo "COMMIT_START=\"${{ steps.validate_start.outputs.commit_start }}\"" >> $GITHUB_ENV
+          echo "COMMIT_END=\"${{ steps.validate_end.outputs.commit_end }}\"" >> $GITHUB_ENV
+          echo "NCOMMITS=\"${{ steps.validate_ncommits.outputs.ncommits }}\"" >> $GITHUB_ENV
 
       - name: Run benchmarks
         run: |

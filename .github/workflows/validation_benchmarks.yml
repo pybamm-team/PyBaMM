@@ -5,6 +5,10 @@ on:
     types:
       - published
 
+
+permissions:
+  contents: read
+
 jobs:
   build:
     if: github.repository_owner == 'pybamm-team'

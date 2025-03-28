@@ -4,6 +4,9 @@ on:
   discussion:
     types: [created]
 
+
+permissions: {}
+
 jobs:
   autorespond:
     name: Autorespond to New Discussions

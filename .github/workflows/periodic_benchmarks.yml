@@ -15,6 +15,10 @@ on:
   # workflow manually
   workflow_dispatch:
 
+
+permissions:
+  contents: read
+
 env:
   PYBAMM_DISABLE_TELEMETRY: "true"
 
@@ -79,6 +83,7 @@ jobs:
         with:
           repository: pybamm-team/pybamm-bench
           token: ${{ secrets.BENCH_PAT }}
+          persist-credentials: false
 
       - name: Download results artifact(s)
         uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1

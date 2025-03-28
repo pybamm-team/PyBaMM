@@ -3,6 +3,10 @@ name: PyBaMM
 on:
   pull_request:
 
+
+permissions:
+  contents: read
+
 env:
   PYBAMM_DISABLE_TELEMETRY: "true"
   FORCE_COLOR: 3

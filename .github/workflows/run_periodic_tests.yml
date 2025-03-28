@@ -6,6 +6,10 @@ on:
   schedule:
     - cron: "0 3 * * *"
 
+# Add specific permissions instead of default
+permissions:
+  contents: read
+
 env:
   PYBAMM_DISABLE_TELEMETRY: "true"
   FORCE_COLOR: 3
