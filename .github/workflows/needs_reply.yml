@@ -7,6 +7,10 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+      contents: read  # Only what's needed
     if: github.repository_owner == 'pybamm-team'
     steps:
       - name: Close old issues that need reply

@@ -12,12 +12,18 @@ on:
       commit_start:
         description: "Identifier of commit from which to start"
         default: "v0.1.0"
+        type: string
+        pattern: '^[a-zA-Z0-9._-]+$'
       commit_end:
         description: "Identifier of commit at which to end"
         default: "develop"
+        type: string
+        pattern: '^[a-zA-Z0-9._-]+$'
       ncommits:
         description: "Number of commits to benchmark between commit_start and commit_end"
         default: "100"
+        type: string
+        pattern: '^[0-9]+$'
 
 env:
   PYBAMM_DISABLE_TELEMETRY: "true"
@@ -25,8 +31,12 @@ env:
 jobs:
   benchmarks:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - name: Set up Python 3.12
         uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
         with:
@@ -43,11 +53,52 @@ jobs:
         run: |
           git fetch origin develop:develop
 
+      - name: Validate and set benchmark parameters
+        run: |
+          # Function to validate input
+          validate_input() {
+            local input="$1"
+            local pattern="$2"
+            local name="$3"
+            local min="$4"
+            local max="$5"
+            
+            # Remove any potential command injection
+            cleaned_input=$(echo "$input" | tr -cd '[:alnum:]._-')
+            
+            if [[ ! "$cleaned_input" =~ $pattern ]]; then
+              echo "Invalid $name format"
+              exit 1
+            fi
+            
+            if [ -n "$min" ] && [ -n "$max" ]; then
+              # For numeric inputs, validate range
+              numeric_val=$(echo "$cleaned_input" | sed 's/^0*//')
+              if [ "$numeric_val" -lt "$min" ] || [ "$numeric_val" -gt "$max" ]; then
+                echo "$name must be between $min and $max"
+                exit 1
+              fi
+              echo "$numeric_val"
+            else
+              echo "$cleaned_input"
+            fi
+          }
+          
+          # Validate inputs
+          COMMIT_START=$(validate_input "${{ github.event.inputs.commit_start }}" '^[a-zA-Z0-9._-]+$' 'commit_start')
+          COMMIT_END=$(validate_input "${{ github.event.inputs.commit_end }}" '^[a-zA-Z0-9._-]+$' 'commit_end')
+          NCOMMITS=$(validate_input "${{ github.event.inputs.ncommits }}" '^[0-9]+$' 'ncommits' 1 1000)
+          
+          # Set validated parameters as environment variables
+          echo "COMMIT_START=${COMMIT_START}" >> "$GITHUB_ENV"
+          echo "COMMIT_END=${COMMIT_END}" >> "$GITHUB_ENV"
+          echo "NCOMMITS=${NCOMMITS}" >> "$GITHUB_ENV"
+
       - name: Run benchmarks
         run: |
           asv machine --machine "GitHubRunner"
-          asv run -m "GitHubRunner" -s ${{ github.event.inputs.ncommits }} \
-          ${{ github.event.inputs.commit_start }}..${{ github.event.inputs.commit_end }}
+          asv run -m "GitHubRunner" -s ${{ env.NCOMMITS }} \
+          ${{ env.COMMIT_START }}..${{ env.COMMIT_END }}
 
       - name: Upload results as artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -61,6 +112,8 @@ jobs:
     name: Push and publish results
     needs: benchmarks
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Set up Python 3.12
         uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
@@ -75,12 +128,13 @@ jobs:
         with:
           repository: pybamm-team/pybamm-bench
           token: ${{ secrets.BENCH_PAT }}
+          persist-credentials: false
 
       - name: Download results artifact(s)
-        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
+        uses: actions/download-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
+          name: asv_over_history_results
           path: results
-          merge-multiple: true
 
       - name: Copy new results and push to pybamm-bench repo
         env:
@@ -95,6 +149,5 @@ jobs:
 
       - name: Publish results
         run: |
-          asv publish
           git fetch origin gh-pages:gh-pages
           asv gh-pages

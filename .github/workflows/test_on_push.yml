@@ -18,8 +18,12 @@ concurrency:
 jobs:
   style:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - name: Setup Python
         uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
         with:
@@ -35,6 +39,9 @@ jobs:
 
   run_unit_tests:
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+      checks: write  # For test results
     strategy:
       fail-fast: false
       matrix:
@@ -45,6 +52,8 @@ jobs:
     steps:
       - name: Check out PyBaMM repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
 
       - name: Install Linux system dependencies
         uses: awalsh128/cache-apt-pkgs-action@7ca5f46d061ad9aa95863cd9b214dd48edef361d # v1.5.0
@@ -112,6 +121,8 @@ jobs:
 
   run_doctests:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
     name: Doctests (ubuntu-latest / Python 3.11)
@@ -121,6 +132,7 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Install Linux system dependencies
         uses: awalsh128/cache-apt-pkgs-action@7ca5f46d061ad9aa95863cd9b214dd48edef361d # v1.5.0
@@ -156,6 +168,8 @@ jobs:
 
   run_example_tests:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
     name: Example notebooks (ubuntu-latest / Python 3.12)
@@ -163,6 +177,8 @@ jobs:
     steps:
       - name: Check out PyBaMM repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
 
       - name: Install Linux system dependencies
         uses: awalsh128/cache-apt-pkgs-action@7ca5f46d061ad9aa95863cd9b214dd48edef361d # v1.5.0
@@ -195,6 +211,8 @@ jobs:
 
   run_scripts_tests:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
     name: Example scripts (ubuntu-latest / Python 3.12)
@@ -202,6 +220,8 @@ jobs:
     steps:
       - name: Check out PyBaMM repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
 
       - name: Install Linux system dependencies
         uses: awalsh128/cache-apt-pkgs-action@7ca5f46d061ad9aa95863cd9b214dd48edef361d # v1.5.0
