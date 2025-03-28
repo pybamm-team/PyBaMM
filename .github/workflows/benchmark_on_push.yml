@@ -3,7 +3,7 @@ on:
   push:
     branches: [main, develop]
 
-# Add specific permissions instead of default
+ 
 permissions:
   contents: read
   pull-requests: read

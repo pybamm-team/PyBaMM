@@ -97,7 +97,7 @@ jobs:
               return;
             }
             core.setOutput('ncommits', numValue.toString());
-            
+
       - name: Set environment variables
         run: |
           echo "COMMIT_START=\"${{ steps.validate_start.outputs.commit_start }}\"" >> $GITHUB_ENV
