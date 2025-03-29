@@ -26,7 +26,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     permissions:
       contents: read
-          
+
     strategy:
       fail-fast: false
       matrix:

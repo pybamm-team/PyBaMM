@@ -15,7 +15,7 @@ jobs:
     permissions:
       issues: read
       pull-requests: read
-      contents: read  
+      contents: read
     if: |
       github.event.comment.author_association != 'OWNER' &&
       github.event.comment.author_association != 'COLLABORATOR' &&
