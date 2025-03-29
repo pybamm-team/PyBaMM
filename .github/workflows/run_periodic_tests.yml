@@ -6,9 +6,8 @@ on:
   schedule:
     - cron: "0 3 * * *"
 
- 
-permissions:
-  contents: read
+
+permissions: {}
 
 env:
   PYBAMM_DISABLE_TELEMETRY: "true"
@@ -27,7 +26,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     permissions:
       contents: read
-      checks: write  # Only if needed for test results
+          
     strategy:
       fail-fast: false
       matrix:

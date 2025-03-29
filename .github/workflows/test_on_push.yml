@@ -4,8 +4,7 @@ on:
   pull_request:
 
 
-permissions:
-  contents: read
+permissions: {}
 
 env:
   PYBAMM_DISABLE_TELEMETRY: "true"
@@ -45,7 +44,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     permissions:
       contents: read
-      checks: write  # For test results
+         
     strategy:
       fail-fast: false
       matrix:

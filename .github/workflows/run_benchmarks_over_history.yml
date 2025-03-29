@@ -26,8 +26,7 @@ on:
         pattern: '^[0-9]+$'
 
 
-permissions:
-  contents: read
+permissions: {}
 
 env:
   PYBAMM_DISABLE_TELEMETRY: "true"
@@ -92,8 +91,8 @@ jobs:
               return;
             }
             const numValue = parseInt(input, 10);
-            if (numValue < 1 || numValue > 1000) {
-              core.setFailed('ncommits must be between 1 and 1000');
+            if (numValue < 1 || numValue > 10000) {
+              core.setFailed('ncommits must be between 1 and 10000');
               return;
             }
             core.setOutput('ncommits', numValue.toString());

@@ -4,8 +4,7 @@ on:
     types: [published]
 
 
-permissions:
-  contents: read
+permissions: {}
 
 jobs:
   build:

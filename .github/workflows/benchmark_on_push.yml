@@ -3,10 +3,8 @@ on:
   push:
     branches: [main, develop]
 
- 
-permissions:
-  contents: read
-  pull-requests: read
+
+permissions: {}
 
 concurrency:
   # Cancel intermediate builds always

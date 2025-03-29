@@ -5,10 +5,7 @@ on:
     - cron: "0 0 * * *"
 
 
-permissions:
-  issues: read
-  pull-requests: read
-  contents: read
+permissions: {}
 
 jobs:
   build:
@@ -16,7 +13,7 @@ jobs:
     permissions:
       issues: read
       pull-requests: read
-      contents: read  # Only what's needed
+      contents: read  
     if: github.repository_owner == 'pybamm-team'
     steps:
       - name: Close old issues that need reply

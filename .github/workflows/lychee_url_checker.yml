@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      issues: write
+      
     steps:
 
       # cache Lychee results to avoid hitting rate limits

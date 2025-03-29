@@ -7,11 +7,7 @@ on:
     types:
       - created
 
-
-permissions:
-  issues: read
-  pull-requests: read
-  contents: read
+permissions: {}
 
 jobs:
   build:
@@ -19,7 +15,7 @@ jobs:
     permissions:
       issues: read
       pull-requests: read
-      contents: read  # Only what's needed
+      contents: read  
     if: |
       github.event.comment.author_association != 'OWNER' &&
       github.event.comment.author_association != 'COLLABORATOR' &&
