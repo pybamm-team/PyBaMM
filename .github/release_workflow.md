@@ -1,7 +1,7 @@
 # Release workflow
 
 This file contains the workflow required to make a `PyBaMM` release on
-GitHub, PyPI, and conda-forge by the maintainers, using `hatch-vcs` for versioning.
+GitHub, PyPI, and conda-forge by the maintainers.
 
 ## Initial release (automated)
 

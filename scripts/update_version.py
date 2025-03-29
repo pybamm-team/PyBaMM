@@ -6,13 +6,13 @@ import os
 import re
 from datetime import date
 import pybamm
+from pybamm._version import __version__ as release_version
 
 
 def update_version():
     """
     Updates version numbers and release information across project files
     """
-    release_version = os.getenv("VERSION")[1:]
     release_date = date.today()
 
     # CITATION.cff
