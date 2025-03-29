@@ -243,11 +243,11 @@ class TestIDAKLUJax:
     ):
         if wrapper == jax.jit:
             return  # test does not involve a JAX expression
-        with pytest.raises(ValueError, match="No variable name specified"):
+        with pytest.raises(ValueError, match="Invalid call signature"):
             idaklu_jax_solver.get_vars()  # no variable name specified
         idaklu_jax_solver.get_vars(output_variables)  # (okay)
         idaklu_jax_solver.get_vars(f, output_variables)  # (okay)
-        with pytest.raises(ValueError, match="Too many arguments provided"):
+        with pytest.raises(ValueError, match="Invalid call signature"):
             idaklu_jax_solver.get_vars(1, 2, 3)  # too many arguments
 
     @pytest.mark.parametrize(
@@ -304,11 +304,11 @@ class TestIDAKLUJax:
     ):
         if wrapper == jax.jit:
             return  # test does not involve a JAX expression
-        with pytest.raises(ValueError, match="No variable name specified"):
+        with pytest.raises(ValueError, match="Invalid call signature"):
             idaklu_jax_solver.get_var()  # no variable name specified
         idaklu_jax_solver.get_var(output_variables[0])  # (okay)
         idaklu_jax_solver.get_var(f, output_variables[0])  # (okay)
-        with pytest.raises(ValueError, match="Too many arguments provided"):
+        with pytest.raises(ValueError, match="Invalid call signature"):
             idaklu_jax_solver.get_var(1, 2, 3)  # too many arguments
 
     @pytest.mark.parametrize(

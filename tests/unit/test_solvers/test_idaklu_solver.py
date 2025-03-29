@@ -828,7 +828,7 @@ class TestIDAKLUSolver:
                             soln.y, soln_base.y, rtol=1e-5, atol=1e-4
                         )
                     else:
-                        with pytest.raises(ValueError):  # noqa: PT011
+                        with pytest.raises(ValueError, match="Unknown"):
                             soln = solver.solve(model, t_eval, t_interp=t_interp)
 
     def test_solver_options(self):

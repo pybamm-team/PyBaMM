@@ -39,7 +39,7 @@ class TestBatchStudy:
 
         # Tests for exceptions
         for name in pybamm.BatchStudy.INPUT_LIST:
-            with pytest.raises(ValueError, match="Invalid input for {name}"):
+            with pytest.raises(ValueError, match="Either provide no"):
                 pybamm.BatchStudy(
                     models={"SPM": spm, "SPM uniform": spm_uniform}, **{name: {None}}
                 )

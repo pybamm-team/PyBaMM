@@ -92,7 +92,7 @@ class TestSpectralVolume:
         sp_meth = pybamm.SpectralVolume()
         with pytest.raises(
             ValueError,
-            match="Too many degrees of differentiation. At most 2 are possible for 3 edges.",
+            match="Too many degrees of differentiation.",
         ):
             sp_meth.chebyshev_differentiation_matrices(3, 3)
 

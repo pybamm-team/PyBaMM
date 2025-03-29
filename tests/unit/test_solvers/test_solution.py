@@ -387,7 +387,7 @@ class TestSolution:
         # test save data
         with pytest.raises(
             ValueError,
-            match="Solution does not have any data. Please provide a list of variables",
+            match="Solution does not have any data.",
         ):
             solution.save_data(f"{test_stub}.pickle")
 
