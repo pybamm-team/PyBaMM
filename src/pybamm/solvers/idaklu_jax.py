@@ -5,7 +5,6 @@ import logging
 import warnings
 import numbers
 import pybammsolvers.idaklu as idaklu
-from typing import Union
 
 from functools import lru_cache
 
