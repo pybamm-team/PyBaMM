@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   build:
-    if: github.repository_owner == 'pybamm-team'
+    if: github.repository == 'pybamm-team/PyBaMM'
     name: Dispatch to `pybamm-validation`
     runs-on: ubuntu-latest
     permissions:

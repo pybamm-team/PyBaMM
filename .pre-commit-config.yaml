@@ -47,4 +47,4 @@ repos:
     rev: v1.5.2
     hooks:
       - id: zizmor
-        args: [--pedantic]
+        args: [--pedantic,--min-severity=low]

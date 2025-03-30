@@ -95,6 +95,9 @@ jobs:
               core.setFailed('ncommits must be between 1 and 10000');
               return;
             }
+            if (numValue > 5000) {
+              core.warning('Processing a large number of commits. This may take a while....');
+            }
             core.setOutput('ncommits', numValue.toString());
 
       - name: Set environment variables
@@ -117,7 +120,7 @@ jobs:
           if-no-files-found: error
 
   publish-results:
-    if: github.repository_owner == 'pybamm-team'
+    if: github.repository == 'pybamm-team/PyBaMM'
     name: Push and publish results
     needs: benchmarks
     runs-on: ubuntu-latest

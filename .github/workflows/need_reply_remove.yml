@@ -14,12 +14,11 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       issues: read
-      pull-requests: read
       contents: read
     if: |
       github.event.comment.author_association != 'OWNER' &&
       github.event.comment.author_association != 'COLLABORATOR' &&
-      github.repository_owner == 'pybamm-team' &&
+      github.repository == 'pybamm-team/PyBaMM' &&
       github.event_name != 'pull_request'
     steps:
       - name: Remove needs-reply label

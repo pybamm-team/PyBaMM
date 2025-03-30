@@ -12,9 +12,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       issues: read
-      pull-requests: read
       contents: read
-    if: github.repository_owner == 'pybamm-team'
+    if: github.repository == 'pybamm-team/PyBaMM'
     steps:
       - name: Close old issues that need reply
         uses: dwieeb/needs-reply@71e8d5144caa0d4a1e292348bfafa3866d08c855 # v2.0.0
