@@ -72,6 +72,9 @@ extensions = [
 napoleon_use_rtype = True
 napoleon_google_docstring = False
 
+# Mock imports for packages that are difficult to install in Read the Docs
+autodoc_mock_imports = ["casadi"]
+
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]

@@ -14,9 +14,10 @@ formats:
 
 # Set the version of Python and other tools you might need
 build:
-  # Install Graphviz to build SVG files
+  # Install Graphviz and CMake for building dependencies
   apt_packages:
     - "graphviz"
+    - "cmake"
   os: ubuntu-22.04
   tools:
     python: "3.12"
