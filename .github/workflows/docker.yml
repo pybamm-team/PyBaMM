@@ -36,7 +36,7 @@ jobs:
           file: scripts/Dockerfile
           tags: pybamm/pybamm:latest
           push: true
-          platforms: linux/amd64, linux/arm64
+          platforms: linux/amd64
 
       - name: List built image(s)
         run: docker images
