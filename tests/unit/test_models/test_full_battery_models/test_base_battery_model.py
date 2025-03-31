@@ -304,7 +304,6 @@ class TestBaseBatteryModel:
         )
         assert model.options["stress-induced diffusion"] == ("true", "false")
 
-
         # SEI on cracks
         with pytest.raises(pybamm.OptionError, match="SEI on cracks"):
             pybamm.BaseBatteryModel({"SEI on cracks": "bad SEI on cracks"})
