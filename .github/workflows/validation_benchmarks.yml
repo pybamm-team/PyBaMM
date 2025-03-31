@@ -6,8 +6,8 @@ on:
       - published
 
 
-permissions:
-  contents: read
+permissions: {}
+
 
 jobs:
   build:
