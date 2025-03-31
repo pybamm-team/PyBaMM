@@ -101,10 +101,14 @@ jobs:
             core.setOutput('ncommits', numValue.toString());
 
       - name: Set environment variables
+        env:
+          COMMIT_START: ${{ steps.validate_start.outputs.commit_start }}
+          COMMIT_END: ${{ steps.validate_end.outputs.commit_end }}
+          NCOMMITS: ${{ steps.validate_ncommits.outputs.ncommits }}
         run: |
-          echo "COMMIT_START=\"${{ steps.validate_start.outputs.commit_start }}\"" >> $GITHUB_ENV
-          echo "COMMIT_END=\"${{ steps.validate_end.outputs.commit_end }}\"" >> $GITHUB_ENV
-          echo "NCOMMITS=\"${{ steps.validate_ncommits.outputs.ncommits }}\"" >> $GITHUB_ENV
+          echo "COMMIT_START=$COMMIT_START" >> $GITHUB_ENV
+          echo "COMMIT_END=$COMMIT_END" >> $GITHUB_ENV
+          echo "NCOMMITS=$NCOMMITS" >> $GITHUB_ENV
 
       - name: Run benchmarks
         run: |
