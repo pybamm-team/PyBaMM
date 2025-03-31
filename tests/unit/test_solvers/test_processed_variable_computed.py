@@ -449,8 +449,8 @@ class TestProcessedVariableComputed:
         np.testing.assert_array_equal(processed_var.unroll(), y_sol.reshape(10, 40, 1))
 
         # Check unroll function (3D)
-        with pytest.raises(NotImplementedError):
-            processed_var.dimensions = 3
+        processed_var.dimensions = 3
+        with pytest.raises(NotImplementedError, match="Unsupported data dimension: 3"):
             processed_var.unroll()
 
     def test_processed_variable_2D_fixed_t_scikit(self):

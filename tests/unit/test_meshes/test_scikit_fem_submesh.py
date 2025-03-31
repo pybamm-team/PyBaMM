@@ -7,7 +7,7 @@ import pybamm
 import numpy as np
 
 
-@pytest.fixture()
+@pytest.fixture
 def param():
     return pybamm.ParameterValues(
         {

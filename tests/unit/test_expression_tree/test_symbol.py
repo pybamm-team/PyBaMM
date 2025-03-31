@@ -417,7 +417,7 @@ class TestSymbol:
         sym.visualise(str(temp_file))
         assert temp_file.exists()
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Invalid file extension"):
             sym.visualise(str(temp_file.with_suffix("")))
 
     def test_has_spatial_derivatives(self):
@@ -559,5 +559,4 @@ class TestIsZero:
             bool(a)
         # if statement calls Boolean
         with pytest.raises(NotImplementedError, match="Boolean"):
-            if a > 1:
-                print("a is greater than 1")
+            bool(a > 1)
