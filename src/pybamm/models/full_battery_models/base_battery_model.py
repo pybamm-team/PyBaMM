@@ -425,6 +425,21 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             and default_options["particle mechanics"] == "none"
         ):
             default_options["stress-induced diffusion"] = "false"
+        elif (
+            mechanics_option == ("none", "swelling only")
+            and default_options["particle mechanics"] == "none"
+        ):
+            default_options["stress-induced diffusion"] = ("false", "true")
+        elif (
+            mechanics_option == ("swelling only", "none")
+            and default_options["particle mechanics"] == "none"
+        ):
+            default_options["stress-induced diffusion"] = ("true", "false")
+        elif (
+            mechanics_option == ("swelling and cracking", "none")
+            and default_options["particle mechanics"] == "none"
+        ):
+            default_options["stress-induced diffusion"] = ("true", "false")
         else:
             default_options["stress-induced diffusion"] = "true"
         # The "stress-induced diffusion" option will still be overridden by
