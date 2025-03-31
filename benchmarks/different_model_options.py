@@ -1,6 +1,7 @@
 import pybamm
 from benchmarks.benchmark_utils import set_random_seed
 import numpy as np
+import numpy.typing as npt
 
 
 def compute_discretisation(model, param):
@@ -33,8 +34,8 @@ def build_model(parameter, model_, option, value):
 class SolveModel:
     solver: pybamm.BaseSolver
     model: pybamm.BaseModel
-    t_eval: np.ndarray
-    t_interp: np.ndarray | None
+    t_eval: npt.NDArray
+    t_interp: npt.NDArray | None
 
     def solve_setup(self, parameter, model_, option, value, solver_class):
         self.solver = solver_class()
