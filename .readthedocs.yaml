@@ -14,7 +14,7 @@ formats:
 
 # Set the version of Python and other tools you might need
 build:
-  # Install Graphviz  to build SVG files
+  # Install Graphviz to build SVG files
   apt_packages:
     - "graphviz"
   os: ubuntu-22.04
