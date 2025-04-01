@@ -1156,18 +1156,31 @@ class TestProcessedVariable:
         np.testing.assert_array_equal(processed_var(t=0.2, x=0.2, z=0.2).shape, ())
 
     @pytest.mark.parametrize("hermite_interp", _hermite_args)
-    def test_processed_var_3D(self, hermite_interp):
-        var = pybamm.Variable(
-            "var",
-            domain=["negative particle"],
-            auxiliary_domains={
-                "secondary": ["negative particle size"],
-                "tertiary": ["negative electrode"],
-            },
-        )
+    @pytest.mark.parametrize("edges_eval", [False, True])
+    def test_processed_var_3D(self, hermite_interp, edges_eval):
         disc = tests.get_size_distribution_disc_for_testing(xpts=5, rpts=6, Rpts=7)
-        disc.set_variable_slices([var])
-        x_sol = disc.mesh["negative electrode"].nodes
+        if edges_eval:
+            var_Rx = pybamm.Variable(
+                "var_Rx",
+                domain=["negative particle size"],
+                auxiliary_domains={"secondary": ["negative electrode"]},
+            )
+            var = pybamm.PrimaryBroadcastToEdges(var_Rx, ["negative particle"])
+            x_sol = disc.mesh["negative electrode"].edges
+            disc.set_variable_slices([var_Rx])
+        else:
+            var = pybamm.Variable(
+                "var",
+                domain=["negative particle"],
+                auxiliary_domains={
+                    "secondary": ["negative particle size"],
+                    "tertiary": ["negative electrode"],
+                },
+            )
+            x_sol = disc.mesh["negative electrode"].nodes
+            disc.set_variable_slices([var])
+
+        Nx = len(x_sol)
         R_sol = disc.mesh["negative particle size"].nodes
         r_sol = disc.mesh["negative particle"].nodes
         var_sol = disc.process_symbol(var)
@@ -1185,20 +1198,20 @@ class TestProcessedVariable:
         )
         # 4 vectors
         np.testing.assert_array_equal(
-            processed_var(t=t_sol, x=x_sol, R=R_sol, r=r_sol).shape, (6, 7, 5, 50)
+            processed_var(t=t_sol, x=x_sol, R=R_sol, r=r_sol).shape, (6, 7, Nx, 50)
         )
         # 3 vectors, 1 scalar
         np.testing.assert_array_equal(
-            processed_var(t=0.5, x=x_sol, R=R_sol, r=r_sol).shape, (6, 7, 5)
+            processed_var(t=0.5, x=x_sol, R=R_sol, r=r_sol).shape, (6, 7, Nx)
         )
         np.testing.assert_array_equal(
             processed_var(t=t_sol, x=0.2, R=R_sol, r=r_sol).shape, (6, 7, 50)
         )
         np.testing.assert_array_equal(
-            processed_var(t=t_sol, x=x_sol, R=0.5, r=r_sol).shape, (6, 5, 50)
+            processed_var(t=t_sol, x=x_sol, R=0.5, r=r_sol).shape, (6, Nx, 50)
         )
         np.testing.assert_array_equal(
-            processed_var(t=t_sol, x=x_sol, R=R_sol, r=0.5).shape, (7, 5, 50)
+            processed_var(t=t_sol, x=x_sol, R=R_sol, r=0.5).shape, (7, Nx, 50)
         )
         # 2 vectors, 2 scalars
         np.testing.assert_array_equal(
@@ -1208,14 +1221,14 @@ class TestProcessedVariable:
             processed_var(t=t_sol, x=0.2, R=0.5, r=r_sol).shape, (6, 50)
         )
         np.testing.assert_array_equal(
-            processed_var(t=t_sol, x=x_sol, R=R_sol, r=0.5).shape, (7, 5, 50)
+            processed_var(t=t_sol, x=x_sol, R=R_sol, r=0.5).shape, (7, Nx, 50)
         )
         # 1 vector, 3 scalars
         np.testing.assert_array_equal(
             processed_var(t=t_sol, x=0.2, R=0.5, r=0.5).shape, (50,)
         )
         np.testing.assert_array_equal(
-            processed_var(t=0.2, x=x_sol, R=0.5, r=0.5).shape, (5,)
+            processed_var(t=0.2, x=x_sol, R=0.5, r=0.5).shape, (Nx,)
         )
         np.testing.assert_array_equal(
             processed_var(t=0.2, x=0.2, R=R_sol, r=0.5).shape, (7,)

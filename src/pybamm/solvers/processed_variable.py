@@ -860,32 +860,6 @@ class ProcessedVariable3D(ProcessedVariable):
         self.second_dim_size = len(second_dim_pts)
         self.third_dim_size = len(third_dim_pts)
 
-    def _observe_raw_python(self):
-        """
-        Initialise a 3D object that depends on x, y, and z or x, r, and R.
-        """
-        pybamm.logger.debug("Observing the variable raw data in Python")
-        first_dim_size, second_dim_size, third_dim_size, t_size = self._shape(
-            self.t_pts
-        )
-        entries = np.empty((first_dim_size, second_dim_size, third_dim_size, t_size))
-
-        # Evaluate the base_variable index-by-index
-        idx = 0
-        for ts, ys, inputs, base_var_casadi in zip(
-            self.all_ts, self.all_ys, self.all_inputs_casadi, self.base_variables_casadi
-        ):
-            for inner_idx, t in enumerate(ts):
-                t = ts[inner_idx]
-                y = ys[:, inner_idx]
-                entries[:, :, :, idx] = np.reshape(
-                    base_var_casadi(t, y, inputs).full(),
-                    [first_dim_size, second_dim_size, third_dim_size],
-                    order="F",
-                )
-                idx += 1
-        return entries
-
     def _interp_setup(self, entries, t):
         """
         Initialise a 3D object that depends on x, y, and z, or x, r, and R.
