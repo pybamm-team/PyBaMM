@@ -11,6 +11,7 @@ import pybamm
 import tests
 
 import numpy as np
+import pytest
 
 
 def to_casadi(var_pybamm, y, inputs=None):
@@ -507,15 +508,24 @@ class TestProcessedVariableComputed:
         # Check unroll function (3D)
         np.testing.assert_array_equal(processed_var.unroll(), u_sol.reshape(4, 5, 3, 2))
 
-    def test_processed_variable_3D_x_y_z(self):
-        var = pybamm.Variable(
-            "var",
-            domain=["negative electrode"],
-            auxiliary_domains={"secondary": "current collector"},
-        )
+    @pytest.mark.parametrize("edges_eval", [False, True])
+    def test_processed_variable_3D_x_y_z(self, edges_eval):
         disc = tests.get_2p1d_discretisation_for_testing(xpts=5, ypts=6, zpts=7)
-        disc.set_variable_slices([var])
-        x_sol = disc.mesh["negative electrode"].nodes
+        if edges_eval:
+            var_cc = pybamm.Variable("var_cc", domain=["current collector"])
+            var = pybamm.PrimaryBroadcastToEdges(var_cc, ["negative electrode"])
+            x_sol = disc.mesh["negative electrode"].edges
+            disc.set_variable_slices([var_cc])
+        else:
+            var = pybamm.Variable(
+                "var",
+                domain=["negative electrode"],
+                auxiliary_domains={"secondary": ["current collector"]},
+            )
+            x_sol = disc.mesh["negative electrode"].nodes
+            disc.set_variable_slices([var])
+
+        Nx = len(x_sol)
         y_sol = disc.mesh["current collector"].edges["y"]
         z_sol = disc.mesh["current collector"].edges["z"]
         var_sol = disc.process_symbol(var)
@@ -537,4 +547,6 @@ class TestProcessedVariableComputed:
         )
 
         # Check unroll function (3D)
-        np.testing.assert_array_equal(processed_var.unroll(), u_sol.reshape(5, 6, 7, 2))
+        np.testing.assert_array_equal(
+            processed_var.unroll(), u_sol.reshape(Nx, 6, 7, 2)
+        )

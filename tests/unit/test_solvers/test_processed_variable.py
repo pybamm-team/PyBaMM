@@ -1231,23 +1231,21 @@ class TestProcessedVariable:
     @pytest.mark.parametrize("hermite_interp", _hermite_args)
     @pytest.mark.parametrize("edges_eval", [False, True])
     def test_processed_var_3D_scikit_interpolation(self, hermite_interp, edges_eval):
+        disc = tests.get_2p1d_discretisation_for_testing(xpts=5, ypts=6, zpts=7)
         if edges_eval:
             var_cc = pybamm.Variable("var_cc", domain=["current collector"])
             var = pybamm.PrimaryBroadcastToEdges(var_cc, ["negative electrode"])
+            x_sol = disc.mesh["negative electrode"].edges
+            disc.set_variable_slices([var_cc])
         else:
             var = pybamm.Variable(
                 "var",
                 domain=["negative electrode"],
                 auxiliary_domains={"secondary": ["current collector"]},
             )
-
-        disc = tests.get_2p1d_discretisation_for_testing(xpts=5, ypts=6, zpts=7)
-        if edges_eval:
-            x_sol = disc.mesh["negative electrode"].edges
-            disc.set_variable_slices([var_cc])
-        else:
             x_sol = disc.mesh["negative electrode"].nodes
             disc.set_variable_slices([var])
+
         Nx = len(x_sol)
         y_sol = disc.mesh["current collector"].edges["y"]
         z_sol = disc.mesh["current collector"].edges["z"]
