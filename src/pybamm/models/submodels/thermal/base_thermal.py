@@ -223,13 +223,12 @@ class BaseThermal(pybamm.BaseSubModel):
         # the product of electrode height * electrode width * electrode stack thickness
         # Note: we multiply by the number of electrode pairs, since the Q_xx_Wm2_av
         # variables are per electrode pair
-        n_elec = self.param.n_electrodes_parallel
         A = self.param.L_y * self.param.L_z  # *modelled* electrode area
-        Q_ohm_W = Q_ohm_Wm2_av * n_elec * A
-        Q_rxn_W = Q_rxn_Wm2_av * n_elec * A
-        Q_rev_W = Q_rev_Wm2_av * n_elec * A
-        Q_mix_W = Q_mix_Wm2_av * n_elec * A
-        Q_W = Q_Wm2_av * n_elec * A
+        Q_ohm_W = Q_ohm_Wm2_av * A
+        Q_rxn_W = Q_rxn_Wm2_av * A
+        Q_rev_W = Q_rev_Wm2_av * A
+        Q_mix_W = Q_mix_Wm2_av * A
+        Q_W = Q_Wm2_av * A
 
         # Compute volume-averaged heat source terms over the *entire cell volume*, not
         # the product of electrode height * electrode width * electrode stack thickness

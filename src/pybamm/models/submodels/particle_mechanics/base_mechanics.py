@@ -140,7 +140,7 @@ class BaseMechanics(pybamm.BaseSubModel):
             eps_s * phase_param.t_change(sto_rav)
         ) - pybamm.x_average(eps_s * phase_param.t_change(sto_init))
 
-        electrode_thickness_change = self.param.n_electrodes_parallel * v_change * L0
+        electrode_thickness_change = v_change * L0
         # Ai2019 eq [10]
         disp_surf = Omega * R0 / 3 * (c_s_rav - c_0)
         # c0 reference concentration for no deformation

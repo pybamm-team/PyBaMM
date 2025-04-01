@@ -62,7 +62,6 @@ class TestEcmParameters:
         assert value == values["Initial temperature [K]"] - 273.15
 
         compatibility_parameters = [
-            (param.n_electrodes_parallel, 1),
             (param.A_cc, 1),
             (param.n_cells, 1),
         ]

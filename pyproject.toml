@@ -1,12 +1,13 @@
 [build-system]
 requires = [
     "hatchling>=1.13.0",
+    "hatch-vcs>=0.3.0",
 ]
 build-backend = "hatchling.build"
 
 [project]
 name = "pybamm"
-version = "25.1.1"
+dynamic = ["version"]
 license = { file = "LICENSE.txt" }
 description = "Python Battery Mathematical Modelling"
 authors = [{name = "The PyBaMM Team", email = "pybamm@pybamm.org"}]
@@ -149,10 +150,12 @@ MSMR_Example = "pybamm.input.parameters.lithium_ion.MSMR_example_set:get_paramet
 Chayambuka2022 = "pybamm.input.parameters.sodium_ion.Chayambuka2022:get_parameter_values"
 
 [tool.hatch]
+version.source = "vcs"
 build.targets.sdist.include = [
   "src/pybamm",
   "CITATION.cff",
 ]
+build.hooks.vcs.version-file = "src/pybamm/_version.py"
 
 [tool.repo-review]
 ignore = [

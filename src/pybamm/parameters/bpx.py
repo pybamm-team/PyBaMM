@@ -157,9 +157,6 @@ def bpx_to_param_dict(bpx: BPX) -> dict:
 
     # BPX is for single cell in series, user can change this later
     pybamm_dict["Number of cells connected in series to make a battery"] = 1
-    pybamm_dict["Number of electrodes connected in parallel to make a cell"] = (
-        pybamm_dict["Number of electrode pairs connected in parallel to make a cell"]
-    )
 
     # electrode area
     equal_len_width = math.sqrt(pybamm_dict["Electrode area [m2]"])
