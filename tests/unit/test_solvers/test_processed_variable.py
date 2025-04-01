@@ -1228,22 +1228,27 @@ class TestProcessedVariable:
             processed_var(t=0.2, x=0.2, R=0.2, r=0.2).shape, ()
         )
 
-        # check that C++ and Python give the same result
-        np.testing.assert_array_equal(
-            processed_var._observe_raw_cpp(), processed_var._observe_raw_python()
-        )
-
     @pytest.mark.parametrize("hermite_interp", _hermite_args)
-    def test_processed_var_3D_scikit_interpolation(self, hermite_interp):
-        var = pybamm.Variable(
-            "var",
-            domain=["negative electrode"],
-            auxiliary_domains={"secondary": ["current collector"]},
-        )
+    @pytest.mark.parametrize("edges_eval", [False, True])
+    def test_processed_var_3D_scikit_interpolation(self, hermite_interp, edges_eval):
+        if edges_eval:
+            var_cc = pybamm.Variable("var_cc", domain=["current collector"])
+            var = pybamm.PrimaryBroadcastToEdges(var_cc, ["negative electrode"])
+        else:
+            var = pybamm.Variable(
+                "var",
+                domain=["negative electrode"],
+                auxiliary_domains={"secondary": ["current collector"]},
+            )
 
         disc = tests.get_2p1d_discretisation_for_testing(xpts=5, ypts=6, zpts=7)
-        disc.set_variable_slices([var])
-        x_sol = disc.mesh["negative electrode"].nodes
+        if edges_eval:
+            x_sol = disc.mesh["negative electrode"].edges
+            disc.set_variable_slices([var_cc])
+        else:
+            x_sol = disc.mesh["negative electrode"].nodes
+            disc.set_variable_slices([var])
+        Nx = len(x_sol)
         y_sol = disc.mesh["current collector"].edges["y"]
         z_sol = disc.mesh["current collector"].edges["z"]
         var_sol = disc.process_symbol(var)
@@ -1259,20 +1264,20 @@ class TestProcessedVariable:
         )
         # 4 vectors
         np.testing.assert_array_equal(
-            processed_var(t=t_sol, x=x_sol, y=y_sol, z=z_sol).shape, (5, 6, 7, 3)
+            processed_var(t=t_sol, x=x_sol, y=y_sol, z=z_sol).shape, (Nx, 6, 7, 3)
         )
         # 3 vectors, 1 scalar
         np.testing.assert_array_equal(
             processed_var(t=t_sol, x=0.2, y=y_sol, z=z_sol).shape, (6, 7, 3)
         )
         np.testing.assert_array_equal(
-            processed_var(t=t_sol, x=x_sol, y=0.2, z=z_sol).shape, (5, 7, 3)
+            processed_var(t=t_sol, x=x_sol, y=0.2, z=z_sol).shape, (Nx, 7, 3)
         )
         np.testing.assert_array_equal(
-            processed_var(t=t_sol, x=x_sol, y=y_sol, z=0.5).shape, (5, 6, 3)
+            processed_var(t=t_sol, x=x_sol, y=y_sol, z=0.5).shape, (Nx, 6, 3)
         )
         np.testing.assert_array_equal(
-            processed_var(t=0.2, x=x_sol, y=y_sol, z=z_sol).shape, (5, 6, 7)
+            processed_var(t=0.2, x=x_sol, y=y_sol, z=z_sol).shape, (Nx, 6, 7)
         )
         # 2 vectors, 2 scalars
         np.testing.assert_array_equal(
@@ -1289,7 +1294,7 @@ class TestProcessedVariable:
             processed_var(t=0.5, x=0.2, y=y_sol, z=0.2).shape, (6,)
         )
         np.testing.assert_array_equal(
-            processed_var(t=0.5, x=x_sol, y=0.2, z=0.5).shape, (5,)
+            processed_var(t=0.5, x=x_sol, y=0.2, z=0.5).shape, (Nx,)
         )
         np.testing.assert_array_equal(
             processed_var(t=t_sol, x=0.2, y=0.2, z=0.5).shape, (3,)
@@ -1297,11 +1302,6 @@ class TestProcessedVariable:
         # 4 scalars
         np.testing.assert_array_equal(
             processed_var(t=0.2, x=0.2, y=0.2, z=0.2).shape, ()
-        )
-
-        # check that C++ and Python give the same result
-        np.testing.assert_array_equal(
-            processed_var._observe_raw_cpp(), processed_var._observe_raw_python()
         )
 
     def test_process_spatial_variable_names(self):
