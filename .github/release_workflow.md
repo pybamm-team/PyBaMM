@@ -9,10 +9,7 @@ GitHub, PyPI, and conda-forge by the maintainers.
    and September, updating incrementing the version to `vYY.MM.0` by running
    `scripts/update_version.py` in the following files:
 
-   - `pybamm/version.py`
-   - `docs/conf.py`
    - `CITATION.cff`
-   - `pyproject.toml`
    - `CHANGELOG.md`
 
    These changes will be automatically pushed to a new branch `vYY.MM`
@@ -34,13 +31,9 @@ If a new release is required after the release of `vYY.MM.{x-1}` -
    merged into `develop`. The CHANGELOG entry for such fixes should go under the
    `YY.MM.x` heading in `CHANGELOG.md`
 
-3. Run `scripts/update_version.py` manually while setting `VERSION=vYY.MM.x`
-   in your environment. This will update the version in the following files:
+3. Run `scripts/update_version.py` manually to update:
 
-   - `pybamm/version.py`
-   - `docs/conf.py`
    - `CITATION.cff`
-   - `pyproject.toml`
    - `CHANGELOG.md`
 
    Commit the changes to your release branch.
