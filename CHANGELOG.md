@@ -2,6 +2,7 @@
 
 ## Features
 
+- Revision of the hysteresis notebook to include the method implemented in the module `axen_ocp`. ([#4880](https://github.com/pybamm-team/PyBaMM/pull/4880))
 - Added `axen_ocp` module within submodel `interface.open_circuit_potential` to handle an OCP with hysteresis. ([#4816](https://github.com/pybamm-team/PyBaMM/pull/4816))
 - Creates a 'calc_esoh' property in battery models ([#4825](https://github.com/pybamm-team/PyBaMM/pull/4825))
 - Added 'get_summary_variables' to return dictionary of computed summary variables ([#4824](https://github.com/pybamm-team/PyBaMM/pull/4824))
@@ -16,6 +17,7 @@
 
 ## Bug fixes
 
+- Fixed a bug with observing the outputs of 2D FEM simulations. ([#4912](https://github.com/pybamm-team/PyBaMM/pull/4912))
 - Fixed a bug in simulating FEM models with the `IDAKLUSolver`. ([#4879](https://github.com/pybamm-team/PyBaMM/pull/4879))
 - Moved concentration inside x-averaged when calculating LLI due to LAM variables ([#4858](https://github.com/pybamm-team/PyBaMM/pull/4858))
 - Fixed a bug that caused the variable `"Loss of lithium due to {domain} lithium plating"`to have the domain `"current collector"` (should not have any domain at all) if the `"x-average side reactions"` option was set to `"true"`. ([#4844](https://github.com/pybamm-team/PyBaMM/pull/4844))
