@@ -129,19 +129,15 @@ class BaseKinetics(BaseInterface):
         # Add SEI resistance
         if self.options.electrode_types[domain] == "planar":
             R_sei = self.phase_param.R_sei
-            L_sei = variables[
-                f"{Domain} total {phase_name}SEI thickness [m]"
-            ]  # on interface
+            L_sei = variables[f"{Domain} {phase_name}SEI thickness [m]"]  # on interface
             eta_sei = -j_tot_av * L_sei * R_sei
         elif self.options["SEI film resistance"] == "average":
             R_sei = self.phase_param.R_sei
-            L_sei_av = variables[
-                f"X-averaged {domain} total {phase_name}SEI thickness [m]"
-            ]
+            L_sei_av = variables[f"X-averaged {domain} {phase_name}SEI thickness [m]"]
             eta_sei = -j_tot_av * L_sei_av * R_sei
         elif self.options["SEI film resistance"] == "distributed":
             R_sei = self.phase_param.R_sei
-            L_sei = variables[f"{Domain} total {phase_name}SEI thickness [m]"]
+            L_sei = variables[f"{Domain} {phase_name}SEI thickness [m]"]
             j_tot = variables[
                 f"Total {domain} electrode {phase_name}"
                 "interfacial current density variable [A.m-2]"
