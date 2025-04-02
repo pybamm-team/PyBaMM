@@ -224,6 +224,7 @@ class Mesh(dict):
         This will be useful for calculating the gradient with Dirichlet BCs.
         """
         # Get all submeshes relating to space (i.e. exclude time)
+        # Ignore 2D submeshes for now...
         submeshes = [
             (domain, submesh)
             for domain, submesh in self.items()
@@ -233,24 +234,25 @@ class Mesh(dict):
             )
         ]
         for domain, submesh in submeshes:
-            edges = submesh.edges
-
-            # left ghost cell: two edges, one node, to the left of existing submesh
-            lgs_edges = np.array([2 * edges[0] - edges[1], edges[0]])
-            lgs_submesh = pybamm.SubMesh1D(lgs_edges, submesh.coord_sys)
-            if getattr(submesh, "length", None) is not None:
-                lgs_submesh.length = submesh.length
-                lgs_submesh.min = submesh.min
-            self[domain[0] + "_left ghost cell"] = lgs_submesh
-
-            # right ghost cell: two edges, one node, to the right of
-            # existing submesh
-            rgs_edges = np.array([edges[-1], 2 * edges[-1] - edges[-2]])
-            rgs_submesh = pybamm.SubMesh1D(rgs_edges, submesh.coord_sys)
-            if getattr(submesh, "length", None) is not None:
-                rgs_submesh.length = submesh.length
-                rgs_submesh.min = submesh.min
-            self[domain[0] + "_right ghost cell"] = rgs_submesh
+            if submesh.dimension == 1:
+                self[domain[0] + "_left ghost cell"] = submesh.create_ghost_cell("left")
+                self[domain[0] + "_right ghost cell"] = submesh.create_ghost_cell(
+                    "right"
+                )
+            elif submesh.dimension == 2:
+                self[domain[0] + "_left ghost cell"] = submesh.create_ghost_cell("left")
+                self[domain[0] + "_right ghost cell"] = submesh.create_ghost_cell(
+                    "right"
+                )
+                self[domain[0] + "_bottom ghost cell"] = submesh.create_ghost_cell(
+                    "bottom"
+                )
+                self[domain[0] + "_top ghost cell"] = submesh.create_ghost_cell("top")
+            else:
+                raise NotImplementedError(
+                    "ghost cells not implemented for submeshes of dimension "
+                    + str(submesh.dimension)
+                )
 
     @property
     def geometry(self):
