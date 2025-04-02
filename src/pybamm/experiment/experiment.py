@@ -63,6 +63,8 @@ class Experiment:
 
         steps_unprocessed = [cond for cycle in cycles for cond in cycle]
 
+        self.temperature_interpolant = None
+
         # Convert strings to pybamm.step.BaseStep objects
         # We only do this once per unique step, to avoid unnecessary conversions
         # Assign experiment period and temperature if not specified in step
@@ -75,6 +77,10 @@ class Experiment:
 
         self.steps = [processed_steps[repr(step)] for step in steps_unprocessed]
         self.steps = self._set_next_start_time(self.steps)
+        for step in self.steps:
+            if getattr(step, "has_time_series_temperature", False):
+                self.temperature_interpolant = step.temperature
+                break
 
         # Save the processed unique steps and the processed operating conditions
         # for every step

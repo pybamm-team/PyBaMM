@@ -318,6 +318,15 @@ class Simulation:
         if initial_soc is not None:
             self.set_initial_soc(initial_soc, inputs=inputs)
 
+        if (
+            getattr(self, "experiment", None)
+            and hasattr(self.experiment, "temperature_interpolant")
+            and self.experiment.temperature_interpolant is not None
+        ):
+            self.parameter_values.update(
+                {"Ambient temperature [K]": self.experiment.temperature_interpolant}
+            )
+
         if self._built_model:
             return
         elif self._model.is_discretised:
@@ -444,6 +453,14 @@ class Simulation:
             See :meth:`pybamm.BaseSolver.solve`.
         """
         pybamm.telemetry.capture("simulation-solved")
+        if (
+            getattr(self, "experiment", None)
+            and hasattr(self.experiment, "temperature_interpolant")
+            and self.experiment.temperature_interpolant is not None
+        ):
+            self.parameter_values.update(
+                {"Ambient temperature [K]": self.experiment.temperature_interpolant}
+            )
 
         # Setup
         if solver is None:
