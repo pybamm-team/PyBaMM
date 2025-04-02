@@ -3,7 +3,6 @@ import importlib
 import os
 import sys
 import pybamm
-import tempfile
 from io import StringIO
 
 from tests import (
@@ -81,16 +80,14 @@ class TestUtil:
                 == d["Positive particle diffusivity [m2.s-1]"]
             )
 
-    def test_get_parameters_filepath(self):
-        with tempfile.NamedTemporaryFile("w", dir=".") as tempfile_obj:
-            assert (
-                pybamm.get_parameters_filepath(tempfile_obj.name) == tempfile_obj.name
-            )
+    def test_get_parameters_filepath(self, tmp_path):
+        temppath = tmp_path / "temp_file.txt"
+        assert pybamm.get_parameters_filepath(temppath) == str(temppath)
 
-        package_dir = os.path.join(pybamm.root_dir(), "src", "pybamm")
-        with tempfile.NamedTemporaryFile("w", dir=package_dir) as tempfile_obj:
-            path = os.path.join(package_dir, tempfile_obj.name)
-            assert pybamm.get_parameters_filepath(tempfile_obj.name) == path
+        temppath = "random.txt"
+        assert pybamm.get_parameters_filepath(temppath) == str(
+            os.path.join(pybamm.root_dir(), "src", "pybamm", temppath)
+        )
 
     @pytest.mark.skipif(not pybamm.has_jax(), reason="JAX is not installed")
     def test_is_jax_compatible(self):
@@ -264,3 +261,22 @@ class TestSearch:
             match="'keys' must be a string or a list of strings, got <class 'int'>",
         ):
             model.variables.search(123)
+
+        # Test smaller strings
+        with mocker.patch("sys.stdout", new=StringIO()) as fake_out:
+            model.variables.search(["El", "co"], print_values=True)
+            out = "No matches found for 'El'\nNo matches found for 'co'\n"
+            assert fake_out.getvalue() == out
+
+        # Case where min_similarity is high (0.9)
+        with mocker.patch("sys.stdout", new=StringIO()) as fake_out:
+            model.variables.search("electro", min_similarity=0.9)
+            assert fake_out.getvalue() == "No matches found for 'electro'\n"
+
+        # Case where min_similarity is low (0.3)
+        with mocker.patch("sys.stdout", new=StringIO()) as fake_out:
+            model.variables.search("electro", min_similarity=0.3)
+            assert (
+                fake_out.getvalue()
+                == "Results for 'electro': ['Electrolyte concentration', 'Electrode potential']\n"
+            )

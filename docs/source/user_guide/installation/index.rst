@@ -98,7 +98,6 @@ Installable with ``pip install "pybamm[plot]"``
 =========================================================== ================== ================== ==================================================================
 Dependency                                                  Minimum Version    pip extra          Notes
 =========================================================== ================== ================== ==================================================================
-`imageio <https://imageio.readthedocs.io/en/stable/>`__     2.3.0              plot               For generating simulation GIFs.
 `matplotlib <https://matplotlib.org/stable/>`__             3.6.0              plot               To plot various battery models, and analyzing battery performance.
 =========================================================== ================== ================== ==================================================================
 
@@ -164,6 +163,7 @@ Dependency                                                                      
 `pytest-mock <https://pytest-mock.readthedocs.io/en/latest/index.html>`__        \-                 dev                Provides a mocker fixture.
 `nbmake <https://github.com/treebeardtech/nbmake/>`__                            \-                 dev                A ``pytest`` plugin for executing Jupyter notebooks.
 `importlib-metadata <https://pypi.org/project/importlib-metadata/>`__            \-                 dev                Used to read metadata from Python packages.
+`hypothesis <https://hypothesis.readthedocs.io/en/latest/>`__                    \-                 dev                Used to perform property based testing.
 ================================================================================ ================== ================== =============================================================
 
 .. _install.cite_dependencies:

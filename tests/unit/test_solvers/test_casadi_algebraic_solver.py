@@ -117,9 +117,13 @@ class TestCasadiAlgebraicSolver:
         solution = solver.solve(model, t_eval)
 
         sol = np.vstack((3 * t_eval, 6 * t_eval))
-        np.testing.assert_array_almost_equal(solution.y, sol)
-        np.testing.assert_array_almost_equal(solution["var1"].data.flatten(), sol[0, :])
-        np.testing.assert_array_almost_equal(solution["var2"].data.flatten(), sol[1, :])
+        np.testing.assert_allclose(solution.y, sol, rtol=1e-7, atol=1e-6)
+        np.testing.assert_allclose(
+            solution["var1"].data.flatten(), sol[0, :], rtol=1e-7, atol=1e-6
+        )
+        np.testing.assert_allclose(
+            solution["var2"].data.flatten(), sol[1, :], rtol=1e-7, atol=1e-6
+        )
 
     def test_model_solver_with_time_not_changing(self):
         # Create model
@@ -139,7 +143,7 @@ class TestCasadiAlgebraicSolver:
         solution = solver.solve(model, t_eval)
 
         sol = np.vstack((3 + 0 * t_eval, 6 + 0 * t_eval))
-        np.testing.assert_array_almost_equal(solution.y, sol)
+        np.testing.assert_allclose(solution.y, sol, rtol=1e-7, atol=1e-6)
 
     def test_model_solver_with_bounds(self):
         # Note: we need a better test case to test this functionality properly
@@ -153,7 +157,9 @@ class TestCasadiAlgebraicSolver:
         # Solve
         solver = pybamm.CasadiAlgebraicSolver(tol=1e-12)
         solution = solver.solve(model)
-        np.testing.assert_array_almost_equal(solution["var1"].data, 3 * np.pi / 2)
+        np.testing.assert_allclose(
+            solution["var1"].data, 3 * np.pi / 2, rtol=1e-7, atol=1e-6
+        )
 
     def test_solve_with_input(self):
         # Simple system: a single algebraic equation
@@ -223,7 +229,7 @@ class TestCasadiAlgebraicSolverSensitivity:
 
         # without Jacobian
         lsq_sol = least_squares(objective, [2, 2], method="lm")
-        np.testing.assert_array_almost_equal(lsq_sol.x, [3, 3], decimal=3)
+        np.testing.assert_allclose(lsq_sol.x, [3, 3], rtol=1e-4, atol=1e-3)
 
         def jac(x):
             solution = solver.solve(
@@ -236,7 +242,7 @@ class TestCasadiAlgebraicSolverSensitivity:
 
         # with Jacobian
         lsq_sol = least_squares(objective, [2, 2], jac=jac, method="lm")
-        np.testing.assert_array_almost_equal(lsq_sol.x, [3, 3], decimal=3)
+        np.testing.assert_allclose(lsq_sol.x, [3, 3], rtol=1e-4, atol=1e-3)
 
     def test_solve_with_symbolic_input_1D_scalar_input(self):
         var = pybamm.Variable("var", "negative electrode")
@@ -283,17 +289,17 @@ class TestCasadiAlgebraicSolverSensitivity:
         solution = solver.solve(
             model, [0], inputs={"param": 3 * np.ones(n)}, calculate_sensitivities=True
         )
-        np.testing.assert_array_almost_equal(
-            solution["var"].sensitivities["param"], -np.eye(40)
+        np.testing.assert_allclose(
+            solution["var"].sensitivities["param"], -np.eye(40), rtol=1e-7, atol=1e-6
         )
-        np.testing.assert_array_almost_equal(solution["var"].data, -3)
+        np.testing.assert_allclose(solution["var"].data, -3, rtol=1e-7, atol=1e-6)
         p = np.linspace(0, 1, n)[:, np.newaxis]
         solution = solver.solve(
             model, [0], inputs={"param": p}, calculate_sensitivities=True
         )
-        np.testing.assert_array_almost_equal(solution["var"].data, -p)
-        np.testing.assert_array_almost_equal(
-            solution["var"].sensitivities["param"], -np.eye(40)
+        np.testing.assert_allclose(solution["var"].data, -p, rtol=1e-7, atol=1e-6)
+        np.testing.assert_allclose(
+            solution["var"].sensitivities["param"], -np.eye(40), rtol=1e-7, atol=1e-6
         )
 
     def test_solve_with_symbolic_input_in_initial_conditions(self):
@@ -345,4 +351,4 @@ class TestCasadiAlgebraicSolverSensitivity:
 
         # without Jacobian
         lsq_sol = least_squares(objective, [2, 2], method="lm")
-        np.testing.assert_array_almost_equal(lsq_sol.x, [3, 3], decimal=3)
+        np.testing.assert_allclose(lsq_sol.x, [3, 3], rtol=1e-4, atol=1e-3)

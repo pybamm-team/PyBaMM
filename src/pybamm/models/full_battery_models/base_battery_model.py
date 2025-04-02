@@ -102,9 +102,10 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 reactions.
             * "open-circuit potential" : str
                 Sets the model for the open circuit potential. Can be "single"
-                (default), "current sigmoid", "Wycisk", or "MSMR". If "MSMR" then the "particle"
-                option must also be "MSMR". A 2-tuple can be provided for different
-                behaviour in negative and positive electrodes.
+                (default), "current sigmoid", "Wycisk", "Axen", or "MSMR".
+                If "MSMR" then the "particle" option must also be "MSMR".
+                A 2-tuple can be provided for different behaviour in negative
+                and positive electrodes.
             * "operating mode" : str
                 Sets the operating mode for the model. This determines how the current
                 is set. Can be:
@@ -273,7 +274,13 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "stress and reaction-driven",
             ],
             "number of MSMR reactions": ["none"],
-            "open-circuit potential": ["single", "current sigmoid", "MSMR", "Wycisk"],
+            "open-circuit potential": [
+                "single",
+                "current sigmoid",
+                "MSMR",
+                "Wycisk",
+                "Axen",
+            ],
             "operating mode": [
                 "current",
                 "voltage",
@@ -545,20 +552,10 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     "'quadratic' and 'quartic' concentration profiles have not yet "
                     "been implemented for particle-size ditributions"
                 )
-            if options["particle mechanics"] != "none":
-                raise NotImplementedError(
-                    "Particle mechanics submodels do not yet support particle-size"
-                    " distributions."
-                )
             if options["particle shape"] != "spherical":
                 raise NotImplementedError(
                     "Particle shape must be 'spherical' for particle-size distribution"
                     " submodels."
-                )
-            if options["stress-induced diffusion"] == "true":
-                raise NotImplementedError(
-                    "stress-induced diffusion cannot yet be included in "
-                    "particle-size distributions."
                 )
             if options["thermal"] == "x-full":
                 raise NotImplementedError(

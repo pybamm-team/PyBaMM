@@ -14,6 +14,7 @@
 import os
 import sys
 import pybamm
+import importlib.metadata
 
 # Path for repository root
 sys.path.insert(0, os.path.abspath("../"))
@@ -29,7 +30,7 @@ copyright = "2018-2025, The PyBaMM Team"
 author = "The PyBaMM Team"
 
 # The short X.Y version
-version = pybamm.__version__
+version = importlib.metadata.version("pybamm")
 # The full version, including alpha/beta/rc tags
 release = version
 
@@ -320,6 +321,9 @@ nbsphinx_requirejs_path = ""
 # On a PR build, we use READTHEDOCS_GIT_COMMIT_HASH which will always point to changes
 # made to a notebook, if any.
 # On local builds, the version is not set, so we use "latest".
+
+notebooks_version = version
+append_to_url = f"blob/v{notebooks_version}"
 
 if (os.environ.get("READTHEDOCS_VERSION") == "latest") or (
     os.environ.get("READTHEDOCS_VERSION") is None

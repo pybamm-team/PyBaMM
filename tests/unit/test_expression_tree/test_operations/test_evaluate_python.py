@@ -488,7 +488,7 @@ class TestEvaluate:
         expr = pybamm.exp(a * b)
         evaluator = pybamm.EvaluatorJax(expr)
         result = evaluator(t=None, y=np.array([[2], [3]]))
-        np.testing.assert_array_almost_equal(result, np.exp(6), decimal=15)
+        np.testing.assert_allclose(result, np.exp(6), rtol=1e-16, atol=1e-15)
 
         # test a constant expression
         expr = pybamm.Scalar(2) * pybamm.Scalar(3)
