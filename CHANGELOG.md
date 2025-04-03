@@ -1,5 +1,7 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+# [v25.4.0](https://github.com/pybamm-team/PyBaMM/tree/v25.4.0) - 2025-04-02
+
 ## Features
 
 - Revision of the hysteresis notebook to include the method implemented in the module `axen_ocp`. ([#4880](https://github.com/pybamm-team/PyBaMM/pull/4880))

@@ -337,15 +337,7 @@ class BaseParticle(pybamm.BaseSubModel):
             c_s_distribution = c_s
 
             # x-average the *tertiary* domain.
-            # NOTE: not yet implemented. Make 0.5 everywhere
-            c_s_xav_distribution = pybamm.FullBroadcast(
-                0.5,
-                [f"{domain} {phase_name}particle"],
-                {
-                    "secondary": f"{domain} {phase_name}particle size",
-                    "tertiary": "current collector",
-                },
-            )
+            c_s_xav_distribution = pybamm.x_average(c_s)
 
             # Surface concentration distribution variables
             c_s_surf_distribution = pybamm.surf(c_s)

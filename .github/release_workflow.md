@@ -3,30 +3,31 @@
 This file contains the workflow required to make a `PyBaMM` release on
 GitHub, PyPI, and conda-forge by the maintainers.
 
-## Initial release (automated)
+## Creating a release
 
-1. The `update_version.yml` workflow will run on every 1st of January, May
-   and September, updating incrementing the version to `vYY.MM.0` by running
-   `scripts/update_version.py` in the following files:
+1. Checkout the latest develop branch, then create a local tag `vYY.MM.0`
+   with the new version. The year and month are taken from the date of the
+   release. The final number represents the bug fix version, which is zero for
+   a new release.
 
-   - `pybamm/version.py`
-   - `docs/conf.py`
+2. Run `scripts/update_version.py` to update the following files:
+
    - `CITATION.cff`
-   - `pyproject.toml`
    - `CHANGELOG.md`
 
-   These changes will be automatically pushed to a new branch `vYY.MM`
-   and a PR from `vYY.MM` to `main` will be created.
+   These changes should be pushed to a release branch `vYY.MM.0`
+   and a PR from `vYY.MM.0` to `main` needs to be created.
 
-2. Create a new GitHub _release_ with the tag `vYY.MM.0` from the `vYY.MM`
-   branch and a description copied from `CHANGELOG.md`.
+3. After the release PR has been merged, create a new GitHub _release_ with the
+   tag `vYY.MM.0` from the `vYY.MM` branch and a description copied from
+   `CHANGELOG.md`.
 
-3. This release will automatically trigger `publish_pypi.yml` and create a
+4. This release will automatically trigger `publish_pypi.yml` and create a
    _release_ on PyPI.
 
-## Bug fix releases (manual)
+## Bug fix releases
 
-If a new release is required after the release of `vYY.MM.{x-1}` -
+If a new bugfix release is required after the release of `vYY.MM.{x-1}` -
 
 1. Create a new branch for the `vYY.MM.x` release using the `vYY.MM.{x-1}` tag.
 
@@ -34,13 +35,9 @@ If a new release is required after the release of `vYY.MM.{x-1}` -
    merged into `develop`. The CHANGELOG entry for such fixes should go under the
    `YY.MM.x` heading in `CHANGELOG.md`
 
-3. Run `scripts/update_version.py` manually while setting `VERSION=vYY.MM.x`
-   in your environment. This will update the version in the following files:
+3. Run `scripts/update_version.py` manually to update:
 
-   - `pybamm/version.py`
-   - `docs/conf.py`
    - `CITATION.cff`
-   - `pyproject.toml`
    - `CHANGELOG.md`
 
    Commit the changes to your release branch.

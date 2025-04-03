@@ -14,6 +14,7 @@
 import os
 import sys
 import pybamm
+import importlib.metadata
 
 # Path for repository root
 sys.path.insert(0, os.path.abspath("../"))
@@ -29,7 +30,7 @@ copyright = "2018-2025, The PyBaMM Team"
 author = "The PyBaMM Team"
 
 # The short X.Y version
-version = pybamm.__version__
+version = importlib.metadata.version("pybamm")
 # The full version, including alpha/beta/rc tags
 release = version
 
