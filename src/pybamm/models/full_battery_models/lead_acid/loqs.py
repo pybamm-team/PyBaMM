@@ -66,6 +66,10 @@ class LOQS(BaseModel):
                 )
             )
 
+    @property
+    def default_solver(self):
+        return pybamm.CasadiSolver()
+
     def set_current_collector_submodel(self):
         if self.options["current collector"] in [
             "uniform",

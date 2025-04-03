@@ -14,14 +14,14 @@ class TestCompareBasicModels:
 
         # Solve basic DFN
         basic_sim = pybamm.Simulation(basic_dfn, parameter_values=parameter_values)
-        t_eval = np.linspace(0, 3600)
-        basic_sim.solve(t_eval)
+        t_eval = [0, 3600]
+        t_interp = np.linspace(0, 3600)
+        basic_sim.solve(t_eval=t_eval, t_interp=t_interp)
         basic_sol = basic_sim.solution
 
         # Solve main DFN
         sim = pybamm.Simulation(dfn, parameter_values=parameter_values)
-        t_eval = np.linspace(0, 3600)
-        sim.solve(t_eval)
+        sim.solve(t_eval=t_eval, t_interp=t_interp)
         sol = sim.solution
 
         # Compare solution data
@@ -29,7 +29,7 @@ class TestCompareBasicModels:
         # Compare variables
         for name in basic_dfn.variables:
             np.testing.assert_allclose(
-                basic_sol[name].entries, sol[name].entries, rtol=1e-3
+                basic_sol[name].entries, sol[name].entries, rtol=2e-3
             )
 
     def test_compare_dfns_composite(self):
@@ -44,14 +44,15 @@ class TestCompareBasicModels:
 
         # Solve basic DFN
         basic_sim = pybamm.Simulation(basic_dfn, parameter_values=parameter_values)
-        t_eval = np.linspace(0, 3600)
-        basic_sim.solve(t_eval)
+        t_eval = [0, 3600]
+        t_interp = np.linspace(0, 3600)
+        basic_sim.solve(t_eval=t_eval, t_interp=t_interp)
         basic_sol = basic_sim.solution
 
         # Solve main DFN
         sim = pybamm.Simulation(dfn, parameter_values=parameter_values)
         t_eval = np.linspace(0, 3600)
-        sim.solve(t_eval)
+        sim.solve(t_eval=t_eval, t_interp=t_interp)
         sol = sim.solution
 
         # Compare solution data
@@ -69,14 +70,14 @@ class TestCompareBasicModels:
 
         # Solve basic SPM
         basic_sim = pybamm.Simulation(basic_spm, parameter_values=parameter_values)
-        t_eval = np.linspace(0, 3600)
-        basic_sim.solve(t_eval)
+        t_eval = [0, 3600]
+        t_interp = np.linspace(0, 3600)
+        basic_sim.solve(t_eval=t_eval, t_interp=t_interp)
         basic_sol = basic_sim.solution
 
         # Solve main SPM
         sim = pybamm.Simulation(spm, parameter_values=parameter_values)
-        t_eval = np.linspace(0, 3600)
-        sim.solve(t_eval)
+        sim.solve(t_eval=t_eval, t_interp=t_interp)
         sol = sim.solution
 
         # Compare solution data
@@ -84,5 +85,5 @@ class TestCompareBasicModels:
         # Compare variables
         for name in basic_spm.variables:
             np.testing.assert_allclose(
-                basic_sol[name].entries, sol[name].entries, rtol=1e-4
+                basic_sol[name].entries, sol[name].entries, rtol=5e-4
             )

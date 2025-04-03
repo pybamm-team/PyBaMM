@@ -119,9 +119,11 @@ class TestThermal:
         )
 
         sols = {}
+        t_eval = [0, 3600]
+        t_interp = np.linspace(0, 3600, 100)
         for name, model in models.items():
             sim = pybamm.Simulation(model, parameter_values=parameter_values)
-            sol = sim.solve([0, 3600])
+            sol = sim.solve(t_eval=t_eval, t_interp=t_interp)
             sols[name] = sol
 
         for var in ["Volume-averaged cell temperature [K]", "Surface temperature [K]"]:

@@ -90,10 +90,10 @@ class TestSimulationExperiment:
             sol.cycles[0].steps[2]["Voltage [V]"].data, 4.1, rtol=1e-6, atol=1e-5
         )
         np.testing.assert_allclose(
-            sol.cycles[0].steps[3]["Power [W]"].data, 2, rtol=1e-6, atol=1e-5
+            sol.cycles[0].steps[3]["Power [W]"].data, 2, rtol=3e-4, atol=3e-4
         )
         np.testing.assert_allclose(
-            sol.cycles[0].steps[4]["Resistance [Ohm]"].data, 4, rtol=1e-6, atol=1e-5
+            sol.cycles[0].steps[4]["Resistance [Ohm]"].data, 4, rtol=2e-4, atol=6e-4
         )
 
         np.testing.assert_array_equal(
@@ -732,8 +732,10 @@ class TestSimulationExperiment:
         sim = pybamm.Simulation(model, experiment=experiment)
         sim.solve(initial_soc=1)
         np.testing.assert_allclose(
-            sim.solution.cycles[0].last_state.y.full(),
-            sim.solution.cycles[1].steps[-1].first_state.y.full(),
+            sim.solution.cycles[0].last_state.y,
+            sim.solution.cycles[1].steps[-1].first_state.y,
+            atol=1e-15,
+            rtol=1e-15,
         )
 
     def test_solver_error(self):

@@ -506,7 +506,7 @@ class TestSolution:
             solver=solver,
         )
         inputs = {"Negative electrode conductivity [S.m-1]": 0.1}
-        sim.solve(t_eval=np.linspace(0, 10, 10), inputs=inputs)
+        sim.solve(t_eval=[0, 10], t_interp=np.linspace(0, 10, 10), inputs=inputs)
         time = sim.solution["Time [h]"](sim.solution.t)
         assert len(time) == 10
 

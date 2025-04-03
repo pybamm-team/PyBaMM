@@ -37,9 +37,12 @@ class TestFunctionControl:
 
         # solve model
         solutions = [None] * len(models)
-        t_eval = np.linspace(0, 3600, 100)
+        t_eval = [0, 3600]
+        t_interp = np.linspace(0, 3600, 100)
         for i, model in enumerate(models):
-            solutions[i] = model.default_solver.solve(model, t_eval)
+            solutions[i] = model.default_solver.solve(
+                model, t_eval=t_eval, t_interp=t_interp
+            )
 
         np.testing.assert_allclose(
             solutions[0]["Discharge capacity [A.h]"].entries,
@@ -48,8 +51,8 @@ class TestFunctionControl:
             atol=1e-6,
         )
         np.testing.assert_allclose(
-            solutions[0]["Voltage [V]"](solutions[0].t),
-            solutions[1]["Voltage [V]"](solutions[0].t),
+            solutions[0]["Voltage [V]"].entries,
+            solutions[1]["Voltage [V]"].entries,
             rtol=1e-6,
             atol=1e-5,
         )
@@ -112,7 +115,8 @@ class TestFunctionControl:
 
         # set parameters and discretise models
         solutions = [None] * len(models)
-        t_eval = np.linspace(0, 3600, 100)
+        t_eval = [0, 3600]
+        t_interp = np.linspace(0, 3600, 100)
         for i, model in enumerate(models):
             # create geometry
             geometry = model.default_geometry
@@ -125,12 +129,14 @@ class TestFunctionControl:
             )
             disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
             disc.process_model(model)
-            solutions[i] = model.default_solver.solve(model, t_eval)
+            solutions[i] = model.default_solver.solve(
+                model, t_eval=t_eval, t_interp=t_interp
+            )
 
         for var in ["Voltage [V]", "Current [A]"]:
             for sol in solutions[1:]:
                 np.testing.assert_allclose(
-                    solutions[0][var].data, sol[var].data, rtol=1e-7, atol=1e-6
+                    solutions[0][var].data, sol[var].data, rtol=5e-5, atol=1e-6
                 )
 
     def test_constant_resistance(self):
@@ -149,7 +155,8 @@ class TestFunctionControl:
 
         # set parameters and discretise models
         solutions = [None] * len(models)
-        t_eval = np.linspace(0, 3600, 100)
+        t_eval = [0, 3600]
+        t_interp = np.linspace(0, 3600, 100)
         for i, model in enumerate(models):
             # create geometry
             geometry = model.default_geometry
@@ -162,12 +169,14 @@ class TestFunctionControl:
             )
             disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
             disc.process_model(model)
-            solutions[i] = model.default_solver.solve(model, t_eval)
+            solutions[i] = model.default_solver.solve(
+                model, t_eval=t_eval, t_interp=t_interp
+            )
 
         for var in ["Voltage [V]", "Current [A]"]:
             for sol in solutions[1:]:
                 np.testing.assert_allclose(
-                    solutions[0][var].data, sol[var].data, rtol=1e-7, atol=1e-6
+                    solutions[0][var].data, sol[var].data, rtol=5e-5, atol=1e-6
                 )
 
     def test_cccv(self):

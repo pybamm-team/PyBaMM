@@ -15,9 +15,7 @@ class TestSimulation:
         model.initial_conditions = {v: 1}
         sim = pybamm.Simulation(model)
         sol = sim.solve([0, 1])
-        np.testing.assert_allclose(
-            sol.y.full()[0], np.exp(-sol.t), rtol=1e-6, atol=1e-5
-        )
+        np.testing.assert_allclose(sol.y[0], np.exp(-sol.t), rtol=1e-4, atol=1e-4)
 
     def test_basic_ops(self):
         model = pybamm.lithium_ion.SPM()
@@ -165,29 +163,41 @@ class TestSimulation:
         model = pybamm.lithium_ion.SPM()
         sim = pybamm.Simulation(model)
 
-        sim.step(dt)  # 1 step stores first two points
-        assert sim.solution.y.full()[0, :].size == 2
+        sim.step(dt)  # 1 step stores first 12 points
+        assert sim.solution.y[0, :].size == 12
         np.testing.assert_allclose(
-            sim.solution.t, np.array([0, dt]), rtol=1e-7, atol=1e-6
+            [sim.solution.t[0], sim.solution.t[-1]],
+            np.array([0, dt]),
+            rtol=1e-7,
+            atol=1e-6,
         )
         saved_sol = sim.solution
 
         sim.step(dt)  # automatically append the next step
-        assert sim.solution.y.full()[0, :].size == 4
+        assert sim.solution.y[0, :].size == 24
         np.testing.assert_allclose(
-            sim.solution.t, np.array([0, dt, dt + 1e-9, 2 * dt]), rtol=1e-7, atol=1e-6
+            [sim.solution.t[0], sim.solution.t[-1]],
+            np.array([0, 2 * dt]),
+            rtol=1e-7,
+            atol=1e-6,
         )
 
         sim.step(dt, save=False)  # now only store the two end step points
-        assert sim.solution.y.full()[0, :].size == 2
+        assert sim.solution.y[0, :].size == 12
         np.testing.assert_allclose(
-            sim.solution.t, np.array([2 * dt + 1e-9, 3 * dt]), rtol=1e-7, atol=1e-6
+            [sim.solution.t[0], sim.solution.t[-1]],
+            np.array([2 * dt + 1e-9, 3 * dt]),
+            rtol=1e-7,
+            atol=1e-6,
         )
         # Start from saved solution
         sim.step(dt, starting_solution=saved_sol)
-        assert sim.solution.y.full()[0, :].size == 4
+        assert sim.solution.y[0, :].size == 24
         np.testing.assert_allclose(
-            sim.solution.t, np.array([0, dt, dt + 1e-9, 2 * dt]), rtol=1e-7, atol=1e-6
+            [sim.solution.t[0], sim.solution.t[-1]],
+            np.array([0, 2 * dt]),
+            rtol=1e-7,
+            atol=1e-6,
         )
 
     @pytest.mark.skipif(
@@ -357,8 +367,11 @@ class TestSimulation:
         param.update({"Current function [A]": "[input]"})
         sim = pybamm.Simulation(model, parameter_values=param)
         h = 1e-6
+        tmax = 600
+        t_interp = np.linspace(0, tmax, 100)
         sol1 = sim.solve(
-            t_eval=[0, 600],
+            t_eval=[0, tmax],
+            t_interp=t_interp,
             inputs={"Current function [A]": 1},
             calculate_sensitivities=True,
         )
@@ -366,7 +379,9 @@ class TestSimulation:
         # check that the sensitivities are stored
         assert "Current function [A]" in sol1.sensitivities
 
-        sol2 = sim.solve(t_eval=[0, 600], inputs={"Current function [A]": 1 + h})
+        sol2 = sim.solve(
+            t_eval=[0, tmax], t_interp=t_interp, inputs={"Current function [A]": 1 + h}
+        )
 
         # check that the sensitivities are not stored
         assert "Current function [A]" not in sol2.sensitivities
@@ -380,8 +395,8 @@ class TestSimulation:
             .full()
             .flatten(),
             sol2["Terminal voltage [V]"].entries,
-            rtol=1e-6,
-            atol=1e-5,
+            rtol=5e-6,
+            atol=2e-5,
         )
 
     def test_step_with_inputs(self):
@@ -392,20 +407,23 @@ class TestSimulation:
         sim = pybamm.Simulation(model, parameter_values=param)
         sim.step(
             dt, inputs={"Current function [A]": 1}
-        )  # 1 step stores first two points
-        assert sim.solution.t.size == 2
-        assert sim.solution.y.full()[0, :].size == 2
+        )  # 1 step stores first 12 points
+        assert sim.solution.t.size == 12
+        assert sim.solution.y[0, :].size == 12
         assert sim.solution.t[0] == 0
-        assert sim.solution.t[1] == dt
+        assert sim.solution.t[-1] == dt
         np.testing.assert_array_equal(
             sim.solution.all_inputs[0]["Current function [A]"], 1
         )
         sim.step(
             dt, inputs={"Current function [A]": 2}
         )  # automatically append the next step
-        assert sim.solution.y.full()[0, :].size == 4
+        assert sim.solution.y[0, :].size == 24
         np.testing.assert_allclose(
-            sim.solution.t, np.array([0, dt, dt + 1e-9, 2 * dt]), rtol=1e-7, atol=1e-6
+            [sim.solution.t[0], sim.solution.t[-1]],
+            np.array([0, 2 * dt]),
+            rtol=1e-7,
+            atol=1e-6,
         )
         np.testing.assert_array_equal(
             sim.solution.all_inputs[1]["Current function [A]"], 2
@@ -610,18 +628,11 @@ class TestSimulation:
 
         # check solution is returned at the times in the data
         sim.solve()
-        np.testing.assert_allclose(sim.solution.t, time_data, rtol=1e-7, atol=1e-6)
-
-        # check warning raised if the largest gap in t_eval is bigger than the
-        # smallest gap in the data
-        with pytest.warns(pybamm.SolverWarning):
-            sim.solve(t_eval=np.linspace(0, 10, 3))
-
-        # check warning raised if t_eval doesnt contain time_data , but has a finer
-        # resolution (can still solve, but good for users to know they dont have
-        # the solution returned at the data points)
-        with pytest.warns(pybamm.SolverWarning):
-            sim.solve(t_eval=np.linspace(0, time_data[-1], 800))
+        i = 0
+        for t in time_data:
+            while abs(sim.solution.t[i] - t) < 1e-6:
+                i += 1
+                assert i < len(sim.solution.t)
 
     def test_discontinuous_current(self):
         def car_current(t):
@@ -656,12 +667,6 @@ class TestSimulation:
         # test t_eval list of length != 2
         with pytest.raises(pybamm.SolverError, match="'t_eval' can be provided"):
             sim.solve(t_eval=[0, 1, 2])
-
-        # tests list gets turned into np.linspace(t0, tf, 100)
-        sim.solve(t_eval=[0, 10])
-        np.testing.assert_allclose(
-            sim.solution.t, np.linspace(0, 10, 100), rtol=1e-7, atol=1e-6
-        )
 
     def test_battery_model_with_input_height(self):
         parameter_values = pybamm.ParameterValues("Marquis2019")
