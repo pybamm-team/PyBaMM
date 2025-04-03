@@ -45,7 +45,7 @@ class BaseThermal(pybamm.BaseSubModel):
         # (y, z) only and time
         y = pybamm.standard_spatial_vars.y
         z = pybamm.standard_spatial_vars.z
-        T_amb = self.param.T_amb(y, z, pybamm.t)
+        T_amb = self.param.T_amb(pybamm.t, y, z)
         T_amb_av = self._yz_average(T_amb)
 
         variables = {
