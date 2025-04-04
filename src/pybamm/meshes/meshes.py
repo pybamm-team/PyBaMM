@@ -273,7 +273,8 @@ class Mesh(dict):
             submesh.length = submesh_length
             submesh.min = submesh_min
         # add in internal boundaries
-        for submeshname in submeshnames[1:]:
+        for i, submeshname in enumerate(submeshnames[1:]):
+            i = i + 1
             if getattr(self[submeshname], "length", None) is not None:
                 min = self[submeshname].min
             else:

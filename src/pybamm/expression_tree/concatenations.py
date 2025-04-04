@@ -450,7 +450,7 @@ class SparseStack(Concatenation):
         The equations to concatenate
     """
 
-    def __init__(self, *children):
+    def __init__(self, *children, name="sparse_stack"):
         children = list(children)
         if not any(issparse(child.evaluate_for_shape()) for child in children):
             concatenation_function = np.vstack
@@ -458,7 +458,7 @@ class SparseStack(Concatenation):
             concatenation_function = vstack
         super().__init__(
             *children,
-            name="sparse_stack",
+            name=name,
             check_domain=False,
             concat_fun=concatenation_function,
         )
@@ -466,6 +466,23 @@ class SparseStack(Concatenation):
     def _concatenation_new_copy(self, children, perform_simplifications=True):
         """See :meth:`pybamm.Concatenation._concatenation_new_copy()`."""
         return SparseStack(*children)
+
+
+class VectorField(SparseStack):
+    """
+    A node in the expression tree representing a vector field.
+    """
+
+    def __init__(self, lr_field, tb_field):
+        children = [lr_field, tb_field]
+        super().__init__(*children, name="vector_field")
+        self.lr_field = lr_field
+        self.tb_field = tb_field
+
+    def create_copy(self, new_children: list[pybamm.Symbol] | None = None):
+        if new_children is None:
+            new_children = [self.lr_field, self.tb_field]
+        return VectorField(*new_children)
 
 
 class ConcatenationVariable(Concatenation):

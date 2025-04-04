@@ -126,9 +126,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         # Multiply by gradient matrix
         grad_lr = self._gradient(symbol, discretised_symbol, boundary_conditions, "lr")
         grad_tb = self._gradient(symbol, discretised_symbol, boundary_conditions, "tb")
-        grad = pybamm.Concatenation(
-            grad_lr, grad_tb, check_domain=False, concat_fun=np.vstack
-        )
+        grad = pybamm.VectorField(grad_lr, grad_tb)
         return grad
 
     def gradient_matrix(self, domain, domains, direction):
@@ -182,7 +180,9 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         divergence_matrix_lr = self.divergence_matrix(symbol.domains, "lr")
         divergence_matrix_tb = self.divergence_matrix(symbol.domains, "tb")
 
-        grad_lr, grad_tb = discretised_symbol.orphans
+        grad_lr = discretised_symbol.lr_field
+        grad_tb = discretised_symbol.tb_field
+
         div_lr = divergence_matrix_lr @ grad_lr
         div_tb = divergence_matrix_tb @ grad_tb
 
@@ -493,7 +493,176 @@ class FiniteVolume2D(pybamm.SpatialMethod):
             concatenated at each end (if given).
 
         """
-        raise NotImplementedError
+        # get relevant grid points
+        submesh = self.mesh[domain]
+
+        # Prepare sizes and empty bcs_vector
+        n_lr = submesh.npts_lr
+        n_tb = submesh.npts_tb
+        second_dim_repeats = self._get_auxiliary_domain_repeats(symbol.domains)
+
+        lbc_value, lbc_type = bcs.get("left", (None, None))
+        rbc_value, rbc_type = bcs.get("right", (None, None))
+        tbc_value, tbc_type = bcs.get("top", (None, None))
+        bbc_value, bbc_type = bcs.get("bottom", (None, None))
+
+        # Count number of Neumann boundary conditions
+        n_bcs = 0
+        if lbc_type == "Neumann":
+            n_bcs += 1
+        if rbc_type == "Neumann":
+            n_bcs += 1
+        if tbc_type == "Neumann":
+            n_bcs += 1
+        if bbc_type == "Neumann":
+            n_bcs += 1
+
+        # Add any values from Neumann boundary conditions to the bcs vector
+        if lbc_type == "Neumann" and lbc_value != 0:
+            lbc_sub_matrix = coo_matrix(([1], ([0], [0])), shape=(n_lr - 1 + n_bcs, 1))
+            lbc_matrix = csr_matrix(kron(eye(second_dim_repeats), lbc_sub_matrix))
+            lbc_matrix = vstack([lbc_matrix] * n_tb)
+            if lbc_value.evaluates_to_number():
+                left_bc = lbc_value * pybamm.Vector(np.ones(second_dim_repeats))
+            else:
+                left_bc = lbc_value
+            lbc_vector = pybamm.Matrix(lbc_matrix) @ left_bc
+        elif lbc_type == "Dirichlet" or (lbc_type == "Neumann" and lbc_value == 0):
+            lbc_vector = pybamm.Vector(
+                np.zeros((n_lr - 1 + n_bcs) * second_dim_repeats * n_tb)
+            )
+        elif lbc_type is None and rbc_type is None:
+            lbc_vector = pybamm.Vector(
+                np.zeros((n_tb - 1 + n_bcs) * second_dim_repeats * n_lr)
+            )
+        else:
+            raise ValueError(
+                f"boundary condition must be Dirichlet or Neumann, not '{rbc_type}'"
+            )
+
+        if rbc_type == "Neumann" and rbc_value != 0:
+            rbc_sub_matrix = coo_matrix(
+                ([1], ([n_lr + n_bcs - 2], [0])), shape=(n_lr - 1 + n_bcs, 1)
+            )
+            rbc_matrix = csr_matrix(kron(eye(second_dim_repeats), rbc_sub_matrix))
+            rbc_matrix = vstack([rbc_matrix] * n_tb)
+            if rbc_value.evaluates_to_number():
+                right_bc = rbc_value * pybamm.Vector(np.ones(second_dim_repeats))
+            else:
+                right_bc = rbc_value
+            rbc_vector = pybamm.Matrix(rbc_matrix) @ right_bc
+        elif rbc_type == "Dirichlet" or (rbc_type == "Neumann" and rbc_value == 0):
+            rbc_vector = pybamm.Vector(
+                np.zeros((n_lr - 1 + n_bcs) * second_dim_repeats * n_tb)
+            )
+        elif rbc_type is None and lbc_type is None:
+            rbc_vector = pybamm.Vector(
+                np.zeros((n_tb - 1 + n_bcs) * second_dim_repeats * n_lr)
+            )
+        else:
+            raise ValueError(
+                f"boundary condition must be Dirichlet or Neumann, not '{rbc_type}'"
+            )
+
+        # Add any values from Neumann boundary conditions to the bcs vector
+        if tbc_type == "Neumann" and tbc_value != 0:
+            row_indices = np.arange(0, n_lr)
+            col_indices = np.zeros(len(row_indices))
+            vals = np.ones(len(row_indices))
+            tbc_sub_matrix = coo_matrix(
+                (vals, (row_indices, col_indices)), shape=((n_tb - 1 + n_bcs) * n_lr, 1)
+            )
+            tbc_matrix = csr_matrix(kron(eye(second_dim_repeats), tbc_sub_matrix))
+            if tbc_value.evaluates_to_number():
+                top_bc = tbc_value * pybamm.Vector(np.ones(second_dim_repeats))
+            else:
+                top_bc = tbc_value
+            tbc_vector = pybamm.Matrix(tbc_matrix) @ top_bc
+        elif tbc_type == "Dirichlet" or (tbc_type == "Neumann" and tbc_value == 0):
+            tbc_vector = pybamm.Vector(
+                np.zeros((n_tb - 1 + n_bcs) * second_dim_repeats * n_lr)
+            )
+        elif tbc_type is None and bbc_type is None:
+            tbc_vector = pybamm.Vector(
+                np.zeros((n_lr - 1 + n_bcs) * second_dim_repeats * n_tb)
+            )
+        else:
+            raise ValueError(
+                f"boundary condition must be Dirichlet or Neumann, not '{tbc_type}'"
+            )
+
+        # Add any values from Neumann boundary conditions to the bcs vector
+        if bbc_type == "Neumann" and bbc_value != 0:
+            row_indices = np.arange(
+                (n_lr * (n_tb - 1 + n_bcs)) - n_lr, n_lr * (n_tb - 1 + n_bcs)
+            )
+            col_indices = np.zeros(len(row_indices))
+            vals = np.ones(len(row_indices))
+            bbc_sub_matrix = coo_matrix(
+                (vals, (row_indices, col_indices)), shape=((n_tb - 1 + n_bcs) * n_lr, 1)
+            )
+            bbc_matrix = csr_matrix(kron(eye(second_dim_repeats), bbc_sub_matrix))
+            if bbc_value.evaluates_to_number():
+                bottom_bc = bbc_value * pybamm.Vector(np.ones(second_dim_repeats))
+            else:
+                bottom_bc = bbc_value
+            bbc_vector = pybamm.Matrix(bbc_matrix) @ bottom_bc
+        elif bbc_type == "Dirichlet" or (bbc_type == "Neumann" and tbc_value == 0):
+            bbc_vector = pybamm.Vector(
+                np.zeros((n_tb - 1 + n_bcs) * second_dim_repeats * n_lr)
+            )
+        elif bbc_type is None and tbc_type is None:
+            bbc_vector = pybamm.Vector(
+                np.zeros((n_lr - 1 + n_bcs) * second_dim_repeats * n_tb)
+            )
+        else:
+            raise ValueError(
+                f"boundary condition must be Dirichlet or Neumann, not '{tbc_type}'"
+            )
+
+        bcs_vector = lbc_vector + rbc_vector + tbc_vector + bbc_vector
+        # Need to match the domain. E.g. in the case of the boundary condition
+        # on the particle, the gradient has domain particle but the bcs_vector
+        # has domain electrode, since it is a function of the macroscopic variables
+        bcs_vector.copy_domains(discretised_gradient)
+
+        # Make matrix which makes "gaps" in the the discretised gradient into
+        # which the known Neumann values will be added. E.g. in 1D if the left
+        # boundary condition is Dirichlet and the right Neumann, this matrix will
+        # act to append a zero to the end of the discretised gradient
+        if lbc_type == "Neumann":
+            left_vector = csr_matrix((1, n_lr - 1))
+        else:
+            left_vector = None
+        if rbc_type == "Neumann":
+            right_vector = csr_matrix((1, n_lr - 1))
+        else:
+            right_vector = None
+        if tbc_type == "Neumann":
+            top_vector = csr_matrix((n_lr, (n_tb - 1) * n_lr))
+        else:
+            top_vector = None
+        if bbc_type == "Neumann":
+            bottom_vector = csr_matrix((n_lr, (n_tb - 1) * n_lr))
+        else:
+            bottom_vector = None
+
+        if lbc_type == "Neumann" or rbc_type == "Neumann":
+            sub_matrix = vstack([left_vector, eye(n_lr - 1), right_vector])
+            sub_matrix = block_diag((sub_matrix,) * n_tb)
+        elif tbc_type == "Neumann" or bbc_type == "Neumann":
+            sub_matrix = vstack([top_vector, eye((n_tb - 1) * n_lr), bottom_vector])
+
+        # repeat matrix for secondary dimensions
+        # Convert to csr_matrix so that we can take the index (row-slicing), which is
+        # not supported by the default kron format
+        # Note that this makes column-slicing inefficient, but this should not be an
+        # issue
+        matrix = csr_matrix(kron(eye(second_dim_repeats), sub_matrix))
+
+        new_gradient = pybamm.Matrix(matrix) @ discretised_gradient + bcs_vector
+
+        return new_gradient
 
     def boundary_value_or_flux(self, symbol, discretised_child, bcs=None):
         """
@@ -628,7 +797,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         evaluated on the cell nodes.
         See :meth:`pybamm.FiniteVolume.shift`
         """
-        raise NotImplementedError
+        return self.shift(discretised_symbol, "edge to node", method)
 
     def node_to_edge(self, discretised_symbol, method="arithmetic"):
         """
@@ -636,7 +805,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         evaluated on the cell edges.
         See :meth:`pybamm.FiniteVolume.shift`
         """
-        raise NotImplementedError
+        return self.shift(discretised_symbol, "node to edge", method)
 
     def shift(self, discretised_symbol, shift_key, method):
         """
@@ -668,7 +837,47 @@ class FiniteVolume2D(pybamm.SpatialMethod):
             shape (n+1,) (if `shift_key = "node to edge"`) or (n,) (if
             `shift_key = "edge to node"`)
         """
-        raise NotImplementedError
+
+        def arithmetic_mean(array):
+            """Calculate the arithmetic mean of an array using matrix multiplication"""
+            # Create appropriate submesh by combining submeshes in domain
+            raise NotImplementedError
+
+        def harmonic_mean(array):
+            """
+            Calculate the harmonic mean of an array using matrix multiplication.
+            The harmonic mean is computed as
+
+            .. math::
+                D_{eff} = \\frac{D_1  D_2}{\\beta D_2 + (1 - \\beta) D_1},
+
+            where
+
+            .. math::
+                \\beta = \\frac{\\Delta x_1}{\\Delta x_2 + \\Delta x_1}
+
+            accounts for the difference in the control volume widths. This is the
+            definiton from [1], which is the same as that in [2] but with slightly
+            different notation.
+
+            [1] Torchio, M et al. "LIONSIMBA: A Matlab Framework Based on a Finite
+            Volume Model Suitable for Li-Ion Battery Design, Simulation, and Control."
+            (2016).
+            [2] Recktenwald, Gerald. "The control-volume finite-difference
+            approximation to the diffusion equation." (2012).
+            """
+            raise NotImplementedError
+
+        # If discretised_symbol evaluates to number there is no need to average
+        if discretised_symbol.size == 1:
+            out = discretised_symbol
+        elif method == "arithmetic":
+            out = arithmetic_mean(discretised_symbol)
+        elif method == "harmonic":
+            out = harmonic_mean(discretised_symbol)
+        else:
+            raise ValueError(f"method '{method}' not recognised")
+        return out
 
     def upwind_or_downwind(self, symbol, discretised_symbol, bcs, direction):
         """
