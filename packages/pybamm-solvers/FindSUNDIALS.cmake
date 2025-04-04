@@ -21,7 +21,7 @@
 #    :code:`PATHS` entry.
 #
 #    This module will define the following variables:
-#    :code:`SUNDIALS_INCLUDE_DIRS` - Location of the SUNDIALS includes
+#    :code:`SUNDIALS_INCLUDE_DIR` - Location of the SUNDIALS includes
 #    :code:`SUNDIALS_LIBRARIES` - Required libraries for all requested components
 
 # List of the valid SUNDIALS components
