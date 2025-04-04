@@ -805,6 +805,23 @@ class ProcessedVariable2DSciKitFEM(ProcessedVariable2D):
         return entries
 
 
+class ProcessedVariable2DReal(ProcessedVariable):
+    def _shape(self, t):
+        return [self.mesh.npts, len(t)]
+
+    def initialise(self):
+        if self.entries_raw_initialized:
+            return
+
+        entries = self.observe_raw()
+
+        # entries_for_interp, coords = self._interp_setup(entries, t)
+
+        self._entries_raw = entries
+        # self._entries_for_interp_raw = entries_for_interp
+        # self._coords_raw = coords
+
+
 def process_variable(base_variables, *args, **kwargs):
     mesh = base_variables[0].mesh
     domain = base_variables[0].domain
@@ -820,6 +837,9 @@ def process_variable(base_variables, *args, **kwargs):
         and isinstance(mesh, pybamm.ScikitSubMesh2D)
     ):
         return ProcessedVariable2DSciKitFEM(base_variables, *args, **kwargs)
+
+    if mesh and hasattr(mesh, "edges_lr") and hasattr(mesh, "edges_tb"):
+        return ProcessedVariable2DReal(base_variables, *args, **kwargs)
 
     # check variable shape
     if len(base_eval_shape) == 0 or base_eval_shape[0] == 1:

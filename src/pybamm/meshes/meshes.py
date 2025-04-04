@@ -170,8 +170,44 @@ class Mesh(dict):
             raise ValueError("Submesh domains being combined cannot be empty")
         # Check that the final edge of each submesh is the same as the first edge of the
         # next submesh
+        # TODO: We need a more robust way to check whether the submeshes are being combined lr or tb
         for i in range(len(submeshnames) - 1):
-            if self[submeshnames[i]].edges[-1] == self[submeshnames[i + 1]].edges[0]:
+            if self[submeshnames[i]].dimension != self[submeshnames[i + 1]].dimension:
+                raise pybamm.DomainError(
+                    "Cannot combine submeshes of different dimensions"
+                )
+            elif self[submeshnames[i]].dimension == 2:
+                if "left" in submeshnames[i] or "right" in submeshnames[i + 1]:
+                    # Make sure that the lr edges are aligned
+                    if (
+                        self[submeshnames[i]].edges_lr[-1]
+                        != self[submeshnames[i + 1]].edges_lr[0]
+                    ):
+                        raise pybamm.DomainError("lr edges are not aligned")
+                    elif (
+                        self[submeshnames[i]].edges_tb
+                        != self[submeshnames[i + 1]].edges_tb
+                    ).any():
+                        raise pybamm.DomainError("tb edges are not aligned")
+                    else:
+                        pass
+
+                elif "bottom" in submeshnames[i] or "top" in submeshnames[i + 1]:
+                    # Make sure that the tb edges are aligned
+                    if (
+                        self[submeshnames[i]].edges_tb[-1]
+                        != self[submeshnames[i + 1]].edges_tb[0]
+                    ):
+                        raise pybamm.DomainError("tb edges are not aligned")
+                    elif (
+                        self[submeshnames[i]].edges_lr
+                        != self[submeshnames[i + 1]].edges_lr
+                    ).any():
+                        raise pybamm.DomainError("lr edges are not aligned")
+                    else:
+                        pass
+                pass
+            elif self[submeshnames[i]].edges[-1] == self[submeshnames[i + 1]].edges[0]:
                 # submeshes are aligned, all good
                 pass
             elif hasattr(self[submeshnames[i]], "min") or hasattr(
@@ -189,12 +225,40 @@ class Mesh(dict):
                 raise pybamm.DomainError(
                     "trying to combine two meshes in different coordinate systems"
                 )
-        combined_submesh_edges = np.concatenate(
-            [self[submeshnames[0]].edges]
-            + [self[submeshname].edges[1:] for submeshname in submeshnames[1:]]
-        )
+
         coord_sys = self[submeshnames[0]].coord_sys
-        submesh = pybamm.SubMesh1D(combined_submesh_edges, coord_sys)
+        if self[submeshnames[0]].dimension == 1:
+            combined_submesh_edges = np.concatenate(
+                [self[submeshnames[0]].edges]
+                + [self[submeshname].edges[1:] for submeshname in submeshnames[1:]]
+            )
+            submesh = pybamm.SubMesh1D(combined_submesh_edges, coord_sys)
+        elif self[submeshnames[0]].dimension == 2:
+            # If it's an lr concatenation, then we only need to concatenate the edges_lr
+            if "left" in submeshnames[0] or "right" in submeshnames[-1]:
+                combined_submesh_edges_lr = np.concatenate(
+                    [self[submeshnames[0]].edges_lr]
+                    + [
+                        self[submeshname].edges_lr[1:]
+                        for submeshname in submeshnames[1:]
+                    ]
+                )
+                combined_submesh_edges_tb = self[submeshnames[0]].edges_tb
+            elif "top" in submeshnames[0] or "bottom" in submeshnames[-1]:
+                combined_submesh_edges_tb = np.concatenate(
+                    [self[submeshnames[0]].edges_tb]
+                    + [
+                        self[submeshname].edges_tb[1:]
+                        for submeshname in submeshnames[1:]
+                    ]
+                )
+                combined_submesh_edges_lr = self[submeshnames[0]].edges_lr
+            else:
+                raise pybamm.DomainError("could not determine how to combine submeshes")
+            submesh = pybamm.SubMesh2D(
+                combined_submesh_edges_lr, combined_submesh_edges_tb, coord_sys
+            )
+
         if getattr(self[submeshnames[0]], "length", None) is not None:
             # Assume that the ghost cells have the same length as the first submesh
             if any("ghost" in submeshname for submeshname in submeshnames):
@@ -214,7 +278,22 @@ class Mesh(dict):
                 min = self[submeshname].min
             else:
                 min = 0
-            submesh.internal_boundaries.append(self[submeshname].edges[0] + min)
+            if submesh.dimension == 1:
+                submesh.internal_boundaries.append(self[submeshname].edges[0] + min)
+            if (
+                "left" in submeshname
+                or "left" in submeshnames[i - 1]
+                or "right" in submeshname
+            ):
+                submesh.internal_boundaries.append(self[submeshname].edges_lr[0] + min)
+            elif (
+                "top" in submeshname
+                or "top" in submeshnames[i - 1]
+                or "bottom" in submeshname
+            ):
+                submesh.internal_boundaries.append(self[submeshname].edges_tb[0] + min)
+            else:
+                raise pybamm.DomainError("could not determine how to combine submeshes")
         return submesh
 
     def add_ghost_meshes(self):

@@ -30,7 +30,7 @@ class SubMesh2D(SubMesh):
         the tabs
     """
 
-    def __init__(self, edges_lr, edges_tb, coord_sys_lr, coord_sys_tb, tabs=None):
+    def __init__(self, edges_lr, edges_tb, coord_sys, tabs=None):
         self.edges_lr = edges_lr
         self.edges_tb = edges_tb
         self.nodes_lr = (self.edges_lr[1:] + self.edges_lr[:-1]) / 2
@@ -41,8 +41,8 @@ class SubMesh2D(SubMesh):
         self.d_nodes_tb = np.diff(self.nodes_tb)
         self.npts_lr = self.nodes_lr.size
         self.npts_tb = self.nodes_tb.size
-        self.coord_sys_lr = coord_sys_lr
-        self.coord_sys_tb = coord_sys_tb
+        self.npts = self.npts_lr * self.npts_tb
+        self.coord_sys = coord_sys
         self.internal_boundaries = []
         self.dimension = 2
 
@@ -94,21 +94,19 @@ class SubMesh2D(SubMesh):
                 [self.edges_lr[-1], 2 * self.edges_lr[-1] - self.edges_lr[-2]]
             )
             gs_edges_tb = self.edges_tb
-        elif side == "bottom":
+        elif side == "top":
             gs_edges_lr = self.edges_lr
             gs_edges_tb = np.array(
                 [2 * self.edges_tb[0] - self.edges_tb[1], self.edges_tb[0]]
             )
-        elif side == "top":
+        elif side == "bottom":
             gs_edges_lr = self.edges_lr
             gs_edges_tb = np.array(
                 [self.edges_tb[-1], 2 * self.edges_tb[-1] - self.edges_tb[-2]]
             )
         else:
             raise ValueError(f"Invalid side: {side}")
-        gs_submesh = pybamm.SubMesh2D(
-            gs_edges_lr, gs_edges_tb, self.coord_sys_lr, self.coord_sys_tb
-        )
+        gs_submesh = pybamm.SubMesh2D(gs_edges_lr, gs_edges_tb, self.coord_sys)
         return gs_submesh
 
 
@@ -130,11 +128,13 @@ class Uniform2DSubMesh(SubMesh2D):
         edges_tb = np.linspace(
             spatial_lims_tb["min"], spatial_lims_tb["max"], npts_tb + 1
         )
+        if spatial_var_lr.coord_sys != spatial_var_tb.coord_sys:
+            raise pybamm.GeometryError(
+                "Coordinate systems must be the same for 2D submeshes"
+            )
+        coord_sys = spatial_var_lr.coord_sys
 
-        coord_sys_lr = spatial_var_lr.coord_sys
-        coord_sys_tb = spatial_var_tb.coord_sys
-
-        super().__init__(edges_lr, edges_tb, coord_sys_lr, coord_sys_tb, tabs=tabs)
+        super().__init__(edges_lr, edges_tb, coord_sys, tabs=tabs)
 
     def read_lims(self, lims):
         # Separate limits and tabs
