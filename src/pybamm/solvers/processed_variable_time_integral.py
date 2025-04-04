@@ -1,3 +1,4 @@
+from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal, Union
 import numpy.typing as npt
@@ -14,7 +15,7 @@ class ProcessedVariableTimeIntegral:
     @staticmethod
     def from_pybamm_var(
         var: Union[pybamm.DiscreteTimeSum, pybamm.ExplicitTimeIntegral],
-    ) -> "ProcessedVariableTimeIntegral":
+    ) -> ProcessedVariableTimeIntegral:
         if isinstance(var, pybamm.DiscreteTimeSum):
             return ProcessedVariableTimeIntegral(
                 method="discrete", initial_condition=0.0, discrete_times=var.sum_times
