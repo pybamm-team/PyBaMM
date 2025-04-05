@@ -14,7 +14,7 @@ class ProcessedVariableTimeIntegral:
 
     @staticmethod
     def from_pybamm_var(
-        var: Union[pybamm.DiscreteTimeSum, pybamm.ExplicitTimeIntegral],
+        var: pybamm.DiscreteTimeSum | pybamm.ExplicitTimeIntegral,
     ) -> ProcessedVariableTimeIntegral:
         if isinstance(var, pybamm.DiscreteTimeSum):
             return ProcessedVariableTimeIntegral(
