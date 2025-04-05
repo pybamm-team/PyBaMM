@@ -87,12 +87,11 @@
       "sympy": [],
       "bpx": [],
       "tqdm": [],
-      "matplotlib": [],
+      "matplotlib": []
     },
     "env": {
       "LD_LIBRARY_PATH": "/home/runner/.local/lib"
     }
-  }
 
   // Combinations of libraries/python versions can be excluded/included
   // from the set to test. Each entry is a dictionary containing additional
@@ -174,4 +173,15 @@
   //    "some_benchmark": 0.01,     // Threshold of 1%
   //    "another_benchmark": 0.5,   // Threshold of 50%
   // },
+  },
+  "exclude": [
+    {"benchmark": "memory_sims.MemSPMSimulationCCCV.*"},
+    {"benchmark": "memory_sims.MemDFNSimulationCCCV.*"},
+    {"benchmark": "memory_sims.MemSPMSimulationGITT.*"},
+    {"benchmark": "memory_sims.MemDFNSimulationGITT.*"},
+    {"benchmark": "memory_unit_benchmarks.MemCreateExpression.*"},
+    {"benchmark": "memory_unit_benchmarks.MemParameteriseModel.*"},
+    {"benchmark": "memory_unit_benchmarks.MemDiscretiseModel.*"},
+    {"benchmark": "memory_unit_benchmarks.MemSolveModel.*"}
+  ]
 }
