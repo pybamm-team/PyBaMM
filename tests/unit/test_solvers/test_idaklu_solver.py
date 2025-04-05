@@ -1229,17 +1229,7 @@ class TestIDAKLUSolver:
                 root_method="lm",
             )
 
-            if form == "python":
-                with pytest.raises(
-                    pybamm.SolverError,
-                    match="Unsupported option for convert_to_format=python",
-                ):
-                    with pytest.raises(
-                        DeprecationWarning,
-                        match="The python-idaklu solver has been deprecated.",
-                    ):
-                        _ = solver.solve(model, t_eval)
-            elif form == "jax":
+            if form == "jax":
                 with pytest.raises(
                     pybamm.SolverError,
                     match="Unsupported evaluation engine for convert_to_format=jax",

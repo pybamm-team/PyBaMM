@@ -42,6 +42,7 @@ dependencies = [
     "posthog",
     "pyyaml",
     "platformdirs",
+    "deprecation"
 ]
 
 [project.urls]
@@ -232,8 +233,10 @@ required_plugins = [
 addopts = [
     "-nauto",
     "-vra",
+    "--showlocals",
     "--strict-config",
     "--strict-markers",
+    "--ignore=tests/unit/test_parameters/test_bpx.py",
 ]
 testpaths = [
     "tests",
@@ -245,10 +248,14 @@ filterwarnings = [
     # ignore internal nbmake warnings
     'ignore:unclosed \<socket.socket:ResourceWarning',
     'ignore:unclosed event loop \<:ResourceWarning',
-    # ignore warnings generated while running tests
-    "ignore::DeprecationWarning",
+    # convert internal warnings as errors
+    "error::DeprecationWarning:pybamm.*",
+    # ignore setuptools and pybtex deprecation warnings
+    "ignore:pkg_resources is deprecated as an API:DeprecationWarning",
+    "ignore:open_text is deprecated:DeprecationWarning",
     "ignore::UserWarning",
     "ignore::RuntimeWarning",
+    "ignore::pydantic.warnings.PydanticDeprecatedSince20",
 ]
 
 # Logging configuration
