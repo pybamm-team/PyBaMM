@@ -1066,6 +1066,15 @@
       "contributions": [
         "test"
       ]
+    },
+    {
+      "login": "JC230903",
+      "name": "JC_005",
+      "avatar_url": "https://avatars.githubusercontent.com/u/152909047?v=4",
+      "profile": "https://github.com/JC230903",
+      "contributions": [
+        "infra"
+      ]
     }
   ],
   "contributorsPerLine": 7,
