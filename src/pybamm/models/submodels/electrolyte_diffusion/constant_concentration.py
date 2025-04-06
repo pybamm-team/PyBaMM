@@ -2,10 +2,10 @@
 # Class for leading-order electrolyte diffusion employing stefan-maxwell
 #
 import pybamm
-from typing import Dict, Optional, Any, List, TYPE_CHECKING
+from typing import Dict, Optional, Any, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from pybamm import ParameterValues, Symbol
+    from pybamm import ParameterValues
 
 from .base_electrolyte_diffusion import BaseElectrolyteDiffusion
 
@@ -21,7 +21,9 @@ class ConstantConcentration(BaseElectrolyteDiffusion):
         A dictionary of options to be passed to the model.
     """
 
-    def __init__(self, param: "ParameterValues", options: Optional[Dict[str, Any]] = None) -> None:
+    def __init__(
+        self, param: "ParameterValues", options: Optional[Dict[str, Any]] = None
+    ) -> None:
         super().__init__(param, options)
 
     def get_fundamental_variables(self) -> Dict[str, pybamm.Symbol]:
@@ -30,8 +32,8 @@ class ConstantConcentration(BaseElectrolyteDiffusion):
             domain: self.param.domain_params[domain.split()[0]].epsilon_init * c_e_init
             for domain in self.options.whole_cell_domains
         }
-        variables: Dict[str, pybamm.Symbol] = self._get_standard_porosity_times_concentration_variables(
-            eps_c_e_dict
+        variables: Dict[str, pybamm.Symbol] = (
+            self._get_standard_porosity_times_concentration_variables(eps_c_e_dict)
         )
         N_e: pybamm.Symbol = pybamm.FullBroadcastToEdges(
             0,
@@ -43,12 +45,16 @@ class ConstantConcentration(BaseElectrolyteDiffusion):
 
         return variables
 
-    def get_coupled_variables(self, variables: Dict[str, pybamm.Symbol]) -> Dict[str, pybamm.Symbol]:
+    def get_coupled_variables(
+        self, variables: Dict[str, pybamm.Symbol]
+    ) -> Dict[str, pybamm.Symbol]:
         c_e_dict: Dict[str, pybamm.Symbol] = {}
         for domain in self.options.whole_cell_domains:
             Domain = domain.capitalize()
             eps_k: pybamm.Symbol = variables[f"{Domain} porosity"]
-            eps_c_e_k: pybamm.Symbol = variables[f"{Domain} porosity times concentration [mol.m-3]"]
+            eps_c_e_k: pybamm.Symbol = variables[
+                f"{Domain} porosity times concentration [mol.m-3]"
+            ]
             c_e_k: pybamm.Symbol = eps_c_e_k / eps_k
             c_e_dict[domain] = c_e_k
 
