@@ -291,6 +291,11 @@ class BaseModel:
         self._concatenated_initial_conditions = concatenated_initial_conditions
 
     @property
+    def built(self):
+        "Returns a boolean for the model built status."
+        return self._built
+
+    @property
     def mass_matrix(self):
         """Returns the mass matrix for the system of differential equations after discretisation."""
         return self._mass_matrix
