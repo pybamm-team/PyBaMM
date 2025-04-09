@@ -2,7 +2,6 @@
 # Compare different discretisations in the particle
 #
 import argparse
-from typing import Any
 import numpy as np
 import pybamm
 import matplotlib.pyplot as plt
@@ -49,7 +48,7 @@ for i, model in enumerate(models):
     disc.process_model(model)
 
 # solve model
-solutions: list[Any] = [None] * len(models)
+solutions = [None] * len(models)
 t_eval = np.linspace(0, 3600, 100)
 for i, model in enumerate(models):
     solutions[i] = model.default_solver.solve(model, t_eval)

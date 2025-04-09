@@ -267,7 +267,12 @@ allow_redefinition = true
 disable_error_code = ["call-overload", "operator"]
 strict = false
 enable_error_code = ["ignore-without-code", "redundant-expr", "truthy-bool"]
-exclude = "^(build/|docs/conf\\.py)$"
+exclude = [
+    "^build/",
+    "^build/lib/",
+    "^docs/conf\\.py$",
+    "^examples/scripts/"
+]
 
 [[tool.mypy.overrides]]
 module = [

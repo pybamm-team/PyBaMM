@@ -43,14 +43,13 @@ while time < end_time:
     time += dt
 
 # plot
-if step_solution is not None:
-    time_in_seconds = solution["Time [s]"].entries
-    step_time_in_seconds = step_solution["Time [s]"].entries
-    voltage = solution["Voltage [V]"].entries
-    step_voltage = step_solution["Voltage [V]"].entries
-    plt.plot(time_in_seconds, voltage, "b-", label="SPMe (continuous solve)")
-    plt.plot(step_time_in_seconds, step_voltage, "ro", label="SPMe (stepped solve)")
-    plt.xlabel(r"$t$")
-    plt.ylabel("Voltage [V]")
-    plt.legend()
-    plt.show()
+time_in_seconds = solution["Time [s]"].entries
+step_time_in_seconds = step_solution["Time [s]"].entries
+voltage = solution["Voltage [V]"].entries
+step_voltage = step_solution["Voltage [V]"].entries
+plt.plot(time_in_seconds, voltage, "b-", label="SPMe (continuous solve)")
+plt.plot(step_time_in_seconds, step_voltage, "ro", label="SPMe (stepped solve)")
+plt.xlabel(r"$t$")
+plt.ylabel("Voltage [V]")
+plt.legend()
+plt.show()
