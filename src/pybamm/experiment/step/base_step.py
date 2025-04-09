@@ -140,7 +140,7 @@ class BaseStep:
             self.value = pybamm.Interpolant(
                 t,
                 y,
-                pybamm.t - pybamm.InputParameter("start time"),  # type: ignore[arg-type]
+                [pybamm.t - pybamm.InputParameter("start time")],
                 name="Drive Cycle",
             )
             self.period = np.diff(t).min()

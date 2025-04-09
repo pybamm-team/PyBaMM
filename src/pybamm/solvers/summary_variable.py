@@ -5,6 +5,7 @@ from __future__ import annotations
 import pybamm
 import numpy as np
 from typing import Any, cast
+from numpy.typing import NDArray
 
 
 class SummaryVariables:
@@ -84,8 +85,9 @@ class SummaryVariables:
         Return names of all possible summary variables, including eSOH variables
          if appropriate.
         """
-        if self._all_variables is not None:
-            return self._all_variables
+        all_vars = getattr(self, "_all_variables", None)
+        if all_vars is not None:
+            return all_vars
         base_vars = self._possible_variables.copy()
         base_vars.extend(
             f"Change in {var[0].lower() + var[1:]}" for var in self._possible_variables
@@ -95,7 +97,7 @@ class SummaryVariables:
             base_vars.extend(self.esoh_variables)
 
         self._all_variables = base_vars
-        return self._all_variables
+        return base_vars
 
     @property
     def esoh_variables(self) -> list[str] | None:
@@ -110,7 +112,7 @@ class SummaryVariables:
             self._esoh_variables = esoh_vars
         return self._esoh_variables
 
-    def __getitem__(self, key: str) -> float | list[float]:
+    def __getitem__(self, key: str) -> float | list[float] | NDArray[Any]:
         """
         Access or compute a summary variable by its name.
 
@@ -128,7 +130,7 @@ class SummaryVariables:
             # return it if it exists
             return self._variables[key]
         elif key == "Cycle number":
-            return cast(list[float], self.cycle_number.tolist())
+            return self.cycle_number
         elif key not in self.all_variables:
             # check it's listed as a summary variable
             raise KeyError(f"Variable '{key}' is not a summary variable.")
