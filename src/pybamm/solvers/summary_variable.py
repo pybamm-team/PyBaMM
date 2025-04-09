@@ -72,7 +72,7 @@ class SummaryVariables:
         self.first_state = None
         self.last_state = None
         self.cycles = cycle_summary_variables
-        self.cycle_number = np.arange(1, len(self.cycles) + 1, dtype=float)
+        self.cycle_number = np.arange(1, len(self.cycles) + 1)
         first_cycle = self.cycles[0]
         self.calc_esoh = first_cycle.calc_esoh
         self.esoh_solver = first_cycle.esoh_solver
