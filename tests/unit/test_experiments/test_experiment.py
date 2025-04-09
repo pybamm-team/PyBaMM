@@ -355,3 +355,60 @@ class TestExperiment:
         result = np.array(f(test_points)).flatten()
 
         np.testing.assert_allclose(result, expected, rtol=1e-7, atol=1e-6)
+
+    def test_ambient_temperature_interpolant_in_lumped_model(self):
+        options = {"thermal": "lumped"}
+        model = pybamm.lithium_ion.DFN(options)
+
+        geometry = model.default_geometry
+
+        times = np.arange(0, 1810, 10)
+        tmax = times[-1]
+
+        def ambient_temperature(t):
+            return pybamm.Interpolant(times, 298.15 + 20 * (times / tmax), pybamm.t)
+
+        param = model.default_parameter_values
+        param.update(
+            {"Ambient temperature [K]": ambient_temperature}, check_already_exists=False
+        )
+
+        param.process_model(model)
+        param.process_geometry(geometry)
+
+        var_pts = {"x_n": 30, "x_s": 30, "x_p": 30, "r_n": 10, "r_p": 10}
+        mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
+        disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+        disc.process_model(model)
+
+        t_eval = np.linspace(0, 1800, 100)
+        solver = pybamm.CasadiSolver(mode="fast", atol=1e-6, rtol=1e-3)
+        solution = solver.solve(model, t_eval)
+
+        amb_temp = solution["Ambient temperature [K]"]
+
+        t_sol = solution.t
+        computed = amb_temp(t_sol)
+
+        expected = 298.15 + 20 * (t_sol / tmax)
+
+        np.testing.assert_allclose(computed, expected, rtol=1e-2)
+
+    def test_ambient_function_required_spatial_params(self):
+        options = {"particle": "quadratic profile", "thermal": "lumped"}
+        model = pybamm.lithium_ion.SPMe(options)
+
+        def ambient_temperature(t, y=None, z=None):
+            return 300 + t * 100 / 3600 + 2 * y * z
+
+        param = pybamm.ParameterValues("Chen2020")
+        param.update(
+            {"Ambient temperature [K]": ambient_temperature}, check_already_exists=False
+        )
+
+        with pytest.raises(
+            ValueError, match=r"Dimensions .* do not exist\. Expected .*"
+        ):
+            sim = pybamm.Simulation(model, parameter_values=param)
+            solution = sim.solve([0, 3600])
+            solution["Ambient temperature [K]"](5, 2, 4)

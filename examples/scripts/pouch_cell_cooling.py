@@ -20,7 +20,7 @@ L_z = param.L_z
 parameter_values = model.default_parameter_values
 
 
-def T_amb(y, z, t):
+def T_amb(t, y=None, z=None):
     return 300 + 20 * pybamm.sin(np.pi * y / L_y) * pybamm.sin(np.pi * z / L_z)
 
 
