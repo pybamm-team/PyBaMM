@@ -21,8 +21,6 @@ class TestSimulation:
 
     def test_basic_ops(self):
         model = pybamm.lithium_ion.SPM()
-        if model is None:
-            pytest.skip("Model is None, skipping test.")
 
         sim = pybamm.Simulation(model)
 
@@ -32,11 +30,9 @@ class TestSimulation:
         V = sim.model.variables["Voltage [V]"]
         assert V.has_symbol_of_classes(pybamm.Parameter)
         assert not V.has_symbol_of_classes(pybamm.Matrix)
-
+        sim._set_parameters()
         assert sim._mesh is None
         assert sim._disc is None
-        if sim.model_with_set_params is None:
-            pytest.skip("Model with set parameters is None, skipping further tests.")
         V = sim.model_with_set_params.variables["Voltage [V]"]
         assert not V.has_symbol_of_classes(pybamm.Parameter)
         assert not V.has_symbol_of_classes(pybamm.Matrix)
@@ -144,6 +140,7 @@ class TestSimulation:
 
     def test_reuse_commands(self):
         sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
+        sim._set_parameters()
 
         sim.build()
         sim.build()
@@ -153,6 +150,7 @@ class TestSimulation:
 
         sim.build()
         sim.solve([0, 600])
+        sim._set_parameters()
 
     def test_set_crate(self):
         model = pybamm.lithium_ion.SPM()
