@@ -4,6 +4,7 @@
 import numbers
 import numpy as np
 import pybamm
+import warnings
 
 
 class Mesh(dict):
@@ -254,7 +255,18 @@ class Mesh(dict):
                 )
                 combined_submesh_edges_lr = self[submeshnames[0]].edges_lr
             else:
-                raise pybamm.DomainError("could not determine how to combine submeshes")
+                warnings.warn(
+                    "Could not determine how to combine submeshes. Assuming lr concatenation.",
+                    stacklevel=2,
+                )
+                combined_submesh_edges_lr = np.concatenate(
+                    [self[submeshnames[0]].edges_lr]
+                    + [
+                        self[submeshname].edges_lr[1:]
+                        for submeshname in submeshnames[1:]
+                    ]
+                )
+                combined_submesh_edges_tb = self[submeshnames[0]].edges_tb
             submesh = pybamm.SubMesh2D(
                 combined_submesh_edges_lr, combined_submesh_edges_tb, coord_sys
             )
@@ -281,7 +293,7 @@ class Mesh(dict):
                 min = 0
             if submesh.dimension == 1:
                 submesh.internal_boundaries.append(self[submeshname].edges[0] + min)
-            if (
+            elif (
                 "left" in submeshname
                 or "left" in submeshnames[i - 1]
                 or "right" in submeshname
@@ -294,7 +306,11 @@ class Mesh(dict):
             ):
                 submesh.internal_boundaries.append(self[submeshname].edges_tb[0] + min)
             else:
-                raise pybamm.DomainError("could not determine how to combine submeshes")
+                warnings.warn(
+                    "Could not determine how to combine submeshes. Assuming lr concatenation.",
+                    stacklevel=2,
+                )
+                submesh.internal_boundaries.append(self[submeshname].edges_lr[0] + min)
         return submesh
 
     def add_ghost_meshes(self):

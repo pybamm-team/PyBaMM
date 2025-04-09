@@ -468,14 +468,14 @@ class SparseStack(Concatenation):
         return SparseStack(*children)
 
 
-class VectorField(SparseStack):
+class VectorField(Concatenation):
     """
     A node in the expression tree representing a vector field.
     """
 
     def __init__(self, lr_field, tb_field):
         children = [lr_field, tb_field]
-        super().__init__(*children, name="vector_field")
+        super().__init__(*children, name="vector_field", check_domain=False)
         self.lr_field = lr_field
         self.tb_field = tb_field
 
