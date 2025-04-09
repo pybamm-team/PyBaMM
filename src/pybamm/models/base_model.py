@@ -414,6 +414,9 @@ class BaseModel:
         if len(self.rhs) == 0 and len(self.algebraic) != 0:
             return pybamm.CasadiAlgebraicSolver()
         else:
+            pybamm.logger.warning(
+                "The default solver changed to IDAKLUSolver after the v25.4.0. release. You can swap back to the previous default by using `pybamm.CasadiSolver()` instead."
+            )
             return pybamm.IDAKLUSolver()
 
     @property
