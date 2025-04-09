@@ -34,6 +34,18 @@ The notebooks are organised into subfolders, and can be viewed in the galleries 
     notebooks/creating_models/7-creating-a-submodel.ipynb
 
 .. nbgallery::
+    :caption: performance
+    :glob:
+
+    notebooks/performance/01-simulation-pipeline.ipynb
+    notebooks/performance/02-input-parameters.ipynb
+    notebooks/performance/03-pybamm-solvers.ipynb
+    notebooks/performance/04-interpolation-points.ipynb
+    notebooks/performance/05-solver-tolerances.ipynb
+    notebooks/performance/06-output-variables.ipynb
+    notebooks/performance/07-multithreading.ipynb
+
+.. nbgallery::
     :caption: Expression Tree
     :glob:
 

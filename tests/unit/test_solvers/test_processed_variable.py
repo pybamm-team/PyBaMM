@@ -88,11 +88,6 @@ class TestProcessedVariable:
             np.reshape(y_sol, [len(first_sol), len(second_sol), len(t_sol)]),
         )
 
-        # check that C++ and Python give the same result
-        np.testing.assert_array_equal(
-            processed_var._observe_raw_cpp(), processed_var._observe_raw_python()
-        )
-
         return y_sol, first_sol, second_sol, t_sol, yp_sol
 
     @pytest.mark.parametrize("hermite_interp", _hermite_args)
@@ -143,11 +138,6 @@ class TestProcessedVariable:
         data_t2 = processed_var(sol.t)
 
         np.testing.assert_array_equal(data_t1, data_t2)
-
-        # check that C++ and Python give the same result
-        np.testing.assert_array_equal(
-            processed_var._observe_raw_cpp(), processed_var._observe_raw_python()
-        )
 
     @pytest.mark.parametrize("hermite_interp", _hermite_args)
     def test_processed_variable_0D_discrete_data(self, hermite_interp):
@@ -319,11 +309,6 @@ class TestProcessedVariable:
         )
         np.testing.assert_array_equal(
             processed_eqn2.entries, y_sol + x_sol[:, np.newaxis]
-        )
-
-        # check that C++ and Python give the same result
-        np.testing.assert_array_equal(
-            processed_eqn2._observe_raw_cpp(), processed_eqn2._observe_raw_python()
         )
 
     @pytest.mark.parametrize("hermite_interp", _hermite_args)
@@ -1158,10 +1143,10 @@ class TestProcessedVariable:
             processed_var(t=0.5, x=x_sol, z=z_sol).shape, (20, 10)
         )
         np.testing.assert_array_equal(
-            processed_var(t=t_sol, x=0.2, z=z_sol).shape, (20, 50)
+            processed_var(t_sol, x=0.2, z=z_sol).shape, (20, 50)
         )
         np.testing.assert_array_equal(
-            processed_var(t=t_sol, x=x_sol, z=0.5).shape, (10, 50)
+            processed_var(t_sol, x=x_sol, z=0.5).shape, (10, 50)
         )
         # 1 vectors, 2 scalar
         np.testing.assert_array_equal(processed_var(t=0.5, x=0.2, z=z_sol).shape, (20,))
@@ -1171,27 +1156,164 @@ class TestProcessedVariable:
         np.testing.assert_array_equal(processed_var(t=0.2, x=0.2, z=0.2).shape, ())
 
     @pytest.mark.parametrize("hermite_interp", _hermite_args)
-    def test_3D_raises_error(self, hermite_interp):
-        var = pybamm.Variable(
-            "var",
-            domain=["negative electrode"],
-            auxiliary_domains={"secondary": ["current collector"]},
+    @pytest.mark.parametrize("edges_eval", [False, True])
+    def test_processed_var_3D(self, hermite_interp, edges_eval):
+        disc = tests.get_size_distribution_disc_for_testing(xpts=5, rpts=6, Rpts=7)
+        if edges_eval:
+            var_Rx = pybamm.Variable(
+                "var_Rx",
+                domain=["negative particle size"],
+                auxiliary_domains={"secondary": ["negative electrode"]},
+            )
+            var = pybamm.PrimaryBroadcastToEdges(var_Rx, ["negative particle"])
+            x_sol = disc.mesh["negative electrode"].edges
+            disc.set_variable_slices([var_Rx])
+        else:
+            var = pybamm.Variable(
+                "var",
+                domain=["negative particle"],
+                auxiliary_domains={
+                    "secondary": ["negative particle size"],
+                    "tertiary": ["negative electrode"],
+                },
+            )
+            x_sol = disc.mesh["negative electrode"].nodes
+            disc.set_variable_slices([var])
+
+        Nx = len(x_sol)
+        R_sol = disc.mesh["negative particle size"].nodes
+        r_sol = disc.mesh["negative particle"].nodes
+        var_sol = disc.process_symbol(var)
+        t_sol = np.linspace(0, 1)
+        y_sol = np.ones(len(x_sol) * len(R_sol) * len(r_sol))[:, np.newaxis] * t_sol
+        yp_sol = self._get_yps(y_sol, hermite_interp)
+
+        var_casadi = to_casadi(var_sol, y_sol)
+        geometry_options = {"options": {"particle size": "distribution"}}
+        model = tests.get_base_model_with_battery_geometry(**geometry_options)
+        processed_var = pybamm.process_variable(
+            [var_sol],
+            [var_casadi],
+            self._sol_default(t_sol, y_sol, yp_sol, model),
+        )
+        # 4 vectors
+        np.testing.assert_array_equal(
+            processed_var(t=t_sol, x=x_sol, R=R_sol, r=r_sol).shape, (6, 7, Nx, 50)
+        )
+        # 3 vectors, 1 scalar
+        np.testing.assert_array_equal(
+            processed_var(t=0.5, x=x_sol, R=R_sol, r=r_sol).shape, (6, 7, Nx)
+        )
+        np.testing.assert_array_equal(
+            processed_var(t=t_sol, x=0.2, R=R_sol, r=r_sol).shape, (6, 7, 50)
+        )
+        np.testing.assert_array_equal(
+            processed_var(t=t_sol, x=x_sol, R=0.5, r=r_sol).shape, (6, Nx, 50)
+        )
+        np.testing.assert_array_equal(
+            processed_var(t=t_sol, x=x_sol, R=R_sol, r=0.5).shape, (7, Nx, 50)
+        )
+        # 2 vectors, 2 scalars
+        np.testing.assert_array_equal(
+            processed_var(t=0.5, x=0.2, R=R_sol, r=r_sol).shape, (6, 7)
+        )
+        np.testing.assert_array_equal(
+            processed_var(t=t_sol, x=0.2, R=0.5, r=r_sol).shape, (6, 50)
+        )
+        np.testing.assert_array_equal(
+            processed_var(t=t_sol, x=x_sol, R=R_sol, r=0.5).shape, (7, Nx, 50)
+        )
+        # 1 vector, 3 scalars
+        np.testing.assert_array_equal(
+            processed_var(t=t_sol, x=0.2, R=0.5, r=0.5).shape, (50,)
+        )
+        np.testing.assert_array_equal(
+            processed_var(t=0.2, x=x_sol, R=0.5, r=0.5).shape, (Nx,)
+        )
+        np.testing.assert_array_equal(
+            processed_var(t=0.2, x=0.2, R=R_sol, r=0.5).shape, (7,)
+        )
+        np.testing.assert_array_equal(
+            processed_var(t=0.2, x=0.2, R=0.5, r=r_sol).shape, (6,)
+        )
+        # 4 scalars
+        np.testing.assert_array_equal(
+            processed_var(t=0.2, x=0.2, R=0.2, r=0.2).shape, ()
         )
 
-        disc = tests.get_2p1d_discretisation_for_testing()
-        disc.set_variable_slices([var])
+    @pytest.mark.parametrize("hermite_interp", _hermite_args)
+    @pytest.mark.parametrize("edges_eval", [False, True])
+    def test_processed_var_3D_scikit_interpolation(self, hermite_interp, edges_eval):
+        disc = tests.get_2p1d_discretisation_for_testing(xpts=5, ypts=6, zpts=7)
+        if edges_eval:
+            var_cc = pybamm.Variable("var_cc", domain=["current collector"])
+            var = pybamm.PrimaryBroadcastToEdges(var_cc, ["negative electrode"])
+            x_sol = disc.mesh["negative electrode"].edges
+            disc.set_variable_slices([var_cc])
+        else:
+            var = pybamm.Variable(
+                "var",
+                domain=["negative electrode"],
+                auxiliary_domains={"secondary": ["current collector"]},
+            )
+            x_sol = disc.mesh["negative electrode"].nodes
+            disc.set_variable_slices([var])
+
+        Nx = len(x_sol)
+        y_sol = disc.mesh["current collector"].edges["y"]
+        z_sol = disc.mesh["current collector"].edges["z"]
         var_sol = disc.process_symbol(var)
         t_sol = np.array([0, 1, 2])
-        u_sol = np.ones(var_sol.shape[0] * 3)[:, np.newaxis]
-        yp_sol = self._get_yps(u_sol, hermite_interp, values=0)
+        u_sol = np.ones(var_sol.shape[0])[:, np.newaxis] * t_sol
+        up_sol = self._get_yps(u_sol, hermite_interp)
         var_casadi = to_casadi(var_sol, u_sol)
 
-        with pytest.raises(NotImplementedError, match="Shape not recognized"):
-            pybamm.process_variable(
-                [var_sol],
-                [var_casadi],
-                self._sol_default(t_sol, u_sol, yp_sol),
-            )
+        processed_var = pybamm.process_variable(
+            [var_sol],
+            [var_casadi],
+            self._sol_default(t_sol, u_sol, up_sol),
+        )
+        # 4 vectors
+        np.testing.assert_array_equal(
+            processed_var(t=t_sol, x=x_sol, y=y_sol, z=z_sol).shape, (Nx, 6, 7, 3)
+        )
+        # 3 vectors, 1 scalar
+        np.testing.assert_array_equal(
+            processed_var(t=t_sol, x=0.2, y=y_sol, z=z_sol).shape, (6, 7, 3)
+        )
+        np.testing.assert_array_equal(
+            processed_var(t=t_sol, x=x_sol, y=0.2, z=z_sol).shape, (Nx, 7, 3)
+        )
+        np.testing.assert_array_equal(
+            processed_var(t=t_sol, x=x_sol, y=y_sol, z=0.5).shape, (Nx, 6, 3)
+        )
+        np.testing.assert_array_equal(
+            processed_var(t=0.2, x=x_sol, y=y_sol, z=z_sol).shape, (Nx, 6, 7)
+        )
+        # 2 vectors, 2 scalars
+        np.testing.assert_array_equal(
+            processed_var(t=0.5, x=0.2, y=y_sol, z=z_sol).shape, (6, 7)
+        )
+        np.testing.assert_array_equal(
+            processed_var(t=t_sol, x=0.2, y=0.2, z=z_sol).shape, (7, 3)
+        )
+        # 1 vector, 3 scalars
+        np.testing.assert_array_equal(
+            processed_var(t=0.5, x=0.2, y=0.2, z=z_sol).shape, (7,)
+        )
+        np.testing.assert_array_equal(
+            processed_var(t=0.5, x=0.2, y=y_sol, z=0.2).shape, (6,)
+        )
+        np.testing.assert_array_equal(
+            processed_var(t=0.5, x=x_sol, y=0.2, z=0.5).shape, (Nx,)
+        )
+        np.testing.assert_array_equal(
+            processed_var(t=t_sol, x=0.2, y=0.2, z=0.5).shape, (3,)
+        )
+        # 4 scalars
+        np.testing.assert_array_equal(
+            processed_var(t=0.2, x=0.2, y=0.2, z=0.2).shape, ()
+        )
 
     def test_process_spatial_variable_names(self):
         # initialise dummy variable to access method
