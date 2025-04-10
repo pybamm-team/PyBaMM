@@ -4,7 +4,8 @@
 from __future__ import annotations
 import pybamm
 import numpy as np
-from typing import Any
+from typing import Any, cast
+from numpy.typing import NDArray
 
 
 class SummaryVariables:
@@ -40,12 +41,15 @@ class SummaryVariables:
     ):
         self.user_inputs = user_inputs or {}
         self.esoh_solver = esoh_solver
-        self._variables = {}  # Store computed variables
+
+        self._variables: dict[str, float | list[float]] = {}  # Store computed variables
         self.cycle_number = np.array([])
+        self.cycles: list[SummaryVariables] | None = None
+        self._all_variables: list[str] | None = None
 
         model = solution.all_models[0]
         self._possible_variables = model.summary_variables  # minus esoh variables
-        self._esoh_variables = None  # Store eSOH variable names
+        self._esoh_variables: list[str] | None = None  # Store eSOH variable names
 
         # Flag if eSOH calculations are needed
         self.calc_esoh = (
@@ -81,31 +85,34 @@ class SummaryVariables:
         Return names of all possible summary variables, including eSOH variables
          if appropriate.
         """
-        try:
-            return self._all_variables
-        except AttributeError:
-            base_vars = self._possible_variables.copy()
-            base_vars.extend(
-                f"Change in {var[0].lower() + var[1:]}"
-                for var in self._possible_variables
-            )
+        all_vars = getattr(self, "_all_variables", None)
+        if all_vars is not None:
+            return all_vars
+        base_vars = self._possible_variables.copy()
+        base_vars.extend(
+            f"Change in {var[0].lower() + var[1:]}" for var in self._possible_variables
+        )
 
-            if self.calc_esoh:
-                base_vars.extend(self.esoh_variables)
+        if self.calc_esoh:
+            base_vars.extend(self.esoh_variables)
 
-            self._all_variables = base_vars
-            return self._all_variables
+        self._all_variables = base_vars
+        return base_vars
 
     @property
     def esoh_variables(self) -> list[str] | None:
         """Return names of all eSOH variables."""
-        if self.calc_esoh and self._esoh_variables is None:
+        if (
+            self.esoh_solver is not None
+            and self.calc_esoh
+            and self._esoh_variables is None
+        ):
             esoh_model = self.esoh_solver._get_electrode_soh_sims_full().model
             esoh_vars = list(esoh_model.variables.keys())
             self._esoh_variables = esoh_vars
         return self._esoh_variables
 
-    def __getitem__(self, key: str) -> float | list[float]:
+    def __getitem__(self, key: str) -> float | list[float] | NDArray[Any]:
         """
         Access or compute a summary variable by its name.
 
@@ -148,10 +155,11 @@ class SummaryVariables:
 
     def _update_multiple_cycles(self, var: str, var_lowercase: str):
         """Creates aggregated summary variables for where more than one cycle exists."""
-        var_cycle = [cycle[var] for cycle in self.cycles]
-        change_var_cycle = [
-            cycle[f"Change in {var_lowercase}"] for cycle in self.cycles
-        ]
+        cycles = cast(list[SummaryVariables], self.cycles)
+        var_cycle = cast(list[float], [cycle[var] for cycle in cycles])
+        change_var_cycle = cast(
+            list[float], [cycle[f"Change in {var_lowercase}"] for cycle in cycles]
+        )
         self._variables[var] = var_cycle
         self._variables[f"Change in {var_lowercase}"] = change_var_cycle
 
@@ -180,8 +188,9 @@ class SummaryVariables:
         Q_p = self.last_state["Positive electrode capacity [A.h]"].data[0]
         Q_Li = self.last_state["Total lithium capacity in particles [A.h]"].data[0]
         all_inputs = {**self.user_inputs, "Q_n": Q_n, "Q_p": Q_p, "Q_Li": Q_Li}
+        esoh_solver = cast(pybamm.lithium_ion.ElectrodeSOHSolver, self.esoh_solver)
         try:
-            esoh_sol = self.esoh_solver.solve(inputs=all_inputs)
+            esoh_sol = esoh_solver.solve(inputs=all_inputs)
         except pybamm.SolverError as error:  # pragma: no cover
             raise pybamm.SolverError(
                 "Could not solve for eSOH summary variables"

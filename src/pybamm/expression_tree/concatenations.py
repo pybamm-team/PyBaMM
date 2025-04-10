@@ -516,7 +516,7 @@ def substrings(s: str):
             yield s[i : j + 1]
 
 
-def intersect(s1: str, s2: str):
+def intersect(s1: str, s2: str) -> str:
     # find all the common strings between two strings
     all_intersects = set(substrings(s1)) & set(substrings(s2))
     # intersect is the longest such intercept
@@ -527,7 +527,7 @@ def intersect(s1: str, s2: str):
     return intersect.lstrip().rstrip()
 
 
-def simplified_concatenation(*children, name: str | None = None):
+def simplified_concatenation(*children: pybamm.Symbol, name: str | None = None):
     """Perform simplifications on a concatenation."""
     # remove children that are None
     children = list(filter(lambda x: x is not None, children))
@@ -543,7 +543,8 @@ def simplified_concatenation(*children, name: str | None = None):
         # Create Concatenation to easily read domains
         concat = Concatenation(*children, name=name)
         if all(
-            isinstance(child, pybamm.Broadcast) and child.child == children[0].child
+            isinstance(child, pybamm.Broadcast)
+            and getattr(child, "child", None) == getattr(children[0], "child", None)
             for child in children
         ):
             unique_child = children[0].orphans[0]
