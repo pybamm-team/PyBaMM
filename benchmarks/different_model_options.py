@@ -34,8 +34,8 @@ def build_model(parameter, model_, option, value):
 class SolveModel:
     solver: pybamm.BaseSolver
     model: pybamm.BaseModel
-    t_eval: npt.NDArray
-    t_interp: npt.NDArray | None
+    t_eval: npt.NDArray[np.float64]
+    t_interp: npt.NDArray[np.float64] | None
 
     def solve_setup(self, parameter, model_, option, value, solver_class):
         self.solver = solver_class()
