@@ -37,15 +37,3 @@ class TestLumpedThermalModel:
         heat_capacity_eval = var.evaluate(t_eval, y_eval)
 
         assert abs(heat_capacity_eval - lumped_value) < lumped_value * 1e-10
-
-    def test_fallback_to_component_based(self):
-        options = {"thermal": "lumped", "use lumped capacity": "true"}
-        model = pybamm.lithium_ion.SPM(options=options)
-
-        sim = pybamm.Simulation(model)
-        sim.build()
-
-        assert (
-            "Volume-averaged effective heat capacity [J.K-1.m-3]"
-            in sim._built_model.variables
-        )

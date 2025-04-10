@@ -67,17 +67,10 @@ class Lumped(BaseThermal):
 
         # Add lumped heat capacity if option is enabled
         if self.use_lumped_capacity == "true":
-            try:
-                rho_c_p_eff_av = self.param.cell_heat_capacity
-            except AttributeError:
-                pybamm.logger.warning(
-                    "Lumped heat capacity parameter not found. "
-                    "Reverting to component-based calculation."
-                )
-            else:
-                variables["Volume-averaged effective heat capacity [J.K-1.m-3]"] = (
-                    rho_c_p_eff_av
-                )
+            rho_c_p_eff_av = self.param.cell_heat_capacity
+            variables["Volume-averaged effective heat capacity [J.K-1.m-3]"] = (
+                rho_c_p_eff_av
+            )
 
         variables.update(
             {
