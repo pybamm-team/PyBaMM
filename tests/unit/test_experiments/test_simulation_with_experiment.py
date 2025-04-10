@@ -187,6 +187,16 @@ class TestSimulationExperiment:
         with pytest.raises(pybamm.SolverError, match="skip_ok is True for all steps"):
             sim.solve()
 
+        # Check termination after a skipped step
+        steps = [
+            pybamm.step.Current(2, duration=100.0, skip_ok=False),
+            cc_charge_skip_ok,
+        ]
+        experiment = pybamm.Experiment(steps)
+        sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
+        sol = sim.solve()
+        assert sol.termination == "Event exceeded in initial conditions"
+
     def test_all_empty_solution_errors(self):
         model = pybamm.lithium_ion.SPM()
         parameter_values = pybamm.ParameterValues("Chen2020")

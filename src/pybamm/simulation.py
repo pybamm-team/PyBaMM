@@ -871,6 +871,9 @@ class Simulation:
                                 pybamm.logger.warning(
                                     f"Step '{step_str}' is infeasible at initial conditions, but skip_ok is True. Skipping step."
                                 )
+
+                                # Update the termination and continue
+                                self._solution.termination = step_solution.termination
                                 continue
                             else:
                                 raise pybamm.SolverError(
