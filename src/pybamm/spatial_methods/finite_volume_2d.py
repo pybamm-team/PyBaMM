@@ -671,7 +671,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
             else:
                 bottom_bc = bbc_value
             bbc_vector = pybamm.Matrix(bbc_matrix) @ bottom_bc
-        elif bbc_type == "Dirichlet" or (bbc_type == "Neumann" and tbc_value == 0):
+        elif bbc_type == "Dirichlet" or (bbc_type == "Neumann" and bbc_value == 0):
             bbc_vector = pybamm.Vector(
                 np.zeros((n_tb - 1 + n_bcs) * second_dim_repeats * n_lr)
             )
@@ -681,7 +681,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
             )
         else:
             raise ValueError(
-                f"boundary condition must be Dirichlet or Neumann, not '{tbc_type}'"
+                f"boundary condition must be Dirichlet or Neumann, not '{bbc_type}'"
             )
 
         bcs_vector = lbc_vector + rbc_vector + tbc_vector + bbc_vector
@@ -896,7 +896,35 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                         "child must have size n_nodes (number of nodes in the mesh) "
                         "or n_edges (number of edges in the mesh)"
                     )
-        return pybamm.domain_concatenation(disc_children, self.mesh)
+        # EXPERIMENTAL: Need to reorder things for 2D
+        if not all(isinstance(child, pybamm.StateVector) for child in disc_children):
+            # All will have the same number of points in the tb direction, so we just need to get the lr points
+            lr_mesh_points = [
+                self.mesh[child.domain[0]].npts_lr for child in disc_children
+            ]
+            tb_mesh_points = self.mesh[disc_children[0].domain[0]].npts_tb
+            num_children = len(disc_children)
+            eyes = [np.eye(lr_mesh_points[i]) for i in range(num_children)]
+            num_blocks = num_children * tb_mesh_points
+            block_mat = [
+                [
+                    np.zeros((lr_mesh_points_this, lr_mesh_points_this))
+                    for lr_mesh_points_this in lr_mesh_points
+                    for _ in range(tb_mesh_points)
+                ]
+                for _ in range(num_blocks)
+            ]
+            i = 0
+            for tb_idx in range(tb_mesh_points):
+                for child_idx in range(num_children):
+                    block_mat[i][tb_idx + child_idx * tb_mesh_points] = eyes[child_idx]
+                    i += 1
+            block_mat = csr_matrix(np.block(block_mat))
+            matrix = pybamm.Matrix(block_mat)
+            repeats = self._get_auxiliary_domain_repeats(disc_children[0].domains)
+            return matrix @ pybamm.domain_concatenation(disc_children, self.mesh)
+        else:
+            return pybamm.domain_concatenation(disc_children, self.mesh)
 
     def edge_to_node(self, discretised_symbol, method="arithmetic"):
         """
