@@ -332,7 +332,11 @@ class TestMesh:
 
         for submesh in mesh.values():
             if not isinstance(submesh, pybamm.SubMesh0D):
-                assert submesh.coord_sys in pybamm.KNOWN_COORD_SYS
+                assert submesh.coord_sys in [
+                    "cartesian",
+                    "cylindrical polar",
+                    "spherical polar",
+                ]
 
     def test_unimplemented_meshes(self):
         var_pts = {"x_n": 10, "y": 10}
