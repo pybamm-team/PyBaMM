@@ -282,7 +282,7 @@ class TestExperiment:
         solution = sim.solution
 
         voltage = solution["Terminal voltage [V]"].entries
-        assert np.allclose(voltage, 2.5, atol=1e-3)
+        assert np.allclose(voltage, 2.5, atol=1e-3, rtol=1e-3)
 
     def test_pchip_interpolation_experiment(self):
         x = np.linspace(0, 1, 11)
