@@ -157,7 +157,10 @@ class BaseModel:
 
     @rhs.setter
     def rhs(self, rhs):
-        self._rhs = EquationDict("rhs", rhs)
+        wrapped_rhs = {}
+        for variable, expression in rhs.items():
+            wrapped_rhs[variable] = self.wrap_source(expression, variable)
+        self._rhs = EquationDict("rhs", wrapped_rhs)
 
     @property
     def algebraic(self):
@@ -1489,6 +1492,21 @@ class BaseModel:
             )
 
         Serialise().save_model(self, filename=filename, mesh=mesh, variables=variables)
+
+    def wrap_source(self, rhs_term, variable):
+        """
+        Check if the RHS term needs to be wrapped in `pybamm.source()`.
+        Automatically wraps it if necessary.
+        """
+        # If the term is not already wrapped, wrap it with pybamm.source()
+        if not isinstance(rhs_term, pybamm.Source):
+            rhs_term = pybamm.source(rhs_term, variable)
+            warnings.warn(
+                f"RHS term for variable '{variable.name}' was not wrapped in `pybamm.source()`. Auto-wrapping applied.",
+                pybamm.ModelWarning,
+                stacklevel=2,
+            )
+        return rhs_term
 
 
 def load_model(filename, battery_model: BaseModel | None = None):
