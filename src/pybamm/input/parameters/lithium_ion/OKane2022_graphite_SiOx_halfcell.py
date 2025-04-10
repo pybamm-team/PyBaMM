@@ -507,6 +507,7 @@ def get_parameter_values():
         "Open-circuit voltage at 100% SOC [V]": 1.5,
         "Initial concentration in positive electrode [mol.m-3]": 29866.0,
         "Initial temperature [K]": 298.15,
+        "Cell heat capacity [J.K-1.m-3]": 2.5e6,
         # citations
         "citations": ["OKane2022", "OKane2020", "Chen2020", "Xu2019"],
     }

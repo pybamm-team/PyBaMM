@@ -224,6 +224,10 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 the respective porosity change) over the x-axis in Single Particle
                 Models, can be "false" or "true". Default is "false" for SPMe and
                 "true" for SPM.
+            * "use lumped capacity" : str
+                Whether to use a lumped capacity model for the thermal model. Can be
+                "false" (default) or "true". This is only available for the lumped
+                thermal model.
     """
 
     def __init__(self, extra_options):
@@ -337,6 +341,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             "voltage as a state": ["false", "true"],
             "working electrode": ["both", "positive"],
             "x-average side reactions": ["false", "true"],
+            "use lumped capacity": ["false", "true"],
         }
 
         default_options = {

@@ -196,6 +196,7 @@ def get_parameter_values():
         "Initial temperature [K]": 298.15,
         "Initial voltage in negative electrode [V]": 0.01,
         "Initial voltage in positive electrode [V]": 4.19,
+        "Cell heat capacity [J.K-1.m-3]": 2.5e6,
         # citations
         "citations": ["Verbrugge2017", "Baker2018", "Chen2020"],
     }
