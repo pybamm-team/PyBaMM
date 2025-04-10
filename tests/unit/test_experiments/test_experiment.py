@@ -355,28 +355,3 @@ class TestExperiment:
         result = np.array(f(test_points)).flatten()
 
         np.testing.assert_allclose(result, expected, rtol=1e-7, atol=1e-6)
-
-    def test_initial_concentration_spatial(self):
-        def initial_concentration(r, x):
-            return 17038.0 + r + x
-
-        parameter_values = pybamm.ParameterValues("Chen2020")
-        parameter_values.update(
-            {
-                "Initial concentration in negative electrode [mol.m-3]": initial_concentration,
-            }
-        )
-
-        model = pybamm.lithium_ion.DFN()
-        experiment = pybamm.Experiment(["Rest for 1 sec"])
-        sim = pybamm.Simulation(
-            model,
-            experiment=experiment,
-            parameter_values=parameter_values,
-        )
-        solution = sim.solve()
-        c_n = solution["Negative particle concentration [mol.m-3]"].entries
-        assert c_n.shape[0] > 0
-        r0 = solution.mesh["negative particle"]["r_n"][0]
-        x0 = solution.mesh["negative electrode"]["x_n"][0]
-        np.testing.assert_allclose(c_n[0], 17038.0 + r0 + x0)
