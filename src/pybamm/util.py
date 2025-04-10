@@ -272,7 +272,7 @@ class TimerTime:
         elif time < 60:
             return f"{time:.3f} s"
         output = []
-        time = int(round(time))
+        time = round(time)
         units = [(604800, "week"), (86400, "day"), (3600, "hour"), (60, "minute")]
         for k, name in units:
             f = time // k
