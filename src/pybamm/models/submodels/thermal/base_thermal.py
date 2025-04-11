@@ -125,14 +125,18 @@ class BaseThermal(pybamm.BaseSubModel):
         # Total Ohmic heating
         Q_ohm = Q_ohm_s + Q_ohm_e
 
+        # Electrochemical heating (by electrode and phase)
         num_phases = int(self.options.positive["particle phases"])
         phase_names = [""]
         if num_phases > 1:
             phase_names = ["primary ", "secondary "]
+        ocp_options = self.options.positive["open-circuit potential"]
+        if isinstance(ocp_options, str):
+            ocp_options = [ocp_options]
 
-        Q_rxn_p, Q_rev_p = 0, 0
+        Q_rxn_p, Q_rev_p, Q_hys_p = 0, 0, 0
         T_p = variables["Positive electrode temperature [K]"]
-        for phase in phase_names:
+        for phase, ocp_option in zip(phase_names, ocp_options):
             a_j_p = variables[
                 f"Positive electrode {phase}volumetric interfacial current density [A.m-3]"
             ]
@@ -142,11 +146,27 @@ class BaseThermal(pybamm.BaseSubModel):
             # Reversible electrochemical heating
             dUdT_p = variables[f"Positive electrode {phase}entropic change [V.K-1]"]
             Q_rev_p += a_j_p * T_p * dUdT_p
+            # Hysteresis electrochemical heating
+            if ocp_option == "single":
+                V_hys_p = 0
+            else:
+                U_p = variables[f"Positive electrode {phase}open-circuit potential [V]"]
+                U_eq_p = variables[
+                    f"Positive electrode {phase}equilibrium open-circuit potential [V]"
+                ]
+                V_hys_p = U_p - U_eq_p
+            i_vol_p = variables[
+                f"Positive electrode {phase}volumetric interfacial current density [A.m-3]"
+            ]
+            Q_hys_p += i_vol_p * V_hys_p
 
         num_phases = int(self.options.negative["particle phases"])
         phase_names = [""]
         if num_phases > 1:
             phase_names = ["primary ", "secondary "]
+        ocp_options = self.options.negative["open-circuit potential"]
+        if isinstance(ocp_options, str):
+            ocp_options = [ocp_options]
 
         if self.options.electrode_types["negative"] == "planar":
             i_n = variables["Lithium metal total interfacial current density [A.m-2]"]
@@ -159,11 +179,13 @@ class BaseThermal(pybamm.BaseSubModel):
             Q_rev_n = pybamm.FullBroadcast(
                 0, ["negative electrode"], "current collector"
             )
+            Q_hys_n = pybamm.FullBroadcast(
+                0, ["negative electrode"], "current collector"
+            )
         else:
             T_n = variables["Negative electrode temperature [K]"]
-            Q_rxn_n = 0
-            Q_rev_n = 0
-            for phase in phase_names:
+            Q_rxn_n, Q_rev_n, Q_hys_n = 0, 0, 0
+            for phase, ocp_option in zip(phase_names, ocp_options):
                 a_j_n = variables[
                     f"Negative electrode {phase}volumetric interfacial current density [A.m-3]"
                 ]
@@ -172,10 +194,24 @@ class BaseThermal(pybamm.BaseSubModel):
                 ]
                 # Irreversible electrochemical heating
                 Q_rxn_n += a_j_n * eta_r_n
-
                 # Reversible electrochemical heating
                 dUdT_n = variables[f"Negative electrode {phase}entropic change [V.K-1]"]
                 Q_rev_n += a_j_n * T_n * dUdT_n
+                # Hysteresis electrochemical heating
+                if ocp_option == "single":
+                    V_hys_n = 0
+                else:
+                    U_n = variables[
+                        f"Negative electrode {phase}open-circuit potential [V]"
+                    ]
+                    U_eq_n = variables[
+                        f"Negative electrode {phase}equilibrium open-circuit potential [V]"
+                    ]
+                    V_hys_n = U_n - U_eq_n
+                i_vol_n = variables[
+                    f"Negative electrode {phase}volumetric interfacial current density [A.m-3]"
+                ]
+                Q_hys_n += i_vol_n * V_hys_n
 
         # Irreversible electrochemical heating
         Q_rxn = pybamm.concatenation(
@@ -191,8 +227,13 @@ class BaseThermal(pybamm.BaseSubModel):
         Q_mix_s_n, Q_mix_s_s, Q_mix_s_p = self._heat_of_mixing(variables)
         Q_mix = pybamm.concatenation(Q_mix_s_n, Q_mix_s_s, Q_mix_s_p)
 
+        # Heating due to hysteresis
+        Q_hys = pybamm.concatenation(
+            Q_hys_n, pybamm.FullBroadcast(0, "separator", "current collector"), Q_hys_p
+        )
+
         # Total heating
-        Q = Q_ohm + Q_rxn + Q_rev + Q_mix
+        Q = Q_ohm + Q_rxn + Q_rev + Q_mix + Q_hys
 
         # Compute the X-average over the entire cell, including current collectors
         # Note: this can still be a function of y and z for higher-dimensional pouch
@@ -201,6 +242,7 @@ class BaseThermal(pybamm.BaseSubModel):
         Q_rxn_av = self._x_average(Q_rxn, 0, 0)
         Q_rev_av = self._x_average(Q_rev, 0, 0)
         Q_mix_av = self._x_average(Q_mix, 0, 0)
+        Q_hys_av = self._x_average(Q_hys, 0, 0)
         Q_av = self._x_average(Q, Q_ohm_s_cn, Q_ohm_s_cp)
 
         # Compute the integrated heat source per unit simulated electrode-pair area
@@ -210,6 +252,7 @@ class BaseThermal(pybamm.BaseSubModel):
         Q_rxn_Wm2 = Q_rxn_av * self.param.L
         Q_rev_Wm2 = Q_rev_av * self.param.L
         Q_mix_Wm2 = Q_mix_av * self.param.L
+        Q_hys_Wm2 = Q_hys_av * self.param.L
         Q_Wm2 = Q_av * self.param.L
 
         # Now average over the electrode height and width
@@ -217,6 +260,7 @@ class BaseThermal(pybamm.BaseSubModel):
         Q_rxn_Wm2_av = self._yz_average(Q_rxn_Wm2)
         Q_rev_Wm2_av = self._yz_average(Q_rev_Wm2)
         Q_mix_Wm2_av = self._yz_average(Q_mix_Wm2)
+        Q_hys_Wm2_av = self._yz_average(Q_hys_Wm2)
         Q_Wm2_av = self._yz_average(Q_Wm2)
 
         # Compute total heat source terms (in W) over the *entire cell volume*, not
@@ -229,6 +273,7 @@ class BaseThermal(pybamm.BaseSubModel):
         Q_rxn_W = Q_rxn_Wm2_av * n_elec * A
         Q_rev_W = Q_rev_Wm2_av * n_elec * A
         Q_mix_W = Q_mix_Wm2_av * n_elec * A
+        Q_hys_W = Q_hys_Wm2_av * n_elec * A
         Q_W = Q_Wm2_av * n_elec * A
 
         # Compute volume-averaged heat source terms over the *entire cell volume*, not
@@ -238,6 +283,7 @@ class BaseThermal(pybamm.BaseSubModel):
         Q_rxn_vol_av = Q_rxn_W / V
         Q_rev_vol_av = Q_rev_W / V
         Q_mix_vol_av = Q_mix_W / V
+        Q_hys_vol_av = Q_hys_W / V
         Q_vol_av = Q_W / V
 
         # Effective heat capacity
@@ -273,6 +319,12 @@ class BaseThermal(pybamm.BaseSubModel):
                 "Volume-averaged heating of mixing [W.m-3]": Q_mix_vol_av,
                 "Heat of mixing per unit electrode-pair area [W.m-2]": Q_mix_Wm2,
                 "Heat of mixing [W]": Q_mix_W,
+                # Hysteresis
+                "Hysteresis electrochemical heating [W.m-3]": Q_hys,
+                "X-averaged hysteresis electrochemical heating [W.m-3]": Q_hys_av,
+                "Volume-averaged hysteresis electrochemical heating [W.m-3]": Q_hys_vol_av,
+                "Hysteresis electrochemical heating per unit electrode-pair area [W.m-2]": Q_hys_Wm2,
+                "Hysteresis electrochemical heating [W]": Q_hys_W,
                 # Total
                 "Total heating [W.m-3]": Q,
                 "X-averaged total heating [W.m-3]": Q_av,

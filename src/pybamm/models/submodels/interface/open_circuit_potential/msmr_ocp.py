@@ -60,4 +60,12 @@ class MSMROpenCircuitPotential(BaseOpenCircuitPotential):
             dUdT = self.phase_param.dUdT(sto_surf)
 
         variables.update(self._get_standard_ocp_variables(ocp_surf, ocp_bulk, dUdT))
+        variables.update(
+            {
+                f"{Domain} electrode {phase_name}equilibrium open-circuit potential [V]": ocp_surf,
+                f"X-averaged {domain} electrode {phase_name}equilibrium open-circuit potential [V]": pybamm.x_average(
+                    ocp_surf
+                ),
+            }
+        )
         return variables
