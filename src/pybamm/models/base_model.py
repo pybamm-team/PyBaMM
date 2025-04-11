@@ -1493,22 +1493,21 @@ class BaseModel:
 
         Serialise().save_model(self, filename=filename, mesh=mesh, variables=variables)
 
-    def wrap_source(self, rhs_term, variable):
-        """
-        Check if the RHS term needs to be wrapped in `pybamm.source()`.
-        Automatically wraps it if necessary.
-        """
-        # If the term is not already wrapped, wrap it with pybamm.source()
-        if not isinstance(
-            rhs_term, pybamm.expression_tree.binary_operators.MatrixMultiplication
-        ):
-            rhs_term = pybamm.source(rhs_term, variable)
-            warnings.warn(
-                f"RHS term for variable '{variable.name}' was not wrapped in `pybamm.source()`. Auto-wrapping applied.",
-                pybamm.ModelWarning,
-                stacklevel=2,
-            )
-        return rhs_term
+    def wrap_source(self, expr, variable):
+        # Only attempt wrapping if expr is a PyBaMM Symbol
+        if isinstance(expr, pybamm.Symbol) and expr.domain == []:
+            if hasattr(variable, "domain") and variable.domain:
+                target_domain = variable.domain
+                pybamm.logger.warning(
+                    f"Wrapping scalar source term with domain '{target_domain}' for variable '{variable}'"
+                )
+                return pybamm.source(expr, target_domain)
+            else:
+                pybamm.logger.warning(
+                    f"Not wrapping scalar source term for variable '{variable}' (no domain info)"
+                )
+                return expr
+        return expr  # No wrapping needed or not a Symbol
 
 
 def load_model(filename, battery_model: BaseModel | None = None):
