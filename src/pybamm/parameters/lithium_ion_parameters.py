@@ -56,6 +56,7 @@ class LithiumIonParameters(BaseParameters):
         self.h_total = self.therm.h_total
         self.rho_c_p_eff = self.therm.rho_c_p_eff
         self.lambda_eff = self.therm.lambda_eff
+        self.cell_heat_capacity = self.therm.cell_heat_capacity
 
         # Macroscale geometry
         self.L_x = self.geo.L_x
