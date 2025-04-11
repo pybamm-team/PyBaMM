@@ -1,2 +1,2 @@
 # To ignore false flagging of assert statements in tests by Codacy.
-skips: ['B101']
+skips: ["B101"]

@@ -1499,7 +1499,9 @@ class BaseModel:
         Automatically wraps it if necessary.
         """
         # If the term is not already wrapped, wrap it with pybamm.source()
-        if not isinstance(rhs_term, pybamm.Source):
+        if not isinstance(
+            rhs_term, pybamm.expression_tree.binary_operators.MatrixMultiplication
+        ):
             rhs_term = pybamm.source(rhs_term, variable)
             warnings.warn(
                 f"RHS term for variable '{variable.name}' was not wrapped in `pybamm.source()`. Auto-wrapping applied.",
