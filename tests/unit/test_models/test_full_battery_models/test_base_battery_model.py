@@ -54,7 +54,7 @@ PRINT_OPTIONS_OUTPUT = """\
 'voltage as a state': 'false' (possible: ['false', 'true'])
 'working electrode': 'both' (possible: ['both', 'positive'])
 'x-average side reactions': 'false' (possible: ['false', 'true'])
-'use lumped capacity': 'false' (possible: ['false', 'true'])
+'use lumped thermal capacity': 'false' (possible: ['false', 'true'])
 """
 
 

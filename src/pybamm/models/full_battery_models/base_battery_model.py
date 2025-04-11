@@ -341,7 +341,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             "voltage as a state": ["false", "true"],
             "working electrode": ["both", "positive"],
             "x-average side reactions": ["false", "true"],
-            "use lumped capacity": ["false", "true"],
+            "use lumped thermal capacity": ["false", "true"],
         }
 
         default_options = {

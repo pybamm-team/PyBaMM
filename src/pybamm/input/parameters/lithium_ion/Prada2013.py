@@ -233,7 +233,6 @@ def get_parameter_values():
         "Initial concentration in negative electrode [mol.m-3]": 0.81 * 30555,
         "Initial concentration in positive electrode [mol.m-3]": 0.0038 * 22806,
         "Initial temperature [K]": 298,
-        "Cell heat capacity [J.K-1.m-3]": 2.5e6,
         # citations
         "citations": ["Chen2020", "Prada2013"],
     }
