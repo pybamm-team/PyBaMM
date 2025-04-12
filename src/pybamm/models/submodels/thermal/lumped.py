@@ -22,9 +22,6 @@ class Lumped(BaseThermal):
 
     def __init__(self, param, options=None, x_average=False):
         super().__init__(param, options=options, x_average=x_average)
-        self.use_lumped_thermal_capacity = self.options.get(
-            "use lumped thermal capacity", "false"
-        )
         pybamm.citations.register("Timms2021")
 
     def get_fundamental_variables(self):
@@ -66,14 +63,6 @@ class Lumped(BaseThermal):
         else:
             Q_cr_W = pybamm.Scalar(0)
             Q_cr_vol_av = Q_cr_W
-
-        # Add lumped heat capacity if option is enabled
-        if self.use_lumped_thermal_capacity == "true":
-            variables.update(
-                {
-                    "Volume-averaged effective heat capacity [J.K-1.m-3]": self.param.cell_heat_capacity,
-                }
-            )
 
         variables.update(
             {

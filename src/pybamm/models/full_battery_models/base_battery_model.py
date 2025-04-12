@@ -601,6 +601,15 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 f"X-full thermal submodels do not yet support {n}D current collectors"
             )
 
+        if (
+            options["use lumped thermal capacity"] == "true"
+            and "lumped" not in options["thermal"]
+        ):
+            raise pybamm.OptionError(
+                "Lumped thermal capacity model only compatible with lumped thermal "
+                "models"
+            )
+
         if isinstance(options["stress-induced diffusion"], str):
             if (
                 options["stress-induced diffusion"] == "true"

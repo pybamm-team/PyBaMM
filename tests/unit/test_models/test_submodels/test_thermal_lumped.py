@@ -1,5 +1,6 @@
 import pybamm
 import numpy as np
+import pytest
 
 
 class TestLumpedThermalModel:
@@ -41,3 +42,12 @@ class TestLumpedThermalModel:
         heat_capacity = var.evaluate(t_eval, y_eval)
 
         np.testing.assert_allclose(heat_capacity, 2.5e6, rtol=1e-10)
+
+    def test_incompatible_lumped_thermal_capacity_option(self):
+        options = {"thermal": "x-full", "use lumped thermal capacity": "true"}
+
+        with pytest.raises(
+            pybamm.OptionError,
+            match="Lumped thermal capacity model only compatible with lumped thermal models",
+        ):
+            pybamm.lithium_ion.SPM(options=options)
