@@ -250,7 +250,7 @@ filterwarnings = [
     # convert internal warnings as errors
     "error::DeprecationWarning:pybamm.*",
     # ignore setuptools and pybtex deprecation warnings
-    "ignore:pkg_resources is deprecated as an API:DeprecationWarning",
+    "ignore::DeprecationWarning:pkg_resources",
     "ignore:open_text is deprecated:DeprecationWarning",
     "ignore::UserWarning",
     "ignore::RuntimeWarning",
