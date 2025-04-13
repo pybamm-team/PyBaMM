@@ -174,14 +174,20 @@
   //    "another_benchmark": 0.5,   // Threshold of 50%
   // },
   },
-  "exclude": [
-    {"benchmark": "memory_sims.MemSPMSimulationCCCV.*"},
-    {"benchmark": "memory_sims.MemDFNSimulationCCCV.*"},
-    {"benchmark": "memory_sims.MemSPMSimulationGITT.*"},
-    {"benchmark": "memory_sims.MemDFNSimulationGITT.*"},
-    {"benchmark": "memory_unit_benchmarks.MemCreateExpression.*"},
-    {"benchmark": "memory_unit_benchmarks.MemParameteriseModel.*"},
-    {"benchmark": "memory_unit_benchmarks.MemDiscretiseModel.*"},
-    {"benchmark": "memory_unit_benchmarks.MemSolveModel.*"}
-  ]
+"exclude": [
+  {"benchmark": "memory_sims.MemSPMSimulationCCCV.*"},
+  {"benchmark": "memory_sims.MemDFNSimulationCCCV.*"},
+  {"benchmark": "memory_sims.MemSPMSimulationGITT.*"},
+  {"benchmark": "memory_sims.MemDFNSimulationGITT.*"},
+  {"benchmark": "memory_unit_benchmarks.MemCreateExpression.mem_create_expression"},
+  {"benchmark": "memory_unit_benchmarks.MemParameteriseModel.mem_create_expression"},
+  {"benchmark": "memory_unit_benchmarks.MemParameteriseModel.mem_parameterise"},
+  {"benchmark": "memory_unit_benchmarks.MemDiscretiseModel.mem_create_expression"},
+  {"benchmark": "memory_unit_benchmarks.MemDiscretiseModel.mem_discretise"},
+  {"benchmark": "memory_unit_benchmarks.MemDiscretiseModel.mem_parameterise"},
+  {"benchmark": "memory_unit_benchmarks.MemSolveModel.mem_create_expression"},
+  {"benchmark": "memory_unit_benchmarks.MemSolveModel.mem_discretise"},
+  {"benchmark": "memory_unit_benchmarks.MemSolveModel.mem_parameterise"},
+  {"benchmark": "memory_unit_benchmarks.MemSolveModel.mem_solve"}
+]
 }
