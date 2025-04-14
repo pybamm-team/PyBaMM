@@ -212,7 +212,12 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         return pybamm.Matrix(sub_matrix)
 
     def laplacian(self, symbol, discretised_symbol, boundary_conditions):
-        raise NotImplementedError
+        """
+        Laplacian operator, implemented as div(grad(.))
+        See :meth:`pybamm.SpatialMethod.laplacian`
+        """
+        grad = self.gradient(symbol, discretised_symbol, boundary_conditions)
+        return self.divergence(grad, grad, boundary_conditions)
 
     def definite_integral_matrix(
         self, child, vector_type="row", integration_dimension="primary"
