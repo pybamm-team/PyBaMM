@@ -26,7 +26,7 @@ class Citations:
     """
 
     _module_import_error = False
-    
+
     _all_citations: dict = {}
 
     def __init__(self):
@@ -65,26 +65,26 @@ class Citations:
         if not self._module_import_error:
             citations_file = os.path.join(pybamm.__path__[0], "CITATIONS.bib")
             with open(citations_file) as bibtex_file:
-              parser = BibTexParser(common_strings=True)
-              bib_data = bibtex_load(bibtex_file, parser=parser)
-              for entry in bib_data.entries:
-                  self._add_citation(entry.key, entry)
+                parser = BibTexParser(common_strings=True)
+                bib_data = bibtex_load(bibtex_file, parser=parser)
+                for entry in bib_data.entries:
+                    self._add_citation(entry.key, entry)
 
     def _add_citation(self, key, entry):
         """Adds `entry` to `self._all_citations` under `key`, warning the user if a
         previous entry is overwritten
         """
         if not isinstance(key, str) or not isinstance(entry, Entry):
-                raise TypeError()
+            raise TypeError()
 
-            # Warn if overwriting a previous citation
+        # Warn if overwriting a previous citation
         if key in self._all_citations:
-                existing = self._string_formating(self._all_citations[key])
-                new = self._string_formating(entry)
-                if existing != new:
-                 warnings.warn(f"Replacing citation for {key}", stacklevel=2)
+            existing = self._string_formating(self._all_citations[key])
+            new = self._string_formating(entry)
+            if existing != new:
+                warnings.warn(f"Replacing citation for {key}", stacklevel=2)
 
-            # Add to database
+        # Add to database
         self._all_citations[key] = entry
 
     def _string_formatting(self, entry):
@@ -98,15 +98,15 @@ class Citations:
         pages = fields.get("pages", "")
         year = fields.get("year", "")
         doi = f"doi:{fields.get('doi', '')}" if fields.get("doi") else ""
-        
+
         components = [
             f"{authors} {title}",
             f"{journal} {volume}{number}",
             f"{year}{', ' + pages if pages else ''}",
-            doi
+            doi,
         ]
-        return ". ".join(filter(None, components)).replace("  ", " ") + "."  
-    
+        return ". ".join(filter(None, components)).replace("  ", " ") + "."
+
     def _format_author(self, author_str):
         authors = author_str.replace("\n", " ").split(" and ")
         formatted = []
@@ -128,26 +128,26 @@ class Citations:
 
     def register(self, key):
         """Register a paper to be cited.
-        Accepts either a citation key from pybamm/CITATIONS.bib or a raw BibTeX entry.
-    When registering unknown citations, validates BibTeX syntax using bibtexparser.
+            Accepts either a citation key from pybamm/CITATIONS.bib or a raw BibTeX entry.
+        When registering unknown citations, validates BibTeX syntax using bibtexparser.
 
-    Parameters
-    ----------
-    key : str
-        - For pre-defined citations: Exact key from CITATIONS.bib (e.g. "Sulzer2021")
-        - For custom citations: Complete BibTeX entry (e.g. "@article{...}")
-    
-    Raises
-    ------
-    KeyError
-        If provided BibTeX is malformed or key doesn't exist in CITATIONS.bib
-    TypeError
-        If input is not a string
+        Parameters
+        ----------
+        key : str
+            - For pre-defined citations: Exact key from CITATIONS.bib (e.g. "Sulzer2021")
+            - For custom citations: Complete BibTeX entry (e.g. "@article{...}")
 
-    Warns
-    -----
-    UserWarning
-        When overwriting an existing citation with different content
+        Raises
+        ------
+        KeyError
+            If provided BibTeX is malformed or key doesn't exist in CITATIONS.bib
+        TypeError
+            If input is not a string
+
+        Warns
+        -----
+        UserWarning
+            When overwriting an existing citation with different content
         """
 
         # Check if citation is a known key
@@ -164,39 +164,39 @@ class Citations:
                 self._add_citation(entry.key, entry)
                 self._papers_to_cite.add(entry.key)
             except (UndefinedString, IndexError, TypeError) as e:
-            # If citation is unknown, parse it later with pybtex
-             self._unknown_citations.add(key)
-             raise KeyError(f"Invalid BibTeX entry: {str(e)}") from e
+                # If citation is unknown, parse it later with pybtex
+                self._unknown_citations.add(key)
+                raise KeyError(f"Invalid BibTeX entry: {e!s}") from e
 
     def print(self, filename=None, output_format="text", verbose=False):
         """
-        Print all registered citations in the desired format.
+            Print all registered citations in the desired format.
 
-    This method outputs all citations that have been registered during the current
-    session, either to the terminal or to a specified file. Citations can be formatted
-    as plain text (suitable for inclusion in manuscripts) or as BibTeX entries
-    (for use in reference managers).
+        This method outputs all citations that have been registered during the current
+        session, either to the terminal or to a specified file. Citations can be formatted
+        as plain text (suitable for inclusion in manuscripts) or as BibTeX entries
+        (for use in reference managers).
 
-    Parameters
-    ----------
-    filename : str or Path, optional
-        The file path to which citations will be written. If None (default),
-        citations are printed to the terminal (stdout).
-    output_format : str, optional
-        The output format for citations. Must be either "text" (default) for
-        human-readable references, or "bibtex" for raw BibTeX entries.
-    verbose : bool, optional
-        If True, prints additional information about where each citation was
-        registered (e.g., which model or solver triggered the citation).
-        Verbose output is only available when printing to the terminal.
+        Parameters
+        ----------
+        filename : str or Path, optional
+            The file path to which citations will be written. If None (default),
+            citations are printed to the terminal (stdout).
+        output_format : str, optional
+            The output format for citations. Must be either "text" (default) for
+            human-readable references, or "bibtex" for raw BibTeX entries.
+        verbose : bool, optional
+            If True, prints additional information about where each citation was
+            registered (e.g., which model or solver triggered the citation).
+            Verbose output is only available when printing to the terminal.
 
-    Raises
-    ------
-    pybamm.OptionError
-        If an invalid output_format is provided (not "text" or "bibtex").
-    Exception
-        If verbose output is requested when writing to a file.
-     """
+        Raises
+        ------
+        pybamm.OptionError
+            If an invalid output_format is provided (not "text" or "bibtex").
+        Exception
+            If verbose output is requested when writing to a file.
+        """
         if self._module_import_error:
             self.print_import_warning()
             return
@@ -209,9 +209,11 @@ class Citations:
                 elif output_format == "bibtex":
                     writer = BibTexWriter()
                     citations.append(writer.write(BibDatabase(entries=[entry])))
-        
-        output = "\n\n".join(citations) if output_format == "text" else "\n".join(citations)
-        
+
+        output = (
+            "\n\n".join(citations) if output_format == "text" else "\n".join(citations)
+        )
+
         if filename:
             with open(filename, "w") as f:
                 f.write(output)
@@ -225,7 +227,7 @@ class Citations:
     def _tag_citations(self, filename=None):
         if self._citation_tags:
             msg = "\nCitations registered:\n" + "\n".join(
-                f"{k} was cited due to {v}" for k,v in self._citation_tags.items()
+                f"{k} was cited due to {v}" for k, v in self._citation_tags.items()
             )
             if filename:
                 with open(filename, "a") as f:
