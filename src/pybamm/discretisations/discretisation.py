@@ -801,6 +801,22 @@ class Discretisation:
         if isinstance(symbol, pybamm.BinaryOperator):
             # Pre-process children
             left, right = symbol.children
+            # Catch case where diffusion is a scalar and turn it into an identity matrix vector field.
+            if len(symbol.domain) != 0:
+                spatial_method = self.spatial_methods[symbol.domain[0]]
+            else:
+                spatial_method = None
+            if isinstance(spatial_method, pybamm.FiniteVolume2D):
+                if isinstance(left, pybamm.Scalar) and (
+                    isinstance(right, pybamm.VectorField)
+                    or isinstance(right, pybamm.Gradient)
+                ):
+                    left = pybamm.VectorField(left, left)
+                elif isinstance(right, pybamm.Scalar) and (
+                    isinstance(left, pybamm.VectorField)
+                    or isinstance(left, pybamm.Gradient)
+                ):
+                    right = pybamm.VectorField(right, right)
             disc_left = self.process_symbol(left)
             disc_right = self.process_symbol(right)
             if symbol.domain == []:
@@ -907,6 +923,14 @@ class Discretisation:
             elif isinstance(symbol, pybamm.EvaluateAt):
                 return child_spatial_method.evaluate_at(
                     symbol, disc_child, symbol.position
+                )
+            elif isinstance(symbol, pybamm.UpwindDownwind2D):
+                return spatial_method.upwind_or_downwind(
+                    child,
+                    disc_child,
+                    self.bcs,
+                    symbol.lr_direction,
+                    symbol.tb_direction,
                 )
             elif isinstance(symbol, pybamm.UpwindDownwind):
                 direction = symbol.name  # upwind or downwind

@@ -1187,6 +1187,10 @@ class UpwindDownwind(SpatialOperator):
     """
 
     def __init__(self, name, child):
+        self._perform_checks(child)
+        super().__init__(name, child)
+
+    def _perform_checks(self, child):
         if child.domain == []:
             raise pybamm.DomainError(
                 f"Cannot upwind '{child}' since its domain is empty. "
@@ -1197,11 +1201,22 @@ class UpwindDownwind(SpatialOperator):
             raise TypeError(
                 f"Cannot upwind '{child}' since it does not " + "evaluate on nodes."
             )
-        super().__init__(name, child)
 
     def _evaluates_on_edges(self, dimension: str) -> bool:
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return True
+
+
+class UpwindDownwind2D(UpwindDownwind):
+    """
+    A node in the expression tree representing an upwinding or downwinding operator.
+    Usually to be used for better stability in convection-dominated equations.
+    """
+
+    def __init__(self, child, lr_direction, tb_direction):
+        super().__init__("upwind_downwind_2d", child)
+        self.lr_direction = lr_direction
+        self.tb_direction = tb_direction
 
 
 class Upwind(UpwindDownwind):

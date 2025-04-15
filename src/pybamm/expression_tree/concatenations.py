@@ -468,23 +468,6 @@ class SparseStack(Concatenation):
         return SparseStack(*children)
 
 
-class VectorField(Concatenation):
-    """
-    A node in the expression tree representing a vector field.
-    """
-
-    def __init__(self, lr_field, tb_field):
-        children = [lr_field, tb_field]
-        super().__init__(*children, name="vector_field", check_domain=False)
-        self.lr_field = lr_field
-        self.tb_field = tb_field
-
-    def create_copy(self, new_children: list[pybamm.Symbol] | None = None):
-        if new_children is None:
-            new_children = [self.lr_field, self.tb_field]
-        return VectorField(*new_children)
-
-
 class ConcatenationVariable(Concatenation):
     """A Variable representing a concatenation of variables."""
 

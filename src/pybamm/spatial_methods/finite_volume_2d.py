@@ -1065,6 +1065,30 @@ class FiniteVolume2D(pybamm.SpatialMethod):
 
         # This could be cleaned up a bit, but it works for now.
         if hasattr(disc_left, "lr_field") and hasattr(disc_right, "lr_field"):
+            if right_evaluates_on_edges and not left_evaluates_on_edges:
+                if isinstance(right, pybamm.Gradient):
+                    method = "harmonic"
+                    disc_left_lr = self.node_to_edge(
+                        disc_left.lr_field, method=method, direction="lr"
+                    )
+                    disc_left_tb = self.node_to_edge(
+                        disc_left.tb_field, method=method, direction="tb"
+                    )
+                    disc_left = pybamm.VectorField(disc_left_lr, disc_left_tb)
+                else:
+                    method = "arithmetic"
+            elif left_evaluates_on_edges and not right_evaluates_on_edges:
+                if isinstance(left, pybamm.Gradient):
+                    method = "harmonic"
+                    disc_right_lr = self.node_to_edge(
+                        disc_right.lr_field, method=method, direction="lr"
+                    )
+                    disc_right_tb = self.node_to_edge(
+                        disc_right.tb_field, method=method, direction="tb"
+                    )
+                    disc_right = pybamm.VectorField(disc_right_lr, disc_right_tb)
+                else:
+                    method = "arithmetic"
             # both are vector fields, so we need make a new vector field.
             lr_field = pybamm.simplify_if_constant(
                 bin_op.create_copy([disc_left.lr_field, disc_right.lr_field])
@@ -1073,9 +1097,50 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                 bin_op.create_copy([disc_left.tb_field, disc_right.tb_field])
             )
             return pybamm.VectorField(lr_field, tb_field)
+        elif hasattr(disc_left, "lr_field") and not hasattr(disc_right, "lr_field"):
+            # one is a vector field, so we need to make a new vector field.
+            if left_evaluates_on_edges and not right_evaluates_on_edges:
+                if isinstance(left, pybamm.Gradient):
+                    method = "harmonic"
+                    disc_right_lr = self.node_to_edge(
+                        disc_right, method=method, direction="lr"
+                    )
+                    disc_right_tb = self.node_to_edge(
+                        disc_right, method=method, direction="tb"
+                    )
+                    disc_right = pybamm.VectorField(disc_right_lr, disc_right_tb)
+                else:
+                    method = "arithmetic"
+            lr_field = pybamm.simplify_if_constant(
+                bin_op.create_copy([disc_left.lr_field, disc_right])
+            )
+            tb_field = pybamm.simplify_if_constant(
+                bin_op.create_copy([disc_left.tb_field, disc_right])
+            )
+            return pybamm.VectorField(lr_field, tb_field)
+        elif not hasattr(disc_left, "lr_field") and hasattr(disc_right, "lr_field"):
+            # one is a vector field, so we need to make a new vector field.
+            if right_evaluates_on_edges and not left_evaluates_on_edges:
+                if isinstance(right, pybamm.Gradient):
+                    method = "harmonic"
+                    disc_left_lr = self.node_to_edge(
+                        disc_left, method=method, direction="lr"
+                    )
+                    disc_left_tb = self.node_to_edge(
+                        disc_left, method=method, direction="tb"
+                    )
+                    disc_left = pybamm.VectorField(disc_left_lr, disc_left_tb)
+                else:
+                    method = "arithmetic"
+            lr_field = pybamm.simplify_if_constant(
+                bin_op.create_copy([disc_left, disc_right.lr_field])
+            )
+            tb_field = pybamm.simplify_if_constant(
+                bin_op.create_copy([disc_left, disc_right.tb_field])
+            )
+            return pybamm.VectorField(lr_field, tb_field)
         else:
             pass
-
         # inner product takes fluxes from edges to nodes
         if isinstance(bin_op, pybamm.Inner):
             if left_evaluates_on_edges:
@@ -1474,11 +1539,13 @@ class FiniteVolume2D(pybamm.SpatialMethod):
             raise ValueError(f"method '{method}' not recognised")
         return out
 
-    def upwind_or_downwind(self, symbol, discretised_symbol, bcs, direction):
+    def upwind_or_downwind(
+        self, symbol, discretised_symbol, bcs, lr_direction, tb_direction
+    ):
         """
         Implement an upwinding operator. Currently, this requires the symbol to have
-        a Dirichlet boundary condition on the left side (for upwinding) or right side
-        (for downwinding).
+        a Dirichlet boundary condition on the left side or top side (for upwinding) or right side
+        or bottom side (for downwinding).
 
         Parameters
         ----------
@@ -1490,7 +1557,37 @@ class FiniteVolume2D(pybamm.SpatialMethod):
             Dictionary (with keys "left" and "right") of boundary conditions. Each
             boundary condition consists of a value and a flag indicating its type
             (e.g. "Dirichlet")
-        direction : str
-            Direction in which to apply the operator (upwind or downwind)
+        lr_direction : str
+            Direction in which to apply the operator (upwind or downwind) in the lr direction
+        tb_direction : str
+            Direction in which to apply the operator (upwind or downwind) in the tb direction
         """
-        raise NotImplementedError
+        if symbol not in bcs:
+            raise pybamm.ModelError(
+                f"Boundary conditions must be provided for {lr_direction}ing '{symbol}' and {tb_direction}ing '{symbol}'"
+            )
+
+        if lr_direction == "upwind":
+            bc_side = "left"
+        elif lr_direction == "downwind":
+            bc_side = "right"
+        else:
+            raise ValueError(f"direction '{lr_direction}' not recognised")
+
+        if tb_direction == "upwind":
+            bc_side = "top"
+        elif tb_direction == "downwind":
+            bc_side = "bottom"
+        else:
+            raise ValueError(f"direction '{tb_direction}' not recognised")
+
+        if bcs[symbol][bc_side][1] != "Dirichlet":
+            raise pybamm.ModelError(
+                "Dirichlet boundary conditions must be provided for "
+                f"{lr_direction}ing '{symbol}' and {tb_direction}ing '{symbol}'"
+            )
+
+        # Extract only the relevant boundary condition as the model might have both
+        bc_subset = {bc_side: bcs[symbol][bc_side]}
+        symbol_out, _ = self.add_ghost_nodes(symbol, discretised_symbol, bc_subset)
+        return symbol_out
