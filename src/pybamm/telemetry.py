@@ -1,3 +1,4 @@
+from typing import cast
 from posthog import Posthog
 import pybamm
 import sys
@@ -20,7 +21,7 @@ else:  # pragma: no cover
         project_api_key="phc_acTt7KxmvBsAxaE0NyRd5WfJyNxGvBq1U9HnlQSztmb",
         host="https://us.i.posthog.com",
     )
-    _posthog.log.setLevel("CRITICAL")
+    cast(Posthog, _posthog).log.setLevel("CRITICAL")
 
 
 def disable():
