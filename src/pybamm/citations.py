@@ -79,10 +79,10 @@ class Citations:
 
         # Warn if overwriting a previous citation
         if key in self._all_citations:
-                existing = self._string_formatting(self._all_citations[key])
-                new = self._string_formatting(entry)
-                if existing != new:
-                 warnings.warn(f"Replacing citation for {key}", stacklevel=2)
+            existing = self._string_formatting(self._all_citations[key])
+            new = self._string_formatting(entry)
+            if existing != new:
+                warnings.warn(f"Replacing citation for {key}", stacklevel=2)
 
         # Add to database
         self._all_citations[key] = entry
@@ -164,9 +164,9 @@ class Citations:
                 self._add_citation(entry.key, entry)
                 self._papers_to_cite.add(entry.key)
             except (UndefinedString, IndexError, TypeError) as e:
-            # If citation parsing fails, store it as unknown
-             self._unknown_citations.add(key)
-             raise KeyError(f"Invalid BibTeX entry: {str(e)}") from e
+                # If citation parsing fails, store it as unknown
+                self._unknown_citations.add(key)
+                raise KeyError(f"Invalid BibTeX entry: {e!s}") from e
 
     def print(self, filename=None, output_format="text", verbose=False):
         """

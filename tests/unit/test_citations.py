@@ -1,8 +1,7 @@
 import contextlib
 import io
-import warnings
 import pytest
-from bibtexparser.model import Entry 
+from bibtexparser.model import Entry
 
 import pybamm
 
@@ -17,8 +16,8 @@ class TestCitations:
         # Non-default papers should only be in the _all_citations dict
         assert "Sulzer2019physical" in citations._all_citations.keys()
         assert "Sulzer2019physical" not in citations._papers_to_cite
-     
-       # Register a new custom BibTeX citation
+
+        # Register a new custom BibTeX citation
         raw_bibtex = "@article{Test2024, author={Smith, Jane}, title={A Study}, journal={Sci}, year={2024}}"
         citations.register(raw_bibtex)
         assert "Test2024" in citations._papers_to_cite
@@ -32,7 +31,9 @@ class TestCitations:
         pybamm.citations._reset()
 
         # Register a citation to ensure there is something to print
-        pybamm.citations.register("@article{Test2024, author={Smith, Jane}, title={A Study}, journal={Sci}, year={2024}}")
+        pybamm.citations.register(
+            "@article{Test2024, author={Smith, Jane}, title={A Study}, journal={Sci}, year={2024}}"
+        )
 
         # Text format to file
         text_file = tmp_path / "citations.txt"
@@ -65,7 +66,6 @@ class TestCitations:
             pybamm.citations.register(invalid_bib)
         assert invalid_bib in pybamm.citations._unknown_citations
 
-
     def test_overwrite_citation(self):
         # Unknown citation
         fake_citation = r"@article{NotACitation, author={John Doe}, title={This Doesn't Exist}, journal={Fake Journal}, year={2025}}"
@@ -75,7 +75,9 @@ class TestCitations:
         # Overwrite NotACitation
         old_citation = pybamm.citations._all_citations["NotACitation"]
         with pytest.warns(UserWarning, match="Replacing citation for NotACitation"):
-            pybamm.citations.register(r"@article{NotACitation, author={Jane Doe}, title={A New Title}, journal={Updated Journal}, year={2026}}")
+            pybamm.citations.register(
+                r"@article{NotACitation, author={Jane Doe}, title={A New Title}, journal={Updated Journal}, year={2026}}"
+            )
         assert "NotACitation" in pybamm.citations._papers_to_cite
         assert pybamm.citations._all_citations["NotACitation"] != old_citation
 
@@ -95,7 +97,7 @@ class TestCitations:
 
         CiteWithWarning().print_import_warning()
         assert "Could not print citations" in caplog.text
-        
+
     def test_register_unknown_citation(self):
         citations = pybamm.citations
         citations._reset()
@@ -110,7 +112,7 @@ class TestCitations:
         malformed_bibtex = "@article{Malformed"
         with pytest.raises(KeyError):
             citations.register(malformed_bibtex)
-        assert malformed_bibtex in citations._unknown_citations    
+        assert malformed_bibtex in citations._unknown_citations
 
     def test_andersson_2019(self):
         citations = pybamm.citations
