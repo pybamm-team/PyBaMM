@@ -120,9 +120,6 @@ class Solution:
             else:
                 self._all_sensitivities[key] = [value]
 
-        else:
-            raise TypeError("sensitivities arg needs to be a bool or dict")
-
         # Check no ys are too large
         if check_solution:
             self.check_ys_are_not_too_large()
@@ -180,10 +177,6 @@ class Solution:
         try:
             return self._y
         except AttributeError:
-            # if y is evaluated before sensitivities then need to extract them
-            if isinstance(self._all_sensitivities, bool) and self._all_sensitivities:
-                self.extract_explicit_sensitivities()
-
             self.set_y()
 
             return self._y
@@ -204,29 +197,10 @@ class Solution:
             self.set_sensitivities()
         return self._sensitivities
 
-    @sensitivities.setter
-    def sensitivities(self, value):
-        """Updates the sensitivity if False or True. Raises an error if sensitivities are a dict"""
-        # sensitivities must be a dict or bool
-        if not isinstance(value, bool):
-            raise TypeError("sensitivities arg needs to be a bool")
-
-        if isinstance(self._all_sensitivities, dict):
-            raise NotImplementedError(
-                "Setting sensitivities is not supported if sensitivities are "
-                "already provided as a dict of {parameter: sensitivities} pairs."
-            )
-
-        self._all_sensitivities = value
-
     def set_sensitivities(self):
         if not self.has_sensitivities():
             self._sensitivities = {}
             return
-
-        # extract sensitivities if they are not already extracted
-        if isinstance(self._all_sensitivities, bool) and self._all_sensitivities:
-            self.extract_explicit_sensitivities()
 
         is_casadi = isinstance(
             next(iter(self._all_sensitivities.values()))[0], (casadi.DM, casadi.MX)
@@ -332,13 +306,10 @@ class Solution:
         than the full solution when only the first state is needed (e.g. to initialize
         a model with the solution)
         """
-        if isinstance(self._all_sensitivities, bool):
-            sensitivities = self._all_sensitivities
-        elif isinstance(self._all_sensitivities, dict):
-            sensitivities = {}
-            n_states = self.all_models[0].len_rhs_and_alg
-            for key in self._all_sensitivities:
-                sensitivities[key] = self._all_sensitivities[key][0][-n_states:, :]
+        sensitivities = {}
+        n_states = self.all_models[0].len_rhs_and_alg
+        for key in self._all_sensitivities:
+            sensitivities[key] = self._all_sensitivities[key][0][-n_states:, :]
 
         if self.all_yps is None:
             all_yps = None
@@ -378,13 +349,10 @@ class Solution:
         than the full solution when only the final state is needed (e.g. to initialize
         a model with the solution)
         """
-        if isinstance(self._all_sensitivities, bool):
-            sensitivities = self._all_sensitivities
-        elif isinstance(self._all_sensitivities, dict):
-            sensitivities = {}
-            n_states = self.all_models[-1].len_rhs_and_alg
-            for key in self._all_sensitivities:
-                sensitivities[key] = self._all_sensitivities[key][-1][-n_states:, :]
+        sensitivities = {}
+        n_states = self.all_models[-1].len_rhs_and_alg
+        for key in self._all_sensitivities:
+            sensitivities[key] = self._all_sensitivities[key][-1][-n_states:, :]
 
         if self.all_yps is None:
             all_yps = None

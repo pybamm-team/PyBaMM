@@ -261,77 +261,84 @@ class TestSimulationExperiment:
         experiment_2step = pybamm.Experiment(
             [
                 (
-                    "Discharge at C/20 for 1 hour",
-                    "Charge at 1 A until 4.1 V",
-                    "Hold at 4.1 V until C/2",
-                    "Discharge at 2 W for 30 min",
-                    "Discharge at 2 W for 30 min",  # repeat to cover this case (changes initialisation)
+                    "Discharge at C/20 for 2 min",
+                    "Charge at 1 A for 1 min",
+                    "Hold at 4.1 V for 1 min",
+                    "Discharge at 2 W for 1 min",
+                    "Discharge at 2 W for 1 min",  # repeat to cover this case (changes initialisation)
                 ),
             ]
             * 2,
         )
 
         solutions = []
-        for solver in [
-            pybamm.CasadiSolver(),
-            pybamm.IDAKLUSolver(),
-            pybamm.ScipySolver(),
-        ]:
-            for calculate_sensitivities in [False, True]:
-                model = pybamm.lithium_ion.SPM()
-                param = model.default_parameter_values
-                input_param_name = "Negative electrode active material volume fraction"
-                input_param_value = param[input_param_name]
-                param.update({input_param_name: "[input]"})
-                sim = pybamm.Simulation(
-                    model,
-                    experiment=experiment_2step,
-                    solver=solver,
-                    parameter_values=param,
-                )
-                solution = sim.solve(
-                    inputs={input_param_name: input_param_value},
-                    calculate_sensitivities=calculate_sensitivities,
-                )
-                solutions.append(solution)
+        input_param_name = "Negative electrode active material volume fraction"
+        solver = pybamm.IDAKLUSolver(atol=1e-8, rtol=1e-8)
+        for calculate_sensitivities in [False, True]:
+            model = pybamm.lithium_ion.SPM()
+            param = model.default_parameter_values
+            input_param_value = param[input_param_name]
+            param.update({input_param_name: "[input]"})
+            sim = pybamm.Simulation(
+                model,
+                experiment=experiment_2step,
+                solver=solver,
+                parameter_values=param,
+            )
+            solution = sim.solve(
+                inputs={input_param_name: input_param_value},
+                calculate_sensitivities=calculate_sensitivities,
+            )
+            solutions.append(solution)
+
+        model = pybamm.lithium_ion.SPM()
+        param = model.default_parameter_values
+        base_input_param_value = param[input_param_name]
+        fd_tol = 1e-4
+        for dh in [-fd_tol, fd_tol]:
+            model = pybamm.lithium_ion.SPM()
+            param = model.default_parameter_values
+            input_param_value = base_input_param_value * (1.0 + dh)
+            param.update({input_param_name: "[input]"})
+            sim = pybamm.Simulation(
+                model,
+                experiment=experiment_2step,
+                solver=solver,
+                parameter_values=param,
+            )
+            solution = sim.solve(
+                inputs={input_param_name: input_param_value},
+            )
+            solutions.append(solution)
 
         # check solutions are the same, leave out the last solution point as it is slightly different
         # for each solve due to numerical errors
-        # TODO: scipy solver does not work for this experiment, with or without sensitivities,
-        # so we skip this test for now
-        for i in range(1, len(solutions) - 2):
-            np.testing.assert_allclose(
-                solutions[0]["Voltage [V]"].data[:-1],
-                solutions[i]["Voltage [V]"](solutions[0].t[:-1]),
-                rtol=5e-2,
-                equal_nan=True,
-            )
-
-        # check sensitivities are roughly the same. Sundials isn't doing error control on the sensitivities
-        # by default, and the solution can be quite coarse for quickly changing sensitivities
-        sens_casadi = (
-            solutions[1]["Voltage [V]"]
-            .sensitivities[input_param_name][:-2]
-            .full()
-            .flatten()
+        np.testing.assert_allclose(
+            solutions[0]["Voltage [V]"].data[:-1],
+            solutions[1]["Voltage [V]"](solutions[0].t[:-1]),
+            rtol=5e-2,
+            equal_nan=True,
         )
+
+        # use finite difference to check sensitivities
+        t = solutions[0].t[:-2]
+        soln_neg = solutions[2]["Voltage [V]"](t)
+        soln_pos = solutions[3]["Voltage [V]"](t)
+        sens_fd = (soln_pos - soln_neg) / (2 * fd_tol * base_input_param_value)
         sens_idaklu = np.interp(
-            solutions[1].t[:-2],
-            solutions[3].t,
-            solutions[3]["Voltage [V]"]
+            t,
+            solutions[1].t,
+            solutions[1]["Voltage [V]"]
             .sensitivities[input_param_name]
             .full()
             .flatten(),
         )
-        rtol = 1e-1
-        atol = 1e-2
-        error = np.sqrt(
-            np.sum(
-                ((sens_casadi - sens_idaklu) / (rtol * np.abs(sens_casadi) + atol)) ** 2
-            )
-            / len(sens_casadi)
+        np.testing.assert_allclose(
+            sens_fd,
+            sens_idaklu,
+            rtol=1e-4,
+            atol=1e-4,
         )
-        assert error < 1.0
 
     def test_run_experiment_drive_cycle(self):
         drive_cycle = np.array([np.arange(10), np.arange(10)]).T

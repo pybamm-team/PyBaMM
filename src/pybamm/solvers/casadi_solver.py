@@ -147,6 +147,12 @@ class CasadiSolver(pybamm.BaseSolver):
             Any input parameters to pass to the model when solving
         """
 
+        # casadi solver does not support sensitivity analysis
+        if model.calculate_sensitivities:
+            raise NotImplementedError(
+                "Sensitivity analysis is not implemented for the CasADi solver."
+            )
+
         # Record whether there are any symbolic inputs
         inputs_dict = inputs_dict or {}
 
