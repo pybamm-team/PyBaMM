@@ -67,6 +67,55 @@ class TestSymbol:
         with pytest.raises(NotImplementedError, match="Cannot set domain directly"):
             b.domain = "test"
 
+    def test_symbol_auxiliary_domains(self):
+        # Normal case with auxiliary domains
+        a = pybamm.Symbol(
+            "a",
+            domain="test",
+            auxiliary_domains={
+                "secondary": "sec",
+                "tertiary": "tert",
+                "quaternary": "quat",
+            },
+        )
+        assert a.domain == ["test"]
+        assert a.secondary_domain == ["sec"]
+        assert a.tertiary_domain == ["tert"]
+        assert a.quaternary_domain == ["quat"]
+        assert a.domains == {
+            "primary": ["test"],
+            "secondary": ["sec"],
+            "tertiary": ["tert"],
+            "quaternary": ["quat"],
+        }
+
+        # Accepting domain as list
+        a = pybamm.Symbol("a", domain=["t", "e", "s"])
+        assert a.domain == ["t", "e", "s"]
+
+        # Raise TypeError for invalid domain
+        with pytest.raises(TypeError):
+            pybamm.Symbol("a", domain=1)
+
+        # Raise DomainError for non-unique domains
+        b = pybamm.Symbol("b", domain="test sec")
+        with pytest.raises(pybamm.DomainError, match="All domains must be different"):
+            b.domains = {"primary": "test", "secondary": "test"}
+
+        # Raise DomainError due to overlap in auxiliary domains
+        with pytest.raises(pybamm.DomainError, match="All domains must be different"):
+            pybamm.Symbol(
+                "b",
+                domain="test",
+                auxiliary_domains={"secondary": ["test sec"], "tertiary": ["test sec"]},
+            )
+
+        # Check for deprecation warning when accessing auxiliary_domains directly
+        with pytest.raises(
+            NotImplementedError, match="symbol.auxiliary_domains has been deprecated"
+        ):
+            _ = a.auxiliary_domains
+
     def test_symbol_methods(self):
         a = pybamm.Symbol("a")
         b = pybamm.Symbol("b")
