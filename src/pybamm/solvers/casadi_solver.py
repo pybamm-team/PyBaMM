@@ -147,6 +147,12 @@ class CasadiSolver(pybamm.BaseSolver):
             Any input parameters to pass to the model when solving
         """
 
+        # casadi solver does not support sensitivity analysis
+        if model.calculate_sensitivities:
+            raise NotImplementedError(
+                "Sensitivity analysis is not implemented for the CasADi solver."
+            )
+
         # Record whether there are any symbolic inputs
         inputs_dict = inputs_dict or {}
 
@@ -193,7 +199,6 @@ class CasadiSolver(pybamm.BaseSolver):
                     y0,
                     model,
                     inputs_dict,
-                    all_sensitivities=False,
                 )
                 solution.solve_time = 0
                 solution.integration_time = 0
@@ -249,7 +254,6 @@ class CasadiSolver(pybamm.BaseSolver):
                             inputs,
                             t_window,
                             use_grid=use_grid,
-                            extract_sensitivities_in_solution=False,
                         )
                         first_ts_solved = True
                         solved = True
@@ -303,10 +307,6 @@ class CasadiSolver(pybamm.BaseSolver):
                     # update y0 as initial_values
                     # from which to start the new casadi integrator
                     y0 = solution.all_ys[-1][:, -1]
-
-            # now we extract sensitivities from the solution
-            if bool(model.calculate_sensitivities):
-                solution.sensitivities = True
 
             solution.check_ys_are_not_too_large()
             return solution
@@ -451,7 +451,6 @@ class CasadiSolver(pybamm.BaseSolver):
             inputs,
             t_window_event_dense,
             use_grid=use_grid,
-            extract_sensitivities_in_solution=False,
         )
 
         # Find the exact time at which the event was triggered
@@ -478,7 +477,6 @@ class CasadiSolver(pybamm.BaseSolver):
             np.array([t_event]),
             y_event[:, np.newaxis],
             "event",
-            all_sensitivities=False,
         )
         solution.integration_time = (
             coarse_solution.integration_time + dense_step_sol.integration_time
@@ -600,7 +598,6 @@ class CasadiSolver(pybamm.BaseSolver):
         inputs,
         t_eval,
         use_grid=True,
-        extract_sensitivities_in_solution=None,
     ):
         """
         Run the integrator.
@@ -619,22 +616,9 @@ class CasadiSolver(pybamm.BaseSolver):
             The times at which to compute the solution
         use_grid: bool, optional
             Determines whether the casadi solver uses a grid or rescales time to (0,1)
-        extract_sensitivities_in_solution: bool or None
-            If None, then the sensitivities are extracted within the
-            :class:`pybamm.Solution` object returned, only if present in the solution.
-            Setting to True or False will override this behaviour, forcing the
-            sensitivities to be extracted or not (it is up to the caller to determine if
-            the sensitivities are in fact present)
         """
 
         pybamm.logger.debug("Running CasADi integrator")
-
-        # are we solving explicit forward equations?
-        explicit_sensitivities = bool(model.calculate_sensitivities)
-        # by default we extract sensitivities in the solution if we
-        # are calculating the sensitivities
-        if extract_sensitivities_in_solution is None:
-            extract_sensitivities_in_solution = explicit_sensitivities
 
         if use_grid is True:
             pybamm.logger.spam("Calculating t_eval_shifted")
@@ -647,12 +631,6 @@ class CasadiSolver(pybamm.BaseSolver):
 
         len_rhs = model.concatenated_rhs.size
         len_alg = model.concatenated_algebraic.size
-
-        # Check y0 to see if it includes sensitivities
-        if explicit_sensitivities:
-            num_parameters = model.len_rhs_sens // model.len_rhs
-            len_rhs = len_rhs * (num_parameters + 1)
-            len_alg = len_alg * (num_parameters + 1)
 
         y0_diff = y0[:len_rhs]
         y0_alg_exact = y0[len_rhs:]
@@ -696,7 +674,6 @@ class CasadiSolver(pybamm.BaseSolver):
                 y_sol,
                 model,
                 inputs_dict,
-                all_sensitivities=extract_sensitivities_in_solution,
                 check_solution=False,
             )
             sol.integration_time = integration_time
@@ -736,7 +713,6 @@ class CasadiSolver(pybamm.BaseSolver):
                 y_sol,
                 model,
                 inputs_dict,
-                all_sensitivities=extract_sensitivities_in_solution,
                 check_solution=False,
             )
             sol.integration_time = integration_time

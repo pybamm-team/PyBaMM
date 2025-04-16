@@ -818,10 +818,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
     def supports_parallel_solve(self):
         return True
 
-    @property
-    def requires_explicit_sensitivities(self):
-        return False
-
     def _integrate(self, model, t_eval, inputs_list=None, t_interp=None):
         """
         Solve a DAE model defined by residuals with initial conditions y0.
@@ -913,7 +909,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             # add "all" stacked sensitivities ((#timesteps * #states,#sens_params))
             yS_out["all"] = np.hstack([yS_out[name] for name in sensitivity_names])
         else:
-            yS_out = False
+            yS_out = {}
 
         # 0 = solved for all t_eval
         # 2 = found root(s)
