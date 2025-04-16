@@ -1,5 +1,9 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Bug fixes
+
+- Remove a regularization term in the harmonic mean.  ([#4977](https://github.com/pybamm-team/PyBaMM/pull/4977))
+
 # [v25.4.0](https://github.com/pybamm-team/PyBaMM/tree/v25.4.0) - 2025-04-02
 
 ## Features
