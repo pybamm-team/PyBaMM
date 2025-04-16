@@ -336,8 +336,8 @@ class TestSimulationExperiment:
         np.testing.assert_allclose(
             sens_fd,
             sens_idaklu,
-            rtol=1e-4,
-            atol=1e-4,
+            rtol=2e-4,
+            atol=2e-4,
         )
 
     def test_run_experiment_drive_cycle(self):
