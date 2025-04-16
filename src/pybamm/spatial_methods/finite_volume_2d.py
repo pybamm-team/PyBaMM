@@ -355,14 +355,34 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         # Dirichlet boundary conditions
         # [left, top, n, bottom, right]
         n_bcs = 0
-        if tbc_type == "Dirichlet":
-            domain = [domain[0] + "_top ghost cell", *domain]
+
+        if tbc_type == "Dirichlet" and bbc_type != "Dirichlet":
+            if isinstance(domain, list) or isinstance(domain, tuple):
+                domain = [(d + "_top ghost cell", d) for d in domain]
+            else:
+                domain = [domain + "_top ghost cell", domain]
             n_bcs += 1
+        elif tbc_type != "Dirichlet" and bbc_type == "Dirichlet":
+            if isinstance(domain, list) or isinstance(domain, tuple):
+                domain = [(d, d + "_bottom ghost cell") for d in domain]
+            else:
+                domain = [domain, domain + "_bottom ghost cell"]
+            n_bcs += 1
+        elif tbc_type == "Dirichlet" and bbc_type == "Dirichlet":
+            if isinstance(domain, list) or isinstance(domain, tuple):
+                domain = [
+                    (d + "_top ghost cell", d, d + "_bottom ghost cell") for d in domain
+                ]
+            else:
+                domain = [
+                    domain + "_top ghost cell",
+                    domain,
+                    domain + "_bottom ghost cell",
+                ]
+            n_bcs += 2
+
         if lbc_type == "Dirichlet":
             domain = [domain[0] + "_left ghost cell", *domain]
-            n_bcs += 1
-        if bbc_type == "Dirichlet":
-            domain = [*domain, domain[-1] + "_bottom ghost cell"]
             n_bcs += 1
         if rbc_type == "Dirichlet":
             domain = [*domain, domain[-1] + "_right ghost cell"]
@@ -1382,8 +1402,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
 
                     # dx_real = dx * length, therefore, beta is unchanged
                     # Compute harmonic mean on internal edges
-                    # Note: add small number to denominator to regularise D_eff
-                    D_eff = D1 * D2 / (D2 * beta + D1 * (1 - beta) + 1e-16)
+                    D_eff = D1 * D2 / (D2 * beta + D1 * (1 - beta))
 
                     # Matrix to pad zeros at the beginning and end of the array where
                     # the exterior edge values will be added
