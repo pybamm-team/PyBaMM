@@ -623,6 +623,8 @@ class ParameterValues:
                             geometry[domain]["tabs"][tab][position_size] = (
                                 process_and_check(sym)
                             )
+                elif spatial_variable == "coord_sys":
+                    continue
                 else:
                     for lim, sym in spatial_limits.items():
                         geometry[domain][spatial_variable][lim] = process_and_check(sym)
