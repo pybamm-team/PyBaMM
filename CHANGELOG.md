@@ -1,8 +1,14 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+# [v25.4.1](https://github.com/pybamm-team/PyBaMM/tree/v25.4.1) - 2025-04-16
+
 ## Bug fixes
 
 - Remove a regularization term in the harmonic mean.  ([#4977](https://github.com/pybamm-team/PyBaMM/pull/4977))
+
+## Breaking changes
+
+- Changed default solver to `pybamm.IDAKLUSolver`. ([#4915](https://github.com/pybamm-team/PyBaMM/pull/4915))
 
 # [v25.4.0](https://github.com/pybamm-team/PyBaMM/tree/v25.4.0) - 2025-04-02
 
@@ -20,7 +26,6 @@
 
 - Added `skip_ok` option to `step` to allow for steps to be skipped if they are infeasible at initial conditions. ([#4839](https://github.com/pybamm-team/PyBaMM/pull/4839))
 - Deprecated `CrateTermination` and renamed it to `CRateTermination`. ([#4834](https://github.com/pybamm-team/PyBaMM/pull/4834))
-- Changed default solver to `pybamm.IDAKLUSolver`. ([#4915](https://github.com/pybamm-team/PyBaMM/pull/4915))
 
 ## Bug fixes
 
