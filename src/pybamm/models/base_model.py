@@ -6,6 +6,7 @@ from collections import OrderedDict
 
 import copy
 import casadi
+import scipy
 import numpy as np
 
 import pybamm
@@ -289,6 +290,11 @@ class BaseModel:
         self._concatenated_initial_conditions = concatenated_initial_conditions
 
     @property
+    def built(self):
+        "Returns a boolean for the model built status."
+        return self._built
+
+    @property
     def mass_matrix(self):
         """Returns the mass matrix for the system of differential equations after discretisation."""
         return self._mass_matrix
@@ -408,7 +414,10 @@ class BaseModel:
         if len(self.rhs) == 0 and len(self.algebraic) != 0:
             return pybamm.CasadiAlgebraicSolver()
         else:
-            return pybamm.CasadiSolver(mode="safe")
+            pybamm.logger.warning(
+                "The default solver changed to IDAKLUSolver after the v25.4.0. release. You can swap back to the previous default by using `pybamm.CasadiSolver()` instead."
+            )
+            return pybamm.IDAKLUSolver()
 
     @property
     def default_quick_plot_variables(self):
@@ -586,8 +595,12 @@ class BaseModel:
         if self.mass_matrix is None or self.mass_matrix_inv is None:
             return False
         # Check that the mass matrix inverse is an identity matrix
-        mass_matrix_inv = self.mass_matrix_inv.entries.toarray()
-        return np.allclose(mass_matrix_inv, np.eye(mass_matrix_inv.shape[0]))
+        mass_matrix_inv = self.mass_matrix_inv.entries
+        if scipy.sparse.issparse(mass_matrix_inv):
+            identity = scipy.sparse.identity(mass_matrix_inv.shape[0])
+            return (mass_matrix_inv - identity).nnz == 0
+        else:
+            return np.allclose(mass_matrix_inv, np.eye(mass_matrix_inv.shape[0]))
 
     def _format_table_row(
         self, param_name, param_type, max_name_length, max_type_length
