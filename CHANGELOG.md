@@ -1,5 +1,10 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Breaking changes
+
+- Changed default solver to `pybamm.IDAKLUSolver`. ([#4915](https://github.com/pybamm-team/PyBaMM/pull/4915))
+- Remove sensitivity functionality for Casadi and Scipy solvers, only `pybamm.IDAKLU` solver can calculats sensitivities. ([#4975](https://github.com/pybamm-team/PyBaMM/pull/4975))
+
 # [v25.4.0](https://github.com/pybamm-team/PyBaMM/tree/v25.4.0) - 2025-04-02
 
 ## Features
@@ -16,7 +21,6 @@
 
 - Added `skip_ok` option to `step` to allow for steps to be skipped if they are infeasible at initial conditions. ([#4839](https://github.com/pybamm-team/PyBaMM/pull/4839))
 - Deprecated `CrateTermination` and renamed it to `CRateTermination`. ([#4834](https://github.com/pybamm-team/PyBaMM/pull/4834))
-- Changed default solver to `pybamm.IDAKLUSolver`. ([#4915](https://github.com/pybamm-team/PyBaMM/pull/4915))
 
 ## Bug fixes
 
