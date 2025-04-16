@@ -82,7 +82,7 @@ plot = [
 ]
 cite = [
     "setuptools", # Fix for a pybtex issue
-    "bibtexparser>=2.0.0"
+    "bibtexparser>=2.0.0b8"
 ]
 # Battery Parameter eXchange format
 bpx = [
