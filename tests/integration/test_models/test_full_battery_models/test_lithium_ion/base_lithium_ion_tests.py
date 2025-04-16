@@ -127,7 +127,7 @@ class BaseIntegrationTestLithiumIon:
 
     def test_kinetics_asymmetric_butler_volmer(self):
         options = {"intercalation kinetics": "asymmetric Butler-Volmer"}
-        solver = pybamm.CasadiSolver(atol=1e-14, rtol=1e-14)
+        solver = pybamm.IDAKLUSolver(atol=1e-14, rtol=1e-14)
 
         parameter_values = pybamm.ParameterValues("Marquis2019")
         parameter_values.update(
