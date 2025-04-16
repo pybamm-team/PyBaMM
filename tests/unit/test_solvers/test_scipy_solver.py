@@ -9,6 +9,21 @@ import warnings
 
 
 class TestScipySolver:
+    def test_no_sensitivities_error(self):
+        model = pybamm.lithium_ion.SPM()
+        parameters = model.default_parameter_values
+        parameters["Current function [A]"] = "[input]"
+        sim = pybamm.Simulation(
+            model, solver=pybamm.ScipySolver(), parameter_values=parameters
+        )
+        with pytest.raises(
+            NotImplementedError,
+            match="Sensitivity analysis is not implemented",
+        ):
+            sim.solve(
+                [0, 1], inputs={"Current function [A]": 1}, calculate_sensitivities=True
+            )
+
     def test_model_solver_python_and_jax(self):
         if pybamm.has_jax():
             formats = ["python", "jax"]
