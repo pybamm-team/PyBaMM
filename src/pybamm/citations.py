@@ -2,7 +2,7 @@ import pybamm
 import os
 import warnings
 from sys import _getframe
-from bibtexparser import BibDatabase, UndefinedString
+from bibtexparser import UndefinedString
 from bibtexparser import BibTexParser
 from bibtexparser import BibTexWriter
 from bibtexparser import load as bibtex_load
@@ -216,7 +216,7 @@ class Citations:
                     citations.append(self._string_formatting(entry))
                 elif output_format == "bibtex":
                     writer = BibTexWriter()
-                    citations.append(writer.write(BibDatabase(entries=[entry])))
+                    citations.append(writer.write(writer.write([entry])))
 
         output = (
             "\n\n".join(citations) if output_format == "text" else "\n".join(citations)
