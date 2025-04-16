@@ -14,7 +14,9 @@ class TestCompareBasicModels:
 
         # Solve basic DFN
         solver = pybamm.IDAKLUSolver(atol=1e-8, rtol=1e-8)
-        basic_sim = pybamm.Simulation(basic_dfn, parameter_values=parameter_values, solver=solver)
+        basic_sim = pybamm.Simulation(
+            basic_dfn, parameter_values=parameter_values, solver=solver
+        )
         t_eval = [0, 3600]
         t_interp = np.linspace(0, 3600)
         basic_sim.solve(t_eval=t_eval, t_interp=t_interp)
@@ -45,7 +47,9 @@ class TestCompareBasicModels:
 
         # Solve basic DFN
         solver = pybamm.IDAKLUSolver(atol=1e-8, rtol=1e-8)
-        basic_sim = pybamm.Simulation(basic_dfn, parameter_values=parameter_values, solver=solver)
+        basic_sim = pybamm.Simulation(
+            basic_dfn, parameter_values=parameter_values, solver=solver
+        )
         t_eval = [0, 3600]
         t_interp = np.linspace(0, 3600)
         basic_sim.solve(t_eval=t_eval, t_interp=t_interp)
@@ -72,7 +76,9 @@ class TestCompareBasicModels:
 
         # Solve basic SPM
         solver = pybamm.IDAKLUSolver(atol=1e-8, rtol=1e-8)
-        basic_sim = pybamm.Simulation(basic_spm, parameter_values=parameter_values, solver=solver)
+        basic_sim = pybamm.Simulation(
+            basic_spm, parameter_values=parameter_values, solver=solver
+        )
         t_eval = [0, 3600]
         t_interp = np.linspace(0, 3600)
         basic_sim.solve(t_eval=t_eval, t_interp=t_interp)
