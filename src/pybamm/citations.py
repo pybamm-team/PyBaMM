@@ -88,32 +88,31 @@ class Citations:
         self._all_citations[key] = entry
 
     def _string_formatting(self, entry):
-           fields = entry.fields_dict
-           authors = self._format_author(fields.get       ("author", ""))
-           title = self._format_title(fields.get       ("title", ""))
-           journal = self._format_journal(fields.       get("journal", ""))
-           volume = fields.get("volume", "")
-           number = fields.get("number", "")
-           pages = fields.get("pages", "")
-           year = fields.get("year", "")
-           doi = fields.get("doi", "")
+        fields = entry.fields_dict
+        authors = self._format_author(fields.get("author", ""))
+        title = self._format_title(fields.get("title", ""))
+        journal = self._format_journal(fields.get("journal", ""))
+        volume = fields.get("volume", "")
+        number = fields.get("number", "")
+        pages = fields.get("pages", "")
+        year = fields.get("year", "")
+        doi = fields.get("doi", "")
 
-           parts = [f"{authors}"]
-           if title:
-               parts.append(f'"{title}"')
-           if journal:
-               vol_issue = f"{volume}({number})"        if volume and number else volume or        number
-               journal_str = f"*{journal}*        {vol_issue}".strip()
-               parts.append(journal_str)
-           if year:
-               parts.append(year)
-           if pages:
-               parts[-1] += f", {pages}" 
-           if doi:
-               parts.append(f"doi:{doi}")
+        parts = [f"{authors}"]
+        if title:
+            parts.append(f'"{title}"')
+        if journal:
+            vol_issue = f"{volume}({number})" if volume and number else volume or number
+            journal_str = f"*{journal}*        {vol_issue}".strip()
+            parts.append(journal_str)
+        if year:
+            parts.append(year)
+        if pages:
+            parts[-1] += f", {pages}"
+        if doi:
+            parts.append(f"doi:{doi}")
 
-           return ". ".join(filter(None, parts)) + "."
-
+        return ". ".join(filter(None, parts)) + "."
 
     def _format_author(self, author_str):
         authors = author_str.replace("\n", " ").split(" and ")
