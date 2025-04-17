@@ -781,13 +781,12 @@ class FiniteVolume2D(pybamm.SpatialMethod):
             side_first = symbol.side
             side_second = None
 
-        prim_pts = submesh.npts
         repeats = self._get_auxiliary_domain_repeats(discretised_child.domains)
 
         if bcs is None:
             bcs = {}
 
-        # extrap_order_gradient = self.options["extrapolation"]["order"]["gradient"]
+        extrap_order_gradient = self.options["extrapolation"]["order"]["gradient"]
         extrap_order_value = self.options["extrapolation"]["order"]["value"]
         use_bcs = self.options["extrapolation"]["use bcs"]
 
@@ -821,11 +820,10 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         # Derivation of extrapolation formula can be found at:
         # https://github.com/Scottmar93/extrapolation-coefficents/tree/master
         if isinstance(symbol, pybamm.BoundaryValue):
-            if use_bcs and pybamm.has_bc_of_form(child, symbol.side, bcs, "Dirichlet"):
+            if use_bcs and pybamm.has_bc_of_form(child, side_first, bcs, "Dirichlet"):
                 # just use the value from the bc: f(x*)
-                sub_matrix = csr_matrix((1, prim_pts))
-                additive = bcs[child][symbol.side][0]
-                raise NotImplementedError
+                sub_matrix = csr_matrix((n_tb, n_tb * n_lr))
+                additive = bcs[child][side_first][0]
 
             elif side_first == "left":
                 if extrap_order_value == "linear":
@@ -833,9 +831,23 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                     # f(x*) = f_1 - (dx0 / dx1) (f_2 - f_1)
 
                     if use_bcs and pybamm.has_bc_of_form(
-                        child, symbol.side, bcs, "Neumann"
+                        child, side_first, bcs, "Neumann"
                     ):
-                        raise NotImplementedError
+                        dx0 = dx0_lr
+                        row_indices = np.arange(0, n_tb)
+                        col_indices_0 = np.arange(0, n_tb * n_lr, n_lr)
+                        vals_0 = np.ones(n_tb)
+                        sub_matrix = csr_matrix(
+                            (
+                                vals_0,
+                                (
+                                    row_indices,
+                                    col_indices_0,
+                                ),
+                            ),
+                            shape=(n_tb, n_tb * n_lr),
+                        )
+                        additive = -dx0 * bcs[child][side_first][0]
 
                     else:
                         dx0 = dx0_lr
@@ -872,9 +884,24 @@ class FiniteVolume2D(pybamm.SpatialMethod):
             elif side_first == "right":
                 if extrap_order_value == "linear":
                     if use_bcs and pybamm.has_bc_of_form(
-                        child, symbol.side, bcs, "Neumann"
+                        child, side_first, bcs, "Neumann"
                     ):
-                        raise NotImplementedError
+                        dxN = dxN_lr
+                        row_indices = np.arange(0, n_tb)
+                        col_indices_N = np.arange(n_lr - 1, n_lr * n_tb, n_lr)
+                        vals_N = np.ones(n_tb)
+                        sub_matrix = csr_matrix(
+                            (
+                                vals_0,
+                                (
+                                    row_indices,
+                                    col_indices_N,
+                                ),
+                            ),
+                            shape=(n_tb, n_tb * n_lr),
+                        )
+                        additive = dxN * bcs[child][side_first][0]
+
                     else:
                         # to find value at x* use formula:
                         # f(x*) = f_N - (dxN / dxNm1) (f_N - f_Nm1)
@@ -911,7 +938,17 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                     if use_bcs and pybamm.has_bc_of_form(
                         child, side_first, bcs, "Neumann"
                     ):
-                        raise NotImplementedError
+                        dx0 = dx0_tb
+                        first_val = np.ones(n_lr)
+                        sub_matrix = spdiags(
+                            first_val,
+                            [
+                                0,
+                            ],
+                            n_lr,
+                            n_lr * n_tb,
+                        )
+                        additive = -dx0 * bcs[child][side_first][0]
                     else:
                         dx0 = dx0_tb
                         dx1 = dx1_tb
@@ -937,10 +974,21 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                     if use_bcs and pybamm.has_bc_of_form(
                         child, side_first, bcs, "Neumann"
                     ):
-                        raise NotImplementedError
+                        dxNm1 = dxNm1_tb
+                        dxN = dxN_tb
+                        val_N = np.ones(n_lr)
+                        sub_matrix = spdiags(
+                            val_N,
+                            [
+                                (n_tb - 1) * n_lr,
+                            ],
+                            n_lr,
+                            n_lr * n_tb,
+                        )
+                        additive = dxN * bcs[child][side_first][0]
                     else:
-                        dx0 = dx0_tb
-                        dx1 = dx1_tb
+                        dx0 = dxNm1_tb
+                        dx1 = dxN_tb
                         first_val = -(dx0 / dx1) * np.ones(n_lr)
                         second_val = (1 + (dx0 / dx1)) * np.ones(n_lr)
                         sub_matrix = spdiags(
@@ -962,11 +1010,164 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                     raise NotImplementedError
 
             if side_second == "top":
+                if use_bcs and pybamm.has_bc_of_form(
+                    child, side_second, bcs, "Neumann"
+                ):
+                    dx0 = dx0_tb
+                    additive = -dx0 * bcs[child][side_second][0]
+                    sub_matrix_second = csr_matrix(
+                        (
+                            [
+                                1,
+                            ],
+                            (
+                                [
+                                    0,
+                                ],
+                                [
+                                    0,
+                                ],
+                            ),
+                        ),
+                        shape=(1, n_tb),
+                    )
+                    sub_matrix = sub_matrix_second @ sub_matrix
+                else:
+                    dx0 = dx0_tb
+                    dx1 = dx1_tb
+                    row_indices = [0, 0]
+                    col_indices = [0, 1]
+                    vals = [1 + (dx0 / dx1), -(dx0 / dx1)]
+                    sub_matrix_second = csr_matrix(
+                        (vals, (row_indices, col_indices)), shape=(1, n_tb)
+                    )
+                    sub_matrix = sub_matrix_second @ sub_matrix
+            elif side_second == "bottom":
+                if use_bcs and pybamm.has_bc_of_form(
+                    child, side_second, bcs, "Neumann"
+                ):
+                    dxN = dxN_tb
+                    additive = dxN * bcs[child][side_second][0]
+                    sub_matrix_second = csr_matrix(
+                        (
+                            [
+                                1,
+                            ],
+                            (
+                                [
+                                    0,
+                                ],
+                                [
+                                    n_tb - 1,
+                                ],
+                            ),
+                        ),
+                        shape=(1, n_tb),
+                    )
+                    sub_matrix = sub_matrix_second @ sub_matrix
+                else:
+                    dxN = dxN_tb
+                    dxNm1 = dxNm1_tb
+                    row_indices = [0, 0]
+                    col_indices = [n_tb - 2, n_tb - 1]
+                    vals = [-(dxN / dxNm1), 1 + (dxN / dxNm1)]
+                    sub_matrix_second = csr_matrix(
+                        (vals, (row_indices, col_indices)), shape=(1, n_tb)
+                    )
+                    sub_matrix = sub_matrix_second @ sub_matrix
+            elif side_second is None:
+                pass
+            else:
+                raise ValueError("side_second must be 'top' or 'bottom'")
+
+        elif isinstance(symbol, pybamm.BoundaryGradient):
+            if use_bcs and pybamm.has_bc_of_form(child, symbol.side, bcs, "Neumann"):
+                # just use the value from the bc: f'(x*)
+                raise NotImplementedError
+
+            elif side_first == "left":
+                if extrap_order_gradient == "linear":
+                    # f'(x*) = (f_2 - f_1) / dx1
+                    dx1 = dx1_lr
+                    row_indices = np.arange(0, n_tb)
+                    col_indices_0 = np.arange(0, n_tb * n_lr, n_lr)
+                    col_indices_1 = col_indices_0 + 1
+                    vals_0 = np.ones(n_tb) * (-1 / dx1)
+                    vals_1 = np.ones(n_tb) * (1 / dx1)
+                    sub_matrix = csr_matrix(
+                        (
+                            np.hstack([vals_0, vals_1]),
+                            (
+                                np.hstack([row_indices, row_indices]),
+                                np.hstack([col_indices_0, col_indices_1]),
+                            ),
+                        ),
+                        shape=(n_tb, n_tb * n_lr),
+                    )
+                    additive = pybamm.Scalar(0)
+
+                elif extrap_order_gradient == "quadratic":
+                    raise NotImplementedError
+
+                else:
+                    raise NotImplementedError
+
+            elif side_first == "right":
+                if extrap_order_gradient == "linear":
+                    # use formula:
+                    # f'(x*) = (f_N - f_Nm1) / dxNm1
+                    dxN = dxN_lr
+                    dxNm1 = dxNm1_lr
+                    row_indices = np.arange(0, n_tb)
+                    col_indices_Nm1 = np.arange(n_lr - 2, n_lr * n_tb, n_lr)
+                    col_indices_N = col_indices_Nm1 + 1
+                    vals_Nm1 = np.ones(n_tb) * (-1 / dxNm1)
+                    vals_N = np.ones(n_tb) * (1 / dxNm1)
+                    sub_matrix = csr_matrix(
+                        (
+                            np.hstack([vals_Nm1, vals_N]),
+                            (
+                                np.hstack([row_indices, row_indices]),
+                                np.hstack([col_indices_Nm1, col_indices_N]),
+                            ),
+                        ),
+                        shape=(n_tb, n_tb * n_lr),
+                    )
+                    additive = pybamm.Scalar(0)
+
+                elif extrap_order_gradient == "quadratic":
+                    raise NotImplementedError
+                else:
+                    raise NotImplementedError
+
+            elif side_first == "top":
+                dx1 = dx1_tb
+                first_val = (-1 / dx1) * np.ones(n_lr)
+                second_val = (1 / dx1) * np.ones(n_lr)
+                sub_matrix = spdiags(
+                    [first_val, second_val], [0, n_lr], n_lr, n_lr * n_tb
+                )
+                additive = pybamm.Scalar(0)
+
+            elif side_first == "bottom":
+                dx0 = dxNm1_tb
+                dx1 = dxN_tb
+                first_val = -(dx0 / dx1) * np.ones(n_lr)
+                second_val = (1 + (dx0 / dx1)) * np.ones(n_lr)
+                sub_matrix = spdiags(
+                    [first_val, second_val],
+                    [(n_tb - 2) * n_lr, (n_tb - 1) * n_lr],
+                    n_lr,
+                    n_lr * n_tb,
+                )
+                additive = pybamm.Scalar(0)
+
+            if side_second == "top":
                 dx0 = dx0_tb
                 dx1 = dx1_tb
                 row_indices = [0, 0]
                 col_indices = [0, 1]
-                vals = [1 + (dx0 / dx1), -(dx0 / dx1)]
+                vals = [-1 / dx1, 1 / dx1]
                 sub_matrix_second = csr_matrix(
                     (vals, (row_indices, col_indices)), shape=(1, n_tb)
                 )
@@ -976,7 +1177,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                 dxNm1 = dxNm1_tb
                 row_indices = [0, 0]
                 col_indices = [n_tb - 2, n_tb - 1]
-                vals = [-(dxN / dxNm1), 1 + (dxN / dxNm1)]
+                vals = [-1 / dxNm1, 1 / dxNm1]
                 sub_matrix_second = csr_matrix(
                     (vals, (row_indices, col_indices)), shape=(1, n_tb)
                 )
@@ -985,10 +1186,6 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                 pass
             else:
                 raise ValueError("side_second must be 'top' or 'bottom'")
-
-        elif isinstance(symbol, pybamm.BoundaryGradient):
-            raise NotImplementedError
-
         # Generate full matrix from the submatrix
         # Convert to csr_matrix so that we can take the index (row-slicing), which is
         # not supported by the default kron format
