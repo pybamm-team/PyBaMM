@@ -35,6 +35,10 @@ class AlgebraicSolver(pybamm.BaseSolver):
         super().__init__(method=method)
         self.tol = tol
         self.extra_options = extra_options or {}
+        if "xtol" not in self.extra_options:
+            self.extra_options["xtol"] = 1e-12
+        if "gtol" not in self.extra_options:
+            self.extra_options["gtol"] = 1e-12
         self.name = f"Algebraic solver ({method})"
         self._algebraic_solver = True
         pybamm.citations.register("Virtanen2020")
@@ -158,6 +162,7 @@ class AlgebraicSolver(pybamm.BaseSolver):
                         **self.extra_options,
                     )
                     integration_time += timer.time()
+                    success |= sol.success
                 # Methods which use minimize are specified as either "minimize",
                 # which uses the default method, or with "minimize__methodname"
                 elif self.method.startswith("minimize"):
@@ -183,7 +188,14 @@ class AlgebraicSolver(pybamm.BaseSolver):
                         bounds = [
                             (lb, ub) for lb, ub in zip(model.bounds[0], model.bounds[1])
                         ]
-                        extra_options["bounds"] = bounds
+                    else:
+                        bounds = None
+
+                    hess = extra_options.get("hess", None)
+                    hessp = extra_options.get("hessp", None)
+                    constraints = extra_options.get("constraints", ())
+                    callback = extra_options.get("callback", None)
+
                     timer.reset()
                     sol = optimize.minimize(
                         root_norm,
@@ -191,9 +203,16 @@ class AlgebraicSolver(pybamm.BaseSolver):
                         method=method,
                         tol=self.tol,
                         jac=jac_norm,
-                        **extra_options,
+                        bounds=bounds,
+                        hess=hess,
+                        hessp=hessp,
+                        constraints=constraints,
+                        callback=callback,
+                        options=extra_options,
                     )
                     integration_time += timer.time()
+                    # The solution.success flag is unreliable, so we ignore
+                    # it and use the norm of the residual instead
                 else:
                     timer.reset()
                     sol = optimize.root(
@@ -205,25 +224,21 @@ class AlgebraicSolver(pybamm.BaseSolver):
                         options=self.extra_options,
                     )
                     integration_time += timer.time()
+                    # The solution.success flag is unreliable, so we ignore
+                    # it and use the norm of the residual instead
 
-                if sol.success and np.all(abs(sol.fun) < self.tol):
-                    # update initial guess for the next iteration
-                    y0_alg = sol.x
-                    # update solution array
+                y0_alg = sol.x
+                success |= np.all(abs(sol.fun) < self.tol)
+                if success:
                     y_alg[:, idx] = y0_alg
-                    success = True
-                elif not sol.success:
+                    break
+
+                if itr > maxiter:
                     raise pybamm.SolverError(
-                        f"Could not find acceptable solution: {sol.message}"
+                        "Could not find acceptable solution: solver terminated "
+                        "unsuccessfully and maximum solution error "
+                        f"({np.max(abs(sol.fun))}) above tolerance ({self.tol})"
                     )
-                else:
-                    y0_alg = sol.x
-                    if itr > maxiter:
-                        raise pybamm.SolverError(
-                            "Could not find acceptable solution: solver terminated "
-                            "successfully, but maximum solution error "
-                            f"({np.max(abs(sol.fun))}) above tolerance ({self.tol})"
-                        )
                 itr += 1
 
         # Concatenate differential part
