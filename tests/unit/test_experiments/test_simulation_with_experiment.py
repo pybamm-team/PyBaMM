@@ -73,7 +73,8 @@ class TestSimulationExperiment:
             temperature="-14oC",
         )
         model = pybamm.lithium_ion.SPM()
-        sim = pybamm.Simulation(model, experiment=experiment)
+        solver = pybamm.IDAKLUSolver(atol=1e-8, rtol=1e-8)
+        sim = pybamm.Simulation(model, experiment=experiment, solver=solver)
         # test the callback here
         sol = sim.solve(callbacks=pybamm.callbacks.Callback())
         assert sol.termination == "final time"
