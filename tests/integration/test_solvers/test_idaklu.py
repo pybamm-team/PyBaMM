@@ -208,3 +208,39 @@ class TestIDAKLUSolver:
             sols[0].cycles[-1]["Current [A]"].data,
             sols[1].cycles[-1]["Current [A]"].data,
         )
+
+    def test_multiple_initial_conditions(self):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        model.rhs = {u: -u}
+        model.initial_conditions = {u: 1}
+        model.variables = {"u": u}
+
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        solver = pybamm.IDAKLUSolver(rtol=1e-8, atol=1e-10, options={"num_threads": 3})
+
+        n_sims = 3
+        initial_conditions = [{"u": i + 1} for i in range(n_sims)]
+
+        inputs = [{} for _ in range(n_sims)]
+
+        t_eval = np.linspace(0, 1, 10)
+
+        solutions = solver.solve(
+            model, t_eval, inputs=inputs, initial_conditions=initial_conditions
+        )
+
+        assert len(solutions) == n_sims
+
+        for i, solution in enumerate(solutions):
+            expected_initial_value = i + 1
+
+            np.testing.assert_allclose(solution["u"](0), expected_initial_value)
+
+            t_check = np.linspace(0, 1, 20)
+            analytical_solution = expected_initial_value * np.exp(-t_check)
+            np.testing.assert_allclose(
+                solution["u"](t_check), analytical_solution, rtol=1e-4
+            )

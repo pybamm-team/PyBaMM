@@ -709,6 +709,7 @@ class BaseSolver:
         nproc=None,
         calculate_sensitivities=False,
         t_interp=None,
+        initial_conditions=None,
     ):
         """
         Execute the solver setup and calculate the solution of the model at
@@ -739,7 +740,11 @@ class BaseSolver:
         t_interp : None, list or ndarray, optional
             The times (in seconds) at which to interpolate the solution. Defaults to None.
             Only valid for solvers that support intra-solve interpolation (`IDAKLUSolver`).
-
+        initial_conditions : dict, numpy.ndarray, or list, optional
+            Override the model’s default `y0`.  Can be:
+            - a dict mapping variable names → values
+            - a 1D array of length `n_states`
+            - a list of such overrides (one per parallel solve)
         Returns
         -------
         :class:`pybamm.Solution` or list of :class:`pybamm.Solution` objects.
@@ -911,6 +916,7 @@ class BaseSolver:
                     t_eval[start_index:end_index],
                     model_inputs_list,
                     t_interp,
+                    initial_conditions,
                 )
             else:
                 ninputs = len(model_inputs_list)

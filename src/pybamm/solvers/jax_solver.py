@@ -189,7 +189,9 @@ class JaxSolver(pybamm.BaseSolver):
     def requires_explicit_sensitivities(self):
         return False
 
-    def _integrate(self, model, t_eval, inputs=None, t_interp=None):
+    def _integrate(
+        self, model, t_eval, inputs=None, t_interp=None, intial_conditions=None
+    ):
         """
         Solve a model defined by dydt with initial conditions y0.
 
