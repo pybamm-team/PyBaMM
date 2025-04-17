@@ -28,17 +28,29 @@ class AlgebraicSolver(pybamm.BaseSolver):
         Any options to pass to the rootfinder. Vary depending on which method is chosen.
         Please consult `SciPy documentation
         <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.show_options.html>`_
-        for details.
+        for details. Addititional options to pass to the solver, by default:
+
+        .. code-block:: python
+
+            extra_options = {
+                # Tolerance for termination by the change of the independent variables.
+                "xtol": 1e-12,
+                # Tolerance for termination by the norm of the gradient.
+                "gtol": 1e-12,
+            }
     """
 
     def __init__(self, method="lm", tol=1e-6, extra_options=None):
         super().__init__(method=method)
         self.tol = tol
-        self.extra_options = extra_options or {}
-        if "xtol" not in self.extra_options:
-            self.extra_options["xtol"] = 1e-12
-        if "gtol" not in self.extra_options:
-            self.extra_options["gtol"] = 1e-12
+
+        default_extra_options = {
+            "xtol": 1e-12,
+            "gtol": 1e-12,
+        }
+        extra_options = extra_options or {}
+        self.extra_options = default_extra_options | extra_options
+
         self.name = f"Algebraic solver ({method})"
         self._algebraic_solver = True
         pybamm.citations.register("Virtanen2020")
