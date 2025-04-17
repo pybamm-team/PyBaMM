@@ -2,10 +2,11 @@ import pybamm
 import os
 import warnings
 from sys import _getframe
+import bibtexparser
 from bibtexparser import load as bibtex_load
 from bibtexparser import loads as bibtex_loads
+from bibtexparser.library import Library
 from pybamm.util import import_optional_dependency
-from bibtexparser.bwriter import BibTexWriter
 
 class Citations:
     """Entry point to citations management.
@@ -64,17 +65,18 @@ class Citations:
             with open(citations_file) as bibtex_file:
                 bib_data = bibtex_load(bibtex_file)
                 for entry in bib_data.entries:
-                    self._add_citation(entry['ID'], entry)
+                    self._add_citation(entry["ID"], entry)
 
     def _add_citation(self, key, entry):
         """Adds `entry` to `self._all_citations` under `key`, warning the user if a
         previous entry is overwritten
         """
         if not isinstance(key, str):
-           raise TypeError(f"Expected citation key as str, got {type(key).__name__}")
+            raise TypeError(f"Expected citation key as str, got {type(key).__name__}")
         if not isinstance(entry, dict):
-           raise TypeError(f"Expected citation entry as dict, got {type(entry).__name__}")
-
+            raise TypeError(
+                f"Expected citation entry as dict, got {type(entry).__name__}"
+            )
 
         # Warn if overwriting a previous citation
         if key in self._all_citations:
@@ -165,7 +167,7 @@ class Citations:
                 bib_db = bibtex_loads(key)
                 print(f"Parsed BibTeX: {bib_db.entries}")
                 if not bib_db.entries:
-                   raise ValueError("No entries found in BibTeX string")
+                    raise ValueError("No entries found in BibTeX string")
                 entry = bib_db.entries[0]
                 print(f"Adding parsed entry: {entry}")
                 self._add_citation(entry['ID'], entry)
@@ -213,8 +215,8 @@ class Citations:
                 if output_format == "text":
                     citations.append(self._string_formatting(entry))
                 elif output_format == "bibtex":
-                    writer = BibTexWriter()
-                    citations.append(writer.write([entry]))
+                    dummy_lib = Library(entries=[entry])
+                    citations.append(bibtexparser.write_string(dummy_lib))
 
         output = (
             "\n\n".join(citations) if output_format == "text" else "\n".join(citations)
