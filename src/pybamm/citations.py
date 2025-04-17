@@ -8,6 +8,7 @@ from bibtexparser import loads as bibtex_loads
 from bibtexparser.library import Library
 from pybamm.util import import_optional_dependency
 
+
 class Citations:
     """Entry point to citations management.
     This object may be used to record BibTeX citation information and then register that
@@ -170,12 +171,12 @@ class Citations:
                     raise ValueError("No entries found in BibTeX string")
                 entry = bib_db.entries[0]
                 print(f"Adding parsed entry: {entry}")
-                self._add_citation(entry['ID'], entry)
-                self._papers_to_cite.add(entry['ID'])
+                self._add_citation(entry["ID"], entry)
+                self._papers_to_cite.add(entry["ID"])
             except Exception as e:
                 self._unknown_citations.add(key)
-                raise KeyError(f"Invalid BibTeX entry: {e!s}") 
-             
+                raise KeyError(f"Invalid BibTeX entry: {e!s}")
+
     def print(self, filename=None, output_format="text", verbose=False):
         """
             Print all registered citations in the desired format.
