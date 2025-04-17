@@ -86,7 +86,9 @@ class TestCitations:
             pybamm.citations._add_citation("NotACitation", "NotAEntry")
 
         with pytest.raises(TypeError):
-            pybamm.citations._add_citation(1001, {"ENTRYTYPE": "misc", "ID": "NotACitation"})
+            pybamm.citations._add_citation(
+                1001, {"ENTRYTYPE": "misc", "ID": "NotACitation"}
+            )
 
     def test_pybtex_warning(self, caplog):
         class CiteWithWarning(pybamm.Citations):
