@@ -1,12 +1,13 @@
 import pybamm
 import os
+from io import StringIO
 import warnings
 from sys import _getframe
 from bibtexparser import UndefinedString
-from bibtexparser import BibTexParser
+from bibtexparser.bparser import BibTexParser
 from bibtexparser import BibTexWriter
-from bibtexparser import load as bibtex_load
-from bibtexparser.model import Entry
+from bibtexparser.customization import convert_to_unicode
+
 from pybamm.util import import_optional_dependency
 
 
@@ -66,16 +67,19 @@ class Citations:
             citations_file = os.path.join(pybamm.__path__[0], "CITATIONS.bib")
             with open(citations_file) as bibtex_file:
                 parser = BibTexParser(common_strings=True)
-                bib_data = bibtex_load(bibtex_file, parser=parser)
+                bib_data = parser.parse_file(bibtex_file)
                 for entry in bib_data.entries:
-                    self._add_citation(entry.key, entry)
+                    self._add_citation(entry['ID'], entry)
 
     def _add_citation(self, key, entry):
         """Adds `entry` to `self._all_citations` under `key`, warning the user if a
         previous entry is overwritten
         """
-        if not isinstance(key, str) or not isinstance(entry, Entry):
-            raise TypeError()
+        if not isinstance(key, str):
+           raise TypeError(f"Expected citation key as str, got {type(key).__name__}")
+        if not isinstance(entry, dict):
+           raise TypeError(f"Expected citation entry as dict, got {type(entry).__name__}")
+
 
         # Warn if overwriting a previous citation
         if key in self._all_citations:
@@ -88,7 +92,7 @@ class Citations:
         self._all_citations[key] = entry
 
     def _string_formatting(self, entry):
-        fields = entry.fields_dict
+        fields = entry
         authors = self._format_author(fields.get("author", ""))
         title = self._format_title(fields.get("title", ""))
         journal = self._format_journal(fields.get("journal", ""))
@@ -158,22 +162,23 @@ class Citations:
         """
 
         # Check if citation is a known key
+        print(f"Registering citation: {key}")
         if key in self._all_citations:
             self._papers_to_cite.add(key)
-
         else:
             try:
                 parser = BibTexParser(common_strings=True)
-                bib_db = bibtex_load(key, parser=parser)
+                bib_db = parser.parse(key)
+                print(f"Parsed BibTeX: {bib_db.entries}")
                 if not bib_db.entries:
-                    raise ValueError("No entries found in BibTeX string")
+                   raise ValueError("No entries found in BibTeX string")
                 entry = bib_db.entries[0]
-                self._add_citation(entry.key, entry)
-                self._papers_to_cite.add(entry.key)
+                print(f"Adding parsed entry: {entry}")
+                self._add_citation(entry['ID'], entry)
+                self._papers_to_cite.add(entry['ID'])
             except (UndefinedString, IndexError, TypeError) as e:
-                # If citation parsing fails, store it as unknown
                 self._unknown_citations.add(key)
-                raise KeyError(f"Invalid BibTeX entry: {e!s}") from e
+                raise KeyError(f"Invalid BibTeX entry: {str(e)}") from e
 
     def print(self, filename=None, output_format="text", verbose=False):
         """
@@ -215,7 +220,7 @@ class Citations:
                     citations.append(self._string_formatting(entry))
                 elif output_format == "bibtex":
                     writer = BibTexWriter()
-                    citations.append(writer.write(writer.write([entry])))
+                    citations.append(writer.write([entry]))
 
         output = (
             "\n\n".join(citations) if output_format == "text" else "\n".join(citations)

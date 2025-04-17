@@ -1,7 +1,6 @@
 import contextlib
 import io
 import pytest
-from bibtexparser.model import Entry
 
 import pybamm
 
@@ -87,7 +86,7 @@ class TestCitations:
             pybamm.citations._add_citation("NotACitation", "NotAEntry")
 
         with pytest.raises(TypeError):
-            pybamm.citations._add_citation(1001, Entry("misc"))
+            pybamm.citations._add_citation(1001, {"ENTRYTYPE": "misc", "ID": "NotACitation"})
 
     def test_pybtex_warning(self, caplog):
         class CiteWithWarning(pybamm.Citations):
