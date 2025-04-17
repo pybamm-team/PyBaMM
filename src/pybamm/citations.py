@@ -1,15 +1,11 @@
 import pybamm
 import os
-from io import StringIO
 import warnings
 from sys import _getframe
-from bibtexparser import UndefinedString
-from bibtexparser.bparser import BibTexParser
-from bibtexparser import BibTexWriter
-from bibtexparser.customization import convert_to_unicode
-
+from bibtexparser import load as bibtex_load
+from bibtexparser import loads as bibtex_loads
 from pybamm.util import import_optional_dependency
-
+from bibtexparser.bwriter import BibTexWriter
 
 class Citations:
     """Entry point to citations management.
@@ -66,8 +62,7 @@ class Citations:
         if not self._module_import_error:
             citations_file = os.path.join(pybamm.__path__[0], "CITATIONS.bib")
             with open(citations_file) as bibtex_file:
-                parser = BibTexParser(common_strings=True)
-                bib_data = parser.parse_file(bibtex_file)
+                bib_data = bibtex_load(bibtex_file)
                 for entry in bib_data.entries:
                     self._add_citation(entry['ID'], entry)
 
@@ -167,8 +162,7 @@ class Citations:
             self._papers_to_cite.add(key)
         else:
             try:
-                parser = BibTexParser(common_strings=True)
-                bib_db = parser.parse(key)
+                bib_db = bibtex_loads(key)
                 print(f"Parsed BibTeX: {bib_db.entries}")
                 if not bib_db.entries:
                    raise ValueError("No entries found in BibTeX string")
@@ -176,10 +170,10 @@ class Citations:
                 print(f"Adding parsed entry: {entry}")
                 self._add_citation(entry['ID'], entry)
                 self._papers_to_cite.add(entry['ID'])
-            except (UndefinedString, IndexError, TypeError) as e:
+            except Exception as e:
                 self._unknown_citations.add(key)
-                raise KeyError(f"Invalid BibTeX entry: {str(e)}") from e
-
+                raise KeyError(f"Invalid BibTeX entry: {e!s}") 
+             
     def print(self, filename=None, output_format="text", verbose=False):
         """
             Print all registered citations in the desired format.
