@@ -142,7 +142,6 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
                 y_alg_sol = roots(y0_alg, t)
                 integration_time += timer.time()
 
-                solver_stats = roots.stats()
                 # Check final output
                 y_sol = casadi.vertcat(y0_diff, y_alg_sol)
                 fun = model.casadi_algebraic(t, y_sol, inputs)
@@ -153,6 +152,7 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
                 y_is_finite = np.isfinite(max_abs(y_alg_sol))
                 fun_is_finite = np.isfinite(max_abs(fun))
 
+                solver_stats = roots.stats()
                 success = solver_stats["success"] and y_is_finite and fun_is_finite
             except RuntimeError as err:
                 success = False
