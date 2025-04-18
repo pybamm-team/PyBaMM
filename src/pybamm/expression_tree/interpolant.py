@@ -7,6 +7,7 @@ import numpy.typing as npt
 from scipy import interpolate
 from collections.abc import Sequence
 import numbers
+from typing import Any
 
 import pybamm
 
@@ -44,8 +45,8 @@ class Interpolant(pybamm.Function):
 
     def __init__(
         self,
-        x: npt.NDArray | Sequence[npt.NDArray],
-        y: npt.NDArray,
+        x: npt.NDArray[np.float64] | Sequence[npt.NDArray[np.float64]],
+        y: npt.NDArray[Any],
         children: Sequence[pybamm.Symbol] | pybamm.Time,
         name: str | None = None,
         interpolator: str | None = "linear",
@@ -97,7 +98,7 @@ class Interpolant(pybamm.Function):
                 x1 = x[0]
             else:
                 x1 = x
-                x: list[npt.NDArray] = [x]  # type: ignore[no-redef]
+                x: list[npt.NDArray[np.float64]] = [x]  # type: ignore[no-redef]
             x2 = None
             if x1.shape[0] != y.shape[0]:
                 raise ValueError(
