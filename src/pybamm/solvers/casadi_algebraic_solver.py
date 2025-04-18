@@ -1,7 +1,7 @@
 import casadi
 import pybamm
 import numpy as np
-
+from copy import deepcopy
 
 class CasadiAlgebraicSolver(pybamm.BaseSolver):
     """Solve a discretised model which contains only (time independent) algebraic
@@ -26,7 +26,7 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
         self.tol = tol
         self.name = "CasADi algebraic solver"
         self._algebraic_solver = True
-        self.extra_options = extra_options or {}
+        self.extra_options = extra_options or {"error_on_fail": False}
         pybamm.citations.register("Andersson2019")
 
     @property
@@ -96,64 +96,112 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
         # Set up rootfinder
         roots = casadi.rootfinder(
             "roots",
-            "newton",
+            "fast_newton",
             dict(x=y_alg_sym, p=t_sym, g=alg),
             {
                 **self.extra_options,
-                "abstol": self.tol,
+                "abstol": 0,
+                "abstolStep": self.tol,
+                "constraints": list(constraints[len_rhs:]),
+            },
+        )
+
+        roots_single_iter = casadi.rootfinder(
+            "roots",
+            "fast_newton",
+            dict(x=y_alg_sym, p=t_sym, g=alg),
+            {
+                **self.extra_options,
+                "abstol": 0,
+                "abstolStep": self.tol,
+                "max_iter": 1,
                 "constraints": list(constraints[len_rhs:]),
             },
         )
 
         timer = pybamm.Timer()
         integration_time = 0
+        success = False
         for _, t in enumerate(t_eval):
             # Solve
-            try:
-                timer.reset()
-                y_alg_sol = roots(y0_alg, t)
-                integration_time += timer.time()
-                success = True
-                message = None
-                # Check final output
-                y_sol = casadi.vertcat(y0_diff, y_alg_sol)
-                fun = model.casadi_algebraic(t, y_sol, inputs)
-            except RuntimeError as err:
-                success = False
-                message = err.args[0]
-                fun = None
+            iter = -1
+            while not success:
+                iter += 1
+                # print("iter", iter)
+                try:
+                    timer.reset()
+                    y_alg_sol = roots(y0_alg, t)
+                    update = y_alg_sol - y0_alg
+                    # print(update)
+                    integration_time += timer.time()
+                    success = True
+                    message = None
+                    # Check final output
+                    y_sol = casadi.vertcat(y0_diff, y_alg_sol)
+                    fun = model.casadi_algebraic(t, y_sol, inputs)
+                except RuntimeError as err:
+                    success = False
+                    message = err.args[0]
+                    fun = None
+                true_success = success and (
+                    not any(np.isnan(fun)) and np.all(casadi.fabs(fun) < self.tol)
+                )
+                # res = np.array(casadi.fabs(fun))
+                # for i in range(len(res)):
+                #     print((i,res[i][0]))
+                # print(true_success)
+                if not true_success:
+                    # extra_options = self.extra_options.copy()
+                    # extra_options["max_iter"] = 1
 
-            # If there are no symbolic inputs, check the function is below the tol
-            # Skip this check if there are symbolic inputs
-            if success and (
-                not any(np.isnan(fun)) and np.all(casadi.fabs(fun) < self.tol)
-            ):
-                # update initial guess for the next iteration
-                y0_alg = y_alg_sol
-                y0 = casadi.vertcat(y0_diff, y0_alg)
-                # update solution array
-                if y_alg is None:
-                    y_alg = y_alg_sol
+                            # Set up rootfinder
+                    learning_rates = [0.01, 0.3, 0.6]
+                    for learning_rate in learning_rates:
+                        y0_alg_single_iter = roots_single_iter(y0_alg, t)
+                        # Compute the update
+                        if any(np.isnan(y0_alg_single_iter)):
+                            raise pybamm.SolverError("Could not find acceptable solution: solver returned NaNs")
+                        update = y0_alg_single_iter - y0_alg
+                        # Apply a reduced learning rate
+                        res = np.array(update)
+                        for i in range(len(res)):
+                            print((i,res[i][0]))
+                        y0_alg = y0_alg + learning_rate * update
+                    # print(update)
+                    success = False
+                    continue
+
+                # If there are no symbolic inputs, check the function is below the tol
+                # Skip this check if there are symbolic inputs
+                if true_success:
+                    # update initial guess for the next iteration
+                    y0_alg = y_alg_sol
+                    y0 = casadi.vertcat(y0_diff, y0_alg)
+                    # update solution array
+                    if y_alg is None:
+                        y_alg = y_alg_sol
+                    else:
+                        y_alg = casadi.horzcat(y_alg, y_alg_sol)
+                elif not success:
+                    raise pybamm.SolverError(
+                        f"Could not find acceptable solution: {message}"
+                    )
+                elif any(np.isnan(fun)):
+                    raise pybamm.SolverError(
+                        "Could not find acceptable solution: solver returned NaNs"
+                    )
                 else:
-                    y_alg = casadi.horzcat(y_alg, y_alg_sol)
-            elif not success:
-                raise pybamm.SolverError(
-                    f"Could not find acceptable solution: {message}"
-                )
-            elif any(np.isnan(fun)):
-                raise pybamm.SolverError(
-                    "Could not find acceptable solution: solver returned NaNs"
-                )
-            else:
-                raise pybamm.SolverError(
-                    "Could not find acceptable solution: solver terminated "
-                    f"successfully, but maximum solution error ({casadi.mmax(casadi.fabs(fun))}) "
-                    f"above tolerance ({self.tol})"
-                )
+                    raise pybamm.SolverError(
+                        "Could not find acceptable solution: solver terminated "
+                        f"successfully, but maximum solution error ({casadi.mmax(casadi.fabs(fun))}) "
+                        f"above tolerance ({self.tol})"
+                    )
 
         # Concatenate differential part
         y_diff = casadi.horzcat(*[y0_diff] * len(t_eval))
         y_sol = casadi.vertcat(y_diff, y_alg)
+
+        print(integration_time)
 
         # Return solution object (no events, so pass None to t_event, y_event)
 
