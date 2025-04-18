@@ -2,10 +2,6 @@ import pybamm
 import os
 import warnings
 from sys import _getframe
-import bibtexparser
-from bibtexparser import load as bibtex_load
-from bibtexparser import loads as bibtex_loads
-from bibtexparser.library import Library
 from pybamm.util import import_optional_dependency
 
 
@@ -62,11 +58,11 @@ class Citations:
         by passing a BibTeX citation to :meth:`register`.
         """
         if not self._module_import_error:
+            bibtexparser = import_optional_dependency("bibtexparser")
             citations_file = os.path.join(pybamm.__path__[0], "CITATIONS.bib")
-            with open(citations_file) as bibtex_file:
-                bib_data = bibtex_load(bibtex_file)
-                for entry in bib_data.entries:
-                    self._add_citation(entry["ID"], entry)
+            library = bibtexparser.parse_file(citations_file)
+            for entry in library.entries:
+                self._add_citation(entry.key, entry.fields_dict)
 
     def _add_citation(self, key, entry):
         """Adds `entry` to `self._all_citations` under `key`, warning the user if a
@@ -75,9 +71,12 @@ class Citations:
         if not isinstance(key, str):
             raise TypeError(f"Expected citation key as str, got {type(key).__name__}")
         if not isinstance(entry, dict):
-            raise TypeError(
-                f"Expected citation entry as dict, got {type(entry).__name__}"
-            )
+            try:
+                entry = dict(entry)
+            except Exception as e:
+                raise TypeError(
+                    f"Expected citation entry as dict, got {type(entry).__name__}"
+                ) from e
 
         # Warn if overwriting a previous citation
         if key in self._all_citations:
@@ -165,17 +164,20 @@ class Citations:
             self._papers_to_cite.add(key)
         else:
             try:
-                bib_db = bibtex_loads(key)
-                print(f"Parsed BibTeX: {bib_db.entries}")
-                if not bib_db.entries:
+                bibtexparser = import_optional_dependency("bibtexparser")
+                library = bibtexparser.parse_string(key)
+                if len(library.failed_blocks) > 0 or not library.entries:
                     raise ValueError("No entries found in BibTeX string")
-                entry = bib_db.entries[0]
+                entry = library.entries[0]
+                citation_id = entry.key
+                if not citation_id:
+                    raise ValueError("Missing ID in BibTeX entry")
                 print(f"Adding parsed entry: {entry}")
-                self._add_citation(entry["ID"], entry)
-                self._papers_to_cite.add(entry["ID"])
+                self._add_citation(citation_id, entry.fields_dict)
+                self._papers_to_cite.add(citation_id)
             except Exception as e:
                 self._unknown_citations.add(key)
-                raise KeyError(f"Invalid BibTeX entry: {e!s}")
+                raise KeyError(f"Invalid BibTeX entry: {e!s}") from e
 
     def print(self, filename=None, output_format="text", verbose=False):
         """
@@ -216,6 +218,9 @@ class Citations:
                 if output_format == "text":
                     citations.append(self._string_formatting(entry))
                 elif output_format == "bibtex":
+                    bibtexparser = import_optional_dependency("bibtexparser")
+                    from bibtexparser.library import Library
+
                     dummy_lib = Library(entries=[entry])
                     citations.append(bibtexparser.write_string(dummy_lib))
 
