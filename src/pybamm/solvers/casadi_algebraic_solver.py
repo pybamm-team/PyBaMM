@@ -162,16 +162,16 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
                 ) from err
 
             if not success:
-                if any(np.isnan(fun)):
-                    reason = "solver returned NaNs"
-                elif any(np.isinf(fun)):
-                    reason = "solver returned Infs"
+                if any(~np.isfinite(fun)):
+                    reason = "solver returned NaNs or Infs"
                 else:
-                    reason = "solver terminated unsuccessfully"
+                    reason = (
+                        f"solver terminated unsuccessfully and maximum solution error ({casadi.mmax(casadi.fabs(fun))}) "
+                        f"above tolerance ({self.tol})"
+                    )
 
                 raise pybamm.SolverError(
-                    f"Could not find acceptable solution: {reason} and maximum solution error ({casadi.mmax(casadi.fabs(fun))}) "
-                    f"above tolerance ({self.tol})"
+                    f"Could not find acceptable solution: {reason}"
                 )
 
             # update initial guess for the next iteration
