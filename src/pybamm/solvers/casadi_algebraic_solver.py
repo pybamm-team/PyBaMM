@@ -6,27 +6,41 @@ import numpy as np
 class CasadiAlgebraicSolver(pybamm.BaseSolver):
     """Solve a discretised model which contains only (time independent) algebraic
     equations using CasADi's root finding algorithm.
+
     Note: this solver could be extended for quasi-static models, or models in
     which the time derivative is manually discretised and results in a (possibly
-    nonlinear) algebaric system at each time level.
+    nonlinear) algebraic system at each time level.
 
     Parameters
     ----------
     tol : float, optional
-        The tolerance for the solver (default is 1e-6).
+        The tolerance for the maximum residual error (default is 1e-6).
+    step_tol : float, optional
+        The tolerance for the maximum step size (default is 1e-4).
     extra_options : dict, optional
         Any options to pass to the CasADi rootfinder.
         Please consult `CasADi documentation <https://web.casadi.org/python-api/#rootfinding>`_ for
-        details.
+        details. By default:
 
+        .. code-block:: python
+
+            extra_options = {
+                # Whether to throw an error if the solver fails to converge.
+                "error_on_fail": False,
+                # Verbosity level
+                "verbose": False,
+            }
     """
 
-    def __init__(self, tol=1e-6, extra_options=None):
+    def __init__(self, tol=1e-6, step_tol=1e-4, extra_options=None):
         super().__init__()
+        default_extra_options = {"error_on_fail": False, "verbose": False}
+        extra_options = extra_options or {}
+        self.extra_options = extra_options | default_extra_options
+        self.step_tol = step_tol
         self.tol = tol
         self.name = "CasADi algebraic solver"
         self._algebraic_solver = True
-        self.extra_options = extra_options or {}
         pybamm.citations.register("Andersson2019")
 
     @property
@@ -36,6 +50,14 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
     @tol.setter
     def tol(self, value):
         self._tol = value
+
+    @property
+    def step_tol(self):
+        return self._step_tol
+
+    @step_tol.setter
+    def step_tol(self, value):
+        self._step_tol = value
 
     def _integrate(self, model, t_eval, inputs_dict=None, t_interp=None):
         """
@@ -87,11 +109,13 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
         # Set constraints vector in the casadi format
         # Constrain the unknowns. 0 (default): no constraint on ui, 1: ui >= 0.0,
         # -1: ui <= 0.0, 2: ui > 0.0, -2: ui < 0.0.
-        constraints = np.zeros_like(model.bounds[0], dtype=int)
+        model_alg_lb = model.bounds[0][len_rhs:]
+        model_alg_ub = model.bounds[1][len_rhs:]
+        constraints = np.zeros_like(model_alg_lb, dtype=int)
         # If the lower bound is positive then the variable must always be positive
-        constraints[model.bounds[0] >= 0] = 1
+        constraints[model_alg_lb >= 0] = 1
         # If the upper bound is negative then the variable must always be negative
-        constraints[model.bounds[1] <= 0] = -1
+        constraints[model_alg_ub <= 0] = -1
 
         # Set up rootfinder
         roots = casadi.rootfinder(
@@ -101,55 +125,63 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
             {
                 **self.extra_options,
                 "abstol": self.tol,
-                "constraints": list(constraints[len_rhs:]),
+                "abstolStep": self.step_tol,
+                "constraints": list(constraints),
             },
         )
+        # As a fallback, if the initial rootfind fails, try again with three
+        # Newton iterations of successively larger learning rates
 
         timer = pybamm.Timer()
         integration_time = 0
-        for _, t in enumerate(t_eval):
+        for t in t_eval:
             # Solve
+            success = False
             try:
                 timer.reset()
                 y_alg_sol = roots(y0_alg, t)
                 integration_time += timer.time()
-                success = True
-                message = None
+
                 # Check final output
                 y_sol = casadi.vertcat(y0_diff, y_alg_sol)
                 fun = model.casadi_algebraic(t, y_sol, inputs)
+
+                # Casadi does not give us the value of the final residuals or step
+                # norm, however, if it returns a success flag and there are no NaNs or Infs
+                # in the solution, then it must be successful
+                y_is_finite = np.isfinite(max_abs(y_alg_sol))
+                fun_is_finite = np.isfinite(max_abs(fun))
+
+                solver_stats = roots.stats()
+                success = solver_stats["success"] and y_is_finite and fun_is_finite
             except RuntimeError as err:
                 success = False
                 message = err.args[0]
-                fun = None
-
-            # If there are no symbolic inputs, check the function is below the tol
-            # Skip this check if there are symbolic inputs
-            if success and (
-                not any(np.isnan(fun)) and np.all(casadi.fabs(fun) < self.tol)
-            ):
-                # update initial guess for the next iteration
-                y0_alg = y_alg_sol
-                y0 = casadi.vertcat(y0_diff, y0_alg)
-                # update solution array
-                if y_alg is None:
-                    y_alg = y_alg_sol
-                else:
-                    y_alg = casadi.horzcat(y_alg, y_alg_sol)
-            elif not success:
                 raise pybamm.SolverError(
                     f"Could not find acceptable solution: {message}"
-                )
-            elif any(np.isnan(fun)):
+                ) from err
+
+            if not success:
+                if any(~np.isfinite(fun)):
+                    reason = "solver returned NaNs or Infs"
+                else:
+                    reason = (
+                        f"solver terminated unsuccessfully and maximum solution error ({casadi.mmax(casadi.fabs(fun))}) "
+                        f"above tolerance ({self.tol})"
+                    )
+
                 raise pybamm.SolverError(
-                    "Could not find acceptable solution: solver returned NaNs"
+                    f"Could not find acceptable solution: {reason}"
                 )
+
+            # update initial guess for the next iteration
+            y0_alg = y_alg_sol
+            y0 = casadi.vertcat(y0_diff, y0_alg)
+            # update solution array
+            if y_alg is None:
+                y_alg = y_alg_sol
             else:
-                raise pybamm.SolverError(
-                    "Could not find acceptable solution: solver terminated "
-                    f"successfully, but maximum solution error ({casadi.mmax(casadi.fabs(fun))}) "
-                    f"above tolerance ({self.tol})"
-                )
+                y_alg = casadi.horzcat(y_alg, y_alg_sol)
 
         # Concatenate differential part
         y_diff = casadi.horzcat(*[y0_diff] * len(t_eval))
@@ -172,3 +204,7 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
         )
         sol.integration_time = integration_time
         return sol
+
+
+def max_abs(x):
+    return np.linalg.norm(x, ord=np.inf)

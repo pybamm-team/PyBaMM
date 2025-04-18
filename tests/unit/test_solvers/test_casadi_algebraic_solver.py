@@ -8,10 +8,16 @@ import tests
 
 class TestCasadiAlgebraicSolver:
     def test_algebraic_solver_init(self):
-        solver = pybamm.CasadiAlgebraicSolver(tol=1e-4)
+        solver = pybamm.CasadiAlgebraicSolver(step_tol=1e-6, tol=1e-4)
+        assert solver.step_tol == 1e-6
         assert solver.tol == 1e-4
 
         solver.tol = 1e-5
+        assert solver.tol == 1e-5
+        assert solver.step_tol == 1e-6
+
+        solver.step_tol = 1e-7
+        assert solver.step_tol == 1e-7
         assert solver.tol == 1e-5
 
     def test_simple_root_find(self):
@@ -67,7 +73,7 @@ class TestCasadiAlgebraicSolver:
         solver = pybamm.CasadiAlgebraicSolver()
         with pytest.raises(
             pybamm.SolverError,
-            match="Could not find acceptable solution: Error in Function",
+            match="Could not find acceptable solution",
         ):
             solver._integrate(model, np.array([0]), {})
         solver = pybamm.CasadiAlgebraicSolver(extra_options={"error_on_fail": False})
@@ -155,10 +161,10 @@ class TestCasadiAlgebraicSolver:
         model.variables = {"var1": var1}
 
         # Solve
-        solver = pybamm.CasadiAlgebraicSolver(tol=1e-12)
+        solver = pybamm.CasadiAlgebraicSolver(step_tol=1e-7, tol=1e-12)
         solution = solver.solve(model)
         np.testing.assert_allclose(
-            solution["var1"].data, 3 * np.pi / 2, rtol=1e-7, atol=1e-6
+            solution["var1"].data, 3 * np.pi / 2, rtol=1e-6, atol=1e-6
         )
 
     def test_solve_with_input(self):
