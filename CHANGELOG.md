@@ -1,5 +1,9 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Optimizations
+
+- Improve reliability of `CasadiAlgebraicSolver` and added an option for the `step_tol` of the Newton iteration. ([#4985](https://github.com/pybamm-team/PyBaMM/pull/4985))
+
 # [v25.4.2](https://github.com/pybamm-team/PyBaMM/tree/v25.4.2) - 2025-04-17
 
 ## Bug fixes
