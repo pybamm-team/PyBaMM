@@ -479,7 +479,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         # half-cells where you must pass a tuple of options to only set MSMR models in
         # the working electrode
         msmr_check_list = [
-            options[opt] == "MSMR"
+            "MSMR" in options[opt]
             for opt in ["open-circuit potential", "particle", "intercalation kinetics"]
         ]
         if (
@@ -536,7 +536,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 )
 
         # Options not yet compatible with particle-size distributions
-        if options["particle size"] == "distribution":
+        if "distribution" in options["particle size"]:
             if options["lithium plating porosity change"] != "false":
                 raise pybamm.OptionError(
                     "Lithium plating porosity change not yet supported for particle-size"
@@ -552,12 +552,15 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     "Heat of mixing submodels do not yet support particle-size "
                     "distributions."
                 )
-            if options["particle"] in ["quadratic profile", "quartic profile"]:
+            if (
+                "quadratic profile" in options["particle"]
+                or "quartic profile" in options["particle"]
+            ):
                 raise NotImplementedError(
                     "'quadratic' and 'quartic' concentration profiles have not yet "
                     "been implemented for particle-size ditributions"
                 )
-            if options["particle shape"] != "spherical":
+            if "spherical" not in options["particle shape"]:
                 raise NotImplementedError(
                     "Particle shape must be 'spherical' for particle-size distribution"
                     " submodels."
@@ -634,8 +637,8 @@ class BatteryModelOptions(pybamm.FuzzyDict):
 
         if options["particle phases"] not in ["1", ("1", "1")]:
             if not (
-                options["surface form"] != "false"
-                and options["particle"] == "Fickian diffusion"
+                "false" not in options["surface form"]
+                and "Fickian diffusion" in options["particle"]
             ):
                 raise pybamm.OptionError(
                     "If there are multiple particle phases: 'surface form' cannot be "
@@ -655,7 +658,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             if isinstance(p_mechanics, str) and isinstance(sei_on_cr, tuple):
                 p_mechanics = (p_mechanics, p_mechanics)
             if any(
-                sei == "true" and mech != "swelling and cracking"
+                "true" in sei and "swelling and cracking" not in mech
                 for mech, sei in zip(p_mechanics, sei_on_cr)
             ):
                 raise pybamm.OptionError(
@@ -998,11 +1001,14 @@ class BaseBatteryModel(pybamm.BaseModel):
                     "Lead-acid models can only have thermal "
                     "effects if dimensionality is 0."
                 )
-            if options["SEI"] != "none" or options["SEI film resistance"] != "none":
+            if (
+                "none" not in options["SEI"]
+                or "none" not in options["SEI film resistance"]
+            ):
                 raise pybamm.OptionError("Lead-acid models cannot have SEI formation")
             if options["lithium plating"] != "none":
                 raise pybamm.OptionError("Lead-acid models cannot have lithium plating")
-            if options["open-circuit potential"] == "MSMR":
+            if "MSMR" in options["open-circuit potential"]:
                 raise pybamm.OptionError(
                     "Lead-acid models cannot use the MSMR open-circuit potential model"
                 )
@@ -1108,21 +1114,21 @@ class BaseBatteryModel(pybamm.BaseModel):
 
     def get_intercalation_kinetics(self, domain):
         options = getattr(self.options, domain)
-        if options["intercalation kinetics"] == "symmetric Butler-Volmer":
+        if "symmetric Butler-Volmer" in options["intercalation kinetics"]:
             return pybamm.kinetics.SymmetricButlerVolmer
-        elif options["intercalation kinetics"] == "asymmetric Butler-Volmer":
+        elif "asymmetric Butler-Volmer" in options["intercalation kinetics"]:
             return pybamm.kinetics.AsymmetricButlerVolmer
-        elif options["intercalation kinetics"] == "linear":
+        elif "linear" in options["intercalation kinetics"]:
             return pybamm.kinetics.Linear
-        elif options["intercalation kinetics"] == "Marcus":
-            return pybamm.kinetics.Marcus
-        elif options["intercalation kinetics"] == "Marcus-Hush-Chidsey":
+        elif "Marcus-Hush-Chidsey" in options["intercalation kinetics"]:
             return pybamm.kinetics.MarcusHushChidsey
-        elif options["intercalation kinetics"] == "MSMR":
+        elif "Marcus" in options["intercalation kinetics"]:
+            return pybamm.kinetics.Marcus
+        elif "MSMR" in options["intercalation kinetics"]:
             return pybamm.kinetics.MSMRButlerVolmer
 
     def get_inverse_intercalation_kinetics(self):
-        if self.options["intercalation kinetics"] == "symmetric Butler-Volmer":
+        if "symmetric Butler-Volmer" in self.options["intercalation kinetics"]:
             return pybamm.kinetics.InverseButlerVolmer
         else:
             raise pybamm.OptionError(
