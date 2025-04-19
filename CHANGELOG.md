@@ -1,10 +1,20 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
-# [v25.4.1](https://github.com/pybamm-team/PyBaMM/tree/v25.4.1) - 2025-04-16
+# [v25.4.2](https://github.com/pybamm-team/PyBaMM/tree/v25.4.2) - 2025-04-17
 
 ## Bug fixes
 
-- Remove a regularization term in the harmonic mean.  ([#4977](https://github.com/pybamm-team/PyBaMM/pull/4977))
+- Improve reliability of `AlgebraicSolver` and change `ElectrodeSOHHalfCell` solver to a Trust-Region method. ([#4982](https://github.com/pybamm-team/PyBaMM/pull/4982))
+
+# [v25.4.1](https://github.com/pybamm-team/PyBaMM/tree/v25.4.1) - 2025-04-16
+
+## Features
+
+- Added "use lumped thermal capacity" option in lumped thermal model ([#4968](https://github.com/pybamm-team/PyBaMM/pull/4968))
+
+## Bug fixes
+
+- Remove a regularization term in the harmonic mean. ([#4977](https://github.com/pybamm-team/PyBaMM/pull/4977))
 
 ## Breaking changes
 
