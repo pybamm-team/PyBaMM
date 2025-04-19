@@ -21,8 +21,6 @@
 - Added support for particle size distributions combined with particle mechanics. ([#4807](https://github.com/pybamm-team/PyBaMM/pull/4807))
 - Added InputParameter support in PyBamm experiments ([#4826](https://github.com/pybamm-team/PyBaMM/pull/4826))
 - Added support for the `"pchip"` interpolator using the CasADI backend. ([#4871](https://github.com/pybamm-team/PyBaMM/pull/4871))
-- Added "use lumped thermal capacity" option in lumped thermal model ([#4968](https://github.com/pybamm-team/PyBaMM/pull/4968))
-- Added an option for multiple initial conditions in IDAKLU solver ([#4981](https://github.com/pybamm-team/PyBaMM/pull/4981))
 
 ## Breaking changes
 
@@ -66,6 +64,8 @@
 - Added `Symbol.post_order()` method to return an iterable that steps through the tree in post-order fashion. ([#4684](https://github.com/pybamm-team/PyBaMM/pull/4684))
 - Porosity change now works for composite electrode ([#4417](https://github.com/pybamm-team/PyBaMM/pull/4417))
 - Added two more submodels (options) for the SEI: Lars von Kolzenberg (2020) model and Tunneling Limit model ([#4394](https://github.com/pybamm-team/PyBaMM/pull/4394))
+- Added "use lumped thermal capacity" option in lumped thermal model ([#4968](https://github.com/pybamm-team/PyBaMM/pull/4968))
+- Added an option for multiple initial conditions in IDAKLU solver ([#4981](https://github.com/pybamm-team/PyBaMM/pull/4981))
 
 ## Breaking changes
 

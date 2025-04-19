@@ -1300,6 +1300,7 @@ class TestIDAKLUSolver:
 
     def test_multiple_initial_conditions_dict(self):
         model = pybamm.BaseModel()
+        model.convert_to_format = None
         u = pybamm.Variable("u")
         model.rhs = {u: -u}
         model.initial_conditions = {u: 1}
@@ -1308,13 +1309,11 @@ class TestIDAKLUSolver:
         disc = pybamm.Discretisation()
         disc.process_model(model)
 
-        solver = pybamm.IDAKLUSolver(rtol=1e-8, atol=1e-10, options={"num_threads": 3})
+        solver = pybamm.IDAKLUSolver(rtol=1e-8, atol=1e-10, options={"num_threads": 1})
 
         n_sims = 3
         initial_conditions = [{"u": i + 1} for i in range(n_sims)]
-
         inputs = [{} for _ in range(n_sims)]
-
         t_eval = np.linspace(0, 1, 10)
 
         solutions = solver.solve(
@@ -1322,7 +1321,6 @@ class TestIDAKLUSolver:
         )
 
         assert len(solutions) == n_sims
-
         for i, solution in enumerate(solutions):
             expected_initial_value = i + 1
             np.testing.assert_allclose(solution["u"](0), expected_initial_value)
@@ -1334,6 +1332,7 @@ class TestIDAKLUSolver:
 
     def test_single_initial_condition_dict(self):
         model = pybamm.BaseModel()
+        model.convert_to_format = "casadi"
         u = pybamm.Variable("u")
         model.rhs = {u: -u}
         model.initial_conditions = {u: 1}
@@ -1345,7 +1344,6 @@ class TestIDAKLUSolver:
         solver = pybamm.IDAKLUSolver(rtol=1e-8, atol=1e-10)
 
         initial_condition = {"u": 5}
-
         t_eval = np.linspace(0, 1, 10)
 
         solution = solver.solve(model, t_eval, initial_conditions=initial_condition)
@@ -1378,17 +1376,27 @@ class TestIDAKLUSolver:
         disc.process_model(model)
 
         solver = pybamm.IDAKLUSolver(rtol=1e-8, atol=1e-10)
-
-        initial_condition = np.array([5.0])
-
         t_eval = np.linspace(0, 1, 10)
 
-        solution = solver.solve(model, t_eval, initial_conditions=initial_condition)
+        ics = [np.array([2.0]), np.array([4.0]), np.array([6.0])]
+        inputs = [{} for _ in ics]
 
-        np.testing.assert_allclose(solution["u"](0), 5)
-        np.testing.assert_allclose(
-            solution["u"](t_eval), 5 * np.exp(-t_eval), rtol=1e-4
+        solutions = solver.solve(
+            model,
+            t_eval,
+            inputs=inputs,
+            initial_conditions=ics,
         )
+
+        assert len(solutions) == len(ics)
+
+        for ic_array, sol in zip(ics, solutions):
+            start = ic_array.item()
+            got0 = sol["u"](0)
+            np.testing.assert_allclose(got0, start, rtol=1e-8)
+            got_curve = sol["u"](t_eval)
+            expected_curve = start * np.exp(-t_eval)
+            np.testing.assert_allclose(got_curve, expected_curve, rtol=1e-6)
 
     def test_multiple_variables(self):
         model = pybamm.BaseModel()

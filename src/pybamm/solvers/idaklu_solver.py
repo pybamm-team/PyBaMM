@@ -850,16 +850,10 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 if not found:
                     raise ValueError(f"Variable '{var_name}' not found in model")
 
-            if isinstance(model.y0, casadi.DM):
-                model.y0 = casadi.DM(y0_np)
-            else:
-                model.y0 = y0_np
+            model.y0 = casadi.DM(y0_np)
 
         elif isinstance(initial_conditions, np.ndarray):
-            if isinstance(model.y0, casadi.DM):
-                model.y0 = casadi.DM(initial_conditions)
-            else:
-                model.y0 = initial_conditions.copy()
+            model.y0 = casadi.DM(initial_conditions)
         else:
             raise TypeError("Initial conditions must be dict or numpy array")
 
@@ -916,22 +910,14 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 for ic in initial_conditions:
                     model_copy = model.new_copy()
                     self._apply_initial_conditions(model_copy, ic)
-
-                    if isinstance(model_copy.y0, casadi.DM):
-                        y0_list.append(model_copy.y0.full().flatten())
-                    else:
-                        y0_list.append(model_copy.y0)
+                    y0_list.append(model_copy.y0.full().flatten())
 
                 y0full = np.vstack(y0_list)
                 ydot0full = np.zeros_like(y0full)
 
             else:
                 self._apply_initial_conditions(model, initial_conditions)
-
-                if isinstance(model.y0, casadi.DM):
-                    y0_np = model.y0.full()
-                else:
-                    y0_np = model.y0
+                y0_np = model.y0.full()
 
                 y0full = np.vstack([y0_np for _ in range(len(inputs_list))])
                 ydot0full = np.zeros_like(y0full)
