@@ -158,4 +158,24 @@ class CompositeAlgebraic(BaseModel):
             f"X-averaged {domain} electrode surface potential difference [V]"
         ]
 
-        self.algebraic[delta_phi] = (sum_a_j_av - sum_a_j) / self.param.a_j_scale
+        pybamm.logger.debug(
+            f"CompositeAlgebraic ({domain}): "
+            f"delta_phi={delta_phi}, sum_a_j={sum_a_j}, sum_a_j_av={sum_a_j_av}"
+        )
+
+        phases = self.options.get("particle phases", "1")
+        if phases == "1" or phases == ("1", "1"):
+            phi_s = variables[f"{domain.capitalize()} electrode potential [V]"]
+            phi_e = variables[f"{domain.capitalize()} electrolyte potential [V]"]
+            delta_phi_calc = phi_s - phi_e
+            self.algebraic[delta_phi] = delta_phi - delta_phi_calc
+            pybamm.logger.debug(
+                f"CompositeAlgebraic ({domain}): Single-phase detected, using "
+                f"delta_phi = phi_s - phi_e = {delta_phi_calc}"
+            )
+        else:
+            self.algebraic[delta_phi] = (sum_a_j_av - sum_a_j) / self.param.a_j_scale
+            pybamm.logger.debug(
+                f"CompositeAlgebraic ({domain}): Multi-phase detected, using "
+                f"algebraic constraint (sum_a_j_av - sum_a_j) / a_j_scale"
+            )

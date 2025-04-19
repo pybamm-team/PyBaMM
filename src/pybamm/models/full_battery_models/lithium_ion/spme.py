@@ -79,3 +79,44 @@ class SPMe(SPM):
                 self.submodels[f"{domain} surface potential difference [V]"] = (
                     surf_model(self.param, domain, self.options)
                 )
+
+        if self.options["surface form"] in ["false", "algebraic"]:
+            for domain in ["negative", "positive"]:
+                if self.options.electrode_types[domain] == "porous":
+                    phi_s = self.variables.get(
+                        f"{domain.capitalize()} electrode potential [V]"
+                    )
+                    phi_e = self.variables.get(
+                        f"{domain.capitalize()} electrolyte potential [V]"
+                    )
+                    delta_phi = self.variables.get(
+                        f"{domain} surface potential difference [V]"
+                    )
+                    delta_phi_av = self.variables.get(
+                        f"X-averaged {domain} surface potential difference [V]"
+                    )
+                    if all([phi_s, phi_e, delta_phi, delta_phi_av]):
+                        pybamm.logger.debug(
+                            f"{domain.capitalize()} electrode for surface form "
+                            f"'{self.options['surface form']}': "
+                            f"phi_s={phi_s}, phi_e={phi_e}, delta_phi={delta_phi}, "
+                            f"delta_phi_av={delta_phi_av}"
+                        )
+            voltage = self.variables.get("Terminal voltage [V]")
+            if voltage:
+                pybamm.logger.debug(
+                    f"Terminal voltage for surface form '{self.options['surface form']}': {voltage}"
+                )
+            phases = self.options["particle phases"]
+            if phases == "1" or phases == ("1", "1"):
+                pybamm.logger.info(
+                    "Surface forms 'false' and 'algebraic' should produce identical "
+                    "results for single-phase configurations. If differences are observed, "
+                    "check logs for phi_s, phi_e, delta_phi, and current densities."
+                )
+            else:
+                pybamm.logger.warning(
+                    "Surface form 'algebraic' is designed for multi-phase configurations. "
+                    "Differences with 'false' may occur due to algebraic constraints in "
+                    "CompositeAlgebraic. Verify with logs if unexpected."
+                )
