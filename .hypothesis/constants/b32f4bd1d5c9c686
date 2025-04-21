@@ -1,0 +1,4 @@
+# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\models\submodels\electrode\base_electrode.py
+# hypothesis_version: 6.131.6
+
+['Current [A]', 'Local voltage [V]', 'Terminal voltage [V]', 'Voltage [V]', 'contact resistance', 'current collector', 'false', 'left', 'negative', 'negative electrode', 'porous', 'positive', 'positive tab', 'right', 'separator', 'true', 'voltage as a state']

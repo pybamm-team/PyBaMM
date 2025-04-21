@@ -1,0 +1,4 @@
+# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\models\full_battery_models\lithium_ion\electrode_soh_half_cell.py
+# hypothesis_version: 6.131.6
+
+[1e-07, 1e-06, 0.2, 0.8, 'ElectrodeSOH', 'ElectrodeSOH model', 'Mohtat2019', 'Q', 'Q_w', 'Uw(x_0)', 'Uw(x_100)', 'V', 'minimize  L-BFGS-B', 'positive', 'soc', 'working electrode', 'x_0', 'x_100']

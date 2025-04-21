@@ -1,0 +1,4 @@
+# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\models\full_battery_models\lead_acid\base_lead_acid_model.py
+# hypothesis_version: 6.131.6
+
+[100, 'Current [A]', 'Depth of Discharge', 'Porosity', 'State of Charge', 'Sulzer2019', 'Voltage [V]', 'lead-acid', 'lead-acid main', 'lead-acid oxygen', 'negative', 'no particles', 'particle shape', 'positive', 'primary', 'total interface', 'x_n', 'x_p', 'x_s', 'y', 'z']

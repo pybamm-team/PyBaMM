@@ -1,0 +1,4 @@
+# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\models\full_battery_models\lead_acid\basic_full.py
+# hypothesis_version: 6.131.6
+
+[0.002, 3600, 'Basic full model', 'Current [A]', 'Dirichlet', 'Maximum voltage [V]', 'Minimum voltage [V]', 'Neumann', 'Porosity', 'Separator porosity', 'Voltage [V]', 'left', 'negative electrode', 'positive electrode', 'right', 'separator']

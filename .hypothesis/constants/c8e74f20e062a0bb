@@ -1,0 +1,4 @@
+# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\models\full_battery_models\lead_acid\__init__.py
+# hypothesis_version: 6.131.6
+
+['base_lead_acid_model', 'basic_full', 'full', 'loqs']

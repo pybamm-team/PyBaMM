@@ -1,0 +1,4 @@
+# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\models\submodels\electrolyte_conductivity\composite_conductivity.py
+# hypothesis_version: 6.131.6
+
+['i_e', 'left', 'macinnes__c_e', 'negative', 'negative electrode', 'planar', 'porous', 'positive electrode', 'separator']

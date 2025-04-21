@@ -1,0 +1,4 @@
+# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\parameters\geometric_parameters.py
+# hypothesis_version: 6.131.6
+
+['Cell volume [m3]', 'Electrode height [m]', 'Electrode width [m]', 'Primary: ', 'Secondary: ', 'cell geometry', 'negative', 'positive', 'pouch', 'primary', 'secondary', 'separator']

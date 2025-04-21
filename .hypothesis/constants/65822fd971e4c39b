@@ -1,0 +1,4 @@
+# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\models\submodels\equivalent_circuit_elements\__init__.py
+# hypothesis_version: 6.131.6
+
+['ocv_element', 'rc_element', 'resistor_element', 'thermal', 'voltage_model']

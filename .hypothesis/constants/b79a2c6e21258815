@@ -1,0 +1,4 @@
+# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\models\full_battery_models\lithium_ion\base_lithium_ion_model.py
+# hypothesis_version: 6.131.6
+
+[100, 3600, '1', 'Axen', 'Axen2022', 'Current [A]', 'LLI [%]', 'MSMR', 'Marquis2019', 'SEI', 'SEI on cracks', 'SEI porosity change', 'Time [h]', 'Time [s]', 'Total lithium [mol]', 'Voltage [V]', 'Wycisk', 'Wycisk2022', 'Xu2019', 'both', 'constant', 'current sigmoid', 'dimensionality', 'false', 'full electrode', 'interface', 'left', 'lithium plating', 'lithium-ion', 'lithium-ion main', 'negative', 'negative electrode', 'none', 'particle mechanics', 'particle phases', 'planar', 'porosity', 'porous', 'positive', 'positive electrode', 'primary', 'r_n [m]', 'r_p [m]', 'right', 'separator', 'single', 'surface form', 'swelling only', 'total interface', 'true', 'working electrode', 'x-average']

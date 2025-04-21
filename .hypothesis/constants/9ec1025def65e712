@@ -1,0 +1,4 @@
+# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\models\submodels\current_collector\effective_resistance_current_collector.py
+# hypothesis_version: 6.131.6
+
+['Dirichlet', 'Lagrange multiplier', 'Marquis2019', 'Neumann', 'Timms2021', 'Voltage [V]', 'column', 'current collector', 'dimensionality', 'max', 'min', 'negative', 'negative tab', 'no tab', 'positive', 'positive tab', 'tabs', 'width', 'y', 'y [m]', 'y_centre', 'z', 'z [m]', 'z_centre']

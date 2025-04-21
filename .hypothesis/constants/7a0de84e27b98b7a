@@ -1,0 +1,4 @@
+# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\__init__.py
+# hypothesis_version: 6.131.6
+
+['CASADIPATH', 'batch_study', 'callbacks', 'casadi', 'citations', 'config', 'discretisations', 'doc_utils', 'experiment', 'expression_tree', 'geometry', 'input', 'logger', 'meshes', 'models', 'parameters', 'plotting', 'purelib', 'pybamm_data', 'settings', 'simulation', 'solvers', 'spatial_methods', 'telemetry', 'type_definitions', 'util', 'version']

@@ -1,0 +1,4 @@
+# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\models\base_model.py
+# hypothesis_version: 6.131.6
+
+[100, "', '", 'Dirichlet', 'F', 'InputParameter', 'Inputs:', 'Neumann', 'Parameter', 'Unknown Type', 'Unnamed model', '_saved', 'alg_', 'algebraic', 'bounds', 'casadi', 'concatenated_rhs', 'events', 'geometry', 'ics', 'initial_conditions', 'inputs', 'jac_alg', 'jac_algebraic', 'jac_rhs', 'mass_matrix', 'mass_matrix_inv', 'mesh', 'model', 'name', 'options', 'rhs', 'rhs_', 'safe', 'secondary', 't', 'tertiary', 'utf-8', 'variables', 'x', 'x0', 'y_alg', 'y_diff', 'z', 'z0']

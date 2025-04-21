@@ -1,0 +1,4 @@
+# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\models\full_battery_models\lithium_ion\mpm.py
+# hypothesis_version: 6.131.6
+
+['Kirk2020', 'Kirk2021', 'Many-Particle Model', 'algebraic', 'distribution', 'false', 'particle size', 'surface form', 'working electrode']

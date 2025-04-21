@@ -1,0 +1,4 @@
+# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\parameters\__init__.py
+# hypothesis_version: 6.131.6
+
+['base_parameters', 'bpx', 'constants', 'ecm_parameters', 'geometric_parameters', 'lead_acid_parameters', 'parameter_sets', 'parameter_values', 'thermal_parameters']

@@ -1,0 +1,4 @@
+# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\models\full_battery_models\lead_acid\full.py
+# hypothesis_version: 6.131.6
+
+['Full model', 'Sulzer2019physical', 'algebraic', 'convection', 'differential', 'false', 'full', 'full transverse', 'hydrolysis', 'lead-acid main', 'lead-acid oxygen', 'negative', 'none', 'oxygen diffusion', 'porosity', 'positive', 'primary', 'separator', 'surface form', 'true', 'uniform transverse']

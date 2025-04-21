@@ -1,0 +1,4 @@
+# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\models\submodels\interface\kinetics\base_kinetics.py
+# hypothesis_version: 6.131.6
+
+['MSMR', 'SEI film resistance', 'average', 'current collector', 'distributed', 'distribution', 'j_tot', 'lead-acid main', 'lithium-ion main', 'main', 'particle size', 'planar', 'porous', 'primary', 'secondary', 'true']

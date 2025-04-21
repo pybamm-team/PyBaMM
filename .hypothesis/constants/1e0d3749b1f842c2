@@ -1,0 +1,4 @@
+# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\parameters\size_distribution_parameters.py
+# hypothesis_version: 6.131.6
+
+[0.3, 'both', 'negative', 'neither', 'positive']

@@ -1,0 +1,4 @@
+# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\solvers\base_solver.py
+# hypothesis_version: 6.131.6
+
+[-1e-10, 0.0, 1e-06, 0.1, 100, 200, '%', '(', ')', ',', '-', '.', 'Base solver', 'Finish solver set-up', 'RHS', 'S_x', 'S_z', 'Start solver set-up', 'Step time must be >0', '[', '[experiment]', ']', '_', '_jac', '_jac_action', '_jacp', 'algebraic', 'all', 'casadi', 'csr', 'darwin', 'error', 'event', 'fast with events', 'final time', 'fork', 'ics', 'initial conditions', 'initial_conditions', 'jacobian', 'jax', 'left', 'linux', 'model', 'pS_casadi_stacked', 'p_casadi', 'p_casadi_stacked', 'prc', 'python', 'rhs', 'rhs_algebraic', 'spawn', 't', 't_casadi', 'v', 'v_', 'warn', 'y', 'y_alg', 'y_and_S', 'y_casadi', 'y_diff']

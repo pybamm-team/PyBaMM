@@ -1,0 +1,4 @@
+# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\expression_tree\symbol.py
+# hypothesis_version: 6.131.6
+
+[100, 1000, '&#43;', '&divide;', '&minus;', '&nabla;', '&nabla;&sdot;', '&times;', '*', '**', '+', '-', '.png', '/', 'DotExporter', '^', 'anytree', 'anytree.exporter', 'children', 'current collector', 'data', 'div', 'domains', 'exact', 'grad', 'id', 'matrix', 'name', 'negative electrode', 'negative particle', 'positive electrode', 'positive particle', 'primary', 'quaternary', 'secondary', 'separator', 'shape test', 't must be provided', 'tertiary', 'vector']

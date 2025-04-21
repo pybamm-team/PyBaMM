@@ -1,0 +1,4 @@
+# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\expression_tree\__init__.py
+# hypothesis_version: 6.131.6
+
+['array', 'averages', 'binary_operators', 'broadcasts', 'concatenations', 'discrete_time_sum', 'exceptions', 'functions', 'independent_variable', 'input_parameter', 'interpolant', 'matrix', 'operations', 'parameter', 'printing', 'scalar', 'state_vector', 'symbol', 'unary_operators', 'variable', 'vector']

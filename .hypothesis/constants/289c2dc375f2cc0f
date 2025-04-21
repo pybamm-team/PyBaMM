@@ -1,0 +1,4 @@
+# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\models\submodels\interface\kinetics\__init__.py
+# hypothesis_version: 6.131.6
+
+['base_kinetics', 'butler_volmer', 'diffusion_limited', 'inverse_kinetics', 'linear', 'marcus', 'msmr_butler_volmer', 'no_reaction', 'tafel', 'total_main_kinetics']

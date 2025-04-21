@@ -1,0 +1,4 @@
+# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\models\full_battery_models\lithium_ion\Yang2017.py
+# hypothesis_version: 6.131.6
+
+['SEI', 'SEI film resistance', 'SEI porosity change', 'Yang2017', 'distributed', 'ec reaction limited', 'irreversible', 'lithium plating', 'none', 'true']

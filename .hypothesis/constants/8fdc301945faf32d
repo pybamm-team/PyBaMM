@@ -1,0 +1,4 @@
+# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\models\submodels\current_collector\potential_pair.py
+# hypothesis_version: 6.131.6
+
+['Dirichlet', 'Neumann', 'Timms2021', 'current collector', 'negative tab', 'no tab', 'positive tab']
