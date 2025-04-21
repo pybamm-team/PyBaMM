@@ -8,6 +8,7 @@ import pybamm
 class TestCitations:
     def test_citations(self):
         citations = pybamm.citations
+        citations._reset()
         # Default papers should be in both _all_citations dict and in the papers to cite
         assert "Sulzer2021" in citations._all_citations.keys()
         assert "Sulzer2021" in citations._papers_to_cite

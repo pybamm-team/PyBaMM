@@ -78,6 +78,7 @@ def run_doctests(session):
 def run_unit(session):
     """Run the unit tests."""
     set_environment_variables(PYBAMM_ENV, session=session)
+    session.install("bibtexparser==2.0.0b8")
     session.install("-e", ".[all,dev,jax]", silent=False)
     session.run("python", "-m", "pytest", "-m", "unit")
 

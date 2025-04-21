@@ -90,14 +90,14 @@ class Citations:
 
     def _string_formatting(self, entry):
         fields = entry
-        authors = self._format_author(fields.get("author", ""))
-        title = self._format_title(fields.get("title", ""))
-        journal = self._format_journal(fields.get("journal", ""))
-        volume = fields.get("volume", "")
-        number = fields.get("number", "")
-        pages = fields.get("pages", "")
-        year = fields.get("year", "")
-        doi = fields.get("doi", "")
+        authors = self._format_author(str(fields.get("author", "")))
+        title = self._format_title(str(fields.get("title", "")))
+        journal = self._format_journal(str(fields.get("journal", "")))
+        volume = str(fields.get("volume", ""))
+        number = str(fields.get("number", ""))
+        pages = str(fields.get("pages", ""))
+        year = str(fields.get("year", ""))
+        doi = str(fields.get("doi", ""))
 
         parts = [f"{authors}"]
         if title:
@@ -127,12 +127,10 @@ class Citations:
         return ", ".join(formatted) + "." if authors else ""
 
     def _format_title(self, title):
-        title = title.replace("\n", " ").strip()
-        return f'"{title}"' if title else ""
+        return str(title).replace("\n", " ").strip()
 
     def _format_journal(self, journal):
-        journal = journal.replace("\n", " ").strip()
-        return f"*{journal}*" if journal else ""
+        return str(journal).replace("\n", " ").strip()
 
     def register(self, key):
         """Register a paper to be cited.
@@ -158,10 +156,13 @@ class Citations:
             When overwriting an existing citation with different content
         """
 
-        # Check if citation is a known key
-        print(f"Registering citation: {key}")
         if key in self._all_citations:
             self._papers_to_cite.add(key)
+            try:
+                caller = self._caller_name()
+                self._citation_tags[key] = caller
+            except KeyError:
+                pass
         else:
             try:
                 bibtexparser = import_optional_dependency("bibtexparser")
@@ -172,7 +173,6 @@ class Citations:
                 citation_id = entry.key
                 if not citation_id:
                     raise ValueError("Missing ID in BibTeX entry")
-                print(f"Adding parsed entry: {entry}")
                 self._add_citation(citation_id, entry.fields_dict)
                 self._papers_to_cite.add(citation_id)
             except Exception as e:
@@ -220,8 +220,12 @@ class Citations:
                 elif output_format == "bibtex":
                     bibtexparser = import_optional_dependency("bibtexparser")
                     from bibtexparser.library import Library
+                    from bibtexparser.model import Entry
 
-                    dummy_lib = Library(entries=[entry])
+                    dummy_lib = Library()
+                    fields = entry
+                    bib_entry = Entry("article", key, fields=fields)
+                    dummy_lib.add_entry(bib_entry)
                     citations.append(bibtexparser.write_string(dummy_lib))
 
         output = (
