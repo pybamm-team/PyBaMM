@@ -1,0 +1,4 @@
+# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\models\full_battery_models\lithium_ion\basic_dfn_composite.py
+# hypothesis_version: 6.131.6
+
+[1e-07, 100, 3600, '1', '2', 'Ai2022', 'Battery voltage [V]', 'Chen2020_composite', 'Current [A]', 'Current variable [A]', 'Dirichlet', 'Maximum voltage [V]', 'Minimum voltage [V]', 'Neumann', 'Separator porosity', 'Time [s]', 'Voltage [V]', 'delithiation', 'left', 'lithiation', 'negative electrode', 'particle phases', 'positive electrode', 'positive particle', 'right', 'secondary', 'separator']

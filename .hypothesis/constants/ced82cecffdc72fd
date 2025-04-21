@@ -1,0 +1,4 @@
+# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\solvers\idaklu_jax.py
+# hypothesis_version: 6.131.6
+
+[0.0, '<- f_jvp_transpose', '_jaxify_solve:', '_register_callbacks', 'cpu', 'f', 'f_abstract_eval', 'f_impl', 'f_jvp', 'f_jvp_abstract_eval', 'f_jvp_batch', 'f_jvp_lowering_cpu', 'f_jvp_transpose', 'f_lowering_cpu', 'f_vjp', 'f_vjp_abstract_eval', 'f_vjp_impl', 'f_vjp_lowering_cpu', 'f_vjp_p_batch', 'jax_solve', 'py:f_vjp_p_impl', 'scalar time', 'vector time']

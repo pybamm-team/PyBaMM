@@ -1,0 +1,4 @@
+# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\expression_tree\printing\print_name.py
+# hypothesis_version: 6.131.6
+
+['(\\epsilon c)', ',', '0', 'I', 'R', '\\', '\\epsilon', '\\overline{', '^{\\mathrm{', '_{\\mathrm{', 'alpha', 'amb', 'av', 'beta', 'cc', 'chi', 'current_with_time', 'delta', 'dl', 'e', 'eps', 'eps_c', 'epsilon', 'eta', 'gamma', 'i_{\\mathrm{cell}}', 'init', 'iota', 'kappa', 'lambda', 'max', 'mu', 'n', 'nu', 'omega', 'p', 'phi', 'pi', 'psi', 'ref', 'rho', 's', 'sigma', 'surf', 't_plus', 't_{\\mathrm{+}}', 'tau', 'thermodynamic_factor', 'theta', 'typ', 'upsilon', 'xav', 'xi', 'zeta', '{', '}', '}}']

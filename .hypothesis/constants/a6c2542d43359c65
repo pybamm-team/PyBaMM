@@ -1,0 +1,4 @@
+# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\models\submodels\thermal\base_thermal.py
+# hypothesis_version: 6.131.6
+
+[273.15, 'Cell temperature [K]', 'Heat of mixing [W]', 'Ohmic heating [W]', 'Richardson2021', 'Total heating [W]', '[C]', '[K]', '[W.m-3]', 'current collector', 'dimensionality', 'heat of mixing', 'negative', 'negative electrode', 'negative particle', 'particle phases', 'planar', 'positive electrode', 'positive particle', 'primary ', 'r', 'secondary ', 'separator', 'true']

@@ -1,0 +1,4 @@
+# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\plotting\quick_plot.py
+# hypothesis_version: 6.131.6
+
+[0.02, 0.03, 0.05, 0.1, 0.315, 0.37, 0.5, 1.05, 1.5, 1000.0, 1000000.0, 100, 300, 3600, '#1f77b4', '$\\mu$m', '-', '--', '-.', '0.5', ':', 'FuncAnimation', 'No variables to plot', 'R', 'Slider', '[', 'all', 'auto', 'b', 'c', 'cm', 'colors', 'current collector', 'first', 'fixed', 'g', 'h', 'hours', 'k', 'k--', 'lightgoldenrodyellow', 'lower center', 'lower right', 'm', 'matplotlib', 'matplotlib.animation', 'matplotlib.gridspec', 'matplotlib.pyplot', 'matplotlib.widgets', 'medium', 'min', 'minutes', 'mm', 'plot.gif', 'r', 's', 'second', 'secondary', 'seconds', 'tight', 'um', 'x', 'y', 'z']

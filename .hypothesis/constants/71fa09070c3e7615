@@ -1,0 +1,4 @@
+# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\_version.py
+# hypothesis_version: 6.131.6
+
+['__version__', '__version_tuple__', 'dev20', 'ge67854af3', 'version', 'version_tuple']

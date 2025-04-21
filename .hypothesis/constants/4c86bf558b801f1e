@@ -1,0 +1,4 @@
+# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\solvers\processed_variable_computed.py
+# hypothesis_version: 6.131.6
+
+['R', 'axis_swaps', 'current collector', 'electrode', 'n_dim1', 'n_dim2', 'n_dim3', 'negative electrode', 'nnz', 'particle', 'particle size', 'positive electrode', 'r', 'secondary', 'secondary_mesh', 'separator', 't', 'tertiary', 'x', 'y', 'z']

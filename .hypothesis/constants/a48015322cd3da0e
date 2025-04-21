@@ -1,0 +1,4 @@
+# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\models\submodels\transport_efficiency\heterogeneous_catalyst.py
+# hypothesis_version: 6.131.6
+
+['Beeckman1990', 'Electrode', 'Electrolyte', 'Shen2007', 'current collector', 'separator']

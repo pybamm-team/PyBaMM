@@ -1,0 +1,4 @@
+# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\parameters\thermal_parameters.py
+# hypothesis_version: 6.131.6
+
+['Temperature [K]', 'Time [s]', 'negative', 'positive', 'separator']

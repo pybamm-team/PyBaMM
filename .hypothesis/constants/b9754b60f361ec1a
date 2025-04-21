@@ -1,0 +1,4 @@
+# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\models\submodels\particle\fickian_diffusion.py
+# hypothesis_version: 6.131.6
+
+['Neumann', 'R', 'cartesian', 'current collector', 'left', 'primary', 'quaternary', 'right', 'secondary', 'tertiary']

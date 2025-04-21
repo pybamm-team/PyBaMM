@@ -1,0 +1,4 @@
+# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\models\full_battery_models\lithium_ion\__init__.py
+# hypothesis_version: 6.131.6
+
+['Yang2017', 'basic_dfn', 'basic_dfn_composite', 'basic_dfn_half_cell', 'basic_splitOCVR', 'basic_spm', 'dfn', 'electrode_soh', 'mpm', 'msmr', 'newman_tobias', 'spm', 'spme']

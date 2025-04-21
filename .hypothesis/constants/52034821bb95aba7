@@ -1,0 +1,4 @@
+# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\expression_tree\operations\convert_to_casadi.py
+# hypothesis_version: 6.131.6
+
+['Andersson2019', 'F', 'LUT', 'bspline', 'cubic', 'elementwise_grad_of_', 'func_diff', 'linear', 'pchip', 'y_']

@@ -1,0 +1,4 @@
+# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\models\full_battery_models\lithium_ion\basic_dfn_half_cell.py
+# hypothesis_version: 6.131.6
+
+[0.002, 0.01, 0.1, 3600, 'Battery voltage [V]', 'Current [A]', 'Current variable [A]', 'Dirichlet', 'Marquis2019', 'Maximum voltage [V]', 'Minimum voltage [V]', 'Neumann', 'Separator porosity', 'Time [s]', 'Voltage [V]', 'left', 'positive', 'positive electrode', 'positive particle', 'right', 'secondary', 'separator', 'working electrode']

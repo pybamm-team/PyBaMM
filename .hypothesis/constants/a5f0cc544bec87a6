@@ -1,0 +1,4 @@
+# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\batch_study.py
+# hypothesis_version: 6.131.6
+
+[0.1, 'C_rates', 'experiments', 'geometries', 'output_variables', 'parameter_values', 'plot.gif', 'sims', 'solvers', 'spatial_methods', 'submesh_types', 'var_pts']

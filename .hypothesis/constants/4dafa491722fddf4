@@ -1,0 +1,4 @@
+# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\models\submodels\electrolyte_diffusion\base_electrolyte_diffusion.py
+# hypothesis_version: 6.131.6
+
+[1000, '[Molar]', '[mol.m-3]', 'c_e', 'left', 'negative electrode', 'separator']

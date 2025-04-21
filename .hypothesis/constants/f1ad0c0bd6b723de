@@ -1,0 +1,4 @@
+# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\solvers\__init__.py
+# hypothesis_version: 6.131.6
+
+['algebraic_solver', 'base_solver', 'c_solvers', 'casadi_solver', 'dummy_solver', 'idaklu_jax', 'idaklu_solver', 'jax_bdf_solver', 'jax_solver', 'lrudict', 'processed_variable', 'scipy_solver', 'solution']

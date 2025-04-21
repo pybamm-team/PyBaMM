@@ -1,0 +1,4 @@
+# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\expression_tree\concatenations.py
+# hypothesis_version: 6.131.6
+
+['(', ')', '\\\\', '\\begin{cases}', '\\end{cases}', '_', 'children', 'children_slices', 'concat_fun', 'concatenation', 'domain_concatenation', 'domains', 'id', 'name', 'numpy_concatenation', 'primary', 'size', 'slices', 'sparse_stack', 'start', 'step', 'stop']

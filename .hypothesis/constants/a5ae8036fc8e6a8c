@@ -1,0 +1,4 @@
+# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\parameters\ecm_parameters.py
+# hypothesis_version: 6.131.6
+
+[273.15, 'Cell capacity [A.h]', 'Current [A]', 'Current function [A]', 'Initial SoC', 'SoC', 'Time [s]']

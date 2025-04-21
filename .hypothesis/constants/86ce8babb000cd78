@@ -1,0 +1,4 @@
+# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\models\full_battery_models\lead_acid\loqs.py
+# hypothesis_version: 6.131.6
+
+['LOQS model', 'Sulzer2019asymptotic', 'algebraic', 'convection', 'current', 'current collector', 'differential', 'dimensionality', 'external circuit', 'false', 'full transverse', 'hydrolysis', 'lead-acid main', 'lead-acid oxygen', 'leading', 'negative', 'none', 'operating mode', 'positive', 'potential pair', 'power', 'primary', 'surface form', 'true', 'uniform', 'uniform transverse', 'voltage']

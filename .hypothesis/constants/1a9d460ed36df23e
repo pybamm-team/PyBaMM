@@ -1,0 +1,4 @@
+# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\meshes\scikit_fem_submeshes.py
+# hypothesis_version: 6.131.6
+
+[3e-16, 2.3, 'coord_sys', 'edges', 'max', 'min', 'negative', 'positive', 'skfem', 'tabs', 'top', 'width', 'y', 'y_centre', 'z', 'z_centre']

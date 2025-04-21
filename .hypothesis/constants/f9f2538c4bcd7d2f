@@ -1,0 +1,4 @@
+# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\input\parameters\lithium_ion\Xu2019.py
+# hypothesis_version: 6.131.6
+
+[-10.5, -4.43, -0.22, 0.0, 2.5e-22, 1e-20, 2e-18, 1e-14, 8.95e-14, 1e-12, 5.76e-11, 5e-09, 3.5e-08, 1.5e-07, 5.3e-06, 1.3e-05, 2.5e-05, 2.8e-05, 4.2e-05, 5.623e-05, 6.96e-05, 9.585e-05, 0.0001, 0.0007, 0.000886, 0.001, 0.0024, 0.01, 0.0154, 0.0178, 0.074, 0.2, 0.3, 0.331, 0.38, 0.39, 0.4, 0.494, 0.5, 0.518, 0.668, 0.7, 1.0, 1.5, 1.6225, 1.6518, 2.0, 2.0843, 2.2166, 3.5, 3.5146, 4.2, 4.3452, 10.0, 15.0, 100.0, 100.006, 109.451, 298.15, 2636.0, 4541.0, 4631.0, 48230.0, 200000.0, 10776000.0, 229, 1000, 'Current function [A]', 'Electrode height [m]', 'Electrode width [m]', 'Separator porosity', 'Thermodynamic factor', 'Valoen2005', 'Xu2019', 'chemistry', 'citations', 'lithium_ion']

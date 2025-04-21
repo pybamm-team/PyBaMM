@@ -1,0 +1,4 @@
+# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\models\submodels\equivalent_circuit_elements\diffusion_element.py
+# hypothesis_version: 6.131.6
+
+[3600, 'Cartesian', 'Current [A]', 'Distributed SoC', 'ECMD particle', 'Fan2022', 'Maximum surface SoC', 'Minimum surface SoC', 'Neumann', 'SoC', 'Surface SoC', 'left', 'right', 'x ECMD']
