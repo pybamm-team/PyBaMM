@@ -1,4 +1,0 @@
-# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\expression_tree\independent_variable.py
-# hypothesis_version: 6.131.6
-
-['cartesian', 'cylindrical polar', 'domains', 'name', 'negative', 'particle', 'positive', 'r_n', 'r_p', 'spherical polar', 't', 't must be provided', 'time', 'x', 'x_n', 'x_p', 'x_s', 'y', 'z']

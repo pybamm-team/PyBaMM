@@ -1,4 +1,0 @@
-# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\models\submodels\__init__.py
-# hypothesis_version: 6.131.6
-
-['active_material', 'base_submodel', 'convection', 'current_collector', 'electrode', 'external_circuit', 'interface', 'oxygen_diffusion', 'particle', 'particle_mechanics', 'porosity', 'thermal', 'transport_efficiency']

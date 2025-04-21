@@ -1,4 +1,0 @@
-# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\util.py
-# hypothesis_version: 6.131.6
-
-[1e-06, 0.001, 0.4, 0.5, 3600, 86400, 604800, ' seconds', ', ', '0.4.27', '1 second', 'Primary', 'Secondary', ']', 'day', 'electrode', 'hour', 'jax', 'jaxlib', 'minute', 'particle', 'particle diffusivity', 'rb', 's', 'week']

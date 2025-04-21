@@ -1,4 +1,0 @@
-# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\models\full_battery_models\lithium_ion\electrode_soh.py
-# hypothesis_version: 6.131.6
-
-[0.0, 1e-06, 0.0001, 0.1, 0.2, 0.8, 0.9, 1.0, 1000.0, 10000.0, 100, 3600, 'Baker2018', 'Capacity [A.h]', 'Capacity [mA.h.cm-2]', 'ElectrodeSOH model', 'MSMR', 'Mohtat2019', 'NPR', 'Practical NPR', 'Q', 'Q_Li', 'Q_n', 'Q_n * (x_100 - x_0)', 'Q_p', 'Q_p * (y_0 - y_100)', 'Un', 'Un(x_0)', 'Un(x_100)', 'Un_0', 'Un_100', 'Up', 'Up(x_0)', 'Up(x_100)', 'Up(y_0)', 'Up(y_0) - Un(x_0)', 'Up(y_100)', 'Up_0', 'Up_100', 'V', 'Weng2023', 'cell capacity', 'n_Li', 'soc', 'x', 'x_0', 'x_100', 'x_100 - x_0', 'y', 'y_0', 'y_0 - y_100', 'y_100']

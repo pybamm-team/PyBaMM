@@ -1,4 +1,0 @@
-# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\expression_tree\averages.py
-# hypothesis_version: 6.131.6
-
-['R', '_n', '_p', '_prim', '_sec', 'cartesian', 'current collector', 'negative', 'negative electrode', 'particle', 'positive', 'positive electrode', 'primary', 'quaternary', 'r', 'r-average', 'secondary', 'separator', 'size-average', 'tertiary', 'x', 'x-average', 'yz-average', 'z-average']

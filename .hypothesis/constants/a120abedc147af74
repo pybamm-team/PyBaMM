@@ -1,4 +1,0 @@
-# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\models\full_battery_models\lithium_ion\spm.py
-# hypothesis_version: 6.131.6
-
-['BrosaPlanella2022', 'Fickian diffusion', 'MPM', 'MSMR', 'Marquis2019', 'SEI', 'algebraic', 'constant', 'default', 'differential', 'false', 'leading order', 'lithium plating', 'lithium-ion main', 'negative', 'none', 'particle', 'planar', 'positive', 'quadratic profile', 'quartic profile', 'surface form', 'true', 'uniform profile']

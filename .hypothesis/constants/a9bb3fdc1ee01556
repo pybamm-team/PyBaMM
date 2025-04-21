@@ -1,4 +1,0 @@
-# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\expression_tree\broadcasts.py
-# hypothesis_version: 6.131.6
-
-['broadcast', 'broadcast to edges', 'current collector', 'full to edges', 'full to nodes', 'negative electrode', 'negative particle', 'nodes', 'particle', 'positive electrode', 'positive particle', 'primary', 'primary to edges', 'primary to nodes', 'quaternary', 'secondary', 'secondary to edges', 'secondary to nodes', 'separator', 'tertiary', 'tertiary to edges', 'tertiary to nodes']

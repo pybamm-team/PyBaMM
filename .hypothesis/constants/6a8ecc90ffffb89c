@@ -1,4 +1,0 @@
-# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\solvers\scipy_solver.py
-# hypothesis_version: 6.131.6
-
-[1e-06, 'BDF', 'LSODA', 'Radau', 'Virtanen2020', 'atol', 'casadi', 'event', 'events', 'final time', 'jac', 'rtol']

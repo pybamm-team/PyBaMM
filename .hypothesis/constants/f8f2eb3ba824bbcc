@@ -1,4 +1,0 @@
-# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\settings.py
-# hypothesis_version: 6.131.6
-
-[1e-15, 1e-10, 1e-08, 0.01, 100000.0, 'D__c_s', 'D_e__c_e', 'U__c_s', 'chi__c_e', 'exact', 'j0__c_e', 'j0__c_s', 'kappa_e__c_e', 'macinnes__c_e', 'smooth', 'soft']

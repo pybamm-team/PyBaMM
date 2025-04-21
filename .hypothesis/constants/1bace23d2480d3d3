@@ -1,4 +1,0 @@
-# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\models\submodels\equivalent_circuit_elements\ocv_element.py
-# hypothesis_version: 6.131.6
-
-[3600, 'Cell temperature [K]', 'Current [A]', 'Maximum SoC', 'Minimum SoC', 'SoC']

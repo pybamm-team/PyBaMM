@@ -1,4 +1,0 @@
-# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\models\submodels\interface\open_circuit_potential\axen_ocp.py
-# hypothesis_version: 6.131.6
-
-[0.5, 'current collector', 'delithiation', 'distribution', 'lithiation', 'lithium-ion main', 'particle size', 'primary', 'secondary']

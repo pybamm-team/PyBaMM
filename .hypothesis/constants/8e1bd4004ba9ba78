@@ -1,4 +1,0 @@
-# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\solvers\casadi_solver.py
-# hypothesis_version: 6.131.6
-
-[1e-06, 1e-05, 1.01, 100, 600, 'Andersson2019', 'F', 'Solving for events', 'abstol', 'alg', 'casadi', 'cvodes', 'error', 'event', 'exact', 'fast', 'fast with events', 'final time', 'idas', 'linear', 'no grid', 'ode', 'p', 'problem dependent', 'reltol', 'safe', 'safe without grid', 'show_eval_warnings', 't', 't_max', 't_min', 'window', 'x', 'xf', 'y_alg', 'y_diff', 'z', 'zf']

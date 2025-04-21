@@ -1,4 +1,0 @@
-# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\conftest.py
-# hypothesis_version: 6.131.6
-
-['--integration', '--scripts', '--unit', 'integration', 'markers', 'run unit tests', 'store_true', 'unit']

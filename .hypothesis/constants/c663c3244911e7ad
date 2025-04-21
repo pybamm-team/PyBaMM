@@ -1,4 +1,0 @@
-# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\models\full_battery_models\equivalent_circuit\thevenin.py
-# hypothesis_version: 6.131.6
-
-[3600, 'CCCV', 'Cartesian', 'Current [A]', 'Diffusion', 'ECMD particle', 'ECM_Example', 'Element-0 (Resistor)', 'Open-circuit voltage', 'Power [W]', 'SoC', 'Thermal', 'Time [h]', 'Time [min]', 'Time [s]', 'Voltage', 'Voltage [V]', 'algebraic', 'current', 'differential', 'differential power', 'diffusion element', 'external circuit', 'false', 'max', 'min', 'operating mode', 'power', 'resistance', 'true', 'voltage', 'x ECMD']

@@ -1,4 +1,0 @@
-# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\solvers\processed_variable.py
-# hypothesis_version: 6.131.6
-
-['R', 'all', 'continuous', 'current collector', 'discrete', 'dvar_dp', 'dvar_dy', 'extrapolate', 'fill_value', 'primary', 'r', 'right', 'secondary', 'secondary_mesh', 't', 'tabs', 'tertiary', 'x', 'y', 'z']

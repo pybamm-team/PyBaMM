@@ -1,4 +1,0 @@
-# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\models\full_battery_models\lithium_ion\dfn.py
-# hypothesis_version: 6.131.6
-
-['Doyle1993', 'Fickian diffusion', 'MSMR', 'algebraic', 'default', 'differential', 'false', 'full', 'lithium-ion main', 'negative', 'particle', 'planar', 'porous', 'positive', 'quadratic profile', 'quartic profile', 'separator', 'surface form', 'uniform profile']

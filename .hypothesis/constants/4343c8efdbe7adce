@@ -1,4 +1,0 @@
-# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\spatial_methods\finite_volume.py
-# hypothesis_version: 6.131.6
-
-[-0.5, 1e-16, 0.5, 1.5, 'Dirichlet', 'Neumann', '_left ghost cell', '_right ghost cell', 'arithmetic', 'backward', 'column', 'cylindrical polar', 'downwind', 'edge to node', 'extrapolation', 'forward', 'gradient', 'harmonic', 'left', 'length', 'linear', 'node to edge', 'order', 'primary', 'quadratic', 'quaternary', 'right', 'row', 'secondary', 'spherical polar', 'tertiary', 'upwind', 'use bcs', 'value']

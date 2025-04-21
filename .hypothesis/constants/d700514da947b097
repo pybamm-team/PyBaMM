@@ -1,4 +1,0 @@
-# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\models\full_battery_models\lithium_ion\basic_splitOCVR.py
-# hypothesis_version: 6.131.6
-
-[0.0001, 0.999, 3600, 'Current [A]', 'Current function [A]', 'ECM with split OCV', 'Maximum voltage [V]', 'Minimum voltage [V]', 'Time [s]', 'Times [s]', 'Voltage [V]']

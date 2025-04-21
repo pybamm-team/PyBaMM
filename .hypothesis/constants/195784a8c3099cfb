@@ -1,4 +1,0 @@
-# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\models\submodels\transport_efficiency\random_overlapping_cylinders.py
-# hypothesis_version: 6.131.6
-
-['Electrode', 'Electrolyte', 'Shen2007', 'Tomadakis1993', 'current collector', 'separator']

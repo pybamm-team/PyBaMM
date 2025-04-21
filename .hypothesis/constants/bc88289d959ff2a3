@@ -1,4 +1,0 @@
-# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\geometry\battery_geometry.py
-# hypothesis_version: 6.131.6
-
-['L_n + L_s', 'R_n', 'R_n_prim', 'R_n_sec', 'R_p', 'R_p_prim', 'R_p_sec', 'current collector', 'cylindrical', 'dimensionality', 'distribution', 'max', 'min', 'negative', 'negative electrode', 'particle phases', 'particle size', 'porous', 'position', 'positive', 'positive electrode', 'pouch', 'r_macro', 'separator', 'tabs', 'width', 'x_n', 'x_p', 'x_s', 'y', 'y_centre', 'z', 'z_centre']

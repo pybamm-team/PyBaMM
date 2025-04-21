@@ -1,4 +1,0 @@
-# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\simulation.py
-# hypothesis_version: 6.131.6
-
-[0.1, 100, 600, '%', 'Ah', 'Battery voltage [V]', 'Capacity [A.h]', 'Current function [A]', 'Cycling', 'ElectrodeSOH', 'InteractiveShell', 'MSMR', 'Minimum voltage [V]', 'Rest for padding', 'Shell', 'ZMQInteractiveShell', '[experiment]', '[input]', 'capacity', 'cycle number', 'drive cycle', 'elapsed time', 'error', 'experiment time', 'final time', 'get_esoh_solver', 'ignore', 'plot.gif', 'positive', 'python', 'simulation-solved', 'start capacity', 'start time', 'step duration', 'step number', 'stopping conditions', 'summary variables', 'termination', 'time', 'tqdm', 'voltage', 'wb', 'with experiment', 'without experiment', 'working electrode']

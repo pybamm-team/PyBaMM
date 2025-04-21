@@ -1,4 +1,0 @@
-# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\models\submodels\particle\polynomial_profile.py
-# hypothesis_version: 6.131.6
-
-[105, 'Fickian diffusion', 'Subramanian2005', 'cartesian', 'current collector', 'particle', 'primary', 'quadratic profile', 'quartic profile', 'quaternary', 'secondary', 'spherical polar', 'tertiary', 'uniform profile']

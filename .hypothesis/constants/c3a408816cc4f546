@@ -1,4 +1,0 @@
-# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\expression_tree\interpolant.py
-# hypothesis_version: 6.131.6
-
-['_', '_num_derivatives', 'children', 'cubic', 'extrapolate', 'id', 'interpolator', 'linear', 'name', 'pchip', 'shape', 'x', 'y', 'y_']

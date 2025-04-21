@@ -1,4 +1,0 @@
-# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\models\full_battery_models\lithium_ion\newman_tobias.py
-# hypothesis_version: 6.131.6
-
-['Chu2020', 'Fickian diffusion', 'MSMR', 'Newman-Tobias model', 'Newman1962', 'negative', 'particle', 'positive', 'quadratic profile', 'quartic profile', 'uniform profile']

@@ -1,4 +1,0 @@
-# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\expression_tree\operations\serialise.py
-# hypothesis_version: 6.131.6
-
-['%Y_%m_%d-%p%I_%M', '.', '.json', '_', 'bounds', 'children', 'concatenated_rhs', 'events', 'expression', 'geometry', 'ghost cell', 'initial_condition', 'json', 'mass_matrix', 'mass_matrix_inv', 'mesh', 'name', 'options', 'py/id', 'py/object', 'pybamm_version', 'sub_meshes', 'symbol_', 'variables', 'w']

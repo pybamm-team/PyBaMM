@@ -1,4 +1,0 @@
-# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\models\submodels\electrolyte_conductivity\integrated_conductivity.py
-# hypothesis_version: 6.131.6
-
-['BrosaPlanella2021', 'left', 'macinnes__c_e', 'negative electrode', 'positive electrode', 'right', 'separator']

@@ -1,4 +1,0 @@
-# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\models\submodels\external_circuit\explicit_control_external_circuit.py
-# hypothesis_version: 6.131.6
-
-['C-rate', 'Current [A]', 'Current variable [A]', 'Power function [W]', 'Time [s]', 'Voltage [V]', 'true', 'voltage as a state']

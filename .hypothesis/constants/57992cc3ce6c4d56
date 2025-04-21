@@ -1,4 +1,0 @@
-# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\models\submodels\particle\__init__.py
-# hypothesis_version: 6.131.6
-
-['base_particle', 'fickian_diffusion', 'msmr_diffusion', 'polynomial_profile']

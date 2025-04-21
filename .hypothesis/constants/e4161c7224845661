@@ -1,4 +1,0 @@
-# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\expression_tree\operations\evaluate_python.py
-# hypothesis_version: 6.131.6
-
-['\n   return ', '(', ')', ',', ', ', '-', '_evaluate', 'const_{:05d}', 'constvars:', 'equation:', 'exec', 'invars:', 'jax.numpy.', 'jax_enable_x64', 'jaxpr:', 'm', 'metal', 'np.', 'np.concatenate(({}))', 'outvars:', 't', 'var_{:05d}', '{}', '{} = {}']

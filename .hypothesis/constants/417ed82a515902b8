@@ -1,4 +1,0 @@
-# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\models\full_battery_models\__init__.py
-# hypothesis_version: 6.131.6
-
-['base_battery_model', 'equivalent_circuit', 'lead_acid', 'lithium_ion', 'sodium_ion']

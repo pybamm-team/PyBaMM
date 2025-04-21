@@ -1,4 +1,0 @@
-# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\expression_tree\unary_operators.py
-# hypothesis_version: 6.131.6
-
-['-', '1', 'Divergence', 'Gradient', 'Index[', 'Index[-1]', ']', '^{', '^{surf}', 'abs', 'basis integral', 'boundary flux', 'boundary mass', 'boundary value', 'ceil', 'check_size', 'children', 'current collector', 'delta_function', 'div', 'domains', 'downwind', 'entire', 'entire boundary', 'evaluate', 'evaluate on nodes.', 'floor', 'grad', 'grad squared', 'id', 'ignore', 'index', 'initial_condition', 'integral', 'laplacian', 'mass', 'matrix', 'name', 'negative particle', 'negative tab', 'not_constant', 'positive particle', 'positive tab', 'primary', 'quaternary', 'right', 'row', 'secondary', 'sign', 'start', 'step', 'stop', 'tertiary', 'upwind', 'xn', '}']

@@ -1,4 +1,0 @@
-# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\pybamm_data.py
-# hypothesis_version: 6.131.6
-
-['0.1C_discharge_U.txt', '0.5C_discharge_T.txt', '0.5C_discharge_U.txt', '1C_discharge_T.txt', '1C_discharge_U.txt', '2C_discharge_T.txt', '2C_discharge_U.txt', 'Ecker_1C.csv', 'Ecker_5C.csv', 'UDDS.csv', 'US06.csv', 'WLTC.csv', 'car_current.csv', 'comsol_01C.json', 'comsol_05C.json', 'comsol_1C.json', 'comsol_2C.json', 'comsol_3C.json', 'pybamm', 'stn_2C.txt', 'stp_2C.txt', 'v1.0.1']

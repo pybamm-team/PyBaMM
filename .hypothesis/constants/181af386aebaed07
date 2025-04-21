@@ -1,4 +1,0 @@
-# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\models\submodels\external_circuit\function_control_external_circuit.py
-# hypothesis_version: 6.131.6
-
-[0.01, 'C-rate', 'Current [A]', 'Current variable [A]', 'Mohtat2021', 'Power function [W]', 'Time [s]', 'Voltage [V]', 'Voltage function [V]', 'algebraic', 'differential', 'true', 'voltage as a state']

@@ -1,4 +1,0 @@
-# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\discretisations\discretisation.py
-# hypothesis_version: 6.131.6
-
-[1.0, 'Neumann', '_geometry', 'backward', 'csr', 'current collector', 'cylindrical polar', 'forward', 'here', 'left', 'lower', 'macroscale', 'min', 'negative electrode', 'negative tab', 'no tab', 'positive electrode', 'positive tab', 'reference', 'right', 'scale', 'secondary', 'separator', 'shape test', 'spherical polar', 'tab', 'tertiary', 'upper']

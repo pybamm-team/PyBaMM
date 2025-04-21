@@ -1,4 +1,0 @@
-# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\models\submodels\interface\sei\sei_growth.py
-# hypothesis_version: 6.131.6
-
-[1e-38, 0.5, '(asymmetric)', 'L_sei', 'L_sei_av', 'Marquis2020', 'SEI', 'SEI on cracks', 'Tang2012', 'VonKolzenberg2020', 'Yang2017', 'current collector', 'ec reaction limited', 'full electrode', 'interface', 'primary', 'reaction limited', 'right', 'secondary', 'tunnelling limited', 'x-average']

@@ -1,4 +1,0 @@
-# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\solvers\solution.py
-# hypothesis_version: 6.131.6
-
-[1.0, 122, 'Andersson2019', 'Cycle', 'Step', 'all', 'cse', 'csv', 'enable_jacobian', 'error_on_fail', 'final time', 'input', 'inputs_check', 'integration_time', 'is_diff_in', 'is_diff_out', 'json', 'matlab', 'pickle', 'regularity_check', 'set_up_time', 'solve_time', 't', 'variable', 'w', 'wb', 'y']

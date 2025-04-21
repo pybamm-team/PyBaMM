@@ -1,4 +1,0 @@
-# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\callbacks.py
-# hypothesis_version: 6.131.6
-
-['-', 'Capacity [A.h]', 'Minimum voltage [V]', 'capacity', 'cycle number', 'elapsed time', 'error', 'experiment time', 'on_', 'start capacity', 'step duration', 'step number', 'stopping conditions', 'summary variables', 'termination', 'time', 'voltage', 'w']

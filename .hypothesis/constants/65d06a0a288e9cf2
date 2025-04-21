@@ -1,4 +1,0 @@
-# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\experiment\step\base_step.py
-# hypothesis_version: 6.131.6
-
-[60.0, 273.15, 1000, 3600, '0123456789.-eE ', '<', '>', 'A', 'C', 'C-rate', 'Current [A]', 'Current function [A]', 'Drive Cycle', 'K', 'Maximum voltage [V]', 'Minimum voltage [V]', 'Ohm', 'V', 'W', '[A]', '[Ohm]', '[V]', '[W]', 'charge', 'current', 'description', 'discharge', 'duration', 'h', 'hour', 'hours', 'hr', 'm', 'min', 'minute', 'minutes', 'oC', 'period', 'power', 'resistance', 'rest', 's', 'sec', 'second', 'seconds', 'start time', 'start_time', 'tags', 'temperature', 'termination', 'type', 'value', 'voltage']

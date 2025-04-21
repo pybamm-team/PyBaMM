@@ -1,4 +1,0 @@
-# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\parameters\parameter_values.py
-# hypothesis_version: 6.131.6
-
-[1e-06, 0.001, 1000, ' : {:10.3E}\n', ' : {:10.4g}\n', '1 + dlnf/dlnc', 'Electron charge [C]', '[2D data]', '[current data]', '[data]', '[function]', '[input]', '__builtins__', '__cached__', '__doc__', '__file__', '__loader__', '__name__', '__package__', '__spec__', '_options', 'absolute_import', 'chemistry', 'citations', 'constants', 'division', 'elec', 'electrode', 'geo', 'half_cell', 'left', 'n', 'negative tab', 'no tab', 'np', 'p', 'particle', 'positive tab', 'print_function', 'propotional term', 'pybamm', 'r', 'right', 's', 'tabs', 'therm', 'unicode_literals', 'w', 'working electrode', 'x']

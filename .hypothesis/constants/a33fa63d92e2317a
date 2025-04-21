@@ -1,4 +1,0 @@
-# file: C:\Users\Guru kiran\GSOC 2025\PyBaMM\src\pybamm\geometry\standard_spatial_vars.py
-# hypothesis_version: 6.131.6
-
-['R_n', 'R_n_prim', 'R_n_sec', 'R_p', 'R_p_prim', 'R_p_sec', 'cartesian', 'current collector', 'cylindrical polar', 'negative electrode', 'negative particle', 'positive electrode', 'positive particle', 'r_macro', 'r_n', 'r_n_prim', 'r_n_sec', 'r_p', 'r_p_prim', 'r_p_sec', 'secondary', 'separator', 'spherical polar', 'tertiary', 'x', 'x_n', 'x_p', 'x_s', 'y', 'z']
