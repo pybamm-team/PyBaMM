@@ -85,6 +85,9 @@ class BaseModel:
         # Non-lithium ion models shouldn't calculate eSOH parameters
         self._calc_esoh = False
 
+        # Root solver
+        self._algebraic_root_solver = None
+
     @classmethod
     def deserialise(cls, properties: dict):
         """
@@ -458,6 +461,14 @@ class BaseModel:
     def calc_esoh(self):
         """Whether to include eSOH variables in the summary variables."""
         return self._calc_esoh
+
+    @property
+    def algebraic_root_solver(self):
+        return self._algebraic_root_solver
+
+    @algebraic_root_solver.setter
+    def algebraic_root_solver(self, algebraic_root_solver):
+        self._algebraic_root_solver = algebraic_root_solver
 
     def get_parameter_info(self, by_submodel=False):
         """
