@@ -34,7 +34,7 @@ The notebooks are organised into subfolders, and can be viewed in the galleries 
     notebooks/creating_models/7-creating-a-submodel.ipynb
 
 .. nbgallery::
-    :caption: performance
+    :caption: Performance
     :glob:
 
     notebooks/performance/01-simulation-pipeline.ipynb
