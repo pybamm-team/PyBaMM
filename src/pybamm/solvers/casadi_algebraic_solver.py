@@ -30,12 +30,18 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
                 "error_on_fail": False,
                 # Verbosity level
                 "verbose": False,
+                # Whether to show warnings when evaluating the model
+                "show_eval_warnings": False,
             }
     """
 
     def __init__(self, tol=1e-6, step_tol=1e-4, extra_options=None):
         super().__init__()
-        default_extra_options = {"error_on_fail": False, "verbose": False}
+        default_extra_options = {
+            "error_on_fail": False,
+            "verbose": False,
+            "show_eval_warnings": False,
+        }
         extra_options = extra_options or {}
         self.extra_options = extra_options | default_extra_options
         self.step_tol = step_tol
