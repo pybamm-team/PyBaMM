@@ -8,10 +8,16 @@ import tests
 
 class TestCasadiAlgebraicSolver:
     def test_algebraic_solver_init(self):
-        solver = pybamm.CasadiAlgebraicSolver(tol=1e-4)
+        solver = pybamm.CasadiAlgebraicSolver(step_tol=1e-6, tol=1e-4)
+        assert solver.step_tol == 1e-6
         assert solver.tol == 1e-4
 
         solver.tol = 1e-5
+        assert solver.tol == 1e-5
+        assert solver.step_tol == 1e-6
+
+        solver.step_tol = 1e-7
+        assert solver.step_tol == 1e-7
         assert solver.tol == 1e-5
 
     def test_simple_root_find(self):
@@ -30,22 +36,35 @@ class TestCasadiAlgebraicSolver:
         solution = solver.solve(model, np.linspace(0, 1, 10))
         np.testing.assert_array_equal(solution.y, -2)
 
-    def test_simple_root_find_correct_initial_guess(self):
-        # Simple system: a single algebraic equation
-        var = pybamm.Variable("var")
+    def test_algebraic_root_solver_reuse(self):
+        # Create a model with an input parameter and
+        # check that the algebraic root solver is reused
+        var = pybamm.Variable("var", "negative electrode")
         model = pybamm.BaseModel()
-        model.algebraic = {var: var + 2}
-        # initial guess gives right answer
-        model.initial_conditions = {var: -2}
+        param = pybamm.InputParameter("param")
+        model.algebraic = {var: var + param}
+        model.initial_conditions = {var: 2}
+        model.variables = {"var": var}
 
         # create discretisation
-        disc = pybamm.Discretisation()
+        disc = tests.get_discretisation_for_testing()
         disc.process_model(model)
 
-        # Solve
+        # Solve - scalar input
         solver = pybamm.CasadiAlgebraicSolver()
-        solution = solver.solve(model, np.linspace(0, 1, 10))
-        np.testing.assert_array_equal(solution.y, -2)
+        solver.solve(model, [0], inputs={"param": 7}, calculate_sensitivities=True)
+
+        # Check that the algebraic root solver exists
+        root_solver0 = model.algebraic_root_solver
+        assert root_solver0 is not None
+        root_solver_serialized0 = root_solver0.serialize()
+
+        # Solve again and make sure the root solver is the same
+        solver.solve(model, [0], inputs={"param": 3}, calculate_sensitivities=True)
+        root_solver1 = model.algebraic_root_solver
+        assert root_solver0 is root_solver1
+        root_solver_serialized1 = root_solver1.serialize()
+        assert root_solver_serialized0 == root_solver_serialized1
 
     def test_root_find_fail(self):
         class Model:
@@ -67,7 +86,7 @@ class TestCasadiAlgebraicSolver:
         solver = pybamm.CasadiAlgebraicSolver()
         with pytest.raises(
             pybamm.SolverError,
-            match="Could not find acceptable solution: Error in Function",
+            match="Could not find acceptable solution",
         ):
             solver._integrate(model, np.array([0]), {})
         solver = pybamm.CasadiAlgebraicSolver(extra_options={"error_on_fail": False})
@@ -155,10 +174,10 @@ class TestCasadiAlgebraicSolver:
         model.variables = {"var1": var1}
 
         # Solve
-        solver = pybamm.CasadiAlgebraicSolver(tol=1e-12)
+        solver = pybamm.CasadiAlgebraicSolver(step_tol=1e-7, tol=1e-12)
         solution = solver.solve(model)
         np.testing.assert_allclose(
-            solution["var1"].data, 3 * np.pi / 2, rtol=1e-7, atol=1e-6
+            solution["var1"].data, 3 * np.pi / 2, rtol=1e-6, atol=1e-6
         )
 
     def test_solve_with_input(self):
