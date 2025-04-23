@@ -17,7 +17,7 @@ class TestExperiments:
         )
         model = pybamm.lithium_ion.SPM()
         sim = pybamm.Simulation(
-            model, experiment=experiment, solver=pybamm.CasadiSolver()
+            model, experiment=experiment
         )
         sim.solve()
         np.testing.assert_allclose(
@@ -46,7 +46,6 @@ class TestExperiments:
             model,
             parameter_values=parameter_values,
             experiment=experiment,
-            solver=pybamm.CasadiSolver(),
         )
         sol = sim.solve()
         np.testing.assert_allclose(sol["Current [A]"].data[:5], 0, rtol=1e-7, atol=1e-6)
@@ -60,7 +59,7 @@ class TestExperiments:
         )
         model = pybamm.lithium_ion.SPM()
         sim = pybamm.Simulation(
-            model, experiment=experiment, solver=pybamm.CasadiSolver()
+            model, experiment=experiment
         )
         sim.solve()
         cap = model.default_parameter_values["Nominal cell capacity [A.h]"]
@@ -80,7 +79,7 @@ class TestExperiments:
         )
         model = pybamm.lithium_ion.SPM()
         sim = pybamm.Simulation(
-            model, experiment=experiment, solver=pybamm.CasadiSolver()
+            model, experiment=experiment
         )
         sol = sim.solve()
         # this experiment fails during the third cycle (i.e. is infeasible)
@@ -102,7 +101,6 @@ class TestExperiments:
             model,
             experiment=experiment,
             parameter_values=param,
-            solver=pybamm.CasadiSolver(),
         )
         sol = sim.solve()
         assert np.all(sol["Terminal voltage [V]"].entries >= 4.00)
