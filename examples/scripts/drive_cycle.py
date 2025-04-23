@@ -27,9 +27,7 @@ param["Current function [A]"] = current_interpolant
 
 # create and run simulation using the CasadiSolver in "fast" mode, remembering to
 # pass in the updated parameters
-sim = pybamm.Simulation(
-    model, parameter_values=param, solver=pybamm.CasadiSolver(mode="fast")
-)
+sim = pybamm.Simulation(model, parameter_values=param)
 sim.solve()
 sim.plot(
     [
