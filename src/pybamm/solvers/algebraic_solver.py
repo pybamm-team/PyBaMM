@@ -56,7 +56,7 @@ class AlgebraicSolver(pybamm.BaseSolver):
         pybamm.citations.register("Virtanen2020")
 
     def set_up_root_solver(self, model, inputs_dict, t_eval):
-        """Create and return a rootfinder object. Not used for algebraic solver.
+        """Create and return a rootfinder object. Not used for `pybamm.AlgebraicSolver`.
 
         Parameters
         ----------
