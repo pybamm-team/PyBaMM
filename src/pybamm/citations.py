@@ -222,11 +222,9 @@ class Citations:
                     from bibtexparser.library import Library
                     from bibtexparser.model import Entry
 
-                    dummy_lib = Library()
-                    fields = entry
-                    bib_entry = Entry("article", key, fields=fields)
-                    dummy_lib.add_entry(bib_entry)
-                    citations.append(bibtexparser.write_string(dummy_lib))
+                    bib_entry = Entry(entry_type="article", key=key, fields=entry)
+                    library = Library(entries=[bib_entry])
+                    citations.append(bibtexparser.write_string(library))
 
         output = (
             "\n\n".join(citations) if output_format == "text" else "\n".join(citations)
