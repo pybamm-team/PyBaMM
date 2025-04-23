@@ -57,7 +57,7 @@ experiment = pb.Experiment(
 )
 
 sim = pb.Simulation(model, experiment=experiment, parameter_values=param)
-sim.solve(solver=pb.IDAKLUSolver()
+sim.solve(solver=pb.IDAKLUSolver())
 sim.plot(
     [
         "Current [A]",
