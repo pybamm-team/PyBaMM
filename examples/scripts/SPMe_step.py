@@ -33,7 +33,7 @@ solution = solver.solve(model, t_eval)
 # step model
 dt = 500
 # Set a t_interp to only save the solution at the end of the st
-t_interp=[0, dt]
+t_interp = [0, dt]
 time = 0
 end_time = solution.t[-1]
 step_solver = pybamm.IDAKLUSolver()

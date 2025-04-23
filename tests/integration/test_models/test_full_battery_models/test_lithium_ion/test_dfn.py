@@ -132,17 +132,18 @@ class TestDFNWithSizeDistribution:
 
         # reduce number of particle sizes, for a crude discretization
         var_pts = {"R_n": 3, "R_p": 3}
-        solver = pybamm.CasadiSolver(mode="fast")
 
         # solve
         neg_Li = []
         pos_Li = []
+        t_eval = [0, 3500]
+        t_interp = np.linspace(t_eval[0], t_eval[-1], 100)
         for model in models:
             sim = pybamm.Simulation(
-                model, parameter_values=self.params, var_pts=self.var_pts, solver=solver
+                model, parameter_values=self.params, var_pts=self.var_pts
             )
             sim.var_pts.update(var_pts)
-            solution = sim.solve([0, 3500])
+            solution = sim.solve(t_eval, t_interp=t_interp)
             neg = solution["Total lithium in negative electrode [mol]"].entries[-1]
             pos = solution["Total lithium in positive electrode [mol]"].entries[-1]
             neg_Li.append(neg)

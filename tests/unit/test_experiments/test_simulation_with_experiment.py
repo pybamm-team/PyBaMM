@@ -369,9 +369,7 @@ class TestSimulationExperiment:
         pybamm.set_logging_level("ERROR")
         # giving the time, should get ignored
         t_eval = [0, 1]
-        sim.solve(
-            t_eval, solver=pybamm.CasadiSolver(), callbacks=pybamm.callbacks.Callback()
-        )
+        sim.solve(t_eval, callbacks=pybamm.callbacks.Callback())
         pybamm.set_logging_level("WARNING")
         assert sim._solution.termination == "event: Minimum voltage [V]"
 
@@ -381,14 +379,14 @@ class TestSimulationExperiment:
             [
                 (
                     "Rest for 10 minutes",
-                    s("Discharge at 20 C for 10 minutes", period="10 minutes"),
+                    s("Discharge at 20000 C for 10 minutes"),
                 )
             ]
         )
         model = pybamm.lithium_ion.DFN()
 
         parameter_values = pybamm.ParameterValues("Chen2020")
-        solver = pybamm.CasadiSolver(max_step_decrease_count=2)
+        solver = pybamm.IDAKLUSolver()
         sim = pybamm.Simulation(
             model,
             experiment=experiment,
@@ -403,7 +401,7 @@ class TestSimulationExperiment:
         experiment = pybamm.Experiment(
             [
                 "Rest for 10 minutes",
-                s("Discharge at 20 C for 10 minutes", period="10 minutes"),
+                s("Discharge at 20000 C for 10 minutes"),
             ]
         )
         sim = pybamm.Simulation(
@@ -449,7 +447,7 @@ class TestSimulationExperiment:
         param = pybamm.ParameterValues("Chen2020")
         param["SEI kinetic rate constant [m.s-1]"] = 1e-14
         sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
-        sol = sim.solve(solver=pybamm.CasadiSolver())
+        sol = sim.solve()
         C = sol.summary_variables["Capacity [A.h]"]
         np.testing.assert_array_less(np.diff(C), 0)
         # all but the last value should be above the termination condition
@@ -471,7 +469,7 @@ class TestSimulationExperiment:
         param = pybamm.ParameterValues("Chen2020")
         param["SEI kinetic rate constant [m.s-1]"] = 1e-14
         sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
-        sol = sim.solve(solver=pybamm.CasadiSolver())
+        sol = sim.solve()
         C = sol.summary_variables["Capacity [A.h]"]
         # all but the last value should be above the termination condition
         np.testing.assert_array_less(5.04, C[:-1])
@@ -577,9 +575,7 @@ class TestSimulationExperiment:
         )
         model = pybamm.lithium_ion.SPM()
         sim = pybamm.Simulation(model, experiment=experiment)
-        sol = sim.solve(
-            solver=pybamm.CasadiSolver("fast with events"), save_at_cycles=2
-        )
+        sol = sim.solve(save_at_cycles=2)
         # Solution saves "None" for the cycles that are not saved
         for cycle_num in [2, 4, 6, 8]:
             assert sol.cycles[cycle_num] is None
@@ -588,9 +584,7 @@ class TestSimulationExperiment:
         # Summary variables are not None
         assert sol.summary_variables["Capacity [A.h]"] is not None
 
-        sol = sim.solve(
-            solver=pybamm.CasadiSolver("fast with events"), save_at_cycles=[3, 4, 5, 9]
-        )
+        sol = sim.solve(save_at_cycles=[3, 4, 5, 9])
         # Note offset by 1 (0th cycle is cycle 1)
         for cycle_num in [1, 5, 6, 7]:
             assert sol.cycles[cycle_num] is None
@@ -617,12 +611,12 @@ class TestSimulationExperiment:
         # O'Kane 2022: pos = function, neg = data
         param = pybamm.ParameterValues("OKane2022")
         sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
-        sim.solve(solver=pybamm.CasadiSolver("fast with events"), save_at_cycles=2)
+        sim.solve(save_at_cycles=2)
 
         # Chen 2020: pos = function, neg = function
         param = pybamm.ParameterValues("Chen2020")
         sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
-        sim.solve(solver=pybamm.CasadiSolver("fast with events"), save_at_cycles=2)
+        sim.solve(save_at_cycles=2)
 
         # Chen 2020 with data: pos = data, neg = data
         # Load negative electrode OCP data
@@ -656,7 +650,7 @@ class TestSimulationExperiment:
         )
 
         sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
-        sim.solve(solver=pybamm.CasadiSolver("safe"), save_at_cycles=2)
+        sim.solve(save_at_cycles=2)
 
     def test_inputs(self):
         experiment = pybamm.Experiment(

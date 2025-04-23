@@ -448,7 +448,7 @@ class TestSimulation:
             step = operating_mode(oscillating, duration=tf / 2)
             experiment = pybamm.Experiment([step, step], period=f"{tf / 100} seconds")
 
-            solver = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8)
+            solver = pybamm.IDAKLUSolver(rtol=1e-8, atol=1e-8)
             sim = pybamm.Simulation(model, experiment=experiment, solver=solver)
             sim.solve()
             for sol in sim.solution.sub_solutions:
@@ -545,7 +545,6 @@ class TestSimulation:
         sim = pybamm.Simulation(
             model,
             experiment="Discharge at 1C for 20 minutes",
-            solver=pybamm.CasadiSolver(),
         )
         sim.solve([0, 600])
         sim.save(test_name)

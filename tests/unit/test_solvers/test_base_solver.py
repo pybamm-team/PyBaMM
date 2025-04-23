@@ -313,7 +313,7 @@ class TestBaseSolver:
         model.initial_conditions = {v: 1}
         x = np.array([0, 1])
         interp = pybamm.Interpolant(x, x, pybamm.t)
-        solver = pybamm.CasadiSolver()
+        solver = pybamm.IDAKLUSolver()
         for input_key in ["Current input [A]", "Voltage input [V]", "Power input [W]"]:
             sol = solver.step(
                 old_solution=None, model=model, dt=1.0, inputs={input_key: interp}

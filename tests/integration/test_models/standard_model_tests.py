@@ -84,7 +84,7 @@ class StandardModelTest:
             Crate = 1
         if t_eval is None:
             t_eval = [0, 3600 / Crate]
-        t_interp = np.linspace(0, t_eval[-1], 100)
+        t_interp = np.linspace(t_eval[0], t_eval[-1], 100)
 
         self.solution = self.solver.solve(
             self.model,

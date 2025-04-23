@@ -29,7 +29,7 @@ experiment = pybamm.Experiment(
     * 3,
 )
 model = pybamm.lithium_ion.DFN()
-sim = pybamm.Simulation(model, experiment=experiment, solver=pybamm.CasadiSolver())
+sim = pybamm.Simulation(model, experiment=experiment, solver=pybamm.IDAKLUSolver())
 sim.solve()
 sim.plot()
 ```
