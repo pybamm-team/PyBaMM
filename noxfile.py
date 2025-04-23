@@ -41,7 +41,7 @@ def run_coverage(session):
     # Using plugin here since coverage runs unit tests on linux with latest python version.
     if "CI" in os.environ:
         session.install("pytest-github-actions-annotate-failures")
-    session.install("-e", ".[all,dev,jax]", silent=False)
+    session.install("-e", ".[all,dev,jax,cite]", silent=False)
     session.run("pytest", "--cov=pybamm", "--cov-report=xml", "tests/unit")
 
 
@@ -55,7 +55,7 @@ def run_integration(session):
         and sys.platform == "linux"
     ):
         session.install("pytest-github-actions-annotate-failures")
-    session.install("-e", ".[all,dev,jax]", silent=False)
+    session.install("-e", ".[all,dev,jax,cite]", silent=False)
     session.run("python", "-m", "pytest", "-m", "integration")
 
 
@@ -64,7 +64,7 @@ def run_doctests(session):
     """Run the doctests and generate the output(s) in the docs/build/ directory."""
     # Fix for Python 3.12 CI. This can be removed after pybtex is replaced.
     session.install("setuptools", silent=False)
-    session.install("-e", ".[all,dev,docs]", silent=False)
+    session.install("-e", ".[all,dev,docs,cite]", silent=False)
     session.run(
         "python",
         "-m",
@@ -79,7 +79,7 @@ def run_unit(session):
     """Run the unit tests."""
     set_environment_variables(PYBAMM_ENV, session=session)
     session.install("bibtexparser==2.0.0b8")
-    session.install("-e", ".[all,dev,jax]", silent=False)
+    session.install("-e", ".[all,dev,jax,cite]", silent=False)
     session.run("python", "-m", "pytest", "-m", "unit")
 
 
@@ -87,7 +87,7 @@ def run_unit(session):
 def run_examples(session):
     """Run the examples tests for Jupyter notebooks."""
     set_environment_variables(PYBAMM_ENV, session=session)
-    session.install("-e", ".[all,dev,jax]", silent=False)
+    session.install("-e", ".[all,dev,jax,cite]", silent=False)
     notebooks_to_test = session.posargs if session.posargs else []
     session.run(
         "pytest", "--nbmake", *notebooks_to_test, "docs/source/examples/", external=True
@@ -100,7 +100,7 @@ def run_scripts(session):
     set_environment_variables(PYBAMM_ENV, session=session)
     # Fix for Python 3.12 CI. This can be removed after pybtex is replaced.
     session.install("setuptools", silent=False)
-    session.install("-e", ".[all,dev,jax]", silent=False)
+    session.install("-e", ".[all,dev,jax,cite]", silent=False)
     session.run("python", "-m", "pytest", "-m", "scripts")
 
 
@@ -131,7 +131,7 @@ def set_dev(session):
 def run_tests(session):
     """Run the unit tests and integration tests sequentially."""
     set_environment_variables(PYBAMM_ENV, session=session)
-    session.install("-e", ".[all,dev,jax]", silent=False)
+    session.install("-e", ".[all,dev,jax,cite]", silent=False)
     session.run(
         "python",
         "-m",
@@ -146,7 +146,7 @@ def build_docs(session):
     envbindir = session.bin
     # Fix for Python 3.12 CI. This can be removed after pybtex is replaced.
     session.install("setuptools", silent=False)
-    session.install("-e", ".[all,docs]", silent=False)
+    session.install("-e", ".[all,docs,cite]", silent=False)
     session.chdir("docs")
     # Local development
     if session.interactive:
