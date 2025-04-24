@@ -238,6 +238,9 @@ class BaseSolver:
             model.casadi_sensitivities_rhs = jacp_rhs
             model.casadi_sensitivities_algebraic = jacp_algebraic
 
+        if getattr(self.root_method, "algebraic_solver", False):
+            self.root_method.set_up_root_solver(model, inputs, t_eval)
+
         # if output_variables specified then convert functions to casadi
         # expressions for evaluation within the respective solver
         self.computed_var_fcns = {}

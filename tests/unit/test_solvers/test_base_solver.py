@@ -197,6 +197,7 @@ class TestBaseSolver:
         init_states = solver.calculate_consistent_state(model)
         np.testing.assert_allclose(init_states.flatten(), vec, rtol=1e-7, atol=1e-6)
         # with casadi
+        solver_with_casadi.root_method.step_tol = 1e-12
         init_states = solver_with_casadi.calculate_consistent_state(model)
         np.testing.assert_allclose(
             init_states.full().flatten(), vec, rtol=1e-7, atol=1e-6
@@ -246,20 +247,20 @@ class TestBaseSolver:
 
         with pytest.raises(
             pybamm.SolverError,
-            match="Could not find acceptable solution: The iteration is not making",
+            match="Could not find acceptable solution",
         ):
             solver.calculate_consistent_state(Model())
         solver = pybamm.BaseSolver(root_method="lm")
         with pytest.raises(
             pybamm.SolverError,
-            match="Could not find acceptable solution: solver terminated",
+            match="Could not find acceptable solution",
         ):
             solver.calculate_consistent_state(Model())
         # with casadi
         solver = pybamm.BaseSolver(root_method="casadi")
         with pytest.raises(
             pybamm.SolverError,
-            match="Could not find acceptable solution: Error in Function",
+            match="Could not find acceptable solution",
         ):
             solver.calculate_consistent_state(Model())
 

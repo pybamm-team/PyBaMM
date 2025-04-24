@@ -276,7 +276,8 @@ class TestExperiment:
         step = pybamm.step.voltage(2.5, termination="2.5 V")
         experiment = pybamm.Experiment([step])
 
-        sim = pybamm.Simulation(model, experiment=experiment)
+        solver = pybamm.IDAKLUSolver(atol=1e-8, rtol=1e-8)
+        sim = pybamm.Simulation(model, experiment=experiment, solver=solver)
 
         sim.solve()
         solution = sim.solution

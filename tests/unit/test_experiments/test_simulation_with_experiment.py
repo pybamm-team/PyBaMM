@@ -73,7 +73,8 @@ class TestSimulationExperiment:
             temperature="-14oC",
         )
         model = pybamm.lithium_ion.SPM()
-        sim = pybamm.Simulation(model, experiment=experiment)
+        solver = pybamm.IDAKLUSolver(atol=1e-8, rtol=1e-8)
+        sim = pybamm.Simulation(model, experiment=experiment, solver=solver)
         # test the callback here
         sol = sim.solve(callbacks=pybamm.callbacks.Callback())
         assert sol.termination == "final time"
@@ -186,6 +187,16 @@ class TestSimulationExperiment:
         sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
         with pytest.raises(pybamm.SolverError, match="skip_ok is True for all steps"):
             sim.solve()
+
+        # Check termination after a skipped step
+        steps = [
+            pybamm.step.Current(2, duration=100.0, skip_ok=False),
+            cc_charge_skip_ok,
+        ]
+        experiment = pybamm.Experiment(steps)
+        sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
+        sol = sim.solve()
+        assert sol.termination == "Event exceeded in initial conditions"
 
     def test_all_empty_solution_errors(self):
         model = pybamm.lithium_ion.SPM()
