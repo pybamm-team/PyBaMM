@@ -1,6 +1,5 @@
 import copy
 import itertools
-from scipy.sparse import block_diag
 import multiprocessing as mp
 import numbers
 import sys
@@ -90,10 +89,6 @@ class BaseSolver:
     def supports_parallel_solve(self):
         return False
 
-    @property
-    def requires_explicit_sensitivities(self):
-        return True
-
     @root_method.setter
     def root_method(self, method):
         if method == "casadi":
@@ -143,18 +138,9 @@ class BaseSolver:
         if not hasattr(model, "calculate_sensitivities"):
             model.calculate_sensitivities = []
 
-        # see if we need to form the explicit sensitivity equations
-        calculate_sensitivities_explicit = (
-            model.calculate_sensitivities and self.requires_explicit_sensitivities
-        )
+        self._set_up_model_sensitivities_inplace(model, inputs)
 
-        self._set_up_model_sensitivities_inplace(
-            model, inputs, calculate_sensitivities_explicit
-        )
-
-        vars_for_processing = self._get_vars_for_processing(
-            model, inputs, calculate_sensitivities_explicit
-        )
+        vars_for_processing = self._get_vars_for_processing(model, inputs)
 
         # Process initial conditions
         initial_conditions, _, jacp_ic, _ = process(
@@ -237,14 +223,14 @@ class BaseSolver:
             # can use DAE solver to solve model with algebraic equations only
             if len(model.rhs) > 0:
                 t_casadi = vars_for_processing["t_casadi"]
-                y_and_S = vars_for_processing["y_and_S"]
+                y_casadi = vars_for_processing["y_casadi"]
                 p_casadi_stacked = vars_for_processing["p_casadi_stacked"]
                 mass_matrix_inv = casadi.MX(model.mass_matrix_inv.entries)
                 explicit_rhs = mass_matrix_inv @ rhs(
-                    t_casadi, y_and_S, p_casadi_stacked
+                    t_casadi, y_casadi, p_casadi_stacked
                 )
                 model.casadi_rhs = casadi.Function(
-                    "rhs", [t_casadi, y_and_S, p_casadi_stacked], [explicit_rhs]
+                    "rhs", [t_casadi, y_casadi, p_casadi_stacked], [explicit_rhs]
                 )
             model.casadi_switch_events = casadi_switch_events
             model.casadi_algebraic = algebraic
@@ -283,7 +269,8 @@ class BaseSolver:
         pybamm.logger.info("Finish solver set-up")
 
     def _set_initial_conditions(self, model, time, inputs):
-        len_tot = model.len_rhs_and_alg + model.len_rhs_sens + model.len_alg_sens
+        # model should have been discretised or an error raised in Self._check_and_prepare_model_inplace
+        len_tot = model.len_rhs_and_alg
         y_zero = np.zeros((len_tot, 1))
 
         casadi_format = model.convert_to_format == "casadi"
@@ -386,10 +373,9 @@ class BaseSolver:
             model.convert_to_format = "casadi"
 
     @staticmethod
-    def _get_vars_for_processing(model, inputs, calculate_sensitivities_explicit):
+    def _get_vars_for_processing(model, inputs):
         vars_for_processing = {
             "model": model,
-            "calculate_sensitivities_explicit": calculate_sensitivities_explicit,
         }
 
         if model.convert_to_format != "casadi":
@@ -424,61 +410,20 @@ class BaseSolver:
                     "p_casadi_stacked": p_casadi_stacked,
                 }
             )
-            # sensitivity vectors
-            if calculate_sensitivities_explicit:
-                pS_casadi_stacked = casadi.vertcat(
-                    *[p_casadi[name] for name in model.calculate_sensitivities]
-                )
-                S_x = casadi.MX.sym("S_x", model.len_rhs_sens)
-                S_z = casadi.MX.sym("S_z", model.len_alg_sens)
-                vars_for_processing.update(
-                    {"S_x": S_x, "S_z": S_z, "pS_casadi_stacked": pS_casadi_stacked}
-                )
-                y_and_S = casadi.vertcat(y_diff, S_x, y_alg, S_z)
-            else:
-                y_and_S = y_casadi
-            vars_for_processing.update({"y_and_S": y_and_S})
 
             return vars_for_processing
 
     @staticmethod
-    def _set_up_model_sensitivities_inplace(
-        model, inputs, calculate_sensitivities_explicit
-    ):
+    def _set_up_model_sensitivities_inplace(model, inputs):
         """
         Set up model attributes related to sensitivities.
         """
-        # if we are calculating sensitivities explicitly then the number of
-        # equations will change
-        if calculate_sensitivities_explicit:
-            num_parameters = 0
-            for name in model.calculate_sensitivities:
-                # if not a number, assume its a vector
-                if isinstance(inputs[name], numbers.Number):
-                    num_parameters += 1
-                else:
-                    num_parameters += len(inputs[name])
-            model.len_rhs_sens = model.len_rhs * num_parameters
-            model.len_alg_sens = model.len_alg * num_parameters
-        else:
-            model.len_rhs_sens = 0
-            model.len_alg_sens = 0
-
         has_mass_matrix = model.mass_matrix is not None
         has_mass_matrix_inv = model.mass_matrix_inv is not None
 
         if not has_mass_matrix:
             return
 
-        # if we will change the equations to include the explicit sensitivity
-        # equations, then we also need to update the mass matrix and bounds.
-        # First, we reset the mass matrix and bounds back to their original form
-        # if they have been extended
-        if model.bounds[0].shape[0] > model.len_rhs_and_alg:
-            model.bounds = (
-                model.bounds[0][: model.len_rhs_and_alg],
-                model.bounds[1][: model.len_rhs_and_alg],
-            )
         model.mass_matrix = pybamm.Matrix(
             model.mass_matrix.entries[: model.len_rhs_and_alg, : model.len_rhs_and_alg]
         )
@@ -486,27 +431,6 @@ class BaseSolver:
             model.mass_matrix_inv = pybamm.Matrix(
                 model.mass_matrix_inv.entries[: model.len_rhs, : model.len_rhs]
             )
-
-        # now we can extend them by the number of sensitivity parameters
-        # if necessary
-        if not calculate_sensitivities_explicit:
-            return
-
-        if model.bounds[0].shape[0] == model.len_rhs_and_alg:
-            model.bounds = (
-                np.repeat(model.bounds[0], num_parameters + 1),
-                np.repeat(model.bounds[1], num_parameters + 1),
-            )
-
-        # if we have a mass matrix, we need to extend it
-        def extend_mass_matrix(M):
-            M_extend = [M.entries] * (num_parameters + 1)
-            return pybamm.Matrix(block_diag(M_extend, format="csr"))
-
-        model.mass_matrix = extend_mass_matrix(model.mass_matrix)
-
-        if has_mass_matrix_inv:
-            model.mass_matrix_inv = extend_mass_matrix(model.mass_matrix_inv)
 
     def _set_up_events(self, model, t_eval, inputs, vars_for_processing):
         # Check for heaviside and modulo functions in rhs and algebraic and add
@@ -1319,7 +1243,7 @@ class BaseSolver:
         elif old_solution.all_models[-1] == model:
             last_state = old_solution.last_state
             model.y0 = last_state.all_ys[0]
-            if using_sensitivities and isinstance(last_state._all_sensitivities, dict):
+            if using_sensitivities:
                 full_sens = last_state._all_sensitivities["all"][0]
                 model.y0S = tuple(full_sens[:, i] for i in range(full_sens.shape[1]))
 
@@ -1330,25 +1254,6 @@ class BaseSolver:
             model.y0 = concatenated_initial_conditions.evaluate(0, inputs=model_inputs)
             if using_sensitivities:
                 model.y0S = self._set_sens_initial_conditions_from(old_solution, model)
-
-        # hopefully we'll get rid of explicit sensitivities soon so we can remove this
-        explicit_sensitivities = model.len_rhs_sens > 0 or model.len_alg_sens > 0
-        if (
-            explicit_sensitivities
-            and using_sensitivities
-            and not isinstance(old_solution, pybamm.EmptySolution)
-            and not old_solution.all_models[-1] == model
-        ):
-            y0_list = []
-            if model.len_rhs > 0:
-                y0_list.append(model.y0[: model.len_rhs])
-                for s in model.y0S:
-                    y0_list.append(s[: model.len_rhs])
-            if model.len_alg > 0:
-                y0_list.append(model.y0[model.len_rhs :])
-                for s in model.y0S:
-                    y0_list.append(s[model.len_rhs :])
-            model.y0 = casadi.vertcat(*y0_list)
 
         set_up_time = timer.time()
 
@@ -1680,71 +1585,15 @@ def process(
         t_casadi = vars_for_processing["t_casadi"]
         y_casadi = vars_for_processing["y_casadi"]
         p_casadi = vars_for_processing["p_casadi"]
-        y_and_S = vars_for_processing["y_and_S"]
         p_casadi_stacked = vars_for_processing["p_casadi_stacked"]
-        calculate_sensitivities_explicit = vars_for_processing[
-            "calculate_sensitivities_explicit"
-        ]
+
         # Process with CasADi
         report(f"Converting {name} to CasADi")
         casadi_expression = symbol.to_casadi(t_casadi, y_casadi, inputs=p_casadi)
         # Add sensitivity vectors to the rhs and algebraic equations
         jacp = None
-        if calculate_sensitivities_explicit:
-            # The formulation is as per Park, S., Kato, D., Gima, Z., Klein, R.,
-            # & Moura, S. (2018).  Optimal experimental design for
-            # parameterization of an electrochemical lithium-ion battery model.
-            # Journal of The Electrochemical Society, 165(7), A1309.". See #1100
-            # for details
-            pS_casadi_stacked = vars_for_processing["pS_casadi_stacked"]
-            y_diff = vars_for_processing["y_diff"]
-            y_alg = vars_for_processing["y_alg"]
-            S_x = vars_for_processing["S_x"]
-            S_z = vars_for_processing["S_z"]
 
-            if name == "RHS" and model.len_rhs > 0:
-                report(
-                    "Creating explicit forward sensitivity equations "
-                    "for rhs using CasADi"
-                )
-                df_dx = casadi.jacobian(casadi_expression, y_diff)
-                df_dp = casadi.jacobian(casadi_expression, pS_casadi_stacked)
-                S_x_mat = S_x.reshape((model.len_rhs, pS_casadi_stacked.shape[0]))
-                if model.len_alg == 0:
-                    S_rhs = (df_dx @ S_x_mat + df_dp).reshape((-1, 1))
-                else:
-                    df_dz = casadi.jacobian(casadi_expression, y_alg)
-                    S_z_mat = S_z.reshape((model.len_alg, pS_casadi_stacked.shape[0]))
-                    S_rhs = (df_dx @ S_x_mat + df_dz @ S_z_mat + df_dp).reshape((-1, 1))
-                casadi_expression = casadi.vertcat(casadi_expression, S_rhs)
-            if name == "algebraic" and model.len_alg > 0:
-                report(
-                    "Creating explicit forward sensitivity equations "
-                    "for algebraic using CasADi"
-                )
-                dg_dz = casadi.jacobian(casadi_expression, y_alg)
-                dg_dp = casadi.jacobian(casadi_expression, pS_casadi_stacked)
-                S_z_mat = S_z.reshape((model.len_alg, pS_casadi_stacked.shape[0]))
-                if model.len_rhs == 0:
-                    S_alg = (dg_dz @ S_z_mat + dg_dp).reshape((-1, 1))
-                else:
-                    dg_dx = casadi.jacobian(casadi_expression, y_diff)
-                    S_x_mat = S_x.reshape((model.len_rhs, pS_casadi_stacked.shape[0]))
-                    S_alg = (dg_dx @ S_x_mat + dg_dz @ S_z_mat + dg_dp).reshape((-1, 1))
-                casadi_expression = casadi.vertcat(casadi_expression, S_alg)
-            if name == "initial_conditions":
-                if model.len_rhs == 0 or model.len_alg == 0:
-                    S_0 = casadi.jacobian(casadi_expression, pS_casadi_stacked).reshape(
-                        (-1, 1)
-                    )
-                    casadi_expression = casadi.vertcat(casadi_expression, S_0)
-                else:
-                    x0 = casadi_expression[: model.len_rhs]
-                    z0 = casadi_expression[model.len_rhs :]
-                    Sx_0 = casadi.jacobian(x0, pS_casadi_stacked).reshape((-1, 1))
-                    Sz_0 = casadi.jacobian(z0, pS_casadi_stacked).reshape((-1, 1))
-                    casadi_expression = casadi.vertcat(x0, Sx_0, z0, Sz_0)
-        elif model.calculate_sensitivities:
+        if model.calculate_sensitivities:
             report(
                 f"Calculating sensitivities for {name} with respect "
                 f"to parameters {model.calculate_sensitivities} using "
@@ -1764,7 +1613,7 @@ def process(
                 # TODO: would it be faster to do the jacobian wrt pS_casadi_stacked?
                 jacp = casadi.Function(
                     name + "_jacp",
-                    [t_casadi, y_and_S, p_casadi_stacked],
+                    [t_casadi, y_casadi, p_casadi_stacked],
                     [
                         casadi.densify(
                             casadi.jacobian(casadi_expression, p_casadi[pname])
@@ -1775,23 +1624,23 @@ def process(
 
         if use_jacobian:
             report(f"Calculating jacobian for {name} using CasADi")
-            jac_casadi = casadi.jacobian(casadi_expression, y_and_S)
+            jac_casadi = casadi.jacobian(casadi_expression, y_casadi)
             jac = casadi.Function(
                 name + "_jac",
-                [t_casadi, y_and_S, p_casadi_stacked],
+                [t_casadi, y_casadi, p_casadi_stacked],
                 [jac_casadi],
             )
 
             v = casadi.MX.sym(
                 "v",
-                model.len_rhs_and_alg + model.len_rhs_sens + model.len_alg_sens,
+                model.len_rhs_and_alg,
             )
             jac_action_casadi = casadi.densify(
-                casadi.jtimes(casadi_expression, y_and_S, v)
+                casadi.jtimes(casadi_expression, y_casadi, v)
             )
             jac_action = casadi.Function(
                 name + "_jac_action",
-                [t_casadi, y_and_S, p_casadi_stacked, v],
+                [t_casadi, y_casadi, p_casadi_stacked, v],
                 [jac_action_casadi],
             )
         else:
@@ -1799,7 +1648,7 @@ def process(
             jac_action = None
 
         func = casadi.Function(
-            name, [t_casadi, y_and_S, p_casadi_stacked], [casadi_expression]
+            name, [t_casadi, y_casadi, p_casadi_stacked], [casadi_expression]
         )
 
     return func, jac, jacp, jac_action
