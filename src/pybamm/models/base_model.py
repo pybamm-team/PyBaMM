@@ -81,7 +81,7 @@ class BaseModel:
         # Model is not initially discretised
         self.is_discretised = False
         self.y_slices = None
-        self.len_rhs_and_alg = 0
+        self.len_rhs_and_alg = None
 
         # Non-lithium ion models shouldn't calculate eSOH parameters
         self._calc_esoh = False
