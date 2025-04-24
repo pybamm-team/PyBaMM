@@ -269,12 +269,7 @@ class BaseSolver:
         pybamm.logger.info("Finish solver set-up")
 
     def _set_initial_conditions(self, model, time, inputs):
-        # we use info from the discretised model here so check
-        # that the model is discretised
-        if not model.is_discretised:
-            raise pybamm.SolverError(
-                "Model must be discretised before setting initial conditions"
-            )
+        # model should have been discretised or an error raised in Self._check_and_prepare_model_inplace
         len_tot = model.len_rhs_and_alg
         y_zero = np.zeros((len_tot, 1))
 
