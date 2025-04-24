@@ -67,6 +67,12 @@ class ScipySolver(pybamm.BaseSolver):
             various diagnostic messages.
 
         """
+        # scipy solver does not support sensitivity analysis
+        if model.calculate_sensitivities:
+            raise NotImplementedError(
+                "Sensitivity analysis is not implemented for the Scipy solver."
+            )
+
         # Save inputs dictionary, and if necessary convert inputs to a casadi vector
         inputs_dict = inputs_dict or {}
         if model.convert_to_format == "casadi":
@@ -150,7 +156,6 @@ class ScipySolver(pybamm.BaseSolver):
                 t_event,
                 y_event,
                 termination,
-                all_sensitivities=bool(model.calculate_sensitivities),
             )
             sol.integration_time = integration_time
             return sol
