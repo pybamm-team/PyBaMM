@@ -202,15 +202,9 @@ class Solution:
             self._sensitivities = {}
             return
 
-        is_casadi = isinstance(
-            next(iter(self._all_sensitivities.values()))[0], (casadi.DM, casadi.MX)
-        )
         self._sensitivities = {}
         for key, sens in self._all_sensitivities.items():
-            if is_casadi:
-                self._sensitivities[key] = casadi.vertcat(*sens)
-            else:
-                self._sensitivities[key] = np.vstack(sens)
+            self._sensitivities[key] = np.vstack(sens)
 
     def set_y(self):
         try:

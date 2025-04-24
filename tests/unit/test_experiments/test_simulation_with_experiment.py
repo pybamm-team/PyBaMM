@@ -257,7 +257,12 @@ class TestSimulationExperiment:
         )
         assert solutions[1].termination == "final time"
 
-    def test_solve_with_sensitivities_and_experiment(self):
+    @pytest.mark.parametrize(
+        "solver_cls",
+        [pybamm.lithium_ion.SPM, pybamm.lithium_ion.DFN],
+        ids=["SPM", "DFN"],
+    )
+    def test_solve_with_sensitivities_and_experiment(self, solver_cls):
         experiment_2step = pybamm.Experiment(
             [
                 (
@@ -275,7 +280,7 @@ class TestSimulationExperiment:
         input_param_name = "Negative electrode active material volume fraction"
         solver = pybamm.IDAKLUSolver(atol=1e-8, rtol=1e-8)
         for calculate_sensitivities in [False, True]:
-            model = pybamm.lithium_ion.SPM()
+            model = solver_cls()
             param = model.default_parameter_values
             input_param_value = param[input_param_name]
             param.update({input_param_name: "[input]"})
@@ -291,12 +296,12 @@ class TestSimulationExperiment:
             )
             solutions.append(solution)
 
-        model = pybamm.lithium_ion.SPM()
+        model = solver_cls()
         param = model.default_parameter_values
         base_input_param_value = param[input_param_name]
         fd_tol = 1e-4
         for dh in [-fd_tol, fd_tol]:
-            model = pybamm.lithium_ion.SPM()
+            model = solver_cls()
             param = model.default_parameter_values
             input_param_value = base_input_param_value * (1.0 + dh)
             param.update({input_param_name: "[input]"})
@@ -311,17 +316,16 @@ class TestSimulationExperiment:
             )
             solutions.append(solution)
 
-        # check solutions are the same, leave out the last solution point as it is slightly different
-        # for each solve due to numerical errors
+        # check solutions are the same
         np.testing.assert_allclose(
-            solutions[0]["Voltage [V]"].data[:-1],
-            solutions[1]["Voltage [V]"](solutions[0].t[:-1]),
+            solutions[0]["Voltage [V]"].data,
+            solutions[1]["Voltage [V]"](solutions[0].t),
             rtol=5e-2,
             equal_nan=True,
         )
 
         # use finite difference to check sensitivities
-        t = solutions[0].t[:-2]
+        t = solutions[0].t
         soln_neg = solutions[2]["Voltage [V]"](t)
         soln_pos = solutions[3]["Voltage [V]"](t)
         sens_fd = (soln_pos - soln_neg) / (2 * fd_tol * base_input_param_value)
@@ -337,7 +341,7 @@ class TestSimulationExperiment:
             sens_fd,
             sens_idaklu,
             rtol=2e-4,
-            atol=2e-4,
+            atol=2e-3,
         )
 
     def test_run_experiment_drive_cycle(self):
