@@ -634,27 +634,76 @@ class TestSimulation:
                 i += 1
                 assert i < len(sim.solution.t)
 
-    def test_discontinuous_current(self):
+    @pytest.mark.parametrize(
+        "model", [pybamm.lithium_ion.SPM(), pybamm.lithium_ion.DFN()]
+    )
+    def test_discontinuous_current(self, model):
         def car_current(t):
             current = (
-                1 * (t >= 0) * (t <= 1000)
+                1 * (t <= 1000)
                 - 0.5 * (1000 < t) * (t <= 2000)
                 + 0.5 * (2000 < t)
+                + 5 * (t >= 3601)
             )
             return current
 
-        model = pybamm.lithium_ion.DFN()
         param = model.default_parameter_values
         param["Current function [A]"] = car_current
 
-        sim = pybamm.Simulation(
-            model, parameter_values=param, solver=pybamm.CasadiSolver(mode="fast")
-        )
-        sim.solve([0, 3600])
+        sim = pybamm.Simulation(model, parameter_values=param)
+        t_eval = [0, 3600]
+        sol = sim.solve(t_eval)
+        # Make sure t_eval is not modified
+        assert t_eval == ([0, 3600])
+
         current = sim.solution["Current [A]"]
+        # Check current values at different times
         assert current(0) == 1
         assert current(1500) == -0.5
         assert current(3000) == 0.5
+
+        def prev(t):
+            # Get the previous representable float
+            return np.nextafter(float(t), -np.inf)
+
+        def next(t):
+            # Get the next representable float
+            return np.nextafter(float(t), np.inf)
+
+        t = sol.t
+        # Check that solution starts at t=0
+        assert np.min(t) == 0.0
+
+        # Check that the solver captures the discontinuity at t=1000
+        assert prev(1000.0) not in t
+        assert 1000.0 in t
+        assert next(1000.0) in t
+
+        # Verify current values around the first discontinuity
+        assert car_current(prev(1000.0)) == pytest.approx(1)
+        assert car_current(1000.0) == pytest.approx(1)
+        assert car_current(next(1000.0)) == pytest.approx(-0.5)
+
+        assert current(prev(1000.0)) == pytest.approx(1)
+        assert current(1000.0) == pytest.approx(1)
+        assert current(next(1000.0)) == pytest.approx(-0.5)
+
+        # Check that the solver captures the discontinuity at t=2000
+        assert prev(2000.0) not in t
+        assert 2000.0 in t
+        assert next(2000.0) in t
+
+        # Verify current values around the second discontinuity
+        assert car_current(prev(2000.0)) == pytest.approx(-0.5)
+        assert car_current(2000.0) == pytest.approx(-0.5)
+        assert car_current(next(2000.0)) == pytest.approx(0.5)
+
+        assert current(prev(2000.0)) == pytest.approx(-0.5)
+        assert current(2000.0) == pytest.approx(-0.5)
+        assert current(next(2000.0)) == pytest.approx(0.5)
+
+        # Check that solution ends at t=3600
+        assert np.max(t) == 3600.0
 
     def test_t_eval(self):
         model = pybamm.lithium_ion.SPM()

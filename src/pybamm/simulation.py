@@ -7,7 +7,7 @@ from functools import lru_cache
 from datetime import timedelta
 import pybamm.telemetry
 from pybamm.util import import_optional_dependency
-
+from copy import copy
 from pybamm.expression_tree.operations.serialise import Serialise
 
 
@@ -444,6 +444,9 @@ class Simulation:
             See :meth:`pybamm.BaseSolver.solve`.
         """
         pybamm.telemetry.capture("simulation-solved")
+
+        # Copy t_eval to avoid modifying the original
+        t_eval = copy(t_eval)
 
         # Setup
         if solver is None:
@@ -1026,6 +1029,9 @@ class Simulation:
             Additional key-word arguments passed to `solver.solve`.
             See :meth:`pybamm.BaseSolver.step`.
         """
+        # Copy t_eval to avoid modifying the original
+        t_eval = copy(t_eval)
+
         if self.operating_mode in ["without experiment", "drive cycle"]:
             self.build()
 
