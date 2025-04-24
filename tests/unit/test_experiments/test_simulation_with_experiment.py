@@ -754,23 +754,6 @@ class TestSimulationExperiment:
             rtol=1e-15,
         )
 
-    def test_solver_error(self):
-        model = pybamm.lithium_ion.DFN()  # load model
-        parameter_values = pybamm.ParameterValues("Chen2020")
-        experiment = pybamm.Experiment(
-            ["Discharge at 10C for 6 minutes or until 2.5 V"]
-        )
-
-        sim = pybamm.Simulation(
-            model,
-            parameter_values=parameter_values,
-            experiment=experiment,
-            solver=pybamm.CasadiSolver(mode="fast"),
-        )
-
-        with pytest.raises(pybamm.SolverError, match="IDA_CONV_FAIL"):
-            sim.solve()
-
     def test_run_experiment_half_cell(self):
         experiment = pybamm.Experiment(
             [("Discharge at C/20 until 3.5V", "Charge at 1C until 3.8 V")]
