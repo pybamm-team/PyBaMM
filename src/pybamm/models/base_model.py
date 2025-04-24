@@ -78,6 +78,8 @@ class BaseModel:
         self.use_jacobian = True
         self.convert_to_format = "casadi"
 
+        self.calculate_sensitivities: list[str] = []
+
         # Model is not initially discretised
         self.is_discretised = False
         self.y_slices = None

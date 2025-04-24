@@ -41,7 +41,9 @@ class Experiment:
 
     def __init__(
         self,
-        operating_conditions: list[str | tuple[str] | BaseStep],
+        operating_conditions: list[
+            str | tuple[str, ...] | tuple[str | BaseStep] | BaseStep
+        ],
         period: str | None = None,
         temperature: float | None = None,
         termination: list[str] | None = None,

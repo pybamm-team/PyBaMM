@@ -94,8 +94,8 @@ class BaseSolver:
     def requires_explicit_sensitivities(self):
         return True
 
-    @root_method.setter
-    def root_method(self, method):
+    @root_method.setter  # type: ignore[attr-defined, no-redef]
+    def root_method(self, method) -> None:
         if method == "casadi":
             method = pybamm.CasadiAlgebraicSolver(self.root_tol)
         elif isinstance(method, str):
@@ -1125,7 +1125,7 @@ class BaseSolver:
         """
 
         ninputs = len(model.calculate_sensitivities)
-        initial_conditions = tuple([] for _ in range(ninputs))
+        initial_conditions: tuple[list[float], ...] = tuple([] for _ in range(ninputs))
         solution = solution.last_state
         for var in model.initial_conditions:
             final_state = solution[var.name]
@@ -1146,10 +1146,10 @@ class BaseSolver:
         slices = [y_slices[symbol][0] for symbol in model.initial_conditions.keys()]
 
         # sort equations according to slices
-        concatenated_initial_conditions = [
+        concatenated_initial_conditions = tuple(
             casadi.vertcat(*[eq for _, eq in sorted(zip(slices, init))])
             for init in initial_conditions
-        ]
+        )
         return concatenated_initial_conditions
 
     def process_t_interp(self, t_interp):

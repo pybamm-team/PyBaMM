@@ -965,7 +965,9 @@ class Symbol:
         """
         return pybamm.CasadiConverter(casadi_symbols).convert(self, t, y, y_dot, inputs)
 
-    def _children_for_copying(self, children: list[Symbol] | None = None) -> Symbol:
+    def _children_for_copying(
+        self, children: list[Symbol] | None = None
+    ) -> list[Symbol]:
         """
         Gets existing children for a symbol being copied if they aren't provided.
         """
