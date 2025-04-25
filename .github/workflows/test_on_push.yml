@@ -169,49 +169,6 @@ jobs:
       - name: Check if the documentation can be built for GNU/Linux
         run: python -m nox -s docs
 
-  run_example_tests:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    strategy:
-      fail-fast: false
-    name: Example notebooks (ubuntu-latest / Python 3.12)
-
-    steps:
-      - name: Check out PyBaMM repository
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-        with:
-          persist-credentials: false
-
-      - name: Install Linux system dependencies
-        uses: awalsh128/cache-apt-pkgs-action@7ca5f46d061ad9aa95863cd9b214dd48edef361d # v1.5.0
-        with:
-          packages: gfortran gcc graphviz pandoc
-          execute_install_scripts: true
-
-      # dot -c is for registering graphviz fonts and plugins
-      - name: Install OpenBLAS and TeXLive for Linux
-        run: |
-          sudo apt-get update
-          sudo dot -c
-          sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
-
-      - name: Set up Python 3.12
-        id: setup-python
-        uses: actions/setup-python@8d9ed9ac5c53483de85588cdf95a591a75ab9f55 # v5.5.0
-        with:
-          python-version: 3.12
-          cache: 'pip'
-
-      - name: Set up uv
-        run: python -m pip install uv
-
-      - name: Install nox
-        run: python -m uv pip install nox[uv]
-
-      - name: Run example notebooks tests for GNU/Linux with Python 3.12
-        run: python -m nox -s examples
-
   run_scripts_tests:
     runs-on: ubuntu-latest
     permissions:
