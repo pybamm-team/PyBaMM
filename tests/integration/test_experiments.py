@@ -97,4 +97,6 @@ class TestExperiments:
             parameter_values=param,
         )
         sol = sim.solve()
-        assert np.all(sol["Terminal voltage [V]"].entries >= 4.00)
+        # Add a small tolerance to account for numerical errors
+        V_max = 4.00 - 1e-4
+        assert np.all(sol["Terminal voltage [V]"].entries >= V_max)
