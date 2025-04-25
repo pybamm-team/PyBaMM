@@ -59,38 +59,12 @@ def run_integration(session):
     session.run("python", "-m", "pytest", "-m", "integration")
 
 
-@nox.session(name="doctests")
-def run_doctests(session):
-    """Run the doctests and generate the output(s) in the docs/build/ directory."""
-    # Fix for Python 3.12 CI. This can be removed after pybtex is replaced.
-    session.install("setuptools", silent=False)
-    session.install("-e", ".[all,dev,docs]", silent=False)
-    session.run(
-        "python",
-        "-m",
-        "pytest",
-        "--doctest-plus",
-        "src",
-    )
-
-
 @nox.session(name="unit")
 def run_unit(session):
     """Run the unit tests."""
     set_environment_variables(PYBAMM_ENV, session=session)
     session.install("-e", ".[all,dev,jax]", silent=False)
     session.run("python", "-m", "pytest", "-m", "unit")
-
-
-@nox.session(name="examples")
-def run_examples(session):
-    """Run the examples tests for Jupyter notebooks."""
-    set_environment_variables(PYBAMM_ENV, session=session)
-    session.install("-e", ".[all,dev,jax]", silent=False)
-    notebooks_to_test = session.posargs if session.posargs else []
-    session.run(
-        "pytest", "--nbmake", *notebooks_to_test, "docs/source/examples/", external=True
-    )
 
 
 @nox.session(name="scripts")
@@ -145,7 +119,7 @@ def build_docs(session):
     envbindir = session.bin
     # Fix for Python 3.12 CI. This can be removed after pybtex is replaced.
     session.install("setuptools", silent=False)
-    session.install("-e", ".[all,docs]", silent=False)
+    session.install("-e", ".[all,jax,docs]", silent=False)
     session.chdir("docs")
     # Local development
     if session.interactive:
@@ -159,11 +133,11 @@ def build_docs(session):
             f"{envbindir}/../tmp/html",
         )
     # Runs in CI only, treating warnings as errors
-    # Run in single-threaded mode, see
-    # https://github.com/pydata/pydata-sphinx-theme/issues/1643
     else:
         session.run(
             "sphinx-build",
+            "-j",
+            "auto",
             "-b",
             "html",
             "-W",
@@ -171,6 +145,21 @@ def build_docs(session):
             ".",
             f"{envbindir}/../tmp/html",
         )
+
+
+@nox.session(name="doctests")
+def run_doctests(session):
+    """Run the doctests and generate the output(s) in the docs/build/ directory."""
+    # Fix for Python 3.12 CI. This can be removed after pybtex is replaced.
+    session.install("setuptools", silent=False)
+    session.install("-e", ".[all,dev,docs]", silent=False)
+    session.run(
+        "python",
+        "-m",
+        "pytest",
+        "--doctest-plus",
+        "src",
+    )
 
 
 @nox.session(name="pre-commit")

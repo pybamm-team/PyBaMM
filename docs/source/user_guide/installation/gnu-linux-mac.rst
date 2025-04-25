@@ -101,7 +101,7 @@ Users can install ``jax`` and ``jaxlib`` to use the Jax solver.
 
 The ``pip install "pybamm[jax]"`` command automatically downloads and installs ``pybamm`` and the compatible versions of ``jax`` and ``jaxlib`` on your system.
 
-PyBaMM's full `conda-forge distribution <index.rst#installation>`_ (``pybamm``) includes ``jax`` and ``jaxlib`` by default.
+PyBaMM's full conda-forge distribution (``pybamm``) includes ``jax`` and ``jaxlib`` by default.
 
 .. _optional-iree-mlir-support:
 
