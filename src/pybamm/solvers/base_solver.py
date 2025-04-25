@@ -39,6 +39,9 @@ class BaseSolver:
     output_variables : list[str], optional
         List of variables to calculate and return. If none are specified then
         the complete state vector is returned (can be very large) (default is [])
+    on_extrapolation : str, optional
+        What to do if the solver is extrapolating. Options are "warn", "error", or "ignore".
+        Default is "warn".
     """
 
     def __init__(
@@ -49,6 +52,7 @@ class BaseSolver:
         root_method=None,
         root_tol=1e-6,
         extrap_tol=None,
+        on_extrapolation=None,
         output_variables=None,
     ):
         self.method = method
@@ -58,6 +62,7 @@ class BaseSolver:
         self.root_method = root_method
         self.extrap_tol = extrap_tol or -1e-10
         self.output_variables = [] if output_variables is None else output_variables
+        self.on_extrapolation = on_extrapolation or "warn"
         self._model_set_up = {}
 
         # Defaults, can be overwritten by specific solver
@@ -65,7 +70,6 @@ class BaseSolver:
         self._ode_solver = False
         self._algebraic_solver = False
         self._supports_interp = False
-        self._on_extrapolation = "warn"
         self.computed_var_fcns = {}
         self._mp_context = self.get_platform_context(platform.system())
 
@@ -82,12 +86,22 @@ class BaseSolver:
         return self._supports_interp
 
     @property
-    def root_method(self):
-        return self._root_method
-
-    @property
     def supports_parallel_solve(self):
         return False
+
+    @property
+    def on_extrapolation(self):
+        return self._on_extrapolation
+
+    @on_extrapolation.setter
+    def on_extrapolation(self, value):
+        if value not in ["warn", "error", "ignore"]:
+            raise ValueError("on_extrapolation must be 'warn', 'raise', or 'ignore'")
+        self._on_extrapolation = value
+
+    @property
+    def root_method(self):
+        return self._root_method
 
     @root_method.setter
     def root_method(self, method):
@@ -1386,6 +1400,9 @@ class BaseSolver:
         events : dict
             Dictionary of events
         """
+        if self.on_extrapolation == "ignore":
+            return
+
         extrap_events = []
 
         # Add the event dictionary to the solution object
@@ -1423,14 +1440,14 @@ class BaseSolver:
             # no extrapolation events are within the tolerance
             return
 
-        if self._on_extrapolation == "error":
+        if self.on_extrapolation == "error":
             raise pybamm.SolverError(
                 "Solver failed because the following "
                 f"interpolation bounds were exceeded: {extrap_events}. "
                 "You may need to provide additional interpolation points "
                 "outside these bounds."
             )
-        elif self._on_extrapolation == "warn":
+        elif self.on_extrapolation == "warn":
             name = solution.all_models[-1].name
             warnings.warn(
                 f"While solving {name} extrapolation occurred for {extrap_events}",
