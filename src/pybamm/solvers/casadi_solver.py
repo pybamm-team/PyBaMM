@@ -46,6 +46,9 @@ class CasadiSolver(pybamm.BaseSolver):
         the default value is 600 seconds.
     extrap_tol : float, optional
         The tolerance to assert whether extrapolation occurs or not. Default is 0.
+    on_extrapolation : str, optional
+        What to do if the solver is extrapolating. Options are "warn", "error", or "ignore".
+        Default is "error".
     extra_options_setup : dict, optional
         Any options to pass to the CasADi integrator when creating the integrator.
         Please consult `CasADi documentation <https://web.casadi.org/python-api/#integrator>`_ for
@@ -81,19 +84,22 @@ class CasadiSolver(pybamm.BaseSolver):
         max_step_decrease_count=5,
         dt_max=None,
         extrap_tol=None,
+        on_extrapolation=None,
         extra_options_setup=None,
         extra_options_call=None,
         return_solution_if_failed_early=False,
         perturb_algebraic_initial_conditions=None,
         integrators_maxcount=100,
     ):
+        on_extrapolation = on_extrapolation or "error"
         super().__init__(
-            "problem dependent",
-            rtol,
-            atol,
-            root_method,
-            root_tol,
-            extrap_tol,
+            method="problem dependent",
+            rtol=rtol,
+            atol=atol,
+            root_method=root_method,
+            root_tol=root_tol,
+            extrap_tol=extrap_tol,
+            on_extrapolation=on_extrapolation,
         )
         if mode in ["safe", "fast", "fast with events", "safe without grid"]:
             self.mode = mode
@@ -109,8 +115,6 @@ class CasadiSolver(pybamm.BaseSolver):
         self.extra_options_setup = extra_options_setup or {}
         self.extra_options_call = extra_options_call or {}
         self.return_solution_if_failed_early = return_solution_if_failed_early
-
-        self._on_extrapolation = "error"
 
         # Decide whether to perturb algebraic initial conditions, True by default for
         # "safe" mode, False by default for other modes
