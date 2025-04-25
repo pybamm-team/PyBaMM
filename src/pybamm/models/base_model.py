@@ -12,6 +12,9 @@ import numpy as np
 import pybamm
 from pybamm.expression_tree.operations.serialise import Serialise
 
+# Only throw the default solver warning once
+warnings.filterwarnings("once", message="The default solver changed to IDAKLUSolver*")
+
 
 class BaseModel:
     """
@@ -81,6 +84,7 @@ class BaseModel:
         # Model is not initially discretised
         self.is_discretised = False
         self.y_slices = None
+        self.len_rhs_and_alg = None
 
         # Non-lithium ion models shouldn't calculate eSOH parameters
         self._calc_esoh = False
@@ -417,8 +421,10 @@ class BaseModel:
         if len(self.rhs) == 0 and len(self.algebraic) != 0:
             return pybamm.CasadiAlgebraicSolver()
         else:
-            pybamm.logger.warning(
-                "The default solver changed to IDAKLUSolver after the v25.4.0. release. You can swap back to the previous default by using `pybamm.CasadiSolver()` instead."
+            warnings.warn(
+                "The default solver changed to IDAKLUSolver after the v25.4.0. release. "
+                "You can swap back to the previous default by using `pybamm.CasadiSolver()` instead.",
+                stacklevel=2,
             )
             return pybamm.IDAKLUSolver()
 

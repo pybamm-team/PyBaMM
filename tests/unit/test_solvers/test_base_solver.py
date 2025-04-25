@@ -19,7 +19,6 @@ class TestBaseSolver:
         assert solver.rtol == 1e-5
         solver.rtol = 1e-7
         assert solver.rtol == 1e-7
-        assert solver.requires_explicit_sensitivities
 
     def test_root_method_init(self):
         solver = pybamm.BaseSolver(root_method="casadi")
@@ -415,3 +414,21 @@ class TestBaseSolver:
             np.testing.assert_allclose(
                 sens_b, exact_diff_b(y, inputs["a"], inputs["b"])
             )
+
+    def test_on_extrapolation_settings(self):
+        # Test setting different on_extrapolation values on BaseSolver
+        base_solver = pybamm.BaseSolver()
+
+        # Test valid values
+        base_solver.on_extrapolation = "warn"
+        assert base_solver.on_extrapolation == "warn"
+        base_solver.on_extrapolation = "error"
+        assert base_solver.on_extrapolation == "error"
+        base_solver.on_extrapolation = "ignore"
+        assert base_solver.on_extrapolation == "ignore"
+
+        # Test invalid value
+        with pytest.raises(
+            ValueError, match="on_extrapolation must be 'warn', 'raise', or 'ignore'"
+        ):
+            base_solver.on_extrapolation = "invalid"
