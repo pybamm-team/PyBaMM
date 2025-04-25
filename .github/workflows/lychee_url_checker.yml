@@ -10,14 +10,20 @@ on:
     # Run everyday at 3 am UTC
     - cron: "0 3 * * *"
 
+
+permissions: {}
+
 jobs:
   linkChecker:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
     steps:
 
       # cache Lychee results to avoid hitting rate limits
       - name: Restore lychee cache
-        uses: actions/cache@d4323d4df104b026a6aa633fdb11d772146be0bf # v4.2.2
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
         with:
           path: .lycheecache
           key: cache-lychee-${{ github.sha }}
@@ -25,10 +31,12 @@ jobs:
 
       # check URLs with Lychee
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
 
       # use stable version for now to avoid breaking changes
       - name: Lychee URL checker
-        uses: lycheeverse/lychee-action@f613c4a64e50d792e0b31ec34bbcbba12263c6a6 # v2.3.0
+        uses: lycheeverse/lychee-action@1d97d84f0bc547f7b25f4c2170d87d810dc2fb2c # v2.4.0
         with:
           # arguments with file types to check
           args: >-

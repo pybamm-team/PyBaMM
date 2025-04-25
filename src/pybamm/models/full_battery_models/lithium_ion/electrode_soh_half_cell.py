@@ -54,7 +54,7 @@ class ElectrodeSOHHalfCell(pybamm.BaseModel):
     @property
     def default_solver(self):
         # Use AlgebraicSolver as CasadiAlgebraicSolver gives unnecessary warnings
-        return pybamm.AlgebraicSolver(method="minimize  L-BFGS-B", tol=1e-7)
+        return pybamm.AlgebraicSolver(method="lsq__trf", tol=1e-7)
 
 
 def get_initial_stoichiometry_half_cell(
