@@ -58,16 +58,14 @@ docs = [
     "pydata-sphinx-theme",
     "sphinx_design",
     "sphinx-copybutton",
-    "myst-parser",
     "sphinx-inline-tabs",
     "sphinxcontrib-bibtex",
     "sphinx-autobuild",
     "sphinx-last-updated-by-git",
-    "nbsphinx",
     "ipykernel",
     "ipywidgets",
-    "sphinx-gallery",
     "sphinx-docsearch",
+    "myst_nb",
 ]
 # For example notebooks
 examples = [
@@ -107,8 +105,6 @@ dev = [
     "pytest-xdist",
     "pytest-mock",
     "pytest-subtests",
-    # For testing Jupyter notebooks
-    "nbmake",
     # To access the metadata for python packages
     "importlib-metadata; python_version < '3.10'",
     # For property based testing

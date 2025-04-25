@@ -48,3 +48,8 @@ repos:
     hooks:
       - id: zizmor
         args: [--pedantic]
+
+  -   repo: https://github.com/kynan/nbstripout
+      rev: 0.8.1
+      hooks:
+      -   id: nbstripout

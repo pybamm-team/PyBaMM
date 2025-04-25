@@ -21,22 +21,22 @@ build:
   tools:
     python: "3.12"
   jobs:
-    pre_build:
-      - python -m sphinx -b linkcheck -D linkcheck_timeout=5 docs/ ./linkcheck_output
+    #pre_build:
+    #  - python -m sphinx -b linkcheck -D linkcheck_timeout=5 docs/ ./linkcheck_output
     # Unshallow the git clone otherwise this may cause issues with Sphinx extensions
     post_checkout:
       - git fetch --unshallow
     # Altered PDF build and upload job
     # This also runs on PR builds, but does not upload the PDF
-    post_build:
-      - mkdir --parents $READTHEDOCS_OUTPUT/pdf/
-      # Generate LaTeX files in docs/build/ and doctrees in docs/_build/doctrees, skipping notebooks
-      - python -m sphinx -T -E -b latex -d docs/_build/doctrees -D language=en docs docs/build/
-      - cd docs/build/ && cat latexmkrc
-      # Map non-zero exit codes to zero
-      - cd docs/build/ && latexmk -r latexmkrc -pdf -f -dvi- -ps- -jobname=pybamm -interaction=nonstopmode || true
-      - test -f docs/build/pybamm.pdf && echo "pybamm.pdf exists. Copying source file to $READTHEDOCS_OUTPUT/pdf/."
-      - cp "docs/build/pybamm.pdf" $READTHEDOCS_OUTPUT/pdf/
+    #post_build:
+    #  - mkdir --parents $READTHEDOCS_OUTPUT/pdf/
+    #  # Generate LaTeX files in docs/build/ and doctrees in docs/_build/doctrees, skipping notebooks
+    #  - python -m sphinx -T -E -b latex -d docs/_build/doctrees -D language=en docs docs/build/
+    #  - cd docs/build/ && cat latexmkrc
+    #  # Map non-zero exit codes to zero
+    #  - cd docs/build/ && latexmk -r latexmkrc -pdf -f -dvi- -ps- -jobname=pybamm -interaction=nonstopmode || true
+    #  - test -f docs/build/pybamm.pdf && echo "pybamm.pdf exists. Copying source file to $READTHEDOCS_OUTPUT/pdf/."
+    #  - cp "docs/build/pybamm.pdf" $READTHEDOCS_OUTPUT/pdf/
 
 # Optionally declare the Python requirements required to build your docs
 python:
