@@ -442,6 +442,7 @@ class BaseSolver:
         tf = np.max(t_eval)
 
         def supports_t_eval_discontinuities(expr):
+            # Only IDAKLUSolver supports discontinuities represented by t_eval
             return (
                 (t_eval is not None)
                 and isinstance(self, pybamm.IDAKLUSolver)
