@@ -120,12 +120,11 @@ def run_pybamm_requires(session):
 def run_unit(session):
     set_environment_variables(PYBAMM_ENV, session=session)
     session.install("setuptools", silent=False)
-    session.install("casadi", silent=False)
-    session.install("-e", ".[dev]", silent=False)
+    session.install("casadi==3.6.7", silent=False)
+    session.install(".[dev]", silent=False)
     if PYBAMM_ENV.get("PYBAMM_IDAKLU_EXPR_IREE") == "ON":
         # See comments in 'dev' session
         session.install(
-            "-e",
             ".[iree]",
             "--find-links",
             PYBAMM_ENV.get("IREE_INDEX_URL"),

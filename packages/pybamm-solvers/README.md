@@ -32,6 +32,7 @@ Mac dependencies can be installed using brew
 ```bash
 brew install libomp
 brew reinstall gcc
+git submodule update --init --recurisive
 python install_KLU_Sundials.py
 pip install .
 ```
@@ -41,8 +42,9 @@ pip install .
 Linux installs may vary based on the distribution, however, the basic build can
 be performed with the following commands:
 ```bash
-sudo apt-get libopenblas-dev gcc gfortran make g++ build-essential
+sudo apt-get install libopenblas-dev gcc gfortran make g++ build-essential
 pip install cmake casadi setuptools wheel
+git submodules update --init --recurisive
 python install_KLU_Sundials.py
 pip install .
 ```
