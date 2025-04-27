@@ -1,3 +1,4 @@
+from __future__ import annotations
 import pybamm
 import numpy as np
 import numpy.typing as npt
