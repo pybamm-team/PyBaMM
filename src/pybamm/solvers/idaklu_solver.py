@@ -827,7 +827,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
     def requires_explicit_sensitivities(self):
         return False
 
-    def _apply_initial_conditions(self, model, initial_conditions):
+    def _apply_solver_initial_conditions(self, model, initial_conditions):
         """
         Apply custom initial conditions to a model by overriding model.y0.
 
@@ -919,14 +919,14 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
                 model_copy = model.new_copy()
                 for ic in initial_conditions:
-                    self._apply_initial_conditions(model_copy, ic)
+                    self._apply_solver_initial_conditions(model_copy, ic)
                     y0_list.append(model_copy.y0.full().flatten())
 
                 y0full = np.vstack(y0_list)
                 ydot0full = np.zeros_like(y0full)
 
             else:
-                self._apply_initial_conditions(model, initial_conditions)
+                self._apply_solver_initial_conditions(model, initial_conditions)
 
                 y0_np = model.y0.full()
 
