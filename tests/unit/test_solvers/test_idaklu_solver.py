@@ -2,7 +2,7 @@ from contextlib import redirect_stdout
 import io
 import pytest
 import numpy as np
-
+import warnings
 import pybamm
 from scipy.sparse import eye
 from tests import get_discretisation_for_testing
@@ -1300,3 +1300,47 @@ class TestIDAKLUSolver:
         np.testing.assert_array_equal(solution.t, t_interp)
         np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
         np.testing.assert_allclose(solution.y[-1], 2 * np.exp(0.1 * solution.t))
+
+    def test_interpolant_extrapolate(self):
+        x = np.linspace(0, 2)
+        var = pybamm.Variable("var")
+        rhs = pybamm.FunctionParameter("func", {"var": var})
+
+        model = pybamm.BaseModel()
+        model.rhs[var] = rhs
+        model.initial_conditions[var] = pybamm.Scalar(1)
+
+        # Bug: we need to set the interpolant via parameter values for the extrapolation
+        # to be detected
+        def func(var):
+            return pybamm.Interpolant(x, x, var, interpolator="linear")
+
+        parameter_values = pybamm.ParameterValues({"func": func})
+        parameter_values.process_model(model)
+
+        # Test with on_extrapolation="error"
+        solver = pybamm.IDAKLUSolver(on_extrapolation="error")
+        t_eval = [0, 5]
+
+        with pytest.raises(pybamm.SolverError, match="interpolation bounds"):
+            solver.solve(model, t_eval)
+
+        # Test with on_extrapolation="warn"
+        solver = pybamm.IDAKLUSolver(on_extrapolation="warn")
+        t_eval = [0, 5]
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            solver.solve(model, t_eval)
+            assert len(w) > 0
+            assert "extrapolation occurred" in str(w[0].message)
+
+        # Test with on_extrapolation="ignore"
+        solver = pybamm.IDAKLUSolver(on_extrapolation="ignore")
+        t_eval = [0, 5]
+
+        # Should not raise an error or warning
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            solver.solve(model, t_eval)
+            assert len(w) == 0
