@@ -39,6 +39,9 @@ class JaxSolver(pybamm.BaseSolver):
         The absolute tolerance for the solver (default is 1e-6).
     extrap_tol : float, optional
         The tolerance to assert whether extrapolation occurs or not (default is 0).
+    on_extrapolation : str, optional
+        What to do if the solver is extrapolating. Options are "warn", "error", or "ignore".
+        Default is "warn".
     extra_options : dict, optional
         Any options to pass to the solver.
         Please consult `JAX documentation
@@ -53,6 +56,7 @@ class JaxSolver(pybamm.BaseSolver):
         rtol=1e-6,
         atol=1e-6,
         extrap_tol=None,
+        on_extrapolation=None,
         extra_options=None,
     ):
         if not pybamm.has_jax():
@@ -63,7 +67,12 @@ class JaxSolver(pybamm.BaseSolver):
         # note: bdf solver itself calculates consistent initial conditions so can set
         # root_method to none, allow user to override this behavior
         super().__init__(
-            method, rtol, atol, root_method=root_method, extrap_tol=extrap_tol
+            method=method,
+            rtol=rtol,
+            atol=atol,
+            root_method=root_method,
+            extrap_tol=extrap_tol,
+            on_extrapolation=on_extrapolation,
         )
         method_options = ["RK45", "BDF"]
         if method not in method_options:

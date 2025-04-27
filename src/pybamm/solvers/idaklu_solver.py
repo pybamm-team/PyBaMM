@@ -51,6 +51,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
         The tolerance for the initial-condition solver (default is 1e-6).
     extrap_tol : float, optional
         The tolerance to assert whether extrapolation occurs or not (default is 0).
+    on_extrapolation : str, optional
+        What to do if the solver is extrapolating. Options are "warn", "error", or "ignore".
+        Default is "warn".
     output_variables : list[str], optional
         List of variables to calculate and return. If none are specified then
         the complete state vector is returned (can be very large) (default is [])
@@ -163,6 +166,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         root_method="casadi",
         root_tol=1e-6,
         extrap_tol=None,
+        on_extrapolation=None,
         output_variables=None,
         options=None,
     ):
@@ -219,13 +223,14 @@ class IDAKLUSolver(pybamm.BaseSolver):
         self.output_variables = [] if output_variables is None else output_variables
 
         super().__init__(
-            "ida",
-            rtol,
-            atol,
-            root_method,
-            root_tol,
-            extrap_tol,
-            output_variables,
+            method="ida",
+            rtol=rtol,
+            atol=atol,
+            root_method=root_method,
+            root_tol=root_tol,
+            extrap_tol=extrap_tol,
+            output_variables=output_variables,
+            on_extrapolation=on_extrapolation,
         )
         self.name = "IDA KLU solver"
         self._supports_interp = True
@@ -980,7 +985,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             # add "all" stacked sensitivities ((#timesteps * #states,#sens_params))
             yS_out["all"] = np.hstack([yS_out[name] for name in sensitivity_names])
         else:
-            yS_out = False
+            yS_out = {}
 
         # 0 = solved for all t_eval
         # 2 = found root(s)
