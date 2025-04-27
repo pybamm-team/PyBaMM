@@ -874,6 +874,11 @@ class IDAKLUSolver(pybamm.BaseSolver):
         t_interp : None, list or ndarray, optional
             The times (in seconds) at which to interpolate the solution. Defaults to `None`,
             which returns the adaptive time-stepping times.
+        initial_conditions : dict, numpy.ndarray, or list, optional
+            Override the model’s default `y0`.  Can be:
+            - a dict mapping variable names → values
+            - a 1D array of length `n_states`
+            - a list of such overrides (one per parallel solve)
         """
         if not (
             model.convert_to_format == "casadi"
@@ -907,8 +912,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
                 y0_list = []
 
+                model_copy = model.new_copy()
                 for ic in initial_conditions:
-                    model_copy = model.new_copy()
                     self._apply_initial_conditions(model_copy, ic)
                     y0_list.append(model_copy.y0.full().flatten())
 
@@ -917,6 +922,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
             else:
                 self._apply_initial_conditions(model, initial_conditions)
+
                 y0_np = model.y0.full()
 
                 y0full = np.vstack([y0_np for _ in range(len(inputs_list))])

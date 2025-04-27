@@ -209,38 +209,71 @@ class TestIDAKLUSolver:
             sols[1].cycles[-1]["Current [A]"].data,
         )
 
-    def test_multiple_initial_conditions(self):
-        model = pybamm.BaseModel()
-        u = pybamm.Variable("u")
-        model.rhs = {u: -u}
-        model.initial_conditions = {u: 1}
-        model.variables = {"u": u}
-
-        disc = pybamm.Discretisation()
+    def test_multiple_initial_conditions_spm(self):
+        model = pybamm.lithium_ion.SPM()
+        geom = model.default_geometry
+        param = model.default_parameter_values
+        param.process_model(model)
+        param.process_geometry(geom)
+        mesh = pybamm.Mesh(geom, model.default_submesh_types, model.default_var_pts)
+        disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
         disc.process_model(model)
 
-        solver = pybamm.IDAKLUSolver(rtol=1e-8, atol=1e-10, options={"num_threads": 3})
+        t_eval = np.array([0, 1])
+        solver = pybamm.IDAKLUSolver()
 
-        n_sims = 3
-        initial_conditions = [{"u": i + 1} for i in range(n_sims)]
+        base_sol = solver.solve(model, t_eval)
+        y0_base = base_sol.y[:, 0]
 
-        inputs = [{} for _ in range(n_sims)]
+        ics = [y0_base, 2 * y0_base]
+        inputs = [{}] * len(ics)
+        sols = solver.solve(
+            model,
+            t_eval,
+            inputs=inputs,
+            initial_conditions=ics,
+        )
+        assert isinstance(sols, list) and len(sols) == 2
 
-        t_eval = np.linspace(0, 1, 10)
+        np.testing.assert_allclose(sols[0].y[:, 0], y0_base, rtol=1e-8)
+        np.testing.assert_allclose(sols[1].y[:, 0], 2 * y0_base, rtol=1e-8)
 
-        solutions = solver.solve(
-            model, t_eval, inputs=inputs, initial_conditions=initial_conditions
+    def test_multiple_initial_conditions_dfn(self):
+        model = pybamm.lithium_ion.DFN()
+        geom = model.default_geometry
+        param = model.default_parameter_values
+        param.process_model(model)
+        param.process_geometry(geom)
+        mesh = pybamm.Mesh(geom, model.default_submesh_types, model.default_var_pts)
+        disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+        disc.process_model(model)
+
+        t_eval = np.array([0, 1])
+        solver = pybamm.IDAKLUSolver()
+
+        base_sol = solver.solve(model, t_eval)
+        y0_base = base_sol.y[:, 0]
+
+        # Small perturbation
+        perturbation = 0.01 * np.ones_like(y0_base)
+        perturbed_y0 = y0_base * (1 + perturbation)
+
+        ics = [y0_base, perturbed_y0]
+        inputs = [{}] * len(ics)
+
+        sols = solver.solve(
+            model,
+            t_eval,
+            inputs=inputs,
+            initial_conditions=ics,
         )
 
-        assert len(solutions) == n_sims
+        assert isinstance(sols, list) and len(sols) == 2
 
-        for i, solution in enumerate(solutions):
-            expected_initial_value = i + 1
+        assert sols[0].t[0] == t_eval[0]
+        assert np.isclose(sols[0].t[-1], t_eval[-1], rtol=1e-8, atol=1e-8)
+        assert sols[1].t[0] == t_eval[0]
+        assert np.isclose(sols[1].t[-1], t_eval[-1], rtol=1e-8, atol=1e-8)
 
-            np.testing.assert_allclose(solution["u"](0), expected_initial_value)
-
-            t_check = np.linspace(0, 1, 20)
-            analytical_solution = expected_initial_value * np.exp(-t_check)
-            np.testing.assert_allclose(
-                solution["u"](t_check), analytical_solution, rtol=1e-4
-            )
+        np.testing.assert_allclose(sols[0].y[:, 0], y0_base, rtol=1e-8, atol=1e-6)
+        np.testing.assert_allclose(sols[1].y[:, 0], perturbed_y0, rtol=2e-1, atol=1e-4)

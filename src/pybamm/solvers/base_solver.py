@@ -745,6 +745,7 @@ class BaseSolver:
             - a dict mapping variable names → values
             - a 1D array of length `n_states`
             - a list of such overrides (one per parallel solve)
+            Only valid for IDAKLU solver.
         Returns
         -------
         :class:`pybamm.Solution` or list of :class:`pybamm.Solution` objects.

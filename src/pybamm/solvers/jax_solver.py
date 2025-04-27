@@ -211,6 +211,10 @@ class JaxSolver(pybamm.BaseSolver):
             various diagnostic messages.
 
         """
+        if intial_conditions is not None:  # pragma: no cover
+            raise NotImplementedError(
+                "Setting initial conditions is not yet implemented for the JAX IDAKLU solver"
+            )
         if isinstance(inputs, dict):
             inputs = [inputs]
         timer = pybamm.Timer()

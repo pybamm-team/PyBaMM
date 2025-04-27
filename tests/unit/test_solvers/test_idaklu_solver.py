@@ -1376,7 +1376,8 @@ class TestIDAKLUSolver:
         disc.process_model(model)
 
         solver = pybamm.IDAKLUSolver(rtol=1e-8, atol=1e-10)
-        t_eval = np.linspace(0, 1, 10)
+        t_eval = np.array([0, 1])
+        t_interp = np.linspace(0, 1, 10)
 
         ics = [np.array([2.0]), np.array([4.0]), np.array([6.0])]
         inputs = [{} for _ in ics]
@@ -1384,6 +1385,7 @@ class TestIDAKLUSolver:
         solutions = solver.solve(
             model,
             t_eval,
+            t_interp=t_interp,
             inputs=inputs,
             initial_conditions=ics,
         )
