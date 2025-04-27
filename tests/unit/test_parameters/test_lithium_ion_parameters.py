@@ -105,6 +105,12 @@ class TestLithiumIonParameterValues:
 
     def test_thermal_parameters(self):
         values = pybamm.lithium_ion.BaseModel().default_parameter_values
+        values.update(
+            {
+                "Cell heat capacity [J.K-1.m-3]": 2.5e6,
+            },
+            check_already_exists=False,
+        )
         param = pybamm.LithiumIonParameters()
         T = param.T_ref
 
@@ -124,6 +130,7 @@ class TestLithiumIonParameterValues:
 
         # other thermal parameters
         np.testing.assert_equal(values.evaluate(param.T_init), 298.15)
+        np.testing.assert_equal(values.evaluate(param.cell_heat_capacity), 2.5e6)
 
     def test_parameter_functions(self):
         values = pybamm.lithium_ion.BaseModel().default_parameter_values
