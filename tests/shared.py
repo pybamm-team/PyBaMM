@@ -119,6 +119,86 @@ def get_mesh_for_testing(
     return pybamm.Mesh(geometry, submesh_types, var_pts)
 
 
+def get_mesh_for_testing_2d(
+    xpts=None,
+    rpts=10,
+    Rpts=10,
+    ypts=15,
+    zpts=15,
+):
+    param = pybamm.ParameterValues(
+        values={
+            "Electrode height [m]": 0.5,
+            "Negative electrode thickness [m]": 1 / 3,
+            "Separator thickness [m]": 1 / 3,
+            "Positive electrode thickness [m]": 1 / 3,
+            "Negative particle radius [m]": 0.5,
+            "Positive particle radius [m]": 0.5,
+        }
+    )
+
+    x = pybamm.SpatialVariable(
+        "x", ["negative electrode", "separator", "positive electrode"], direction="lr"
+    )
+    z = pybamm.SpatialVariable(
+        "z", ["negative electrode", "separator", "positive electrode"], direction="tb"
+    )
+
+    geometry = {
+        "negative electrode": {
+            x: {
+                "min": pybamm.Scalar(0),
+                "max": pybamm.Parameter("Negative electrode thickness [m]"),
+            },
+            z: {
+                "min": pybamm.Scalar(0),
+                "max": pybamm.Parameter("Electrode height [m]"),
+            },
+        },
+        "separator": {
+            x: {
+                "min": pybamm.Parameter("Negative electrode thickness [m]"),
+                "max": pybamm.Parameter("Separator thickness [m]")
+                + pybamm.Parameter("Negative electrode thickness [m]"),
+            },
+            z: {
+                "min": pybamm.Scalar(0),
+                "max": pybamm.Parameter("Electrode height [m]"),
+            },
+        },
+        "positive electrode": {
+            x: {
+                "min": pybamm.Parameter("Separator thickness [m]")
+                + pybamm.Parameter("Negative electrode thickness [m]"),
+                "max": pybamm.Parameter("Positive electrode thickness [m]")
+                + pybamm.Parameter("Separator thickness [m]")
+                + pybamm.Parameter("Negative electrode thickness [m]"),
+            },
+            z: {
+                "min": pybamm.Scalar(0),
+                "max": pybamm.Parameter("Electrode height [m]"),
+            },
+        },
+    }
+    param.process_geometry(geometry)
+
+    submesh_types = {
+        "negative electrode": pybamm.Uniform2DSubMesh,
+        "separator": pybamm.Uniform2DSubMesh,
+        "positive electrode": pybamm.Uniform2DSubMesh,
+    }
+
+    if xpts is None:
+        xn_pts = 40, 25, 35
+    else:
+        xn_pts = xpts, xpts, xpts
+    var_pts = {
+        x: xn_pts,
+        z: zpts,
+    }
+    return pybamm.Mesh(geometry, submesh_types, var_pts)
+
+
 def get_p2d_mesh_for_testing(xpts=None, rpts=10):
     geometry = pybamm.battery_geometry()
     return get_mesh_for_testing(xpts=xpts, rpts=rpts, geometry=geometry)

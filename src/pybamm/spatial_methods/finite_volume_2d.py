@@ -821,9 +821,17 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         # https://github.com/Scottmar93/extrapolation-coefficents/tree/master
         if isinstance(symbol, pybamm.BoundaryValue):
             if use_bcs and pybamm.has_bc_of_form(child, side_first, bcs, "Dirichlet"):
-                # just use the value from the bc: f(x*)
-                sub_matrix = csr_matrix((n_tb, n_tb * n_lr))
-                additive = bcs[child][side_first][0]
+                if side_first == "left" or side_first == "right":
+                    # just use the value from the bc: f(x*)
+                    sub_matrix = csr_matrix((n_tb, n_tb * n_lr))
+                    additive = bcs[child][side_first][0]
+                elif side_first == "top" or side_first == "bottom":
+                    sub_matrix = csr_matrix((n_lr, n_lr * n_tb))
+                    additive = bcs[child][side_first][0]
+                else:
+                    raise ValueError(
+                        "side_first must be 'left', 'right', 'top', or 'bottom'"
+                    )
 
             elif side_first == "left":
                 if extrap_order_value == "linear":
@@ -1081,9 +1089,18 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                 raise ValueError("side_second must be 'top' or 'bottom'")
 
         elif isinstance(symbol, pybamm.BoundaryGradient):
-            if use_bcs and pybamm.has_bc_of_form(child, symbol.side, bcs, "Neumann"):
-                # just use the value from the bc: f'(x*)
-                raise NotImplementedError
+            if use_bcs and pybamm.has_bc_of_form(child, side_first, bcs, "Neumann"):
+                if side_first == "left" or side_first == "right":
+                    # just use the value from the bc: f(x*)
+                    sub_matrix = csr_matrix((n_tb, n_tb * n_lr))
+                    additive = bcs[child][side_first][0]
+                elif side_first == "top" or side_first == "bottom":
+                    sub_matrix = csr_matrix((n_lr, n_lr * n_tb))
+                    additive = bcs[child][side_first][0]
+                else:
+                    raise ValueError(
+                        "side_first must be 'left', 'right', 'top', or 'bottom'"
+                    )
 
             elif side_first == "left":
                 if extrap_order_gradient == "linear":
@@ -1294,6 +1311,13 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                     disc_left = pybamm.VectorField(disc_left_lr, disc_left_tb)
                 else:
                     method = "arithmetic"
+                    disc_left_lr = self.node_to_edge(
+                        disc_left.lr_field, method=method, direction="lr"
+                    )
+                    disc_left_tb = self.node_to_edge(
+                        disc_left.tb_field, method=method, direction="tb"
+                    )
+                    disc_left = pybamm.VectorField(disc_left_lr, disc_left_tb)
             elif left_evaluates_on_edges and not right_evaluates_on_edges:
                 if isinstance(left, pybamm.Gradient):
                     method = "harmonic"
@@ -1451,6 +1475,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                     block_mat[i][tb_idx + child_idx * tb_mesh_points] = eyes[child_idx]
                     i += 1
             block_mat = csr_matrix(np.block(block_mat))
+            block_mat = kron(eye(repeats), block_mat)
             matrix = pybamm.Matrix(block_mat)
             repeats = self._get_auxiliary_domain_repeats(disc_children[0].domains)
             return matrix @ pybamm.domain_concatenation(disc_children, self.mesh)
@@ -1504,10 +1529,85 @@ class FiniteVolume2D(pybamm.SpatialMethod):
             `shift_key = "edge to node"`)
         """
 
-        def arithmetic_mean(array):
+        def arithmetic_mean(array, direction):
             """Calculate the arithmetic mean of an array using matrix multiplication"""
             # Create appropriate submesh by combining submeshes in domain
-            raise NotImplementedError
+            submesh = self.mesh[array.domain]
+
+            # Create 1D matrix using submesh
+            n_lr = submesh.npts_lr
+            n_tb = submesh.npts_tb
+
+            if shift_key == "node to edge":
+                if direction == "lr":
+                    sub_matrix_left = csr_matrix(
+                        ([1.5, -0.5], ([0, 0], [0, 1])), shape=(1, n_lr)
+                    )
+                    sub_matrix_center = diags(
+                        [0.5, 0.5], [0, 1], shape=(n_lr - 1, n_lr)
+                    )
+                    sub_matrix_right = csr_matrix(
+                        ([-0.5, 1.5], ([0, 0], [n_lr - 2, n_lr - 1])), shape=(1, n_lr)
+                    )
+                    sub_matrix = vstack(
+                        [sub_matrix_left, sub_matrix_center, sub_matrix_right]
+                    )
+                    sub_matrix = block_diag((sub_matrix,) * n_tb)
+                elif direction == "tb":
+                    # Matrix to compute values at the exterior edges
+                    one_fives_top = np.ones(n_lr) * 1.5
+                    neg_zero_fives_top = np.ones(n_lr) * -0.5
+                    rows = np.arange(0, n_lr)
+                    cols_first = np.arange(0, n_lr)
+                    cols_second = np.arange(n_lr, 2 * n_lr)
+                    data = np.hstack([one_fives_top, neg_zero_fives_top])
+                    cols = np.hstack([cols_first, cols_second])
+                    rows = np.hstack([rows, rows])
+                    sub_matrix_top = csr_matrix(
+                        (data, (rows, cols)), shape=(n_lr, n_lr * n_tb)
+                    )
+                    cols_first = np.arange((n_tb - 2) * (n_lr), (n_tb - 1) * (n_lr))
+                    cols_second = np.arange((n_tb - 1) * (n_lr), (n_tb) * (n_lr))
+                    data = np.hstack([neg_zero_fives_top, one_fives_top])
+                    cols = np.hstack([cols_first, cols_second])
+                    sub_matrix_bottom = csr_matrix(
+                        (data, (rows, cols)), shape=(n_lr, n_lr * n_tb)
+                    )
+                    data = np.ones((n_tb - 1) * n_lr) * 0.5
+                    data = np.hstack([data, data])
+                    rows = np.arange(0, (n_tb - 1) * n_lr)
+                    rows = np.hstack([rows, rows])
+                    cols_first = np.arange(0, (n_tb - 1) * n_lr)
+                    cols_second = np.arange(n_lr, n_lr * n_tb)
+                    cols = np.hstack([cols_first, cols_second])
+                    sub_matrix_center = csr_matrix(
+                        (data, (rows, cols)), shape=(n_lr * (n_tb - 1), n_lr * n_tb)
+                    )
+                    sub_matrix = vstack(
+                        [
+                            sub_matrix_top,
+                            sub_matrix_center,
+                            sub_matrix_bottom,
+                        ]
+                    )
+
+            elif shift_key == "edge to node":
+                raise NotImplementedError
+            else:
+                raise ValueError(f"shift key '{shift_key}' not recognised")
+            # Second dimension length
+            second_dim_repeats = self._get_auxiliary_domain_repeats(
+                discretised_symbol.domains
+            )
+
+            # Generate full matrix from the submatrix
+            # Convert to csr_matrix so that we can take the index (row-slicing), which
+            # is not supported by the default kron format
+            # Note that this makes column-slicing inefficient, but this should not be an
+            # issue
+            matrix = csr_matrix(kron(eye(second_dim_repeats), sub_matrix))
+
+            return pybamm.Matrix(matrix) @ array
 
         def harmonic_mean(array, direction):
             """
@@ -1625,19 +1725,24 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                     )
                 elif direction == "tb":
                     # Matrix to compute values at the exterior edges
+                    # Matrix to compute values at the exterior edges
                     one_fives_top = np.ones(n_lr) * 1.5
                     neg_zero_fives_top = np.ones(n_lr) * -0.5
-                    edges_sub_matrix_top = spdiags(
-                        [one_fives_top, neg_zero_fives_top],
-                        [0, n_lr],
-                        n_lr,
-                        n_lr * n_tb,
+                    rows = np.arange(0, n_lr)
+                    cols_first = np.arange(0, n_lr)
+                    cols_second = np.arange(n_lr, 2 * n_lr)
+                    data = np.hstack([one_fives_top, neg_zero_fives_top])
+                    cols = np.hstack([cols_first, cols_second])
+                    rows = np.hstack([rows, rows])
+                    edges_sub_matrix_top = csr_matrix(
+                        (data, (rows, cols)), shape=(n_lr, n_lr * n_tb)
                     )
-                    edges_sub_matrix_bottom = spdiags(
-                        [neg_zero_fives_top, one_fives_top],
-                        [n_lr * n_tb - n_lr - 1, n_lr * n_tb - 1],
-                        n_lr,
-                        n_lr * n_tb,
+                    cols_first = np.arange((n_tb - 2) * (n_lr), (n_tb - 1) * (n_lr))
+                    cols_second = np.arange((n_tb - 1) * (n_lr), (n_tb) * (n_lr))
+                    data = np.hstack([neg_zero_fives_top, one_fives_top])
+                    cols = np.hstack([cols_first, cols_second])
+                    edges_sub_matrix_bottom = csr_matrix(
+                        (data, (rows, cols)), shape=(n_lr, n_lr * n_tb)
                     )
                     edges_sub_matrix_center = csr_matrix(
                         ((n_tb - 1) * n_lr, n_tb * n_lr)
@@ -1688,7 +1793,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                     # dx_real = dx * length, therefore, beta is unchanged
                     # Compute harmonic mean on internal edges
                     # Note: add small number to denominator to regularise D_eff
-                    D_eff = D1 * D2 / (D2 * beta + D1 * (1 - beta) + 1e-16)
+                    D_eff = D1 * D2 / (D2 * beta + D1 * (1 - beta))
 
                     # Matrix to pad zeros at the beginning and end of the array where
                     # the exterior edge values will be added
@@ -1748,7 +1853,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         if discretised_symbol.size == 1:
             out = discretised_symbol
         elif method == "arithmetic":
-            out = arithmetic_mean(discretised_symbol)
+            out = arithmetic_mean(discretised_symbol, direction)
         elif method == "harmonic":
             out = harmonic_mean(discretised_symbol, direction)
         else:

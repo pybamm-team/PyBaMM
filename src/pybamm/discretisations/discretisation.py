@@ -1011,6 +1011,11 @@ class Discretisation:
             new_symbol = self.process_symbol(symbol.children[0])
             return new_symbol
 
+        elif isinstance(symbol, pybamm.VectorField):
+            left_symbol = self.process_symbol(symbol.lr_field)
+            right_symbol = self.process_symbol(symbol.tb_field)
+            return symbol.create_copy(new_children=[left_symbol, right_symbol])
+
         else:
             # Backup option: return the object
             return symbol

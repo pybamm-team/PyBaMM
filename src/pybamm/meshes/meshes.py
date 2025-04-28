@@ -75,7 +75,7 @@ class Mesh(dict):
                             and var.domain[0] in geometry.keys()
                         ):
                             raise KeyError(
-                                f"Points not given for a variable in domain '{domain}'"
+                                f"Points not given for variable '{var.name}' in domain '{domain}'"
                             )
                         # Otherwise add to the dictionary of submesh points
                         submesh_pts[domain][var.name] = var_name_pts[var.name]
