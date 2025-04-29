@@ -25,8 +25,7 @@ current_interpolant = pybamm.Interpolant(drive_cycle[:, 0], drive_cycle[:, 1], p
 param["Current function [A]"] = current_interpolant
 
 
-# create and run simulation using the CasadiSolver in "fast" mode, remembering to
-# pass in the updated parameters
+# create and run simulation with the updated parameters
 sim = pybamm.Simulation(model, parameter_values=param)
 sim.solve()
 sim.plot(
