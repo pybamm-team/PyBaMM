@@ -1472,14 +1472,23 @@ class FiniteVolume2D(pybamm.SpatialMethod):
             i = 0
             for tb_idx in range(tb_mesh_points):
                 for child_idx in range(num_children):
-                    block_mat[i][tb_idx + child_idx * tb_mesh_points] = eyes[child_idx]
-                    i += 1
+                    if isinstance(disc_children[child_idx], pybamm.StateVector):
+                        block_mat[i][tb_idx + child_idx * tb_mesh_points] = eyes[
+                            child_idx
+                        ]
+                        i += 1
+                    else:
+                        block_mat[i][tb_idx + child_idx * tb_mesh_points] = eyes[
+                            child_idx
+                        ]
+                        i += 1
             block_mat = csr_matrix(np.block(block_mat))
             block_mat = kron(eye(repeats), block_mat)
             matrix = pybamm.Matrix(block_mat)
             repeats = self._get_auxiliary_domain_repeats(disc_children[0].domains)
             return matrix @ pybamm.domain_concatenation(disc_children, self.mesh)
         else:
+            print("hi")
             return pybamm.domain_concatenation(disc_children, self.mesh)
 
     def edge_to_node(self, discretised_symbol, method="arithmetic"):

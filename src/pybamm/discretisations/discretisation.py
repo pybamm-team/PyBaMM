@@ -270,27 +270,65 @@ class Discretisation:
         end = 0
         lower_bounds = []
         upper_bounds = []
+
+        # Make sure we hit concatenation variables first.
+        # concat_variables = [var for var in variables if isinstance(var, pybamm.ConcatenationVariable)]
+        # not_concat_variables = [var for var in variables if not isinstance(var, pybamm.ConcatenationVariable)]
+        # variables = concat_variables + not_concat_variables
+
         # Iterate through unpacked variables, adding appropriate slices to y_slices
         for variable in variables:
+            if variable in y_slices:
+                continue
             # Add up the size of all the domains in variable.domain
             if isinstance(variable, pybamm.ConcatenationVariable):
-                start_ = start
                 spatial_method = self.spatial_methods[variable.domain[0]]
+                dimension = spatial_method.mesh[variable.domain[0]].dimension
+                start_ = start
                 children = variable.children
                 meshes = OrderedDict()
+                lr_points = OrderedDict()
+                tb_points = OrderedDict()
                 for child in children:
                     meshes[child] = [spatial_method.mesh[dom] for dom in child.domain]
+                    if dimension == 2:
+                        lr_points[child] = sum(
+                            spatial_method.mesh[dom].npts_lr for dom in child.domain
+                        )
+                        tb_points[child] = sum(
+                            spatial_method.mesh[dom].npts_tb for dom in child.domain
+                        )
                 sec_points = spatial_method._get_auxiliary_domain_repeats(
                     variable.domains
                 )
                 for _ in range(sec_points):
+                    start_this_child = start_
                     for child, mesh in meshes.items():
                         for domain_mesh in mesh:
                             end += domain_mesh.npts_for_broadcast_to_nodes
                         # Add to slices
-                        y_slices[child].append(slice(start_, end))
-                        y_slices_explicit[child].append(slice(start_, end))
-                        # Increment start_
+                        if dimension == 2:
+                            other_children = set(meshes.keys()) - {child}
+                            num_pts_to_skip = sum(
+                                lr_points[other_child] for other_child in other_children
+                            )
+                            for row in range(tb_points[child]):
+                                start_this_row = (
+                                    start_this_child
+                                    + (lr_points[child] + num_pts_to_skip) * row
+                                )
+                                end_this_row = start_this_row + lr_points[child]
+                                y_slices[child].append(
+                                    slice(start_this_row, end_this_row)
+                                )
+                                y_slices_explicit[child].append(
+                                    slice(start_this_row, end_this_row)
+                                )
+                            start_this_child += lr_points[child]
+                        else:
+                            y_slices[child].append(slice(start_, end))
+                            y_slices_explicit[child].append(slice(start_, end))
+                            # Increment start_
                         start_ = end
             else:
                 end += self._get_variable_size(variable)
