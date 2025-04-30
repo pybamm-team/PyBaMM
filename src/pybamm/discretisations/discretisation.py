@@ -821,6 +821,13 @@ class Discretisation:
                 ]
             else:
                 discretised_symbol.secondary_mesh = None
+
+            # Assign tertiary mesh
+            if symbol.domains["tertiary"] != []:
+                discretised_symbol.tertiary_mesh = self.mesh[symbol.domains["tertiary"]]
+            else:
+                discretised_symbol.tertiary_mesh = None
+
             return discretised_symbol
 
     def _process_symbol(self, symbol):

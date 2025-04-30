@@ -24,7 +24,6 @@ sim = pybamm.Simulation(
     model,
     experiment=experiment,
     parameter_values=parameter_values,
-    solver=pybamm.CasadiSolver("fast with events"),
 )
 sim.solve()
 
