@@ -823,6 +823,7 @@ class ProcessedVariable2DReal(ProcessedVariable):
         # self._entries_for_interp_raw = entries_for_interp
         # self._coords_raw = coords
 
+
 class ProcessedVariable3D(ProcessedVariable):
     """
     An object that can be evaluated at arbitrary (scalars or vectors) t and x, and
