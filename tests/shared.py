@@ -189,9 +189,9 @@ def get_mesh_for_testing_2d(
     }
 
     if xpts is None:
-        xn_pts = 40, 25, 35
+        xn_pts = 40
     else:
-        xn_pts = xpts, xpts, xpts
+        xn_pts = xpts
     var_pts = {
         x: xn_pts,
         z: zpts,

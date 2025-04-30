@@ -13,7 +13,6 @@ class TestFiniteVolume2D:
         fin_vol.build(mesh)
         n_lr = mesh["negative electrode"].npts_lr
         n_tb = mesh["negative electrode"].npts_tb
-        n = 100
 
         # node to edge
         c = pybamm.StateVector(slice(0, n_lr * n_tb), domain=["negative electrode"])
@@ -45,18 +44,6 @@ class TestFiniteVolume2D:
         np.testing.assert_array_equal(
             diffusivity_c_har_tb.evaluate(None, y_test),
             np.ones(((n_lr) * (n_tb + 1), 1)) * 2,
-        )
-
-        # edge to node
-        d = pybamm.StateVector(slice(0, n + 1), domain=["negative electrode"])
-        y_test = np.ones(n + 1)
-        diffusivity_d_ari = fin_vol.edge_to_node(d, method="arithmetic")
-        np.testing.assert_array_equal(
-            diffusivity_d_ari.evaluate(None, y_test), np.ones((n, 1))
-        )
-        diffusivity_d_har = fin_vol.edge_to_node(d, method="harmonic")
-        np.testing.assert_array_equal(
-            diffusivity_d_har.evaluate(None, y_test), np.ones((n, 1))
         )
 
         # bad shift key

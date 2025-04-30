@@ -1488,7 +1488,6 @@ class FiniteVolume2D(pybamm.SpatialMethod):
             repeats = self._get_auxiliary_domain_repeats(disc_children[0].domains)
             return matrix @ pybamm.domain_concatenation(disc_children, self.mesh)
         else:
-            print("hi")
             return pybamm.domain_concatenation(disc_children, self.mesh)
 
     def edge_to_node(self, discretised_symbol, method="arithmetic"):
