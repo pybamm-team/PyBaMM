@@ -823,10 +823,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
     def supports_parallel_solve(self):
         return True
 
-    @property
-    def requires_explicit_sensitivities(self):
-        return False
-
     def _apply_solver_initial_conditions(self, model, initial_conditions):
         """
         Apply custom initial conditions to a model by overriding model.y0.
