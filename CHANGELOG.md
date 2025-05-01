@@ -10,6 +10,10 @@
 - Fixed a bug in the `QuickPlot` which would return empty values for 1D variables at the beginning and end of a timespan. ([#4991](https://github.com/pybamm-team/PyBaMM/pull/4991))
 - Fixed a bug in the `Exponential1DSubMesh` where the mesh was not being created correctly for non-zero minimum values. ([#4989](https://github.com/pybamm-team/PyBaMM/pull/4989))
 
+## Features
+
+- Added an option for multiple initial conditions in IDAKLU solver ([#4981](https://github.com/pybamm-team/PyBaMM/pull/4981))
+
 ## Breaking changes
 
 - Remove sensitivity functionality for Casadi and Scipy solvers, only `pybamm.IDAKLU` solver can calculate sensitivities. ([#4975](https://github.com/pybamm-team/PyBaMM/pull/4975))
@@ -25,8 +29,6 @@
 ## Features
 
 - Added "use lumped thermal capacity" option in lumped thermal model ([#4968](https://github.com/pybamm-team/PyBaMM/pull/4968))
-- Added an option for multiple initial conditions in IDAKLU solver ([#4981](https://github.com/pybamm-team/PyBaMM/pull/4981))
-
 
 ## Bug fixes
 
