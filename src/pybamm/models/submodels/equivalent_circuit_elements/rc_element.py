@@ -38,7 +38,7 @@ class RCElement(pybamm.BaseSubModel):
         )
         r.print_name = "R_1"
         c = self.param.rcr_element(
-            "Capacitence of RC network [F]", T_cell, current, soc
+            "Capacitance of RC network [F]", T_cell, current, soc
         )
         c.print_name = "C_1"
         tau = r * c
