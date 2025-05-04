@@ -5,6 +5,7 @@
 - Add a solver option to change `on_extrapolation` behavior to `"error"`, `"warn"`, or `"ignore"` on extrapolation events. ([#4993](https://github.com/pybamm-team/PyBaMM/pull/4993))
 - Improve reliability of `CasadiAlgebraicSolver` and added an option for the `step_tol` of the Newton iteration. ([#4985](https://github.com/pybamm-team/PyBaMM/pull/4985))
 - Speed up calculation of variable sensitivities in `ProcessedVariable` ([#5000](https://github.com/pybamm-team/PyBaMM/pull/5000))
+- Added `print names` for variables in `equivalent circuit model` to make `latexify` output more readalbe. ([#4898](https://github.com/pybamm-team/PyBaMM/pull/4898))
 
 ## Bug fixes
 
