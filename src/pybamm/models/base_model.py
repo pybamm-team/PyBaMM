@@ -6,10 +6,14 @@ from collections import OrderedDict
 
 import copy
 import casadi
+import scipy
 import numpy as np
 
 import pybamm
 from pybamm.expression_tree.operations.serialise import Serialise
+
+# Only throw the default solver warning once
+warnings.filterwarnings("once", message="The default solver changed to IDAKLUSolver*")
 
 
 class BaseModel:
@@ -80,9 +84,13 @@ class BaseModel:
         # Model is not initially discretised
         self.is_discretised = False
         self.y_slices = None
+        self.len_rhs_and_alg = None
 
         # Non-lithium ion models shouldn't calculate eSOH parameters
         self._calc_esoh = False
+
+        # Root solver
+        self._algebraic_root_solver = None
 
     @classmethod
     def deserialise(cls, properties: dict):
@@ -413,7 +421,12 @@ class BaseModel:
         if len(self.rhs) == 0 and len(self.algebraic) != 0:
             return pybamm.CasadiAlgebraicSolver()
         else:
-            return pybamm.CasadiSolver(mode="safe")
+            warnings.warn(
+                "The default solver changed to IDAKLUSolver after the v25.4.0. release. "
+                "You can swap back to the previous default by using `pybamm.CasadiSolver()` instead.",
+                stacklevel=2,
+            )
+            return pybamm.IDAKLUSolver()
 
     @property
     def default_quick_plot_variables(self):
@@ -454,6 +467,14 @@ class BaseModel:
     def calc_esoh(self):
         """Whether to include eSOH variables in the summary variables."""
         return self._calc_esoh
+
+    @property
+    def algebraic_root_solver(self):
+        return self._algebraic_root_solver
+
+    @algebraic_root_solver.setter
+    def algebraic_root_solver(self, algebraic_root_solver):
+        self._algebraic_root_solver = algebraic_root_solver
 
     def get_parameter_info(self, by_submodel=False):
         """
@@ -591,8 +612,12 @@ class BaseModel:
         if self.mass_matrix is None or self.mass_matrix_inv is None:
             return False
         # Check that the mass matrix inverse is an identity matrix
-        mass_matrix_inv = self.mass_matrix_inv.entries.toarray()
-        return np.allclose(mass_matrix_inv, np.eye(mass_matrix_inv.shape[0]))
+        mass_matrix_inv = self.mass_matrix_inv.entries
+        if scipy.sparse.issparse(mass_matrix_inv):
+            identity = scipy.sparse.identity(mass_matrix_inv.shape[0])
+            return (mass_matrix_inv - identity).nnz == 0
+        else:
+            return np.allclose(mass_matrix_inv, np.eye(mass_matrix_inv.shape[0]))
 
     def _format_table_row(
         self, param_name, param_type, max_name_length, max_type_length

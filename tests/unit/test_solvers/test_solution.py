@@ -57,19 +57,10 @@ class TestSolution:
         assert "exceeds the maximum" in log_output
         logger.removeHandler(handler)
 
-        with pytest.raises(
-            TypeError, match="sensitivities arg needs to be a bool or dict"
-        ):
+        with pytest.raises(TypeError, match="sensitivities arg needs to be a dict"):
             pybamm.Solution(ts, bad_ys, model, {}, all_sensitivities="bad")
 
         sol = pybamm.Solution(ts, bad_ys, model, {}, all_sensitivities={})
-        with pytest.raises(TypeError, match="sensitivities arg needs to be a bool"):
-            sol.sensitivities = "bad"
-        with pytest.raises(
-            NotImplementedError,
-            match="Setting sensitivities is not supported if sensitivities are already provided as a dict",
-        ):
-            sol.sensitivities = True
 
     def test_add_solutions(self):
         # Set up first solution
@@ -141,10 +132,7 @@ class TestSolution:
             {},
             all_sensitivities={"test": [np.ones((1, 3))]},
         )
-        sol2 = pybamm.Solution(t2, y2, pybamm.BaseModel(), {}, all_sensitivities=True)
-        with pytest.raises(ValueError, match="Sensitivities must be of the same type"):
-            sol3 = sol1 + sol2
-        sol1 = pybamm.Solution(t1, y3, pybamm.BaseModel(), {}, all_sensitivities=False)
+        sol1 = pybamm.Solution(t1, y3, pybamm.BaseModel(), {})
         sol2 = pybamm.Solution(t3, y3, pybamm.BaseModel(), {}, all_sensitivities={})
         sol3 = sol1 + sol2
         assert not sol3._all_sensitivities
@@ -506,7 +494,7 @@ class TestSolution:
             solver=solver,
         )
         inputs = {"Negative electrode conductivity [S.m-1]": 0.1}
-        sim.solve(t_eval=np.linspace(0, 10, 10), inputs=inputs)
+        sim.solve(t_eval=[0, 10], t_interp=np.linspace(0, 10, 10), inputs=inputs)
         time = sim.solution["Time [h]"](sim.solution.t)
         assert len(time) == 10
 
