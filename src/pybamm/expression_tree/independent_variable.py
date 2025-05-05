@@ -3,6 +3,7 @@
 #
 from __future__ import annotations
 import sympy
+import numpy as np
 import numpy.typing as npt
 import pybamm
 from pybamm.type_definitions import DomainType, AuxiliaryDomainType, DomainsType
@@ -93,8 +94,8 @@ class Time(IndependentVariable):
     def _base_evaluate(
         self,
         t: float | None = None,
-        y: npt.NDArray | None = None,
-        y_dot: npt.NDArray | None = None,
+        y: npt.NDArray[np.float64] | None = None,
+        y_dot: npt.NDArray[np.float64] | None = None,
         inputs: dict | str | None = None,
     ):
         """See :meth:`pybamm.Symbol._base_evaluate()`."""
