@@ -6,6 +6,7 @@ import numpy as np
 import numpy.typing as npt
 import pybamm
 from pybamm.type_definitions import DomainType, AuxiliaryDomainType, DomainsType
+from typing import Any
 
 
 class Vector(pybamm.Array):
@@ -15,7 +16,7 @@ class Vector(pybamm.Array):
 
     def __init__(
         self,
-        entries: npt.NDArray | list[float] | np.matrix,
+        entries: npt.NDArray[Any] | list[float] | np.matrix,
         name: str | None = None,
         domain: DomainType = None,
         auxiliary_domains: AuxiliaryDomainType = None,
