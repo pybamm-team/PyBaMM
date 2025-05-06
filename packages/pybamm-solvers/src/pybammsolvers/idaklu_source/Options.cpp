@@ -141,14 +141,14 @@ SolverOptions::SolverOptions(py::dict &py_opts)
       // IDA main solver
       max_order_bdf(py_opts["max_order_bdf"].cast<int>()),
       max_num_steps(py_opts["max_num_steps"].cast<int>()),
-      dt_init(RCONST(py_opts["dt_init"].cast<double>())),
-      dt_min(RCONST(py_opts["dt_min"].cast<double>())),
-      dt_max(RCONST(py_opts["dt_max"].cast<double>())),
+      dt_init(SUN_RCONST(py_opts["dt_init"].cast<double>())),
+      dt_min(SUN_RCONST(py_opts["dt_min"].cast<double>())),
+      dt_max(SUN_RCONST(py_opts["dt_max"].cast<double>())),
       max_error_test_failures(py_opts["max_error_test_failures"].cast<int>()),
       max_nonlinear_iterations(py_opts["max_nonlinear_iterations"].cast<int>()),
       max_convergence_failures(py_opts["max_convergence_failures"].cast<int>()),
-      nonlinear_convergence_coefficient(RCONST(py_opts["nonlinear_convergence_coefficient"].cast<double>())),
-      nonlinear_convergence_coefficient_ic(RCONST(py_opts["nonlinear_convergence_coefficient_ic"].cast<double>())),
+      nonlinear_convergence_coefficient(SUN_RCONST(py_opts["nonlinear_convergence_coefficient"].cast<double>())),
+      nonlinear_convergence_coefficient_ic(SUN_RCONST(py_opts["nonlinear_convergence_coefficient_ic"].cast<double>())),
       suppress_algebraic_error(py_opts["suppress_algebraic_error"].cast<sunbooleantype>()),
       hermite_interpolation(py_opts["hermite_interpolation"].cast<sunbooleantype>()),
       // IDA initial conditions calculation
@@ -161,6 +161,6 @@ SolverOptions::SolverOptions(py::dict &py_opts)
       linesearch_off_ic(py_opts["linesearch_off_ic"].cast<sunbooleantype>()),
       // IDALS linear solver interface
       linear_solution_scaling(py_opts["linear_solution_scaling"].cast<sunbooleantype>()),
-      epsilon_linear_tolerance(RCONST(py_opts["epsilon_linear_tolerance"].cast<double>())),
-      increment_factor(RCONST(py_opts["increment_factor"].cast<double>()))
+      epsilon_linear_tolerance(SUN_RCONST(py_opts["epsilon_linear_tolerance"].cast<double>())),
+      increment_factor(SUN_RCONST(py_opts["increment_factor"].cast<double>()))
 {}

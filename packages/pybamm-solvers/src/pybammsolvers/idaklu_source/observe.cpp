@@ -17,50 +17,50 @@ int _setup_len_spatial(const std::vector<int>& shape) {
 // Coupled observe and Hermite interpolation of variables
 class HermiteInterpolator {
 public:
-    HermiteInterpolator(const py::detail::unchecked_reference<realtype, 1>& t,
-                       const py::detail::unchecked_reference<realtype, 2>& y,
-                       const py::detail::unchecked_reference<realtype, 2>& yp)
+    HermiteInterpolator(const py::detail::unchecked_reference<sunrealtype, 1>& t,
+                       const py::detail::unchecked_reference<sunrealtype, 2>& y,
+                       const py::detail::unchecked_reference<sunrealtype, 2>& yp)
         : t(t), y(y), yp(yp) {}
 
-    void compute_knots(const size_t j, vector<realtype>& c, vector<realtype>& d) const {
+    void compute_knots(const size_t j, vector<sunrealtype>& c, vector<sunrealtype>& d) const {
         // Called at the start of each interval
-        const realtype h_full = t(j + 1) - t(j);
-        const realtype inv_h = 1.0 / h_full;
-        const realtype inv_h2 = inv_h * inv_h;
-        const realtype inv_h3 = inv_h2 * inv_h;
+        const sunrealtype h_full = t(j + 1) - t(j);
+        const sunrealtype inv_h = 1.0 / h_full;
+        const sunrealtype inv_h2 = inv_h * inv_h;
+        const sunrealtype inv_h3 = inv_h2 * inv_h;
 
         for (size_t i = 0; i < y.shape(0); ++i) {
-            realtype y_ij = y(i, j);
-            realtype yp_ij = yp(i, j);
-            realtype y_ijp1 = y(i, j + 1);
-            realtype yp_ijp1 = yp(i, j + 1);
+            sunrealtype y_ij = y(i, j);
+            sunrealtype yp_ij = yp(i, j);
+            sunrealtype y_ijp1 = y(i, j + 1);
+            sunrealtype yp_ijp1 = yp(i, j + 1);
 
             c[i] = 3.0 * (y_ijp1 - y_ij) * inv_h2 - (2.0 * yp_ij + yp_ijp1) * inv_h;
             d[i] = 2.0 * (y_ij - y_ijp1) * inv_h3 + (yp_ij + yp_ijp1) * inv_h2;
         }
     }
 
-    void interpolate(vector<realtype>& entries,
-    realtype t_interp,
+    void interpolate(vector<sunrealtype>& entries,
+    sunrealtype t_interp,
     const size_t j,
-    vector<realtype>& c,
-    vector<realtype>& d) const {
+    vector<sunrealtype>& c,
+    vector<sunrealtype>& d) const {
         // Must be called after compute_knots
-        const realtype h = t_interp - t(j);
-        const realtype h2 = h * h;
-        const realtype h3 = h2 * h;
+        const sunrealtype h = t_interp - t(j);
+        const sunrealtype h2 = h * h;
+        const sunrealtype h3 = h2 * h;
 
         for (size_t i = 0; i < entries.size(); ++i) {
-            realtype y_ij = y(i, j);
-            realtype yp_ij = yp(i, j);
+            sunrealtype y_ij = y(i, j);
+            sunrealtype yp_ij = yp(i, j);
             entries[i] = y_ij + yp_ij * h + c[i] * h2 + d[i] * h3;
         }
     }
 
 private:
-    const py::detail::unchecked_reference<realtype, 1>& t;
-    const py::detail::unchecked_reference<realtype, 2>& y;
-    const py::detail::unchecked_reference<realtype, 2>& yp;
+    const py::detail::unchecked_reference<sunrealtype, 1>& t;
+    const py::detail::unchecked_reference<sunrealtype, 2>& y;
+    const py::detail::unchecked_reference<sunrealtype, 2>& yp;
 };
 
 class TimeSeriesInterpolator {
@@ -71,7 +71,7 @@ public:
                            const vector<np_array_realtype>& _yps_data,
                            const vector<np_array_realtype>& _inputs,
                            const vector<std::shared_ptr<const casadi::Function>>& _funcs,
-                           realtype* _entries,
+                           sunrealtype* _entries,
                            const int _size_spatial)
         : t_interp_np(_t_interp), ts_data_np(_ts_data), ys_data_np(_ys_data),
           yps_data_np(_yps_data), inputs_np(_inputs), funcs(_funcs),
@@ -95,7 +95,7 @@ public:
     void process_within_bounds(
             ssize_t& i_interp,
             int& i_entries,
-            const py::detail::unchecked_reference<realtype, 1>& t_interp,
+            const py::detail::unchecked_reference<sunrealtype, 1>& t_interp,
             const ssize_t N_interp
         ) {
         for (size_t i = 0; i < ts_data_np.size(); i++) {
@@ -105,8 +105,8 @@ public:
                 continue;
             }
 
-            const realtype t_data_final = t_data(t_data.size() - 1);
-            realtype t_interp_next = t_interp(i_interp);
+            const sunrealtype t_data_final = t_data(t_data.size() - 1);
+            sunrealtype t_interp_next = t_interp(i_interp);
             // Continue if the next interpolation point is beyond the final data point
             if (t_interp_next > t_data_final) {
                 continue;
@@ -156,7 +156,7 @@ public:
     void extrapolate_remaining(
             ssize_t& i_interp,
             int& i_entries,
-            const py::detail::unchecked_reference<realtype, 1>& t_interp,
+            const py::detail::unchecked_reference<sunrealtype, 1>& t_interp,
             const ssize_t N_interp
         ) {
         const auto& t_data = ts_data_np.back().unchecked<1>();
@@ -174,7 +174,7 @@ public:
         itp.compute_knots(j, c, d);
 
         for (; i_interp < N_interp; ++i_interp) {
-            const realtype t_interp_next = t_interp(i_interp);
+            const sunrealtype t_interp_next = t_interp(i_interp);
             itp.interpolate(y_buffer, t_interp_next, j, c, d);
 
             args[0] = &t_interp_next;
@@ -204,15 +204,15 @@ private:
     const vector<np_array_realtype>& yps_data_np;
     const vector<np_array_realtype>& inputs_np;
     const vector<std::shared_ptr<const casadi::Function>>& funcs;
-    realtype* entries;
+    sunrealtype* entries;
     const int size_spatial;
-    vector<realtype> c;
-    vector<realtype> d;
-    vector<realtype> y_buffer;
-    vector<const realtype*> args;
-    vector<realtype*> results;
+    vector<sunrealtype> c;
+    vector<sunrealtype> d;
+    vector<sunrealtype> y_buffer;
+    vector<const sunrealtype*> args;
+    vector<sunrealtype*> results;
     vector<casadi_int> iw;
-    vector<realtype> w;
+    vector<sunrealtype> w;
 };
 
 // Observe the raw data
@@ -222,7 +222,7 @@ public:
                         const vector<np_array_realtype>& _ys,
                         const vector<np_array_realtype>& _inputs,
                         const vector<std::shared_ptr<const casadi::Function>>& _funcs,
-                        realtype* _entries,
+                        sunrealtype* _entries,
                         const bool _is_f_contiguous,
                         const int _size_spatial)
         : ts(_ts), ys(_ys), inputs(_inputs), funcs(_funcs),
@@ -244,8 +244,8 @@ public:
             args[2] = input;
 
             for (size_t j = 0; j < t.size(); j++) {
-                const realtype t_val = t(j);
-                const realtype* y_val = is_f_contiguous ? &y(0, j) : copy_to_buffer(y_buffer, y, j);
+                const sunrealtype t_val = t(j);
+                const sunrealtype* y_val = is_f_contiguous ? &y(0, j) : copy_to_buffer(y_buffer, y, j);
 
                 args[0] = &t_val;
                 args[1] = y_val;
@@ -259,9 +259,9 @@ public:
     }
 
 private:
-    const realtype* copy_to_buffer(
-        vector<realtype>& entries,
-        const py::detail::unchecked_reference<realtype, 2>& y,
+    const sunrealtype* copy_to_buffer(
+        vector<sunrealtype>& entries,
+        const py::detail::unchecked_reference<sunrealtype, 2>& y,
         size_t j) {
         for (size_t i = 0; i < entries.size(); ++i) {
             entries[i] = y(i, j);
@@ -284,14 +284,14 @@ private:
     const vector<np_array_realtype>& ys;
     const vector<np_array_realtype>& inputs;
     const vector<std::shared_ptr<const casadi::Function>>& funcs;
-    realtype* entries;
+    sunrealtype* entries;
     const bool is_f_contiguous;
     int size_spatial;
-    vector<realtype> y_buffer;
-    vector<const realtype*> args;
-    vector<realtype*> results;
+    vector<sunrealtype> y_buffer;
+    vector<const sunrealtype*> args;
+    vector<sunrealtype*> results;
     vector<casadi_int> iw;
-    vector<realtype> w;
+    vector<sunrealtype> w;
 };
 
 const np_array_realtype observe_hermite_interp(
@@ -305,7 +305,7 @@ const np_array_realtype observe_hermite_interp(
 ) {
     const int size_spatial = _setup_len_spatial(shape);
     const auto& funcs = setup_casadi_funcs(strings);
-    py::array_t<realtype, py::array::f_style> out_array(shape);
+    py::array_t<sunrealtype, py::array::f_style> out_array(shape);
     auto entries = out_array.mutable_data();
 
     TimeSeriesInterpolator(t_interp_np, ts_np, ys_np, yps_np, inputs_np, funcs, entries, size_spatial).process();
@@ -323,7 +323,7 @@ const np_array_realtype observe(
 ) {
     const int size_spatial = _setup_len_spatial(shape);
     const auto& funcs = setup_casadi_funcs(strings);
-    py::array_t<realtype, py::array::f_style> out_array(shape);
+    py::array_t<sunrealtype, py::array::f_style> out_array(shape);
     auto entries = out_array.mutable_data();
 
     TimeSeriesProcessor(ts_np, ys_np, inputs_np, funcs, entries, is_f_contiguous, size_spatial).process();

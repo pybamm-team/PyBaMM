@@ -69,16 +69,16 @@ public:
 
   std::vector<int64_t> jac_times_cjmass_rowvals;  // cppcheck-suppress unusedStructMember
   std::vector<int64_t> jac_times_cjmass_colptrs;  // cppcheck-suppress unusedStructMember
-  std::vector<realtype> inputs;  // cppcheck-suppress unusedStructMember
+  std::vector<sunrealtype> inputs;  // cppcheck-suppress unusedStructMember
 
   SetupOptions setup_opts;
 
-  virtual realtype *get_tmp_state_vector() = 0;
-  virtual realtype *get_tmp_sparse_jacobian_data() = 0;
+  virtual sunrealtype *get_tmp_state_vector() = 0;
+  virtual sunrealtype *get_tmp_sparse_jacobian_data() = 0;
 
 protected:
-  std::vector<realtype> tmp_state_vector;
-  std::vector<realtype> tmp_sparse_jacobian_data;
+  std::vector<sunrealtype> tmp_state_vector;
+  std::vector<sunrealtype> tmp_sparse_jacobian_data;
 };
 
 #endif // PYBAMM_IDAKLU_EXPRESSION_SET_HPP

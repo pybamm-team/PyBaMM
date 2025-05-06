@@ -16,7 +16,7 @@ using CallbackJvp = std::function<np_array(np_array, np_array, np_array, np_arra
 /**
  * @brief Callback function type for VJP evaluation
  */
-using CallbackVjp = std::function<np_array(np_array, int, int, realtype, np_array, np_array)>;
+using CallbackVjp = std::function<np_array(np_array, int, int, sunrealtype, np_array, np_array)>;
 
 /**
  * @brief IDAKLU-JAX interface class.

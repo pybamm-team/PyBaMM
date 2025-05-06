@@ -57,26 +57,26 @@ public:
   N_Vector *yyS;  // cppcheck-suppress unusedStructMember
   N_Vector *yypS;  // cppcheck-suppress unusedStructMember
   N_Vector id;              // rhs_alg_id
-  realtype rtol;
+  sunrealtype rtol;
   int const jac_times_cjmass_nnz;  // cppcheck-suppress unusedStructMember
   int const jac_bandwidth_lower;  // cppcheck-suppress unusedStructMember
   int const jac_bandwidth_upper;  // cppcheck-suppress unusedStructMember
   SUNMatrix J;
   SUNLinearSolver LS = nullptr;
   std::unique_ptr<ExprSet> functions;
-  vector<realtype> res;
-  vector<realtype> res_dvar_dy;
-  vector<realtype> res_dvar_dp;
+  vector<sunrealtype> res;
+  vector<sunrealtype> res_dvar_dy;
+  vector<sunrealtype> res_dvar_dp;
   bool const sensitivity;  // cppcheck-suppress unusedStructMember
   bool const save_outputs_only; // cppcheck-suppress unusedStructMember
   bool save_hermite;  // cppcheck-suppress unusedStructMember
   bool is_ODE;  // cppcheck-suppress unusedStructMember
   int length_of_return_vector;  // cppcheck-suppress unusedStructMember
-  vector<realtype> t;  // cppcheck-suppress unusedStructMember
-  vector<vector<realtype>> y;  // cppcheck-suppress unusedStructMember
-  vector<vector<realtype>> yp;  // cppcheck-suppress unusedStructMember
-  vector<vector<vector<realtype>>> yS;  // cppcheck-suppress unusedStructMember
-  vector<vector<vector<realtype>>> ypS;  // cppcheck-suppress unusedStructMember
+  vector<sunrealtype> t;  // cppcheck-suppress unusedStructMember
+  vector<vector<sunrealtype>> y;  // cppcheck-suppress unusedStructMember
+  vector<vector<sunrealtype>> yp;  // cppcheck-suppress unusedStructMember
+  vector<vector<vector<sunrealtype>>> yS;  // cppcheck-suppress unusedStructMember
+  vector<vector<vector<sunrealtype>>> ypS;  // cppcheck-suppress unusedStructMember
   SetupOptions const setup_opts;
   SolverOptions const solver_opts;
 
@@ -111,11 +111,11 @@ public:
    * @brief The main solve method that solves for each variable and time step
    */
   SolutionData solve(
-    const std::vector<realtype> &t_eval,
-    const std::vector<realtype> &t_interp,
-    const realtype *y0,
-    const realtype *yp0,
-    const realtype *inputs,
+    const std::vector<sunrealtype> &t_eval,
+    const std::vector<sunrealtype> &t_interp,
+    const sunrealtype *y0,
+    const sunrealtype *yp0,
+    const sunrealtype *inputs,
     bool save_adaptive_steps,
     bool save_interp_steps
   ) override;
@@ -169,28 +169,28 @@ public:
   /**
    * @brief Set a consistent initialization for ODEs
    */
-  void ReinitializeIntegrator(const realtype& t_val);
+  void ReinitializeIntegrator(const sunrealtype& t_val);
 
   /**
    * @brief Set a consistent initialization for the system of equations
    */
   void ConsistentInitialization(
-    const realtype& t_val,
-    const realtype& t_next,
+    const sunrealtype& t_val,
+    const sunrealtype& t_next,
     const int& icopt);
 
   /**
    * @brief Set a consistent initialization for DAEs
    */
   void ConsistentInitializationDAE(
-    const realtype& t_val,
-    const realtype& t_next,
+    const sunrealtype& t_val,
+    const sunrealtype& t_next,
     const int& icopt);
 
   /**
    * @brief Set a consistent initialization for ODEs
    */
-  void ConsistentInitializationODE(const realtype& t_val);
+  void ConsistentInitializationODE(const sunrealtype& t_val);
 
   /**
    * @brief Extend the adaptive arrays by 1
@@ -206,11 +206,11 @@ public:
    * @brief Set the step values
    */
   void SetStep(
-    realtype &tval,
-    realtype *y_val,
-    realtype *yp_val,
-    vector<realtype *> const &yS_val,
-    vector<realtype *> const &ypS_val,
+    sunrealtype &tval,
+    sunrealtype *y_val,
+    sunrealtype *yp_val,
+    vector<sunrealtype *> const &yS_val,
+    vector<sunrealtype *> const &ypS_val,
     int &i_save
   );
 
@@ -219,15 +219,15 @@ public:
    */
   void SetStepInterp(
     int &i_interp,
-    realtype &t_interp_next,
-    vector<realtype> const &t_interp,
-    realtype &t_val,
-    realtype &t_prev,
-    realtype const &t_next,
-    realtype *y_val,
-    realtype *yp_val,
-    vector<realtype *> const &yS_val,
-    vector<realtype *> const &ypS_val,
+    sunrealtype &t_interp_next,
+    vector<sunrealtype> const &t_interp,
+    sunrealtype &t_val,
+    sunrealtype &t_prev,
+    sunrealtype const &t_next,
+    sunrealtype *y_val,
+    sunrealtype *yp_val,
+    vector<sunrealtype *> const &yS_val,
+    vector<sunrealtype *> const &ypS_val,
     int &i_save
   );
 
@@ -235,9 +235,9 @@ public:
    * @brief Save y and yS at the current time
    */
   void SetStepFull(
-    realtype &t_val,
-    realtype *y_val,
-    vector<realtype *> const &yS_val,
+    sunrealtype &t_val,
+    sunrealtype *y_val,
+    vector<sunrealtype *> const &yS_val,
     int &i_save
   );
 
@@ -245,9 +245,9 @@ public:
    * @brief Save yS at the current time
    */
   void SetStepFullSensitivities(
-    realtype &t_val,
-    realtype *y_val,
-    vector<realtype *> const &yS_val,
+    sunrealtype &t_val,
+    sunrealtype *y_val,
+    vector<sunrealtype *> const &yS_val,
     int &i_save
   );
 
@@ -255,9 +255,9 @@ public:
    * @brief Save the output function results at the requested time
    */
   void SetStepOutput(
-    realtype &t_val,
-    realtype *y_val,
-    const vector<realtype*> &yS_val,
+    sunrealtype &t_val,
+    sunrealtype *y_val,
+    const vector<sunrealtype*> &yS_val,
     int &i_save
   );
 
@@ -265,9 +265,9 @@ public:
    * @brief Save the output function sensitivities at the requested time
    */
   void SetStepOutputSensitivities(
-    realtype &t_val,
-    realtype *y_val,
-    const vector<realtype*> &yS_val,
+    sunrealtype &t_val,
+    sunrealtype *y_val,
+    const vector<sunrealtype*> &yS_val,
     int &i_save
   );
 
@@ -275,9 +275,9 @@ public:
    * @brief Save the output function results at the requested time
    */
   void SetStepHermite(
-    realtype &t_val,
-    realtype *yp_val,
-    const vector<realtype*> &ypS_val,
+    sunrealtype &t_val,
+    sunrealtype *yp_val,
+    const vector<sunrealtype*> &ypS_val,
     int &i_save
   );
 
@@ -285,9 +285,9 @@ public:
    * @brief Save the output function sensitivities at the requested time
    */
   void SetStepHermiteSensitivities(
-    realtype &t_val,
-    realtype *yp_val,
-    const vector<realtype*> &ypS_val,
+    sunrealtype &t_val,
+    sunrealtype *yp_val,
+    const vector<sunrealtype*> &ypS_val,
     int &i_save
   );
 

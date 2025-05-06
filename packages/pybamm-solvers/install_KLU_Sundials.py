@@ -19,10 +19,10 @@ def build_solvers():
     SUITESPARSE_CHECKSUM = (
         "ce39b28d4038a09c14f21e02c664401be73c0cb96a9198418d6a98a7db73a259"
     )
-    SUNDIALS_VERSION = "6.5.0"
+    SUNDIALS_VERSION = "7.3.0"
     SUNDIALS_URL = f"https://github.com/LLNL/sundials/releases/download/v{SUNDIALS_VERSION}/sundials-{SUNDIALS_VERSION}.tar.gz"
     SUNDIALS_CHECKSUM = (
-        "4e0b998dff292a2617e179609b539b511eb80836f5faacf800e688a886288502"
+        "697b7b0dbc229f149e39b293d1ab03d321d61adb6733ffb78c0ddbffaf73d839"
     )
     DEFAULT_INSTALL_DIR = str(pathlib.Path(__file__).parent.resolve() / ".idaklu")
 

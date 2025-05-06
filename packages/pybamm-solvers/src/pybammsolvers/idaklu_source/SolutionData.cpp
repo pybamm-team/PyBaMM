@@ -4,7 +4,7 @@ Solution SolutionData::generate_solution() {
   py::capsule free_t_when_done(
     t_return,
     [](void *f) {
-      auto *vect = reinterpret_cast<realtype *>(f);
+      auto *vect = reinterpret_cast<sunrealtype *>(f);
       delete[] vect;
     }
   );
@@ -18,7 +18,7 @@ Solution SolutionData::generate_solution() {
   py::capsule free_y_when_done(
     y_return,
     [](void *f) {
-      auto *vect = reinterpret_cast<realtype *>(f);
+      auto *vect = reinterpret_cast<sunrealtype *>(f);
       delete[] vect;
     }
   );
@@ -32,7 +32,7 @@ Solution SolutionData::generate_solution() {
   py::capsule free_yp_when_done(
     yp_return,
     [](void *f) {
-      auto *vect = reinterpret_cast<realtype *>(f);
+      auto *vect = reinterpret_cast<sunrealtype *>(f);
       delete[] vect;
     }
   );
@@ -46,7 +46,7 @@ Solution SolutionData::generate_solution() {
   py::capsule free_yS_when_done(
     yS_return,
     [](void *f) {
-      auto *vect = reinterpret_cast<realtype *>(f);
+      auto *vect = reinterpret_cast<sunrealtype *>(f);
       delete[] vect;
     }
   );
@@ -64,7 +64,7 @@ Solution SolutionData::generate_solution() {
   py::capsule free_ypS_when_done(
     ypS_return,
     [](void *f) {
-      auto *vect = reinterpret_cast<realtype *>(f);
+      auto *vect = reinterpret_cast<sunrealtype *>(f);
       delete[] vect;
     }
   );
@@ -83,7 +83,7 @@ Solution SolutionData::generate_solution() {
   py::capsule free_yterm_when_done(
     yterm_return,
     [](void *f) {
-      auto *vect = reinterpret_cast<realtype *>(f);
+      auto *vect = reinterpret_cast<sunrealtype *>(f);
       delete[] vect;
     }
   );

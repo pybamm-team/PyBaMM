@@ -10,7 +10,7 @@
 #include <nvector/nvector_openmp.h>  /* access to openmp N_Vector            */
 #include <sundials/sundials_math.h>  /* defs. of SUNRabs, SUNRexp, etc.      */
 #include <sundials/sundials_config.h>  /* defs. of SUNRabs, SUNRexp, etc.      */
-#include <sundials/sundials_types.h> /* defs. of realtype, sunindextype      */
+#include <sundials/sundials_types.h> /* defs. of sunrealtype, sunindextype      */
 
 #include <sundials/sundials_context.h>
 
@@ -30,8 +30,8 @@
 
 namespace py = pybind11;
 // note: we rely on c_style ordering for numpy arrays so don't change this!
-using np_array = py::array_t<realtype, py::array::c_style | py::array::forcecast>;
-using np_array_realtype = py::array_t<realtype>;
+using np_array = py::array_t<sunrealtype, py::array::c_style | py::array::forcecast>;
+using np_array_realtype = py::array_t<sunrealtype>;
 using np_array_int = py::array_t<int64_t>;
 
 /**
@@ -47,7 +47,7 @@ using np_array_int = py::array_t<int64_t>;
  * @param nr New index pointer to row starts
  */
 template<typename T1, typename T2>
-void csc_csr(const realtype f[], const T1 c[], const T1 r[], realtype nf[], T2 nc[], T2 nr[], int N, int cols) {
+void csc_csr(const sunrealtype f[], const T1 c[], const T1 r[], sunrealtype nf[], T2 nc[], T2 nr[], int N, int cols) {
   std::vector<int> nn(cols+1);
   std::vector<int> rr(N);
   for (int i=0; i<cols+1; i++)
@@ -75,16 +75,16 @@ void csc_csr(const realtype f[], const T1 c[], const T1 r[], realtype nf[], T2 n
 
 
 /**
- * @brief Utility function to convert numpy array to std::vector<realtype>
+ * @brief Utility function to convert numpy array to std::vector<sunrealtype>
  */
-std::vector<realtype> numpy2realtype(const np_array& input_np);
+std::vector<sunrealtype> numpy2sunrealtype(const np_array& input_np);
 
 /**
  * @brief Utility function to compute the set difference of two vectors
  */
 template <typename T1, typename T2>
-std::vector<realtype> setDiff(const T1 a_begin, const T1 a_end, const T2 b_begin, const T2 b_end) {
-    std::vector<realtype> result;
+std::vector<sunrealtype> setDiff(const T1 a_begin, const T1 a_end, const T2 b_begin, const T2 b_end) {
+    std::vector<sunrealtype> result;
     if (std::distance(a_begin, a_end) > 0) {
       std::set_difference(a_begin, a_end, b_begin, b_end, std::back_inserter(result));
     }
@@ -95,14 +95,14 @@ std::vector<realtype> setDiff(const T1 a_begin, const T1 a_end, const T2 b_begin
  * @brief Utility function to make a sorted and unique vector
  */
 template <typename T>
-std::vector<realtype> makeSortedUnique(const T input_begin, const T input_end) {
-    std::unordered_set<realtype> uniqueSet(input_begin, input_end); // Remove duplicates
-    std::vector<realtype> uniqueVector(uniqueSet.begin(), uniqueSet.end()); // Convert to vector
+std::vector<sunrealtype> makeSortedUnique(const T input_begin, const T input_end) {
+    std::unordered_set<sunrealtype> uniqueSet(input_begin, input_end); // Remove duplicates
+    std::vector<sunrealtype> uniqueVector(uniqueSet.begin(), uniqueSet.end()); // Convert to vector
     std::sort(uniqueVector.begin(), uniqueVector.end()); // Sort the vector
     return uniqueVector;
 }
 
-std::vector<realtype> makeSortedUnique(const np_array& input_np);
+std::vector<sunrealtype> makeSortedUnique(const np_array& input_np);
 
 #ifdef NDEBUG
 #define DEBUG_VECTOR(vector)

@@ -61,8 +61,8 @@ const std::vector<expr_int>& CasadiFunction::get_col() {
   return m_cols;
 }
 
-void CasadiFunction::operator()(const std::vector<realtype*>& inputs,
-                                const std::vector<realtype*>& results)
+void CasadiFunction::operator()(const std::vector<sunrealtype*>& inputs,
+                                const std::vector<sunrealtype*>& results)
 {
   DEBUG("CasadiFunction operator() with inputs and results: " << m_func.name());
 

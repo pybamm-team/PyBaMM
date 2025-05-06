@@ -49,12 +49,12 @@ void IdakluJax::cpu_idaklu_eval(void *out_tuple, const void **in) {
   const std::int64_t n_t = *reinterpret_cast<const std::int64_t *>(in[k++]);
   const std::int64_t n_vars = *reinterpret_cast<const std::int64_t *>(in[k++]);
   const std::int64_t n_inputs = *reinterpret_cast<const std::int64_t *>(in[k++]);
-  const auto *t = reinterpret_cast<const realtype *>(in[k++]);
-  auto *inputs = new realtype(n_inputs);
+  const auto *t = reinterpret_cast<const sunrealtype *>(in[k++]);
+  auto *inputs = new sunrealtype(n_inputs);
   for (int i = 0; i < n_inputs; i++) {
-    inputs[i] = reinterpret_cast<const realtype *>(in[k++])[0];
+    inputs[i] = reinterpret_cast<const sunrealtype *>(in[k++])[0];
   }
-  void *out = reinterpret_cast<realtype *>(out_tuple);
+  void *out = reinterpret_cast<sunrealtype *>(out_tuple);
 
   // Log
   DEBUG("cpu_idaklu");
@@ -71,19 +71,19 @@ void IdakluJax::cpu_idaklu_eval(void *out_tuple, const void **in) {
 
   // Convert time vector to an np_array
   const py::capsule t_capsule(t, "t_capsule");
-  const auto t_np = np_array({n_t}, {sizeof(realtype)}, t, t_capsule);
+  const auto t_np = np_array({n_t}, {sizeof(sunrealtype)}, t, t_capsule);
 
   // Convert inputs to an np_array
   const py::capsule in_capsule(inputs, "in_capsule");
-  const auto in_np = np_array({n_inputs}, {sizeof(realtype)}, inputs, in_capsule);
+  const auto in_np = np_array({n_inputs}, {sizeof(sunrealtype)}, inputs, in_capsule);
 
   // Call solve function in python to obtain an np_array
   const np_array out_np = callback_eval(t_np, in_np);
   const auto out_buf = out_np.request();
-  const realtype *out_ptr = reinterpret_cast<realtype *>(out_buf.ptr);
+  const sunrealtype *out_ptr = reinterpret_cast<sunrealtype *>(out_buf.ptr);
 
   // Arrange into 'out' array
-  memcpy(out, out_ptr, n_t * n_vars * sizeof(realtype));
+  memcpy(out, out_ptr, n_t * n_vars * sizeof(sunrealtype));
 
   // Release GIL
   PyGILState_Release(state);
@@ -95,17 +95,17 @@ void IdakluJax::cpu_idaklu_jvp(void *out_tuple, const void **in) {
   const std::int64_t n_t = *reinterpret_cast<const std::int64_t *>(in[k++]);
   const std::int64_t n_vars = *reinterpret_cast<const std::int64_t *>(in[k++]);
   const std::int64_t n_inputs = *reinterpret_cast<const std::int64_t *>(in[k++]);
-  const auto *primal_t = reinterpret_cast<const realtype *>(in[k++]);
-  auto *primal_inputs = new realtype(n_inputs);
+  const auto *primal_t = reinterpret_cast<const sunrealtype *>(in[k++]);
+  auto *primal_inputs = new sunrealtype(n_inputs);
   for (int i = 0; i < n_inputs; i++) {
-    primal_inputs[i] = reinterpret_cast<const realtype *>(in[k++])[0];
+    primal_inputs[i] = reinterpret_cast<const sunrealtype *>(in[k++])[0];
   }
-  const auto *tangent_t = reinterpret_cast<const realtype *>(in[k++]);
-  auto *tangent_inputs = new realtype(n_inputs);
+  const auto *tangent_t = reinterpret_cast<const sunrealtype *>(in[k++]);
+  auto *tangent_inputs = new sunrealtype(n_inputs);
   for (int i = 0; i < n_inputs; i++) {
-    tangent_inputs[i] = reinterpret_cast<const realtype *>(in[k++])[0];
+    tangent_inputs[i] = reinterpret_cast<const sunrealtype *>(in[k++])[0];
   }
-  void *out = reinterpret_cast<realtype *>(out_tuple);
+  void *out = reinterpret_cast<sunrealtype *>(out_tuple);
 
   // Log
   DEBUG("cpu_idaklu_jvp");
@@ -125,7 +125,7 @@ void IdakluJax::cpu_idaklu_jvp(void *out_tuple, const void **in) {
   const py::capsule primal_t_capsule(primal_t, "primal_t_capsule");
   const auto primal_t_np = np_array(
     {n_t},
-    {sizeof(realtype)},
+    {sizeof(sunrealtype)},
     primal_t,
     primal_t_capsule
   );
@@ -134,7 +134,7 @@ void IdakluJax::cpu_idaklu_jvp(void *out_tuple, const void **in) {
   py::capsule primal_inputs_capsule(primal_inputs, "primal_inputs_capsule");
   const auto primal_inputs_np = np_array(
     {n_inputs},
-    {sizeof(realtype)},
+    {sizeof(sunrealtype)},
     primal_inputs,
     primal_inputs_capsule
   );
@@ -143,7 +143,7 @@ void IdakluJax::cpu_idaklu_jvp(void *out_tuple, const void **in) {
   const py::capsule tangent_t_capsule(tangent_t, "tangent_t_capsule");
   const auto tangent_t_np = np_array(
     {n_t},
-    {sizeof(realtype)},
+    {sizeof(sunrealtype)},
     tangent_t,
     tangent_t_capsule
   );
@@ -152,7 +152,7 @@ void IdakluJax::cpu_idaklu_jvp(void *out_tuple, const void **in) {
   const py::capsule tangent_inputs_capsule(tangent_inputs, "tangent_inputs_capsule");
   const auto tangent_inputs_np = np_array(
     {n_inputs},
-    {sizeof(realtype)},
+    {sizeof(sunrealtype)},
     tangent_inputs,
     tangent_inputs_capsule
   );
@@ -163,10 +163,10 @@ void IdakluJax::cpu_idaklu_jvp(void *out_tuple, const void **in) {
     tangent_t_np, tangent_inputs_np
   );
   const auto buf = y_dot.request();
-  const realtype *ptr = reinterpret_cast<realtype *>(buf.ptr);
+  const sunrealtype *ptr = reinterpret_cast<sunrealtype *>(buf.ptr);
 
   // Arrange into 'out' array
-  memcpy(out, ptr, n_t * n_vars * sizeof(realtype));
+  memcpy(out, ptr, n_t * n_vars * sizeof(sunrealtype));
 
   // Release GIL
   PyGILState_Release(state);
@@ -179,14 +179,14 @@ void IdakluJax::cpu_idaklu_vjp(void *out_tuple, const void **in) {
   const std::int64_t n_y_bar0 = *reinterpret_cast<const std::int64_t *>(in[k++]);
   const std::int64_t n_y_bar1 = *reinterpret_cast<const std::int64_t *>(in[k++]);
   const std::int64_t n_y_bar = (n_y_bar1 > 0) ? (n_y_bar0*n_y_bar1) : n_y_bar0;
-  const auto *y_bar = reinterpret_cast<const realtype *>(in[k++]);
+  const auto *y_bar = reinterpret_cast<const sunrealtype *>(in[k++]);
   const auto *invar = reinterpret_cast<const std::int64_t *>(in[k++]);
-  const auto *t = reinterpret_cast<const realtype *>(in[k++]);
-  auto *inputs = new realtype(n_inputs);
+  const auto *t = reinterpret_cast<const sunrealtype *>(in[k++]);
+  auto *inputs = new sunrealtype(n_inputs);
   for (int i = 0; i < n_inputs; i++) {
-    inputs[i] = reinterpret_cast<const realtype *>(in[k++])[0];
+    inputs[i] = reinterpret_cast<const sunrealtype *>(in[k++])[0];
   }
-  auto *out = reinterpret_cast<realtype *>(out_tuple);
+  auto *out = reinterpret_cast<sunrealtype *>(out_tuple);
 
   // Log
   DEBUG("cpu_idaklu_vjp");
@@ -205,28 +205,28 @@ void IdakluJax::cpu_idaklu_vjp(void *out_tuple, const void **in) {
 
   // Convert time vector to an np_array
   py::capsule t_capsule(t, "t_capsule");
-  np_array t_np = np_array({n_t}, {sizeof(realtype)}, t, t_capsule);
+  np_array t_np = np_array({n_t}, {sizeof(sunrealtype)}, t, t_capsule);
 
   // Convert y_bar to an np_array
   py::capsule y_bar_capsule(y_bar, "y_bar_capsule");
   np_array y_bar_np = np_array(
       {n_y_bar},
-      {sizeof(realtype)},
+      {sizeof(sunrealtype)},
       y_bar,
       y_bar_capsule
     );
 
   // Convert inputs to an np_array
   py::capsule in_capsule(inputs, "in_capsule");
-  np_array in_np = np_array({n_inputs}, {sizeof(realtype)}, inputs, in_capsule);
+  np_array in_np = np_array({n_inputs}, {sizeof(sunrealtype)}, inputs, in_capsule);
 
   // Call VJP function in python to obtain an np_array
   np_array y_dot = callback_vjp(y_bar_np, n_y_bar0, n_y_bar1, invar[0], t_np, in_np);
   auto buf = y_dot.request();
-  const realtype *ptr = reinterpret_cast<realtype *>(buf.ptr);
+  const sunrealtype *ptr = reinterpret_cast<sunrealtype *>(buf.ptr);
 
   // Arrange output
-  //memcpy(out, ptr, sizeof(realtype));
+  //memcpy(out, ptr, sizeof(sunrealtype));
   out[0] = ptr[0];  // output is scalar
 
   // Release GIL

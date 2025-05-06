@@ -52,14 +52,14 @@ IDAKLUSolverOpenMP<ExprSet>::IDAKLUSolverOpenMP(
     yypS = N_VCloneVectorArray(number_of_parameters, yyp);
   }
   // set initial values
-  realtype *atval = N_VGetArrayPointer(avtol);
+  sunrealtype *atval = N_VGetArrayPointer(avtol);
   for (int i = 0; i < number_of_states; i++) {
     atval[i] = atol[i];
   }
 
   for (int is = 0; is < number_of_parameters; is++) {
-    N_VConst(RCONST(0.0), yyS[is]);
-    N_VConst(RCONST(0.0), yypS[is]);
+    N_VConst(SUN_RCONST(0.0), yyS[is]);
+    N_VConst(SUN_RCONST(0.0), yypS[is]);
   }
 
   // create Matrix objects
@@ -69,7 +69,7 @@ IDAKLUSolverOpenMP<ExprSet>::IDAKLUSolverOpenMP(
   IDAInit(ida_mem, residual_eval<ExprSet>, 0, yy, yyp);
 
   // set tolerances
-  rtol = RCONST(rel_tol);
+  rtol = SUN_RCONST(rel_tol);
   IDASVtolerances(ida_mem, rtol, avtol);
 
   // Set events
@@ -117,18 +117,18 @@ template <class ExprSet>
 void IDAKLUSolverOpenMP<ExprSet>::InitializeStorage(int const N) {
   length_of_return_vector = ReturnVectorLength();
 
-  t = vector<realtype>(N, 0.0);
+  t = vector<sunrealtype>(N, 0.0);
 
-  y = vector<vector<realtype>>(
+  y = vector<vector<sunrealtype>>(
       N,
-      vector<realtype>(length_of_return_vector, 0.0)
+      vector<sunrealtype>(length_of_return_vector, 0.0)
   );
 
-  yS = vector<vector<vector<realtype>>>(
+  yS = vector<vector<vector<sunrealtype>>>(
       N,
-      vector<vector<realtype>>(
+      vector<vector<sunrealtype>>(
           number_of_parameters,
-          vector<realtype>(length_of_return_vector, 0.0)
+          vector<sunrealtype>(length_of_return_vector, 0.0)
       )
   );
 
@@ -139,16 +139,16 @@ void IDAKLUSolverOpenMP<ExprSet>::InitializeStorage(int const N) {
 
 template <class ExprSet>
 void IDAKLUSolverOpenMP<ExprSet>::InitializeHermiteStorage(int const N) {
-  yp = vector<vector<realtype>>(
+  yp = vector<vector<sunrealtype>>(
       N,
-      vector<realtype>(number_of_states, 0.0)
+      vector<sunrealtype>(number_of_states, 0.0)
   );
 
-  ypS = vector<vector<vector<realtype>>>(
+  ypS = vector<vector<vector<sunrealtype>>>(
       N,
-      vector<vector<realtype>>(
+      vector<vector<sunrealtype>>(
           number_of_parameters,
-          vector<realtype>(number_of_states, 0.0)
+          vector<sunrealtype>(number_of_states, 0.0)
       )
   );
 }
@@ -319,7 +319,7 @@ void IDAKLUSolverOpenMP<ExprSet>::Initialize() {
   CheckErrors(SUNLinSolInitialize(LS));
 
   auto id_np_val = rhs_alg_id.unchecked<1>();
-  realtype *id_val;
+  sunrealtype *id_val;
   id_val = N_VGetArrayPointer(id);
 
   // Determine if the system is an ODE
@@ -363,11 +363,11 @@ IDAKLUSolverOpenMP<ExprSet>::~IDAKLUSolverOpenMP() {
 
 template <class ExprSet>
 SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
-  const std::vector<realtype> &t_eval,
-  const std::vector<realtype> &t_interp,
-  const realtype *y0,
-  const realtype *yp0,
-  const realtype *inputs,
+  const std::vector<sunrealtype> &t_eval,
+  const std::vector<sunrealtype> &t_interp,
+  const sunrealtype *y0,
+  const sunrealtype *yp0,
+  const sunrealtype *inputs,
   bool save_adaptive_steps,
   bool save_interp_steps
 )
@@ -388,14 +388,14 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
 
   int i_save = 0;
 
-  realtype t0 = t_eval.front();
-  realtype tf = t_eval.back();
+  sunrealtype t0 = t_eval.front();
+  sunrealtype tf = t_eval.back();
 
-  realtype t_val = t0;
-  realtype t_prev = t0;
+  sunrealtype t_val = t0;
+  sunrealtype t_prev = t0;
   int i_eval = 0;
 
-  realtype t_interp_next;
+  sunrealtype t_interp_next;
   int i_interp = 0;
   // If t_interp is empty, save all adaptive steps
   if (save_interp_steps) {
@@ -410,10 +410,10 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
   }
 
   // Setup consistent initialization
-  realtype *y_val = N_VGetArrayPointer(yy);
-  realtype *yp_val = N_VGetArrayPointer(yyp);
-  vector<realtype *> yS_val(number_of_parameters);
-  vector<realtype *> ypS_val(number_of_parameters);
+  sunrealtype *y_val = N_VGetArrayPointer(yy);
+  sunrealtype *yp_val = N_VGetArrayPointer(yyp);
+  vector<sunrealtype *> yS_val(number_of_parameters);
+  vector<sunrealtype *> ypS_val(number_of_parameters);
   for (int p = 0 ; p < number_of_parameters; p++) {
     yS_val[p] = N_VGetArrayPointer(yyS[p]);
     ypS_val[p] = N_VGetArrayPointer(yypS[p]);
@@ -432,7 +432,7 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
 
   // Prepare first time step
   i_eval = 1;
-  realtype t_eval_next = t_eval[i_eval];
+  sunrealtype t_eval_next = t_eval[i_eval];
 
 
   // Consistent initialization
@@ -542,10 +542,10 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
   }
 
   int const length_of_final_sv_slice = save_outputs_only ? number_of_states : 0;
-  realtype *yterm_return = new realtype[length_of_final_sv_slice];
+  sunrealtype *yterm_return = new sunrealtype[length_of_final_sv_slice];
   if (save_outputs_only) {
     // store final state slice if outout variables are specified
-    std::memcpy(yterm_return, y_val, length_of_final_sv_slice * sizeof(realtype*));
+    std::memcpy(yterm_return, y_val, length_of_final_sv_slice * sizeof(sunrealtype*));
   }
 
   if (solver_opts.print_stats) {
@@ -558,13 +558,13 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
   // Copy the data to return as numpy arrays
 
   // Time, t
-  realtype *t_return = new realtype[number_of_timesteps];
+  sunrealtype *t_return = new sunrealtype[number_of_timesteps];
   for (size_t i = 0; i < number_of_timesteps; i++) {
     t_return[i] = t[i];
   }
 
   // States, y
-  realtype *y_return = new realtype[number_of_timesteps * length_of_return_vector];
+  sunrealtype *y_return = new sunrealtype[number_of_timesteps * length_of_return_vector];
   int count = 0;
   for (size_t i = 0; i < number_of_timesteps; i++) {
     for (size_t j = 0; j < length_of_return_vector; j++) {
@@ -580,7 +580,7 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
   auto const arg_sens1 = (save_outputs_only ? length_of_return_vector : number_of_timesteps);
   auto const arg_sens2 = (save_outputs_only ? number_of_parameters : length_of_return_vector);
 
-  realtype *yS_return = new realtype[arg_sens0 * arg_sens1 * arg_sens2];
+  sunrealtype *yS_return = new sunrealtype[arg_sens0 * arg_sens1 * arg_sens2];
   count = 0;
   for (size_t idx0 = 0; idx0 < arg_sens0; idx0++) {
     for (size_t idx1 = 0; idx1 < arg_sens1; idx1++) {
@@ -595,8 +595,8 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
     }
   }
 
-  realtype *yp_return = new realtype[(save_hermite ? 1 : 0) * (number_of_timesteps * number_of_states)];
-  realtype *ypS_return = new realtype[(save_hermite ? 1 : 0) * (arg_sens0 * arg_sens1 * arg_sens2)];
+  sunrealtype *yp_return = new sunrealtype[(save_hermite ? 1 : 0) * (number_of_timesteps * number_of_states)];
+  sunrealtype *ypS_return = new sunrealtype[(save_hermite ? 1 : 0) * (arg_sens0 * arg_sens1 * arg_sens2)];
   if (save_hermite) {
     count = 0;
     for (size_t i = 0; i < number_of_timesteps; i++) {
@@ -652,7 +652,7 @@ void IDAKLUSolverOpenMP<ExprSet>::ExtendAdaptiveArrays() {
 
   // Sensitivity
   if (sensitivity) {
-    yS.emplace_back(number_of_parameters, vector<realtype>(length_of_return_vector, 0.0));
+    yS.emplace_back(number_of_parameters, vector<sunrealtype>(length_of_return_vector, 0.0));
   }
 
   if (save_hermite) {
@@ -668,12 +668,12 @@ void IDAKLUSolverOpenMP<ExprSet>::ExtendHermiteArrays() {
 
   // Sensitivity
   if (sensitivity) {
-    ypS.emplace_back(number_of_parameters, vector<realtype>(number_of_states, 0.0));
+    ypS.emplace_back(number_of_parameters, vector<sunrealtype>(number_of_states, 0.0));
   }
 }
 
 template <class ExprSet>
-void IDAKLUSolverOpenMP<ExprSet>::ReinitializeIntegrator(const realtype& t_val) {
+void IDAKLUSolverOpenMP<ExprSet>::ReinitializeIntegrator(const sunrealtype& t_val) {
   DEBUG("IDAKLUSolver::ReinitializeIntegrator");
   CheckErrors(IDAReInit(ida_mem, t_val, yy, yyp));
   if (sensitivity) {
@@ -683,8 +683,8 @@ void IDAKLUSolverOpenMP<ExprSet>::ReinitializeIntegrator(const realtype& t_val) 
 
 template <class ExprSet>
 void IDAKLUSolverOpenMP<ExprSet>::ConsistentInitialization(
-  const realtype& t_val,
-  const realtype& t_next,
+  const sunrealtype& t_val,
+  const sunrealtype& t_next,
   const int& icopt) {
   DEBUG("IDAKLUSolver::ConsistentInitialization");
 
@@ -697,15 +697,15 @@ void IDAKLUSolverOpenMP<ExprSet>::ConsistentInitialization(
 
 template <class ExprSet>
 void IDAKLUSolverOpenMP<ExprSet>::ConsistentInitializationDAE(
-  const realtype& t_val,
-  const realtype& t_next,
+  const sunrealtype& t_val,
+  const sunrealtype& t_next,
   const int& icopt) {
   DEBUG("IDAKLUSolver::ConsistentInitializationDAE");
   // The solver requires a future time point to calculate the direction
   // of the initial step and its order of magnitude estimate. Add a
   // small buffer to t_next to ensure that the initialization is
   // consistent with the solver's roundoff.
-  realtype tout1 = 1.01 * t_next;
+  sunrealtype tout1 = 1.01 * t_next;
   // Support both forward and backward integration.
   tout1 += (t_next > t_val) ? 1.0 : -1.0;
   IDACalcIC(ida_mem, icopt, tout1);
@@ -713,26 +713,26 @@ void IDAKLUSolverOpenMP<ExprSet>::ConsistentInitializationDAE(
 
 template <class ExprSet>
 void IDAKLUSolverOpenMP<ExprSet>::ConsistentInitializationODE(
-  const realtype& t_val) {
+  const sunrealtype& t_val) {
   DEBUG("IDAKLUSolver::ConsistentInitializationODE");
 
   // For ODEs where the mass matrix M = I, we can simplify the problem
   // by analytically computing the yp values. If we take our implicit
   // DAE system res(t,y,yp) = f(t,y) - I*yp, then yp = res(t,y,0). This
   // avoids an expensive call to IDACalcIC.
-  realtype *y_cache_val = N_VGetArrayPointer(y_cache);
-  std::memset(y_cache_val, 0, number_of_states * sizeof(realtype));
+  sunrealtype *y_cache_val = N_VGetArrayPointer(y_cache);
+  std::memset(y_cache_val, 0, number_of_states * sizeof(sunrealtype));
   // Overwrite yp
   residual_eval<ExprSet>(t_val, yy, y_cache, yyp, functions.get());
 }
 
 template <class ExprSet>
 void IDAKLUSolverOpenMP<ExprSet>::SetStep(
-  realtype &tval,
-  realtype *y_val,
-  realtype *yp_val,
-  vector<realtype *> const &yS_val,
-  vector<realtype *> const &ypS_val,
+  sunrealtype &tval,
+  sunrealtype *y_val,
+  sunrealtype *yp_val,
+  vector<sunrealtype *> const &yS_val,
+  vector<sunrealtype *> const &ypS_val,
   int &i_save
 ) {
   // Set adaptive step results for y and yS
@@ -758,15 +758,15 @@ void IDAKLUSolverOpenMP<ExprSet>::SetStep(
 template <class ExprSet>
 void IDAKLUSolverOpenMP<ExprSet>::SetStepInterp(
   int &i_interp,
-  realtype &t_interp_next,
-  vector<realtype> const &t_interp,
-  realtype &t_val,
-  realtype &t_prev,
-  realtype const &t_eval_next,
-  realtype *y_val,
-  realtype *yp_val,
-  vector<realtype *> const &yS_val,
-  vector<realtype *> const &ypS_val,
+  sunrealtype &t_interp_next,
+  vector<sunrealtype> const &t_interp,
+  sunrealtype &t_val,
+  sunrealtype &t_prev,
+  sunrealtype const &t_eval_next,
+  sunrealtype *y_val,
+  sunrealtype *yp_val,
+  vector<sunrealtype *> const &yS_val,
+  vector<sunrealtype *> const &ypS_val,
   int &i_save
   ) {
   // Save the state at the requested time
@@ -792,9 +792,9 @@ void IDAKLUSolverOpenMP<ExprSet>::SetStepInterp(
 
 template <class ExprSet>
 void IDAKLUSolverOpenMP<ExprSet>::SetStepFull(
-  realtype &tval,
-  realtype *y_val,
-  vector<realtype *> const &yS_val,
+  sunrealtype &tval,
+  sunrealtype *y_val,
+  vector<sunrealtype *> const &yS_val,
   int &i_save
 ) {
   // Set adaptive step results for y and yS
@@ -814,9 +814,9 @@ void IDAKLUSolverOpenMP<ExprSet>::SetStepFull(
 
 template <class ExprSet>
 void IDAKLUSolverOpenMP<ExprSet>::SetStepFullSensitivities(
-  realtype &tval,
-  realtype *y_val,
-  vector<realtype *> const &yS_val,
+  sunrealtype &tval,
+  sunrealtype *y_val,
+  vector<sunrealtype *> const &yS_val,
   int &i_save
 ) {
   DEBUG("IDAKLUSolver::SetStepFullSensitivities");
@@ -833,9 +833,9 @@ void IDAKLUSolverOpenMP<ExprSet>::SetStepFullSensitivities(
 
 template <class ExprSet>
 void IDAKLUSolverOpenMP<ExprSet>::SetStepOutput(
-    realtype &tval,
-    realtype *y_val,
-    const vector<realtype*>& yS_val,
+    sunrealtype &tval,
+    sunrealtype *y_val,
+    const vector<sunrealtype*>& yS_val,
     int &i_save
 ) {
   DEBUG("IDAKLUSolver::SetStepOutput");
@@ -857,14 +857,14 @@ void IDAKLUSolverOpenMP<ExprSet>::SetStepOutput(
 
 template <class ExprSet>
 void IDAKLUSolverOpenMP<ExprSet>::SetStepOutputSensitivities(
-  realtype &tval,
-  realtype *y_val,
-  const vector<realtype*>& yS_val,
+  sunrealtype &tval,
+  sunrealtype *y_val,
+  const vector<sunrealtype*>& yS_val,
     int &i_save
   ) {
   DEBUG("IDAKLUSolver::SetStepOutputSensitivities");
   // Calculate sensitivities
-  vector<realtype> dens_dvar_dp = vector<realtype>(number_of_parameters, 0);
+  vector<sunrealtype> dens_dvar_dp = vector<sunrealtype>(number_of_parameters, 0);
   for (size_t dvar_k=0; dvar_k<functions->dvar_dy_fcns.size(); dvar_k++) {
     // Isolate functions
     Expression* dvar_dy = functions->dvar_dy_fcns[dvar_k];
@@ -893,9 +893,9 @@ void IDAKLUSolverOpenMP<ExprSet>::SetStepOutputSensitivities(
 
 template <class ExprSet>
 void IDAKLUSolverOpenMP<ExprSet>::SetStepHermite(
-  realtype &tval,
-  realtype *yp_val,
-  vector<realtype *> const &ypS_val,
+  sunrealtype &tval,
+  sunrealtype *yp_val,
+  vector<sunrealtype *> const &ypS_val,
   int &i_save
 ) {
   // Set adaptive step results for yp and ypS
@@ -917,9 +917,9 @@ void IDAKLUSolverOpenMP<ExprSet>::SetStepHermite(
 
 template <class ExprSet>
 void IDAKLUSolverOpenMP<ExprSet>::SetStepHermiteSensitivities(
-  realtype &tval,
-  realtype *yp_val,
-  vector<realtype *> const &ypS_val,
+  sunrealtype &tval,
+  sunrealtype *yp_val,
+  vector<sunrealtype *> const &ypS_val,
   int &i_save
 ) {
   DEBUG("IDAKLUSolver::SetStepHermiteSensitivities");
@@ -947,7 +947,7 @@ template <class ExprSet>
 void IDAKLUSolverOpenMP<ExprSet>::PrintStats() {
   long nsteps, nrevals, nlinsetups, netfails;
   int klast, kcur;
-  realtype hinused, hlast, hcur, tcur;
+  sunrealtype hinused, hlast, hcur, tcur;
 
   CheckErrors(IDAGetIntegratorStats(
     ida_mem,

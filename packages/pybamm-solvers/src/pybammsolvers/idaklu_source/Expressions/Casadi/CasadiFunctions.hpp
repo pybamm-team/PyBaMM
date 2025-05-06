@@ -22,8 +22,8 @@ public:
 
   // Method overrides
   void operator()() override;
-  void operator()(const std::vector<realtype*>& inputs,
-                  const std::vector<realtype*>& results) override;
+  void operator()(const std::vector<sunrealtype*>& inputs,
+                  const std::vector<sunrealtype*>& results) override;
   expr_int out_shape(int k) override;
   expr_int nnz() override;
   expr_int nnz_out() override;
@@ -144,10 +144,10 @@ public:
   std::vector<CasadiFunction> dvar_dy_fcns_casadi;
   std::vector<CasadiFunction> dvar_dp_fcns_casadi;
 
-  realtype* get_tmp_state_vector() override {
+  sunrealtype* get_tmp_state_vector() override {
     return tmp_state_vector.data();
   }
-  realtype* get_tmp_sparse_jacobian_data() override {
+  sunrealtype* get_tmp_sparse_jacobian_data() override {
     return tmp_sparse_jacobian_data.data();
   }
 };

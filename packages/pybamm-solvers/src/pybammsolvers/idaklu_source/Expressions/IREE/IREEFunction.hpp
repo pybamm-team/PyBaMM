@@ -22,8 +22,8 @@ public:
 
   // Method overrides
   void operator()() override;
-  void operator()(const std::vector<realtype*>& inputs,
-                  const std::vector<realtype*>& results) override;
+  void operator()(const std::vector<sunrealtype*>& inputs,
+                  const std::vector<sunrealtype*>& results) override;
   expr_int out_shape(int k) override;
   expr_int nnz() override;
   expr_int nnz_out() override;

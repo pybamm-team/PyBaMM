@@ -21,8 +21,8 @@ public:  // method declarations
    * @brief Evaluation operator (supplying data references)
    */
   virtual void operator()(
-    const std::vector<realtype*>& inputs,
-    const std::vector<realtype*>& results) = 0;
+    const std::vector<sunrealtype*>& inputs,
+    const std::vector<sunrealtype*>& results) = 0;
 
   /**
    * @brief The maximum number of elements returned by the k'th output

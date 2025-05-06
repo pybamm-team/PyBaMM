@@ -13,10 +13,10 @@ std::vector<Solution> IDAKLUSolverGroup::solve(
   // If t_interp is empty, save all adaptive steps
   bool save_adaptive_steps =  t_interp_np.size() == 0;
 
-  const realtype* t_eval_begin = t_eval_np.data();
-  const realtype* t_eval_end = t_eval_begin + t_eval_np.size();
-  const realtype* t_interp_begin = t_interp_np.data();
-  const realtype* t_interp_end = t_interp_begin + t_interp_np.size();
+  const sunrealtype* t_eval_begin = t_eval_np.data();
+  const sunrealtype* t_eval_end = t_eval_begin + t_eval_np.size();
+  const sunrealtype* t_interp_begin = t_interp_np.data();
+  const sunrealtype* t_interp_end = t_interp_begin + t_interp_np.size();
 
   // Process the time inputs
   // 1. Get the sorted and unique t_eval vector
@@ -97,9 +97,9 @@ std::vector<Solution> IDAKLUSolverGroup::solve(
   const std::size_t solves_per_thread = number_of_groups / m_solvers.size();
   const std::size_t remainder_solves = number_of_groups % m_solvers.size();
 
-  const realtype *y0 = y0_np.data();
-  const realtype *yp0 = yp0_np.data();
-  const realtype *inputs_data = inputs.data();
+  const sunrealtype *y0 = y0_np.data();
+  const sunrealtype *yp0 = yp0_np.data();
+  const sunrealtype *inputs_data = inputs.data();
 
   std::vector<SolutionData> results(number_of_groups);
 
@@ -111,9 +111,9 @@ std::vector<Solution> IDAKLUSolverGroup::solve(
     try {
       for (int j = 0; j < solves_per_thread; j++) {
         const std::size_t index = i * solves_per_thread + j;
-        const realtype *y = y0 + index * y0_np.shape(1);
-        const realtype *yp = yp0 + index * yp0_np.shape(1);
-        const realtype *input = inputs_data + index * inputs.shape(1);
+        const sunrealtype *y = y0 + index * y0_np.shape(1);
+        const sunrealtype *yp = yp0 + index * yp0_np.shape(1);
+        const sunrealtype *input = inputs_data + index * inputs.shape(1);
         results[index] = m_solvers[i]->solve(t_eval, t_interp, y, yp, input, save_adaptive_steps, save_interp_steps);
       }
     } catch (std::exception &e) {
@@ -132,9 +132,9 @@ std::vector<Solution> IDAKLUSolverGroup::solve(
 
   for (int i = 0; i < remainder_solves; i++) {
     const std::size_t index = number_of_groups - remainder_solves + i;
-    const realtype *y = y0 + index * y0_np.shape(1);
-    const realtype *yp = yp0 + index * yp0_np.shape(1);
-    const realtype *input = inputs_data + index * inputs.shape(1);
+    const sunrealtype *y = y0 + index * y0_np.shape(1);
+    const sunrealtype *yp = yp0 + index * yp0_np.shape(1);
+    const sunrealtype *input = inputs_data + index * inputs.shape(1);
     results[index] = m_solvers[i]->solve(t_eval, t_interp, y, yp, input, save_adaptive_steps, save_interp_steps);
   }
 

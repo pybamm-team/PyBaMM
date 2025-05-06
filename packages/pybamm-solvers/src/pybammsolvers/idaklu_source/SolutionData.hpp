@@ -28,12 +28,12 @@ class SolutionData
       const int arg_sens2,
       const int length_of_final_sv_slice,
       const bool save_hermite,
-      realtype *t_return,
-      realtype *y_return,
-      realtype *yp_return,
-      realtype *yS_return,
-      realtype *ypS_return,
-      realtype *yterm_return):
+      sunrealtype *t_return,
+      sunrealtype *y_return,
+      sunrealtype *yp_return,
+      sunrealtype *yS_return,
+      sunrealtype *ypS_return,
+      sunrealtype *yterm_return):
       flag(flag),
       number_of_timesteps(number_of_timesteps),
       length_of_return_vector(length_of_return_vector),
@@ -71,12 +71,12 @@ private:
     int arg_sens2;
     int length_of_final_sv_slice;
     bool save_hermite;
-    realtype *t_return;
-    realtype *y_return;
-    realtype *yp_return;
-    realtype *yS_return;
-    realtype *ypS_return;
-    realtype *yterm_return;
+    sunrealtype *t_return;
+    sunrealtype *y_return;
+    sunrealtype *yp_return;
+    sunrealtype *yS_return;
+    sunrealtype *ypS_return;
+    sunrealtype *yterm_return;
 };
 
 #endif // PYBAMM_IDAKLU_SOLUTION_DATA_HPP

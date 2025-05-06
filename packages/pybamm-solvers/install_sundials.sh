@@ -28,7 +28,7 @@ function extract {
 }
 
 SUITESPARSE_VERSION=7.8.3
-SUNDIALS_VERSION=6.5.0
+SUNDIALS_VERSION=7.3.0
 
 SUITESPARSE_ROOT_ADDR=https://github.com/DrTimothyAldenDavis/SuiteSparse/archive
 SUNDIALS_ROOT_ADDR=https://github.com/LLNL/sundials/releases/download/v$SUNDIALS_VERSION

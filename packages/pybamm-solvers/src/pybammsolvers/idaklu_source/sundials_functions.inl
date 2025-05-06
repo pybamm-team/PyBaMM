@@ -6,7 +6,7 @@
 #define NV_DATA NV_DATA_OMP  // Serial: NV_DATA_S
 
 template<class T>
-int residual_eval(realtype tres, N_Vector yy, N_Vector yp, N_Vector rr, void *user_data)
+int residual_eval(sunrealtype tres, N_Vector yy, N_Vector yp, N_Vector rr, void *user_data)
 {
   DEBUG("residual_eval");
   auto *p_python_functions = static_cast<ExpressionSet<T> *>(user_data);
@@ -22,7 +22,7 @@ int residual_eval(realtype tres, N_Vector yy, N_Vector yp, N_Vector rr, void *us
 
   DEBUG_VECTORn(rr, 100);
 
-  realtype *tmp = p_python_functions->get_tmp_state_vector();
+  sunrealtype *tmp = p_python_functions->get_tmp_state_vector();
   p_python_functions->mass_action->m_arg[0] = NV_DATA(yp);
   p_python_functions->mass_action->m_res[0] = tmp;
   (*p_python_functions->mass_action)();
@@ -68,7 +68,7 @@ int residual_eval(realtype tres, N_Vector yy, N_Vector yp, N_Vector rr, void *us
 //
 // The case where G is mathematically identical to F is allowed.
 template<class T>
-int residual_eval_approx(sunindextype Nlocal, realtype tt, N_Vector yy,
+int residual_eval_approx(sunindextype Nlocal, sunrealtype tt, N_Vector yy,
                            N_Vector yp, N_Vector gval, void *user_data)
 {
   DEBUG("residual_eval_approx");
@@ -98,8 +98,8 @@ int residual_eval_approx(sunindextype Nlocal, realtype tt, N_Vector yy,
 //     which can
 //        be used by IDALsJacTimesVecFn as temporary storage or work space.
 template<class T>
-int jtimes_eval(realtype tt, N_Vector yy, N_Vector yp, N_Vector rr,
-                  N_Vector v, N_Vector Jv, realtype cj, void *user_data,
+int jtimes_eval(sunrealtype tt, N_Vector yy, N_Vector yp, N_Vector rr,
+                  N_Vector v, N_Vector Jv, sunrealtype cj, void *user_data,
                   N_Vector tmp1, N_Vector tmp2)
 {
   DEBUG("jtimes_eval");
@@ -114,7 +114,7 @@ int jtimes_eval(realtype tt, N_Vector yy, N_Vector yp, N_Vector rr,
   (*p_python_functions->jac_action)();
 
   // tmp has -∂F/∂y˙ v
-  realtype *tmp = p_python_functions->get_tmp_state_vector();
+  sunrealtype *tmp = p_python_functions->get_tmp_state_vector();
   p_python_functions->mass_action->m_arg[0] = NV_DATA(v);
   p_python_functions->mass_action->m_res[0] = tmp;
   (*p_python_functions->mass_action)();
@@ -147,7 +147,7 @@ int jtimes_eval(realtype tt, N_Vector yy, N_Vector yp, N_Vector rr,
 //   can
 //     be used by IDALsJacFn function as temporary storage or work space.
 template<class T>
-int jacobian_eval(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
+int jacobian_eval(sunrealtype tt, sunrealtype cj, N_Vector yy, N_Vector yp,
                     N_Vector resvec, SUNMatrix JJ, void *user_data,
                     N_Vector tempv1, N_Vector tempv2, N_Vector tempv3)
 {
@@ -156,7 +156,7 @@ int jacobian_eval(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
   auto *p_python_functions = static_cast<T *>(user_data);
 
   // create pointer to jac data, column pointers, and row values
-  realtype *jac_data;
+  sunrealtype *jac_data;
   if (p_python_functions->setup_opts.using_sparse_matrix)
   {
     jac_data = SUNSparseMatrix_Data(JJ);
@@ -194,10 +194,10 @@ int jacobian_eval(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
     auto jac_rowvals = p_python_functions->jac_times_cjmass_rowvals.data();
     int ncols = p_python_functions->number_of_states;
     for (int col_ij = 0; col_ij < ncols; col_ij++) {
-      realtype *banded_col = SM_COLUMN_B(JJ, col_ij);
+      sunrealtype *banded_col = SM_COLUMN_B(JJ, col_ij);
       for (auto data_i = jac_colptrs[col_ij]; data_i < jac_colptrs[col_ij+1]; data_i++) {
         auto row_ij = jac_rowvals[data_i];
-        const realtype value_ij = jac_data[data_i];
+        const sunrealtype value_ij = jac_data[data_i];
         DEBUG("(" << row_ij << ", " << col_ij << ") = " << value_ij);
         SM_COLUMN_ELEMENT_B(banded_col, row_ij, col_ij) = value_ij;
       }
@@ -232,7 +232,7 @@ int jacobian_eval(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
       }
     } else if (SUNSparseMatrix_SparseType(JJ) == CSR_MAT) {
       // make a copy so that we can overwrite jac_data as CSR
-      std::vector<realtype> newjac(&jac_data[0], &jac_data[SUNSparseMatrix_NNZ(JJ)]);
+      std::vector<sunrealtype> newjac(&jac_data[0], &jac_data[SUNSparseMatrix_NNZ(JJ)]);
       sunindextype *jac_ptrs = SUNSparseMatrix_IndexPointers(JJ);
       sunindextype *jac_vals = SUNSparseMatrix_IndexValues(JJ);
 
@@ -258,7 +258,7 @@ int jacobian_eval(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
 }
 
 template<class T>
-int events_eval(realtype t, N_Vector yy, N_Vector yp, realtype *events_ptr,
+int events_eval(sunrealtype t, N_Vector yy, N_Vector yp, sunrealtype *events_ptr,
                   void *user_data)
 {
   DEBUG("events_eval");
@@ -296,7 +296,7 @@ int events_eval(realtype t, N_Vector yy, N_Vector yp, realtype *events_ptr,
 // or a negative value if it failed unrecoverably (in which case the integration
 // is halted and IDA SRES FAIL is returned)
 template<class T>
-int sensitivities_eval(int Ns, realtype t, N_Vector yy, N_Vector yp,
+int sensitivities_eval(int Ns, sunrealtype t, N_Vector yy, N_Vector yp,
                          N_Vector resval, N_Vector *yS, N_Vector *ypS,
                          N_Vector *resvalS, void *user_data, N_Vector tmp1,
                          N_Vector tmp2, N_Vector tmp3)
@@ -321,7 +321,7 @@ int sensitivities_eval(int Ns, realtype t, N_Vector yy, N_Vector yp,
   for (int i = 0; i < np; i++)
   {
     // put (∂F/∂y)s i (t) in tmp
-    realtype *tmp = p_python_functions->get_tmp_state_vector();
+    sunrealtype *tmp = p_python_functions->get_tmp_state_vector();
     p_python_functions->jac_action->m_arg[0] = &t;
     p_python_functions->jac_action->m_arg[1] = NV_DATA(yy);
     p_python_functions->jac_action->m_arg[2] = p_python_functions->inputs.data();

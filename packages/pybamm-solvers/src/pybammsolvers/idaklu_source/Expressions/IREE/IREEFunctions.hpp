@@ -130,10 +130,10 @@ public:
   std::vector<IREEFunction> dvar_dy_fcns_iree;
   std::vector<IREEFunction> dvar_dp_fcns_iree;
 
-  realtype* get_tmp_state_vector() override {
+  sunrealtype* get_tmp_state_vector() override {
     return tmp_state_vector.data();
   }
-  realtype* get_tmp_sparse_jacobian_data() override {
+  sunrealtype* get_tmp_sparse_jacobian_data() override {
     return tmp_sparse_jacobian_data.data();
   }
 

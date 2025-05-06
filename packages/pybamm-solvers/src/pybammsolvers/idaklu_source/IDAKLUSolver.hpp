@@ -28,11 +28,11 @@ public:
    * @brief Abstract solver method that executes the solver
    */
   virtual SolutionData solve(
-    const std::vector<realtype> &t_eval,
-    const std::vector<realtype> &t_interp,
-    const realtype *y0,
-    const realtype *yp0,
-    const realtype *inputs,
+    const std::vector<sunrealtype> &t_eval,
+    const std::vector<sunrealtype> &t_interp,
+    const sunrealtype *y0,
+    const sunrealtype *yp0,
+    const sunrealtype *inputs,
     bool save_adaptive_steps,
     bool save_interp_steps
   ) = 0;

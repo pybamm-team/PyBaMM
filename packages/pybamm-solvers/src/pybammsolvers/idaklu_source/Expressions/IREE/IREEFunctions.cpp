@@ -177,7 +177,7 @@ void IREEFunction::evaluate(int n_outputs) {
   // Copy results to output array
   for(size_t k=0; k<n_outputs; k++) {
     for(size_t j=0; j<result[k].size(); j++) {
-      m_res[k][j] = static_cast<realtype>(result[k][j]);
+      m_res[k][j] = static_cast<sunrealtype>(result[k][j]);
     }
   }
 
@@ -213,8 +213,8 @@ const std::vector<expr_int>& IREEFunction::get_col() {
   return m_func.col;
 }
 
-void IREEFunction::operator()(const std::vector<realtype*>& inputs,
-                                const std::vector<realtype*>& results)
+void IREEFunction::operator()(const std::vector<sunrealtype*>& inputs,
+                                const std::vector<sunrealtype*>& results)
 {
   DEBUG("IreeFunction operator() with inputs and results");
   // Set-up input arguments, provide result vector, then execute function
