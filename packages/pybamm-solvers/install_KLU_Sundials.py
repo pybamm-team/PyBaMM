@@ -14,13 +14,13 @@ import pathlib
 
 
 def build_solvers():
-    SUITESPARSE_VERSION = "6.0.3"
-    SUNDIALS_VERSION = "6.5.0"
+    SUITESPARSE_VERSION = "7.8.3"
     SUITESPARSE_URL = f"https://github.com/DrTimothyAldenDavis/SuiteSparse/archive/v{SUITESPARSE_VERSION}.tar.gz"
-    SUNDIALS_URL = f"https://github.com/LLNL/sundials/releases/download/v{SUNDIALS_VERSION}/sundials-{SUNDIALS_VERSION}.tar.gz"
     SUITESPARSE_CHECKSUM = (
-        "7111b505c1207f6f4bd0be9740d0b2897e1146b845d73787df07901b4f5c1fb7"
+        "ce39b28d4038a09c14f21e02c664401be73c0cb96a9198418d6a98a7db73a259"
     )
+    SUNDIALS_VERSION = "6.5.0"
+    SUNDIALS_URL = f"https://github.com/LLNL/sundials/releases/download/v{SUNDIALS_VERSION}/sundials-{SUNDIALS_VERSION}.tar.gz"
     SUNDIALS_CHECKSUM = (
         "4e0b998dff292a2617e179609b539b511eb80836f5faacf800e688a886288502"
     )
@@ -81,7 +81,7 @@ def build_solvers():
         # Ex: if install_dir -> "/usr/local/" then
         # KLU_INCLUDE_DIR -> "/usr/local/include"
         # KLU_LIBRARY_DIR -> "/usr/local/lib"
-        KLU_INCLUDE_DIR = os.path.join(install_dir, "include")
+        KLU_INCLUDE_DIR = os.path.join(install_dir, "include", "suitesparse")
         KLU_LIBRARY_DIR = os.path.join(install_dir, "lib")
         cmake_args = [
             "-DENABLE_LAPACK=ON",

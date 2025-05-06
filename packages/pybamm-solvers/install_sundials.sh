@@ -27,7 +27,7 @@ function extract {
     tar -xf $1
 }
 
-SUITESPARSE_VERSION=6.0.3
+SUITESPARSE_VERSION=7.8.3
 SUNDIALS_VERSION=6.5.0
 
 SUITESPARSE_ROOT_ADDR=https://github.com/DrTimothyAldenDavis/SuiteSparse/archive
@@ -69,7 +69,7 @@ yum -y install openblas-devel
 
 mkdir -p build_sundials
 cd build_sundials
-KLU_INCLUDE_DIR=/usr/local/include
+KLU_INCLUDE_DIR=/usr/local/include/suitesparse
 KLU_LIBRARY_DIR=/usr/local/lib
 SUNDIALS_DIR=sundials-$SUNDIALS_VERSION
 cmake -DENABLE_LAPACK=ON\

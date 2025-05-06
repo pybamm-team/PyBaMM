@@ -24,7 +24,7 @@ jobs:
           submodules: 'true'
       - uses: actions/setup-python@v5
         with:
-          python-version: 3.11
+          python-version: 3.12
 
       - name: Build wheels on Windows
         run: pipx run cibuildwheel --output-dir wheelhouse
@@ -59,7 +59,7 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: 3.11
+          python-version: 3.12
 
       - name: Build wheels on Linux
         run: pipx run cibuildwheel --output-dir wheelhouse
@@ -95,7 +95,7 @@ jobs:
           submodules: 'true'
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: 3.12
 
       - name: Install cibuildwheel
         run: python -m pip install cibuildwheel
