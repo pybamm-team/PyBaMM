@@ -904,8 +904,17 @@ class BoundaryIntegral(SpatialOperator):
             name += "negative tab"
         elif region == "positive tab":
             name += "positive tab"
+        elif region == "top":
+            name += "top"
+        elif region == "bottom":
+            name += "bottom"
+        elif region == "left":
+            name += "left"
+        elif region == "right":
+            name += "right"
         self.region = region
         super().__init__(name, child, domains)
+        self.domains = {}
 
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`"""
@@ -1217,6 +1226,10 @@ class UpwindDownwind2D(UpwindDownwind):
         super().__init__("upwind_downwind_2d", child)
         self.lr_direction = lr_direction
         self.tb_direction = tb_direction
+
+    def _unary_new_copy(self, child, perform_simplifications=True):
+        """See :meth:`UnaryOperator._unary_new_copy()`."""
+        return self.__class__(child, self.lr_direction, self.tb_direction)
 
 
 class Upwind(UpwindDownwind):

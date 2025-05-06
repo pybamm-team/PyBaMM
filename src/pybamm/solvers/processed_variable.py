@@ -1124,6 +1124,8 @@ def process_variable(base_variables, *args, **kwargs):
     if len(base_eval_shape) == 0 or base_eval_shape[0] == 1:
         return ProcessedVariable0D(base_variables, *args, **kwargs)
 
+    if mesh is None:
+        return ProcessedVariable2DReal(base_variables, *args, **kwargs)
     n = mesh.npts
     base_shape = base_eval_shape[0]
     # Try some shapes that could make the variable a 1D variable

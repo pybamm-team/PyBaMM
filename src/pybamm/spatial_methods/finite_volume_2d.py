@@ -211,6 +211,19 @@ class FiniteVolume2D(pybamm.SpatialMethod):
             )
         return pybamm.Matrix(sub_matrix)
 
+    def integral(
+        self, child, discretised_child, integration_dimension, integration_variable
+    ):
+        """Vector-vector dot product to implement the integral operator."""
+        integration_vector = self.definite_integral_matrix(
+            child,
+            integration_dimension=integration_dimension,
+            integration_variable=integration_variable,
+        )
+        out = integration_vector @ discretised_child
+
+        return out
+
     def laplacian(self, symbol, discretised_symbol, boundary_conditions):
         """
         Laplacian operator, implemented as div(grad(.))
@@ -220,9 +233,105 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         return self.divergence(grad, grad, boundary_conditions)
 
     def definite_integral_matrix(
-        self, child, vector_type="row", integration_dimension="primary"
+        self,
+        child,
+        vector_type="row",
+        integration_dimension="primary",
+        integration_variable=None,
     ):
-        raise NotImplementedError
+        if integration_variable is None:
+            raise ValueError("Integration variable must be provided for 2D integration")
+        else:
+            integration_direction = integration_variable[0].direction
+
+        domains = child.domains
+        domain = child.domains[integration_dimension]
+        submesh = self.mesh[domain]
+        n_lr = submesh.npts_lr
+        n_tb = submesh.npts_tb
+
+        if integration_dimension == "primary":
+            # Create appropriate submesh by combining submeshes in domain
+            submesh = self.mesh[domains["primary"]]
+
+            # Create vector of ones for primary domain submesh
+            if integration_direction == "lr":
+                d_edges = submesh.d_edges_lr
+                cols_list = []
+                rows_list = []
+                for n in range(n_tb):
+                    cols = np.arange(n * n_lr, (n + 1) * n_lr)
+                    rows = np.ones(n_lr) * n
+                    cols_list.append(cols)
+                    rows_list.append(rows)
+                cols = np.concatenate(cols_list)
+                rows = np.concatenate(rows_list)
+                sub_matrix = csr_matrix(
+                    (np.tile(d_edges, n_tb), (rows, cols)), shape=(n_tb, n_lr * n_tb)
+                )
+            elif integration_direction == "tb":
+                d_edges = submesh.d_edges_tb
+                cols_list = []
+                rows_list = []
+                for n in range(n_tb):
+                    rows = np.arange(0, n_lr)
+                    cols = np.arange(n * n_lr, (n + 1) * n_lr)
+                    cols_list.append(cols)
+                    rows_list.append(rows)
+                cols = np.concatenate(cols_list)
+                rows = np.concatenate(rows_list)
+                sub_matrix = csr_matrix(
+                    (np.tile(d_edges, n_lr), (rows, cols)), shape=(n_lr, n_lr * n_tb)
+                )
+
+            # repeat matrix for each node in secondary dimensions
+            second_dim_repeats = self._get_auxiliary_domain_repeats(domains)
+            # generate full matrix from the submatrix
+            matrix = kron(eye(second_dim_repeats), sub_matrix)
+        else:
+            raise NotImplementedError(
+                "Only primary integration dimension is implemented for 2D integration"
+            )
+
+        return pybamm.Matrix(matrix)
+
+    def one_dimensional_integral_matrix(self, child, direction):
+        """
+        One-dimensional integral matrix for finite volumes in the appropriate domain.
+        Equivalent to int(y) = sum(y[i] * dx[i])
+        """
+        submesh = self.mesh[child.domain]
+        domains = child.domains
+
+        # Create vector of ones for primary domain submesh
+        if direction == "lr":
+            d_edges = submesh.d_edges_lr
+        elif direction == "tb":
+            d_edges = submesh.d_edges_tb
+
+        # repeat matrix for each node in secondary dimensions
+        second_dim_repeats = self._get_auxiliary_domain_repeats(domains)
+        # generate full matrix from the submatrix
+        matrix = kron(eye(second_dim_repeats), d_edges)
+
+        return pybamm.Matrix(matrix)
+
+    def boundary_integral(self, child, discretised_child, region):
+        """
+        Boundary integral operator, implemented as int(grad(.))
+        See :meth:`pybamm.SpatialMethod.boundary_integral`
+        """
+        symbol = pybamm.BoundaryValue(child, region)
+        boundary_value = self.boundary_value_or_flux(symbol, discretised_child)
+        if region == "left" or region == "right":
+            direction = "lr"
+        elif region == "top" or region == "bottom":
+            direction = "tb"
+        else:
+            raise ValueError(f"Region {region} not supported")
+
+        integral_matrix = self.one_dimensional_integral_matrix(child, direction)
+        return integral_matrix @ boundary_value
 
     def indefinite_integral(self, child, discretised_child, direction):
         raise NotImplementedError
@@ -962,8 +1071,16 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                         dx1 = dx1_tb
                         first_val = (1 + (dx0 / dx1)) * np.ones(n_lr)
                         second_val = -(dx0 / dx1) * np.ones(n_lr)
-                        sub_matrix = spdiags(
-                            [first_val, second_val], [0, n_lr], n_lr, n_lr * n_tb
+                        rows_first = np.arange(0, n_lr)
+                        rows_second = rows_first
+                        cols_first = np.arange(0, n_lr)
+                        cols_second = np.arange(n_lr, 2 * n_lr)
+                        rows = np.concatenate([rows_first, rows_second])
+                        cols = np.concatenate([cols_first, cols_second])
+                        vals = np.concatenate([first_val, second_val])
+                        sub_matrix = csr_matrix(
+                            (vals, (rows, cols)),
+                            shape=(n_lr, n_lr * n_tb),
                         )
                         additive = pybamm.Scalar(0)
 
@@ -999,11 +1116,16 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                         dx1 = dxN_tb
                         first_val = -(dx0 / dx1) * np.ones(n_lr)
                         second_val = (1 + (dx0 / dx1)) * np.ones(n_lr)
-                        sub_matrix = spdiags(
-                            [first_val, second_val],
-                            [(n_tb - 2) * n_lr, (n_tb - 1) * n_lr],
-                            n_lr,
-                            n_lr * n_tb,
+                        rows_first = np.arange(0, n_lr)
+                        rows_second = np.arange(0, n_lr)
+                        cols_first = np.arange((n_tb - 2) * n_lr, (n_tb - 1) * n_lr)
+                        cols_second = np.arange((n_tb - 1) * n_lr, n_tb * n_lr)
+                        rows = np.concatenate([rows_first, rows_second])
+                        cols = np.concatenate([cols_first, cols_second])
+                        vals = np.concatenate([first_val, second_val])
+                        sub_matrix = csr_matrix(
+                            (vals, (rows, cols)),
+                            shape=(n_lr, n_lr * n_tb),
                         )
                         additive = pybamm.Scalar(0)
 
