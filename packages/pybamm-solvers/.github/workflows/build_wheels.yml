@@ -67,7 +67,7 @@ jobs:
           CIBW_ARCHS_LINUX: x86_64
           CIBW_BEFORE_ALL_LINUX: >
             yum -y install openblas-devel lapack-devel &&
-            bash install_sundials.sh
+            python install_KLU_Sundials.py
           CIBW_BEFORE_BUILD_LINUX: python -m pip install cmake casadi==3.6.7 setuptools wheel
           CIBW_REPAIR_WHEEL_COMMAND_LINUX: auditwheel repair -w {dest_dir} {wheel}
           CIBW_TEST_EXTRAS: "dev"
