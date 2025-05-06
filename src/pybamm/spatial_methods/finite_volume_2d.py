@@ -214,15 +214,27 @@ class FiniteVolume2D(pybamm.SpatialMethod):
     def integral(
         self, child, discretised_child, integration_dimension, integration_variable
     ):
-        """Vector-vector dot product to implement the integral operator."""
-        integration_vector = self.definite_integral_matrix(
+        """matrix-vector product to implement the integral operator."""
+        integration_matrix = self.definite_integral_matrix(
             child,
             integration_dimension=integration_dimension,
             integration_variable=integration_variable,
         )
-        out = integration_vector @ discretised_child
-
-        return out
+        if len(integration_variable) > 1:
+            dir_1 = integration_variable[0].direction
+            dir_2 = integration_variable[1].direction
+            if dir_1 == dir_2:
+                raise ValueError(
+                    "Integration variables must be in different directions"
+                )
+            else:
+                one_dimensional_matrix = self.one_dimensional_integral_matrix(
+                    child, dir_2
+                )
+                integration_matrix = one_dimensional_matrix @ integration_matrix
+        else:
+            pass
+        return integration_matrix @ discretised_child
 
     def laplacian(self, symbol, discretised_symbol, boundary_conditions):
         """
