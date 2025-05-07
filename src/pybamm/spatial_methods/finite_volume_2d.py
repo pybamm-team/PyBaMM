@@ -1467,6 +1467,13 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                     disc_right = pybamm.VectorField(disc_right_lr, disc_right_tb)
                 else:
                     method = "arithmetic"
+                    disc_right_lr = self.node_to_edge(
+                        disc_right.lr_field, method=method, direction="lr"
+                    )
+                    disc_right_tb = self.node_to_edge(
+                        disc_right.tb_field, method=method, direction="tb"
+                    )
+                    disc_right = pybamm.VectorField(disc_right_lr, disc_right_tb)
             # both are vector fields, so we need make a new vector field.
             lr_field = pybamm.simplify_if_constant(
                 bin_op.create_copy([disc_left.lr_field, disc_right.lr_field])
