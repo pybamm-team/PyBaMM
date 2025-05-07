@@ -234,7 +234,10 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                 integration_matrix = one_dimensional_matrix @ integration_matrix
         else:
             pass
-        return integration_matrix @ discretised_child
+        domains = child.domains
+        second_dim_repeats = self._get_auxiliary_domain_repeats(domains)
+        integration_matrix = kron(eye(second_dim_repeats), integration_matrix)
+        return pybamm.Matrix(integration_matrix) @ discretised_child
 
     def laplacian(self, symbol, discretised_symbol, boundary_conditions):
         """
@@ -297,15 +300,12 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                 )
 
             # repeat matrix for each node in secondary dimensions
-            second_dim_repeats = self._get_auxiliary_domain_repeats(domains)
-            # generate full matrix from the submatrix
-            matrix = kron(eye(second_dim_repeats), sub_matrix)
         else:
             raise NotImplementedError(
                 "Only primary integration dimension is implemented for 2D integration"
             )
 
-        return pybamm.Matrix(matrix)
+        return sub_matrix
 
     def one_dimensional_integral_matrix(self, child, direction):
         """
@@ -326,7 +326,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         # generate full matrix from the submatrix
         matrix = kron(eye(second_dim_repeats), d_edges)
 
-        return pybamm.Matrix(matrix)
+        return matrix
 
     def boundary_integral(self, child, discretised_child, region):
         """
@@ -343,7 +343,10 @@ class FiniteVolume2D(pybamm.SpatialMethod):
             raise ValueError(f"Region {region} not supported")
 
         integral_matrix = self.one_dimensional_integral_matrix(child, direction)
-        return integral_matrix @ boundary_value
+        domains = child.domains
+        second_dim_repeats = self._get_auxiliary_domain_repeats(domains)
+        integral_matrix = kron(eye(second_dim_repeats), integral_matrix)
+        return pybamm.Matrix(integral_matrix) @ boundary_value
 
     def indefinite_integral(self, child, discretised_child, direction):
         raise NotImplementedError

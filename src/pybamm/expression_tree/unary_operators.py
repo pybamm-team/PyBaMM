@@ -1232,6 +1232,20 @@ class UpwindDownwind2D(UpwindDownwind):
         return self.__class__(child, self.lr_direction, self.tb_direction)
 
 
+class Magnitude(UnaryOperator):
+    """
+    A node in the expression tree representing the magnitude of a vector field.
+    """
+
+    def __init__(self, child, direction):
+        super().__init__("magnitude" + f"({direction})", child)
+        self.direction = direction
+
+    def _unary_new_copy(self, child, perform_simplifications=True):
+        """See :meth:`UnaryOperator._unary_new_copy()`."""
+        return self.__class__(child, self.direction)
+
+
 class Upwind(UpwindDownwind):
     """
     Upwinding operator. To be used if flow velocity is positive (left to right).

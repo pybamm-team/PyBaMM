@@ -988,6 +988,16 @@ class Discretisation:
             elif isinstance(symbol, pybamm.NotConstant):
                 # After discretisation, we can make the symbol constant
                 return disc_child
+            elif isinstance(symbol, pybamm.Magnitude):
+                if not isinstance(disc_child, pybamm.VectorField):
+                    raise ValueError("Magnitude can only be applied to a vector field")
+                direction = symbol.direction
+                if direction == "lr":
+                    return disc_child.lr_field
+                elif direction == "tb":
+                    return disc_child.tb_field
+                else:
+                    raise ValueError("Invalid direction")
             else:
                 return symbol.create_copy(new_children=[disc_child])
 
