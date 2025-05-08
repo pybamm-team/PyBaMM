@@ -535,3 +535,16 @@ class TestSolution:
             np.testing.assert_allclose(
                 sol["data_comparison"](), expected, rtol=1e-3, atol=1e-2
             )
+
+            sol = solver.solve(
+                model, t_eval=t_eval, inputs={"a": a}, calculate_sensitivities=True
+            )
+            y_sol = np.exp(-a * data_times)
+            dy_sol_dt = -a * y_sol
+            expected = np.sum(2 * (y_sol - data_values) * dy_sol_dt)
+            np.testing.assert_allclose(
+                sol["data_comparison"].sensitivities["a"],
+                expected,
+                rtol=1e-3,
+                atol=1e-2,
+            )

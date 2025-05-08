@@ -458,6 +458,12 @@ class ProcessedVariable:
 
             # Compute sensitivity
             S_var = dvar_dy_eval @ dy_dp + dvar_dp_eval
+
+            # post fix (e.g for time integral)
+            print("ProcessedVariable.sens__observe_postfix", S_var.shape)
+            S_var = self._observe_postfix(S_var, ts)
+            print("ProcessedVariable.sens__observe_postfix", S_var.shape)
+
             all_S_var.append(S_var)
 
         S_var = casadi.vertcat(*all_S_var)
@@ -495,9 +501,11 @@ class ProcessedVariable0D(ProcessedVariable):
         )
 
     def _observe_postfix(self, entries, t):
+        print("ProcessedVariable0D._observe_postfix")
         if self.time_integral is None:
             return entries
         if self.time_integral.method == "discrete":
+            print("ProcessedVariable0D._observe_postfix discrete", entries)
             return np.sum(entries, axis=0, initial=self.time_integral.initial_condition)
         elif self.time_integral.method == "continuous":
             return cumulative_trapezoid(
