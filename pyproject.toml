@@ -42,6 +42,7 @@ dependencies = [
     "posthog",
     "pyyaml",
     "platformdirs",
+    "pygmsh>=7.1.11"
 ]
 
 [project.urls]
