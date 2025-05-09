@@ -56,7 +56,11 @@ class BaseThermal(pybamm.BaseSubModel):
         for name, var in T_dict.items():
             Name = name.capitalize()
             variables[f"{Name} temperature [K]"] = var
-            if name in ["negative electrode", "separator", "positive electrode"]:
+            if name in [
+                "negative electrode",
+                "separator",
+                "positive electrode",
+            ] and self.options["dimensionality"] in [0, 1, 2]:
                 variables[f"X-averaged {name} temperature [K]"] = pybamm.x_average(var)
 
         # Calculate temperatures in Celsius

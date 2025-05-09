@@ -154,6 +154,7 @@ from .models.base_model import load_model
 from .spatial_methods.spatial_method import SpatialMethod
 from .spatial_methods.zero_dimensional_method import ZeroDimensionalSpatialMethod
 from .spatial_methods.finite_volume import FiniteVolume
+from .spatial_methods.finite_volume_3d import FiniteVolume3D
 from .spatial_methods.spectral_volume import SpectralVolume
 from .spatial_methods.scikit_finite_element import ScikitFiniteElement
 
