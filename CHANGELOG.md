@@ -1,5 +1,40 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Optimizations
+
+- Add a solver option to change `on_extrapolation` behavior to `"error"`, `"warn"`, or `"ignore"` on extrapolation events. ([#4993](https://github.com/pybamm-team/PyBaMM/pull/4993))
+- Improve reliability of `CasadiAlgebraicSolver` and added an option for the `step_tol` of the Newton iteration. ([#4985](https://github.com/pybamm-team/PyBaMM/pull/4985))
+- Speed up calculation of variable sensitivities in `ProcessedVariable` ([#5000](https://github.com/pybamm-team/PyBaMM/pull/5000))
+
+## Bug fixes
+
+- Fixed a bug in the `QuickPlot` which would return empty values for 1D variables at the beginning and end of a timespan. ([#4991](https://github.com/pybamm-team/PyBaMM/pull/4991))
+- Fixed a bug in the `Exponential1DSubMesh` where the mesh was not being created correctly for non-zero minimum values. ([#4989](https://github.com/pybamm-team/PyBaMM/pull/4989))
+
+## Breaking changes
+
+- Remove sensitivity functionality for Casadi and Scipy solvers, only `pybamm.IDAKLU` solver can calculate sensitivities. ([#4975](https://github.com/pybamm-team/PyBaMM/pull/4975))
+
+# [v25.4.2](https://github.com/pybamm-team/PyBaMM/tree/v25.4.2) - 2025-04-17
+
+## Bug fixes
+
+- Improve reliability of `AlgebraicSolver` and change `ElectrodeSOHHalfCell` solver to a Trust-Region method. ([#4982](https://github.com/pybamm-team/PyBaMM/pull/4982))
+
+# [v25.4.1](https://github.com/pybamm-team/PyBaMM/tree/v25.4.1) - 2025-04-16
+
+## Features
+
+- Added "use lumped thermal capacity" option in lumped thermal model ([#4968](https://github.com/pybamm-team/PyBaMM/pull/4968))
+
+## Bug fixes
+
+- Remove a regularization term in the harmonic mean. ([#4977](https://github.com/pybamm-team/PyBaMM/pull/4977))
+
+## Breaking changes
+
+- Changed default solver to `pybamm.IDAKLUSolver`. ([#4915](https://github.com/pybamm-team/PyBaMM/pull/4915))
+
 # [v25.4.0](https://github.com/pybamm-team/PyBaMM/tree/v25.4.0) - 2025-04-02
 
 ## Features
@@ -16,7 +51,6 @@
 
 - Added `skip_ok` option to `step` to allow for steps to be skipped if they are infeasible at initial conditions. ([#4839](https://github.com/pybamm-team/PyBaMM/pull/4839))
 - Deprecated `CrateTermination` and renamed it to `CRateTermination`. ([#4834](https://github.com/pybamm-team/PyBaMM/pull/4834))
-- Changed default solver to `pybamm.IDAKLUSolver`. ([#4915](https://github.com/pybamm-team/PyBaMM/pull/4915))
 
 ## Bug fixes
 

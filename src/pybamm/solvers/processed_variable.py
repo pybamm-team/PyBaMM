@@ -443,16 +443,18 @@ class ProcessedVariable:
             dvar_dp_func = casadi.Function(
                 "dvar_dp", [t_casadi, y_casadi, p_casadi_stacked], [dvar_dp]
             )
-            for idx, t in enumerate(ts):
-                u = ys[:, idx]
-                next_dvar_dy_eval = dvar_dy_func(t, u, inputs_stacked)
-                next_dvar_dp_eval = dvar_dp_func(t, u, inputs_stacked)
-                if idx == 0:
-                    dvar_dy_eval = next_dvar_dy_eval
-                    dvar_dp_eval = next_dvar_dp_eval
-                else:
-                    dvar_dy_eval = casadi.diagcat(dvar_dy_eval, next_dvar_dy_eval)
-                    dvar_dp_eval = casadi.vertcat(dvar_dp_eval, next_dvar_dp_eval)
+            dvar_dy_eval = casadi.diagcat(
+                *[
+                    dvar_dy_func(t, ys[:, idx], inputs_stacked)
+                    for idx, t in enumerate(ts)
+                ]
+            )
+            dvar_dp_eval = casadi.vertcat(
+                *[
+                    dvar_dp_func(t, ys[:, idx], inputs_stacked)
+                    for idx, t in enumerate(ts)
+                ]
+            )
 
             # Compute sensitivity
             S_var = dvar_dy_eval @ dy_dp + dvar_dp_eval

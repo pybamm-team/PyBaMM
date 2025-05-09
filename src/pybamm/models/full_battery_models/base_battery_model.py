@@ -232,6 +232,10 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     - `params`: dict of geometry parameters as documented in `PyGmshMeshGenerator`
             * "heat of mixing": str
                 Whether to include heat of mixing in the model. Can be "false" or "true".
+            * "use lumped thermal capacity" : str
+                Whether to use a lumped capacity model for the thermal model. Can be
+                "false" (default) or "true". This is only available for the lumped
+                thermal model.
     """
 
     def __init__(self, extra_options):
@@ -346,6 +350,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             "working electrode": ["both", "positive"],
             "x-average side reactions": ["false", "true"],
             "geometry options": ["none"],
+            "use lumped thermal capacity": ["false", "true"],
         }
 
         default_options = {
@@ -605,6 +610,15 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             n = options["dimensionality"]
             raise pybamm.OptionError(
                 f"X-full thermal submodels do not yet support {n}D current collectors"
+            )
+
+        if (
+            options["use lumped thermal capacity"] == "true"
+            and "lumped" not in options["thermal"]
+        ):
+            raise pybamm.OptionError(
+                "Lumped thermal capacity model only compatible with lumped thermal "
+                "models"
             )
 
         if isinstance(options["stress-induced diffusion"], str):
