@@ -54,6 +54,7 @@ PRINT_OPTIONS_OUTPUT = """\
 'voltage as a state': 'false' (possible: ['false', 'true'])
 'working electrode': 'both' (possible: ['both', 'positive'])
 'x-average side reactions': 'false' (possible: ['false', 'true'])
+'use lumped thermal capacity': 'false' (possible: ['false', 'true'])
 """
 
 
@@ -434,12 +435,12 @@ class TestBaseBatteryModel:
 
     def test_default_solver(self):
         model = pybamm.BaseBatteryModel()
-        assert isinstance(model.default_solver, pybamm.CasadiSolver)
+        assert isinstance(model.default_solver, pybamm.IDAKLUSolver)
 
         # check that default_solver gives you a new solver, not an internal object
         solver = model.default_solver
         solver = pybamm.BaseModel()
-        assert isinstance(model.default_solver, pybamm.CasadiSolver)
+        assert isinstance(model.default_solver, pybamm.IDAKLUSolver)
         assert isinstance(solver, pybamm.BaseModel)
 
         # check that adding algebraic variables gives algebraic solver

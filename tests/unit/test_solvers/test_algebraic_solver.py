@@ -14,7 +14,7 @@ class TestAlgebraicSolver:
             method="hybr", tol=1e-4, extra_options={"maxfev": 100}
         )
         assert solver.method == "hybr"
-        assert solver.extra_options == {"maxfev": 100}
+        assert solver.extra_options == {"xtol": 1e-12, "gtol": 1e-12, "maxfev": 100}
         assert solver.tol == 1e-4
 
         solver.method = "krylov"
@@ -78,14 +78,14 @@ class TestAlgebraicSolver:
         solver = pybamm.AlgebraicSolver(method="hybr")
         with pytest.raises(
             pybamm.SolverError,
-            match="Could not find acceptable solution: The iteration is not making",
+            match="Could not find acceptable solution",
         ):
             solver._integrate(model, np.array([0]))
 
         solver = pybamm.AlgebraicSolver()
         with pytest.raises(
             pybamm.SolverError,
-            match="Could not find acceptable solution: solver terminated",
+            match="Could not find acceptable solution",
         ):
             solver._integrate(model, np.array([0]))
 

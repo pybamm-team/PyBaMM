@@ -6,6 +6,7 @@ import numbers
 import warnings
 
 import numpy as np
+import numpy.typing as npt
 import sympy
 from scipy.sparse import csr_matrix, issparse
 from functools import cached_property
@@ -769,8 +770,8 @@ class Symbol:
     def _base_evaluate(
         self,
         t: float | None = None,
-        y: np.ndarray | None = None,
-        y_dot: np.ndarray | None = None,
+        y: npt.NDArray[np.float64] | None = None,
+        y_dot: npt.NDArray[np.float64] | None = None,
         inputs: dict | str | None = None,
     ):
         """
@@ -801,8 +802,8 @@ class Symbol:
     def evaluate(
         self,
         t: float | None = None,
-        y: np.ndarray | None = None,
-        y_dot: np.ndarray | None = None,
+        y: npt.NDArray[np.float64] | None = None,
+        y_dot: npt.NDArray[np.float64] | None = None,
         inputs: dict | str | None = None,
     ) -> ChildValue:
         """Evaluate expression tree (wrapper to allow using dict of known values).

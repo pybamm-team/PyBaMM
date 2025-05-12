@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import numpy as np
+import numpy.typing as npt
 from scipy.sparse import csr_matrix, issparse
 import sympy
 import pybamm
@@ -93,8 +94,8 @@ class UnaryOperator(pybamm.Symbol):
     def evaluate(
         self,
         t: float | None = None,
-        y: np.ndarray | None = None,
-        y_dot: np.ndarray | None = None,
+        y: npt.NDArray[np.float64] | None = None,
+        y_dot: npt.NDArray[np.float64] | None = None,
         inputs: dict | str | None = None,
     ):
         """See :meth:`pybamm.Symbol.evaluate()`."""
