@@ -417,7 +417,6 @@ class TestSimulationExperiment:
             model,
             experiment=experiment,
             parameter_values=parameter_values,
-            solver=solver,
         )
         sol = sim.solve()
         assert len(sol.cycles) == 1
