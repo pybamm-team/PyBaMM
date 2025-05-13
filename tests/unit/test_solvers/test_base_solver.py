@@ -39,7 +39,7 @@ class TestBaseSolver:
 
     def test_additional_inputs_provided(self):
         # if additional inputs are provided that are not in the model, this should run as normal
-        sim = pybamm.Simulation(pybamm.lithium_ion.SPM(), solver=pybamm.IDAKLUSolver())
+        sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
         sol1 = sim.solve([0, 3600])["Voltage [V]"].entries
         sol2 = sim.solve([0, 3600], inputs={"Current function [A]": 1})[
             "Voltage [V]"

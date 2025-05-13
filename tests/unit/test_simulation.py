@@ -540,7 +540,7 @@ class TestSimulation:
         sim.solve([0, 600])
         sim.save(test_name)
 
-        # with Casadi solver & experiment
+        # with Casadi format & experiment
         model.convert_to_format = "casadi"
         sim = pybamm.Simulation(
             model,

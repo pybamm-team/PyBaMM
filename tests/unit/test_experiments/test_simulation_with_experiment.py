@@ -397,12 +397,10 @@ class TestSimulationExperiment:
         model = pybamm.lithium_ion.DFN()
 
         parameter_values = pybamm.ParameterValues("Chen2020")
-        solver = pybamm.IDAKLUSolver()
         sim = pybamm.Simulation(
             model,
             experiment=experiment,
             parameter_values=parameter_values,
-            solver=solver,
         )
         sol = sim.solve()
         assert len(sol.cycles) == 1

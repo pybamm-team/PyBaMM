@@ -37,7 +37,7 @@ disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
 disc.process_model(model)
 
 # solve model
-t_eval = [0, 3600 / 2]
+t_eval = [0, 1800]
 solver = pybamm.IDAKLUSolver(atol=1e-6, rtol=1e-3)
 solution = solver.solve(model, t_eval)
 
