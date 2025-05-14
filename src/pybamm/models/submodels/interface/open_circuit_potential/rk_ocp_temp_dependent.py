@@ -6,9 +6,9 @@ from . import BaseOpenCircuitPotential
 
 
 class RKOpenCircuitPotential(BaseOpenCircuitPotential):
-    """ Class for the Open Circuit Potential for implementing RK-Polynomial method 
+    """Class for the Open Circuit Potential for implementing RK-Polynomial method
     taking stoichimetry and temperature as input"""
-    
+
     def get_coupled_variables(self, variables):
         domain, Domain = self.domain_Domain
         phase_name = self.phase_name
