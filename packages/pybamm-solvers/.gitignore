@@ -9,7 +9,7 @@ __pycache__
 .DS_Store
 
 setup.log
-install_KLU_Sundials
+build_sundials
 .idaklu
 build
 

@@ -1,43 +1,27 @@
 import os
 import subprocess
-import tarfile
 import argparse
 import platform
-import hashlib
 import shutil
-import urllib.request
 from os.path import join, isfile
-from urllib.parse import urlparse
-from concurrent.futures import ThreadPoolExecutor
 from multiprocessing import cpu_count
 import pathlib
 
 
 def build_solvers():
-    SUITESPARSE_VERSION = "7.8.3"
-    SUITESPARSE_URL = f"https://github.com/DrTimothyAldenDavis/SuiteSparse/archive/v{SUITESPARSE_VERSION}.tar.gz"
-    SUITESPARSE_CHECKSUM = (
-        "ce39b28d4038a09c14f21e02c664401be73c0cb96a9198418d6a98a7db73a259"
-    )
-    SUNDIALS_VERSION = "7.3.0"
-    SUNDIALS_URL = f"https://github.com/LLNL/sundials/releases/download/v{SUNDIALS_VERSION}/sundials-{SUNDIALS_VERSION}.tar.gz"
-    SUNDIALS_CHECKSUM = (
-        "697b7b0dbc229f149e39b293d1ab03d321d61adb6733ffb78c0ddbffaf73d839"
-    )
     DEFAULT_INSTALL_DIR = str(pathlib.Path(__file__).parent.resolve() / ".idaklu")
 
     def safe_remove_dir(path):
         if os.path.exists(path):
             shutil.rmtree(path)
 
-    def install_suitesparse(download_dir):
+    def install_suitesparse():
         # The SuiteSparse KLU module has 4 dependencies:
         # - suitesparseconfig
         # - AMD
         # - COLAMD
         # - BTF
-        suitesparse_dir = f"SuiteSparse-{SUITESPARSE_VERSION}"
-        suitesparse_src = os.path.join(download_dir, suitesparse_dir)
+        suitesparse_src = pathlib.Path("SuiteSparse")
         print("-" * 10, "Building SuiteSparse_config", "-" * 40)
         make_cmd = [
             "make",
@@ -61,28 +45,26 @@ def build_solvers():
                 # dylibs to find libomp.dylib when repairing the wheel
                 if os.environ.get("CIBUILDWHEEL") == "1":
                     env["CMAKE_OPTIONS"] = (
-                        f"-DCMAKE_INSTALL_PREFIX={install_dir} -DCMAKE_INSTALL_RPATH={install_dir}/lib"
+                        f"-DCMAKE_INSTALL_PREFIX={DEFAULT_INSTALL_DIR} -DCMAKE_INSTALL_RPATH={DEFAULT_INSTALL_DIR}/lib"
                     )
                 else:
-                    env["CMAKE_OPTIONS"] = f"-DCMAKE_INSTALL_PREFIX={install_dir}"
+                    env["CMAKE_OPTIONS"] = (
+                        f"-DCMAKE_INSTALL_PREFIX={DEFAULT_INSTALL_DIR}"
+                    )
             else:
                 # For AMD, COLAMD, BTF and KLU; do not set a BUILD RPATH but use an
                 # INSTALL RPATH in order to ensure that the dynamic libraries are found
                 # at runtime just once. Otherwise, delocate complains about multiple
                 # references to the SuiteSparse_config dynamic library (auditwheel does not).
                 env["CMAKE_OPTIONS"] = (
-                    f"-DCMAKE_INSTALL_PREFIX={install_dir} -DCMAKE_INSTALL_RPATH={install_dir}/lib -DCMAKE_INSTALL_RPATH_USE_LINK_PATH=FALSE -DCMAKE_BUILD_WITH_INSTALL_RPATH=FALSE"
+                    f"-DCMAKE_INSTALL_PREFIX={DEFAULT_INSTALL_DIR} -DCMAKE_INSTALL_RPATH={DEFAULT_INSTALL_DIR}/lib -DCMAKE_INSTALL_RPATH_USE_LINK_PATH=FALSE -DCMAKE_BUILD_WITH_INSTALL_RPATH=FALSE"
                 )
             subprocess.run(make_cmd, cwd=build_dir, env=env, shell=True, check=True)
             subprocess.run(install_cmd, cwd=build_dir, check=True)
 
-    def install_sundials(download_dir, install_dir):
-        # Set install dir for SuiteSparse libs
-        # Ex: if install_dir -> "/usr/local/" then
-        # KLU_INCLUDE_DIR -> "/usr/local/include"
-        # KLU_LIBRARY_DIR -> "/usr/local/lib"
-        KLU_INCLUDE_DIR = os.path.join(install_dir, "include", "suitesparse")
-        KLU_LIBRARY_DIR = os.path.join(install_dir, "lib")
+    def install_sundials():
+        KLU_INCLUDE_DIR = os.path.join(DEFAULT_INSTALL_DIR, "include", "suitesparse")
+        KLU_LIBRARY_DIR = os.path.join(DEFAULT_INSTALL_DIR, "lib")
         cmake_args = [
             "-DENABLE_LAPACK=ON",
             "-DSUNDIALS_INDEX_SIZE=32",
@@ -93,7 +75,7 @@ def build_solvers():
             "-DENABLE_OPENMP=ON",
             f"-DKLU_INCLUDE_DIR={KLU_INCLUDE_DIR}",
             f"-DKLU_LIBRARY_DIR={KLU_LIBRARY_DIR}",
-            "-DCMAKE_INSTALL_PREFIX=" + install_dir,
+            "-DCMAKE_INSTALL_PREFIX=" + DEFAULT_INSTALL_DIR,
             # on macOS use fixed paths rather than rpath
             "-DCMAKE_INSTALL_NAME_DIR=" + KLU_LIBRARY_DIR,
         ]
@@ -134,14 +116,12 @@ def build_solvers():
                     "-DOpenMP_omp_LIBRARY=" + OpenMP_omp_LIBRARY,
                 ]
 
-        # SUNDIALS are built within download_dir 'build_sundials' in the PyBaMM root
-        # download_dir
-        build_dir = os.path.abspath(os.path.join(download_dir, "build_sundials"))
+        build_dir = pathlib.Path("build_sundials")
         if not os.path.exists(build_dir):
             print("\n-" * 10, "Creating build dir", "-" * 40)
             os.makedirs(build_dir)
 
-        sundials_src = f"../sundials-{SUNDIALS_VERSION}"
+        sundials_src = "../sundials"
         print("-" * 10, "Running CMake prepare", "-" * 40)
         subprocess.run(["cmake", sundials_src, *cmake_args], cwd=build_dir, check=True)
 
@@ -149,9 +129,9 @@ def build_solvers():
         make_cmd = ["make", f"-j{cpu_count()}", "install"]
         subprocess.run(make_cmd, cwd=build_dir, check=True)
 
-    def check_libraries_installed(install_dir):
+    def check_libraries_installed():
         # Define the directories to check for SUNDIALS and SuiteSparse libraries
-        lib_dirs = [install_dir]
+        lib_dirs = [DEFAULT_INSTALL_DIR]
 
         sundials_files = [
             "libsundials_idas",
@@ -217,121 +197,38 @@ def build_solvers():
 
         return sundials_lib_found, suitesparse_lib_found
 
-    def calculate_sha256(file_path):
-        sha256_hash = hashlib.sha256()
-        with open(file_path, "rb") as f:
-            # Read and update hash in chunks of 4K
-            for byte_block in iter(lambda: f.read(4096), b""):
-                sha256_hash.update(byte_block)
-        return sha256_hash.hexdigest()
-
-    def download_extract_library(url, expected_checksum, download_dir):
-        file_name = url.split("/")[-1]
-        file_path = os.path.join(download_dir, file_name)
-
-        # Check if file already exists and validate checksum
-        if os.path.exists(file_path):
-            print(f"Validating checksum for {file_name}...")
-            actual_checksum = calculate_sha256(file_path)
-            print(f"Found {actual_checksum} against {expected_checksum}")
-            if actual_checksum == expected_checksum:
-                print(f"Checksum valid. Skipping download for {file_name}.")
-                # Extract the archive as the checksum is valid
-                with tarfile.open(file_path) as tar:
-                    tar.extractall(download_dir)
-                return
-            else:
-                print(f"Checksum invalid. Redownloading {file_name}.")
-
-        # Download and extract archive at url
-        parsed_url = urlparse(url)
-        if parsed_url.scheme not in ["http", "https"]:
-            raise ValueError(
-                f"Invalid URL scheme: {parsed_url.scheme}. Only HTTP and HTTPS are allowed."
-            )
-        with urllib.request.urlopen(url) as response:
-            os.makedirs(download_dir, exist_ok=True)
-            with open(file_path, "wb") as out_file:
-                out_file.write(response.read())
-        with tarfile.open(file_path) as tar:
-            tar.extractall(download_dir)
-
-    def parallel_download(urls, download_dir):
-        # Use 2 processes for parallel downloading
-        with ThreadPoolExecutor(max_workers=len(urls)) as executor:
-            futures = [
-                executor.submit(
-                    download_extract_library, url, expected_checksum, download_dir
-                )
-                for (url, expected_checksum) in urls
-            ]
-            for future in futures:
-                future.result()
-
     # First check requirements: make and cmake
     check_build_tools()
 
     # Build in parallel wherever possible
     os.environ["CMAKE_BUILD_PARALLEL_LEVEL"] = str(cpu_count())
 
-    # Create download directory in PyBaMM dir
-    pybamm_dir = pathlib.Path(__file__).parent.resolve()
-    download_dir = str(pybamm_dir / "install_KLU_Sundials")
-    if not os.path.exists(download_dir):
-        os.makedirs(download_dir)
-
     # Get installation location
     parser = argparse.ArgumentParser(
-        description="Download, compile and install Sundials and SuiteSparse."
+        description="Compile and install Sundials and SuiteSparse."
     )
     parser.add_argument(
         "--force",
         action="store_true",
         help="Force installation even if libraries are already found. This will overwrite the pre-existing files.",
     )
-    parser.add_argument("--install-dir", type=str, default=DEFAULT_INSTALL_DIR)
     args = parser.parse_args()
-    install_dir = (
-        args.install_dir
-        if os.path.isabs(args.install_dir)
-        else os.path.join(pybamm_dir, args.install_dir)
-    )
 
     if args.force:
         print(
             "The '--force' option is activated: installation will be forced, ignoring any existing libraries."
         )
-        safe_remove_dir(os.path.join(download_dir, "build_sundials"))
-        safe_remove_dir(
-            os.path.join(download_dir, f"SuiteSparse-{SUITESPARSE_VERSION}")
-        )
-        safe_remove_dir(os.path.join(download_dir, f"sundials-{SUNDIALS_VERSION}"))
+        safe_remove_dir(pathlib.Path("build_sundials"))
         sundials_found, suitesparse_found = False, False
     else:
         # Check whether the libraries are installed
-        sundials_found, suitesparse_found = check_libraries_installed(install_dir)
+        sundials_found, suitesparse_found = check_libraries_installed()
 
-    # Determine which libraries to download based on whether they were found
-    if not sundials_found and not suitesparse_found:
-        # Both SUNDIALS and SuiteSparse are missing, download and install both
-        parallel_download(
-            [
-                (SUITESPARSE_URL, SUITESPARSE_CHECKSUM),
-                (SUNDIALS_URL, SUNDIALS_CHECKSUM),
-            ],
-            download_dir,
-        )
-        install_suitesparse(download_dir)
-        install_sundials(download_dir, install_dir)
-    else:
-        if not sundials_found:
-            # Only SUNDIALS is missing, download and install it
-            parallel_download([(SUNDIALS_URL, SUNDIALS_CHECKSUM)], download_dir)
-            install_sundials(download_dir, install_dir)
-        if not suitesparse_found:
-            # Only SuiteSparse is missing, download and install it
-            parallel_download([(SUITESPARSE_URL, SUITESPARSE_CHECKSUM)], download_dir)
-            install_suitesparse(download_dir)
+    # Determine which libraries to install
+    if not suitesparse_found:
+        install_suitesparse()
+    if not sundials_found:
+        install_sundials()
 
 
 def check_build_tools():
