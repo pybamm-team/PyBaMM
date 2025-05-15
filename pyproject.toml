@@ -67,7 +67,6 @@ docs = [
     "ipykernel",
     "ipywidgets",
     "sphinx-gallery",
-    "sphinx-hoverxref",
     "sphinx-docsearch",
 ]
 # For example notebooks

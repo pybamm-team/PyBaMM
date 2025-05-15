@@ -1,3 +1,4 @@
+from __future__ import annotations
 import pybamm
 import numpy as np
 import numpy.typing as npt
@@ -5,7 +6,6 @@ import logging
 import warnings
 import numbers
 import pybammsolvers.idaklu as idaklu
-from typing import Union
 
 from functools import lru_cache
 
@@ -259,9 +259,9 @@ class IDAKLUJax:
 
     def jax_value(
         self,
-        t: npt.NDArray = None,
-        inputs: Union[dict, None] = None,
-        output_variables: Union[list[str], None] = None,
+        t: npt.NDArray[np.float64] | None = None,
+        inputs: dict | None = None,
+        output_variables: list[str] | None = None,
     ):
         """Helper function to compute the gradient of a jaxified expression
 
@@ -292,9 +292,9 @@ class IDAKLUJax:
 
     def jax_grad(
         self,
-        t: npt.NDArray = None,
-        inputs: Union[dict, None] = None,
-        output_variables: Union[list[str], None] = None,
+        t: npt.NDArray[np.float64] | None = None,
+        inputs: dict | None = None,
+        output_variables: list[str] | None = None,
     ):
         """Helper function to compute the gradient of a jaxified expression
 
@@ -396,9 +396,9 @@ class IDAKLUJax:
 
     def _jax_solve(
         self,
-        t: Union[float, npt.NDArray],
+        t: float | npt.NDArray[np.float64],
         *inputs,
-    ) -> npt.NDArray:
+    ) -> npt.NDArray[np.float64]:
         """Solver implementation used by f-bind"""
         logger.info("jax_solve")
         logger.debug(f"  t: {type(t)}, {t}")
@@ -410,7 +410,7 @@ class IDAKLUJax:
 
     def _jax_jvp_impl(
         self,
-        *args: Union[npt.NDArray],
+        *args: npt.NDArray[np.float64],
     ):
         """JVP implementation used by f_jvp bind"""
         primals = args[: len(args) // 2]
@@ -455,9 +455,9 @@ class IDAKLUJax:
 
     def _jax_vjp_impl(
         self,
-        y_bar: npt.NDArray,
-        invar: Union[str, int],  # index or name of input variable
-        *primals: npt.NDArray,
+        y_bar: npt.NDArray[np.float64],
+        invar: str | int,  # index or name of input variable
+        *primals: npt.NDArray[np.float64],
     ):
         """VJP implementation used by f_vjp bind"""
         logger.info("py:f_vjp_p_impl")

@@ -1,5 +1,4 @@
 import pybamm
-import numpy as np
 
 pybamm.set_logging_level("INFO")
 
@@ -69,10 +68,10 @@ disc_fv.process_model(models[0])
 disc_sv.process_model(models[1])
 
 # solve model
-t_eval = np.linspace(0, 3600, 100)
+t_eval = [0, 3600]
 
-casadi_fv = pybamm.CasadiSolver(atol=1e-8, rtol=1e-8).solve(models[0], t_eval)
-casadi_sv = pybamm.CasadiSolver(atol=1e-8, rtol=1e-8).solve(models[1], t_eval)
+casadi_fv = pybamm.IDAKLUSolver(atol=1e-8, rtol=1e-8).solve(models[0], t_eval)
+casadi_sv = pybamm.IDAKLUSolver(atol=1e-8, rtol=1e-8).solve(models[1], t_eval)
 solutions = [casadi_fv, casadi_sv]
 
 # plot

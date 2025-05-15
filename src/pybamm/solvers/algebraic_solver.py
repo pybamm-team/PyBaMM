@@ -28,16 +28,46 @@ class AlgebraicSolver(pybamm.BaseSolver):
         Any options to pass to the rootfinder. Vary depending on which method is chosen.
         Please consult `SciPy documentation
         <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.show_options.html>`_
-        for details.
+        for details. Addititional options to pass to the solver, by default:
+
+        .. code-block:: python
+
+            extra_options = {
+                # Tolerance for termination by the change of the independent variables.
+                "xtol": 1e-12,
+                # Tolerance for termination by the norm of the gradient.
+                "gtol": 1e-12,
+            }
     """
 
     def __init__(self, method="lm", tol=1e-6, extra_options=None):
         super().__init__(method=method)
         self.tol = tol
-        self.extra_options = extra_options or {}
+
+        default_extra_options = {
+            "xtol": 1e-12,
+            "gtol": 1e-12,
+        }
+        extra_options = extra_options or {}
+        self.extra_options = default_extra_options | extra_options
+
         self.name = f"Algebraic solver ({method})"
         self._algebraic_solver = True
         pybamm.citations.register("Virtanen2020")
+
+    def set_up_root_solver(self, model, inputs_dict, t_eval):
+        """Create and return a rootfinder object. Not used for `pybamm.AlgebraicSolver`.
+
+        Parameters
+        ----------
+        model : :class:`pybamm.BaseModel`
+            The model whose solution to calculate.
+        inputs_dict : dict
+            Dictionary of inputs.
+        t_eval : :class:`numpy.array`, size (k,)
+            The times at which to compute the solution.
+        """
+        pass
 
     @property
     def tol(self):
@@ -158,6 +188,7 @@ class AlgebraicSolver(pybamm.BaseSolver):
                         **self.extra_options,
                     )
                     integration_time += timer.time()
+                    success |= sol.success
                 # Methods which use minimize are specified as either "minimize",
                 # which uses the default method, or with "minimize__methodname"
                 elif self.method.startswith("minimize"):
@@ -183,7 +214,14 @@ class AlgebraicSolver(pybamm.BaseSolver):
                         bounds = [
                             (lb, ub) for lb, ub in zip(model.bounds[0], model.bounds[1])
                         ]
-                        extra_options["bounds"] = bounds
+                    else:
+                        bounds = None
+
+                    hess = extra_options.get("hess", None)
+                    hessp = extra_options.get("hessp", None)
+                    constraints = extra_options.get("constraints", ())
+                    callback = extra_options.get("callback", None)
+
                     timer.reset()
                     sol = optimize.minimize(
                         root_norm,
@@ -191,9 +229,16 @@ class AlgebraicSolver(pybamm.BaseSolver):
                         method=method,
                         tol=self.tol,
                         jac=jac_norm,
-                        **extra_options,
+                        bounds=bounds,
+                        hess=hess,
+                        hessp=hessp,
+                        constraints=constraints,
+                        callback=callback,
+                        options=extra_options,
                     )
                     integration_time += timer.time()
+                    # The solution.success flag is unreliable, so we ignore
+                    # it and use the norm of the residual instead
                 else:
                     timer.reset()
                     sol = optimize.root(
@@ -205,25 +250,21 @@ class AlgebraicSolver(pybamm.BaseSolver):
                         options=self.extra_options,
                     )
                     integration_time += timer.time()
+                    # The solution.success flag is unreliable, so we ignore
+                    # it and use the norm of the residual instead
 
-                if sol.success and np.all(abs(sol.fun) < self.tol):
-                    # update initial guess for the next iteration
-                    y0_alg = sol.x
-                    # update solution array
+                y0_alg = sol.x
+                success |= np.all(abs(sol.fun) < self.tol)
+                if success:
                     y_alg[:, idx] = y0_alg
-                    success = True
-                elif not sol.success:
+                    break
+
+                if itr > maxiter:
                     raise pybamm.SolverError(
-                        f"Could not find acceptable solution: {sol.message}"
+                        "Could not find acceptable solution: solver terminated "
+                        "unsuccessfully and maximum solution error "
+                        f"({np.max(abs(sol.fun))}) above tolerance ({self.tol})"
                     )
-                else:
-                    y0_alg = sol.x
-                    if itr > maxiter:
-                        raise pybamm.SolverError(
-                            "Could not find acceptable solution: solver terminated "
-                            "successfully, but maximum solution error "
-                            f"({np.max(abs(sol.fun))}) above tolerance ({self.tol})"
-                        )
                 itr += 1
 
         # Concatenate differential part

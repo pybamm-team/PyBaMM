@@ -213,36 +213,37 @@ class Exponential1DSubMesh(SubMesh1D):
             elif side in ["left", "right"]:
                 stretch = 2.3
 
-        # Create edges accoriding to "side"
+        # Create edges according to "side"
         if side == "left":
             ii = np.array(range(0, npts + 1))
-            edges = (b - a) * (np.exp(stretch * ii / npts) - 1) / (
+            edges = a + (b - a) * (np.exp(stretch * ii / npts) - 1) / (
                 np.exp(stretch) - 1
-            ) + a
+            )
 
         elif side == "right":
             ii = np.array(range(0, npts + 1))
-            edges = (b - a) * (np.exp(-stretch * ii / npts) - 1) / (
-                np.exp(-stretch) - 1
-            ) + a
+            edges = b - (b - a) * (np.exp(stretch * (npts - ii) / npts) - 1) / (
+                np.exp(stretch) - 1
+            )
 
         elif side == "symmetric":
-            # Mesh half-interval [a, b/2]
+            # Mesh half-interval [a, (a+b)/2]
             if npts % 2 == 0:
                 ii = np.array(range(0, int((npts) / 2)))
             else:
                 ii = np.array(range(0, int((npts + 1) / 2)))
-            x_exp_left = (b / 2 - a) * (np.exp(stretch * ii / npts) - 1) / (
+            midpoint = (a + b) / 2
+            x_exp_left = a + (midpoint - a) * (np.exp(stretch * ii / npts) - 1) / (
                 np.exp(stretch) - 1
-            ) + a
+            )
 
-            # Refelct mesh
-            x_exp_right = b * np.ones_like(x_exp_left) - (x_exp_left[::-1] - a)
+            # Reflect mesh
+            x_exp_right = b - (x_exp_left[::-1] - a)
 
             # Combine left and right halves of the mesh, adding a node at the
             # centre if npts is even (odd number of edges)
             if npts % 2 == 0:
-                edges = np.concatenate((x_exp_left, [(a + b) / 2], x_exp_right))
+                edges = np.concatenate((x_exp_left, [midpoint], x_exp_right))
             else:
                 edges = np.concatenate((x_exp_left, x_exp_right))
 

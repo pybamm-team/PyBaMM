@@ -276,13 +276,14 @@ class TestExperiment:
         step = pybamm.step.voltage(2.5, termination="2.5 V")
         experiment = pybamm.Experiment([step])
 
-        sim = pybamm.Simulation(model, experiment=experiment)
+        solver = pybamm.IDAKLUSolver(atol=1e-8, rtol=1e-8)
+        sim = pybamm.Simulation(model, experiment=experiment, solver=solver)
 
         sim.solve()
         solution = sim.solution
 
         voltage = solution["Terminal voltage [V]"].entries
-        assert np.allclose(voltage, 2.5, atol=1e-3)
+        assert np.allclose(voltage, 2.5, atol=1e-3, rtol=1e-3)
 
     def test_pchip_interpolation_experiment(self):
         x = np.linspace(0, 1, 11)

@@ -10,8 +10,7 @@ class TestBatchStudy:
     def test_solve(self):
         spm = pybamm.lithium_ion.SPM()
         spm_uniform = pybamm.lithium_ion.SPM({"particle": "uniform profile"})
-        casadi_safe = pybamm.CasadiSolver(mode="safe")
-        casadi_fast = pybamm.CasadiSolver(mode="fast")
+        idaklu = pybamm.IDAKLUSolver()
         exp1 = pybamm.Experiment(
             [("Discharge at C/5 for 10 minutes", "Rest for 1 hour")]
         )
@@ -27,12 +26,12 @@ class TestBatchStudy:
         )
         bs_false = pybamm.BatchStudy(
             models={"SPM": spm, "SPM uniform": spm_uniform},
-            solvers={"casadi safe": casadi_safe, "casadi fast": casadi_fast},
+            solvers={"idaklu0": idaklu, "idaklu1": idaklu},
             experiments={"exp1": exp1, "exp2": exp2},
         )
         bs_true = pybamm.BatchStudy(
             models={"SPM": spm, "SPM uniform": spm_uniform},
-            solvers={"casadi safe": casadi_safe, "casadi fast": casadi_fast},
+            solvers={"idaklu0": idaklu, "idaklu1": idaklu},
             experiments={"exp2": exp2},
             permutations=True,
         )

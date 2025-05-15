@@ -26,27 +26,30 @@ disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
 disc.process_model(model)
 
 # solve model
-t_eval = np.linspace(0, 3600, 100)
-solver = pybamm.CasadiSolver()
+t_eval = [0, 3700]
+solver = pybamm.IDAKLUSolver()
 solution = solver.solve(model, t_eval)
 
 # step model
 dt = 500
-# t_eval is an array of time in the interval 0 to dt, dt being size of the step.
-t_eval = np.array([0, 50, 100, 200, 500])
+# Set a t_interp to only save the solution at the end of the st
+t_interp = [0, dt]
 time = 0
 end_time = solution.t[-1]
-step_solver = pybamm.CasadiSolver()
+step_solver = pybamm.IDAKLUSolver()
 step_solution = None
 while time < end_time:
-    step_solution = step_solver.step(step_solution, model, dt=dt, t_eval=t_eval)
+    step_solution = step_solver.step(step_solution, model, dt=dt, t_interp=t_interp)
     time += dt
 
 # plot
-time_in_seconds = solution["Time [s]"].entries
-step_time_in_seconds = step_solution["Time [s]"].entries
-voltage = solution["Voltage [V]"].entries
-step_voltage = step_solution["Voltage [V]"].entries
+t_continuous = solution.t
+time_in_seconds = np.linspace(t_continuous[0], t_continuous[-1], 1000)
+voltage = solution["Voltage [V]"](time_in_seconds)
+
+step_time_in_seconds = step_solution.t
+step_voltage = step_solution["Voltage [V]"].data
+
 plt.plot(time_in_seconds, voltage, "b-", label="SPMe (continuous solve)")
 plt.plot(step_time_in_seconds, step_voltage, "ro", label="SPMe (stepped solve)")
 plt.xlabel(r"$t$")

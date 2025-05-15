@@ -377,8 +377,10 @@ def solve_advection_equation(direction="upwind", source=1, bc=0):
     spatial_methods = {"domain": pybamm.FiniteVolume()}
     disc = pybamm.Discretisation(mesh, spatial_methods)
     disc.process_model(model)
-    solver = pybamm.CasadiSolver()
-    return solver.solve(model, [0, 1])
+    solver = pybamm.IDAKLUSolver()
+    t_eval = [0, 1]
+    t_interp = t_eval
+    return solver.solve(model, t_eval, t_interp=t_interp)
 
 
 class TestUpwindDownwind:

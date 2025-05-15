@@ -217,8 +217,8 @@ class FunctionParameter(pybamm.Symbol):
         Returns the sum of the evaluated children
         See :meth:`pybamm.Symbol.evaluate_for_shape()`
         """
-        # add 1e-16 to avoid division by zero
-        return sum(child.evaluate_for_shape() for child in self.children) + 1e-16
+        # add 1e-300 to avoid division by zero
+        return sum(child.evaluate_for_shape() for child in self.children) + 1e-300
 
     def to_equation(self) -> sympy.Symbol:
         """Convert the node and its subtree into a SymPy equation."""

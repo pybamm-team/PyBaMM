@@ -43,9 +43,9 @@ class TestLeadAcidFullSideReactions:
         [
             (
                 {"hydrolysis": "true", "surface form": "differential"},
-                pybamm.CasadiSolver,
+                pybamm.IDAKLUSolver,
             ),
-            ({"hydrolysis": "true", "surface form": "algebraic"}, pybamm.CasadiSolver),
+            ({"hydrolysis": "true", "surface form": "algebraic"}, pybamm.IDAKLUSolver),
         ],
         ids=[
             "surface_form_differential",

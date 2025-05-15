@@ -1227,6 +1227,7 @@ class TestBaseModel:
         assert not model._built
         model.build_model()
         assert model._built
+        assert model._built == model.built
         u = model.variables["u"]
         v = model.variables["v"]
         assert model.rhs[u].value == 2
