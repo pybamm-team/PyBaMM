@@ -36,13 +36,13 @@ class ProcessedVariable:
 
     def __init__(
         self,
-        variable: str,
+        name: str,
         base_variables,
         base_variables_casadi,
         solution,
         time_integral: Optional[pybamm.ProcessedVariableTimeIntegral] = None,
     ):
-        self._variable_name = variable
+        self._name = variable
         self.base_variables = base_variables
         self.base_variables_casadi = base_variables_casadi
 
