@@ -19,28 +19,22 @@ params = pybamm.ParameterValues("Marquis2019")
 # add distribution params (lognormals) with custom standard deviations
 params = pybamm.get_size_distribution_parameters(params, sd_n=0.2, sd_p=0.4)
 
-# discharge and relaxation: define current function
-t_cutoff = 3450  # [s]
-t_rest = 3600  # [s]
-I_typ = params["Nominal cell capacity [A.h]"]  # cell capacity gives current for 1C
-
-
-def current(t):
-    return I_typ * pybamm.EqualHeaviside(t, t_cutoff)
-
-
-params.update({"Current function [A]": current})
-t_eval = [0, t_cutoff + t_rest]
+# experiment
+experiment = pybamm.Experiment(
+    [
+        "Discharge at 1C for 3450 seconds",
+        "Rest for 3600 seconds",
+    ]
+)
 
 # solve
-solver = pybamm.CasadiSolver(mode="fast")
 sims = []
 for model in models:
-    sim = pybamm.Simulation(model, parameter_values=params, solver=solver)
+    sim = pybamm.Simulation(model, parameter_values=params, experiment=experiment)
     sims.append(sim)
 
 for sim in sims:
-    sim.solve(t_eval=t_eval)
+    sim.solve()
 
 # plot MP-DFN variables
 output_variables = [

@@ -285,7 +285,7 @@ class TestQuickPlot:
         a = pybamm.Variable("a")
         model.rhs = {a: pybamm.Scalar(0)}
         model.initial_conditions = {a: pybamm.Scalar(0)}
-        solution = pybamm.CasadiSolver("fast").solve(model, [0, 1])
+        solution = pybamm.IDAKLUSolver().solve(model, [0, 1])
         with pytest.raises(ValueError, match="No default output variables"):
             pybamm.QuickPlot(solution)
 
@@ -495,18 +495,12 @@ class TestQuickPlot:
         parameter_values = pybamm.ParameterValues("Chen2020")
         model = pybamm.lithium_ion.SPMe()
         parameter_values.update({"Electrode height [m]": "[input]"})
-        solver1 = pybamm.CasadiSolver(mode="safe")
-        sim1 = pybamm.Simulation(
-            model, parameter_values=parameter_values, solver=solver1
-        )
+        sim1 = pybamm.Simulation(model, parameter_values=parameter_values)
         inputs1 = {"Electrode height [m]": 1.00}
-        sol1 = sim1.solve(t_eval=np.linspace(0, 1000, 101), inputs=inputs1)
-        solver2 = pybamm.CasadiSolver(mode="safe")
-        sim2 = pybamm.Simulation(
-            model, parameter_values=parameter_values, solver=solver2
-        )
+        sol1 = sim1.solve([0, 1000], inputs=inputs1)
+        sim2 = pybamm.Simulation(model, parameter_values=parameter_values)
         inputs2 = {"Electrode height [m]": 2.00}
-        sol2 = sim2.solve(t_eval=np.linspace(0, 1000, 101), inputs=inputs2)
+        sol2 = sim2.solve([0, 1000], inputs=inputs2)
         output_variables = [
             "Voltage [V]",
             "Current [A]",
