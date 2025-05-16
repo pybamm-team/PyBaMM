@@ -472,7 +472,7 @@ class ProcessedVariable:
             ):
                 if not (
                     len(ts) == len(self.time_integral.discrete_times)
-                    and np.all(np.abs(ts - self.time_integral.discrete_times) < 1e-10)
+                    and np.allclose(ts, self.time_integral.discrete_times, atol=1e-10))
                 ):
                     raise pybamm.SolverError(
                         f'Processing discrete-time-sum variable "{self._name}": solution times '
