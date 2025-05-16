@@ -336,12 +336,47 @@ def no_internet_connection():
         conn = socket.create_connection((host, 80), 2)
         conn.close()
         return False
-    except socket.gaierror:
+    except (socket.gaierror, TimeoutError):
         return True
 
 
 def assert_domain_equal(a, b):
-    "Check that two domains are equal, ignoring empty domains"
+    """Check that two domains are equal, ignoring empty domains"""
     a_dict = {k: v for k, v in a.items() if v != []}
     b_dict = {k: v for k, v in b.items() if v != []}
     assert a_dict == b_dict
+
+
+def get_mesh_for_testing_symbolic():
+    submesh_types = {"domain": pybamm.SymbolicUniform1DSubMesh}
+    geometry = {
+        "domain": {"x": {"min": pybamm.Scalar(0), "max": pybamm.Scalar(2)}},
+    }
+    var_pts = {"x": 15}
+    mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+    return mesh
+
+
+def get_spherical_mesh_for_testing_symbolic():
+    submesh_types = {"spherical domain": pybamm.SymbolicUniform1DSubMesh}
+    geometry = {
+        "spherical domain": {"r_n": {"min": pybamm.Scalar(0), "max": pybamm.Scalar(2)}},
+    }
+    var_pts = {"r_n": 15}
+    mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+    return mesh
+
+
+def get_cylindrical_mesh_for_testing_symbolic():
+    submesh_types = {"cylindrical domain": pybamm.SymbolicUniform1DSubMesh}
+    cylindrical_r = pybamm.SpatialVariable(
+        "r", ["cylindrical domain"], coord_sys="cylindrical polar"
+    )
+    geometry = {
+        "cylindrical domain": {
+            cylindrical_r: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(2)}
+        },
+    }
+    var_pts = {cylindrical_r: 15}
+    mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+    return mesh

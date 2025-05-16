@@ -19,7 +19,6 @@ class TestBaseSolver:
         assert solver.rtol == 1e-5
         solver.rtol = 1e-7
         assert solver.rtol == 1e-7
-        assert solver.requires_explicit_sensitivities
 
     def test_root_method_init(self):
         solver = pybamm.BaseSolver(root_method="casadi")
@@ -37,6 +36,20 @@ class TestBaseSolver:
             pybamm.SolverError, match="Root method must be an algebraic solver"
         ):
             pybamm.BaseSolver(root_method=pybamm.ScipySolver())
+
+    def test_additional_inputs_provided(self):
+        # if additional inputs are provided that are not in the model, this should run as normal
+        sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
+        sol1 = sim.solve([0, 3600])["Voltage [V]"].entries
+        sol2 = sim.solve([0, 3600], inputs={"Current function [A]": 1})[
+            "Voltage [V]"
+        ].entries
+        sol3 = sim.solve(
+            [0, 3600], inputs=[{"Current function [A]": 1}, {"Current function [A]": 2}]
+        )[0]["Voltage [V]"].entries
+        # check that the solutions are the same
+        np.testing.assert_array_almost_equal(sol1, sol2)
+        np.testing.assert_array_almost_equal(sol2, sol3)
 
     def test_step_or_solve_empty_model(self):
         model = pybamm.BaseModel()
@@ -182,10 +195,13 @@ class TestBaseSolver:
 
         model = VectorModel()
         init_states = solver.calculate_consistent_state(model)
-        np.testing.assert_array_almost_equal(init_states.flatten(), vec)
+        np.testing.assert_allclose(init_states.flatten(), vec, rtol=1e-7, atol=1e-6)
         # with casadi
+        solver_with_casadi.root_method.step_tol = 1e-12
         init_states = solver_with_casadi.calculate_consistent_state(model)
-        np.testing.assert_array_almost_equal(init_states.full().flatten(), vec)
+        np.testing.assert_allclose(
+            init_states.full().flatten(), vec, rtol=1e-7, atol=1e-6
+        )
 
         # With Jacobian
         def jac_dense(t, y, inputs):
@@ -193,7 +209,7 @@ class TestBaseSolver:
 
         model.jac_algebraic_eval = jac_dense
         init_states = solver.calculate_consistent_state(model)
-        np.testing.assert_array_almost_equal(init_states.flatten(), vec)
+        np.testing.assert_allclose(init_states.flatten(), vec, rtol=1e-7, atol=1e-6)
 
         # With sparse Jacobian
         def jac_sparse(t, y, inputs):
@@ -203,7 +219,7 @@ class TestBaseSolver:
 
         model.jac_algebraic_eval = jac_sparse
         init_states = solver.calculate_consistent_state(model)
-        np.testing.assert_array_almost_equal(init_states.flatten(), vec)
+        np.testing.assert_allclose(init_states.flatten(), vec, rtol=1e-7, atol=1e-6)
 
     def test_fail_consistent_initialization(self):
         class Model:
@@ -231,20 +247,20 @@ class TestBaseSolver:
 
         with pytest.raises(
             pybamm.SolverError,
-            match="Could not find acceptable solution: The iteration is not making",
+            match="Could not find acceptable solution",
         ):
             solver.calculate_consistent_state(Model())
         solver = pybamm.BaseSolver(root_method="lm")
         with pytest.raises(
             pybamm.SolverError,
-            match="Could not find acceptable solution: solver terminated",
+            match="Could not find acceptable solution",
         ):
             solver.calculate_consistent_state(Model())
         # with casadi
         solver = pybamm.BaseSolver(root_method="casadi")
         with pytest.raises(
             pybamm.SolverError,
-            match="Could not find acceptable solution: Error in Function",
+            match="Could not find acceptable solution",
         ):
             solver.calculate_consistent_state(Model())
 
@@ -296,7 +312,7 @@ class TestBaseSolver:
         model.initial_conditions = {v: 1}
         x = np.array([0, 1])
         interp = pybamm.Interpolant(x, x, pybamm.t)
-        solver = pybamm.CasadiSolver()
+        solver = pybamm.IDAKLUSolver()
         for input_key in ["Current input [A]", "Voltage input [V]", "Power input [W]"]:
             sol = solver.step(
                 old_solution=None, model=model, dt=1.0, inputs={input_key: interp}
@@ -353,9 +369,6 @@ class TestBaseSolver:
         assert solver.get_platform_context("Linux") == "fork"
         assert solver.get_platform_context("Darwin") == "fork"
 
-    @pytest.mark.skipif(
-        not pybamm.has_idaklu(), reason="idaklu solver is not installed"
-    )
     def test_sensitivities(self):
         def exact_diff_a(y, a, b):
             return np.array([[y[0] ** 2 + 2 * a], [y[0]]])
@@ -401,3 +414,21 @@ class TestBaseSolver:
             np.testing.assert_allclose(
                 sens_b, exact_diff_b(y, inputs["a"], inputs["b"])
             )
+
+    def test_on_extrapolation_settings(self):
+        # Test setting different on_extrapolation values on BaseSolver
+        base_solver = pybamm.BaseSolver()
+
+        # Test valid values
+        base_solver.on_extrapolation = "warn"
+        assert base_solver.on_extrapolation == "warn"
+        base_solver.on_extrapolation = "error"
+        assert base_solver.on_extrapolation == "error"
+        base_solver.on_extrapolation = "ignore"
+        assert base_solver.on_extrapolation == "ignore"
+
+        # Test invalid value
+        with pytest.raises(
+            ValueError, match="on_extrapolation must be 'warn', 'raise', or 'ignore'"
+        ):
+            base_solver.on_extrapolation = "invalid"

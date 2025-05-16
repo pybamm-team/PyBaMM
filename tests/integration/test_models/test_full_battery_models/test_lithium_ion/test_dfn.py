@@ -1,11 +1,12 @@
 #
 # Tests for the lithium-ion DFN model
 #
+import numpy as np
+import pytest
+
 import pybamm
 import tests
-import numpy as np
 from tests import BaseIntegrationTestLithiumIon
-import pytest
 
 
 class TestDFN(BaseIntegrationTestLithiumIon):
@@ -51,6 +52,10 @@ class TestDFNWithSizeDistribution:
             "R_p": 3,
             "y": 5,
             "z": 5,
+            "R_n_prim": 3,
+            "R_n_sec": 3,
+            "R_p_prim": 3,
+            "R_p_sec": 3,
         }
 
     def test_basic_processing(self):
@@ -59,6 +64,31 @@ class TestDFNWithSizeDistribution:
         modeltest = tests.StandardModelTest(
             model, parameter_values=self.params, var_pts=self.var_pts
         )
+        modeltest.test_all()
+
+    def test_composite(self):
+        options = {
+            "particle phases": ("2", "1"),
+            "open-circuit potential": (("single", "current sigmoid"), "single"),
+            "particle size": "distribution",
+        }
+        parameter_values = pybamm.ParameterValues("Chen2020_composite")
+        name = "Negative electrode active material volume fraction"
+        x = 0.1
+        parameter_values.update(
+            {f"Primary: {name}": (1 - x) * 0.75, f"Secondary: {name}": x * 0.75}
+        )
+        parameter_values = pybamm.get_size_distribution_parameters(
+            parameter_values,
+            composite="negative",
+            R_min_n_prim=0.9,
+            R_min_n_sec=0.9,
+            R_max_n_prim=1.1,
+            R_max_n_sec=1.1,
+        )
+        # self.run_basic_processing_test(options, parameter_values=parameter_values)
+        model = pybamm.lithium_ion.DFN(options)
+        modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
         modeltest.test_all()
 
     def test_basic_processing_tuple(self):
@@ -102,22 +132,36 @@ class TestDFNWithSizeDistribution:
 
         # reduce number of particle sizes, for a crude discretization
         var_pts = {"R_n": 3, "R_p": 3}
-        solver = pybamm.CasadiSolver(mode="fast")
 
         # solve
         neg_Li = []
         pos_Li = []
+        t_eval = [0, 3500]
+        t_interp = np.linspace(t_eval[0], t_eval[-1], 100)
         for model in models:
             sim = pybamm.Simulation(
-                model, parameter_values=self.params, var_pts=self.var_pts, solver=solver
+                model, parameter_values=self.params, var_pts=self.var_pts
             )
             sim.var_pts.update(var_pts)
-            solution = sim.solve([0, 3500])
+            solution = sim.solve(t_eval, t_interp=t_interp)
             neg = solution["Total lithium in negative electrode [mol]"].entries[-1]
             pos = solution["Total lithium in positive electrode [mol]"].entries[-1]
             neg_Li.append(neg)
             pos_Li.append(pos)
 
         # compare
-        np.testing.assert_array_almost_equal(neg_Li[0], neg_Li[1], decimal=12)
-        np.testing.assert_array_almost_equal(pos_Li[0], pos_Li[1], decimal=12)
+        np.testing.assert_allclose(neg_Li[0], neg_Li[1], rtol=1e-13, atol=1e-12)
+        np.testing.assert_allclose(pos_Li[0], pos_Li[1], rtol=1e-13, atol=1e-12)
+
+    def test_basic_processing_nonlinear_diffusion(self):
+        options = {
+            "particle size": "distribution",
+        }
+        model = pybamm.lithium_ion.DFN(options)
+        # Ecker2015 has a nonlinear diffusion coefficient
+        parameter_values = pybamm.ParameterValues("Ecker2015")
+        parameter_values = pybamm.get_size_distribution_parameters(parameter_values)
+        modeltest = tests.StandardModelTest(
+            model, parameter_values=parameter_values, var_pts=self.var_pts
+        )
+        modeltest.test_all(skip_output_tests=True)

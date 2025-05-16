@@ -9,7 +9,7 @@ def graphite_mcmb2528_diffusivity_Dualfoil1998(sto, T):
 
     References
     ----------
-    .. [1] http://www.cchem.berkeley.edu/jsngrp/fortran.html
+    .. [1] John Newman, Dualfoil
 
     Parameters
     ----------
@@ -40,7 +40,7 @@ def graphite_mcmb2528_ocp_Dualfoil1998(sto):
 
     References
     ----------
-    .. [1] http://www.cchem.berkeley.edu/jsngrp/fortran.html
+    .. [1] John Newman, Dualfoil
     """
 
     u_eq = (
@@ -68,7 +68,7 @@ def graphite_electrolyte_exchange_current_density_Dualfoil1998(
 
     References
     ----------
-    .. [2] http://www.cchem.berkeley.edu/jsngrp/fortran.html
+    .. [2] John Newman, Dualfoil
 
     Parameters
     ----------
@@ -134,7 +134,7 @@ def lico2_diffusivity_Dualfoil1998(sto, T):
 
     References
     ----------
-    .. [1] http://www.cchem.berkeley.edu/jsngrp/fortran.html
+    .. [1] John Newman, Dualfoil
 
     Parameters
     ----------
@@ -166,7 +166,7 @@ def lico2_ocp_Dualfoil1998(sto):
 
     References
     ----------
-    .. [1] http://www.cchem.berkeley.edu/jsngrp/fortran.html
+    .. [1] John Newman, Dualfoil
     .. [2] CM Doyle. Design and simulation of lithium rechargeable batteries,
            1995.
 
@@ -200,7 +200,7 @@ def lico2_electrolyte_exchange_current_density_Dualfoil1998(c_e, c_s_surf, c_s_m
 
     References
     ----------
-    .. [2] http://www.cchem.berkeley.edu/jsngrp/fortran.html
+    .. [2] John Newman, Dualfoil
 
     Parameters
     ----------
@@ -269,7 +269,7 @@ def electrolyte_diffusivity_Capiglia1999(c_e, T):
     .. [1] C Capiglia et al. 7Li and 19F diffusion coefficients and thermal
     properties of non-aqueous electrolyte solutions for rechargeable lithium batteries.
     Journal of power sources 81 (1999): 859-862.
-    .. [2] http://www.cchem.berkeley.edu/jsngrp/fortran.html
+    .. [2] John Newman, Dualfoil
 
     Parameters
     ----------
@@ -302,7 +302,7 @@ def electrolyte_conductivity_Capiglia1999(c_e, T):
     .. [1] C Capiglia et al. 7Li and 19F diffusion coefficients and thermal
     properties of non-aqueous electrolyte solutions for rechargeable lithium batteries.
     Journal of power sources 81 (1999): 859-862.
-    .. [2] http://www.cchem.berkeley.edu/jsngrp/fortran.html
+    .. [2] John Newman, Dualfoil
 
     Parameters
     ----------
@@ -352,25 +352,20 @@ def get_parameter_values():
         "chemistry": "lithium_ion",
         # sei
         "Ratio of lithium moles to SEI moles": 2.0,
-        "Inner SEI reaction proportion": 0.5,
-        "Inner SEI partial molar volume [m3.mol-1]": 9.585e-05,
-        "Outer SEI partial molar volume [m3.mol-1]": 9.585e-05,
+        "SEI partial molar volume [m3.mol-1]": 9.585e-05,
         "SEI growth transfer coefficient": 0.5,
         "SEI reaction exchange current density [A.m-2]": 1.5e-07,
         "SEI resistivity [Ohm.m]": 200000.0,
-        "Outer SEI solvent diffusivity [m2.s-1]": 2.5000000000000002e-22,
+        "SEI solvent diffusivity [m2.s-1]": 2.5e-22,
         "Bulk solvent concentration [mol.m-3]": 2636.0,
-        "Inner SEI open-circuit potential [V]": 0.1,
-        "Outer SEI open-circuit potential [V]": 0.8,
-        "Inner SEI electron conductivity [S.m-1]": 8.95e-14,
-        "Inner SEI lithium interstitial diffusivity [m2.s-1]": 1e-20,
+        "SEI open-circuit potential [V]": 0.4,
+        "SEI electron conductivity [S.m-1]": 8.95e-14,
+        "SEI lithium interstitial diffusivity [m2.s-1]": 1e-20,
         "Lithium interstitial reference concentration [mol.m-3]": 15.0,
-        "Initial inner SEI thickness [m]": 2.5e-09,
-        "Initial outer SEI thickness [m]": 2.5e-09,
+        "Initial SEI thickness [m]": 5e-09,
         "EC initial concentration in electrolyte [mol.m-3]": 4541.0,
         "EC diffusivity [m2.s-1]": 2e-18,
         "SEI kinetic rate constant [m.s-1]": 1e-12,
-        "SEI open-circuit potential [V]": 0.4,
         "SEI growth activation energy [J.mol-1]": 0.0,
         "Negative electrode reaction-driven LAM factor [m3.mol-1]": 0.0,
         "Positive electrode reaction-driven LAM factor [m3.mol-1]": 0.0,
@@ -455,10 +450,8 @@ def get_parameter_values():
         # experiment
         "Reference temperature [K]": 298.15,
         "Ambient temperature [K]": 298.15,
-        "Negative current collector surface heat transfer coefficient [W.m-2.K-1]"
-        "": 0.0,
-        "Positive current collector surface heat transfer coefficient [W.m-2.K-1]"
-        "": 0.0,
+        "Negative current collector surface heat transfer coefficient [W.m-2.K-1]": 0.0,
+        "Positive current collector surface heat transfer coefficient [W.m-2.K-1]": 0.0,
         "Negative tab heat transfer coefficient [W.m-2.K-1]": 10.0,
         "Positive tab heat transfer coefficient [W.m-2.K-1]": 10.0,
         "Edge heat transfer coefficient [W.m-2.K-1]": 0.3,

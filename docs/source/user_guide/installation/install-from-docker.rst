@@ -13,7 +13,7 @@ Ensure Docker installation by running:
 
 .. code:: bash
 
-	  docker --version
+      docker --version
 
 Pulling the Docker image
 ------------------------
@@ -95,11 +95,6 @@ If you want to build the PyBaMM Docker image locally from the PyBaMM source code
 .. code-block:: bash
 
       source /home/pybamm/venv/bin/activate
-
-.. note::
-
-  PyBaMM's Docker image comes with all available solvers by default. These solvers include ``IDAKLU`` IDAS solver provided by the SUNDIALS linked with SuiteSparse's KLU and the ``JAX`` solver.
-
 
 Using Git inside a running Docker container
 -------------------------------------------

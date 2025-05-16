@@ -1,6 +1,7 @@
 import pybamm
 from benchmarks.benchmark_utils import set_random_seed
 import numpy as np
+import numpy.typing as npt
 
 
 def compute_discretisation(model, param):
@@ -33,21 +34,10 @@ def build_model(parameter, model_, option, value):
 class SolveModel:
     solver: pybamm.BaseSolver
     model: pybamm.BaseModel
-    t_eval: np.ndarray
-    t_interp: np.ndarray | None
+    t_eval: npt.NDArray[np.float64]
+    t_interp: npt.NDArray[np.float64] | None
 
     def solve_setup(self, parameter, model_, option, value, solver_class):
-        import importlib
-
-        idaklu_spec = importlib.util.find_spec("pybamm.solvers.idaklu")
-        if idaklu_spec is not None:
-            try:
-                idaklu = importlib.util.module_from_spec(idaklu_spec)
-                idaklu_spec.loader.exec_module(idaklu)
-            except ImportError as e:  # pragma: no cover
-                print("XXXXX cannot find klu", e)
-                idaklu_spec = None
-
         self.solver = solver_class()
         self.model = model_({option: value})
         c_rate = 1
@@ -184,6 +174,8 @@ class TimeSolveSEI(SolveModel):
             "electron-migration limited",
             "interstitial-diffusion limited",
             "ec reaction limited",
+            "tunnelling limited",
+            "VonKolzenberg2020",
         ],
         [pybamm.CasadiSolver, pybamm.IDAKLUSolver],
     )

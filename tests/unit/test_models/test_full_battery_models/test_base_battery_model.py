@@ -34,14 +34,14 @@ PRINT_OPTIONS_OUTPUT = """\
 'lithium plating porosity change': 'false' (possible: ['false', 'true'])
 'loss of active material': 'stress-driven' (possible: ['none', 'stress-driven', 'reaction-driven', 'current-driven', 'stress and reaction-driven'])
 'number of MSMR reactions': 'none' (possible: ['none'])
-'open-circuit potential': 'single' (possible: ['single', 'current sigmoid', 'MSMR', 'Wycisk'])
+'open-circuit potential': 'single' (possible: ['single', 'current sigmoid', 'MSMR', 'Wycisk', 'Axen'])
 'operating mode': 'current' (possible: ['current', 'voltage', 'power', 'differential power', 'explicit power', 'resistance', 'differential resistance', 'explicit resistance', 'CCCV'])
 'particle': 'Fickian diffusion' (possible: ['Fickian diffusion', 'uniform profile', 'quadratic profile', 'quartic profile', 'MSMR'])
 'particle mechanics': 'swelling only' (possible: ['none', 'swelling only', 'swelling and cracking'])
 'particle phases': '1' (possible: ['1', '2'])
 'particle shape': 'spherical' (possible: ['spherical', 'no particles'])
 'particle size': 'single' (possible: ['single', 'distribution'])
-'SEI': 'none' (possible: ['none', 'constant', 'reaction limited', 'reaction limited (asymmetric)', 'solvent-diffusion limited', 'electron-migration limited', 'interstitial-diffusion limited', 'ec reaction limited', 'ec reaction limited (asymmetric)'])
+'SEI': 'none' (possible: ['none', 'constant', 'reaction limited', 'reaction limited (asymmetric)', 'solvent-diffusion limited', 'electron-migration limited', 'interstitial-diffusion limited', 'ec reaction limited', 'ec reaction limited (asymmetric)', 'VonKolzenberg2020', 'tunnelling limited'])
 'SEI film resistance': 'none' (possible: ['none', 'distributed', 'average'])
 'SEI on cracks': 'false' (possible: ['false', 'true'])
 'SEI porosity change': 'false' (possible: ['false', 'true'])
@@ -54,6 +54,7 @@ PRINT_OPTIONS_OUTPUT = """\
 'voltage as a state': 'false' (possible: ['false', 'true'])
 'working electrode': 'both' (possible: ['both', 'positive'])
 'x-average side reactions': 'false' (possible: ['false', 'true'])
+'use lumped thermal capacity': 'false' (possible: ['false', 'true'])
 """
 
 
@@ -140,6 +141,10 @@ class TestBaseBatteryModel:
             "z": 10,
             "R_n": 30,
             "R_p": 30,
+            "R_n_prim": 30,
+            "R_p_prim": 30,
+            "R_n_sec": 30,
+            "R_p_sec": 30,
         }
         model = pybamm.BaseBatteryModel({"dimensionality": 0})
         assert var_pts == model.default_var_pts
@@ -309,6 +314,13 @@ class TestBaseBatteryModel:
                     "plating porosity change"
                 }
             )
+        with pytest.raises(pybamm.OptionError, match="distributions"):
+            pybamm.BaseBatteryModel(
+                {
+                    "particle size": "distribution",
+                    "lithium plating porosity change": "true",
+                }
+            )
 
         # contact resistance
         with pytest.raises(pybamm.OptionError, match="contact resistance"):
@@ -423,12 +435,12 @@ class TestBaseBatteryModel:
 
     def test_default_solver(self):
         model = pybamm.BaseBatteryModel()
-        assert isinstance(model.default_solver, pybamm.CasadiSolver)
+        assert isinstance(model.default_solver, pybamm.IDAKLUSolver)
 
         # check that default_solver gives you a new solver, not an internal object
         solver = model.default_solver
         solver = pybamm.BaseModel()
-        assert isinstance(model.default_solver, pybamm.CasadiSolver)
+        assert isinstance(model.default_solver, pybamm.IDAKLUSolver)
         assert isinstance(solver, pybamm.BaseModel)
 
         # check that adding algebraic variables gives algebraic solver

@@ -83,11 +83,13 @@ class StandardModelTest:
         if Crate == 0:
             Crate = 1
         if t_eval is None:
-            t_eval = np.linspace(0, 3600 / Crate, 100)
+            t_eval = [0, 3600 / Crate]
+        t_interp = np.linspace(t_eval[0], t_eval[-1], 100)
 
         self.solution = self.solver.solve(
             self.model,
-            t_eval,
+            t_eval=t_eval,
+            t_interp=t_interp,
             inputs=inputs,
         )
 
@@ -167,8 +169,6 @@ class StandardModelTest:
             new_solver.rtol = 1e-8
             new_solver.atol = 1e-8
 
-        accuracy = 5
-
         Crate = abs(
             self.parameter_values["Current function [A]"]
             / self.parameter_values["Nominal cell capacity [A.h]"]
@@ -177,13 +177,17 @@ class StandardModelTest:
         if Crate == 0:
             Crate = 1
         if t_eval is None:
-            t_eval = np.linspace(0, 3600 / Crate, 100)
+            t_eval = [0, 3600 / Crate]
+        t_interp = np.linspace(0, t_eval[-1], 100)
 
-        new_solution = new_solver.solve(new_model, t_eval)
+        new_solution = new_solver.solve(new_model, t_eval=t_eval, t_interp=t_interp)
 
         for x, _ in enumerate(self.solution.all_ys):
-            np.testing.assert_array_almost_equal(
-                new_solution.all_ys[x], self.solution.all_ys[x], decimal=accuracy
+            np.testing.assert_allclose(
+                new_solution.all_ys[x],
+                self.solution.all_ys[x],
+                rtol=1e-6,
+                atol=1e-6,
             )
         temp.close()
 

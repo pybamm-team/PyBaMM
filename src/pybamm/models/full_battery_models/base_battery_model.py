@@ -102,9 +102,10 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 reactions.
             * "open-circuit potential" : str
                 Sets the model for the open circuit potential. Can be "single"
-                (default), "current sigmoid", "Wycisk", or "MSMR". If "MSMR" then the "particle"
-                option must also be "MSMR". A 2-tuple can be provided for different
-                behaviour in negative and positive electrodes.
+                (default), "current sigmoid", "Wycisk", "Axen", or "MSMR".
+                If "MSMR" then the "particle" option must also be "MSMR".
+                A 2-tuple can be provided for different behaviour in negative
+                and positive electrodes.
             * "operating mode" : str
                 Sets the operating mode for the model. This determines how the current
                 is set. Can be:
@@ -153,7 +154,8 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 - "constant": :class:`pybamm.sei.Constant` (constant SEI thickness)
                 - "reaction limited", "reaction limited (asymmetric)", \
                     "solvent-diffusion limited", "electron-migration limited", \
-                    "interstitial-diffusion limited", "ec reaction limited" \
+                    "interstitial-diffusion limited", "ec reaction limited" ,   \
+                    "VonKolzenberg2020", "tunnelling limited",\
                     or "ec reaction limited (asymmetric)": :class:`pybamm.sei.SEIGrowth`
             * "SEI film resistance" : str
                 Set the submodel for additional term in the overpotential due to SEI.
@@ -222,6 +224,10 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 the respective porosity change) over the x-axis in Single Particle
                 Models, can be "false" or "true". Default is "false" for SPMe and
                 "true" for SPM.
+            * "use lumped thermal capacity" : str
+                Whether to use a lumped capacity model for the thermal model. Can be
+                "false" (default) or "true". This is only available for the lumped
+                thermal model.
     """
 
     def __init__(self, extra_options):
@@ -272,7 +278,13 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "stress and reaction-driven",
             ],
             "number of MSMR reactions": ["none"],
-            "open-circuit potential": ["single", "current sigmoid", "MSMR", "Wycisk"],
+            "open-circuit potential": [
+                "single",
+                "current sigmoid",
+                "MSMR",
+                "Wycisk",
+                "Axen",
+            ],
             "operating mode": [
                 "current",
                 "voltage",
@@ -305,6 +317,8 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "interstitial-diffusion limited",
                 "ec reaction limited",
                 "ec reaction limited (asymmetric)",
+                "VonKolzenberg2020",
+                "tunnelling limited",
             ],
             "SEI film resistance": ["none", "distributed", "average"],
             "SEI on cracks": ["false", "true"],
@@ -327,6 +341,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             "voltage as a state": ["false", "true"],
             "working electrode": ["both", "positive"],
             "x-average side reactions": ["false", "true"],
+            "use lumped thermal capacity": ["false", "true"],
         }
 
         default_options = {
@@ -522,14 +537,19 @@ class BatteryModelOptions(pybamm.FuzzyDict):
 
         # Options not yet compatible with particle-size distributions
         if options["particle size"] == "distribution":
+            if options["lithium plating porosity change"] != "false":
+                raise pybamm.OptionError(
+                    "Lithium plating porosity change not yet supported for particle-size"
+                    " distributions."
+                )
+            if options["SEI porosity change"] == "true":
+                raise NotImplementedError(
+                    "SEI porosity change submodels do not yet support particle-size "
+                    "distributions."
+                )
             if options["heat of mixing"] != "false":
                 raise NotImplementedError(
                     "Heat of mixing submodels do not yet support particle-size "
-                    "distributions."
-                )
-            if options["lithium plating"] != "none":
-                raise NotImplementedError(
-                    "Lithium plating submodels do not yet support particle-size "
                     "distributions."
                 )
             if options["particle"] in ["quadratic profile", "quartic profile"]:
@@ -537,24 +557,10 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     "'quadratic' and 'quartic' concentration profiles have not yet "
                     "been implemented for particle-size ditributions"
                 )
-            if options["particle mechanics"] != "none":
-                raise NotImplementedError(
-                    "Particle mechanics submodels do not yet support particle-size"
-                    " distributions."
-                )
             if options["particle shape"] != "spherical":
                 raise NotImplementedError(
                     "Particle shape must be 'spherical' for particle-size distribution"
                     " submodels."
-                )
-            if options["SEI"] != "none":
-                raise NotImplementedError(
-                    "SEI submodels do not yet support particle-size distributions."
-                )
-            if options["stress-induced diffusion"] == "true":
-                raise NotImplementedError(
-                    "stress-induced diffusion cannot yet be included in "
-                    "particle-size distributions."
                 )
             if options["thermal"] == "x-full":
                 raise NotImplementedError(
@@ -595,6 +601,15 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 f"X-full thermal submodels do not yet support {n}D current collectors"
             )
 
+        if (
+            options["use lumped thermal capacity"] == "true"
+            and "lumped" not in options["thermal"]
+        ):
+            raise pybamm.OptionError(
+                "Lumped thermal capacity model only compatible with lumped thermal "
+                "models"
+            )
+
         if isinstance(options["stress-induced diffusion"], str):
             if (
                 options["stress-induced diffusion"] == "true"
@@ -620,7 +635,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         if options["particle phases"] not in ["1", ("1", "1")]:
             if not (
                 options["surface form"] != "false"
-                and options["particle size"] == "single"
                 and options["particle"] == "Fickian diffusion"
             ):
                 raise pybamm.OptionError(
@@ -865,6 +879,10 @@ class BaseBatteryModel(pybamm.BaseModel):
             "z": 10,
             "R_n": 30,
             "R_p": 30,
+            "R_n_prim": 30,
+            "R_p_prim": 30,
+            "R_n_sec": 30,
+            "R_p_sec": 30,
         }
         # Reduce the default points for 2D current collectors
         if self.options["dimensionality"] == 2:
@@ -885,6 +903,10 @@ class BaseBatteryModel(pybamm.BaseModel):
             "positive secondary particle": pybamm.Uniform1DSubMesh,
             "negative particle size": pybamm.Uniform1DSubMesh,
             "positive particle size": pybamm.Uniform1DSubMesh,
+            "negative primary particle size": pybamm.Uniform1DSubMesh,
+            "positive primary particle size": pybamm.Uniform1DSubMesh,
+            "negative secondary particle size": pybamm.Uniform1DSubMesh,
+            "positive secondary particle size": pybamm.Uniform1DSubMesh,
         }
         if self.options["dimensionality"] == 0:
             base_submeshes["current collector"] = pybamm.SubMesh0D
@@ -907,6 +929,10 @@ class BaseBatteryModel(pybamm.BaseModel):
             "positive secondary particle": pybamm.FiniteVolume(),
             "negative particle size": pybamm.FiniteVolume(),
             "positive particle size": pybamm.FiniteVolume(),
+            "negative primary particle size": pybamm.FiniteVolume(),
+            "positive primary particle size": pybamm.FiniteVolume(),
+            "negative secondary particle size": pybamm.FiniteVolume(),
+            "positive secondary particle size": pybamm.FiniteVolume(),
         }
         if self.options["dimensionality"] == 0:
             # 0D submesh - use base spatial method

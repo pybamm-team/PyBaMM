@@ -40,6 +40,9 @@ class ThermalParameters(BaseParameters):
         # Initial temperature
         self.T_init = pybamm.Parameter("Initial temperature [K]")
 
+        # Lumped model heat capacity (volumetric)
+        self.cell_heat_capacity = pybamm.Parameter("Cell heat capacity [J.K-1.m-3]")
+
     def T_amb(self, y, z, t):
         """Ambient temperature [K]"""
         return pybamm.FunctionParameter(
@@ -109,8 +112,7 @@ class DomainThermalParameters(BaseParameters):
         }
         Domain = self.domain.capitalize()
         return pybamm.FunctionParameter(
-            f"{Domain} current collector surface heat transfer coefficient "
-            "[W.m-2.K-1]",
+            f"{Domain} current collector surface heat transfer coefficient [W.m-2.K-1]",
             inputs,
         )
 

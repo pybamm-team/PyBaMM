@@ -6,6 +6,7 @@ import numbers
 import warnings
 
 import numpy as np
+import numpy.typing as npt
 import sympy
 from scipy.sparse import csr_matrix, issparse
 from functools import cached_property
@@ -235,6 +236,9 @@ class Symbol:
 
         # Set domains (and hence id)
         self.domains = self.read_domain_or_domains(domain, auxiliary_domains, domains)
+
+        # mesh required for solution and processed variables classes
+        self.mesh = None
 
         self._saved_evaluates_on_edges: dict = {}
         self._print_name = None
@@ -567,13 +571,20 @@ class Symbol:
         anytree = import_optional_dependency("anytree")
         return anytree.PreOrderIter(self)
 
+    def post_order(self, filter=None):
+        """
+        returns an iterable that steps through the tree in post-order fashion.
+        """
+        anytree = import_optional_dependency("anytree")
+        return anytree.PostOrderIter(self, filter_=filter)
+
     def __str__(self):
         """return a string representation of the node and its children."""
         return self._name
 
     def __repr__(self):
         """returns the string `__class__(id, name, children, domain)`"""
-        return f"{self.__class__.__name__!s}({hex(self.id)}, {self._name!s}, children={[str(child) for child in self.children]!s}, domains={({k: v for k, v in self.domains.items() if v != []})!s})"
+        return f"{self.__class__.__name__!s}({hex(self.id)}, {self._name!s}, children={[str(child) for child in self.children]!s}, domains={ ({k: v for k, v in self.domains.items() if v != []})!s})"
 
     def __add__(self, other: ChildSymbol) -> pybamm.Addition:
         """return an :class:`Addition` object."""
@@ -759,8 +770,8 @@ class Symbol:
     def _base_evaluate(
         self,
         t: float | None = None,
-        y: np.ndarray | None = None,
-        y_dot: np.ndarray | None = None,
+        y: npt.NDArray[np.float64] | None = None,
+        y_dot: npt.NDArray[np.float64] | None = None,
         inputs: dict | str | None = None,
     ):
         """
@@ -791,8 +802,8 @@ class Symbol:
     def evaluate(
         self,
         t: float | None = None,
-        y: np.ndarray | None = None,
-        y_dot: np.ndarray | None = None,
+        y: npt.NDArray[np.float64] | None = None,
+        y_dot: npt.NDArray[np.float64] | None = None,
         inputs: dict | str | None = None,
     ) -> ChildValue:
         """Evaluate expression tree (wrapper to allow using dict of known values).

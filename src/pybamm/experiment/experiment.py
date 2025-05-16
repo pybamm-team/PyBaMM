@@ -3,6 +3,7 @@ import pybamm
 from .step.base_step import (
     _convert_time_to_seconds,
     _convert_temperature_to_kelvin,
+    BaseStep,
 )
 
 
@@ -23,10 +24,11 @@ class Experiment:
     period : str, optional
         Period (1/frequency) at which to record outputs. Default is 1 minute. Can be
         overwritten by individual operating conditions.
-    temperature: float, optional
-        The ambient air temperature in degrees Celsius at which to run the experiment.
-        Default is None whereby the ambient temperature is taken from the parameter set.
-        This value is overwritten if the temperature is specified in a step.
+    temperature : float or string, optional
+        The temperature of the experiment. If a float, the value is in Kelvin. If a string,
+        the value should be a valid temperature string, e.g. "25 oC". Default is None whereby
+        the ambient temperature is taken from the parameter set. This value is overwritten if
+        the temperature is specified in a step.
     termination : list[str], optional
         List of strings representing the conditions to terminate the experiment. Default is None.
         This is different from the termination for individual steps. Termination for
@@ -39,7 +41,7 @@ class Experiment:
 
     def __init__(
         self,
-        operating_conditions: list[str | tuple[str]],
+        operating_conditions: list[str | tuple[str] | BaseStep],
         period: str | None = None,
         temperature: float | None = None,
         termination: list[str] | None = None,

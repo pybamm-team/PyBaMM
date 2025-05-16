@@ -147,7 +147,7 @@ class WyciskOpenCircuitPotential(BaseOpenCircuitPotential):
         domain, Domain = self.domain_Domain
         phase_name = self.phase_name
 
-        current = variables[
+        i_surf = variables[
             f"{Domain} electrode {phase_name}interfacial current density [A.m-2]"
         ]
         # check if composite or not
@@ -160,12 +160,12 @@ class WyciskOpenCircuitPotential(BaseOpenCircuitPotential):
             f"{Domain} electrode {phase_name}differential capacity [A.s.V-1]"
         ]
         dQdU = dQdU.orphans[0]
-        K = self.phase_param.hysteresis_decay
+        K = self.phase_param.hysteresis_decay()
         K_x = self.phase_param.hysteresis_switch
         h = variables[f"{Domain} electrode {phase_name}hysteresis state"]
 
         dhdt = (
-            K * (current / (Q_cell * (dQdU**K_x))) * (1 - pybamm.sign(current) * h)
+            K * (i_surf / (Q_cell * (dQdU**K_x))) * (1 - pybamm.sign(i_surf) * h)
         )  #! current is backwards for a halfcell
         self.rhs[h] = dhdt
 
@@ -173,4 +173,4 @@ class WyciskOpenCircuitPotential(BaseOpenCircuitPotential):
         domain, Domain = self.domain_Domain
         phase_name = self.phase_name
         h = variables[f"{Domain} electrode {phase_name}hysteresis state"]
-        self.initial_conditions[h] = pybamm.Scalar(0)
+        self.initial_conditions[h] = self.phase_param.h_init

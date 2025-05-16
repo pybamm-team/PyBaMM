@@ -4,13 +4,19 @@ on:
   schedule:
     - cron: "0 0 * * *"
 
+
+permissions: {}
+
 jobs:
   build:
     runs-on: ubuntu-latest
-    if: github.repository_owner == 'pybamm-team'
+    permissions:
+      issues: read
+      contents: read
+    if: github.repository == 'pybamm-team/PyBaMM'
     steps:
       - name: Close old issues that need reply
-        uses: dwieeb/needs-reply@v2
+        uses: dwieeb/needs-reply@71e8d5144caa0d4a1e292348bfafa3866d08c855 # v2.0.0
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           issue-label: needs-reply

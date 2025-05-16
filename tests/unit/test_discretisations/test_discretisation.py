@@ -68,6 +68,44 @@ class TestDiscretise:
         for child in c_e.children:
             assert child in disc.bcs.keys()
 
+    def test_add_internal_boundary_conditions_symbolic(self):
+        submesh_types = {
+            "left domain": pybamm.SymbolicUniform1DSubMesh,
+            "middle domain": pybamm.SymbolicUniform1DSubMesh,
+            "right domain": pybamm.SymbolicUniform1DSubMesh,
+        }
+        spatial_methods = {
+            "left domain": pybamm.FiniteVolume(),
+            "middle domain": pybamm.FiniteVolume(),
+            "right domain": pybamm.FiniteVolume(),
+        }
+        x_l = pybamm.SpatialVariable("x_l", ["left domain"], coord_sys="cartesian")
+        x_m = pybamm.SpatialVariable("x_m", ["middle domain"], coord_sys="cartesian")
+        x_r = pybamm.SpatialVariable("x_r", ["right domain"], coord_sys="cartesian")
+        geometry = {
+            "left domain": {x_l: {"min": 0, "max": 1}},
+            "middle domain": {x_m: {"min": 1, "max": 2}},
+            "right domain": {x_r: {"min": 2, "max": 3}},
+        }
+        var_pts = {x_l: 10, x_m: 10, x_r: 10}
+        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        model = pybamm.BaseModel()
+        c_e_n = pybamm.Variable("c_e_n", domain=["left domain"])
+        c_e_s = pybamm.Variable("c_e_s", domain=["middle domain"])
+        c_e_p = pybamm.Variable("c_e_p", domain=["right domain"])
+        c_e = pybamm.concatenation(c_e_n, c_e_s, c_e_p)
+        lbc = (pybamm.Scalar(0), "Neumann")
+        rbc = (pybamm.Scalar(0), "Neumann")
+        model.boundary_conditions = {c_e: {"left": lbc, "right": rbc}}
+        disc.bcs = model.boundary_conditions
+        disc.set_variable_slices([c_e_n, c_e_s, c_e_p])
+        disc.set_internal_boundary_conditions(model)
+
+        for child in c_e.children:
+            assert child in disc.bcs.keys()
+
     def test_discretise_slicing(self):
         # create discretisation
         mesh = get_mesh_for_testing()
@@ -432,6 +470,8 @@ class TestDiscretise:
             np.eye(submesh.nodes.shape[0]), model.mass_matrix.entries.toarray()
         )
 
+        assert model.is_standard_form_dae
+
         # Create StateVector to differentiate model with respect to
         y = pybamm.StateVector(slice(0, submesh.npts))
 
@@ -488,6 +528,8 @@ class TestDiscretise:
         np.testing.assert_array_equal(
             np.eye(np.size(y0)), model.mass_matrix.entries.toarray()
         )
+
+        assert model.is_standard_form_dae
 
         # Create StateVector to differentiate model with respect to
         y = pybamm.StateVector(slice(0, np.size(y0)))
@@ -602,6 +644,7 @@ class TestDiscretise:
         np.testing.assert_array_equal(
             mass.toarray(), model.mass_matrix.entries.toarray()
         )
+        assert model.is_standard_form_dae
 
         # jacobian
         y = pybamm.StateVector(slice(0, np.size(y0)))
@@ -684,6 +727,8 @@ class TestDiscretise:
         # mass matrix is identity upper left, zeros elsewhere
         mass = np.zeros((np.size(submesh.nodes), np.size(submesh.nodes)))
         np.testing.assert_array_equal(mass, model.mass_matrix.entries.toarray())
+
+        assert not model.is_standard_form_dae
 
         # jacobian
         y = pybamm.StateVector(slice(0, np.size(y0)))
@@ -998,9 +1043,9 @@ class TestDiscretise:
         assert expr.children[2].evaluate(0, y).shape == (105, 1)
 
     def test_exceptions(self):
-        c_n = pybamm.Variable("c", domain=["negative electrode"])
+        c_n = pybamm.Variable("c_n", domain=["negative electrode"])
         N_n = pybamm.grad(c_n)
-        c_s = pybamm.Variable("c", domain=["separator"])
+        c_s = pybamm.Variable("c_s", domain=["separator"])
         N_s = pybamm.grad(c_s)
         model = pybamm.BaseModel()
         model.rhs = {c_n: pybamm.div(N_n), c_s: pybamm.div(N_s)}
@@ -1011,22 +1056,6 @@ class TestDiscretise:
         }
 
         disc = get_discretisation_for_testing()
-
-        # check raises error if different sized key and output var
-        model.variables = {c_n.name: c_s}
-        with pytest.raises(pybamm.ModelError, match="variable and its eqn"):
-            disc.process_model(model)
-
-        # check doesn't raise if concatenation
-        model.variables = {c_n.name: pybamm.concatenation(2 * c_n, 3 * c_s)}
-        disc.process_model(model, inplace=False)
-
-        # check doesn't raise if broadcast
-        model.variables = {
-            c_n.name: pybamm.PrimaryBroadcast(
-                pybamm.InputParameter("a"), ["negative electrode"]
-            )
-        }
         disc.process_model(model)
 
         # Check setting up a 0D spatial method with 1D mesh raises error
@@ -1239,3 +1268,29 @@ class TestDiscretise:
         disc = pybamm.Discretisation(remove_independent_variables_from_rhs=True)
         disc.process_model(model)
         assert len(model.rhs) == 3
+
+    def test_pre_process_variables(self):
+        a = pybamm.Variable("a")
+        b = pybamm.Variable("b")
+        model = pybamm.BaseModel()
+        model.rhs = {a: b, b: a}
+        model.initial_conditions = {
+            a: pybamm.Scalar(0),
+            b: pybamm.Scalar(1),
+        }
+        model.variables = {
+            "a": a,  # correct
+            # b missing
+        }
+        disc = pybamm.Discretisation()
+        disc_model = disc.process_model(model, inplace=False)
+        assert list(disc_model.variables.keys()) == ["a", "b"]
+
+        model.variables = {
+            "a": a,
+            "b": 2 * a,
+        }
+        with pytest.raises(
+            pybamm.ModelError, match="Variable 'b' should have expression"
+        ):
+            disc.process_model(model, inplace=False)

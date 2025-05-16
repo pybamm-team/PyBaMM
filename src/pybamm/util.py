@@ -1,10 +1,10 @@
+from __future__ import annotations
 import importlib.util
 import importlib.metadata
 import numbers
 import os
 import pathlib
 import pickle
-import subprocess
 import sys
 import timeit
 import difflib
@@ -21,23 +21,6 @@ JAXLIB_VERSION = "0.4.27" if sys.version_info < (3, 10) else "0.4.34"
 def root_dir():
     """return the root directory of the PyBaMM install directory"""
     return str(pathlib.Path(pybamm.__path__[0]).parent.parent)
-
-
-def get_git_commit_info():
-    """
-    Get the git commit info for the current PyBaMM version, e.g. v22.8-39-gb25ce8c41
-    (version 22.8, commit b25ce8c41)
-    """
-    try:
-        # Get the latest git commit hash
-        return str(
-            subprocess.check_output(["git", "describe", "--tags"], cwd=root_dir())
-            .strip()
-            .decode()
-        )
-    except subprocess.CalledProcessError:  # pragma: no cover
-        # Not a git repository so just return the version number
-        return f"v{pybamm.__version__}"
 
 
 class FuzzyDict(dict):
@@ -95,46 +78,148 @@ class FuzzyDict(dict):
                 ) from error
             best_matches = self.get_best_matches(key)
             for k in best_matches:
-                if key in k and k.endswith("]"):
+                if key in k and k.endswith("]") and not key.endswith("]"):
                     raise KeyError(
                         f"'{key}' not found. Use the dimensional version '{k}' instead."
+                    ) from error
+                elif key in k and (
+                    k.startswith("Primary") or k.startswith("Secondary")
+                ):
+                    raise KeyError(
+                        f"'{key}' not found. If you are using a composite model, you may need to use {k} instead. Otherwise, best matches are {best_matches}"
                     ) from error
             raise KeyError(
                 f"'{key}' not found. Best matches are {best_matches}"
             ) from error
 
-    def search(self, key, print_values=False):
+    def _find_matches(
+        self, search_key: str, known_keys: list[str], min_similarity: float = 0.4
+    ):
         """
-        Search dictionary for keys containing 'key'. If print_values is True, then
-        both the keys and values will be printed. Otherwise just the values will
-        be printed. If no results are found, the best matches are printed.
+        Helper method to find exact and partial matches for a given search key.
+
+        Parameters
+        ----------
+        search_key : str
+            The term to search for in the keys.
+        known_keys : list of str
+            The list of known dictionary keys to search within.
+        min_similarity : float, optional
+            The minimum similarity threshold for a match.
+            Default is 0.4
         """
-        key_in = key
-        key = key_in.lower()
+        search_key = search_key.lower()
+        exact_matches = []
+        partial_matches = []
 
-        # Sort the keys so results are stored in alphabetical order
-        keys = list(self.keys())
-        keys.sort()
-        results = {}
+        for key in known_keys:
+            key_lower = key.lower()
+            if search_key in key_lower:
+                key_words = key_lower.split()
 
-        # Check if any of the dict keys contain the key we are searching for
-        for k in keys:
-            if key in k.lower():
-                results[k] = self[k]
+                for word in key_words:
+                    similarity = difflib.SequenceMatcher(None, search_key, word).ratio()
 
-        if results == {}:
-            # If no results, return best matches
-            best_matches = self.get_best_matches(key)
+                    if similarity >= min_similarity:
+                        exact_matches.append(key)
+
+            else:
+                partial_matches = difflib.get_close_matches(
+                    search_key, known_keys, n=5, cutoff=0.5
+                )
+        return exact_matches, partial_matches
+
+    def search(
+        self,
+        keys: str | list[str],
+        print_values: bool = False,
+        min_similarity: float = 0.4,
+    ):
+        """
+        Search dictionary for keys containing all terms in 'keys'.
+        If print_values is True, both the keys and values will be printed.
+        Otherwise, just the keys will be printed. If no results are found,
+        the best matches are printed.
+
+        Parameters
+        ----------
+        keys : str or list of str
+            Search term(s)
+        print_values : bool, optional
+            If True, print both keys and values. Otherwise, print only keys.
+            Default is False.
+        min_similarity : float, optional
+            The minimum similarity threshold for a match.
+            Default is 0.4
+        """
+
+        if not isinstance(keys, (str, list)) or not all(
+            isinstance(k, str) for k in keys
+        ):
+            msg = f"'keys' must be a string or a list of strings, got {type(keys)}"
+            raise TypeError(msg)
+
+        if isinstance(keys, str):
+            if not keys.strip():
+                msg = "The search term cannot be an empty or whitespace-only string"
+                raise ValueError(msg)
+            original_keys = [keys]
+            search_keys = [keys.strip().lower()]
+
+        elif isinstance(keys, list):
+            if all(not str(k).strip() for k in keys):
+                msg = "The 'keys' list cannot contain only empty or whitespace strings"
+                raise ValueError(msg)
+
+            original_keys = keys
+            search_keys = [k.strip().lower() for k in keys if k.strip()]
+
+        known_keys = list(self.keys())
+        # Check for exact matches where all search keys appear together in a key
+        exact_matches = []
+        for key in known_keys:
+            key_lower = key.lower()
+            if all(term in key_lower for term in search_keys):
+                key_words = key_lower.split()
+
+                # Ensure all search terms match at least one word in the key
+                if all(
+                    any(
+                        difflib.SequenceMatcher(None, term, word).ratio()
+                        >= min_similarity
+                        for word in key_words
+                    )
+                    for term in search_keys
+                ):
+                    exact_matches.append(key)
+
+        if exact_matches:
             print(
-                f"No results for search using '{key_in}'. "
-                f"Best matches are {best_matches}"
+                f"Results for '{' '.join(k for k in original_keys if k.strip())}': {exact_matches}"
             )
-        elif print_values:
-            # Else print results, including dict items
-            print("\n".join(f"{k}\t{v}" for k, v in results.items()))
-        else:
-            # Just print keys
-            print("\n".join(f"{k}" for k in results.keys()))
+            if print_values:
+                for match in exact_matches:
+                    print(f"{match} -> {self[match]}")
+            return
+
+        # If no exact matches, iterate over search keys individually
+        for original_key, search_key in zip(original_keys, search_keys):
+            exact_key_matches, partial_matches = self._find_matches(
+                search_key, known_keys, min_similarity
+            )
+
+            if exact_key_matches:
+                print(f"Exact matches for '{original_key}': {exact_key_matches}")
+                if print_values:
+                    for match in exact_key_matches:
+                        print(f"{match} -> {self[match]}")
+            else:
+                if partial_matches:
+                    print(
+                        f"No exact matches found for '{original_key}'. Best matches are: {partial_matches}"
+                    )
+                else:
+                    print(f"No matches found for '{original_key}'")
 
     def copy(self):
         return FuzzyDict(super().copy())
@@ -188,7 +273,7 @@ class TimerTime:
         elif time < 60:
             return f"{time:.3f} s"
         output = []
-        time = int(round(time))
+        time = round(time)
         units = [(604800, "week"), (86400, "day"), (3600, "hour"), (60, "minute")]
         for k, name in units:
             f = time // k
@@ -306,7 +391,6 @@ def is_constant_and_can_evaluate(symbol):
         return False
 
 
-# https://docs.pybamm.org/en/latest/source/user_guide/contributing.html#managing-optional-dependencies-and-their-imports
 def import_optional_dependency(module_name, attribute=None):
     err_msg = f"Optional dependency {module_name} is not available. See https://docs.pybamm.org/en/latest/source/user_guide/installation/index.html#optional-dependencies for more details."
     try:

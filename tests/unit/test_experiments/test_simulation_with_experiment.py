@@ -1,6 +1,3 @@
-#
-# Test setting up a simulation with an experiment
-#
 import pytest
 import casadi
 import pybamm
@@ -36,10 +33,10 @@ class TestSimulationExperiment:
             steps[1].basic_repr()
         ]  # CC charge
         model_V = sim.experiment_unique_steps_to_model[steps[2].basic_repr()]  # CV hold
-        assert "Current cut-off [A] [experiment]" in [
+        assert "abs(Current [A]) < 0.05 [A] [experiment]" in [
             event.name for event in model_V.events
         ]
-        assert "Charge voltage cut-off [V] [experiment]" in [
+        assert "Voltage > 4.1 [V] [experiment]" in [
             event.name for event in model_I.events
         ]
 
@@ -76,27 +73,28 @@ class TestSimulationExperiment:
             temperature="-14oC",
         )
         model = pybamm.lithium_ion.SPM()
-        sim = pybamm.Simulation(model, experiment=experiment)
+        solver = pybamm.IDAKLUSolver(atol=1e-8, rtol=1e-8)
+        sim = pybamm.Simulation(model, experiment=experiment, solver=solver)
         # test the callback here
         sol = sim.solve(callbacks=pybamm.callbacks.Callback())
         assert sol.termination == "final time"
         assert len(sol.cycles) == 1
 
         # Test outputs
-        np.testing.assert_array_almost_equal(
-            sol.cycles[0].steps[0]["C-rate"].data, 1 / 20
+        np.testing.assert_allclose(
+            sol.cycles[0].steps[0]["C-rate"].data, 1 / 20, rtol=1e-7, atol=1e-6
         )
-        np.testing.assert_array_almost_equal(
-            sol.cycles[0].steps[1]["Current [A]"].data, -1
+        np.testing.assert_allclose(
+            sol.cycles[0].steps[1]["Current [A]"].data, -1, rtol=1e-7, atol=1e-6
         )
-        np.testing.assert_array_almost_equal(
-            sol.cycles[0].steps[2]["Voltage [V]"].data, 4.1, decimal=5
+        np.testing.assert_allclose(
+            sol.cycles[0].steps[2]["Voltage [V]"].data, 4.1, rtol=1e-6, atol=1e-5
         )
-        np.testing.assert_array_almost_equal(
-            sol.cycles[0].steps[3]["Power [W]"].data, 2, decimal=5
+        np.testing.assert_allclose(
+            sol.cycles[0].steps[3]["Power [W]"].data, 2, rtol=3e-4, atol=3e-4
         )
-        np.testing.assert_array_almost_equal(
-            sol.cycles[0].steps[4]["Resistance [Ohm]"].data, 4, decimal=5
+        np.testing.assert_allclose(
+            sol.cycles[0].steps[4]["Resistance [Ohm]"].data, 4, rtol=2e-4, atol=6e-4
         )
 
         np.testing.assert_array_equal(
@@ -123,7 +121,9 @@ class TestSimulationExperiment:
             y_right = sol.cycles[0].steps[i + 1].all_ys[0][:len_rhs, 0]
             if isinstance(y_right, casadi.DM):
                 y_right = y_right.full()
-            np.testing.assert_array_almost_equal(y_left.flatten(), y_right.flatten())
+            np.testing.assert_allclose(
+                y_left.flatten(), y_right.flatten(), rtol=1e-7, atol=1e-6
+            )
 
         # Solve again starting from solution
         sol2 = sim.solve(starting_solution=sol)
@@ -146,6 +146,73 @@ class TestSimulationExperiment:
         assert len(sol3.cycles) == 2
         os.remove("test_experiment.sav")
 
+    def test_skip_ok(self):
+        model = pybamm.lithium_ion.SPMe()
+        cc_charge_skip_ok = pybamm.step.Current(-5, termination="4.2 V")
+        cc_charge_skip_not_ok = pybamm.step.Current(
+            -5, termination="4.2 V", skip_ok=False
+        )
+        steps = [
+            pybamm.step.Current(2, duration=100.0, skip_ok=False),
+            cc_charge_skip_ok,
+            pybamm.step.Voltage(4.2, termination="0.01 A", skip_ok=False),
+        ]
+        param = pybamm.ParameterValues("Chen2020")
+        experiment = pybamm.Experiment(steps)
+        sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
+        sol = sim.solve()
+        # Make sure we know to skip it if we should and not if we shouldn't
+        assert sim.experiment.steps[1].skip_ok
+        assert not sim.experiment.steps[0].skip_ok
+
+        # Make sure we actually skipped it because it is infeasible
+        assert len(sol.cycles) == 2
+
+        # In this case, it is feasible, so we should not skip it
+        sol2 = sim.solve(initial_soc=0.5)
+        assert len(sol2.cycles) == 3
+
+        # make sure we raise an error if we shouldn't skip it and it is infeasible
+        steps[1] = cc_charge_skip_not_ok
+        experiment = pybamm.Experiment(steps)
+        sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
+        with pytest.raises(pybamm.SolverError):
+            sim.solve()
+
+        # make sure we raise an error if all steps are infeasible
+        steps = [
+            (pybamm.step.Current(-5, termination="4.2 V", skip_ok=True),) * 5,
+        ]
+        experiment = pybamm.Experiment(steps)
+        sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
+        with pytest.raises(pybamm.SolverError, match="skip_ok is True for all steps"):
+            sim.solve()
+
+        # Check termination after a skipped step
+        steps = [
+            pybamm.step.Current(2, duration=100.0, skip_ok=False),
+            cc_charge_skip_ok,
+        ]
+        experiment = pybamm.Experiment(steps)
+        sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
+        sol = sim.solve()
+        assert sol.termination == "Event exceeded in initial conditions"
+
+    def test_all_empty_solution_errors(self):
+        model = pybamm.lithium_ion.SPM()
+        parameter_values = pybamm.ParameterValues("Chen2020")
+
+        # One step exceeded, suggests making a cycle
+        steps = [
+            (pybamm.step.Current(-5, termination="4.2 V", skip_ok=False),) * 5,
+        ]
+        experiment = pybamm.Experiment(steps)
+        sim = pybamm.Simulation(
+            model, experiment=experiment, parameter_values=parameter_values
+        )
+        with pytest.raises(pybamm.SolverError, match="All steps in the cycle"):
+            sim.solve()
+
     def test_run_experiment_multiple_times(self):
         s = pybamm.step.string
         experiment = pybamm.Experiment(
@@ -167,9 +234,6 @@ class TestSimulationExperiment:
             sol1["Voltage [V]"].data, sol2["Voltage [V]"].data
         )
 
-    @pytest.mark.skipif(
-        not pybamm.has_idaklu(), reason="idaklu solver is not installed"
-    )
     def test_run_experiment_cccv_solvers(self):
         experiment_2step = pybamm.Experiment(
             [
@@ -190,96 +254,106 @@ class TestSimulationExperiment:
             solution = sim.solve()
             solutions.append(solution)
 
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             solutions[0]["Voltage [V]"].data,
             solutions[1]["Voltage [V]"](solutions[0].t),
-            decimal=1,
+            rtol=1e-2,
+            atol=1e-1,
         )
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             solutions[0]["Current [A]"].data,
             solutions[1]["Current [A]"](solutions[0].t),
-            decimal=0,
+            rtol=1e-0,
+            atol=1e-0,
         )
         assert solutions[1].termination == "final time"
 
-    @pytest.mark.skipif(
-        not pybamm.has_idaklu(), reason="idaklu solver is not installed"
+    @pytest.mark.parametrize(
+        "solver_cls",
+        [pybamm.lithium_ion.SPM, pybamm.lithium_ion.DFN],
+        ids=["SPM", "DFN"],
     )
-    def test_solve_with_sensitivities_and_experiment(self):
+    def test_solve_with_sensitivities_and_experiment(self, solver_cls):
         experiment_2step = pybamm.Experiment(
             [
                 (
-                    "Discharge at C/20 for 1 hour",
-                    "Charge at 1 A until 4.1 V",
-                    "Hold at 4.1 V until C/2",
-                    "Discharge at 2 W for 30 min",
-                    "Discharge at 2 W for 30 min",  # repeat to cover this case (changes initialisation)
+                    "Discharge at C/20 for 2 min",
+                    "Charge at 1 A for 1 min",
+                    "Hold at 4.1 V for 1 min",
+                    "Discharge at 2 W for 1 min",
+                    "Discharge at 2 W for 1 min",  # repeat to cover this case (changes initialisation)
                 ),
             ]
             * 2,
         )
 
         solutions = []
-        for solver in [
-            pybamm.CasadiSolver(),
-            pybamm.IDAKLUSolver(),
-            pybamm.ScipySolver(),
-        ]:
-            for calculate_sensitivities in [False, True]:
-                model = pybamm.lithium_ion.SPM()
-                param = model.default_parameter_values
-                input_param_name = "Negative electrode active material volume fraction"
-                input_param_value = param[input_param_name]
-                param.update({input_param_name: "[input]"})
-                sim = pybamm.Simulation(
-                    model,
-                    experiment=experiment_2step,
-                    solver=solver,
-                    parameter_values=param,
-                )
-                solution = sim.solve(
-                    inputs={input_param_name: input_param_value},
-                    calculate_sensitivities=calculate_sensitivities,
-                )
-                solutions.append(solution)
-
-        # check solutions are the same, leave out the last solution point as it is slightly different
-        # for each solve due to numerical errors
-        # TODO: scipy solver does not work for this experiment, with or without sensitivities,
-        # so we skip this test for now
-        for i in range(1, len(solutions) - 2):
-            np.testing.assert_allclose(
-                solutions[0]["Voltage [V]"].data[:-1],
-                solutions[i]["Voltage [V]"](solutions[0].t[:-1]),
-                rtol=5e-2,
-                equal_nan=True,
+        input_param_name = "Negative electrode active material volume fraction"
+        solver = pybamm.IDAKLUSolver(atol=1e-8, rtol=1e-8)
+        for calculate_sensitivities in [False, True]:
+            model = solver_cls()
+            param = model.default_parameter_values
+            input_param_value = param[input_param_name]
+            param.update({input_param_name: "[input]"})
+            sim = pybamm.Simulation(
+                model,
+                experiment=experiment_2step,
+                solver=solver,
+                parameter_values=param,
             )
+            solution = sim.solve(
+                inputs={input_param_name: input_param_value},
+                calculate_sensitivities=calculate_sensitivities,
+            )
+            solutions.append(solution)
 
-        # check sensitivities are roughly the same. Sundials isn't doing error control on the sensitivities
-        # by default, and the solution can be quite coarse for quickly changing sensitivities
-        sens_casadi = (
-            solutions[1]["Voltage [V]"]
-            .sensitivities[input_param_name][:-2]
-            .full()
-            .flatten()
+        model = solver_cls()
+        param = model.default_parameter_values
+        base_input_param_value = param[input_param_name]
+        fd_tol = 1e-4
+        for dh in [-fd_tol, fd_tol]:
+            model = solver_cls()
+            param = model.default_parameter_values
+            input_param_value = base_input_param_value * (1.0 + dh)
+            param.update({input_param_name: "[input]"})
+            sim = pybamm.Simulation(
+                model,
+                experiment=experiment_2step,
+                solver=solver,
+                parameter_values=param,
+            )
+            solution = sim.solve(
+                inputs={input_param_name: input_param_value},
+            )
+            solutions.append(solution)
+
+        # check solutions are the same
+        np.testing.assert_allclose(
+            solutions[0]["Voltage [V]"].data,
+            solutions[1]["Voltage [V]"](solutions[0].t),
+            rtol=5e-2,
+            equal_nan=True,
         )
+
+        # use finite difference to check sensitivities
+        t = solutions[0].t
+        soln_neg = solutions[2]["Voltage [V]"](t)
+        soln_pos = solutions[3]["Voltage [V]"](t)
+        sens_fd = (soln_pos - soln_neg) / (2 * fd_tol * base_input_param_value)
         sens_idaklu = np.interp(
-            solutions[1].t[:-2],
-            solutions[3].t,
-            solutions[3]["Voltage [V]"]
+            t,
+            solutions[1].t,
+            solutions[1]["Voltage [V]"]
             .sensitivities[input_param_name]
             .full()
             .flatten(),
         )
-        rtol = 1e-1
-        atol = 1e-2
-        error = np.sqrt(
-            np.sum(
-                ((sens_casadi - sens_idaklu) / (rtol * np.abs(sens_casadi) + atol)) ** 2
-            )
-            / len(sens_casadi)
+        np.testing.assert_allclose(
+            sens_fd,
+            sens_idaklu,
+            rtol=2e-4,
+            atol=2e-3,
         )
-        assert error < 1.0
 
     def test_run_experiment_drive_cycle(self):
         drive_cycle = np.array([np.arange(10), np.arange(10)]).T
@@ -288,7 +362,7 @@ class TestSimulationExperiment:
                 (
                     pybamm.step.current(drive_cycle, temperature="35oC"),
                     pybamm.step.voltage(drive_cycle),
-                    pybamm.step.power(drive_cycle, termination="3 V"),
+                    pybamm.step.power(drive_cycle, termination="< 3 V"),
                 )
             ],
         )
@@ -306,9 +380,7 @@ class TestSimulationExperiment:
         pybamm.set_logging_level("ERROR")
         # giving the time, should get ignored
         t_eval = [0, 1]
-        sim.solve(
-            t_eval, solver=pybamm.CasadiSolver(), callbacks=pybamm.callbacks.Callback()
-        )
+        sim.solve(t_eval, callbacks=pybamm.callbacks.Callback())
         pybamm.set_logging_level("WARNING")
         assert sim._solution.termination == "event: Minimum voltage [V]"
 
@@ -318,19 +390,17 @@ class TestSimulationExperiment:
             [
                 (
                     "Rest for 10 minutes",
-                    s("Discharge at 20 C for 10 minutes", period="10 minutes"),
+                    s("Discharge at 20000 C for 10 minutes"),
                 )
             ]
         )
         model = pybamm.lithium_ion.DFN()
 
         parameter_values = pybamm.ParameterValues("Chen2020")
-        solver = pybamm.CasadiSolver(max_step_decrease_count=2)
         sim = pybamm.Simulation(
             model,
             experiment=experiment,
             parameter_values=parameter_values,
-            solver=solver,
         )
         sol = sim.solve()
         assert len(sol.cycles) == 1
@@ -340,14 +410,13 @@ class TestSimulationExperiment:
         experiment = pybamm.Experiment(
             [
                 "Rest for 10 minutes",
-                s("Discharge at 20 C for 10 minutes", period="10 minutes"),
+                s("Discharge at 20000 C for 10 minutes"),
             ]
         )
         sim = pybamm.Simulation(
             model,
             experiment=experiment,
             parameter_values=parameter_values,
-            solver=solver,
         )
         sol = sim.solve()
         assert len(sol.cycles) == 1
@@ -386,7 +455,7 @@ class TestSimulationExperiment:
         param = pybamm.ParameterValues("Chen2020")
         param["SEI kinetic rate constant [m.s-1]"] = 1e-14
         sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
-        sol = sim.solve(solver=pybamm.CasadiSolver())
+        sol = sim.solve()
         C = sol.summary_variables["Capacity [A.h]"]
         np.testing.assert_array_less(np.diff(C), 0)
         # all but the last value should be above the termination condition
@@ -408,7 +477,8 @@ class TestSimulationExperiment:
         param = pybamm.ParameterValues("Chen2020")
         param["SEI kinetic rate constant [m.s-1]"] = 1e-14
         sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
-        sol = sim.solve(solver=pybamm.CasadiSolver())
+        sol = sim.solve()
+        C = sol.summary_variables["Capacity [A.h]"]
         # all but the last value should be above the termination condition
         np.testing.assert_array_less(5.04, C[:-1])
 
@@ -513,9 +583,7 @@ class TestSimulationExperiment:
         )
         model = pybamm.lithium_ion.SPM()
         sim = pybamm.Simulation(model, experiment=experiment)
-        sol = sim.solve(
-            solver=pybamm.CasadiSolver("fast with events"), save_at_cycles=2
-        )
+        sol = sim.solve(save_at_cycles=2)
         # Solution saves "None" for the cycles that are not saved
         for cycle_num in [2, 4, 6, 8]:
             assert sol.cycles[cycle_num] is None
@@ -524,9 +592,7 @@ class TestSimulationExperiment:
         # Summary variables are not None
         assert sol.summary_variables["Capacity [A.h]"] is not None
 
-        sol = sim.solve(
-            solver=pybamm.CasadiSolver("fast with events"), save_at_cycles=[3, 4, 5, 9]
-        )
+        sol = sim.solve(save_at_cycles=[3, 4, 5, 9])
         # Note offset by 1 (0th cycle is cycle 1)
         for cycle_num in [1, 5, 6, 7]:
             assert sol.cycles[cycle_num] is None
@@ -553,12 +619,12 @@ class TestSimulationExperiment:
         # O'Kane 2022: pos = function, neg = data
         param = pybamm.ParameterValues("OKane2022")
         sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
-        sim.solve(solver=pybamm.CasadiSolver("fast with events"), save_at_cycles=2)
+        sim.solve(save_at_cycles=2)
 
         # Chen 2020: pos = function, neg = function
         param = pybamm.ParameterValues("Chen2020")
         sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
-        sim.solve(solver=pybamm.CasadiSolver("fast with events"), save_at_cycles=2)
+        sim.solve(save_at_cycles=2)
 
         # Chen 2020 with data: pos = data, neg = data
         # Load negative electrode OCP data
@@ -592,7 +658,7 @@ class TestSimulationExperiment:
         )
 
         sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
-        sim.solve(solver=pybamm.CasadiSolver("safe"), save_at_cycles=2)
+        sim.solve(save_at_cycles=2)
 
     def test_inputs(self):
         experiment = pybamm.Experiment(
@@ -653,14 +719,15 @@ class TestSimulationExperiment:
             model, parameter_values=parameter_values, experiment=experiment2
         )
         sol2 = sim2.solve()
-        np.testing.assert_array_almost_equal(
-            sol["Voltage [V]"].data, sol2["Voltage [V]"].data, decimal=5
+        np.testing.assert_allclose(
+            sol["Voltage [V]"].data, sol2["Voltage [V]"].data, rtol=1e-6, atol=1e-5
         )
         for idx1, idx2 in [(1, 0), (2, 1), (4, 2)]:
-            np.testing.assert_array_almost_equal(
+            np.testing.assert_allclose(
                 sol.cycles[0].steps[idx1]["Voltage [V]"].data,
                 sol2.cycles[0].steps[idx2]["Voltage [V]"].data,
-                decimal=5,
+                rtol=1e-6,
+                atol=1e-5,
             )
 
     def test_skipped_step_continuous(self):
@@ -677,52 +744,12 @@ class TestSimulationExperiment:
         )
         sim = pybamm.Simulation(model, experiment=experiment)
         sim.solve(initial_soc=1)
-        np.testing.assert_array_almost_equal(
-            sim.solution.cycles[0].last_state.y.full(),
-            sim.solution.cycles[1].steps[-1].first_state.y.full(),
+        np.testing.assert_allclose(
+            sim.solution.cycles[0].last_state.y,
+            sim.solution.cycles[1].steps[-1].first_state.y,
+            atol=1e-15,
+            rtol=1e-15,
         )
-
-    def test_all_empty_solution_errors(self):
-        model = pybamm.lithium_ion.SPM()
-        parameter_values = pybamm.ParameterValues("Chen2020")
-
-        # One step exceeded, suggests making a cycle
-        experiment = pybamm.Experiment([("Charge at 1C until 4.2V")])
-        sim = pybamm.Simulation(
-            model, parameter_values=parameter_values, experiment=experiment
-        )
-        with pytest.raises(
-            pybamm.SolverError,
-            match="Step 'Charge at 1C until 4.2V' is infeasible due to exceeded bounds",
-        ):
-            sim.solve()
-
-        # Two steps exceeded, different error
-        experiment = pybamm.Experiment(
-            [("Charge at 1C until 4.2V", "Charge at 1C until 4.2V")]
-        )
-        sim = pybamm.Simulation(
-            model, parameter_values=parameter_values, experiment=experiment
-        )
-        with pytest.raises(pybamm.SolverError, match="All steps in the cycle"):
-            sim.solve()
-
-    def test_solver_error(self):
-        model = pybamm.lithium_ion.DFN()  # load model
-        parameter_values = pybamm.ParameterValues("Chen2020")
-        experiment = pybamm.Experiment(
-            ["Discharge at 10C for 6 minutes or until 2.5 V"]
-        )
-
-        sim = pybamm.Simulation(
-            model,
-            parameter_values=parameter_values,
-            experiment=experiment,
-            solver=pybamm.CasadiSolver(mode="fast"),
-        )
-
-        with pytest.raises(pybamm.SolverError, match="IDA_CONV_FAIL"):
-            sim.solve()
 
     def test_run_experiment_half_cell(self):
         experiment = pybamm.Experiment(
@@ -956,8 +983,8 @@ class TestSimulationExperiment:
                 sim = pybamm.Simulation(model, experiment=experiment)
                 sol = sim.solve()
                 # sol.plot()
-                np.testing.assert_array_almost_equal(
-                    sol["Voltage [V]"].data[2:], 4.2, decimal=3
+                np.testing.assert_allclose(
+                    sol["Voltage [V]"].data[2:], 4.2, rtol=1e-4, atol=1e-3
                 )
 
     def test_experiment_custom_termination(self):

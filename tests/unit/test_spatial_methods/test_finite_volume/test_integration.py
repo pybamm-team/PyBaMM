@@ -8,6 +8,9 @@ from tests import (
     get_mesh_for_testing,
     get_1p1d_mesh_for_testing,
     get_cylindrical_mesh_for_testing,
+    get_mesh_for_testing_symbolic,
+    get_cylindrical_mesh_for_testing_symbolic,
+    get_spherical_mesh_for_testing_symbolic,
 )
 import numpy as np
 
@@ -39,12 +42,18 @@ class TestFiniteVolumeIntegration:
         constant_y = np.ones_like(submesh.nodes[:, np.newaxis])
         assert integral_eqn_disc.evaluate(None, constant_y) == ln + ls
         linear_y = submesh.nodes
-        np.testing.assert_array_almost_equal(
-            integral_eqn_disc.evaluate(None, linear_y), (ln + ls) ** 2 / 2
+        np.testing.assert_allclose(
+            integral_eqn_disc.evaluate(None, linear_y),
+            (ln + ls) ** 2 / 2,
+            rtol=1e-7,
+            atol=1e-6,
         )
         cos_y = np.cos(submesh.nodes[:, np.newaxis])
-        np.testing.assert_array_almost_equal(
-            integral_eqn_disc.evaluate(None, cos_y), np.sin(ln + ls), decimal=4
+        np.testing.assert_allclose(
+            integral_eqn_disc.evaluate(None, cos_y),
+            np.sin(ln + ls),
+            rtol=1e-5,
+            atol=1e-4,
         )
 
         # domain not starting at zero
@@ -62,8 +71,11 @@ class TestFiniteVolumeIntegration:
             (1 - (ln) ** 2) / 2
         )
         cos_y = np.cos(submesh.nodes[:, np.newaxis])
-        np.testing.assert_array_almost_equal(
-            integral_eqn_disc.evaluate(None, cos_y), np.sin(1) - np.sin(ln), decimal=4
+        np.testing.assert_allclose(
+            integral_eqn_disc.evaluate(None, cos_y),
+            np.sin(1) - np.sin(ln),
+            rtol=1e-5,
+            atol=1e-4,
         )
 
         # microscale variable
@@ -75,18 +87,25 @@ class TestFiniteVolumeIntegration:
 
         constant_y = np.ones_like(mesh["negative particle"].nodes[:, np.newaxis])
         r_end = mesh["negative particle"].edges[-1]
-        np.testing.assert_array_almost_equal(
-            integral_eqn_disc.evaluate(None, constant_y), 4 * np.pi * r_end**3 / 3
+        np.testing.assert_allclose(
+            integral_eqn_disc.evaluate(None, constant_y),
+            4 * np.pi * r_end**3 / 3,
+            rtol=1e-7,
+            atol=1e-6,
         )
         linear_y = mesh["negative particle"].nodes
-        np.testing.assert_array_almost_equal(
-            integral_eqn_disc.evaluate(None, linear_y), np.pi * r_end**4, decimal=4
+        np.testing.assert_allclose(
+            integral_eqn_disc.evaluate(None, linear_y),
+            np.pi * r_end**4,
+            rtol=1e-5,
+            atol=1e-4,
         )
         one_over_y = 1 / mesh["negative particle"].nodes
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             integral_eqn_disc.evaluate(None, one_over_y),
             2 * np.pi * r_end**2,
-            decimal=3,
+            rtol=1e-4,
+            atol=1e-3,
         )
 
         # cylindrical coordinates
@@ -103,20 +122,25 @@ class TestFiniteVolumeIntegration:
         r0 = mesh["current collector"].edges[0]
 
         constant_y = np.ones_like(pts[:, np.newaxis])
-        np.testing.assert_array_almost_equal(
-            integral_eqn_disc.evaluate(None, constant_y), np.pi * (1 - r0**2)
+        np.testing.assert_allclose(
+            integral_eqn_disc.evaluate(None, constant_y),
+            np.pi * (1 - r0**2),
+            rtol=1e-7,
+            atol=1e-6,
         )
         linear_y = pts
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             integral_eqn_disc.evaluate(None, linear_y),
             2 * np.pi / 3 * (1 - r0**3),
-            decimal=4,
+            rtol=1e-5,
+            atol=1e-4,
         )
         one_over_y = 1 / pts
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             integral_eqn_disc.evaluate(None, one_over_y),
             2 * np.pi * (1 - r0),
-            decimal=3,
+            rtol=1e-4,
+            atol=1e-3,
         )
 
         # test failure for secondary dimension column form
@@ -128,7 +152,55 @@ class TestFiniteVolumeIntegration:
         ):
             finite_volume.definite_integral_matrix(var, "column", "secondary")
 
-    def test_integral_secondary_domain(self):
+    def test_definite_integral_symbolic_mesh(self):
+        mesh = get_mesh_for_testing_symbolic()
+        spatial_methods = {"domain": pybamm.FiniteVolume()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        var = pybamm.Variable("var", domain="domain")
+        x = pybamm.SpatialVariable("x", "domain")
+        integral_eqn = pybamm.Integral(var, x)
+        disc.set_variable_slices([var])
+        integral_eqn_disc = disc.process_symbol(integral_eqn)
+        const_y = np.ones_like(mesh["domain"].nodes[:, np.newaxis])
+        np.testing.assert_allclose(
+            integral_eqn_disc.evaluate(None, const_y), 2.0, rtol=1e-5, atol=1e-4
+        )
+
+        mesh = get_cylindrical_mesh_for_testing_symbolic()
+        spatial_methods = {"cylindrical domain": pybamm.FiniteVolume()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        var = pybamm.Variable("var", domain="cylindrical domain")
+        r = pybamm.SpatialVariable(
+            "r", "cylindrical domain", coord_sys="cylindrical polar"
+        )
+        integral_eqn = pybamm.Integral(var, r)
+        disc.set_variable_slices([var])
+        integral_eqn_disc = disc.process_symbol(integral_eqn)
+        const_y = np.ones_like(mesh["cylindrical domain"].nodes[:, np.newaxis])
+        np.testing.assert_allclose(
+            integral_eqn_disc.evaluate(None, const_y),
+            2 * np.pi * 2.0,
+            rtol=1e-5,
+            atol=1e-4,
+        )
+
+        mesh = get_spherical_mesh_for_testing_symbolic()
+        spatial_methods = {"spherical domain": pybamm.FiniteVolume()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        var = pybamm.Variable("var", domain="spherical domain")
+        r = pybamm.SpatialVariable("r", "spherical domain", coord_sys="spherical polar")
+        integral_eqn = pybamm.Integral(var, r)
+        disc.set_variable_slices([var])
+        integral_eqn_disc = disc.process_symbol(integral_eqn)
+        const_y = np.ones_like(mesh["spherical domain"].nodes[:, np.newaxis])
+        np.testing.assert_allclose(
+            integral_eqn_disc.evaluate(None, const_y),
+            4 * np.pi * 2.0**3 / 3,
+            rtol=1e-5,
+            atol=1e-4,
+        )
+
+    def test_integral_secondary_tertiary_domain(self):
         # create discretisation
         mesh = get_1p1d_mesh_for_testing()
         spatial_methods = {
@@ -141,6 +213,7 @@ class TestFiniteVolumeIntegration:
         # lengths
         ln = mesh["negative electrode"].edges[-1]
         ls = mesh["separator"].edges[-1] - ln
+        lc = mesh["current collector"].edges[-1]
         lp = 1 - (ln + ls)
 
         var = pybamm.Variable(
@@ -152,9 +225,12 @@ class TestFiniteVolumeIntegration:
             },
         )
         x = pybamm.SpatialVariable("x", "positive electrode")
+        z = pybamm.SpatialVariable("z", "current collector")
         integral_eqn = pybamm.Integral(var, x)
+        integral_eqn_tertiary = pybamm.Integral(var, z)
         disc.set_variable_slices([var])
-        integral_eqn_disc = disc.process_symbol(integral_eqn)
+        integral_eqn_disc_secondary = disc.process_symbol(integral_eqn)
+        integral_eqn_disc_tertiary = disc.process_symbol(integral_eqn_tertiary)
 
         submesh = mesh["positive particle"]
         constant_y = np.ones(
@@ -165,34 +241,60 @@ class TestFiniteVolumeIntegration:
                 1,
             )
         )
-        np.testing.assert_array_almost_equal(
-            integral_eqn_disc.evaluate(None, constant_y),
+        # Test with constant y
+        np.testing.assert_allclose(
+            integral_eqn_disc_secondary.evaluate(None, constant_y),
             lp * np.ones((submesh.npts * mesh["current collector"].npts, 1)),
+            rtol=1e-7,
+            atol=1e-6,
         )
+        np.testing.assert_allclose(
+            integral_eqn_disc_tertiary.evaluate(None, constant_y),
+            lc * np.ones((submesh.npts * mesh["positive electrode"].npts, 1)),
+            rtol=1e-7,
+            atol=1e-6,
+        )
+        # Test with linear
         linear_in_x = np.tile(
             np.repeat(mesh["positive electrode"].nodes, submesh.npts),
             mesh["current collector"].npts,
         )
-        np.testing.assert_array_almost_equal(
-            integral_eqn_disc.evaluate(None, linear_in_x),
+        np.testing.assert_allclose(
+            integral_eqn_disc_secondary.evaluate(None, linear_in_x),
             (1 - (ln + ls) ** 2)
             / 2
             * np.ones((submesh.npts * mesh["current collector"].npts, 1)),
+            rtol=1e-7,
+            atol=1e-6,
         )
         linear_in_r = np.tile(
             submesh.nodes,
             mesh["positive electrode"].npts * mesh["current collector"].npts,
         )
-        np.testing.assert_array_almost_equal(
-            integral_eqn_disc.evaluate(None, linear_in_r).flatten(),
+        np.testing.assert_allclose(
+            integral_eqn_disc_secondary.evaluate(None, linear_in_r).flatten(),
             lp * np.tile(submesh.nodes, mesh["current collector"].npts),
+            rtol=1e-7,
+            atol=1e-6,
         )
         cos_y = np.cos(linear_in_x)
-        np.testing.assert_array_almost_equal(
-            integral_eqn_disc.evaluate(None, cos_y),
+        np.testing.assert_allclose(
+            integral_eqn_disc_secondary.evaluate(None, cos_y),
             (np.sin(1) - np.sin(ln + ls))
             * np.ones((submesh.npts * mesh["current collector"].npts, 1)),
-            decimal=4,
+            rtol=1e-5,
+            atol=1e-4,
+        )
+        # test tertiary integration with linear function in y
+        linear_in_z = np.repeat(
+            mesh["current collector"].nodes,
+            submesh.npts * mesh["positive electrode"].npts,
+        )
+        np.testing.assert_allclose(
+            integral_eqn_disc_tertiary.evaluate(None, linear_in_z),
+            (lc**2 / 2) * np.ones((submesh.npts * mesh["positive electrode"].npts, 1)),
+            rtol=1e-7,
+            atol=1e-6,
         )
 
     def test_integral_primary_then_secondary_same_result(self):
@@ -234,10 +336,11 @@ class TestFiniteVolumeIntegration:
                 mesh["positive electrode"].npts * mesh["current collector"].npts,
             )
         )
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             integral_eqn_x_then_r_disc.evaluate(None, cos_y),
             integral_eqn_r_then_x_disc.evaluate(None, cos_y),
-            decimal=4,
+            rtol=1e-5,
+            atol=1e-4,
         )
 
     def test_integral_secondary_domain_on_edges_in_primary_domain(self):
@@ -270,13 +373,15 @@ class TestFiniteVolumeIntegration:
 
         submesh = mesh["positive particle"]
         r_end = submesh.edges[-1]
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             integral_eqn_disc.evaluate().flatten(),
             lp
             * r_end
             * np.tile(
                 np.linspace(0, 1, submesh.npts + 1), mesh["current collector"].npts
             ),
+            rtol=1e-7,
+            atol=1e-6,
         )
 
     def test_definite_integral_vector(self):
@@ -339,22 +444,22 @@ class TestFiniteVolumeIntegration:
         phi_exact = np.ones((submesh.npts, 1))
         phi_approx = int_grad_phi_disc.evaluate(None, phi_exact)
         phi_approx += 1  # add constant of integration
-        np.testing.assert_array_almost_equal(phi_exact, phi_approx)
+        np.testing.assert_allclose(phi_exact, phi_approx, rtol=1e-7, atol=1e-6)
         assert left_boundary_value_disc.evaluate(y=phi_exact) == 0
         # linear case
         phi_exact = submesh.nodes[:, np.newaxis]
         phi_approx = int_grad_phi_disc.evaluate(None, phi_exact)
-        np.testing.assert_array_almost_equal(phi_exact, phi_approx)
-        np.testing.assert_array_almost_equal(
-            left_boundary_value_disc.evaluate(y=phi_exact), 0, decimal=16
+        np.testing.assert_allclose(phi_exact, phi_approx, rtol=1e-7, atol=1e-6)
+        np.testing.assert_allclose(
+            left_boundary_value_disc.evaluate(y=phi_exact), 0, rtol=1e-17, atol=1e-16
         )
 
         # sine case
         phi_exact = np.sin(submesh.nodes[:, np.newaxis])
         phi_approx = int_grad_phi_disc.evaluate(None, phi_exact)
-        np.testing.assert_array_almost_equal(phi_exact, phi_approx)
-        np.testing.assert_array_almost_equal(
-            left_boundary_value_disc.evaluate(y=phi_exact), 0, decimal=16
+        np.testing.assert_allclose(phi_exact, phi_approx, rtol=1e-7, atol=1e-6)
+        np.testing.assert_allclose(
+            left_boundary_value_disc.evaluate(y=phi_exact), 0, rtol=1e-17, atol=1e-16
         )
 
         # --------------------------------------------------------------------
@@ -379,23 +484,23 @@ class TestFiniteVolumeIntegration:
         phi_exact = np.ones((submesh.npts, 1))
         phi_approx = int_grad_phi_disc.evaluate(None, phi_exact)
         phi_approx += 1  # add constant of integration
-        np.testing.assert_array_almost_equal(phi_exact, phi_approx)
+        np.testing.assert_allclose(phi_exact, phi_approx, rtol=1e-7, atol=1e-6)
         assert left_boundary_value_disc.evaluate(y=phi_exact) == 0
 
         # linear case
         phi_exact = submesh.nodes[:, np.newaxis] - submesh.edges[0]
         phi_approx = int_grad_phi_disc.evaluate(None, phi_exact)
-        np.testing.assert_array_almost_equal(phi_exact, phi_approx)
-        np.testing.assert_array_almost_equal(
-            left_boundary_value_disc.evaluate(y=phi_exact), 0
+        np.testing.assert_allclose(phi_exact, phi_approx, rtol=1e-7, atol=1e-6)
+        np.testing.assert_allclose(
+            left_boundary_value_disc.evaluate(y=phi_exact), 0, rtol=1e-7, atol=1e-6
         )
 
         # sine case
         phi_exact = np.sin(submesh.nodes[:, np.newaxis] - submesh.edges[0])
         phi_approx = int_grad_phi_disc.evaluate(None, phi_exact)
-        np.testing.assert_array_almost_equal(phi_exact, phi_approx)
-        np.testing.assert_array_almost_equal(
-            left_boundary_value_disc.evaluate(y=phi_exact), 0
+        np.testing.assert_allclose(phi_exact, phi_approx, rtol=1e-7, atol=1e-6)
+        np.testing.assert_allclose(
+            left_boundary_value_disc.evaluate(y=phi_exact), 0, rtol=1e-7, atol=1e-6
         )
 
         # --------------------------------------------------------------------
@@ -440,23 +545,23 @@ class TestFiniteVolumeIntegration:
         c_exact = np.ones((submesh.npts, 1))
         c_approx = c_integral_disc.evaluate(None, c_exact)
         c_approx += 1  # add constant of integration
-        np.testing.assert_array_almost_equal(c_exact, c_approx)
+        np.testing.assert_allclose(c_exact, c_approx, rtol=1e-7, atol=1e-6)
         assert left_boundary_value_disc.evaluate(y=c_exact) == 0
 
         # linear case
         c_exact = submesh.nodes[:, np.newaxis]
         c_approx = c_integral_disc.evaluate(None, c_exact)
-        np.testing.assert_array_almost_equal(c_exact, c_approx)
-        np.testing.assert_array_almost_equal(
-            left_boundary_value_disc.evaluate(y=c_exact), 0
+        np.testing.assert_allclose(c_exact, c_approx, rtol=1e-7, atol=1e-6)
+        np.testing.assert_allclose(
+            left_boundary_value_disc.evaluate(y=c_exact), 0, rtol=1e-7, atol=1e-6
         )
 
         # sine case
         c_exact = np.sin(submesh.nodes[:, np.newaxis])
         c_approx = c_integral_disc.evaluate(None, c_exact)
-        np.testing.assert_array_almost_equal(c_exact, c_approx, decimal=3)
-        np.testing.assert_array_almost_equal(
-            left_boundary_value_disc.evaluate(y=c_exact), 0
+        np.testing.assert_allclose(c_exact, c_approx, rtol=1e-4, atol=1e-3)
+        np.testing.assert_allclose(
+            left_boundary_value_disc.evaluate(y=c_exact), 0, rtol=1e-7, atol=1e-6
         )
 
     def test_backward_indefinite_integral(self):
@@ -488,23 +593,23 @@ class TestFiniteVolumeIntegration:
         phi_exact = np.ones((submesh.npts, 1))
         phi_approx = int_grad_phi_disc.evaluate(None, phi_exact)
         phi_approx += 1  # add constant of integration
-        np.testing.assert_array_almost_equal(phi_exact, phi_approx)
+        np.testing.assert_allclose(phi_exact, phi_approx, rtol=1e-7, atol=1e-6)
         assert right_boundary_value_disc.evaluate(y=phi_exact) == 0
 
         # linear case
         phi_exact = submesh.nodes - submesh.edges[-1]
         phi_approx = int_grad_phi_disc.evaluate(None, phi_exact).flatten()
-        np.testing.assert_array_almost_equal(phi_exact, -phi_approx)
-        np.testing.assert_array_almost_equal(
-            right_boundary_value_disc.evaluate(y=phi_exact), 0
+        np.testing.assert_allclose(phi_exact, -phi_approx, rtol=1e-7, atol=1e-6)
+        np.testing.assert_allclose(
+            right_boundary_value_disc.evaluate(y=phi_exact), 0, rtol=1e-7, atol=1e-6
         )
 
         # sine case
         phi_exact = np.sin(submesh.nodes - submesh.edges[-1])
         phi_approx = int_grad_phi_disc.evaluate(None, phi_exact).flatten()
-        np.testing.assert_array_almost_equal(phi_exact, -phi_approx)
-        np.testing.assert_array_almost_equal(
-            right_boundary_value_disc.evaluate(y=phi_exact), 0
+        np.testing.assert_allclose(phi_exact, -phi_approx, rtol=1e-7, atol=1e-6)
+        np.testing.assert_allclose(
+            right_boundary_value_disc.evaluate(y=phi_exact), 0, rtol=1e-7, atol=1e-6
         )
 
     def test_indefinite_integral_of_broadcasted_to_cell_edges(self):
@@ -536,12 +641,37 @@ class TestFiniteVolumeIntegration:
         # constant case
         phi_exact = np.ones_like(submesh.nodes)
         phi_approx = int_int_phi_disc.evaluate(None, phi_exact)
-        np.testing.assert_array_almost_equal(x_end**2 / 2, phi_approx)
+        np.testing.assert_allclose(x_end**2 / 2, phi_approx, rtol=1e-7, atol=1e-6)
 
         # linear case
         phi_exact = submesh.nodes[:, np.newaxis]
         phi_approx = int_int_phi_disc.evaluate(None, phi_exact)
-        np.testing.assert_array_almost_equal(x_end**3 / 6, phi_approx, decimal=4)
+        np.testing.assert_allclose(x_end**3 / 6, phi_approx, rtol=1e-5, atol=1e-4)
+
+    def test_indefinite_integral_on_edges_symbolic(self):
+        mesh = get_mesh_for_testing_symbolic()
+        spatial_methods = {"domain": pybamm.FiniteVolume()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        # make a variable 'phi' and a vector 'i' which is broadcast onto edges
+        # the integral of this should then be put onto the nodes
+        phi = pybamm.Variable("phi", domain=["domain"])
+        i = pybamm.PrimaryBroadcastToEdges(1, phi.domain)
+        x = pybamm.SpatialVariable("x", phi.domain)
+        disc.set_variable_slices([phi])
+        submesh = mesh["domain"]
+        x_end = submesh.edges[-1] * submesh.length + submesh.min
+
+        # take indefinite integral
+        int_phi = pybamm.IndefiniteIntegral(i * phi, x)
+        # take integral again
+        int_int_phi = pybamm.Integral(int_phi, x)
+        int_int_phi_disc = disc.process_symbol(int_int_phi)
+
+        # constant case
+        phi_exact = np.ones_like(submesh.nodes)
+        phi_approx = int_int_phi_disc.evaluate(None, phi_exact)
+        np.testing.assert_allclose(x_end**2 / 2, phi_approx, rtol=1e-7, atol=1e-6)
 
     def test_indefinite_integral_on_nodes(self):
         mesh = get_mesh_for_testing()
@@ -561,17 +691,17 @@ class TestFiniteVolumeIntegration:
         phi_exact = np.ones((submesh.npts, 1))
         int_phi_exact = submesh.edges
         int_phi_approx = int_phi_disc.evaluate(None, phi_exact).flatten()
-        np.testing.assert_array_almost_equal(int_phi_exact, int_phi_approx)
+        np.testing.assert_allclose(int_phi_exact, int_phi_approx, rtol=1e-7, atol=1e-6)
         # linear case
         phi_exact = submesh.nodes
         int_phi_exact = submesh.edges**2 / 2
         int_phi_approx = int_phi_disc.evaluate(None, phi_exact).flatten()
-        np.testing.assert_array_almost_equal(int_phi_exact, int_phi_approx)
+        np.testing.assert_allclose(int_phi_exact, int_phi_approx, rtol=1e-7, atol=1e-6)
         # cos case
         phi_exact = np.cos(submesh.nodes)
         int_phi_exact = np.sin(submesh.edges)
         int_phi_approx = int_phi_disc.evaluate(None, phi_exact).flatten()
-        np.testing.assert_array_almost_equal(int_phi_exact, int_phi_approx, decimal=5)
+        np.testing.assert_allclose(int_phi_exact, int_phi_approx, rtol=1e-6, atol=1e-5)
 
         # microscale case should fail
         mesh = get_mesh_for_testing()
@@ -588,6 +718,23 @@ class TestFiniteVolumeIntegration:
             match="Indefinite integral on a spherical polar domain is not implemented",
         ):
             disc.process_symbol(int_c)
+
+    def test_indefinite_integral_on_nodes_symbolic(self):
+        mesh = get_mesh_for_testing_symbolic()
+        spatial_methods = {"domain": pybamm.FiniteVolume()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        phi = pybamm.Variable("phi", domain=["domain"])
+        x = pybamm.SpatialVariable("x", ["domain"])
+        int_phi = pybamm.IndefiniteIntegral(phi, x)
+        disc.set_variable_slices([phi])
+        int_phi_disc = disc.process_symbol(int_phi)
+
+        submesh = mesh["domain"]
+        constant_y = np.ones((submesh.npts, 1))
+        phi_exact = submesh.edges * submesh.length + submesh.min
+        phi_approx = int_phi_disc.evaluate(None, constant_y).flatten()
+        np.testing.assert_allclose(phi_exact, phi_approx, rtol=1e-7, atol=1e-6)
 
     def test_backward_indefinite_integral_on_nodes(self):
         mesh = get_mesh_for_testing()
@@ -608,18 +755,22 @@ class TestFiniteVolumeIntegration:
         phi_exact = np.ones((submesh.npts, 1))
         back_int_phi_exact = edges[-1] - edges
         back_int_phi_approx = back_int_phi_disc.evaluate(None, phi_exact).flatten()
-        np.testing.assert_array_almost_equal(back_int_phi_exact, back_int_phi_approx)
+        np.testing.assert_allclose(
+            back_int_phi_exact, back_int_phi_approx, rtol=1e-7, atol=1e-6
+        )
         # linear case
         phi_exact = submesh.nodes
         back_int_phi_exact = edges[-1] ** 2 / 2 - edges**2 / 2
         back_int_phi_approx = back_int_phi_disc.evaluate(None, phi_exact).flatten()
-        np.testing.assert_array_almost_equal(back_int_phi_exact, back_int_phi_approx)
+        np.testing.assert_allclose(
+            back_int_phi_exact, back_int_phi_approx, rtol=1e-7, atol=1e-6
+        )
         # cos case
         phi_exact = np.cos(submesh.nodes)
         back_int_phi_exact = np.sin(edges[-1]) - np.sin(edges)
         back_int_phi_approx = back_int_phi_disc.evaluate(None, phi_exact).flatten()
-        np.testing.assert_array_almost_equal(
-            back_int_phi_exact, back_int_phi_approx, decimal=5
+        np.testing.assert_allclose(
+            back_int_phi_exact, back_int_phi_approx, rtol=1e-6, atol=1e-5
         )
 
     def test_forward_plus_backward_integral(self):
@@ -651,7 +802,9 @@ class TestFiniteVolumeIntegration:
             submesh.nodes,
             np.cos(submesh.nodes),
         ]:
-            np.testing.assert_array_almost_equal(
+            np.testing.assert_allclose(
                 full_int_phi_disc.evaluate(y=phi_exact).flatten(),
                 int_plus_back_int_phi_disc.evaluate(y=phi_exact).flatten(),
+                rtol=1e-7,
+                atol=1e-6,
             )

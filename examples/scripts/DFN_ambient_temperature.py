@@ -3,7 +3,6 @@
 #
 
 import pybamm
-import numpy as np
 
 pybamm.set_logging_level("DEBUG")
 
@@ -38,8 +37,8 @@ disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
 disc.process_model(model)
 
 # solve model
-t_eval = np.linspace(0, 3600 / 2, 100)
-solver = pybamm.CasadiSolver(mode="fast", atol=1e-6, rtol=1e-3)
+t_eval = [0, 1800]
+solver = pybamm.IDAKLUSolver(atol=1e-6, rtol=1e-3)
 solution = solver.solve(model, t_eval)
 
 # plot

@@ -3,7 +3,6 @@ import importlib
 import os
 import sys
 import pybamm
-import tempfile
 from io import StringIO
 
 from tests import (
@@ -35,6 +34,7 @@ class TestUtil:
                 "Lithium plating current": 4,
                 "A dimensional variable [m]": 5,
                 "Positive particle diffusivity [m2.s-1]": 6,
+                "Primary: Open circuit voltage [V]": 7,
             }
         )
         d2 = pybamm.FuzzyDict(
@@ -51,6 +51,9 @@ class TestUtil:
 
         with pytest.raises(KeyError, match="dimensional version"):
             d.__getitem__("A dimensional variable")
+
+        with pytest.raises(KeyError, match="composite model"):
+            d.__getitem__("Open circuit voltage [V]")
 
         with pytest.raises(KeyError, match="open circuit voltage"):
             d.__getitem__("Measured open circuit voltage [V]")
@@ -77,25 +80,18 @@ class TestUtil:
                 == d["Positive particle diffusivity [m2.s-1]"]
             )
 
-    def test_get_parameters_filepath(self):
-        with tempfile.NamedTemporaryFile("w", dir=".") as tempfile_obj:
-            assert (
-                pybamm.get_parameters_filepath(tempfile_obj.name) == tempfile_obj.name
-            )
+    def test_get_parameters_filepath(self, tmp_path):
+        temppath = tmp_path / "temp_file.txt"
+        assert pybamm.get_parameters_filepath(temppath) == str(temppath)
 
-        package_dir = os.path.join(pybamm.root_dir(), "src", "pybamm")
-        with tempfile.NamedTemporaryFile("w", dir=package_dir) as tempfile_obj:
-            path = os.path.join(package_dir, tempfile_obj.name)
-            assert pybamm.get_parameters_filepath(tempfile_obj.name) == path
+        temppath = "random.txt"
+        assert pybamm.get_parameters_filepath(temppath) == str(
+            os.path.join(pybamm.root_dir(), "src", "pybamm", temppath)
+        )
 
     @pytest.mark.skipif(not pybamm.has_jax(), reason="JAX is not installed")
     def test_is_jax_compatible(self):
         assert pybamm.is_jax_compatible()
-
-    def test_git_commit_info(self):
-        git_commit_info = pybamm.get_git_commit_info()
-        assert isinstance(git_commit_info, str)
-        assert git_commit_info[:2] == "v2"
 
     def test_import_optional_dependency(self):
         optional_distribution_deps = get_optional_distribution_deps("pybamm")
@@ -184,19 +180,103 @@ class TestSearch:
         # Test variables search (default returns key)
         with mocker.patch("sys.stdout", new=StringIO()) as fake_out:
             model.variables.search("Electrode")
-            assert fake_out.getvalue() == "Electrode potential\n"
-
+            assert (
+                fake_out.getvalue()
+                == "Results for 'Electrode': ['Electrode potential']\n"
+            )
         # Test bad var search (returns best matches)
         with mocker.patch("sys.stdout", new=StringIO()) as fake_out:
             model.variables.search("Electrolyte cot")
             out = (
-                "No results for search using 'Electrolyte cot'. "
-                "Best matches are ['Electrolyte concentration', "
-                "'Electrode potential']\n"
+                "No exact matches found for 'Electrolyte cot'. "
+                "Best matches are: ['Electrolyte concentration', 'Electrode potential']\n"
+            )
+            assert fake_out.getvalue() == out
+
+        # Test for multiple strings as input (default returns key)
+        with mocker.patch("sys.stdout", new=StringIO()) as fake_out:
+            model.variables.search(["Electrolyte", "Concentration"], print_values=True)
+            assert (
+                fake_out.getvalue()
+                == "Results for 'Electrolyte Concentration': ['Electrolyte concentration']\n"
+                "Electrolyte concentration -> 1\n"
+            )
+
+        # Test for multiple strings as input (default returns best matches)
+        with mocker.patch("sys.stdout", new=StringIO()) as fake_out:
+            model.variables.search(["Electrolyte", "Potenteel"], print_values=True)
+            out = (
+                "Exact matches for 'Electrolyte': ['Electrolyte concentration']\n"
+                "Electrolyte concentration -> 1\n"
+                "No exact matches found for 'Potenteel'. Best matches are: ['Electrode potential']\n"
             )
             assert fake_out.getvalue() == out
 
         # Test param search (default returns key, value)
         with mocker.patch("sys.stdout", new=StringIO()) as fake_out:
             param.search("test")
-            assert fake_out.getvalue() == "test\t10\n"
+            out = "Results for 'test': ['test']\ntest -> 10\n"
+            assert fake_out.getvalue() == out
+
+        # Test no matches and no best matches
+        with mocker.patch("sys.stdout", new=StringIO()) as fake_out:
+            model.variables.search("NonexistentKey")
+            assert fake_out.getvalue() == "No matches found for 'NonexistentKey'\n"
+
+        # Test print_values=True with partial matches
+        with mocker.patch("sys.stdout", new=StringIO()) as fake_out:
+            model.variables.search("Electrolyte", print_values=True)
+            out = (
+                "Results for 'Electrolyte': ['Electrolyte concentration']\n"
+                "Electrolyte concentration -> 1\n"
+            )
+            assert fake_out.getvalue() == out
+
+        # Test for empty string input (raises ValueError)
+        with pytest.raises(
+            ValueError,
+            match="The search term cannot be an empty or whitespace-only string",
+        ):
+            model.variables.search("", print_values=True)
+
+        # Test for list with all empty strings (raises ValueError)
+        with pytest.raises(
+            ValueError,
+            match="The 'keys' list cannot contain only empty or whitespace strings",
+        ):
+            model.variables.search(["", "   ", "\t"], print_values=True)
+
+        # Test for list with a mix of empty and valid strings
+        with mocker.patch("sys.stdout", new=StringIO()) as fake_out:
+            model.variables.search(["", "Electrolyte"], print_values=True)
+            out = (
+                "Results for 'Electrolyte': ['Electrolyte concentration']\n"
+                "Electrolyte concentration -> 1\n"
+            )
+            assert fake_out.getvalue() == out
+
+        # Test invalid input type
+        with pytest.raises(
+            TypeError,
+            match="'keys' must be a string or a list of strings, got <class 'int'>",
+        ):
+            model.variables.search(123)
+
+        # Test smaller strings
+        with mocker.patch("sys.stdout", new=StringIO()) as fake_out:
+            model.variables.search(["El", "co"], print_values=True)
+            out = "No matches found for 'El'\nNo matches found for 'co'\n"
+            assert fake_out.getvalue() == out
+
+        # Case where min_similarity is high (0.9)
+        with mocker.patch("sys.stdout", new=StringIO()) as fake_out:
+            model.variables.search("electro", min_similarity=0.9)
+            assert fake_out.getvalue() == "No matches found for 'electro'\n"
+
+        # Case where min_similarity is low (0.3)
+        with mocker.patch("sys.stdout", new=StringIO()) as fake_out:
+            model.variables.search("electro", min_similarity=0.3)
+            assert (
+                fake_out.getvalue()
+                == "Results for 'electro': ['Electrolyte concentration', 'Electrode potential']\n"
+            )

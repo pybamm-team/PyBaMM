@@ -19,6 +19,9 @@ class BaseThermal(pybamm.BaseSubModel):
 
     def __init__(self, param, options=None, x_average=False):
         super().__init__(param, options=options)
+        self.use_lumped_thermal_capacity = self.options.get(
+            "use lumped thermal capacity", "false"
+        )
         self.x_average = x_average
 
         if self.options["heat of mixing"] == "true":
@@ -240,9 +243,13 @@ class BaseThermal(pybamm.BaseSubModel):
         Q_mix_vol_av = Q_mix_W / V
         Q_vol_av = Q_W / V
 
-        # Effective heat capacity
-        T_vol_av = variables["Volume-averaged cell temperature [K]"]
-        rho_c_p_eff_av = self.param.rho_c_p_eff(T_vol_av)
+        # Add lumped heat capacity if option is enabled
+        if self.use_lumped_thermal_capacity == "true":
+            rho_c_p_eff_av = self.param.cell_heat_capacity
+        else:
+            # Effective heat capacity
+            T_vol_av = variables["Volume-averaged cell temperature [K]"]
+            rho_c_p_eff_av = self.param.rho_c_p_eff(T_vol_av)
 
         variables.update(
             {
@@ -265,13 +272,13 @@ class BaseThermal(pybamm.BaseSubModel):
                 "Reversible heating [W.m-3]": Q_rev,
                 "X-averaged reversible heating [W.m-3]": Q_rev_av,
                 "Volume-averaged reversible heating [W.m-3]": Q_rev_vol_av,
-                "Reversible heating per unit electrode-pair area " "[W.m-2]": Q_rev_Wm2,
+                "Reversible heating per unit electrode-pair area [W.m-2]": Q_rev_Wm2,
                 "Reversible heating [W]": Q_rev_W,
                 # Mixing
                 "Heat of mixing [W.m-3]": Q_mix,
                 "X-averaged heat of mixing [W.m-3]": Q_mix_av,
                 "Volume-averaged heating of mixing [W.m-3]": Q_mix_vol_av,
-                "Heat of mixing per unit electrode-pair area " "[W.m-2]": Q_mix_Wm2,
+                "Heat of mixing per unit electrode-pair area [W.m-2]": Q_mix_Wm2,
                 "Heat of mixing [W]": Q_mix_W,
                 # Total
                 "Total heating [W.m-3]": Q,

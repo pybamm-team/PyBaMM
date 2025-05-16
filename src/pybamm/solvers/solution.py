@@ -2,7 +2,6 @@
 # Solution class
 #
 import casadi
-import copy
 import json
 import numbers
 import numpy as np
@@ -58,10 +57,8 @@ class Solution:
         the event happens.
     termination : str
         String to indicate why the solution terminated
-    all_sensitivities: bool or dict of lists
-        True if sensitivities included as the solution of the explicit forwards
-        equations.  False if no sensitivities included/wanted. Dict if sensitivities are
-        provided as a dict of {parameter: [sensitivities]} pairs.
+    all_sensitivities: dict of lists
+        sensitivities are provided as a dict of {parameter: [sensitivities]} pairs.
     variables_returned: bool
         Bool to indicate if `all_ys` contains the full state vector, or is empty because
         only requested variables have been returned. True if `output_variables` is used
@@ -78,7 +75,7 @@ class Solution:
         t_event=None,
         y_event=None,
         termination="final time",
-        all_sensitivities=False,
+        all_sensitivities=None,
         all_yps=None,
         variables_returned=False,
         check_solution=True,
@@ -110,18 +107,18 @@ class Solution:
         else:
             self.all_inputs = all_inputs
 
-        if isinstance(all_sensitivities, bool):
-            self._all_sensitivities = all_sensitivities
-        elif isinstance(all_sensitivities, dict):
-            self._all_sensitivities = {}
-            for key, value in all_sensitivities.items():
-                if isinstance(value, list):
-                    self._all_sensitivities[key] = value
-                else:
-                    self._all_sensitivities[key] = [value]
-
-        else:
-            raise TypeError("sensitivities arg needs to be a bool or dict")
+        if all_sensitivities is None:
+            all_sensitivities = {}
+        if not isinstance(all_sensitivities, dict):
+            raise TypeError(
+                "sensitivities arg needs to be a dict of {parameter: [sensitivities]} "
+            )
+        self._all_sensitivities = {}
+        for key, value in all_sensitivities.items():
+            if isinstance(value, list):
+                self._all_sensitivities[key] = value
+            else:
+                self._all_sensitivities[key] = [value]
 
         # Check no ys are too large
         if check_solution:
@@ -158,129 +155,7 @@ class Solution:
         pybamm.citations.register("Andersson2019")
 
     def has_sensitivities(self) -> bool:
-        if isinstance(self._all_sensitivities, bool):
-            return self._all_sensitivities
-        elif isinstance(self._all_sensitivities, dict):
-            return len(self._all_sensitivities) > 0
-
-    def extract_explicit_sensitivities(self):
-        self._all_sensitivities = {}
-
-        # extract sensitivities from each sub-solution
-        for index, (model, ys, ts, inputs) in enumerate(
-            zip(self.all_models, self.all_ys, self.all_ts, self.all_inputs)
-        ):
-            self._all_ys[index], sens_segment = self._extract_explicit_sensitivities(
-                model, ys, ts, inputs
-            )
-            for key, value in sens_segment.items():
-                if key in self._all_sensitivities:
-                    self._all_sensitivities[key] = self._all_sensitivities[key] + [
-                        value
-                    ]
-                else:
-                    self._all_sensitivities[key] = [value]
-
-    def _extract_sensitivity_matrix(self, model, y):
-        n_states = model.len_rhs_and_alg
-        n_rhs = model.len_rhs
-        n_alg = model.len_alg
-        # Get the point where the algebraic equations start
-        if model.len_rhs != 0:
-            n_p = model.len_rhs_sens // model.len_rhs
-        else:
-            n_p = model.len_alg_sens // model.len_alg
-        len_rhs_and_sens = model.len_rhs + model.len_rhs_sens
-
-        # y gets the part of the solution vector that correspond to the
-        # actual ODE/DAE solution
-
-        # save sensitivities as a dictionary
-        # first save the whole sensitivity matrix
-        # reshape using Fortran order to get the right array:
-        #   t0_x0_p0, t0_x0_p1, ..., t0_x0_pn
-        #   t0_x1_p0, t0_x1_p1, ..., t0_x1_pn
-        #   ...
-        #   t0_xn_p0, t0_xn_p1, ..., t0_xn_pn
-        #   t1_x0_p0, t1_x0_p1, ..., t1_x0_pn
-        #   t1_x1_p0, t1_x1_p1, ..., t1_x1_pn
-        #   ...
-        #   t1_xn_p0, t1_xn_p1, ..., t1_xn_pn
-        #   ...
-        #   tn_x0_p0, tn_x0_p1, ..., tn_x0_pn
-        #   tn_x1_p0, tn_x1_p1, ..., tn_x1_pn
-        #   ...
-        #   tn_xn_p0, tn_xn_p1, ..., tn_xn_pn
-        # 1, Extract rhs and alg sensitivities and reshape into 3D matrices
-        # with shape (n_p, n_states, n_t)
-        if isinstance(y, casadi.DM):
-            y_full = y.full()
-        else:
-            y_full = y
-
-        n_t = y.shape[1]
-        ode_sens = y_full[n_rhs:len_rhs_and_sens, :].reshape(n_p, n_rhs, n_t)
-        alg_sens = y_full[len_rhs_and_sens + n_alg :, :].reshape(n_p, n_alg, n_t)
-        # 2. Concatenate into a single 3D matrix with shape (n_p, n_states, n_t)
-        # i.e. along first axis
-        full_sens_matrix = np.concatenate([ode_sens, alg_sens], axis=1)
-        # Transpose and reshape into a (n_states * n_t, n_p) matrix
-        full_sens_matrix = full_sens_matrix.transpose(2, 1, 0).reshape(
-            n_t * n_states, n_p
-        )
-
-        # convert back to casadi (todo: this is not very efficient, should refactor
-        # to avoid this)
-        full_sens_matrix = casadi.DM(full_sens_matrix)
-
-        y_dae = np.vstack(
-            [
-                y[: model.len_rhs, :],
-                y[len_rhs_and_sens : len_rhs_and_sens + model.len_alg, :],
-            ]
-        )
-        return y_dae, full_sens_matrix
-
-    def _extract_explicit_sensitivities(self, model, y, t_eval, inputs):
-        """
-        given a model and a solution y, extracts the sensitivities
-
-        Parameters
-        --------
-        model : :class:`pybamm.BaseModel`
-            A model that has been already setup by this base solver
-        y: ndarray
-            The solution of the full explicit sensitivity equations
-        t_eval: ndarray
-            The evaluation times
-        inputs: dict
-            parameter inputs
-
-        Returns
-        -------
-        y: ndarray
-            The solution of the ode/dae in model
-        sensitivities: dict of (string: ndarray)
-            A dictionary of parameter names, and the corresponding solution of
-            the sensitivity equations
-        """
-
-        y_dae, full_sens_matrix = self._extract_sensitivity_matrix(model, y)
-
-        # Save the full sensitivity matrix
-        sensitivity = {"all": full_sens_matrix}
-
-        # also save the sensitivity wrt each parameter (read the columns of the
-        # sensitivity matrix)
-        start = 0
-        for name in model.calculate_sensitivities:
-            inp = inputs[name]
-            input_size = inp.shape[0]
-            end = start + input_size
-            sensitivity[name] = full_sens_matrix[:, start:end]
-            start = end
-
-        return y_dae, sensitivity
+        return len(self._all_sensitivities) > 0
 
     @property
     def t(self):
@@ -302,10 +177,6 @@ class Solution:
         try:
             return self._y
         except AttributeError:
-            # if y is evaluated before sensitivities then need to extract them
-            if isinstance(self._all_sensitivities, bool) and self._all_sensitivities:
-                self.extract_explicit_sensitivities()
-
             self.set_y()
 
             return self._y
@@ -326,39 +197,14 @@ class Solution:
             self.set_sensitivities()
         return self._sensitivities
 
-    @sensitivities.setter
-    def sensitivities(self, value):
-        """Updates the sensitivity if False or True. Raises an error if sensitivities are a dict"""
-        # sensitivities must be a dict or bool
-        if not isinstance(value, bool):
-            raise TypeError("sensitivities arg needs to be a bool")
-
-        if isinstance(self._all_sensitivities, dict):
-            raise NotImplementedError(
-                "Setting sensitivities is not supported if sensitivities are "
-                "already provided as a dict of {parameter: sensitivities} pairs."
-            )
-
-        self._all_sensitivities = value
-
     def set_sensitivities(self):
         if not self.has_sensitivities():
             self._sensitivities = {}
             return
 
-        # extract sensitivities if they are not already extracted
-        if isinstance(self._all_sensitivities, bool) and self._all_sensitivities:
-            self.extract_explicit_sensitivities()
-
-        is_casadi = isinstance(
-            next(iter(self._all_sensitivities.values()))[0], (casadi.DM, casadi.MX)
-        )
         self._sensitivities = {}
         for key, sens in self._all_sensitivities.items():
-            if is_casadi:
-                self._sensitivities[key] = casadi.vertcat(*sens)
-            else:
-                self._sensitivities[key] = np.vstack(sens)
+            self._sensitivities[key] = np.vstack(sens)
 
     def set_y(self):
         try:
@@ -454,13 +300,10 @@ class Solution:
         than the full solution when only the first state is needed (e.g. to initialize
         a model with the solution)
         """
-        if isinstance(self._all_sensitivities, bool):
-            sensitivities = self._all_sensitivities
-        elif isinstance(self._all_sensitivities, dict):
-            sensitivities = {}
-            n_states = self.all_models[0].len_rhs_and_alg
-            for key in self._all_sensitivities:
-                sensitivities[key] = self._all_sensitivities[key][0][-n_states:, :]
+        sensitivities = {}
+        n_states = self.all_models[0].len_rhs_and_alg
+        for key in self._all_sensitivities:
+            sensitivities[key] = self._all_sensitivities[key][0][-n_states:, :]
 
         if self.all_yps is None:
             all_yps = None
@@ -500,13 +343,10 @@ class Solution:
         than the full solution when only the final state is needed (e.g. to initialize
         a model with the solution)
         """
-        if isinstance(self._all_sensitivities, bool):
-            sensitivities = self._all_sensitivities
-        elif isinstance(self._all_sensitivities, dict):
-            sensitivities = {}
-            n_states = self.all_models[-1].len_rhs_and_alg
-            for key in self._all_sensitivities:
-                sensitivities[key] = self._all_sensitivities[key][-1][-n_states:, :]
+        sensitivities = {}
+        n_states = self.all_models[-1].len_rhs_and_alg
+        for key in self._all_sensitivities:
+            sensitivities[key] = self._all_sensitivities[key][-1][-n_states:, :]
 
         if self.all_yps is None:
             all_yps = None
@@ -563,24 +403,14 @@ class Solution:
         """Updates the initial start time of the experiment"""
         self._initial_start_time = value
 
-    def set_summary_variables(self, all_summary_variables):
-        summary_variables = {var: [] for var in all_summary_variables[0]}
-        for sum_vars in all_summary_variables:
-            for name, value in sum_vars.items():
-                summary_variables[name].append(value)
-
-        summary_variables["Cycle number"] = range(1, len(all_summary_variables) + 1)
+    def update_summary_variables(self, all_summary_variables):
         self.all_summary_variables = all_summary_variables
-        self._summary_variables = pybamm.FuzzyDict(
-            {name: np.array(value) for name, value in summary_variables.items()}
+        self._summary_variables = pybamm.SummaryVariables(
+            self, cycle_summary_variables=all_summary_variables
         )
 
     def update(self, variables):
         """Add ProcessedVariables to the dictionary of variables in the solution"""
-        # make sure that sensitivities are extracted if required
-        if isinstance(self._all_sensitivities, bool) and self._all_sensitivities:
-            self.extract_explicit_sensitivities()
-
         # Single variable
         if isinstance(variables, str):
             variables = [variables]
@@ -931,29 +761,13 @@ class Solution:
         if not hermite_interpolation:
             all_yps = None
 
-        # sensitivities can be:
-        # - bool if not using sensitivities or using explicit sensitivities which still
-        #   need to be extracted
-        # - dict if sensitivities are provided as a dict of {parameter: sensitivities}
-        # both self and other should have the same type of sensitivities
-        # OR both can be either False or {} (i.e. no sensitivities)
-        if isinstance(self._all_sensitivities, bool) and isinstance(
-            other._all_sensitivities, bool
-        ):
-            all_sensitivities = self._all_sensitivities or other._all_sensitivities
-        elif isinstance(self._all_sensitivities, dict) and isinstance(
-            other._all_sensitivities, dict
-        ):
-            all_sensitivities = self._all_sensitivities
-            # we can assume that the keys are the same for both solutions
-            for key in other._all_sensitivities:
-                all_sensitivities[key] = (
-                    all_sensitivities[key] + other._all_sensitivities[key]
-                )
-        elif not self._all_sensitivities and not other._all_sensitivities:
-            all_sensitivities = {}
-        else:
-            raise ValueError("Sensitivities must be of the same type")
+        # sensitivities are a dict of {parameter: [sensitivities]}
+        # we can assume that the keys are the same for both solutions
+        all_sensitivities = self._all_sensitivities
+        for key in other._all_sensitivities:
+            all_sensitivities[key] = (
+                all_sensitivities[key] + other._all_sensitivities[key]
+            )
 
         new_sol = Solution(
             all_ts,
@@ -1003,8 +817,7 @@ class Solution:
     def copy(self):
         new_sol = self.__class__(
             self.all_ts,
-            # need to copy y in case it is modified by extract explicit sensitivities
-            [copy.copy(y) for y in self.all_ys],
+            self.all_ys,
             self.all_models,
             self.all_inputs,
             self.t_event,
@@ -1058,7 +871,6 @@ class Solution:
             Keyword arguments, passed to ax.fill_between.
 
         """
-        # Use 'self' here as the solution object
         return pybamm.plot_voltage_components(
             self,
             ax=ax,
@@ -1108,6 +920,8 @@ def make_cycle_solution(
     save_this_cycle : bool, optional
         Whether to save the entire cycle variables or just the summary variables.
         Default True
+    inputs : dict
+        User inputs for the summary variables.
 
     Returns
     -------
@@ -1115,6 +929,8 @@ def make_cycle_solution(
         The Solution object for this cycle, or None (if save_this_cycle is False)
     cycle_summary_variables : dict
         Dictionary of summary variables for this cycle
+    cycle_first_state : Solution
+        First state of the cycle.
 
     """
     sum_sols = step_solutions[0].copy()
@@ -1133,6 +949,10 @@ def make_cycle_solution(
         sum_sols.all_yps,
         sum_sols.variables_returned,
     )
+
+    if sum_sols.variables_returned:
+        cycle_solution._variables = sum_sols._variables
+
     cycle_solution._all_inputs_casadi = sum_sols.all_inputs_casadi
     cycle_solution._sub_solutions = sum_sols.sub_solutions
 
@@ -1142,8 +962,8 @@ def make_cycle_solution(
 
     cycle_solution.steps = step_solutions
 
-    cycle_summary_variables = _get_cycle_summary_variables(
-        cycle_solution, esoh_solver, user_inputs=inputs
+    cycle_summary_variables = pybamm.SummaryVariables(
+        cycle_solution, esoh_solver=esoh_solver, user_inputs=inputs
     )
 
     cycle_first_state = cycle_solution.first_state
@@ -1154,46 +974,3 @@ def make_cycle_solution(
         cycle_solution = None
 
     return cycle_solution, cycle_summary_variables, cycle_first_state
-
-
-def _get_cycle_summary_variables(cycle_solution, esoh_solver, user_inputs=None):
-    user_inputs = user_inputs or {}
-    model = cycle_solution.all_models[0]
-    cycle_summary_variables = pybamm.FuzzyDict({})
-
-    # Summary variables
-    summary_variables = model.summary_variables
-    first_state = cycle_solution.first_state
-    last_state = cycle_solution.last_state
-    for var in summary_variables:
-        data_first = first_state[var].data
-        data_last = last_state[var].data
-        cycle_summary_variables[var] = data_last[0]
-        var_lowercase = var[0].lower() + var[1:]
-        cycle_summary_variables["Change in " + var_lowercase] = (
-            data_last[0] - data_first[0]
-        )
-
-    # eSOH variables (full-cell lithium-ion model only, for now)
-    if (
-        esoh_solver is not None
-        and isinstance(model, pybamm.lithium_ion.BaseModel)
-        and model.options.electrode_types["negative"] == "porous"
-        and "Negative electrode capacity [A.h]" in model.variables
-        and "Positive electrode capacity [A.h]" in model.variables
-    ):
-        Q_n = last_state["Negative electrode capacity [A.h]"].data[0]
-        Q_p = last_state["Positive electrode capacity [A.h]"].data[0]
-        Q_Li = last_state["Total lithium capacity in particles [A.h]"].data[0]
-        all_inputs = {**user_inputs, "Q_n": Q_n, "Q_p": Q_p, "Q_Li": Q_Li}
-        try:
-            esoh_sol = esoh_solver.solve(inputs=all_inputs)
-        except pybamm.SolverError as error:  # pragma: no cover
-            raise pybamm.SolverError(
-                "Could not solve for summary variables, run "
-                "`sim.solve(calc_esoh=False)` to skip this step"
-            ) from error
-
-        cycle_summary_variables.update(esoh_sol)
-
-    return cycle_summary_variables

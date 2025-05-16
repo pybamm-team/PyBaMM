@@ -9,7 +9,7 @@ def graphite_mcmb2528_diffusivity_Dualfoil1998(sto, T):
 
     References
     ----------
-    .. [1] http://www.cchem.berkeley.edu/jsngrp/fortran.html
+    .. [1] John Newman, Dualfoil
 
     Parameters
     ----------
@@ -366,24 +366,19 @@ def get_parameter_values():
         "chemistry": "lithium_ion",
         # sei
         "Ratio of lithium moles to SEI moles": 2.0,
-        "Inner SEI reaction proportion": 0.5,
-        "Inner SEI partial molar volume [m3.mol-1]": 9.585e-05,
-        "Outer SEI partial molar volume [m3.mol-1]": 9.585e-05,
+        "SEI partial molar volume [m3.mol-1]": 9.585e-05,
         "SEI reaction exchange current density [A.m-2]": 1.5e-06,
         "SEI resistivity [Ohm.m]": 200000.0,
-        "Outer SEI solvent diffusivity [m2.s-1]": 2.5000000000000002e-22,
+        "SEI solvent diffusivity [m2.s-1]": 2.5e-22,
         "Bulk solvent concentration [mol.m-3]": 2636.0,
-        "Inner SEI open-circuit potential [V]": 0.1,
-        "Outer SEI open-circuit potential [V]": 0.8,
-        "Inner SEI electron conductivity [S.m-1]": 8.95e-14,
-        "Inner SEI lithium interstitial diffusivity [m2.s-1]": 1e-20,
+        "SEI electron conductivity [S.m-1]": 8.95e-14,
+        "SEI lithium interstitial diffusivity [m2.s-1]": 1e-20,
         "Lithium interstitial reference concentration [mol.m-3]": 15.0,
-        "Initial inner SEI thickness [m]": 2.5e-09,
-        "Initial outer SEI thickness [m]": 2.5e-09,
+        "Initial SEI thickness [m]": 5e-09,
         "EC initial concentration in electrolyte [mol.m-3]": 4541.0,
         "EC diffusivity [m2.s-1]": 2e-18,
         "SEI kinetic rate constant [m.s-1]": 1e-12,
-        "SEI open-circuit potential [V]": 0.0,
+        "SEI open-circuit potential [V]": 0.0,  # absorbed into the reaction rate
         "SEI growth activation energy [J.mol-1]": 0.0,
         # cell
         "Negative current collector thickness [m]": 1.7e-05,
@@ -464,10 +459,8 @@ def get_parameter_values():
         # experiment
         "Reference temperature [K]": 298.15,
         "Ambient temperature [K]": 298.15,
-        "Negative current collector surface heat transfer coefficient [W.m-2.K-1]"
-        "": 0.0,
-        "Positive current collector surface heat transfer coefficient [W.m-2.K-1]"
-        "": 0.0,
+        "Negative current collector surface heat transfer coefficient [W.m-2.K-1]": 0.0,
+        "Positive current collector surface heat transfer coefficient [W.m-2.K-1]": 0.0,
         "Negative tab heat transfer coefficient [W.m-2.K-1]": 10.0,
         "Positive tab heat transfer coefficient [W.m-2.K-1]": 10.0,
         "Edge heat transfer coefficient [W.m-2.K-1]": 0.3,

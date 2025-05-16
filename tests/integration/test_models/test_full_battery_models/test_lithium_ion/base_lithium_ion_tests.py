@@ -1,10 +1,7 @@
-#
-# Base integration tests for lithium-ion models
-#
+import numpy as np
+
 import pybamm
 import tests
-
-import numpy as np
 
 
 class BaseIntegrationTestLithiumIon:
@@ -22,10 +19,7 @@ class BaseIntegrationTestLithiumIon:
         param = pybamm.ParameterValues("Ecker2015")
         rtol = 1e-6
         atol = 1e-6
-        if pybamm.has_idaklu():
-            solver = pybamm.IDAKLUSolver(rtol=rtol, atol=atol)
-        else:
-            solver = pybamm.CasadiSolver(rtol=rtol, atol=atol)
+        solver = pybamm.IDAKLUSolver(rtol=rtol, atol=atol)
         modeltest = tests.StandardModelTest(
             model, parameter_values=param, solver=solver
         )
@@ -51,11 +45,11 @@ class BaseIntegrationTestLithiumIon:
 
         original = optimtest.evaluate_model()
         to_python = optimtest.evaluate_model(to_python=True)
-        np.testing.assert_array_almost_equal(original, to_python)
+        np.testing.assert_allclose(original, to_python, rtol=1e-7, atol=1e-7)
 
         if pybamm.has_jax():
             to_jax = optimtest.evaluate_model(to_jax=True)
-            np.testing.assert_array_almost_equal(original, to_jax)
+            np.testing.assert_allclose(original, to_jax, rtol=1e-7, atol=1e-7)
 
     def test_set_up(self):
         model = self.model()
@@ -133,7 +127,7 @@ class BaseIntegrationTestLithiumIon:
 
     def test_kinetics_asymmetric_butler_volmer(self):
         options = {"intercalation kinetics": "asymmetric Butler-Volmer"}
-        solver = pybamm.CasadiSolver(atol=1e-14, rtol=1e-14)
+        solver = pybamm.IDAKLUSolver(atol=1e-14, rtol=1e-14)
 
         parameter_values = pybamm.ParameterValues("Marquis2019")
         parameter_values.update(
@@ -203,6 +197,29 @@ class BaseIntegrationTestLithiumIon:
             "SEI porosity change": "true",
         }
         self.run_basic_processing_test(options)
+
+    def test_sei_VonKolzenberg2020(self):
+        options = {"SEI": "VonKolzenberg2020"}
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        parameter_values.update(
+            {
+                "Tunneling distance for electrons [m]": 0,
+                "SEI lithium ion conductivity [S.m-1]": 1.0e-7,
+            },
+            check_already_exists=False,
+        )
+        self.run_basic_processing_test(options, parameter_values=parameter_values)
+
+    def test_sei_tunnelling_limited(self):
+        options = {
+            "SEI": "tunnelling limited",
+        }
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        parameter_values.update(
+            {"Tunneling barrier factor [m-1]": 6.0e9},
+            check_already_exists=False,
+        )
+        self.run_basic_processing_test(options, parameter_values=parameter_values)
 
     def test_sei_asymmetric_ec_reaction_limited(self):
         options = {
@@ -333,6 +350,7 @@ class BaseIntegrationTestLithiumIon:
             "particle phases": ("2", "1"),
             "open-circuit potential": (("single", "current sigmoid"), "single"),
             "SEI": "ec reaction limited",
+            "SEI porosity change": "true",
         }
         parameter_values = pybamm.ParameterValues("Chen2020_composite")
         name = "Negative electrode active material volume fraction"
@@ -439,7 +457,8 @@ class BaseIntegrationTestLithiumIon:
                 "Secondary: Negative electrode partial molar volume [m3.mol-1]": 3.1e-06,
                 "Secondary: Negative electrode Young's modulus [Pa]": 15000000000.0,
                 "Secondary: Negative electrode Poisson's ratio": 0.3,
-                "Negative electrode reference concentration for free of deformation [mol.m-3]": 0.0,
+                "Primary: Negative electrode reference concentration for free of deformation [mol.m-3]": 0.0,
+                "Secondary: Negative electrode reference concentration for free of deformation [mol.m-3]": 0.0,
                 "Primary: Negative electrode volume change": graphite_volume_change_Ai2020,
                 "Secondary: Negative electrode volume change": graphite_volume_change_Ai2020,
                 "Positive electrode partial molar volume [m3.mol-1]": -7.28e-07,
