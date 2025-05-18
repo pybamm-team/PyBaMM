@@ -396,6 +396,7 @@ class TestProcessedVariableComputed:
         x_s_edge.secondary_mesh = disc.mesh["current collector"]
         x_s_casadi = to_casadi(x_s_edge, y_sol)
         processed_x_s_edge = pybamm.process_variable(
+            "test",
             [x_s_edge],
             [x_s_casadi],
             pybamm.Solution(

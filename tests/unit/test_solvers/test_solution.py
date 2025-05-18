@@ -526,12 +526,63 @@ class TestSolution:
         model.rhs = {c: -a * c}
         model.initial_conditions = {c: 1}
         model.variables["data_comparison"] = data_comparison
+        model.variables["data"] = data
+        model.variables["c"] = c
 
         solver = solver_class()
         for a in [0.5, 1.0, 2.0]:
-            sol = solver.solve(model, t_eval=t_eval, inputs={"a": a})
+            sol = solver.solve(model, t_eval=t_eval, t_interp=t_interp, inputs={"a": a})
             y_sol = np.exp(-a * data_times)
             expected = np.sum((y_sol - data_values) ** 2)
             np.testing.assert_allclose(
                 sol["data_comparison"](), expected, rtol=1e-3, atol=1e-2
             )
+
+            # sensitivity calculation only supported for IDAKLUSolver
+            if solver_class == pybamm.IDAKLUSolver:
+                sol = solver.solve(
+                    model,
+                    t_eval=t_eval,
+                    t_interp=t_interp,
+                    inputs={"a": a},
+                    calculate_sensitivities=True,
+                )
+                y_sol = np.exp(-a * data_times)
+                dy_sol_da = -data_times * y_sol
+
+                np.testing.assert_allclose(
+                    sol["data"].sensitivities["a"].full().flatten(),
+                    np.zeros_like(data_times),
+                    rtol=1e-3,
+                    atol=1e-2,
+                )
+                np.testing.assert_allclose(
+                    sol["c"].data,
+                    y_sol,
+                    rtol=1e-3,
+                    atol=1e-2,
+                )
+                np.testing.assert_allclose(
+                    sol["c"].sensitivities["a"].full().flatten(),
+                    dy_sol_da,
+                    rtol=1e-3,
+                    atol=1e-2,
+                )
+                np.testing.assert_allclose(
+                    sol["data_comparison"].sensitivities["a"],
+                    np.sum(2 * (y_sol - data_values) * dy_sol_da),
+                    rtol=1e-3,
+                    atol=1e-2,
+                )
+
+                # should raise error if t_interp is not equal to data_times
+                with pytest.raises(
+                    pybamm.SolverError,
+                    match="solution times and discrete times of the time integral are not equal",
+                ):
+                    solver.solve(
+                        model,
+                        t_eval=t_eval,
+                        inputs={"a": a},
+                        calculate_sensitivities=True,
+                    )["data_comparison"].sensitivities["a"]
