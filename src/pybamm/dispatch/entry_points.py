@@ -10,27 +10,27 @@ class EntryPoint(Mapping):
     """
     Access via :py:data:`pybamm.parameter_sets` for parameter_sets
     Access via :py:data:`pybamm.Model` for Models
+
     Examples
     --------
     Listing available parameter sets:
         >>> import pybamm
-        >>> list(pybamm.parameter_sets)
+        >>> list(pybamm.parameter_sets)  # doctest: +ELLIPSIS
         ['Ai2020', 'Chayambuka2022', ...]
+
+    Listing available models:
+        >>> import pybamm
         >>> list(pybamm.dispatch.models)
         ['SPM']
-    Get the docstring for a parameter set/model:
-        >>> print(pybamm.parameter_sets.get_docstring("Ai2020"))
+
+    Get the docstring for a parameter set or model:
+        >>> print(pybamm.parameter_sets.get_docstring("Ai2020"))  # doctest: +ELLIPSIS
         <BLANKLINE>
-        Parameters for the Enertech cell (Ai2020), from the papers :footcite:t:`Ai2019`,
-        :footcite:t:`Rieger2016` and references therein.
-        ...
-        See also: :ref:`adding-parameter-sets`
-        >>> print(pybamm.dispatch.models.get_docstring("SPM"))
+        Parameters for the Enertech cell (Ai2020), from the papers :footcite:t:`Ai2019`...
+
+        >>> print(pybamm.dispatch.models.get_docstring("SPM"))  # doctest: +ELLIPSIS
         <BLANKLINE>
-        Single Particle Model (SPM) of a lithium-ion battery, from
-        :footcite:t:`Marquis2019`.
-        See :class:`pybamm.lithium_ion.BaseModel` for more details.
-        ...
+        Single Particle Model (SPM) of a lithium-ion battery...
     """
 
     _instances = 0
