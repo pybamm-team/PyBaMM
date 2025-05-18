@@ -527,6 +527,12 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     "If 'PE degradation' is 'phase transition' then 'total interfacial "
                     "current density as a state' must be 'true'"
                 )
+            # Options not yet compatible with phase transition PE degradation
+            if options["particle size"] == "distribution":
+                raise pybamm.OptionError(
+                    "Positive Electrode phase transition submodel only implemented for "
+                    "particles of single size, i.e, no distribution."
+                )
 
         # If "SEI film resistance" is not "none" and there are multiple phases
         # then "total interfacial current density as a state" must be "true"

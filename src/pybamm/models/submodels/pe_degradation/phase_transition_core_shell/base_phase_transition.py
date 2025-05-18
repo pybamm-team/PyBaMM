@@ -37,15 +37,6 @@ class BasePhaseTransition(pybamm.BaseSubModel):
     def __init__(self, param, domain, options, phase="primary"):
         super().__init__(param, domain, options=options, phase=phase)
 
-        # Read from options to see if we have a particle size distribution
-        domain_options = getattr(self.options, domain)
-        self.size_distribution = domain_options["particle size"] == "distribution"
-        if self.size_distribution is True:
-            raise NotImplementedError(
-                "Positive Electrode phase transition submodel only implemented for "
-                "particles of single size, i.e, no distribution."
-            )
-
     def _get_standard_concentration_variables(
         self, c_c, c_o, s_nd, c_c_xav=None, c_o_xav=None, s_nd_av=None
     ):
