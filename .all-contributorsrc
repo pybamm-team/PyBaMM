@@ -1028,6 +1028,53 @@
         "doc",
         "infra"
       ]
+    },
+    {
+      "login": "vidipsingh",
+      "name": "Vidip Singh",
+      "avatar_url": "https://avatars.githubusercontent.com/u/112854574?v=4",
+      "profile": "https://github.com/vidipsingh",
+      "contributions": [
+        "infra"
+      ]
+    },
+    {
+      "login": "chtamar",
+      "name": "chtamar",
+      "avatar_url": "https://avatars.githubusercontent.com/u/196436685?v=4",
+      "profile": "https://github.com/chtamar",
+      "contributions": [
+        "code",
+        "doc",
+        "test"
+      ]
+    },
+    {
+      "login": "d-cogswell",
+      "name": "Dan Cogswell",
+      "avatar_url": "https://avatars.githubusercontent.com/u/51965251?v=4",
+      "profile": "https://dancogswell.com",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
+      "login": "Prtm2110",
+      "name": "Pratham Hole",
+      "avatar_url": "https://avatars.githubusercontent.com/u/139000226?v=4",
+      "profile": "https://github.com/Prtm2110",
+      "contributions": [
+        "test"
+      ]
+    },
+    {
+      "login": "JC230903",
+      "name": "JC_005",
+      "avatar_url": "https://avatars.githubusercontent.com/u/152909047?v=4",
+      "profile": "https://github.com/JC230903",
+      "contributions": [
+        "infra"
+      ]
     }
   ],
   "contributorsPerLine": 7,

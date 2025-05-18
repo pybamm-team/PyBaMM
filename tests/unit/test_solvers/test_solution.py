@@ -2,7 +2,6 @@
 # Tests for the Solution class
 #
 import pytest
-import os
 import io
 import logging
 import json
@@ -11,7 +10,6 @@ import numpy as np
 import pandas as pd
 from scipy.io import loadmat
 from tests import get_discretisation_for_testing
-from tempfile import TemporaryDirectory
 
 
 class TestSolution:
@@ -59,19 +57,10 @@ class TestSolution:
         assert "exceeds the maximum" in log_output
         logger.removeHandler(handler)
 
-        with pytest.raises(
-            TypeError, match="sensitivities arg needs to be a bool or dict"
-        ):
+        with pytest.raises(TypeError, match="sensitivities arg needs to be a dict"):
             pybamm.Solution(ts, bad_ys, model, {}, all_sensitivities="bad")
 
         sol = pybamm.Solution(ts, bad_ys, model, {}, all_sensitivities={})
-        with pytest.raises(TypeError, match="sensitivities arg needs to be a bool"):
-            sol.sensitivities = "bad"
-        with pytest.raises(
-            NotImplementedError,
-            match="Setting sensitivities is not supported if sensitivities are already provided as a dict",
-        ):
-            sol.sensitivities = True
 
     def test_add_solutions(self):
         # Set up first solution
@@ -143,10 +132,7 @@ class TestSolution:
             {},
             all_sensitivities={"test": [np.ones((1, 3))]},
         )
-        sol2 = pybamm.Solution(t2, y2, pybamm.BaseModel(), {}, all_sensitivities=True)
-        with pytest.raises(ValueError, match="Sensitivities must be of the same type"):
-            sol3 = sol1 + sol2
-        sol1 = pybamm.Solution(t1, y3, pybamm.BaseModel(), {}, all_sensitivities=False)
+        sol1 = pybamm.Solution(t1, y3, pybamm.BaseModel(), {})
         sol2 = pybamm.Solution(t3, y3, pybamm.BaseModel(), {}, all_sensitivities={})
         sol3 = sol1 + sol2
         assert not sol3._all_sensitivities
@@ -306,8 +292,8 @@ class TestSolution:
         )
         # check summay variables not in the solve can be evaluated at the final timestep
         # via 'last_state
-        np.testing.assert_array_almost_equal(
-            sol1.last_state["4u"].entries, np.array([4.0])
+        np.testing.assert_allclose(
+            sol1.last_state["4u"].entries, np.array([4.0]), rtol=1e-7, atol=1e-6
         )
 
     def test_cycles(self):
@@ -371,107 +357,102 @@ class TestSolution:
 
         solution.plot(["c", "2c"], show_plot=False)
 
-    def test_save(self):
-        with TemporaryDirectory() as dir_name:
-            test_stub = os.path.join(dir_name, "test")
+    def test_save(self, tmp_path):
+        test_stub = tmp_path / "test"
 
-            model = pybamm.BaseModel()
-            # create both 1D and 2D variables
-            c = pybamm.Variable("c")
-            d = pybamm.Variable("d", domain="negative electrode")
-            model.rhs = {c: -c, d: 1}
-            model.initial_conditions = {c: 1, d: 2}
-            model.variables = {"c": c, "d": d, "2c": 2 * c, "c + d": c + d}
+        model = pybamm.BaseModel()
+        # create both 1D and 2D variables
+        c = pybamm.Variable("c")
+        d = pybamm.Variable("d", domain="negative electrode")
+        model.rhs = {c: -c, d: 1}
+        model.initial_conditions = {c: 1, d: 2}
+        model.variables = {"c": c, "d": d, "2c": 2 * c, "c + d": c + d}
 
-            disc = get_discretisation_for_testing()
-            disc.process_model(model)
-            solution = pybamm.ScipySolver().solve(model, np.linspace(0, 1))
+        disc = get_discretisation_for_testing()
+        disc.process_model(model)
+        solution = pybamm.ScipySolver().solve(model, np.linspace(0, 1))
 
-            # test save data
-            with pytest.raises(ValueError):
-                solution.save_data(f"{test_stub}.pickle")
-
-            # set variables first then save
-            solution.update(["c", "d"])
-            with pytest.raises(ValueError, match="pickle"):
-                solution.save_data(to_format="pickle")
+        # test save data
+        with pytest.raises(ValueError):
             solution.save_data(f"{test_stub}.pickle")
 
-            data_load = pybamm.load(f"{test_stub}.pickle")
-            np.testing.assert_array_equal(solution.data["c"], data_load["c"])
-            np.testing.assert_array_equal(solution.data["d"], data_load["d"])
+        # set variables first then save
+        solution.update(["c", "d"])
+        with pytest.raises(ValueError, match="pickle"):
+            solution.save_data(to_format="pickle")
+        solution.save_data(f"{test_stub}.pickle")
 
-            # to matlab
+        data_load = pybamm.load(f"{test_stub}.pickle")
+        np.testing.assert_array_equal(solution.data["c"], data_load["c"])
+        np.testing.assert_array_equal(solution.data["d"], data_load["d"])
+
+        # to matlab
+        solution.save_data(f"{test_stub}.mat", to_format="matlab")
+        data_load = loadmat(f"{test_stub}.mat")
+        np.testing.assert_array_equal(solution.data["c"], data_load["c"].flatten())
+        np.testing.assert_array_equal(solution.data["d"], data_load["d"])
+
+        with pytest.raises(ValueError, match="matlab"):
+            solution.save_data(to_format="matlab")
+
+        # to matlab with bad variables name fails
+        solution.update(["c + d"])
+        with pytest.raises(ValueError, match="Invalid character"):
             solution.save_data(f"{test_stub}.mat", to_format="matlab")
-            data_load = loadmat(f"{test_stub}.mat")
-            np.testing.assert_array_equal(solution.data["c"], data_load["c"].flatten())
-            np.testing.assert_array_equal(solution.data["d"], data_load["d"])
+        # Works if providing alternative name
+        solution.save_data(
+            f"{test_stub}.mat",
+            to_format="matlab",
+            short_names={"c + d": "c_plus_d"},
+        )
+        data_load = loadmat(f"{test_stub}.mat")
+        np.testing.assert_array_equal(solution.data["c + d"], data_load["c_plus_d"])
 
-            with pytest.raises(ValueError, match="matlab"):
-                solution.save_data(to_format="matlab")
+        # to csv
+        with pytest.raises(ValueError, match="only 0D variables can be saved to csv"):
+            solution.save_data(f"{test_stub}.csv", to_format="csv")
+        # only save "c" and "2c"
+        solution.save_data(f"{test_stub}.csv", ["c", "2c"], to_format="csv")
+        csv_str = solution.save_data(variables=["c", "2c"], to_format="csv")
 
-            # to matlab with bad variables name fails
-            solution.update(["c + d"])
-            with pytest.raises(ValueError, match="Invalid character"):
-                solution.save_data(f"{test_stub}.mat", to_format="matlab")
-            # Works if providing alternative name
-            solution.save_data(
-                f"{test_stub}.mat",
-                to_format="matlab",
-                short_names={"c + d": "c_plus_d"},
-            )
-            data_load = loadmat(f"{test_stub}.mat")
-            np.testing.assert_array_equal(solution.data["c + d"], data_load["c_plus_d"])
+        # check string is the same as the file
+        with open(f"{test_stub}.csv") as f:
+            # need to strip \r chars for windows
+            assert csv_str.replace("\r", "") == f.read()
 
-            # to csv
-            with pytest.raises(
-                ValueError, match="only 0D variables can be saved to csv"
-            ):
-                solution.save_data(f"{test_stub}.csv", to_format="csv")
-            # only save "c" and "2c"
-            solution.save_data(f"{test_stub}.csv", ["c", "2c"], to_format="csv")
-            csv_str = solution.save_data(variables=["c", "2c"], to_format="csv")
+        # read csv
+        df = pd.read_csv(f"{test_stub}.csv")
+        np.testing.assert_allclose(df["c"], solution.data["c"], rtol=1e-7, atol=1e-6)
+        np.testing.assert_allclose(df["2c"], solution.data["2c"], rtol=1e-7, atol=1e-6)
 
-            # check string is the same as the file
-            with open(f"{test_stub}.csv") as f:
-                # need to strip \r chars for windows
-                assert csv_str.replace("\r", "") == f.read()
+        # to json
+        solution.save_data(f"{test_stub}.json", to_format="json")
+        json_str = solution.save_data(to_format="json")
 
-            # read csv
-            df = pd.read_csv(f"{test_stub}.csv")
-            np.testing.assert_array_almost_equal(df["c"], solution.data["c"])
-            np.testing.assert_array_almost_equal(df["2c"], solution.data["2c"])
+        # check string is the same as the file
+        with open(f"{test_stub}.json") as f:
+            # need to strip \r chars for windows
+            assert json_str.replace("\r", "") == f.read()
 
-            # to json
-            solution.save_data(f"{test_stub}.json", to_format="json")
-            json_str = solution.save_data(to_format="json")
+        # check if string has the right values
+        json_data = json.loads(json_str)
+        np.testing.assert_allclose(
+            json_data["c"], solution.data["c"], rtol=1e-7, atol=1e-6
+        )
+        np.testing.assert_allclose(
+            json_data["d"], solution.data["d"], rtol=1e-7, atol=1e-6
+        )
 
-            # check string is the same as the file
-            with open(f"{test_stub}.json") as f:
-                # need to strip \r chars for windows
-                assert json_str.replace("\r", "") == f.read()
+        # raise error if format is unknown
+        with pytest.raises(ValueError, match="format 'wrong_format' not recognised"):
+            solution.save_data(f"{test_stub}.csv", to_format="wrong_format")
 
-            # check if string has the right values
-            json_data = json.loads(json_str)
-            np.testing.assert_array_almost_equal(json_data["c"], solution.data["c"])
-            np.testing.assert_array_almost_equal(json_data["d"], solution.data["d"])
-
-            # raise error if format is unknown
-            with pytest.raises(
-                ValueError, match="format 'wrong_format' not recognised"
-            ):
-                solution.save_data(f"{test_stub}.csv", to_format="wrong_format")
-
-            # test save whole solution
-            solution.save(f"{test_stub}.pickle")
-            solution_load = pybamm.load(f"{test_stub}.pickle")
-            assert solution.all_models[0].name == solution_load.all_models[0].name
-            np.testing.assert_array_equal(
-                solution["c"].entries, solution_load["c"].entries
-            )
-            np.testing.assert_array_equal(
-                solution["d"].entries, solution_load["d"].entries
-            )
+        # test save whole solution
+        solution.save(f"{test_stub}.pickle")
+        solution_load = pybamm.load(f"{test_stub}.pickle")
+        assert solution.all_models[0].name == solution_load.all_models[0].name
+        np.testing.assert_array_equal(solution["c"].entries, solution_load["c"].entries)
+        np.testing.assert_array_equal(solution["d"].entries, solution_load["d"].entries)
 
     def test_get_data_cycles_steps(self):
         model = pybamm.BaseModel()
@@ -513,7 +494,7 @@ class TestSolution:
             solver=solver,
         )
         inputs = {"Negative electrode conductivity [S.m-1]": 0.1}
-        sim.solve(t_eval=np.linspace(0, 10, 10), inputs=inputs)
+        sim.solve(t_eval=[0, 10], t_interp=np.linspace(0, 10, 10), inputs=inputs)
         time = sim.solution["Time [h]"](sim.solution.t)
         assert len(time) == 10
 
@@ -551,6 +532,6 @@ class TestSolution:
             sol = solver.solve(model, t_eval=t_eval, inputs={"a": a})
             y_sol = np.exp(-a * data_times)
             expected = np.sum((y_sol - data_values) ** 2)
-            np.testing.assert_array_almost_equal(
-                sol["data_comparison"](), expected, decimal=2
+            np.testing.assert_allclose(
+                sol["data_comparison"](), expected, rtol=1e-3, atol=1e-2
             )

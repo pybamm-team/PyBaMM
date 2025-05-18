@@ -1356,7 +1356,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             The harmonic mean is computed as
 
             .. math::
-                D_{eff} = \\frac{D_1  D_2}{\\beta D_2 + (1 - \\beta) D_1},
+                D_{eff} = \\frac{1}{\\frac{\\beta}{D_1} + \\frac{1 - \\beta}{D_2}},
 
             where
 
@@ -1431,7 +1431,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
                 # dx_real = dx * length, therefore, beta is unchanged
                 # Compute harmonic mean on internal edges
-                D_eff = D1 * D2 / (D2 * beta + D1 * (1 - beta) + 1e-16)
+                D_eff = 1 / (beta / D1 + (1 - beta) / D2)
 
                 # Matrix to pad zeros at the beginning and end of the array where
                 # the exterior edge values will be added
@@ -1473,8 +1473,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                 beta = pybamm.Array(np.kron(np.ones((second_dim_repeats, 1)), sub_beta))
 
                 # Compute harmonic mean on nodes
-                # Note: add small number to denominator to regularise D_eff
-                D_eff = D1 * D2 / (D2 * beta + D1 * (1 - beta) + 1e-16)
+                D_eff = 1 / (beta / D1 + (1 - beta) / D2)
 
                 return D_eff
 

@@ -1,1 +1,1 @@
-__version__ = "25.1.0"
+from pybamm._version import version as __version__  # noqa: F401

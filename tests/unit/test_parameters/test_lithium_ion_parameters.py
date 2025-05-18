@@ -1,20 +1,17 @@
 #
 # Tests lithium-ion parameters load and give expected values
 #
-import os
 
 import pybamm
-from tempfile import TemporaryDirectory
 import numpy as np
 
 
 class TestLithiumIonParameterValues:
-    def test_print_parameters(self):
-        with TemporaryDirectory() as dir_name:
-            parameters = pybamm.LithiumIonParameters()
-            parameter_values = pybamm.lithium_ion.BaseModel().default_parameter_values
-            output_file = os.path.join(dir_name, "lithium_ion_parameters.txt")
-            parameter_values.print_parameters(parameters, output_file)
+    def test_print_parameters(self, tmp_path):
+        parameters = pybamm.LithiumIonParameters()
+        parameter_values = pybamm.lithium_ion.BaseModel().default_parameter_values
+        output_file = tmp_path / "lithium_ion_parameters.txt"
+        parameter_values.print_parameters(parameters, output_file)
 
     def test_lithium_ion(self):
         """This test checks that all the parameters are being calculated
@@ -108,6 +105,12 @@ class TestLithiumIonParameterValues:
 
     def test_thermal_parameters(self):
         values = pybamm.lithium_ion.BaseModel().default_parameter_values
+        values.update(
+            {
+                "Cell heat capacity [J.K-1.m-3]": 2.5e6,
+            },
+            check_already_exists=False,
+        )
         param = pybamm.LithiumIonParameters()
         T = param.T_ref
 
@@ -127,6 +130,7 @@ class TestLithiumIonParameterValues:
 
         # other thermal parameters
         np.testing.assert_equal(values.evaluate(param.T_init), 298.15)
+        np.testing.assert_equal(values.evaluate(param.cell_heat_capacity), 2.5e6)
 
     def test_parameter_functions(self):
         values = pybamm.lithium_ion.BaseModel().default_parameter_values

@@ -37,18 +37,24 @@ class TestFunctionControl:
 
         # solve model
         solutions = [None] * len(models)
-        t_eval = np.linspace(0, 3600, 100)
+        t_eval = [0, 3600]
+        t_interp = np.linspace(0, 3600, 100)
         for i, model in enumerate(models):
-            solutions[i] = model.default_solver.solve(model, t_eval)
+            solutions[i] = model.default_solver.solve(
+                model, t_eval=t_eval, t_interp=t_interp
+            )
 
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             solutions[0]["Discharge capacity [A.h]"].entries,
             solutions[0]["Current [A]"].entries * solutions[0]["Time [h]"].entries,
+            rtol=1e-7,
+            atol=1e-6,
         )
-        np.testing.assert_array_almost_equal(
-            solutions[0]["Voltage [V]"](solutions[0].t),
-            solutions[1]["Voltage [V]"](solutions[0].t),
-            decimal=5,
+        np.testing.assert_allclose(
+            solutions[0]["Voltage [V]"].entries,
+            solutions[1]["Voltage [V]"].entries,
+            rtol=1e-6,
+            atol=1e-5,
         )
 
     def test_constant_voltage(self):
@@ -87,11 +93,11 @@ class TestFunctionControl:
 
         V0 = solutions[0]["Voltage [V]"].entries
         V1 = solutions[1]["Voltage [V]"].entries
-        np.testing.assert_array_almost_equal(V0, V1)
+        np.testing.assert_allclose(V0, V1, rtol=1e-7, atol=1e-6)
 
         I0 = solutions[0]["Current [A]"].entries
         I1 = solutions[1]["Current [A]"].entries
-        np.testing.assert_array_almost_equal(abs((I1 - I0) / I0), 0, decimal=1)
+        np.testing.assert_allclose(abs((I1 - I0) / I0), 0, rtol=1e-2, atol=1e-1)
 
     def test_constant_power(self):
         def constant_power(variables):
@@ -109,7 +115,8 @@ class TestFunctionControl:
 
         # set parameters and discretise models
         solutions = [None] * len(models)
-        t_eval = np.linspace(0, 3600, 100)
+        t_eval = [0, 3600]
+        t_interp = np.linspace(0, 3600, 100)
         for i, model in enumerate(models):
             # create geometry
             geometry = model.default_geometry
@@ -122,12 +129,14 @@ class TestFunctionControl:
             )
             disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
             disc.process_model(model)
-            solutions[i] = model.default_solver.solve(model, t_eval)
+            solutions[i] = model.default_solver.solve(
+                model, t_eval=t_eval, t_interp=t_interp
+            )
 
         for var in ["Voltage [V]", "Current [A]"]:
             for sol in solutions[1:]:
-                np.testing.assert_array_almost_equal(
-                    solutions[0][var].data, sol[var].data
+                np.testing.assert_allclose(
+                    solutions[0][var].data, sol[var].data, rtol=5e-5, atol=1e-6
                 )
 
     def test_constant_resistance(self):
@@ -146,7 +155,8 @@ class TestFunctionControl:
 
         # set parameters and discretise models
         solutions = [None] * len(models)
-        t_eval = np.linspace(0, 3600, 100)
+        t_eval = [0, 3600]
+        t_interp = np.linspace(0, 3600, 100)
         for i, model in enumerate(models):
             # create geometry
             geometry = model.default_geometry
@@ -159,12 +169,14 @@ class TestFunctionControl:
             )
             disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
             disc.process_model(model)
-            solutions[i] = model.default_solver.solve(model, t_eval)
+            solutions[i] = model.default_solver.solve(
+                model, t_eval=t_eval, t_interp=t_interp
+            )
 
         for var in ["Voltage [V]", "Current [A]"]:
             for sol in solutions[1:]:
-                np.testing.assert_array_almost_equal(
-                    solutions[0][var].data, sol[var].data
+                np.testing.assert_allclose(
+                    solutions[0][var].data, sol[var].data, rtol=5e-5, atol=1e-6
                 )
 
     def test_cccv(self):

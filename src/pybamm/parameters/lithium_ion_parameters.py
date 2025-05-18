@@ -56,6 +56,7 @@ class LithiumIonParameters(BaseParameters):
         self.h_total = self.therm.h_total
         self.rho_c_p_eff = self.therm.rho_c_p_eff
         self.lambda_eff = self.therm.lambda_eff
+        self.cell_heat_capacity = self.therm.cell_heat_capacity
 
         # Macroscale geometry
         self.L_x = self.geo.L_x
@@ -462,9 +463,6 @@ class ParticleLithiumIonParameters(BaseParameters):
             self.epsilon_s * pybamm.r_average(self.c_init)
         )
         # if self.options['open-circuit potential'] == 'Plett':
-        self.hysteresis_decay = pybamm.Parameter(
-            f"{pref}{Domain} particle hysteresis decay rate"
-        )
         self.hysteresis_switch = pybamm.Parameter(
             f"{pref}{Domain} particle hysteresis switching factor"
         )
@@ -610,6 +608,21 @@ class ParticleLithiumIonParameters(BaseParameters):
                 self.n_Li_init_cyc = eps_c_init_cyc_av * (
                     self.domain_param.L * main.A_cc
                 )
+
+    def hysteresis_decay(self, lithiation=None):
+        """
+        Rate at which the open-circuit potential approaches the lithiation
+        or delithiation branch when it exhibits hysteresis.
+        """
+        Domain = self.domain.capitalize()
+        if lithiation is None:
+            lithiation = ""
+        else:
+            lithiation = lithiation + " "
+
+        return pybamm.Parameter(
+            f"{self.phase_prefactor}{Domain} particle {lithiation}hysteresis decay rate"
+        )
 
     def k_cr(self, T):
         """

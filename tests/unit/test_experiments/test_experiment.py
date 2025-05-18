@@ -5,6 +5,9 @@
 from datetime import datetime
 import pybamm
 import pytest
+import numpy as np
+import casadi
+from scipy.interpolate import PchipInterpolator
 
 
 class TestExperiment:
@@ -214,3 +217,142 @@ class TestExperiment:
 
         # TODO: once #3176 is completed, the test should pass for
         # operating_conditions_steps (or equivalent) as well
+
+    def test_simulation_solve_updates_input_parameters(self):
+        model = pybamm.lithium_ion.SPM()
+
+        step = pybamm.step.current(
+            pybamm.InputParameter("I_app"),
+            termination="< 2.5 V",
+        )
+        experiment = pybamm.Experiment([step])
+
+        sim = pybamm.Simulation(model, experiment=experiment)
+
+        sim.solve(inputs={"I_app": 1})
+        solution = sim.solution
+
+        current = solution["Current [A]"].entries
+
+        assert np.allclose(current, 1, atol=1e-3)
+
+    def test_current_step_raises_error_without_operator_with_input_parameters(self):
+        pybamm.lithium_ion.SPM()
+        with pytest.raises(
+            ValueError,
+            match="Termination must include an operator when using InputParameter.",
+        ):
+            pybamm.step.current(pybamm.InputParameter("I_app"), termination="2.5 V")
+
+    def test_value_function_with_input_parameter(self):
+        I_coeff = pybamm.InputParameter("I_coeff")
+        t = pybamm.t
+        expr = I_coeff * t
+        step = pybamm.step.current(expr, termination="< 2.5V")
+
+        direction = step.value_based_charge_or_discharge()
+        assert direction is None, (
+            "Expected direction to be None when the expression depends on an InputParameter."
+        )
+
+    def test_symbolic_current_step(self):
+        model = pybamm.lithium_ion.SPM()
+        expr = 2.5 + 0 * pybamm.t
+
+        step = pybamm.step.current(expr, duration=3600)
+        experiment = pybamm.Experiment([step])
+
+        sim = pybamm.Simulation(model, experiment=experiment)
+        sim.solve([0, 3600])
+
+        solution = sim.solution
+        voltage = solution["Current [A]"].entries
+
+        np.testing.assert_allclose(voltage[-1], 2.5, atol=0.1)
+
+    def test_voltage_without_directions(self):
+        model = pybamm.lithium_ion.SPM()
+
+        step = pybamm.step.voltage(2.5, termination="2.5 V")
+        experiment = pybamm.Experiment([step])
+
+        solver = pybamm.IDAKLUSolver(atol=1e-8, rtol=1e-8)
+        sim = pybamm.Simulation(model, experiment=experiment, solver=solver)
+
+        sim.solve()
+        solution = sim.solution
+
+        voltage = solution["Terminal voltage [V]"].entries
+        assert np.allclose(voltage, 2.5, atol=1e-3, rtol=1e-3)
+
+    def test_pchip_interpolation_experiment(self):
+        x = np.linspace(0, 1, 11)
+        y_values = x**3
+
+        y = pybamm.StateVector(slice(0, 1))
+        interp = pybamm.Interpolant(x, y_values, y, interpolator="pchip")
+
+        test_points = np.linspace(0, 1, 21)
+        casadi_y = casadi.MX.sym("y", len(test_points), 1)
+        interp_casadi = interp.to_casadi(y=casadi_y)
+        f = casadi.Function("f", [casadi_y], [interp_casadi])
+
+        casadi_results = f(test_points.reshape((-1, 1)))
+        expected = interp.evaluate(y=test_points)
+        np.testing.assert_allclose(casadi_results, expected, rtol=1e-7, atol=1e-6)
+
+    def test_pchip_interpolation_uniform_grid(self):
+        x = np.linspace(0, 1, 11)
+        y_values = np.sin(x)
+
+        state = pybamm.StateVector(slice(0, 1))
+        interp = pybamm.Interpolant(x, y_values, state, interpolator="pchip")
+
+        test_points = np.linspace(0, 1, 21)
+        expected = PchipInterpolator(x, y_values)(test_points)
+
+        casadi_y = casadi.MX.sym("y", 1)
+        interp_casadi = interp.to_casadi(y=casadi_y)
+        f = casadi.Function("f", [casadi_y], [interp_casadi])
+        result = np.array(f(test_points)).flatten()
+
+        np.testing.assert_allclose(result, expected, rtol=1e-7, atol=1e-6)
+
+    def test_pchip_interpolation_nonuniform_grid(self):
+        x = np.array([0, 0.05, 0.2, 0.4, 0.65, 1.0])
+        y_values = np.exp(-x)
+        state = pybamm.StateVector(slice(0, 1))
+        interp = pybamm.Interpolant(x, y_values, state, interpolator="pchip")
+
+        test_points = np.linspace(0, 1, 21)
+        expected = PchipInterpolator(x, y_values)(test_points)
+
+        casadi_y = casadi.MX.sym("y", 1)
+        interp_casadi = interp.to_casadi(y=casadi_y)
+        f = casadi.Function("f", [casadi_y], [interp_casadi])
+        result = np.array(f(test_points)).flatten()
+
+        np.testing.assert_allclose(result, expected, rtol=1e-7, atol=1e-6)
+
+    def test_pchip_non_increasing_x(self):
+        x = np.array([0, 0.5, 0.5, 1.0])
+        y_values = np.linspace(0, 1, 4)
+        state = pybamm.StateVector(slice(0, 1))
+        with pytest.raises(ValueError, match="strictly increasing sequence"):
+            _ = pybamm.Interpolant(x, y_values, state, interpolator="pchip")
+
+    def test_pchip_extrapolation(self):
+        x = np.linspace(0, 1, 11)
+        y_values = np.log1p(x)  # a smooth function on [0,1]
+        state = pybamm.StateVector(slice(0, 1))
+        interp = pybamm.Interpolant(x, y_values, state, interpolator="pchip")
+
+        test_points = np.array([-0.1, 1.1])
+        expected = PchipInterpolator(x, y_values)(test_points)
+
+        casadi_y = casadi.MX.sym("y", 1)
+        interp_casadi = interp.to_casadi(y=casadi_y)
+        f = casadi.Function("f", [casadi_y], [interp_casadi])
+        result = np.array(f(test_points)).flatten()
+
+        np.testing.assert_allclose(result, expected, rtol=1e-7, atol=1e-6)
