@@ -148,7 +148,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 distribution of sizes at any macroscale location. Can be "single"
                 (default) or "distribution". Option applies to both electrodes.
             * "PE degradation": str
-                Set the positive electrode (PE) degradation submodel to be used.
+                Set the Positive Electrode (PE) degradation submodel to be used.
                 Options are:
 
                 - "none": : no action taken

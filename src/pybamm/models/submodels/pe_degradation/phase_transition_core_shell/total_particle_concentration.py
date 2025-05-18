@@ -7,7 +7,8 @@ from .base_phase_transition import BasePhaseTransition
 
 class TotalConcentration(BasePhaseTransition):
     """
-    Class to calculate total lithium concentrations in the core
+    Class to calculate total lithium concentrations in the core of
+    Positive Electrode
 
     Parameters
     ----------

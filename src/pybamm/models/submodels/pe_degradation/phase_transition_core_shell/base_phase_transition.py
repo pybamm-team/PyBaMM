@@ -11,7 +11,7 @@ import pybamm
 
 class BasePhaseTransition(pybamm.BaseSubModel):
     """
-    Base class for the core-shell model.
+    Base class for the core-shell degradation model for Positive Electrode.
 
     Parameters
     ----------
@@ -42,8 +42,8 @@ class BasePhaseTransition(pybamm.BaseSubModel):
         self.size_distribution = domain_options["particle size"] == "distribution"
         if self.size_distribution is True:
             raise NotImplementedError(
-                "PE phase transition submodel only implemented for particles "
-                "of single size, i.e, no distribution."
+                "Positive Electrode phase transition submodel only implemented for "
+                "particles of single size, i.e, no distribution."
             )
 
     def _get_standard_concentration_variables(
@@ -102,7 +102,7 @@ class BasePhaseTransition(pybamm.BaseSubModel):
         dx_shell = pybamm.boundary_cell_length(c_o, "left")
         dx_shell_av = pybamm.x_average(dx_shell)
 
-        # Definition of loss of active material in PE
+        # Definition of loss of active material in Positive Electrode
         # that is, the fraction of shell phase
         lam_pe = pybamm.Scalar(1) - s_nd**3
         lam_pe_av = pybamm.x_average(lam_pe)

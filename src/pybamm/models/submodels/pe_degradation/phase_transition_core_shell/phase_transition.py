@@ -1,5 +1,5 @@
 #
-# Class for the core-shell submodel for PE phase transition.
+# Class for the core-shell submodel for Positive Electrode phase transition.
 #
 import pybamm
 from .base_phase_transition import BasePhaseTransition
