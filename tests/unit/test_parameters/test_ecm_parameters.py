@@ -4,7 +4,6 @@
 
 import pybamm
 
-
 values = {
     "Initial SoC": 0.5,
     "Initial temperature [K]": 25 + 273.15,

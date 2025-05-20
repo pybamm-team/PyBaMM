@@ -1,11 +1,12 @@
-import pytest
 import select
 import sys
-
-import pybamm
 import uuid
 from pathlib import Path
+
 import platformdirs
+import pytest
+
+import pybamm
 
 
 class TestConfig:

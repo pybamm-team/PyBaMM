@@ -1,5 +1,6 @@
-import pooch
 import pathlib
+
+import pooch
 
 
 class DataLoader:

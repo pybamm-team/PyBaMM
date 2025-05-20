@@ -2,11 +2,11 @@
 # Tests for the jacobian methods for two-dimensional objects
 #
 
-import pytest
-import pybamm
-
 import numpy as np
+import pytest
 from scipy.sparse import eye
+
+import pybamm
 from tests import (
     get_1p1d_discretisation_for_testing,
 )

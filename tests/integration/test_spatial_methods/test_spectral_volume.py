@@ -1,8 +1,9 @@
 #
 # Test for the operator class
 #
-import pybamm
 import numpy as np
+
+import pybamm
 
 
 def get_mesh_for_testing(

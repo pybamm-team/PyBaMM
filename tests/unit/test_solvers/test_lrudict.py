@@ -1,9 +1,11 @@
 #
 # Tests for the LRUDict class
 #
-import pytest
-from pybamm.solvers.lrudict import LRUDict
 from collections import OrderedDict
+
+import pytest
+
+from pybamm.solvers.lrudict import LRUDict
 
 
 class TestLRUDict:

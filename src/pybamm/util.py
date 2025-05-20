@@ -1,12 +1,13 @@
 from __future__ import annotations
-import importlib.util
+
+import difflib
 import importlib.metadata
+import importlib.util
 import numbers
 import os
 import pathlib
 import pickle
 import timeit
-import difflib
 from warnings import warn
 
 import pybamm

@@ -2,14 +2,12 @@
 # Tests for the Binary Operator classes
 #
 
-import pytest
-
-
 import numpy as np
+import pytest
+import sympy
 from scipy.sparse import coo_matrix
 
 import pybamm
-import sympy
 
 EMPTY_DOMAINS = {
     "primary": [],

@@ -2,11 +2,11 @@
 # Tests for the jacobian methods
 #
 
-import pytest
-import pybamm
-
 import numpy as np
+import pytest
 from scipy.sparse import eye
+
+import pybamm
 from tests import get_mesh_for_testing
 
 

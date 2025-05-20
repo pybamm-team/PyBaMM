@@ -1,8 +1,9 @@
 #
 # Empirical hysteresis modelling
 #
-import pybamm
 from numpy import array
+
+import pybamm
 
 pybamm.set_logging_level("INFO")
 

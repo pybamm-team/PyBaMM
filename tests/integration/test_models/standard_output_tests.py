@@ -1,8 +1,9 @@
 #
 # Standard tests on the standard set of model outputs
 #
-import pybamm
 import numpy as np
+
+import pybamm
 
 
 class StandardOutputTests:

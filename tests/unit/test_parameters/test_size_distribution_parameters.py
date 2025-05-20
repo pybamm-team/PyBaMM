@@ -2,9 +2,10 @@
 # Tests particle size distribution parameters are loaded into a parameter set
 # and give expected values
 #
-import pytest
-import pybamm
 import numpy as np
+import pytest
+
+import pybamm
 
 
 class TestSizeDistributionParameters:

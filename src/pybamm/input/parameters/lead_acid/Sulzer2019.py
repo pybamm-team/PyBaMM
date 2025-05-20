@@ -1,5 +1,6 @@
-import pybamm
 import numpy as np
+
+import pybamm
 
 
 def lead_ocp_Bode1977(m):

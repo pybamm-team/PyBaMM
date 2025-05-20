@@ -1,8 +1,9 @@
 #
 # Tests for the surface formulation
 #
-import pybamm
 import numpy as np
+
+import pybamm
 
 
 class TestCompareOutputsTwoPhase:

@@ -2,6 +2,7 @@
 # Class for reaction driven porosity changes as a multiple of SEI/plating thicknesses
 #
 import pybamm
+
 from .base_porosity import BaseModel
 
 

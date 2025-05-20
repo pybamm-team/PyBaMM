@@ -2,10 +2,10 @@
 # Tests for the Function classes
 #
 
-import pybamm
-
-import pytest
 import numpy as np
+import pytest
+
+import pybamm
 
 
 class TestInterpolant:

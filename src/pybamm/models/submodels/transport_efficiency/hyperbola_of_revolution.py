@@ -2,6 +2,7 @@
 # Class for hyperbola of revolution transport_efficiency
 #
 import pybamm
+
 from .base_transport_efficiency import BaseModel
 
 

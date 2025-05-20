@@ -7,11 +7,11 @@
 #
 
 import casadi
-import pybamm
-import tests
-
 import numpy as np
 import pytest
+
+import pybamm
+import tests
 
 
 def to_casadi(var_pybamm, y, inputs=None):

@@ -2,6 +2,7 @@
 # Method for plotting/comparing summary variables
 #
 import numpy as np
+
 import pybamm
 from pybamm.util import import_optional_dependency
 

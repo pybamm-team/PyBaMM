@@ -2,10 +2,11 @@
 # Method for plotting voltage components
 #
 
-from pybamm.util import import_optional_dependency
+from scipy.integrate import cumulative_trapezoid
+
 from pybamm.simulation import Simulation
 from pybamm.solvers.solution import Solution
-from scipy.integrate import cumulative_trapezoid
+from pybamm.util import import_optional_dependency
 
 
 def plot_thermal_components(

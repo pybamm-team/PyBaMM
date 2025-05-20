@@ -1,6 +1,7 @@
 import contextlib
 import io
 import warnings
+
 import pytest
 from pybtex.database import Entry
 

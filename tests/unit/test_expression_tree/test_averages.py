@@ -1,12 +1,13 @@
 #
 # Tests for the Unary Operator classes
 #
-import pytest
 import numpy as np
+import pytest
+from hypothesis import given
+from hypothesis import strategies as st
+
 import pybamm
 from tests import assert_domain_equal
-from hypothesis import strategies as st
-from hypothesis import given
 
 
 class TestUnaryOperators:

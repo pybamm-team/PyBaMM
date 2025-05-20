@@ -2,10 +2,11 @@
 # Tests for the symbolic differentiation methods
 #
 
-import pytest
 import numpy as np
-import pybamm
+import pytest
 from numpy import testing
+
+import pybamm
 
 
 class TestSymbolicDifferentiation:

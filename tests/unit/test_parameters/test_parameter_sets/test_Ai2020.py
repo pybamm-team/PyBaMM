@@ -2,6 +2,7 @@
 # Tests for Ai (2020) Enertech parameter set loads
 #
 import pytest
+
 import pybamm
 
 

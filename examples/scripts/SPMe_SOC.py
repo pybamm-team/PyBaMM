@@ -8,9 +8,10 @@
 #  The negative electrode thickness is varied to highlight the importance of electrode
 #  sizing to enable full lithium utilization
 #
-import pybamm
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+
+import pybamm
 
 factor = 6.38
 capacities = []

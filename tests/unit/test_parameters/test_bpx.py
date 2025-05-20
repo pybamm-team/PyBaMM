@@ -1,9 +1,11 @@
-import json
-import pybamm
 import copy
+import json
+from typing import Any
+
 import numpy as np
 import pytest
-from typing import Any
+
+import pybamm
 
 
 class TestBPX:

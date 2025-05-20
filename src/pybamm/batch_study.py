@@ -1,8 +1,9 @@
 #
 # BatchStudy class
 #
-import pybamm
 from itertools import product
+
+import pybamm
 
 
 class BatchStudy:

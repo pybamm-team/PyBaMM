@@ -2,6 +2,7 @@
 # Standard electrical parameters
 #
 import pybamm
+
 from .base_parameters import BaseParameters
 
 

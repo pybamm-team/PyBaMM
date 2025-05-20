@@ -1,5 +1,6 @@
-import pybamm
 import os
+
+import pybamm
 
 path, _ = os.path.split(os.path.abspath(__file__))
 

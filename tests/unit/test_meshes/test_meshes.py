@@ -2,9 +2,10 @@
 # Test for the Finite Volume Mesh class
 #
 
-import pytest
-import pybamm
 import numpy as np
+import pytest
+
+import pybamm
 
 
 def get_param():

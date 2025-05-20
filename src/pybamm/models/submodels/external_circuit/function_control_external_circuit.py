@@ -2,6 +2,7 @@
 # External circuit with an arbitrary function
 #
 import pybamm
+
 from .base_external_circuit import BaseModel
 
 

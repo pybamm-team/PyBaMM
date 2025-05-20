@@ -2,8 +2,9 @@
 Tests for the base_parameters.py
 """
 
-import pybamm
 import pytest
+
+import pybamm
 
 
 class TestBaseParameters:

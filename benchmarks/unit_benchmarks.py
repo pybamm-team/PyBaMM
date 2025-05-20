@@ -1,5 +1,6 @@
-import pybamm
 import numpy as np
+
+import pybamm
 from benchmarks.benchmark_utils import set_random_seed
 
 

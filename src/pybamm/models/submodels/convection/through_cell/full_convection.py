@@ -2,6 +2,7 @@
 # Submodel for pressure driven convection
 #
 import pybamm
+
 from .base_through_cell_convection import BaseThroughCellModel
 
 

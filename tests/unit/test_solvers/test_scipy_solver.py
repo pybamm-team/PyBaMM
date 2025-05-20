@@ -1,11 +1,12 @@
 # Tests for the Scipy Solver class
 #
-import pytest
-import pybamm
+import warnings
 
 import numpy as np
+import pytest
+
+import pybamm
 from tests import get_mesh_for_testing
-import warnings
 
 
 class TestScipySolver:

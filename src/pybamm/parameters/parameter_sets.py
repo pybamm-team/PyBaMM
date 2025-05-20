@@ -1,5 +1,5 @@
-import sys
 import importlib.metadata
+import sys
 import textwrap
 from collections.abc import Mapping
 from typing import Callable

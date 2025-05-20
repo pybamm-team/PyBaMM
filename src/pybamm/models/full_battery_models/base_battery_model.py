@@ -2,9 +2,9 @@
 # Base battery model class
 #
 
-import pybamm
 from functools import cached_property
 
+import pybamm
 from pybamm.expression_tree.operations.serialise import Serialise
 
 

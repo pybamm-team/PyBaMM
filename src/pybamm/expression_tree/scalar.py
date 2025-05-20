@@ -2,10 +2,12 @@
 # Scalar class
 #
 from __future__ import annotations
+
+from typing import Literal
+
 import numpy as np
 import numpy.typing as npt
 import sympy
-from typing import Literal
 
 import pybamm
 from pybamm.type_definitions import Numeric

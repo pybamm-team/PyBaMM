@@ -2,9 +2,10 @@
 # 'docs/source/examples/notebooks/create-model.ipnb' so for more details please see
 # that notebook
 
-import pybamm
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+
+import pybamm
 
 # 1. Initialise model ------------------------------------------------------------------
 model = pybamm.BaseModel()

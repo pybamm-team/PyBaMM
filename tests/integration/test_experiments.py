@@ -1,8 +1,9 @@
 #
 # Test some experiments
 #
-import pybamm
 import numpy as np
+
+import pybamm
 
 
 class TestExperiments:

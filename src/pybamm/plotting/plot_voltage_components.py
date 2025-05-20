@@ -3,9 +3,9 @@
 #
 import numpy as np
 
-from pybamm.util import import_optional_dependency
 from pybamm.simulation import Simulation
 from pybamm.solvers.solution import Solution
+from pybamm.util import import_optional_dependency
 
 
 def plot_voltage_components(

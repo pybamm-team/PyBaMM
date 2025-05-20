@@ -2,13 +2,12 @@
 # Tests for the Function classes
 #
 
-import pytest
-
 import numpy as np
+import pytest
+import sympy
 from scipy import special
 
 import pybamm
-import sympy
 from tests import (
     function_test,
     multi_var_function_test,

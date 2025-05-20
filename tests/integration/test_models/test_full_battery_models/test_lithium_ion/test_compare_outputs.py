@@ -2,8 +2,9 @@
 # Tests for the surface formulation
 #
 
-import pybamm
 import numpy as np
+
+import pybamm
 from tests import StandardOutputComparison
 
 

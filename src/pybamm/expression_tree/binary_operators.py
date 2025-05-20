@@ -2,17 +2,17 @@
 # Binary operator classes
 #
 from __future__ import annotations
+
+import functools
 import numbers
+from typing import Callable, cast
 
 import numpy as np
 import numpy.typing as npt
 import sympy
 from scipy.sparse import csr_matrix, issparse
-import functools
 
 import pybamm
-
-from typing import Callable, cast
 
 # create type alias(s)
 from pybamm.type_definitions import ChildSymbol, ChildValue, Numeric

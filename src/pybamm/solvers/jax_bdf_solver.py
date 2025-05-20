@@ -11,8 +11,8 @@ if pybamm.has_jax():
     import jax
     import jax.numpy as jnp
     from jax import core, dtypes
-    from jax.extend import linear_util as lu
     from jax.api_util import flatten_fun_nokwargs
+    from jax.extend import linear_util as lu
     from jax.flatten_util import ravel_pytree
     from jax.interpreters import partial_eval as pe
     from jax.tree_util import tree_flatten, tree_map, tree_unflatten

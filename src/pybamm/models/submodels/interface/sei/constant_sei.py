@@ -2,6 +2,7 @@
 # Class for constant SEI thickness
 #
 import pybamm
+
 from .base_sei import BaseModel
 
 

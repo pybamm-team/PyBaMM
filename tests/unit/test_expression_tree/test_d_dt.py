@@ -1,10 +1,10 @@
 #
 # Tests for the Scalar class
 #
-import pytest
-import pybamm
-
 import numpy as np
+import pytest
+
+import pybamm
 
 
 class TestDDT:

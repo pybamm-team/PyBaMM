@@ -11,10 +11,11 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
+import importlib.metadata
 import os
 import sys
+
 import pybamm
-import importlib.metadata
 
 # Path for repository root
 sys.path.insert(0, os.path.abspath("../"))

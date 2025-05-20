@@ -1,8 +1,9 @@
 #
 # Test that the model works with an example parameter set
 #
-import pybamm
 import numpy as np
+
+import pybamm
 import tests
 
 
