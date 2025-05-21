@@ -24,23 +24,22 @@ class TestMSMRParameterNames:
 
         # Invalid names (returns False)
         invalid_names = [
-            "X_p_-3", # Negative index
-            "X_j_3", # Invalid electrode
-            "Y_p_3", # Invalid base
-            "X_p_k_3", # Invalid qualifier
-            "X_p_l", # Missing electrode
-            "X_3", # Missing index
-            "X_p_3_extra", # Extra components
-            "electrode", # Invalid base
-            "particle", # Invalid base
-            "", # Empty string
+            "X_p_-3",  # Negative index
+            "X_j_3",  # Invalid electrode
+            "Y_p_3",  # Invalid base
+            "X_p_k_3",  # Invalid qualifier
+            "X_p_l",  # Missing electrode
+            "X_3",  # Missing index
+            "X_p_3_extra",  # Extra components
+            "electrode",  # Invalid base
+            "particle",  # Invalid base
+            "",  # Empty string
         ]
         for name in invalid_names:
             assert is_deprecated_msmr_name(name) is False
 
             with pytest.raises(ValueError, match="Invalid MSMR name"):
                 replace_deprecated_msmr_name(name)
-
 
     def test_replace_deprecated_msmr_name(self):
         """
@@ -60,7 +59,6 @@ class TestMSMRParameterNames:
         for old_name, new_name in name_mapping.items():
             assert replace_deprecated_msmr_name(old_name) == new_name
 
-
     def test_integration_with_parameter_values(self):
         """
         Test that the MSMR parameter name functions work correctly when integrated
@@ -74,7 +72,7 @@ class TestMSMRParameterNames:
             "U0_n_d_4": 0.1,
             "j0_ref_n_0": 0.1,
         }
-        
+
         # Define mapping of old parameter names to their human-readable equivalents
         name_mapping = {
             "X_p_3": "Positive electrode host site occupancy fraction (3)",
@@ -83,18 +81,18 @@ class TestMSMRParameterNames:
             "U0_n_d_4": "Negative electrode host site standard potential in delithiation (4) [V]",
             "j0_ref_n_0": "Negative electrode host site exchange-current density (0) [A.m-2]",
         }
-        
+
         param_values = pybamm.ParameterValues(old_params)
-    
+
         # New human-readable keys should be present
         for new_name in name_mapping.values():
             assert new_name in param_values
-    
+
         # Original keys should remain
         for old_key, val in old_params.items():
             assert old_key in param_values
             assert param_values[old_key] == val
-            
+
         # And their human-readable counterparts map to the same values
         for old_key, new_key in name_mapping.items():
             assert param_values[new_key] == old_params[old_key]
