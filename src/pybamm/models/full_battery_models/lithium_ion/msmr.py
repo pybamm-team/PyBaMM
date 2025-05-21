@@ -101,7 +101,7 @@ _QUALIFIER = {
 def replace_deprecated_msmr_name(key: str) -> str:
     """
     Convert e.g. "X_n_d_3" →
-        "Negative electrode host site occupancy fraction in delithiation (3)"
+        "Negative electrode host site occupancy fraction (delithiation) (3)"
     and likewise for a/U0/Q/j0_ref.
     """
     m = _VALID_NAME_RE.fullmatch(key)
@@ -116,7 +116,7 @@ def replace_deprecated_msmr_name(key: str) -> str:
     # start constructing the description
     desc = f"{_ELECTRODE[elec]} electrode {_BASE_DESC[base]}"
     if qual:
-        desc += f" in {_QUALIFIER[qual]}"
+        desc += f" ({_QUALIFIER[qual]})"
     desc += f" ({idx})"
 
     # tack on units if this base has them

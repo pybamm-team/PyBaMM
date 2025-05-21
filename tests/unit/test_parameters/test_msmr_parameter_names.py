@@ -48,12 +48,12 @@ class TestMSMRParameterNames:
         name_mapping = {
             "X_p_3": "Positive electrode host site occupancy fraction (3)",
             "X_n_5": "Negative electrode host site occupancy fraction (5)",
-            "X_p_l_3": "Positive electrode host site occupancy fraction in lithiation (3)",
-            "X_n_d_5": "Negative electrode host site occupancy fraction in delithiation (5)",
+            "X_p_l_3": "Positive electrode host site occupancy fraction (lithiation) (3)",
+            "X_n_d_5": "Negative electrode host site occupancy fraction (delithiation) (5)",
             "Q_p_3": "Positive electrode host site occupancy capacity (3) [A.h]",
             "w_n_2": "Negative electrode host site ideality factor (2)",
-            "U0_p_d_4": "Positive electrode host site standard potential in delithiation (4) [V]",
-            "a_p_d_5": "Positive electrode host site charge transfer coefficient in delithiation (5)",
+            "U0_p_d_4": "Positive electrode host site standard potential (delithiation) (4) [V]",
+            "a_p_d_5": "Positive electrode host site charge transfer coefficient (delithiation) (5)",
             "j0_ref_n_0": "Negative electrode host site reference exchange-current density (0) [A.m-2]",
         }
         for old_name, new_name in name_mapping.items():
@@ -76,9 +76,9 @@ class TestMSMRParameterNames:
         # Define mapping of old parameter names to their human-readable equivalents
         name_mapping = {
             "X_p_3": "Positive electrode host site occupancy fraction (3)",
-            "X_n_l_2": "Negative electrode host site occupancy fraction in lithiation (2)",
+            "X_n_l_2": "Negative electrode host site occupancy fraction (lithiation) (2)",
             "Q_p_1": "Positive electrode host site occupancy capacity (1) [A.h]",
-            "U0_n_d_4": "Negative electrode host site standard potential in delithiation (4) [V]",
+            "U0_n_d_4": "Negative electrode host site standard potential (delithiation) (4) [V]",
             "j0_ref_n_0": "Negative electrode host site reference exchange-current density (0) [A.m-2]",
         }
 
