@@ -257,14 +257,14 @@ def get_parameter_values():
         "Signed stoichiometry of water (oxygen reaction)": -1.0,
         "Signed stoichiometry of oxygen (oxygen reaction)": 1.0,
         "Electrons in oxygen reaction": 4.0,
-        "Negative electrode reference exchange-current density (oxygen) [A.m-2]"
+        "Negative electrode host site reference exchange-current density (oxygen) [A.m-2]"
         "": 2.5e-32,
         "Reference oxygen molecule concentration [mol.m-3]": 1000.0,
         "Oxygen reference OCP vs SHE [V]": 1.229,
         "Signed stoichiometry of cations (hydrogen reaction)": 2.0,
         "Signed stoichiometry of hydrogen (hydrogen reaction)": -1.0,
         "Electrons in hydrogen reaction": 2.0,
-        "Negative electrode reference exchange-current density (hydrogen) [A.m-2]"
+        "Negative electrode host site reference exchange-current density (hydrogen) [A.m-2]"
         "": 1.56e-11,
         "Hydrogen reference OCP vs SHE [V]": 0.0,
         "Negative electrode double-layer capacity [F.m-2]": 0.2,
@@ -289,7 +289,7 @@ def get_parameter_values():
         "Positive electrode oxygen exchange-current density [A.m-2]"
         "": oxygen_exchange_current_density_Sulzer2019,
         "Positive electrode Butler-Volmer transfer coefficient": 0.5,
-        "Positive electrode reference exchange-current density (hydrogen) [A.m-2]": 0.0,
+        "Positive electrode host site reference exchange-current density (hydrogen) [A.m-2]": 0.0,
         "Positive electrode double-layer capacity [F.m-2]": 0.2,
         "Positive electrode density [kg.m-3]": 9375.0,
         "Positive electrode specific heat capacity [J.kg-1.K-1]": 256.0,
