@@ -77,7 +77,7 @@ _BASE_DESC = {
     "w": "host site ideality factor",
     "U0": "host site standard potential",
     "a": "host site charge transfer coefficient",
-    "j0_ref": "host site exchange-current density",
+    "j0_ref": "host site reference exchange-current density",
 }
 
 # only Q, U0, and j0_ref have units

@@ -54,7 +54,7 @@ class TestMSMRParameterNames:
             "w_n_2": "Negative electrode host site ideality factor (2)",
             "U0_p_d_4": "Positive electrode host site standard potential in delithiation (4) [V]",
             "a_p_d_5": "Positive electrode host site charge transfer coefficient in delithiation (5)",
-            "j0_ref_n_0": "Negative electrode host site exchange-current density (0) [A.m-2]",
+            "j0_ref_n_0": "Negative electrode host site reference exchange-current density (0) [A.m-2]",
         }
         for old_name, new_name in name_mapping.items():
             assert replace_deprecated_msmr_name(old_name) == new_name
@@ -79,7 +79,7 @@ class TestMSMRParameterNames:
             "X_n_l_2": "Negative electrode host site occupancy fraction in lithiation (2)",
             "Q_p_1": "Positive electrode host site occupancy capacity (1) [A.h]",
             "U0_n_d_4": "Negative electrode host site standard potential in delithiation (4) [V]",
-            "j0_ref_n_0": "Negative electrode host site exchange-current density (0) [A.m-2]",
+            "j0_ref_n_0": "Negative electrode host site reference exchange-current density (0) [A.m-2]",
         }
 
         param_values = pybamm.ParameterValues(old_params)
