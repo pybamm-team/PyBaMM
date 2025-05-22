@@ -3,20 +3,20 @@
 #
 
 
-import pytest
 import os
 
+import casadi
 import numpy as np
 import pandas as pd
+import pytest
 
 import pybamm
 import tests.shared as shared
-from pybamm.input.parameters.lithium_ion.Marquis2019 import (
-    lico2_ocp_Dualfoil1998,
-    lico2_diffusivity_Dualfoil1998,
-)
 from pybamm.expression_tree.exceptions import OptionError
-import casadi
+from pybamm.input.parameters.lithium_ion.Marquis2019 import (
+    lico2_diffusivity_Dualfoil1998,
+    lico2_ocp_Dualfoil1998,
+)
 from pybamm.parameters.parameter_values import ParameterValues
 
 

@@ -1,8 +1,9 @@
 #
 # Test edge cases for initial SOC
 #
-import pybamm
 import pytest
+
+import pybamm
 
 
 class TestInitialSOC:

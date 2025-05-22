@@ -2,11 +2,11 @@
 # Tests for the electrode-electrolyte interface equations
 #
 
+import numpy as np
 import pytest
+
 import pybamm
 from tests import get_discretisation_for_testing
-
-import numpy as np
 
 
 class TestButlerVolmer:

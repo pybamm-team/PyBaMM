@@ -1,9 +1,10 @@
 #
 # Tests for the lithium-ion DFN half-cell model
 #
+import pytest
+
 import pybamm
 from tests import BaseIntegrationTestLithiumIonHalfCell
-import pytest
 
 
 class TestDFNHalfCell(BaseIntegrationTestLithiumIonHalfCell):

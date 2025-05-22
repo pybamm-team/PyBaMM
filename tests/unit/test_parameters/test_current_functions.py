@@ -2,11 +2,13 @@
 # Tests for current input functions
 #
 
-import pybamm
 import numbers
+
 import numpy as np
 import pandas as pd
 import pytest
+
+import pybamm
 from tests import no_internet_connection
 
 

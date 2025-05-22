@@ -1,8 +1,10 @@
 #
 # Tests for the ParameterSets class
 #
-import pytest
 import re
+
+import pytest
+
 import pybamm
 
 

@@ -1,8 +1,9 @@
 #
 # Tests for inputting a temperature profile
 #
-import pybamm
 import numpy as np
+
+import pybamm
 
 
 class TestInputLumpedTemperature:

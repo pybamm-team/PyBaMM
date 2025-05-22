@@ -2,9 +2,12 @@
 # Summary Variable class
 #
 from __future__ import annotations
-import pybamm
-import numpy as np
+
 from typing import Any
+
+import numpy as np
+
+import pybamm
 
 
 class SummaryVariables:

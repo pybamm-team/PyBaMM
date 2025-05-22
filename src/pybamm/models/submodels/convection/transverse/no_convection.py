@@ -2,6 +2,7 @@
 # Submodel for no convection in transverse directions
 #
 import pybamm
+
 from .base_transverse_convection import BaseTransverseModel
 
 

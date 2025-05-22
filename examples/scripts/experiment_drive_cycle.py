@@ -1,9 +1,9 @@
 #
 # Constant-current constant-voltage charge with US06 Drive Cycle using Experiment Class.
 #
-import pybamm
 import pandas as pd
 
+import pybamm
 
 pybamm.set_logging_level("INFO")
 

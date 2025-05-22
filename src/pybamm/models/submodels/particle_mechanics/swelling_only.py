@@ -2,6 +2,7 @@
 # Class for swelling only (no cracking)
 #
 import pybamm
+
 from .base_mechanics import BaseMechanics
 
 

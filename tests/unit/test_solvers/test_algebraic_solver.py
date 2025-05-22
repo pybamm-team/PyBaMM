@@ -2,9 +2,10 @@
 # Tests for the Algebraic Solver class
 #
 
-import pybamm
-import pytest
 import numpy as np
+import pytest
+
+import pybamm
 from tests import get_discretisation_for_testing
 
 

@@ -2,8 +2,9 @@
 # Test for the base Spatial Method class
 #
 import numpy as np
+
 import pybamm
-from tests import get_mesh_for_testing, get_discretisation_for_testing
+from tests import get_discretisation_for_testing, get_mesh_for_testing
 
 
 class TestZeroDimensionalSpatialMethod:

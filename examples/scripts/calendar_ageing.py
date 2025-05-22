@@ -1,5 +1,6 @@
-import pybamm as pb
 import numpy as np
+
+import pybamm as pb
 
 pb.set_logging_level("INFO")
 

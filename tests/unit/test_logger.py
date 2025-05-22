@@ -2,6 +2,7 @@
 # Tests the logger class.
 #
 import pytest
+
 import pybamm
 
 

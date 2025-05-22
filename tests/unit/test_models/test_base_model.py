@@ -2,15 +2,15 @@
 # Tests for the base model class
 #
 
-import pytest
 import os
 import platform
 import subprocess  # nosec
-from io import StringIO
 import sys
+from io import StringIO
 
 import casadi
 import numpy as np
+import pytest
 from numpy import testing
 
 import pybamm

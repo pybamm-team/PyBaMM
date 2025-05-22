@@ -1,9 +1,9 @@
 #
 # Compare basic models with full models
 #
-import pybamm
-
 import numpy as np
+
+import pybamm
 
 
 class TestCompareBasicModels:

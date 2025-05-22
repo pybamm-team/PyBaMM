@@ -2,6 +2,7 @@
 # Class for heterogeneous catalyst transport_efficiency
 #
 import pybamm
+
 from .base_transport_efficiency import BaseModel
 
 

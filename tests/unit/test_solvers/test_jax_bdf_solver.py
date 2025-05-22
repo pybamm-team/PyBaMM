@@ -1,8 +1,8 @@
+import numpy as np
 import pytest
+
 import pybamm
 from tests import get_mesh_for_testing
-
-import numpy as np
 
 if pybamm.has_jax():
     import jax

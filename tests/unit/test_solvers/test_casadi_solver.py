@@ -1,8 +1,9 @@
-import pytest
-import pybamm
 import numpy as np
-from tests import get_mesh_for_testing, get_discretisation_for_testing
+import pytest
 from scipy.sparse import eye
+
+import pybamm
+from tests import get_discretisation_for_testing, get_mesh_for_testing
 
 
 class TestCasadiSolver:

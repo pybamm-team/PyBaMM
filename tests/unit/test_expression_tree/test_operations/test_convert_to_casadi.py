@@ -4,10 +4,11 @@
 
 import casadi
 import numpy as np
-import pybamm
 import pytest
-from tests import get_mesh_for_testing, get_1p1d_discretisation_for_testing
 from scipy import special
+
+import pybamm
+from tests import get_1p1d_discretisation_for_testing, get_mesh_for_testing
 
 
 class TestCasadiConverter:

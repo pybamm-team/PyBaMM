@@ -3,6 +3,7 @@ Tests for the batch_study.py
 """
 
 import pytest
+
 import pybamm
 
 

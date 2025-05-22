@@ -1,7 +1,8 @@
-import pybamm
 import os
 import warnings
 from sys import _getframe
+
+import pybamm
 from pybamm.util import import_optional_dependency
 
 

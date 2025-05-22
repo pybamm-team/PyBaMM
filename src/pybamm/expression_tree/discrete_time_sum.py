@@ -1,7 +1,9 @@
-import pybamm
-import numpy.typing as npt
-import numpy as np
 from typing import Any
+
+import numpy as np
+import numpy.typing as npt
+
+import pybamm
 
 
 class DiscreteTimeData(pybamm.Interpolant):

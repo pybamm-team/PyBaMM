@@ -1,7 +1,9 @@
-import casadi
-import pybamm
-import numpy as np
 import numbers
+
+import casadi
+import numpy as np
+
+import pybamm
 
 
 class CasadiAlgebraicSolver(pybamm.BaseSolver):

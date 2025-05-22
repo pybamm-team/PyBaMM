@@ -1,8 +1,9 @@
 #
 # Tests for the lithium-ion DFN model
 #
-import pybamm
 import pytest
+
+import pybamm
 from tests import BaseUnitTestLithiumIon
 
 
