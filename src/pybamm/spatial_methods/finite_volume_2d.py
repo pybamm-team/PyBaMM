@@ -317,9 +317,9 @@ class FiniteVolume2D(pybamm.SpatialMethod):
 
         # Create vector of ones for primary domain submesh
         if direction == "lr":
-            d_edges = submesh.d_edges_lr
-        elif direction == "tb":
             d_edges = submesh.d_edges_tb
+        elif direction == "tb":
+            d_edges = submesh.d_edges_lr
 
         # repeat matrix for each node in secondary dimensions
         second_dim_repeats = self._get_auxiliary_domain_repeats(domains)
