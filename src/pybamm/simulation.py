@@ -7,7 +7,7 @@ from functools import lru_cache
 from datetime import timedelta
 import pybamm.telemetry
 from pybamm.util import import_optional_dependency
-
+from deprecation import deprecated
 from pybamm.expression_tree.operations.serialise import Serialise
 
 
@@ -156,8 +156,6 @@ class Simulation:
         self.get_esoh_solver = lru_cache()(self._get_esoh_solver)
 
     def set_up_and_parameterise_experiment(self, solve_kwargs=None):
-        msg = "pybamm.simulation.set_up_and_parameterise_experiment is deprecated and not meant to be accessed by users."
-        warnings.warn(msg, DeprecationWarning, stacklevel=2)
         self._set_up_and_parameterise_experiment(solve_kwargs=solve_kwargs)
 
     def _set_up_and_parameterise_experiment(self, solve_kwargs=None):
@@ -238,11 +236,13 @@ class Simulation:
                 parameterised_model
             )
 
+    @deprecated(
+        deprecated_in="25.1.0",
+        removed_in="26.0.0",
+        current_version=pybamm.__version__,
+        details="pybamm.set_parameters is deprecated and not meant to be accessed by users.",
+    )
     def set_parameters(self):
-        msg = (
-            "pybamm.set_parameters is deprecated and not meant to be accessed by users."
-        )
-        warnings.warn(msg, DeprecationWarning, stacklevel=2)
         self._set_parameters()
 
     def _set_parameters(self):

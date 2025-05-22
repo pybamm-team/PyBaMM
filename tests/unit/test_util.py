@@ -3,7 +3,9 @@ import importlib
 import os
 import sys
 import pybamm
+import warnings
 from io import StringIO
+from pybamm.util import deprecate_arguments
 
 from tests import (
     get_optional_distribution_deps,
@@ -70,8 +72,8 @@ class TestUtil:
         )
 
         assert (
-            d2["Positive electrode diffusivity [m2.s-1]"]
-            == d["Positive electrode diffusivity [m2.s-1]"]
+            d2["Positive particle diffusivity [m2.s-1]"]
+            == d["Positive particle diffusivity [m2.s-1]"]
         )
 
         with pytest.warns(DeprecationWarning):
@@ -168,6 +170,30 @@ class TestUtil:
             "Please ensure that optional dependencies are not present in the core PyBaMM installation, "
             "or list them as required."
         )
+
+    def test_deprecate_arguments_warns(self):
+        # A simple function with deprecated argument 'old_arg'
+        @deprecate_arguments(
+            deprecated_args={"old_arg": "Use 'new_arg' instead."},
+            deprecated_in="1.0.0",
+            removed_in="2.0.0",
+            current_version="1.1.0",
+            msg={"old_arg": "This is extra context."},
+        )
+        def sample_function(new_arg=None, old_arg=None):
+            return new_arg or old_arg
+
+        # Check that a warning is issued when using a deprecated argument
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")  # Ensure warnings are caught
+            result = sample_function(old_arg="value")
+
+            assert result == "value"
+            assert len(w) == 1
+            assert issubclass(w[0].category, DeprecationWarning)
+            assert "Argument 'old_arg' is deprecated" in str(w[0].message)
+            assert "Use 'new_arg' instead." in str(w[0].message)
+            assert "This is extra context." in str(w[0].message)
 
 
 class TestSearch:

@@ -42,6 +42,7 @@ dependencies = [
     "posthog",
     "pyyaml",
     "platformdirs",
+    "deprecation"
 ]
 
 [project.urls]
@@ -80,7 +81,7 @@ plot = [
     "matplotlib>=3.6.0",
 ]
 cite = [
-    "setuptools", # Fix for a pybtex issue
+    "setuptools==66.1.1", # Fix for a pybtex issue
     "pybtex>=0.24.0",
 ]
 # Battery Parameter eXchange format
@@ -232,8 +233,10 @@ required_plugins = [
 addopts = [
     "-nauto",
     "-vra",
+    "--showlocals",
     "--strict-config",
     "--strict-markers",
+    "--ignore=tests/unit/test_parameters/test_bpx.py",
 ]
 testpaths = [
     "tests",
@@ -245,10 +248,14 @@ filterwarnings = [
     # ignore internal nbmake warnings
     'ignore:unclosed \<socket.socket:ResourceWarning',
     'ignore:unclosed event loop \<:ResourceWarning',
-    # ignore warnings generated while running tests
-    "ignore::DeprecationWarning",
+    # convert internal warnings as errors
+    "error::DeprecationWarning:pybamm.*",
+    # ignore setuptools and pybtex deprecation warnings
+    "ignore::DeprecationWarning:pkg_resources",
+    "ignore:open_text is deprecated:DeprecationWarning",
     "ignore::UserWarning",
     "ignore::RuntimeWarning",
+    "ignore::pydantic.warnings.PydanticDeprecatedSince20",
 ]
 
 # Logging configuration

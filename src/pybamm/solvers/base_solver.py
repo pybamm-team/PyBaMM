@@ -12,6 +12,7 @@ import numpy as np
 import pybamm
 from pybamm.expression_tree.binary_operators import _Heaviside
 from pybamm import ParameterValues
+from pybamm.util import deprecate_arguments
 
 
 class BaseSolver:
@@ -1107,6 +1108,13 @@ class BaseSolver:
 
         return t_interp
 
+    @deprecate_arguments(
+        deprecated_args={"npts": "Use 't_eval' instead."},
+        deprecated_in="25.1.0",
+        removed_in="25.3.0",
+        current_version="25.1.0",
+        msg="Please refer to the updated documentation.",
+    )
     def step(
         self,
         old_solution,
@@ -1179,14 +1187,6 @@ class BaseSolver:
         if dt <= 0:
             raise pybamm.SolverError("Step time must be >0")
 
-        # Raise deprecation warning for npts and convert it to t_eval
-        if npts is not None:
-            warnings.warn(
-                "The 'npts' parameter is deprecated, use 't_eval' instead.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            t_eval = np.linspace(0, dt, npts)
         elif t_eval is None:
             t_eval = np.array([0, dt])
         elif t_eval[0] != 0 or t_eval[-1] != dt:

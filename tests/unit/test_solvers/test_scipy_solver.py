@@ -199,7 +199,8 @@ class TestScipySolver:
         )
 
         # Step again (return 5 points)
-        step_sol_2 = solver.step(step_sol, model, dt, npts=5)
+        t_eval = np.linspace(0, dt, 5)
+        step_sol_2 = solver.step(step_sol, model, dt, t_eval=t_eval)
         np.testing.assert_array_equal(
             step_sol_2.t, np.array([0, 1, np.nextafter(1, np.inf), 1.25, 1.5, 1.75, 2])
         )
