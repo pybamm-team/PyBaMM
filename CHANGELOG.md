@@ -1,5 +1,9 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Features
+
+- Renamed MSMR parameters from symbols to written out names with units as a non-breaking change with a deprecation warning. ([#5027](https://github.com/pybamm-team/PyBaMM/pull/5027))
+
 ## Optimizations
 
 - Update docs, examples and tests to use `IDAKLUSolver`. ([#4996](https://github.com/pybamm-team/PyBaMM/pull/4996))
