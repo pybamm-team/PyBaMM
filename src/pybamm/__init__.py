@@ -139,6 +139,12 @@ from .meshes.one_dimensional_submeshes import (
     SpectralVolume1DSubMesh,
     SymbolicUniform1DSubMesh,
 )
+
+from .meshes.three_dimensional_submeshes import (
+    SubMesh3D,
+    Uniform3DSubMesh,
+)
+
 from .meshes.scikit_fem_submeshes import (
     ScikitSubMesh2D,
     ScikitUniform2DSubMesh,

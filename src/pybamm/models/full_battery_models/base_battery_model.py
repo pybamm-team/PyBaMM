@@ -596,6 +596,13 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 raise pybamm.OptionError(
                     "cannot have transverse convection in 0D model"
                 )
+            if (
+                options["thermal"] in ["x-lumped", "x-full"]
+                and options["cell geometry"] != "pouch"
+            ):
+                raise pybamm.OptionError(
+                    options["thermal"] + " model must have pouch cell geometry."
+                )
 
         if options["thermal"] != "full-3d" and options["cell geometry"] == "3D":
             raise pybamm.OptionError(

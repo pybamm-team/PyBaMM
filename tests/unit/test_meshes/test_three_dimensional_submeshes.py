@@ -1,176 +1,140 @@
 import pytest
 import numpy as np
-import meshio
-from unittest import mock
+import pybamm
 
-from pybamm.meshes.three_dimensional_submeshes import SubMesh3D, PyGmshMeshGenerator
-
-
-class TestSubMesh3D:
-    def test_initialization(self):
-        points = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1]])
-        cells = [("tetra", np.array([[0, 1, 2, 3]]))]
-        mesh = meshio.Mesh(points, cells)
-
-        submesh = SubMesh3D(mesh)
-
-        assert submesh.coord_sys == "cartesian"
-        assert len(submesh.internal_boundaries) == 0
-        assert submesh.npts == 1
-        assert len(submesh.points) == 4
-        assert len(submesh.tetrahedra) == 1
-
-    def test_volumes_and_centers(self):
-        points = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1]])
-        cells = [("tetra", np.array([[0, 1, 2, 3]]))]
-        mesh = meshio.Mesh(points, cells)
-
-        submesh = SubMesh3D(mesh)
-
-        assert np.isclose(submesh.volumes[0], 1 / 6)
-
-        assert np.allclose(submesh.nodes[0], np.array([0.25, 0.25, 0.25]))
-
-    def test_adjacency(self):
-        points = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1], [1, 1, 1]])
-        cells = [("tetra", np.array([[0, 1, 2, 3], [1, 2, 3, 4]]))]
-        mesh = meshio.Mesh(points, cells)
-
-        submesh = SubMesh3D(mesh)
-
-        assert 1 in submesh.adjacency_list[0]
-        assert 0 in submesh.adjacency_list[1]
-        assert len(submesh.adjacency_list[0]) == 1
-        assert len(submesh.adjacency_list[1]) == 1
-
-    def test_empty_mesh(self):
-        points = np.zeros((0, 3))
-        cells = [("tetra", np.zeros((0, 4), dtype=int))]
-        mesh = meshio.Mesh(points, cells)
-
-        submesh = SubMesh3D(mesh)
-
-        assert submesh.npts == 0
-        assert len(submesh.volumes) == 0
-        assert len(submesh.nodes) == 0
-
-    def test_no_tetrahedra(self):
-        points = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0]])
-        cells = [("triangle", np.array([[0, 1, 2]]))]
-        mesh = meshio.Mesh(points, cells)
-
-        submesh = SubMesh3D(mesh)
-
-        assert submesh.npts == 0
-        assert len(submesh.volumes) == 0
-        assert len(submesh.nodes) == 0
+from pybamm.meshes.three_dimensional_submeshes import (
+    SubMesh3D,
+    Uniform3DSubMesh,
+    MeshPyGenerator3D,
+)
+from pybamm.meshes.meshes import Mesh
 
 
-class TestPyGmshMeshGenerator:
-    def test_initialization(self):
-        generator = PyGmshMeshGenerator(mesh_size=0.2)
-        assert generator.mesh_size == 0.2
-
-    @mock.patch("pygmsh.geo.Geometry")
-    def test_generate_rectangular(self, mock_geometry):
-        mock_instance = mock_geometry.return_value.__enter__.return_value
-        mock_instance.generate_mesh.return_value = meshio.Mesh(
-            points=np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1]]),
-            cells=[("tetra", np.array([[0, 1, 2, 3]]))],
-        )
-
-        generator = PyGmshMeshGenerator(mesh_size=0.1)
-
-        params = {"x": [0, 1], "y": [0, 1], "z": [0, 1]}
-        submesh = generator.generate("rectangular", params)
-
-        mock_instance.add_box.assert_called_once_with(
-            x0=0, y0=0, z0=0, x1=1, y1=1, z1=1, mesh_size=0.1
-        )
-
-        assert isinstance(submesh, SubMesh3D)
-        assert len(submesh.tetrahedra) == 1
-
-    @mock.patch("pygmsh.geo.Geometry")
-    def test_generate_cylindrical(self, mock_geometry):
-        mock_instance = mock_geometry.return_value.__enter__.return_value
-        mock_instance.generate_mesh.return_value = meshio.Mesh(
-            points=np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1]]),
-            cells=[("tetra", np.array([[0, 1, 2, 3]]))],
-        )
-
-        generator = PyGmshMeshGenerator(mesh_size=0.1)
-
-        params = {"radius": 1.0, "height": 2.0}
-        submesh = generator.generate("cylindrical", params)
-
-        mock_instance.add_cylinder.assert_called_once_with(
-            [0, 0, 0], [0, 0, 2.0], 1.0, mesh_size=0.1
-        )
-
-        assert isinstance(submesh, SubMesh3D)
-        assert len(submesh.tetrahedra) == 1
-
-    @mock.patch("pygmsh.geo.Geometry")
-    def test_generate_spiral(self, mock_geometry):
-        mock_instance = mock_geometry.return_value.__enter__.return_value
-        mock_instance.generate_mesh.return_value = meshio.Mesh(
-            points=np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1]]),
-            cells=[("tetra", np.array([[0, 1, 2, 3]]))],
-        )
-        mock_instance.add_parametric_surface.return_value = "surface"
-
-        generator = PyGmshMeshGenerator(mesh_size=0.1)
-
-        params = {"inner_radius": 0.5, "outer_radius": 1.0, "height": 2.0, "turns": 3}
-        submesh = generator.generate("spiral", params)
-
-        mock_instance.add_parametric_surface.assert_called_once()
-        mock_instance.add_surface_loop.assert_called_once_with(["surface"])
-
-        assert isinstance(submesh, SubMesh3D)
-        assert len(submesh.tetrahedra) == 1
-
-    def test_unknown_geometry_type(self):
-        generator = PyGmshMeshGenerator()
-
-        with pytest.raises(ValueError, match="Unknown 3D geometry"):
-            generator.generate("unknown_type", {})
-
-    @pytest.mark.integration
-    def test_real_mesh_generation(self):
-        generator = PyGmshMeshGenerator(mesh_size=0.5)
-
-        params = {"x": [0, 1], "y": [0, 1], "z": [0, 1]}
-        submesh = generator.generate("rectangular", params)
-
-        assert isinstance(submesh, SubMesh3D)
-        assert len(submesh.tetrahedra) > 0
-        assert submesh.npts > 0
+@pytest.fixture
+def x():
+    return pybamm.SpatialVariable("x", domain=["my 3d domain"], coord_sys="cartesian")
 
 
-class TestSubMesh3DIntegration:
-    def test_integration_with_pybamm_mesh(self):
-        # x = pybamm.SpatialVariable("x", domain=["domain"], coord_sys="cartesian")
-        # y = pybamm.SpatialVariable("y", domain=["domain"], coord_sys="cartesian")
-        # z = pybamm.SpatialVariable("z", domain=["domain"], coord_sys="cartesian")
+@pytest.fixture
+def y():
+    return pybamm.SpatialVariable("y", domain=["my 3d domain"], coord_sys="cartesian")
 
-        # geometry = {
-        #     "domain": {
-        #         x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
-        #         y: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
-        #         z: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
-        #     }
-        # }
 
-        points = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1], [1, 1, 1]])
-        cells = [("tetra", np.array([[0, 1, 2, 3], [1, 2, 3, 4]]))]
-        mesh_data = meshio.Mesh(points, cells)
-        mock_submesh = SubMesh3D(mesh_data)
+@pytest.fixture
+def z():
+    return pybamm.SpatialVariable("z", domain=["my 3d domain"], coord_sys="cartesian")
 
-        mesh_dict = {"domain": mock_submesh}
 
-        assert "domain" in mesh_dict
-        assert isinstance(mesh_dict["domain"], SubMesh3D)
-        assert len(mesh_dict["domain"].tetrahedra) == 2
-        assert mesh_dict["domain"].npts == 2
+@pytest.fixture
+def geometry(x, y, z):
+    return {
+        "my 3d domain": {
+            x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+            y: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(2)},
+            z: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(3)},
+        }
+    }
+
+
+class TestSubMesh3DReadLims:
+    def test_read_lims_wrong_number(self):
+        lims = {"x": {}, "y": {}}
+        with pytest.raises(pybamm.GeometryError):
+            SubMesh3D.read_lims(lims.copy())
+
+        lims = {"x": {}, "y": {}, "z": {}, "w": {}}
+        with pytest.raises(pybamm.GeometryError):
+            SubMesh3D.read_lims(lims.copy())
+
+    def test_read_lims_string_keys(self, x, y, z):
+        lims = {
+            "x": {"min": 0, "max": 1},
+            "y": {"min": 0, "max": 1},
+            "z": {"min": 0, "max": 1},
+            "tabs": {"foo": "bar"},
+        }
+        var_x, lims_x, var_y, lims_y, var_z, lims_z, tabs = SubMesh3D.read_lims(lims)
+        assert var_x.name == x.name
+        assert var_y.name == y.name
+        assert var_z.name == z.name
+        assert tabs == {"foo": "bar"}
+
+
+class TestUniform3DSubMesh:
+    def test_exception_wrong_lims(self):
+        # missing one axis
+        lims = {"x": {}, "y": {}}
+        with pytest.raises(pybamm.GeometryError):
+            Uniform3DSubMesh(lims, {"x": 1, "y": 1, "z": 1})
+
+    def test_basic_uniform_mesh(self, geometry):
+        pts = {"x": 4, "y": 5, "z": 6}
+        sub = Uniform3DSubMesh(geometry["my 3d domain"], pts)
+
+        # edges should span [0,1], [0,2], [0,3]
+        assert np.allclose(sub.edges_x, np.linspace(0, 1, pts["x"] + 1))
+        assert np.allclose(sub.edges_y, np.linspace(0, 2, pts["y"] + 1))
+        assert np.allclose(sub.edges_z, np.linspace(0, 3, pts["z"] + 1))
+
+        # node counts
+        assert sub.npts_x == 4
+        assert sub.npts_y == 5
+        assert sub.npts_z == 6
+        assert sub.npts == 4 * 5 * 6
+
+        # nodes shape
+        nodes = sub.nodes
+        assert nodes.shape == (4 * 5 * 6, 3)
+        # centers: first node in x is at (0.5/4, 0.5*2/5, 0.5*3/6)
+        assert np.allclose(nodes[0], [0.5 / 4, 1 / 5, 1 / 4])
+
+    def test_to_json_and_from_json(self, geometry):
+        pts = {"x": 2, "y": 2, "z": 2}
+        sub = Uniform3DSubMesh(geometry["my 3d domain"], pts)
+        j = sub.to_json()
+        # round-trip via the Mesh._from_json
+        re_sub = SubMesh3D._from_json(j)
+        assert np.allclose(re_sub.edges_x, sub.edges_x)
+        assert np.allclose(re_sub.edges_y, sub.edges_y)
+        assert np.allclose(re_sub.edges_z, sub.edges_z)
+
+    def test_create_ghost_cells(self, geometry):
+        pts = {"x": 3, "y": 3, "z": 3}
+        sub = Uniform3DSubMesh(geometry["my 3d domain"], pts)
+        # left & right
+        left = sub.create_ghost_cell("left")
+        assert left.edges_x[1] == sub.edges_x[0]
+        assert left.edges_x[0] == 2 * sub.edges_x[0] - sub.edges_x[1]
+        right = sub.create_ghost_cell("right")
+        assert right.edges_x[0] == sub.edges_x[-1]
+        # front & back
+        front = sub.create_ghost_cell("front")
+        assert front.edges_y[1] == sub.edges_y[0]
+        back = sub.create_ghost_cell("back")
+        assert back.edges_y[0] == sub.edges_y[-1]
+        # bottom & top
+        bottom = sub.create_ghost_cell("bottom")
+        assert bottom.edges_z[1] == sub.edges_z[0]
+        top = sub.create_ghost_cell("top")
+        assert top.edges_z[0] == sub.edges_z[-1]
+
+
+class TestMeshIntegration3D:
+    def test_mesh_factory_uniform(self, geometry):
+        submesh_types = {"my 3d domain": Uniform3DSubMesh}
+        var_pts = {"x": 2, "y": 3, "z": 4}
+        mesh = Mesh(geometry, submesh_types, var_pts)
+
+        sub = mesh["my 3d domain"]
+        # dimension & nodes
+        assert sub.dimension == 3
+        assert sub.nodes.shape == (2 * 3 * 4, 3)
+        assert any("left ghost cell" in k[0] for k in mesh.keys())
+
+
+def test_meshpy_box_generator(geometry):
+    gen = MeshPyGenerator3D("box", max_volume=1e-2)
+    sub = gen(geometry["my 3d domain"], {})
+    assert hasattr(sub, "nodes")
+    assert hasattr(sub, "elements")
+    assert sub.dimension == 3

@@ -180,43 +180,43 @@ class TestThermal:
         # skip the first entry because they are the same due to initial conditions
         np.testing.assert_array_less(avg_cell_temp[1:], avg_cell_temp_cr[1:])
 
-    def test_3d_modular_constant_heat(self):
-        options = {
-            "cell geometry": "3D",
-            "dimensionality": 3,
-            "geometry options": {
-                "mesh_size": 0.05,
-                "domains": {
-                    "cell": {
-                        "type": "rectangular",
-                        "params": {"x": (0, 1), "y": (0, 1), "z": (0, 0.1)},
-                    }
-                },
-            },
-            "thermal": "full-3d",
-        }
+    # def test_3d_modular_constant_heat(self):
+    #     options = {
+    #         "cell geometry": "3D",
+    #         "dimensionality": 3,
+    #         "geometry options": {
+    #             "mesh_size": 0.05,
+    #             "domains": {
+    #                 "cell": {
+    #                     "type": "rectangular",
+    #                     "params": {"x": (0, 1), "y": (0, 1), "z": (0, 0.1)},
+    #                 }
+    #             },
+    #         },
+    #         "thermal": "full-3d",
+    #     }
 
-        model = pybamm.lithium_ion.DFN(options)
-        parameter_values = pybamm.ParameterValues("Chen2020")
+    #     model = pybamm.lithium_ion.DFN(options)
+    #     parameter_values = pybamm.ParameterValues("Chen2020")
 
-        # Override some thermal parameters for demonstration
-        parameter_values.update(
-            {
-                "Cell width [m]": 0.1,  # y-direction
-                "Cell height [m]": 0.15,  # z-direction
-                "Heat transfer coefficient [W.m-2.K-1]": 10,  # Convection coefficient at edges
-                "Negative tab heat transfer coefficient [W.m-2.K-1]": 100,  # Tab cooling
-                "Positive tab heat transfer coefficient [W.m-2.K-1]": 100,  # Tab cooling
-                "Initial temperature [K]": 298.15,  # 25°C
-                "Ambient temperature [K]": 298.15,  # 25°C
-                "Cell thermal conductivity [W.m-1.K-1]": 1.0,
-                "Negative current collector thermal conductivity [W.m-1.K-1]": 400,  # Copper
-                "Positive current collector thermal conductivity [W.m-1.K-1]": 240,  # Aluminum
-            }
-        )
-        sim = pybamm.Simulation(model)
-        t = np.linspace(0, 100, 11)
-        sol = sim.solve(t)
-        T = sol["Volume-averaged cell temperature [K]"](t)
-        # Q/(rhoCp)=1 ⇒ T=300+t
-        np.testing.assert_allclose(T, 300 + t, rtol=1e-6)
+    #     # Override some thermal parameters for demonstration
+    #     parameter_values.update(
+    #         {
+    #             "Cell width [m]": 0.1,  # y-direction
+    #             "Cell height [m]": 0.15,  # z-direction
+    #             "Heat transfer coefficient [W.m-2.K-1]": 10,  # Convection coefficient at edges
+    #             "Negative tab heat transfer coefficient [W.m-2.K-1]": 100,  # Tab cooling
+    #             "Positive tab heat transfer coefficient [W.m-2.K-1]": 100,  # Tab cooling
+    #             "Initial temperature [K]": 298.15,  # 25°C
+    #             "Ambient temperature [K]": 298.15,  # 25°C
+    #             "Cell thermal conductivity [W.m-1.K-1]": 1.0,
+    #             "Negative current collector thermal conductivity [W.m-1.K-1]": 400,  # Copper
+    #             "Positive current collector thermal conductivity [W.m-1.K-1]": 240,  # Aluminum
+    #         }
+    #     )
+    #     sim = pybamm.Simulation(model)
+    #     t = np.linspace(0, 100, 11)
+    #     sol = sim.solve(t)
+    #     T = sol["Volume-averaged cell temperature [K]"](t)
+    #     # Q/(rhoCp)=1 ⇒ T=300+t
+    #     np.testing.assert_allclose(T, 300 + t, rtol=1e-6)

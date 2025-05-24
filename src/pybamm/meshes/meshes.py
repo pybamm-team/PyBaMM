@@ -74,7 +74,7 @@ class Mesh(dict):
                             and var.domain[0] in geometry.keys()
                         ):
                             raise KeyError(
-                                f"Points not given for a variable in domain '{domain}'"
+                                f"Points not given for variable '{var.name}' in domain '{domain}'"
                             )
                         # Otherwise add to the dictionary of submesh points
                         submesh_pts[domain][var.name] = var_name_pts[var.name]
@@ -171,7 +171,13 @@ class Mesh(dict):
         # Check that the final edge of each submesh is the same as the first edge of the
         # next submesh
         for i in range(len(submeshnames) - 1):
-            if self[submeshnames[i]].edges[-1] == self[submeshnames[i + 1]].edges[0]:
+            if self[submeshnames[i]].dimension != self[submeshnames[i + 1]].dimension:
+                raise pybamm.DomainError(
+                    "Cannot combine submeshes of different dimensions"
+                )
+            elif self[submeshnames[i]].dimension == 3:
+                pass
+            elif self[submeshnames[i]].edges[-1] == self[submeshnames[i + 1]].edges[0]:
                 # submeshes are aligned, all good
                 pass
             elif hasattr(self[submeshnames[i]], "min") or hasattr(
@@ -189,12 +195,40 @@ class Mesh(dict):
                 raise pybamm.DomainError(
                     "trying to combine two meshes in different coordinate systems"
                 )
-        combined_submesh_edges = np.concatenate(
-            [self[submeshnames[0]].edges]
-            + [self[submeshname].edges[1:] for submeshname in submeshnames[1:]]
-        )
+
         coord_sys = self[submeshnames[0]].coord_sys
-        submesh = pybamm.SubMesh1D(combined_submesh_edges, coord_sys)
+        if self[submeshnames[0]].dimension == 1:
+            combined_submesh_edges = np.concatenate(
+                [self[submeshnames[0]].edges]
+                + [self[submeshname].edges[1:] for submeshname in submeshnames[1:]]
+            )
+            submesh = pybamm.SubMesh1D(combined_submesh_edges, coord_sys)
+        elif self[submeshnames[0]].dimension == 3:
+            s1 = self[submeshnames[0]]
+            s2 = self[submeshnames[1]]
+
+            if np.isclose(s1.edges_x[-1], s2.edges_x[0]):
+                # X-axis concatenation
+                ex = np.concatenate([s1.edges_x, s2.edges_x[1:]])
+                ey = s1.edges_y
+                ez = s1.edges_z
+            elif np.isclose(s1.edges_y[-1], s2.edges_y[0]):
+                # Y-axis
+                ey = np.concatenate([s1.edges_y, s2.edges_y[1:]])
+                ex = s1.edges_x
+                ez = s1.edges_z
+            elif np.isclose(s1.edges_z[-1], s2.edges_z[0]):
+                # Z-axis
+                ez = np.concatenate([s1.edges_z, s2.edges_z[1:]])
+                ex = s1.edges_x
+                ey = s1.edges_y
+
+            else:
+                raise pybamm.DomainError(
+                    "Cannot determine 3D concatenation axis for " + str(submeshnames)
+                )
+            submesh = pybamm.SubMesh3D(ex, ey, ez, coord_sys)
+
         if getattr(self[submeshnames[0]], "length", None) is not None:
             # Assume that the ghost cells have the same length as the first submesh
             if any("ghost" in submeshname for submeshname in submeshnames):
@@ -209,12 +243,31 @@ class Mesh(dict):
             submesh.length = submesh_length
             submesh.min = submesh_min
         # add in internal boundaries
-        for submeshname in submeshnames[1:]:
+        for i, submeshname in enumerate(submeshnames[1:]):
+            i = i + 1
             if getattr(self[submeshname], "length", None) is not None:
                 min = self[submeshname].min
             else:
                 min = 0
-            submesh.internal_boundaries.append(self[submeshname].edges[0] + min)
+            if submesh.dimension == 1:
+                submesh.internal_boundaries.append(self[submeshname].edges[0] + min)
+            elif submesh.dimension == 3:
+                prev = self[submeshnames[i - 1]]
+                curr = self[submeshname]
+
+                # Compare edges numerically to infer concatenation axis
+                if np.isclose(prev.edges_x[-1], curr.edges_x[0]):
+                    loc = curr.edges_x[0]
+                elif np.isclose(prev.edges_y[-1], curr.edges_y[0]):
+                    loc = curr.edges_y[0]
+                elif np.isclose(prev.edges_z[-1], curr.edges_z[0]):
+                    loc = curr.edges_z[0]
+                else:
+                    raise pybamm.DomainError(
+                        "Cannot determine 3D internal boundary location"
+                    )
+
+                submesh.internal_boundaries.append(loc)
         return submesh
 
     def add_ghost_meshes(self):
@@ -233,24 +286,22 @@ class Mesh(dict):
             )
         ]
         for domain, submesh in submeshes:
-            edges = submesh.edges
-
-            # left ghost cell: two edges, one node, to the left of existing submesh
-            lgs_edges = np.array([2 * edges[0] - edges[1], edges[0]])
-            lgs_submesh = pybamm.SubMesh1D(lgs_edges, submesh.coord_sys)
-            if getattr(submesh, "length", None) is not None:
-                lgs_submesh.length = submesh.length
-                lgs_submesh.min = submesh.min
-            self[domain[0] + "_left ghost cell"] = lgs_submesh
-
-            # right ghost cell: two edges, one node, to the right of
-            # existing submesh
-            rgs_edges = np.array([edges[-1], 2 * edges[-1] - edges[-2]])
-            rgs_submesh = pybamm.SubMesh1D(rgs_edges, submesh.coord_sys)
-            if getattr(submesh, "length", None) is not None:
-                rgs_submesh.length = submesh.length
-                rgs_submesh.min = submesh.min
-            self[domain[0] + "_right ghost cell"] = rgs_submesh
+            base = domain[0] + "_"
+            if submesh.dimension == 1:
+                self[base + "left ghost cell"] = submesh.create_ghost_cell("left")
+                self[base + "right ghost cell"] = submesh.create_ghost_cell("right")
+            elif submesh.dimension == 3:
+                self[base + "left ghost cell"] = submesh.create_ghost_cell("left")
+                self[base + "right ghost cell"] = submesh.create_ghost_cell("right")
+                self[base + "front ghost cell"] = submesh.create_ghost_cell("front")
+                self[base + "back ghost cell"] = submesh.create_ghost_cell("back")
+                self[base + "bottom ghost cell"] = submesh.create_ghost_cell("bottom")
+                self[base + "top ghost cell"] = submesh.create_ghost_cell("top")
+            else:
+                raise NotImplementedError(
+                    "ghost cells not implemented for submeshes of dimension "
+                    + str(submesh.dimension)
+                )
 
     @property
     def geometry(self):

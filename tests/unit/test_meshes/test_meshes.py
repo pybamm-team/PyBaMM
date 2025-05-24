@@ -442,6 +442,161 @@ class TestMesh:
 
         assert mesh_json == expected_json
 
+    def setup_method(self):
+        self.geometry = {
+            "3d_lo": {
+                "x": {"min": 0, "max": 1},
+                "y": {"min": 0, "max": 1},
+                "z": {"min": 0, "max": 1},
+            },
+            "3d_hi": {
+                "x": {"min": 1, "max": 2},
+                "y": {"min": 0, "max": 1},
+                "z": {"min": 0, "max": 1},
+            },
+        }
+
+        self.submesh_types = {
+            "3d_lo": pybamm.Uniform3DSubMesh,
+            "3d_hi": pybamm.Uniform3DSubMesh,
+        }
+
+        self.var_pts = {"x": 4, "y": 3, "z": 5}
+
+    def test_create_mesh(self):
+        param = get_param()
+        param.process_geometry(self.geometry)
+        mesh = pybamm.Mesh(self.geometry, self.submesh_types, self.var_pts)
+        assert ("3d_lo",) in mesh
+        assert ("3d_hi",) in mesh
+
+        submesh = mesh[("3d_lo",)]
+        # Check that we have the right number of edges in each dimension
+        assert len(submesh.edges_x) == self.var_pts["x"] + 1  # 5 = var_pts["x"] + 1
+        assert len(submesh.edges_y) == self.var_pts["y"] + 1  # 4 = var_pts["y"] + 1
+        assert len(submesh.edges_z) == self.var_pts["z"] + 1  # 6 = var_pts["z"] + 1
+        assert submesh.coord_sys == "cartesian"
+        assert submesh.dimension == 3
+        assert submesh.npts == self.var_pts["x"] * self.var_pts["y"] * self.var_pts["z"]
+
+    def test_combine_3d_submeshes(self):
+        # Use geometry that makes concatenation axis clear
+        geometry = {
+            "negative electrode": {
+                "x": {"min": 0, "max": 1},
+                "y": {"min": 0, "max": 1},
+                "z": {"min": 0, "max": 1},
+            },
+            "separator": {
+                "x": {"min": 1, "max": 2},  # Adjacent in x-direction
+                "y": {"min": 0, "max": 1},
+                "z": {"min": 0, "max": 1},
+            },
+        }
+        submesh_types = {
+            "negative electrode": pybamm.Uniform3DSubMesh,
+            "separator": pybamm.Uniform3DSubMesh,
+        }
+        param = get_param()
+        param.process_geometry(geometry)
+        mesh = pybamm.Mesh(geometry, submesh_types, self.var_pts)
+
+        combined = mesh.combine_submeshes("negative electrode", "separator")
+        assert combined.coord_sys == "cartesian"
+        assert combined.dimension == 3
+        # Check that x-dimension was extended (concatenated)
+        assert len(combined.edges_x) == self.var_pts["x"] * 2 + 1
+        # Y and Z should remain the same
+        assert len(combined.edges_y) == self.var_pts["y"] + 1
+        assert len(combined.edges_z) == self.var_pts["z"] + 1
+        # Should have one internal boundary at x=1
+        assert len(combined.internal_boundaries) == 1
+        assert combined.internal_boundaries[0] == 1.0
+
+    def test_combine_errors(self):
+        # Test mismatched dimensions
+        geometry = {
+            "3d_domain": {
+                "x": {"min": 0, "max": 1},
+                "y": {"min": 0, "max": 1},
+                "z": {"min": 0, "max": 1},
+            },
+            "1d_domain": {"r_n": {"min": 0, "max": 1}},
+        }
+        submesh_types = {
+            "3d_domain": pybamm.Uniform3DSubMesh,
+            "1d_domain": pybamm.Uniform1DSubMesh,
+        }
+        var_pts = {"x": 2, "y": 2, "z": 2, "r_n": 2}
+
+        param = get_param()
+        param.process_geometry(geometry)
+        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+
+        with pytest.raises(pybamm.DomainError, match="different dimensions"):
+            mesh.combine_submeshes("3d_domain", "1d_domain")
+
+        with pytest.raises(ValueError, match="cannot be empty"):
+            mesh.combine_submeshes()
+
+    def test_3d_mesh_properties(self):
+        """Test additional 3D-specific properties"""
+        param = get_param()
+        param.process_geometry(self.geometry)
+        mesh = pybamm.Mesh(self.geometry, self.submesh_types, self.var_pts)
+
+        submesh = mesh["3d_lo"]
+
+        # Test node counts in each dimension
+        assert submesh.npts_x == self.var_pts["x"]
+        assert submesh.npts_y == self.var_pts["y"]
+        assert submesh.npts_z == self.var_pts["z"]
+
+        # Test total node count
+        expected_total = self.var_pts["x"] * self.var_pts["y"] * self.var_pts["z"]
+        assert submesh.npts == expected_total
+        assert submesh.nodes.shape == (expected_total, 3)  # 3D coordinates
+
+        # Test edge arrays are properly sized
+        assert submesh.edges_x.shape == (self.var_pts["x"] + 1,)
+        assert submesh.edges_y.shape == (self.var_pts["y"] + 1,)
+        assert submesh.edges_z.shape == (self.var_pts["z"] + 1,)
+
+    def test_3d_mesh_boundaries(self):
+        """Test 3D mesh boundary handling"""
+        geometry = {
+            "domain1": {
+                "x": {"min": 0, "max": 1},
+                "y": {"min": 0, "max": 1},
+                "z": {"min": 0, "max": 1},
+            },
+            "domain2": {
+                "x": {"min": 1, "max": 2},  # Adjacent in x
+                "y": {"min": 0, "max": 1},
+                "z": {"min": 0, "max": 1},
+            },
+            "domain3": {
+                "x": {"min": 0, "max": 1},
+                "y": {"min": 1, "max": 2},  # Adjacent in y
+                "z": {"min": 0, "max": 1},
+            },
+        }
+        submesh_types = {k: pybamm.Uniform3DSubMesh for k in geometry.keys()}
+
+        param = get_param()
+        param.process_geometry(geometry)
+        mesh = pybamm.Mesh(geometry, submesh_types, self.var_pts)
+
+        # Test x-direction combination
+        combined_x = mesh.combine_submeshes("domain1", "domain2")
+        assert len(combined_x.edges_x) == 2 * self.var_pts["x"] + 1
+        assert len(combined_x.internal_boundaries) == 1
+
+        # Test y-direction combination
+        combined_y = mesh.combine_submeshes("domain1", "domain3")
+        assert len(combined_y.edges_y) == 2 * self.var_pts["y"] + 1
+        assert len(combined_y.internal_boundaries) == 1
+
 
 class TestMeshGenerator:
     def test_init_name(self):

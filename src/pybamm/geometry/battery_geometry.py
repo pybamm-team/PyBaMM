@@ -2,7 +2,6 @@
 # Function to create battery geometries
 #
 import pybamm
-from pybamm.meshes.three_dimensional_submeshes import PyGmshMeshGenerator
 
 
 def battery_geometry(
@@ -168,36 +167,4 @@ def battery_geometry(
             f"Invalid form factor '{form_factor}' (should be 'pouch' or 'cylindrical'"
         )
 
-    geo_obj = pybamm.Geometry(geometry)
-    if options.get("cell geometry") == "3D":
-        mesh_opts = options.get("geometry options", {})
-        gen = PyGmshMeshGenerator(mesh_size=mesh_opts.get("mesh_size", 0.05))
-        domains = {
-            "cell": {
-                "type": "rectangular",
-                "params": {"x": (0, 1), "y": (0, 1), "z": (0, 0.1)},
-            },
-            "negative current collector": {
-                "type": "rectangular",
-                "params": {"x": (-0.1, 0), "y": (0, 1), "z": (0, 0.1)},
-            },
-            "positive current collector": {
-                "type": "rectangular",
-                "params": {"x": (1, 1.1), "y": (0, 1), "z": (0, 0.1)},
-            },
-        }
-
-        # Update domains with any user-specified configurations
-        if "domains" in mesh_opts:
-            domains.update(mesh_opts["domains"])
-
-        for domain, cfg in domains.items():
-            try:
-                submesh_3d = gen.generate(cfg["type"], cfg["params"])
-                geo_obj.submeshes[domain] = submesh_3d
-            except Exception as e:
-                raise pybamm.GeometryError(
-                    f"Failed to generate 3D mesh for domain '{domain}': {e!s}"
-                ) from e
-
-    return geo_obj
+    return pybamm.Geometry(geometry)
