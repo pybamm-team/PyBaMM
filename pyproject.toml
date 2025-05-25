@@ -151,6 +151,7 @@ Zhuo2023 = "pybamm.input.parameters.lithium_ion.Zhuo2023:get_parameter_values"
 
 [tool.hatch]
 version.source = "vcs"
+version.fallback-version = "0.0.0"
 build.targets.sdist.include = [
   "src/pybamm",
   "CITATION.cff",

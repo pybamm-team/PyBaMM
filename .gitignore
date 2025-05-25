@@ -86,26 +86,14 @@ pyvenv.cfg
 
 # third party
 third-party
-
-# cmakefiles
-CMakeFiles
-Makefile
-cmake_install.cmake
 *.so
 
-third-party/pybind11
-pybind11/
-
-# Build dependencies/
-KLU_module_deps
-
-# setup
-setup.log
 
 # test
 test.c
 test.json
 .pytest_cache/
+.hypothesis
 
 # tox
 .tox/

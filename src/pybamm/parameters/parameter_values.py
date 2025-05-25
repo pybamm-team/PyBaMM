@@ -4,6 +4,10 @@ import numbers
 from pprint import pformat
 from warnings import warn
 from collections import defaultdict
+from pybamm.models.full_battery_models.lithium_ion.msmr import (
+    is_deprecated_msmr_name,
+    replace_deprecated_msmr_name,
+)
 
 
 class ParameterValues:
@@ -432,6 +436,14 @@ class ParameterValues:
                 )
             if "electrode diffusivity" in param:
                 new_param = param.replace("electrode", "particle")
+                warn(
+                    f"The parameter '{param}' has been renamed to '{new_param}'",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
+                values[new_param] = values.get(param)
+            if is_deprecated_msmr_name(param):
+                new_param = replace_deprecated_msmr_name(param)
                 warn(
                     f"The parameter '{param}' has been renamed to '{new_param}'",
                     DeprecationWarning,
