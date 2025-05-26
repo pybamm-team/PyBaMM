@@ -17,7 +17,7 @@ for i, C_rate in enumerate(C_rates):
     experiment = pybamm.Experiment(
         [f"Discharge at {C_rate:.4f}C until 3.2V"],
     )
-    sim = pybamm.Simulation(model, experiment=experiment, solver=pybamm.IDAKLUSolver())
+    sim = pybamm.Simulation(model, experiment=experiment)
     sim.solve()
 
     time = sim.solution["Time [s]"].entries

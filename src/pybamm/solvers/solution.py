@@ -479,7 +479,7 @@ class Solution:
                 model._variables_casadi[variable] = var_casadi
             vars_casadi.append(var_casadi)
         var = pybamm.process_variable(
-            vars_pybamm, vars_casadi, self, time_integral=time_integral
+            variable, vars_pybamm, vars_casadi, self, time_integral=time_integral
         )
 
         self._variables[variable] = var
