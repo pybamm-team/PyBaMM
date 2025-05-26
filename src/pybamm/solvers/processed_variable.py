@@ -807,6 +807,25 @@ class ProcessedVariable2DSciKitFEM(ProcessedVariable2D):
         return entries
 
 
+class ProcessedVariable3DReal(ProcessedVariable):
+    def _shape(self, t):
+        # in 3D your mesh has npts_x, npts_y, npts_z, and total npts
+        # you probably want to return [ n_x, n_y, n_z, len(t) ]
+        return [self.mesh.npts_x, self.mesh.npts_y, self.mesh.npts_z, len(t)]
+
+    def initialize(self):
+        if self.entries_raw_initialized:
+            return
+        entries = self.observe_raw()
+        self._entries_raw = entries.reshape(
+            self.mesh.npts_x,
+            self.mesh.npts_y,
+            self.mesh.npts_z,
+            -1,
+        )
+        self.entries_raw_initialized = True
+
+
 class ProcessedVariable3D(ProcessedVariable):
     """
     An object that can be evaluated at arbitrary (scalars or vectors) t and x, and
@@ -1103,6 +1122,9 @@ def process_variable(base_variables, *args, **kwargs):
     # check variable shape
     if len(base_eval_shape) == 0 or base_eval_shape[0] == 1:
         return ProcessedVariable0D(base_variables, *args, **kwargs)
+
+    if mesh and mesh.dimension == 3:
+        return ProcessedVariable3DReal(base_variables, *args, **kwargs)
 
     n = mesh.npts
     base_shape = base_eval_shape[0]

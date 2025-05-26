@@ -904,8 +904,17 @@ class BoundaryIntegral(SpatialOperator):
             name += "negative tab"
         elif region == "positive tab":
             name += "positive tab"
+        elif region == "top":
+            name += "top"
+        elif region == "bottom":
+            name += "bottom"
+        elif region == "left":
+            name += "left"
+        elif region == "right":
+            name += "right"
         self.region = region
         super().__init__(name, child, domains)
+        self.domains = {}
 
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`"""
@@ -1211,6 +1220,34 @@ class Upwind(UpwindDownwind):
 
     def __init__(self, child):
         super().__init__("upwind", child)
+
+
+class UpwindDownwind3D(UpwindDownwind):
+    """
+    A node in the expression tree representing an upwinding or downwinding operator.
+    Usually to be used for better stability in convection-dominated equations.
+    """
+
+    def __init__(self, child, x_dir, y_dir, z_dir):
+        super().__init__("upwind_downwind_3d", child)
+        self.x_dir, self.y_dir, self.z_dir = x_dir, y_dir, z_dir
+
+    def _unary_new_copy(self, child, perform_simplifications: bool = True):
+        return UpwindDownwind3D(child, self.x_dir, self.y_dir, self.z_dir)
+
+
+class Magnitude(UnaryOperator):
+    """
+    A node in the expression tree representing the magnitude of a vector field.
+    """
+
+    def __init__(self, child, direction):
+        super().__init__("magnitude" + f"({direction})", child)
+        self.direction = direction
+
+    def _unary_new_copy(self, child, perform_simplifications=True):
+        """See :meth:`UnaryOperator._unary_new_copy()`."""
+        return self.__class__(child, self.direction)
 
 
 class Downwind(UpwindDownwind):

@@ -569,7 +569,18 @@ class ParameterValues:
         "positive tab": pos. tab bc "no tab": no tab bc}.
         """
         new_boundary_conditions = {}
-        sides = ["left", "right", "negative tab", "positive tab", "no tab"]
+        sides = [
+            "left",
+            "right",
+            "negative tab",
+            "positive tab",
+            "no tab",
+            "front",
+            "back",
+            "top",
+            "bottom",
+        ]
+
         for variable, bcs in model.boundary_conditions.items():
             processed_variable = self.process_symbol(variable)
             new_boundary_conditions[processed_variable] = {}
@@ -786,6 +797,12 @@ class ParameterValues:
         ):
             new_children = [self.process_symbol(child) for child in symbol.children]
             return symbol.create_copy(new_children)
+
+        elif isinstance(symbol, pybamm.VectorField3D):
+            x_disc = self.process_symbol(symbol.x_field)
+            y_disc = self.process_symbol(symbol.y_field)
+            z_disc = self.process_symbol(symbol.z_field)
+            return symbol.create_copy(new_children=[x_disc, y_disc, z_disc])
 
         # Variables: update scale
         elif isinstance(symbol, pybamm.Variable):

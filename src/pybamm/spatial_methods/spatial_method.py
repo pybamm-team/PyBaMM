@@ -225,7 +225,9 @@ class SpatialMethod:
         """
         raise NotImplementedError
 
-    def integral(self, child, discretised_child, integration_dimension):
+    def integral(
+        self, child, discretised_child, integration_dimension, integration_variable=None
+    ):
         """
         Implements the integral for a spatial method.
 
