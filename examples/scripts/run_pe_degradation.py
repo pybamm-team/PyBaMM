@@ -45,7 +45,7 @@ output_variables = [
     "X-averaged positive electrode shell layer overpotential [V]",
     # "X-averaged loss of active material due to PE phase transition",
     "LLI_cyc [%]",
-    "Cell SoC",
+    "Discharge capacity [A.h]",
     [
         "Total cyclable lithium in primary phase in positive electrode [mol]",
         "Total cyclable lithium in primary phase in negative electrode [mol]",
