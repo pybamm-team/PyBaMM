@@ -39,7 +39,7 @@ class TestLeadAcidFullSideReactions:
         model.check_well_posedness()
 
     @pytest.mark.parametrize(
-        "options, expected_solver",
+        ("options", "expected_solver"),
         [
             (
                 {"hydrolysis": "true", "surface form": "differential"},

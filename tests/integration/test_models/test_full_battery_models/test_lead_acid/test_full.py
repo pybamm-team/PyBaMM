@@ -13,7 +13,7 @@ def optimtest():
 
 class TestLeadAcidFull:
     @pytest.mark.parametrize(
-        "options, t_eval",
+        ("options", "t_eval"),
         [
             ({"thermal": "isothermal"}, np.linspace(0, 3600 * 17)),
             (
@@ -76,7 +76,7 @@ class TestLeadAcidFullSurfaceForm:
         optimtest.set_up_model(to_python=False)
 
     @pytest.mark.parametrize(
-        "options, param_update",
+        ("options", "param_update"),
         [
             ({"thermal": "lumped"}, {"Current function [A]": 1.7}),
             ({"thermal": "x-full"}, None),
