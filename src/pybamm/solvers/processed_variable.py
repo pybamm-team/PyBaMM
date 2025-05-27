@@ -847,20 +847,13 @@ class ProcessedVariable2DSciKitFEM(ProcessedVariable2D):
 
 class ProcessedVariable3DReal(ProcessedVariable):
     def _shape(self, t):
-        # in 3D your mesh has npts_x, npts_y, npts_z, and total npts
-        # you probably want to return [ n_x, n_y, n_z, len(t) ]
         return [self.mesh.npts_x, self.mesh.npts_y, self.mesh.npts_z, len(t)]
 
     def initialize(self):
         if self.entries_raw_initialized:
             return
         entries = self.observe_raw()
-        self._entries_raw = entries.reshape(
-            self.mesh.npts_x,
-            self.mesh.npts_y,
-            self.mesh.npts_z,
-            -1,
-        )
+        self._entries_raw = entries
         self.entries_raw_initialized = True
 
 

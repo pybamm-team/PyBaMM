@@ -242,7 +242,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         self.possible_options = {
             "calculate discharge energy": ["false", "true"],
             "calculate heat source for isothermal models": ["false", "true"],
-            "cell geometry": ["arbitrary", "pouch", "3D"],
+            "cell geometry": ["arbitrary", "pouch"],
             "contact resistance": ["false", "true"],
             "convection": ["none", "uniform transverse", "full transverse"],
             "current collector": [
@@ -251,7 +251,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "potential pair quite conductive",
             ],
             "diffusivity": ["single", "current sigmoid"],
-            "dimensionality": [0, 1, 2, 3],
+            "dimensionality": [0, 1, 2],
             "electrolyte conductivity": [
                 "default",
                 "full",
@@ -334,7 +334,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             "stress-induced diffusion": ["false", "true"],
             "surface form": ["false", "differential", "algebraic"],
             "surface temperature": ["ambient", "lumped"],
-            "thermal": ["isothermal", "lumped", "x-lumped", "x-full", "full-3d"],
+            "thermal": ["isothermal", "lumped", "x-lumped", "x-full"],
             "total interfacial current density as a state": ["false", "true"],
             "transport efficiency": [
                 "Bruggeman",
@@ -349,7 +349,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             "voltage as a state": ["false", "true"],
             "working electrode": ["both", "positive"],
             "x-average side reactions": ["false", "true"],
-            "geometry options": ["none"],
             "use lumped thermal capacity": ["false", "true"],
         }
 
@@ -604,15 +603,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     options["thermal"] + " model must have pouch cell geometry."
                 )
 
-        if options["thermal"] != "full-3d" and options["cell geometry"] == "3D":
-            raise pybamm.OptionError(
-                "3D cell geometry is only compatible with the thermal model."
-            )
-        if options["cell geometry"] == "3D" and "geometry options" not in options:
-            raise pybamm.OptionError(
-                "3D cell geometry requires 'geometry options' to be provided."
-            )
-
         if options["thermal"] == "x-full" and options["dimensionality"] != 0:
             n = options["dimensionality"]
             raise pybamm.OptionError(
@@ -683,15 +673,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
 
         # Check options are valid
         for option, value in options.items():
-            # Special handling for geometry options
-            if option == "geometry options":
-                if not (isinstance(value, dict) or value == "none"):
-                    raise pybamm.OptionError(
-                        f"\n'{value}' is not recognized in option '{option}'. "
-                        "Values must be a dictionary or 'none'"
-                    )
-                continue
-
             if isinstance(value, str) or option in [
                 "dimensionality",
                 "operating mode",
@@ -970,9 +951,6 @@ class BaseBatteryModel(pybamm.BaseModel):
             base_spatial_methods["current collector"] = pybamm.FiniteVolume()
         elif self.options["dimensionality"] == 2:
             base_spatial_methods["current collector"] = pybamm.ScikitFiniteElement()
-        elif self.options["dimensionality"] == 3:
-            base_spatial_methods["current collector"] = pybamm.FiniteVolume3D()
-            base_spatial_methods["cell"] = pybamm.FiniteVolume3D()
         return base_spatial_methods
 
     @property
@@ -1316,9 +1294,6 @@ class BaseBatteryModel(pybamm.BaseModel):
         elif self.options["thermal"] == "x-full":
             if self.options["dimensionality"] == 0:
                 thermal_submodel = pybamm.thermal.pouch_cell.OneDimensionalX
-        elif self.options["thermal"] == "full-3d":
-            if self.options["dimensionality"] == 3:
-                thermal_submodel = pybamm.thermal.full_3d.FullThreeDimensional
 
         x_average = getattr(self, "x_average", False)
         self.submodels["thermal"] = thermal_submodel(

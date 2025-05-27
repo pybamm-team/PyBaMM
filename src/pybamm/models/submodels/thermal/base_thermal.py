@@ -63,7 +63,7 @@ class BaseThermal(pybamm.BaseSubModel):
                 "negative electrode",
                 "separator",
                 "positive electrode",
-            ] and self.options["dimensionality"] in [0, 1, 2]:
+            ]:
                 variables[f"X-averaged {name} temperature [K]"] = pybamm.x_average(var)
 
         # Calculate temperatures in Celsius
