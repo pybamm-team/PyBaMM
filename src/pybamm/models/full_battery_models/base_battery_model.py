@@ -435,16 +435,15 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         # The "stress-induced diffusion" option will still be overridden by
         # extra_options if provided
 
-        # Change the default for surface form based on which particle
-        # phases option is provided.
-        # return "1" if option not given
         phases_option = extra_options.get("particle phases", "1")
-        if phases_option == "1":
+        if phases_option == "1" or phases_option == ("1", "1"):
             default_options["surface form"] = "false"
         else:
             default_options["surface form"] = "algebraic"
-        # The "surface form" option will still be overridden by
-        # extra_options if provided
+            pybamm.logger.warning(
+                "Multi-phase configuration detected. Setting 'surface form' to "
+                "'algebraic' by default. Specify 'surface form' explicitly to override."
+            )
 
         # Change default SEI model based on which lithium plating option is provided
         # return "none" if option not given
@@ -638,10 +637,16 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 and options["particle"] == "Fickian diffusion"
             ):
                 raise pybamm.OptionError(
-                    "If there are multiple particle phases: 'surface form' cannot be "
-                    "'false', 'particle size' must be 'single', 'particle' must be "
-                    "'Fickian diffusion'."
+                    "If there are multiple particle phases: 'surface form' must be "
+                    "'differential' or 'algebraic', 'particle size' must be 'single', "
+                    "'particle' must be 'Fickian diffusion'."
                 )
+        elif options["surface form"] == "algebraic":
+            pybamm.logger.warning(
+                "Surface form 'algebraic' is not necessary for single-phase "
+                "configurations ('particle phases' = '1' or ('1', '1')). "
+                "Consider using 'false' for equivalent results with simpler computation."
+            )
 
         if options["surface temperature"] == "lumped":
             if options["thermal"] not in ["isothermal", "lumped"]:
