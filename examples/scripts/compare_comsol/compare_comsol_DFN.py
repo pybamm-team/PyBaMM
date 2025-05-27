@@ -57,7 +57,8 @@ disc.process_model(pybamm_model)
 
 # solve model at comsol times
 time = np.array(comsol_variables["time"])
-pybamm_solution = pybamm.CasadiSolver(mode="fast").solve(pybamm_model, time)
+t_eval = [time[0], time[-1]]
+pybamm_solution = pybamm.IDAKLUSolver().solve(pybamm_model, t_eval, t_interp=time)
 
 
 # Make Comsol 'model' for comparison
