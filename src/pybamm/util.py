@@ -23,6 +23,38 @@ def root_dir():
 
 
 class FuzzyDict(dict):
+    """
+    A dictionary with fuzzy matching capabilities for key retrieval and search.
+
+    Methods
+    -------
+    get_best_matches(key)
+        Returns a list of the best-matching keys for a given input key.
+
+    search(keys, print_values=False)
+        Searches the dictionary for keys containing all specified terms. Prints
+        the results and, optionally, the corresponding values.
+
+    copy()
+        Returns a copy of the FuzzyDict instance.
+
+    Examples
+    --------
+      >>> params = FuzzyDict({
+      >>> "electrode diffusivity": 1.2,
+      >>> "particle diffusivity": 0.8,
+      >>> "Negative electrode SOC": 0.5,
+      >>> "Open-circuit voltage at 100% SOC [V]": 4.2,
+      >>> })
+      >>> print(params["electrode diffusivity"])
+      1.2
+      >>> print(params["particle diffusivity"])
+      0.8
+      >>> params.search("open circuit voltage")
+      >>> params_copy = params.copy()  # Creates a new FuzzyDict instance
+
+    """
+
     def get_best_matches(self, key):
         """Get best matches from keys"""
         return difflib.get_close_matches(key, list(self.keys()), n=3, cutoff=0.5)
@@ -98,7 +130,7 @@ class FuzzyDict(dict):
         Helper method to find exact and partial matches for a given search key.
 
         Parameters
-        ----------
+        -------
         search_key : str
             The term to search for in the keys.
         known_keys : list of str
@@ -141,7 +173,7 @@ class FuzzyDict(dict):
         the best matches are printed.
 
         Parameters
-        ----------
+        -------
         keys : str or list of str
             Search term(s)
         print_values : bool, optional
@@ -221,6 +253,19 @@ class FuzzyDict(dict):
                     print(f"No matches found for '{original_key}'")
 
     def copy(self):
+        """
+        Create and return a copy of the FuzzyDict instance.
+
+        This method returns a new FuzzyDict object containing the same key-value pairs
+        as the original dictionary. It ensures that the copied dictionary retains
+        the fuzzy matching behavior.
+
+        Returns
+        -------
+        FuzzyDict
+            A new FuzzyDict instance with the same data as the original.
+        """
+
         return FuzzyDict(super().copy())
 
 
