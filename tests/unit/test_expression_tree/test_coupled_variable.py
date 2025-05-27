@@ -67,9 +67,10 @@ class TestCoupledVariable:
         disc.process_model(model)
 
         # solve
-        solver = pybamm.CasadiSolver()
-        t = np.linspace(0, 10, 1000)
-        solution = solver.solve(model, t)
+        solver = pybamm.IDAKLUSolver()
+        t_eval = [0, 10]
+        t_interp = np.linspace(t_eval[0], t_eval[-1], 1000)
+        solution = solver.solve(model, t_eval, t_interp=t_interp)
 
         np.testing.assert_almost_equal(
             solution["a"].entries, solution["b"].entries, decimal=10

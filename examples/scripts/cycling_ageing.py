@@ -50,14 +50,14 @@ experiment = pb.Experiment(
             "Charge at 1 C until 4.2 V",
             "Hold at 4.2 V until C/20",
             "Rest for 30 minutes",
-            pb.step.string("Discharge at 3 C until 2.8 V", period=10),
+            "Discharge at 3 C until 2.8 V",
             "Rest for 30 minutes",
         ),
     ]
 )
 
 sim = pb.Simulation(model, experiment=experiment, parameter_values=param)
-sim.solve(solver=pb.CasadiSolver(mode="fast with events"))
+sim.solve()
 sim.plot(
     [
         "Current [A]",

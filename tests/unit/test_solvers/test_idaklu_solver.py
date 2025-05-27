@@ -80,8 +80,8 @@ class TestIDAKLUSolver:
             if num_solvers is not None:
                 options["num_solvers"] = num_solvers
             solver = pybamm.IDAKLUSolver(rtol=1e-5, atol=1e-5, options=options)
-            t_interp = np.linspace(0, 1, 10)
-            t_eval = [t_interp[0], t_interp[-1]]
+            t_eval = [0, 1]
+            t_interp = np.linspace(t_eval[0], t_eval[-1], 10)
             ninputs = 8
             inputs_list = [{"rate": 0.01 * (i + 1)} for i in range(ninputs)]
 
@@ -126,8 +126,8 @@ class TestIDAKLUSolver:
                 options={"jax_evaluator": "iree"} if form == "iree" else {},
             )
 
-            t_interp = np.linspace(0, 1, 100)
-            t_eval = [t_interp[0], t_interp[-1]]
+            t_eval = [0, 1]
+            t_interp = np.linspace(t_eval[0], t_eval[-1], 100)
 
             solution = solver.solve(model_disc, t_eval, t_interp=t_interp)
             np.testing.assert_array_equal(
@@ -254,8 +254,8 @@ class TestIDAKLUSolver:
                 options={"jax_evaluator": "iree"} if form == "iree" else {},
             )
 
-            t_interp = np.linspace(0, 3, 100)
-            t_eval = [t_interp[0], t_interp[-1]]
+            t_eval = [0, 3]
+            t_interp = np.linspace(t_eval[0], t_eval[-1], 100)
             a_value = 0.1
             b_value = np.array([[0.2], [0.3]])
 
@@ -372,8 +372,8 @@ class TestIDAKLUSolver:
                 options={"jax_evaluator": "iree"} if form == "iree" else {},
             )
 
-            t_interp = np.linspace(0, 3, 100)
-            t_eval = [t_interp[0], t_interp[-1]]
+            t_eval = [0, 3]
+            t_interp = np.linspace(t_eval[0], t_eval[-1], 100)
             a_value = 0.1
 
             # solve first without sensitivities
@@ -550,8 +550,8 @@ class TestIDAKLUSolver:
                 options={"jax_evaluator": "iree"} if form == "iree" else {},
             )
 
-            t_interp = np.linspace(0, 3, 100)
-            t_eval = [t_interp[0], t_interp[-1]]
+            t_eval = [0, 3]
+            t_interp = np.linspace(t_eval[0], t_eval[-1], 100)
 
             a_value = 0.1
             b_value = 0.0
@@ -734,8 +734,8 @@ class TestIDAKLUSolver:
         disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
         disc.process_model(model)
 
-        t_interp = np.linspace(0, 3600, 100)
-        t_eval = [t_interp[0], t_interp[-1]]
+        t_eval = [0, 3600]
+        t_interp = np.linspace(t_eval[0], t_eval[-1], 100)
         solver = pybamm.IDAKLUSolver()
         soln = solver.solve(model, t_eval, t_interp=t_interp)
 
@@ -758,8 +758,8 @@ class TestIDAKLUSolver:
         disc = pybamm.Discretisation()
         disc.process_model(model)
 
-        t_interp = np.linspace(0, 1)
-        t_eval = [t_interp[0], t_interp[-1]]
+        t_eval = [0, 1]
+        t_interp = np.linspace(t_eval[0], t_eval[-1], 100)
         solver = pybamm.IDAKLUSolver()
         soln_base = solver.solve(model, t_eval, t_interp=t_interp)
 
@@ -842,8 +842,8 @@ class TestIDAKLUSolver:
         disc = pybamm.Discretisation()
         disc.process_model(model)
 
-        t_interp = np.linspace(0, 1)
-        t_eval = [t_interp[0], t_interp[-1]]
+        t_eval = [0, 1]
+        t_interp = np.linspace(t_eval[0], t_eval[-1], 100)
         solver = pybamm.IDAKLUSolver()
         soln_base = solver.solve(model, t_eval, t_interp=t_interp)
 
@@ -904,8 +904,8 @@ class TestIDAKLUSolver:
         # the 'output_variables' option for each variable in turn, confirming
         # equivalence
         input_parameters = {}  # Sensitivities dictionary
-        t_interp = np.linspace(0, 3600, 100)
-        t_eval = [t_interp[0], t_interp[-1]]
+        t_eval = [0, 3600]
+        t_interp = np.linspace(t_eval[0], t_eval[-1], 100)
 
         # construct model
         def construct_model():
@@ -1039,8 +1039,8 @@ class TestIDAKLUSolver:
             disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
             disc.process_model(model)
 
-            t_interp = np.linspace(0, 100, 5)
-            t_eval = [t_interp[0], t_interp[-1]]
+            t_eval = [0, 100]
+            t_interp = np.linspace(t_eval[0], t_eval[-1], 5)
 
             options = {
                 "linear_solver": "SUNLinSol_KLU",
@@ -1294,8 +1294,8 @@ class TestIDAKLUSolver:
 
         # Solve
         solver = pybamm.IDAKLUSolver(rtol=1e-8, atol=1e-8)
-        t_interp = np.linspace(0, 1, 100)
-        t_eval = [t_interp[0], t_interp[-1]]
+        t_eval = [0, 1]
+        t_interp = np.linspace(t_eval[0], t_eval[-1], 100)
         solution = solver.solve(model, t_eval, t_interp=t_interp)
         np.testing.assert_array_equal(solution.t, t_interp)
         np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
