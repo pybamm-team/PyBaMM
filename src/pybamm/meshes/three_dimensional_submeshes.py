@@ -1,11 +1,7 @@
 import numpy as np
 import pybamm
 from .meshes import SubMesh
-from meshpy.tet import MeshInfo, build
-from meshpy.geometry import (
-    make_box,
-    make_cylinder,
-)
+import skfem
 
 
 def _num(val):
@@ -185,9 +181,9 @@ class Uniform3DSubMesh(SubMesh3D):
         super().__init__(edges_x, edges_y, edges_z, coord_sys, tabs=tabs)
 
 
-class MeshPyGenerator3D:
+class ScikitFemGenerator3D:
     """
-    A MeshGenerator-style wrapper that calls meshpy under the hood.
+    A MeshGenerator-style wrapper that uses scikit-fem for 3D mesh generation.
     Usage: Generator(geometry, params) returns a SubMesh-like object
     with attributes .nodes, .elements, .npts, .dimension=3, etc.
     """
@@ -196,11 +192,88 @@ class MeshPyGenerator3D:
         self.geom_type = geom_type
         self.params = gen_params
 
-    def _make_spiral_jelly_roll(
-        inner_radius, outer_radius, height, turns, max_volume=None
-    ):
+    def _make_box_mesh(self, x_min, x_max, y_min, y_max, z_min, z_max, h=None):
         """
-        Generate a proper spiral jelly roll mesh with Archimedean spiral cross-section.
+        Generate a 3D box mesh using scikit-fem's built-in functionality.
+
+        Parameters:
+        -----------
+        x_min, x_max, y_min, y_max, z_min, z_max : float
+            Bounds of the box
+        h : float, optional
+            Mesh size parameter (smaller = finer mesh)
+        """
+        if h is None:
+            h = min(x_max - x_min, y_max - y_min, z_max - z_min) / 10
+
+        # Create a structured tetrahedral mesh for a box
+        # scikit-fem provides MeshTet.init_tensor for structured 3D meshes
+        nx = max(5, int((x_max - x_min) / h))
+        ny = max(5, int((y_max - y_min) / h))
+        nz = max(5, int((z_max - z_min) / h))
+
+        mesh = skfem.MeshTet.init_tensor(
+            np.linspace(x_min, x_max, nx),
+            np.linspace(y_min, y_max, ny),
+            np.linspace(z_min, z_max, nz),
+        )
+
+        return mesh
+
+    def _make_cylinder_mesh(self, radius, height, h=None):
+        """
+        Generate a cylindrical mesh using scikit-fem.
+        This creates a structured mesh by revolution or extrusion.
+
+        Parameters:
+        -----------
+        radius : float
+            Cylinder radius
+        height : float
+            Cylinder height
+        h : float, optional
+            Mesh size parameter
+        """
+        if h is None:
+            h = min(radius, height) / 10
+
+        # Create cylinder by extruding a circular cross-section
+        # First create a 2D circular mesh, then extrude in z-direction
+        n_radial = max(5, int(radius / h))
+        n_theta = max(12, int(2 * np.pi * radius / h))
+        n_z = max(5, int(height / h))
+
+        r = np.linspace(0, radius, n_radial)
+        theta = np.linspace(0, 2 * np.pi, n_theta, endpoint=False)
+        z = np.linspace(0, height, n_z)
+
+        points = []
+        for z_val in z:
+            for r_val in r:
+                if r_val == 0:  # Center point
+                    points.append([0, 0, z_val])
+                else:
+                    for theta_val in theta:
+                        x = r_val * np.cos(theta_val)
+                        y = r_val * np.sin(theta_val)
+                        points.append([x, y, z_val])
+
+        points = np.array(points)
+
+        try:
+            from scipy.spatial import Delaunay
+
+            tri = Delaunay(points)
+            mesh = skfem.MeshTet(points.T, tri.simplices.T)
+        except ImportError:
+            mesh = self._make_box_mesh(-radius, radius, -radius, radius, 0, height, h)
+
+        return mesh
+
+    def _make_spiral_mesh(self, inner_radius, outer_radius, height, turns, h=None):
+        """
+        Generate a spiral jelly roll mesh using scikit-fem.
+        Creates an Archimedean spiral cross-section and extrudes it.
 
         Parameters:
         -----------
@@ -209,148 +282,122 @@ class MeshPyGenerator3D:
         outer_radius : float
             Outer radius of the spiral
         height : float
-            Height of the jelly roll
+            Height of the spiral
         turns : float
             Number of spiral turns
-        max_volume : float, optional
-            Maximum volume constraint for mesh elements
-
-        Returns:
-        --------
-        MeshInfo object ready for tetrahedral mesh generation
+        h : float, optional
+            Mesh size parameter
         """
-        # Generate spiral points using Archimedean spiral: r = a + b*theta
-        n_theta = int(200 * turns)  # Points per turn
+        if h is None:
+            h = min(outer_radius - inner_radius, height) / 20
+
+        # Generate spiral geometry
+        n_theta = int(100 * turns)
+        n_z = max(10, int(height / h))
+
         theta_max = 2 * np.pi * turns
         theta = np.linspace(0, theta_max, n_theta)
+        z_levels = np.linspace(0, height, n_z)
 
-        # Archimedean spiral parameters
+        # Archimedean spiral: r = a + b*theta
         a = inner_radius
         b = (outer_radius - inner_radius) / theta_max
         r_spiral = a + b * theta
 
-        spiral_x = r_spiral * np.cos(theta)
-        spiral_y = r_spiral * np.sin(theta)
-
-        n_z = max(10, int(height * 20))
-        z_levels = np.linspace(0, height, n_z)
-
         points = []
 
-        for z in z_levels:
-            for x, y in zip(spiral_x, spiral_y):
-                points.append((x, y, z))
+        # Generate spiral points at each z-level
+        for z_val in z_levels:
+            # Center point
+            points.append([0, 0, z_val])
 
-        for z in z_levels:
-            points.append((0, 0, z))
+            # Spiral points
+            for _i, (r_val, theta_val) in enumerate(zip(r_spiral, theta)):
+                x = r_val * np.cos(theta_val)
+                y = r_val * np.sin(theta_val)
+                points.append([x, y, z_val])
 
-        n_boundary = 50
-        boundary_theta = np.linspace(0, 2 * np.pi, n_boundary, endpoint=False)
-        for z in z_levels:
-            for t in boundary_theta:
-                x = outer_radius * np.cos(t)
-                y = outer_radius * np.sin(t)
-                points.append((x, y, z))
+        points = np.array(points)
 
-        facets = []
+        # Create tetrahedral mesh
+        try:
+            from scipy.spatial import Delaunay
 
-        bottom_center_idx = len(spiral_x) * n_z
-        for i in range(len(spiral_x) - 1):
-            facets.append([bottom_center_idx, i, i + 1])
+            tri = Delaunay(points)
+            mesh = skfem.MeshTet(points.T, tri.simplices.T)
+        except ImportError:
+            # Fallback: create cylindrical approximation
+            mesh = self._make_cylinder_mesh(outer_radius, height, h)
 
-        top_center_idx = (
-            bottom_center_idx + n_z - 1
-        )  # Index of center point at z=height
-        top_offset = (n_z - 1) * len(spiral_x)
-        for i in range(len(spiral_x) - 1):
-            facets.append([top_center_idx, top_offset + i + 1, top_offset + i])
-
-        for k in range(n_z - 1):
-            for i in range(len(spiral_x) - 1):
-                curr_i = k * len(spiral_x) + i
-                curr_i1 = k * len(spiral_x) + i + 1
-
-                next_i = (k + 1) * len(spiral_x) + i
-                next_i1 = (k + 1) * len(spiral_x) + i + 1
-
-                facets.append([curr_i, next_i, curr_i1])
-                facets.append([curr_i1, next_i, next_i1])
-
-        mesh_info = MeshInfo()
-        mesh_info.set_points(points)
-        mesh_info.set_facets(facets)
-
-        return mesh_info
-
-    def _make_cylinder_simple(radius, height, max_volume=None):
-        """
-        Simple cylinder mesh generation using meshpy's built-in function.
-        """
-        cylinder_pts, cylinder_facets, cylinder_holes, cylinder_fm = make_cylinder(
-            radius=radius, height=height
-        )
-
-        mesh_info = MeshInfo()
-        mesh_info.set_points(cylinder_pts)
-        mesh_info.set_facets(cylinder_facets)
-
-        if cylinder_holes:
-            mesh_info.set_holes(cylinder_holes)
-
-        return mesh_info
+        return mesh
 
     def __call__(self, lims, npts):
+        """
+        Generate 3D mesh based on geometry type and parameters.
+
+        Parameters:
+        -----------
+        lims : dict
+            Dictionary containing spatial limits
+        npts : dict
+            Dictionary containing number of points (may be ignored for unstructured meshes)
+
+        Returns:
+        --------
+        SubMesh3D-like object with nodes, elements, npts, dimension attributes
+        """
         # Convert SpatialVariable keys to string keys
         lims_dict = {}
         for k, v in lims.items():
             key_name = k if isinstance(k, str) else k.name
             lims_dict[key_name] = v
 
+        # Extract mesh size parameter
+        h = self.params.get("h", self.params.get("max_volume", None))
+        if h is not None and h > 1:
+            # Convert volume constraint to approximate edge length
+            h = h ** (1 / 3)
+
         if self.geom_type == "box":
-            origin = (
-                _num(lims_dict["x"]["min"]),
-                _num(lims_dict["y"]["min"]),
-                _num(lims_dict["z"]["min"]),
-            )
-            lengths = (
-                _num(lims_dict["x"]["max"]) - origin[0],
-                _num(lims_dict["y"]["max"]) - origin[1],
-                _num(lims_dict["z"]["max"]) - origin[2],
-            )
-            box_pts, box_facets, box_holes, box_fm = make_box(origin, lengths)
-            mesh_info = MeshInfo()
-            mesh_info.set_points(box_pts)
-            if box_holes:
-                mesh_info.set_holes(box_holes)
-            if box_fm:
-                mesh_info.set_facets(box_facets, markers=box_fm)
-            else:
-                mesh_info.set_facets(box_facets)
+            x_min = _num(lims_dict["x"]["min"])
+            x_max = _num(lims_dict["x"]["max"])
+            y_min = _num(lims_dict["y"]["min"])
+            y_max = _num(lims_dict["y"]["max"])
+            z_min = _num(lims_dict["z"]["min"])
+            z_max = _num(lims_dict["z"]["max"])
+
+            mesh = self._make_box_mesh(x_min, x_max, y_min, y_max, z_min, z_max, h)
 
         elif self.geom_type == "cylinder":
-            mesh_info = MeshPyGenerator3D._make_cylinder_simple(
-                self.params.get("radius", 1.0),
-                self.params.get("height", 1.0),
-                self.params.get("max_volume"),
-            )
+            radius = self.params.get("radius", 1.0)
+            height = self.params.get("height", 1.0)
+            mesh = self._make_cylinder_mesh(radius, height, h)
 
         elif self.geom_type == "spiral":
-            mesh_info = MeshPyGenerator3D._make_spiral_jelly_roll(
-                self.params.get("inner_radius", 0.1),
-                self.params.get("outer_radius", 1.0),
-                self.params.get("height", 1.0),
-                self.params.get("turns", 3.0),
-                self.params.get("max_volume"),
-            )
+            inner_radius = self.params.get("inner_radius", 0.1)
+            outer_radius = self.params.get("outer_radius", 1.0)
+            height = self.params.get("height", 1.0)
+            turns = self.params.get("turns", 3.0)
+            mesh = self._make_spiral_mesh(inner_radius, outer_radius, height, turns, h)
 
         else:
             raise ValueError(f"Unknown geom_type: {self.geom_type}")
 
-        mesh = build(mesh_info, max_volume=self.params.get("max_volume", 1e-2))
-
         sub = SubMesh3D.__new__(SubMesh3D)
-        sub.nodes = np.array(mesh.points)
-        sub.elements = np.array(mesh.elements)
+        sub.nodes = (
+            mesh.p.T
+        )  # scikit-fem stores points as (dim, npts), we want (npts, dim)
+        sub.elements = mesh.t.T
         sub.npts = sub.nodes.shape[0]
         sub.dimension = 3
+        if self.geom_type == "cylinder":
+            sub.coord_sys = "cylindrical polar"
+        elif self.geom_type == "spiral":
+            sub.coord_sys = "spiral"
+        else:
+            sub.coord_sys = "cartesian"
+        sub.internal_boundaries = []
+
+        sub._skfem_mesh = mesh
+
         return sub

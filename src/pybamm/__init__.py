@@ -144,7 +144,7 @@ from .meshes.one_dimensional_submeshes import (
 from .meshes.three_dimensional_submeshes import (
     SubMesh3D,
     Uniform3DSubMesh,
-    MeshPyGenerator3D,
+    ScikitFemGenerator3D,
 )
 
 from .meshes.scikit_fem_submeshes import (

@@ -5,7 +5,7 @@ import pybamm
 from pybamm.meshes.three_dimensional_submeshes import (
     SubMesh3D,
     Uniform3DSubMesh,
-    MeshPyGenerator3D,
+    ScikitFemGenerator3D,
 )
 from pybamm.meshes.meshes import Mesh
 
@@ -133,7 +133,7 @@ class TestMeshIntegration3D:
 
 
 def test_meshpy_box_generator(geometry):
-    gen = MeshPyGenerator3D("box", max_volume=1e-2)
+    gen = ScikitFemGenerator3D("box", max_volume=1e-2)
     sub = gen(geometry["my 3d domain"], {})
     assert hasattr(sub, "nodes")
     assert hasattr(sub, "elements")
