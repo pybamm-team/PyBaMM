@@ -333,8 +333,6 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         Boundary integral operator, implemented as int(grad(.))
         See :meth:`pybamm.SpatialMethod.boundary_integral`
         """
-        symbol = pybamm.BoundaryValue(child, region)
-        boundary_value = self.boundary_value_or_flux(symbol, discretised_child)
         if region == "left" or region == "right":
             direction = "lr"
         elif region == "top" or region == "bottom":
@@ -342,6 +340,12 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         else:
             raise ValueError(f"Region {region} not supported")
 
+        if child.evaluates_on_edges("primary"):
+            discretised_child = self.edge_to_node(
+                discretised_child, direction=direction
+            )
+        symbol = pybamm.BoundaryValue(child, region)
+        boundary_value = self.boundary_value_or_flux(symbol, discretised_child)
         integral_matrix = self.one_dimensional_integral_matrix(child, direction)
         domains = child.domains
         second_dim_repeats = self._get_auxiliary_domain_repeats(domains)
@@ -1486,6 +1490,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
             # one is a vector field, so we need to make a new vector field.
             if left_evaluates_on_edges and not right_evaluates_on_edges:
                 if isinstance(left, pybamm.Gradient):
+                    print("hi")
                     method = "harmonic"
                     disc_right_lr = self.node_to_edge(
                         disc_right, method=method, direction="lr"
@@ -1496,11 +1501,18 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                     disc_right = pybamm.VectorField(disc_right_lr, disc_right_tb)
                 else:
                     method = "arithmetic"
+                    disc_right_lr = self.node_to_edge(
+                        disc_right, method=method, direction="lr"
+                    )
+                    disc_right_tb = self.node_to_edge(
+                        disc_right, method=method, direction="tb"
+                    )
+                    disc_right = pybamm.VectorField(disc_right_lr, disc_right_tb)
             lr_field = pybamm.simplify_if_constant(
-                bin_op.create_copy([disc_left.lr_field, disc_right])
+                bin_op.create_copy([disc_left.lr_field, disc_right.lr_field])
             )
             tb_field = pybamm.simplify_if_constant(
-                bin_op.create_copy([disc_left.tb_field, disc_right])
+                bin_op.create_copy([disc_left.tb_field, disc_right.tb_field])
             )
             return pybamm.VectorField(lr_field, tb_field)
         elif not hasattr(disc_left, "lr_field") and hasattr(disc_right, "lr_field"):
@@ -1517,6 +1529,13 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                     disc_left = pybamm.VectorField(disc_left_lr, disc_left_tb)
                 else:
                     method = "arithmetic"
+                    disc_left_lr = self.node_to_edge(
+                        disc_left, method=method, direction="lr"
+                    )
+                    disc_left_tb = self.node_to_edge(
+                        disc_left, method=method, direction="tb"
+                    )
+                    disc_left = pybamm.VectorField(disc_left_lr, disc_left_tb)
             lr_field = pybamm.simplify_if_constant(
                 bin_op.create_copy([disc_left, disc_right.lr_field])
             )
@@ -1552,6 +1571,13 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                 disc_right = pybamm.VectorField(disc_right_lr, disc_right_tb)
             else:
                 method = "arithmetic"
+                disc_right_lr = self.node_to_edge(
+                    disc_right, method=method, direction="lr"
+                )
+                disc_right_tb = self.node_to_edge(
+                    disc_right, method=method, direction="tb"
+                )
+                disc_right = pybamm.VectorField(disc_right_lr, disc_right_tb)
 
         # If only right child evaluates on edges, map left child onto edges
         # using the harmonic mean if the right child is a gradient (i.e. this
@@ -1568,6 +1594,13 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                 disc_left = pybamm.VectorField(disc_left_lr, disc_left_tb)
             else:
                 method = "arithmetic"
+                disc_left_lr = self.node_to_edge(
+                    disc_left, method=method, direction="lr"
+                )
+                disc_left_tb = self.node_to_edge(
+                    disc_left, method=method, direction="tb"
+                )
+                disc_left = pybamm.VectorField(disc_left_lr, disc_left_tb)
 
         # Return new binary operator with appropriate class
         out = pybamm.simplify_if_constant(bin_op.create_copy([disc_left, disc_right]))
@@ -1634,13 +1667,13 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         else:
             return pybamm.domain_concatenation(disc_children, self.mesh)
 
-    def edge_to_node(self, discretised_symbol, method="arithmetic"):
+    def edge_to_node(self, discretised_symbol, method="arithmetic", direction="lr"):
         """
         Convert a discretised symbol evaluated on the cell edges to a discretised symbol
         evaluated on the cell nodes.
         See :meth:`pybamm.FiniteVolume.shift`
         """
-        return self.shift(discretised_symbol, "edge to node", method)
+        return self.shift(discretised_symbol, "edge to node", method, direction)
 
     def node_to_edge(self, discretised_symbol, method="arithmetic", direction="lr"):
         """
@@ -1744,7 +1777,21 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                     )
 
             elif shift_key == "edge to node":
-                raise NotImplementedError
+                if direction == "lr":
+                    block = diags([0.5, 0.5], [0, 1], shape=(n_lr, n_lr + 1))
+                    sub_matrix = block_diag((block,) * n_tb)
+                elif direction == "tb":
+                    rows = np.arange(0, n_lr * n_tb)
+                    cols_first = np.arange(0, n_lr * n_tb)
+                    cols_second = np.arange(n_lr, n_lr * (n_tb + 1))
+                    data = np.ones(n_lr * n_tb) * 0.5
+                    data = np.hstack([data, data])
+                    rows = np.hstack([rows, rows])
+                    cols = np.hstack([cols_first, cols_second])
+                    sub_matrix = csr_matrix(
+                        (data, (rows, cols)), shape=(n_lr * n_tb, n_lr * (n_tb + 1))
+                    )
+
             else:
                 raise ValueError(f"shift key '{shift_key}' not recognised")
             # Second dimension length
