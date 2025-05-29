@@ -1,7 +1,9 @@
 import numpy as np
 import pybamm
 from .meshes import SubMesh
-import skfem
+from pybamm.util import import_optional_dependency
+
+skfem = import_optional_dependency("skfem")
 
 
 def _num(val):

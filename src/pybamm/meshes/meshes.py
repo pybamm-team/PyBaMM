@@ -4,6 +4,7 @@
 import numbers
 import numpy as np
 import pybamm
+import warnings
 
 
 class Mesh(dict):
@@ -168,6 +169,7 @@ class Mesh(dict):
         """
         if submeshnames == ():
             raise ValueError("Submesh domains being combined cannot be empty")
+
         # Check that the final edge of each submesh is the same as the first edge of the
         # next submesh
         for i in range(len(submeshnames) - 1):
@@ -176,6 +178,65 @@ class Mesh(dict):
                     "Cannot combine submeshes of different dimensions"
                 )
             elif self[submeshnames[i]].dimension == 3:
+                if "left" in submeshnames[i] or "right" in submeshnames[i + 1]:
+                    # Make sure that the x edges are aligned
+                    if (
+                        self[submeshnames[i]].edges_x[-1]
+                        != self[submeshnames[i + 1]].edges_x[0]
+                    ):
+                        raise pybamm.DomainError("x edges are not aligned")
+                    elif (
+                        self[submeshnames[i]].edges_y
+                        != self[submeshnames[i + 1]].edges_y
+                    ).any():
+                        raise pybamm.DomainError("y edges are not aligned")
+                    elif (
+                        self[submeshnames[i]].edges_z
+                        != self[submeshnames[i + 1]].edges_z
+                    ).any():
+                        raise pybamm.DomainError("z edges are not aligned")
+                    else:
+                        pass
+
+                elif "front" in submeshnames[i] or "back" in submeshnames[i + 1]:
+                    # Make sure that the y edges are aligned
+                    if (
+                        self[submeshnames[i]].edges_y[-1]
+                        != self[submeshnames[i + 1]].edges_y[0]
+                    ):
+                        raise pybamm.DomainError("y edges are not aligned")
+                    elif (
+                        self[submeshnames[i]].edges_x
+                        != self[submeshnames[i + 1]].edges_x
+                    ).any():
+                        raise pybamm.DomainError("x edges are not aligned")
+                    elif (
+                        self[submeshnames[i]].edges_z
+                        != self[submeshnames[i + 1]].edges_z
+                    ).any():
+                        raise pybamm.DomainError("z edges are not aligned")
+                    else:
+                        pass
+
+                elif "bottom" in submeshnames[i] or "top" in submeshnames[i + 1]:
+                    # Make sure that the z edges are aligned
+                    if (
+                        self[submeshnames[i]].edges_z[-1]
+                        != self[submeshnames[i + 1]].edges_z[0]
+                    ):
+                        raise pybamm.DomainError("z edges are not aligned")
+                    elif (
+                        self[submeshnames[i]].edges_x
+                        != self[submeshnames[i + 1]].edges_x
+                    ).any():
+                        raise pybamm.DomainError("x edges are not aligned")
+                    elif (
+                        self[submeshnames[i]].edges_y
+                        != self[submeshnames[i + 1]].edges_y
+                    ).any():
+                        raise pybamm.DomainError("y edges are not aligned")
+                    else:
+                        pass
                 pass
             elif self[submeshnames[i]].edges[-1] == self[submeshnames[i + 1]].edges[0]:
                 # submeshes are aligned, all good
@@ -204,30 +265,57 @@ class Mesh(dict):
             )
             submesh = pybamm.SubMesh1D(combined_submesh_edges, coord_sys)
         elif self[submeshnames[0]].dimension == 3:
-            s1 = self[submeshnames[0]]
-            s2 = self[submeshnames[1]]
-
-            if np.isclose(s1.edges_x[-1], s2.edges_x[0]):
-                # X-axis concatenation
-                ex = np.concatenate([s1.edges_x, s2.edges_x[1:]])
-                ey = s1.edges_y
-                ez = s1.edges_z
-            elif np.isclose(s1.edges_y[-1], s2.edges_y[0]):
-                # Y-axis
-                ey = np.concatenate([s1.edges_y, s2.edges_y[1:]])
-                ex = s1.edges_x
-                ez = s1.edges_z
-            elif np.isclose(s1.edges_z[-1], s2.edges_z[0]):
-                # Z-axis
-                ez = np.concatenate([s1.edges_z, s2.edges_z[1:]])
-                ex = s1.edges_x
-                ey = s1.edges_y
-
-            else:
-                raise pybamm.DomainError(
-                    "Cannot determine 3D concatenation axis for " + str(submeshnames)
+            # If it's an x concatenation, then we only need to concatenate the edges_x
+            if "left" in submeshnames[0] or "right" in submeshnames[-1]:
+                combined_submesh_edges_x = np.concatenate(
+                    [self[submeshnames[0]].edges_x]
+                    + [
+                        self[submeshname].edges_x[1:]
+                        for submeshname in submeshnames[1:]
+                    ]
                 )
-            submesh = pybamm.SubMesh3D(ex, ey, ez, coord_sys)
+                combined_submesh_edges_y = self[submeshnames[0]].edges_y
+                combined_submesh_edges_z = self[submeshnames[0]].edges_z
+            elif "front" in submeshnames[0] or "back" in submeshnames[-1]:
+                combined_submesh_edges_y = np.concatenate(
+                    [self[submeshnames[0]].edges_y]
+                    + [
+                        self[submeshname].edges_y[1:]
+                        for submeshname in submeshnames[1:]
+                    ]
+                )
+                combined_submesh_edges_x = self[submeshnames[0]].edges_x
+                combined_submesh_edges_z = self[submeshnames[0]].edges_z
+            elif "bottom" in submeshnames[0] or "top" in submeshnames[-1]:
+                combined_submesh_edges_z = np.concatenate(
+                    [self[submeshnames[0]].edges_z]
+                    + [
+                        self[submeshname].edges_z[1:]
+                        for submeshname in submeshnames[1:]
+                    ]
+                )
+                combined_submesh_edges_x = self[submeshnames[0]].edges_x
+                combined_submesh_edges_y = self[submeshnames[0]].edges_y
+            else:
+                warnings.warn(
+                    "Could not determine how to combine submeshes. Assuming x concatenation.",
+                    stacklevel=2,
+                )
+                combined_submesh_edges_x = np.concatenate(
+                    [self[submeshnames[0]].edges_x]
+                    + [
+                        self[submeshname].edges_x[1:]
+                        for submeshname in submeshnames[1:]
+                    ]
+                )
+                combined_submesh_edges_y = self[submeshnames[0]].edges_y
+                combined_submesh_edges_z = self[submeshnames[0]].edges_z
+            submesh = pybamm.SubMesh3D(
+                combined_submesh_edges_x,
+                combined_submesh_edges_y,
+                combined_submesh_edges_z,
+                coord_sys,
+            )
 
         if getattr(self[submeshnames[0]], "length", None) is not None:
             # Assume that the ghost cells have the same length as the first submesh
@@ -251,23 +339,30 @@ class Mesh(dict):
                 min = 0
             if submesh.dimension == 1:
                 submesh.internal_boundaries.append(self[submeshname].edges[0] + min)
-            elif submesh.dimension == 3:
-                prev = self[submeshnames[i - 1]]
-                curr = self[submeshname]
-
-                # Compare edges numerically to infer concatenation axis
-                if np.isclose(prev.edges_x[-1], curr.edges_x[0]):
-                    loc = curr.edges_x[0]
-                elif np.isclose(prev.edges_y[-1], curr.edges_y[0]):
-                    loc = curr.edges_y[0]
-                elif np.isclose(prev.edges_z[-1], curr.edges_z[0]):
-                    loc = curr.edges_z[0]
-                else:
-                    raise pybamm.DomainError(
-                        "Cannot determine 3D internal boundary location"
-                    )
-
-                submesh.internal_boundaries.append(loc)
+            elif (
+                "left" in submeshname
+                or "left" in submeshnames[i - 1]
+                or "right" in submeshname
+            ):
+                submesh.internal_boundaries.append(self[submeshname].edges_x[0] + min)
+            elif (
+                "front" in submeshname
+                or "front" in submeshnames[i - 1]
+                or "back" in submeshname
+            ):
+                submesh.internal_boundaries.append(self[submeshname].edges_y[0] + min)
+            elif (
+                "bottom" in submeshname
+                or "bottom" in submeshnames[i - 1]
+                or "top" in submeshname
+            ):
+                submesh.internal_boundaries.append(self[submeshname].edges_z[0] + min)
+            else:
+                warnings.warn(
+                    "Could not determine how to combine submeshes. Assuming x concatenation.",
+                    stacklevel=2,
+                )
+                submesh.internal_boundaries.append(self[submeshname].edges_x[0] + min)
         return submesh
 
     def add_ghost_meshes(self):

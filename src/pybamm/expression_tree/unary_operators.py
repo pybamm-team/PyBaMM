@@ -505,6 +505,9 @@ class Gradient(SpatialOperator):
         )
         return sympy_Gradient(child)
 
+    def _evaluate_for_shape(self):
+        return self.children[0].evaluate_for_shape()
+
 
 class Divergence(SpatialOperator):
     """
