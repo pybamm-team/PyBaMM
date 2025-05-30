@@ -1,5 +1,16 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Features
+
+## Optimizations
+
+## Bug fixes
+
+- Fixed a dimension bug for `DiscreteTimeSum` sensitivity calculation ([#5037](https://github.com/pybamm-team/PyBaMM/pull/5037))
+
+
+## Breaking changes
+
 # [v25.6.0](https://github.com/pybamm-team/PyBaMM/tree/v25.6.0) - 2025-05-27
 
 ## Features
