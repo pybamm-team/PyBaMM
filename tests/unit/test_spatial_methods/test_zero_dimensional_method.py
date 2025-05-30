@@ -14,7 +14,7 @@ class TestZeroDimensionalSpatialMethod:
         np.testing.assert_array_equal(spatial_method._mesh, test_mesh)
 
         a = pybamm.Symbol("a")
-        assert a == spatial_method.integral(None, a, "primary")
+        assert a == spatial_method.integral(None, a, "primary", None)
         assert a == spatial_method.indefinite_integral(None, a, "forward")
         assert a == spatial_method.boundary_value_or_flux(None, a)
         assert (-a) == spatial_method.indefinite_integral(None, a, "backward")

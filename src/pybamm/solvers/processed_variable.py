@@ -809,7 +809,7 @@ class ProcessedVariable2DSciKitFEM(ProcessedVariable2D):
 
 class ProcessedVariable2DReal(ProcessedVariable):
     def _shape(self, t):
-        return [self.mesh.npts, len(t)]
+        return [self.base_variables[0].size, len(t)]
 
     def initialise(self):
         if self.entries_raw_initialized:

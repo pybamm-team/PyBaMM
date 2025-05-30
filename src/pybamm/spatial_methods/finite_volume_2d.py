@@ -122,7 +122,8 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         return grad
 
     def gradient(self, symbol, discretised_symbol, boundary_conditions):
-        """Matrix-vector multiplication to implement the gradient operator.
+        """
+        Matrix-vector multiplication to implement the gradient operator.
         See :meth:`pybamm.SpatialMethod.gradient`
         """
         # Multiply by gradient matrix
@@ -591,7 +592,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
             else:
                 top_ghost_constant = 2 * tbc_value
             tbc_vector = pybamm.Matrix(tbc_matrix) @ top_ghost_constant
-        elif tbc_type == "Neumann":
+        elif tbc_type == "Neumann" or bbc_type == "Dirichlet":
             tbc_vector = pybamm.Vector(
                 np.zeros((n_tb + n_bcs) * second_dim_repeats * n_lr)
             )
@@ -620,7 +621,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
             else:
                 bottom_ghost_constant = 2 * bbc_value
             bbc_vector = pybamm.Matrix(bbc_matrix) @ bottom_ghost_constant
-        elif bbc_type == "Neumann":
+        elif bbc_type == "Neumann" or tbc_type == "Dirichlet":
             bbc_vector = pybamm.Vector(
                 np.zeros((n_tb + n_bcs) * second_dim_repeats * n_lr)
             )
@@ -1509,10 +1510,10 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                     )
                     disc_right = pybamm.VectorField(disc_right_lr, disc_right_tb)
             lr_field = pybamm.simplify_if_constant(
-                bin_op.create_copy([disc_left.lr_field, disc_right.lr_field])
+                bin_op.create_copy([disc_left.lr_field, disc_right])
             )
             tb_field = pybamm.simplify_if_constant(
-                bin_op.create_copy([disc_left.tb_field, disc_right.tb_field])
+                bin_op.create_copy([disc_left.tb_field, disc_right])
             )
             return pybamm.VectorField(lr_field, tb_field)
         elif not hasattr(disc_left, "lr_field") and hasattr(disc_right, "lr_field"):
@@ -2088,26 +2089,49 @@ class FiniteVolume2D(pybamm.SpatialMethod):
             )
 
         if lr_direction == "upwind":
-            bc_side = "left"
+            lr_bc_side = "left"
         elif lr_direction == "downwind":
-            bc_side = "right"
+            lr_bc_side = "right"
+        elif lr_direction is None:
+            lr_bc_side = None
         else:
             raise ValueError(f"direction '{lr_direction}' not recognised")
 
         if tb_direction == "upwind":
-            bc_side = "top"
+            tb_bc_side = "top"
         elif tb_direction == "downwind":
-            bc_side = "bottom"
+            tb_bc_side = "bottom"
+        elif tb_direction is None:
+            tb_bc_side = None
         else:
             raise ValueError(f"direction '{tb_direction}' not recognised")
 
-        if bcs[symbol][bc_side][1] != "Dirichlet":
+        if lr_bc_side is not None and bcs[symbol][lr_bc_side][1] != "Dirichlet":
             raise pybamm.ModelError(
                 "Dirichlet boundary conditions must be provided for "
                 f"{lr_direction}ing '{symbol}' and {tb_direction}ing '{symbol}'"
             )
+        elif lr_bc_side is None:
+            symbol_out_lr = self.node_to_edge(discretised_symbol, direction="lr")
+        else:
+            # Extract only the relevant boundary condition as the model might have both
+            bc_subset = {lr_bc_side: bcs[symbol][lr_bc_side]}
+            symbol_out_lr, _ = self.add_ghost_nodes(
+                symbol, discretised_symbol, bc_subset
+            )
 
-        # Extract only the relevant boundary condition as the model might have both
-        bc_subset = {bc_side: bcs[symbol][bc_side]}
-        symbol_out, _ = self.add_ghost_nodes(symbol, discretised_symbol, bc_subset)
-        return symbol_out
+        if tb_bc_side is not None and bcs[symbol][tb_bc_side][1] != "Dirichlet":
+            raise pybamm.ModelError(
+                "Dirichlet boundary conditions must be provided for "
+                f"{lr_direction}ing '{symbol}' and {tb_direction}ing '{symbol}'"
+            )
+        elif tb_bc_side is None:
+            symbol_out_tb = self.node_to_edge(discretised_symbol, direction="tb")
+        else:
+            # Extract only the relevant boundary condition as the model might have both
+            bc_subset = {tb_bc_side: bcs[symbol][tb_bc_side]}
+            symbol_out_tb, _ = self.add_ghost_nodes(
+                symbol, discretised_symbol, bc_subset
+            )
+
+        return pybamm.VectorField(symbol_out_lr, symbol_out_tb)

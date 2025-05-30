@@ -21,6 +21,7 @@ class TestFiniteVolumeIntegration:
         # lengths
         ln = mesh["negative electrode"].edges_lr[-1]
         ls = mesh["separator"].edges_lr[-1] - ln
+        lp = mesh["positive electrode"].edges_lr[-1] - (ln + ls)
         l_tb = mesh["negative electrode"].edges_tb[-1]
 
         # macroscale variable (lr integration)
@@ -48,17 +49,23 @@ class TestFiniteVolumeIntegration:
             integral_eqn_disc_tb.evaluate(None, constant_y), l_tb
         )
 
-        var = pybamm.Variable("var", domain=["negative electrode"])
-        x = pybamm.SpatialVariable("x", ["negative electrode"], direction="lr")
+        var = pybamm.Variable(
+            "var", domain=["negative electrode", "separator", "positive electrode"]
+        )
+        x = pybamm.SpatialVariable(
+            "x",
+            ["negative electrode", "separator", "positive electrode"],
+            direction="lr",
+        )
         integral_eqn = pybamm.Integral(var, x)
         disc.set_variable_slices([var])
         integral_eqn_disc = disc.process_symbol(integral_eqn)
-        submesh = mesh["negative electrode"]
+        submesh = mesh[("negative electrode", "separator", "positive electrode")]
         LR, TB = np.meshgrid(submesh.edges_lr, submesh.edges_tb)
         lr = LR.flatten()
         np.testing.assert_allclose(
             integral_eqn_disc.evaluate(None, lr),
-            (ln + ls) ** 2 / 2,
+            (ln + ls + lp) ** 2 / 2,
             rtol=1e-7,
             atol=1e-6,
         )
