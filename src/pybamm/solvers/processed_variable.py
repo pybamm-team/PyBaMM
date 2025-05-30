@@ -466,10 +466,7 @@ class ProcessedVariable:
             # post fix for discrete time integral won't give correct result
             # if ts are not equal to the discrete times. Raise error
             # in this case
-            if (
-                self.time_integral is not None
-                and self.time_integral.method == "discrete"
-            ):
+            if self._is_discrete_time_method():
                 if not (
                     len(ts) == len(self.time_integral.discrete_times)
                     and np.allclose(ts, self.time_integral.discrete_times, atol=1e-10)
@@ -485,6 +482,8 @@ class ProcessedVariable:
             all_S_var.append(S_var)
 
         S_var = casadi.vertcat(*all_S_var)
+        if self._is_discrete_time_method():
+            S_var = S_var.T
         sensitivities = {"all": S_var}
 
         # Add the individual sensitivity
@@ -496,6 +495,12 @@ class ProcessedVariable:
 
         # Save attribute
         self._sensitivities = sensitivities
+
+    def _is_discrete_time_method(self):
+        """Check if using discrete time integral method"""
+        return (
+            self.time_integral is not None and self.time_integral.method == "discrete"
+        )
 
     @property
     def hermite_interpolation(self):
