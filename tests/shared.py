@@ -125,7 +125,7 @@ def get_mesh_for_testing_3d(
     zpts=None,
 ):
     """
-    Build a 3D mesh similar to the 2D battery geometry for testing.
+    Build a 3D mesh
 
     Parameters
     ----------
@@ -231,9 +231,9 @@ def get_mesh_for_testing_3d(
         zpts = 3
 
     var_pts = {
-        x.name: xpts,
-        y.name: ypts,
-        z.name: zpts,
+        x: xpts,
+        y: ypts,
+        z: zpts,
     }
 
     return pybamm.Mesh(geometry, submesh_types, var_pts)

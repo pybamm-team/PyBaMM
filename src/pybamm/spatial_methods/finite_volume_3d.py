@@ -75,7 +75,6 @@ class FiniteVolume3D(pybamm.SpatialMethod):
                 symbol_mesh.edges_x,
                 symbol_mesh.edges_y,
                 symbol_mesh.edges_z,
-                indexing="ij",
             )
             x = X.flatten()
             y = Y.flatten()
@@ -85,7 +84,6 @@ class FiniteVolume3D(pybamm.SpatialMethod):
                 symbol_mesh.nodes_x,
                 symbol_mesh.nodes_y,
                 symbol_mesh.nodes_z,
-                indexing="ij",
             )
             x = X.flatten()
             y = Y.flatten()
@@ -176,7 +174,6 @@ class FiniteVolume3D(pybamm.SpatialMethod):
         e_z = 1 / submesh.d_edges_z
 
         if direction == "x":
-            # Gradient in x-direction
             if submesh.coord_sys == "cylindrical polar":
                 r_nodes = submesh.nodes_x
                 r_weights = r_nodes[:-1]  # Use left node for face weighting
@@ -216,11 +213,9 @@ class FiniteVolume3D(pybamm.SpatialMethod):
                 sub_matrix = block_diag([sub_matrix] * (n_y * n_z))
 
         elif direction == "y":
-            # Gradient in y-direction
             if submesh.coord_sys == "cylindrical polar":
                 r_nodes = submesh.nodes_x
-                # For y-direction, we need to weight by radius at each x position
-                r_weights = np.tile(r_nodes, n_y - 1)  # Repeat for each y-face
+                r_weights = np.tile(r_nodes, n_y - 1)
                 e_y_weighted = (
                     np.repeat(e_y, n_x) / r_weights[: len(np.repeat(e_y, n_x))]
                 )
@@ -256,7 +251,6 @@ class FiniteVolume3D(pybamm.SpatialMethod):
                 sub_matrix = block_diag([sub_matrix] * n_z)
 
         elif direction == "z":
-            # Gradient in z-direction
             if submesh.coord_sys in ["cylindrical polar", "spherical polar"]:
                 # For cylindrical and spherical, z-direction is typically standard
                 e_z_repeated = np.repeat(e_z, n_x * n_y)
@@ -274,10 +268,9 @@ class FiniteVolume3D(pybamm.SpatialMethod):
                     shape=(n_x * n_y * (n_z - 1), n_x * n_y * n_z),
                 )
 
-        # number of repeats for auxiliary domains
+        # number of repeats
         second_dim_repeats = self._get_auxiliary_domain_repeats(domains)
 
-        # generate full matrix from the submatrix
         matrix = csr_matrix(kron(eye(second_dim_repeats), sub_matrix))
         return pybamm.Matrix(matrix)
 
@@ -300,22 +293,6 @@ class FiniteVolume3D(pybamm.SpatialMethod):
     def divergence_matrix(self, domains, direction):
         """
         Divergence matrix for a specific direction (x, y, or z)
-        Maps from edge values to node values in the specified direction.
-
-        Parameters
-        ----------
-        domains : dict or str
-            Domain information
-        direction : str
-            Direction for divergence ('x', 'y', or 'z')
-
-        Returns
-        -------
-        pybamm.Matrix
-            Divergence matrix with correct dimensions:
-            - x-direction: (n_x * n_y * n_z, (n_x + 1) * n_y * n_z)
-            - y-direction: (n_x * n_y * n_z, n_x * (n_y + 1) * n_z)
-            - z-direction: (n_x * n_y * n_z, n_x * n_y * (n_z + 1))
         """
 
         submesh = self.mesh[domains["primary"]]
@@ -328,7 +305,6 @@ class FiniteVolume3D(pybamm.SpatialMethod):
         e_z = 1 / submesh.d_edges_z
 
         if direction == "x":
-            # Divergence in x-direction
             if submesh.coord_sys == "cylindrical polar":
                 r_nodes = submesh.nodes_x
                 r_weights = r_nodes
@@ -360,7 +336,6 @@ class FiniteVolume3D(pybamm.SpatialMethod):
                 sub_matrix = block_diag((sub_matrix,) * (n_y * n_z))
 
         elif direction == "y":
-            # Divergence in y-direction
             if submesh.coord_sys == "cylindrical polar":
                 r_nodes = submesh.nodes_x
                 r_weights = r_nodes
@@ -400,7 +375,6 @@ class FiniteVolume3D(pybamm.SpatialMethod):
                 sub_matrix = block_diag((sub_matrix,) * n_z)
 
         elif direction == "z":
-            # Divergence in z-direction
             if submesh.coord_sys == "cylindrical polar":
                 r_nodes = submesh.nodes_x
                 r_weights = r_nodes
@@ -440,23 +414,24 @@ class FiniteVolume3D(pybamm.SpatialMethod):
     def integral(
         self, child, discretised_child, integration_dimension, integration_variable
     ):
-        """3D integration operator."""
+        """matrix-vector product to implement 3D integration operator."""
         integration_matrix = self.definite_integral_matrix(
             child,
             integration_dimension=integration_dimension,
             integration_variable=integration_variable,
         )
 
-        # Handle multiple integration variables (e.g., integrating over x, y, and z)
         if len(integration_variable) > 1:
+            dirs = [v.direction for v in integration_variable]
+            if len(set(dirs)) != len(dirs):
+                raise ValueError("Integration variables must be in distinct directions")
+
             for _i, var in enumerate(integration_variable[1:], 1):
                 direction = var.direction
                 one_dimensional_matrix = self.one_dimensional_integral_matrix(
                     child, direction
                 )
-                # Fix dimension matching issue
                 if integration_matrix.shape[1] != one_dimensional_matrix.shape[0]:
-                    # Adjust the matrix dimensions to match
                     repeats_needed = (
                         integration_matrix.shape[1] // one_dimensional_matrix.shape[0]
                     )
@@ -738,47 +713,72 @@ class FiniteVolume3D(pybamm.SpatialMethod):
         return pybamm.Matrix(matrix)
 
     def delta_function(self, symbol, discretised_symbol):
-        """
-        Delta function implementation for 3D.
-
-        Parameters
-        ----------
-        symbol : :class:`pybamm.Symbol`
-            The delta function symbol.
-        discretised_symbol : :class:`pybamm.StateVector`
-            The discretised variable.
-
-        Returns
-        -------
-        :class:`pybamm.Vector`
-            The delta function vector.
-        """
-        position = symbol.child
+        """3D delta function for boundary flux (symbol.side = ("x"/"y"/"z", "left"/"right"))."""
         submesh = self.mesh[symbol.domain]
+        n_x, n_y, n_z = submesh.npts_x, submesh.npts_y, submesh.npts_z
+        coord_dir, face_side = symbol.side
 
-        # Evaluate position
-        pos_val = position.evaluate() if hasattr(position, "evaluate") else position
-        x_pos, y_pos, z_pos = pos_val
+        if coord_dir == "x":
+            x_idx = 0 if face_side == "left" else n_x - 1
+            y_length = submesh.edges_y[-1] - submesh.edges_y[0]
+            z_length = submesh.edges_z[-1] - submesh.edges_z[0]
+            face_area = y_length * z_length
+            dx = submesh.d_edges_x[x_idx]
 
-        # Find closest indices
-        x_idx = np.argmin(np.abs(submesh.nodes_x - x_pos))
-        y_idx = np.argmin(np.abs(submesh.nodes_y - y_pos))
-        z_idx = np.argmin(np.abs(submesh.nodes_z - z_pos))
+            rows = []
+            for z_i in range(n_z):
+                base_z = z_i * (n_x * n_y)
+                for y_i in range(n_y):
+                    rows.append(base_z + y_i * n_x + x_idx)
 
-        # Convert to linear index
-        linear_idx = (
-            z_idx * submesh.npts_x * submesh.npts_y + y_idx * submesh.npts_x + x_idx
-        )
+            scale = face_area / dx
 
-        # Create delta vector
-        delta_vec = np.zeros(submesh.npts)
-        delta_vec[linear_idx] = 1.0 / (
-            submesh.d_edges_x[x_idx]
-            * submesh.d_edges_y[y_idx]
-            * submesh.d_edges_z[z_idx]
-        )
+        elif coord_dir == "y":
+            y_idx = 0 if face_side == "left" else n_y - 1
+            x_length = submesh.edges_x[-1] - submesh.edges_x[0]
+            z_length = submesh.edges_z[-1] - submesh.edges_z[0]
+            face_area = x_length * z_length
+            dy = submesh.d_edges_y[y_idx]
 
-        return pybamm.Vector(delta_vec, domains=symbol.domains)
+            rows = []
+            for z_i in range(n_z):
+                base_z = z_i * (n_x * n_y)
+                for x_i in range(n_x):
+                    rows.append(base_z + y_idx * n_x + x_i)
+
+            scale = face_area / dy
+
+        elif coord_dir == "z":
+            z_idx = 0 if face_side == "left" else n_z - 1
+            x_length = submesh.edges_x[-1] - submesh.edges_x[0]
+            y_length = submesh.edges_y[-1] - submesh.edges_y[0]
+            face_area = x_length * y_length
+            dz = submesh.d_edges_z[z_idx]
+
+            rows = []
+            base_z = z_idx * (n_x * n_y)
+            for y_i in range(n_y):
+                for x_i in range(n_x):
+                    rows.append(base_z + y_i * n_x + x_i)
+
+            scale = face_area / dz
+
+        else:
+            raise ValueError(
+                "symbol.side must be ('x','left'/'right'), ('y',...), or ('z',...)"
+            )
+
+        rows = np.array(rows, dtype=int)
+        cols = np.zeros_like(rows)
+        data = np.ones_like(rows, dtype=float)
+        sub_matrix = csr_matrix((data, (rows, cols)), shape=(n_x * n_y * n_z, 1))
+
+        repeats = self._get_auxiliary_domain_repeats(symbol.domains)
+        full_matrix = kron(eye(repeats), sub_matrix)
+
+        delta_vec = pybamm.Matrix(scale * full_matrix) @ discretised_symbol
+        delta_vec.copy_domains(symbol)
+        return delta_vec
 
     def internal_neumann_condition(
         self, left_symbol_disc, right_symbol_disc, left_mesh, right_mesh
@@ -807,10 +807,7 @@ class FiniteVolume3D(pybamm.SpatialMethod):
                 "Number of secondary points in subdomains do not match"
             )
 
-        # Create matrices to extract boundary values
-        # Assuming connection is in x direction (can be extended for other directions)
         left_sub_matrix = np.zeros((1, left_npts))
-        # Extract rightmost face of left domain
         for k in range(left_npts_z):
             for j in range(left_npts_y):
                 idx = (
@@ -823,7 +820,6 @@ class FiniteVolume3D(pybamm.SpatialMethod):
         )
 
         right_sub_matrix = np.zeros((1, right_npts))
-        # Extract leftmost face of right domain
         for k in range(right_npts_z):
             for j in range(right_npts_y):
                 idx = k * right_npts_x * right_npts_y + j * right_npts_x + 0
@@ -833,7 +829,6 @@ class FiniteVolume3D(pybamm.SpatialMethod):
             csr_matrix(kron(eye(second_dim_repeats), right_sub_matrix))
         )
 
-        # Calculate finite volume derivative
         right_mesh_x = right_mesh.nodes_x[0]
         left_mesh_x = left_mesh.nodes_x[-1]
         dx = right_mesh_x - left_mesh_x
@@ -949,105 +944,175 @@ class FiniteVolume3D(pybamm.SpatialMethod):
                         )
                         matrix[new_idx, old_idx] = 1.0
 
-            # Add ghost nodes and set their values
-            # Left ghost nodes (x=0)
+            # Evaluate boundary condition values once
+            lbc_val = (
+                float(lbc_value.evaluate())
+                if lbc_value is not None and lbc_value.evaluates_to_number()
+                else 0.0
+            )
+            rbc_val = (
+                float(rbc_value.evaluate())
+                if rbc_value is not None and rbc_value.evaluates_to_number()
+                else 0.0
+            )
+            fbc_val = (
+                float(fbc_value.evaluate())
+                if fbc_value is not None and fbc_value.evaluates_to_number()
+                else 0.0
+            )
+            bbc_val = (
+                float(bbc_value.evaluate())
+                if bbc_value is not None and bbc_value.evaluates_to_number()
+                else 0.0
+            )
+            botbc_val = (
+                float(botbc_value.evaluate())
+                if botbc_value is not None and botbc_value.evaluates_to_number()
+                else 0.0
+            )
+            tbc_val = (
+                float(tbc_value.evaluate())
+                if tbc_value is not None and tbc_value.evaluates_to_number()
+                else 0.0
+            )
+
+            # Add ghost nodes for each face separately
+            # Left face ghost nodes (i = 0)
             if lbc_type == "Dirichlet":
-                lbc_val = (
-                    float(lbc_value.evaluate())
-                    if lbc_value.evaluates_to_number()
-                    else 0.0
-                )
-                for k in range(n_z):
-                    for j in range(n_y):
-                        ghost_idx = base_new + flat_index(
-                            0, j + y_offset, k + z_offset, new_n_x, new_n_y
+                for k in range(new_n_z):
+                    for j in range(new_n_y):
+                        # Skip corner nodes that belong to other faces
+                        k_interior = max(z_offset, min(z_offset + n_z - 1, k))
+                        j_interior = max(y_offset, min(y_offset + n_y - 1, j))
+
+                        ghost_idx = base_new + flat_index(0, j, k, new_n_x, new_n_y)
+                        interior_idx = base_old + flat_index(
+                            0, j_interior - y_offset, k_interior - z_offset, n_x, n_y
                         )
-                        # Ghost value = 2 * boundary_value - first_interior_value
-                        # We'll set: ghost = 2 * bc_value - interior_node
-                        interior_idx = base_old + flat_index(0, j, k, n_x, n_y)
+
                         matrix[ghost_idx, interior_idx] = -1.0
                         bcs_vector[ghost_idx] = 2.0 * lbc_val
 
-            # Right ghost nodes (x=n_x+1)
+            # Right face ghost nodes (i = new_n_x - 1)
             if rbc_type == "Dirichlet":
-                rbc_val = (
-                    float(rbc_value.evaluate())
-                    if rbc_value.evaluates_to_number()
-                    else 0.0
-                )
-                right_x = new_n_x - 1
-                for k in range(n_z):
-                    for j in range(n_y):
+                for k in range(new_n_z):
+                    for j in range(new_n_y):
+                        k_interior = max(z_offset, min(z_offset + n_z - 1, k))
+                        j_interior = max(y_offset, min(y_offset + n_y - 1, j))
+
                         ghost_idx = base_new + flat_index(
-                            right_x, j + y_offset, k + z_offset, new_n_x, new_n_y
+                            new_n_x - 1, j, k, new_n_x, new_n_y
                         )
-                        interior_idx = base_old + flat_index(n_x - 1, j, k, n_x, n_y)
+                        interior_idx = base_old + flat_index(
+                            n_x - 1,
+                            j_interior - y_offset,
+                            k_interior - z_offset,
+                            n_x,
+                            n_y,
+                        )
+
                         matrix[ghost_idx, interior_idx] = -1.0
                         bcs_vector[ghost_idx] = 2.0 * rbc_val
 
-            # Front ghost nodes (y=0)
+            # Front face ghost nodes (j = 0)
             if fbc_type == "Dirichlet":
-                fbc_val = (
-                    float(fbc_value.evaluate())
-                    if fbc_value.evaluates_to_number()
-                    else 0.0
-                )
-                for k in range(n_z):
-                    for i in range(n_x):
-                        ghost_idx = base_new + flat_index(
-                            i + x_offset, 0, k + z_offset, new_n_x, new_n_y
+                for k in range(new_n_z):
+                    for i in range(new_n_x):
+                        # Skip nodes already handled by left/right faces
+                        if (i == 0 and lbc_type == "Dirichlet") or (
+                            i == new_n_x - 1 and rbc_type == "Dirichlet"
+                        ):
+                            continue
+
+                        k_interior = max(z_offset, min(z_offset + n_z - 1, k))
+                        i_interior = max(x_offset, min(x_offset + n_x - 1, i))
+
+                        ghost_idx = base_new + flat_index(i, 0, k, new_n_x, new_n_y)
+                        interior_idx = base_old + flat_index(
+                            i_interior - x_offset, 0, k_interior - z_offset, n_x, n_y
                         )
-                        interior_idx = base_old + flat_index(i, 0, k, n_x, n_y)
+
                         matrix[ghost_idx, interior_idx] = -1.0
                         bcs_vector[ghost_idx] = 2.0 * fbc_val
 
-            # Back ghost nodes (y=n_y+1)
+            # Back face ghost nodes (j = new_n_y - 1)
             if bbc_type == "Dirichlet":
-                bbc_val = (
-                    float(bbc_value.evaluate())
-                    if bbc_value.evaluates_to_number()
-                    else 0.0
-                )
-                back_y = new_n_y - 1
-                for k in range(n_z):
-                    for i in range(n_x):
+                for k in range(new_n_z):
+                    for i in range(new_n_x):
+                        # Skip nodes already handled by left/right faces
+                        if (i == 0 and lbc_type == "Dirichlet") or (
+                            i == new_n_x - 1 and rbc_type == "Dirichlet"
+                        ):
+                            continue
+
+                        k_interior = max(z_offset, min(z_offset + n_z - 1, k))
+                        i_interior = max(x_offset, min(x_offset + n_x - 1, i))
+
                         ghost_idx = base_new + flat_index(
-                            i + x_offset, back_y, k + z_offset, new_n_x, new_n_y
+                            i, new_n_y - 1, k, new_n_x, new_n_y
                         )
-                        interior_idx = base_old + flat_index(i, n_y - 1, k, n_x, n_y)
+                        interior_idx = base_old + flat_index(
+                            i_interior - x_offset,
+                            n_y - 1,
+                            k_interior - z_offset,
+                            n_x,
+                            n_y,
+                        )
+
                         matrix[ghost_idx, interior_idx] = -1.0
                         bcs_vector[ghost_idx] = 2.0 * bbc_val
 
-            # Bottom ghost nodes (z=0)
+            # Bottom face ghost nodes (k = 0)
             if botbc_type == "Dirichlet":
-                botbc_val = (
-                    float(botbc_value.evaluate())
-                    if botbc_value.evaluates_to_number()
-                    else 0.0
-                )
-                for j in range(n_y):
-                    for i in range(n_x):
-                        ghost_idx = base_new + flat_index(
-                            i + x_offset, j + y_offset, 0, new_n_x, new_n_y
+                for j in range(new_n_y):
+                    for i in range(new_n_x):
+                        # Skip nodes already handled by other faces
+                        if (
+                            (i == 0 and lbc_type == "Dirichlet")
+                            or (i == new_n_x - 1 and rbc_type == "Dirichlet")
+                            or (j == 0 and fbc_type == "Dirichlet")
+                            or (j == new_n_y - 1 and bbc_type == "Dirichlet")
+                        ):
+                            continue
+
+                        j_interior = max(y_offset, min(y_offset + n_y - 1, j))
+                        i_interior = max(x_offset, min(x_offset + n_x - 1, i))
+
+                        ghost_idx = base_new + flat_index(i, j, 0, new_n_x, new_n_y)
+                        interior_idx = base_old + flat_index(
+                            i_interior - x_offset, j_interior - y_offset, 0, n_x, n_y
                         )
-                        interior_idx = base_old + flat_index(i, j, 0, n_x, n_y)
+
                         matrix[ghost_idx, interior_idx] = -1.0
                         bcs_vector[ghost_idx] = 2.0 * botbc_val
 
-            # Top ghost nodes (z=n_z+1)
+            # Top face ghost nodes (k = new_n_z - 1)
             if tbc_type == "Dirichlet":
-                tbc_val = (
-                    float(tbc_value.evaluate())
-                    if tbc_value.evaluates_to_number()
-                    else 0.0
-                )
-                top_z = new_n_z - 1
-                for j in range(n_y):
-                    for i in range(n_x):
+                for j in range(new_n_y):
+                    for i in range(new_n_x):
+                        # Skip nodes already handled by other faces
+                        if (
+                            (i == 0 and lbc_type == "Dirichlet")
+                            or (i == new_n_x - 1 and rbc_type == "Dirichlet")
+                            or (j == 0 and fbc_type == "Dirichlet")
+                            or (j == new_n_y - 1 and bbc_type == "Dirichlet")
+                        ):
+                            continue
+
+                        j_interior = max(y_offset, min(y_offset + n_y - 1, j))
+                        i_interior = max(x_offset, min(x_offset + n_x - 1, i))
+
                         ghost_idx = base_new + flat_index(
-                            i + x_offset, j + y_offset, top_z, new_n_x, new_n_y
+                            i, j, new_n_z - 1, new_n_x, new_n_y
                         )
-                        interior_idx = base_old + flat_index(i, j, n_z - 1, n_x, n_y)
+                        interior_idx = base_old + flat_index(
+                            i_interior - x_offset,
+                            j_interior - y_offset,
+                            n_z - 1,
+                            n_x,
+                            n_y,
+                        )
+
                         matrix[ghost_idx, interior_idx] = -1.0
                         bcs_vector[ghost_idx] = 2.0 * tbc_val
 
@@ -2349,13 +2414,13 @@ class FiniteVolume3D(pybamm.SpatialMethod):
                 )
 
             x_field = pybamm.simplify_if_constant(
-                bin_op.create_copy([disc_left.x_field, disc_right.x_field])
+                bin_op.create_copy([disc_left.x_field, disc_right])
             )
             y_field = pybamm.simplify_if_constant(
-                bin_op.create_copy([disc_left.y_field, disc_right.y_field])
+                bin_op.create_copy([disc_left.y_field, disc_right])
             )
             z_field = pybamm.simplify_if_constant(
-                bin_op.create_copy([disc_left.z_field, disc_right.z_field])
+                bin_op.create_copy([disc_left.z_field, disc_right])
             )
             return pybamm.VectorField3D(x_field, y_field, z_field)
 
@@ -2546,36 +2611,25 @@ class FiniteVolume3D(pybamm.SpatialMethod):
 
         def arithmetic_mean(array, direction):
             """Calculate the arithmetic mean of an array using matrix multiplication"""
-            # Handle domain access properly - array.domain might be a tuple
-            if isinstance(array.domain, (list, tuple)) and len(array.domain) > 0:
-                domain_key = array.domain[0]
-            else:
-                domain_key = array.domain
-            submesh = self.mesh[domain_key]
+            submesh = self.mesh[array.domain]
+
             n_x, n_y, n_z = submesh.npts_x, submesh.npts_y, submesh.npts_z
-            second_dim_repeats = self._get_auxiliary_domain_repeats(array.domains)
 
             if shift_key == "node to edge":
                 if direction == "x":
-                    # Left boundary extrapolation
                     sub_matrix_left = csr_matrix(
                         ([1.5, -0.5], ([0, 0], [0, 1])), shape=(1, n_x)
                     )
-                    # Interior averaging
                     sub_matrix_center = diags([0.5, 0.5], [0, 1], shape=(n_x - 1, n_x))
-                    # Right boundary extrapolation
                     sub_matrix_right = csr_matrix(
                         ([-0.5, 1.5], ([0, 0], [n_x - 2, n_x - 1])), shape=(1, n_x)
                     )
                     sub_matrix_1d = vstack(
                         [sub_matrix_left, sub_matrix_center, sub_matrix_right]
                     )
-                    # Lift to 3D: repeat for each y-z plane
                     sub_matrix = block_diag([sub_matrix_1d] * (n_y * n_z))
 
                 elif direction == "y":
-                    # Build matrix for y-direction node-to-edge
-                    # Top boundary (y=0)
                     one_fives = np.ones(n_x) * 1.5
                     neg_zero_fives = np.ones(n_x) * -0.5
                     rows = np.arange(0, n_x)
@@ -2587,7 +2641,6 @@ class FiniteVolume3D(pybamm.SpatialMethod):
                     sub_matrix_top = csr_matrix(
                         (data, (rows, cols)), shape=(n_x, n_x * n_y)
                     )
-                    # Bottom boundary (y=n_y-1)
                     cols_first = np.arange((n_y - 2) * n_x, (n_y - 1) * n_x)
                     cols_second = np.arange((n_y - 1) * n_x, n_y * n_x)
                     data = np.hstack([neg_zero_fives, one_fives])
@@ -2615,8 +2668,6 @@ class FiniteVolume3D(pybamm.SpatialMethod):
                     sub_matrix = block_diag([sub_matrix_2d] * n_z)
 
                 elif direction == "z":
-                    # Build matrix for z-direction node-to-edge
-                    # Bottom boundary (z=0)
                     one_fives = np.ones(n_x * n_y) * 1.5
                     neg_zero_fives = np.ones(n_x * n_y) * -0.5
                     rows = np.arange(0, n_x * n_y)
@@ -2628,7 +2679,6 @@ class FiniteVolume3D(pybamm.SpatialMethod):
                     sub_matrix_bottom = csr_matrix(
                         (data, (rows, cols)), shape=(n_x * n_y, n_x * n_y * n_z)
                     )
-                    # Top boundary (z=n_z-1)
                     cols_first = np.arange((n_z - 2) * n_x * n_y, (n_z - 1) * n_x * n_y)
                     cols_second = np.arange((n_z - 1) * n_x * n_y, n_z * n_x * n_y)
                     data = np.hstack([neg_zero_fives, one_fives])
@@ -2638,7 +2688,6 @@ class FiniteVolume3D(pybamm.SpatialMethod):
                     sub_matrix_top = csr_matrix(
                         (data, (rows, cols)), shape=(n_x * n_y, n_x * n_y * n_z)
                     )
-                    # Interior averaging
                     data = np.ones((n_z - 1) * n_x * n_y) * 0.5
                     data = np.hstack([data, data])
                     rows = np.arange(0, (n_z - 1) * n_x * n_y)
@@ -2736,14 +2785,12 @@ class FiniteVolume3D(pybamm.SpatialMethod):
                     )
 
                 elif direction == "z":
-                    # Map from n_x*n_y*(n_z-1) z-edges to n_x*n_y*n_z nodes
                     data = []
                     rows = []
                     cols = []
 
                     row_idx = 0
 
-                    # Bottom boundary nodes (k=0)
                     for j in range(n_y):
                         for i in range(n_x):
                             rows.append(row_idx)
@@ -2765,7 +2812,6 @@ class FiniteVolume3D(pybamm.SpatialMethod):
                                 data.extend([0.5, 0.5])
                                 row_idx += 1
 
-                    # Top boundary nodes (k=n_z-1)
                     for j in range(n_y):
                         for i in range(n_x):
                             rows.append(row_idx)
@@ -2780,56 +2826,154 @@ class FiniteVolume3D(pybamm.SpatialMethod):
             else:
                 raise ValueError(f"shift key '{shift_key}' not recognised")
 
-            # Generate full matrix from the submatrix
+            second_dim_repeats = self._get_auxiliary_domain_repeats(array.domains)
             matrix = csr_matrix(kron(eye(second_dim_repeats), sub_matrix))
             return pybamm.Matrix(matrix) @ array
 
         def harmonic_mean(array, direction):
             """Calculate the harmonic mean of an array using matrix multiplication"""
             # Handle domain access properly - array.domain might be a tuple
-            if isinstance(array.domain, (list, tuple)) and len(array.domain) > 0:
-                domain_key = array.domain[0]
-            else:
-                domain_key = array.domain
-            submesh = self.mesh[domain_key]
+            submesh = self.mesh[array.domain]
             n_x, n_y, n_z = submesh.npts_x, submesh.npts_y, submesh.npts_z
-            second_dim_repeats = self._get_auxiliary_domain_repeats(array.domains)
+            repeats = self._get_auxiliary_domain_repeats(array.domains)
 
             if shift_key == "node to edge":
-                # Your existing harmonic mean implementation for node to edge
-                # (keeping the current implementation as it looks correct)
                 if direction == "x":
-                    left, right = self._exterior_stencil(n_x)
+                    left, right = _exterior_stencil(n_x)
                     interior = csr_matrix((n_x - 1, n_x))
                     stencil_1d = vstack([left, interior, right])
                     E = kron(eye(n_z), kron(eye(n_y), stencil_1d))
-
-                    D1_1d, D2_1d = self._pick_D1_D2(n_x)
+                    D1_1d, D2_1d = _pick_D1_D2(n_x)
                     M1 = kron(eye(n_z), kron(eye(n_y), D1_1d))
                     M2 = kron(eye(n_z), kron(eye(n_y), D2_1d))
-
                     D1 = pybamm.Matrix(M1) @ array
                     D2 = pybamm.Matrix(M2) @ array
-
-                    dx = submesh.d_edges_x
-                    beta = dx[:-2] / (dx[1:-1] + dx[:-2])
-                    beta_full = np.repeat(
-                        beta[:, None], n_y * n_z * second_dim_repeats, axis=1
-                    )
+                    dx = submesh.d_edges_x  # length = n_x
+                    beta = dx[:-2] / (dx[1:-1] + dx[:-2])  # shape = (n_x-2,)
+                    beta_full = np.repeat(beta[:, None], n_y * n_z * repeats, axis=1)
                     beta = pybamm.Array(beta_full.flatten()[:, None])
-
-                    # Interior harmonic mean
                     D_eff = D1 * D2 / (beta * D2 + (1 - beta) * D1)
                     return pybamm.Matrix(E) @ array + D_eff
 
-                # Similar for y and z directions...
+                elif direction == "y":
+                    one_fives = np.ones(n_x) * 1.5
+                    neg_zero_fives = np.ones(n_x) * -0.5
+                    rows = np.arange(0, n_x)
+                    cols_first = np.arange(0, n_x)  # column indices (j=0,i)
+                    cols_second = np.arange(n_x, 2 * n_x)  # (j=1,i)
+                    data = np.hstack([one_fives, neg_zero_fives])
+                    cols = np.hstack([cols_first, cols_second])
+                    rows = np.hstack([rows, rows])
+                    sub_top = csr_matrix((data, (rows, cols)), shape=(n_x, n_x * n_y))
+
+                    interior_rows = (n_y - 1) * n_x
+                    data = np.ones(interior_rows) * 0.5
+                    data = np.hstack([data, data])
+                    rows = np.arange(0, interior_rows)
+                    rows = np.hstack([rows, rows])
+                    cols_first = np.arange(0, interior_rows)
+                    cols_second = np.arange(n_x, n_x * n_y)
+                    cols = np.hstack([cols_first, cols_second])
+                    sub_mid = csr_matrix(
+                        (data, (rows, cols)), shape=((n_y - 1) * n_x, n_x * n_y)
+                    )
+
+                    data = np.hstack([neg_zero_fives, one_fives])
+                    cols_first = np.arange((n_y - 2) * n_x, (n_y - 1) * n_x)
+                    cols_second = np.arange((n_y - 1) * n_x, n_y * n_x)
+                    rows = np.arange(0, n_x)
+                    rows = np.hstack([rows, rows])
+                    cols = np.hstack([cols_first, cols_second])
+                    sub_bot = csr_matrix((data, (rows, cols)), shape=(n_x, n_x * n_y))
+
+                    stencil_2d_y = vstack([sub_top, sub_mid, sub_bot])
+                    sub_matrix = block_diag([stencil_2d_y] * n_z)
+                    E = csr_matrix(kron(eye(repeats), sub_matrix))
+
+                    D1_1d_y = hstack([eye(n_y - 1), csr_matrix((n_y - 1, 1))])
+                    D2_1d_y = hstack([csr_matrix((n_y - 1, 1)), eye(n_y - 1)])
+
+                    sub_D1_y = block_diag([D1_1d_y] * n_x)
+                    sub_D2_y = block_diag([D2_1d_y] * n_x)
+
+                    M1 = kron(eye(n_z), sub_D1_y)
+                    M2 = kron(eye(n_z), sub_D2_y)
+
+                    D1 = pybamm.Matrix(kron(eye(repeats), M1)) @ array
+                    D2 = pybamm.Matrix(kron(eye(repeats), M2)) @ array
+
+                    dy = submesh.d_edges_y  # length = n_y
+                    beta = dy[:-2] / (dy[1:-1] + dy[:-2])  # length = n_y-2
+                    beta_full = np.repeat(beta[:, None], n_x * n_z * repeats, axis=1)
+                    beta = pybamm.Array(beta_full.flatten()[:, None])
+
+                    D_eff = D1 * D2 / (beta * D2 + (1 - beta) * D1)
+
+                    return E @ array + D_eff
+
+                elif direction == "z":
+                    one_fives = np.ones(n_x * n_y) * 1.5
+                    neg_zero_fives = np.ones(n_x * n_y) * -0.5
+                    rows = np.arange(0, n_x * n_y)
+                    cols_first = np.arange(0, n_x * n_y)  # (k=0) plane
+                    cols_second = np.arange(n_x * n_y, 2 * n_x * n_y)  # (k=1) plane
+                    data = np.hstack([one_fives, neg_zero_fives])
+                    cols = np.hstack([cols_first, cols_second])
+                    rows = np.hstack([rows, rows])
+                    sub_bot = csr_matrix(
+                        (data, (rows, cols)), shape=(n_x * n_y, n_x * n_y * n_z)
+                    )
+
+                    interior_rows = (n_z - 1) * (n_x * n_y)
+                    data = np.ones(interior_rows) * 0.5
+                    data = np.hstack([data, data])
+                    rows = np.arange(0, interior_rows)
+                    rows = np.hstack([rows, rows])
+                    cols_first = np.arange(0, interior_rows)
+                    cols_second = np.arange(n_x * n_y, n_x * n_y * n_z)
+                    cols = np.hstack([cols_first, cols_second])
+                    sub_mid = csr_matrix(
+                        (data, (rows, cols)),
+                        shape=((n_z - 1) * n_x * n_y, n_x * n_y * n_z),
+                    )
+
+                    data = np.hstack([neg_zero_fives, one_fives])
+                    cols_first = np.arange(
+                        (n_z - 2) * (n_x * n_y), (n_z - 1) * (n_x * n_y)
+                    )
+                    cols_second = np.arange((n_z - 1) * (n_x * n_y), n_z * (n_x * n_y))
+                    rows = np.arange(0, n_x * n_y)
+                    rows = np.hstack([rows, rows])
+                    cols = np.hstack([cols_first, cols_second])
+                    sub_top = csr_matrix(
+                        (data, (rows, cols)), shape=(n_x * n_y, n_x * n_y * n_z)
+                    )
+
+                    stencil_3d_z = vstack([sub_bot, sub_mid, sub_top])
+                    E = csr_matrix(kron(eye(repeats), stencil_3d_z))
+
+                    D1_1d_z = hstack([eye(n_z - 1), csr_matrix((n_z - 1, 1))])
+                    D2_1d_z = hstack([csr_matrix((n_z - 1, 1)), eye(n_z - 1)])
+                    sub_D1_z = block_diag([D1_1d_z] * (n_x * n_y))
+                    sub_D2_z = block_diag([D2_1d_z] * (n_x * n_y))
+                    M1 = sub_D1_z  # already accounts for whole x y plane
+                    M2 = sub_D2_z
+                    D1 = pybamm.Matrix(kron(eye(repeats), M1)) @ array
+                    D2 = pybamm.Matrix(kron(eye(repeats), M2)) @ array
+
+                    dz = submesh.d_edges_z  # length = n_z
+                    beta = dz[:-2] / (dz[1:-1] + dz[:-2])  # length = n_z-2
+                    beta_full = np.repeat(beta[:, None], n_x * n_y * repeats, axis=1)
+                    beta = pybamm.Array(beta_full.flatten()[:, None])
+
+                    D_eff = D1 * D2 / (beta * D2 + (1 - beta) * D1)
+
+                    return E @ array + D_eff
                 else:
                     # Fall back to arithmetic mean for other directions in harmonic case
                     return arithmetic_mean(array, direction)
 
             elif shift_key == "edge to node":
-                # For edge to node harmonic mean, use similar logic to 2D
-                # This is more complex and may not be needed for basic functionality
                 raise NotImplementedError(
                     "Harmonic mean edge-to-node not implemented for 3D"
                 )
@@ -2868,95 +3012,123 @@ class FiniteVolume3D(pybamm.SpatialMethod):
         symbol,
         discretised_symbol,
         bcs,
-        x_direction,
+        x_direction=None,
         y_direction=None,
         z_direction=None,
     ):
         """
-        3D upwind/downwind: only adds ghost nodes on the specified x, y and z faces.
+        3D upwind/downwind: for each axis, either insert a Dirichlet ghost layer
+        on the specified face (if direction is "upwind"/"downwind") or else average
+        from nodes to edges (if direction is None).
 
         Parameters
         ----------
         symbol : :class:`pybamm.SpatialVariable`
-            The variable to be discretised
+            The variable to be discretised.
         discretised_symbol : :class:`pybamm.Vector`
-            The already discretised symbol (no ghost cells)
+            The already discretised symbol (no ghost cells).
         bcs : dict
-            Keys are faces ("left","right","front","back","bottom","top"),
-            values are (value, "Dirichlet"|"Neumann") tuples.
-        x_direction : {"upwind","downwind"}
-            'upwind'→use left Dirichlet BC; 'downwind'→use right
-        y_direction : {"upwind","downwind"} or None
-            'upwind'→use front Dirichlet BC; 'downwind'→use back
-            If None, no action in y-direction
-        z_direction : {"upwind","downwind"} or None
-            'upwind'→use bottom Dirichlet BC; 'downwind'→use top
-            If None, no action in z-direction
+            A dictionary mapping `symbol` → {face_name: (value, "Dirichlet"/"Neumann"), …}.
+            Valid face names: "left", "right", "front", "back", "bottom", "top".
+        x_direction : {None, "upwind", "downwind"}, default None
+            If "upwind", insert a left‐face Dirichlet ghost; if "downwind", insert a right‐face.
+            If None, perform node→edge averaging in x.
+        y_direction : {None, "upwind", "downwind"}, default None
+            If "upwind", insert a front‐face Dirichlet ghost; if "downwind", insert a back‐face.
+            If None, perform node→edge averaging in y.
+        z_direction : {None, "upwind", "downwind"}, default None
+            If "upwind", insert a bottom‐face Dirichlet ghost; if "downwind", insert a top‐face.
+            If None, perform node→edge averaging in z.
+
+        Returns
+        -------
+        :class:`pybamm.VectorField3D`
+            A 3D vector field whose x, y, z components have been upwinded (i.e. ghost‐cell
+            Dirichlet if requested, or else averaged from nodes to edges).
         """
+        if symbol not in bcs:
+            raise pybamm.ModelError(f"No boundary conditions defined for {symbol!r}.")
 
-        # Handle the case where this is called like regular 1D upwind/downwind
-        # where x_direction contains the direction string and others are None
-        if y_direction is None and z_direction is None:
-            # This is a regular 1D-style call - apply in x-direction only
-            # For 3D, we need to ensure we have proper BCs
-            direction = x_direction  # "upwind" or "downwind"
+        # Determine which face (if any) to use in each axis
+        if x_direction == "upwind":
+            x_face = "left"
+        elif x_direction == "downwind":
+            x_face = "right"
+        elif x_direction is None:
+            x_face = None
+        else:
+            raise ValueError(
+                f"x_direction must be 'upwind', 'downwind', or None, not '{x_direction}'"
+            )
 
-            # Check if we have the proper boundary conditions for 1D-style operation
-            if direction == "upwind":
-                required_faces = ["left"]
-            elif direction == "downwind":
-                required_faces = ["right"]
-            else:
-                raise ValueError(f"Invalid direction: {direction}")
+        if y_direction == "upwind":
+            y_face = "front"
+        elif y_direction == "downwind":
+            y_face = "back"
+        elif y_direction is None:
+            y_face = None
+        else:
+            raise ValueError(
+                f"y_direction must be 'upwind', 'downwind', or None, not '{y_direction}'"
+            )
 
-            bc_subset = {}
-            for face in required_faces:
-                if symbol in bcs and face in bcs[symbol]:
-                    bc_subset[face] = bcs[symbol][face]
-                    if bc_subset[face][1] != "Dirichlet":
-                        raise pybamm.ModelError(
-                            f"Dirichlet boundary conditions must be provided for "
-                            f"{direction}ing '{symbol}'"
-                        )
-                else:
-                    raise pybamm.ModelError(
-                        f"Boundary conditions must be provided for {direction}ing '{symbol}'"
-                    )
+        if z_direction == "upwind":
+            z_face = "bottom"
+        elif z_direction == "downwind":
+            z_face = "top"
+        elif z_direction is None:
+            z_face = None
+        else:
+            raise ValueError(
+                f"z_direction must be 'upwind', 'downwind', or None, not '{z_direction}'"
+            )
 
-            # Apply ghost nodes only for the required face
-            upwinded, _ = self.add_ghost_nodes(symbol, discretised_symbol, bc_subset)
-            return upwinded
-
-        # Handle full 3D case with all three directions specified
-        # Map each logical up/downwind onto the correct geometric face:
-        face_map = {
-            "x": {"upwind": "left", "downwind": "right"},
-            "y": {"upwind": "front", "downwind": "back"},
-            "z": {"upwind": "bottom", "downwind": "top"},
-        }
-        try:
-            x_face = face_map["x"][x_direction]
-            y_face = face_map["y"][y_direction]
-            z_face = face_map["z"][z_direction]
-        except KeyError as err:
-            raise ValueError(f"Invalid direction flag: {err}") from err
-
-        # Check that each required face has a Dirichlet BC
-        for face in (x_face, y_face, z_face):
-            if symbol not in bcs or face not in bcs[symbol]:
+        # X-component
+        if x_face is not None:
+            if x_face not in bcs[symbol]:
                 raise pybamm.ModelError(
-                    f"No BC provided for {face!r}, but needed for upwind/downwind"
+                    f"No BC provided for face '{x_face}' of {symbol!r}."
                 )
-            _, bc_type = bcs[symbol][face]
+            val, bc_type = bcs[symbol][x_face]
             if bc_type != "Dirichlet":
                 raise pybamm.ModelError(
-                    f"Must have Dirichlet BC on {face!r} for up/downwind"
+                    f"Dirichlet BC required on '{x_face}' for x upwind/downwind."
                 )
+            bc_subset = {x_face: (val, bc_type)}
+            out_x, _ = self.add_ghost_nodes(symbol, discretised_symbol, bc_subset)
+        else:
+            out_x = self.node_to_edge(discretised_symbol, direction="x")
 
-        # Build a minimal subset of BCs
-        bc_subset = {face: bcs[symbol][face] for face in (x_face, y_face, z_face)}
+        # Y-component
+        if y_face is not None:
+            if y_face not in bcs[symbol]:
+                raise pybamm.ModelError(
+                    f"No BC provided for face '{y_face}' of {symbol!r}."
+                )
+            val, bc_type = bcs[symbol][y_face]
+            if bc_type != "Dirichlet":
+                raise pybamm.ModelError(
+                    f"Dirichlet BC required on '{y_face}' for y upwind/downwind."
+                )
+            bc_subset = {y_face: (val, bc_type)}
+            out_y, _ = self.add_ghost_nodes(symbol, discretised_symbol, bc_subset)
+        else:
+            out_y = self.node_to_edge(discretised_symbol, direction="y")
 
-        # Delegate to add_ghost_nodes (which will now insert ghost layers
-        # on exactly those faces)
-        upwinded, _ = self.add_ghost_nodes(symbol, discretised_symbol, bc_subset)
-        return upwinded
+        # Z-component
+        if z_face is not None:
+            if z_face not in bcs[symbol]:
+                raise pybamm.ModelError(
+                    f"No BC provided for face '{z_face}' of {symbol!r}."
+                )
+            val, bc_type = bcs[symbol][z_face]
+            if bc_type != "Dirichlet":
+                raise pybamm.ModelError(
+                    f"Dirichlet BC required on '{z_face}' for z upwind/downwind."
+                )
+            bc_subset = {z_face: (val, bc_type)}
+            out_z, _ = self.add_ghost_nodes(symbol, discretised_symbol, bc_subset)
+        else:
+            out_z = self.node_to_edge(discretised_symbol, direction="z")
+
+        return pybamm.VectorField3D(out_x, out_y, out_z)

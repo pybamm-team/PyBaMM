@@ -118,6 +118,32 @@ class TestUniform3DSubMesh:
         top = sub.create_ghost_cell("top")
         assert top.edges_z[0] == sub.edges_z[-1]
 
+    def test_symmetric_mesh_creation_no_parameters_3d(x, y, z, geometry):
+        submesh_types = {"my 3d domain": pybamm.Uniform3DSubMesh}
+        var_pts = {"x": 10, "y": 12, "z": 14}
+
+        # build the mesh
+        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+        sub = mesh["my 3d domain"]
+
+        # check that the physical boundaries are correct
+        assert sub.edges_x[0] == 0
+        assert sub.edges_x[-1] == 1
+        assert sub.edges_y[0] == 0
+        assert sub.edges_y[-1] == 2
+        assert sub.edges_z[0] == 0
+        assert sub.edges_z[-1] == 3
+
+        # check number of nodes along each axis
+        assert len(sub.nodes_x) == var_pts["x"]
+        assert len(sub.nodes_y) == var_pts["y"]
+        assert len(sub.nodes_z) == var_pts["z"]
+
+        # check that the number of edges is nodes + 1
+        assert len(sub.edges_x) == len(sub.nodes_x) + 1
+        assert len(sub.edges_y) == len(sub.nodes_y) + 1
+        assert len(sub.edges_z) == len(sub.nodes_z) + 1
+
 
 class TestMeshIntegration3D:
     def test_mesh_factory_uniform(self, geometry):

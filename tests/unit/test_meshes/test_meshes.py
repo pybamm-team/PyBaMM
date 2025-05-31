@@ -563,21 +563,25 @@ class TestMesh:
         assert submesh.edges_z.shape == (self.var_pts["z"] + 1,)
 
     def test_3d_mesh_boundaries(self):
-        """Test 3D mesh boundary handling"""
         geometry = {
-            "domain1": {
+            "left_domain": {
                 "x": {"min": 0, "max": 1},
                 "y": {"min": 0, "max": 1},
                 "z": {"min": 0, "max": 1},
             },
-            "domain2": {
+            "right_domain": {
                 "x": {"min": 1, "max": 2},  # Adjacent in x
                 "y": {"min": 0, "max": 1},
                 "z": {"min": 0, "max": 1},
             },
-            "domain3": {
+            "front_domain": {
                 "x": {"min": 0, "max": 1},
-                "y": {"min": 1, "max": 2},  # Adjacent in y
+                "y": {"min": 0, "max": 1},
+                "z": {"min": 0, "max": 1},
+            },
+            "back_domain": {
+                "x": {"min": 0, "max": 1},
+                "y": {"min": 1, "max": 2},  # Adjacent in y to front_domain
                 "z": {"min": 0, "max": 1},
             },
         }
@@ -587,13 +591,11 @@ class TestMesh:
         param.process_geometry(geometry)
         mesh = pybamm.Mesh(geometry, submesh_types, self.var_pts)
 
-        # Test x-direction combination
-        combined_x = mesh.combine_submeshes("domain1", "domain2")
+        combined_x = mesh.combine_submeshes("left_domain", "right_domain")
         assert len(combined_x.edges_x) == 2 * self.var_pts["x"] + 1
         assert len(combined_x.internal_boundaries) == 1
 
-        # Test y-direction combination
-        combined_y = mesh.combine_submeshes("domain1", "domain3")
+        combined_y = mesh.combine_submeshes("front_domain", "back_domain")
         assert len(combined_y.edges_y) == 2 * self.var_pts["y"] + 1
         assert len(combined_y.internal_boundaries) == 1
 

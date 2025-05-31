@@ -847,7 +847,7 @@ class ProcessedVariable2DSciKitFEM(ProcessedVariable2D):
 
 class ProcessedVariable3DReal(ProcessedVariable):
     def _shape(self, t):
-        return [self.mesh.npts_x, self.mesh.npts_y, self.mesh.npts_z, len(t)]
+        return [self.base_variables[0].size, len(t)]
 
     def initialize(self):
         if self.entries_raw_initialized:
@@ -1158,12 +1158,20 @@ def process_variable(name: str, base_variables, *args, **kwargs):
         ):
             return ProcessedVariable3DSciKitFEM(name, base_variables, *args, **kwargs)
 
+    if (
+        mesh
+        and hasattr(mesh, "edges_x")
+        and hasattr(mesh, "edges_y")
+        and hasattr(mesh, "edges_z")
+    ):
+        return ProcessedVariable3DReal(base_variables, *args, **kwargs)
+
     # check variable shape
     if len(base_eval_shape) == 0 or base_eval_shape[0] == 1:
         return ProcessedVariable0D(name, base_variables, *args, **kwargs)
 
-    if mesh and mesh.dimension == 3:
-        return ProcessedVariable3DReal(base_variables, *args, **kwargs)
+    if mesh is None:
+        return ProcessedVariable3DReal(name, base_variables, *args, **kwargs)
 
     n = mesh.npts
     base_shape = base_eval_shape[0]

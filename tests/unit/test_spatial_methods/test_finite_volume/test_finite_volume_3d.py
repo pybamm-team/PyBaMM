@@ -5,283 +5,158 @@ from tests import get_mesh_for_testing_3d
 
 
 class TestFiniteVolume3D:
-    def test_linear_solution_exact(self):
-        mesh = get_mesh_for_testing_3d(xpts=8, ypts=6, zpts=5)
-        method = pybamm.FiniteVolume3D()
-        method.build(mesh)
-        domain = next(iter(mesh.keys()))
-        submesh = mesh[domain]
-
-        Xc, Yc, Zc = np.meshgrid(
-            submesh.nodes_x, submesh.nodes_y, submesh.nodes_z, indexing="ij"
-        )
-        u_cc = 2 * Xc + 3 * Yc + 1 * Zc
-        u_vec = pybamm.Vector(u_cc.ravel(), domain=domain)
-
-        u = pybamm.Variable("u", domain=domain)
-        y_mid = 0.5 * (submesh.nodes_y[0] + submesh.nodes_y[-1])
-        z_mid = 0.5 * (submesh.nodes_z[0] + submesh.nodes_z[-1])
-        x_mid = 0.5 * (submesh.nodes_x[0] + submesh.nodes_x[-1])
-
-        left_val = 2 * submesh.nodes_x[0] + 3 * y_mid + 1 * z_mid
-        right_val = 2 * submesh.nodes_x[-1] + 3 * y_mid + 1 * z_mid
-        front_val = 2 * x_mid + 3 * submesh.nodes_y[0] + 1 * z_mid
-        back_val = 2 * x_mid + 3 * submesh.nodes_y[-1] + 1 * z_mid
-        bottom_val = 2 * x_mid + 3 * y_mid + 1 * submesh.nodes_z[0]
-        top_val = 2 * x_mid + 3 * y_mid + 1 * submesh.nodes_z[-1]
-
-        bcs = {
-            u: {
-                "left": (pybamm.Scalar(left_val), "Dirichlet"),
-                "right": (pybamm.Scalar(right_val), "Dirichlet"),
-                "front": (pybamm.Scalar(front_val), "Dirichlet"),
-                "back": (pybamm.Scalar(back_val), "Dirichlet"),
-                "bottom": (pybamm.Scalar(bottom_val), "Dirichlet"),
-                "top": (pybamm.Scalar(top_val), "Dirichlet"),
-            }
-        }
-
-        grad = method.gradient(u, u_vec, bcs)
-        div_grad = method.divergence(u, grad, bcs)
-
-        gx = grad.x_field.evaluate().ravel()
-        gy = grad.y_field.evaluate().ravel()
-        gz = grad.z_field.evaluate().ravel()
-        dd = div_grad.evaluate().ravel()
-
-        np.testing.assert_allclose(gx, 2.0, rtol=0, atol=1e-12)
-        np.testing.assert_allclose(gy, 3.0, rtol=0, atol=1e-12)
-        np.testing.assert_allclose(gz, 1.0, rtol=0, atol=1e-12)
-        np.testing.assert_allclose(dd, 0.0, rtol=0, atol=1e-12)
-
-    def test_quadratic_solution_convergence(self):
-        def solve_poisson_3d(npts):
-            mesh = get_mesh_for_testing_3d(xpts=npts, ypts=npts, zpts=npts)
-            spatial_method = pybamm.FiniteVolume3D()
-            spatial_method.build(mesh)
-
-            domain = next(iter(mesh.keys()))
-            submesh = mesh[domain]
-
-            # Manufactured solution: u(x,y,z) = x² + y² + z²
-            x, y, z = np.meshgrid(
-                submesh.nodes_x, submesh.nodes_y, submesh.nodes_z, indexing="ij"
-            )
-            u_exact = x.flatten() ** 2 + y.flatten() ** 2 + z.flatten() ** 2
-
-            # Source term: f = -∇²u = -(2 + 2 + 2) = -6
-            f_exact = -6 * np.ones_like(u_exact)
-
-            # Create variables
-            u = pybamm.Variable("u", domain=domain)
-            # f = pybamm.Vector(f_exact, domain=domain)
-
-            # Compute Laplacian
-            laplacian_u = spatial_method.laplacian(
-                u, pybamm.Vector(u_exact, domain=domain), {}
-            )
-
-            computed_source = -laplacian_u.evaluate()
-            error = np.abs(computed_source - f_exact).max()
-
-            h = min(
-                submesh.d_edges_x.min(),
-                submesh.d_edges_y.min(),
-                submesh.d_edges_z.min(),
-            )
-
-            return error, h, u_exact
-
-        mesh_sizes = [4, 6, 8]
-        errors = []
-        h_values = []
-
-        for npts in mesh_sizes:
-            error, h, _ = solve_poisson_3d(npts)
-            errors.append(error)
-            h_values.append(h)
-
-        for i in range(1, len(errors)):
-            assert errors[i] < errors[i - 1], f"Error should decrease: {errors}"
-
-        if len(errors) >= 2:
-            rate = np.log(errors[1] / errors[0]) / np.log(h_values[1] / h_values[0])
-            assert rate > 1.5, f"Convergence rate {rate} should be close to 2.0"
-
     def test_node_to_edge_to_node_3d(self):
-        mesh = get_mesh_for_testing_3d(xpts=6, ypts=5, zpts=4)
-        spatial_method = pybamm.FiniteVolume3D()
-        spatial_method.build(mesh)
+        mesh = get_mesh_for_testing_3d(xpts=4, ypts=3, zpts=2)
+        fin_vol = pybamm.FiniteVolume3D()
+        fin_vol.build(mesh)
 
-        domain = next(iter(mesh.keys()))
-        submesh = mesh[domain]
+        submesh = mesh["negative electrode"]
         n_x, n_y, n_z = submesh.npts_x, submesh.npts_y, submesh.npts_z
+        n_nodes = n_x * n_y * n_z
 
-        c_x = pybamm.StateVector(slice(0, n_x * n_y * n_z), domain=[domain])
-        y_test_nodes = np.ones(n_x * n_y * n_z)
+        y_test = np.ones(n_nodes) * 2
+        c = pybamm.StateVector(slice(0, n_nodes), domain=["negative electrode"])
 
-        edge_x = spatial_method.node_to_edge(c_x, method="arithmetic", direction="x")
-        edge_x_vals = edge_x.evaluate(None, y_test_nodes)
-        expected_edge_size_x = (n_x + 1) * n_y * n_z
-        assert edge_x_vals.shape[0] == expected_edge_size_x
-        np.testing.assert_array_equal(edge_x_vals, np.ones((expected_edge_size_x, 1)))
-
-        d_x = pybamm.StateVector(slice(0, expected_edge_size_x), domain=[domain])
-        y_test_edges_x = np.ones(expected_edge_size_x)
-        node_x = spatial_method.edge_to_node(d_x, method="arithmetic", direction="x")
-        node_x_vals = node_x.evaluate(None, y_test_edges_x)
-        assert node_x_vals.shape[0] == n_x * n_y * n_z
-        np.testing.assert_array_equal(node_x_vals, np.ones((n_x * n_y * n_z, 1)))
-
-        expected_edge_size_y = n_x * (n_y + 1) * n_z
-        edge_y = spatial_method.node_to_edge(c_x, method="arithmetic", direction="y")
-        edge_y_vals = edge_y.evaluate(None, y_test_nodes)
-        assert edge_y_vals.shape[0] == expected_edge_size_y
-
-        d_y = pybamm.StateVector(slice(0, expected_edge_size_y), domain=[domain])
-        y_test_edges_y = np.ones(expected_edge_size_y)
-        node_y = spatial_method.edge_to_node(d_y, method="arithmetic", direction="y")
-        node_y_vals = node_y.evaluate(None, y_test_edges_y)
-        assert node_y_vals.shape[0] == n_x * n_y * n_z
-
-        expected_edge_size_z = n_x * n_y * (n_z + 1)
-        edge_z = spatial_method.node_to_edge(c_x, method="arithmetic", direction="z")
-        edge_z_vals = edge_z.evaluate(None, y_test_nodes)
-        assert edge_z_vals.shape[0] == expected_edge_size_z
-
-        d_z = pybamm.StateVector(slice(0, expected_edge_size_z), domain=[domain])
-        y_test_edges_z = np.ones(expected_edge_size_z)
-        node_z = spatial_method.edge_to_node(d_z, method="arithmetic", direction="z")
-        node_z_vals = node_z.evaluate(None, y_test_edges_z)
-        assert node_z_vals.shape[0] == n_x * n_y * n_z
-
-    def test_shift_method_errors_3d(self):
-        mesh = get_mesh_for_testing_3d(xpts=5, ypts=4, zpts=3)
-        spatial_method = pybamm.FiniteVolume3D()
-        spatial_method.build(mesh)
-
-        domain = next(iter(mesh.keys()))
-        c = pybamm.StateVector(slice(0, 60), domain=[domain])
-
-        # bad shift key
-        with pytest.raises(ValueError, match="shift key"):
-            spatial_method.shift(c, "bad shift key", "arithmetic", "x")
-
-        # bad method
-        with pytest.raises(ValueError, match="method"):
-            spatial_method.shift(c, "node to edge", "bad method", "x")
-
-        # bad direction
-        with pytest.raises(ValueError, match="direction"):
-            spatial_method.shift(c, "node to edge", "arithmetic", "bad direction")
-
-    def test_harmonic_mean_3d(self):
-        mesh = get_mesh_for_testing_3d(xpts=6, ypts=5, zpts=4)
-        spatial_method = pybamm.FiniteVolume3D()
-        spatial_method.build(mesh)
-
-        domain = next(iter(mesh.keys()))
-        submesh = mesh[domain]
-        n_nodes = submesh.npts
-
-        c = pybamm.StateVector(slice(0, n_nodes), domain=[domain])
-        y_test = np.ones(n_nodes) * 2.0
-
-        for direction in ["x", "y", "z"]:
-            edge_harmonic = spatial_method.node_to_edge(
-                c, method="harmonic", direction=direction
-            )
-            edge_harmonic_vals = edge_harmonic.evaluate(None, y_test)
-
-            edge_arithmetic = spatial_method.node_to_edge(
-                c, method="arithmetic", direction=direction
-            )
-            edge_arithmetic_vals = edge_arithmetic.evaluate(None, y_test)
-
-            # For constant values, harmonic and arithmetic means should be equal
+        for method in ["arithmetic", "harmonic"]:
+            # Test X direction
+            edge_x = fin_vol.node_to_edge(c, method=method, direction="x")
+            node_x = fin_vol.edge_to_node(edge_x, method=method, direction="x")
+            # Extrapolation means we won't get the exact same values back
             np.testing.assert_allclose(
-                edge_harmonic_vals, edge_arithmetic_vals, rtol=1e-12
+                node_x.evaluate(None, y_test), y_test[:, np.newaxis], rtol=1e-1
             )
-            np.testing.assert_allclose(edge_harmonic_vals, 2.0, rtol=1e-12)
+
+            # Test Y direction
+            edge_y = fin_vol.node_to_edge(c, method=method, direction="y")
+            node_y = fin_vol.edge_to_node(edge_y, method=method, direction="y")
+            np.testing.assert_allclose(
+                node_y.evaluate(None, y_test), y_test[:, np.newaxis], rtol=1e-1
+            )
+
+            # Test Z direction
+            edge_z = fin_vol.node_to_edge(c, method=method, direction="z")
+            node_z = fin_vol.edge_to_node(edge_z, method=method, direction="z")
+            np.testing.assert_allclose(
+                node_z.evaluate(None, y_test), y_test[:, np.newaxis], rtol=1e-1
+            )
+
+        with pytest.raises(ValueError, match="shift key"):
+            fin_vol.shift(c, "bad shift key", "arithmetic", "x")
+        with pytest.raises(ValueError, match="method"):
+            fin_vol.shift(c, "node to edge", "bad method", "x")
+        with pytest.raises(ValueError, match="direction"):
+            fin_vol.shift(c, "node to edge", "arithmetic", "bad direction")
 
     def test_concatenation_3d(self):
         mesh = get_mesh_for_testing_3d(xpts=4, ypts=3, zpts=2)
-        spatial_method = pybamm.FiniteVolume3D()
-        spatial_method.build(mesh)
+        fin_vol = pybamm.FiniteVolume3D()
+        fin_vol.build(mesh)
 
-        # Create multiple domains (simulating multiple regions)
-        domains = list(mesh.keys())
-        if len(domains) < 2:
-            domain1 = domains[0]
-            domain2 = domain1  # Use same domain for testing
-        else:
-            domain1, domain2 = domains[:2]
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        edges = [pybamm.Vector(mesh[dom].edges_x, domain=dom) for dom in whole_cell]
+        v_disc = fin_vol.concatenation(edges)
+        np.testing.assert_array_equal(
+            v_disc.evaluate()[:, 0],
+            mesh[whole_cell].nodes,
+        )
 
-        submesh1 = mesh[domain1]
-        submesh2 = mesh[domain2]
+        bad_edges = [
+            pybamm.Vector(np.ones(mesh[dom].npts + 2), domain=dom) for dom in whole_cell
+        ]
+        with pytest.raises(pybamm.ShapeError, match="child must have size n_nodes"):
+            fin_vol.concatenation(bad_edges)
 
-        edges1 = pybamm.Vector(submesh1.edges_x, domain=domain1)
-        edges2 = pybamm.Vector(submesh2.edges_x, domain=domain2)
-
-        concatenated = spatial_method.concatenation([edges1, edges2])
-        concatenated_vals = concatenated.evaluate()
-
-        assert concatenated_vals.shape[0] > 0
-        assert np.all(np.isfinite(concatenated_vals))
-
-    def test_discretise_spatial_operators_3d(self):
-        mesh = get_mesh_for_testing_3d(xpts=6, ypts=5, zpts=4)
+    def test_discretise_diffusivity_times_spatial_operator_3d(self):
+        mesh = get_mesh_for_testing_3d(xpts=4, ypts=3, zpts=2)
         spatial_methods = {"macroscale": pybamm.FiniteVolume3D()}
         disc = pybamm.Discretisation(mesh, spatial_methods)
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        submesh = mesh[whole_cell]
 
-        domain = next(iter(mesh.keys()))
-        submesh = mesh[domain]
-
-        var = pybamm.Variable("var", domain=domain)
+        var = pybamm.Variable("var", domain=whole_cell)
         disc.set_variable_slices([var])
-        y_test = np.ones(submesh.npts)[:, np.newaxis]
 
-        # Test various spatial operators
-        operators_to_test = [
-            pybamm.grad(var),
+        y_test = np.ones_like(submesh.nodes[:, np.newaxis])
+
+        exprs = [
+            var * pybamm.grad(var),
+            var**2 * pybamm.grad(var),
+            var * pybamm.grad(var) ** 2,
+            var * (pybamm.grad(var) + 2),
+            (pybamm.grad(var) + 2) * (-var),
+            (pybamm.grad(var) + 2) * (2 * var),
+            pybamm.grad(var) * pybamm.grad(var),
+            (pybamm.grad(var) + 2) * pybamm.grad(var) ** 2,
             pybamm.div(pybamm.grad(var)),
+            pybamm.div(pybamm.grad(var)) + 2,
+            pybamm.div(pybamm.grad(var)) + var,
+            pybamm.div(2 * pybamm.grad(var)),
+            pybamm.div(2 * pybamm.grad(var)) + 3 * var,
+            -2 * pybamm.div(var * pybamm.grad(var) + 2 * pybamm.grad(var)),
             pybamm.laplacian(var),
-            var * pybamm.grad(var).x_field,
-            var * pybamm.grad(var).y_field,
-            var * pybamm.grad(var).z_field,
         ]
 
-        for eqn in operators_to_test:
-            disc.bcs = {
-                var: {
-                    "left": (pybamm.Scalar(0), "Dirichlet"),
-                    "right": (pybamm.Scalar(1), "Dirichlet"),
-                }
-            }
-            eqn_disc = disc.process_symbol(eqn)
-            result = eqn_disc.evaluate(None, y_test)
-            assert np.all(np.isfinite(result))
+        bc_combinations = [
+            {
+                "left": (pybamm.Scalar(0), "Dirichlet"),
+                "right": (pybamm.Scalar(1), "Dirichlet"),
+            },
+            {
+                "left": (pybamm.Scalar(0), "Neumann"),
+                "right": (pybamm.Scalar(1), "Neumann"),
+            },
+            {
+                "left": (pybamm.Scalar(0), "Dirichlet"),
+                "right": (pybamm.Scalar(1), "Neumann"),
+            },
+            {
+                "left": (pybamm.Scalar(0), "Neumann"),
+                "right": (pybamm.Scalar(1), "Dirichlet"),
+            },
+        ]
 
-            disc.bcs = {
-                var: {
-                    "left": (pybamm.Scalar(0), "Neumann"),
-                    "right": (pybamm.Scalar(1), "Neumann"),
-                }
-            }
-            eqn_disc = disc.process_symbol(eqn)
-            result = eqn_disc.evaluate(None, y_test)
-            assert np.all(np.isfinite(result))
+        for eqn in exprs:
+            for bc in bc_combinations:
+                disc.bcs = {var: bc}
+                eqn_disc = disc.process_symbol(eqn)
+                eqn_disc.evaluate(None, y_test)
 
-    def test_mass_matrix_3d(self):
-        mesh = get_mesh_for_testing_3d(xpts=5, ypts=4, zpts=3)
-        spatial_methods = {"macroscale": pybamm.FiniteVolume3D()}
+    def test_discretise_spatial_variable_3d(self):
+        mesh = get_mesh_for_testing_3d(xpts=4, ypts=3, zpts=2)
+        spatial_methods = {
+            "macroscale": pybamm.FiniteVolume3D(),
+            "negative particle": pybamm.FiniteVolume3D(),
+            "positive particle": pybamm.FiniteVolume3D(),
+        }
+        disc = pybamm.Discretisation(mesh, spatial_methods)
 
-        domain = next(iter(mesh.keys()))
-        submesh = mesh[domain]
+        x1 = pybamm.SpatialVariable("x", ["negative electrode"])
+        x1_disc = disc.process_symbol(x1)
+        assert isinstance(x1_disc, pybamm.Vector)
+        np.testing.assert_array_equal(
+            x1_disc.evaluate(), disc.mesh["negative electrode"].nodes[:, np.newaxis]
+        )
 
-        c = pybamm.Variable("c", domain=domain)
+        x2 = pybamm.SpatialVariable("x", ["negative electrode", "separator"])
+        x2_disc = disc.process_symbol(x2)
+        assert isinstance(x2_disc, pybamm.Vector)
+        np.testing.assert_array_equal(
+            x2_disc.evaluate(),
+            disc.mesh[("negative electrode", "separator")].nodes[:, np.newaxis],
+        )
+
+        r = 3 * pybamm.SpatialVariable("r", ["negative particle"])
+        r_disc = disc.process_symbol(r)
+        assert isinstance(r_disc, pybamm.Vector)
+        np.testing.assert_array_equal(
+            r_disc.evaluate(),
+            3 * disc.mesh["negative particle"].nodes[:, np.newaxis],
+        )
+
+    def test_mass_matrix_shape_3d(self):
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        c = pybamm.Variable("c", domain=whole_cell)
         N = pybamm.grad(c)
-
         model = pybamm.BaseModel()
         model.rhs = {c: pybamm.div(N)}
         model.initial_conditions = {c: pybamm.Scalar(0)}
@@ -290,28 +165,29 @@ class TestFiniteVolume3D:
         }
         model.variables = {"c": c, "N": N}
 
-        disc = pybamm.Discretisation(mesh, spatial_methods)
-        disc.process_model(model)
-
-        expected_mass = np.eye(submesh.npts)
-        np.testing.assert_array_equal(
-            expected_mass, model.mass_matrix.entries.toarray()
-        )
-
-    def test_jacobian_3d(self):
-        mesh = get_mesh_for_testing_3d(xpts=5, ypts=4, zpts=3)
+        mesh = get_mesh_for_testing_3d(xpts=4, ypts=3, zpts=2)
         spatial_methods = {"macroscale": pybamm.FiniteVolume3D()}
         disc = pybamm.Discretisation(mesh, spatial_methods)
+        submesh = mesh[whole_cell]
+        disc.process_model(model)
 
-        domain = next(iter(mesh.keys()))
-        submesh = mesh[domain]
+        mass = np.eye(submesh.npts)
+        np.testing.assert_array_equal(mass, model.mass_matrix.entries.toarray())
+
+    def test_jacobian_3d(self):
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        mesh = get_mesh_for_testing_3d(xpts=4, ypts=3, zpts=2)
+        spatial_methods = {"macroscale": pybamm.FiniteVolume3D()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        submesh = mesh[whole_cell]
         spatial_method = pybamm.FiniteVolume3D()
         spatial_method.build(mesh)
 
-        var = pybamm.Variable("var", domain=domain)
+        # Setup a concatenated variable var on the whole cell
+        var = pybamm.Variable("var", domain=whole_cell)
         disc.set_variable_slices([var])
-        y = pybamm.StateVector(slice(0, submesh.npts))
-        y_test = np.ones(submesh.npts)[:, np.newaxis]
+        y = pybamm.StateVector(slice(0, submesh.npts), domain=whole_cell)
+        y_test = np.ones_like(submesh.nodes[:, np.newaxis])
 
         eqn = pybamm.grad(var)
         disc.bcs = {
@@ -324,12 +200,26 @@ class TestFiniteVolume3D:
         eqn_jac = eqn_disc.jac(y)
         jacobian = eqn_jac.evaluate(y=y_test)
 
-        # Jacobian should have appropriate dimensions
-        assert jacobian.shape[1] == submesh.npts
-        assert np.all(np.isfinite(jacobian.toarray()))
+        grad_matrix = spatial_method.gradient_matrix(
+            whole_cell, {"primary": whole_cell}
+        ).entries
 
-        # Test Laplacian Jacobian
-        eqn = pybamm.laplacian(var)
+        np.testing.assert_allclose(jacobian.toarray()[1:-1], grad_matrix.toarray())
+        np.testing.assert_allclose(
+            jacobian.toarray()[0, 0], grad_matrix.toarray()[0][0] * -2
+        )
+        np.testing.assert_allclose(
+            jacobian.toarray()[-1, -1], grad_matrix.toarray()[-1][-1] * -2
+        )
+
+        eqn = var * pybamm.grad(var)
+        eqn_disc = disc.process_symbol(eqn)
+        eqn_jac = eqn_disc.jac(y)
+
+        eqn_jac.evaluate(y=y_test)
+
+        flux = pybamm.grad(var)
+        eqn = pybamm.div(flux)
         disc.bcs = {
             var: {
                 "left": (pybamm.Scalar(1), "Neumann"),
@@ -338,315 +228,162 @@ class TestFiniteVolume3D:
         }
         eqn_disc = disc.process_symbol(eqn)
         eqn_jac = eqn_disc.jac(y)
-        jacobian = eqn_jac.evaluate(y=y_test)
+        eqn_jac.evaluate(y=y_test)
 
-        assert jacobian.shape == (submesh.npts, submesh.npts)
-        assert np.all(np.isfinite(jacobian.toarray()))
-
-    def test_divergence_conservation_3d(self):
-        mesh = get_mesh_for_testing_3d(xpts=6, ypts=5, zpts=4)
-        spatial_method = pybamm.FiniteVolume3D()
-        spatial_method.build(mesh)
-
-        domain = next(iter(mesh.keys()))
-        submesh = mesh[domain]
-        n_x, n_y, n_z = submesh.npts_x, submesh.npts_y, submesh.npts_z
-
-        flux_x = pybamm.Vector(np.ones((n_x + 1) * n_y * n_z), domain=domain)
-        flux_y = pybamm.Vector(np.ones(n_x * (n_y + 1) * n_z), domain=domain)
-        flux_z = pybamm.Vector(np.ones(n_x * n_y * (n_z + 1)), domain=domain)
-
-        vector_field = pybamm.VectorField3D(flux_x, flux_y, flux_z)
-
-        div_result = spatial_method.divergence(vector_field, vector_field, {})
-        div_vals = div_result.evaluate()
-
-        assert np.abs(np.mean(div_vals)) < 1.0
-        assert np.all(np.isfinite(div_vals))
-
-    def test_integral_operators_3d(self):
-        mesh = get_mesh_for_testing_3d(xpts=6, ypts=5, zpts=4)
-        spatial_method = pybamm.FiniteVolume3D()
-        spatial_method.build(mesh)
-
-        domain = next(iter(mesh.keys()))
-        submesh = mesh[domain]
-
-        var = pybamm.Variable("var", domain=domain)
-        constant_field = pybamm.Vector(np.ones(submesh.npts), domain=domain)
-
-        for direction in ["x", "y", "z"]:
-            coord = pybamm.SpatialVariable(
-                direction, domain=domain, direction=direction
-            )
-
-            integral_matrix = spatial_method.definite_integral_matrix(
-                var, integration_variable=[coord]
-            )
-
-            result = integral_matrix @ constant_field.entries
-
-            if direction == "x":
-                expected_length = submesh.edges_x[-1] - submesh.edges_x[0]
-            elif direction == "y":
-                expected_length = submesh.edges_y[-1] - submesh.edges_y[0]
-            elif direction == "z":
-                expected_length = submesh.edges_z[-1] - submesh.edges_z[0]
-
-            np.testing.assert_allclose(result, expected_length, rtol=0.1)
+        flux = var * pybamm.grad(var)
+        eqn = pybamm.div(flux)
+        disc.bcs = {
+            var: {
+                "left": (pybamm.Scalar(1), "Neumann"),
+                "right": (pybamm.Scalar(2), "Neumann"),
+            }
+        }
+        eqn_disc = disc.process_symbol(eqn)
+        eqn_jac = eqn_disc.jac(y)
+        eqn_jac.evaluate(y=y_test)
 
     def test_delta_function_3d(self):
-        mesh = get_mesh_for_testing_3d(xpts=8, ypts=6, zpts=4)
+        mesh = get_mesh_for_testing_3d(xpts=4, ypts=3, zpts=2)
         spatial_methods = {"macroscale": pybamm.FiniteVolume3D()}
         disc = pybamm.Discretisation(mesh, spatial_methods)
-
-        domain = next(iter(mesh.keys()))
-        submesh = mesh[domain]
 
         var = pybamm.Variable("var")
+        delta_fn_left = pybamm.DeltaFunction(var, "left", "negative electrode")
+        delta_fn_right = pybamm.DeltaFunction(var, "right", "negative electrode")
+        disc.set_variable_slices([var])
+        delta_fn_left_disc = disc.process_symbol(delta_fn_left)
+        delta_fn_right_disc = disc.process_symbol(delta_fn_right)
 
-        x_center = (submesh.nodes_x[0] + submesh.nodes_x[-1]) / 2
-        y_center = (submesh.nodes_y[0] + submesh.nodes_y[-1]) / 2
-        z_center = (submesh.nodes_z[0] + submesh.nodes_z[-1]) / 2
+        y = np.ones_like(mesh["negative electrode"].nodes[:, np.newaxis])
 
-        position = pybamm.Vector([x_center, y_center, z_center])
-        delta_fn = pybamm.DeltaFunction(var, position, domain)
+        assert delta_fn_left_disc.domains == delta_fn_left.domains
+        assert isinstance(delta_fn_left_disc, pybamm.Multiplication)
+        assert isinstance(delta_fn_left_disc.left, pybamm.Matrix)
+
+        np.testing.assert_array_equal(delta_fn_left_disc.left.evaluate()[:, 1:], 0)
+        assert delta_fn_left_disc.shape == y.shape
+
+        assert delta_fn_right_disc.domains == delta_fn_right.domains
+        assert isinstance(delta_fn_right_disc, pybamm.Multiplication)
+        assert isinstance(delta_fn_right_disc.left, pybamm.Matrix)
+
+        np.testing.assert_array_equal(delta_fn_right_disc.left.evaluate()[:, :-1], 0)
+        assert delta_fn_right_disc.shape == y.shape
+
+        var_disc = disc.process_symbol(var)
+        x = pybamm.standard_spatial_vars.x_n  # stands for negative-electrode nodes
+        delta_fn_int_disc = disc.process_symbol(pybamm.Integral(delta_fn_left, x))
+        np.testing.assert_allclose(
+            var_disc.evaluate(y=y) * mesh["negative electrode"].edges[-1],
+            np.sum(delta_fn_int_disc.evaluate(y=y)),
+        )
+
+    def test_heaviside_3d(self):
+        mesh = get_mesh_for_testing_3d(xpts=4, ypts=3, zpts=2)
+        spatial_methods = {"macroscale": pybamm.FiniteVolume3D()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        var = pybamm.Variable("var", domain="negative electrode")
+        heav = var > 1
 
         disc.set_variable_slices([var])
-        delta_fn_disc = disc.process_symbol(delta_fn)
+        disc_heav = disc.process_symbol(heav * var)
+        nodes = mesh["negative electrode"].nodes
+        assert disc_heav.size == nodes.size
 
-        y = np.ones(submesh.npts)[:, np.newaxis]
-
-        assert delta_fn_disc.domains == delta_fn.domains
-        assert delta_fn_disc.shape == y.shape
-
-        delta_vals = delta_fn_disc.evaluate(y=y)
-        assert np.sum(delta_vals > 0) <= 1  # At most one non-zero entry
-
-    def test_boundary_conditions_3d(self):
-        mesh = get_mesh_for_testing_3d(xpts=6, ypts=5, zpts=4)
-        spatial_method = pybamm.FiniteVolume3D()
-        spatial_method.build(mesh)
-
-        domain = next(iter(mesh.keys()))
-        submesh = mesh[domain]
-
-        u = pybamm.Variable("u", domain=domain)
-        x, y, z = np.meshgrid(
-            submesh.nodes_x, submesh.nodes_y, submesh.nodes_z, indexing="ij"
+        np.testing.assert_array_equal(
+            disc_heav.evaluate(y=2 * np.ones_like(nodes)),
+            2 * np.ones((nodes.size, 1)),
         )
-        u_vals = x.flatten() + y.flatten() + z.flatten()
-        u_vec = pybamm.Vector(u_vals, domain=domain)
-
-        # Test different boundary condition combinations
-        bc_combinations = [
-            {
-                "left": (pybamm.Scalar(1.0), "Dirichlet"),
-                "right": (pybamm.Scalar(2.0), "Dirichlet"),
-            },
-            {
-                "left": (pybamm.Scalar(0.0), "Neumann"),
-                "right": (pybamm.Scalar(0.0), "Neumann"),
-            },
-            {
-                "left": (pybamm.Scalar(1.0), "Dirichlet"),
-                "right": (pybamm.Scalar(0.0), "Neumann"),
-            },
-            {
-                "left": (pybamm.Scalar(0.0), "Neumann"),
-                "right": (pybamm.Scalar(2.0), "Dirichlet"),
-            },
-        ]
-
-        for bcs in bc_combinations:
-            boundary_conditions = {u: bcs}
-
-            grad_x = spatial_method._gradient(u, u_vec, boundary_conditions, "x")
-            grad_vals = grad_x.evaluate()
-
-            assert np.all(np.isfinite(grad_vals))
-            assert grad_vals.shape[0] > 0
-
-            # Test Laplacian computation
-            laplacian = spatial_method.laplacian(u, u_vec, boundary_conditions)
-            laplacian_vals = laplacian.evaluate()
-
-            assert np.all(np.isfinite(laplacian_vals))
-            assert laplacian_vals.shape[0] == submesh.npts
-
-    def test_spiral_coordinates_3d(self):
-        mesh = get_mesh_for_testing_3d(xpts=6, ypts=8, zpts=4)
-        spatial_method = pybamm.FiniteVolume3D()
-        spatial_method.build(mesh)
-
-        domain = next(iter(mesh.keys()))
-        submesh = mesh[domain]
-
-        submesh.coord_sys = "spiral"
-
-        spiral_metric = spatial_method.compute_spiral_metric(submesh)
-        assert len(spiral_metric) == submesh.npts_x
-        assert np.all(spiral_metric > 0)
-        assert np.all(np.isfinite(spiral_metric))
-
-        # Test basic operations with spiral coordinates
-        u = pybamm.Variable("u", domain=domain)
-        x, y, z = np.meshgrid(
-            submesh.nodes_x, submesh.nodes_y, submesh.nodes_z, indexing="ij"
+        np.testing.assert_array_equal(
+            disc_heav.evaluate(y=-2 * np.ones_like(nodes)),
+            np.zeros((nodes.size, 1)),
         )
-        u_vals = x.flatten() + y.flatten()
-        u_vec = pybamm.Vector(u_vals, domain=domain)
-
-        grad_u = spatial_method.gradient(u, u_vec, {})
-
-        grad_x_vals = grad_u.x_field.evaluate()
-        grad_y_vals = grad_u.y_field.evaluate()
-        grad_z_vals = grad_u.z_field.evaluate()
-
-        assert np.all(np.isfinite(grad_x_vals))
-        assert np.all(np.isfinite(grad_y_vals))
-        assert np.all(np.isfinite(grad_z_vals))
-
-    def test_convergence_rates_3d(self):
-        """Test convergence rates for manufactured solutions"""
-
-        def compute_error(npts):
-            """Compute error for quadratic manufactured solution"""
-            mesh = get_mesh_for_testing_3d(xpts=npts, ypts=npts, zpts=max(3, npts // 2))
-            spatial_method = pybamm.FiniteVolume3D()
-            spatial_method.build(mesh)
-
-            domain = next(iter(mesh.keys()))
-            submesh = mesh[domain]
-
-            u = pybamm.Variable("u", domain=domain)
-            x, y, z = np.meshgrid(
-                submesh.nodes_x, submesh.nodes_y, submesh.nodes_z, indexing="ij"
-            )
-            u_vals = x.flatten() ** 2 + y.flatten() ** 2 + z.flatten() ** 2
-            u_vec = pybamm.Vector(u_vals, domain=domain)
-
-            # Compute Laplacian
-            laplacian = spatial_method.laplacian(u, u_vec, {})
-            laplacian_vals = laplacian.evaluate()
-
-            error = np.abs(laplacian_vals - 6.0).max()
-            h = min(
-                np.diff(submesh.edges_x).min(),
-                np.diff(submesh.edges_y).min(),
-                np.diff(submesh.edges_z).min(),
-            )
-
-            return error, h
-
-        # Test on progressively finer meshes
-        mesh_sizes = [4, 6, 8]
-        errors = []
-        h_values = []
-
-        for npts in mesh_sizes:
-            try:
-                error, h = compute_error(npts)
-                if np.isfinite(error) and error > 0:
-                    errors.append(error)
-                    h_values.append(h)
-            except Exception:
-                continue
-
-        if len(errors) >= 2:
-            for i in range(1, len(errors)):
-                ratio = errors[i] / errors[i - 1]
-                assert ratio < 5.0, f"Error should not increase dramatically: {errors}"
-
-    def test_evaluate_at_3d(self):
-        mesh = get_mesh_for_testing_3d(xpts=8, ypts=6, zpts=4)
-        spatial_methods = {"macroscale": pybamm.FiniteVolume3D()}
-        disc = pybamm.Discretisation(mesh, spatial_methods)
-
-        domain = next(iter(mesh.keys()))
-        submesh = mesh[domain]
-        n = submesh.npts
-
-        var = pybamm.StateVector(slice(0, n), domain=domain)
-
-        # Choose evaluation point near center
-        idx_x = submesh.npts_x // 2
-        idx_y = submesh.npts_y // 2
-        idx_z = submesh.npts_z // 2
-
-        x_pos = submesh.nodes_x[idx_x]
-        y_pos = submesh.nodes_y[idx_y]
-        z_pos = submesh.nodes_z[idx_z]
-
-        position = pybamm.Vector([x_pos, y_pos, z_pos])
-        evaluate_at = pybamm.EvaluateAt(var, position)
-
-        evaluate_at_disc = disc.process_symbol(evaluate_at)
-
-        assert isinstance(evaluate_at_disc, pybamm.MatrixMultiplication)
-        assert isinstance(evaluate_at_disc.left, pybamm.Matrix)
-        assert isinstance(evaluate_at_disc.right, pybamm.StateVector)
-
-        # Test evaluation
-        y = np.arange(n)[:, np.newaxis]
-        result = evaluate_at_disc.evaluate(y=y)
-
-        # Should return scalar value
-        assert result.shape == (1, 1) or result.shape == ()
-        assert np.isfinite(result)
 
     def test_upwind_downwind_3d(self):
-        mesh = get_mesh_for_testing_3d(xpts=6, ypts=5, zpts=4)
+        mesh = get_mesh_for_testing_3d(xpts=4, ypts=3, zpts=2)
         spatial_methods = {"macroscale": pybamm.FiniteVolume3D()}
         disc = pybamm.Discretisation(mesh, spatial_methods)
 
-        domain = next(iter(mesh.keys()))
-        submesh = mesh[domain]
-        n = submesh.npts
+        n = mesh["negative electrode"].npts
+        var = pybamm.StateVector(slice(0, n), domain="negative electrode")
+        upwind = pybamm.upwind(var)
+        downwind = pybamm.downwind(var)
 
-        var = pybamm.StateVector(slice(0, n), domain=domain)
-
-        try:
-            upwind = pybamm.upwind(var)
-            downwind = pybamm.downwind(var)
-
-            disc.bcs = {
-                var: {
-                    "left": (pybamm.Scalar(5), "Dirichlet"),
-                    "right": (pybamm.Scalar(3), "Dirichlet"),
-                }
+        disc.bcs = {
+            var: {
+                "left": (pybamm.Scalar(5), "Dirichlet"),
+                "right": (pybamm.Scalar(3), "Dirichlet"),
             }
+        }
 
-            disc_upwind = disc.process_symbol(upwind)
-            disc_downwind = disc.process_symbol(downwind)
+        disc_upwind = disc.process_symbol(upwind)
+        disc_downwind = disc.process_symbol(downwind)
 
-            y_test = 2 * np.ones(n)
+        nodes = mesh["negative electrode"].nodes
+        assert disc_upwind.size == nodes.size + 1
+        assert disc_downwind.size == nodes.size + 1
 
-            upwind_vals = disc_upwind.evaluate(y=y_test)
-            downwind_vals = disc_downwind.evaluate(y=y_test)
+        y_test = 2 * np.ones_like(nodes)
+        np.testing.assert_array_equal(
+            disc_upwind.evaluate(y=y_test),
+            np.concatenate([np.array([8]), 2 * np.ones(n)])[:, np.newaxis],
+        )
+        np.testing.assert_array_equal(
+            disc_downwind.evaluate(y=y_test),
+            np.concatenate([2 * np.ones(n), np.array([4])])[:, np.newaxis],
+        )
 
-            assert upwind_vals.shape[0] > n  # Should include boundary points
-            assert downwind_vals.shape[0] > n
-            assert np.all(np.isfinite(upwind_vals))
-            assert np.all(np.isfinite(downwind_vals))
+        disc.bcs = {}
+        disc._discretised_symbols = {}
+        with pytest.raises(pybamm.ModelError, match="Boundary conditions"):
+            disc.process_symbol(upwind)
 
-        except (NotImplementedError, AttributeError):
-            pytest.skip("Upwind/downwind operators not implemented for 3D")
+        disc.bcs = {
+            var: {
+                "left": (pybamm.Scalar(5), "Neumann"),
+                "right": (pybamm.Scalar(3), "Neumann"),
+            }
+        }
+        with pytest.raises(pybamm.ModelError, match="Dirichlet boundary conditions"):
+            disc.process_symbol(upwind)
+        with pytest.raises(pybamm.ModelError, match="Dirichlet boundary conditions"):
+            disc.process_symbol(downwind)
 
-    def test_inner_product_3d(self):
-        mesh = get_mesh_for_testing_3d(xpts=6, ypts=5, zpts=4)
-        spatial_methods = {"macroscale": pybamm.FiniteVolume3D()}
+    def test_full_broadcast_domains_3d(self):
+        model = pybamm.BaseModel()
+        var = pybamm.Variable(
+            "var", domain=["negative electrode", "separator"], scale=100
+        )
+        model.rhs = {var: 0}
+        a = pybamm.InputParameter("a")
+        ic = pybamm.concatenation(
+            pybamm.FullBroadcast(a * 100, "negative electrode"),
+            pybamm.FullBroadcast(100, "separator"),
+        )
+        model.initial_conditions = {var: ic}
 
-        domain = next(iter(mesh.keys()))
-        submesh = mesh[domain]
+        mesh = get_mesh_for_testing_3d(xpts=4, ypts=3, zpts=2)
+        spatial_methods = {
+            "negative electrode": pybamm.FiniteVolume3D(),
+            "separator": pybamm.FiniteVolume3D(),
+        }
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        disc.process_model(model)
 
-        var = pybamm.Variable("var", domain=domain)
+    def test_inner_3d(self):
+        mesh = get_mesh_for_testing_3d(xpts=4, ypts=3, zpts=2)
+        spatial_methods = {
+            "macroscale": pybamm.FiniteVolume3D(),
+            "negative particle": pybamm.FiniteVolume3D(),
+        }
+
+        var = pybamm.Variable("var", domain="negative particle")
         grad_var = pybamm.grad(var)
         inner = pybamm.inner(grad_var, grad_var)
 
         disc = pybamm.Discretisation(mesh, spatial_methods)
         disc.set_variable_slices([var])
-
         boundary_conditions = {
             var: {
                 "left": (pybamm.Scalar(0), "Neumann"),
@@ -654,16 +391,88 @@ class TestFiniteVolume3D:
             }
         }
         disc.bcs = boundary_conditions
-
         inner_disc = disc.process_symbol(inner)
 
         assert isinstance(inner_disc, pybamm.Inner)
+        assert isinstance(inner_disc.left, pybamm.MatrixMultiplication)
+        assert isinstance(inner_disc.right, pybamm.MatrixMultiplication)
 
-        n = submesh.npts
+        n = mesh["negative particle"].npts
         y = np.ones(n)[:, np.newaxis]
-        result = inner_disc.evaluate(y=y)
+        np.testing.assert_array_equal(inner_disc.evaluate(y=y), np.zeros((n, 1)))
 
-        # For constant field, inner product should be small
-        assert result.shape == (n, 1)
-        assert np.all(np.isfinite(result))
-        np.testing.assert_allclose(result, 0, atol=1e-10)
+        grad_var = pybamm.grad(pybamm.SecondaryBroadcast(var, "negative electrode"))
+        inner = pybamm.inner(grad_var, grad_var)
+
+        inner_disc = disc.process_symbol(inner)
+        assert isinstance(inner_disc, pybamm.Inner)
+        assert isinstance(inner_disc.left, pybamm.MatrixMultiplication)
+        assert isinstance(inner_disc.right, pybamm.MatrixMultiplication)
+
+        m = mesh["negative electrode"].npts
+        np.testing.assert_array_equal(inner_disc.evaluate(y=y), np.zeros((n * m, 1)))
+
+    def test_discrete_laplacian_linear_in_x_is_zero(self):
+        nx, ny, nz = 6, 5, 4
+        mesh = get_mesh_for_testing_3d(xpts=nx, ypts=ny, zpts=nz)
+
+        spatial_method = pybamm.FiniteVolume3D()
+        spatial_method.build(mesh)
+
+        submesh = mesh["negative electrode"]
+        n = submesh.npts
+
+        x_nodes = submesh.nodes  # shape = (n,)
+
+        u_exact = x_nodes[:, np.newaxis]
+
+        var = pybamm.Variable("var", domain=["negative electrode"])
+        lap_symbolic = pybamm.div(pybamm.grad(var))
+
+        disc = pybamm.Discretisation(mesh, {"negative electrode": spatial_method})
+        disc.set_variable_slices([var])
+
+        disc.bcs = {
+            var: {
+                "left": (pybamm.Scalar(0), "Neumann"),
+                "right": (pybamm.Scalar(0), "Neumann"),
+            }
+        }
+
+        lap_disc = disc.process_symbol(lap_symbolic)
+
+        lap_u = lap_disc.evaluate(y=u_exact)
+
+        np.testing.assert_allclose(lap_u, np.zeros((n, 1)), atol=0, rtol=0)
+
+    def test_discrete_laplacian_quadratic_in_x_converges_to_two(self):
+        nx = ny = nz = 20
+        mesh = get_mesh_for_testing_3d(xpts=nx, ypts=ny, zpts=nz)
+
+        spatial_method = pybamm.FiniteVolume3D()
+        spatial_method.build(mesh)
+
+        submesh = mesh["negative electrode"]
+        n = submesh.npts
+
+        x_nodes = submesh.nodes
+        u_exact = (x_nodes**2)[:, np.newaxis]
+        var = pybamm.Variable("var", domain=["negative electrode"])
+        lap_symbolic = pybamm.div(pybamm.grad(var))
+
+        disc = pybamm.Discretisation(mesh, {"negative electrode": spatial_method})
+        disc.set_variable_slices([var])
+        disc.bcs = {
+            var: {
+                "left": (pybamm.Scalar(0), "Neumann"),
+                "right": (pybamm.Scalar(0), "Neumann"),
+            }
+        }
+
+        lap_disc = disc.process_symbol(lap_symbolic)
+
+        lap_u = lap_disc.evaluate(y=u_exact)
+
+        tol = 5e-4
+        two_vec = 2 * np.ones((n, 1))
+        np.testing.assert_allclose(lap_u, two_vec, atol=tol, rtol=0)

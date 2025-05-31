@@ -1233,10 +1233,12 @@ class UpwindDownwind3D(UpwindDownwind):
 
     def __init__(self, child, x_dir, y_dir, z_dir):
         super().__init__("upwind_downwind_3d", child)
-        self.x_dir, self.y_dir, self.z_dir = x_dir, y_dir, z_dir
+        self.x_direction, self.y_direction, self.z_direction = x_dir, y_dir, z_dir
 
     def _unary_new_copy(self, child, perform_simplifications: bool = True):
-        return UpwindDownwind3D(child, self.x_dir, self.y_dir, self.z_dir)
+        return UpwindDownwind3D(
+            child, self.x_direction, self.y_direction, self.z_direction
+        )
 
 
 class Magnitude(UnaryOperator):
