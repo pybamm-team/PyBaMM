@@ -459,6 +459,17 @@ class Solution:
                 vars_pybamm[i] = var_pybamm
             elif variable in model._variables_casadi:
                 var_casadi = model._variables_casadi[variable]
+            elif isinstance(var_pybamm, pybamm.VectorField3D):
+                var_casadi_x = self.process_casadi_var(
+                    var_pybamm.x_field, inputs, ys.shape
+                )
+                var_casadi_y = self.process_casadi_var(
+                    var_pybamm.y_field, inputs, ys.shape
+                )
+                var_casadi_z = self.process_casadi_var(
+                    var_pybamm.z_field, inputs, ys.shape
+                )
+                var_casadi = {"x": var_casadi_x, "y": var_casadi_y, "z": var_casadi_z}
             else:
                 var_casadi = self.process_casadi_var(
                     var_pybamm,

@@ -142,12 +142,14 @@ class SpatialVariable(IndependentVariable):
         auxiliary_domains: AuxiliaryDomainType = None,
         domains: DomainsType = None,
         coord_sys=None,
+        direction: str | None = None,
     ) -> None:
         self.coord_sys = coord_sys
         super().__init__(
             name, domain=domain, auxiliary_domains=auxiliary_domains, domains=domains
         )
         domain = self.domain
+        self.direction = direction
 
         if domain == []:
             raise ValueError("domain must be provided")

@@ -44,6 +44,7 @@ from .expression_tree.independent_variable import *
 from .expression_tree.independent_variable import t
 from .expression_tree.vector import Vector
 from .expression_tree.state_vector import StateVectorBase, StateVector, StateVectorDot
+from .expression_tree.vector_field import VectorField3D
 
 from .expression_tree.exceptions import *
 
@@ -139,6 +140,13 @@ from .meshes.one_dimensional_submeshes import (
     SpectralVolume1DSubMesh,
     SymbolicUniform1DSubMesh,
 )
+
+from .meshes.three_dimensional_submeshes import (
+    SubMesh3D,
+    Uniform3DSubMesh,
+    ScikitFemGenerator3D,
+)
+
 from .meshes.scikit_fem_submeshes import (
     ScikitSubMesh2D,
     ScikitUniform2DSubMesh,
@@ -154,6 +162,7 @@ from .models.base_model import load_model
 from .spatial_methods.spatial_method import SpatialMethod
 from .spatial_methods.zero_dimensional_method import ZeroDimensionalSpatialMethod
 from .spatial_methods.finite_volume import FiniteVolume
+from .spatial_methods.finite_volume_3d import FiniteVolume3D
 from .spatial_methods.spectral_volume import SpectralVolume
 from .spatial_methods.scikit_finite_element import ScikitFiniteElement
 
