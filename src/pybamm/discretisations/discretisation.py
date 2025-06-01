@@ -281,19 +281,16 @@ class Discretisation:
                 start_ = start
                 children = variable.children
                 meshes = OrderedDict()
-                x_points = OrderedDict()
-                y_points = OrderedDict()
-                z_points = OrderedDict()
 
                 for child in children:
-                    meshes[child] = submesh_3d = spatial_method.mesh[child.domain[0]]
+                    meshes[child] = [spatial_method.mesh[dom] for dom in child.domain]
                     if dimension == 3:
-                        npts_x = submesh_3d.npts_x
-                        npts_y = submesh_3d.npts_y
-                        npts_z = submesh_3d.npts_z
-                        x_points[child] = npts_x
-                        y_points[child] = npts_x * npts_y
-                        z_points[child] = npts_z
+                        x_points = OrderedDict()
+                        y_points = OrderedDict()
+                        z_points = OrderedDict()
+                        x_points[child] = sum(m.npts_x for m in meshes[child])
+                        y_points[child] = sum(m.npts_y for m in meshes[child])
+                        z_points[child] = sum(m.npts_z for m in meshes[child])
 
                 sec_points = spatial_method._get_auxiliary_domain_repeats(
                     variable.domains

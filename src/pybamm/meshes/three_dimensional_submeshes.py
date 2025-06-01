@@ -3,8 +3,6 @@ import pybamm
 from .meshes import SubMesh
 from pybamm.util import import_optional_dependency
 
-skfem = import_optional_dependency("skfem")
-
 
 def _num(val):
     if hasattr(val, "evaluate"):  # PyBaMM Scalar
@@ -205,6 +203,7 @@ class ScikitFemGenerator3D:
         h : float, optional
             Mesh size parameter (smaller = finer mesh)
         """
+        skfem = import_optional_dependency("skfem")
         if h is None:
             h = min(x_max - x_min, y_max - y_min, z_max - z_min) / 10
 
@@ -236,6 +235,7 @@ class ScikitFemGenerator3D:
         h : float, optional
             Mesh size parameter
         """
+        skfem = import_optional_dependency("skfem")
         if h is None:
             h = min(radius, height) / 10
 
@@ -290,6 +290,7 @@ class ScikitFemGenerator3D:
         h : float, optional
             Mesh size parameter
         """
+        skfem = import_optional_dependency("skfem")
         if h is None:
             h = min(outer_radius - inner_radius, height) / 20
 
