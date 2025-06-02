@@ -5,7 +5,6 @@ from scipy.sparse import (
     eye,
     kron,
     csr_matrix,
-    vstack,
     hstack,
     block_diag,
     spdiags,
@@ -2592,6 +2591,8 @@ class FiniteVolume3D(pybamm.SpatialMethod):
                     f"or n_edges={n_edges}, but got {child.size}"
                 )
 
+        return pybamm.domain_concatenation(disc_children, self.mesh)
+
     def edge_to_node(self, discretised_symbol, method="arithmetic", direction="x"):
         """
         Convert a discretised symbol evaluated on the cell edges to a discretised symbol
@@ -2649,97 +2650,68 @@ class FiniteVolume3D(pybamm.SpatialMethod):
 
             if shift_key == "node to edge":
                 if direction == "x":
-                    sub_matrix_left = csr_matrix(
-                        ([1.5, -0.5], ([0, 0], [0, 1])), shape=(1, n_x)
-                    )
-                    sub_matrix_center = diags([0.5, 0.5], [0, 1], shape=(n_x - 1, n_x))
-                    sub_matrix_right = csr_matrix(
-                        ([-0.5, 1.5], ([0, 0], [n_x - 2, n_x - 1])), shape=(1, n_x)
-                    )
-                    sub_matrix_1d = vstack(
-                        [sub_matrix_left, sub_matrix_center, sub_matrix_right]
-                    )
+                    sub_matrix_1d = diags([0.5, 0.5], [0, 1], shape=(n_x - 1, n_x))
                     sub_matrix = block_diag([sub_matrix_1d] * (n_y * n_z))
 
                 elif direction == "y":
-                    one_fives = np.ones(n_x) * 1.5
-                    neg_zero_fives = np.ones(n_x) * -0.5
-                    rows = np.arange(0, n_x)
-                    cols_first = np.arange(0, n_x)
-                    cols_second = np.arange(n_x, 2 * n_x)
-                    data = np.hstack([one_fives, neg_zero_fives])
-                    cols = np.hstack([cols_first, cols_second])
-                    rows = np.hstack([rows, rows])
-                    sub_matrix_top = csr_matrix(
-                        (data, (rows, cols)), shape=(n_x, n_x * n_y)
+                    # For y-direction: we need to connect adjacent nodes in y for each x,z position
+                    # Total y-edges: n_x * (n_y-1) * n_z
+                    # Each edge connects two nodes that are n_x positions apart in the flattened array
+
+                    n_edges_y = n_x * (n_y - 1) * n_z
+                    n_nodes = n_x * n_y * n_z
+
+                    data = []
+                    rows = []
+                    cols = []
+
+                    edge_idx = 0
+                    for k in range(n_z):
+                        for j in range(n_y - 1):
+                            for i in range(n_x):
+                                node1 = k * (n_x * n_y) + j * n_x + i
+                                node2 = k * (n_x * n_y) + (j + 1) * n_x + i
+
+                                rows.extend([edge_idx, edge_idx])
+                                cols.extend([node1, node2])
+                                data.extend([0.5, 0.5])
+
+                                edge_idx += 1
+
+                    sub_matrix = csr_matrix(
+                        (data, (rows, cols)), shape=(n_edges_y, n_nodes)
                     )
-                    cols_first = np.arange((n_y - 2) * n_x, (n_y - 1) * n_x)
-                    cols_second = np.arange((n_y - 1) * n_x, n_y * n_x)
-                    data = np.hstack([neg_zero_fives, one_fives])
-                    cols = np.hstack([cols_first, cols_second])
-                    rows = np.arange(0, n_x)
-                    rows = np.hstack([rows, rows])
-                    sub_matrix_bottom = csr_matrix(
-                        (data, (rows, cols)), shape=(n_x, n_x * n_y)
-                    )
-                    # Interior averaging
-                    data = np.ones((n_y - 1) * n_x) * 0.5
-                    data = np.hstack([data, data])
-                    rows = np.arange(0, (n_y - 1) * n_x)
-                    rows = np.hstack([rows, rows])
-                    cols_first = np.arange(0, (n_y - 1) * n_x)
-                    cols_second = np.arange(n_x, n_x * n_y)
-                    cols = np.hstack([cols_first, cols_second])
-                    sub_matrix_center = csr_matrix(
-                        (data, (rows, cols)), shape=(n_x * (n_y - 1), n_x * n_y)
-                    )
-                    sub_matrix_2d = vstack(
-                        [sub_matrix_top, sub_matrix_center, sub_matrix_bottom]
-                    )
-                    # Repeat for each z-plane
-                    sub_matrix = block_diag([sub_matrix_2d] * n_z)
 
                 elif direction == "z":
-                    one_fives = np.ones(n_x * n_y) * 1.5
-                    neg_zero_fives = np.ones(n_x * n_y) * -0.5
-                    rows = np.arange(0, n_x * n_y)
-                    cols_first = np.arange(0, n_x * n_y)
-                    cols_second = np.arange(n_x * n_y, 2 * n_x * n_y)
-                    data = np.hstack([one_fives, neg_zero_fives])
-                    cols = np.hstack([cols_first, cols_second])
-                    rows = np.hstack([rows, rows])
-                    sub_matrix_bottom = csr_matrix(
-                        (data, (rows, cols)), shape=(n_x * n_y, n_x * n_y * n_z)
+                    n_edges_z = n_x * n_y * (n_z - 1)
+                    n_nodes = n_x * n_y * n_z
+
+                    data = []
+                    rows = []
+                    cols = []
+
+                    edge_idx = 0
+                    for k in range(n_z - 1):
+                        for j in range(n_y):
+                            for i in range(n_x):
+                                node1 = k * (n_x * n_y) + j * n_x + i
+                                node2 = (k + 1) * (n_x * n_y) + j * n_x + i
+
+                                rows.extend([edge_idx, edge_idx])
+                                cols.extend([node1, node2])
+                                data.extend([0.5, 0.5])
+
+                                edge_idx += 1
+
+                    sub_matrix = csr_matrix(
+                        (data, (rows, cols)), shape=(n_edges_z, n_nodes)
                     )
-                    cols_first = np.arange((n_z - 2) * n_x * n_y, (n_z - 1) * n_x * n_y)
-                    cols_second = np.arange((n_z - 1) * n_x * n_y, n_z * n_x * n_y)
-                    data = np.hstack([neg_zero_fives, one_fives])
-                    cols = np.hstack([cols_first, cols_second])
-                    rows = np.arange(0, n_x * n_y)
-                    rows = np.hstack([rows, rows])
-                    sub_matrix_top = csr_matrix(
-                        (data, (rows, cols)), shape=(n_x * n_y, n_x * n_y * n_z)
-                    )
-                    data = np.ones((n_z - 1) * n_x * n_y) * 0.5
-                    data = np.hstack([data, data])
-                    rows = np.arange(0, (n_z - 1) * n_x * n_y)
-                    rows = np.hstack([rows, rows])
-                    cols_first = np.arange(0, (n_z - 1) * n_x * n_y)
-                    cols_second = np.arange(n_x * n_y, n_x * n_y * n_z)
-                    cols = np.hstack([cols_first, cols_second])
-                    sub_matrix_center = csr_matrix(
-                        (data, (rows, cols)),
-                        shape=(n_x * n_y * (n_z - 1), n_x * n_y * n_z),
-                    )
-                    sub_matrix = vstack(
-                        [sub_matrix_bottom, sub_matrix_center, sub_matrix_top]
-                    )
+
                 else:
                     raise ValueError(f"direction '{direction}' not recognised")
 
             elif shift_key == "edge to node":
                 if direction == "x":
-                    # Map from (n_x-1)*n_y*n_z x-edges to n_x*n_y*n_z nodes
                     data = []
                     rows = []
                     cols = []
@@ -2749,20 +2721,17 @@ class FiniteVolume3D(pybamm.SpatialMethod):
 
                     for _k in range(n_z):
                         for _j in range(n_y):
-                            # Left boundary node: extrapolate from first edge
                             rows.append(row_idx)
                             cols.append(col_idx)
                             data.append(1.0)
                             row_idx += 1
 
-                            # Interior nodes: average adjacent edges
                             for i in range(1, n_x - 1):
                                 rows.extend([row_idx, row_idx])
                                 cols.extend([col_idx + i - 1, col_idx + i])
                                 data.extend([0.5, 0.5])
                                 row_idx += 1
 
-                            # Right boundary node: extrapolate from last edge
                             rows.append(row_idx)
                             cols.append(col_idx + n_x - 2)
                             data.append(1.0)
@@ -2776,152 +2745,139 @@ class FiniteVolume3D(pybamm.SpatialMethod):
                     )
 
                 elif direction == "y":
-                    # Map from n_x*(n_y-1)*n_z y-edges to n_x*n_y*n_z nodes
+                    n_edges_y = n_x * (n_y - 1) * n_z
+                    n_nodes = n_x * n_y * n_z
+
                     data = []
                     rows = []
                     cols = []
 
-                    row_idx = 0
+                    node_idx = 0
 
                     for k in range(n_z):
-                        # Front boundary nodes (j=0)
-                        for i in range(n_x):
-                            rows.append(row_idx)
-                            cols.append(k * n_x * (n_y - 1) + i)
-                            data.append(1.0)
-                            row_idx += 1
-
-                        # Interior nodes
-                        for j in range(1, n_y - 1):
+                        for j in range(n_y):
                             for i in range(n_x):
-                                rows.extend([row_idx, row_idx])
-                                cols.extend(
-                                    [
-                                        k * n_x * (n_y - 1) + (j - 1) * n_x + i,
-                                        k * n_x * (n_y - 1) + j * n_x + i,
-                                    ]
-                                )
-                                data.extend([0.5, 0.5])
-                                row_idx += 1
+                                if j == 0:
+                                    edge_idx = k * n_x * (n_y - 1) + 0 * n_x + i
+                                    rows.append(node_idx)
+                                    cols.append(edge_idx)
+                                    data.append(1.0)
+                                elif j == n_y - 1:
+                                    edge_idx = k * n_x * (n_y - 1) + (n_y - 2) * n_x + i
+                                    rows.append(node_idx)
+                                    cols.append(edge_idx)
+                                    data.append(1.0)
+                                else:
+                                    edge_left = k * n_x * (n_y - 1) + (j - 1) * n_x + i
+                                    edge_right = k * n_x * (n_y - 1) + j * n_x + i
+                                    rows.extend([node_idx, node_idx])
+                                    cols.extend([edge_left, edge_right])
+                                    data.extend([0.5, 0.5])
 
-                        # Back boundary nodes (j=n_y-1)
-                        for i in range(n_x):
-                            rows.append(row_idx)
-                            cols.append(k * n_x * (n_y - 1) + (n_y - 2) * n_x + i)
-                            data.append(1.0)
-                            row_idx += 1
+                                node_idx += 1
+                                print(f"Expected: nodes={n_nodes}, edges_y={n_edges_y}")
 
                     sub_matrix = csr_matrix(
-                        (data, (rows, cols)),
-                        shape=(n_x * n_y * n_z, n_x * (n_y - 1) * n_z),
+                        (data, (rows, cols)), shape=(n_nodes, n_edges_y)
                     )
 
                 elif direction == "z":
+                    n_edges_z = n_x * n_y * (n_z - 1)
+                    n_nodes = n_x * n_y * n_z
+
                     data = []
                     rows = []
                     cols = []
 
-                    row_idx = 0
+                    node_idx = 0
 
-                    for j in range(n_y):
-                        for i in range(n_x):
-                            rows.append(row_idx)
-                            cols.append(j * n_x + i)
-                            data.append(1.0)
-                            row_idx += 1
-
-                    # Interior nodes
-                    for k in range(1, n_z - 1):
+                    for k in range(n_z):
                         for j in range(n_y):
                             for i in range(n_x):
-                                rows.extend([row_idx, row_idx])
-                                cols.extend(
-                                    [
-                                        (k - 1) * n_x * n_y + j * n_x + i,
-                                        k * n_x * n_y + j * n_x + i,
-                                    ]
-                                )
-                                data.extend([0.5, 0.5])
-                                row_idx += 1
+                                if k == 0:
+                                    edge_idx = 0 * (n_x * n_y) + j * n_x + i
+                                    rows.append(node_idx)
+                                    cols.append(edge_idx)
+                                    data.append(1.0)
+                                elif k == n_z - 1:
+                                    edge_idx = (n_z - 2) * (n_x * n_y) + j * n_x + i
+                                    rows.append(node_idx)
+                                    cols.append(edge_idx)
+                                    data.append(1.0)
+                                else:
+                                    edge_lower = (k - 1) * (n_x * n_y) + j * n_x + i
+                                    edge_upper = k * (n_x * n_y) + j * n_x + i
+                                    rows.extend([node_idx, node_idx])
+                                    cols.extend([edge_lower, edge_upper])
+                                    data.extend([0.5, 0.5])
 
-                    for j in range(n_y):
-                        for i in range(n_x):
-                            rows.append(row_idx)
-                            cols.append((n_z - 2) * n_x * n_y + j * n_x + i)
-                            data.append(1.0)
-                            row_idx += 1
+                                node_idx += 1
 
                     sub_matrix = csr_matrix(
-                        (data, (rows, cols)),
-                        shape=(n_x * n_y * n_z, n_x * n_y * (n_z - 1)),
+                        (data, (rows, cols)), shape=(n_nodes, n_edges_z)
                     )
+
             else:
                 raise ValueError(f"shift key '{shift_key}' not recognised")
 
             second_dim_repeats = self._get_auxiliary_domain_repeats(array.domains)
             matrix = csr_matrix(kron(eye(second_dim_repeats), sub_matrix))
+            print(f"Matrix shape: {sub_matrix.shape}")
+            print(f"After repeats: {matrix.shape}")
+
             return pybamm.Matrix(matrix) @ array
 
         def harmonic_mean(array, direction):
             """Calculate the harmonic mean of an array using matrix multiplication"""
-            # Handle domain access properly - array.domain might be a tuple
             submesh = self.mesh[array.domain]
             n_x, n_y, n_z = submesh.npts_x, submesh.npts_y, submesh.npts_z
             repeats = self._get_auxiliary_domain_repeats(array.domains)
 
             if shift_key == "node to edge":
                 if direction == "x":
-                    left, right = _exterior_stencil(n_x)
-                    interior = csr_matrix((n_x - 1, n_x))
-                    stencil_1d = vstack([left, interior, right])
-                    E = kron(eye(n_z), kron(eye(n_y), stencil_1d))
-                    D1_1d, D2_1d = _pick_D1_D2(n_x)
+                    n_edges_x = n_x - 1
+                    D1_1d = lil_matrix((n_edges_x, n_x))
+                    D2_1d = lil_matrix((n_edges_x, n_x))
+
+                    for i in range(n_edges_x):
+                        D1_1d[i, i] = 1.0  # Left node
+                        D2_1d[i, i + 1] = 1.0  # Right node
+
+                    D1_1d = D1_1d.tocsr()
+                    D2_1d = D2_1d.tocsr()
+
                     M1 = kron(eye(n_z), kron(eye(n_y), D1_1d))
                     M2 = kron(eye(n_z), kron(eye(n_y), D2_1d))
+
                     D1 = pybamm.Matrix(M1) @ array
                     D2 = pybamm.Matrix(M2) @ array
-                    dx = submesh.d_edges_x  # length = n_x
-                    beta = dx[:-2] / (dx[1:-1] + dx[:-2])  # shape = (n_x-2,)
-                    beta_full = np.repeat(beta[:, None], n_y * n_z * repeats, axis=1)
-                    beta = pybamm.Array(beta_full.flatten()[:, None])
-                    D_eff = D1 * D2 / (beta * D2 + (1 - beta) * D1)
-                    return pybamm.Matrix(E) @ array + D_eff
+
+                    dx = submesh.d_edges_x
+                    beta_1d = dx[:-2] / (dx[1:-1] + dx[:-2])
+
+                    n_edges_total = (n_x - 1) * n_y * n_z
+
+                    beta_full = np.zeros(n_edges_total)
+
+                    for k in range(n_z):
+                        for j in range(n_y):
+                            for i in range(n_x - 1):
+                                edge_idx = k * n_y * (n_x - 1) + j * (n_x - 1) + i
+                                if i > 0 and i < n_x - 2:
+                                    beta_full[edge_idx] = beta_1d[i - 1]
+                                else:
+                                    beta_full[edge_idx] = 0.5
+
+                    beta_pybamm = pybamm.Array(beta_full.reshape(-1, 1))
+
+                    denominator = beta_pybamm * D2 + (1 - beta_pybamm) * D1
+
+                    epsilon = 1e-12
+                    denominator = denominator + epsilon
+
+                    return D1 * D2 / denominator
 
                 elif direction == "y":
-                    one_fives = np.ones(n_x) * 1.5
-                    neg_zero_fives = np.ones(n_x) * -0.5
-                    rows = np.arange(0, n_x)
-                    cols_first = np.arange(0, n_x)  # column indices (j=0,i)
-                    cols_second = np.arange(n_x, 2 * n_x)  # (j=1,i)
-                    data = np.hstack([one_fives, neg_zero_fives])
-                    cols = np.hstack([cols_first, cols_second])
-                    rows = np.hstack([rows, rows])
-                    sub_top = csr_matrix((data, (rows, cols)), shape=(n_x, n_x * n_y))
-
-                    interior_rows = (n_y - 1) * n_x
-                    data = np.ones(interior_rows) * 0.5
-                    data = np.hstack([data, data])
-                    rows = np.arange(0, interior_rows)
-                    rows = np.hstack([rows, rows])
-                    cols_first = np.arange(0, interior_rows)
-                    cols_second = np.arange(n_x, n_x * n_y)
-                    cols = np.hstack([cols_first, cols_second])
-                    sub_mid = csr_matrix(
-                        (data, (rows, cols)), shape=((n_y - 1) * n_x, n_x * n_y)
-                    )
-
-                    data = np.hstack([neg_zero_fives, one_fives])
-                    cols_first = np.arange((n_y - 2) * n_x, (n_y - 1) * n_x)
-                    cols_second = np.arange((n_y - 1) * n_x, n_y * n_x)
-                    rows = np.arange(0, n_x)
-                    rows = np.hstack([rows, rows])
-                    cols = np.hstack([cols_first, cols_second])
-                    sub_bot = csr_matrix((data, (rows, cols)), shape=(n_x, n_x * n_y))
-
-                    stencil_2d_y = vstack([sub_top, sub_mid, sub_bot])
-                    sub_matrix = block_diag([stencil_2d_y] * n_z)
-                    E = csr_matrix(kron(eye(repeats), sub_matrix))
-
                     D1_1d_y = hstack([eye(n_y - 1), csr_matrix((n_y - 1, 1))])
                     D2_1d_y = hstack([csr_matrix((n_y - 1, 1)), eye(n_y - 1)])
 
@@ -2934,81 +2890,141 @@ class FiniteVolume3D(pybamm.SpatialMethod):
                     D1 = pybamm.Matrix(kron(eye(repeats), M1)) @ array
                     D2 = pybamm.Matrix(kron(eye(repeats), M2)) @ array
 
-                    dy = submesh.d_edges_y  # length = n_y
-                    beta = dy[:-2] / (dy[1:-1] + dy[:-2])  # length = n_y-2
-                    beta_full = np.repeat(beta[:, None], n_x * n_z * repeats, axis=1)
-                    beta = pybamm.Array(beta_full.flatten()[:, None])
+                    dy = submesh.d_edges_y
+                    beta_1d = dy[:-2] / (dy[1:-1] + dy[:-2])
 
-                    D_eff = D1 * D2 / (beta * D2 + (1 - beta) * D1)
+                    n_edges_total = n_x * (n_y - 1) * n_z
+                    beta_full = np.zeros(n_edges_total)
 
-                    return E @ array + D_eff
+                    for k in range(n_z):
+                        for i in range(n_x):
+                            for j in range(n_y - 1):
+                                edge_idx = k * n_x * (n_y - 1) + i * (n_y - 1) + j
+                                if j > 0 and j < n_y - 2:
+                                    beta_full[edge_idx] = beta_1d[j - 1]
+                                else:
+                                    beta_full[edge_idx] = 0.5
+
+                    beta_pybamm = pybamm.Array(beta_full.reshape(-1, 1))
+                    denominator = beta_pybamm * D2 + (1 - beta_pybamm) * D1
+
+                    epsilon = 1e-12
+                    denominator = denominator + epsilon
+
+                    return D1 * D2 / denominator
 
                 elif direction == "z":
-                    one_fives = np.ones(n_x * n_y) * 1.5
-                    neg_zero_fives = np.ones(n_x * n_y) * -0.5
-                    rows = np.arange(0, n_x * n_y)
-                    cols_first = np.arange(0, n_x * n_y)  # (k=0) plane
-                    cols_second = np.arange(n_x * n_y, 2 * n_x * n_y)  # (k=1) plane
-                    data = np.hstack([one_fives, neg_zero_fives])
-                    cols = np.hstack([cols_first, cols_second])
-                    rows = np.hstack([rows, rows])
-                    sub_bot = csr_matrix(
-                        (data, (rows, cols)), shape=(n_x * n_y, n_x * n_y * n_z)
-                    )
-
-                    interior_rows = (n_z - 1) * (n_x * n_y)
-                    data = np.ones(interior_rows) * 0.5
-                    data = np.hstack([data, data])
-                    rows = np.arange(0, interior_rows)
-                    rows = np.hstack([rows, rows])
-                    cols_first = np.arange(0, interior_rows)
-                    cols_second = np.arange(n_x * n_y, n_x * n_y * n_z)
-                    cols = np.hstack([cols_first, cols_second])
-                    sub_mid = csr_matrix(
-                        (data, (rows, cols)),
-                        shape=((n_z - 1) * n_x * n_y, n_x * n_y * n_z),
-                    )
-
-                    data = np.hstack([neg_zero_fives, one_fives])
-                    cols_first = np.arange(
-                        (n_z - 2) * (n_x * n_y), (n_z - 1) * (n_x * n_y)
-                    )
-                    cols_second = np.arange((n_z - 1) * (n_x * n_y), n_z * (n_x * n_y))
-                    rows = np.arange(0, n_x * n_y)
-                    rows = np.hstack([rows, rows])
-                    cols = np.hstack([cols_first, cols_second])
-                    sub_top = csr_matrix(
-                        (data, (rows, cols)), shape=(n_x * n_y, n_x * n_y * n_z)
-                    )
-
-                    stencil_3d_z = vstack([sub_bot, sub_mid, sub_top])
-                    E = csr_matrix(kron(eye(repeats), stencil_3d_z))
-
                     D1_1d_z = hstack([eye(n_z - 1), csr_matrix((n_z - 1, 1))])
                     D2_1d_z = hstack([csr_matrix((n_z - 1, 1)), eye(n_z - 1)])
                     sub_D1_z = block_diag([D1_1d_z] * (n_x * n_y))
                     sub_D2_z = block_diag([D2_1d_z] * (n_x * n_y))
-                    M1 = sub_D1_z  # already accounts for whole x y plane
+                    M1 = sub_D1_z
                     M2 = sub_D2_z
                     D1 = pybamm.Matrix(kron(eye(repeats), M1)) @ array
                     D2 = pybamm.Matrix(kron(eye(repeats), M2)) @ array
 
-                    dz = submesh.d_edges_z  # length = n_z
-                    beta = dz[:-2] / (dz[1:-1] + dz[:-2])  # length = n_z-2
-                    beta_full = np.repeat(beta[:, None], n_x * n_y * repeats, axis=1)
-                    beta = pybamm.Array(beta_full.flatten()[:, None])
+                    dz = submesh.d_edges_z
+                    beta_1d = dz[:-2] / (dz[1:-1] + dz[:-2])
 
-                    D_eff = D1 * D2 / (beta * D2 + (1 - beta) * D1)
+                    n_edges_total = n_x * n_y * (n_z - 1)
+                    beta_full = np.zeros(n_edges_total)
 
-                    return E @ array + D_eff
+                    for i in range(n_x):
+                        for j in range(n_y):
+                            for k in range(n_z - 1):
+                                edge_idx = (i * n_y + j) * (n_z - 1) + k
+                                if k > 0 and k < n_z - 2:
+                                    beta_full[edge_idx] = beta_1d[k - 1]
+                                else:
+                                    beta_full[edge_idx] = 0.5
+
+                    beta_pybamm = pybamm.Array(beta_full.reshape(-1, 1))
+                    denominator = beta_pybamm * D2 + (1 - beta_pybamm) * D1
+
+                    epsilon = 1e-12
+                    denominator = denominator + epsilon
+
+                    return D1 * D2 / denominator
                 else:
-                    # Fall back to arithmetic mean for other directions in harmonic case
                     return arithmetic_mean(array, direction)
 
             elif shift_key == "edge to node":
-                raise NotImplementedError(
-                    "Harmonic mean edge-to-node not implemented for 3D"
-                )
+                if direction == "x":
+                    n_edges_x = n_x - 1
+
+                    stencil_1d = lil_matrix((n_x, n_edges_x))
+
+                    stencil_1d[0, 0] = 1.0
+
+                    for i in range(1, n_x - 1):
+                        stencil_1d[i, i - 1] = 0.5
+                        stencil_1d[i, i] = 0.5
+
+                    stencil_1d[n_x - 1, n_edges_x - 1] = 1.0
+
+                    stencil_1d = stencil_1d.tocsr()
+
+                    E = kron(eye(n_z), kron(eye(n_y), stencil_1d))
+
+                    return pybamm.Matrix(E) @ array
+
+                elif direction == "y":
+                    n_edges_y = n_y - 1
+
+                    stencil_2d = lil_matrix((n_x * n_y, n_x * n_edges_y))
+
+                    for i in range(n_x):
+                        edge_start = i * n_edges_y
+                        node_start = i * n_y
+                        stencil_2d[node_start, edge_start] = 1.0
+
+                        for j in range(1, n_y - 1):
+                            node_idx = node_start + j
+                            edge_left = edge_start + j - 1
+                            edge_right = edge_start + j
+                            stencil_2d[node_idx, edge_left] = 0.5
+                            stencil_2d[node_idx, edge_right] = 0.5
+
+                        stencil_2d[node_start + n_y - 1, edge_start + n_edges_y - 1] = (
+                            1.0
+                        )
+
+                    stencil_2d = stencil_2d.tocsr()
+
+                    E = kron(eye(n_z), stencil_2d)
+                    E = csr_matrix(kron(eye(repeats), E))
+
+                    return pybamm.Matrix(E) @ array
+
+                elif direction == "z":
+                    n_edges_z = n_z - 1
+
+                    stencil_3d = lil_matrix((n_x * n_y * n_z, n_x * n_y * n_edges_z))
+
+                    for i in range(n_x):
+                        for j in range(n_y):
+                            xy_idx = i * n_y + j
+
+                            node_start = xy_idx * n_z
+                            edge_start = xy_idx * n_edges_z
+                            stencil_3d[node_start, edge_start] = 1.0
+
+                            for k in range(1, n_z - 1):
+                                node_idx = node_start + k
+                                edge_left = edge_start + k - 1
+                                edge_right = edge_start + k
+                                stencil_3d[node_idx, edge_left] = 0.5
+                                stencil_3d[node_idx, edge_right] = 0.5
+
+                            stencil_3d[
+                                node_start + n_z - 1, edge_start + n_edges_z - 1
+                            ] = 1.0
+
+                    stencil_3d = stencil_3d.tocsr()
+
+                    E = csr_matrix(kron(eye(repeats), stencil_3d))
+
+                    return pybamm.Matrix(E) @ array
 
             else:
                 raise ValueError(f"shift key '{shift_key}' not recognised")
@@ -3024,11 +3040,9 @@ class FiniteVolume3D(pybamm.SpatialMethod):
             D2 = hstack([csr_matrix((n - 1, 1)), eye(n - 1)])
             return D1, D2
 
-        # Add helper methods to self
         self._exterior_stencil = _exterior_stencil
         self._pick_D1_D2 = _pick_D1_D2
 
-        # Main logic
         if discretised_symbol.size == 1:
             out = discretised_symbol
         elif method == "arithmetic":
