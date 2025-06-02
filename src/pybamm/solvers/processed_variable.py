@@ -527,7 +527,16 @@ class ProcessedVariable0D(ProcessedVariable):
         if self.time_integral is None:
             return entries
         if self.time_integral.method == "discrete":
-            return np.sum(entries, axis=0, initial=self.time_integral.initial_condition)
+            if self.time_integral.post_sum_casadi is None:
+                raise ValueError(
+                    "post_sum_casadi must be set for discrete time integral variables"
+                )  # pragma: no cover
+            the_sum = np.sum(
+                entries, axis=0, initial=self.time_integral.initial_condition
+            )
+            return self.time_integral.post_sum_casadi(
+                0.0, the_sum, inputs=self.all_inputs_casadi[0]
+            )
         elif self.time_integral.method == "continuous":
             return cumulative_trapezoid(
                 entries, self.t_pts, initial=float(self.time_integral.initial_condition)

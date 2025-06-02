@@ -440,15 +440,25 @@ class Solution:
                     "solve. Please re-run the solve with `output_variables` set to "
                     "include this variable."
                 )
-            elif isinstance(
-                var_pybamm, (pybamm.ExplicitTimeIntegral, pybamm.DiscreteTimeSum)
-            ):
+            elif variable in model._variables_casadi:
+                var_casadi = model._variables_casadi[variable]
+            else:
                 time_integral = pybamm.ProcessedVariableTimeIntegral.from_pybamm_var(
                     var_pybamm
                 )
-                var_pybamm = var_pybamm.child
-                if variable in model._variables_casadi:
-                    var_casadi = model._variables_casadi[variable]
+                if time_integral is not None:
+                    vars_pybamm[i] = time_integral.sum_node
+                    var_casadi = self.process_casadi_var(
+                        time_integral.sum_node,
+                        inputs,
+                        ys.shape,
+                    )
+                    time_integral.post_sum_casadi = self.process_casadi_var(
+                        time_integral.post_sum_node,
+                        inputs,
+                        ys.shape,
+                    )
+                    model._variables_casadi[variable] = var_casadi
                 else:
                     var_casadi = self.process_casadi_var(
                         var_pybamm,
@@ -456,16 +466,6 @@ class Solution:
                         ys.shape,
                     )
                     model._variables_casadi[variable] = var_casadi
-                vars_pybamm[i] = var_pybamm
-            elif variable in model._variables_casadi:
-                var_casadi = model._variables_casadi[variable]
-            else:
-                var_casadi = self.process_casadi_var(
-                    var_pybamm,
-                    inputs,
-                    ys.shape,
-                )
-                model._variables_casadi[variable] = var_casadi
             vars_casadi.append(var_casadi)
         var = pybamm.process_variable(
             variable, vars_pybamm, vars_casadi, self, time_integral=time_integral
