@@ -343,10 +343,7 @@ class TestSimulationExperiment:
         sens_idaklu = np.interp(
             t,
             solutions[1].t,
-            solutions[1]["Voltage [V]"]
-            .sensitivities[input_param_name]
-            .full()
-            .flatten(),
+            solutions[1]["Voltage [V]"].sensitivities[input_param_name].flatten(),
         )
         np.testing.assert_allclose(
             sens_fd,

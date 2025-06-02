@@ -481,9 +481,7 @@ class ProcessedVariable:
 
             all_S_var.append(S_var)
 
-        S_var = casadi.vertcat(*all_S_var)
-        if self._is_discrete_time_method():
-            S_var = S_var.T
+        S_var = np.vstack(all_S_var)
         sensitivities = {"all": S_var}
 
         # Add the individual sensitivity

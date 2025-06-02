@@ -556,7 +556,7 @@ class TestSolution:
                 dy_sol_da = -data_times * y_sol
 
                 np.testing.assert_allclose(
-                    sol["data"].sensitivities["a"].full().flatten(),
+                    sol["data"].sensitivities["a"].flatten(),
                     np.zeros_like(data_times),
                     rtol=1e-3,
                     atol=1e-2,
@@ -568,7 +568,7 @@ class TestSolution:
                     atol=1e-2,
                 )
                 np.testing.assert_allclose(
-                    sol["c"].sensitivities["a"].full().flatten(),
+                    sol["c"].sensitivities["a"].flatten(),
                     dy_sol_da,
                     rtol=1e-3,
                     atol=1e-2,

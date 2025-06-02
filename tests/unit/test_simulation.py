@@ -392,7 +392,6 @@ class TestSimulation:
             + h
             * sol1["Terminal voltage [V]"]
             .sensitivities["Current function [A]"]
-            .full()
             .flatten(),
             sol2["Terminal voltage [V]"].entries,
             rtol=5e-6,

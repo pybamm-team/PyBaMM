@@ -6,7 +6,7 @@
 
 ## Bug fixes
 
-- Fixed a dimension bug for `DiscreteTimeSum` sensitivity calculation ([#5037](https://github.com/pybamm-team/PyBaMM/pull/5037))
+- Converts sensitivities to numpy objects, fixing bug in `DiscreteTimeSum` sensitivity calculation ([#5037](https://github.com/pybamm-team/PyBaMM/pull/5037))
 
 
 ## Breaking changes
