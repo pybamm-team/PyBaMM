@@ -55,7 +55,7 @@ class SubMesh3D(SubMesh):
         self.d_nodes_y = np.diff(self.nodes_y)
         self.d_nodes_z = np.diff(self.nodes_z)
 
-        X, Y, Z = np.meshgrid(self.nodes_x, self.nodes_y, self.nodes_z, indexing="ij")
+        X, Y, Z = np.meshgrid(self.nodes_x, self.nodes_y, self.nodes_z)
         self.nodes = np.vstack([X.ravel(), Y.ravel(), Z.ravel()]).T
         self.npts_x = self.nodes_x.size
         self.npts_y = self.nodes_y.size

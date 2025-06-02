@@ -8,6 +8,8 @@ from scipy.sparse import (
     vstack,
     hstack,
     block_diag,
+    spdiags,
+    lil_matrix,
 )
 import numpy as np
 
@@ -633,83 +635,113 @@ class FiniteVolume3D(pybamm.SpatialMethod):
         """
         Indefinite integral operator for 3D.
         """
-        indefinite_integral_matrix = self.indefinite_integral_matrix_nodes(
-            child.domains, direction
-        )
+        if child.evaluates_on_edges("primary"):
+            indefinite_integral_matrix = self.indefinite_integral_matrix_edges(
+                child.domains, direction
+            )
+        else:
+            submesh = self.mesh[child.domain]
+            if submesh.coord_sys in ["cylindrical polar", "spherical polar", "spiral"]:
+                raise NotImplementedError(
+                    f"Indefinite integral on a {submesh.coord_sys} domain is not "
+                    "implemented"
+                )
+            indefinite_integral_matrix = self.indefinite_integral_matrix_nodes(
+                child.domains, direction
+            )
         return indefinite_integral_matrix @ discretised_child
 
     def indefinite_integral_matrix_edges(self, domains, direction):
         """
-        Matrix for indefinite integral from edges to nodes in 3D.
+        Matrix for finite-volume implementation of the indefinite integral where the
+        integrand is evaluated on mesh edges in 3D.
+
+        This follows the same logic as 1D but applies it to the primary dimension
+        of the 3D mesh while keeping other dimensions fixed.
         """
         submesh = self.mesh[domains["primary"]]
-        n_x = submesh.npts_x
+
+        n_primary = submesh.npts_x
         n_y = submesh.npts_y
         n_z = submesh.npts_z
 
-        if direction == "x":
-            # Cumulative sum in x-direction
-            d_edges = submesh.d_edges_x
-            sub_matrix = np.tril(np.ones((n_x, n_x + 1)))
-            sub_matrix = sub_matrix @ diags(d_edges, shape=(n_x + 1, n_x + 1))
-            sub_matrix = block_diag((sub_matrix,) * (n_y * n_z))
+        du_n = submesh.d_nodes_x
 
-        elif direction == "y":
-            # Cumulative sum in y-direction
-            d_edges = submesh.d_edges_y
-            sub_matrix = np.tril(np.ones((n_y, n_y + 1)))
-            sub_matrix = sub_matrix @ diags(d_edges, shape=(n_y + 1, n_y + 1))
-            # Create block structure for 3D
-            sub_matrix = kron(eye(n_z), kron(sub_matrix, eye(n_x)))
+        if direction == "forward":
+            # Forward integration: cumulative sum from start
+            du_entries = [du_n] * (n_primary - 1)
+            offset = -np.arange(1, n_primary, 1)
+            main_integral_matrix = spdiags(du_entries, offset, n_primary, n_primary - 1)
+            bc_offset_matrix = lil_matrix((n_primary, n_primary - 1))
+            bc_offset_matrix[:, 0] = du_n[0] / 2
 
-        elif direction == "z":
-            # Cumulative sum in z-direction
-            d_edges = submesh.d_edges_z
-            sub_matrix = np.tril(np.ones((n_z, n_z + 1)))
-            sub_matrix = sub_matrix @ diags(d_edges, shape=(n_z + 1, n_z + 1))
-            # Create block structure for 3D
-            sub_matrix = kron(sub_matrix, eye(n_x * n_y))
+        elif direction == "backward":
+            # Backward integration: cumulative sum from end
+            du_entries = [du_n] * (n_primary + 1)
+            offset = np.arange(n_primary, -1, -1)
+            main_integral_matrix = spdiags(du_entries, offset, n_primary, n_primary - 1)
+            bc_offset_matrix = lil_matrix((n_primary, n_primary - 1))
+            bc_offset_matrix[:, -1] = du_n[-1] / 2
 
-        # repeat matrix for secondary dimensions
+        else:
+            raise ValueError(
+                f"Unknown direction: {direction}. Must be 'forward' or 'backward'"
+            )
+
+        # Combine main matrix and boundary condition offset
+        sub_matrix_1d = main_integral_matrix + bc_offset_matrix
+
+        zero_col = csr_matrix((n_primary, 1))
+        sub_matrix_1d = hstack([zero_col, sub_matrix_1d, zero_col])
+
+        sub_matrix_3d = kron(eye(n_y * n_z), sub_matrix_1d)
+
         second_dim_repeats = self._get_auxiliary_domain_repeats(domains)
-        matrix = csr_matrix(kron(eye(second_dim_repeats), sub_matrix))
+        matrix = csr_matrix(kron(eye(second_dim_repeats), sub_matrix_3d))
+
+        if hasattr(submesh, "length"):
+            matrix = matrix * submesh.length
+
         return pybamm.Matrix(matrix)
 
     def indefinite_integral_matrix_nodes(self, domains, direction):
         """
-        Matrix for indefinite integral from nodes to nodes in 3D.
+        Matrix for finite-volume implementation of the indefinite integral where the
+        integrand is evaluated on mesh nodes in 3D.
+
+        This is a straightforward cumulative sum along the primary dimension.
         """
         submesh = self.mesh[domains["primary"]]
-        n_x = submesh.npts_x
+
+        n_primary = submesh.npts_x
         n_y = submesh.npts_y
         n_z = submesh.npts_z
 
-        if direction == "x":
-            # Cumulative sum in x-direction
-            d_edges = submesh.d_edges_x
-            sub_matrix = np.tril(np.ones((n_x, n_x)))
-            sub_matrix = sub_matrix @ diags(d_edges, shape=(n_x, n_x))
-            sub_matrix = block_diag((sub_matrix,) * (n_y * n_z))
+        du_n = submesh.d_edges_x
 
-        elif direction == "y":
-            # Cumulative sum in y-direction
-            d_edges = submesh.d_edges_y
-            sub_matrix = np.tril(np.ones((n_y, n_y)))
-            sub_matrix = sub_matrix @ diags(d_edges, shape=(n_y, n_y))
-            # Create block structure for 3D
-            sub_matrix = kron(eye(n_z), kron(sub_matrix, eye(n_x)))
+        du_entries = [du_n] * n_primary
 
-        elif direction == "z":
-            # Cumulative sum in z-direction
-            d_edges = submesh.d_edges_z
-            sub_matrix = np.tril(np.ones((n_z, n_z)))
-            sub_matrix = sub_matrix @ diags(d_edges, shape=(n_z, n_z))
-            # Create block structure for 3D
-            sub_matrix = kron(sub_matrix, eye(n_x * n_y))
+        if direction == "forward":
+            # Forward: cumulative sum from start to current
+            offset = -np.arange(1, n_primary + 1, 1)
+        elif direction == "backward":
+            # Backward: cumulative sum from current to end
+            offset = np.arange(n_primary - 1, -1, -1)
+        else:
+            raise ValueError(
+                f"Unknown direction: {direction}. Must be 'forward' or 'backward'"
+            )
 
-        # repeat matrix for secondary dimensions
+        sub_matrix_1d = spdiags(du_entries, offset, n_primary + 1, n_primary)
+
+        sub_matrix_3d = kron(eye(n_y * n_z), sub_matrix_1d)
+
         second_dim_repeats = self._get_auxiliary_domain_repeats(domains)
-        matrix = csr_matrix(kron(eye(second_dim_repeats), sub_matrix))
+        matrix = csr_matrix(kron(eye(second_dim_repeats), sub_matrix_3d))
+
+        if hasattr(submesh, "length"):
+            matrix = matrix * submesh.length
+
         return pybamm.Matrix(matrix)
 
     def delta_function(self, symbol, discretised_symbol):
@@ -1206,7 +1238,7 @@ class FiniteVolume3D(pybamm.SpatialMethod):
         """
         3D version of add_neumann_values.  Any Neumann BC on one of the six faces
         contributes a known flux into the gradient vector; Dirichlet BCs were handled
-        earlier by ghost‐nodes.
+        earlier by ghost nodes.
         """
         submesh = self.mesh[domain]
         nx, ny, nz = submesh.npts_x, submesh.npts_y, submesh.npts_z
