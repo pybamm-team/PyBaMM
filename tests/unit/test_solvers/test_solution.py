@@ -504,7 +504,7 @@ class TestSolution:
     def test_discrete_data_sum(self, solver_class):
         model = pybamm.BaseModel(name="test_model")
         c = pybamm.Variable("c")
-        model.rhs = {c: -c}
+        model.rhs = {c: -2 * c}
         model.initial_conditions = {c: 1}
         model.variables["c"] = c
 
@@ -523,16 +523,21 @@ class TestSolution:
 
         model = pybamm.BaseModel(name="test_model2")
         a = pybamm.InputParameter("a")
-        model.rhs = {c: -a * c}
+        b = pybamm.InputParameter("b")
+        model.rhs = {c: b * -a * c}
         model.initial_conditions = {c: 1}
         model.variables["data_comparison"] = data_comparison
         model.variables["data"] = data
         model.variables["c"] = c
 
         solver = solver_class()
-        for a in [0.5, 1.0, 2.0]:
-            sol = solver.solve(model, t_eval=t_eval, t_interp=t_interp, inputs={"a": a})
-            y_sol = np.exp(-a * data_times)
+        range = [0.5, 1.0, 2.0]
+        range2 = np.ones(3)
+        for a, b in zip(range, range2):
+            sol = solver.solve(
+                model, t_eval=t_eval, t_interp=t_interp, inputs={"a": a, "b": b}
+            )
+            y_sol = np.exp(b * -a * data_times)
             expected = np.sum((y_sol - data_values) ** 2)
             np.testing.assert_allclose(
                 sol["data_comparison"](), expected, rtol=1e-3, atol=1e-2
@@ -544,14 +549,14 @@ class TestSolution:
                     model,
                     t_eval=t_eval,
                     t_interp=t_interp,
-                    inputs={"a": a},
+                    inputs={"a": a, "b": b},
                     calculate_sensitivities=True,
                 )
-                y_sol = np.exp(-a * data_times)
+                y_sol = np.exp(b * -a * data_times)
                 dy_sol_da = -data_times * y_sol
 
                 np.testing.assert_allclose(
-                    sol["data"].sensitivities["a"].full().flatten(),
+                    sol["data"].sensitivities["a"].flatten(),
                     np.zeros_like(data_times),
                     rtol=1e-3,
                     atol=1e-2,
@@ -563,7 +568,7 @@ class TestSolution:
                     atol=1e-2,
                 )
                 np.testing.assert_allclose(
-                    sol["c"].sensitivities["a"].full().flatten(),
+                    sol["c"].sensitivities["a"].flatten(),
                     dy_sol_da,
                     rtol=1e-3,
                     atol=1e-2,
@@ -583,6 +588,6 @@ class TestSolution:
                     solver.solve(
                         model,
                         t_eval=t_eval,
-                        inputs={"a": a},
+                        inputs={"a": a, "b": b},
                         calculate_sensitivities=True,
                     )["data_comparison"].sensitivities["a"]

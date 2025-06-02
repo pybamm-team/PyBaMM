@@ -325,7 +325,6 @@ class TestIDAKLUSolver:
                 )
 
                 t_eval = [0, 3]
-
                 a_value = 0.1
 
                 sol = solver.solve(
@@ -336,7 +335,7 @@ class TestIDAKLUSolver:
                 )
 
                 np.testing.assert_allclose(
-                    sol["2v"].sensitivities["a"].full().flatten(),
+                    sol["2v"].sensitivities["a"].flatten(),
                     np.exp(-sol.t) * 2,
                     rtol=1e-5,
                     atol=1e-4,
