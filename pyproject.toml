@@ -103,7 +103,7 @@ dev = [
     # For doctest
     "pytest-doctestplus",
     # pytest and its plugins
-    "pytest>=6",
+    "pytest<=8.3.0",
     "pytest-xdist",
     "pytest-mock",
     "pytest-subtests",
