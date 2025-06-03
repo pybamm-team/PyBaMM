@@ -34,9 +34,6 @@ class SubMesh3D(SubMesh):
     """
 
     def __init__(self, edges_x, edges_y, edges_z, coord_sys, tabs=None):
-        edges_x = np.array(edges_x)
-        edges_y = np.array(edges_y)
-        edges_z = np.array(edges_z)
         self.edges_x = edges_x
         self.edges_y = edges_y
         self.edges_z = edges_z
@@ -55,8 +52,12 @@ class SubMesh3D(SubMesh):
         self.d_nodes_y = np.diff(self.nodes_y)
         self.d_nodes_z = np.diff(self.nodes_z)
 
-        X, Y, Z = np.meshgrid(self.nodes_x, self.nodes_y, self.nodes_z)
-        self.nodes = np.vstack([X.ravel(), Y.ravel(), Z.ravel()]).T
+        X, Y, Z = np.meshgrid(self.nodes_x, self.nodes_y, self.nodes_z, indexing="ij")
+        x_flat_f = X.flatten(order="F")
+        y_flat_f = Y.flatten(order="F")
+        z_flat_f = Z.flatten(order="F")
+        self.nodes = np.column_stack([x_flat_f, y_flat_f, z_flat_f])
+
         self.npts_x = self.nodes_x.size
         self.npts_y = self.nodes_y.size
         self.npts_z = self.nodes_z.size
