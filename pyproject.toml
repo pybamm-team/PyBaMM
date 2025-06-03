@@ -226,7 +226,6 @@ required_plugins = [
     "pytest-subtests",
 ]
 addopts = [
-    "-nauto",
     "-vra",
     "--strict-config",
     "--strict-markers",
