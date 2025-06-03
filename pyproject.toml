@@ -104,6 +104,7 @@ dev = [
     "pytest-doctestplus",
     # pytest and its plugins
     "pytest>=8",
+    "pytest-xdist",
     "pytest-mock",
     "pytest-subtests",
     # For testing Jupyter notebooks
@@ -222,10 +223,12 @@ ignore = [
 [tool.pytest.ini_options]
 minversion = "8"
 required_plugins = [
+    "pytest-xdist",
     "pytest-mock",
     "pytest-subtests",
 ]
 addopts = [
+    "-nauto",
     "-vra",
     "--strict-config",
     "--strict-markers",
