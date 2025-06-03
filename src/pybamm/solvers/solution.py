@@ -444,7 +444,7 @@ class Solution:
                 var_casadi = model._variables_casadi[variable]
             else:
                 time_integral = pybamm.ProcessedVariableTimeIntegral.from_pybamm_var(
-                    var_pybamm
+                    var_pybamm, self.all_ys[i].shape[0]
                 )
                 if time_integral is not None:
                     vars_pybamm[i] = time_integral.sum_node
@@ -453,12 +453,12 @@ class Solution:
                         inputs,
                         ys.shape,
                     )
-                    time_integral.post_sum_casadi = self.process_casadi_var(
-                        time_integral.post_sum_node,
-                        inputs,
-                        ys.shape,
-                    )
-                    model._variables_casadi[variable] = var_casadi
+                    if time_integral.post_sum_node is not None:
+                        time_integral.post_sum = self.process_casadi_var(
+                            time_integral.post_sum_node,
+                            inputs,
+                            ys.shape,
+                        )
                 else:
                     var_casadi = self.process_casadi_var(
                         var_pybamm,
