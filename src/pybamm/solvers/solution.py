@@ -447,9 +447,9 @@ class Solution:
                     var_pybamm, self.all_ys[i].shape[0]
                 )
                 if time_integral is not None:
-                    vars_pybamm[i] = time_integral.sum_node
+                    vars_pybamm[i] = time_integral.sum_node.child
                     var_casadi = self.process_casadi_var(
-                        time_integral.sum_node,
+                        time_integral.sum_node.child,
                         inputs,
                         ys.shape,
                     )
