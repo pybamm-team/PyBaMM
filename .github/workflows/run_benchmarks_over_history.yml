@@ -113,8 +113,8 @@ jobs:
       - name: Run benchmarks
         run: |
           asv machine --machine "GitHubRunner"
-          asv run -m "GitHubRunner" -s ${{ env.NCOMMITS }} \
-          ${{ env.COMMIT_START }}..${{ env.COMMIT_END }}
+          asv run -m "GitHubRunner" -s $NCOMMITS \
+          $COMMIT_START..$COMMIT_END
 
       - name: Upload results as artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
