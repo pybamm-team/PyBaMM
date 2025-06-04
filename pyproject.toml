@@ -260,6 +260,8 @@ log_date_format = "%Y-%m-%d %H:%M:%S"
 [tool.coverage.run]
 source = ["src/pybamm"]
 concurrency = ["multiprocessing"]
+# Fixes an internal error warning from pytest-cov with pytest-xdist
+disable_warnings = ["module-not-measured"]
 
 [tool.mypy]
 ignore_missing_imports = true
