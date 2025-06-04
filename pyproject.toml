@@ -222,8 +222,6 @@ ignore = [
 
 [tool.pytest.ini_options]
 minversion = "8"
-# Use pytest-xdist to run tests in parallel by default, exit with
-# error if not installed
 required_plugins = [
     "pytest-xdist",
     "pytest-mock",
