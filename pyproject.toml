@@ -103,7 +103,7 @@ dev = [
     # For doctest
     "pytest-doctestplus",
     # pytest and its plugins
-    "pytest>=6",
+    "pytest<=8.3.0",
     "pytest-xdist",
     "pytest-mock",
     "pytest-subtests",
@@ -223,8 +223,6 @@ ignore = [
 
 [tool.pytest.ini_options]
 minversion = "8"
-# Use pytest-xdist to run tests in parallel by default, exit with
-# error if not installed
 required_plugins = [
     "pytest-xdist",
     "pytest-mock",
