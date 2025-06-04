@@ -498,6 +498,36 @@ class TestSolution:
         time = sim.solution["Time [h]"](sim.solution.t)
         assert len(time) == 10
 
+    def test_discrete_data_sum_errors(self):
+        data_times = np.array([0.0])
+        data_values = np.array([1.0])
+        data = pybamm.DiscreteTimeData(data_times, data_values, "test_data")
+        dts = pybamm.DiscreteTimeSum(data)
+
+        model = pybamm.BaseModel(name="test_model2")
+        c = pybamm.Variable("c")
+        model.rhs = {c: -c}
+        model.initial_conditions = {c: 1}
+        model.variables["dts"] = pybamm.t * dts
+        solver = pybamm.IDAKLUSolver()
+        with pytest.raises(
+            ValueError,
+            match="time or state vector nodes should only appear within the time integral node",
+        ):
+            solver.solve(model, t_eval=[0, 0.1])["dts"]
+
+        model = pybamm.BaseModel(name="test_model2")
+        c = pybamm.Variable("c")
+        model.rhs = {c: -c}
+        model.initial_conditions = {c: 1}
+        model.variables["dts"] = dts * dts
+        solver = pybamm.IDAKLUSolver()
+        with pytest.raises(
+            ValueError,
+            match="More than one time integral node found",
+        ):
+            solver.solve(model, t_eval=[0, 0.1])["dts"]
+
     _solver_classes = [
         (pybamm.CasadiSolver, False),
         (pybamm.IDAKLUSolver, False),
