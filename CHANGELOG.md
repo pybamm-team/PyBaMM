@@ -65,6 +65,7 @@
 - Added support for particle size distributions combined with particle mechanics. ([#4807](https://github.com/pybamm-team/PyBaMM/pull/4807))
 - Added InputParameter support in PyBamm experiments ([#4826](https://github.com/pybamm-team/PyBaMM/pull/4826))
 - Added support for the `"pchip"` interpolator using the CasADI backend. ([#4871](https://github.com/pybamm-team/PyBaMM/pull/4871))
+- Added support for time series temperature in an experiment step ([#4855](https://github.com/pybamm-team/PyBaMM/pull/4855))
 
 ## Breaking changes
 
