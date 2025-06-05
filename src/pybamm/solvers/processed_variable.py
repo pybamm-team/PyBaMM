@@ -859,6 +859,25 @@ class ProcessedVariable3DReal(ProcessedVariable):
         self._entries_raw = entries
         self.entries_raw_initialized = True
 
+    def _interp_setup(self, entries, t):
+        """
+        Set up interpolation for 3D real variables.
+        """
+        mesh = self.base_variables[0].mesh
+
+        # Create coordinate arrays
+        x_coords = mesh.nodes_x
+        y_coords = mesh.nodes_y
+        z_coords = mesh.nodes_z
+
+        X, Y, Z = np.meshgrid(x_coords, y_coords, z_coords, indexing="ij")
+
+        coords = np.column_stack(
+            [X.flatten(order="F"), Y.flatten(order="F"), Z.flatten(order="F")]
+        )
+
+        return entries, coords
+
 
 class ProcessedVariable3D(ProcessedVariable):
     """
@@ -1167,7 +1186,7 @@ def process_variable(name: str, base_variables, *args, **kwargs):
         and hasattr(mesh, "edges_y")
         and hasattr(mesh, "edges_z")
     ):
-        return ProcessedVariable3DReal(base_variables, *args, **kwargs)
+        return ProcessedVariable3DReal(name, base_variables, *args, **kwargs)
 
     # check variable shape
     if len(base_eval_shape) == 0 or base_eval_shape[0] == 1:

@@ -315,100 +315,91 @@ class FiniteVolume3D(pybamm.SpatialMethod):
         n_y = submesh.npts_y
         n_z = submesh.npts_z
 
-        # Use d_edges for divergence (distance between adjacent edges)
-        e_x = 1 / submesh.d_edges_x
-        e_y = 1 / submesh.d_edges_y
-        e_z = 1 / submesh.d_edges_z
-
         if direction == "x":
             # Divergence in x-direction: shape n_x*n_y*n_z x (n_x-1)*n_y*n_z
             if submesh.coord_sys == "cylindrical polar":
                 r_nodes = submesh.nodes_x
-                r_weights = r_nodes
                 sub_matrix = diags(
-                    [-e_x * r_weights[:-1], e_x * r_weights[1:]],
+                    [-submesh.d_edges_x * r_nodes, submesh.d_edges_x * r_nodes],
                     [0, 1],
-                    shape=(n_x, n_x - 1),
+                    shape=(n_x, n_x + 1),
                 )
-                sub_matrix = block_diag([sub_matrix] * (n_y * n_z))
             elif submesh.coord_sys == "spherical polar":
-                r_nodes = submesh.nodes_x
-                r_weights = r_nodes**2
+                r_nodes = submesh.nodes_x  # length n_x
                 sub_matrix = diags(
-                    [-e_x * r_weights[:-1], e_x * r_weights[1:]],
+                    [-submesh.d_edges_x * r_nodes**2, submesh.d_edges_x * r_nodes**2],
                     [0, 1],
-                    shape=(n_x, n_x - 1),
+                    shape=(n_x, n_x + 1),
                 )
-                sub_matrix = block_diag([sub_matrix] * (n_y * n_z))
             elif submesh.coord_sys == "spiral":
-                spiral_metric = self.compute_spiral_metric(submesh)
+                spiral_metric_main = self.compute_spiral_metric(
+                    submesh
+                )  # Assuming len n_x
+                spiral_metric_super = self.compute_spiral_metric(
+                    submesh
+                )  # Assuming len n_x
                 sub_matrix = diags(
-                    [-e_x * spiral_metric[:-1], e_x * spiral_metric[1:]],
+                    [
+                        -submesh.d_edges_x * spiral_metric_main,
+                        submesh.d_edges_x * spiral_metric_super,
+                    ],
                     [0, 1],
-                    shape=(n_x, n_x - 1),
+                    shape=(n_x, n_x + 1),
                 )
-                sub_matrix = block_diag([sub_matrix] * (n_y * n_z))
             else:
-                sub_matrix = diags([e_x, -e_x], [0, -1], shape=(n_x, n_x - 1))
-                sub_matrix = block_diag([sub_matrix] * (n_y * n_z))
+                sub_matrix = diags(
+                    [-submesh.d_edges_x, submesh.d_edges_x],
+                    [0, 1],
+                    shape=(n_x, n_x + 1),
+                )
+
+            sub_matrix = block_diag([sub_matrix] * (n_y * n_z), format="csr")
 
         elif direction == "y":
-            # Divergence in y-direction: shape n_x*n_y*n_z x n_x*(n_y-1)*n_z
+            e_y_values = submesh.d_edges_y
             if submesh.coord_sys == "cylindrical polar":
-                r_nodes = submesh.nodes_x
-                r_weights = np.tile(r_nodes, n_y)
-                e_y_weighted = (
-                    np.repeat(e_y, n_x) / r_weights[: len(np.repeat(e_y, n_x))]
-                )
-                sub_matrix = diags(
-                    [-e_y_weighted, e_y_weighted],
-                    [0, n_x],
-                    shape=(n_x * n_y, n_x * (n_y - 1)),
-                )
-                sub_matrix = block_diag([sub_matrix] * n_z)
-            elif submesh.coord_sys == "spherical polar":
-                r_nodes = submesh.nodes_x
-                theta_nodes = submesh.nodes_y
-                r_weights = np.tile(r_nodes, n_y)
-                sin_weights = np.repeat(np.sin(theta_nodes), n_x)
-                e_y_weighted = np.repeat(e_y, n_x) / (
-                    r_weights[: len(np.repeat(e_y, n_x))] * sin_weights
-                )
-                sub_matrix = diags(
-                    [-e_y_weighted, e_y_weighted],
-                    [0, n_x],
-                    shape=(n_x * n_y, n_x * (n_y - 1)),
-                )
-                sub_matrix = block_diag([sub_matrix] * n_z)
-            else:
-                e_y_repeated = np.repeat(e_y, n_x)
+                r_nodes = submesh.nodes_x  # length n_x
+                e_y_repeated = np.repeat(e_y_values, n_x)
                 sub_matrix_plane = diags(
-                    [e_y_repeated, -e_y_repeated],
-                    [0, -n_x],
-                    shape=(n_x * n_y, n_x * (n_y - 1)),
+                    [-e_y_repeated, e_y_repeated],
+                    [0, n_x],
+                    shape=(n_x * n_y, n_x * (n_y + 1)),
                 )
-                sub_matrix = block_diag([sub_matrix_plane] * n_z)
+            elif submesh.coord_sys == "spherical polar":
+                e_y_repeated = np.repeat(e_y_values, n_x)
+                sub_matrix_plane = diags(
+                    [-e_y_repeated, e_y_repeated],
+                    [0, n_x],
+                    shape=(n_x * n_y, n_x * (n_y + 1)),
+                )
+            else:
+                e_y_repeated = np.repeat(
+                    e_y_values, n_x
+                )  # If e_y_values is scalar 1/dy or vector of length n_y
+                sub_matrix_plane = diags(
+                    [-e_y_repeated, e_y_repeated],
+                    [0, n_x],
+                    shape=(n_x * n_y, n_x * (n_y + 1)),
+                )
+
+            sub_matrix = block_diag([sub_matrix_plane] * n_z, format="csr")
 
         elif direction == "z":
-            if submesh.coord_sys in ["cylindrical polar", "spherical polar"]:
-                e_z_repeated = np.repeat(e_z, n_x * n_y)
-                sub_matrix = diags(
-                    [e_z_repeated, -e_z_repeated],
-                    [0, -n_x * n_y],
-                    shape=(n_x * n_y * n_z, n_x * n_y * (n_z - 1)),
-                )
-            else:  # Cartesian
-                e_z_repeated = np.repeat(e_z, n_x * n_y)
-                sub_matrix = diags(
-                    [e_z_repeated, -e_z_repeated],
-                    [0, -n_x * n_y],
-                    shape=(n_x * n_y * n_z, n_x * n_y * (n_z - 1)),
-                )
+            e_z_values = submesh.d_edges_z
+            e_z_repeated = np.repeat(
+                e_z_values, n_x * n_y
+            )  # If e_z_values is scalar 1/dz or vector of length n_z
+            sub_matrix = diags(
+                [-e_z_repeated, e_z_repeated],
+                [0, n_x * n_y],
+                shape=(n_x * n_y * n_z, n_x * n_y * (n_z + 1)),
+            )
 
         second_dim_repeats = self._get_auxiliary_domain_repeats(domains)
+
         if not isinstance(sub_matrix, csr_matrix):
             sub_matrix = csr_matrix(sub_matrix)
-        matrix = csr_matrix(kron(eye(second_dim_repeats), sub_matrix))
+        matrix = kron(eye(second_dim_repeats, format="csr"), sub_matrix, format="csr")
 
         return pybamm.Matrix(matrix)
 
@@ -1229,13 +1220,13 @@ class FiniteVolume3D(pybamm.SpatialMethod):
 
     def add_neumann_values(self, symbol, discretised_gradient, bcs, domain):
         """
-        3D version of add_neumann_values.  Any Neumann BC on one of the six faces
-        contributes a known flux into the gradient vector; Dirichlet BCs were handled
-        earlier by ghost nodes.
+        3D version of add_neumann_values. Directly modifies boundary flux values
+        for Neumann BCs without complex matrix expansions.
         """
+        import numpy as np
 
         def get_float_val(bc_val_obj):
-            if hasattr(bc_val_obj, "evaluate"):
+            if hasattr(bc_val_obj, "evaluate") and bc_val_obj.evaluates_to_number():
                 return float(bc_val_obj.evaluate())
             return float(bc_val_obj)
 
@@ -1243,6 +1234,7 @@ class FiniteVolume3D(pybamm.SpatialMethod):
         nx, ny, nz = submesh.npts_x, submesh.npts_y, submesh.npts_z
         repeats = self._get_auxiliary_domain_repeats(symbol.domains)
 
+        # Get boundary conditions
         (xlv, xlt), (xrv, xrt) = (
             bcs.get("left", (None, None)),
             bcs.get("right", (None, None)),
@@ -1256,134 +1248,205 @@ class FiniteVolume3D(pybamm.SpatialMethod):
             bcs.get("top", (None, None)),
         )
 
-        # count Neumann faces (will need to expand length by 1 in that direction)
-        nnx = nx + (1 if xlt == "Neumann" else 0) + (1 if xrt == "Neumann" else 0)
-        nny = ny + (1 if yft == "Neumann" else 0) + (1 if ybt == "Neumann" else 0)
-        nnz = nz + (1 if zbt == "Neumann" else 0) + (1 if ztt == "Neumann" else 0)
-        # Nn = nnx * nny * nnz
+        # Check if any Neumann BCs exist
+        has_neumann = any(
+            [
+                xlt == "Neumann",
+                xrt == "Neumann",
+                yft == "Neumann",
+                ybt == "Neumann",
+                zbt == "Neumann",
+                ztt == "Neumann",
+            ]
+        )
 
-        # total interior gradient points is (nx-1)*ny*nz in x direction, etc,
-        # but in 3D we actually have three separate gradient components; here
-        # I'm assuming `discretised_gradient` already flattened one component
-        # of shape ( (nx-1)*ny*nz , ) for ∂/∂x etc.  You may need to adapt
-        # this to your actual storage of the 3D vector.
-        # n = discretised_gradient.size // repeats
+        if not has_neumann:
+            return discretised_gradient
 
-        # build 1D expansion matrices Ix, Iy, Iz for where the Neumann extended
-        # gradient lives; e.g. if left Neumann, we prepend one zero, etc.
-        def expand_1d(npts, didx):
-            rows, cols = [], []
-            for i in range(npts):
-                rows.append(i + (1 if (didx and didx > 0) else 0))
-                cols.append(i)
-            return csr_matrix((np.ones(npts), (rows, cols)), shape=(npts + didx, npts))
+        # Determine gradient direction from shape information
+        expected_x_size = (nx - 1) * ny * nz * repeats
+        expected_y_size = nx * (ny - 1) * nz * repeats
+        expected_z_size = nx * ny * (nz - 1) * repeats
 
-        Ix = expand_1d(
-            nx - 1, 1 if xlt == "Neumann" else 0
-        )  # for ∂/∂x, there are nx 1 intervals
-        Iy = expand_1d(
-            ny, 1 if yft == "Neumann" else 0
-        )  # each x gradient slice repeats ny times
-        Iz = expand_1d(nz, 1 if zbt == "Neumann" else 0)
+        grad_size = discretised_gradient.size
 
-        Mx = kron(Iz, kron(Iy, Ix))
+        if grad_size == expected_x_size:
+            target_size = (nx + 1) * ny * nz * repeats
 
-        bc_vec = pybamm.Vector(np.zeros((Mx.shape[0] * repeats,)))
+            from scipy.sparse import lil_matrix
 
-        def scatter(vals, rows, length):
-            out = np.zeros((length,))
-            out[rows] = vals
-            return out
+            matrix = lil_matrix((target_size, grad_size))
 
-        if xlt == "Neumann" and xlv is not None:
-            xlv_val = get_float_val(xrv)
-            if xlv_val != 0:
-                rows = []
+            for rep in range(repeats):
                 for k in range(nz):
                     for j in range(ny):
-                        # row index in flattened (nnx*ny*nz) vector
-                        idx = k * (nny * nnx) + j * nnx + 0
-                        rows.append(idx)
-                val = xlv_val if isinstance(xlv_val, (int, float)) else xlv
-                bc_vec += pybamm.Vector(
-                    scatter(val * np.ones(len(rows)), rows, Mx.shape[0] * repeats)
-                )
+                        rod_start_src = (
+                            rep * (nx - 1) * ny * nz + k * (nx - 1) * ny + j * (nx - 1)
+                        )
+                        rod_start_tgt = (
+                            rep * (nx + 1) * ny * nz + k * (nx + 1) * ny + j * (nx + 1)
+                        )
 
-        if xrt == "Neumann" and xrv is not None:
-            xrv_val = get_float_val(xrv)
-            if xrv_val != 0:
-                rows = []
+                        for i in range(nx - 1):
+                            src_idx = rod_start_src + i
+                            tgt_idx = rod_start_tgt + (
+                                i + 1
+                            )  # Shift by 1 to leave space for left BC
+                            matrix[tgt_idx, src_idx] = 1.0
+
+            bc_vector = np.zeros(target_size)
+
+            if xlt == "Neumann" and xlv is not None:
+                xlv_val = get_float_val(xlv)
+                for rep in range(repeats):
+                    for k in range(nz):
+                        for j in range(ny):
+                            # Left boundary goes to position 0 in each rod
+                            rod_start = (
+                                rep * (nx + 1) * ny * nz
+                                + k * (nx + 1) * ny
+                                + j * (nx + 1)
+                            )
+                            bc_vector[rod_start + 0] = xlv_val
+
+            if xrt == "Neumann" and xrv is not None:
+                xrv_val = get_float_val(xrv)
+                for rep in range(repeats):
+                    for k in range(nz):
+                        for j in range(ny):
+                            # Right boundary goes to position nx in each rod
+                            rod_start = (
+                                rep * (nx + 1) * ny * nz
+                                + k * (nx + 1) * ny
+                                + j * (nx + 1)
+                            )
+                            bc_vector[rod_start + nx] = xrv_val
+
+        elif grad_size == expected_y_size:
+            # Y-direction gradient: MUST expand to exactly nx*(ny+1)*nz
+            target_size = nx * (ny + 1) * nz * repeats
+
+            from scipy.sparse import lil_matrix
+
+            matrix = lil_matrix((target_size, grad_size))
+
+            # Map internal faces
+            for rep in range(repeats):
                 for k in range(nz):
+                    for i in range(nx):
+                        col_start_src = (
+                            rep * nx * (ny - 1) * nz + k * nx * (ny - 1) + i * (ny - 1)
+                        )
+                        col_start_tgt = (
+                            rep * nx * (ny + 1) * nz + k * nx * (ny + 1) + i * (ny + 1)
+                        )
+
+                        for j in range(ny - 1):
+                            src_idx = col_start_src + j
+                            tgt_idx = col_start_tgt + (j + 1)  # Shift by 1 for front BC
+                            matrix[tgt_idx, src_idx] = 1.0
+
+            bc_vector = np.zeros(target_size)
+
+            # Apply Neumann BCs
+            if yft == "Neumann" and yfv is not None:
+                yfv_val = get_float_val(yfv)
+                for rep in range(repeats):
+                    for k in range(nz):
+                        for i in range(nx):
+                            # Front boundary goes to position 0
+                            col_start = (
+                                rep * nx * (ny + 1) * nz
+                                + k * nx * (ny + 1)
+                                + i * (ny + 1)
+                            )
+                            bc_vector[col_start + 0] = yfv_val
+
+            if ybt == "Neumann" and ybv is not None:
+                ybv_val = get_float_val(ybv)
+                for rep in range(repeats):
+                    for k in range(nz):
+                        for i in range(nx):
+                            # Back boundary goes to position ny
+                            col_start = (
+                                rep * nx * (ny + 1) * nz
+                                + k * nx * (ny + 1)
+                                + i * (ny + 1)
+                            )
+                            bc_vector[col_start + ny] = ybv_val
+
+        elif grad_size == expected_z_size:
+            # Z-direction gradient: MUST expand to exactly nx*ny*(nz+1)
+            target_size = nx * ny * (nz + 1) * repeats
+
+            from scipy.sparse import lil_matrix
+
+            matrix = lil_matrix((target_size, grad_size))
+
+            # Map internal faces
+            for rep in range(repeats):
+                for j in range(ny):
+                    for i in range(nx):
+                        # Each "stack" in x-y has nz+1 face positions: [0, 1, 2, ..., nz]
+                        # Internal faces go to positions [1, 2, ..., nz-1]
+                        stack_start_src = (
+                            rep * nx * ny * (nz - 1) + j * nx * (nz - 1) + i * (nz - 1)
+                        )
+                        stack_start_tgt = (
+                            rep * nx * ny * (nz + 1) + j * nx * (nz + 1) + i * (nz + 1)
+                        )
+
+                        for k in range(nz - 1):
+                            src_idx = stack_start_src + k
+                            tgt_idx = stack_start_tgt + (
+                                k + 1
+                            )  # Shift by 1 for bottom BC
+                            matrix[tgt_idx, src_idx] = 1.0
+
+            bc_vector = np.zeros(target_size)
+
+            # Apply Neumann BCs
+            if zbt == "Neumann" and zbv is not None:
+                zbv_val = get_float_val(zbv)
+                for rep in range(repeats):
                     for j in range(ny):
-                        idx = k * (nny * nnx) + j * nnx + (nnx - 1)
-                        rows.append(idx)
-                val = xrv_val if isinstance(xrv_val, (int, float)) else xrv
-                bc_vec += pybamm.Vector(
-                    scatter(val * np.ones(len(rows)), rows, Mx.shape[0] * repeats)
-                )
+                        for i in range(nx):
+                            # Bottom boundary goes to position 0
+                            stack_start = (
+                                rep * nx * ny * (nz + 1)
+                                + j * nx * (nz + 1)
+                                + i * (nz + 1)
+                            )
+                            bc_vector[stack_start + 0] = zbv_val
 
-        if yft == "Neumann" and yfv is not None:
-            yfv_val_num = get_float_val(yfv)
-            if yfv_val_num != 0:
-                rows = []
-                for k in range(nz):
-                    for i in range(
-                        nx - 1 + (1 if xlt == "Neumann" or xrt == "Neumann" else 0)
-                    ):
-                        idx = k * (nny * nnx) + 0 * nnx + i
-                        rows.append(idx)
-                val = yfv_val_num
-                bc_vec += pybamm.Vector(
-                    scatter(val * np.ones(len(rows)), rows, Mx.shape[0] * repeats)
-                )
+            if ztt == "Neumann" and ztv is not None:
+                ztv_val = get_float_val(ztv)
+                for rep in range(repeats):
+                    for j in range(ny):
+                        for i in range(nx):
+                            # Top boundary goes to position nz
+                            stack_start = (
+                                rep * nx * ny * (nz + 1)
+                                + j * nx * (nz + 1)
+                                + i * (nz + 1)
+                            )
+                            bc_vector[stack_start + nz] = ztv_val
 
-        if ybt == "Neumann" and ybv is not None:
-            ybv_val_num = get_float_val(ybv)
-            if ybv_val_num != 0:
-                rows = []
-                for k in range(nz):
-                    for i in range(
-                        nx - 1 + (1 if xlt == "Neumann" or xrt == "Neumann" else 0)
-                    ):
-                        idx = k * (nny * nnx) + (nny - 1) * nnx + i
-                        rows.append(idx)
-                val = ybv_val_num
-                bc_vec += pybamm.Vector(
-                    scatter(val * np.ones(len(rows)), rows, Mx.shape[0] * repeats)
-                )
+        else:
+            raise ValueError(
+                f"Unexpected gradient size {grad_size}. Expected one of: "
+                f"x-grad={expected_x_size}, y-grad={expected_y_size}, z-grad={expected_z_size}"
+            )
 
-        if zbt == "Neumann" and zbv is not None:
-            zbv_val = get_float_val(zbv)
-            if zbv_val != 0:
-                rows = []
-                for j in range(ny + (1 if yft == "Neumann" or ybt == "Neumann" else 0)):
-                    for i in range(
-                        nx - 1 + (1 if xlt == "Neumann" or xrt == "Neumann" else 0)
-                    ):
-                        idx = 0 * (nny * nnx) + j * nnx + i
-                        rows.append(idx)
-                val = zbv_val
-                bc_vec += pybamm.Vector(
-                    scatter(val * np.ones(len(rows)), rows, Mx.shape[0] * repeats)
-                )
+        # Convert to CSR and create PyBaMM symbols
+        matrix = matrix.tocsr()
+        bc_vector_symbol = pybamm.Vector(bc_vector)
+        bc_vector_symbol.copy_domains(discretised_gradient)
 
-        if ztt == "Neumann" and ztv is not None:
-            ztv_val = get_float_val(ztv)
-            if ztv_val != 0:
-                rows = []
-                for j in range(ny + (1 if yft == "Neumann" or ybt == "Neumann" else 0)):
-                    for i in range(
-                        nx - 1 + (1 if xlt == "Neumann" or xrt == "Neumann" else 0)
-                    ):
-                        idx = (nnz - 1) * (nny * nnx) + j * nnx + i
-                        rows.append(idx)
-                val = ztv_val
-                bc_vec += pybamm.Vector(
-                    scatter(val * np.ones(len(rows)), rows, Mx.shape[0] * repeats)
-                )
-
-        new_grad = pybamm.Matrix(Mx) @ discretised_gradient + bc_vec
+        # Create the result using symbolic operations
+        new_grad = pybamm.Matrix(matrix) @ discretised_gradient + bc_vector_symbol
         new_grad.copy_domains(discretised_gradient)
+
         return new_grad
 
     def boundary_value_or_flux(self, symbol, discretised_child, bcs=None):
