@@ -1,5 +1,6 @@
-import pybamm
 import numpy as np
+
+import pybamm
 
 # create the model
 model = pybamm.lithium_ion.DFN()

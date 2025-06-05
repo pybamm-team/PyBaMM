@@ -1,8 +1,11 @@
 from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import Literal
-import numpy.typing as npt
+
 import numpy as np
+import numpy.typing as npt
+
 import pybamm
 
 

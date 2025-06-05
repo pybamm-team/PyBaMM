@@ -1,6 +1,7 @@
 import pybamm
-from .quick_plot import ax_min, ax_max
 from pybamm.util import import_optional_dependency
+
+from .quick_plot import ax_max, ax_min
 
 
 def plot2D(x, y, z, ax=None, show_plot=True, **kwargs):

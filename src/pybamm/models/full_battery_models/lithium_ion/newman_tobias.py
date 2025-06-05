@@ -2,6 +2,7 @@
 # Newman Tobias Model
 #
 import pybamm
+
 from .dfn import DFN
 
 

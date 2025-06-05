@@ -2,8 +2,9 @@
 # Tests for the Casadi Solver Modes
 #
 
-import pybamm
 import numpy as np
+
+import pybamm
 
 
 class TestCasadiModes:

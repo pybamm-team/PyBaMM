@@ -1,9 +1,11 @@
 from __future__ import annotations
+
 import pybamm
+
 from .step.base_step import (
-    _convert_time_to_seconds,
-    _convert_temperature_to_kelvin,
     BaseStep,
+    _convert_temperature_to_kelvin,
+    _convert_time_to_seconds,
 )
 
 

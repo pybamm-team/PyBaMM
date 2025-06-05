@@ -1,5 +1,6 @@
-import pybamm
 import pytest
+
+import pybamm
 
 
 class TestLeadAcidLOQS:
