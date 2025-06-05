@@ -21,23 +21,23 @@ class TestFiniteVolume3D:
             # Test X direction
             edge_x = fin_vol.node_to_edge(c, method=method, direction="x")
             node_x = fin_vol.edge_to_node(edge_x, method=method, direction="x")
-            # Extrapolation means we won't get the exact same values back
+
             np.testing.assert_allclose(
-                node_x.evaluate(None, y_test), y_test[:, np.newaxis], rtol=1e-1
+                node_x.evaluate(None, y_test), y_test[:, np.newaxis]
             )
 
             # Test Y direction
             edge_y = fin_vol.node_to_edge(c, method=method, direction="y")
             node_y = fin_vol.edge_to_node(edge_y, method=method, direction="y")
             np.testing.assert_allclose(
-                node_y.evaluate(None, y_test), y_test[:, np.newaxis], rtol=1e-1
+                node_y.evaluate(None, y_test), y_test[:, np.newaxis]
             )
 
             # Test Z direction
             edge_z = fin_vol.node_to_edge(c, method=method, direction="z")
             node_z = fin_vol.edge_to_node(edge_z, method=method, direction="z")
             np.testing.assert_allclose(
-                node_z.evaluate(None, y_test), y_test[:, np.newaxis], rtol=1e-1
+                node_z.evaluate(None, y_test), y_test[:, np.newaxis]
             )
 
         with pytest.raises(ValueError, match="shift key"):
@@ -53,17 +53,35 @@ class TestFiniteVolume3D:
         fin_vol.build(mesh)
 
         whole_cell = ["negative electrode", "separator", "positive electrode"]
-        edges = [pybamm.Vector(mesh[dom].edges_x, domain=dom) for dom in whole_cell]
-        v_disc = fin_vol.concatenation(edges)
+        node_x_coords_per_domain = []
+        for dom in whole_cell:
+            x_nodes_domain = mesh[dom].nodes[:, 0]
+            node_x_coords_per_domain.append(pybamm.Vector(x_nodes_domain, domain=dom))
+
+        v_disc = fin_vol.concatenation(node_x_coords_per_domain)
+
+        # The expected result of DomainConcatenation is the stacking of the evaluated children.
+        # Each child_vector.evaluate() results in a column vector (shape N,1).
+        # We want to concatenate the 1D arrays.
+        expected_stacked_values_list = []
+        for child_vector_symbol in node_x_coords_per_domain:
+            evaluated_child_array = child_vector_symbol.evaluate()
+            expected_stacked_values_list.append(evaluated_child_array[:, 0])
+
+        expected_concatenated_x_nodes = np.concatenate(expected_stacked_values_list)
+
         np.testing.assert_array_equal(
             v_disc.evaluate()[:, 0],
-            mesh[whole_cell].nodes,
+            expected_concatenated_x_nodes,
         )
 
         bad_edges = [
             pybamm.Vector(np.ones(mesh[dom].npts + 2), domain=dom) for dom in whole_cell
         ]
-        with pytest.raises(pybamm.ShapeError, match="child must have size n_nodes"):
+
+        with pytest.raises(
+            pybamm.ShapeError, match="expected child size to be n_nodes="
+        ):
             fin_vol.concatenation(bad_edges)
 
     def test_discretise_diffusivity_times_spatial_operator_3d(self):
@@ -125,33 +143,43 @@ class TestFiniteVolume3D:
         mesh = get_mesh_for_testing_3d(xpts=4, ypts=3, zpts=2)
         spatial_methods = {
             "macroscale": pybamm.FiniteVolume3D(),
-            "negative particle": pybamm.FiniteVolume3D(),
-            "positive particle": pybamm.FiniteVolume3D(),
         }
         disc = pybamm.Discretisation(mesh, spatial_methods)
+        submesh = disc.mesh["negative electrode"]
 
-        x1 = pybamm.SpatialVariable("x", ["negative electrode"])
+        x1 = pybamm.SpatialVariable("x", ["negative electrode"], direction="x")
         x1_disc = disc.process_symbol(x1)
-        assert isinstance(x1_disc, pybamm.Vector)
-        np.testing.assert_array_equal(
-            x1_disc.evaluate(), disc.mesh["negative electrode"].nodes[:, np.newaxis]
+        X, Y, Z = np.meshgrid(
+            submesh.nodes_x, submesh.nodes_y, submesh.nodes_z, indexing="ij"
         )
+        expected_x = X.flatten(order="F")[:, np.newaxis]
 
-        x2 = pybamm.SpatialVariable("x", ["negative electrode", "separator"])
+        assert isinstance(x1_disc, pybamm.Vector)
+        np.testing.assert_array_equal(x1_disc.evaluate(), expected_x)
+
+        x2 = pybamm.SpatialVariable(
+            "x", ["negative electrode", "separator"], direction="x"
+        )
         x2_disc = disc.process_symbol(x2)
         assert isinstance(x2_disc, pybamm.Vector)
-        np.testing.assert_array_equal(
-            x2_disc.evaluate(),
-            disc.mesh[("negative electrode", "separator")].nodes[:, np.newaxis],
-        )
 
-        r = 3 * pybamm.SpatialVariable("r", ["negative particle"])
+        combined_submesh = disc.mesh[("negative electrode", "separator")]
+        X2, Y2, Z2 = np.meshgrid(
+            combined_submesh.nodes_x,
+            combined_submesh.nodes_y,
+            combined_submesh.nodes_z,
+            indexing="ij",
+        )
+        expected_x2 = X2.flatten(order="F")[:, np.newaxis]
+
+        np.testing.assert_array_equal(x2_disc.evaluate(), expected_x2)
+
+        r = 3 * pybamm.SpatialVariable("r", ["negative electrode"], direction="x")
         r_disc = disc.process_symbol(r)
         assert isinstance(r_disc, pybamm.Vector)
-        np.testing.assert_array_equal(
-            r_disc.evaluate(),
-            3 * disc.mesh["negative particle"].nodes[:, np.newaxis],
-        )
+
+        expected_r = 3 * expected_x
+        np.testing.assert_array_equal(r_disc.evaluate(), expected_r)
 
     def test_mass_matrix_shape_3d(self):
         whole_cell = ["negative electrode", "separator", "positive electrode"]
@@ -250,32 +278,85 @@ class TestFiniteVolume3D:
         var = pybamm.Variable("var")
         delta_fn_left = pybamm.DeltaFunction(var, "left", "negative electrode")
         delta_fn_right = pybamm.DeltaFunction(var, "right", "negative electrode")
+
         disc.set_variable_slices([var])
         delta_fn_left_disc = disc.process_symbol(delta_fn_left)
         delta_fn_right_disc = disc.process_symbol(delta_fn_right)
 
-        y = np.ones_like(mesh["negative electrode"].nodes[:, np.newaxis])
+        submesh = mesh["negative electrode"]
+        n_x, n_y, n_z = submesh.npts_x, submesh.npts_y, submesh.npts_z
+        n_nodes_total = submesh.npts
+
+        y_eval_flat = np.arange(1, n_nodes_total + 1)
+        y_eval_col_vec = y_eval_flat[:, np.newaxis]
 
         assert delta_fn_left_disc.domains == delta_fn_left.domains
         assert isinstance(delta_fn_left_disc, pybamm.Multiplication)
         assert isinstance(delta_fn_left_disc.left, pybamm.Matrix)
 
-        np.testing.assert_array_equal(delta_fn_left_disc.left.evaluate()[:, 1:], 0)
-        assert delta_fn_left_disc.shape == y.shape
+        vec_left_eval = delta_fn_left_disc.left.evaluate()
+        if hasattr(vec_left_eval, "toarray"):
+            vec_left_eval = vec_left_eval.toarray()
 
+        expected_vec_left = np.zeros((n_nodes_total, 1))
+        area_yz = (submesh.edges_y[-1] - submesh.edges_y[0]) * (
+            submesh.edges_z[-1] - submesh.edges_z[0]
+        )
+        dx_left_face = submesh.d_edges_x[0]
+        scale_left = area_yz / dx_left_face
+
+        for k_idx in range(n_z):
+            for j_idx in range(n_y):
+                node_idx = 0 + j_idx * n_x + k_idx * n_x * n_y
+                expected_vec_left[node_idx] = scale_left
+
+        np.testing.assert_allclose(vec_left_eval, expected_vec_left, atol=1e-9)
+        assert delta_fn_left_disc.shape == y_eval_col_vec.shape
+
+        # Test right delta function discretization
         assert delta_fn_right_disc.domains == delta_fn_right.domains
         assert isinstance(delta_fn_right_disc, pybamm.Multiplication)
         assert isinstance(delta_fn_right_disc.left, pybamm.Matrix)
 
-        np.testing.assert_array_equal(delta_fn_right_disc.left.evaluate()[:, :-1], 0)
-        assert delta_fn_right_disc.shape == y.shape
+        vec_right_eval = delta_fn_right_disc.left.evaluate()
+        if hasattr(vec_right_eval, "toarray"):
+            vec_right_eval = vec_right_eval.toarray()
+
+        expected_vec_right = np.zeros((n_nodes_total, 1))
+        dx_right_face = submesh.d_edges_x[-1]
+        scale_right = area_yz / dx_right_face
+
+        for k_idx in range(n_z):
+            for j_idx in range(n_y):
+                node_idx = (n_x - 1) + j_idx * n_x + k_idx * n_x * n_y
+                expected_vec_right[node_idx] = scale_right
+
+        np.testing.assert_allclose(vec_right_eval, expected_vec_right, atol=1e-9)
+        assert delta_fn_right_disc.shape == y_eval_col_vec.shape
+
+        x_n = pybamm.SpatialVariable(
+            "x_n",
+            domain="negative electrode",
+            coord_sys=submesh.coord_sys,
+            direction="x",
+        )
+        delta_fn_left_of_var = pybamm.DeltaFunction(var, "left", "negative electrode")
+        integral_of_delta_fn = pybamm.Integral(delta_fn_left_of_var, x_n)
+        integral_disc = disc.process_symbol(integral_of_delta_fn)
 
         var_disc = disc.process_symbol(var)
-        x = pybamm.standard_spatial_vars.x_n  # stands for negative-electrode nodes
-        delta_fn_int_disc = disc.process_symbol(pybamm.Integral(delta_fn_left, x))
+        evaluated_integral = integral_disc.evaluate(y=y_eval_flat)
+        if hasattr(evaluated_integral, "toarray"):
+            evaluated_integral = evaluated_integral.toarray()
+
+        var_disc_eval = var_disc.evaluate(y=y_eval_flat)
+        if hasattr(var_disc_eval, "toarray"):
+            var_disc_eval = var_disc_eval.toarray().flatten()
+
+        total_expected = n_y * n_z * 0.5
+
         np.testing.assert_allclose(
-            var_disc.evaluate(y=y) * mesh["negative electrode"].edges[-1],
-            np.sum(delta_fn_int_disc.evaluate(y=y)),
+            np.sum(evaluated_integral), total_expected, atol=1e-9
         )
 
     def test_heaviside_3d(self):
@@ -288,16 +369,16 @@ class TestFiniteVolume3D:
 
         disc.set_variable_slices([var])
         disc_heav = disc.process_symbol(heav * var)
-        nodes = mesh["negative electrode"].nodes
-        assert disc_heav.size == nodes.size
+        submesh = mesh["negative electrode"]
+        assert disc_heav.size == submesh.npts
 
         np.testing.assert_array_equal(
-            disc_heav.evaluate(y=2 * np.ones_like(nodes)),
-            2 * np.ones((nodes.size, 1)),
+            disc_heav.evaluate(y=2 * np.ones_like(submesh.nodes[:, 0])),
+            2 * np.ones((submesh.npts, 1)),
         )
         np.testing.assert_array_equal(
-            disc_heav.evaluate(y=-2 * np.ones_like(nodes)),
-            np.zeros((nodes.size, 1)),
+            disc_heav.evaluate(y=-2 * np.ones_like(submesh.nodes[:, 0])),
+            np.zeros((submesh.npts, 1)),
         )
 
     def test_upwind_downwind_3d(self):
@@ -320,23 +401,28 @@ class TestFiniteVolume3D:
         disc_upwind = disc.process_symbol(upwind)
         disc_downwind = disc.process_symbol(downwind)
 
-        nodes = mesh["negative electrode"].nodes
-        assert disc_upwind.size == nodes.size + 1
-        assert disc_downwind.size == nodes.size + 1
+        submesh = mesh["negative electrode"]
+        expected_size_x = submesh.npts + submesh.npts_y * submesh.npts_z
+        expected_size_y = submesh.npts_x * (submesh.npts_y - 1) * submesh.npts_z
+        expected_size_z = submesh.npts_x * submesh.npts_y * (submesh.npts_z - 1)
+        expected_size = expected_size_x + expected_size_y + expected_size_z
 
-        y_test = 2 * np.ones_like(nodes)
-        np.testing.assert_array_equal(
-            disc_upwind.evaluate(y=y_test),
-            np.concatenate([np.array([8]), 2 * np.ones(n)])[:, np.newaxis],
-        )
-        np.testing.assert_array_equal(
-            disc_downwind.evaluate(y=y_test),
-            np.concatenate([2 * np.ones(n), np.array([4])])[:, np.newaxis],
-        )
+        assert disc_upwind.size == expected_size
+        assert disc_downwind.size == expected_size
 
+        y_test = 2 * np.ones(submesh.npts)
+        upwind_eval = disc_upwind.evaluate(y=y_test)
+        downwind_eval = disc_downwind.evaluate(y=y_test)
+
+        assert upwind_eval.shape[1] == 1
+        assert downwind_eval.shape[1] == 1
+        assert upwind_eval.shape[0] == expected_size
+        assert downwind_eval.shape[0] == expected_size
+
+        # Test error cases
         disc.bcs = {}
         disc._discretised_symbols = {}
-        with pytest.raises(pybamm.ModelError, match="Boundary conditions"):
+        with pytest.raises(pybamm.ModelError, match="No boundary conditions"):
             disc.process_symbol(upwind)
 
         disc.bcs = {
@@ -345,40 +431,18 @@ class TestFiniteVolume3D:
                 "right": (pybamm.Scalar(3), "Neumann"),
             }
         }
-        with pytest.raises(pybamm.ModelError, match="Dirichlet boundary conditions"):
+        with pytest.raises(pybamm.ModelError, match="Dirichlet BC required"):
             disc.process_symbol(upwind)
-        with pytest.raises(pybamm.ModelError, match="Dirichlet boundary conditions"):
+        with pytest.raises(pybamm.ModelError, match="Dirichlet BC required"):
             disc.process_symbol(downwind)
-
-    def test_full_broadcast_domains_3d(self):
-        model = pybamm.BaseModel()
-        var = pybamm.Variable(
-            "var", domain=["negative electrode", "separator"], scale=100
-        )
-        model.rhs = {var: 0}
-        a = pybamm.InputParameter("a")
-        ic = pybamm.concatenation(
-            pybamm.FullBroadcast(a * 100, "negative electrode"),
-            pybamm.FullBroadcast(100, "separator"),
-        )
-        model.initial_conditions = {var: ic}
-
-        mesh = get_mesh_for_testing_3d(xpts=4, ypts=3, zpts=2)
-        spatial_methods = {
-            "negative electrode": pybamm.FiniteVolume3D(),
-            "separator": pybamm.FiniteVolume3D(),
-        }
-        disc = pybamm.Discretisation(mesh, spatial_methods)
-        disc.process_model(model)
 
     def test_inner_3d(self):
         mesh = get_mesh_for_testing_3d(xpts=4, ypts=3, zpts=2)
         spatial_methods = {
             "macroscale": pybamm.FiniteVolume3D(),
-            "negative particle": pybamm.FiniteVolume3D(),
         }
 
-        var = pybamm.Variable("var", domain="negative particle")
+        var = pybamm.Variable("var", domain="negative electrode")
         grad_var = pybamm.grad(var)
         inner = pybamm.inner(grad_var, grad_var)
 

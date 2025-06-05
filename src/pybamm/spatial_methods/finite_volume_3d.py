@@ -98,11 +98,10 @@ class FiniteVolume3D(pybamm.SpatialMethod):
         elif symbol_direction == "z":
             entries = np.tile(z, repeats)
         else:
-            if symbol_direction not in ["x", "y", "z"]:
-                raise ValueError(
-                    f"Symbol direction '{symbol_direction}' not supported for direct construction "
-                    "as a spatial variable vector. Discretise the variable directly."
-                )
+            raise ValueError(
+                f"Symbol direction '{symbol_direction}' not supported for direct construction "
+                "as a spatial variable vector. Discretise the variable directly."
+            )
 
         return pybamm.Vector(entries, domains=symbol.domains)
 
@@ -479,7 +478,6 @@ class FiniteVolume3D(pybamm.SpatialMethod):
 
         if integration_dimension == "primary":
             submesh = self.mesh[domains["primary"]]
-
             if integration_direction == "x":
                 d_edges = submesh.d_edges_x
                 if submesh.coord_sys == "cylindrical polar":
@@ -492,9 +490,8 @@ class FiniteVolume3D(pybamm.SpatialMethod):
                     spiral_metric = self.compute_spiral_metric(submesh)
                     weights = spiral_metric
                 else:
-                    weights = np.ones_like(d_edges)
+                    weights = np.ones(n_x)
 
-                # Create integration matrix for x-direction
                 cols_list = []
                 rows_list = []
                 for k in range(n_z):
@@ -506,28 +503,24 @@ class FiniteVolume3D(pybamm.SpatialMethod):
 
                 cols = np.concatenate(cols_list)
                 rows = np.concatenate(rows_list)
+                data = np.tile(d_edges * weights, n_y * n_z)
                 sub_matrix = csr_matrix(
-                    (np.tile(d_edges * weights, n_y * n_z), (rows, cols)),
+                    (data, (rows, cols)),
                     shape=(n_y * n_z, n_x * n_y * n_z),
                 )
 
             elif integration_direction == "y":
                 d_edges = submesh.d_edges_y
                 if submesh.coord_sys == "cylindrical polar":
-                    r_nodes = submesh.nodes_x
-                    weights = np.ones_like(
-                        d_edges
-                    )  # No additional weighting for y in cylindrical
+                    weights = np.ones(n_y)
                 elif submesh.coord_sys == "spherical polar":
                     theta_nodes = submesh.nodes_y
                     weights = np.sin(theta_nodes)
                 elif submesh.coord_sys == "spiral":
-                    spiral_metric = self.compute_spiral_metric(submesh)
-                    weights = np.ones_like(d_edges)
+                    weights = np.ones(n_y)
                 else:
-                    weights = np.ones_like(d_edges)
+                    weights = np.ones(n_y)
 
-                # Create integration matrix for y-direction
                 cols_list = []
                 rows_list = []
                 for k in range(n_z):
@@ -542,28 +535,23 @@ class FiniteVolume3D(pybamm.SpatialMethod):
 
                 cols = np.concatenate(cols_list)
                 rows = np.concatenate(rows_list)
+                data = np.tile(d_edges * weights, n_x * n_z)
                 sub_matrix = csr_matrix(
-                    (np.tile(d_edges * weights, n_x * n_z), (rows, cols)),
+                    (data, (rows, cols)),
                     shape=(n_x * n_z, n_x * n_y * n_z),
                 )
 
             elif integration_direction == "z":
                 d_edges = submesh.d_edges_z
                 if submesh.coord_sys == "cylindrical polar":
-                    weights = np.ones_like(
-                        d_edges
-                    )  # No additional weighting for z in cylindrical
+                    weights = np.ones(n_z)
                 elif submesh.coord_sys == "spherical polar":
-                    weights = np.ones_like(
-                        d_edges
-                    )  # No additional weighting for z in spherical
+                    weights = np.ones(n_z)
                 elif submesh.coord_sys == "spiral":
-                    spiral_metric = self.compute_spiral_metric(submesh)
-                    weights = np.ones_like(d_edges)
+                    weights = np.ones(n_z)
                 else:
-                    weights = np.ones_like(d_edges)
+                    weights = np.ones(n_z)
 
-                # Create integration matrix for z-direction
                 cols_list = []
                 rows_list = []
                 for j in range(n_y):
@@ -578,8 +566,9 @@ class FiniteVolume3D(pybamm.SpatialMethod):
 
                 cols = np.concatenate(cols_list)
                 rows = np.concatenate(rows_list)
+                data = np.tile(d_edges * weights, n_x * n_y)
                 sub_matrix = csr_matrix(
-                    (np.tile(d_edges * weights, n_x * n_y), (rows, cols)),
+                    (data, (rows, cols)),
                     shape=(n_x * n_y, n_x * n_y * n_z),
                 )
         else:
@@ -745,59 +734,63 @@ class FiniteVolume3D(pybamm.SpatialMethod):
         return pybamm.Matrix(matrix)
 
     def delta_function(self, symbol, discretised_symbol):
-        """3D delta function for boundary flux (symbol.side = ("x"/"y"/"z", "left"/"right"))."""
+        """
+        3D delta function for boundary flux.
+        Uses face area perpendicular to the integration direction, following 1D pattern.
+        """
         submesh = self.mesh[symbol.domain]
         n_x, n_y, n_z = submesh.npts_x, submesh.npts_y, submesh.npts_z
-        coord_dir, face_side = symbol.side
+
+        if isinstance(symbol.side, tuple):
+            coord_dir, face_side = symbol.side
+        else:
+            face_side = symbol.side
+            coord_dir = "x"  # Default to x-direction
 
         if coord_dir == "x":
             x_idx = 0 if face_side == "left" else n_x - 1
-            y_length = submesh.edges_y[-1] - submesh.edges_y[0]
-            z_length = submesh.edges_z[-1] - submesh.edges_z[0]
-            face_area = y_length * z_length
+            # Face area perpendicular to x (y-z area)
+            face_area = (submesh.edges_y[-1] - submesh.edges_y[0]) * (
+                submesh.edges_z[-1] - submesh.edges_z[0]
+            )
             dx = submesh.d_edges_x[x_idx]
-
             rows = []
             for z_i in range(n_z):
                 base_z = z_i * (n_x * n_y)
                 for y_i in range(n_y):
                     rows.append(base_z + y_i * n_x + x_idx)
-
             scale = face_area / dx
 
         elif coord_dir == "y":
             y_idx = 0 if face_side == "left" else n_y - 1
-            x_length = submesh.edges_x[-1] - submesh.edges_x[0]
-            z_length = submesh.edges_z[-1] - submesh.edges_z[0]
-            face_area = x_length * z_length
+            # Face area perpendicular to y (x-z area)
+            face_area = (submesh.edges_x[-1] - submesh.edges_x[0]) * (
+                submesh.edges_z[-1] - submesh.edges_z[0]
+            )
             dy = submesh.d_edges_y[y_idx]
-
             rows = []
             for z_i in range(n_z):
                 base_z = z_i * (n_x * n_y)
                 for x_i in range(n_x):
                     rows.append(base_z + y_idx * n_x + x_i)
-
             scale = face_area / dy
 
         elif coord_dir == "z":
             z_idx = 0 if face_side == "left" else n_z - 1
-            x_length = submesh.edges_x[-1] - submesh.edges_x[0]
-            y_length = submesh.edges_y[-1] - submesh.edges_y[0]
-            face_area = x_length * y_length
+            # Face area perpendicular to z (x-y area)
+            face_area = (submesh.edges_x[-1] - submesh.edges_x[0]) * (
+                submesh.edges_y[-1] - submesh.edges_y[0]
+            )
             dz = submesh.d_edges_z[z_idx]
-
             rows = []
-            base_z = z_idx * (n_x * n_y)
             for y_i in range(n_y):
                 for x_i in range(n_x):
-                    rows.append(base_z + y_i * n_x + x_i)
-
+                    rows.append(z_idx * (n_x * n_y) + y_i * n_x + x_i)
             scale = face_area / dz
-
         else:
             raise ValueError(
-                "symbol.side must be ('x','left'/'right'), ('y',...), or ('z',...)"
+                "symbol.side must be ('x','left'/'right'), ('y',...), or ('z',...) "
+                "for tuple format, or 'left'/'right' for standard PyBaMM format"
             )
 
         rows = np.array(rows, dtype=int)
@@ -808,7 +801,7 @@ class FiniteVolume3D(pybamm.SpatialMethod):
         repeats = self._get_auxiliary_domain_repeats(symbol.domains)
         full_matrix = kron(eye(repeats), sub_matrix)
 
-        delta_vec = pybamm.Matrix(scale * full_matrix) @ discretised_symbol
+        delta_vec = pybamm.Matrix(scale * full_matrix) * discretised_symbol
         delta_vec.copy_domains(symbol)
         return delta_vec
 
@@ -2544,6 +2537,21 @@ class FiniteVolume3D(pybamm.SpatialMethod):
                     bin_op.create_copy([disc_left, disc_right.z_field])
                 )
             return pybamm.VectorField3D(x_field, y_field, z_field)
+
+        if isinstance(bin_op, pybamm.Inner):
+            if left.evaluates_on_edges("primary"):
+                # Check if disc_left is already node-based (e.g. from VectorField3D component handling)
+                if not (
+                    hasattr(disc_left, "domains")
+                    and self.mesh[disc_left.domain].npts == disc_left.size
+                ):  # A heuristic
+                    disc_left = self.edge_to_node(disc_left)
+            if right.evaluates_on_edges("primary"):
+                if not (
+                    hasattr(disc_right, "domains")
+                    and self.mesh[disc_right.domain].npts == disc_right.size
+                ):  # A heuristic
+                    disc_right = self.edge_to_node(disc_right)
 
         # If neither child evaluates on edges, or both children have gradients,
         # no need to do any averaging

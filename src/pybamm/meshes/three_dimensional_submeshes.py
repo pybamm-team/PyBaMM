@@ -106,9 +106,9 @@ class SubMesh3D(SubMesh):
     @classmethod
     def _from_json(cls, json_dict):
         return cls(
-            json_dict["edges_x"],
-            json_dict["edges_y"],
-            json_dict["edges_z"],
+            np.array(json_dict["edges_x"]),
+            np.array(json_dict["edges_y"]),
+            np.array(json_dict["edges_z"]),
             json_dict["coord_sys"],
             tabs=json_dict.get("tabs"),
         )
