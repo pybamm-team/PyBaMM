@@ -1,6 +1,8 @@
-import pybamm
 import os
+
 import numpy as np
+
+import pybamm
 
 
 def graphite_diffusivity_Dualfoil1998(sto, T):

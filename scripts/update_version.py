@@ -5,6 +5,7 @@ Automatically update version numbers in various files for releases
 import os
 import re
 from datetime import date
+
 import pybamm
 from pybamm._version import __version__ as release_version
 

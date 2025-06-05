@@ -1,9 +1,11 @@
-import pytest
-import casadi
-import pybamm
-import numpy as np
 import os
 from datetime import datetime
+
+import casadi
+import numpy as np
+import pytest
+
+import pybamm
 
 
 class ShortDurationCRate(pybamm.step.CRate):

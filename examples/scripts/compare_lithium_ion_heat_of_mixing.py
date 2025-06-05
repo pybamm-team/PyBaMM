@@ -1,9 +1,10 @@
 #
 # Compare SPMe model with and without heat of mixing
 #
-import pybamm
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+
+import pybamm
 
 pybamm.set_logging_level("INFO")
 

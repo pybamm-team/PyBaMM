@@ -2,8 +2,9 @@
 # Helper function for adding particle-size distribution parameter values
 # to a parameter set
 #
-import pybamm
 import numpy as np
+
+import pybamm
 
 
 def get_size_distribution_parameters(
