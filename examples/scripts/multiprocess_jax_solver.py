@@ -1,7 +1,8 @@
-import pybamm
 import time
+
 import numpy as np
 
+import pybamm
 
 # This script provides an example for massively vectorised
 # model solves using the JAX BDF solver. First,

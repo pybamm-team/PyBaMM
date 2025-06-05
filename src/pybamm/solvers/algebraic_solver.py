@@ -2,10 +2,11 @@
 # Algebraic solver class
 #
 import casadi
-import pybamm
 import numpy as np
 from scipy import optimize
 from scipy.sparse import issparse
+
+import pybamm
 
 
 class AlgebraicSolver(pybamm.BaseSolver):

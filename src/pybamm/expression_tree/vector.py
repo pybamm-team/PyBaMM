@@ -2,11 +2,14 @@
 # Vector class
 #
 from __future__ import annotations
+
+from typing import Any
+
 import numpy as np
 import numpy.typing as npt
+
 import pybamm
-from pybamm.type_definitions import DomainType, AuxiliaryDomainType, DomainsType
-from typing import Any
+from pybamm.type_definitions import AuxiliaryDomainType, DomainsType, DomainType
 
 
 class Vector(pybamm.Array):

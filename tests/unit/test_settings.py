@@ -2,8 +2,9 @@
 # Tests the settings class.
 #
 
-import pybamm
 import pytest
+
+import pybamm
 
 
 class TestSettings:

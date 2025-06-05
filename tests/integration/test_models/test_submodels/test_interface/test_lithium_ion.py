@@ -1,10 +1,11 @@
 #
 # Tests for the electrode-electrolyte interface equations for lithium-ion models
 #
+import numpy as np
+import pytest
+
 import pybamm
 from tests import get_discretisation_for_testing
-import pytest
-import numpy as np
 
 
 class TestExchangeCurrentDensity:
