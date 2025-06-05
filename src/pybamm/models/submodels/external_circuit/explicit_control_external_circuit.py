@@ -2,6 +2,7 @@
 # External circuit with explicit equations for control
 #
 import pybamm
+
 from .base_external_circuit import BaseModel
 
 

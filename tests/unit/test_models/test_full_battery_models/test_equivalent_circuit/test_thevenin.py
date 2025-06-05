@@ -2,8 +2,9 @@
 # Tests for the Thevenin equivalant circuit model
 #
 
-import pybamm
 import pytest
+
+import pybamm
 
 
 class TestThevenin:

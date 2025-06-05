@@ -1,9 +1,9 @@
 #
 # Simulate drive cycle loaded from csv file
 #
-import pybamm
 import pandas as pd
 
+import pybamm
 
 pybamm.set_logging_level("INFO")
 

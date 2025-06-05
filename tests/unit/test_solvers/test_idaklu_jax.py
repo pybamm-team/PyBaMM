@@ -1,8 +1,9 @@
 import sys
 
-import pytest
-import pybamm
 import numpy as np
+import pytest
+
+import pybamm
 
 
 def make_model():
@@ -22,9 +23,9 @@ def make_model():
 
 
 if pybamm.has_jax():
-    from jax.tree_util import tree_flatten
     import jax
     import jax.numpy as jnp
+    from jax.tree_util import tree_flatten
 
     inputs = {
         "a": 0.1,

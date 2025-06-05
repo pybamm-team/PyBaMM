@@ -2,8 +2,9 @@
 # Tests for the InputParameter class
 #
 import numpy as np
-import pybamm
 import pytest
+
+import pybamm
 
 
 class TestInputParameter:

@@ -1,9 +1,11 @@
-import numpy as np
-import pybamm
 import numbers
+from collections import defaultdict
 from pprint import pformat
 from warnings import warn
-from collections import defaultdict
+
+import numpy as np
+
+import pybamm
 from pybamm.models.full_battery_models.lithium_ion.msmr import (
     is_deprecated_msmr_name,
     replace_deprecated_msmr_name,
@@ -75,6 +77,7 @@ class ParameterValues:
     def _create_from_bpx(bpx, target_soc):
         from bpx import get_electrode_concentrations
         from bpx.schema import ElectrodeBlended, ElectrodeBlendedSPM
+
         from .bpx import bpx_to_param_dict
 
         if target_soc < 0 or target_soc > 1:

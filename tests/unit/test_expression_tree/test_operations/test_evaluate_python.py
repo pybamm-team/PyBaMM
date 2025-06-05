@@ -2,14 +2,15 @@
 # Test for the evaluate-to-python functions
 #
 
-import pytest
-import pybamm
-
-from tests import get_discretisation_for_testing, get_1p1d_discretisation_for_testing
-import numpy as np
-import scipy.sparse
-from collections import OrderedDict
 import re
+from collections import OrderedDict
+
+import numpy as np
+import pytest
+import scipy.sparse
+
+import pybamm
+from tests import get_1p1d_discretisation_for_testing, get_discretisation_for_testing
 
 if pybamm.has_jax():
     import jax
