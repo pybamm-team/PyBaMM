@@ -234,3 +234,185 @@ class TestIntegration3D:
                 atol=1e-6,
                 err_msg="Derivative of ∫x² dx should approximate x²",
             )
+
+    def test_indefinite_integral_on_nodes_3d(self):
+        mesh = get_mesh_for_testing_3d(xpts=4, ypts=3, zpts=2)
+        spatial_methods = {"macroscale": pybamm.FiniteVolume3D()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        phi = pybamm.Variable("phi", domain=["negative electrode"])
+        x = pybamm.SpatialVariable("x", ["negative electrode"], direction="x")
+
+        int_phi = pybamm.IndefiniteIntegral(phi, x)
+        disc.set_variable_slices([phi])
+        int_phi_disc = disc.process_symbol(int_phi)
+
+        submesh = mesh["negative electrode"]
+        n_x, n_y, n_z = submesh.npts_x, submesh.npts_y, submesh.npts_z
+
+        phi_exact = np.ones((submesh.npts, 1))
+        int_phi_approx = int_phi_disc.evaluate(None, phi_exact)
+
+        expected_size = (n_x + 1) * n_y * n_z
+        assert int_phi_approx.size == expected_size
+
+        result_3d = int_phi_approx.reshape((n_z, n_y, n_x + 1))
+
+        for k in range(n_z):
+            for j in range(n_y):
+                np.testing.assert_allclose(
+                    result_3d[k, j, :], submesh.edges_x, rtol=1e-7, atol=1e-6
+                )
+
+        x_coords = np.zeros(submesh.npts)
+        for k in range(n_z):
+            for j in range(n_y):
+                for i in range(n_x):
+                    idx = k * n_x * n_y + j * n_x + i
+                    x_coords[idx] = submesh.nodes_x[i]
+
+        int_phi_approx = int_phi_disc.evaluate(None, x_coords)
+        result_3d = int_phi_approx.reshape((n_z, n_y, n_x + 1))
+
+        expected_at_edges = submesh.edges_x**2 / 2
+        for k in range(n_z):
+            for j in range(n_y):
+                np.testing.assert_allclose(
+                    result_3d[k, j, :], expected_at_edges, rtol=1e-7, atol=1e-6
+                )
+
+    def test_backward_indefinite_integral_3d(self):
+        mesh = get_mesh_for_testing_3d(xpts=4, ypts=3, zpts=2)
+        spatial_methods = {"macroscale": pybamm.FiniteVolume3D()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        phi = pybamm.Variable("phi", domain=["negative electrode"])
+        x = pybamm.SpatialVariable("x", ["negative electrode"], direction="x")
+
+        back_int_phi = pybamm.BackwardIndefiniteIntegral(phi, x)
+        disc.set_variable_slices([phi])
+        back_int_phi_disc = disc.process_symbol(back_int_phi)
+
+        submesh = mesh["negative electrode"]
+        n_x, n_y, n_z = submesh.npts_x, submesh.npts_y, submesh.npts_z
+        edges_x = submesh.edges_x
+
+        phi_exact = np.ones((submesh.npts, 1))
+        back_int_phi_approx = back_int_phi_disc.evaluate(None, phi_exact)
+
+        expected_size = (n_x + 1) * n_y * n_z
+        assert back_int_phi_approx.size == expected_size
+
+        result_3d = back_int_phi_approx.reshape((n_z, n_y, n_x + 1))
+        expected_backward = edges_x[-1] - edges_x
+
+        for k in range(n_z):
+            for j in range(n_y):
+                np.testing.assert_allclose(
+                    result_3d[k, j, :], expected_backward, rtol=1e-7, atol=1e-6
+                )
+
+        x_coords = np.zeros(submesh.npts)
+        for k in range(n_z):
+            for j in range(n_y):
+                for i in range(n_x):
+                    idx = k * n_x * n_y + j * n_x + i
+                    x_coords[idx] = submesh.nodes_x[i]
+
+        back_int_phi_approx = back_int_phi_disc.evaluate(None, x_coords)
+        result_3d = back_int_phi_approx.reshape((n_z, n_y, n_x + 1))
+
+        expected_backward_linear = edges_x[-1] ** 2 / 2 - edges_x**2 / 2
+        for k in range(n_z):
+            for j in range(n_y):
+                np.testing.assert_allclose(
+                    result_3d[k, j, :], expected_backward_linear, rtol=1e-7, atol=1e-6
+                )
+
+    def test_boundary_integral_3d(self):
+        mesh = get_mesh_for_testing_3d(xpts=4, ypts=3, zpts=2)
+        spatial_methods = {"macroscale": pybamm.FiniteVolume3D()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        var = pybamm.Variable("var", domain=["negative electrode"])
+        disc.set_variable_slices([var])
+
+        submesh = mesh["negative electrode"]
+        n_x, n_y, n_z = submesh.npts_x, submesh.npts_y, submesh.npts_z
+
+        x_var = pybamm.SpatialVariable(
+            "x", domain=["negative electrode"], direction="x"
+        )
+        domain_integral = pybamm.Integral(var, x_var)
+        domain_integral_disc = disc.process_symbol(domain_integral)
+
+        constant_ones = np.ones(submesh.npts)
+        result = domain_integral_disc.evaluate(None, constant_ones)
+
+        expected_length_x = submesh.edges_x[-1] - submesh.edges_x[0]
+
+        expected_size = n_y * n_z
+        assert result.size == expected_size
+
+        np.testing.assert_allclose(
+            result.flatten(),
+            np.full(expected_size, expected_length_x),
+            rtol=1e-7,
+            atol=1e-6,
+        )
+
+        y_var = pybamm.SpatialVariable(
+            "y", domain=["negative electrode"], direction="y"
+        )
+        y_integral = pybamm.Integral(var, y_var)
+        y_integral_disc = disc.process_symbol(y_integral)
+
+        result = y_integral_disc.evaluate(None, constant_ones)
+        expected_length_y = submesh.edges_y[-1] - submesh.edges_y[0]
+        expected_size_y = n_x * n_z  # one integral per x-z slice
+
+        assert result.size == expected_size_y
+        np.testing.assert_allclose(
+            result.flatten(),
+            np.full(expected_size_y, expected_length_y),
+            rtol=1e-7,
+            atol=1e-6,
+        )
+
+        z_var = pybamm.SpatialVariable(
+            "z", domain=["negative electrode"], direction="z"
+        )
+        z_integral = pybamm.Integral(var, z_var)
+        z_integral_disc = disc.process_symbol(z_integral)
+
+        result = z_integral_disc.evaluate(None, constant_ones)
+        expected_length_z = submesh.edges_z[-1] - submesh.edges_z[0]
+        expected_size_z = n_x * n_y
+
+        assert result.size == expected_size_z
+        np.testing.assert_allclose(
+            result.flatten(),
+            np.full(expected_size_z, expected_length_z),
+            rtol=1e-7,
+            atol=1e-6,
+        )
+
+        x_coords = np.zeros(submesh.npts)
+        for k in range(n_z):
+            for j in range(n_y):
+                for i in range(n_x):
+                    idx = k * n_x * n_y + j * n_x + i
+                    x_coords[idx] = submesh.nodes_x[i]
+
+        result = domain_integral_disc.evaluate(None, x_coords)
+        x_left = submesh.edges_x[0]
+        x_right = submesh.edges_x[-1]
+        expected_quad = (x_right**2 - x_left**2) / 2
+
+        expected_size_x = n_y * n_z
+        np.testing.assert_allclose(
+            result.flatten(),
+            np.full(expected_size_x, expected_quad),
+            rtol=1e-7,
+            atol=1e-6,
+        )
