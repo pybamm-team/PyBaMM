@@ -1,11 +1,13 @@
 #
 # Interface for discretisation
 #
-import pybamm
+from collections import OrderedDict, defaultdict
+
 import numpy as np
-from collections import defaultdict, OrderedDict
 from scipy.sparse import block_diag, csc_matrix, csr_matrix
 from scipy.sparse.linalg import inv
+
+import pybamm
 
 
 def has_bc_of_form(symbol, side, bcs, form):

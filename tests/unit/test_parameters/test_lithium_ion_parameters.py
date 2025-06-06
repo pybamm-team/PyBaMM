@@ -2,8 +2,9 @@
 # Tests lithium-ion parameters load and give expected values
 #
 
-import pybamm
 import numpy as np
+
+import pybamm
 
 
 class TestLithiumIonParameterValues:

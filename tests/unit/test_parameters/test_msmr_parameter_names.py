@@ -1,5 +1,6 @@
-import pybamm
 import pytest
+
+import pybamm
 from pybamm.models.full_battery_models.lithium_ion.msmr import (
     is_deprecated_msmr_name,
     replace_deprecated_msmr_name,

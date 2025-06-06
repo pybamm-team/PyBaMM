@@ -1,11 +1,10 @@
 import casadi
-import pybamm
-import tests
-
 import numpy as np
 import pytest
 from scipy.interpolate import CubicHermiteSpline
 
+import pybamm
+import tests
 
 _hermite_args = [True, False]
 

@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from enum import Enum
-import numpy.typing as npt
 from typing import TypeVar
+
 import numpy as np
+import numpy.typing as npt
 
 
 class EventType(Enum):

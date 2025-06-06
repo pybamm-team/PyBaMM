@@ -2,7 +2,9 @@
 # Compare lithium-ion battery models
 #
 import argparse
+
 import numpy as np
+
 import pybamm
 
 parser = argparse.ArgumentParser()

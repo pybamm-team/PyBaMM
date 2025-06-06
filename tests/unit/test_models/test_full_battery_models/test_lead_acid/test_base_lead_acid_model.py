@@ -1,8 +1,9 @@
 #
 # Tests for the base lead acid model class
 #
-import pybamm
 import pytest
+
+import pybamm
 
 
 class TestBaseLeadAcidModel:

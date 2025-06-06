@@ -1,5 +1,7 @@
-import pybamm
 import re
+
+import pybamm
+
 from .dfn import DFN
 
 

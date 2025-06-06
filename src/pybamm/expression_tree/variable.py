@@ -2,14 +2,17 @@
 # Variable class
 #
 from __future__ import annotations
-import numpy as np
+
 import numbers
-import pybamm
+
+import numpy as np
 import sympy
+
+import pybamm
 from pybamm.type_definitions import (
-    DomainType,
     AuxiliaryDomainType,
     DomainsType,
+    DomainType,
     Numeric,
 )
 

@@ -2,12 +2,14 @@
 # Parameter classes
 #
 from __future__ import annotations
+
 import numbers
+
 import numpy as np
 import numpy.typing as npt
 import scipy.sparse
-import pybamm
 
+import pybamm
 from pybamm.type_definitions import DomainType
 
 

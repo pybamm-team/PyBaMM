@@ -1,14 +1,16 @@
 #
 # Tests for the Solution class
 #
-import pytest
 import io
-import logging
 import json
-import pybamm
+import logging
+
 import numpy as np
 import pandas as pd
+import pytest
 from scipy.io import loadmat
+
+import pybamm
 from tests import get_discretisation_for_testing
 
 

@@ -1,11 +1,13 @@
+import bisect
 from typing import Optional
+
 import casadi
 import numpy as np
-import pybamm
-from scipy.integrate import cumulative_trapezoid
 import xarray as xr
-import bisect
 from pybammsolvers import idaklu
+from scipy.integrate import cumulative_trapezoid
+
+import pybamm
 
 
 class ProcessedVariable:

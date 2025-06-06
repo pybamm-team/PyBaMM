@@ -3,11 +3,13 @@
 #
 
 from datetime import datetime
-import pybamm
-import pytest
-import numpy as np
+
 import casadi
+import numpy as np
+import pytest
 from scipy.interpolate import PchipInterpolator
+
+import pybamm
 
 
 class TestExperiment:

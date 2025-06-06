@@ -2,6 +2,7 @@
 # Single open-circuit potential, same for charge and discharge
 #
 import pybamm
+
 from . import BaseOpenCircuitPotential
 
 

@@ -1,9 +1,11 @@
-import pybamm
+import os
+
 import numpy as np
 import pandas as pd
-import os
 import pytest
 from scipy.integrate import cumulative_trapezoid
+
+import pybamm
 from tests import no_internet_connection
 
 

@@ -1,9 +1,11 @@
 #
 # A model to calculate electrode-specific SOH
 #
-import pybamm
-import numpy as np
 from functools import lru_cache
+
+import numpy as np
+
+import pybamm
 
 
 class _BaseElectrodeSOH(pybamm.BaseModel):

@@ -2,16 +2,16 @@ import copy
 import itertools
 import multiprocessing as mp
 import numbers
+import platform
 import sys
 import warnings
-import platform
 
 import casadi
 import numpy as np
 
 import pybamm
-from pybamm.expression_tree.binary_operators import _Heaviside
 from pybamm import ParameterValues
+from pybamm.expression_tree.binary_operators import _Heaviside
 
 
 class BaseSolver:

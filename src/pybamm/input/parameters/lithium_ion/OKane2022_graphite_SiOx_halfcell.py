@@ -1,5 +1,6 @@
-import pybamm
 import os
+
+import pybamm
 
 
 def li_metal_electrolyte_exchange_current_density_Xu2019(c_e, c_Li, T):

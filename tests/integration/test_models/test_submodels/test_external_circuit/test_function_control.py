@@ -2,6 +2,7 @@
 # Test function control submodel
 #
 import numpy as np
+
 import pybamm
 
 

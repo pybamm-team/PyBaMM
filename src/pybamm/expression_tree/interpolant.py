@@ -2,12 +2,14 @@
 # Interpolating class
 #
 from __future__ import annotations
+
+import numbers
+from collections.abc import Sequence
+from typing import Any
+
 import numpy as np
 import numpy.typing as npt
 from scipy import interpolate
-from collections.abc import Sequence
-import numbers
-from typing import Any
 
 import pybamm
 

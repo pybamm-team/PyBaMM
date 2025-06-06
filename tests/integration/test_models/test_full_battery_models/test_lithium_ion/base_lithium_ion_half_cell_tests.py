@@ -1,8 +1,8 @@
 #
 # Base integration tests for lithium-ion half-cell battery models.
 #
-import tests
 import pybamm
+import tests
 
 
 class BaseIntegrationTestLithiumIonHalfCell:

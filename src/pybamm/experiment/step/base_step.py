@@ -1,9 +1,13 @@
 from __future__ import annotations
-import pybamm
-import numpy as np
-from datetime import datetime
-from .step_termination import _read_termination
+
 import numbers
+from datetime import datetime
+
+import numpy as np
+
+import pybamm
+
+from .step_termination import _read_termination
 
 _examples = """
 

@@ -1,6 +1,5 @@
 import pybamm
 
-
 x_n = pybamm.standard_spatial_vars.x_n
 x_s = pybamm.standard_spatial_vars.x_s
 x_p = pybamm.standard_spatial_vars.x_p

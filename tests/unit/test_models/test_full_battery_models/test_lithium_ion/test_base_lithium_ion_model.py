@@ -1,9 +1,11 @@
 #
 # Tests for the base lead acid model class
 #
-import pybamm
 import os
+
 import pytest
+
+import pybamm
 
 
 class TestBaseLithiumIonModel:

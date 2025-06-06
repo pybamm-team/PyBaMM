@@ -1,12 +1,12 @@
 #
 # Tests for the Broadcast class
 #
-import pytest
-from tests import assert_domain_equal
 import numpy as np
 import re
+import pytest
 
 import pybamm
+from tests import assert_domain_equal
 
 
 class TestBroadcasts:

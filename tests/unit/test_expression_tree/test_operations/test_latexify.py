@@ -2,10 +2,11 @@
 Tests for the latexify.py
 """
 
-import pytest
 import os
 import platform
 import uuid
+
+import pytest
 
 import pybamm
 

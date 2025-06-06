@@ -1,8 +1,10 @@
-import pybamm
-import os
 import json
+import os
+
 import numpy as np
 import scipy.interpolate as interp
+
+import pybamm
 
 # change working directory to the root of pybamm
 os.chdir(pybamm.root_dir())

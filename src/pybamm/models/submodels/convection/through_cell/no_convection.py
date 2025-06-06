@@ -2,6 +2,7 @@
 # No convection
 #
 import pybamm
+
 from .base_through_cell_convection import BaseThroughCellModel
 
 

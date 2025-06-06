@@ -1,7 +1,8 @@
+import os
+
 import pytest
 
 import pybamm
-import os
 from pybamm import callbacks
 
 

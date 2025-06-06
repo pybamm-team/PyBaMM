@@ -1,13 +1,13 @@
 from __future__ import annotations
 
+import copy
 import numbers
 import warnings
 from collections import OrderedDict
 
-import copy
 import casadi
-import scipy
 import numpy as np
+import scipy
 
 import pybamm
 from pybamm.expression_tree.operations.serialise import Serialise

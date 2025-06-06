@@ -2,6 +2,7 @@
 # Standard constants
 #
 from scipy import constants
+
 from pybamm import Scalar
 
 R = Scalar(constants.R)

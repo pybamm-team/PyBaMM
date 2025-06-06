@@ -1,6 +1,8 @@
-import pybamm
-import numpy as np
 import inspect
+
+import numpy as np
+
+import pybamm
 
 
 def setup_callbacks(callbacks):
