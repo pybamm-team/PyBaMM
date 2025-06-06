@@ -850,6 +850,23 @@ class ProcessedVariable2DSciKitFEM(ProcessedVariable2D):
         return entries
 
 
+class ProcessedVariable2DReal(ProcessedVariable):
+    def _shape(self, t):
+        return [self.base_variables[0].size, len(t)]
+
+    def initialise(self):
+        if self.entries_raw_initialized:
+            return
+
+        entries = self.observe_raw()
+
+        # entries_for_interp, coords = self._interp_setup(entries, t)
+
+        self._entries_raw = entries
+        # self._entries_for_interp_raw = entries_for_interp
+        # self._coords_raw = coords
+
+
 class ProcessedVariable3D(ProcessedVariable):
     """
     An object that can be evaluated at arbitrary (scalars or vectors) t and x, and
@@ -1151,10 +1168,15 @@ def process_variable(name: str, base_variables, *args, **kwargs):
         ):
             return ProcessedVariable3DSciKitFEM(name, base_variables, *args, **kwargs)
 
+    if mesh and hasattr(mesh, "edges_lr") and hasattr(mesh, "edges_tb"):
+        return ProcessedVariable2DReal(base_variables, *args, **kwargs)
+
     # check variable shape
     if len(base_eval_shape) == 0 or base_eval_shape[0] == 1:
         return ProcessedVariable0D(name, base_variables, *args, **kwargs)
 
+    if mesh is None:
+        return ProcessedVariable2DReal(base_variables, *args, **kwargs)
     n = mesh.npts
     base_shape = base_eval_shape[0]
     # Try some shapes that could make the variable a 1D variable
