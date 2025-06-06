@@ -30,6 +30,10 @@
 - Fixed a bug in the `Exponential1DSubMesh` where the mesh was not being created correctly for non-zero minimum values. ([#4989](https://github.com/pybamm-team/PyBaMM/pull/4989))
 - Fixed sensitivity calculation for `pybamm.DiscreteTimeSum`. ([#5007](https://github.com/pybamm-team/PyBaMM/pull/5008))
 
+## Features
+
+- Added an option for multiple initial conditions in IDAKLU solver ([#4981](https://github.com/pybamm-team/PyBaMM/pull/4981))
+
 ## Breaking changes
 
 - Remove sensitivity functionality for Casadi and Scipy solvers, only `pybamm.IDAKLU` solver can calculate sensitivities. ([#4975](https://github.com/pybamm-team/PyBaMM/pull/4975))
