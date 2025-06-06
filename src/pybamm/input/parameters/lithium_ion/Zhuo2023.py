@@ -1,7 +1,8 @@
-import pybamm
 import os
+
 import numpy as np
 
+import pybamm
 
 # loading data from csv files in the appropriate format
 """

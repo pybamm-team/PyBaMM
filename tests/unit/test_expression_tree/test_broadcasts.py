@@ -1,8 +1,9 @@
 #
 # Tests for the Broadcast class
 #
-import numpy as np
 import re
+
+import numpy as np
 import pytest
 
 import pybamm
