@@ -101,6 +101,9 @@ test.json
 # nox
 .nox/
 
+# spider
+.spyproject/
+
 # benchmarks
 html/
 results/
