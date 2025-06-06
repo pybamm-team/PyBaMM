@@ -8,7 +8,7 @@ import pytest
 import pybamm
 
 
-@pytest.fixture()
+@pytest.fixture
 def param():
     return pybamm.ParameterValues(
         {
