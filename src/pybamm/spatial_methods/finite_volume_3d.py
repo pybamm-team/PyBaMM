@@ -1224,234 +1224,316 @@ class FiniteVolume3D(pybamm.SpatialMethod):
 
     def add_neumann_values(self, symbol, discretised_gradient, bcs, domain):
         """
-        3D version of add_neumann_values. Directly modifies boundary flux values
-        for Neumann BCs without complex matrix expansions.
+        Add the known values of the gradient from Neumann boundary conditions to
+        the discretised gradient.
+
+        Dirichlet bcs are implemented using ghost nodes, see
+        :meth:`pybamm.FiniteVolume3D.add_ghost_nodes`.
+
+        Parameters
+        ----------
+        symbol : :class:`pybamm.SpatialVariable`
+            The variable to be discretised
+        discretised_gradient : :class:`pybamm.Vector`
+            Contains the discretised gradient of symbol
+        bcs : dict of tuples (:class:`pybamm.Scalar`, str)
+            Dictionary (with keys "left", "right", "top", "bottom", "front", "back") of boundary conditions. Each
+            boundary condition consists of a value and a flag indicating its type
+            (e.g. "Dirichlet")
+        domain : list of strings
+            The domain of the gradient of the symbol (may include ghost nodes)
+
+        Returns
+        -------
+        :class:`pybamm.Symbol`
+            `Matrix @ discretised_gradient + bcs_vector`. When evaluated, this gives the
+            discretised_gradient, with the values of the Neumann boundary conditions
+            concatenated at each end (if given).
+
         """
-        import numpy as np
-
-        def get_float_val(bc_val_obj):
-            if hasattr(bc_val_obj, "evaluate") and bc_val_obj.evaluates_to_number():
-                return float(bc_val_obj.evaluate())
-            return float(bc_val_obj)
-
+        # get relevant grid points
         submesh = self.mesh[domain]
-        nx, ny, nz = submesh.npts_x, submesh.npts_y, submesh.npts_z
-        repeats = self._get_auxiliary_domain_repeats(symbol.domains)
 
-        # Get boundary conditions
-        (xlv, xlt), (xrv, xrt) = (
-            bcs.get("left", (None, None)),
-            bcs.get("right", (None, None)),
-        )
-        (yfv, yft), (ybv, ybt) = (
-            bcs.get("front", (None, None)),
-            bcs.get("back", (None, None)),
-        )
-        (zbv, zbt), (ztv, ztt) = (
-            bcs.get("bottom", (None, None)),
-            bcs.get("top", (None, None)),
-        )
+        # Prepare sizes and empty bcs_vector
+        n_x = submesh.npts_x
+        n_y = submesh.npts_y
+        n_z = submesh.npts_z
+        second_dim_repeats = self._get_auxiliary_domain_repeats(symbol.domains)
 
-        # Check if any Neumann BCs exist
-        has_neumann = any(
-            [
-                xlt == "Neumann",
-                xrt == "Neumann",
-                yft == "Neumann",
-                ybt == "Neumann",
-                zbt == "Neumann",
-                ztt == "Neumann",
-            ]
-        )
+        lbc_value, lbc_type = bcs.get("left", (None, None))
+        rbc_value, rbc_type = bcs.get("right", (None, None))
+        fbc_value, fbc_type = bcs.get("front", (None, None))
+        bbc_value, bbc_type = bcs.get("back", (None, None))
+        botbc_value, botbc_type = bcs.get("bottom", (None, None))
+        tbc_value, tbc_type = bcs.get("top", (None, None))
 
-        if not has_neumann:
-            return discretised_gradient
+        # Count number of Neumann boundary conditions
+        n_bcs = 0
+        if lbc_type == "Neumann":
+            n_bcs += 1
+        if rbc_type == "Neumann":
+            n_bcs += 1
+        if fbc_type == "Neumann":
+            n_bcs += 1
+        if bbc_type == "Neumann":
+            n_bcs += 1
+        if botbc_type == "Neumann":
+            n_bcs += 1
+        if tbc_type == "Neumann":
+            n_bcs += 1
 
-        # Determine gradient direction from shape information
-        expected_x_size = (nx - 1) * ny * nz * repeats
-        expected_y_size = nx * (ny - 1) * nz * repeats
-        expected_z_size = nx * ny * (nz - 1) * repeats
-
-        grad_size = discretised_gradient.size
-
-        if grad_size == expected_x_size:
-            target_size = (nx + 1) * ny * nz * repeats
-
-            from scipy.sparse import lil_matrix
-
-            matrix = lil_matrix((target_size, grad_size))
-
-            for rep in range(repeats):
-                for k in range(nz):
-                    for j in range(ny):
-                        rod_start_src = (
-                            rep * (nx - 1) * ny * nz + k * (nx - 1) * ny + j * (nx - 1)
-                        )
-                        rod_start_tgt = (
-                            rep * (nx + 1) * ny * nz + k * (nx + 1) * ny + j * (nx + 1)
-                        )
-
-                        for i in range(nx - 1):
-                            src_idx = rod_start_src + i
-                            tgt_idx = rod_start_tgt + (
-                                i + 1
-                            )  # Shift by 1 to leave space for left BC
-                            matrix[tgt_idx, src_idx] = 1.0
-
-            bc_vector = np.zeros(target_size)
-
-            if xlt == "Neumann" and xlv is not None:
-                xlv_val = get_float_val(xlv)
-                for rep in range(repeats):
-                    for k in range(nz):
-                        for j in range(ny):
-                            # Left boundary goes to position 0 in each rod
-                            rod_start = (
-                                rep * (nx + 1) * ny * nz
-                                + k * (nx + 1) * ny
-                                + j * (nx + 1)
-                            )
-                            bc_vector[rod_start + 0] = xlv_val
-
-            if xrt == "Neumann" and xrv is not None:
-                xrv_val = get_float_val(xrv)
-                for rep in range(repeats):
-                    for k in range(nz):
-                        for j in range(ny):
-                            # Right boundary goes to position nx in each rod
-                            rod_start = (
-                                rep * (nx + 1) * ny * nz
-                                + k * (nx + 1) * ny
-                                + j * (nx + 1)
-                            )
-                            bc_vector[rod_start + nx] = xrv_val
-
-        elif grad_size == expected_y_size:
-            # Y-direction gradient: MUST expand to exactly nx*(ny+1)*nz
-            target_size = nx * (ny + 1) * nz * repeats
-
-            from scipy.sparse import lil_matrix
-
-            matrix = lil_matrix((target_size, grad_size))
-
-            # Map internal faces
-            for rep in range(repeats):
-                for k in range(nz):
-                    for i in range(nx):
-                        col_start_src = (
-                            rep * nx * (ny - 1) * nz + k * nx * (ny - 1) + i * (ny - 1)
-                        )
-                        col_start_tgt = (
-                            rep * nx * (ny + 1) * nz + k * nx * (ny + 1) + i * (ny + 1)
-                        )
-
-                        for j in range(ny - 1):
-                            src_idx = col_start_src + j
-                            tgt_idx = col_start_tgt + (j + 1)  # Shift by 1 for front BC
-                            matrix[tgt_idx, src_idx] = 1.0
-
-            bc_vector = np.zeros(target_size)
-
-            # Apply Neumann BCs
-            if yft == "Neumann" and yfv is not None:
-                yfv_val = get_float_val(yfv)
-                for rep in range(repeats):
-                    for k in range(nz):
-                        for i in range(nx):
-                            # Front boundary goes to position 0
-                            col_start = (
-                                rep * nx * (ny + 1) * nz
-                                + k * nx * (ny + 1)
-                                + i * (ny + 1)
-                            )
-                            bc_vector[col_start + 0] = yfv_val
-
-            if ybt == "Neumann" and ybv is not None:
-                ybv_val = get_float_val(ybv)
-                for rep in range(repeats):
-                    for k in range(nz):
-                        for i in range(nx):
-                            # Back boundary goes to position ny
-                            col_start = (
-                                rep * nx * (ny + 1) * nz
-                                + k * nx * (ny + 1)
-                                + i * (ny + 1)
-                            )
-                            bc_vector[col_start + ny] = ybv_val
-
-        elif grad_size == expected_z_size:
-            # Z-direction gradient: MUST expand to exactly nx*ny*(nz+1)
-            target_size = nx * ny * (nz + 1) * repeats
-
-            from scipy.sparse import lil_matrix
-
-            matrix = lil_matrix((target_size, grad_size))
-
-            # Map internal faces
-            for rep in range(repeats):
-                for j in range(ny):
-                    for i in range(nx):
-                        # Each "stack" in x-y has nz+1 face positions: [0, 1, 2, ..., nz]
-                        # Internal faces go to positions [1, 2, ..., nz-1]
-                        stack_start_src = (
-                            rep * nx * ny * (nz - 1) + j * nx * (nz - 1) + i * (nz - 1)
-                        )
-                        stack_start_tgt = (
-                            rep * nx * ny * (nz + 1) + j * nx * (nz + 1) + i * (nz + 1)
-                        )
-
-                        for k in range(nz - 1):
-                            src_idx = stack_start_src + k
-                            tgt_idx = stack_start_tgt + (
-                                k + 1
-                            )  # Shift by 1 for bottom BC
-                            matrix[tgt_idx, src_idx] = 1.0
-
-            bc_vector = np.zeros(target_size)
-
-            # Apply Neumann BCs
-            if zbt == "Neumann" and zbv is not None:
-                zbv_val = get_float_val(zbv)
-                for rep in range(repeats):
-                    for j in range(ny):
-                        for i in range(nx):
-                            # Bottom boundary goes to position 0
-                            stack_start = (
-                                rep * nx * ny * (nz + 1)
-                                + j * nx * (nz + 1)
-                                + i * (nz + 1)
-                            )
-                            bc_vector[stack_start + 0] = zbv_val
-
-            if ztt == "Neumann" and ztv is not None:
-                ztv_val = get_float_val(ztv)
-                for rep in range(repeats):
-                    for j in range(ny):
-                        for i in range(nx):
-                            # Top boundary goes to position nz
-                            stack_start = (
-                                rep * nx * ny * (nz + 1)
-                                + j * nx * (nz + 1)
-                                + i * (nz + 1)
-                            )
-                            bc_vector[stack_start + nz] = ztv_val
-
+        # X-direction boundaries (following 2D left/right pattern)
+        if lbc_type == "Neumann" and lbc_value != 0:
+            lbc_sub_matrix = coo_matrix(([1], ([0], [0])), shape=(n_x - 1 + n_bcs, 1))
+            lbc_matrix = csr_matrix(kron(eye(second_dim_repeats), lbc_sub_matrix))
+            lbc_matrix = vstack([lbc_matrix] * (n_y * n_z))
+            if lbc_value.evaluates_to_number():
+                left_bc = lbc_value * pybamm.Vector(np.ones(second_dim_repeats))
+            else:
+                left_bc = lbc_value
+            lbc_vector = pybamm.Matrix(lbc_matrix) @ left_bc
+        elif lbc_type == "Dirichlet" or (lbc_type == "Neumann" and lbc_value == 0):
+            lbc_vector = pybamm.Vector(
+                np.zeros((n_x - 1 + n_bcs) * second_dim_repeats * (n_y * n_z))
+            )
+        elif lbc_type is None and rbc_type is None:
+            # When no X boundaries, size should match Y or Z gradient
+            lbc_vector = pybamm.Vector(
+                np.zeros((n_y - 1 + n_bcs) * second_dim_repeats * (n_x * n_z))
+            )
         else:
             raise ValueError(
-                f"Unexpected gradient size {grad_size}. Expected one of: "
-                f"x-grad={expected_x_size}, y-grad={expected_y_size}, z-grad={expected_z_size}"
+                f"boundary condition must be Dirichlet or Neumann, not '{lbc_type}'"
             )
 
-        # Convert to CSR and create PyBaMM symbols
-        matrix = matrix.tocsr()
-        bc_vector_symbol = pybamm.Vector(bc_vector)
-        bc_vector_symbol.copy_domains(discretised_gradient)
+        if rbc_type == "Neumann" and rbc_value != 0:
+            rbc_sub_matrix = coo_matrix(
+                ([1], ([n_x + n_bcs - 2], [0])), shape=(n_x - 1 + n_bcs, 1)
+            )
+            rbc_matrix = csr_matrix(kron(eye(second_dim_repeats), rbc_sub_matrix))
+            rbc_matrix = vstack([rbc_matrix] * (n_y * n_z))
+            if rbc_value.evaluates_to_number():
+                right_bc = rbc_value * pybamm.Vector(np.ones(second_dim_repeats))
+            else:
+                right_bc = rbc_value
+            rbc_vector = pybamm.Matrix(rbc_matrix) @ right_bc
+        elif rbc_type == "Dirichlet" or (rbc_type == "Neumann" and rbc_value == 0):
+            rbc_vector = pybamm.Vector(
+                np.zeros((n_x - 1 + n_bcs) * second_dim_repeats * (n_y * n_z))
+            )
+        elif rbc_type is None and lbc_type is None:
+            rbc_vector = pybamm.Vector(
+                np.zeros((n_y - 1 + n_bcs) * second_dim_repeats * (n_x * n_z))
+            )
+        else:
+            raise ValueError(
+                f"boundary condition must be Dirichlet or Neumann, not '{rbc_type}'"
+            )
 
-        # Create the result using symbolic operations
-        new_grad = pybamm.Matrix(matrix) @ discretised_gradient + bc_vector_symbol
-        new_grad.copy_domains(discretised_gradient)
+        # Y-direction boundaries (following 2D top/bottom pattern)
+        if fbc_type == "Neumann" and fbc_value != 0:
+            row_indices = np.arange(0, n_x * n_z)
+            col_indices = np.zeros(len(row_indices))
+            vals = np.ones(len(row_indices))
+            fbc_sub_matrix = coo_matrix(
+                (vals, (row_indices, col_indices)),
+                shape=((n_y - 1 + n_bcs) * n_x * n_z, 1),
+            )
+            fbc_matrix = csr_matrix(kron(eye(second_dim_repeats), fbc_sub_matrix))
+            if fbc_value.evaluates_to_number():
+                front_bc = fbc_value * pybamm.Vector(np.ones(second_dim_repeats))
+            else:
+                front_bc = fbc_value
+            fbc_vector = pybamm.Matrix(fbc_matrix) @ front_bc
+        elif fbc_type == "Dirichlet" or (fbc_type == "Neumann" and fbc_value == 0):
+            fbc_vector = pybamm.Vector(
+                np.zeros((n_y - 1 + n_bcs) * second_dim_repeats * (n_x * n_z))
+            )
+        elif fbc_type is None and bbc_type is None:
+            fbc_vector = pybamm.Vector(
+                np.zeros((n_x - 1 + n_bcs) * second_dim_repeats * (n_y * n_z))
+            )
+        else:
+            raise ValueError(
+                f"boundary condition must be Dirichlet or Neumann, not '{fbc_type}'"
+            )
 
-        return new_grad
+        if bbc_type == "Neumann" and bbc_value != 0:
+            row_indices = np.arange(
+                (n_x * n_z * (n_y - 1 + n_bcs)) - n_x * n_z,
+                n_x * n_z * (n_y - 1 + n_bcs),
+            )
+            col_indices = np.zeros(len(row_indices))
+            vals = np.ones(len(row_indices))
+            bbc_sub_matrix = coo_matrix(
+                (vals, (row_indices, col_indices)),
+                shape=((n_y - 1 + n_bcs) * n_x * n_z, 1),
+            )
+            bbc_matrix = csr_matrix(kron(eye(second_dim_repeats), bbc_sub_matrix))
+            if bbc_value.evaluates_to_number():
+                back_bc = bbc_value * pybamm.Vector(np.ones(second_dim_repeats))
+            else:
+                back_bc = bbc_value
+            bbc_vector = pybamm.Matrix(bbc_matrix) @ back_bc
+        elif bbc_type == "Dirichlet" or (bbc_type == "Neumann" and bbc_value == 0):
+            bbc_vector = pybamm.Vector(
+                np.zeros((n_y - 1 + n_bcs) * second_dim_repeats * (n_x * n_z))
+            )
+        elif bbc_type is None and fbc_type is None:
+            bbc_vector = pybamm.Vector(
+                np.zeros((n_x - 1 + n_bcs) * second_dim_repeats * (n_y * n_z))
+            )
+        else:
+            raise ValueError(
+                f"boundary condition must be Dirichlet or Neumann, not '{bbc_type}'"
+            )
+
+        # Z-direction boundaries (similar to Y-direction)
+        if botbc_type == "Neumann" and botbc_value != 0:
+            row_indices = np.arange(0, n_x * n_y)
+            col_indices = np.zeros(len(row_indices))
+            vals = np.ones(len(row_indices))
+            botbc_sub_matrix = coo_matrix(
+                (vals, (row_indices, col_indices)),
+                shape=((n_z - 1 + n_bcs) * n_x * n_y, 1),
+            )
+            botbc_matrix = csr_matrix(kron(eye(second_dim_repeats), botbc_sub_matrix))
+            if botbc_value.evaluates_to_number():
+                bottom_bc = botbc_value * pybamm.Vector(np.ones(second_dim_repeats))
+            else:
+                bottom_bc = botbc_value
+            botbc_vector = pybamm.Matrix(botbc_matrix) @ bottom_bc
+        elif botbc_type == "Dirichlet" or (
+            botbc_type == "Neumann" and botbc_value == 0
+        ):
+            botbc_vector = pybamm.Vector(
+                np.zeros((n_z - 1 + n_bcs) * second_dim_repeats * (n_x * n_y))
+            )
+        elif botbc_type is None and tbc_type is None:
+            botbc_vector = pybamm.Vector(
+                np.zeros((n_x - 1 + n_bcs) * second_dim_repeats * (n_y * n_z))
+            )
+        else:
+            raise ValueError(
+                f"boundary condition must be Dirichlet or Neumann, not '{botbc_type}'"
+            )
+
+        if tbc_type == "Neumann" and tbc_value != 0:
+            row_indices = np.arange(
+                (n_x * n_y * (n_z - 1 + n_bcs)) - n_x * n_y,
+                n_x * n_y * (n_z - 1 + n_bcs),
+            )
+            col_indices = np.zeros(len(row_indices))
+            vals = np.ones(len(row_indices))
+            tbc_sub_matrix = coo_matrix(
+                (vals, (row_indices, col_indices)),
+                shape=((n_z - 1 + n_bcs) * n_x * n_y, 1),
+            )
+            tbc_matrix = csr_matrix(kron(eye(second_dim_repeats), tbc_sub_matrix))
+            if tbc_value.evaluates_to_number():
+                top_bc = tbc_value * pybamm.Vector(np.ones(second_dim_repeats))
+            else:
+                top_bc = tbc_value
+            tbc_vector = pybamm.Matrix(tbc_matrix) @ top_bc
+        elif tbc_type == "Dirichlet" or (tbc_type == "Neumann" and tbc_value == 0):
+            tbc_vector = pybamm.Vector(
+                np.zeros((n_z - 1 + n_bcs) * second_dim_repeats * (n_x * n_y))
+            )
+        elif tbc_type is None and botbc_type is None:
+            tbc_vector = pybamm.Vector(
+                np.zeros((n_x - 1 + n_bcs) * second_dim_repeats * (n_y * n_z))
+            )
+        else:
+            raise ValueError(
+                f"boundary condition must be Dirichlet or Neumann, not '{tbc_type}'"
+            )
+
+        bcs_vector = (
+            lbc_vector
+            + rbc_vector
+            + fbc_vector
+            + bbc_vector
+            + botbc_vector
+            + tbc_vector
+        )
+        # Need to match the domain. E.g. in the case of the boundary condition
+        # on the particle, the gradient has domain particle but the bcs_vector
+        # has domain electrode, since it is a function of the macroscopic variables
+        bcs_vector.copy_domains(discretised_gradient)
+
+        # Make matrix which makes "gaps" in the discretised gradient into
+        # which the known Neumann values will be added
+        # X-direction matrices
+        if lbc_type == "Neumann":
+            left_vector = csr_matrix((1, n_x - 1))
+        else:
+            left_vector = None
+        if rbc_type == "Neumann":
+            right_vector = csr_matrix((1, n_x - 1))
+        else:
+            right_vector = None
+
+        # Y-direction matrices
+        if fbc_type == "Neumann":
+            front_vector = csr_matrix((n_x * n_z, (n_y - 1) * n_x * n_z))
+        else:
+            front_vector = None
+        if bbc_type == "Neumann":
+            back_vector = csr_matrix((n_x * n_z, (n_y - 1) * n_x * n_z))
+        else:
+            back_vector = None
+
+        # Z-direction matrices
+        if botbc_type == "Neumann":
+            bottom_vector = csr_matrix((n_x * n_y, (n_z - 1) * n_x * n_y))
+        else:
+            bottom_vector = None
+        if tbc_type == "Neumann":
+            top_vector = csr_matrix((n_x * n_y, (n_z - 1) * n_x * n_y))
+        else:
+            top_vector = None
+
+        # Build sub_matrix based on which boundaries have Neumann conditions
+        if lbc_type == "Neumann" or rbc_type == "Neumann":
+            # X-direction gradient - extend in X direction
+            sub_matrix = vstack([left_vector, eye(n_x - 1), right_vector])
+            # Remove None entries
+            sub_matrix = vstack(
+                [m for m in [left_vector, eye(n_x - 1), right_vector] if m is not None]
+            )
+            sub_matrix = block_diag((sub_matrix,) * (n_y * n_z))
+        elif fbc_type == "Neumann" or bbc_type == "Neumann":
+            # Y-direction gradient - extend in Y direction
+            sub_matrix = vstack(
+                [
+                    m
+                    for m in [front_vector, eye((n_y - 1) * n_x * n_z), back_vector]
+                    if m is not None
+                ]
+            )
+        elif botbc_type == "Neumann" or tbc_type == "Neumann":
+            # Z-direction gradient - extend in Z direction
+            sub_matrix = vstack(
+                [
+                    m
+                    for m in [bottom_vector, eye((n_z - 1) * n_x * n_y), top_vector]
+                    if m is not None
+                ]
+            )
+        else:
+            # No Neumann conditions, return as-is
+            return discretised_gradient
+
+        # repeat matrix for secondary dimensions
+        # Convert to csr_matrix so that we can take the index (row-slicing), which is
+        # not supported by the default kron format
+        # Note that this makes column-slicing inefficient, but this should not be an
+        # issue
+        matrix = csr_matrix(kron(eye(second_dim_repeats), sub_matrix))
+
+        new_gradient = pybamm.Matrix(matrix) @ discretised_gradient + bcs_vector
+
+        return new_gradient
 
     def boundary_value_or_flux(self, symbol, discretised_child, bcs=None):
         """
