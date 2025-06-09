@@ -149,6 +149,7 @@ from .meshes.scikit_fem_submeshes import (
 
 # Serialisation
 from .models.base_model import load_model
+from .models.base_model import load_custom_model
 
 # Spatial Methods
 from .spatial_methods.spatial_method import SpatialMethod

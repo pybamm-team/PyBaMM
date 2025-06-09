@@ -1237,6 +1237,34 @@ class Simulation:
                 """
             )
 
+    def save_custom_model(
+        self,
+        filename: str | None = None,
+        mesh: bool = False,
+        variables: bool = False,
+    ):
+        mesh = self._mesh if (mesh or variables) else None
+        variables = self._built_model.variables if variables else None
+
+        if self.operating_mode == "with experiment":
+            raise NotImplementedError(
+                """
+                Serialising models coupled to experiments is not yet supported.
+                """
+            )
+
+        if self._built_model:
+            Serialise().save_custom_model(
+                self._built_model, filename=filename, mesh=mesh, variables=variables
+            )
+        else:
+            raise NotImplementedError(
+                """
+                PyBaMM can only serialise a discretised model.
+                Ensure the model has been built (e.g. run `build()`) before saving.
+                """
+            )
+
     def plot_voltage_components(
         self,
         ax=None,

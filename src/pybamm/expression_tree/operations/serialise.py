@@ -143,6 +143,51 @@ class Serialise:
         with open(filename + ".json", "w") as f:
             json.dump(model_json, f)
 
+    def save_custom_model(
+        self,
+        model: pybamm.BaseModel,
+        mesh: pybamm.Mesh | None = None,
+        variables: pybamm.FuzzyDict | None = None,
+        filename: str | None = None,
+    ):
+        if model.is_discretised is False:
+            raise NotImplementedError(
+                "PyBaMM can only serialise a discretised, ready-to-solve model."
+            )
+
+        model_json = {
+            "pybamm_version": pybamm.__version__,
+            "name": model.name,
+            "options": model.options,
+            "bounds": [bound.tolist() for bound in model.bounds],  # type: ignore[attr-defined]
+            "concatenated_rhs": self._SymbolEncoder().default(model._concatenated_rhs),
+            "concatenated_algebraic": self._SymbolEncoder().default(
+                model._concatenated_algebraic
+            ),
+            "concatenated_initial_conditions": self._SymbolEncoder().default(
+                model._concatenated_initial_conditions
+            ),
+            "events": [self._SymbolEncoder().default(event) for event in model.events],
+            "mass_matrix": self._SymbolEncoder().default(model.mass_matrix),
+            "mass_matrix_inv": self._SymbolEncoder().default(model.mass_matrix_inv),
+        }
+
+        if mesh:
+            model_json["mesh"] = self._MeshEncoder().default(mesh)
+
+        if variables:
+            if model._geometry:
+                model_json["geometry"] = self._deconstruct_pybamm_dicts(model._geometry)
+            model_json["variables"] = {
+                k: self._SymbolEncoder().default(v) for k, v in dict(variables).items()
+            }
+
+        if filename is None:
+            filename = model.name + "_" + datetime.now().strftime("%Y_%m_%d-%p%I_%M")
+
+        with open(filename + ".json", "w") as f:
+            json.dump(model_json, f)
+
     def load_model(
         self, filename: str, battery_model: pybamm.BaseModel | None = None
     ) -> pybamm.BaseModel:
@@ -234,6 +279,76 @@ class Serialise:
             The PyBaMM battery model to use has not been provided.
             """
         )
+
+    def load_custom_model(
+        self,
+        filename: str,
+        battery_model: pybamm.BaseModel,
+    ) -> pybamm.BaseModel:
+        """
+        Loads a discretised custom PyBaMM model from a JSON file.
+
+        Requires the user to pass the correct model class (`battery_model`) since
+        the saved file does not contain any class metadata.
+
+        Parameters
+        ----------
+        filename: str
+            Path to the JSON file containing the serialised model.
+        battery_model: :class:`pybamm.BaseModel`
+            An *instance* of the model class to be populated with the data.
+
+        Returns
+        -------
+        :class:`pybamm.BaseModel`
+            A reconstructed PyBaMM model ready to solve.
+        """
+        with open(filename) as f:
+            model_data = json.load(f)
+
+        recon_model_dict = {
+            "name": model_data["name"],
+            "options": self._convert_options(model_data["options"]),
+            "bounds": tuple(np.array(bound) for bound in model_data["bounds"]),
+            "concatenated_rhs": self._reconstruct_expression_tree(
+                model_data["concatenated_rhs"]
+            ),
+            "concatenated_algebraic": self._reconstruct_expression_tree(
+                model_data["concatenated_algebraic"]
+            ),
+            "concatenated_initial_conditions": self._reconstruct_expression_tree(
+                model_data["concatenated_initial_conditions"]
+            ),
+            "events": [
+                self._reconstruct_expression_tree(event)
+                for event in model_data["events"]
+            ],
+            "mass_matrix": self._reconstruct_expression_tree(model_data["mass_matrix"]),
+            "mass_matrix_inv": self._reconstruct_expression_tree(
+                model_data["mass_matrix_inv"]
+            ),
+        }
+
+        recon_model_dict["geometry"] = (
+            self._reconstruct_pybamm_dict(model_data["geometry"])
+            if "geometry" in model_data
+            else None
+        )
+
+        recon_model_dict["mesh"] = (
+            self._reconstruct_mesh(model_data["mesh"]) if "mesh" in model_data else None
+        )
+
+        recon_model_dict["variables"] = (
+            {
+                k: self._reconstruct_expression_tree(v)
+                for k, v in model_data["variables"].items()
+            }
+            if "variables" in model_data
+            else None
+        )
+
+        return battery_model.deserialise(recon_model_dict)
 
     # Helper functions
 
