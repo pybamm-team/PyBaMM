@@ -1,7 +1,7 @@
+import matplotlib.pyplot as plt
 import numpy as np
 
 import pybamm
-import matplotlib.pyplot as plt
 
 
 def f(x, y, z):

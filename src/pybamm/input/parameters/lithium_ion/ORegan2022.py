@@ -1,5 +1,6 @@
-import pybamm
 import numpy as np
+
+import pybamm
 
 
 def electrolyte_conductivity_base_Landesfeind2019(c_e, T, coeffs):

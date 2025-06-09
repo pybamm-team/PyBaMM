@@ -2,11 +2,11 @@
 # Parameter classes
 #
 from __future__ import annotations
-import sys
 
-import numpy as np
+import sys
 from typing import Literal
 
+import numpy as np
 import sympy
 
 import pybamm

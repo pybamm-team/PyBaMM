@@ -1,14 +1,15 @@
-import pytest
 import importlib
 import os
 import sys
-import pybamm
 from io import StringIO
 
+import pytest
+
+import pybamm
 from tests import (
     get_optional_distribution_deps,
-    get_required_distribution_deps,
     get_present_optional_import_deps,
+    get_required_distribution_deps,
 )
 
 

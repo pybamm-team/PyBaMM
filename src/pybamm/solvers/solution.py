@@ -1,15 +1,17 @@
 #
 # Solution class
 #
-import casadi
 import json
 import numbers
-import numpy as np
 import pickle
-import pybamm
+from functools import cached_property
+
+import casadi
+import numpy as np
 import pandas as pd
 from scipy.io import savemat
-from functools import cached_property
+
+import pybamm
 
 
 class NumpyEncoder(json.JSONEncoder):

@@ -1,9 +1,11 @@
 #
 # Class for cracking
 #
-import pybamm
-from .base_mechanics import BaseMechanics
 import numpy as np
+
+import pybamm
+
+from .base_mechanics import BaseMechanics
 
 
 class CrackPropagation(BaseMechanics):

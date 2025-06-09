@@ -1,10 +1,12 @@
+import bisect
 from typing import Optional
+
 import casadi
 import numpy as np
-import pybamm
 import xarray as xr
-import bisect
 from pybammsolvers import idaklu
+
+import pybamm
 
 
 class ProcessedVariable:
