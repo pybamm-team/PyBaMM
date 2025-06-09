@@ -92,7 +92,7 @@ def _get_phase_names(domain):
     """
     Return a list of the phase names in a given domain
     """
-    if isinstance(domain, (ElectrodeBlended, ElectrodeBlendedSPM)):
+    if isinstance(domain, ElectrodeBlended | ElectrodeBlendedSPM):
         phases = len(domain.particle.keys())
     else:
         phases = 1
@@ -450,7 +450,7 @@ def _bpx_to_domain_param_dict(instance: BPX, pybamm_dict: dict, domain: Domain) 
         # Handle blended electrodes, where the field is now an instance of
         # ElectrodeBlended or ElectrodeBlendedSPM
         if (
-            isinstance(instance, (ElectrodeBlended, ElectrodeBlendedSPM))
+            isinstance(instance, ElectrodeBlended | ElectrodeBlendedSPM)
             and name == "particle"
         ):
             particle_instance = instance.particle
