@@ -562,8 +562,9 @@ class TestSolution:
         model = pybamm.BaseModel(name="test_model2")
         a = pybamm.InputParameter("a")
         b = pybamm.InputParameter("b")
-        model.rhs = {c: b * -a * c}
-        model.initial_conditions = {c: 1}
+        c2 = pybamm.Variable("c2")
+        model.rhs = {c: b * -a * c, c2: -2 * c2}
+        model.initial_conditions = {c: 1, c2: 1}
         model.variables["data_comparison"] = data_comparison
         model.variables["data"] = data
         model.variables["c"] = c

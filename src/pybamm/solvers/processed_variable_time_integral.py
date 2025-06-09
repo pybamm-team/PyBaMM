@@ -82,8 +82,9 @@ class ProcessedVariableTimeIntegral:
         if sum_node == var:
             post_sum_node = None
         else:
+            sum_y_len = sum_node.evaluate_for_shape().shape[0]
             post_sum_node = ProcessedVariableTimeIntegral.to_post_sum_expr(
-                var, sum_node, nstates
+                var, sum_node, sum_y_len
             )
         if isinstance(sum_node, pybamm.DiscreteTimeSum):
             return ProcessedVariableTimeIntegral(

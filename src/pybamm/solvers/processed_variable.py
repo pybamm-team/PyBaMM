@@ -534,7 +534,6 @@ class ProcessedVariable0D(ProcessedVariable):
         solution,
         time_integral: Optional[pybamm.ProcessedVariableTimeIntegral] = None,
     ):
-        print("creating 0D processed variable", name, time_integral)
         self.dimensions = 0
         super().__init__(
             name,
