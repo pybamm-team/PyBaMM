@@ -9,6 +9,8 @@ from scipy.sparse import (
     block_diag,
     spdiags,
     lil_matrix,
+    coo_matrix,
+    vstack,
 )
 import numpy as np
 
@@ -221,8 +223,8 @@ class FiniteVolume3D(pybamm.SpatialMethod):
                 )
                 sub_matrix = block_diag([sub_matrix] * (n_y * n_z))
             else:
-                sub_matrix = diags([-e_x, e_x], [0, 1], shape=(n_x - 1, n_x))
-                sub_matrix = block_diag([sub_matrix] * (n_y * n_z))
+                sub_matrix = diags([-e_x, e_x], [0, 1], shape=((n_x - 1), n_x))
+                sub_matrix = block_diag((sub_matrix,) * (n_y * n_z))
 
         elif direction == "y":
             # Gradient in y-direction: shape n_x*(n_y-1)*n_z x n_x*n_y*n_z
@@ -261,7 +263,7 @@ class FiniteVolume3D(pybamm.SpatialMethod):
                     [0, n_x],
                     shape=(n_x * (n_y - 1), n_x * n_y),
                 )
-                sub_matrix = block_diag([sub_matrix] * n_z)
+                sub_matrix = block_diag((sub_matrix,) * n_z)
 
         elif direction == "z":
             # Gradient in z-direction: shape n_x*n_y*(n_z-1) x n_x*n_y*n_z
@@ -373,9 +375,11 @@ class FiniteVolume3D(pybamm.SpatialMethod):
                     shape=(n_x * n_y, n_x * (n_y + 1)),
                 )
             else:
-                e_y_repeated = np.repeat(
-                    e_y_values, n_x
-                )  # If e_y_values is scalar 1/dy or vector of length n_y
+                e_y_repeated = (
+                    np.repeat(
+                        e_y_values, n_x
+                    )  # If e_y_values is scalar 1/dy or vector of length n_y
+                )
                 sub_matrix_plane = diags(
                     [-e_y_repeated, e_y_repeated],
                     [0, n_x],
@@ -858,11 +862,16 @@ class FiniteVolume3D(pybamm.SpatialMethod):
 
     def add_ghost_nodes(self, symbol, discretised_symbol, bcs):
         """
-        Add ghost nodes to a symbol for 3D finite volume.
+        Add ghost nodes to a symbol.
 
         For Dirichlet bcs, for a boundary condition "y = a at the left-hand boundary",
-        we add ghost nodes with value "2*a - y_boundary" where y_boundary is the
-        value at the boundary face.
+        we concatenate a ghost node to the start of the vector y with value "2*a - y1"
+        where y1 is the value of the first node.
+        Similarly for the right-hand boundary condition and all other boundaries.
+
+        For Neumann bcs no ghost nodes are added. Instead, the exact value provided
+        by the boundary condition is used at the cell edge when calculating the
+        gradient (see :meth:`pybamm.FiniteVolume3D.add_neumann_values`).
 
         Parameters
         ----------
@@ -871,15 +880,15 @@ class FiniteVolume3D(pybamm.SpatialMethod):
         discretised_symbol : :class:`pybamm.Vector`
             Contains the discretised variable
         bcs : dict of tuples (:class:`pybamm.Scalar`, str)
-            Dictionary (with keys "left", "right", "front", "back", "bottom", "top") of
-            boundary conditions.
+            Dictionary (with keys "left", "right", "top", "bottom", "front", "back") of boundary conditions. Each
+            boundary condition consists of a value and a flag indicating its type
+            (e.g. "Dirichlet")
 
         Returns
         -------
         :class:`pybamm.Symbol`
-            The discretised symbol with ghost nodes
-        str
-            New domain name with ghost suffix
+            `Matrix @ discretised_symbol + bcs_vector`. When evaluated, this gives the
+            discretised_symbol, with appropriate ghost nodes concatenated at each end.
         """
         domain = symbol.domain
         submesh = self.mesh[domain]
@@ -890,14 +899,17 @@ class FiniteVolume3D(pybamm.SpatialMethod):
         n = submesh.npts
         second_dim_repeats = self._get_auxiliary_domain_repeats(symbol.domains)
 
-        # Check if we have boundary conditions
-        if not any(
-            face in bcs.keys()
-            for face in ["left", "right", "front", "back", "bottom", "top"]
+        # Catch if no boundary conditions are defined
+        if (
+            "left" not in bcs.keys()
+            and "right" not in bcs.keys()
+            and "top" not in bcs.keys()
+            and "bottom" not in bcs.keys()
+            and "front" not in bcs.keys()
+            and "back" not in bcs.keys()
         ):
             raise ValueError(f"No boundary conditions have been provided for {symbol}")
 
-        # Get boundary conditions
         lbc_value, lbc_type = bcs.get("left", (None, None))
         rbc_value, rbc_type = bcs.get("right", (None, None))
         fbc_value, fbc_type = bcs.get("front", (None, None))
@@ -905,318 +917,310 @@ class FiniteVolume3D(pybamm.SpatialMethod):
         botbc_value, botbc_type = bcs.get("bottom", (None, None))
         tbc_value, tbc_type = bcs.get("top", (None, None))
 
-        # Count ghost nodes needed in each direction
-        n_ghost_x = 0
-        n_ghost_y = 0
-        n_ghost_z = 0
+        # Add ghost node(s) to domain where necessary and count number of
+        # Dirichlet boundary conditions
+        n_bcs = 0
+
+        if fbc_type == "Dirichlet" and bbc_type != "Dirichlet":
+            if isinstance(domain, list) or isinstance(domain, tuple):
+                domain = [(d + "_front ghost cell", d) for d in domain]
+            else:
+                domain = [domain + "_front ghost cell", domain]
+            n_bcs += 1
+        elif fbc_type != "Dirichlet" and bbc_type == "Dirichlet":
+            if isinstance(domain, list) or isinstance(domain, tuple):
+                domain = [(d, d + "_back ghost cell") for d in domain]
+            else:
+                domain = [domain, domain + "_back ghost cell"]
+            n_bcs += 1
+        elif fbc_type == "Dirichlet" and bbc_type == "Dirichlet":
+            if isinstance(domain, list) or isinstance(domain, tuple):
+                domain = [
+                    (d + "_front ghost cell", d, d + "_back ghost cell") for d in domain
+                ]
+            else:
+                domain = [
+                    domain + "_front ghost cell",
+                    domain,
+                    domain + "_back ghost cell",
+                ]
+            n_bcs += 2
+
+        if botbc_type == "Dirichlet" and tbc_type != "Dirichlet":
+            if isinstance(domain, list) or isinstance(domain, tuple):
+                domain = [(d + "_bottom ghost cell", d) for d in domain]
+            else:
+                domain = [domain + "_bottom ghost cell", domain]
+            n_bcs += 1
+        elif botbc_type != "Dirichlet" and tbc_type == "Dirichlet":
+            if isinstance(domain, list) or isinstance(domain, tuple):
+                domain = [(d, d + "_top ghost cell") for d in domain]
+            else:
+                domain = [domain, domain + "_top ghost cell"]
+            n_bcs += 1
+        elif botbc_type == "Dirichlet" and tbc_type == "Dirichlet":
+            if isinstance(domain, list) or isinstance(domain, tuple):
+                domain = [
+                    (d + "_bottom ghost cell", d, d + "_top ghost cell") for d in domain
+                ]
+            else:
+                domain = [
+                    domain + "_bottom ghost cell",
+                    domain,
+                    domain + "_top ghost cell",
+                ]
+            n_bcs += 2
 
         if lbc_type == "Dirichlet":
-            n_ghost_x += 1
+            if isinstance(domain, list) or isinstance(domain, tuple):
+                domain = [domain[0] + "_left ghost cell", *domain]
+            else:
+                domain = [domain + "_left ghost cell", domain]
+            n_bcs += 1
         if rbc_type == "Dirichlet":
-            n_ghost_x += 1
+            if isinstance(domain, list) or isinstance(domain, tuple):
+                domain = [*domain, domain[-1] + "_right ghost cell"]
+            else:
+                domain = [domain, domain + "_right ghost cell"]
+            n_bcs += 1
+
+        if lbc_type == "Dirichlet":
+            lbc_sub_matrix = coo_matrix(([1], ([0], [0])), shape=(n_x + n_bcs, 1))
+            lbc_matrix = csr_matrix(kron(eye(second_dim_repeats), lbc_sub_matrix))
+            lbc_matrix = vstack([lbc_matrix] * (n_y * n_z))
+
+            if lbc_value.evaluates_to_number():
+                left_ghost_constant = (
+                    2 * lbc_value * pybamm.Vector(np.ones(second_dim_repeats))
+                )
+            else:
+                left_ghost_constant = 2 * lbc_value
+
+            lbc_vector = pybamm.Matrix(lbc_matrix) @ left_ghost_constant
+        elif lbc_type == "Neumann":
+            lbc_vector = pybamm.Vector(
+                np.zeros((n_x + n_bcs) * second_dim_repeats * (n_y * n_z))
+            )
+        else:
+            lbc_vector = pybamm.Vector(
+                np.zeros((n_y * n_z + n_bcs) * second_dim_repeats * n_x)
+            )
+
+        if rbc_type == "Dirichlet":
+            rbc_sub_matrix = coo_matrix(
+                ([1], ([n_x + n_bcs - 1], [0])), shape=(n_x + n_bcs, 1)
+            )
+            rbc_matrix = csr_matrix(kron(eye(second_dim_repeats), rbc_sub_matrix))
+            rbc_matrix = vstack([rbc_matrix] * (n_y * n_z))
+
+            if rbc_value.evaluates_to_number():
+                right_ghost_constant = (
+                    2 * rbc_value * pybamm.Vector(np.ones(second_dim_repeats))
+                )
+            else:
+                right_ghost_constant = 2 * rbc_value
+            rbc_vector = pybamm.Matrix(rbc_matrix) @ right_ghost_constant
+        elif rbc_type == "Neumann":
+            rbc_vector = pybamm.Vector(
+                np.zeros((n_x + n_bcs) * second_dim_repeats * (n_y * n_z))
+            )
+        else:
+            rbc_vector = pybamm.Vector(
+                np.zeros((n_y * n_z + n_bcs) * second_dim_repeats * n_x)
+            )
+
         if fbc_type == "Dirichlet":
-            n_ghost_y += 1
+            row_indices = np.arange(0, n_x * n_z)
+            col_indices = np.zeros(len(row_indices))
+            vals = np.ones(len(row_indices))
+            fbc_sub_matrix = coo_matrix(
+                (vals, (row_indices, col_indices)), shape=((n_y + n_bcs) * n_x * n_z, 1)
+            )
+            fbc_matrix = csr_matrix(kron(eye(second_dim_repeats), fbc_sub_matrix))
+
+            if fbc_value.evaluates_to_number():
+                front_ghost_constant = (
+                    2 * fbc_value * pybamm.Vector(np.ones(second_dim_repeats))
+                )
+            else:
+                front_ghost_constant = 2 * fbc_value
+            fbc_vector = pybamm.Matrix(fbc_matrix) @ front_ghost_constant
+        elif fbc_type == "Neumann" or bbc_type == "Dirichlet":
+            fbc_vector = pybamm.Vector(
+                np.zeros((n_y + n_bcs) * second_dim_repeats * n_x * n_z)
+            )
+        else:
+            fbc_vector = pybamm.Vector(
+                np.zeros((n_x + n_bcs) * second_dim_repeats * (n_y * n_z))
+            )
+
         if bbc_type == "Dirichlet":
-            n_ghost_y += 1
+            row_indices = np.arange(
+                (n_x * n_z * (n_y + n_bcs)) - n_x * n_z, n_x * n_z * (n_y + n_bcs)
+            )
+            col_indices = np.zeros(len(row_indices))
+            vals = np.ones(len(row_indices))
+            bbc_sub_matrix = coo_matrix(
+                (vals, (row_indices, col_indices)), shape=((n_y + n_bcs) * n_x * n_z, 1)
+            )
+            bbc_matrix = csr_matrix(kron(eye(second_dim_repeats), bbc_sub_matrix))
+
+            if bbc_value.evaluates_to_number():
+                back_ghost_constant = (
+                    2 * bbc_value * pybamm.Vector(np.ones(second_dim_repeats))
+                )
+            else:
+                back_ghost_constant = 2 * bbc_value
+            bbc_vector = pybamm.Matrix(bbc_matrix) @ back_ghost_constant
+        elif bbc_type == "Neumann" or fbc_type == "Dirichlet":
+            bbc_vector = pybamm.Vector(
+                np.zeros((n_y + n_bcs) * second_dim_repeats * n_x * n_z)
+            )
+        else:
+            bbc_vector = pybamm.Vector(
+                np.zeros((n_x + n_bcs) * second_dim_repeats * (n_y * n_z))
+            )
+
         if botbc_type == "Dirichlet":
-            n_ghost_z += 1
+            row_indices = np.arange(0, n_x * n_y)
+            col_indices = np.zeros(len(row_indices))
+            vals = np.ones(len(row_indices))
+            botbc_sub_matrix = coo_matrix(
+                (vals, (row_indices, col_indices)), shape=((n_z + n_bcs) * n_x * n_y, 1)
+            )
+            botbc_matrix = csr_matrix(kron(eye(second_dim_repeats), botbc_sub_matrix))
+
+            if botbc_value.evaluates_to_number():
+                bottom_ghost_constant = (
+                    2 * botbc_value * pybamm.Vector(np.ones(second_dim_repeats))
+                )
+            else:
+                bottom_ghost_constant = 2 * botbc_value
+            botbc_vector = pybamm.Matrix(botbc_matrix) @ bottom_ghost_constant
+        elif botbc_type == "Neumann" or tbc_type == "Dirichlet":
+            botbc_vector = pybamm.Vector(
+                np.zeros((n_z + n_bcs) * second_dim_repeats * n_x * n_y)
+            )
+        else:
+            botbc_vector = pybamm.Vector(
+                np.zeros((n_x + n_bcs) * second_dim_repeats * (n_y * n_z))
+            )
+
         if tbc_type == "Dirichlet":
-            n_ghost_z += 1
-
-        # Calculate new dimensions
-        new_n_x = n_x + n_ghost_x
-        new_n_y = n_y + n_ghost_y
-        new_n_z = n_z + n_ghost_z
-        new_n = new_n_x * new_n_y * new_n_z
-
-        # Create transformation matrix and boundary vector
-        from scipy.sparse import lil_matrix
-        import numpy as np
-
-        matrix = lil_matrix((new_n * second_dim_repeats, n * second_dim_repeats))
-        bcs_vector = np.zeros(new_n * second_dim_repeats)
-
-        # Helper function to convert 3D indices to flat index
-        def flat_index(i, j, k, nx, ny):
-            return i + j * nx + k * nx * ny
-
-        # Process each secondary domain repeat
-        for rep in range(second_dim_repeats):
-            base_old = rep * n
-            base_new = rep * new_n
-
-            # Determine offsets for ghost nodes
-            x_offset = 1 if lbc_type == "Dirichlet" else 0
-            y_offset = 1 if fbc_type == "Dirichlet" else 0
-            z_offset = 1 if botbc_type == "Dirichlet" else 0
-
-            # Map interior nodes
-            for k in range(n_z):
-                for j in range(n_y):
-                    for i in range(n_x):
-                        old_idx = base_old + flat_index(i, j, k, n_x, n_y)
-                        new_idx = base_new + flat_index(
-                            i + x_offset, j + y_offset, k + z_offset, new_n_x, new_n_y
-                        )
-                        matrix[new_idx, old_idx] = 1.0
-
-            # Evaluate boundary condition values once
-            lbc_val = (
-                float(lbc_value.evaluate())
-                if lbc_value is not None and lbc_value.evaluates_to_number()
-                else 0.0
+            row_indices = np.arange(
+                (n_x * n_y * (n_z + n_bcs)) - n_x * n_y, n_x * n_y * (n_z + n_bcs)
             )
-            rbc_val = (
-                float(rbc_value.evaluate())
-                if rbc_value is not None and rbc_value.evaluates_to_number()
-                else 0.0
+            col_indices = np.zeros(len(row_indices))
+            vals = np.ones(len(row_indices))
+            tbc_sub_matrix = coo_matrix(
+                (vals, (row_indices, col_indices)), shape=((n_z + n_bcs) * n_x * n_y, 1)
             )
-            fbc_val = (
-                float(fbc_value.evaluate())
-                if fbc_value is not None and fbc_value.evaluates_to_number()
-                else 0.0
+            tbc_matrix = csr_matrix(kron(eye(second_dim_repeats), tbc_sub_matrix))
+
+            if tbc_value.evaluates_to_number():
+                top_ghost_constant = (
+                    2 * tbc_value * pybamm.Vector(np.ones(second_dim_repeats))
+                )
+            else:
+                top_ghost_constant = 2 * tbc_value
+            tbc_vector = pybamm.Matrix(tbc_matrix) @ top_ghost_constant
+        elif tbc_type == "Neumann" or botbc_type == "Dirichlet":
+            tbc_vector = pybamm.Vector(
+                np.zeros((n_z + n_bcs) * second_dim_repeats * n_x * n_y)
             )
-            bbc_val = (
-                float(bbc_value.evaluate())
-                if bbc_value is not None and bbc_value.evaluates_to_number()
-                else 0.0
-            )
-            botbc_val = (
-                float(botbc_value.evaluate())
-                if botbc_value is not None and botbc_value.evaluates_to_number()
-                else 0.0
-            )
-            tbc_val = (
-                float(tbc_value.evaluate())
-                if tbc_value is not None and tbc_value.evaluates_to_number()
-                else 0.0
+        else:
+            tbc_vector = pybamm.Vector(
+                np.zeros((n_x + n_bcs) * second_dim_repeats * (n_y * n_z))
             )
 
-            # Add ghost nodes for each face separately
-            # Left face ghost nodes (i = 0)
-            if lbc_type == "Dirichlet":
-                for k in range(new_n_z):
-                    for j in range(new_n_y):
-                        # Skip corner nodes that belong to other faces
-                        k_interior = max(z_offset, min(z_offset + n_z - 1, k))
-                        j_interior = max(y_offset, min(y_offset + n_y - 1, j))
+        # Simple addition like in 2D
+        bcs_vector = (
+            lbc_vector
+            + rbc_vector
+            + fbc_vector
+            + bbc_vector
+            + botbc_vector
+            + tbc_vector
+        )
+        bcs_vector.copy_domains(discretised_symbol)
 
-                        ghost_idx = base_new + flat_index(0, j, k, new_n_x, new_n_y)
-                        interior_idx = base_old + flat_index(
-                            0, j_interior - y_offset, k_interior - z_offset, n_x, n_y
-                        )
+        # Make matrix to calculate ghost nodes - following 2D pattern exactly
+        if lbc_type == "Dirichlet":
+            left_ghost_vector = coo_matrix(([-1], ([0], [0])), shape=(1, n_x))
+        else:
+            left_ghost_vector = None
+        if rbc_type == "Dirichlet":
+            right_ghost_vector = coo_matrix(([-1], ([0], [n_x - 1])), shape=(1, n_x))
+        else:
+            right_ghost_vector = None
 
-                        matrix[ghost_idx, interior_idx] = -1.0
-                        bcs_vector[ghost_idx] = 2.0 * lbc_val
+        if fbc_type == "Dirichlet":
+            row_indices = np.arange(0, n_x * n_z)
+            col_indices = np.arange(0, n_x * n_z)
+            front_ghost_vector = coo_matrix(
+                (-np.ones(n_x * n_z), (row_indices, col_indices)), shape=(n_x * n_z, n)
+            )
+        else:
+            front_ghost_vector = None
+        if bbc_type == "Dirichlet":
+            row_indices = np.arange(0, n_x * n_z)
+            col_indices = np.arange(n - n_x * n_z, n)
+            back_ghost_vector = coo_matrix(
+                (-np.ones(n_x * n_z), (row_indices, col_indices)), shape=(n_x * n_z, n)
+            )
+        else:
+            back_ghost_vector = None
 
-            # Right face ghost nodes (i = new_n_x - 1)
-            if rbc_type == "Dirichlet":
-                for k in range(new_n_z):
-                    for j in range(new_n_y):
-                        k_interior = max(z_offset, min(z_offset + n_z - 1, k))
-                        j_interior = max(y_offset, min(y_offset + n_y - 1, j))
+        if botbc_type == "Dirichlet":
+            row_indices = np.arange(0, n_x * n_y)
+            col_indices = np.arange(0, n_x * n_y)
+            bottom_ghost_vector = coo_matrix(
+                (-np.ones(n_x * n_y), (row_indices, col_indices)), shape=(n_x * n_y, n)
+            )
+        else:
+            bottom_ghost_vector = None
+        if tbc_type == "Dirichlet":
+            row_indices = np.arange(0, n_x * n_y)
+            col_indices = np.arange(n - n_x * n_y, n)
+            top_ghost_vector = coo_matrix(
+                (-np.ones(n_x * n_y), (row_indices, col_indices)), shape=(n_x * n_y, n)
+            )
+        else:
+            top_ghost_vector = None
 
-                        ghost_idx = base_new + flat_index(
-                            new_n_x - 1, j, k, new_n_x, new_n_y
-                        )
-                        interior_idx = base_old + flat_index(
-                            n_x - 1,
-                            j_interior - y_offset,
-                            k_interior - z_offset,
-                            n_x,
-                            n_y,
-                        )
-
-                        matrix[ghost_idx, interior_idx] = -1.0
-                        bcs_vector[ghost_idx] = 2.0 * rbc_val
-
-            # Front face ghost nodes (j = 0)
-            if fbc_type == "Dirichlet":
-                for k in range(new_n_z):
-                    for i in range(new_n_x):
-                        # Skip nodes already handled by left/right faces
-                        if (i == 0 and lbc_type == "Dirichlet") or (
-                            i == new_n_x - 1 and rbc_type == "Dirichlet"
-                        ):
-                            continue
-
-                        k_interior = max(z_offset, min(z_offset + n_z - 1, k))
-                        i_interior = max(x_offset, min(x_offset + n_x - 1, i))
-
-                        ghost_idx = base_new + flat_index(i, 0, k, new_n_x, new_n_y)
-                        interior_idx = base_old + flat_index(
-                            i_interior - x_offset, 0, k_interior - z_offset, n_x, n_y
-                        )
-
-                        matrix[ghost_idx, interior_idx] = -1.0
-                        bcs_vector[ghost_idx] = 2.0 * fbc_val
-
-            # Back face ghost nodes (j = new_n_y - 1)
-            if bbc_type == "Dirichlet":
-                for k in range(new_n_z):
-                    for i in range(new_n_x):
-                        # Skip nodes already handled by left/right faces
-                        if (i == 0 and lbc_type == "Dirichlet") or (
-                            i == new_n_x - 1 and rbc_type == "Dirichlet"
-                        ):
-                            continue
-
-                        k_interior = max(z_offset, min(z_offset + n_z - 1, k))
-                        i_interior = max(x_offset, min(x_offset + n_x - 1, i))
-
-                        ghost_idx = base_new + flat_index(
-                            i, new_n_y - 1, k, new_n_x, new_n_y
-                        )
-                        interior_idx = base_old + flat_index(
-                            i_interior - x_offset,
-                            n_y - 1,
-                            k_interior - z_offset,
-                            n_x,
-                            n_y,
-                        )
-
-                        matrix[ghost_idx, interior_idx] = -1.0
-                        bcs_vector[ghost_idx] = 2.0 * bbc_val
-
-            # Bottom face ghost nodes (k = 0)
-            if botbc_type == "Dirichlet":
-                for j in range(new_n_y):
-                    for i in range(new_n_x):
-                        # Skip nodes already handled by other faces
-                        if (
-                            (i == 0 and lbc_type == "Dirichlet")
-                            or (i == new_n_x - 1 and rbc_type == "Dirichlet")
-                            or (j == 0 and fbc_type == "Dirichlet")
-                            or (j == new_n_y - 1 and bbc_type == "Dirichlet")
-                        ):
-                            continue
-
-                        j_interior = max(y_offset, min(y_offset + n_y - 1, j))
-                        i_interior = max(x_offset, min(x_offset + n_x - 1, i))
-
-                        ghost_idx = base_new + flat_index(i, j, 0, new_n_x, new_n_y)
-                        interior_idx = base_old + flat_index(
-                            i_interior - x_offset, j_interior - y_offset, 0, n_x, n_y
-                        )
-
-                        matrix[ghost_idx, interior_idx] = -1.0
-                        bcs_vector[ghost_idx] = 2.0 * botbc_val
-
-            # Top face ghost nodes (k = new_n_z - 1)
-            if tbc_type == "Dirichlet":
-                for j in range(new_n_y):
-                    for i in range(new_n_x):
-                        # Skip nodes already handled by other faces
-                        if (
-                            (i == 0 and lbc_type == "Dirichlet")
-                            or (i == new_n_x - 1 and rbc_type == "Dirichlet")
-                            or (j == 0 and fbc_type == "Dirichlet")
-                            or (j == new_n_y - 1 and bbc_type == "Dirichlet")
-                        ):
-                            continue
-
-                        j_interior = max(y_offset, min(y_offset + n_y - 1, j))
-                        i_interior = max(x_offset, min(x_offset + n_x - 1, i))
-
-                        ghost_idx = base_new + flat_index(
-                            i, j, new_n_z - 1, new_n_x, new_n_y
-                        )
-                        interior_idx = base_old + flat_index(
-                            i_interior - x_offset,
-                            j_interior - y_offset,
-                            n_z - 1,
-                            n_x,
-                            n_y,
-                        )
-
-                        matrix[ghost_idx, interior_idx] = -1.0
-                        bcs_vector[ghost_idx] = 2.0 * tbc_val
-
-        # Convert to CSR format for efficiency
-        matrix = matrix.tocsr()
-
-        # Create new domain name with proper ghost cell naming
-        new_domain = domain
-
-        # Handle X-direction (left/right)
-        if lbc_type == "Dirichlet" and rbc_type != "Dirichlet":
-            if isinstance(new_domain, (list, tuple)):
-                new_domain = [(d + "_left ghost cell", d) for d in new_domain]
-            else:
-                new_domain = [new_domain + "_left ghost cell", new_domain]
-        elif lbc_type != "Dirichlet" and rbc_type == "Dirichlet":
-            if isinstance(new_domain, (list, tuple)):
-                new_domain = [(d, d + "_right ghost cell") for d in new_domain]
-            else:
-                new_domain = [new_domain, new_domain + "_right ghost cell"]
-        elif lbc_type == "Dirichlet" and rbc_type == "Dirichlet":
-            if isinstance(new_domain, (list, tuple)):
-                new_domain = [
-                    (d + "_left ghost cell", d, d + "_right ghost cell")
-                    for d in new_domain
+        # Build the matrix following the 2D pattern exactly
+        if lbc_type == "Dirichlet" or rbc_type == "Dirichlet":
+            sub_matrix = vstack(
+                [
+                    mat
+                    for mat in [left_ghost_vector, eye(n_x), right_ghost_vector]
+                    if mat is not None
                 ]
-            else:
-                new_domain = [
-                    new_domain + "_left ghost cell",
-                    new_domain,
-                    new_domain + "_right ghost cell",
-                ]
+            )
+            sub_matrix = block_diag((sub_matrix,) * (n_y * n_z))
+        else:
+            matrix_parts = []
+            if left_ghost_vector is not None:
+                matrix_parts.append(left_ghost_vector)
+            if front_ghost_vector is not None:
+                matrix_parts.append(front_ghost_vector)
+            if bottom_ghost_vector is not None:
+                matrix_parts.append(bottom_ghost_vector)
+            matrix_parts.append(eye(n))
+            if top_ghost_vector is not None:
+                matrix_parts.append(top_ghost_vector)
+            if back_ghost_vector is not None:
+                matrix_parts.append(back_ghost_vector)
+            if right_ghost_vector is not None:
+                matrix_parts.append(right_ghost_vector)
 
-        # Handle Y-direction (front/back)
-        if fbc_type == "Dirichlet" and bbc_type != "Dirichlet":
-            if isinstance(new_domain, (list, tuple)):
-                new_domain = [(d + "_front ghost cell", d) for d in new_domain]
-            else:
-                new_domain = [new_domain + "_front ghost cell", new_domain]
-        elif fbc_type != "Dirichlet" and bbc_type == "Dirichlet":
-            if isinstance(new_domain, (list, tuple)):
-                new_domain = [(d, d + "_back ghost cell") for d in new_domain]
-            else:
-                new_domain = [new_domain, new_domain + "_back ghost cell"]
-        elif fbc_type == "Dirichlet" and bbc_type == "Dirichlet":
-            if isinstance(new_domain, (list, tuple)):
-                new_domain = [
-                    (d + "_front ghost cell", d, d + "_back ghost cell")
-                    for d in new_domain
-                ]
-            else:
-                new_domain = [
-                    new_domain + "_front ghost cell",
-                    new_domain,
-                    new_domain + "_back ghost cell",
-                ]
+            sub_matrix = vstack(matrix_parts)
 
-        # Handle Z-direction (bottom/top)
-        if botbc_type == "Dirichlet" and tbc_type != "Dirichlet":
-            if isinstance(new_domain, (list, tuple)):
-                new_domain = [(d + "_bottom ghost cell", d) for d in new_domain]
-            else:
-                new_domain = [new_domain + "_bottom ghost cell", new_domain]
-        elif botbc_type != "Dirichlet" and tbc_type == "Dirichlet":
-            if isinstance(new_domain, (list, tuple)):
-                new_domain = [(d, d + "_top ghost cell") for d in new_domain]
-            else:
-                new_domain = [new_domain, new_domain + "_top ghost cell"]
-        elif botbc_type == "Dirichlet" and tbc_type == "Dirichlet":
-            if isinstance(new_domain, (list, tuple)):
-                new_domain = [
-                    (d + "_bottom ghost cell", d, d + "_top ghost cell")
-                    for d in new_domain
-                ]
-            else:
-                new_domain = [
-                    new_domain + "_bottom ghost cell",
-                    new_domain,
-                    new_domain + "_top ghost cell",
-                ]
+        matrix = csr_matrix(kron(eye(second_dim_repeats), sub_matrix))
 
-        # Create the result
-        bcs_vector_symbol = pybamm.Vector(bcs_vector)
-        bcs_vector_symbol.copy_domains(discretised_symbol)
+        new_symbol = pybamm.Matrix(matrix) @ discretised_symbol + bcs_vector
 
-        new_symbol = pybamm.Matrix(matrix) @ discretised_symbol + bcs_vector_symbol
-
-        return new_symbol, new_domain
+        return new_symbol, domain
 
     def add_neumann_values(self, symbol, discretised_gradient, bcs, domain):
         """
@@ -1789,29 +1793,15 @@ class FiniteVolume3D(pybamm.SpatialMethod):
                     ):
                         dx0 = dx0_y
                         additive_secondary = -dx0 * bcs[child][secondary_side][0]
-                        if primary_side in ["left", "right"]:
-                            secondary_matrix = csr_matrix(
-                                ([1], ([0], [0])), shape=(1, n_y * n_z)
-                            )
-                        elif primary_side in ["bottom", "top"]:
-                            secondary_matrix = csr_matrix(
-                                ([1], ([0], [0])), shape=(1, n_x * n_y)
-                            )
+                        tertiary_matrix = csr_matrix(([1], ([0], [0])), shape=(1, 1))
                     else:
                         dx0 = dx0_y
                         dx1 = dx1_y
-                        if primary_side in ["left", "right"]:
-                            vals = [1 + (dx0 / dx1), -(dx0 / dx1)]
-                            secondary_matrix = csr_matrix(
-                                (vals, ([0, 0], [0, n_z])), shape=(1, n_y * n_z)
-                            )
-                        elif primary_side in ["bottom", "top"]:
-                            vals = [1 + (dx0 / dx1), -(dx0 / dx1)]
-                            secondary_matrix = csr_matrix(
-                                (vals, ([0, 0], [0, n_x])), shape=(1, n_x * n_y)
-                            )
+                        tertiary_matrix = csr_matrix(
+                            ([1 + (dx0 / dx1)], ([0], [0])), shape=(1, 1)
+                        )
 
-                    sub_matrix = secondary_matrix @ sub_matrix
+                    sub_matrix = tertiary_matrix @ sub_matrix
                     additive += additive_secondary
 
                 elif secondary_side == "back":
@@ -1820,34 +1810,15 @@ class FiniteVolume3D(pybamm.SpatialMethod):
                     ):
                         dxN = dxN_y
                         additive_secondary = dxN * bcs[child][secondary_side][0]
-                        if primary_side in ["left", "right"]:
-                            secondary_matrix = csr_matrix(
-                                ([1], ([0], [n_y * n_z - n_z])), shape=(1, n_y * n_z)
-                            )
-                        elif primary_side in ["bottom", "top"]:
-                            secondary_matrix = csr_matrix(
-                                ([1], ([0], [n_x * (n_y - 1)])), shape=(1, n_x * n_y)
-                            )
+                        tertiary_matrix = csr_matrix(([1], ([0], [0])), shape=(1, 1))
                     else:
                         dxN = dxN_y
                         dxNm1 = dxNm1_y
-                        if primary_side in ["left", "right"]:
-                            vals = [-(dxN / dxNm1), 1 + (dxN / dxNm1)]
-                            secondary_matrix = csr_matrix(
-                                (
-                                    vals,
-                                    ([0, 0], [n_y * n_z - 2 * n_z, n_y * n_z - n_z]),
-                                ),
-                                shape=(1, n_y * n_z),
-                            )
-                        elif primary_side in ["bottom", "top"]:
-                            vals = [-(dxN / dxNm1), 1 + (dxN / dxNm1)]
-                            secondary_matrix = csr_matrix(
-                                (vals, ([0, 0], [n_x * (n_y - 2), n_x * (n_y - 1)])),
-                                shape=(1, n_x * n_y),
-                            )
+                        tertiary_matrix = csr_matrix(
+                            ([1 + (dxN / dxNm1)], ([0], [0])), shape=(1, 1)
+                        )
 
-                    sub_matrix = secondary_matrix @ sub_matrix
+                    sub_matrix = tertiary_matrix @ sub_matrix
                     additive += additive_secondary
 
                 elif secondary_side == "bottom":
@@ -1856,29 +1827,15 @@ class FiniteVolume3D(pybamm.SpatialMethod):
                     ):
                         dx0 = dx0_z
                         additive_secondary = -dx0 * bcs[child][secondary_side][0]
-                        if primary_side in ["left", "right"]:
-                            secondary_matrix = csr_matrix(
-                                ([1], ([0], [0])), shape=(1, n_y * n_z)
-                            )
-                        elif primary_side in ["front", "back"]:
-                            secondary_matrix = csr_matrix(
-                                ([1], ([0], [0])), shape=(1, n_x * n_z)
-                            )
+                        tertiary_matrix = csr_matrix(([1], ([0], [0])), shape=(1, 1))
                     else:
                         dx0 = dx0_z
                         dx1 = dx1_z
-                        if primary_side in ["left", "right"]:
-                            vals = [1 + (dx0 / dx1), -(dx0 / dx1)]
-                            secondary_matrix = csr_matrix(
-                                (vals, ([0, 0], [0, n_y])), shape=(1, n_y * n_z)
-                            )
-                        elif primary_side in ["front", "back"]:
-                            vals = [1 + (dx0 / dx1), -(dx0 / dx1)]
-                            secondary_matrix = csr_matrix(
-                                (vals, ([0, 0], [0, n_x])), shape=(1, n_x * n_z)
-                            )
+                        tertiary_matrix = csr_matrix(
+                            ([1 + (dx0 / dx1)], ([0], [0])), shape=(1, 1)
+                        )
 
-                    sub_matrix = secondary_matrix @ sub_matrix
+                    sub_matrix = tertiary_matrix @ sub_matrix
                     additive += additive_secondary
 
                 elif secondary_side == "top":
@@ -1887,31 +1844,15 @@ class FiniteVolume3D(pybamm.SpatialMethod):
                     ):
                         dxN = dxN_z
                         additive_secondary = dxN * bcs[child][secondary_side][0]
-                        if primary_side in ["left", "right"]:
-                            secondary_matrix = csr_matrix(
-                                ([1], ([0], [n_y * (n_z - 1)])), shape=(1, n_y * n_z)
-                            )
-                        elif primary_side in ["front", "back"]:
-                            secondary_matrix = csr_matrix(
-                                ([1], ([0], [n_x * (n_z - 1)])), shape=(1, n_x * n_z)
-                            )
+                        tertiary_matrix = csr_matrix(([1], ([0], [0])), shape=(1, 1))
                     else:
                         dxN = dxN_z
                         dxNm1 = dxNm1_z
-                        if primary_side in ["left", "right"]:
-                            vals = [-(dxN / dxNm1), 1 + (dxN / dxNm1)]
-                            secondary_matrix = csr_matrix(
-                                (vals, ([0, 0], [n_y * (n_z - 2), n_y * (n_z - 1)])),
-                                shape=(1, n_y * n_z),
-                            )
-                        elif primary_side in ["front", "back"]:
-                            vals = [-(dxN / dxNm1), 1 + (dxN / dxNm1)]
-                            secondary_matrix = csr_matrix(
-                                (vals, ([0, 0], [n_x * (n_z - 2), n_x * (n_z - 1)])),
-                                shape=(1, n_x * n_z),
-                            )
+                        tertiary_matrix = csr_matrix(
+                            ([1 + (dxN / dxNm1)], ([0], [0])), shape=(1, 1)
+                        )
 
-                    sub_matrix = secondary_matrix @ sub_matrix
+                    sub_matrix = tertiary_matrix @ sub_matrix
                     additive += additive_secondary
 
                 # Handle tertiary sides (corner boundaries)
@@ -1992,7 +1933,7 @@ class FiniteVolume3D(pybamm.SpatialMethod):
                     row_indices = np.arange(0, n_y * n_z)
                     col_indices_0 = np.arange(0, n_x * n_y * n_z, n_x)
                     col_indices_1 = col_indices_0 + 1
-                    col_indices_2 = col_indices_0 + 2 if n_x > 2 else col_indices_1
+                    col_indices_2 = col_indices_0 + 2 if n_x > 2 else col_indices_0 + 1
 
                     # Quadratic extrapolation coefficients
                     c0 = (2 * dx1 + dx2) / (dx1 * (dx1 + dx2))
@@ -2811,6 +2752,8 @@ class FiniteVolume3D(pybamm.SpatialMethod):
                             data.append(1.0)
                             row_idx += 1
 
+                    for _k in range(n_z):
+                        for _j in range(n_y):
                             for i in range(1, n_x - 1):
                                 rows.extend([row_idx, row_idx])
                                 cols.extend([col_idx + i - 1, col_idx + i])
@@ -2921,117 +2864,80 @@ class FiniteVolume3D(pybamm.SpatialMethod):
             if shift_key == "node to edge":
                 if direction == "x":
                     n_edges_x = n_x - 1
-                    D1_1d = lil_matrix((n_edges_x, n_x))
-                    D2_1d = lil_matrix((n_edges_x, n_x))
 
-                    for i in range(n_edges_x):
-                        D1_1d[i, i] = 1.0  # Left node
-                        D2_1d[i, i + 1] = 1.0  # Right node
+                    stencil_1d = lil_matrix((n_edges_x, n_x))
 
-                    D1_1d = D1_1d.tocsr()
-                    D2_1d = D2_1d.tocsr()
+                    stencil_1d[0, 0] = 1.0
 
-                    M1 = kron(eye(n_z), kron(eye(n_y), D1_1d))
-                    M2 = kron(eye(n_z), kron(eye(n_y), D2_1d))
+                    for i in range(1, n_x - 1):
+                        stencil_1d[i, i - 1] = 0.5
+                        stencil_1d[i, i] = 0.5
 
-                    D1 = pybamm.Matrix(M1) @ array
-                    D2 = pybamm.Matrix(M2) @ array
+                    stencil_1d[n_edges_x - 1, n_x - 2] = 1.0
 
-                    dx = submesh.d_edges_x
-                    beta_1d = dx[:-2] / (dx[1:-1] + dx[:-2])
+                    stencil_1d = stencil_1d.tocsr()
 
-                    n_edges_total = (n_x - 1) * n_y * n_z
+                    E = kron(eye(n_z), kron(eye(n_y), stencil_1d))
 
-                    beta_full = np.zeros(n_edges_total)
-
-                    for k in range(n_z):
-                        for j in range(n_y):
-                            for i in range(n_x - 1):
-                                edge_idx = k * n_y * (n_x - 1) + j * (n_x - 1) + i
-                                if i > 0 and i < n_x - 2:
-                                    beta_full[edge_idx] = beta_1d[i - 1]
-                                else:
-                                    beta_full[edge_idx] = 0.5
-
-                    beta_pybamm = pybamm.Array(beta_full.reshape(-1, 1))
-
-                    denominator = beta_pybamm * D2 + (1 - beta_pybamm) * D1
-
-                    epsilon = 1e-12
-                    denominator = denominator + epsilon
-
-                    return D1 * D2 / denominator
+                    return pybamm.Matrix(E) @ array
 
                 elif direction == "y":
-                    D1_1d_y = hstack([eye(n_y - 1), csr_matrix((n_y - 1, 1))])
-                    D2_1d_y = hstack([csr_matrix((n_y - 1, 1)), eye(n_y - 1)])
+                    n_edges_y = n_y - 1
 
-                    sub_D1_y = block_diag([D1_1d_y] * n_x)
-                    sub_D2_y = block_diag([D2_1d_y] * n_x)
+                    stencil_2d = lil_matrix((n_x * n_edges_y, n_x * n_y))
 
-                    M1 = kron(eye(n_z), sub_D1_y)
-                    M2 = kron(eye(n_z), sub_D2_y)
+                    for i in range(n_x):
+                        edge_start = i * n_edges_y
+                        node_start = i * n_y
+                        stencil_2d[node_start, edge_start] = 1.0
 
-                    D1 = pybamm.Matrix(kron(eye(repeats), M1)) @ array
-                    D2 = pybamm.Matrix(kron(eye(repeats), M2)) @ array
+                        for j in range(1, n_y - 1):
+                            node_idx = node_start + j
+                            edge_left = edge_start + j - 1
+                            edge_right = edge_start + j
+                            stencil_2d[node_idx, edge_left] = 0.5
+                            stencil_2d[node_idx, edge_right] = 0.5
 
-                    dy = submesh.d_edges_y
-                    beta_1d = dy[:-2] / (dy[1:-1] + dy[:-2])
+                        stencil_2d[node_start + n_y - 1, edge_start + n_edges_y - 1] = (
+                            1.0
+                        )
 
-                    n_edges_total = n_x * (n_y - 1) * n_z
-                    beta_full = np.zeros(n_edges_total)
+                    stencil_2d = stencil_2d.tocsr()
 
-                    for k in range(n_z):
-                        for i in range(n_x):
-                            for j in range(n_y - 1):
-                                edge_idx = k * n_x * (n_y - 1) + i * (n_y - 1) + j
-                                if j > 0 and j < n_y - 2:
-                                    beta_full[edge_idx] = beta_1d[j - 1]
-                                else:
-                                    beta_full[edge_idx] = 0.5
+                    E = kron(eye(n_z), stencil_2d)
+                    E = csr_matrix(kron(eye(repeats), E))
 
-                    beta_pybamm = pybamm.Array(beta_full.reshape(-1, 1))
-                    denominator = beta_pybamm * D2 + (1 - beta_pybamm) * D1
-
-                    epsilon = 1e-12
-                    denominator = denominator + epsilon
-
-                    return D1 * D2 / denominator
+                    return pybamm.Matrix(E) @ array
 
                 elif direction == "z":
-                    D1_1d_z = hstack([eye(n_z - 1), csr_matrix((n_z - 1, 1))])
-                    D2_1d_z = hstack([csr_matrix((n_z - 1, 1)), eye(n_z - 1)])
-                    sub_D1_z = block_diag([D1_1d_z] * (n_x * n_y))
-                    sub_D2_z = block_diag([D2_1d_z] * (n_x * n_y))
-                    M1 = sub_D1_z
-                    M2 = sub_D2_z
-                    D1 = pybamm.Matrix(kron(eye(repeats), M1)) @ array
-                    D2 = pybamm.Matrix(kron(eye(repeats), M2)) @ array
+                    n_edges_z = n_z - 1
 
-                    dz = submesh.d_edges_z
-                    beta_1d = dz[:-2] / (dz[1:-1] + dz[:-2])
-
-                    n_edges_total = n_x * n_y * (n_z - 1)
-                    beta_full = np.zeros(n_edges_total)
+                    stencil_3d = lil_matrix((n_x * n_y * n_edges_z, n_x * n_y * n_z))
 
                     for i in range(n_x):
                         for j in range(n_y):
-                            for k in range(n_z - 1):
-                                edge_idx = (i * n_y + j) * (n_z - 1) + k
-                                if k > 0 and k < n_z - 2:
-                                    beta_full[edge_idx] = beta_1d[k - 1]
-                                else:
-                                    beta_full[edge_idx] = 0.5
+                            xy_idx = i * n_y + j
 
-                    beta_pybamm = pybamm.Array(beta_full.reshape(-1, 1))
-                    denominator = beta_pybamm * D2 + (1 - beta_pybamm) * D1
+                            node_start = xy_idx * n_z
+                            edge_start = xy_idx * n_edges_z
+                            stencil_3d[node_start, edge_start] = 1.0
 
-                    epsilon = 1e-12
-                    denominator = denominator + epsilon
+                            for k in range(1, n_z - 1):
+                                node_idx = node_start + k
+                                edge_left = edge_start + k - 1
+                                edge_right = edge_start + k
+                                stencil_3d[node_idx, edge_left] = 0.5
+                                stencil_3d[node_idx, edge_right] = 0.5
 
-                    return D1 * D2 / denominator
-                else:
-                    return arithmetic_mean(array, direction)
+                            stencil_3d[
+                                node_start + n_z - 1, edge_start + n_edges_z - 1
+                            ] = 1.0
+
+                    stencil_3d = stencil_3d.tocsr()
+
+                    E = csr_matrix(kron(eye(repeats), stencil_3d))
+
+                    return pybamm.Matrix(E) @ array
 
             elif shift_key == "edge to node":
                 if direction == "x":
