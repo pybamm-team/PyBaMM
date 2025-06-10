@@ -1,10 +1,11 @@
 #
 # Two-dimensional submeshes
 #
-import pybamm
-from .meshes import SubMesh
-
 import numpy as np
+
+import pybamm
+
+from .meshes import SubMesh
 
 
 class SubMesh2D(SubMesh):

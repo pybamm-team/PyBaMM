@@ -2,11 +2,12 @@
 # Test for the gradient and divergence in Finite Volumes
 #
 
+import numpy as np
+
 import pybamm
 from tests import (
     get_mesh_for_testing_2d,
 )
-import numpy as np
 
 
 class TestFiniteVolume2DGradDiv:

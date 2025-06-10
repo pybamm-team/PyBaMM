@@ -2,9 +2,9 @@
 # Tests for integration using Finite Volume method
 #
 
-import pybamm
 import numpy as np
 
+import pybamm
 from tests import get_mesh_for_testing_2d
 
 

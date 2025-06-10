@@ -1,5 +1,6 @@
-import pybamm
 from typing import Optional
+
+import pybamm
 
 
 class VectorField(pybamm.Symbol):
