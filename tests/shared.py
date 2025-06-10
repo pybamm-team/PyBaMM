@@ -128,7 +128,7 @@ def get_mesh_for_testing_2d(
 ):
     param = pybamm.ParameterValues(
         values={
-            "Electrode height [m]": 0.5,
+            "Electrode height [m]": 1,
             "Negative electrode thickness [m]": 1 / 3,
             "Separator thickness [m]": 1 / 3,
             "Positive electrode thickness [m]": 1 / 3,

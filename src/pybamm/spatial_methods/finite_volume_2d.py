@@ -1510,10 +1510,10 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                     )
                     disc_right = pybamm.VectorField(disc_right_lr, disc_right_tb)
             lr_field = pybamm.simplify_if_constant(
-                bin_op.create_copy([disc_left.lr_field, disc_right])
+                bin_op.create_copy([disc_left.lr_field, disc_right.lr_field])
             )
             tb_field = pybamm.simplify_if_constant(
-                bin_op.create_copy([disc_left.tb_field, disc_right])
+                bin_op.create_copy([disc_left.tb_field, disc_right.tb_field])
             )
             return pybamm.VectorField(lr_field, tb_field)
         elif not hasattr(disc_left, "lr_field") and hasattr(disc_right, "lr_field"):
@@ -1538,10 +1538,10 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                     )
                     disc_left = pybamm.VectorField(disc_left_lr, disc_left_tb)
             lr_field = pybamm.simplify_if_constant(
-                bin_op.create_copy([disc_left, disc_right.lr_field])
+                bin_op.create_copy([disc_left.lr_field, disc_right.lr_field])
             )
             tb_field = pybamm.simplify_if_constant(
-                bin_op.create_copy([disc_left, disc_right.tb_field])
+                bin_op.create_copy([disc_left.tb_field, disc_right.tb_field])
             )
             return pybamm.VectorField(lr_field, tb_field)
         else:

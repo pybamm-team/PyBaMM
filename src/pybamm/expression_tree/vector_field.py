@@ -11,9 +11,9 @@ class VectorField(pybamm.Symbol):
         children = [lr_field, tb_field]
         if lr_field.domain != tb_field.domain:
             raise ValueError("lr_field and tb_field must have the same domain")
-        super().__init__(name="vector_field", children=children, domain=lr_field.domain)
         self.lr_field = lr_field
         self.tb_field = tb_field
+        super().__init__(name="vector_field", children=children, domain=lr_field.domain)
 
     def create_copy(self, new_children: Optional[list[pybamm.Symbol]] = None):
         if new_children is None:
