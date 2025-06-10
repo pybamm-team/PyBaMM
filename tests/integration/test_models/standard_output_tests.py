@@ -1,8 +1,9 @@
 #
 # Standard tests on the standard set of model outputs
 #
-import pybamm
 import numpy as np
+
+import pybamm
 
 
 class StandardOutputTests:
@@ -790,13 +791,13 @@ class CurrentTests(BaseOutputTest):
                 axis=0,
             ),
             self.i_cell / self.L_n,
-            rtol=1e-3,
+            rtol=2e-3,
             atol=1e-3,
         )
         np.testing.assert_allclose(
             np.mean(self.a_j_p(self.t, self.x_p), axis=0),
             -self.i_cell / self.L_p,
-            rtol=1e-3,
+            rtol=6e-3,
             atol=1e-3,
         )
 

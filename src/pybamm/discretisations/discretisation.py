@@ -1,11 +1,13 @@
 #
 # Interface for discretisation
 #
-import pybamm
+from collections import OrderedDict, defaultdict
+
 import numpy as np
-from collections import defaultdict, OrderedDict
 from scipy.sparse import block_diag, csc_matrix, csr_matrix
 from scipy.sparse.linalg import inv
+
+import pybamm
 
 
 def has_bc_of_form(symbol, side, bcs, form):
@@ -783,6 +785,13 @@ class Discretisation:
                 ]
             else:
                 discretised_symbol.secondary_mesh = None
+
+            # Assign tertiary mesh
+            if symbol.domains["tertiary"] != []:
+                discretised_symbol.tertiary_mesh = self.mesh[symbol.domains["tertiary"]]
+            else:
+                discretised_symbol.tertiary_mesh = None
+
             return discretised_symbol
 
     def _process_symbol(self, symbol):

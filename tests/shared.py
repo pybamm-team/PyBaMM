@@ -1,11 +1,13 @@
 #
 # Shared methods and classes for testing
 #
-import pybamm
-from scipy.sparse import eye
-import sys
 import re
 import socket
+import sys
+
+from scipy.sparse import eye
+
+import pybamm
 
 if sys.version_info < (3, 10):
     import importlib_metadata

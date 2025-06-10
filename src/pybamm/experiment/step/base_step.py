@@ -1,9 +1,13 @@
 from __future__ import annotations
-import pybamm
-import numpy as np
-from datetime import datetime
-from .step_termination import _read_termination
+
 import numbers
+from datetime import datetime
+
+import numpy as np
+
+import pybamm
+
+from .step_termination import _read_termination
 
 _examples = """
 
@@ -288,7 +292,7 @@ class BaseStep:
             period = self.default_period()
         else:
             period = self.period
-        npts = max(int(round(np.abs(tf - t0) / period)) + 1, 2)
+        npts = max(round(np.abs(tf - t0) / period) + 1, 2)
 
         return np.linspace(t0, tf, npts)
 

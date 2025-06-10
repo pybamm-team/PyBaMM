@@ -7,9 +7,10 @@ import copy
 import re
 import warnings
 
+import sympy
+
 import pybamm
 from pybamm.expression_tree.printing.sympy_overrides import custom_print_func
-import sympy
 
 
 def get_rng_min_max_name(rng, min_or_max):

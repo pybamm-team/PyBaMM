@@ -4,11 +4,13 @@
 from __future__ import annotations
 
 import numpy as np
-from scipy.sparse import csr_matrix, issparse
+import numpy.typing as npt
 import sympy
+from scipy.sparse import csr_matrix, issparse
+
 import pybamm
-from pybamm.util import import_optional_dependency
 from pybamm.type_definitions import DomainsType
+from pybamm.util import import_optional_dependency
 
 
 class UnaryOperator(pybamm.Symbol):
@@ -93,8 +95,8 @@ class UnaryOperator(pybamm.Symbol):
     def evaluate(
         self,
         t: float | None = None,
-        y: np.ndarray | None = None,
-        y_dot: np.ndarray | None = None,
+        y: npt.NDArray[np.float64] | None = None,
+        y_dot: npt.NDArray[np.float64] | None = None,
         inputs: dict | str | None = None,
     ):
         """See :meth:`pybamm.Symbol.evaluate()`."""

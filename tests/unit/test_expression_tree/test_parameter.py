@@ -2,11 +2,12 @@
 # Tests for the Parameter class
 #
 
-import pytest
 import numbers
 
-import pybamm
+import pytest
 import sympy
+
+import pybamm
 
 
 class TestParameter:

@@ -74,6 +74,21 @@ glob:
 ../examples/notebooks/creating_models/6-a-simple-SEI-model.ipynb
 ```
 
+```{nbgallery}
+---
+caption: Performance
+maxdepth: 1
+glob:
+---
+../examples/notebooks/performance/01-simulation-pipeline.ipynb
+../examples/notebooks/performance/02-input-parameters.ipynb
+../examples/notebooks/performance/03-pybamm-solvers.ipynb
+../examples/notebooks/performance/04-interpolation-points.ipynb
+../examples/notebooks/performance/05-solver-tolerances.ipynb
+../examples/notebooks/performance/06-output-variables.ipynb
+../examples/notebooks/performance/07-multithreading.ipynb
+```
+
 # Telemetry
 
 PyBaMM optionally collects anonymous usage data to help improve the library. This telemetry is opt-in and can be easily disabled. Here's what you need to know:

@@ -1,15 +1,19 @@
 from __future__ import annotations
 
+import copy
 import numbers
 import warnings
 from collections import OrderedDict
 
-import copy
 import casadi
 import numpy as np
+import scipy
 
 import pybamm
 from pybamm.expression_tree.operations.serialise import Serialise
+
+# Only throw the default solver warning once
+warnings.filterwarnings("once", message="The default solver changed to IDAKLUSolver*")
 
 
 class BaseModel:
@@ -80,9 +84,13 @@ class BaseModel:
         # Model is not initially discretised
         self.is_discretised = False
         self.y_slices = None
+        self.len_rhs_and_alg = None
 
         # Non-lithium ion models shouldn't calculate eSOH parameters
         self._calc_esoh = False
+
+        # Root solver
+        self._algebraic_root_solver = None
 
     @classmethod
     def deserialise(cls, properties: dict):
@@ -125,6 +133,11 @@ class BaseModel:
                     var.secondary_mesh = properties["mesh"][var.domains["secondary"]]
                 else:
                     var.secondary_mesh = None
+
+                if var.domains["tertiary"] != []:
+                    var.tertiary_mesh = properties["mesh"][var.domains["tertiary"]]
+                else:
+                    var.tertiary_mesh = None
 
             if properties["geometry"]:
                 instance._geometry = pybamm.Geometry(properties["geometry"])
@@ -284,6 +297,11 @@ class BaseModel:
         self._concatenated_initial_conditions = concatenated_initial_conditions
 
     @property
+    def built(self):
+        "Returns a boolean for the model built status."
+        return self._built
+
+    @property
     def mass_matrix(self):
         """Returns the mass matrix for the system of differential equations after discretisation."""
         return self._mass_matrix
@@ -403,7 +421,12 @@ class BaseModel:
         if len(self.rhs) == 0 and len(self.algebraic) != 0:
             return pybamm.CasadiAlgebraicSolver()
         else:
-            return pybamm.CasadiSolver(mode="safe")
+            warnings.warn(
+                "The default solver changed to IDAKLUSolver after the v25.4.0. release. "
+                "You can swap back to the previous default by using `pybamm.CasadiSolver()` instead.",
+                stacklevel=2,
+            )
+            return pybamm.IDAKLUSolver()
 
     @property
     def default_quick_plot_variables(self):
@@ -444,6 +467,14 @@ class BaseModel:
     def calc_esoh(self):
         """Whether to include eSOH variables in the summary variables."""
         return self._calc_esoh
+
+    @property
+    def algebraic_root_solver(self):
+        return self._algebraic_root_solver
+
+    @algebraic_root_solver.setter
+    def algebraic_root_solver(self, algebraic_root_solver):
+        self._algebraic_root_solver = algebraic_root_solver
 
     def get_parameter_info(self, by_submodel=False):
         """
@@ -581,8 +612,12 @@ class BaseModel:
         if self.mass_matrix is None or self.mass_matrix_inv is None:
             return False
         # Check that the mass matrix inverse is an identity matrix
-        mass_matrix_inv = self.mass_matrix_inv.entries.toarray()
-        return np.allclose(mass_matrix_inv, np.eye(mass_matrix_inv.shape[0]))
+        mass_matrix_inv = self.mass_matrix_inv.entries
+        if scipy.sparse.issparse(mass_matrix_inv):
+            identity = scipy.sparse.identity(mass_matrix_inv.shape[0])
+            return (mass_matrix_inv - identity).nnz == 0
+        else:
+            return np.allclose(mass_matrix_inv, np.eye(mass_matrix_inv.shape[0]))
 
     def _format_table_row(
         self, param_name, param_type, max_name_length, max_type_length
@@ -897,51 +932,48 @@ class BaseModel:
         initial_conditions = {}
         if isinstance(solution, pybamm.Solution):
             solution = solution.last_state
+
+        def get_final_state_eval(final_state):
+            if isinstance(solution, pybamm.Solution):
+                final_state = final_state.data
+
+            if final_state.ndim == 0:
+                return np.array([final_state])
+            elif final_state.ndim == 1:
+                return final_state[-1:]
+            elif final_state.ndim == 2:
+                return final_state[:, -1]
+            elif final_state.ndim == 3:
+                return final_state[:, :, -1].flatten(order="F")
+            elif final_state.ndim == 4:
+                return final_state[:, :, :, -1].flatten(order="F")
+            else:
+                raise NotImplementedError("Variable must be 0D, 1D, 2D, or 3D")
+
+        def get_variable_state(var_name):
+            try:
+                return solution[var_name]
+            except KeyError as e:
+                raise pybamm.ModelError(
+                    "To update a model from a solution, each variable in "
+                    "model.initial_conditions must appear in the solution with "
+                    "the same key as the variable name. In the solution provided, "
+                    f"'{e.args[0]}' was not found."
+                ) from e
+
         for var in self.initial_conditions:
             if isinstance(var, pybamm.Variable):
-                try:
-                    final_state = solution[var.name]
-                except KeyError as e:
-                    raise pybamm.ModelError(
-                        "To update a model from a solution, each variable in "
-                        "model.initial_conditions must appear in the solution with "
-                        "the same key as the variable name. In the solution provided, "
-                        f"'{e.args[0]}' was not found."
-                    ) from e
-                if isinstance(solution, pybamm.Solution):
-                    final_state = final_state.data
-                if final_state.ndim == 0:
-                    final_state_eval = np.array([final_state])
-                elif final_state.ndim == 1:
-                    final_state_eval = final_state[-1:]
-                elif final_state.ndim == 2:
-                    final_state_eval = final_state[:, -1]
-                elif final_state.ndim == 3:
-                    final_state_eval = final_state[:, :, -1].flatten(order="F")
-                else:
-                    raise NotImplementedError("Variable must be 0D, 1D, or 2D")
+                final_state = get_variable_state(var.name)
+                final_state_eval = get_final_state_eval(final_state)
+
             elif isinstance(var, pybamm.Concatenation):
                 children = []
                 for child in var.orphans:
-                    try:
-                        final_state = solution[child.name]
-                    except KeyError as e:
-                        raise pybamm.ModelError(
-                            "To update a model from a solution, each variable in "
-                            "model.initial_conditions must appear in the solution with "
-                            "the same key as the variable name. In the solution "
-                            f"provided, {e.args[0]}"
-                        ) from e
-                    if isinstance(solution, pybamm.Solution):
-                        final_state = final_state.data
-                    if final_state.ndim == 2:
-                        final_state_eval = final_state[:, -1]
-                    else:
-                        raise NotImplementedError(
-                            "Variable in concatenation must be 1D"
-                        )
+                    final_state = get_variable_state(child.name)
+                    final_state_eval = get_final_state_eval(final_state)
                     children.append(final_state_eval)
                 final_state_eval = np.concatenate(children)
+
             else:
                 raise NotImplementedError(
                     "Variable must have type 'Variable' or 'Concatenation'"

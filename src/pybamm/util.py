@@ -1,12 +1,13 @@
 from __future__ import annotations
-import importlib.util
+
+import difflib
 import importlib.metadata
+import importlib.util
 import numbers
 import os
 import pathlib
 import pickle
 import timeit
-import difflib
 from warnings import warn
 
 import pybamm
@@ -272,7 +273,7 @@ class TimerTime:
         elif time < 60:
             return f"{time:.3f} s"
         output = []
-        time = int(round(time))
+        time = round(time)
         units = [(604800, "week"), (86400, "day"), (3600, "hour"), (60, "minute")]
         for k, name in units:
             f = time // k

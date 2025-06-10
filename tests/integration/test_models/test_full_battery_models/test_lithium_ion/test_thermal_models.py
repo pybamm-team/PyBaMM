@@ -2,8 +2,9 @@
 # Tests for the thermal lithium-ion models produce consistent
 # thermal response
 #
-import pybamm
 import numpy as np
+
+import pybamm
 
 
 class TestThermal:
@@ -77,8 +78,10 @@ class TestThermal:
         # Solve models
         solutions = {}
         var_pts = {"x_n": 3, "x_s": 3, "x_p": 3, "r_n": 3, "r_p": 3, "y": 5, "z": 5}
+        t_eval = [0, 3500 / 6]
+        t_interp = np.linspace(t_eval[0], t_eval[-1], 100)
         for model_name, model in models.items():
-            solver = pybamm.CasadiSolver(mode="fast")
+            solver = pybamm.IDAKLUSolver(rtol=1e-8, atol=1e-12)
             sim = pybamm.Simulation(
                 model,
                 var_pts=var_pts,
@@ -86,12 +89,11 @@ class TestThermal:
                 parameter_values=parameter_values,
                 C_rate=C_rate,
             )
-            t_eval = np.linspace(0, 3500 / 6, 100)
-            sim.solve(t_eval=t_eval)
+            sim.solve(t_eval)
 
             solutions[model_name] = sim.solution[
                 "Volume-averaged cell temperature [K]"
-            ].entries
+            ](t_interp)
 
         # check volume-averaged cell temperature is within
         # 1e-5 relative error
@@ -119,9 +121,11 @@ class TestThermal:
         )
 
         sols = {}
+        t_eval = [0, 3600]
+        t_interp = np.linspace(0, 3600, 100)
         for name, model in models.items():
             sim = pybamm.Simulation(model, parameter_values=parameter_values)
-            sol = sim.solve([0, 3600])
+            sol = sim.solve(t_eval=t_eval, t_interp=t_interp)
             sols[name] = sol
 
         for var in ["Volume-averaged cell temperature [K]", "Surface temperature [K]"]:

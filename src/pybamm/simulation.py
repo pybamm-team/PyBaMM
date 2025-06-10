@@ -1,14 +1,16 @@
 from __future__ import annotations
-import pickle
-import pybamm
-import numpy as np
-import warnings
-from functools import lru_cache
-from datetime import timedelta
-import pybamm.telemetry
-from pybamm.util import import_optional_dependency
 
+import pickle
+import warnings
+from datetime import timedelta
+from functools import lru_cache
+
+import numpy as np
+
+import pybamm
+import pybamm.telemetry
 from pybamm.expression_tree.operations.serialise import Serialise
+from pybamm.util import import_optional_dependency
 
 
 def is_notebook():
@@ -871,6 +873,9 @@ class Simulation:
                                 pybamm.logger.warning(
                                     f"Step '{step_str}' is infeasible at initial conditions, but skip_ok is True. Skipping step."
                                 )
+
+                                # Update the termination and continue
+                                self._solution.termination = step_solution.termination
                                 continue
                             else:
                                 raise pybamm.SolverError(
@@ -976,7 +981,7 @@ class Simulation:
 
         # Make sure we take at least 2 timesteps. The period is hardcoded to 10
         # minutes,the user can always override it by adding a rest step
-        npts = max(int(round(rest_time / 600)) + 1, 2)
+        npts = max(round(rest_time / 600) + 1, 2)
 
         step_solution_with_rest = solver.step(
             step_solution,

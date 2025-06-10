@@ -2,6 +2,7 @@
 # Lead-acid LOQS model
 #
 import pybamm
+
 from .base_lead_acid_model import BaseModel
 
 
@@ -65,6 +66,10 @@ class LOQS(BaseModel):
                     self.param, self.options["operating mode"], self.options
                 )
             )
+
+    @property
+    def default_solver(self):
+        return pybamm.CasadiSolver()
 
     def set_current_collector_submodel(self):
         if self.options["current collector"] in [

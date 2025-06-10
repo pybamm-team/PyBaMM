@@ -2,12 +2,14 @@
 # NumpyArray class
 #
 from __future__ import annotations
+
 import numpy as np
+import numpy.typing as npt
+import sympy
 from scipy.sparse import csr_matrix, issparse
 
 import pybamm
-from pybamm.type_definitions import DomainType, AuxiliaryDomainType, DomainsType
-import sympy
+from pybamm.type_definitions import AuxiliaryDomainType, DomainsType, DomainType
 
 
 class Array(pybamm.Symbol):
@@ -38,7 +40,7 @@ class Array(pybamm.Symbol):
 
     def __init__(
         self,
-        entries: np.ndarray | list[float] | csr_matrix,
+        entries: npt.NDArray | list[float] | csr_matrix,
         name: str | None = None,
         domain: DomainType = None,
         auxiliary_domains: AuxiliaryDomainType = None,
@@ -144,8 +146,8 @@ class Array(pybamm.Symbol):
     def _base_evaluate(
         self,
         t: float | None = None,
-        y: np.ndarray | None = None,
-        y_dot: np.ndarray | None = None,
+        y: npt.NDArray | None = None,
+        y_dot: npt.NDArray | None = None,
         inputs: dict | str | None = None,
     ):
         """See :meth:`pybamm.Symbol._base_evaluate()`."""

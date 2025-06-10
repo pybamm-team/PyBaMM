@@ -2,9 +2,9 @@
 # Base battery model class
 #
 
-import pybamm
 from functools import cached_property
 
+import pybamm
 from pybamm.expression_tree.operations.serialise import Serialise
 
 
@@ -224,6 +224,10 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 the respective porosity change) over the x-axis in Single Particle
                 Models, can be "false" or "true". Default is "false" for SPMe and
                 "true" for SPM.
+            * "use lumped thermal capacity" : str
+                Whether to use a lumped capacity model for the thermal model. Can be
+                "false" (default) or "true". This is only available for the lumped
+                thermal model.
     """
 
     def __init__(self, extra_options):
@@ -337,6 +341,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             "voltage as a state": ["false", "true"],
             "working electrode": ["both", "positive"],
             "x-average side reactions": ["false", "true"],
+            "use lumped thermal capacity": ["false", "true"],
         }
 
         default_options = {
@@ -594,6 +599,15 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             n = options["dimensionality"]
             raise pybamm.OptionError(
                 f"X-full thermal submodels do not yet support {n}D current collectors"
+            )
+
+        if (
+            options["use lumped thermal capacity"] == "true"
+            and "lumped" not in options["thermal"]
+        ):
+            raise pybamm.OptionError(
+                "Lumped thermal capacity model only compatible with lumped thermal "
+                "models"
             )
 
         if isinstance(options["stress-induced diffusion"], str):

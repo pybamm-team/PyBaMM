@@ -2,9 +2,10 @@
 # Test for the scikit-fem Finite Element Mesh class
 #
 
-import pytest
-import pybamm
 import numpy as np
+import pytest
+
+import pybamm
 
 
 @pytest.fixture()

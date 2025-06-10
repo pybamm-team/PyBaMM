@@ -2,7 +2,9 @@
 # Classes and methods for averaging
 #
 from __future__ import annotations
+
 from typing import Callable
+
 import pybamm
 
 

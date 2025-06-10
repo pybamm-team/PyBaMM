@@ -2,10 +2,10 @@
 # Solver class using Scipy's adaptive time stepper
 #
 import casadi
-import pybamm
-
-import scipy.integrate as it
 import numpy as np
+import scipy.integrate as it
+
+import pybamm
 
 
 class ScipySolver(pybamm.BaseSolver):
@@ -21,6 +21,9 @@ class ScipySolver(pybamm.BaseSolver):
         The absolute tolerance for the solver (default is 1e-6).
     extrap_tol : float, optional
         The tolerance to assert whether extrapolation occurs or not (default is 0).
+    on_extrapolation : str, optional
+        What to do if the solver is extrapolating. Options are "warn", "error", or "ignore".
+        Default is "warn".
     extra_options : dict, optional
         Any options to pass to the solver.
         Please consult `SciPy documentation
@@ -34,6 +37,7 @@ class ScipySolver(pybamm.BaseSolver):
         rtol=1e-6,
         atol=1e-6,
         extrap_tol=None,
+        on_extrapolation=None,
         extra_options=None,
     ):
         super().__init__(
@@ -41,6 +45,7 @@ class ScipySolver(pybamm.BaseSolver):
             rtol=rtol,
             atol=atol,
             extrap_tol=extrap_tol,
+            on_extrapolation=on_extrapolation,
         )
         self._ode_solver = True
         self.extra_options = extra_options or {}
@@ -67,6 +72,12 @@ class ScipySolver(pybamm.BaseSolver):
             various diagnostic messages.
 
         """
+        # scipy solver does not support sensitivity analysis
+        if model.calculate_sensitivities:
+            raise NotImplementedError(
+                "Sensitivity analysis is not implemented for the Scipy solver."
+            )
+
         # Save inputs dictionary, and if necessary convert inputs to a casadi vector
         inputs_dict = inputs_dict or {}
         if model.convert_to_format == "casadi":
@@ -150,7 +161,6 @@ class ScipySolver(pybamm.BaseSolver):
                 t_event,
                 y_event,
                 termination,
-                all_sensitivities=bool(model.calculate_sensitivities),
             )
             sol.integration_time = integration_time
             return sol
