@@ -2,6 +2,7 @@
 # from Axen 2022
 #
 import pybamm
+
 from . import BaseHysteresisOpenCircuitPotential
 
 

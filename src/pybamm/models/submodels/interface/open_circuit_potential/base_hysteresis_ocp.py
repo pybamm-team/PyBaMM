@@ -2,6 +2,7 @@
 # Base class for open-circuit potential with hysteresis
 #
 import pybamm
+
 from . import BaseOpenCircuitPotential
 
 
