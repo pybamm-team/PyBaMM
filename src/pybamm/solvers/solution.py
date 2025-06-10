@@ -444,6 +444,21 @@ class Solution:
                 )
             elif variable in model._variables_casadi:
                 var_casadi = model._variables_casadi[variable]
+            elif isinstance(var_pybamm, pybamm.VectorField):
+                var_casadi_lr = self.process_casadi_var(
+                    var_pybamm.lr_field,
+                    inputs,
+                    ys.shape,
+                )
+                var_casadi_tb = self.process_casadi_var(
+                    var_pybamm.tb_field,
+                    inputs,
+                    ys.shape,
+                )
+                var_casadi = {
+                    "lr": var_casadi_lr,
+                    "tb": var_casadi_tb,
+                }
             else:
                 time_integral = pybamm.ProcessedVariableTimeIntegral.from_pybamm_var(
                     var_pybamm, self.all_ys[i].shape[0]
@@ -469,30 +484,6 @@ class Solution:
                     )
                     model._variables_casadi[variable] = var_casadi
                 vars_pybamm[i] = var_pybamm
-            elif variable in model._variables_casadi:
-                var_casadi = model._variables_casadi[variable]
-            elif isinstance(var_pybamm, pybamm.VectorField):
-                var_casadi_lr = self.process_casadi_var(
-                    var_pybamm.lr_field,
-                    inputs,
-                    ys.shape,
-                )
-                var_casadi_tb = self.process_casadi_var(
-                    var_pybamm.tb_field,
-                    inputs,
-                    ys.shape,
-                )
-                var_casadi = {
-                    "lr": var_casadi_lr,
-                    "tb": var_casadi_tb,
-                }
-            else:
-                var_casadi = self.process_casadi_var(
-                    var_pybamm,
-                    inputs,
-                    ys.shape,
-                )
-                model._variables_casadi[variable] = var_casadi
 
             vars_casadi.append(var_casadi)
         var = pybamm.process_variable(
