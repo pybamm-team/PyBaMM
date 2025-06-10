@@ -1,8 +1,11 @@
-import casadi
-import pybamm
-import numpy as np
 import warnings
+
+import casadi
+import numpy as np
 from scipy.interpolate import interp1d
+
+import pybamm
+
 from .lrudict import LRUDict
 
 

@@ -1,5 +1,6 @@
-import pybamm
 from warnings import warn
+
+import pybamm
 
 
 class BaseTermination:

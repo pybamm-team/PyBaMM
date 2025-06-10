@@ -2,7 +2,9 @@
 # Native PyBaMM Meshes
 #
 import numbers
+
 import numpy as np
+
 import pybamm
 import warnings
 

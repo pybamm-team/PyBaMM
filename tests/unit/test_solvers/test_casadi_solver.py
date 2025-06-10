@@ -1,8 +1,9 @@
-import pytest
-import pybamm
 import numpy as np
-from tests import get_mesh_for_testing, get_discretisation_for_testing
+import pytest
 from scipy.sparse import eye
+
+import pybamm
+from tests import get_discretisation_for_testing, get_mesh_for_testing
 
 
 class TestCasadiSolver:
@@ -172,6 +173,23 @@ class TestCasadiSolver:
         # since no progress can be made from the first timestep
         with pytest.raises(pybamm.SolverError, match="Maximum number of decreased"):
             solver.solve(model, t_eval)
+
+    def test_solver_error(self):
+        model = pybamm.lithium_ion.DFN()  # load model
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        experiment = pybamm.Experiment(
+            ["Discharge at 10C for 6 minutes or until 2.5 V"]
+        )
+
+        sim = pybamm.Simulation(
+            model,
+            parameter_values=parameter_values,
+            experiment=experiment,
+            solver=pybamm.CasadiSolver(mode="fast"),
+        )
+
+        with pytest.raises(pybamm.SolverError, match="IDA_CONV_FAIL"):
+            sim.solve()
 
     def test_model_solver_events(self):
         # Create model

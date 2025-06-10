@@ -1,8 +1,9 @@
 #
 # Spatial method for zero dimensional meshes
 #
-import pybamm
 import numpy as np
+
+import pybamm
 
 
 class ZeroDimensionalSpatialMethod(pybamm.SpatialMethod):
