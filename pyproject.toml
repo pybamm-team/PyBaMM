@@ -260,6 +260,7 @@ source = ["src/pybamm"]
 concurrency = ["multiprocessing"]
 # Parse warnings have existed for a while, but became failures in pytest 8.4.0
 disable_warnings = ["couldnt-parse"]
+disable_warnings = ["module-not-measured"]
 
 
 [tool.mypy]
