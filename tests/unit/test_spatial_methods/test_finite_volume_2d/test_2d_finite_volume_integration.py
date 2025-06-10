@@ -61,7 +61,7 @@ class TestFiniteVolumeIntegration:
         disc.set_variable_slices([var])
         integral_eqn_disc = disc.process_symbol(integral_eqn)
         submesh = mesh[("negative electrode", "separator", "positive electrode")]
-        LR, TB = np.meshgrid(submesh.edges_lr, submesh.edges_tb)
+        LR, TB = np.meshgrid(submesh.nodes_lr, submesh.nodes_tb)
         lr = LR.flatten()
         np.testing.assert_allclose(
             integral_eqn_disc.evaluate(None, lr),
