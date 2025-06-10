@@ -56,3 +56,38 @@ class TestFiniteVolume2D:
         # bad method
         with pytest.raises(ValueError, match="method"):
             fin_vol.shift(c, "shift key", "bad method")
+
+    def test_discretise_spatial_variable(self):
+        # Create discretisation
+        mesh = get_mesh_for_testing_2d()
+        spatial_methods = {
+            "macroscale": pybamm.FiniteVolume2D(),
+        }
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        # macroscale
+        x1 = pybamm.SpatialVariable("x", ["negative electrode"], direction="lr")
+        x2 = pybamm.SpatialVariable("x2", ["negative electrode"], direction="tb")
+        x1_disc = disc.process_symbol(x1)
+        x2_disc = disc.process_symbol(x2)
+        assert isinstance(x1_disc, pybamm.Vector)
+        LR, TB = np.meshgrid(
+            disc.mesh["negative electrode"].nodes_lr,
+            disc.mesh["negative electrode"].nodes_tb,
+        )
+        np.testing.assert_array_equal(x1_disc.evaluate().flatten(), LR.flatten())
+        np.testing.assert_array_equal(x2_disc.evaluate().flatten(), TB.flatten())
+        # macroscale with concatenation
+        x3 = pybamm.SpatialVariable(
+            "x3", ["negative electrode", "separator"], direction="lr"
+        )
+        x4 = pybamm.SpatialVariable(
+            "x4", ["negative electrode", "separator"], direction="tb"
+        )
+        x3_disc = disc.process_symbol(x3)
+        x4_disc = disc.process_symbol(x4)
+        assert isinstance(x2_disc, pybamm.Vector)
+        submesh = disc.mesh[("negative electrode", "separator")]
+        LR, TB = np.meshgrid(submesh.nodes_lr, submesh.nodes_tb)
+        np.testing.assert_array_equal(x3_disc.evaluate().flatten(), LR.flatten())
+        np.testing.assert_array_equal(x4_disc.evaluate().flatten(), TB.flatten())
