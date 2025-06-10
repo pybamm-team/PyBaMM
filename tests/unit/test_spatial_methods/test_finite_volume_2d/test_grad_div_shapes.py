@@ -48,16 +48,9 @@ class TestFiniteVolume2DGradDiv:
         )
 
         # Test operations on linear x
-        LR, TB = np.meshgrid(submesh.nodes_lr, submesh.nodes_tb)
+        LR, _ = np.meshgrid(submesh.nodes_lr, submesh.nodes_tb)
         submesh_neg = mesh["negative electrode"]
-        submesh_sep = mesh["separator"]
-        submesh_pos = mesh["positive electrode"]
-        LR_neg, TB_neg = np.meshgrid(submesh_neg.nodes_lr, submesh_neg.nodes_tb)
-        LR_sep, TB_sep = np.meshgrid(submesh_sep.nodes_lr, submesh_sep.nodes_tb)
-        LR_pos, TB_pos = np.meshgrid(submesh_pos.nodes_lr, submesh_pos.nodes_tb)
-        linear_y_neg = LR_neg.flatten()
-        linear_y_sep = LR_sep.flatten()
-        linear_y_pos = LR_pos.flatten()
+        _, TB_neg = np.meshgrid(submesh_neg.nodes_lr, submesh_neg.nodes_tb)
         linear_y = LR.flatten()
         disc.set_variable_slices([linear_x_var])
         N = pybamm.grad(linear_x_var)
