@@ -1,5 +1,6 @@
-import pytest
 import numpy as np
+import pytest
+
 import pybamm
 from tests import get_mesh_for_testing_3d
 

@@ -1,6 +1,7 @@
-from tests import get_mesh_for_testing_3d
-import pybamm
 import numpy as np
+
+import pybamm
+from tests import get_mesh_for_testing_3d
 
 
 class TestIntegration3D:

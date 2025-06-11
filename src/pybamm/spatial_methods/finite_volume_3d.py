@@ -1,18 +1,18 @@
-import pybamm
-
+import numpy as np
 from scipy.sparse import (
+    block_diag,
+    coo_matrix,
+    csr_matrix,
     diags,
     eye,
-    kron,
-    csr_matrix,
     hstack,
-    block_diag,
-    spdiags,
+    kron,
     lil_matrix,
-    coo_matrix,
+    spdiags,
     vstack,
 )
-import numpy as np
+
+import pybamm
 
 
 class FiniteVolume3D(pybamm.SpatialMethod):

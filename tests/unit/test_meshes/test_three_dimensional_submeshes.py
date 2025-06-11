@@ -1,13 +1,13 @@
-import pytest
 import numpy as np
-import pybamm
+import pytest
 
+import pybamm
+from pybamm.meshes.meshes import Mesh
 from pybamm.meshes.three_dimensional_submeshes import (
+    ScikitFemGenerator3D,
     SubMesh3D,
     Uniform3DSubMesh,
-    ScikitFemGenerator3D,
 )
-from pybamm.meshes.meshes import Mesh
 
 
 @pytest.fixture

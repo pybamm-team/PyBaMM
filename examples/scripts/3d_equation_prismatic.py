@@ -1,10 +1,11 @@
 import matplotlib.pyplot as plt
+
 import pybamm
 from pybamm import (
     BaseModel,
-    SpatialVariable,
     Discretisation,
     FiniteVolume3D,
+    SpatialVariable,
 )
 
 Lx, Ly, Lz = 1.0, 0.8, 0.6

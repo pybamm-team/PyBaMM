@@ -1,6 +1,8 @@
-import pybamm
 from typing import Optional
+
 import numpy as np
+
+import pybamm
 
 
 class VectorField3D(pybamm.Symbol):
