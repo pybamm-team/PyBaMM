@@ -288,6 +288,12 @@ class FiniteVolume3D(pybamm.SpatialMethod):
         second_dim_repeats = self._get_auxiliary_domain_repeats(domains)
 
         matrix = csr_matrix(kron(eye(second_dim_repeats), sub_matrix))
+
+        print(f"Gradient matrix creation for direction {direction}:")
+        print(f"  sub_matrix.shape: {sub_matrix.shape}")
+        print(f"  second_dim_repeats: {second_dim_repeats}")
+        print(f"  final matrix.shape: {matrix.shape}")
+
         return pybamm.Matrix(matrix)
 
     def divergence(self, symbol, discretised_symbol, boundary_conditions):
@@ -334,12 +340,8 @@ class FiniteVolume3D(pybamm.SpatialMethod):
                     shape=(n_x, n_x + 1),
                 )
             elif submesh.coord_sys == "spiral":
-                spiral_metric_main = self.compute_spiral_metric(
-                    submesh
-                )  # Assuming len n_x
-                spiral_metric_super = self.compute_spiral_metric(
-                    submesh
-                )  # Assuming len n_x
+                spiral_metric_main = self.compute_spiral_metric(submesh)
+                spiral_metric_super = self.compute_spiral_metric(submesh)
                 sub_matrix = diags(
                     [
                         -submesh.d_edges_x * spiral_metric_main,
@@ -377,7 +379,7 @@ class FiniteVolume3D(pybamm.SpatialMethod):
             else:
                 e_y_repeated = (
                     np.repeat(
-                        e_y_values, n_x
+                        e_y_values, n_x + 1
                     )  # If e_y_values is scalar 1/dy or vector of length n_y
                 )
                 sub_matrix_plane = diags(
@@ -391,7 +393,7 @@ class FiniteVolume3D(pybamm.SpatialMethod):
         elif direction == "z":
             e_z_values = submesh.d_edges_z
             e_z_repeated = np.repeat(
-                e_z_values, n_x * n_y
+                e_z_values, (n_x * n_y) + 1
             )  # If e_z_values is scalar 1/dz or vector of length n_z
             sub_matrix = diags(
                 [-e_z_repeated, e_z_repeated],
@@ -916,7 +918,6 @@ class FiniteVolume3D(pybamm.SpatialMethod):
         bbc_value, bbc_type = bcs.get("back", (None, None))
         botbc_value, botbc_type = bcs.get("bottom", (None, None))
         tbc_value, tbc_type = bcs.get("top", (None, None))
-
         # Add ghost node(s) to domain where necessary and count number of
         # Dirichlet boundary conditions
         n_bcs = 0
@@ -984,10 +985,31 @@ class FiniteVolume3D(pybamm.SpatialMethod):
                 domain = [domain, domain + "_right ghost cell"]
             n_bcs += 1
 
+        print(f"Adding {n_bcs} ghost nodes to {symbol} in domain {domain}")
+
+        # Calculate final dimensions with ALL ghost nodes
+        final_n_x = (
+            n_x
+            + (1 if lbc_type == "Dirichlet" else 0)
+            + (1 if rbc_type == "Dirichlet" else 0)
+        )
+        final_n_y = (
+            n_y
+            + (1 if fbc_type == "Dirichlet" else 0)
+            + (1 if bbc_type == "Dirichlet" else 0)
+        )
+        final_n_z = (
+            n_z
+            + (1 if botbc_type == "Dirichlet" else 0)
+            + (1 if tbc_type == "Dirichlet" else 0)
+        )
+        final_size = final_n_x * final_n_y * final_n_z * second_dim_repeats
+
+        # X-direction boundaries (follow 2D pattern exactly)
         if lbc_type == "Dirichlet":
-            lbc_sub_matrix = coo_matrix(([1], ([0], [0])), shape=(n_x + n_bcs, 1))
+            lbc_sub_matrix = coo_matrix(([1], ([0], [0])), shape=(final_n_x, 1))
             lbc_matrix = csr_matrix(kron(eye(second_dim_repeats), lbc_sub_matrix))
-            lbc_matrix = vstack([lbc_matrix] * (n_y * n_z))
+            lbc_matrix = vstack([lbc_matrix] * (final_n_y * final_n_z))
 
             if lbc_value.evaluates_to_number():
                 left_ghost_constant = (
@@ -995,23 +1017,16 @@ class FiniteVolume3D(pybamm.SpatialMethod):
                 )
             else:
                 left_ghost_constant = 2 * lbc_value
-
             lbc_vector = pybamm.Matrix(lbc_matrix) @ left_ghost_constant
-        elif lbc_type == "Neumann":
-            lbc_vector = pybamm.Vector(
-                np.zeros((n_x + n_bcs) * second_dim_repeats * (n_y * n_z))
-            )
         else:
-            lbc_vector = pybamm.Vector(
-                np.zeros((n_y * n_z + n_bcs) * second_dim_repeats * n_x)
-            )
+            lbc_vector = pybamm.Vector(np.zeros(final_size))
 
         if rbc_type == "Dirichlet":
             rbc_sub_matrix = coo_matrix(
-                ([1], ([n_x + n_bcs - 1], [0])), shape=(n_x + n_bcs, 1)
+                ([1], ([final_n_x - 1], [0])), shape=(final_n_x, 1)
             )
             rbc_matrix = csr_matrix(kron(eye(second_dim_repeats), rbc_sub_matrix))
-            rbc_matrix = vstack([rbc_matrix] * (n_y * n_z))
+            rbc_matrix = vstack([rbc_matrix] * (final_n_y * final_n_z))
 
             if rbc_value.evaluates_to_number():
                 right_ghost_constant = (
@@ -1020,23 +1035,14 @@ class FiniteVolume3D(pybamm.SpatialMethod):
             else:
                 right_ghost_constant = 2 * rbc_value
             rbc_vector = pybamm.Matrix(rbc_matrix) @ right_ghost_constant
-        elif rbc_type == "Neumann":
-            rbc_vector = pybamm.Vector(
-                np.zeros((n_x + n_bcs) * second_dim_repeats * (n_y * n_z))
-            )
         else:
-            rbc_vector = pybamm.Vector(
-                np.zeros((n_y * n_z + n_bcs) * second_dim_repeats * n_x)
-            )
+            rbc_vector = pybamm.Vector(np.zeros(final_size))
 
+        # Y-direction boundaries
         if fbc_type == "Dirichlet":
-            row_indices = np.arange(0, n_x * n_z)
-            col_indices = np.zeros(len(row_indices))
-            vals = np.ones(len(row_indices))
-            fbc_sub_matrix = coo_matrix(
-                (vals, (row_indices, col_indices)), shape=((n_y + n_bcs) * n_x * n_z, 1)
-            )
+            fbc_sub_matrix = coo_matrix(([1], ([0], [0])), shape=(final_n_y, 1))
             fbc_matrix = csr_matrix(kron(eye(second_dim_repeats), fbc_sub_matrix))
+            fbc_matrix = vstack([fbc_matrix] * (final_n_x * final_n_z))
 
             if fbc_value.evaluates_to_number():
                 front_ghost_constant = (
@@ -1045,25 +1051,15 @@ class FiniteVolume3D(pybamm.SpatialMethod):
             else:
                 front_ghost_constant = 2 * fbc_value
             fbc_vector = pybamm.Matrix(fbc_matrix) @ front_ghost_constant
-        elif fbc_type == "Neumann" or bbc_type == "Dirichlet":
-            fbc_vector = pybamm.Vector(
-                np.zeros((n_y + n_bcs) * second_dim_repeats * n_x * n_z)
-            )
         else:
-            fbc_vector = pybamm.Vector(
-                np.zeros((n_x + n_bcs) * second_dim_repeats * (n_y * n_z))
-            )
+            fbc_vector = pybamm.Vector(np.zeros(final_size))
 
         if bbc_type == "Dirichlet":
-            row_indices = np.arange(
-                (n_x * n_z * (n_y + n_bcs)) - n_x * n_z, n_x * n_z * (n_y + n_bcs)
-            )
-            col_indices = np.zeros(len(row_indices))
-            vals = np.ones(len(row_indices))
             bbc_sub_matrix = coo_matrix(
-                (vals, (row_indices, col_indices)), shape=((n_y + n_bcs) * n_x * n_z, 1)
+                ([1], ([final_n_y - 1], [0])), shape=(final_n_y, 1)
             )
             bbc_matrix = csr_matrix(kron(eye(second_dim_repeats), bbc_sub_matrix))
+            bbc_matrix = vstack([bbc_matrix] * (final_n_x * final_n_z))
 
             if bbc_value.evaluates_to_number():
                 back_ghost_constant = (
@@ -1072,23 +1068,14 @@ class FiniteVolume3D(pybamm.SpatialMethod):
             else:
                 back_ghost_constant = 2 * bbc_value
             bbc_vector = pybamm.Matrix(bbc_matrix) @ back_ghost_constant
-        elif bbc_type == "Neumann" or fbc_type == "Dirichlet":
-            bbc_vector = pybamm.Vector(
-                np.zeros((n_y + n_bcs) * second_dim_repeats * n_x * n_z)
-            )
         else:
-            bbc_vector = pybamm.Vector(
-                np.zeros((n_x + n_bcs) * second_dim_repeats * (n_y * n_z))
-            )
+            bbc_vector = pybamm.Vector(np.zeros(final_size))
 
+        # Z-direction boundaries
         if botbc_type == "Dirichlet":
-            row_indices = np.arange(0, n_x * n_y)
-            col_indices = np.zeros(len(row_indices))
-            vals = np.ones(len(row_indices))
-            botbc_sub_matrix = coo_matrix(
-                (vals, (row_indices, col_indices)), shape=((n_z + n_bcs) * n_x * n_y, 1)
-            )
+            botbc_sub_matrix = coo_matrix(([1], ([0], [0])), shape=(final_n_z, 1))
             botbc_matrix = csr_matrix(kron(eye(second_dim_repeats), botbc_sub_matrix))
+            botbc_matrix = vstack([botbc_matrix] * (final_n_x * final_n_y))
 
             if botbc_value.evaluates_to_number():
                 bottom_ghost_constant = (
@@ -1097,25 +1084,15 @@ class FiniteVolume3D(pybamm.SpatialMethod):
             else:
                 bottom_ghost_constant = 2 * botbc_value
             botbc_vector = pybamm.Matrix(botbc_matrix) @ bottom_ghost_constant
-        elif botbc_type == "Neumann" or tbc_type == "Dirichlet":
-            botbc_vector = pybamm.Vector(
-                np.zeros((n_z + n_bcs) * second_dim_repeats * n_x * n_y)
-            )
         else:
-            botbc_vector = pybamm.Vector(
-                np.zeros((n_x + n_bcs) * second_dim_repeats * (n_y * n_z))
-            )
+            botbc_vector = pybamm.Vector(np.zeros(final_size))
 
         if tbc_type == "Dirichlet":
-            row_indices = np.arange(
-                (n_x * n_y * (n_z + n_bcs)) - n_x * n_y, n_x * n_y * (n_z + n_bcs)
-            )
-            col_indices = np.zeros(len(row_indices))
-            vals = np.ones(len(row_indices))
             tbc_sub_matrix = coo_matrix(
-                (vals, (row_indices, col_indices)), shape=((n_z + n_bcs) * n_x * n_y, 1)
+                ([1], ([final_n_z - 1], [0])), shape=(final_n_z, 1)
             )
             tbc_matrix = csr_matrix(kron(eye(second_dim_repeats), tbc_sub_matrix))
+            tbc_matrix = vstack([tbc_matrix] * (final_n_x * final_n_y))
 
             if tbc_value.evaluates_to_number():
                 top_ghost_constant = (
@@ -1124,16 +1101,9 @@ class FiniteVolume3D(pybamm.SpatialMethod):
             else:
                 top_ghost_constant = 2 * tbc_value
             tbc_vector = pybamm.Matrix(tbc_matrix) @ top_ghost_constant
-        elif tbc_type == "Neumann" or botbc_type == "Dirichlet":
-            tbc_vector = pybamm.Vector(
-                np.zeros((n_z + n_bcs) * second_dim_repeats * n_x * n_y)
-            )
         else:
-            tbc_vector = pybamm.Vector(
-                np.zeros((n_x + n_bcs) * second_dim_repeats * (n_y * n_z))
-            )
+            tbc_vector = pybamm.Vector(np.zeros(final_size))
 
-        # Simple addition like in 2D
         bcs_vector = (
             lbc_vector
             + rbc_vector
@@ -1142,15 +1112,17 @@ class FiniteVolume3D(pybamm.SpatialMethod):
             + botbc_vector
             + tbc_vector
         )
+        print(f"  bcs_vector.shape: {bcs_vector.shape}")
         bcs_vector.copy_domains(discretised_symbol)
 
-        # Make matrix to calculate ghost nodes - following 2D pattern exactly
         if lbc_type == "Dirichlet":
             left_ghost_vector = coo_matrix(([-1], ([0], [0])), shape=(1, n_x))
+            print(f"  left_ghost_vector.shape: {left_ghost_vector.shape}")
         else:
             left_ghost_vector = None
         if rbc_type == "Dirichlet":
             right_ghost_vector = coo_matrix(([-1], ([0], [n_x - 1])), shape=(1, n_x))
+            print(f"  right_ghost_vector.shape: {right_ghost_vector.shape}")
         else:
             right_ghost_vector = None
 
@@ -1188,7 +1160,6 @@ class FiniteVolume3D(pybamm.SpatialMethod):
         else:
             top_ghost_vector = None
 
-        # Build the matrix following the 2D pattern exactly
         if lbc_type == "Dirichlet" or rbc_type == "Dirichlet":
             sub_matrix = vstack(
                 [
@@ -1217,8 +1188,10 @@ class FiniteVolume3D(pybamm.SpatialMethod):
             sub_matrix = vstack(matrix_parts)
 
         matrix = csr_matrix(kron(eye(second_dim_repeats), sub_matrix))
+        print(f"  matrix.shape: {matrix.shape}")
 
         new_symbol = pybamm.Matrix(matrix) @ discretised_symbol + bcs_vector
+        print(f"  new_symbol.shape: {new_symbol.shape}")
 
         return new_symbol, domain
 
@@ -1251,10 +1224,8 @@ class FiniteVolume3D(pybamm.SpatialMethod):
             concatenated at each end (if given).
 
         """
-        # get relevant grid points
         submesh = self.mesh[domain]
 
-        # Prepare sizes and empty bcs_vector
         n_x = submesh.npts_x
         n_y = submesh.npts_y
         n_z = submesh.npts_z
@@ -1267,186 +1238,228 @@ class FiniteVolume3D(pybamm.SpatialMethod):
         botbc_value, botbc_type = bcs.get("bottom", (None, None))
         tbc_value, tbc_type = bcs.get("top", (None, None))
 
-        # Count number of Neumann boundary conditions
-        n_bcs = 0
-        if lbc_type == "Neumann":
-            n_bcs += 1
-        if rbc_type == "Neumann":
-            n_bcs += 1
-        if fbc_type == "Neumann":
-            n_bcs += 1
-        if bbc_type == "Neumann":
-            n_bcs += 1
-        if botbc_type == "Neumann":
-            n_bcs += 1
-        if tbc_type == "Neumann":
-            n_bcs += 1
+        print(f"Adding Neumann boundary conditions to {symbol} in domain {domain}")
 
-        # X-direction boundaries (following 2D left/right pattern)
-        if lbc_type == "Neumann" and lbc_value != 0:
-            lbc_sub_matrix = coo_matrix(([1], ([0], [0])), shape=(n_x - 1 + n_bcs, 1))
-            lbc_matrix = csr_matrix(kron(eye(second_dim_repeats), lbc_sub_matrix))
-            lbc_matrix = vstack([lbc_matrix] * (n_y * n_z))
-            if lbc_value.evaluates_to_number():
-                left_bc = lbc_value * pybamm.Vector(np.ones(second_dim_repeats))
-            else:
-                left_bc = lbc_value
-            lbc_vector = pybamm.Matrix(lbc_matrix) @ left_bc
-        elif lbc_type == "Dirichlet" or (lbc_type == "Neumann" and lbc_value == 0):
-            lbc_vector = pybamm.Vector(
-                np.zeros((n_x - 1 + n_bcs) * second_dim_repeats * (n_y * n_z))
-            )
-        elif lbc_type is None and rbc_type is None:
-            # When no X boundaries, size should match Y or Z gradient
-            lbc_vector = pybamm.Vector(
-                np.zeros((n_y - 1 + n_bcs) * second_dim_repeats * (n_x * n_z))
-            )
-        else:
-            raise ValueError(
-                f"boundary condition must be Dirichlet or Neumann, not '{lbc_type}'"
+        if lbc_type == "Neumann" or rbc_type == "Neumann":
+            # X-direction gradient processing - only count X boundary conditions
+            n_bcs = 0
+            if lbc_type == "Neumann":
+                n_bcs += 1
+            if rbc_type == "Neumann":
+                n_bcs += 1
+            print(
+                f"Processing X-direction gradient with {n_bcs} X-boundary Neumann conditions"
             )
 
-        if rbc_type == "Neumann" and rbc_value != 0:
-            rbc_sub_matrix = coo_matrix(
-                ([1], ([n_x + n_bcs - 2], [0])), shape=(n_x - 1 + n_bcs, 1)
-            )
-            rbc_matrix = csr_matrix(kron(eye(second_dim_repeats), rbc_sub_matrix))
-            rbc_matrix = vstack([rbc_matrix] * (n_y * n_z))
-            if rbc_value.evaluates_to_number():
-                right_bc = rbc_value * pybamm.Vector(np.ones(second_dim_repeats))
+            # Create all vectors with X-gradient sizing
+            base_size = (n_x - 1 + n_bcs) * second_dim_repeats * (n_y * n_z)
+
+            # X-direction boundaries (active)
+            if lbc_type == "Neumann" and lbc_value != 0:
+                lbc_sub_matrix = coo_matrix(
+                    ([1], ([0], [0])), shape=(n_x - 1 + n_bcs, 1)
+                )
+                lbc_matrix = csr_matrix(kron(eye(second_dim_repeats), lbc_sub_matrix))
+                lbc_matrix = vstack([lbc_matrix] * (n_y * n_z))
+                if lbc_value.evaluates_to_number():
+                    left_bc = lbc_value * pybamm.Vector(np.ones(second_dim_repeats))
+                else:
+                    left_bc = lbc_value
+                lbc_vector = pybamm.Matrix(lbc_matrix) @ left_bc
             else:
-                right_bc = rbc_value
-            rbc_vector = pybamm.Matrix(rbc_matrix) @ right_bc
-        elif rbc_type == "Dirichlet" or (rbc_type == "Neumann" and rbc_value == 0):
-            rbc_vector = pybamm.Vector(
-                np.zeros((n_x - 1 + n_bcs) * second_dim_repeats * (n_y * n_z))
+                lbc_vector = pybamm.Vector(np.zeros(base_size))
+
+            if rbc_type == "Neumann" and rbc_value != 0:
+                rbc_sub_matrix = coo_matrix(
+                    ([1], ([n_x + n_bcs - 2], [0])), shape=(n_x - 1 + n_bcs, 1)
+                )
+                rbc_matrix = csr_matrix(kron(eye(second_dim_repeats), rbc_sub_matrix))
+                rbc_matrix = vstack([rbc_matrix] * (n_y * n_z))
+                if rbc_value.evaluates_to_number():
+                    right_bc = rbc_value * pybamm.Vector(np.ones(second_dim_repeats))
+                else:
+                    right_bc = rbc_value
+                rbc_vector = pybamm.Matrix(rbc_matrix) @ right_bc
+            else:
+                rbc_vector = pybamm.Vector(np.zeros(base_size))
+
+            # Y and Z direction boundaries (inactive for X-gradient)
+            fbc_vector = pybamm.Vector(np.zeros(base_size))
+            bbc_vector = pybamm.Vector(np.zeros(base_size))
+            botbc_vector = pybamm.Vector(np.zeros(base_size))
+            tbc_vector = pybamm.Vector(np.zeros(base_size))
+
+            # X-direction matrix construction
+            left_vector = csr_matrix((1, n_x - 1)) if lbc_type == "Neumann" else None
+            right_vector = csr_matrix((1, n_x - 1)) if rbc_type == "Neumann" else None
+            sub_matrix = vstack(
+                [m for m in [left_vector, eye(n_x - 1), right_vector] if m is not None]
             )
-        elif rbc_type is None and lbc_type is None:
-            rbc_vector = pybamm.Vector(
-                np.zeros((n_y - 1 + n_bcs) * second_dim_repeats * (n_x * n_z))
-            )
-        else:
-            raise ValueError(
-                f"boundary condition must be Dirichlet or Neumann, not '{rbc_type}'"
+            sub_matrix = block_diag((sub_matrix,) * (n_y * n_z))
+
+        elif fbc_type == "Neumann" or bbc_type == "Neumann":
+            # Y-direction gradient processing - only count Y boundary conditions
+            n_bcs = 0
+            if fbc_type == "Neumann":
+                n_bcs += 1
+            if bbc_type == "Neumann":
+                n_bcs += 1
+            print(
+                f"Processing Y-direction gradient with {n_bcs} Y-boundary Neumann conditions"
             )
 
-        # Y-direction boundaries (following 2D top/bottom pattern)
-        if fbc_type == "Neumann" and fbc_value != 0:
-            row_indices = np.arange(0, n_x * n_z)
-            col_indices = np.zeros(len(row_indices))
-            vals = np.ones(len(row_indices))
-            fbc_sub_matrix = coo_matrix(
-                (vals, (row_indices, col_indices)),
-                shape=((n_y - 1 + n_bcs) * n_x * n_z, 1),
-            )
-            fbc_matrix = csr_matrix(kron(eye(second_dim_repeats), fbc_sub_matrix))
-            if fbc_value.evaluates_to_number():
-                front_bc = fbc_value * pybamm.Vector(np.ones(second_dim_repeats))
+            # Create all vectors with Y-gradient sizing
+            base_size = (n_y - 1 + n_bcs) * second_dim_repeats * (n_x * n_z)
+
+            # Y-direction boundaries (active)
+            if fbc_type == "Neumann" and fbc_value != 0:
+                row_indices = np.arange(0, n_x * n_z)
+                col_indices = np.zeros(len(row_indices))
+                vals = np.ones(len(row_indices))
+                fbc_sub_matrix = coo_matrix(
+                    (vals, (row_indices, col_indices)),
+                    shape=((n_y - 1 + n_bcs) * n_x * n_z, 1),
+                )
+                fbc_matrix = csr_matrix(kron(eye(second_dim_repeats), fbc_sub_matrix))
+                if fbc_value.evaluates_to_number():
+                    front_bc = fbc_value * pybamm.Vector(np.ones(second_dim_repeats))
+                else:
+                    front_bc = fbc_value
+                fbc_vector = pybamm.Matrix(fbc_matrix) @ front_bc
             else:
-                front_bc = fbc_value
-            fbc_vector = pybamm.Matrix(fbc_matrix) @ front_bc
-        elif fbc_type == "Dirichlet" or (fbc_type == "Neumann" and fbc_value == 0):
-            fbc_vector = pybamm.Vector(
-                np.zeros((n_y - 1 + n_bcs) * second_dim_repeats * (n_x * n_z))
+                fbc_vector = pybamm.Vector(np.zeros(base_size))
+
+            if bbc_type == "Neumann" and bbc_value != 0:
+                row_indices = np.arange(
+                    (n_x * n_z * (n_y - 1 + n_bcs)) - n_x * n_z,
+                    n_x * n_z * (n_y - 1 + n_bcs),
+                )
+                col_indices = np.zeros(len(row_indices))
+                vals = np.ones(len(row_indices))
+                bbc_sub_matrix = coo_matrix(
+                    (vals, (row_indices, col_indices)),
+                    shape=((n_y - 1 + n_bcs) * n_x * n_z, 1),
+                )
+                bbc_matrix = csr_matrix(kron(eye(second_dim_repeats), bbc_sub_matrix))
+                if bbc_value.evaluates_to_number():
+                    back_bc = bbc_value * pybamm.Vector(np.ones(second_dim_repeats))
+                else:
+                    back_bc = bbc_value
+                bbc_vector = pybamm.Matrix(bbc_matrix) @ back_bc
+            else:
+                bbc_vector = pybamm.Vector(np.zeros(base_size))
+
+            # X and Z direction boundaries (inactive for Y-gradient)
+            lbc_vector = pybamm.Vector(np.zeros(base_size))
+            rbc_vector = pybamm.Vector(np.zeros(base_size))
+            botbc_vector = pybamm.Vector(np.zeros(base_size))
+            tbc_vector = pybamm.Vector(np.zeros(base_size))
+
+            # Y-direction matrix construction
+            front_vector = (
+                csr_matrix((n_x * n_z, (n_y - 1) * n_x * n_z))
+                if fbc_type == "Neumann"
+                else None
             )
-        elif fbc_type is None and bbc_type is None:
-            fbc_vector = pybamm.Vector(
-                np.zeros((n_x - 1 + n_bcs) * second_dim_repeats * (n_y * n_z))
+            back_vector = (
+                csr_matrix((n_x * n_z, (n_y - 1) * n_x * n_z))
+                if bbc_type == "Neumann"
+                else None
             )
-        else:
-            raise ValueError(
-                f"boundary condition must be Dirichlet or Neumann, not '{fbc_type}'"
+            sub_matrix = vstack(
+                [
+                    m
+                    for m in [front_vector, eye((n_y - 1) * n_x * n_z), back_vector]
+                    if m is not None
+                ]
             )
 
-        if bbc_type == "Neumann" and bbc_value != 0:
-            row_indices = np.arange(
-                (n_x * n_z * (n_y - 1 + n_bcs)) - n_x * n_z,
-                n_x * n_z * (n_y - 1 + n_bcs),
-            )
-            col_indices = np.zeros(len(row_indices))
-            vals = np.ones(len(row_indices))
-            bbc_sub_matrix = coo_matrix(
-                (vals, (row_indices, col_indices)),
-                shape=((n_y - 1 + n_bcs) * n_x * n_z, 1),
-            )
-            bbc_matrix = csr_matrix(kron(eye(second_dim_repeats), bbc_sub_matrix))
-            if bbc_value.evaluates_to_number():
-                back_bc = bbc_value * pybamm.Vector(np.ones(second_dim_repeats))
-            else:
-                back_bc = bbc_value
-            bbc_vector = pybamm.Matrix(bbc_matrix) @ back_bc
-        elif bbc_type == "Dirichlet" or (bbc_type == "Neumann" and bbc_value == 0):
-            bbc_vector = pybamm.Vector(
-                np.zeros((n_y - 1 + n_bcs) * second_dim_repeats * (n_x * n_z))
-            )
-        elif bbc_type is None and fbc_type is None:
-            bbc_vector = pybamm.Vector(
-                np.zeros((n_x - 1 + n_bcs) * second_dim_repeats * (n_y * n_z))
-            )
-        else:
-            raise ValueError(
-                f"boundary condition must be Dirichlet or Neumann, not '{bbc_type}'"
+        elif botbc_type == "Neumann" or tbc_type == "Neumann":
+            # Z-direction gradient processing - only count Z boundary conditions
+            n_bcs = 0
+            if botbc_type == "Neumann":
+                n_bcs += 1
+            if tbc_type == "Neumann":
+                n_bcs += 1
+            print(
+                f"Processing Z-direction gradient with {n_bcs} Z-boundary Neumann conditions"
             )
 
-        # Z-direction boundaries (similar to Y-direction)
-        if botbc_type == "Neumann" and botbc_value != 0:
-            row_indices = np.arange(0, n_x * n_y)
-            col_indices = np.zeros(len(row_indices))
-            vals = np.ones(len(row_indices))
-            botbc_sub_matrix = coo_matrix(
-                (vals, (row_indices, col_indices)),
-                shape=((n_z - 1 + n_bcs) * n_x * n_y, 1),
-            )
-            botbc_matrix = csr_matrix(kron(eye(second_dim_repeats), botbc_sub_matrix))
-            if botbc_value.evaluates_to_number():
-                bottom_bc = botbc_value * pybamm.Vector(np.ones(second_dim_repeats))
+            # Create all vectors with Z-gradient sizing
+            base_size = (n_z - 1 + n_bcs) * second_dim_repeats * (n_x * n_y)
+
+            # Z-direction boundaries (active)
+            if botbc_type == "Neumann" and botbc_value != 0:
+                row_indices = np.arange(0, n_x * n_y)
+                col_indices = np.zeros(len(row_indices))
+                vals = np.ones(len(row_indices))
+                botbc_sub_matrix = coo_matrix(
+                    (vals, (row_indices, col_indices)),
+                    shape=((n_z - 1 + n_bcs) * n_x * n_y, 1),
+                )
+                botbc_matrix = csr_matrix(
+                    kron(eye(second_dim_repeats), botbc_sub_matrix)
+                )
+                if botbc_value.evaluates_to_number():
+                    bottom_bc = botbc_value * pybamm.Vector(np.ones(second_dim_repeats))
+                else:
+                    bottom_bc = botbc_value
+                botbc_vector = pybamm.Matrix(botbc_matrix) @ bottom_bc
             else:
-                bottom_bc = botbc_value
-            botbc_vector = pybamm.Matrix(botbc_matrix) @ bottom_bc
-        elif botbc_type == "Dirichlet" or (
-            botbc_type == "Neumann" and botbc_value == 0
-        ):
-            botbc_vector = pybamm.Vector(
-                np.zeros((n_z - 1 + n_bcs) * second_dim_repeats * (n_x * n_y))
+                botbc_vector = pybamm.Vector(np.zeros(base_size))
+
+            if tbc_type == "Neumann" and tbc_value != 0:
+                row_indices = np.arange(
+                    (n_x * n_y * (n_z - 1 + n_bcs)) - n_x * n_y,
+                    n_x * n_y * (n_z - 1 + n_bcs),
+                )
+                col_indices = np.zeros(len(row_indices))
+                vals = np.ones(len(row_indices))
+                tbc_sub_matrix = coo_matrix(
+                    (vals, (row_indices, col_indices)),
+                    shape=((n_z - 1 + n_bcs) * n_x * n_y, 1),
+                )
+                tbc_matrix = csr_matrix(kron(eye(second_dim_repeats), tbc_sub_matrix))
+                if tbc_value.evaluates_to_number():
+                    top_bc = tbc_value * pybamm.Vector(np.ones(second_dim_repeats))
+                else:
+                    top_bc = tbc_value
+                tbc_vector = pybamm.Matrix(tbc_matrix) @ top_bc
+            else:
+                tbc_vector = pybamm.Vector(np.zeros(base_size))
+
+            # X and Y direction boundaries (inactive for Z-gradient)
+            lbc_vector = pybamm.Vector(np.zeros(base_size))
+            rbc_vector = pybamm.Vector(np.zeros(base_size))
+            fbc_vector = pybamm.Vector(np.zeros(base_size))
+            bbc_vector = pybamm.Vector(np.zeros(base_size))
+
+            # Z-direction matrix construction
+            bottom_vector = (
+                csr_matrix((n_x * n_y, (n_z - 1) * n_x * n_y))
+                if botbc_type == "Neumann"
+                else None
             )
-        elif botbc_type is None and tbc_type is None:
-            botbc_vector = pybamm.Vector(
-                np.zeros((n_x - 1 + n_bcs) * second_dim_repeats * (n_y * n_z))
+            top_vector = (
+                csr_matrix((n_x * n_y, (n_z - 1) * n_x * n_y))
+                if tbc_type == "Neumann"
+                else None
             )
-        else:
-            raise ValueError(
-                f"boundary condition must be Dirichlet or Neumann, not '{botbc_type}'"
+            sub_matrix = vstack(
+                [
+                    m
+                    for m in [bottom_vector, eye((n_z - 1) * n_x * n_y), top_vector]
+                    if m is not None
+                ]
             )
 
-        if tbc_type == "Neumann" and tbc_value != 0:
-            row_indices = np.arange(
-                (n_x * n_y * (n_z - 1 + n_bcs)) - n_x * n_y,
-                n_x * n_y * (n_z - 1 + n_bcs),
-            )
-            col_indices = np.zeros(len(row_indices))
-            vals = np.ones(len(row_indices))
-            tbc_sub_matrix = coo_matrix(
-                (vals, (row_indices, col_indices)),
-                shape=((n_z - 1 + n_bcs) * n_x * n_y, 1),
-            )
-            tbc_matrix = csr_matrix(kron(eye(second_dim_repeats), tbc_sub_matrix))
-            if tbc_value.evaluates_to_number():
-                top_bc = tbc_value * pybamm.Vector(np.ones(second_dim_repeats))
-            else:
-                top_bc = tbc_value
-            tbc_vector = pybamm.Matrix(tbc_matrix) @ top_bc
-        elif tbc_type == "Dirichlet" or (tbc_type == "Neumann" and tbc_value == 0):
-            tbc_vector = pybamm.Vector(
-                np.zeros((n_z - 1 + n_bcs) * second_dim_repeats * (n_x * n_y))
-            )
-        elif tbc_type is None and botbc_type is None:
-            tbc_vector = pybamm.Vector(
-                np.zeros((n_x - 1 + n_bcs) * second_dim_repeats * (n_y * n_z))
-            )
         else:
-            raise ValueError(
-                f"boundary condition must be Dirichlet or Neumann, not '{tbc_type}'"
-            )
+            return discretised_gradient
+
+        print(
+            f" {lbc_vector.shape}, {rbc_vector.shape}, {fbc_vector.shape}, "
+            f"{bbc_vector.shape}, {botbc_vector.shape}, {tbc_vector.shape}"
+        )
 
         bcs_vector = (
             lbc_vector
@@ -1456,80 +1469,14 @@ class FiniteVolume3D(pybamm.SpatialMethod):
             + botbc_vector
             + tbc_vector
         )
-        # Need to match the domain. E.g. in the case of the boundary condition
-        # on the particle, the gradient has domain particle but the bcs_vector
-        # has domain electrode, since it is a function of the macroscopic variables
+
+        print(f"  bcs_vector.shape: {bcs_vector.shape}")
         bcs_vector.copy_domains(discretised_gradient)
 
-        # Make matrix which makes "gaps" in the discretised gradient into
-        # which the known Neumann values will be added
-        # X-direction matrices
-        if lbc_type == "Neumann":
-            left_vector = csr_matrix((1, n_x - 1))
-        else:
-            left_vector = None
-        if rbc_type == "Neumann":
-            right_vector = csr_matrix((1, n_x - 1))
-        else:
-            right_vector = None
-
-        # Y-direction matrices
-        if fbc_type == "Neumann":
-            front_vector = csr_matrix((n_x * n_z, (n_y - 1) * n_x * n_z))
-        else:
-            front_vector = None
-        if bbc_type == "Neumann":
-            back_vector = csr_matrix((n_x * n_z, (n_y - 1) * n_x * n_z))
-        else:
-            back_vector = None
-
-        # Z-direction matrices
-        if botbc_type == "Neumann":
-            bottom_vector = csr_matrix((n_x * n_y, (n_z - 1) * n_x * n_y))
-        else:
-            bottom_vector = None
-        if tbc_type == "Neumann":
-            top_vector = csr_matrix((n_x * n_y, (n_z - 1) * n_x * n_y))
-        else:
-            top_vector = None
-
-        # Build sub_matrix based on which boundaries have Neumann conditions
-        if lbc_type == "Neumann" or rbc_type == "Neumann":
-            # X-direction gradient - extend in X direction
-            sub_matrix = vstack([left_vector, eye(n_x - 1), right_vector])
-            # Remove None entries
-            sub_matrix = vstack(
-                [m for m in [left_vector, eye(n_x - 1), right_vector] if m is not None]
-            )
-            sub_matrix = block_diag((sub_matrix,) * (n_y * n_z))
-        elif fbc_type == "Neumann" or bbc_type == "Neumann":
-            # Y-direction gradient - extend in Y direction
-            sub_matrix = vstack(
-                [
-                    m
-                    for m in [front_vector, eye((n_y - 1) * n_x * n_z), back_vector]
-                    if m is not None
-                ]
-            )
-        elif botbc_type == "Neumann" or tbc_type == "Neumann":
-            # Z-direction gradient - extend in Z direction
-            sub_matrix = vstack(
-                [
-                    m
-                    for m in [bottom_vector, eye((n_z - 1) * n_x * n_y), top_vector]
-                    if m is not None
-                ]
-            )
-        else:
-            # No Neumann conditions, return as-is
-            return discretised_gradient
-
+        print(f"  sub_matrix.shape: {sub_matrix.shape}")
         # repeat matrix for secondary dimensions
-        # Convert to csr_matrix so that we can take the index (row-slicing), which is
-        # not supported by the default kron format
-        # Note that this makes column-slicing inefficient, but this should not be an
-        # issue
         matrix = csr_matrix(kron(eye(second_dim_repeats), sub_matrix))
+        print(f"  matrix.shape: {matrix.shape}")
 
         new_gradient = pybamm.Matrix(matrix) @ discretised_gradient + bcs_vector
 
@@ -2595,7 +2542,6 @@ class FiniteVolume3D(pybamm.SpatialMethod):
                     method = "harmonic"
                 else:
                     method = "arithmetic"
-
                 disc_left_x = self.node_to_edge(disc_left, method=method, direction="x")
                 disc_left_y = self.node_to_edge(disc_left, method=method, direction="y")
                 disc_left_z = self.node_to_edge(disc_left, method=method, direction="z")
@@ -2753,369 +2699,460 @@ class FiniteVolume3D(pybamm.SpatialMethod):
         def arithmetic_mean(array, direction):
             """Calculate the arithmetic mean of an array using matrix multiplication"""
             submesh = self.mesh[array.domain]
-
             n_x, n_y, n_z = submesh.npts_x, submesh.npts_y, submesh.npts_z
 
             if shift_key == "node to edge":
                 if direction == "x":
-                    sub_matrix_1d = diags([0.5, 0.5], [0, 1], shape=(n_x - 1, n_x))
-                    sub_matrix = block_diag([sub_matrix_1d] * (n_y * n_z))
+                    sub_matrix_left = csr_matrix(
+                        ([1.5, -0.5], ([0, 0], [0, 1])), shape=(1, n_x)
+                    )
+                    sub_matrix_center = diags([0.5, 0.5], [0, 1], shape=(n_x - 1, n_x))
+                    sub_matrix_right = csr_matrix(
+                        ([-0.5, 1.5], ([0, 0], [n_x - 2, n_x - 1])), shape=(1, n_x)
+                    )
+                    sub_matrix_1d = vstack(
+                        [sub_matrix_left, sub_matrix_center, sub_matrix_right]
+                    )
+                    sub_matrix = block_diag((sub_matrix_1d,) * (n_y * n_z))
 
                 elif direction == "y":
-                    # For y-direction: we need to connect adjacent nodes in y for each x,z position
-                    # Total y-edges: n_x * (n_y-1) * n_z
-                    # Each edge connects two nodes that are n_x positions apart in the flattened array
-
-                    n_edges_y = n_x * (n_y - 1) * n_z
-                    n_nodes = n_x * n_y * n_z
-
-                    data = []
-                    rows = []
-                    cols = []
-
-                    edge_idx = 0
-                    for k in range(n_z):
-                        for j in range(n_y - 1):
-                            for i in range(n_x):
-                                node1 = k * (n_x * n_y) + j * n_x + i
-                                node2 = k * (n_x * n_y) + (j + 1) * n_x + i
-
-                                rows.extend([edge_idx, edge_idx])
-                                cols.extend([node1, node2])
-                                data.extend([0.5, 0.5])
-
-                                edge_idx += 1
-
-                    sub_matrix = csr_matrix(
-                        (data, (rows, cols)), shape=(n_edges_y, n_nodes)
+                    one_fives_front = np.ones(n_x) * 1.5
+                    neg_zero_fives_front = np.ones(n_x) * -0.5
+                    rows = np.arange(0, n_x)
+                    cols_first = np.arange(0, n_x)
+                    cols_second = np.arange(n_x, 2 * n_x)
+                    data = np.hstack([one_fives_front, neg_zero_fives_front])
+                    cols = np.hstack([cols_first, cols_second])
+                    rows = np.hstack([rows, rows])
+                    sub_matrix_front = csr_matrix(
+                        (data, (rows, cols)), shape=(n_x, n_x * n_y)
                     )
+
+                    cols_first = np.arange((n_y - 2) * n_x, (n_y - 1) * n_x)
+                    cols_second = np.arange((n_y - 1) * n_x, n_y * n_x)
+                    data = np.hstack([neg_zero_fives_front, one_fives_front])
+                    cols = np.hstack([cols_first, cols_second])
+                    sub_matrix_back = csr_matrix(
+                        (data, (rows, cols)), shape=(n_x, n_x * n_y)
+                    )
+
+                    data = np.ones((n_y - 1) * n_x) * 0.5
+                    data = np.hstack([data, data])
+                    rows = np.arange(0, (n_y - 1) * n_x)
+                    rows = np.hstack([rows, rows])
+                    cols_first = np.arange(0, (n_y - 1) * n_x)
+                    cols_second = np.arange(n_x, n_x * n_y)
+                    cols = np.hstack([cols_first, cols_second])
+                    sub_matrix_center = csr_matrix(
+                        (data, (rows, cols)), shape=(n_x * (n_y - 1), n_x * n_y)
+                    )
+                    sub_matrix_2d = vstack(
+                        [
+                            sub_matrix_front,
+                            sub_matrix_center,
+                            sub_matrix_back,
+                        ]
+                    )
+                    sub_matrix = block_diag((sub_matrix_2d,) * n_z)
 
                 elif direction == "z":
-                    n_edges_z = n_x * n_y * (n_z - 1)
-                    n_nodes = n_x * n_y * n_z
-
-                    data = []
-                    rows = []
-                    cols = []
-
-                    edge_idx = 0
-                    for k in range(n_z - 1):
-                        for j in range(n_y):
-                            for i in range(n_x):
-                                node1 = k * (n_x * n_y) + j * n_x + i
-                                node2 = (k + 1) * (n_x * n_y) + j * n_x + i
-
-                                rows.extend([edge_idx, edge_idx])
-                                cols.extend([node1, node2])
-                                data.extend([0.5, 0.5])
-
-                                edge_idx += 1
-
-                    sub_matrix = csr_matrix(
-                        (data, (rows, cols)), shape=(n_edges_z, n_nodes)
+                    one_fives_bottom = np.ones(n_x * n_y) * 1.5
+                    neg_zero_fives_bottom = np.ones(n_x * n_y) * -0.5
+                    rows = np.arange(0, n_x * n_y)
+                    cols_first = np.arange(0, n_x * n_y)
+                    cols_second = np.arange(n_x * n_y, 2 * n_x * n_y)
+                    data = np.hstack([one_fives_bottom, neg_zero_fives_bottom])
+                    cols = np.hstack([cols_first, cols_second])
+                    rows = np.hstack([rows, rows])
+                    sub_matrix_bottom = csr_matrix(
+                        (data, (rows, cols)), shape=(n_x * n_y, n_x * n_y * n_z)
                     )
 
-                else:
-                    raise ValueError(f"direction '{direction}' not recognised")
+                    cols_first = np.arange((n_z - 2) * n_x * n_y, (n_z - 1) * n_x * n_y)
+                    cols_second = np.arange((n_z - 1) * n_x * n_y, n_z * n_x * n_y)
+                    data = np.hstack([neg_zero_fives_bottom, one_fives_bottom])
+                    cols = np.hstack([cols_first, cols_second])
+                    sub_matrix_top = csr_matrix(
+                        (data, (rows, cols)), shape=(n_x * n_y, n_x * n_y * n_z)
+                    )
+
+                    data = np.ones((n_z - 1) * n_x * n_y) * 0.5
+                    data = np.hstack([data, data])
+                    rows = np.arange(0, (n_z - 1) * n_x * n_y)
+                    rows = np.hstack([rows, rows])
+                    cols_first = np.arange(0, (n_z - 1) * n_x * n_y)
+                    cols_second = np.arange(n_x * n_y, n_x * n_y * n_z)
+                    cols = np.hstack([cols_first, cols_second])
+                    sub_matrix_center = csr_matrix(
+                        (data, (rows, cols)),
+                        shape=(n_x * n_y * (n_z - 1), n_x * n_y * n_z),
+                    )
+                    sub_matrix = vstack(
+                        [
+                            sub_matrix_bottom,
+                            sub_matrix_center,
+                            sub_matrix_top,
+                        ]
+                    )
 
             elif shift_key == "edge to node":
                 if direction == "x":
-                    data = []
-                    rows = []
-                    cols = []
-
-                    row_idx = 0
-                    col_idx = 0
-
-                    for _k in range(n_z):
-                        for _j in range(n_y):
-                            rows.append(row_idx)
-                            cols.append(col_idx)
-                            data.append(1.0)
-                            row_idx += 1
-
-                    for _k in range(n_z):
-                        for _j in range(n_y):
-                            for i in range(1, n_x - 1):
-                                rows.extend([row_idx, row_idx])
-                                cols.extend([col_idx + i - 1, col_idx + i])
-                                data.extend([0.5, 0.5])
-                                row_idx += 1
-
-                            rows.append(row_idx)
-                            cols.append(col_idx + n_x - 2)
-                            data.append(1.0)
-                            row_idx += 1
-
-                            col_idx += n_x - 1
-
-                    sub_matrix = csr_matrix(
-                        (data, (rows, cols)),
-                        shape=(n_x * n_y * n_z, (n_x - 1) * n_y * n_z),
-                    )
+                    block = diags([0.5, 0.5], [0, 1], shape=(n_x, n_x + 1))
+                    sub_matrix = block_diag((block,) * (n_y * n_z))
 
                 elif direction == "y":
-                    n_edges_y = n_x * (n_y - 1) * n_z
-                    n_nodes = n_x * n_y * n_z
-
-                    data = []
-                    rows = []
-                    cols = []
-
-                    node_idx = 0
-
-                    for k in range(n_z):
-                        for j in range(n_y):
-                            for i in range(n_x):
-                                if j == 0:
-                                    edge_idx = k * n_x * (n_y - 1) + 0 * n_x + i
-                                    rows.append(node_idx)
-                                    cols.append(edge_idx)
-                                    data.append(1.0)
-                                elif j == n_y - 1:
-                                    edge_idx = k * n_x * (n_y - 1) + (n_y - 2) * n_x + i
-                                    rows.append(node_idx)
-                                    cols.append(edge_idx)
-                                    data.append(1.0)
-                                else:
-                                    edge_left = k * n_x * (n_y - 1) + (j - 1) * n_x + i
-                                    edge_right = k * n_x * (n_y - 1) + j * n_x + i
-                                    rows.extend([node_idx, node_idx])
-                                    cols.extend([edge_left, edge_right])
-                                    data.extend([0.5, 0.5])
-
-                                node_idx += 1
-                                print(f"Expected: nodes={n_nodes}, edges_y={n_edges_y}")
-
-                    sub_matrix = csr_matrix(
-                        (data, (rows, cols)), shape=(n_nodes, n_edges_y)
+                    rows = np.arange(0, n_x * n_y)
+                    cols_first = np.arange(0, n_x * n_y)
+                    cols_second = np.arange(n_x, n_x * (n_y + 1))
+                    data = np.ones(n_x * n_y) * 0.5
+                    data = np.hstack([data, data])
+                    rows = np.hstack([rows, rows])
+                    cols = np.hstack([cols_first, cols_second])
+                    sub_matrix_2d = csr_matrix(
+                        (data, (rows, cols)), shape=(n_x * n_y, n_x * (n_y + 1))
                     )
+                    sub_matrix = block_diag((sub_matrix_2d,) * n_z)
 
                 elif direction == "z":
-                    n_edges_z = n_x * n_y * (n_z - 1)
-                    n_nodes = n_x * n_y * n_z
-
-                    data = []
-                    rows = []
-                    cols = []
-
-                    node_idx = 0
-
-                    for k in range(n_z):
-                        for j in range(n_y):
-                            for i in range(n_x):
-                                if k == 0:
-                                    edge_idx = 0 * (n_x * n_y) + j * n_x + i
-                                    rows.append(node_idx)
-                                    cols.append(edge_idx)
-                                    data.append(1.0)
-                                elif k == n_z - 1:
-                                    edge_idx = (n_z - 2) * (n_x * n_y) + j * n_x + i
-                                    rows.append(node_idx)
-                                    cols.append(edge_idx)
-                                    data.append(1.0)
-                                else:
-                                    edge_lower = (k - 1) * (n_x * n_y) + j * n_x + i
-                                    edge_upper = k * (n_x * n_y) + j * n_x + i
-                                    rows.extend([node_idx, node_idx])
-                                    cols.extend([edge_lower, edge_upper])
-                                    data.extend([0.5, 0.5])
-
-                                node_idx += 1
-
+                    rows = np.arange(0, n_x * n_y * n_z)
+                    cols_first = np.arange(0, n_x * n_y * n_z)
+                    cols_second = np.arange(n_x * n_y, n_x * n_y * (n_z + 1))
+                    data = np.ones(n_x * n_y * n_z) * 0.5
+                    data = np.hstack([data, data])
+                    rows = np.hstack([rows, rows])
+                    cols = np.hstack([cols_first, cols_second])
                     sub_matrix = csr_matrix(
-                        (data, (rows, cols)), shape=(n_nodes, n_edges_z)
+                        (data, (rows, cols)),
+                        shape=(n_x * n_y * n_z, n_x * n_y * (n_z + 1)),
                     )
 
             else:
                 raise ValueError(f"shift key '{shift_key}' not recognised")
 
+            # Second dimension repeats
             second_dim_repeats = self._get_auxiliary_domain_repeats(array.domains)
             matrix = csr_matrix(kron(eye(second_dim_repeats), sub_matrix))
-            print(f"Matrix shape: {sub_matrix.shape}")
-            print(f"After repeats: {matrix.shape}")
 
             return pybamm.Matrix(matrix) @ array
 
         def harmonic_mean(array, direction):
-            """Calculate the harmonic mean of an array using matrix multiplication"""
+            """Calculate the harmonic mean following 2D pattern exactly"""
             submesh = self.mesh[array.domain]
+            second_dim_repeats = self._get_auxiliary_domain_repeats(
+                discretised_symbol.domains
+            )
+
             n_x, n_y, n_z = submesh.npts_x, submesh.npts_y, submesh.npts_z
-            repeats = self._get_auxiliary_domain_repeats(array.domains)
 
             if shift_key == "node to edge":
                 if direction == "x":
-                    n_edges_x = n_x - 1
+                    # Matrix to compute values at the exterior edges
+                    edges_sub_matrix_left = csr_matrix(
+                        ([1.5, -0.5], ([0, 0], [0, 1])), shape=(1, n_x)
+                    )
+                    edges_sub_matrix_center = csr_matrix((n_x - 1, n_x))
+                    edges_sub_matrix_right = csr_matrix(
+                        ([-0.5, 1.5], ([0, 0], [n_x - 2, n_x - 1])), shape=(1, n_x)
+                    )
+                    edges_sub_matrix_1d = vstack(
+                        [
+                            edges_sub_matrix_left,
+                            edges_sub_matrix_center,
+                            edges_sub_matrix_right,
+                        ]
+                    )
+                    edges_sub_matrix = block_diag((edges_sub_matrix_1d,) * (n_y * n_z))
+                    edges_matrix = csr_matrix(
+                        kron(eye(second_dim_repeats), edges_sub_matrix)
+                    )
 
-                    stencil_1d = lil_matrix((n_edges_x, n_x))
+                    # Matrix to extract D1 and D2
+                    sub_matrix_D1 = hstack([eye(n_x - 1), csr_matrix((n_x - 1, 1))])
+                    sub_matrix_D1 = block_diag((sub_matrix_D1,) * (n_y * n_z))
+                    matrix_D1 = csr_matrix(kron(eye(second_dim_repeats), sub_matrix_D1))
+                    D1 = pybamm.Matrix(matrix_D1) @ array
 
-                    stencil_1d[0, 0] = 1.0
+                    sub_matrix_D2 = hstack([csr_matrix((n_x - 1, 1)), eye(n_x - 1)])
+                    sub_matrix_D2 = block_diag((sub_matrix_D2,) * (n_y * n_z))
+                    matrix_D2 = csr_matrix(kron(eye(second_dim_repeats), sub_matrix_D2))
+                    D2 = pybamm.Matrix(matrix_D2) @ array
 
-                    for i in range(1, n_x - 1):
-                        stencil_1d[i, i - 1] = 0.5
-                        stencil_1d[i, i] = 0.5
+                    # Compute weight beta
+                    dx = np.diff(submesh.edges_x)
+                    sub_beta = (dx[:-1] / (dx[1:] + dx[:-1]))[:, np.newaxis]
+                    sub_beta = np.repeat(sub_beta, n_y * n_z, axis=0)
+                    beta = pybamm.Array(
+                        np.kron(np.ones((second_dim_repeats, 1)), sub_beta)
+                    )
 
-                    stencil_1d[n_edges_x - 1, n_x - 2] = 1.0
+                    # Harmonic mean
+                    D_eff = D1 * D2 / (D2 * beta + D1 * (1 - beta))
 
-                    stencil_1d = stencil_1d.tocsr()
+                    # Padding matrix
+                    sub_matrix = vstack(
+                        [
+                            csr_matrix((1, n_x - 1)),
+                            eye(n_x - 1),
+                            csr_matrix((1, n_x - 1)),
+                        ]
+                    )
+                    sub_matrix = block_diag((sub_matrix,) * (n_y * n_z))
+                    matrix = csr_matrix(kron(eye(second_dim_repeats), sub_matrix))
 
-                    E = kron(eye(n_z), kron(eye(n_y), stencil_1d))
-
-                    return pybamm.Matrix(E) @ array
+                    return (
+                        pybamm.Matrix(edges_matrix) @ array
+                        + pybamm.Matrix(matrix) @ D_eff
+                    )
 
                 elif direction == "y":
-                    n_edges_y = n_y - 1
+                    # Follow 2D tb pattern for y-direction
+                    one_fives_front = np.ones(n_x) * 1.5
+                    neg_zero_fives_front = np.ones(n_x) * -0.5
+                    rows = np.arange(0, n_x)
+                    cols_first = np.arange(0, n_x)
+                    cols_second = np.arange(n_x, 2 * n_x)
+                    data = np.hstack([one_fives_front, neg_zero_fives_front])
+                    cols = np.hstack([cols_first, cols_second])
+                    rows = np.hstack([rows, rows])
+                    edges_sub_matrix_front = csr_matrix(
+                        (data, (rows, cols)), shape=(n_x, n_x * n_y)
+                    )
 
-                    stencil_2d = lil_matrix((n_x * n_edges_y, n_x * n_y))
+                    cols_first = np.arange((n_y - 2) * n_x, (n_y - 1) * n_x)
+                    cols_second = np.arange((n_y - 1) * n_x, n_y * n_x)
+                    data = np.hstack([neg_zero_fives_front, one_fives_front])
+                    cols = np.hstack([cols_first, cols_second])
+                    edges_sub_matrix_back = csr_matrix(
+                        (data, (rows, cols)), shape=(n_x, n_x * n_y)
+                    )
+                    edges_sub_matrix_center = csr_matrix(((n_y - 1) * n_x, n_y * n_x))
+                    edges_sub_matrix_2d = vstack(
+                        [
+                            edges_sub_matrix_front,
+                            edges_sub_matrix_center,
+                            edges_sub_matrix_back,
+                        ]
+                    )
+                    edges_sub_matrix = block_diag((edges_sub_matrix_2d,) * n_z)
+                    edges_matrix = csr_matrix(
+                        kron(eye(second_dim_repeats), edges_sub_matrix)
+                    )
 
-                    for i in range(n_x):
-                        edge_start = i * n_edges_y
-                        node_start = i * n_y
-                        stencil_2d[node_start, edge_start] = 1.0
+                    # D1 and D2 matrices
+                    sub_matrix_D1 = hstack(
+                        [eye(n_x * (n_y - 1)), csr_matrix((n_x * (n_y - 1), n_x))]
+                    )
+                    sub_matrix_D1 = block_diag((sub_matrix_D1,) * n_z)
+                    matrix_D1 = csr_matrix(kron(eye(second_dim_repeats), sub_matrix_D1))
+                    D1 = pybamm.Matrix(matrix_D1) @ array
 
-                        for j in range(1, n_y - 1):
-                            node_idx = node_start + j
-                            edge_left = edge_start + j - 1
-                            edge_right = edge_start + j
-                            stencil_2d[node_idx, edge_left] = 0.5
-                            stencil_2d[node_idx, edge_right] = 0.5
+                    sub_matrix_D2 = hstack(
+                        [csr_matrix((n_x * (n_y - 1), n_x)), eye(n_x * (n_y - 1))]
+                    )
+                    sub_matrix_D2 = block_diag((sub_matrix_D2,) * n_z)
+                    matrix_D2 = csr_matrix(kron(eye(second_dim_repeats), sub_matrix_D2))
+                    D2 = pybamm.Matrix(matrix_D2) @ array
 
-                        stencil_2d[node_start + n_y - 1, edge_start + n_edges_y - 1] = (
-                            1.0
-                        )
+                    # Compute beta
+                    dx = submesh.d_edges_y
+                    sub_beta = (dx[:-1] / (dx[1:] + dx[:-1]))[:, np.newaxis]
+                    sub_beta = np.repeat(sub_beta, n_x, axis=0)
+                    sub_beta = np.tile(sub_beta, (n_z, 1))
+                    beta = pybamm.Array(
+                        np.kron(np.ones((second_dim_repeats, 1)), sub_beta)
+                    )
 
-                    stencil_2d = stencil_2d.tocsr()
+                    D_eff = D1 * D2 / (D2 * beta + D1 * (1 - beta))
 
-                    E = kron(eye(n_z), stencil_2d)
-                    E = csr_matrix(kron(eye(repeats), E))
+                    # Padding matrix
+                    sub_matrix_2d = vstack(
+                        [
+                            csr_matrix((n_x, n_x * (n_y - 1))),
+                            eye(n_x * (n_y - 1)),
+                            csr_matrix((n_x, n_x * (n_y - 1))),
+                        ]
+                    )
+                    sub_matrix = block_diag((sub_matrix_2d,) * n_z)
+                    matrix = csr_matrix(kron(eye(second_dim_repeats), sub_matrix))
 
-                    return pybamm.Matrix(E) @ array
+                    return (
+                        pybamm.Matrix(edges_matrix) @ array
+                        + pybamm.Matrix(matrix) @ D_eff
+                    )
 
                 elif direction == "z":
-                    n_edges_z = n_z - 1
+                    # Follow 2D pattern for z-direction
+                    one_fives_bottom = np.ones(n_x * n_y) * 1.5
+                    neg_zero_fives_bottom = np.ones(n_x * n_y) * -0.5
+                    rows = np.arange(0, n_x * n_y)
+                    cols_first = np.arange(0, n_x * n_y)
+                    cols_second = np.arange(n_x * n_y, 2 * n_x * n_y)
+                    data = np.hstack([one_fives_bottom, neg_zero_fives_bottom])
+                    cols = np.hstack([cols_first, cols_second])
+                    rows = np.hstack([rows, rows])
+                    edges_sub_matrix_bottom = csr_matrix(
+                        (data, (rows, cols)), shape=(n_x * n_y, n_x * n_y * n_z)
+                    )
 
-                    stencil_3d = lil_matrix((n_x * n_y * n_edges_z, n_x * n_y * n_z))
+                    cols_first = np.arange((n_z - 2) * n_x * n_y, (n_z - 1) * n_x * n_y)
+                    cols_second = np.arange((n_z - 1) * n_x * n_y, n_z * n_x * n_y)
+                    data = np.hstack([neg_zero_fives_bottom, one_fives_bottom])
+                    cols = np.hstack([cols_first, cols_second])
+                    edges_sub_matrix_top = csr_matrix(
+                        (data, (rows, cols)), shape=(n_x * n_y, n_x * n_y * n_z)
+                    )
+                    edges_sub_matrix_center = csr_matrix(
+                        ((n_z - 1) * n_x * n_y, n_z * n_x * n_y)
+                    )
+                    edges_sub_matrix = vstack(
+                        [
+                            edges_sub_matrix_bottom,
+                            edges_sub_matrix_center,
+                            edges_sub_matrix_top,
+                        ]
+                    )
+                    edges_matrix = csr_matrix(
+                        kron(eye(second_dim_repeats), edges_sub_matrix)
+                    )
 
-                    for i in range(n_x):
-                        for j in range(n_y):
-                            xy_idx = i * n_y + j
+                    # D1 and D2 matrices
+                    sub_matrix_D1 = hstack(
+                        [
+                            eye(n_x * n_y * (n_z - 1)),
+                            csr_matrix((n_x * n_y * (n_z - 1), n_x * n_y)),
+                        ]
+                    )
+                    matrix_D1 = csr_matrix(kron(eye(second_dim_repeats), sub_matrix_D1))
+                    D1 = pybamm.Matrix(matrix_D1) @ array
 
-                            node_start = xy_idx * n_z
-                            edge_start = xy_idx * n_edges_z
-                            stencil_3d[node_start, edge_start] = 1.0
+                    sub_matrix_D2 = hstack(
+                        [
+                            csr_matrix((n_x * n_y * (n_z - 1), n_x * n_y)),
+                            eye(n_x * n_y * (n_z - 1)),
+                        ]
+                    )
+                    matrix_D2 = csr_matrix(kron(eye(second_dim_repeats), sub_matrix_D2))
+                    D2 = pybamm.Matrix(matrix_D2) @ array
 
-                            for k in range(1, n_z - 1):
-                                node_idx = node_start + k
-                                edge_left = edge_start + k - 1
-                                edge_right = edge_start + k
-                                stencil_3d[node_idx, edge_left] = 0.5
-                                stencil_3d[node_idx, edge_right] = 0.5
+                    # Compute beta
+                    dx = submesh.d_edges_z
+                    sub_beta = (dx[:-1] / (dx[1:] + dx[:-1]))[:, np.newaxis]
+                    sub_beta = np.repeat(sub_beta, n_x * n_y, axis=0)
+                    beta = pybamm.Array(
+                        np.kron(np.ones((second_dim_repeats, 1)), sub_beta)
+                    )
 
-                            stencil_3d[
-                                node_start + n_z - 1, edge_start + n_edges_z - 1
-                            ] = 1.0
+                    D_eff = D1 * D2 / (D2 * beta + D1 * (1 - beta))
 
-                    stencil_3d = stencil_3d.tocsr()
+                    # Padding matrix
+                    sub_matrix = vstack(
+                        [
+                            csr_matrix((n_x * n_y, n_x * n_y * (n_z - 1))),
+                            eye(n_x * n_y * (n_z - 1)),
+                            csr_matrix((n_x * n_y, n_x * n_y * (n_z - 1))),
+                        ]
+                    )
+                    matrix = csr_matrix(kron(eye(second_dim_repeats), sub_matrix))
 
-                    E = csr_matrix(kron(eye(repeats), stencil_3d))
-
-                    return pybamm.Matrix(E) @ array
+                    return (
+                        pybamm.Matrix(edges_matrix) @ array
+                        + pybamm.Matrix(matrix) @ D_eff
+                    )
 
             elif shift_key == "edge to node":
                 if direction == "x":
-                    n_edges_x = n_x - 1
+                    sub_matrix_D1 = hstack([eye(n_x), csr_matrix((n_x, 1))])
+                    sub_matrix_D1 = block_diag((sub_matrix_D1,) * (n_y * n_z))
+                    matrix_D1 = csr_matrix(kron(eye(second_dim_repeats), sub_matrix_D1))
+                    D1 = pybamm.Matrix(matrix_D1) @ array
 
-                    stencil_1d = lil_matrix((n_x, n_edges_x))
+                    sub_matrix_D2 = hstack([csr_matrix((n_x, 1)), eye(n_x)])
+                    sub_matrix_D2 = block_diag((sub_matrix_D2,) * (n_y * n_z))
+                    matrix_D2 = csr_matrix(kron(eye(second_dim_repeats), sub_matrix_D2))
+                    D2 = pybamm.Matrix(matrix_D2) @ array
 
-                    stencil_1d[0, 0] = 1.0
+                    # Compute weight beta
+                    dx0 = submesh.nodes_x[0] - submesh.edges_x[0]
+                    dxN = submesh.edges_x[-1] - submesh.nodes_x[-1]
+                    dx = np.concatenate(([dx0], submesh.d_nodes_x, [dxN]))
+                    sub_beta = (dx[:-1] / (dx[1:] + dx[:-1]))[:, np.newaxis]
+                    sub_beta = np.repeat(sub_beta, n_y * n_z, axis=0)
+                    beta = pybamm.Array(
+                        np.kron(np.ones((second_dim_repeats, 1)), sub_beta)
+                    )
 
-                    for i in range(1, n_x - 1):
-                        stencil_1d[i, i - 1] = 0.5
-                        stencil_1d[i, i] = 0.5
-
-                    stencil_1d[n_x - 1, n_edges_x - 1] = 1.0
-
-                    stencil_1d = stencil_1d.tocsr()
-
-                    E = kron(eye(n_z), kron(eye(n_y), stencil_1d))
-
-                    return pybamm.Matrix(E) @ array
+                    # Compute harmonic mean on nodes
+                    D_eff = D1 * D2 / (D2 * beta + D1 * (1 - beta) + 1e-16)
+                    return D_eff
 
                 elif direction == "y":
-                    n_edges_y = n_y - 1
+                    # Implement harmonic mean edge to node for y-direction
+                    sub_matrix_D1 = hstack(
+                        [eye(n_x * n_y), csr_matrix((n_x * n_y, n_x))]
+                    )
+                    sub_matrix_D1 = block_diag((sub_matrix_D1,) * n_z)
+                    matrix_D1 = csr_matrix(kron(eye(second_dim_repeats), sub_matrix_D1))
+                    D1 = pybamm.Matrix(matrix_D1) @ array
 
-                    stencil_2d = lil_matrix((n_x * n_y, n_x * n_edges_y))
+                    sub_matrix_D2 = hstack(
+                        [csr_matrix((n_x * n_y, n_x)), eye(n_x * n_y)]
+                    )
+                    sub_matrix_D2 = block_diag((sub_matrix_D2,) * n_z)
+                    matrix_D2 = csr_matrix(kron(eye(second_dim_repeats), sub_matrix_D2))
+                    D2 = pybamm.Matrix(matrix_D2) @ array
 
-                    for i in range(n_x):
-                        edge_start = i * n_edges_y
-                        node_start = i * n_y
-                        stencil_2d[node_start, edge_start] = 1.0
+                    # Compute beta for y-direction
+                    dx0 = submesh.nodes_y[0] - submesh.edges_y[0]
+                    dxN = submesh.edges_y[-1] - submesh.nodes_y[-1]
+                    dx = np.concatenate(([dx0], submesh.d_nodes_y, [dxN]))
+                    sub_beta = (dx[:-1] / (dx[1:] + dx[:-1]))[:, np.newaxis]
+                    sub_beta = np.repeat(sub_beta, n_x, axis=0)
+                    sub_beta = np.tile(sub_beta, (n_z, 1))
+                    beta = pybamm.Array(
+                        np.kron(np.ones((second_dim_repeats, 1)), sub_beta)
+                    )
 
-                        for j in range(1, n_y - 1):
-                            node_idx = node_start + j
-                            edge_left = edge_start + j - 1
-                            edge_right = edge_start + j
-                            stencil_2d[node_idx, edge_left] = 0.5
-                            stencil_2d[node_idx, edge_right] = 0.5
-
-                        stencil_2d[node_start + n_y - 1, edge_start + n_edges_y - 1] = (
-                            1.0
-                        )
-
-                    stencil_2d = stencil_2d.tocsr()
-
-                    E = kron(eye(n_z), stencil_2d)
-                    E = csr_matrix(kron(eye(repeats), E))
-
-                    return pybamm.Matrix(E) @ array
+                    D_eff = D1 * D2 / (D2 * beta + D1 * (1 - beta) + 1e-16)
+                    return D_eff
 
                 elif direction == "z":
-                    n_edges_z = n_z - 1
+                    # Implement harmonic mean edge to node for z-direction
+                    sub_matrix_D1 = hstack(
+                        [eye(n_x * n_y * n_z), csr_matrix((n_x * n_y * n_z, n_x * n_y))]
+                    )
+                    matrix_D1 = csr_matrix(kron(eye(second_dim_repeats), sub_matrix_D1))
+                    D1 = pybamm.Matrix(matrix_D1) @ array
 
-                    stencil_3d = lil_matrix((n_x * n_y * n_z, n_x * n_y * n_edges_z))
+                    sub_matrix_D2 = hstack(
+                        [csr_matrix((n_x * n_y * n_z, n_x * n_y)), eye(n_x * n_y * n_z)]
+                    )
+                    matrix_D2 = csr_matrix(kron(eye(second_dim_repeats), sub_matrix_D2))
+                    D2 = pybamm.Matrix(matrix_D2) @ array
 
-                    for i in range(n_x):
-                        for j in range(n_y):
-                            xy_idx = i * n_y + j
+                    # Compute beta for z-direction
+                    dx0 = submesh.nodes_z[0] - submesh.edges_z[0]
+                    dxN = submesh.edges_z[-1] - submesh.nodes_z[-1]
+                    dx = np.concatenate(([dx0], submesh.d_nodes_z, [dxN]))
+                    sub_beta = (dx[:-1] / (dx[1:] + dx[:-1]))[:, np.newaxis]
+                    sub_beta = np.repeat(sub_beta, n_x * n_y, axis=0)
+                    beta = pybamm.Array(
+                        np.kron(np.ones((second_dim_repeats, 1)), sub_beta)
+                    )
 
-                            node_start = xy_idx * n_z
-                            edge_start = xy_idx * n_edges_z
-                            stencil_3d[node_start, edge_start] = 1.0
-
-                            for k in range(1, n_z - 1):
-                                node_idx = node_start + k
-                                edge_left = edge_start + k - 1
-                                edge_right = edge_start + k
-                                stencil_3d[node_idx, edge_left] = 0.5
-                                stencil_3d[node_idx, edge_right] = 0.5
-
-                            stencil_3d[
-                                node_start + n_z - 1, edge_start + n_edges_z - 1
-                            ] = 1.0
-
-                    stencil_3d = stencil_3d.tocsr()
-
-                    E = csr_matrix(kron(eye(repeats), stencil_3d))
-
-                    return pybamm.Matrix(E) @ array
-
+                    D_eff = D1 * D2 / (D2 * beta + D1 * (1 - beta) + 1e-16)
+                    return D_eff
             else:
                 raise ValueError(f"shift key '{shift_key}' not recognised")
 
-        # Helper methods for harmonic mean
-        def _exterior_stencil(n):
-            left = csr_matrix(([1.5, -0.5], ([0, 0], [0, 1])), shape=(1, n))
-            right = csr_matrix(([-0.5, 1.5], ([0, 0], [n - 2, n - 1])), shape=(1, n))
-            return left, right
+        # Validate inputs
+        if shift_key not in ["node to edge", "edge to node"]:
+            raise ValueError(f"shift key '{shift_key}' not recognised")
+        if method not in ["arithmetic", "harmonic"]:
+            raise ValueError(f"method '{method}' not recognised")
+        if direction not in ["x", "y", "z"]:
+            raise ValueError(f"direction '{direction}' not recognised")
 
-        def _pick_D1_D2(n):
-            D1 = hstack([eye(n - 1), csr_matrix((n - 1, 1))])
-            D2 = hstack([csr_matrix((n - 1, 1)), eye(n - 1)])
-            return D1, D2
-
-        self._exterior_stencil = _exterior_stencil
-        self._pick_D1_D2 = _pick_D1_D2
-
+        # If discretised_symbol evaluates to number there is no need to average
         if discretised_symbol.size == 1:
             out = discretised_symbol
         elif method == "arithmetic":
@@ -3124,6 +3161,7 @@ class FiniteVolume3D(pybamm.SpatialMethod):
             out = harmonic_mean(discretised_symbol, direction)
         else:
             raise ValueError(f"method '{method}' not recognised")
+
         return out
 
     def upwind_or_downwind(
@@ -3131,8 +3169,8 @@ class FiniteVolume3D(pybamm.SpatialMethod):
         symbol,
         discretised_symbol,
         bcs,
-        x_direction=None,
-        y_direction=None,
+        x_direction,
+        y_direction,
         z_direction=None,
     ):
         """

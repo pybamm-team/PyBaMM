@@ -94,7 +94,7 @@ class TestFiniteVolume3D:
         var = pybamm.Variable("var", domain=whole_cell)
         disc.set_variable_slices([var])
 
-        y_test = np.ones_like(submesh.nodes[:, np.newaxis])
+        y_test = np.ones(submesh.npts)[:, np.newaxis]
 
         exprs = [
             var * pybamm.grad(var),
@@ -189,7 +189,14 @@ class TestFiniteVolume3D:
         model.rhs = {c: pybamm.div(N)}
         model.initial_conditions = {c: pybamm.Scalar(0)}
         model.boundary_conditions = {
-            c: {"left": (0, "Dirichlet"), "right": (0, "Dirichlet")}
+            c: {
+                "left": (0, "Dirichlet"),
+                "right": (0, "Dirichlet"),
+                "front": (0, "Neumann"),
+                "back": (0, "Neumann"),
+                "bottom": (0, "Neumann"),
+                "top": (0, "Neumann"),
+            }
         }
         model.variables = {"c": c, "N": N}
 
@@ -215,7 +222,7 @@ class TestFiniteVolume3D:
         var = pybamm.Variable("var", domain=whole_cell)
         disc.set_variable_slices([var])
         y = pybamm.StateVector(slice(0, submesh.npts), domain=whole_cell)
-        y_test = np.ones_like(submesh.nodes[:, np.newaxis])
+        y_test = np.ones(submesh.npts)[:, np.newaxis]
 
         eqn = pybamm.grad(var)
         disc.bcs = {
@@ -229,15 +236,24 @@ class TestFiniteVolume3D:
         jacobian = eqn_jac.evaluate(y=y_test)
 
         grad_matrix = spatial_method.gradient_matrix(
-            whole_cell, {"primary": whole_cell}
+            whole_cell, {"primary": whole_cell}, direction="x"
         ).entries
 
-        np.testing.assert_allclose(jacobian.toarray()[1:-1], grad_matrix.toarray())
+        # Fix: Handle different jacobian types
+        if hasattr(jacobian, "toarray"):
+            jacobian_array = jacobian.toarray()
+        elif hasattr(jacobian, "entries"):
+            jacobian_array = jacobian.entries.toarray()
+        else:
+            # For VectorResult or other types, try to convert to array
+            jacobian_array = np.array(jacobian)
+
+        np.testing.assert_allclose(jacobian_array[1:-1], grad_matrix.toarray())
         np.testing.assert_allclose(
-            jacobian.toarray()[0, 0], grad_matrix.toarray()[0][0] * -2
+            jacobian_array[0, 0], grad_matrix.toarray()[0][0] * -2
         )
         np.testing.assert_allclose(
-            jacobian.toarray()[-1, -1], grad_matrix.toarray()[-1][-1] * -2
+            jacobian_array[-1, -1], grad_matrix.toarray()[-1][-1] * -2
         )
 
         eqn = var * pybamm.grad(var)
@@ -387,7 +403,7 @@ class TestFiniteVolume3D:
         disc = pybamm.Discretisation(mesh, spatial_methods)
 
         n = mesh["negative electrode"].npts
-        var = pybamm.StateVector(slice(0, n), domain="negative electrode")
+        var = pybamm.StateVector(slice(0, n), domain=["negative electrode"])
         upwind = pybamm.upwind(var)
         downwind = pybamm.downwind(var)
 
@@ -452,6 +468,10 @@ class TestFiniteVolume3D:
             var: {
                 "left": (pybamm.Scalar(0), "Neumann"),
                 "right": (pybamm.Scalar(0), "Neumann"),
+                "front": (pybamm.Scalar(0), "Neumann"),
+                "back": (pybamm.Scalar(0), "Neumann"),
+                "bottom": (pybamm.Scalar(0), "Neumann"),
+                "top": (pybamm.Scalar(0), "Neumann"),
             }
         }
         disc.bcs = boundary_conditions
@@ -500,6 +520,10 @@ class TestFiniteVolume3D:
             var: {
                 "left": (pybamm.Scalar(0), "Neumann"),
                 "right": (pybamm.Scalar(0), "Neumann"),
+                "front": (pybamm.Scalar(0), "Neumann"),
+                "back": (pybamm.Scalar(0), "Neumann"),
+                "bottom": (pybamm.Scalar(0), "Neumann"),
+                "top": (pybamm.Scalar(0), "Neumann"),
             }
         }
 
@@ -530,6 +554,10 @@ class TestFiniteVolume3D:
             var: {
                 "left": (pybamm.Scalar(0), "Neumann"),
                 "right": (pybamm.Scalar(0), "Neumann"),
+                "front": (pybamm.Scalar(0), "Neumann"),
+                "back": (pybamm.Scalar(0), "Neumann"),
+                "bottom": (pybamm.Scalar(0), "Neumann"),
+                "top": (pybamm.Scalar(0), "Neumann"),
             }
         }
 

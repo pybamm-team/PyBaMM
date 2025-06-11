@@ -23,12 +23,12 @@ class TestGradDivShapes3D:
         grad_eqn = pybamm.grad(var)
         boundary_conditions = {
             var: {
-                "left": (pybamm.Scalar(0), "Dirichlet"),
-                "right": (pybamm.Scalar(0), "Dirichlet"),
-                "front": (pybamm.Scalar(0), "Dirichlet"),
-                "back": (pybamm.Scalar(0), "Dirichlet"),
-                "bottom": (pybamm.Scalar(0), "Dirichlet"),
-                "top": (pybamm.Scalar(0), "Dirichlet"),
+                "left": (pybamm.Scalar(1), "Dirichlet"),
+                "right": (pybamm.Scalar(1), "Dirichlet"),
+                "front": (pybamm.Scalar(1), "Dirichlet"),
+                "back": (pybamm.Scalar(1), "Dirichlet"),
+                "bottom": (pybamm.Scalar(1), "Dirichlet"),
+                "top": (pybamm.Scalar(1), "Dirichlet"),
             }
         }
         disc.bcs = boundary_conditions
@@ -47,6 +47,7 @@ class TestGradDivShapes3D:
         # Test operations on linear x
         # For 3D, use x-coordinate of nodes as the linear function
         coords_x = submesh.nodes[:, 0:1]  # Extract x-coordinates as column vector
+        print("coords_x", coords_x.shape)
         N = pybamm.grad(var)
         div_eqn = pybamm.div(N)
         boundary_conditions = {

@@ -4,14 +4,17 @@ import numpy as np
 
 
 class VectorField3D(pybamm.Symbol):
+    """
+    A node in the expression tree representing a 3D vector field.
+    """
+
     def __init__(self, x_field, y_field, z_field):
+        children = [x_field, y_field, z_field]
         if not (x_field.domain == y_field.domain == z_field.domain):
             raise ValueError("All vector field components must have the same domain")
 
         super().__init__(
-            name="vector_field_3d",
-            children=[x_field, y_field, z_field],
-            domain=x_field.domain,
+            name="vector_field_3d", children=children, domain=x_field.domain
         )
         self.x_field = x_field
         self.y_field = y_field
@@ -20,69 +23,73 @@ class VectorField3D(pybamm.Symbol):
     def create_copy(self, new_children: Optional[list[pybamm.Symbol]] = None):
         if new_children is None:
             new_children = [self.x_field, self.y_field, self.z_field]
-        return VectorField3D(*new_children)
+        new_obj = VectorField3D(*new_children)
+        return new_obj
 
     def _evaluate_for_shape(self):
         return self.children[0].evaluate_for_shape()
 
+    @property
+    def x_field(self):
+        return self.children[0]
+
+    @x_field.setter
+    def x_field(self, value):
+        self.children[0] = value
+
+    @property
+    def y_field(self):
+        return self.children[1]
+
+    @y_field.setter
+    def y_field(self, value):
+        self.children[1] = value
+
+    @property
+    def z_field(self):
+        return self.children[2]
+
+    @z_field.setter
+    def z_field(self, value):
+        self.children[2] = value
+
     def evaluate(self, t=None, y=None, y_dot=None, inputs=None):
         """
-        Evaluate the vector field by evaluating each component
-        and returning an object with x_field, y_field, and z_field attributes.
+        Evaluate the vector field by concatenating x, y, z components into a column vector.
         """
         x_eval = self.x_field.evaluate(t, y, y_dot, inputs)
         y_eval = self.y_field.evaluate(t, y, y_dot, inputs)
         z_eval = self.z_field.evaluate(t, y, y_dot, inputs)
 
-        class VectorResult:
-            def __init__(self, x, y, z):
-                self.x_field = x
-                self.y_field = y
-                self.z_field = z
+        def ensure_column_vector(arr):
+            if hasattr(arr, "toarray"):
+                arr = arr.toarray()
+            arr = np.asarray(arr)
+            if arr.ndim == 1:
+                arr = arr.reshape(-1, 1)
+            elif arr.ndim == 2 and arr.shape[1] != 1:
+                arr = arr.flatten().reshape(-1, 1)
+            return arr
 
-            def flatten(self):
-                """Convert to a flat array for comparison"""
-                x_flat = (
-                    self.x_field.flatten()
-                    if hasattr(self.x_field, "flatten")
-                    else np.array(self.x_field).flatten()
-                )
-                y_flat = (
-                    self.y_field.flatten()
-                    if hasattr(self.y_field, "flatten")
-                    else np.array(self.y_field).flatten()
-                )
-                z_flat = (
-                    self.z_field.flatten()
-                    if hasattr(self.z_field, "flatten")
-                    else np.array(self.z_field).flatten()
-                )
-                return np.concatenate([x_flat, y_flat, z_flat])
+        x_col = ensure_column_vector(x_eval)
+        y_col = ensure_column_vector(y_eval)
+        z_col = ensure_column_vector(z_eval)
 
-            def __array__(self):
-                """Support numpy array conversion"""
-                return self.flatten()
+        result = np.vstack([x_col, y_col, z_col])
 
-            def __eq__(self, other):
-                """Support equality comparison with arrays"""
-                if isinstance(other, np.ndarray):
-                    if len(other.shape) > 1 and other.shape[1] == 1:
-                        # If other is a column vector, flatten it
-                        other = other.flatten()
-                    return np.array_equal(self.flatten(), other)
-                return NotImplemented
+        return result
 
-        return VectorResult(x_eval, y_eval, z_eval)
+    def evaluates_on_edges(self, dimension: str) -> bool:
+        x_evaluates_on_edges = self.x_field.evaluates_on_edges(dimension)
+        y_evaluates_on_edges = self.y_field.evaluates_on_edges(dimension)
+        z_evaluates_on_edges = self.z_field.evaluates_on_edges(dimension)
 
-    def evaluates_on_edges(self, dim):
-        vals = [
-            f.evaluates_on_edges(dim)
-            for f in (self.x_field, self.y_field, self.z_field)
-        ]
-        if vals.count(vals[0]) == 3:
-            return vals[0]
+        if x_evaluates_on_edges == y_evaluates_on_edges == z_evaluates_on_edges:
+            return x_evaluates_on_edges
         else:
-            raise ValueError("components disagree on edges")
+            raise ValueError(
+                "All components must agree on whether they evaluate on edges"
+            )
 
     def _jac(self, variable):
         """Compute the Jacobian of the vector field"""
