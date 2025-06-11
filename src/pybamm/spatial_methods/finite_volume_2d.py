@@ -1132,8 +1132,8 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                         )
                         additive = dxN * bcs[child][side_first][0]
                     else:
-                        dx0 = dxNm1_tb
-                        dx1 = dxN_tb
+                        dx0 = dxN_tb
+                        dx1 = dxNm1_tb
                         first_val = -(dx0 / dx1) * np.ones(n_lr)
                         second_val = (1 + (dx0 / dx1)) * np.ones(n_lr)
                         rows_first = np.arange(0, n_lr)
