@@ -2,6 +2,8 @@
 
 ## Features
 
+- Generalise `pybamm.DiscreteTimeSum` to allow it to be embedded in other expressions ([#5044](https://github.com/pybamm-team/PyBaMM/pull/5044))
+
 ## Optimizations
 
 ## Bug fixes
