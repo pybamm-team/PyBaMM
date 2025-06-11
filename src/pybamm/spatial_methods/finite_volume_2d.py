@@ -949,8 +949,10 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         # Derivation of extrapolation formula can be found at:
         # https://github.com/Scottmar93/extrapolation-coefficents/tree/master
         if isinstance(symbol, pybamm.BoundaryValue):
+            skip_side_second = False
             if use_bcs and pybamm.has_bc_of_form(child, side_first, bcs, "Dirichlet"):
                 if side_first == "left" or side_first == "right":
+                    skip_side_second = True
                     # just use the value from the bc: f(x*)
                     sub_matrix = csr_matrix((n_tb, n_tb * n_lr))
                     additive = bcs[child][side_first][0]
@@ -1029,7 +1031,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                         vals_N = np.ones(n_tb)
                         sub_matrix = csr_matrix(
                             (
-                                vals_0,
+                                vals_N,
                                 (
                                     row_indices,
                                     col_indices_N,
@@ -1119,16 +1121,14 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                     if use_bcs and pybamm.has_bc_of_form(
                         child, side_first, bcs, "Neumann"
                     ):
-                        dxNm1 = dxNm1_tb
-                        dxN = dxN_tb
+                        dxN = dxNm1_tb
+                        dxNm1 = dxN_tb
                         val_N = np.ones(n_lr)
-                        sub_matrix = spdiags(
-                            val_N,
-                            [
-                                (n_tb - 1) * n_lr,
-                            ],
-                            n_lr,
-                            n_lr * n_tb,
+                        rows = np.arange(0, n_lr)
+                        cols = np.arange((n_tb - 1) * n_lr, n_tb * n_lr)
+                        sub_matrix = csr_matrix(
+                            (val_N, (rows, cols)),
+                            shape=(n_lr, n_lr * n_tb),
                         )
                         additive = dxN * bcs[child][side_first][0]
                     else:
@@ -1159,7 +1159,9 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                 else:
                     raise NotImplementedError
 
-            if side_second == "top":
+            if skip_side_second:
+                pass
+            elif side_second == "top":
                 if use_bcs and pybamm.has_bc_of_form(
                     child, side_second, bcs, "Neumann"
                 ):
@@ -1275,7 +1277,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                 if extrap_order_gradient == "linear":
                     # use formula:
                     # f'(x*) = (f_N - f_Nm1) / dxNm1
-                    dxN = dxN_lr
+                    dxN = dxNm1_lr
                     dxNm1 = dxNm1_lr
                     row_indices = np.arange(0, n_tb)
                     col_indices_Nm1 = np.arange(n_lr - 2, n_lr * n_tb, n_lr)
@@ -1301,23 +1303,39 @@ class FiniteVolume2D(pybamm.SpatialMethod):
 
             elif side_first == "top":
                 dx1 = dx1_tb
+                row_indices = np.arange(0, n_lr)
+                col_indices_0 = np.arange(0, n_lr)
+                col_indices_1 = np.arange(n_lr, 2 * n_lr)
                 first_val = (-1 / dx1) * np.ones(n_lr)
                 second_val = (1 / dx1) * np.ones(n_lr)
-                sub_matrix = spdiags(
-                    [first_val, second_val], [0, n_lr], n_lr, n_lr * n_tb
+                sub_matrix = csr_matrix(
+                    (
+                        np.hstack([first_val, second_val]),
+                        (
+                            np.hstack([row_indices, row_indices]),
+                            np.hstack([col_indices_0, col_indices_1]),
+                        ),
+                    ),
+                    shape=(n_lr, n_tb * n_lr),
                 )
                 additive = pybamm.Scalar(0)
 
             elif side_first == "bottom":
-                dx0 = dxNm1_tb
-                dx1 = dxN_tb
-                first_val = -(dx0 / dx1) * np.ones(n_lr)
-                second_val = (1 + (dx0 / dx1)) * np.ones(n_lr)
-                sub_matrix = spdiags(
-                    [first_val, second_val],
-                    [(n_tb - 2) * n_lr, (n_tb - 1) * n_lr],
-                    n_lr,
-                    n_lr * n_tb,
+                dxNm1 = dxNm1_tb
+                row_indices = np.arange(0, n_lr)
+                col_indices_0 = np.arange((n_tb - 2) * n_lr, (n_tb - 1) * n_lr)
+                col_indices_1 = np.arange((n_tb - 1) * n_lr, n_tb * n_lr)
+                first_val = (-1 / dxNm1) * np.ones(n_lr)
+                second_val = (1 / dxNm1) * np.ones(n_lr)
+                sub_matrix = csr_matrix(
+                    (
+                        np.hstack([first_val, second_val]),
+                        (
+                            np.hstack([row_indices, row_indices]),
+                            np.hstack([col_indices_0, col_indices_1]),
+                        ),
+                    ),
+                    shape=(n_lr, n_tb * n_lr),
                 )
                 additive = pybamm.Scalar(0)
 

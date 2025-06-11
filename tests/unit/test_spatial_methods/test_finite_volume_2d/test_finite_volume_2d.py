@@ -91,3 +91,134 @@ class TestFiniteVolume2D:
         LR, TB = np.meshgrid(submesh.nodes_lr, submesh.nodes_tb)
         np.testing.assert_array_equal(x3_disc.evaluate().flatten(), LR.flatten())
         np.testing.assert_array_equal(x4_disc.evaluate().flatten(), TB.flatten())
+
+    def test_discretise_diffusivity_times_spatial_operator(self):
+        # Setup mesh and discretisation
+        mesh = get_mesh_for_testing_2d()
+        spatial_methods = {"macroscale": pybamm.FiniteVolume2D()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        submesh = mesh[whole_cell]
+
+        # Discretise some equations where averaging is needed
+        var = pybamm.Variable("var", domain=whole_cell)
+        disc.set_variable_slices([var])
+        LR, TB = np.meshgrid(submesh.nodes_lr, submesh.nodes_tb)
+        for eqn in [
+            var * pybamm.grad(var),
+            var**2 * pybamm.grad(var),
+            var * pybamm.grad(var) ** 2,
+            var * (pybamm.grad(var) + 2),
+            (pybamm.grad(var) + 2) * (-var),
+            (pybamm.grad(var) + 2) * (2 * var),
+            pybamm.grad(var) * pybamm.grad(var),
+            (pybamm.grad(var) + 2) * pybamm.grad(var) ** 2,
+        ]:
+            # Check that the equation can be evaluated for different combinations
+            # of boundary conditions
+            # Dirichlet
+            disc.bcs = {
+                var: {
+                    "left": (pybamm.Scalar(0), "Dirichlet"),
+                    "right": (pybamm.Scalar(1), "Dirichlet"),
+                    "top": (pybamm.Scalar(0), "Dirichlet"),
+                    "bottom": (pybamm.Scalar(1), "Dirichlet"),
+                }
+            }
+            eqn_disc = disc.process_symbol(eqn)
+            eqn_disc.lr_field.evaluate(None, LR.flatten())
+            eqn_disc.tb_field.evaluate(None, TB.flatten())
+            # Neumann
+            disc.bcs = {
+                var: {
+                    "left": (pybamm.Scalar(0), "Neumann"),
+                    "right": (pybamm.Scalar(1), "Neumann"),
+                    "top": (pybamm.Scalar(0), "Neumann"),
+                    "bottom": (pybamm.Scalar(1), "Neumann"),
+                }
+            }
+            eqn_disc = disc.process_symbol(eqn)
+            eqn_disc.lr_field.evaluate(None, LR.flatten())
+            eqn_disc.tb_field.evaluate(None, TB.flatten())
+            # One of each
+            disc.bcs = {
+                var: {
+                    "left": (pybamm.Scalar(0), "Dirichlet"),
+                    "right": (pybamm.Scalar(1), "Neumann"),
+                    "top": (pybamm.Scalar(0), "Dirichlet"),
+                    "bottom": (pybamm.Scalar(1), "Neumann"),
+                }
+            }
+            eqn_disc = disc.process_symbol(eqn)
+            eqn_disc.lr_field.evaluate(None, LR.flatten())
+            eqn_disc.tb_field.evaluate(None, TB.flatten())
+            disc.bcs = {
+                var: {
+                    "left": (pybamm.Scalar(0), "Neumann"),
+                    "right": (pybamm.Scalar(1), "Dirichlet"),
+                    "top": (pybamm.Scalar(0), "Neumann"),
+                    "bottom": (pybamm.Scalar(1), "Neumann"),
+                }
+            }
+            eqn_disc = disc.process_symbol(eqn)
+            eqn_disc.lr_field.evaluate(None, LR.flatten())
+            eqn_disc.tb_field.evaluate(None, TB.flatten())
+
+        for eqn in [
+            pybamm.div(pybamm.grad(var)),
+            pybamm.div(pybamm.grad(var)) + 2,
+            pybamm.div(pybamm.grad(var)) + var,
+            pybamm.div(2 * pybamm.grad(var)),
+            pybamm.div(2 * pybamm.grad(var)) + 3 * var,
+            -2 * pybamm.div(var * pybamm.grad(var) + 2 * pybamm.grad(var)),
+            pybamm.laplacian(var),
+        ]:
+            # Check that the equation can be evaluated for different combinations
+            # of boundary conditions
+            # Dirichlet
+            disc.bcs = {
+                var: {
+                    "left": (pybamm.Scalar(0), "Dirichlet"),
+                    "right": (pybamm.Scalar(1), "Dirichlet"),
+                    "top": (pybamm.Scalar(0), "Dirichlet"),
+                    "bottom": (pybamm.Scalar(1), "Dirichlet"),
+                }
+            }
+            eqn_disc = disc.process_symbol(eqn)
+            eqn_disc.evaluate(None, LR.flatten())
+            eqn_disc.evaluate(None, TB.flatten())
+            # Neumann
+            disc.bcs = {
+                var: {
+                    "left": (pybamm.Scalar(0), "Neumann"),
+                    "right": (pybamm.Scalar(1), "Neumann"),
+                    "top": (pybamm.Scalar(0), "Neumann"),
+                    "bottom": (pybamm.Scalar(1), "Neumann"),
+                }
+            }
+            eqn_disc = disc.process_symbol(eqn)
+            eqn_disc.evaluate(None, LR.flatten())
+            eqn_disc.evaluate(None, TB.flatten())
+            # One of each
+            disc.bcs = {
+                var: {
+                    "left": (pybamm.Scalar(0), "Dirichlet"),
+                    "right": (pybamm.Scalar(1), "Neumann"),
+                    "top": (pybamm.Scalar(0), "Dirichlet"),
+                    "bottom": (pybamm.Scalar(1), "Neumann"),
+                }
+            }
+            eqn_disc = disc.process_symbol(eqn)
+            eqn_disc.evaluate(None, LR.flatten())
+            eqn_disc.evaluate(None, TB.flatten())
+            disc.bcs = {
+                var: {
+                    "left": (pybamm.Scalar(0), "Neumann"),
+                    "right": (pybamm.Scalar(1), "Dirichlet"),
+                    "top": (pybamm.Scalar(0), "Neumann"),
+                    "bottom": (pybamm.Scalar(1), "Neumann"),
+                }
+            }
+            eqn_disc = disc.process_symbol(eqn)
+            eqn_disc.evaluate(None, LR.flatten())
+            eqn_disc.evaluate(None, TB.flatten())

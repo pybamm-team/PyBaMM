@@ -308,3 +308,236 @@ class TestFiniteVolume2DGradDiv:
             div_eqn_disc.evaluate(None, linear_y).flatten(),
             np.zeros((submesh.npts_lr) * (submesh.npts_tb)),
         )
+
+    def test_grad_div_shapes_concatenation(self):
+        """
+        Test grad and div with concatenation variables using Dirichlet boundary conditions
+        """
+        # Create discretisation
+        mesh = get_mesh_for_testing_2d()
+        spatial_methods = {
+            "negative electrode": pybamm.FiniteVolume2D(),
+            "separator": pybamm.FiniteVolume2D(),
+            "positive electrode": pybamm.FiniteVolume2D(),
+        }
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        # Create separate variables for each domain
+        var_n = pybamm.Variable("var_n", domain=["negative electrode"])
+        var_s = pybamm.Variable("var_s", domain=["separator"])
+        var_p = pybamm.Variable("var_p", domain=["positive electrode"])
+
+        # Create concatenation variable
+        var_concat = pybamm.concatenation(var_n, var_s, var_p)
+
+        # Get combined submesh
+        submesh = mesh[("negative electrode", "separator", "positive electrode")]
+
+        # Test gradient of constant is zero
+        # grad(1) = 0
+        grad_eqn = pybamm.grad(var_concat)
+        boundary_conditions = {
+            var_concat: {
+                "left": (pybamm.Scalar(1), "Dirichlet"),
+                "right": (pybamm.Scalar(1), "Dirichlet"),
+                "top": (pybamm.Scalar(1), "Dirichlet"),
+                "bottom": (pybamm.Scalar(1), "Dirichlet"),
+            }
+        }
+        disc.bcs = boundary_conditions
+        disc.set_variable_slices([var_n, var_s, var_p])
+        grad_eqn_disc = disc.process_symbol(grad_eqn)
+
+        # Create constant values for each domain and concatenate
+        submesh_n = mesh["negative electrode"]
+        submesh_s = mesh["separator"]
+        submesh_p = mesh["positive electrode"]
+
+        constant_n = np.ones(submesh_n.npts)
+        constant_s = np.ones(submesh_s.npts)
+        constant_p = np.ones(submesh_p.npts)
+        constant_y = np.concatenate([constant_n, constant_s, constant_p])
+
+        np.testing.assert_array_almost_equal(
+            grad_eqn_disc.lr_field.evaluate(None, constant_y).flatten(),
+            np.zeros((submesh.npts_lr + 1) * (submesh.npts_tb)),
+        )
+        np.testing.assert_array_almost_equal(
+            grad_eqn_disc.tb_field.evaluate(None, constant_y).flatten(),
+            np.zeros((submesh.npts_lr) * (submesh.npts_tb + 1)),
+        )
+
+        # Test operations on linear x
+        # Create x-dependent values for each domain and concatenate
+        LR_n, TB_n = np.meshgrid(submesh_n.nodes_lr, submesh_n.nodes_tb)
+        LR_s, TB_s = np.meshgrid(submesh_s.nodes_lr, submesh_s.nodes_tb)
+        LR_p, TB_p = np.meshgrid(submesh_p.nodes_lr, submesh_p.nodes_tb)
+
+        submesh = mesh[("negative electrode", "separator", "positive electrode")]
+        LR, TB = np.meshgrid(submesh.nodes_lr, submesh.nodes_tb)
+        linear_x = LR.flatten()
+
+        N = pybamm.grad(var_concat)
+        div_eqn = pybamm.div(N)
+        boundary_conditions = {
+            var_concat: {
+                "left": (pybamm.Scalar(0), "Dirichlet"),
+                "right": (pybamm.Scalar(1), "Dirichlet"),
+                "top": (pybamm.Scalar(0), "Neumann"),
+                "bottom": (pybamm.Scalar(0), "Neumann"),
+            }
+        }
+        disc.bcs = boundary_conditions
+
+        # grad(x) = 1 in lr direction, 0 in tb direction
+        grad_eqn_disc = disc.process_symbol(grad_eqn)
+        np.testing.assert_array_almost_equal(
+            grad_eqn_disc.lr_field.evaluate(None, linear_x).flatten(),
+            np.ones((submesh.npts_lr + 1) * (submesh.npts_tb)),
+        )
+        np.testing.assert_array_almost_equal(
+            grad_eqn_disc.tb_field.evaluate(None, linear_x).flatten(),
+            np.zeros((submesh.npts_lr) * (submesh.npts_tb + 1)),
+        )
+
+        # div(grad(x)) = 0
+        div_eqn_disc = disc.process_symbol(div_eqn)
+        np.testing.assert_allclose(
+            div_eqn_disc.evaluate(None, linear_x),
+            np.zeros_like(submesh.npts),
+            rtol=1e-7,
+            atol=1e-6,
+        )
+
+        # Test operations on linear z
+        # Create z-dependent values for each domain and concatenate
+        linear_z = TB.flatten()
+
+        boundary_conditions = {
+            var_concat: {
+                "left": (pybamm.Scalar(0), "Neumann"),
+                "right": (pybamm.Scalar(0), "Neumann"),
+                "top": (pybamm.Scalar(0), "Dirichlet"),
+                "bottom": (pybamm.Scalar(1), "Dirichlet"),
+            }
+        }
+        disc.bcs = boundary_conditions
+
+        # grad(z) = 0 in lr direction, 1 in tb direction
+        grad_eqn_disc = disc.process_symbol(grad_eqn)
+        np.testing.assert_array_almost_equal(
+            grad_eqn_disc.lr_field.evaluate(None, linear_z).flatten(),
+            np.zeros((submesh.npts_lr + 1) * (submesh.npts_tb)),
+        )
+        np.testing.assert_array_almost_equal(
+            grad_eqn_disc.tb_field.evaluate(None, linear_z).flatten(),
+            np.ones((submesh.npts_lr) * (submesh.npts_tb + 1)),
+        )
+
+        # div(grad(z)) = 0
+        div_eqn_disc = disc.process_symbol(div_eqn)
+        np.testing.assert_allclose(
+            div_eqn_disc.evaluate(None, linear_z),
+            np.zeros_like(submesh.npts),
+            rtol=1e-7,
+            atol=1e-6,
+        )
+
+    def test_laplacian_shapes(self):
+        """
+        Test Laplacian with concatenation variables using Dirichlet boundary conditions
+        """
+        # Create discretisation
+        mesh = get_mesh_for_testing_2d()
+        spatial_methods = {
+            "negative electrode": pybamm.FiniteVolume2D(),
+            "separator": pybamm.FiniteVolume2D(),
+            "positive electrode": pybamm.FiniteVolume2D(),
+        }
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        # Create separate variables for each domain
+        var_n = pybamm.Variable("var_n", domain=["negative electrode"])
+        var_s = pybamm.Variable("var_s", domain=["separator"])
+        var_p = pybamm.Variable("var_p", domain=["positive electrode"])
+
+        # Create concatenation variable
+        var_concat = pybamm.concatenation(var_n, var_s, var_p)
+
+        # Get combined submesh
+        submesh = mesh[("negative electrode", "separator", "positive electrode")]
+
+        # Test Laplacian of constant is zero
+        # laplacian(1) = 0
+        laplacian_eqn = pybamm.laplacian(var_concat)
+        boundary_conditions = {
+            var_concat: {
+                "left": (pybamm.Scalar(1), "Dirichlet"),
+                "right": (pybamm.Scalar(1), "Dirichlet"),
+                "top": (pybamm.Scalar(1), "Dirichlet"),
+                "bottom": (pybamm.Scalar(1), "Dirichlet"),
+            }
+        }
+        disc.bcs = boundary_conditions
+        disc.set_variable_slices([var_n, var_s, var_p])
+        laplacian_eqn_disc = disc.process_symbol(laplacian_eqn)
+
+        # Create constant values for each domain and concatenate
+        submesh_n = mesh["negative electrode"]
+        submesh_s = mesh["separator"]
+        submesh_p = mesh["positive electrode"]
+
+        constant_n = np.ones(submesh_n.npts)
+        constant_s = np.ones(submesh_s.npts)
+        constant_p = np.ones(submesh_p.npts)
+        constant_y = np.concatenate([constant_n, constant_s, constant_p])
+
+        np.testing.assert_array_almost_equal(
+            laplacian_eqn_disc.evaluate(None, constant_y).flatten(),
+            np.zeros(submesh.npts),
+        )
+
+        # Test Laplacian of linear x is zero
+        # laplacian(x) = 0
+        LR, TB = np.meshgrid(submesh.nodes_lr, submesh.nodes_tb)
+        linear_x = LR.flatten()
+
+        boundary_conditions = {
+            var_concat: {
+                "left": (pybamm.Scalar(0), "Dirichlet"),
+                "right": (pybamm.Scalar(1), "Dirichlet"),
+                "top": (pybamm.Scalar(0), "Neumann"),
+                "bottom": (pybamm.Scalar(0), "Neumann"),
+            }
+        }
+        disc.bcs = boundary_conditions
+
+        laplacian_eqn_disc = disc.process_symbol(laplacian_eqn)
+        np.testing.assert_allclose(
+            laplacian_eqn_disc.evaluate(None, linear_x).flatten(),
+            np.zeros(submesh.npts),
+            rtol=1e-7,
+            atol=1e-6,
+        )
+
+        # Test Laplacian of linear z is zero
+        # laplacian(z) = 0
+        linear_z = TB.flatten()
+
+        boundary_conditions = {
+            var_concat: {
+                "left": (pybamm.Scalar(0), "Neumann"),
+                "right": (pybamm.Scalar(0), "Neumann"),
+                "top": (pybamm.Scalar(0), "Dirichlet"),
+                "bottom": (pybamm.Scalar(1), "Dirichlet"),
+            }
+        }
+        disc.bcs = boundary_conditions
+
+        laplacian_eqn_disc = disc.process_symbol(laplacian_eqn)
+        np.testing.assert_allclose(
+            laplacian_eqn_disc.evaluate(None, linear_z).flatten(),
+            np.zeros(submesh.npts),
+            rtol=1e-7,
+            atol=1e-6,
+        )
