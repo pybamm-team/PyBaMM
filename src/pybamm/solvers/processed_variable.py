@@ -1,11 +1,12 @@
+import bisect
 from typing import Optional
+
 import casadi
 import numpy as np
-import pybamm
-from scipy.integrate import cumulative_trapezoid
 import xarray as xr
-import bisect
 from pybammsolvers import idaklu
+
+import pybamm
 
 
 class ProcessedVariable:
@@ -477,7 +478,28 @@ class ProcessedVariable:
                         f"ensure the correct times are used.\nSolution times: {ts}\nDiscrete Sum times: {self.time_integral.discrete_times}"
                     )
 
-            S_var = self._observe_postfix(S_var, ts)
+            if self.time_integral is not None:
+                post_sum_values = self.time_integral.postfix_sum(S_var, ts)
+                post_sum_node = self.time_integral.post_sum_node
+                if post_sum_node is None:
+                    S_var = post_sum_values
+                else:
+                    # If there is a post-sum expression, we need to compute the
+                    # sensitivity of the post-sum expression as well
+                    y_casadi = casadi.MX.sym("y", post_sum_values.shape[0])
+                    s_var_casadi = casadi.MX.sym("s_var", post_sum_values.shape)
+                    post_sum_casadi = post_sum_node.to_casadi(
+                        t_casadi, y_casadi, inputs=p_casadi
+                    )
+                    dpost_dy = casadi.jacobian(post_sum_casadi, y_casadi)
+                    dpost_dp = casadi.jacobian(post_sum_casadi, p_casadi_stacked)
+                    sens = dpost_dy @ s_var_casadi + dpost_dp
+                    sens_fun = casadi.Function(
+                        "sens_fun",
+                        [t_casadi, y_casadi, p_casadi_stacked, s_var_casadi],
+                        [sens],
+                    )
+                    S_var = sens_fun(0.0, self.data, inputs_stacked, post_sum_values)
 
             all_S_var.append(S_var)
 
@@ -526,16 +548,9 @@ class ProcessedVariable0D(ProcessedVariable):
     def _observe_postfix(self, entries, t):
         if self.time_integral is None:
             return entries
-        if self.time_integral.method == "discrete":
-            return np.sum(entries, axis=0, initial=self.time_integral.initial_condition)
-        elif self.time_integral.method == "continuous":
-            return cumulative_trapezoid(
-                entries, self.t_pts, initial=float(self.time_integral.initial_condition)
-            )
-        else:
-            raise ValueError(
-                "time_integral method must be 'discrete' or 'continuous'"
-            )  # pragma: no cover
+        return self.time_integral.postfix(
+            entries, self.t_pts, self.all_inputs_casadi[0]
+        )
 
     def _interp_setup(self, entries, t):
         # save attributes for interpolation

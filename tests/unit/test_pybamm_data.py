@@ -1,5 +1,6 @@
-import pybamm
 import pytest
+
+import pybamm
 from tests import no_internet_connection
 
 data_loader = pybamm.DataLoader()

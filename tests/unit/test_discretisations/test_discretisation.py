@@ -2,20 +2,19 @@
 # Tests for the base model class
 #
 
-import pytest
-import pybamm
-
 import numpy as np
-from tests import (
-    get_mesh_for_testing,
-    get_discretisation_for_testing,
-    get_1p1d_discretisation_for_testing,
-    get_2p1d_mesh_for_testing,
-)
-from tests.shared import SpatialMethodForTesting
-
+import pytest
 from scipy.sparse import block_diag, csc_matrix
 from scipy.sparse.linalg import inv
+
+import pybamm
+from tests import (
+    get_1p1d_discretisation_for_testing,
+    get_2p1d_mesh_for_testing,
+    get_discretisation_for_testing,
+    get_mesh_for_testing,
+)
+from tests.shared import SpatialMethodForTesting
 
 
 class TestDiscretise:

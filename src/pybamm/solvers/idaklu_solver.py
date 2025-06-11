@@ -1,15 +1,15 @@
 # mypy: ignore-errors
-import os
-import casadi
-import pybamm
-import numpy as np
 import numbers
-import scipy.sparse as sparse
-from scipy.linalg import bandwidth
-import pybammsolvers.idaklu as idaklu
-
+import os
 import warnings
 
+import casadi
+import numpy as np
+import pybammsolvers.idaklu as idaklu
+import scipy.sparse as sparse
+from scipy.linalg import bandwidth
+
+import pybamm
 
 if pybamm.has_jax():
     import jax

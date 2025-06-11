@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from typing import Union
-from typing_extensions import TypeAlias
+from typing import Any, Union
+
 import numpy as np
 import numpy.typing as npt
+from typing_extensions import TypeAlias
+
 import pybamm
-from typing import Any
 
 # numbers.Number should not be used for type hints
 Numeric: TypeAlias = Union[int, float, np.number]

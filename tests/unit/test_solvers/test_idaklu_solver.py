@@ -1,10 +1,12 @@
-from contextlib import redirect_stdout
 import io
-import pytest
-import numpy as np
 import warnings
-import pybamm
+from contextlib import redirect_stdout
+
+import numpy as np
+import pytest
 from scipy.sparse import eye
+
+import pybamm
 from tests import get_discretisation_for_testing
 
 

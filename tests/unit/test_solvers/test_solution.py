@@ -1,14 +1,16 @@
 #
 # Tests for the Solution class
 #
-import pytest
 import io
-import logging
 import json
-import pybamm
+import logging
+
 import numpy as np
 import pandas as pd
+import pytest
 from scipy.io import loadmat
+
+import pybamm
 from tests import get_discretisation_for_testing
 
 
@@ -498,10 +500,45 @@ class TestSolution:
         time = sim.solution["Time [h]"](sim.solution.t)
         assert len(time) == 10
 
-    _solver_classes = [pybamm.CasadiSolver, pybamm.IDAKLUSolver]
+    def test_discrete_data_sum_errors(self):
+        data_times = np.array([0.0])
+        data_values = np.array([1.0])
+        data = pybamm.DiscreteTimeData(data_times, data_values, "test_data")
+        dts = pybamm.DiscreteTimeSum(data)
 
-    @pytest.mark.parametrize("solver_class", _solver_classes)
-    def test_discrete_data_sum(self, solver_class):
+        model = pybamm.BaseModel(name="test_model2")
+        c = pybamm.Variable("c")
+        model.rhs = {c: -c}
+        model.initial_conditions = {c: 1}
+        model.variables["dts"] = pybamm.t * dts
+        solver = pybamm.IDAKLUSolver()
+        with pytest.raises(
+            ValueError,
+            match="time or state vector nodes should only appear within the time integral node",
+        ):
+            solver.solve(model, t_eval=[0, 0.1])["dts"]
+
+        model = pybamm.BaseModel(name="test_model2")
+        c = pybamm.Variable("c")
+        model.rhs = {c: -c}
+        model.initial_conditions = {c: 1}
+        model.variables["dts"] = dts * dts
+        solver = pybamm.IDAKLUSolver()
+        with pytest.raises(
+            ValueError,
+            match="More than one time integral node found",
+        ):
+            solver.solve(model, t_eval=[0, 0.1])["dts"]
+
+    _solver_classes = [
+        (pybamm.CasadiSolver, False),
+        (pybamm.IDAKLUSolver, False),
+        (pybamm.CasadiSolver, True),
+        (pybamm.IDAKLUSolver, True),
+    ]
+
+    @pytest.mark.parametrize("solver_class,use_post_sum", _solver_classes)
+    def test_discrete_data_sum(self, solver_class, use_post_sum):
         model = pybamm.BaseModel(name="test_model")
         c = pybamm.Variable("c")
         model.rhs = {c: -2 * c}
@@ -519,13 +556,17 @@ class TestSolution:
         data_values = solver.solve(model, t_eval=t_eval, t_interp=t_interp)["c"].entries
 
         data = pybamm.DiscreteTimeData(data_times, data_values, "test_data")
-        data_comparison = pybamm.DiscreteTimeSum((c - data) ** 2)
+        if use_post_sum:
+            data_comparison = (pybamm.DiscreteTimeSum((c - data) ** 2)) ** 0.5
+        else:
+            data_comparison = pybamm.DiscreteTimeSum((c - data) ** 2)
 
         model = pybamm.BaseModel(name="test_model2")
         a = pybamm.InputParameter("a")
         b = pybamm.InputParameter("b")
-        model.rhs = {c: b * -a * c}
-        model.initial_conditions = {c: 1}
+        c2 = pybamm.Variable("c2")
+        model.rhs = {c: b * -a * c, c2: -2 * c2}
+        model.initial_conditions = {c: 1, c2: 1}
         model.variables["data_comparison"] = data_comparison
         model.variables["data"] = data
         model.variables["c"] = c
@@ -538,7 +579,10 @@ class TestSolution:
                 model, t_eval=t_eval, t_interp=t_interp, inputs={"a": a, "b": b}
             )
             y_sol = np.exp(b * -a * data_times)
-            expected = np.sum((y_sol - data_values) ** 2)
+            if use_post_sum:
+                expected = np.sqrt(np.sum((y_sol - data_values) ** 2))
+            else:
+                expected = np.sum((y_sol - data_values) ** 2)
             np.testing.assert_allclose(
                 sol["data_comparison"](), expected, rtol=1e-3, atol=1e-2
             )
@@ -554,6 +598,14 @@ class TestSolution:
                 )
                 y_sol = np.exp(b * -a * data_times)
                 dy_sol_da = -data_times * y_sol
+                if use_post_sum:
+                    expected_sens = (
+                        0.5
+                        * (expected ** (-0.5))
+                        * np.sum(2 * (y_sol - data_values) * dy_sol_da)
+                    )
+                else:
+                    expected_sens = np.sum(2 * (y_sol - data_values) * dy_sol_da)
 
                 np.testing.assert_allclose(
                     sol["data"].sensitivities["a"].flatten(),
@@ -575,7 +627,7 @@ class TestSolution:
                 )
                 np.testing.assert_allclose(
                     sol["data_comparison"].sensitivities["a"],
-                    np.sum(2 * (y_sol - data_values) * dy_sol_da),
+                    expected_sens,
                     rtol=1e-3,
                     atol=1e-2,
                 )

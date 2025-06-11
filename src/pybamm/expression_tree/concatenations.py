@@ -1,18 +1,17 @@
-from __future__ import annotations
-
 #
 # Concatenation classes
 #
 from __future__ import annotations
+
 import copy
 from collections import defaultdict
+from collections.abc import Sequence
+from typing import Any
 
 import numpy as np
 import numpy.typing as npt
 import sympy
 from scipy.sparse import issparse, vstack
-from collections.abc import Sequence
-from typing import Any
 
 import pybamm
 

@@ -2,9 +2,11 @@
 # Native PyBaMM Meshes
 #
 import numbers
-import numpy as np
-import pybamm
 import warnings
+
+import numpy as np
+
+import pybamm
 
 
 class Mesh(dict):

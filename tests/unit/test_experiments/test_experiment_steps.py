@@ -1,10 +1,12 @@
 #
 # Test the experiment steps
 #
-import pytest
-import pybamm
-import numpy as np
 from datetime import datetime
+
+import numpy as np
+import pytest
+
+import pybamm
 
 
 class TestExperimentSteps:

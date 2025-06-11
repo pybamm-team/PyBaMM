@@ -1,8 +1,9 @@
 #
 # Base class for thermal effects
 #
-import pybamm
 import numpy as np
+
+import pybamm
 
 
 class BaseThermal(pybamm.BaseSubModel):

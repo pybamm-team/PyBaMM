@@ -1,6 +1,7 @@
-import pybamm
 import numpy as np
-from scipy.sparse import eye, kron, coo_matrix, csr_matrix, vstack
+from scipy.sparse import coo_matrix, csr_matrix, eye, kron, vstack
+
+import pybamm
 
 
 class SpatialMethod:

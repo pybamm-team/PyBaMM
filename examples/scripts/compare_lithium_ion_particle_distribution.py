@@ -2,6 +2,7 @@
 # Compare lithium-ion battery models with and without particle size distibution
 #
 import numpy as np
+
 import pybamm
 
 pybamm.set_logging_level("INFO")
