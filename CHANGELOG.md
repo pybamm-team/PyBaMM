@@ -83,6 +83,7 @@
 
 ## Optimizations
 
+- Enhanced option checking by converting string-based options into tuples for consistent handling.([#4707](https://github.com/pybamm-team/PyBaMM/pull/4707)
 - Performance improvements to `IDAKLUSolver` initialization and processed variables. ([#4878](https://github.com/pybamm-team/PyBaMM/pull/4878))
 - Improved search to handle cases with shorter input strings and provide more relevant results. ([#4735](https://github.com/pybamm-team/PyBaMM/pull/4735))
 
