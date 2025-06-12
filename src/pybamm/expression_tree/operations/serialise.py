@@ -302,19 +302,18 @@ class Serialise:
 
         with open(filename + ".json", "w") as f:
             json.dump(model_json, f, indent=2, default=Serialise._json_encoder)
-            
+
     @staticmethod
-    def load_custom_model(filename,battery_model=None):
+    def load_custom_model(filename, battery_model=None):
         with open(filename) as f:
             model_data = json.load(f)
         model = battery_model if battery_model is not None else pybamm.BaseModel()
-        
+
         model.name = model_data["name"]
-        
+
         model.rhs = {
             pybamm.Symbol(k): Serialise.convert_symbol_from_json(v)
             for k, v in model_data["rhs"].items()
-
         }
         model.algebraic = {
             pybamm.Symbol(k): Serialise.convert_symbol_from_json(v)
@@ -331,8 +330,8 @@ class Serialise:
             }
             for var, conds in model_data["boundary_conditions"].items()
         }
-        model.events  = [
-                pybamm.Event(
+        model.events = [
+            pybamm.Event(
                 e["name"],
                 Serialise.convert_symbol_from_json(e["expression"]),
                 e["event_type"],
@@ -347,9 +346,9 @@ class Serialise:
         param_values = Serialise.convert_parameter_values_to_json(
             model_data["parameters"]
         )
-        
-        return model_data, param_values        
- 
+
+        return model_data, param_values
+
     # Helper functions
 
     def _get_pybamm_class(self, snippet: dict):
@@ -559,11 +558,13 @@ class Serialise:
         dict
             The JSON-serializable dictionary
         """
+
         def maybe_add_auxiliary_domains(symbol, json_dict):
             aux_domains = getattr(symbol, "_auxiliary_domains", None)
             if aux_domains:
                 json_dict["auxiliary_domains"] = aux_domains
             return json_dict
+
         if isinstance(symbol, numbers.Number | list):
             return symbol
         elif isinstance(symbol, pybamm.Time):
@@ -579,7 +580,7 @@ class Serialise:
             json_dict = {
                 "type": "PrimaryBroadcast",
                 "broadcast_domain": symbol.broadcast_domain,
-                "children": [Serialise.convert_symbol_to_json(symbol.orphans[0])]
+                "children": [Serialise.convert_symbol_to_json(symbol.orphans[0])],
             }
             return maybe_add_auxiliary_domains(symbol, json_dict)
 
@@ -605,7 +606,9 @@ class Serialise:
                 "type": symbol.__class__.__name__,
                 "x": [x.tolist() for x in symbol.x],
                 "y": symbol.y.tolist(),
-                "children": [Serialise.convert_symbol_to_json(c) for c in symbol.children],
+                "children": [
+                    Serialise.convert_symbol_to_json(c) for c in symbol.children
+                ],
                 "name": symbol.name,
                 "interpolator": symbol.interpolator,
                 "entries_string": symbol.entries_string,
@@ -635,14 +638,18 @@ class Serialise:
                 raise NotImplementedError("SpecificFunction is not supported directly")
             json_dict = {
                 "type": symbol.__class__.__name__,
-                "children": [Serialise.convert_symbol_to_json(c) for c in symbol.children],
+                "children": [
+                    Serialise.convert_symbol_to_json(c) for c in symbol.children
+                ],
             }
             return maybe_add_auxiliary_domains(symbol, json_dict)
 
         elif isinstance(symbol, pybamm.UnaryOperator | pybamm.BinaryOperator):
             json_dict = {
                 "type": symbol.__class__.__name__,
-                "children": [Serialise.convert_symbol_to_json(c) for c in symbol.children],
+                "children": [
+                    Serialise.convert_symbol_to_json(c) for c in symbol.children
+                ],
             }
             return maybe_add_auxiliary_domains(symbol, json_dict)
 
@@ -650,7 +657,9 @@ class Serialise:
             # Generic fallback for other symbols with children
             json_dict = {
                 "type": symbol.__class__.__name__,
-                "children": [Serialise.convert_symbol_to_json(c) for c in symbol.children],
+                "children": [
+                    Serialise.convert_symbol_to_json(c) for c in symbol.children
+                ],
             }
             return maybe_add_auxiliary_domains(symbol, json_dict)
         else:
@@ -730,14 +739,17 @@ class Serialise:
                 diff_variable = Serialise.convert_symbol_from_json(diff_variable)
             return pybamm.FunctionParameter(
                 json_data["name"],
-                {k: Serialise.convert_symbol_from_json(v) for k, v in json_data["inputs"].items()},
+                {
+                    k: Serialise.convert_symbol_from_json(v)
+                    for k, v in json_data["inputs"].items()
+                },
                 diff_variable=diff_variable,
-            )  
+            )
         elif json_data["type"] == "PrimaryBroadcast":
             child = Serialise.convert_symbol_from_json(json_data["children"][0])
             domain = json_data["broadcast_domain"]
             return pybamm.PrimaryBroadcast(child, domain)
- 
+
         elif json_data["type"] == "Time":
             return pybamm.t
         elif json_data["type"] == "Variable":
@@ -756,4 +768,4 @@ class Serialise:
                 *[Serialise.convert_symbol_from_json(c) for c in json_data["children"]]
             )
         else:
-            raise ValueError(f"Unhandled symbol type or malformed entry: {json_data}")    
+            raise ValueError(f"Unhandled symbol type or malformed entry: {json_data}")
