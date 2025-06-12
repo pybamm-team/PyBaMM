@@ -36,7 +36,7 @@ class EntryPoint(Mapping):
     _instances = 0
 
     def __init__(self, group):
-        """Dict of entry points for parameter sets or models, lazily load entry points as"""
+        """Dict of entry points for parameter sets or models to lazily load as entry points"""
         if not hasattr(
             self, "initialized"
         ):  # Ensure __init__ is called once per instance
@@ -148,7 +148,6 @@ def Model(model: str, options=None, *args, **kwargs):  # doctest: +SKIP
     """
     model_class = models.get_class(model)
 
-    # Pass options as the first argument if provided, then *args and **kwargs
     if options is not None:
         return model_class(options, *args, **kwargs)
     else:
