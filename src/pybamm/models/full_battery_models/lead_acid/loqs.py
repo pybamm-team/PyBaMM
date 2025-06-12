@@ -2,6 +2,7 @@
 # Lead-acid LOQS model
 #
 import pybamm
+
 from .base_lead_acid_model import BaseModel
 
 

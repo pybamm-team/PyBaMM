@@ -1,14 +1,16 @@
 from __future__ import annotations
 
-import pybamm
-from datetime import datetime
-import json
 import importlib
-import numpy as np
+import json
 import re
 from enum import Enum
 import inspect
 import numbers
+from datetime import datetime
+
+import numpy as np
+
+import pybamm
 
 
 class Serialise:

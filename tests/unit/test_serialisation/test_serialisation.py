@@ -4,12 +4,13 @@
 
 import json
 import os
-import pytest
 from datetime import datetime
-import numpy as np
-import pybamm
 
+import numpy as np
+import pytest
 from numpy import testing
+
+import pybamm
 from pybamm.expression_tree.operations.serialise import Serialise
 
 

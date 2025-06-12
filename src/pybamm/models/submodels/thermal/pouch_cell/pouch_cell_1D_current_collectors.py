@@ -2,7 +2,6 @@
 # Class for one-dimensional thermal submodel for use in the "1+1D" pouch cell model
 #
 import pybamm
-
 from pybamm.models.submodels.thermal.base_thermal import BaseThermal
 
 

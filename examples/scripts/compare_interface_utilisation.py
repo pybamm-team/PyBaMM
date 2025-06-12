@@ -2,8 +2,9 @@
 # Example showing how to change the interface utilisation
 #
 
-import pybamm
 import numpy as np
+
+import pybamm
 
 pybamm.set_logging_level("INFO")
 

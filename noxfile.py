@@ -1,8 +1,8 @@
-import nox
 import os
 import sys
 from pathlib import Path
 
+import nox
 
 # Options to modify nox behaviour
 nox.options.default_venv_backend = "uv|virtualenv"

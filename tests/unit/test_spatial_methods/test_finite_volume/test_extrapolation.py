@@ -2,15 +2,16 @@
 # Test for the extrapolations in the finite volume class
 #
 
-import pybamm
-import pytest
-from tests import (
-    get_mesh_for_testing,
-    get_p2d_mesh_for_testing,
-    get_1p1d_mesh_for_testing,
-    get_mesh_for_testing_symbolic,
-)
 import numpy as np
+import pytest
+
+import pybamm
+from tests import (
+    get_1p1d_mesh_for_testing,
+    get_mesh_for_testing,
+    get_mesh_for_testing_symbolic,
+    get_p2d_mesh_for_testing,
+)
 
 
 def errors(

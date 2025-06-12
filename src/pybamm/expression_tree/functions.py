@@ -3,12 +3,13 @@
 #
 from __future__ import annotations
 
+from collections.abc import Sequence
+from typing import Callable
+
 import numpy as np
 import numpy.typing as npt
-from scipy import special
 import sympy
-from typing import Callable
-from collections.abc import Sequence
+from scipy import special
 from typing_extensions import TypeVar
 
 import pybamm

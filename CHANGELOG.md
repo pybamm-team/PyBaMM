@@ -1,7 +1,27 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Features
+
+- Generalise `pybamm.DiscreteTimeSum` to allow it to be embedded in other expressions ([#5044](https://github.com/pybamm-team/PyBaMM/pull/5044))
+
 ## Optimizations
 
+## Bug fixes
+
+- Converts sensitivities to numpy objects, fixing bug in `DiscreteTimeSum` sensitivity calculation ([#5037](https://github.com/pybamm-team/PyBaMM/pull/5037))
+
+
+## Breaking changes
+
+# [v25.6.0](https://github.com/pybamm-team/PyBaMM/tree/v25.6.0) - 2025-05-27
+
+## Features
+
+- Renamed MSMR parameters from symbols to written out names with units as a non-breaking change with a deprecation warning. ([#5027](https://github.com/pybamm-team/PyBaMM/pull/5027))
+
+## Optimizations
+
+- Update docs, examples and tests to use `IDAKLUSolver`. ([#4996](https://github.com/pybamm-team/PyBaMM/pull/4996))
 - Add a solver option to change `on_extrapolation` behavior to `"error"`, `"warn"`, or `"ignore"` on extrapolation events. ([#4993](https://github.com/pybamm-team/PyBaMM/pull/4993))
 - Improve reliability of `CasadiAlgebraicSolver` and added an option for the `step_tol` of the Newton iteration. ([#4985](https://github.com/pybamm-team/PyBaMM/pull/4985))
 - Speed up calculation of variable sensitivities in `ProcessedVariable` ([#5000](https://github.com/pybamm-team/PyBaMM/pull/5000))
@@ -10,6 +30,7 @@
 
 - Fixed a bug in the `QuickPlot` which would return empty values for 1D variables at the beginning and end of a timespan. ([#4991](https://github.com/pybamm-team/PyBaMM/pull/4991))
 - Fixed a bug in the `Exponential1DSubMesh` where the mesh was not being created correctly for non-zero minimum values. ([#4989](https://github.com/pybamm-team/PyBaMM/pull/4989))
+- Fixed sensitivity calculation for `pybamm.DiscreteTimeSum`. ([#5007](https://github.com/pybamm-team/PyBaMM/pull/5008))
 
 ## Breaking changes
 

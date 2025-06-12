@@ -1,7 +1,8 @@
-import pybamm
-from benchmarks.benchmark_utils import set_random_seed
 import numpy as np
 import numpy.typing as npt
+
+import pybamm
+from benchmarks.benchmark_utils import set_random_seed
 
 
 def compute_discretisation(model, param):

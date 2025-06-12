@@ -2,10 +2,10 @@
 # Solver class using Scipy's adaptive time stepper
 #
 import casadi
-import pybamm
-
-import scipy.integrate as it
 import numpy as np
+import scipy.integrate as it
+
+import pybamm
 
 
 class ScipySolver(pybamm.BaseSolver):

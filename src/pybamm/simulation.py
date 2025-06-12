@@ -1,14 +1,16 @@
 from __future__ import annotations
-import pickle
-import pybamm
-import numpy as np
-import warnings
-from functools import lru_cache
-from datetime import timedelta
-import pybamm.telemetry
-from pybamm.util import import_optional_dependency
 
+import pickle
+import warnings
+from datetime import timedelta
+from functools import lru_cache
+
+import numpy as np
+
+import pybamm
+import pybamm.telemetry
 from pybamm.expression_tree.operations.serialise import Serialise
+from pybamm.util import import_optional_dependency
 
 
 def is_notebook():

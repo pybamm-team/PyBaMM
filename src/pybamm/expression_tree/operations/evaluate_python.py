@@ -2,12 +2,13 @@
 # Write a symbol to python
 #
 from __future__ import annotations
+
 import numbers
 from collections import OrderedDict
-from numpy.typing import ArrayLike
 
 import numpy as np
 import scipy.sparse
+from numpy.typing import ArrayLike
 
 import pybamm
 
