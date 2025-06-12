@@ -326,14 +326,21 @@ def find_symbols(
             all_child_vectors = []
             for i in range(symbol.secondary_dimensions_npts):
                 child_vectors = []
-                for child_var, slices in zip(children_vars, symbol._children_slices):
+                for child_var, slices in zip(
+                    children_vars, symbol._children_slices, strict=False
+                ):
                     for child_dom, child_slice in slices.items():
                         slice_starts.append(symbol._slices[child_dom][i].start)
                         child_vectors.append(
                             f"{child_var}[{child_slice[i].start}:{child_slice[i].stop}]"
                         )
                 all_child_vectors.extend(
-                    [v for _, v in sorted(zip(slice_starts, child_vectors))]
+                    [
+                        v
+                        for _, v in sorted(
+                            zip(slice_starts, child_vectors, strict=False)
+                        )
+                    ]
                 )
             if len(children_vars) > 1 or symbol.secondary_dimensions_npts > 1:
                 symbol_str = "np.concatenate(({}))".format(",".join(all_child_vectors))

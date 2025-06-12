@@ -153,7 +153,7 @@ class FuzzyDict(dict):
             Default is 0.4
         """
 
-        if not isinstance(keys, (str, list)) or not all(
+        if not isinstance(keys, str | list) or not all(
             isinstance(k, str) for k in keys
         ):
             msg = f"'keys' must be a string or a list of strings, got {type(keys)}"
@@ -203,7 +203,7 @@ class FuzzyDict(dict):
             return
 
         # If no exact matches, iterate over search keys individually
-        for original_key, search_key in zip(original_keys, search_keys):
+        for original_key, search_key in zip(original_keys, search_keys, strict=False):
             exact_key_matches, partial_matches = self._find_matches(
                 search_key, known_keys, min_similarity
             )

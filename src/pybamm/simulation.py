@@ -98,7 +98,7 @@ class Simulation:
                         }
                     )
         else:
-            if isinstance(experiment, (str, pybamm.step.BaseStep)):
+            if isinstance(experiment, str | pybamm.step.BaseStep):
                 experiment = pybamm.Experiment([experiment])
             elif isinstance(experiment, list):
                 experiment = pybamm.Experiment(experiment)

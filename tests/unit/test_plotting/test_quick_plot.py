@@ -342,7 +342,9 @@ class TestQuickPlot:
             # 1D variables should be evaluated on edges
             c_e = c_e_var(t=t, x=mesh[c_e_var.domain].edges)
 
-            for unit, scale in zip(["seconds", "minutes", "hours"], [1, 60, 3600]):
+            for unit, scale in zip(
+                ["seconds", "minutes", "hours"], [1, 60, 3600], strict=False
+            ):
                 quick_plot = pybamm.QuickPlot(
                     solution, ["Electrolyte concentration [mol.m-3]"], time_unit=unit
                 )
@@ -375,7 +377,9 @@ class TestQuickPlot:
                 # check 2D (space) variables update properly for different time units
                 c_n = solution["Negative particle concentration [mol.m-3]"]
 
-                for unit, scale in zip(["seconds", "minutes", "hours"], [1, 60, 3600]):
+                for unit, scale in zip(
+                    ["seconds", "minutes", "hours"], [1, 60, 3600], strict=False
+                ):
                     quick_plot = pybamm.QuickPlot(
                         solution,
                         ["Negative particle concentration [mol.m-3]"],
@@ -419,7 +423,9 @@ class TestQuickPlot:
         # Note: these should be the transpose of the entries in the processed variable
         c_e = solution["Electrolyte concentration [mol.m-3]"]
 
-        for unit, scale in zip(["seconds", "minutes", "hours"], [1, 60, 3600]):
+        for unit, scale in zip(
+            ["seconds", "minutes", "hours"], [1, 60, 3600], strict=False
+        ):
             quick_plot = pybamm.QuickPlot(
                 solution, ["Electrolyte concentration [mol.m-3]"], time_unit=unit
             )
@@ -464,7 +470,9 @@ class TestQuickPlot:
         # Note: these should be the transpose of the entries in the processed variable
         phi_n = solution["Negative current collector potential [V]"].entries
 
-        for unit, scale in zip(["seconds", "minutes", "hours"], [1, 60, 3600]):
+        for unit, scale in zip(
+            ["seconds", "minutes", "hours"], [1, 60, 3600], strict=False
+        ):
             quick_plot = pybamm.QuickPlot(
                 solution, ["Negative current collector potential [V]"], time_unit=unit
             )

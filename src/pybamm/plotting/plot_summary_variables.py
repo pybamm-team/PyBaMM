@@ -58,7 +58,7 @@ def plot_summary_variables(
     fig, axes = plt.subplots(n, m, **kwargs_fig)
 
     # loop through the subplots and plot the output_variables
-    for var, ax in zip(output_variables, axes.flat):
+    for var, ax in zip(output_variables, axes.flat, strict=False):
         # loop through the solutions to compare output_variables
         for solution in solutions:
             # plot summary variable v/s cycle number

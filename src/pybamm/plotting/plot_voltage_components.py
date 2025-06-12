@@ -124,7 +124,7 @@ def plot_voltage_components(
         ocv = initial_ocv - delta_ocp_n + delta_ocp_p
     top = ocv
     # Plot components
-    for overpotential, label in zip(overpotentials, labels):
+    for overpotential, label in zip(overpotentials, labels, strict=False):
         # negative overpotentials are positive for a discharge and negative for a charge
         # so we have to multiply by -1 to show them correctly
         sgn = -1 if "negative" in overpotential else 1

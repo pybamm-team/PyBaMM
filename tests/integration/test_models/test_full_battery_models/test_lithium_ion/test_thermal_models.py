@@ -168,7 +168,7 @@ class TestThermal:
         # solve the models
         params = [lumped_params, lumped_params_contact_resistance]
         sols = []
-        for model, param in zip(models, params):
+        for model, param in zip(models, params, strict=False):
             sim = pybamm.Simulation(model, parameter_values=param)
             sim.solve([0, 3600])
             sols.append(sim.solution)

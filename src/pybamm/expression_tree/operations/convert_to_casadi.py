@@ -60,12 +60,7 @@ class CasadiConverter:
         """See :meth:`CasadiConverter.convert()`."""
         if isinstance(
             symbol,
-            (
-                pybamm.Scalar,
-                pybamm.Array,
-                pybamm.Time,
-                pybamm.InputParameter,
-            ),
+            pybamm.Scalar | pybamm.Array | pybamm.Time | pybamm.InputParameter,
         ):
             return casadi.MX(symbol.evaluate(t, y, y_dot, inputs))
 
@@ -270,7 +265,7 @@ class CasadiConverter:
             converted_children = [
                 self.convert(child, t, y, y_dot, inputs) for child in symbol.children
             ]
-            if isinstance(symbol, (pybamm.NumpyConcatenation, pybamm.SparseStack)):
+            if isinstance(symbol, pybamm.NumpyConcatenation | pybamm.SparseStack):
                 return casadi.vertcat(*converted_children)
             # DomainConcatenation specifies a particular ordering for the concatenation,
             # which we must follow
@@ -280,7 +275,7 @@ class CasadiConverter:
                 for i in range(symbol.secondary_dimensions_npts):
                     child_vectors = []
                     for child_var, slices in zip(
-                        converted_children, symbol._children_slices
+                        converted_children, symbol._children_slices, strict=False
                     ):
                         for child_dom, child_slice in slices.items():
                             slice_starts.append(symbol._slices[child_dom][i].start)
@@ -288,7 +283,12 @@ class CasadiConverter:
                                 child_var[child_slice[i].start : child_slice[i].stop]
                             )
                     all_child_vectors.extend(
-                        [v for _, v in sorted(zip(slice_starts, child_vectors))]
+                        [
+                            v
+                            for _, v in sorted(
+                                zip(slice_starts, child_vectors, strict=False)
+                            )
+                        ]
                     )
                 return casadi.vertcat(*all_child_vectors)
 

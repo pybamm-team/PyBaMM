@@ -109,7 +109,7 @@ class PrimaryBroadcast(Broadcast):
         name: str | None = None,
     ):
         # Convert child to scalar if it is a number
-        if isinstance(child, (float, int, np.number)):
+        if isinstance(child, float | int | np.number):
             child = pybamm.Scalar(child)
 
         # cast child to Symbol for mypy
@@ -469,7 +469,7 @@ class FullBroadcast(Broadcast):
         name: str | None = None,
     ):
         # Convert child to scalar if it is a number
-        if isinstance(child_input, (float, int, np.number)):
+        if isinstance(child_input, float | int | np.number):
             child: pybamm.Scalar = pybamm.Scalar(child_input)
         else:
             child: pybamm.Symbol = child_input  # type: ignore[no-redef]

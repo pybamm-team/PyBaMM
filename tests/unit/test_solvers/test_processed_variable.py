@@ -1419,7 +1419,7 @@ class TestProcessedVariable:
         # Ground truth spline interpolants from scipy
         spls = [
             CubicHermiteSpline(t, y, yp, axis=1)
-            for t, y, yp in zip(sol.all_ts, sol.all_ys, sol.all_yps)
+            for t, y, yp in zip(sol.all_ts, sol.all_ys, sol.all_yps, strict=False)
         ]
 
         def spl(t):

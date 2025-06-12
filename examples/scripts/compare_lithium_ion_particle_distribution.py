@@ -37,7 +37,7 @@ params[1]["Positive particle radius [m]"] = positive_radius
 # set up and solve simulations
 t_eval = np.linspace(0, 3600, 100)
 sols = []
-for model, param in zip(models, params):
+for model, param in zip(models, params, strict=False):
     sim = pybamm.Simulation(model, parameter_values=param)
     sol = sim.solve(t_eval)
     sols.append(sol)

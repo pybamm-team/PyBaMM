@@ -40,7 +40,7 @@ class TestPlotSummaryVariables:
         axes = axes.flatten()
         assert len(axes) == 9
 
-        for output_var, ax in zip(output_variables, axes):
+        for output_var, ax in zip(output_variables, axes, strict=False):
             assert ax.get_xlabel() == "Cycle number"
             assert ax.get_ylabel() == output_var
 
@@ -57,7 +57,7 @@ class TestPlotSummaryVariables:
         axes = axes.flatten()
         assert len(axes) == 9
 
-        for output_var, ax in zip(output_variables, axes):
+        for output_var, ax in zip(output_variables, axes, strict=False):
             assert ax.get_xlabel() == "Cycle number"
             assert ax.get_ylabel() == output_var
 

@@ -146,12 +146,10 @@ class Latexify:
                 # If it contains name, append it to var_list
                 if isinstance(
                     node_copy,
-                    (
-                        pybamm.Parameter,
-                        pybamm.Variable,
-                        pybamm.FunctionParameter,
-                        pybamm.Scalar,
-                    ),
+                    pybamm.Parameter
+                    | pybamm.Variable
+                    | pybamm.FunctionParameter
+                    | pybamm.Scalar,
                 ):
                     var_list.append(node_latex)
                 # Else append parameters to param_list

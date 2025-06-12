@@ -150,7 +150,7 @@ class TestBaseModel:
             [x.name for x in [a, b, c, d, e, f, g, h, i]]
         )
         assert all(
-            isinstance(x, (pybamm.Parameter, pybamm.InputParameter))
+            isinstance(x, pybamm.Parameter | pybamm.InputParameter)
             for x in model.parameters
         )
 

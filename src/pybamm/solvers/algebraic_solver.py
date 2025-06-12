@@ -213,7 +213,10 @@ class AlgebraicSolver(pybamm.BaseSolver):
                         model.bounds[1] != np.inf
                     ):
                         bounds = [
-                            (lb, ub) for lb, ub in zip(model.bounds[0], model.bounds[1])
+                            (lb, ub)
+                            for lb, ub in zip(
+                                model.bounds[0], model.bounds[1], strict=False
+                            )
                         ]
                     else:
                         bounds = None
