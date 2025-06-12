@@ -20,7 +20,7 @@ def battery_geometry(
         Dictionary of model options. Necessary for "particle-size geometry",
         relevant for lithium-ion chemistries.
     form_factor : str, optional
-        The form factor of the cell. Can be "pouch" (default) or "cylindrical".
+        The form factor of the cell. Can be "pouch" (default).
 
     Returns
     -------
@@ -150,21 +150,9 @@ def battery_geometry(
                     },
                 },
             }
-    elif form_factor == "cylindrical":
-        if current_collector_dimension == 0:
-            geometry["current collector"] = {"r_macro": {"position": 1}}
-        elif current_collector_dimension == 1:
-            geometry["current collector"] = {
-                "r_macro": {"min": geo.r_inner, "max": 1},
-            }
-        else:
-            raise pybamm.GeometryError(
-                f"Invalid current collector dimension '{current_collector_dimension}' (should be 0 or 1 for "
-                "a 'cylindrical' battery geometry)"
-            )
     else:
         raise pybamm.GeometryError(
-            f"Invalid form factor '{form_factor}' (should be 'pouch' or 'cylindrical'"
+            f"Invalid form factor '{form_factor}' (should be 'pouch')"
         )
 
     return pybamm.Geometry(geometry)
