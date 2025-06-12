@@ -6,6 +6,9 @@ import json
 import importlib
 import numpy as np
 import re
+from enum import Enum
+import inspect
+import numbers
 
 
 class Serialise:
@@ -143,51 +146,6 @@ class Serialise:
         with open(filename + ".json", "w") as f:
             json.dump(model_json, f)
 
-    def save_custom_model(
-        self,
-        model: pybamm.BaseModel,
-        mesh: pybamm.Mesh | None = None,
-        variables: pybamm.FuzzyDict | None = None,
-        filename: str | None = None,
-    ):
-        if model.is_discretised is False:
-            raise NotImplementedError(
-                "PyBaMM can only serialise a discretised, ready-to-solve model."
-            )
-
-        model_json = {
-            "pybamm_version": pybamm.__version__,
-            "name": model.name,
-            "options": model.options,
-            "bounds": [bound.tolist() for bound in model.bounds],  # type: ignore[attr-defined]
-            "concatenated_rhs": self._SymbolEncoder().default(model._concatenated_rhs),
-            "concatenated_algebraic": self._SymbolEncoder().default(
-                model._concatenated_algebraic
-            ),
-            "concatenated_initial_conditions": self._SymbolEncoder().default(
-                model._concatenated_initial_conditions
-            ),
-            "events": [self._SymbolEncoder().default(event) for event in model.events],
-            "mass_matrix": self._SymbolEncoder().default(model.mass_matrix),
-            "mass_matrix_inv": self._SymbolEncoder().default(model.mass_matrix_inv),
-        }
-
-        if mesh:
-            model_json["mesh"] = self._MeshEncoder().default(mesh)
-
-        if variables:
-            if model._geometry:
-                model_json["geometry"] = self._deconstruct_pybamm_dicts(model._geometry)
-            model_json["variables"] = {
-                k: self._SymbolEncoder().default(v) for k, v in dict(variables).items()
-            }
-
-        if filename is None:
-            filename = model.name + "_" + datetime.now().strftime("%Y_%m_%d-%p%I_%M")
-
-        with open(filename + ".json", "w") as f:
-            json.dump(model_json, f)
-
     def load_model(
         self, filename: str, battery_model: pybamm.BaseModel | None = None
     ) -> pybamm.BaseModel:
@@ -279,6 +237,69 @@ class Serialise:
             The PyBaMM battery model to use has not been provided.
             """
         )
+
+    def _json_encoder(obj):
+        if isinstance(obj, pybamm.Scalar):
+            return obj.evaluate()
+
+        if isinstance(obj, (np.integer, np.floating)):
+            return obj.item()
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        if isinstance(obj, Enum):
+            return obj.name
+        raise TypeError(
+            f"Object of type {obj.__class__.__name__} is not JSON serializable"
+        )
+
+    @staticmethod
+    def save_custom_model(model, param_values, filename=None):
+        """
+        Save the custom PyBaMM model and parameters to a JSON file.
+        """
+        model_json = {
+            "pybamm_version": pybamm.__version__,
+            "name": model.name,
+            "options": model.options,
+            "rhs": {
+                str(k): Serialise.convert_symbol_to_json(v)
+                for k, v in model.rhs.items()
+            },
+            "algebraic": {
+                str(k): Serialise.convert_symbol_to_json(v)
+                for k, v in model.algebraic.items()
+            },
+            "initial_conditions": {
+                str(k): Serialise.convert_symbol_to_json(v)
+                for k, v in model.initial_conditions.items()
+            },
+            "boundary_conditions": {
+                str(var): {
+                    side: [Serialise.convert_symbol_to_json(expr), btype]
+                    for side, (expr, btype) in conds.items()
+                }
+                for var, conds in model.boundary_conditions.items()
+            },
+            "events": [
+                {
+                    "name": event.name,
+                    "expression": Serialise.convert_symbol_to_json(event.expression),
+                    "event_type": event.event_type,
+                }
+                for event in model.events
+            ],
+            "parameters": Serialise.convert_parameter_values_to_json(param_values),
+            "variables": {
+                str(name): Serialise.convert_symbol_to_json(expr)
+                for name, expr in model.variables.items()
+            },
+        }
+
+        if filename is None:
+            filename = model.name + "_" + datetime.now().strftime("%Y_%m_%d-%I_%M_%p")
+
+        with open(filename + ".json", "w") as f:
+            json.dump(model_json, f, indent=2, default=Serialise._json_encoder)
 
     def load_custom_model(
         self,
@@ -512,3 +533,217 @@ class Serialise:
             return tuple(self._convert_options(item) for item in d)
         else:
             return d
+
+    @staticmethod
+    def convert_parameter_values_to_json(parameter_values, filename=None):
+        """
+        Converts a ParameterValues object to a JSON-serializable dictionary and optionally
+        saves it to a file.
+
+        Parameters
+        ----------
+        parameter_values : ParameterValues
+            The ParameterValues object to convert
+
+        filename : str, optional
+            The filename to save the JSON file to. If not provided, the dictionary is
+            not saved.
+        """
+        parameter_values_dict = {}
+
+        for k, v in parameter_values.items():
+            if callable(v):
+                parameter_values_dict[k] = Serialise.convert_symbol_to_json(
+                    Serialise.convert_function_to_symbolic_expression(v, k)
+                )
+            else:
+                parameter_values_dict[k] = Serialise.convert_symbol_to_json(v)
+
+        if filename is not None:
+            with open(filename, "w") as f:
+                json.dump(parameter_values_dict, f, indent=2)
+
+        return parameter_values_dict
+
+    @staticmethod
+    def convert_symbol_to_json(symbol):
+        """
+        Converts a PyBaMM symbolic expression to a JSON-serializable dictionary
+
+        Parameters
+        ----------
+        symbol : pybamm.Symbol
+            The PyBaMM symbolic expression to convert
+
+        Returns
+        -------
+        dict
+            The JSON-serializable dictionary
+        """
+        if isinstance(symbol, numbers.Number | list):
+            return symbol
+        elif isinstance(symbol, pybamm.Time):
+            return {"type": "Time"}
+        elif isinstance(symbol, pybamm.Parameter):
+            # Parameters are stored with their type and name
+            return {"type": "Parameter", "name": symbol.name}
+        elif isinstance(symbol, pybamm.Scalar):
+            # Scalar values are stored with their numerical value
+            return {"type": "Scalar", "value": symbol.value}
+        elif isinstance(symbol, pybamm.BinaryOperator | pybamm.UnaryOperator):
+            # Operators (like +, -, *, /) are stored with their type and operands
+            return {
+                "type": symbol.__class__.__name__,
+                "children": [
+                    Serialise.convert_symbol_to_json(c) for c in symbol.children
+                ],
+            }
+        elif isinstance(symbol, pybamm.SpecificFunction):
+            if symbol.__class__ == pybamm.SpecificFunction:
+                raise NotImplementedError("SpecificFunction is not supported")
+            else:
+                # Subclasses of SpecificFunction (e.g. Exp, Sin, etc.) can be reconstructed
+                # from only the children
+                return {
+                    "type": symbol.__class__.__name__,
+                    "children": [
+                        Serialise.convert_symbol_to_json(c) for c in symbol.children
+                    ],
+                }
+        elif isinstance(symbol, pybamm.Interpolant):
+            return {
+                "type": symbol.__class__.__name__,
+                "x": [x.tolist() for x in symbol.x],
+                "y": symbol.y.tolist(),
+                "children": [
+                    Serialise.convert_symbol_to_json(c) for c in symbol.children
+                ],
+                "name": symbol.name,
+                "interpolator": symbol.interpolator,
+                "entries_string": symbol.entries_string,
+            }
+        elif isinstance(symbol, pybamm.FunctionParameter):
+            input_names = symbol.input_names
+            inputs = {
+                input_names[i]: Serialise.convert_symbol_to_json(symbol.orphans[i])
+                for i in range(len(input_names))
+            }
+            diff_variable = symbol.diff_variable
+            if diff_variable is not None:
+                diff_variable = Serialise.convert_symbol_to_json(diff_variable)
+            return {
+                "type": symbol.__class__.__name__,
+                "inputs": inputs,
+                "diff_variable": diff_variable,
+                "name": symbol.name,
+            }
+        elif isinstance(symbol, pybamm.Variable):
+            return {
+                "type": "Variable",
+                "name": symbol.name,
+                "domain": symbol.domain,
+                "bounds": symbol.bounds,
+            }
+        elif isinstance(symbol, pybamm.SpatialVariable):
+            return {
+                "type": "SpatialVariable",
+                "name": symbol.name,
+                "domain": symbol.domain,
+                "coord_sys": symbol.coord_sys,
+            }
+
+        else:
+            raise ValueError(
+                f"Error processing '{symbol.name}'. Unknown symbol type: {type(symbol)}"
+            )
+
+    @staticmethod
+    def convert_function_to_symbolic_expression(func, name=None):
+        """
+        Converts a Python function to a PyBaMM symbolic expression
+
+        Parameters
+        ----------
+        func : callable
+            The Python function to convert
+
+        name : str, optional
+            The name of the function to use in the symbolic expression. If not provided,
+            the name of the function is used.
+
+        Returns
+        -------
+        pybamm.Symbol
+            The PyBaMM symbolic expression
+        """
+        # First, determine the number of inputs the function takes
+        num_inputs = len(inspect.signature(func).parameters)
+
+        # Create symbolic parameters for each input argument
+        # For myfun(x, y), this creates ["myfun.input_0", "myfun.input_1"]
+        func_name = name or func.__name__
+        sym_inputs = [
+            pybamm.Parameter(f"{func_name}.input_{i}") for i in range(num_inputs)
+        ]
+
+        # Evaluate the function with symbolic inputs to get symbolic expression
+        sym_output = func(*sym_inputs)
+
+        return sym_output
+
+    @staticmethod
+    def convert_symbol_from_json(json_data):
+        """
+        Recursively converts a JSON dictionary back into PyBaMM symbolic expressions
+
+        Parameters
+        ----------
+        json_data : dict
+            Dictionary containing the serialized PyBaMM expression
+
+        Returns
+        -------
+        pybamm.Symbol
+            The reconstructed PyBaMM symbolic expression
+        """
+        if isinstance(json_data, numbers.Number | list):
+            return json_data
+        elif json_data["type"] == "Parameter":
+            # Convert stored parameters back to PyBaMM Parameter objects
+            return pybamm.Parameter(json_data["name"])
+        elif json_data["type"] == "Scalar":
+            # Convert stored numerical values back to PyBaMM Scalar objects
+            return pybamm.Scalar(json_data["value"])
+        elif json_data["type"] == "Interpolant":
+            return pybamm.Interpolant(
+                [np.array(x) for x in json_data["x"]],
+                np.array(json_data["y"]),
+                [Serialise.convert_symbol_from_json(c) for c in json_data["children"]],
+                name=json_data["name"],
+                interpolator=json_data["interpolator"],
+                entries_string=json_data["entries_string"],
+            )
+        elif json_data["type"] == "FunctionParameter":
+            diff_variable = json_data["diff_variable"]
+            if diff_variable is not None:
+                diff_variable = Serialise.convert_symbol_from_json(diff_variable)
+            return pybamm.FunctionParameter(
+                json_data["name"],
+                {
+                    k: Serialise.convert_symbol_from_json(v)
+                    for k, v in json_data["inputs"].items()
+                },
+                diff_variable=diff_variable,
+            )
+        elif json_data["type"] in [
+            "Variable",
+            "StateVector",
+            "InputParameter",
+            "BoundaryValue",
+        ]:
+            return getattr(pybamm, json_data["type"])(json_data["name"])
+        else:
+            children = json_data.get("children", [])
+            return getattr(pybamm, json_data["type"])(
+                *[Serialise.convert_symbol_from_json(c) for c in children]
+            )

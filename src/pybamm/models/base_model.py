@@ -1524,22 +1524,6 @@ def load_model(filename, battery_model: BaseModel | None = None):
     return Serialise().load_model(filename, battery_model)
 
 
-def load_custom_model(filename, battery_model: BaseModel | None = None):
-    """
-    Load in a saved model from a JSON file
-
-    Parameters
-    ----------
-    filename: str
-        Path to the JSON file containing the serialised model file
-    battery_model: :class: pybamm.BaseBatteryModel, optional
-            PyBaMM model to be created (e.g. pybamm.lithium_ion.SPM), which will
-            override any model names within the file. If None, the function will look
-            for the saved object path, present if the original model came from PyBaMM.
-    """
-    return Serialise().load_custom_model(filename, battery_model)
-
-
 # helper functions for finding symbols
 def find_symbol_in_tree(tree, name):
     if name == tree.name:
