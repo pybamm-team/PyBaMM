@@ -1,7 +1,8 @@
-# processed_variable_base.py  (new file)
 from __future__ import annotations
-import pybamm
+
 import abc
+
+import pybamm
 
 
 class BaseProcessedVariable(abc.ABC):

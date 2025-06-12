@@ -5,9 +5,10 @@ import casadi
 import numpy as np
 import xarray as xr
 from pybammsolvers import idaklu
-from .base_processed_variable import BaseProcessedVariable
 
 import pybamm
+
+from .base_processed_variable import BaseProcessedVariable
 
 
 class ProcessedVariable(BaseProcessedVariable):
