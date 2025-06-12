@@ -150,6 +150,7 @@ Chayambuka2022 = "pybamm.input.parameters.sodium_ion.Chayambuka2022:get_paramete
 
 [project.entry-points."pybamm_models"]
 SPM = "pybamm.models.full_battery_models.lithium_ion.spm:SPM"
+DFN = "pybamm.models.full_battery_models.lithium_ion.dfn:DFN"
 
 [tool.hatch]
 version.source = "vcs"

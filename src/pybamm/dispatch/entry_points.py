@@ -8,8 +8,17 @@ from typing import Callable
 
 class EntryPoint(Mapping):
     """
-    Access via :py:data:`pybamm.parameter_sets` for parameter_sets
-    Access via :py:data:`pybamm.Model` for Models
+    A mapping interface for accessing PyBaMM models and parameter sets through entry points.
+
+    This class provides a unified way to load, and instantiate PyBaMM models
+    and parameter sets that have been registered as entry points.
+
+    Access via :py:data:`pybamm.parameter_sets` for parameter sets - provides access
+    to all registered battery parameter sets (e.g., 'Chen2020', 'Ai2020') that can
+    be used to parameterise battery models.
+
+    Access via :py:data:`pybamm.Model` for models - provides access to all registered
+    battery models (e.g., 'SPM', 'DFN').
 
     Examples
     --------
@@ -21,7 +30,7 @@ class EntryPoint(Mapping):
     Listing available models:
         >>> import pybamm
         >>> list(pybamm.dispatch.models)
-        ['SPM']
+        ['DFN', 'SPM']
 
     Get the docstring for a parameter set or model:
         >>> print(pybamm.parameter_sets.get_docstring("Ai2020"))  # doctest: +ELLIPSIS
@@ -73,12 +82,12 @@ class EntryPoint(Mapping):
         and return the entry point for the parameter set/model, loading it needed."""
         if key not in self._all_entries:
             raise KeyError(f"Unknown parameter set or model: {key}")
-        ps = self._all_entries[key]
+        param_set = self._all_entries[key]
         try:
-            ps = self._all_entries[key] = ps.load()
+            param_set = self._all_entries[key] = param_set.load()
         except AttributeError:
             pass
-        return ps
+        return param_set
 
     def __iter__(self):
         return self._all_entries.__iter__()
@@ -142,7 +151,7 @@ def Model(model: str, options=None, *args, **kwargs):  # doctest: +SKIP
     Listing available models:
         >>> import pybamm
         >>> list(pybamm.dispatch.models)
-        ['SPM']
+        ['DFN', 'SPM']
         >>> pybamm.Model('SPM') # doctest: +SKIP
         <pybamm.models.full_battery_models.lithium_ion.spm.SPM object>
     """

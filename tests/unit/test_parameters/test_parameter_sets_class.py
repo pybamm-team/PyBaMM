@@ -111,18 +111,16 @@ class TestModelEntryPoints:
 
     def test_models_no_deprecation_warning(self):
         """Test that accessing models via attribute doesn't trigger deprecation warning"""
-        # Models should not trigger the deprecation warning
         model_names = list(pybamm.dispatch.models.keys())
         if model_names:  # Only run if models exist
             model_name = model_names[0]
 
-            # This should not raise a deprecation warning
             import warnings
 
             with warnings.catch_warnings(record=True) as warning_list:
                 warnings.simplefilter("always")
                 try:
-                    result = getattr(pybamm.dispatch.models, model_name)
+                    getattr(pybamm.dispatch.models, model_name)
                 except AttributeError:
                     # This is expected - models don't have the deprecation behavior
                     pass
@@ -135,7 +133,6 @@ class TestModelEntryPoints:
 
     def test_getattribute_normal_attributes(self):
         """Test that normal attributes work correctly in __getattribute__"""
-        # Test accessing normal attributes
         assert hasattr(pybamm.dispatch.models, "group")
         assert pybamm.dispatch.models.group == "pybamm_models"
 

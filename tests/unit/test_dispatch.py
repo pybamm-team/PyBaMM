@@ -1,0 +1,44 @@
+#
+# Test dispatching mechanism in entry points
+#
+import pybamm
+
+
+class TestDispatch:
+    def test_model_loads_through_entry_points(self):
+        """Test that a model loaded through Model() function is actually functional"""
+        # Load model with build=False to avoid full initialization for faster testing
+        model = pybamm.Model("SPM", build=False)
+
+        assert hasattr(model, "name")
+        assert hasattr(model, "variables")
+        assert hasattr(model, "submodels")
+        assert hasattr(model, "algebraic")
+        assert hasattr(model, "rhs")
+
+        assert "SPM" in str(model)
+
+    def test_getitem_returns_instance(self):
+        """Test that __getitem__ returns an instantiated model"""
+        model_instance = pybamm.dispatch.models["SPM"]
+        assert hasattr(model_instance, "__class__")
+        assert model_instance.__class__.__name__ == "SPM"
+
+    def test_model_function_no_args(self):
+        """Test Model function with no additional arguments"""
+        model = pybamm.Model("SPM")
+        assert model.__class__.__name__ == "SPM"
+
+    def test_model_function_with_options(self):
+        """Test Model function with options parameter"""
+        options = {"thermal": "isothermal"}
+        model = pybamm.Model("SPM", options=options)
+        assert model.__class__.__name__ == "SPM"
+
+    def test_model_function_with_args_kwargs(self):
+        """Test Model function with *args and **kwargs"""
+        model = pybamm.Model("SPM", build=False)
+        assert model.__class__.__name__ == "SPM"
+        options = {"thermal": "isothermal"}
+        model = pybamm.Model("SPM", options=options, build=False)
+        assert model.__class__.__name__ == "SPM"
