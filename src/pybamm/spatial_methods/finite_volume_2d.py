@@ -545,14 +545,16 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                 left_ghost_constant = 2 * lbc_value
 
             lbc_vector = pybamm.Matrix(lbc_matrix) @ left_ghost_constant
-        elif lbc_type == "Neumann":
-            lbc_vector = pybamm.Vector(
-                np.zeros((n_lr + n_bcs) * second_dim_repeats * n_tb)
-            )
         else:
-            lbc_vector = pybamm.Vector(
-                np.zeros((n_tb + n_bcs) * second_dim_repeats * n_lr)
-            )
+            # Use consistent shape based on whether we have lr or tb Dirichlet BCs
+            if lbc_type == "Dirichlet" or rbc_type == "Dirichlet":
+                lbc_vector = pybamm.Vector(
+                    np.zeros((n_lr + n_bcs) * second_dim_repeats * n_tb)
+                )
+            else:
+                lbc_vector = pybamm.Vector(
+                    np.zeros((n_tb + n_bcs) * second_dim_repeats * n_lr)
+                )
 
         # Calculate values for ghost nodes for any Dirichlet boundary conditions
         if rbc_type == "Dirichlet":
@@ -574,14 +576,16 @@ class FiniteVolume2D(pybamm.SpatialMethod):
             else:
                 right_ghost_constant = 2 * rbc_value
             rbc_vector = pybamm.Matrix(rbc_matrix) @ right_ghost_constant
-        elif rbc_type == "Neumann":
-            rbc_vector = pybamm.Vector(
-                np.zeros((n_lr + n_bcs) * second_dim_repeats * n_tb)
-            )
         else:
-            rbc_vector = pybamm.Vector(
-                np.zeros((n_tb + n_bcs) * second_dim_repeats * n_lr)
-            )
+            # Use consistent shape based on whether we have lr or tb Dirichlet BCs
+            if lbc_type == "Dirichlet" or rbc_type == "Dirichlet":
+                rbc_vector = pybamm.Vector(
+                    np.zeros((n_lr + n_bcs) * second_dim_repeats * n_tb)
+                )
+            else:
+                rbc_vector = pybamm.Vector(
+                    np.zeros((n_tb + n_bcs) * second_dim_repeats * n_lr)
+                )
 
         # Calculate values for ghost nodes for any Dirichlet boundary conditions
         if tbc_type == "Dirichlet":
@@ -601,14 +605,16 @@ class FiniteVolume2D(pybamm.SpatialMethod):
             else:
                 top_ghost_constant = 2 * tbc_value
             tbc_vector = pybamm.Matrix(tbc_matrix) @ top_ghost_constant
-        elif tbc_type == "Neumann" or bbc_type == "Dirichlet":
-            tbc_vector = pybamm.Vector(
-                np.zeros((n_tb + n_bcs) * second_dim_repeats * n_lr)
-            )
         else:
-            tbc_vector = pybamm.Vector(
-                np.zeros((n_lr + n_bcs) * second_dim_repeats * n_tb)
-            )
+            # Use consistent shape based on whether we have lr or tb Dirichlet BCs
+            if lbc_type == "Dirichlet" or rbc_type == "Dirichlet":
+                tbc_vector = pybamm.Vector(
+                    np.zeros((n_lr + n_bcs) * second_dim_repeats * n_tb)
+                )
+            else:
+                tbc_vector = pybamm.Vector(
+                    np.zeros((n_tb + n_bcs) * second_dim_repeats * n_lr)
+                )
 
         # Calculate values for ghost nodes for any Dirichlet boundary conditions
         if bbc_type == "Dirichlet":
@@ -630,14 +636,16 @@ class FiniteVolume2D(pybamm.SpatialMethod):
             else:
                 bottom_ghost_constant = 2 * bbc_value
             bbc_vector = pybamm.Matrix(bbc_matrix) @ bottom_ghost_constant
-        elif bbc_type == "Neumann" or tbc_type == "Dirichlet":
-            bbc_vector = pybamm.Vector(
-                np.zeros((n_tb + n_bcs) * second_dim_repeats * n_lr)
-            )
         else:
-            bbc_vector = pybamm.Vector(
-                np.zeros((n_lr + n_bcs) * second_dim_repeats * n_tb)
-            )
+            # Use consistent shape based on whether we have lr or tb Dirichlet BCs
+            if lbc_type == "Dirichlet" or rbc_type == "Dirichlet":
+                bbc_vector = pybamm.Vector(
+                    np.zeros((n_lr + n_bcs) * second_dim_repeats * n_tb)
+                )
+            else:
+                bbc_vector = pybamm.Vector(
+                    np.zeros((n_tb + n_bcs) * second_dim_repeats * n_lr)
+                )
 
         bcs_vector = lbc_vector + rbc_vector + tbc_vector + bbc_vector
         # Need to match the domain. E.g. in the case of the boundary condition
