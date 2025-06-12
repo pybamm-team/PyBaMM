@@ -6,9 +6,10 @@ from scipy.integrate import cumulative_trapezoid
 import xarray as xr
 import bisect
 from pybammsolvers import idaklu
+from .base_processed_variable import BaseProcessedVariable
 
 
-class ProcessedVariable:
+class ProcessedVariable(BaseProcessedVariable):
     """
     An object that can be evaluated at arbitrary (scalars or vectors) t and x, and
     returns the (interpolated) value of the base variable at that t and x.
@@ -503,6 +504,64 @@ class ProcessedVariable:
     @property
     def hermite_interpolation(self):
         return self.all_yps is not None
+
+    def _make_stub_solution(self):
+        """
+        Return a lightweight object that looks like the parts of
+        `pybamm.Solution` required by ProcessedVariableComputed, but without
+        keeping the full state vector in memory.
+
+        Parameters
+        ----------
+        t_points : 1-D array-like
+            The dimensional time grid for the (sub-)solution you are building.
+
+        Returns
+        -------
+        StubSolution
+            An object with the minimal API: ``t``, ``all_ts``, ``all_ys``,
+            ``all_inputs``, ``all_inputs_casadi`` and ``sensitivities``.
+        """
+
+        class StubSolution:
+
+            def __init__(self, ts, ys, inputs, inputs_casadi, sensitivities, t_pts):
+                self.all_ts = ts
+                self.all_ys = ys
+                self.all_inputs = inputs
+                self.all_inputs_casadi = inputs_casadi
+                self.sensitivities = sensitivities
+                self.t = t_pts
+
+        return StubSolution(
+            self.all_ts,
+            self.all_ys,
+            self.all_inputs,
+            self.all_inputs_casadi,
+            self.sensitivities,
+            self.t_pts,
+        )
+
+    def as_computed(self):
+        # materialise the data we really need
+        base_data = [
+            np.asarray(f(ts, ys, u)).T  # (n_t, n_space)
+            for ts, ys, u, f in zip(
+                self.all_ts,
+                self.all_ys,
+                self.all_inputs_casadi,
+                self.base_variables_casadi,
+            )
+        ]
+
+        cpv = pybamm.ProcessedVariableComputed(
+            self.base_variables,
+            self.base_variables_casadi,
+            base_data,
+            self._make_stub_solution(),
+        )
+
+        return cpv
 
 
 class ProcessedVariable0D(ProcessedVariable):

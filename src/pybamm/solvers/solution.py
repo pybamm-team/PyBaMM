@@ -797,17 +797,10 @@ class Solution:
         new_sol._sub_solutions = self.sub_solutions + other.sub_solutions
 
         # update variables which were derived at the solver stage
-        if other._variables and all(
-            isinstance(v, pybamm.ProcessedVariableComputed)
-            for v in other._variables.values()
-        ):
-            if not self._variables:
-                new_sol._variables = other._variables.copy()
-            else:
-                new_sol._variables = {
-                    v: self._variables[v]._update(other._variables[v], new_sol)
-                    for v in self._variables.keys()
-                }
+        if any([self.variables_returned, other.variables_returned]):
+            vars = {*self._variables.keys(), *other._variables.keys()}
+            new_sol._variables = {v: self[v]._update(other[v], new_sol) for v in vars}
+            new_sol.variables_returned = True
 
         return new_sol
 

@@ -8,8 +8,10 @@ import pybamm
 from scipy.integrate import cumulative_trapezoid
 import xarray as xr
 
+from .base_processed_variable import BaseProcessedVariable
 
-class ProcessedVariableComputed:
+
+class ProcessedVariableComputed(BaseProcessedVariable):
     """
     An object that can be evaluated at arbitrary (scalars or vectors) t and x, and
     returns the (interpolated) value of the base variable at that t and x.
@@ -122,6 +124,9 @@ class ProcessedVariableComputed:
             return
 
         raise NotImplementedError(f"Shape not recognized for {base_variables[0]}")
+
+    def as_computed(self) -> ProcessedVariableComputed:
+        return self
 
     def add_sensitivity(self, param, data):
         # unroll from sparse representation into n-d matrix
@@ -682,7 +687,7 @@ class ProcessedVariableComputed:
             return {}
         return self._sensitivities
 
-    def _update(
+    def _concat(
         self, other: pybamm.ProcessedVariableComputed, new_sol: pybamm.Solution
     ) -> pybamm.ProcessedVariableComputed:
         """
@@ -705,3 +710,18 @@ class ProcessedVariableComputed:
         new_var = self.__class__(bv, bvc, bvd, new_sol)
 
         return new_var
+
+    # def last_state(self, last_state_sol):
+    #     """
+    #     Returns the last timestep of the ProcessedVariableComputed object.
+    #     This is used to save space in the solution object, as it does not
+    #     store the full state vector, but only the last state.
+    #     """
+    #     # calling the class without providing a new solution will just create a recursive call
+    #     # this isn't quite right atm, i think the base variable data shape is probably the problem again
+    #     return self.__class__(
+    #         self.base_variables,
+    #         self.base_variables_casadi,
+    #         [v[-1:, :] for v in self.base_variables_data],
+    #         last_state_sol,
+    #     )
