@@ -37,7 +37,7 @@ class TestLeadAcidLOQS:
         )
 
     @pytest.mark.parametrize(
-        "dimensionality, spatial_method, submesh_type",
+        ("dimensionality", "spatial_method", "submesh_type"),
         [
             (1, pybamm.FiniteVolume, pybamm.Uniform1DSubMesh),
             (2, pybamm.ScikitFiniteElement, pybamm.ScikitUniform2DSubMesh),
