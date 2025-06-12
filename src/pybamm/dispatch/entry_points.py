@@ -1,7 +1,7 @@
-import sys
-import warnings
 import importlib.metadata
+import sys
 import textwrap
+import warnings
 from collections.abc import Mapping
 from typing import Callable
 
@@ -61,6 +61,10 @@ class EntryPoint(Mapping):
             cls.instance = super().__new__(cls)
         return cls.instance
 
+    def get_class(self, key) -> Callable:
+        """Return the class without instantiating it"""
+        return self._load_entry_point(key)
+
     def __getitem__(self, key) -> dict:
         return self._load_entry_point(key)()
 
@@ -113,13 +117,19 @@ parameter_sets = EntryPoint(group="pybamm_parameter_sets")
 models = EntryPoint(group="pybamm_models")
 
 
-def Model(model: str):  # doctest: +SKIP
+def Model(model: str, options=None, *args, **kwargs):  # doctest: +SKIP
     """
     Returns the loaded model object
     Parameters
     ----------
     model : str
         The model name or author name of the model mentioned at the model entry point.
+    options : dict, optional
+        Options to pass to the model constructor.
+    *args
+        Additional positional arguments to pass to the model constructor.
+    **kwargs
+        Additional keyword arguments to pass to the model constructor.
     Returns
     -------
     pybamm.model
@@ -133,4 +143,10 @@ def Model(model: str):  # doctest: +SKIP
         >>> pybamm.Model('SPM') # doctest: +SKIP
         <pybamm.models.full_battery_models.lithium_ion.spm.SPM object>
     """
-    return models[model]
+    model_class = models.get_class(model)
+
+    # Pass options as the first argument if provided, then *args and **kwargs
+    if options is not None:
+        return model_class(options, *args, **kwargs)
+    else:
+        return model_class(*args, **kwargs)
