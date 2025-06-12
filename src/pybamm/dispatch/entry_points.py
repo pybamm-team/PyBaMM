@@ -97,7 +97,10 @@ class EntryPoint(Mapping):
             # parameter set as before when passed to `ParameterValues`
             # Bypass the overloaded __getitem__ and __iter__ to avoid recursion
             _all_entries = super().__getattribute__("_all_entries")
-            if name in _all_entries:
+            group = super().__getattribute__("group")
+
+            # Only show deprecation warning for parameter sets, not models
+            if name in _all_entries and group == "pybamm_parameter_sets":
                 msg = (
                     f"Parameter sets should be called directly by their name ({name}), "
                     f"instead of via pybamm.parameter_sets (pybamm.parameter_sets.{name})."
