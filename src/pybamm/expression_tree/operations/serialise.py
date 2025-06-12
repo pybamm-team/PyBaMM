@@ -302,77 +302,54 @@ class Serialise:
 
         with open(filename + ".json", "w") as f:
             json.dump(model_json, f, indent=2, default=Serialise._json_encoder)
-
-    def load_custom_model(
-        self,
-        filename: str,
-        battery_model: pybamm.BaseModel,
-    ) -> pybamm.BaseModel:
-        """
-        Loads a discretised custom PyBaMM model from a JSON file.
-
-        Requires the user to pass the correct model class (`battery_model`) since
-        the saved file does not contain any class metadata.
-
-        Parameters
-        ----------
-        filename: str
-            Path to the JSON file containing the serialised model.
-        battery_model: :class:`pybamm.BaseModel`
-            An *instance* of the model class to be populated with the data.
-
-        Returns
-        -------
-        :class:`pybamm.BaseModel`
-            A reconstructed PyBaMM model ready to solve.
-        """
+            
+    @staticmethod
+    def load_custom_model(filename,battery_model=None):
         with open(filename) as f:
             model_data = json.load(f)
+        model = battery_model if battery_model is not None else pybamm.BaseModel()
+        
+        model.name = model_data["name"]
+        
+        model.rhs = {
+            pybamm.Symbol(k): Serialise.convert_symbol_from_json(v)
+            for k, v in model_data["rhs"].items()
 
-        recon_model_dict = {
-            "name": model_data["name"],
-            "options": self._convert_options(model_data["options"]),
-            "bounds": tuple(np.array(bound) for bound in model_data["bounds"]),
-            "concatenated_rhs": self._reconstruct_expression_tree(
-                model_data["concatenated_rhs"]
-            ),
-            "concatenated_algebraic": self._reconstruct_expression_tree(
-                model_data["concatenated_algebraic"]
-            ),
-            "concatenated_initial_conditions": self._reconstruct_expression_tree(
-                model_data["concatenated_initial_conditions"]
-            ),
-            "events": [
-                self._reconstruct_expression_tree(event)
-                for event in model_data["events"]
-            ],
-            "mass_matrix": self._reconstruct_expression_tree(model_data["mass_matrix"]),
-            "mass_matrix_inv": self._reconstruct_expression_tree(
-                model_data["mass_matrix_inv"]
-            ),
+        }
+        model.algebraic = {
+            pybamm.Symbol(k): Serialise.convert_symbol_from_json(v)
+            for k, v in model_data["algebraic"].items()
+        }
+        model.initial_conditions = {
+            pybamm.Symbol(k): Serialise.convert_symbol_from_json(v)
+            for k, v in model_data["initial_conditions"].items()
+        }
+        model.boundary_conditions = {
+            pybamm.Symbol(var): {
+                side: (Serialise.convert_symbol_from_json(expr), btype)
+                for side, (expr, btype) in conds.items()
+            }
+            for var, conds in model_data["boundary_conditions"].items()
+        }
+        model.events  = [
+                pybamm.Event(
+                e["name"],
+                Serialise.convert_symbol_from_json(e["expression"]),
+                e["event_type"],
+            )
+            for e in model_data["events"]
+        ]
+        model.variables = {
+            name: Serialise.convert_symbol_from_json(expr)
+            for name, expr in model_data["variables"].items()
         }
 
-        recon_model_dict["geometry"] = (
-            self._reconstruct_pybamm_dict(model_data["geometry"])
-            if "geometry" in model_data
-            else None
+        param_values = Serialise.convert_parameter_values_to_json(
+            model_data["parameters"]
         )
-
-        recon_model_dict["mesh"] = (
-            self._reconstruct_mesh(model_data["mesh"]) if "mesh" in model_data else None
-        )
-
-        recon_model_dict["variables"] = (
-            {
-                k: self._reconstruct_expression_tree(v)
-                for k, v in model_data["variables"].items()
-            }
-            if "variables" in model_data
-            else None
-        )
-
-        return battery_model.deserialise(recon_model_dict)
-
+        
+        return model_data, param_values        
+ 
     # Helper functions
 
     def _get_pybamm_class(self, snippet: dict):
@@ -582,48 +559,30 @@ class Serialise:
         dict
             The JSON-serializable dictionary
         """
+        def maybe_add_auxiliary_domains(symbol, json_dict):
+            aux_domains = getattr(symbol, "_auxiliary_domains", None)
+            if aux_domains:
+                json_dict["auxiliary_domains"] = aux_domains
+            return json_dict
         if isinstance(symbol, numbers.Number | list):
             return symbol
         elif isinstance(symbol, pybamm.Time):
             return {"type": "Time"}
+
         elif isinstance(symbol, pybamm.Parameter):
-            # Parameters are stored with their type and name
             return {"type": "Parameter", "name": symbol.name}
+
         elif isinstance(symbol, pybamm.Scalar):
-            # Scalar values are stored with their numerical value
             return {"type": "Scalar", "value": symbol.value}
-        elif isinstance(symbol, pybamm.BinaryOperator | pybamm.UnaryOperator):
-            # Operators (like +, -, *, /) are stored with their type and operands
-            return {
-                "type": symbol.__class__.__name__,
-                "children": [
-                    Serialise.convert_symbol_to_json(c) for c in symbol.children
-                ],
+
+        elif isinstance(symbol, pybamm.PrimaryBroadcast):
+            json_dict = {
+                "type": "PrimaryBroadcast",
+                "broadcast_domain": symbol.broadcast_domain,
+                "children": [Serialise.convert_symbol_to_json(symbol.orphans[0])]
             }
-        elif isinstance(symbol, pybamm.SpecificFunction):
-            if symbol.__class__ == pybamm.SpecificFunction:
-                raise NotImplementedError("SpecificFunction is not supported")
-            else:
-                # Subclasses of SpecificFunction (e.g. Exp, Sin, etc.) can be reconstructed
-                # from only the children
-                return {
-                    "type": symbol.__class__.__name__,
-                    "children": [
-                        Serialise.convert_symbol_to_json(c) for c in symbol.children
-                    ],
-                }
-        elif isinstance(symbol, pybamm.Interpolant):
-            return {
-                "type": symbol.__class__.__name__,
-                "x": [x.tolist() for x in symbol.x],
-                "y": symbol.y.tolist(),
-                "children": [
-                    Serialise.convert_symbol_to_json(c) for c in symbol.children
-                ],
-                "name": symbol.name,
-                "interpolator": symbol.interpolator,
-                "entries_string": symbol.entries_string,
-            }
+            return maybe_add_auxiliary_domains(symbol, json_dict)
+
         elif isinstance(symbol, pybamm.FunctionParameter):
             input_names = symbol.input_names
             inputs = {
@@ -633,27 +592,67 @@ class Serialise:
             diff_variable = symbol.diff_variable
             if diff_variable is not None:
                 diff_variable = Serialise.convert_symbol_to_json(diff_variable)
-            return {
+            json_dict = {
                 "type": symbol.__class__.__name__,
                 "inputs": inputs,
                 "diff_variable": diff_variable,
                 "name": symbol.name,
             }
+            return maybe_add_auxiliary_domains(symbol, json_dict)
+
+        elif isinstance(symbol, pybamm.Interpolant):
+            json_dict = {
+                "type": symbol.__class__.__name__,
+                "x": [x.tolist() for x in symbol.x],
+                "y": symbol.y.tolist(),
+                "children": [Serialise.convert_symbol_to_json(c) for c in symbol.children],
+                "name": symbol.name,
+                "interpolator": symbol.interpolator,
+                "entries_string": symbol.entries_string,
+            }
+            return maybe_add_auxiliary_domains(symbol, json_dict)
+
         elif isinstance(symbol, pybamm.Variable):
-            return {
+            json_dict = {
                 "type": "Variable",
                 "name": symbol.name,
                 "domain": symbol.domain,
                 "bounds": symbol.bounds,
             }
+            return maybe_add_auxiliary_domains(symbol, json_dict)
+
         elif isinstance(symbol, pybamm.SpatialVariable):
-            return {
+            json_dict = {
                 "type": "SpatialVariable",
                 "name": symbol.name,
                 "domain": symbol.domain,
                 "coord_sys": symbol.coord_sys,
             }
+            return maybe_add_auxiliary_domains(symbol, json_dict)
 
+        elif isinstance(symbol, pybamm.SpecificFunction):
+            if symbol.__class__ == pybamm.SpecificFunction:
+                raise NotImplementedError("SpecificFunction is not supported directly")
+            json_dict = {
+                "type": symbol.__class__.__name__,
+                "children": [Serialise.convert_symbol_to_json(c) for c in symbol.children],
+            }
+            return maybe_add_auxiliary_domains(symbol, json_dict)
+
+        elif isinstance(symbol, pybamm.UnaryOperator | pybamm.BinaryOperator):
+            json_dict = {
+                "type": symbol.__class__.__name__,
+                "children": [Serialise.convert_symbol_to_json(c) for c in symbol.children],
+            }
+            return maybe_add_auxiliary_domains(symbol, json_dict)
+
+        elif isinstance(symbol, pybamm.Symbol):
+            # Generic fallback for other symbols with children
+            json_dict = {
+                "type": symbol.__class__.__name__,
+                "children": [Serialise.convert_symbol_to_json(c) for c in symbol.children],
+            }
+            return maybe_add_auxiliary_domains(symbol, json_dict)
         else:
             raise ValueError(
                 f"Error processing '{symbol.name}'. Unknown symbol type: {type(symbol)}"
@@ -731,21 +730,30 @@ class Serialise:
                 diff_variable = Serialise.convert_symbol_from_json(diff_variable)
             return pybamm.FunctionParameter(
                 json_data["name"],
-                {
-                    k: Serialise.convert_symbol_from_json(v)
-                    for k, v in json_data["inputs"].items()
-                },
+                {k: Serialise.convert_symbol_from_json(v) for k, v in json_data["inputs"].items()},
                 diff_variable=diff_variable,
+            )  
+        elif json_data["type"] == "PrimaryBroadcast":
+            child = Serialise.convert_symbol_from_json(json_data["children"][0])
+            domain = json_data["broadcast_domain"]
+            return pybamm.PrimaryBroadcast(child, domain)
+ 
+        elif json_data["type"] == "Time":
+            return pybamm.t
+        elif json_data["type"] == "Variable":
+            return pybamm.Variable(
+                json_data["name"],
+                domain=json_data.get("domain"),
             )
-        elif json_data["type"] in [
-            "Variable",
-            "StateVector",
-            "InputParameter",
-            "BoundaryValue",
-        ]:
-            return getattr(pybamm, json_data["type"])(json_data["name"])
-        else:
-            children = json_data.get("children", [])
+        elif json_data["type"] == "SpatialVariable":
+            return pybamm.SpatialVariable(
+                json_data["name"],
+                domain=json_data["domain"],
+                coord_sys=json_data.get("coord_sys", "cartesian"),
+            )
+        elif "children" in json_data:
             return getattr(pybamm, json_data["type"])(
-                *[Serialise.convert_symbol_from_json(c) for c in children]
+                *[Serialise.convert_symbol_from_json(c) for c in json_data["children"]]
             )
+        else:
+            raise ValueError(f"Unhandled symbol type or malformed entry: {json_data}")    
