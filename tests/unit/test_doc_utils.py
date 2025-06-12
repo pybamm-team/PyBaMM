@@ -4,6 +4,7 @@
 #
 
 from inspect import getmro
+
 from pybamm.doc_utils import copy_parameter_doc_from_parent, doc_extend_parent
 
 

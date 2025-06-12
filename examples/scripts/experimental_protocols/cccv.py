@@ -1,8 +1,9 @@
 #
 # Constant-current constant-voltage charge
 #
-import pybamm
 import matplotlib.pyplot as plt
+
+import pybamm
 
 pybamm.set_logging_level("NOTICE")
 experiment = pybamm.Experiment(

@@ -1,11 +1,12 @@
 #
 # Standard basic tests for any model
 #
-import pybamm
-import tests
 import tempfile
 
 import numpy as np
+
+import pybamm
+import tests
 
 
 class StandardModelTest:

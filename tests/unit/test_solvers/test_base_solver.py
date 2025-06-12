@@ -2,11 +2,12 @@
 # Tests for the Base Solver class
 #
 
-import pytest
 import casadi
-import pybamm
 import numpy as np
+import pytest
 from scipy.sparse import csr_matrix
+
+import pybamm
 
 
 class TestBaseSolver:

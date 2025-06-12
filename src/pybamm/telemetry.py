@@ -1,6 +1,8 @@
-from posthog import Posthog
-import pybamm
 import sys
+
+from posthog import Posthog
+
+import pybamm
 
 
 class MockTelemetry:

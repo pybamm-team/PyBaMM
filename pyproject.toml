@@ -103,7 +103,7 @@ dev = [
     # For doctest
     "pytest-doctestplus",
     # pytest and its plugins
-    "pytest<=8.3.0",
+    "pytest",
     "pytest-xdist",
     "pytest-mock",
     "pytest-subtests",
@@ -175,7 +175,7 @@ extend-exclude = ["__init__.py"]
 [tool.ruff.lint]
 extend-select = [
     "B",             # flake8-bugbear
-    # "I",           # isort
+    "I",             # isort
     # "ARG",         # flake8-unused-arguments
     # "C4",          # flake8-comprehensions
     # "ICN",         # flake8-import-conventions
@@ -258,6 +258,9 @@ log_date_format = "%Y-%m-%d %H:%M:%S"
 [tool.coverage.run]
 source = ["src/pybamm"]
 concurrency = ["multiprocessing"]
+# Parse warnings have existed for a while, but became failures in pytest 8.4.0
+disable_warnings = ["couldnt-parse", "module-not-measured"]
+
 
 [tool.mypy]
 ignore_missing_imports = true
