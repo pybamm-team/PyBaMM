@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import importlib
-import json
-import re
-from enum import Enum
 import inspect
+import json
 import numbers
+import re
 from datetime import datetime
+from enum import Enum
 
 import numpy as np
 
