@@ -386,8 +386,10 @@ class FiniteVolume2D(pybamm.SpatialMethod):
 
         left_npts = left_mesh.npts
         left_npts_lr = left_mesh.npts_lr
+        left_npts_tb = left_mesh.npts_tb
         right_npts = right_mesh.npts
         right_npts_lr = right_mesh.npts_lr
+        right_npts_tb = right_mesh.npts_tb
 
         second_dim_repeats = self._get_auxiliary_domain_repeats(
             left_symbol_disc.domains
@@ -400,15 +402,22 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                 """Number of secondary points in subdomains do not match"""
             )
 
-        left_sub_matrix = np.zeros((1, left_npts))
-        left_sub_matrix[0][left_npts_lr - 1 : left_npts_lr : left_npts] = 1
+        # Create matrix to extract rightmost lr values for each tb row in left domain
+        left_sub_matrix = np.zeros((left_npts_tb, left_npts))
+        for i in range(left_npts_tb):
+            # For each tb row, extract the rightmost lr value
+            left_sub_matrix[i, i * left_npts_lr + (left_npts_lr - 1)] = 1
 
         left_matrix = pybamm.Matrix(
             csr_matrix(kron(eye(second_dim_repeats), left_sub_matrix))
         )
 
-        right_sub_matrix = np.zeros((1, right_npts))
-        right_sub_matrix[0][0:right_npts_lr:right_npts] = 1
+        # Create matrix to extract leftmost lr values for each tb row in right domain
+        right_sub_matrix = np.zeros((right_npts_tb, right_npts))
+        for i in range(right_npts_tb):
+            # For each tb row, extract the leftmost lr value
+            right_sub_matrix[i, i * right_npts_lr] = 1
+
         right_matrix = pybamm.Matrix(
             csr_matrix(kron(eye(second_dim_repeats), right_sub_matrix))
         )

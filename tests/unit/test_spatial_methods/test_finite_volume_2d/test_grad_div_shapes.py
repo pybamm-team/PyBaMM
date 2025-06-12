@@ -541,3 +541,130 @@ class TestFiniteVolume2DGradDiv:
             rtol=1e-7,
             atol=1e-6,
         )
+
+    def test_internal_neumann_condition(self):
+        """
+        Test internal Neumann conditions (flux continuity) between domains
+        """
+        # Create discretisation
+        mesh = get_mesh_for_testing_2d()
+        spatial_methods = {
+            "negative electrode": pybamm.FiniteVolume2D(),
+            "separator": pybamm.FiniteVolume2D(),
+            "positive electrode": pybamm.FiniteVolume2D(),
+        }
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        # Create variables for adjacent domains
+        var_n = pybamm.Variable("var_n", domain=["negative electrode"])
+        var_s = pybamm.Variable("var_s", domain=["separator"])
+        var_p = pybamm.Variable("var_p", domain=["positive electrode"])
+
+        disc.set_variable_slices([var_n, var_s, var_p])
+
+        # Get submeshes
+        submesh_n = mesh["negative electrode"]
+        submesh_s = mesh["separator"]
+        submesh_p = mesh["positive electrode"]
+
+        # Test 1: Internal Neumann condition between negative electrode and separator
+        # Create a linear function across both domains
+        LR_n, TB_n = np.meshgrid(submesh_n.nodes_lr, submesh_n.nodes_tb)
+        LR_s, TB_s = np.meshgrid(submesh_s.nodes_lr, submesh_s.nodes_tb)
+        LR_p, TB_p = np.meshgrid(submesh_p.nodes_lr, submesh_p.nodes_tb)
+
+        # Linear x function - should have continuous gradient across boundary
+        linear_x_n = LR_n.flatten()
+        linear_x_s = LR_s.flatten()
+        linear_x_p = LR_p.flatten()
+
+        # Process the variables
+        var_n_disc = disc.process_symbol(var_n)
+        var_s_disc = disc.process_symbol(var_s)
+        var_p_disc = disc.process_symbol(var_p)
+
+        # Get the spatial method to test internal_neumann_condition directly
+        spatial_method = spatial_methods["negative electrode"]
+        spatial_method.build(mesh)
+
+        # Test internal Neumann condition between negative electrode and separator
+        internal_neumann = spatial_method.internal_neumann_condition(
+            var_n_disc, var_s_disc, submesh_n, submesh_s
+        )
+
+        # For a linear x function, the internal Neumann condition computes:
+        # (first_value_of_separator - last_value_of_neg_electrode) / dx
+        # This should equal the slope of the linear function (which is 1)
+        result = internal_neumann.evaluate(
+            None, np.concatenate([linear_x_n, linear_x_s, linear_x_p])
+        )
+
+        # For a linear x function, this should equal 1 (the slope)
+        # The exact value depends on the mesh spacing
+        dx = submesh_s.nodes_lr[0] - submesh_n.nodes_lr[-1]  # spacing across boundary
+        expected_slope = 1.0  # slope of linear x function
+
+        np.testing.assert_allclose(
+            result.flatten(),
+            expected_slope
+            * np.ones(submesh_n.npts_tb),  # One value per tb node at the boundary
+            rtol=1e-6,
+        )
+
+        # Test 2: Internal Neumann condition between separator and positive electrode
+        # Test internal Neumann condition between separator and positive electrode
+        internal_neumann_sp = spatial_method.internal_neumann_condition(
+            var_s_disc, var_p_disc, submesh_s, submesh_p
+        )
+
+        result_sp = internal_neumann_sp.evaluate(
+            None, np.concatenate([linear_x_n, linear_x_s, linear_x_p])
+        )
+
+        # Should also equal the slope (1) for linear x function
+        np.testing.assert_allclose(
+            result_sp.flatten(),
+            expected_slope
+            * np.ones(submesh_s.npts_tb),  # One value per tb node at the boundary
+            rtol=1e-6,
+        )
+
+        # Test 3: Test with constant function - should give zero
+        # Create constant functions with the same value in each domain
+        constant_n = np.ones(submesh_n.npts)  # value = 1 in negative electrode
+        constant_s = np.ones(submesh_s.npts)  # value = 1 in separator
+        constant_p = np.ones(submesh_p.npts)  # value = 1 in positive electrode
+
+        # This should give zero since there's no jump across the boundary
+        result_constant = internal_neumann.evaluate(
+            None, np.concatenate([constant_n, constant_s, constant_p])
+        )
+
+        # The result should be zero for constant function (no jump)
+        np.testing.assert_allclose(
+            result_constant.flatten(),
+            np.zeros(submesh_n.npts_tb),
+            rtol=1e-10,
+            atol=1e-12,
+        )
+
+        # Test 4: Test with discontinuous function to verify expected jump
+        # Create a step function with different values in each domain
+        constant_n_step = np.ones(submesh_n.npts)  # value = 1 in negative electrode
+        constant_s_step = 3 * np.ones(submesh_s.npts)  # value = 3 in separator
+        constant_p_step = 3 * np.ones(submesh_p.npts)  # value = 3 in positive electrode
+
+        # This should give the jump divided by dx
+        result_discontinuous = internal_neumann.evaluate(
+            None, np.concatenate([constant_n_step, constant_s_step, constant_p_step])
+        )
+
+        # The result should be (3 - 1) / dx = 2 / dx
+        expected_jump = (3 - 1) / dx  # (right_value - left_value) / dx
+
+        # Check that we get the expected jump
+        np.testing.assert_allclose(
+            result_discontinuous.flatten(),
+            expected_jump * np.ones(submesh_n.npts_tb),
+            rtol=1e-6,
+        )
