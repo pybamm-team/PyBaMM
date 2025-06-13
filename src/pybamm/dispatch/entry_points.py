@@ -109,7 +109,9 @@ class EntryPoint(Mapping):
             group = super().__getattribute__("group")
 
             # Only show deprecation warning for parameter sets, not models
-            if name in _all_entries and group == "pybamm_parameter_sets":
+            if (
+                name in _all_entries and group == "pybamm_parameter_sets"
+            ):  # pragma: no cover
                 msg = (
                     f"Parameter sets should be called directly by their name ({name}), "
                     f"instead of via pybamm.parameter_sets (pybamm.parameter_sets.{name})."

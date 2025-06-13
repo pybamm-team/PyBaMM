@@ -24,19 +24,17 @@ class TestDispatch:
         assert hasattr(model_instance, "__class__")
         assert model_instance.__class__.__name__ == "SPM"
 
-    def test_model_function_no_args(self):
-        """Test Model function with no additional arguments"""
+    def test_model_function(self):
+        """Test Model function with arguments and options"""
         model = pybamm.Model("SPM")
         assert model.__class__.__name__ == "SPM"
 
-    def test_model_function_with_options(self):
-        """Test Model function with options parameter"""
+        # Test Model function with options parameter
         options = {"thermal": "isothermal"}
         model = pybamm.Model("SPM", options=options)
         assert model.__class__.__name__ == "SPM"
 
-    def test_model_function_with_args_kwargs(self):
-        """Test Model function with *args and **kwargs"""
+        # Test Model function with *args and **kwargs
         model = pybamm.Model("SPM", build=False)
         assert model.__class__.__name__ == "SPM"
         options = {"thermal": "isothermal"}
