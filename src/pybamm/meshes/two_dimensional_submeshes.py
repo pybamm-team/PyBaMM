@@ -75,8 +75,7 @@ class SubMesh2D(SubMesh):
         json_dict = {
             "edges_lr": self.edges_lr.tolist(),
             "edges_tb": self.edges_tb.tolist(),
-            "coord_sys_lr": self.coord_sys_lr,
-            "coord_sys_tb": self.coord_sys_tb,
+            "coord_sys": self.coord_sys,
         }
 
         if hasattr(self, "tabs"):
