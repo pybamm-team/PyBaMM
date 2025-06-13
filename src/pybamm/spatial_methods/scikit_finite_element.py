@@ -282,7 +282,9 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
 
         return pybamm.Matrix(stiffness)
 
-    def integral(self, child, discretised_child, integration_dimension):
+    def integral(
+        self, child, discretised_child, integration_dimension, integration_variable
+    ):
         """Vector-vector dot product to implement the integral operator.
         See :meth:`pybamm.SpatialMethod.integral`
         """

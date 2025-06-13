@@ -506,6 +506,9 @@ class Gradient(SpatialOperator):
         )
         return sympy_Gradient(child)
 
+    def _evaluate_for_shape(self):
+        return self.children[0].evaluate_for_shape()
+
 
 class Divergence(SpatialOperator):
     """
@@ -905,8 +908,17 @@ class BoundaryIntegral(SpatialOperator):
             name += "negative tab"
         elif region == "positive tab":
             name += "positive tab"
+        elif region == "top":
+            name += "top"
+        elif region == "bottom":
+            name += "bottom"
+        elif region == "left":
+            name += "left"
+        elif region == "right":
+            name += "right"
         self.region = region
         super().__init__(name, child, domains)
+        self.domains = {}
 
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`"""
@@ -1188,6 +1200,10 @@ class UpwindDownwind(SpatialOperator):
     """
 
     def __init__(self, name, child):
+        self._perform_checks(child)
+        super().__init__(name, child)
+
+    def _perform_checks(self, child):
         if child.domain == []:
             raise pybamm.DomainError(
                 f"Cannot upwind '{child}' since its domain is empty. "
@@ -1198,11 +1214,40 @@ class UpwindDownwind(SpatialOperator):
             raise TypeError(
                 f"Cannot upwind '{child}' since it does not " + "evaluate on nodes."
             )
-        super().__init__(name, child)
 
     def _evaluates_on_edges(self, dimension: str) -> bool:
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return True
+
+
+class UpwindDownwind2D(UpwindDownwind):
+    """
+    A node in the expression tree representing an upwinding or downwinding operator.
+    Usually to be used for better stability in convection-dominated equations.
+    """
+
+    def __init__(self, child, lr_direction, tb_direction):
+        super().__init__("upwind_downwind_2d", child)
+        self.lr_direction = lr_direction
+        self.tb_direction = tb_direction
+
+    def _unary_new_copy(self, child, perform_simplifications=True):
+        """See :meth:`UnaryOperator._unary_new_copy()`."""
+        return self.__class__(child, self.lr_direction, self.tb_direction)
+
+
+class Magnitude(UnaryOperator):
+    """
+    A node in the expression tree representing the magnitude of a vector field.
+    """
+
+    def __init__(self, child, direction):
+        super().__init__("magnitude" + f"({direction})", child)
+        self.direction = direction
+
+    def _unary_new_copy(self, child, perform_simplifications=True):
+        """See :meth:`UnaryOperator._unary_new_copy()`."""
+        return self.__class__(child, self.direction)
 
 
 class Upwind(UpwindDownwind):
