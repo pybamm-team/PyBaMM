@@ -251,7 +251,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "potential pair quite conductive",
             ],
             "diffusivity": ["single", "current sigmoid"],
-            "dimensionality": [0, 1, 2],
+            "dimensionality": [0, 1, 2, 3],
             "electrolyte conductivity": [
                 "default",
                 "full",

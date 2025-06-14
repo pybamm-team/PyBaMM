@@ -121,28 +121,48 @@ def get_mesh_for_testing(
     return pybamm.Mesh(geometry, submesh_types, var_pts)
 
 
-def get_mesh_for_testing_3d(
-    xpts=None,
-    ypts=None,
-    zpts=None,
+def get_unit_3d_mesh_for_testing(
+    xpts=5, ypts=5, zpts=5, geom_type="box", include_particles=False, **geom_params
 ):
-    """
-    Build a 3D mesh
+    """Build a simple unit cube 3D mesh for testing."""
 
-    Parameters
-    ----------
-    xpts, ypts, zpts : int, optional
-        Number of cells in the x, y, z directions. Defaults to 10, 10, 5.
+    # Create simple unit cube geometry
+    x = pybamm.SpatialVariable("x", ["negative electrode"])
+    y = pybamm.SpatialVariable("y", ["negative electrode"])
+    z = pybamm.SpatialVariable("z", ["negative electrode"])
 
-    Returns
-    -------
-    mesh : :class:`pybamm.Mesh`
-    """
+    geometry = {
+        "negative electrode": {
+            x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+            y: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+            z: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+        }
+    }
+
+    generator_params = {"h": 0.2}
+    generator_params.update(geom_params)
+
+    generator = pybamm.ScikitFemGenerator3D(geom_type, **generator_params)
+
+    submesh_types = {
+        "negative electrode": generator,  # Use generator directly, not MeshGenerator(generator)
+    }
+
+    var_pts = {x: xpts, y: ypts, z: zpts}
+
+    return pybamm.Mesh(geometry, submesh_types, var_pts)
+
+
+def get_3d_mesh_for_testing(
+    xpts=5, ypts=5, zpts=5, geom_type="box", include_particles=False, **geom_params
+):
+    """Build a 3D mesh for testing with multiple domains."""
+
     param = pybamm.ParameterValues(
-        values={
+        {
             "Electrode width [m]": 1.0,
-            "Electrode height [m]": 0.5,
-            "Electrode depth [m]": 0.3,
+            "Electrode height [m]": 1.0,
+            "Electrode depth [m]": 1.0,
             "Negative electrode thickness [m]": 1 / 3,
             "Separator thickness [m]": 1 / 3,
             "Positive electrode thickness [m]": 1 / 3,
@@ -150,22 +170,13 @@ def get_mesh_for_testing_3d(
     )
 
     x = pybamm.SpatialVariable(
-        "x",
-        ["negative electrode", "separator", "positive electrode"],
-        direction="x",
-        coord_sys="cartesian",
+        "x", ["negative electrode", "separator", "positive electrode"]
     )
     y = pybamm.SpatialVariable(
-        "y",
-        ["negative electrode", "separator", "positive electrode"],
-        direction="y",
-        coord_sys="cartesian",
+        "y", ["negative electrode", "separator", "positive electrode"]
     )
     z = pybamm.SpatialVariable(
-        "z",
-        ["negative electrode", "separator", "positive electrode"],
-        direction="z",
-        coord_sys="cartesian",
+        "z", ["negative electrode", "separator", "positive electrode"]
     )
 
     geometry = {
@@ -218,27 +229,42 @@ def get_mesh_for_testing_3d(
     }
     param.process_geometry(geometry)
 
+    # Create generator with parameters
+    generator_params = {"h": 0.2}
+    generator_params.update(geom_params)
+
+    generator = pybamm.ScikitFemGenerator3D(geom_type, **generator_params)
+
     submesh_types = {
-        "negative electrode": pybamm.Uniform3DSubMesh,
-        "separator": pybamm.Uniform3DSubMesh,
-        "positive electrode": pybamm.Uniform3DSubMesh,
+        "negative electrode": generator,
+        "separator": generator,
+        "positive electrode": generator,
     }
 
-    # Set default values
-    if xpts is None:
-        xpts = 5
-    if ypts is None:
-        ypts = 4
-    if zpts is None:
-        zpts = 3
-
-    var_pts = {
-        x: xpts,
-        y: ypts,
-        z: zpts,
-    }
+    var_pts = {x: xpts, y: ypts, z: zpts}
 
     return pybamm.Mesh(geometry, submesh_types, var_pts)
+
+
+def get_3d_discretisation_for_testing(
+    xpts=5, ypts=5, zpts=5, geom_type="box", include_particles=False, **geom_params
+):
+    """
+    Build a 3D discretisation for testing.
+    """
+    mesh = get_3d_mesh_for_testing(
+        xpts=xpts,
+        ypts=ypts,
+        zpts=zpts,
+        geom_type=geom_type,
+        include_particles=include_particles,
+        **geom_params,
+    )
+    spatial_methods = {
+        "macroscale": pybamm.ScikitFiniteElement3D(),
+        "current collector": pybamm.ScikitFiniteElement3D(),
+    }
+    return pybamm.Discretisation(mesh, spatial_methods)
 
 
 def get_p2d_mesh_for_testing(xpts=None, rpts=10):

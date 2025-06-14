@@ -77,9 +77,7 @@ class VectorField3D(pybamm.Symbol):
         y_col = ensure_column_vector(y_eval)
         z_col = ensure_column_vector(z_eval)
 
-        result = np.vstack([x_col, y_col, z_col])
-
-        return result
+        return np.hstack([x_col, y_col, z_col])
 
     def evaluates_on_edges(self, dimension: str) -> bool:
         x_evaluates_on_edges = self.x_field.evaluates_on_edges(dimension)
@@ -92,11 +90,3 @@ class VectorField3D(pybamm.Symbol):
             raise ValueError(
                 "All components must agree on whether they evaluate on edges"
             )
-
-    def _jac(self, variable):
-        """Compute the Jacobian of the vector field"""
-        jac_x = self.x_field.jac(variable)
-        jac_y = self.y_field.jac(variable)
-        jac_z = self.z_field.jac(variable)
-
-        return VectorField3D(jac_x, jac_y, jac_z)
