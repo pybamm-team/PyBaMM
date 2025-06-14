@@ -877,7 +877,10 @@ class Discretisation:
                     symbol.integration_variable[0].domain[0]
                 ]
                 out = integral_spatial_method.integral(
-                    child, disc_child, symbol._integration_dimension
+                    child,
+                    disc_child,
+                    symbol._integration_dimension,
+                    symbol.integration_variable,
                 )
                 out.copy_domains(symbol)
                 return out
@@ -982,6 +985,12 @@ class Discretisation:
             new_children = [self.process_symbol(child) for child in symbol.children]
             new_symbol = spatial_method.concatenation(new_children)
             return new_symbol
+
+        elif isinstance(symbol, pybamm.VectorField3D):
+            x_sym = self.process_symbol(symbol.x_field)
+            y_sym = self.process_symbol(symbol.y_field)
+            z_sym = self.process_symbol(symbol.z_field)
+            return symbol.create_copy(new_children=[x_sym, y_sym, z_sym])
 
         elif isinstance(symbol, pybamm.InputParameter):
             if symbol.domain != []:

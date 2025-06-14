@@ -224,6 +224,14 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 the respective porosity change) over the x-axis in Single Particle
                 Models, can be "false" or "true". Default is "false" for SPMe and
                 "true" for SPM.
+            * "geometry options" : dict
+                Required when `cell geometry` is "3D". Must be a dict with:
+                - `mesh_size`: positive float
+                - `domains`: mapping each subdomain name to a dict with keys:
+                    - `type`: one of "rectangular","cylindrical","spiral"
+                    - `params`: dict of geometry parameters as documented in `PyGmshMeshGenerator`
+            * "heat of mixing": str
+                Whether to include heat of mixing in the model. Can be "false" or "true".
             * "use lumped thermal capacity" : str
                 Whether to use a lumped capacity model for the thermal model. Can be
                 "false" (default) or "true". This is only available for the lumped
@@ -243,7 +251,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "potential pair quite conductive",
             ],
             "diffusivity": ["single", "current sigmoid"],
-            "dimensionality": [0, 1, 2],
+            "dimensionality": [0, 1, 2, 3],
             "electrolyte conductivity": [
                 "default",
                 "full",
@@ -587,14 +595,14 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 raise pybamm.OptionError(
                     "cannot have transverse convection in 0D model"
                 )
+            if (
+                options["thermal"] in ["x-lumped", "x-full"]
+                and options["cell geometry"] != "pouch"
+            ):
+                raise pybamm.OptionError(
+                    options["thermal"] + " model must have pouch cell geometry."
+                )
 
-        if (
-            options["thermal"] in ["x-lumped", "x-full"]
-            and options["cell geometry"] != "pouch"
-        ):
-            raise pybamm.OptionError(
-                options["thermal"] + " model must have pouch cell geometry."
-            )
         if options["thermal"] == "x-full" and options["dimensionality"] != 0:
             n = options["dimensionality"]
             raise pybamm.OptionError(
