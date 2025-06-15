@@ -25,19 +25,16 @@ class ScikitFemGenerator3D(pybamm.MeshGenerator):
         skfem = import_optional_dependency("skfem")
         from scipy.spatial import Delaunay
 
-        # Remove duplicate points to avoid Delaunay errors
         unique_points, inverse_indices = np.unique(points, axis=0, return_inverse=True)
 
         if unique_points.shape[0] < 4:
             pybamm.logger.warning("Mesh has too few unique points for 3D Delaunay.")
             return None
 
-        # Create Delaunay triangulation
         try:
             delaunay = Delaunay(unique_points)
             mesh = skfem.MeshTet(unique_points.T, delaunay.simplices.T)
 
-            # Add subdomains to the created mesh
             subdomains = {"default": np.arange(mesh.nelements)}
             mesh = mesh.with_subdomains(subdomains)
 
@@ -56,7 +53,6 @@ class ScikitFemGenerator3D(pybamm.MeshGenerator):
         ny = max(5, int((y_max - y_min) / h))
         nz = max(5, int((z_max - z_min) / h))
 
-        # Create mesh first, then define boundaries
         mesh = skfem.MeshTet.init_tensor(
             np.linspace(x_min, x_max, nx),
             np.linspace(y_min, y_max, ny),
@@ -66,7 +62,6 @@ class ScikitFemGenerator3D(pybamm.MeshGenerator):
         bnd_facets = mesh.boundary_facets()
         midpoints = mesh.p[:, mesh.facets[:, bnd_facets]].mean(axis=1)
 
-        # This is now just a dictionary, not assigned to the mesh yet.
         boundaries = {
             "left": bnd_facets[np.isclose(midpoints[0], x_min)],
             "right": bnd_facets[np.isclose(midpoints[0], x_max)],
@@ -99,11 +94,17 @@ class ScikitFemGenerator3D(pybamm.MeshGenerator):
                     for theta in theta_coords:
                         points.append([r * np.cos(theta), r * np.sin(theta), z])
 
-        mesh = self._create_mesh_from_points(np.array(points))
+        points = np.array(points)
+
+        np.random.seed(0)  # for reproducibility
+        jitter = h * 1e-5
+        points += np.random.normal(scale=jitter, size=points.shape)
+
+        mesh = self._create_mesh_from_points(points)  # Pass jittered points
+
         if mesh is None:
             return None
 
-        # FIX: More robust boundary detection
         bnd_facets = mesh.boundary_facets()
         if len(bnd_facets) == 0:
             return None
@@ -127,7 +128,6 @@ class ScikitFemGenerator3D(pybamm.MeshGenerator):
         if np.any(side_mask):
             boundaries["side wall"] = bnd_facets[side_mask]
 
-        # Only add boundaries that actually exist
         if not boundaries:
             return None
 
@@ -252,7 +252,6 @@ class ScikitFemSubMesh3D(pybamm.SubMesh):
 
         if hasattr(self._skfem_mesh, "boundaries"):
             for name in self._skfem_mesh.boundaries:
-                # Create a basis for integrating over this boundary
                 facet_basis = skfem.FacetBasis(
                     self._skfem_mesh,
                     self.basis.elem,
@@ -260,13 +259,11 @@ class ScikitFemSubMesh3D(pybamm.SubMesh):
                 )
                 setattr(self, f"{name}_basis", facet_basis)
 
-                # Get the indices (degrees of freedom) of the nodes on this boundary
                 dofs = self.basis.get_dofs(
                     name
                 ).all()  # Use .all() to get the numpy array
                 setattr(self, f"{name}_dofs", dofs)
 
-                # Also store normals for flux calculations
                 normals = facet_basis.normals
                 setattr(self, f"{name}_normals", normals)
 

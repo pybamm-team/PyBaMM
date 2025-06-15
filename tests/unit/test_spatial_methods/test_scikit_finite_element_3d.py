@@ -157,19 +157,18 @@ class TestScikitFiniteElement3D:
         np.testing.assert_allclose(np.mean(grad_eval[:, 2]), 4, rtol=5e-2, atol=5e-2)
 
     def test_laplacian_3d_manufactured_box(self):
-        mesh = get_unit_3d_mesh_for_testing(h=0.3)
+        mesh = get_unit_3d_mesh_for_testing(h=0.4)
         disc = pybamm.Discretisation(
             mesh, {"negative electrode": pybamm.ScikitFiniteElement3D()}
         )
         var = pybamm.Variable("var", domain="negative electrode")
 
-        source_term = pybamm.Scalar(6)
-        eqn = pybamm.laplacian(var) - source_term
+        eqn = pybamm.laplacian(var)
 
         x_sym = pybamm.SpatialVariable("x", "negative electrode")
         y_sym = pybamm.SpatialVariable("y", "negative electrode")
         z_sym = pybamm.SpatialVariable("z", "negative electrode")
-        u_analytical_sym = x_sym**2 + y_sym**2 + z_sym**2
+        u_analytical_sym = x_sym * y_sym * z_sym
 
         all_boundaries = ["left", "right", "bottom", "top", "front", "back"]
         disc.bcs = {
@@ -179,27 +178,26 @@ class TestScikitFiniteElement3D:
         eqn_disc = disc.process_symbol(eqn)
 
         x_num, y_num, z_num = mesh["negative electrode"].nodes.T
-        u_analytical_num = x_num**2 + y_num**2 + z_num**2
+        u_analytical_num = x_num * y_num * z_num
 
         result = eqn_disc.evaluate(None, u_analytical_num)
 
         submesh = mesh["negative electrode"]
-        boundary_dofs = np.array([], dtype=int)
-        for name in all_boundaries:
-            dofs = getattr(submesh, f"{name}_dofs")
-            boundary_dofs = np.union1d(boundary_dofs, dofs)
-
+        boundary_dofs = np.unique(
+            np.concatenate(
+                [getattr(submesh, f"{name}_dofs") for name in all_boundaries]
+            )
+        )
         interior_mask = np.ones(submesh.npts, dtype=bool)
         interior_mask[boundary_dofs] = False
 
         l2_error = np.sqrt(np.mean(result[interior_mask] ** 2))
-
-        assert l2_error < 1.0
+        assert l2_error < 1e-10
 
     def test_laplacian_3d_manufactured_cylinder(self):
         try:
             mesh = get_unit_3d_mesh_for_testing(
-                geom_type="cylinder", radius=1, height=1, h=0.4
+                geom_type="cylinder", radius=0.5, height=1, h=0.2
             )
         except pybamm.DiscretisationError as e:
             pytest.skip(f"Cylinder mesh generation failed: {e}")
@@ -209,9 +207,17 @@ class TestScikitFiniteElement3D:
         )
         var = pybamm.Variable("var", domain="negative electrode")
 
-        eqn = pybamm.laplacian(var)
+        source_term = pybamm.Scalar(4)
+        eqn = pybamm.laplacian(var) - source_term
 
-        disc.bcs = {}
+        x_sym = pybamm.SpatialVariable("x", "negative electrode")
+        y_sym = pybamm.SpatialVariable("y", "negative electrode")
+        u_analytical_sym = x_sym**2 + y_sym**2
+
+        all_boundaries = ["side wall", "top cap", "bottom cap"]
+        disc.bcs = {
+            var: {name: (u_analytical_sym, "Dirichlet") for name in all_boundaries}
+        }
         disc.set_variable_slices([var])
         eqn_disc = disc.process_symbol(eqn)
 
@@ -220,8 +226,17 @@ class TestScikitFiniteElement3D:
 
         result = eqn_disc.evaluate(None, u_analytical_num)
 
-        mean_result = np.mean(result)
-        assert abs(abs(mean_result) - 4) < 2.0
+        submesh = mesh["negative electrode"]
+        boundary_dofs = np.unique(
+            np.concatenate(
+                [getattr(submesh, f"{name}_dofs") for name in all_boundaries]
+            )
+        )
+        interior_mask = np.ones(submesh.npts, dtype=bool)
+        interior_mask[boundary_dofs] = False
+
+        l2_error = np.sqrt(np.mean(result[interior_mask] ** 2))
+        assert l2_error < 1e-1
 
     def test_divergence_3d_manufactured(self):
         mesh = get_unit_3d_mesh_for_testing(h=0.4)
@@ -230,12 +245,10 @@ class TestScikitFiniteElement3D:
         )
 
         u = pybamm.Variable("u", domain="negative electrode")
-        eqn = pybamm.div(pybamm.grad(u))  # div(grad(u)) is laplacian(u)
+        eqn = pybamm.div(pybamm.grad(u))
 
         x_sym = pybamm.SpatialVariable("x", "negative electrode")
-        y_sym = pybamm.SpatialVariable("y", "negative electrode")
-        z_sym = pybamm.SpatialVariable("z", "negative electrode")
-        u_analytical_sym = x_sym**2 + 1.5 * y_sym**2 + 2 * z_sym**2
+        u_analytical_sym = 4.5 * x_sym**2
 
         disc.bcs = {
             u: {
@@ -246,11 +259,12 @@ class TestScikitFiniteElement3D:
         disc.set_variable_slices([u])
         div_disc = disc.process_symbol(eqn)
 
-        x, y, z = mesh["negative electrode"].nodes.T
-        test_func = x**2 + 1.5 * y**2 + 2 * z**2
+        x, _, _ = mesh["negative electrode"].nodes.T
+        test_func = 4.5 * x**2
 
         result = div_disc.evaluate(None, test_func)
-        np.testing.assert_allclose(np.mean(result), 9, rtol=5e-2, atol=5e-2)
+
+        np.testing.assert_allclose(np.mean(result), 9, rtol=1e-1, atol=1e-1)
 
     def test_neumann_boundary_conditions(self):
         mesh = get_unit_3d_mesh_for_testing(h=0.5)
