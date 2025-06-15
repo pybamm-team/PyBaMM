@@ -116,16 +116,16 @@ class ScikitFemGenerator3D(pybamm.MeshGenerator):
 
         bottom_mask = midpoints[2] < (0 + tol)
         if np.any(bottom_mask):
-            boundaries["bottom_cap"] = bnd_facets[bottom_mask]
+            boundaries["bottom cap"] = bnd_facets[bottom_mask]
 
         top_mask = midpoints[2] > (height - tol)
         if np.any(top_mask):
-            boundaries["top_cap"] = bnd_facets[top_mask]
+            boundaries["top cap"] = bnd_facets[top_mask]
 
         radial_dist = np.sqrt(midpoints[0] ** 2 + midpoints[1] ** 2)
         side_mask = radial_dist > (radius - tol)
         if np.any(side_mask):
-            boundaries["side_wall"] = bnd_facets[side_mask]
+            boundaries["side wall"] = bnd_facets[side_mask]
 
         # Only add boundaries that actually exist
         if not boundaries:
@@ -161,10 +161,10 @@ class ScikitFemGenerator3D(pybamm.MeshGenerator):
         boundaries = {
             "bottom": bnd_facets[np.isclose(midpoints[2], 0)],
             "top": bnd_facets[np.isclose(midpoints[2], height)],
-            "inner_wall": bnd_facets[
+            "inner wall": bnd_facets[
                 np.isclose(np.sqrt(midpoints[0] ** 2 + midpoints[1] ** 2), inner_radius)
             ],
-            "outer_wall": bnd_facets[
+            "outer wall": bnd_facets[
                 np.isclose(np.sqrt(midpoints[0] ** 2 + midpoints[1] ** 2), outer_radius)
             ],
         }

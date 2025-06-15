@@ -150,8 +150,3 @@ plt.colorbar(ax2.collections[0], ax=ax2, label="Temperature [°C]")
 
 plt.tight_layout()
 plt.show()
-
-print("\nMesh Information:")
-print(f"Number of nodes: {submesh.npts}")
-print(f"Number of elements: {submesh.nelements}")
-print("Mesh type: Unstructured tetrahedral (scikit-fem)")

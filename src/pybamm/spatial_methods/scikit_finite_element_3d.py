@@ -46,6 +46,7 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
     def gradient(self, symbol, discretised_symbol, boundary_conditions):
         """
         Matrix-vector multiplication to implement the 3D gradient operator.
+        Returns a Concatenation of [grad_x, grad_y, grad_z] similar to 2D approach.
 
         Parameters
         ----------
@@ -58,8 +59,8 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
 
         Returns
         -------
-        :class:`pybamm.VectorField3D`
-            The 3D gradient vector field
+        :class:`pybamm.Concatenation`
+            The 3D gradient as concatenation of x, y, z components
         """
         skfem = import_optional_dependency("skfem")
         domain = symbol.domain[0]
@@ -74,23 +75,19 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
             return u * v
 
         mass = skfem.asm(mass_form, mesh.basis)
-
-        try:
-            mass_inv = pybamm.Matrix(inv(csc_matrix(mass)))
-        except Exception:
-            return pybamm.VectorField3D(
-                pybamm.Vector(np.full(mesh.npts, np.nan)),
-                pybamm.Vector(np.full(mesh.npts, np.nan)),
-                pybamm.Vector(np.full(mesh.npts, np.nan)),
-            )
+        mass_inv = pybamm.Matrix(inv(csc_matrix(mass)))
 
         grad_x = mass_inv @ (grad_x_matrix @ discretised_symbol)
         grad_y = mass_inv @ (grad_y_matrix @ discretised_symbol)
         grad_z = mass_inv @ (grad_z_matrix @ discretised_symbol)
-        grad_field = pybamm.VectorField3D(grad_x, grad_y, grad_z)
-        grad_field.evaluates_on_edges = lambda _: True
 
-        return grad_field
+        # Create concatenation
+        grad = pybamm.Concatenation(
+            grad_x, grad_y, grad_z, check_domain=False, concat_fun=np.hstack
+        )
+        grad.copy_domains(symbol)
+
+        return grad
 
     def gradient_squared(self, symbol, discretised_symbol, boundary_conditions):
         """
@@ -98,9 +95,7 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
         with itself in 3D.
         """
         grad = self.gradient(symbol, discretised_symbol, boundary_conditions)
-        grad_x = grad.x_field
-        grad_y = grad.y_field
-        grad_z = grad.z_field
+        grad_x, grad_y, grad_z = grad.orphans
         return grad_x**2 + grad_y**2 + grad_z**2
 
     def gradient_matrix(self, symbol, boundary_conditions):
@@ -144,13 +139,14 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
     def divergence(self, symbol, discretised_symbol, boundary_conditions):
         """
         Matrix-vector multiplication to implement the 3D divergence operator.
+        Expects discretised_symbol to be a Concatenation of [Fx, Fy, Fz].
 
         Parameters
         ----------
         symbol: :class:`pybamm.Symbol`
             The symbol representing the divergence operation
-        discretised_symbol: :class:`pybamm.VectorField3D`
-            The discretised vector field
+        discretised_symbol: :class:`pybamm.Concatenation`
+            The discretised vector field as concatenation [Fx, Fy, Fz]
         boundary_conditions : dict
             The boundary conditions of the model
 
@@ -159,12 +155,17 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
         :class:`pybamm.Symbol`
             The divergence of the vector field
         """
+        domain_key = symbol.domain[0]
 
-        try:
-            domain_key = discretised_symbol.domain[0]
-        except (AttributeError, IndexError):
-            domain_key = symbol.domain[0]
-        mesh = self.mesh[domain_key]
+        if (
+            hasattr(discretised_symbol, "orphans")
+            and len(discretised_symbol.orphans) == 3
+        ):
+            Fx, Fy, Fz = discretised_symbol.orphans
+        else:
+            raise ValueError(
+                "divergence expects a concatenation of 3 vector components"
+            )
 
         dummy_scalar_for_grad_ops = pybamm.Variable("dummy_scalar", domain=domain_key)
         grad_x_op, grad_y_op, grad_z_op = self.gradient_matrix(
@@ -175,11 +176,7 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
         grad_y_T = pybamm.Matrix(grad_y_op.entries.T)
         grad_z_T = pybamm.Matrix(grad_z_op.entries.T)
 
-        Fx = discretised_symbol.x_field
-        Fy = discretised_symbol.y_field
-        Fz = discretised_symbol.z_field
-
-        rhs_divergence = -(grad_x_T @ Fx + grad_y_T @ Fy + grad_z_T @ Fz)
+        rhs_divergence = grad_x_T @ Fx + grad_y_T @ Fy + grad_z_T @ Fz
 
         mass_mat_raw = self.mass_matrix(dummy_scalar_for_grad_ops, {})
         mass_entries_sparse = csc_matrix(mass_mat_raw.entries)
@@ -187,11 +184,8 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
         if mass_entries_sparse.shape[0] == 0:
             return pybamm.Scalar(0) * Fx
 
-        try:
-            mass_inv_sparse = inv(mass_entries_sparse)
-            mass_inv = pybamm.Matrix(mass_inv_sparse)
-        except Exception:
-            return pybamm.Vector(np.full(mesh.npts, np.nan))
+        mass_inv_sparse = inv(mass_entries_sparse)
+        mass_inv = pybamm.Matrix(mass_inv_sparse)
 
         div_op_val = mass_inv @ rhs_divergence
         div_op_val.clear_domains()
@@ -200,6 +194,7 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
     def laplacian(self, symbol, discretised_symbol, boundary_conditions):
         """
         Matrix-vector multiplication to implement the 3D Laplacian operator.
+        Uses direct stiffness matrix approach without mass matrix inversion for stability.
 
         Parameters
         ----------
@@ -215,35 +210,27 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
         :class:`pybamm.Symbol`
             The Laplacian of the symbol
         """
-        stiffness_mat_raw = self.stiffness_matrix(symbol, {})
-        boundary_load_neumann_raw = self.laplacian_boundary_load(
-            symbol, boundary_conditions
-        )
-        mass_mat_raw = self.mass_matrix(symbol, {})
+        domain = symbol.domain[0]
+        mesh = self.mesh[domain]
 
-        mass_entries_sparse = csc_matrix(mass_mat_raw.entries)
+        stiffness_matrix = self.stiffness_matrix(symbol, boundary_conditions)
+        boundary_load = self.laplacian_boundary_load(symbol, boundary_conditions)
 
-        if mass_entries_sparse.shape[0] == 0:
-            return pybamm.Scalar(0) * discretised_symbol
+        # Apply boundary conditions to stiffness matrix
+        all_boundary_dofs = np.array([], dtype=int)
+        bcs = boundary_conditions.get(symbol, {})
 
-        try:
-            mass_inv_sparse = inv(mass_entries_sparse)
-            mass_inv = pybamm.Matrix(mass_inv_sparse)
-        except Exception:
-            return pybamm.Vector(
-                np.full(
-                    discretised_symbol.shape[0]
-                    if hasattr(discretised_symbol, "shape")
-                    else mass_entries_sparse.shape[0],
-                    np.nan,
-                )
-            )
+        for name, (_bc_value, bc_type) in bcs.items():
+            if bc_type == "Dirichlet" and hasattr(mesh, f"{name}_dofs"):
+                boundary_dofs = getattr(mesh, f"{name}_dofs")
+                all_boundary_dofs = np.union1d(all_boundary_dofs, boundary_dofs)
 
-        lap_op_val = mass_inv @ (
-            -stiffness_mat_raw @ discretised_symbol + boundary_load_neumann_raw
-        )
-        lap_op_val.clear_domains()
-        return lap_op_val
+        if all_boundary_dofs.any():
+            stiffness_entries = stiffness_matrix.entries.copy()
+            self.bc_apply(stiffness_entries, all_boundary_dofs)
+            stiffness_matrix = pybamm.Matrix(stiffness_entries)
+
+        return -stiffness_matrix @ discretised_symbol + boundary_load
 
     def stiffness_matrix(self, symbol, boundary_conditions):
         """
@@ -304,11 +291,15 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
                 if hasattr(mesh, f"{name}_basis"):
                     boundary_basis = getattr(mesh, f"{name}_basis")
                     bc_contrib = skfem.asm(unit_bc_load_form, boundary_basis)
-                    if hasattr(bc_value, "evaluate"):
-                        bc_val = bc_value.evaluate()
+                    # For Neumann BC, just apply scalar value
+                    if hasattr(bc_value, "value"):
+                        bc_val = bc_value.value
                     else:
-                        bc_val = float(bc_value)
+                        bc_val = 1.0  # Default value
                     boundary_load += bc_val * bc_contrib
+            elif bc_type == "Dirichlet":
+                # For Dirichlet BC, the boundary load is zero (handled in matrix)
+                pass
 
         return pybamm.Vector(boundary_load)
 

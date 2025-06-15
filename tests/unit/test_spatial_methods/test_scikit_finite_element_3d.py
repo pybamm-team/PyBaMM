@@ -94,7 +94,7 @@ class TestScikitFiniteElement3D:
         disc.bcs = {
             var: {
                 name: (u_analytical_sym, "Dirichlet")
-                for name in ["side_wall", "top_cap", "bottom_cap"]
+                for name in ["side wall", "top cap", "bottom cap"]
             }
         }
 

@@ -986,12 +986,6 @@ class Discretisation:
             new_symbol = spatial_method.concatenation(new_children)
             return new_symbol
 
-        elif isinstance(symbol, pybamm.VectorField3D):
-            x_sym = self.process_symbol(symbol.x_field)
-            y_sym = self.process_symbol(symbol.y_field)
-            z_sym = self.process_symbol(symbol.z_field)
-            return symbol.create_copy(new_children=[x_sym, y_sym, z_sym])
-
         elif isinstance(symbol, pybamm.InputParameter):
             if symbol.domain != []:
                 expected_size = self._get_variable_size(symbol)

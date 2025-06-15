@@ -44,7 +44,6 @@ from .expression_tree.independent_variable import *
 from .expression_tree.independent_variable import t
 from .expression_tree.vector import Vector
 from .expression_tree.state_vector import StateVectorBase, StateVector, StateVectorDot
-from .expression_tree.vector_field import VectorField3D
 
 from .expression_tree.exceptions import *
 
