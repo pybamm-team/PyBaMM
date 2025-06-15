@@ -81,7 +81,7 @@ class ScikitFemGenerator3D(pybamm.MeshGenerator):
         n_theta = max(12, int(2 * np.pi * radius / h))
         n_z = max(5, int(height / h))
 
-        r_coords = np.linspace(0, radius, n_radial)
+        r_coords = np.sqrt(np.linspace(0, radius**2, n_radial))
         theta_coords = np.linspace(0, 2 * np.pi, n_theta, endpoint=False)
         z_coords = np.linspace(0, height, n_z)
 
@@ -112,7 +112,7 @@ class ScikitFemGenerator3D(pybamm.MeshGenerator):
         midpoints = mesh.p[:, mesh.facets[:, bnd_facets]].mean(axis=1)
 
         # Use tolerances for boundary detection
-        tol = h * 0.1
+        tol = 1e-6
         boundaries = {}
 
         bottom_mask = midpoints[2] < (0 + tol)

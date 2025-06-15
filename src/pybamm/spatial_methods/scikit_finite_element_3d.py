@@ -208,7 +208,7 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
             self.bc_apply(stiffness_entries, all_dirichlet_dofs)
             stiffness_matrix = pybamm.Matrix(stiffness_entries)
 
-        return stiffness_matrix @ discretised_symbol + boundary_load
+        return -stiffness_matrix @ discretised_symbol + boundary_load
 
     def divergence(self, symbol, discretised_symbol, boundary_conditions):
         """
@@ -244,17 +244,11 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
         dummy_scalar = pybamm.Variable("dummy", domain=domain_key)
         grad_x_op, grad_y_op, grad_z_op = self.gradient_matrix(dummy_scalar, {})
 
-        # Use negative transpose for correct divergence
-        grad_x_T = pybamm.Matrix(-grad_x_op.entries.T)
-        grad_y_T = pybamm.Matrix(-grad_y_op.entries.T)
-        grad_z_T = pybamm.Matrix(-grad_z_op.entries.T)
+        grad_x_T = pybamm.Matrix(grad_x_op.entries.T)
+        grad_y_T = pybamm.Matrix(grad_y_op.entries.T)
+        grad_z_T = pybamm.Matrix(grad_z_op.entries.T)
 
-        rhs_divergence = grad_x_T @ Fx + grad_y_T @ Fy + grad_z_T @ Fz
-
-        mass_mat_raw = self.mass_matrix(dummy_scalar, {})
-        mass_inv = pybamm.Matrix(inv(csc_matrix(mass_mat_raw.entries)))
-
-        div_op_val = mass_inv @ rhs_divergence
+        div_op_val = grad_x_T @ Fx + grad_y_T @ Fy + grad_z_T @ Fz
         div_op_val.clear_domains()
         return div_op_val
 

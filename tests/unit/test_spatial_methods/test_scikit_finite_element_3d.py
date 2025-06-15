@@ -68,7 +68,7 @@ class TestScikitFiniteElement3D:
                 result = eqn_disc.evaluate(None, y_test)
                 assert result is not None
 
-    def test_discretise_equations_cylinder(self):
+    def test_discretise_equations_cylinder_with_bcs(self):
         try:
             mesh = get_3d_mesh_for_testing(
                 geom_type="cylinder",
@@ -194,19 +194,20 @@ class TestScikitFiniteElement3D:
         l2_error = np.sqrt(np.mean(result[interior_mask] ** 2))
         assert l2_error < 1e-10
 
-    def test_laplacian_3d_manufactured_cylinder(self):
+    def test_discretise_equations_cylinder(self):
         try:
-            mesh = get_unit_3d_mesh_for_testing(
-                geom_type="cylinder", radius=0.5, height=1, h=0.2
+            mesh = get_3d_mesh_for_testing(
+                geom_type="cylinder",
+                radius=0.5,
+                height=1.0,
+                h=0.15,
             )
         except pybamm.DiscretisationError as e:
             pytest.skip(f"Cylinder mesh generation failed: {e}")
 
-        disc = pybamm.Discretisation(
-            mesh, {"negative electrode": pybamm.ScikitFiniteElement3D()}
-        )
+        spatial_methods = {"negative electrode": pybamm.ScikitFiniteElement3D()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
         var = pybamm.Variable("var", domain="negative electrode")
-
         source_term = pybamm.Scalar(4)
         eqn = pybamm.laplacian(var) - source_term
 
@@ -218,25 +219,27 @@ class TestScikitFiniteElement3D:
         disc.bcs = {
             var: {name: (u_analytical_sym, "Dirichlet") for name in all_boundaries}
         }
+
         disc.set_variable_slices([var])
         eqn_disc = disc.process_symbol(eqn)
-
-        x_num, y_num, _ = mesh["negative electrode"].nodes.T
+        submesh = mesh["negative electrode"]
+        x_num, y_num, z_num = submesh.nodes.T
         u_analytical_num = x_num**2 + y_num**2
-
         result = eqn_disc.evaluate(None, u_analytical_num)
 
-        submesh = mesh["negative electrode"]
         boundary_dofs = np.unique(
             np.concatenate(
                 [getattr(submesh, f"{name}_dofs") for name in all_boundaries]
             )
         )
+        # Create a mask that is True for interior nodes and False for boundary nodes
         interior_mask = np.ones(submesh.npts, dtype=bool)
         interior_mask[boundary_dofs] = False
 
+        # Calculate the L2 error ONLY on the interior nodes
         l2_error = np.sqrt(np.mean(result[interior_mask] ** 2))
-        assert l2_error < 1e-1
+
+        assert l2_error < 1e-2
 
     def test_divergence_3d_manufactured(self):
         mesh = get_unit_3d_mesh_for_testing(h=0.4)
@@ -245,7 +248,6 @@ class TestScikitFiniteElement3D:
         )
 
         u = pybamm.Variable("u", domain="negative electrode")
-        eqn = pybamm.div(pybamm.grad(u))
 
         x_sym = pybamm.SpatialVariable("x", "negative electrode")
         u_analytical_sym = 4.5 * x_sym**2
@@ -254,17 +256,25 @@ class TestScikitFiniteElement3D:
             u: {
                 "left": (u_analytical_sym, "Dirichlet"),
                 "right": (u_analytical_sym, "Dirichlet"),
+                "front": (u_analytical_sym, "Dirichlet"),
+                "back": (u_analytical_sym, "Dirichlet"),
+                "bottom": (u_analytical_sym, "Dirichlet"),
+                "top": (u_analytical_sym, "Dirichlet"),
             }
         }
+
         disc.set_variable_slices([u])
-        div_disc = disc.process_symbol(eqn)
 
-        x, _, _ = mesh["negative electrode"].nodes.T
-        test_func = 4.5 * x**2
+        x, y, z = mesh["negative electrode"].nodes.T
+        u_exact = 4.5 * x**2
 
-        result = div_disc.evaluate(None, test_func)
+        grad_u = pybamm.grad(u)
+        div_grad_u = pybamm.div(grad_u)
 
-        np.testing.assert_allclose(np.mean(result), 9, rtol=1e-1, atol=1e-1)
+        div_disc = disc.process_symbol(div_grad_u)
+        div_result = div_disc.evaluate(None, u_exact)
+
+        np.testing.assert_allclose(np.mean(div_result), 9, rtol=1e-1, atol=1e-1)
 
     def test_neumann_boundary_conditions(self):
         mesh = get_unit_3d_mesh_for_testing(h=0.5)
@@ -510,3 +520,59 @@ class TestScikitFiniteElement3D:
         np.testing.assert_array_equal(x_disc.evaluate(), x_actual)
         np.testing.assert_array_equal(y_disc.evaluate(), y_actual)
         np.testing.assert_array_equal(z_disc.evaluate(), z_actual)
+
+    def test_discretise_equations_spiral_manufactured(self):
+        try:
+            mesh = get_3d_mesh_for_testing(
+                geom_type="spiral",
+                include_particles=False,
+                inner_radius=0.2,
+                outer_radius=0.5,
+                height=1.0,
+                turns=1.5,
+                h=0.1,  # Use a reasonable h for accuracy
+            )
+        except pybamm.DiscretisationError as e:
+            pytest.skip(f"Spiral mesh generation failed: {e}")
+
+        spatial_methods = {"negative electrode": pybamm.ScikitFiniteElement3D()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        var = pybamm.Variable("var", domain="negative electrode")
+
+        # 1. Define the manufactured solution and source term
+        x_sym = pybamm.SpatialVariable("x", "negative electrode")
+        y_sym = pybamm.SpatialVariable("y", "negative electrode")
+        u_analytical_sym = x_sym**2 + y_sym**2
+        source_term = pybamm.Scalar(4)  # Laplacian of the analytical solution
+
+        eqn = pybamm.laplacian(var) - source_term
+
+        all_boundaries = ["top", "bottom", "inner wall", "outer wall"]
+        disc.bcs = {
+            var: {name: (u_analytical_sym, "Dirichlet") for name in all_boundaries}
+        }
+        disc.set_variable_slices([var])
+
+        eqn_disc = disc.process_symbol(eqn)
+        submesh = mesh["negative electrode"]
+        x_num, y_num, z_num = submesh.nodes.T
+        u_analytical_num = x_num**2 + y_num**2
+        result = eqn_disc.evaluate(None, u_analytical_num)
+
+        boundary_dofs = np.unique(
+            np.concatenate(
+                [
+                    getattr(submesh, f"{name}_dofs")
+                    for name in all_boundaries
+                    if hasattr(submesh, f"{name}_dofs")
+                ]
+            )
+        )
+        interior_mask = np.ones(submesh.npts, dtype=bool)
+        interior_mask[boundary_dofs] = False
+
+        assert np.any(interior_mask)
+
+        l2_error = np.sqrt(np.mean(result[interior_mask] ** 2))
+
+        assert l2_error < 1e-2
