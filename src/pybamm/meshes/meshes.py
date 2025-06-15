@@ -231,7 +231,14 @@ class Mesh(dict):
             for domain, submesh in self.items()
             if (
                 len(domain) == 1
-                and not isinstance(submesh, (pybamm.SubMesh0D, pybamm.ScikitSubMesh2D))
+                and not isinstance(
+                    submesh,
+                    (
+                        pybamm.SubMesh0D,
+                        pybamm.ScikitSubMesh2D,
+                        pybamm.ScikitFemSubMesh3D,
+                    ),
+                )
             )
         ]
         for domain, submesh in submeshes:

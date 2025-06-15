@@ -584,7 +584,23 @@ class ParameterValues:
         "positive tab": pos. tab bc "no tab": no tab bc}.
         """
         new_boundary_conditions = {}
-        sides = ["left", "right", "negative tab", "positive tab", "no tab"]
+        sides = [
+            "left",
+            "right",
+            "negative tab",
+            "positive tab",
+            "no tab",
+            "front",
+            "back",
+            "top",
+            "bottom",
+            "inner wall",
+            "outer wall",
+            "top cap",
+            "bottom cap",
+            "side wall",
+        ]
+
         for variable, bcs in model.boundary_conditions.items():
             processed_variable = self.process_symbol(variable)
             new_boundary_conditions[processed_variable] = {}
