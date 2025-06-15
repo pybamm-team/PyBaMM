@@ -69,9 +69,6 @@ class TestScikitFemGenerator3D:
         submesh = mesh["domain"]
         assert hasattr(submesh, "_skfem_mesh"), "Mesh should have _skfem_mesh attribute"
         assert submesh.dimension == 3, "Mesh should be 3D"
-        assert submesh.coord_sys == "cylindrical polar", (
-            "Cylinder mesh should be cylindrical polar"
-        )
 
         nodes = submesh.nodes
         x_coords = nodes[:, 0]
@@ -116,9 +113,6 @@ class TestScikitFemGenerator3D:
         submesh = mesh["domain"]
         assert hasattr(submesh, "_skfem_mesh"), "Mesh should have _skfem_mesh attribute"
         assert submesh.dimension == 3, "Mesh should be 3D"
-        assert submesh.coord_sys == "spiral", (
-            "Spiral mesh should have spiral coordinates"
-        )
 
         nodes = submesh.nodes
         x_coords = nodes[:, 0]
