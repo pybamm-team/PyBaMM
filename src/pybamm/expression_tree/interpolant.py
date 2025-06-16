@@ -108,7 +108,7 @@ class Interpolant(pybamm.Function):
                     f"but x1.shape={x1.shape} and y.shape={y.shape}"
                 )
             # if 1d then x should be monotonically increasing
-            if not all(np.diff(x1) >= 0):
+            if np.any(x1[:-1] > x1[1:]):
                 raise ValueError("x should be monotonically increasing")
         # children should be a list not a symbol or a number
         if isinstance(children, (pybamm.Symbol, numbers.Number)):
