@@ -385,7 +385,7 @@ class Discretisation:
                 if first_child not in bc_keys:
                     internal_bcs.update({first_child: {"left": lbc, "right": rbc}})
 
-                for current_child, next_child in itertools.pairwise(children):
+                for current_child, next_child in itertools.pairwise(children[1:]):
                     lbc = rbc
                     rbc = (boundary_gradient(current_child, next_child), "Neumann")
                     if current_child not in bc_keys:
