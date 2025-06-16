@@ -49,7 +49,7 @@ class ParameterValues:
             }
         )
 
-        if isinstance(values, (dict, ParameterValues)):
+        if isinstance(values, dict | ParameterValues):
             # remove the "chemistry" key if it exists
             values.pop("chemistry", None)
             self.update(values, check_already_exists=False)
@@ -109,8 +109,8 @@ class ParameterValues:
         # see https://github.com/pybamm-team/PyBaMM/issues/2682
         bpx_neg = bpx.parameterisation.negative_electrode
         bpx_pos = bpx.parameterisation.positive_electrode
-        if isinstance(bpx_neg, (ElectrodeBlended, ElectrodeBlendedSPM)) or isinstance(
-            bpx_pos, (ElectrodeBlended, ElectrodeBlendedSPM)
+        if isinstance(bpx_neg, ElectrodeBlended | ElectrodeBlendedSPM) or isinstance(
+            bpx_pos, ElectrodeBlended | ElectrodeBlendedSPM
         ):
             pybamm.logger.warning(
                 "Initial concentrations cannot be set using stoichiometry limits for "
@@ -558,7 +558,7 @@ class ParameterValues:
         for interpolant in interpolants:
             xs = interpolant.x
             children = interpolant.children
-            for x, child in zip(xs, children):
+            for x, child in zip(xs, children, strict=False):
                 interpolant_events.extend(
                     [
                         pybamm.Event(
@@ -687,7 +687,7 @@ class ParameterValues:
             function_name = self[symbol.name]
             if isinstance(
                 function_name,
-                (numbers.Number, pybamm.Interpolant, pybamm.InputParameter),
+                numbers.Number | pybamm.Interpolant | pybamm.InputParameter,
             ) or (
                 isinstance(function_name, pybamm.Symbol)
                 and function_name.size_for_testing == 1
@@ -747,7 +747,7 @@ class ParameterValues:
                 # otherwise evaluate the function to create a new PyBaMM object
                 function = function_name(*new_children)
             elif isinstance(
-                function_name, (pybamm.Interpolant, pybamm.InputParameter)
+                function_name, pybamm.Interpolant | pybamm.InputParameter
             ) or (
                 isinstance(function_name, pybamm.Symbol)
                 and function_name.size_for_testing == 1

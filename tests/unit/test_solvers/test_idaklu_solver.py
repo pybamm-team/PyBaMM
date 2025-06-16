@@ -92,7 +92,7 @@ class TestIDAKLUSolver:
             )
 
             # check solution
-            for inputs, solution in zip(inputs_list, solutions):
+            for inputs, solution in zip(inputs_list, solutions, strict=False):
                 print("checking solution", inputs, solution.all_inputs)
                 np.testing.assert_array_equal(solution.t, t_interp)
                 np.testing.assert_allclose(

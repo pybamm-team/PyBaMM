@@ -1,6 +1,7 @@
 #
 # Interface for discretisation
 #
+import itertools
 from collections import OrderedDict, defaultdict
 
 import numpy as np
@@ -384,7 +385,7 @@ class Discretisation:
                 if first_child not in bc_keys:
                     internal_bcs.update({first_child: {"left": lbc, "right": rbc}})
 
-                for current_child, next_child in zip(children[1:-1], children[2:]):
+                for current_child, next_child in itertools.pairwise(children[1:]):
                     lbc = rbc
                     rbc = (boundary_gradient(current_child, next_child), "Neumann")
                     if current_child not in bc_keys:
@@ -608,7 +609,7 @@ class Discretisation:
         for v in model_variables:
             model_slices.append(self.y_slices[v][0])
         sorted_model_variables = [
-            v for _, v in sorted(zip(model_slices, model_variables))
+            v for _, v in sorted(zip(model_slices, model_variables, strict=False))
         ]
 
         # Process mass matrices for the differential equations
@@ -625,7 +626,7 @@ class Discretisation:
                 )
                 if isinstance(
                     self.spatial_methods[var.domain[0]],
-                    (pybamm.ZeroDimensionalSpatialMethod, pybamm.FiniteVolume),
+                    pybamm.ZeroDimensionalSpatialMethod | pybamm.FiniteVolume,
                 ):
                     # for 0D methods the mass matrix is just a scalar 1 and for
                     # finite volumes the mass matrix is identity, so no need to
@@ -1056,7 +1057,9 @@ class Discretisation:
         equations = list(var_eqn_dict.values())
 
         # sort equations according to slices
-        sorted_equations = [eq for _, eq in sorted(zip(slices, equations))]
+        sorted_equations = [
+            eq for _, eq in sorted(zip(slices, equations, strict=False))
+        ]
 
         return self.concatenate(*sorted_equations, sparse=sparse)
 
