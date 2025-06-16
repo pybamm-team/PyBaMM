@@ -773,7 +773,7 @@ class TestUnaryOperators:
             pybamm.DiscreteTimeSum(2 * y)
 
         # check that raises error if two data are present
-        data2 = pybamm.DiscreteTimeData(values, times, "test2")
+        data2 = pybamm.DiscreteTimeData(times, values, "test2")
         with pytest.raises(pybamm.ModelError, match="only have one DiscreteTimeData"):
             pybamm.DiscreteTimeSum(data + data2)
 
