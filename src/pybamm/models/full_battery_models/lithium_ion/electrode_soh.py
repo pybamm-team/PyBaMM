@@ -1,9 +1,11 @@
 #
 # A model to calculate electrode-specific SOH
 #
-import pybamm
-import numpy as np
 from functools import lru_cache
+
+import numpy as np
+
+import pybamm
 
 
 class _BaseElectrodeSOH(pybamm.BaseModel):
@@ -728,7 +730,7 @@ class ElectrodeSOHSolver:
             initial_soc = (
                 pybamm.AlgebraicSolver(tol=tol).solve(soc_model, [0])["soc"].data[0]
             )
-        elif isinstance(initial_value, (int, float)):
+        elif isinstance(initial_value, int | float):
             initial_soc = initial_value
             if not 0 <= initial_soc <= 1:
                 raise ValueError("Initial SOC should be between 0 and 1")

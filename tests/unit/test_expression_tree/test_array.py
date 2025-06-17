@@ -5,6 +5,7 @@
 
 import numpy as np
 import sympy
+
 import pybamm
 
 

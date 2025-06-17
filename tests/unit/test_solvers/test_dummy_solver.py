@@ -1,8 +1,9 @@
 #
 # Tests for the Dummy Solver class
 #
-import pybamm
 import numpy as np
+
+import pybamm
 
 
 class TestDummySolver:

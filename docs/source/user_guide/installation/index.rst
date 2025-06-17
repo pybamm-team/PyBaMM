@@ -210,7 +210,7 @@ Dependency                                                  Minimum Version    p
 Jax dependencies
 ^^^^^^^^^^^^^^^^
 
-Installable with ``pip install "pybamm[jax]"``, currently supported on Python 3.9-3.11.
+Installable with ``pip install "pybamm[jax]"``, currently supported on Python 3.10-3.12.
 
 ========================================================================= ================== ================== =======================
 Dependency                                                                Minimum Version    pip extra          Notes

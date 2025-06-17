@@ -1,15 +1,17 @@
 #
 # Solution class
 #
-import casadi
 import json
 import numbers
-import numpy as np
 import pickle
-import pybamm
+from functools import cached_property
+
+import casadi
+import numpy as np
 import pandas as pd
 from scipy.io import savemat
-from functools import cached_property
+
+import pybamm
 
 
 class NumpyEncoder(json.JSONEncoder):
@@ -208,7 +210,7 @@ class Solution:
 
     def set_y(self):
         try:
-            if isinstance(self.all_ys[0], (casadi.DM, casadi.MX)):
+            if isinstance(self.all_ys[0], casadi.DM | casadi.MX):
                 self._y = casadi.horzcat(*self.all_ys)
             else:
                 self._y = np.hstack(self.all_ys)
@@ -430,7 +432,9 @@ class Solution:
         # therefore only get set up once
         vars_casadi = []
         for i, (model, ys, inputs, var_pybamm) in enumerate(
-            zip(self.all_models, self.all_ys, self.all_inputs, vars_pybamm)
+            zip(
+                self.all_models, self.all_ys, self.all_inputs, vars_pybamm, strict=False
+            )
         ):
             if self.variables_returned and var_pybamm.has_symbol_of_classes(
                 pybamm.expression_tree.state_vector.StateVector
@@ -440,15 +444,25 @@ class Solution:
                     "solve. Please re-run the solve with `output_variables` set to "
                     "include this variable."
                 )
-            elif isinstance(
-                var_pybamm, (pybamm.ExplicitTimeIntegral, pybamm.DiscreteTimeSum)
-            ):
+            elif variable in model._variables_casadi:
+                var_casadi = model._variables_casadi[variable]
+            else:
                 time_integral = pybamm.ProcessedVariableTimeIntegral.from_pybamm_var(
-                    var_pybamm
+                    var_pybamm, self.all_ys[i].shape[0]
                 )
-                var_pybamm = var_pybamm.child
-                if variable in model._variables_casadi:
-                    var_casadi = model._variables_casadi[variable]
+                if time_integral is not None:
+                    vars_pybamm[i] = time_integral.sum_node.child
+                    var_casadi = self.process_casadi_var(
+                        time_integral.sum_node.child,
+                        inputs,
+                        ys.shape,
+                    )
+                    if time_integral.post_sum_node is not None:
+                        time_integral.post_sum = self.process_casadi_var(
+                            time_integral.post_sum_node,
+                            inputs,
+                            ys.shape,
+                        )
                 else:
                     var_casadi = self.process_casadi_var(
                         var_pybamm,
@@ -456,19 +470,9 @@ class Solution:
                         ys.shape,
                     )
                     model._variables_casadi[variable] = var_casadi
-                vars_pybamm[i] = var_pybamm
-            elif variable in model._variables_casadi:
-                var_casadi = model._variables_casadi[variable]
-            else:
-                var_casadi = self.process_casadi_var(
-                    var_pybamm,
-                    inputs,
-                    ys.shape,
-                )
-                model._variables_casadi[variable] = var_casadi
             vars_casadi.append(var_casadi)
         var = pybamm.process_variable(
-            vars_pybamm, vars_casadi, self, time_integral=time_integral
+            variable, vars_pybamm, vars_casadi, self, time_integral=time_integral
         )
 
         self._variables[variable] = var
@@ -892,7 +896,7 @@ class EmptySolution:
         self.t = t
 
     def __add__(self, other):
-        if isinstance(other, (EmptySolution, Solution)):
+        if isinstance(other, EmptySolution | Solution):
             return other.copy()
 
     def __radd__(self, other):

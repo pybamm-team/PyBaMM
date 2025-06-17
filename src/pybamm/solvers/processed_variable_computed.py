@@ -2,11 +2,13 @@
 # Processed Variable Computed class
 #
 from __future__ import annotations
+
 import casadi
 import numpy as np
-import pybamm
-from scipy.integrate import cumulative_trapezoid
 import xarray as xr
+from scipy.integrate import cumulative_trapezoid
+
+import pybamm
 
 
 class ProcessedVariableComputed:
@@ -125,9 +127,9 @@ class ProcessedVariableComputed:
 
     def add_sensitivity(self, param, data):
         # unroll from sparse representation into n-d matrix
-        # Note: then flatten and convert to casadi.DM for consistency with
-        #       full state-vector ProcessedVariable sensitivities
-        self._sensitivities[param] = casadi.DM(self.unroll(data).flatten())
+        # then flatten for consistency with full state-vector
+        # ProcessedVariable sensitivities
+        self._sensitivities[param] = self.unroll(data).flatten()
 
     def _unroll_nnz(self, realdata=None):
         # unroll in nnz != numel, otherwise copy

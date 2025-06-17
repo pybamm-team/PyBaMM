@@ -1,6 +1,7 @@
-import pybamm
 import numpy as np
 import pytest
+
+import pybamm
 
 
 class TestIDAKLUSolver:

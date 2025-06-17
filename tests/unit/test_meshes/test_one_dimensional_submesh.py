@@ -1,6 +1,7 @@
-import pytest
-import pybamm
 import numpy as np
+import pytest
+
+import pybamm
 
 
 @pytest.fixture()
@@ -370,6 +371,7 @@ class TestSpectralVolume1DSubMesh:
         for a, b in zip(
             mesh["negative particle"].edges.tolist(),
             [0, 0.075, 0.225, 0.3, 0.475, 0.825, 1],
+            strict=False,
         ):
             assert a == pytest.approx(b)
 
@@ -387,5 +389,6 @@ class TestSpectralVolume1DSubMesh:
         for a, b in zip(
             mesh["negative particle"].edges.tolist(),
             [0.0, 0.125, 0.375, 0.5, 0.625, 0.875, 1.0],
+            strict=False,
         ):
             assert a == pytest.approx(b)
