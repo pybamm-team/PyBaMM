@@ -133,6 +133,8 @@ class ProcessedVariableComputed:
 
     def _unroll_nnz(self, realdata=None):
         # unroll in nnz != numel, otherwise copy
+        nnz = None
+        numel = None
         if realdata is None:
             realdata = self.base_variables_data
         if isinstance(self.base_variables_casadi[0], casadi.Function):  # casadi fcn
@@ -140,11 +142,6 @@ class ProcessedVariableComputed:
             nnz = sp.nnz()
             numel = sp.numel()
             row = sp.row()
-        elif "nnz" in dir(self.base_variables_casadi[0]):  # IREE fcn
-            sp = self.base_variables_casadi[0]
-            nnz = sp.nnz
-            numel = sp.numel
-            row = sp.row
         if nnz != numel:
             data = [None] * len(realdata)
             for datak in range(len(realdata)):
