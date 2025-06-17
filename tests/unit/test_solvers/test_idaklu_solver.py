@@ -1395,7 +1395,7 @@ class TestIDAKLUSolver:
 
         assert len(solutions) == len(ics)
 
-        for ic_array, sol in zip(ics, solutions):
+        for ic_array, sol in zip(ics, solutions, strict=False):
             start = ic_array.item()
             got0 = sol["u"](0)
             np.testing.assert_allclose(got0, start, rtol=1e-3, atol=1e-5)
