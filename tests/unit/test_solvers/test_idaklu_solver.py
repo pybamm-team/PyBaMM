@@ -1316,10 +1316,15 @@ class TestIDAKLUSolver:
         n_sims = 3
         initial_conditions = [{"u": i + 1} for i in range(n_sims)]
         inputs = [{} for _ in range(n_sims)]
-        t_eval = np.linspace(0, 1, 10)
+        t_eval = np.array([0, 1])
+        t_interp = np.linspace(0, 1, 10)
 
         solutions = solver.solve(
-            model, t_eval, inputs=inputs, initial_conditions=initial_conditions
+            model,
+            t_eval,
+            inputs=inputs,
+            initial_conditions=initial_conditions,
+            t_interp=t_interp,
         )
 
         assert len(solutions) == n_sims
@@ -1347,9 +1352,12 @@ class TestIDAKLUSolver:
         solver = pybamm.IDAKLUSolver()
 
         initial_condition = {"u": 5}
-        t_eval = np.linspace(0, 1, 10)
+        t_eval = np.array([0, 1])
+        t_interp = np.linspace(0, 1, 10)
 
-        solution = solver.solve(model, t_eval, initial_conditions=initial_condition)
+        solution = solver.solve(
+            model, t_eval, initial_conditions=initial_condition, t_interp=t_interp
+        )
 
         np.testing.assert_allclose(solution["u"](0), 5)
         np.testing.assert_allclose(
@@ -1419,10 +1427,15 @@ class TestIDAKLUSolver:
 
         initial_conditions = [{"u": 3, "v": 4}, {"u": 5, "v": 6}]
 
-        t_eval = np.linspace(0, 1, 10)
+        t_eval = np.array([0, 1])
+        t_interp = np.linspace(0, 1, 10)
 
         solutions = solver.solve(
-            model, t_eval, inputs=[{}, {}], initial_conditions=initial_conditions
+            model,
+            t_eval,
+            inputs=[{}, {}],
+            initial_conditions=initial_conditions,
+            t_interp=t_interp,
         )
 
         assert len(solutions) == 2
