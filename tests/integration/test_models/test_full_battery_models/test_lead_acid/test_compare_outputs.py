@@ -1,8 +1,9 @@
 #
 # Tests for the asymptotic convergence of the simplified models
 #
-import pybamm
 import numpy as np
+
+import pybamm
 from tests import StandardOutputComparison
 
 

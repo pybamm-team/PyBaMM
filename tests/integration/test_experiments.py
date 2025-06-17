@@ -1,8 +1,9 @@
 #
 # Test some experiments
 #
-import pybamm
 import numpy as np
+
+import pybamm
 
 
 class TestExperiments:
@@ -16,9 +17,7 @@ class TestExperiments:
             period="0.5 hours",
         )
         model = pybamm.lithium_ion.SPM()
-        sim = pybamm.Simulation(
-            model, experiment=experiment, solver=pybamm.CasadiSolver()
-        )
+        sim = pybamm.Simulation(model, experiment=experiment)
         sim.solve()
         np.testing.assert_allclose(
             sim._solution["Time [h]"].entries,
@@ -46,7 +45,6 @@ class TestExperiments:
             model,
             parameter_values=parameter_values,
             experiment=experiment,
-            solver=pybamm.CasadiSolver(),
         )
         sol = sim.solve()
         np.testing.assert_allclose(sol["Current [A]"].data[:5], 0, rtol=1e-7, atol=1e-6)
@@ -59,9 +57,7 @@ class TestExperiments:
             ["Discharge at C/20 for 1 hour", "Rest for 1 hour"] * 10, period="6 minutes"
         )
         model = pybamm.lithium_ion.SPM()
-        sim = pybamm.Simulation(
-            model, experiment=experiment, solver=pybamm.CasadiSolver()
-        )
+        sim = pybamm.Simulation(model, experiment=experiment)
         sim.solve()
         cap = model.default_parameter_values["Nominal cell capacity [A.h]"]
         np.testing.assert_allclose(
@@ -79,9 +75,7 @@ class TestExperiments:
             * 4
         )
         model = pybamm.lithium_ion.SPM()
-        sim = pybamm.Simulation(
-            model, experiment=experiment, solver=pybamm.CasadiSolver()
-        )
+        sim = pybamm.Simulation(model, experiment=experiment)
         sol = sim.solve()
         # this experiment fails during the third cycle (i.e. is infeasible)
         assert len(sol.cycles) == 3
@@ -102,7 +96,8 @@ class TestExperiments:
             model,
             experiment=experiment,
             parameter_values=param,
-            solver=pybamm.CasadiSolver(),
         )
         sol = sim.solve()
-        assert np.all(sol["Terminal voltage [V]"].entries >= 4.00)
+        # Add a small tolerance to account for numerical errors
+        V_max = 4.00 - 1e-4
+        assert np.all(sol["Terminal voltage [V]"].entries >= V_max)

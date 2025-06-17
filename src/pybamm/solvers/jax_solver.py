@@ -1,5 +1,7 @@
-import numpy as onp
 import asyncio
+
+import numpy as onp
+
 import pybamm
 
 if pybamm.has_jax():

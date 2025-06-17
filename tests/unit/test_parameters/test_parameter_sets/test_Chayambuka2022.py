@@ -3,6 +3,7 @@
 #
 
 import pytest
+
 import pybamm
 
 

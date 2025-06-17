@@ -1,15 +1,15 @@
 # mypy: ignore-errors
-import os
-import casadi
-import pybamm
-import numpy as np
 import numbers
-import scipy.sparse as sparse
-from scipy.linalg import bandwidth
-import pybammsolvers.idaklu as idaklu
-
+import os
 import warnings
 
+import casadi
+import numpy as np
+import pybammsolvers.idaklu as idaklu
+import scipy.sparse as sparse
+from scipy.linalg import bandwidth
+
+import pybamm
 
 if pybamm.has_jax():
     import jax
@@ -276,7 +276,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         def inputs_to_dict(inputs):
             index = 0
-            for n, key in zip(inputs_sizes, inputs_dict.keys()):
+            for n, key in zip(inputs_sizes, inputs_dict.keys(), strict=False):
                 inputs_dict[key] = inputs[index : (index + n)]
                 index += n
             return inputs_dict
@@ -952,7 +952,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         return [
             self._post_process_solution(soln, model, integration_time, inputs_dict)
-            for soln, inputs_dict in zip(solns, inputs_list)
+            for soln, inputs_dict in zip(solns, inputs_list, strict=False)
         ]
 
     def _post_process_solution(self, sol, model, integration_time, inputs_dict):

@@ -1,9 +1,10 @@
 #
 # Tests for the electrode-electrolyte interface equations for lead-acid models
 #
+import pytest
+
 import pybamm
 from tests import get_discretisation_for_testing
-import pytest
 
 
 class TestMainReaction:

@@ -1,11 +1,10 @@
 import casadi
-import pybamm
-import tests
-
 import numpy as np
 import pytest
 from scipy.interpolate import CubicHermiteSpline
 
+import pybamm
+import tests
 
 _hermite_args = [True, False]
 
@@ -79,6 +78,7 @@ class TestProcessedVariable:
         var_casadi = to_casadi(var_sol, y_sol)
         model = tests.get_base_model_with_battery_geometry(**geometry_options)
         processed_var = pybamm.process_variable(
+            "test",
             [var_sol],
             [var_casadi],
             self._sol_default(t_sol, y_sol, yp_sol, model),
@@ -102,6 +102,7 @@ class TestProcessedVariable:
         yp_sol = self._get_yps(y_sol, hermite_interp)
         var_casadi = to_casadi(var, y_sol)
         processed_var = pybamm.process_variable(
+            "test",
             [var],
             [var_casadi],
             self._sol_default(t_sol, y_sol, yp_sol, model),
@@ -116,6 +117,7 @@ class TestProcessedVariable:
         sol = self._sol_default(t_sol, y_sol, yp_sol, model)
         var_casadi = to_casadi(var, y_sol)
         processed_var = pybamm.process_variable(
+            "test",
             [var],
             [var_casadi],
             sol,
@@ -162,6 +164,7 @@ class TestProcessedVariable:
         model = pybamm.BaseModel()
         var_casadi = to_casadi(var, y_sol)
         processed_var = pybamm.process_variable(
+            "test",
             [var],
             [var_casadi],
             self._sol_default(t_sol, y_sol, yp_sol, model),
@@ -187,6 +190,7 @@ class TestProcessedVariable:
         model = pybamm.BaseModel()
         var_casadi = to_casadi(var, y_sol)
         processed_var = pybamm.process_variable(
+            "test",
             [var],
             [var_casadi],
             self._sol_default(t_sol, y_sol, yp_sol, model),
@@ -209,6 +213,7 @@ class TestProcessedVariable:
         yp_sol = self._get_yps(y_sol, hermite_interp)
         var_casadi = to_casadi(var, y_sol)
         processed_var = pybamm.process_variable(
+            "test",
             [var],
             [var_casadi],
             self._sol_default(t_sol, y_sol, yp_sol, pybamm.BaseModel()),
@@ -227,6 +232,7 @@ class TestProcessedVariable:
         inputs = {"a": np.array([1.0])}
         var_casadi = to_casadi(var, y_sol, inputs=inputs)
         processed_var = pybamm.process_variable(
+            "test",
             [var],
             [var_casadi],
             pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), inputs),
@@ -255,6 +261,7 @@ class TestProcessedVariable:
 
         var_casadi = to_casadi(var_sol, y_sol)
         processed_var = pybamm.process_variable(
+            "test",
             [var_sol],
             [var_casadi],
             self._sol_default(t_sol, y_sol, yp_sol),
@@ -265,6 +272,7 @@ class TestProcessedVariable:
         )
         eqn_casadi = to_casadi(eqn_sol, y_sol)
         processed_eqn = pybamm.process_variable(
+            "test",
             [eqn_sol],
             [eqn_casadi],
             self._sol_default(t_sol, y_sol, yp_sol),
@@ -287,6 +295,7 @@ class TestProcessedVariable:
         x_s_edge.mesh = disc.mesh["separator"]
         x_s_casadi = to_casadi(x_s_edge, y_sol)
         processed_x_s_edge = pybamm.process_variable(
+            "test",
             [x_s_edge],
             [x_s_casadi],
             self._sol_default(t_sol, y_sol, yp_sol),
@@ -303,6 +312,7 @@ class TestProcessedVariable:
         yp_sol = self._get_yps(y_sol, hermite_interp, values=0)
         eqn_casadi = to_casadi(eqn_sol, y_sol)
         processed_eqn2 = pybamm.process_variable(
+            "test",
             [eqn_sol],
             [eqn_casadi],
             self._sol_default(t_sol, y_sol, yp_sol),
@@ -342,7 +352,7 @@ class TestProcessedVariable:
         c = pybamm.StateVector(slice(0, var_pts[x]), domain=["SEI layer"])
         c.mesh = mesh["SEI layer"]
         c_casadi = to_casadi(c, y_sol)
-        pybamm.process_variable([c], [c_casadi], solution)
+        pybamm.process_variable("test", [c], [c_casadi], solution)
 
     @pytest.mark.parametrize("hermite_interp", _hermite_args)
     def test_processed_variable_2D_x_r(self, hermite_interp):
@@ -465,6 +475,7 @@ class TestProcessedVariable:
         x_s_edge.secondary_mesh = disc.mesh["current collector"]
         x_s_casadi = to_casadi(x_s_edge, y_sol)
         processed_x_s_edge = pybamm.process_variable(
+            "test",
             [x_s_edge],
             [x_s_casadi],
             self._sol_default(t_sol, y_sol, yp_sol),
@@ -500,6 +511,7 @@ class TestProcessedVariable:
 
         var_casadi = to_casadi(var_sol, y_sol)
         processed_var = pybamm.process_variable(
+            "test",
             [var_sol],
             [var_casadi],
             self._sol_default(t_sol, y_sol, yp_sol),
@@ -525,6 +537,7 @@ class TestProcessedVariable:
 
         var_casadi = to_casadi(var_sol, u_sol)
         processed_var = pybamm.process_variable(
+            "test",
             [var_sol],
             [var_casadi],
             self._sol_default(t_sol, u_sol, yp_sol),
@@ -552,6 +565,7 @@ class TestProcessedVariable:
             options={"dimensionality": 2}
         )
         processed_var = pybamm.process_variable(
+            "test",
             [var_sol],
             [var_casadi],
             pybamm.Solution(t_sol, u_sol, model, {}, all_yps=yp_sol),
@@ -573,6 +587,7 @@ class TestProcessedVariable:
         yp_sol = self._get_yps(y_sol, hermite_interp, values=5)
         var_casadi = to_casadi(var, y_sol)
         processed_var = pybamm.process_variable(
+            "test",
             [var],
             [var_casadi],
             self._sol_default(t_sol, y_sol, yp_sol),
@@ -585,6 +600,7 @@ class TestProcessedVariable:
 
         eqn_casadi = to_casadi(eqn, y_sol)
         processed_eqn = pybamm.process_variable(
+            "test",
             [eqn],
             [eqn_casadi],
             self._sol_default(t_sol, y_sol, yp_sol),
@@ -610,6 +626,7 @@ class TestProcessedVariable:
         yp_sol = self._get_yps(y_sol, hermite_interp)
         eqn_casadi = to_casadi(eqn, y_sol)
         processed_var = pybamm.process_variable(
+            "test",
             [eqn],
             [eqn_casadi],
             self._sol_default(t_sol, y_sol, yp_sol, pybamm.BaseModel()),
@@ -635,6 +652,7 @@ class TestProcessedVariable:
 
         var_casadi = to_casadi(var_sol, y_sol)
         processed_var = pybamm.process_variable(
+            "test",
             [var_sol],
             [var_casadi],
             self._sol_default(t_sol, y_sol, yp_sol),
@@ -660,6 +678,7 @@ class TestProcessedVariable:
         )
         eqn_casadi = to_casadi(eqn_sol, y_sol)
         processed_eqn = pybamm.process_variable(
+            "test",
             [eqn_sol],
             [eqn_casadi],
             self._sol_default(t_sol, y_sol, yp_sol),
@@ -682,6 +701,7 @@ class TestProcessedVariable:
         x_casadi = to_casadi(x_disc, y_sol)
 
         processed_x = pybamm.process_variable(
+            "test",
             [x_disc],
             [x_casadi],
             self._sol_default(t_sol, y_sol, yp_sol),
@@ -697,6 +717,7 @@ class TestProcessedVariable:
         r_n.mesh = disc.mesh["negative particle"]
         r_n_casadi = to_casadi(r_n, y_sol)
         processed_r_n = pybamm.process_variable(
+            "test",
             [r_n],
             [r_n_casadi],
             self._sol_default(t_sol, y_sol, yp_sol),
@@ -717,6 +738,7 @@ class TestProcessedVariable:
             options={"particle size": "distribution"}
         )
         processed_R_n = pybamm.process_variable(
+            "test",
             [R_n],
             [R_n_casadi],
             pybamm.Solution(t_sol, y_sol, model, {}),
@@ -743,6 +765,7 @@ class TestProcessedVariable:
 
         eqn_casadi = to_casadi(eqn_sol, y_sol)
         processed_var = pybamm.process_variable(
+            "test",
             [eqn_sol],
             [eqn_casadi],
             self._sol_default(t_sol, y_sol, yp_sol),
@@ -798,6 +821,7 @@ class TestProcessedVariable:
         )
         with pytest.raises(NotImplementedError, match="Spatial variable name"):
             pybamm.process_variable(
+                "test",
                 [var_sol],
                 [var_casadi],
                 pybamm.Solution(t_sol, y_sol, model, {}, all_yps=yp_sol),
@@ -830,6 +854,7 @@ class TestProcessedVariable:
 
         var_casadi = to_casadi(var_sol, y_sol)
         processed_var = pybamm.process_variable(
+            "test",
             [var_sol],
             [var_casadi],
             self._sol_default(t_sol, y_sol, yp_sol),
@@ -879,6 +904,7 @@ class TestProcessedVariable:
 
         var_casadi = to_casadi(var_sol, y_sol)
         processed_var = pybamm.process_variable(
+            "test",
             [var_sol],
             [var_casadi],
             self._sol_default(t_sol, y_sol, yp_sol),
@@ -915,6 +941,7 @@ class TestProcessedVariable:
 
         var_casadi = to_casadi(var_sol, y_sol)
         processed_var = pybamm.process_variable(
+            "test",
             [var_sol],
             [var_casadi],
             self._sol_default(t_sol, y_sol, yp_sol),
@@ -947,6 +974,7 @@ class TestProcessedVariable:
 
         var_casadi = to_casadi(var_sol, y_sol)
         processed_var = pybamm.process_variable(
+            "test",
             [var_sol],
             [var_casadi],
             self._sol_default(t_sol, y_sol, yp_sol),
@@ -988,6 +1016,7 @@ class TestProcessedVariable:
 
         var_casadi = to_casadi(var_sol, y_sol)
         processed_var = pybamm.process_variable(
+            "test",
             [var_sol],
             [var_casadi],
             self._sol_default(t_sol, y_sol, yp_sol),
@@ -1013,6 +1042,7 @@ class TestProcessedVariable:
 
         var_casadi = to_casadi(var_sol, u_sol)
         processed_var = pybamm.process_variable(
+            "test",
             [var_sol],
             [var_casadi],
             self._sol_default(t_sol, u_sol, yp_sol),
@@ -1060,6 +1090,7 @@ class TestProcessedVariable:
 
         var_casadi = to_casadi(var_sol, u_sol)
         processed_var = pybamm.process_variable(
+            "test",
             [var_sol],
             [var_casadi],
             self._sol_default(t_sol, u_sol, yp_sol),
@@ -1124,6 +1155,7 @@ class TestProcessedVariable:
             }
         )
         processed_var = pybamm.process_variable(
+            "test",
             [var_sol],
             [var_casadi],
             pybamm.Solution(t_sol, y_sol, model, {}, all_yps=yp_sol),
@@ -1192,6 +1224,7 @@ class TestProcessedVariable:
         geometry_options = {"options": {"particle size": "distribution"}}
         model = tests.get_base_model_with_battery_geometry(**geometry_options)
         processed_var = pybamm.process_variable(
+            "test",
             [var_sol],
             [var_casadi],
             self._sol_default(t_sol, y_sol, yp_sol, model),
@@ -1269,6 +1302,7 @@ class TestProcessedVariable:
         var_casadi = to_casadi(var_sol, u_sol)
 
         processed_var = pybamm.process_variable(
+            "test",
             [var_sol],
             [var_casadi],
             self._sol_default(t_sol, u_sol, up_sol),
@@ -1324,6 +1358,7 @@ class TestProcessedVariable:
         y_sol = np.array([np.linspace(0, 5)])
         var_casadi = to_casadi(var, y_sol)
         processed_var = pybamm.process_variable(
+            "test",
             [var],
             [var_casadi],
             pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {}),
@@ -1375,6 +1410,7 @@ class TestProcessedVariable:
         sol = sol1 + sol2
         var_casadi = to_casadi(var, sol.all_ys[0])
         processed_var = pybamm.process_variable(
+            "test",
             [var] * len(sol.all_ts),
             [var_casadi] * len(sol.all_ts),
             sol,
@@ -1383,7 +1419,7 @@ class TestProcessedVariable:
         # Ground truth spline interpolants from scipy
         spls = [
             CubicHermiteSpline(t, y, yp, axis=1)
-            for t, y, yp in zip(sol.all_ts, sol.all_ys, sol.all_yps)
+            for t, y, yp in zip(sol.all_ts, sol.all_ys, sol.all_yps, strict=False)
         ]
 
         def spl(t):

@@ -2,12 +2,14 @@
 # Parameter classes
 #
 from __future__ import annotations
+
 import numbers
+
 import numpy as np
 import numpy.typing as npt
 import scipy.sparse
-import pybamm
 
+import pybamm
 from pybamm.type_definitions import DomainType
 
 
@@ -89,8 +91,8 @@ class InputParameter(pybamm.Symbol):
     def _base_evaluate(
         self,
         t: float | None = None,
-        y: npt.NDArray | None = None,
-        y_dot: npt.NDArray | None = None,
+        y: npt.NDArray[np.float64] | None = None,
+        y_dot: npt.NDArray[np.float64] | None = None,
         inputs: dict | str | None = None,
     ):
         # inputs should be a dictionary

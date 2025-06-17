@@ -1,11 +1,11 @@
-from typing import Optional
+import bisect
+
 import casadi
 import numpy as np
-import pybamm
-from scipy.integrate import cumulative_trapezoid
 import xarray as xr
-import bisect
 from pybammsolvers import idaklu
+
+import pybamm
 
 
 class ProcessedVariable:
@@ -15,6 +15,8 @@ class ProcessedVariable:
 
     Parameters
     ----------
+    name : str
+        The name of the variable
     base_variables : list of :class:`pybamm.Symbol`
         A list of base variables with a method `evaluate(t,y)`, each entry of which
         returns the value of that variable for that particular sub-solution.
@@ -34,11 +36,13 @@ class ProcessedVariable:
 
     def __init__(
         self,
+        name: str,
         base_variables,
         base_variables_casadi,
         solution,
-        time_integral: Optional[pybamm.ProcessedVariableTimeIntegral] = None,
+        time_integral: pybamm.ProcessedVariableTimeIntegral | None = None,
     ):
+        self._name = name
         self.base_variables = base_variables
         self.base_variables_casadi = base_variables_casadi
 
@@ -420,6 +424,7 @@ class ProcessedVariable:
             self.all_inputs,
             self.base_variables,
             self.all_solution_sensitivities["all"],
+            strict=False,
         ):
             # Set up symbolic variables
             t_casadi = casadi.MX.sym("t")
@@ -443,22 +448,62 @@ class ProcessedVariable:
             dvar_dp_func = casadi.Function(
                 "dvar_dp", [t_casadi, y_casadi, p_casadi_stacked], [dvar_dp]
             )
-            for idx, t in enumerate(ts):
-                u = ys[:, idx]
-                next_dvar_dy_eval = dvar_dy_func(t, u, inputs_stacked)
-                next_dvar_dp_eval = dvar_dp_func(t, u, inputs_stacked)
-                if idx == 0:
-                    dvar_dy_eval = next_dvar_dy_eval
-                    dvar_dp_eval = next_dvar_dp_eval
-                else:
-                    dvar_dy_eval = casadi.diagcat(dvar_dy_eval, next_dvar_dy_eval)
-                    dvar_dp_eval = casadi.vertcat(dvar_dp_eval, next_dvar_dp_eval)
+            dvar_dy_eval = casadi.diagcat(
+                *[
+                    dvar_dy_func(t, ys[:, idx], inputs_stacked)
+                    for idx, t in enumerate(ts)
+                ]
+            )
+            dvar_dp_eval = casadi.vertcat(
+                *[
+                    dvar_dp_func(t, ys[:, idx], inputs_stacked)
+                    for idx, t in enumerate(ts)
+                ]
+            )
 
             # Compute sensitivity
             S_var = dvar_dy_eval @ dy_dp + dvar_dp_eval
+
+            # post fix for discrete time integral won't give correct result
+            # if ts are not equal to the discrete times. Raise error
+            # in this case
+            if self._is_discrete_time_method():
+                if not (
+                    len(ts) == len(self.time_integral.discrete_times)
+                    and np.allclose(ts, self.time_integral.discrete_times, atol=1e-10)
+                ):
+                    raise pybamm.SolverError(
+                        f'Processing discrete-time-sum variable "{self._name}": solution times '
+                        "and discrete times of the time integral are not equal. Set 't_interp=discrete_sum_times' to "
+                        f"ensure the correct times are used.\nSolution times: {ts}\nDiscrete Sum times: {self.time_integral.discrete_times}"
+                    )
+
+            if self.time_integral is not None:
+                post_sum_values = self.time_integral.postfix_sum(S_var, ts)
+                post_sum_node = self.time_integral.post_sum_node
+                if post_sum_node is None:
+                    S_var = post_sum_values
+                else:
+                    # If there is a post-sum expression, we need to compute the
+                    # sensitivity of the post-sum expression as well
+                    y_casadi = casadi.MX.sym("y", post_sum_values.shape[0])
+                    s_var_casadi = casadi.MX.sym("s_var", post_sum_values.shape)
+                    post_sum_casadi = post_sum_node.to_casadi(
+                        t_casadi, y_casadi, inputs=p_casadi
+                    )
+                    dpost_dy = casadi.jacobian(post_sum_casadi, y_casadi)
+                    dpost_dp = casadi.jacobian(post_sum_casadi, p_casadi_stacked)
+                    sens = dpost_dy @ s_var_casadi + dpost_dp
+                    sens_fun = casadi.Function(
+                        "sens_fun",
+                        [t_casadi, y_casadi, p_casadi_stacked, s_var_casadi],
+                        [sens],
+                    )
+                    S_var = sens_fun(0.0, self.data, inputs_stacked, post_sum_values)
+
             all_S_var.append(S_var)
 
-        S_var = casadi.vertcat(*all_S_var)
+        S_var = np.vstack(all_S_var)
         sensitivities = {"all": S_var}
 
         # Add the individual sensitivity
@@ -471,6 +516,12 @@ class ProcessedVariable:
         # Save attribute
         self._sensitivities = sensitivities
 
+    def _is_discrete_time_method(self):
+        """Check if using discrete time integral method"""
+        return (
+            self.time_integral is not None and self.time_integral.method == "discrete"
+        )
+
     @property
     def hermite_interpolation(self):
         return self.all_yps is not None
@@ -479,13 +530,15 @@ class ProcessedVariable:
 class ProcessedVariable0D(ProcessedVariable):
     def __init__(
         self,
+        name: str,
         base_variables,
         base_variables_casadi,
         solution,
-        time_integral: Optional[pybamm.ProcessedVariableTimeIntegral] = None,
+        time_integral: pybamm.ProcessedVariableTimeIntegral | None = None,
     ):
         self.dimensions = 0
         super().__init__(
+            name,
             base_variables,
             base_variables_casadi,
             solution,
@@ -495,16 +548,9 @@ class ProcessedVariable0D(ProcessedVariable):
     def _observe_postfix(self, entries, t):
         if self.time_integral is None:
             return entries
-        if self.time_integral.method == "discrete":
-            return np.sum(entries, axis=0, initial=self.time_integral.initial_condition)
-        elif self.time_integral.method == "continuous":
-            return cumulative_trapezoid(
-                entries, self.t_pts, initial=float(self.time_integral.initial_condition)
-            )
-        else:
-            raise ValueError(
-                "time_integral method must be 'discrete' or 'continuous'"
-            )  # pragma: no cover
+        return self.time_integral.postfix(
+            entries, self.t_pts, self.all_inputs_casadi[0]
+        )
 
     def _interp_setup(self, entries, t):
         # save attributes for interpolation
@@ -524,6 +570,8 @@ class ProcessedVariable1D(ProcessedVariable):
 
     Parameters
     ----------
+    variable : str
+        The name of the variable
     base_variables : list of :class:`pybamm.Symbol`
         A list of base variables with a method `evaluate(t,y)`, each entry of which
         returns the value of that variable for that particular sub-solution.
@@ -541,13 +589,15 @@ class ProcessedVariable1D(ProcessedVariable):
 
     def __init__(
         self,
+        name: str,
         base_variables,
         base_variables_casadi,
         solution,
-        time_integral: Optional[pybamm.ProcessedVariableTimeIntegral] = None,
+        time_integral: pybamm.ProcessedVariableTimeIntegral | None = None,
     ):
         self.dimensions = 1
         super().__init__(
+            name,
             base_variables,
             base_variables_casadi,
             solution,
@@ -605,6 +655,8 @@ class ProcessedVariable2D(ProcessedVariable):
 
     Parameters
     ----------
+    variable : str
+        The name of the variable
     base_variables : list of :class:`pybamm.Symbol`
         A list of base variables with a method `evaluate(t,y)`, each entry of which
         returns the value of that variable for that particular sub-solution.
@@ -622,13 +674,15 @@ class ProcessedVariable2D(ProcessedVariable):
 
     def __init__(
         self,
+        name: str,
         base_variables,
         base_variables_casadi,
         solution,
-        time_integral: Optional[pybamm.ProcessedVariableTimeIntegral] = None,
+        time_integral: pybamm.ProcessedVariableTimeIntegral | None = None,
     ):
         self.dimensions = 2
         super().__init__(
+            name,
             base_variables,
             base_variables_casadi,
             solution,
@@ -747,6 +801,8 @@ class ProcessedVariable2DSciKitFEM(ProcessedVariable2D):
 
     Parameters
     ----------
+    variable : str
+        The name of the variable
     base_variables : list of :class:`pybamm.Symbol`
         A list of base variables with a method `evaluate(t,y)`, each entry of which
         returns the value of that variable for that particular sub-solution.
@@ -764,13 +820,15 @@ class ProcessedVariable2DSciKitFEM(ProcessedVariable2D):
 
     def __init__(
         self,
+        name: str,
         base_variables,
         base_variables_casadi,
         solution,
-        time_integral: Optional[pybamm.ProcessedVariableTimeIntegral] = None,
+        time_integral: pybamm.ProcessedVariableTimeIntegral | None = None,
     ):
         self.dimensions = 2
         super(ProcessedVariable2D, self).__init__(
+            name,
             base_variables,
             base_variables_casadi,
             solution,
@@ -812,6 +870,8 @@ class ProcessedVariable3D(ProcessedVariable):
 
     Parameters
     ----------
+    variable : str
+        The name of the variable
     base_variables : list of :class:`pybamm.Symbol`
         A list of base variables with a method `evaluate(t,y)`, each entry of which
         returns the value of that variable for that particular sub-solution.
@@ -829,13 +889,15 @@ class ProcessedVariable3D(ProcessedVariable):
 
     def __init__(
         self,
+        name: str,
         base_variables,
         base_variables_casadi,
         solution,
-        time_integral: Optional[pybamm.ProcessedVariableTimeIntegral] = None,
+        time_integral: pybamm.ProcessedVariableTimeIntegral | None = None,
     ):
         self.dimensions = 3
         super().__init__(
+            name,
             base_variables,
             base_variables_casadi,
             solution,
@@ -1003,6 +1065,8 @@ class ProcessedVariable3DSciKitFEM(ProcessedVariable3D):
 
     Parameters
     ----------
+    variable : str
+        The name of the variable
     base_variables : list of :class:`pybamm.Symbol`
         A list of base variables with a method `evaluate(t,y)`, each entry of which
         returns the value of that variable for that particular sub-solution.
@@ -1020,13 +1084,15 @@ class ProcessedVariable3DSciKitFEM(ProcessedVariable3D):
 
     def __init__(
         self,
+        name: str,
         base_variables,
         base_variables_casadi,
         solution,
-        time_integral: Optional[pybamm.ProcessedVariableTimeIntegral] = None,
+        time_integral: pybamm.ProcessedVariableTimeIntegral | None = None,
     ):
         self.dimensions = 3
         super(ProcessedVariable3D, self).__init__(
+            name,
             base_variables,
             base_variables_casadi,
             solution,
@@ -1077,7 +1143,7 @@ class ProcessedVariable3DSciKitFEM(ProcessedVariable3D):
         return entries
 
 
-def process_variable(base_variables, *args, **kwargs):
+def process_variable(name: str, base_variables, *args, **kwargs):
     mesh = base_variables[0].mesh
     domain = base_variables[0].domain
 
@@ -1091,22 +1157,22 @@ def process_variable(base_variables, *args, **kwargs):
         and "current collector" in domain
         and isinstance(mesh, pybamm.ScikitSubMesh2D)
     ):
-        return ProcessedVariable2DSciKitFEM(base_variables, *args, **kwargs)
+        return ProcessedVariable2DSciKitFEM(name, base_variables, *args, **kwargs)
     if hasattr(base_variables[0], "secondary_mesh"):
         if "current collector" in base_variables[0].domains["secondary"] and isinstance(
             base_variables[0].secondary_mesh, pybamm.ScikitSubMesh2D
         ):
-            return ProcessedVariable3DSciKitFEM(base_variables, *args, **kwargs)
+            return ProcessedVariable3DSciKitFEM(name, base_variables, *args, **kwargs)
 
     # check variable shape
     if len(base_eval_shape) == 0 or base_eval_shape[0] == 1:
-        return ProcessedVariable0D(base_variables, *args, **kwargs)
+        return ProcessedVariable0D(name, base_variables, *args, **kwargs)
 
     n = mesh.npts
     base_shape = base_eval_shape[0]
     # Try some shapes that could make the variable a 1D variable
     if base_shape in [n, n + 1]:
-        return ProcessedVariable1D(base_variables, *args, **kwargs)
+        return ProcessedVariable1D(name, base_variables, *args, **kwargs)
 
     # Try some shapes that could make the variable a 2D variable
     first_dim_nodes = mesh.nodes
@@ -1116,7 +1182,7 @@ def process_variable(base_variables, *args, **kwargs):
         len(first_dim_nodes),
         len(first_dim_edges),
     ]:
-        return ProcessedVariable2D(base_variables, *args, **kwargs)
+        return ProcessedVariable2D(name, base_variables, *args, **kwargs)
 
     # Try some shapes that could make the variable a 3D variable
     tertiary_pts = base_variables[0].tertiary_mesh.nodes
@@ -1124,7 +1190,7 @@ def process_variable(base_variables, *args, **kwargs):
         len(first_dim_nodes),
         len(first_dim_edges),
     ]:
-        return ProcessedVariable3D(base_variables, *args, **kwargs)
+        return ProcessedVariable3D(name, base_variables, *args, **kwargs)
 
     raise NotImplementedError(f"Shape not recognized for {base_variables[0]}")
 

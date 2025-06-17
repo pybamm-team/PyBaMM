@@ -1,8 +1,9 @@
 #
 # Geometry class for storing the geometry of the model
 #
-import pybamm
 import numbers
+
+import pybamm
 
 
 class Geometry(dict):

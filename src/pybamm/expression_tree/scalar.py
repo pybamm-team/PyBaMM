@@ -2,10 +2,12 @@
 # Scalar class
 #
 from __future__ import annotations
+
+from typing import Literal
+
 import numpy as np
 import numpy.typing as npt
 import sympy
-from typing import Literal
 
 import pybamm
 from pybamm.type_definitions import Numeric
@@ -67,8 +69,8 @@ class Scalar(pybamm.Symbol):
     def _base_evaluate(
         self,
         t: float | None = None,
-        y: npt.NDArray | None = None,
-        y_dot: npt.NDArray | None = None,
+        y: npt.NDArray[np.float64] | None = None,
+        y_dot: npt.NDArray[np.float64] | None = None,
         inputs: dict | str | None = None,
     ):
         """See :meth:`pybamm.Symbol._base_evaluate()`."""
@@ -84,9 +86,12 @@ class Scalar(pybamm.Symbol):
         perform_simplifications=True,
     ):
         """See :meth:`pybamm.Symbol.new_copy()`."""
-        if new_children is not None:
-            raise ValueError("Cannot create a copy of a scalar with new children")
-        return Scalar(self.value, self.name)
+        if new_children is None or len(new_children) == 0:
+            return Scalar(self.value, self.name)
+        else:
+            raise ValueError(
+                f"Cannot create a copy of a scalar with new children: {new_children}"
+            )
 
     def is_constant(self) -> Literal[True]:
         """See :meth:`pybamm.Symbol.is_constant()`."""

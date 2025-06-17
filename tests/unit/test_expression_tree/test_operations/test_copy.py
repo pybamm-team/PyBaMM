@@ -2,8 +2,9 @@
 # Test for making copies
 #
 
-import pytest
 import numpy as np
+import pytest
+
 import pybamm
 from tests import get_mesh_for_testing
 
@@ -93,6 +94,7 @@ class TestCopy:
                 pybamm.maximum(b, a),
                 pybamm.Equality(b, a),
             ],
+            strict=False,
         ):
             new_symbol = symbol_ab.create_copy(new_children=[b, a])
             assert new_symbol == symbol_ba
@@ -118,6 +120,7 @@ class TestCopy:
                 pybamm.NotConstant(b),
                 pybamm.EvaluateAt(b, 0),
             ],
+            strict=False,
         ):
             new_symbol = symbol_a.create_copy(new_children=[b])
             assert new_symbol == symbol_b
@@ -146,6 +149,7 @@ class TestCopy:
                 pybamm.BoundaryGradient(w_n, "right"),
                 pybamm.SecondaryBroadcast(w_n, "current collector"),
             ],
+            strict=False,
         ):
             new_symbol = symbol_v.create_copy(new_children=[w_n])
             assert new_symbol == symbol_w
@@ -167,6 +171,7 @@ class TestCopy:
                 pybamm.concatenation(v_s, v_n),
                 pybamm.DomainConcatenation([v_s, v_n], mesh),
             ],
+            strict=False,
         ):
             new_symbol = symbol_n.create_copy(new_children=[v_s, v_n])
             assert new_symbol == symbol_s
@@ -259,6 +264,7 @@ class TestCopy:
                 pybamm.AbsoluteValue(b),
                 pybamm.Sign(b),
             ],
+            strict=False,
         ):
             assert (
                 symbol_a.create_copy(new_children=[b], perform_simplifications=False)
@@ -296,6 +302,7 @@ class TestCopy:
                 pybamm.YZAverage,
             ],
             [a_v, a_v, c, c],
+            strict=False,
         ):
             assert average(var).create_copy(
                 new_children=[var], perform_simplifications=False
@@ -328,6 +335,7 @@ class TestCopy:
                 pybamm.ConcatenationVariable(v_s, v_n),
                 pybamm.DomainConcatenation([v_s, v_n], mesh),
             ],
+            strict=False,
         ):
             assert (
                 symbol_n.create_copy(

@@ -1,13 +1,13 @@
 from __future__ import annotations
 
+import copy
 import numbers
 import warnings
 from collections import OrderedDict
 
-import copy
 import casadi
-import scipy
 import numpy as np
+import scipy
 
 import pybamm
 from pybamm.expression_tree.operations.serialise import Serialise
@@ -1010,7 +1010,9 @@ class BaseModel:
                     slices.append(y_slices[symbol][0])
             equations = list(initial_conditions.values())
             # sort equations according to slices
-            sorted_equations = [eq for _, eq in sorted(zip(slices, equations))]
+            sorted_equations = [
+                eq for _, eq in sorted(zip(slices, equations, strict=False))
+            ]
             concatenated_initial_conditions = pybamm.NumpyConcatenation(
                 *sorted_equations
             )
