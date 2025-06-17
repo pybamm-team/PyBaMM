@@ -27,7 +27,19 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
             mesh[dom].npts_for_broadcast_to_nodes = mesh[dom].npts
 
     def spatial_variable(self, symbol):
-        """Creates a discretised spatial variable for x, y, or z."""
+        """
+        Creates a discretised spatial variable for x, y, or z.
+
+        Parameters
+        ----------
+        symbol : :class:`pybamm.SpatialVariable`
+            The spatial variable to discretise (must be 'x', 'y', or 'z')
+
+        Returns
+        -------
+        :class:`pybamm.Vector`
+            The discretised spatial variable as a vector of nodal values
+        """
         domain = symbol.domain[0]
         mesh = self.mesh[domain]
 
@@ -141,6 +153,7 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
         Matrix-vector multiplication to implement the 3D Laplacian operator.
         This should be called only after boundary conditions have been properly
         discretised by the PyBaMM discretisation process.
+
         Parameters
         ----------
         symbol: :class:`pybamm.Symbol`
@@ -149,6 +162,7 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
             The discretised symbol of the correct size
         boundary_conditions : dict
             The boundary conditions of the model
+
         Returns
         -------
         :class:`pybamm.Symbol`
@@ -156,12 +170,14 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
         """
         stiffness_matrix = self.stiffness_matrix(symbol, boundary_conditions)
         boundary_load = self.laplacian_boundary_load(symbol, boundary_conditions)
+
         return -stiffness_matrix @ discretised_symbol + boundary_load
 
     def divergence(self, symbol, discretised_symbol, boundary_conditions):
         """
         Matrix-vector multiplication to implement the 3D divergence operator.
         Expects discretised_symbol to be a Concatenation of [Fx, Fy, Fz].
+
         Parameters
         ----------
         symbol: :class:`pybamm.Symbol`
@@ -170,6 +186,7 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
             The discretised vector field as concatenation [Fx, Fy, Fz]
         boundary_conditions : dict
             The boundary conditions of the model
+
         Returns
         -------
         :class:`pybamm.Symbol`
@@ -260,12 +277,14 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
     def laplacian_boundary_load(self, symbol_for_laplacian, boundary_conditions_dict):
         """
         Assembles the boundary load vector for the 3D Laplacian.
+
         Parameters
         ----------
         symbol: :class:`pybamm.Symbol`
             The symbol for which we want to calculate the boundary load
         boundary_conditions : dict
             The boundary conditions of the model
+
         Returns
         -------
         :class:`pybamm.Vector`

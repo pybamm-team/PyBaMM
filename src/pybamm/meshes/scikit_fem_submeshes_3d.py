@@ -85,9 +85,9 @@ class ScikitFemGenerator3D(pybamm.MeshGenerator):
         y_min, y_max = y_lim
         z_min, z_max = z_lim
 
-        nx = max(5, int((x_max - x_min) / h))
-        ny = max(5, int((y_max - y_min) / h))
-        nz = max(5, int((z_max - z_min) / h))
+        nx = max(1, int(np.ceil((x_max - x_min) / h)))
+        ny = max(1, int(np.ceil((y_max - y_min) / h)))
+        nz = max(1, int(np.ceil((z_max - z_min) / h)))
 
         mesh = skfem.MeshTet.init_tensor(
             np.linspace(x_min, x_max, nx),
@@ -97,8 +97,6 @@ class ScikitFemGenerator3D(pybamm.MeshGenerator):
 
         bnd_facets = mesh.boundary_facets()
         midpoints = mesh.p[:, mesh.facets[:, bnd_facets]].mean(axis=1)
-        boundary_nodes = np.unique(mesh.facets[:, bnd_facets])
-        mesh = laplacian_smooth(mesh, boundary_nodes)
 
         boundaries = {
             "left": bnd_facets[np.isclose(midpoints[0], x_min)],
@@ -208,6 +206,12 @@ class ScikitFemGenerator3D(pybamm.MeshGenerator):
         if side_facets:
             boundaries["side wall"] = np.array(side_facets)
 
+        if boundaries:
+            all_boundary_nodes = set()
+            for facet_list in boundaries.values():
+                all_boundary_nodes.update(mesh.facets[:, facet_list].flatten())
+            mesh = laplacian_smooth(mesh, list(all_boundary_nodes), iterations=2)
+
         return mesh.with_boundaries(boundaries)
 
     def _make_spiral_mesh(self, inner_radius, outer_radius, height, turns, h):
@@ -297,7 +301,7 @@ class ScikitFemGenerator3D(pybamm.MeshGenerator):
             all_boundary_nodes = set()
             for facet_list in boundaries.values():
                 all_boundary_nodes.update(mesh.facets[:, facet_list].flatten())
-            mesh = laplacian_smooth(mesh, list(all_boundary_nodes))
+            mesh = laplacian_smooth(mesh, list(all_boundary_nodes), iterations=2)
 
         return mesh
 
