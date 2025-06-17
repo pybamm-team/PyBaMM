@@ -683,9 +683,11 @@ class BaseSolver:
             Only valid for solvers that support intra-solve interpolation (`IDAKLUSolver`).
         initial_conditions : dict, numpy.ndarray, or list, optional
             Override the model’s default `y0`.  Can be:
+
             - a dict mapping variable names → values
             - a 1D array of length `n_states`
             - a list of such overrides (one per parallel solve)
+
             Only valid for IDAKLU solver.
         Returns
         -------

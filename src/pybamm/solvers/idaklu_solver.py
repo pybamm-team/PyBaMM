@@ -877,9 +877,11 @@ class IDAKLUSolver(pybamm.BaseSolver):
             which returns the adaptive time-stepping times.
         initial_conditions : dict, numpy.ndarray, or list, optional
             Override the model’s default `y0`.  Can be:
+
             - a dict mapping variable names → values
             - a 1D array of length `n_states`
             - a list of such overrides (one per parallel solve)
+
         """
         if not (
             model.convert_to_format == "casadi"
