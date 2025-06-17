@@ -97,6 +97,8 @@ class ScikitFemGenerator3D(pybamm.MeshGenerator):
 
         bnd_facets = mesh.boundary_facets()
         midpoints = mesh.p[:, mesh.facets[:, bnd_facets]].mean(axis=1)
+        boundary_nodes = np.unique(mesh.facets[:, bnd_facets])
+        mesh = laplacian_smooth(mesh, boundary_nodes)
 
         boundaries = {
             "left": bnd_facets[np.isclose(midpoints[0], x_min)],
@@ -264,34 +266,38 @@ class ScikitFemGenerator3D(pybamm.MeshGenerator):
         facet_centers = np.mean(points[facet_nodes], axis=1)
 
         boundaries = {}
+        tolerance = h * 0.5
 
-        bottom_mask = np.isclose(facet_centers[:, 2], 0, atol=h / 2)
+        # Bottom boundary
+        bottom_mask = facet_centers[:, 2] <= (0 + tolerance)
         if np.any(bottom_mask):
             boundaries["bottom"] = boundary_facets[bottom_mask]
 
-        top_mask = np.isclose(facet_centers[:, 2], height, atol=h / 2)
+        # Top boundary
+        top_mask = facet_centers[:, 2] >= (height - tolerance)
         if np.any(top_mask):
             boundaries["top"] = boundary_facets[top_mask]
 
+        # Radial boundaries
         radii = np.sqrt(facet_centers[:, 0] ** 2 + facet_centers[:, 1] ** 2)
-        inner_mask = np.isclose(radii, inner_radius, rtol=0.1)
+
+        inner_tolerance = inner_radius * 0.1
+        inner_mask = np.abs(radii - inner_radius) <= inner_tolerance
         if np.any(inner_mask):
             boundaries["inner wall"] = boundary_facets[inner_mask]
 
-        outer_mask = np.isclose(radii, outer_radius, rtol=0.1)
+        outer_tolerance = outer_radius * 0.1
+        outer_mask = np.abs(radii - outer_radius) <= outer_tolerance
         if np.any(outer_mask):
             boundaries["outer wall"] = boundary_facets[outer_mask]
 
-        if boundaries:
-            mesh = mesh.with_boundaries(boundaries)
+        mesh = mesh.with_boundaries(boundaries)
 
+        if boundaries:
             all_boundary_nodes = set()
             for facet_list in boundaries.values():
                 all_boundary_nodes.update(mesh.facets[:, facet_list].flatten())
-
             mesh = laplacian_smooth(mesh, list(all_boundary_nodes))
-        else:
-            mesh = mesh.with_boundaries({})
 
         return mesh
 

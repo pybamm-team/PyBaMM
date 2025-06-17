@@ -127,12 +127,12 @@ def get_unit_3d_mesh_for_testing(
     """Build a simple unit cube 3D mesh for testing."""
 
     # Create simple unit cube geometry
-    x = pybamm.SpatialVariable("x", ["negative electrode"])
-    y = pybamm.SpatialVariable("y", ["negative electrode"])
-    z = pybamm.SpatialVariable("z", ["negative electrode"])
+    x = pybamm.SpatialVariable("x", ["current collector"])
+    y = pybamm.SpatialVariable("y", ["current collector"])
+    z = pybamm.SpatialVariable("z", ["current collector"])
 
     geometry = {
-        "negative electrode": {
+        "current collector": {
             x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
             y: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
             z: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
@@ -145,7 +145,7 @@ def get_unit_3d_mesh_for_testing(
     generator = pybamm.ScikitFemGenerator3D(geom_type, **generator_params)
 
     submesh_types = {
-        "negative electrode": generator,  # Use generator directly, not MeshGenerator(generator)
+        "current collector": generator,  # Use generator directly, not MeshGenerator(generator)
     }
 
     var_pts = {x: xpts, y: ypts, z: zpts}
