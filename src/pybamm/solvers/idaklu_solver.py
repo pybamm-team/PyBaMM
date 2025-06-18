@@ -1002,7 +1002,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             idx = self.output_variables.index(var)
             base_var = self._setup["var_idaklu_fcns"][idx]
             return base_var.nnz, [base_var]
-        else:
+        else:  # pragma: no cover
             raise pybamm.SolverError(
                 f"Unsupported evaluation engine for convert_to_format="
                 f"{model.convert_to_format} (jax_evaluator={self._options['jax_evaluator']})"
