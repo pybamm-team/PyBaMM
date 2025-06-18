@@ -153,8 +153,19 @@ class ScikitFemGenerator3D(pybamm.MeshGenerator):
                 points_list.append([r * np.cos(theta), r * np.sin(theta)])
 
         points_2d = np.array(points_list)
+        points_2d += 1e-8 * np.random.randn(*points_2d.shape)  # random perturbation
         tri_2d = Delaunay(points_2d)
         triangles_base = tri_2d.simplices
+
+        areas = []
+        for tri in triangles_base:
+            v = points_2d[tri]
+            area = 0.5 * np.abs(
+                (v[1, 0] - v[0, 0]) * (v[2, 1] - v[0, 1])
+                - (v[2, 0] - v[0, 0]) * (v[1, 1] - v[0, 1])
+            )
+            areas.append(area)
+        triangles_base = triangles_base[np.array(areas) > 1e-12]
 
         n_z = max(5, int(height / h))
         z_coords = np.linspace(0, height, n_z)
@@ -179,6 +190,20 @@ class ScikitFemGenerator3D(pybamm.MeshGenerator):
                     ]
                 )
 
+        tetrahedra = np.array(tetrahedra)
+        volumes = []
+        for tet in tetrahedra:
+            v = nodes_3d[tet]
+            vol = (
+                np.abs(
+                    np.linalg.det(
+                        np.column_stack([v[1] - v[0], v[2] - v[0], v[3] - v[0]])
+                    )
+                )
+                / 6
+            )
+            volumes.append(vol)
+        tetrahedra = tetrahedra[np.array(volumes) > 1e-10]
         mesh = skfem.MeshTet(nodes_3d.T, np.array(tetrahedra).T)
 
         bottom_nodes = np.arange(n_nodes_per_layer)
@@ -267,13 +292,28 @@ class ScikitFemGenerator3D(pybamm.MeshGenerator):
                     points.append([r * np.cos(theta), r * np.sin(theta), z])
 
         points = np.array(points)
+        points += 1e-8 * np.random.randn(
+            *points.shape
+        )  # random perturbation to avoid collinear points
 
-        try:
-            delaunay = Delaunay(points)
-            mesh = skfem.MeshTet(points.T, delaunay.simplices.T)
-        except Exception as e:
-            pybamm.logger.warning(f"Spiral mesh generation failed: {e}")
-            return None
+        # remove zero volume tets
+        delaunay = Delaunay(points)
+        tets = delaunay.simplices
+        volumes = []
+        for tet in tets:
+            v = points[tet]
+            vol = (
+                np.abs(
+                    np.linalg.det(
+                        np.column_stack([v[1] - v[0], v[2] - v[0], v[3] - v[0]])
+                    )
+                )
+                / 6
+            )
+            volumes.append(vol)
+        tets = tets[np.array(volumes) > 1e-10]
+
+        mesh = skfem.MeshTet(points.T, tets.T)
 
         boundary_facets = mesh.boundary_facets()
         facet_nodes = mesh.facets[:, boundary_facets]
@@ -281,7 +321,7 @@ class ScikitFemGenerator3D(pybamm.MeshGenerator):
         facet_centers = np.mean(facet_coords, axis=1).T
 
         boundaries = {}
-        tolerance = h * 2
+        tolerance = h * 0.01
 
         bottom_mask = facet_centers[:, 2] <= tolerance
         if np.any(bottom_mask):

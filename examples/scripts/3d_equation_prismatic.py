@@ -31,9 +31,7 @@ geometry = {
     }
 }
 
-submesh_types = {
-    "prism": pybamm.ScikitFemGenerator3D(geom_type="box", gen_params={"h": 0.1})
-}
+submesh_types = {"prism": pybamm.ScikitFemGenerator3D(geom_type="box", h=0.1)}
 
 var_pts = {x: None, y: None, z: None}
 
