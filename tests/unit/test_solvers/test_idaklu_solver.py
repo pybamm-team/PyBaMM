@@ -1101,6 +1101,12 @@ class TestIDAKLUSolver:
                     err_msg=f"Failed for {varname} with form {form}",
                 )
 
+                # Test `all` key shape
+                assert (
+                    sol[varname].sensitivities["all"].shape
+                    == sol_all[varname].sensitivities["all"].shape
+                )
+
             # Mock a 1D current collector and initialise (none in the model)
             sol["x_s [m]"].domain = ["current collector"]
             sol["x_s [m]"].entries
