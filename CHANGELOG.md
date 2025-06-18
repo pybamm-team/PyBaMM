@@ -2,6 +2,7 @@
 
 ## Features
 
+- Unified entry points for models and parameter sets in `pybamm.dispatch.entry_points`, models can now be initialised through `pybamm.Model('model_name)` ([#4490](https://github.com/pybamm-team/PyBaMM/pull/4490))
 - Generalise `pybamm.DiscreteTimeSum` to allow it to be embedded in other expressions ([#5044](https://github.com/pybamm-team/PyBaMM/pull/5044))
 - Adds `all` key-value pair to `output_variables` sensitivity dictionaries, accessible through `solution[var].sensitivities['all']`. Aligns shape with conventional solution sensitivities object. ([#5067](https://github.com/pybamm-team/PyBaMM/pull/5067))
 
