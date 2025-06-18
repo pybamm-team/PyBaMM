@@ -2,9 +2,8 @@ name: Build and push Docker images to Docker Hub
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-    - develop
+  release:
+    types: [published]
 
 permissions: {}
 
@@ -45,7 +44,7 @@ jobs:
           file: scripts/Dockerfile
           tags: pybamm/pybamm:latest
           push: true
-          platforms: linux/amd64, linux/arm64
+          platforms: linux/amd64
           no-cache: true
 
       - name: List built image(s)
