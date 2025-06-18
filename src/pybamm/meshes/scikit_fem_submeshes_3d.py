@@ -95,9 +95,9 @@ class ScikitFemGenerator3D(pybamm.MeshGenerator):
         y_min, y_max = y_lim
         z_min, z_max = z_lim
 
-        nx = max(1, int(np.ceil((x_max - x_min) / h)))
-        ny = max(1, int(np.ceil((y_max - y_min) / h)))
-        nz = max(1, int(np.ceil((z_max - z_min) / h)))
+        nx = max(2, int(np.ceil((x_max - x_min) / h)) + 1)
+        ny = max(2, int(np.ceil((y_max - y_min) / h)) + 1)
+        nz = max(2, int(np.ceil((z_max - z_min) / h)) + 1)
 
         mesh = skfem.MeshTet.init_tensor(
             np.linspace(x_min, x_max, nx),
