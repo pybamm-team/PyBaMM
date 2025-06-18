@@ -118,28 +118,32 @@ class ScikitSubMesh2D(SubMesh):
             tab_left = tab["y_centre"] - tab["width"] / 2
             tab_right = tab["y_centre"] + tab["width"] / 2
             return [
-                near(Z, l_z) and between(Y, [tab_left, tab_right]) for Y, Z in zip(y, z)
+                near(Z, l_z) and between(Y, [tab_left, tab_right])
+                for Y, Z in zip(y, z, strict=False)
             ]
         # Tab on bottom
         elif near(tab["z_centre"], 0):
             tab_left = tab["y_centre"] - tab["width"] / 2
             tab_right = tab["y_centre"] + tab["width"] / 2
             return [
-                near(Z, 0) and between(Y, [tab_left, tab_right]) for Y, Z in zip(y, z)
+                near(Z, 0) and between(Y, [tab_left, tab_right])
+                for Y, Z in zip(y, z, strict=False)
             ]
         # Tab on left
         elif near(tab["y_centre"], 0):
             tab_bottom = tab["z_centre"] - tab["width"] / 2
             tab_top = tab["z_centre"] + tab["width"] / 2
             return [
-                near(Y, 0) and between(Z, [tab_bottom, tab_top]) for Y, Z in zip(y, z)
+                near(Y, 0) and between(Z, [tab_bottom, tab_top])
+                for Y, Z in zip(y, z, strict=False)
             ]
         # Tab on right
         elif near(tab["y_centre"], l_y):
             tab_bottom = tab["z_centre"] - tab["width"] / 2
             tab_top = tab["z_centre"] + tab["width"] / 2
             return [
-                near(Y, l_y) and between(Z, [tab_bottom, tab_top]) for Y, Z in zip(y, z)
+                near(Y, l_y) and between(Z, [tab_bottom, tab_top])
+                for Y, Z in zip(y, z, strict=False)
             ]
         else:
             raise pybamm.GeometryError("tab location not valid")
