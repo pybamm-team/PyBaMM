@@ -2,8 +2,7 @@ import importlib.metadata
 import sys
 import textwrap
 import warnings
-from collections.abc import Mapping
-from typing import Callable
+from collections.abc import Callable, Mapping
 
 
 class EntryPoint(Mapping):
@@ -59,9 +58,6 @@ class EntryPoint(Mapping):
     @staticmethod
     def get_entries(group_name):
         """Wrapper for the importlib version logic"""
-        if sys.version_info < (3, 10):  # pragma: no cover
-            return importlib.metadata.entry_points()[group_name]
-        else:
             return importlib.metadata.entry_points(group=group_name)
 
     def __new__(cls, group):
@@ -134,6 +130,7 @@ models = EntryPoint(group="pybamm_models")
 def Model(model: str, options=None, *args, **kwargs):  # doctest: +SKIP
     """
     Returns the loaded model object
+
     Parameters
     ----------
     model : str
@@ -144,10 +141,12 @@ def Model(model: str, options=None, *args, **kwargs):  # doctest: +SKIP
         Additional positional arguments to pass to the model constructor.
     **kwargs
         Additional keyword arguments to pass to the model constructor.
+
     Returns
     -------
     pybamm.model
         Model object of the initialised model.
+
     Examples
     --------
     Listing available models:
