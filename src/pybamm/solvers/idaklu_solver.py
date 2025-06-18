@@ -947,49 +947,66 @@ class IDAKLUSolver(pybamm.BaseSolver):
         if not save_outputs_only:
             return newsol
 
-        # Populate variables and sensititivies dictionaries directly
+        # Populate variables and sensitivities dictionaries directly
         number_of_samples = sol.y.shape[0] // number_of_timesteps
         sol.y = sol.y.reshape((number_of_timesteps, number_of_samples))
-        startk = 0
+        sensitivity_params = (
+            list(inputs_dict.keys()) if model.calculate_sensitivities else []
+        )
+
+        start_idx = 0
         for var in self.output_variables:
             # ExplicitTimeIntegral's are not computed as part of the solver and
             # do not need to be converted
             if isinstance(model.variables_and_events[var], pybamm.ExplicitTimeIntegral):
                 continue
-            if model.convert_to_format == "casadi":
-                len_of_var = (
-                    self._setup["var_fcns"][var](0.0, 0.0, 0.0).sparsity().nnz()
-                )
-                base_variables = [self._setup["var_fcns"][var]]
-            elif (
-                model.convert_to_format == "jax"
-                and self._options["jax_evaluator"] == "iree"
-            ):
-                idx = self.output_variables.index(var)
-                len_of_var = self._setup["var_idaklu_fcns"][idx].nnz
-                base_variables = [self._setup["var_idaklu_fcns"][idx]]
-            else:  # pragma: no cover
-                raise pybamm.SolverError(
-                    "Unsupported evaluation engine for convert_to_format="
-                    + f"{model.convert_to_format} "
-                    + f"(jax_evaluator={self._options['jax_evaluator']})"
-                )
+
+            var_length, base_variables = self._get_variable_info(model, var)
+            end_idx = start_idx + var_length
+
             newsol._variables[var] = pybamm.ProcessedVariableComputed(
                 [model.variables_and_events[var]],
                 base_variables,
-                [sol.y[:, startk : (startk + len_of_var)]],
+                [sol.y[:, start_idx:end_idx]],
                 newsol,
             )
+
             # Add sensitivities
             newsol[var]._sensitivities = {}
-            if model.calculate_sensitivities:
-                for paramk, param in enumerate(inputs_dict.keys()):
+            if sensitivity_params:
+                for param_idx, param in enumerate(sensitivity_params):
                     newsol[var].add_sensitivity(
                         param,
-                        [sol.yS[:, startk : (startk + len_of_var), paramk]],
+                        [sol.yS[:, start_idx:end_idx, param_idx]],
                     )
-            startk += len_of_var
+
+                # Stack individual sensitivities for `all` entry
+                newsol[var]._sensitivities["all"] = np.stack(
+                    [newsol[var].sensitivities[p] for p in sensitivity_params], axis=-1
+                )
+
+            start_idx += var_length
         return newsol
+
+    def _get_variable_info(self, model, var) -> tuple:
+        """Get variable length and base variables based on model format."""
+        if model.convert_to_format == "casadi":
+            base_var = self._setup["var_fcns"][var]
+            var_length = base_var(0.0, 0.0, 0.0).sparsity().nnz()
+            return var_length, [base_var]
+
+        elif (
+            model.convert_to_format == "jax"
+            and self._options["jax_evaluator"] == "iree"
+        ):
+            idx = self.output_variables.index(var)
+            base_var = self._setup["var_idaklu_fcns"][idx]
+            return base_var.nnz, [base_var]
+        else:  # pragma: no cover
+            raise pybamm.SolverError(
+                f"Unsupported evaluation engine for convert_to_format="
+                f"{model.convert_to_format} (jax_evaluator={self._options['jax_evaluator']})"
+            )
 
     def _set_consistent_initialization(self, model, time, inputs_dict):
         """
