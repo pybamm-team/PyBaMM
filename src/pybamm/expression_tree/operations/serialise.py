@@ -255,32 +255,32 @@ class Serialise:
         )
 
     @staticmethod
-    def save_custom_model(model, param_values, filename=None):
+    def save_custom_model(model, param_values=None, filename=None):
         """
         Save the custom PyBaMM model and parameters to a JSON file.
         """
         model_json = {
             "pybamm_version": pybamm.__version__,
-            "name": model.name,
-            "options": model.options,
+            "name": getattr(model, "name", "unnamed_model"),
+            "options": getattr(model, "options", {}),
             "rhs": {
                 str(k): Serialise.convert_symbol_to_json(v)
-                for k, v in model.rhs.items()
+                for k, v in getattr(model, "rhs", {}).items()
             },
             "algebraic": {
                 str(k): Serialise.convert_symbol_to_json(v)
-                for k, v in model.algebraic.items()
+                for k, v in getattr(model, "algebraic", {}).items()
             },
             "initial_conditions": {
                 str(k): Serialise.convert_symbol_to_json(v)
-                for k, v in model.initial_conditions.items()
+                for k, v in getattr(model, "initial_conditions", {}).items()
             },
             "boundary_conditions": {
                 str(var): {
                     side: [Serialise.convert_symbol_to_json(expr), btype]
                     for side, (expr, btype) in conds.items()
                 }
-                for var, conds in model.boundary_conditions.items()
+                for var, conds in getattr(model, "boundary_conditions", {}).items()
             },
             "events": [
                 {
@@ -288,17 +288,21 @@ class Serialise:
                     "expression": Serialise.convert_symbol_to_json(event.expression),
                     "event_type": event.event_type,
                 }
-                for event in model.events
+                for event in getattr(model, "events", [])
             ],
-            "parameters": Serialise.convert_parameter_values_to_json(param_values),
+            "parameters": Serialise.convert_parameter_values_to_json(param_values)
+            if param_values is not None
+            else {},
             "variables": {
                 str(name): Serialise.convert_symbol_to_json(expr)
-                for name, expr in model.variables.items()
+                for name, expr in getattr(model, "variables", {}).items()
             },
         }
 
         if filename is None:
-            filename = model.name + "_" + datetime.now().strftime("%Y_%m_%d-%I_%M_%p")
+            filename = (
+                model_json["name"] + "_" + datetime.now().strftime("%Y_%m_%d-%I_%M_%p")
+            )
 
         with open(filename + ".json", "w") as f:
             json.dump(model_json, f, indent=2, default=Serialise._json_encoder)
@@ -353,7 +357,7 @@ class Serialise:
             model_data["parameters"]
         )
 
-        return model_data, param_values
+        return model, param_values
 
 
         return model_data, param_values
