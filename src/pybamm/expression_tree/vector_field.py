@@ -1,5 +1,3 @@
-from typing import Optional
-
 import pybamm
 
 
@@ -16,7 +14,7 @@ class VectorField(pybamm.Symbol):
         self.tb_field = tb_field
         super().__init__(name="vector_field", children=children, domain=lr_field.domain)
 
-    def create_copy(self, new_children: Optional[list[pybamm.Symbol]] = None):
+    def create_copy(self, new_children: list[pybamm.Symbol] | None = None):
         if new_children is None:
             new_children = [self.lr_field, self.tb_field]
         return VectorField(*new_children)
