@@ -145,6 +145,8 @@ def get_mesh_for_testing_2d(
     z = pybamm.SpatialVariable(
         "z", ["negative electrode", "separator", "positive electrode"], direction="tb"
     )
+    r_n = pybamm.SpatialVariable("r_n", ["negative particle"])
+    r_p = pybamm.SpatialVariable("r_p", ["positive particle"])
 
     geometry = {
         "negative electrode": {
@@ -181,6 +183,18 @@ def get_mesh_for_testing_2d(
                 "max": pybamm.Parameter("Electrode height [m]"),
             },
         },
+        "negative particle": {
+            r_n: {
+                "min": pybamm.Scalar(0),
+                "max": pybamm.Scalar(1),
+            },
+        },
+        "positive particle": {
+            r_p: {
+                "min": pybamm.Scalar(0),
+                "max": pybamm.Scalar(1),
+            },
+        },
     }
     param.process_geometry(geometry)
 
@@ -188,6 +202,8 @@ def get_mesh_for_testing_2d(
         "negative electrode": pybamm.Uniform2DSubMesh,
         "separator": pybamm.Uniform2DSubMesh,
         "positive electrode": pybamm.Uniform2DSubMesh,
+        "negative particle": pybamm.Uniform1DSubMesh,
+        "positive particle": pybamm.Uniform1DSubMesh,
     }
 
     if xpts is None:
@@ -197,6 +213,8 @@ def get_mesh_for_testing_2d(
     var_pts = {
         x: xn_pts,
         z: zpts,
+        r_n: rpts,
+        r_p: rpts,
     }
     return pybamm.Mesh(geometry, submesh_types, var_pts)
 

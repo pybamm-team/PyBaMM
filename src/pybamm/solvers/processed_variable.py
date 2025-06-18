@@ -1182,7 +1182,7 @@ def process_variable(name: str, base_variables, *args, **kwargs):
             return ProcessedVariable3DSciKitFEM(name, base_variables, *args, **kwargs)
 
     if mesh and hasattr(mesh, "edges_lr") and hasattr(mesh, "edges_tb"):
-        return ProcessedVariable2DReal(base_variables, *args, **kwargs)
+        return ProcessedVariable2DReal(name, base_variables, *args, **kwargs)
 
     # check variable shape
     if len(base_eval_shape) == 0 or base_eval_shape[0] == 1:

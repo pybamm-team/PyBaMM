@@ -11,11 +11,18 @@ class TestFiniteVolume2D:
         mesh = get_mesh_for_testing_2d()
         fin_vol = pybamm.FiniteVolume2D()
         fin_vol.build(mesh)
-        n_lr = mesh["negative electrode"].npts_lr
-        n_tb = mesh["negative electrode"].npts_tb
+        n_lr = mesh[("negative electrode", "separator", "positive electrode")].npts_lr
+        n_tb = mesh[("negative electrode", "separator", "positive electrode")].npts_tb
 
         # node to edge
-        c = pybamm.StateVector(slice(0, n_lr * n_tb), domain=["negative electrode"])
+        var_left = pybamm.Variable("var_left", domain=["negative electrode"])
+        var_separator = pybamm.Variable("var_separator", domain=["separator"])
+        var_right = pybamm.Variable("var_right", domain=["positive electrode"])
+        var_concat = pybamm.concatenation(var_left, var_separator, var_right)
+        disc = pybamm.Discretisation(mesh, {"macroscale": fin_vol})
+        disc.set_variable_slices([var_concat])
+        c = disc.process_symbol(var_concat)
+        # c = pybamm.StateVector(slice(0, n_lr * n_tb), domain=["negative electrode", "separator", "positive electrode"])
         y_test = np.ones(n_lr * n_tb) * 2
         diffusivity_c_ari_lr = fin_vol.node_to_edge(
             c, method="arithmetic", direction="lr"
@@ -111,6 +118,12 @@ class TestFiniteVolume2D:
             var * (pybamm.grad(var) + 2),
             (pybamm.grad(var) + 2) * (-var),
             (pybamm.grad(var) + 2) * (2 * var),
+            # this very complicated one catches a coverage case
+            (
+                pybamm.VectorField(pybamm.Scalar(2), pybamm.Scalar(2))
+                + (2 * pybamm.grad(var))
+            )
+            * (2 * var),
             pybamm.grad(var) * pybamm.grad(var),
             (pybamm.grad(var) + 2) * pybamm.grad(var) ** 2,
         ]:
@@ -537,3 +550,93 @@ class TestFiniteVolume2D:
         )
         # Verify it's a VectorField
         assert isinstance(result_both_ghost, pybamm.VectorField)
+
+    def test_2d_concatenations(self):
+        # Create discretisation
+        mesh = get_mesh_for_testing_2d()
+        spatial_methods = {
+            "macroscale": pybamm.FiniteVolume2D(),
+        }
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        neg_electrode = pybamm.Variable("symbol_neg", domain=["negative electrode"])
+        separator = pybamm.Variable("symbol_sep", domain=["separator"])
+        pos_electrode = pybamm.Variable("symbol_pos", domain=["positive electrode"])
+        concat_var = pybamm.concatenation(neg_electrode, separator, pos_electrode)
+        disc.set_variable_slices([concat_var])
+        concat_var_disc = disc.process_symbol(concat_var)
+        submesh_total = mesh[("negative electrode", "separator", "positive electrode")]
+        LR, TB = np.meshgrid(submesh_total.nodes_lr, submesh_total.nodes_tb)
+        linear_x = LR.flatten()
+        linear_y = TB.flatten()
+        lr_result = concat_var_disc.evaluate(None, linear_x).flatten()
+        tb_result = concat_var_disc.evaluate(None, linear_y).flatten()
+        np.testing.assert_array_equal(lr_result, LR.flatten())
+        np.testing.assert_array_equal(tb_result, TB.flatten())
+
+        # Now check individual vectors
+        submesh_neg = mesh[("negative electrode")]
+        submesh_sep = mesh[("separator")]
+        submesh_pos = mesh[("positive electrode")]
+        LR_neg, TB_neg = np.meshgrid(submesh_neg.nodes_lr, submesh_neg.nodes_tb)
+        LR_sep, TB_sep = np.meshgrid(submesh_sep.nodes_lr, submesh_sep.nodes_tb)
+        LR_pos, TB_pos = np.meshgrid(submesh_pos.nodes_lr, submesh_pos.nodes_tb)
+        neg_electrode_disc = disc.process_symbol(neg_electrode)
+        separator_disc = disc.process_symbol(separator)
+        pos_electrode_disc = disc.process_symbol(pos_electrode)
+        neg_electrode_lr = neg_electrode_disc.evaluate(None, linear_x).flatten()
+        separator_lr = separator_disc.evaluate(None, linear_x).flatten()
+        pos_electrode_lr = pos_electrode_disc.evaluate(None, linear_x).flatten()
+        neg_electrode_tb = neg_electrode_disc.evaluate(None, linear_y).flatten()
+        separator_tb = separator_disc.evaluate(None, linear_y).flatten()
+        pos_electrode_tb = pos_electrode_disc.evaluate(None, linear_y).flatten()
+        np.testing.assert_array_equal(neg_electrode_lr, LR_neg.flatten())
+        np.testing.assert_array_equal(separator_lr, LR_sep.flatten())
+        np.testing.assert_array_equal(pos_electrode_lr, LR_pos.flatten())
+        np.testing.assert_array_equal(neg_electrode_tb, TB_neg.flatten())
+        np.testing.assert_array_equal(separator_tb, TB_sep.flatten())
+        np.testing.assert_array_equal(pos_electrode_tb, TB_pos.flatten())
+
+        # Now check concatenating broadcasted constants
+        source_neg = pybamm.PrimaryBroadcast(pybamm.Scalar(1.0), ["negative electrode"])
+        source_sep = pybamm.PrimaryBroadcast(pybamm.Scalar(2.0), ["separator"])
+        source_pos = pybamm.PrimaryBroadcast(pybamm.Scalar(3.0), ["positive electrode"])
+        source_concat = pybamm.concatenation(source_neg, source_sep, source_pos)
+        source_concat_disc = disc.process_symbol(source_concat)
+        source_concat_result = source_concat_disc.evaluate(None, None).flatten()
+        thing = []
+        for _ in submesh_total.nodes_tb:
+            thing.append(1 * np.ones(submesh_neg.npts_lr))
+            thing.append(2 * np.ones(submesh_sep.npts_lr))
+            thing.append(3 * np.ones(submesh_pos.npts_lr))
+        source_concat_expected = np.concatenate(thing)
+        np.testing.assert_array_equal(source_concat_result, source_concat_expected)
+
+        # Now check adding broadcasted constants to state vectors
+        constant_y = np.ones(submesh_total.npts)
+        neg_add = neg_electrode + source_neg
+        separator_add = separator + source_sep
+        pos_add = pos_electrode + source_pos
+        total_add = concat_var + source_concat
+        neg_add_disc = disc.process_symbol(neg_add)
+        separator_add_disc = disc.process_symbol(separator_add)
+        pos_add_disc = disc.process_symbol(pos_add)
+        total_add_disc = disc.process_symbol(total_add)
+        neg_add_result = neg_add_disc.evaluate(None, constant_y).flatten()
+        separator_add_result = separator_add_disc.evaluate(None, constant_y).flatten()
+        pos_add_result = pos_add_disc.evaluate(None, constant_y).flatten()
+        total_add_result = total_add_disc.evaluate(None, constant_y).flatten()
+        np.testing.assert_array_equal(neg_add_result, 2 * np.ones(submesh_neg.npts))
+        np.testing.assert_array_equal(
+            separator_add_result, 3 * np.ones(submesh_sep.npts)
+        )
+        np.testing.assert_array_equal(pos_add_result, 4 * np.ones(submesh_pos.npts))
+        total_add_result_expected = source_concat_expected + 1
+        np.testing.assert_array_equal(total_add_result, total_add_result_expected)
+
+        # Now check concatenating broadcasted constants to state vectors
+        constant_y = np.ones(submesh_total.npts)
+        neg_add = neg_electrode + source_neg
+        separator_add = separator + source_sep
+        pos_add = pos_electrode + source_pos
+        total_add = concat_var + source_concat
+        neg_add_disc = disc.process_symbol(neg_add)

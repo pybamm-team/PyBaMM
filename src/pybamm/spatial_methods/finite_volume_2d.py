@@ -1685,16 +1685,8 @@ class FiniteVolume2D(pybamm.SpatialMethod):
             i = 0
             for tb_idx in range(tb_mesh_points):
                 for child_idx in range(num_children):
-                    if isinstance(disc_children[child_idx], pybamm.StateVector):
-                        block_mat[i][tb_idx + child_idx * tb_mesh_points] = eyes[
-                            child_idx
-                        ]
-                        i += 1
-                    else:
-                        block_mat[i][tb_idx + child_idx * tb_mesh_points] = eyes[
-                            child_idx
-                        ]
-                        i += 1
+                    block_mat[i][tb_idx + child_idx * tb_mesh_points] = eyes[child_idx]
+                    i += 1
             block_mat = csr_matrix(np.block(block_mat))
             block_mat = kron(eye(repeats), block_mat)
             matrix = pybamm.Matrix(block_mat)
@@ -2141,7 +2133,11 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         else:
             raise ValueError(f"direction '{tb_direction}' not recognised")
 
-        if lr_bc_side is not None and bcs[symbol][lr_bc_side][1] != "Dirichlet":
+        if (
+            lr_bc_side is not None
+            and lr_bc_side in bcs[symbol]
+            and bcs[symbol][lr_bc_side][1] != "Dirichlet"
+        ):
             raise pybamm.ModelError(
                 "Dirichlet boundary conditions must be provided for "
                 f"{lr_direction}ing '{symbol}' and {tb_direction}ing '{symbol}'"
@@ -2155,7 +2151,11 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                 symbol, discretised_symbol, bc_subset
             )
 
-        if tb_bc_side is not None and bcs[symbol][tb_bc_side][1] != "Dirichlet":
+        if (
+            tb_bc_side is not None
+            and tb_bc_side in bcs[symbol]
+            and bcs[symbol][tb_bc_side][1] != "Dirichlet"
+        ):
             raise pybamm.ModelError(
                 "Dirichlet boundary conditions must be provided for "
                 f"{lr_direction}ing '{symbol}' and {tb_direction}ing '{symbol}'"
