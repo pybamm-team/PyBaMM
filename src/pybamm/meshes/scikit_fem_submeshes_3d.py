@@ -44,7 +44,17 @@ def laplacian_smooth(mesh, boundary_dofs, iterations=5):
                 p_new[:, i] = np.mean(p[:, neighbors], axis=1)
         p = p_new
 
-    return skfem.MeshTet(p, mesh.t)
+    original_boundaries = mesh.boundaries if hasattr(mesh, "boundaries") else None
+    original_subdomains = mesh.subdomains if hasattr(mesh, "subdomains") else None
+
+    smoothed_mesh = skfem.MeshTet(p, mesh.t)
+
+    if original_boundaries:
+        smoothed_mesh = smoothed_mesh.with_boundaries(original_boundaries)
+    if original_subdomains:
+        smoothed_mesh = smoothed_mesh.with_subdomains(original_subdomains)
+
+    return smoothed_mesh
 
 
 class ScikitFemGenerator3D(pybamm.MeshGenerator):
@@ -267,17 +277,16 @@ class ScikitFemGenerator3D(pybamm.MeshGenerator):
 
         boundary_facets = mesh.boundary_facets()
         facet_nodes = mesh.facets[:, boundary_facets]
-        facet_centers = np.mean(points[facet_nodes], axis=1)
+        facet_coords = mesh.p[:, facet_nodes]
+        facet_centers = np.mean(facet_coords, axis=1).T
 
         boundaries = {}
-        tolerance = h * 0.5
+        tolerance = h * 2
 
-        # Bottom boundary
-        bottom_mask = facet_centers[:, 2] <= (0 + tolerance)
+        bottom_mask = facet_centers[:, 2] <= tolerance
         if np.any(bottom_mask):
             boundaries["bottom"] = boundary_facets[bottom_mask]
 
-        # Top boundary
         top_mask = facet_centers[:, 2] >= (height - tolerance)
         if np.any(top_mask):
             boundaries["top"] = boundary_facets[top_mask]
@@ -285,12 +294,12 @@ class ScikitFemGenerator3D(pybamm.MeshGenerator):
         # Radial boundaries
         radii = np.sqrt(facet_centers[:, 0] ** 2 + facet_centers[:, 1] ** 2)
 
-        inner_tolerance = inner_radius * 0.1
+        inner_tolerance = inner_radius * 0.15
         inner_mask = np.abs(radii - inner_radius) <= inner_tolerance
         if np.any(inner_mask):
             boundaries["inner wall"] = boundary_facets[inner_mask]
 
-        outer_tolerance = outer_radius * 0.1
+        outer_tolerance = outer_radius * 0.15
         outer_mask = np.abs(radii - outer_radius) <= outer_tolerance
         if np.any(outer_mask):
             boundaries["outer wall"] = boundary_facets[outer_mask]
@@ -392,6 +401,7 @@ class ScikitFemSubMesh3D(pybamm.SubMesh):
 
         self.basis = skfem.InteriorBasis(self._skfem_mesh, skfem.ElementTetP1())
         self.facet_basis = skfem.FacetBasis(self._skfem_mesh, self.basis.elem)
+        self.element = skfem.ElementTetP1()
 
         if (
             hasattr(self._skfem_mesh, "boundaries")

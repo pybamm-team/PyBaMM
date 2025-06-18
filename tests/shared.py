@@ -145,7 +145,7 @@ def get_unit_3d_mesh_for_testing(
     generator = pybamm.ScikitFemGenerator3D(geom_type, **generator_params)
 
     submesh_types = {
-        "current collector": generator,  # Use generator directly, not MeshGenerator(generator)
+        "current collector": generator,
     }
 
     var_pts = {x: xpts, y: ypts, z: zpts}

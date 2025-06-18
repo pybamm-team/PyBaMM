@@ -217,9 +217,9 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
         mass = skfem.asm(mass_form, mesh.basis)
         mass_inv = pybamm.Matrix(inv(csc_matrix(mass)))
 
-        grad_x_T = pybamm.Matrix(grad_M[0].entries.T)
-        grad_y_T = pybamm.Matrix(grad_M[1].entries.T)
-        grad_z_T = pybamm.Matrix(grad_M[2].entries.T)
+        grad_x_T = pybamm.Matrix(grad_M[0].entries)
+        grad_y_T = pybamm.Matrix(grad_M[1].entries)
+        grad_z_T = pybamm.Matrix(grad_M[2].entries)
 
         div_x = mass_inv @ (grad_x_T @ Fx)
         div_y = mass_inv @ (grad_y_T @ Fy)
@@ -261,16 +261,17 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
 
         @skfem.BilinearForm
         def stiffness_form(u, v, w):
-            return u.grad[0] * v.grad[0] + u.grad[1] * v.grad[1] + u.grad[2] * v.grad[2]
+            return sum(u.grad * v.grad)
 
         stiffness = skfem.asm(stiffness_form, mesh.basis)
 
-        bcs = boundary_conditions.get(symbol, {})
-        for name, (_, bc_type) in bcs.items():
-            if bc_type == "Dirichlet":
-                boundary_dofs = getattr(mesh, f"{name}_dofs", None)
-                if boundary_dofs is not None:
-                    self.bc_apply(stiffness, boundary_dofs)
+        if symbol in boundary_conditions:
+            bcs = boundary_conditions[symbol]
+            for name, (_, bc_type) in bcs.items():
+                if bc_type == "Dirichlet":
+                    boundary_dofs = getattr(mesh, f"{name}_dofs", None)
+                    if boundary_dofs is not None and len(boundary_dofs) > 0:
+                        self.bc_apply(stiffness, boundary_dofs)
 
         return pybamm.Matrix(stiffness)
 
@@ -308,31 +309,27 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
                 return v
 
             unit_bc_load_form = _unit_bc_load_form
-
-        for name, (bc_value_symbol, bc_type) in bcs_for_symbol.items():
-            term_contribution = None
-            if bc_type == "Neumann":
-                if not hasattr(fem_mesh, f"{name}_basis"):
-                    continue
-                if unit_bc_load_form is None:
-                    raise RuntimeError("unit_bc_load_form not defined for Neumann BC")
-                numeric_coeffs = skfem.asm(
-                    unit_bc_load_form, getattr(fem_mesh, f"{name}_basis")
-                )
-                term_contribution = bc_value_symbol * pybamm.Vector(numeric_coeffs)
-                current_boundary_load_symbol += term_contribution
-            elif bc_type == "Dirichlet":
-                if not hasattr(fem_mesh, f"{name}_dofs"):
-                    continue
-                boundary_dofs = getattr(fem_mesh, f"{name}_dofs")
-                numeric_mask = np.zeros(fem_mesh.npts)
-                numeric_mask[boundary_dofs] = 1.0
-                term_contribution = bc_value_symbol * pybamm.Vector(numeric_mask)
-                current_boundary_load_symbol += term_contribution
-            else:
-                raise ValueError(
-                    f"Boundary condition for '{name}' must be Dirichlet or Neumann, not '{bc_type}'"
-                )
+        if symbol_for_laplacian in boundary_conditions_dict:
+            for name, (bc_value_symbol, bc_type) in bcs_for_symbol.items():
+                term_contribution = None
+                if bc_type == "Neumann":
+                    numeric_coeffs = skfem.asm(
+                        unit_bc_load_form, getattr(fem_mesh, f"{name}_basis")
+                    )
+                    if numeric_coeffs.ndim == 1:
+                        numeric_coeffs = numeric_coeffs[:, np.newaxis]
+                    term_contribution = bc_value_symbol * pybamm.Vector(numeric_coeffs)
+                    current_boundary_load_symbol += term_contribution
+                elif bc_type == "Dirichlet":
+                    boundary_dofs = getattr(fem_mesh, f"{name}_dofs")
+                    numeric_mask = np.zeros((fem_mesh.npts, 1))
+                    numeric_mask[boundary_dofs, 0] = 1.0
+                    term_contribution = bc_value_symbol * pybamm.Vector(numeric_mask)
+                    current_boundary_load_symbol += term_contribution
+                else:
+                    raise ValueError(
+                        f"Boundary condition for '{name}' must be Dirichlet or Neumann, not '{bc_type}'"
+                    )
 
         return current_boundary_load_symbol
 
