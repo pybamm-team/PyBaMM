@@ -664,7 +664,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 p_mechanics = (p_mechanics, p_mechanics)
             if any(
                 sei == "true" and mech != "swelling and cracking"
-                for mech, sei in zip(p_mechanics, sei_on_cr)
+                for mech, sei in zip(p_mechanics, sei_on_cr, strict=False)
             ):
                 raise pybamm.OptionError(
                     "If 'SEI on cracks' is 'true' then 'particle mechanics' must be "

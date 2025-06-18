@@ -232,7 +232,7 @@ class BaseSolver:
         # Save CasADi functions for solvers that use CasADi
         # Note: when we pass to casadi the ode part of the problem must be in
         if isinstance(self.root_method, pybamm.CasadiAlgebraicSolver) or isinstance(
-            self, (pybamm.CasadiSolver, pybamm.CasadiAlgebraicSolver)
+            self, pybamm.CasadiSolver | pybamm.CasadiAlgebraicSolver
         ):
             # can use DAE solver to solve model with algebraic equations only
             if len(model.rhs) > 0:
@@ -371,7 +371,7 @@ class BaseSolver:
                 ) from e
 
         if (
-            isinstance(self, (pybamm.CasadiSolver, pybamm.CasadiAlgebraicSolver))
+            isinstance(self, pybamm.CasadiSolver | pybamm.CasadiAlgebraicSolver)
         ) and model.convert_to_format != "casadi":
             pybamm.logger.warning(
                 f"Converting {model.name} to CasADi for solving with CasADi solver"
@@ -841,7 +841,7 @@ class BaseSolver:
         # consistent state afterwards if a DAE)
         old_y0 = model.y0
         solutions = None
-        for start_index, end_index in zip(start_indices, end_indices):
+        for start_index, end_index in zip(start_indices, end_indices, strict=False):
             pybamm.logger.verbose(
                 f"Calling solver for {t_eval[start_index]} < t < {t_eval[end_index - 1]}"
             )
@@ -872,6 +872,7 @@ class BaseSolver:
                                 [t_eval[start_index:end_index]] * ninputs,
                                 model_inputs_list,
                                 [t_interp] * ninputs,
+                                strict=False,
                             ),
                         )
                         p.close()
@@ -1085,7 +1086,7 @@ class BaseSolver:
 
         # sort equations according to slices
         concatenated_initial_conditions = [
-            casadi.vertcat(*[eq for _, eq in sorted(zip(slices, init))])
+            casadi.vertcat(*[eq for _, eq in sorted(zip(slices, init, strict=False))])
             for init in initial_conditions
         ]
         return concatenated_initial_conditions

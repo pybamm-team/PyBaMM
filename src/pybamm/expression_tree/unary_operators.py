@@ -36,7 +36,7 @@ class UnaryOperator(pybamm.Symbol):
         child: pybamm.Symbol,
         domains: DomainsType = None,
     ):
-        if isinstance(child, (float, int, np.number)):
+        if isinstance(child, float | int | np.number):
             child = pybamm.Scalar(child)
         domains = domains or child.domains
 
@@ -1334,7 +1334,7 @@ def div(symbol):
     # Divergence commutes with Negate operator
     if isinstance(symbol, pybamm.Negate):
         return -div(symbol.orphans[0])
-    elif isinstance(symbol, (pybamm.Multiplication, pybamm.Division)):
+    elif isinstance(symbol, pybamm.Multiplication | pybamm.Division):
         left, right = symbol.orphans
         if isinstance(left, pybamm.Negate):
             return -div(symbol._binary_new_copy(left.orphans[0], right))
@@ -1444,7 +1444,7 @@ def boundary_value(symbol, side):
     if symbol.domain == []:
         return symbol
     # If symbol is a primary or full broadcast, reduce by one dimension
-    if isinstance(symbol, (pybamm.PrimaryBroadcast, pybamm.FullBroadcast)):
+    if isinstance(symbol, pybamm.PrimaryBroadcast | pybamm.FullBroadcast):
         return symbol.reduce_one_dimension()
     # If symbol is a secondary broadcast, its boundary value is a primary broadcast of
     # the boundary value of its child

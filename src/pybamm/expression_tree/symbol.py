@@ -755,7 +755,7 @@ class Symbol:
         See :class:`pybamm.Jacobian`.
         """
         jac = pybamm.Jacobian(known_jacs, clear_domain=clear_domain)
-        if not isinstance(variable, (pybamm.StateVector, pybamm.StateVectorDot)):
+        if not isinstance(variable, pybamm.StateVector | pybamm.StateVectorDot):
             raise TypeError(
                 "Jacobian can only be taken with respect to a 'StateVector' "
                 f"or 'StateVectorDot', but {variable} is a {type(variable)}"

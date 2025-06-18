@@ -51,7 +51,7 @@ class ProcessedVariableTimeIntegral:
             return pybamm.StateVector(slice(0, nstates))
 
         # Should not be any time or state vector nodes in the children
-        if any(isinstance(c, (pybamm.Time, pybamm.StateVector)) for c in var.children):
+        if any(isinstance(c, pybamm.Time | pybamm.StateVector) for c in var.children):
             raise ValueError(
                 "For expressions containing time integrals, "
                 "time or state vector nodes should only appear within the "
@@ -70,9 +70,7 @@ class ProcessedVariableTimeIntegral:
     ) -> ProcessedVariableTimeIntegral | None:
         sum_node = None
         for symbol in var.pre_order():
-            if isinstance(
-                symbol, (pybamm.ExplicitTimeIntegral, pybamm.DiscreteTimeSum)
-            ):
+            if isinstance(symbol, pybamm.ExplicitTimeIntegral | pybamm.DiscreteTimeSum):
                 if sum_node is None:
                     sum_node = symbol
                 else:

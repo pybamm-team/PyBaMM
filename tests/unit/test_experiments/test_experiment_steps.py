@@ -175,7 +175,7 @@ class TestExperimentSteps:
             },
         ]
 
-        for step, expected in zip(steps, expected_result):
+        for step, expected in zip(steps, expected_result, strict=False):
             actual = pybamm.step.string(step).to_dict()
             for k in expected.keys():
                 # useful form for debugging

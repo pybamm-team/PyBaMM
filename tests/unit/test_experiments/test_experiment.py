@@ -212,7 +212,9 @@ class TestExperiment:
         ]
 
         # Test method directly
-        for next, end, steps in zip(expected_next, expected_end, processed_steps):
+        for next, end, steps in zip(
+            expected_next, expected_end, processed_steps, strict=False
+        ):
             # useful form for debugging
             assert steps.next_start_time == next
             assert steps.end_time == end

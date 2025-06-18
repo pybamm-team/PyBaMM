@@ -245,9 +245,9 @@ class TestSymbol:
             "-",
             "*",
         ]
-        for node, expect in zip(exp.pre_order(), expected_preorder):
+        for node, expect in zip(exp.pre_order(), expected_preorder, strict=False):
             assert node.name == expect
-        for node, expect in zip(exp.post_order(), expected_postorder):
+        for node, expect in zip(exp.post_order(), expected_postorder, strict=False):
             assert node.name == expect
 
     def test_symbol_diff(self):
