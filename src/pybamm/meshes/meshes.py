@@ -232,12 +232,10 @@ class Mesh(dict):
             if (
                 len(domain) == 1
                 and not isinstance(
-                    (
-                        submesh,
-                        pybamm.SubMesh0D
-                        | pybamm.ScikitSubMesh2D
-                        | pybamm.ScikitFemSubMesh3D,
-                    ),
+                    submesh,
+                    pybamm.SubMesh0D
+                    | pybamm.ScikitSubMesh2D
+                    | pybamm.ScikitFemSubMesh3D,
                 )
             )
         ]
