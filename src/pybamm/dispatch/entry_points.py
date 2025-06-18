@@ -18,7 +18,9 @@ class EntryPoint(Mapping):
     Access via :py:data:`pybamm.Model` for models - provides access to all registered
     battery models (e.g., 'SPM', 'DFN').
 
-    Note: This feature is in its experimental phase.
+    .. attention::
+
+        This feature is currently experimental.
 
     Examples
     --------
