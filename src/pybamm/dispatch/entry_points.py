@@ -1,5 +1,4 @@
 import importlib.metadata
-import sys
 import textwrap
 import warnings
 from collections.abc import Callable, Mapping
@@ -19,6 +18,8 @@ class EntryPoint(Mapping):
     Access via :py:data:`pybamm.Model` for models - provides access to all registered
     battery models (e.g., 'SPM', 'DFN').
 
+    Note: This feature is in its experimental phase.
+
     Examples
     --------
     Listing available parameter sets:
@@ -28,8 +29,8 @@ class EntryPoint(Mapping):
 
     Listing available models:
         >>> import pybamm
-        >>> list(pybamm.dispatch.models)
-        ['DFN', 'SPM']
+        >>> list(pybamm.dispatch.models) # doctest: +ELLIPSIS
+        ['DFN', 'SPM', 'MSMR', 'NewmanTobias', 'SPM', 'SPMe', 'Yang2017']
 
     Get the docstring for a parameter set or model:
         >>> print(pybamm.parameter_sets.get_docstring("Ai2020"))  # doctest: +ELLIPSIS
@@ -58,7 +59,7 @@ class EntryPoint(Mapping):
     @staticmethod
     def get_entries(group_name):
         """Wrapper for the importlib version logic"""
-            return importlib.metadata.entry_points(group=group_name)
+        return importlib.metadata.entry_points(group=group_name)
 
     def __new__(cls, group):
         """Ensure only two instances of entry points exist, one for parameter sets and the other for models"""
@@ -66,7 +67,7 @@ class EntryPoint(Mapping):
             cls.instance = super().__new__(cls)
         return cls.instance
 
-    def get_class(self, key) -> Callable:
+    def _get_class(self, key) -> Callable:
         """Return the class without instantiating it"""
         return self._load_entry_point(key)
 
@@ -130,6 +131,7 @@ models = EntryPoint(group="pybamm_models")
 def Model(model: str, options=None, *args, **kwargs):  # doctest: +SKIP
     """
     Returns the loaded model object
+    Note: This feature is in its experimental phase.
 
     Parameters
     ----------
@@ -151,12 +153,12 @@ def Model(model: str, options=None, *args, **kwargs):  # doctest: +SKIP
     --------
     Listing available models:
         >>> import pybamm
-        >>> list(pybamm.dispatch.models)
-        ['DFN', 'SPM']
+        >>> list(pybamm.dispatch.models) # doctest: +ELLIPSIS
+        ['DFN', 'SPM', 'MSMR', 'NewmanTobias', 'SPM', 'SPMe', 'Yang2017']
         >>> pybamm.Model('SPM') # doctest: +SKIP
         <pybamm.models.full_battery_models.lithium_ion.spm.SPM object>
     """
-    model_class = models.get_class(model)
+    model_class = models._get_class(model)
 
     if options is not None:
         return model_class(options, *args, **kwargs)

@@ -63,7 +63,7 @@ class TestModelEntryPoints:
 
     def test_get_class_method(self):
         """Test that get_class method returns the class without instantiating"""
-        model_class = pybamm.dispatch.models.get_class("SPM")
+        model_class = pybamm.dispatch.models._get_class("SPM")
         # Should be a class, not an instance
         assert callable(model_class)
         assert hasattr(model_class, "__name__")

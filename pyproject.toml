@@ -151,6 +151,11 @@ Chayambuka2022 = "pybamm.input.parameters.sodium_ion.Chayambuka2022:get_paramete
 [project.entry-points."pybamm_models"]
 SPM = "pybamm.models.full_battery_models.lithium_ion.spm:SPM"
 DFN = "pybamm.models.full_battery_models.lithium_ion.dfn:DFN"
+SPMe = "pybamm.models.full_battery_models.lithium_ion.spme:SPMe"
+MPM = "pybamm.models.full_battery_models.lithium_ion.mpm:MPM"
+MSMR = "pybamm.models.full_battery_models.lithium_ion.msmr:MSMR"
+NewmanTobias = "pybamm.models.full_battery_models.lithium_ion.newman_tobian:NewmanTobias"
+Yang2017 = "pybamm.models.full_battery_models.lithium_ion.Yang2017:Yang2017"
 
 [tool.hatch]
 version.source = "vcs"
