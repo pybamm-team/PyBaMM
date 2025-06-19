@@ -558,13 +558,6 @@ class Serialise:
         dict
             The JSON-serializable dictionary
         """
-
-        def maybe_add_auxiliary_domains(symbol, json_dict):
-            aux_domains = getattr(symbol, "_auxiliary_domains", None)
-            if aux_domains:
-                json_dict["auxiliary_domains"] = aux_domains
-            return json_dict
-
         if isinstance(symbol, numbers.Number | list):
             return symbol
         elif isinstance(symbol, pybamm.Time):
@@ -582,7 +575,6 @@ class Serialise:
                 "broadcast_domain": symbol.broadcast_domain,
                 "children": [Serialise.convert_symbol_to_json(symbol.orphans[0])],
             }
-            return maybe_add_auxiliary_domains(symbol, json_dict)
 
         elif isinstance(symbol, pybamm.FunctionParameter):
             input_names = symbol.input_names
@@ -598,8 +590,8 @@ class Serialise:
                 "inputs": inputs,
                 "diff_variable": diff_variable,
                 "name": symbol.name,
+                "domains": symbol.domains, 
             }
-            return maybe_add_auxiliary_domains(symbol, json_dict)
 
         elif isinstance(symbol, pybamm.Interpolant):
             json_dict = {
@@ -613,7 +605,6 @@ class Serialise:
                 "interpolator": symbol.interpolator,
                 "entries_string": symbol.entries_string,
             }
-            return maybe_add_auxiliary_domains(symbol, json_dict)
 
         elif isinstance(symbol, pybamm.Variable):
             json_dict = {
@@ -622,16 +613,14 @@ class Serialise:
                 "domain": symbol.domain,
                 "bounds": symbol.bounds,
             }
-            return maybe_add_auxiliary_domains(symbol, json_dict)
 
         elif isinstance(symbol, pybamm.SpatialVariable):
             json_dict = {
                 "type": "SpatialVariable",
                 "name": symbol.name,
-                "domain": symbol.domain,
+                "domains": symbol.domains,
                 "coord_sys": symbol.coord_sys,
             }
-            return maybe_add_auxiliary_domains(symbol, json_dict)
 
         elif isinstance(symbol, pybamm.SpecificFunction):
             if symbol.__class__ == pybamm.SpecificFunction:
@@ -642,7 +631,6 @@ class Serialise:
                     Serialise.convert_symbol_to_json(c) for c in symbol.children
                 ],
             }
-            return maybe_add_auxiliary_domains(symbol, json_dict)
 
         elif isinstance(symbol, pybamm.UnaryOperator | pybamm.BinaryOperator):
             json_dict = {
@@ -651,7 +639,6 @@ class Serialise:
                     Serialise.convert_symbol_to_json(c) for c in symbol.children
                 ],
             }
-            return maybe_add_auxiliary_domains(symbol, json_dict)
 
         elif isinstance(symbol, pybamm.Symbol):
             # Generic fallback for other symbols with children
@@ -661,12 +648,12 @@ class Serialise:
                     Serialise.convert_symbol_to_json(c) for c in symbol.children
                 ],
             }
-            return maybe_add_auxiliary_domains(symbol, json_dict)
         else:
             raise ValueError(
                 f"Error processing '{symbol.name}'. Unknown symbol type: {type(symbol)}"
             )
-
+        return json_dict
+    
     @staticmethod
     def convert_function_to_symbolic_expression(func, name=None):
         """
@@ -760,8 +747,9 @@ class Serialise:
         elif json_data["type"] == "SpatialVariable":
             return pybamm.SpatialVariable(
                 json_data["name"],
-                domain=json_data["domain"],
                 coord_sys=json_data.get("coord_sys", "cartesian"),
+                domains=json_data.get("domains"), 
+                
             )
         elif "children" in json_data:
             return getattr(pybamm, json_data["type"])(
