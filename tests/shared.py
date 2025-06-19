@@ -1,18 +1,13 @@
 #
 # Shared methods and classes for testing
 #
+import importlib.metadata as importlib_metadata
 import re
 import socket
-import sys
 
 from scipy.sparse import eye
 
 import pybamm
-
-if sys.version_info < (3, 10):
-    import importlib_metadata
-else:
-    import importlib.metadata as importlib_metadata
 
 
 class SpatialMethodForTesting(pybamm.SpatialMethod):

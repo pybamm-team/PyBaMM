@@ -311,7 +311,9 @@ class FiniteVolume(pybamm.SpatialMethod):
             higher_dimensions = possible_dimensions[this_dimension_index + 1 :]
             n_lower_pts = 1
             #  Lower dimensions should be repeated, so add them to the eye matrix
-            for lower_domain, lower_dimension in zip(lower_domains, lower_dimensions):
+            for lower_domain, lower_dimension in zip(
+                lower_domains, lower_dimensions, strict=False
+            ):
                 lower_submesh = self.mesh[lower_domain]
                 if child.evaluates_on_edges(lower_dimension):
                     n_lower_pts *= lower_submesh.npts + 1

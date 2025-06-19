@@ -92,7 +92,7 @@ class TestIDAKLUSolver:
             )
 
             # check solution
-            for inputs, solution in zip(inputs_list, solutions):
+            for inputs, solution in zip(inputs_list, solutions, strict=False):
                 print("checking solution", inputs, solution.all_inputs)
                 np.testing.assert_array_equal(solution.t, t_interp)
                 np.testing.assert_allclose(
@@ -1099,6 +1099,12 @@ class TestIDAKLUSolver:
                     rtol=tol,
                     atol=tol,
                     err_msg=f"Failed for {varname} with form {form}",
+                )
+
+                # Test `all` key shape
+                assert (
+                    sol[varname].sensitivities["all"].shape
+                    == sol_all[varname].sensitivities["all"].shape
                 )
 
             # Mock a 1D current collector and initialise (none in the model)

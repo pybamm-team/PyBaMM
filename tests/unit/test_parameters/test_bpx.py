@@ -292,7 +292,7 @@ class TestBPX:
             "Negative electrode reaction rate constant activation energy [J.mol-1]",
         ]
 
-        for param_key, Ea_key in zip(param_keys, Ea_keys):
+        for param_key, Ea_key in zip(param_keys, Ea_keys, strict=False):
             arrhenius_assertion(pv, param_key, Ea_key)
 
     def test_bpx_blended(self, tmp_path):
