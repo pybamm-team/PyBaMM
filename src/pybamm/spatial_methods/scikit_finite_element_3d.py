@@ -225,14 +225,6 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
         div_y = mass_inv @ (grad_y_T @ Fy)
         div_z = mass_inv @ (grad_z_T @ Fz)
 
-        for var_symbol, bcs in boundary_conditions.items():
-            if var_symbol.domain and var_symbol.domain[0] == domain_key:
-                for name, (_, bc_type) in bcs.items():
-                    if bc_type == "Dirichlet":
-                        boundary_dofs = getattr(mesh, f"{name}_dofs", None)
-                        if boundary_dofs is not None:
-                            self.bc_apply(mass, boundary_dofs, zero=True)
-
         div_result = div_x + div_y + div_z
         div_result.clear_domains()
         return div_result

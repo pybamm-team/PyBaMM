@@ -187,21 +187,6 @@ class TestScikitFiniteElement3D:
         )
 
         u = pybamm.Variable("u", domain="current collector")
-
-        x_sym = pybamm.SpatialVariable("x", "current collector")
-        u_analytical_sym = 4.5 * x_sym**2
-
-        disc.bcs = {
-            u: {
-                "left": (u_analytical_sym, "Dirichlet"),
-                "right": (u_analytical_sym, "Dirichlet"),
-                "front": (u_analytical_sym, "Dirichlet"),
-                "back": (u_analytical_sym, "Dirichlet"),
-                "bottom": (u_analytical_sym, "Dirichlet"),
-                "top": (u_analytical_sym, "Dirichlet"),
-            }
-        }
-
         disc.set_variable_slices([u])
 
         x, y, z = mesh["current collector"].nodes.T
