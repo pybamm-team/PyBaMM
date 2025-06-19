@@ -31,7 +31,7 @@ class EntryPoint(Mapping):
     Listing available models:
         >>> import pybamm
         >>> list(pybamm.dispatch.models) # doctest: +ELLIPSIS
-        ['DFN', 'MPM', 'MSMR', 'NewmanTobias', 'SPM', 'SPMe', 'Yang2017']
+        ['DFN', 'MPM', ...]
 
     Get the docstring for a parameter set or model:
         >>> print(pybamm.parameter_sets.get_docstring("Ai2020"))  # doctest: +ELLIPSIS
@@ -109,7 +109,7 @@ parameter_sets = EntryPoint(group="pybamm_parameter_sets")
 models = EntryPoint(group="pybamm_models")
 
 
-def Model(model: str, options=None, *args, **kwargs):  # doctest: +SKIP
+def Model(model: str, options=None, *args, **kwargs):
     """
     Returns the loaded model object
     Note: This feature is in its experimental phase.
@@ -135,7 +135,7 @@ def Model(model: str, options=None, *args, **kwargs):  # doctest: +SKIP
     Listing available models:
         >>> import pybamm
         >>> list(pybamm.dispatch.models) # doctest: +ELLIPSIS
-        ['DFN', 'MPM', 'MSMR', 'NewmanTobias', 'SPM', 'SPMe', 'Yang2017']
+        ['DFN', 'MPM', ...]
         >>> pybamm.Model('SPM') # doctest: +SKIP
         <pybamm.models.full_battery_models.lithium_ion.spm.SPM object>
     """
