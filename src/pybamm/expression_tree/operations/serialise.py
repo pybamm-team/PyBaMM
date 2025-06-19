@@ -758,19 +758,16 @@ class Serialise:
                 entries_string=json_data["entries_string"],
             )
         elif json_data["type"] == "FunctionParameter":
-            diff_variable = json_data["diff_variable"]
+            inputs = {
+                k: Serialise.convert_symbol_from_json(v)
+                for k, v in json_data.get("inputs", {}).items()
+            }
+            diff_variable = json_data.get("diff_variable")
             if diff_variable is not None:
                 diff_variable = Serialise.convert_symbol_from_json(diff_variable)
             return pybamm.FunctionParameter(
                 json_data["name"],
-                {
-                    k: Serialise.convert_symbol_from_json(v)
-                    for k, v in json_data["inputs"].items()
-                },
-                {
-                    k: Serialise.convert_symbol_from_json(v)
-                    for k, v in json_data["inputs"].items()
-                },
+                inputs,
                 diff_variable=diff_variable,
             )
         elif json_data["type"] == "PrimaryBroadcast":
