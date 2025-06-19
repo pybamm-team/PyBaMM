@@ -286,13 +286,16 @@ class Serialise:
                 )
                 for k, v in getattr(model, "initial_conditions", {}).items()
             ],
-            "boundary_conditions": {
-                str(var): {
-                    side: [Serialise.convert_symbol_to_json(expr), btype]
-                    for side, (expr, btype) in conds.items()
-                }
+            "boundary_conditions": [
+                (
+                    Serialise.convert_symbol_to_json(var),
+                    {
+                        side: [Serialise.convert_symbol_to_json(expr), btype]
+                        for side, (expr, btype) in conds.items()
+                    },
+                )
                 for var, conds in getattr(model, "boundary_conditions", {}).items()
-            },
+            ],
             "events": [
                 {
                     "name": event.name,
@@ -328,10 +331,19 @@ class Serialise:
 
 
         model.name = model_data["name"]
-
+        
+        symbol_map = {}
+        for k_json, _ in model_data["rhs"]:
+            k = Serialise.convert_symbol_from_json(k_json)
+            symbol_map[str(k)] = k
+        for k_json, _ in model_data["initial_conditions"]:
+            k = Serialise.convert_symbol_from_json(k_json)
+            symbol_map[str(k)] = k
 
         model.rhs = {
-            Serialise.convert_symbol_from_json(k): Serialise.convert_symbol_from_json(v)
+            symbol_map[
+                str(Serialise.convert_symbol_from_json(k))
+            ]: Serialise.convert_symbol_from_json(v)
             for k, v in model_data["rhs"]
         }
         model.algebraic = {
@@ -339,18 +351,21 @@ class Serialise:
             for k, v in model_data["algebraic"].items()
         }
         model.initial_conditions = {
-            Serialise.convert_symbol_from_json(k): Serialise.convert_symbol_from_json(v)
+            symbol_map[
+                str(Serialise.convert_symbol_from_json(k))
+            ]: Serialise.convert_symbol_from_json(v)
             for k, v in model_data["initial_conditions"]
         }
         model.boundary_conditions = {
-            pybamm.Symbol(var): {
+            symbol_map[str(Serialise.convert_symbol_from_json(var))]: {
                 side: (Serialise.convert_symbol_from_json(expr), btype)
                 for side, (expr, btype) in conds.items()
             }
-            for var, conds in model_data["boundary_conditions"].items()
+            for var, conds in model_data["boundary_conditions"]
         }
         model.events = [
             pybamm.Event(
+
         model.events = [
             pybamm.Event(
                 e["name"],
