@@ -1,6 +1,5 @@
 import importlib.metadata
 import textwrap
-import warnings
 from collections.abc import Callable, Mapping
 
 
@@ -85,6 +84,7 @@ class EntryPoint(Mapping):
         try:
             entry_point = self._all_entries[key] = entry_point.load()
         except AttributeError:
+            # Parameter sets cannot be loaded so returning the default entry_point
             pass
         return entry_point
 
@@ -99,27 +99,6 @@ class EntryPoint(Mapping):
         return textwrap.dedent(self._load_entry_point(key).__doc__)
 
     def __getattribute__(self, name):
-        try:
-            # For backwards compatibility, parameter sets that used to be defined in
-            # this file now return the name as a string, which will load the same
-            # parameter set as before when passed to `ParameterValues`
-            # Bypass the overloaded __getitem__ and __iter__ to avoid recursion
-            _all_entries = super().__getattribute__("_all_entries")
-            group = super().__getattribute__("group")
-
-            # Only show deprecation warning for parameter sets, not models
-            if (
-                name in _all_entries and group == "pybamm_parameter_sets"
-            ):  # pragma: no cover
-                msg = (
-                    f"Parameter sets should be called directly by their name ({name}), "
-                    f"instead of via pybamm.parameter_sets (pybamm.parameter_sets.{name})."
-                )
-                warnings.warn(msg, DeprecationWarning, stacklevel=2)
-                return name
-        except AttributeError:
-            pass  # Handle the attribute error normally
-
         return super().__getattribute__(name)
 
 
