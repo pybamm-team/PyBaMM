@@ -243,7 +243,12 @@ class Serialise:
     def _json_encoder(obj):
         if isinstance(obj, pybamm.Scalar):
             return obj.evaluate()
-
+        if isinstance(obj, pybamm.Parameter):
+            return {
+                "type": "Parameter",
+                "name": obj.name,
+                "domain": obj.domain,
+            }
         if isinstance(obj, (np.integer, np.floating)):
             return obj.item()
         if isinstance(obj, np.ndarray):
@@ -263,18 +268,24 @@ class Serialise:
             "pybamm_version": pybamm.__version__,
             "name": getattr(model, "name", "unnamed_model"),
             "options": getattr(model, "options", {}),
-            "rhs": {
-                str(k): Serialise.convert_symbol_to_json(v)
+            "rhs": [
+                (
+                    Serialise.convert_symbol_to_json(k),
+                    Serialise.convert_symbol_to_json(v),
+                )
                 for k, v in getattr(model, "rhs", {}).items()
-            },
+            ],
             "algebraic": {
                 str(k): Serialise.convert_symbol_to_json(v)
                 for k, v in getattr(model, "algebraic", {}).items()
             },
-            "initial_conditions": {
-                str(k): Serialise.convert_symbol_to_json(v)
+            "initial_conditions": [
+                (
+                    Serialise.convert_symbol_to_json(k),
+                    Serialise.convert_symbol_to_json(v),
+                )
                 for k, v in getattr(model, "initial_conditions", {}).items()
-            },
+            ],
             "boundary_conditions": {
                 str(var): {
                     side: [Serialise.convert_symbol_to_json(expr), btype]
@@ -320,16 +331,16 @@ class Serialise:
 
 
         model.rhs = {
-            pybamm.Symbol(k): Serialise.convert_symbol_from_json(v)
-            for k, v in model_data["rhs"].items()
+            Serialise.convert_symbol_from_json(k): Serialise.convert_symbol_from_json(v)
+            for k, v in model_data["rhs"]
         }
         model.algebraic = {
             pybamm.Symbol(k): Serialise.convert_symbol_from_json(v)
             for k, v in model_data["algebraic"].items()
         }
         model.initial_conditions = {
-            pybamm.Symbol(k): Serialise.convert_symbol_from_json(v)
-            for k, v in model_data["initial_conditions"].items()
+            Serialise.convert_symbol_from_json(k): Serialise.convert_symbol_from_json(v)
+            for k, v in model_data["initial_conditions"]
         }
         model.boundary_conditions = {
             pybamm.Symbol(var): {
@@ -779,6 +790,7 @@ class Serialise:
             return pybamm.Variable(
                 json_data["name"],
                 domain=json_data.get("domain"),
+                bounds=json_data.get("bounds", [-float("inf"), float("inf")]),
             )
         elif json_data["type"] == "SpatialVariable":
             return pybamm.SpatialVariable(
