@@ -249,111 +249,6 @@ class ScikitFemGenerator3D(pybamm.MeshGenerator):
 
         return mesh.with_boundaries(boundaries)
 
-    def _make_spiral_mesh(self, inner_radius, outer_radius, height, turns, h):
-        """
-        Create a spiral mesh using point cloud generation and Delaunay triangulation.
-
-        Parameters
-        ----------
-        inner_radius : float
-            Inner spiral radius
-        outer_radius : float
-            Outer spiral radius
-        height : float
-            Spiral height
-        turns : float
-            Number of spiral turns
-        h : float
-            Target mesh size
-
-        Returns
-        -------
-        skfem.MeshTet
-            Spiral mesh with proper boundary tags
-        """
-        skfem = import_optional_dependency("skfem")
-        from scipy.spatial import Delaunay
-
-        n_radial = max(5, int((outer_radius - inner_radius) / h))
-        n_z = max(5, int(height / h))
-        theta_max = turns * 2 * np.pi
-
-        points = []
-        z_coords = np.linspace(0, height, n_z)
-        r_coords = np.linspace(inner_radius, outer_radius, n_radial)
-
-        for z in z_coords:
-            for r in r_coords:
-                arc_len = r * theta_max
-                n_theta = max(8, int(arc_len / h))
-                thetas = np.linspace(0, theta_max, n_theta)
-
-                for theta in thetas:
-                    points.append([r * np.cos(theta), r * np.sin(theta), z])
-
-        points = np.array(points)
-        points += 1e-8 * np.random.randn(
-            *points.shape
-        )  # random perturbation to avoid collinear points
-
-        # remove zero volume tets
-        delaunay = Delaunay(points)
-        tets = delaunay.simplices
-        volumes = []
-        for tet in tets:
-            v = points[tet]
-            vol = (
-                np.abs(
-                    np.linalg.det(
-                        np.column_stack([v[1] - v[0], v[2] - v[0], v[3] - v[0]])
-                    )
-                )
-                / 6
-            )
-            volumes.append(vol)
-        tets = tets[np.array(volumes) > 1e-10]
-
-        mesh = skfem.MeshTet(points.T, tets.T)
-
-        boundary_facets = mesh.boundary_facets()
-        facet_nodes = mesh.facets[:, boundary_facets]
-        facet_coords = mesh.p[:, facet_nodes]
-        facet_centers = np.mean(facet_coords, axis=1).T
-
-        boundaries = {}
-        tolerance = h * 0.01
-
-        bottom_mask = facet_centers[:, 2] <= tolerance
-        if np.any(bottom_mask):
-            boundaries["bottom"] = boundary_facets[bottom_mask]
-
-        top_mask = facet_centers[:, 2] >= (height - tolerance)
-        if np.any(top_mask):
-            boundaries["top"] = boundary_facets[top_mask]
-
-        # Radial boundaries
-        radii = np.sqrt(facet_centers[:, 0] ** 2 + facet_centers[:, 1] ** 2)
-
-        inner_tolerance = inner_radius * 0.15
-        inner_mask = np.abs(radii - inner_radius) <= inner_tolerance
-        if np.any(inner_mask):
-            boundaries["inner wall"] = boundary_facets[inner_mask]
-
-        outer_tolerance = outer_radius * 0.15
-        outer_mask = np.abs(radii - outer_radius) <= outer_tolerance
-        if np.any(outer_mask):
-            boundaries["outer wall"] = boundary_facets[outer_mask]
-
-        mesh = mesh.with_boundaries(boundaries)
-
-        if boundaries:
-            all_boundary_nodes = set()
-            for facet_list in boundaries.values():
-                all_boundary_nodes.update(mesh.facets[:, facet_list].flatten())
-            mesh = laplacian_smooth(mesh, list(all_boundary_nodes), iterations=2)
-
-        return mesh
-
     def __call__(self, lims, npts):
         """
         Main entry point called by PyBaMM's Discretisation.
@@ -385,21 +280,13 @@ class ScikitFemGenerator3D(pybamm.MeshGenerator):
             radius = self.gen_params.get("radius", 0.4)
             height = self.gen_params.get("height", 0.8)
             mesh = self._make_cylinder_mesh(radius, height, h)
-
-        elif self.geom_type == "spiral":
-            inner_radius = self.gen_params.get("inner_radius", 0.1)
-            outer_radius = self.gen_params.get("outer_radius", 0.4)
-            height = self.gen_params.get("height", 0.8)
-            turns = self.gen_params.get("turns", 2.0)
-            mesh = self._make_spiral_mesh(inner_radius, outer_radius, height, turns, h)
-
         else:
-            raise ValueError(f"Unknown geom_type: {self.geom_type}")
+            raise ValueError(f"Unknown geom_type: {self.geom_type}")  # pragma: no cover
 
         if mesh is None:
             raise pybamm.DiscretisationError(
                 f"Mesh generation failed for {self.geom_type}"
-            )
+            )  # pragma: no cover
 
         nodes = mesh.p.T
         elements = mesh.t.T

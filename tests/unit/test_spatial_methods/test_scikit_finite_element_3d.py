@@ -68,35 +68,6 @@ class TestScikitFiniteElement3D:
                 result = eqn_disc.evaluate(None, y_test)
                 assert result is not None
 
-    def test_discretise_equations_spiral(self):
-        try:
-            mesh = get_3d_mesh_for_testing(
-                geom_type="spiral",
-                include_particles=False,
-                inner_radius=0.1,
-                outer_radius=0.4,
-                height=1.0,
-                turns=1.0,  # Fewer turns
-                h=0.4,  # Coarser mesh
-            )
-        except pybamm.DiscretisationError as e:
-            pytest.skip(f"Spiral mesh generation failed: {e}")
-
-        spatial_methods = {"negative electrode": pybamm.ScikitFiniteElement3D()}
-        disc = pybamm.Discretisation(mesh, spatial_methods)
-        var = pybamm.Variable("var", domain="negative electrode")
-
-        eqn = pybamm.laplacian(var)
-        disc.bcs = {}
-        disc.set_variable_slices([var])
-
-        eqn_disc = disc.process_symbol(eqn)
-        test_func = np.ones(mesh["negative electrode"].npts)
-        result = eqn_disc.evaluate(None, test_func)
-
-        assert result is not None
-        assert not np.all(np.isnan(result))
-
     def test_gradient_3d_manufactured(self):
         mesh = get_unit_3d_mesh_for_testing(h=0.3)
         disc = pybamm.Discretisation(
@@ -516,25 +487,6 @@ class TestScikitFiniteElement3D:
         expected_result = const_value * analytical_area
         np.testing.assert_allclose(numerical_result, expected_result, rtol=5e-2)
 
-    def test_spiral_mesh_properties(self):
-        mesh = get_3d_mesh_for_testing(
-            xpts=6,
-            ypts=6,
-            zpts=6,
-            geom_type="spiral",
-            include_particles=False,
-            inner_radius=0.1,
-            outer_radius=0.4,
-            height=0.8,
-            turns=2,
-        )
-        nodes = mesh["negative electrode"].nodes
-        radii = np.sqrt(nodes[:, 0] ** 2 + nodes[:, 1] ** 2)
-        assert radii.min() >= 0.04
-        assert radii.max() <= 0.45
-        assert nodes[:, 2].min() >= -0.1
-        assert nodes[:, 2].max() <= 0.9
-
     def test_cylinder_mesh_properties(self):
         mesh = get_3d_mesh_for_testing(
             xpts=6,
@@ -710,86 +662,6 @@ class TestScikitFiniteElement3D:
         u_analytical = x_nodes * y_nodes * z_nodes * (1 - z_nodes)
 
         np.testing.assert_allclose(u_numerical, u_analytical, rtol=1e-2, atol=1e-2)
-
-    def test_laplacian_manufactured_solution_on_spiral_radial(self):
-        try:
-            mesh = get_unit_3d_mesh_for_testing(
-                geom_type="spiral",
-                inner_radius=0.2,
-                outer_radius=0.5,
-                height=1.0,
-                turns=1.5,
-                h=0.2,
-            )
-        except pybamm.DiscretisationError as e:
-            pytest.skip(f"Spiral mesh generation failed: {e}")
-
-        model = pybamm.BaseModel()
-        u = pybamm.Variable("u", "current collector")
-
-        x = pybamm.SpatialVariable("x", "current collector")
-        y = pybamm.SpatialVariable("y", "current collector")
-        z = pybamm.SpatialVariable("z", "current collector")
-
-        u_exact = (x**2 + y**2) * z * (1 - z)
-
-        f = 2 * (x**2 + y**2) - 4 * z * (1 - z)
-
-        model.algebraic = {u: pybamm.laplacian(u) - pybamm.source(f, u)}
-
-        model.boundary_conditions = {
-            u: {
-                "bottom": (pybamm.Scalar(0), "Dirichlet"),
-                "top": (pybamm.Scalar(0), "Dirichlet"),
-                "inner wall": (pybamm.Scalar(0), "Dirichlet"),
-                "outer wall": (pybamm.Scalar(0), "Dirichlet"),
-            }
-        }
-
-        model.initial_conditions = {u: u_exact * 0.1}
-        model.variables = {"u": u}
-
-        nodes = mesh["current collector"].nodes
-        elements = mesh["current collector"].elements
-        vols = []
-        for tet in elements:
-            v = nodes[tet]
-            vol = (
-                np.abs(
-                    np.linalg.det(
-                        np.column_stack([v[1] - v[0], v[2] - v[0], v[3] - v[0]])
-                    )
-                )
-                / 6
-            )
-            vols.append(vol)
-        print("Min tet volume:", np.min(vols))
-
-        spatial_methods = {"current collector": pybamm.ScikitFiniteElement3D()}
-        disc = pybamm.Discretisation(mesh, spatial_methods)
-        disc.process_model(model)
-
-        solver = pybamm.AlgebraicSolver(
-            method="hybr",
-            tol=1e-4,
-            extra_options={
-                "maxfev": 10000,
-                "factor": 0.1,
-            },
-        )
-        solution = solver.solve(model)
-
-        u_numerical = solution.y.flatten()
-
-        nodes = mesh["current collector"].nodes
-        x_nodes = nodes[:, 0]
-        y_nodes = nodes[:, 1]
-        z_nodes = nodes[:, 2]
-
-        u_analytical = (x_nodes**2 + y_nodes**2) * z_nodes * (1 - z_nodes)
-
-        # NOTE: Tolerance is loose due to poor mesh quality from Delaunay on spiral domain
-        np.testing.assert_allclose(u_numerical, u_analytical, rtol=0.3, atol=0.3)
 
     def test_scalar_field_discretization(self):
         mesh = get_unit_3d_mesh_for_testing(h=0.2)

@@ -6,103 +6,136 @@ import pybamm
 from pybamm import (
     BaseModel,
     Discretisation,
+    Scalar,
     ScikitFiniteElement3D,
     SpatialVariable,
 )
 
 Lx, Ly, Lz = 1.0, 0.8, 0.6
-kappa = 0.1
+alpha = 0.1
 t_max = 0.2
 
 model = BaseModel()
 
-x = SpatialVariable("x", ["prism"], coord_sys="cartesian", direction="x")
-y = SpatialVariable("y", ["prism"], coord_sys="cartesian", direction="y")
-z = SpatialVariable("z", ["prism"], coord_sys="cartesian", direction="z")
+x = SpatialVariable("x", ["current collector"], coord_sys="cartesian", direction="x")
+y = SpatialVariable("y", ["current collector"], coord_sys="cartesian", direction="y")
+z = SpatialVariable("z", ["current collector"], coord_sys="cartesian", direction="z")
 
-T = x * 2 * y + 3 * z
+T = pybamm.Variable("T", domain="current collector")
 model.variables = {"T": T}
 
-geometry = {
-    "prism": {
-        x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(Lx)},
-        y: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(Ly)},
-        z: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(Lz)},
+model.algebraic = {T: alpha * pybamm.laplacian(T) - pybamm.source(0, T)}
+
+model.initial_conditions = {T: Scalar(0)}
+
+model.boundary_conditions = {
+    T: {
+        "left": (Scalar(100), "Dirichlet"),
+        "right": (Scalar(0), "Dirichlet"),
+        "front": (Scalar(0), "Neumann"),
+        "back": (Scalar(0), "Neumann"),
+        "bottom": (Scalar(0), "Neumann"),
+        "top": (Scalar(0), "Neumann"),
     }
 }
 
-submesh_types = {"prism": pybamm.ScikitFemGenerator3D(geom_type="box", h=0.1)}
+geometry = {
+    "current collector": {
+        x: {"min": Scalar(0), "max": Scalar(Lx)},
+        y: {"min": Scalar(0), "max": Scalar(Ly)},
+        z: {"min": Scalar(0), "max": Scalar(Lz)},
+    }
+}
 
+submesh_types = {
+    "current collector": pybamm.ScikitFemGenerator3D(geom_type="box", h=0.15)
+}
 var_pts = {x: None, y: None, z: None}
-
 mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 
-spatial_methods = {"prism": ScikitFiniteElement3D()}
+spatial_methods = {"current collector": ScikitFiniteElement3D()}
 disc = Discretisation(mesh, spatial_methods)
-
 disc.process_model(model)
 
-t_disc = model.variables["T"].entries
-submesh = mesh["prism"]
-nodes = submesh.nodes
+solver = pybamm.AlgebraicSolver()
+solution = solver.solve(model)
+
+nodes = mesh["current collector"].nodes
+T_solution = solution.y.flatten()
 
 print(f"Number of FEM nodes: {nodes.shape[0]}")
-print(
-    f"Mesh bounds: x=[{nodes[:, 0].min():.3f}, {nodes[:, 0].max():.3f}], "
-    f"y=[{nodes[:, 1].min():.3f}, {nodes[:, 1].max():.3f}], "
-    f"z=[{nodes[:, 2].min():.3f}, {nodes[:, 2].max():.3f}]"
-)
+print(f"Temperature range: [{T_solution.min():.2f}, {T_solution.max():.2f}]°C")
 
-Nx_vis, Ny_vis, Nz_vis = 20, 20, 20
+Nx_vis, Ny_vis, Nz_vis = 25, 20, 15
 x_grid = np.linspace(0, Lx, Nx_vis)
 y_grid = np.linspace(0, Ly, Ny_vis)
 z_grid = np.linspace(0, Lz, Nz_vis)
-
-X_grid, Y_grid, Z_grid = np.meshgrid(x_grid, y_grid, z_grid, indexing="ij")
-grid_points = np.column_stack([X_grid.ravel(), Y_grid.ravel(), Z_grid.ravel()])
-
-T_interpolated = griddata(
-    nodes, t_disc, grid_points, method="linear", fill_value=0
+X, Y, Z = np.meshgrid(x_grid, y_grid, z_grid, indexing="ij")
+grid_points = np.column_stack([X.ravel(), Y.ravel(), Z.ravel()])
+T_interp_3d = griddata(
+    nodes, T_solution, grid_points, method="linear", fill_value=0
 ).reshape((Nx_vis, Ny_vis, Nz_vis))
 
-mid_j = Ny_vis // 2
-X_plane = X_grid[:, mid_j, :]
-Z_plane = Z_grid[:, mid_j, :]
-T_plane = T_interpolated[:, mid_j, :]
+fig, axes = plt.subplots(1, 3, figsize=(18, 5))
+mid_y = Ny_vis // 2
+mid_z = Nz_vis // 2
+mid_x = Nx_vis // 2
 
-fig, ax = plt.subplots(subplot_kw={"projection": "3d"}, figsize=(8, 6))
+im0 = axes[0].contourf(
+    X[:, mid_y, :], Z[:, mid_y, :], T_interp_3d[:, mid_y, :], levels=20, cmap="inferno"
+)
+axes[0].set_xlabel("x [m]")
+axes[0].set_ylabel("z [m]")
+axes[0].set_title(f"T(x,z) at y={y_grid[mid_y]:.2f}")
+plt.colorbar(im0, ax=axes[0])
+
+im1 = axes[1].contourf(
+    X[:, :, mid_z], Y[:, :, mid_z], T_interp_3d[:, :, mid_z], levels=20, cmap="inferno"
+)
+axes[1].set_xlabel("x [m]")
+axes[1].set_ylabel("y [m]")
+axes[1].set_title(f"T(x,y) at z={z_grid[mid_z]:.2f}")
+plt.colorbar(im1, ax=axes[1])
+
+im2 = axes[2].contourf(
+    Y[mid_x, :, :], Z[mid_x, :, :], T_interp_3d[mid_x, :, :], levels=20, cmap="inferno"
+)
+axes[2].set_xlabel("y [m]")
+axes[2].set_ylabel("z [m]")
+axes[2].set_title(f"T(y,z) at x={x_grid[mid_x]:.2f}")
+plt.colorbar(im2, ax=axes[2])
+
+plt.tight_layout()
+plt.show()
+
+fig = plt.figure(figsize=(8, 6))
+ax = fig.add_subplot(111, projection="3d")
 surf = ax.plot_surface(
-    X_plane,
-    Z_plane,
-    T_plane,
+    X[:, mid_y, :],
+    Z[:, mid_y, :],
+    T_interp_3d[:, mid_y, :],
     cmap="inferno",
     edgecolor="none",
-    rcount=40,
-    ccount=40,
     alpha=0.9,
 )
-
 ax.set_xlabel("x [m]")
 ax.set_ylabel("z [m]")
 ax.set_zlabel("T [°C]")
-ax.set_title(f"T(x,z) at y = {Ly / 2:.2f} (3D FEM)")
+ax.set_title(f"T(x,z) at y={y_grid[mid_y]:.2f} (3D Surface)")
 fig.colorbar(surf, ax=ax, shrink=0.5, label="Temperature [°C]")
+plt.tight_layout()
+plt.show()
 
-y_mid_mask = np.abs(nodes[:, 1] - Ly / 2) < 0.05
-if np.any(y_mid_mask):
-    nodes_mid = nodes[y_mid_mask]
-    t_mid = t_disc[y_mid_mask]
-    ax.scatter(
-        nodes_mid[:, 0],
-        nodes_mid[:, 2],
-        t_mid,
-        c="red",
-        s=20,
-        alpha=0.6,
-        label="FEM nodes",
-    )
-    ax.legend()
-
+fig = plt.figure(figsize=(10, 8))
+ax = fig.add_subplot(111, projection="3d")
+scatter = ax.scatter(
+    nodes[:, 0], nodes[:, 1], nodes[:, 2], c=T_solution, cmap="inferno", s=15, alpha=0.6
+)
+ax.set_xlabel("x [m]")
+ax.set_ylabel("y [m]")
+ax.set_zlabel("z [m]")
+ax.set_title("3D Temperature Distribution (FEM Nodes)")
+fig.colorbar(scatter, ax=ax, shrink=0.5, label="Temperature [°C]")
 plt.tight_layout()
 plt.show()
 
@@ -113,38 +146,31 @@ def find_closest_node(target_point, nodes):
 
 
 center_point = np.array([Lx / 2, Ly / 2, Lz / 2])
-corner_point = np.array([0, 0, 0])
+left_edge = np.array([0.1, Ly / 2, Lz / 2])
+right_edge = np.array([Lx - 0.1, Ly / 2, Lz / 2])
 
 center_idx = find_closest_node(center_point, nodes)
-corner_idx = find_closest_node(corner_point, nodes)
+left_idx = find_closest_node(left_edge, nodes)
+right_idx = find_closest_node(right_edge, nodes)
 
-print("\nFEM Results:")
-print(f"T(center) ≈ {float(t_disc[center_idx]):.4f} °C at node {nodes[center_idx]}")
-print(f"T(corner) ≈ {float(t_disc[corner_idx]):.4f} °C at node {nodes[corner_idx]}")
+x_line_points = np.column_stack(
+    [np.linspace(0, Lx, 50), np.full(50, Ly / 2), np.full(50, Lz / 2)]
+)
+T_line = griddata(nodes, T_solution, x_line_points, method="linear")
 
-T_center_analytical = (Lx / 2) * 2 * (Ly / 2) + 3 * (Lz / 2)
-T_corner_analytical = 0 * 2 * 0 + 3 * 0
-
-print("\nAnalytical comparison:")
-print(f"T(center) analytical = {T_center_analytical:.4f} °C")
-print(f"T(corner) analytical = {T_corner_analytical:.4f} °C")
-print(f"Center error: {abs(float(t_disc[center_idx]) - T_center_analytical):.6f}")
-print(f"Corner error: {abs(float(t_disc[corner_idx]) - T_corner_analytical):.6f}")
-
-fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
-
-im1 = ax1.contourf(X_plane, Z_plane, T_plane, levels=20, cmap="inferno")
-ax1.set_xlabel("x [m]")
-ax1.set_ylabel("z [m]")
-ax1.set_title(f"T(x,z) at y = {Ly / 2:.2f}")
-plt.colorbar(im1, ax=ax1, label="Temperature [°C]")
-
-ax2.scatter(nodes[:, 0], nodes[:, 1], c=t_disc, cmap="inferno", s=10, alpha=0.7)
-ax2.set_xlabel("x [m]")
-ax2.set_ylabel("y [m]")
-ax2.set_title("FEM Node Distribution (x-y plane)")
-ax2.set_aspect("equal")
-plt.colorbar(ax2.collections[0], ax=ax2, label="Temperature [°C]")
-
-plt.tight_layout()
+plt.figure(figsize=(8, 5))
+plt.plot(x_line_points[:, 0], T_line, "b-", linewidth=2, label="FEM solution")
+plt.axhline(100, color="r", linestyle="--", alpha=0.7, label="Left BC (100°C)")
+plt.axhline(0, color="g", linestyle="--", alpha=0.7, label="Right BC (0°C)")
+plt.xlabel("x [m]")
+plt.ylabel("Temperature [°C]")
+plt.title("Temperature Profile Along x-axis (centerline)")
+plt.legend()
+plt.grid(True, alpha=0.3)
 plt.show()
+
+print("\nSTEADY-STATE HEAT DISTRIBUTION")
+print(f"Center temperature: {T_solution[center_idx]:.1f}°C")
+print(f"Near left (hot): {T_solution[left_idx]:.1f}°C")
+print(f"Near right (cold): {T_solution[right_idx]:.1f}°C")
+print("Heat flows from left (100°C) to right (0°C)")
