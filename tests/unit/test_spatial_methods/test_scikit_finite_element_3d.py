@@ -180,37 +180,32 @@ class TestScikitFiniteElement3D:
 
         assert l2_error < 1e-2
 
-    def test_divergence_3d(self):
+    def test_divergence_3d_manufactured(self):
         mesh = get_unit_3d_mesh_for_testing(h=0.1)
         disc = pybamm.Discretisation(
             mesh, {"current collector": pybamm.ScikitFiniteElement3D()}
         )
 
         u = pybamm.Variable("u", domain="current collector")
-        disc.set_variable_slices([u])
 
-        x_nodes, y_nodes, z_nodes = mesh["current collector"].nodes.T
-        u_exact = x_nodes**2 + y_nodes**2 + z_nodes**2
+        x_sym = pybamm.SpatialVariable("x", "current collector")
+        u_analytical_sym = 4.5 * x_sym**2
 
         disc.bcs = {
             u: {
-                "left": (pybamm.Scalar(0), "Dirichlet"),
-                "right": (
-                    pybamm.Scalar(1 + y_nodes[0] ** 2 + z_nodes[0] ** 2),
-                    "Dirichlet",
-                ),
-                "front": (pybamm.Scalar(0), "Dirichlet"),
-                "back": (
-                    pybamm.Scalar(x_nodes[0] ** 2 + 1 + z_nodes[0] ** 2),
-                    "Dirichlet",
-                ),
-                "bottom": (pybamm.Scalar(0), "Dirichlet"),
-                "top": (
-                    pybamm.Scalar(x_nodes[0] ** 2 + y_nodes[0] ** 2 + 1),
-                    "Dirichlet",
-                ),
+                "left": (u_analytical_sym, "Dirichlet"),
+                "right": (u_analytical_sym, "Dirichlet"),
+                "front": (u_analytical_sym, "Dirichlet"),
+                "back": (u_analytical_sym, "Dirichlet"),
+                "bottom": (u_analytical_sym, "Dirichlet"),
+                "top": (u_analytical_sym, "Dirichlet"),
             }
         }
+
+        disc.set_variable_slices([u])
+
+        x, y, z = mesh["current collector"].nodes.T
+        u_exact = 4.5 * x**2
 
         grad_u = pybamm.grad(u)
         div_grad_u = pybamm.div(grad_u)
@@ -218,13 +213,7 @@ class TestScikitFiniteElement3D:
         div_disc = disc.process_symbol(div_grad_u)
         div_result = div_disc.evaluate(None, u_exact)
 
-        np.testing.assert_allclose(
-            np.mean(div_result),
-            6,
-            rtol=0.2,
-            atol=0.5,
-            err_msg="Divergence of gradient should be 6 with Dirichlet BCs",
-        )
+        np.testing.assert_allclose(np.mean(div_result), 9, rtol=1e-1, atol=1e-1)
 
     def test_neumann_boundary_conditions(self):
         mesh = get_unit_3d_mesh_for_testing(h=0.5)
