@@ -1199,7 +1199,10 @@ def process_variable(name: str, base_variables, *args, **kwargs):
     # Try some shapes that could make the variable a 2D variable
     first_dim_nodes = mesh.nodes
     first_dim_edges = mesh.edges
-    second_dim_pts = base_variables[0].secondary_mesh.nodes
+    try:
+        second_dim_pts = base_variables[0].secondary_mesh.nodes
+    except AttributeError:
+        return ProcessedVariable2DReal(name, base_variables, *args, **kwargs)
     if base_eval_size // len(second_dim_pts) in [
         len(first_dim_nodes),
         len(first_dim_edges),
