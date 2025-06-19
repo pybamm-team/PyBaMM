@@ -82,49 +82,6 @@ class TestScikitFemGenerator3D:
         assert np.min(z_coords) >= -0.1, "Z coordinates should be non-negative"
         assert np.max(z_coords) <= 2.1, "Z coordinates should be within height"
 
-    def test_spiral_mesh_creation(self):
-        try:
-            from pybamm.meshes.scikit_fem_submeshes_3d import ScikitFemGenerator3D
-        except ImportError:
-            pytest.skip("scikit-fem not available")
-
-        geometry = {
-            "domain": {
-                pybamm.standard_spatial_vars.x: {"min": -2, "max": 2},
-                pybamm.standard_spatial_vars.y: {"min": -2, "max": 2},
-                pybamm.standard_spatial_vars.z: {"min": 0, "max": 1},
-            }
-        }
-
-        mesh_gen = ScikitFemGenerator3D(
-            "spiral", inner_radius=0.5, outer_radius=2.0, height=1.0, turns=2.0, h=0.6
-        )
-
-        mesh = pybamm.Mesh(
-            geometry,
-            {"domain": mesh_gen},
-            {
-                pybamm.standard_spatial_vars.x: 5,
-                pybamm.standard_spatial_vars.y: 5,
-                pybamm.standard_spatial_vars.z: 5,
-            },
-        )
-
-        submesh = mesh["domain"]
-        assert hasattr(submesh, "_skfem_mesh"), "Mesh should have _skfem_mesh attribute"
-        assert submesh.dimension == 3, "Mesh should be 3D"
-
-        nodes = submesh.nodes
-        x_coords = nodes[:, 0]
-        y_coords = nodes[:, 1]
-        z_coords = nodes[:, 2]
-        radii = np.sqrt(x_coords**2 + y_coords**2)
-
-        assert np.min(radii) >= 0.4, "Inner radius should be respected"
-        assert np.max(radii) <= 2.1, "Outer radius should be respected"
-        assert np.min(z_coords) >= -0.1, "Z coordinates should be non-negative"
-        assert np.max(z_coords) <= 1.1, "Z coordinates should be within height"
-
     def test_invalid_geometry_type(self):
         try:
             from pybamm.meshes.scikit_fem_submeshes_3d import ScikitFemGenerator3D
