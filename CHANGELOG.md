@@ -4,6 +4,7 @@
 
 - Generalise `pybamm.DiscreteTimeSum` to allow it to be embedded in other expressions ([#5044](https://github.com/pybamm-team/PyBaMM/pull/5044))
 - Adds `all` key-value pair to `output_variables` sensitivity dictionaries, accessible through `solution[var].sensitivities['all']`. Aligns shape with conventional solution sensitivities object. ([#5067](https://github.com/pybamm-team/PyBaMM/pull/5067))
+- Added 3D FEM and meshes supporting rectangular and cylindrical geometries ([#5009](https://github.com/pybamm-team/PyBaMM/pull/5009))
 
 ## Bug fixes
 
