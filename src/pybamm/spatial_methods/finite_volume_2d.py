@@ -1672,22 +1672,21 @@ class FiniteVolume2D(pybamm.SpatialMethod):
             ]
             tb_mesh_points = self.mesh[disc_children[0].domain[0]].npts_tb
             num_children = len(disc_children)
-            eyes = [np.eye(lr_mesh_points[i]) for i in range(num_children)]
-            num_blocks = num_children * tb_mesh_points
-            block_mat = [
-                [
-                    np.zeros((lr_mesh_points_this, lr_mesh_points_this))
-                    for lr_mesh_points_this in lr_mesh_points
-                    for _ in range(tb_mesh_points)
-                ]
-                for _ in range(num_blocks)
-            ]
-            i = 0
-            for tb_idx in range(tb_mesh_points):
-                for child_idx in range(num_children):
-                    block_mat[i][tb_idx + child_idx * tb_mesh_points] = eyes[child_idx]
-                    i += 1
-            block_mat = csr_matrix(np.block(block_mat))
+            rows = np.arange(0, tb_mesh_points * sum(lr_mesh_points))
+            cols = []
+            for _ in range(tb_mesh_points):
+                for i in range(num_children):
+                    row_start = sum(lr_mesh_points[:i]) * tb_mesh_points
+                    row_end = row_start + lr_mesh_points[i]
+                    cols.append(np.arange(row_start, row_end))
+            cols = np.hstack(cols)
+            block_mat = csr_matrix(
+                (np.ones(len(rows)), (rows, cols)),
+                shape=(
+                    tb_mesh_points * sum(lr_mesh_points),
+                    tb_mesh_points * sum(lr_mesh_points),
+                ),
+            )
             block_mat = kron(eye(repeats), block_mat)
             matrix = pybamm.Matrix(block_mat)
             repeats = self._get_auxiliary_domain_repeats(disc_children[0].domains)
