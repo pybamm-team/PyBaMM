@@ -916,16 +916,6 @@ class BoundaryIntegral(SpatialOperator):
             name += "left"
         elif region == "right":
             name += "right"
-        elif region == "side wall":
-            name += "side wall"
-        elif region == "bottom cap":
-            name += "bottom cap"
-        elif region == "top cap":
-            name += "top cap"
-        elif region == "inner wall":
-            name += "inner wall"
-        elif region == "outer wall":
-            name += "outer wall"
         self.region = region
         super().__init__(name, child, domains)
         self.domains = {}

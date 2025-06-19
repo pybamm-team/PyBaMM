@@ -180,7 +180,7 @@ class TestScikitFiniteElement3D:
 
         assert l2_error < 1e-2
 
-    def test_divergence_3d_manufactured(self):
+    def test_divergence_3d(self):
         mesh = get_unit_3d_mesh_for_testing(h=0.1)
         disc = pybamm.Discretisation(
             mesh, {"current collector": pybamm.ScikitFiniteElement3D()}
@@ -194,12 +194,21 @@ class TestScikitFiniteElement3D:
 
         disc.bcs = {
             u: {
-                "left": (pybamm.Scalar(0), "Neumann"),
-                "right": (pybamm.Scalar(0), "Neumann"),
-                "front": (pybamm.Scalar(0), "Neumann"),
-                "back": (pybamm.Scalar(0), "Neumann"),
-                "top": (pybamm.Scalar(0), "Neumann"),
-                "bottom": (pybamm.Scalar(0), "Neumann"),
+                "left": (pybamm.Scalar(0), "Dirichlet"),
+                "right": (
+                    pybamm.Scalar(1 + y_nodes[0] ** 2 + z_nodes[0] ** 2),
+                    "Dirichlet",
+                ),
+                "front": (pybamm.Scalar(0), "Dirichlet"),
+                "back": (
+                    pybamm.Scalar(x_nodes[0] ** 2 + 1 + z_nodes[0] ** 2),
+                    "Dirichlet",
+                ),
+                "bottom": (pybamm.Scalar(0), "Dirichlet"),
+                "top": (
+                    pybamm.Scalar(x_nodes[0] ** 2 + y_nodes[0] ** 2 + 1),
+                    "Dirichlet",
+                ),
             }
         }
 
@@ -214,7 +223,7 @@ class TestScikitFiniteElement3D:
             6,
             rtol=0.2,
             atol=0.5,
-            err_msg="Divergence of gradient should be 6",
+            err_msg="Divergence of gradient should be 6 with Dirichlet BCs",
         )
 
     def test_neumann_boundary_conditions(self):

@@ -44,15 +44,7 @@ def laplacian_smooth(mesh, boundary_dofs, iterations=5):
                 p_new[:, i] = np.mean(p[:, neighbors], axis=1)
         p = p_new
 
-    original_boundaries = mesh.boundaries if hasattr(mesh, "boundaries") else None
-    original_subdomains = mesh.subdomains if hasattr(mesh, "subdomains") else None
-
     smoothed_mesh = skfem.MeshTet(p, mesh.t)
-
-    if original_boundaries:
-        smoothed_mesh = smoothed_mesh.with_boundaries(original_boundaries)
-    if original_subdomains:
-        smoothed_mesh = smoothed_mesh.with_subdomains(original_subdomains)
 
     return smoothed_mesh
 

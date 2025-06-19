@@ -225,15 +225,13 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
         div_y = mass_inv @ (grad_y_T @ Fy)
         div_z = mass_inv @ (grad_z_T @ Fz)
 
-        if symbol in boundary_conditions:
-            bcs = boundary_conditions[symbol]
-            for name, (_, bc_type) in bcs.items():
-                if bc_type == "Dirichlet":
-                    boundary_dofs = getattr(mesh, f"{name}_dofs", None)
-                    if boundary_dofs is not None:
-                        self.bc_apply(div_x, boundary_dofs, zero=True)
-                        self.bc_apply(div_y, boundary_dofs, zero=True)
-                        self.bc_apply(div_z, boundary_dofs, zero=True)
+        for var_symbol, bcs in boundary_conditions.items():
+            if var_symbol.domain and var_symbol.domain[0] == domain_key:
+                for name, (_, bc_type) in bcs.items():
+                    if bc_type == "Dirichlet":
+                        boundary_dofs = getattr(mesh, f"{name}_dofs", None)
+                        if boundary_dofs is not None:
+                            self.bc_apply(mass, boundary_dofs, zero=True)
 
         div_result = div_x + div_y + div_z
         div_result.clear_domains()
@@ -476,11 +474,10 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
         :class:`pybamm.Symbol`
             The boundary value or flux
         """
-        if isinstance(symbol, pybamm.BoundaryValue):
-            domain = symbol.children[0].domain
-            region = symbol.side
-            mesh = self.mesh[domain[0]]
+        domain = symbol.children[0].domain
+        region = symbol.side
 
+        if isinstance(symbol, pybamm.BoundaryValue):
             integration_vector = self.boundary_integral_vector(domain, region=region)
             boundary_val_vector = integration_vector / (
                 integration_vector @ pybamm.Vector(np.ones(integration_vector.shape[1]))
@@ -490,25 +487,9 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
             return boundary_value
 
         elif isinstance(symbol, pybamm.BoundaryGradient):
-            domain = symbol.children[0].domain
-            region = symbol.side
-
-            laplacian_of_child = self.laplacian(
-                symbol.children[0], discretised_child, bcs
-            )
-            stiffness = self.stiffness_matrix(symbol.children[0], bcs)
-            mass = self.mass_matrix(symbol.children[0], bcs)
-
-            flux_vector = mass @ laplacian_of_child + stiffness @ discretised_child
-            integration_vector = self.boundary_integral_vector(domain, region=region)
-
-            total_flux_on_boundary = integration_vector @ flux_vector
-            boundary_area_vector = self.boundary_integral_vector(domain, region=region)
-            total_area = boundary_area_vector @ pybamm.Vector(np.ones(mesh.npts))
-
-            avg_flux = total_flux_on_boundary / total_area
-            avg_flux.copy_domains(symbol)
-            return avg_flux
+            raise NotImplementedError(
+                "Boundary gradient not implemented for 3D finite elements"
+            )  # pragma: no cover
 
     def mass_matrix(self, symbol, boundary_conditions):
         """
@@ -574,7 +555,7 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
 
         if region == "interior":
             mass = skfem.asm(mass_form, mesh.basis)
-        elif region == "boundary":
+        elif region == "boundary":  # pragma: no cover
             mass = skfem.asm(mass_form, mesh.facet_basis)
 
         if symbol in boundary_conditions:
