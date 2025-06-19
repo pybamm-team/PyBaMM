@@ -81,12 +81,12 @@ class EntryPoint(Mapping):
         and return the entry point for the parameter set/model, loading it needed."""
         if key not in self._all_entries:
             raise KeyError(f"Unknown parameter set or model: {key}")
-        param_set = self._all_entries[key]
+        entry_point = self._all_entries[key]
         try:
-            param_set = self._all_entries[key] = param_set.load()
+            entry_point = self._all_entries[key] = entry_point.load()
         except AttributeError:
             pass
-        return param_set
+        return entry_point
 
     def __iter__(self):
         return self._all_entries.__iter__()
