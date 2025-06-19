@@ -1,6 +1,8 @@
 #
 # One-dimensional submeshes
 #
+import itertools
+
 import numpy as np
 
 import pybamm
@@ -415,7 +417,7 @@ class SpectralVolume1DSubMesh(SubMesh1D):
             [edges[0]]
             + [
                 x
-                for (a, b) in zip(edges[:-1], edges[1:])
+                for (a, b) in itertools.pairwise(edges)
                 for x in np.flip(a + 0.5 * (b - a) * (1 + np.sin(np.pi * array)))[1:]
             ]
         )

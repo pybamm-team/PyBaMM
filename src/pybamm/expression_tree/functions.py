@@ -3,8 +3,7 @@
 #
 from __future__ import annotations
 
-from collections.abc import Sequence
-from typing import Callable
+from collections.abc import Callable, Sequence
 
 import numpy as np
 import numpy.typing as npt
@@ -41,7 +40,7 @@ class Function(pybamm.Symbol):
         # Turn numbers into scalars
         children = list(children)
         for idx, child in enumerate(children):
-            if isinstance(child, (float, int, np.number)):
+            if isinstance(child, float | int | np.number):
                 children[idx] = pybamm.Scalar(child)
 
         if name is not None:

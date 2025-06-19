@@ -1,5 +1,4 @@
 import bisect
-from typing import Optional
 
 import casadi
 import numpy as np
@@ -41,7 +40,7 @@ class ProcessedVariable:
         base_variables,
         base_variables_casadi,
         solution,
-        time_integral: Optional[pybamm.ProcessedVariableTimeIntegral] = None,
+        time_integral: pybamm.ProcessedVariableTimeIntegral | None = None,
     ):
         self._name = name
         self.base_variables = base_variables
@@ -425,6 +424,7 @@ class ProcessedVariable:
             self.all_inputs,
             self.base_variables,
             self.all_solution_sensitivities["all"],
+            strict=False,
         ):
             # Set up symbolic variables
             t_casadi = casadi.MX.sym("t")
@@ -534,7 +534,7 @@ class ProcessedVariable0D(ProcessedVariable):
         base_variables,
         base_variables_casadi,
         solution,
-        time_integral: Optional[pybamm.ProcessedVariableTimeIntegral] = None,
+        time_integral: pybamm.ProcessedVariableTimeIntegral | None = None,
     ):
         self.dimensions = 0
         super().__init__(
@@ -593,7 +593,7 @@ class ProcessedVariable1D(ProcessedVariable):
         base_variables,
         base_variables_casadi,
         solution,
-        time_integral: Optional[pybamm.ProcessedVariableTimeIntegral] = None,
+        time_integral: pybamm.ProcessedVariableTimeIntegral | None = None,
     ):
         self.dimensions = 1
         super().__init__(
@@ -678,7 +678,7 @@ class ProcessedVariable2D(ProcessedVariable):
         base_variables,
         base_variables_casadi,
         solution,
-        time_integral: Optional[pybamm.ProcessedVariableTimeIntegral] = None,
+        time_integral: pybamm.ProcessedVariableTimeIntegral | None = None,
     ):
         self.dimensions = 2
         super().__init__(
@@ -824,7 +824,7 @@ class ProcessedVariable2DSciKitFEM(ProcessedVariable2D):
         base_variables,
         base_variables_casadi,
         solution,
-        time_integral: Optional[pybamm.ProcessedVariableTimeIntegral] = None,
+        time_integral: pybamm.ProcessedVariableTimeIntegral | None = None,
     ):
         self.dimensions = 2
         super(ProcessedVariable2D, self).__init__(
@@ -893,7 +893,7 @@ class ProcessedVariable3D(ProcessedVariable):
         base_variables,
         base_variables_casadi,
         solution,
-        time_integral: Optional[pybamm.ProcessedVariableTimeIntegral] = None,
+        time_integral: pybamm.ProcessedVariableTimeIntegral | None = None,
     ):
         self.dimensions = 3
         super().__init__(
@@ -1088,7 +1088,7 @@ class ProcessedVariable3DSciKitFEM(ProcessedVariable3D):
         base_variables,
         base_variables_casadi,
         solution,
-        time_integral: Optional[pybamm.ProcessedVariableTimeIntegral] = None,
+        time_integral: pybamm.ProcessedVariableTimeIntegral | None = None,
     ):
         self.dimensions = 3
         super(ProcessedVariable3D, self).__init__(
