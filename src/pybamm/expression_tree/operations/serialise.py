@@ -240,6 +240,7 @@ class Serialise:
             """
         )
 
+    @staticmethod
     def _json_encoder(obj):
         if isinstance(obj, pybamm.Scalar):
             return obj.evaluate()
@@ -321,17 +322,15 @@ class Serialise:
         with open(filename + ".json", "w") as f:
             json.dump(model_json, f, indent=2, default=Serialise._json_encoder)
 
-
     @staticmethod
-    def load_custom_model(filename, battery_model=None):
     def load_custom_model(filename, battery_model=None):
         with open(filename) as f:
             model_data = json.load(f)
+
         model = battery_model if battery_model is not None else pybamm.BaseModel()
 
-
         model.name = model_data["name"]
-        
+
         symbol_map = {}
         for k_json, _ in model_data["rhs"]:
             k = Serialise.convert_symbol_from_json(k_json)
@@ -365,9 +364,6 @@ class Serialise:
         }
         model.events = [
             pybamm.Event(
-
-        model.events = [
-            pybamm.Event(
                 e["name"],
                 Serialise.convert_symbol_from_json(e["expression"]),
                 e["event_type"],
@@ -384,9 +380,6 @@ class Serialise:
         )
 
         return model, param_values
-
-
-        return model_data, param_values
 
     # Helper functions
 
@@ -613,7 +606,6 @@ class Serialise:
                 "type": "PrimaryBroadcast",
                 "broadcast_domain": symbol.broadcast_domain,
                 "children": [Serialise.convert_symbol_to_json(symbol.orphans[0])],
-                "children": [Serialise.convert_symbol_to_json(symbol.orphans[0])],
             }
 
         elif isinstance(symbol, pybamm.FunctionParameter):
@@ -638,9 +630,6 @@ class Serialise:
                 "type": symbol.__class__.__name__,
                 "x": [x.tolist() for x in symbol.x],
                 "y": symbol.y.tolist(),
-                "children": [
-                    Serialise.convert_symbol_to_json(c) for c in symbol.children
-                ],
                 "children": [
                     Serialise.convert_symbol_to_json(c) for c in symbol.children
                 ],
@@ -678,9 +667,6 @@ class Serialise:
                 "children": [
                     Serialise.convert_symbol_to_json(c) for c in symbol.children
                 ],
-                "children": [
-                    Serialise.convert_symbol_to_json(c) for c in symbol.children
-                ],
             }
 
         elif isinstance(symbol, pybamm.UnaryOperator | pybamm.BinaryOperator):
@@ -695,9 +681,6 @@ class Serialise:
             # Generic fallback for other symbols with children
             json_dict = {
                 "type": symbol.__class__.__name__,
-                "children": [
-                    Serialise.convert_symbol_to_json(c) for c in symbol.children
-                ],
                 "children": [
                     Serialise.convert_symbol_to_json(c) for c in symbol.children
                 ],
@@ -790,7 +773,6 @@ class Serialise:
                 },
                 diff_variable=diff_variable,
             )
-            )
         elif json_data["type"] == "PrimaryBroadcast":
             child = Serialise.convert_symbol_from_json(json_data["children"][0])
             domain = json_data["broadcast_domain"]
@@ -818,6 +800,4 @@ class Serialise:
                 *[Serialise.convert_symbol_from_json(c) for c in json_data["children"]]
             )
         else:
-            raise ValueError(f"Unhandled symbol type or malformed entry: {json_data}")
-
             raise ValueError(f"Unhandled symbol type or malformed entry: {json_data}")
