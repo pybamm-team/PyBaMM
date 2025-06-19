@@ -509,10 +509,6 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
             avg_flux = total_flux_on_boundary / total_area
             avg_flux.copy_domains(symbol)
             return avg_flux
-        else:
-            raise TypeError(
-                "symbol must be BoundaryValue or BoundaryGradient"
-            )  # pragma: no cover
 
     def mass_matrix(self, symbol, boundary_conditions):
         """
@@ -587,10 +583,10 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
                 if bc_type == "Dirichlet":
                     boundary_dofs = getattr(mesh, f"{name}_dofs", None)
                     if boundary_dofs is not None and len(boundary_dofs) > 0:
-                        self.bc_apply(mass, boundary_dofs)
+                        self.bc_apply(mass, boundary_dofs, zero=True)
         return pybamm.Matrix(mass)
 
-    def bc_apply(self, M, boundary, zero=False):
+    def bc_apply(self, M, boundary_dofs, zero=False):
         """
         Adjusts matrices for 3D boundary conditions.
 
@@ -605,13 +601,13 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
         """
         M_lil = M.tolil()
 
-        for dof in boundary:
-            if dof < M_lil.shape[0]:
-                M_lil[dof, :] = 0
-                if not zero:
-                    M_lil[dof, dof] = 1.0
+        for dof in boundary_dofs:
+            M_lil[dof, :] = 0
+            if not zero:
+                M_lil[dof, dof] = 1.0
 
         M_csr = M_lil.tocsr()
         M.data = M_csr.data
         M.indices = M_csr.indices
         M.indptr = M_csr.indptr
+        M._shape = M_csr._shape
