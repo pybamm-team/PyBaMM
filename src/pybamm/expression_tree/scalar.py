@@ -112,3 +112,33 @@ class Scalar(pybamm.Symbol):
         json_dict = {"name": self.name, "id": self.id, "value": self.value}
 
         return json_dict
+
+
+class Constant(Scalar):
+    """
+    A node in the expression tree representing a named constant value. This is a subclass of
+    :class:`pybamm.Scalar` and is used to represent named constants such as :math:`R`, :math:`F`,
+    and :math:`k_b`. Counterintuitively, the "is_constant" method is set to False, so that
+    named constants are not simplified when evaluated.
+
+    Parameters
+    ----------
+    value : numeric
+        the value returned by the node when evaluated
+    name : str
+        the name of the node
+    """
+
+    def __init__(self, value: Numeric, name: str):
+        super().__init__(value, name)
+
+    def is_constant(self) -> Literal[True]:
+        """
+        The value is constant, but setting this to False makes sure we retain named constants
+        in the expression tree. For example, `pybamm.constants.R + 2` should not be
+        simplified to `10.314462618`. See :meth:`pybamm.Symbol.is_constant()`.
+        """
+        return False
+
+    def __str__(self):
+        return str(self.name)

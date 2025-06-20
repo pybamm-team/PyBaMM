@@ -49,3 +49,20 @@ class TestScalar:
         assert a.to_json() == json_dict
 
         assert pybamm.Scalar._from_json(json_dict) == a
+
+
+class TestConstant:
+    def test_constant_eval(self):
+        a = pybamm.Constant(5, "a")
+        assert a.value == 5
+        assert a.evaluate() == 5
+        assert a.name == "a"
+
+    def test_constant_operations(self):
+        a = pybamm.Constant(5, "a")
+        b = pybamm.Constant(6, "b")
+        c = a + b
+        assert str(c) == "a + b"
+        assert c.is_constant() is False
+        assert c.evaluate() == 11
+        assert isinstance(c, pybamm.Addition)
