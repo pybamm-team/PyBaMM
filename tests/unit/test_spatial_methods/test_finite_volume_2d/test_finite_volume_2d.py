@@ -640,3 +640,126 @@ class TestFiniteVolume2D:
         pos_add = pos_electrode + source_pos
         total_add = concat_var + source_concat
         neg_add_disc = disc.process_symbol(neg_add)
+
+    def test_vector_boundary_conditions_with_spatial_variables(self):
+        """
+        Test using vector quantities as boundary conditions, such as spatial variables
+        with BoundaryGradient. This tests the case where boundary conditions are
+        functions of spatial coordinates rather than scalar constants.
+        """
+        # Create discretisation with 2D mesh
+        mesh = get_mesh_for_testing_2d()
+        spatial_methods = {"macroscale": pybamm.FiniteVolume2D()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        # Create a variable and spatial variables
+        phi = pybamm.Variable(
+            "phi", domain=["negative electrode", "separator", "positive electrode"]
+        )
+        x = pybamm.SpatialVariable(
+            "x",
+            ["negative electrode", "separator", "positive electrode"],
+            direction="lr",
+        )
+        z = pybamm.SpatialVariable(
+            "z",
+            ["negative electrode", "separator", "positive electrode"],
+            direction="tb",
+        )
+
+        # Set up boundary conditions using spatial variables through BoundaryGradient
+        # This represents cases where boundary conditions depend on spatial position
+        boundary_conditions = {
+            phi: {
+                "top": (
+                    pybamm.BoundaryGradient(x, "top"),
+                    "Dirichlet",
+                ),  # BC depends on x coordinate
+                "bottom": (
+                    pybamm.BoundaryGradient(x, "bottom"),
+                    "Dirichlet",
+                ),  # BC depends on x coordinate
+                "left": (pybamm.Scalar(0), "Dirichlet"),  # Scalar BC for comparison
+                "right": (pybamm.Scalar(1), "Dirichlet"),  # Scalar BC for comparison
+            }
+        }
+
+        disc.bcs = boundary_conditions
+        disc.set_variable_slices([phi])
+
+        # Process the boundary conditions to ensure they work with vector quantities
+        x_disc = disc.process_symbol(x)
+        z_disc = disc.process_symbol(z)
+
+        # Test that spatial variables are properly discretised as vectors
+        assert isinstance(x_disc, pybamm.Vector)
+        assert isinstance(z_disc, pybamm.Vector)
+
+        # Test BoundaryGradient with spatial variables
+        top_bc_gradient = pybamm.BoundaryGradient(x, "top")
+        bottom_bc_gradient = pybamm.BoundaryGradient(x, "bottom")
+
+        top_bc_disc = disc.process_symbol(top_bc_gradient)
+        bottom_bc_disc = disc.process_symbol(bottom_bc_gradient)
+
+        # Verify that boundary gradients are properly processed
+        assert top_bc_disc is not None
+        assert bottom_bc_disc is not None
+
+        # Test a simple equation with these boundary conditions
+        # Laplace equation: div(grad(phi)) = 0
+        eqn = pybamm.div(pybamm.grad(phi))
+        eqn_disc = disc.process_symbol(eqn)
+
+        # Verify the equation can be evaluated with vector boundary conditions
+        submesh = mesh[("negative electrode", "separator", "positive electrode")]
+        LR, TB = np.meshgrid(submesh.nodes_lr, submesh.nodes_tb)
+        test_y = LR.flatten()  # Use x-coordinate values as test data
+
+        # This should not raise an error
+        result = eqn_disc.evaluate(None, test_y)
+        assert result is not None
+        assert result.shape[0] == submesh.npts
+
+        # Test more complex vector boundary conditions
+        # Use spatial variable directly in boundary condition (not through BoundaryGradient)
+        boundary_conditions_direct = {
+            phi: {
+                "top": (z, "Dirichlet"),  # BC is the z-coordinate itself
+                "bottom": (pybamm.Scalar(0), "Dirichlet"),
+                "left": (pybamm.Scalar(0), "Dirichlet"),
+                "right": (pybamm.Scalar(1), "Dirichlet"),
+            }
+        }
+
+        disc.bcs = boundary_conditions_direct
+        eqn_disc_direct = disc.process_symbol(eqn)
+
+        # This should also work with direct spatial variable as BC
+        result_direct = eqn_disc_direct.evaluate(None, test_y)
+        assert result_direct is not None
+        assert result_direct.shape[0] == submesh.npts
+
+        # Test combination of vector and scalar boundary conditions
+        boundary_conditions_mixed = {
+            phi: {
+                "top": (
+                    pybamm.BoundaryGradient(x, "top") + pybamm.Scalar(1),
+                    "Dirichlet",
+                ),  # Vector + scalar
+                "bottom": (
+                    pybamm.BoundaryGradient(z, "bottom"),
+                    "Neumann",
+                ),  # Vector Neumann BC
+                "left": (pybamm.Scalar(0), "Dirichlet"),
+                "right": (x, "Neumann"),  # Direct spatial variable as Neumann BC
+            }
+        }
+
+        disc.bcs = boundary_conditions_mixed
+        eqn_disc_mixed = disc.process_symbol(eqn)
+
+        # This should work with mixed vector/scalar boundary conditions
+        result_mixed = eqn_disc_mixed.evaluate(None, test_y)
+        assert result_mixed is not None
+        assert result_mixed.shape[0] == submesh.npts
