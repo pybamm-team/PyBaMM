@@ -140,7 +140,7 @@ class BaseThermal(pybamm.BaseSubModel):
 
         Q_rxn_p, Q_rev_p, Q_hys_p = 0, 0, 0
         T_p = variables["Positive electrode temperature [K]"]
-        for phase, ocp_option in zip(phase_names, ocp_options):
+        for phase, ocp_option in zip(phase_names, ocp_options, strict=False):
             a_j_p = variables[
                 f"Positive electrode {phase}volumetric interfacial current density [A.m-3]"
             ]
@@ -189,7 +189,7 @@ class BaseThermal(pybamm.BaseSubModel):
         else:
             T_n = variables["Negative electrode temperature [K]"]
             Q_rxn_n, Q_rev_n, Q_hys_n = 0, 0, 0
-            for phase, ocp_option in zip(phase_names, ocp_options):
+            for phase, ocp_option in zip(phase_names, ocp_options, strict=False):
                 a_j_n = variables[
                     f"Negative electrode {phase}volumetric interfacial current density [A.m-3]"
                 ]
