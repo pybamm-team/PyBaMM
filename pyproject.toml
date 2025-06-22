@@ -12,7 +12,7 @@ license = { file = "LICENSE.txt" }
 description = "Python Battery Mathematical Modelling"
 authors = [{name = "The PyBaMM Team", email = "pybamm@pybamm.org"}]
 maintainers = [{name = "The PyBaMM Team", email = "pybamm@pybamm.org"}]
-requires-python = ">=3.9, <3.13"
+requires-python = ">=3.10, <3.13"
 readme = {file = "README.md", content-type = "text/markdown"}
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -22,7 +22,6 @@ classifiers = [
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -103,7 +102,7 @@ dev = [
     # For doctest
     "pytest-doctestplus",
     # pytest and its plugins
-    "pytest<=8.3.0",
+    "pytest",
     "pytest-xdist",
     "pytest-mock",
     "pytest-subtests",
@@ -258,6 +257,9 @@ log_date_format = "%Y-%m-%d %H:%M:%S"
 [tool.coverage.run]
 source = ["src/pybamm"]
 concurrency = ["multiprocessing"]
+# Parse warnings have existed for a while, but became failures in pytest 8.4.0
+disable_warnings = ["couldnt-parse", "module-not-measured"]
+
 
 [tool.mypy]
 ignore_missing_imports = true

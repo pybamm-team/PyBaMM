@@ -17,7 +17,7 @@ geometries = [m.default_geometry for m in models]
 
 # load parameter values and process model and geometry
 params = [m.default_parameter_values for m in models]
-for m, p, g in zip(models, params, geometries):
+for m, p, g in zip(models, params, geometries, strict=False):
     p.process_model(m)
     p.process_geometry(g)
 

@@ -65,7 +65,7 @@ lumped_params.update(
 # loop over the models and solve
 params = [full_params, lumped_params]
 sols = []
-for model, param in zip(models, params):
+for model, param in zip(models, params, strict=False):
     sim = pybamm.Simulation(model, parameter_values=param)
     sim.solve([0, 3600])
     sols.append(sim.solution)
