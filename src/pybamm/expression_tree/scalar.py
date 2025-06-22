@@ -119,7 +119,7 @@ class Constant(Scalar):
     A node in the expression tree representing a named constant value. This is a subclass of
     :class:`pybamm.Scalar` and is used to represent named constants such as :math:`R`, :math:`F`,
     and :math:`k_b`. Counterintuitively, the "is_constant" method is set to False, so that
-    named constants are not simplified when evaluated.
+    named constants are not simplified when constructed.
 
     Parameters
     ----------
@@ -136,7 +136,7 @@ class Constant(Scalar):
         """
         The value is constant, but setting this to False makes sure we retain named constants
         in the expression tree. For example, `pybamm.constants.R + 2` should not be
-        simplified to `10.314462618`. See :meth:`pybamm.Symbol.is_constant()`.
+        simplified to `10.314462618` until after the expression is evaluated. See :meth:`pybamm.Symbol.is_constant()`.
         """
         return False
 
