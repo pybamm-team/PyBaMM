@@ -3,6 +3,7 @@
 #
 
 import pybamm
+from tests import get_discretisation_for_testing
 
 
 class TestScalar:
@@ -66,3 +67,18 @@ class TestConstant:
         assert c.is_constant() is False
         assert c.evaluate() == 11
         assert isinstance(c, pybamm.Addition)
+
+    def test_simplify_on_discretisation(self):
+        a = pybamm.Variable("a")
+        b = pybamm.Scalar(4)
+        c = pybamm.Constant(5, "c")
+        expr = a * (b * c)
+
+        disc = get_discretisation_for_testing()
+        disc.y_slices = {a: [slice(0, 1)]}
+
+        disc_expr = disc.process_symbol(expr)
+        assert isinstance(disc_expr, pybamm.Multiplication)
+        assert disc_expr.children[0] == pybamm.Scalar(20)
+        assert isinstance(disc_expr.children[1], pybamm.StateVector)
+        assert disc_expr.children[1].y_slices == (slice(0, 1, None),)
