@@ -14,6 +14,10 @@ class MSMROpenCircuitPotential(BaseOpenCircuitPotential):
     substitutional materials.
     """
 
+    def __init__(self, param, domain, reaction, options, phase="primary"):
+        super().__init__(param, domain, reaction, options=options, phase=phase)
+        pybamm.citations.register("Baker2018")
+
     def get_coupled_variables(self, variables):
         domain, Domain = self.domain_Domain
         phase_name = self.phase_name

@@ -7,6 +7,10 @@ from . import BaseHysteresisOpenCircuitPotential
 
 
 class CurrentSigmoidOpenCircuitPotential(BaseHysteresisOpenCircuitPotential):
+    def __init__(self, param, domain, reaction, options, phase="primary"):
+        super().__init__(param, domain, reaction, options=options, phase=phase)
+        pybamm.citations.register("Ai2022")
+
     def get_coupled_variables(self, variables):
         domain, Domain = self.domain_Domain
         domain_options = getattr(self.options, domain)

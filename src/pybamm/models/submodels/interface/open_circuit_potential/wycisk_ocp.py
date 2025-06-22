@@ -8,10 +8,12 @@ from . import BaseHysteresisOpenCircuitPotential
 
 class WyciskOpenCircuitPotential(BaseHysteresisOpenCircuitPotential):
     """
-    Class for open-circuit potential with hysteresis based on the approach outlined by Wycisk :footcite:t:'Wycisk2022'.
-    This approach employs a differential capacity hysteresis state variable. The decay and switching of the hysteresis state
-    is tunable via two additional parameters. The hysteresis state is updated based on the current and the differential capacity.
+    Class for single-state open-circuit hysteresis model based on he approach outlined by Wycisk :footcite:t:'Wycisk2022'. The hysteresis state variable $h$ is governed by an ODE which depends on the local surface stoichiometry, volumetric interfacial current density, and differential capacity.
     """
+
+    def __init__(self, param, domain, reaction, options, phase="primary"):
+        super().__init__(param, domain, reaction, options=options, phase=phase)
+        pybamm.citations.register("Wycisk2022")
 
     def get_fundamental_variables(self):
         return self._get_hysteresis_state_variables()
@@ -62,12 +64,12 @@ class WyciskOpenCircuitPotential(BaseHysteresisOpenCircuitPotential):
             f"{Domain} electrode {phase_name}differential capacity [A.s.V-1]"
         ]
         dQdU = dQdU.orphans[0]
-        K = self.phase_param.hysteresis_decay(sto_surf, T)
-        K_x = self.phase_param.hysteresis_switch
+        Gamma = self.phase_param.hysteresis_decay(sto_surf, T)
+        x = self.phase_param.hysteresis_switch
 
         i_surf_sign = pybamm.sign(i_surf)
         signed_h = 1 - i_surf_sign * h
-        rate_coefficient = K * (i_surf / (Q_cell * (dQdU**K_x)))
-        dhdt = rate_coefficient * signed_h
+        gamma = Gamma * (1 / dQdU**x)
+        dhdt = gamma * i_surf / Q_cell * signed_h
 
         self.rhs[h] = dhdt

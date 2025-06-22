@@ -8,20 +8,12 @@ from . import BaseHysteresisOpenCircuitPotential
 
 class AxenOpenCircuitPotential(BaseHysteresisOpenCircuitPotential):
     """
-    Class for open-circuit potential (OCP) with hysteresis based on the approach outlined by Axen et al. https://doi.org/10.1016/j.est.2022.103985.
-    This approach tracks the evolution of the hysteresis using an ODE system scaled by the volumetric interfacial current density and
-    a decay rate parameter.
-
-    The original method defines the open-circuit potential as OCP = OCP_delithiation + (OCP_lithiation - OCP_delithiation) * h,
-    where h is the hysteresis state. By allowing h to vary between 0 and 1, the OCP approaches OCP_lithiation when h tends to 1
-    and OCP_delithiation when h tends to 0. These interval limits are achieved by defining the ODE system as dh/dt = S_lith * (1 - h)
-    for lithiation and dh/dt = S_delith * h for delithiation, where S_lith and S_delith are rate coefficients.
-
-    The original implementation is modified to ensure h varies between -1 and 1, thus assuming an unified framework within pybamm.
-    This new variation interval is obtained with the ODE system dh/dt = S_lith * (1 + h) for lithiation and dh/dt = S_delith * (1 - h)
-    for delithiation. Now, OCP = OCP_delithiation + (OCP_lithiation - OCP_delithiation) * (1 - h) / 2, implying that the OCP approaches
-    OCP_lithiation when h tends to -1 and OCP_delithiation when h tends to 1.
+    Class for single-state hysteresis model based on the implementation in :footcite:t:`Axen2022`. The hysteresis state variable $h$ is governed by an ODE which depends on the local surface stoichiometry and volumetric interfacial current density.
     """
+
+    def __init__(self, param, domain, reaction, options, phase="primary"):
+        super().__init__(param, domain, reaction, options=options, phase=phase)
+        pybamm.citations.register("Axen2022")
 
     def get_fundamental_variables(self):
         return self._get_hysteresis_state_variables()
@@ -42,18 +34,15 @@ class AxenOpenCircuitPotential(BaseHysteresisOpenCircuitPotential):
 
         c_max = self.phase_param.c_max
         epsl = self.phase_param.epsilon_s
-        K_lith = self.phase_param.hysteresis_decay(sto_surf, T, "lithiation")
-        K_delith = self.phase_param.hysteresis_decay(sto_surf, T, "delithiation")
-
-        S_lith = i_vol * K_lith / (self.param.F * c_max * epsl)
-        S_delith = i_vol * K_delith / (self.param.F * c_max * epsl)
+        gamma_lith = self.phase_param.hysteresis_decay(sto_surf, T, "lithiation")
+        gamma_delith = self.phase_param.hysteresis_decay(sto_surf, T, "delithiation")
 
         i_vol_sign = pybamm.sign(i_vol)
         signed_h = 1 - i_vol_sign * h
-        rate_coefficient = (
-            0.5 * (1 - i_vol_sign) * S_lith + 0.5 * (1 + i_vol_sign) * S_delith
+        gamma = (
+            0.5 * (1 - i_vol_sign) * gamma_lith + 0.5 * (1 + i_vol_sign) * gamma_delith
         )
 
-        dhdt = rate_coefficient * signed_h
+        dhdt = gamma * i_vol / (self.param.F * c_max * epsl) * signed_h
 
         self.rhs[h] = dhdt
