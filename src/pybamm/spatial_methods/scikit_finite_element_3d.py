@@ -316,17 +316,20 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
                     x_safe, y_safe = x[safe_indices], y[safe_indices]
                     grad_u_r = (u_dx * x_safe + u_dy * y_safe) / r_safe
                     grad_v_r = (v_dx * x_safe + v_dy * y_safe) / r_safe
-                    grad_u_theta = u_dx * -y_safe + u_dy * x_safe
-                    grad_v_theta = v_dx * -y_safe + v_dy * x_safe
+
+                    grad_u_theta = u_dy * x_safe - u_dx * y_safe
+                    grad_v_theta = v_dy * x_safe - v_dx * y_safe
+
                     grad_u_z = u_dz
                     grad_v_z = v_dz
+
                     integrand_safe = (
                         r_safe * (grad_u_r * grad_v_r)
                         + (1 / r_safe) * (grad_u_theta * grad_v_theta)
                         + r_safe * (grad_u_z * grad_v_z)
                     )
                     integrand[safe_indices] = integrand_safe
-                return integrand
+                    return integrand
         else:
             raise pybamm.DiscretisationError(
                 f"Unknown coordinate system '{coord_sys}'"
