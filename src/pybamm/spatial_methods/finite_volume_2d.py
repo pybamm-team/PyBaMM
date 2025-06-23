@@ -547,9 +547,13 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                 row_indices = np.arange(0, (n_lr + n_bcs) * n_tb, n_lr + n_bcs)
                 col_indices = np.arange(0, n_tb)
                 new_lbc_sub_matrix = coo_matrix(
-                    (np.ones(n_lr), (row_indices, col_indices)),
+                    (np.ones(n_tb), (row_indices, col_indices)),
                     shape=((n_lr + n_bcs) * n_tb, n_tb),
                 )
+                if left_ghost_constant.shape == (1, 1):
+                    left_ghost_constant = left_ghost_constant * pybamm.Vector(
+                        np.ones(n_tb)
+                    )
                 lbc_vector = pybamm.Matrix(new_lbc_sub_matrix) @ left_ghost_constant
 
         else:
@@ -588,9 +592,13 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                 )
                 col_indices = np.arange(0, n_tb)
                 new_rbc_sub_matrix = coo_matrix(
-                    (np.ones(n_lr), (row_indices, col_indices)),
+                    (np.ones(n_tb), (row_indices, col_indices)),
                     shape=((n_lr + n_bcs) * n_tb, n_tb),
                 )
+                if right_ghost_constant.shape == (1, 1):
+                    right_ghost_constant = right_ghost_constant * pybamm.Vector(
+                        np.ones(n_tb)
+                    )
                 rbc_vector = pybamm.Matrix(new_rbc_sub_matrix) @ right_ghost_constant
 
         else:
@@ -627,6 +635,10 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                     (np.ones(n_lr), (row_indices, new_col_indices)),
                     shape=((n_tb + n_bcs) * n_lr, n_lr),
                 )
+                if top_ghost_constant.shape == (1, 1):
+                    top_ghost_constant = top_ghost_constant * pybamm.Vector(
+                        np.ones(n_lr)
+                    )
                 tbc_vector = pybamm.Matrix(new_tbc_sub_matrix) @ top_ghost_constant
 
         else:
@@ -665,6 +677,10 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                     (np.ones(n_lr), (row_indices, new_col_indices)),
                     shape=((n_tb + n_bcs) * n_lr, n_lr),
                 )
+                if bottom_ghost_constant.shape == (1, 1):
+                    bottom_ghost_constant = bottom_ghost_constant * pybamm.Vector(
+                        np.ones(n_lr)
+                    )
                 bbc_vector = pybamm.Matrix(new_bbc_sub_matrix) @ bottom_ghost_constant
 
         else:
@@ -677,7 +693,6 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                 bbc_vector = pybamm.Vector(
                     np.zeros((n_tb + n_bcs) * second_dim_repeats * n_lr)
                 )
-
         bcs_vector = lbc_vector + rbc_vector + tbc_vector + bbc_vector
         # Need to match the domain. E.g. in the case of the boundary condition
         # on the particle, the gradient has domain particle but the bcs_vector
@@ -807,6 +822,8 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                     (np.ones(n_tb), (row_indices, col_indices)),
                     shape=((n_lr + n_bcs - 1) * n_tb, n_tb),
                 )
+                if left_bc.shape == (1, 1):
+                    left_bc = left_bc * pybamm.Vector(np.ones(n_tb))
                 lbc_vector = pybamm.Matrix(new_lbc_sub_matrix) @ left_bc
 
         elif lbc_type == "Dirichlet" or (lbc_type == "Neumann" and lbc_value == 0):
@@ -834,13 +851,15 @@ class FiniteVolume2D(pybamm.SpatialMethod):
             else:
                 right_bc = rbc_value
                 row_indices = np.arange(
-                    n_lr + n_bcs - 2, (n_lr + n_bcs) * n_tb, n_lr + n_bcs - 1
+                    n_lr + n_bcs - 2, (n_lr + n_bcs - 1) * n_tb, n_lr + n_bcs - 1
                 )
                 col_indices = np.arange(0, n_tb)
                 new_rbc_sub_matrix = coo_matrix(
                     (np.ones(n_tb), (row_indices, col_indices)),
                     shape=((n_lr + n_bcs - 1) * n_tb, n_tb),
                 )
+                if right_bc.shape == (1, 1):
+                    right_bc = right_bc * pybamm.Vector(np.ones(n_tb))
                 rbc_vector = pybamm.Matrix(new_rbc_sub_matrix) @ right_bc
 
         elif rbc_type == "Dirichlet" or (rbc_type == "Neumann" and rbc_value == 0):
@@ -875,6 +894,8 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                     (np.ones(n_lr), (row_indices, new_col_indices)),
                     shape=((n_tb + n_bcs - 1) * n_lr, n_lr),
                 )
+                if top_bc.shape == (1, 1):
+                    top_bc = top_bc * pybamm.Vector(np.ones(n_lr))
                 tbc_vector = pybamm.Matrix(new_tbc_sub_matrix) @ top_bc
 
         elif tbc_type == "Dirichlet" or (tbc_type == "Neumann" and tbc_value == 0):
@@ -911,6 +932,8 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                     (np.ones(n_lr), (row_indices, new_col_indices)),
                     shape=((n_tb + n_bcs - 1) * n_lr, n_lr),
                 )
+                if bottom_bc.shape == (1, 1):
+                    bottom_bc = bottom_bc * pybamm.Vector(np.ones(n_lr))
                 bbc_vector = pybamm.Matrix(new_bbc_sub_matrix) @ bottom_bc
         elif bbc_type == "Dirichlet" or (bbc_type == "Neumann" and bbc_value == 0):
             bbc_vector = pybamm.Vector(
@@ -1008,11 +1031,11 @@ class FiniteVolume2D(pybamm.SpatialMethod):
 
         dx0_lr = nodes_lr[0] - edges_lr[0]
         dx1_lr = submesh.d_nodes_lr[0]
-        # dx2_lr = submesh.d_nodes_lr[1]
+        dx2_lr = submesh.d_nodes_lr[1]
 
         dxN_lr = edges_lr[-1] - nodes_lr[-1]
         dxNm1_lr = submesh.d_nodes_lr[-1]
-        # dxNm2_lr = submesh.d_nodes_lr[-2]
+        dxNm2_lr = submesh.d_nodes_lr[-2]
 
         dx0_tb = nodes_tb[0] - edges_tb[0]
         dx1_tb = submesh.d_nodes_tb[0]
@@ -1347,7 +1370,32 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                     additive = pybamm.Scalar(0)
 
                 elif extrap_order_gradient == "quadratic":
-                    raise NotImplementedError
+                    dx0 = dx0_lr
+                    dx1 = dx1_lr
+                    dx2 = dx2_lr
+                    a = -(2 * dx0 + 2 * dx1 + dx2) / (dx1**2 + dx1 * dx2)
+                    b = (2 * dx0 + dx1 + dx2) / (dx1 * dx2)
+                    c = -(2 * dx0 + dx1) / (dx1 * dx2 + dx2**2)
+                    row_indices = np.arange(0, n_tb)
+                    col_indices_0 = np.arange(0, n_tb * n_lr, n_lr)
+                    col_indices_1 = col_indices_0 + 1
+                    col_indices_2 = col_indices_0 + 2
+                    vals_0 = a * np.ones(n_tb)
+                    vals_1 = b * np.ones(n_tb)
+                    vals_2 = c * np.ones(n_tb)
+                    sub_matrix = csr_matrix(
+                        (
+                            np.hstack([vals_0, vals_1, vals_2]),
+                            (
+                                np.hstack([row_indices, row_indices, row_indices]),
+                                np.hstack(
+                                    [col_indices_0, col_indices_1, col_indices_2]
+                                ),
+                            ),
+                        ),
+                        shape=(n_tb, n_tb * n_lr),
+                    )
+                    additive = pybamm.Scalar(0)
 
                 else:
                     raise NotImplementedError
@@ -1376,7 +1424,33 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                     additive = pybamm.Scalar(0)
 
                 elif extrap_order_gradient == "quadratic":
-                    raise NotImplementedError
+                    dxN = dxNm1_lr
+                    dxNm1 = dxNm1_lr
+                    dxNm2 = dxNm2_lr
+                    a = (2 * dxN + 2 * dxNm1 + dxNm2) / (dxNm1**2 + dxNm1 * dxNm2)
+                    b = -(2 * dxN + dxNm1 + dxNm2) / (dxNm1 * dxNm2)
+                    c = (2 * dxN + dxNm1) / (dxNm1 * dxNm2 + dxNm2**2)
+                    vals_a = a * np.ones(n_tb)
+                    vals_b = b * np.ones(n_tb)
+                    vals_c = c * np.ones(n_tb)
+                    row_indices = np.arange(0, n_tb)
+                    col_indices_Nm1 = np.arange(n_lr - 2, n_lr * n_tb, n_lr)
+                    col_indices_N = col_indices_Nm1 + 1
+                    col_indices_Nm2 = col_indices_Nm1 - 1
+
+                    sub_matrix = csr_matrix(
+                        (
+                            np.hstack([vals_c, vals_b, vals_a]),
+                            (
+                                np.hstack([row_indices, row_indices, row_indices]),
+                                np.hstack(
+                                    [col_indices_Nm2, col_indices_Nm1, col_indices_N]
+                                ),
+                            ),
+                        ),
+                        shape=(n_tb, n_tb * n_lr),
+                    )
+                    additive = pybamm.Scalar(0)
                 else:
                     raise NotImplementedError
 
@@ -2110,29 +2184,6 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                 # to the penultimate edge in the primary dimension (D_1 in the
                 # definiton of the harmonic mean)
                 raise NotImplementedError
-                sub_matrix_D1 = hstack([eye(n), csr_matrix((n, 1))])
-                matrix_D1 = csr_matrix(kron(eye(second_dim_repeats), sub_matrix_D1))
-                D1 = pybamm.Matrix(matrix_D1) @ array
-
-                # Matrix to extract the edge values running from the second edge
-                # to the final edge in the primary dimension  (D_2 in the
-                # definiton of the harmonic mean)
-                sub_matrix_D2 = hstack([csr_matrix((n, 1)), eye(n)])
-                matrix_D2 = csr_matrix(kron(eye(second_dim_repeats), sub_matrix_D2))
-                D2 = pybamm.Matrix(matrix_D2) @ array
-
-                # Compute weight beta
-                dx0 = submesh.nodes[0] - submesh.edges[0]  # first edge to node
-                dxN = submesh.edges[-1] - submesh.nodes[-1]  # last node to edge
-                dx = np.concatenate(([dx0], submesh.d_nodes, [dxN]))
-                sub_beta = (dx[:-1] / (dx[1:] + dx[:-1]))[:, np.newaxis]
-                beta = pybamm.Array(np.kron(np.ones((second_dim_repeats, 1)), sub_beta))
-
-                # Compute harmonic mean on nodes
-                # Note: add small number to denominator to regularise D_eff
-                D_eff = D1 * D2 / (D2 * beta + D1 * (1 - beta) + 1e-16)
-
-                return D_eff
 
             else:
                 raise ValueError(f"shift key '{shift_key}' not recognised")
