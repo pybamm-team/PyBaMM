@@ -22,10 +22,15 @@ class BaseOpenCircuitPotential(BaseInterface):
         :class:`pybamm.BaseBatteryModel`
     phase : str, optional
         Phase of the particle (default is "primary")
+    x_average : bool
+        Whether the particle concentration is averaged over the x-direction. Default is False.
     """
 
-    def __init__(self, param, domain, reaction, options, phase="primary"):
+    def __init__(
+        self, param, domain, reaction, options, phase="primary", x_average=False
+    ):
         super().__init__(param, domain, reaction, options=options, phase=phase)
+        self.x_average = x_average
 
     def _get_standard_ocp_variables(self, ocp_surf, ocp_bulk, dUdT):
         domain, Domain = self.domain_Domain

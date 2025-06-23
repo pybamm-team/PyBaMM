@@ -279,7 +279,7 @@ class BaseModel(pybamm.BaseBatteryModel):
                 elif ocp_option == "MSMR":
                     ocp_model = ocp_submodels.MSMROpenCircuitPotential
                 self.submodels[f"{domain} {phase} open-circuit potential"] = ocp_model(
-                    self.param, domain, reaction, self.options, phase
+                    self.param, domain, reaction, self.options, phase, self.x_average
                 )
 
     def set_sei_submodel(self):

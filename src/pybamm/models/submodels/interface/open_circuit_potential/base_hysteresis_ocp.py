@@ -23,24 +23,39 @@ class BaseHysteresisOpenCircuitPotential(BaseOpenCircuitPotential):
         :class:`pybamm.BaseBatteryModel`
     phase : str, optional
         Phase of the particle (default is "primary")
+    x_average : bool
+        Whether the particle concentration is averaged over the x-direction. Default is False.
     """
 
-    def __init__(self, param, domain, reaction, options, phase="primary"):
-        super().__init__(param, domain, reaction, options=options, phase=phase)
+    def __init__(
+        self, param, domain, reaction, options, phase="primary", x_average=False
+    ):
+        super().__init__(
+            param, domain, reaction, options=options, phase=phase, x_average=x_average
+        )
 
     def _get_hysteresis_state_variables(self):
         domain, Domain = self.domain_Domain
         domain_options = getattr(self.options, domain)
         phase_name = self.phase_name
 
-        h = pybamm.Variable(
-            f"{Domain} electrode {phase_name}hysteresis state",
-            domains={
-                "primary": f"{domain} electrode",
-                "secondary": "current collector",
-            },
-        )
-        h_x_av = pybamm.x_average(h)
+        if self.x_average is False:
+            h = pybamm.Variable(
+                f"{Domain} electrode {phase_name}hysteresis state",
+                domains={
+                    "primary": f"{domain} electrode",
+                    "secondary": "current collector",
+                },
+            )
+            h_x_av = pybamm.x_average(h)
+        else:
+            h_x_av = pybamm.Variable(
+                f"X-averaged {domain} electrode {phase_name}hysteresis state",
+                domains={
+                    "primary": "current collector",
+                },
+            )
+            h = pybamm.PrimaryBroadcast(h_x_av, [f"{domain} electrode"])
         variables = {
             f"{Domain} electrode {phase_name}hysteresis state": h,
             f"X-averaged {domain} electrode {phase_name}hysteresis state": h_x_av,
@@ -119,7 +134,14 @@ class BaseHysteresisOpenCircuitPotential(BaseOpenCircuitPotential):
         return variables
 
     def set_initial_conditions(self, variables):
-        _, Domain = self.domain_Domain
+        domain, Domain = self.domain_Domain
         phase_name = self.phase_name
-        h = variables[f"{Domain} electrode {phase_name}hysteresis state"]
-        self.initial_conditions[h] = self.phase_param.h_init
+
+        h_init = self.phase_param.h_init
+        if self.x_average is False:
+            h = variables[f"{Domain} electrode {phase_name}hysteresis state"]
+        else:
+            h = variables[f"X-averaged {domain} electrode {phase_name}hysteresis state"]
+            h_init = pybamm.x_average(h_init)
+
+        self.initial_conditions[h] = h_init

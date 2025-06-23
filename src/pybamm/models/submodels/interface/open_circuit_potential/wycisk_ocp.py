@@ -9,17 +9,37 @@ from . import BaseHysteresisOpenCircuitPotential
 class WyciskOpenCircuitPotential(BaseHysteresisOpenCircuitPotential):
     """
     Class for single-state open-circuit hysteresis model based on he approach outlined by Wycisk :footcite:t:'Wycisk2022'. The hysteresis state variable $h$ is governed by an ODE which depends on the local surface stoichiometry, volumetric interfacial current density, and differential capacity.
+
+    Parameters
+    ----------
+    param : parameter class
+        The parameters to use for this submodel
+    domain : str
+        The domain to implement the model, either: 'Negative' or 'Positive'.
+    reaction : str
+        The name of the reaction being implemented
+    options: dict
+        A dictionary of options to be passed to the model. See
+        :class:`pybamm.BaseBatteryModel`
+    phase : str, optional
+        Phase of the particle (default is "primary")
+    x_average : bool
+        Whether the particle concentration is averaged over the x-direction. Default is False.
     """
 
-    def __init__(self, param, domain, reaction, options, phase="primary"):
-        super().__init__(param, domain, reaction, options=options, phase=phase)
+    def __init__(
+        self, param, domain, reaction, options, phase="primary", x_average=False
+    ):
+        super().__init__(
+            param, domain, reaction, options=options, phase=phase, x_average=x_average
+        )
         pybamm.citations.register("Wycisk2022")
 
     def get_fundamental_variables(self):
         return self._get_hysteresis_state_variables()
 
     def get_coupled_variables(self, variables):
-        _, Domain = self.domain_Domain
+        domain, Domain = self.domain_Domain
         phase_name = self.phase_name
 
         variables = self._get_coupled_variables(variables)
@@ -44,16 +64,25 @@ class WyciskOpenCircuitPotential(BaseHysteresisOpenCircuitPotential):
         return variables
 
     def set_rhs(self, variables):
-        _, Domain = self.domain_Domain
+        domain, Domain = self.domain_Domain
         phase_name = self.phase_name
 
-        i_surf = variables[
-            f"{Domain} electrode {phase_name}interfacial current density [A.m-2]"
-        ]
-        sto_surf = variables[f"{Domain} {phase_name}particle surface stoichiometry"]
-        T = variables[f"{Domain} electrode temperature [K]"]
-        h = variables[f"{Domain} electrode {phase_name}hysteresis state"]
-
+        if self.x_average is False:
+            i_surf = variables[
+                f"{Domain} electrode {phase_name}interfacial current density [A.m-2]"
+            ]
+            sto_surf = variables[f"{Domain} {phase_name}particle surface stoichiometry"]
+            T = variables[f"{Domain} electrode temperature [K]"]
+            h = variables[f"{Domain} electrode {phase_name}hysteresis state"]
+        else:
+            i_surf = variables[
+                f"X-averaged {domain} electrode {phase_name}interfacial current density [A.m-2]"
+            ]
+            sto_surf = variables[
+                f"X-averaged {domain} {phase_name}particle surface stoichiometry"
+            ]
+            T = variables[f"X-averaged {domain} electrode temperature [K]"]
+            h = variables[f"X-averaged {domain} electrode {phase_name}hysteresis state"]
         # check if composite or not
         if phase_name != "":
             Q_cell = variables[f"{Domain} electrode {phase_name}phase capacity [A.h]"]
