@@ -130,56 +130,6 @@ class TestScikitFiniteElement3D:
         l2_error = np.sqrt(np.mean(result[interior_mask] ** 2))
         assert l2_error < 1e-10
 
-    def test_discretise_equations_cylinder(self):
-        try:
-            mesh = get_unit_3d_mesh_for_testing(
-                xpts=5,
-                ypts=5,
-                zpts=5,
-                geom_type="cylinder",
-                radius=0.5,
-                height=1.0,
-                h=0.1,
-            )
-        except pybamm.DiscretisationError as e:
-            pytest.skip(f"Cylinder mesh generation failed: {e}")
-
-        spatial_methods = {"current collector": pybamm.ScikitFiniteElement3D()}
-        disc = pybamm.Discretisation(mesh, spatial_methods)
-        var = pybamm.Variable("var", domain="current collector")
-        source_term = pybamm.source(4, var)
-        eqn = pybamm.laplacian(var) - source_term
-
-        x_sym = pybamm.SpatialVariable("x", "current collector")
-        y_sym = pybamm.SpatialVariable("y", "current collector")
-        processed_x = disc.process_symbol(x_sym)
-        processed_y = disc.process_symbol(y_sym)
-        u_analytical_sym = processed_x**2 + processed_y**2
-
-        all_boundaries = ["side wall", "top cap", "bottom cap"]
-        disc.bcs = {
-            var: {name: (u_analytical_sym, "Dirichlet") for name in all_boundaries}
-        }
-
-        disc.set_variable_slices([var])
-        eqn_disc = disc.process_symbol(eqn)
-        submesh = mesh["current collector"]
-        x_num, y_num, z_num = submesh.nodes.T
-        u_analytical_num = x_num**2 + y_num**2
-        result = eqn_disc.evaluate(None, u_analytical_num)
-
-        boundary_dofs = np.unique(
-            np.concatenate(
-                [getattr(submesh, f"{name}_dofs") for name in all_boundaries]
-            )
-        )
-        interior_mask = np.ones(submesh.npts, dtype=bool)
-        interior_mask[boundary_dofs] = False
-
-        l2_error = np.sqrt(np.mean(result[interior_mask] ** 2))
-
-        assert l2_error < 1e-2
-
     def test_divergence_3d_manufactured(self):
         mesh = get_unit_3d_mesh_for_testing(h=0.1)
         disc = pybamm.Discretisation(
@@ -470,22 +420,6 @@ class TestScikitFiniteElement3D:
         expected_result = const_value * analytical_area
         np.testing.assert_allclose(numerical_result, expected_result, rtol=5e-2)
 
-    def test_cylinder_mesh_properties(self):
-        mesh = get_3d_mesh_for_testing(
-            xpts=6,
-            ypts=6,
-            zpts=6,
-            geom_type="cylinder",
-            include_particles=False,
-            radius=0.4,
-            height=0.8,
-        )
-        nodes = mesh["negative electrode"].nodes
-        radii = np.sqrt(nodes[:, 0] ** 2 + nodes[:, 1] ** 2)
-        assert radii.max() <= 0.42
-        assert nodes[:, 2].min() >= -0.1
-        assert nodes[:, 2].max() <= 0.9
-
     def test_disc_spatial_var_3d(self):
         mesh = get_unit_3d_mesh_for_testing(
             xpts=4, ypts=4, zpts=4, geom_type="box", include_particles=False
@@ -597,55 +531,6 @@ class TestScikitFiniteElement3D:
             solution.y.flatten(), u_exact_at_nodes.flatten(), rtol=1e-2, atol=1e-2
         )
 
-    def test_laplacian_manufactured_solution_on_cylinder_polynomial(self):
-        radius = 0.5
-        height = 1.0
-        mesh = get_unit_3d_mesh_for_testing(
-            geom_type="cylinder", radius=radius, height=height, h=0.2
-        )
-
-        model = pybamm.BaseModel()
-        u = pybamm.Variable("u", "current collector")
-
-        x = pybamm.SpatialVariable("x", "current collector")
-        y = pybamm.SpatialVariable("y", "current collector")
-        z = pybamm.SpatialVariable("z", "current collector")
-
-        u_exact = x * y * z * (1 - z)
-
-        f = -(-2 * x * y)
-
-        model.algebraic = {u: pybamm.laplacian(u) - pybamm.source(f, u)}
-
-        model.boundary_conditions = {
-            u: {
-                "bottom cap": (pybamm.Scalar(0), "Dirichlet"),
-                "top cap": (pybamm.Scalar(0), "Dirichlet"),
-                "side wall": (u_exact, "Dirichlet"),
-            }
-        }
-
-        model.initial_conditions = {u: pybamm.Scalar(0)}
-        model.variables = {"u": u}
-
-        spatial_methods = {"current collector": pybamm.ScikitFiniteElement3D()}
-        disc = pybamm.Discretisation(mesh, spatial_methods)
-        disc.process_model(model)
-
-        solver = pybamm.AlgebraicSolver()
-        solution = solver.solve(model)
-
-        u_numerical = solution.y.flatten()
-
-        nodes = mesh["current collector"].nodes
-        x_nodes = nodes[:, 0]
-        y_nodes = nodes[:, 1]
-        z_nodes = nodes[:, 2]
-
-        u_analytical = x_nodes * y_nodes * z_nodes * (1 - z_nodes)
-
-        np.testing.assert_allclose(u_numerical, u_analytical, rtol=1e-2, atol=1e-2)
-
     def test_scalar_field_discretization(self):
         mesh = get_unit_3d_mesh_for_testing(h=0.2)
         disc = pybamm.Discretisation(
@@ -715,3 +600,99 @@ class TestScikitFiniteElement3D:
             atol=1e-8,
             err_msg="Scalar field should be accurate at specific points",
         )
+
+    def test_gradient_cylinder_manufactured(self):
+        mesh = get_unit_3d_mesh_for_testing(
+            geom_type="cylinder", r_inner=0.1, radius=0.5, height=1.0, h=0.15
+        )
+        disc = pybamm.Discretisation(
+            mesh, {"current collector": pybamm.ScikitFiniteElement3D()}
+        )
+        var = pybamm.Variable("var", domain="current collector")
+        disc.set_variable_slices([var])
+        grad_disc = disc.process_symbol(pybamm.grad(var))
+        nodes = mesh["current collector"].nodes
+        x, y, z = nodes.T
+        r = np.sqrt(x**2 + y**2)
+        u_exact_num = r**2 * z
+        grad_u_exact_r = 2 * r * z
+        grad_u_exact_theta = np.zeros_like(r)
+        grad_u_exact_z = r**2
+        grad_eval = grad_disc.evaluate(None, u_exact_num)
+        l2_error_r = np.sqrt(np.mean((grad_eval[:, 0] - grad_u_exact_r) ** 2))
+        l2_error_theta = np.sqrt(np.mean((grad_eval[:, 1] - grad_u_exact_theta) ** 2))
+        l2_error_z = np.sqrt(np.mean((grad_eval[:, 2] - grad_u_exact_z) ** 2))
+        assert l2_error_r < 0.1
+        assert l2_error_theta < 5e-2
+        assert l2_error_z < 0.1
+
+    def test_laplacian_cylinder_manufactured(self):
+        mesh = get_unit_3d_mesh_for_testing(
+            geom_type="cylinder", r_inner=0.2, radius=0.5, height=1.0, h=0.1
+        )
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u", "current collector")
+        r = pybamm.SpatialVariable("r", "current collector")
+        z = pybamm.SpatialVariable("z", "current collector")
+        u_exact = r**2 * z
+        f = -4 * z
+        model.algebraic = {u: pybamm.laplacian(u) - pybamm.source(f, u)}
+        model.boundary_conditions = {
+            u: {
+                "bottom": (u_exact, "Dirichlet"),
+                "top": (u_exact, "Dirichlet"),
+                "inner radius": (u_exact, "Dirichlet"),
+                "outer radius": (u_exact, "Dirichlet"),
+            }
+        }
+        model.initial_conditions = {u: pybamm.Scalar(0)}
+        model.variables = {"u": u}
+        spatial_methods = {"current collector": pybamm.ScikitFiniteElement3D()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        disc.process_model(model)
+        solver = pybamm.AlgebraicSolver()
+        solution = solver.solve(model)
+        u_numerical = solution.y.flatten()
+        nodes = mesh["current collector"].nodes
+        x_nodes, y_nodes, z_nodes = nodes.T
+        r_nodes = np.sqrt(x_nodes**2 + y_nodes**2)
+        u_analytical = r_nodes**2 * z_nodes
+        l2_error = np.sqrt(np.mean((u_numerical - u_analytical) ** 2))
+        assert l2_error < 0.08
+
+    def test_divergence_cylinder_manufactured(self):
+        mesh = get_unit_3d_mesh_for_testing(
+            geom_type="cylinder", r_inner=0.1, radius=0.5, height=1.0, h=0.15
+        )
+        disc = pybamm.Discretisation(
+            mesh, {"current collector": pybamm.ScikitFiniteElement3D()}
+        )
+        u = pybamm.Variable("u", domain="current collector")
+        disc.set_variable_slices([u])
+
+        nodes = mesh["current collector"].nodes
+        x, y, z = nodes.T
+        r = np.sqrt(x**2 + y**2)
+
+        # Manufactured solution u = r^3 * z
+        # div(grad(u)) = lap(u) = 9*r*z
+        u_exact_num = r**3 * z
+        div_grad_u_exact_num = 9 * r * z
+
+        div_grad_u_sym = pybamm.div(pybamm.grad(u))
+        div_grad_u_disc = disc.process_symbol(div_grad_u_sym)
+        div_grad_u_eval = div_grad_u_disc.evaluate(None, u_exact_num).flatten()
+
+        l2_error = np.sqrt(np.mean((div_grad_u_eval - div_grad_u_exact_num) ** 2))
+        assert l2_error < 1.5
+
+    def test_cylinder_mesh_properties(self):
+        mesh = get_unit_3d_mesh_for_testing(
+            geom_type="cylinder", radius=0.4, height=0.8
+        )
+        nodes = mesh["current collector"].nodes
+        radii = np.sqrt(nodes[:, 0] ** 2 + nodes[:, 1] ** 2)
+        assert radii.max() < 0.4 + 1e-7
+        assert radii.min() > 0.0 - 1e-7
+        assert nodes[:, 2].min() > 0.0 - 1e-7
+        assert nodes[:, 2].max() < 0.8 + 1e-7

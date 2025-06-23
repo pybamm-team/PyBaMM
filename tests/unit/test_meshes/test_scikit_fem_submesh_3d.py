@@ -46,41 +46,35 @@ class TestScikitFemGenerator3D:
         except ImportError:
             pytest.skip("scikit-fem not available")
 
+        r = pybamm.SpatialVariable("r", ["domain"], coord_sys="cylindrical polar")
+        z = pybamm.SpatialVariable("z", ["domain"], coord_sys="cylindrical polar")
+
         geometry = {
             "domain": {
-                pybamm.standard_spatial_vars.x: {"min": -1, "max": 1},
-                pybamm.standard_spatial_vars.y: {"min": -1, "max": 1},
-                pybamm.standard_spatial_vars.z: {"min": 0, "max": 2},
+                r: {"min": 0.1, "max": 1.0},
+                z: {"min": 0, "max": 2.0},
             }
         }
 
-        mesh_gen = ScikitFemGenerator3D("cylinder", radius=1.0, height=2.0, h=0.5)
+        mesh_gen = ScikitFemGenerator3D("cylinder", h=0.5)
 
-        mesh = pybamm.Mesh(
-            geometry,
-            {"domain": mesh_gen},
-            {
-                pybamm.standard_spatial_vars.x: 5,
-                pybamm.standard_spatial_vars.y: 5,
-                pybamm.standard_spatial_vars.z: 5,
-            },
-        )
+        var_pts = {r: 10, z: 10}
+
+        mesh = pybamm.Mesh(geometry, {"domain": mesh_gen}, var_pts)
 
         submesh = mesh["domain"]
-        assert hasattr(submesh, "_skfem_mesh"), "Mesh should have _skfem_mesh attribute"
-        assert submesh.dimension == 3, "Mesh should be 3D"
+        assert hasattr(submesh, "_skfem_mesh")
+        assert submesh.dimension == 3
+        assert submesh.coord_sys == "cylindrical polar"
 
         nodes = submesh.nodes
-        x_coords = nodes[:, 0]
-        y_coords = nodes[:, 1]
-        z_coords = nodes[:, 2]
+        x_coords, y_coords, z_coords = nodes.T
         radii = np.sqrt(x_coords**2 + y_coords**2)
 
-        assert np.mean(radii <= 1.1) > 0.8, (
-            "Most nodes should be within cylinder radius"
-        )
-        assert np.min(z_coords) >= -0.1, "Z coordinates should be non-negative"
-        assert np.max(z_coords) <= 2.1, "Z coordinates should be within height"
+        assert np.max(radii) < 1.0 + 1e-7
+        assert np.min(radii) > 0.1 - 1e-7
+        assert np.min(z_coords) >= 0.0 - 1e-7
+        assert np.max(z_coords) <= 2.0 + 1e-7
 
     def test_invalid_geometry_type(self):
         try:
@@ -88,26 +82,8 @@ class TestScikitFemGenerator3D:
         except ImportError:
             pytest.skip("scikit-fem not available")
 
-        geometry = {
-            "domain": {
-                pybamm.standard_spatial_vars.x: {"min": 0, "max": 1},
-                pybamm.standard_spatial_vars.y: {"min": 0, "max": 1},
-                pybamm.standard_spatial_vars.z: {"min": 0, "max": 1},
-            }
-        }
-
-        mesh_gen = ScikitFemGenerator3D("invalid_type", h=0.3)
-
-        with pytest.raises(ValueError, match="Unknown geom_type"):
-            pybamm.Mesh(
-                geometry,
-                {"domain": mesh_gen},
-                {
-                    pybamm.standard_spatial_vars.x: 5,
-                    pybamm.standard_spatial_vars.y: 5,
-                    pybamm.standard_spatial_vars.z: 5,
-                },
-            )
+        with pytest.raises(pybamm.GeometryError, match="geom_type must be one of"):
+            ScikitFemGenerator3D("invalid_type", h=0.3)
 
 
 class TestScikitFemSubMesh3D:

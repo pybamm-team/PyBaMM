@@ -1,4 +1,4 @@
-3D Scikit Sub Mesh
+3D Sub Meshes
 ==================
 
 .. autoclass:: pybamm.ScikitFemSubMesh3D

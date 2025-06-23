@@ -116,35 +116,43 @@ def get_mesh_for_testing(
     return pybamm.Mesh(geometry, submesh_types, var_pts)
 
 
-def get_unit_3d_mesh_for_testing(
-    xpts=5, ypts=5, zpts=5, geom_type="box", include_particles=False, **geom_params
-):
-    """Build a simple unit cube 3D mesh for testing."""
-
-    # Create simple unit cube geometry
-    x = pybamm.SpatialVariable("x", ["current collector"])
-    y = pybamm.SpatialVariable("y", ["current collector"])
-    z = pybamm.SpatialVariable("z", ["current collector"])
-
-    geometry = {
-        "current collector": {
-            x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
-            y: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
-            z: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+def get_unit_3d_mesh_for_testing(geom_type="box", **geom_params):
+    if geom_type == "box":
+        x = pybamm.SpatialVariable("x", ["current collector"])
+        y = pybamm.SpatialVariable("y", ["current collector"])
+        z = pybamm.SpatialVariable("z", ["current collector"])
+        geometry = {
+            "current collector": {
+                x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+                y: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+                z: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+            }
         }
-    }
+        var_pts = {x: 5, y: 5, z: 5}
+    elif geom_type == "cylinder":
+        r = pybamm.SpatialVariable(
+            "r", ["current collector"], coord_sys="cylindrical polar"
+        )
+        z = pybamm.SpatialVariable(
+            "z", ["current collector"], coord_sys="cylindrical polar"
+        )
+        radius = geom_params.get("radius", 1.0)
+        height = geom_params.get("height", 1.0)
+        r_inner = geom_params.get("r_inner", 0.0)
+        geometry = {
+            "current collector": {
+                r: {"min": pybamm.Scalar(r_inner), "max": pybamm.Scalar(radius)},
+                z: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(height)},
+            }
+        }
+        var_pts = {r: 5, z: 5}
+    else:
+        raise ValueError(f"geom_type '{geom_type}' not recognised")
 
     generator_params = {"h": 0.2}
     generator_params.update(geom_params)
-
     generator = pybamm.ScikitFemGenerator3D(geom_type, **generator_params)
-
-    submesh_types = {
-        "current collector": generator,
-    }
-
-    var_pts = {x: xpts, y: ypts, z: zpts}
-
+    submesh_types = {"current collector": generator}
     return pybamm.Mesh(geometry, submesh_types, var_pts)
 
 

@@ -49,6 +49,12 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
             entries = mesh.nodes[:, 1][:, np.newaxis]
         elif symbol.name == "z":
             entries = mesh.nodes[:, 2][:, np.newaxis]
+        elif symbol.name == "r":
+            entries = np.sqrt(mesh.nodes[:, 0] ** 2 + mesh.nodes[:, 1] ** 2)[
+                :, np.newaxis
+            ]
+        elif symbol.name == "theta":
+            entries = np.arctan2(mesh.nodes[:, 1], mesh.nodes[:, 0])[:, np.newaxis]
         else:
             raise pybamm.GeometryError(
                 f"Spatial variable must be 'x', 'y' or 'z', not {symbol.name}"
@@ -77,6 +83,7 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
         skfem = import_optional_dependency("skfem")
         domain = symbol.domain[0]
         mesh = self.mesh[domain]
+        coord_sys = mesh.coord_sys
 
         grad_x_matrix, grad_y_matrix, grad_z_matrix = self.gradient_matrix(
             symbol, boundary_conditions
@@ -93,10 +100,30 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
         grad_y = mass_inv @ (grad_y_matrix @ discretised_symbol)
         grad_z = mass_inv @ (grad_z_matrix @ discretised_symbol)
 
-        # Create concatenation
-        grad = pybamm.Concatenation(
-            grad_x, grad_y, grad_z, check_domain=False, concat_fun=np.hstack
-        )
+        if coord_sys == "cartesian":
+            grad = pybamm.Concatenation(
+                grad_x, grad_y, grad_z, check_domain=False, concat_fun=np.hstack
+            )
+        elif coord_sys == "cylindrical polar":
+            x_nodes = pybamm.Vector(mesh.nodes[:, 0][:, np.newaxis])
+            y_nodes = pybamm.Vector(mesh.nodes[:, 1][:, np.newaxis])
+            r_nodes = pybamm.sqrt(x_nodes**2 + y_nodes**2)
+            r_nodes.entries[r_nodes.entries < 1e-12] = 1e-12
+
+            cos_theta = x_nodes / r_nodes
+            sin_theta = y_nodes / r_nodes
+
+            grad_r = grad_x * cos_theta + grad_y * sin_theta
+            grad_theta = -grad_x * sin_theta + grad_y * cos_theta
+
+            grad = pybamm.Concatenation(
+                grad_r, grad_theta, grad_z, check_domain=False, concat_fun=np.hstack
+            )
+        else:
+            raise pybamm.DiscretisationError(
+                f"Unknown coordinate system '{coord_sys}'"
+            )  # pragma: no cover
+
         grad.copy_domains(symbol)
 
         return grad
@@ -194,12 +221,10 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
         """
         domain_key = symbol.domain[0]
 
-        if (
+        if not (
             hasattr(discretised_symbol, "orphans")
             and len(discretised_symbol.orphans) == 3
         ):
-            Fx, Fy, Fz = discretised_symbol.orphans
-        else:
             raise ValueError(
                 "divergence expects a concatenation of 3 vector components"
             )  # pragma: no cover
@@ -209,6 +234,23 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
 
         skfem = import_optional_dependency("skfem")
         mesh = self.mesh[domain_key]
+        coord_sys = mesh.coord_sys
+
+        if coord_sys == "cartesian":
+            Fx, Fy, Fz = discretised_symbol.orphans
+        elif coord_sys == "cylindrical polar":
+            Fr, Ftheta, Fz_cyl = discretised_symbol.orphans
+            x_nodes = pybamm.Vector(mesh.nodes[:, 0][:, np.newaxis])
+            y_nodes = pybamm.Vector(mesh.nodes[:, 1][:, np.newaxis])
+            r_nodes = pybamm.sqrt(x_nodes**2 + y_nodes**2)
+            r_nodes.entries[r_nodes.entries < 1e-12] = 1e-12
+
+            cos_theta = x_nodes / r_nodes
+            sin_theta = y_nodes / r_nodes
+
+            Fx = Fr * cos_theta - Ftheta * sin_theta
+            Fy = Fr * sin_theta + Ftheta * cos_theta
+            Fz = Fz_cyl
 
         @skfem.BilinearForm
         def mass_form(u, v, w):
@@ -248,10 +290,47 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
         skfem = import_optional_dependency("skfem")
         domain = symbol.domain[0]
         mesh = self.mesh[domain]
+        coord_sys = mesh.coord_sys
 
-        @skfem.BilinearForm
-        def stiffness_form(u, v, w):
-            return sum(u.grad * v.grad)
+        if coord_sys == "cartesian":
+
+            @skfem.BilinearForm
+            def stiffness_form(u, v, w):
+                return (
+                    u.grad[0] * v.grad[0]
+                    + u.grad[1] * v.grad[1]
+                    + u.grad[2] * v.grad[2]
+                )
+        elif coord_sys == "cylindrical polar":
+
+            @skfem.BilinearForm
+            def stiffness_form(u, v, w):
+                x, y = w.x[0], w.x[1]
+                r_squared = x**2 + y**2
+                integrand = np.zeros_like(r_squared)
+                safe_indices = r_squared > 1e-24
+                if np.any(safe_indices):
+                    r_safe = np.sqrt(r_squared[safe_indices])
+                    u_dx, u_dy, u_dz = u.grad[:, safe_indices]
+                    v_dx, v_dy, v_dz = v.grad[:, safe_indices]
+                    x_safe, y_safe = x[safe_indices], y[safe_indices]
+                    grad_u_r = (u_dx * x_safe + u_dy * y_safe) / r_safe
+                    grad_v_r = (v_dx * x_safe + v_dy * y_safe) / r_safe
+                    grad_u_theta = u_dx * -y_safe + u_dy * x_safe
+                    grad_v_theta = v_dx * -y_safe + v_dy * x_safe
+                    grad_u_z = u_dz
+                    grad_v_z = v_dz
+                    integrand_safe = (
+                        r_safe * (grad_u_r * grad_v_r)
+                        + (1 / r_safe) * (grad_u_theta * grad_v_theta)
+                        + r_safe * (grad_u_z * grad_v_z)
+                    )
+                    integrand[safe_indices] = integrand_safe
+                return integrand
+        else:
+            raise pybamm.DiscretisationError(
+                f"Unknown coordinate system '{coord_sys}'"
+            )  # pragma: no cover
 
         stiffness = skfem.asm(stiffness_form, mesh.basis)
 

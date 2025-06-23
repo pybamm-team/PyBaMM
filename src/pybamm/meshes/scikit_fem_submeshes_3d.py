@@ -62,6 +62,11 @@ class ScikitFemGenerator3D(pybamm.MeshGenerator):
     """
 
     def __init__(self, geom_type, **gen_params):
+        supported_geometries = ["box", "cylinder"]
+        if geom_type not in supported_geometries:
+            raise pybamm.GeometryError(
+                f"geom_type must be one of {supported_geometries}, not '{geom_type}'"
+            )  # pragma: no cover
         super().__init__(ScikitFemSubMesh3D)
         self.geom_type = geom_type
         self.gen_params = gen_params
@@ -112,40 +117,44 @@ class ScikitFemGenerator3D(pybamm.MeshGenerator):
         subdomains = {"default": np.arange(mesh.nelements)}
         return mesh.with_boundaries(boundaries).with_subdomains(subdomains)
 
-    def _make_cylinder_mesh(self, radius, height, h):
+    def _make_cylindrical_mesh(self, r_lim, z_lim, h):
         """
-        Create a cylinder mesh using structured extrusion from 2D base.
+        Create a cylindrical annulus mesh.
 
         Parameters
         ----------
-        radius : float
-            Cylinder radius
-        height : float
-            Cylinder height
+        r_lim : tuple
+            Radial limits (inner radius, outer radius)
+        z_lim : tuple
+            Vertical limits (z_min, z_max)
         h : float
             Target mesh size
-
         Returns
         -------
         skfem.MeshTet
-            Cylinder mesh with proper boundary tags
+            Cylindrical mesh with proper boundary tags
         """
         skfem = import_optional_dependency("skfem")
         from scipy.spatial import Delaunay
 
-        n_radial = max(5, int(radius / h))
-        n_theta_base = max(12, int(2 * np.pi * radius / h))
-        r_coords = np.sqrt(np.linspace(0, radius**2, n_radial))
+        r_inner, r_outer = r_lim
+        height = z_lim[1] - z_lim[0]
 
-        points_list = [[0, 0]]
-        for r in r_coords[1:]:
-            n_theta = max(1, int(n_theta_base * (r / radius)))
-            thetas = np.linspace(0, 2 * np.pi, n_theta, endpoint=False)
-            for theta in thetas:
-                points_list.append([r * np.cos(theta), r * np.sin(theta)])
+        n_radial = max(3, int((r_outer - r_inner) / h) + 1)
+        n_theta_base = max(12, int(2 * np.pi * r_outer / h))
+        r_coords = np.linspace(r_inner, r_outer, n_radial)
+
+        points_list = []
+        for r in r_coords:
+            if r > 1e-9:
+                n_theta = max(6, int(n_theta_base * (r / r_outer)))
+                thetas = np.linspace(0, 2 * np.pi, n_theta, endpoint=False)
+                for theta in thetas:
+                    points_list.append([r * np.cos(theta), r * np.sin(theta)])
 
         points_2d = np.array(points_list)
-        points_2d += 1e-8 * np.random.randn(*points_2d.shape)  # random perturbation
+        points_2d += 1e-8 * np.random.randn(*points_2d.shape)
+
         tri_2d = Delaunay(points_2d)
         triangles_base = tri_2d.simplices
 
@@ -160,7 +169,7 @@ class ScikitFemGenerator3D(pybamm.MeshGenerator):
         triangles_base = triangles_base[np.array(areas) > 1e-12]
 
         n_z = max(5, int(height / h))
-        z_coords = np.linspace(0, height, n_z)
+        z_coords = np.linspace(z_lim[0], z_lim[1], n_z)
         n_nodes_per_layer = points_2d.shape[0]
 
         nodes_3d = np.zeros((n_nodes_per_layer * n_z, 3))
@@ -201,37 +210,42 @@ class ScikitFemGenerator3D(pybamm.MeshGenerator):
         bottom_nodes = np.arange(n_nodes_per_layer)
         top_nodes = np.arange(nodes_3d.shape[0] - n_nodes_per_layer, nodes_3d.shape[0])
 
-        outer_radius_nodes_2d = np.where(
-            np.isclose(np.linalg.norm(points_2d, axis=1), radius, rtol=1e-3)
-        )[0]
-        side_nodes = np.concatenate(
+        points_2d_r = np.linalg.norm(points_2d, axis=1)
+        inner_radius_nodes_2d = np.where(np.isclose(points_2d_r, r_inner, rtol=1e-3))[0]
+        outer_radius_nodes_2d = np.where(np.isclose(points_2d_r, r_outer, rtol=1e-3))[0]
+
+        inner_side_nodes = np.concatenate(
+            [inner_radius_nodes_2d + (i * n_nodes_per_layer) for i in range(n_z)]
+        )
+        outer_side_nodes = np.concatenate(
             [outer_radius_nodes_2d + (i * n_nodes_per_layer) for i in range(n_z)]
         )
 
         boundary_facets = mesh.boundary_facets()
         facet_nodes = mesh.facets[:, boundary_facets]
 
-        bottom_facets = []
-        top_facets = []
-        side_facets = []
+        bottom_facets, top_facets, inner_facets, outer_facets = [], [], [], []
 
         for i, facet_idx in enumerate(boundary_facets):
             nodes_in_facet = facet_nodes[:, i]
-
             if np.all(np.isin(nodes_in_facet, bottom_nodes)):
                 bottom_facets.append(facet_idx)
             elif np.all(np.isin(nodes_in_facet, top_nodes)):
                 top_facets.append(facet_idx)
-            elif np.any(np.isin(nodes_in_facet, side_nodes)):
-                side_facets.append(facet_idx)
+            elif np.any(np.isin(nodes_in_facet, inner_side_nodes)):
+                inner_facets.append(facet_idx)
+            elif np.any(np.isin(nodes_in_facet, outer_side_nodes)):
+                outer_facets.append(facet_idx)
 
         boundaries = {}
         if bottom_facets:
-            boundaries["bottom cap"] = np.array(bottom_facets)
+            boundaries["bottom"] = np.array(bottom_facets)
         if top_facets:
-            boundaries["top cap"] = np.array(top_facets)
-        if side_facets:
-            boundaries["side wall"] = np.array(side_facets)
+            boundaries["top"] = np.array(top_facets)
+        if inner_facets:
+            boundaries["inner radius"] = np.array(inner_facets)
+        if outer_facets:
+            boundaries["outer radius"] = np.array(outer_facets)
 
         if boundaries:
             all_boundary_nodes = set()
@@ -266,12 +280,16 @@ class ScikitFemGenerator3D(pybamm.MeshGenerator):
             x_lim = tuple(lims[x_key].values())
             y_lim = tuple(lims[y_key].values())
             z_lim = tuple(lims[z_key].values())
+            coord_sys = "cartesian"
             mesh = self._make_box_mesh(x_lim, y_lim, z_lim, h)
 
         elif self.geom_type == "cylinder":
-            radius = self.gen_params.get("radius", 0.4)
-            height = self.gen_params.get("height", 0.8)
-            mesh = self._make_cylinder_mesh(radius, height, h)
+            r_key = next(k for k in lims if k.name == "r")
+            z_key = next(k for k in lims if k.name == "z")
+            r_lim = tuple(lims[r_key].values())
+            z_lim = tuple(lims[z_key].values())
+            coord_sys = "cylindrical polar"
+            mesh = self._make_cylindrical_mesh(r_lim, z_lim, h)
         else:
             raise ValueError(f"Unknown geom_type: {self.geom_type}")  # pragma: no cover
 
@@ -282,7 +300,7 @@ class ScikitFemGenerator3D(pybamm.MeshGenerator):
 
         nodes = mesh.p.T
         elements = mesh.t.T
-        submesh = self.submesh_type(mesh, nodes, elements, "cartesian")
+        submesh = self.submesh_type(mesh, nodes, elements, coord_sys)
         return submesh
 
 
