@@ -48,7 +48,7 @@ geometry = {
 }
 
 submesh_types = {
-    "current collector": pybamm.ScikitFemGenerator3D(geom_type="cylinder", h=0.08)
+    "current collector": pybamm.ScikitFemGenerator3D(geom_type="cylinder", h=0.1)
 }
 
 var_pts = {r: None, theta: None, z: None}
