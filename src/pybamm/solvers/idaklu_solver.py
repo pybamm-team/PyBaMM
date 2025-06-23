@@ -952,10 +952,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
         sol.y = sol.y.reshape((number_of_timesteps, number_of_samples))
         startk = 0
         for var in self.output_variables:
-            # ExplicitTimeIntegral's are not computed as part of the solver and
-            # do not need to be converted
-            if isinstance(model.variables_and_events[var], pybamm.ExplicitTimeIntegral):
-                continue
             if model.convert_to_format == "casadi":
                 len_of_var = (
                     self._setup["var_fcns"][var](0.0, 0.0, 0.0).sparsity().nnz()
@@ -974,10 +970,11 @@ class IDAKLUSolver(pybamm.BaseSolver):
                     + f"{model.convert_to_format} "
                     + f"(jax_evaluator={self._options['jax_evaluator']})"
                 )
+            data = sol.y[:, startk : (startk + len_of_var)]
             newsol._variables[var] = pybamm.ProcessedVariableComputed(
                 [model.variables_and_events[var]],
                 base_variables,
-                [sol.y[:, startk : (startk + len_of_var)]],
+                [data],
                 newsol,
             )
             # Add sensitivities
