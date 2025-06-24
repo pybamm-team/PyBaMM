@@ -978,7 +978,7 @@ class BaseSolver:
                 i == len(discontinuities) - 1
                 or discontinuities[i] < discontinuities[i + 1]
             )
-            and v > 0
+            and v > t_eval[0]
         ]
 
         # remove any discontinuities after end of t_eval
