@@ -1549,7 +1549,6 @@ class TestProcessedVariable:
         )
 
     def test_as_computed_2D(self):
-
         var = pybamm.Variable(
             "var",
             domain=["negative particle"],
