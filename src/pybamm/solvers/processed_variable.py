@@ -565,17 +565,30 @@ class ProcessedVariable(BaseProcessedVariable):
         )
 
     def as_computed(self):
-        # materialise the data we really need
-        base_data = [
-            np.asarray(f(ts, ys, u)).T  # (n_t, n_space)
-            for ts, ys, u, f in zip(
-                self.all_ts,
-                self.all_ys,
-                self.all_inputs_casadi,
-                self.base_variables_casadi,
-                strict=False,
-            )
-        ]
+        base_data = []
+
+        for ts, ys, u, f in zip(
+            self.all_ts,
+            self.all_ys,
+            self.all_inputs_casadi,
+            self.base_variables_casadi,
+            strict=False,
+        ):
+            outputs = []
+
+            for i in range(ys.shape[1]):
+                y_t = ys[:, i]
+                if y_t.ndim == 1:
+                    y_t = y_t[:, None]  # Ensure column vector
+
+                result = f(ts[i], y_t, u)
+                result_np = np.asarray(result).flatten()
+
+                outputs.append(result_np)
+
+            # Convert list of (n_vars,) → shape (n_t, n_vars)
+            output_array = np.vstack(outputs)  # shape (n_t, n_vars)
+            base_data.append(output_array)
 
         cpv = pybamm.ProcessedVariableComputed(
             self.base_variables,
