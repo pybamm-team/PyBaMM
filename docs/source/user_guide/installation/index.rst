@@ -33,7 +33,7 @@ It can be installed using ``pip`` or ``conda``, or from source.
 Optional solvers
 ----------------
 
-The following solvers are optionally available:
+The following solver is optionally available:
 
 *  `jax <https://jax.readthedocs.io/en/latest/notebooks/quickstart.html>`_ -based solver, see :ref:`optional-jaxsolver` .
 
