@@ -3,6 +3,7 @@
 #
 
 import pybamm
+from tests import get_discretisation_for_testing
 
 
 class TestScalar:
@@ -49,3 +50,35 @@ class TestScalar:
         assert a.to_json() == json_dict
 
         assert pybamm.Scalar._from_json(json_dict) == a
+
+
+class TestConstant:
+    def test_constant_eval(self):
+        a = pybamm.Constant(5, "a")
+        assert a.value == 5
+        assert a.evaluate() == 5
+        assert a.name == "a"
+
+    def test_constant_operations(self):
+        a = pybamm.Constant(5, "a")
+        b = pybamm.Constant(6, "b")
+        c = a + b
+        assert str(c) == "a + b"
+        assert c.is_constant() is False
+        assert c.evaluate() == 11
+        assert isinstance(c, pybamm.Addition)
+
+    def test_simplify_on_discretisation(self):
+        a = pybamm.Variable("a")
+        b = pybamm.Scalar(4)
+        c = pybamm.Constant(5, "c")
+        expr = a * (b * c)
+
+        disc = get_discretisation_for_testing()
+        disc.y_slices = {a: [slice(0, 1)]}
+
+        disc_expr = disc.process_symbol(expr)
+        assert isinstance(disc_expr, pybamm.Multiplication)
+        assert disc_expr.children[0] == pybamm.Scalar(20)
+        assert isinstance(disc_expr.children[1], pybamm.StateVector)
+        assert disc_expr.children[1].y_slices == (slice(0, 1, None),)
