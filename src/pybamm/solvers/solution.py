@@ -210,7 +210,7 @@ class Solution:
 
     def set_y(self):
         try:
-            if isinstance(self.all_ys[0], (casadi.DM, casadi.MX)):
+            if isinstance(self.all_ys[0], casadi.DM | casadi.MX):
                 self._y = casadi.horzcat(*self.all_ys)
             else:
                 self._y = np.hstack(self.all_ys)
@@ -432,7 +432,9 @@ class Solution:
         # therefore only get set up once
         vars_casadi = []
         for i, (model, ys, inputs, var_pybamm) in enumerate(
-            zip(self.all_models, self.all_ys, self.all_inputs, vars_pybamm)
+            zip(
+                self.all_models, self.all_ys, self.all_inputs, vars_pybamm, strict=False
+            )
         ):
             if self.variables_returned and var_pybamm.has_symbol_of_classes(
                 pybamm.expression_tree.state_vector.StateVector
@@ -750,10 +752,10 @@ class Solution:
         )
         if other.all_ts[0][0] == self.all_ts[-1][-1]:
             # Skip first time step if it is repeated
-            all_ts = self.all_ts + [other.all_ts[0][1:]] + other.all_ts[1:]
-            all_ys = self.all_ys + [other.all_ys[0][:, 1:]] + other.all_ys[1:]
+            all_ts = [*self.all_ts, other.all_ts[0][1:], *other.all_ts[1:]]
+            all_ys = [*self.all_ys, other.all_ys[0][:, 1:], *other.all_ys[1:]]
             if hermite_interpolation:
-                all_yps = self.all_yps + [other.all_yps[0][:, 1:]] + other.all_yps[1:]
+                all_yps = [*self.all_yps, other.all_yps[0][:, 1:], *other.all_yps[1:]]
         else:
             all_ts = self.all_ts + other.all_ts
             all_ys = self.all_ys + other.all_ys
@@ -887,7 +889,7 @@ class EmptySolution:
         self.t = t
 
     def __add__(self, other):
-        if isinstance(other, (EmptySolution, Solution)):
+        if isinstance(other, EmptySolution | Solution):
             return other.copy()
 
     def __radd__(self, other):

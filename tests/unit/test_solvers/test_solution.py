@@ -206,7 +206,7 @@ class TestSolution:
 
         sol_copy = sol1.copy()
         assert sol_copy.all_ts == sol1.all_ts
-        for ys_copy, ys1 in zip(sol_copy.all_ys, sol1.all_ys):
+        for ys_copy, ys1 in zip(sol_copy.all_ys, sol1.all_ys, strict=False):
             np.testing.assert_array_equal(ys_copy, ys1)
         assert sol_copy.all_inputs == sol1.all_inputs
         assert sol_copy.all_inputs_casadi == sol1.all_inputs_casadi
@@ -565,7 +565,7 @@ class TestSolution:
         solver = solver_class()
         range = [0.5, 1.0, 2.0]
         range2 = np.ones(3)
-        for a, b in zip(range, range2):
+        for a, b in zip(range, range2, strict=False):
             sol = solver.solve(
                 model, t_eval=t_eval, t_interp=t_interp, inputs={"a": a, "b": b}
             )

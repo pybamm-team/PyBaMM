@@ -2,16 +2,18 @@
 
 ## Features
 
+- Added a `Constant` symbol for named constants. This is a subclass of `Scalar` and is used to represent named constants such as the gas constant. This avoids constants being simplified out when constructing expressions. ([#5070](https://github.com/pybamm-team/PyBaMM/pull/5070))
 - Generalise `pybamm.DiscreteTimeSum` to allow it to be embedded in other expressions ([#5044](https://github.com/pybamm-team/PyBaMM/pull/5044))
-
-## Optimizations
+- Adds `all` key-value pair to `output_variables` sensitivity dictionaries, accessible through `solution[var].sensitivities['all']`. Aligns shape with conventional solution sensitivities object. ([#5067](https://github.com/pybamm-team/PyBaMM/pull/5067))
 
 ## Bug fixes
 
 - Converts sensitivities to numpy objects, fixing bug in `DiscreteTimeSum` sensitivity calculation ([#5037](https://github.com/pybamm-team/PyBaMM/pull/5037))
-
+- Raises error if `pybamm.Interpolant` given 1D x values that are not strictly increasing ([#5061](https://github.com/pybamm-team/PyBaMM/pull/5061))
 
 ## Breaking changes
+
+- Removed support for Python 3.9 ([#5052](https://github.com/pybamm-team/PyBaMM/pull/5052))
 
 # [v25.6.0](https://github.com/pybamm-team/PyBaMM/tree/v25.6.0) - 2025-05-27
 

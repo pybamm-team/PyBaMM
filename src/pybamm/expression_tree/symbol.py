@@ -163,7 +163,7 @@ def is_matrix_minus_one(expr: Symbol):
 
 def simplify_if_constant(symbol: pybamm.Symbol):
     """
-    Utility function to simplify an expression tree if it evalutes to a constant
+    Utility function to simplify an expression tree if it evaluates to a constant
     scalar, vector or matrix
     """
     if symbol.is_constant():
@@ -755,7 +755,7 @@ class Symbol:
         See :class:`pybamm.Jacobian`.
         """
         jac = pybamm.Jacobian(known_jacs, clear_domain=clear_domain)
-        if not isinstance(variable, (pybamm.StateVector, pybamm.StateVectorDot)):
+        if not isinstance(variable, pybamm.StateVector | pybamm.StateVectorDot):
             raise TypeError(
                 "Jacobian can only be taken with respect to a 'StateVector' "
                 f"or 'StateVectorDot', but {variable} is a {type(variable)}"
