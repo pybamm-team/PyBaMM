@@ -869,6 +869,17 @@ class Discretisation:
             disc_left = self.process_symbol(left)
             disc_right = self.process_symbol(right)
             if symbol.domain == []:
+                if isinstance(disc_left, pybamm.VectorField) or isinstance(disc_right, pybamm.VectorField):
+                    if isinstance(disc_left, pybamm.VectorField) and not isinstance(disc_right, pybamm.VectorField):
+                        disc_right = pybamm.VectorField(disc_right, disc_right)
+                    elif isinstance(disc_right, pybamm.VectorField) and not isinstance(disc_left, pybamm.VectorField):
+                        disc_left = pybamm.VectorField(disc_left, disc_left)
+                    else: # both are vector fields already
+                        pass
+                    disc_lr = pybamm.simplify_if_constant(symbol.create_copy(new_children=[disc_left.lr_field, disc_right.lr_field]))
+                    disc_tb = pybamm.simplify_if_constant(symbol.create_copy(new_children=[disc_left.tb_field, disc_right.tb_field]))
+                    return pybamm.VectorField(disc_lr, disc_tb)
+                
                 return pybamm.simplify_if_constant(
                     symbol.create_copy(new_children=[disc_left, disc_right])
                 )

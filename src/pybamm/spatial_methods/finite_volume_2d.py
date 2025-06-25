@@ -77,6 +77,8 @@ class FiniteVolume2D(pybamm.SpatialMethod):
             entries = np.tile(lr, repeats)
         elif symbol_direction == "tb":
             entries = np.tile(tb, repeats)
+        else:
+            raise ValueError(f"Direction {symbol_direction} not supported")
         return pybamm.Vector(entries, domains=symbol.domains)
 
     def _gradient(self, symbol, discretised_symbol, boundary_conditions, direction):
@@ -1117,7 +1119,32 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                         raise NotImplementedError
 
                     else:
-                        raise NotImplementedError
+                        dx0 = dx0_lr
+                        dx1 = dx1_lr
+                        dx2 = dx2_lr
+                        a = (dx0 + dx1) * (dx0 + dx1 + dx2) / (dx1 * (dx1 + dx2))
+                        b = -dx0 * (dx0 + dx1 + dx2) / (dx1 * dx2)
+                        c = dx0 * (dx0 + dx1) / (dx2 * (dx1 + dx2))
+                        row_indices = np.arange(0, n_tb)
+                        col_indices_0 = np.arange(0, n_tb * n_lr, n_lr)
+                        col_indices_1 = col_indices_0 + 1
+                        col_indices_2 = col_indices_0 + 2
+                        vals_0 = a * np.ones(n_tb)
+                        vals_1 = b * np.ones(n_tb)
+                        vals_2 = c * np.ones(n_tb)
+                        sub_matrix = csr_matrix(
+                            (
+                                np.hstack([vals_0, vals_1, vals_2]),
+                                (
+                                    np.hstack([row_indices, row_indices, row_indices]),
+                                    np.hstack(
+                                        [col_indices_0, col_indices_1, col_indices_2]
+                                    ),
+                                ),
+                            ),
+                            shape=(n_tb, n_tb * n_lr),
+                        )
+                        additive = pybamm.Scalar(0)
 
                 else:
                     raise NotImplementedError
@@ -1170,12 +1197,48 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                     ):
                         raise NotImplementedError
                     else:
-                        raise NotImplementedError
+                        dxN = dxN_lr
+                        dxNm1 = dxNm1_lr
+                        dxNm2 = dxNm2_lr
+                        a = (
+                            (dxN + dxNm1)
+                            * (dxN + dxNm1 + dxNm2)
+                            / (dxNm1 * (dxNm1 + dxNm2))
+                        )
+                        b = -dxN * (dxN + dxNm1 + dxNm2) / (dxNm1 * dxNm2)
+                        c = dxN * (dxN + dxNm1) / (dxNm2 * (dxNm1 + dxNm2))
+
+                        row_indices = np.arange(0, n_tb)
+                        col_indices_Nm1 = np.arange(n_lr - 2, n_lr * n_tb, n_lr)
+                        col_indices_N = col_indices_Nm1 + 1
+                        col_indices_Nm2 = col_indices_Nm1 - 1
+
+                        vals_Nm2 = c * np.ones(n_tb)
+                        vals_Nm1 = b * np.ones(n_tb)
+                        vals_N = a * np.ones(n_tb)
+
+                        sub_matrix = csr_matrix(
+                            (
+                                np.hstack([vals_Nm2, vals_Nm1, vals_N]),
+                                (
+                                    np.hstack([row_indices, row_indices, row_indices]),
+                                    np.hstack(
+                                        [
+                                            col_indices_Nm2,
+                                            col_indices_Nm1,
+                                            col_indices_N,
+                                        ]
+                                    ),
+                                ),
+                            ),
+                            shape=(n_tb, n_tb * n_lr),
+                        )
+                        additive = pybamm.Scalar(0)
                 else:
                     raise NotImplementedError
 
             elif side_first == "top":
-                if extrap_order_value == "linear":
+                if extrap_order_value == "linear" or extrap_order_value == "quadratic":
                     if use_bcs and pybamm.has_bc_of_form(
                         child, side_first, bcs, "Neumann"
                     ):
@@ -1662,7 +1725,6 @@ class FiniteVolume2D(pybamm.SpatialMethod):
             # one is a vector field, so we need to make a new vector field.
             if left_evaluates_on_edges and not right_evaluates_on_edges:
                 if isinstance(left, pybamm.Gradient):
-                    print("hi")
                     method = "harmonic"
                     disc_right_lr = self.node_to_edge(
                         disc_right, method=method, direction="lr"

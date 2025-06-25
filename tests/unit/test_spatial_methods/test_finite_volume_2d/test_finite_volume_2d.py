@@ -99,7 +99,7 @@ class TestFiniteVolume2D:
         np.testing.assert_array_equal(x3_disc.evaluate().flatten(), LR.flatten())
         np.testing.assert_array_equal(x4_disc.evaluate().flatten(), TB.flatten())
 
-    def test_discretise_diffusivity_times_spatial_operator(self):
+    def test_process_binary_operators(self):
         # Setup mesh and discretisation
         mesh = get_mesh_for_testing_2d()
         spatial_methods = {"macroscale": pybamm.FiniteVolume2D()}
@@ -126,6 +126,8 @@ class TestFiniteVolume2D:
             * (2 * var),
             pybamm.grad(var) * pybamm.grad(var),
             (pybamm.grad(var) + 2) * pybamm.grad(var) ** 2,
+            pybamm.VectorField(pybamm.Scalar(2), pybamm.Scalar(2)) * pybamm.Scalar(2),
+            pybamm.VectorField(pybamm.Scalar(2), pybamm.Scalar(2)) * pybamm.VectorField(pybamm.Scalar(2), pybamm.Scalar(2)),
         ]:
             # Check that the equation can be evaluated for different combinations
             # of boundary conditions
