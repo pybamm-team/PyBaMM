@@ -565,39 +565,24 @@ class ProcessedVariable(BaseProcessedVariable):
         )
 
     def as_computed(self):
-        base_data = []
+        """
+        Allows a ProcessedVariable to be converted to a ComputedProcessedVariable for
+        use together, e.g. when using a last state solution with a new simulation running
+        with output variables in the solver.
+        """
 
-        for ts, ys, u, f in zip(
-            self.all_ts,
-            self.all_ys,
-            self.all_inputs_casadi,
-            self.base_variables_casadi,
-            strict=False,
-        ):
-            outputs = []
+        entries = self.entries  # shape: (..., n_t)
 
-            for i in range(ys.shape[1]):
-                y_t = ys[:, i]
-                if y_t.ndim == 1:
-                    y_t = y_t[:, None]  # Ensure column vector
+        # Move time to axis 0, then flatten spatial dims per timestep
+        reshaped = np.moveaxis(entries, -1, 0)  # shape: (n_t, ...)
+        base_data = [reshaped.reshape(reshaped.shape[0], -1)]  # (n_t, n_vars)
 
-                result = f(ts[i], y_t, u)
-                result_np = np.asarray(result).flatten()
-
-                outputs.append(result_np)
-
-            # Convert list of (n_vars,) → shape (n_t, n_vars)
-            output_array = np.vstack(outputs)  # shape (n_t, n_vars)
-            base_data.append(output_array)
-
-        cpv = pybamm.ProcessedVariableComputed(
+        return pybamm.ProcessedVariableComputed(
             self.base_variables,
             self.base_variables_casadi,
             base_data,
             self._make_stub_solution(),
         )
-
-        return cpv
 
 
 class ProcessedVariable0D(ProcessedVariable):
