@@ -92,13 +92,11 @@ class CMakeBuild(build_ext):
 
         build_type = os.getenv("PYBAMM_CPP_BUILD_TYPE", "Release")
         idaklu_expr_casadi = os.getenv("PYBAMM_IDAKLU_EXPR_CASADI", "ON")
-        idaklu_expr_iree = os.getenv("PYBAMM_IDAKLU_EXPR_IREE", "OFF")
         cmake_args = [
             f"-DCMAKE_BUILD_TYPE={build_type}",
             f"-DPYTHON_EXECUTABLE={sys.executable}",
             "-DUSE_PYTHON_CASADI={}".format("TRUE" if use_python_casadi else "FALSE"),
             f"-DPYBAMM_IDAKLU_EXPR_CASADI={idaklu_expr_casadi}",
-            f"-DPYBAMM_IDAKLU_EXPR_IREE={idaklu_expr_iree}",
         ]
         if self.suitesparse_root:
             cmake_args.append(
@@ -244,14 +242,6 @@ ext_modules = [
             "src/pybammsolvers/idaklu_source/Expressions/Base/ExpressionSparsity.hpp",
             "src/pybammsolvers/idaklu_source/Expressions/Casadi/CasadiFunctions.cpp",
             "src/pybammsolvers/idaklu_source/Expressions/Casadi/CasadiFunctions.hpp",
-            "src/pybammsolvers/idaklu_source/Expressions/IREE/IREEBaseFunction.hpp",
-            "src/pybammsolvers/idaklu_source/Expressions/IREE/IREEFunction.hpp",
-            "src/pybammsolvers/idaklu_source/Expressions/IREE/IREEFunctions.cpp",
-            "src/pybammsolvers/idaklu_source/Expressions/IREE/IREEFunctions.hpp",
-            "src/pybammsolvers/idaklu_source/Expressions/IREE/iree_jit.cpp",
-            "src/pybammsolvers/idaklu_source/Expressions/IREE/iree_jit.hpp",
-            "src/pybammsolvers/idaklu_source/Expressions/IREE/ModuleParser.cpp",
-            "src/pybammsolvers/idaklu_source/Expressions/IREE/ModuleParser.hpp",
             "src/pybammsolvers/idaklu_source/idaklu_solver.hpp",
             "src/pybammsolvers/idaklu_source/IDAKLUSolver.cpp",
             "src/pybammsolvers/idaklu_source/IDAKLUSolver.hpp",

@@ -15,10 +15,6 @@
 #include "idaklu_source/common.hpp"
 #include "idaklu_source/Expressions/Casadi/CasadiFunctions.hpp"
 
-#ifdef IREE_ENABLE
-#include "idaklu_source/Expressions/IREE/IREEFunctions.hpp"
-#endif
-
 
 casadi::Function generate_casadi_function(const std::string &data)
 {
@@ -96,34 +92,6 @@ PYBIND11_MODULE(idaklu, m)
     py::arg("shape"),
     py::return_value_policy::take_ownership);
 
-#ifdef IREE_ENABLE
-  m.def("create_iree_solver_group", &create_idaklu_solver_group<IREEFunctions>,
-    "Create a group of iree idaklu solver objects",
-    py::arg("number_of_states"),
-    py::arg("number_of_parameters"),
-    py::arg("rhs_alg"),
-    py::arg("jac_times_cjmass"),
-    py::arg("jac_times_cjmass_colptrs"),
-    py::arg("jac_times_cjmass_rowvals"),
-    py::arg("jac_times_cjmass_nnz"),
-    py::arg("jac_bandwidth_lower"),
-    py::arg("jac_bandwidth_upper"),
-    py::arg("jac_action"),
-    py::arg("mass_action"),
-    py::arg("sens"),
-    py::arg("events"),
-    py::arg("number_of_events"),
-    py::arg("rhs_alg_id"),
-    py::arg("atol"),
-    py::arg("rtol"),
-    py::arg("inputs"),
-    py::arg("var_fcns"),
-    py::arg("dvar_dy_fcns"),
-    py::arg("dvar_dp_fcns"),
-    py::arg("options"),
-    py::return_value_policy::take_ownership);
-#endif
-
   m.def("generate_function", &generate_casadi_function,
     "Generate a casadi function",
     py::arg("string"),
@@ -173,20 +141,6 @@ PYBIND11_MODULE(idaklu, m)
   );
 
   py::class_<casadi::Function>(m, "Function");
-
-#ifdef IREE_ENABLE
-  py::class_<IREEBaseFunctionType>(m, "IREEBaseFunctionType")
-    .def(py::init<>())
-    .def_readwrite("mlir", &IREEBaseFunctionType::mlir)
-    .def_readwrite("kept_var_idx", &IREEBaseFunctionType::kept_var_idx)
-    .def_readwrite("nnz", &IREEBaseFunctionType::nnz)
-    .def_readwrite("numel", &IREEBaseFunctionType::numel)
-    .def_readwrite("col", &IREEBaseFunctionType::col)
-    .def_readwrite("row", &IREEBaseFunctionType::row)
-    .def_readwrite("pytree_shape", &IREEBaseFunctionType::pytree_shape)
-    .def_readwrite("pytree_sizes", &IREEBaseFunctionType::pytree_sizes)
-    .def_readwrite("n_args", &IREEBaseFunctionType::n_args);
-#endif
 
   py::class_<Solution>(m, "solution")
     .def_readwrite("t", &Solution::t)
