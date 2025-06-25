@@ -48,8 +48,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 "num_threads": 1,
                 # Number of solvers to use in parallel (for solving multiple sets of input parameters in parallel)
                 "num_solvers": num_threads,
-                # Evaluation engine to use for jax, can be 'jax'(native) or 'iree'
-                "jax_evaluator": "jax",
                 ## Linear solver interface
                 # name of sundials linear solver to use options are: "SUNLinSol_KLU",
                 # "SUNLinSol_Dense", "SUNLinSol_Band", "SUNLinSol_SPBCGS",
@@ -159,7 +157,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
             "precon_half_bandwidth_keep": 5,
             "num_threads": 1,
             "num_solvers": 1,
-            "jax_evaluator": "jax",
             "linear_solver": "SUNLinSol_KLU",
             "linsol_max_iterations": 5,
             "epsilon_linear_tolerance": 0.05,
@@ -193,10 +190,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
             for key, value in default_options.items():
                 if key not in options:
                     options[key] = value
-        if options["jax_evaluator"] not in ["jax"]:
-            raise pybamm.SolverError(
-                "Evaluation engine must be 'jax' for IDAKLU solver"
-            )
         self._options = options
 
         self.output_variables = [] if output_variables is None else output_variables
@@ -247,18 +240,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
         # stack inputs
         if inputs_dict:
             arrays_to_stack = [np.array(x).reshape(-1, 1) for x in inputs_dict.values()]
-            inputs_sizes = [len(array) for array in arrays_to_stack]
             inputs = np.vstack(arrays_to_stack)
         else:
-            inputs_sizes = []
             inputs = np.array([[]])
-
-        def inputs_to_dict(inputs):
-            index = 0
-            for n, key in zip(inputs_sizes, inputs_dict.keys(), strict=False):
-                inputs_dict[key] = inputs[index : (index + n)]
-                index += n
-            return inputs_dict
 
         y0 = model.y0
         if isinstance(y0, casadi.DM):
@@ -268,104 +252,84 @@ class IDAKLUSolver(pybamm.BaseSolver):
         if ics_only:
             return base_set_up_return
 
-        if model.convert_to_format not in ["casadi", "jax"]:
-            msg = (
-                "The python-idaklu solver has been deprecated. "
-                "To use the IDAKLU solver set `convert_to_format = 'casadi'`, or `jax`"
-                " if using IREE."
-            )
+        if model.convert_to_format != "casadi":
+            msg = "The python-idaklu solver has been deprecated."
             warnings.warn(msg, DeprecationWarning, stacklevel=2)
-
-        if model.convert_to_format == "jax":
-            if self._options["jax_evaluator"] != "iree":
-                raise pybamm.SolverError(
-                    "Unsupported evaluation engine for convert_to_format="
-                    f"{model.convert_to_format} "
-                    f"(jax_evaluator={self._options['jax_evaluator']})"
-                )
-            mass_matrix = model.mass_matrix.entries.toarray()
-        elif model.convert_to_format == "casadi":
-            if self._options["jacobian"] == "dense":
-                mass_matrix = casadi.DM(model.mass_matrix.entries.toarray())
-            else:
-                mass_matrix = casadi.DM(model.mass_matrix.entries)
-        else:
             raise pybamm.SolverError(
                 f"Unsupported option for convert_to_format={model.convert_to_format} "
             )
 
+        if self._options["jacobian"] == "dense":
+            mass_matrix = casadi.DM(model.mass_matrix.entries.toarray())
+        else:
+            mass_matrix = casadi.DM(model.mass_matrix.entries)
+
         # construct residuals function by binding inputs
-        if model.convert_to_format == "casadi":
-            # TODO: do we need densify here?
-            rhs_algebraic = model.rhs_algebraic_eval
+        # TODO: do we need densify here?
+        rhs_algebraic = model.rhs_algebraic_eval
 
         if not model.use_jacobian:
             raise pybamm.SolverError("KLU requires the Jacobian")
 
         # need to provide jacobian_rhs_alg - cj * mass_matrix
-        if model.convert_to_format == "casadi":
-            t_casadi = casadi.MX.sym("t")
-            y_casadi = casadi.MX.sym("y", model.len_rhs_and_alg)
-            cj_casadi = casadi.MX.sym("cj")
-            p_casadi = {}
-            for name, value in inputs_dict.items():
-                if isinstance(value, numbers.Number):
-                    p_casadi[name] = casadi.MX.sym(name)
-                else:
-                    p_casadi[name] = casadi.MX.sym(name, value.shape[0])
-            p_casadi_stacked = casadi.vertcat(*[p for p in p_casadi.values()])
+        t_casadi = casadi.MX.sym("t")
+        y_casadi = casadi.MX.sym("y", model.len_rhs_and_alg)
+        cj_casadi = casadi.MX.sym("cj")
+        p_casadi = {}
+        for name, value in inputs_dict.items():
+            if isinstance(value, numbers.Number):
+                p_casadi[name] = casadi.MX.sym(name)
+            else:
+                p_casadi[name] = casadi.MX.sym(name, value.shape[0])
+        p_casadi_stacked = casadi.vertcat(*[p for p in p_casadi.values()])
 
-            jac_times_cjmass = casadi.Function(
-                "jac_times_cjmass",
-                [t_casadi, y_casadi, p_casadi_stacked, cj_casadi],
-                [
-                    model.jac_rhs_algebraic_eval(t_casadi, y_casadi, p_casadi_stacked)
-                    - cj_casadi * mass_matrix
-                ],
-            )
+        jac_times_cjmass = casadi.Function(
+            "jac_times_cjmass",
+            [t_casadi, y_casadi, p_casadi_stacked, cj_casadi],
+            [
+                model.jac_rhs_algebraic_eval(t_casadi, y_casadi, p_casadi_stacked)
+                - cj_casadi * mass_matrix
+            ],
+        )
 
-            jac_times_cjmass_sparsity = jac_times_cjmass.sparsity_out(0)
-            jac_bw_lower = jac_times_cjmass_sparsity.bw_lower()
-            jac_bw_upper = jac_times_cjmass_sparsity.bw_upper()
-            jac_times_cjmass_nnz = jac_times_cjmass_sparsity.nnz()
-            jac_times_cjmass_colptrs = np.array(
-                jac_times_cjmass_sparsity.colind(), dtype=np.int64
-            )
-            jac_times_cjmass_rowvals = np.array(
-                jac_times_cjmass_sparsity.row(), dtype=np.int64
-            )
+        jac_times_cjmass_sparsity = jac_times_cjmass.sparsity_out(0)
+        jac_bw_lower = jac_times_cjmass_sparsity.bw_lower()
+        jac_bw_upper = jac_times_cjmass_sparsity.bw_upper()
+        jac_times_cjmass_nnz = jac_times_cjmass_sparsity.nnz()
+        jac_times_cjmass_colptrs = np.array(
+            jac_times_cjmass_sparsity.colind(), dtype=np.int64
+        )
+        jac_times_cjmass_rowvals = np.array(
+            jac_times_cjmass_sparsity.row(), dtype=np.int64
+        )
 
-            v_casadi = casadi.MX.sym("v", model.len_rhs_and_alg)
+        v_casadi = casadi.MX.sym("v", model.len_rhs_and_alg)
 
-            jac_rhs_algebraic_action = model.jac_rhs_algebraic_action_eval
+        jac_rhs_algebraic_action = model.jac_rhs_algebraic_action_eval
 
-            # also need the action of the mass matrix on a vector
-            mass_action = casadi.Function(
-                "mass_action", [v_casadi], [casadi.densify(mass_matrix @ v_casadi)]
-            )
+        # also need the action of the mass matrix on a vector
+        mass_action = casadi.Function(
+            "mass_action", [v_casadi], [casadi.densify(mass_matrix @ v_casadi)]
+        )
 
         num_of_events = len(model.terminate_events_eval)
 
         # rootfn needs to return an array of length num_of_events
-        if model.convert_to_format == "casadi":
-            rootfn = casadi.Function(
-                "rootfn",
-                [t_casadi, y_casadi, p_casadi_stacked],
-                [
-                    casadi.vertcat(
-                        *[
-                            event(t_casadi, y_casadi, p_casadi_stacked)
-                            for event in model.terminate_events_eval
-                        ]
-                    )
-                ],
-            )
+        rootfn = casadi.Function(
+            "rootfn",
+            [t_casadi, y_casadi, p_casadi_stacked],
+            [
+                casadi.vertcat(
+                    *[
+                        event(t_casadi, y_casadi, p_casadi_stacked)
+                        for event in model.terminate_events_eval
+                    ]
+                )
+            ],
+        )
 
         # get ids of rhs and algebraic variables
-        if model.convert_to_format == "casadi":
-            rhs_ids = np.ones(model.rhs_eval(0, y0, inputs).shape[0])
-        else:
-            rhs_ids = np.ones(model.rhs_eval(0, y0, inputs_dict).shape[0])
+        rhs_ids = np.ones(model.rhs_eval(0, y0, inputs).shape[0])
         alg_ids = np.zeros(len(y0) - len(rhs_ids))
         ids = np.concatenate((rhs_ids, alg_ids))
 
@@ -379,71 +343,63 @@ class IDAKLUSolver(pybamm.BaseSolver):
         else:
             sensitivity_names = []
 
-        if model.convert_to_format == "casadi":
-            # for the casadi solver we just give it dFdp_i
-            if model.jacp_rhs_algebraic_eval is None:
-                sensfn = casadi.Function("sensfn", [], [])
-            else:
-                sensfn = model.jacp_rhs_algebraic_eval
+        # for the casadi solver we just give it dFdp_i
+        if model.jacp_rhs_algebraic_eval is None:
+            sensfn = casadi.Function("sensfn", [], [])
+        else:
+            sensfn = model.jacp_rhs_algebraic_eval
 
         atol = getattr(model, "atol", self.atol)
         atol = self._check_atol_type(atol, y0.size)
 
-        if model.convert_to_format == "casadi":
-            # Serialize casadi functions
-            idaklu_solver_fcn = idaklu.create_casadi_solver_group
-            rhs_algebraic_pkl = rhs_algebraic.serialize()
-            rhs_algebraic = idaklu.generate_function(rhs_algebraic_pkl)
-            jac_times_cjmass_pkl = jac_times_cjmass.serialize()
-            jac_times_cjmass = idaklu.generate_function(jac_times_cjmass_pkl)
-            jac_rhs_algebraic_action_pkl = jac_rhs_algebraic_action.serialize()
-            jac_rhs_algebraic_action = idaklu.generate_function(
-                jac_rhs_algebraic_action_pkl
-            )
-            rootfn_pkl = rootfn.serialize()
-            rootfn = idaklu.generate_function(rootfn_pkl)
-            mass_action_pkl = mass_action.serialize()
-            mass_action = idaklu.generate_function(mass_action_pkl)
-            sensfn_pkl = sensfn.serialize()
-            sensfn = idaklu.generate_function(sensfn_pkl)
+        # Serialize casadi functions
+        idaklu_solver_fcn = idaklu.create_casadi_solver_group
+        rhs_algebraic_pkl = rhs_algebraic.serialize()
+        rhs_algebraic = idaklu.generate_function(rhs_algebraic_pkl)
+        jac_times_cjmass_pkl = jac_times_cjmass.serialize()
+        jac_times_cjmass = idaklu.generate_function(jac_times_cjmass_pkl)
+        jac_rhs_algebraic_action_pkl = jac_rhs_algebraic_action.serialize()
+        jac_rhs_algebraic_action = idaklu.generate_function(
+            jac_rhs_algebraic_action_pkl
+        )
+        rootfn_pkl = rootfn.serialize()
+        rootfn = idaklu.generate_function(rootfn_pkl)
+        mass_action_pkl = mass_action.serialize()
+        mass_action = idaklu.generate_function(mass_action_pkl)
+        sensfn_pkl = sensfn.serialize()
+        sensfn = idaklu.generate_function(sensfn_pkl)
 
-            # if output_variables specified then convert 'variable' casadi
-            # function expressions to idaklu-compatible functions
-            self.var_idaklu_fcns = []
-            self.var_idaklu_fcns_pkl = []
-            self.dvar_dy_idaklu_fcns = []
-            self.dvar_dy_idaklu_fcns_pkl = []
-            self.dvar_dp_idaklu_fcns = []
-            self.dvar_dp_idaklu_fcns_pkl = []
-            for key in self.output_variables:
-                # ExplicitTimeIntegral's are not computed as part of the solver and
-                # do not need to be converted
-                if isinstance(
-                    model.variables_and_events[key], pybamm.ExplicitTimeIntegral
-                ):
-                    continue
-                self.var_idaklu_fcns_pkl.append(self.computed_var_fcns[key].serialize())
-                self.var_idaklu_fcns.append(
-                    idaklu.generate_function(self.var_idaklu_fcns_pkl[-1])
-                )
-                # Convert derivative functions for sensitivities
-                if (len(inputs) > 0) and (model.calculate_sensitivities):
-                    self.dvar_dy_idaklu_fcns_pkl.append(
-                        self.computed_dvar_dy_fcns[key].serialize()
-                    )
-                    self.dvar_dy_idaklu_fcns.append(
-                        idaklu.generate_function(self.dvar_dy_idaklu_fcns_pkl[-1])
-                    )
-                    self.dvar_dp_idaklu_fcns_pkl.append(
-                        self.computed_dvar_dp_fcns[key].serialize()
-                    )
-                    self.dvar_dp_idaklu_fcns.append(
-                        idaklu.generate_function(self.dvar_dp_idaklu_fcns_pkl[-1])
-                    )
-        else:  # pragma: no cover
-            raise pybamm.SolverError(
-                "Unsupported evaluation engine for convert_to_format='jax'"
+        # if output_variables specified then convert 'variable' casadi
+        # function expressions to idaklu-compatible functions
+        self.var_idaklu_fcns = []
+        self.var_idaklu_fcns_pkl = []
+        self.dvar_dy_idaklu_fcns = []
+        self.dvar_dy_idaklu_fcns_pkl = []
+        self.dvar_dp_idaklu_fcns = []
+        self.dvar_dp_idaklu_fcns_pkl = []
+        for key in self.output_variables:
+            # ExplicitTimeIntegral's are not computed as part of the solver and
+            # do not need to be converted
+            if isinstance(model.variables_and_events[key], pybamm.ExplicitTimeIntegral):
+                continue
+            self.var_idaklu_fcns_pkl.append(self.computed_var_fcns[key].serialize())
+            self.var_idaklu_fcns.append(
+                idaklu.generate_function(self.var_idaklu_fcns_pkl[-1])
             )
+            # Convert derivative functions for sensitivities
+            if (len(inputs) > 0) and (model.calculate_sensitivities):
+                self.dvar_dy_idaklu_fcns_pkl.append(
+                    self.computed_dvar_dy_fcns[key].serialize()
+                )
+                self.dvar_dy_idaklu_fcns.append(
+                    idaklu.generate_function(self.dvar_dy_idaklu_fcns_pkl[-1])
+                )
+                self.dvar_dp_idaklu_fcns_pkl.append(
+                    self.computed_dvar_dp_fcns[key].serialize()
+                )
+                self.dvar_dp_idaklu_fcns.append(
+                    idaklu.generate_function(self.dvar_dp_idaklu_fcns_pkl[-1])
+                )
 
         self._setup = {
             "number_of_states": len(y0),
@@ -749,7 +705,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         else:  # pragma: no cover
             raise pybamm.SolverError(
                 f"Unsupported evaluation engine for convert_to_format="
-                f"{model.convert_to_format} (jax_evaluator={self._options['jax_evaluator']})"
+                f"{model.convert_to_format}"
             )
 
     def _set_consistent_initialization(self, model, time, inputs_dict):
