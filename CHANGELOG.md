@@ -13,6 +13,7 @@
 
 ## Breaking changes
 
+- Removed the IREE code from the IDAKLU solver ([#5080](https://github.com/pybamm-team/PyBaMM/pull/5080))
 - Removed support for Python 3.9 ([#5052](https://github.com/pybamm-team/PyBaMM/pull/5052))
 
 # [v25.6.0](https://github.com/pybamm-team/PyBaMM/tree/v25.6.0) - 2025-05-27
