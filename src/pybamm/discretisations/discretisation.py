@@ -999,7 +999,9 @@ class Discretisation:
         elif isinstance(symbol, pybamm.CoupledVariable):
             new_symbol = self.process_symbol(symbol.children[0])
             return new_symbol
-
+        elif isinstance(symbol, pybamm.Constant):
+            # after discretisation we just care about the value, not the name
+            return self.process_symbol(pybamm.Scalar(symbol.value))
         else:
             # Backup option: return the object
             return symbol
