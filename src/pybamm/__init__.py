@@ -1,8 +1,5 @@
 from pybamm.version import __version__
 
-# Demote expressions to 32-bit floats/ints - option used for IDAKLU-MLIR compilation
-demote_expressions_to_32bit = False
-
 # Utility classes and methods
 from .util import root_dir
 from .util import Timer, TimerTime, FuzzyDict

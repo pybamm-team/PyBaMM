@@ -526,13 +526,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
             options=self._options,
         )
 
-    def _check_mlir_conversion(self, name, mlir: str):
-        if mlir.count("f64") > 0:  # pragma: no cover
-            warnings.warn(f"f64 found in {name} (x{mlir.count('f64')})", stacklevel=2)
-
-    def _demote_64_to_32(self, x: pybamm.EvaluatorJax):
-        return pybamm.EvaluatorJax._demote_64_to_32(x)
-
     @property
     def supports_parallel_solve(self):
         return True
