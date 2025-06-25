@@ -8,9 +8,6 @@ import pybammsolvers.idaklu as idaklu
 
 import pybamm
 
-if pybamm.has_jax():
-    pass
-
 
 class IDAKLUSolver(pybamm.BaseSolver):
     """
