@@ -547,7 +547,6 @@ class ProcessedVariable(BaseProcessedVariable):
         """
 
         class StubSolution:
-
             def __init__(self, ts, ys, inputs, inputs_casadi, sensitivities, t_pts):
                 self.all_ts = ts
                 self.all_ys = ys
@@ -574,6 +573,7 @@ class ProcessedVariable(BaseProcessedVariable):
                 self.all_ys,
                 self.all_inputs_casadi,
                 self.base_variables_casadi,
+                strict=False,
             )
         ]
 
