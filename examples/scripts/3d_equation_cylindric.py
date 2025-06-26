@@ -18,15 +18,11 @@ alpha = 0.1
 
 model = BaseModel()
 
-r = pybamm.SpatialVariable(
-    "r", ["current collector"], coord_sys="cylindrical polar", direction="r"
-)
+r = pybamm.SpatialVariable("r", ["current collector"], coord_sys="cylindrical polar")
 theta = pybamm.SpatialVariable(
-    "theta", ["current collector"], coord_sys="cylindrical polar", direction="theta"
+    "theta", ["current collector"], coord_sys="cylindrical polar"
 )
-z = pybamm.SpatialVariable(
-    "z", ["current collector"], coord_sys="cylindrical polar", direction="z"
-)
+z = pybamm.SpatialVariable("z", ["current collector"], coord_sys="cylindrical polar")
 T = pybamm.Variable("T", domain="current collector")
 
 model.algebraic = {T: alpha * pybamm.laplacian(T)}

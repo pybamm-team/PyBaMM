@@ -35,7 +35,6 @@ class SubMesh1D(SubMesh):
         self.npts = self.nodes.size
         self.coord_sys = coord_sys
         self.internal_boundaries = []
-        self.dimension = 1
 
         # Add tab locations in terms of "left" and "right"
         if tabs and "negative tab" not in tabs.keys():
@@ -111,7 +110,6 @@ class SymbolicUniform1DSubMesh(SubMesh1D):
         self.npts = self.nodes.size
         self.coord_sys = coord_sys
         self.internal_boundaries = []
-        self.dimension = 1
 
 
 class Uniform1DSubMesh(SubMesh1D):

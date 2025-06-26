@@ -506,9 +506,6 @@ class Gradient(SpatialOperator):
         )
         return sympy_Gradient(child)
 
-    def _evaluate_for_shape(self):
-        return self.children[0].evaluate_for_shape()
-
 
 class Divergence(SpatialOperator):
     """
@@ -910,7 +907,6 @@ class BoundaryIntegral(SpatialOperator):
             name += "positive tab"
         self.region = region
         super().__init__(name, child, domains)
-        self.domains = {}
 
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`"""

@@ -454,7 +454,7 @@ class SparseStack(Concatenation):
         The equations to concatenate
     """
 
-    def __init__(self, *children, name="sparse_stack"):
+    def __init__(self, *children):
         children = list(children)
         if not any(issparse(child.evaluate_for_shape()) for child in children):
             concatenation_function = np.vstack
@@ -462,7 +462,7 @@ class SparseStack(Concatenation):
             concatenation_function = vstack
         super().__init__(
             *children,
-            name=name,
+            name="sparse_stack",
             check_domain=False,
             concat_fun=concatenation_function,
         )

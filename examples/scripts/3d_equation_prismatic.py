@@ -17,9 +17,9 @@ t_max = 0.2
 
 model = BaseModel()
 
-x = SpatialVariable("x", ["current collector"], coord_sys="cartesian", direction="x")
-y = SpatialVariable("y", ["current collector"], coord_sys="cartesian", direction="y")
-z = SpatialVariable("z", ["current collector"], coord_sys="cartesian", direction="z")
+x = SpatialVariable("x", ["current collector"], coord_sys="cartesian")
+y = SpatialVariable("y", ["current collector"], coord_sys="cartesian")
+z = SpatialVariable("z", ["current collector"], coord_sys="cartesian")
 
 T = pybamm.Variable("T", domain="current collector")
 model.variables = {"T": T}
