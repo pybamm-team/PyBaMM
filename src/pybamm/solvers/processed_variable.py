@@ -528,42 +528,6 @@ class ProcessedVariable(BaseProcessedVariable):
     def hermite_interpolation(self):
         return self.all_yps is not None
 
-    def _make_stub_solution(self):
-        """
-        Return a lightweight object that looks like the parts of
-        `pybamm.Solution` required by ProcessedVariableComputed, but without
-        keeping the full state vector in memory.
-
-        Parameters
-        ----------
-        t_points : 1-D array-like
-            The dimensional time grid for the (sub-)solution you are building.
-
-        Returns
-        -------
-        StubSolution
-            An object with the minimal API: ``t``, ``all_ts``, ``all_ys``,
-            ``all_inputs``, ``all_inputs_casadi`` and ``sensitivities``.
-        """
-
-        class StubSolution:
-            def __init__(self, ts, ys, inputs, inputs_casadi, sensitivities, t_pts):
-                self.all_ts = ts
-                self.all_ys = ys
-                self.all_inputs = inputs
-                self.all_inputs_casadi = inputs_casadi
-                self.sensitivities = sensitivities
-                self.t = t_pts
-
-        return StubSolution(
-            self.all_ts,
-            self.all_ys,
-            self.all_inputs,
-            self.all_inputs_casadi,
-            self.sensitivities,
-            self.t_pts,
-        )
-
     def as_computed(self):
         """
         Allows a ProcessedVariable to be converted to a ComputedProcessedVariable for
@@ -571,18 +535,49 @@ class ProcessedVariable(BaseProcessedVariable):
         with output variables in the solver.
         """
 
+        def _stub_solution(self):
+            """
+            Return a lightweight object that looks like the parts of
+            `pybamm.Solution` required by ProcessedVariableComputed, but without
+            keeping the full state vector in memory.
+            """
+
+            class StubSolution:
+                def __init__(self, ts, ys, inputs, inputs_casadi, sensitivities, t_pts):
+                    self.all_ts = ts
+                    self.all_ys = ys
+                    self.all_inputs = inputs
+                    self.all_inputs_casadi = inputs_casadi
+                    self.sensitivities = sensitivities
+                    self.t = t_pts
+
+            return StubSolution(
+                self.all_ts,
+                self.all_ys,
+                self.all_inputs,
+                self.all_inputs_casadi,
+                self.sensitivities,
+                self.t_pts,
+            )
+
         entries = self.entries  # shape: (..., n_t)
 
         # Move time to axis 0, then flatten spatial dims per timestep
         reshaped = np.moveaxis(entries, -1, 0)  # shape: (n_t, ...)
         base_data = [reshaped.reshape(reshaped.shape[0], -1)]  # (n_t, n_vars)
 
-        return pybamm.ProcessedVariableComputed(
+        cpv = pybamm.ProcessedVariableComputed(
             self.base_variables,
             self.base_variables_casadi,
             base_data,
-            self._make_stub_solution(),
+            _stub_solution(self),
         )
+
+        # add sensitivities if they exist
+        if self.sensitivities:
+            cpv._sensitivities = self.sensitivities
+
+        return cpv
 
 
 class ProcessedVariable0D(ProcessedVariable):

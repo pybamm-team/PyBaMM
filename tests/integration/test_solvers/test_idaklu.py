@@ -210,7 +210,7 @@ class TestIDAKLUSolver:
             sols[1].cycles[-1]["Current [A]"].data,
         )
 
-    def test_with_experiments_multi_simulation(self):
+    def test_outvars_with_experiments_multi_simulation(self):
         model = pybamm.lithium_ion.SPM()
 
         experiment = pybamm.Experiment(
