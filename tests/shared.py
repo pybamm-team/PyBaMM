@@ -159,8 +159,6 @@ def get_unit_3d_mesh_for_testing(geom_type="box", **geom_params):
 def get_3d_mesh_for_testing(
     xpts=5, ypts=5, zpts=5, geom_type="box", include_particles=False, **geom_params
 ):
-    """Build a 3D mesh for testing with multiple domains."""
-
     param = pybamm.ParameterValues(
         {
             "Electrode width [m]": 1.0,
@@ -247,27 +245,6 @@ def get_3d_mesh_for_testing(
     var_pts = {x: xpts, y: ypts, z: zpts}
 
     return pybamm.Mesh(geometry, submesh_types, var_pts)
-
-
-def get_3d_discretisation_for_testing(
-    xpts=5, ypts=5, zpts=5, geom_type="box", include_particles=False, **geom_params
-):
-    """
-    Build a 3D discretisation for testing.
-    """
-    mesh = get_3d_mesh_for_testing(
-        xpts=xpts,
-        ypts=ypts,
-        zpts=zpts,
-        geom_type=geom_type,
-        include_particles=include_particles,
-        **geom_params,
-    )
-    spatial_methods = {
-        "macroscale": pybamm.ScikitFiniteElement3D(),
-        "current collector": pybamm.ScikitFiniteElement3D(),
-    }
-    return pybamm.Discretisation(mesh, spatial_methods)
 
 
 def get_p2d_mesh_for_testing(xpts=None, rpts=10):

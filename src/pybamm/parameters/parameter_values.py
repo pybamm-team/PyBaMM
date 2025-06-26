@@ -590,15 +590,6 @@ class ParameterValues:
             "negative tab",
             "positive tab",
             "no tab",
-            "front",
-            "back",
-            "top",
-            "bottom",
-            "inner wall",
-            "outer wall",
-            "top cap",
-            "bottom cap",
-            "side wall",
         ]
 
         for variable, bcs in model.boundary_conditions.items():

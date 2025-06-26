@@ -401,9 +401,7 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
 
         return current_boundary_load_symbol
 
-    def integral(
-        self, child, discretised_child, integration_dimension, integration_variable
-    ):
+    def integral(self, child, discretised_child, integration_dimension):
         """
         Vector-vector dot product to implement the 3D integral operator.
 
@@ -415,8 +413,6 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
             The discretised symbol being integrated (vector of nodal values)
         integration_dimension : str
             The dimension over which to integrate (e.g. "primary" for volume)
-        integration_variable : :class:`pybamm.SpatialVariable`
-            The variable(s) of integration
 
         Returns
         -------
@@ -431,8 +427,6 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
         """
         Matrix for definite integral *vector* (vector of ones).
         The child is used to determine the domain and size.
-        'integration_dimension' and 'integration_variable' are kept for signature
-        compatibility but are not strictly used for this method's typical behavior.
 
         Parameters
         ----------
@@ -440,10 +434,6 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
             The symbol whose domain/mesh determines the size.
         vector_type : str, optional
             "row" or "column" for the shape of the resulting vector of ones.
-        integration_dimension : str, optional
-            (Not directly used for vector of ones)
-        integration_variable : :class:`pybamm.SpatialVariable`, optional
-            (Not directly used for vector of ones)
 
         Returns
         -------

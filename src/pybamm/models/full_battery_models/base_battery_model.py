@@ -224,12 +224,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 the respective porosity change) over the x-axis in Single Particle
                 Models, can be "false" or "true". Default is "false" for SPMe and
                 "true" for SPM.
-            * "geometry options" : dict
-                Required when `cell geometry` is "3D". Must be a dict with:
-                - `mesh_size`: positive float
-                - `domains`: mapping each subdomain name to a dict with keys:
-                    - `type`: one of "rectangular","cylindrical","spiral"
-                    - `params`: dict of geometry parameters as documented in `PyGmshMeshGenerator`
             * "heat of mixing": str
                 Whether to include heat of mixing in the model. Can be "false" or "true".
             * "use lumped thermal capacity" : str

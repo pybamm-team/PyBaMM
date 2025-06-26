@@ -878,10 +878,7 @@ class Discretisation:
                     symbol.integration_variable[0].domain[0]
                 ]
                 out = integral_spatial_method.integral(
-                    child,
-                    disc_child,
-                    symbol._integration_dimension,
-                    symbol.integration_variable,
+                    child, disc_child, symbol._integration_dimension
                 )
                 out.copy_domains(symbol)
                 return out

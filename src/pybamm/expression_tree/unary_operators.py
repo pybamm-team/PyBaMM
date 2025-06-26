@@ -908,14 +908,6 @@ class BoundaryIntegral(SpatialOperator):
             name += "negative tab"
         elif region == "positive tab":
             name += "positive tab"
-        elif region == "top":
-            name += "top"
-        elif region == "bottom":
-            name += "bottom"
-        elif region == "left":
-            name += "left"
-        elif region == "right":
-            name += "right"
         self.region = region
         super().__init__(name, child, domains)
         self.domains = {}

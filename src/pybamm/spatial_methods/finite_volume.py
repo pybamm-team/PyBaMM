@@ -226,9 +226,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         grad = self.gradient(symbol, discretised_symbol, boundary_conditions)
         return self.divergence(grad, grad, boundary_conditions)
 
-    def integral(
-        self, child, discretised_child, integration_dimension, integration_variable
-    ):
+    def integral(self, child, discretised_child, integration_dimension):
         """Vector-vector dot product to implement the integral operator."""
         integration_vector = self.definite_integral_matrix(
             child, integration_dimension=integration_dimension
