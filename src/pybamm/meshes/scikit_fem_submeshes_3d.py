@@ -120,7 +120,6 @@ class ScikitFemGenerator3D(pybamm.MeshGenerator):
     def _make_cylindrical_mesh(self, r_lim, z_lim, h):
         """
         Create a cylindrical annulus mesh.
-
         Parameters
         ----------
         r_lim : tuple
@@ -138,46 +137,31 @@ class ScikitFemGenerator3D(pybamm.MeshGenerator):
         from scipy.spatial import Delaunay
 
         r_inner, r_outer = r_lim
-        height = z_lim[1] - z_lim[0]
+        z_min, z_max = z_lim
+        height = z_max - z_min
 
-        n_radial = max(3, int((r_outer - r_inner) / h) + 1)
-        n_theta_base = max(12, int(2 * np.pi * r_outer / h))
+        n_radial = max(4, int((r_outer - r_inner) / h) + 1)
+        n_theta_base = max(16, int(2 * np.pi * r_outer / h))
         r_coords = np.linspace(r_inner, r_outer, n_radial)
-
         points_list = []
         for r in r_coords:
             if r > 1e-9:
-                n_theta = max(6, int(n_theta_base * (r / r_outer)))
+                n_theta = max(8, int(n_theta_base * (r / r_outer)))
                 thetas = np.linspace(0, 2 * np.pi, n_theta, endpoint=False)
                 for theta in thetas:
                     points_list.append([r * np.cos(theta), r * np.sin(theta)])
-
         points_2d = np.array(points_list)
-        points_2d += 1e-8 * np.random.randn(*points_2d.shape)
-
         tri_2d = Delaunay(points_2d)
         triangles_base = tri_2d.simplices
 
-        areas = []
-        for tri in triangles_base:
-            v = points_2d[tri]
-            area = 0.5 * np.abs(
-                (v[1, 0] - v[0, 0]) * (v[2, 1] - v[0, 1])
-                - (v[2, 0] - v[0, 0]) * (v[1, 1] - v[0, 1])
-            )
-            areas.append(area)
-        triangles_base = triangles_base[np.array(areas) > 1e-12]
-
         n_z = max(5, int(height / h))
-        z_coords = np.linspace(z_lim[0], z_lim[1], n_z)
+        z_coords = np.linspace(z_min, z_max, n_z)
         n_nodes_per_layer = points_2d.shape[0]
-
         nodes_3d = np.zeros((n_nodes_per_layer * n_z, 3))
         for i, z in enumerate(z_coords):
             start, end = i * n_nodes_per_layer, (i + 1) * n_nodes_per_layer
             nodes_3d[start:end, :2] = points_2d
             nodes_3d[start:end, 2] = z
-
         tetrahedra = []
         for i in range(n_z - 1):
             for tri in triangles_base:
@@ -190,68 +174,45 @@ class ScikitFemGenerator3D(pybamm.MeshGenerator):
                         [v[0], v_top[0], v_top[1], v_top[2]],
                     ]
                 )
-
-        tetrahedra = np.array(tetrahedra)
-        volumes = []
-        for tet in tetrahedra:
-            v = nodes_3d[tet]
-            vol = (
-                np.abs(
-                    np.linalg.det(
-                        np.column_stack([v[1] - v[0], v[2] - v[0], v[3] - v[0]])
-                    )
-                )
-                / 6
-            )
-            volumes.append(vol)
-        tetrahedra = tetrahedra[np.array(volumes) > 1e-10]
         mesh = skfem.MeshTet(nodes_3d.T, np.array(tetrahedra).T)
 
-        bottom_nodes = np.arange(n_nodes_per_layer)
-        top_nodes = np.arange(nodes_3d.shape[0] - n_nodes_per_layer, nodes_3d.shape[0])
+        bottom_nodes = set(range(n_nodes_per_layer))
+        top_nodes = set(range(n_nodes_per_layer * (n_z - 1), n_nodes_per_layer * n_z))
 
         points_2d_r = np.linalg.norm(points_2d, axis=1)
-        inner_radius_nodes_2d = np.where(np.isclose(points_2d_r, r_inner, rtol=1e-3))[0]
-        outer_radius_nodes_2d = np.where(np.isclose(points_2d_r, r_outer, rtol=1e-3))[0]
+        tol = h * 0.1
+        inner_nodes_2d = np.where(np.isclose(points_2d_r, r_inner, atol=tol))[0]
+        outer_nodes_2d = np.where(np.isclose(points_2d_r, r_outer, atol=tol))[0]
 
-        inner_side_nodes = np.concatenate(
-            [inner_radius_nodes_2d + (i * n_nodes_per_layer) for i in range(n_z)]
-        )
-        outer_side_nodes = np.concatenate(
-            [outer_radius_nodes_2d + (i * n_nodes_per_layer) for i in range(n_z)]
-        )
-
-        boundary_facets = mesh.boundary_facets()
-        facet_nodes = mesh.facets[:, boundary_facets]
+        inner_wall_nodes = {
+            n + (i * n_nodes_per_layer) for i in range(n_z) for n in inner_nodes_2d
+        }
+        outer_wall_nodes = {
+            n + (i * n_nodes_per_layer) for i in range(n_z) for n in outer_nodes_2d
+        }
 
         bottom_facets, top_facets, inner_facets, outer_facets = [], [], [], []
 
-        for i, facet_idx in enumerate(boundary_facets):
-            nodes_in_facet = facet_nodes[:, i]
-            if np.all(np.isin(nodes_in_facet, bottom_nodes)):
+        for facet_idx in mesh.boundary_facets():
+            facet_nodes = set(mesh.facets[:, facet_idx])
+            if facet_nodes.issubset(bottom_nodes):
                 bottom_facets.append(facet_idx)
-            elif np.all(np.isin(nodes_in_facet, top_nodes)):
+            elif facet_nodes.issubset(top_nodes):
                 top_facets.append(facet_idx)
-            elif np.any(np.isin(nodes_in_facet, inner_side_nodes)):
+            elif facet_nodes.issubset(inner_wall_nodes):
                 inner_facets.append(facet_idx)
-            elif np.any(np.isin(nodes_in_facet, outer_side_nodes)):
+            elif facet_nodes.issubset(outer_wall_nodes):
                 outer_facets.append(facet_idx)
 
         boundaries = {}
-        if bottom_facets:
+        if len(bottom_facets) > 0:
             boundaries["bottom"] = np.array(bottom_facets)
-        if top_facets:
+        if len(top_facets) > 0:
             boundaries["top"] = np.array(top_facets)
-        if inner_facets:
+        if len(inner_facets) > 0:
             boundaries["inner radius"] = np.array(inner_facets)
-        if outer_facets:
+        if len(outer_facets) > 0:
             boundaries["outer radius"] = np.array(outer_facets)
-
-        if boundaries:
-            all_boundary_nodes = set()
-            for facet_list in boundaries.values():
-                all_boundary_nodes.update(mesh.facets[:, facet_list].flatten())
-            mesh = laplacian_smooth(mesh, list(all_boundary_nodes), iterations=2)
 
         return mesh.with_boundaries(boundaries)
 

@@ -905,6 +905,22 @@ class BoundaryIntegral(SpatialOperator):
             name += "negative tab"
         elif region == "positive tab":
             name += "positive tab"
+        elif region == "left":
+            name += "left"
+        elif region == "right":
+            name += "right"
+        elif region == "top":
+            name += "top"
+        elif region == "bottom":
+            name += "bottom"
+        elif region == "back":
+            name += "back"
+        elif region == "front":
+            name += "front"
+        elif region == "inner radius":  # pragma: no cover
+            name += "inner radius"
+        elif region == "outer radius":  # pragma: no cover
+            name += "outer radius"
         self.region = region
         super().__init__(name, child, domains)
 

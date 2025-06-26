@@ -418,7 +418,7 @@ class TestScikitFiniteElement3D:
         analytical_area = 2 * (lx * ly + lx * lz + ly * lz)
 
         expected_result = const_value * analytical_area
-        np.testing.assert_allclose(numerical_result, expected_result, rtol=5e-2)
+        np.testing.assert_allclose(numerical_result, expected_result, rtol=1e-2)
 
     def test_disc_spatial_var_3d(self):
         mesh = get_unit_3d_mesh_for_testing(
@@ -696,3 +696,35 @@ class TestScikitFiniteElement3D:
         assert radii.min() > 0.0 - 1e-7
         assert nodes[:, 2].min() > 0.0 - 1e-7
         assert nodes[:, 2].max() < 0.8 + 1e-7
+
+    def test_boundary_integral_3d_box(self):
+        mesh = get_unit_3d_mesh_for_testing(geom_type="box", h=0.1)
+        domain = "current collector"
+        disc = pybamm.Discretisation(mesh, {domain: pybamm.ScikitFiniteElement3D()})
+
+        var = pybamm.Variable("var", domain=domain)
+        disc.set_variable_slices([var])
+
+        y_test = np.ones(mesh[domain].npts)
+
+        regions_and_areas = {
+            "left": 1.0,
+            "right": 1.0,
+            "bottom": 1.0,
+            "top": 1.0,
+            "front": 1.0,
+            "back": 1.0,
+        }
+
+        for region, analytical_area in regions_and_areas.items():
+            integral_op = pybamm.BoundaryIntegral(var, region=region)
+
+            integral_disc = disc.process_symbol(integral_op)
+            numerical_area = integral_disc.evaluate(y=y_test)
+
+            np.testing.assert_allclose(
+                numerical_area,
+                analytical_area,
+                rtol=1e-2,
+                err_msg=f"Failed for region: '{region}'",
+            )

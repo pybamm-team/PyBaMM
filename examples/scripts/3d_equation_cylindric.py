@@ -10,6 +10,7 @@ from pybamm import (
     Scalar,
     ScikitFiniteElement3D,
 )
+from pybamm.meshes.scikit_fem_submeshes_3d import ScikitFemGenerator3D
 
 R_outer = 0.6
 R_inner = 0.1
@@ -44,7 +45,7 @@ geometry = {
 }
 
 submesh_types = {
-    "current collector": pybamm.ScikitFemGenerator3D(geom_type="cylinder", h=0.08)
+    "current collector": ScikitFemGenerator3D(geom_type="cylinder", h=0.08)
 }
 
 var_pts = {r: None, theta: None, z: None}
@@ -101,9 +102,17 @@ ax2.set_title("T(r,z) at θ=0 (Interpolated)")
 ax2.set_aspect("equal")
 fig.colorbar(pcm2, ax=ax2)
 
-z_mid_indices = np.abs(nodes[:, 2] - H / 2) < (H / 20)
+
+unique_z_coords = np.unique(nodes[:, 2])
+mid_plane_z = unique_z_coords[np.argmin(np.abs(unique_z_coords - H / 2))]
+print(
+    f"\nPlotting direct FEM solution on the mesh plane closest to mid-height (z={mid_plane_z:.3f}m)."
+)
+
+z_mid_indices = nodes[:, 2] == mid_plane_z
 z_mid_nodes = nodes[z_mid_indices]
 T_mid = T_solution[z_mid_indices]
+
 triang = tri.Triangulation(z_mid_nodes[:, 0], z_mid_nodes[:, 1])
 pcm3 = ax3.tricontourf(triang, T_mid, levels=20, cmap="viridis")
 ax3.plot(
@@ -121,6 +130,7 @@ ax3.set_ylabel("y [m]")
 ax3.set_title("FEM Solution at Mid-Height (Direct)")
 ax3.set_aspect("equal")
 fig.colorbar(pcm3, ax=ax3, label="Temperature [°C]")
+
 
 r_line = np.linspace(R_inner, R_outer, 100)
 radial_points = np.column_stack(
