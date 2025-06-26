@@ -256,7 +256,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             msg = "The python-idaklu solver has been deprecated."
             warnings.warn(msg, DeprecationWarning, stacklevel=2)
             raise pybamm.SolverError(
-                f"Unsupported option for convert_to_format={model.convert_to_format} "
+                f"Unsupported option for convert_to_format={model.convert_to_format}"
             )
 
         if self._options["jacobian"] == "dense":
