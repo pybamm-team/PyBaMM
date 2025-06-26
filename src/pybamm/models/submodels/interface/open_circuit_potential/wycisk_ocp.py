@@ -92,7 +92,7 @@ class WyciskOpenCircuitPotential(BaseHysteresisOpenCircuitPotential):
         dQdU = variables[
             f"{Domain} electrode {phase_name}differential capacity [A.s.V-1]"
         ]
-        dQdU = dQdU.orphans[0]
+        # dQdU = dQdU.orphans[0]
         Gamma = self.phase_param.hysteresis_decay(sto_surf, T)
         x = self.phase_param.hysteresis_switch
 
