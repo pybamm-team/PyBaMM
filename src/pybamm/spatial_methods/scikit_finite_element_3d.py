@@ -54,7 +54,9 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
                 :, np.newaxis
             ]
         elif symbol.name == "theta":
-            entries = np.arctan2(mesh.nodes[:, 1], mesh.nodes[:, 0])[:, np.newaxis]
+            entries = np.arctan2(mesh.nodes[:, 1], mesh.nodes[:, 0])[
+                :, np.newaxis
+            ]  # pragma: no cover
         else:
             raise pybamm.GeometryError(
                 f"Spatial variable must be 'x', 'y' or 'z', not {symbol.name}"
@@ -290,50 +292,10 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
         skfem = import_optional_dependency("skfem")
         domain = symbol.domain[0]
         mesh = self.mesh[domain]
-        coord_sys = mesh.coord_sys
 
-        if coord_sys == "cartesian":
-
-            @skfem.BilinearForm
-            def stiffness_form(u, v, w):
-                return (
-                    u.grad[0] * v.grad[0]
-                    + u.grad[1] * v.grad[1]
-                    + u.grad[2] * v.grad[2]
-                )
-        elif coord_sys == "cylindrical polar":
-
-            @skfem.BilinearForm
-            def stiffness_form(u, v, w):
-                x, y = w.x[0], w.x[1]
-                r_squared = x**2 + y**2
-                integrand = np.zeros_like(r_squared)
-                safe_indices = r_squared > 1e-24
-                if np.any(safe_indices):
-                    r_safe = np.sqrt(r_squared[safe_indices])
-                    u_dx, u_dy, u_dz = u.grad[:, safe_indices]
-                    v_dx, v_dy, v_dz = v.grad[:, safe_indices]
-                    x_safe, y_safe = x[safe_indices], y[safe_indices]
-                    grad_u_r = (u_dx * x_safe + u_dy * y_safe) / r_safe
-                    grad_v_r = (v_dx * x_safe + v_dy * y_safe) / r_safe
-
-                    grad_u_theta = u_dy * x_safe - u_dx * y_safe
-                    grad_v_theta = v_dy * x_safe - v_dx * y_safe
-
-                    grad_u_z = u_dz
-                    grad_v_z = v_dz
-
-                    integrand_safe = (
-                        r_safe * (grad_u_r * grad_v_r)
-                        + (1 / r_safe) * (grad_u_theta * grad_v_theta)
-                        + r_safe * (grad_u_z * grad_v_z)
-                    )
-                    integrand[safe_indices] = integrand_safe
-                    return integrand
-        else:
-            raise pybamm.DiscretisationError(
-                f"Unknown coordinate system '{coord_sys}'"
-            )  # pragma: no cover
+        @skfem.BilinearForm
+        def stiffness_form(u, v, w):
+            return u.grad[0] * v.grad[0] + u.grad[1] * v.grad[1] + u.grad[2] * v.grad[2]
 
         stiffness = skfem.asm(stiffness_form, mesh.basis)
 

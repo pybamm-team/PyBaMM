@@ -917,10 +917,10 @@ class BoundaryIntegral(SpatialOperator):
             name += "back"
         elif region == "front":
             name += "front"
-        elif region == "inner radius":  # pragma: no cover
-            name += "inner radius"
-        elif region == "outer radius":  # pragma: no cover
-            name += "outer radius"
+        elif region == "inner radius":
+            name += "inner radius"  # pragma: no cover
+        elif region == "outer radius":
+            name += "outer radius"  # pragma: no cover
         self.region = region
         super().__init__(name, child, domains)
 
