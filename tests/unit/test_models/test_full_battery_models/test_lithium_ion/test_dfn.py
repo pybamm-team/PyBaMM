@@ -53,6 +53,13 @@ class TestDFN(BaseUnitTestLithiumIon):
         }
         self.check_well_posedness(options)
 
+    def test_well_posed_wycisk_thermal(self):
+        options = {
+            "open-circuit potential": "Wycisk",
+            "thermal": "lumped",
+        }
+        self.check_well_posedness(options)
+
     def test_well_posed_axen_ocp_with_psd(self):
         options = {
             "open-circuit potential": "Axen",
@@ -64,6 +71,13 @@ class TestDFN(BaseUnitTestLithiumIon):
         options = {
             "open-circuit potential": (("Axen", "single"), "single"),
             "particle phases": ("2", "1"),
+        }
+        self.check_well_posedness(options)
+
+    def test_well_posed_axen_thermal(self):
+        options = {
+            "open-circuit potential": "Axen",
+            "thermal": "lumped",
         }
         self.check_well_posedness(options)
 

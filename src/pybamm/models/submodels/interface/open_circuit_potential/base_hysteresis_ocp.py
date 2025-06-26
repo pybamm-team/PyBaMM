@@ -77,15 +77,14 @@ class BaseHysteresisOpenCircuitPotential(BaseOpenCircuitPotential):
         phase_name = self.phase_name
 
         if self.reaction == "lithium-ion main":
-            # Get delithiation and lithiation OCPs
+            # Get equilibrium, delithiation and lithiation OCPs
             sto_surf, T = self._get_stoichiometry_and_temperature(variables)
+            U_eq = self.phase_param.U(sto_surf, T)
+            U_eq_x_av = self.phase_param.U(sto_surf, T)
             U_lith = self.phase_param.U(sto_surf, T, "lithiation")
             U_lith_x_av = pybamm.x_average(U_lith)
             U_delith = self.phase_param.U(sto_surf, T, "delithiation")
             U_delith_x_av = pybamm.x_average(U_delith)
-
-            U_eq = (U_lith + U_delith) / 2
-            U_eq_x_av = (U_lith_x_av + U_delith_x_av) / 2
 
             H = U_lith - U_delith
             H_x_av = pybamm.x_average(H)
