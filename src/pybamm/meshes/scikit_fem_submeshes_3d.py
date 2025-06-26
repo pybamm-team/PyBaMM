@@ -4,51 +4,6 @@ import pybamm
 from pybamm.util import import_optional_dependency
 
 
-def laplacian_smooth(mesh, boundary_dofs, iterations=5):
-    """
-    Improves mesh quality using Laplacian smoothing while keeping boundary nodes fixed.
-
-    Parameters
-    ----------
-    mesh : skfem.MeshTet
-        The tetrahedral mesh to smooth
-    boundary_dofs : array_like
-        Indices of boundary nodes to keep fixed
-    iterations : int
-        Number of smoothing iterations
-
-    Returns
-    -------
-    skfem.MeshTet
-        Smoothed mesh
-    """
-    skfem = import_optional_dependency("skfem")
-    p = mesh.p.copy()
-    edges = mesh.edges
-
-    adjacency = [[] for _ in range(p.shape[1])]
-    for i in range(edges.shape[1]):
-        u, v = edges[:, i]
-        adjacency[u].append(v)
-        adjacency[v].append(u)
-
-    interior_nodes = np.ones(p.shape[1], dtype=bool)
-    interior_nodes[np.unique(boundary_dofs)] = False
-    interior_indices = np.where(interior_nodes)[0]
-
-    for _ in range(iterations):
-        p_new = p.copy()
-        for i in interior_indices:
-            neighbors = adjacency[i]
-            if neighbors:
-                p_new[:, i] = np.mean(p[:, neighbors], axis=1)
-        p = p_new
-
-    smoothed_mesh = skfem.MeshTet(p, mesh.t)
-
-    return smoothed_mesh
-
-
 class ScikitFemGenerator3D(pybamm.MeshGenerator):
     """
     A mesh generator that creates 3D tetrahedral meshes using scikit-fem.
