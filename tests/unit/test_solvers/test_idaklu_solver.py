@@ -971,21 +971,6 @@ class TestIDAKLUSolver:
                 == sol_all[varname].sensitivities["all"].shape
             )
 
-    def test_bad_jax_evaluator(self):
-        model = pybamm.lithium_ion.DFN()
-        model.convert_to_format = "jax"
-        with pytest.raises(pybamm.SolverError):
-            pybamm.IDAKLUSolver(options={"jax_evaluator": "bad_evaluator"})
-
-    def test_bad_jax_evaluator_output_variables(self):
-        model = pybamm.lithium_ion.DFN()
-        model.convert_to_format = "jax"
-        with pytest.raises(pybamm.SolverError):
-            pybamm.IDAKLUSolver(
-                options={"jax_evaluator": "bad_evaluator"},
-                output_variables=["Terminal voltage [V]"],
-            )
-
     def test_with_output_variables_and_event_termination(self):
         model = pybamm.lithium_ion.DFN()
         parameter_values = pybamm.ParameterValues("Chen2020")
@@ -1074,44 +1059,33 @@ class TestIDAKLUSolver:
         )
 
     def test_python_idaklu_deprecation_errors(self):
-        for form in ["python", "", "jax"]:
-            if form == "jax" and not pybamm.has_jax():
-                continue
+        model = pybamm.BaseModel()
+        model.convert_to_format = "python"
+        u = pybamm.Variable("u")
+        v = pybamm.Variable("v")
+        model.rhs = {u: 0.1 * v}
+        model.algebraic = {v: 1 - v}
+        model.initial_conditions = {u: 0, v: 1}
+        model.events = [pybamm.Event("1", 0.2 - u), pybamm.Event("2", v)]
 
-            model = pybamm.BaseModel()
-            model.convert_to_format = form
-            u = pybamm.Variable("u")
-            v = pybamm.Variable("v")
-            model.rhs = {u: 0.1 * v}
-            model.algebraic = {v: 1 - v}
-            model.initial_conditions = {u: 0, v: 1}
-            model.events = [pybamm.Event("1", 0.2 - u), pybamm.Event("2", v)]
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
 
-            disc = pybamm.Discretisation()
-            disc.process_model(model)
+        t_eval = [0, 3]
 
-            t_eval = [0, 3]
+        solver = pybamm.IDAKLUSolver(
+            root_method="lm",
+        )
 
-            solver = pybamm.IDAKLUSolver(
-                root_method="lm",
-            )
-
-            if form == "python":
-                with pytest.raises(
-                    pybamm.SolverError,
-                    match="Unsupported option for convert_to_format=python",
-                ):
-                    with pytest.raises(
-                        DeprecationWarning,
-                        match="The python-idaklu solver has been deprecated.",
-                    ):
-                        _ = solver.solve(model, t_eval)
-            elif form == "jax":
-                with pytest.raises(
-                    pybamm.SolverError,
-                    match="Unsupported evaluation engine for convert_to_format=jax",
-                ):
-                    _ = solver.solve(model, t_eval)
+        with pytest.raises(
+            pybamm.SolverError,
+            match="Unsupported option for convert_to_format=python",
+        ):
+            with pytest.raises(
+                DeprecationWarning,
+                match="The python-idaklu solver has been deprecated.",
+            ):
+                _ = solver.solve(model, t_eval)
 
     def test_extrapolation_events_with_output_variables(self):
         # Make sure the extrapolation checks work with output variables
