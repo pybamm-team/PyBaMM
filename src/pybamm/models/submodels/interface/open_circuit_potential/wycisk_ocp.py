@@ -47,6 +47,7 @@ class WyciskOpenCircuitPotential(BaseHysteresisOpenCircuitPotential):
         if self.reaction == "lithium-ion main":
             # determine dQ/dU
             sto_surf, T = self._get_stoichiometry_and_temperature(variables)
+            sto_surf = pybamm.size_average(sto_surf)
             T_bulk = pybamm.xyz_average(pybamm.size_average(T))
             if phase_name == "":
                 Q_mag = variables[f"{Domain} electrode capacity [A.h]"]
@@ -57,9 +58,13 @@ class WyciskOpenCircuitPotential(BaseHysteresisOpenCircuitPotential):
 
             dU = self.phase_param.U(sto_surf, T_bulk).diff(sto_surf)
             dQdU = Q_mag / dU
-            variables[
-                f"{Domain} electrode {phase_name}differential capacity [A.s.V-1]"
-            ] = dQdU
+            dQdU_xav = pybamm.x_average(dQdU)
+            variables.update(
+                {
+                    f"{Domain} electrode {phase_name}differential capacity [A.s.V-1]": dQdU,
+                    f"X-averaged {domain} electrode {phase_name}differential capacity [A.s.V-1]": dQdU_xav,
+                }
+            )
 
         return variables
 
@@ -74,6 +79,9 @@ class WyciskOpenCircuitPotential(BaseHysteresisOpenCircuitPotential):
             sto_surf = variables[f"{Domain} {phase_name}particle surface stoichiometry"]
             T = variables[f"{Domain} electrode temperature [K]"]
             h = variables[f"{Domain} electrode {phase_name}hysteresis state"]
+            dQdU = variables[
+                f"{Domain} electrode {phase_name}differential capacity [A.s.V-1]"
+            ]
         else:
             i_surf = variables[
                 f"X-averaged {domain} electrode {phase_name}interfacial current density [A.m-2]"
@@ -83,16 +91,15 @@ class WyciskOpenCircuitPotential(BaseHysteresisOpenCircuitPotential):
             ]
             T = variables[f"X-averaged {domain} electrode temperature [K]"]
             h = variables[f"X-averaged {domain} electrode {phase_name}hysteresis state"]
+            dQdU = variables[
+                f"X-averaged {domain} electrode {phase_name}differential capacity [A.s.V-1]"
+            ]
         # check if composite or not
         if phase_name != "":
             Q_cell = variables[f"{Domain} electrode {phase_name}phase capacity [A.h]"]
         else:
             Q_cell = variables[f"{Domain} electrode capacity [A.h]"]
 
-        dQdU = variables[
-            f"{Domain} electrode {phase_name}differential capacity [A.s.V-1]"
-        ]
-        # dQdU = dQdU.orphans[0]
         Gamma = self.phase_param.hysteresis_decay(sto_surf, T)
         x = self.phase_param.hysteresis_switch
 
