@@ -575,7 +575,8 @@ class ProcessedVariable(BaseProcessedVariable):
 
         # add sensitivities if they exist
         if self.sensitivities:
-            cpv._sensitivities = self.sensitivities
+            # TODO: test once #5058 is fixed
+            cpv._sensitivities = self.sensitivities  # pragma: no cover
 
         return cpv
 
