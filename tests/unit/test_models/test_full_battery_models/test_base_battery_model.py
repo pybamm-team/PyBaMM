@@ -25,7 +25,7 @@ PRINT_OPTIONS_OUTPUT = """\
 'convection': 'none' (possible: ['none', 'uniform transverse', 'full transverse'])
 'current collector': 'uniform' (possible: ['uniform', 'potential pair', 'potential pair quite conductive'])
 'diffusivity': 'single' (possible: ['single', 'current sigmoid'])
-'dimensionality': 0 (possible: [0, 1, 2, 3])
+'dimensionality': 0 (possible: [0, 1, 2])
 'electrolyte conductivity': 'default' (possible: ['default', 'full', 'leading order', 'composite', 'integrated'])
 'exchange-current density': 'single' (possible: ['single', 'current sigmoid'])
 'heat of mixing': 'false' (possible: ['false', 'true'])

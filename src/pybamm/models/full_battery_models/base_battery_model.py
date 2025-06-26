@@ -251,7 +251,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "potential pair quite conductive",
             ],
             "diffusivity": ["single", "current sigmoid"],
-            "dimensionality": [0, 1, 2, 3],
+            "dimensionality": [0, 1, 2],
             "electrolyte conductivity": [
                 "default",
                 "full",
@@ -951,11 +951,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             base_spatial_methods["current collector"] = pybamm.FiniteVolume()
         elif self.options["dimensionality"] == 2:
             base_spatial_methods["current collector"] = pybamm.ScikitFiniteElement()
-        elif self.options["dimensionality"] == 3:  # pragma: no cover
-            raise NotImplementedError(
-                "3D models are not yet implemented in PyBaMM. "
-                "Please use a 0D, 1D or 2D model."
-            )
+
         return base_spatial_methods
 
     @property
