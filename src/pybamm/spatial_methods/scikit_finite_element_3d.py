@@ -253,6 +253,10 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
             Fx = Fr * cos_theta - Ftheta * sin_theta
             Fy = Fr * sin_theta + Ftheta * cos_theta
             Fz = Fz_cyl
+        else:
+            raise pybamm.DiscretisationError(
+                f"Unknown coordinate system '{coord_sys}'"
+            )  # pragma: no cover
 
         @skfem.BilinearForm
         def mass_form(u, v, w):
