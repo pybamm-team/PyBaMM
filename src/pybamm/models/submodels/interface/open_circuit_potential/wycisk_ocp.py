@@ -104,7 +104,7 @@ class WyciskOpenCircuitPotential(BaseHysteresisOpenCircuitPotential):
         x = self.phase_param.hysteresis_switch
 
         i_surf_sign = pybamm.sign(i_surf)
-        signed_h = 1 - i_surf_sign * h
+        signed_h = (1 - i_surf_sign * h) / 2
         gamma = Gamma * (1 / dQdU**x)
         dhdt = gamma * i_surf / Q_cell * signed_h
 

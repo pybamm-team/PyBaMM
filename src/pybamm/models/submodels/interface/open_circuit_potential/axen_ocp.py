@@ -68,7 +68,7 @@ class AxenOpenCircuitPotential(BaseHysteresisOpenCircuitPotential):
         gamma_delith = self.phase_param.hysteresis_decay(sto_surf, T, "delithiation")
 
         i_vol_sign = pybamm.sign(i_vol)
-        signed_h = 1 - i_vol_sign * h
+        signed_h = (1 - i_vol_sign * h) / 2
         gamma = (
             0.5 * (1 - i_vol_sign) * gamma_lith + 0.5 * (1 + i_vol_sign) * gamma_delith
         )
