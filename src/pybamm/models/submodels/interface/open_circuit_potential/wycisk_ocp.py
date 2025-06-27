@@ -8,7 +8,9 @@ from . import BaseHysteresisOpenCircuitPotential
 
 class WyciskOpenCircuitPotential(BaseHysteresisOpenCircuitPotential):
     """
-    Class for single-state open-circuit hysteresis model based on he approach outlined by Wycisk :footcite:t:'Wycisk2022'. The hysteresis state variable $h$ is governed by an ODE which depends on the local surface stoichiometry, volumetric interfacial current density, and differential capacity.
+    Class for single-state open-circuit hysteresis model based on the approach outlined by Wycisk :footcite:t:`Wycisk2022`.
+    The hysteresis state variable `h` is governed by an ODE which depends on the local surface stoichiometry,
+    volumetric interfacial current density, and differential capacity.
 
     Parameters
     ----------

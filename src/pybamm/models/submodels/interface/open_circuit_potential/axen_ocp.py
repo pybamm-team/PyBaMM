@@ -8,7 +8,9 @@ from . import BaseHysteresisOpenCircuitPotential
 
 class AxenOpenCircuitPotential(BaseHysteresisOpenCircuitPotential):
     """
-    Class for single-state hysteresis model based on the implementation in :footcite:t:`Axen2022`. The hysteresis state variable $h$ is governed by an ODE which depends on the local surface stoichiometry and volumetric interfacial current density.
+    Class for single-state hysteresis model based on the implementation in :footcite:t:`Axen2022`.
+    The hysteresis state variable `h` is governed by an ODE which depends on the local surface
+    stoichiometry and volumetric interfacial current density.
 
     Parameters
     ----------
