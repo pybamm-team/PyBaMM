@@ -1,5 +1,6 @@
-import pybamm
 import warnings
+
+import pybamm
 
 from . import BaseHysteresisOpenCircuitPotential
 
