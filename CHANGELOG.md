@@ -13,6 +13,7 @@
 
 ## Breaking changes
 
+- PyBaMM now supports `numpy>2.0.0` ([#5083](https://github.com/pybamm-team/PyBaMM/pull/5083))
 - Removed the IREE code from the IDAKLU solver ([#5080](https://github.com/pybamm-team/PyBaMM/pull/5080))
 - Removed support for Python 3.9 ([#5052](https://github.com/pybamm-team/PyBaMM/pull/5052))
 
