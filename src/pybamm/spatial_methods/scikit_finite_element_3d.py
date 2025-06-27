@@ -28,12 +28,12 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
 
     def spatial_variable(self, symbol):
         """
-        Creates a discretised spatial variable for x, y, or z.
+        Creates a discretised spatial variable for x, y, z, r or theta.
 
         Parameters
         ----------
         symbol : :class:`pybamm.SpatialVariable`
-            The spatial variable to discretise (must be 'x', 'y', or 'z')
+            The spatial variable to discretise (must be 'x', 'y', 'z', 'r' or 'theta')
 
         Returns
         -------
@@ -59,14 +59,14 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
             ]  # pragma: no cover
         else:
             raise pybamm.GeometryError(
-                f"Spatial variable must be 'x', 'y' or 'z', not {symbol.name}"
+                f"Spatial variable must be 'x', 'y', 'z', 'r' or 'theta', not {symbol.name}"
             )  # pragma: no cover
         return pybamm.Vector(entries, domains=symbol.domains)
 
     def gradient(self, symbol, discretised_symbol, boundary_conditions):
         """
         Matrix-vector multiplication to implement the 3D gradient operator.
-        Returns a Concatenation of [grad_x, grad_y, grad_z] similar to 2D approach.
+        Returns a Concatenation of [grad_x, grad_y, grad_z] or [grad_r, grad_theta, grad_z].
 
         Parameters
         ----------
@@ -80,7 +80,7 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
         Returns
         -------
         :class:`pybamm.Concatenation`
-            The 3D gradient as concatenation of x, y, z components
+            The 3D gradient as concatenation of x, y, z or z, r, theta components
         """
         skfem = import_optional_dependency("skfem")
         domain = symbol.domain[0]
@@ -153,7 +153,7 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
         Returns
         -------
         tuple of :class:`pybamm.Matrix`
-            The (sparse) finite element gradient matrices for x, y, z directions
+            The (sparse) finite element gradient matrices.
         """
         skfem = import_optional_dependency("skfem")
         domain = symbol.domain[0]

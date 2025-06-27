@@ -121,11 +121,14 @@ def get_unit_3d_mesh_for_testing(geom_type="box", **geom_params):
         x = pybamm.SpatialVariable("x", ["current collector"])
         y = pybamm.SpatialVariable("y", ["current collector"])
         z = pybamm.SpatialVariable("z", ["current collector"])
+        x_max = geom_params.get("x_max", 1.0)
+        y_max = geom_params.get("y_max", 2.0)
+        z_max = geom_params.get("z_max", 3.0)
         geometry = {
             "current collector": {
-                x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
-                y: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
-                z: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+                x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(x_max)},
+                y: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(y_max)},
+                z: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(z_max)},
             }
         }
         var_pts = {x: 5, y: 5, z: 5}

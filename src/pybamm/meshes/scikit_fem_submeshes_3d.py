@@ -61,12 +61,12 @@ class ScikitFemGenerator3D(pybamm.MeshGenerator):
         midpoints = mesh.p[:, mesh.facets[:, bnd_facets]].mean(axis=1)
 
         boundaries = {
-            "left": bnd_facets[np.isclose(midpoints[0], x_min)],
-            "right": bnd_facets[np.isclose(midpoints[0], x_max)],
-            "bottom": bnd_facets[np.isclose(midpoints[1], y_min)],
-            "top": bnd_facets[np.isclose(midpoints[1], y_max)],
-            "front": bnd_facets[np.isclose(midpoints[2], z_min)],
-            "back": bnd_facets[np.isclose(midpoints[2], z_max)],
+            "x_min": bnd_facets[np.isclose(midpoints[0], x_min)],
+            "x_max": bnd_facets[np.isclose(midpoints[0], x_max)],
+            "y_min": bnd_facets[np.isclose(midpoints[1], y_min)],
+            "y_max": bnd_facets[np.isclose(midpoints[1], y_max)],
+            "z_min": bnd_facets[np.isclose(midpoints[2], z_min)],
+            "z_max": bnd_facets[np.isclose(midpoints[2], z_max)],
         }
 
         subdomains = {"default": np.arange(mesh.nelements)}
@@ -161,13 +161,13 @@ class ScikitFemGenerator3D(pybamm.MeshGenerator):
 
         boundaries = {}
         if len(bottom_facets) > 0:
-            boundaries["bottom"] = np.array(bottom_facets)
+            boundaries["z_min"] = np.array(bottom_facets)
         if len(top_facets) > 0:
-            boundaries["top"] = np.array(top_facets)
+            boundaries["z_max"] = np.array(top_facets)
         if len(inner_facets) > 0:
-            boundaries["inner radius"] = np.array(inner_facets)
+            boundaries["r_min"] = np.array(inner_facets)
         if len(outer_facets) > 0:
-            boundaries["outer radius"] = np.array(outer_facets)
+            boundaries["r_max"] = np.array(outer_facets)
 
         return mesh.with_boundaries(boundaries)
 
