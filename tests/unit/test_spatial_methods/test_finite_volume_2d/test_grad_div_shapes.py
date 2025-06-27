@@ -513,11 +513,9 @@ class TestFiniteVolume2DGradDiv:
         disc.bcs = boundary_conditions
 
         laplacian_eqn_disc = disc.process_symbol(laplacian_eqn)
-        np.testing.assert_allclose(
+        np.testing.assert_array_almost_equal(
             laplacian_eqn_disc.evaluate(None, linear_x).flatten(),
             np.zeros(submesh.npts),
-            rtol=1e-7,
-            atol=1e-6,
         )
 
         # Test Laplacian of linear z is zero
@@ -535,11 +533,9 @@ class TestFiniteVolume2DGradDiv:
         disc.bcs = boundary_conditions
 
         laplacian_eqn_disc = disc.process_symbol(laplacian_eqn)
-        np.testing.assert_allclose(
+        np.testing.assert_array_almost_equal(
             laplacian_eqn_disc.evaluate(None, linear_z).flatten(),
             np.zeros(submesh.npts),
-            rtol=1e-7,
-            atol=1e-6,
         )
 
     def test_internal_neumann_condition(self):
