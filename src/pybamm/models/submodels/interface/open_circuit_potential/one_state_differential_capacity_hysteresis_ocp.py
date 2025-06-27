@@ -1,14 +1,14 @@
-#
-# from Wycisk 2022
-#
 import pybamm
+import warnings
 
 from . import BaseHysteresisOpenCircuitPotential
 
 
-class WyciskOpenCircuitPotential(BaseHysteresisOpenCircuitPotential):
+class OneStateDifferentialCapacityHysteresisOpenCircuitPotential(
+    BaseHysteresisOpenCircuitPotential
+):
     """
-    Class for single-state open-circuit hysteresis model based on the approach outlined by Wycisk :footcite:t:`Wycisk2022`.
+    Class for one-state open-circuit hysteresis model based on the approach outlined by Wycisk :footcite:t:`Wycisk2022`.
     The hysteresis state variable `h` is governed by an ODE which depends on the local surface stoichiometry,
     volumetric interfacial current density, and differential capacity.
 
@@ -111,3 +111,18 @@ class WyciskOpenCircuitPotential(BaseHysteresisOpenCircuitPotential):
         dhdt = gamma * i_surf / Q_cell * signed_h
 
         self.rhs[h] = dhdt
+
+
+class WyciskOpenCircuitPotential(
+    OneStateDifferentialCapacityHysteresisOpenCircuitPotential
+):
+    """
+    Alias for the OneStateDifferentialCapacityHysteresisOpenCircuitPotential model.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        raise warnings.warn(
+            "WyciskOpenCircuitPotential is deprecated. Use OneStateDifferentialCapacityHysteresisOpenCircuitPotential instead.",
+            stacklevel=2,
+        )

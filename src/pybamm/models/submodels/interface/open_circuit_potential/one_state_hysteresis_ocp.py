@@ -1,14 +1,12 @@
-#
-# from Axen 2022
-#
 import pybamm
+import warnings
 
 from . import BaseHysteresisOpenCircuitPotential
 
 
-class AxenOpenCircuitPotential(BaseHysteresisOpenCircuitPotential):
+class OneStateHysteresisOpenCircuitPotential(BaseHysteresisOpenCircuitPotential):
     """
-    Class for single-state hysteresis model based on the implementation in :footcite:t:`Axen2022`.
+    Class for one-state hysteresis model based on the implementation in :footcite:t:`Axen2022`.
     The hysteresis state variable `h` is governed by an ODE which depends on the local surface
     stoichiometry and volumetric interfacial current density.
 
@@ -78,3 +76,16 @@ class AxenOpenCircuitPotential(BaseHysteresisOpenCircuitPotential):
         dhdt = gamma * i_vol / (self.param.F * c_max * eps) * signed_h
 
         self.rhs[h] = dhdt
+
+
+class AxenOpenCircuitPotential(OneStateHysteresisOpenCircuitPotential):
+    """
+    Alias for the OneStateHysteresisOpenCircuitPotential model.
+    """
+
+    def __init__(self, *args, **kwargs):
+        raise warnings.warn(
+            "AxenOpenCircuitPotential is deprecated. Use OneStateHysteresisOpenCircuitPotential instead.",
+            stacklevel=2,
+        )
+        super().__init__(*args, **kwargs)

@@ -36,7 +36,7 @@ PRINT_OPTIONS_OUTPUT = """\
 'lithium plating porosity change': 'false' (possible: ['false', 'true'])
 'loss of active material': 'stress-driven' (possible: ['none', 'stress-driven', 'reaction-driven', 'current-driven', 'stress and reaction-driven'])
 'number of MSMR reactions': 'none' (possible: ['none'])
-'open-circuit potential': 'single' (possible: ['single', 'current sigmoid', 'MSMR', 'Wycisk', 'Axen'])
+'open-circuit potential': 'single' (possible: ['single', 'current sigmoid', 'MSMR', 'one-state hysteresis', 'one-state differential capacity hysteresis'])
 'operating mode': 'current' (possible: ['current', 'voltage', 'power', 'differential power', 'explicit power', 'resistance', 'differential resistance', 'explicit resistance', 'CCCV'])
 'particle': 'Fickian diffusion' (possible: ['Fickian diffusion', 'uniform profile', 'quadratic profile', 'quartic profile', 'MSMR'])
 'particle mechanics': 'swelling only' (possible: ['none', 'swelling only', 'swelling and cracking'])
@@ -552,3 +552,11 @@ class TestOptions:
             "separator",
             "positive electrode",
         ]
+
+    @pytest.mark.parametrize(
+        "ocp_option",
+        ["Axen", "Wycisk", ("Axen", "single"), ("Wycisk", "single")],
+    )
+    def test_renamed_hysteresis_ocp(self, ocp_option):
+        with pytest.raises(pybamm.OptionError, match="renamed"):
+            BatteryModelOptions({"open-circuit potential": ocp_option})

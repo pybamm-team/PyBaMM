@@ -102,7 +102,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 reactions.
             * "open-circuit potential" : str
                 Sets the model for the open circuit potential. Can be "single"
-                (default), "current sigmoid", "Wycisk", "Axen", or "MSMR".
+                (default), "current sigmoid", "one-state hysteresis", "one-state differential capacity hysteresis", or "MSMR".
                 If "MSMR" then the "particle" option must also be "MSMR".
                 A 2-tuple can be provided for different behaviour in negative
                 and positive electrodes.
@@ -282,8 +282,8 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "single",
                 "current sigmoid",
                 "MSMR",
-                "Wycisk",
-                "Axen",
+                "one-state hysteresis",
+                "one-state differential capacity hysteresis",
             ],
             "operating mode": [
                 "current",
@@ -348,6 +348,23 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             name: options[0] for name, options in self.possible_options.items()
         }
         extra_options = extra_options or {}
+
+        # Catch renamed hysteresis options
+        ocp_option = extra_options.get("open-circuit potential")
+        if (isinstance(ocp_option, str) and ocp_option == "Wycisk") or (
+            isinstance(ocp_option, tuple) and "Wycisk" in ocp_option
+        ):
+            raise pybamm.OptionError(
+                "The 'Wycisk' open-circuit potential model has been renamed. "
+                "Use 'one-state differential capacity hysteresis' instead."
+            )
+        if (isinstance(ocp_option, str) and ocp_option == "Axen") or (
+            isinstance(ocp_option, tuple) and "Axen" in ocp_option
+        ):
+            raise pybamm.OptionError(
+                "The 'Axen' open-circuit potential model has been renamed. "
+                "Use 'one-state hysteresis' instead."
+            )
 
         working_electrode_option = extra_options.get("working electrode", "both")
         SEI_option = extra_options.get("SEI", "none")  # return "none" if not given
