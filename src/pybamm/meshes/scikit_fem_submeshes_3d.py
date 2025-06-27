@@ -11,7 +11,7 @@ class ScikitFemGenerator3D(pybamm.MeshGenerator):
     Parameters
     ----------
     geom_type : str
-        Type of geometry to generate ('box', 'cylinder', 'spiral')
+        Type of geometry to generate ('box' or 'cylinder')
     **gen_params : dict
         Geometry-specific parameters
     """
