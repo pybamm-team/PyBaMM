@@ -30,12 +30,12 @@ model.initial_conditions = {T: Scalar(0)}
 
 model.boundary_conditions = {
     T: {
-        "left": (Scalar(100), "Dirichlet"),
-        "right": (Scalar(0), "Dirichlet"),
-        "front": (Scalar(0), "Neumann"),
-        "back": (Scalar(0), "Neumann"),
-        "bottom": (Scalar(0), "Neumann"),
-        "top": (Scalar(0), "Neumann"),
+        "x_min": (Scalar(100), "Dirichlet"),
+        "x_max": (Scalar(0), "Dirichlet"),
+        "y_min": (Scalar(0), "Neumann"),
+        "y_max": (Scalar(0), "Neumann"),
+        "z_min": (Scalar(0), "Neumann"),
+        "z_max": (Scalar(0), "Neumann"),
     }
 }
 

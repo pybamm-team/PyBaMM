@@ -30,10 +30,10 @@ model.algebraic = {T: alpha * pybamm.laplacian(T)}
 model.initial_conditions = {T: Scalar(25)}
 model.boundary_conditions = {
     T: {
-        "inner radius": (Scalar(100), "Dirichlet"),
-        "outer radius": (Scalar(0), "Dirichlet"),
-        "bottom": (Scalar(0), "Neumann"),
-        "top": (Scalar(0), "Neumann"),
+        "r_min": (Scalar(100), "Dirichlet"),
+        "r_max": (Scalar(0), "Dirichlet"),
+        "z_min": (Scalar(0), "Neumann"),
+        "z_max": (Scalar(0), "Neumann"),
     }
 }
 
