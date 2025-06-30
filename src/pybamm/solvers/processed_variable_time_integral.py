@@ -40,7 +40,7 @@ class ProcessedVariableTimeIntegral:
         elif self.post_sum is None:
             return self.post_sum_node.evaluate(0.0, the_integral, inputs)
         else:
-            return self.post_sum(0.0, the_integral, inputs)
+            return self.post_sum(0.0, the_integral, inputs).full()
 
     def postfix_sensitivities(
         self,
@@ -92,7 +92,7 @@ class ProcessedVariableTimeIntegral:
             [sens],
         )
         sens_values = sens_fun(0.0, entries, inputs_stacked, the_integral)
-        return sens_values
+        return sens_values.full()
 
     @staticmethod
     def to_post_sum_expr(

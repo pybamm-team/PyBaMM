@@ -594,6 +594,7 @@ class TestSolution:
             np.testing.assert_allclose(
                 sol["data_comparison"](), expected, rtol=1e-3, atol=1e-2
             )
+            assert isinstance(sol["data_comparison"].data, np.ndarray)
 
             # sensitivity calculation only supported for IDAKLUSolver
             if solver_class == pybamm.IDAKLUSolver:
@@ -639,6 +640,7 @@ class TestSolution:
                     rtol=1e-3,
                     atol=1e-2,
                 )
+                assert isinstance(sol["data_comparison"].sensitivities["a"], np.ndarray)
 
                 # should raise error if t_interp is not equal to data_times
                 with pytest.raises(

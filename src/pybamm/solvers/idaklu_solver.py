@@ -661,9 +661,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
             # handle any time integral variables
             if var in self._time_integral_vars:
                 tiv = self._time_integral_vars[var]
-                print(
-                    f"Post-processing time integral variable {var}, data shape = {data.shape}"
-                )
                 data = tiv.postfix(data, sol.t, inputs_dict)
                 time_indep = True
 
