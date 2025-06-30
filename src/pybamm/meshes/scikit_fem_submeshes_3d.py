@@ -187,23 +187,25 @@ class ScikitFemGenerator3D(pybamm.MeshGenerator):
         ScikitFemSubMesh3D
             Generated 3D submesh
         """
-        h = self.gen_params.get("h", 0.3)
+        h = float(self.gen_params.get("h", 0.3))
+
+        lims_dict = {}
+        for var, lim in lims.items():
+            if isinstance(var, pybamm.SpatialVariable):
+                lims_dict[var.name] = (lim["min"], lim["max"])
+            else:
+                lims_dict[var] = (float(lim["min"]), float(lim["max"]))
 
         if self.geom_type == "box":
-            x_key = next(k for k in lims if k.name == "x")
-            y_key = next(k for k in lims if k.name == "y")
-            z_key = next(k for k in lims if k.name == "z")
-            x_lim = tuple(lims[x_key].values())
-            y_lim = tuple(lims[y_key].values())
-            z_lim = tuple(lims[z_key].values())
+            x_lim = lims_dict["x"]
+            y_lim = lims_dict["y"]
+            z_lim = lims_dict["z"]
             coord_sys = "cartesian"
             mesh = self._make_box_mesh(x_lim, y_lim, z_lim, h)
 
         elif self.geom_type == "cylinder":
-            r_key = next(k for k in lims if k.name == "r")
-            z_key = next(k for k in lims if k.name == "z")
-            r_lim = tuple(lims[r_key].values())
-            z_lim = tuple(lims[z_key].values())
+            r_lim = lims_dict["r"]
+            z_lim = lims_dict["z"]
             coord_sys = "cylindrical polar"
             mesh = self._make_cylindrical_mesh(r_lim, z_lim, h)
         else:

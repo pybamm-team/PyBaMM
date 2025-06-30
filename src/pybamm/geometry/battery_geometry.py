@@ -30,6 +30,7 @@ def battery_geometry(
     """
     if options is None or type(options) == dict:  # noqa: E721
         options = pybamm.BatteryModelOptions(options)
+    form_factor = options["cell geometry"]
     geo = pybamm.GeometricParameters(options)
     L_n = geo.n.L
     L_s = geo.s.L
@@ -157,14 +158,59 @@ def battery_geometry(
             geometry["current collector"] = {
                 "r_macro": {"min": geo.r_inner, "max": 1},
             }
+        elif current_collector_dimension == 3:
+            geometry["current collector"] = {
+                "y": {"min": 0, "max": geo.L_y},
+                "z": {"min": 0, "max": geo.L_z},
+                "tabs": {
+                    "negative": {
+                        "y_centre": geo.n.centre_y_tab,
+                        "z_centre": geo.n.centre_z_tab,
+                        "width": geo.n.L_tab,
+                    },
+                    "positive": {
+                        "y_centre": geo.p.centre_y_tab,
+                        "z_centre": geo.p.centre_z_tab,
+                        "width": geo.p.L_tab,
+                    },
+                },
+            }
+
+            geometry["cell"] = {
+                "r": {"min": geo.r_inner, "max": geo.r_outer},
+                "z": {"min": 0, "max": geo.L_z},
+            }
         else:
             raise pybamm.GeometryError(
                 f"Invalid current collector dimension '{current_collector_dimension}' (should be 0 or 1 for "
                 "a 'cylindrical' battery geometry)"
             )
+    elif form_factor == "box":
+        if current_collector_dimension == 3:
+            geometry["current collector"] = {
+                "y": {"min": 0, "max": geo.L_y},
+                "z": {"min": 0, "max": geo.L_z},
+                "tabs": {
+                    "negative": {
+                        "y_centre": geo.n.centre_y_tab,
+                        "z_centre": geo.n.centre_z_tab,
+                        "width": geo.n.L_tab,
+                    },
+                    "positive": {
+                        "y_centre": geo.p.centre_y_tab,
+                        "z_centre": geo.p.centre_z_tab,
+                        "width": geo.p.L_tab,
+                    },
+                },
+            }
+            geometry["cell"] = {
+                "x": {"min": 0, "max": geo.L_x},
+                "y": {"min": 0, "max": geo.L_y},
+                "z": {"min": 0, "max": geo.L_z},
+            }
     else:
         raise pybamm.GeometryError(
-            f"Invalid form factor '{form_factor}' (should be 'pouch' or 'cylindrical'"
+            f"Invalid form factor '{form_factor}' (should be 'pouch', 'box' or 'cylindrical'"
         )
 
     return pybamm.Geometry(geometry)
