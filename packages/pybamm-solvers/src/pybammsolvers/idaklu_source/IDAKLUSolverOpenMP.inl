@@ -484,7 +484,7 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
     }
 
     if (hit_tinterp) {
-      // Save the interpolated state at t_prev < t < t_val, for all t in t_interp
+      // Save the interpolated state at t_prev < t <= t_val, for all t in t_interp
       SetStepInterp(
         i_interp,
         t_interp_next,
@@ -499,26 +499,15 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
         i_save);
     }
 
-    if (hit_adaptive || hit_teval || hit_event || hit_final_time) {
-      if (hit_tinterp) {
-        // Reset the states and sensitivities at t = t_val
-        CheckErrors(IDAGetDky(ida_mem, t_val, 0, yy));
-        if (sensitivity) {
-          CheckErrors(IDAGetSensDky(ida_mem, t_val, 0, yyS));
-        }
+    // Check that we are not saving the same time point twice,
+    // which is possible if t_interp contains t_val.
+    if ((t_val != t[i_save-1]) && (hit_adaptive || hit_teval || hit_event || hit_final_time)) {
+      if (hit_adaptive) {
+        // Dynamically allocate memory for the adaptive step
+        ExtendAdaptiveArrays();
       }
 
-      // Save the current state at t_val
-      // First, check to make sure that the t_val is not equal to the current t value
-      // If it is, we don't want to save the current state twice
-      if (!hit_tinterp || t_val != t.back()) {
-        if (hit_adaptive) {
-          // Dynamically allocate memory for the adaptive step
-          ExtendAdaptiveArrays();
-        }
-
-        SetStep(t_val, y_val, yp_val, yS_val, ypS_val, i_save);
-      }
+      SetStep(t_val, y_val, yp_val, yS_val, ypS_val, i_save);
     }
 
     if (hit_final_time || hit_event) {
@@ -787,6 +776,12 @@ void IDAKLUSolverOpenMP<ExprSet>::SetStepInterp(
       break;
     }
     t_interp_next = t_interp[i_interp];
+  }
+
+  // Reset the states and sensitivities to t = t_val
+  CheckErrors(IDAGetDky(ida_mem, t_val, 0, yy));
+  if (sensitivity) {
+    CheckErrors(IDAGetSensDky(ida_mem, t_val, 0, yyS));
   }
 }
 
