@@ -46,7 +46,6 @@ class BasicSPM_with_3DThermal(BaseModel):
         )
 
         T = pybamm.Variable("Cell temperature [K]", domain="cell")
-        print(f"1. T.domains: {T.domains}")
 
         if self.options.get("cell geometry") == "box":
             x = pybamm.SpatialVariable("x", domain="cell")
@@ -60,7 +59,6 @@ class BasicSPM_with_3DThermal(BaseModel):
 
         volume = pybamm.Integral(pybamm.PrimaryBroadcast(1.0, "cell"), integration_vars)
         T_av = pybamm.Integral(T, integration_vars) / volume
-        print(f"Cell average temperature T_av: {T_av.domains}")
 
         ######################
         # Other set-up
@@ -176,22 +174,17 @@ class BasicSPM_with_3DThermal(BaseModel):
         # Total heating in each electrode domain
         Q_total_n = Q_rev_n + Q_irr_n
         Q_total_p = Q_rev_p + Q_irr_p
-        print(f"3. Q_total_n.domains: {Q_total_n.domains}")
         # Create 1D heat source vector across the cell (x-direction)
         # No heat is generated in the separator.
         q_n = pybamm.PrimaryBroadcast(Q_total_n, "negative electrode")
         q_s = pybamm.PrimaryBroadcast(0, "separator")
         q_p = pybamm.PrimaryBroadcast(Q_total_p, "positive electrode")
-        print(f"4. q_n.domains: {q_n.domains}")
-        print(f"4. q_s.domains: {q_s.domains}")
-        print(f"4. q_p.domains: {q_p.domains}")
+
         Q_x_heating = pybamm.concatenation(q_n, q_s, q_p)
-        print(f"5. Q_x_heating.domains: {Q_x_heating.domains}")
 
         # Average the 1D heat source and broadcast to the 3D 'cell' domain
         Q_vol_av = pybamm.x_average(Q_x_heating)
         Q_source = pybamm.PrimaryBroadcast(Q_vol_av, "cell")
-        print(f"Volume-averaged heat source Q_source: {Q_source.domains}")
 
         # Define the 3D heat equation
         # Effective parameters are functions of temperature
@@ -199,7 +192,10 @@ class BasicSPM_with_3DThermal(BaseModel):
         lambda_eff = self.param.lambda_eff(T)
 
         # The heat equation is d(rho*cp*T)/dt = div(lambda*grad(T)) + Q
-        self.rhs[T] = (pybamm.div(lambda_eff * pybamm.grad(T)) + Q_source) / rho_c_p_eff
+        term1 = lambda_eff * pybamm.laplacian(T)
+        term2 = pybamm.inner(pybamm.grad(lambda_eff), pybamm.grad(T))
+
+        self.rhs[T] = (term1 + term2 + Q_source) / rho_c_p_eff
 
         # Cooling taken care of by boundary conditions
 
@@ -301,6 +297,6 @@ class BasicSPM_with_3DThermal(BaseModel):
 
         self.boundary_conditions[T] = {}
         for face, h_coeff in face_params.items():
-            T_face = pybamm.boundary_value(T, face)
-            q_cool = h_coeff * (T_face - T_amb)
-            self.boundary_conditions[T][face] = (q_cool, "Neumann")
+            lambda_eff = self.param.lambda_eff(pybamm.boundary_value(T, face))
+            flux_expr = -h_coeff / lambda_eff * (pybamm.boundary_value(T, face) - T_amb)
+            self.boundary_conditions[T][face] = (flux_expr, "Neumann")
