@@ -103,19 +103,6 @@ The ``pip install "pybamm[jax]"`` command automatically downloads and installs `
 
 PyBaMM's full `conda-forge distribution <index.rst#installation>`_ (``pybamm``) includes ``jax`` and ``jaxlib`` by default.
 
-.. _optional-iree-mlir-support:
-
-Optional - IREE / MLIR support
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Users can install ``iree`` (for MLIR just-in-time compilation) to use for main expression evaluation in the IDAKLU solver. Requires ``jax``.
-
-.. code:: bash
-
-   pip install "pybamm[iree,jax]"
-
-The ``pip install "pybamm[iree,jax]"`` command automatically downloads and installs ``pybamm`` and the compatible versions of ``jax`` and ``iree`` onto your system.
-
 Uninstall PyBaMM
 ----------------
 
