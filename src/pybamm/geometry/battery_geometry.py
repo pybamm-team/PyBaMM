@@ -20,7 +20,7 @@ def battery_geometry(
         Dictionary of model options. Necessary for "particle-size geometry",
         relevant for lithium-ion chemistries.
     form_factor : str, optional
-        The form factor of the cell. Can be "pouch" (default) or "cylindrical".
+        The form factor of the cell. Can be "pouch" (default), "box" or "cylindrical".
 
     Returns
     -------
@@ -30,7 +30,8 @@ def battery_geometry(
     """
     if options is None or type(options) == dict:  # noqa: E721
         options = pybamm.BatteryModelOptions(options)
-    form_factor = options["cell geometry"] or "pouch"
+    if options["cell geometry"] in ["box", "cylindrical"]:
+        form_factor = options["cell geometry"]
     geo = pybamm.GeometricParameters(options)
     L_n = geo.n.L
     L_s = geo.s.L
@@ -210,7 +211,7 @@ def battery_geometry(
             }
     else:
         raise pybamm.GeometryError(
-            f"Invalid form factor '{form_factor}' (should be 'pouch', 'box' or 'cylindrical'"
+            f"Invalid form factor '{form_factor}' (should be 'pouch', 'box' or 'cylindrical')"
         )
 
     return pybamm.Geometry(geometry)
