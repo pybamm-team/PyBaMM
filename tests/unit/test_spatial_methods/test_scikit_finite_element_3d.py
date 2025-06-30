@@ -758,3 +758,27 @@ class TestScikitFiniteElement3D:
         result_analytical = r_analytical**2 + z
 
         np.testing.assert_allclose(result_numerical, result_analytical, atol=1e-12)
+
+    def test_scalar_times_gradient_3d(self):
+        mesh = get_unit_3d_mesh_for_testing(h=0.3, x_max=1.0, y_max=1.0, z_max=1.0)
+        disc = pybamm.Discretisation(
+            mesh, {"current collector": pybamm.ScikitFiniteElement3D()}
+        )
+        T = pybamm.Variable("T", domain="current collector")
+        disc.set_variable_slices([T])
+
+        expression_sym = T * pybamm.grad(T)
+        expression_disc = disc.process_symbol(expression_sym)
+
+        nodes = mesh["current collector"].nodes
+        x, y, z = nodes.T
+        T_analytical_func = 2 * x + 3 * y + 4 * z
+
+        numerical_result = expression_disc.evaluate(None, T_analytical_func)
+
+        grad_T_analytical = np.array([2.0, 3.0, 4.0])
+        analytical_result = (
+            T_analytical_func[:, np.newaxis] * grad_T_analytical[np.newaxis, :]
+        )
+
+        np.testing.assert_allclose(numerical_result, analytical_result)
