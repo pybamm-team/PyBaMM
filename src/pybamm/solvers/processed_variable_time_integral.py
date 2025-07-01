@@ -150,11 +150,15 @@ class ProcessedVariableTimeIntegral:
                 discrete_times=sum_node.sum_times,
             )
         elif isinstance(sum_node, pybamm.ExplicitTimeIntegral):
+            if isinstance(sum_node.initial_condition, pybamm.Symbol):
+                initial_condition = sum_node.initial_condition.evaluate()
+            else:
+                initial_condition = sum_node.initial_condition
             return ProcessedVariableTimeIntegral(
                 method="continuous",
                 post_sum_node=post_sum_node,
                 sum_node=sum_node,
-                initial_condition=sum_node.initial_condition,
+                initial_condition=initial_condition,
                 discrete_times=None,
             )
         else:
