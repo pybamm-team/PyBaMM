@@ -52,10 +52,15 @@ class BasicSPM_with_3DThermal(BaseModel):
             y = pybamm.SpatialVariable("y", domain="cell")
             z = pybamm.SpatialVariable("z", domain="cell")
             integration_vars = [x, y, z]
-        else:
+        elif self.options.get("cell geometry") == "cylindrical":
             r = pybamm.SpatialVariable("r", domain="cell")
             z = pybamm.SpatialVariable("z", domain="cell")
             integration_vars = [r, z]
+        else:
+            raise ValueError(
+                f"Geometry type '{self.options.get('cell geometry')}' is not supported. "
+                "Supported types are 'box' and 'cylindrical'."
+            )  # pragma: no cover
 
         volume = pybamm.Integral(pybamm.PrimaryBroadcast(1.0, "cell"), integration_vars)
         T_av = pybamm.Integral(T, integration_vars) / volume
@@ -183,8 +188,8 @@ class BasicSPM_with_3DThermal(BaseModel):
         Q_x_heating = pybamm.concatenation(q_n, q_s, q_p)
 
         # Average the 1D heat source and broadcast to the 3D 'cell' domain
-        Q_vol_av = pybamm.x_average(Q_x_heating)
-        Q_source = pybamm.PrimaryBroadcast(Q_vol_av, "cell")
+        Q_per_area = pybamm.x_average(Q_x_heating) * self.param.L_x
+        Q_source = pybamm.PrimaryBroadcast(Q_per_area / self.param.L_z, "cell")
 
         # Define the 3D heat equation
         # Effective parameters are functions of temperature
@@ -257,43 +262,28 @@ class BasicSPM_with_3DThermal(BaseModel):
             z = pybamm.SpatialVariable("z", "cell")
             T_amb = self.param.T_amb(y, z, pybamm.t)
             face_params = {
-                "x_min": pybamm.Parameter(
-                    "Left face heat transfer coefficient [W.m-2.K-1]"
-                ),
-                "x_max": pybamm.Parameter(
-                    "Right face heat transfer coefficient [W.m-2.K-1]"
-                ),
-                "y_min": pybamm.Parameter(
-                    "Front face heat transfer coefficient [W.m-2.K-1]"
-                ),
-                "y_max": pybamm.Parameter(
-                    "Back face heat transfer coefficient [W.m-2.K-1]"
-                ),
-                "z_min": pybamm.Parameter(
-                    "Bottom face heat transfer coefficient [W.m-2.K-1]"
-                ),
-                "z_max": pybamm.Parameter(
-                    "Top face heat transfer coefficient [W.m-2.K-1]"
-                ),
+                "x_min": self.param.h_edge_x_min,
+                "x_max": self.param.h_edge_x_max,
+                "y_min": self.param.h_edge_y_min,
+                "y_max": self.param.h_edge_y_max,
+                "z_min": self.param.h_edge_z_min,
+                "z_max": self.param.h_edge_z_max,
             }
-        else:
+        elif geometry_type == "cylindrical":
             r = pybamm.SpatialVariable("r", "cell")
             z = pybamm.SpatialVariable("z", "cell")
             T_amb = self.param.T_amb(r, z, pybamm.t)
             face_params = {
-                "r_min": pybamm.Parameter(
-                    "Inner radius heat transfer coefficient [W.m-2.K-1]"
-                ),
-                "r_max": pybamm.Parameter(
-                    "Outer radius heat transfer coefficient [W.m-2.K-1]"
-                ),
-                "z_min": pybamm.Parameter(
-                    "Bottom face heat transfer coefficient [W.m-2.K-1]"
-                ),
-                "z_max": pybamm.Parameter(
-                    "Top face heat transfer coefficient [W.m-2.K-1]"
-                ),
+                "r_min": self.param.h_edge_radial_min,
+                "r_max": self.param.h_edge_radial_max,
+                "z_min": self.param.h_edge_z_min,
+                "z_max": self.param.h_edge_z_max,
             }
+        else:
+            raise ValueError(
+                f"Geometry type '{geometry_type}' is not supported. "
+                "Supported types are 'box' and 'cylindrical'."
+            )  # pragma: no cover
 
         self.boundary_conditions[T] = {}
         for face, h_coeff in face_params.items():
