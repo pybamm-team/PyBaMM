@@ -149,7 +149,12 @@ class BaseStep:
                 pybamm.t - pybamm.InputParameter("start time"),
                 name="Drive Cycle",
             )
-            self.period = np.diff(t).min()
+            if period is None:
+                # Infer the period from the drive cycle
+                self.period = np.diff(t).min()
+            else:
+                self.period = _convert_time_to_seconds(period)
+
         elif is_python_function:
             t = pybamm.t - pybamm.InputParameter("start time")
             self.value = value(t)
