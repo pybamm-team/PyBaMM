@@ -228,9 +228,9 @@ class TestExperimentSteps:
         assert drive_cycle_step.period == 1
         assert drive_cycle_step.temperature == 273.15 - 5
 
-        # Check that the default duration is the length of the drive cycle
-        drive_cycle_step_no_duration = pybamm.step.current(drive_cycle)
-        assert drive_cycle_step_no_duration.duration == 9
+        # Check that the default c_rate duration is the length of the drive cycle
+        drive_cycle_step_c_rate = pybamm.step.c_rate(drive_cycle)
+        assert drive_cycle_step_c_rate.duration == 9
 
     def test_drive_cycle_period(self):
         # Import drive cycle from file
