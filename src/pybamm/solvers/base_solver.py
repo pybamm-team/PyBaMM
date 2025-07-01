@@ -1481,7 +1481,7 @@ class BaseSolver:
 
     def get_platform_context(self, system_type: str):
         # Set context for parallel processing depending on the platform
-        if system_type.lower() in ["linux", "darwin"]:
+        if system_type.lower() in ["linux"]:
             return "fork"
         return "spawn"
 
