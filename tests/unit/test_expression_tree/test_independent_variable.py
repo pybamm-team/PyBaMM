@@ -2,9 +2,9 @@
 # Tests for the Parameter class
 #
 import pytest
+import sympy
 
 import pybamm
-import sympy
 
 
 class TestIndependentVariable:

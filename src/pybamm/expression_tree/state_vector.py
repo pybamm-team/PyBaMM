@@ -2,12 +2,13 @@
 # State Vector class
 #
 from __future__ import annotations
+
 import numpy as np
 import numpy.typing as npt
 from scipy.sparse import csr_matrix, vstack
 
 import pybamm
-from pybamm.type_definitions import DomainType, AuxiliaryDomainType, DomainsType
+from pybamm.type_definitions import AuxiliaryDomainType, DomainsType, DomainType
 
 
 class StateVectorBase(pybamm.Symbol):
@@ -282,8 +283,8 @@ class StateVector(StateVectorBase):
     def _base_evaluate(
         self,
         t: float | None = None,
-        y: npt.NDArray | None = None,
-        y_dot: npt.NDArray | None = None,
+        y: npt.NDArray[np.float64] | None = None,
+        y_dot: npt.NDArray[np.float64] | None = None,
         inputs: dict | str | None = None,
     ):
         """See :meth:`pybamm.Symbol._base_evaluate()`."""
@@ -366,8 +367,8 @@ class StateVectorDot(StateVectorBase):
     def _base_evaluate(
         self,
         t: float | None = None,
-        y: npt.NDArray | None = None,
-        y_dot: npt.NDArray | None = None,
+        y: npt.NDArray[np.float64] | None = None,
+        y_dot: npt.NDArray[np.float64] | None = None,
         inputs: dict | str | None = None,
     ):
         """See :meth:`pybamm.Symbol._base_evaluate()`."""

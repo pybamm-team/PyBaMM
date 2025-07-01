@@ -2,6 +2,7 @@
 # Class for particles using the MSMR model
 #
 import pybamm
+
 from .base_particle import BaseParticle
 
 

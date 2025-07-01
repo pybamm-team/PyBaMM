@@ -1,14 +1,16 @@
 #
 # Tests for the Solution class
 #
-import pytest
 import io
-import logging
 import json
-import pybamm
+import logging
+
 import numpy as np
 import pandas as pd
+import pytest
 from scipy.io import loadmat
+
+import pybamm
 from tests import get_discretisation_for_testing
 
 
@@ -57,19 +59,10 @@ class TestSolution:
         assert "exceeds the maximum" in log_output
         logger.removeHandler(handler)
 
-        with pytest.raises(
-            TypeError, match="sensitivities arg needs to be a bool or dict"
-        ):
+        with pytest.raises(TypeError, match="sensitivities arg needs to be a dict"):
             pybamm.Solution(ts, bad_ys, model, {}, all_sensitivities="bad")
 
         sol = pybamm.Solution(ts, bad_ys, model, {}, all_sensitivities={})
-        with pytest.raises(TypeError, match="sensitivities arg needs to be a bool"):
-            sol.sensitivities = "bad"
-        with pytest.raises(
-            NotImplementedError,
-            match="Setting sensitivities is not supported if sensitivities are already provided as a dict",
-        ):
-            sol.sensitivities = True
 
     def test_add_solutions(self):
         # Set up first solution
@@ -141,10 +134,7 @@ class TestSolution:
             {},
             all_sensitivities={"test": [np.ones((1, 3))]},
         )
-        sol2 = pybamm.Solution(t2, y2, pybamm.BaseModel(), {}, all_sensitivities=True)
-        with pytest.raises(ValueError, match="Sensitivities must be of the same type"):
-            sol3 = sol1 + sol2
-        sol1 = pybamm.Solution(t1, y3, pybamm.BaseModel(), {}, all_sensitivities=False)
+        sol1 = pybamm.Solution(t1, y3, pybamm.BaseModel(), {})
         sol2 = pybamm.Solution(t3, y3, pybamm.BaseModel(), {}, all_sensitivities={})
         sol3 = sol1 + sol2
         assert not sol3._all_sensitivities
@@ -225,7 +215,7 @@ class TestSolution:
 
         sol_copy = sol1.copy()
         assert sol_copy.all_ts == sol1.all_ts
-        for ys_copy, ys1 in zip(sol_copy.all_ys, sol1.all_ys):
+        for ys_copy, ys1 in zip(sol_copy.all_ys, sol1.all_ys, strict=False):
             np.testing.assert_array_equal(ys_copy, ys1)
         assert sol_copy.all_inputs == sol1.all_inputs
         assert sol_copy.all_inputs_casadi == sol1.all_inputs_casadi
@@ -510,13 +500,52 @@ class TestSolution:
         time = sim.solution["Time [h]"](sim.solution.t)
         assert len(time) == 10
 
-    _solver_classes = [pybamm.CasadiSolver, pybamm.IDAKLUSolver]
+    def test_discrete_data_sum_errors(self):
+        data_times = np.array([0.0])
+        data_values = np.array([1.0])
+        data = pybamm.DiscreteTimeData(data_times, data_values, "test_data")
+        dts = pybamm.DiscreteTimeSum(data)
 
-    @pytest.mark.parametrize("solver_class", _solver_classes)
-    def test_discrete_data_sum(self, solver_class):
-        model = pybamm.BaseModel(name="test_model")
+        model = pybamm.BaseModel(name="test_model2")
         c = pybamm.Variable("c")
         model.rhs = {c: -c}
+        model.initial_conditions = {c: 1}
+        model.variables["dts"] = pybamm.t * dts
+        solver = pybamm.IDAKLUSolver()
+        with pytest.raises(
+            ValueError,
+            match="time or state vector nodes should only appear within the time integral node",
+        ):
+            solver.solve(model, t_eval=[0, 0.1])["dts"]
+
+        model = pybamm.BaseModel(name="test_model2")
+        c = pybamm.Variable("c")
+        model.rhs = {c: -c}
+        model.initial_conditions = {c: 1}
+        model.variables["dts"] = dts * dts
+        solver = pybamm.IDAKLUSolver()
+        with pytest.raises(
+            ValueError,
+            match="More than one time integral node found",
+        ):
+            solver.solve(model, t_eval=[0, 0.1])["dts"]
+
+    _solver_classes = [
+        (pybamm.CasadiSolver, False, False),
+        (pybamm.IDAKLUSolver, False, False),
+        (pybamm.CasadiSolver, True, False),
+        (pybamm.IDAKLUSolver, True, False),
+        (pybamm.IDAKLUSolver, False, True),
+        (pybamm.IDAKLUSolver, True, True),
+    ]
+
+    @pytest.mark.parametrize(
+        "solver_class,use_post_sum,use_output_var", _solver_classes
+    )
+    def test_discrete_data_sum(self, solver_class, use_post_sum, use_output_var):
+        model = pybamm.BaseModel(name="test_model")
+        c = pybamm.Variable("c")
+        model.rhs = {c: -2 * c}
         model.initial_conditions = {c: 1}
         model.variables["c"] = c
 
@@ -531,19 +560,96 @@ class TestSolution:
         data_values = solver.solve(model, t_eval=t_eval, t_interp=t_interp)["c"].entries
 
         data = pybamm.DiscreteTimeData(data_times, data_values, "test_data")
-        data_comparison = pybamm.DiscreteTimeSum((c - data) ** 2)
+        if use_post_sum:
+            data_comparison = (pybamm.DiscreteTimeSum((c - data) ** 2)) ** 0.5
+        else:
+            data_comparison = pybamm.DiscreteTimeSum((c - data) ** 2)
 
         model = pybamm.BaseModel(name="test_model2")
         a = pybamm.InputParameter("a")
-        model.rhs = {c: -a * c}
-        model.initial_conditions = {c: 1}
+        b = pybamm.InputParameter("b")
+        c2 = pybamm.Variable("c2")
+        model.rhs = {c: b * -a * c, c2: -2 * c2}
+        model.initial_conditions = {c: 1, c2: 1}
         model.variables["data_comparison"] = data_comparison
+        model.variables["data"] = data
+        model.variables["c"] = c
 
-        solver = solver_class()
-        for a in [0.5, 1.0, 2.0]:
-            sol = solver.solve(model, t_eval=t_eval, inputs={"a": a})
-            y_sol = np.exp(-a * data_times)
-            expected = np.sum((y_sol - data_values) ** 2)
+        if use_output_var:
+            output_variables = ["data_comparison", "c", "data"]
+            solver = solver_class(output_variables=output_variables)
+        else:
+            solver = solver_class()
+        range = [0.5, 1.0, 2.0]
+        range2 = np.ones(3)
+        for a, b in zip(range, range2, strict=False):
+            sol = solver.solve(
+                model, t_eval=t_eval, t_interp=t_interp, inputs={"a": a, "b": b}
+            )
+            y_sol = np.exp(b * -a * data_times)
+            if use_post_sum:
+                expected = np.sqrt(np.sum((y_sol - data_values) ** 2))
+            else:
+                expected = np.sum((y_sol - data_values) ** 2)
             np.testing.assert_allclose(
                 sol["data_comparison"](), expected, rtol=1e-3, atol=1e-2
             )
+            assert isinstance(sol["data_comparison"].data, np.ndarray)
+
+            # sensitivity calculation only supported for IDAKLUSolver
+            if solver_class == pybamm.IDAKLUSolver:
+                sol = solver.solve(
+                    model,
+                    t_eval=t_eval,
+                    t_interp=t_interp,
+                    inputs={"a": a, "b": b},
+                    calculate_sensitivities=True,
+                )
+                y_sol = np.exp(b * -a * data_times)
+                dy_sol_da = -data_times * y_sol
+                if use_post_sum:
+                    expected_sens = (
+                        0.5
+                        * (expected ** (-0.5))
+                        * np.sum(2 * (y_sol - data_values) * dy_sol_da)
+                    )
+                else:
+                    expected_sens = np.sum(2 * (y_sol - data_values) * dy_sol_da)
+
+                np.testing.assert_allclose(
+                    sol["data"].sensitivities["a"].flatten(),
+                    np.zeros_like(data_times),
+                    rtol=1e-3,
+                    atol=1e-2,
+                )
+                np.testing.assert_allclose(
+                    sol["c"].data,
+                    y_sol,
+                    rtol=1e-3,
+                    atol=1e-2,
+                )
+                np.testing.assert_allclose(
+                    sol["c"].sensitivities["a"].flatten(),
+                    dy_sol_da,
+                    rtol=1e-3,
+                    atol=1e-2,
+                )
+                np.testing.assert_allclose(
+                    sol["data_comparison"].sensitivities["a"],
+                    expected_sens,
+                    rtol=1e-3,
+                    atol=1e-2,
+                )
+                assert isinstance(sol["data_comparison"].sensitivities["a"], np.ndarray)
+
+                # should raise error if t_interp is not equal to data_times
+                with pytest.raises(
+                    pybamm.SolverError,
+                    match="solution times and discrete times of the time integral are not equal",
+                ):
+                    solver.solve(
+                        model,
+                        t_eval=t_eval,
+                        inputs={"a": a, "b": b},
+                        calculate_sensitivities=True,
+                    )["data_comparison"].sensitivities["a"]

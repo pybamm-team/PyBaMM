@@ -1,8 +1,9 @@
 #
 # Test basic model classes
 #
-import pybamm
 import pytest
+
+import pybamm
 
 
 class BaseBasicModelTest:

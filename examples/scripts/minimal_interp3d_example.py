@@ -1,7 +1,7 @@
+import matplotlib.pyplot as plt
 import numpy as np
 
 import pybamm
-import matplotlib.pyplot as plt
 
 
 def f(x, y, z):
@@ -41,7 +41,6 @@ model.variables = {
     "d": d,
 }
 
-# solver = pybamm.CasadiSolver()
 sim = pybamm.Simulation(model)
 
 t_eval = np.linspace(0, 1, 100)

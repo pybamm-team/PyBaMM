@@ -3,12 +3,12 @@
 #
 from __future__ import annotations
 
+from collections.abc import Callable, Sequence
+
 import numpy as np
 import numpy.typing as npt
-from scipy import special
 import sympy
-from typing import Callable
-from collections.abc import Sequence
+from scipy import special
 from typing_extensions import TypeVar
 
 import pybamm
@@ -40,7 +40,7 @@ class Function(pybamm.Symbol):
         # Turn numbers into scalars
         children = list(children)
         for idx, child in enumerate(children):
-            if isinstance(child, (float, int, np.number)):
+            if isinstance(child, float | int | np.number):
                 children[idx] = pybamm.Scalar(child)
 
         if name is not None:
@@ -123,8 +123,8 @@ class Function(pybamm.Symbol):
     def evaluate(
         self,
         t: float | None = None,
-        y: npt.NDArray | None = None,
-        y_dot: npt.NDArray | None = None,
+        y: npt.NDArray[np.float64] | None = None,
+        y_dot: npt.NDArray[np.float64] | None = None,
         inputs: dict | str | None = None,
     ):
         """See :meth:`pybamm.Symbol.evaluate()`."""

@@ -1,9 +1,10 @@
 #
 # Tests for the lithium-ion SPM model
 #
+import pytest
+
 import pybamm
 from tests import BaseUnitTestLithiumIon
-import pytest
 
 
 class TestSPM(BaseUnitTestLithiumIon):

@@ -1,6 +1,7 @@
-import pytest
-import pybamm
 import numpy as np
+import pytest
+
+import pybamm
 
 
 @pytest.fixture()
@@ -160,37 +161,15 @@ class TestSymbolicUniform1DSubMesh:
 
 
 class TestExponential1DSubMesh:
-    def test_symmetric_mesh_creation_no_parameters_even(self, r, geometry):
-        submesh_params = {"side": "symmetric"}
-        submesh_types = {
-            "negative particle": pybamm.MeshGenerator(
-                pybamm.Exponential1DSubMesh, submesh_params
-            )
-        }
-        var_pts = {r: 20}
-
-        # create mesh
-        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
-
-        # check boundary locations
-        assert mesh["negative particle"].edges[0] == 0
-        assert mesh["negative particle"].edges[-1] == 1
-
-        # check number of edges and nodes
-        assert len(mesh["negative particle"].nodes) == var_pts[r]
-        assert (
-            len(mesh["negative particle"].edges)
-            == len(mesh["negative particle"].nodes) + 1
-        )
-
-    def test_symmetric_mesh_creation_no_parameters_odd(self, r, geometry):
+    @pytest.mark.parametrize("odd_even", [20, 21])
+    def test_symmetric_mesh_creation(self, r, geometry, odd_even):
         submesh_params = {"side": "symmetric", "stretch": 1.5}
         submesh_types = {
             "negative particle": pybamm.MeshGenerator(
                 pybamm.Exponential1DSubMesh, submesh_params
             )
         }
-        var_pts = {r: 21}
+        var_pts = {r: odd_even}
 
         # create mesh
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
@@ -206,31 +185,9 @@ class TestExponential1DSubMesh:
             == len(mesh["negative particle"].nodes) + 1
         )
 
-    def test_left_mesh_creation_no_parameters(self, r, geometry):
-        submesh_params = {"side": "left"}
-        submesh_types = {
-            "negative particle": pybamm.MeshGenerator(
-                pybamm.Exponential1DSubMesh, submesh_params
-            )
-        }
-        var_pts = {r: 21}
-
-        # create mesh
-        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
-
-        # check boundary locations
-        assert mesh["negative particle"].edges[0] == 0
-        assert mesh["negative particle"].edges[-1] == 1
-
-        # check number of edges and nodes
-        assert len(mesh["negative particle"].nodes) == var_pts[r]
-        assert (
-            len(mesh["negative particle"].edges)
-            == len(mesh["negative particle"].nodes) + 1
-        )
-
-    def test_right_mesh_creation_no_parameters(self, r, geometry):
-        submesh_params = {"side": "right", "stretch": 2}
+    @pytest.mark.parametrize("side", ["left", "right"])
+    def test_mesh_creation_with_side(self, r, geometry, side):
+        submesh_params = {"side": side}
         submesh_types = {
             "negative particle": pybamm.MeshGenerator(
                 pybamm.Exponential1DSubMesh, submesh_params
@@ -251,6 +208,39 @@ class TestExponential1DSubMesh:
             len(mesh["negative particle"].edges)
             == len(mesh["negative particle"].nodes) + 1
         )
+
+        # check monotonicity based on side
+        if side == "left":
+            # spacing should increase from left to right
+            assert np.all(np.diff(np.diff(mesh["negative particle"].edges)) > 0)
+        else:  # right
+            # spacing should decrease from left to right
+            assert np.all(np.diff(np.diff(mesh["negative particle"].edges)) < 0)
+
+    @pytest.mark.parametrize("side", ["left", "right", "symmetric"])
+    def test_mesh_creation_non_zero_min(self, r, side):
+        geometry = {
+            "negative particle": {r: {"min": pybamm.Scalar(1), "max": pybamm.Scalar(2)}}
+        }
+        submesh_types = {
+            "negative particle": pybamm.MeshGenerator(
+                pybamm.Exponential1DSubMesh, {"side": side}
+            )
+        }
+        var_pts = {r: 20}
+        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+
+        # check boundary locations
+        assert mesh["negative particle"].edges[0] == 1
+        assert mesh["negative particle"].edges[-1] == 2
+        # check number of edges and nodes
+        assert len(mesh["negative particle"].nodes) == var_pts[r]
+        assert (
+            len(mesh["negative particle"].edges)
+            == len(mesh["negative particle"].nodes) + 1
+        )
+        # check monotonically increasing
+        assert np.all(np.diff(mesh["negative particle"].edges) > 0)
 
 
 class TestChebyshev1DSubMesh:
@@ -381,6 +371,7 @@ class TestSpectralVolume1DSubMesh:
         for a, b in zip(
             mesh["negative particle"].edges.tolist(),
             [0, 0.075, 0.225, 0.3, 0.475, 0.825, 1],
+            strict=False,
         ):
             assert a == pytest.approx(b)
 
@@ -398,5 +389,6 @@ class TestSpectralVolume1DSubMesh:
         for a, b in zip(
             mesh["negative particle"].edges.tolist(),
             [0.0, 0.125, 0.375, 0.5, 0.625, 0.875, 1.0],
+            strict=False,
         ):
             assert a == pytest.approx(b)

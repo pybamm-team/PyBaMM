@@ -2,10 +2,11 @@
 # Algebraic solver class
 #
 import casadi
-import pybamm
 import numpy as np
 from scipy import optimize
 from scipy.sparse import issparse
+
+import pybamm
 
 
 class AlgebraicSolver(pybamm.BaseSolver):
@@ -54,6 +55,20 @@ class AlgebraicSolver(pybamm.BaseSolver):
         self.name = f"Algebraic solver ({method})"
         self._algebraic_solver = True
         pybamm.citations.register("Virtanen2020")
+
+    def set_up_root_solver(self, model, inputs_dict, t_eval):
+        """Create and return a rootfinder object. Not used for `pybamm.AlgebraicSolver`.
+
+        Parameters
+        ----------
+        model : :class:`pybamm.BaseModel`
+            The model whose solution to calculate.
+        inputs_dict : dict
+            Dictionary of inputs.
+        t_eval : :class:`numpy.array`, size (k,)
+            The times at which to compute the solution.
+        """
+        pass
 
     @property
     def tol(self):
@@ -198,7 +213,10 @@ class AlgebraicSolver(pybamm.BaseSolver):
                         model.bounds[1] != np.inf
                     ):
                         bounds = [
-                            (lb, ub) for lb, ub in zip(model.bounds[0], model.bounds[1])
+                            (lb, ub)
+                            for lb, ub in zip(
+                                model.bounds[0], model.bounds[1], strict=False
+                            )
                         ]
                     else:
                         bounds = None
