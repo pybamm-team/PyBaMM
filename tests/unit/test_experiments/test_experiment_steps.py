@@ -228,6 +228,20 @@ class TestExperimentSteps:
         assert drive_cycle_step.period == 1
         assert drive_cycle_step.temperature == 273.15 - 5
 
+        # Check that the default duration is the length of the drive cycle
+        drive_cycle_step_no_duration = pybamm.step.current(drive_cycle)
+        assert drive_cycle_step_no_duration.duration == 9
+
+    def test_drive_cycle_period(self):
+        # Import drive cycle from file
+        drive_cycle = np.array([np.arange(10), np.arange(10)]).T
+
+        drive_cycle_step = pybamm.step.current(drive_cycle, period=0.01)
+        assert drive_cycle_step.period == 0.01
+
+        drive_cycle_step_no_period = pybamm.step.current(drive_cycle)
+        assert drive_cycle_step_no_period.period == 1
+
     def test_bad_strings(self):
         with pytest.raises(TypeError, match="Input to step.string"):
             pybamm.step.string(1)
