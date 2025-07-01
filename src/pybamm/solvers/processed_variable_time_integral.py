@@ -27,7 +27,7 @@ class ProcessedVariableTimeIntegral:
             )
         else:
             return cumulative_trapezoid(
-                entries, t_pts, initial=float(self.initial_condition)
+                entries, t_pts, initial=float(self.initial_condition), axis=0
             )
 
     def postfix(self, entries, t_pts, inputs) -> np.ndarray:
@@ -37,8 +37,62 @@ class ProcessedVariableTimeIntegral:
         the_integral = self.postfix_sum(entries, t_pts)
         if self.post_sum_node is None:
             return the_integral
+        elif self.post_sum is None:
+            return self.post_sum_node.evaluate(0.0, the_integral, inputs)
         else:
-            return self.post_sum(0.0, the_integral, inputs)
+            return self.post_sum(0.0, the_integral, inputs).full()
+
+    def postfix_sensitivities(
+        self,
+        var_name,
+        entries,
+        t_pts,
+        inputs,
+        sensitivities,
+    ) -> np.ndarray:
+        # post fix for discrete time integral won't give correct result
+        # if ts are not equal to the discrete times. Raise error
+        # in this case
+        if self.method == "discrete":
+            if not (
+                len(t_pts) == len(self.discrete_times)
+                and np.allclose(t_pts, self.discrete_times, atol=1e-10)
+            ):
+                raise pybamm.SolverError(
+                    f'Processing discrete-time-sum variable "{var_name}": solution times '
+                    "and discrete times of the time integral are not equal. Set 't_interp=discrete_sum_times' to "
+                    f"ensure the correct times are used.\nSolution times: {t_pts}\nDiscrete Sum times: {self.discrete_times}"
+                )
+
+        the_integral = self.postfix_sum(sensitivities, t_pts)
+        if self.post_sum_node is None:
+            return the_integral
+
+        y_casadi = casadi.MX.sym("y", entries.shape[0])
+        sens_casadi = casadi.MX.sym("s_var", the_integral.shape)
+        t_casadi = casadi.MX.sym("t")
+        p_casadi = {
+            name: casadi.MX.sym(
+                name, 1 if not isinstance(value, np.ndarray) else value.shape[0]
+            )
+            for name, value in inputs.items()
+        }
+        p_casadi_stacked = casadi.vertcat(*[p for p in p_casadi.values()])
+        inputs_stacked = casadi.vertcat(*[v for v in inputs.values()])
+        post_sum_casadi = self.post_sum_node.to_casadi(
+            t_casadi, y_casadi, inputs=p_casadi
+        )
+
+        dpost_dy = casadi.jacobian(post_sum_casadi, y_casadi)
+        dpost_dp = casadi.jacobian(post_sum_casadi, p_casadi_stacked)
+        sens = dpost_dy @ sens_casadi + dpost_dp
+        sens_fun = casadi.Function(
+            "sens_fun",
+            [t_casadi, y_casadi, p_casadi_stacked, sens_casadi],
+            [sens],
+        )
+        sens_values = sens_fun(0.0, entries, inputs_stacked, the_integral)
+        return sens_values.full()
 
     @staticmethod
     def to_post_sum_expr(

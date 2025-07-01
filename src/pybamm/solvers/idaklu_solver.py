@@ -378,10 +378,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
         self.dvar_dp_idaklu_fcns = []
         self.dvar_dp_idaklu_fcns_pkl = []
         for key in self.output_variables:
-            # ExplicitTimeIntegral's are not computed as part of the solver and
-            # do not need to be converted
-            if isinstance(model.variables_and_events[key], pybamm.ExplicitTimeIntegral):
-                continue
             self.var_idaklu_fcns_pkl.append(self.computed_var_fcns[key].serialize())
             self.var_idaklu_fcns.append(
                 idaklu.generate_function(self.var_idaklu_fcns_pkl[-1])
@@ -657,28 +653,38 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         start_idx = 0
         for var in self.output_variables:
-            # ExplicitTimeIntegral's are not computed as part of the solver and
-            # do not need to be converted
-            if isinstance(model.variables_and_events[var], pybamm.ExplicitTimeIntegral):
-                continue
-
             var_length, base_variables = self._get_variable_info(model, var)
             end_idx = start_idx + var_length
+            data = sol.y[:, start_idx:end_idx]
+            time_indep = False
+
+            # handle any time integral variables
+            if var in self._time_integral_vars:
+                tiv = self._time_integral_vars[var]
+                data = tiv.postfix(data, sol.t, inputs_dict)
+                time_indep = True
 
             newsol._variables[var] = pybamm.ProcessedVariableComputed(
                 [model.variables_and_events[var]],
                 base_variables,
-                [sol.y[:, start_idx:end_idx]],
+                [data],
                 newsol,
+                time_indep=time_indep,
             )
 
             # Add sensitivities
             newsol[var]._sensitivities = {}
             if sensitivity_params:
                 for param_idx, param in enumerate(sensitivity_params):
+                    sens_data = sol.yS[:, start_idx:end_idx, param_idx]
+                    if var in self._time_integral_vars:
+                        tiv = self._time_integral_vars[var]
+                        sens_data = tiv.postfix_sensitivities(
+                            var, data, sol.t, inputs_dict, sens_data
+                        )
                     newsol[var].add_sensitivity(
                         param,
-                        [sol.yS[:, start_idx:end_idx, param_idx]],
+                        [sens_data],
                     )
 
                 # Stack individual sensitivities for `all` entry
