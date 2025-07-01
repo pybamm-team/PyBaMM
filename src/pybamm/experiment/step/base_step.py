@@ -99,8 +99,6 @@ class BaseStep:
             t = value[:, 0]
             if t[0] != 0:
                 raise ValueError("Drive cycle must start at t=0")
-            if duration is None:
-                duration = t[-1]
         elif is_python_function:
             t0 = 0
             # Check if the function is only a function of t
@@ -279,6 +277,12 @@ class BaseStep:
     def __hash__(self):
         return hash(self.basic_repr())
 
+    def _default_timespan(self, value):
+        """
+        Default timespan for the step is one day (24 hours).
+        """
+        return 24 * 3600
+
     def default_duration(self, value):
         """
         Default duration for the step is one day (24 hours) or the duration of the
@@ -288,7 +292,7 @@ class BaseStep:
             t = value[:, 0]
             return t[-1]
         else:
-            return 24 * 3600  # one day in seconds
+            return self._default_timespan(value)
 
     @staticmethod
     def default_period():
