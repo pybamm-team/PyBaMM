@@ -531,14 +531,18 @@ class TestSolution:
             solver.solve(model, t_eval=[0, 0.1])["dts"]
 
     _solver_classes = [
-        (pybamm.CasadiSolver, False),
-        (pybamm.IDAKLUSolver, False),
-        (pybamm.CasadiSolver, True),
-        (pybamm.IDAKLUSolver, True),
+        (pybamm.CasadiSolver, False, False),
+        (pybamm.IDAKLUSolver, False, False),
+        (pybamm.CasadiSolver, True, False),
+        (pybamm.IDAKLUSolver, True, False),
+        (pybamm.IDAKLUSolver, False, True),
+        (pybamm.IDAKLUSolver, True, True),
     ]
 
-    @pytest.mark.parametrize("solver_class,use_post_sum", _solver_classes)
-    def test_discrete_data_sum(self, solver_class, use_post_sum):
+    @pytest.mark.parametrize(
+        "solver_class,use_post_sum,use_output_var", _solver_classes
+    )
+    def test_discrete_data_sum(self, solver_class, use_post_sum, use_output_var):
         model = pybamm.BaseModel(name="test_model")
         c = pybamm.Variable("c")
         model.rhs = {c: -2 * c}
@@ -571,7 +575,11 @@ class TestSolution:
         model.variables["data"] = data
         model.variables["c"] = c
 
-        solver = solver_class()
+        if use_output_var:
+            output_variables = ["data_comparison", "c", "data"]
+            solver = solver_class(output_variables=output_variables)
+        else:
+            solver = solver_class()
         range = [0.5, 1.0, 2.0]
         range2 = np.ones(3)
         for a, b in zip(range, range2, strict=False):
@@ -586,6 +594,7 @@ class TestSolution:
             np.testing.assert_allclose(
                 sol["data_comparison"](), expected, rtol=1e-3, atol=1e-2
             )
+            assert isinstance(sol["data_comparison"].data, np.ndarray)
 
             # sensitivity calculation only supported for IDAKLUSolver
             if solver_class == pybamm.IDAKLUSolver:
@@ -631,6 +640,7 @@ class TestSolution:
                     rtol=1e-3,
                     atol=1e-2,
                 )
+                assert isinstance(sol["data_comparison"].sensitivities["a"], np.ndarray)
 
                 # should raise error if t_interp is not equal to data_times
                 with pytest.raises(

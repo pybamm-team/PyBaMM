@@ -1093,6 +1093,10 @@ class ExplicitTimeIntegral(UnaryOperator):
     def _unary_new_copy(self, child, perform_simplifications=True):
         return self.__class__(child, self.initial_condition)
 
+    def _unary_evaluate(self, child):
+        # return result of evaluating the child, we'll only implement the sum once the model is solved (in pybamm.ProcessedVariable)
+        return child
+
     def is_constant(self):
         return False
 

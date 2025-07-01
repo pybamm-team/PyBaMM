@@ -40,6 +40,9 @@ class ProcessedVariableComputed:
     warn : bool, optional
         Whether to raise warnings when trying to evaluate time and length scales.
         Default is True.
+    time_indep : bool, optional
+        Whether the variable is time-independent. Default is False. Used for
+        time integral or sum variables
     """
 
     def __init__(
@@ -49,6 +52,7 @@ class ProcessedVariableComputed:
         base_variables_data,
         solution,
         cumtrapz_ic=None,
+        time_indep=False,
     ):
         self.base_variables = base_variables
         self.base_variables_casadi = base_variables_casadi
@@ -63,6 +67,7 @@ class ProcessedVariableComputed:
         self.domain = base_variables[0].domain
         self.domains = base_variables[0].domains
         self.cumtrapz_ic = cumtrapz_ic
+        self.time_indep = time_indep
 
         # Sensitivity starts off uninitialized, only set when called
         self._sensitivities = None
@@ -93,7 +98,10 @@ class ProcessedVariableComputed:
 
         # check variable shape
         if len(self.base_eval_shape) == 0 or self.base_eval_shape[0] == 1:
-            self.initialise_0D()
+            if self.time_indep:
+                self.initialise_time_independent()
+            else:
+                self.initialise_0D()
             return
 
         n = self.mesh.npts
@@ -225,6 +233,11 @@ class ProcessedVariableComputed:
             return self.unroll_3D(realdata=realdata)
         else:
             raise NotImplementedError(f"Unsupported data dimension: {self.dimensions}")
+
+    def initialise_time_independent(self):
+        self.entries = self.unroll_0D()
+        self._xr_data_array = None
+        self.dimensions = 0
 
     def initialise_0D(self):
         entries = self.unroll_0D()
@@ -655,6 +668,8 @@ class ProcessedVariableComputed:
         Evaluate the variable at arbitrary *dimensional* t (and x, r, y, z and/or R),
         using interpolation
         """
+        if self.time_indep:
+            return self.entries
         kwargs = {"t": t, "x": x, "r": r, "y": y, "z": z, "R": R}
         # Remove any None arguments
         kwargs = {key: value for key, value in kwargs.items() if value is not None}
