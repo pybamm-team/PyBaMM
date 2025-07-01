@@ -99,6 +99,8 @@ class BaseStep:
             t = value[:, 0]
             if t[0] != 0:
                 raise ValueError("Drive cycle must start at t=0")
+            if duration is None:
+                duration = t[-1]
         elif is_python_function:
             t0 = 0
             # Check if the function is only a function of t
