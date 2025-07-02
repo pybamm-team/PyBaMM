@@ -9,7 +9,7 @@ class OneStateDifferentialCapacityHysteresisOpenCircuitPotential(
     BaseHysteresisOpenCircuitPotential
 ):
     """
-    Class for one-state open-circuit hysteresis model based on the approach outlined by Wycisk2022.
+    Class for one-state open-circuit hysteresis model based on the approach outlined by Wycisk :footcite:t:`Wycisk2022`.
     The hysteresis state variable `h` is governed by an ODE which depends on the local surface stoichiometry,
     volumetric interfacial current density, and differential capacity.
 
