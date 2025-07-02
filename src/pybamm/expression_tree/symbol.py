@@ -163,7 +163,7 @@ def is_matrix_minus_one(expr: Symbol):
 
 def simplify_if_constant(symbol: pybamm.Symbol):
     """
-    Utility function to simplify an expression tree if it evalutes to a constant
+    Utility function to simplify an expression tree if it evaluates to a constant
     scalar, vector or matrix
     """
     if symbol.is_constant():

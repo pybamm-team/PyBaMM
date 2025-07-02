@@ -147,7 +147,12 @@ class BaseStep:
                 pybamm.t - pybamm.InputParameter("start time"),
                 name="Drive Cycle",
             )
-            self.period = np.diff(t).min()
+            if period is None:
+                # Infer the period from the drive cycle
+                self.period = np.diff(t).min()
+            else:
+                self.period = _convert_time_to_seconds(period)
+
         elif is_python_function:
             t = pybamm.t - pybamm.InputParameter("start time")
             self.value = value(t)
@@ -272,6 +277,12 @@ class BaseStep:
     def __hash__(self):
         return hash(self.basic_repr())
 
+    def _default_timespan(self, value):
+        """
+        Default timespan for the step is one day (24 hours).
+        """
+        return 24 * 3600
+
     def default_duration(self, value):
         """
         Default duration for the step is one day (24 hours) or the duration of the
@@ -281,7 +292,7 @@ class BaseStep:
             t = value[:, 0]
             return t[-1]
         else:
-            return 24 * 3600  # one day in seconds
+            return self._default_timespan(value)
 
     @staticmethod
     def default_period():
