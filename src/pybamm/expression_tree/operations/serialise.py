@@ -250,7 +250,7 @@ class Serialise:
                 "name": obj.name,
                 "domain": obj.domain,
             }
-        if isinstance(obj, (np.integer, np.floating)):
+        if isinstance(obj, (np.integer | np.floating)):
             return obj.item()
         if isinstance(obj, np.ndarray):
             return obj.tolist()
@@ -276,10 +276,13 @@ class Serialise:
                 )
                 for k, v in getattr(model, "rhs", {}).items()
             ],
-            "algebraic": {
-                str(k): Serialise.convert_symbol_to_json(v)
-                for k, v in getattr(model, "algebraic", {}).items()
-            },
+            "algebraic": [
+                [
+                    Serialise.convert_symbol_to_json(k),
+                    Serialise.convert_symbol_to_json(v),
+                ]
+                for k, v in model.algebraic.items()
+            ],
             "initial_conditions": [
                 (
                     Serialise.convert_symbol_to_json(k),
@@ -328,14 +331,17 @@ class Serialise:
             model_data = json.load(f)
 
         model = battery_model if battery_model is not None else pybamm.BaseModel()
-
         model.name = model_data["name"]
 
+        all_keys = (
+            [k for k, _ in model_data["rhs"]]
+            + [k for k, _ in model_data["initial_conditions"]]
+            + [k for k, _ in model_data["algebraic"]]
+            + [var for var, _ in model_data["boundary_conditions"]]
+        )
+
         symbol_map = {}
-        for k_json, _ in model_data["rhs"]:
-            k = Serialise.convert_symbol_from_json(k_json)
-            symbol_map[str(k)] = k
-        for k_json, _ in model_data["initial_conditions"]:
+        for k_json in all_keys:
             k = Serialise.convert_symbol_from_json(k_json)
             symbol_map[str(k)] = k
 
@@ -346,8 +352,10 @@ class Serialise:
             for k, v in model_data["rhs"]
         }
         model.algebraic = {
-            pybamm.Symbol(k): Serialise.convert_symbol_from_json(v)
-            for k, v in model_data["algebraic"].items()
+            symbol_map[
+                str(Serialise.convert_symbol_from_json(k))
+            ]: Serialise.convert_symbol_from_json(v)
+            for k, v in model_data["algebraic"]
         }
         model.initial_conditions = {
             symbol_map[
@@ -371,12 +379,18 @@ class Serialise:
             for e in model_data["events"]
         ]
         model.variables = {
-            name: Serialise.convert_symbol_from_json(expr)
+            name: symbol_map.get(
+                str(Serialise.convert_symbol_from_json(expr)),
+                Serialise.convert_symbol_from_json(expr),
+            )
             for name, expr in model_data["variables"].items()
         }
 
-        param_values = Serialise.convert_parameter_values_to_json(
-            model_data["parameters"]
+        param_values = pybamm.ParameterValues(
+            {
+                k: Serialise.convert_symbol_from_json(v)
+                for k, v in model_data["parameters"].items()
+            }
         )
 
         return model, param_values
@@ -642,16 +656,43 @@ class Serialise:
             json_dict = {
                 "type": "Variable",
                 "name": symbol.name,
-                "domain": symbol.domain,
+                "domains": symbol.domains,
                 "bounds": symbol.bounds,
             }
 
+        elif isinstance(symbol, pybamm.ConcatenationVariable):
+            json_dict = {
+                "type": "ConcatenationVariable",
+                "name": symbol.name,
+                "children": [
+                    Serialise.convert_symbol_to_json(child) for child in symbol.children
+                ],
+            }
+        elif isinstance(symbol, pybamm.FullBroadcast):
+            json_dict = {
+                "type": "FullBroadcast",
+                "children": [Serialise.convert_symbol_to_json(symbol.child)],
+                "broadcast_domain": symbol.broadcast_domain,
+            }
         elif isinstance(symbol, pybamm.SpatialVariable):
             json_dict = {
                 "type": "SpatialVariable",
                 "name": symbol.name,
                 "domains": symbol.domains,
                 "coord_sys": symbol.coord_sys,
+            }
+        elif isinstance(symbol, pybamm.IndefiniteIntegral):
+            integration_var = (
+                symbol.integration_variable[0]
+                if isinstance(symbol.integration_variable, list)
+                else symbol.integration_variable
+            )
+            json_dict = {
+                "type": "IndefiniteIntegral",
+                "children": [Serialise.convert_symbol_to_json(symbol.child)],
+                "integration_variable": Serialise.convert_symbol_to_json(
+                    integration_var
+                ),
             }
         elif isinstance(symbol, pybamm.BoundaryValue):
             json_dict = {
@@ -681,6 +722,8 @@ class Serialise:
             # Generic fallback for other symbols with children
             json_dict = {
                 "type": symbol.__class__.__name__,
+                "name": symbol.name,
+                "domains": symbol.domains,
                 "children": [
                     Serialise.convert_symbol_to_json(c) for c in symbol.children
                 ],
@@ -742,13 +785,15 @@ class Serialise:
         """
         if isinstance(json_data, numbers.Number | list):
             return json_data
-        elif json_data["type"] == "Parameter":
-            # Convert stored parameters back to PyBaMM Parameter objects
+        symbol_type = json_data.get("type")
+
+        if symbol_type == "Parameter":
             return pybamm.Parameter(json_data["name"])
-        elif json_data["type"] == "Scalar":
-            # Convert stored numerical values back to PyBaMM Scalar objects
+
+        elif symbol_type == "Scalar":
             return pybamm.Scalar(json_data["value"])
-        elif json_data["type"] == "Interpolant":
+
+        elif symbol_type == "Interpolant":
             return pybamm.Interpolant(
                 [np.array(x) for x in json_data["x"]],
                 np.array(json_data["y"]),
@@ -757,7 +802,7 @@ class Serialise:
                 interpolator=json_data["interpolator"],
                 entries_string=json_data["entries_string"],
             )
-        elif json_data["type"] == "FunctionParameter":
+        elif symbol_type == "FunctionParameter":
             inputs = {
                 k: Serialise.convert_symbol_from_json(v)
                 for k, v in json_data.get("inputs", {}).items()
@@ -770,30 +815,75 @@ class Serialise:
                 inputs,
                 diff_variable=diff_variable,
             )
-        elif json_data["type"] == "PrimaryBroadcast":
+        elif symbol_type == "PrimaryBroadcast":
             child = Serialise.convert_symbol_from_json(json_data["children"][0])
             domain = json_data["broadcast_domain"]
             return pybamm.PrimaryBroadcast(child, domain)
-        elif json_data["type"] == "BoundaryValue":
+        elif symbol_type == "FullBroadcast":
+            child = Serialise.convert_symbol_from_json(json_data["children"][0])
+            broadcast_domain = json_data.get("broadcast_domain", [])
+            return pybamm.FullBroadcast(
+                child,
+                broadcast_domain,
+            )
+        elif symbol_type == "BoundaryValue":
             child = Serialise.convert_symbol_from_json(json_data["children"][0])
             side = json_data["side"]
             return pybamm.BoundaryValue(child, side)
-        elif json_data["type"] == "Time":
+        elif symbol_type == "Time":
             return pybamm.t
-        elif json_data["type"] == "Variable":
+        elif symbol_type == "Variable":
+            raw_bounds = json_data.get("bounds", [-float("inf"), float("inf")])
+            # Ensure bounds are pybamm.Symbol (usually pybamm.Scalar)
+            bounds = tuple(
+                b
+                if isinstance(b, pybamm.Symbol)
+                else Serialise.convert_symbol_from_json(b)
+                for b in raw_bounds
+            )
             return pybamm.Variable(
                 json_data["name"],
-                domain=json_data.get("domain"),
-                bounds=json_data.get("bounds", [-float("inf"), float("inf")]),
+                domains=json_data.get(
+                    "domains",
+                    {
+                        "primary": json_data.get("domain", []),
+                        "secondary": [],
+                        "tertiary": [],
+                        "quaternary": [],
+                    },
+                ),
+                bounds=bounds,
             )
-        elif json_data["type"] == "SpatialVariable":
+        elif symbol_type == "Parameter":
+            return pybamm.Parameter(
+                json_data["name"],
+                domains=json_data.get("domains", {}),
+            )
+
+        elif symbol_type == "SpatialVariable":
             return pybamm.SpatialVariable(
                 json_data["name"],
                 coord_sys=json_data.get("coord_sys", "cartesian"),
                 domains=json_data.get("domains"),
             )
+        elif symbol_type == "IndefiniteIntegral":
+            child = Serialise.convert_symbol_from_json(json_data["children"][0])
+            integration_var_json = json_data["integration_variable"]
+            integration_variable = Serialise.convert_symbol_from_json(
+                integration_var_json
+            )
+            if not isinstance(integration_variable, pybamm.SpatialVariable):
+                raise TypeError(
+                    f"Expected SpatialVariable, got {type(integration_variable)}"
+                )
+            return pybamm.IndefiniteIntegral(child, [integration_variable])
+        elif symbol_type == "Symbol":
+            return pybamm.Symbol(
+                json_data["name"],
+                domains=json_data.get("domains", {}),
+            )
         elif "children" in json_data:
-            return getattr(pybamm, json_data["type"])(
+            return getattr(pybamm, symbol_type)(
                 *[Serialise.convert_symbol_from_json(c) for c in json_data["children"]]
             )
         else:
