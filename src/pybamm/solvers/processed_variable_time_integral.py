@@ -6,7 +6,7 @@ from typing import Literal
 import casadi
 import numpy as np
 import numpy.typing as npt
-from scipy.integrate import cumulative_trapezoid
+from scipy.integrate import trapezoid
 
 import pybamm
 
@@ -26,8 +26,8 @@ class ProcessedVariableTimeIntegral:
                 entries, axis=0, initial=self.initial_condition, keepdims=True
             )
         else:
-            return cumulative_trapezoid(
-                entries, t_pts, initial=float(self.initial_condition), axis=0
+            return np.array(
+                [trapezoid(entries, t_pts, axis=0) + float(self.initial_condition)]
             )
 
     def postfix(self, entries, t_pts, inputs) -> np.ndarray:
@@ -150,11 +150,15 @@ class ProcessedVariableTimeIntegral:
                 discrete_times=sum_node.sum_times,
             )
         elif isinstance(sum_node, pybamm.ExplicitTimeIntegral):
+            if isinstance(sum_node.initial_condition, pybamm.Symbol):
+                initial_condition = sum_node.initial_condition.evaluate()
+            else:
+                initial_condition = sum_node.initial_condition
             return ProcessedVariableTimeIntegral(
                 method="continuous",
                 post_sum_node=post_sum_node,
                 sum_node=sum_node,
-                initial_condition=sum_node.initial_condition.evaluate(),
+                initial_condition=initial_condition,
                 discrete_times=None,
             )
         else:
