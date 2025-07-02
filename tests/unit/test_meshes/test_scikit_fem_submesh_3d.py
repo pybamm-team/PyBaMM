@@ -14,8 +14,8 @@ class TestScikitFemGenerator3D:
         geometry = {
             "domain": {
                 pybamm.standard_spatial_vars.x: {"min": 0, "max": 1},
-                pybamm.standard_spatial_vars.y: {"min": 0, "max": 1},
-                pybamm.standard_spatial_vars.z: {"min": 0, "max": 1},
+                pybamm.standard_spatial_vars.y: {"min": 0, "max": 2},
+                pybamm.standard_spatial_vars.z: {"min": 0, "max": 3},
             }
         }
 
@@ -25,9 +25,9 @@ class TestScikitFemGenerator3D:
             geometry,
             {"domain": mesh_gen},
             {
-                pybamm.standard_spatial_vars.x: 5,
-                pybamm.standard_spatial_vars.y: 5,
-                pybamm.standard_spatial_vars.z: 5,
+                pybamm.standard_spatial_vars.x: None,
+                pybamm.standard_spatial_vars.y: None,
+                pybamm.standard_spatial_vars.z: None,
             },
         )
 
@@ -58,7 +58,7 @@ class TestScikitFemGenerator3D:
 
         mesh_gen = ScikitFemGenerator3D("cylinder", h=0.5)
 
-        var_pts = {r: 10, z: 10}
+        var_pts = {r: None, z: None}
 
         mesh = pybamm.Mesh(geometry, {"domain": mesh_gen}, var_pts)
 
@@ -99,8 +99,8 @@ class TestScikitFemSubMesh3D:
         geometry = {
             "domain": {
                 pybamm.standard_spatial_vars.x: {"min": 0, "max": 1},
-                pybamm.standard_spatial_vars.y: {"min": 0, "max": 1},
-                pybamm.standard_spatial_vars.z: {"min": 0, "max": 1},
+                pybamm.standard_spatial_vars.y: {"min": 0, "max": 2},
+                pybamm.standard_spatial_vars.z: {"min": 0, "max": 3},
             }
         }
 
@@ -109,9 +109,9 @@ class TestScikitFemSubMesh3D:
             geometry,
             {"domain": mesh_gen},
             {
-                pybamm.standard_spatial_vars.x: 3,
-                pybamm.standard_spatial_vars.y: 3,
-                pybamm.standard_spatial_vars.z: 3,
+                pybamm.standard_spatial_vars.x: None,
+                pybamm.standard_spatial_vars.y: None,
+                pybamm.standard_spatial_vars.z: None,
             },
         )
 
@@ -145,8 +145,8 @@ class TestScikitFemSubMesh3D:
         geometry = {
             "domain": {
                 pybamm.standard_spatial_vars.x: {"min": 0, "max": 1},
-                pybamm.standard_spatial_vars.y: {"min": 0, "max": 1},
-                pybamm.standard_spatial_vars.z: {"min": 0, "max": 1},
+                pybamm.standard_spatial_vars.y: {"min": 0, "max": 2},
+                pybamm.standard_spatial_vars.z: {"min": 0, "max": 3},
             }
         }
 
@@ -155,9 +155,9 @@ class TestScikitFemSubMesh3D:
             geometry,
             {"domain": mesh_gen},
             {
-                pybamm.standard_spatial_vars.x: 2,
-                pybamm.standard_spatial_vars.y: 2,
-                pybamm.standard_spatial_vars.z: 2,
+                pybamm.standard_spatial_vars.x: None,
+                pybamm.standard_spatial_vars.y: None,
+                pybamm.standard_spatial_vars.z: None,
             },
         )
 
@@ -181,3 +181,8 @@ class TestScikitFemSubMesh3D:
             "Should preserve coord_sys"
         )
         assert restored_submesh.npts == submesh.npts, "Should preserve npts"
+
+    def test_invalid_geometry_type(self):
+        with pytest.raises(pybamm.GeometryError, match="geom_type must be one of"):
+            pybamm.ScikitFemGenerator3D("invalid_type", h=0.3)
+

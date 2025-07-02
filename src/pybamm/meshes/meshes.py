@@ -41,6 +41,21 @@ class Mesh(dict):
         # convert var_pts to an id dict
         var_name_pts = {var.name: pts for var, pts in var_pts.items()}
 
+        for domain, generator in submesh_types.items():
+            if isinstance(generator, pybamm.ScikitFemGenerator3D):
+                for var in geometry[domain]:
+                    provided_pts = var_name_pts.get(var.name)
+                    if provided_pts is not None:
+                        pybamm.logger.warning(
+                            f"For the 3D FEM submesh on domain '{domain}', the value "
+                            f"of all 'var_pts' are ignored. "
+                            "The mesh is generated to satisfy the 'h' parameter. "
+                            "It is recommended to pass 'None' for spatial variables "
+                            "on a 3D FEM domain to avoid this warning."
+                        )
+                        # We only need to warn once per domain.
+                        break
+
         # create submesh_pts from var_pts
         submesh_pts = {}
         for domain in geometry:

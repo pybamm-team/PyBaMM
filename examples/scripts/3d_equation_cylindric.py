@@ -44,10 +44,18 @@ geometry = {
     }
 }
 
+# For unstructured 3D FEM meshes, we control the density and quality using a
+# characteristic length parameter 'h'. The generator will try to create
+# tetrahedral elements with edge lengths around this value.
 submesh_types = {
     "current collector": ScikitFemGenerator3D(geom_type="cylinder", h=0.08)
 }
 
+# The 'var_pts' dictionary is required by the pybamm.Mesh class for validation,
+# but our ScikitFemGenerator3D completely IGNORES it. The number of points
+# is determined by the meshing algorithm based on 'h', not by 'var_pts'.
+# We pass placeholder values to satisfy the class constructor.
+# We may want to pass var_pts anyway since other domains may not be in 3D in a simulation
 var_pts = {r: None, theta: None, z: None}
 mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 spatial_methods = {"current collector": ScikitFiniteElement3D()}
@@ -63,6 +71,7 @@ T_solution = solution.y.flatten()
 print(f"Number of FEM nodes: {nodes.shape[0]}")
 print(f"Temperature range: [{T_solution.min():.2f}, {T_solution.max():.2f}]°C")
 
+# Create a regular grid for visualization purposes.
 Nr_vis, Ntheta_vis, Nz_vis = 30, 40, 25
 r_grid = np.linspace(R_inner, R_outer, Nr_vis)
 theta_grid = np.linspace(0, 2 * np.pi, Ntheta_vis)
@@ -73,13 +82,17 @@ X_grid = R_grid * np.cos(Theta_grid)
 Y_grid = R_grid * np.sin(Theta_grid)
 grid_points = np.column_stack([X_grid.ravel(), Y_grid.ravel(), Z_grid.ravel()])
 
+# Interpolate the unstructured FEM solution onto the regular visualization grid.
+# This can sometimes make the plot look "lumpy" if the mesh is coarse.
 T_interpolated = griddata(
     nodes, T_solution, grid_points, method="linear", fill_value=np.nan
 ).reshape((Nr_vis, Ntheta_vis, Nz_vis))
 
+# Create the 4-panel plot
 fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(15, 12))
 fig.suptitle("Steady-State Heat Distribution Analysis", fontsize=16)
 
+# Plot 1: Polar plot (r-theta plane) at mid-height
 mid_k = Nz_vis // 2
 R_plane = R_grid[:, :, mid_k]
 Theta_plane = Theta_grid[:, :, mid_k]
@@ -91,6 +104,7 @@ ax1.set_title(f"T(r,θ) at z={H / 2:.1f}m (Interpolated)")
 ax1.set_ylim(R_inner, R_outer)
 fig.colorbar(pcm1, ax=ax1)
 
+# Plot 2: Cross-section (r-z plane) at theta=0
 mid_j = 0
 R_axial = R_grid[:, mid_j, :]
 Z_axial = Z_grid[:, mid_j, :]
@@ -102,7 +116,7 @@ ax2.set_title("T(r,z) at θ=0 (Interpolated)")
 ax2.set_aspect("equal")
 fig.colorbar(pcm2, ax=ax2)
 
-
+# Plot 3: Direct FEM solution plot at mid-height (no interpolation)
 unique_z_coords = np.unique(nodes[:, 2])
 mid_plane_z = unique_z_coords[np.argmin(np.abs(unique_z_coords - H / 2))]
 print(
@@ -131,7 +145,7 @@ ax3.set_title("FEM Solution at Mid-Height (Direct)")
 ax3.set_aspect("equal")
 fig.colorbar(pcm3, ax=ax3, label="Temperature [°C]")
 
-
+# Plot 4: Radial temperature profile vs. analytical solution
 r_line = np.linspace(R_inner, R_outer, 100)
 radial_points = np.column_stack(
     [r_line, np.zeros_like(r_line), np.full_like(r_line, H / 2)]
@@ -149,6 +163,17 @@ ax4.legend()
 ax4.grid(True, alpha=0.5)
 
 plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+plt.show()
+
+# Mesh Visualisation
+print("\nGenerating mesh visualization...")
+fig_mesh, ax_mesh = plt.subplots(figsize=(8, 8))
+ax_mesh.triplot(triang, 'k-', lw=0.5, alpha=0.7)
+ax_mesh.plot(z_mid_nodes[:, 0], z_mid_nodes[:, 1], 'o', markersize=2, color='blue')
+ax_mesh.set_title(f"FEM Mesh Visualization (Slice at z={mid_plane_z:.3f}m)")
+ax_mesh.set_xlabel("x [m]")
+ax_mesh.set_ylabel("y [m]")
+ax_mesh.set_aspect('equal')
 plt.show()
 
 
