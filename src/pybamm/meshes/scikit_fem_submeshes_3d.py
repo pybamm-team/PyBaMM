@@ -26,7 +26,7 @@ class ScikitFemGenerator3D(pybamm.MeshGenerator):
         if geom_type not in supported_geometries:
             raise pybamm.GeometryError(
                 f"geom_type must be one of {supported_geometries}, not '{geom_type}'"
-            ) 
+            )
         super().__init__(ScikitFemSubMesh3D)
         self.geom_type = geom_type
         self.gen_params = gen_params

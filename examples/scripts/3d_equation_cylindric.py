@@ -168,12 +168,12 @@ plt.show()
 # Mesh Visualisation
 print("\nGenerating mesh visualization...")
 fig_mesh, ax_mesh = plt.subplots(figsize=(8, 8))
-ax_mesh.triplot(triang, 'k-', lw=0.5, alpha=0.7)
-ax_mesh.plot(z_mid_nodes[:, 0], z_mid_nodes[:, 1], 'o', markersize=2, color='blue')
+ax_mesh.triplot(triang, "k-", lw=0.5, alpha=0.7)
+ax_mesh.plot(z_mid_nodes[:, 0], z_mid_nodes[:, 1], "o", markersize=2, color="blue")
 ax_mesh.set_title(f"FEM Mesh Visualization (Slice at z={mid_plane_z:.3f}m)")
 ax_mesh.set_xlabel("x [m]")
 ax_mesh.set_ylabel("y [m]")
-ax_mesh.set_aspect('equal')
+ax_mesh.set_aspect("equal")
 plt.show()
 
 

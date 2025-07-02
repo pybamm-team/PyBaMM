@@ -185,4 +185,3 @@ class TestScikitFemSubMesh3D:
     def test_invalid_geometry_type(self):
         with pytest.raises(pybamm.GeometryError, match="geom_type must be one of"):
             pybamm.ScikitFemGenerator3D("invalid_type", h=0.3)
-
