@@ -73,6 +73,7 @@ from .models.full_battery_models import lead_acid
 from .models.full_battery_models import lithium_ion
 from .models.full_battery_models import equivalent_circuit
 from .models.full_battery_models import sodium_ion
+from .models.custom_model import CustomModel
 
 # Submodel classes
 from .models.submodels.base_submodel import BaseSubModel
