@@ -9,7 +9,7 @@ import pybamm
 
 
 class ShortDurationCRate(pybamm.step.CRate):
-    def default_duration(self, value):
+    def _default_timespan(self, value):
         # Set a short default duration for testing early stopping due to infeasible time
         return 1
 
