@@ -7,8 +7,10 @@ from pybammsolvers import idaklu
 
 import pybamm
 
+from .base_processed_variable import BaseProcessedVariable
 
-class ProcessedVariable:
+
+class ProcessedVariable(BaseProcessedVariable):
     """
     An object that can be evaluated at arbitrary (scalars or vectors) t and x, and
     returns the (interpolated) value of the base variable at that t and x.
@@ -493,6 +495,58 @@ class ProcessedVariable:
     @property
     def hermite_interpolation(self):
         return self.all_yps is not None
+
+    def as_computed(self):
+        """
+        Allows a ProcessedVariable to be converted to a ComputedProcessedVariable for
+        use together, e.g. when using a last state solution with a new simulation running
+        with output variables in the solver.
+        """
+
+        def _stub_solution(self):
+            """
+            Return a lightweight object that looks like the parts of
+            `pybamm.Solution` required by ProcessedVariableComputed, but without
+            keeping the full state vector in memory.
+            """
+
+            class StubSolution:
+                def __init__(self, ts, ys, inputs, inputs_casadi, sensitivities, t_pts):
+                    self.all_ts = ts
+                    self.all_ys = ys
+                    self.all_inputs = inputs
+                    self.all_inputs_casadi = inputs_casadi
+                    self.sensitivities = sensitivities
+                    self.t = t_pts
+
+            return StubSolution(
+                self.all_ts,
+                self.all_ys,
+                self.all_inputs,
+                self.all_inputs_casadi,
+                self.sensitivities,
+                self.t_pts,
+            )
+
+        entries = self.entries  # shape: (..., n_t)
+
+        # Move time to axis 0, then flatten spatial dims per timestep
+        reshaped = np.moveaxis(entries, -1, 0)  # shape: (n_t, ...)
+        base_data = [reshaped.reshape(reshaped.shape[0], -1)]  # (n_t, n_vars)
+
+        cpv = pybamm.ProcessedVariableComputed(
+            self.base_variables,
+            self.base_variables_casadi,
+            base_data,
+            _stub_solution(self),
+        )
+
+        # add sensitivities if they exist
+        if self.sensitivities:
+            # TODO: test once #5058 is fixed
+            cpv._sensitivities = self.sensitivities  # pragma: no cover
+
+        return cpv
 
 
 class ProcessedVariable0D(ProcessedVariable):
