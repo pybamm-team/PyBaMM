@@ -600,6 +600,7 @@ class IDAKLUJax:
         self._register_callbacks()  # Register python methods as callbacks in IDAKLU-JAX
 
         for _name, _value in idaklu.registrations().items():
+            # todo: This has been removed from jax v0.6.0
             xla_client.register_custom_call_target(
                 f"{_name}_{self._unique_name()}", _value, platform="cpu"
             )
