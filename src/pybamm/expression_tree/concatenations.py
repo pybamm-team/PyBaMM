@@ -1,18 +1,17 @@
-from __future__ import annotations
-
 #
 # Concatenation classes
 #
 from __future__ import annotations
+
 import copy
 from collections import defaultdict
+from collections.abc import Sequence
+from typing import Any
 
 import numpy as np
 import numpy.typing as npt
 import sympy
 from scipy.sparse import issparse, vstack
-from collections.abc import Sequence
-from typing import Any
 
 import pybamm
 
@@ -376,7 +375,9 @@ class DomainConcatenation(Concatenation):
         vector = np.empty((self._size, 1))
 
         # loop through domains of children writing subvectors to final vector
-        for child_vector, slices in zip(children_eval, self._children_slices):
+        for child_vector, slices in zip(
+            children_eval, self._children_slices, strict=False
+        ):
             for child_dom, child_slice in slices.items():
                 for i, _slice in enumerate(child_slice):
                     vector[self._slices[child_dom][i]] = child_vector[_slice]
@@ -389,7 +390,9 @@ class DomainConcatenation(Concatenation):
         # one domain each
         jacs = []
         for i in range(self.secondary_dimensions_npts):
-            for child_jac, slices in zip(children_jacs, self._children_slices):
+            for child_jac, slices in zip(
+                children_jacs, self._children_slices, strict=False
+            ):
                 if len(slices) > 1:
                     raise NotImplementedError(
                         """jacobian only implemented for when each child has

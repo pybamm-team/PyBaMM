@@ -1,8 +1,9 @@
 #
 # Base parameters class
 #
-import pybamm
 import warnings
+
+import pybamm
 
 
 class BaseParameters:

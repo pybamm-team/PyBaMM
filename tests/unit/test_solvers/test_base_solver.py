@@ -2,11 +2,12 @@
 # Tests for the Base Solver class
 #
 
-import pytest
 import casadi
-import pybamm
 import numpy as np
+import pytest
 from scipy.sparse import csr_matrix
+
+import pybamm
 
 
 class TestBaseSolver:
@@ -367,7 +368,7 @@ class TestBaseSolver:
         solver = pybamm.BaseSolver()
         assert solver.get_platform_context("Win") == "spawn"
         assert solver.get_platform_context("Linux") == "fork"
-        assert solver.get_platform_context("Darwin") == "fork"
+        assert solver.get_platform_context("Darwin") == "spawn"
 
     def test_sensitivities(self):
         def exact_diff_a(y, a, b):

@@ -1,11 +1,11 @@
-from typing import Optional
+import bisect
+
 import casadi
 import numpy as np
-import pybamm
-from scipy.integrate import cumulative_trapezoid
 import xarray as xr
-import bisect
 from pybammsolvers import idaklu
+
+import pybamm
 
 
 class ProcessedVariable:
@@ -40,7 +40,7 @@ class ProcessedVariable:
         base_variables,
         base_variables_casadi,
         solution,
-        time_integral: Optional[pybamm.ProcessedVariableTimeIntegral] = None,
+        time_integral: pybamm.ProcessedVariableTimeIntegral | None = None,
     ):
         self._name = name
         self.base_variables = base_variables
@@ -424,6 +424,7 @@ class ProcessedVariable:
             self.all_inputs,
             self.base_variables,
             self.all_solution_sensitivities["all"],
+            strict=False,
         ):
             # Set up symbolic variables
             t_casadi = casadi.MX.sym("t")
@@ -463,21 +464,10 @@ class ProcessedVariable:
             # Compute sensitivity
             S_var = dvar_dy_eval @ dy_dp + dvar_dp_eval
 
-            # post fix for discrete time integral won't give correct result
-            # if ts are not equal to the discrete times. Raise error
-            # in this case
-            if self._is_discrete_time_method():
-                if not (
-                    len(ts) == len(self.time_integral.discrete_times)
-                    and np.allclose(ts, self.time_integral.discrete_times, atol=1e-10)
-                ):
-                    raise pybamm.SolverError(
-                        f'Processing discrete-time-sum variable "{self._name}": solution times '
-                        "and discrete times of the time integral are not equal. Set 't_interp=discrete_sum_times' to "
-                        f"ensure the correct times are used.\nSolution times: {ts}\nDiscrete Sum times: {self.time_integral.discrete_times}"
-                    )
-
-            S_var = self._observe_postfix(S_var, ts)
+            if self.time_integral is not None:
+                S_var = self.time_integral.postfix_sensitivities(
+                    self._name, self.data, ts, inputs, S_var
+                )
 
             all_S_var.append(S_var)
 
@@ -512,7 +502,7 @@ class ProcessedVariable0D(ProcessedVariable):
         base_variables,
         base_variables_casadi,
         solution,
-        time_integral: Optional[pybamm.ProcessedVariableTimeIntegral] = None,
+        time_integral: pybamm.ProcessedVariableTimeIntegral | None = None,
     ):
         self.dimensions = 0
         super().__init__(
@@ -526,16 +516,9 @@ class ProcessedVariable0D(ProcessedVariable):
     def _observe_postfix(self, entries, t):
         if self.time_integral is None:
             return entries
-        if self.time_integral.method == "discrete":
-            return np.sum(entries, axis=0, initial=self.time_integral.initial_condition)
-        elif self.time_integral.method == "continuous":
-            return cumulative_trapezoid(
-                entries, self.t_pts, initial=float(self.time_integral.initial_condition)
-            )
-        else:
-            raise ValueError(
-                "time_integral method must be 'discrete' or 'continuous'"
-            )  # pragma: no cover
+        return self.time_integral.postfix(
+            entries, self.t_pts, self.all_inputs_casadi[0]
+        )
 
     def _interp_setup(self, entries, t):
         # save attributes for interpolation
@@ -578,7 +561,7 @@ class ProcessedVariable1D(ProcessedVariable):
         base_variables,
         base_variables_casadi,
         solution,
-        time_integral: Optional[pybamm.ProcessedVariableTimeIntegral] = None,
+        time_integral: pybamm.ProcessedVariableTimeIntegral | None = None,
     ):
         self.dimensions = 1
         super().__init__(
@@ -663,7 +646,7 @@ class ProcessedVariable2D(ProcessedVariable):
         base_variables,
         base_variables_casadi,
         solution,
-        time_integral: Optional[pybamm.ProcessedVariableTimeIntegral] = None,
+        time_integral: pybamm.ProcessedVariableTimeIntegral | None = None,
     ):
         self.dimensions = 2
         super().__init__(
@@ -809,7 +792,7 @@ class ProcessedVariable2DSciKitFEM(ProcessedVariable2D):
         base_variables,
         base_variables_casadi,
         solution,
-        time_integral: Optional[pybamm.ProcessedVariableTimeIntegral] = None,
+        time_integral: pybamm.ProcessedVariableTimeIntegral | None = None,
     ):
         self.dimensions = 2
         super(ProcessedVariable2D, self).__init__(
@@ -878,7 +861,7 @@ class ProcessedVariable3D(ProcessedVariable):
         base_variables,
         base_variables_casadi,
         solution,
-        time_integral: Optional[pybamm.ProcessedVariableTimeIntegral] = None,
+        time_integral: pybamm.ProcessedVariableTimeIntegral | None = None,
     ):
         self.dimensions = 3
         super().__init__(
@@ -1073,7 +1056,7 @@ class ProcessedVariable3DSciKitFEM(ProcessedVariable3D):
         base_variables,
         base_variables_casadi,
         solution,
-        time_integral: Optional[pybamm.ProcessedVariableTimeIntegral] = None,
+        time_integral: pybamm.ProcessedVariableTimeIntegral | None = None,
     ):
         self.dimensions = 3
         super(ProcessedVariable3D, self).__init__(

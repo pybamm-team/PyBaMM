@@ -2,7 +2,9 @@
 # Classes and methods for averaging
 #
 from __future__ import annotations
-from typing import Callable
+
+from collections.abc import Callable
+
 import pybamm
 
 
@@ -177,7 +179,7 @@ def x_average(symbol: pybamm.Symbol) -> pybamm.Symbol:
     # If symbol is a broadcast, reduce by one dimension
     if isinstance(
         symbol,
-        (pybamm.PrimaryBroadcast, pybamm.SecondaryBroadcast, pybamm.FullBroadcast),
+        pybamm.PrimaryBroadcast | pybamm.SecondaryBroadcast | pybamm.FullBroadcast,
     ):
         if all(
             dom in ["negative electrode", "separator", "positive electrode"]
@@ -228,7 +230,7 @@ def x_average(symbol: pybamm.Symbol) -> pybamm.Symbol:
         ) / sum(ls[tuple(orp.domain)] for orp in symbol.orphans)
         return out
     # Average of a sum is sum of averages
-    elif isinstance(symbol, (pybamm.Addition, pybamm.Subtraction)):
+    elif isinstance(symbol, pybamm.Addition | pybamm.Subtraction):
         return _sum_of_averages(symbol, x_average)
     # Otherwise, use Integral to calculate average value
     else:
@@ -265,7 +267,7 @@ def z_average(symbol: pybamm.Symbol) -> pybamm.Symbol:
     elif isinstance(symbol, pybamm.Broadcast):
         return symbol.reduce_one_dimension()
     # Average of a sum is sum of averages
-    elif isinstance(symbol, (pybamm.Addition, pybamm.Subtraction)):
+    elif isinstance(symbol, pybamm.Addition | pybamm.Subtraction):
         return _sum_of_averages(symbol, z_average)
     # Otherwise, define a ZAverage
     else:
@@ -299,7 +301,7 @@ def yz_average(symbol: pybamm.Symbol) -> pybamm.Symbol:
     elif isinstance(symbol, pybamm.Broadcast):
         return symbol.reduce_one_dimension()
     # Average of a sum is sum of averages
-    elif isinstance(symbol, (pybamm.Addition, pybamm.Subtraction)):
+    elif isinstance(symbol, pybamm.Addition | pybamm.Subtraction):
         return _sum_of_averages(symbol, yz_average)
     # Otherwise, define a YZAverage
     else:
@@ -328,7 +330,7 @@ def r_average(symbol: pybamm.Symbol) -> pybamm.Symbol:
     :class:`Symbol`
         the new averaged symbol
     """
-    has_r_domain = symbol.domain != [] and (
+    has_particle_domain = symbol.domain != [] and (
         symbol.domain[0].endswith("particle")
         or symbol.domain[0] in ["positive core", "positive shell"]
     )
@@ -337,7 +339,7 @@ def r_average(symbol: pybamm.Symbol) -> pybamm.Symbol:
         raise ValueError("Can't take the r-average of a symbol that evaluates on edges")
     # Otherwise, if symbol doesn't have a particle domain,
     # its r-averaged value is itself
-    elif not has_r_domain:
+    elif not has_particle_domain:
         return symbol
     # If symbol is a secondary broadcast onto "negative electrode" or
     # "positive electrode", take the r-average of the child then broadcast back
@@ -349,12 +351,12 @@ def r_average(symbol: pybamm.Symbol) -> pybamm.Symbol:
         return pybamm.PrimaryBroadcast(child_av, symbol.domains["secondary"])
     # If symbol is a Broadcast onto a particle domain, its average value is its child
     elif (
-        isinstance(symbol, (pybamm.PrimaryBroadcast, pybamm.FullBroadcast))
-        and has_r_domain
+        isinstance(symbol, pybamm.PrimaryBroadcast | pybamm.FullBroadcast)
+        and has_particle_domain
     ):
         return symbol.reduce_one_dimension()
     # Average of a sum is sum of averages
-    elif isinstance(symbol, (pybamm.Addition, pybamm.Subtraction)):
+    elif isinstance(symbol, pybamm.Addition | pybamm.Subtraction):
         return _sum_of_averages(symbol, r_average)
     else:
         return RAverage(symbol)

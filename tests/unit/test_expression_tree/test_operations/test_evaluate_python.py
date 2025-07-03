@@ -2,14 +2,15 @@
 # Test for the evaluate-to-python functions
 #
 
-import pytest
-import pybamm
-
-from tests import get_discretisation_for_testing, get_1p1d_discretisation_for_testing
-import numpy as np
-import scipy.sparse
-from collections import OrderedDict
 import re
+from collections import OrderedDict
+
+import numpy as np
+import pytest
+import scipy.sparse
+
+import pybamm
+from tests import get_1p1d_discretisation_for_testing, get_discretisation_for_testing
 
 if pybamm.has_jax():
     import jax
@@ -325,7 +326,7 @@ class TestEvaluate:
         # test something with time
         expr = a * pybamm.t
         evaluator = pybamm.EvaluatorPython(expr)
-        for t, y in zip(t_tests, y_tests):
+        for t, y in zip(t_tests, y_tests, strict=False):
             result = evaluator(t=t, y=y)
             assert result == expr.evaluate(t=t, y=y)
 
@@ -333,7 +334,7 @@ class TestEvaluate:
         A = pybamm.Matrix([[1, 2], [3, 4]])
         expr = A @ pybamm.StateVector(slice(0, 2))
         evaluator = pybamm.EvaluatorPython(expr)
-        for t, y in zip(t_tests, y_tests):
+        for t, y in zip(t_tests, y_tests, strict=False):
             result = evaluator(t=t, y=y)
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
@@ -341,13 +342,13 @@ class TestEvaluate:
         a = pybamm.Vector([1, 2])
         expr = a <= pybamm.StateVector(slice(0, 2))
         evaluator = pybamm.EvaluatorPython(expr)
-        for t, y in zip(t_tests, y_tests):
+        for t, y in zip(t_tests, y_tests, strict=False):
             result = evaluator(t=t, y=y)
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
         expr = a > pybamm.StateVector(slice(0, 2))
         evaluator = pybamm.EvaluatorPython(expr)
-        for t, y in zip(t_tests, y_tests):
+        for t, y in zip(t_tests, y_tests, strict=False):
             result = evaluator(t=t, y=y)
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
@@ -355,20 +356,20 @@ class TestEvaluate:
         a = pybamm.Vector([1, 2])
         expr = pybamm.minimum(a, pybamm.StateVector(slice(0, 2)))
         evaluator = pybamm.EvaluatorPython(expr)
-        for t, y in zip(t_tests, y_tests):
+        for t, y in zip(t_tests, y_tests, strict=False):
             result = evaluator(t=t, y=y)
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
         expr = pybamm.maximum(a, pybamm.StateVector(slice(0, 2)))
         evaluator = pybamm.EvaluatorPython(expr)
-        for t, y in zip(t_tests, y_tests):
+        for t, y in zip(t_tests, y_tests, strict=False):
             result = evaluator(t=t, y=y)
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
         # test something with an index
         expr = pybamm.Index(A @ pybamm.StateVector(slice(0, 2)), 0)
         evaluator = pybamm.EvaluatorPython(expr)
-        for t, y in zip(t_tests, y_tests):
+        for t, y in zip(t_tests, y_tests, strict=False):
             result = evaluator(t=t, y=y)
             assert result == expr.evaluate(t=t, y=y)
 
@@ -378,13 +379,13 @@ class TestEvaluate:
         C = pybamm.Matrix(scipy.sparse.coo_matrix(np.array([[1, 0], [0, 4]])))
         expr = A @ B @ C @ pybamm.StateVector(slice(0, 2))
         evaluator = pybamm.EvaluatorPython(expr)
-        for t, y in zip(t_tests, y_tests):
+        for t, y in zip(t_tests, y_tests, strict=False):
             result = evaluator(t=t, y=y)
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
         expr = B @ pybamm.StateVector(slice(0, 2))
         evaluator = pybamm.EvaluatorPython(expr)
-        for t, y in zip(t_tests, y_tests):
+        for t, y in zip(t_tests, y_tests, strict=False):
             result = evaluator(t=t, y=y)
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
@@ -397,12 +398,12 @@ class TestEvaluate:
         t_tests = [1, 2]
         expr = pybamm.NumpyConcatenation(a, b)
         evaluator = pybamm.EvaluatorPython(expr)
-        for t, y in zip(t_tests, y_tests):
+        for t, y in zip(t_tests, y_tests, strict=False):
             result = evaluator(t=t, y=y)
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
         expr = pybamm.NumpyConcatenation(a, c)
         evaluator = pybamm.EvaluatorPython(expr)
-        for t, y in zip(t_tests, y_tests):
+        for t, y in zip(t_tests, y_tests, strict=False):
             result = evaluator(t=t, y=y)
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
@@ -412,7 +413,7 @@ class TestEvaluate:
         a = pybamm.StateVector(slice(0, 1))
         expr = pybamm.SparseStack(A, a * B)
         evaluator = pybamm.EvaluatorPython(expr)
-        for t, y in zip(t_tests, y_tests):
+        for t, y in zip(t_tests, y_tests, strict=False):
             result = evaluator(t=t, y=y).toarray()
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y).toarray())
         expr = pybamm.SparseStack(A)
@@ -423,7 +424,7 @@ class TestEvaluate:
         # test Inner
         expr = pybamm.Inner(a, b)
         evaluator = pybamm.EvaluatorPython(expr)
-        for t, y in zip(t_tests, y_tests):
+        for t, y in zip(t_tests, y_tests, strict=False):
             result = evaluator(t=t, y=y)
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
@@ -431,7 +432,7 @@ class TestEvaluate:
         A = pybamm.Matrix(scipy.sparse.csr_matrix(np.array([[1, 0], [0, 4]])))
         for expr in [pybamm.Inner(A, v), pybamm.Inner(v, A)]:
             evaluator = pybamm.EvaluatorPython(expr)
-            for t, y in zip(t_tests, y_tests):
+            for t, y in zip(t_tests, y_tests, strict=False):
                 result = evaluator(t=t, y=y).toarray()
                 np.testing.assert_allclose(result, expr.evaluate(t=t, y=y).toarray())
 
@@ -441,7 +442,7 @@ class TestEvaluate:
         b = pybamm.StateVector(slice(1, 3))
         expr = a * b
         evaluator = pybamm.EvaluatorPython(expr)
-        for t, y in zip(t_tests, y_tests):
+        for t, y in zip(t_tests, y_tests, strict=False):
             result = evaluator(t=t, y=y)
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
@@ -506,7 +507,7 @@ class TestEvaluate:
         # test something with time
         expr = a * pybamm.t
         evaluator = pybamm.EvaluatorJax(expr)
-        for t, y in zip(t_tests, y_tests):
+        for t, y in zip(t_tests, y_tests, strict=False):
             result = evaluator(t=t, y=y)
             assert result == expr.evaluate(t=t, y=y)
 
@@ -514,7 +515,7 @@ class TestEvaluate:
         A = pybamm.Matrix(np.array([[1, 2], [3, 4]]))
         expr = A @ pybamm.StateVector(slice(0, 2))
         evaluator = pybamm.EvaluatorJax(expr)
-        for t, y in zip(t_tests, y_tests):
+        for t, y in zip(t_tests, y_tests, strict=False):
             result = evaluator(t=t, y=y)
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
@@ -522,13 +523,13 @@ class TestEvaluate:
         a = pybamm.Vector(np.array([1, 2]))
         expr = a <= pybamm.StateVector(slice(0, 2))
         evaluator = pybamm.EvaluatorJax(expr)
-        for t, y in zip(t_tests, y_tests):
+        for t, y in zip(t_tests, y_tests, strict=False):
             result = evaluator(t=t, y=y)
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
         expr = a > pybamm.StateVector(slice(0, 2))
         evaluator = pybamm.EvaluatorJax(expr)
-        for t, y in zip(t_tests, y_tests):
+        for t, y in zip(t_tests, y_tests, strict=False):
             result = evaluator(t=t, y=y)
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
@@ -536,20 +537,20 @@ class TestEvaluate:
         a = pybamm.Vector(np.array([1, 2]))
         expr = pybamm.minimum(a, pybamm.StateVector(slice(0, 2)))
         evaluator = pybamm.EvaluatorJax(expr)
-        for t, y in zip(t_tests, y_tests):
+        for t, y in zip(t_tests, y_tests, strict=False):
             result = evaluator(t=t, y=y)
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
         expr = pybamm.maximum(a, pybamm.StateVector(slice(0, 2)))
         evaluator = pybamm.EvaluatorJax(expr)
-        for t, y in zip(t_tests, y_tests):
+        for t, y in zip(t_tests, y_tests, strict=False):
             result = evaluator(t=t, y=y)
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
         # test something with an index
         expr = pybamm.Index(A @ pybamm.StateVector(slice(0, 2)), 0)
         evaluator = pybamm.EvaluatorJax(expr)
-        for t, y in zip(t_tests, y_tests):
+        for t, y in zip(t_tests, y_tests, strict=False):
             result = evaluator(t=t, y=y)
             assert result == expr.evaluate(t=t, y=y)
 
@@ -559,7 +560,7 @@ class TestEvaluate:
         C = pybamm.Matrix(scipy.sparse.coo_matrix(np.array([[1, 0], [0, 4]])))
         expr = A @ B @ C @ pybamm.StateVector(slice(0, 2))
         evaluator = pybamm.EvaluatorJax(expr)
-        for t, y in zip(t_tests, y_tests):
+        for t, y in zip(t_tests, y_tests, strict=False):
             result = evaluator(t=t, y=y)
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
@@ -570,7 +571,7 @@ class TestEvaluate:
             pybamm.t * A @ pybamm.StateVector(slice(0, 2)),
         ]:
             evaluator = pybamm.EvaluatorJax(expr)
-            for t, y in zip(t_tests, y_tests):
+            for t, y in zip(t_tests, y_tests, strict=False):
                 result = evaluator(t=t, y=y)
                 np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
@@ -578,7 +579,7 @@ class TestEvaluate:
         A = pybamm.Matrix(scipy.sparse.csr_matrix(np.array([[1, 0], [0, 4]])))
         expr = A / (1.0 + pybamm.t) @ pybamm.StateVector(slice(0, 2))
         evaluator = pybamm.EvaluatorJax(expr)
-        for t, y in zip(t_tests, y_tests):
+        for t, y in zip(t_tests, y_tests, strict=False):
             result = evaluator(t=t, y=y)
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
@@ -603,7 +604,7 @@ class TestEvaluate:
         b = pybamm.Vector(np.array([[3]]))
         expr = pybamm.NumpyConcatenation(a, b)
         evaluator = pybamm.EvaluatorJax(expr)
-        for t, y in zip(t_tests, y_tests):
+        for t, y in zip(t_tests, y_tests, strict=False):
             result = evaluator(t=t, y=y)
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
@@ -616,7 +617,7 @@ class TestEvaluate:
             pybamm.Inner(v, v) @ v,
         ]:
             evaluator = pybamm.EvaluatorJax(expr)
-            for t, y in zip(t_tests, y_tests):
+            for t, y in zip(t_tests, y_tests, strict=False):
                 result = evaluator(t=t, y=y)
                 np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
@@ -647,7 +648,7 @@ class TestEvaluate:
         evaluator_jac_test = evaluator.get_jacobian()
         evaluator_jac_action_test = evaluator.get_jacobian_action()
         evaluator_jac = pybamm.EvaluatorJax(expr_jac)
-        for y, v in zip(y_tests, v_tests):
+        for y, v in zip(y_tests, v_tests, strict=False):
             result_test = evaluator_jac_test(t=None, y=y)
             result_test_times_v = evaluator_jac_action_test(t=None, y=y, v=v)
             result_true = evaluator_jac(t=None, y=y)
@@ -670,68 +671,6 @@ class TestEvaluate:
         evaluator = pybamm.EvaluatorJax(expr)
         result = evaluator(inputs={"a": 2})
         assert result == 4
-
-    @pytest.mark.skipif(not pybamm.has_jax(), reason="jax or jaxlib is not installed")
-    def test_evaluator_jax_demotion(self):
-        for demote in [True, False]:
-            pybamm.demote_expressions_to_32bit = demote  # global flag
-            target_dtype = "32" if demote else "64"
-            if demote:
-                # Test only works after conversion to jax.numpy
-                for c in [
-                    1.0,
-                    1,
-                ]:
-                    assert (
-                        str(pybamm.EvaluatorJax._demote_64_to_32(c).dtype)[-2:]
-                        == target_dtype
-                    )
-            for c in [
-                np.float64(1.0),
-                np.int64(1),
-                np.array([1.0], dtype=np.float64),
-                np.array([1], dtype=np.int64),
-                jax.numpy.array([1.0], dtype=np.float64),
-                jax.numpy.array([1], dtype=np.int64),
-            ]:
-                assert (
-                    str(pybamm.EvaluatorJax._demote_64_to_32(c).dtype)[-2:]
-                    == target_dtype
-                )
-            for c in [
-                {key: np.float64(1.0) for key in ["a", "b"]},
-            ]:
-                expr_demoted = pybamm.EvaluatorJax._demote_64_to_32(c)
-                assert all(
-                    str(c_v.dtype)[-2:] == target_dtype
-                    for c_k, c_v in expr_demoted.items()
-                )
-            for c in [
-                (np.float64(1.0), np.float64(2.0)),
-                [np.float64(1.0), np.float64(2.0)],
-            ]:
-                expr_demoted = pybamm.EvaluatorJax._demote_64_to_32(c)
-                assert all(str(c_i.dtype)[-2:] == target_dtype for c_i in expr_demoted)
-            for dtype in [
-                np.float64,
-                jax.numpy.float64,
-            ]:
-                c = pybamm.JaxCooMatrix([0, 1], [0, 1], dtype([1.0, 2.0]), (2, 2))
-                c_demoted = pybamm.EvaluatorJax._demote_64_to_32(c)
-                assert all(
-                    str(c_i.dtype)[-2:] == target_dtype for c_i in c_demoted.data
-                )
-            for dtype in [
-                np.int64,
-                jax.numpy.int64,
-            ]:
-                c = pybamm.JaxCooMatrix(
-                    dtype([0, 1]), dtype([0, 1]), [1.0, 2.0], (2, 2)
-                )
-                c_demoted = pybamm.EvaluatorJax._demote_64_to_32(c)
-                assert all(str(c_i.dtype)[-2:] == target_dtype for c_i in c_demoted.row)
-                assert all(str(c_i.dtype)[-2:] == target_dtype for c_i in c_demoted.col)
-            pybamm.demote_expressions_to_32bit = False
 
     @pytest.mark.skipif(not pybamm.has_jax(), reason="jax or jaxlib is not installed")
     def test_jax_coo_matrix(self):

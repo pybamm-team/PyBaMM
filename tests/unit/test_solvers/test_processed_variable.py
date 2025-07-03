@@ -1,11 +1,10 @@
 import casadi
-import pybamm
-import tests
-
 import numpy as np
 import pytest
 from scipy.interpolate import CubicHermiteSpline
 
+import pybamm
+import tests
 
 _hermite_args = [True, False]
 
@@ -1420,7 +1419,7 @@ class TestProcessedVariable:
         # Ground truth spline interpolants from scipy
         spls = [
             CubicHermiteSpline(t, y, yp, axis=1)
-            for t, y, yp in zip(sol.all_ts, sol.all_ys, sol.all_yps)
+            for t, y, yp in zip(sol.all_ts, sol.all_ys, sol.all_yps, strict=False)
         ]
 
         def spl(t):

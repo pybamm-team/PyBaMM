@@ -1,8 +1,6 @@
-import sys
 import importlib.metadata
 import textwrap
-from collections.abc import Mapping
-from typing import Callable
+from collections.abc import Callable, Mapping
 
 
 class ParameterSets(Mapping):
@@ -41,10 +39,7 @@ class ParameterSets(Mapping):
     @staticmethod
     def get_entries(group_name):
         # Wrapper for the importlib version logic
-        if sys.version_info < (3, 10):  # pragma: no cover
-            return importlib.metadata.entry_points()[group_name]
-        else:
-            return importlib.metadata.entry_points(group=group_name)
+        return importlib.metadata.entry_points(group=group_name)
 
     def __new__(cls):
         """Ensure only one instance of ParameterSets exists"""

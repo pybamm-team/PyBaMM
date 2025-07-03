@@ -1,9 +1,11 @@
-import pybamm
+import os
+
 import numpy as np
 import pandas as pd
-import os
 import pytest
-from scipy.integrate import cumulative_trapezoid
+from scipy.integrate import trapezoid
+
+import pybamm
 from tests import no_internet_connection
 
 
@@ -92,9 +94,7 @@ class TestSimulation:
         t = sol["Time [s]"].data
         I = sol["Current [A]"].data
         q = sol["Discharge capacity [A.h]"].data
-        np.testing.assert_allclose(
-            q, cumulative_trapezoid(I, t, initial=0) / 3600, rtol=1e-7, atol=1e-6
-        )
+        np.testing.assert_allclose(q, trapezoid(I, t) / 3600, rtol=1e-7, atol=1e-6)
 
     def test_solve_non_battery_model(self):
         model = pybamm.BaseModel()

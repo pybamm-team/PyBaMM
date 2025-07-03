@@ -2,17 +2,18 @@
 # Binary operator classes
 #
 from __future__ import annotations
+
+import functools
 import numbers
+from collections.abc import Callable
+from typing import cast
 
 import numpy as np
 import numpy.typing as npt
 import sympy
 from scipy.sparse import csr_matrix, issparse
-import functools
 
 import pybamm
-
-from typing import Callable, cast
 
 # create type alias(s)
 from pybamm.type_definitions import ChildSymbol, ChildValue, Numeric
@@ -21,13 +22,13 @@ from pybamm.type_definitions import ChildSymbol, ChildValue, Numeric
 def _preprocess_binary(
     left: ChildSymbol, right: ChildSymbol
 ) -> tuple[pybamm.Symbol, pybamm.Symbol]:
-    if isinstance(left, (float, int, np.number)):
+    if isinstance(left, float | int | np.number):
         left = pybamm.Scalar(left)
     elif isinstance(left, np.ndarray):
         if left.ndim > 1:
             raise ValueError("left must be a 1D array")
         left = pybamm.Vector(left)
-    if isinstance(right, (float, int, np.number)):
+    if isinstance(right, float | int | np.number):
         right = pybamm.Scalar(right)
     elif isinstance(right, np.ndarray):
         if right.ndim > 1:
@@ -861,7 +862,9 @@ def _simplified_binary_broadcast_concatenation(
                 return left.create_copy(
                     [
                         operator(left_child, right_child)
-                        for left_child, right_child in zip(left.orphans, right.orphans)
+                        for left_child, right_child in zip(
+                            left.orphans, right.orphans, strict=False
+                        )
                     ]
                 )
             else:
@@ -954,7 +957,7 @@ def add(left: ChildSymbol, right: ChildSymbol):
         elif all(
             left_dim_size <= right_dim_size
             for left_dim_size, right_dim_size in zip(
-                left.shape_for_testing, right.shape_for_testing
+                left.shape_for_testing, right.shape_for_testing, strict=False
             )
         ) and all(
             left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
@@ -991,7 +994,7 @@ def add(left: ChildSymbol, right: ChildSymbol):
         return right - left.orphans[0]
 
     if left.is_constant():
-        if isinstance(right, (Addition, Subtraction)) and right.left.is_constant():
+        if isinstance(right, Addition | Subtraction) and right.left.is_constant():
             # Simplify a + (b +- c) to (a + b) +- c if (a + b) is constant
             r_left, r_right = right.orphans
             return right.create_copy([left + r_left, r_right])
@@ -1043,7 +1046,7 @@ def subtract(
         elif all(
             left_dim_size <= right_dim_size
             for left_dim_size, right_dim_size in zip(
-                left.shape_for_testing, right.shape_for_testing
+                left.shape_for_testing, right.shape_for_testing, strict=False
             )
         ) and all(
             left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
@@ -1064,7 +1067,7 @@ def subtract(
         return left + right.orphans[0]
 
     if left.is_constant():
-        if isinstance(right, (Addition, Subtraction)) and right.left.is_constant():
+        if isinstance(right, Addition | Subtraction) and right.left.is_constant():
             # Simplify a - (b +- c) to (a - b) -+ c if (a - b) is constant
             r_left, r_right = right.orphans
             return right.create_copy([left - r_left, -r_right])
@@ -1179,7 +1182,7 @@ def multiply(
         # This is a common construction that appears from discretisation of spatial
         # operators
         # Also do this for cases like a * (b @ c + d) where (a * b) is constant
-        elif isinstance(right, (Addition, Subtraction)):
+        elif isinstance(right, Addition | Subtraction):
             mul_classes = (Multiplication, MatrixMultiplication)
             if (
                 right.left.is_constant()
@@ -1259,7 +1262,7 @@ def divide(
         return pybamm.simplify_if_constant(Division(left, right))
 
     if left.is_constant():
-        if isinstance(right, (Multiplication, Division)) and right.left.is_constant():
+        if isinstance(right, Multiplication | Division) and right.left.is_constant():
             r_left, r_right = right.orphans
             # Simplify a / (b */ c) to (a / b) /* c if (a / b) is constant
             if isinstance(right, Multiplication):
@@ -1327,7 +1330,7 @@ def matmul(
         new_mul.copy_domains(right)
         return new_mul
 
-    elif left.is_constant() and isinstance(right, (Addition, Subtraction)):
+    elif left.is_constant() and isinstance(right, Addition | Subtraction):
         # Simplify A @ (b +- c) to (A @ b) +- (A @ c) if (A @ b) or (A @ c) is constant
         # This is a common construction that appears from discretisation of spatial
         # operators

@@ -3,11 +3,13 @@
 #
 
 from datetime import datetime
-import pybamm
-import pytest
-import numpy as np
+
 import casadi
+import numpy as np
+import pytest
 from scipy.interpolate import PchipInterpolator
+
+import pybamm
 
 
 class TestExperiment:
@@ -210,7 +212,9 @@ class TestExperiment:
         ]
 
         # Test method directly
-        for next, end, steps in zip(expected_next, expected_end, processed_steps):
+        for next, end, steps in zip(
+            expected_next, expected_end, processed_steps, strict=False
+        ):
             # useful form for debugging
             assert steps.next_start_time == next
             assert steps.end_time == end

@@ -2,6 +2,7 @@
 # Class to calculate total lithium concentrations in the core
 #
 import pybamm
+
 from .base_phase_transition import BasePhaseTransition
 
 
