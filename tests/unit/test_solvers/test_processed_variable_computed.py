@@ -107,7 +107,7 @@ class TestProcessedVariableComputed:
         )
 
         comb_sol = sol + sol_2
-        comb_var = processed_var._update(processed_var2, comb_sol)
+        comb_var = processed_var.update(processed_var2, comb_sol)
         np.testing.assert_array_equal(comb_var.entries, np.append(y_sol, y_sol2))
 
     # check empty sensitivity works
@@ -275,7 +275,7 @@ class TestProcessedVariableComputed:
         )
 
         comb_sol = sol1 + sol2
-        comb_var = processed_var1._update(var_2, comb_sol)
+        comb_var = processed_var1.update(var_2, comb_sol)
 
         # Ordering from idaklu with output_variables set is different to
         # the full solver
