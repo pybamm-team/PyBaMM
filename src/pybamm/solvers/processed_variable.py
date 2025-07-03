@@ -464,42 +464,10 @@ class ProcessedVariable:
             # Compute sensitivity
             S_var = dvar_dy_eval @ dy_dp + dvar_dp_eval
 
-            # post fix for discrete time integral won't give correct result
-            # if ts are not equal to the discrete times. Raise error
-            # in this case
-            if self._is_discrete_time_method():
-                if not (
-                    len(ts) == len(self.time_integral.discrete_times)
-                    and np.allclose(ts, self.time_integral.discrete_times, atol=1e-10)
-                ):
-                    raise pybamm.SolverError(
-                        f'Processing discrete-time-sum variable "{self._name}": solution times '
-                        "and discrete times of the time integral are not equal. Set 't_interp=discrete_sum_times' to "
-                        f"ensure the correct times are used.\nSolution times: {ts}\nDiscrete Sum times: {self.time_integral.discrete_times}"
-                    )
-
             if self.time_integral is not None:
-                post_sum_values = self.time_integral.postfix_sum(S_var, ts)
-                post_sum_node = self.time_integral.post_sum_node
-                if post_sum_node is None:
-                    S_var = post_sum_values
-                else:
-                    # If there is a post-sum expression, we need to compute the
-                    # sensitivity of the post-sum expression as well
-                    y_casadi = casadi.MX.sym("y", post_sum_values.shape[0])
-                    s_var_casadi = casadi.MX.sym("s_var", post_sum_values.shape)
-                    post_sum_casadi = post_sum_node.to_casadi(
-                        t_casadi, y_casadi, inputs=p_casadi
-                    )
-                    dpost_dy = casadi.jacobian(post_sum_casadi, y_casadi)
-                    dpost_dp = casadi.jacobian(post_sum_casadi, p_casadi_stacked)
-                    sens = dpost_dy @ s_var_casadi + dpost_dp
-                    sens_fun = casadi.Function(
-                        "sens_fun",
-                        [t_casadi, y_casadi, p_casadi_stacked, s_var_casadi],
-                        [sens],
-                    )
-                    S_var = sens_fun(0.0, self.data, inputs_stacked, post_sum_values)
+                S_var = self.time_integral.postfix_sensitivities(
+                    self._name, self.data, ts, inputs, S_var
+                )
 
             all_S_var.append(S_var)
 
