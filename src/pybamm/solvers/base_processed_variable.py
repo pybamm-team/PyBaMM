@@ -16,7 +16,7 @@ class BaseProcessedVariable(abc.ABC):
     @abc.abstractmethod
     def as_computed(self) -> pybamm.ProcessedVariableComputed: ...
 
-    def _update(
+    def update(
         self,
         other: BaseProcessedVariable,
         new_sol: pybamm.Solution,

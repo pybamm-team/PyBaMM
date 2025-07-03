@@ -803,7 +803,7 @@ class Solution:
         # update variables which were derived at the solver stage
         if any([self.variables_returned, other.variables_returned]):
             vars = {*self._variables.keys(), *other._variables.keys()}
-            new_sol._variables = {v: self[v]._update(other[v], new_sol) for v in vars}
+            new_sol._variables = {v: self[v].update(other[v], new_sol) for v in vars}
             new_sol.variables_returned = True
 
         return new_sol
