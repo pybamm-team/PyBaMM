@@ -112,13 +112,9 @@ dev = [
     "importlib-metadata; python_version < '3.10'",
     # For property based testing
     "hypothesis",
-
 ]
-# For the Jax solver.
-# Note: These must be kept in sync with the versions defined in pybamm/util.py
 jax = [
-    "jax==0.4.27",
-    "jaxlib==0.4.27",
+    "jax>=0.4.36,<0.6.0",
 ]
 # Contains all optional dependencies, except for jax, and dev dependencies
 all = [

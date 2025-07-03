@@ -90,10 +90,6 @@ class TestUtil:
             os.path.join(pybamm.root_dir(), "src", "pybamm", temppath)
         )
 
-    @pytest.mark.skipif(not pybamm.has_jax(), reason="JAX is not installed")
-    def test_is_jax_compatible(self):
-        assert pybamm.is_jax_compatible()
-
     def test_import_optional_dependency(self):
         optional_distribution_deps = get_optional_distribution_deps("pybamm")
         present_optional_import_deps = get_present_optional_import_deps(
