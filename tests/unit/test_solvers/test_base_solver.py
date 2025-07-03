@@ -449,3 +449,4 @@ class TestBaseSolver:
 
         model.set_initial_conditions_from(sol1)
         sol2 = solver.solve(model, t_eval=[1, 2])
+        assert sol2 is not None
