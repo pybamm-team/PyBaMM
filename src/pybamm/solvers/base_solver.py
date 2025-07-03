@@ -260,11 +260,22 @@ class BaseSolver:
         self.computed_var_fcns = {}
         self.computed_dvar_dy_fcns = {}
         self.computed_dvar_dp_fcns = {}
+        self._time_integral_vars = {}
         for key in self.output_variables:
-            # ExplicitTimeIntegral's are not computed as part of the solver and
-            # do not need to be converted
-            if isinstance(model.variables_and_events[key], pybamm.ExplicitTimeIntegral):
-                continue
+            # Check for any ExplicitTimeIntegral or DiscreteTimeSum variables
+            processed_time_integral = (
+                pybamm.ProcessedVariableTimeIntegral.from_pybamm_var(
+                    model.variables_and_events[key],
+                    model.len_rhs_and_alg,
+                )
+            )
+            # We will evaluate the sum node in the solver and sum it afterwards
+            if processed_time_integral is None:
+                var = model.variables_and_events[key]
+            else:
+                var = processed_time_integral.sum_node
+                self._time_integral_vars[key] = processed_time_integral
+
             # Generate Casadi function to calculate variable and derivates
             # to enable sensitivites to be computed within the solver
             (
@@ -273,7 +284,7 @@ class BaseSolver:
                 self.computed_dvar_dp_fcns[key],
                 _,
             ) = process(
-                model.variables_and_events[key],
+                var,
                 BaseSolver._wrangle_name(key),
                 vars_for_processing,
                 use_jacobian=True,
@@ -1470,7 +1481,7 @@ class BaseSolver:
 
     def get_platform_context(self, system_type: str):
         # Set context for parallel processing depending on the platform
-        if system_type.lower() in ["linux", "darwin"]:
+        if system_type.lower() in ["linux"]:
             return "fork"
         return "spawn"
 
