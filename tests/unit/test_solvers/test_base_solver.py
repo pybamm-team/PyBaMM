@@ -368,7 +368,7 @@ class TestBaseSolver:
         solver = pybamm.BaseSolver()
         assert solver.get_platform_context("Win") == "spawn"
         assert solver.get_platform_context("Linux") == "fork"
-        assert solver.get_platform_context("Darwin") == "fork"
+        assert solver.get_platform_context("Darwin") == "spawn"
 
     def test_sensitivities(self):
         def exact_diff_a(y, a, b):
