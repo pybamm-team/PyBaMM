@@ -183,7 +183,7 @@ class BasicSPM_with_3DThermal(BaseModel):
         # Average the 1D heat source and broadcast to the 3D 'cell' domain
         L_n = self.param.n.L
         L_p = self.param.p.L
-        L_x = self.param.L_x # Total cell thickness
+        L_x = self.param.L_x  # Total cell thickness
 
         # Calculate the true volume-weighted average heat source in W/m^3
         Q_vol_avg = (Q_total_n * L_n + Q_total_p * L_p) / L_x
