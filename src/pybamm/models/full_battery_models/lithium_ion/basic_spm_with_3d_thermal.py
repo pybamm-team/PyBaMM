@@ -179,17 +179,17 @@ class BasicSPM_with_3DThermal(BaseModel):
         # Total heating in each electrode domain
         Q_total_n = Q_rev_n + Q_irr_n
         Q_total_p = Q_rev_p + Q_irr_p
-        # Create 1D heat source vector across the cell (x-direction)
-        # No heat is generated in the separator.
-        q_n = pybamm.PrimaryBroadcast(Q_total_n, "negative electrode")
-        q_s = pybamm.PrimaryBroadcast(0, "separator")
-        q_p = pybamm.PrimaryBroadcast(Q_total_p, "positive electrode")
-
-        Q_x_heating = pybamm.concatenation(q_n, q_s, q_p)
 
         # Average the 1D heat source and broadcast to the 3D 'cell' domain
-        Q_per_area = pybamm.x_average(Q_x_heating) * self.param.L_x
-        Q_source = pybamm.PrimaryBroadcast(Q_per_area / self.param.L_z, "cell")
+        L_n = self.param.n.L
+        L_p = self.param.p.L
+        L_x = self.param.L_x # Total cell thickness
+
+        # Calculate the true volume-weighted average heat source in W/m^3
+        Q_vol_avg = (Q_total_n * L_n + Q_total_p * L_p) / L_x
+
+        # Broadcast this uniform volumetric heat source to the entire 3D cell domain
+        Q_source = pybamm.PrimaryBroadcast(Q_vol_avg, "cell")
 
         # Define the 3D heat equation
         # Effective parameters are functions of temperature
@@ -287,6 +287,5 @@ class BasicSPM_with_3DThermal(BaseModel):
 
         self.boundary_conditions[T] = {}
         for face, h_coeff in face_params.items():
-            lambda_eff = self.param.lambda_eff(pybamm.boundary_value(T, face))
-            flux_expr = -h_coeff / lambda_eff * (pybamm.boundary_value(T, face) - T_amb)
+            flux_expr = -h_coeff * (pybamm.boundary_value(T, face) - T_amb)
             self.boundary_conditions[T][face] = (flux_expr, "Neumann")
