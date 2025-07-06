@@ -204,7 +204,11 @@ class ScikitFemGenerator3D(pybamm.MeshGenerator):
             mesh = self._make_box_mesh(x_lim, y_lim, z_lim, h)
 
         elif self.geom_type == "cylinder":
-            r_lim = lims_dict["r"]
+            if "r" in lims_dict:
+                r_lim = lims_dict["r"]
+            else:
+                r_lim = lims_dict["r_macro"]
+
             z_lim = lims_dict["z"]
             coord_sys = "cylindrical polar"
             mesh = self._make_cylindrical_mesh(r_lim, z_lim, h)
