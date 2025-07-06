@@ -162,7 +162,7 @@ def battery_geometry(
         elif current_collector_dimension == 3:
             geometry["current collector"] = {"z": {"position": 1}}
             geometry["cell"] = {
-                "r": {"min": geo.r_inner, "max": geo.r_outer},
+                "r_macro": {"min": geo.r_inner, "max": geo.r_outer},
                 "z": {"min": 0, "max": geo.L_z},
             }
         else:

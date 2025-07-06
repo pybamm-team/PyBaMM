@@ -53,7 +53,7 @@ class BasicSPM_with_3DThermal(BaseModel):
             z = pybamm.SpatialVariable("z", domain="cell")
             integration_vars = [x, y, z]
         elif self.options.get("cell geometry") == "cylindrical":
-            r = pybamm.SpatialVariable("r", domain="cell")
+            r = pybamm.SpatialVariable("r_macro", domain="cell")
             z = pybamm.SpatialVariable("z", domain="cell")
             integration_vars = [r, z]
         else:
@@ -270,7 +270,7 @@ class BasicSPM_with_3DThermal(BaseModel):
                 "z_max": self.param.h_edge_z_max,
             }
         elif geometry_type == "cylindrical":
-            r = pybamm.SpatialVariable("r", "cell")
+            r = pybamm.SpatialVariable("r_macro", "cell")
             z = pybamm.SpatialVariable("z", "cell")
             T_amb = self.param.T_amb(r, z, pybamm.t)
             face_params = {
