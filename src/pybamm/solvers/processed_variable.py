@@ -1161,6 +1161,109 @@ class ProcessedVariable3DSciKitFEM(ProcessedVariable3D):
         entries = entries.transpose(0, 2, 1, 3).reshape(shape)
         return entries
 
+class ProcessedVariableUnstructured(ProcessedVariable):
+    """
+    A processed variable for data on an unstructured mesh (e.g., from a FEM solution).
+    This class correctly uses scipy's LinearNDInterpolator for spatial interpolation,
+    which is the required method for scattered data points from a FEM mesh.
+
+    Parameters
+    ----------
+    name : str
+        The name of the variable
+    base_variables : list of :class:`pybamm.Symbol`
+        A list of base variables with a method `evaluate(t,y)`, each entry of which
+        returns the value of that variable for that particular sub-solution.
+        A Solution can be comprised of sub-solutions which are the solutions of
+        different models.
+        base_variables : list of :class:`pybamm.Symbol`
+        A list of base variables with a method `evaluate(t,y)`, each entry of which
+        returns the value of that variable for that particular sub-solution.
+        A Solution can be comprised of sub-solutions which are the solutions of
+        different models.
+        Note that this can be any kind of node in the expression tree, not
+        just a :class:`pybamm.Variable`.
+        When evaluated, returns an array of size (m,n)
+    base_variables_casadi : list of :class:`casadi.Function`
+        A list of casadi functions. When evaluated, returns the same thing as
+        `base_Variable.evaluate` (but more efficiently).
+    solution : :class:`pybamm.Solution`
+        The solution object to be used to create the processed variables
+    time_integral : pybamm.ProcessedVariableTimeIntegral, optional
+        An optional time integral object to handle time integration of the variable.
+        If provided, the processed variable will handle time integration using this object.
+    """
+
+    def __init__(
+        self,
+        name: str,
+        base_variables,
+        base_variables_casadi,
+        solution,
+        time_integral: pybamm.ProcessedVariableTimeIntegral | None = None,
+    ):
+        self.dimensions = base_variables[0].mesh.dimension
+        super().__init__(
+            name,
+            base_variables,
+            base_variables_casadi,
+            solution,
+            time_integral=time_integral,
+        )
+        self._time_interpolator = None
+
+    def initialise(self):
+        if self.entries_raw_initialized:
+            return
+        self._entries_raw = self.observe_raw()
+        
+        from scipy.interpolate import interp1d
+        self._time_interpolator = interp1d(
+            self.t_pts,
+            self._entries_raw,
+            kind="linear",
+            axis=1, # Interpolate along the time axis
+            bounds_error=False,
+            fill_value="extrapolate",
+        )
+        
+    def _shape(self, t):
+        return [self.mesh.npts, len(t)]
+
+    def __call__(
+        self, t, x=None, y=None, z=None, r=None, R=None, fill_value=np.nan
+    ):
+        from scipy.interpolate import LinearNDInterpolator
+
+        self.initialise()
+
+        data_at_t = self._time_interpolator(t)
+
+        spatial_coords_provided = any(c is not None for c in [x, y, z])
+        if not spatial_coords_provided:
+            return data_at_t # Return all node data if no spatial coords are given
+
+        node_coords = self.mesh.nodes
+        
+        eval_points = np.column_stack([x.ravel(), y.ravel(), z.ravel()])
+        output_shape = x.shape
+
+        # If t was a single value (scalar), data_at_t is 1D array of (n_nodes)
+        if isinstance(t, (int, float)):
+            spatial_interpolator = LinearNDInterpolator(
+                points=node_coords, values=data_at_t, fill_value=fill_value
+            )
+            result = spatial_interpolator(eval_points)
+        else: # If t was a vector, we must create an interpolator for each time step
+            result = np.empty((len(eval_points), len(t)))
+            for i in range(len(t)):
+                spatial_interpolator = LinearNDInterpolator(
+                    points=node_coords, values=data_at_t[:, i], fill_value=fill_value
+                )
+                result[:, i] = spatial_interpolator(eval_points)
+
+        final_shape = (*output_shape, len(t) if not isinstance(t, (int, float)) else 1)
+        return result.reshape(final_shape).squeeze()
 
 def process_variable(name: str, base_variables, *args, **kwargs):
     mesh = base_variables[0].mesh
@@ -1169,6 +1272,9 @@ def process_variable(name: str, base_variables, *args, **kwargs):
     # Evaluate base variable at initial time
     base_eval_shape = base_variables[0].shape
     base_eval_size = base_variables[0].size
+
+    if isinstance(mesh, pybamm.ScikitFemSubMesh3D):
+        return ProcessedVariableUnstructured(name, base_variables, *args, **kwargs)
 
     # handle 2D (in space) finite element variables differently
     if (

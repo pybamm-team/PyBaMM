@@ -191,6 +191,7 @@ from .plotting.plot_voltage_components import plot_voltage_components
 from .plotting.plot_thermal_components import plot_thermal_components
 from .plotting.plot_summary_variables import plot_summary_variables
 from .plotting.dynamic_plot import dynamic_plot
+from .plotting.plot_cross_section import plot_cross_section
 
 # Simulation
 from .simulation import Simulation, load_sim, is_notebook
