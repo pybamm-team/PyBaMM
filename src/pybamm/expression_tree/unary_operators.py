@@ -917,10 +917,10 @@ class BoundaryIntegral(SpatialOperator):
             name += "z_min"
         elif region == "z_max":
             name += "z_max"
-        elif region == "r_min":
-            name += "r_min"  # pragma: no cover
-        elif region == "r_max":
-            name += "r_max"  # pragma: no cover
+        elif region == "r_min":  # pragma: no cover
+            name += "r_min"
+        elif region == "r_max":  # pragma: no cover
+            name += "r_max"
         self.region = region
         super().__init__(name, child, domains)
 
