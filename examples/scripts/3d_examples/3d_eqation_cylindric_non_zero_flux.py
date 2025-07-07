@@ -17,14 +17,16 @@ R_inner = 0.1
 H = 1.0
 alpha = 0.1
 
-heat_generation = 1000.0 
-heat_flux_top = 500.0     
-heat_flux_bottom = -300.0 
+heat_generation = 1000.0
+heat_flux_top = 500.0
+heat_flux_bottom = -300.0
 
 model = BaseModel()
 
 r = pybamm.SpatialVariable("r", ["current collector"], coord_sys="cylindrical polar")
-theta = pybamm.SpatialVariable("theta", ["current collector"], coord_sys="cylindrical polar")
+theta = pybamm.SpatialVariable(
+    "theta", ["current collector"], coord_sys="cylindrical polar"
+)
 z = pybamm.SpatialVariable("z", ["current collector"], coord_sys="cylindrical polar")
 T = pybamm.Variable("T", domain="current collector")
 
@@ -36,7 +38,7 @@ model.initial_conditions = {T: Scalar(25)}
 model.boundary_conditions = {
     T: {
         "r_min": (Scalar(100), "Dirichlet"),
-        "r_max": (Scalar(20), "Dirichlet"),            
+        "r_max": (Scalar(20), "Dirichlet"),
         "z_min": (Scalar(heat_flux_bottom), "Neumann"),
         "z_max": (Scalar(heat_flux_top), "Neumann"),
     }
@@ -119,12 +121,14 @@ pcm3 = ax3.tricontourf(triang, T_mid, levels=20, cmap="plasma")
 ax3.plot(
     R_outer * np.cos(np.linspace(0, 2 * np.pi, 100)),
     R_outer * np.sin(np.linspace(0, 2 * np.pi, 100)),
-    "k-", linewidth=2
+    "k-",
+    linewidth=2,
 )
 ax3.plot(
     R_inner * np.cos(np.linspace(0, 2 * np.pi, 100)),
     R_inner * np.sin(np.linspace(0, 2 * np.pi, 100)),
-    "w-", linewidth=2
+    "w-",
+    linewidth=2,
 )
 ax3.set_xlabel("x [m]")
 ax3.set_ylabel("y [m]")
@@ -147,17 +151,27 @@ ax4.set_title("Axial Temperature Profile\n(shows Neumann BC effects)")
 ax4.legend()
 ax4.grid(True, alpha=0.3)
 
-ax4.text(0.05, T_axial_profile[5], f"q = {heat_flux_bottom} W/m²\n(cooling)", 
-         bbox=dict(boxstyle="round,pad=0.3", facecolor="lightblue"))
-ax4.text(0.85, T_axial_profile[-5], f"q = {heat_flux_top} W/m²\n(heating)", 
-         bbox=dict(boxstyle="round,pad=0.3", facecolor="lightcoral"))
+ax4.text(
+    0.05,
+    T_axial_profile[5],
+    f"q = {heat_flux_bottom} W/m²\n(cooling)",
+    bbox=dict(boxstyle="round,pad=0.3", facecolor="lightblue"),
+)
+ax4.text(
+    0.85,
+    T_axial_profile[-5],
+    f"q = {heat_flux_top} W/m²\n(heating)",
+    bbox=dict(boxstyle="round,pad=0.3", facecolor="lightcoral"),
+)
 
 plt.tight_layout(rect=[0, 0.03, 1, 0.95])
 plt.show()
 
+
 def find_closest_node(target_point, nodes):
     distances = np.linalg.norm(nodes - target_point, axis=1)
     return np.argmin(distances)
+
 
 inner_point = np.array([R_inner, 0, H / 2])
 outer_point = np.array([R_outer, 0, H / 2])
