@@ -555,8 +555,35 @@ class TestOptions:
 
     @pytest.mark.parametrize(
         "ocp_option",
-        ["Axen", "Wycisk", ("Axen", "single"), ("Wycisk", "single")],
+        [
+            ["Axen", "one-state hysteresis"],
+            ["Wycisk", "one-state differential capacity hysteresis"],
+            [("Axen", "single"), ("one-state hysteresis", "single")],
+            [
+                ("Wycisk", "single"),
+                ("one-state differential capacity hysteresis", "single"),
+            ],
+            [
+                ("Axen", "Wycisk"),
+                ("one-state hysteresis", "one-state differential capacity hysteresis"),
+            ],
+            [
+                (("Axen", "Wycisk"), "single"),
+                (
+                    (
+                        "one-state hysteresis",
+                        "one-state differential capacity hysteresis",
+                    ),
+                    "single",
+                ),
+            ],
+        ],
     )
     def test_renamed_hysteresis_ocp(self, ocp_option):
-        with pytest.raises(pybamm.OptionError, match="renamed"):
-            BatteryModelOptions({"open-circuit potential": ocp_option})
+        # check old option is renamed to new option
+        assert (
+            BatteryModelOptions({"open-circuit potential": ocp_option[0]}).get(
+                "open-circuit potential"
+            )
+            == ocp_option[1]
+        )

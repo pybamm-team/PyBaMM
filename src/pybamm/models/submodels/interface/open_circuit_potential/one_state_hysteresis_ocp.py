@@ -1,5 +1,3 @@
-import warnings
-
 import pybamm
 
 from . import BaseHysteresisOpenCircuitPotential
@@ -69,7 +67,7 @@ class OneStateHysteresisOpenCircuitPotential(BaseHysteresisOpenCircuitPotential)
         gamma_delith = self.phase_param.hysteresis_decay(sto_surf, T, "delithiation")
 
         i_vol_sign = pybamm.sign(i_vol)
-        signed_h = (1 - i_vol_sign * h) / 2
+        signed_h = 1 - i_vol_sign * h
         gamma = (
             0.5 * (1 - i_vol_sign) * gamma_lith + 0.5 * (1 + i_vol_sign) * gamma_delith
         )
@@ -77,16 +75,3 @@ class OneStateHysteresisOpenCircuitPotential(BaseHysteresisOpenCircuitPotential)
         dhdt = gamma * i_vol / (self.param.F * c_max * eps) * signed_h
 
         self.rhs[h] = dhdt
-
-
-class AxenOpenCircuitPotential(OneStateHysteresisOpenCircuitPotential):
-    """
-    Alias for the OneStateHysteresisOpenCircuitPotential model.
-    """
-
-    def __init__(self, *args, **kwargs):
-        raise warnings.warn(
-            "AxenOpenCircuitPotential is deprecated. Use OneStateHysteresisOpenCircuitPotential instead.",
-            stacklevel=2,
-        )
-        super().__init__(*args, **kwargs)

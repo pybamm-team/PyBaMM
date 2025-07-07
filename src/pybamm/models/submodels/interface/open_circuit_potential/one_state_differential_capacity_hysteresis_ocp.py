@@ -1,5 +1,3 @@
-import warnings
-
 import pybamm
 
 from . import BaseHysteresisOpenCircuitPotential
@@ -107,23 +105,8 @@ class OneStateDifferentialCapacityHysteresisOpenCircuitPotential(
         x = self.phase_param.hysteresis_switch
 
         i_surf_sign = pybamm.sign(i_surf)
-        signed_h = (1 - i_surf_sign * h) / 2
+        signed_h = 1 - i_surf_sign * h
         gamma = Gamma * (1 / dQdU**x)
         dhdt = gamma * i_surf / Q_cell * signed_h
 
         self.rhs[h] = dhdt
-
-
-class WyciskOpenCircuitPotential(
-    OneStateDifferentialCapacityHysteresisOpenCircuitPotential
-):
-    """
-    Alias for the OneStateDifferentialCapacityHysteresisOpenCircuitPotential model.
-    """
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        raise warnings.warn(
-            "WyciskOpenCircuitPotential is deprecated. Use OneStateDifferentialCapacityHysteresisOpenCircuitPotential instead.",
-            stacklevel=2,
-        )
