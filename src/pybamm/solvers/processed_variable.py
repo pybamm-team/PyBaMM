@@ -1161,6 +1161,7 @@ class ProcessedVariable3DSciKitFEM(ProcessedVariable3D):
         entries = entries.transpose(0, 2, 1, 3).reshape(shape)
         return entries
 
+
 class ProcessedVariableUnstructured(ProcessedVariable):
     """
     A processed variable for data on an unstructured mesh (e.g., from a FEM solution).
@@ -1216,23 +1217,22 @@ class ProcessedVariableUnstructured(ProcessedVariable):
         if self.entries_raw_initialized:
             return
         self._entries_raw = self.observe_raw()
-        
+
         from scipy.interpolate import interp1d
+
         self._time_interpolator = interp1d(
             self.t_pts,
             self._entries_raw,
             kind="linear",
-            axis=1, # Interpolate along the time axis
+            axis=1,  # Interpolate along the time axis
             bounds_error=False,
             fill_value="extrapolate",
         )
-        
+
     def _shape(self, t):
         return [self.mesh.npts, len(t)]
 
-    def __call__(
-        self, t, x=None, y=None, z=None, r=None, R=None, fill_value=np.nan
-    ):
+    def __call__(self, t, x=None, y=None, z=None, r=None, R=None, fill_value=np.nan):
         from scipy.interpolate import LinearNDInterpolator
 
         self.initialise()
@@ -1241,10 +1241,10 @@ class ProcessedVariableUnstructured(ProcessedVariable):
 
         spatial_coords_provided = any(c is not None for c in [x, y, z])
         if not spatial_coords_provided:
-            return data_at_t # Return all node data if no spatial coords are given
+            return data_at_t  # Return all node data if no spatial coords are given
 
         node_coords = self.mesh.nodes
-        
+
         eval_points = np.column_stack([x.ravel(), y.ravel(), z.ravel()])
         output_shape = x.shape
 
@@ -1254,7 +1254,7 @@ class ProcessedVariableUnstructured(ProcessedVariable):
                 points=node_coords, values=data_at_t, fill_value=fill_value
             )
             result = spatial_interpolator(eval_points)
-        else: # If t was a vector, we must create an interpolator for each time step
+        else:  # If t was a vector, we must create an interpolator for each time step
             result = np.empty((len(eval_points), len(t)))
             for i in range(len(t)):
                 spatial_interpolator = LinearNDInterpolator(
@@ -1264,6 +1264,7 @@ class ProcessedVariableUnstructured(ProcessedVariable):
 
         final_shape = (*output_shape, len(t) if not isinstance(t, (int, float)) else 1)
         return result.reshape(final_shape).squeeze()
+
 
 def process_variable(name: str, base_variables, *args, **kwargs):
     mesh = base_variables[0].mesh
