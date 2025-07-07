@@ -154,6 +154,7 @@ class BaseThermal(pybamm.BaseSubModel):
             if ocp_option == "single":
                 V_hys_p = 0
             else:
+                pybamm.citations.register("Wycisk2023")
                 U_p = variables[f"Positive electrode {phase}open-circuit potential [V]"]
                 U_eq_p = variables[
                     f"Positive electrode {phase}equilibrium open-circuit potential [V]"
@@ -205,6 +206,7 @@ class BaseThermal(pybamm.BaseSubModel):
                 if ocp_option == "single":
                     V_hys_n = 0
                 else:
+                    pybamm.citations.register("Wycisk2023")
                     U_n = variables[
                         f"Negative electrode {phase}open-circuit potential [V]"
                     ]
