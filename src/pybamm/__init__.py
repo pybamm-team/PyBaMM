@@ -12,7 +12,6 @@ from .util import (
     get_parameters_filepath,
     has_jax,
     import_optional_dependency,
-    is_jax_compatible,
 )
 from .logger import logger, set_logging_level, get_new_logger
 from .settings import settings
