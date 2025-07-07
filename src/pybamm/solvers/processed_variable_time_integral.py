@@ -36,11 +36,12 @@ class ProcessedVariableTimeIntegral:
         """
         the_integral = self.postfix_sum(entries, t_pts)
         if self.post_sum_node is None:
-            return the_integral
+            ret = the_integral
         elif self.post_sum is None:
-            return self.post_sum_node.evaluate(0.0, the_integral, inputs)
+            ret = self.post_sum_node.evaluate(0.0, the_integral, inputs).reshape(-1)
         else:
-            return self.post_sum(0.0, the_integral, inputs).full()
+            ret = self.post_sum(0.0, the_integral, inputs).full().reshape(-1)
+        return ret
 
     def postfix_sensitivities(
         self,

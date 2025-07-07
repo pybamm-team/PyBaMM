@@ -660,8 +660,13 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
             # handle any time integral variables
             if var in self._time_integral_vars:
+                # time integral variables should all be 1D
+                if data.ndim > 1 and data.shape[1] > 1:
+                    raise pybamm.SolverError(
+                        f"Time integral variable {var} should be 1D, but got shape {data.shape}"
+                    )
                 tiv = self._time_integral_vars[var]
-                data = tiv.postfix(data, sol.t, inputs_dict)
+                data = tiv.postfix(data.reshape(-1), sol.t, inputs_dict)
                 time_indep = True
 
             newsol._variables[var] = pybamm.ProcessedVariableComputed(
@@ -675,22 +680,26 @@ class IDAKLUSolver(pybamm.BaseSolver):
             # Add sensitivities
             newsol[var]._sensitivities = {}
             if sensitivity_params:
-                for param_idx, param in enumerate(sensitivity_params):
-                    sens_data = sol.yS[:, start_idx:end_idx, param_idx]
-                    if var in self._time_integral_vars:
-                        tiv = self._time_integral_vars[var]
-                        sens_data = tiv.postfix_sensitivities(
-                            var, data, sol.t, inputs_dict, sens_data
-                        )
-                    newsol[var].add_sensitivity(
-                        param,
-                        [sens_data],
+                # sensitivities only supported for 1D variables
+                if end_idx - start_idx > 1:
+                    raise pybamm.SolverError(
+                        f"Sensitivity variable {var} should be 1D, but got shape {data.shape}"
                     )
-
-                # Stack individual sensitivities for `all` entry
-                newsol[var]._sensitivities["all"] = np.stack(
-                    [newsol[var].sensitivities[p] for p in sensitivity_params], axis=-1
+                sens_data = sol.yS[:, start_idx:end_idx, :].reshape(
+                    (number_of_timesteps, number_of_sensitivity_parameters)
                 )
+                if var in self._time_integral_vars:
+                    tiv = self._time_integral_vars[var]
+                    sens_data = tiv.postfix_sensitivities(
+                        var, data, sol.t, inputs_dict, sens_data
+                    )
+                newsol[var]._sensitivities["all"] = sens_data
+
+                # Add the individual sensitivity
+                for i, name in enumerate(inputs_dict.keys()):
+                    newsol[var]._sensitivities[name] = (
+                        newsol[var]._sensitivities["all"][:, i : i + 1].reshape(-1)
+                    )
 
             start_idx += var_length
         return newsol

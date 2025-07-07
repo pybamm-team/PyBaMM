@@ -480,7 +480,10 @@ class ProcessedVariable(BaseProcessedVariable):
         start = 0
         for name, inp in self.all_inputs[0].items():
             end = start + inp.shape[0]
-            sensitivities[name] = S_var[:, start:end]
+            if end - start == 1:
+                sensitivities[name] = S_var[:, start:end].reshape(-1)
+            else:
+                sensitivities[name] = S_var[:, start:end]
             start = end
 
         # Save attribute
