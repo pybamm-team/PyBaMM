@@ -1,4 +1,5 @@
 # mypy: ignore-errors
+import math
 import numbers
 import warnings
 
@@ -653,7 +654,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         start_idx = 0
         for var in self.output_variables:
-            var_length, base_variables = self._get_variable_info(model, var)
+            var_length, var_shape, base_variables = self._get_variable_info(model, var)
             end_idx = start_idx + var_length
             data = sol.y[:, start_idx:end_idx]
             time_indep = False
@@ -680,13 +681,14 @@ class IDAKLUSolver(pybamm.BaseSolver):
             # Add sensitivities
             newsol[var]._sensitivities = {}
             if sensitivity_params:
-                # sensitivities only supported for 1D variables
-                if end_idx - start_idx > 1:
+                if var_length != math.prod(var_shape):
                     raise pybamm.SolverError(
-                        f"Sensitivity variable {var} should be 1D, but got shape {data.shape}"
+                        f"Sensitivity of sparse variables not supported. {var} is a sparse variable with length {var_length} and shape {var_shape}"
                     )
-                sens_data = sol.yS[:, start_idx:end_idx, :].reshape(
-                    (number_of_timesteps, number_of_sensitivity_parameters)
+                sens_data = sol.yS[:, start_idx:end_idx, :]
+                sens_data = sens_data.reshape(
+                    number_of_timesteps * (end_idx - start_idx),
+                    number_of_sensitivity_parameters,
                 )
                 if var in self._time_integral_vars:
                     tiv = self._time_integral_vars[var]
@@ -696,10 +698,17 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 newsol[var]._sensitivities["all"] = sens_data
 
                 # Add the individual sensitivity
-                for i, name in enumerate(inputs_dict.keys()):
-                    newsol[var]._sensitivities[name] = (
-                        newsol[var]._sensitivities["all"][:, i : i + 1].reshape(-1)
-                    )
+                start = 0
+                for name, inp in inputs_dict.items():
+                    if isinstance(inp, numbers.Number):
+                        n = 1
+                    else:
+                        n = inp.shape[0]
+                    end = start + n
+                    sens = newsol[var]._sensitivities["all"][:, start:end]
+                    if end - start == 1:
+                        sens = sens.reshape(-1)
+                    newsol[var]._sensitivities[name] = sens
 
             start_idx += var_length
         return newsol
@@ -708,8 +717,10 @@ class IDAKLUSolver(pybamm.BaseSolver):
         """Get variable length and base variables based on model format."""
         if model.convert_to_format == "casadi":
             base_var = self._setup["var_fcns"][var]
-            var_length = base_var(0.0, 0.0, 0.0).sparsity().nnz()
-            return var_length, [base_var]
+            var_eval = base_var(0.0, 0.0, 0.0)
+            var_length = var_eval.sparsity().nnz()
+            var_shape = var_eval.shape
+            return var_length, var_shape, [base_var]
         else:  # pragma: no cover
             raise pybamm.SolverError(
                 f"Unsupported evaluation engine for convert_to_format="

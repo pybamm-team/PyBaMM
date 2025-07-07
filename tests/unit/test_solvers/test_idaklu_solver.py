@@ -389,7 +389,7 @@ class TestIDAKLUSolver:
         # get the sensitivities for the variable
         d2uda = sol["2u"].sensitivities["a"]
         np.testing.assert_allclose(
-            2 * dyda_ida[0:200:2],
+            2 * dyda_ida[0:200:2].flatten(),
             d2uda,
             rtol=1e-7,
             atol=1e-6,
@@ -922,7 +922,6 @@ class TestIDAKLUSolver:
             "Voltage [V]",
             "Time [min]",
             "x [m]",
-            "Negative particle flux [mol.m-2.s-1]",
             "Throughput capacity [A.h]",  # ExplicitTimeIntegral
         ]
 
