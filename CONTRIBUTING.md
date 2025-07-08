@@ -374,8 +374,8 @@ PyBaMM is documented in several ways.
 
 First and foremost, every method and every class should have a [docstring](https://www.python.org/dev/peps/pep-0257/) that describes in plain terms what it does, and what the expected input and output is.
 
-These docstrings can be fairly simple, but can also make use of 
-`reStructuredText`, a markup language designed specifically for writing 
+These docstrings can be fairly simple, but can also make use of
+`reStructuredText`, a markup language designed specifically for writing
 technical documentation. For example, you can link to other classes and methods
 by writing ``:class:`pybamm.Model` `` and ``:meth:`run()` ``.
 
