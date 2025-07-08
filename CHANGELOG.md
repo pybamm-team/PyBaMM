@@ -13,6 +13,7 @@
 - Fixed a bug that ignored the default duration of drive cycles for `CRate` steps and a bug that overwrote custom `period` arguments for drive cycles. ([#5090](https://github.com/pybamm-team/PyBaMM/pull/5090))
 - Converts sensitivities to numpy objects, fixing bug in `DiscreteTimeSum` sensitivity calculation ([#5037](https://github.com/pybamm-team/PyBaMM/pull/5037))
 - Raises error if `pybamm.Interpolant` given 1D x values that are not strictly increasing ([#5061](https://github.com/pybamm-team/PyBaMM/pull/5061))
+- Removes the discontinuity caused by a Heaviside (which is a function of time) when a solver is called with a non-zero initial time ([#5075](https://github.com/pybamm-team/PyBaMM/pull/5075)).
 
 ## Breaking changes
 
