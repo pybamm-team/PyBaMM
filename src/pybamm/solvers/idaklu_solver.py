@@ -662,10 +662,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
             # handle any time integral variables
             if var in self._time_integral_vars:
                 # time integral variables should all be 1D
-                if data.ndim > 1 and data.shape[1] > 1:
-                    raise pybamm.SolverError(
-                        f"Time integral variable {var} should be 1D, but got shape {data.shape}"
-                    )
                 tiv = self._time_integral_vars[var]
                 data = tiv.postfix(data.reshape(-1), sol.t, inputs_dict)
                 time_indep = True
@@ -698,16 +694,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 newsol[var]._sensitivities["all"] = sens_data
 
                 # Add the individual sensitivity
-                start = 0
-                for name, inp in inputs_dict.items():
-                    if isinstance(inp, numbers.Number):
-                        n = 1
-                    else:
-                        n = inp.shape[0]
-                    end = start + n
-                    sens = newsol[var]._sensitivities["all"][:, start:end]
-                    if end - start == 1:
-                        sens = sens.reshape(-1)
+                for i, name in enumerate(inputs_dict.keys()):
+                    sens = newsol[var]._sensitivities["all"][:, i : i + 1].reshape(-1)
                     newsol[var]._sensitivities[name] = sens
 
             start_idx += var_length

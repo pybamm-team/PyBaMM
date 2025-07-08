@@ -886,6 +886,29 @@ class TestIDAKLUSolver:
         # Check Solution is marked
         assert sol.variables_returned is True
 
+    def test_with_sparse_output_variables_and_sensitivities(self):
+        # Construct a model and solve for all variables, then test
+        # the 'output_variables' option for each variable in turn, confirming
+        # equivalence
+        input_parameters = {  # Sensitivities dictionary
+            "Current function [A]": 0.222,
+            "Separator porosity": 0.3,
+        }
+
+        # construct model
+        solver = pybamm.IDAKLUSolver(
+            output_variables=["Negative particle flux [mol.m-2.s-1]"],
+        )
+        model = pybamm.lithium_ion.DFN()
+        params = model.default_parameter_values
+        params.update({"Current function [A]": "[input]"})
+        sim = pybamm.Simulation(model, solver=solver, parameter_values=params)
+        with pytest.raises(
+            pybamm.SolverError,
+            match="Sensitivity of sparse variables not supported",
+        ):
+            sim.solve([0, 100], inputs=input_parameters, calculate_sensitivities=True)
+
     def test_with_output_variables_and_sensitivities(self):
         # Construct a model and solve for all variables, then test
         # the 'output_variables' option for each variable in turn, confirming
