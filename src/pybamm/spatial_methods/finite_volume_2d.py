@@ -1487,7 +1487,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                     additive = pybamm.Scalar(0)
 
                 elif extrap_order_gradient == "quadratic":
-                    dxN = dxNm1_lr
+                    dxN = dxN_lr
                     dxNm1 = dxNm1_lr
                     dxNm2 = dxNm2_lr
                     a = (2 * dxN + 2 * dxNm1 + dxNm2) / (dxNm1**2 + dxNm1 * dxNm2)
