@@ -127,7 +127,8 @@ class TestFiniteVolume2D:
             pybamm.grad(var) * pybamm.grad(var),
             (pybamm.grad(var) + 2) * pybamm.grad(var) ** 2,
             pybamm.VectorField(pybamm.Scalar(2), pybamm.Scalar(2)) * pybamm.Scalar(2),
-            pybamm.VectorField(pybamm.Scalar(2), pybamm.Scalar(2)) * pybamm.VectorField(pybamm.Scalar(2), pybamm.Scalar(2)),
+            pybamm.VectorField(pybamm.Scalar(2), pybamm.Scalar(2))
+            * pybamm.VectorField(pybamm.Scalar(2), pybamm.Scalar(2)),
         ]:
             # Check that the equation can be evaluated for different combinations
             # of boundary conditions
