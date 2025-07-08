@@ -1041,11 +1041,11 @@ class FiniteVolume2D(pybamm.SpatialMethod):
 
         dx0_tb = nodes_tb[0] - edges_tb[0]
         dx1_tb = submesh.d_nodes_tb[0]
-        # dx2_tb = submesh.d_nodes_tb[1]
+        dx2_tb = submesh.d_nodes_tb[1]
 
         dxN_tb = edges_tb[-1] - nodes_tb[-1]
         dxNm1_tb = submesh.d_nodes_tb[-1]
-        # dxNm2_tb = submesh.d_nodes_tb[-2]
+        dxNm2_tb = submesh.d_nodes_tb[-2]
 
         child = symbol.child
 
@@ -1518,42 +1518,96 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                     raise NotImplementedError
 
             elif side_first == "top":
-                dx1 = dx1_tb
-                row_indices = np.arange(0, n_lr)
-                col_indices_0 = np.arange(0, n_lr)
-                col_indices_1 = np.arange(n_lr, 2 * n_lr)
-                first_val = (-1 / dx1) * np.ones(n_lr)
-                second_val = (1 / dx1) * np.ones(n_lr)
-                sub_matrix = csr_matrix(
-                    (
-                        np.hstack([first_val, second_val]),
+                if extrap_order_gradient == "linear":
+                    dx1 = dx1_tb
+                    row_indices = np.arange(0, n_lr)
+                    col_indices_0 = np.arange(0, n_lr)
+                    col_indices_1 = np.arange(n_lr, 2 * n_lr)
+                    first_val = (-1 / dx1) * np.ones(n_lr)
+                    second_val = (1 / dx1) * np.ones(n_lr)
+                    sub_matrix = csr_matrix(
                         (
-                            np.hstack([row_indices, row_indices]),
-                            np.hstack([col_indices_0, col_indices_1]),
+                            np.hstack([first_val, second_val]),
+                            (
+                                np.hstack([row_indices, row_indices]),
+                                np.hstack([col_indices_0, col_indices_1]),
+                            ),
                         ),
-                    ),
-                    shape=(n_lr, n_tb * n_lr),
-                )
-                additive = pybamm.Scalar(0)
-
+                        shape=(n_lr, n_tb * n_lr),
+                    )
+                    additive = pybamm.Scalar(0)
+                elif extrap_order_gradient == "quadratic":
+                    dx0 = dx0_tb
+                    dx1 = dx1_tb
+                    dx2 = dx2_tb
+                    a = -(2 * dx0 + 2 * dx1 + dx2) / (dx1**2 + dx1 * dx2)
+                    b = (2 * dx0 + dx1 + dx2) / (dx1 * dx2)
+                    c = -(2 * dx0 + dx1) / (dx1 * dx2 + dx2**2)
+                    row_indices = np.arange(0, n_lr)
+                    col_indices_0 = np.arange(0, n_lr)
+                    col_indices_1 = np.arange(n_lr, 2 * n_lr)
+                    col_indices_2 = np.arange(2 * n_lr, 3 * n_lr)
+                    vals_0 = a * np.ones(n_lr)
+                    vals_1 = b * np.ones(n_lr)
+                    vals_2 = c * np.ones(n_lr)
+                    sub_matrix = csr_matrix(
+                        (
+                            np.hstack([vals_0, vals_1, vals_2]),
+                            (
+                                np.hstack([row_indices, row_indices, row_indices]),
+                                np.hstack(
+                                    [col_indices_0, col_indices_1, col_indices_2]
+                                ),
+                            ),
+                        ),
+                        shape=(n_lr, n_tb * n_lr),
+                    )
+                    additive = pybamm.Scalar(0)
             elif side_first == "bottom":
-                dxNm1 = dxNm1_tb
-                row_indices = np.arange(0, n_lr)
-                col_indices_0 = np.arange((n_tb - 2) * n_lr, (n_tb - 1) * n_lr)
-                col_indices_1 = np.arange((n_tb - 1) * n_lr, n_tb * n_lr)
-                first_val = (-1 / dxNm1) * np.ones(n_lr)
-                second_val = (1 / dxNm1) * np.ones(n_lr)
-                sub_matrix = csr_matrix(
-                    (
-                        np.hstack([first_val, second_val]),
+                if extrap_order_gradient == "linear":
+                    dxNm1 = dxNm1_tb
+                    row_indices = np.arange(0, n_lr)
+                    col_indices_0 = np.arange((n_tb - 2) * n_lr, (n_tb - 1) * n_lr)
+                    col_indices_1 = np.arange((n_tb - 1) * n_lr, n_tb * n_lr)
+                    first_val = (-1 / dxNm1) * np.ones(n_lr)
+                    second_val = (1 / dxNm1) * np.ones(n_lr)
+                    sub_matrix = csr_matrix(
                         (
-                            np.hstack([row_indices, row_indices]),
-                            np.hstack([col_indices_0, col_indices_1]),
+                            np.hstack([first_val, second_val]),
+                            (
+                                np.hstack([row_indices, row_indices]),
+                                np.hstack([col_indices_0, col_indices_1]),
+                            ),
                         ),
-                    ),
-                    shape=(n_lr, n_tb * n_lr),
-                )
-                additive = pybamm.Scalar(0)
+                        shape=(n_lr, n_tb * n_lr),
+                    )
+                    additive = pybamm.Scalar(0)
+                elif extrap_order_gradient == "quadratic":
+                    dxN = dxN_tb
+                    dxNm1 = dxNm1_tb
+                    dxNm2 = dxNm2_tb
+                    a = (2 * dxN + 2 * dxNm1 + dxNm2) / (dxNm1**2 + dxNm1 * dxNm2)
+                    b = -(2 * dxN + dxNm1 + dxNm2) / (dxNm1 * dxNm2)
+                    c = (2 * dxN + dxNm1) / (dxNm1 * dxNm2 + dxNm2**2)
+                    row_indices = np.arange(0, n_lr)
+                    col_indices_m2 = np.arange((n_tb - 3) * n_lr, (n_tb - 2) * n_lr)
+                    col_indices_m1 = np.arange((n_tb - 2) * n_lr, (n_tb - 1) * n_lr)
+                    col_indices_0 = np.arange((n_tb - 1) * n_lr, n_tb * n_lr)
+                    vals_m2 = c * np.ones(n_lr)
+                    vals_m1 = b * np.ones(n_lr)
+                    vals_0 = a * np.ones(n_lr)
+                    sub_matrix = csr_matrix(
+                        (
+                            np.hstack([vals_m2, vals_m1, vals_0]),
+                            (
+                                np.hstack([row_indices, row_indices, row_indices]),
+                                np.hstack(
+                                    [col_indices_m2, col_indices_m1, col_indices_0]
+                                ),
+                            ),
+                        )
+                    )
+                    additive = pybamm.Scalar(0)
 
             if side_second == "top":
                 dx0 = dx0_tb
