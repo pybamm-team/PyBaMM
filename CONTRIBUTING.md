@@ -374,7 +374,10 @@ PyBaMM is documented in several ways.
 
 First and foremost, every method and every class should have a [docstring](https://www.python.org/dev/peps/pep-0257/) that describes in plain terms what it does, and what the expected input and output is.
 
-These docstrings can be fairly simple, but can also make use of [reStructuredText](http://docutils.sourceforge.net/docs/user/rst/quickref.html), a markup language designed specifically for writing [technical documentation](https://en.wikipedia.org/wiki/ReStructuredText). For example, you can link to other classes and methods by writing ``:class:`pybamm.Model` `` and ``:meth:`run()` ``.
+These docstrings can be fairly simple, but can also make use of 
+`reStructuredText`, a markup language designed specifically for writing 
+technical documentation. For example, you can link to other classes and methods
+by writing ``:class:`pybamm.Model` `` and ``:meth:`run()` ``.
 
 In addition, we write a (very) small bit of documentation in separate reStructuredText files in the `docs` directory. Most of what these files do is simply import docstrings from the source code. But they also do things like add tables and indexes. If you've added a new class to a module, search the `docs` directory for that module's `.rst` file and add your class (in alphabetical order) to its index. If you've added a whole new module, copy-paste another module's file and add a link to your new file in the appropriate `index.rst` file.
 
