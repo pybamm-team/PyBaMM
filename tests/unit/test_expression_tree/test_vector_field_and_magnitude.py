@@ -1,3 +1,5 @@
+import pytest
+
 import pybamm
 from tests.shared import get_mesh_for_testing_2d
 
@@ -31,3 +33,6 @@ class TestVectorFieldAndMagnitude:
             pybamm.Scalar(2), pybamm.Scalar(3)
         )
         assert vf_processed == pybamm.VectorField(pybamm.Scalar(1), pybamm.Scalar(2))
+
+        with pytest.raises(ValueError, match="applied to a vector field"):
+            pybamm.Magnitude(pybamm.Scalar(1), "lr")
