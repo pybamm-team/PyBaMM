@@ -2065,7 +2065,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
             )
 
             # Create 1D matrix using submesh
-            n = submesh.npts
+            # n = submesh.npts
             n_lr = submesh.npts_lr
             n_tb = submesh.npts_tb
 
@@ -2115,8 +2115,8 @@ class FiniteVolume2D(pybamm.SpatialMethod):
 
                     # Compute weight beta
                     dx = submesh.d_edges_lr
-                    sub_beta = (dx[:-1] / (dx[1:] + dx[:-1]))[:, np.newaxis]
-                    sub_beta = np.repeat(sub_beta, n_tb, axis=0)
+                    sub_beta = dx[:-1] / (dx[1:] + dx[:-1])
+                    sub_beta = np.tile(sub_beta, n_tb)[:, np.newaxis]
                     beta = pybamm.Array(
                         np.kron(np.ones((second_dim_repeats, 1)), sub_beta)
                     )
