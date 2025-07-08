@@ -7,8 +7,10 @@ from pybammsolvers import idaklu
 
 import pybamm
 
+from .base_processed_variable import BaseProcessedVariable
 
-class ProcessedVariable:
+
+class ProcessedVariable(BaseProcessedVariable):
     """
     An object that can be evaluated at arbitrary (scalars or vectors) t and x, and
     returns the (interpolated) value of the base variable at that t and x.
@@ -464,42 +466,10 @@ class ProcessedVariable:
             # Compute sensitivity
             S_var = dvar_dy_eval @ dy_dp + dvar_dp_eval
 
-            # post fix for discrete time integral won't give correct result
-            # if ts are not equal to the discrete times. Raise error
-            # in this case
-            if self._is_discrete_time_method():
-                if not (
-                    len(ts) == len(self.time_integral.discrete_times)
-                    and np.allclose(ts, self.time_integral.discrete_times, atol=1e-10)
-                ):
-                    raise pybamm.SolverError(
-                        f'Processing discrete-time-sum variable "{self._name}": solution times '
-                        "and discrete times of the time integral are not equal. Set 't_interp=discrete_sum_times' to "
-                        f"ensure the correct times are used.\nSolution times: {ts}\nDiscrete Sum times: {self.time_integral.discrete_times}"
-                    )
-
             if self.time_integral is not None:
-                post_sum_values = self.time_integral.postfix_sum(S_var, ts)
-                post_sum_node = self.time_integral.post_sum_node
-                if post_sum_node is None:
-                    S_var = post_sum_values
-                else:
-                    # If there is a post-sum expression, we need to compute the
-                    # sensitivity of the post-sum expression as well
-                    y_casadi = casadi.MX.sym("y", post_sum_values.shape[0])
-                    s_var_casadi = casadi.MX.sym("s_var", post_sum_values.shape)
-                    post_sum_casadi = post_sum_node.to_casadi(
-                        t_casadi, y_casadi, inputs=p_casadi
-                    )
-                    dpost_dy = casadi.jacobian(post_sum_casadi, y_casadi)
-                    dpost_dp = casadi.jacobian(post_sum_casadi, p_casadi_stacked)
-                    sens = dpost_dy @ s_var_casadi + dpost_dp
-                    sens_fun = casadi.Function(
-                        "sens_fun",
-                        [t_casadi, y_casadi, p_casadi_stacked, s_var_casadi],
-                        [sens],
-                    )
-                    S_var = sens_fun(0.0, self.data, inputs_stacked, post_sum_values)
+                S_var = self.time_integral.postfix_sensitivities(
+                    self._name, self.data, ts, inputs, S_var
+                )
 
             all_S_var.append(S_var)
 
@@ -525,6 +495,58 @@ class ProcessedVariable:
     @property
     def hermite_interpolation(self):
         return self.all_yps is not None
+
+    def as_computed(self):
+        """
+        Allows a ProcessedVariable to be converted to a ComputedProcessedVariable for
+        use together, e.g. when using a last state solution with a new simulation running
+        with output variables in the solver.
+        """
+
+        def _stub_solution(self):
+            """
+            Return a lightweight object that looks like the parts of
+            `pybamm.Solution` required by ProcessedVariableComputed, but without
+            keeping the full state vector in memory.
+            """
+
+            class StubSolution:
+                def __init__(self, ts, ys, inputs, inputs_casadi, sensitivities, t_pts):
+                    self.all_ts = ts
+                    self.all_ys = ys
+                    self.all_inputs = inputs
+                    self.all_inputs_casadi = inputs_casadi
+                    self.sensitivities = sensitivities
+                    self.t = t_pts
+
+            return StubSolution(
+                self.all_ts,
+                self.all_ys,
+                self.all_inputs,
+                self.all_inputs_casadi,
+                self.sensitivities,
+                self.t_pts,
+            )
+
+        entries = self.entries  # shape: (..., n_t)
+
+        # Move time to axis 0, then flatten spatial dims per timestep
+        reshaped = np.moveaxis(entries, -1, 0)  # shape: (n_t, ...)
+        base_data = [reshaped.reshape(reshaped.shape[0], -1)]  # (n_t, n_vars)
+
+        cpv = pybamm.ProcessedVariableComputed(
+            self.base_variables,
+            self.base_variables_casadi,
+            base_data,
+            _stub_solution(self),
+        )
+
+        # add sensitivities if they exist
+        if self.sensitivities:
+            # TODO: test once #5058 is fixed
+            cpv._sensitivities = self.sensitivities  # pragma: no cover
+
+        return cpv
 
 
 class ProcessedVariable0D(ProcessedVariable):

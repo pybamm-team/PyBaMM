@@ -752,10 +752,10 @@ class Solution:
         )
         if other.all_ts[0][0] == self.all_ts[-1][-1]:
             # Skip first time step if it is repeated
-            all_ts = self.all_ts + [other.all_ts[0][1:]] + other.all_ts[1:]
-            all_ys = self.all_ys + [other.all_ys[0][:, 1:]] + other.all_ys[1:]
+            all_ts = [*self.all_ts, other.all_ts[0][1:], *other.all_ts[1:]]
+            all_ys = [*self.all_ys, other.all_ys[0][:, 1:], *other.all_ys[1:]]
             if hermite_interpolation:
-                all_yps = self.all_yps + [other.all_yps[0][:, 1:]] + other.all_yps[1:]
+                all_yps = [*self.all_yps, other.all_yps[0][:, 1:], *other.all_yps[1:]]
         else:
             all_ts = self.all_ts + other.all_ts
             all_ys = self.all_ys + other.all_ys
@@ -801,17 +801,10 @@ class Solution:
         new_sol._sub_solutions = self.sub_solutions + other.sub_solutions
 
         # update variables which were derived at the solver stage
-        if other._variables and all(
-            isinstance(v, pybamm.ProcessedVariableComputed)
-            for v in other._variables.values()
-        ):
-            if not self._variables:
-                new_sol._variables = other._variables.copy()
-            else:
-                new_sol._variables = {
-                    v: self._variables[v]._update(other._variables[v], new_sol)
-                    for v in self._variables.keys()
-                }
+        if any([self.variables_returned, other.variables_returned]):
+            vars = {*self._variables.keys(), *other._variables.keys()}
+            new_sol._variables = {v: self[v].update(other[v], new_sol) for v in vars}
+            new_sol.variables_returned = True
 
         return new_sol
 

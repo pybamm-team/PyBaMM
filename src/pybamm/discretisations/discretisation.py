@@ -1089,6 +1089,9 @@ class Discretisation:
             right_symbol = self.process_symbol(symbol.tb_field)
             return symbol.create_copy(new_children=[left_symbol, right_symbol])
 
+        elif isinstance(symbol, pybamm.Constant):
+            # after discretisation we just care about the value, not the name
+            return self.process_symbol(pybamm.Scalar(symbol.value))
         else:
             # Backup option: return the object
             return symbol

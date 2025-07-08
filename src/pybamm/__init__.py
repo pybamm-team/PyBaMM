@@ -1,8 +1,5 @@
 from pybamm.version import __version__
 
-# Demote expressions to 32-bit floats/ints - option used for IDAKLU-MLIR compilation
-demote_expressions_to_32bit = False
-
 # Utility classes and methods
 from .util import root_dir
 from .util import Timer, TimerTime, FuzzyDict
@@ -15,7 +12,6 @@ from .util import (
     get_parameters_filepath,
     has_jax,
     import_optional_dependency,
-    is_jax_compatible,
 )
 from .logger import logger, set_logging_level, get_new_logger
 from .settings import settings
@@ -37,7 +33,7 @@ from .expression_tree.interpolant import Interpolant
 from .expression_tree.discrete_time_sum import *
 from .expression_tree.input_parameter import InputParameter
 from .expression_tree.parameter import Parameter, FunctionParameter
-from .expression_tree.scalar import Scalar
+from .expression_tree.scalar import Scalar, Constant
 from .expression_tree.variable import *
 from .expression_tree.coupled_variable import *
 from .expression_tree.independent_variable import *
@@ -180,7 +176,7 @@ from .solvers.jax_solver import JaxSolver
 from .solvers.jax_bdf_solver import jax_bdf_integrate
 
 from .solvers.idaklu_jax import IDAKLUJax
-from .solvers.idaklu_solver import IDAKLUSolver, has_iree
+from .solvers.idaklu_solver import IDAKLUSolver
 
 # Experiments
 from .experiment.experiment import Experiment
