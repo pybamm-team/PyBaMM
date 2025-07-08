@@ -2,9 +2,10 @@
 # Tests for the State Vector class
 #
 
-import pybamm
 import numpy as np
 import pytest
+
+import pybamm
 
 
 class TestStateVector:

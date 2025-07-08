@@ -1,15 +1,16 @@
 #
 # Tests for the Concatenation class and subclasses
 #
-import pytest
-from tests import assert_domain_equal
-
-
 import numpy as np
+import pytest
+import sympy
 
 import pybamm
-import sympy
-from tests import get_discretisation_for_testing, get_mesh_for_testing
+from tests import (
+    assert_domain_equal,
+    get_discretisation_for_testing,
+    get_mesh_for_testing,
+)
 
 
 class TestConcatenations:

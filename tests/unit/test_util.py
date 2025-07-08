@@ -1,14 +1,15 @@
-import pytest
 import importlib
 import os
 import sys
-import pybamm
 from io import StringIO
 
+import pytest
+
+import pybamm
 from tests import (
     get_optional_distribution_deps,
-    get_required_distribution_deps,
     get_present_optional_import_deps,
+    get_required_distribution_deps,
 )
 
 
@@ -88,10 +89,6 @@ class TestUtil:
         assert pybamm.get_parameters_filepath(temppath) == str(
             os.path.join(pybamm.root_dir(), "src", "pybamm", temppath)
         )
-
-    @pytest.mark.skipif(not pybamm.has_jax(), reason="JAX is not installed")
-    def test_is_jax_compatible(self):
-        assert pybamm.is_jax_compatible()
 
     def test_import_optional_dependency(self):
         optional_distribution_deps = get_optional_distribution_deps("pybamm")

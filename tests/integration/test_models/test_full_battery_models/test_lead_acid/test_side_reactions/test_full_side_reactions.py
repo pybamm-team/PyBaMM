@@ -1,10 +1,10 @@
 #
 # Tests for the lead-acid Full model
 #
+import numpy as np
+
 import pybamm
 import tests
-
-import numpy as np
 
 
 class TestLeadAcidFullSideReactions:

@@ -2,8 +2,9 @@
 # Tests for the surface formulation
 #
 
-import pybamm
 import numpy as np
+
+import pybamm
 from tests import StandardOutputComparison
 
 
@@ -40,9 +41,11 @@ class TestCompareOutputs:
 
             # solve model
             solutions = []
-            t_eval = np.linspace(0, 3600, 100)
+            t_eval = [0, 3600]
+            t_interp = np.linspace(t_eval[0], t_eval[-1], 100)
             for model in models:
-                solution = pybamm.CasadiSolver().solve(model, t_eval)
+                solver = pybamm.IDAKLUSolver(rtol=1e-8, atol=1e-12)
+                solution = solver.solve(model, t_eval, t_interp=t_interp)
                 solutions.append(solution)
 
             # compare outputs
@@ -96,9 +99,10 @@ class TestCompareOutputs:
 
             # solve model
             solutions = []
-            t_eval = np.linspace(0, 3600, 100)
+            t_eval = [0, 3600]
+            t_interp = np.linspace(t_eval[0], t_eval[-1], 100)
             for model in models:
-                solution = pybamm.CasadiSolver().solve(model, t_eval)
+                solution = pybamm.IDAKLUSolver().solve(model, t_eval, t_interp=t_interp)
                 solutions.append(solution)
 
             # compare outputs
@@ -128,14 +132,15 @@ class TestCompareOutputs:
 
         # solve models
         solutions = []
+        t_eval = [0, 3600]
+        t_interp = np.linspace(t_eval[0], t_eval[-1], 100)
         for model in models:
             sim = pybamm.Simulation(
                 model,
                 var_pts=var_pts,
                 parameter_values=param,
-                solver=pybamm.CasadiSolver(mode="fast"),
             )
-            solution = sim.solve([0, 3600])
+            solution = sim.solve(t_eval, t_interp=t_interp)
             solutions.append(solution)
 
         # compare outputs

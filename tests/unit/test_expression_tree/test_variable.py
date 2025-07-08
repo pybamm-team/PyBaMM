@@ -2,12 +2,11 @@
 # Tests for the Variable class
 #
 
-import pytest
-
 import numpy as np
+import pytest
+import sympy
 
 import pybamm
-import sympy
 
 
 class TestVariable:

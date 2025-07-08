@@ -34,7 +34,7 @@ The notebooks are organised into subfolders, and can be viewed in the galleries 
     notebooks/creating_models/7-creating-a-submodel.ipynb
 
 .. nbgallery::
-    :caption: performance
+    :caption: Performance
     :glob:
 
     notebooks/performance/01-simulation-pipeline.ipynb
@@ -72,6 +72,7 @@ The notebooks are organised into subfolders, and can be viewed in the galleries 
     notebooks/models/latexify.ipynb
     notebooks/models/lead-acid.ipynb
     notebooks/models/lithium-plating.ipynb
+    notebooks/models/lithium-plating-composite.ipynb
     notebooks/models/MPM.ipynb
     notebooks/models/MSMR.ipynb
     notebooks/models/pouch-cell-model.ipynb
@@ -128,7 +129,7 @@ The notebooks are organised into subfolders, and can be viewed in the galleries 
     notebooks/solvers/dae-solver.ipynb
     notebooks/solvers/ode-solver.ipynb
     notebooks/solvers/idaklu-jax-interface.ipynb
-    notebooks/solvers/speed-up-solver.ipynb
+    notebooks/solvers/instability-nonsmooth-functions.ipynb
 
 .. nbgallery::
     :caption: Spatial Methods

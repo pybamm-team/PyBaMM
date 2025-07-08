@@ -1,18 +1,17 @@
 #
 # Tests for the Unary Operator classes
 #
-import pytest
-
 import numpy as np
-from scipy.sparse import diags
+import pytest
 import sympy
+from hypothesis import HealthCheck, given, settings
+from hypothesis import strategies as st
+from scipy.sparse import diags
 from sympy.vector.operators import Divergence as sympy_Divergence
 from sympy.vector.operators import Gradient as sympy_Gradient
-from tests import assert_domain_equal
-from hypothesis import strategies as st
-from hypothesis import given, settings, HealthCheck
 
 import pybamm
+from tests import assert_domain_equal
 
 
 class TestUnaryOperators:
@@ -774,7 +773,7 @@ class TestUnaryOperators:
             pybamm.DiscreteTimeSum(2 * y)
 
         # check that raises error if two data are present
-        data2 = pybamm.DiscreteTimeData(values, times, "test2")
+        data2 = pybamm.DiscreteTimeData(times, values, "test2")
         with pytest.raises(pybamm.ModelError, match="only have one DiscreteTimeData"):
             pybamm.DiscreteTimeSum(data + data2)
 

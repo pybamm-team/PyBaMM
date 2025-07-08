@@ -2,6 +2,70 @@
 
 ## Features
 
+- Creates `BaseProcessedVariable` to enable object combination when adding solutions together ([#5076](https://github.com/pybamm-team/PyBaMM/pull/5076))
+- Added a `Constant` symbol for named constants. This is a subclass of `Scalar` and is used to represent named constants such as the gas constant. This avoids constants being simplified out when constructing expressions. ([#5070](https://github.com/pybamm-team/PyBaMM/pull/5070))
+- Generalise `pybamm.DiscreteTimeSum` to allow it to be embedded in other expressions ([#5044](https://github.com/pybamm-team/PyBaMM/pull/5044))
+- Adds `all` key-value pair to `output_variables` sensitivity dictionaries, accessible through `solution[var].sensitivities['all']`. Aligns shape with conventional solution sensitivities object. ([#5067](https://github.com/pybamm-team/PyBaMM/pull/5067))
+- Add support for `output_variables` to `pybamm.DiscreteTimeSum` and `pybamm.ExplicitTimeIntegral` expressions. ([#5071](https://github.com/pybamm-team/PyBaMM/pull/5071))
+
+## Bug fixes
+
+- Fixed a bug that ignored the default duration of drive cycles for `CRate` steps and a bug that overwrote custom `period` arguments for drive cycles. ([#5090](https://github.com/pybamm-team/PyBaMM/pull/5090))
+- Converts sensitivities to numpy objects, fixing bug in `DiscreteTimeSum` sensitivity calculation ([#5037](https://github.com/pybamm-team/PyBaMM/pull/5037))
+- Raises error if `pybamm.Interpolant` given 1D x values that are not strictly increasing ([#5061](https://github.com/pybamm-team/PyBaMM/pull/5061))
+
+## Breaking changes
+
+- Removed the IREE code from the IDAKLU solver ([#5080](https://github.com/pybamm-team/PyBaMM/pull/5080))
+- Removed support for Python 3.9 ([#5052](https://github.com/pybamm-team/PyBaMM/pull/5052))
+
+# [v25.6.0](https://github.com/pybamm-team/PyBaMM/tree/v25.6.0) - 2025-05-27
+
+## Features
+
+- Renamed MSMR parameters from symbols to written out names with units as a non-breaking change with a deprecation warning. ([#5027](https://github.com/pybamm-team/PyBaMM/pull/5027))
+
+## Optimizations
+
+- Update docs, examples and tests to use `IDAKLUSolver`. ([#4996](https://github.com/pybamm-team/PyBaMM/pull/4996))
+- Add a solver option to change `on_extrapolation` behavior to `"error"`, `"warn"`, or `"ignore"` on extrapolation events. ([#4993](https://github.com/pybamm-team/PyBaMM/pull/4993))
+- Improve reliability of `CasadiAlgebraicSolver` and added an option for the `step_tol` of the Newton iteration. ([#4985](https://github.com/pybamm-team/PyBaMM/pull/4985))
+- Speed up calculation of variable sensitivities in `ProcessedVariable` ([#5000](https://github.com/pybamm-team/PyBaMM/pull/5000))
+
+## Bug fixes
+
+- Fixed a bug in the `QuickPlot` which would return empty values for 1D variables at the beginning and end of a timespan. ([#4991](https://github.com/pybamm-team/PyBaMM/pull/4991))
+- Fixed a bug in the `Exponential1DSubMesh` where the mesh was not being created correctly for non-zero minimum values. ([#4989](https://github.com/pybamm-team/PyBaMM/pull/4989))
+- Fixed sensitivity calculation for `pybamm.DiscreteTimeSum`. ([#5007](https://github.com/pybamm-team/PyBaMM/pull/5008))
+
+## Breaking changes
+
+- Remove sensitivity functionality for Casadi and Scipy solvers, only `pybamm.IDAKLU` solver can calculate sensitivities. ([#4975](https://github.com/pybamm-team/PyBaMM/pull/4975))
+
+# [v25.4.2](https://github.com/pybamm-team/PyBaMM/tree/v25.4.2) - 2025-04-17
+
+## Bug fixes
+
+- Improve reliability of `AlgebraicSolver` and change `ElectrodeSOHHalfCell` solver to a Trust-Region method. ([#4982](https://github.com/pybamm-team/PyBaMM/pull/4982))
+
+# [v25.4.1](https://github.com/pybamm-team/PyBaMM/tree/v25.4.1) - 2025-04-16
+
+## Features
+
+- Added "use lumped thermal capacity" option in lumped thermal model ([#4968](https://github.com/pybamm-team/PyBaMM/pull/4968))
+
+## Bug fixes
+
+- Remove a regularization term in the harmonic mean. ([#4977](https://github.com/pybamm-team/PyBaMM/pull/4977))
+
+## Breaking changes
+
+- Changed default solver to `pybamm.IDAKLUSolver`. ([#4915](https://github.com/pybamm-team/PyBaMM/pull/4915))
+
+# [v25.4.0](https://github.com/pybamm-team/PyBaMM/tree/v25.4.0) - 2025-04-02
+
+## Features
+
 - Revision of the hysteresis notebook to include the method implemented in the module `axen_ocp`. ([#4880](https://github.com/pybamm-team/PyBaMM/pull/4880))
 - Added `axen_ocp` module within submodel `interface.open_circuit_potential` to handle an OCP with hysteresis. ([#4816](https://github.com/pybamm-team/PyBaMM/pull/4816))
 - Creates a 'calc_esoh' property in battery models ([#4825](https://github.com/pybamm-team/PyBaMM/pull/4825))

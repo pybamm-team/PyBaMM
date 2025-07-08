@@ -2,6 +2,7 @@
 # Class for no mechanics
 #
 import pybamm
+
 from .base_mechanics import BaseMechanics
 
 

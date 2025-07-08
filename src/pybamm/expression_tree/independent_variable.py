@@ -2,10 +2,13 @@
 # IndependentVariable class
 #
 from __future__ import annotations
-import sympy
+
+import numpy as np
 import numpy.typing as npt
+import sympy
+
 import pybamm
-from pybamm.type_definitions import DomainType, AuxiliaryDomainType, DomainsType
+from pybamm.type_definitions import AuxiliaryDomainType, DomainsType, DomainType
 
 KNOWN_COORD_SYS = ["cartesian", "cylindrical polar", "spherical polar"]
 
@@ -93,8 +96,8 @@ class Time(IndependentVariable):
     def _base_evaluate(
         self,
         t: float | None = None,
-        y: npt.NDArray | None = None,
-        y_dot: npt.NDArray | None = None,
+        y: npt.NDArray[np.float64] | None = None,
+        y_dot: npt.NDArray[np.float64] | None = None,
         inputs: dict | str | None = None,
     ):
         """See :meth:`pybamm.Symbol._base_evaluate()`."""

@@ -2,11 +2,11 @@
 # Parameter classes
 #
 from __future__ import annotations
-import sys
 
-import numpy as np
+import sys
 from typing import Literal
 
+import numpy as np
 import sympy
 
 import pybamm
@@ -107,7 +107,7 @@ class FunctionParameter(pybamm.Symbol):
 
         # Turn numbers into scalars
         for idx, child in enumerate(children_list):
-            if isinstance(child, (float, int, np.number)):
+            if isinstance(child, float | int | np.number):
                 children_list[idx] = pybamm.Scalar(child)
 
         domains = self.get_children_domains(children_list)
@@ -217,8 +217,8 @@ class FunctionParameter(pybamm.Symbol):
         Returns the sum of the evaluated children
         See :meth:`pybamm.Symbol.evaluate_for_shape()`
         """
-        # add 1e-16 to avoid division by zero
-        return sum(child.evaluate_for_shape() for child in self.children) + 1e-16
+        # add 1e-300 to avoid division by zero
+        return sum(child.evaluate_for_shape() for child in self.children) + 1e-300
 
     def to_equation(self) -> sympy.Symbol:
         """Convert the node and its subtree into a SymPy equation."""

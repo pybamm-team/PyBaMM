@@ -2,8 +2,9 @@
 # Example showing how to create a custom lithium-ion model from submodels
 #
 
-import pybamm
 import numpy as np
+
+import pybamm
 
 pybamm.set_logging_level("INFO")
 

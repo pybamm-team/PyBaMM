@@ -5,11 +5,12 @@ from __future__ import annotations
 
 import numpy as np
 import numpy.typing as npt
-from scipy.sparse import csr_matrix, issparse
 import sympy
+from scipy.sparse import csr_matrix, issparse
+
 import pybamm
-from pybamm.util import import_optional_dependency
 from pybamm.type_definitions import DomainsType
+from pybamm.util import import_optional_dependency
 
 
 class UnaryOperator(pybamm.Symbol):
@@ -35,7 +36,7 @@ class UnaryOperator(pybamm.Symbol):
         child: pybamm.Symbol,
         domains: DomainsType = None,
     ):
-        if isinstance(child, (float, int, np.number)):
+        if isinstance(child, float | int | np.number):
             child = pybamm.Scalar(child)
         domains = domains or child.domains
 
@@ -94,8 +95,8 @@ class UnaryOperator(pybamm.Symbol):
     def evaluate(
         self,
         t: float | None = None,
-        y: npt.NDArray | None = None,
-        y_dot: npt.NDArray | None = None,
+        y: npt.NDArray[np.float64] | None = None,
+        y_dot: npt.NDArray[np.float64] | None = None,
         inputs: dict | str | None = None,
     ):
         """See :meth:`pybamm.Symbol.evaluate()`."""
@@ -1092,6 +1093,10 @@ class ExplicitTimeIntegral(UnaryOperator):
     def _unary_new_copy(self, child, perform_simplifications=True):
         return self.__class__(child, self.initial_condition)
 
+    def _unary_evaluate(self, child):
+        # return result of evaluating the child, we'll only implement the sum once the model is solved (in pybamm.ProcessedVariable)
+        return child
+
     def is_constant(self):
         return False
 
@@ -1311,7 +1316,7 @@ def div(symbol):
     # Divergence commutes with Negate operator
     if isinstance(symbol, pybamm.Negate):
         return -div(symbol.orphans[0])
-    elif isinstance(symbol, (pybamm.Multiplication, pybamm.Division)):
+    elif isinstance(symbol, pybamm.Multiplication | pybamm.Division):
         left, right = symbol.orphans
         if isinstance(left, pybamm.Negate):
             return -div(symbol._binary_new_copy(left.orphans[0], right))
@@ -1421,7 +1426,7 @@ def boundary_value(symbol, side):
     if symbol.domain == []:
         return symbol
     # If symbol is a primary or full broadcast, reduce by one dimension
-    if isinstance(symbol, (pybamm.PrimaryBroadcast, pybamm.FullBroadcast)):
+    if isinstance(symbol, pybamm.PrimaryBroadcast | pybamm.FullBroadcast):
         return symbol.reduce_one_dimension()
     # If symbol is a secondary broadcast, its boundary value is a primary broadcast of
     # the boundary value of its child

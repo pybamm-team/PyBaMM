@@ -1,8 +1,9 @@
 #
 # Tests Event class
 #
-import pybamm
 import numpy as np
+
+import pybamm
 
 
 class TestEvent:

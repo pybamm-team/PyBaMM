@@ -1,9 +1,10 @@
 #
 # Tests for the Matrix class
 #
-import pybamm
 import numpy as np
 from scipy.sparse import csr_matrix
+
+import pybamm
 
 
 class TestMatrix:

@@ -12,6 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       issues: read
+      pull-requests: read
       contents: read
     if: github.repository == 'pybamm-team/PyBaMM'
     steps:

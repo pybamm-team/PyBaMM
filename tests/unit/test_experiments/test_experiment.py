@@ -3,11 +3,13 @@
 #
 
 from datetime import datetime
-import pybamm
-import pytest
-import numpy as np
+
 import casadi
+import numpy as np
+import pytest
 from scipy.interpolate import PchipInterpolator
+
+import pybamm
 
 
 class TestExperiment:
@@ -210,7 +212,9 @@ class TestExperiment:
         ]
 
         # Test method directly
-        for next, end, steps in zip(expected_next, expected_end, processed_steps):
+        for next, end, steps in zip(
+            expected_next, expected_end, processed_steps, strict=False
+        ):
             # useful form for debugging
             assert steps.next_start_time == next
             assert steps.end_time == end
@@ -276,13 +280,14 @@ class TestExperiment:
         step = pybamm.step.voltage(2.5, termination="2.5 V")
         experiment = pybamm.Experiment([step])
 
-        sim = pybamm.Simulation(model, experiment=experiment)
+        solver = pybamm.IDAKLUSolver(atol=1e-8, rtol=1e-8)
+        sim = pybamm.Simulation(model, experiment=experiment, solver=solver)
 
         sim.solve()
         solution = sim.solution
 
         voltage = solution["Terminal voltage [V]"].entries
-        assert np.allclose(voltage, 2.5, atol=1e-3)
+        assert np.allclose(voltage, 2.5, atol=1e-3, rtol=1e-3)
 
     def test_pchip_interpolation_experiment(self):
         x = np.linspace(0, 1, 11)
