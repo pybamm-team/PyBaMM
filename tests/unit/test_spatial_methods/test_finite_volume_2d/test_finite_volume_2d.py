@@ -644,7 +644,7 @@ class TestFiniteVolume2D:
         total_add = concat_var + source_concat
         neg_add_disc = disc.process_symbol(neg_add)
 
-    def test_vector_boundary_conditions_with_spatial_variables(self):
+    def test_vector_boundary_conditions(self):
         """
         Test using vector quantities as boundary conditions, such as spatial variables
         with BoundaryGradient. This tests the case where boundary conditions are
@@ -659,6 +659,7 @@ class TestFiniteVolume2D:
         phi = pybamm.Variable(
             "phi", domain=["negative electrode", "separator", "positive electrode"]
         )
+        submesh = mesh[("negative electrode", "separator", "positive electrode")]
         x = pybamm.SpatialVariable(
             "x",
             ["negative electrode", "separator", "positive electrode"],
@@ -675,11 +676,11 @@ class TestFiniteVolume2D:
         boundary_conditions = {
             phi: {
                 "top": (
-                    pybamm.BoundaryGradient(x, "top"),
+                    pybamm.Vector(np.ones(submesh.npts_lr)),
                     "Dirichlet",
                 ),  # BC depends on x coordinate
                 "bottom": (
-                    pybamm.BoundaryGradient(x, "bottom"),
+                    pybamm.Vector(np.ones(submesh.npts_lr)),
                     "Dirichlet",
                 ),  # BC depends on x coordinate
                 "left": (pybamm.Scalar(0), "Dirichlet"),  # Scalar BC for comparison
@@ -728,7 +729,10 @@ class TestFiniteVolume2D:
         # Use spatial variable directly in boundary condition (not through BoundaryGradient)
         boundary_conditions_direct = {
             phi: {
-                "top": (z, "Dirichlet"),  # BC is the z-coordinate itself
+                "top": (
+                    pybamm.Vector(np.ones(submesh.npts_lr)),
+                    "Dirichlet",
+                ),  # BC is the z-coordinate itself
                 "bottom": (pybamm.Scalar(0), "Dirichlet"),
                 "left": (pybamm.Scalar(0), "Dirichlet"),
                 "right": (pybamm.Scalar(1), "Dirichlet"),
@@ -747,15 +751,15 @@ class TestFiniteVolume2D:
         boundary_conditions_mixed = {
             phi: {
                 "top": (
-                    pybamm.BoundaryGradient(x, "top") + pybamm.Scalar(1),
+                    pybamm.Vector(np.ones(submesh.npts_lr)) + pybamm.Scalar(1),
                     "Dirichlet",
                 ),  # Vector + scalar
                 "bottom": (
-                    pybamm.BoundaryGradient(z, "bottom"),
+                    pybamm.Vector(np.ones(submesh.npts_lr)),
                     "Neumann",
                 ),  # Vector Neumann BC
                 "left": (pybamm.Scalar(0), "Dirichlet"),
-                "right": (x, "Neumann"),  # Direct spatial variable as Neumann BC
+                "right": (pybamm.Vector(np.ones(submesh.npts_tb)), "Neumann"),
             }
         }
 
