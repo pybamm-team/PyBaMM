@@ -62,12 +62,12 @@ The notebooks are organised into subfolders, and can be viewed in the galleries 
     notebooks/models/compare-particle-diffusion-models.ipynb
     notebooks/models/composite_particle.ipynb
     notebooks/models/coupled-degradation.ipynb
-    notebooks/models/differential-capacity-hysteresis-state.ipynb
     notebooks/models/DFN-with-particle-size-distributions.ipynb
     notebooks/models/DFN.ipynb
     notebooks/models/electrode-state-of-health.ipynb
     notebooks/models/graded-electrodes.ipynb
     notebooks/models/half-cell.ipynb
+    notebooks/models/hysteresis-state-models.ipynb
     notebooks/models/jelly-roll-model.ipynb
     notebooks/models/latexify.ipynb
     notebooks/models/lead-acid.ipynb

@@ -130,6 +130,12 @@ def silicon_ocp_delithiation_Mark2016(sto):
     return U_delithiation
 
 
+def silicon_ocp_average_Mark2016(sto):
+    return (
+        silicon_ocp_lithiation_Mark2016(sto) + silicon_ocp_delithiation_Mark2016(sto)
+    ) / 2
+
+
 def silicon_LGM50_electrolyte_exchange_current_density_Chen2020(
     c_e, c_s_surf, c_s_max, T
 ):
@@ -408,6 +414,7 @@ def get_parameter_values():
         "": silicon_ocp_lithiation_Mark2016,
         "Secondary: Negative electrode delithiation OCP [V]"
         "": silicon_ocp_delithiation_Mark2016,
+        "Secondary: Negative electrode OCP [V]": silicon_ocp_average_Mark2016,
         "Secondary: Negative electrode active material volume fraction": 0.015,
         "Secondary: Negative particle radius [m]": 1.52e-06,
         "Secondary: Negative electrode exchange-current density [A.m-2]"
