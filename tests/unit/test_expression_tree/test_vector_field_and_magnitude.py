@@ -31,6 +31,7 @@ class TestVectorFieldAndMagnitude:
         assert vf_plus_one_processed == pybamm.VectorField(
             pybamm.Scalar(2), pybamm.Scalar(3)
         )
+        assert vf_plus_one.create_copy() == vf_plus_one
         assert one_plus_vf_processed == pybamm.VectorField(
             pybamm.Scalar(2), pybamm.Scalar(3)
         )
@@ -42,3 +43,15 @@ class TestVectorFieldAndMagnitude:
         assert negative_vf_processed == pybamm.VectorField(
             pybamm.Scalar(-1), pybamm.Scalar(-2)
         )
+
+        thing_lr = pybamm.PrimaryBroadcast(pybamm.Scalar(1), "domain_1")
+        thing_tb = pybamm.PrimaryBroadcast(pybamm.Scalar(2), "domain_2")
+        with pytest.raises(ValueError, match="same domain"):
+            pybamm.VectorField(thing_lr, thing_tb)
+
+
+        vf_evaluates_on_edges = pybamm.VectorField(pybamm.Scalar(1), pybamm.Scalar(2))
+        vf_evaluates_on_edges.lr_field._evaluates_on_edges = lambda _: True
+        vf_evaluates_on_edges.tb_field._evaluates_on_edges = lambda _: False
+        with pytest.raises(ValueError, match="same domain"):
+            vf_evaluates_on_edges.evaluates_on_edges("primary")
