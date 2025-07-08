@@ -49,7 +49,6 @@ class TestVectorFieldAndMagnitude:
         with pytest.raises(ValueError, match="same domain"):
             pybamm.VectorField(thing_lr, thing_tb)
 
-
         vf_evaluates_on_edges = pybamm.VectorField(pybamm.Scalar(1), pybamm.Scalar(2))
         vf_evaluates_on_edges.lr_field._evaluates_on_edges = lambda _: True
         vf_evaluates_on_edges.tb_field._evaluates_on_edges = lambda _: False
