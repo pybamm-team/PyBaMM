@@ -1028,7 +1028,13 @@ class Discretisation:
                 else:
                     raise ValueError("Invalid direction")
             else:
-                return symbol.create_copy(new_children=[disc_child])
+                if isinstance(disc_child, pybamm.VectorField):
+                    return pybamm.VectorField(
+                        symbol.create_copy(new_children=[disc_child.lr_field]),
+                        symbol.create_copy(new_children=[disc_child.tb_field]),
+                    )
+                else:
+                    return symbol.create_copy(new_children=[disc_child])
 
         elif isinstance(symbol, pybamm.Function):
             disc_children = [self.process_symbol(child) for child in symbol.children]

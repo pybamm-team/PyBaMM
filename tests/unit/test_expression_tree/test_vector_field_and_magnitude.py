@@ -18,11 +18,13 @@ class TestVectorFieldAndMagnitude:
         one_plus_vf = pybamm.Scalar(1) + vector_field
         magnitude_lr = pybamm.Magnitude(vector_field, "lr")
         magnitude_tb = pybamm.Magnitude(vector_field, "tb")
+        negative_vf = -vector_field
         vf_processed = disc.process_symbol(vector_field)
         vf_plus_one_processed = disc.process_symbol(vf_plus_one)
         one_plus_vf_processed = disc.process_symbol(one_plus_vf)
         magnitude_lr_processed = disc.process_symbol(magnitude_lr)
         magnitude_tb_processed = disc.process_symbol(magnitude_tb)
+        negative_vf_processed = disc.process_symbol(negative_vf)
 
         assert magnitude_lr_processed.evaluate() == 1
         assert magnitude_tb_processed.evaluate() == 2
@@ -35,4 +37,8 @@ class TestVectorFieldAndMagnitude:
         assert vf_processed == pybamm.VectorField(pybamm.Scalar(1), pybamm.Scalar(2))
 
         with pytest.raises(ValueError, match="applied to a vector field"):
-            pybamm.Magnitude(pybamm.Scalar(1), "lr")
+            disc.process_symbol(pybamm.Magnitude(pybamm.Scalar(1), "lr"))
+
+        assert negative_vf_processed == pybamm.VectorField(
+            pybamm.Scalar(-1), pybamm.Scalar(-2)
+        )
