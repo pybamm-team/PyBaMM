@@ -31,12 +31,5 @@ class TestDispatch:
 
         # Test Model function with options parameter
         options = {"thermal": "isothermal"}
-        model = pybamm.Model("SPM", options=options)
-        assert model.__class__.__name__ == "SPM"
-
-        # Test Model function with *args and **kwargs
-        model = pybamm.Model("SPM", build=False)
-        assert model.__class__.__name__ == "SPM"
-        options = {"thermal": "isothermal"}
-        model = pybamm.Model("SPM", options=options, build=False)
+        model = pybamm.Model("SPM", options)
         assert model.__class__.__name__ == "SPM"

@@ -109,7 +109,7 @@ parameter_sets = EntryPoint(group="pybamm_parameter_sets")
 models = EntryPoint(group="pybamm_models")
 
 
-def Model(model: str, options=None, *args, **kwargs):
+def Model(model: str, *args, **kwargs):
     """
     Returns the loaded model object
     Note: This feature is in its experimental phase.
@@ -118,8 +118,6 @@ def Model(model: str, options=None, *args, **kwargs):
     ----------
     model : str
         The model name or author name of the model mentioned at the model entry point.
-    options : dict, optional
-        Options to pass to the model constructor.
     *args
         Additional positional arguments to pass to the model constructor.
     **kwargs
@@ -141,7 +139,4 @@ def Model(model: str, options=None, *args, **kwargs):
     """
     model_class = models._get_class(model)
 
-    if options is not None:
-        return model_class(options, *args, **kwargs)
-    else:
-        return model_class(*args, **kwargs)
+    return model_class(*args, **kwargs)
