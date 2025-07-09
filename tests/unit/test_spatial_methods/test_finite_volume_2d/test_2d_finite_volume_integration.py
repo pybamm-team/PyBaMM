@@ -3,6 +3,7 @@
 #
 
 import numpy as np
+import pytest
 
 import pybamm
 from tests.shared import get_mesh_for_testing_2d
@@ -70,6 +71,18 @@ class TestFiniteVolumeIntegration:
             atol=1e-6,
         )
 
+        spatial_method = pybamm.FiniteVolume2D()
+        child = pybamm.Variable(
+            "child",
+            domain=["negative electrode", "separator", "positive electrode"],
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        spatial_method.build(mesh)
+        with pytest.raises(
+            ValueError, match="Integration variable must be provided for 2D integration"
+        ):
+            spatial_method.definite_integral_matrix(child)
+
     def test_area_integral(self):
         mesh = get_mesh_for_testing_2d()
         spatial_methods = {"macroscale": pybamm.FiniteVolume2D()}
@@ -112,6 +125,11 @@ class TestFiniteVolumeIntegration:
             rtol=1e-7,
             atol=1e-6,
         )
+
+        with pytest.raises(
+            ValueError, match="Integration variables must be in different directions"
+        ):
+            disc.process_symbol(pybamm.Integral(var, [x, x]))
 
     def test_boundary_integral(self):
         # create discretisation
