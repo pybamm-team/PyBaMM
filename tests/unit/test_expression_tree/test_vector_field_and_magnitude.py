@@ -54,3 +54,5 @@ class TestVectorFieldAndMagnitude:
         vf_evaluates_on_edges.tb_field._evaluates_on_edges = lambda _: False
         with pytest.raises(ValueError, match="same domain"):
             vf_evaluates_on_edges.evaluates_on_edges("primary")
+
+        assert magnitude_lr.new_copy([vector_field]) == magnitude_lr
