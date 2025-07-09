@@ -957,6 +957,14 @@ class FiniteVolume(pybamm.SpatialMethod):
                         additive_multiplicative = pybamm.Scalar(1)
                         multiplicative = pybamm.Scalar(1)
 
+                elif extrap_order_value == "constant":
+                    sub_matrix = csr_matrix(
+                        ([1], ([0], [0])),
+                        shape=(1, prim_pts),
+                    )
+                    additive = pybamm.Scalar(0)
+                    additive_multiplicative = pybamm.Scalar(1)
+                    multiplicative = pybamm.Scalar(1)
                 else:
                     raise NotImplementedError
 
@@ -1027,6 +1035,14 @@ class FiniteVolume(pybamm.SpatialMethod):
                         additive = pybamm.Scalar(0)
                         additive_multiplicative = pybamm.Scalar(1)
                         multiplicative = pybamm.Scalar(1)
+                elif extrap_order_value == "constant":
+                    sub_matrix = csr_matrix(
+                        ([1], ([0], [prim_pts - 1])),
+                        shape=(1, prim_pts),
+                    )
+                    additive = pybamm.Scalar(0)
+                    additive_multiplicative = pybamm.Scalar(1)
+                    multiplicative = pybamm.Scalar(1)
                 else:
                     raise NotImplementedError
 

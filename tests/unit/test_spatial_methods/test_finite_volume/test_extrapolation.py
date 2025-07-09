@@ -86,6 +86,39 @@ def get_errors(
 
 
 class TestExtrapolation:
+    def test_constant_extrapolation(self):
+        linear = {
+            "extrapolation": {"order": {"gradient": "linear", "value": "constant"}}
+        }
+
+        geometry = {"domain": {"x": {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}}
+        submesh_types = {"domain": pybamm.Uniform1DSubMesh}
+        var_pts = {"x": 10}
+        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+
+        spatial_methods_linear = {"domain": pybamm.FiniteVolume(linear)}
+
+        disc_linear = pybamm.Discretisation(mesh, spatial_methods_linear)
+
+        var = pybamm.Variable("var", domain="domain")
+        left_extrap_linear = pybamm.BoundaryValue(var, "left")
+        right_extrap_linear = pybamm.BoundaryValue(var, "right")
+
+        disc_linear.set_variable_slices([var])
+
+        submesh = mesh["domain"]
+        y = submesh.nodes
+
+        left_extrap_linear_disc = disc_linear.process_symbol(left_extrap_linear)
+        right_extrap_linear_disc = disc_linear.process_symbol(right_extrap_linear)
+
+        np.testing.assert_allclose(
+            left_extrap_linear_disc.evaluate(None, y), y[0], rtol=1e-7, atol=1e-6
+        )
+        np.testing.assert_allclose(
+            right_extrap_linear_disc.evaluate(None, y), y[-1], rtol=1e-7, atol=1e-6
+        )
+
     def test_order_override(self):
         linear = {"extrapolation": {"order": {"gradient": "linear", "value": "linear"}}}
 
