@@ -1085,6 +1085,22 @@ class BoundaryValue(BoundaryOperator):
             return sympy.Symbol(latex_child)
 
 
+class BoundaryMeshSize(BoundaryOperator):
+    """
+    A node in the expression tree which gets the distance between the boundary of a variable's domain and the edge of the domain.
+
+    Parameters
+    ----------
+    child : :class:`pybamm.Symbol`
+        The variable whose boundary value to take
+    side : str
+        Which side to take the boundary value on ("left" or "right")
+    """
+
+    def __init__(self, child, side):
+        super().__init__("boundary mesh size", child, side)
+
+
 class ExplicitTimeIntegral(UnaryOperator):
     def __init__(self, children, initial_condition):
         super().__init__("explicit time integral", children)
