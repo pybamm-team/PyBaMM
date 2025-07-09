@@ -176,7 +176,7 @@ class Mesh(dict):
         # TODO: We need a more robust way to check whether the submeshes are being combined lr or tb
         for i in range(len(submeshnames) - 1):
             if self[submeshnames[i]].dimension != self[submeshnames[i + 1]].dimension:
-                raise pybamm.DomainError(
+                raise pybamm.GeometryError(
                     "Cannot combine submeshes of different dimensions"
                 )
             elif self[submeshnames[i]].dimension == 2:
@@ -195,7 +195,7 @@ class Mesh(dict):
                     else:
                         pass
 
-                elif "bottom" in submeshnames[i] or "top" in submeshnames[i + 1]:
+                elif "top" in submeshnames[i] or "bottom" in submeshnames[i + 1]:
                     # Make sure that the tb edges are aligned
                     if (
                         self[submeshnames[i]].edges_tb[-1]
