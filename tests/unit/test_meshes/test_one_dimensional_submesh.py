@@ -35,6 +35,13 @@ class TestSubMesh1D:
         assert mesh.tabs["negative tab"] == "left"
         assert mesh.tabs["positive tab"] == "right"
 
+    def test_ghost_cell_top_bottom_error(self):
+        edges = np.linspace(0, 1, 10)
+        tabs = {"negative": {"z_centre": 0}, "positive": {"z_centre": 1}}
+        mesh = pybamm.SubMesh1D(edges, None, tabs=tabs)
+        with pytest.raises(NotImplementedError, match="left and right ghost cells"):
+            mesh.create_ghost_cell("top")
+
     def test_exceptions(self):
         edges = np.linspace(0, 1, 10)
         tabs = {"negative": {"z_centre": 0.2}, "positive": {"z_centre": 1}}
