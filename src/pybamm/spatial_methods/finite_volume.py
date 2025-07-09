@@ -868,8 +868,12 @@ class FiniteVolume(pybamm.SpatialMethod):
         if bcs is None:
             bcs = {}
 
-        extrap_order_gradient = self.options["extrapolation"]["order"]["gradient"]
-        extrap_order_value = self.options["extrapolation"]["order"]["value"]
+        extrap_order_gradient = (
+            symbol.order or self.options["extrapolation"]["order"]["gradient"]
+        )
+        extrap_order_value = (
+            symbol.order or self.options["extrapolation"]["order"]["value"]
+        )
         use_bcs = self.options["extrapolation"]["use bcs"]
 
         nodes = submesh.nodes

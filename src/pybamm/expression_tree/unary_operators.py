@@ -1043,10 +1043,14 @@ class BoundaryValue(BoundaryOperator):
         The variable whose boundary value to take
     side : str
         Which side to take the boundary value on ("left" or "right")
+    order : str, None
+        The order of the boundary gradient. If None, the order is determined by the
+        spatial method. Can be "constant", "linear" or "quadratic".
     """
 
-    def __init__(self, child, side):
+    def __init__(self, child, side, order=None):
         super().__init__("boundary value", child, side)
+        self.order = order
 
     def _unary_new_copy(self, child, perform_simplifications: bool = True):
         """
@@ -1056,9 +1060,9 @@ class BoundaryValue(BoundaryOperator):
         creating a BoundaryValue object.
         """
         if perform_simplifications:
-            return boundary_value(child, self.side)
+            return boundary_value(child, self.side, self.order)
         else:
-            return BoundaryValue(child, self.side)
+            return BoundaryValue(child, self.side, self.order)
 
     def _sympy_operator(self, child):
         """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
@@ -1126,10 +1130,14 @@ class BoundaryGradient(BoundaryOperator):
         The variable whose boundary flux to take
     side : str
         Which side to take the boundary flux on ("left" or "right")
+    order : str, None
+        The order of the boundary gradient. If None, the order is determined by the
+        spatial method. Can be "constant", "linear" or "quadratic".
     """
 
-    def __init__(self, child, side):
+    def __init__(self, child, side, order=None):
         super().__init__("boundary flux", child, side)
+        self.order = order
 
 
 class EvaluateAt(SpatialOperator):
@@ -1400,7 +1408,7 @@ def surf(symbol):
     return boundary_value(symbol, "right")
 
 
-def boundary_value(symbol, side):
+def boundary_value(symbol, side, order=None):
     """
     convenience function for creating a :class:`pybamm.BoundaryValue`
 
@@ -1439,15 +1447,15 @@ def boundary_value(symbol, side):
         return pybamm.PrimaryBroadcast(boundary_child, symbol.secondary_domain)
     # Otherwise, calculate boundary value
     else:
-        return BoundaryValue(symbol, side)
+        return BoundaryValue(symbol, side, order)
 
 
-def boundary_gradient(symbol, side):
+def boundary_gradient(symbol, side, order=None):
     # Gradient of a broadcast is zero
     if isinstance(symbol, pybamm.Broadcast):
         return 0 * symbol.reduce_one_dimension()
     else:
-        return BoundaryGradient(symbol, side)
+        return BoundaryGradient(symbol, side, order)
 
 
 def sign(symbol):
