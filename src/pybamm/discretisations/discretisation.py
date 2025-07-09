@@ -872,13 +872,9 @@ class Discretisation:
                 if isinstance(disc_left, pybamm.VectorField) or isinstance(
                     disc_right, pybamm.VectorField
                 ):
-                    if isinstance(disc_left, pybamm.VectorField) and not isinstance(
-                        disc_right, pybamm.VectorField
-                    ):
+                    if not isinstance(disc_right, pybamm.VectorField):
                         disc_right = pybamm.VectorField(disc_right, disc_right)
-                    elif isinstance(disc_right, pybamm.VectorField) and not isinstance(
-                        disc_left, pybamm.VectorField
-                    ):
+                    if not isinstance(disc_left, pybamm.VectorField):
                         disc_left = pybamm.VectorField(disc_left, disc_left)
                     else:  # both are vector fields already
                         pass

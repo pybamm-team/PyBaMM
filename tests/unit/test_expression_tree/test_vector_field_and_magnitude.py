@@ -14,8 +14,10 @@ class TestVectorFieldAndMagnitude:
         symbol_lr = pybamm.Scalar(1)
         symbol_tb = pybamm.Scalar(2)
         vector_field = pybamm.VectorField(symbol_lr, symbol_tb)
-        vf_plus_one = vector_field + pybamm.Scalar(1)
-        one_plus_vf = pybamm.Scalar(1) + vector_field
+        # using constant increases coverage due to non-simplification of constants
+        one = pybamm.Constant(1, "one")
+        vf_plus_one = vector_field + one
+        one_plus_vf = one + vector_field
         magnitude_lr = pybamm.Magnitude(vector_field, "lr")
         magnitude_tb = pybamm.Magnitude(vector_field, "tb")
         negative_vf = -vector_field
@@ -31,8 +33,12 @@ class TestVectorFieldAndMagnitude:
         assert vf_plus_one_processed == pybamm.VectorField(
             pybamm.Scalar(2), pybamm.Scalar(3)
         )
-        assert vf_plus_one.create_copy() == vf_plus_one
+        assert vector_field.create_copy() == vector_field
+
         assert one_plus_vf_processed == pybamm.VectorField(
+            pybamm.Scalar(2), pybamm.Scalar(3)
+        )
+        assert vf_plus_one_processed == pybamm.VectorField(
             pybamm.Scalar(2), pybamm.Scalar(3)
         )
         assert vf_processed == pybamm.VectorField(pybamm.Scalar(1), pybamm.Scalar(2))
@@ -56,3 +62,6 @@ class TestVectorFieldAndMagnitude:
             vf_evaluates_on_edges.evaluates_on_edges("primary")
 
         assert magnitude_lr.new_copy([vector_field]) == magnitude_lr
+
+        with pytest.raises(ValueError, match="Invalid direction"):
+            disc.process_symbol(pybamm.Magnitude(vector_field, "asdf"))

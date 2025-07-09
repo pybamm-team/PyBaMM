@@ -276,6 +276,10 @@ class TestFiniteVolume2D:
         result_none = spatial_method.upwind_or_downwind(
             var, var_disc, boundary_conditions, None, None
         )
+        symbol = pybamm.UpwindDownwind2D(var, None, None)
+        disc.bcs = boundary_conditions
+        symbol_disc = disc.process_symbol(symbol)
+        assert result_none == symbol_disc
 
         # Check that result is a VectorField
         assert isinstance(result_none, pybamm.VectorField)
