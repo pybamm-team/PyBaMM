@@ -2,6 +2,7 @@
 
 ## Features
 
+- Allow for overriding the spatial method's extrapolation and for using constant extrapolation of boundary values ([#5107](https://github.com/pybamm-team/PyBaMM/pull/5107))
 - Creates `BaseProcessedVariable` to enable object combination when adding solutions together ([#5076](https://github.com/pybamm-team/PyBaMM/pull/5076))
 - Added a `Constant` symbol for named constants. This is a subclass of `Scalar` and is used to represent named constants such as the gas constant. This avoids constants being simplified out when constructing expressions. ([#5070](https://github.com/pybamm-team/PyBaMM/pull/5070))
 - Generalise `pybamm.DiscreteTimeSum` to allow it to be embedded in other expressions ([#5044](https://github.com/pybamm-team/PyBaMM/pull/5044))
