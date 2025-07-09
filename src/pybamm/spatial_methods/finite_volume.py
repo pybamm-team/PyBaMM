@@ -857,9 +857,9 @@ class FiniteVolume(pybamm.SpatialMethod):
         """
         submesh = self.mesh[child.domain]
         if side == "left":
-            return pybamm.Scalar(submesh.nodes[0] - submesh.edges[0])
+            return pybamm.Scalar(submesh.d_nodes[0])
         elif side == "right":
-            return pybamm.Scalar(submesh.edges[-1] - submesh.nodes[-1])
+            return pybamm.Scalar(submesh.d_nodes[-1])
         else:
             raise ValueError(f"Invalid side: {side}")
 

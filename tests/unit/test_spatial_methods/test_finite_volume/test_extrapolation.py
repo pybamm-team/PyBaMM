@@ -841,8 +841,8 @@ class TestExtrapolation:
         submesh = mesh["domain"]
 
         # Calculate expected values
-        expected_left = submesh.nodes[0] - submesh.edges[0]
-        expected_right = submesh.edges[-1] - submesh.nodes[-1]
+        expected_left = submesh.d_nodes[0]
+        expected_right = submesh.d_nodes[-1]
 
         # Test that the discretized symbols return the correct values
         np.testing.assert_allclose(

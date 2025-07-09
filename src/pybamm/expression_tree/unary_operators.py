@@ -1087,7 +1087,7 @@ class BoundaryValue(BoundaryOperator):
 
 class BoundaryMeshSize(BoundaryOperator):
     """
-    A node in the expression tree which gets the distance between the boundary of a variable's domain and the edge of the domain.
+    A node in the expression tree which gets the width of the control volume at the boundary of a variable's domain.
 
     Parameters
     ----------
