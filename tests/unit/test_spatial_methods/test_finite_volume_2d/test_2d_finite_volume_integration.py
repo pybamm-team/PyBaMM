@@ -70,6 +70,49 @@ class TestFiniteVolumeIntegration:
             atol=1e-6,
         )
 
+    def test_area_integral(self):
+        mesh = get_mesh_for_testing_2d()
+        spatial_methods = {"macroscale": pybamm.FiniteVolume2D()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        var = pybamm.Variable(
+            "var", domain=["negative electrode", "separator", "positive electrode"]
+        )
+        disc.set_variable_slices([var])
+        x = pybamm.SpatialVariable(
+            "x",
+            ["negative electrode", "separator", "positive electrode"],
+            direction="lr",
+        )
+        z = pybamm.SpatialVariable(
+            "z",
+            ["negative electrode", "separator", "positive electrode"],
+            direction="tb",
+        )
+        symbol_x_z = pybamm.Integral(var, [z, x])
+        symbol_z_x = pybamm.Integral(var, [x, z])
+        disc_symbol_x_z = disc.process_symbol(symbol_x_z)
+        disc_symbol_z_x = disc.process_symbol(symbol_z_x)
+        submesh = mesh[("negative electrode", "separator", "positive electrode")]
+        LR, TB = np.meshgrid(submesh.nodes_lr, submesh.nodes_tb)
+        lr = LR.flatten()
+        tb = TB.flatten()
+        ln = mesh["negative electrode"].edges_lr[-1]
+        ls = mesh["separator"].edges_lr[-1] - ln
+        lp = mesh["positive electrode"].edges_lr[-1] - (ln + ls)
+        l_tb = mesh["negative electrode"].edges_tb[-1]
+        np.testing.assert_allclose(
+            disc_symbol_x_z.evaluate(None, y=lr),
+            l_tb * (ln + ls + lp) ** 2 / 2,
+            rtol=1e-7,
+            atol=1e-6,
+        )
+        np.testing.assert_allclose(
+            disc_symbol_z_x.evaluate(None, y=tb),
+            l_tb * (ln + ls + lp) ** 2 / 2,
+            rtol=1e-7,
+            atol=1e-6,
+        )
+
     def test_boundary_integral(self):
         # create discretisation
         mesh = get_mesh_for_testing_2d()

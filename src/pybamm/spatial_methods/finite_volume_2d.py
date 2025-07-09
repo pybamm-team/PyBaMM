@@ -232,7 +232,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                 )
             else:
                 one_dimensional_matrix = self.one_dimensional_integral_matrix(
-                    child, dir_2
+                    child, dir_1
                 )
                 integration_matrix = one_dimensional_matrix @ integration_matrix
         else:

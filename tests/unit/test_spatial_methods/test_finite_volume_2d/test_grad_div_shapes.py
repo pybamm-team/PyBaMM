@@ -3,6 +3,7 @@
 #
 
 import numpy as np
+import pytest
 
 import pybamm
 from tests import (
@@ -664,3 +665,17 @@ class TestFiniteVolume2DGradDiv:
             expected_jump * np.ones(submesh_n.npts_tb),
             rtol=1e-6,
         )
+
+    def test_grad_direction_error(self):
+        mesh = get_mesh_for_testing_2d()
+        spatial_methods = {"macroscale": pybamm.FiniteVolume2D()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        var = pybamm.Variable(
+            "var", domain=["negative electrode", "separator", "positive electrode"]
+        )
+        disc_var = disc.set_variable_slices([var])
+        symbol = pybamm.Gradient(var)
+        spatial_method = pybamm.FiniteVolume2D()
+        spatial_method.build(mesh)
+        with pytest.raises(ValueError, match="Direction asdf not supported"):
+            spatial_method._gradient(symbol, disc_var, None, direction="asdf")

@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 import pybamm
-from tests import get_mesh_for_testing_2d
+from tests import get_mesh_for_testing, get_mesh_for_testing_2d
 
 
 class TestFiniteVolume2D:
@@ -98,6 +98,27 @@ class TestFiniteVolume2D:
         LR, TB = np.meshgrid(submesh.nodes_lr, submesh.nodes_tb)
         np.testing.assert_array_equal(x3_disc.evaluate().flatten(), LR.flatten())
         np.testing.assert_array_equal(x4_disc.evaluate().flatten(), TB.flatten())
+
+        # test invalid direction
+        with pytest.raises(ValueError, match="Direction asdf not supported"):
+            disc.process_symbol(
+                pybamm.SpatialVariable("q", ["negative electrode"], direction="asdf")
+            )
+
+        x_edges = pybamm.SpatialVariable(
+            "x_edges", ["negative electrode", "separator"], direction="lr"
+        )
+        x_edges._evaluates_on_edges = lambda _: True
+        x_edges_disc = disc.process_symbol(x_edges)
+        LR, TB = np.meshgrid(submesh.edges_lr, submesh.edges_tb)
+        np.testing.assert_array_equal(x_edges_disc.evaluate().flatten(), LR.flatten())
+
+        mesh_1d = get_mesh_for_testing()
+        spatial_methods_1d = {"macroscale": pybamm.FiniteVolume2D()}
+        disc_1d = pybamm.Discretisation(mesh_1d, spatial_methods_1d)
+        x_1d = pybamm.SpatialVariable("x_1d", ["negative electrode"], direction="lr")
+        with pytest.raises(ValueError, match="Spatial variable x_1d is not in 2D"):
+            disc_1d.process_symbol(x_1d)
 
     def test_process_binary_operators(self):
         # Setup mesh and discretisation
