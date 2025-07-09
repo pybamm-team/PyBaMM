@@ -927,10 +927,14 @@ class TestExtrapolation:
         )
 
         # Test with symbolic submesh
-        geometry_symbolic = {"domain": {"x": {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}}
+        geometry_symbolic = {
+            "domain": {"x": {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
+        }
         submesh_types_symbolic = {"domain": pybamm.SymbolicUniform1DSubMesh}
         var_pts_symbolic = {"x": 8}
-        mesh_symbolic = pybamm.Mesh(geometry_symbolic, submesh_types_symbolic, var_pts_symbolic)
+        mesh_symbolic = pybamm.Mesh(
+            geometry_symbolic, submesh_types_symbolic, var_pts_symbolic
+        )
 
         spatial_methods_symbolic = {"domain": pybamm.FiniteVolume(method_options)}
         disc_symbolic = pybamm.Discretisation(mesh_symbolic, spatial_methods_symbolic)
@@ -940,8 +944,12 @@ class TestExtrapolation:
         right_mesh_size_symbolic = pybamm.BoundaryMeshSize(var_symbolic, "right")
 
         disc_symbolic.set_variable_slices([var_symbolic])
-        left_mesh_size_disc_symbolic = disc_symbolic.process_symbol(left_mesh_size_symbolic)
-        right_mesh_size_disc_symbolic = disc_symbolic.process_symbol(right_mesh_size_symbolic)
+        left_mesh_size_disc_symbolic = disc_symbolic.process_symbol(
+            left_mesh_size_symbolic
+        )
+        right_mesh_size_disc_symbolic = disc_symbolic.process_symbol(
+            right_mesh_size_symbolic
+        )
 
         submesh_symbolic = mesh_symbolic["domain"]
         expected_left_symbolic = submesh_symbolic.d_nodes[0]
