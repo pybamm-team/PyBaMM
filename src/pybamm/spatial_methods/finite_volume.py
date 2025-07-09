@@ -857,11 +857,18 @@ class FiniteVolume(pybamm.SpatialMethod):
         """
         submesh = self.mesh[child.domain]
         if side == "left":
-            return pybamm.Scalar(submesh.d_nodes[0])
+            if hasattr(submesh, "length"):
+                val = submesh.length * pybamm.Scalar(submesh.d_nodes[0])
+            else:
+                val = pybamm.Scalar(submesh.d_nodes[0])
         elif side == "right":
-            return pybamm.Scalar(submesh.d_nodes[-1])
+            if hasattr(submesh, "length"):
+                val = submesh.length * pybamm.Scalar(submesh.d_nodes[-1])
+            else:
+                val = pybamm.Scalar(submesh.d_nodes[-1])
         else:
             raise ValueError(f"Invalid side: {side}")
+        return val
 
     def boundary_value_or_flux(self, symbol, discretised_child, bcs=None):
         """
