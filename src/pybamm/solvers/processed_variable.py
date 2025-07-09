@@ -1249,7 +1249,7 @@ class ProcessedVariableUnstructured(ProcessedVariable):
         output_shape = x.shape
 
         # If t was a single value (scalar), data_at_t is 1D array of (n_nodes)
-        if isinstance(t, (int, float)):
+        if isinstance(t, int | float):
             spatial_interpolator = LinearNDInterpolator(
                 points=node_coords, values=data_at_t, fill_value=fill_value
             )
@@ -1262,7 +1262,7 @@ class ProcessedVariableUnstructured(ProcessedVariable):
                 )
                 result[:, i] = spatial_interpolator(eval_points)
 
-        final_shape = (*output_shape, len(t) if not isinstance(t, (int, float)) else 1)
+        final_shape = (*output_shape, len(t) if not isinstance(t, int | float) else 1)
         return result.reshape(final_shape).squeeze()
 
 

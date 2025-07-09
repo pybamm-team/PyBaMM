@@ -42,10 +42,17 @@ def plot_cross_section(
     **kwargs
         Additional keyword arguments passed to matplotlib.imshow.
     """
+
+    model = solution.all_models[0]
+    if model.options.get("dimensionality") != 3:
+        raise TypeError(
+            "plot_cross_section requires a solution from a model with 3D "
+            "dimensionality."
+        )
+
     if t is None:
         t = solution.t[-1]
 
-    model = solution.all_models[0]
     geometry = model.options["cell geometry"]
     var_3d = solution[variable]
     mesh = var_3d.mesh
