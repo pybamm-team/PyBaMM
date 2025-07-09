@@ -67,8 +67,13 @@ class TestMPM:
         modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
         modeltest.test_all(skip_output_tests=True)
 
-    def test_wycisk_ocp(self):
-        options = {"open-circuit potential": ("Wycisk", "single")}
+    def test_one_state_differential_capacity_hysteresis_ocp(self):
+        options = {
+            "open-circuit potential": (
+                "one-state differential capacity hysteresis",
+                "single",
+            )
+        }
         model = pybamm.lithium_ion.MPM(options)
         parameter_values = pybamm.ParameterValues("Chen2020")
         parameter_values = pybamm.get_size_distribution_parameters(parameter_values)
@@ -91,8 +96,8 @@ class TestMPM:
         modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
         modeltest.test_all(skip_output_tests=True)
 
-    def test_axen_ocp(self):
-        options = {"open-circuit potential": ("Axen", "single")}
+    def test_one_state_hysteresis_ocp(self):
+        options = {"open-circuit potential": ("one-state hysteresis", "single")}
         model = pybamm.lithium_ion.MPM(options)
         parameter_values = pybamm.ParameterValues("Chen2020")
         parameter_values = pybamm.get_size_distribution_parameters(parameter_values)
