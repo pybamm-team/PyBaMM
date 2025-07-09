@@ -287,5 +287,6 @@ class BasicSPM_with_3DThermal(BaseModel):
 
         self.boundary_conditions[T] = {}
         for face, h_coeff in face_params.items():
-            flux_expr = -h_coeff * (pybamm.boundary_value(T, face) - T_amb)
-            self.boundary_conditions[T][face] = (flux_expr, "Neumann")
+            C = -h_coeff
+            D = h_coeff * T_amb
+            self.boundary_conditions[T][face] = (C * T + D, "Neumann")
