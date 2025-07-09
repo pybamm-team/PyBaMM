@@ -868,8 +868,8 @@ class TestExtrapolation:
             right_mesh_size_disc = disc.process_symbol(right_mesh_size)
 
             submesh = mesh["domain"]
-            expected_left = submesh.nodes[0] - submesh.edges[0]
-            expected_right = submesh.edges[-1] - submesh.nodes[-1]
+            expected_left = submesh.d_nodes[0]
+            expected_right = submesh.d_nodes[-1]
 
             np.testing.assert_allclose(
                 left_mesh_size_disc.evaluate(), expected_left, rtol=1e-15, atol=1e-15
@@ -910,12 +910,8 @@ class TestExtrapolation:
         )
 
         submesh_nonuniform = mesh_nonuniform["negative particle"]
-        expected_left_nonuniform = (
-            submesh_nonuniform.nodes[0] - submesh_nonuniform.edges[0]
-        )
-        expected_right_nonuniform = (
-            submesh_nonuniform.edges[-1] - submesh_nonuniform.nodes[-1]
-        )
+        expected_left_nonuniform = submesh_nonuniform.d_nodes[0]
+        expected_right_nonuniform = submesh_nonuniform.d_nodes[-1]
 
         np.testing.assert_allclose(
             left_mesh_size_disc_nonuniform.evaluate(),
