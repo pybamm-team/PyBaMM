@@ -967,6 +967,17 @@ class Discretisation:
                     child, vector_type=symbol.vector_type
                 )
 
+            elif isinstance(symbol, pybamm.OneDimensionalIntegral):
+                child_spatial_method = self.spatial_methods[
+                    symbol.integration_domain[0]
+                ]
+                return child_spatial_method.one_dimensional_integral(
+                    symbol,
+                    child,
+                    disc_child,
+                    symbol.integration_domain,
+                    symbol.direction,
+                )
             elif isinstance(symbol, pybamm.BoundaryIntegral):
                 return child_spatial_method.boundary_integral(
                     child, disc_child, symbol.region

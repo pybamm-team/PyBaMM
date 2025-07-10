@@ -939,6 +939,43 @@ class BoundaryIntegral(SpatialOperator):
         return False
 
 
+class OneDimensionalIntegral(BoundaryIntegral):
+    """
+    A node in the expression tree which integrates a variable over the edges of a domain.
+    Similar to BoundaryIntegral, but rather than taking the boundary value of the child,
+    it assumes that the boundary value
+    """
+
+    def __init__(self, child, integration_domain, direction):
+        # boundary integral removes domains
+        self.direction = direction
+        self.integration_domain = integration_domain
+        super().__init__(child)
+        name = "edge integral over "
+        name += direction
+        name += str(integration_domain)
+        self.name = name
+        self.domains = {}
+
+    def set_id(self):
+        """See :meth:`pybamm.Symbol.set_id()`"""
+        self._id = hash(
+            (self.__class__, self.name, self.children[0].id, *tuple(self.domain))
+        )
+
+    def _unary_new_copy(self, child, perform_simplifications=True):
+        """See :meth:`UnaryOperator._unary_new_copy()`."""
+        return self.__class__(child, region=self.region)
+
+    def _evaluate_for_shape(self):
+        """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""
+        return pybamm.evaluate_for_shape_using_domain(self.domains)
+
+    def _evaluates_on_edges(self, dimension: str) -> bool:
+        """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
+        return False
+
+
 class DeltaFunction(SpatialOperator):
     """
     Delta function. Currently can only be implemented at the edge of a domain.

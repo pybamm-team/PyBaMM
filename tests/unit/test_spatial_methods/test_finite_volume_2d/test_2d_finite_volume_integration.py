@@ -201,3 +201,64 @@ class TestFiniteVolumeIntegration:
 
         result_bottom_x = boundary_integral_bottom_disc.evaluate(None, x_values)
         np.testing.assert_allclose(result_bottom_x, 0.5, rtol=1e-6)
+
+    def test_edge_integral(self):
+        mesh = get_mesh_for_testing_2d()
+        spatial_methods = {"macroscale": pybamm.FiniteVolume2D()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        var = pybamm.Variable(
+            "var", domain=["negative electrode", "separator", "positive electrode"]
+        )
+        disc.set_variable_slices([var])
+        x = pybamm.SpatialVariable(
+            "x",
+            ["negative electrode", "separator", "positive electrode"],
+            direction="lr",
+        )
+        z = pybamm.SpatialVariable(
+            "z",
+            ["negative electrode", "separator", "positive electrode"],
+            direction="tb",
+        )
+        x_boundary_value = pybamm.BoundaryValue(x, "bottom")
+        z_boundary_value = pybamm.BoundaryValue(z, "left")
+        symbol_x = pybamm.OneDimensionalIntegral(
+            x_boundary_value,
+            integration_domain=[
+                "negative electrode",
+                "separator",
+                "positive electrode",
+            ],
+            direction="lr",
+        )
+        symbol_z = pybamm.OneDimensionalIntegral(
+            z_boundary_value,
+            integration_domain=[
+                "negative electrode",
+                "separator",
+                "positive electrode",
+            ],
+            direction="tb",
+        )
+        disc_symbol_x = disc.process_symbol(symbol_x)
+        disc_symbol_z = disc.process_symbol(symbol_z)
+        submesh = mesh[("negative electrode", "separator", "positive electrode")]
+        LR, TB = np.meshgrid(submesh.nodes_lr, submesh.nodes_tb)
+        lr = LR.flatten()
+        tb = TB.flatten()
+        l_tb = mesh["negative electrode"].edges_tb[-1]
+        ln = mesh["negative electrode"].edges_lr[-1]
+        ls = mesh["separator"].edges_lr[-1] - ln
+        lp = mesh["positive electrode"].edges_lr[-1] - (ln + ls)
+        np.testing.assert_allclose(
+            disc_symbol_x.evaluate(None, y=lr),
+            (ln + ls + lp) ** 2 / 2,
+            rtol=1e-7,
+            atol=1e-6,
+        )
+        np.testing.assert_allclose(
+            disc_symbol_z.evaluate(None, y=tb),
+            (l_tb) ** 2 / 2,
+            rtol=1e-7,
+            atol=1e-6,
+        )

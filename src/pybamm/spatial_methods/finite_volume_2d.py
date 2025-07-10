@@ -310,12 +310,13 @@ class FiniteVolume2D(pybamm.SpatialMethod):
 
         return sub_matrix
 
-    def one_dimensional_integral_matrix(self, child, direction):
+    def one_dimensional_integral_matrix(self, child, direction, domains=None):
         """
         One-dimensional integral matrix for finite volumes in the appropriate domain.
         Equivalent to int(y) = sum(y[i] * dx[i])
         """
-        submesh = self.mesh[child.domain]
+        domain = domains or child.domain
+        submesh = self.mesh[domain]
         domains = child.domains
 
         # Create vector of ones for primary domain submesh
@@ -330,6 +331,30 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         matrix = kron(eye(second_dim_repeats), d_edges)
 
         return matrix
+
+    def one_dimensional_integral(
+        self, symbol, child, discretised_child, integration_domain, direction
+    ):
+        """
+        Edge integral operator, implemented as int(grad(.))
+        See :meth:`pybamm.SpatialMethod.edge_integral`
+        """
+        if direction == "lr":
+            direction = "tb"
+        elif direction == "tb":
+            direction = "lr"
+        else:
+            raise ValueError(f"Direction {direction} not supported")
+        if child.evaluates_on_edges("primary"):
+            discretised_child = self.edge_to_node(
+                discretised_child, direction=direction
+            )
+        integral_matrix = self.one_dimensional_integral_matrix(
+            child, direction, domains=integration_domain
+        )
+        second_dim_repeats = self._get_auxiliary_domain_repeats(child.domains)
+        integral_matrix = kron(eye(second_dim_repeats), integral_matrix)
+        return pybamm.Matrix(integral_matrix) @ discretised_child
 
     def boundary_integral(self, child, discretised_child, region):
         """
@@ -1238,7 +1263,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                     raise NotImplementedError
 
             elif side_first == "top":
-                if extrap_order_value == "linear" or extrap_order_value == "quadratic":
+                if extrap_order_value == "linear":
                     if use_bcs and pybamm.has_bc_of_form(
                         child, side_first, bcs, "Neumann"
                     ):
@@ -1277,7 +1302,32 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                     ):
                         raise NotImplementedError
                     else:
-                        raise NotImplementedError
+                        dx0 = dx0_tb
+                        dx1 = dx1_tb
+                        dx2 = dx2_tb
+                        a = (dx0 + dx1) * (dx0 + dx1 + dx2) / (dx1 * (dx1 + dx2))
+                        b = -dx0 * (dx0 + dx1 + dx2) / (dx1 * dx2)
+                        c = dx0 * (dx0 + dx1) / (dx2 * (dx1 + dx2))
+                        row_indices = np.arange(0, n_lr)
+                        col_indices_0 = np.arange(0, n_lr)
+                        col_indices_1 = np.arange(n_lr, 2 * n_lr)
+                        col_indices_2 = np.arange(2 * n_lr, 3 * n_lr)
+                        vals_0 = a * np.ones(n_lr)
+                        vals_1 = b * np.ones(n_lr)
+                        vals_2 = c * np.ones(n_lr)
+                        sub_matrix = csr_matrix(
+                            (
+                                np.hstack([vals_0, vals_1, vals_2]),
+                                (
+                                    np.hstack([row_indices, row_indices, row_indices]),
+                                    np.hstack(
+                                        [col_indices_0, col_indices_1, col_indices_2]
+                                    ),
+                                ),
+                            ),
+                            shape=(n_lr, n_lr * n_tb),
+                        )
+                        additive = pybamm.Scalar(0)
                 else:
                     raise NotImplementedError
 
