@@ -64,6 +64,37 @@ class TestFiniteVolume2D:
         with pytest.raises(ValueError, match="method"):
             fin_vol.shift(c, "shift key", "bad method")
 
+        # Edge to node
+        LR, TB = np.meshgrid(
+            mesh[("negative electrode", "separator", "positive electrode")].nodes_lr,
+            mesh[("negative electrode", "separator", "positive electrode")].nodes_tb,
+        )
+        lr = LR.flatten()
+        tb = TB.flatten()
+        bcs = {
+            var_concat: {
+                "left": (pybamm.Scalar(0), "Dirichlet"),
+                "right": (pybamm.Scalar(1), "Dirichlet"),
+                "top": (pybamm.Scalar(0), "Dirichlet"),
+                "bottom": (pybamm.Scalar(1), "Dirichlet"),
+            }
+        }
+        disc.bcs = bcs
+        symbol = pybamm.Gradient(var_concat)
+        disc_symbol = disc.process_symbol(symbol)
+        left_grad = fin_vol.edge_to_node(
+            disc_symbol.lr_field, method="arithmetic", direction="lr"
+        )
+        right_grad = fin_vol.edge_to_node(
+            disc_symbol.tb_field, method="arithmetic", direction="tb"
+        )
+        np.testing.assert_array_almost_equal(
+            left_grad.evaluate(None, lr).flatten(), np.ones(n_lr * n_tb)
+        )
+        np.testing.assert_array_almost_equal(
+            right_grad.evaluate(None, tb).flatten(), np.ones(n_lr * n_tb)
+        )
+
     def test_discretise_spatial_variable(self):
         # Create discretisation
         mesh = get_mesh_for_testing_2d()
@@ -134,6 +165,7 @@ class TestFiniteVolume2D:
         LR, TB = np.meshgrid(submesh.nodes_lr, submesh.nodes_tb)
         for eqn in [
             var * pybamm.grad(var),
+            pybamm.grad(var) * var,
             var**2 * pybamm.grad(var),
             var * pybamm.grad(var) ** 2,
             var * (pybamm.grad(var) + 2),
@@ -803,3 +835,174 @@ class TestFiniteVolume2D:
         result_mixed = eqn_disc_mixed.evaluate(None, test_y)
         assert result_mixed is not None
         assert result_mixed.shape[0] == submesh.npts
+
+        # Test vector Dirichlet boundary conditions for left and right sides
+        # (similar to existing top/bottom vector BCs)
+        boundary_conditions_lr_vector = {
+            phi: {
+                "top": (pybamm.Scalar(0), "Dirichlet"),
+                "bottom": (pybamm.Scalar(0), "Dirichlet"),
+                "left": (
+                    pybamm.Vector(np.ones(submesh.npts_tb)),
+                    "Dirichlet",
+                ),  # Vector BC depends on z coordinate
+                "right": (
+                    pybamm.Vector(np.ones(submesh.npts_tb)),
+                    "Dirichlet",
+                ),  # Vector BC depends on z coordinate
+            }
+        }
+
+        disc.bcs = boundary_conditions_lr_vector
+        eqn_disc_lr_vector = disc.process_symbol(eqn)
+
+        # This should work with vector Dirichlet BCs on left and right sides
+        result_lr_vector = eqn_disc_lr_vector.evaluate(None, test_y)
+        assert result_lr_vector is not None
+        assert result_lr_vector.shape[0] == submesh.npts
+
+        # Test BoundaryGradient with spatial variables for left and right sides
+        left_bc_gradient = pybamm.BoundaryGradient(z, "left")
+        right_bc_gradient = pybamm.BoundaryGradient(z, "right")
+
+        left_bc_disc = disc.process_symbol(left_bc_gradient)
+        right_bc_disc = disc.process_symbol(right_bc_gradient)
+
+        # Verify that boundary gradients are properly processed for left/right
+        assert left_bc_disc is not None
+        assert right_bc_disc is not None
+
+        # Test all sides with vector Dirichlet boundary conditions
+        boundary_conditions_all_vector = {
+            phi: {
+                "top": (
+                    pybamm.Vector(np.ones(submesh.npts_lr)),
+                    "Dirichlet",
+                ),  # Vector BC depends on x coordinate
+                "bottom": (
+                    pybamm.Vector(np.ones(submesh.npts_lr)),
+                    "Dirichlet",
+                ),  # Vector BC depends on x coordinate
+                "left": (
+                    pybamm.Vector(np.ones(submesh.npts_tb)),
+                    "Dirichlet",
+                ),  # Vector BC depends on z coordinate
+                "right": (
+                    pybamm.Vector(np.ones(submesh.npts_tb)),
+                    "Dirichlet",
+                ),  # Vector BC depends on z coordinate
+            }
+        }
+
+        disc.bcs = boundary_conditions_all_vector
+        eqn_disc_all_vector = disc.process_symbol(eqn)
+
+        # This should work with vector Dirichlet BCs on all sides
+        result_all_vector = eqn_disc_all_vector.evaluate(None, test_y)
+        assert result_all_vector is not None
+        assert result_all_vector.shape[0] == submesh.npts
+
+        # Test mixed vector boundary conditions with complex expressions
+        boundary_conditions_complex_lr = {
+            phi: {
+                "top": (
+                    pybamm.Vector(np.ones(submesh.npts_lr)) * 2,
+                    "Dirichlet",
+                ),  # Vector BC with scaling
+                "bottom": (pybamm.Scalar(0), "Dirichlet"),
+                "left": (
+                    pybamm.Vector(np.ones(submesh.npts_tb)) + pybamm.Scalar(0.5),
+                    "Dirichlet",
+                ),  # Vector + scalar BC
+                "right": (
+                    pybamm.Vector(np.ones(submesh.npts_tb)) * pybamm.Scalar(1.5),
+                    "Dirichlet",
+                ),  # Vector * scalar BC
+            }
+        }
+
+        disc.bcs = boundary_conditions_complex_lr
+        eqn_disc_complex_lr = disc.process_symbol(eqn)
+
+        # This should work with complex vector expressions as boundary conditions
+        result_complex_lr = eqn_disc_complex_lr.evaluate(None, test_y)
+        assert result_complex_lr is not None
+        assert result_complex_lr.shape[0] == submesh.npts
+
+        # Test vector Neumann boundary conditions for top and bottom sides
+        boundary_conditions_tb_neumann = {
+            phi: {
+                "top": (
+                    pybamm.Vector(np.ones(submesh.npts_lr)),
+                    "Neumann",
+                ),  # Vector Neumann BC for top side
+                "bottom": (
+                    pybamm.Vector(np.ones(submesh.npts_lr)),
+                    "Neumann",
+                ),  # Vector Neumann BC for bottom side
+                "left": (pybamm.Scalar(0), "Dirichlet"),
+                "right": (pybamm.Scalar(1), "Dirichlet"),
+            }
+        }
+
+        disc.bcs = boundary_conditions_tb_neumann
+        eqn_disc_tb_neumann = disc.process_symbol(eqn)
+
+        # This should work with vector Neumann BCs on top and bottom sides
+        result_tb_neumann = eqn_disc_tb_neumann.evaluate(None, test_y)
+        assert result_tb_neumann is not None
+        assert result_tb_neumann.shape[0] == submesh.npts
+
+        # Test all sides with vector Neumann boundary conditions
+        boundary_conditions_all_neumann = {
+            phi: {
+                "top": (
+                    pybamm.Vector(np.ones(submesh.npts_lr)),
+                    "Neumann",
+                ),  # Vector Neumann BC depends on x coordinate
+                "bottom": (
+                    pybamm.Vector(np.ones(submesh.npts_lr)),
+                    "Neumann",
+                ),  # Vector Neumann BC depends on x coordinate
+                "left": (
+                    pybamm.Vector(np.ones(submesh.npts_tb)),
+                    "Neumann",
+                ),  # Vector Neumann BC depends on z coordinate
+                "right": (
+                    pybamm.Vector(np.ones(submesh.npts_tb)),
+                    "Neumann",
+                ),  # Vector Neumann BC depends on z coordinate
+            }
+        }
+
+        disc.bcs = boundary_conditions_all_neumann
+        eqn_disc_all_neumann = disc.process_symbol(eqn)
+
+        # This should work with vector Neumann BCs on all sides
+        result_all_neumann = eqn_disc_all_neumann.evaluate(None, test_y)
+        assert result_all_neumann is not None
+        assert result_all_neumann.shape[0] == submesh.npts
+
+        # Test mixed vector Neumann boundary conditions with complex expressions
+        boundary_conditions_complex_neumann = {
+            phi: {
+                "top": (
+                    pybamm.Vector(np.ones(submesh.npts_lr)) * 2,
+                    "Neumann",
+                ),  # Vector Neumann BC with scaling
+                "bottom": (
+                    pybamm.Vector(np.ones(submesh.npts_lr)) + pybamm.Scalar(0.5),
+                    "Neumann",
+                ),  # Vector + scalar Neumann BC
+                "left": (pybamm.Scalar(0), "Dirichlet"),
+                "right": (pybamm.Scalar(1), "Dirichlet"),
+            }
+        }
+
+        disc.bcs = boundary_conditions_complex_neumann
+        eqn_disc_complex_neumann = disc.process_symbol(eqn)
+
+        # This should work with complex vector Neumann expressions as boundary conditions
+        result_complex_neumann = eqn_disc_complex_neumann.evaluate(None, test_y)
+        assert result_complex_neumann is not None
+        assert result_complex_neumann.shape[0] == submesh.npts

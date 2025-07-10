@@ -186,19 +186,47 @@ class TestExtrapolationFiniteVolume2D:
             }
         }
 
+        bcs_LR_neumann = {
+            var_LR: {
+                "left": (pybamm.Scalar(1.0), "Neumann"),
+                "right": (pybamm.Scalar(1.0), "Neumann"),
+                "top": (pybamm.Scalar(0.0), "Neumann"),
+                "bottom": (pybamm.Scalar(0.0), "Neumann"),
+            }
+        }
+
+        bcs_TB_neumann = {
+            var_TB: {
+                "left": (pybamm.Scalar(0.0), "Neumann"),
+                "right": (pybamm.Scalar(0.0), "Neumann"),
+                "top": (pybamm.Scalar(1.0), "Neumann"),
+                "bottom": (pybamm.Scalar(1.0), "Neumann"),
+            }
+        }
+
         # Test boundary gradients for linear x function
         discretised_gradients_LR = {}
+        discretised_gradients_LR_neumann = {}
         for direction in directions_LR:
             disc_LR.bcs = bcs_LR
             discretised_gradients_LR[direction] = disc_LR.process_symbol(
                 pybamm.BoundaryGradient(var_LR, direction)
             )
+            disc_LR.bcs = bcs_LR_neumann
+            discretised_gradients_LR_neumann[direction] = disc_LR.process_symbol(
+                pybamm.BoundaryGradient(var_LR, direction)
+            )
 
         # Test boundary gradients for linear z function
         discretised_gradients_TB = {}
+        discretised_gradients_TB_neumann = {}
         for direction in directions_TB:
             disc_TB.bcs = bcs_TB
             discretised_gradients_TB[direction] = disc_TB.process_symbol(
+                pybamm.BoundaryGradient(var_TB, direction)
+            )
+            disc_TB.bcs = bcs_TB_neumann
+            discretised_gradients_TB_neumann[direction] = disc_TB.process_symbol(
                 pybamm.BoundaryGradient(var_TB, direction)
             )
 
@@ -208,11 +236,23 @@ class TestExtrapolationFiniteVolume2D:
                 discretised_gradients_LR[direction].evaluate(y=LR.flatten()).flatten(),
                 solutions_LR[direction],
             )
+            np.testing.assert_array_almost_equal(
+                discretised_gradients_LR_neumann[direction]
+                .evaluate(y=LR.flatten())
+                .flatten(),
+                solutions_LR[direction],
+            )
 
         # Check results for linear z function
         for direction in directions_TB:
             np.testing.assert_array_almost_equal(
                 discretised_gradients_TB[direction].evaluate(y=TB.flatten()).flatten(),
+                solutions_TB[direction],
+            )
+            np.testing.assert_array_almost_equal(
+                discretised_gradients_TB_neumann[direction]
+                .evaluate(y=TB.flatten())
+                .flatten(),
                 solutions_TB[direction],
             )
 
