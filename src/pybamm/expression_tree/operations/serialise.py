@@ -318,9 +318,7 @@ class Serialise:
         }
 
         if filename is None:
-            filename = (
-                model_json["name"] + "_" + datetime.now().strftime("%Y_%m_%d-%I_%M_%p")
-            )
+            filename = model.name + "_" + datetime.now().strftime("%Y_%m_%d-%p%I_%M")
 
         with open(filename + ".json", "w") as f:
             json.dump(model_json, f, indent=2, default=Serialise._json_encoder)
@@ -386,12 +384,14 @@ class Serialise:
             for name, expr in model_data["variables"].items()
         }
 
-        param_values = pybamm.ParameterValues(
-            {
-                k: Serialise.convert_symbol_from_json(v)
-                for k, v in model_data["parameters"].items()
-            }
-        )
+        param_dict = {}
+        for k, v in model_data["parameters"].items():
+            if isinstance(v, dict):
+                param_dict[k] = Serialise.convert_symbol_from_json(v)
+            else:
+                param_dict[k] = v
+
+        param_values = pybamm.ParameterValues(param_dict)
 
         return model, param_values
 
@@ -577,9 +577,14 @@ class Serialise:
 
         for k, v in parameter_values.items():
             if callable(v):
-                parameter_values_dict[k] = Serialise.convert_symbol_to_json(
-                    Serialise.convert_function_to_symbolic_expression(v, k)
-                )
+                num_inputs = len(inspect.signature(v).parameters)
+                inputs = [f"{k}.input_{i}" for i in range(num_inputs)]
+                symbol = Serialise.convert_function_to_symbolic_expression(v, k)
+                parameter_values_dict[k] = {
+                    "type": "function",
+                    "inputs": inputs,
+                    "symbolic_expression": Serialise.convert_symbol_to_json(symbol),
+                }
             else:
                 parameter_values_dict[k] = Serialise.convert_symbol_to_json(v)
 
@@ -760,7 +765,7 @@ class Serialise:
         # For myfun(x, y), this creates ["myfun.input_0", "myfun.input_1"]
         func_name = name or func.__name__
         sym_inputs = [
-            pybamm.Parameter(f"{func_name}.input_{i}") for i in range(num_inputs)
+            pybamm.InputParameter(f"{func_name}.input_{i}") for i in range(num_inputs)
         ]
 
         # Evaluate the function with symbolic inputs to get symbolic expression
@@ -783,16 +788,25 @@ class Serialise:
         pybamm.Symbol
             The reconstructed PyBaMM symbolic expression
         """
-        if isinstance(json_data, numbers.Number | list):
+        if isinstance(json_data, (str | float | int | bool)):
             return json_data
+
+        if json_data is None:
+            return None
+
+        if json_data.get("type") == "function":
+            return Serialise.convert_symbol_from_json(json_data["symbolic_expression"])
+
         symbol_type = json_data.get("type")
 
         if symbol_type == "Parameter":
-            return pybamm.Parameter(json_data["name"])
-
+            return pybamm.Parameter(
+                json_data["name"],
+            )
         elif symbol_type == "Scalar":
             return pybamm.Scalar(json_data["value"])
-
+        elif symbol_type == "InputParameter":
+            return pybamm.InputParameter(json_data["name"])
         elif symbol_type == "Interpolant":
             return pybamm.Interpolant(
                 [np.array(x) for x in json_data["x"]],
@@ -833,13 +847,9 @@ class Serialise:
         elif symbol_type == "Time":
             return pybamm.t
         elif symbol_type == "Variable":
-            raw_bounds = json_data.get("bounds", [-float("inf"), float("inf")])
-            # Ensure bounds are pybamm.Symbol (usually pybamm.Scalar)
             bounds = tuple(
-                b
-                if isinstance(b, pybamm.Symbol)
-                else Serialise.convert_symbol_from_json(b)
-                for b in raw_bounds
+                Serialise.convert_symbol_from_json(b)
+                for b in json_data.get("bounds", [-float("inf"), float("inf")])
             )
             return pybamm.Variable(
                 json_data["name"],
@@ -854,12 +864,6 @@ class Serialise:
                 ),
                 bounds=bounds,
             )
-        elif symbol_type == "Parameter":
-            return pybamm.Parameter(
-                json_data["name"],
-                domains=json_data.get("domains", {}),
-            )
-
         elif symbol_type == "SpatialVariable":
             return pybamm.SpatialVariable(
                 json_data["name"],
