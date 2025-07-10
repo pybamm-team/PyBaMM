@@ -260,6 +260,14 @@ class TestFiniteVolume2D:
             eqn_disc.evaluate(None, LR.flatten())
             eqn_disc.evaluate(None, TB.flatten())
 
+        for eqn in [
+            var * pybamm.Magnitude(pybamm.grad(var), "lr"),
+            pybamm.Magnitude(pybamm.grad(var), "lr") * var,
+        ]:
+            eqn_disc = disc.process_symbol(eqn)
+            eqn_disc.evaluate(None, LR.flatten())
+            eqn_disc.evaluate(None, TB.flatten())
+
     def test_upwind_downwind_2d(self):
         """
         Test upwind and downwind operators in 2D finite volume method

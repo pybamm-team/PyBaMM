@@ -202,7 +202,41 @@ class TestFiniteVolumeIntegration:
         result_bottom_x = boundary_integral_bottom_disc.evaluate(None, x_values)
         np.testing.assert_allclose(result_bottom_x, 0.5, rtol=1e-6)
 
-    def test_edge_integral(self):
+        # Error
+        with pytest.raises(ValueError, match="not supported"):
+            boundary_integral_bottom = disc.process_symbol(
+                pybamm.BoundaryIntegral(var, region="tab")
+            )
+
+        bcs = {
+            var: {
+                "left": (
+                    "Neumann",
+                    pybamm.Scalar(0),
+                ),
+                "right": (
+                    "Neumann",
+                    pybamm.Scalar(0),
+                ),
+                "top": (
+                    "Neumann",
+                    pybamm.Scalar(0),
+                ),
+                "bottom": (
+                    "Neumann",
+                    pybamm.Scalar(0),
+                ),
+            }
+        }
+        disc.bcs = bcs
+        symbol = pybamm.Magnitude(pybamm.Gradient(var), "tb")
+        boundary_integral_left = pybamm.BoundaryIntegral(symbol, region="bottom")
+        # Fix this test
+        # boundary_integral_left_disc = disc.process_symbol(boundary_integral_left)
+        # result_left = boundary_integral_left_disc.evaluate(None, y=np.ones(submesh.npts))
+        # np.testing.assert_allclose(result_left, 0.0, rtol=1e-10)
+
+    def test_one_dimensional_integral(self):
         mesh = get_mesh_for_testing_2d()
         spatial_methods = {"macroscale": pybamm.FiniteVolume2D()}
         disc = pybamm.Discretisation(mesh, spatial_methods)
@@ -262,3 +296,31 @@ class TestFiniteVolumeIntegration:
             rtol=1e-7,
             atol=1e-6,
         )
+
+        with pytest.raises(ValueError, match="not supported"):
+            disc.process_symbol(
+                pybamm.OneDimensionalIntegral(
+                    pybamm.Scalar(0),
+                    integration_domain=[
+                        "negative electrode",
+                        "separator",
+                        "positive electrode",
+                    ],
+                    direction="asdf",
+                )
+            )
+
+        child_edges = pybamm.Vector(submesh.edges_lr)
+        child_edges._evaluates_on_edges = lambda _: True
+        with pytest.raises(NotImplementedError, match="not implemented"):
+            disc.process_symbol(
+                pybamm.OneDimensionalIntegral(
+                    child_edges,
+                    integration_domain=[
+                        "negative electrode",
+                        "separator",
+                        "positive electrode",
+                    ],
+                    direction="lr",
+                )
+            )

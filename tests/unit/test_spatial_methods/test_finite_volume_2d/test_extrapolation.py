@@ -7,14 +7,18 @@ from tests.shared import get_mesh_for_testing_2d
 
 class TestExtrapolationFiniteVolume2D:
     @pytest.mark.parametrize("use_bcs", [True, False])
-    def test_boundary_value_finite_volume_2d(self, use_bcs):
+    @pytest.mark.parametrize("order", ["linear", "quadratic"])
+    def test_boundary_value_finite_volume_2d(self, use_bcs, order):
+        if order == "quadratic" and use_bcs:
+            # Not implemented
+            return
         # Create discretisation
         mesh = get_mesh_for_testing_2d()
         spatial_methods = {
             "macroscale": pybamm.FiniteVolume2D(
                 {
                     "extrapolation": {
-                        "order": {"gradient": "linear", "value": "linear"},
+                        "order": {"gradient": "linear", "value": order},
                         "use bcs": use_bcs,
                     }
                 }
@@ -113,14 +117,15 @@ class TestExtrapolationFiniteVolume2D:
             )
 
     @pytest.mark.parametrize("use_bcs", [True, False])
-    def test_boundary_gradient_finite_volume_2d(self, use_bcs):
+    @pytest.mark.parametrize("order", ["linear", "quadratic"])
+    def test_boundary_gradient_finite_volume_2d(self, use_bcs, order):
         # Create discretisation
         mesh = get_mesh_for_testing_2d()
         spatial_methods = {
             "macroscale": pybamm.FiniteVolume2D(
                 {
                     "extrapolation": {
-                        "order": {"gradient": "quadratic", "value": "linear"},
+                        "order": {"gradient": order, "value": "linear"},
                         "use bcs": use_bcs,
                     }
                 }

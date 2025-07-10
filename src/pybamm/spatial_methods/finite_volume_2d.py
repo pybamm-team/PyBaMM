@@ -346,8 +346,8 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         else:
             raise ValueError(f"Direction {direction} not supported")
         if child.evaluates_on_edges("primary"):
-            discretised_child = self.edge_to_node(
-                discretised_child, direction=direction
+            raise NotImplementedError(
+                "One-dimensional integral of a variable on edges is not implemented"
             )
         integral_matrix = self.one_dimensional_integral_matrix(
             child, direction, domains=integration_domain
@@ -1370,7 +1370,33 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                     ):
                         raise NotImplementedError
                     else:
-                        raise NotImplementedError
+                        dxN = dxN_tb
+                        dxNm1 = dxNm1_tb
+                        dxNm2 = dxNm2_tb
+                        a = (
+                            (dxN + dxNm1)
+                            * (dxN + dxNm1 + dxNm2)
+                            / (dxNm1 * (dxNm1 + dxNm2))
+                        )
+                        b = -dxN * (dxN + dxNm1 + dxNm2) / (dxNm1 * dxNm2)
+                        c = dxN * (dxN + dxNm1) / (dxNm2 * (dxNm1 + dxNm2))
+
+                        rows = np.arange(0, n_lr)
+
+                        cols_Nm2 = np.arange((n_tb - 3) * n_lr, (n_tb - 2) * n_lr)
+                        cols_Nm1 = np.arange((n_tb - 2) * n_lr, (n_tb - 1) * n_lr)
+                        cols_N = np.arange((n_tb - 1) * n_lr, n_tb * n_lr)
+                        rows = np.concatenate([rows, rows, rows])
+                        cols = np.concatenate([cols_Nm2, cols_Nm1, cols_N])
+                        vals_Nm2 = c * np.ones(n_lr)
+                        vals_Nm1 = b * np.ones(n_lr)
+                        vals_N = a * np.ones(n_lr)
+                        vals = np.concatenate([vals_Nm2, vals_Nm1, vals_N])
+                        sub_matrix = csr_matrix(
+                            (vals, (rows, cols)),
+                            shape=(n_lr, n_lr * n_tb),
+                        )
+                        additive = pybamm.Scalar(0)
                 else:
                     raise NotImplementedError
 
@@ -1659,30 +1685,10 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                     )
                     additive = pybamm.Scalar(0)
 
-            if side_second == "top":
-                dx0 = dx0_tb
-                dx1 = dx1_tb
-                row_indices = [0, 0]
-                col_indices = [0, 1]
-                vals = [-1 / dx1, 1 / dx1]
-                sub_matrix_second = csr_matrix(
-                    (vals, (row_indices, col_indices)), shape=(1, n_tb)
+            if side_second is not None:
+                raise ValueError(
+                    "BoundaryGradient only supports one side, such as `top`, `bottom`, `left`, or `right` in FiniteVolume2D"
                 )
-                sub_matrix = sub_matrix_second @ sub_matrix
-            elif side_second == "bottom":
-                dxN = dxN_tb
-                dxNm1 = dxNm1_tb
-                row_indices = [0, 0]
-                col_indices = [n_tb - 2, n_tb - 1]
-                vals = [-1 / dxNm1, 1 / dxNm1]
-                sub_matrix_second = csr_matrix(
-                    (vals, (row_indices, col_indices)), shape=(1, n_tb)
-                )
-                sub_matrix = sub_matrix_second @ sub_matrix
-            elif side_second is None:
-                pass
-            else:
-                raise ValueError("side_second must be 'top' or 'bottom'")
         # Generate full matrix from the submatrix
         # Convert to csr_matrix so that we can take the index (row-slicing), which is
         # not supported by the default kron format
@@ -1898,47 +1904,27 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         # using the harmonic mean if the left child is a gradient (i.e. this
         # binary operator represents a flux)
         elif left_evaluates_on_edges and not right_evaluates_on_edges:
-            if isinstance(left, pybamm.Gradient):
-                method = "harmonic"
-                disc_right_lr = self.node_to_edge(
-                    disc_right, method=method, direction="lr"
+            if not isinstance(left, pybamm.Magnitude):
+                raise NotImplementedError(
+                    "Symbols that evaluate on edges must either be a vector field or a magnitude of a vector field"
                 )
-                disc_right_tb = self.node_to_edge(
-                    disc_right, method=method, direction="tb"
-                )
-                disc_right = pybamm.VectorField(disc_right_lr, disc_right_tb)
-            else:
-                method = "arithmetic"
-                disc_right_lr = self.node_to_edge(
-                    disc_right, method=method, direction="lr"
-                )
-                disc_right_tb = self.node_to_edge(
-                    disc_right, method=method, direction="tb"
-                )
-                disc_right = pybamm.VectorField(disc_right_lr, disc_right_tb)
+            method = "arithmetic"
+            direction = left.direction
+            disc_right = self.node_to_edge(
+                disc_right, method=method, direction=direction
+            )
 
         # If only right child evaluates on edges, map left child onto edges
         # using the harmonic mean if the right child is a gradient (i.e. this
         # binary operator represents a flux)
         elif right_evaluates_on_edges and not left_evaluates_on_edges:
-            if isinstance(right, pybamm.Gradient):
-                method = "harmonic"
-                disc_left_lr = self.node_to_edge(
-                    disc_left, method=method, direction="lr"
+            if not isinstance(right, pybamm.Magnitude):
+                raise NotImplementedError(
+                    "Symbols that evaluate on edges must either be a vector field or a magnitude of a vector field"
                 )
-                disc_left_tb = self.node_to_edge(
-                    disc_left, method=method, direction="tb"
-                )
-                disc_left = pybamm.VectorField(disc_left_lr, disc_left_tb)
-            else:
-                method = "arithmetic"
-                disc_left_lr = self.node_to_edge(
-                    disc_left, method=method, direction="lr"
-                )
-                disc_left_tb = self.node_to_edge(
-                    disc_left, method=method, direction="tb"
-                )
-                disc_left = pybamm.VectorField(disc_left_lr, disc_left_tb)
+            method = "arithmetic"
+            direction = right.direction
+            disc_left = self.node_to_edge(disc_left, method=method, direction=direction)
 
         # Return new binary operator with appropriate class
         out = pybamm.simplify_if_constant(bin_op.create_copy([disc_left, disc_right]))
