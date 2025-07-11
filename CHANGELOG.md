@@ -16,8 +16,10 @@
 - Fixed a bug that ignored the default duration of drive cycles for `CRate` steps and a bug that overwrote custom `period` arguments for drive cycles. ([#5090](https://github.com/pybamm-team/PyBaMM/pull/5090))
 - Converts sensitivities to numpy objects, fixing bug in `DiscreteTimeSum` sensitivity calculation ([#5037](https://github.com/pybamm-team/PyBaMM/pull/5037))
 - Raises error if `pybamm.Interpolant` given 1D x values that are not strictly increasing ([#5061](https://github.com/pybamm-team/PyBaMM/pull/5061))
+- Fixes inconsistency of the returned shape of a `pybamm.DiscreteTimeSum` variable depending on `output_variables` being set or not. ([#5098](https://github.com/pybamm-team/PyBaMM/pull/5098))
 - Fixed a bug where simplifications cause heavisides to evaluate as booleans ([#4893](https://github.com/pybamm-team/PyBaMM/pull/4893))
 - Fixed a bug in the `WyciskOpenCircuitPotential` model where the differential capacity was not being evaluated correctly. ([#4893](https://github.com/pybamm-team/PyBaMM/pull/4893))
+
 
 ## Breaking changes
 
