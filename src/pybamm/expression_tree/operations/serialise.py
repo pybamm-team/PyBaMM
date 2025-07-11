@@ -577,14 +577,9 @@ class Serialise:
 
         for k, v in parameter_values.items():
             if callable(v):
-                num_inputs = len(inspect.signature(v).parameters)
-                inputs = [f"{k}.input_{i}" for i in range(num_inputs)]
-                symbol = Serialise.convert_function_to_symbolic_expression(v, k)
-                parameter_values_dict[k] = {
-                    "type": "function",
-                    "inputs": inputs,
-                    "symbolic_expression": Serialise.convert_symbol_to_json(symbol),
-                }
+                parameter_values_dict[k] = Serialise.convert_symbol_to_json(
+                    Serialise.convert_function_to_symbolic_expression(v, k)
+                )
             else:
                 parameter_values_dict[k] = Serialise.convert_symbol_to_json(v)
 
@@ -662,7 +657,10 @@ class Serialise:
                 "type": "Variable",
                 "name": symbol.name,
                 "domains": symbol.domains,
-                "bounds": symbol.bounds,
+                "bounds": [
+                    Serialise.convert_symbol_to_json(symbol.bounds[0]),
+                    Serialise.convert_symbol_to_json(symbol.bounds[1]),
+                ],
             }
 
         elif isinstance(symbol, pybamm.ConcatenationVariable):
@@ -727,12 +725,14 @@ class Serialise:
             # Generic fallback for other symbols with children
             json_dict = {
                 "type": symbol.__class__.__name__,
-                "name": symbol.name,
                 "domains": symbol.domains,
                 "children": [
                     Serialise.convert_symbol_to_json(c) for c in symbol.children
                 ],
             }
+            if hasattr(symbol, "name"):
+                json_dict["name"] = symbol.name
+
         else:
             raise ValueError(
                 f"Error processing '{symbol.name}'. Unknown symbol type: {type(symbol)}"
@@ -765,7 +765,7 @@ class Serialise:
         # For myfun(x, y), this creates ["myfun.input_0", "myfun.input_1"]
         func_name = name or func.__name__
         sym_inputs = [
-            pybamm.InputParameter(f"{func_name}.input_{i}") for i in range(num_inputs)
+            pybamm.Parameter(f"{func_name}.input_{i}") for i in range(num_inputs)
         ]
 
         # Evaluate the function with symbolic inputs to get symbolic expression
@@ -788,14 +788,14 @@ class Serialise:
         pybamm.Symbol
             The reconstructed PyBaMM symbolic expression
         """
-        if isinstance(json_data, (str | float | int | bool)):
+        if isinstance(json_data, float | int | bool):
             return json_data
+
+        if isinstance(json_data, str):
+            raise ValueError(f"Unexpected raw string in JSON: {json_data}")
 
         if json_data is None:
             return None
-
-        if json_data.get("type") == "function":
-            return Serialise.convert_symbol_from_json(json_data["symbolic_expression"])
 
         symbol_type = json_data.get("type")
 
@@ -817,16 +817,15 @@ class Serialise:
                 entries_string=json_data["entries_string"],
             )
         elif symbol_type == "FunctionParameter":
-            inputs = {
-                k: Serialise.convert_symbol_from_json(v)
-                for k, v in json_data.get("inputs", {}).items()
-            }
-            diff_variable = json_data.get("diff_variable")
+            diff_variable = json_data["diff_variable"]
             if diff_variable is not None:
                 diff_variable = Serialise.convert_symbol_from_json(diff_variable)
             return pybamm.FunctionParameter(
                 json_data["name"],
-                inputs,
+                {
+                    k: Serialise.convert_symbol_from_json(v)
+                    for k, v in json_data["inputs"].items()
+                },
                 diff_variable=diff_variable,
             )
         elif symbol_type == "PrimaryBroadcast":
