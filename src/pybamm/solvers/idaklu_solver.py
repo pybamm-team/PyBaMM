@@ -1,4 +1,5 @@
 # mypy: ignore-errors
+import math
 import numbers
 import warnings
 
@@ -653,15 +654,16 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         start_idx = 0
         for var in self.output_variables:
-            var_length, base_variables = self._get_variable_info(model, var)
-            end_idx = start_idx + var_length
+            var_nnz, var_shape, base_variables = self._get_variable_info(model, var)
+            end_idx = start_idx + var_nnz
             data = sol.y[:, start_idx:end_idx]
             time_indep = False
 
             # handle any time integral variables
             if var in self._time_integral_vars:
+                # time integral variables should all be 1D
                 tiv = self._time_integral_vars[var]
-                data = tiv.postfix(data, sol.t, inputs_dict)
+                data = tiv.postfix(data.reshape(-1), sol.t, inputs_dict)
                 time_indep = True
 
             newsol._variables[var] = pybamm.ProcessedVariableComputed(
@@ -675,32 +677,38 @@ class IDAKLUSolver(pybamm.BaseSolver):
             # Add sensitivities
             newsol[var]._sensitivities = {}
             if sensitivity_params:
-                for param_idx, param in enumerate(sensitivity_params):
-                    sens_data = sol.yS[:, start_idx:end_idx, param_idx]
-                    if var in self._time_integral_vars:
-                        tiv = self._time_integral_vars[var]
-                        sens_data = tiv.postfix_sensitivities(
-                            var, data, sol.t, inputs_dict, sens_data
-                        )
-                    newsol[var].add_sensitivity(
-                        param,
-                        [sens_data],
+                if var_nnz != math.prod(var_shape):
+                    raise pybamm.SolverError(
+                        f"Sensitivity of sparse variables not supported. {var} is a sparse variable with number of non-zeros {var_nnz} and shape {var_shape}"
                     )
-
-                # Stack individual sensitivities for `all` entry
-                newsol[var]._sensitivities["all"] = np.stack(
-                    [newsol[var].sensitivities[p] for p in sensitivity_params], axis=-1
+                sens_data = sol.yS[:, start_idx:end_idx, :]
+                sens_data = sens_data.reshape(
+                    number_of_timesteps * (end_idx - start_idx),
+                    number_of_sensitivity_parameters,
                 )
+                if var in self._time_integral_vars:
+                    tiv = self._time_integral_vars[var]
+                    sens_data = tiv.postfix_sensitivities(
+                        var, data, sol.t, inputs_dict, sens_data
+                    )
+                newsol[var]._sensitivities["all"] = sens_data
 
-            start_idx += var_length
+                # Add the individual sensitivity
+                for i, name in enumerate(inputs_dict.keys()):
+                    sens = newsol[var]._sensitivities["all"][:, i : i + 1].reshape(-1)
+                    newsol[var]._sensitivities[name] = sens
+
+            start_idx += var_nnz
         return newsol
 
     def _get_variable_info(self, model, var) -> tuple:
         """Get variable length and base variables based on model format."""
         if model.convert_to_format == "casadi":
             base_var = self._setup["var_fcns"][var]
-            var_length = base_var(0.0, 0.0, 0.0).sparsity().nnz()
-            return var_length, [base_var]
+            var_eval = base_var(0.0, 0.0, 0.0)
+            var_nnz = var_eval.sparsity().nnz()
+            var_shape = var_eval.shape
+            return var_nnz, var_shape, [base_var]
         else:  # pragma: no cover
             raise pybamm.SolverError(
                 f"Unsupported evaluation engine for convert_to_format="

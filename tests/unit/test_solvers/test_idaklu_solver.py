@@ -389,7 +389,7 @@ class TestIDAKLUSolver:
         # get the sensitivities for the variable
         d2uda = sol["2u"].sensitivities["a"]
         np.testing.assert_allclose(
-            2 * dyda_ida[0:200:2],
+            2 * dyda_ida[0:200:2].flatten(),
             d2uda,
             rtol=1e-7,
             atol=1e-6,
@@ -886,6 +886,29 @@ class TestIDAKLUSolver:
         # Check Solution is marked
         assert sol.variables_returned is True
 
+    def test_with_sparse_output_variables_and_sensitivities(self):
+        # Construct a model and solve for all variables, then test
+        # the 'output_variables' option for each variable in turn, confirming
+        # equivalence
+        input_parameters = {  # Sensitivities dictionary
+            "Current function [A]": 0.222,
+            "Separator porosity": 0.3,
+        }
+
+        # construct model
+        solver = pybamm.IDAKLUSolver(
+            output_variables=["Negative particle flux [mol.m-2.s-1]"],
+        )
+        model = pybamm.lithium_ion.DFN()
+        params = model.default_parameter_values
+        params.update({"Current function [A]": "[input]"})
+        sim = pybamm.Simulation(model, solver=solver, parameter_values=params)
+        with pytest.raises(
+            pybamm.SolverError,
+            match="Sensitivity of sparse variables not supported",
+        ):
+            sim.solve([0, 100], inputs=input_parameters, calculate_sensitivities=True)
+
     def test_with_output_variables_and_sensitivities(self):
         # Construct a model and solve for all variables, then test
         # the 'output_variables' option for each variable in turn, confirming
@@ -922,7 +945,6 @@ class TestIDAKLUSolver:
             "Voltage [V]",
             "Time [min]",
             "x [m]",
-            "Negative particle flux [mol.m-2.s-1]",
             "Throughput capacity [A.h]",  # ExplicitTimeIntegral
         ]
 
