@@ -27,6 +27,7 @@ class NewmanTobias(DFN):
         options = options or {}
         if "particle" not in options:
             options["particle"] = "uniform profile"
+        self.x_average = True
 
         super().__init__(options, name, build)
 
