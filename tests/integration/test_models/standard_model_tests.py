@@ -143,7 +143,7 @@ class StandardModelTest:
         )
         output_neg = sol_neg[output_name].data
         fd = (np.array(output_plus) - np.array(output_neg)) / h
-        fd = fd.transpose().reshape(-1, 1)
+        fd = fd.transpose().reshape(-1)
         np.testing.assert_allclose(
             output_sens,
             fd,

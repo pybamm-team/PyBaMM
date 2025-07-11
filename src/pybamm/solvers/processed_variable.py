@@ -477,11 +477,8 @@ class ProcessedVariable(BaseProcessedVariable):
         sensitivities = {"all": S_var}
 
         # Add the individual sensitivity
-        start = 0
-        for name, inp in self.all_inputs[0].items():
-            end = start + inp.shape[0]
-            sensitivities[name] = S_var[:, start:end]
-            start = end
+        for i, name in enumerate(self.all_inputs[0].keys()):
+            sensitivities[name] = S_var[:, i : i + 1].reshape(-1)
 
         # Save attribute
         self._sensitivities = sensitivities
