@@ -261,7 +261,7 @@ class Serialise:
         )
 
     @staticmethod
-    def save_custom_model(model, param_values=None, filename=None):
+    def save_custom_model(model, filename=None):
         """
         Save the custom PyBaMM model and parameters to a JSON file.
         """
@@ -308,9 +308,6 @@ class Serialise:
                 }
                 for event in getattr(model, "events", [])
             ],
-            "parameters": Serialise.convert_parameter_values_to_json(param_values)
-            if param_values is not None
-            else {},
             "variables": {
                 str(name): Serialise.convert_symbol_to_json(expr)
                 for name, expr in getattr(model, "variables", {}).items()
@@ -384,16 +381,7 @@ class Serialise:
             for name, expr in model_data["variables"].items()
         }
 
-        param_dict = {}
-        for k, v in model_data["parameters"].items():
-            if isinstance(v, dict):
-                param_dict[k] = Serialise.convert_symbol_from_json(v)
-            else:
-                param_dict[k] = v
-
-        param_values = pybamm.ParameterValues(param_dict)
-
-        return model, param_values
+        return model
 
     # Helper functions
 
@@ -558,36 +546,6 @@ class Serialise:
         else:
             return d
 
-    @staticmethod
-    def convert_parameter_values_to_json(parameter_values, filename=None):
-        """
-        Converts a ParameterValues object to a JSON-serializable dictionary and optionally
-        saves it to a file.
-
-        Parameters
-        ----------
-        parameter_values : ParameterValues
-            The ParameterValues object to convert
-
-        filename : str, optional
-            The filename to save the JSON file to. If not provided, the dictionary is
-            not saved.
-        """
-        parameter_values_dict = {}
-
-        for k, v in parameter_values.items():
-            if callable(v):
-                parameter_values_dict[k] = Serialise.convert_symbol_to_json(
-                    Serialise.convert_function_to_symbolic_expression(v, k)
-                )
-            else:
-                parameter_values_dict[k] = Serialise.convert_symbol_to_json(v)
-
-        if filename is not None:
-            with open(filename, "w") as f:
-                json.dump(parameter_values_dict, f, indent=2)
-
-        return parameter_values_dict
 
     @staticmethod
     def convert_symbol_to_json(symbol):
@@ -738,40 +696,6 @@ class Serialise:
                 f"Error processing '{symbol.name}'. Unknown symbol type: {type(symbol)}"
             )
         return json_dict
-
-    @staticmethod
-    def convert_function_to_symbolic_expression(func, name=None):
-        """
-        Converts a Python function to a PyBaMM symbolic expression
-
-        Parameters
-        ----------
-        func : callable
-            The Python function to convert
-
-        name : str, optional
-            The name of the function to use in the symbolic expression. If not provided,
-            the name of the function is used.
-
-        Returns
-        -------
-        pybamm.Symbol
-            The PyBaMM symbolic expression
-        """
-        # First, determine the number of inputs the function takes
-        num_inputs = len(inspect.signature(func).parameters)
-
-        # Create symbolic parameters for each input argument
-        # For myfun(x, y), this creates ["myfun.input_0", "myfun.input_1"]
-        func_name = name or func.__name__
-        sym_inputs = [
-            pybamm.Parameter(f"{func_name}.input_{i}") for i in range(num_inputs)
-        ]
-
-        # Evaluate the function with symbolic inputs to get symbolic expression
-        sym_output = func(*sym_inputs)
-
-        return sym_output
 
     @staticmethod
     def convert_symbol_from_json(json_data):

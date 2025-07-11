@@ -173,52 +173,6 @@ def test_unhandled_symbol_type_error():
     assert "Error processing 'not_a_symbol'. Unknown symbol type:" in str(e.value)
 
 
-def test_convert_parameter_values_to_json(tmp_path):
-    def my_func(x):
-        return x * 2
-
-    param_values = pybamm.ParameterValues(
-        {
-            "param1": pybamm.Scalar(42),
-            "param2": my_func,
-        }
-    )
-
-    result = Serialise.convert_parameter_values_to_json(param_values)
-
-    assert "param1" in result
-    assert "param2" in result
-
-    assert result["param1"]["type"] == "Scalar"
-    assert result["param1"]["value"] == 42
-
-    assert result["param2"]["type"] == "Multiplication"
-    assert result["param2"]["children"][1]["name"] == "param2.input_0"
-
-    # Test with file output
-    file_path = tmp_path / "params.json"
-    result = Serialise.convert_parameter_values_to_json(
-        param_values, filename=file_path
-    )
-
-    with open(file_path) as f:
-        data = json.load(f)
-
-    assert "param1" in data
-    assert data["param1"]["value"] == 42
-
-
-def test_convert_function_to_symbolic_expression():
-    def f(x, y):
-        return x + y
-
-    expr = Serialise.convert_function_to_symbolic_expression(f, name="f")
-
-    assert isinstance(expr, pybamm.Addition)
-    assert expr.children[0].name == "f.input_0"
-    assert expr.children[1].name == "f.input_1"
-
-
 def test_save_and_load_custom_model():
     model = pybamm.BaseModel(name="test_model")
     a = pybamm.Variable("a", domain="electrode")
@@ -233,7 +187,7 @@ def test_save_and_load_custom_model():
     param_values = pybamm.ParameterValues({"param1": pybamm.Scalar(5)})
 
     # save model
-    Serialise.save_custom_model(model, param_values, filename="test_model")
+    Serialise.save_custom_model(model, filename="test_model")
 
     # check json exists
     assert os.path.exists("test_model.json")
@@ -245,14 +199,13 @@ def test_save_and_load_custom_model():
     os.remove(filename)
 
     # load model
-    loaded_model, loaded_params = Serialise.load_custom_model("test_model.json")
+    loaded_model = Serialise.load_custom_model("test_model.json")
     os.remove("test_model.json")
 
     assert loaded_model.name == "test_model"
     assert isinstance(loaded_model.rhs, dict)
     assert next(iter(loaded_model.rhs.keys())).name == "a"
     assert next(iter(loaded_model.rhs.values())).name == "b"
-    assert loaded_params["param1"].value == 5
 
 
 def test_plotting_serialised_models():
@@ -264,7 +217,7 @@ def test_plotting_serialised_models():
         Serialise.save_custom_model(model, filename=name)
 
         # Load the model
-        loaded_model, loaded_params = Serialise.load_custom_model(
+        loaded_model= Serialise.load_custom_model(
             f"{name}.json", battery_model=pybamm.lithium_ion.BaseModel()
         )
 
