@@ -191,6 +191,9 @@ class BasicSPM_with_3DThermal(BaseModel):
         # Broadcast this uniform volumetric heat source to the entire 3D cell domain
         Q_source = pybamm.PrimaryBroadcast(Q_vol_avg, "cell")
 
+        # Wrap in source term to get the correct mass matrix
+        Q_source = pybamm.source(Q_source, T)
+
         # Define the 3D heat equation
         # Effective parameters are functions of temperature
         rho_c_p_eff = self.param.rho_c_p_eff(T)
@@ -286,7 +289,8 @@ class BasicSPM_with_3DThermal(BaseModel):
             )  # pragma: no cover
 
         self.boundary_conditions[T] = {}
+        lambda_eff = self.param.lambda_eff(T)
+
         for face, h_coeff in face_params.items():
-            C = -h_coeff
-            D = h_coeff * T_amb
-            self.boundary_conditions[T][face] = (C * T + D, "Neumann")
+            q_face = -h_coeff * (T - T_amb)
+            self.boundary_conditions[T][face] = (q_face / lambda_eff, "Neumann")
