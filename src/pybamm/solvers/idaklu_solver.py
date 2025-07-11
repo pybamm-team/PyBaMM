@@ -654,8 +654,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         start_idx = 0
         for var in self.output_variables:
-            var_length, var_shape, base_variables = self._get_variable_info(model, var)
-            end_idx = start_idx + var_length
+            var_nnz, var_shape, base_variables = self._get_variable_info(model, var)
+            end_idx = start_idx + var_nnz
             data = sol.y[:, start_idx:end_idx]
             time_indep = False
 
@@ -677,9 +677,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
             # Add sensitivities
             newsol[var]._sensitivities = {}
             if sensitivity_params:
-                if var_length != math.prod(var_shape):
+                if var_nnz != math.prod(var_shape):
                     raise pybamm.SolverError(
-                        f"Sensitivity of sparse variables not supported. {var} is a sparse variable with length {var_length} and shape {var_shape}"
+                        f"Sensitivity of sparse variables not supported. {var} is a sparse variable with number of non-zeros {var_nnz} and shape {var_shape}"
                     )
                 sens_data = sol.yS[:, start_idx:end_idx, :]
                 sens_data = sens_data.reshape(
@@ -698,7 +698,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                     sens = newsol[var]._sensitivities["all"][:, i : i + 1].reshape(-1)
                     newsol[var]._sensitivities[name] = sens
 
-            start_idx += var_length
+            start_idx += var_nnz
         return newsol
 
     def _get_variable_info(self, model, var) -> tuple:
@@ -706,9 +706,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
         if model.convert_to_format == "casadi":
             base_var = self._setup["var_fcns"][var]
             var_eval = base_var(0.0, 0.0, 0.0)
-            var_length = var_eval.sparsity().nnz()
+            var_nnz = var_eval.sparsity().nnz()
             var_shape = var_eval.shape
-            return var_length, var_shape, [base_var]
+            return var_nnz, var_shape, [base_var]
         else:  # pragma: no cover
             raise pybamm.SolverError(
                 f"Unsupported evaluation engine for convert_to_format="
