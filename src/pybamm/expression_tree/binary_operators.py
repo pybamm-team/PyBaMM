@@ -1121,11 +1121,11 @@ def multiply(
         return pybamm.zeros_like(Multiplication(left, right))
 
     # anything multiplied by a scalar one returns itself
-    if pybamm.is_scalar_one(left):
+    if pybamm.is_scalar_one(left) and not isinstance(right, _Heaviside):
         return right
 
     # anything multiplied by a scalar negative one returns negative itself
-    if pybamm.is_scalar_minus_one(left):
+    if pybamm.is_scalar_minus_one(left) and not isinstance(right, _Heaviside):
         return -right
 
     # Return constant if both sides are constant

@@ -1,8 +1,19 @@
 from .base_ocp import BaseOpenCircuitPotential
+from .base_hysteresis_ocp import BaseHysteresisOpenCircuitPotential
 from .single_ocp import SingleOpenCircuitPotential
 from .current_sigmoid_ocp import CurrentSigmoidOpenCircuitPotential
 from .msmr_ocp import MSMROpenCircuitPotential
-from .wycisk_ocp import WyciskOpenCircuitPotential
-from .axen_ocp import AxenOpenCircuitPotential
+from .one_state_differential_capacity_hysteresis_ocp import (
+    OneStateDifferentialCapacityHysteresisOpenCircuitPotential,
+)
+from .one_state_hysteresis_ocp import OneStateHysteresisOpenCircuitPotential
 
-__all__ = ['base_ocp', 'current_sigmoid_ocp', 'msmr_ocp', 'single_ocp', 'wycisk_ocp', 'axen_ocp']
+__all__ = [
+    "base_ocp",
+    "base_hysteresis_ocp",
+    "current_sigmoid_ocp",
+    "msmr_ocp",
+    "single_ocp",
+    "one_state_differential_capacity_hysteresis_ocp",
+    "one_state_hysteresis_ocp",
+]
