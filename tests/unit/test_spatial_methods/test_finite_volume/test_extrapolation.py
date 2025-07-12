@@ -808,3 +808,185 @@ class TestExtrapolation:
             extrap_pos_disc.evaluate(None, constant_y),
             extrap_right_disc.evaluate(None, constant_y),
         )
+
+    def test_boundary_mesh_size(self):
+        """Test BoundaryMeshSize functionality."""
+        # Create a simple 1D geometry
+        geometry = {"domain": {"x": {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}}
+        submesh_types = {"domain": pybamm.Uniform1DSubMesh}
+        var_pts = {"x": 5}
+        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+
+        method_options = {
+            "extrapolation": {
+                "order": {"gradient": "linear", "value": "linear"},
+                "use bcs": False,
+            }
+        }
+        spatial_methods = {"domain": pybamm.FiniteVolume(method_options)}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        # Create a variable
+        var = pybamm.Variable("var", domain="domain")
+
+        # Test left boundary mesh size
+        left_mesh_size = pybamm.BoundaryMeshSize(var, "left")
+        right_mesh_size = pybamm.BoundaryMeshSize(var, "right")
+
+        disc.set_variable_slices([var])
+        left_mesh_size_disc = disc.process_symbol(left_mesh_size)
+        right_mesh_size_disc = disc.process_symbol(right_mesh_size)
+
+        # Get the submesh for direct comparison
+        submesh = mesh["domain"]
+
+        # Calculate expected values
+        expected_left = submesh.d_nodes[0]
+        expected_right = submesh.d_nodes[-1]
+
+        # Test that the discretized symbols return the correct values
+        np.testing.assert_allclose(
+            left_mesh_size_disc.evaluate(), expected_left, rtol=1e-15, atol=1e-15
+        )
+        np.testing.assert_allclose(
+            right_mesh_size_disc.evaluate(), expected_right, rtol=1e-15, atol=1e-15
+        )
+
+        # Test with different mesh sizes
+        for npts in [10, 20, 50]:
+            var_pts = {"x": npts}
+            mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+            spatial_methods = {"domain": pybamm.FiniteVolume(method_options)}
+            disc = pybamm.Discretisation(mesh, spatial_methods)
+
+            var = pybamm.Variable("var", domain="domain")
+            left_mesh_size = pybamm.BoundaryMeshSize(var, "left")
+            right_mesh_size = pybamm.BoundaryMeshSize(var, "right")
+
+            disc.set_variable_slices([var])
+            left_mesh_size_disc = disc.process_symbol(left_mesh_size)
+            right_mesh_size_disc = disc.process_symbol(right_mesh_size)
+
+            submesh = mesh["domain"]
+            expected_left = submesh.d_nodes[0]
+            expected_right = submesh.d_nodes[-1]
+
+            np.testing.assert_allclose(
+                left_mesh_size_disc.evaluate(), expected_left, rtol=1e-15, atol=1e-15
+            )
+            np.testing.assert_allclose(
+                right_mesh_size_disc.evaluate(), expected_right, rtol=1e-15, atol=1e-15
+            )
+
+        # Test with non-uniform mesh
+        geometry_nonuniform = {
+            "negative particle": {"r_n": {"min": 0, "max": 1}},
+        }
+        submesh_types_nonuniform = {
+            "negative particle": pybamm.MeshGenerator(pybamm.Exponential1DSubMesh),
+        }
+        var_pts_nonuniform = {"r_n": 10}
+        mesh_nonuniform = pybamm.Mesh(
+            geometry_nonuniform, submesh_types_nonuniform, var_pts_nonuniform
+        )
+
+        spatial_methods_nonuniform = {
+            "negative particle": pybamm.FiniteVolume(method_options)
+        }
+        disc_nonuniform = pybamm.Discretisation(
+            mesh_nonuniform, spatial_methods_nonuniform
+        )
+
+        var_nonuniform = pybamm.Variable("var", domain="negative particle")
+        left_mesh_size_nonuniform = pybamm.BoundaryMeshSize(var_nonuniform, "left")
+        right_mesh_size_nonuniform = pybamm.BoundaryMeshSize(var_nonuniform, "right")
+
+        disc_nonuniform.set_variable_slices([var_nonuniform])
+        left_mesh_size_disc_nonuniform = disc_nonuniform.process_symbol(
+            left_mesh_size_nonuniform
+        )
+        right_mesh_size_disc_nonuniform = disc_nonuniform.process_symbol(
+            right_mesh_size_nonuniform
+        )
+
+        submesh_nonuniform = mesh_nonuniform["negative particle"]
+        expected_left_nonuniform = submesh_nonuniform.d_nodes[0]
+        expected_right_nonuniform = submesh_nonuniform.d_nodes[-1]
+
+        np.testing.assert_allclose(
+            left_mesh_size_disc_nonuniform.evaluate(),
+            expected_left_nonuniform,
+            rtol=1e-15,
+            atol=1e-15,
+        )
+        np.testing.assert_allclose(
+            right_mesh_size_disc_nonuniform.evaluate(),
+            expected_right_nonuniform,
+            rtol=1e-15,
+            atol=1e-15,
+        )
+
+        # Test with symbolic submesh
+        geometry_symbolic = {
+            "domain": {"x": {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
+        }
+        submesh_types_symbolic = {"domain": pybamm.SymbolicUniform1DSubMesh}
+        var_pts_symbolic = {"x": 8}
+        mesh_symbolic = pybamm.Mesh(
+            geometry_symbolic, submesh_types_symbolic, var_pts_symbolic
+        )
+
+        spatial_methods_symbolic = {"domain": pybamm.FiniteVolume(method_options)}
+        disc_symbolic = pybamm.Discretisation(mesh_symbolic, spatial_methods_symbolic)
+
+        var_symbolic = pybamm.Variable("var", domain="domain")
+        left_mesh_size_symbolic = pybamm.BoundaryMeshSize(var_symbolic, "left")
+        right_mesh_size_symbolic = pybamm.BoundaryMeshSize(var_symbolic, "right")
+
+        disc_symbolic.set_variable_slices([var_symbolic])
+        left_mesh_size_disc_symbolic = disc_symbolic.process_symbol(
+            left_mesh_size_symbolic
+        )
+        right_mesh_size_disc_symbolic = disc_symbolic.process_symbol(
+            right_mesh_size_symbolic
+        )
+
+        submesh_symbolic = mesh_symbolic["domain"]
+        expected_left_symbolic = submesh_symbolic.d_nodes[0]
+        expected_right_symbolic = submesh_symbolic.d_nodes[-1]
+
+        np.testing.assert_allclose(
+            left_mesh_size_disc_symbolic.evaluate(),
+            expected_left_symbolic,
+            rtol=1e-15,
+            atol=1e-15,
+        )
+        np.testing.assert_allclose(
+            right_mesh_size_disc_symbolic.evaluate(),
+            expected_right_symbolic,
+            rtol=1e-15,
+            atol=1e-15,
+        )
+
+        # Test error handling for invalid side
+        var_error = pybamm.Variable("var", domain="domain")
+        with pytest.raises(ValueError, match="Invalid side"):
+            invalid_mesh_size = pybamm.BoundaryMeshSize(var_error, "invalid")
+            disc.set_variable_slices([var_error])
+            disc.process_symbol(invalid_mesh_size)
+
+        # Test that the BoundaryMeshSize symbol has the correct properties
+        left_mesh_size_symbol = pybamm.BoundaryMeshSize(var, "left")
+        right_mesh_size_symbol = pybamm.BoundaryMeshSize(var, "right")
+
+        # Check that it's a BoundaryMeshSize instance
+        assert isinstance(left_mesh_size_symbol, pybamm.BoundaryMeshSize)
+        assert isinstance(right_mesh_size_symbol, pybamm.BoundaryMeshSize)
+
+        # Check side property
+        assert left_mesh_size_symbol.side == "left"
+        assert right_mesh_size_symbol.side == "right"
+
+        # Check child property
+        assert left_mesh_size_symbol.child == var
+        assert right_mesh_size_symbol.child == var

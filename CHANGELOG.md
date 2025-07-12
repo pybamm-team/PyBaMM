@@ -1,7 +1,7 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
 ## Features
-
+- Creates a boundary mesh size object that returns the distance from the center of the leftmost/rightmost control volume to the boundary of the domain ([#5108](https://github.com/pybamm-team/PyBaMM/pull/5108))
 - Introduced entry points for models, similar to parameter sets, and moved entry point handling to `pybamm.dispatch.entry_points`. There is now experimental support for loading third-party models outside of the PyBaMM framework via `pybamm.Model("model_name")`. This API is currently unstable until further notice and may be subject to change without warning. ([#4490](https://github.com/pybamm-team/PyBaMM/pull/4490))
 - Allow for overriding the spatial method's extrapolation and for using constant extrapolation of boundary values ([#5107](https://github.com/pybamm-team/PyBaMM/pull/5107))
 - Creates `BaseProcessedVariable` to enable object combination when adding solutions together ([#5076](https://github.com/pybamm-team/PyBaMM/pull/5076))
@@ -356,7 +356,7 @@ package to install PyBaMM with only the required dependencies. ([conda-forge/pyb
 - Fixed a bug where supplying an initial soc did not work with half cell models ([#3456](https://github.com/pybamm-team/PyBaMM/pull/3456))
 - Fixed a bug where empty lists passed to QuickPlot resulted in an IndexError and did not return a meaningful error message ([#3359](https://github.com/pybamm-team/PyBaMM/pull/3359))
 - Fixed a bug where there was a missing thermal conductivity in the thermal pouch cell models ([#3330](https://github.com/pybamm-team/PyBaMM/pull/3330))
-- Fixed a bug that caused incorrect results of “{Domain} electrode thickness change [m]” due to the absence of dimension for the variable `electrode_thickness_change`([#3329](https://github.com/pybamm-team/PyBaMM/pull/3329)).
+- Fixed a bug that caused incorrect results of "{Domain} electrode thickness change [m]" due to the absence of dimension for the variable `electrode_thickness_change`([#3329](https://github.com/pybamm-team/PyBaMM/pull/3329)).
 - Fixed a bug that occured in `check_ys_are_not_too_large` when trying to reference `y-slice` where the referenced variable was not a `pybamm.StateVector` ([#3313](https://github.com/pybamm-team/PyBaMM/pull/3313)
 - Fixed a bug with `_Heaviside._evaluate_for_shape` which meant some expressions involving heaviside function and subtractions did not work ([#3306](https://github.com/pybamm-team/PyBaMM/pull/3306))
 - Attributes of `pybamm.Simulation` objects (models, parameter values, geometries, choice of solver, and output variables) are now private and as such cannot be edited in-place after the simulation has been created ([#3267](https://github.com/pybamm-team/PyBaMM/pull/3267)
