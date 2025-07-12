@@ -20,7 +20,7 @@ OPTIONS_DICT = {
 PRINT_OPTIONS_OUTPUT = """\
 'calculate discharge energy': 'false' (possible: ['false', 'true'])
 'calculate heat source for isothermal models': 'false' (possible: ['false', 'true'])
-'cell geometry': 'pouch' (possible: ['arbitrary', 'pouch', 'box', 'cylinder'])
+'cell geometry': 'pouch' (possible: ['arbitrary', 'pouch', 'box', 'cylindrical'])
 'contact resistance': 'false' (possible: ['false', 'true'])
 'convection': 'none' (possible: ['none', 'uniform transverse', 'full transverse'])
 'current collector': 'uniform' (possible: ['uniform', 'potential pair', 'potential pair quite conductive'])
