@@ -618,7 +618,7 @@ class TestIDAKLUJax:
         check = {  # Form dictionary of results from IDAKLU simulation
             invar: np.concatenate(
                 [
-                    np.array(sim[outvar].sensitivities[invar])
+                    sim[outvar].sensitivities[invar].reshape(-1, 1)
                     for outvar in output_variables
                 ],
                 axis=1,
@@ -755,7 +755,7 @@ class TestIDAKLUJax:
         check = {  # Form dictionary of results from IDAKLU simulation
             invar: np.concatenate(
                 [
-                    np.array(sim[outvar].sensitivities[invar])
+                    sim[outvar].sensitivities[invar].reshape(-1, 1)
                     for outvar in output_variables
                 ],
                 axis=1,
