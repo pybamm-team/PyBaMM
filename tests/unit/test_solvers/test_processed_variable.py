@@ -1638,6 +1638,7 @@ class TestProcessedVariable:
         np.testing.assert_array_equal(
             computed_var(t=t_sol, x=x_sol, R=R_sol, r=r_sol).shape, (6, 7, Nx, 50)
         )
+
     def test_processed_variable_unstructured_3d_box(self):
         from pybamm.meshes.scikit_fem_submeshes_3d import ScikitFemGenerator3D
 
