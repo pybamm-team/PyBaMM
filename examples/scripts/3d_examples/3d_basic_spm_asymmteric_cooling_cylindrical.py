@@ -26,13 +26,16 @@ parameter_values.update(
 )
 
 # Use a high discharge rate to generate significant heat
-experiment = pybamm.Experiment(
-    [("Discharge at 4C until 2.5V")]
-)
+experiment = pybamm.Experiment([("Discharge at 4C until 2.5V")])
 
 var_pts = {
-    "x_n": 20, "x_s": 20, "x_p": 20, "r_n": 30, "r_p": 30,
-    "r_macro": 20, "z": 20
+    "x_n": 20,
+    "x_s": 20,
+    "x_p": 20,
+    "r_n": 30,
+    "r_p": 30,
+    "r_macro": 20,
+    "z": 20,
 }
 
 sim = pybamm.Simulation(
