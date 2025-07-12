@@ -30,4 +30,4 @@ from .basic_splitOCVR import SplitOCVR
 __all__ = ['Yang2017', 'base_lithium_ion_model', 'basic_dfn',
            'basic_dfn_composite', 'basic_dfn_half_cell', 'basic_spm', 'dfn',
            'electrode_soh', 'electrode_soh_half_cell', 'mpm', 'msmr',
-           'newman_tobias', 'spm', 'spme', 'basic_splitOCVR']
+           'newman_tobias', 'spm', 'spme', 'basic_splitOCVR', 'basic_spm_with_3d_thermal']
