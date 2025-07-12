@@ -10,6 +10,7 @@
 - Adds `all` key-value pair to `output_variables` sensitivity dictionaries, accessible through `solution[var].sensitivities['all']`. Aligns shape with conventional solution sensitivities object. ([#5067](https://github.com/pybamm-team/PyBaMM/pull/5067))
 - Added a new `BaseHysteresisOpenCircuitPotential` class that sets variables for the lithiation and delithiation OCP and the hysteresis voltage (`H = U_lith - U_delith`). Allow the initial hysteresis state to be a function of position through the electrode. Allow the hysteresis decay rates of the Axen and Wycisk models to be a function of stoichiometry and temperature. Added a heat source term in each active material phase `Q_hys = i_vol * (U - U_eq)` where `i_vol` is the volumetric interfacial current density, `U` is the OCP (i.e. includes hysteresis), and `U_eq` is the "equilibrium OCP". Renamed the open-circuit potential models to be more descriptive. The options "Axen" and "Wycisk" are now "one-state hysteresis" and "one-state differential capacity hysteresis". The old option names still work but will raise a warning. ([#4893](https://github.com/pybamm-team/PyBaMM/pull/4893))
 - Add support for `output_variables` to `pybamm.DiscreteTimeSum` and `pybamm.ExplicitTimeIntegral` expressions. ([#5071](https://github.com/pybamm-team/PyBaMM/pull/5071))
+- Added 3D FEM and meshes supporting rectangular and cylindrical geometries ([#5009](https://github.com/pybamm-team/PyBaMM/pull/5009))
 
 ## Bug fixes
 

@@ -905,6 +905,22 @@ class BoundaryIntegral(SpatialOperator):
             name += "negative tab"
         elif region == "positive tab":
             name += "positive tab"
+        elif region == "x_min":
+            name += "x_min"
+        elif region == "x_max":
+            name += "x_max"
+        elif region == "y_min":
+            name += "y_min"
+        elif region == "y_max":
+            name += "y_max"
+        elif region == "z_min":
+            name += "z_min"
+        elif region == "z_max":
+            name += "z_max"
+        elif region == "r_min":  # pragma: no cover
+            name += "r_min"
+        elif region == "r_max":  # pragma: no cover
+            name += "r_max"
         self.region = region
         super().__init__(name, child, domains)
 
