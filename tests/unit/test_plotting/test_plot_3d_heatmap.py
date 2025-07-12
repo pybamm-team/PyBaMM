@@ -104,41 +104,29 @@ class TestPlot3DHeatmap:
         assert ax is not None
 
     def test_plot_3d_heatmap_custom_cmap(self, box_3d_solution):
-        ax = pybamm.plot_3d_heatmap(
-            box_3d_solution, cmap="viridis", show_plot=False
-        )
+        ax = pybamm.plot_3d_heatmap(box_3d_solution, cmap="viridis", show_plot=False)
         assert ax is not None
 
     def test_plot_3d_heatmap_custom_marker_size(self, box_3d_solution):
-        ax = pybamm.plot_3d_heatmap(
-            box_3d_solution, marker_size=20, show_plot=False
-        )
+        ax = pybamm.plot_3d_heatmap(box_3d_solution, marker_size=20, show_plot=False)
         assert ax is not None
 
     def test_plot_3d_heatmap_custom_alpha(self, box_3d_solution):
-        ax = pybamm.plot_3d_heatmap(
-            box_3d_solution, alpha=0.5, show_plot=False
-        )
+        ax = pybamm.plot_3d_heatmap(box_3d_solution, alpha=0.5, show_plot=False)
         assert ax is not None
 
     def test_plot_3d_heatmap_use_offset_true(self, box_3d_solution):
-        ax = pybamm.plot_3d_heatmap(
-            box_3d_solution, use_offset=True, show_plot=False
-        )
+        ax = pybamm.plot_3d_heatmap(box_3d_solution, use_offset=True, show_plot=False)
         assert ax is not None
 
     def test_plot_3d_heatmap_use_offset_false(self, box_3d_solution):
-        ax = pybamm.plot_3d_heatmap(
-            box_3d_solution, use_offset=False, show_plot=False
-        )
+        ax = pybamm.plot_3d_heatmap(box_3d_solution, use_offset=False, show_plot=False)
         assert ax is not None
 
     def test_plot_3d_heatmap_custom_ax(self, box_3d_solution):
         fig = plt.figure()
         ax = fig.add_subplot(projection="3d")
-        ax_out = pybamm.plot_3d_heatmap(
-            box_3d_solution, ax=ax, show_plot=False
-        )
+        ax_out = pybamm.plot_3d_heatmap(box_3d_solution, ax=ax, show_plot=False)
         assert ax_out == ax
 
     def test_plot_3d_heatmap_kwargs(self, box_3d_solution):

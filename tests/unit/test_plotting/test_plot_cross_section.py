@@ -140,9 +140,7 @@ class TestPlot3DCrossSection:
         assert ax is not None
 
     def test_plot_3d_cross_section_custom_levels(self, box_3d_solution):
-        ax = pybamm.plot_3d_cross_section(
-            box_3d_solution, levels=10, show_plot=False
-        )
+        ax = pybamm.plot_3d_cross_section(box_3d_solution, levels=10, show_plot=False)
         assert ax is not None
 
     def test_plot_3d_cross_section_use_offset_true(self, box_3d_solution):
@@ -159,9 +157,7 @@ class TestPlot3DCrossSection:
 
     def test_plot_3d_cross_section_custom_ax(self, box_3d_solution):
         fig, ax = plt.subplots(figsize=(6, 4))
-        ax_out = pybamm.plot_3d_cross_section(
-            box_3d_solution, ax=ax, show_plot=False
-        )
+        ax_out = pybamm.plot_3d_cross_section(box_3d_solution, ax=ax, show_plot=False)
         assert ax_out == ax
 
     def test_plot_3d_cross_section_custom_ax_polar(self, cylindrical_3d_solution):
@@ -202,7 +198,9 @@ class TestPlot3DCrossSection:
         ax = pybamm.plot_3d_cross_section(box_3d_solution, show_plot=False)
         assert ax.get_aspect() == "auto"
 
-    def test_plot_3d_cross_section_cylindrical_polar_limits(self, cylindrical_3d_solution):
+    def test_plot_3d_cross_section_cylindrical_polar_limits(
+        self, cylindrical_3d_solution
+    ):
         ax = pybamm.plot_3d_cross_section(
             cylindrical_3d_solution, plane="xy", show_plot=False
         )
@@ -214,23 +212,17 @@ class TestPlot3DCrossSection:
         assert "t=50.0s" in title
 
     def test_plot_3d_cross_section_labels_box_xy(self, box_3d_solution):
-        ax = pybamm.plot_3d_cross_section(
-            box_3d_solution, plane="xy", show_plot=False
-        )
+        ax = pybamm.plot_3d_cross_section(box_3d_solution, plane="xy", show_plot=False)
         assert "x [m]" in ax.get_xlabel()
         assert "y [m]" in ax.get_ylabel()
 
     def test_plot_3d_cross_section_labels_box_yz(self, box_3d_solution):
-        ax = pybamm.plot_3d_cross_section(
-            box_3d_solution, plane="yz", show_plot=False
-        )
+        ax = pybamm.plot_3d_cross_section(box_3d_solution, plane="yz", show_plot=False)
         assert "y [m]" in ax.get_xlabel()
         assert "z [m]" in ax.get_ylabel()
 
     def test_plot_3d_cross_section_labels_box_xz(self, box_3d_solution):
-        ax = pybamm.plot_3d_cross_section(
-            box_3d_solution, plane="xz", show_plot=False
-        )
+        ax = pybamm.plot_3d_cross_section(box_3d_solution, plane="xz", show_plot=False)
         assert "x [m]" in ax.get_xlabel()
         assert "z [m]" in ax.get_ylabel()
 
