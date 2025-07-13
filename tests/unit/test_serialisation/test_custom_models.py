@@ -1,4 +1,3 @@
-import json
 import os
 from datetime import datetime
 
@@ -217,7 +216,7 @@ def test_plotting_serialised_models():
         Serialise.save_custom_model(model, filename=name)
 
         # Load the model
-        loaded_model= Serialise.load_custom_model(
+        loaded_model = Serialise.load_custom_model(
             f"{name}.json", battery_model=pybamm.lithium_ion.BaseModel()
         )
 

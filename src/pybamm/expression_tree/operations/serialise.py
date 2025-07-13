@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import importlib
-import inspect
 import json
 import numbers
 import re
@@ -545,7 +544,6 @@ class Serialise:
             return tuple(self._convert_options(item) for item in d)
         else:
             return d
-
 
     @staticmethod
     def convert_symbol_to_json(symbol):
