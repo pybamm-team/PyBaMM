@@ -5,6 +5,7 @@ model_3d = pybamm.lithium_ion.BasicSPM_with_3DThermal(
     options={"cell geometry": "cylindrical", "dimensionality": 3}
 )
 
+# Use parameters for a cylindrical 18650 cell
 parameter_values = pybamm.ParameterValues("NCA_Kim2011")
 
 # Define our cooling scenario
@@ -38,6 +39,7 @@ var_pts = {
     "z": 20,
 }
 
+# 2. --- Simulation Solve ---
 sim = pybamm.Simulation(
     model_3d,
     parameter_values=parameter_values,
@@ -48,6 +50,7 @@ print("Solving... (this may take a minute)")
 solution = sim.solve()
 print("Solve complete.")
 
+# 3. --- Plotting Results ---
 print("Generating plots...")
 final_time = solution.t[-1]
 
@@ -58,10 +61,26 @@ solution.plot(["Voltage [V]", "Volume-averaged cell temperature [K]"])
 print(f"\n--- Displaying heatmaps at t={final_time:.0f}s ---")
 
 # Plot the r-z plane to show the radial gradient (hot core, cool edge)
-pybamm.plot_3d_cross_section(solution, t=final_time, plane="rz")
+pybamm.plot_3d_cross_section(
+    solution,
+    plane="rz",
+    position=0.5,
+    show_mesh=True,
+    mesh_color="white",
+    mesh_alpha=0.4,
+    mesh_linewidth=0.7,
+)
 
 # Plot the polar xy-plane to show the temperature at a mid-height slice
-pybamm.plot_3d_cross_section(solution, t=final_time, plane="xy", position=0.5)
+pybamm.plot_3d_cross_section(
+    solution,
+    plane="xy",
+    position=0.5,
+    show_mesh=True,
+    mesh_color="white",
+    mesh_alpha=0.4,
+    mesh_linewidth=0.7,
+)
 
 # Plot a 3D heatmap of the temperature distribution
 pybamm.plot_3d_heatmap(solution, t=final_time, marker_size=5)

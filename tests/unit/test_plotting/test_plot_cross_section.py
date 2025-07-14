@@ -232,3 +232,87 @@ class TestPlot3DCrossSection:
         )
         assert "Radius r [m]" in ax.get_xlabel()
         assert "Height z [m]" in ax.get_ylabel()
+
+    def test_plot_3d_cross_section_show_mesh_box_xy(self, box_3d_solution):
+        ax = pybamm.plot_3d_cross_section(
+            box_3d_solution, plane="xy", show_mesh=True, show_plot=False
+        )
+        assert ax is not None
+
+    def test_plot_3d_cross_section_show_mesh_box_yz(self, box_3d_solution):
+        ax = pybamm.plot_3d_cross_section(
+            box_3d_solution, plane="yz", show_mesh=True, show_plot=False
+        )
+        assert ax is not None
+
+    def test_plot_3d_cross_section_show_mesh_box_xz(self, box_3d_solution):
+        ax = pybamm.plot_3d_cross_section(
+            box_3d_solution, plane="xz", show_mesh=True, show_plot=False
+        )
+        assert ax is not None
+
+    def test_plot_3d_cross_section_show_mesh_cylindrical_xy(
+        self, cylindrical_3d_solution
+    ):
+        ax = pybamm.plot_3d_cross_section(
+            cylindrical_3d_solution, plane="xy", show_mesh=True, show_plot=False
+        )
+        assert ax is not None
+
+    def test_plot_3d_cross_section_show_mesh_cylindrical_rz(
+        self, cylindrical_3d_solution
+    ):
+        ax = pybamm.plot_3d_cross_section(
+            cylindrical_3d_solution, plane="rz", show_mesh=True, show_plot=False
+        )
+        assert ax is not None
+
+    def test_plot_3d_cross_section_mesh_color_custom(self, box_3d_solution):
+        ax = pybamm.plot_3d_cross_section(
+            box_3d_solution, show_mesh=True, mesh_color="red", show_plot=False
+        )
+        assert ax is not None
+
+    def test_plot_3d_cross_section_mesh_alpha_custom(self, box_3d_solution):
+        ax = pybamm.plot_3d_cross_section(
+            box_3d_solution, show_mesh=True, mesh_alpha=0.8, show_plot=False
+        )
+        assert ax is not None
+
+    def test_plot_3d_cross_section_mesh_linewidth_custom(self, box_3d_solution):
+        ax = pybamm.plot_3d_cross_section(
+            box_3d_solution, show_mesh=True, mesh_linewidth=1.5, show_plot=False
+        )
+        assert ax is not None
+
+    def test_plot_3d_cross_section_mesh_tolerance_custom(self, box_3d_solution):
+        ax = pybamm.plot_3d_cross_section(
+            box_3d_solution, show_mesh=True, mesh_tolerance=0.001, show_plot=False
+        )
+        assert ax is not None
+
+    def test_plot_3d_cross_section_mesh_tolerance_none(self, box_3d_solution):
+        ax = pybamm.plot_3d_cross_section(
+            box_3d_solution, show_mesh=True, mesh_tolerance=None, show_plot=False
+        )
+        assert ax is not None
+
+    def test_plot_3d_cross_section_cylindrical_invalid_plane(
+        self, cylindrical_3d_solution
+    ):
+        with pytest.raises(
+            ValueError, match="Plane 'yz' invalid for cylindrical geometry"
+        ):
+            pybamm.plot_3d_cross_section(
+                cylindrical_3d_solution, plane="yz", show_plot=False
+            )
+
+    def test_plot_3d_cross_section_cylindrical_invalid_plane_xz(
+        self, cylindrical_3d_solution
+    ):
+        with pytest.raises(
+            ValueError, match="Plane 'xz' invalid for cylindrical geometry"
+        ):
+            pybamm.plot_3d_cross_section(
+                cylindrical_3d_solution, plane="xz", show_plot=False
+            )
