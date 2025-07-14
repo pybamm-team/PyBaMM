@@ -181,6 +181,10 @@ class TestBaseBatteryModel:
         )
         model = pybamm.BaseBatteryModel({"dimensionality": 3, "cell geometry": "pouch"})
         assert isinstance(
+            model.default_spatial_methods["current collector"],
+            pybamm.ZeroDimensionalSpatialMethod,
+        )
+        assert isinstance(
             model.default_spatial_methods["cell"],
             pybamm.ScikitFiniteElement3D,
         )
