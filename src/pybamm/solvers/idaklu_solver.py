@@ -616,12 +616,23 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         # 0 = solved for all t_eval
         # 2 = found root(s)
+        # < 0 = solver failure
         if sol.flag == 2:
             termination = "event"
         elif sol.flag >= 0:
             termination = "final time"
-        else:
-            raise pybamm.SolverError(f"FAILURE {self._solver_flag(sol.flag)}")
+        elif sol.flag < 0:
+            match self._on_failure:
+                case "warn":
+                    termination = "final time"
+                    warnings.warn(
+                        f"FAILURE {self._solver_flag(sol.flag)}, returning a partial solution.",
+                        stacklevel=2,
+                    )
+                case "raise":
+                    raise pybamm.SolverError(f"FAILURE {self._solver_flag(sol.flag)}")
+                case "ignore":
+                    return pybamm.EmptySolution(termination="failure")
 
         if sol.yp.size > 0:
             yp = sol.yp.reshape((number_of_timesteps, number_of_states)).T
