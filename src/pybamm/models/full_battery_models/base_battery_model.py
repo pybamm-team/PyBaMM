@@ -18,6 +18,66 @@ def represents_positive_integer(s):
         return val > 0
 
 
+def _rename_option(options_dict, option_name, old_name, new_name):
+    if option_name not in options_dict:
+        return
+
+    option = options_dict[option_name]
+
+    if option is None:
+        return
+
+    if isinstance(option, str):
+        if option == old_name:
+            pybamm.logger.warning(
+                f"The '{old_name}' {option_name} model has been renamed to '{new_name}'"
+            )
+            options_dict[option_name] = new_name
+        return
+
+    if isinstance(option, tuple):
+        # Handle tuple of tuples case
+        if isinstance(option[0], tuple):
+            # Check if any element contains old_name
+            has_old_name = False
+            for x in option:
+                if isinstance(x, tuple):
+                    if isinstance(x[0], tuple):
+                        # Handle 2-tuple of 2-tuple of 2-tuple case
+                        for y in x:
+                            if isinstance(y, tuple):
+                                if old_name in y:
+                                    has_old_name = True
+                    # Handle 2-tuple of 2-tuple case
+                    elif old_name in x:
+                        has_old_name = True
+                elif x == old_name:
+                    has_old_name = True
+
+            if has_old_name:
+                pybamm.logger.warning(
+                    f"The '{old_name}' {option_name} model has been renamed to "
+                    f"'{new_name}'"
+                )
+
+                # Replace old_name with new_name at any nesting level
+                def replace_name(t):
+                    if isinstance(t, tuple):
+                        return tuple(replace_name(x) for x in t)
+                    return new_name if t == old_name else t
+
+                options_dict[option_name] = replace_name(option)
+
+        # Handle single tuple case
+        elif old_name in option:
+            pybamm.logger.warning(
+                f"The '{old_name}' {option_name} model has been renamed to '{new_name}'"
+            )
+            options_dict[option_name] = tuple(
+                new_name if x == old_name else x for x in option
+            )
+
+
 class BatteryModelOptions(pybamm.FuzzyDict):
     """
     Attributes
@@ -102,7 +162,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 reactions.
             * "open-circuit potential" : str
                 Sets the model for the open circuit potential. Can be "single"
-                (default), "current sigmoid", "Wycisk", "Axen", or "MSMR".
+                (default), "current sigmoid", "one-state hysteresis", "one-state differential capacity hysteresis", or "MSMR".
                 If "MSMR" then the "particle" option must also be "MSMR".
                 A 2-tuple can be provided for different behaviour in negative
                 and positive electrodes.
@@ -282,8 +342,8 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "single",
                 "current sigmoid",
                 "MSMR",
-                "Wycisk",
-                "Axen",
+                "one-state hysteresis",
+                "one-state differential capacity hysteresis",
             ],
             "operating mode": [
                 "current",
@@ -348,6 +408,21 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             name: options[0] for name, options in self.possible_options.items()
         }
         extra_options = extra_options or {}
+
+        # Handle OCP option renaming
+        _rename_option(
+            extra_options,
+            "open-circuit potential",
+            "Wycisk",
+            "one-state differential capacity hysteresis",
+        )
+
+        _rename_option(
+            extra_options,
+            "open-circuit potential",
+            "Axen",
+            "one-state hysteresis",
+        )
 
         working_electrode_option = extra_options.get("working electrode", "both")
         SEI_option = extra_options.get("SEI", "none")  # return "none" if not given

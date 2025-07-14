@@ -851,6 +851,25 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         return new_gradient
 
+    def _boundary_mesh_size(self, child, side):
+        """
+        Get the mesh size at the boundary of a variable's domain.
+        """
+        submesh = self.mesh[child.domain]
+        if side == "left":
+            if hasattr(submesh, "length"):
+                val = submesh.length * pybamm.Scalar(submesh.d_nodes[0])
+            else:
+                val = pybamm.Scalar(submesh.d_nodes[0])
+        elif side == "right":
+            if hasattr(submesh, "length"):
+                val = submesh.length * pybamm.Scalar(submesh.d_nodes[-1])
+            else:
+                val = pybamm.Scalar(submesh.d_nodes[-1])
+        else:
+            raise ValueError(f"Invalid side: {side}")
+        return val
+
     def boundary_value_or_flux(self, symbol, discretised_child, bcs=None):
         """
         Uses extrapolation to get the boundary value or flux of a variable in the
@@ -868,8 +887,14 @@ class FiniteVolume(pybamm.SpatialMethod):
         if bcs is None:
             bcs = {}
 
-        extrap_order_gradient = self.options["extrapolation"]["order"]["gradient"]
-        extrap_order_value = self.options["extrapolation"]["order"]["value"]
+        extrap_order_gradient = (
+            getattr(symbol, "order", None)
+            or self.options["extrapolation"]["order"]["gradient"]
+        )
+        extrap_order_value = (
+            getattr(symbol, "order", None)
+            or self.options["extrapolation"]["order"]["value"]
+        )
         use_bcs = self.options["extrapolation"]["use bcs"]
 
         nodes = submesh.nodes
@@ -888,7 +913,9 @@ class FiniteVolume(pybamm.SpatialMethod):
         # Create submatrix to compute boundary values or fluxes
         # Derivation of extrapolation formula can be found at:
         # https://github.com/Scottmar93/extrapolation-coefficents/tree/master
-        if isinstance(symbol, pybamm.BoundaryValue):
+        if isinstance(symbol, pybamm.BoundaryMeshSize):
+            return self._boundary_mesh_size(child, symbol.side)
+        elif isinstance(symbol, pybamm.BoundaryValue):
             if use_bcs and pybamm.has_bc_of_form(child, symbol.side, bcs, "Dirichlet"):
                 # just use the value from the bc: f(x*)
                 sub_matrix = csr_matrix((1, prim_pts))
@@ -953,6 +980,14 @@ class FiniteVolume(pybamm.SpatialMethod):
                         additive_multiplicative = pybamm.Scalar(1)
                         multiplicative = pybamm.Scalar(1)
 
+                elif extrap_order_value == "constant":
+                    sub_matrix = csr_matrix(
+                        ([1], ([0], [0])),
+                        shape=(1, prim_pts),
+                    )
+                    additive = pybamm.Scalar(0)
+                    additive_multiplicative = pybamm.Scalar(1)
+                    multiplicative = pybamm.Scalar(1)
                 else:
                     raise NotImplementedError
 
@@ -1023,6 +1058,14 @@ class FiniteVolume(pybamm.SpatialMethod):
                         additive = pybamm.Scalar(0)
                         additive_multiplicative = pybamm.Scalar(1)
                         multiplicative = pybamm.Scalar(1)
+                elif extrap_order_value == "constant":
+                    sub_matrix = csr_matrix(
+                        ([1], ([0], [prim_pts - 1])),
+                        shape=(1, prim_pts),
+                    )
+                    additive = pybamm.Scalar(0)
+                    additive_multiplicative = pybamm.Scalar(1)
+                    multiplicative = pybamm.Scalar(1)
                 else:
                     raise NotImplementedError
 

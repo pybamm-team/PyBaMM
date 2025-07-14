@@ -221,6 +221,7 @@ class TestIDAKLUSolver:
             ),
         ],
     )
+    
     def test_multiple_initial_conditions_against_independent_solves(
         self, model_cls, make_ics
     ):
@@ -275,3 +276,37 @@ class TestIDAKLUSolver:
                 np.testing.assert_allclose(
                     sol_vec.y[:, 0], ics[idx], rtol=1e-8, atol=1e-10
                 )
+
+    def test_outvars_with_experiments_multi_simulation(self):
+        model = pybamm.lithium_ion.SPM()
+
+        experiment = pybamm.Experiment(
+            [
+                "Discharge at C/2 for 10 minutes",
+                "Rest for 10 minutes",
+            ]
+        )
+
+        solver = pybamm.IDAKLUSolver(
+            output_variables=[
+                "Discharge capacity [A.h]",  # 0D variables
+                "Time [s]",
+                "Current [A]",
+                "Voltage [V]",
+                "Pressure [Pa]",  # 1D variable
+                "Positive particle effective diffusivity [m2.s-1]",  # 2D variable
+            ]
+        )
+
+        sim = pybamm.Simulation(model, experiment=experiment, solver=solver)
+        solution = sim.solve()
+
+        sim2 = pybamm.Simulation(model, experiment=experiment, solver=solver)
+
+        new_sol1 = sim2.solve(starting_solution=solution.copy())
+        new_sol2 = sim2.solve(starting_solution=solution.copy().last_state)
+
+        np.testing.assert_array_equal(
+            new_sol1["Voltage [V]"].entries[63:], new_sol2["Voltage [V]"].entries
+        )
+

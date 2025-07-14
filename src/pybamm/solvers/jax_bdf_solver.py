@@ -910,7 +910,7 @@ if pybamm.has_jax():
         return out, merge
 
     def abstractify(x):
-        return core.raise_to_shaped(core.get_aval(x))
+        return core.get_aval(x)
 
     def ravel_first_arg(f, unravel):
         return ravel_first_arg_(lu.wrap_init(f), unravel).call_wrapped

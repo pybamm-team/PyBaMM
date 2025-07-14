@@ -12,11 +12,6 @@ from warnings import warn
 
 import pybamm
 
-# Versions of jax and jaxlib compatible with PyBaMM. Note: these are also defined in
-# the extras dependencies in pyproject.toml, and therefore must be kept in sync.
-JAX_VERSION = "0.4.27"
-JAXLIB_VERSION = "0.4.27"
-
 
 def root_dir():
     """return the root directory of the PyBaMM install directory"""
@@ -354,25 +349,9 @@ def has_jax():
         True if jax and jaxlib are installed with the correct versions, False if otherwise
 
     """
-    return (
-        (importlib.util.find_spec("jax") is not None)
-        and (importlib.util.find_spec("jaxlib") is not None)
-        and is_jax_compatible()
+    return (importlib.util.find_spec("jax") is not None) and (
+        importlib.util.find_spec("jaxlib") is not None
     )
-
-
-def is_jax_compatible():
-    """
-    Check if the available versions of jax and jaxlib are compatible with PyBaMM
-
-    Returns
-    -------
-    bool
-        True if jax and jaxlib are compatible with PyBaMM, False if otherwise
-    """
-    return importlib.metadata.distribution("jax").version.startswith(
-        JAX_VERSION
-    ) and importlib.metadata.distribution("jaxlib").version.startswith(JAXLIB_VERSION)
 
 
 def is_constant_and_can_evaluate(symbol):

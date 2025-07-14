@@ -79,8 +79,7 @@ plot = [
     "matplotlib>=3.6.0",
 ]
 cite = [
-    "setuptools", # Fix for a pybtex issue
-    "pybtex>=0.24.0",
+    "pybtex>=0.25.0",
 ]
 # Battery Parameter eXchange format
 bpx = [
@@ -112,16 +111,11 @@ dev = [
     "importlib-metadata; python_version < '3.10'",
     # For property based testing
     "hypothesis",
-
 ]
-# For the Jax solver.
-# Note: These must be kept in sync with the versions defined in pybamm/util.py, and
-#       must remain compatible with IREE (see noxfile.py for IREE compatibility).
 jax = [
-    "jax==0.4.27",
-    "jaxlib==0.4.27",
+    "jax>=0.4.36,<0.6.0",
 ]
-# Contains all optional dependencies, except for jax, iree, and dev dependencies
+# Contains all optional dependencies, except for jax, and dev dependencies
 all = [
     "scikit-fem>=8.1.0",
     "pybamm[examples,plot,cite,bpx,tqdm]",
@@ -146,6 +140,15 @@ Xu2019 = "pybamm.input.parameters.lithium_ion.Xu2019:get_parameter_values"
 ECM_Example = "pybamm.input.parameters.ecm.example_set:get_parameter_values"
 MSMR_Example = "pybamm.input.parameters.lithium_ion.MSMR_example_set:get_parameter_values"
 Chayambuka2022 = "pybamm.input.parameters.sodium_ion.Chayambuka2022:get_parameter_values"
+
+[project.entry-points."pybamm_models"]
+SPM = "pybamm.models.full_battery_models.lithium_ion.spm:SPM"
+DFN = "pybamm.models.full_battery_models.lithium_ion.dfn:DFN"
+SPMe = "pybamm.models.full_battery_models.lithium_ion.spme:SPMe"
+MPM = "pybamm.models.full_battery_models.lithium_ion.mpm:MPM"
+MSMR = "pybamm.models.full_battery_models.lithium_ion.msmr:MSMR"
+NewmanTobias = "pybamm.models.full_battery_models.lithium_ion.newman_tobian:NewmanTobias"
+Yang2017 = "pybamm.models.full_battery_models.lithium_ion.Yang2017:Yang2017"
 
 [tool.hatch]
 version.source = "vcs"
