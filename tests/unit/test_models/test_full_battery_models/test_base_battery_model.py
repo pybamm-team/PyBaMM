@@ -127,14 +127,14 @@ class TestBaseBatteryModel:
             model.default_submesh_types["current collector"],
             pybamm.ScikitUniform2DSubMesh,
         )
-        model = pybamm.BaseBatteryModel({"dimensionality": 3})
+        model = pybamm.BaseBatteryModel({"dimensionality": 3, "cell geometry": "pouch"})
         assert issubclass(
             model.default_submesh_types["current collector"],
-            pybamm.ZeroDimensionalSpatialMethod,
+            pybamm.SubMesh0D,
         )
-        assert issubclass(
+        assert isinstance(
             model.default_submesh_types["cell"],
-            pybamm.ScikitUniform3DSubMesh,
+            pybamm.ScikitFemGenerator3D,
         )
 
     def test_default_var_pts(self):
@@ -179,10 +179,10 @@ class TestBaseBatteryModel:
             model.default_spatial_methods["current collector"],
             pybamm.ScikitFiniteElement,
         )
-        model = pybamm.BaseBatteryModel({"dimensionality": 3})
+        model = pybamm.BaseBatteryModel({"dimensionality": 3, "cell geometry": "pouch"})
         assert isinstance(
             model.default_spatial_methods["cell"],
-            pybamm.ScikitFiniteElement,
+            pybamm.ScikitFiniteElement3D,
         )
 
     def test_options(self):
