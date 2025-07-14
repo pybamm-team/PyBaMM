@@ -221,7 +221,6 @@ class TestIDAKLUSolver:
             ),
         ],
     )
-    
     def test_multiple_initial_conditions_against_independent_solves(
         self, model_cls, make_ics
     ):
@@ -309,4 +308,3 @@ class TestIDAKLUSolver:
         np.testing.assert_array_equal(
             new_sol1["Voltage [V]"].entries[63:], new_sol2["Voltage [V]"].entries
         )
-
