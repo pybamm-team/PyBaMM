@@ -62,12 +62,12 @@ class TestExtrapolationFiniteVolume2D:
         solutions_TB = {
             "left": submesh.nodes_tb,
             "right": submesh.nodes_tb,
-            "top": np.zeros(submesh.nodes_lr.shape),
-            "bottom": np.ones(submesh.nodes_lr.shape),
-            "top-left": 0.0,
-            "top-right": 0.0,
-            "bottom-left": 1.0,
-            "bottom-right": 1.0,
+            "top": np.ones(submesh.nodes_lr.shape),
+            "bottom": np.zeros(submesh.nodes_lr.shape),
+            "top-left": 1.0,
+            "top-right": 1.0,
+            "bottom-left": 0.0,
+            "bottom-right": 0.0,
         }
 
         bcs_LR = {
@@ -82,8 +82,8 @@ class TestExtrapolationFiniteVolume2D:
             var_TB: {
                 "left": (pybamm.Scalar(0.0), "Neumann"),
                 "right": (pybamm.Scalar(0.0), "Neumann"),
-                "top": (pybamm.Scalar(0.0), "Dirichlet"),
-                "bottom": (pybamm.Scalar(1.0), "Dirichlet"),
+                "top": (pybamm.Scalar(1.0), "Dirichlet"),
+                "bottom": (pybamm.Scalar(0.0), "Dirichlet"),
             }
         }
 
@@ -181,8 +181,8 @@ class TestExtrapolationFiniteVolume2D:
             var_TB: {
                 "left": (pybamm.Scalar(0.0), "Neumann"),
                 "right": (pybamm.Scalar(0.0), "Neumann"),
-                "top": (pybamm.Scalar(0.0), "Dirichlet"),
-                "bottom": (pybamm.Scalar(1.0), "Dirichlet"),
+                "top": (pybamm.Scalar(1.0), "Dirichlet"),
+                "bottom": (pybamm.Scalar(0.0), "Dirichlet"),
             }
         }
 
@@ -336,9 +336,8 @@ class TestExtrapolationFiniteVolume2D:
         }
 
         solutions_TB = {
-            "top": np.zeros(submesh.nodes_lr.shape),  # gradient of z^2 at z=0 is 0
-            "bottom": 2
-            * np.ones(submesh.nodes_lr.shape),  # gradient of z^2 at z=1 is 2
+            "bottom": np.zeros(submesh.nodes_lr.shape),  # gradient of z^2 at z=0 is 0
+            "top": 2 * np.ones(submesh.nodes_lr.shape),  # gradient of z^2 at z=1 is 2
         }
 
         # Set up boundary conditions for x^2 function
@@ -358,8 +357,8 @@ class TestExtrapolationFiniteVolume2D:
             var_TB: {
                 "left": (pybamm.Scalar(0.0), "Neumann"),
                 "right": (pybamm.Scalar(0.0), "Neumann"),
-                "top": (pybamm.Scalar(0.0), "Dirichlet"),  # z^2 = 0 at z=0
-                "bottom": (pybamm.Scalar(1.0), "Dirichlet"),  # z^2 = 1 at z=1
+                "top": (pybamm.Scalar(1.0), "Dirichlet"),  # z^2 = 0 at z=0
+                "bottom": (pybamm.Scalar(0.0), "Dirichlet"),  # z^2 = 1 at z=1
             }
         }
 

@@ -75,8 +75,8 @@ class TestFiniteVolume2D:
             var_concat: {
                 "left": (pybamm.Scalar(0), "Dirichlet"),
                 "right": (pybamm.Scalar(1), "Dirichlet"),
-                "top": (pybamm.Scalar(0), "Dirichlet"),
-                "bottom": (pybamm.Scalar(1), "Dirichlet"),
+                "top": (pybamm.Scalar(1), "Dirichlet"),
+                "bottom": (pybamm.Scalar(0), "Dirichlet"),
             }
         }
         disc.bcs = bcs
@@ -404,7 +404,7 @@ class TestFiniteVolume2D:
             pybamm.ModelError, match="Dirichlet boundary conditions must be provided"
         ):
             spatial_method.upwind_or_downwind(
-                var, var_disc, boundary_conditions, "upwind", None
+                var, var_disc, boundary_conditions, "downwind", None
             )
 
         # Should raise error when downwinding without right Dirichlet BC
@@ -412,7 +412,7 @@ class TestFiniteVolume2D:
             pybamm.ModelError, match="Dirichlet boundary conditions must be provided"
         ):
             spatial_method.upwind_or_downwind(
-                var, var_disc, boundary_conditions, "downwind", None
+                var, var_disc, boundary_conditions, "upwind", None
             )
 
         # Should raise error when upwinding in tb without top Dirichlet BC
@@ -420,7 +420,7 @@ class TestFiniteVolume2D:
             pybamm.ModelError, match="Dirichlet boundary conditions must be provided"
         ):
             spatial_method.upwind_or_downwind(
-                var, var_disc, boundary_conditions, None, "upwind"
+                var, var_disc, boundary_conditions, None, "downwind"
             )
 
         # Should raise error when downwinding in tb without bottom Dirichlet BC
@@ -428,7 +428,7 @@ class TestFiniteVolume2D:
             pybamm.ModelError, match="Dirichlet boundary conditions must be provided"
         ):
             spatial_method.upwind_or_downwind(
-                var, var_disc, boundary_conditions, None, "downwind"
+                var, var_disc, boundary_conditions, None, "upwind"
             )
 
         # Test 3: Error case - no boundary conditions at all
@@ -465,7 +465,7 @@ class TestFiniteVolume2D:
             pybamm.ModelError, match="Dirichlet boundary conditions must be provided"
         ):
             spatial_method.upwind_or_downwind(
-                var, var_disc, boundary_conditions_no_left_dirichlet, "upwind", None
+                var, var_disc, boundary_conditions_no_left_dirichlet, "downwind", None
             )
 
         # Test that downwind requires right Dirichlet BC
@@ -473,7 +473,7 @@ class TestFiniteVolume2D:
             pybamm.ModelError, match="Dirichlet boundary conditions must be provided"
         ):
             spatial_method.upwind_or_downwind(
-                var, var_disc, boundary_conditions_no_left_dirichlet, "downwind", None
+                var, var_disc, boundary_conditions_no_left_dirichlet, "upwind", None
             )
 
         # Test that upwind in tb requires top Dirichlet BC
@@ -481,7 +481,7 @@ class TestFiniteVolume2D:
             pybamm.ModelError, match="Dirichlet boundary conditions must be provided"
         ):
             spatial_method.upwind_or_downwind(
-                var, var_disc, boundary_conditions_no_left_dirichlet, None, "upwind"
+                var, var_disc, boundary_conditions_no_left_dirichlet, None, "downwind"
             )
 
         # Test that downwind in tb requires bottom Dirichlet BC
@@ -489,7 +489,7 @@ class TestFiniteVolume2D:
             pybamm.ModelError, match="Dirichlet boundary conditions must be provided"
         ):
             spatial_method.upwind_or_downwind(
-                var, var_disc, boundary_conditions_no_left_dirichlet, None, "downwind"
+                var, var_disc, boundary_conditions_no_left_dirichlet, None, "upwind"
             )
 
         # Test 5b: Test the boundary condition checking logic more thoroughly
@@ -545,7 +545,7 @@ class TestFiniteVolume2D:
             pybamm.ModelError, match="Dirichlet boundary conditions must be provided"
         ):
             spatial_method.upwind_or_downwind(
-                var, var_disc, boundary_conditions_top_dirichlet_only, None, "downwind"
+                var, var_disc, boundary_conditions_top_dirichlet_only, None, "upwind"
             )
 
         # Test with bottom Dirichlet but trying upwind in tb (should fail)
@@ -563,7 +563,11 @@ class TestFiniteVolume2D:
             pybamm.ModelError, match="Dirichlet boundary conditions must be provided"
         ):
             spatial_method.upwind_or_downwind(
-                var, var_disc, boundary_conditions_bottom_dirichlet_only, None, "upwind"
+                var,
+                var_disc,
+                boundary_conditions_bottom_dirichlet_only,
+                None,
+                "downwind",
             )
 
         # Test 6: Test the add_ghost_nodes code paths (lines 2145-2146 and 2159-2160)
@@ -597,7 +601,7 @@ class TestFiniteVolume2D:
 
         # This should reach line 2159-2160 (add_ghost_nodes for tb direction)
         result_tb_ghost = spatial_method.upwind_or_downwind(
-            var, var_disc, boundary_conditions_minimal_tb, None, "upwind"
+            var, var_disc, boundary_conditions_minimal_tb, None, "downwind"
         )
         # Verify it's a VectorField
         assert isinstance(result_tb_ghost, pybamm.VectorField)
@@ -614,7 +618,7 @@ class TestFiniteVolume2D:
 
         # This should reach both add_ghost_nodes code paths
         result_both_ghost = spatial_method.upwind_or_downwind(
-            var, var_disc, boundary_conditions_both_minimal, "upwind", "upwind"
+            var, var_disc, boundary_conditions_both_minimal, "upwind", "downwind"
         )
         # Verify it's a VectorField
         assert isinstance(result_both_ghost, pybamm.VectorField)

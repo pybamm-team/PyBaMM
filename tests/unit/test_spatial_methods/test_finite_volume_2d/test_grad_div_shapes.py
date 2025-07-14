@@ -91,8 +91,8 @@ class TestFiniteVolume2DGradDiv:
             linear_y_var: {
                 "left": (pybamm.Scalar(0), "Neumann"),
                 "right": (pybamm.Scalar(0), "Neumann"),
-                "top": (pybamm.Scalar(0), "Dirichlet"),
-                "bottom": (pybamm.Scalar(1), "Dirichlet"),
+                "top": (pybamm.Scalar(1), "Dirichlet"),
+                "bottom": (pybamm.Scalar(0), "Dirichlet"),
             }
         }
         disc.bcs = boundary_conditions
@@ -288,8 +288,8 @@ class TestFiniteVolume2DGradDiv:
             var: {
                 "left": (pybamm.Scalar(0), "Neumann"),
                 "right": (pybamm.Scalar(0), "Neumann"),
-                "top": (pybamm.Scalar(1), "Neumann"),
-                "bottom": (pybamm.Scalar(1), "Dirichlet"),
+                "top": (pybamm.Scalar(1), "Dirichlet"),
+                "bottom": (pybamm.Scalar(1), "Neumann"),
             }
         }
         disc.bcs = boundary_conditions
@@ -418,8 +418,8 @@ class TestFiniteVolume2DGradDiv:
             var_concat: {
                 "left": (pybamm.Scalar(0), "Neumann"),
                 "right": (pybamm.Scalar(0), "Neumann"),
-                "top": (pybamm.Scalar(0), "Dirichlet"),
-                "bottom": (pybamm.Scalar(1), "Dirichlet"),
+                "top": (pybamm.Scalar(1), "Dirichlet"),
+                "bottom": (pybamm.Scalar(0), "Dirichlet"),
             }
         }
         disc.bcs = boundary_conditions
@@ -527,8 +527,8 @@ class TestFiniteVolume2DGradDiv:
             var_concat: {
                 "left": (pybamm.Scalar(0), "Neumann"),
                 "right": (pybamm.Scalar(0), "Neumann"),
-                "top": (pybamm.Scalar(0), "Dirichlet"),
-                "bottom": (pybamm.Scalar(1), "Dirichlet"),
+                "top": (pybamm.Scalar(1), "Dirichlet"),
+                "bottom": (pybamm.Scalar(0), "Dirichlet"),
             }
         }
         disc.bcs = boundary_conditions

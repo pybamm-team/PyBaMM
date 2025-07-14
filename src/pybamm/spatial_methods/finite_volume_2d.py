@@ -640,51 +640,9 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                 )
 
         # Calculate values for ghost nodes for any Dirichlet boundary conditions
-        if tbc_type == "Dirichlet":
-            # Create matrix to extract the leftmost column of values
-            row_indices = np.arange(0, n_lr)
-            col_indices = np.zeros(len(row_indices))
-            vals = np.ones(len(row_indices))
-            tbc_sub_matrix = coo_matrix(
-                (vals, (row_indices, col_indices)), shape=((n_tb + n_bcs) * n_lr, 1)
-            )
-            tbc_matrix = csr_matrix(kron(eye(second_dim_repeats), tbc_sub_matrix))
-
-            if tbc_value.evaluates_to_number():
-                top_ghost_constant = (
-                    2 * tbc_value * pybamm.Vector(np.ones(second_dim_repeats))
-                )
-                tbc_vector = pybamm.Matrix(tbc_matrix) @ top_ghost_constant
-            else:
-                top_ghost_constant = 2 * tbc_value
-                new_col_indices = np.arange(0, n_lr)
-                new_tbc_sub_matrix = coo_matrix(
-                    (np.ones(n_lr), (row_indices, new_col_indices)),
-                    shape=((n_tb + n_bcs) * n_lr, n_lr),
-                )
-                if top_ghost_constant.shape == (1, 1):
-                    top_ghost_constant = top_ghost_constant * pybamm.Vector(
-                        np.ones(n_lr)
-                    )
-                tbc_vector = pybamm.Matrix(new_tbc_sub_matrix) @ top_ghost_constant
-
-        else:
-            # Use consistent shape based on whether we have lr or tb Dirichlet BCs
-            if lbc_type == "Dirichlet" or rbc_type == "Dirichlet":
-                tbc_vector = pybamm.Vector(
-                    np.zeros((n_lr + n_bcs) * second_dim_repeats * n_tb)
-                )
-            else:
-                tbc_vector = pybamm.Vector(
-                    np.zeros((n_tb + n_bcs) * second_dim_repeats * n_lr)
-                )
-
-        # Calculate values for ghost nodes for any Dirichlet boundary conditions
         if bbc_type == "Dirichlet":
             # Create matrix to extract the leftmost column of values
-            row_indices = np.arange(
-                (n_lr * (n_tb + n_bcs)) - n_lr, n_lr * (n_tb + n_bcs)
-            )
+            row_indices = np.arange(0, n_lr)
             col_indices = np.zeros(len(row_indices))
             vals = np.ones(len(row_indices))
             bbc_sub_matrix = coo_matrix(
@@ -720,6 +678,48 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                 bbc_vector = pybamm.Vector(
                     np.zeros((n_tb + n_bcs) * second_dim_repeats * n_lr)
                 )
+
+        # Calculate values for ghost nodes for any Dirichlet boundary conditions
+        if tbc_type == "Dirichlet":
+            # Create matrix to extract the leftmost column of values
+            row_indices = np.arange(
+                (n_lr * (n_tb + n_bcs)) - n_lr, n_lr * (n_tb + n_bcs)
+            )
+            col_indices = np.zeros(len(row_indices))
+            vals = np.ones(len(row_indices))
+            tbc_sub_matrix = coo_matrix(
+                (vals, (row_indices, col_indices)), shape=((n_tb + n_bcs) * n_lr, 1)
+            )
+            tbc_matrix = csr_matrix(kron(eye(second_dim_repeats), tbc_sub_matrix))
+
+            if tbc_value.evaluates_to_number():
+                top_ghost_constant = (
+                    2 * tbc_value * pybamm.Vector(np.ones(second_dim_repeats))
+                )
+                tbc_vector = pybamm.Matrix(tbc_matrix) @ top_ghost_constant
+            else:
+                top_ghost_constant = 2 * tbc_value
+                new_col_indices = np.arange(0, n_lr)
+                new_tbc_sub_matrix = coo_matrix(
+                    (np.ones(n_lr), (row_indices, new_col_indices)),
+                    shape=((n_tb + n_bcs) * n_lr, n_lr),
+                )
+                if top_ghost_constant.shape == (1, 1):
+                    top_ghost_constant = top_ghost_constant * pybamm.Vector(
+                        np.ones(n_lr)
+                    )
+                tbc_vector = pybamm.Matrix(new_tbc_sub_matrix) @ top_ghost_constant
+
+        else:
+            # Use consistent shape based on whether we have lr or tb Dirichlet BCs
+            if lbc_type == "Dirichlet" or rbc_type == "Dirichlet":
+                tbc_vector = pybamm.Vector(
+                    np.zeros((n_lr + n_bcs) * second_dim_repeats * n_tb)
+                )
+            else:
+                tbc_vector = pybamm.Vector(
+                    np.zeros((n_tb + n_bcs) * second_dim_repeats * n_lr)
+                )
         bcs_vector = lbc_vector + rbc_vector + tbc_vector + bbc_vector
         # Need to match the domain. E.g. in the case of the boundary condition
         # on the particle, the gradient has domain particle but the bcs_vector
@@ -738,22 +738,22 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         else:
             right_ghost_vector = None
 
-        if tbc_type == "Dirichlet":
-            row_indices = np.arange(0, n_lr)
-            col_indices = np.arange(0, n_lr)
-            top_ghost_vector = coo_matrix(
-                (-np.ones(n_lr), (row_indices, col_indices)), shape=(n_lr, n)
-            )
-        else:
-            top_ghost_vector = None
         if bbc_type == "Dirichlet":
             row_indices = np.arange(0, n_lr)
-            col_indices = np.arange(n - n_lr, n)
+            col_indices = np.arange(0, n_lr)
             bottom_ghost_vector = coo_matrix(
                 (-np.ones(n_lr), (row_indices, col_indices)), shape=(n_lr, n)
             )
         else:
             bottom_ghost_vector = None
+        if tbc_type == "Dirichlet":
+            row_indices = np.arange(0, n_lr)
+            col_indices = np.arange(n - n_lr, n)
+            top_ghost_vector = coo_matrix(
+                (-np.ones(n_lr), (row_indices, col_indices)), shape=(n_lr, n)
+            )
+        else:
+            top_ghost_vector = None
 
         if lbc_type == "Dirichlet" or rbc_type == "Dirichlet":
             sub_matrix = vstack([left_ghost_vector, eye(n_lr), right_ghost_vector])
@@ -762,9 +762,9 @@ class FiniteVolume2D(pybamm.SpatialMethod):
             sub_matrix = vstack(
                 [
                     left_ghost_vector,
-                    top_ghost_vector,
-                    eye(n),
                     bottom_ghost_vector,
+                    eye(n),
+                    top_ghost_vector,
                     right_ghost_vector,
                 ]
             )
@@ -903,46 +903,8 @@ class FiniteVolume2D(pybamm.SpatialMethod):
             )
 
         # Add any values from Neumann boundary conditions to the bcs vector
-        if tbc_type == "Neumann" and tbc_value != 0:
-            row_indices = np.arange(0, n_lr)
-            col_indices = np.zeros(len(row_indices))
-            vals = np.ones(len(row_indices))
-            tbc_sub_matrix = coo_matrix(
-                (vals, (row_indices, col_indices)), shape=((n_tb - 1 + n_bcs) * n_lr, 1)
-            )
-            tbc_matrix = csr_matrix(kron(eye(second_dim_repeats), tbc_sub_matrix))
-            if tbc_value.evaluates_to_number():
-                top_bc = tbc_value * pybamm.Vector(np.ones(second_dim_repeats))
-                tbc_vector = pybamm.Matrix(tbc_matrix) @ top_bc
-            else:
-                top_bc = tbc_value
-                new_col_indices = np.arange(0, n_lr)
-                new_tbc_sub_matrix = coo_matrix(
-                    (np.ones(n_lr), (row_indices, new_col_indices)),
-                    shape=((n_tb + n_bcs - 1) * n_lr, n_lr),
-                )
-                if top_bc.shape == (1, 1):
-                    top_bc = top_bc * pybamm.Vector(np.ones(n_lr))
-                tbc_vector = pybamm.Matrix(new_tbc_sub_matrix) @ top_bc
-
-        elif tbc_type == "Dirichlet" or (tbc_type == "Neumann" and tbc_value == 0):
-            tbc_vector = pybamm.Vector(
-                np.zeros((n_tb - 1 + n_bcs) * second_dim_repeats * n_lr)
-            )
-        elif tbc_type is None and bbc_type is None:
-            tbc_vector = pybamm.Vector(
-                np.zeros((n_lr - 1 + n_bcs) * second_dim_repeats * n_tb)
-            )
-        else:
-            raise ValueError(
-                f"boundary condition must be Dirichlet or Neumann, not '{tbc_type}'"
-            )
-
-        # Add any values from Neumann boundary conditions to the bcs vector
         if bbc_type == "Neumann" and bbc_value != 0:
-            row_indices = np.arange(
-                (n_lr * (n_tb - 1 + n_bcs)) - n_lr, n_lr * (n_tb - 1 + n_bcs)
-            )
+            row_indices = np.arange(0, n_lr)
             col_indices = np.zeros(len(row_indices))
             vals = np.ones(len(row_indices))
             bbc_sub_matrix = coo_matrix(
@@ -962,12 +924,50 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                 if bottom_bc.shape == (1, 1):
                     bottom_bc = bottom_bc * pybamm.Vector(np.ones(n_lr))
                 bbc_vector = pybamm.Matrix(new_bbc_sub_matrix) @ bottom_bc
+
         elif bbc_type == "Dirichlet" or (bbc_type == "Neumann" and bbc_value == 0):
             bbc_vector = pybamm.Vector(
                 np.zeros((n_tb - 1 + n_bcs) * second_dim_repeats * n_lr)
             )
         elif bbc_type is None and tbc_type is None:
             bbc_vector = pybamm.Vector(
+                np.zeros((n_lr - 1 + n_bcs) * second_dim_repeats * n_tb)
+            )
+        else:
+            raise ValueError(
+                f"boundary condition must be Dirichlet or Neumann, not '{tbc_type}'"
+            )
+
+        # Add any values from Neumann boundary conditions to the bcs vector
+        if tbc_type == "Neumann" and tbc_value != 0:
+            row_indices = np.arange(
+                (n_lr * (n_tb - 1 + n_bcs)) - n_lr, n_lr * (n_tb - 1 + n_bcs)
+            )
+            col_indices = np.zeros(len(row_indices))
+            vals = np.ones(len(row_indices))
+            tbc_sub_matrix = coo_matrix(
+                (vals, (row_indices, col_indices)), shape=((n_tb - 1 + n_bcs) * n_lr, 1)
+            )
+            tbc_matrix = csr_matrix(kron(eye(second_dim_repeats), tbc_sub_matrix))
+            if tbc_value.evaluates_to_number():
+                top_bc = tbc_value * pybamm.Vector(np.ones(second_dim_repeats))
+                tbc_vector = pybamm.Matrix(tbc_matrix) @ top_bc
+            else:
+                top_bc = tbc_value
+                new_col_indices = np.arange(0, n_lr)
+                new_tbc_sub_matrix = coo_matrix(
+                    (np.ones(n_lr), (row_indices, new_col_indices)),
+                    shape=((n_tb + n_bcs - 1) * n_lr, n_lr),
+                )
+                if top_bc.shape == (1, 1):
+                    top_bc = top_bc * pybamm.Vector(np.ones(n_lr))
+                tbc_vector = pybamm.Matrix(new_tbc_sub_matrix) @ top_bc
+        elif tbc_type == "Dirichlet" or (tbc_type == "Neumann" and tbc_value == 0):
+            tbc_vector = pybamm.Vector(
+                np.zeros((n_tb - 1 + n_bcs) * second_dim_repeats * n_lr)
+            )
+        elif tbc_type is None and bbc_type is None:
+            tbc_vector = pybamm.Vector(
                 np.zeros((n_lr - 1 + n_bcs) * second_dim_repeats * n_tb)
             )
         else:
@@ -1006,7 +1006,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
             sub_matrix = vstack([left_vector, eye(n_lr - 1), right_vector])
             sub_matrix = block_diag((sub_matrix,) * n_tb)
         elif tbc_type == "Neumann" or bbc_type == "Neumann":
-            sub_matrix = vstack([top_vector, eye((n_tb - 1) * n_lr), bottom_vector])
+            sub_matrix = vstack([bottom_vector, eye((n_tb - 1) * n_lr), top_vector])
 
         # repeat matrix for secondary dimensions
         # Convert to csr_matrix so that we can take the index (row-slicing), which is
@@ -1262,7 +1262,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                 else:
                     raise NotImplementedError
 
-            elif side_first == "top":
+            elif side_first == "bottom":
                 if extrap_order_value == "linear":
                     if use_bcs and pybamm.has_bc_of_form(
                         child, side_first, bcs, "Neumann"
@@ -1331,7 +1331,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                 else:
                     raise NotImplementedError
 
-            elif side_first == "bottom":
+            elif side_first == "top":
                 if extrap_order_value == "linear":
                     if use_bcs and pybamm.has_bc_of_form(
                         child, side_first, bcs, "Neumann"
@@ -1402,7 +1402,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
 
             if skip_side_second:
                 pass
-            elif side_second == "top":
+            elif side_second == "bottom":
                 if use_bcs and pybamm.has_bc_of_form(
                     child, side_second, bcs, "Neumann"
                 ):
@@ -1435,7 +1435,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                         (vals, (row_indices, col_indices)), shape=(1, n_tb)
                     )
                     sub_matrix = sub_matrix_second @ sub_matrix
-            elif side_second == "bottom":
+            elif side_second == "top":
                 if use_bcs and pybamm.has_bc_of_form(
                     child, side_second, bcs, "Neumann"
                 ):
@@ -1593,7 +1593,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                 else:
                     raise NotImplementedError
 
-            elif side_first == "top":
+            elif side_first == "bottom":
                 if extrap_order_gradient == "linear":
                     dx1 = dx1_tb
                     row_indices = np.arange(0, n_lr)
@@ -1639,7 +1639,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                         shape=(n_lr, n_tb * n_lr),
                     )
                     additive = pybamm.Scalar(0)
-            elif side_first == "bottom":
+            elif side_first == "top":
                 if extrap_order_gradient == "linear":
                     dxNm1 = dxNm1_tb
                     row_indices = np.arange(0, n_lr)
@@ -2389,9 +2389,9 @@ class FiniteVolume2D(pybamm.SpatialMethod):
             raise ValueError(f"direction '{lr_direction}' not recognised")
 
         if tb_direction == "upwind":
-            tb_bc_side = "top"
-        elif tb_direction == "downwind":
             tb_bc_side = "bottom"
+        elif tb_direction == "downwind":
+            tb_bc_side = "top"
         elif tb_direction is None:
             tb_bc_side = None
         else:
