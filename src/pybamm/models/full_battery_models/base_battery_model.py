@@ -294,7 +294,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         self.possible_options = {
             "calculate discharge energy": ["false", "true"],
             "calculate heat source for isothermal models": ["false", "true"],
-            "cell geometry": ["arbitrary", "pouch", "box", "cylindrical"],
+            "cell geometry": ["arbitrary", "pouch", "cylindrical"],
             "contact resistance": ["false", "true"],
             "convection": ["none", "uniform transverse", "full transverse"],
             "current collector": [
@@ -663,15 +663,15 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     "cannot have transverse convection in 0D model"
                 )
         if options["dimensionality"] == 3:
-            if options["cell geometry"] not in ["box", "cylindrical"]:
+            if options["cell geometry"] not in ["pouch", "cylindrical"]:
                 raise pybamm.OptionError(
-                    "cell geometry must be box or cylindrical in 3D model"
+                    "cell geometry must be pouch or cylindrical in 3D model"
                 )
 
-        if options["cell geometry"] in ["box", "cylindrical"]:
+        if options["cell geometry"] == "cylindrical":
             if options["dimensionality"] != 3:
                 raise pybamm.OptionError(
-                    "cell geometry must be 3D for box or cylindrical geometries"
+                    "cell geometry must be 3D for cylindrical geometries"
                 )
 
         if (
@@ -1003,10 +1003,10 @@ class BaseBatteryModel(pybamm.BaseModel):
             base_submeshes["current collector"] = pybamm.ScikitUniform2DSubMesh
         elif self.options["dimensionality"] == 3:
             base_submeshes["current collector"] = pybamm.SubMesh0D
-            geom_type = self.options.get("cell geometry", "box")
-            if geom_type == "box":
+            geom_type = self.options.get("cell geometry", "pouch")
+            if geom_type == "pouch":
                 base_submeshes["cell"] = pybamm.ScikitFemGenerator3D(
-                    geom_type="box", h="0.1"
+                    geom_type="pouch", h="0.1"
                 )
             elif geom_type == "cylindrical":
                 base_submeshes["cell"] = pybamm.ScikitFemGenerator3D(

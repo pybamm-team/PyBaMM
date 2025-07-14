@@ -11,7 +11,7 @@ class ScikitFemGenerator3D(pybamm.MeshGenerator):
     Parameters
     ----------
     geom_type : str
-        The type of geometry to generate. Must be one of "box" for a rectangular
+        The type of geometry to generate. Must be one of "pouch" for a rectangular
         prism, or "cylinder" for a cylindrical annulus.
     gen_params : dict
         A dictionary of geometry-specific parameters. for eg:
@@ -23,7 +23,7 @@ class ScikitFemGenerator3D(pybamm.MeshGenerator):
     """
 
     def __init__(self, geom_type, **gen_params):
-        supported_geometries = ["box", "cylinder"]
+        supported_geometries = ["pouch", "cylinder"]
         if geom_type not in supported_geometries:
             raise pybamm.GeometryError(
                 f"geom_type must be one of {supported_geometries}, not '{geom_type}'"
@@ -32,9 +32,9 @@ class ScikitFemGenerator3D(pybamm.MeshGenerator):
         self.geom_type = geom_type
         self.gen_params = gen_params
 
-    def _make_box_mesh(self, x_lim, y_lim, z_lim, h):
+    def _make_pouch_mesh(self, x_lim, y_lim, z_lim, h):
         """
-        Create a structured box mesh.
+        Create a structured pouch mesh.
 
         Parameters
         ----------
@@ -46,7 +46,7 @@ class ScikitFemGenerator3D(pybamm.MeshGenerator):
         Returns
         -------
         skfem.MeshTet
-            Box mesh with proper boundary tags
+            Pouch mesh with proper boundary tags
         """
         skfem = import_optional_dependency("skfem")
         x_min, x_max = x_lim
@@ -204,12 +204,12 @@ class ScikitFemGenerator3D(pybamm.MeshGenerator):
             else:
                 lims_dict[var] = (float(lim["min"]), float(lim["max"]))
 
-        if self.geom_type == "box":
+        if self.geom_type == "pouch":
             x_lim = lims_dict["x"]
             y_lim = lims_dict["y"]
             z_lim = lims_dict["z"]
             coord_sys = "cartesian"
-            mesh = self._make_box_mesh(x_lim, y_lim, z_lim, h)
+            mesh = self._make_pouch_mesh(x_lim, y_lim, z_lim, h)
 
         elif self.geom_type == "cylinder":
             if "r" in lims_dict:

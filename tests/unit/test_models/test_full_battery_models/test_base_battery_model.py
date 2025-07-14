@@ -20,7 +20,7 @@ OPTIONS_DICT = {
 PRINT_OPTIONS_OUTPUT = """\
 'calculate discharge energy': 'false' (possible: ['false', 'true'])
 'calculate heat source for isothermal models': 'false' (possible: ['false', 'true'])
-'cell geometry': 'pouch' (possible: ['arbitrary', 'pouch', 'box', 'cylindrical'])
+'cell geometry': 'pouch' (possible: ['arbitrary', 'pouch', 'cylindrical'])
 'contact resistance': 'false' (possible: ['false', 'true'])
 'convection': 'none' (possible: ['none', 'uniform transverse', 'full transverse'])
 'current collector': 'uniform' (possible: ['uniform', 'potential pair', 'potential pair quite conductive'])
@@ -127,6 +127,15 @@ class TestBaseBatteryModel:
             model.default_submesh_types["current collector"],
             pybamm.ScikitUniform2DSubMesh,
         )
+        model = pybamm.BaseBatteryModel({"dimensionality": 3})
+        assert issubclass(
+            model.default_submesh_types["current collector"],
+            pybamm.ZeroDimensionalSpatialMethod,
+        )
+        assert issubclass(
+            model.default_submesh_types["cell"],
+            pybamm.ScikitUniform3DSubMesh,
+        )
 
     def test_default_var_pts(self):
         var_pts = {
@@ -168,6 +177,11 @@ class TestBaseBatteryModel:
         model = pybamm.BaseBatteryModel({"dimensionality": 2})
         assert isinstance(
             model.default_spatial_methods["current collector"],
+            pybamm.ScikitFiniteElement,
+        )
+        model = pybamm.BaseBatteryModel({"dimensionality": 3})
+        assert isinstance(
+            model.default_spatial_methods["cell"],
             pybamm.ScikitFiniteElement,
         )
 

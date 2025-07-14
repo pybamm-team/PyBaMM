@@ -7,7 +7,7 @@ import pybamm
 models = {
     "Lumped": pybamm.lithium_ion.SPM(options={"thermal": "lumped"}),
     "3D": pybamm.lithium_ion.BasicSPM_with_3DThermal(
-        options={"cell geometry": "box", "dimensionality": 3}
+        options={"cell geometry": "pouch", "dimensionality": 3}
     ),
 }
 

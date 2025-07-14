@@ -47,7 +47,7 @@ class BasicSPM_with_3DThermal(BaseModel):
 
         T = pybamm.Variable("Cell temperature [K]", domain="cell")
 
-        if self.options.get("cell geometry") == "box":
+        if self.options.get("cell geometry") == "pouch":
             x = pybamm.SpatialVariable("x", domain="cell")
             y = pybamm.SpatialVariable("y", domain="cell")
             z = pybamm.SpatialVariable("z", domain="cell")
@@ -59,7 +59,7 @@ class BasicSPM_with_3DThermal(BaseModel):
         else:
             raise ValueError(
                 f"Geometry type '{self.options.get('cell geometry')}' is not supported. "
-                "Supported types are 'box' and 'cylindrical'."
+                "Supported types are 'pouch' and 'cylindrical'."
             )  # pragma: no cover
 
         volume = pybamm.Integral(pybamm.PrimaryBroadcast(1.0, "cell"), integration_vars)
@@ -259,8 +259,8 @@ class BasicSPM_with_3DThermal(BaseModel):
         ]
 
     def set_thermal_bcs(self, T):
-        geometry_type = self.options.get("cell geometry", "box")
-        if geometry_type == "box":
+        geometry_type = self.options.get("cell geometry", "pouch")
+        if geometry_type == "pouch":
             y = pybamm.SpatialVariable("y", "cell")
             z = pybamm.SpatialVariable("z", "cell")
             T_amb = self.param.T_amb(y, z, pybamm.t)
@@ -285,7 +285,7 @@ class BasicSPM_with_3DThermal(BaseModel):
         else:
             raise ValueError(
                 f"Geometry type '{geometry_type}' is not supported. "
-                "Supported types are 'box' and 'cylindrical'."
+                "Supported types are 'pouch' and 'cylindrical'."
             )  # pragma: no cover
 
         self.boundary_conditions[T] = {}

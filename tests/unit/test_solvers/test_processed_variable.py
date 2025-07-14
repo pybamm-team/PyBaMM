@@ -1639,7 +1639,7 @@ class TestProcessedVariable:
             computed_var(t=t_sol, x=x_sol, R=R_sol, r=r_sol).shape, (6, 7, Nx, 50)
         )
 
-    def test_processed_variable_unstructured_3d_box(self):
+    def test_processed_variable_unstructured_3d_pouch(self):
         from pybamm.meshes.scikit_fem_submeshes_3d import ScikitFemGenerator3D
 
         x = pybamm.SpatialVariable(
@@ -1661,7 +1661,7 @@ class TestProcessedVariable:
         }
 
         submesh_types = {
-            "current collector": ScikitFemGenerator3D(geom_type="box", h=0.3)
+            "current collector": ScikitFemGenerator3D(geom_type="pouch", h=0.3)
         }
         var_pts = {x: None, y: None, z: None}
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
@@ -1729,7 +1729,7 @@ class TestProcessedVariable:
         }
 
         submesh_types = {
-            "current collector": ScikitFemGenerator3D(geom_type="box", h=0.3)
+            "current collector": ScikitFemGenerator3D(geom_type="pouch", h=0.3)
         }
         var_pts = {x: None, y: None, z: None}
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
@@ -1794,7 +1794,7 @@ class TestProcessedVariable:
         }
 
         submesh_types = {
-            "current collector": ScikitFemGenerator3D(geom_type="box", h=0.3)
+            "current collector": ScikitFemGenerator3D(geom_type="pouch", h=0.3)
         }
         var_pts = {x: None, y: None, z: None}
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
@@ -1853,7 +1853,7 @@ class TestProcessedVariable:
         }
 
         submesh_types = {
-            "current collector": ScikitFemGenerator3D(geom_type="box", h=0.3)
+            "current collector": ScikitFemGenerator3D(geom_type="pouch", h=0.3)
         }
         var_pts = {x: None, y: None, z: None}
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
@@ -1903,7 +1903,7 @@ class TestProcessedVariable:
         }
 
         submesh_types = {
-            "current collector": ScikitFemGenerator3D(geom_type="box", h=0.3)
+            "current collector": ScikitFemGenerator3D(geom_type="pouch", h=0.3)
         }
         var_pts = {x: None, y: None, z: None}
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
@@ -1986,7 +1986,7 @@ class TestProcessedVariable:
         }
 
         submesh_types = {
-            "current collector": ScikitFemGenerator3D(geom_type="box", h=0.3)
+            "current collector": ScikitFemGenerator3D(geom_type="pouch", h=0.3)
         }
         var_pts = {x: None, y: None, z: None}
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)

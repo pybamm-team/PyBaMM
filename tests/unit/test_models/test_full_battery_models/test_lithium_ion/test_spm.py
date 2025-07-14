@@ -74,8 +74,8 @@ class TestSPM(BaseUnitTestLithiumIon):
         model_cs_eqn = list(model.rhs.values())[1]
         assert new_model_cs_eqn == model_cs_eqn
 
-    def test_basic_spm_with_3d_thermal_box(self):
-        options = {"cell geometry": "box", "dimensionality": 3}
+    def test_basic_spm_with_3d_thermal_pouch(self):
+        options = {"cell geometry": "pouch", "dimensionality": 3}
         self.model = pybamm.lithium_ion.BasicSPM_with_3DThermal
         self.check_well_posedness(options)
 
@@ -85,17 +85,17 @@ class TestSPM(BaseUnitTestLithiumIon):
         self.check_well_posedness(options)
 
     def test_basic_spm_with_3d_thermal_incompatible_options(self):
-        options = {"cell geometry": "box", "dimensionality": 2}
+        options = {"cell geometry": "cylindrical", "dimensionality": 2}
         self.model = pybamm.lithium_ion.BasicSPM_with_3DThermal
         with pytest.raises(
             pybamm.OptionError,
-            match="cell geometry must be 3D for box or cylindrical geometries",
+            match="cell geometry must be 3D for cylindrical geometries",
         ):
             self.check_well_posedness(options)
 
-        options = {"cell geometry": "pouch", "dimensionality": 3}
+        options = {"cell geometry": "arbitrary", "dimensionality": 3}
         with pytest.raises(
             pybamm.OptionError,
-            match="cell geometry must be box or cylindrical in 3D model",
+            match="cell geometry must be pouch or cylindrical in 3D model",
         ):
             self.check_well_posedness(options)
