@@ -944,7 +944,7 @@ class TestIDAKLUSolver:
         output_variables = [
             "Voltage [V]",
             "Time [min]",
-            "x [m]",
+            "x [m]",  # 1D
             "Throughput capacity [A.h]",  # ExplicitTimeIntegral
         ]
 
@@ -992,6 +992,17 @@ class TestIDAKLUSolver:
                 sol[varname].sensitivities["all"].shape
                 == sol_all[varname].sensitivities["all"].shape
             )
+
+        # test each of the sensitivity calculations match
+        for varname in output_variables:
+            for key in input_parameters:
+                np.testing.assert_allclose(
+                    sol[varname].sensitivities[key],
+                    sol_all[varname].sensitivities[key],
+                    rtol=tol,
+                    atol=tol,
+                    err_msg=f"Failed for '{varname}', sensitivity '{key}'",
+                )
 
     def test_with_output_variables_and_event_termination(self):
         model = pybamm.lithium_ion.DFN()
