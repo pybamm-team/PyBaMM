@@ -1369,7 +1369,7 @@ class BaseSolver:
             case "failure":
                 return (
                     solution,
-                    "the solver failed to reach the end of the integration interval",
+                    "the solver failed to simulate",
                 )
 
         # solution.termination == "event":
