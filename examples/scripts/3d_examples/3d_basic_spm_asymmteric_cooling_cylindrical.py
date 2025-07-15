@@ -35,11 +35,10 @@ var_pts = {
     "x_p": 20,
     "r_n": 30,
     "r_p": 30,
-    "r_macro": 20,
-    "z": 20,
+    "r_macro": None,
+    "z": None,
 }
 
-# 2. --- Simulation Solve ---
 sim = pybamm.Simulation(
     model_3d,
     parameter_values=parameter_values,
@@ -50,7 +49,6 @@ print("Solving... (this may take a minute)")
 solution = sim.solve()
 print("Solve complete.")
 
-# 3. --- Plotting Results ---
 print("Generating plots...")
 final_time = solution.t[-1]
 

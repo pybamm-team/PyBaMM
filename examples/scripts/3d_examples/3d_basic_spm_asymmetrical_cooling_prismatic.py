@@ -34,23 +34,42 @@ var_pts = {
     "x_p": 20,
     "r_n": 30,
     "r_p": 30,
-    "x": 20,
-    "y": 20,
-    "z": 20,
+    "x": None,
+    "y": None,
+    "z": None,
 }
 
-# 2. --- Simulation Solve ---
+submesh_types = {
+    "cell": pybamm.ScikitFemGenerator3D("box", h="0.01"),  # very fine mesh
+    "negative electrode": pybamm.Uniform1DSubMesh,
+    "separator": pybamm.Uniform1DSubMesh,
+    "positive electrode": pybamm.Uniform1DSubMesh,
+    "current collector": pybamm.SubMesh0D,
+    "negative particle": pybamm.Uniform1DSubMesh,
+    "positive particle": pybamm.Uniform1DSubMesh,
+    "negative primary particle": pybamm.Uniform1DSubMesh,
+    "positive primary particle": pybamm.Uniform1DSubMesh,
+    "negative secondary particle": pybamm.Uniform1DSubMesh,
+    "positive secondary particle": pybamm.Uniform1DSubMesh,
+    "negative particle size": pybamm.Uniform1DSubMesh,
+    "positive particle size": pybamm.Uniform1DSubMesh,
+    "negative primary particle size": pybamm.Uniform1DSubMesh,
+    "positive primary particle size": pybamm.Uniform1DSubMesh,
+    "negative secondary particle size": pybamm.Uniform1DSubMesh,
+    "positive secondary particle size": pybamm.Uniform1DSubMesh,
+}
+
 sim = pybamm.Simulation(
     model_3d,
     parameter_values=parameter_values,
     var_pts=var_pts,
     experiment=experiment,
+    submesh_types=submesh_types,
 )
 print("Solving... (this may take a minute)")
 solution = sim.solve()
 print("Solve complete.")
 
-# 3. --- Plotting Results ---
 print("Generating plots...")
 final_time = solution.t[-1]
 
