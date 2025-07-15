@@ -930,9 +930,8 @@ class BaseSolver:
         solve_time = timer.time()
 
         for i, solution in enumerate(solutions):
-            # Check if extrapolation or failure occurred
+            # Check if extrapolation occurred
             self.check_extrapolation(solution, model.events)
-            solution = self._check_failure(solution)
             # Identify the event that caused termination and update the solution to
             # include the event time and state
             solutions[i], termination = self.get_termination_reason(
@@ -1360,16 +1359,18 @@ class BaseSolver:
         termination_events = [
             x for x in events if x.event_type == pybamm.EventType.TERMINATION
         ]
-        if solution.termination == "final time":
-            return (
-                solution,
-                "the solver successfully reached the end of the integration interval",
-            )
-        if solution.termination == "failure":
-            return (
-                solution,
-                "the solver failed to reach end of the integration interval",
-            )
+
+        match solution.termination:
+            case "final time":
+                return (
+                    solution,
+                    "the solver successfully reached the end of the integration interval",
+                )
+            case "failure":
+                return (
+                    solution,
+                    "the solver failed to reach the end of the integration interval",
+                )
 
         # solution.termination == "event":
         pybamm.logger.debug("Start post-processing events")
@@ -1487,19 +1488,6 @@ class BaseSolver:
                 pybamm.SolverWarning,
                 stacklevel=2,
             )
-
-    def _check_failure(
-        self, solution: pybamm.Solution
-    ) -> pybamm.Solution | pybamm.EmptySolution:
-        """Checks if a solution failed to converge and return either the solution or an EmptySolution"""
-        if solution.termination != "failure":
-            return solution
-
-        match self._on_failure:
-            case "ignore":
-                return pybamm.EmptySolution(termination="failure")
-            case _:
-                return solution
 
     def _check_empty_model(self, model):
         # Make sure model isn't empty

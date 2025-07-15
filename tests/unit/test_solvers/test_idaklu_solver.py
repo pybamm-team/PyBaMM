@@ -1238,7 +1238,7 @@ class TestIDAKLUSolver:
         sol = solver.solve(
             model, t_eval=t_eval, t_interp=t_interp, inputs=input_parameters
         )
-        assert isinstance(sol, pybamm.EmptySolution)
+        assert sol.termination == "failure"
 
         # Test "warn"
         solver = pybamm.IDAKLUSolver(on_failure="warn")

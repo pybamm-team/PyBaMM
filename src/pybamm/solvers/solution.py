@@ -881,9 +881,6 @@ class Solution:
 class EmptySolution:
     def __init__(self, termination=None, t=None):
         self.termination = termination
-        self.integration_time = 0
-        self.total_time = 0
-        self.all_ts = [0, 0]
         if t is None:
             t = np.array([0])
         elif isinstance(t, numbers.Number):
