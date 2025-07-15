@@ -34,6 +34,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
     on_extrapolation : str, optional
         What to do if the solver is extrapolating. Options are "warn", "error", or "ignore".
         Default is "warn".
+    on_failure : str, optional
+        What to do if a solver error flag occurs. Options are "warn", "error", or "ignore".
+        Default is "raise".
     output_variables : list[str], optional
         List of variables to calculate and return. If none are specified then
         the complete state vector is returned (can be very large) (default is [])
@@ -146,6 +149,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         extrap_tol=None,
         on_extrapolation=None,
         output_variables=None,
+        on_failure=None,
         options=None,
     ):
         # set default options,
@@ -204,6 +208,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             extrap_tol=extrap_tol,
             output_variables=output_variables,
             on_extrapolation=on_extrapolation,
+            on_failure=on_failure,
         )
         self.name = "IDA KLU solver"
         self._supports_interp = True
@@ -616,12 +621,21 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         # 0 = solved for all t_eval
         # 2 = found root(s)
+        # < 0 = solver failure
         if sol.flag == 2:
             termination = "event"
         elif sol.flag >= 0:
             termination = "final time"
-        else:
-            raise pybamm.SolverError(f"FAILURE {self._solver_flag(sol.flag)}")
+        elif sol.flag < 0:
+            termination = "failure"
+            match self._on_failure:
+                case "warn":
+                    warnings.warn(
+                        f"FAILURE {self._solver_flag(sol.flag)}, returning a partial solution.",
+                        stacklevel=2,
+                    )
+                case "raise":
+                    raise pybamm.SolverError(f"FAILURE {self._solver_flag(sol.flag)}")
 
         if sol.yp.size > 0:
             yp = sol.yp.reshape((number_of_timesteps, number_of_states)).T
