@@ -942,9 +942,10 @@ class TestIDAKLUSolver:
 
         # Use a selection of variables of different types
         output_variables = [
-            "Voltage [V]",
-            "Time [min]",
-            "x [m]",  # 1D
+            "Voltage [V]",  # 0D
+            "x [m]",  # 1D, empty sensitivities
+            "Negative electrode potential [V]",  # 1D
+            "Negative particle concentration [mol.m-3]",  # 2D
             "Throughput capacity [A.h]",  # ExplicitTimeIntegral
         ]
 
