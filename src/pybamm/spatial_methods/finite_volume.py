@@ -120,11 +120,27 @@ class FiniteVolume(pybamm.SpatialMethod):
         """
         # Create appropriate submesh by combining submeshes in primary domain
         submesh = self.mesh[domain]
+        if len(domain) > 1 and hasattr(submesh, "length"):
+            submeshes = [self.mesh[domain_] for domain_ in domain]
+            dx_list = []
+            for submesh_ in submeshes:
+                nodes_ = pybamm.Vector(submesh_.nodes)
+                if hasattr(submesh_, "length"):
+                    nodes_ = nodes_ * submesh_.length + submesh_.min
+                dx_list.append(nodes_)
+            dx = pybamm.numpy_concatenation(*dx_list)
+            diff_matrix = diags([-1, 1], [0, 1], shape=(dx.size - 1, dx.size))
+            d_nodes = pybamm.Matrix(diff_matrix) @ dx
+            e = 1 / d_nodes
+        else:
+            e = 1 / submesh.d_nodes
 
         # Create 1D matrix using submesh
         n = submesh.npts
-        e = 1 / submesh.d_nodes
-        sub_matrix = diags([-e, e], [0, 1], shape=(n - 1, n))
+        # e = 1 / submesh.d_nodes
+        sub_matrix_minus = pybamm.Matrix(diags([-1], [0], shape=(n - 1, n))) * e
+        sub_matrix_plus = pybamm.Matrix(diags([1], [1], shape=(n - 1, n))) * e
+        sub_matrix = sub_matrix_minus + sub_matrix_plus
 
         # number of repeats
         second_dim_repeats = self._get_auxiliary_domain_repeats(domains)
@@ -134,11 +150,10 @@ class FiniteVolume(pybamm.SpatialMethod):
         # not supported by the default kron format
         # Note that this makes column-slicing inefficient, but this should not be an
         # issue
-        matrix = csr_matrix(kron(eye(second_dim_repeats), sub_matrix))
-        if getattr(submesh, "length", None) is not None:
-            return pybamm.Matrix(matrix) * 1 / submesh.length
-        else:
-            return pybamm.Matrix(matrix)
+        matrix = pybamm.KroneckerProduct(
+            pybamm.Matrix(eye(second_dim_repeats)), sub_matrix
+        )
+        return matrix
 
     def divergence(self, symbol, discretised_symbol, boundary_conditions):
         """Matrix-vector multiplication to implement the divergence operator.
@@ -182,6 +197,26 @@ class FiniteVolume(pybamm.SpatialMethod):
         """
         # Create appropriate submesh by combining submeshes in domain
         submesh = self.mesh[domains["primary"]]
+        if len(domains["primary"]) > 1 and hasattr(submesh, "length"):
+            submeshes = [self.mesh[domain] for domain in domains["primary"]]
+            edges_list = []
+            for i, submesh_ in enumerate(submeshes):
+                if i == 0:
+                    edges_ = pybamm.Vector(submesh_.edges)
+                else:
+                    edges_ = pybamm.Vector(submesh_.edges[1:])
+
+                # edges_ = submesh_.edges
+                if hasattr(submesh_, "length"):
+                    edges_ = edges_ * submesh_.length + submesh_.min
+                edges_list.append(edges_)
+            edges = pybamm.numpy_concatenation(*edges_list)
+            diff_matrix = diags([-1, 1], [0, 1], shape=(edges.size - 1, edges.size))
+            d_edges = pybamm.Matrix(diff_matrix) @ edges
+            e = 1 / d_edges
+        else:
+            e = 1 / submesh.d_edges
+            d_edges = submesh.d_edges
 
         # check coordinate system
         if submesh.coord_sys in ["cylindrical polar", "spherical polar"]:
@@ -192,31 +227,24 @@ class FiniteVolume(pybamm.SpatialMethod):
             elif submesh.coord_sys == "cylindrical polar":
                 d_edges = (r_edges_right**2 - r_edges_left**2) / 2
         else:
-            d_edges = submesh.d_edges
+            d_edges = d_edges
+        #    d_edges = submesh.d_edges
 
-        e = 1 / d_edges
+        # e = 1 / d_edges
 
         # Create matrix using submesh
         n = submesh.npts + 1
-        sub_matrix = diags([-e, e], [0, 1], shape=(n - 1, n))
+        sub_matrix_minus = pybamm.Matrix(diags([-1], [0], shape=(n - 1, n))) * e
+        sub_matrix_plus = pybamm.Matrix(diags([1], [1], shape=(n - 1, n))) * e
+        sub_matrix = sub_matrix_minus + sub_matrix_plus
 
         # repeat matrix for each node in secondary dimensions
         second_dim_repeats = self._get_auxiliary_domain_repeats(domains)
         # generate full matrix from the submatrix
-        # Convert to csr_matrix so that we can take the index (row-slicing), which is
-        # not supported by the default kron format
-        # Note that this makes column-slicing inefficient, but this should not be an
-        # issue
-        matrix = csr_matrix(kron(eye(second_dim_repeats), sub_matrix))
-        if getattr(submesh, "length", None) is not None:
-            if submesh.coord_sys == "spherical polar":
-                return pybamm.Matrix(matrix) * (1 / submesh.length**3)
-            elif submesh.coord_sys == "cylindrical polar":
-                return pybamm.Matrix(matrix) * (1 / (submesh.length**2))
-            else:
-                return pybamm.Matrix(matrix) * (1 / submesh.length)
-        else:
-            return pybamm.Matrix(matrix)
+        matrix = pybamm.KroneckerProduct(
+            pybamm.Matrix(eye(second_dim_repeats)), sub_matrix
+        )
+        return matrix
 
     def laplacian(self, symbol, discretised_symbol, boundary_conditions):
         """
@@ -1398,6 +1426,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             """
             # Create appropriate submesh by combining submeshes in domain
             submesh = self.mesh[array.domain]
+            submeshes = [self.mesh[domain] for domain in array.domain]
 
             # Get second dimension length for use later
             second_dim_repeats = self._get_auxiliary_domain_repeats(
@@ -1446,9 +1475,15 @@ class FiniteVolume(pybamm.SpatialMethod):
                 sub_matrix_D2 = hstack([csr_matrix((n - 1, 1)), eye(n - 1)])
                 matrix_D2 = csr_matrix(kron(eye(second_dim_repeats), sub_matrix_D2))
                 D2 = pybamm.Matrix(matrix_D2) @ array
-
                 # Compute weight beta
                 dx = submesh.d_edges
+                dx_list = []
+                for submesh_ in submeshes:
+                    dx_ = submesh_.d_edges
+                    if hasattr(submesh_, "length"):
+                        dx_ = dx_ * submesh_.length
+                    dx_list.append(dx_)
+                dx = np.concatenate(dx_list)
                 sub_beta = (dx[:-1] / (dx[1:] + dx[:-1]))[:, np.newaxis]
                 beta = pybamm.Array(np.kron(np.ones((second_dim_repeats, 1)), sub_beta))
 

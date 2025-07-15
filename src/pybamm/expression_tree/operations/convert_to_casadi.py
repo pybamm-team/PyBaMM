@@ -86,6 +86,8 @@ class CasadiConverter:
                 return casadi.fmin(converted_left, converted_right)
             if isinstance(symbol, pybamm.Maximum):
                 return casadi.fmax(converted_left, converted_right)
+            if isinstance(symbol, pybamm.KroneckerProduct):
+                return casadi.kron(converted_left, converted_right)
 
             # _binary_evaluate defined in derived classes for specific rules
             return symbol._binary_evaluate(converted_left, converted_right)

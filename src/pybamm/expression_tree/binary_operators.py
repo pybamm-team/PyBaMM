@@ -11,7 +11,7 @@ from typing import cast
 import numpy as np
 import numpy.typing as npt
 import sympy
-from scipy.sparse import csr_matrix, issparse
+from scipy.sparse import csr_matrix, issparse, kron
 
 import pybamm
 
@@ -356,6 +356,45 @@ class Multiplication(BinaryOperator):
             return csr_matrix(right.multiply(left))
         else:
             return left * right
+
+
+class KroneckerProduct(BinaryOperator):
+    """
+    A node in the expression tree representing a matrix multiplication operator.
+    """
+
+    def __init__(
+        self,
+        left: ChildSymbol,
+        right: ChildSymbol,
+    ):
+        """See :meth:`pybamm.BinaryOperator.__init__()`."""
+        super().__init__("kronecker product", left, right)
+
+    def diff(self, variable):
+        """See :meth:`pybamm.Symbol.diff()`."""
+        # We shouldn't need this
+        raise NotImplementedError(
+            "diff not implemented for symbol of type 'MatrixMultiplication'"
+        )
+
+    def _binary_jac(self, left_jac, right_jac):
+        """See :meth:`pybamm.BinaryOperator._binary_jac()`."""
+        # We only need the case where left is an array and right
+        # is a (slice of a) state vector, e.g. for discretised spatial
+        # operators of the form D @ u (also catch cases of (-D) @ u)
+        raise NotImplementedError
+
+    def _binary_evaluate(self, left, right):
+        """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
+        if issparse(left) and issparse(right):
+            return kron(left, right)
+        else:
+            return np.kron(left, right)
+
+    def _sympy_operator(self, left, right):
+        """Override :meth:`pybamm.BinaryOperator._sympy_operator`"""
+        raise NotImplementedError
 
 
 class MatrixMultiplication(BinaryOperator):
