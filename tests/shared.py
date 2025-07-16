@@ -115,6 +115,7 @@ def get_mesh_for_testing(
     }
     return pybamm.Mesh(geometry, submesh_types, var_pts)
 
+
 def get_mesh_for_testing_2d(
     xpts=None,
     rpts=10,
