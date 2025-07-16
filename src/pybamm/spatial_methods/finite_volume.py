@@ -120,7 +120,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         """
         # Create appropriate submesh by combining submeshes in primary domain
         submesh = self.mesh[domain]
-        if len(domain) > 1:
+        if hasattr(submesh, "length"):
             submeshes = [self.mesh[domain_] for domain_ in domain]
             dx_list = []
             for submesh_ in submeshes:
@@ -138,9 +138,9 @@ class FiniteVolume(pybamm.SpatialMethod):
         # Create 1D matrix using submesh
         n = submesh.npts
         # e = 1 / submesh.d_nodes
-        sub_matrix_minus = pybamm.Matrix(diags([-1], [0], shape=(n - 1, n))) * e
-        sub_matrix_plus = pybamm.Matrix(diags([1], [1], shape=(n - 1, n))) * e
-        sub_matrix = sub_matrix_minus + sub_matrix_plus
+        sub_matrix_minus = pybamm.Matrix(diags([-1], [0], shape=(n - 1, n)))
+        sub_matrix_plus = pybamm.Matrix(diags([1], [1], shape=(n - 1, n)))
+        sub_matrix = (sub_matrix_minus + sub_matrix_plus) * e
 
         # number of repeats
         second_dim_repeats = self._get_auxiliary_domain_repeats(domains)
@@ -155,6 +155,45 @@ class FiniteVolume(pybamm.SpatialMethod):
         )
         return matrix
 
+    def _get_edges_symbolic_mesh(self, domains):
+        submeshes = [self.mesh[domain] for domain in domains]
+        edges_list = []
+        for i, submesh_ in enumerate(submeshes):
+            if i == 0:
+                edges_ = pybamm.Vector(submesh_.edges)
+            else:
+                edges_ = pybamm.Vector(submesh_.edges[1:])
+            # edges_ = submesh_.edges
+            if hasattr(submesh_, "length"):
+                edges_ = edges_ * submesh_.length + submesh_.min
+            edges_list.append(edges_)
+        edges = pybamm.numpy_concatenation(*edges_list)
+        return edges
+
+    def _get_edges_left_right_symbolic_mesh(self, domains):
+        submeshes = [self.mesh[domain] for domain in domains["primary"]]
+        edges_left_list = []
+        edges_right_list = []
+        for i, submesh_ in enumerate(submeshes):
+            if i == 0:
+                edges_left = submesh_.edges
+                edges_right = submesh_.edges[1:]
+            else:
+                edges_left = submesh_.edges[1:]
+                edges_right = submesh_.edges[1:]
+            if i == len(submeshes) - 1:
+                edges_left = edges_left[:-1]
+            edges_left = pybamm.Vector(edges_left)
+            edges_right = pybamm.Vector(edges_right)
+            if hasattr(submesh_, "length"):
+                edges_left = edges_left * submesh_.length + submesh_.min
+                edges_right = edges_right * submesh_.length + submesh_.min
+            edges_left_list.append(edges_left)
+            edges_right_list.append(edges_right)
+        edges_left = pybamm.numpy_concatenation(*edges_left_list)
+        edges_right = pybamm.numpy_concatenation(*edges_right_list)
+        return edges_left, edges_right
+
     def divergence(self, symbol, discretised_symbol, boundary_conditions):
         """Matrix-vector multiplication to implement the divergence operator.
         See :meth:`pybamm.SpatialMethod.divergence`
@@ -167,10 +206,14 @@ class FiniteVolume(pybamm.SpatialMethod):
         if submesh.coord_sys in ["cylindrical polar", "spherical polar"]:
             second_dim_repeats = self._get_auxiliary_domain_repeats(symbol.domains)
             # create np.array of repeated submesh.edges
-            r_edges_numpy = np.kron(np.ones(second_dim_repeats), submesh.edges)
-            r_edges = pybamm.Vector(r_edges_numpy)
             if hasattr(submesh, "length"):
-                r_edges = r_edges * submesh.length
+                edges = self._get_edges_symbolic_mesh(symbol.domains["primary"])
+            else:
+                edges = submesh.edges
+
+            r_edges = pybamm.KroneckerProduct(
+                pybamm.Matrix(np.ones(second_dim_repeats)), edges
+            )
             if submesh.coord_sys == "spherical polar":
                 out = divergence_matrix @ ((r_edges**2) * discretised_symbol)
             elif submesh.coord_sys == "cylindrical polar":
@@ -197,40 +240,29 @@ class FiniteVolume(pybamm.SpatialMethod):
         """
         # Create appropriate submesh by combining submeshes in domain
         submesh = self.mesh[domains["primary"]]
-        if len(domains["primary"]) > 1:
-            submeshes = [self.mesh[domain] for domain in domains["primary"]]
-            edges_list = []
-            for i, submesh_ in enumerate(submeshes):
-                if i == 0:
-                    edges_ = pybamm.Vector(submesh_.edges)
-                else:
-                    edges_ = pybamm.Vector(submesh_.edges[1:])
-
-                # edges_ = submesh_.edges
-                if hasattr(submesh_, "length"):
-                    edges_ = edges_ * submesh_.length + submesh_.min
-                edges_list.append(edges_)
-            edges = pybamm.numpy_concatenation(*edges_list)
+        if hasattr(submesh, "length"):
+            edges = self._get_edges_symbolic_mesh(domains["primary"])
             diff_matrix = diags([-1, 1], [0, 1], shape=(edges.size - 1, edges.size))
             d_edges = pybamm.Matrix(diff_matrix) @ edges
-            e = 1 / d_edges
         else:
-            e = 1 / submesh.d_edges
             d_edges = submesh.d_edges
 
         # check coordinate system
         if submesh.coord_sys in ["cylindrical polar", "spherical polar"]:
-            r_edges_left = submesh.edges[:-1]
-            r_edges_right = submesh.edges[1:]
+            if hasattr(submesh, "length"):
+                r_edges_left, r_edges_right = self._get_edges_left_right_symbolic_mesh(
+                    domains
+                )
+            else:
+                r_edges_left = submesh.edges[:-1]
+                r_edges_right = submesh.edges[1:]
             if submesh.coord_sys == "spherical polar":
                 d_edges = (r_edges_right**3 - r_edges_left**3) / 3
             elif submesh.coord_sys == "cylindrical polar":
                 d_edges = (r_edges_right**2 - r_edges_left**2) / 2
         else:
             d_edges = d_edges
-        #    d_edges = submesh.d_edges
-
-        # e = 1 / d_edges
+        e = 1 / d_edges
 
         # Create matrix using submesh
         n = submesh.npts + 1
@@ -1426,7 +1458,6 @@ class FiniteVolume(pybamm.SpatialMethod):
             """
             # Create appropriate submesh by combining submeshes in domain
             submesh = self.mesh[array.domain]
-            submeshes = [self.mesh[domain] for domain in array.domain]
 
             # Get second dimension length for use later
             second_dim_repeats = self._get_auxiliary_domain_repeats(
@@ -1476,16 +1507,30 @@ class FiniteVolume(pybamm.SpatialMethod):
                 matrix_D2 = csr_matrix(kron(eye(second_dim_repeats), sub_matrix_D2))
                 D2 = pybamm.Matrix(matrix_D2) @ array
                 # Compute weight beta
-                dx = submesh.d_edges
-                dx_list = []
-                for submesh_ in submeshes:
-                    dx_ = submesh_.d_edges
-                    if hasattr(submesh_, "length"):
-                        dx_ = dx_ * submesh_.length
-                    dx_list.append(dx_)
-                dx = np.concatenate(dx_list)
-                sub_beta = (dx[:-1] / (dx[1:] + dx[:-1]))[:, np.newaxis]
-                beta = pybamm.Array(np.kron(np.ones((second_dim_repeats, 1)), sub_beta))
+                if hasattr(submesh, "length"):
+                    edges = self._get_edges_symbolic_mesh(
+                        discretised_symbol.domains["primary"]
+                    )
+                    diff_matrix = diags(
+                        [-1, 1], [0, 1], shape=(edges.size - 1, edges.size)
+                    )
+                    d_edges = pybamm.Matrix(diff_matrix) @ edges
+                    left_index_matrix = diags(
+                        [1], [0], shape=(d_edges.size - 1, d_edges.size)
+                    )
+                    left_dx = pybamm.Matrix(left_index_matrix) @ d_edges
+                    right_index_matrix = diags(
+                        [1], [1], shape=(d_edges.size - 1, d_edges.size)
+                    )
+                    right_dx = pybamm.Matrix(right_index_matrix) @ d_edges
+                else:
+                    dx = submesh.d_edges
+                    left_dx = pybamm.Vector(dx[:-1])
+                    right_dx = pybamm.Vector(dx[1:])
+                sub_beta = left_dx / (left_dx + right_dx)
+                beta = pybamm.KroneckerProduct(
+                    pybamm.Matrix(np.ones((second_dim_repeats, 1))), sub_beta
+                )
 
                 # dx_real = dx * length, therefore, beta is unchanged
                 # Compute harmonic mean on internal edges
