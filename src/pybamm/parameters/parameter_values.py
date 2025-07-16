@@ -592,6 +592,14 @@ class ParameterValues:
             "no tab",
             "top",
             "bottom",
+            "x_min",
+            "x_max",
+            "y_min",
+            "y_max",
+            "z_min",
+            "z_max",
+            "r_min",
+            "r_max",
         ]
         for variable, bcs in model.boundary_conditions.items():
             processed_variable = self.process_symbol(variable)

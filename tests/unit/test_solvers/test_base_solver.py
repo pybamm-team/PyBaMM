@@ -416,11 +416,11 @@ class TestBaseSolver:
                 sens_b, exact_diff_b(y, inputs["a"], inputs["b"])
             )
 
-    def test_on_extrapolation_settings(self):
-        # Test setting different on_extrapolation values on BaseSolver
+    def test_on_extrapolation_and_on_failure_settings(self):
+        # Test setting different on_extrapolation and on_failure values on BaseSolver
         base_solver = pybamm.BaseSolver()
 
-        # Test valid values
+        # Test valid on_extrapolation values
         base_solver.on_extrapolation = "warn"
         assert base_solver.on_extrapolation == "warn"
         base_solver.on_extrapolation = "error"
@@ -428,8 +428,21 @@ class TestBaseSolver:
         base_solver.on_extrapolation = "ignore"
         assert base_solver.on_extrapolation == "ignore"
 
+        # Test valid on_failure values
+        base_solver.on_failure = "warn"
+        assert base_solver.on_failure == "warn"
+        base_solver.on_failure = "error"
+        assert base_solver.on_failure == "error"
+        base_solver.on_failure = "ignore"
+        assert base_solver.on_failure == "ignore"
+
         # Test invalid value
         with pytest.raises(
             ValueError, match="on_extrapolation must be 'warn', 'raise', or 'ignore'"
         ):
             base_solver.on_extrapolation = "invalid"
+
+        with pytest.raises(
+            ValueError, match="on_failure must be 'warn', 'raise', or 'ignore'"
+        ):
+            base_solver.on_failure = "invalid"

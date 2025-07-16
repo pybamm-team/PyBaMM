@@ -916,6 +916,22 @@ class BoundaryIntegral(SpatialOperator):
             name += "left"
         elif region == "right":
             name += "right"
+        elif region == "x_min":
+            name += "x_min"
+        elif region == "x_max":
+            name += "x_max"
+        elif region == "y_min":
+            name += "y_min"
+        elif region == "y_max":
+            name += "y_max"
+        elif region == "z_min":
+            name += "z_min"
+        elif region == "z_max":
+            name += "z_max"
+        elif region == "r_min":  # pragma: no cover
+            name += "r_min"
+        elif region == "r_max":  # pragma: no cover
+            name += "r_max"
         self.region = region
         super().__init__(name, child, domains)
         self.domains = {}
@@ -1132,6 +1148,22 @@ class BoundaryValue(BoundaryOperator):
         else:
             latex_child = sympy.latex(child) + r"^{" + sympy.latex(self.side) + r"}"
             return sympy.Symbol(latex_child)
+
+
+class BoundaryMeshSize(BoundaryOperator):
+    """
+    A node in the expression tree which gets the width of the control volume at the boundary of a variable's domain.
+
+    Parameters
+    ----------
+    child : :class:`pybamm.Symbol`
+        The variable whose boundary value to take
+    side : str
+        Which side to take the boundary value on ("left" or "right")
+    """
+
+    def __init__(self, child, side):
+        super().__init__("boundary mesh size", child, side)
 
 
 class ExplicitTimeIntegral(UnaryOperator):

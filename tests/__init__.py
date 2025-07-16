@@ -25,6 +25,8 @@ from .integration.test_models.test_full_battery_models.test_lithium_ion.base_lit
 from .shared import (
     get_mesh_for_testing,
     get_mesh_for_testing_2d,
+    get_3d_mesh_for_testing,
+    get_unit_3d_mesh_for_testing,
     get_mesh_for_testing_symbolic,
     get_p2d_mesh_for_testing,
     get_size_distribution_mesh_for_testing,

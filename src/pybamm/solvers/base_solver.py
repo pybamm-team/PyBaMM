@@ -42,6 +42,9 @@ class BaseSolver:
     on_extrapolation : str, optional
         What to do if the solver is extrapolating. Options are "warn", "error", or "ignore".
         Default is "warn".
+    on_failure : str, optional
+        What to do if a solver error flag occurs. Options are "warn", "error", or "ignore".
+        Default is "raise".
     """
 
     def __init__(
@@ -53,6 +56,7 @@ class BaseSolver:
         root_tol=1e-6,
         extrap_tol=None,
         on_extrapolation=None,
+        on_failure=None,
         output_variables=None,
     ):
         self.method = method
@@ -62,7 +66,8 @@ class BaseSolver:
         self.root_method = root_method
         self.extrap_tol = extrap_tol or -1e-10
         self.output_variables = [] if output_variables is None else output_variables
-        self.on_extrapolation = on_extrapolation or "warn"
+        self._on_extrapolation = on_extrapolation or "warn"
+        self._on_failure = on_failure or "raise"
         self._model_set_up = {}
 
         # Defaults, can be overwritten by specific solver
@@ -98,6 +103,16 @@ class BaseSolver:
         if value not in ["warn", "error", "ignore"]:
             raise ValueError("on_extrapolation must be 'warn', 'raise', or 'ignore'")
         self._on_extrapolation = value
+
+    @property
+    def on_failure(self):
+        return self._on_failure
+
+    @on_failure.setter
+    def on_failure(self, value):
+        if value not in ["warn", "error", "ignore"]:
+            raise ValueError("on_failure must be 'warn', 'raise', or 'ignore'")
+        self._on_failure = value
 
     @property
     def root_method(self):
@@ -1344,11 +1359,18 @@ class BaseSolver:
         termination_events = [
             x for x in events if x.event_type == pybamm.EventType.TERMINATION
         ]
-        if solution.termination == "final time":
-            return (
-                solution,
-                "the solver successfully reached the end of the integration interval",
-            )
+
+        match solution.termination:
+            case "final time":
+                return (
+                    solution,
+                    "the solver successfully reached the end of the integration interval",
+                )
+            case "failure":
+                return (
+                    solution,
+                    "the solver failed to simulate",
+                )
 
         # solution.termination == "event":
         pybamm.logger.debug("Start post-processing events")
