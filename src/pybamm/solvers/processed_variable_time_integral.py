@@ -38,7 +38,9 @@ class ProcessedVariableTimeIntegral:
         if self.post_sum_node is None:
             ret = the_integral
         elif self.post_sum is None:
-            ret = self.post_sum_node.evaluate(0.0, the_integral, inputs).reshape(-1)
+            ret = self.post_sum_node.evaluate(0.0, the_integral, None, inputs).reshape(
+                -1
+            )
         else:
             ret = self.post_sum(0.0, the_integral, inputs).full().reshape(-1)
         return ret
