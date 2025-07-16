@@ -120,7 +120,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         """
         # Create appropriate submesh by combining submeshes in primary domain
         submesh = self.mesh[domain]
-        if len(domain) > 1 and hasattr(submesh, "length"):
+        if len(domain) > 1:
             submeshes = [self.mesh[domain_] for domain_ in domain]
             dx_list = []
             for submesh_ in submeshes:
@@ -197,7 +197,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         """
         # Create appropriate submesh by combining submeshes in domain
         submesh = self.mesh[domains["primary"]]
-        if len(domains["primary"]) > 1 and hasattr(submesh, "length"):
+        if len(domains["primary"]) > 1:
             submeshes = [self.mesh[domain] for domain in domains["primary"]]
             edges_list = []
             for i, submesh_ in enumerate(submeshes):
@@ -234,9 +234,9 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         # Create matrix using submesh
         n = submesh.npts + 1
-        sub_matrix_minus = pybamm.Matrix(diags([-1], [0], shape=(n - 1, n))) * e
-        sub_matrix_plus = pybamm.Matrix(diags([1], [1], shape=(n - 1, n))) * e
-        sub_matrix = sub_matrix_minus + sub_matrix_plus
+        sub_matrix_minus = pybamm.Matrix(diags([-1], [0], shape=(n - 1, n)))
+        sub_matrix_plus = pybamm.Matrix(diags([1], [1], shape=(n - 1, n)))
+        sub_matrix = (sub_matrix_minus + sub_matrix_plus) * e
 
         # repeat matrix for each node in secondary dimensions
         second_dim_repeats = self._get_auxiliary_domain_repeats(domains)

@@ -8,6 +8,7 @@ import numbers
 from collections.abc import Callable
 from typing import cast
 
+import casadi
 import numpy as np
 import numpy.typing as npt
 import sympy
@@ -476,9 +477,11 @@ class Division(BinaryOperator):
 
     def _binary_evaluate(self, left, right):
         """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
-
         if issparse(left):
             return csr_matrix(left.multiply(1 / right))
+        # casadi oversimplifies division of sparse matrices
+        elif isinstance(right, casadi.casadi.MX):
+            return left * (1 / right)
         else:
             return left / right
 
