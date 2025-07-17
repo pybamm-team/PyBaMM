@@ -239,30 +239,44 @@ class Serialise:
             """
         )
 
-    @staticmethod
     def _json_encoder(obj):
-        if isinstance(obj, pybamm.Scalar):
-            return obj.evaluate()
-        if isinstance(obj, pybamm.Parameter):
-            return {
-                "type": "Parameter",
-                "name": obj.name,
-                "domain": obj.domain,
-            }
-        if isinstance(obj, (np.integer | np.floating)):
-            return obj.item()
-        if isinstance(obj, np.ndarray):
-            return obj.tolist()
-        if isinstance(obj, Enum):
+        if isinstance(obj, pybamm.Symbol):  # or SymbolBase
+            return Serialise.convert_symbol_to_json(obj)
+        elif isinstance(obj, Enum):
             return obj.name
-        raise TypeError(
-            f"Object of type {obj.__class__.__name__} is not JSON serializable"
-        )
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        elif isinstance(obj, (np.float64 | np.float32)):
+            return float(obj)
+        elif isinstance(obj, (np.int64 | np.int32)):
+            return int(obj)
+        else:
+            raise TypeError(f"Object of type {type(obj)} is not JSON serializable.")
 
     @staticmethod
     def save_custom_model(model, filename=None):
         """
-        Save the custom PyBaMM model and parameters to a JSON file.
+        Saves a custom (non-discretised) PyBaMM model to a JSON file.
+
+        This includes symbolic expressions for rhs, algebraic, initial and boundary
+        conditions, events, and variables. Useful for storing or sharing models
+        before discretisation.
+
+        Parameters
+        ----------
+        model : :class:`pybamm.BaseModel`
+            The custom symbolic model to be saved.
+        filename : str, optional
+            The desired name of the JSON file. If not provided, a name will be
+            generated from the model name and current datetime.
+
+        Example
+        -------
+        >>> MyModel = MyCustomModelClass()
+        >>> MyModel.build_model()
+        >>> Serialise.save_custom_model(MyModel, "my_custom_model")
+        # Saves 'my_custom_model.json' in the current directory
+
         """
         model_json = {
             "pybamm_version": pybamm.__version__,
@@ -270,34 +284,41 @@ class Serialise:
             "options": getattr(model, "options", {}),
             "rhs": [
                 (
-                    Serialise.convert_symbol_to_json(k),
-                    Serialise.convert_symbol_to_json(v),
+                    Serialise.convert_symbol_to_json(variable),
+                    Serialise.convert_symbol_to_json(rhs_expression),
                 )
-                for k, v in getattr(model, "rhs", {}).items()
+                for variable, rhs_expression in getattr(model, "rhs", {}).items()
             ],
             "algebraic": [
                 [
-                    Serialise.convert_symbol_to_json(k),
-                    Serialise.convert_symbol_to_json(v),
+                    Serialise.convert_symbol_to_json(variable),
+                    Serialise.convert_symbol_to_json(algebraic_expression),
                 ]
-                for k, v in model.algebraic.items()
+                for variable, algebraic_expression in model.algebraic.items()
             ],
             "initial_conditions": [
                 (
-                    Serialise.convert_symbol_to_json(k),
-                    Serialise.convert_symbol_to_json(v),
+                    Serialise.convert_symbol_to_json(variable),
+                    Serialise.convert_symbol_to_json(initial_value),
                 )
-                for k, v in getattr(model, "initial_conditions", {}).items()
+                for variable, initial_value in getattr(
+                    model, "initial_conditions", {}
+                ).items()
             ],
             "boundary_conditions": [
                 (
-                    Serialise.convert_symbol_to_json(var),
+                    Serialise.convert_symbol_to_json(variable),
                     {
-                        side: [Serialise.convert_symbol_to_json(expr), btype]
-                        for side, (expr, btype) in conds.items()
+                        side: [
+                            Serialise.convert_symbol_to_json(expression),
+                            boundary_type,
+                        ]
+                        for side, (expression, boundary_type) in conditions.items()
                     },
                 )
-                for var, conds in getattr(model, "boundary_conditions", {}).items()
+                for variable, conditions in getattr(
+                    model, "boundary_conditions", {}
+                ).items()
             ],
             "events": [
                 {
@@ -308,8 +329,8 @@ class Serialise:
                 for event in getattr(model, "events", [])
             ],
             "variables": {
-                str(name): Serialise.convert_symbol_to_json(expr)
-                for name, expr in getattr(model, "variables", {}).items()
+                str(variable_name): Serialise.convert_symbol_to_json(expression)
+                for variable_name, expression in getattr(model, "variables", {}).items()
             },
         }
 
@@ -321,63 +342,98 @@ class Serialise:
 
     @staticmethod
     def load_custom_model(filename, battery_model=None):
-        with open(filename) as f:
-            model_data = json.load(f)
+        """
+        Loads a custom (symbolic) PyBaMM model from a JSON file.
+
+        Reconstructs a model saved using `save_custom_model`, including its rhs,
+        algebraic equations, initial and boundary conditions, events, and variables.
+        Returns a fully symbolic model ready for further processing or discretisation.
+
+        Parameters
+        ----------
+        filename : str
+            Path to the JSON file containing the saved model.
+        battery_model : :class:`pybamm.BaseModel`, optional
+            An optional existing model instance to populate. If not provided, a new
+            :class:`pybamm.BaseModel` is created.
+
+        Returns
+        -------
+        :class:`pybamm.BaseModel` or subclass
+            The reconstructed symbolic PyBaMM model.
+
+        Example
+        -------
+        >>> loaded_model= Serialise.load_custom_model("my_model.json", battery_model=pybamm.lithium_ion.BaseModel())
+        >>> sim = pybamm.Simulation(loaded_model)
+        >>> sim.solve([0, 3600])
+        >>> sim.plot()
+        """
+        with open(filename) as file:
+            model_data = json.load(file)
 
         model = battery_model if battery_model is not None else pybamm.BaseModel()
         model.name = model_data["name"]
 
-        all_keys = (
-            [k for k, _ in model_data["rhs"]]
-            + [k for k, _ in model_data["initial_conditions"]]
-            + [k for k, _ in model_data["algebraic"]]
-            + [var for var, _ in model_data["boundary_conditions"]]
+        all_variable_keys = (
+            [lhs_json for lhs_json, _ in model_data["rhs"]]
+            + [lhs_json for lhs_json, _ in model_data["initial_conditions"]]
+            + [lhs_json for lhs_json, _ in model_data["algebraic"]]
+            + [variable_json for variable_json, _ in model_data["boundary_conditions"]]
         )
 
         symbol_map = {}
-        for k_json in all_keys:
-            k = Serialise.convert_symbol_from_json(k_json)
-            symbol_map[str(k)] = k
+        for variable_json in all_variable_keys:
+            symbol = Serialise.convert_symbol_from_json(variable_json)
+            symbol_map[str(symbol)] = symbol
 
         model.rhs = {
             symbol_map[
-                str(Serialise.convert_symbol_from_json(k))
-            ]: Serialise.convert_symbol_from_json(v)
-            for k, v in model_data["rhs"]
+                str(Serialise.convert_symbol_from_json(lhs_json))
+            ]: Serialise.convert_symbol_from_json(rhs_expr_json)
+            for lhs_json, rhs_expr_json in model_data["rhs"]
         }
+
         model.algebraic = {
             symbol_map[
-                str(Serialise.convert_symbol_from_json(k))
-            ]: Serialise.convert_symbol_from_json(v)
-            for k, v in model_data["algebraic"]
+                str(Serialise.convert_symbol_from_json(lhs_json))
+            ]: Serialise.convert_symbol_from_json(algebraic_expr_json)
+            for lhs_json, algebraic_expr_json in model_data["algebraic"]
         }
+
         model.initial_conditions = {
             symbol_map[
-                str(Serialise.convert_symbol_from_json(k))
-            ]: Serialise.convert_symbol_from_json(v)
-            for k, v in model_data["initial_conditions"]
+                str(Serialise.convert_symbol_from_json(lhs_json))
+            ]: Serialise.convert_symbol_from_json(initial_value_json)
+            for lhs_json, initial_value_json in model_data["initial_conditions"]
         }
+
         model.boundary_conditions = {
-            symbol_map[str(Serialise.convert_symbol_from_json(var))]: {
-                side: (Serialise.convert_symbol_from_json(expr), btype)
-                for side, (expr, btype) in conds.items()
+            symbol_map[str(Serialise.convert_symbol_from_json(variable_json))]: {
+                side: (
+                    Serialise.convert_symbol_from_json(expression_json),
+                    boundary_type,
+                )
+                for side, (expression_json, boundary_type) in condition_dict.items()
             }
-            for var, conds in model_data["boundary_conditions"]
+            for variable_json, condition_dict in model_data["boundary_conditions"]
         }
+
         model.events = [
             pybamm.Event(
-                e["name"],
-                Serialise.convert_symbol_from_json(e["expression"]),
-                e["event_type"],
+                event_data["name"],
+                Serialise.convert_symbol_from_json(event_data["expression"]),
+                event_data["event_type"],
             )
-            for e in model_data["events"]
+            for event_data in model_data["events"]
         ]
+
         model.variables = {
-            name: symbol_map.get(
-                str(Serialise.convert_symbol_from_json(expr)),
-                Serialise.convert_symbol_from_json(expr),
+            variable_name: symbol_map.get(
+                str(Serialise.convert_symbol_from_json(expression_json)),
+                Serialise.convert_symbol_from_json(expression_json),
             )
-            for name, expr in model_data["variables"].items()
+            for variable_name, expression_json in model_data["variables"].items()
         }
 
         return model
@@ -505,6 +561,7 @@ class Serialise:
         {"rod":
             {SpatialVariable(name="spat_var"): {"min":0.0, "max":2.0} }
             }
+
         """
 
         def recurse(obj):
@@ -548,18 +605,31 @@ class Serialise:
     @staticmethod
     def convert_symbol_to_json(symbol):
         """
-        Converts a PyBaMM symbolic expression to a JSON-serializable dictionary
+        Recursively converts a PyBaMM symbolic expression into a JSON-serializable format.
+
+        Supports most PyBaMM symbol types, including scalars, variables, parameters,
+        operators, broadcasts, and interpolants.
 
         Parameters
         ----------
-        symbol : pybamm.Symbol
-            The PyBaMM symbolic expression to convert
+        symbol : pybamm.Symbol or compatible type
+            The expression or object to convert.
 
         Returns
         -------
         dict
-            The JSON-serializable dictionary
+            A JSON-compatible representation of the input.
+
+        Examples
+        --------
+        >>> Serialise.convert_symbol_to_json(pybamm.Scalar(5))
+        {'type': 'Scalar', 'value': 5}
+
+        >>> Serialise.convert_symbol_to_json(pybamm.Variable("c"))
+        {'type': 'Variable', 'name': 'c', 'domains': {}, 'bounds': [None, None]}
+
         """
+
         if isinstance(symbol, numbers.Number | list):
             return symbol
         elif isinstance(symbol, pybamm.Time):
@@ -698,17 +768,28 @@ class Serialise:
     @staticmethod
     def convert_symbol_from_json(json_data):
         """
-        Recursively converts a JSON dictionary back into PyBaMM symbolic expressions
+        Recursively reconstructs a PyBaMM symbolic expression from a JSON dictionary.
+
+        Supports all major PyBaMM symbol types, including Scalars, Variables, Parameters,
+        Operators, FunctionParameters, Broadcasts, Interpolants.
 
         Parameters
         ----------
         json_data : dict
-            Dictionary containing the serialized PyBaMM expression
+            A JSON-serialized representation of a PyBaMM expression, produced
+            by `Serialise.convert_symbol_to_json`.
 
         Returns
         -------
-        pybamm.Symbol
-            The reconstructed PyBaMM symbolic expression
+        pybamm.Symbol or primitive
+            The reconstructed PyBaMM symbolic expression or a primitive (float, int, bool).
+
+        Examples
+        --------
+        >>> json_expr = {'type': 'Scalar', 'value': 42}
+        >>> Serialise.convert_symbol_from_json(json_expr)
+        pybamm.Scalar(42)
+
         """
         if isinstance(json_data, float | int | bool):
             return json_data
