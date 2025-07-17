@@ -367,7 +367,9 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
 
         return current_boundary_load_symbol
 
-    def integral(self, child, discretised_child, integration_dimension):
+    def integral(
+        self, child, discretised_child, integration_dimension, integration_variable
+    ):
         """
         Vector-vector dot product to implement the 3D integral operator.
 
