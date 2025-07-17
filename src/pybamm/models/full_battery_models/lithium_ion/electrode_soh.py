@@ -810,6 +810,7 @@ class ElectrodeSOHSolver:
         Un, Up
             The initial open-circuit potentials at the desired initial state of charge
         """
+        inputs = inputs or {}
         parameter_values = self.parameter_values
         x, y = self.get_initial_stoichiometries(initial_value, tol, inputs=inputs)
         if self.options["open-circuit potential"] == "MSMR":
@@ -837,6 +838,7 @@ class ElectrodeSOHSolver:
         Un_0, Un_100, Up_100, Up_0
             The min/max ocps
         """
+        inputs = inputs or {}
         parameter_values = self.parameter_values
 
         Q_n = parameter_values.evaluate(self.param.n.Q_init, inputs=inputs)
@@ -846,14 +848,14 @@ class ElectrodeSOHSolver:
             Q_Li = parameter_values.evaluate(
                 self.param.Q_Li_particles_init, inputs=inputs
             )
-            inputs = {"Q_n": Q_n, "Q_p": Q_p, "Q_Li": Q_Li}
+            all_inputs = {**inputs, "Q_n": Q_n, "Q_p": Q_p, "Q_Li": Q_Li}
         elif self.known_value == "cell capacity":
             Q = parameter_values.evaluate(
                 self.param.Q / self.param.n_electrodes_parallel, inputs=inputs
             )
-            inputs = {"Q_n": Q_n, "Q_p": Q_p, "Q": Q}
+            all_inputs = {**inputs, "Q_n": Q_n, "Q_p": Q_p, "Q": Q}
         # Solve the model and check outputs
-        sol = self.solve(inputs)
+        sol = self.solve(all_inputs)
         return [sol["Un(x_0)"], sol["Un(x_100)"], sol["Up(y_100)"], sol["Up(y_0)"]]
 
     def theoretical_energy_integral(self, inputs, points=1000):
