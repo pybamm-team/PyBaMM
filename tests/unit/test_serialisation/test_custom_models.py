@@ -183,8 +183,6 @@ def test_save_and_load_custom_model():
     model.events = [pybamm.Event("terminal", pybamm.Scalar(1) - b, "TERMINATION")]
     model.variables = {"a": a, "b": b}
 
-    param_values = pybamm.ParameterValues({"param1": pybamm.Scalar(5)})
-
     # save model
     Serialise.save_custom_model(model, filename="test_model")
 
