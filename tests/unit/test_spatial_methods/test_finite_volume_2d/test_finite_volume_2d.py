@@ -241,6 +241,8 @@ class TestFiniteVolume2D:
             pybamm.div(2 * pybamm.grad(var)) + 3 * var,
             -2 * pybamm.div(var * pybamm.grad(var) + 2 * pybamm.grad(var)),
             pybamm.laplacian(var),
+            pybamm.Inner(pybamm.Magnitude(pybamm.grad(var), "lr"), var),
+            pybamm.Inner(var, pybamm.Magnitude(pybamm.grad(var), "lr")),
         ]:
             # Check that the equation can be evaluated for different combinations
             # of boundary conditions
@@ -1010,3 +1012,16 @@ class TestFiniteVolume2D:
         result_complex_neumann = eqn_disc_complex_neumann.evaluate(None, test_y)
         assert result_complex_neumann is not None
         assert result_complex_neumann.shape[0] == submesh.npts
+
+    def test_delta_function(self):
+        # Create discretisation
+        mesh = get_mesh_for_testing_2d()
+        spatial_methods = {"macroscale": pybamm.FiniteVolume2D()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        var = pybamm.Variable(
+            "var", domain=["negative electrode", "separator", "positive electrode"]
+        )
+        disc.set_variable_slices([var])
+        delta_function = pybamm.DeltaFunction(var, "left", "negative electrode")
+        with pytest.raises(NotImplementedError):
+            disc.process_symbol(delta_function)

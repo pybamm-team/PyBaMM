@@ -207,21 +207,118 @@ class TestFiniteVolume2DGradDiv:
             np.zeros((submesh.npts_lr) * (submesh.npts_tb)),
         )
 
-    def test_grad_div_shapes_Dirichlet_and_Neumann_bcs(self):
+        ## Test operations on linear y with input parameter BC's
+        LR, TB = np.meshgrid(submesh.nodes_lr, submesh.nodes_tb)
+        my_scalar_var = pybamm.Variable("my_scalar_var")
+        disc.set_variable_slices([my_scalar_var, var])
+        linear_y = np.concatenate([[1], LR.flatten()])
+        grad_eqn = pybamm.grad(var)
+        div_eqn = pybamm.div(grad_eqn)
+
+        class DummyClass:
+            boundary_conditions = None
+
+        boundary_conditions = {
+            var: {
+                "left": (my_scalar_var, "Neumann"),
+                "right": (my_scalar_var, "Neumann"),
+                "top": (pybamm.Scalar(0), "Neumann"),
+                "bottom": (pybamm.Scalar(0), "Neumann"),
+            }
+        }
+        myclass = DummyClass()
+        myclass.boundary_conditions = boundary_conditions
+        disc.bcs = disc.process_boundary_conditions(myclass)
+        # grad(x) = 1
+        grad_eqn_disc = disc.process_symbol(grad_eqn)
+        np.testing.assert_array_almost_equal(
+            grad_eqn_disc.tb_field.evaluate(
+                inputs={"top_bc": 1, "bottom_bc": 1}, y=linear_y
+            ).flatten(),
+            np.zeros((submesh.npts_tb + 1) * (submesh.npts_lr)),
+        )
+        np.testing.assert_array_almost_equal(
+            grad_eqn_disc.lr_field.evaluate(
+                inputs={"top_bc": 1, "bottom_bc": 1}, y=linear_y
+            ).flatten(),
+            np.ones((submesh.npts_tb) * (submesh.npts_lr + 1)),
+        )
+        # div(grad(x)) = 0
+        div_eqn_disc = disc.process_symbol(div_eqn)
+        np.testing.assert_array_almost_equal(
+            div_eqn_disc.evaluate(
+                inputs={"top_bc": 1, "bottom_bc": 1}, y=linear_y
+            ).flatten(),
+            np.zeros((submesh.npts_tb) * (submesh.npts_lr)),
+        )
+
+        ## Test operations on linear y with input parameter BC's
+        LR, TB = np.meshgrid(submesh.nodes_lr, submesh.nodes_tb)
+        my_scalar_var = pybamm.Variable("my_scalar_var")
+        disc.set_variable_slices([my_scalar_var, var])
+        linear_y = np.concatenate([[1], TB.flatten()])
+        grad_eqn = pybamm.grad(var)
+        div_eqn = pybamm.div(grad_eqn)
+
+        class DummyClass:
+            boundary_conditions = None
+
+        boundary_conditions = {
+            var: {
+                "left": (pybamm.Scalar(0), "Neumann"),
+                "right": (pybamm.Scalar(0), "Neumann"),
+                "top": (my_scalar_var, "Neumann"),
+                "bottom": (my_scalar_var, "Neumann"),
+            }
+        }
+        myclass = DummyClass()
+        myclass.boundary_conditions = boundary_conditions
+        disc.bcs = disc.process_boundary_conditions(myclass)
+        # grad(x) = 1
+        grad_eqn_disc = disc.process_symbol(grad_eqn)
+        np.testing.assert_array_almost_equal(
+            grad_eqn_disc.lr_field.evaluate(
+                inputs={"top_bc": 1, "bottom_bc": 1}, y=linear_y
+            ).flatten(),
+            np.zeros((submesh.npts_lr + 1) * (submesh.npts_tb)),
+        )
+        np.testing.assert_array_almost_equal(
+            grad_eqn_disc.tb_field.evaluate(
+                inputs={"top_bc": 1, "bottom_bc": 1}, y=linear_y
+            ).flatten(),
+            np.ones((submesh.npts_lr) * (submesh.npts_tb + 1)),
+        )
+        # div(grad(x)) = 0
+        div_eqn_disc = disc.process_symbol(div_eqn)
+        np.testing.assert_array_almost_equal(
+            div_eqn_disc.evaluate(
+                inputs={"top_bc": 1, "bottom_bc": 1}, y=linear_y
+            ).flatten(),
+            np.zeros((submesh.npts_lr) * (submesh.npts_tb)),
+        )
+
+    @pytest.mark.parametrize(
+        "domain",
+        [
+            ["negative electrode", "separator", "positive electrode"],
+            "negative electrode",
+        ],
+    )
+    def test_grad_div_shapes_Dirichlet_and_Neumann_bcs(self, domain):
         """
         Test grad and div with a Dirichlet boundary condition on one side and
         a Neumann boundary conditions on the other side in Cartesian coordinates
         """
         # Create discretisation
-        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        domain = domain
         mesh = get_mesh_for_testing_2d()
         spatial_methods = {"macroscale": pybamm.FiniteVolume2D()}
         disc = pybamm.Discretisation(mesh, spatial_methods)
-        submesh = mesh[whole_cell]
+        submesh = mesh[domain]
 
         # Test gradient and divergence of a constant
         constant_y = np.ones(submesh.npts_lr * submesh.npts_tb)
-        var = pybamm.Variable("var", domain=whole_cell)
+        var = pybamm.Variable("var", domain=domain)
         grad_eqn = pybamm.grad(var)
         N = pybamm.grad(var)
         div_eqn = pybamm.div(N)
@@ -254,11 +351,12 @@ class TestFiniteVolume2DGradDiv:
 
         ## Test gradient and divergence of linear x
         LR, TB = np.meshgrid(submesh.nodes_lr, submesh.nodes_tb)
+        right_val = submesh.edges_lr[-1]
         linear_y = LR.flatten()
         boundary_conditions = {
             var: {
                 "left": (pybamm.Scalar(1), "Neumann"),
-                "right": (pybamm.Scalar(1), "Dirichlet"),
+                "right": (pybamm.Scalar(right_val), "Dirichlet"),
                 "top": (pybamm.Scalar(0), "Neumann"),
                 "bottom": (pybamm.Scalar(0), "Neumann"),
             }
@@ -290,6 +388,35 @@ class TestFiniteVolume2DGradDiv:
                 "right": (pybamm.Scalar(0), "Neumann"),
                 "top": (pybamm.Scalar(1), "Dirichlet"),
                 "bottom": (pybamm.Scalar(1), "Neumann"),
+            }
+        }
+        disc.bcs = boundary_conditions
+        ## grad(x) = 1
+        grad_eqn_disc = disc.process_symbol(grad_eqn)
+        np.testing.assert_array_almost_equal(
+            grad_eqn_disc.lr_field.evaluate(None, linear_y).flatten(),
+            np.zeros((submesh.npts_lr + 1) * (submesh.npts_tb)),
+        )
+        np.testing.assert_array_almost_equal(
+            grad_eqn_disc.tb_field.evaluate(None, linear_y).flatten(),
+            np.ones((submesh.npts_lr) * (submesh.npts_tb + 1)),
+        )
+        ## div(grad(x)) = 0
+        div_eqn_disc = disc.process_symbol(div_eqn)
+        np.testing.assert_array_almost_equal(
+            div_eqn_disc.evaluate(None, linear_y).flatten(),
+            np.zeros((submesh.npts_lr) * (submesh.npts_tb)),
+        )
+
+        ## Test gradient and divergence of linear y
+        LR, TB = np.meshgrid(submesh.nodes_lr, submesh.nodes_tb)
+        linear_y = TB.flatten()
+        boundary_conditions = {
+            var: {
+                "left": (pybamm.Scalar(0), "Neumann"),
+                "right": (pybamm.Scalar(0), "Neumann"),
+                "bottom": (pybamm.Scalar(0), "Dirichlet"),
+                "top": (pybamm.Scalar(1), "Neumann"),
             }
         }
         disc.bcs = boundary_conditions

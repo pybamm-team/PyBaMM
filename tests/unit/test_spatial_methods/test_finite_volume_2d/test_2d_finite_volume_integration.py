@@ -10,6 +10,32 @@ from tests.shared import get_mesh_for_testing_2d
 
 
 class TestFiniteVolumeIntegration:
+    def test_indefinite_integral(self):
+        mesh = get_mesh_for_testing_2d()
+        spatial_methods = {"macroscale": pybamm.FiniteVolume2D()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        var = pybamm.Variable(
+            "var", domain=["negative electrode", "separator", "positive electrode"]
+        )
+        disc.set_variable_slices([var])
+        x = pybamm.SpatialVariable(
+            "x",
+            domain=["negative electrode", "separator", "positive electrode"],
+            direction="lr",
+        )
+        indef_integral = pybamm.IndefiniteIntegral(var, x)
+        with pytest.raises(NotImplementedError):
+            disc.process_symbol(indef_integral)
+        spatial_method = pybamm.FiniteVolume2D()
+        with pytest.raises(NotImplementedError):
+            spatial_method.indefinite_integral_matrix_edges(
+                "negative electrode", "left"
+            )
+        with pytest.raises(NotImplementedError):
+            spatial_method.indefinite_integral_matrix_nodes(
+                "negative electrode", "left"
+            )
+
     def test_definite_integral(self):
         # create discretisation
         mesh = get_mesh_for_testing_2d()
@@ -211,30 +237,33 @@ class TestFiniteVolumeIntegration:
         bcs = {
             var: {
                 "left": (
-                    "Neumann",
                     pybamm.Scalar(0),
+                    "Neumann",
                 ),
                 "right": (
-                    "Neumann",
                     pybamm.Scalar(0),
+                    "Neumann",
                 ),
                 "top": (
-                    "Neumann",
                     pybamm.Scalar(0),
+                    "Neumann",
                 ),
                 "bottom": (
-                    "Neumann",
                     pybamm.Scalar(0),
+                    "Neumann",
                 ),
             }
         }
+        k = pybamm.VectorField(pybamm.Scalar(1 + 1e-5), pybamm.Scalar(1 + 1e-5))
         disc.bcs = bcs
-        symbol = pybamm.Magnitude(pybamm.Gradient(var), "tb")
+        symbol = pybamm.Magnitude(k * pybamm.Gradient(var) / pybamm.Scalar(-5), "tb")
         boundary_integral_left = pybamm.BoundaryIntegral(symbol, region="bottom")
         # Fix this test
-        # boundary_integral_left_disc = disc.process_symbol(boundary_integral_left)
-        # result_left = boundary_integral_left_disc.evaluate(None, y=np.ones(submesh.npts))
-        # np.testing.assert_allclose(result_left, 0.0, rtol=1e-10)
+        boundary_integral_left_disc = disc.process_symbol(boundary_integral_left)
+        result_left = boundary_integral_left_disc.evaluate(
+            None, y=np.ones(submesh.npts)
+        )
+        np.testing.assert_array_almost_equal(result_left, 0.0)
 
     def test_one_dimensional_integral(self):
         mesh = get_mesh_for_testing_2d()

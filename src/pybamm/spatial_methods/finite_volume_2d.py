@@ -522,28 +522,15 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         n_bcs = 0
 
         if tbc_type == "Dirichlet" and bbc_type != "Dirichlet":
-            if isinstance(domain, list) or isinstance(domain, tuple):
-                domain = [(d + "_top ghost cell", d) for d in domain]
-            else:
-                domain = [domain + "_top ghost cell", domain]
+            domain = [(d + "_top ghost cell", d) for d in domain]
             n_bcs += 1
         elif tbc_type != "Dirichlet" and bbc_type == "Dirichlet":
-            if isinstance(domain, list) or isinstance(domain, tuple):
-                domain = [(d, d + "_bottom ghost cell") for d in domain]
-            else:
-                domain = [domain, domain + "_bottom ghost cell"]
+            domain = [(d, d + "_bottom ghost cell") for d in domain]
             n_bcs += 1
         elif tbc_type == "Dirichlet" and bbc_type == "Dirichlet":
-            if isinstance(domain, list) or isinstance(domain, tuple):
-                domain = [
-                    (d + "_top ghost cell", d, d + "_bottom ghost cell") for d in domain
-                ]
-            else:
-                domain = [
-                    domain + "_top ghost cell",
-                    domain,
-                    domain + "_bottom ghost cell",
-                ]
+            domain = [
+                (d + "_top ghost cell", d, d + "_bottom ghost cell") for d in domain
+            ]
             n_bcs += 2
 
         if lbc_type == "Dirichlet":
@@ -2120,7 +2107,6 @@ class FiniteVolume2D(pybamm.SpatialMethod):
             # Note that this makes column-slicing inefficient, but this should not be an
             # issue
             matrix = csr_matrix(kron(eye(second_dim_repeats), sub_matrix))
-
             return pybamm.Matrix(matrix) @ array
 
         def harmonic_mean(array, direction):
