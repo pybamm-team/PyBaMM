@@ -1323,8 +1323,8 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                     if use_bcs and pybamm.has_bc_of_form(
                         child, side_first, bcs, "Neumann"
                     ):
-                        dxN = dxNm1_tb
-                        dxNm1 = dxN_tb
+                        dxNm1 = dxNm1_tb
+                        dxN = dxN_tb
                         val_N = np.ones(n_lr)
                         rows = np.arange(0, n_lr)
                         cols = np.arange((n_tb - 1) * n_lr, n_tb * n_lr)
@@ -1923,22 +1923,18 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         edges.
         See :meth:`pybamm.SpatialMethod.concatenation`
         """
-        for idx, child in enumerate(disc_children):
+        for child in disc_children:
             submesh = self.mesh[child.domain]
             repeats = self._get_auxiliary_domain_repeats(child.domains)
             n_nodes = len(submesh.nodes_lr) * len(submesh.nodes_tb) * repeats
-            n_edges = len(submesh.edges_lr) * len(submesh.edges_tb) * repeats
             child_size = child.size
             if child_size != n_nodes:
-                # Average any children that evaluate on the edges (size n_edges) to
-                # evaluate on nodes instead, so that concatenation works properly
-                if child_size == n_edges:
-                    disc_children[idx] = self.edge_to_node(child)
-                else:
-                    raise pybamm.ShapeError(
-                        "child must have size n_nodes (number of nodes in the mesh) "
-                        "or n_edges (number of edges in the mesh)"
-                    )
+                # This is not implemented. One possiblity for doing this would be to switch evaluates_on_edges
+                # to a double return (evaluates_on_edges_lr and evaluates_on_edges_tb). There are a few different
+                # places that this would help anyway, but it doesn't seem necessary for now.
+                raise NotImplementedError(
+                    "Concatenation on edges in 2D is not implemented"
+                )
         # EXPERIMENTAL: Need to reorder things for 2D
         if not all(isinstance(child, pybamm.StateVector) for child in disc_children):
             # All will have the same number of points in the tb direction, so we just need to get the lr points

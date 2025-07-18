@@ -182,6 +182,7 @@ class TestFiniteVolume2D:
             pybamm.VectorField(pybamm.Scalar(2), pybamm.Scalar(2)) * pybamm.Scalar(2),
             pybamm.VectorField(pybamm.Scalar(2), pybamm.Scalar(2))
             * pybamm.VectorField(pybamm.Scalar(2), pybamm.Scalar(2)),
+            pybamm.UpwindDownwind2D(var, None, None) * pybamm.VectorField(var, var),
         ]:
             # Check that the equation can be evaluated for different combinations
             # of boundary conditions

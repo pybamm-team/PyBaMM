@@ -51,7 +51,7 @@ class TestFiniteVolume2DGradDiv:
         # Test operations on linear x
         LR, _ = np.meshgrid(submesh.nodes_lr, submesh.nodes_tb)
         submesh_neg = mesh["negative electrode"]
-        _, TB_neg = np.meshgrid(submesh_neg.nodes_lr, submesh_neg.nodes_tb)
+        LR_neg, TB_neg = np.meshgrid(submesh_neg.nodes_lr, submesh_neg.nodes_tb)
         linear_y = LR.flatten()
         disc.set_variable_slices([linear_x_var])
         N = pybamm.grad(linear_x_var)
@@ -107,6 +107,63 @@ class TestFiniteVolume2DGradDiv:
         np.testing.assert_array_almost_equal(
             grad_eqn_disc.tb_field.evaluate(None, linear_y).flatten(),
             np.ones((submesh.npts_lr) * (submesh.npts_tb + 1)),
+        )
+
+        # Now do linear in y direction but with a variable BC
+        my_scalar_var_zero = pybamm.Variable("my_scalar_var_zero")
+        my_scalar_var_one = pybamm.Variable("my_scalar_var_one")
+        linear_y_var = pybamm.Variable("linear_y_var", domain=["negative electrode"])
+        disc.set_variable_slices([my_scalar_var_zero, my_scalar_var_one, linear_y_var])
+        grad_eqn = pybamm.grad(linear_y_var)
+
+        class DummyClass:
+            boundary_conditions = None
+
+        myclass = DummyClass()
+        boundary_conditions = {
+            linear_y_var: {
+                "left": (pybamm.Scalar(0), "Neumann"),
+                "right": (pybamm.Scalar(0), "Neumann"),
+                "top": (my_scalar_var_one, "Dirichlet"),
+                "bottom": (my_scalar_var_zero, "Dirichlet"),
+            }
+        }
+        myclass.boundary_conditions = boundary_conditions
+        disc.bcs = disc.process_boundary_conditions(myclass)
+        grad_eqn_disc = disc.process_symbol(grad_eqn)
+        linear_y = np.concatenate([[0], [1], TB_neg.flatten()])
+        submesh = mesh["negative electrode"]
+        np.testing.assert_array_almost_equal(
+            grad_eqn_disc.lr_field.evaluate(None, linear_y).flatten(),
+            np.zeros((submesh.npts_lr + 1) * (submesh.npts_tb)),
+        )
+        np.testing.assert_array_almost_equal(
+            grad_eqn_disc.tb_field.evaluate(None, linear_y).flatten(),
+            np.ones((submesh.npts_lr) * (submesh.npts_tb + 1)),
+        )
+
+        # Now do linear in x direction but with a variable BC
+        myclass = DummyClass()
+        boundary_conditions = {
+            linear_y_var: {
+                "left": (my_scalar_var_zero, "Dirichlet"),
+                "right": (my_scalar_var_one, "Dirichlet"),
+                "top": (pybamm.Scalar(0), "Neumann"),
+                "bottom": (pybamm.Scalar(0), "Neumann"),
+            }
+        }
+        myclass.boundary_conditions = boundary_conditions
+        disc.bcs = disc.process_boundary_conditions(myclass)
+        grad_eqn_disc = disc.process_symbol(grad_eqn)
+        linear_y = np.concatenate([[0], [1 / 3], LR_neg.flatten()])
+        submesh = mesh["negative electrode"]
+        np.testing.assert_array_almost_equal(
+            grad_eqn_disc.tb_field.evaluate(None, linear_y).flatten(),
+            np.zeros((submesh.npts_tb + 1) * (submesh.npts_lr)),
+        )
+        np.testing.assert_array_almost_equal(
+            grad_eqn_disc.lr_field.evaluate(None, linear_y).flatten(),
+            np.ones((submesh.npts_tb) * (submesh.npts_lr + 1)),
         )
 
     def test_grad_div_shapes_Neumann_bcs(self):

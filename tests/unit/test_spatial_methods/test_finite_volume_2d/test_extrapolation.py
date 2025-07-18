@@ -26,6 +26,8 @@ class TestExtrapolationFiniteVolume2D:
         }
         disc_LR = pybamm.Discretisation(mesh, spatial_methods)
         disc_TB = pybamm.Discretisation(mesh, spatial_methods)
+        disc_LR_neumann = pybamm.Discretisation(mesh, spatial_methods)
+        disc_TB_neumann = pybamm.Discretisation(mesh, spatial_methods)
         submesh = mesh[("negative electrode", "separator", "positive electrode")]
         LR, TB = np.meshgrid(submesh.nodes_lr, submesh.nodes_tb)
 
@@ -37,6 +39,8 @@ class TestExtrapolationFiniteVolume2D:
         )
         disc_LR.set_variable_slices([var_LR])
         disc_TB.set_variable_slices([var_TB])
+        disc_LR_neumann.set_variable_slices([var_LR])
+        disc_TB_neumann.set_variable_slices([var_TB])
         directions = [
             "left",
             "right",
@@ -86,6 +90,22 @@ class TestExtrapolationFiniteVolume2D:
                 "bottom": (pybamm.Scalar(0.0), "Dirichlet"),
             }
         }
+        bcs_TB_neumann = {
+            var_TB: {
+                "left": (pybamm.Scalar(0.0), "Neumann"),
+                "right": (pybamm.Scalar(0.0), "Neumann"),
+                "top": (pybamm.Scalar(1.0), "Neumann"),
+                "bottom": (pybamm.Scalar(1.0), "Neumann"),
+            }
+        }
+        bcs_LR_neumann = {
+            var_LR: {
+                "left": (pybamm.Scalar(1.0), "Neumann"),
+                "right": (pybamm.Scalar(1.0), "Neumann"),
+                "top": (pybamm.Scalar(0.0), "Neumann"),
+                "bottom": (pybamm.Scalar(0.0), "Neumann"),
+            }
+        }
 
         discretised_extrapolations_LR = {}
         for direction in directions:
@@ -93,11 +113,23 @@ class TestExtrapolationFiniteVolume2D:
             discretised_extrapolations_LR[direction] = disc_LR.process_symbol(
                 pybamm.BoundaryValue(var_LR, direction)
             )
+        discretised_extrapolations_LR_neumann = {}
+        for direction in directions:
+            disc_LR_neumann.bcs = bcs_LR_neumann
+            discretised_extrapolations_LR_neumann[direction] = disc_LR.process_symbol(
+                pybamm.BoundaryValue(var_LR, direction)
+            )
         discretised_extrapolations_TB = {}
         for direction in directions:
             disc_TB.bcs = bcs_TB
             discretised_extrapolations_TB[direction] = disc_TB.process_symbol(
                 pybamm.BoundaryValue(var_TB, direction)
+            )
+        discretised_extrapolations_TB_neumann = {}
+        for direction in directions:
+            disc_TB_neumann.bcs = bcs_TB_neumann
+            discretised_extrapolations_TB_neumann[direction] = (
+                disc_TB_neumann.process_symbol(pybamm.BoundaryValue(var_TB, direction))
             )
 
         for direction in directions:
@@ -107,10 +139,24 @@ class TestExtrapolationFiniteVolume2D:
                 .flatten(),
                 solutions_LR[direction],
             )
+        for direction in directions:
+            np.testing.assert_array_almost_equal(
+                discretised_extrapolations_LR_neumann[direction]
+                .evaluate(y=LR.flatten())
+                .flatten(),
+                solutions_LR[direction],
+            )
 
         for direction in directions:
             np.testing.assert_array_almost_equal(
                 discretised_extrapolations_TB[direction]
+                .evaluate(y=TB.flatten())
+                .flatten(),
+                solutions_TB[direction],
+            )
+        for direction in directions:
+            np.testing.assert_array_almost_equal(
+                discretised_extrapolations_TB_neumann[direction]
                 .evaluate(y=TB.flatten())
                 .flatten(),
                 solutions_TB[direction],
