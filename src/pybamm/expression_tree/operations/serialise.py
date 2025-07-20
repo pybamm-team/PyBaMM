@@ -673,13 +673,15 @@ class Serialise:
                 input_names[i]: Serialise.convert_symbol_to_json(symbol.orphans[i])
                 for i in range(len(input_names))
             }
-            diff_variable = symbol.diff_variable
-            if diff_variable is not None:
-                diff_variable = Serialise.convert_symbol_to_json(diff_variable)
+            dv = symbol.diff_variable
+            if dv is not None:
+                dv_json = Serialise.convert_symbol_to_json(dv)
+            else:
+                dv_json = None
             json_dict = {
                 "type": symbol.__class__.__name__,
                 "inputs": inputs,
-                "diff_variable": diff_variable,
+                "diff_variable": dv_json,
                 "name": symbol.name,
                 "domains": symbol.domains,
             }
@@ -730,7 +732,6 @@ class Serialise:
                 "coord_sys": symbol.coord_sys,
             }
         elif isinstance(symbol, pybamm.IndefiniteIntegral):
-            print(10)
             integration_var = (
                 symbol.integration_variable[0]
                 if isinstance(symbol.integration_variable, list)
@@ -830,8 +831,7 @@ class Serialise:
             )
         elif symbol_type == "Scalar":
             return pybamm.Scalar(json_data["value"])
-        elif symbol_type == "InputParameter":
-            return pybamm.InputParameter(json_data["name"])
+
         elif symbol_type == "Interpolant":
             return pybamm.Interpolant(
                 [np.array(x) for x in json_data["x"]],
