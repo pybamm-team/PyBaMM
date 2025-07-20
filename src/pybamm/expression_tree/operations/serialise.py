@@ -240,9 +240,7 @@ class Serialise:
         )
 
     def _json_encoder(obj):
-        if isinstance(obj, pybamm.Symbol):  # or SymbolBase
-            return Serialise.convert_symbol_to_json(obj)
-        elif isinstance(obj, Enum):
+        if isinstance(obj, Enum):
             return obj.name
         elif isinstance(obj, np.ndarray):
             return obj.tolist()
@@ -272,10 +270,13 @@ class Serialise:
 
         Example
         -------
-        >>> MyModel = MyCustomModelClass()
-        >>> MyModel.build_model()
-        >>> Serialise.save_custom_model(MyModel, "my_custom_model")
-        # Saves 'my_custom_model.json' in the current directory
+        >>> import pybamm
+        >>> model = pybamm.lithium_ion.BasicDFN()
+        >>> from pybamm.expression_tree.operations.serialise import Serialise
+        >>> Serialise.save_custom_model(model, "basicdfn_model")
+        # Saves 'basicdfn_model.json' in the current directory
+
+        # Note: 'save_custom_model' also works for user-defined models.
 
         """
         model_json = {
@@ -364,10 +365,12 @@ class Serialise:
 
         Example
         -------
-        >>> loaded_model= Serialise.load_custom_model("my_model.json", battery_model=pybamm.lithium_ion.BaseModel())
-        >>> sim = pybamm.Simulation(loaded_model)
-        >>> sim.solve([0, 3600])
-        >>> sim.plot()
+        >>> import pybamm
+        >>> model = pybamm.lithium_ion.BasicDFN()
+        >>> from pybamm.expression_tree.operations.serialise import Serialise
+        >>> Serialise.save_custom_model(model, "basicdfn_model")
+        >>> loaded_model= Serialise.load_custom_model("basicdfn_model.json", battery_model=pybamm.lithium_ion.BaseModel())
+
         """
         with open(filename) as file:
             model_data = json.load(file)
@@ -622,11 +625,27 @@ class Serialise:
 
         Examples
         --------
-        >>> Serialise.convert_symbol_to_json(pybamm.Scalar(5))
+        >>> import pybamm
+        >>> from pybamm.expression_tree.operations.serialise import Serialise
+        >>> s = pybamm.Scalar(5)
+        >>> Serialise.convert_symbol_to_json(s)
         {'type': 'Scalar', 'value': 5}
 
-        >>> Serialise.convert_symbol_to_json(pybamm.Variable("c"))
-        {'type': 'Variable', 'name': 'c', 'domains': {}, 'bounds': [None, None]}
+        >>> v = pybamm.Variable("c")
+        >>> Serialise.convert_symbol_to_json(v)
+        {'type': 'Variable',
+            'name': 'c',
+            'domains': {
+                'primary': [],
+                'secondary': [],
+                'tertiary': [],
+                'quaternary': []
+            },
+            'bounds': [
+                {'type': 'Scalar', 'value': -float("inf")},
+                {'type': 'Scalar', 'value': float("inf")}
+            ]
+        }
 
         """
 
@@ -711,6 +730,7 @@ class Serialise:
                 "coord_sys": symbol.coord_sys,
             }
         elif isinstance(symbol, pybamm.IndefiniteIntegral):
+            print(10)
             integration_var = (
                 symbol.integration_variable[0]
                 if isinstance(symbol.integration_variable, list)
@@ -786,6 +806,8 @@ class Serialise:
 
         Examples
         --------
+        >>> import pybamm
+        >>> from pybamm.expression_tree.operations.serialise import Serialise
         >>> json_expr = {'type': 'Scalar', 'value': 42}
         >>> Serialise.convert_symbol_from_json(json_expr)
         pybamm.Scalar(42)

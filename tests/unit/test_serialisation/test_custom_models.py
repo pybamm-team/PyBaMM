@@ -1,5 +1,5 @@
 import os
-from datetime import datetime
+import re
 
 import numpy as np
 import pytest
@@ -148,6 +148,23 @@ def test_binary_operator_serialisation():
     assert values == [2, 3]
 
 
+def test_function_parameter_with_diff_variable_serialisation():
+    x = pybamm.Variable("x")
+    diff_var = pybamm.Variable("r")
+    func_param = pybamm.FunctionParameter("my_func", {"x": x}, diff_var)
+
+    json_dict = Serialise.convert_symbol_to_json(func_param)
+    assert "diff_variable" in json_dict
+    assert json_dict["diff_variable"]["type"] == "Variable"
+    assert json_dict["diff_variable"]["name"] == "r"
+
+    expr2 = Serialise.convert_symbol_from_json(json_dict)
+    assert isinstance(expr2, pybamm.FunctionParameter)
+    assert expr2.diff_variable.name == "r"
+    assert expr2.name == "my_func"
+    assert list(expr2.input_names) == ["x"]
+
+
 def test_symbol_fallback_serialisation():
     var = pybamm.Variable("v", domain="electrode")
     diff = pybamm.Gradient(var)
@@ -191,9 +208,9 @@ def test_save_and_load_custom_model():
 
     # saving with defualt filename
     Serialise().save_custom_model(model)
-    filename = "test_model_" + datetime.now().strftime("%Y_%m_%d-%p%I_%M") + ".json"
-    assert os.path.exists(filename)
-    os.remove(filename)
+    pattern = r"test_model_\d{4}_\d{2}_\d{2}-(AM|PM)\d{2}_\d{2}\.json"
+    found = any(re.fullmatch(pattern, f) for f in os.listdir("."))
+    assert found
 
     # load model
     loaded_model = Serialise.load_custom_model("test_model.json")
@@ -209,7 +226,7 @@ def test_plotting_serialised_models():
     models = [BasicSPM(), BasicDFN()]
     filenames = ["spm", "dfn"]
 
-    for model, name in zip(models, filenames, strict=False):
+    for model, name in zip(models, filenames, strict=True):
         # Save the model
         Serialise.save_custom_model(model, filename=name)
 
