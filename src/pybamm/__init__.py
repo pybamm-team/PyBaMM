@@ -58,6 +58,7 @@ from .expression_tree.operations.jacobian import Jacobian
 from .expression_tree.operations.convert_to_casadi import CasadiConverter
 from .expression_tree.operations.unpack_symbols import SymbolUnpacker
 from .expression_tree.operations.serialise import Serialise
+
 # Model classes
 from .models.base_model import BaseModel
 from .models.event import Event
@@ -72,6 +73,7 @@ from .models.full_battery_models import lead_acid
 from .models.full_battery_models import lithium_ion
 from .models.full_battery_models import equivalent_circuit
 from .models.full_battery_models import sodium_ion
+
 # Submodel classes
 from .models.submodels.base_submodel import BaseSubModel
 
@@ -149,6 +151,7 @@ from .meshes.scikit_fem_submeshes_3d import (
 
 # Serialisation
 from .models.base_model import load_model
+
 # Spatial Methods
 from .spatial_methods.spatial_method import SpatialMethod
 from .spatial_methods.zero_dimensional_method import ZeroDimensionalSpatialMethod
