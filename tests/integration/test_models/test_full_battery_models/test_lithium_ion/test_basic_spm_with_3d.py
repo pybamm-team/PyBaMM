@@ -7,7 +7,7 @@ class TestBasicSPMWith3DThermal:
     def test_spm_3d_vs_lumped_pouch(self):
         models = {
             "Lumped": pybamm.lithium_ion.SPM(options={"thermal": "lumped"}),
-            "3D": pybamm.lithium_ion.BasicSPM_with_3DThermal(
+            "3D": pybamm.lithium_ion.Basic3DThermalSPM(
                 options={"cell geometry": "pouch", "dimensionality": 3}
             ),
         }
@@ -84,7 +84,7 @@ class TestBasicSPMWith3DThermal:
     def test_spm_3d_vs_lumped_cylinder(self):
         models = {
             "Lumped": pybamm.lithium_ion.SPM(options={"thermal": "lumped"}),
-            "3D": pybamm.lithium_ion.BasicSPM_with_3DThermal(
+            "3D": pybamm.lithium_ion.Basic3DThermalSPM(
                 options={"cell geometry": "cylindrical", "dimensionality": 3}
             ),
         }

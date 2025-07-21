@@ -3,7 +3,7 @@ import pybamm
 from .base_lithium_ion_model import BaseModel
 
 
-class BasicSPM_with_3DThermal(BaseModel):
+class Basic3DThermalSPM(BaseModel):
     """Single Particle Model (SPM) model of a lithium-ion battery, from
     :footcite:t:`Marquis2019`.
 

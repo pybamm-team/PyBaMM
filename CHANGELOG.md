@@ -1,7 +1,7 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
 ## Features
-- Added a 3D temperature in existing Basic SPM model with two way coupling. ([#5112](https://github.com/pybamm-team/PyBaMM/pull/5112))
+- Added a `Basic3DThermalSPM` with two way coupling. ([#5112](https://github.com/pybamm-team/PyBaMM/pull/5112))
 - Creates a boundary mesh size object that returns the distance from the center of the leftmost/rightmost control volume to the boundary of the domain ([#5108](https://github.com/pybamm-team/PyBaMM/pull/5108))
 - Introduced entry points for models, similar to parameter sets, and moved entry point handling to `pybamm.dispatch.entry_points`. There is now experimental support for loading third-party models outside of the PyBaMM framework via `pybamm.Model("model_name")`. This API is currently unstable until further notice and may be subject to change without warning. ([#4490](https://github.com/pybamm-team/PyBaMM/pull/4490))
 - Allow for overriding the spatial method's extrapolation and for using constant extrapolation of boundary values ([#5107](https://github.com/pybamm-team/PyBaMM/pull/5107))

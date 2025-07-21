@@ -947,7 +947,10 @@ class BaseBatteryModel(pybamm.BaseModel):
 
     @property
     def default_geometry(self):
-        return pybamm.battery_geometry(options=self.options)
+        if (self.options["cell geometry"] == "cylindrical"):
+            return pybamm.battery_geometry(options=self.options, form_factor="cylindrical")
+        else:
+            return pybamm.battery_geometry(options=self.options)
 
     @property
     def default_var_pts(self):
