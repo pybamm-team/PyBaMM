@@ -234,6 +234,7 @@ class ParameterValues:
         """Returns a copy of the parameter values. Makes sure to copy the internal
         dictionary."""
         new_copy = ParameterValues(self._dict_items.copy())
+        new_copy._set_initial_state = self._set_initial_state
         return new_copy
 
     def search(self, key, print_values=True):
