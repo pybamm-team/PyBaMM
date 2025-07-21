@@ -260,7 +260,7 @@ class Simulation:
         self._parameter_values.process_geometry(self._geometry)
         self._model = self._model_with_set_params
 
-    def set_initial_soc(self, initial_soc, inputs=None):
+    def set_initial_state(self, initial_soc, inputs=None):
         if self._built_initial_soc != initial_soc:
             # reset
             self._model_with_set_params = None
@@ -268,38 +268,11 @@ class Simulation:
             self.steps_to_built_models = None
             self.steps_to_built_solvers = None
 
-        options = self._model.options
         param = self._model.param
-        if options["open-circuit potential"] == "MSMR":
-            self._parameter_values = (
-                self._unprocessed_parameter_values.set_initial_ocps(
-                    initial_soc,
-                    param=param,
-                    inplace=False,
-                    options=options,
-                    inputs=inputs,
-                )
-            )
-        elif options["working electrode"] == "positive":
-            self._parameter_values = (
-                self._unprocessed_parameter_values.set_initial_stoichiometry_half_cell(
-                    initial_soc,
-                    param=param,
-                    inplace=False,
-                    options=options,
-                    inputs=inputs,
-                )
-            )
-        else:
-            self._parameter_values = (
-                self._unprocessed_parameter_values.set_initial_stoichiometries(
-                    initial_soc,
-                    param=param,
-                    inplace=False,
-                    options=options,
-                    inputs=inputs,
-                )
-            )
+        options = self._model.options
+        self._parameter_values = self._unprocessed_parameter_values.set_initial_state(
+            initial_soc, param=param, inplace=False, options=options, inputs=inputs
+        )
 
         # Save solved initial SOC in case we need to re-build the model
         self._built_initial_soc = initial_soc
@@ -322,7 +295,7 @@ class Simulation:
             A dictionary of input parameters to pass to the model when solving.
         """
         if initial_soc is not None:
-            self.set_initial_soc(initial_soc, inputs=inputs)
+            self.set_initial_state(initial_soc, inputs=inputs)
 
         if self._built_model:
             return
@@ -347,7 +320,7 @@ class Simulation:
         experiment, where there may be several models and solvers to build.
         """
         if initial_soc is not None:
-            self.set_initial_soc(initial_soc, inputs)
+            self.set_initial_state(initial_soc, inputs=inputs)
 
         if self.steps_to_built_models:
             return

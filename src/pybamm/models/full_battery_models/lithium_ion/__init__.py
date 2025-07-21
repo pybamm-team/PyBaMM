@@ -13,6 +13,7 @@ from .electrode_soh_half_cell import (
     ElectrodeSOHHalfCell,
     get_initial_stoichiometry_half_cell,
 )
+from .initial_state import set_initial_state
 from .spm import SPM
 from .spme import SPMe
 from .dfn import DFN
