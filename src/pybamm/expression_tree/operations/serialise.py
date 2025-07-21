@@ -11,6 +11,8 @@ import numpy as np
 
 import pybamm
 
+SUPPORTED_SCHEMA_VERSION = "1.0"
+
 
 class Serialise:
     """
@@ -239,14 +241,15 @@ class Serialise:
             """
         )
 
+    @staticmethod
     def _json_encoder(obj):
         if isinstance(obj, Enum):
             return obj.name
         elif isinstance(obj, np.ndarray):
             return obj.tolist()
-        elif isinstance(obj, (np.float64 | np.float32)):
+        elif isinstance(obj, np.floating):
             return float(obj)
-        elif isinstance(obj, (np.int64 | np.int32)):
+        elif isinstance(obj, np.integer):
             return int(obj)
         else:
             raise TypeError(f"Object of type {type(obj)} is not JSON serializable.")
@@ -254,7 +257,7 @@ class Serialise:
     @staticmethod
     def save_custom_model(model, filename=None):
         """
-        Saves a custom (non-discretised) PyBaMM model to a JSON file.
+        Saves a custom (non-discretised) PyBaMM model to a JSON file. Works for user defined models that are subclasses of BaseModel.
 
         This includes symbolic expressions for rhs, algebraic, initial and boundary
         conditions, events, and variables. Useful for storing or sharing models
@@ -274,13 +277,12 @@ class Serialise:
         >>> model = pybamm.lithium_ion.BasicDFN()
         >>> from pybamm.expression_tree.operations.serialise import Serialise
         >>> Serialise.save_custom_model(model, "basicdfn_model")
-        # Saves 'basicdfn_model.json' in the current directory
-
-        # Note: 'save_custom_model' also works for user-defined models.
 
         """
+        SCHEMA_VERSION = "1.0"
         model_json = {
             "pybamm_version": pybamm.__version__,
+            "schema_version": SCHEMA_VERSION,
             "name": getattr(model, "name", "unnamed_model"),
             "options": getattr(model, "options", {}),
             "rhs": [
@@ -369,11 +371,18 @@ class Serialise:
         >>> model = pybamm.lithium_ion.BasicDFN()
         >>> from pybamm.expression_tree.operations.serialise import Serialise
         >>> Serialise.save_custom_model(model, "basicdfn_model")
-        >>> loaded_model= Serialise.load_custom_model("basicdfn_model.json", battery_model=pybamm.lithium_ion.BaseModel())
+        >>> loaded_model = Serialise.load_custom_model("basicdfn_model.json", battery_model=pybamm.lithium_ion.BaseModel())
 
         """
         with open(filename) as file:
             model_data = json.load(file)
+
+        schema_version = model_data.get("schema_version", SUPPORTED_SCHEMA_VERSION)
+        if schema_version != SUPPORTED_SCHEMA_VERSION:
+            raise ValueError(
+                f"Unsupported schema version: {schema_version}. "
+                f"Expected: {SUPPORTED_SCHEMA_VERSION}"
+            )
 
         model = battery_model if battery_model is not None else pybamm.BaseModel()
         model.name = model_data["name"]
@@ -629,24 +638,11 @@ class Serialise:
         >>> from pybamm.expression_tree.operations.serialise import Serialise
         >>> s = pybamm.Scalar(5)
         >>> Serialise.convert_symbol_to_json(s)
-        {'type': 'Scalar', 'value': 5}
+        {'type': 'Scalar', 'value': 5.0}
 
         >>> v = pybamm.Variable("c")
         >>> Serialise.convert_symbol_to_json(v)
-        {'type': 'Variable',
-            'name': 'c',
-            'domains': {
-                'primary': [],
-                'secondary': [],
-                'tertiary': [],
-                'quaternary': []
-            },
-            'bounds': [
-                {'type': 'Scalar', 'value': -float("inf")},
-                {'type': 'Scalar', 'value': float("inf")}
-            ]
-        }
-
+        {'type': 'Variable', 'name': 'c', 'domains': {'primary': [], 'secondary': [], 'tertiary': [], 'quaternary': []}, 'bounds': [{'type': 'Scalar', 'value': -inf}, {'type': 'Scalar', 'value': inf}]}
         """
 
         if isinstance(symbol, numbers.Number | list):
@@ -791,8 +787,8 @@ class Serialise:
         """
         Recursively reconstructs a PyBaMM symbolic expression from a JSON dictionary.
 
-        Supports all major PyBaMM symbol types, including Scalars, Variables, Parameters,
-        Operators, FunctionParameters, Broadcasts, Interpolants.
+        Supports all major PyBaMM symbol types, including :class:`pybamm.Scalar`, :class:`pybamm.Variable`, :class:`pybamm.Parameter`, :class:`pybamm.Operator`, :class:`pybamm.FunctionParameter`, :class:`pybamm.Broadcast`, and :class:`pybamm.Interpolant`.
+
 
         Parameters
         ----------
@@ -810,8 +806,8 @@ class Serialise:
         >>> import pybamm
         >>> from pybamm.expression_tree.operations.serialise import Serialise
         >>> json_expr = {'type': 'Scalar', 'value': 42}
-        >>> Serialise.convert_symbol_from_json(json_expr)
-        pybamm.Scalar(42)
+        >>> Serialise.convert_symbol_from_json(json_expr) # doctest: +SKIP
+        Scalar(0x21569ea463d7fb2, 42.0, children=[], domains={})
 
         """
         if isinstance(json_data, float | int | bool):
