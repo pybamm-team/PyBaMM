@@ -1,6 +1,7 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
 ## Features
+- Enables the passing of `inputs` throughout `set_initial_soc`. ([#5122](https://github.com/pybamm-team/PyBaMM/pull/5122))
 - Adds `on_failure` option to `BaseSolver` with options for `"warn"`, `"ignore"`, and `"raise"` to change behaviour on solver failure. Defaults to "raise" to retain historic functionality. ([#5105](https://github.com/pybamm-team/PyBaMM/pull/5105))
 - Creates a boundary mesh size object that returns the distance from the center of the leftmost/rightmost control volume to the boundary of the domain ([#5108](https://github.com/pybamm-team/PyBaMM/pull/5108))
 - Introduced entry points for models, similar to parameter sets, and moved entry point handling to `pybamm.dispatch.entry_points`. There is now experimental support for loading third-party models outside of the PyBaMM framework via `pybamm.Model("model_name")`. This API is currently unstable until further notice and may be subject to change without warning. ([#4490](https://github.com/pybamm-team/PyBaMM/pull/4490))

@@ -273,7 +273,11 @@ class Simulation:
         if options["open-circuit potential"] == "MSMR":
             self._parameter_values = (
                 self._unprocessed_parameter_values.set_initial_ocps(
-                    initial_soc, param=param, inplace=False, options=options
+                    initial_soc,
+                    param=param,
+                    inplace=False,
+                    options=options,
+                    inputs=inputs,
                 )
             )
         elif options["working electrode"] == "positive":
