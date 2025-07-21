@@ -665,13 +665,13 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         if options["dimensionality"] == 3:
             if options["cell geometry"] not in ["pouch", "cylindrical"]:
                 raise pybamm.OptionError(
-                    "cell geometry must be pouch or cylindrical in 3D model"
+                    "'cell geometry' must be 'pouch' or 'cylindrical' if 'dimensionality' is '3'"
                 )
 
         if options["cell geometry"] == "cylindrical":
             if options["dimensionality"] != 3:
                 raise pybamm.OptionError(
-                    "cell geometry must be 3D for cylindrical geometries"
+                    "'dimensionality' must be '3' if 'cell geometry' is 'cylindrical'"
                 )
 
         if (

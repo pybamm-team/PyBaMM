@@ -58,7 +58,7 @@ class LithiumIonParameters(BaseParameters):
         self.lambda_eff = self.therm.lambda_eff
         self.cell_heat_capacity = self.therm.cell_heat_capacity
 
-        # box bcs
+        # pouch bcs
         self.h_edge_x_min = self.therm.h_edge_x_min
         self.h_edge_x_max = self.therm.h_edge_x_max
         self.h_edge_y_max = self.therm.h_edge_y_max

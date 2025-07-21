@@ -1205,3 +1205,47 @@ class TestIDAKLUSolver:
             warnings.simplefilter("always")
             solver.solve(model, t_eval)
             assert len(w) == 0
+
+    def test_on_failure_option(self):
+        input_parameters = {"Positive electrode active material volume fraction": 0.01}
+        t_eval = [0, 100]
+        t_interp = np.linspace(t_eval[0], t_eval[-1], 10)
+
+        model = pybamm.lithium_ion.DFN()
+        model.events = []  # Requires events to be off
+        geometry = model.default_geometry
+        param = model.default_parameter_values
+        param.update({key: "[input]" for key in input_parameters})
+        param.process_model(model)
+        param.process_geometry(geometry)
+        mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
+        disc = pybamm.Discretisation(
+            mesh,
+            model.default_spatial_methods,
+            remove_independent_variables_from_rhs=True,
+        )
+        disc.process_model(model)
+
+        # Test default "raise"
+        solver = pybamm.IDAKLUSolver()
+        with pytest.raises(pybamm.SolverError):
+            solver.solve(
+                model, t_eval=t_eval, t_interp=t_interp, inputs=input_parameters
+            )
+
+        # Test "ignore"
+        solver = pybamm.IDAKLUSolver(on_failure="ignore")
+        sol = solver.solve(
+            model, t_eval=t_eval, t_interp=t_interp, inputs=input_parameters
+        )
+        assert sol.termination == "failure"
+
+        # Test "warn"
+        solver = pybamm.IDAKLUSolver(on_failure="warn")
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            solver.solve(
+                model, t_eval=t_eval, t_interp=t_interp, inputs=input_parameters
+            )
+            assert len(w) > 0
+            assert "FAILURE" in str(w[0].message)
