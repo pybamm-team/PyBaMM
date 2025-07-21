@@ -19,7 +19,7 @@ def plot_3d_heatmap(
     Creates a 3D scatter plot of a variable from a PyBaMM solution with a 3D mesh.
 
     This function visualizes the solution directly on the FEM nodes, providing a true
-    representation of the 3D data for both box and cylindrical geometries.
+    representation of the 3D data.
 
     Parameters
     ----------
