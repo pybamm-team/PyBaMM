@@ -5,7 +5,7 @@ model_3d = pybamm.lithium_ion.BasicSPM_with_3DThermal(
     options={"cell geometry": "box", "dimensionality": 3}
 )
 
-parameter_values = pybamm.ParameterValues("Chen2020")
+parameter_values = pybamm.ParameterValues("Ecker2015")
 
 # Define our cooling scenario
 h_cooling = 20  # W.m-2.K-1 -> A cooling plate on one side
