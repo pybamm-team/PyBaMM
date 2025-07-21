@@ -81,103 +81,178 @@ class TestPlot3DHeatmap:
         return sim.solve([0, 100])
 
     def test_plot_3d_heatmap_default(self, box_3d_solution):
-        ax = pybamm.plot_3d_heatmap(box_3d_solution, show_plot=False)
+        ax = pybamm.plot_3d_heatmap(
+            box_3d_solution, show_plot=False, variable="Cell temperature [K]", t=None
+        )
         assert ax is not None
         assert ax.name == "3d"
 
     def test_plot_3d_heatmap_with_time(self, box_3d_solution):
-        ax = pybamm.plot_3d_heatmap(box_3d_solution, t=50, show_plot=False)
+        ax = pybamm.plot_3d_heatmap(
+            box_3d_solution, t=50, show_plot=False, variable="Cell temperature [K]"
+        )
         assert ax is not None
 
     def test_plot_3d_heatmap_time_none(self, box_3d_solution):
-        ax = pybamm.plot_3d_heatmap(box_3d_solution, t=None, show_plot=False)
+        ax = pybamm.plot_3d_heatmap(
+            box_3d_solution, t=None, show_plot=False, variable="Cell temperature [K]"
+        )
         assert ax is not None
 
     def test_plot_3d_heatmap_cylindrical(self, cylindrical_3d_solution):
-        ax = pybamm.plot_3d_heatmap(cylindrical_3d_solution, show_plot=False)
+        ax = pybamm.plot_3d_heatmap(
+            cylindrical_3d_solution,
+            show_plot=False,
+            variable="Cell temperature [K]",
+            t=None,
+        )
         assert ax is not None
 
     def test_plot_3d_heatmap_custom_variable(self, box_3d_solution):
         ax = pybamm.plot_3d_heatmap(
-            box_3d_solution, variable="Cell temperature [K]", show_plot=False
+            box_3d_solution, variable="Cell temperature [K]", show_plot=False, t=None
         )
         assert ax is not None
 
     def test_plot_3d_heatmap_custom_cmap(self, box_3d_solution):
-        ax = pybamm.plot_3d_heatmap(box_3d_solution, cmap="viridis", show_plot=False)
+        ax = pybamm.plot_3d_heatmap(
+            box_3d_solution,
+            cmap="viridis",
+            show_plot=False,
+            variable="Cell temperature [K]",
+            t=None,
+        )
         assert ax is not None
 
     def test_plot_3d_heatmap_custom_marker_size(self, box_3d_solution):
-        ax = pybamm.plot_3d_heatmap(box_3d_solution, marker_size=20, show_plot=False)
+        ax = pybamm.plot_3d_heatmap(
+            box_3d_solution,
+            marker_size=20,
+            show_plot=False,
+            variable="Cell temperature [K]",
+            t=None,
+        )
         assert ax is not None
 
     def test_plot_3d_heatmap_custom_alpha(self, box_3d_solution):
-        ax = pybamm.plot_3d_heatmap(box_3d_solution, alpha=0.5, show_plot=False)
+        ax = pybamm.plot_3d_heatmap(
+            box_3d_solution,
+            alpha=0.5,
+            show_plot=False,
+            variable="Cell temperature [K]",
+            t=None,
+        )
         assert ax is not None
 
     def test_plot_3d_heatmap_use_offset_true(self, box_3d_solution):
-        ax = pybamm.plot_3d_heatmap(box_3d_solution, use_offset=True, show_plot=False)
+        ax = pybamm.plot_3d_heatmap(
+            box_3d_solution,
+            use_offset=True,
+            show_plot=False,
+            variable="Cell temperature [K]",
+            t=None,
+        )
         assert ax is not None
 
     def test_plot_3d_heatmap_use_offset_false(self, box_3d_solution):
-        ax = pybamm.plot_3d_heatmap(box_3d_solution, use_offset=False, show_plot=False)
+        ax = pybamm.plot_3d_heatmap(
+            box_3d_solution,
+            use_offset=False,
+            show_plot=False,
+            variable="Cell temperature [K]",
+            t=None,
+        )
         assert ax is not None
 
     def test_plot_3d_heatmap_custom_ax(self, box_3d_solution):
         fig = plt.figure()
         ax = fig.add_subplot(projection="3d")
-        ax_out = pybamm.plot_3d_heatmap(box_3d_solution, ax=ax, show_plot=False)
+        ax_out = pybamm.plot_3d_heatmap(
+            box_3d_solution,
+            ax=ax,
+            show_plot=False,
+            variable="Cell temperature [K]",
+            t=None,
+        )
         assert ax_out == ax
 
     def test_plot_3d_heatmap_kwargs(self, box_3d_solution):
         ax = pybamm.plot_3d_heatmap(
-            box_3d_solution, edgecolors="black", linewidths=0.5, show_plot=False
+            box_3d_solution,
+            edgecolors="black",
+            linewidths=0.5,
+            show_plot=False,
+            variable="Cell temperature [K]",
+            t=None,
         )
         assert ax is not None
 
     def test_plot_3d_heatmap_show_plot_true(self, box_3d_solution):
-        ax = pybamm.plot_3d_heatmap(box_3d_solution, show_plot=True)
+        ax = pybamm.plot_3d_heatmap(
+            box_3d_solution, show_plot=True, variable="Cell temperature [K]", t=None
+        )
         assert ax is not None
 
     def test_plot_3d_heatmap_non_3d_model_error(self, non_3d_solution):
         with pytest.raises(
             TypeError, match="This function requires a 3D model solution"
         ):
-            pybamm.plot_3d_heatmap(non_3d_solution)
+            pybamm.plot_3d_heatmap(
+                non_3d_solution, variable="Cell temperature [K]", t=None
+            )
 
     def test_plot_3d_heatmap_non_3d_axes_error(self, box_3d_solution):
         fig, ax = plt.subplots()
         with pytest.raises(
             TypeError, match="The provided axes `ax` must be a 3D projection"
         ):
-            pybamm.plot_3d_heatmap(box_3d_solution, ax=ax, show_plot=False)
+            pybamm.plot_3d_heatmap(
+                box_3d_solution,
+                ax=ax,
+                show_plot=False,
+                variable="Cell temperature [K]",
+                t=None,
+            )
 
     def test_plot_3d_heatmap_colorbar_present(self, box_3d_solution):
-        ax = pybamm.plot_3d_heatmap(box_3d_solution, show_plot=False)
+        ax = pybamm.plot_3d_heatmap(
+            box_3d_solution, show_plot=False, variable="Cell temperature [K]", t=None
+        )
         fig = ax.get_figure()
         assert len(fig.axes) == 2
 
     def test_plot_3d_heatmap_axis_labels(self, box_3d_solution):
-        ax = pybamm.plot_3d_heatmap(box_3d_solution, show_plot=False)
+        ax = pybamm.plot_3d_heatmap(
+            box_3d_solution, show_plot=False, variable="Cell temperature [K]", t=None
+        )
         assert "x [m]" in ax.get_xlabel()
         assert "y [m]" in ax.get_ylabel()
         assert "z [m]" in ax.get_zlabel()
 
     def test_plot_3d_heatmap_title_content(self, box_3d_solution):
-        ax = pybamm.plot_3d_heatmap(box_3d_solution, t=50, show_plot=False)
+        ax = pybamm.plot_3d_heatmap(
+            box_3d_solution, t=50, show_plot=False, variable="Cell temperature [K]"
+        )
         title = ax.get_title()
         assert "3D Heatmap" in title
         assert "t=50.0s" in title
 
     def test_plot_3d_heatmap_view_angle_set(self, box_3d_solution):
-        ax = pybamm.plot_3d_heatmap(box_3d_solution, show_plot=False)
+        ax = pybamm.plot_3d_heatmap(
+            box_3d_solution, show_plot=False, variable="Cell temperature [K]", t=None
+        )
         elev, azim = ax.elev, ax.azim
         assert elev == 20
         assert azim == -65
 
     def test_plot_3d_heatmap_scatter_properties(self, box_3d_solution):
         ax = pybamm.plot_3d_heatmap(
-            box_3d_solution, marker_size=15, alpha=0.8, show_plot=False
+            box_3d_solution,
+            marker_size=15,
+            alpha=0.8,
+            show_plot=False,
+            variable="Cell temperature [K]",
+            t=None,
         )
         collections = ax.collections
         assert len(collections) > 0

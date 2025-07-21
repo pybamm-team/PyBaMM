@@ -6,8 +6,8 @@ import pybamm
 
 def plot_3d_cross_section(
     solution: "pybamm.Solution",
-    variable: str = "Cell temperature [K]",
-    t: float | None = None,
+    variable: str,
+    t: float | None,
     plane: str = "yz",
     position: float = 0.5,
     n_pts: int = 100,

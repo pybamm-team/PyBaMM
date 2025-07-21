@@ -5,8 +5,8 @@ import pybamm
 
 def plot_3d_heatmap(
     solution: "pybamm.Solution",
-    variable: str = "Cell temperature [K]",
-    t: float | None = None,
+    variable: str,
+    t: float | None,
     ax=None,
     show_plot: bool = True,
     cmap: str = "inferno",

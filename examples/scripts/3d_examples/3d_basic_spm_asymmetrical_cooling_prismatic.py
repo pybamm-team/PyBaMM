@@ -5,7 +5,7 @@ model_3d = pybamm.lithium_ion.BasicSPM_with_3DThermal(
     options={"cell geometry": "box", "dimensionality": 3}
 )
 
-parameter_values = pybamm.ParameterValues("Marquis2019")
+parameter_values = pybamm.ParameterValues("Chen2020")
 
 # Define our cooling scenario
 h_cooling = 20  # W.m-2.K-1 -> A cooling plate on one side
@@ -39,25 +39,8 @@ var_pts = {
     "z": None,
 }
 
-submesh_types = {
-    "cell": pybamm.ScikitFemGenerator3D("box", h="0.01"),  # very fine mesh
-    "negative electrode": pybamm.Uniform1DSubMesh,
-    "separator": pybamm.Uniform1DSubMesh,
-    "positive electrode": pybamm.Uniform1DSubMesh,
-    "current collector": pybamm.SubMesh0D,
-    "negative particle": pybamm.Uniform1DSubMesh,
-    "positive particle": pybamm.Uniform1DSubMesh,
-    "negative primary particle": pybamm.Uniform1DSubMesh,
-    "positive primary particle": pybamm.Uniform1DSubMesh,
-    "negative secondary particle": pybamm.Uniform1DSubMesh,
-    "positive secondary particle": pybamm.Uniform1DSubMesh,
-    "negative particle size": pybamm.Uniform1DSubMesh,
-    "positive particle size": pybamm.Uniform1DSubMesh,
-    "negative primary particle size": pybamm.Uniform1DSubMesh,
-    "positive primary particle size": pybamm.Uniform1DSubMesh,
-    "negative secondary particle size": pybamm.Uniform1DSubMesh,
-    "positive secondary particle size": pybamm.Uniform1DSubMesh,
-}
+submesh_types = model_3d.default_submesh_types
+submesh_types["cell"] = pybamm.ScikitFemGenerator3D("box", h="0.01")  # very fine mesh
 
 sim = pybamm.Simulation(
     model_3d,
@@ -83,6 +66,8 @@ print(f"\n--- Displaying heatmaps at t={final_time:.0f}s ---")
 pybamm.plot_3d_cross_section(
     solution,
     plane="xz",
+    variable="Cell temperature [K]",
+    t=None,  # Last time stamp
     position=0.5,
     show_mesh=True,
     mesh_color="white",
@@ -95,6 +80,8 @@ pybamm.plot_3d_cross_section(
     solution,
     plane="yz",
     position=0.5,
+    t=None,
+    variable="Cell temperature [K]",
     show_mesh=True,
     mesh_color="white",
     mesh_alpha=0.4,
@@ -102,4 +89,6 @@ pybamm.plot_3d_cross_section(
 )
 
 # Plot a 3D heatmap of the temperature distribution
-pybamm.plot_3d_heatmap(solution, t=final_time, marker_size=5)
+pybamm.plot_3d_heatmap(
+    solution, t=final_time, marker_size=5, variable="Cell temperature [K]"
+)
