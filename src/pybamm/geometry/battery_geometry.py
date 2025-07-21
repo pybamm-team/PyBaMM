@@ -30,8 +30,6 @@ def battery_geometry(
     """
     if options is None or type(options) == dict:  # noqa: E721
         options = pybamm.BatteryModelOptions(options)
-    if options["cell geometry"] == "cylindrical":
-        form_factor = options["cell geometry"]
     geo = pybamm.GeometricParameters(options)
     L_n = geo.n.L
     L_s = geo.s.L
