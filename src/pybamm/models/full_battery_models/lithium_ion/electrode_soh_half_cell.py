@@ -98,8 +98,8 @@ def get_initial_stoichiometry_half_cell(
 
     if isinstance(initial_value, str) and initial_value.endswith("V"):
         V_init = float(initial_value[:-1])
-        V_min = parameter_values.evaluate(param.voltage_low_cut)
-        V_max = parameter_values.evaluate(param.voltage_high_cut)
+        V_min = parameter_values.evaluate(param.voltage_low_cut, inputs=inputs)
+        V_max = parameter_values.evaluate(param.voltage_high_cut, inputs=inputs)
 
         if not V_min - tol <= V_init <= V_max + tol:
             raise ValueError(
@@ -121,7 +121,9 @@ def get_initial_stoichiometry_half_cell(
         soc_model.variables["soc"] = soc
         parameter_values.process_model(soc_model)
         initial_soc = (
-            pybamm.AlgebraicSolver(tol=tol).solve(soc_model, [0])["soc"].data[0]
+            pybamm.AlgebraicSolver(tol=tol)
+            .solve(soc_model, [0], inputs=inputs)["soc"]
+            .data[0]
         )
     elif isinstance(initial_value, int | float):
         initial_soc = initial_value
