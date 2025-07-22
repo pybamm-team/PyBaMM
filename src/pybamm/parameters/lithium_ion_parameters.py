@@ -58,6 +58,18 @@ class LithiumIonParameters(BaseParameters):
         self.lambda_eff = self.therm.lambda_eff
         self.cell_heat_capacity = self.therm.cell_heat_capacity
 
+        # pouch bcs
+        self.h_edge_x_min = self.therm.h_edge_x_min
+        self.h_edge_x_max = self.therm.h_edge_x_max
+        self.h_edge_y_max = self.therm.h_edge_y_max
+        self.h_edge_y_min = self.therm.h_edge_y_min
+        self.h_edge_z_min = self.therm.h_edge_z_min
+        self.h_edge_z_max = self.therm.h_edge_z_max
+
+        # cylinder specific bcs
+        self.h_edge_radial_min = self.therm.h_edge_radial_min
+        self.h_edge_radial_max = self.therm.h_edge_radial_max
+
         # Macroscale geometry
         self.L_x = self.geo.L_x
         self.L = self.geo.L

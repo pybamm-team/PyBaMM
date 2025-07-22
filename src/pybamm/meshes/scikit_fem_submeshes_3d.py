@@ -11,7 +11,7 @@ class ScikitFemGenerator3D(pybamm.MeshGenerator):
     Parameters
     ----------
     geom_type : str
-        The type of geometry to generate. Must be one of "box" for a rectangular
+        The type of geometry to generate. Must be one of "pouch" for a rectangular
         prism, or "cylinder" for a cylindrical annulus.
     gen_params : dict
         A dictionary of geometry-specific parameters. for eg:
@@ -23,7 +23,7 @@ class ScikitFemGenerator3D(pybamm.MeshGenerator):
     """
 
     def __init__(self, geom_type, **gen_params):
-        supported_geometries = ["box", "cylinder"]
+        supported_geometries = ["pouch", "cylinder"]
         if geom_type not in supported_geometries:
             raise pybamm.GeometryError(
                 f"geom_type must be one of {supported_geometries}, not '{geom_type}'"
@@ -32,9 +32,9 @@ class ScikitFemGenerator3D(pybamm.MeshGenerator):
         self.geom_type = geom_type
         self.gen_params = gen_params
 
-    def _make_box_mesh(self, x_lim, y_lim, z_lim, h):
+    def _make_pouch_mesh(self, x_lim, y_lim, z_lim, h):
         """
-        Create a structured box mesh.
+        Create a structured pouch mesh.
 
         Parameters
         ----------
@@ -46,7 +46,7 @@ class ScikitFemGenerator3D(pybamm.MeshGenerator):
         Returns
         -------
         skfem.MeshTet
-            Box mesh with proper boundary tags
+            Pouch mesh with proper boundary tags
         """
         skfem = import_optional_dependency("skfem")
         x_min, x_max = x_lim
@@ -195,23 +195,29 @@ class ScikitFemGenerator3D(pybamm.MeshGenerator):
         ScikitFemSubMesh3D
             Generated 3D submesh
         """
-        h = self.gen_params.get("h", 0.3)
+        h = float(self.gen_params.get("h", 0.3))
 
-        if self.geom_type == "box":
-            x_key = next(k for k in lims if k.name == "x")
-            y_key = next(k for k in lims if k.name == "y")
-            z_key = next(k for k in lims if k.name == "z")
-            x_lim = tuple(lims[x_key].values())
-            y_lim = tuple(lims[y_key].values())
-            z_lim = tuple(lims[z_key].values())
+        lims_dict = {}
+        for var, lim in lims.items():
+            if isinstance(var, pybamm.SpatialVariable):
+                lims_dict[var.name] = (lim["min"], lim["max"])
+            else:
+                lims_dict[var] = (float(lim["min"]), float(lim["max"]))
+
+        if self.geom_type == "pouch":
+            x_lim = lims_dict["x"]
+            y_lim = lims_dict["y"]
+            z_lim = lims_dict["z"]
             coord_sys = "cartesian"
-            mesh = self._make_box_mesh(x_lim, y_lim, z_lim, h)
+            mesh = self._make_pouch_mesh(x_lim, y_lim, z_lim, h)
 
         elif self.geom_type == "cylinder":
-            r_key = next(k for k in lims if k.name == "r")
-            z_key = next(k for k in lims if k.name == "z")
-            r_lim = tuple(lims[r_key].values())
-            z_lim = tuple(lims[z_key].values())
+            if "r" in lims_dict:
+                r_lim = lims_dict["r"]
+            else:
+                r_lim = lims_dict["r_macro"]
+
+            z_lim = lims_dict["z"]
             coord_sys = "cylindrical polar"
             mesh = self._make_cylindrical_mesh(r_lim, z_lim, h)
         else:
