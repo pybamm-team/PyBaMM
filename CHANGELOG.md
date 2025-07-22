@@ -1,6 +1,7 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
 ## Features
+- Added `plot_3d_cross_section` & `plot_3d_heatmap` functions to support plotting for 3D thermal simulations. ([#5130](https://github.com/pybamm-team/PyBaMM/pull/5130))
 - Added a `Basic3DThermalSPM` with two way coupling. ([#5112](https://github.com/pybamm-team/PyBaMM/pull/5112))
 - Enables the passing of `inputs` throughout `set_initial_soc`. ([#5122](https://github.com/pybamm-team/PyBaMM/pull/5122))
 - Adds `on_failure` option to `BaseSolver` with options for `"warn"`, `"ignore"`, and `"raise"` to change behaviour on solver failure. Defaults to "raise" to retain historic functionality. ([#5105](https://github.com/pybamm-team/PyBaMM/pull/5105))
