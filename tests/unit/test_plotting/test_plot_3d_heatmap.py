@@ -11,7 +11,7 @@ class TestPlot3DHeatmap:
     @pytest.fixture
     def box_3d_solution(self):
         model = pybamm.lithium_ion.Basic3DThermalSPM(
-            options={"cell geometry": "box", "dimensionality": 3}
+            options={"cell geometry": "pouch", "dimensionality": 3}
         )
         params = pybamm.ParameterValues("Marquis2019")
         params.update(
