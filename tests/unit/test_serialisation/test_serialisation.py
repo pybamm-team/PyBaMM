@@ -630,6 +630,20 @@ class TestSerialise:
         with pytest.raises(ValueError, match=r"Unexpected raw string in JSON: foo"):
             Serialise.convert_symbol_from_json("foo")
 
+    def test_create_symbol_key_distinguishes_bounds(self):
+        var1 = pybamm.Variable("x", bounds=(0, 1))
+        var2 = pybamm.Variable("x", bounds=(0, 2))
+
+        json1 = Serialise.convert_symbol_to_json(var1)
+        json2 = Serialise.convert_symbol_to_json(var2)
+
+        key1 = Serialise._create_symbol_key(json1)
+        key2 = Serialise._create_symbol_key(json2)
+
+        assert isinstance(key1, str)
+        assert isinstance(key2, str)
+        assert key1 != key2
+
     def test_primary_broadcast_serialisation(self):
         child = pybamm.Scalar(42)
         symbol = pybamm.PrimaryBroadcast(child, "negative electrode")

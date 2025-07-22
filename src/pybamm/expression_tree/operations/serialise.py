@@ -346,6 +346,14 @@ class Serialise:
             json.dump(model_json, f, indent=2, default=Serialise._json_encoder)
 
     @staticmethod
+    def _create_symbol_key(symbol_json: dict) -> str:
+        """
+        Given the JSON‐dict for a symbol, return a unique, hashable key.
+        We just sort the dict keys and dump to a string.
+        """
+        return json.dumps(symbol_json, sort_keys=True)
+
+    @staticmethod
     def load_custom_model(filename, battery_model=None):
         """
         Loads a custom (symbolic) PyBaMM model from a JSON file.
@@ -399,31 +407,32 @@ class Serialise:
         symbol_map = {}
         for variable_json in all_variable_keys:
             symbol = Serialise.convert_symbol_from_json(variable_json)
-            symbol_map[str(symbol)] = symbol
+            key = Serialise._create_symbol_key(variable_json)
+            symbol_map[key] = symbol
 
         model.rhs = {
             symbol_map[
-                str(Serialise.convert_symbol_from_json(lhs_json))
+                Serialise._create_symbol_key(lhs_json)
             ]: Serialise.convert_symbol_from_json(rhs_expr_json)
             for lhs_json, rhs_expr_json in model_data["rhs"]
         }
 
         model.algebraic = {
             symbol_map[
-                str(Serialise.convert_symbol_from_json(lhs_json))
+                Serialise._create_symbol_key(lhs_json)
             ]: Serialise.convert_symbol_from_json(algebraic_expr_json)
             for lhs_json, algebraic_expr_json in model_data["algebraic"]
         }
 
         model.initial_conditions = {
             symbol_map[
-                str(Serialise.convert_symbol_from_json(lhs_json))
+                Serialise._create_symbol_key(lhs_json)
             ]: Serialise.convert_symbol_from_json(initial_value_json)
             for lhs_json, initial_value_json in model_data["initial_conditions"]
         }
 
         model.boundary_conditions = {
-            symbol_map[str(Serialise.convert_symbol_from_json(variable_json))]: {
+            symbol_map[Serialise._create_symbol_key(variable_json)]: {
                 side: (
                     Serialise.convert_symbol_from_json(expression_json),
                     boundary_type,
@@ -444,7 +453,7 @@ class Serialise:
 
         model.variables = {
             variable_name: symbol_map.get(
-                str(Serialise.convert_symbol_from_json(expression_json)),
+                Serialise._create_symbol_key(expression_json),
                 Serialise.convert_symbol_from_json(expression_json),
             )
             for variable_name, expression_json in model_data["variables"].items()
