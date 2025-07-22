@@ -1,7 +1,7 @@
-import matplotlib.pyplot as plt
 import numpy as np
 
 import pybamm
+from pybamm.util import import_optional_dependency
 
 
 def plot_3d_cross_section(
@@ -62,6 +62,7 @@ def plot_3d_cross_section(
     **kwargs
         Additional keyword arguments passed to matplotlib.contourf.
     """
+    plt = import_optional_dependency("matplotlib.pyplot")
     model = solution.all_models[0]
     if model.options.get("dimensionality") != 3:
         raise TypeError("This function requires a 3D model solution.")

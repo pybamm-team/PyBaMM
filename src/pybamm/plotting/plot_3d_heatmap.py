@@ -1,6 +1,5 @@
-import matplotlib.pyplot as plt
-
 import pybamm
+from pybamm.util import import_optional_dependency
 
 
 def plot_3d_heatmap(
@@ -45,6 +44,7 @@ def plot_3d_heatmap(
     **kwargs
         Additional keyword arguments passed to matplotlib.axes.Axes.scatter.
     """
+    plt = import_optional_dependency("matplotlib.pyplot")
     model = solution.all_models[0]
     if model.options.get("dimensionality") != 3:
         raise TypeError("This function requires a 3D model solution.")
