@@ -305,6 +305,9 @@ class TestSimulation:
         sim.build(initial_soc=0.5)
         assert sim._built_initial_soc == 0.5
 
+        with pytest.warns(DeprecationWarning):
+            sim.set_initial_soc(0.5)
+
     def test_solve_with_initial_soc_with_input_param_in_ocv(self):
         # test having an input parameter in the ocv function
         model = pybamm.lithium_ion.SPM()

@@ -103,6 +103,9 @@ class TestParameterValues:
         y_100 = param_100["Initial concentration in positive electrode [mol.m-3]"]
         assert y == pytest.approx(y_0 - 0.4 * (y_0 - y_100))
 
+        with pytest.warns(DeprecationWarning):
+            param.set_initial_stoichiometries(0.4)
+
         # check that passing inputs gives the same result
         input_param = "Maximum concentration in positive electrode [mol.m-3]"
         input_value = param[input_param]
@@ -119,8 +122,8 @@ class TestParameterValues:
         param = pybamm.lithium_ion.DFN(
             {"working electrode": "positive"}
         ).default_parameter_values
-        param = param.set_initial_state(
-            0.4, inplace=False, options={"working electrode": "positive"}
+        param.set_initial_state(
+            0.4, inplace=True, options={"working electrode": "positive"}
         )
         param_0 = param.set_initial_state(
             0, inplace=False, options={"working electrode": "positive"}
@@ -157,6 +160,11 @@ class TestParameterValues:
         )
         y_100 = param_100["Initial concentration in positive electrode [mol.m-3]"]
         assert y == pytest.approx(y_0 - 0.4 * (y_0 - y_100))
+
+        with pytest.warns(DeprecationWarning):
+            param.set_initial_stoichiometry_half_cell(
+                0.4, options={"working electrode": "positive"}
+            )
 
         # check that passing inputs gives the same result
         input_param = "Maximum concentration in positive electrode [mol.m-3]"
@@ -196,6 +204,9 @@ class TestParameterValues:
         Un_100 = param_100["Initial voltage in negative electrode [V]"]
         Up_100 = param_100["Initial voltage in positive electrode [V]"]
         assert Up_100 - Un_100 == pytest.approx(4.2)
+
+        with pytest.warns(DeprecationWarning):
+            param_100.set_initial_ocps("4.2 V", inplace=False, options=options)
 
         # check that passing inputs gives the same result
         input_param = "Maximum concentration in positive electrode [mol.m-3]"

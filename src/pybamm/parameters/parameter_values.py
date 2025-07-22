@@ -342,6 +342,71 @@ class ParameterValues:
             inputs=inputs,
         )
 
+    def set_initial_stoichiometry_half_cell(
+        self,
+        initial_value,
+        param=None,
+        known_value="cyclable lithium capacity",
+        inplace=True,
+        options=None,
+        inputs=None,
+    ):
+        msg = "pybamm.parameter_values.set_initial_stoichiometry_half_cell is deprecated, please use set_initial_state."
+        warn(msg, DeprecationWarning, stacklevel=2)
+        return self._set_initial_state(
+            initial_value,
+            self,
+            param=param,
+            known_value=known_value,
+            inplace=inplace,
+            options=options,
+            inputs=inputs,
+        )
+
+    def set_initial_stoichiometries(
+        self,
+        initial_value,
+        param=None,
+        known_value="cyclable lithium capacity",
+        inplace=True,
+        options=None,
+        inputs=None,
+        tol=1e-6,
+    ):
+        msg = "pybamm.parameter_values.set_initial_stoichiometries is deprecated, please use set_initial_state."
+        warn(msg, DeprecationWarning, stacklevel=2)
+        return self._set_initial_state(
+            initial_value,
+            self,
+            param=param,
+            known_value=known_value,
+            inplace=inplace,
+            options=options,
+            inputs=inputs,
+            tol=tol,
+        )
+
+    def set_initial_ocps(
+        self,
+        initial_value,
+        param=None,
+        known_value="cyclable lithium capacity",
+        inplace=True,
+        options=None,
+        inputs=None,
+    ):
+        msg = "pybamm.parameter_values.set_initial_ocps is deprecated, please use set_initial_state."
+        warn(msg, DeprecationWarning, stacklevel=2)
+        return self._set_initial_state(
+            initial_value,
+            self,
+            param=param,
+            known_value=known_value,
+            inplace=inplace,
+            options=options,
+            inputs=inputs,
+        )
+
     @staticmethod
     def check_parameter_values(values):
         for param in list(values.keys()):

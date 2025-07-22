@@ -277,6 +277,11 @@ class Simulation:
         # Save solved initial SOC in case we need to re-build the model
         self._built_initial_soc = initial_soc
 
+    def set_initial_soc(self, initial_soc, inputs=None):
+        msg = "pybamm.simulation.set_initial_soc is deprecated, please use set_initial_state."
+        warnings.warn(msg, DeprecationWarning, stacklevel=2)
+        return self.set_initial_state(initial_soc=initial_soc, inputs=inputs)
+
     def build(self, initial_soc=None, inputs=None):
         """
         A method to build the model into a system of matrices and vectors suitable for
