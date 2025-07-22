@@ -340,6 +340,8 @@ class Serialise:
         if filename is None:
             filename = model.name + "_" + datetime.now().strftime("%Y_%m_%d-%p%I_%M")
 
+        filename = re.sub(r'[<>:"/\\|?*\x00-\x1F]', "", filename)
+
         with open(filename + ".json", "w") as f:
             json.dump(model_json, f, indent=2, default=Serialise._json_encoder)
 
