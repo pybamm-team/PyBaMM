@@ -630,7 +630,40 @@ class TestSerialise:
         with pytest.raises(ValueError, match=r"Unexpected raw string in JSON: foo"):
             Serialise.convert_symbol_from_json("foo")
 
-    def test_create_symbol_key_distinguishes_bounds(self):
+    def test_numpy_array_conversion(self):
+        arr = np.array([1, 2, 3])
+        assert Serialise._json_encoder(arr) == [1, 2, 3]
+
+    def test_numpy_float_conversion(self):
+        val1 = np.float32(2.71)
+        result1 = Serialise._json_encoder(val1)
+        assert result1 == float(val1)
+        assert isinstance(result1, float)
+
+        val2 = np.float64(3.14)
+        result2 = Serialise._json_encoder(val2)
+        assert result2 == float(val2)
+        assert isinstance(result2, float)
+
+    def test_numpy_int_conversion(self):
+        val1 = np.int32(42)
+        result1 = Serialise._json_encoder(val1)
+        assert result1 == int(val1)
+        assert isinstance(result1, int)
+
+        val2 = np.int64(123)
+        result2 = Serialise._json_encoder(val2)
+        assert result2 == int(val2)
+        assert isinstance(result2, int)
+
+    def test_unsupported_type_raises(self):
+        class Dummy:
+            pass
+
+        with pytest.raises(TypeError, match="is not JSON serializable"):
+            Serialise._json_encoder(Dummy())
+
+    def test_create_symbol_key(self):
         var1 = pybamm.Variable("x", bounds=(0, 1))
         var2 = pybamm.Variable("x", bounds=(0, 2))
 
