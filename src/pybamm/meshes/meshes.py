@@ -44,7 +44,11 @@ class Mesh(dict):
         for domain, generator in submesh_types.items():
             if isinstance(generator, pybamm.ScikitFemGenerator3D):
                 for var in geometry[domain]:
-                    provided_pts = var_name_pts.get(var.name)
+                    if isinstance(var, str):
+                        var_name = var
+                    else:
+                        var_name = var.name
+                    provided_pts = var_name_pts.get(var_name)
                     if provided_pts is not None:
                         pybamm.logger.warning(
                             f"For the 3D FEM submesh on domain '{domain}', the value "
