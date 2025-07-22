@@ -293,11 +293,13 @@ class Serialise:
                 for variable, rhs_expression in getattr(model, "rhs", {}).items()
             ],
             "algebraic": [
-                [
+                (
                     Serialise.convert_symbol_to_json(variable),
                     Serialise.convert_symbol_to_json(algebraic_expression),
-                ]
-                for variable, algebraic_expression in model.algebraic.items()
+                )
+                for variable, algebraic_expression in getattr(
+                    model, "algebraic", {}
+                ).items()
             ],
             "initial_conditions": [
                 (
@@ -884,15 +886,7 @@ class Serialise:
             )
             return pybamm.Variable(
                 json_data["name"],
-                domains=json_data.get(
-                    "domains",
-                    {
-                        "primary": json_data.get("domain", []),
-                        "secondary": [],
-                        "tertiary": [],
-                        "quaternary": [],
-                    },
-                ),
+                domains=json_data["domains"],
                 bounds=bounds,
             )
         elif symbol_type == "SpatialVariable":
