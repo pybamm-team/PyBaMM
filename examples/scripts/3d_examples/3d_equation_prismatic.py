@@ -48,7 +48,7 @@ geometry = {
 }
 
 submesh_types = {
-    "current collector": pybamm.ScikitFemGenerator3D(geom_type="box", h=0.15)
+    "current collector": pybamm.ScikitFemGenerator3D(geom_type="pouch", h=0.15)
 }
 var_pts = {x: None, y: None, z: None}
 mesh = pybamm.Mesh(geometry, submesh_types, var_pts)

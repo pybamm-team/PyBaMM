@@ -1,6 +1,7 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
 ## Features
+- Added a `Basic3DThermalSPM` with two way coupling. ([#5112](https://github.com/pybamm-team/PyBaMM/pull/5112))
 - Enables the passing of `inputs` throughout `set_initial_soc`. ([#5122](https://github.com/pybamm-team/PyBaMM/pull/5122))
 - Adds `on_failure` option to `BaseSolver` with options for `"warn"`, `"ignore"`, and `"raise"` to change behaviour on solver failure. Defaults to "raise" to retain historic functionality. ([#5105](https://github.com/pybamm-team/PyBaMM/pull/5105))
 - Creates a boundary mesh size object that returns the distance from the center of the leftmost/rightmost control volume to the boundary of the domain ([#5108](https://github.com/pybamm-team/PyBaMM/pull/5108))

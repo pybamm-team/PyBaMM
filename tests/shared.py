@@ -116,8 +116,8 @@ def get_mesh_for_testing(
     return pybamm.Mesh(geometry, submesh_types, var_pts)
 
 
-def get_unit_3d_mesh_for_testing(geom_type="box", **geom_params):
-    if geom_type == "box":
+def get_unit_3d_mesh_for_testing(geom_type="pouch", **geom_params):
+    if geom_type == "pouch":
         x = pybamm.SpatialVariable("x", ["current collector"])
         y = pybamm.SpatialVariable("y", ["current collector"])
         z = pybamm.SpatialVariable("z", ["current collector"])
@@ -160,7 +160,7 @@ def get_unit_3d_mesh_for_testing(geom_type="box", **geom_params):
 
 
 def get_3d_mesh_for_testing(
-    xpts=5, ypts=5, zpts=5, geom_type="box", include_particles=False, **geom_params
+    xpts=5, ypts=5, zpts=5, geom_type="pouch", include_particles=False, **geom_params
 ):
     param = pybamm.ParameterValues(
         {
