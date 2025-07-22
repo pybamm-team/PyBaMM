@@ -636,7 +636,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         else:
             # stack y0full and ydot0full so they are a 2D array of shape (number_of_inputs, number_of_states + number_of_parameters * number_of_states)
             # note that y0full and ydot0full are currently 1D arrays (i.e. independent of inputs), but in the future we will support
-            # different initial conditions for different inputs (see https://github.com/pybamm-team/PyBaMM/pull/4260). For now we just repeat the same initial conditions for each input
+            # different initial conditions for different inputs. For now we just repeat the same initial conditions for each input
             y0full = np.vstack([model.y0full] * len(inputs_list))
             ydot0full = np.vstack([model.ydot0full] * len(inputs_list))
 
