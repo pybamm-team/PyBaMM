@@ -10,8 +10,8 @@ use("Agg")
 class TestPlot3DCrossSection:
     @pytest.fixture
     def box_3d_solution(self):
-        model = pybamm.lithium_ion.BasicSPM_with_3DThermal(
-            options={"cell geometry": "box", "dimensionality": 3}
+        model = pybamm.lithium_ion.Basic3DThermalSPM(
+            options={"cell geometry": "pouch", "dimensionality": 3}
         )
         params = pybamm.ParameterValues("Marquis2019")
         params.update(
@@ -44,7 +44,7 @@ class TestPlot3DCrossSection:
 
     @pytest.fixture
     def cylindrical_3d_solution(self):
-        model = pybamm.lithium_ion.BasicSPM_with_3DThermal(
+        model = pybamm.lithium_ion.Basic3DThermalSPM(
             options={"cell geometry": "cylindrical", "dimensionality": 3}
         )
         params = pybamm.ParameterValues("NCA_Kim2011")

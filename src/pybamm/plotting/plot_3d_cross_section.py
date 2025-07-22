@@ -77,7 +77,7 @@ def plot_3d_cross_section(
     x_min, x_max = np.min(nodes[:, 0]), np.max(nodes[:, 0])
     y_min, y_max = np.min(nodes[:, 1]), np.max(nodes[:, 1])
     z_min, z_max = np.min(nodes[:, 2]), np.max(nodes[:, 2])
-    geometry = model.options.get("cell geometry", "box")
+    geometry = model.options.get("cell geometry", "pouch")
 
     if mesh_tolerance is None:
         domain_size = max(x_max - x_min, y_max - y_min, z_max - z_min)

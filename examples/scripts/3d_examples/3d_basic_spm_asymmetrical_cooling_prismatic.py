@@ -1,8 +1,8 @@
 import pybamm
 
 print("Setting up asymmetric cooling simulation...")
-model_3d = pybamm.lithium_ion.BasicSPM_with_3DThermal(
-    options={"cell geometry": "box", "dimensionality": 3}
+model_3d = pybamm.lithium_ion.Basic3DThermalSPM(
+    options={"cell geometry": "pouch", "dimensionality": 3}
 )
 
 parameter_values = pybamm.ParameterValues("Ecker2015")
@@ -40,7 +40,7 @@ var_pts = {
 }
 
 submesh_types = model_3d.default_submesh_types
-submesh_types["cell"] = pybamm.ScikitFemGenerator3D("box", h="0.01")  # very fine mesh
+submesh_types["cell"] = pybamm.ScikitFemGenerator3D("pouch", h="0.01")  # very fine mesh
 
 sim = pybamm.Simulation(
     model_3d,

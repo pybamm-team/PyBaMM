@@ -1,7 +1,7 @@
 import pybamm
 
 print("Setting up asymmetric radial cooling simulation for a cylinder...")
-model_3d = pybamm.lithium_ion.BasicSPM_with_3DThermal(
+model_3d = pybamm.lithium_ion.Basic3DThermalSPM(
     options={"cell geometry": "cylindrical", "dimensionality": 3}
 )
 
