@@ -12,7 +12,10 @@ import pytest
 from numpy import testing
 
 import pybamm
-from pybamm.expression_tree.operations.serialise import Serialise
+from pybamm.expression_tree.operations.serialise import (
+    SUPPORTED_SCHEMA_VERSION,
+    Serialise,
+)
 from pybamm.models.full_battery_models.lithium_ion.basic_dfn import BasicDFN
 from pybamm.models.full_battery_models.lithium_ion.basic_spm import BasicSPM
 
@@ -875,6 +878,46 @@ class TestSerialise:
             ValueError, match=r"Unhandled symbol type or malformed entry: .*"
         ):
             Serialise.convert_symbol_from_json(unhandled_json2)
+
+    def test_unsupported_schema_version(self):
+        unhandled_schema_json = {
+            "schema_version": "9.9",  # Unsupported
+            "pybamm_version": pybamm.__version__,
+            "name": "BadModel",
+            "rhs": [],
+            "algebraic": [],
+            "initial_conditions": [],
+            "boundary_conditions": [],
+            "events": [],
+            "variables": {},
+        }
+
+        file = "model.json"
+
+        with open(file, "w") as f:
+            json.dump(unhandled_schema_json, f)
+
+        try:
+            with pytest.raises(ValueError, match="Unsupported schema version: 9.9"):
+                Serialise.load_custom_model(file, battery_model=pybamm.BaseModel())
+        finally:
+            os.remove(file)
+
+    def test_model_has_correct_schema_version(self):
+        model = BasicDFN()
+        filename = "test_scehma_version"
+
+        Serialise.save_custom_model(model, filename=filename)
+        loaded_model = Serialise.load_custom_model(
+            f"{filename}.json", battery_model=pybamm.lithium_ion.BaseModel()
+        )
+
+        try:
+            assert hasattr(loaded_model, "schema_version")
+            assert loaded_model.schema_version == SUPPORTED_SCHEMA_VERSION
+        finally:
+            # Clean up
+            os.remove(f"{filename}.json")
 
     def test_save_and_load_custom_model(self):
         model = pybamm.BaseModel(name="test_model")
