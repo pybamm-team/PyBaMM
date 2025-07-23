@@ -94,6 +94,8 @@ class CasadiConverter:
 
         elif isinstance(symbol, pybamm.UnaryOperator):
             converted_child = self.convert(symbol.child, t, y, y_dot, inputs)
+            if isinstance(symbol, pybamm.Transpose):
+                return converted_child.T
             if isinstance(symbol, pybamm.AbsoluteValue):
                 return casadi.fabs(converted_child)
             if isinstance(symbol, pybamm.Floor):

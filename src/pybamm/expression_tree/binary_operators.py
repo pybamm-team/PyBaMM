@@ -388,7 +388,7 @@ class KroneckerProduct(BinaryOperator):
 
     def _binary_evaluate(self, left, right):
         """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
-        if issparse(left) and issparse(right):
+        if issparse(left) or issparse(right):
             return kron(left, right)
         else:
             return np.kron(left, right)

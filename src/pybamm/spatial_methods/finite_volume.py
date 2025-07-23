@@ -334,14 +334,24 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         # check coordinate system
         if submesh.coord_sys in ["cylindrical polar", "spherical polar"]:
-            r_edges_left = submesh.edges[:-1]
-            r_edges_right = submesh.edges[1:]
+            if hasattr(submesh, "length"):
+                r_edges_left, r_edges_right = self._get_edges_left_right_symbolic_mesh(
+                    domains
+                )
+            else:
+                r_edges_left = pybamm.Vector(submesh.edges[:-1])
+                r_edges_right = pybamm.Vector(submesh.edges[1:])
             if submesh.coord_sys == "spherical polar":
                 d_edges = 4 * np.pi * (r_edges_right**3 - r_edges_left**3) / 3
             elif submesh.coord_sys == "cylindrical polar":
                 d_edges = 2 * np.pi * (r_edges_right**2 - r_edges_left**2) / 2
         else:
-            d_edges = submesh.d_edges
+            if hasattr(submesh, "length"):
+                edges = self._get_edges_symbolic_mesh(domains["primary"])
+                diff_matrix = diags([-1, 1], [0, 1], shape=(edges.size - 1, edges.size))
+                d_edges = pybamm.Matrix(diff_matrix) @ edges
+            else:
+                d_edges = pybamm.Vector(submesh.d_edges)
         possible_dimensions = ["primary", "secondary", "tertiary", "quaternary"]
         if integration_dimension == "primary":
             # Create appropriate submesh by combining submeshes in domain
@@ -350,14 +360,16 @@ class FiniteVolume(pybamm.SpatialMethod):
             # Create vector of ones for primary domain submesh
 
             if vector_type == "row":
-                d_edges = d_edges[np.newaxis, :]
+                d_edges = pybamm.Transpose(d_edges)
             elif vector_type == "column":
-                d_edges = d_edges[:, np.newaxis]
+                d_edges = d_edges
 
             # repeat matrix for each node in secondary dimensions
             second_dim_repeats = self._get_auxiliary_domain_repeats(domains)
             # generate full matrix from the submatrix
-            matrix = kron(eye(second_dim_repeats), d_edges)
+            matrix = pybamm.KroneckerProduct(
+                pybamm.Matrix(eye(second_dim_repeats)), d_edges
+            )
         elif integration_dimension in possible_dimensions[1:]:
             this_dimension_index = possible_dimensions.index(integration_dimension)
             # get lower dimensions and the corresponding domains, i.e. if integration_dimension is "secondary",
@@ -377,25 +389,25 @@ class FiniteVolume(pybamm.SpatialMethod):
                     n_lower_pts *= lower_submesh.npts + 1
                 else:
                     n_lower_pts *= lower_submesh.npts
-            int_matrix = hstack([d_edge * eye(n_lower_pts) for d_edge in d_edges])
+            if hasattr(submesh, "length"):
+                raise NotImplementedError("Length not implemented for integration")
+            else:
+                d_edges_ = submesh.d_edges
+                int_matrix = hstack([d_edge * eye(n_lower_pts) for d_edge in d_edges_])
+                int_matrix = pybamm.Matrix(int_matrix)
+
             # Higher dimensions should be tiled, so repeat the matrix for each higher dimension.
             higher_repeats = self._get_auxiliary_domain_repeats(
                 {k: v for k, v in domains.items() if (k in higher_dimensions)}
             )
-            matrix = kron(eye(higher_repeats), int_matrix)
+            matrix = pybamm.KroneckerProduct(
+                pybamm.Matrix(eye(higher_repeats)), int_matrix
+            )
         # generate full matrix from the submatrix
         # Convert to csr_matrix so that we can take the index (row-slicing), which is
         # not supported by the default kron format
         # Note that this makes column-slicing inefficient, but this should not be an
         # issue
-        matrix = pybamm.Matrix(csr_matrix(matrix))
-        if hasattr(submesh, "length"):
-            if submesh.coord_sys == "spherical polar":
-                matrix = matrix * submesh.length**3
-            elif submesh.coord_sys == "cylindrical polar":
-                matrix = matrix * submesh.length**2
-            else:
-                matrix = matrix * submesh.length
         return matrix
 
     def indefinite_integral(self, child, discretised_child, direction):
