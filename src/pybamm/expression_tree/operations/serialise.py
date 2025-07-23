@@ -340,9 +340,13 @@ class Serialise:
         }
 
         if filename is None:
-            filename = model.name + "_" + datetime.now().strftime("%Y_%m_%d-%p%I_%M")
+            safe_name = re.sub(r"[^\w\-_.]", "_", model.name or "unnamed_model")
+            timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+            filename = f"{safe_name}_{timestamp}"
 
-        filename = re.sub(r'[<>:"/\\|?*\x00-\x1F]', "", filename)
+        else:
+            # Clean provided filename
+            filename = re.sub(r'[<>:"/\\|?*\x00-\x1F]', "_", filename)
 
         with open(filename + ".json", "w") as f:
             json.dump(model_json, f, indent=2, default=Serialise._json_encoder)

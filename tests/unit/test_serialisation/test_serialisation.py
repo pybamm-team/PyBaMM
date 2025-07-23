@@ -895,7 +895,7 @@ class TestSerialise:
 
         # saving with defualt filename
         Serialise().save_custom_model(model)
-        pattern = r"test_model_\d{4}_\d{2}_\d{2}-(AM|PM)\d{2}_\d{2}\.json"
+        pattern = r"test_model_\d{4}_\d{2}_\d{2}_\d{2}_\d{2}_\d{2}\.json"
         matched = [f for f in os.listdir(".") if re.fullmatch(pattern, f)]
         assert matched
 
