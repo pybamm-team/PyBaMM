@@ -17,8 +17,8 @@ class TestScikitFiniteElement3D:
         with pytest.raises(NotImplementedError):
             spatial_method.indefinite_integral(None, None, None)
 
-    def test_discretise_equations_box(self):
-        mesh = get_3d_mesh_for_testing(geom_type="box", include_particles=False)
+    def test_discretise_equations_pouch(self):
+        mesh = get_3d_mesh_for_testing(geom_type="pouch", include_particles=False)
         spatial_methods = {
             "negative electrode": pybamm.ScikitFiniteElement3D(),
             "separator": pybamm.ScikitFiniteElement3D(),
@@ -86,7 +86,7 @@ class TestScikitFiniteElement3D:
         np.testing.assert_allclose(np.mean(grad_eval[:, 1]), 3, rtol=1e-7, atol=5e-6)
         np.testing.assert_allclose(np.mean(grad_eval[:, 2]), 4, rtol=1e-7, atol=5e-6)
 
-    def test_laplacian_3d_manufactured_box(self):
+    def test_laplacian_3d_manufactured_pouch(self):
         mesh = get_unit_3d_mesh_for_testing(h=0.4)
         disc = pybamm.Discretisation(
             mesh, {"current collector": pybamm.ScikitFiniteElement3D()}
@@ -185,7 +185,7 @@ class TestScikitFiniteElement3D:
     def test_3d_thermal_equation_analytical(self):
         L_x = 2.0
         mesh = get_unit_3d_mesh_for_testing(
-            h=0.4, geom_type="box", x_max=L_x, y_max=1.0, z_max=1.0
+            h=0.4, geom_type="pouch", x_max=L_x, y_max=1.0, z_max=1.0
         )
         disc = pybamm.Discretisation(
             mesh, {"current collector": pybamm.ScikitFiniteElement3D()}
@@ -222,7 +222,7 @@ class TestScikitFiniteElement3D:
 
     def test_gradient_squared_3d(self):
         mesh = get_unit_3d_mesh_for_testing(
-            xpts=6, ypts=6, zpts=6, geom_type="box", include_particles=False
+            xpts=6, ypts=6, zpts=6, geom_type="pouch", include_particles=False
         )
         spatial_methods = {
             "current collector": pybamm.ScikitFiniteElement3D(),
@@ -352,7 +352,7 @@ class TestScikitFiniteElement3D:
 
     def test_definite_integral_3d(self):
         mesh = get_3d_mesh_for_testing(
-            xpts=6, ypts=6, zpts=6, geom_type="box", include_particles=False
+            xpts=6, ypts=6, zpts=6, geom_type="pouch", include_particles=False
         )
         spatial_methods = {
             "negative electrode": pybamm.ScikitFiniteElement3D(),
@@ -380,7 +380,7 @@ class TestScikitFiniteElement3D:
 
     def test_boundary_value_3d(self):
         mesh = get_3d_mesh_for_testing(
-            xpts=6, ypts=6, zpts=6, geom_type="box", include_particles=False
+            xpts=6, ypts=6, zpts=6, geom_type="pouch", include_particles=False
         )
         spatial_methods = {
             "negative electrode": pybamm.ScikitFiniteElement3D(),
@@ -399,7 +399,7 @@ class TestScikitFiniteElement3D:
             np.testing.assert_allclose(result, 1, rtol=1e-6, atol=1e-6)
 
     def test_boundary_integral_3d(self):
-        mesh = get_3d_mesh_for_testing(geom_type="box")
+        mesh = get_3d_mesh_for_testing(geom_type="pouch")
         disc = pybamm.Discretisation(
             mesh, {"negative electrode": pybamm.ScikitFiniteElement3D()}
         )
@@ -428,7 +428,7 @@ class TestScikitFiniteElement3D:
 
     def test_disc_spatial_var_3d(self):
         mesh = get_unit_3d_mesh_for_testing(
-            xpts=4, ypts=4, zpts=4, geom_type="box", include_particles=False
+            xpts=4, ypts=4, zpts=4, geom_type="pouch", include_particles=False
         )
         spatial_methods = {
             "current collector": pybamm.ScikitFiniteElement3D(),
@@ -704,10 +704,10 @@ class TestScikitFiniteElement3D:
         assert nodes[:, 2].min() > 0.0 - 1e-7
         assert nodes[:, 2].max() < 0.8 + 1e-7
 
-    def test_boundary_integral_3d_box(self):
+    def test_boundary_integral_3d_pouch(self):
         x_max, y_max, z_max = 1.0, 2.0, 3.0
         mesh = get_unit_3d_mesh_for_testing(
-            geom_type="box", h=0.3, x_max=x_max, y_max=y_max, z_max=z_max
+            geom_type="pouch", h=0.3, x_max=x_max, y_max=y_max, z_max=z_max
         )
         domain = "current collector"
         disc = pybamm.Discretisation(mesh, {domain: pybamm.ScikitFiniteElement3D()})

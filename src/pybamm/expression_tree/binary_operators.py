@@ -1584,16 +1584,18 @@ def source(
         corresponding to a source term in the bulk.
     """
     # Broadcast if left is number
+    right_domain = right.domain
     if isinstance(left, numbers.Number):
-        left = pybamm.PrimaryBroadcast(left, "current collector")
+        left = pybamm.PrimaryBroadcast(left, right_domain)
 
     # force type cast for mypy
     left = cast(pybamm.Symbol, left)
 
-    if left.domain != ["current collector"] or right.domain != ["current collector"]:
+    allowed_domains = [["cell"], ["current collector"]]
+    if left.domain not in allowed_domains or right_domain not in allowed_domains:
         raise pybamm.DomainError(
-            "'source' only implemented in the 'current collector' domain, "
-            f"but symbols have domains {left.domain} and {right.domain}"
+            "'source' only implemented in the 'cell' or 'current collector' domains, "
+            f"but symbols have domains {left.domain} and {right_domain}"
         )
     if boundary:
         return pybamm.BoundaryMass(right) @ left
