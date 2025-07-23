@@ -389,12 +389,14 @@ class FiniteVolume(pybamm.SpatialMethod):
                     n_lower_pts *= lower_submesh.npts + 1
                 else:
                     n_lower_pts *= lower_submesh.npts
-            if hasattr(submesh, "length"):
-                raise NotImplementedError("Length not implemented for integration")
+            if d_edges.shape[0] == 1:
+                int_matrix = pybamm.KroneckerProduct(
+                    d_edges, pybamm.Matrix(eye(n_lower_pts))
+                )
             else:
-                d_edges_ = submesh.d_edges
-                int_matrix = hstack([d_edge * eye(n_lower_pts) for d_edge in d_edges_])
-                int_matrix = pybamm.Matrix(int_matrix)
+                int_matrix = pybamm.KroneckerProduct(
+                    pybamm.Transpose(d_edges), pybamm.Matrix(eye(n_lower_pts))
+                )
 
             # Higher dimensions should be tiled, so repeat the matrix for each higher dimension.
             higher_repeats = self._get_auxiliary_domain_repeats(
