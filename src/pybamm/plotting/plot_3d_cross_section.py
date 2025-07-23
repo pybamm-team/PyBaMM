@@ -111,8 +111,6 @@ def plot_3d_cross_section(
         elif plane == "rz":
             slice_axis_idx = 1  # slice on y
             slice_coord_val = 0.0
-        else:
-            return
 
         mesh_segments = []
 
