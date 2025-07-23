@@ -883,7 +883,6 @@ class Serialise:
             child = Serialise.convert_symbol_from_json(json_data["children"][0])
             domain = json_data["broadcast_domain"]
             return pybamm.SecondaryBroadcast(child, domain)
-
         elif symbol_type == "BoundaryValue":
             child = Serialise.convert_symbol_from_json(json_data["children"][0])
             side = json_data["side"]

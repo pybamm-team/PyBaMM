@@ -739,14 +739,32 @@ class TestSerialise:
 
     def test_full_broadcast_serialisation(self):
         child = pybamm.Scalar(5)
-        fb = pybamm.FullBroadcast(child, broadcast_domain="negative electrode")
+        fb = pybamm.FullBroadcast(
+            child,
+            "negative electrode",
+            {"primary": ["negative electrode"], "secondary": ["current collector"]},
+        )
         json_dict = Serialise.convert_symbol_to_json(fb)
         fb2 = Serialise.convert_symbol_from_json(json_dict)
 
         assert isinstance(fb2, pybamm.FullBroadcast)
         assert fb2.broadcast_domain == ["negative electrode"]
+        assert fb2.domains["primary"] == ["negative electrode"]
+        assert fb2.domains["secondary"] == ["current collector"]
         assert isinstance(fb2.child, pybamm.Scalar)
         assert fb2.child.value == 5
+
+    def test_secondary_broadcast_serialisation(self):
+        child = pybamm.Variable("c", domain="negative electrode")
+        sb = pybamm.SecondaryBroadcast(child, "current collector")
+
+        json_dict = Serialise.convert_symbol_to_json(sb)
+        sb2 = Serialise.convert_symbol_from_json(json_dict)
+
+        assert isinstance(sb2, pybamm.SecondaryBroadcast)
+        assert sb2.broadcast_domain == ["current collector"]
+        assert sb2.child.name == "c"
+        assert sb2.child.domain == ["negative electrode"]
 
     def test_spatial_variable_serialisation(self):
         sv = pybamm.SpatialVariable(
@@ -955,8 +973,13 @@ class TestSerialise:
         assert next(iter(loaded_model.rhs.values())).name == "b"
 
     def test_plotting_serialised_models(self):
-        models = [BasicSPM(), BasicDFN()]
-        filenames = ["spm", "dfn"]
+        models = [
+            BasicSPM(),
+            BasicDFN(),
+            pybamm.lithium_ion.SPM(),
+            pybamm.lithium_ion.DFN(),
+        ]
+        filenames = ["basic_spm", "basic_dfn", "spm", "dfn"]
 
         for model, name in zip(models, filenames, strict=True):
             # Save the model
@@ -967,7 +990,6 @@ class TestSerialise:
                 f"{name}.json", battery_model=pybamm.lithium_ion.BaseModel()
             )
 
-            # Simulate
             sim = pybamm.Simulation(loaded_model)
             sim.solve([0, 3600])
             sim.plot(show_plot=False)
