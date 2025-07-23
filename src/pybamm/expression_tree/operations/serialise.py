@@ -677,10 +677,9 @@ class Serialise:
         elif isinstance(symbol, pybamm.PrimaryBroadcast):
             json_dict = {
                 "type": "PrimaryBroadcast",
+                "children": [Serialise.convert_symbol_to_json(symbol.child)],
                 "broadcast_domain": symbol.broadcast_domain,
-                "children": [Serialise.convert_symbol_to_json(symbol.orphans[0])],
             }
-
         elif isinstance(symbol, pybamm.FunctionParameter):
             input_names = symbol.input_names
             inputs = {
@@ -723,7 +722,6 @@ class Serialise:
                     Serialise.convert_symbol_to_json(symbol.bounds[1]),
                 ],
             }
-
         elif isinstance(symbol, pybamm.ConcatenationVariable):
             json_dict = {
                 "type": "ConcatenationVariable",
@@ -735,6 +733,12 @@ class Serialise:
         elif isinstance(symbol, pybamm.FullBroadcast):
             json_dict = {
                 "type": "FullBroadcast",
+                "children": [Serialise.convert_symbol_to_json(symbol.child)],
+                "domains": symbol.domains,
+            }
+        elif isinstance(symbol, pybamm.SecondaryBroadcast):
+            json_dict = {
+                "type": "SecondaryBroadcast",
                 "children": [Serialise.convert_symbol_to_json(symbol.child)],
                 "broadcast_domain": symbol.broadcast_domain,
             }
@@ -873,11 +877,13 @@ class Serialise:
             return pybamm.PrimaryBroadcast(child, domain)
         elif symbol_type == "FullBroadcast":
             child = Serialise.convert_symbol_from_json(json_data["children"][0])
-            broadcast_domain = json_data.get("broadcast_domain", [])
-            return pybamm.FullBroadcast(
-                child,
-                broadcast_domain,
-            )
+            domains = json_data["domains"]
+            return pybamm.FullBroadcast(child, "broadcast", domains)
+        elif symbol_type == "SecondaryBroadcast":
+            child = Serialise.convert_symbol_from_json(json_data["children"][0])
+            domain = json_data["broadcast_domain"]
+            return pybamm.SecondaryBroadcast(child, domain)
+
         elif symbol_type == "BoundaryValue":
             child = Serialise.convert_symbol_from_json(json_data["children"][0])
             side = json_data["side"]
