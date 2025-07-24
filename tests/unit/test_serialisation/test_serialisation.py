@@ -1012,11 +1012,72 @@ class TestSerialise:
         json_data = json.dumps(model_data)
 
         with patch("builtins.open", mock_open(read_data=json_data)):
-            with pytest.raises(ValueError) as exc_info:
+            with pytest.raises(ValueError) as e:
                 Serialise.load_custom_model("test_file.json")
             assert "Missing expected model key: rhs in file: test_file.json" in str(
-                exc_info.value
+                e.value
             )
+
+    def test_load_custom_model_variable_conversion_failure(self):
+        # Valid model with one variable in RHS (to trigger the variable conversion loop)
+        model_data = {
+            "schema_version": "1.0",
+            "name": "TestModel",
+            "rhs": [["invalid_variable", "rhs_expr"]],
+            "initial_conditions": [],
+            "algebraic": [],
+            "boundary_conditions": [],
+            "events": [],
+            "variables": {},
+        }
+
+        json_data = json.dumps(model_data)
+
+        with patch("builtins.open", mock_open(read_data=json_data)):
+            with patch.object(
+                Serialise,
+                "convert_symbol_from_json",
+                side_effect=Exception("variable conversion failed"),
+            ):
+                with pytest.raises(ValueError) as e:
+                    Serialise.load_custom_model("test_model.json")
+            assert (
+                "Failed to convert model variables: variable conversion failed"
+                in str(e.value)
+            )
+
+    def test_load_custom_model_event_conversion_failure(self):
+        # Model with one event to trigger the error
+        model_data = {
+            "schema_version": "1.0",
+            "name": "TestModel",
+            "rhs": [],
+            "initial_conditions": [],
+            "algebraic": [],
+            "boundary_conditions": [],
+            "events": [
+                {
+                    "name": "TestEvent",
+                    "expression": "event_expression",
+                    "event_type": "terminal",
+                }
+            ],
+            "variables": {},
+        }
+
+        json_data = json.dumps(model_data)
+
+        with patch("builtins.open", mock_open(read_data=json_data)):
+            with patch.object(
+                Serialise,
+                "convert_symbol_from_json",
+                side_effect=Exception("event conversion failed"),
+            ):
+                with pytest.raises(ValueError) as e:
+                    Serialise.load_custom_model("test_model.json")
+                assert "Failed to load model events: event conversion failed" in str(
+                    e.value
+                )
 
     def test_save_and_load_custom_model(self):
         model = pybamm.BaseModel(name="test_model")
