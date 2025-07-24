@@ -6,6 +6,7 @@ import json
 import os
 import re
 from datetime import datetime
+from unittest.mock import mock_open, patch
 
 import numpy as np
 import pytest
@@ -897,6 +898,34 @@ class TestSerialise:
         ):
             Serialise.convert_symbol_from_json(unhandled_json2)
 
+    def test_file_write_raises_ioerror(self):
+        # testing behaviour when file system is read-only to raise exception
+        model = pybamm.lithium_ion.SPM()
+
+        with patch("builtins.open", mock_open()) as file:
+            file.side_effect = OSError("file system is read-only")
+
+            with pytest.raises(
+                ValueError,
+                match="Failed to save custom model: Failed to write model JSON to file",
+            ):
+                Serialise.save_custom_model(model, "readonly_test")
+
+    def test_symbol_conversion_failure_raises_value_error(self):
+        model = pybamm.BaseModel()
+        model.name = "TestModel"
+        model.rhs = {pybamm.Variable("c"): pybamm.Variable("c")}
+
+        with patch.object(
+            Serialise,
+            "convert_symbol_to_json",
+            side_effect=Exception("conversion failed"),
+        ):
+            with pytest.raises(
+                ValueError, match="Failed to save custom model: conversion failed"
+            ):
+                Serialise.save_custom_model(model, "conversion_fail")
+
     def test_unsupported_schema_version(self):
         unhandled_schema_json = {
             "schema_version": "9.9",  # Unsupported
@@ -936,6 +965,18 @@ class TestSerialise:
         finally:
             # Clean up
             os.remove(f"{filename}.json")
+
+    def test_load_invalid_json(self):
+        invalid_json = "{ invalid json"
+        with patch("builtins.open", mock_open(read_data=invalid_json)):
+            with pytest.raises(ValueError) as exc_info:
+                Serialise.load_custom_model("invalid_json.json")
+            assert "Invalid JSON in file" in str(exc_info.value)
+
+    def test_load_custom_model_file_not_found(self):
+        with pytest.raises(FileNotFoundError) as exc_info:
+            Serialise.load_custom_model("non_existent_file.json")
+        assert "Could not find file" in str(exc_info.value)
 
     def test_save_and_load_custom_model(self):
         model = pybamm.BaseModel(name="test_model")
