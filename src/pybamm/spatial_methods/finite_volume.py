@@ -103,26 +103,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         return out
 
-    def _get_d_nodes_symbolic_mesh(self, domains):
-        submeshes = [self.mesh[domain_] for domain_ in domains]
-        dx_list = []
-        for submesh_ in submeshes:
-            nodes_ = pybamm.Vector(submesh_.nodes)
-            if hasattr(submesh_, "length"):
-                nodes_ = nodes_ * submesh_.length + submesh_.min
-            dx_list.append(nodes_)
-        dx = pybamm.numpy_concatenation(*dx_list)
-        diff_matrix = diags([-1, 1], [0, 1], shape=(dx.size - 1, dx.size))
-        d_nodes = pybamm.Matrix(diff_matrix) @ dx
-        return d_nodes
-
-    def _get_d_edges_symbolic_mesh(self, domains):
-        edges = self._get_edges_symbolic_mesh(domains)
-        diff_matrix = diags([-1, 1], [0, 1], shape=(edges.size - 1, edges.size))
-        d_edges = pybamm.Matrix(diff_matrix) @ edges
-        return d_edges
-
-    def _get_edges_symbolic_mesh(self, domains):
+    def _get_edges_symbolic_mesh(self, domains: list[str]):
         submeshes = [self.mesh[domain] for domain in domains]
         edges_list = []
         for i, submesh_ in enumerate(submeshes):
@@ -137,8 +118,47 @@ class FiniteVolume(pybamm.SpatialMethod):
         edges = pybamm.numpy_concatenation(*edges_list)
         return edges
 
-    def _get_edges_left_right_symbolic_mesh(self, domains):
-        submeshes = [self.mesh[domain] for domain in domains["primary"]]
+    def _get_nodes_symbolic_mesh(self, domains: list[str]):
+        submeshes = [self.mesh[domain_] for domain_ in domains]
+        nodes_list = []
+        for submesh_ in submeshes:
+            nodes_ = pybamm.Vector(submesh_.nodes)
+            if hasattr(submesh_, "length"):
+                nodes_ = nodes_ * submesh_.length + submesh_.min
+            nodes_list.append(nodes_)
+        nodes = pybamm.numpy_concatenation(*nodes_list)
+        return nodes
+
+    def _get_d_nodes_symbolic_mesh(self, domains: list[str]):
+        nodes = self._get_nodes_symbolic_mesh(domains)
+        diff_matrix = diags([-1, 1], [0, 1], shape=(nodes.size - 1, nodes.size))
+        d_nodes = pybamm.Matrix(diff_matrix) @ nodes
+        return d_nodes
+
+    def _get_d_edges_symbolic_mesh(self, domains: list[str]):
+        edges = self._get_edges_symbolic_mesh(domains)
+        diff_matrix = diags([-1, 1], [0, 1], shape=(edges.size - 1, edges.size))
+        d_edges = pybamm.Matrix(diff_matrix) @ edges
+        return d_edges
+
+    def _get_first_node(self, domains: list[str]):
+        submesh = self.mesh[domains[0]]
+        if hasattr(submesh, "length"):
+            first_node = pybamm.Scalar(submesh.nodes[0]) * submesh.length + submesh.min
+        else:
+            first_node = pybamm.Scalar(submesh.nodes[0])
+        return first_node
+
+    def _get_last_node(self, domains: list[str]):
+        submesh = self.mesh[domains[-1]]
+        if hasattr(submesh, "length"):
+            last_node = pybamm.Scalar(submesh.nodes[-1]) * submesh.length + submesh.min
+        else:
+            last_node = pybamm.Scalar(submesh.nodes[-1])
+        return last_node
+
+    def _get_edges_left_right_symbolic_mesh(self, domains: list[str]):
+        submeshes = [self.mesh[domain] for domain in domains]
         edges_left_list = []
         edges_right_list = []
         for i, submesh_ in enumerate(submeshes):
@@ -259,7 +279,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         if submesh.coord_sys in ["cylindrical polar", "spherical polar"]:
             if hasattr(submesh, "length"):
                 r_edges_left, r_edges_right = self._get_edges_left_right_symbolic_mesh(
-                    domains
+                    domains["primary"]
                 )
             else:
                 r_edges_left = submesh.edges[:-1]
@@ -344,7 +364,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         if submesh.coord_sys in ["cylindrical polar", "spherical polar"]:
             if hasattr(submesh, "length"):
                 r_edges_left, r_edges_right = self._get_edges_left_right_symbolic_mesh(
-                    domains
+                    domains["primary"]
                 )
             else:
                 r_edges_left = pybamm.Vector(submesh.edges[:-1])
@@ -728,14 +748,8 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         # Finite volume derivative
         # Remove domains to avoid clash
-        if hasattr(right_mesh, "length"):
-            right_mesh_x = right_mesh.min + (right_mesh.nodes[0] * right_mesh.length)
-        else:
-            right_mesh_x = right_mesh.nodes[0]
-        if hasattr(left_mesh, "length"):
-            left_mesh_x = left_mesh.min + (left_mesh.nodes[-1] * left_mesh.length)
-        else:
-            left_mesh_x = left_mesh.nodes[-1]
+        right_mesh_x = self._get_first_node(right_symbol_disc.domain)
+        left_mesh_x = self._get_last_node(left_symbol_disc.domain)
         dx = right_mesh_x - left_mesh_x
         dy_r = (right_matrix / dx) @ right_symbol_disc
         dy_r.clear_domains()
