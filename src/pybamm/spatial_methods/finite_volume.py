@@ -1345,6 +1345,11 @@ class FiniteVolume(pybamm.SpatialMethod):
         domain = discretised_child.domain
         mesh = self.mesh[domain]
         nodes = mesh.nodes
+        if hasattr(mesh, "length"):
+            domain = discretised_child.domain
+            raise NotImplementedError(
+                f"The symbolic submesh does not support `EvaluateAt` because we are unable to find the position of the node in the symbolic submesh. Please use one of the other submeshes for domain {domain}"
+            )
         repeats = self._get_auxiliary_domain_repeats(discretised_child.domains)
 
         # Find the index of the node closest to the value
