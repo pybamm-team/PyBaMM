@@ -991,21 +991,25 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         return new_gradient
 
+    def _get_boundary_submesh_length(self, side: str, domains: list[str]):
+        if side == "left":
+            return self.mesh[domains[0]].length
+        elif side == "right":
+            return self.mesh[domains[-1]].length
+
     def _boundary_mesh_size(self, child, side):
         """
         Get the mesh size at the boundary of a variable's domain.
         """
         submesh = self.mesh[child.domain]
+        if hasattr(submesh, "length"):
+            length = self._get_boundary_submesh_length("left", child.domain)
+        else:
+            length = 1
         if side == "left":
-            if hasattr(submesh, "length"):
-                val = submesh.length * pybamm.Scalar(submesh.d_nodes[0])
-            else:
-                val = pybamm.Scalar(submesh.d_nodes[0])
+            val = length * pybamm.Scalar(submesh.d_nodes[0])
         elif side == "right":
-            if hasattr(submesh, "length"):
-                val = submesh.length * pybamm.Scalar(submesh.d_nodes[-1])
-            else:
-                val = pybamm.Scalar(submesh.d_nodes[-1])
+            val = length * pybamm.Scalar(submesh.d_nodes[-1])
         else:
             raise ValueError(f"Invalid side: {side}")
         return val
@@ -1075,7 +1079,9 @@ class FiniteVolume(pybamm.SpatialMethod):
 
                         additive = -dx0 * bcs[child][symbol.side][0]
                         if hasattr(submesh, "length"):
-                            additive_multiplicative = submesh.length
+                            additive_multiplicative = self._get_boundary_submesh_length(
+                                "left", child.domain
+                            )
                         else:
                             additive_multiplicative = pybamm.Scalar(1)
                         multiplicative = pybamm.Scalar(1)
@@ -1102,7 +1108,9 @@ class FiniteVolume(pybamm.SpatialMethod):
                         )
                         additive = alpha * bcs[child][symbol.side][0]
                         if hasattr(submesh, "length"):
-                            additive_multiplicative = submesh.length
+                            additive_multiplicative = self._get_boundary_submesh_length(
+                                "left", child.domain
+                            )
                         else:
                             additive_multiplicative = pybamm.Scalar(1)
                         multiplicative = pybamm.Scalar(1)
@@ -1143,8 +1151,12 @@ class FiniteVolume(pybamm.SpatialMethod):
                         )
                         additive = dxN * bcs[child][symbol.side][0]
                         if hasattr(submesh, "length"):
-                            multiplicative = submesh.length
-                            additive_multiplicative = submesh.length
+                            multiplicative = self._get_boundary_submesh_length(
+                                "right", child.domain
+                            )
+                            additive_multiplicative = self._get_boundary_submesh_length(
+                                "right", child.domain
+                            )
                         else:
                             multiplicative = pybamm.Scalar(1)
                             additive_multiplicative = pybamm.Scalar(1)
@@ -1175,7 +1187,9 @@ class FiniteVolume(pybamm.SpatialMethod):
 
                         additive = alpha * bcs[child][symbol.side][0]
                         if hasattr(submesh, "length"):
-                            additive_multiplicative = submesh.length
+                            additive_multiplicative = self._get_boundary_submesh_length(
+                                "right", child.domain
+                            )
                         else:
                             additive_multiplicative = pybamm.Scalar(1)
                         multiplicative = pybamm.Scalar(1)
@@ -1226,7 +1240,9 @@ class FiniteVolume(pybamm.SpatialMethod):
                     additive = pybamm.Scalar(0)
                     additive_multiplicative = pybamm.Scalar(1)
                     if hasattr(submesh, "length"):
-                        multiplicative = 1 / submesh.length
+                        multiplicative = 1 / self._get_boundary_submesh_length(
+                            "left", child.domain
+                        )
                     else:
                         multiplicative = pybamm.Scalar(1)
 
@@ -1241,7 +1257,9 @@ class FiniteVolume(pybamm.SpatialMethod):
                     additive = pybamm.Scalar(0)
                     additive_multiplicative = pybamm.Scalar(1)
                     if hasattr(submesh, "length"):
-                        multiplicative = 1 / submesh.length
+                        multiplicative = 1 / self._get_boundary_submesh_length(
+                            "left", child.domain
+                        )
                     else:
                         multiplicative = pybamm.Scalar(1)
 
@@ -1259,7 +1277,9 @@ class FiniteVolume(pybamm.SpatialMethod):
                     additive = pybamm.Scalar(0)
                     additive_multiplicative = pybamm.Scalar(1)
                     if hasattr(submesh, "length"):
-                        multiplicative = 1 / submesh.length
+                        multiplicative = 1 / self._get_boundary_submesh_length(
+                            "right", child.domain
+                        )
                     else:
                         multiplicative = pybamm.Scalar(1)
 
@@ -1278,7 +1298,9 @@ class FiniteVolume(pybamm.SpatialMethod):
                     additive = pybamm.Scalar(0)
                     additive_multiplicative = pybamm.Scalar(1)
                     if hasattr(submesh, "length"):
-                        multiplicative = 1 / submesh.length
+                        multiplicative = 1 / self._get_boundary_submesh_length(
+                            "right", child.domain
+                        )
                     else:
                         multiplicative = pybamm.Scalar(1)
                 else:
