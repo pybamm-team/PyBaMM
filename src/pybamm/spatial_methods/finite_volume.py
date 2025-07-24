@@ -635,25 +635,48 @@ class FiniteVolume(pybamm.SpatialMethod):
         second_dim_repeats = self._get_auxiliary_domain_repeats(symbol.domains)
 
         # Create submatrix to compute delta function as a flux
+        if hasattr(submesh, "length"):
+            d_nodes = self._get_d_nodes_symbolic_mesh(symbol.domain)
+        else:
+            d_nodes = pybamm.Vector(submesh.d_nodes)
         if symbol.side == "left":
-            dx = submesh.d_nodes[0]
-            sub_matrix = csr_matrix(([1], ([0], [0])), shape=(prim_pts, 1))
+            dx_sub_matrix = pybamm.Vector(
+                csr_matrix(([1], ([0], [0])), shape=(d_nodes.size, 1)).toarray()
+            )
+            dx = pybamm.Transpose(dx_sub_matrix) @ d_nodes
+            sub_matrix = pybamm.Matrix(
+                csr_matrix(([1], ([0], [0])), shape=(prim_pts, 1))
+            )
         elif symbol.side == "right":
-            dx = submesh.d_nodes[-1]
-            sub_matrix = csr_matrix(([1], ([prim_pts - 1], [0])), shape=(prim_pts, 1))
+            dx_sub_matrix = pybamm.Vector(
+                csr_matrix(
+                    ([1], ([d_nodes.size - 1], [0])), shape=(d_nodes.size, 1)
+                ).toarray()
+            )
+            dx = pybamm.Transpose(dx_sub_matrix) @ d_nodes
+            sub_matrix = pybamm.Matrix(
+                csr_matrix(([1], ([prim_pts - 1], [0])), shape=(prim_pts, 1))
+            )
 
         # Calculate domain width, to make sure that the integral of the delta function
         # is the same as the integral of the child
-        domain_width = submesh.edges[-1] - submesh.edges[0]
+        if hasattr(submesh, "length"):
+            domain_width = (
+                pybamm.Scalar(submesh.edges[-1] - submesh.edges[0]) * submesh.length
+            )
+        else:
+            domain_width = pybamm.Scalar(submesh.edges[-1] - submesh.edges[0])
         # Generate full matrix from the submatrix
         # Convert to csr_matrix so that we can take the index (row-slicing), which is
         # not supported by the default kron format
         # Note that this makes column-slicing inefficient, but this should not be an
         # issue
-        matrix = kron(eye(second_dim_repeats), sub_matrix).toarray()
+        matrix = pybamm.KroneckerProduct(
+            pybamm.Matrix(eye(second_dim_repeats)), sub_matrix
+        )
 
         # Return delta function, keep domains
-        delta_fn = pybamm.Matrix(domain_width / dx * matrix) * discretised_symbol
+        delta_fn = domain_width / dx * matrix * discretised_symbol
         delta_fn.copy_domains(symbol)
 
         return delta_fn
