@@ -103,57 +103,24 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         return out
 
-    def gradient_matrix(self, domain, domains):
-        """
-        Gradient matrix for finite volumes in the appropriate domain.
-        Equivalent to grad(y) = (y[1:] - y[:-1])/dx
+    def _get_d_nodes_symbolic_mesh(self, domains):
+        submeshes = [self.mesh[domain_] for domain_ in domains]
+        dx_list = []
+        for submesh_ in submeshes:
+            nodes_ = pybamm.Vector(submesh_.nodes)
+            if hasattr(submesh_, "length"):
+                nodes_ = nodes_ * submesh_.length + submesh_.min
+            dx_list.append(nodes_)
+        dx = pybamm.numpy_concatenation(*dx_list)
+        diff_matrix = diags([-1, 1], [0, 1], shape=(dx.size - 1, dx.size))
+        d_nodes = pybamm.Matrix(diff_matrix) @ dx
+        return d_nodes
 
-        Parameters
-        ----------
-        domains : list
-            The domain in which to compute the gradient matrix, including ghost nodes
-
-        Returns
-        -------
-        :class:`pybamm.Matrix`
-            The (sparse) finite volume gradient matrix for the domain
-        """
-        # Create appropriate submesh by combining submeshes in primary domain
-        submesh = self.mesh[domain]
-        if hasattr(submesh, "length"):
-            submeshes = [self.mesh[domain_] for domain_ in domain]
-            dx_list = []
-            for submesh_ in submeshes:
-                nodes_ = pybamm.Vector(submesh_.nodes)
-                if hasattr(submesh_, "length"):
-                    nodes_ = nodes_ * submesh_.length + submesh_.min
-                dx_list.append(nodes_)
-            dx = pybamm.numpy_concatenation(*dx_list)
-            diff_matrix = diags([-1, 1], [0, 1], shape=(dx.size - 1, dx.size))
-            d_nodes = pybamm.Matrix(diff_matrix) @ dx
-            e = 1 / d_nodes
-        else:
-            e = 1 / submesh.d_nodes
-
-        # Create 1D matrix using submesh
-        n = submesh.npts
-        # e = 1 / submesh.d_nodes
-        sub_matrix_minus = pybamm.Matrix(diags([-1], [0], shape=(n - 1, n)))
-        sub_matrix_plus = pybamm.Matrix(diags([1], [1], shape=(n - 1, n)))
-        sub_matrix = (sub_matrix_minus + sub_matrix_plus) * e
-
-        # number of repeats
-        second_dim_repeats = self._get_auxiliary_domain_repeats(domains)
-
-        # generate full matrix from the submatrix
-        # Convert to csr_matrix so that we can take the index (row-slicing), which is
-        # not supported by the default kron format
-        # Note that this makes column-slicing inefficient, but this should not be an
-        # issue
-        matrix = pybamm.KroneckerProduct(
-            pybamm.Matrix(eye(second_dim_repeats)), sub_matrix
-        )
-        return matrix
+    def _get_d_edges_symbolic_mesh(self, domains):
+        edges = self._get_edges_symbolic_mesh(domains)
+        diff_matrix = diags([-1, 1], [0, 1], shape=(edges.size - 1, edges.size))
+        d_edges = pybamm.Matrix(diff_matrix) @ edges
+        return d_edges
 
     def _get_edges_symbolic_mesh(self, domains):
         submeshes = [self.mesh[domain] for domain in domains]
@@ -193,6 +160,49 @@ class FiniteVolume(pybamm.SpatialMethod):
         edges_left = pybamm.numpy_concatenation(*edges_left_list)
         edges_right = pybamm.numpy_concatenation(*edges_right_list)
         return edges_left, edges_right
+
+    def gradient_matrix(self, domain, domains):
+        """
+        Gradient matrix for finite volumes in the appropriate domain.
+        Equivalent to grad(y) = (y[1:] - y[:-1])/dx
+
+        Parameters
+        ----------
+        domains : list
+            The domain in which to compute the gradient matrix, including ghost nodes
+
+        Returns
+        -------
+        :class:`pybamm.Matrix`
+            The (sparse) finite volume gradient matrix for the domain
+        """
+        # Create appropriate submesh by combining submeshes in primary domain
+        submesh = self.mesh[domain]
+        if hasattr(submesh, "length"):
+            d_nodes = self._get_d_nodes_symbolic_mesh(domain)
+            e = 1 / d_nodes
+        else:
+            e = 1 / submesh.d_nodes
+
+        # Create 1D matrix using submesh
+        n = submesh.npts
+        # e = 1 / submesh.d_nodes
+        sub_matrix_minus = pybamm.Matrix(diags([-1], [0], shape=(n - 1, n)))
+        sub_matrix_plus = pybamm.Matrix(diags([1], [1], shape=(n - 1, n)))
+        sub_matrix = (sub_matrix_minus + sub_matrix_plus) * e
+
+        # number of repeats
+        second_dim_repeats = self._get_auxiliary_domain_repeats(domains)
+
+        # generate full matrix from the submatrix
+        # Convert to csr_matrix so that we can take the index (row-slicing), which is
+        # not supported by the default kron format
+        # Note that this makes column-slicing inefficient, but this should not be an
+        # issue
+        matrix = pybamm.KroneckerProduct(
+            pybamm.Matrix(eye(second_dim_repeats)), sub_matrix
+        )
+        return matrix
 
     def divergence(self, symbol, discretised_symbol, boundary_conditions):
         """Matrix-vector multiplication to implement the divergence operator.
@@ -241,11 +251,9 @@ class FiniteVolume(pybamm.SpatialMethod):
         # Create appropriate submesh by combining submeshes in domain
         submesh = self.mesh[domains["primary"]]
         if hasattr(submesh, "length"):
-            edges = self._get_edges_symbolic_mesh(domains["primary"])
-            diff_matrix = diags([-1, 1], [0, 1], shape=(edges.size - 1, edges.size))
-            d_edges = pybamm.Matrix(diff_matrix) @ edges
+            d_edges = self._get_d_edges_symbolic_mesh(domains["primary"])
         else:
-            d_edges = submesh.d_edges
+            d_edges = pybamm.Vector(submesh.d_edges)
 
         # check coordinate system
         if submesh.coord_sys in ["cylindrical polar", "spherical polar"]:
@@ -347,9 +355,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                 d_edges = 2 * np.pi * (r_edges_right**2 - r_edges_left**2) / 2
         else:
             if hasattr(submesh, "length"):
-                edges = self._get_edges_symbolic_mesh(domains["primary"])
-                diff_matrix = diags([-1, 1], [0, 1], shape=(edges.size - 1, edges.size))
-                d_edges = pybamm.Matrix(diff_matrix) @ edges
+                d_edges = self._get_d_edges_symbolic_mesh(domains["primary"])
             else:
                 d_edges = pybamm.Vector(submesh.d_edges)
         possible_dimensions = ["primary", "secondary", "tertiary", "quaternary"]
@@ -445,6 +451,14 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         return out
 
+    @staticmethod
+    def _get_integral_node_edge_matrix(vector, n):
+        vec_transposed = pybamm.Transpose(vector)
+        cols = []
+        for _ in range(n):
+            cols.append(vec_transposed)
+        return pybamm.SparseStack(*cols)
+
     def indefinite_integral_matrix_edges(self, domains, direction):
         """
         Matrix for finite-volume implementation of the indefinite integral where the
@@ -519,33 +533,43 @@ class FiniteVolume(pybamm.SpatialMethod):
         submesh = self.mesh[domains["primary"]]
         n = submesh.npts
         second_dim_repeats = self._get_auxiliary_domain_repeats(domains)
-
-        du_n = submesh.d_nodes
+        if hasattr(submesh, "length"):
+            d_nodes = self._get_d_nodes_symbolic_mesh(domains["primary"])
+        else:
+            d_nodes = pybamm.Vector(submesh.d_nodes)
+        d_nodes_matrix = self._get_integral_node_edge_matrix(d_nodes, n)
         if direction == "forward":
-            du_entries = [du_n] * (n - 1)
+            du_entries = [np.ones(d_nodes.size)] * (n - 1)
             offset = -np.arange(1, n, 1)
-            main_integral_matrix = spdiags(du_entries, offset, n, n - 1)
+            main_integral_matrix = d_nodes_matrix * pybamm.Matrix(
+                spdiags(du_entries, offset, n, n - 1)
+            )
             bc_offset_matrix = lil_matrix((n, n - 1))
-            bc_offset_matrix[:, 0] = du_n[0] / 2
+            bc_offset_matrix[:, 0] = 1.0
+            bc_offset_matrix = d_nodes_matrix * pybamm.Matrix(bc_offset_matrix) / 2
         elif direction == "backward":
-            du_entries = [du_n] * (n + 1)
+            du_entries = [np.ones(d_nodes.size)] * (n + 1)
             offset = np.arange(n, -1, -1)
-            main_integral_matrix = spdiags(du_entries, offset, n, n - 1)
+            main_integral_matrix = d_nodes_matrix * pybamm.Matrix(
+                spdiags(du_entries, offset, n, n - 1)
+            )
             bc_offset_matrix = lil_matrix((n, n - 1))
-            bc_offset_matrix[:, -1] = du_n[-1] / 2
+            bc_offset_matrix[:, -1] = 1.0
+            bc_offset_matrix = d_nodes_matrix * pybamm.Matrix(bc_offset_matrix) / 2
         sub_matrix = main_integral_matrix + bc_offset_matrix
         # add a column of zeros at each end
-        zero_col = csr_matrix((n, 1))
-        sub_matrix = hstack([zero_col, sub_matrix, zero_col])
+        zero_col = pybamm.Transpose(pybamm.Matrix(csr_matrix((n, 1))))
+        sub_matrix_transposed = pybamm.Transpose(sub_matrix)
+        sub_matrix = pybamm.SparseStack(zero_col, sub_matrix_transposed, zero_col)
+        sub_matrix = pybamm.Transpose(sub_matrix)
         # Convert to csr_matrix so that we can take the index (row-slicing), which is
         # not supported by the default kron format
         # Note that this makes column-slicing inefficient, but this should not be an
         # issue
-        matrix = csr_matrix(kron(eye(second_dim_repeats), sub_matrix))
-        if hasattr(submesh, "length"):
-            matrix = matrix * submesh.length
-
-        return pybamm.Matrix(matrix)
+        matrix = pybamm.KroneckerProduct(
+            pybamm.Matrix(eye(second_dim_repeats)), sub_matrix
+        )
+        return matrix
 
     def indefinite_integral_matrix_nodes(self, domains, direction):
         """
@@ -571,23 +595,28 @@ class FiniteVolume(pybamm.SpatialMethod):
         submesh = self.mesh[domains["primary"]]
         n = submesh.npts
         second_dim_repeats = self._get_auxiliary_domain_repeats(domains)
-
-        du_n = submesh.d_edges
-        du_entries = [du_n] * n
+        if hasattr(submesh, "length"):
+            d_edges = self._get_d_edges_symbolic_mesh(domains["primary"])
+        else:
+            d_edges = pybamm.Vector(submesh.d_edges)
+        d_edges = self._get_d_edges_symbolic_mesh(domains["primary"])
+        d_edges_matrix = self._get_integral_node_edge_matrix(d_edges, n + 1)
+        du_entries = [np.ones(d_edges.size)] * n
         if direction == "forward":
             offset = -np.arange(1, n + 1, 1)  # from -1 down to -n
         elif direction == "backward":
             offset = np.arange(n - 1, -1, -1)  # from n-1 down to 0
-        sub_matrix = spdiags(du_entries, offset, n + 1, n)
+        sub_matrix = d_edges_matrix * pybamm.Matrix(
+            spdiags(du_entries, offset, n + 1, n)
+        )
         # Convert to csr_matrix so that we can take the index (row-slicing), which is
         # not supported by the default kron format
         # Note that this makes column-slicing inefficient, but this should not be an
         # issue
-        matrix = csr_matrix(kron(eye(second_dim_repeats), sub_matrix))
-        if hasattr(submesh, "length"):
-            matrix = matrix * submesh.length
-
-        return pybamm.Matrix(matrix)
+        matrix = pybamm.KroneckerProduct(
+            pybamm.Matrix(eye(second_dim_repeats)), sub_matrix
+        )
+        return matrix
 
     def delta_function(self, symbol, discretised_symbol):
         """
@@ -1522,13 +1551,9 @@ class FiniteVolume(pybamm.SpatialMethod):
                 D2 = pybamm.Matrix(matrix_D2) @ array
                 # Compute weight beta
                 if hasattr(submesh, "length"):
-                    edges = self._get_edges_symbolic_mesh(
+                    d_edges = self._get_d_edges_symbolic_mesh(
                         discretised_symbol.domains["primary"]
                     )
-                    diff_matrix = diags(
-                        [-1, 1], [0, 1], shape=(edges.size - 1, edges.size)
-                    )
-                    d_edges = pybamm.Matrix(diff_matrix) @ edges
                     left_index_matrix = diags(
                         [1], [0], shape=(d_edges.size - 1, d_edges.size)
                     )
