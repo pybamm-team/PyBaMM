@@ -969,14 +969,54 @@ class TestSerialise:
     def test_load_invalid_json(self):
         invalid_json = "{ invalid json"
         with patch("builtins.open", mock_open(read_data=invalid_json)):
-            with pytest.raises(ValueError) as exc_info:
+            with pytest.raises(ValueError) as e:
                 Serialise.load_custom_model("invalid_json.json")
-            assert "Invalid JSON in file" in str(exc_info.value)
+            assert "Invalid JSON in file" in str(e.value)
 
     def test_load_custom_model_file_not_found(self):
-        with pytest.raises(FileNotFoundError) as exc_info:
+        with pytest.raises(FileNotFoundError) as e:
             Serialise.load_custom_model("non_existent_file.json")
-        assert "Could not find file" in str(exc_info.value)
+        assert "Could not find file" in str(e.value)
+
+    def test_load_custom_model_missing_name(self):
+        # minimal valid model data but missing the "name" key
+        model_data = {
+            "schema_version": "1.0",
+            "rhs": [],
+            "initial_conditions": [],
+            "algebraic": [],
+            "boundary_conditions": [],
+            "events": [],
+            "variables": {},
+        }
+
+        json_data = json.dumps(model_data)
+
+        with patch("builtins.open", mock_open(read_data=json_data)):
+            with pytest.raises(ValueError) as e:
+                Serialise.load_custom_model("test.json")
+            assert "Missing model 'name' in file: test.json" in str(e.value)
+
+    def test_load_custom_model_missing_rhs_key_raises_value_error(self):
+        # Model data missing the "rhs" key
+        model_data = {
+            "schema_version": "1.0",
+            "name": "TestModel",
+            "initial_conditions": [],
+            "algebraic": [],
+            "boundary_conditions": [],
+            "events": [],
+            "variables": {},
+        }
+
+        json_data = json.dumps(model_data)
+
+        with patch("builtins.open", mock_open(read_data=json_data)):
+            with pytest.raises(ValueError) as exc_info:
+                Serialise.load_custom_model("test_file.json")
+            assert "Missing expected model key: rhs in file: test_file.json" in str(
+                exc_info.value
+            )
 
     def test_save_and_load_custom_model(self):
         model = pybamm.BaseModel(name="test_model")
