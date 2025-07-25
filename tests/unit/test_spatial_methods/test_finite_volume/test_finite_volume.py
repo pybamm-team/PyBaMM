@@ -272,7 +272,7 @@ class TestFiniteVolume:
         jacobian = eqn_jac.evaluate(y=y_test)
         grad_matrix = spatial_method.gradient_matrix(
             whole_cell, {"primary": whole_cell}
-        ).entries
+        ).evaluate()
         np.testing.assert_allclose(jacobian.toarray()[1:-1], grad_matrix.toarray())
         np.testing.assert_allclose(
             jacobian.toarray()[0, 0], grad_matrix.toarray()[0][0] * -2
@@ -362,16 +362,14 @@ class TestFiniteVolume:
         assert isinstance(delta_fn_left_disc, pybamm.Multiplication)
         assert isinstance(delta_fn_left_disc.left, pybamm.Symbol)
         np.testing.assert_array_almost_equal(
-            delta_fn_left_disc.left.evaluate()[:, 1:].toarray(), 0
+            delta_fn_left_disc.left.evaluate()[:, 1:], 0
         )
         assert delta_fn_left_disc.shape == y.shape
         # Right
         assert delta_fn_right_disc.domains == delta_fn_right.domains
         assert isinstance(delta_fn_right_disc, pybamm.Multiplication)
         assert isinstance(delta_fn_right_disc.left, pybamm.Symbol)
-        np.testing.assert_array_equal(
-            delta_fn_right_disc.left.evaluate()[:, :-1].toarray(), 0
-        )
+        np.testing.assert_array_equal(delta_fn_right_disc.left.evaluate()[:, :-1], 0)
         assert delta_fn_right_disc.shape == y.shape
 
         # Value tests

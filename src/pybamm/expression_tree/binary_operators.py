@@ -381,10 +381,20 @@ class KroneckerProduct(BinaryOperator):
 
     def _binary_jac(self, left_jac, right_jac):
         """See :meth:`pybamm.BinaryOperator._binary_jac()`."""
-        # We only need the case where left is an array and right
-        # is a (slice of a) state vector, e.g. for discretised spatial
-        # operators of the form D @ u (also catch cases of (-D) @ u)
-        raise NotImplementedError
+        left, right = self.orphans
+        if left.is_constant():
+            return pybamm.KroneckerProduct(left, right_jac)
+        elif right.is_constant():
+            return pybamm.KroneckerProduct(left_jac, right)
+        elif left.is_constant() and right.is_constant():
+            m, n = left.shape
+            o, p = right.shape
+            _, v = left_jac.shape
+            return pybamm.Matrix(csr_matrix([], shape=(m * o, n * p)))
+        else:
+            raise NotImplementedError(
+                "jac of 'KroneckerProduct' is only implemented if left or right is constant"
+            )
 
     def _binary_evaluate(self, left, right):
         """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
@@ -396,6 +406,14 @@ class KroneckerProduct(BinaryOperator):
     def _sympy_operator(self, left, right):
         """Override :meth:`pybamm.BinaryOperator._sympy_operator`"""
         raise NotImplementedError
+
+    def _binary_new_copy(
+        self,
+        left: ChildSymbol,
+        right: ChildSymbol,
+    ):
+        """See :meth:`pybamm.BinaryOperator._binary_new_copy()`."""
+        return pybamm.kronecker_product(left, right)
 
 
 class MatrixMultiplication(BinaryOperator):
@@ -1401,6 +1419,10 @@ def matmul(
                 return (left @ r_left) - (left @ r_right)
 
     return pybamm.simplify_if_constant(MatrixMultiplication(left, right))
+
+
+def kronecker_product(left: ChildSymbol, right: ChildSymbol):
+    return pybamm.simplify_if_constant(KroneckerProduct(left, right))
 
 
 def minimum(

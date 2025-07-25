@@ -219,7 +219,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         # not supported by the default kron format
         # Note that this makes column-slicing inefficient, but this should not be an
         # issue
-        matrix = pybamm.KroneckerProduct(
+        matrix = pybamm.kronecker_product(
             pybamm.Matrix(eye(second_dim_repeats)), sub_matrix
         )
         return matrix
@@ -241,7 +241,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             else:
                 edges = submesh.edges
 
-            r_edges = pybamm.KroneckerProduct(
+            r_edges = pybamm.kronecker_product(
                 pybamm.Matrix(np.ones(second_dim_repeats)), edges
             )
             if submesh.coord_sys == "spherical polar":
@@ -301,7 +301,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         # repeat matrix for each node in secondary dimensions
         second_dim_repeats = self._get_auxiliary_domain_repeats(domains)
         # generate full matrix from the submatrix
-        matrix = pybamm.KroneckerProduct(
+        matrix = pybamm.kronecker_product(
             pybamm.Matrix(eye(second_dim_repeats)), sub_matrix
         )
         return matrix
@@ -393,7 +393,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             # repeat matrix for each node in secondary dimensions
             second_dim_repeats = self._get_auxiliary_domain_repeats(domains)
             # generate full matrix from the submatrix
-            matrix = pybamm.KroneckerProduct(
+            matrix = pybamm.kronecker_product(
                 pybamm.Matrix(eye(second_dim_repeats)), d_edges
             )
         elif integration_dimension in possible_dimensions[1:]:
@@ -416,11 +416,11 @@ class FiniteVolume(pybamm.SpatialMethod):
                 else:
                     n_lower_pts *= lower_submesh.npts
             if d_edges.shape[0] == 1:
-                int_matrix = pybamm.KroneckerProduct(
+                int_matrix = pybamm.kronecker_product(
                     d_edges, pybamm.Matrix(eye(n_lower_pts))
                 )
             else:
-                int_matrix = pybamm.KroneckerProduct(
+                int_matrix = pybamm.kronecker_product(
                     pybamm.Transpose(d_edges), pybamm.Matrix(eye(n_lower_pts))
                 )
 
@@ -428,7 +428,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             higher_repeats = self._get_auxiliary_domain_repeats(
                 {k: v for k, v in domains.items() if (k in higher_dimensions)}
             )
-            matrix = pybamm.KroneckerProduct(
+            matrix = pybamm.kronecker_product(
                 pybamm.Matrix(eye(higher_repeats)), int_matrix
             )
         # generate full matrix from the submatrix
@@ -586,7 +586,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         # not supported by the default kron format
         # Note that this makes column-slicing inefficient, but this should not be an
         # issue
-        matrix = pybamm.KroneckerProduct(
+        matrix = pybamm.kronecker_product(
             pybamm.Matrix(eye(second_dim_repeats)), sub_matrix
         )
         return matrix
@@ -633,7 +633,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         # not supported by the default kron format
         # Note that this makes column-slicing inefficient, but this should not be an
         # issue
-        matrix = pybamm.KroneckerProduct(
+        matrix = pybamm.kronecker_product(
             pybamm.Matrix(eye(second_dim_repeats)), sub_matrix
         )
         return matrix
@@ -665,7 +665,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             )
             dx = pybamm.Transpose(dx_sub_matrix) @ d_nodes
             sub_matrix = pybamm.Matrix(
-                csr_matrix(([1], ([0], [0])), shape=(prim_pts, 1))
+                csr_matrix(([1], ([0], [0])), shape=(prim_pts, 1)).toarray()
             )
         elif symbol.side == "right":
             dx_sub_matrix = pybamm.Vector(
@@ -675,7 +675,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             )
             dx = pybamm.Transpose(dx_sub_matrix) @ d_nodes
             sub_matrix = pybamm.Matrix(
-                csr_matrix(([1], ([prim_pts - 1], [0])), shape=(prim_pts, 1))
+                csr_matrix(([1], ([prim_pts - 1], [0])), shape=(prim_pts, 1)).toarray()
             )
 
         # Calculate domain width, to make sure that the integral of the delta function
@@ -691,8 +691,8 @@ class FiniteVolume(pybamm.SpatialMethod):
         # not supported by the default kron format
         # Note that this makes column-slicing inefficient, but this should not be an
         # issue
-        matrix = pybamm.KroneckerProduct(
-            pybamm.Matrix(eye(second_dim_repeats)), sub_matrix
+        matrix = pybamm.kronecker_product(
+            pybamm.Matrix(eye(second_dim_repeats).toarray()), sub_matrix
         )
 
         # Return delta function, keep domains
@@ -1631,7 +1631,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                     left_dx = pybamm.Vector(dx[:-1])
                     right_dx = pybamm.Vector(dx[1:])
                 sub_beta = left_dx / (left_dx + right_dx)
-                beta = pybamm.KroneckerProduct(
+                beta = pybamm.kronecker_product(
                     pybamm.Matrix(np.ones((second_dim_repeats, 1))), sub_beta
                 )
 
@@ -1672,11 +1672,33 @@ class FiniteVolume(pybamm.SpatialMethod):
                 D2 = pybamm.Matrix(matrix_D2) @ array
 
                 # Compute weight beta
-                dx0 = submesh.nodes[0] - submesh.edges[0]  # first edge to node
-                dxN = submesh.edges[-1] - submesh.nodes[-1]  # last node to edge
-                dx = np.concatenate(([dx0], submesh.d_nodes, [dxN]))
-                sub_beta = (dx[:-1] / (dx[1:] + dx[:-1]))[:, np.newaxis]
-                beta = pybamm.Array(np.kron(np.ones((second_dim_repeats, 1)), sub_beta))
+                dx0 = pybamm.Scalar(
+                    submesh.nodes[0] - submesh.edges[0]
+                )  # first edge to node
+                if hasattr(submesh, "length"):
+                    dx0 = dx0 * self._get_boundary_submesh_length(
+                        "left", discretised_symbol.domain
+                    )
+                dxN = pybamm.Scalar(
+                    submesh.edges[-1] - submesh.nodes[-1]
+                )  # last node to edge
+                if hasattr(submesh, "length"):
+                    dxN = dxN * self._get_boundary_submesh_length(
+                        "right", discretised_symbol.domain
+                    )
+                if hasattr(submesh, "length"):
+                    d_nodes = self._get_d_nodes_symbolic_mesh(discretised_symbol.domain)
+                else:
+                    d_nodes = pybamm.Vector(submesh.d_nodes)
+                dx = pybamm.numpy_concatenation(dx0, d_nodes, dxN)
+                left_dx_matrix = diags([1], [0], shape=(dx.size - 1, dx.size))
+                right_dx_matrix = diags([1], [1], shape=(dx.size - 1, dx.size))
+                left_dx = pybamm.Matrix(left_dx_matrix) @ dx
+                right_dx = pybamm.Matrix(right_dx_matrix) @ dx
+                sub_beta = left_dx / (left_dx + right_dx)
+                beta = pybamm.kronecker_product(
+                    pybamm.Matrix(np.ones((second_dim_repeats, 1))), sub_beta
+                )
 
                 # Compute harmonic mean on nodes
                 D_eff = 1 / (beta / D1 + (1 - beta) / D2)
