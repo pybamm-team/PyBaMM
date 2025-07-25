@@ -31,6 +31,8 @@
 - Removed the IREE code from the IDAKLU solver ([#5080](https://github.com/pybamm-team/PyBaMM/pull/5080))
 - Removed support for Python 3.9 ([#5052](https://github.com/pybamm-team/PyBaMM/pull/5052))
 - In OCP hysteresis models, users need to explicitly give the equilibrium, delithiation, and lithiation OCPs when using a hysteresis model. E.g., you must provide all three of "Negative electrode OCP [V]", "Negative electrode delithiation OCP [V]", and "Negative electrode lithiation OCP [V]". ([#4893](https://github.com/pybamm-team/PyBaMM/pull/4893))
+- Changed fundamental variable for all SEI models from thickness to concentration ([#4869](https://github.com/pybamm-team/PyBaMM/pull/4869))
+- Replaced parameter `"Initial SEI thickness [m]"` with `"Initial SEI concentration [mol.m-3]"` ([#4869](https://github.com/pybamm-team/PyBaMM/pull/4869))
 
 
 # [v25.6.0](https://github.com/pybamm-team/PyBaMM/tree/v25.6.0) - 2025-05-27
@@ -90,8 +92,6 @@
 
 ## Breaking changes
 
-- Changed fundamental variable for all SEI models from thickness to concentration ([#4869](https://github.com/pybamm-team/PyBaMM/pull/4869))
-- Replaced parameter `"Initial SEI thickness [m]"` with `"Initial SEI concentration [mol.m-3]"` ([#4869](https://github.com/pybamm-team/PyBaMM/pull/4869))
 - Added `skip_ok` option to `step` to allow for steps to be skipped if they are infeasible at initial conditions. ([#4839](https://github.com/pybamm-team/PyBaMM/pull/4839))
 - Deprecated `CrateTermination` and renamed it to `CRateTermination`. ([#4834](https://github.com/pybamm-team/PyBaMM/pull/4834))
 
