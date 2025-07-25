@@ -1,8 +1,9 @@
 #
 # Tests for the polynomial profile submodel
 #
-import pybamm
 import pytest
+
+import pybamm
 
 
 class TestParticlePolynomialProfile:

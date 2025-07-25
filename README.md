@@ -29,7 +29,7 @@ of differential equations,
 Together, these enable flexible model definitions and fast battery simulations, allowing users to
 explore the effect of different battery designs and modeling assumptions under a variety of operating scenarios.
 
-[//]: # "numfocus-fiscal-sponsor-attribution"
+[//]: # (numfocus-fiscal-sponsor-attribution)
 
 PyBaMM uses an [open governance model](https://pybamm.org/governance/)
 and is fiscally sponsored by [NumFOCUS](https://numfocus.org/). Consider making
@@ -49,7 +49,7 @@ pay for developer time, professional services, travel, workshops, and a variety 
 
 The easiest way to use PyBaMM is to run a 1C constant-current discharge with a model of your choice with all the default settings:
 
-```python3
+```python
 import pybamm
 
 model = pybamm.lithium_ion.DFN()  # Doyle-Fuller-Newman model
@@ -60,7 +60,7 @@ sim.plot()
 
 or simulate an experiment such as a constant-current discharge followed by a constant-current-constant-voltage charge:
 
-```python3
+```python
 import pybamm
 
 experiment = pybamm.Experiment(
@@ -76,7 +76,7 @@ experiment = pybamm.Experiment(
     * 3,
 )
 model = pybamm.lithium_ion.DFN()
-sim = pybamm.Simulation(model, experiment=experiment, solver=pybamm.CasadiSolver())
+sim = pybamm.Simulation(model, experiment=experiment)
 sim.solve()
 sim.plot()
 ```
@@ -153,7 +153,7 @@ You can use the BibTeX
 
 We would be grateful if you could also cite the relevant papers. These will change depending on what models and solvers you use. To find out which papers you should cite, add the line
 
-```python3
+```python
 pybamm.print_citations()
 ```
 
@@ -174,9 +174,3 @@ For any questions, comments, suggestions or bug reports, please visit:
 ## 📃 License
 
 PyBaMM is fully open source. For more information about its license, see [LICENSE](https://github.com/pybamm-team/PyBaMM/blob/develop/LICENSE.txt).
-
-## ✨ Contributors
-
-This project follows the [all-contributors](https://github.com/all-contributors/all-contributors) specification. Contributions of any kind are welcome!
-
-Click here to see [a full list](https://github.com/pybamm-team/PyBaMM/blob/develop/all_contributors.md) of our contributors' profiles.

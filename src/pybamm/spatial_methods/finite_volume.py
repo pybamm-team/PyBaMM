@@ -1,20 +1,20 @@
 #
 # Finite Volume discretisation class
 #
-import pybamm
-
-from scipy.sparse import (
-    diags,
-    spdiags,
-    eye,
-    kron,
-    csr_matrix,
-    vstack,
-    hstack,
-    lil_matrix,
-    coo_matrix,
-)
 import numpy as np
+from scipy.sparse import (
+    coo_matrix,
+    csr_matrix,
+    diags,
+    eye,
+    hstack,
+    kron,
+    lil_matrix,
+    spdiags,
+    vstack,
+)
+
+import pybamm
 
 
 class FiniteVolume(pybamm.SpatialMethod):
@@ -309,7 +309,9 @@ class FiniteVolume(pybamm.SpatialMethod):
             higher_dimensions = possible_dimensions[this_dimension_index + 1 :]
             n_lower_pts = 1
             #  Lower dimensions should be repeated, so add them to the eye matrix
-            for lower_domain, lower_dimension in zip(lower_domains, lower_dimensions):
+            for lower_domain, lower_dimension in zip(
+                lower_domains, lower_dimensions, strict=False
+            ):
                 lower_submesh = self.mesh[lower_domain]
                 if child.evaluates_on_edges(lower_dimension):
                     n_lower_pts *= lower_submesh.npts + 1
@@ -849,6 +851,25 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         return new_gradient
 
+    def _boundary_mesh_size(self, child, side):
+        """
+        Get the mesh size at the boundary of a variable's domain.
+        """
+        submesh = self.mesh[child.domain]
+        if side == "left":
+            if hasattr(submesh, "length"):
+                val = submesh.length * pybamm.Scalar(submesh.d_nodes[0])
+            else:
+                val = pybamm.Scalar(submesh.d_nodes[0])
+        elif side == "right":
+            if hasattr(submesh, "length"):
+                val = submesh.length * pybamm.Scalar(submesh.d_nodes[-1])
+            else:
+                val = pybamm.Scalar(submesh.d_nodes[-1])
+        else:
+            raise ValueError(f"Invalid side: {side}")
+        return val
+
     def boundary_value_or_flux(self, symbol, discretised_child, bcs=None):
         """
         Uses extrapolation to get the boundary value or flux of a variable in the
@@ -866,8 +887,14 @@ class FiniteVolume(pybamm.SpatialMethod):
         if bcs is None:
             bcs = {}
 
-        extrap_order_gradient = self.options["extrapolation"]["order"]["gradient"]
-        extrap_order_value = self.options["extrapolation"]["order"]["value"]
+        extrap_order_gradient = (
+            getattr(symbol, "order", None)
+            or self.options["extrapolation"]["order"]["gradient"]
+        )
+        extrap_order_value = (
+            getattr(symbol, "order", None)
+            or self.options["extrapolation"]["order"]["value"]
+        )
         use_bcs = self.options["extrapolation"]["use bcs"]
 
         nodes = submesh.nodes
@@ -886,7 +913,9 @@ class FiniteVolume(pybamm.SpatialMethod):
         # Create submatrix to compute boundary values or fluxes
         # Derivation of extrapolation formula can be found at:
         # https://github.com/Scottmar93/extrapolation-coefficents/tree/master
-        if isinstance(symbol, pybamm.BoundaryValue):
+        if isinstance(symbol, pybamm.BoundaryMeshSize):
+            return self._boundary_mesh_size(child, symbol.side)
+        elif isinstance(symbol, pybamm.BoundaryValue):
             if use_bcs and pybamm.has_bc_of_form(child, symbol.side, bcs, "Dirichlet"):
                 # just use the value from the bc: f(x*)
                 sub_matrix = csr_matrix((1, prim_pts))
@@ -951,6 +980,14 @@ class FiniteVolume(pybamm.SpatialMethod):
                         additive_multiplicative = pybamm.Scalar(1)
                         multiplicative = pybamm.Scalar(1)
 
+                elif extrap_order_value == "constant":
+                    sub_matrix = csr_matrix(
+                        ([1], ([0], [0])),
+                        shape=(1, prim_pts),
+                    )
+                    additive = pybamm.Scalar(0)
+                    additive_multiplicative = pybamm.Scalar(1)
+                    multiplicative = pybamm.Scalar(1)
                 else:
                     raise NotImplementedError
 
@@ -1021,6 +1058,14 @@ class FiniteVolume(pybamm.SpatialMethod):
                         additive = pybamm.Scalar(0)
                         additive_multiplicative = pybamm.Scalar(1)
                         multiplicative = pybamm.Scalar(1)
+                elif extrap_order_value == "constant":
+                    sub_matrix = csr_matrix(
+                        ([1], ([0], [prim_pts - 1])),
+                        shape=(1, prim_pts),
+                    )
+                    additive = pybamm.Scalar(0)
+                    additive_multiplicative = pybamm.Scalar(1)
+                    multiplicative = pybamm.Scalar(1)
                 else:
                     raise NotImplementedError
 
@@ -1334,7 +1379,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             The harmonic mean is computed as
 
             .. math::
-                D_{eff} = \\frac{D_1  D_2}{\\beta D_2 + (1 - \\beta) D_1},
+                D_{eff} = \\frac{1}{\\frac{\\beta}{D_1} + \\frac{1 - \\beta}{D_2}},
 
             where
 
@@ -1409,8 +1454,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
                 # dx_real = dx * length, therefore, beta is unchanged
                 # Compute harmonic mean on internal edges
-                # Note: add small number to denominator to regularise D_eff
-                D_eff = D1 * D2 / (D2 * beta + D1 * (1 - beta) + 1e-16)
+                D_eff = 1 / (beta / D1 + (1 - beta) / D2)
 
                 # Matrix to pad zeros at the beginning and end of the array where
                 # the exterior edge values will be added
@@ -1452,8 +1496,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                 beta = pybamm.Array(np.kron(np.ones((second_dim_repeats, 1)), sub_beta))
 
                 # Compute harmonic mean on nodes
-                # Note: add small number to denominator to regularise D_eff
-                D_eff = D1 * D2 / (D2 * beta + D1 * (1 - beta) + 1e-16)
+                D_eff = 1 / (beta / D1 + (1 - beta) / D2)
 
                 return D_eff
 

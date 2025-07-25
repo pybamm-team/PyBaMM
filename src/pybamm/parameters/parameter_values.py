@@ -1,9 +1,15 @@
-import numpy as np
-import pybamm
 import numbers
+from collections import defaultdict
 from pprint import pformat
 from warnings import warn
-from collections import defaultdict
+
+import numpy as np
+
+import pybamm
+from pybamm.models.full_battery_models.lithium_ion.msmr import (
+    is_deprecated_msmr_name,
+    replace_deprecated_msmr_name,
+)
 
 
 class ParameterValues:
@@ -43,7 +49,7 @@ class ParameterValues:
             }
         )
 
-        if isinstance(values, (dict, ParameterValues)):
+        if isinstance(values, dict | ParameterValues):
             # remove the "chemistry" key if it exists
             values.pop("chemistry", None)
             self.update(values, check_already_exists=False)
@@ -71,6 +77,7 @@ class ParameterValues:
     def _create_from_bpx(bpx, target_soc):
         from bpx import get_electrode_concentrations
         from bpx.schema import ElectrodeBlended, ElectrodeBlendedSPM
+
         from .bpx import bpx_to_param_dict
 
         if target_soc < 0 or target_soc > 1:
@@ -102,8 +109,8 @@ class ParameterValues:
         # see https://github.com/pybamm-team/PyBaMM/issues/2682
         bpx_neg = bpx.parameterisation.negative_electrode
         bpx_pos = bpx.parameterisation.positive_electrode
-        if isinstance(bpx_neg, (ElectrodeBlended, ElectrodeBlendedSPM)) or isinstance(
-            bpx_pos, (ElectrodeBlended, ElectrodeBlendedSPM)
+        if isinstance(bpx_neg, ElectrodeBlended | ElectrodeBlendedSPM) or isinstance(
+            bpx_pos, ElectrodeBlended | ElectrodeBlendedSPM
         ):
             pybamm.logger.warning(
                 "Initial concentrations cannot be set using stoichiometry limits for "
@@ -339,7 +346,7 @@ class ParameterValues:
         else:
             parameter_values = self.copy()
 
-        c_max = self.evaluate(param.p.prim.c_max)
+        c_max = self.evaluate(param.p.prim.c_max, inputs=inputs)
 
         parameter_values.update(
             {
@@ -378,8 +385,8 @@ class ParameterValues:
             parameter_values = self
         else:
             parameter_values = self.copy()
-        c_n_max = self.evaluate(param.n.prim.c_max)
-        c_p_max = self.evaluate(param.p.prim.c_max)
+        c_n_max = self.evaluate(param.n.prim.c_max, inputs=inputs)
+        c_p_max = self.evaluate(param.p.prim.c_max, inputs=inputs)
         parameter_values.update(
             {
                 "Initial concentration in negative electrode [mol.m-3]": x * c_n_max,
@@ -395,6 +402,7 @@ class ParameterValues:
         known_value="cyclable lithium capacity",
         inplace=True,
         options=None,
+        inputs=None,
     ):
         """
         Set the initial OCP of each electrode, based on the initial
@@ -402,7 +410,12 @@ class ParameterValues:
         """
         param = param or pybamm.LithiumIonParameters(options)
         Un, Up = pybamm.lithium_ion.get_initial_ocps(
-            initial_value, self, param=param, known_value=known_value, options=options
+            initial_value,
+            self,
+            param=param,
+            known_value=known_value,
+            options=options,
+            inputs=inputs,
         )
         if inplace:
             parameter_values = self
@@ -432,6 +445,14 @@ class ParameterValues:
                 )
             if "electrode diffusivity" in param:
                 new_param = param.replace("electrode", "particle")
+                warn(
+                    f"The parameter '{param}' has been renamed to '{new_param}'",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
+                values[new_param] = values.get(param)
+            if is_deprecated_msmr_name(param):
+                new_param = replace_deprecated_msmr_name(param)
                 warn(
                     f"The parameter '{param}' has been renamed to '{new_param}'",
                     DeprecationWarning,
@@ -543,7 +564,7 @@ class ParameterValues:
         for interpolant in interpolants:
             xs = interpolant.x
             children = interpolant.children
-            for x, child in zip(xs, children):
+            for x, child in zip(xs, children, strict=False):
                 interpolant_events.extend(
                     [
                         pybamm.Event(
@@ -569,7 +590,21 @@ class ParameterValues:
         "positive tab": pos. tab bc "no tab": no tab bc}.
         """
         new_boundary_conditions = {}
-        sides = ["left", "right", "negative tab", "positive tab", "no tab"]
+        sides = [
+            "left",
+            "right",
+            "negative tab",
+            "positive tab",
+            "no tab",
+            "x_min",
+            "x_max",
+            "y_min",
+            "y_max",
+            "z_min",
+            "z_max",
+            "r_min",
+            "r_max",
+        ]
         for variable, bcs in model.boundary_conditions.items():
             processed_variable = self.process_symbol(variable)
             new_boundary_conditions[processed_variable] = {}
@@ -672,7 +707,7 @@ class ParameterValues:
             function_name = self[symbol.name]
             if isinstance(
                 function_name,
-                (numbers.Number, pybamm.Interpolant, pybamm.InputParameter),
+                numbers.Number | pybamm.Interpolant | pybamm.InputParameter,
             ) or (
                 isinstance(function_name, pybamm.Symbol)
                 and function_name.size_for_testing == 1
@@ -732,7 +767,7 @@ class ParameterValues:
                 # otherwise evaluate the function to create a new PyBaMM object
                 function = function_name(*new_children)
             elif isinstance(
-                function_name, (pybamm.Interpolant, pybamm.InputParameter)
+                function_name, pybamm.Interpolant | pybamm.InputParameter
             ) or (
                 isinstance(function_name, pybamm.Symbol)
                 and function_name.size_for_testing == 1

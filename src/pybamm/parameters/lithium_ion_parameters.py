@@ -56,6 +56,19 @@ class LithiumIonParameters(BaseParameters):
         self.h_total = self.therm.h_total
         self.rho_c_p_eff = self.therm.rho_c_p_eff
         self.lambda_eff = self.therm.lambda_eff
+        self.cell_heat_capacity = self.therm.cell_heat_capacity
+
+        # pouch bcs
+        self.h_edge_x_min = self.therm.h_edge_x_min
+        self.h_edge_x_max = self.therm.h_edge_x_max
+        self.h_edge_y_max = self.therm.h_edge_y_max
+        self.h_edge_y_min = self.therm.h_edge_y_min
+        self.h_edge_z_min = self.therm.h_edge_z_min
+        self.h_edge_z_max = self.therm.h_edge_z_max
+
+        # cylinder specific bcs
+        self.h_edge_radial_min = self.therm.h_edge_radial_min
+        self.h_edge_radial_max = self.therm.h_edge_radial_max
 
         # Macroscale geometry
         self.L_x = self.geo.L_x
@@ -460,8 +473,9 @@ class ParticleLithiumIonParameters(BaseParameters):
         self.hysteresis_switch = pybamm.Parameter(
             f"{pref}{Domain} particle hysteresis switching factor"
         )
-        self.h_init = pybamm.Parameter(
-            f"{pref}Initial hysteresis state in {domain} electrode"
+        self.h_init = pybamm.FunctionParameter(
+            f"{pref}Initial hysteresis state in {domain} electrode",
+            {"Through-cell distance (x) [m]": x},
         )
 
         if self.options["open-circuit potential"] != "MSMR":
@@ -513,7 +527,7 @@ class ParticleLithiumIonParameters(BaseParameters):
         self.b_cr = pybamm.Parameter(f"{pref}{Domain} electrode Paris' law constant b")
         self.m_cr = pybamm.Parameter(f"{pref}{Domain} electrode Paris' law constant m")
 
-    def hysteresis_decay(self, lithiation=None):
+    def hysteresis_decay(self, sto, T, lithiation=None):
         """
         Rate at which the open-circuit potential approaches the lithiation
         or delithiation branch when it exhibits hysteresis.
@@ -524,8 +538,14 @@ class ParticleLithiumIonParameters(BaseParameters):
         else:
             lithiation = lithiation + " "
 
-        return pybamm.Parameter(
-            f"{self.phase_prefactor}{Domain} particle {lithiation}hysteresis decay rate"
+        inputs = {
+            f"{self.phase_prefactor}{Domain} particle stoichiometry": sto,
+            f"{Domain} electrode temperature [K]": T,
+        }
+
+        return pybamm.FunctionParameter(
+            f"{self.phase_prefactor}{Domain} particle {lithiation}hysteresis decay rate",
+            inputs,
         )
 
     def k_cr(self, T):
@@ -681,32 +701,41 @@ class ParticleLithiumIonParameters(BaseParameters):
         "Available host sites indexed by reaction j"
         inputs = {"Temperature [K]": T}
         domain = self.domain
-        d = domain[0]
-        Xj = pybamm.FunctionParameter(f"X_{d}_{index}", inputs)
+        Electrode = domain.capitalize()
+        Xj = pybamm.FunctionParameter(
+            f"{Electrode} electrode host site occupancy fraction ({index})", inputs
+        )
         return Xj
 
     def U0_j(self, T, index):
         "Equilibrium potential indexed by reaction j"
         inputs = {"Temperature [K]": T}
         domain = self.domain
-        d = domain[0]
-        U0j = pybamm.FunctionParameter(f"U0_{d}_{index}", inputs)
+        Electrode = domain.capitalize()
+        U0j = pybamm.FunctionParameter(
+            f"{Electrode} electrode host site standard potential ({index}) [V]", inputs
+        )
         return U0j
 
     def w_j(self, T, index):
         "Order parameter indexed by reaction j"
         inputs = {"Temperature [K]": T}
         domain = self.domain
-        d = domain[0]
-        wj = pybamm.FunctionParameter(f"w_{d}_{index}", inputs)
+        Electrode = domain.capitalize()
+        wj = pybamm.FunctionParameter(
+            f"{Electrode} electrode host site ideality factor ({index})", inputs
+        )
         return wj
 
     def alpha_bv_j(self, T, index):
         "Dimensional Butler-Volmer exchange-current density indexed by reaction j"
         inputs = {"Temperature [K]": T}
         domain = self.domain
-        d = domain[0]
-        alpha_bv_j = pybamm.FunctionParameter(f"a_{d}_{index}", inputs)
+        Electrode = domain.capitalize()
+        alpha_bv_j = pybamm.FunctionParameter(
+            f"{Electrode} electrode host site charge transfer coefficient ({index})",
+            inputs,
+        )
         return alpha_bv_j
 
     def x_j(self, U, T, index):
@@ -733,7 +762,7 @@ class ParticleLithiumIonParameters(BaseParameters):
     def j0_j(self, c_e, U, T, index):
         "Exchange-current density index by reaction j [A.m-2]"
         domain = self.domain
-        d = domain[0]
+        Electrode = domain.capitalize()
 
         tol = pybamm.settings.tolerances["j0__c_e"]
         c_e = pybamm.maximum(c_e, tol)
@@ -746,7 +775,8 @@ class ParticleLithiumIonParameters(BaseParameters):
         self.X_j(T, index)
         aj = self.alpha_bv_j(T, index)
         j0_ref_j = pybamm.FunctionParameter(
-            f"j0_ref_{d}_{index}", {"Temperature [K]": T}
+            f"{Electrode} electrode host site reference exchange-current density ({index}) [A.m-2]",
+            {"Temperature [K]": T},
         )
 
         # Equation 16, Baker et al 2018. The original formulation would be implemented

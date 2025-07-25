@@ -2,12 +2,25 @@
 # Different OCPs for charge and discharge, based on current
 #
 import pybamm
-from . import BaseOpenCircuitPotential
+
+from . import BaseHysteresisOpenCircuitPotential
 
 
-class CurrentSigmoidOpenCircuitPotential(BaseOpenCircuitPotential):
+class CurrentSigmoidOpenCircuitPotential(BaseHysteresisOpenCircuitPotential):
+    def __init__(
+        self, param, domain, reaction, options, phase="primary", x_average=False
+    ):
+        super().__init__(
+            param, domain, reaction, options=options, phase=phase, x_average=x_average
+        )
+        pybamm.citations.register("Ai2022")
+
     def get_coupled_variables(self, variables):
         domain, Domain = self.domain_Domain
+        domain_options = getattr(self.options, domain)
+        phase_name = self.phase_name
+
+        # Set hysteresis state
         current = variables["Total current density [A.m-2]"]
         k = 100
 
@@ -16,49 +29,32 @@ class CurrentSigmoidOpenCircuitPotential(BaseOpenCircuitPotential):
         elif Domain == "Negative":
             lithiation_current = -current
 
-        m_lith = pybamm.sigmoid(0, lithiation_current, k)  # lithiation_current > 0
-        m_delith = 1 - m_lith  # lithiation_current < 0
+        h_x_av = 1 - 2 * pybamm.sigmoid(0, lithiation_current, k)
+        h = pybamm.FullBroadcast(
+            h_x_av,
+            [f"{domain} electrode"],
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        variables.update(
+            {
+                f"{Domain} electrode {phase_name}hysteresis state": h,
+                f"X-averaged {domain} electrode {phase_name}hysteresis state": h_x_av,
+            }
+        )
+        if domain_options["particle size"] == "distribution":
+            h_dist = pybamm.PrimaryBroadcast(h, [f"{domain} {phase_name}particle size"])
+            h_dist_x_av = pybamm.x_average(h_dist)
+            variables.update(
+                {
+                    f"{Domain} electrode {phase_name}hysteresis state distribution": h_dist,
+                    f"X-averaged {domain} electrode {phase_name}hysteresis state distribution": h_dist_x_av,
+                }
+            )
 
-        phase_name = self.phase_name
+        # Get single-state hysteresis variables
+        variables.update(self._get_coupled_variables(variables))
 
-        if self.reaction == "lithium-ion main":
-            T = variables[f"{Domain} electrode temperature [K]"]
-            # For "particle-size distribution" models, take distribution version
-            # of sto_surf that depends on particle size.
-            domain_options = getattr(self.options, domain)
-            if domain_options["particle size"] == "distribution":
-                sto_surf = variables[
-                    f"{Domain} {phase_name}particle surface stoichiometry distribution"
-                ]
-                # If variable was broadcast, take only the orphan
-                if isinstance(sto_surf, pybamm.Broadcast) and isinstance(
-                    T, pybamm.Broadcast
-                ):
-                    sto_surf = sto_surf.orphans[0]
-                    T = T.orphans[0]
-                T = pybamm.PrimaryBroadcast(T, [f"{domain} {phase_name}particle size"])
-            else:
-                sto_surf = variables[
-                    f"{Domain} {phase_name}particle surface stoichiometry"
-                ]
-                # If variable was broadcast, take only the orphan
-                if isinstance(sto_surf, pybamm.Broadcast) and isinstance(
-                    T, pybamm.Broadcast
-                ):
-                    sto_surf = sto_surf.orphans[0]
-                    T = T.orphans[0]
-
-            U_lith = self.phase_param.U(sto_surf, T, "lithiation")
-            U_delith = self.phase_param.U(sto_surf, T, "delithiation")
-            ocp_surf = m_lith * U_lith + m_delith * U_delith
-            dUdT = self.phase_param.dUdT(sto_surf)
-
-            # Bulk OCP is from the average SOC and temperature
-            sto_bulk = variables[f"{Domain} electrode {phase_name}stoichiometry"]
-            T_bulk = pybamm.xyz_average(pybamm.size_average(T))
-            U_bulk_lith = self.phase_param.U(sto_bulk, T_bulk, "lithiation")
-            U_bulk_delith = self.phase_param.U(sto_bulk, T_bulk, "delithiation")
-            ocp_bulk = m_lith * U_bulk_lith + m_delith * U_bulk_delith
-
-        variables.update(self._get_standard_ocp_variables(ocp_surf, ocp_bulk, dUdT))
         return variables
+
+    def set_initial_conditions(self, variables):
+        pass

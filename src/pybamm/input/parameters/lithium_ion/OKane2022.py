@@ -1,6 +1,8 @@
-import pybamm
 import os
+
 import numpy as np
+
+import pybamm
 
 
 def plating_exchange_current_density_OKane2020(c_e, c_Li, T):

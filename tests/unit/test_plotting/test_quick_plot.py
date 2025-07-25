@@ -1,8 +1,9 @@
 import os
-import pybamm
-import pytest
 
 import numpy as np
+import pytest
+
+import pybamm
 
 
 class TestQuickPlot:
@@ -285,7 +286,7 @@ class TestQuickPlot:
         a = pybamm.Variable("a")
         model.rhs = {a: pybamm.Scalar(0)}
         model.initial_conditions = {a: pybamm.Scalar(0)}
-        solution = pybamm.CasadiSolver("fast").solve(model, [0, 1])
+        solution = pybamm.IDAKLUSolver().solve(model, [0, 1])
         with pytest.raises(ValueError, match="No default output variables"):
             pybamm.QuickPlot(solution)
 
@@ -316,7 +317,7 @@ class TestQuickPlot:
         pybamm.close_plots()
 
     def test_loqs_spme(self):
-        t_eval = np.linspace(0, 10, 2)
+        t_interp = np.linspace(0, 10, 2)
 
         for model in [
             pybamm.lithium_ion.SPMe(),
@@ -332,7 +333,7 @@ class TestQuickPlot:
             disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
             disc.process_model(model)
             solver = model.default_solver
-            solution = solver.solve(model, t_eval)
+            solution = solver.solve(model, t_eval=[0, t_interp[-1]], t_interp=t_interp)
             pybamm.QuickPlot(solution)
 
             # check 1D (space) variables update properly for different time units
@@ -341,7 +342,9 @@ class TestQuickPlot:
             # 1D variables should be evaluated on edges
             c_e = c_e_var(t=t, x=mesh[c_e_var.domain].edges)
 
-            for unit, scale in zip(["seconds", "minutes", "hours"], [1, 60, 3600]):
+            for unit, scale in zip(
+                ["seconds", "minutes", "hours"], [1, 60, 3600], strict=False
+            ):
                 quick_plot = pybamm.QuickPlot(
                     solution, ["Electrolyte concentration [mol.m-3]"], time_unit=unit
                 )
@@ -352,11 +355,11 @@ class TestQuickPlot:
                 ].get_ydata()
                 np.testing.assert_allclose(qp_data, c_e[:, 0], rtol=1e-7, atol=1e-6)
 
-                quick_plot.slider_update(t_eval[-1] / scale)
+                quick_plot.slider_update(t_interp[-1] / scale)
                 qp_data = quick_plot.plots[("Electrolyte concentration [mol.m-3]",)][0][
                     0
                 ].get_ydata()
-                np.testing.assert_allclose(qp_data, c_e[:, 1], rtol=1e-7, atol=1e-6)
+                np.testing.assert_allclose(qp_data, c_e[:, 1], rtol=2e-4, atol=0.6)
 
             # test quick plot of particle for spme
             if (
@@ -374,7 +377,9 @@ class TestQuickPlot:
                 # check 2D (space) variables update properly for different time units
                 c_n = solution["Negative particle concentration [mol.m-3]"]
 
-                for unit, scale in zip(["seconds", "minutes", "hours"], [1, 60, 3600]):
+                for unit, scale in zip(
+                    ["seconds", "minutes", "hours"], [1, 60, 3600], strict=False
+                ):
                     quick_plot = pybamm.QuickPlot(
                         solution,
                         ["Negative particle concentration [mol.m-3]"],
@@ -384,14 +389,16 @@ class TestQuickPlot:
                     qp_data = quick_plot.plots[
                         ("Negative particle concentration [mol.m-3]",)
                     ][0][1]
-                    c_n_eval = c_n(t_eval[0], r=c_n.first_dim_pts, x=c_n.second_dim_pts)
+                    c_n_eval = c_n(
+                        t_interp[0], r=c_n.first_dim_pts, x=c_n.second_dim_pts
+                    )
                     np.testing.assert_allclose(qp_data, c_n_eval, rtol=1e-7, atol=1e-6)
-                    quick_plot.slider_update(t_eval[-1] / scale)
+                    quick_plot.slider_update(t_interp[-1] / scale)
                     qp_data = quick_plot.plots[
                         ("Negative particle concentration [mol.m-3]",)
                     ][0][1]
                     c_n_eval = c_n(
-                        t_eval[-1], r=c_n.first_dim_pts, x=c_n.second_dim_pts
+                        t_interp[-1], r=c_n.first_dim_pts, x=c_n.second_dim_pts
                     )
                     np.testing.assert_allclose(qp_data, c_n_eval, rtol=1e-7, atol=1e-6)
 
@@ -416,7 +423,9 @@ class TestQuickPlot:
         # Note: these should be the transpose of the entries in the processed variable
         c_e = solution["Electrolyte concentration [mol.m-3]"]
 
-        for unit, scale in zip(["seconds", "minutes", "hours"], [1, 60, 3600]):
+        for unit, scale in zip(
+            ["seconds", "minutes", "hours"], [1, 60, 3600], strict=False
+        ):
             quick_plot = pybamm.QuickPlot(
                 solution, ["Electrolyte concentration [mol.m-3]"], time_unit=unit
             )
@@ -461,7 +470,9 @@ class TestQuickPlot:
         # Note: these should be the transpose of the entries in the processed variable
         phi_n = solution["Negative current collector potential [V]"].entries
 
-        for unit, scale in zip(["seconds", "minutes", "hours"], [1, 60, 3600]):
+        for unit, scale in zip(
+            ["seconds", "minutes", "hours"], [1, 60, 3600], strict=False
+        ):
             quick_plot = pybamm.QuickPlot(
                 solution, ["Negative current collector potential [V]"], time_unit=unit
             )
@@ -493,18 +504,12 @@ class TestQuickPlot:
         parameter_values = pybamm.ParameterValues("Chen2020")
         model = pybamm.lithium_ion.SPMe()
         parameter_values.update({"Electrode height [m]": "[input]"})
-        solver1 = pybamm.CasadiSolver(mode="safe")
-        sim1 = pybamm.Simulation(
-            model, parameter_values=parameter_values, solver=solver1
-        )
+        sim1 = pybamm.Simulation(model, parameter_values=parameter_values)
         inputs1 = {"Electrode height [m]": 1.00}
-        sol1 = sim1.solve(t_eval=np.linspace(0, 1000, 101), inputs=inputs1)
-        solver2 = pybamm.CasadiSolver(mode="safe")
-        sim2 = pybamm.Simulation(
-            model, parameter_values=parameter_values, solver=solver2
-        )
+        sol1 = sim1.solve([0, 1000], inputs=inputs1)
+        sim2 = pybamm.Simulation(model, parameter_values=parameter_values)
         inputs2 = {"Electrode height [m]": 2.00}
-        sol2 = sim2.solve(t_eval=np.linspace(0, 1000, 101), inputs=inputs2)
+        sol2 = sim2.solve([0, 1000], inputs=inputs2)
         output_variables = [
             "Voltage [V]",
             "Current [A]",

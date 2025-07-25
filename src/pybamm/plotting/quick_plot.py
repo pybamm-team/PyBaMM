@@ -1,9 +1,11 @@
 #
 # Class for quick plotting of variables from models
 #
-import numpy as np
-import pybamm
 from collections import defaultdict
+
+import numpy as np
+
+import pybamm
 from pybamm.util import import_optional_dependency
 
 
@@ -266,7 +268,7 @@ class QuickPlot:
 
     @staticmethod
     def check_input_validity(input_solutions):
-        if not isinstance(input_solutions, (pybamm.Solution, pybamm.Simulation, list)):
+        if not isinstance(input_solutions, pybamm.Solution | pybamm.Simulation | list):
             raise TypeError(
                 "Solutions must be 'pybamm.Solution' or 'pybamm.Simulation' or list"
             )
@@ -717,6 +719,9 @@ class QuickPlot:
         from matplotlib import cm, colors
 
         time_in_seconds = t * self.time_scaling_factor
+        time_in_seconds = np.clip(
+            time_in_seconds, self.min_t_unscaled, self.max_t_unscaled
+        )
         for k, (key, plot) in enumerate(self.plots.items()):
             ax = self.axes[k]
             if self.variables[key][0][0].dimensions == 0:

@@ -2,13 +2,14 @@
 # NumpyArray class
 #
 from __future__ import annotations
+
 import numpy as np
 import numpy.typing as npt
+import sympy
 from scipy.sparse import csr_matrix, issparse
 
 import pybamm
-from pybamm.type_definitions import DomainType, AuxiliaryDomainType, DomainsType
-import sympy
+from pybamm.type_definitions import AuxiliaryDomainType, DomainsType, DomainType
 
 
 class Array(pybamm.Symbol):

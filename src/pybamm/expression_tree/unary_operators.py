@@ -5,11 +5,12 @@ from __future__ import annotations
 
 import numpy as np
 import numpy.typing as npt
-from scipy.sparse import csr_matrix, issparse
 import sympy
+from scipy.sparse import csr_matrix, issparse
+
 import pybamm
-from pybamm.util import import_optional_dependency
 from pybamm.type_definitions import DomainsType
+from pybamm.util import import_optional_dependency
 
 
 class UnaryOperator(pybamm.Symbol):
@@ -35,7 +36,7 @@ class UnaryOperator(pybamm.Symbol):
         child: pybamm.Symbol,
         domains: DomainsType = None,
     ):
-        if isinstance(child, (float, int, np.number)):
+        if isinstance(child, float | int | np.number):
             child = pybamm.Scalar(child)
         domains = domains or child.domains
 
@@ -94,8 +95,8 @@ class UnaryOperator(pybamm.Symbol):
     def evaluate(
         self,
         t: float | None = None,
-        y: npt.NDArray | None = None,
-        y_dot: npt.NDArray | None = None,
+        y: npt.NDArray[np.float64] | None = None,
+        y_dot: npt.NDArray[np.float64] | None = None,
         inputs: dict | str | None = None,
     ):
         """See :meth:`pybamm.Symbol.evaluate()`."""
@@ -904,6 +905,22 @@ class BoundaryIntegral(SpatialOperator):
             name += "negative tab"
         elif region == "positive tab":
             name += "positive tab"
+        elif region == "x_min":
+            name += "x_min"
+        elif region == "x_max":
+            name += "x_max"
+        elif region == "y_min":
+            name += "y_min"
+        elif region == "y_max":
+            name += "y_max"
+        elif region == "z_min":
+            name += "z_min"
+        elif region == "z_max":
+            name += "z_max"
+        elif region == "r_min":  # pragma: no cover
+            name += "r_min"
+        elif region == "r_max":  # pragma: no cover
+            name += "r_max"
         self.region = region
         super().__init__(name, child, domains)
 
@@ -1042,10 +1059,14 @@ class BoundaryValue(BoundaryOperator):
         The variable whose boundary value to take
     side : str
         Which side to take the boundary value on ("left" or "right")
+    order : str, None
+        The order of the boundary gradient. If None, the order is determined by the
+        spatial method. Can be "constant", "linear" or "quadratic".
     """
 
-    def __init__(self, child, side):
+    def __init__(self, child, side, order=None):
         super().__init__("boundary value", child, side)
+        self.order = order
 
     def _unary_new_copy(self, child, perform_simplifications: bool = True):
         """
@@ -1055,9 +1076,9 @@ class BoundaryValue(BoundaryOperator):
         creating a BoundaryValue object.
         """
         if perform_simplifications:
-            return boundary_value(child, self.side)
+            return boundary_value(child, self.side, self.order)
         else:
-            return BoundaryValue(child, self.side)
+            return BoundaryValue(child, self.side, self.order)
 
     def _sympy_operator(self, child):
         """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
@@ -1080,6 +1101,22 @@ class BoundaryValue(BoundaryOperator):
             return sympy.Symbol(latex_child)
 
 
+class BoundaryMeshSize(BoundaryOperator):
+    """
+    A node in the expression tree which gets the width of the control volume at the boundary of a variable's domain.
+
+    Parameters
+    ----------
+    child : :class:`pybamm.Symbol`
+        The variable whose boundary value to take
+    side : str
+        Which side to take the boundary value on ("left" or "right")
+    """
+
+    def __init__(self, child, side):
+        super().__init__("boundary mesh size", child, side)
+
+
 class ExplicitTimeIntegral(UnaryOperator):
     def __init__(self, children, initial_condition):
         super().__init__("explicit time integral", children)
@@ -1091,6 +1128,10 @@ class ExplicitTimeIntegral(UnaryOperator):
 
     def _unary_new_copy(self, child, perform_simplifications=True):
         return self.__class__(child, self.initial_condition)
+
+    def _unary_evaluate(self, child):
+        # return result of evaluating the child, we'll only implement the sum once the model is solved (in pybamm.ProcessedVariable)
+        return child
 
     def is_constant(self):
         return False
@@ -1121,10 +1162,14 @@ class BoundaryGradient(BoundaryOperator):
         The variable whose boundary flux to take
     side : str
         Which side to take the boundary flux on ("left" or "right")
+    order : str, None
+        The order of the boundary gradient. If None, the order is determined by the
+        spatial method. Can be "constant", "linear" or "quadratic".
     """
 
-    def __init__(self, child, side):
+    def __init__(self, child, side, order=None):
         super().__init__("boundary flux", child, side)
+        self.order = order
 
 
 class EvaluateAt(SpatialOperator):
@@ -1311,7 +1356,7 @@ def div(symbol):
     # Divergence commutes with Negate operator
     if isinstance(symbol, pybamm.Negate):
         return -div(symbol.orphans[0])
-    elif isinstance(symbol, (pybamm.Multiplication, pybamm.Division)):
+    elif isinstance(symbol, pybamm.Multiplication | pybamm.Division):
         left, right = symbol.orphans
         if isinstance(left, pybamm.Negate):
             return -div(symbol._binary_new_copy(left.orphans[0], right))
@@ -1395,7 +1440,7 @@ def surf(symbol):
     return boundary_value(symbol, "right")
 
 
-def boundary_value(symbol, side):
+def boundary_value(symbol, side, order=None):
     """
     convenience function for creating a :class:`pybamm.BoundaryValue`
 
@@ -1421,7 +1466,7 @@ def boundary_value(symbol, side):
     if symbol.domain == []:
         return symbol
     # If symbol is a primary or full broadcast, reduce by one dimension
-    if isinstance(symbol, (pybamm.PrimaryBroadcast, pybamm.FullBroadcast)):
+    if isinstance(symbol, pybamm.PrimaryBroadcast | pybamm.FullBroadcast):
         return symbol.reduce_one_dimension()
     # If symbol is a secondary broadcast, its boundary value is a primary broadcast of
     # the boundary value of its child
@@ -1434,15 +1479,15 @@ def boundary_value(symbol, side):
         return pybamm.PrimaryBroadcast(boundary_child, symbol.secondary_domain)
     # Otherwise, calculate boundary value
     else:
-        return BoundaryValue(symbol, side)
+        return BoundaryValue(symbol, side, order)
 
 
-def boundary_gradient(symbol, side):
+def boundary_gradient(symbol, side, order=None):
     # Gradient of a broadcast is zero
     if isinstance(symbol, pybamm.Broadcast):
         return 0 * symbol.reduce_one_dimension()
     else:
-        return BoundaryGradient(symbol, side)
+        return BoundaryGradient(symbol, side, order)
 
 
 def sign(symbol):

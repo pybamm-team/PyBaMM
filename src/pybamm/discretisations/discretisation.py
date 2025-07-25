@@ -1,11 +1,14 @@
 #
 # Interface for discretisation
 #
-import pybamm
+import itertools
+from collections import OrderedDict, defaultdict
+
 import numpy as np
-from collections import defaultdict, OrderedDict
 from scipy.sparse import block_diag, csc_matrix, csr_matrix
 from scipy.sparse.linalg import inv
+
+import pybamm
 
 
 def has_bc_of_form(symbol, side, bcs, form):
@@ -382,7 +385,7 @@ class Discretisation:
                 if first_child not in bc_keys:
                     internal_bcs.update({first_child: {"left": lbc, "right": rbc}})
 
-                for current_child, next_child in zip(children[1:-1], children[2:]):
+                for current_child, next_child in itertools.pairwise(children[1:]):
                     lbc = rbc
                     rbc = (boundary_gradient(current_child, next_child), "Neumann")
                     if current_child not in bc_keys:
@@ -606,7 +609,7 @@ class Discretisation:
         for v in model_variables:
             model_slices.append(self.y_slices[v][0])
         sorted_model_variables = [
-            v for _, v in sorted(zip(model_slices, model_variables))
+            v for _, v in sorted(zip(model_slices, model_variables, strict=False))
         ]
 
         # Process mass matrices for the differential equations
@@ -623,7 +626,7 @@ class Discretisation:
                 )
                 if isinstance(
                     self.spatial_methods[var.domain[0]],
-                    (pybamm.ZeroDimensionalSpatialMethod, pybamm.FiniteVolume),
+                    pybamm.ZeroDimensionalSpatialMethod | pybamm.FiniteVolume,
                 ):
                     # for 0D methods the mass matrix is just a scalar 1 and for
                     # finite volumes the mass matrix is identity, so no need to
@@ -783,6 +786,13 @@ class Discretisation:
                 ]
             else:
                 discretised_symbol.secondary_mesh = None
+
+            # Assign tertiary mesh
+            if symbol.domains["tertiary"] != []:
+                discretised_symbol.tertiary_mesh = self.mesh[symbol.domains["tertiary"]]
+            else:
+                discretised_symbol.tertiary_mesh = None
+
             return discretised_symbol
 
     def _process_symbol(self, symbol):
@@ -986,7 +996,9 @@ class Discretisation:
         elif isinstance(symbol, pybamm.CoupledVariable):
             new_symbol = self.process_symbol(symbol.children[0])
             return new_symbol
-
+        elif isinstance(symbol, pybamm.Constant):
+            # after discretisation we just care about the value, not the name
+            return self.process_symbol(pybamm.Scalar(symbol.value))
         else:
             # Backup option: return the object
             return symbol
@@ -1047,7 +1059,9 @@ class Discretisation:
         equations = list(var_eqn_dict.values())
 
         # sort equations according to slices
-        sorted_equations = [eq for _, eq in sorted(zip(slices, equations))]
+        sorted_equations = [
+            eq for _, eq in sorted(zip(slices, equations, strict=False))
+        ]
 
         return self.concatenate(*sorted_equations, sparse=sparse)
 

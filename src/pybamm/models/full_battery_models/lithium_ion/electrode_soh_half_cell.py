@@ -54,7 +54,7 @@ class ElectrodeSOHHalfCell(pybamm.BaseModel):
     @property
     def default_solver(self):
         # Use AlgebraicSolver as CasadiAlgebraicSolver gives unnecessary warnings
-        return pybamm.AlgebraicSolver(method="minimize  L-BFGS-B", tol=1e-7)
+        return pybamm.AlgebraicSolver(method="lsq__trf", tol=1e-7)
 
 
 def get_initial_stoichiometry_half_cell(
@@ -98,8 +98,8 @@ def get_initial_stoichiometry_half_cell(
 
     if isinstance(initial_value, str) and initial_value.endswith("V"):
         V_init = float(initial_value[:-1])
-        V_min = parameter_values.evaluate(param.voltage_low_cut)
-        V_max = parameter_values.evaluate(param.voltage_high_cut)
+        V_min = parameter_values.evaluate(param.voltage_low_cut, inputs=inputs)
+        V_max = parameter_values.evaluate(param.voltage_high_cut, inputs=inputs)
 
         if not V_min - tol <= V_init <= V_max + tol:
             raise ValueError(
@@ -121,9 +121,11 @@ def get_initial_stoichiometry_half_cell(
         soc_model.variables["soc"] = soc
         parameter_values.process_model(soc_model)
         initial_soc = (
-            pybamm.AlgebraicSolver(tol=tol).solve(soc_model, [0])["soc"].data[0]
+            pybamm.AlgebraicSolver(tol=tol)
+            .solve(soc_model, [0], inputs=inputs)["soc"]
+            .data[0]
         )
-    elif isinstance(initial_value, (int, float)):
+    elif isinstance(initial_value, int | float):
         initial_soc = initial_value
         if not 0 <= initial_soc <= 1:
             raise ValueError("Initial SOC should be between 0 and 1")

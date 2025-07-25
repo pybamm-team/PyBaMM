@@ -1,10 +1,11 @@
 #
 # Zero dimensional submesh
 #
-import pybamm
-from .meshes import SubMesh
-
 import numpy as np
+
+import pybamm
+
+from .meshes import SubMesh
 
 
 class SubMesh0D(SubMesh):

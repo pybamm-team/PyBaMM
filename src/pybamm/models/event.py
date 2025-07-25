@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from enum import Enum
-import numpy.typing as npt
 from typing import TypeVar
+
+import numpy as np
+import numpy.typing as npt
 
 
 class EventType(Enum):
@@ -74,8 +76,8 @@ class Event:
     def evaluate(
         self,
         t: float | None = None,
-        y: npt.NDArray | None = None,
-        y_dot: npt.NDArray | None = None,
+        y: npt.NDArray[np.float64] | None = None,
+        y_dot: npt.NDArray[np.float64] | None = None,
         inputs: dict | None = None,
     ):
         """

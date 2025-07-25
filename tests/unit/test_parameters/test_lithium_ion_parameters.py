@@ -2,8 +2,9 @@
 # Tests lithium-ion parameters load and give expected values
 #
 
-import pybamm
 import numpy as np
+
+import pybamm
 
 
 class TestLithiumIonParameterValues:
@@ -105,6 +106,20 @@ class TestLithiumIonParameterValues:
 
     def test_thermal_parameters(self):
         values = pybamm.lithium_ion.BaseModel().default_parameter_values
+        values.update(
+            {
+                "Cell heat capacity [J.K-1.m-3]": 2.5e6,
+                "Left face heat transfer coefficient [W.m-2.K-1]": 5.0,
+                "Right face heat transfer coefficient [W.m-2.K-1]": 5.0,
+                "Front face heat transfer coefficient [W.m-2.K-1]": 5.0,
+                "Back face heat transfer coefficient [W.m-2.K-1]": 5.0,
+                "Bottom face heat transfer coefficient [W.m-2.K-1]": 5.0,
+                "Top face heat transfer coefficient [W.m-2.K-1]": 5.0,
+                "Inner radius heat transfer coefficient [W.m-2.K-1]": 5.0,
+                "Outer radius heat transfer coefficient [W.m-2.K-1]": 5.0,
+            },
+            check_already_exists=False,
+        )
         param = pybamm.LithiumIonParameters()
         T = param.T_ref
 
@@ -124,6 +139,15 @@ class TestLithiumIonParameterValues:
 
         # other thermal parameters
         np.testing.assert_equal(values.evaluate(param.T_init), 298.15)
+        np.testing.assert_equal(values.evaluate(param.cell_heat_capacity), 2.5e6)
+        np.testing.assert_equal(values.evaluate(param.h_edge_x_min), 5.0)
+        np.testing.assert_equal(values.evaluate(param.h_edge_x_max), 5.0)
+        np.testing.assert_equal(values.evaluate(param.h_edge_y_min), 5.0)
+        np.testing.assert_equal(values.evaluate(param.h_edge_y_max), 5.0)
+        np.testing.assert_equal(values.evaluate(param.h_edge_z_min), 5.0)
+        np.testing.assert_equal(values.evaluate(param.h_edge_z_max), 5.0)
+        np.testing.assert_equal(values.evaluate(param.h_edge_radial_min), 5.0)
+        np.testing.assert_equal(values.evaluate(param.h_edge_radial_max), 5.0)
 
     def test_parameter_functions(self):
         values = pybamm.lithium_ion.BaseModel().default_parameter_values
