@@ -381,20 +381,7 @@ class KroneckerProduct(BinaryOperator):
 
     def _binary_jac(self, left_jac, right_jac):
         """See :meth:`pybamm.BinaryOperator._binary_jac()`."""
-        left, right = self.orphans
-        if left.is_constant():
-            return pybamm.KroneckerProduct(left, right_jac)
-        elif right.is_constant():
-            return pybamm.KroneckerProduct(left_jac, right)
-        elif left.is_constant() and right.is_constant():
-            m, n = left.shape
-            o, p = right.shape
-            _, v = left_jac.shape
-            return pybamm.Matrix(csr_matrix([], shape=(m * o, n * p)))
-        else:
-            raise NotImplementedError(
-                "jac of 'KroneckerProduct' is only implemented if left or right is constant"
-            )
+        raise NotImplementedError
 
     def _binary_evaluate(self, left, right):
         """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
