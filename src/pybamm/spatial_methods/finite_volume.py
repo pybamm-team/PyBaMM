@@ -218,7 +218,6 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         # Create 1D matrix using submesh
         n = submesh.npts
-        # e = 1 / submesh.d_nodes
         sub_matrix_minus = pybamm.Matrix(diags([-1], [0], shape=(n - 1, n)))
         sub_matrix_plus = pybamm.Matrix(diags([1], [1], shape=(n - 1, n)))
         sub_matrix = (sub_matrix_minus + sub_matrix_plus) * e
