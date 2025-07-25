@@ -61,17 +61,29 @@ class FiniteVolume(pybamm.SpatialMethod):
         symbol_mesh = self.mesh[symbol.domain]
         repeats = self._get_auxiliary_domain_repeats(symbol.domains)
         if symbol.evaluates_on_edges("primary"):
-            entries = np.tile(symbol_mesh.edges, repeats)
+            if hasattr(symbol_mesh, "length"):
+                edges = self._get_edges_symbolic_mesh(symbol.domains["primary"])
+                entries = pybamm.kronecker_product(
+                    pybamm.Matrix(np.ones(repeats)), edges
+                )
+                entries.domains = symbol.domains
+            else:
+                entries = pybamm.Vector(
+                    np.tile(symbol_mesh.edges, repeats), domains=symbol.domains
+                )
         else:
-            entries = np.tile(symbol_mesh.nodes, repeats)
+            if hasattr(symbol_mesh, "length"):
+                nodes = self._get_nodes_symbolic_mesh(symbol.domains["primary"])
+                entries = pybamm.kronecker_product(
+                    pybamm.Matrix(np.ones(repeats)), nodes
+                )
+                entries.domains = symbol.domains
+            else:
+                entries = pybamm.Vector(
+                    np.tile(symbol_mesh.nodes, repeats), domains=symbol.domains
+                )
 
-        if hasattr(symbol_mesh, "length"):
-            return (
-                pybamm.Vector(entries, domains=symbol.domains) * symbol_mesh.length
-                + symbol_mesh.min
-            )
-        else:
-            return pybamm.Vector(entries, domains=symbol.domains)
+        return entries
 
     def gradient(self, symbol, discretised_symbol, boundary_conditions):
         """Matrix-vector multiplication to implement the gradient operator.
