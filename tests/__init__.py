@@ -27,6 +27,7 @@ from .shared import (
     get_3d_mesh_for_testing,
     get_unit_3d_mesh_for_testing,
     get_mesh_for_testing_symbolic,
+    get_mesh_for_testing_symbolic_concatenation,
     get_p2d_mesh_for_testing,
     get_size_distribution_mesh_for_testing,
     get_1p1d_mesh_for_testing,

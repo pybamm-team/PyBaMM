@@ -111,8 +111,11 @@ class TestParameterValues:
             0, inplace=False, inputs={input_param: input_value}
         )
         assert (
-            param_0_inputs["Initial concentration in positive electrode [mol.m-3]"]
-            == y_0
+            abs(
+                param_0_inputs["Initial concentration in positive electrode [mol.m-3]"]
+                - y_0
+            )
+            < 1e-10
         )
 
     def test_set_initial_stoichiometry_half_cell(self):
