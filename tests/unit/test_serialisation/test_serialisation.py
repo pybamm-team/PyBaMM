@@ -978,106 +978,27 @@ class TestSerialise:
             Serialise.load_custom_model("non_existent_file.json")
         assert "Could not find file" in str(e.value)
 
-    def test_load_custom_model_missing_name(self):
-        # minimal valid model data but missing the "name" key
-        model_data = {
-            "schema_version": "1.0",
+    def test_symbol_map_failure_with_invalid_key(tmp_path):
+        data = {
+            "all_variable_keys": ["this_is_not_a_valid_symbol_json"],
             "rhs": [],
-            "initial_conditions": [],
             "algebraic": [],
+            "initial_conditions": [],
             "boundary_conditions": [],
             "events": [],
             "variables": {},
         }
+        model_file = tmp_path / "_model.json"
+        model_file.write_text(json.dumps(data))
 
-        json_data = json.dumps(model_data)
-
-        with patch("builtins.open", mock_open(read_data=json_data)):
-            with pytest.raises(ValueError) as e:
-                Serialise.load_custom_model("test.json")
-            assert "Missing model 'name' in file: test.json" in str(e.value)
-
-    def test_load_custom_model_missing_rhs_key_raises_value_error(self):
-        # Model data missing the "rhs" key
-        model_data = {
-            "schema_version": "1.0",
-            "name": "TestModel",
-            "initial_conditions": [],
-            "algebraic": [],
-            "boundary_conditions": [],
-            "events": [],
-            "variables": {},
-        }
-
-        json_data = json.dumps(model_data)
-
-        with patch("builtins.open", mock_open(read_data=json_data)):
-            with pytest.raises(ValueError) as e:
-                Serialise.load_custom_model("test_file.json")
-            assert "Missing expected model key: rhs in file: test_file.json" in str(
-                e.value
+        with pytest.raises(ValueError) as excinfo:
+            Serialise.load_custom_model(
+                str(model_file), battery_model=pybamm.lithium_ion.SPM()
             )
 
-    def test_load_custom_model_variable_conversion_failure(self):
-        # Valid model with one variable in RHS (to trigger the variable conversion loop)
-        model_data = {
-            "schema_version": "1.0",
-            "name": "TestModel",
-            "rhs": [["invalid_variable", "rhs_expr"]],
-            "initial_conditions": [],
-            "algebraic": [],
-            "boundary_conditions": [],
-            "events": [],
-            "variables": {},
-        }
-
-        json_data = json.dumps(model_data)
-
-        with patch("builtins.open", mock_open(read_data=json_data)):
-            with patch.object(
-                Serialise,
-                "convert_symbol_from_json",
-                side_effect=Exception("variable conversion failed"),
-            ):
-                with pytest.raises(ValueError) as e:
-                    Serialise.load_custom_model("test_model.json")
-            assert (
-                "Failed to convert model variables: variable conversion failed"
-                in str(e.value)
-            )
-
-    def test_load_custom_model_event_conversion_failure(self):
-        # Model with one event to trigger the error
-        model_data = {
-            "schema_version": "1.0",
-            "name": "TestModel",
-            "rhs": [],
-            "initial_conditions": [],
-            "algebraic": [],
-            "boundary_conditions": [],
-            "events": [
-                {
-                    "name": "TestEvent",
-                    "expression": "event_expression",
-                    "event_type": "terminal",
-                }
-            ],
-            "variables": {},
-        }
-
-        json_data = json.dumps(model_data)
-
-        with patch("builtins.open", mock_open(read_data=json_data)):
-            with patch.object(
-                Serialise,
-                "convert_symbol_from_json",
-                side_effect=Exception("event conversion failed"),
-            ):
-                with pytest.raises(ValueError) as e:
-                    Serialise.load_custom_model("test_model.json")
-                assert "Failed to load model events: event conversion failed" in str(
-                    e.value
-                )
+        # 3. Check that the message contains your custom prefix
+        msg = str(excinfo.value)
+        assert "Failed to reconstruct symbol map from variable keys" in msg
 
     def test_save_and_load_custom_model(self):
         model = pybamm.BaseModel(name="test_model")

@@ -429,29 +429,18 @@ class Serialise:
 
         model.schema_version = schema_version
 
-        try:
-            all_variable_keys = (
-                [lhs_json for lhs_json, _ in model_data["rhs"]]
-                + [lhs_json for lhs_json, _ in model_data["initial_conditions"]]
-                + [lhs_json for lhs_json, _ in model_data["algebraic"]]
-                + [
-                    variable_json
-                    for variable_json, _ in model_data["boundary_conditions"]
-                ]
-            )
-        except KeyError as e:
-            raise ValueError(
-                f"Missing expected model key: {e.args[0]} in file: {filename}"
-            ) from e
+        all_variable_keys = (
+            [lhs_json for lhs_json, _ in model_data["rhs"]]
+            + [lhs_json for lhs_json, _ in model_data["initial_conditions"]]
+            + [lhs_json for lhs_json, _ in model_data["algebraic"]]
+            + [variable_json for variable_json, _ in model_data["boundary_conditions"]]
+        )
 
         symbol_map = {}
-        try:
-            for variable_json in all_variable_keys:
-                symbol = Serialise.convert_symbol_from_json(variable_json)
-                key = Serialise._create_symbol_key(variable_json)
-                symbol_map[key] = symbol
-        except Exception as e:
-            raise ValueError(f"Failed to convert model variables: {e}") from e
+        for variable_json in all_variable_keys:
+            symbol = Serialise.convert_symbol_from_json(variable_json)
+            key = Serialise._create_symbol_key(variable_json)
+            symbol_map[key] = symbol
 
         try:
             model.rhs = {
@@ -460,18 +449,30 @@ class Serialise:
                 ]: Serialise.convert_symbol_from_json(rhs_expr_json)
                 for lhs_json, rhs_expr_json in model_data["rhs"]
             }
+        except Exception as e:
+            raise ValueError(f"Failed to load model.rhs: {e}") from e
+
+        try:
             model.algebraic = {
                 symbol_map[
                     Serialise._create_symbol_key(lhs_json)
                 ]: Serialise.convert_symbol_from_json(algebraic_expr_json)
                 for lhs_json, algebraic_expr_json in model_data["algebraic"]
             }
+        except Exception as e:
+            raise ValueError(f"Failed to load model.algebraic: {e}") from e
+
+        try:
             model.initial_conditions = {
                 symbol_map[
                     Serialise._create_symbol_key(lhs_json)
                 ]: Serialise.convert_symbol_from_json(initial_value_json)
                 for lhs_json, initial_value_json in model_data["initial_conditions"]
             }
+        except Exception as e:
+            raise ValueError(f"Failed to load model.initial_conditions: {e}") from e
+
+        try:
             model.boundary_conditions = {
                 symbol_map[Serialise._create_symbol_key(variable_json)]: {
                     side: (
@@ -483,7 +484,7 @@ class Serialise:
                 for variable_json, condition_dict in model_data["boundary_conditions"]
             }
         except Exception as e:
-            raise ValueError(f"Failed to reconstruct model components: {e}") from e
+            raise ValueError(f"Failed to load model.boundary_conditions: {e}") from e
 
         try:
             model.events = [
@@ -506,7 +507,9 @@ class Serialise:
                 for variable_name, expression_json in model_data["variables"].items()
             }
         except Exception as e:
-            raise ValueError(f"Failed to load model variables: {e}") from e
+            raise ValueError(
+                f"Failed to reconstruct symbol map from variable keys: {e}"
+            ) from e
 
         return model
 
