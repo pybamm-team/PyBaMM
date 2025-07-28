@@ -520,22 +520,30 @@ class Serialise:
                     f"Failed to convert boundary condition entry for variable {variable_json}: {e!s}"
                 ) from e
 
-        model.events = [
-            pybamm.Event(
-                event_data["name"],
-                Serialise.convert_symbol_from_json(event_data["expression"]),
-                event_data["event_type"],
-            )
-            for event_data in model_data["events"]
-        ]
+        model.events = []
+        for event_data in model_data["events"]:
+            try:
+                name = event_data["name"]
+                expr = Serialise.convert_symbol_from_json(event_data["expression"])
+                event_type = event_data["event_type"]
+                model.events.append(pybamm.Event(name, expr, event_type))
+            except Exception as e:
+                raise ValueError(
+                    f"Failed to convert event '{event_data.get('name', 'UNKNOWN')}': {e!s}"
+                ) from e
 
-        model.variables = {
-            variable_name: symbol_map.get(
-                Serialise._create_symbol_key(expression_json),
-                Serialise.convert_symbol_from_json(expression_json),
-            )
-            for variable_name, expression_json in model_data["variables"].items()
-        }
+        model.variables = {}
+        for variable_name, expression_json in model_data["variables"].items():
+            try:
+                key = Serialise._create_symbol_key(expression_json)
+                symbol = symbol_map.get(key)
+                if symbol is None:
+                    symbol = Serialise.convert_symbol_from_json(expression_json)
+                model.variables[variable_name] = symbol
+            except Exception as e:
+                raise ValueError(
+                    f"Failed to convert variable '{variable_name}': {e!s}"
+                ) from e
 
         return model
 

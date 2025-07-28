@@ -1221,14 +1221,45 @@ class TestSerialise:
         with open(model_file, "w") as f:
             json.dump(model_data, f)
 
-        with pytest.raises(ValueError) as excinfo:
+        with pytest.raises(ValueError) as e:
             Serialise.load_custom_model(str(model_file))
 
-        error_msg = str(excinfo.value)
-        assert "Failed to convert boundary expression for variable" in error_msg
-        assert "left" in error_msg
-        assert "not_a_valid_expression" in error_msg or "Invalid" in error_msg
+        msg = str(e.value)
+        assert "Failed to convert boundary expression for variable" in msg
+        assert "left" in msg
+        assert "not_a_valid_expression" in msg or "Invalid" in msg
         os.remove(model_file)
+
+    def test_event_conversion_failure(self):
+        model_data = {
+            "schema_version": "1.0",
+            "pybamm_version": pybamm.__version__,
+            "name": "BadEventModel",
+            "rhs": [],
+            "algebraic": [],
+            "initial_conditions": [],
+            "boundary_conditions": [],
+            "variables": {},
+            "events": [
+                {
+                    "name": "Bad Event",
+                    "expression": {"bad": "structure"},  # malformed
+                    "event_type": "termination",
+                }
+            ],
+        }
+
+        file = "bad_event_model.json"
+        with open(file, "w") as f:
+            json.dump(model_data, f)
+
+        with pytest.raises(ValueError) as e:
+            Serialise.load_custom_model(str(file))
+
+        msg = str(e.value).lower()
+        assert "failed to convert event 'bad event'" in msg
+        assert "unhandled symbol type or malformed entry" in msg
+        os.remove(file)
 
     def test_save_and_load_custom_model(self):
         model = pybamm.BaseModel(name="test_model")
