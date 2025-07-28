@@ -1261,6 +1261,31 @@ class TestSerialise:
         assert "unhandled symbol type or malformed entry" in msg
         os.remove(file)
 
+    def test_variable_conversion_failure(tmp_path):
+        model_data = {
+            "schema_version": "1.0",
+            "pybamm_version": pybamm.__version__,
+            "name": "BadVariableModel",
+            "rhs": [],
+            "algebraic": [],
+            "initial_conditions": [],
+            "boundary_conditions": [],
+            "events": [],
+            "variables": {"Bad Variable": {"bad": "structure"}},
+        }
+
+        file = "bad_variable_model.json"
+        with open(file, "w") as f:
+            json.dump(model_data, f)
+
+        with pytest.raises(ValueError) as e:
+            Serialise.load_custom_model(str(file))
+
+        msg = str(e.value).lower()
+        assert "failed to convert variable 'bad variable'" in msg
+        assert "unhandled symbol type or malformed entry" in msg
+        os.remove(file)
+
     def test_save_and_load_custom_model(self):
         model = pybamm.BaseModel(name="test_model")
         a = pybamm.Variable("a", domain="electrode")
