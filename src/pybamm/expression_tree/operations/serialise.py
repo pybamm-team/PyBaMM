@@ -279,6 +279,18 @@ class Serialise:
         >>> Serialise.save_custom_model(model, "basicdfn_model")
 
         """
+        required_attrs = [
+            "rhs",
+            "algebraic",
+            "initial_conditions",
+            "boundary_conditions",
+            "events",
+            "variables",
+        ]
+        missing = [attr for attr in required_attrs if not hasattr(model, attr)]
+        if missing:
+            raise AttributeError(f"Model is missing required sections: {missing}")
+
         try:
             SCHEMA_VERSION = "1.0"
             model_json = {
@@ -347,20 +359,18 @@ class Serialise:
             if filename is None:
                 safe_name = re.sub(r"[^\w\-_.]", "_", model.name or "unnamed_model")
                 timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-                filename = f"{safe_name}_{timestamp}"
+                filename = f"{safe_name}_{timestamp}.json"
             else:
-                # Clean provided filename
-                filename = re.sub(r'[<>:"/\\|?*\x00-\x1F]', "_", filename)
+                # Clean provided filename and ensure .json
+                base = re.sub(r'[<>:"/\\|?*\x00-\x1F]', "_", filename)
+                filename = base if base.endswith(".json") else f"{base}.json"
 
             try:
-                filename = (
-                    filename if filename.endswith(".json") else filename + ".json"
-                )
                 with open(filename, "w") as f:
                     json.dump(model_json, f, indent=2, default=Serialise._json_encoder)
             except OSError as file_err:
                 raise OSError(
-                    f"Failed to write model JSON to file '{filename}.json': {file_err}"
+                    f"Failed to write model JSON to file '{filename}': {file_err}"
                 ) from file_err
 
         except Exception as e:
@@ -413,6 +423,20 @@ class Serialise:
         except json.JSONDecodeError as e:
             raise ValueError(f"Invalid JSON in file '{filename}': {e!s}") from e
 
+        # check missing secitons in json
+        required = [
+            "name",
+            "rhs",
+            "initial_conditions",
+            "algebraic",
+            "boundary_conditions",
+            "events",
+            "variables",
+        ]
+        missing = [k for k in required if k not in model_data]
+        if missing:
+            raise KeyError(f"Missing required model sections: {missing}")
+
         schema_version = model_data.get("schema_version", SUPPORTED_SCHEMA_VERSION)
         if schema_version != SUPPORTED_SCHEMA_VERSION:
             raise ValueError(
@@ -422,10 +446,7 @@ class Serialise:
 
         model = battery_model if battery_model is not None else pybamm.BaseModel()
 
-        try:
-            model.name = model_data["name"]
-        except KeyError as e:
-            raise ValueError(f"Missing model 'name' in file: {filename}") from e
+        model.name = model_data["name"]
 
         model.schema_version = schema_version
 
@@ -438,78 +459,74 @@ class Serialise:
 
         symbol_map = {}
         for variable_json in all_variable_keys:
-            symbol = Serialise.convert_symbol_from_json(variable_json)
-            key = Serialise._create_symbol_key(variable_json)
-            symbol_map[key] = symbol
+            try:
+                symbol = Serialise.convert_symbol_from_json(variable_json)
+                key = Serialise._create_symbol_key(variable_json)
+                symbol_map[key] = symbol
+            except Exception as e:
+                raise ValueError(
+                    f"Failed to process symbol key for variable {variable_json}: {e!s}"
+                ) from e
 
-        try:
-            model.rhs = {
-                symbol_map[
-                    Serialise._create_symbol_key(lhs_json)
-                ]: Serialise.convert_symbol_from_json(rhs_expr_json)
-                for lhs_json, rhs_expr_json in model_data["rhs"]
-            }
-        except Exception as e:
-            raise ValueError(f"Failed to load model.rhs: {e}") from e
+        model.rhs = {}
+        for lhs_json, rhs_expr_json in model_data["rhs"]:
+            try:
+                lhs = symbol_map[Serialise._create_symbol_key(lhs_json)]
+                rhs = Serialise.convert_symbol_from_json(rhs_expr_json)
+                model.rhs[lhs] = rhs
+            except Exception as e:
+                raise ValueError(
+                    f"Failed to convert rhs entry for {lhs_json}: {e!s}"
+                ) from e
 
-        try:
-            model.algebraic = {
-                symbol_map[
-                    Serialise._create_symbol_key(lhs_json)
-                ]: Serialise.convert_symbol_from_json(algebraic_expr_json)
-                for lhs_json, algebraic_expr_json in model_data["algebraic"]
-            }
-        except Exception as e:
-            raise ValueError(f"Failed to load model.algebraic: {e}") from e
+        model.algebraic = {}
+        for lhs_json, algebraic_expr_json in model_data["algebraic"]:
+            try:
+                lhs = symbol_map[Serialise._create_symbol_key(lhs_json)]
+                rhs = Serialise.convert_symbol_from_json(algebraic_expr_json)
+                model.algebraic[lhs] = rhs
+            except Exception as e:
+                raise ValueError(
+                    f"Failed to convert algebraic entry for {lhs_json}: {e!s}"
+                ) from e
 
-        try:
-            model.initial_conditions = {
-                symbol_map[
-                    Serialise._create_symbol_key(lhs_json)
-                ]: Serialise.convert_symbol_from_json(initial_value_json)
-                for lhs_json, initial_value_json in model_data["initial_conditions"]
-            }
-        except Exception as e:
-            raise ValueError(f"Failed to load model.initial_conditions: {e}") from e
+        model.initial_conditions = {}
+        for lhs_json, initial_value_json in model_data["initial_conditions"]:
+            try:
+                lhs = symbol_map[Serialise._create_symbol_key(lhs_json)]
+                rhs = Serialise.convert_symbol_from_json(initial_value_json)
+                model.initial_conditions[lhs] = rhs
+            except Exception as e:
+                raise ValueError(
+                    f"Failed to convert initial condition entry for {lhs_json}: {e!s}"
+                ) from e
 
-        try:
-            model.boundary_conditions = {
-                symbol_map[Serialise._create_symbol_key(variable_json)]: {
-                    side: (
-                        Serialise.convert_symbol_from_json(expression_json),
-                        boundary_type,
-                    )
-                    for side, (expression_json, boundary_type) in condition_dict.items()
-                }
-                for variable_json, condition_dict in model_data["boundary_conditions"]
-            }
-        except Exception as e:
-            raise ValueError(f"Failed to load model.boundary_conditions: {e}") from e
-
-        try:
-            model.events = [
-                pybamm.Event(
-                    event_data["name"],
-                    Serialise.convert_symbol_from_json(event_data["expression"]),
-                    event_data["event_type"],
-                )
-                for event_data in model_data["events"]
-            ]
-        except Exception as e:
-            raise ValueError(f"Failed to load model events: {e}") from e
-
-        try:
-            model.variables = {
-                variable_name: symbol_map.get(
-                    Serialise._create_symbol_key(expression_json),
+        model.boundary_conditions = {
+            symbol_map[Serialise._create_symbol_key(variable_json)]: {
+                side: (
                     Serialise.convert_symbol_from_json(expression_json),
+                    boundary_type,
                 )
-                for variable_name, expression_json in model_data["variables"].items()
+                for side, (expression_json, boundary_type) in condition_dict.items()
             }
-        except Exception as e:
-            raise ValueError(
-                f"Failed to reconstruct symbol map from variable keys: {e}"
-            ) from e
+            for variable_json, condition_dict in model_data["boundary_conditions"]
+        }
+        model.events = [
+            pybamm.Event(
+                event_data["name"],
+                Serialise.convert_symbol_from_json(event_data["expression"]),
+                event_data["event_type"],
+            )
+            for event_data in model_data["events"]
+        ]
+
+        model.variables = {
+            variable_name: symbol_map.get(
+                Serialise._create_symbol_key(expression_json),
+                Serialise.convert_symbol_from_json(expression_json),
+            )
+            for variable_name, expression_json in model_data["variables"].items()
+        }
 
         return model
 
