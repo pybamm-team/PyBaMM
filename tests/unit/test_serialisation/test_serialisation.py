@@ -1032,7 +1032,7 @@ class TestSerialise:
             "algebraic": [],
             "initial_conditions": [],
         }
-        file = "model.json"
+        file = "model1.json"
 
         with open(file, "w") as f:
             json.dump(model_json, f)
@@ -1104,7 +1104,7 @@ class TestSerialise:
             "events": [],
             "variables": {},
         }
-        file = "model2.json"
+        file = "model3.json"
 
         with open(file, "w") as f:
             json.dump(model_json, f)
@@ -1139,7 +1139,7 @@ class TestSerialise:
             "events": [],
             "variables": {},
         }
-        file = "model2.json"
+        file = "model4.json"
 
         with open(file, "w") as f:
             json.dump(model_json, f)
@@ -1151,6 +1151,84 @@ class TestSerialise:
         assert "failed to convert initial condition" in msg
         assert "unhandled symbol type or malformed entry" in msg
         os.remove(file)
+
+    def test_invalid_boundary_conditions_raise_value_error(self):
+        good_variable = {
+            "type": "Variable",
+            "name": "x",
+            "domains": {},
+        }
+
+        # Malformed RHS: missing tuple structure
+        bad_condition_dict = {
+            "left": {
+                "this_is_not_valid": True
+            },  # Should be (expression_json, boundary_type)
+        }
+
+        model_json = {
+            "schema_version": "1.0",
+            "pybamm_version": pybamm.__version__,
+            "name": "BadBoundaryModel",
+            "rhs": [],
+            "algebraic": [],
+            "initial_conditions": [],
+            "boundary_conditions": [[good_variable, bad_condition_dict]],
+            "events": [],
+            "variables": {},
+            "all_variable_keys": [good_variable],
+        }
+
+        file = "model5.json"
+
+        with open(file, "w") as f:
+            json.dump(model_json, f)
+
+        # Expect the load to raise a ValueError
+        with pytest.raises(ValueError) as e:
+            Serialise.load_custom_model(str(file))
+
+        msg = str(e.value).lower()
+        assert "failed to convert boundary" in msg
+        assert " not enough values to unpack" in msg
+        os.remove(file)
+
+        # Valid variable
+        variable_json = {
+            "type": "Variable",
+            "name": "c",
+            "domains": {},
+        }
+
+        invalid_expression_json = "not_a_valid_expression"
+
+        condition_dict = {"left": (invalid_expression_json, "Dirichlet")}
+
+        model_data = {
+            "schema_version": "1.0",
+            "pybamm_version": pybamm.__version__,
+            "name": "BadBoundaryExpressionModel",
+            "rhs": [],
+            "algebraic": [],
+            "initial_conditions": [],
+            "boundary_conditions": [[variable_json, condition_dict]],
+            "events": [],
+            "variables": {},
+            "all_variable_keys": [variable_json],
+        }
+
+        model_file = "bad_boundary_expr.json"
+        with open(model_file, "w") as f:
+            json.dump(model_data, f)
+
+        with pytest.raises(ValueError) as excinfo:
+            Serialise.load_custom_model(str(model_file))
+
+        error_msg = str(excinfo.value)
+        assert "Failed to convert boundary expression for variable" in error_msg
+        assert "left" in error_msg
+        assert "not_a_valid_expression" in error_msg or "Invalid" in error_msg
+        os.remove(model_file)
 
     def test_save_and_load_custom_model(self):
         model = pybamm.BaseModel(name="test_model")

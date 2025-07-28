@@ -501,16 +501,25 @@ class Serialise:
                     f"Failed to convert initial condition entry for {lhs_json}: {e!s}"
                 ) from e
 
-        model.boundary_conditions = {
-            symbol_map[Serialise._create_symbol_key(variable_json)]: {
-                side: (
-                    Serialise.convert_symbol_from_json(expression_json),
-                    boundary_type,
-                )
-                for side, (expression_json, boundary_type) in condition_dict.items()
-            }
-            for variable_json, condition_dict in model_data["boundary_conditions"]
-        }
+        model.boundary_conditions = {}
+        for variable_json, condition_dict in model_data["boundary_conditions"]:
+            try:
+                variable = symbol_map[Serialise._create_symbol_key(variable_json)]
+                sides = {}
+                for side, (expression_json, boundary_type) in condition_dict.items():
+                    try:
+                        expr = Serialise.convert_symbol_from_json(expression_json)
+                        sides[side] = (expr, boundary_type)
+                    except Exception as e:
+                        raise ValueError(
+                            f"Failed to convert boundary expression for variable {variable_json} on side '{side}': {e!s}"
+                        ) from e
+                model.boundary_conditions[variable] = sides
+            except Exception as e:
+                raise ValueError(
+                    f"Failed to convert boundary condition entry for variable {variable_json}: {e!s}"
+                ) from e
+
         model.events = [
             pybamm.Event(
                 event_data["name"],
