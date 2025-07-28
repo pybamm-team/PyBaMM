@@ -1344,3 +1344,41 @@ class TestSerialise:
             sim.plot(show_plot=False)
 
             os.remove(f"{name}.json")
+
+    def test_models_and_params(self):
+        import numpy as np
+
+        import pybamm
+        from pybamm.expression_tree.operations.serialise import Serialise
+
+        param = pybamm.ParameterValues(
+            "Marquis2019"
+        )  # or another chemistry like "Chen2020"
+
+        Serialise.save_parameters(param, filename="my_params.json")
+
+        model = pybamm.lithium_ion.SPM()
+        Serialise.save_custom_model(model, "my_model.json")
+        model2 = Serialise.load_custom_model(
+            "my_model.json", battery_model=pybamm.lithium_ion.BaseModel()
+        )
+
+        # Load parameter values
+        param_dict = Serialise.load_parameters("my_params.json")
+        param3 = pybamm.ParameterValues(param_dict)
+
+        param3.update({"Electrode height [m]": "[input]"})
+
+        # Load the model
+        model2 = Serialise.load_custom_model(
+            "my_model.json", battery_model=pybamm.lithium_ion.BaseModel()
+        )
+
+        # ✅ Process the model AFTER update() so the necessary .input_* keys get created
+        param3.process_model(model2)
+
+        # Create simulation
+        t_eval = np.linspace(0, 60, 11)
+        inputs = {"Electrode height [m]": 0.2}
+        sim = pybamm.Simulation(model=model2, parameter_values=param3)
+        sim.solve(t_eval=t_eval, inputs=inputs)

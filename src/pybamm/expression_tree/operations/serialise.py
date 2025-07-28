@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib
+import inspect
 import json
 import numbers
 import re
@@ -547,6 +548,72 @@ class Serialise:
 
         return model
 
+    @staticmethod
+    def save_parameters(parameters: dict, filename=None):
+        """
+        Serializes a dictionary of parameters to a JSON file.
+        The values can be numbers, PyBaMM symbols, or callables.
+
+        Parameters
+        ----------
+        parameters : dict
+            A dictionary of parameter names and values.
+            Values can be numeric, PyBaMM symbols, or callables.
+
+        filename : str, optional
+            If given, saves the serialized parameters to this file.
+        """
+        parameter_values_dict = {}
+
+        for k, v in parameters.items():
+            if callable(v):
+                parameter_values_dict[k] = Serialise.convert_symbol_to_json(
+                    Serialise.convert_function_to_symbolic_expression(v, k)
+                )
+            else:
+                parameter_values_dict[k] = Serialise.convert_symbol_to_json(v)
+
+        if filename is not None:
+            with open(filename, "w") as f:
+                json.dump(parameter_values_dict, f, indent=4)
+
+    @staticmethod
+    def load_parameters(filename):
+        """
+        Load a JSON file of parameters (either from Serialise.save_parameters
+        or from a standard pybamm.ParameterValues.save), and return a
+        pybamm.ParameterValues object.
+
+        - If a value is a dict with a "type" key, deserialize it as a PyBaMM symbol.
+        - Otherwise (float, int, bool, str, list, dict-without-type), leave it as-is.
+        """
+        with open(filename) as f:
+            raw_dict = json.load(f)
+
+        deserialized = {}
+        for key, val in raw_dict.items():
+            if isinstance(val, dict) and "type" in val:
+                deserialized[key] = Serialise.convert_symbol_from_json(val)
+
+            elif isinstance(val, list):
+                deserialized[key] = val
+
+            elif isinstance(val, (numbers.Number | bool)):
+                deserialized[key] = val
+
+            elif isinstance(val, str):
+                deserialized[key] = val
+
+            elif isinstance(val, dict):
+                deserialized[key] = val
+
+            else:
+                raise ValueError(
+                    f"Unsupported parameter format for key '{key}': {val!r}"
+                )
+
+        return pybamm.ParameterValues(deserialized)
+
     # Helper functions
 
     def _get_pybamm_class(self, snippet: dict):
@@ -711,6 +778,48 @@ class Serialise:
         else:
             return d
 
+    def convert_function_to_symbolic_expression(func, name=None, param_map=None):
+        """
+        Converts a Python function to a PyBaMM symbolic expression, allowing
+        mapping of parameter names to actual PyBaMM parameter names.
+
+        Parameters
+        ----------
+        func : callable
+            The Python function to convert
+
+        name : str, optional
+            The name of the function to use in the symbolic expression. If not provided,
+            the function's own name is used.
+
+        param_map : dict, optional
+            Mapping from argument names in the function to PyBaMM parameter names.
+            For example: {"T": "Ambient temperature [K]"}
+
+        Returns
+        -------
+        pybamm.Symbol
+            The PyBaMM symbolic expression
+        """
+        sig = inspect.signature(func)
+        # func_name = name or func.__name__
+
+        param_names = list(sig.parameters.keys())
+
+        # Use mapped names if provided
+        sym_inputs = []
+        for param in param_names:
+            mapped_name = (
+                func.param_map[param]
+                if param_map and param in func.param_map
+                else param
+            )
+            sym_inputs.append(pybamm.Parameter(mapped_name))
+
+        sym_output = func(*sym_inputs)
+
+        return sym_output
+
     @staticmethod
     def convert_symbol_to_json(symbol):
         """
@@ -789,6 +898,12 @@ class Serialise:
                 "name": symbol.name,
                 "interpolator": symbol.interpolator,
                 "entries_string": symbol.entries_string,
+            }
+        elif isinstance(symbol, pybamm.InputParameter):  # <-- ADDED BLOCK
+            json_dict = {
+                "type": "InputParameter",
+                "name": symbol.name,
+                "domain": symbol.domain,
             }
 
         elif isinstance(symbol, pybamm.Variable):
@@ -911,6 +1026,7 @@ class Serialise:
         Scalar(0x21569ea463d7fb2, 42.0, children=[], domains={})
 
         """
+
         if isinstance(json_data, float | int | bool):
             return json_data
 
@@ -938,6 +1054,12 @@ class Serialise:
                 interpolator=json_data["interpolator"],
                 entries_string=json_data["entries_string"],
             )
+        elif symbol_type == "InputParameter":
+            name = json_data["name"]
+            domain = json_data.get("domain", {})
+
+            return pybamm.InputParameter(name, domain=domain)
+
         elif symbol_type == "FunctionParameter":
             diff_variable = json_data["diff_variable"]
             if diff_variable is not None:
