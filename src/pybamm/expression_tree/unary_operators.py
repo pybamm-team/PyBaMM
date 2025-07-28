@@ -203,6 +203,24 @@ class AbsoluteValue(UnaryOperator):
             return AbsoluteValue(child)
 
 
+class Transpose(UnaryOperator):
+    """
+    A node in the expression tree representing an `abs` operator.
+    """
+
+    def __init__(self, child):
+        """See :meth:`pybamm.UnaryOperator.__init__()`."""
+        super().__init__("transpose", child)
+
+    def _unary_evaluate(self, child):
+        """See :meth:`UnaryOperator._unary_evaluate()`."""
+        return child.T
+
+    def _evaluate_for_shape(self):
+        """See :meth:`pybamm.Symbol._evaluate_for_shape()`."""
+        return self.children[0].evaluate_for_shape().T
+
+
 class Sign(UnaryOperator):
     """
     A node in the expression tree representing a `sign` operator.
