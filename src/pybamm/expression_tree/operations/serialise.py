@@ -6,6 +6,7 @@ import numbers
 import re
 from datetime import datetime
 from enum import Enum
+from pathlib import Path
 
 import numpy as np
 
@@ -360,10 +361,18 @@ class Serialise:
                 safe_name = re.sub(r"[^\w\-_.]", "_", model.name or "unnamed_model")
                 timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
                 filename = f"{safe_name}_{timestamp}.json"
+                filename = Path(filename)
             else:
-                # Clean provided filename and ensure .json
-                base = re.sub(r'[<>:"/\\|?*\x00-\x1F]', "_", filename)
-                filename = base if base.endswith(".json") else f"{base}.json"
+                filename = Path(filename)
+
+                if not filename.name.endswith(".json"):
+                    raise ValueError(
+                        f"Filename '{filename}' must end with '.json' extension."
+                    )
+
+                # Sanitize only the filename, not the directory path
+                safe_stem = re.sub(r"[^\w\-_.]", "_", filename.stem)
+                filename = filename.with_name(f"{safe_stem}.json")
 
             try:
                 with open(filename, "w") as f:
@@ -716,8 +725,10 @@ class Serialise:
         """
         Recursively converts a PyBaMM symbolic expression into a JSON-serializable format.
 
-        Supports most PyBaMM symbol types, including scalars, variables, parameters,
-        operators, broadcasts, and interpolants.
+        Supports all major PyBaMM symbol types, including :class:`pybamm.Scalar`,
+        :class:`pybamm.Variable`, :class:`pybamm.Parameter`, :class:`pybamm.Operator`,
+        :class:`pybamm.FunctionParameter`, :class:`pybamm.Broadcast`, and
+        :class:`pybamm.Interpolant`.
 
         Parameters
         ----------

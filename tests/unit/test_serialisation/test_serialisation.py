@@ -600,6 +600,7 @@ class TestSerialise:
         new_solution.plot(show_plot=False)
 
     # testing custom models serilaisation and deserialisation
+
     def test_serialise_scalar(self):
         S = pybamm.Scalar(2.718)
         j = Serialise.convert_symbol_to_json(S)
@@ -909,7 +910,7 @@ class TestSerialise:
                 ValueError,
                 match="Failed to save custom model: Failed to write model JSON to file",
             ):
-                Serialise.save_custom_model(model, "readonly_test")
+                Serialise.save_custom_model(model, "readonly_test.json")
 
     def test_symbol_conversion_failure_raises_value_error(self):
         model = pybamm.BaseModel()
@@ -926,7 +927,7 @@ class TestSerialise:
             ):
                 Serialise.save_custom_model(model, "conversion_fail")
 
-    def test_unsupported_schema_version(self):
+    def test_unsupported_schema_version(self, tmp_path):
         unhandled_schema_json = {
             "schema_version": "9.9",  # Unsupported
             "pybamm_version": pybamm.__version__,
@@ -939,32 +940,28 @@ class TestSerialise:
             "variables": {},
         }
 
-        file = "model.json"
+        file_path = tmp_path / "model.json"
 
-        with open(file, "w") as f:
+        # Write JSON to the temporary file
+        with open(file_path, "w") as f:
             json.dump(unhandled_schema_json, f)
 
-        try:
-            with pytest.raises(ValueError, match="Unsupported schema version: 9.9"):
-                Serialise.load_custom_model(file, battery_model=pybamm.BaseModel())
-        finally:
-            os.remove(file)
+        # Assert that loading this model raises a ValueError
+        with pytest.raises(ValueError, match="Unsupported schema version: 9.9"):
+            Serialise.load_custom_model(file_path, battery_model=pybamm.BaseModel())
 
-    def test_model_has_correct_schema_version(self):
+    def test_model_has_correct_schema_version(self, tmp_path):
         model = BasicDFN()
-        filename = "test_scehma_version"
+        file_path = tmp_path / "test_schema_version.json"
 
-        Serialise.save_custom_model(model, filename=filename)
+        Serialise.save_custom_model(model, filename=str(file_path))
+
         loaded_model = Serialise.load_custom_model(
-            f"{filename}.json", battery_model=pybamm.lithium_ion.BaseModel()
+            str(file_path), battery_model=pybamm.lithium_ion.BaseModel()
         )
 
-        try:
-            assert hasattr(loaded_model, "schema_version")
-            assert loaded_model.schema_version == SUPPORTED_SCHEMA_VERSION
-        finally:
-            # Clean up
-            os.remove(f"{filename}.json")
+        assert hasattr(loaded_model, "schema_version")
+        assert loaded_model.schema_version == SUPPORTED_SCHEMA_VERSION
 
     def test_load_invalid_json(self):
         invalid_json = "{ invalid json"
@@ -978,7 +975,7 @@ class TestSerialise:
             Serialise.load_custom_model("non_existent_file.json")
         assert "Could not find file" in str(e.value)
 
-    def test_invalid_symbol_key_raises_value_error(self):
+    def test_invalid_symbol_key_raises_value_error(self, tmp_path):
         # Malformed LHS (invalid symbol type)
         bad_lhs = {"not_a_valid_symbol": 123}
         rhs_expr = {"type": "Scalar", "value": 1.0}
@@ -995,18 +992,14 @@ class TestSerialise:
             "variables": {},
         }
 
-        file = "model.json"
-
-        with open(file, "w") as f:
+        file_path = tmp_path / "model.json"
+        with open(file_path, "w") as f:
             json.dump(model_json, f)
 
-        with pytest.raises(ValueError) as e:
-            Serialise.load_custom_model(str(file))
-
-        msg = str(e.value).lower()
-        assert "failed to process symbol key for variable" in msg
-        assert "unhandled symbol type or malformed entry" in msg
-        os.remove(file)
+        with pytest.raises(
+            ValueError, match="(?i)failed to process symbol key.*unhandled symbol type"
+        ):
+            Serialise.load_custom_model(str(file_path))
 
     def test_save_raises_for_missing_sections(self):
         class DummyModelMissing:
@@ -1024,7 +1017,7 @@ class TestSerialise:
             section in msg for section in ["initial_conditions", "events", "variables"]
         )
 
-    def test_model_with_missing_json_sections(self):
+    def test_model_with_missing_json_sections(self, tmp_path):
         model_json = {
             "schema_version": "1.0",
             "pybamm_version": pybamm.__version__,
@@ -1032,20 +1025,16 @@ class TestSerialise:
             "algebraic": [],
             "initial_conditions": [],
         }
-        file = "model1.json"
 
-        with open(file, "w") as f:
+        file_path = tmp_path / "model1.json"
+
+        with open(file_path, "w") as f:
             json.dump(model_json, f)
 
-        with pytest.raises(KeyError) as e:
-            Serialise.load_custom_model(str(file))
-
-        msg = str(e.value).lower()
-        for missing_section in ["rhs", "boundary_conditions", "events", "variables"]:
-            assert missing_section in msg, (
-                f"Error message should mention missing '{missing_section}'"
-            )
-        os.remove(file)
+        with pytest.raises(
+            KeyError, match="(?i)rhs.*boundary_conditions.*events.*variables"
+        ):
+            Serialise.load_custom_model(str(file_path))
 
     def test_invalid_rhs_entry_raises_value_error(self):
         # Build JSON with all required keys, but rhs has a bad entry
@@ -1298,7 +1287,7 @@ class TestSerialise:
         model.variables = {"a": a, "b": b}
 
         # save model
-        Serialise.save_custom_model(model, filename="test_model")
+        Serialise.save_custom_model(model, filename="test_model.json")
 
         # check json exists
         assert os.path.exists("test_model.json")
@@ -1328,7 +1317,7 @@ class TestSerialise:
             pybamm.lithium_ion.SPM(),
             pybamm.lithium_ion.DFN(),
         ]
-        filenames = ["basic_spm", "basic_dfn", "spm", "dfn"]
+        filenames = ["basic_spm.json", "basic_dfn.json", "spm.json", "dfn.json"]
 
         for model, name in zip(models, filenames, strict=True):
             # Save the model
@@ -1336,11 +1325,9 @@ class TestSerialise:
 
             # Load the model
             loaded_model = Serialise.load_custom_model(
-                f"{name}.json", battery_model=pybamm.lithium_ion.BaseModel()
+                name, battery_model=pybamm.lithium_ion.BaseModel()
             )
 
             sim = pybamm.Simulation(loaded_model)
             sim.solve([0, 3600])
             sim.plot(show_plot=False)
-
-            os.remove(f"{name}.json")
