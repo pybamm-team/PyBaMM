@@ -293,10 +293,7 @@ class Serialise:
             raise AttributeError(f"Model is missing required sections: {missing}")
 
         try:
-            SCHEMA_VERSION = "1.0"
-            model_json = {
-                "pybamm_version": pybamm.__version__,
-                "schema_version": SCHEMA_VERSION,
+            model_content = {
                 "name": getattr(model, "name", "unnamed_model"),
                 "options": getattr(model, "options", {}),
                 "rhs": [
@@ -357,8 +354,18 @@ class Serialise:
                 },
             }
 
+            # Final JSON structure with schema and version info at top level
+            SCHEMA_VERSION = "1.0"
+            model_json = {
+                "schema_version": SCHEMA_VERSION,
+                "pybamm_version": pybamm.__version__,
+                "model": model_content,
+            }
+
             if filename is None:
-                safe_name = re.sub(r"[^\w\-_.]", "_", model.name or "unnamed_model")
+                safe_name = re.sub(
+                    r"[^\w\-_.]", "_", model_content["name"] or "unnamed_model"
+                )
                 timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
                 filename = f"{safe_name}_{timestamp}.json"
                 filename = Path(filename)
@@ -426,13 +433,24 @@ class Serialise:
         """
         try:
             with open(filename) as file:
-                model_data = json.load(file)
+                data = json.load(file)
         except FileNotFoundError as err:
             raise FileNotFoundError(f"Could not find file: {filename}") from err
         except json.JSONDecodeError as e:
             raise ValueError(f"Invalid JSON in file '{filename}': {e!s}") from e
 
-        # check missing secitons in json
+        # Validate outer structure
+        schema_version = data.get("schema_version", SUPPORTED_SCHEMA_VERSION)
+        if schema_version != SUPPORTED_SCHEMA_VERSION:
+            raise ValueError(
+                f"Unsupported schema version: {schema_version}. "
+                f"Expected: {SUPPORTED_SCHEMA_VERSION}"
+            )
+
+        model_data = data.get("model")
+        if model_data is None:
+            raise KeyError("Missing 'model' section in JSON file.")
+
         required = [
             "name",
             "rhs",
@@ -446,17 +464,8 @@ class Serialise:
         if missing:
             raise KeyError(f"Missing required model sections: {missing}")
 
-        schema_version = model_data.get("schema_version", SUPPORTED_SCHEMA_VERSION)
-        if schema_version != SUPPORTED_SCHEMA_VERSION:
-            raise ValueError(
-                f"Unsupported schema version: {schema_version}. "
-                f"Expected: {SUPPORTED_SCHEMA_VERSION}"
-            )
-
         model = battery_model if battery_model is not None else pybamm.BaseModel()
-
         model.name = model_data["name"]
-
         model.schema_version = schema_version
 
         all_variable_keys = (

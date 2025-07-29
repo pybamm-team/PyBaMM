@@ -983,13 +983,15 @@ class TestSerialise:
         model_json = {
             "schema_version": "1.0",
             "pybamm_version": pybamm.__version__,
-            "name": "BadSymbolKeyModel",
-            "rhs": [[bad_lhs, rhs_expr]],
-            "algebraic": [],
-            "initial_conditions": [],
-            "boundary_conditions": [],
-            "events": [],
-            "variables": {},
+            "model": {
+                "name": "BadSymbolKeyModel",
+                "rhs": [[bad_lhs, rhs_expr]],
+                "algebraic": [],
+                "initial_conditions": [],
+                "boundary_conditions": [],
+                "events": [],
+                "variables": {},
+            },
         }
 
         file_path = tmp_path / "model.json"
@@ -997,7 +999,7 @@ class TestSerialise:
             json.dump(model_json, f)
 
         with pytest.raises(
-            ValueError, match="(?i)failed to process symbol key.*unhandled symbol type"
+            ValueError, match=r"(?i)failed to process symbol key.*unhandled symbol type"
         ):
             Serialise.load_custom_model(str(file_path))
 
@@ -1021,9 +1023,11 @@ class TestSerialise:
         model_json = {
             "schema_version": "1.0",
             "pybamm_version": pybamm.__version__,
-            "name": "BadModel",
-            "algebraic": [],
-            "initial_conditions": [],
+            "model": {
+                "name": "BadModel",
+                "algebraic": [],
+                "initial_conditions": [],
+            },
         }
 
         file_path = tmp_path / "model1.json"
@@ -1032,11 +1036,44 @@ class TestSerialise:
             json.dump(model_json, f)
 
         with pytest.raises(
-            KeyError, match="(?i)rhs.*boundary_conditions.*events.*variables"
+            KeyError, match=r"(?i)rhs.*boundary_conditions.*events.*variables"
         ):
             Serialise.load_custom_model(str(file_path))
 
-    def test_invalid_rhs_entry_raises_value_error(self):
+    def test_invalid_rhs_entry_raises_value_error(self, tmp_path):
+        good_lhs = {
+            "type": "Variable",
+            "name": "x",
+            "domains": {},
+        }
+        bad_rhs = {"this_will_fail": True}
+
+        model_json = {
+            "schema_version": "1.0",
+            "pybamm_version": pybamm.__version__,
+            "model": {
+                "name": "BadModel",
+                "rhs": [[good_lhs, bad_rhs]],
+                "algebraic": [],
+                "initial_conditions": [],
+                "boundary_conditions": [],
+                "events": [],
+                "variables": {},
+            },
+        }
+
+        file_path = tmp_path / "model2.json"
+
+        with open(file_path, "w") as f:
+            json.dump(model_json, f)
+
+        with pytest.raises(
+            ValueError,
+            match=r"(?i)failed to convert rhs.*unhandled symbol type or malformed entry",
+        ):
+            Serialise.load_custom_model(str(file_path))
+
+    def test_invalid_algebraic_entry_raises_value_error(self, tmp_path):
         # Build JSON with all required keys, but rhs has a bad entry
         good_lhs = {
             "type": "Variable",
@@ -1049,29 +1086,29 @@ class TestSerialise:
         model_json = {
             "schema_version": "1.0",
             "pybamm_version": pybamm.__version__,
-            "name": "BadModel",
-            # One valid pair in RHS
-            "rhs": [[good_lhs, bad_rhs]],
-            "algebraic": [],
-            "initial_conditions": [],
-            "boundary_conditions": [],
-            "events": [],
-            "variables": {},
+            "model": {
+                "name": "BadModel",
+                # One valid pair in RHS
+                "rhs": [],
+                "algebraic": [[good_lhs, bad_rhs]],
+                "initial_conditions": [],
+                "boundary_conditions": [],
+                "events": [],
+                "variables": {},
+            },
         }
-        file = "model2.json"
+        file_path = tmp_path / "model3.json"
 
-        with open(file, "w") as f:
+        with open(file_path, "w") as f:
             json.dump(model_json, f)
 
-        with pytest.raises(ValueError) as e:
-            Serialise.load_custom_model(str(file))
+        with pytest.raises(
+            ValueError,
+            match=r"(?i)failed to convert algebraic.*unhandled symbol type or malformed entry",
+        ):
+            Serialise.load_custom_model(str(file_path))
 
-        msg = str(e.value).lower()
-        assert "failed to convert rhs" in msg
-        assert "unhandled symbol type or malformed entry" in msg
-        os.remove(file)
-
-    def test_invalid_algebraic_entry_raises_value_error(self):
+    def test_invalid_initial_conditions_entry_raises_value_error(self, tmp_path):
         # Build JSON with all required keys, but rhs has a bad entry
         good_lhs = {
             "type": "Variable",
@@ -1084,64 +1121,29 @@ class TestSerialise:
         model_json = {
             "schema_version": "1.0",
             "pybamm_version": pybamm.__version__,
-            "name": "BadModel",
-            # One valid pair in RHS
-            "rhs": [],
-            "algebraic": [[good_lhs, bad_rhs]],
-            "initial_conditions": [],
-            "boundary_conditions": [],
-            "events": [],
-            "variables": {},
+            "model": {
+                "name": "BadModel",
+                # One valid pair in RHS
+                "rhs": [],
+                "algebraic": [],
+                "initial_conditions": [[good_lhs, bad_rhs]],
+                "boundary_conditions": [],
+                "events": [],
+                "variables": {},
+            },
         }
-        file = "model3.json"
+        file_path = tmp_path / "model4.json"
 
-        with open(file, "w") as f:
+        with open(file_path, "w") as f:
             json.dump(model_json, f)
 
-        with pytest.raises(ValueError) as e:
-            Serialise.load_custom_model(str(file))
+        with pytest.raises(
+            ValueError,
+            match=r"(?i)failed to convert initial condition.*unhandled symbol type or malformed entry",
+        ):
+            Serialise.load_custom_model(str(file_path))
 
-        msg = str(e.value).lower()
-        assert "failed to convert algebraic" in msg
-        assert "unhandled symbol type or malformed entry" in msg
-        os.remove(file)
-
-    def test_invalid_initial_conditions_entry_raises_value_error(self):
-        # Build JSON with all required keys, but rhs has a bad entry
-        good_lhs = {
-            "type": "Variable",
-            "name": "x",
-            "domains": {},
-        }
-        bad_rhs = {"this_will_fail": True}
-
-        # 2) Build JSON with all required keys
-        model_json = {
-            "schema_version": "1.0",
-            "pybamm_version": pybamm.__version__,
-            "name": "BadModel",
-            # One valid pair in RHS
-            "rhs": [],
-            "algebraic": [],
-            "initial_conditions": [[good_lhs, bad_rhs]],
-            "boundary_conditions": [],
-            "events": [],
-            "variables": {},
-        }
-        file = "model4.json"
-
-        with open(file, "w") as f:
-            json.dump(model_json, f)
-
-        with pytest.raises(ValueError) as e:
-            Serialise.load_custom_model(str(file))
-
-        msg = str(e.value).lower()
-        assert "failed to convert initial condition" in msg
-        assert "unhandled symbol type or malformed entry" in msg
-        os.remove(file)
-
-    def test_invalid_boundary_conditions_raise_value_error(self):
+    def test_invalid_boundary_conditions_raise_value_error(self, tmp_path):
         good_variable = {
             "type": "Variable",
             "name": "x",
@@ -1158,29 +1160,28 @@ class TestSerialise:
         model_json = {
             "schema_version": "1.0",
             "pybamm_version": pybamm.__version__,
-            "name": "BadBoundaryModel",
-            "rhs": [],
-            "algebraic": [],
-            "initial_conditions": [],
-            "boundary_conditions": [[good_variable, bad_condition_dict]],
-            "events": [],
-            "variables": {},
-            "all_variable_keys": [good_variable],
+            "model": {
+                "name": "BadBoundaryModel",
+                "rhs": [],
+                "algebraic": [],
+                "initial_conditions": [],
+                "boundary_conditions": [[good_variable, bad_condition_dict]],
+                "events": [],
+                "variables": {},
+                "all_variable_keys": [good_variable],
+            },
         }
 
-        file = "model5.json"
+        file_path = tmp_path / "model5.json"
 
-        with open(file, "w") as f:
+        with open(file_path, "w") as f:
             json.dump(model_json, f)
 
-        # Expect the load to raise a ValueError
-        with pytest.raises(ValueError) as e:
-            Serialise.load_custom_model(str(file))
-
-        msg = str(e.value).lower()
-        assert "failed to convert boundary" in msg
-        assert " not enough values to unpack" in msg
-        os.remove(file)
+        with pytest.raises(
+            ValueError,
+            match=r"(?i)failed to convert boundary.*not enough values to unpack",
+        ):
+            Serialise.load_custom_model(str(file_path))
 
         # Valid variable
         variable_json = {
@@ -1196,86 +1197,85 @@ class TestSerialise:
         model_data = {
             "schema_version": "1.0",
             "pybamm_version": pybamm.__version__,
-            "name": "BadBoundaryExpressionModel",
-            "rhs": [],
-            "algebraic": [],
-            "initial_conditions": [],
-            "boundary_conditions": [[variable_json, condition_dict]],
-            "events": [],
-            "variables": {},
-            "all_variable_keys": [variable_json],
+            "model": {
+                "name": "BadBoundaryExpressionModel",
+                "rhs": [],
+                "algebraic": [],
+                "initial_conditions": [],
+                "boundary_conditions": [[variable_json, condition_dict]],
+                "events": [],
+                "variables": {},
+                "all_variable_keys": [variable_json],
+            },
         }
 
-        model_file = "bad_boundary_expr.json"
+        model_file = tmp_path / "bad_boundary_expr.json"
         with open(model_file, "w") as f:
             json.dump(model_data, f)
 
-        with pytest.raises(ValueError) as e:
+        with pytest.raises(
+            ValueError,
+            match=r"(?i)failed to convert boundary expression.*left.*not_a_valid_expression",
+        ):
             Serialise.load_custom_model(str(model_file))
 
-        msg = str(e.value)
-        assert "Failed to convert boundary expression for variable" in msg
-        assert "left" in msg
-        assert "not_a_valid_expression" in msg or "Invalid" in msg
-        os.remove(model_file)
-
-    def test_event_conversion_failure(self):
+    def test_event_conversion_failure(self, tmp_path):
         model_data = {
             "schema_version": "1.0",
             "pybamm_version": pybamm.__version__,
-            "name": "BadEventModel",
-            "rhs": [],
-            "algebraic": [],
-            "initial_conditions": [],
-            "boundary_conditions": [],
-            "variables": {},
-            "events": [
-                {
-                    "name": "Bad Event",
-                    "expression": {"bad": "structure"},  # malformed
-                    "event_type": "termination",
-                }
-            ],
+            "model": {
+                "name": "BadEventModel",
+                "rhs": [],
+                "algebraic": [],
+                "initial_conditions": [],
+                "boundary_conditions": [],
+                "variables": {},
+                "events": [
+                    {
+                        "name": "Bad Event",
+                        "expression": {"bad": "structure"},  # malformed
+                        "event_type": "termination",
+                    }
+                ],
+            },
         }
 
-        file = "bad_event_model.json"
+        file = tmp_path / "bad_event_model.json"
         with open(file, "w") as f:
             json.dump(model_data, f)
 
-        with pytest.raises(ValueError) as e:
+        with pytest.raises(
+            ValueError,
+            match=r"(?i)failed to convert event 'bad event'.*unhandled symbol type or malformed entry",
+        ):
             Serialise.load_custom_model(str(file))
 
-        msg = str(e.value).lower()
-        assert "failed to convert event 'bad event'" in msg
-        assert "unhandled symbol type or malformed entry" in msg
-        os.remove(file)
-
-    def test_variable_conversion_failure(tmp_path):
+    def test_variable_conversion_failure(self, tmp_path):
         model_data = {
             "schema_version": "1.0",
             "pybamm_version": pybamm.__version__,
-            "name": "BadVariableModel",
-            "rhs": [],
-            "algebraic": [],
-            "initial_conditions": [],
-            "boundary_conditions": [],
-            "events": [],
-            "variables": {"Bad Variable": {"bad": "structure"}},
+            "model": {
+                "name": "BadVariableModel",
+                "rhs": [],
+                "algebraic": [],
+                "initial_conditions": [],
+                "boundary_conditions": [],
+                "events": [],
+                "variables": {"Bad Variable": {"bad": "structure"}},
+            },
         }
 
-        file = "bad_variable_model.json"
+        file = tmp_path / "bad_variable_model.json"
         with open(file, "w") as f:
             json.dump(model_data, f)
 
-        with pytest.raises(ValueError) as e:
+        with pytest.raises(
+            ValueError,
+            match=r"(?i)failed to convert variable 'bad variable'.*unhandled symbol type or malformed entry",
+        ):
             Serialise.load_custom_model(str(file))
 
-        msg = str(e.value).lower()
-        assert "failed to convert variable 'bad variable'" in msg
-        assert "unhandled symbol type or malformed entry" in msg
-        os.remove(file)
-
-    def test_save_and_load_custom_model(self):
+    def test_save_and_load_custom_model(self, tmp_path):
         model = pybamm.BaseModel(name="test_model")
         a = pybamm.Variable("a", domain="electrode")
         b = pybamm.Variable("b", domain="electrode")
@@ -1286,31 +1286,26 @@ class TestSerialise:
         model.events = [pybamm.Event("terminal", pybamm.Scalar(1) - b, "TERMINATION")]
         model.variables = {"a": a, "b": b}
 
-        # save model
-        Serialise.save_custom_model(model, filename="test_model.json")
+        # Save model to specified filename
+        file_path = tmp_path / "test_model.json"
+        Serialise.save_custom_model(model, filename=str(file_path))
+        assert file_path.exists()
 
-        # check json exists
-        assert os.path.exists("test_model.json")
-
-        # saving with defualt filename
+        # Save using default filename logic
+        os.chdir(tmp_path)
         Serialise().save_custom_model(model)
         pattern = r"test_model_\d{4}_\d{2}_\d{2}_\d{2}_\d{2}_\d{2}\.json"
-        matched = [f for f in os.listdir(".") if re.fullmatch(pattern, f)]
+        matched = [f for f in os.listdir(tmp_path) if re.fullmatch(pattern, f)]
         assert matched
 
-        for f in matched:
-            os.remove(f)
-
-        # load model
-        loaded_model = Serialise.load_custom_model("test_model.json")
-        os.remove("test_model.json")
-
+        # Load and test model
+        loaded_model = Serialise.load_custom_model(str(file_path))
         assert loaded_model.name == "test_model"
         assert isinstance(loaded_model.rhs, dict)
         assert next(iter(loaded_model.rhs.keys())).name == "a"
         assert next(iter(loaded_model.rhs.values())).name == "b"
 
-    def test_plotting_serialised_models(self):
+    def test_plotting_serialised_models(self, tmp_path):
         models = [
             BasicSPM(),
             BasicDFN(),
@@ -1318,14 +1313,15 @@ class TestSerialise:
             pybamm.lithium_ion.DFN(),
         ]
         filenames = ["basic_spm.json", "basic_dfn.json", "spm.json", "dfn.json"]
+        file_paths = [tmp_path / name for name in filenames]
 
-        for model, name in zip(models, filenames, strict=True):
+        for model, path in zip(models, file_paths, strict=True):
             # Save the model
-            Serialise.save_custom_model(model, filename=name)
+            Serialise.save_custom_model(model, filename=str(path))
 
             # Load the model
             loaded_model = Serialise.load_custom_model(
-                name, battery_model=pybamm.lithium_ion.BaseModel()
+                str(path), battery_model=pybamm.lithium_ion.BaseModel()
             )
 
             sim = pybamm.Simulation(loaded_model)
