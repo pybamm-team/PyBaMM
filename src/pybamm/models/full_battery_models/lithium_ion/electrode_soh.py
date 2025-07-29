@@ -338,12 +338,89 @@ class ElectrodeSOHSolver:
     def _get_lims_ocp(self):
         parameter_values = self.parameter_values
 
+        # Parse particle phases option
+        particle_phases = self.options.get("particle phases", "1")
+        if isinstance(particle_phases, str):
+            # Same number of phases for both electrodes
+            neg_phases = int(particle_phases)
+            pos_phases = int(particle_phases)
+        else:
+            # Tuple format: (negative_phases, positive_phases)
+            neg_phases = int(particle_phases[0])
+            pos_phases = int(particle_phases[1])
+
         # Check whether each electrode OCP is a function (False) or data (True)
         # Set to false for MSMR models
         if self.options["open-circuit potential"] == "MSMR":
-            OCPp_data = False
-            OCPn_data = False
+            # For MSMR, return simplified structure for backward compatibility
+            return (1e-6, 1 - 1e-6, 1e-6, 1 - 1e-6)
+        elif particle_phases not in ["1", ("1", "1")]:
+            # Handle composite electrodes
+            result = {"negative": {}, "positive": {}}
+
+            # Process negative electrode phases
+            for phase_idx in range(neg_phases):
+                phase_name = "primary" if phase_idx == 0 else "secondary"
+                if neg_phases == 1:
+                    ocp_key = "Negative electrode OCP [V]"
+                else:
+                    phase_prefix = "Primary: " if phase_idx == 0 else "Secondary: "
+                    ocp_key = f"{phase_prefix}Negative electrode OCP [V]"
+
+                try:
+                    OCPn_data = isinstance(parameter_values[ocp_key], tuple)
+                    if OCPn_data:
+                        Un_sto = parameter_values[ocp_key][1][0]
+                        x0_min = max(np.min(Un_sto), 0) + 1e-6
+                        x100_max = min(np.max(Un_sto), 1) - 1e-6
+                    else:
+                        x0_min = 1e-6
+                        x100_max = 1 - 1e-6
+
+                    result["negative"][phase_name] = {
+                        "x0_min": x0_min,
+                        "x100_max": x100_max,
+                    }
+                except KeyError:
+                    # Fallback if parameter not found
+                    result["negative"][phase_name] = {
+                        "x0_min": 1e-6,
+                        "x100_max": 1 - 1e-6,
+                    }
+
+            # Process positive electrode phases
+            for phase_idx in range(pos_phases):
+                phase_name = "primary" if phase_idx == 0 else "secondary"
+                if pos_phases == 1:
+                    ocp_key = "Positive electrode OCP [V]"
+                else:
+                    phase_prefix = "Primary: " if phase_idx == 0 else "Secondary: "
+                    ocp_key = f"{phase_prefix}Positive electrode OCP [V]"
+
+                try:
+                    OCPp_data = isinstance(parameter_values[ocp_key], tuple)
+                    if OCPp_data:
+                        Up_sto = parameter_values[ocp_key][1][0]
+                        y100_min = max(np.min(Up_sto), 0) + 1e-6
+                        y0_max = min(np.max(Up_sto), 1) - 1e-6
+                    else:
+                        y100_min = 1e-6
+                        y0_max = 1 - 1e-6
+
+                    result["positive"][phase_name] = {
+                        "y100_min": y100_min,
+                        "y0_max": y0_max,
+                    }
+                except KeyError:
+                    # Fallback if parameter not found
+                    result["positive"][phase_name] = {
+                        "y100_min": 1e-6,
+                        "y0_max": 1 - 1e-6,
+                    }
+
+            return result
         else:
+            # Single phase electrodes - maintain backward compatibility
             OCPp_data = isinstance(
                 parameter_values["Positive electrode OCP [V]"], tuple
             )
@@ -351,23 +428,23 @@ class ElectrodeSOHSolver:
                 parameter_values["Negative electrode OCP [V]"], tuple
             )
 
-        # Calculate stoich limits for the open-circuit potentials
-        if OCPp_data:
-            Up_sto = parameter_values["Positive electrode OCP [V]"][1][0]
-            y100_min = max(np.min(Up_sto), 0) + 1e-6
-            y0_max = min(np.max(Up_sto), 1) - 1e-6
-        else:
-            y100_min = 1e-6
-            y0_max = 1 - 1e-6
+            # Calculate stoich limits for the open-circuit potentials
+            if OCPp_data:
+                Up_sto = parameter_values["Positive electrode OCP [V]"][1][0]
+                y100_min = max(np.min(Up_sto), 0) + 1e-6
+                y0_max = min(np.max(Up_sto), 1) - 1e-6
+            else:
+                y100_min = 1e-6
+                y0_max = 1 - 1e-6
 
-        if OCPn_data:
-            Un_sto = parameter_values["Negative electrode OCP [V]"][1][0]
-            x0_min = max(np.min(Un_sto), 0) + 1e-6
-            x100_max = min(np.max(Un_sto), 1) - 1e-6
-        else:
-            x0_min = 1e-6
-            x100_max = 1 - 1e-6
-        return (x0_min, x100_max, y100_min, y0_max)
+            if OCPn_data:
+                Un_sto = parameter_values["Negative electrode OCP [V]"][1][0]
+                x0_min = max(np.min(Un_sto), 0) + 1e-6
+                x100_max = min(np.max(Un_sto), 1) - 1e-6
+            else:
+                x0_min = 1e-6
+                x100_max = 1 - 1e-6
+            return (x0_min, x100_max, y100_min, y0_max)
 
     def __get_electrode_soh_sims_full(self):
         if self.options["open-circuit potential"] == "MSMR":
@@ -552,7 +629,14 @@ class ElectrodeSOHSolver:
         Q_p = inputs["Q_p"]
         Q_n = inputs["Q_n"]
 
-        x0_min, x100_max, y100_min, y0_max = self.lims_ocp
+        # Handle both legacy tuple format and new dictionary format for composite electrodes
+        if isinstance(self.lims_ocp, dict):
+            raise NotImplementedError(
+                "Composite electrode support is not implemented yet"
+            )
+        else:
+            # Legacy tuple format for single-phase electrodes
+            x0_min, x100_max, y100_min, y0_max = self.lims_ocp
 
         if self.known_value == "cyclable lithium capacity":
             Q_Li = inputs["Q_Li"]
