@@ -863,9 +863,7 @@ class ElectrodeSOHSolver:
             )
             all_inputs = {**inputs, "Q_n": Q_n, "Q_p": Q_p, "Q_Li": Q_Li}
         elif self.known_value == "cell capacity":
-            Q = parameter_values.evaluate(
-                self.param.Q / self.param.n_electrodes_parallel, inputs=inputs
-            )
+            Q = parameter_values.evaluate(self.param.Q, inputs=inputs)
             all_inputs = {**inputs, "Q_n": Q_n, "Q_p": Q_p, "Q": Q}
         # Solve the model and check outputs
         sol = self.solve(all_inputs)
@@ -934,9 +932,7 @@ class ElectrodeSOHSolver:
             )
             all_inputs = {**inputs, "Q_n": Q_n, "Q_p": Q_p, "Q_Li": Q_Li}
         elif self.known_value == "cell capacity":
-            Q = parameter_values.evaluate(
-                self.param.Q / self.param.n_electrodes_parallel, inputs=inputs
-            )
+            Q = parameter_values.evaluate(self.param.Q, inputs=inputs)
             all_inputs = {**inputs, "Q_n": Q_n, "Q_p": Q_p, "Q": Q}
         # Solve the model and check outputs
         sol = self.solve(all_inputs)
