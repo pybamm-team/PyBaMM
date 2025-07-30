@@ -66,7 +66,7 @@ class LeadAcidParameters(BaseParameters):
         self.current_density_with_time = self.elec.current_density_with_time
         self.Q = self.elec.Q
         self.R_contact = self.elec.R_contact
-        self.n_electrodes_parallel = self.elec.n_electrodes_parallel
+        self.n_electrodes_parallel = self.geo.n_electrodes_parallel
         self.n_cells = self.elec.n_cells
         self.voltage_low_cut = self.elec.voltage_low_cut
         self.voltage_high_cut = self.elec.voltage_high_cut
@@ -153,7 +153,7 @@ class LeadAcidParameters(BaseParameters):
             / (self.p.prim.s_plus_S - self.n.prim.s_plus_S)
         )
         self.Q_e_max = self.Q_e_max * self.c_e_init * self.F
-        self.capacity = self.Q_e_max * self.n_electrodes_parallel * self.A_cc * self.L_x
+        self.capacity = self.Q_e_max * self.A_cc * self.L_x
 
         # Initial conditions
         self.q_init = pybamm.Parameter("Initial State of Charge")
@@ -174,7 +174,7 @@ class LeadAcidParameters(BaseParameters):
 
         # Some scales
         self.thermal_voltage = self.R * self.T_ref / self.F
-        self.I_typ = self.Q / (self.A_cc * self.n_electrodes_parallel)
+        self.I_typ = self.Q / self.A_cc
         self.a_j_scale = self.I_typ / self.n.L
 
     def t_plus(self, c_e, T):

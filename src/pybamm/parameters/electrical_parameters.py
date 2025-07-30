@@ -23,9 +23,6 @@ class ElectricalParameters(BaseParameters):
 
         self.Q = pybamm.Parameter("Nominal cell capacity [A.h]")
         self.R_contact = pybamm.Parameter("Contact resistance [Ohm]")
-        self.n_electrodes_parallel = pybamm.Parameter(
-            "Number of electrodes connected in parallel to make a cell"
-        )
         self.n_cells = pybamm.Parameter(
             "Number of cells connected in series to make a battery"
         )
@@ -37,9 +34,7 @@ class ElectricalParameters(BaseParameters):
         self.current_with_time = pybamm.FunctionParameter(
             "Current function [A]", {"Time [s]": pybamm.t}
         )
-        self.current_density_with_time = self.current_with_time / (
-            self.n_electrodes_parallel * self.geo.A_cc
-        )
+        self.current_density_with_time = self.current_with_time / (self.geo.A_cc)
 
 
 electrical_parameters = ElectricalParameters()
