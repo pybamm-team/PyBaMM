@@ -148,19 +148,13 @@ class BaseStep:
                 pybamm.t - pybamm.InputParameter("start time"),
                 name="Drive Cycle",
             )
-            if period is None:
-                # Infer the period from the drive cycle
-                self.period = _convert_time_to_seconds(period)
-            else:
-                self.period = _convert_time_to_seconds(period)
 
         elif self.is_python_function:
             t = pybamm.t - pybamm.InputParameter("start time")
             self.value = value(t)
-            self.period = _convert_time_to_seconds(period)
         else:
             self.value = value
-            self.period = _convert_time_to_seconds(period)
+        self.period = _convert_time_to_seconds(period)
 
         self.repr_args, self.hash_args = self.record_tags(
             value,
