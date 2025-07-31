@@ -87,9 +87,9 @@ class BaseStep:
         self.skip_ok = skip_ok
 
         # Check if drive cycle
-        is_drive_cycle = isinstance(value, np.ndarray)
-        is_python_function = callable(value)
-        if is_drive_cycle:
+        self.is_drive_cycle = isinstance(value, np.ndarray)
+        self.is_python_function = callable(value)
+        if self.is_drive_cycle:
             if value.ndim != 2 or value.shape[1] != 2:
                 raise ValueError(
                     "Drive cycle must be a 2-column array with time in the first column"
@@ -99,7 +99,7 @@ class BaseStep:
             t = value[:, 0]
             if t[0] != 0:
                 raise ValueError("Drive cycle must start at t=0")
-        elif is_python_function:
+        elif self.is_python_function:
             t0 = 0
             # Check if the function is only a function of t
             try:
@@ -117,15 +117,16 @@ class BaseStep:
 
         # Record whether the step uses the default duration
         # This will be used by the experiment to check whether the step is feasible
-        self.uses_default_duration = duration is None
+        self.uses_default_duration = duration is None and not self.is_drive_cycle
+
         # Set duration
-        if self.uses_default_duration:
+        if duration is None:
             duration = self.default_duration(value)
         self.duration = _convert_time_to_seconds(duration)
 
         # If drive cycle, repeat the drive cycle until the end of the experiment,
         # and create an interpolant
-        if is_drive_cycle:
+        if self.is_drive_cycle:
             t_max = self.duration
             if t_max > value[-1, 0]:
                 # duration longer than drive cycle values so loop
@@ -149,11 +150,11 @@ class BaseStep:
             )
             if period is None:
                 # Infer the period from the drive cycle
-                self.period = np.diff(t).min()
+                self.period = _convert_time_to_seconds(period)
             else:
                 self.period = _convert_time_to_seconds(period)
 
-        elif is_python_function:
+        elif self.is_python_function:
             t = pybamm.t - pybamm.InputParameter("start time")
             self.value = value(t)
             self.period = _convert_time_to_seconds(period)
@@ -298,11 +299,14 @@ class BaseStep:
     def default_period():
         return 60.0  # seconds
 
-    def default_time_vector(self, tf, t0=0):
-        if self.period is None:
-            period = self.default_period()
-        else:
+    def default_time_vector(self, solver, tf, t0=0):
+        if self.period is not None:
             period = self.period
+        elif self.is_drive_cycle and solver.supports_interp:
+            # Infer the period from the drive cycle
+            period = np.diff(self.value.x[0]).min()
+        else:
+            period = self.default_period()
         npts = max(round(np.abs(tf - t0) / period) + 1, 2)
 
         return np.linspace(t0, tf, npts)
@@ -342,10 +346,18 @@ class BaseStep:
         t_interp: np.array | None
             The time points at which to interpolate the solution
         """
-        t_eval = np.array([0, tf])
+        if self.is_drive_cycle:
+            t_eval = self.value.x[0]
+            # If the drive cycle is longer than the final time,
+            # then truncate the drive cycle
+            if t_eval[-1] > tf:
+                t_eval = t_eval[t_eval <= tf]
+        else:
+            t_eval = np.array([0, tf])
+
         if t_interp is None:
             if self.period is not None:
-                t_interp = self.default_time_vector(tf)
+                t_interp = self.default_time_vector(solver, tf)
             else:
                 t_interp = solver.process_t_interp(t_interp)
 
@@ -366,7 +378,7 @@ class BaseStep:
         t_interp: np.array | None
             The time points at which to interpolate the solution
         """
-        t_eval = self.default_time_vector(tf)
+        t_eval = self.default_time_vector(solver, tf)
 
         t_interp = solver.process_t_interp(t_interp)
 
