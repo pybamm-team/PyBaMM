@@ -58,6 +58,18 @@ class LithiumIonParameters(BaseParameters):
         self.lambda_eff = self.therm.lambda_eff
         self.cell_heat_capacity = self.therm.cell_heat_capacity
 
+        # pouch bcs
+        self.h_edge_x_min = self.therm.h_edge_x_min
+        self.h_edge_x_max = self.therm.h_edge_x_max
+        self.h_edge_y_max = self.therm.h_edge_y_max
+        self.h_edge_y_min = self.therm.h_edge_y_min
+        self.h_edge_z_min = self.therm.h_edge_z_min
+        self.h_edge_z_max = self.therm.h_edge_z_max
+
+        # cylinder specific bcs
+        self.h_edge_radial_min = self.therm.h_edge_radial_min
+        self.h_edge_radial_max = self.therm.h_edge_radial_max
+
         # Macroscale geometry
         self.L_x = self.geo.L_x
         self.L = self.geo.L
@@ -74,7 +86,7 @@ class LithiumIonParameters(BaseParameters):
         self.current_density_with_time = self.elec.current_density_with_time
         self.Q = self.elec.Q
         self.R_contact = self.elec.R_contact
-        self.n_electrodes_parallel = self.elec.n_electrodes_parallel
+        self.n_electrodes_parallel = self.geo.n_electrodes_parallel
         self.n_cells = self.elec.n_cells
         self.voltage_low_cut = self.elec.voltage_low_cut
         self.voltage_high_cut = self.elec.voltage_high_cut
@@ -126,7 +138,7 @@ class LithiumIonParameters(BaseParameters):
 
         # Some scales
         self.thermal_voltage = self.R * self.T_ref / self.F
-        self.I_typ = self.Q / (self.A_cc * self.n_electrodes_parallel)
+        self.I_typ = self.Q / self.A_cc
         self.a_j_scale = self.I_typ / self.L_x
 
     def chi(self, c_e, T):

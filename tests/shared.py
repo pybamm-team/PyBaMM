@@ -214,8 +214,8 @@ def get_mesh_for_testing_2d(
     return pybamm.Mesh(geometry, submesh_types, var_pts)
 
 
-def get_unit_3d_mesh_for_testing(geom_type="box", **geom_params):
-    if geom_type == "box":
+def get_unit_3d_mesh_for_testing(geom_type="pouch", **geom_params):
+    if geom_type == "pouch":
         x = pybamm.SpatialVariable("x", ["current collector"])
         y = pybamm.SpatialVariable("y", ["current collector"])
         z = pybamm.SpatialVariable("z", ["current collector"])
@@ -258,7 +258,7 @@ def get_unit_3d_mesh_for_testing(geom_type="box", **geom_params):
 
 
 def get_3d_mesh_for_testing(
-    xpts=5, ypts=5, zpts=5, geom_type="box", include_particles=False, **geom_params
+    xpts=5, ypts=5, zpts=5, geom_type="pouch", include_particles=False, **geom_params
 ):
     param = pybamm.ParameterValues(
         {
@@ -580,6 +580,20 @@ def get_mesh_for_testing_symbolic():
     submesh_types = {"domain": pybamm.SymbolicUniform1DSubMesh}
     geometry = {
         "domain": {"x": {"min": pybamm.Scalar(0), "max": pybamm.Scalar(2)}},
+    }
+    var_pts = {"x": 15}
+    mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+    return mesh
+
+
+def get_mesh_for_testing_symbolic_concatenation():
+    submesh_types = {
+        "domain 1": pybamm.SymbolicUniform1DSubMesh,
+        "domain 2": pybamm.SymbolicUniform1DSubMesh,
+    }
+    geometry = {
+        "domain 1": {"x": {"min": pybamm.Scalar(0), "max": pybamm.Scalar(2)}},
+        "domain 2": {"x": {"min": pybamm.Scalar(2), "max": pybamm.Scalar(4)}},
     }
     var_pts = {"x": 15}
     mesh = pybamm.Mesh(geometry, submesh_types, var_pts)

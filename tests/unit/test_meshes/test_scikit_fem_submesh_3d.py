@@ -5,7 +5,7 @@ import pybamm
 
 
 class TestScikitFemGenerator3D:
-    def test_box_mesh_creation(self):
+    def test_pouch_mesh_creation(self):
         try:
             from pybamm.meshes.scikit_fem_submeshes_3d import ScikitFemGenerator3D
         except ImportError:
@@ -19,7 +19,7 @@ class TestScikitFemGenerator3D:
             }
         }
 
-        mesh_gen = ScikitFemGenerator3D("box", h=0.3)
+        mesh_gen = ScikitFemGenerator3D("pouch", h=0.3)
 
         mesh = pybamm.Mesh(
             geometry,
@@ -38,7 +38,7 @@ class TestScikitFemGenerator3D:
         assert submesh.dimension == 3, "Mesh should be 3D"
         assert submesh.npts > 0, "Mesh should have nodes"
         assert submesh.nodes.shape[1] == 3, "Nodes should be 3D coordinates"
-        assert submesh.coord_sys == "cartesian", "Box mesh should be cartesian"
+        assert submesh.coord_sys == "cartesian", "Pouch mesh should be cartesian"
 
     def test_cylinder_mesh_creation(self):
         try:
@@ -104,7 +104,7 @@ class TestScikitFemSubMesh3D:
             }
         }
 
-        mesh_gen = ScikitFemGenerator3D("box", h=0.4)
+        mesh_gen = ScikitFemGenerator3D("pouch", h=0.4)
         mesh = pybamm.Mesh(
             geometry,
             {"domain": mesh_gen},
@@ -150,7 +150,7 @@ class TestScikitFemSubMesh3D:
             }
         }
 
-        mesh_gen = ScikitFemGenerator3D("box", h=0.5)
+        mesh_gen = ScikitFemGenerator3D("pouch", h=0.5)
         mesh = pybamm.Mesh(
             geometry,
             {"domain": mesh_gen},

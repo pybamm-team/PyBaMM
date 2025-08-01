@@ -346,7 +346,7 @@ class ParameterValues:
         else:
             parameter_values = self.copy()
 
-        c_max = self.evaluate(param.p.prim.c_max)
+        c_max = self.evaluate(param.p.prim.c_max, inputs=inputs)
 
         parameter_values.update(
             {
@@ -385,8 +385,8 @@ class ParameterValues:
             parameter_values = self
         else:
             parameter_values = self.copy()
-        c_n_max = self.evaluate(param.n.prim.c_max)
-        c_p_max = self.evaluate(param.p.prim.c_max)
+        c_n_max = self.evaluate(param.n.prim.c_max, inputs=inputs)
+        c_p_max = self.evaluate(param.p.prim.c_max, inputs=inputs)
         parameter_values.update(
             {
                 "Initial concentration in negative electrode [mol.m-3]": x * c_n_max,
@@ -402,6 +402,7 @@ class ParameterValues:
         known_value="cyclable lithium capacity",
         inplace=True,
         options=None,
+        inputs=None,
     ):
         """
         Set the initial OCP of each electrode, based on the initial
@@ -409,7 +410,12 @@ class ParameterValues:
         """
         param = param or pybamm.LithiumIonParameters(options)
         Un, Up = pybamm.lithium_ion.get_initial_ocps(
-            initial_value, self, param=param, known_value=known_value, options=options
+            initial_value,
+            self,
+            param=param,
+            known_value=known_value,
+            options=options,
+            inputs=inputs,
         )
         if inplace:
             parameter_values = self

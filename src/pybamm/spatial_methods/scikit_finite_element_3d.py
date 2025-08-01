@@ -49,7 +49,7 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
             entries = mesh.nodes[:, 1][:, np.newaxis]
         elif symbol.name == "z":
             entries = mesh.nodes[:, 2][:, np.newaxis]
-        elif symbol.name == "r":
+        elif symbol.name == "r" or symbol.name == "r_macro":
             entries = np.sqrt(mesh.nodes[:, 0] ** 2 + mesh.nodes[:, 1] ** 2)[
                 :, np.newaxis
             ]

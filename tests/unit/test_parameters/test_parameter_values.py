@@ -103,6 +103,21 @@ class TestParameterValues:
         y_100 = param_100["Initial concentration in positive electrode [mol.m-3]"]
         assert y == pytest.approx(y_0 - 0.4 * (y_0 - y_100))
 
+        # check that passing inputs gives the same result
+        input_param = "Maximum concentration in positive electrode [mol.m-3]"
+        input_value = param[input_param]
+        param[input_param] = "[input]"
+        param_0_inputs = param.set_initial_stoichiometries(
+            0, inplace=False, inputs={input_param: input_value}
+        )
+        assert (
+            abs(
+                param_0_inputs["Initial concentration in positive electrode [mol.m-3]"]
+                - y_0
+            )
+            < 1e-10
+        )
+
     def test_set_initial_stoichiometry_half_cell(self):
         param = pybamm.lithium_ion.DFN(
             {"working electrode": "positive"}
@@ -146,6 +161,21 @@ class TestParameterValues:
         y_100 = param_100["Initial concentration in positive electrode [mol.m-3]"]
         assert y == pytest.approx(y_0 - 0.4 * (y_0 - y_100))
 
+        # check that passing inputs gives the same result
+        input_param = "Maximum concentration in positive electrode [mol.m-3]"
+        input_value = param[input_param]
+        param[input_param] = "[input]"
+        param_0_inputs = param.set_initial_stoichiometry_half_cell(
+            0,
+            inplace=False,
+            options={"working electrode": "positive"},
+            inputs={input_param: input_value},
+        )
+        assert (
+            param_0_inputs["Initial concentration in positive electrode [mol.m-3]"]
+            == y_0
+        )
+
         # test error
         param = pybamm.ParameterValues("Chen2020")
         with pytest.raises(OptionError, match="working electrode"):
@@ -171,6 +201,15 @@ class TestParameterValues:
         Un_100 = param_100["Initial voltage in negative electrode [V]"]
         Up_100 = param_100["Initial voltage in positive electrode [V]"]
         assert Up_100 - Un_100 == pytest.approx(4.2)
+
+        # check that passing inputs gives the same result
+        input_param = "Maximum concentration in positive electrode [mol.m-3]"
+        input_value = param_100[input_param]
+        param_100[input_param] = "[input]"
+        param_0_inputs = param_100.set_initial_ocps(
+            0, inplace=False, options=options, inputs={input_param: input_value}
+        )
+        assert param_0_inputs["Initial voltage in positive electrode [V]"] == Up_0
 
     def test_check_parameter_values(self):
         with pytest.raises(ValueError, match="propotional term"):

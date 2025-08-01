@@ -20,12 +20,12 @@ OPTIONS_DICT = {
 PRINT_OPTIONS_OUTPUT = """\
 'calculate discharge energy': 'false' (possible: ['false', 'true'])
 'calculate heat source for isothermal models': 'false' (possible: ['false', 'true'])
-'cell geometry': 'pouch' (possible: ['arbitrary', 'pouch'])
+'cell geometry': 'pouch' (possible: ['arbitrary', 'pouch', 'cylindrical'])
 'contact resistance': 'false' (possible: ['false', 'true'])
 'convection': 'none' (possible: ['none', 'uniform transverse', 'full transverse'])
 'current collector': 'uniform' (possible: ['uniform', 'potential pair', 'potential pair quite conductive'])
 'diffusivity': 'single' (possible: ['single', 'current sigmoid'])
-'dimensionality': 0 (possible: [0, 1, 2])
+'dimensionality': 0 (possible: [0, 1, 2, 3])
 'electrolyte conductivity': 'default' (possible: ['default', 'full', 'leading order', 'composite', 'integrated'])
 'exchange-current density': 'single' (possible: ['single', 'current sigmoid'])
 'heat of mixing': 'false' (possible: ['false', 'true'])
@@ -127,6 +127,15 @@ class TestBaseBatteryModel:
             model.default_submesh_types["current collector"],
             pybamm.ScikitUniform2DSubMesh,
         )
+        model = pybamm.BaseBatteryModel({"dimensionality": 3, "cell geometry": "pouch"})
+        assert issubclass(
+            model.default_submesh_types["current collector"],
+            pybamm.SubMesh0D,
+        )
+        assert isinstance(
+            model.default_submesh_types["cell"],
+            pybamm.ScikitFemGenerator3D,
+        )
 
     def test_default_var_pts(self):
         var_pts = {
@@ -169,6 +178,15 @@ class TestBaseBatteryModel:
         assert isinstance(
             model.default_spatial_methods["current collector"],
             pybamm.ScikitFiniteElement,
+        )
+        model = pybamm.BaseBatteryModel({"dimensionality": 3, "cell geometry": "pouch"})
+        assert isinstance(
+            model.default_spatial_methods["current collector"],
+            pybamm.ZeroDimensionalSpatialMethod,
+        )
+        assert isinstance(
+            model.default_spatial_methods["cell"],
+            pybamm.ScikitFiniteElement3D,
         )
 
     def test_options(self):

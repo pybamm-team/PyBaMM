@@ -1,6 +1,8 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
 ## Features
+- Added a `Basic3DThermalSPM` with two way coupling. ([#5112](https://github.com/pybamm-team/PyBaMM/pull/5112))
+- Enables the passing of `inputs` throughout `set_initial_soc`. ([#5122](https://github.com/pybamm-team/PyBaMM/pull/5122))
 - Adds `on_failure` option to `BaseSolver` with options for `"warn"`, `"ignore"`, and `"raise"` to change behaviour on solver failure. Defaults to "raise" to retain historic functionality. ([#5105](https://github.com/pybamm-team/PyBaMM/pull/5105))
 - Creates a boundary mesh size object that returns the distance from the center of the leftmost/rightmost control volume to the boundary of the domain ([#5108](https://github.com/pybamm-team/PyBaMM/pull/5108))
 - Introduced entry points for models, similar to parameter sets, and moved entry point handling to `pybamm.dispatch.entry_points`. There is now experimental support for loading third-party models outside of the PyBaMM framework via `pybamm.Model("model_name")`. This API is currently unstable until further notice and may be subject to change without warning. ([#4490](https://github.com/pybamm-team/PyBaMM/pull/4490))
@@ -15,6 +17,8 @@
 
 ## Bug fixes
 
+- Fixes negative electrode boundary values for half-cell voltage contributions. ([#5139](https://github.com/pybamm-team/PyBaMM/pull/5139))
+- Makes `A_cc` L_z * L_y * number of layers ([#5138](https://github.com/pybamm-team/PyBaMM/pull/5138))
 - Fixes `TimeIntegral` expression node summation when dependent on an input parameter. ([#5119](https://github.com/pybamm-team/PyBaMM/pull/5119))
 - Fixed a bug that ignored the default duration of drive cycles for `CRate` steps and a bug that overwrote custom `period` arguments for drive cycles. ([#5090](https://github.com/pybamm-team/PyBaMM/pull/5090))
 - Converts sensitivities to numpy objects, fixing bug in `DiscreteTimeSum` sensitivity calculation ([#5037](https://github.com/pybamm-team/PyBaMM/pull/5037))
@@ -26,6 +30,7 @@
 
 ## Breaking changes
 
+- Changed behavior of drive cycle steps in `pybamm.Experiment`s to treat each time point as a discontinuity, consistent with how input interpolants work. This ensures more accurate simulation of drive cycles with rapid changes. ([#5141](https://github.com/pybamm-team/PyBaMM/pull/5141))
 - Removed the IREE code from the IDAKLU solver ([#5080](https://github.com/pybamm-team/PyBaMM/pull/5080))
 - Removed support for Python 3.9 ([#5052](https://github.com/pybamm-team/PyBaMM/pull/5052))
 - In OCP hysteresis models, users need to explicitly give the equilibrium, delithiation, and lithiation OCPs when using a hysteresis model. E.g., you must provide all three of "Negative electrode OCP [V]", "Negative electrode delithiation OCP [V]", and "Negative electrode lithiation OCP [V]". ([#4893](https://github.com/pybamm-team/PyBaMM/pull/4893))
