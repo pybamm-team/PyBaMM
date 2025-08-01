@@ -1031,8 +1031,14 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         if bcs is None:
             bcs = {}
 
-        extrap_order_gradient = self.options["extrapolation"]["order"]["gradient"]
-        extrap_order_value = self.options["extrapolation"]["order"]["value"]
+        extrap_order_gradient = (
+            getattr(symbol, "order", None)
+            or self.options["extrapolation"]["order"]["gradient"]
+        )
+        extrap_order_value = (
+            getattr(symbol, "order", None)
+            or self.options["extrapolation"]["order"]["value"]
+        )
         use_bcs = self.options["extrapolation"]["use bcs"]
 
         n_lr = submesh.npts_lr
@@ -1064,7 +1070,10 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         # Create submatrix to compute boundary values or fluxes
         # Derivation of extrapolation formula can be found at:
         # https://github.com/Scottmar93/extrapolation-coefficents/tree/master
-        if isinstance(symbol, pybamm.BoundaryValue):
+        if isinstance(symbol, pybamm.BoundaryMeshSize):
+            if symbol.side == "bottom":
+                return pybamm.Scalar(2 * nodes_tb[0])
+        elif isinstance(symbol, pybamm.BoundaryValue):
             skip_side_second = False
             if use_bcs and pybamm.has_bc_of_form(child, side_first, bcs, "Dirichlet"):
                 if side_first == "left" or side_first == "right":
@@ -1250,7 +1259,16 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                     raise NotImplementedError
 
             elif side_first == "bottom":
-                if extrap_order_value == "linear":
+                if extrap_order_value == "constant":
+                    first_val = np.ones(n_lr)
+                    rows_first = np.arange(0, n_lr)
+                    cols_first = np.arange(0, n_lr)
+                    sub_matrix = csr_matrix(
+                        (first_val, (rows_first, cols_first)),
+                        shape=(n_lr, n_lr * n_tb),
+                    )
+                    additive = pybamm.Scalar(0)
+                elif extrap_order_value == "linear":
                     if use_bcs and pybamm.has_bc_of_form(
                         child, side_first, bcs, "Neumann"
                     ):

@@ -337,11 +337,11 @@ class TestFiniteVolume2D:
         }
 
         # Test None directions - should use node_to_edge
+        disc.bcs = boundary_conditions
         result_none = spatial_method.upwind_or_downwind(
             var, var_disc, boundary_conditions, None, None
         )
         symbol = pybamm.UpwindDownwind2D(var, None, None)
-        disc.bcs = boundary_conditions
         symbol_disc = disc.process_symbol(symbol)
         assert result_none == symbol_disc
 

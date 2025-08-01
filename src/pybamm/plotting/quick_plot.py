@@ -398,6 +398,8 @@ class QuickPlot:
             spatial_var_value = variable.second_dim_pts
             if variable.domain[0] == "current collector":
                 domain = "current collector"
+            elif isinstance(variable, pybamm.ProcessedVariable2DFVM):
+                domain = variable.domain[0]
             else:
                 domain = variable.domains["secondary"][0]
 

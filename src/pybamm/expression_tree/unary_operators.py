@@ -962,7 +962,7 @@ class OneDimensionalIntegral(BoundaryIntegral):
     it assumes that the boundary value
     """
 
-    def __init__(self, child, integration_domain, direction):
+    def __init__(self, child, integration_domain, direction, region=None):
         # boundary integral removes domains
         self.direction = direction
         self.integration_domain = integration_domain
@@ -981,7 +981,12 @@ class OneDimensionalIntegral(BoundaryIntegral):
 
     def _unary_new_copy(self, child, perform_simplifications=True):
         """See :meth:`UnaryOperator._unary_new_copy()`."""
-        return self.__class__(child, region=self.region)
+        return self.__class__(
+            child,
+            integration_domain=self.integration_domain,
+            direction=self.direction,
+            region=self.region,
+        )
 
     def _evaluate_for_shape(self):
         """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""

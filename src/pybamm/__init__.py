@@ -167,7 +167,7 @@ from .spatial_methods.scikit_finite_element_3d import ScikitFiniteElement3D
 # Solver classes
 from .solvers.solution import Solution, EmptySolution, make_cycle_solution
 from .solvers.processed_variable_time_integral import ProcessedVariableTimeIntegral
-from .solvers.processed_variable import ProcessedVariable, process_variable
+from .solvers.processed_variable import ProcessedVariable, ProcessedVariable2DFVM, process_variable
 from .solvers.processed_variable_computed import ProcessedVariableComputed
 from .solvers.summary_variable import SummaryVariables
 from .solvers.base_solver import BaseSolver
