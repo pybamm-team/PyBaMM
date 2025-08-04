@@ -1,13 +1,15 @@
-import pytest
-import casadi
-import pybamm
-import numpy as np
 import os
 from datetime import datetime
 
+import casadi
+import numpy as np
+import pytest
+
+import pybamm
+
 
 class ShortDurationCRate(pybamm.step.CRate):
-    def default_duration(self, value):
+    def _default_timespan(self, value):
         # Set a short default duration for testing early stopping due to infeasible time
         return 1
 
@@ -343,10 +345,7 @@ class TestSimulationExperiment:
         sens_idaklu = np.interp(
             t,
             solutions[1].t,
-            solutions[1]["Voltage [V]"]
-            .sensitivities[input_param_name]
-            .full()
-            .flatten(),
+            solutions[1]["Voltage [V]"].sensitivities[input_param_name].flatten(),
         )
         np.testing.assert_allclose(
             sens_fd,
@@ -372,6 +371,21 @@ class TestSimulationExperiment:
         assert sorted([step.basic_repr() for step in experiment.steps]) == sorted(
             list(sim.experiment_unique_steps_to_model.keys())
         )
+
+    def test_run_experiment_drive_cycle_experiment(self):
+        time = [0, 5, 10]
+        current = [-1, -2, -1]
+        drive_cycle = np.column_stack([time, current])
+        experiment = pybamm.Experiment([pybamm.step.current(drive_cycle)])
+        model = pybamm.lithium_ion.SPM()
+        sim = pybamm.Simulation(model, experiment=experiment)
+        sol = sim.solve()
+        assert sol.termination == "final time"
+
+        assert all(t in sol.t for t in time)
+        assert len(sol.t) > len(time)
+
+        np.testing.assert_allclose(sol["Current [A]"](time), current)
 
     def test_run_experiment_breaks_early_infeasible(self):
         experiment = pybamm.Experiment(["Discharge at 2 C for 1 hour"])

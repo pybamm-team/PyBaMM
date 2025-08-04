@@ -1,14 +1,14 @@
 #
 # Test for the operator class
 #
+import numpy as np
+
 import pybamm
 from tests import (
+    get_cylindrical_mesh_for_testing,
     get_mesh_for_testing,
     get_p2d_mesh_for_testing,
-    get_cylindrical_mesh_for_testing,
 )
-
-import numpy as np
 
 
 class TestFiniteVolumeConvergence:

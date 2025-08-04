@@ -1,16 +1,13 @@
 #
 # Shared methods and classes for testing
 #
-import pybamm
-from scipy.sparse import eye
-import sys
+import importlib.metadata as importlib_metadata
 import re
 import socket
 
-if sys.version_info < (3, 10):
-    import importlib_metadata
-else:
-    import importlib.metadata as importlib_metadata
+from scipy.sparse import eye
+
+import pybamm
 
 
 class SpatialMethodForTesting(pybamm.SpatialMethod):
@@ -116,6 +113,140 @@ def get_mesh_for_testing(
         "R_n": Rpts,
         "R_p": Rpts,
     }
+    return pybamm.Mesh(geometry, submesh_types, var_pts)
+
+
+def get_unit_3d_mesh_for_testing(geom_type="pouch", **geom_params):
+    if geom_type == "pouch":
+        x = pybamm.SpatialVariable("x", ["current collector"])
+        y = pybamm.SpatialVariable("y", ["current collector"])
+        z = pybamm.SpatialVariable("z", ["current collector"])
+        x_max = geom_params.get("x_max", 1.0)
+        y_max = geom_params.get("y_max", 2.0)
+        z_max = geom_params.get("z_max", 3.0)
+        geometry = {
+            "current collector": {
+                x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(x_max)},
+                y: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(y_max)},
+                z: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(z_max)},
+            }
+        }
+        var_pts = {x: 5, y: 5, z: 5}
+    elif geom_type == "cylinder":
+        r = pybamm.SpatialVariable(
+            "r", ["current collector"], coord_sys="cylindrical polar"
+        )
+        z = pybamm.SpatialVariable(
+            "z", ["current collector"], coord_sys="cylindrical polar"
+        )
+        radius = geom_params.get("radius", 1.0)
+        height = geom_params.get("height", 1.0)
+        r_inner = geom_params.get("r_inner", 0.0)
+        geometry = {
+            "current collector": {
+                r: {"min": pybamm.Scalar(r_inner), "max": pybamm.Scalar(radius)},
+                z: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(height)},
+            }
+        }
+        var_pts = {r: 5, z: 5}
+    else:
+        raise ValueError(f"geom_type '{geom_type}' not recognised")
+
+    generator_params = {"h": 0.2}
+    generator_params.update(geom_params)
+    generator = pybamm.ScikitFemGenerator3D(geom_type, **generator_params)
+    submesh_types = {"current collector": generator}
+    return pybamm.Mesh(geometry, submesh_types, var_pts)
+
+
+def get_3d_mesh_for_testing(
+    xpts=5, ypts=5, zpts=5, geom_type="pouch", include_particles=False, **geom_params
+):
+    param = pybamm.ParameterValues(
+        {
+            "Electrode width [m]": 1.0,
+            "Electrode height [m]": 1.0,
+            "Electrode depth [m]": 1.0,
+            "Negative electrode thickness [m]": 1 / 3,
+            "Separator thickness [m]": 1 / 3,
+            "Positive electrode thickness [m]": 1 / 3,
+        }
+    )
+
+    x = pybamm.SpatialVariable(
+        "x", ["negative electrode", "separator", "positive electrode"]
+    )
+    y = pybamm.SpatialVariable(
+        "y", ["negative electrode", "separator", "positive electrode"]
+    )
+    z = pybamm.SpatialVariable(
+        "z", ["negative electrode", "separator", "positive electrode"]
+    )
+
+    geometry = {
+        "negative electrode": {
+            x: {
+                "min": pybamm.Scalar(0),
+                "max": pybamm.Parameter("Negative electrode thickness [m]"),
+            },
+            y: {
+                "min": pybamm.Scalar(0),
+                "max": pybamm.Parameter("Electrode width [m]"),
+            },
+            z: {
+                "min": pybamm.Scalar(0),
+                "max": pybamm.Parameter("Electrode height [m]"),
+            },
+        },
+        "separator": {
+            x: {
+                "min": pybamm.Parameter("Negative electrode thickness [m]"),
+                "max": pybamm.Parameter("Separator thickness [m]")
+                + pybamm.Parameter("Negative electrode thickness [m]"),
+            },
+            y: {
+                "min": pybamm.Scalar(0),
+                "max": pybamm.Parameter("Electrode width [m]"),
+            },
+            z: {
+                "min": pybamm.Scalar(0),
+                "max": pybamm.Parameter("Electrode height [m]"),
+            },
+        },
+        "positive electrode": {
+            x: {
+                "min": pybamm.Parameter("Separator thickness [m]")
+                + pybamm.Parameter("Negative electrode thickness [m]"),
+                "max": pybamm.Parameter("Positive electrode thickness [m]")
+                + pybamm.Parameter("Separator thickness [m]")
+                + pybamm.Parameter("Negative electrode thickness [m]"),
+            },
+            y: {
+                "min": pybamm.Scalar(0),
+                "max": pybamm.Parameter("Electrode width [m]"),
+            },
+            z: {
+                "min": pybamm.Scalar(0),
+                "max": pybamm.Parameter("Electrode height [m]"),
+            },
+        },
+    }
+    param.process_geometry(geometry)
+
+    # Create generator with parameters
+    generator_params = {"h": 0.2}
+    generator_params.update(geom_params)
+
+    generator = pybamm.ScikitFemGenerator3D(geom_type, **generator_params)
+
+    submesh_types = {
+        "negative electrode": generator,
+        "separator": generator,
+        "positive electrode": generator,
+    }
+
+    var_pts = {x: xpts, y: ypts, z: zpts}
+
     return pybamm.Mesh(geometry, submesh_types, var_pts)
 
 
@@ -351,6 +482,20 @@ def get_mesh_for_testing_symbolic():
     submesh_types = {"domain": pybamm.SymbolicUniform1DSubMesh}
     geometry = {
         "domain": {"x": {"min": pybamm.Scalar(0), "max": pybamm.Scalar(2)}},
+    }
+    var_pts = {"x": 15}
+    mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+    return mesh
+
+
+def get_mesh_for_testing_symbolic_concatenation():
+    submesh_types = {
+        "domain 1": pybamm.SymbolicUniform1DSubMesh,
+        "domain 2": pybamm.SymbolicUniform1DSubMesh,
+    }
+    geometry = {
+        "domain 1": {"x": {"min": pybamm.Scalar(0), "max": pybamm.Scalar(2)}},
+        "domain 2": {"x": {"min": pybamm.Scalar(2), "max": pybamm.Scalar(4)}},
     }
     var_pts = {"x": 15}
     mesh = pybamm.Mesh(geometry, submesh_types, var_pts)

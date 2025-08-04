@@ -2,6 +2,7 @@
 # External circuit with explicit equations for control
 #
 import pybamm
+
 from .base_external_circuit import BaseModel
 
 
@@ -47,7 +48,7 @@ class ExplicitPowerControl(BaseModel):
         I = P / V
 
         # Update derived variables
-        i_cell = I / (self.param.n_electrodes_parallel * self.param.A_cc)
+        i_cell = I / (self.param.A_cc)
 
         variables = {
             "Total current density [A.m-2]": i_cell,
@@ -70,7 +71,7 @@ class ExplicitResistanceControl(BaseModel):
         I = V / R
 
         # Update derived variables
-        i_cell = I / (self.param.n_electrodes_parallel * self.param.A_cc)
+        i_cell = I / self.param.A_cc
 
         variables = {
             "Total current density [A.m-2]": i_cell,

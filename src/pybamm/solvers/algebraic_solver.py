@@ -2,10 +2,11 @@
 # Algebraic solver class
 #
 import casadi
-import pybamm
 import numpy as np
 from scipy import optimize
 from scipy.sparse import issparse
+
+import pybamm
 
 
 class AlgebraicSolver(pybamm.BaseSolver):
@@ -212,7 +213,10 @@ class AlgebraicSolver(pybamm.BaseSolver):
                         model.bounds[1] != np.inf
                     ):
                         bounds = [
-                            (lb, ub) for lb, ub in zip(model.bounds[0], model.bounds[1])
+                            (lb, ub)
+                            for lb, ub in zip(
+                                model.bounds[0], model.bounds[1], strict=False
+                            )
                         ]
                     else:
                         bounds = None

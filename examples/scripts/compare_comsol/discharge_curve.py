@@ -1,8 +1,10 @@
-import pybamm
-import numpy as np
-import os
 import json
+import os
+
 import matplotlib.pyplot as plt
+import numpy as np
+
+import pybamm
 
 # change working directory to the root of pybamm
 os.chdir(pybamm.root_dir())

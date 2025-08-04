@@ -1,8 +1,9 @@
 #
 # Dummy solver class, for empty models
 #
-import pybamm
 import numpy as np
+
+import pybamm
 
 
 class DummySolver(pybamm.BaseSolver):

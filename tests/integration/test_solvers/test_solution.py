@@ -1,8 +1,9 @@
 #
 # Tests for the Solution class
 #
-import pybamm
 import numpy as np
+
+import pybamm
 
 
 class TestSolution:

@@ -1,11 +1,10 @@
 import casadi
-import pybamm
-import tests
-
 import numpy as np
 import pytest
 from scipy.interpolate import CubicHermiteSpline
 
+import pybamm
+import tests
 
 _hermite_args = [True, False]
 
@@ -1420,7 +1419,7 @@ class TestProcessedVariable:
         # Ground truth spline interpolants from scipy
         spls = [
             CubicHermiteSpline(t, y, yp, axis=1)
-            for t, y, yp in zip(sol.all_ts, sol.all_ys, sol.all_yps)
+            for t, y, yp in zip(sol.all_ts, sol.all_ys, sol.all_yps, strict=False)
         ]
 
         def spl(t):
@@ -1487,3 +1486,529 @@ class TestProcessedVariable:
 
         # Check that the unsorted and sorted arrays are the same
         assert np.all(y_unsorted == y_sorted[idxs_unsort])
+
+    def test_as_computed_0D(self):
+        # 0D
+        t = pybamm.t
+        y = pybamm.StateVector(slice(0, 1))
+        var = t * y
+        model = pybamm.BaseModel()
+        t_sol = np.linspace(0, 1)
+        y_sol = np.array([np.linspace(0, 5)])
+        yp_sol = self._get_yps(y_sol, False)
+        var_casadi = to_casadi(var, y_sol)
+        processed_var = pybamm.process_variable(
+            "test",
+            [var],
+            [var_casadi],
+            self._sol_default(t_sol, y_sol, yp_sol, model),
+        )
+        computed_var = processed_var.as_computed()
+
+        np.testing.assert_array_equal(computed_var.entries, t_sol * y_sol[0])
+
+    def test_as_computed_1D(self):
+        var = pybamm.Variable("var", domain=["negative electrode", "separator"])
+        x = pybamm.SpatialVariable("x", domain=["negative electrode", "separator"])
+
+        disc = tests.get_discretisation_for_testing()
+        disc.set_variable_slices([var])
+        x_sol = disc.process_symbol(x).entries[:, 0]
+        var_sol = disc.process_symbol(var)
+        t_sol = np.linspace(0, 1)
+        y_sol = x_sol[:, np.newaxis] * (5 * t_sol)
+        yp_sol = self._get_yps(y_sol, False, values=5)
+
+        var_casadi = to_casadi(var_sol, y_sol)
+        processed_var = pybamm.process_variable(
+            "test",
+            [var_sol],
+            [var_casadi],
+            self._sol_default(t_sol, y_sol, yp_sol),
+        )
+
+        computed_var = processed_var.as_computed()
+
+        # 2 vectors
+        np.testing.assert_allclose(
+            computed_var(t_sol, x_sol), y_sol, rtol=1e-7, atol=1e-6
+        )
+        # 1 vector, 1 scalar
+        np.testing.assert_allclose(
+            computed_var(0.5, x_sol), 2.5 * x_sol, rtol=1e-7, atol=1e-6
+        )
+        np.testing.assert_allclose(
+            computed_var(t_sol, x_sol[-1]),
+            x_sol[-1] * np.linspace(0, 5),
+            rtol=1e-7,
+            atol=1e-6,
+        )
+        # 2 scalars
+        np.testing.assert_allclose(
+            computed_var(0.5, x_sol[-1]), 2.5 * x_sol[-1], rtol=1e-7, atol=1e-6
+        )
+
+    def test_as_computed_2D(self):
+        var = pybamm.Variable(
+            "var",
+            domain=["negative particle"],
+            auxiliary_domains={"secondary": ["negative electrode"]},
+        )
+        x = pybamm.SpatialVariable("x", domain=["negative electrode"])
+        r = pybamm.SpatialVariable(
+            "r",
+            domain=["negative particle"],
+            auxiliary_domains={"secondary": ["negative electrode"]},
+        )
+
+        disc = tests.get_p2d_discretisation_for_testing()
+        disc.set_variable_slices([var])
+        x_sol = disc.process_symbol(x).entries[:, 0]
+        r_sol = disc.process_symbol(r).entries[:, 0]
+        # Keep only the first iteration of entries
+        r_sol = r_sol[: len(r_sol) // len(x_sol)]
+        var_sol = disc.process_symbol(var)
+        t_sol = np.linspace(0, 1)
+        y_sol = np.ones(len(x_sol) * len(r_sol))[:, np.newaxis] * np.linspace(0, 5)
+        yp_sol = self._get_yps(y_sol, False)
+
+        var_casadi = to_casadi(var_sol, y_sol)
+        processed_var = pybamm.process_variable(
+            "test",
+            [var_sol],
+            [var_casadi],
+            self._sol_default(t_sol, y_sol, yp_sol),
+        )
+
+        computed_var = processed_var.as_computed()
+        # 3 vectors
+        np.testing.assert_array_equal(
+            computed_var(t_sol, x_sol, r_sol).shape, (10, 40, 50)
+        )
+        np.testing.assert_allclose(
+            computed_var(t_sol, x_sol, r_sol),
+            np.reshape(y_sol, [len(r_sol), len(x_sol), len(t_sol)]),
+            rtol=1e-7,
+            atol=1e-6,
+        )
+        # 2 vectors, 1 scalar
+        np.testing.assert_array_equal(computed_var(0.5, x_sol, r_sol).shape, (10, 40))
+        np.testing.assert_array_equal(computed_var(t_sol, 0.2, r_sol).shape, (10, 50))
+        np.testing.assert_array_equal(computed_var(t_sol, x_sol, 0.5).shape, (40, 50))
+        # 1 vectors, 2 scalar
+        np.testing.assert_array_equal(computed_var(0.5, 0.2, r_sol).shape, (10,))
+        np.testing.assert_array_equal(computed_var(0.5, x_sol, 0.5).shape, (40,))
+        np.testing.assert_array_equal(computed_var(t_sol, 0.2, 0.5).shape, (50,))
+        # 3 scalars
+        np.testing.assert_array_equal(computed_var(0.2, 0.2, 0.2).shape, ())
+
+    def test_as_computed_3D(self):
+        disc = tests.get_size_distribution_disc_for_testing(xpts=5, rpts=6, Rpts=7)
+        var = pybamm.Variable(
+            "var",
+            domain=["negative particle"],
+            auxiliary_domains={
+                "secondary": ["negative particle size"],
+                "tertiary": ["negative electrode"],
+            },
+        )
+        x_sol = disc.mesh["negative electrode"].nodes
+        disc.set_variable_slices([var])
+
+        Nx = len(x_sol)
+        R_sol = disc.mesh["negative particle size"].nodes
+        r_sol = disc.mesh["negative particle"].nodes
+        var_sol = disc.process_symbol(var)
+        t_sol = np.linspace(0, 1)
+        y_sol = np.ones(len(x_sol) * len(R_sol) * len(r_sol))[:, np.newaxis] * t_sol
+        yp_sol = self._get_yps(y_sol, False)
+
+        var_casadi = to_casadi(var_sol, y_sol)
+        geometry_options = {"options": {"particle size": "distribution"}}
+        model = tests.get_base_model_with_battery_geometry(**geometry_options)
+        processed_var = pybamm.process_variable(
+            "test",
+            [var_sol],
+            [var_casadi],
+            self._sol_default(t_sol, y_sol, yp_sol, model),
+        )
+        computed_var = processed_var.as_computed()
+
+        # 4 vectors
+        np.testing.assert_array_equal(
+            computed_var(t=t_sol, x=x_sol, R=R_sol, r=r_sol).shape, (6, 7, Nx, 50)
+        )
+
+    def test_processed_variable_unstructured_3d_pouch(self):
+        from pybamm.meshes.scikit_fem_submeshes_3d import ScikitFemGenerator3D
+
+        x = pybamm.SpatialVariable(
+            "x", domain=["current collector"], coord_sys="cartesian"
+        )
+        y = pybamm.SpatialVariable(
+            "y", domain=["current collector"], coord_sys="cartesian"
+        )
+        z = pybamm.SpatialVariable(
+            "z", domain=["current collector"], coord_sys="cartesian"
+        )
+
+        geometry = {
+            "current collector": {
+                x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+                y: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+                z: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+            }
+        }
+
+        submesh_types = {
+            "current collector": ScikitFemGenerator3D(geom_type="pouch", h=0.3)
+        }
+        var_pts = {x: None, y: None, z: None}
+        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+
+        spatial_methods = {"current collector": pybamm.ScikitFiniteElement3D()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        var = pybamm.Variable("var", domain=["current collector"])
+        disc.set_variable_slices([var])
+        var_disc = disc.process_symbol(var)
+
+        t_sol = np.linspace(0, 1, 10)
+        y_sol = np.ones((var_disc.shape[0], len(t_sol))) * np.linspace(0, 5, len(t_sol))
+
+        var_casadi = to_casadi(var_disc, y_sol)
+        model = pybamm.BaseModel()
+        model._geometry = geometry
+
+        solution = pybamm.Solution(t_sol, y_sol, model, {})
+
+        processed_var = pybamm.ProcessedVariableUnstructured(
+            "test", [var_disc], [var_casadi], solution
+        )
+
+        assert processed_var.dimensions == 3
+        assert processed_var._time_interpolator is None
+
+        processed_var.initialise()
+        assert processed_var.entries_raw_initialized
+        assert processed_var._time_interpolator is not None
+
+        nodes = var_disc.mesh.nodes
+        x_test = nodes[:5, 0]
+        y_test = nodes[:5, 1]
+        z_test = nodes[:5, 2]
+
+        result_scalar_t = processed_var(0.5, x=x_test, y=y_test, z=z_test)
+        assert result_scalar_t.shape == (5,)
+
+        result_vector_t = processed_var(t_sol[:3], x=x_test, y=y_test, z=z_test)
+        assert result_vector_t.shape == (5, 3)
+
+        result_no_coords = processed_var(0.5)
+        assert result_no_coords.shape == (var_disc.mesh.npts,)
+
+    def test_processed_variable_unstructured_scalar_vs_vector_time(self):
+        from pybamm.meshes.scikit_fem_submeshes_3d import ScikitFemGenerator3D
+
+        x = pybamm.SpatialVariable(
+            "x", domain=["current collector"], coord_sys="cartesian"
+        )
+        y = pybamm.SpatialVariable(
+            "y", domain=["current collector"], coord_sys="cartesian"
+        )
+        z = pybamm.SpatialVariable(
+            "z", domain=["current collector"], coord_sys="cartesian"
+        )
+
+        geometry = {
+            "current collector": {
+                x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+                y: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+                z: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+            }
+        }
+
+        submesh_types = {
+            "current collector": ScikitFemGenerator3D(geom_type="pouch", h=0.3)
+        }
+        var_pts = {x: None, y: None, z: None}
+        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+
+        spatial_methods = {"current collector": pybamm.ScikitFiniteElement3D()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        var = pybamm.Variable("var", domain=["current collector"])
+        disc.set_variable_slices([var])
+        var_disc = disc.process_symbol(var)
+
+        t_sol = np.array([0.0, 0.5, 1.0])
+        y_sol = np.ones((var_disc.shape[0], len(t_sol))) * np.array([1, 2, 3])
+
+        var_casadi = to_casadi(var_disc, y_sol)
+        model = pybamm.BaseModel()
+        model._geometry = geometry
+
+        solution = pybamm.Solution(t_sol, y_sol, model, {})
+
+        processed_var = pybamm.ProcessedVariableUnstructured(
+            "test", [var_disc], [var_casadi], solution
+        )
+
+        nodes = var_disc.mesh.nodes
+        x_test = nodes[:3, 0]
+        y_test = nodes[:3, 1]
+        z_test = nodes[:3, 2]
+
+        result_scalar_int = processed_var(0, x=x_test, y=y_test, z=z_test)
+        assert isinstance(0, int)
+        assert result_scalar_int.shape == (3,)
+
+        result_scalar_float = processed_var(0.0, x=x_test, y=y_test, z=z_test)
+        assert isinstance(0.0, float)
+        assert result_scalar_float.shape == (3,)
+
+        result_vector = processed_var(
+            np.array([0.0, 0.5]), x=x_test, y=y_test, z=z_test
+        )
+        assert result_vector.shape == (3, 2)
+
+    def test_processed_variable_unstructured_fill_value(self):
+        from pybamm.meshes.scikit_fem_submeshes_3d import ScikitFemGenerator3D
+
+        x = pybamm.SpatialVariable(
+            "x", domain=["current collector"], coord_sys="cartesian"
+        )
+        y = pybamm.SpatialVariable(
+            "y", domain=["current collector"], coord_sys="cartesian"
+        )
+        z = pybamm.SpatialVariable(
+            "z", domain=["current collector"], coord_sys="cartesian"
+        )
+
+        geometry = {
+            "current collector": {
+                x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+                y: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+                z: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+            }
+        }
+
+        submesh_types = {
+            "current collector": ScikitFemGenerator3D(geom_type="pouch", h=0.3)
+        }
+        var_pts = {x: None, y: None, z: None}
+        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+
+        spatial_methods = {"current collector": pybamm.ScikitFiniteElement3D()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        var = pybamm.Variable("var", domain=["current collector"])
+        disc.set_variable_slices([var])
+        var_disc = disc.process_symbol(var)
+
+        t_sol = np.array([0])
+        y_sol = np.ones((var_disc.shape[0], 1))
+
+        var_casadi = to_casadi(var_disc, y_sol)
+        model = pybamm.BaseModel()
+        model._geometry = geometry
+
+        solution = pybamm.Solution(t_sol, y_sol, model, {})
+
+        processed_var = pybamm.ProcessedVariableUnstructured(
+            "test", [var_disc], [var_casadi], solution
+        )
+
+        x_outside = np.array([2.0])
+        y_outside = np.array([2.0])
+        z_outside = np.array([2.0])
+
+        result_default = processed_var(0, x=x_outside, y=y_outside, z=z_outside)
+        assert np.isnan(result_default)
+
+        result_custom = processed_var(
+            0, x=x_outside, y=y_outside, z=z_outside, fill_value=999
+        )
+        assert result_custom == 999
+
+    def test_processed_variable_unstructured_shape_method(self):
+        from pybamm.meshes.scikit_fem_submeshes_3d import ScikitFemGenerator3D
+
+        x = pybamm.SpatialVariable(
+            "x", domain=["current collector"], coord_sys="cartesian"
+        )
+        y = pybamm.SpatialVariable(
+            "y", domain=["current collector"], coord_sys="cartesian"
+        )
+        z = pybamm.SpatialVariable(
+            "z", domain=["current collector"], coord_sys="cartesian"
+        )
+
+        geometry = {
+            "current collector": {
+                x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+                y: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+                z: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+            }
+        }
+
+        submesh_types = {
+            "current collector": ScikitFemGenerator3D(geom_type="pouch", h=0.3)
+        }
+        var_pts = {x: None, y: None, z: None}
+        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+
+        spatial_methods = {"current collector": pybamm.ScikitFiniteElement3D()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        var = pybamm.Variable("var", domain=["current collector"])
+        disc.set_variable_slices([var])
+        var_disc = disc.process_symbol(var)
+
+        t_sol = np.linspace(0, 1, 5)
+        y_sol = np.ones((var_disc.shape[0], len(t_sol)))
+
+        var_casadi = to_casadi(var_disc, y_sol)
+        model = pybamm.BaseModel()
+        model._geometry = geometry
+
+        solution = pybamm.Solution(t_sol, y_sol, model, {})
+
+        processed_var = pybamm.ProcessedVariableUnstructured(
+            "test", [var_disc], [var_casadi], solution
+        )
+
+        shape = processed_var._shape(t_sol)
+        assert shape == [var_disc.mesh.npts, len(t_sol)]
+
+    def test_processed_variable_unstructured_time_integral(self):
+        from pybamm.meshes.scikit_fem_submeshes_3d import ScikitFemGenerator3D
+
+        x = pybamm.SpatialVariable(
+            "x", domain=["current collector"], coord_sys="cartesian"
+        )
+        y = pybamm.SpatialVariable(
+            "y", domain=["current collector"], coord_sys="cartesian"
+        )
+        z = pybamm.SpatialVariable(
+            "z", domain=["current collector"], coord_sys="cartesian"
+        )
+
+        geometry = {
+            "current collector": {
+                x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+                y: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+                z: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+            }
+        }
+
+        submesh_types = {
+            "current collector": ScikitFemGenerator3D(geom_type="pouch", h=0.3)
+        }
+        var_pts = {x: None, y: None, z: None}
+        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+
+        spatial_methods = {"current collector": pybamm.ScikitFiniteElement3D()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        var = pybamm.Variable("var", domain=["current collector"])
+        disc.set_variable_slices([var])
+        var_disc = disc.process_symbol(var)
+
+        t_sol = np.linspace(0, 1, 5)
+        y_sol = np.ones((var_disc.shape[0], len(t_sol)))
+
+        var_casadi = to_casadi(var_disc, y_sol)
+        model = pybamm.BaseModel()
+        model._geometry = geometry
+
+        solution = pybamm.Solution(t_sol, y_sol, model, {})
+
+        processed_var = pybamm.ProcessedVariableUnstructured(
+            "test", [var_disc], [var_casadi], solution
+        )
+
+        assert processed_var.time_integral is None
+
+        time_integral = pybamm.ProcessedVariableTimeIntegral(
+            method="simpson",
+            sum_node=True,
+            initial_condition=np.zeros(var_disc.shape[0]),
+            discrete_times=t_sol,
+        )
+
+        processed_var_with_integral = pybamm.ProcessedVariableUnstructured(
+            "test", [var_disc], [var_casadi], solution, time_integral=time_integral
+        )
+
+        assert processed_var_with_integral.time_integral is time_integral
+
+    def test_process_variable_regular_mesh_fallback(self):
+        var = pybamm.Variable("var", domain=["negative electrode"])
+
+        disc = tests.get_discretisation_for_testing()
+        disc.set_variable_slices([var])
+        var_sol = disc.process_symbol(var)
+
+        t_sol = np.array([0, 1])
+        y_sol = np.ones((var_sol.shape[0], 2))
+
+        var_casadi = to_casadi(var_sol, y_sol)
+
+        model = tests.get_base_model_with_battery_geometry()
+        solution = pybamm.Solution(t_sol, y_sol, model, {})
+
+        processed_var = pybamm.process_variable(
+            "test", [var_sol], [var_casadi], solution
+        )
+
+        assert not isinstance(processed_var, pybamm.ProcessedVariableUnstructured)
+
+    def test_process_variable_unstructured_detection(self):
+        from pybamm.meshes.scikit_fem_submeshes_3d import ScikitFemGenerator3D
+
+        x = pybamm.SpatialVariable(
+            "x", domain=["current collector"], coord_sys="cartesian"
+        )
+        y = pybamm.SpatialVariable(
+            "y", domain=["current collector"], coord_sys="cartesian"
+        )
+        z = pybamm.SpatialVariable(
+            "z", domain=["current collector"], coord_sys="cartesian"
+        )
+
+        geometry = {
+            "current collector": {
+                x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+                y: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+                z: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+            }
+        }
+
+        submesh_types = {
+            "current collector": ScikitFemGenerator3D(geom_type="pouch", h=0.3)
+        }
+        var_pts = {x: None, y: None, z: None}
+        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+
+        spatial_methods = {"current collector": pybamm.ScikitFiniteElement3D()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        var = pybamm.Variable("var", domain=["current collector"])
+        disc.set_variable_slices([var])
+        var_disc = disc.process_symbol(var)
+
+        t_sol = np.array([0, 1])
+        y_sol = np.ones((var_disc.shape[0], 2))
+
+        var_casadi = to_casadi(var_disc, y_sol)
+        model = pybamm.BaseModel()
+        model._geometry = geometry
+
+        solution = pybamm.Solution(t_sol, y_sol, model, {})
+
+        processed_var = pybamm.process_variable(
+            "test", [var_disc], [var_casadi], solution
+        )
+
+        assert isinstance(processed_var, pybamm.ProcessedVariableUnstructured)

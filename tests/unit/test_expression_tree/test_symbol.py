@@ -2,14 +2,15 @@
 # Test for the Symbol class
 #
 
-import pytest
+import re
 
 import numpy as np
-from scipy.sparse import csr_matrix, coo_matrix
-import re
+import pytest
+import sympy
+from scipy.sparse import coo_matrix, csr_matrix
+
 import pybamm
 from pybamm.expression_tree.binary_operators import _Heaviside
-import sympy
 
 
 class TestSymbol:
@@ -244,9 +245,9 @@ class TestSymbol:
             "-",
             "*",
         ]
-        for node, expect in zip(exp.pre_order(), expected_preorder):
+        for node, expect in zip(exp.pre_order(), expected_preorder, strict=False):
             assert node.name == expect
-        for node, expect in zip(exp.post_order(), expected_postorder):
+        for node, expect in zip(exp.post_order(), expected_postorder, strict=False):
             assert node.name == expect
 
     def test_symbol_diff(self):

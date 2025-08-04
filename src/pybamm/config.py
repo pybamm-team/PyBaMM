@@ -1,11 +1,13 @@
-import uuid
 import os
-import platformdirs
-from pathlib import Path
-import pybamm
 import sys
 import threading
 import time
+import uuid
+from pathlib import Path
+
+import platformdirs
+
+import pybamm
 
 
 def check_env_opt_out():

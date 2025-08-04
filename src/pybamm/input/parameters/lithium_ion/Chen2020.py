@@ -1,5 +1,6 @@
-import pybamm
 import numpy as np
+
+import pybamm
 
 
 def graphite_LGM50_ocp_Chen2020(sto):

@@ -1,19 +1,19 @@
 from __future__ import annotations
 
-from typing import Union
-from typing_extensions import TypeAlias
+from typing import Any, TypeAlias
+
 import numpy as np
 import numpy.typing as npt
+
 import pybamm
-from typing import Any
 
 # numbers.Number should not be used for type hints
-Numeric: TypeAlias = Union[int, float, np.number]
+Numeric: TypeAlias = int | float | np.number
 
 # expression tree
-ChildValue: TypeAlias = Union[float, npt.NDArray[Any]]
-ChildSymbol: TypeAlias = Union[float, npt.NDArray[Any], pybamm.Symbol]
+ChildValue: TypeAlias = float | npt.NDArray[Any]
+ChildSymbol: TypeAlias = float | npt.NDArray[Any] | pybamm.Symbol
 
-DomainType: TypeAlias = Union[list[str], str, None]
-AuxiliaryDomainType: TypeAlias = Union[dict[str, str], None]
-DomainsType: TypeAlias = Union[dict[str, Union[list[str], str]], None]
+DomainType: TypeAlias = list[str] | str | None
+AuxiliaryDomainType: TypeAlias = dict[str, str] | None
+DomainsType: TypeAlias = dict[str, list[str] | str] | None

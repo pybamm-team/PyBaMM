@@ -1,4 +1,5 @@
 import pybamm
+
 from .base_step import (
     BaseStepExplicit,
     BaseStepImplicit,
@@ -156,7 +157,7 @@ class CRate(BaseStepExplicit):
     def current_value(self, variables):
         return self.value * pybamm.Parameter("Nominal cell capacity [A.h]")
 
-    def default_duration(self, value):
+    def _default_timespan(self, value):
         # "value" is C-rate, so duration is "1 / value" hours in seconds
         # with a 2x safety factor
         return 1 / abs(value) * 3600 * 2

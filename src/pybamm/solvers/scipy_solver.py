@@ -2,10 +2,10 @@
 # Solver class using Scipy's adaptive time stepper
 #
 import casadi
-import pybamm
-
-import scipy.integrate as it
 import numpy as np
+import scipy.integrate as it
+
+import pybamm
 
 
 class ScipySolver(pybamm.BaseSolver):
@@ -130,8 +130,8 @@ class ScipySolver(pybamm.BaseSolver):
         timer = pybamm.Timer()
         sol = it.solve_ivp(
             rhs,
-            (t_eval[0], t_eval[-1]),
-            y0,
+            t_span=(t_eval[0], t_eval[-1]),
+            y0=y0,
             t_eval=t_eval,
             method=self.method,
             dense_output=True,

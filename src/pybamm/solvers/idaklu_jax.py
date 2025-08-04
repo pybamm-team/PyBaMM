@@ -1,13 +1,15 @@
 from __future__ import annotations
-import pybamm
+
+import logging
+import numbers
+import warnings
+from functools import lru_cache
+
 import numpy as np
 import numpy.typing as npt
-import logging
-import warnings
-import numbers
 import pybammsolvers.idaklu as idaklu
 
-from functools import lru_cache
+import pybamm
 
 logger = logging.getLogger("pybamm.solvers.idaklu_jax")
 
@@ -15,9 +17,7 @@ if pybamm.has_jax():
     import jax
     from jax import lax
     from jax import numpy as jnp
-    from jax.interpreters import ad
-    from jax.interpreters import mlir
-    from jax.interpreters import batching
+    from jax.interpreters import ad, batching, mlir
     from jax.interpreters.mlir import custom_call
     from jax.lib import xla_client
     from jax.tree_util import tree_flatten
@@ -345,7 +345,7 @@ class IDAKLUJax:
         d = self._hashabledict()
         if self.jax_inputs is not None:
             # Use hashable dictionaries for caching the solve
-            for key, value in zip(self.jax_inputs.keys(), inputs_values):
+            for key, value in zip(self.jax_inputs.keys(), inputs_values, strict=False):
                 d[key] = value
         # Solver
         logger.debug("_jaxify_solve:")
@@ -600,6 +600,7 @@ class IDAKLUJax:
         self._register_callbacks()  # Register python methods as callbacks in IDAKLU-JAX
 
         for _name, _value in idaklu.registrations().items():
+            # todo: This has been removed from jax v0.6.0
             xla_client.register_custom_call_target(
                 f"{_name}_{self._unique_name()}", _value, platform="cpu"
             )
@@ -742,7 +743,10 @@ class IDAKLUJax:
                 return lax.zeros_like_array(prim) if type(tan) is ad.Zero else tan
 
             zero_mapped_tangents = tuple(
-                map(lambda pt: make_zero(pt[0], pt[1]), zip(primals, tangents))
+                map(
+                    lambda pt: make_zero(pt[0], pt[1]),
+                    zip(primals, tangents, strict=False),
+                )
             )
 
             y = f_p.bind(*primals)

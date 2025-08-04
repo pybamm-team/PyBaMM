@@ -2,11 +2,12 @@
 # Tests for the Base Solver class
 #
 
-import pytest
 import casadi
-import pybamm
 import numpy as np
+import pytest
 from scipy.sparse import csr_matrix
+
+import pybamm
 
 
 class TestBaseSolver:
@@ -367,7 +368,7 @@ class TestBaseSolver:
         solver = pybamm.BaseSolver()
         assert solver.get_platform_context("Win") == "spawn"
         assert solver.get_platform_context("Linux") == "fork"
-        assert solver.get_platform_context("Darwin") == "fork"
+        assert solver.get_platform_context("Darwin") == "spawn"
 
     def test_sensitivities(self):
         def exact_diff_a(y, a, b):
@@ -415,11 +416,11 @@ class TestBaseSolver:
                 sens_b, exact_diff_b(y, inputs["a"], inputs["b"])
             )
 
-    def test_on_extrapolation_settings(self):
-        # Test setting different on_extrapolation values on BaseSolver
+    def test_on_extrapolation_and_on_failure_settings(self):
+        # Test setting different on_extrapolation and on_failure values on BaseSolver
         base_solver = pybamm.BaseSolver()
 
-        # Test valid values
+        # Test valid on_extrapolation values
         base_solver.on_extrapolation = "warn"
         assert base_solver.on_extrapolation == "warn"
         base_solver.on_extrapolation = "error"
@@ -427,8 +428,21 @@ class TestBaseSolver:
         base_solver.on_extrapolation = "ignore"
         assert base_solver.on_extrapolation == "ignore"
 
+        # Test valid on_failure values
+        base_solver.on_failure = "warn"
+        assert base_solver.on_failure == "warn"
+        base_solver.on_failure = "error"
+        assert base_solver.on_failure == "error"
+        base_solver.on_failure = "ignore"
+        assert base_solver.on_failure == "ignore"
+
         # Test invalid value
         with pytest.raises(
             ValueError, match="on_extrapolation must be 'warn', 'raise', or 'ignore'"
         ):
             base_solver.on_extrapolation = "invalid"
+
+        with pytest.raises(
+            ValueError, match="on_failure must be 'warn', 'raise', or 'ignore'"
+        ):
+            base_solver.on_failure = "invalid"
