@@ -82,6 +82,7 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
         :class:`pybamm.Concatenation`
             The 3D gradient as concatenation of x, y, z or z, r, theta components
         """
+
         skfem = import_optional_dependency("skfem")
         domain = symbol.domain[0]
         mesh = self.mesh[domain]
@@ -97,6 +98,12 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
 
         mass = skfem.asm(mass_form, mesh.basis)
         mass_inv = pybamm.Matrix(inv(csc_matrix(mass)))
+
+        if isinstance(discretised_symbol, pybamm.Scalar):  # pragma: no cover
+            zeros = pybamm.Vector(np.zeros((mesh.npts, 1)))
+            grad = pybamm.Concatenation(zeros, zeros, zeros, check_domain=False)
+            grad.copy_domains(symbol)
+            return grad
 
         grad_x = mass_inv @ (grad_x_matrix @ discretised_symbol)
         grad_y = mass_inv @ (grad_y_matrix @ discretised_symbol)
