@@ -863,6 +863,13 @@ class TestSerialise:
         assert isinstance(expr2.integration_variable[0], pybamm.SpatialVariable)
         assert expr2.integration_variable[0].name == "x"
 
+    def test_invalid_filename(self):
+        model = pybamm.lithium_ion.DFN()
+        with pytest.raises(
+            ValueError, match=r"Filename 'dfn' must end with '.json' extension."
+        ):
+            Serialise.save_custom_model(model, filename="dfn")
+
     def test_symbol_fallback_serialisation(self):
         var = pybamm.Variable("v", domain="electrode")
         diff = pybamm.Gradient(var)
