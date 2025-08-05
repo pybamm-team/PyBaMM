@@ -277,7 +277,7 @@ class Serialise:
         >>> import pybamm
         >>> model = pybamm.lithium_ion.BasicDFN()
         >>> from pybamm.expression_tree.operations.serialise import Serialise
-        >>> Serialise.save_custom_model(model, "basicdfn_model")
+        >>> Serialise.save_custom_model(model, "basicdfn_model.json")
 
         """
         required_attrs = [
@@ -427,7 +427,7 @@ class Serialise:
         >>> import pybamm
         >>> model = pybamm.lithium_ion.BasicDFN()
         >>> from pybamm.expression_tree.operations.serialise import Serialise
-        >>> Serialise.save_custom_model(model, "basicdfn_model")
+        >>> Serialise.save_custom_model(model, "basicdfn_model.json")
         >>> loaded_model = Serialise.load_custom_model("basicdfn_model.json", battery_model=pybamm.lithium_ion.BaseModel())
 
         """
