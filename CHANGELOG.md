@@ -7,6 +7,10 @@
 - Adds a composite electrode electrode soh model ([#5160](https://github.com/pybamm-team/PyBaMM/pull/5129))
 - Generalises `set_initial_soc` to `set_initial_state` and adds Thevenin initial state setting. ([#5129](https://github.com/pybamm-team/PyBaMM/pull/5129))
 
+## Bug fixes
+
+- Fixed a bug where the final duration of a drive cycle would not be inferred correctly. ([#5153](https://github.com/pybamm-team/PyBaMM/pull/5153))
+
 # [v25.8.0](https://github.com/pybamm-team/PyBaMM/tree/v25.8.0) - 2025-08-04
 
 ## Features
