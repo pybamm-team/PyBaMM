@@ -164,7 +164,10 @@ class BaseModel:
 
     @rhs.setter
     def rhs(self, rhs):
-        self._rhs = EquationDict("rhs", rhs)
+        wrapped_rhs = {}
+        for variable, expression in rhs.items():
+            wrapped_rhs[variable] = self.wrap_source(expression, variable)
+        self._rhs = EquationDict("rhs", wrapped_rhs)
 
     @property
     def algebraic(self):
@@ -1517,6 +1520,20 @@ class BaseModel:
             )
 
         Serialise().save_model(self, filename=filename, mesh=mesh, variables=variables)
+
+    def wrap_source(self, expr, variable):
+        if isinstance(variable, pybamm.Variable) and variable.domain == [
+            "current collector"
+        ]:
+            # Only wrap if it's not already a MatrixMultiplication from source()
+            if not isinstance(expr, pybamm.MatrixMultiplication) and isinstance(
+                expr, pybamm.PrimaryBroadcast
+            ):
+                pybamm.logger.warning(
+                    f"[wrap_source] Wrapping RHS for '{variable.name}' in pybamm.source()"
+                )
+                return pybamm.source(expr, variable)
+        return expr
 
 
 def load_model(filename, battery_model: BaseModel | None = None):
