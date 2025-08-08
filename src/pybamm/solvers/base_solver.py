@@ -1216,9 +1216,15 @@ class BaseSolver:
             t_eval = np.linspace(0, dt, npts)
         elif t_eval is None:
             t_eval = np.array([0, dt])
-        elif t_eval[0] != 0 or t_eval[-1] != dt:
+        elif t_eval[0] != 0:
             raise pybamm.SolverError(
-                "Elements inside array t_eval must lie in the closed interval 0 to dt"
+                f"The first `t_eval` value ({t_eval[0]}) must be 0."
+                "Please correct your `t_eval` array."
+            )
+        elif t_eval[-1] != dt:
+            raise pybamm.SolverError(
+                f"The final `t_eval` value ({t_eval[-1]}) must be equal "
+                f"to the step time `dt` ({dt}). Please correct your `t_eval` array."
             )
         else:
             pass
