@@ -35,11 +35,11 @@ class TestSettings:
         pybamm.settings.set_smoothing_parameters("exact")
 
         # Test errors
+        pybamm.settings.min_max_mode = "smooth"
         with pytest.raises(ValueError, match="greater than 1"):
-            pybamm.settings.min_max_mode = "smooth"
             pybamm.settings.min_max_smoothing = 0.9
+        pybamm.settings.min_max_mode = "soft"
         with pytest.raises(ValueError, match="positive number"):
-            pybamm.settings.min_max_mode = "soft"
             pybamm.settings.min_max_smoothing = -10
         with pytest.raises(ValueError, match="positive number"):
             pybamm.settings.heaviside_smoothing = -10

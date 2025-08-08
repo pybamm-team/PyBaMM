@@ -4,7 +4,7 @@ import pytest
 import pybamm
 
 
-@pytest.fixture()
+@pytest.fixture
 def r():
     r = pybamm.SpatialVariable(
         "r", domain=["negative particle"], coord_sys="spherical polar"
@@ -12,14 +12,14 @@ def r():
     return r
 
 
-@pytest.fixture()
+@pytest.fixture
 def x():
     return pybamm.SpatialVariable(
         "x", domain=["negative electrode"], coord_sys="cartesian"
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def geometry(r):
     geometry = {
         "negative particle": {r: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}

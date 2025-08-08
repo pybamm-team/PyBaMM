@@ -91,7 +91,10 @@ def get_1p1d_mesh_for_testing(
 class TestSpectralVolume:
     def test_exceptions(self):
         sp_meth = pybamm.SpectralVolume()
-        with pytest.raises(ValueError):
+        with pytest.raises(
+            ValueError,
+            match="Too many degrees of differentiation.",
+        ):
             sp_meth.chebyshev_differentiation_matrices(3, 3)
 
         mesh = get_mesh_for_testing()
