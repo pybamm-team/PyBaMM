@@ -1,5 +1,7 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+# [v25.8.0](https://github.com/pybamm-team/PyBaMM/tree/v25.8.0) - 2025-08-04
+
 ## Features
 - Added `plot_3d_cross_section` & `plot_3d_heatmap` functions to support plotting for 3D thermal simulations. ([#5130](https://github.com/pybamm-team/PyBaMM/pull/5130))
 - Added a `Basic3DThermalSPM` with two way coupling. ([#5112](https://github.com/pybamm-team/PyBaMM/pull/5112))
@@ -18,6 +20,7 @@
 
 ## Bug fixes
 
+- Fixed non-deterministic plotting CI issues ([#5150](https://github.com/pybamm-team/PyBaMM/pull/5150))
 - Fix non-deterministic ShapeError in 3D FEM gradient method ([#5143](https://github.com/pybamm-team/PyBaMM/pull/5143))
 - Fixes negative electrode boundary values for half-cell voltage contributions. ([#5139](https://github.com/pybamm-team/PyBaMM/pull/5139))
 - Makes `A_cc` L_z * L_y * number of layers ([#5138](https://github.com/pybamm-team/PyBaMM/pull/5138))
