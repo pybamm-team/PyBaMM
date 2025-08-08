@@ -1,8 +1,13 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Features
+
+- Generalises `set_initial_soc` to `set_initial_state` and adds Thevenin initial state setting. ([#5129](https://github.com/pybamm-team/PyBaMM/pull/5129))
+
 # [v25.8.0](https://github.com/pybamm-team/PyBaMM/tree/v25.8.0) - 2025-08-04
 
 ## Features
+
 - Added `plot_3d_cross_section` & `plot_3d_heatmap` functions to support plotting for 3D thermal simulations. ([#5130](https://github.com/pybamm-team/PyBaMM/pull/5130))
 - Added a `Basic3DThermalSPM` with two way coupling. ([#5112](https://github.com/pybamm-team/PyBaMM/pull/5112))
 - Enables the passing of `inputs` throughout `set_initial_soc`. ([#5122](https://github.com/pybamm-team/PyBaMM/pull/5122))
