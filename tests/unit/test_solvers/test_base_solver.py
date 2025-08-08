@@ -93,14 +93,14 @@ class TestBaseSolver:
         t_eval = np.array([0, 1])
         with pytest.raises(
             pybamm.SolverError,
-            match="Elements inside array t_eval must lie in the closed interval 0 to dt",
+            match="The final `t_eval` value \\(1\\) must be equal to the step time `dt` \\(2\\)",
         ):
             solver.step(None, model, dt, t_eval=t_eval)
 
         t_eval = np.array([1, dt])
         with pytest.raises(
             pybamm.SolverError,
-            match="Elements inside array t_eval must lie in the closed interval 0 to dt",
+            match="The first `t_eval` value \\(1\\) must be 0",
         ):
             solver.step(None, model, dt, t_eval=t_eval)
 
