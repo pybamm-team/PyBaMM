@@ -532,7 +532,44 @@ class IDAKLUSolver(pybamm.BaseSolver):
     def supports_parallel_solve(self):
         return True
 
-    def _integrate(self, model, t_eval, inputs_list=None, t_interp=None):
+    def _apply_solver_initial_conditions(self, model, initial_conditions):
+        """
+        Apply custom initial conditions to a model by overriding model.y0.
+
+        Parameters
+        ----------
+        model : pybamm.BaseModel
+            A model with a precomputed y0 vector.
+        initial_conditions : dict or numpy.ndarray
+            Either a mapping from variable names to values (scalar or array),
+            or a flat numpy array matching the length of model.y0.
+        """
+        if isinstance(initial_conditions, dict):
+            y0_np = (
+                model.y0.full() if isinstance(model.y0, casadi.DM) else model.y0.copy()
+            )
+
+            for var_name, value in initial_conditions.items():
+                found = False
+                for symbol, slice_info in model.y_slices.items():
+                    if symbol.name == var_name:
+                        var_slice = slice_info[0]
+                        y0_np[var_slice] = value
+                        found = True
+                        break
+                if not found:
+                    raise ValueError(f"Variable '{var_name}' not found in model")
+
+            model.y0 = casadi.DM(y0_np)
+
+        elif isinstance(initial_conditions, np.ndarray):
+            model.y0 = casadi.DM(initial_conditions)
+        else:
+            raise TypeError("Initial conditions must be dict or numpy array")
+
+    def _integrate(
+        self, model, t_eval, inputs_list=None, t_interp=None, initial_conditions=None
+    ):
         """
         Solve a DAE model defined by residuals with initial conditions y0.
 
@@ -547,6 +584,13 @@ class IDAKLUSolver(pybamm.BaseSolver):
         t_interp : None, list or ndarray, optional
             The times (in seconds) at which to interpolate the solution. Defaults to `None`,
             which returns the adaptive time-stepping times.
+        initial_conditions : dict, numpy.ndarray, or list, optional
+            Override the model’s default `y0`.  Can be:
+
+            - a dict mapping variable names → values
+            - a 1D array of length `n_states`
+            - a list of such overrides (one per parallel solve)
+
         """
         if model.convert_to_format != "casadi":  # pragma: no cover
             # Shouldn't ever reach this point
@@ -565,11 +609,36 @@ class IDAKLUSolver(pybamm.BaseSolver):
         else:
             inputs = np.array([[]] * len(inputs_list))
 
-        # stack y0full and ydot0full so they are a 2D array of shape (number_of_inputs, number_of_states + number_of_parameters * number_of_states)
-        # note that y0full and ydot0full are currently 1D arrays (i.e. independent of inputs), but in the future we will support
-        # different initial conditions for different inputs (see https://github.com/pybamm-team/PyBaMM/pull/4260). For now we just repeat the same initial conditions for each input
-        y0full = np.vstack([model.y0full] * len(inputs_list))
-        ydot0full = np.vstack([model.ydot0full] * len(inputs_list))
+        if initial_conditions is not None:
+            if isinstance(initial_conditions, list):
+                if len(initial_conditions) != len(inputs_list):
+                    raise ValueError(
+                        "Number of initial conditions must match number of input sets"
+                    )
+
+                y0_list = []
+
+                model_copy = model.new_copy()
+                for ic in initial_conditions:
+                    self._apply_solver_initial_conditions(model_copy, ic)
+                    y0_list.append(model_copy.y0.full().flatten())
+
+                y0full = np.vstack(y0_list)
+                ydot0full = np.zeros_like(y0full)
+
+            else:
+                self._apply_solver_initial_conditions(model, initial_conditions)
+
+                y0_np = model.y0.full()
+
+                y0full = np.vstack([y0_np for _ in range(len(inputs_list))])
+                ydot0full = np.zeros_like(y0full)
+        else:
+            # stack y0full and ydot0full so they are a 2D array of shape (number_of_inputs, number_of_states + number_of_parameters * number_of_states)
+            # note that y0full and ydot0full are currently 1D arrays (i.e. independent of inputs), but in the future we will support
+            # different initial conditions for different inputs. For now we just repeat the same initial conditions for each input
+            y0full = np.vstack([model.y0full] * len(inputs_list))
+            ydot0full = np.vstack([model.ydot0full] * len(inputs_list))
 
         atol = getattr(model, "atol", self.atol)
         atol = self._check_atol_type(atol, y0full.size)

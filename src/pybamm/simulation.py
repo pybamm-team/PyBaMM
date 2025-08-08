@@ -390,6 +390,7 @@ class Simulation:
         showprogress=False,
         inputs=None,
         t_interp=None,
+        initial_conditions=None,
         **kwargs,
     ):
         """
@@ -543,9 +544,13 @@ class Simulation:
                             pybamm.SolverWarning,
                             stacklevel=2,
                         )
-
             self._solution = solver.solve(
-                self._built_model, t_eval, inputs=inputs, t_interp=t_interp, **kwargs
+                self._built_model,
+                t_eval,
+                inputs=inputs,
+                t_interp=t_interp,
+                **kwargs,
+                initial_conditions=initial_conditions,
             )
 
         elif self.operating_mode == "with experiment":

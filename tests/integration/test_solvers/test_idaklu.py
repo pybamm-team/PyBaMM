@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 
 import pybamm
 
@@ -209,6 +210,71 @@ class TestIDAKLUSolver:
             sols[0].cycles[-1]["Current [A]"].data,
             sols[1].cycles[-1]["Current [A]"].data,
         )
+
+    @pytest.mark.parametrize(
+        "model_cls, make_ics",
+        [
+            (pybamm.lithium_ion.SPM, lambda y0: [y0, 2 * y0]),
+            (
+                pybamm.lithium_ion.DFN,
+                lambda y0: [y0, y0 * (1 + 0.01 * np.ones_like(y0))],
+            ),
+        ],
+    )
+    def test_multiple_initial_conditions_against_independent_solves(
+        self, model_cls, make_ics
+    ):
+        model = model_cls()
+        geom = model.default_geometry
+        pv = model.default_parameter_values
+        pv.process_model(model)
+        pv.process_geometry(geom)
+        mesh = pybamm.Mesh(geom, model.default_submesh_types, model.default_var_pts)
+        disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+        disc.process_model(model)
+
+        t_eval = np.array([0, 1])
+        solver = pybamm.IDAKLUSolver()
+
+        base_sol = solver.solve(model, t_eval)
+        y0_base = base_sol.y[:, 0]
+
+        ics = make_ics(y0_base)
+        inputs = [{}] * len(ics)
+
+        multi_sols = solver.solve(
+            model,
+            t_eval,
+            inputs=inputs,
+            initial_conditions=ics,
+        )
+        assert isinstance(multi_sols, list) and len(multi_sols) == 2
+
+        indep_sols = []
+        for ic in ics:
+            sol_indep = solver.solve(
+                model, t_eval, inputs=[{}], initial_conditions=[ic]
+            )
+            if isinstance(sol_indep, list):
+                sol_indep = sol_indep[0]
+            indep_sols.append(sol_indep)
+
+        if model_cls is pybamm.lithium_ion.SPM:
+            rtol, atol = 1e-8, 1e-10
+        else:
+            rtol, atol = 1e-6, 1e-8
+
+        for idx in (0, 1):
+            sol_vec = multi_sols[idx]
+            sol_ind = indep_sols[idx]
+
+            np.testing.assert_allclose(sol_vec.t, sol_ind.t, rtol=1e-12, atol=0)
+            np.testing.assert_allclose(sol_vec.y, sol_ind.y, rtol=rtol, atol=atol)
+
+            if model_cls is pybamm.lithium_ion.SPM:
+                np.testing.assert_allclose(
+                    sol_vec.y[:, 0], ics[idx], rtol=1e-8, atol=1e-10
+                )
 
     def test_outvars_with_experiments_multi_simulation(self):
         model = pybamm.lithium_ion.SPM()
