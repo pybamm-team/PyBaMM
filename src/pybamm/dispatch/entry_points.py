@@ -1,6 +1,12 @@
+import hashlib
 import importlib.metadata
 import textwrap
+import urllib.request
 from collections.abc import Callable, Mapping
+from pathlib import Path
+
+import pybamm
+from pybamm.expression_tree.operations.serialise import Serialise
 
 
 class EntryPoint(Mapping):
@@ -109,7 +115,28 @@ parameter_sets = EntryPoint(group="pybamm_parameter_sets")
 models = EntryPoint(group="pybamm_models")
 
 
-def Model(model: str, *args, **kwargs):
+def get_cache_path(url):
+    cache_dir = Path.home() / ".pybamm_cache" / "pybamm" / "models"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    file_hash = hashlib.md5(url.encode()).hexdigest()
+    return cache_dir / f"{file_hash}.json"
+
+
+def clear_model_cache():
+    cache_dir = Path.home() / ".pybamm_cache" / "pybamm" / "models"
+    if cache_dir.exists():
+        for file in cache_dir.glob("*.json"):
+            file.unlink()
+
+
+def Model(
+    model=None,
+    url=None,
+    battery_model=None,
+    force_download=False,
+    *args,
+    **kwargs,
+):
     """
     Returns the loaded model object
     Note: This feature is in its experimental phase.
@@ -137,6 +164,29 @@ def Model(model: str, *args, **kwargs):
         >>> pybamm.Model('SPM') # doctest: +SKIP
         <pybamm.models.full_battery_models.lithium_ion.spm.SPM object>
     """
-    model_class = models._get_class(model)
+    if (model is None and url is None) or (model and url):
+        raise ValueError("You must provide exactly one of `model` or `url`.")
 
-    return model_class(*args, **kwargs)
+    if url is not None:
+        if battery_model is None:
+            battery_model = pybamm.BaseModel()
+
+        cache_path = get_cache_path(url)
+        if not cache_path.exists() or force_download:
+            try:
+                print(f"Downloading model from {url}...")
+                urllib.request.urlretrieve(url, cache_path)
+                print(f"Model cached at: {cache_path}")
+            except Exception as e:
+                raise RuntimeError(f"Failed to download model from URL: {e}") from e
+        else:
+            print(f"Using cached model at: {cache_path}")
+
+        return Serialise.load_custom_model(str(cache_path), battery_model=battery_model)
+
+    if model is not None:
+        try:
+            model_class = models._get_class(model)
+            return model_class(*args, **kwargs)
+        except Exception as e:
+            raise ValueError(f"Could not load model '{model}': {e}") from e
