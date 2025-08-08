@@ -36,6 +36,10 @@ class VectorField(pybamm.Symbol):
     def evaluates_on_edges(self, dimension: str) -> bool:
         left_evaluates_on_edges = self.lr_field.evaluates_on_edges(dimension)
         right_evaluates_on_edges = self.tb_field.evaluates_on_edges(dimension)
+        if left_evaluates_on_edges:
+            left_evaluates_on_edges = True
+        if right_evaluates_on_edges:
+            right_evaluates_on_edges = True
         if left_evaluates_on_edges == right_evaluates_on_edges:
             return left_evaluates_on_edges
         else:

@@ -17,6 +17,26 @@ from scipy.sparse import (
 import pybamm
 
 
+def _evaluates_on_edges_one_side(symbol, direction):
+    if hasattr(symbol, "_evaluates_on_edges_original"):
+        return symbol
+    if direction == "lr":
+        symbol._evaluates_on_edges_original = symbol._evaluates_on_edges
+        symbol._evaluates_on_edges = (
+            lambda dim: "lr"
+            if dim == "primary"
+            else symbol._evaluates_on_edges_original(dim)
+        )
+    elif direction == "tb":
+        symbol._evaluates_on_edges_original = symbol._evaluates_on_edges
+        symbol._evaluates_on_edges = (
+            lambda dim: "tb"
+            if dim == "primary"
+            else symbol._evaluates_on_edges_original(dim)
+        )
+    return symbol
+
+
 class FiniteVolume2D(pybamm.SpatialMethod):
     """
     A class which implements the steps specific to the finite volume method during
@@ -130,19 +150,9 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         """
         # Multiply by gradient matrix
         grad_lr = self._gradient(symbol, discretised_symbol, boundary_conditions, "lr")
-        grad_lr._evaluates_on_edges_original = grad_lr._evaluates_on_edges
-        grad_lr._evaluates_on_edges = (
-            lambda dim: "lr"
-            if dim == "primary"
-            else grad_lr._evaluates_on_edges_original(dim)
-        )
+        grad_lr = _evaluates_on_edges_one_side(grad_lr, "lr")
         grad_tb = self._gradient(symbol, discretised_symbol, boundary_conditions, "tb")
-        grad_tb._evaluates_on_edges_original = grad_tb._evaluates_on_edges
-        grad_tb._evaluates_on_edges = (
-            lambda dim: "tb"
-            if dim == "primary"
-            else grad_tb._evaluates_on_edges_original(dim)
-        )
+        grad_tb = _evaluates_on_edges_one_side(grad_tb, "tb")
         grad = pybamm.VectorField(grad_lr, grad_tb)
         return grad
 
@@ -2011,19 +2021,9 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         """
         new_symbol = self.shift(discretised_symbol, "node to edge", method, direction)
         if direction == "lr":
-            new_symbol._evaluates_on_edges_original = new_symbol._evaluates_on_edges
-            new_symbol._evaluates_on_edges = (
-                lambda dim: "lr"
-                if dim == "primary"
-                else new_symbol._evaluates_on_edges_original(dim)
-            )
+            new_symbol = _evaluates_on_edges_one_side(new_symbol, "lr")
         elif direction == "tb":
-            new_symbol._evaluates_on_edges_original = new_symbol._evaluates_on_edges
-            new_symbol._evaluates_on_edges = (
-                lambda dim: "tb"
-                if dim == "primary"
-                else new_symbol._evaluates_on_edges_original(dim)
-            )
+            new_symbol = _evaluates_on_edges_one_side(new_symbol, "tb")
         return new_symbol
 
     def shift(self, discretised_symbol, shift_key, method, direction="lr"):
