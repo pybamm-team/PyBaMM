@@ -19,7 +19,7 @@ def y():
 def geometry(x, y):
     geometry = {
         "my 2d domain": {
-            x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+            x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(2)},
             y: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
         }
     }
@@ -201,7 +201,7 @@ class TestUniform2DSubMesh:
 
         # check boundary locations
         assert mesh["my 2d domain"].edges_lr[0] == 0
-        assert mesh["my 2d domain"].edges_lr[-1] == 1
+        assert mesh["my 2d domain"].edges_lr[-1] == 2
         assert mesh["my 2d domain"].edges_tb[0] == 0
         assert mesh["my 2d domain"].edges_tb[-1] == 1
 

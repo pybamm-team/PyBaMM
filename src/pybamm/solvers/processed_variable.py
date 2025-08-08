@@ -904,12 +904,12 @@ class ProcessedVariable2DFVM(ProcessedVariable):
         num_edges_lr = len(self.mesh.edges_lr)
         num_edges_tb = len(self.mesh.edges_tb)
 
-        if base_variables[0].shape[0] == num_nodes_lr * num_nodes_tb:
+        if not self.base_variables[0].evaluates_on_edges("primary"):
             self.first_dim_size = num_nodes_lr
             self.second_dim_size = num_nodes_tb
             self.first_dim_pts = self.mesh.nodes_lr
             self.second_dim_pts = self.mesh.nodes_tb
-        elif base_variables[0].shape[0] == num_edges_lr * num_nodes_tb:
+        elif base_variables[0].evaluates_on_edges("primary") == "lr":
             # Evaluates on edges in the LR direction
             # Note that if the variable has the same number of nodes in the LR direction and the TB direction,
             # Then we assume it evaluates on edges in the LR direction for lack of a better option
@@ -917,11 +917,16 @@ class ProcessedVariable2DFVM(ProcessedVariable):
             self.second_dim_size = num_nodes_tb
             self.first_dim_pts = self.mesh.edges_lr
             self.second_dim_pts = self.mesh.nodes_tb
-        elif base_variables[0].shape[0] == num_nodes_lr * num_edges_tb:
+        elif base_variables[0].evaluates_on_edges("primary") == "tb":
             # Evaluates on edges in the TB direction
             self.first_dim_size = num_nodes_lr
             self.second_dim_size = num_edges_tb
             self.first_dim_pts = self.mesh.nodes_lr
+            self.second_dim_pts = self.mesh.edges_tb
+        elif base_variables[0].evaluates_on_edges("primary"):
+            self.first_dim_size = num_edges_lr
+            self.second_dim_size = num_edges_tb
+            self.first_dim_pts = self.mesh.edges_lr
             self.second_dim_pts = self.mesh.edges_tb
         else:
             raise ValueError(

@@ -6,9 +6,7 @@ import numpy as np
 import pytest
 
 import pybamm
-from tests import (
-    get_mesh_for_testing_2d,
-)
+from tests import DummyDiscretisationClass, get_mesh_for_testing_2d
 
 
 class TestFiniteVolume2DGradDiv:
@@ -116,10 +114,7 @@ class TestFiniteVolume2DGradDiv:
         disc.set_variable_slices([my_scalar_var_zero, my_scalar_var_one, linear_y_var])
         grad_eqn = pybamm.grad(linear_y_var)
 
-        class DummyClass:
-            boundary_conditions = None
-
-        myclass = DummyClass()
+        myclass = DummyDiscretisationClass()
         boundary_conditions = {
             linear_y_var: {
                 "left": (pybamm.Scalar(0), "Neumann"),
@@ -143,7 +138,7 @@ class TestFiniteVolume2DGradDiv:
         )
 
         # Now do linear in x direction but with a variable BC
-        myclass = DummyClass()
+        myclass = DummyDiscretisationClass()
         boundary_conditions = {
             linear_y_var: {
                 "left": (my_scalar_var_zero, "Dirichlet"),
@@ -272,9 +267,6 @@ class TestFiniteVolume2DGradDiv:
         grad_eqn = pybamm.grad(var)
         div_eqn = pybamm.div(grad_eqn)
 
-        class DummyClass:
-            boundary_conditions = None
-
         boundary_conditions = {
             var: {
                 "left": (my_scalar_var, "Neumann"),
@@ -283,7 +275,7 @@ class TestFiniteVolume2DGradDiv:
                 "bottom": (pybamm.Scalar(0), "Neumann"),
             }
         }
-        myclass = DummyClass()
+        myclass = DummyDiscretisationClass()
         myclass.boundary_conditions = boundary_conditions
         disc.bcs = disc.process_boundary_conditions(myclass)
         # grad(x) = 1
@@ -317,9 +309,6 @@ class TestFiniteVolume2DGradDiv:
         grad_eqn = pybamm.grad(var)
         div_eqn = pybamm.div(grad_eqn)
 
-        class DummyClass:
-            boundary_conditions = None
-
         boundary_conditions = {
             var: {
                 "left": (pybamm.Scalar(0), "Neumann"),
@@ -328,7 +317,7 @@ class TestFiniteVolume2DGradDiv:
                 "bottom": (my_scalar_var, "Neumann"),
             }
         }
-        myclass = DummyClass()
+        myclass = DummyDiscretisationClass()
         myclass.boundary_conditions = boundary_conditions
         disc.bcs = disc.process_boundary_conditions(myclass)
         # grad(x) = 1

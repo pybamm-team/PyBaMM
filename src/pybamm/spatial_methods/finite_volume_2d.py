@@ -130,7 +130,19 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         """
         # Multiply by gradient matrix
         grad_lr = self._gradient(symbol, discretised_symbol, boundary_conditions, "lr")
+        grad_lr._evaluates_on_edges_original = grad_lr._evaluates_on_edges
+        grad_lr._evaluates_on_edges = (
+            lambda dim: "lr"
+            if dim == "primary"
+            else grad_lr._evaluates_on_edges_original(dim)
+        )
         grad_tb = self._gradient(symbol, discretised_symbol, boundary_conditions, "tb")
+        grad_tb._evaluates_on_edges_original = grad_tb._evaluates_on_edges
+        grad_tb._evaluates_on_edges = (
+            lambda dim: "tb"
+            if dim == "primary"
+            else grad_tb._evaluates_on_edges_original(dim)
+        )
         grad = pybamm.VectorField(grad_lr, grad_tb)
         return grad
 
@@ -1997,7 +2009,22 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         evaluated on the cell edges.
         See :meth:`pybamm.FiniteVolume.shift`
         """
-        return self.shift(discretised_symbol, "node to edge", method, direction)
+        new_symbol = self.shift(discretised_symbol, "node to edge", method, direction)
+        if direction == "lr":
+            new_symbol._evaluates_on_edges_original = new_symbol._evaluates_on_edges
+            new_symbol._evaluates_on_edges = (
+                lambda dim: "lr"
+                if dim == "primary"
+                else new_symbol._evaluates_on_edges_original(dim)
+            )
+        elif direction == "tb":
+            new_symbol._evaluates_on_edges_original = new_symbol._evaluates_on_edges
+            new_symbol._evaluates_on_edges = (
+                lambda dim: "tb"
+                if dim == "primary"
+                else new_symbol._evaluates_on_edges_original(dim)
+            )
+        return new_symbol
 
     def shift(self, discretised_symbol, shift_key, method, direction="lr"):
         """

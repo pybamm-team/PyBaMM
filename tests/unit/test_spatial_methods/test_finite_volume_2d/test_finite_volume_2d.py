@@ -22,7 +22,7 @@ class TestFiniteVolume2D:
         disc = pybamm.Discretisation(mesh, {"macroscale": fin_vol})
         disc.set_variable_slices([var_concat])
         c = disc.process_symbol(var_concat)
-        # c = pybamm.StateVector(slice(0, n_lr * n_tb), domain=["negative electrode", "separator", "positive electrode"])
+
         y_test = np.ones(n_lr * n_tb) * 2
         diffusivity_c_ari_lr = fin_vol.node_to_edge(
             c, method="arithmetic", direction="lr"

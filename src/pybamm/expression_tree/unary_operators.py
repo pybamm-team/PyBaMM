@@ -977,7 +977,7 @@ class OneDimensionalIntegral(BoundaryIntegral):
     """
     A node in the expression tree which integrates a variable over the edges of a domain.
     Similar to BoundaryIntegral, but rather than taking the boundary value of the child,
-    it assumes that the boundary value
+    it assumes that the boundary value has already been taken.
     """
 
     def __init__(self, child, integration_domain, direction, region=None):
@@ -1005,14 +1005,6 @@ class OneDimensionalIntegral(BoundaryIntegral):
             direction=self.direction,
             region=self.region,
         )
-
-    def _evaluate_for_shape(self):
-        """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""
-        return pybamm.evaluate_for_shape_using_domain(self.domains)
-
-    def _evaluates_on_edges(self, dimension: str) -> bool:
-        """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
-        return False
 
 
 class DeltaFunction(SpatialOperator):

@@ -10,6 +10,10 @@ from scipy.sparse import eye
 import pybamm
 
 
+class DummyDiscretisationClass:
+    boundary_conditions = None
+
+
 class SpatialMethodForTesting(pybamm.SpatialMethod):
     """Identity operators, no boundary conditions."""
 

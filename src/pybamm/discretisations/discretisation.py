@@ -274,11 +274,6 @@ class Discretisation:
         lower_bounds = []
         upper_bounds = []
 
-        # Make sure we hit concatenation variables first.
-        # concat_variables = [var for var in variables if isinstance(var, pybamm.ConcatenationVariable)]
-        # not_concat_variables = [var for var in variables if not isinstance(var, pybamm.ConcatenationVariable)]
-        # variables = concat_variables + not_concat_variables
-
         # Iterate through unpacked variables, adding appropriate slices to y_slices
         for variable in variables:
             if variable in y_slices:
@@ -331,7 +326,7 @@ class Discretisation:
                         else:
                             y_slices[child].append(slice(start_, end))
                             y_slices_explicit[child].append(slice(start_, end))
-                            # Increment start_
+                        # Increment start_
                         start_ = end
             else:
                 end += self._get_variable_size(variable)

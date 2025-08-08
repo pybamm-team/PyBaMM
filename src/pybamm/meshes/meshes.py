@@ -277,7 +277,7 @@ class Mesh(dict):
                 combined_submesh_edges_lr = self[submeshnames[0]].edges_lr
             else:
                 warnings.warn(
-                    "Could not determine how to combine submeshes. Assuming lr concatenation.",
+                    "Could not determine how to combine submeshes. Assuming left-right concatenation.",
                     stacklevel=2,
                 )
                 combined_submesh_edges_lr = np.concatenate(
@@ -328,7 +328,7 @@ class Mesh(dict):
                 submesh.internal_boundaries.append(self[submeshname].edges_tb[0] + min)
             else:
                 warnings.warn(
-                    "Could not determine how to combine submeshes. Assuming lr concatenation.",
+                    "Could not determine how to combine submeshes. Assuming left-right concatenation.",
                     stacklevel=2,
                 )
                 submesh.internal_boundaries.append(self[submeshname].edges_lr[0] + min)
@@ -341,7 +341,6 @@ class Mesh(dict):
         This will be useful for calculating the gradient with Dirichlet BCs.
         """
         # Get all submeshes relating to space (i.e. exclude time)
-        # Ignore 2D submeshes for now...
         submeshes = [
             (domain, submesh)
             for domain, submesh in self.items()

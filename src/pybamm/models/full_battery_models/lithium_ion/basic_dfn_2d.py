@@ -31,6 +31,9 @@ class BasicDFN2D(BaseModel):
         # Variables that depend on time only are created without a domain
         Q = pybamm.Variable("Discharge capacity [A.h]")
 
+        # Spatial variables
+        # Direction is required for 2D spatial variables, and can be "lr" or "tb"
+        # for left-right or top-bottom respectively.
         x = pybamm.SpatialVariable(
             "x",
             domain=["negative electrode", "separator", "positive electrode"],
@@ -104,7 +107,7 @@ class BasicDFN2D(BaseModel):
             domain="positive electrode",
         )
         # Particle concentrations are variables on the particle domain, but also vary in
-        # the x-direction (electrode domain) and so must be provided with auxiliary
+        # the x-direction and z-direction (electrode domain) and so must be provided with auxiliary
         # domains
         c_s_n = pybamm.Variable(
             "Negative particle concentration [mol.m-3]",
@@ -212,6 +215,13 @@ class BasicDFN2D(BaseModel):
         }
         self.initial_conditions[c_s_n] = self.param.n.prim.c_init
         self.initial_conditions[c_s_p] = self.param.p.prim.c_init
+
+        c_s_n_av = pybamm.RAverage(c_s_n)
+        c_s_p_av = pybamm.RAverage(c_s_p)
+        solid_lithium_negative = pybamm.Integral(c_s_n_av * eps_s_n, [x_n, z_n])
+        solid_lithium_positive = pybamm.Integral(c_s_p_av * eps_s_p, [x_p, z_p])
+        total_solid_lithium = solid_lithium_negative + solid_lithium_positive
+
         ######################
         # Current in the solid
         ######################
@@ -340,6 +350,9 @@ class BasicDFN2D(BaseModel):
             "Negative electrode current density [A.m-2]": j_n,
             "Electrolyte flux X-component [mol.m-2.s-1]": pybamm.Magnitude(N_e, "lr"),
             "Electrolyte flux Z-component [mol.m-2.s-1]": pybamm.Magnitude(N_e, "tb"),
+            "Positive solid lithium [mol]": solid_lithium_positive,
+            "Negative solid lithium [mol]": solid_lithium_negative,
+            "Total solid lithium [mol]": total_solid_lithium,
         }
         # Events specify points at which a solution should terminate
         self.events += [
