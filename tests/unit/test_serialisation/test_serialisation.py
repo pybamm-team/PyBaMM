@@ -514,9 +514,7 @@ class TestSerialise:
             new_solution.plot()
 
         # load when specifying the battery model to use
-        newest_model = Serialise().load_model(
-            "test_model.json", battery_model=pybamm.lithium_ion.SPM
-        )
+        newest_model = Serialise().load_model("test_model.json")
 
         # Test for error if no model type is provided
         with open("test_model.json") as f:
@@ -955,7 +953,7 @@ class TestSerialise:
 
         # Assert that loading this model raises a ValueError
         with pytest.raises(ValueError, match="Unsupported schema version: 9.9"):
-            Serialise.load_custom_model(file_path, battery_model=pybamm.BaseModel())
+            Serialise.load_custom_model(file_path)
 
     def test_model_has_correct_schema_version(self, tmp_path):
         model = BasicDFN()
@@ -963,9 +961,7 @@ class TestSerialise:
 
         Serialise.save_custom_model(model, filename=str(file_path))
 
-        loaded_model = Serialise.load_custom_model(
-            str(file_path), battery_model=pybamm.lithium_ion.BaseModel()
-        )
+        loaded_model = Serialise.load_custom_model(str(file_path))
 
         assert hasattr(loaded_model, "schema_version")
         assert loaded_model.schema_version == SUPPORTED_SCHEMA_VERSION
@@ -991,6 +987,7 @@ class TestSerialise:
             "schema_version": "1.0",
             "pybamm_version": pybamm.__version__,
             "model": {
+                "base_class": "",
                 "name": "BadSymbolKeyModel",
                 "rhs": [[bad_lhs, rhs_expr]],
                 "algebraic": [],
@@ -1032,6 +1029,7 @@ class TestSerialise:
             "pybamm_version": pybamm.__version__,
             "model": {
                 "name": "BadModel",
+                "base_class": "",
                 "algebraic": [],
                 "initial_conditions": [],
             },
@@ -1059,6 +1057,7 @@ class TestSerialise:
             "schema_version": "1.0",
             "pybamm_version": pybamm.__version__,
             "model": {
+                "base_class": "",
                 "name": "BadModel",
                 "rhs": [[good_lhs, bad_rhs]],
                 "algebraic": [],
@@ -1094,6 +1093,7 @@ class TestSerialise:
             "schema_version": "1.0",
             "pybamm_version": pybamm.__version__,
             "model": {
+                "base_class": "",
                 "name": "BadModel",
                 # One valid pair in RHS
                 "rhs": [],
@@ -1129,6 +1129,7 @@ class TestSerialise:
             "schema_version": "1.0",
             "pybamm_version": pybamm.__version__,
             "model": {
+                "base_class": "",
                 "name": "BadModel",
                 # One valid pair in RHS
                 "rhs": [],
@@ -1168,6 +1169,7 @@ class TestSerialise:
             "schema_version": "1.0",
             "pybamm_version": pybamm.__version__,
             "model": {
+                "base_class": "",
                 "name": "BadBoundaryModel",
                 "rhs": [],
                 "algebraic": [],
@@ -1205,6 +1207,7 @@ class TestSerialise:
             "schema_version": "1.0",
             "pybamm_version": pybamm.__version__,
             "model": {
+                "base_class": "",
                 "name": "BadBoundaryExpressionModel",
                 "rhs": [],
                 "algebraic": [],
@@ -1231,6 +1234,7 @@ class TestSerialise:
             "schema_version": "1.0",
             "pybamm_version": pybamm.__version__,
             "model": {
+                "base_class": "",
                 "name": "BadEventModel",
                 "rhs": [],
                 "algebraic": [],
@@ -1262,6 +1266,7 @@ class TestSerialise:
             "schema_version": "1.0",
             "pybamm_version": pybamm.__version__,
             "model": {
+                "base_class": "",
                 "name": "BadVariableModel",
                 "rhs": [],
                 "algebraic": [],
@@ -1327,9 +1332,7 @@ class TestSerialise:
             Serialise.save_custom_model(model, filename=str(path))
 
             # Load the model
-            loaded_model = Serialise.load_custom_model(
-                str(path), battery_model=pybamm.lithium_ion.BaseModel()
-            )
+            loaded_model = Serialise.load_custom_model(str(path))
 
             sim = pybamm.Simulation(loaded_model)
             sim.solve([0, 3600])

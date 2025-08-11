@@ -256,7 +256,9 @@ class Serialise:
             raise TypeError(f"Object of type {type(obj)} is not JSON serializable.")
 
     @staticmethod
-    def save_custom_model(model, filename=None):
+    def save_custom_model(
+        model: pybamm.BaseModel, filename: str | Path | None = None
+    ) -> None:
         """
         Saves a custom (non-discretised) PyBaMM model to a JSON file. Works for user defined models that are subclasses of BaseModel.
 
@@ -293,8 +295,20 @@ class Serialise:
             raise AttributeError(f"Model is missing required sections: {missing}")
 
         try:
+            base_cls = (
+                model.__class__.__bases__[0] if model.__class__.__bases__ else object
+            )
+            # If the base class is object or builtins.object, use pybamm.BaseModel instead
+            if base_cls is object or (
+                base_cls.__module__ == "builtins" and base_cls.__name__ == "object"
+            ):
+                base_cls_str = "pybamm.BaseModel"
+            else:
+                base_cls_str = f"{base_cls.__module__}.{base_cls.__name__}"
+
             model_content = {
                 "name": getattr(model, "name", "unnamed_model"),
+                "base_class": base_cls_str,
                 "options": getattr(model, "options", {}),
                 "rhs": [
                     (
@@ -354,7 +368,6 @@ class Serialise:
                 },
             }
 
-            # Final JSON structure with schema and version info at top level
             SCHEMA_VERSION = "1.0"
             model_json = {
                 "schema_version": SCHEMA_VERSION,
@@ -401,7 +414,7 @@ class Serialise:
         return json.dumps(symbol_json, sort_keys=True)
 
     @staticmethod
-    def load_custom_model(filename, battery_model=None):
+    def load_custom_model(filename):
         """
         Loads a custom (symbolic) PyBaMM model from a JSON file.
 
@@ -455,6 +468,7 @@ class Serialise:
             "name",
             "rhs",
             "initial_conditions",
+            "base_class",
             "algebraic",
             "boundary_conditions",
             "events",
@@ -464,7 +478,27 @@ class Serialise:
         if missing:
             raise KeyError(f"Missing required model sections: {missing}")
 
-        model = battery_model if battery_model is not None else pybamm.BaseModel()
+        battery_model = model_data.get("base_class")
+        if (
+            not battery_model
+            or battery_model.isspace()
+            or battery_model == "pybamm.BaseModel"
+        ):
+            base_cls = pybamm.BaseModel
+        else:
+            module_name, class_name = battery_model.rsplit(".", 1)
+            try:
+                module = importlib.import_module(module_name)
+                base_cls = getattr(module, class_name)
+            except (ModuleNotFoundError, AttributeError) as e:
+                if battery_model == "builtins.object":
+                    base_cls = pybamm.BaseModel
+                else:
+                    raise ImportError(
+                        f"Could not import base class '{battery_model}': {e}"
+                    ) from e
+
+        model = base_cls()
         model.name = model_data["name"]
         model.schema_version = schema_version
 
