@@ -913,7 +913,9 @@ class BaseModel:
 
         self.build_model_equations()
 
-    def set_initial_conditions_from(self, solution, inplace=True, return_type="model"):
+    def set_initial_conditions_from(
+        self, solution, inplace=True, return_type="model", mesh=None
+    ):
         """
         Update initial conditions with the final states from a Solution object or from
         a dictionary.
@@ -928,7 +930,10 @@ class BaseModel:
             Whether to modify the model inplace or create a new model (default True)
         return_type : str, optional
             Whether to return the model (default) or initial conditions ("ics")
+        mesh : :class:`pybamm.Mesh`, optional
+            The mesh to use to initialize the model
         """
+        mesh = mesh or {}
         initial_conditions = {}
         if isinstance(solution, pybamm.Solution):
             solution = solution.last_state
@@ -962,18 +967,22 @@ class BaseModel:
                 ) from e
 
         for var in self.initial_conditions:
-            if isinstance(var, pybamm.Variable):
-                final_state = get_variable_state(var.name)
-                final_state_eval = get_final_state_eval(final_state)
-
-            elif isinstance(var, pybamm.Concatenation):
-                children = []
-                for child in var.orphans:
-                    final_state = get_variable_state(child.name)
+            if isinstance(var, pybamm.Variable) or isinstance(
+                var, pybamm.Concatenation
+            ):
+                try:
+                    final_state = get_variable_state(var.name)
                     final_state_eval = get_final_state_eval(final_state)
-                    children.append(final_state_eval)
-                final_state_eval = np.concatenate(children)
-
+                except pybamm.ModelError as e:
+                    if isinstance(var, pybamm.Concatenation):
+                        children = []
+                        for child in var.orphans:
+                            final_state = get_variable_state(child.name)
+                            final_state_eval = get_final_state_eval(final_state)
+                            children.append(final_state_eval)
+                        final_state_eval = np.concatenate(children)
+                    else:
+                        raise e
             else:
                 raise NotImplementedError(
                     "Variable must have type 'Variable' or 'Concatenation'"

@@ -13,11 +13,13 @@ from .electrode_soh_half_cell import (
     ElectrodeSOHHalfCell,
     get_initial_stoichiometry_half_cell,
 )
+from .initial_state import set_initial_state
 from .spm import SPM
 from .spme import SPMe
 from .dfn import DFN
 from .newman_tobias import NewmanTobias
 from .basic_dfn import BasicDFN
+from .basic_dfn_2d import BasicDFN2D
 from .basic_spm import BasicSPM
 from .basic_spm_with_3d_thermal import Basic3DThermalSPM
 from .basic_dfn_half_cell import BasicDFNHalfCell

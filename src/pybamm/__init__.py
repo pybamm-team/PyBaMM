@@ -39,6 +39,7 @@ from .expression_tree.coupled_variable import *
 from .expression_tree.independent_variable import *
 from .expression_tree.independent_variable import t
 from .expression_tree.vector import Vector
+from .expression_tree.vector_field import VectorField
 from .expression_tree.state_vector import StateVectorBase, StateVector, StateVectorDot
 
 from .expression_tree.exceptions import *
@@ -135,7 +136,10 @@ from .meshes.one_dimensional_submeshes import (
     SpectralVolume1DSubMesh,
     SymbolicUniform1DSubMesh,
 )
-
+from .meshes.two_dimensional_submeshes import (
+    SubMesh2D,
+    Uniform2DSubMesh,
+)
 from .meshes.scikit_fem_submeshes import (
     ScikitSubMesh2D,
     ScikitUniform2DSubMesh,
@@ -156,6 +160,7 @@ from .models.base_model import load_model
 from .spatial_methods.spatial_method import SpatialMethod
 from .spatial_methods.zero_dimensional_method import ZeroDimensionalSpatialMethod
 from .spatial_methods.finite_volume import FiniteVolume
+from .spatial_methods.finite_volume_2d import FiniteVolume2D
 from .spatial_methods.spectral_volume import SpectralVolume
 from .spatial_methods.scikit_finite_element import ScikitFiniteElement
 from .spatial_methods.scikit_finite_element_3d import ScikitFiniteElement3D
@@ -163,7 +168,7 @@ from .spatial_methods.scikit_finite_element_3d import ScikitFiniteElement3D
 # Solver classes
 from .solvers.solution import Solution, EmptySolution, make_cycle_solution
 from .solvers.processed_variable_time_integral import ProcessedVariableTimeIntegral
-from .solvers.processed_variable import ProcessedVariable, process_variable
+from .solvers.processed_variable import ProcessedVariable, ProcessedVariable2DFVM, process_variable
 from .solvers.processed_variable_computed import ProcessedVariableComputed
 from .solvers.processed_variable import ProcessedVariableUnstructured
 from .solvers.summary_variable import SummaryVariables
