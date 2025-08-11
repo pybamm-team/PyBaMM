@@ -7,6 +7,7 @@ import re
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 
@@ -414,7 +415,7 @@ class Serialise:
         return json.dumps(symbol_json, sort_keys=True)
 
     @staticmethod
-    def load_custom_model(filename):
+    def load_custom_model(filename: str) -> pybamm.BaseModel:
         """
         Loads a custom (symbolic) PyBaMM model from a JSON file.
 
@@ -426,9 +427,6 @@ class Serialise:
         ----------
         filename : str
             Path to the JSON file containing the saved model.
-        battery_model : :class:`pybamm.BaseModel`, optional
-            An optional existing model instance to populate. If not provided, a new
-            :class:`pybamm.BaseModel` is created.
 
         Returns
         -------
@@ -441,7 +439,7 @@ class Serialise:
         >>> model = pybamm.lithium_ion.BasicDFN()
         >>> from pybamm.expression_tree.operations.serialise import Serialise
         >>> Serialise.save_custom_model(model, "basicdfn_model.json")
-        >>> loaded_model = Serialise.load_custom_model("basicdfn_model.json", battery_model=pybamm.lithium_ion.BaseModel())
+        >>> loaded_model = Serialise.load_custom_model("basicdfn_model.json")
 
         """
         try:
@@ -450,7 +448,9 @@ class Serialise:
         except FileNotFoundError as err:
             raise FileNotFoundError(f"Could not find file: {filename}") from err
         except json.JSONDecodeError as e:
-            raise ValueError(f"Invalid JSON in file '{filename}': {e!s}") from e
+            raise pybamm.InvalidModelJSONError(
+                f"The model defined in the file '{filename}' contains invalid JSON: {e!s}"
+            ) from e
 
         # Validate outer structure
         schema_version = data.get("schema_version", SUPPORTED_SCHEMA_VERSION)
@@ -633,7 +633,6 @@ class Serialise:
         {'rod':
             {SpatialVariable(name='spat_var'): {"min":0.0, "max":2.0} }
             }
-
         converts to
 
         {'rod':
@@ -764,7 +763,7 @@ class Serialise:
             return d
 
     @staticmethod
-    def convert_symbol_to_json(symbol):
+    def convert_symbol_to_json(symbol: pybamm.Symbol) -> dict[str, Any]:
         """
         Recursively converts a PyBaMM symbolic expression into a JSON-serializable format.
 
@@ -938,7 +937,9 @@ class Serialise:
         return json_dict
 
     @staticmethod
-    def convert_symbol_from_json(json_data):
+    def convert_symbol_from_json(
+        json_data: dict[str, Any],
+    ) -> pybamm.Symbol | float | int | bool:
         """
         Recursively reconstructs a PyBaMM symbolic expression from a JSON dictionary.
 

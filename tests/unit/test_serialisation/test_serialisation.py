@@ -696,13 +696,13 @@ class TestSerialise:
         y = np.array([0, 1, 4, 9, 16])
         child = pybamm.Variable("z")
         interp = pybamm.Interpolant(
-            x, y, child, name="test_interplot", interpolator="linear"
+            x, y, child, name="test_interplolant", interpolator="linear"
         )
         json_dict = Serialise.convert_symbol_to_json(interp)
         interp2 = Serialise.convert_symbol_from_json(json_dict)
 
         assert isinstance(interp2, pybamm.Interpolant)
-        assert interp2.name == "test_interplot"
+        assert interp2.name == "test_interplolant"
         assert interp2.interpolator == "linear"
         assert isinstance(interp2.x[0], np.ndarray)
         assert isinstance(interp2.y, np.ndarray)
@@ -947,11 +947,9 @@ class TestSerialise:
 
         file_path = tmp_path / "model.json"
 
-        # Write JSON to the temporary file
         with open(file_path, "w") as f:
             json.dump(unhandled_schema_json, f)
 
-        # Assert that loading this model raises a ValueError
         with pytest.raises(ValueError, match="Unsupported schema version: 9.9"):
             Serialise.load_custom_model(file_path)
 
@@ -968,10 +966,12 @@ class TestSerialise:
 
     def test_load_invalid_json(self):
         invalid_json = "{ invalid json"
+
         with patch("builtins.open", mock_open(read_data=invalid_json)):
-            with pytest.raises(ValueError) as e:
+            with pytest.raises(pybamm.InvalidModelJSONError) as e:
                 Serialise.load_custom_model("invalid_json.json")
-            assert "Invalid JSON in file" in str(e.value)
+
+            assert "contains invalid JSON" in str(e.value)
 
     def test_load_custom_model_file_not_found(self):
         with pytest.raises(FileNotFoundError) as e:
@@ -1317,23 +1317,20 @@ class TestSerialise:
         assert next(iter(loaded_model.rhs.keys())).name == "a"
         assert next(iter(loaded_model.rhs.values())).name == "b"
 
-    def test_plotting_serialised_models(self, tmp_path):
-        models = [
-            BasicSPM(),
-            BasicDFN(),
-            pybamm.lithium_ion.SPM(),
-            pybamm.lithium_ion.DFN(),
-        ]
-        filenames = ["basic_spm.json", "basic_dfn.json", "spm.json", "dfn.json"]
-        file_paths = [tmp_path / name for name in filenames]
-
-        for model, path in zip(models, file_paths, strict=True):
-            # Save the model
-            Serialise.save_custom_model(model, filename=str(path))
-
-            # Load the model
-            loaded_model = Serialise.load_custom_model(str(path))
-
-            sim = pybamm.Simulation(loaded_model)
-            sim.solve([0, 3600])
-            sim.plot(show_plot=False)
+    @pytest.mark.parametrize(
+        "model, filename",
+        [
+            (BasicSPM(), "basic_spm.json"),
+            (BasicDFN(), "basic_dfn.json"),
+            (pybamm.lithium_ion.SPM(), "spm.json"),
+            (pybamm.lithium_ion.DFN(), "dfn.json"),
+        ],
+        ids=["basic_spm", "basic_dfn", "spm", "dfn"],
+    )
+    def test_plotting_serialised_models(self, model, filename, tmp_path):
+        path = tmp_path / filename
+        Serialise.save_custom_model(model, filename=str(path))
+        loaded_model = Serialise.load_custom_model(str(path))
+        sim = pybamm.Simulation(loaded_model)
+        sim.solve([0, 3600])
+        sim.plot(show_plot=False)
