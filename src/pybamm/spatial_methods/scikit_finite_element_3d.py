@@ -661,22 +661,22 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
                 isinstance(disc_left, pybamm.Concatenation)
                 and disc_left.concatenation_function is None
             ):
-                new_disc_left = pybamm.Concatenation(
-                    *disc_left.children, concat_fun=np.hstack
-                )
-                new_disc_left.copy_domains(disc_left)
-                disc_left = new_disc_left
-
+                target_domain = bin_op.domain
+                new_children = [
+                    pybamm.PrimaryBroadcast(child, target_domain)
+                    for child in disc_left.children
+                ]
+                disc_left = pybamm.Concatenation(*new_children, concat_fun=np.hstack)
             if (
                 isinstance(disc_right, pybamm.Concatenation)
                 and disc_right.concatenation_function is None
             ):
-                new_disc_right = pybamm.Concatenation(
-                    *disc_right.children, concat_fun=np.hstack
-                )
-                new_disc_right.copy_domains(disc_right)
-                disc_right = new_disc_right
-
+                target_domain = bin_op.domain
+                new_children = [
+                    pybamm.PrimaryBroadcast(child, target_domain)
+                    for child in disc_right.children
+                ]
+                disc_right = pybamm.Concatenation(*new_children, concat_fun=np.hstack)
         return super().process_binary_operators(
             bin_op, left, right, disc_left, disc_right
         )
