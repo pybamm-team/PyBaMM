@@ -574,6 +574,8 @@ class ParameterValues:
             "negative tab",
             "positive tab",
             "no tab",
+            "top",
+            "bottom",
             "x_min",
             "x_max",
             "y_min",
@@ -799,6 +801,11 @@ class ParameterValues:
         ):
             new_children = [self.process_symbol(child) for child in symbol.children]
             return symbol.create_copy(new_children)
+
+        elif isinstance(symbol, pybamm.VectorField):
+            left_symbol = self.process_symbol(symbol.lr_field)
+            right_symbol = self.process_symbol(symbol.tb_field)
+            return symbol.create_copy(new_children=[left_symbol, right_symbol])
 
         # Variables: update scale
         elif isinstance(symbol, pybamm.Variable):

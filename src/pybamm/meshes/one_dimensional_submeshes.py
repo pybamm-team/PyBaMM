@@ -35,6 +35,7 @@ class SubMesh1D(SubMesh):
         self.npts = self.nodes.size
         self.coord_sys = coord_sys
         self.internal_boundaries = []
+        self.dimension = 1
 
         # Add tab locations in terms of "left" and "right"
         if tabs and "negative tab" not in tabs.keys():
@@ -87,6 +88,22 @@ class SubMesh1D(SubMesh):
 
         return json_dict
 
+    def create_ghost_cell(self, side):
+        edges = self.edges
+        if side == "left":
+            gs_edges = np.array([2 * edges[0] - edges[1], edges[0]])
+        elif side == "right":
+            gs_edges = np.array([edges[-1], 2 * edges[-1] - edges[-2]])
+        else:
+            raise NotImplementedError(
+                "Only left and right ghost cells are implemented for 1D submeshes"
+            )
+        gs_submesh = pybamm.SubMesh1D(gs_edges, self.coord_sys)
+        if hasattr(self, "length") and getattr(self, "length", None) is not None:
+            gs_submesh.length = self.length
+            gs_submesh.min = self.min
+        return gs_submesh
+
 
 class SymbolicUniform1DSubMesh(SubMesh1D):
     def __init__(self, lims, npts, tabs=None):
@@ -110,6 +127,7 @@ class SymbolicUniform1DSubMesh(SubMesh1D):
         self.npts = self.nodes.size
         self.coord_sys = coord_sys
         self.internal_boundaries = []
+        self.dimension = 1
 
 
 class Uniform1DSubMesh(SubMesh1D):

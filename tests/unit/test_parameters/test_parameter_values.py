@@ -371,6 +371,16 @@ class TestParameterValues:
             processed_g.evaluate(y=np.ones(10)), np.ones((10, 1))
         )
 
+        # process vector field
+        parameter_values = pybamm.ParameterValues({"lr param": 1, "tb param": 2})
+        h = pybamm.VectorField(
+            pybamm.Parameter("lr param"), pybamm.Parameter("tb param")
+        )
+        processed_h = parameter_values.process_symbol(h)
+        assert isinstance(processed_h, pybamm.VectorField)
+        assert processed_h.lr_field.evaluate() == 1
+        assert processed_h.tb_field.evaluate() == 2
+
         # not found
         with pytest.raises(KeyError):
             x = pybamm.Parameter("x")

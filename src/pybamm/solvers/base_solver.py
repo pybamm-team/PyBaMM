@@ -1070,7 +1070,7 @@ class BaseSolver:
     ) -> tuple:
         """
         A restricted version of BaseModel.set_initial_conditions_from that only extracts the
-        sensitivities from a solution object, and only for a model that has been descretised.
+        sensitivities from a solution object, and only for a model that has been discretised.
         This is used when setting the initial conditions for a sensitivity model.
 
         Parameters
