@@ -479,11 +479,7 @@ class Serialise:
             raise KeyError(f"Missing required model sections: {missing}")
 
         battery_model = model_data.get("base_class")
-        if (
-            not battery_model
-            or battery_model.isspace()
-            or battery_model == "pybamm.BaseModel"
-        ):
+        if not battery_model or battery_model.strip() == "pybamm.BaseModel":
             base_cls = pybamm.BaseModel
         else:
             module_name, class_name = battery_model.rsplit(".", 1)
@@ -763,7 +759,9 @@ class Serialise:
             return d
 
     @staticmethod
-    def convert_symbol_to_json(symbol: pybamm.Symbol) -> dict[str, Any]:
+    def convert_symbol_to_json(
+        symbol: pybamm.Symbol | numbers.Number | list,
+    ) -> dict[str, Any] | numbers.Number | list:
         """
         Recursively converts a PyBaMM symbolic expression into a JSON-serializable format.
 
