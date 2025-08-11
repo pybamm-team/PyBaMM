@@ -817,6 +817,55 @@ class TestSerialise:
         values = [c.value for c in expr2.children]
         assert values == [2, 3]
 
+    def test_symbol_deserialization_with_domains(self):
+        json_data = {
+            "type": "Symbol",
+            "name": "test symbol",
+            "domains": {
+                "primary": ["negative electrode", "separator", "positive electrode"],
+                "secondary": ["current collector"],
+            },
+        }
+
+        symbol = Serialise.convert_symbol_from_json(json_data)
+
+        assert isinstance(symbol, pybamm.Symbol)
+        assert symbol.name == "test symbol"
+        assert symbol.domains == {
+            "primary": ["negative electrode", "separator", "positive electrode"],
+            "secondary": ["current collector"],
+            "tertiary": [],
+            "quaternary": [],
+        }
+
+    def test_import_base_class_non_builtin_object(self, tmp_path):
+        # Minimal model JSON with a non-existent base class
+        model_json = {
+            "schema_version": "1.0",
+            "pybamm_version": pybamm.__version__,
+            "model": {
+                "base_class": "nonexistent_module.DummyModel",
+                "name": "DummyModel",
+                "rhs": [],
+                "algebraic": [],
+                "initial_conditions": [],
+                "boundary_conditions": [],
+                "events": [],
+                "variables": {},
+            },
+        }
+
+        file_path = tmp_path / "model.json"
+
+        with open(file_path, "w") as f:
+            json.dump(model_json, f)
+
+        with pytest.raises(
+            ImportError,
+            match=r"(?i)Could not import base class 'nonexistent_module\.DummyModel'",
+        ):
+            Serialise.load_custom_model(str(file_path))
+
     def test_function_parameter_with_diff_variable_serialisation(self):
         x = pybamm.Variable("x")
         diff_var = pybamm.Variable("r")
@@ -854,12 +903,21 @@ class TestSerialise:
         expr2 = Serialise.convert_symbol_from_json(json_dict)
         assert isinstance(expr2, pybamm.IndefiniteIntegral)
         assert isinstance(expr2.child, pybamm.SpatialVariable)
-
         assert expr2.child.name == "x"
         assert isinstance(expr2.integration_variable, list)
         assert len(expr2.integration_variable) == 1
         assert isinstance(expr2.integration_variable[0], pybamm.SpatialVariable)
         assert expr2.integration_variable[0].name == "x"
+
+        bad_json_dict = json_dict.copy()
+        bad_json_dict["integration_variable"] = {
+            "type": "Symbol",  # Something not a SpatialVariable
+            "name": "not spatial",
+            "domains": {},
+        }
+
+        with pytest.raises(TypeError, match=r"Expected SpatialVariable"):
+            Serialise.convert_symbol_from_json(bad_json_dict)
 
     def test_invalid_filename(self):
         model = pybamm.lithium_ion.DFN()
