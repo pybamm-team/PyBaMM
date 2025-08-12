@@ -162,28 +162,28 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
         if known_value == "cyclable lithium capacity":
             self.algebraic[y_100_1] = Q_Li - _get_cyclable_lithium_equation(options)
 
-        x_init = variables["x_init_1"]
-        y_init = variables["y_init_1"]
+        x_init_1 = variables["x_init_1"]
+        y_init_1 = variables["y_init_1"]
         if options["initialization method"] == "voltage":
             V_init = pybamm.InputParameter("V_init")
-            self.algebraic[x_init] = (
-                param.p.prim.U(y_init, param.T_ref)
-                - param.n.prim.U(x_init, param.T_ref)
+            self.algebraic[x_init_1] = (
+                param.p.prim.U(y_init_1, param.T_ref)
+                - param.n.prim.U(x_init_1, param.T_ref)
                 - V_init
             )
-            self.algebraic[y_init] = (
+            self.algebraic[y_init_1] = (
                 _get_cyclable_lithium_equation(options, "init") - Q_Li
             )
             if is_positive_composite:
                 y_init_2 = variables["y_init_2"]
                 self.algebraic[y_init_2] = param.p.prim.U(
-                    y_init_2, param.T_ref
-                ) - param.p.sec.U(y_init, param.T_ref)
+                    y_init_1, param.T_ref
+                ) - param.p.sec.U(y_init_2, param.T_ref)
             if is_negative_composite:
                 x_init_2 = variables["x_init_2"]
                 self.algebraic[x_init_2] = param.n.prim.U(
-                    x_init_2, param.T_ref
-                ) - param.n.sec.U(x_init, param.T_ref)
+                    x_init_1, param.T_ref
+                ) - param.n.sec.U(x_init_2, param.T_ref)
         elif options["initialization method"] == "SOC":
             raise NotImplementedError("SOC initialization not implemented")
         else:
@@ -195,7 +195,7 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
     @property
     def default_solver(self):
         # Use AlgebraicSolver as CasadiAlgebraicSolver gives unnecessary warnings
-        return pybamm.AlgebraicSolver(method="lsq__trf", tol=1e-7)
+        return pybamm.AlgebraicSolver()
 
 
 def get_initial_stoichiometries_composite(
