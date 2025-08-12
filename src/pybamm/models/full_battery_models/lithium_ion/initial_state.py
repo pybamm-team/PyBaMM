@@ -178,6 +178,6 @@ def _set_concentration_from_stoich(
     parameter_values.update(
         {
             f"{phase_prefactor}Initial concentration in {electrode} electrode [mol.m-3]": stoich
-            * phase_param.c_max
+            * parameter_values.evaluate(phase_param.c_max, inputs=inputs)
         }
     )
