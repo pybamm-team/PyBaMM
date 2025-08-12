@@ -28,7 +28,7 @@ def _get_stoich_variables(options):
     return variables
 
 
-def _get_initial_conditions(options):
+def _get_initial_conditions(options, soc_init):
     variables = _get_stoich_variables(options)
     ics = {}
     for name, var in variables.items():
@@ -40,8 +40,10 @@ def _get_initial_conditions(options):
             ics[var] = 0.8
         elif "0" in name and "y" in name:
             ics[var] = 0.2
-        elif "init" in name:
-            ics[var] = 0.5
+        elif "init" in name and "x" in name:
+            ics[var] = soc_init
+        elif "init" in name and "y" in name:
+            ics[var] = 1 - soc_init
     return ics
 
 
@@ -118,7 +120,6 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
         param = pybamm.LithiumIonParameters(options)
 
         # Start by just assuming known value is cyclable lithium (and solve all at once)
-        known_value = "cyclable lithium capacity"
         Q_Li = pybamm.InputParameter("Q_Li")
         is_negative_composite = check_if_composite(options, "negative")
         is_positive_composite = check_if_composite(options, "positive")
@@ -161,8 +162,7 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
         self.algebraic[y_0_1] = _get_electrode_capacity_equation(
             options, "positive"
         ) - _get_electrode_capacity_equation(options, "negative")
-        if known_value == "cyclable lithium capacity":
-            self.algebraic[y_100_1] = Q_Li - _get_cyclable_lithium_equation(options)
+        self.algebraic[y_100_1] = Q_Li - _get_cyclable_lithium_equation(options)
 
         x_init_1 = variables["x_init_1"]
         y_init_1 = variables["y_init_1"]
@@ -176,28 +176,51 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
             self.algebraic[y_init_1] = (
                 _get_cyclable_lithium_equation(options, "init") - Q_Li
             )
-            if is_positive_composite:
-                y_init_2 = variables["y_init_2"]
-                self.algebraic[y_init_2] = param.p.prim.U(
-                    y_init_1, param.T_ref
-                ) - param.p.sec.U(y_init_2, param.T_ref)
+        elif initialization_method == "SOC":
+            soc_init = pybamm.InputParameter("SOC_init")
+            negative_soc = x_init_1 * pybamm.InputParameter("Q_n_1")
             if is_negative_composite:
                 x_init_2 = variables["x_init_2"]
-                self.algebraic[x_init_2] = param.n.prim.U(
-                    x_init_1, param.T_ref
-                ) - param.n.sec.U(x_init_2, param.T_ref)
-        elif initialization_method == "SOC":
-            raise NotImplementedError("SOC initialization not implemented")
+                negative_soc += x_init_2 * pybamm.InputParameter("Q_n_2")
+
+            negative_0_soc = x_0_1 * pybamm.InputParameter("Q_n_1")
+            if is_negative_composite:
+                negative_0_soc += x_0_2 * pybamm.InputParameter("Q_n_2")
+
+            negative_100_soc = x_100_1 * pybamm.InputParameter("Q_n_1")
+            if is_negative_composite:
+                negative_100_soc += x_100_2 * pybamm.InputParameter("Q_n_2")
+            self.algebraic[x_init_1] = (
+                (negative_soc - negative_0_soc) / (negative_100_soc - negative_0_soc)
+            ) - soc_init
+            self.algebraic[y_init_1] = (
+                _get_cyclable_lithium_equation(options, "init") - Q_Li
+            )
         else:
             raise ValueError("Invalid initialization method")
+        # Add voltage equations for secondary phases (init)
+        if is_positive_composite:
+            y_init_2 = variables["y_init_2"]
+            self.algebraic[y_init_2] = param.p.prim.U(
+                y_init_1, param.T_ref
+            ) - param.p.sec.U(y_init_2, param.T_ref)
+        if is_negative_composite:
+            x_init_2 = variables["x_init_2"]
+            self.algebraic[x_init_2] = param.n.prim.U(
+                x_init_1, param.T_ref
+            ) - param.n.sec.U(x_init_2, param.T_ref)
 
         self.variables.update(variables)
-        self.initial_conditions.update(_get_initial_conditions(options))
+        if initialization_method == "SOC":
+            soc_init = pybamm.InputParameter("SOC_init")
+        else:
+            soc_init = 0.5
+        self.initial_conditions.update(_get_initial_conditions(options, soc_init))
 
     @property
     def default_solver(self):
         # Use AlgebraicSolver as CasadiAlgebraicSolver gives unnecessary warnings
-        return pybamm.AlgebraicSolver()
+        return pybamm.AlgebraicSolver(tol=1e-7)
 
 
 def get_initial_stoichiometries_composite(
@@ -223,6 +246,10 @@ def get_initial_stoichiometries_composite(
         If None, the default is used: {"working electrode": "positive"}
     """
     inputs = inputs or {}
+    if known_value != "cyclable lithium capacity":
+        raise ValueError(
+            "Only `cyclable lithium capacity` is supported for composite electrodes"
+        )
 
     Q_n_1 = parameter_values.evaluate(param.n.prim.Q_init, inputs=inputs)
     Q_p_1 = parameter_values.evaluate(param.p.prim.Q_init, inputs=inputs)
@@ -239,18 +266,15 @@ def get_initial_stoichiometries_composite(
         Q_n_2 = parameter_values.evaluate(param.n.sec.Q_init, inputs=inputs)
         Qs["Q_n_2"] = Q_n_2
 
-    if known_value == "cyclable lithium capacity":
-        Q_Li = parameter_values.evaluate(param.Q_Li_particles_init, inputs=inputs)
-        all_inputs = {**inputs, **Qs, "Q_Li": Q_Li}
-    elif known_value == "cell capacity":
-        Q = parameter_values.evaluate(param.Q, inputs=inputs)
-        all_inputs = {**inputs, **Qs, "Q": Q}
+    Q_Li = parameter_values.evaluate(param.Q_Li_particles_init, inputs=inputs)
+    all_inputs = {**inputs, **Qs, "Q_Li": Q_Li}
     # Solve the model and check outputs
     if isinstance(initial_value, str) and initial_value.endswith("V"):
         all_inputs["V_init"] = float(initial_value[:-1])
         initialization_method = "voltage"
     elif isinstance(initial_value, float) and initial_value >= 0 and initial_value <= 1:
         initialization_method = "SOC"
+        all_inputs["SOC_init"] = initial_value
     else:
         raise ValueError("Invalid initial value")
     model = ElectrodeSOHComposite(options, initialization_method=initialization_method)

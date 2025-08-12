@@ -228,6 +228,7 @@ class TestElectrodeSOHComposite:
         options = {"particle phases": phases}
         return params, options
 
+    @pytest.mark.parametrize("initial_value", ["4.0 V", 0.5])
     @pytest.mark.parametrize(
         "composite_electrode",
         [
@@ -236,7 +237,7 @@ class TestElectrodeSOHComposite:
             "positive",  # positive-only composite
         ],
     )
-    def test_half_cell_with_same_ocp_curves(self, composite_electrode):
+    def test_half_cell_with_same_ocp_curves(self, composite_electrode, initial_value):
         pvals, options = self._get_params_and_options(composite_electrode)
         # Use composite ESOH helper to compute initial stoichiometries at a voltage
         param = pybamm.LithiumIonParameters(options=options)
@@ -256,12 +257,13 @@ class TestElectrodeSOHComposite:
             self._check_phases_equal(results, "x", "0")
 
         pvals_set = pybamm.lithium_ion.set_initial_state(
-            "4.0 V", pvals, param=param, options=options
+            initial_value, pvals, param=param, options=options
         )
-        assert pvals_set.evaluate(
-            param.p.prim.U(results["y_init_1"], param.T_ref)
-            - param.n.prim.U(results["x_init_1"], param.T_ref)
-        ) == pytest.approx(4.0, abs=1e-05)
+        if initial_value == "4.0 V":
+            assert pvals_set.evaluate(
+                param.p.prim.U(results["y_init_1"], param.T_ref)
+                - param.n.prim.U(results["x_init_1"], param.T_ref)
+            ) == pytest.approx(4.0, abs=1e-05)
 
     def test_chen2020_composite_defaults(self):
         pvals = pybamm.ParameterValues("Chen2020_composite")
