@@ -161,7 +161,7 @@ class TestElectrodeSOH:
 
 class TestElectrodeSOHComposite:
     @staticmethod
-    def _check_equal(results, xy, soc):
+    def _check_phases_equal(results, xy, soc):
         assert results[f"{xy}_{soc}_1"] == pytest.approx(
             results[f"{xy}_{soc}_2"], abs=1e-05
         )
@@ -246,14 +246,14 @@ class TestElectrodeSOHComposite:
         # Ensure keys exist and values are equal for both phases (this is not how the equation is set, but should be true)
         if composite_electrode == "positive" or composite_electrode == "both":
             assert pybamm.lithium_ion.check_if_composite(options, "positive")
-            self._check_equal(results, "y", "init")
-            self._check_equal(results, "y", "100")
-            self._check_equal(results, "y", "0")
+            self._check_phases_equal(results, "y", "init")
+            self._check_phases_equal(results, "y", "100")
+            self._check_phases_equal(results, "y", "0")
         if composite_electrode == "negative" or composite_electrode == "both":
             assert pybamm.lithium_ion.check_if_composite(options, "negative")
-            self._check_equal(results, "x", "init")
-            self._check_equal(results, "x", "100")
-            self._check_equal(results, "x", "0")
+            self._check_phases_equal(results, "x", "init")
+            self._check_phases_equal(results, "x", "100")
+            self._check_phases_equal(results, "x", "0")
 
         pvals_set = pybamm.lithium_ion.set_initial_state(
             "4.0 V", pvals, param=param, options=options
