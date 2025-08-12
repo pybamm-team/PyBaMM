@@ -1010,7 +1010,7 @@ class Serialise:
         elif symbol_type == "FullBroadcast":
             child = Serialise.convert_symbol_from_json(json_data["children"][0])
             domains = json_data["domains"]
-            return pybamm.FullBroadcast(child, "broadcast", domains)
+            return pybamm.FullBroadcast(child, broadcast_domains=domains)
         elif symbol_type == "SecondaryBroadcast":
             child = Serialise.convert_symbol_from_json(json_data["children"][0])
             domain = json_data["broadcast_domain"]
