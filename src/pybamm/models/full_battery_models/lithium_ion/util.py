@@ -5,15 +5,10 @@ def check_if_composite(options, electrode):
         return False
     if particle_phases == "2":
         return True
-    elif isinstance(particle_phases, tuple) and particle_phases[0] == "2":
-        if electrode == "positive":
-            return False
-        else:
+    if isinstance(particle_phases, tuple) and particle_phases[0] == "2":
+        if electrode == "negative":
             return True
-    elif isinstance(particle_phases, tuple) and particle_phases[1] == "2":
+    if isinstance(particle_phases, tuple) and particle_phases[1] == "2":
         if electrode == "positive":
             return True
-        else:
-            return False
-    else:
-        return False
+    return False

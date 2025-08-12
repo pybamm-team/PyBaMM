@@ -110,7 +110,9 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
     Subscript w indicates working electrode and subscript c indicates counter electrode.
     """
 
-    def __init__(self, options, name="ElectrodeSOH model"):
+    def __init__(
+        self, options, name="ElectrodeSOH model", initialization_method="voltage"
+    ):
         pybamm.citations.register("Mohtat2019")
         super().__init__(name)
         param = pybamm.LithiumIonParameters(options)
@@ -164,7 +166,7 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
 
         x_init_1 = variables["x_init_1"]
         y_init_1 = variables["y_init_1"]
-        if options["initialization method"] == "voltage":
+        if initialization_method == "voltage":
             V_init = pybamm.InputParameter("V_init")
             self.algebraic[x_init_1] = (
                 param.p.prim.U(y_init_1, param.T_ref)
@@ -184,7 +186,7 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
                 self.algebraic[x_init_2] = param.n.prim.U(
                     x_init_1, param.T_ref
                 ) - param.n.sec.U(x_init_2, param.T_ref)
-        elif options["initialization method"] == "SOC":
+        elif initialization_method == "SOC":
             raise NotImplementedError("SOC initialization not implemented")
         else:
             raise ValueError("Invalid initialization method")
@@ -246,12 +248,12 @@ def get_initial_stoichiometries_composite(
     # Solve the model and check outputs
     if isinstance(initial_value, str) and initial_value.endswith("V"):
         all_inputs["V_init"] = float(initial_value[:-1])
-        options["initialization method"] = "voltage"
+        initialization_method = "voltage"
     elif isinstance(initial_value, float) and initial_value >= 0 and initial_value <= 1:
-        options["initialization method"] = "SOC"
+        initialization_method = "SOC"
     else:
         raise ValueError("Invalid initial value")
-    model = ElectrodeSOHComposite(options)
+    model = ElectrodeSOHComposite(options, initialization_method=initialization_method)
     sim = pybamm.Simulation(model, parameter_values=parameter_values)
     sol = sim.solve([0, 1], inputs=all_inputs)
     return {var: sol[var].entries[0] for var in model.variables.keys()}
