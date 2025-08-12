@@ -1,5 +1,5 @@
 #
-# A model to calculate electrode-specific SOH, adapted to a half-cell
+# A model to calculate electrode-specific SOH, adapted for composite electrodes
 #
 import pybamm
 
