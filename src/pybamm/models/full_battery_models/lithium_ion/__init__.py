@@ -13,6 +13,10 @@ from .electrode_soh_half_cell import (
     ElectrodeSOHHalfCell,
     get_initial_stoichiometry_half_cell,
 )
+from .electrode_soh_composite import (
+    ElectrodeSOHComposite,
+    get_initial_stoichiometries_composite,
+)
 from .initial_state import set_initial_state
 from .spm import SPM
 from .spme import SPMe

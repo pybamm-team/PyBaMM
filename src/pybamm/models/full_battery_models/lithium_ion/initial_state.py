@@ -1,5 +1,7 @@
 import pybamm
 
+from .util import check_if_composite
+
 
 def set_initial_state(
     initial_value,
@@ -75,10 +77,63 @@ def set_initial_state(
             options=options,
             inputs=inputs,
         )
-        c_max = parameter_values.evaluate(param.p.prim.c_max, inputs=inputs)
-        parameter_values.update(
-            {"Initial concentration in positive electrode [mol.m-3]": x * c_max}
+        _set_concentration_from_stoich(
+            parameter_values, param, "positive", "primary", x, inputs, options
         )
+    elif options is not None and (
+        check_if_composite(options, "positive")
+        or check_if_composite(options, "negative")
+    ):
+        """
+        Set the initial stoichiometry of each electrode, based on the initial SOC or
+        voltage.
+        """
+        initial_stoichs = pybamm.lithium_ion.get_initial_stoichiometries_composite(
+            initial_value,
+            parameter_values,
+            param=param,
+            known_value=known_value,
+            options=options,
+            inputs=inputs,
+        )
+        _set_concentration_from_stoich(
+            parameter_values,
+            param,
+            "positive",
+            "primary",
+            initial_stoichs["y_init_1"],
+            inputs,
+            options,
+        )
+        _set_concentration_from_stoich(
+            parameter_values,
+            param,
+            "negative",
+            "primary",
+            initial_stoichs["x_init_1"],
+            inputs,
+            options,
+        )
+        if check_if_composite(options, "positive"):
+            _set_concentration_from_stoich(
+                parameter_values,
+                param,
+                "positive",
+                "secondary",
+                initial_stoichs["y_init_2"],
+                inputs,
+                options,
+            )
+        if check_if_composite(options, "negative"):
+            _set_concentration_from_stoich(
+                parameter_values,
+                param,
+                "negative",
+                "secondary",
+                initial_stoichs["x_init_2"],
+                inputs,
+                options,
+            )
     else:
         """
         Set the initial stoichiometry of each electrode, based on the initial SOC or
@@ -93,13 +148,36 @@ def set_initial_state(
             tol=tol,
             inputs=inputs,
         )
-        c_n_max = parameter_values.evaluate(param.n.prim.c_max, inputs=inputs)
-        c_p_max = parameter_values.evaluate(param.p.prim.c_max, inputs=inputs)
-        parameter_values.update(
-            {
-                "Initial concentration in negative electrode [mol.m-3]": x * c_n_max,
-                "Initial concentration in positive electrode [mol.m-3]": y * c_p_max,
-            }
+        _set_concentration_from_stoich(
+            parameter_values, param, "negative", "primary", x, inputs, options
+        )
+        _set_concentration_from_stoich(
+            parameter_values, param, "positive", "primary", y, inputs, options
         )
 
     return parameter_values
+
+
+def _set_concentration_from_stoich(
+    parameter_values, param, electrode, phase, stoich, inputs, options
+):
+    if electrode == "positive":
+        electrode_param = param.p
+    else:
+        electrode_param = param.n
+    if phase == "primary":
+        phase_param = electrode_param.prim
+    elif phase == "secondary":
+        phase_param = electrode_param.sec
+    else:
+        raise ValueError(f"Invalid phase: {phase}")
+    if check_if_composite(options, electrode):
+        phase_prefactor = phase.capitalize() + ": "
+    else:
+        phase_prefactor = ""
+    parameter_values.update(
+        {
+            f"{phase_prefactor}Initial concentration in {electrode} electrode [mol.m-3]": stoich
+            * phase_param.c_max
+        }
+    )
