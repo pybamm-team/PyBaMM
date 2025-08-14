@@ -19,6 +19,8 @@ def _get_lithiation_delithiation(direction, electrode, options):
         direction == "charge" and electrode == "positive"
     ):
         return "delithiation"
+    else:
+        raise ValueError
 
 
 def _has_hysteresis(electrode, options):
@@ -44,7 +46,7 @@ def _has_hysteresis(electrode, options):
             else:
                 return False
     else:
-        return False
+        raise ValueError
 
 
 class _BaseElectrodeSOH(pybamm.BaseModel):
@@ -446,7 +448,7 @@ class ElectrodeSOHSolver:
                 sol = self._solve_split(inputs, ics)
             except pybamm.SolverError as split_error:
                 # check if the error is due to the simulation not being feasible
-                self._check_esoh_feasible(inputs)
+                self._check_esoh_feasible(inputs, None)
                 # if that didn't raise an error, raise the original error instead
                 raise split_error
 
@@ -780,7 +782,21 @@ class ElectrodeSOHSolver:
                 Up = self.param.p.prim.U
                 Un = self.param.n.prim.U
                 soc_model.algebraic[soc] = (
-                    Up(y, T_ref, direction) - Un(x, T_ref, direction) - V_init
+                    Up(
+                        y,
+                        T_ref,
+                        _get_lithiation_delithiation(
+                            direction, "positive", self.options
+                        ),
+                    )
+                    - Un(
+                        x,
+                        T_ref,
+                        _get_lithiation_delithiation(
+                            direction, "negative", self.options
+                        ),
+                    )
+                    - V_init
                 )
             # initial guess for soc linearly interpolates between 0 and 1
             # based on V linearly interpolating between V_max and V_min
@@ -1046,13 +1062,13 @@ def get_min_max_stoichiometries(
 
 def get_initial_ocps(
     initial_value,
+    direction,
     parameter_values,
     param=None,
     known_value="cyclable lithium capacity",
     options=None,
     tol=1e-6,
     inputs=None,
-    direction=None,
 ):
     """
     Calculate initial open-circuit potentials to start off the simulation at a
@@ -1174,9 +1190,14 @@ def calculate_theoretical_energy(
     E
         The total energy of the cell in Wh
     """
+    direction = "discharge"
     # Get initial and final stoichiometric values.
-    x_100, y_100 = get_initial_stoichiometries(initial_soc, parameter_values, tol=tol)
-    x_0, y_0 = get_initial_stoichiometries(final_soc, parameter_values, tol=tol)
+    x_100, y_100 = get_initial_stoichiometries(
+        initial_soc, direction=direction, parameter_values=parameter_values, tol=tol
+    )
+    x_0, y_0 = get_initial_stoichiometries(
+        final_soc, direction=direction, parameter_values=parameter_values, tol=tol
+    )
     Q_p = parameter_values.evaluate(
         pybamm.LithiumIonParameters().p.prim.Q_init, inputs=inputs
     )

@@ -167,13 +167,13 @@ def set_initial_state(
         """
         x, y = pybamm.lithium_ion.get_initial_stoichiometries(
             initial_value,
+            direction,
             parameter_values,
             param=param,
             known_value=known_value,
             options=options,
             tol=tol,
             inputs=inputs,
-            direction=direction,
         )
         _set_concentration_from_stoich(
             parameter_values, param, "negative", "primary", x, inputs, options

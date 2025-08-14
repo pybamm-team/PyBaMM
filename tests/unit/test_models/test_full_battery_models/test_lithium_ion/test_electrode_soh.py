@@ -459,13 +459,17 @@ class TestGetInitialSOC:
         ).default_parameter_values
 
         with pytest.raises(ValueError, match="Initial SOC should be between 0 and 1"):
-            pybamm.lithium_ion.get_initial_stoichiometries(2, parameter_values)
+            pybamm.lithium_ion.get_initial_stoichiometries(2, None, parameter_values)
 
         with pytest.raises(ValueError, match="outside the voltage limits"):
-            pybamm.lithium_ion.get_initial_stoichiometries("1 V", parameter_values)
+            pybamm.lithium_ion.get_initial_stoichiometries(
+                "1 V", None, parameter_values
+            )
 
         with pytest.raises(ValueError, match="must be a float"):
-            pybamm.lithium_ion.get_initial_stoichiometries("5 A", parameter_values)
+            pybamm.lithium_ion.get_initial_stoichiometries(
+                "5 A", None, parameter_values
+            )
 
         with pytest.raises(ValueError, match="outside the voltage limits"):
             pybamm.lithium_ion.get_initial_stoichiometry_half_cell(
