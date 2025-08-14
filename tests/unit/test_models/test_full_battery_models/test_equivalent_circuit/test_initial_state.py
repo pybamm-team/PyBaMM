@@ -13,13 +13,15 @@ class TestSetInitialSOC:
         V_min = parameter_values["Lower voltage cut-off [V]"]
         V_max = parameter_values["Upper voltage cut-off [V]"]
 
-        param_0 = parameter_values.set_initial_state(0, inplace=False)
-        param_100 = parameter_values.set_initial_state(1, inplace=False)
+        param_0 = parameter_values.set_initial_state(0, None, inplace=False)
+        param_100 = parameter_values.set_initial_state(1, None, inplace=False)
         assert param_0["Initial SoC"] == 0
         assert param_100["Initial SoC"] == 1
 
-        param_0 = parameter_values.set_initial_state(f"{V_min} V", inplace=False)
-        param_100 = parameter_values.set_initial_state(f"{V_max} V", inplace=False)
+        param_0 = parameter_values.set_initial_state(f"{V_min} V", None, inplace=False)
+        param_100 = parameter_values.set_initial_state(
+            f"{V_max} V", None, inplace=False
+        )
         assert param_0["Initial SoC"] == pytest.approx(0)
         assert param_100["Initial SoC"] == pytest.approx(1)
 
@@ -27,10 +29,10 @@ class TestSetInitialSOC:
         parameter_values = pybamm.ParameterValues("ECM_Example")
 
         with pytest.raises(ValueError, match="Initial SOC should be between 0 and 1"):
-            parameter_values.set_initial_state(2)
+            parameter_values.set_initial_state(2, None)
 
         with pytest.raises(ValueError, match="outside the voltage limits"):
-            parameter_values.set_initial_state("1 V")
+            parameter_values.set_initial_state("1 V", None)
 
         with pytest.raises(ValueError, match="must be a float"):
-            parameter_values.set_initial_state("5 A")
+            parameter_values.set_initial_state("5 A", None)

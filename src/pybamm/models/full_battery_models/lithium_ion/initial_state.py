@@ -73,13 +73,13 @@ def set_initial_state(
         """
         Un, Up = pybamm.lithium_ion.get_initial_ocps(
             initial_value,
+            direction,
             parameter_values,
             param=param,
             known_value=known_value,
             options=options,
             tol=tol,
             inputs=inputs,
-            direction=direction,
         )
         parameter_values.update(
             {

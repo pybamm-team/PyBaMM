@@ -438,7 +438,7 @@ class ElectrodeSOHSolver:
         x0_sim = pybamm.Simulation(x0_model, parameter_values=self.parameter_values)
         return [x100_sim, x0_sim]
 
-    def solve(self, inputs):
+    def solve(self, inputs, direction=None):
         ics = self._set_up_solve(inputs)
         try:
             sol = self._solve_full(inputs, ics)
@@ -448,7 +448,7 @@ class ElectrodeSOHSolver:
                 sol = self._solve_split(inputs, ics)
             except pybamm.SolverError as split_error:
                 # check if the error is due to the simulation not being feasible
-                self._check_esoh_feasible(inputs, None)
+                self._check_esoh_feasible(inputs, direction)
                 # if that didn't raise an error, raise the original error instead
                 raise split_error
 
@@ -1105,7 +1105,7 @@ def get_initial_ocps(
     """
     # 'direction' is currently unused; reserved for future behavior
     esoh_solver = ElectrodeSOHSolver(parameter_values, param, known_value, options)
-    return esoh_solver.get_initial_ocps(initial_value, tol, inputs=inputs)
+    return esoh_solver.get_initial_ocps(initial_value, direction, tol, inputs=inputs)
 
 
 def get_min_max_ocps(

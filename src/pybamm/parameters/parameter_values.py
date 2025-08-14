@@ -347,6 +347,7 @@ class ParameterValues:
     def set_initial_stoichiometry_half_cell(
         self,
         initial_value,
+        direction,
         param=None,
         known_value="cyclable lithium capacity",
         inplace=True,
@@ -357,6 +358,7 @@ class ParameterValues:
         warn(msg, DeprecationWarning, stacklevel=2)
         return self._set_initial_state(
             initial_value,
+            direction,
             self,
             param=param,
             known_value=known_value,
@@ -368,6 +370,7 @@ class ParameterValues:
     def set_initial_stoichiometries(
         self,
         initial_value,
+        direction,
         param=None,
         known_value="cyclable lithium capacity",
         inplace=True,
@@ -379,6 +382,7 @@ class ParameterValues:
         warn(msg, DeprecationWarning, stacklevel=2)
         return self._set_initial_state(
             initial_value,
+            direction,
             self,
             param=param,
             known_value=known_value,
@@ -391,6 +395,7 @@ class ParameterValues:
     def set_initial_ocps(
         self,
         initial_value,
+        direction,
         param=None,
         known_value="cyclable lithium capacity",
         inplace=True,
@@ -401,6 +406,7 @@ class ParameterValues:
         warn(msg, DeprecationWarning, stacklevel=2)
         return self._set_initial_state(
             initial_value,
+            direction,
             self,
             param=param,
             known_value=known_value,

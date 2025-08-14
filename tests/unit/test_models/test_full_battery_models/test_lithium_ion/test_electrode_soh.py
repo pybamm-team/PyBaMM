@@ -317,7 +317,7 @@ class TestElectrodeSOHMSMR:
                 assert sol[key] == pytest.approx(sol_split[key].data[0], abs=1e-05)
 
         # Check feasibility checks can be performed successfully
-        esoh_solver._check_esoh_feasible(inputs)
+        esoh_solver._check_esoh_feasible(inputs, direction=None)
 
     def test_known_solution_cell_capacity(self, options):
         param = pybamm.LithiumIonParameters(options)
@@ -543,15 +543,15 @@ class TestGetInitialOCPMSMR:
         param = pybamm.LithiumIonParameters(options)
         parameter_values = pybamm.ParameterValues("MSMR_Example")
         Un, Up = pybamm.lithium_ion.get_initial_ocps(
-            1, parameter_values, param, options=options
+            1, None, parameter_values, param, options=options
         )
         assert Up - Un == pytest.approx(4.2, abs=1e-05)
         Un, Up = pybamm.lithium_ion.get_initial_ocps(
-            0, parameter_values, param, options=options
+            0, None, parameter_values, param, options=options
         )
         assert Up - Un == pytest.approx(2.8, abs=1e-05)
         Un, Up = pybamm.lithium_ion.get_initial_ocps(
-            "4 V", parameter_values, param, options=options
+            "4 V", None, parameter_values, param, options=options
         )
         assert Up - Un == pytest.approx(4)
 
