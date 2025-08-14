@@ -242,7 +242,7 @@ class TestElectrodeSOHComposite:
         # Use composite ESOH helper to compute initial stoichiometries at a voltage
         param = pybamm.LithiumIonParameters(options=options)
         results = pybamm.lithium_ion.get_initial_stoichiometries_composite(
-            "4.0 V", pvals, param=param, options=options
+            "4.0 V", None, pvals, param=param, options=options
         )
         # Ensure keys exist and values are equal for both phases (this is not how the equation is set, but should be true)
         if composite_electrode == "positive" or composite_electrode == "both":
@@ -257,7 +257,7 @@ class TestElectrodeSOHComposite:
             self._check_phases_equal(results, "x", "0")
 
         pvals_set = pybamm.lithium_ion.set_initial_state(
-            initial_value, pvals, param=param, options=options
+            initial_value, None, pvals, param=param, options=options
         )
         if initial_value == "4.0 V":
             assert pvals_set.evaluate(
@@ -270,14 +270,14 @@ class TestElectrodeSOHComposite:
         options = {"particle phases": ("2", "1")}
         param = pybamm.LithiumIonParameters(options=options)
         results = pybamm.lithium_ion.get_initial_stoichiometries_composite(
-            "4.0 V", pvals, param=param, options=options
+            "4.0 V", None, pvals, param=param, options=options
         )
         # Basic sanity: solution includes expected variables and bounded stoichiometries
         for key, val in results.items():
             if key.startswith(("x_", "y_")):
                 assert 0 <= val <= 1
         pvals_set = pybamm.lithium_ion.set_initial_state(
-            "4.0 V", pvals, param=param, options=options
+            "4.0 V", None, pvals, param=param, options=options
         )
         assert pvals_set.evaluate(
             param.p.prim.U(results["y_init_1"], param.T_ref)
@@ -394,25 +394,25 @@ class TestGetInitialSOC:
         T = parameter_values.evaluate(param.T_ref)
 
         x100, y100 = pybamm.lithium_ion.get_initial_stoichiometries(
-            1, parameter_values, param
+            1, None, parameter_values, param
         )
         V = parameter_values.evaluate(param.p.prim.U(y100, T) - param.n.prim.U(x100, T))
         assert V == pytest.approx(4.2)
 
         x0, y0 = pybamm.lithium_ion.get_initial_stoichiometries(
-            0, parameter_values, param
+            0, None, parameter_values, param
         )
         V = parameter_values.evaluate(param.p.prim.U(y0, T) - param.n.prim.U(x0, T))
         assert V == pytest.approx(2.8)
 
         x, y = pybamm.lithium_ion.get_initial_stoichiometries(
-            0.4, parameter_values, param
+            0.4, None, parameter_values, param
         )
         assert x == x0 + 0.4 * (x100 - x0)
         assert y == y0 - 0.4 * (y0 - y100)
 
         x, y = pybamm.lithium_ion.get_initial_stoichiometries(
-            "4 V", parameter_values, param
+            "4 V", None, parameter_values, param
         )
         T = parameter_values.evaluate(param.T_ref)
         V = parameter_values.evaluate(param.p.prim.U(y, T) - param.n.prim.U(x, T))

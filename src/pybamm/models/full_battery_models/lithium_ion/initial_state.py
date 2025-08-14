@@ -3,8 +3,29 @@ import pybamm
 from .util import check_if_composite
 
 
+def _set_hysteresis_branch(
+    parameter_values, electrode, initial_hysteresis_branch, direction
+):
+    if direction == "discharge":
+        lithiation = "delithiation"
+        h = 1
+    elif direction == "charge":
+        lithiation = "lithiation"
+        h = -1
+    else:
+        lithiation = None
+        h = 0
+    parameter_values.update(
+        {
+            f"Initial {lithiation} branch": initial_hysteresis_branch,
+        }
+    )
+    return lithiation, h
+
+
 def set_initial_state(
     initial_value,
+    direction,
     parameter_values,
     param=None,
     known_value="cyclable lithium capacity",
@@ -56,7 +77,9 @@ def set_initial_state(
             param=param,
             known_value=known_value,
             options=options,
+            tol=tol,
             inputs=inputs,
+            direction=direction,
         )
         parameter_values.update(
             {
@@ -73,9 +96,10 @@ def set_initial_state(
             initial_value,
             parameter_values,
             param=param,
-            known_value=known_value,
             options=options,
+            tol=tol,
             inputs=inputs,
+            direction=direction,
         )
         _set_concentration_from_stoich(
             parameter_values, param, "positive", "primary", x, inputs, options
@@ -90,11 +114,13 @@ def set_initial_state(
         """
         initial_stoichs = pybamm.lithium_ion.get_initial_stoichiometries_composite(
             initial_value,
+            direction,
             parameter_values,
             param=param,
-            known_value=known_value,
             options=options,
+            tol=tol,
             inputs=inputs,
+            known_value=known_value,
         )
         _set_concentration_from_stoich(
             parameter_values,
@@ -147,6 +173,7 @@ def set_initial_state(
             options=options,
             tol=tol,
             inputs=inputs,
+            direction=direction,
         )
         _set_concentration_from_stoich(
             parameter_values, param, "negative", "primary", x, inputs, options

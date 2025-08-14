@@ -113,7 +113,11 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
     """
 
     def __init__(
-        self, options, name="ElectrodeSOH model", initialization_method="voltage"
+        self,
+        options,
+        direction,
+        name="ElectrodeSOH model",
+        initialization_method="voltage",
     ):
         pybamm.citations.register("Mohtat2019")
         super().__init__(name)
@@ -137,25 +141,25 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
                 x_100_2, param.T_ref
             ) - param.n.sec.U(x_100_1, param.T_ref)
             self.algebraic[x_0_2] = param.n.prim.U(x_0_2, param.T_ref) - param.n.sec.U(
-                x_0_1, param.T_ref
+                x_0_1, param.T_ref, direction
             )
         if is_positive_composite:
             y_100_2 = variables["y_100_2"]
             y_0_2 = variables["y_0_2"]
             self.algebraic[y_100_2] = param.p.prim.U(
-                y_100_2, param.T_ref
+                y_100_2, param.T_ref, direction
             ) - param.p.sec.U(y_100_1, param.T_ref)
-            self.algebraic[y_0_2] = param.p.prim.U(y_0_2, param.T_ref) - param.p.sec.U(
-                y_0_1, param.T_ref
-            )
+            self.algebraic[y_0_2] = param.p.prim.U(
+                y_0_2, param.T_ref, direction
+            ) - param.p.sec.U(y_0_1, param.T_ref, direction)
         self.algebraic[x_100_1] = (
-            param.p.prim.U(y_100_1, param.T_ref)
-            - param.n.prim.U(x_100_1, param.T_ref)
+            param.p.prim.U(y_100_1, param.T_ref, direction)
+            - param.n.prim.U(x_100_1, param.T_ref, direction)
             - V_max
         )
         self.algebraic[x_0_1] = (
-            param.p.prim.U(y_0_1, param.T_ref)
-            - param.n.prim.U(x_0_1, param.T_ref)
+            param.p.prim.U(y_0_1, param.T_ref, direction)
+            - param.n.prim.U(x_0_1, param.T_ref, direction)
             - V_min
         )
         # arbitrary choice: use y_0_1 for the capacity equation
@@ -169,8 +173,8 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
         if initialization_method == "voltage":
             V_init = pybamm.InputParameter("V_init")
             self.algebraic[x_init_1] = (
-                param.p.prim.U(y_init_1, param.T_ref)
-                - param.n.prim.U(x_init_1, param.T_ref)
+                param.p.prim.U(y_init_1, param.T_ref, direction)
+                - param.n.prim.U(x_init_1, param.T_ref, direction)
                 - V_init
             )
             self.algebraic[y_init_1] = (
@@ -202,13 +206,13 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
         if is_positive_composite:
             y_init_2 = variables["y_init_2"]
             self.algebraic[y_init_2] = param.p.prim.U(
-                y_init_1, param.T_ref
-            ) - param.p.sec.U(y_init_2, param.T_ref)
+                y_init_1, param.T_ref, direction
+            ) - param.p.sec.U(y_init_2, param.T_ref, direction)
         if is_negative_composite:
             x_init_2 = variables["x_init_2"]
             self.algebraic[x_init_2] = param.n.prim.U(
-                x_init_1, param.T_ref
-            ) - param.n.sec.U(x_init_2, param.T_ref)
+                x_init_1, param.T_ref, direction
+            ) - param.n.sec.U(x_init_2, param.T_ref, direction)
 
         self.variables.update(variables)
         if initialization_method == "SOC":
@@ -225,6 +229,7 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
 
 def get_initial_stoichiometries_composite(
     initial_value,
+    direction,
     parameter_values,
     param=None,
     options=None,
@@ -245,6 +250,7 @@ def get_initial_stoichiometries_composite(
         :class:`pybamm.BatteryModelOptions`.
         If None, the default is used: {"working electrode": "positive"}
     """
+    # 'direction' is currently unused; reserved for future behavior
     inputs = inputs or {}
     if known_value != "cyclable lithium capacity":
         raise ValueError(
@@ -277,7 +283,9 @@ def get_initial_stoichiometries_composite(
         all_inputs["SOC_init"] = initial_value
     else:
         raise ValueError("Invalid initial value")
-    model = ElectrodeSOHComposite(options, initialization_method=initialization_method)
+    model = ElectrodeSOHComposite(
+        options, direction, initialization_method=initialization_method
+    )
     sim = pybamm.Simulation(model, parameter_values=parameter_values)
     sol = sim.solve([0, 1], inputs=all_inputs)
     return {var: sol[var].entries[0] for var in model.variables.keys()}

@@ -64,6 +64,7 @@ def get_initial_stoichiometry_half_cell(
     options=None,
     tol=1e-6,
     inputs=None,
+    direction=None,
     **kwargs,
 ):
     """
@@ -93,6 +94,7 @@ def get_initial_stoichiometry_half_cell(
     x
         The initial stoichiometry that give the desired initial state of charge
     """
+    # 'direction' is currently unused; reserved for future behavior
     param = pybamm.LithiumIonParameters(options)
     x_0, x_100 = get_min_max_stoichiometries(parameter_values, inputs=inputs)
 

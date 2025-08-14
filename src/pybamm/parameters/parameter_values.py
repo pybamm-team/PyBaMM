@@ -328,6 +328,7 @@ class ParameterValues:
     def set_initial_state(
         self,
         initial_value,
+        direction,
         param=None,
         inplace=True,
         options=None,
@@ -335,6 +336,7 @@ class ParameterValues:
     ):
         return self._set_initial_state(
             initial_value,
+            direction,
             self,
             param=param,
             inplace=inplace,

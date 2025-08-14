@@ -667,7 +667,9 @@ class ElectrodeSOHSolver:
                 )
             )
 
-    def get_initial_stoichiometries(self, initial_value, tol=1e-6, inputs=None):
+    def get_initial_stoichiometries(
+        self, initial_value, direction, tol=1e-6, inputs=None
+    ):
         """
         Calculate initial stoichiometries to start off the simulation at a particular
         state of charge, given voltage limits, open-circuit potentials, etc defined by
@@ -725,7 +727,9 @@ class ElectrodeSOHSolver:
             else:
                 Up = self.param.p.prim.U
                 Un = self.param.n.prim.U
-                soc_model.algebraic[soc] = Up(y, T_ref) - Un(x, T_ref) - V_init
+                soc_model.algebraic[soc] = (
+                    Up(y, T_ref, direction) - Un(x, T_ref, direction) - V_init
+                )
             # initial guess for soc linearly interpolates between 0 and 1
             # based on V linearly interpolating between V_max and V_min
             soc_model.initial_conditions[soc] = (V_init - V_min) / (V_max - V_min)
@@ -785,7 +789,7 @@ class ElectrodeSOHSolver:
         sol = self.solve(all_inputs)
         return [sol["x_0"], sol["x_100"], sol["y_100"], sol["y_0"]]
 
-    def get_initial_ocps(self, initial_value, tol=1e-6, inputs=None):
+    def get_initial_ocps(self, initial_value, direction, tol=1e-6, inputs=None):
         """
         Calculate initial open-circuit potentials to start off the simulation at a
         particular state of charge, given voltage limits, open-circuit potentials, etc
@@ -810,7 +814,9 @@ class ElectrodeSOHSolver:
         """
         inputs = inputs or {}
         parameter_values = self.parameter_values
-        x, y = self.get_initial_stoichiometries(initial_value, tol, inputs=inputs)
+        x, y = self.get_initial_stoichiometries(
+            initial_value, direction, tol, inputs=inputs
+        )
         if self.options["open-circuit potential"] == "MSMR":
             msmr_pot_model = _get_msmr_potential_model(
                 self.parameter_values, self.param
@@ -878,6 +884,7 @@ class ElectrodeSOHSolver:
 
 def get_initial_stoichiometries(
     initial_value,
+    direction,
     parameter_values,
     param=None,
     known_value="cyclable lithium capacity",
@@ -919,8 +926,11 @@ def get_initial_stoichiometries(
     x, y
         The initial stoichiometries that give the desired initial state of charge
     """
+    # 'direction' is currently unused; reserved for future behavior
     esoh_solver = ElectrodeSOHSolver(parameter_values, param, known_value, options)
-    return esoh_solver.get_initial_stoichiometries(initial_value, tol, inputs=inputs)
+    return esoh_solver.get_initial_stoichiometries(
+        initial_value, direction, tol, inputs=inputs
+    )
 
 
 def get_min_max_stoichiometries(
@@ -966,6 +976,7 @@ def get_initial_ocps(
     options=None,
     tol=1e-6,
     inputs=None,
+    direction=None,
 ):
     """
     Calculate initial open-circuit potentials to start off the simulation at a
@@ -1000,6 +1011,7 @@ def get_initial_ocps(
     Un, Up
         The initial electrode OCPs that give the desired initial state of charge
     """
+    # 'direction' is currently unused; reserved for future behavior
     esoh_solver = ElectrodeSOHSolver(parameter_values, param, known_value, options)
     return esoh_solver.get_initial_ocps(initial_value, tol, inputs=inputs)
 
