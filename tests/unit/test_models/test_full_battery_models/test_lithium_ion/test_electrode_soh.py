@@ -447,7 +447,7 @@ class TestGetInitialSOC:
         T = parameter_values.evaluate(param.T_ref)
 
         x100, y100 = pybamm.lithium_ion.get_initial_stoichiometries(
-            1, parameter_values, param, known_value="cell capacity"
+            1, None, parameter_values, param, known_value="cell capacity"
         )
         V = parameter_values.evaluate(param.p.prim.U(y100, T) - param.n.prim.U(x100, T))
         assert V == pytest.approx(4.2)
@@ -514,11 +514,13 @@ class TestGetInitialOCP:
     def test_get_initial_ocp(self):
         param = pybamm.LithiumIonParameters()
         parameter_values = pybamm.ParameterValues("Mohtat2020")
-        Un, Up = pybamm.lithium_ion.get_initial_ocps(1, parameter_values, param)
+        Un, Up = pybamm.lithium_ion.get_initial_ocps(1, None, parameter_values, param)
         assert Up - Un == pytest.approx(4.2)
-        Un, Up = pybamm.lithium_ion.get_initial_ocps(0, parameter_values, param)
+        Un, Up = pybamm.lithium_ion.get_initial_ocps(0, None, parameter_values, param)
         assert Up - Un == pytest.approx(2.8)
-        Un, Up = pybamm.lithium_ion.get_initial_ocps("4 V", parameter_values, param)
+        Un, Up = pybamm.lithium_ion.get_initial_ocps(
+            "4 V", None, parameter_values, param
+        )
         assert Up - Un == pytest.approx(4)
 
     def test_min_max_ocp(self):

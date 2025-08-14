@@ -8,6 +8,45 @@ import numpy as np
 import pybamm
 
 
+def _get_lithiation_delithiation(direction, electrode, options):
+    if direction is None or not _has_hysteresis(electrode, options):
+        return None
+    elif (direction == "charge" and electrode == "negative") or (
+        direction == "discharge" and electrode == "positive"
+    ):
+        return "lithiation"
+    elif (direction == "discharge" and electrode == "negative") or (
+        direction == "charge" and electrode == "positive"
+    ):
+        return "delithiation"
+
+
+def _has_hysteresis(electrode, options):
+    hysteresis_options = [
+        "current sigmoid",
+        "one-state hysteresis",
+        "one-state differential capacity hysteresis",
+    ]
+    if isinstance(options["open-circuit potential"], str):
+        if options["open-circuit potential"] in hysteresis_options:
+            return True
+        else:
+            return False
+    elif isinstance(options["open-circuit potential"], tuple):
+        if electrode == "negative":
+            if options["open-circuit potential"][0] in hysteresis_options:
+                return True
+            else:
+                return False
+        elif electrode == "positive":
+            if options["open-circuit potential"][1] in hysteresis_options:
+                return True
+            else:
+                return False
+    else:
+        return False
+
+
 class _BaseElectrodeSOH(pybamm.BaseModel):
     def __init__(self):
         pybamm.citations.register("Mohtat2019")
@@ -595,7 +634,7 @@ class ElectrodeSOHSolver:
 
         return (x0_min, x100_max, y100_min, y0_max)
 
-    def _check_esoh_feasible(self, inputs):
+    def _check_esoh_feasible(self, inputs, direction):
         """
         Check that the electrode SOH calculation is feasible, based on voltage limits
         """
@@ -618,7 +657,20 @@ class ElectrodeSOHSolver:
                 x = pybamm.InputParameter("x")
                 y = pybamm.InputParameter("y")
                 self.OCV_function = self.parameter_values.process_symbol(
-                    self.param.p.prim.U(y, T) - self.param.n.prim.U(x, T)
+                    self.param.p.prim.U(
+                        y,
+                        T,
+                        _get_lithiation_delithiation(
+                            direction, "positive", self.options
+                        ),
+                    )
+                    - self.param.n.prim.U(
+                        x,
+                        T,
+                        _get_lithiation_delithiation(
+                            direction, "negative", self.options
+                        ),
+                    )
                 )
 
         # Evaluate OCP function
@@ -828,8 +880,22 @@ class ElectrodeSOHSolver:
             Up = sol["Up"].data[0]
         else:
             T_ref = parameter_values["Reference temperature [K]"]
-            Un = parameter_values.evaluate(self.param.n.prim.U(x, T_ref), inputs=inputs)
-            Up = parameter_values.evaluate(self.param.p.prim.U(y, T_ref), inputs=inputs)
+            Un = parameter_values.evaluate(
+                self.param.n.prim.U(
+                    x,
+                    T_ref,
+                    _get_lithiation_delithiation(direction, "negative", self.options),
+                ),
+                inputs=inputs,
+            )
+            Up = parameter_values.evaluate(
+                self.param.p.prim.U(
+                    y,
+                    T_ref,
+                    _get_lithiation_delithiation(direction, "positive", self.options),
+                ),
+                inputs=inputs,
+            )
         return Un, Up
 
     def get_min_max_ocps(self, inputs=None):
@@ -861,6 +927,7 @@ class ElectrodeSOHSolver:
         return [sol["Un(x_0)"], sol["Un(x_100)"], sol["Up(y_100)"], sol["Up(y_0)"]]
 
     def theoretical_energy_integral(self, inputs, points=1000):
+        direction = "discharge"
         x_0 = inputs["x_0"]
         y_0 = inputs["y_0"]
         x_100 = inputs["x_100"]
@@ -871,7 +938,16 @@ class ElectrodeSOHSolver:
         # Calculate OCV at each stoichiometry
         T = self.param.T_amb_av(0)
         Vs = self.parameter_values.evaluate(
-            self.param.p.prim.U(y_vals, T) - self.param.n.prim.U(x_vals, T),
+            self.param.p.prim.U(
+                y_vals,
+                T,
+                _get_lithiation_delithiation(direction, "positive", self.options),
+            )
+            - self.param.n.prim.U(
+                x_vals,
+                T,
+                _get_lithiation_delithiation(direction, "negative", self.options),
+            ),
             inputs=inputs,
         ).flatten()
         # Calculate dQ
