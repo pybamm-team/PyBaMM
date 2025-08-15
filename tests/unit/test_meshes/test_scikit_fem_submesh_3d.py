@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 import pytest
 
@@ -185,3 +187,85 @@ class TestScikitFemSubMesh3D:
     def test_invalid_geometry_type(self):
         with pytest.raises(pybamm.GeometryError, match="geom_type must be one of"):
             pybamm.ScikitFemGenerator3D("invalid_type", h=0.3)
+
+
+@pytest.fixture(scope="module")
+def temp_mesh_file(tmp_path_factory):
+    MESH_DIR = os.path.join(os.path.dirname(__file__), "assets")
+    file_path = os.path.join(MESH_DIR, "test_mesh.msh")
+    return str(file_path)
+
+
+class TestUserSuppliedMesh:
+    def test_load_mesh_from_file_success(self, temp_mesh_file):
+        boundary_map = {"z_min": 1, "z_max": 2}
+        domain_map = {"current collector": 5}
+
+        skfem_mesh = pybamm.ScikitFemSubMesh3D.load_mesh_from_file(
+            temp_mesh_file, boundary_map, domain_map
+        )
+
+        assert skfem_mesh.p.shape[1] > 0
+        assert skfem_mesh.nelements > 0
+        assert "current collector" in skfem_mesh.subdomains
+        assert "z_min" in skfem_mesh.boundaries
+        assert "z_max" in skfem_mesh.boundaries
+        assert len(skfem_mesh.boundaries["z_min"]) > 0
+
+    def test_load_file_not_found(self):
+        with pytest.raises(pybamm.GeometryError, match="Could not read mesh file"):
+            pybamm.ScikitFemSubMesh3D.load_mesh_from_file(
+                "non_existent_file.msh", {}, {}
+            )
+
+    def test_missing_tags(self, temp_mesh_file, caplog):
+        # Tag 99 does not exist in the file
+        boundary_map = {"non_existent_boundary": 99}
+        domain_map = {"non_existent_domain": 98}
+
+        with caplog.at_level("WARNING", logger="pybamm"):
+            skfem_mesh = pybamm.ScikitFemSubMesh3D.load_mesh_from_file(
+                temp_mesh_file, boundary_map, domain_map
+            )
+            assert "No boundary facets found for 'non_existent_boundary'" in caplog.text
+            assert "No elements found for domain 'non_existent_domain'" in caplog.text
+
+        assert skfem_mesh.boundaries is None
+        assert skfem_mesh.subdomains is None
+
+    def test_user_supplied_generator(self, temp_mesh_file):
+        boundary_map = {"z_min": 1}
+        domain_map = {"my_domain": 5}
+
+        generator = pybamm.UserSuppliedGenerator3D(
+            file_path=temp_mesh_file,
+            boundary_mapping=boundary_map,
+            domain_mapping=domain_map,
+        )
+
+        submesh = generator(lims=None, npts=None)
+
+        assert isinstance(submesh, pybamm.ScikitFemSubMesh3D)
+        assert submesh.npts > 0
+        assert "z_min_dofs" in submesh.__dict__  # Check that dofs were created
+
+    def test_integration_with_pybamm_mesh(self, temp_mesh_file):
+        domain_name = "current collector"
+        boundary_map = {"z_min": 1, "z_max": 2}
+        domain_map = {domain_name: 5}
+
+        mesh_generator = pybamm.UserSuppliedGenerator3D(
+            file_path=temp_mesh_file,
+            boundary_mapping=boundary_map,
+            domain_mapping=domain_map,
+        )
+
+        geometry = pybamm.Geometry({domain_name: {"x": {}, "y": {}, "z": {}}})
+        submesh_types = {domain_name: mesh_generator}
+        var_pts = {"x": None, "y": None, "z": None}
+
+        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+
+        assert isinstance(mesh[domain_name], pybamm.ScikitFemSubMesh3D)
+        assert mesh[domain_name].npts > 0
+        assert "z_min" in mesh[domain_name]._skfem_mesh.boundaries
