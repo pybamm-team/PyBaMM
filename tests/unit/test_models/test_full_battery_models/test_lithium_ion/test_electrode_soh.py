@@ -294,6 +294,25 @@ class TestElectrodeSOHComposite:
             - param.n.prim.U(results["x_init_1"], param.T_ref)
         ) == pytest.approx(4.0, abs=1e-05)
 
+    def test_chen2020_composite_defaults_hysteresis(self):
+        pvals = pybamm.ParameterValues("Chen2020_composite")
+        options = {
+            "particle phases": ("2", "1"),
+            "open-circuit potential": (("single", "current sigmoid"), "single"),
+        }
+        param = pybamm.LithiumIonParameters(options=options)
+        results_discharge = pybamm.lithium_ion.get_initial_stoichiometries_composite(
+            "4.0 V", "discharge", pvals, param=param, options=options
+        )
+        results_charge = pybamm.lithium_ion.get_initial_stoichiometries_composite(
+            "4.0 V", "charge", pvals, param=param, options=options
+        )
+        # Basic sanity: solution includes expected variables and bounded stoichiometries
+        for key, val in results_discharge.items():
+            if key.startswith(("x_", "y_")):
+                assert 0 <= val <= 1
+                assert results_discharge[key] != results_charge[key]
+
 
 class TestElectrodeSOHMSMR:
     def test_known_solution(self, options):
