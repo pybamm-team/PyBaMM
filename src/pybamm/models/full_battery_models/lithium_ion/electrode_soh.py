@@ -7,46 +7,7 @@ import numpy as np
 
 import pybamm
 
-
-def _get_lithiation_delithiation(direction, electrode, options):
-    if direction is None or not _has_hysteresis(electrode, options):
-        return None
-    elif (direction == "charge" and electrode == "negative") or (
-        direction == "discharge" and electrode == "positive"
-    ):
-        return "lithiation"
-    elif (direction == "discharge" and electrode == "negative") or (
-        direction == "charge" and electrode == "positive"
-    ):
-        return "delithiation"
-    else:
-        raise ValueError
-
-
-def _has_hysteresis(electrode, options):
-    hysteresis_options = [
-        "current sigmoid",
-        "one-state hysteresis",
-        "one-state differential capacity hysteresis",
-    ]
-    if isinstance(options["open-circuit potential"], str):
-        if options["open-circuit potential"] in hysteresis_options:
-            return True
-        else:
-            return False
-    elif isinstance(options["open-circuit potential"], tuple):
-        if electrode == "negative":
-            if options["open-circuit potential"][0] in hysteresis_options:
-                return True
-            else:
-                return False
-        elif electrode == "positive":
-            if options["open-circuit potential"][1] in hysteresis_options:
-                return True
-            else:
-                return False
-    else:
-        raise ValueError
+from .util import _get_lithiation_delithiation
 
 
 class _BaseElectrodeSOH(pybamm.BaseModel):
@@ -138,7 +99,12 @@ class _ElectrodeSOH(_BaseElectrodeSOH):
     """
 
     def __init__(
-        self, param=None, solve_for=None, known_value="cyclable lithium capacity"
+        self,
+        direction,
+        param=None,
+        solve_for=None,
+        known_value="cyclable lithium capacity",
+        options=None,
     ):
         super().__init__()
 
@@ -180,8 +146,12 @@ class _ElectrodeSOH(_BaseElectrodeSOH):
         else:
             x_100 = pybamm.InputParameter("x_100")
             y_100 = pybamm.InputParameter("y_100")
-        Un_100 = Un(x_100, T_ref)
-        Up_100 = Up(y_100, T_ref)
+        Un_100 = Un(
+            x_100, T_ref, _get_lithiation_delithiation(direction, "negative", options)
+        )
+        Up_100 = Up(
+            y_100, T_ref, _get_lithiation_delithiation(direction, "positive", options)
+        )
 
         # Define equations for 100% state of charge
         if "x_100" in solve_for:
@@ -207,8 +177,12 @@ class _ElectrodeSOH(_BaseElectrodeSOH):
                 # based on Q
                 var = y_100
             y_0 = y_100 + Q / Q_p
-            Un_0 = Un(x_0, T_ref)
-            Up_0 = Up(y_0, T_ref)
+            Un_0 = Un(
+                x_0, T_ref, _get_lithiation_delithiation(direction, "negative", options)
+            )
+            Up_0 = Up(
+                y_0, T_ref, _get_lithiation_delithiation(direction, "positive", options)
+            )
             self.algebraic[var] = Up_0 - Un_0 - V_min
             self.initial_conditions[var] = pybamm.Scalar(0.1)
 
@@ -227,7 +201,11 @@ class _ElectrodeSOHMSMR(_BaseElectrodeSOH):
     """
 
     def __init__(
-        self, param=None, solve_for=None, known_value="cyclable lithium capacity"
+        self,
+        direction,
+        param=None,
+        solve_for=None,
+        known_value="cyclable lithium capacity",
     ):
         pybamm.citations.register("Baker2018")
         super().__init__()
@@ -332,6 +310,7 @@ class ElectrodeSOHSolver:
 
     def __init__(
         self,
+        direction,
         parameter_values,
         param=None,
         known_value="cyclable lithium capacity",
@@ -346,7 +325,7 @@ class ElectrodeSOHSolver:
         self.known_value = known_value
         self.options = options or pybamm.BatteryModelOptions({})
 
-        self.lims_ocp = self._get_lims_ocp()
+        self.lims_ocp = self._get_lims_ocp(direction)
         self.OCV_function = None
         self._get_electrode_soh_sims_full = lru_cache()(
             self.__get_electrode_soh_sims_full
@@ -376,7 +355,7 @@ class ElectrodeSOHSolver:
             self.__get_electrode_soh_sims_split
         )
 
-    def _get_lims_ocp(self):
+    def _get_lims_ocp(self, direction):
         parameter_values = self.parameter_values
 
         # Check whether each electrode OCP is a function (False) or data (True)
@@ -410,42 +389,56 @@ class ElectrodeSOHSolver:
             x100_max = 1 - 1e-6
         return (x0_min, x100_max, y100_min, y0_max)
 
-    def __get_electrode_soh_sims_full(self):
+    def __get_electrode_soh_sims_full(self, direction):
         if self.options["open-circuit potential"] == "MSMR":
             full_model = _ElectrodeSOHMSMR(
-                param=self.param, known_value=self.known_value
+                direction, param=self.param, known_value=self.known_value
             )
         else:
-            full_model = _ElectrodeSOH(param=self.param, known_value=self.known_value)
+            full_model = _ElectrodeSOH(
+                direction, param=self.param, known_value=self.known_value
+            )
         return pybamm.Simulation(full_model, parameter_values=self.parameter_values)
 
-    def __get_electrode_soh_sims_split(self):
+    def __get_electrode_soh_sims_split(self, direction):
         if self.options["open-circuit potential"] == "MSMR":
             x100_model = _ElectrodeSOHMSMR(
-                param=self.param, solve_for=["Un_100"], known_value=self.known_value
+                direction,
+                param=self.param,
+                solve_for=["Un_100"],
+                known_value=self.known_value,
             )
             x0_model = _ElectrodeSOHMSMR(
-                param=self.param, solve_for=["Un_0"], known_value=self.known_value
+                direction,
+                param=self.param,
+                solve_for=["Un_0"],
+                known_value=self.known_value,
             )
         else:
             x100_model = _ElectrodeSOH(
-                param=self.param, solve_for=["x_100"], known_value=self.known_value
+                direction,
+                param=self.param,
+                solve_for=["x_100"],
+                known_value=self.known_value,
             )
             x0_model = _ElectrodeSOH(
-                param=self.param, solve_for=["x_0"], known_value=self.known_value
+                direction,
+                param=self.param,
+                solve_for=["x_0"],
+                known_value=self.known_value,
             )
         x100_sim = pybamm.Simulation(x100_model, parameter_values=self.parameter_values)
         x0_sim = pybamm.Simulation(x0_model, parameter_values=self.parameter_values)
         return [x100_sim, x0_sim]
 
     def solve(self, inputs, direction=None):
-        ics = self._set_up_solve(inputs)
+        ics = self._set_up_solve(inputs, direction)
         try:
-            sol = self._solve_full(inputs, ics)
+            sol = self._solve_full(inputs, ics, direction)
         except pybamm.SolverError:
             # just in case solving one by one works better
             try:
-                sol = self._solve_split(inputs, ics)
+                sol = self._solve_split(inputs, ics, direction)
             except pybamm.SolverError as split_error:
                 # check if the error is due to the simulation not being feasible
                 self._check_esoh_feasible(inputs, direction)
@@ -462,9 +455,9 @@ class ElectrodeSOHSolver:
             sol_dict.update({"Maximum theoretical energy [W.h]": energy})
         return sol_dict
 
-    def _set_up_solve(self, inputs):
+    def _set_up_solve(self, inputs, direction):
         # Try with full sim
-        sim = self._get_electrode_soh_sims_full()
+        sim = self._get_electrode_soh_sims_full(direction)
         if sim.solution is not None:
             if self.options["open-circuit potential"] == "MSMR":
                 Un_100_sol = sim.solution["Un(x_100)"].data
@@ -491,7 +484,7 @@ class ElectrodeSOHSolver:
 
         # Try with split sims
         if self.known_value == "cyclable lithium capacity":
-            x100_sim, x0_sim = self._get_electrode_soh_sims_split()
+            x100_sim, x0_sim = self._get_electrode_soh_sims_split(direction)
             if x100_sim.solution is not None and x0_sim.solution is not None:
                 if self.options["open-circuit potential"] == "MSMR":
                     Un_100_sol = x100_sim.solution["Un_100"].data
@@ -562,15 +555,15 @@ class ElectrodeSOHSolver:
                 "y_0": y0_init,
             }
 
-    def _solve_full(self, inputs, ics):
-        sim = self._get_electrode_soh_sims_full()
+    def _solve_full(self, inputs, ics, direction):
+        sim = self._get_electrode_soh_sims_full(direction)
         sim.build()
         sim.built_model.set_initial_conditions_from(ics)
         sol = sim.solve([0], inputs=inputs)
         return sol
 
-    def _solve_split(self, inputs, ics):
-        x100_sim, x0_sim = self._get_electrode_soh_sims_split()
+    def _solve_split(self, inputs, ics, direction):
+        x100_sim, x0_sim = self._get_electrode_soh_sims_split(direction)
         x100_sim.build()
         x100_sim.built_model.set_initial_conditions_from(ics)
         x100_sol = x100_sim.solve([0], inputs=inputs)
@@ -1019,13 +1012,16 @@ def get_initial_stoichiometries(
         The initial stoichiometries that give the desired initial state of charge
     """
     # 'direction' is currently unused; reserved for future behavior
-    esoh_solver = ElectrodeSOHSolver(parameter_values, param, known_value, options)
+    esoh_solver = ElectrodeSOHSolver(
+        direction, parameter_values, param, known_value, options
+    )
     return esoh_solver.get_initial_stoichiometries(
         initial_value, direction, tol, inputs=inputs
     )
 
 
 def get_min_max_stoichiometries(
+    direction,
     parameter_values,
     param=None,
     known_value="cyclable lithium capacity",
@@ -1056,7 +1052,9 @@ def get_min_max_stoichiometries(
     x_0, x_100, y_100, y_0
         The min/max stoichiometries
     """
-    esoh_solver = ElectrodeSOHSolver(parameter_values, param, known_value, options)
+    esoh_solver = ElectrodeSOHSolver(
+        direction, parameter_values, param, known_value, options
+    )
     return esoh_solver.get_min_max_stoichiometries(inputs=inputs)
 
 
@@ -1104,11 +1102,14 @@ def get_initial_ocps(
         The initial electrode OCPs that give the desired initial state of charge
     """
     # 'direction' is currently unused; reserved for future behavior
-    esoh_solver = ElectrodeSOHSolver(parameter_values, param, known_value, options)
+    esoh_solver = ElectrodeSOHSolver(
+        direction, parameter_values, param, known_value, options
+    )
     return esoh_solver.get_initial_ocps(initial_value, direction, tol, inputs=inputs)
 
 
 def get_min_max_ocps(
+    direction,
     parameter_values,
     param=None,
     known_value="cyclable lithium capacity",
@@ -1139,7 +1140,9 @@ def get_min_max_ocps(
     Un_0, Un_100, Up_100, Up_0
         The min/max OCPs
     """
-    esoh_solver = ElectrodeSOHSolver(parameter_values, param, known_value, options)
+    esoh_solver = ElectrodeSOHSolver(
+        direction, parameter_values, param, known_value, options
+    )
     return esoh_solver.get_min_max_ocps(inputs=inputs)
 
 
@@ -1162,7 +1165,7 @@ def theoretical_energy_integral(parameter_values, param, inputs, points=100):
     E
         The total energy of the cell in Wh
     """
-    esoh_solver = ElectrodeSOHSolver(parameter_values, param)
+    esoh_solver = ElectrodeSOHSolver("discharge", parameter_values, param)
     return esoh_solver.theoretical_energy_integral(inputs, points=points)
 
 

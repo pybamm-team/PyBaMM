@@ -556,7 +556,7 @@ class Simulation:
             timer = pybamm.Timer()
 
             # Set up eSOH solver (for summary variables)
-            esoh_solver = self.get_esoh_solver(calc_esoh)
+            esoh_solver = self.get_esoh_solver(calc_esoh, direction)
 
             if starting_solution is None:
                 starting_solution_cycles = []
@@ -1044,12 +1044,15 @@ class Simulation:
 
         return self._solution
 
-    def _get_esoh_solver(self, calc_esoh):
+    def _get_esoh_solver(self, calc_esoh, direction):
         if calc_esoh is False:
             return None
 
         return pybamm.lithium_ion.ElectrodeSOHSolver(
-            self._parameter_values, self._model.param, options=self._model.options
+            direction,
+            self._parameter_values,
+            self._model.param,
+            options=self._model.options,
         )
 
     def plot(self, output_variables=None, **kwargs):

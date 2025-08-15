@@ -3,7 +3,7 @@
 #
 import pybamm
 
-from .util import check_if_composite
+from .util import _get_lithiation_delithiation, check_if_composite
 
 
 def _get_stoich_variables(options):
@@ -138,28 +138,68 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
             x_100_2 = variables["x_100_2"]
             x_0_2 = variables["x_0_2"]
             self.algebraic[x_100_2] = param.n.prim.U(
-                x_100_2, param.T_ref
-            ) - param.n.sec.U(x_100_1, param.T_ref)
-            self.algebraic[x_0_2] = param.n.prim.U(x_0_2, param.T_ref) - param.n.sec.U(
-                x_0_1, param.T_ref, direction
+                x_100_2,
+                param.T_ref,
+                _get_lithiation_delithiation(direction, "negative", options),
+            ) - param.n.sec.U(
+                x_100_1,
+                param.T_ref,
+                _get_lithiation_delithiation(direction, "negative", options),
+            )
+            self.algebraic[x_0_2] = param.n.prim.U(
+                x_0_2,
+                param.T_ref,
+                _get_lithiation_delithiation(direction, "negative", options),
+            ) - param.n.sec.U(
+                x_0_1,
+                param.T_ref,
+                _get_lithiation_delithiation(direction, "negative", options),
             )
         if is_positive_composite:
             y_100_2 = variables["y_100_2"]
             y_0_2 = variables["y_0_2"]
             self.algebraic[y_100_2] = param.p.prim.U(
-                y_100_2, param.T_ref, direction
-            ) - param.p.sec.U(y_100_1, param.T_ref)
+                y_100_2,
+                param.T_ref,
+                _get_lithiation_delithiation(direction, "positive", options),
+            ) - param.p.sec.U(
+                y_100_1,
+                param.T_ref,
+                _get_lithiation_delithiation(direction, "positive", options),
+            )
             self.algebraic[y_0_2] = param.p.prim.U(
-                y_0_2, param.T_ref, direction
-            ) - param.p.sec.U(y_0_1, param.T_ref, direction)
+                y_0_2,
+                param.T_ref,
+                _get_lithiation_delithiation(direction, "positive", options),
+            ) - param.p.sec.U(
+                y_0_1,
+                param.T_ref,
+                _get_lithiation_delithiation(direction, "positive", options),
+            )
         self.algebraic[x_100_1] = (
-            param.p.prim.U(y_100_1, param.T_ref, direction)
-            - param.n.prim.U(x_100_1, param.T_ref, direction)
+            param.p.prim.U(
+                y_100_1,
+                param.T_ref,
+                _get_lithiation_delithiation(direction, "positive", options),
+            )
+            - param.n.prim.U(
+                x_100_1,
+                param.T_ref,
+                _get_lithiation_delithiation(direction, "negative", options),
+            )
             - V_max
         )
         self.algebraic[x_0_1] = (
-            param.p.prim.U(y_0_1, param.T_ref, direction)
-            - param.n.prim.U(x_0_1, param.T_ref, direction)
+            param.p.prim.U(
+                y_0_1,
+                param.T_ref,
+                _get_lithiation_delithiation(direction, "positive", options),
+            )
+            - param.n.prim.U(
+                x_0_1,
+                param.T_ref,
+                _get_lithiation_delithiation(direction, "negative", options),
+            )
             - V_min
         )
         # arbitrary choice: use y_0_1 for the capacity equation
@@ -173,8 +213,16 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
         if initialization_method == "voltage":
             V_init = pybamm.InputParameter("V_init")
             self.algebraic[x_init_1] = (
-                param.p.prim.U(y_init_1, param.T_ref, direction)
-                - param.n.prim.U(x_init_1, param.T_ref, direction)
+                param.p.prim.U(
+                    y_init_1,
+                    param.T_ref,
+                    _get_lithiation_delithiation(direction, "positive", options),
+                )
+                - param.n.prim.U(
+                    x_init_1,
+                    param.T_ref,
+                    _get_lithiation_delithiation(direction, "negative", options),
+                )
                 - V_init
             )
             self.algebraic[y_init_1] = (
@@ -206,13 +254,25 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
         if is_positive_composite:
             y_init_2 = variables["y_init_2"]
             self.algebraic[y_init_2] = param.p.prim.U(
-                y_init_1, param.T_ref, direction
-            ) - param.p.sec.U(y_init_2, param.T_ref, direction)
+                y_init_1,
+                param.T_ref,
+                _get_lithiation_delithiation(direction, "positive", options),
+            ) - param.p.sec.U(
+                y_init_2,
+                param.T_ref,
+                _get_lithiation_delithiation(direction, "positive", options),
+            )
         if is_negative_composite:
             x_init_2 = variables["x_init_2"]
             self.algebraic[x_init_2] = param.n.prim.U(
-                x_init_1, param.T_ref, direction
-            ) - param.n.sec.U(x_init_2, param.T_ref, direction)
+                x_init_1,
+                param.T_ref,
+                _get_lithiation_delithiation(direction, "negative", options),
+            ) - param.n.sec.U(
+                x_init_2,
+                param.T_ref,
+                _get_lithiation_delithiation(direction, "negative", options),
+            )
 
         self.variables.update(variables)
         if initialization_method == "SOC":

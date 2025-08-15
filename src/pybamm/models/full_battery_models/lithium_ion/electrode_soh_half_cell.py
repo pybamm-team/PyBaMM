@@ -3,6 +3,8 @@
 #
 import pybamm
 
+from .util import _get_lithiation_delithiation
+
 
 class ElectrodeSOHHalfCell(pybamm.BaseModel):
     """Model to calculate electrode-specific SOH for a half-cell, adapted from
@@ -116,7 +118,10 @@ def get_initial_stoichiometry_half_cell(
         T_ref = parameter_values["Reference temperature [K]"]
         x = x_0 + soc * (x_100 - x_0)
 
-        soc_model.algebraic[soc] = Up(x, T_ref) - V_init
+        soc_model.algebraic[soc] = (
+            Up(x, T_ref, _get_lithiation_delithiation(direction, "positive", options))
+            - V_init
+        )
         # initial guess for soc linearly interpolates between 0 and 1
         # based on V linearly interpolating between V_max and V_min
         soc_model.initial_conditions[soc] = (V_init - V_min) / (V_max - V_min)
