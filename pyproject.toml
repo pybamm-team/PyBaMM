@@ -118,6 +118,7 @@ jax = [
 # Contains all optional dependencies, except for jax, and dev dependencies
 all = [
     "scikit-fem>=8.1.0",
+    "meshio>=5.3.0",
     "pybamm[examples,plot,cite,bpx,tqdm]",
 ]
 
