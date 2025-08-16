@@ -404,7 +404,7 @@ class ScikitFemSubMesh3D(pybamm.SubMesh):
         Parameters
         ----------
         file_path : str
-            The path to the mesh file (.msh, .vtk, .xdmf, etc.).
+            The path to the mesh file (It supports .msh, .xdmf, may also work with others but not tested).
         boundary_mapping : dict
             Maps PyBaMM boundary names to integer tags (e.g., {"r_inner": 1}).
         domain_mapping : dict
