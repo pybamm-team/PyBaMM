@@ -49,4 +49,25 @@ class Total(pybamm.BaseSubModel):
             )
             variables.update({f"{Domain} electrode capacity [A.h]": C})
 
+        if self.options["particle shape"] == "spherical":
+            # Ignore factor of 4pi that will cancel
+            total_surface_area = sum(
+                variables[f"{Domain} electrode {phase} active material volume fraction"]
+                * variables[f"{Domain} {phase} particle radius [m]"] ** 2
+                for phase in phases
+            )
+            total_volume = 3 * sum(
+                variables[f"{Domain} {phase} particle radius [m]"] ** 3
+                for phase in phases
+            )
+            total_surface_area_to_volume_ratio = total_surface_area / total_volume
+            variables.update(
+                {
+                    f"{Domain} electrode surface area to volume ratio [m-1]": total_surface_area_to_volume_ratio,
+                    f"X-averaged {domain} electrode surface area to volume ratio [m-1]": pybamm.x_average(
+                        total_surface_area_to_volume_ratio
+                    ),
+                }
+            )
+
         return variables

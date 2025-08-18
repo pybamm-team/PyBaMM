@@ -2,6 +2,7 @@
 
 ## Features
 
+- Added support for algebraic and differential surface form in composite models. ([#5165](https://github.com/pybamm-team/PyBaMM/pull/5165))
 - Adds a composite electrode electrode soh model ([#5160](https://github.com/pybamm-team/PyBaMM/pull/5129))
 - Generalises `set_initial_soc` to `set_initial_state` and adds Thevenin initial state setting. ([#5129](https://github.com/pybamm-team/PyBaMM/pull/5129))
 
