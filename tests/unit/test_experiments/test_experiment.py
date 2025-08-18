@@ -528,7 +528,7 @@ class TestExperiment:
 
         MESH_DIR = os.path.join(os.path.dirname(__file__), "assets")
         file_path = os.path.join(MESH_DIR, "spm_test_mesh.msh")
-        mesh_generator = pybamm.UserSuppliedGenerator3D(
+        mesh_generator = pybamm.UserSuppliedSubmesh3D(
             file_path=file_path,
             boundary_mapping=boundary_mapping,
             domain_mapping=domain_mapping,

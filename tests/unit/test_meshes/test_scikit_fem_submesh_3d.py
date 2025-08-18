@@ -237,7 +237,7 @@ class TestUserSuppliedMesh:
         boundary_map = {"z_min": 1}
         domain_map = {"my_domain": 5}
 
-        generator = pybamm.UserSuppliedGenerator3D(
+        generator = pybamm.UserSuppliedSubmesh3D(
             file_path=temp_mesh_file,
             boundary_mapping=boundary_map,
             domain_mapping=domain_map,
@@ -254,7 +254,7 @@ class TestUserSuppliedMesh:
         boundary_map = {"z_min": 1, "z_max": 2}
         domain_map = {domain_name: 5}
 
-        mesh_generator = pybamm.UserSuppliedGenerator3D(
+        mesh_generator = pybamm.UserSuppliedSubmesh3D(
             file_path=temp_mesh_file,
             boundary_mapping=boundary_map,
             domain_mapping=domain_map,

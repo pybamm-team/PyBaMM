@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 
 import pybamm
@@ -234,7 +236,7 @@ class ScikitFemGenerator3D(pybamm.MeshGenerator):
         return submesh
 
 
-class UserSuppliedGenerator3D(pybamm.MeshGenerator):
+class UserSuppliedSubmesh3D(pybamm.MeshGenerator):
     """
     A mesh generator that loads a 3D mesh from an external file (e.g., VTK).
 
@@ -257,6 +259,25 @@ class UserSuppliedGenerator3D(pybamm.MeshGenerator):
         The name of the data array in the mesh file for boundary tags.
     coord_sys : str, optional
         The coordinate system ("cartesian" or "cylindrical polar").
+
+    Notes
+    -----
+    The external mesh file must meet the following criteria to be compatible:
+
+        1.  **Element Types**: The 3D volume must be meshed with 4-node
+            **tetrahedral** elements. The 2D boundaries must be meshed with
+            3-node **triangular** elements.
+
+        2.  **Physical Tags**: The file must contain integer tags to identify
+            physical groups.
+            - Each tetrahedron in the volume must be tagged with an integer
+            that corresponds to a PyBaMM domain.
+            - Each triangle on a boundary must be tagged with an integer that
+            corresponds to a PyBaMM boundary.
+
+        3.  **File Format**: Any format supported by the `meshio` library is
+            acceptable. For maximum reliability in preserving physical tags,
+            the **Gmsh `.msh` Version 2.2 (ASCII)** format is recommended.
     """
 
     def __init__(
@@ -416,6 +437,14 @@ class ScikitFemSubMesh3D(pybamm.SubMesh):
         """
         meshio = pybamm.util.import_optional_dependency("meshio")
         skfem = pybamm.util.import_optional_dependency("skfem")
+
+        tested_formats = [".msh", ".xdmf"]
+        _, file_ext = os.path.splitext(file_path)
+        if file_ext not in tested_formats:  # pragma: no cover
+            pybamm.logger.warning(
+                f"File format '{file_ext}' has not been explicitly tested and may not "
+                "work correctly. Recommended formats are .msh and .xdmf."
+            )
 
         try:
             m = meshio.read(file_path)
