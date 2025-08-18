@@ -480,13 +480,14 @@ class ScikitFemSubMesh3D(pybamm.SubMesh):
                 if candidate in available_data:
                     return candidate
 
-            integer_arrays = []
-            for name, data in available_data.items():
-                if np.issubdtype(data.dtype, np.integer):
-                    integer_arrays.append(name)
+            integer_arrays = [
+                name
+                for name, data in available_data.items()
+                if np.issubdtype(data.dtype, np.integer)
+            ]
 
-            if len(available_data) == 1:
-                return next(iter(available_data))
+            if len(integer_arrays) == 1:
+                return integer_arrays[0]
 
             priority_patterns = ["physical", "tag", "id", "group", "material", "region"]
             for pattern in priority_patterns:
@@ -494,14 +495,11 @@ class ScikitFemSubMesh3D(pybamm.SubMesh):
                     if pattern.lower() in name.lower():
                         return name
 
-            if len(available_data) == 1:
-                return next(iter(available_data))
-
             raise pybamm.GeometryError(
                 f"Could not automatically detect {context} tag array in '{file_path}'. "
                 f"Available arrays: {list(available_data.keys())}. "
                 f"Integer arrays found: {integer_arrays}. "
-                f"Please specify manually using '{context.replace(' ', '_')}_tag_name' parameter."
+                f"Please specify manually using '{context.replace(' ', '_')}_tag_name'."
             )
 
         try:

@@ -189,20 +189,25 @@ class TestScikitFemSubMesh3D:
             pybamm.ScikitFemGenerator3D("invalid_type", h=0.3)
 
 
-@pytest.fixture(scope="module")
-def temp_mesh_file(tmp_path_factory):
-    MESH_DIR = os.path.join(os.path.dirname(__file__), "assets")
-    file_path = os.path.join(MESH_DIR, "test_mesh.msh")
-    return str(file_path)
+MESH_DIR = os.path.join(os.path.dirname(__file__), "assets")
+VALID_MESH_FILE = os.path.join(MESH_DIR, "test_mesh.msh")
+NO_TETRA_MESH_FILE = os.path.join(MESH_DIR, "no_tetra_mesh.msh")
+AMBIGUOUS_TAGS_MESH_FILE = os.path.join(MESH_DIR, "ambiguous_tags_mesh.msh")
+NO_INTEGER_TAGS_MESH_FILE = os.path.join(MESH_DIR, "no_integer_tags_mesh.vtu")
+
+requires_mesh_assets = pytest.mark.skipif(
+    not os.path.exists(VALID_MESH_FILE),
+    reason=f"Test mesh asset file not found: {VALID_MESH_FILE}",
+)
 
 
 class TestUserSuppliedMesh:
-    def test_load_mesh_from_file_success(self, temp_mesh_file):
+    def test_load_mesh_from_file_success(self):
         boundary_map = {"z_min": 1, "z_max": 2}
         domain_map = {"current collector": 5}
 
         skfem_mesh = pybamm.ScikitFemSubMesh3D.load_mesh_from_file(
-            temp_mesh_file, boundary_map, domain_map
+            VALID_MESH_FILE, boundary_map, domain_map
         )
 
         assert skfem_mesh.p.shape[1] > 0
@@ -218,14 +223,14 @@ class TestUserSuppliedMesh:
                 "non_existent_file.msh", {}, {}
             )
 
-    def test_missing_tags(self, temp_mesh_file, caplog):
+    def test_missing_tags(self, caplog):
         # Tag 99 does not exist in the file
         boundary_map = {"non_existent_boundary": 99}
         domain_map = {"non_existent_domain": 98}
 
         with caplog.at_level("WARNING", logger="pybamm"):
             skfem_mesh = pybamm.ScikitFemSubMesh3D.load_mesh_from_file(
-                temp_mesh_file, boundary_map, domain_map
+                VALID_MESH_FILE, boundary_map, domain_map
             )
             assert "No boundary facets found for 'non_existent_boundary'" in caplog.text
             assert "No elements found for domain 'non_existent_domain'" in caplog.text
@@ -233,12 +238,12 @@ class TestUserSuppliedMesh:
         assert skfem_mesh.boundaries is None
         assert skfem_mesh.subdomains is None
 
-    def test_user_supplied_generator(self, temp_mesh_file):
+    def test_user_supplied_generator(self):
         boundary_map = {"z_min": 1}
         domain_map = {"my_domain": 5}
 
         generator = pybamm.UserSuppliedSubmesh3D(
-            file_path=temp_mesh_file,
+            file_path=VALID_MESH_FILE,
             boundary_mapping=boundary_map,
             domain_mapping=domain_map,
         )
@@ -249,13 +254,13 @@ class TestUserSuppliedMesh:
         assert submesh.npts > 0
         assert "z_min_dofs" in submesh.__dict__  # Check that dofs were created
 
-    def test_integration_with_pybamm_mesh(self, temp_mesh_file):
+    def test_integration_with_pybamm_mesh(self):
         domain_name = "current collector"
         boundary_map = {"z_min": 1, "z_max": 2}
         domain_map = {domain_name: 5}
 
         mesh_generator = pybamm.UserSuppliedSubmesh3D(
-            file_path=temp_mesh_file,
+            file_path=VALID_MESH_FILE,
             boundary_mapping=boundary_map,
             domain_mapping=domain_map,
         )
@@ -269,3 +274,37 @@ class TestUserSuppliedMesh:
         assert isinstance(mesh[domain_name], pybamm.ScikitFemSubMesh3D)
         assert mesh[domain_name].npts > 0
         assert "z_min" in mesh[domain_name]._skfem_mesh.boundaries
+
+    def test_load_no_tetrahedra_error(self):
+        with pytest.raises(pybamm.GeometryError, match="No tetrahedral elements found"):
+            pybamm.ScikitFemSubMesh3D.load_mesh_from_file(NO_TETRA_MESH_FILE, {}, {})
+
+    def test_bad_user_tag_name_error(self):
+        with pytest.raises(
+            pybamm.GeometryError,
+            match="User-specified domain tag name 'bad_tag' not found",
+        ):
+            pybamm.ScikitFemSubMesh3D.load_mesh_from_file(
+                VALID_MESH_FILE, {}, {}, domain_tag_name="bad_tag"
+            )
+
+    def test_no_integer_tag_error(self):
+        with pytest.raises(
+            pybamm.GeometryError,
+            match="Could not automatically detect domain tag array",
+        ):
+            pybamm.ScikitFemSubMesh3D.load_mesh_from_file(
+                NO_INTEGER_TAGS_MESH_FILE, {}, {"domain": 1}
+            )
+
+    def test_internal_exception_handling(self, monkeypatch):
+        def mock_error(*args, **kwargs):
+            raise ValueError("Simulated internal error")
+
+        monkeypatch.setattr(np, "where", mock_error)
+        with pytest.raises(
+            pybamm.GeometryError, match="Failed to extract tetrahedral elements"
+        ):
+            pybamm.ScikitFemSubMesh3D.load_mesh_from_file(
+                VALID_MESH_FILE, {}, {"domain": 5}
+            )

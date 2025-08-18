@@ -532,6 +532,7 @@ class TestExperiment:
             file_path=file_path,
             boundary_mapping=boundary_mapping,
             domain_mapping=domain_mapping,
+            coord_sys="cylindrical polar",
         )
 
         parameter_values = pybamm.ParameterValues("NCA_Kim2011")
