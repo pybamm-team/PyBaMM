@@ -5,8 +5,13 @@ import urllib.request
 from collections.abc import Callable, Mapping
 from pathlib import Path
 
+from platformdirs import user_cache_dir
+
 import pybamm
 from pybamm.expression_tree.operations.serialise import Serialise
+
+APP_NAME = "pybamm"
+APP_AUTHOR = "pybamm"
 
 
 class EntryPoint(Mapping):
@@ -115,18 +120,26 @@ parameter_sets = EntryPoint(group="pybamm_parameter_sets")
 models = EntryPoint(group="pybamm_models")
 
 
-def get_cache_path(url):
-    cache_dir = Path.home() / ".pybamm_cache" / "pybamm" / "models"
+def _get_cache_dir() -> Path:
+    cache_dir = Path(user_cache_dir(APP_NAME, APP_AUTHOR)) / "models"
     cache_dir.mkdir(parents=True, exist_ok=True)
+    return cache_dir
+
+
+def get_cache_path(url: str) -> Path:
+    cache_dir = _get_cache_dir()
     file_hash = hashlib.md5(url.encode()).hexdigest()
     return cache_dir / f"{file_hash}.json"
 
 
-def clear_model_cache():
-    cache_dir = Path.home() / ".pybamm_cache" / "pybamm" / "models"
-    if cache_dir.exists():
-        for file in cache_dir.glob("*.json"):
+def clear_model_cache() -> None:
+    cache_dir = _get_cache_dir()
+    for file in cache_dir.glob("*.json"):
+        try:
             file.unlink()
+        except Exception as e:
+            # Optional: log error instead of failing silently
+            print(f"Could not delete {file}: {e}")
 
 
 def Model(
@@ -182,7 +195,7 @@ def Model(
         else:
             print(f"Using cached model at: {cache_path}")
 
-        return Serialise.load_custom_model(str(cache_path), battery_model=battery_model)
+        return Serialise.load_custom_model(str(cache_path))
 
     if model is not None:
         try:
