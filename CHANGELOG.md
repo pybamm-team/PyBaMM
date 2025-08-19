@@ -1,6 +1,16 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
 ## Features
+
+- Added helper functions to import external 3D meshes in PyBaMM ([#5162](https://github.com/pybamm-team/PyBaMM/pull/5162))
+- Added support for algebraic and differential surface form in composite models. ([#5165](https://github.com/pybamm-team/PyBaMM/pull/5165))
+- Adds a composite electrode electrode soh model ([#5160](https://github.com/pybamm-team/PyBaMM/pull/5129))
+- Generalises `set_initial_soc` to `set_initial_state` and adds Thevenin initial state setting. ([#5129](https://github.com/pybamm-team/PyBaMM/pull/5129))
+
+# [v25.8.0](https://github.com/pybamm-team/PyBaMM/tree/v25.8.0) - 2025-08-04
+
+## Features
+
 - Added `plot_3d_cross_section` & `plot_3d_heatmap` functions to support plotting for 3D thermal simulations. ([#5130](https://github.com/pybamm-team/PyBaMM/pull/5130))
 - Added a `Basic3DThermalSPM` with two way coupling. ([#5112](https://github.com/pybamm-team/PyBaMM/pull/5112))
 - Enables the passing of `inputs` throughout `set_initial_soc`. ([#5122](https://github.com/pybamm-team/PyBaMM/pull/5122))
@@ -18,6 +28,7 @@
 
 ## Bug fixes
 
+- Fixed non-deterministic plotting CI issues ([#5150](https://github.com/pybamm-team/PyBaMM/pull/5150))
 - Fix non-deterministic ShapeError in 3D FEM gradient method ([#5143](https://github.com/pybamm-team/PyBaMM/pull/5143))
 - Fixes negative electrode boundary values for half-cell voltage contributions. ([#5139](https://github.com/pybamm-team/PyBaMM/pull/5139))
 - Makes `A_cc` L_z * L_y * number of layers ([#5138](https://github.com/pybamm-team/PyBaMM/pull/5138))

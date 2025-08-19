@@ -5,6 +5,7 @@ from scipy.interpolate import CubicHermiteSpline
 
 import pybamm
 import tests
+from tests.shared import get_mesh_for_testing_2d
 
 _hermite_args = [True, False]
 
@@ -371,6 +372,94 @@ class TestProcessedVariable:
         disc = tests.get_p2d_discretisation_for_testing()
         self._process_and_check_2D_variable(
             var, r, x, disc=disc, hermite_interp=hermite_interp
+        )
+
+    def test_processed_variable_2D_fvm(self):
+        var = pybamm.Variable("var", domain=["negative electrode"])
+        mesh = get_mesh_for_testing_2d()
+        fin_vol = pybamm.FiniteVolume2D()
+        disc = pybamm.Discretisation(mesh, {"negative electrode": fin_vol})
+        disc.set_variable_slices([var])
+        x = pybamm.SpatialVariable("x", domain=["negative electrode"], direction="lr")
+        z = pybamm.SpatialVariable("z", domain=["negative electrode"], direction="tb")
+
+        first_sol = disc.process_symbol(x).entries[:, 0]
+        second_sol = disc.process_symbol(z).entries[:, 0]
+
+        # Keep only the first iteration of entries
+        first_sol = first_sol[: len(first_sol) // len(second_sol)]
+        var_sol = disc.process_symbol(var)
+        t_sol = np.linspace(0, 1)
+        y_sol = 5 * t_sol * np.zeros(len(second_sol) * len(first_sol))[:, np.newaxis]
+        yp_sol = self._get_yps(y_sol, True, values=5)
+
+        var_casadi = to_casadi(var_sol, y_sol)
+        model = tests.get_base_model_with_battery_geometry()
+        processed_var = pybamm.process_variable(
+            "test",
+            [var_sol],
+            [var_casadi],
+            self._sol_default(t_sol, y_sol, yp_sol, model),
+        )
+        np.testing.assert_array_equal(
+            processed_var.entries,
+            y_sol.reshape(processed_var.entries.shape),
+        )
+
+        var_edges_tb = pybamm.Magnitude(pybamm.grad(var), "tb")
+        disc.bcs = {
+            var: {
+                "left": (pybamm.Scalar(0), "Dirichlet"),
+                "right": (pybamm.Scalar(0), "Dirichlet"),
+                "top": (pybamm.Scalar(0), "Dirichlet"),
+                "bottom": (pybamm.Scalar(0), "Dirichlet"),
+            },
+        }
+        var_edges_tb_sol = disc.process_symbol(var_edges_tb)
+        var_edges_tb_casadi = to_casadi(var_edges_tb_sol, y_sol)
+        processed_var_edges_tb = pybamm.process_variable(
+            "test",
+            [var_edges_tb_sol],
+            [var_edges_tb_casadi],
+            self._sol_default(t_sol, y_sol, yp_sol, model),
+        )
+        np.testing.assert_array_equal(
+            processed_var_edges_tb.entries,
+            np.zeros(
+                (
+                    len(mesh["negative electrode"].nodes_lr),
+                    len(mesh["negative electrode"].edges_tb),
+                    len(t_sol),
+                )
+            ),
+        )
+
+        var_edges_lr = pybamm.Magnitude(pybamm.grad(var), "lr")
+        disc.bcs = {
+            var: {
+                "left": (pybamm.Scalar(0), "Dirichlet"),
+                "right": (pybamm.Scalar(0), "Dirichlet"),
+                "top": (pybamm.Scalar(0), "Dirichlet"),
+                "bottom": (pybamm.Scalar(0), "Dirichlet"),
+            },
+        }
+        var_edges_lr_sol = disc.process_symbol(var_edges_lr)
+        var_edges_lr_casadi = to_casadi(var_edges_lr_sol, y_sol)
+        processed_var_edges_lr = pybamm.process_variable(
+            "test",
+            [var_edges_lr_sol],
+            [var_edges_lr_casadi],
+            self._sol_default(t_sol, y_sol, yp_sol, model),
+        )
+        np.testing.assert_array_equal(
+            processed_var_edges_lr.entries,
+            np.zeros(
+                (
+                    len(mesh["negative electrode"].edges_lr),
+                    len(mesh["negative electrode"].nodes_tb),
+                    len(t_sol),
+                )
+            ),
         )
 
     @pytest.mark.parametrize("hermite_interp", _hermite_args)

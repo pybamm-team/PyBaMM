@@ -87,9 +87,9 @@ class TestParameterValues:
 
     def test_set_initial_stoichiometries(self):
         param = pybamm.ParameterValues("Chen2020")
-        param.set_initial_stoichiometries(0.4)
-        param_0 = param.set_initial_stoichiometries(0, inplace=False)
-        param_100 = param.set_initial_stoichiometries(1, inplace=False)
+        param.set_initial_state(0.4)
+        param_0 = param.set_initial_state(0, inplace=False)
+        param_100 = param.set_initial_state(1, inplace=False)
 
         # check that the stoichiometry of param is linearly interpolated between
         # the min and max stoichiometries
@@ -103,11 +103,14 @@ class TestParameterValues:
         y_100 = param_100["Initial concentration in positive electrode [mol.m-3]"]
         assert y == pytest.approx(y_0 - 0.4 * (y_0 - y_100))
 
+        with pytest.warns(DeprecationWarning):
+            param.set_initial_stoichiometries(0.4)
+
         # check that passing inputs gives the same result
         input_param = "Maximum concentration in positive electrode [mol.m-3]"
         input_value = param[input_param]
         param[input_param] = "[input]"
-        param_0_inputs = param.set_initial_stoichiometries(
+        param_0_inputs = param.set_initial_state(
             0, inplace=False, inputs={input_param: input_value}
         )
         assert (
@@ -122,13 +125,13 @@ class TestParameterValues:
         param = pybamm.lithium_ion.DFN(
             {"working electrode": "positive"}
         ).default_parameter_values
-        param = param.set_initial_stoichiometry_half_cell(
-            0.4, inplace=False, options={"working electrode": "positive"}
+        param.set_initial_state(
+            0.4, inplace=True, options={"working electrode": "positive"}
         )
-        param_0 = param.set_initial_stoichiometry_half_cell(
+        param_0 = param.set_initial_state(
             0, inplace=False, options={"working electrode": "positive"}
         )
-        param_100 = param.set_initial_stoichiometry_half_cell(
+        param_100 = param.set_initial_state(
             1, inplace=False, options={"working electrode": "positive"}
         )
 
@@ -141,31 +144,36 @@ class TestParameterValues:
         param_t = pybamm.lithium_ion.DFN(
             {"working electrode": "positive"}
         ).default_parameter_values
-        param_t.set_initial_stoichiometry_half_cell(
+        param_t.set_initial_state(
             0.4, inplace=True, options={"working electrode": "positive"}
         )
         y = param_t["Initial concentration in positive electrode [mol.m-3]"]
         param_0 = pybamm.lithium_ion.DFN(
             {"working electrode": "positive"}
         ).default_parameter_values
-        param_0.set_initial_stoichiometry_half_cell(
+        param_0.set_initial_state(
             0, inplace=True, options={"working electrode": "positive"}
         )
         y_0 = param_0["Initial concentration in positive electrode [mol.m-3]"]
         param_100 = pybamm.lithium_ion.DFN(
             {"working electrode": "positive"}
         ).default_parameter_values
-        param_100.set_initial_stoichiometry_half_cell(
+        param_100.set_initial_state(
             1, inplace=True, options={"working electrode": "positive"}
         )
         y_100 = param_100["Initial concentration in positive electrode [mol.m-3]"]
         assert y == pytest.approx(y_0 - 0.4 * (y_0 - y_100))
 
+        with pytest.warns(DeprecationWarning):
+            param.set_initial_stoichiometry_half_cell(
+                0.4, options={"working electrode": "positive"}
+            )
+
         # check that passing inputs gives the same result
         input_param = "Maximum concentration in positive electrode [mol.m-3]"
         input_value = param[input_param]
         param[input_param] = "[input]"
-        param_0_inputs = param.set_initial_stoichiometry_half_cell(
+        param_0_inputs = param.set_initial_state(
             0,
             inplace=False,
             options={"working electrode": "positive"},
@@ -179,9 +187,7 @@ class TestParameterValues:
         # test error
         param = pybamm.ParameterValues("Chen2020")
         with pytest.raises(OptionError, match="working electrode"):
-            param.set_initial_stoichiometry_half_cell(
-                0.1, options={"working electrode": "negative"}
-            )
+            param.set_initial_state(0.1, options={"working electrode": "negative"})
 
     def test_set_initial_ocps(self):
         options = {
@@ -191,8 +197,8 @@ class TestParameterValues:
             "intercalation kinetics": "MSMR",
         }
         param_100 = pybamm.ParameterValues("MSMR_Example")
-        param_100.set_initial_ocps(1, inplace=True, options=options)
-        param_0 = param_100.set_initial_ocps(0, inplace=False, options=options)
+        param_100.set_initial_state(1, inplace=True, options=options)
+        param_0 = param_100.set_initial_state(0, inplace=False, options=options)
 
         Un_0 = param_0["Initial voltage in negative electrode [V]"]
         Up_0 = param_0["Initial voltage in positive electrode [V]"]
@@ -202,11 +208,14 @@ class TestParameterValues:
         Up_100 = param_100["Initial voltage in positive electrode [V]"]
         assert Up_100 - Un_100 == pytest.approx(4.2)
 
+        with pytest.warns(DeprecationWarning):
+            param_100.set_initial_ocps("4.2 V", inplace=False, options=options)
+
         # check that passing inputs gives the same result
         input_param = "Maximum concentration in positive electrode [mol.m-3]"
         input_value = param_100[input_param]
         param_100[input_param] = "[input]"
-        param_0_inputs = param_100.set_initial_ocps(
+        param_0_inputs = param_100.set_initial_state(
             0, inplace=False, options=options, inputs={input_param: input_value}
         )
         assert param_0_inputs["Initial voltage in positive electrode [V]"] == Up_0
@@ -361,6 +370,16 @@ class TestParameterValues:
         np.testing.assert_array_equal(
             processed_g.evaluate(y=np.ones(10)), np.ones((10, 1))
         )
+
+        # process vector field
+        parameter_values = pybamm.ParameterValues({"lr param": 1, "tb param": 2})
+        h = pybamm.VectorField(
+            pybamm.Parameter("lr param"), pybamm.Parameter("tb param")
+        )
+        processed_h = parameter_values.process_symbol(h)
+        assert isinstance(processed_h, pybamm.VectorField)
+        assert processed_h.lr_field.evaluate() == 1
+        assert processed_h.tb_field.evaluate() == 2
 
         # not found
         with pytest.raises(KeyError):
