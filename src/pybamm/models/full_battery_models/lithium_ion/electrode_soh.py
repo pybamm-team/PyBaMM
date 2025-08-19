@@ -100,7 +100,7 @@ class _ElectrodeSOH(_BaseElectrodeSOH):
 
     def __init__(
         self,
-        direction,
+        direction=None,
         param=None,
         solve_for=None,
         known_value="cyclable lithium capacity",
