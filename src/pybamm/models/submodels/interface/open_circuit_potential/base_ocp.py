@@ -132,7 +132,9 @@ class BaseOpenCircuitPotential(BaseInterface):
         domain_options = getattr(self.options, domain)
         phase_name = self.phase_name
 
+        sto_bulk = variables[f"{Domain} electrode {phase_name}stoichiometry"]
         T = variables[f"{Domain} electrode temperature [K]"]
+        T_bulk = pybamm.xyzs_average(T)
 
         # For "particle-size distribution" models, take distribution version
         # of sto_surf that depends on particle size.
@@ -156,4 +158,6 @@ class BaseOpenCircuitPotential(BaseInterface):
                 sto_surf = sto_surf.orphans[0]
                 T = T.orphans[0]
 
-        return sto_surf, T
+        print(phase_name)
+
+        return sto_surf, sto_bulk, T, T_bulk
