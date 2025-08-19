@@ -310,8 +310,8 @@ class ElectrodeSOHSolver:
 
     def __init__(
         self,
-        direction,
         parameter_values,
+        direction=None,
         param=None,
         known_value="cyclable lithium capacity",
         options=None,
@@ -1013,7 +1013,11 @@ def get_initial_stoichiometries(
     """
     # 'direction' is currently unused; reserved for future behavior
     esoh_solver = ElectrodeSOHSolver(
-        direction, parameter_values, param, known_value, options
+        parameter_values,
+        direction=direction,
+        param=param,
+        known_value=known_value,
+        options=options,
     )
     return esoh_solver.get_initial_stoichiometries(
         initial_value, direction, tol, inputs=inputs
@@ -1053,7 +1057,11 @@ def get_min_max_stoichiometries(
         The min/max stoichiometries
     """
     esoh_solver = ElectrodeSOHSolver(
-        direction, parameter_values, param, known_value, options
+        parameter_values,
+        direction=direction,
+        param=param,
+        known_value=known_value,
+        options=options,
     )
     return esoh_solver.get_min_max_stoichiometries(inputs=inputs)
 
@@ -1103,7 +1111,11 @@ def get_initial_ocps(
     """
     # 'direction' is currently unused; reserved for future behavior
     esoh_solver = ElectrodeSOHSolver(
-        direction, parameter_values, param, known_value, options
+        parameter_values,
+        direction=direction,
+        param=param,
+        known_value=known_value,
+        options=options,
     )
     return esoh_solver.get_initial_ocps(initial_value, direction, tol, inputs=inputs)
 
@@ -1141,7 +1153,11 @@ def get_min_max_ocps(
         The min/max OCPs
     """
     esoh_solver = ElectrodeSOHSolver(
-        direction, parameter_values, param, known_value, options
+        parameter_values,
+        direction=direction,
+        param=param,
+        known_value=known_value,
+        options=options,
     )
     return esoh_solver.get_min_max_ocps(inputs=inputs)
 
@@ -1165,7 +1181,9 @@ def theoretical_energy_integral(parameter_values, param, inputs, points=100):
     E
         The total energy of the cell in Wh
     """
-    esoh_solver = ElectrodeSOHSolver("discharge", parameter_values, param)
+    esoh_solver = ElectrodeSOHSolver(
+        parameter_values, direction="discharge", param=param
+    )
     return esoh_solver.theoretical_energy_integral(inputs, points=points)
 
 

@@ -1049,9 +1049,9 @@ class Simulation:
             return None
 
         return pybamm.lithium_ion.ElectrodeSOHSolver(
-            direction,
             self._parameter_values,
-            self._model.param,
+            param=self._model.param,
+            direction=direction,
             options=self._model.options,
         )
 
