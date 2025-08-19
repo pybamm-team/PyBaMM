@@ -57,6 +57,7 @@ def set_initial_state(
             known_value=known_value,
             options=options,
             inputs=inputs,
+            tol=tol,
         )
         parameter_values.update(
             {
@@ -76,6 +77,7 @@ def set_initial_state(
             known_value=known_value,
             options=options,
             inputs=inputs,
+            tol=tol,
         )
         _set_concentration_from_stoich(
             parameter_values, param, "positive", "primary", x, inputs, options
@@ -95,6 +97,7 @@ def set_initial_state(
             known_value=known_value,
             options=options,
             inputs=inputs,
+            tol=tol,
         )
         _set_concentration_from_stoich(
             parameter_values,

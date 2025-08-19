@@ -134,19 +134,19 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
             x_100_2 = variables["x_100_2"]
             x_0_2 = variables["x_0_2"]
             self.algebraic[x_100_2] = param.n.prim.U(
-                x_100_2, param.T_ref
-            ) - param.n.sec.U(x_100_1, param.T_ref)
-            self.algebraic[x_0_2] = param.n.prim.U(x_0_2, param.T_ref) - param.n.sec.U(
-                x_0_1, param.T_ref
+                x_100_1, param.T_ref
+            ) - param.n.sec.U(x_100_2, param.T_ref)
+            self.algebraic[x_0_2] = param.n.prim.U(x_0_1, param.T_ref) - param.n.sec.U(
+                x_0_2, param.T_ref
             )
         if is_positive_composite:
             y_100_2 = variables["y_100_2"]
             y_0_2 = variables["y_0_2"]
             self.algebraic[y_100_2] = param.p.prim.U(
-                y_100_2, param.T_ref
-            ) - param.p.sec.U(y_100_1, param.T_ref)
-            self.algebraic[y_0_2] = param.p.prim.U(y_0_2, param.T_ref) - param.p.sec.U(
-                y_0_1, param.T_ref
+                y_100_1, param.T_ref
+            ) - param.p.sec.U(y_100_2, param.T_ref)
+            self.algebraic[y_0_2] = param.p.prim.U(y_0_1, param.T_ref) - param.p.sec.U(
+                y_0_2, param.T_ref
             )
         self.algebraic[x_100_1] = (
             param.p.prim.U(y_100_1, param.T_ref)
@@ -278,6 +278,10 @@ def get_initial_stoichiometries_composite(
     else:
         raise ValueError("Invalid initial value")
     model = ElectrodeSOHComposite(options, initialization_method=initialization_method)
-    sim = pybamm.Simulation(model, parameter_values=parameter_values)
+    sim = pybamm.Simulation(
+        model,
+        parameter_values=parameter_values,
+        solver=pybamm.AlgebraicSolver(tol=tol),
+    )
     sol = sim.solve([0, 1], inputs=all_inputs)
     return {var: sol[var].entries[0] for var in model.variables.keys()}
