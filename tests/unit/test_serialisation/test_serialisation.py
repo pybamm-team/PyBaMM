@@ -514,9 +514,7 @@ class TestSerialise:
             new_solution.plot()
 
         # load when specifying the battery model to use
-        newest_model = Serialise().load_model(
-            "test_model.json", battery_model=pybamm.lithium_ion.SPM
-        )
+        newest_model = Serialise().load_model("test_model.json")
 
         # Test for error if no model type is provided
         with open("test_model.json") as f:
@@ -698,13 +696,13 @@ class TestSerialise:
         y = np.array([0, 1, 4, 9, 16])
         child = pybamm.Variable("z")
         interp = pybamm.Interpolant(
-            x, y, child, name="test_interplot", interpolator="linear"
+            x, y, child, name="test_interplolant", interpolator="linear"
         )
         json_dict = Serialise.convert_symbol_to_json(interp)
         interp2 = Serialise.convert_symbol_from_json(json_dict)
 
         assert isinstance(interp2, pybamm.Interpolant)
-        assert interp2.name == "test_interplot"
+        assert interp2.name == "test_interplolant"
         assert interp2.interpolator == "linear"
         assert isinstance(interp2.x[0], np.ndarray)
         assert isinstance(interp2.y, np.ndarray)
@@ -819,6 +817,55 @@ class TestSerialise:
         values = [c.value for c in expr2.children]
         assert values == [2, 3]
 
+    def test_symbol_deserialization_with_domains(self):
+        json_data = {
+            "type": "Symbol",
+            "name": "test symbol",
+            "domains": {
+                "primary": ["negative electrode", "separator", "positive electrode"],
+                "secondary": ["current collector"],
+            },
+        }
+
+        symbol = Serialise.convert_symbol_from_json(json_data)
+
+        assert isinstance(symbol, pybamm.Symbol)
+        assert symbol.name == "test symbol"
+        assert symbol.domains == {
+            "primary": ["negative electrode", "separator", "positive electrode"],
+            "secondary": ["current collector"],
+            "tertiary": [],
+            "quaternary": [],
+        }
+
+    def test_import_base_class_non_builtin_object(self, tmp_path):
+        # Minimal model JSON with a non-existent base class
+        model_json = {
+            "schema_version": "1.0",
+            "pybamm_version": pybamm.__version__,
+            "model": {
+                "base_class": "nonexistent_module.DummyModel",
+                "name": "DummyModel",
+                "rhs": [],
+                "algebraic": [],
+                "initial_conditions": [],
+                "boundary_conditions": [],
+                "events": [],
+                "variables": {},
+            },
+        }
+
+        file_path = tmp_path / "model.json"
+
+        with open(file_path, "w") as f:
+            json.dump(model_json, f)
+
+        with pytest.raises(
+            ImportError,
+            match=r"(?i)Could not import base class 'nonexistent_module\.DummyModel'",
+        ):
+            Serialise.load_custom_model(str(file_path))
+
     def test_function_parameter_with_diff_variable_serialisation(self):
         x = pybamm.Variable("x")
         diff_var = pybamm.Variable("r")
@@ -856,12 +903,28 @@ class TestSerialise:
         expr2 = Serialise.convert_symbol_from_json(json_dict)
         assert isinstance(expr2, pybamm.IndefiniteIntegral)
         assert isinstance(expr2.child, pybamm.SpatialVariable)
-
         assert expr2.child.name == "x"
         assert isinstance(expr2.integration_variable, list)
         assert len(expr2.integration_variable) == 1
         assert isinstance(expr2.integration_variable[0], pybamm.SpatialVariable)
         assert expr2.integration_variable[0].name == "x"
+
+        bad_json_dict = json_dict.copy()
+        bad_json_dict["integration_variable"] = {
+            "type": "Symbol",  # Something not a SpatialVariable
+            "name": "not spatial",
+            "domains": {},
+        }
+
+        with pytest.raises(TypeError, match=r"Expected SpatialVariable"):
+            Serialise.convert_symbol_from_json(bad_json_dict)
+
+    def test_invalid_filename(self):
+        model = pybamm.lithium_ion.DFN()
+        with pytest.raises(
+            ValueError, match=r"Filename 'dfn' must end with '.json' extension."
+        ):
+            Serialise.save_custom_model(model, filename="dfn")
 
     def test_symbol_fallback_serialisation(self):
         var = pybamm.Variable("v", domain="electrode")
@@ -942,13 +1005,11 @@ class TestSerialise:
 
         file_path = tmp_path / "model.json"
 
-        # Write JSON to the temporary file
         with open(file_path, "w") as f:
             json.dump(unhandled_schema_json, f)
 
-        # Assert that loading this model raises a ValueError
         with pytest.raises(ValueError, match="Unsupported schema version: 9.9"):
-            Serialise.load_custom_model(file_path, battery_model=pybamm.BaseModel())
+            Serialise.load_custom_model(file_path)
 
     def test_model_has_correct_schema_version(self, tmp_path):
         model = BasicDFN()
@@ -956,19 +1017,19 @@ class TestSerialise:
 
         Serialise.save_custom_model(model, filename=str(file_path))
 
-        loaded_model = Serialise.load_custom_model(
-            str(file_path), battery_model=pybamm.lithium_ion.BaseModel()
-        )
+        loaded_model = Serialise.load_custom_model(str(file_path))
 
         assert hasattr(loaded_model, "schema_version")
         assert loaded_model.schema_version == SUPPORTED_SCHEMA_VERSION
 
     def test_load_invalid_json(self):
         invalid_json = "{ invalid json"
+
         with patch("builtins.open", mock_open(read_data=invalid_json)):
-            with pytest.raises(ValueError) as e:
+            with pytest.raises(pybamm.InvalidModelJSONError) as e:
                 Serialise.load_custom_model("invalid_json.json")
-            assert "Invalid JSON in file" in str(e.value)
+
+            assert "contains invalid JSON" in str(e.value)
 
     def test_load_custom_model_file_not_found(self):
         with pytest.raises(FileNotFoundError) as e:
@@ -984,6 +1045,7 @@ class TestSerialise:
             "schema_version": "1.0",
             "pybamm_version": pybamm.__version__,
             "model": {
+                "base_class": "",
                 "name": "BadSymbolKeyModel",
                 "rhs": [[bad_lhs, rhs_expr]],
                 "algebraic": [],
@@ -1025,6 +1087,7 @@ class TestSerialise:
             "pybamm_version": pybamm.__version__,
             "model": {
                 "name": "BadModel",
+                "base_class": "",
                 "algebraic": [],
                 "initial_conditions": [],
             },
@@ -1052,6 +1115,7 @@ class TestSerialise:
             "schema_version": "1.0",
             "pybamm_version": pybamm.__version__,
             "model": {
+                "base_class": "",
                 "name": "BadModel",
                 "rhs": [[good_lhs, bad_rhs]],
                 "algebraic": [],
@@ -1087,6 +1151,7 @@ class TestSerialise:
             "schema_version": "1.0",
             "pybamm_version": pybamm.__version__,
             "model": {
+                "base_class": "",
                 "name": "BadModel",
                 # One valid pair in RHS
                 "rhs": [],
@@ -1122,6 +1187,7 @@ class TestSerialise:
             "schema_version": "1.0",
             "pybamm_version": pybamm.__version__,
             "model": {
+                "base_class": "",
                 "name": "BadModel",
                 # One valid pair in RHS
                 "rhs": [],
@@ -1161,6 +1227,7 @@ class TestSerialise:
             "schema_version": "1.0",
             "pybamm_version": pybamm.__version__,
             "model": {
+                "base_class": "",
                 "name": "BadBoundaryModel",
                 "rhs": [],
                 "algebraic": [],
@@ -1198,6 +1265,7 @@ class TestSerialise:
             "schema_version": "1.0",
             "pybamm_version": pybamm.__version__,
             "model": {
+                "base_class": "",
                 "name": "BadBoundaryExpressionModel",
                 "rhs": [],
                 "algebraic": [],
@@ -1224,6 +1292,7 @@ class TestSerialise:
             "schema_version": "1.0",
             "pybamm_version": pybamm.__version__,
             "model": {
+                "base_class": "",
                 "name": "BadEventModel",
                 "rhs": [],
                 "algebraic": [],
@@ -1255,6 +1324,7 @@ class TestSerialise:
             "schema_version": "1.0",
             "pybamm_version": pybamm.__version__,
             "model": {
+                "base_class": "",
                 "name": "BadVariableModel",
                 "rhs": [],
                 "algebraic": [],
@@ -1305,25 +1375,20 @@ class TestSerialise:
         assert next(iter(loaded_model.rhs.keys())).name == "a"
         assert next(iter(loaded_model.rhs.values())).name == "b"
 
-    def test_plotting_serialised_models(self, tmp_path):
-        models = [
-            BasicSPM(),
-            BasicDFN(),
-            pybamm.lithium_ion.SPM(),
-            pybamm.lithium_ion.DFN(),
-        ]
-        filenames = ["basic_spm.json", "basic_dfn.json", "spm.json", "dfn.json"]
-        file_paths = [tmp_path / name for name in filenames]
-
-        for model, path in zip(models, file_paths, strict=True):
-            # Save the model
-            Serialise.save_custom_model(model, filename=str(path))
-
-            # Load the model
-            loaded_model = Serialise.load_custom_model(
-                str(path), battery_model=pybamm.lithium_ion.BaseModel()
-            )
-
-            sim = pybamm.Simulation(loaded_model)
-            sim.solve([0, 3600])
-            sim.plot(show_plot=False)
+    @pytest.mark.parametrize(
+        "model, filename",
+        [
+            (BasicSPM(), "basic_spm.json"),
+            (BasicDFN(), "basic_dfn.json"),
+            (pybamm.lithium_ion.SPM(), "spm.json"),
+            (pybamm.lithium_ion.DFN(), "dfn.json"),
+        ],
+        ids=["basic_spm", "basic_dfn", "spm", "dfn"],
+    )
+    def test_plotting_serialised_models(self, model, filename, tmp_path):
+        path = tmp_path / filename
+        Serialise.save_custom_model(model, filename=str(path))
+        loaded_model = Serialise.load_custom_model(str(path))
+        sim = pybamm.Simulation(loaded_model)
+        sim.solve([0, 3600])
+        sim.plot(show_plot=False)

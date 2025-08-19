@@ -7,6 +7,7 @@ import re
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 
@@ -256,7 +257,9 @@ class Serialise:
             raise TypeError(f"Object of type {type(obj)} is not JSON serializable.")
 
     @staticmethod
-    def save_custom_model(model, filename=None):
+    def save_custom_model(
+        model: pybamm.BaseModel, filename: str | Path | None = None
+    ) -> None:
         """
         Saves a custom (non-discretised) PyBaMM model to a JSON file. Works for user defined models that are subclasses of BaseModel.
 
@@ -277,7 +280,7 @@ class Serialise:
         >>> import pybamm
         >>> model = pybamm.lithium_ion.BasicDFN()
         >>> from pybamm.expression_tree.operations.serialise import Serialise
-        >>> Serialise.save_custom_model(model, "basicdfn_model")
+        >>> Serialise.save_custom_model(model, "basicdfn_model.json")
 
         """
         required_attrs = [
@@ -293,8 +296,20 @@ class Serialise:
             raise AttributeError(f"Model is missing required sections: {missing}")
 
         try:
+            base_cls = (
+                model.__class__.__bases__[0] if model.__class__.__bases__ else object
+            )
+            # If the base class is object or builtins.object, use pybamm.BaseModel instead
+            if base_cls is object or (
+                base_cls.__module__ == "builtins" and base_cls.__name__ == "object"
+            ):
+                base_cls_str = "pybamm.BaseModel"
+            else:
+                base_cls_str = f"{base_cls.__module__}.{base_cls.__name__}"
+
             model_content = {
                 "name": getattr(model, "name", "unnamed_model"),
+                "base_class": base_cls_str,
                 "options": getattr(model, "options", {}),
                 "rhs": [
                     (
@@ -354,7 +369,6 @@ class Serialise:
                 },
             }
 
-            # Final JSON structure with schema and version info at top level
             SCHEMA_VERSION = "1.0"
             model_json = {
                 "schema_version": SCHEMA_VERSION,
@@ -401,7 +415,7 @@ class Serialise:
         return json.dumps(symbol_json, sort_keys=True)
 
     @staticmethod
-    def load_custom_model(filename, battery_model=None):
+    def load_custom_model(filename: str) -> pybamm.BaseModel:
         """
         Loads a custom (symbolic) PyBaMM model from a JSON file.
 
@@ -413,9 +427,6 @@ class Serialise:
         ----------
         filename : str
             Path to the JSON file containing the saved model.
-        battery_model : :class:`pybamm.BaseModel`, optional
-            An optional existing model instance to populate. If not provided, a new
-            :class:`pybamm.BaseModel` is created.
 
         Returns
         -------
@@ -427,8 +438,8 @@ class Serialise:
         >>> import pybamm
         >>> model = pybamm.lithium_ion.BasicDFN()
         >>> from pybamm.expression_tree.operations.serialise import Serialise
-        >>> Serialise.save_custom_model(model, "basicdfn_model")
-        >>> loaded_model = Serialise.load_custom_model("basicdfn_model.json", battery_model=pybamm.lithium_ion.BaseModel())
+        >>> Serialise.save_custom_model(model, "basicdfn_model.json")
+        >>> loaded_model = Serialise.load_custom_model("basicdfn_model.json")
 
         """
         try:
@@ -437,7 +448,9 @@ class Serialise:
         except FileNotFoundError as err:
             raise FileNotFoundError(f"Could not find file: {filename}") from err
         except json.JSONDecodeError as e:
-            raise ValueError(f"Invalid JSON in file '{filename}': {e!s}") from e
+            raise pybamm.InvalidModelJSONError(
+                f"The model defined in the file '{filename}' contains invalid JSON: {e!s}"
+            ) from e
 
         # Validate outer structure
         schema_version = data.get("schema_version", SUPPORTED_SCHEMA_VERSION)
@@ -455,6 +468,7 @@ class Serialise:
             "name",
             "rhs",
             "initial_conditions",
+            "base_class",
             "algebraic",
             "boundary_conditions",
             "events",
@@ -464,7 +478,23 @@ class Serialise:
         if missing:
             raise KeyError(f"Missing required model sections: {missing}")
 
-        model = battery_model if battery_model is not None else pybamm.BaseModel()
+        battery_model = model_data.get("base_class")
+        if not battery_model or battery_model.strip() == "pybamm.BaseModel":
+            base_cls = pybamm.BaseModel
+        else:
+            module_name, class_name = battery_model.rsplit(".", 1)
+            try:
+                module = importlib.import_module(module_name)
+                base_cls = getattr(module, class_name)
+            except (ModuleNotFoundError, AttributeError) as e:
+                if battery_model == "builtins.object":
+                    base_cls = pybamm.BaseModel
+                else:
+                    raise ImportError(
+                        f"Could not import base class '{battery_model}': {e}"
+                    ) from e
+
+        model = base_cls()
         model.name = model_data["name"]
         model.schema_version = schema_version
 
@@ -599,7 +629,6 @@ class Serialise:
         {'rod':
             {SpatialVariable(name='spat_var'): {"min":0.0, "max":2.0} }
             }
-
         converts to
 
         {'rod':
@@ -730,7 +759,9 @@ class Serialise:
             return d
 
     @staticmethod
-    def convert_symbol_to_json(symbol):
+    def convert_symbol_to_json(
+        symbol: pybamm.Symbol | numbers.Number | list,
+    ) -> dict[str, Any] | numbers.Number | list:
         """
         Recursively converts a PyBaMM symbolic expression into a JSON-serializable format.
 
@@ -904,7 +935,9 @@ class Serialise:
         return json_dict
 
     @staticmethod
-    def convert_symbol_from_json(json_data):
+    def convert_symbol_from_json(
+        json_data: dict[str, Any],
+    ) -> pybamm.Symbol | float | int | bool:
         """
         Recursively reconstructs a PyBaMM symbolic expression from a JSON dictionary.
 
@@ -977,7 +1010,7 @@ class Serialise:
         elif symbol_type == "FullBroadcast":
             child = Serialise.convert_symbol_from_json(json_data["children"][0])
             domains = json_data["domains"]
-            return pybamm.FullBroadcast(child, "broadcast", domains)
+            return pybamm.FullBroadcast(child, broadcast_domains=domains)
         elif symbol_type == "SecondaryBroadcast":
             child = Serialise.convert_symbol_from_json(json_data["children"][0])
             domain = json_data["broadcast_domain"]
