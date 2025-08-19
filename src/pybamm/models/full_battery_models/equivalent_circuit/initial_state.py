@@ -5,8 +5,8 @@ import pybamm
 
 def set_initial_state(
     initial_value,
-    direction,
     parameter_values,
+    direction=None,
     param=None,
     inplace=True,
     options=None,

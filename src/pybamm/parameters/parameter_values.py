@@ -328,7 +328,7 @@ class ParameterValues:
     def set_initial_state(
         self,
         initial_value,
-        direction,
+        direction=None,
         param=None,
         inplace=True,
         options=None,
@@ -336,8 +336,8 @@ class ParameterValues:
     ):
         return self._set_initial_state(
             initial_value,
-            direction,
             self,
+            direction=direction,
             param=param,
             inplace=inplace,
             options=options,
@@ -347,7 +347,7 @@ class ParameterValues:
     def set_initial_stoichiometry_half_cell(
         self,
         initial_value,
-        direction,
+        direction=None,
         param=None,
         known_value="cyclable lithium capacity",
         inplace=True,
@@ -358,8 +358,8 @@ class ParameterValues:
         warn(msg, DeprecationWarning, stacklevel=2)
         return self._set_initial_state(
             initial_value,
-            direction,
             self,
+            direction=direction,
             param=param,
             known_value=known_value,
             inplace=inplace,
@@ -382,8 +382,8 @@ class ParameterValues:
         warn(msg, DeprecationWarning, stacklevel=2)
         return self._set_initial_state(
             initial_value,
-            direction,
             self,
+            direction=direction,
             param=param,
             known_value=known_value,
             inplace=inplace,
@@ -406,8 +406,8 @@ class ParameterValues:
         warn(msg, DeprecationWarning, stacklevel=2)
         return self._set_initial_state(
             initial_value,
-            direction,
             self,
+            direction=direction,
             param=param,
             known_value=known_value,
             inplace=inplace,

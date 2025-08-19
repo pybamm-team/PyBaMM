@@ -25,8 +25,8 @@ def _set_hysteresis_branch(
 
 def set_initial_state(
     initial_value,
-    direction,
     parameter_values,
+    direction=None,
     param=None,
     known_value="cyclable lithium capacity",
     inplace=True,

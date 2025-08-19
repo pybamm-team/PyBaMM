@@ -23,10 +23,11 @@ class ElectrodeSOHHalfCell(pybamm.BaseModel):
 
     """
 
-    def __init__(self, name="ElectrodeSOH model"):
+    def __init__(self, name="ElectrodeSOH model", direction=None, options=None):
         pybamm.citations.register("Mohtat2019")
+        options = options or {}
         super().__init__(name)
-        param = pybamm.LithiumIonParameters({"working electrode": "positive"})
+        param = pybamm.LithiumIonParameters(options)
 
         x_100 = pybamm.Variable("x_100", bounds=(0, 1))
         x_0 = pybamm.Variable("x_0", bounds=(0, 1))
@@ -39,8 +40,16 @@ class ElectrodeSOHHalfCell(pybamm.BaseModel):
         V_min = param.ocp_soc_0
 
         self.algebraic = {
-            x_100: U_w(x_100, T_ref) - V_max,
-            x_0: U_w(x_0, T_ref) - V_min,
+            x_100: U_w(
+                x_100,
+                T_ref,
+                _get_lithiation_delithiation(direction, "positive", options),
+            )
+            - V_max,
+            x_0: U_w(
+                x_0, T_ref, _get_lithiation_delithiation(direction, "negative", options)
+            )
+            - V_min,
         }
         self.initial_conditions = {x_100: 0.8, x_0: 0.2}
 
@@ -98,7 +107,9 @@ def get_initial_stoichiometry_half_cell(
     """
     # 'direction' is currently unused; reserved for future behavior
     param = pybamm.LithiumIonParameters(options)
-    x_0, x_100 = get_min_max_stoichiometries(parameter_values, inputs=inputs)
+    x_0, x_100 = get_min_max_stoichiometries(
+        parameter_values, inputs=inputs, direction=direction, options=options
+    )
 
     if isinstance(initial_value, str) and initial_value.endswith("V"):
         V_init = float(initial_value[:-1])
@@ -147,7 +158,9 @@ def get_initial_stoichiometry_half_cell(
     return x
 
 
-def get_min_max_stoichiometries(parameter_values, options=None, inputs=None):
+def get_min_max_stoichiometries(
+    parameter_values, options=None, inputs=None, direction=None
+):
     """
     Get the minimum and maximum stoichiometries from the parameter values
 
@@ -163,7 +176,9 @@ def get_min_max_stoichiometries(parameter_values, options=None, inputs=None):
     inputs = inputs or {}
     if options is None:
         options = {"working electrode": "positive"}
-    esoh_model = pybamm.lithium_ion.ElectrodeSOHHalfCell("ElectrodeSOH")
+    esoh_model = pybamm.lithium_ion.ElectrodeSOHHalfCell(
+        "ElectrodeSOH", direction=direction, options=options
+    )
     param = pybamm.LithiumIonParameters(options)
     Q_w = parameter_values.evaluate(param.p.Q_init, inputs=inputs)
     # Add Q_w to input parameters

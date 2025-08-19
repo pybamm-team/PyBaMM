@@ -382,6 +382,8 @@ def get_initial_stoichiometries_composite(
     model = ElectrodeSOHComposite(
         options, direction, initialization_method=initialization_method
     )
-    sim = pybamm.Simulation(model, parameter_values=parameter_values)
+    sim = pybamm.Simulation(
+        model, parameter_values=parameter_values, solver=pybamm.AlgebraicSolver(tol=tol)
+    )
     sol = sim.solve([0, 1], inputs=all_inputs)
     return {var: sol[var].entries[0] for var in model.variables.keys()}

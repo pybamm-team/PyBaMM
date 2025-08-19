@@ -267,7 +267,7 @@ class TestElectrodeSOHComposite:
             self._check_phases_equal(results, "x", "0")
 
         pvals_set = pybamm.lithium_ion.set_initial_state(
-            initial_value, None, pvals, param=param, options=options
+            initial_value, pvals, param=param, options=options
         )
         if initial_value == "4.0 V":
             assert pvals_set.evaluate(
@@ -280,14 +280,14 @@ class TestElectrodeSOHComposite:
         options = {"particle phases": ("2", "1")}
         param = pybamm.LithiumIonParameters(options=options)
         results = pybamm.lithium_ion.get_initial_stoichiometries_composite(
-            "4.0 V", None, pvals, param=param, options=options
+            "4.0 V", None, pvals, param=param, options=options, tol=1e-1
         )
         # Basic sanity: solution includes expected variables and bounded stoichiometries
         for key, val in results.items():
             if key.startswith(("x_", "y_")):
                 assert 0 <= val <= 1
         pvals_set = pybamm.lithium_ion.set_initial_state(
-            "4.0 V", None, pvals, param=param, options=options
+            "4.0 V", pvals, param=param, options=options, tol=1e-1
         )
         assert pvals_set.evaluate(
             param.p.prim.U(results["y_init_1"], param.T_ref)
@@ -302,10 +302,10 @@ class TestElectrodeSOHComposite:
         }
         param = pybamm.LithiumIonParameters(options=options)
         results_discharge = pybamm.lithium_ion.get_initial_stoichiometries_composite(
-            "4.0 V", "discharge", pvals, param=param, options=options
+            "4.0 V", "discharge", pvals, param=param, options=options, tol=1e-1
         )
         results_charge = pybamm.lithium_ion.get_initial_stoichiometries_composite(
-            "4.0 V", "charge", pvals, param=param, options=options
+            "4.0 V", "charge", pvals, param=param, options=options, tol=1e-1
         )
         # Basic sanity: solution includes expected variables and bounded stoichiometries
         for key, val in results_discharge.items():

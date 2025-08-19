@@ -260,7 +260,7 @@ class Simulation:
         self._parameter_values.process_geometry(self._geometry)
         self._model = self._model_with_set_params
 
-    def set_initial_state(self, initial_soc, direction, inputs=None):
+    def set_initial_state(self, initial_soc, direction=None, inputs=None):
         if self._built_initial_soc != initial_soc:
             # reset
             self._model_with_set_params = None
@@ -272,7 +272,7 @@ class Simulation:
         options = self._model.options
         self._parameter_values = self._unprocessed_parameter_values.set_initial_state(
             initial_soc,
-            direction,
+            direction=direction,
             param=param,
             inplace=False,
             options=options,
@@ -307,7 +307,7 @@ class Simulation:
             A dictionary of input parameters to pass to the model when solving.
         """
         if initial_soc is not None:
-            self.set_initial_state(initial_soc, direction, inputs=inputs)
+            self.set_initial_state(initial_soc, direction=direction, inputs=inputs)
 
         if self._built_model:
             return
@@ -334,7 +334,7 @@ class Simulation:
         experiment, where there may be several models and solvers to build.
         """
         if initial_soc is not None:
-            self.set_initial_state(initial_soc, direction, inputs=inputs)
+            self.set_initial_state(initial_soc, direction=direction, inputs=inputs)
 
         if self.steps_to_built_models:
             return
