@@ -7,7 +7,6 @@ from pathlib import Path
 
 from platformdirs import user_cache_dir
 
-import pybamm
 from pybamm.expression_tree.operations.serialise import Serialise
 
 APP_NAME = "pybamm"
@@ -145,7 +144,6 @@ def clear_model_cache() -> None:
 def Model(
     model=None,
     url=None,
-    battery_model=None,
     force_download=False,
     *args,
     **kwargs,
@@ -181,9 +179,6 @@ def Model(
         raise ValueError("You must provide exactly one of `model` or `url`.")
 
     if url is not None:
-        if battery_model is None:
-            battery_model = pybamm.BaseModel()
-
         cache_path = get_cache_path(url)
         if not cache_path.exists() or force_download:
             try:
