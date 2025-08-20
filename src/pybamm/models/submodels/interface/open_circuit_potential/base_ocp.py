@@ -158,6 +158,4 @@ class BaseOpenCircuitPotential(BaseInterface):
                 sto_surf = sto_surf.orphans[0]
                 T = T.orphans[0]
 
-        print(phase_name)
-
         return sto_surf, sto_bulk, T, T_bulk

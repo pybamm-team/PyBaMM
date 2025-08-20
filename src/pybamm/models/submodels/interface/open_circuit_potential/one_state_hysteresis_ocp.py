@@ -29,7 +29,6 @@ class OneStateHysteresisOpenCircuitPotential(BaseHysteresisOpenCircuitPotential)
     def __init__(
         self, param, domain, reaction, options, phase="primary", x_average=False
     ):
-        print(phase)
         super().__init__(
             param, domain, reaction, options=options, phase=phase, x_average=x_average
         )
