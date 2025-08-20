@@ -370,7 +370,7 @@ class ParameterValues:
     def set_initial_stoichiometries(
         self,
         initial_value,
-        direction,
+        direction=None,
         param=None,
         known_value="cyclable lithium capacity",
         inplace=True,
@@ -395,7 +395,7 @@ class ParameterValues:
     def set_initial_ocps(
         self,
         initial_value,
-        direction,
+        direction=None,
         param=None,
         known_value="cyclable lithium capacity",
         inplace=True,
