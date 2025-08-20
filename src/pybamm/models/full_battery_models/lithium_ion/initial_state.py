@@ -1,26 +1,29 @@
 import pybamm
 
-from .util import check_if_composite
+from .util import _has_hysteresis, check_if_composite
 
 
-def _set_hysteresis_branch(
-    parameter_values, electrode, initial_hysteresis_branch, direction
-):
-    if direction == "discharge":
-        lithiation = "delithiation"
-        h = 1
-    elif direction == "charge":
-        lithiation = "lithiation"
-        h = -1
+def _set_hysteresis_branch(parameter_values, electrode, direction, options, phase=None):
+    phase = phase or ""
+    if phase != "":
+        phase_prefactor = phase.capitalize() + ": "
     else:
-        lithiation = None
-        h = 0
+        phase_prefactor = ""
+    if direction is None:
+        initial_hysteresis_branch = 0
+    else:
+        if direction == "discharge":
+            initial_hysteresis_branch = 1
+        elif direction == "charge":
+            initial_hysteresis_branch = -1
+        else:
+            raise ValueError(f"Invalid direction: {direction}")
     parameter_values.update(
         {
-            f"Initial {lithiation} branch": initial_hysteresis_branch,
+            f"{phase_prefactor}Initial hysteresis state in {electrode} electrode": initial_hysteresis_branch,
         }
     )
-    return lithiation, h
+    return parameter_values
 
 
 def set_initial_state(
@@ -64,8 +67,22 @@ def set_initial_state(
         A lower value results in higher precision but may increase computation time.
         Default is 1e-6.
     """
+    options = options or {}
     parameter_values = parameter_values if inplace else parameter_values.copy()
     param = param or pybamm.LithiumIonParameters(options)
+
+    for electrode in ["negative", "positive"]:
+        if check_if_composite(options, electrode):
+            for phase in ["primary", "secondary"]:
+                if _has_hysteresis(electrode, options, phase):
+                    parameter_values = _set_hysteresis_branch(
+                        parameter_values, electrode, direction, options, phase
+                    )
+        else:
+            if _has_hysteresis(electrode, options):
+                parameter_values = _set_hysteresis_branch(
+                    parameter_values, electrode, direction, options
+                )
 
     if options is not None and options.get("open-circuit potential", None) == "MSMR":
         """
