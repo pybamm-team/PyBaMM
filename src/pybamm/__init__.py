@@ -151,6 +151,7 @@ from .meshes.scikit_fem_submeshes import (
 from .meshes.scikit_fem_submeshes_3d import (
     ScikitFemSubMesh3D,
     ScikitFemGenerator3D,
+    UserSuppliedSubmesh3D,
 )
 
 # Serialisation

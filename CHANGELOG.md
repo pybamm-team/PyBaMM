@@ -2,6 +2,9 @@
 
 ## Features
 
+- Added helper functions to import external 3D meshes in PyBaMM ([#5162](https://github.com/pybamm-team/PyBaMM/pull/5162))
+- Added support for algebraic and differential surface form in composite models. ([#5165](https://github.com/pybamm-team/PyBaMM/pull/5165))
+- Adds a composite electrode electrode soh model ([#5160](https://github.com/pybamm-team/PyBaMM/pull/5129))
 - Generalises `set_initial_soc` to `set_initial_state` and adds Thevenin initial state setting. ([#5129](https://github.com/pybamm-team/PyBaMM/pull/5129))
 
 # [v25.8.0](https://github.com/pybamm-team/PyBaMM/tree/v25.8.0) - 2025-08-04
