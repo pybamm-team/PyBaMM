@@ -26,6 +26,16 @@ jobs:
         with:
           python-version: 3.12
 
+      # Pin to 2024.12.16 to avoid issues with finding SuiteSparse in manifest mode
+      # after SuiteSparse was split into subpackages in recent vcpkg releases.
+      - name: Install vcpkg on Windows
+        run: |
+          cd C:\
+          rm -r -fo 'C:\vcpkg'
+          git clone https://github.com/microsoft/vcpkg --branch 2024.12.16
+          cd vcpkg
+          .\bootstrap-vcpkg.bat
+
       - name: Build wheels on Windows
         run: pipx run cibuildwheel --output-dir wheelhouse
         env:
