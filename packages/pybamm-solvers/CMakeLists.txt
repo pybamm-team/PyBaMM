@@ -2,10 +2,6 @@ cmake_minimum_required(VERSION 3.13)
 cmake_policy(SET CMP0074 NEW)
 set(CMAKE_VERBOSE_MAKEFILE ON)
 
-if (DEFINED Python_EXECUTABLE)
-    set(PYTHON_EXECUTABLE ${Python_EXECUTABLE})
-endif ()
-
 if (DEFINED ENV{VCPKG_ROOT_DIR} AND NOT DEFINED VCPKG_ROOT_DIR)
     set(VCPKG_ROOT_DIR "$ENV{VCPKG_ROOT_DIR}"
             CACHE STRING "Vcpkg root directory")
@@ -95,34 +91,72 @@ if (NOT DEFINED USE_PYTHON_CASADI)
     set(USE_PYTHON_CASADI TRUE)
 endif ()
 
-
-execute_process(
-        COMMAND "${PYTHON_EXECUTABLE}" -c
-        "import os; import sysconfig; print(os.path.join(sysconfig.get_path('purelib'), 'casadi', 'cmake'))"
-        OUTPUT_VARIABLE CASADI_DIR
-        OUTPUT_STRIP_TRAILING_WHITESPACE)
-
-if (CASADI_DIR)
-    file(TO_CMAKE_PATH ${CASADI_DIR} CASADI_DIR)
-    message("Found Python casadi path: ${CASADI_DIR}")
-else ()
-    message(FATAL_ERROR "Did not find casadi path}")
-endif ()
-
 if (${USE_PYTHON_CASADI})
+    execute_process(
+            COMMAND "${PYTHON_EXECUTABLE}" -c
+            "import os; import sysconfig; print(os.path.join(sysconfig.get_path('purelib'), 'casadi', 'cmake'))"
+            OUTPUT_VARIABLE CASADI_DIR
+            OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+    if (CASADI_DIR)
+        file(TO_CMAKE_PATH ${CASADI_DIR} CASADI_DIR)
+        message("Found Python casadi path: ${CASADI_DIR}")
+    else ()
+        message(FATAL_ERROR "Did not find casadi path")
+    endif ()
+
     message("Trying to link against Python casadi package in ${CASADI_DIR}")
-    find_package(casadi CONFIG PATHS ${CASADI_DIR} REQUIRED NO_DEFAULT_PATH)
+    if (EXISTS "${CASADI_DIR}/casadiConfig.cmake" OR EXISTS "${CASADI_DIR}/casadi-config.cmake")
+        find_package(casadi CONFIG PATHS ${CASADI_DIR} NO_DEFAULT_PATH)
+    else ()
+        message(WARNING "CasADi CMake config not found in ${CASADI_DIR}. Proceeding without find_package; using include and library paths discovered from the Python package.")
+    endif ()
+
+    execute_process(
+            COMMAND "${PYTHON_EXECUTABLE}" -c
+            "import casadi; from pathlib import Path; print(Path(casadi.__file__).parent / 'include')"
+            OUTPUT_VARIABLE CASADI_INCLUDE_DIR
+            OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+    if (CASADI_INCLUDE_DIR)
+        file(TO_CMAKE_PATH ${CASADI_INCLUDE_DIR} CASADI_INCLUDE_DIR)
+        message("Found Python CasADi include directory: ${CASADI_INCLUDE_DIR}")
+        target_include_directories(idaklu PRIVATE ${CASADI_INCLUDE_DIR})
+    else ()
+        message(FATAL_ERROR "Could not find CasADi include directory")
+    endif ()
+
+    execute_process(
+            COMMAND "${PYTHON_EXECUTABLE}" -c
+            "import casadi; from pathlib import Path; import glob; lib_dir = Path(casadi.__file__).parent; lib_files = list(lib_dir.glob('*casadi*')); print(str(lib_dir) if lib_files else '')"
+            OUTPUT_VARIABLE CASADI_LIB_DIR
+            OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+    if (CASADI_LIB_DIR)
+        file(TO_CMAKE_PATH ${CASADI_LIB_DIR} CASADI_LIB_DIR)
+        message("Found Python CasADi library directory: ${CASADI_LIB_DIR}")
+        target_link_directories(idaklu PRIVATE ${CASADI_LIB_DIR})
+
+        set_target_properties(
+                idaklu PROPERTIES
+                INSTALL_RPATH "${CASADI_LIB_DIR}"
+                INSTALL_RPATH_USE_LINK_PATH TRUE
+        )
+        # Attempt to link the casadi library directly if found
+        find_library(CASADI_LIBRARY NAMES casadi PATHS ${CASADI_LIB_DIR} NO_DEFAULT_PATH)
+        if (CASADI_LIBRARY)
+            message("Found CasADi library: ${CASADI_LIBRARY}")
+            target_link_libraries(idaklu PRIVATE ${CASADI_LIBRARY})
+        else ()
+            message(WARNING "CasADi library not found in ${CASADI_LIB_DIR}. The target will rely on transitive linkage via CMake config if available.")
+        endif ()
+    else ()
+        message(FATAL_ERROR "Could not find CasADi library directory")
+    endif ()
 else ()
     message("Trying to link against any casadi package apart from the Python one")
-    set(CMAKE_IGNORE_PATH "${CASADI_DIR}/cmake")
     find_package(casadi CONFIG REQUIRED)
 endif ()
-
-set_target_properties(
-        idaklu PROPERTIES
-        INSTALL_RPATH "${CASADI_DIR}"
-        INSTALL_RPATH_USE_LINK_PATH TRUE
-)
 
 # openmp
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
