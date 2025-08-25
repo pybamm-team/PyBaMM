@@ -2,6 +2,7 @@
 #define PYBAMM_IDAKLU_COMMON_HPP
 
 #include <iostream>
+#include <limits>
 
 #include <idas/idas.h>                 /* prototypes for IDAS fcts., consts.    */
 #include <idas/idas_bbdpre.h>         /* access to IDABBDPRE preconditioner          */
@@ -103,6 +104,17 @@ std::vector<sunrealtype> makeSortedUnique(const T input_begin, const T input_end
 }
 
 std::vector<sunrealtype> makeSortedUnique(const np_array& input_np);
+
+/**
+ * @brief Apply a small perturbation to a time value to avoid roundoff errors
+ */
+inline sunrealtype perturb_time(const sunrealtype t, bool increasing) {
+  const sunrealtype eps = std::numeric_limits<sunrealtype>::epsilon();
+  const sunrealtype delta = SUNRsqrt(eps);
+  const sunrealtype sign = increasing ? SUN_RCONST(1.0) : -SUN_RCONST(1.0);
+  // Relative nudge ensures progress away from t, absolute nudge covers t == 0
+  return (SUN_RCONST(1.0) + delta) * t + delta * sign;
+}
 
 #ifdef NDEBUG
 #define DEBUG_VECTOR(vector)
