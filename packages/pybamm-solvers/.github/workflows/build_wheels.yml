@@ -107,6 +107,17 @@ jobs:
         with:
           python-version: 3.12
 
+      - name: Install Fortran compiler
+        env:
+          HOMEBREW_NO_INSTALL_CLEANUP: 1
+          HOMEBREW_NO_AUTO_UPDATE: 1
+          HOMEBREW_NO_COLOR: 1
+          NONINTERACTIVE: 1
+        run: |
+          brew analytics off
+          brew install libomp
+          brew reinstall gcc
+
       - name: Install cibuildwheel
         run: python -m pip install cibuildwheel
 
@@ -122,55 +133,10 @@ jobs:
               OPENMP_URL="https://anaconda.org/conda-forge/llvm-openmp/11.1.0/download/osx-arm64/llvm-openmp-11.1.0-hf3c4609_1.tar.bz2"
             fi
 
-            # Download gfortran with proper macOS minimum version (11.0)
-            if [[ $(uname -m) == "x86_64" ]]; then
-              GFORTRAN_URL="https://github.com/isuruf/gcc/releases/download/gcc-11.3.0-2/gfortran-darwin-x86_64-native.tar.gz"
-              KNOWN_SHA256="981367dd0ad4335613e91bbee453d60b6669f5d7e976d18c7bdb7f1966f26ae4 gfortran.tar.gz"
-            elif [[ $(uname -m) == "arm64" ]]; then
-              GFORTRAN_URL="https://github.com/isuruf/gcc/releases/download/gcc-11.3.0-2/gfortran-darwin-arm64-native.tar.gz"
-              KNOWN_SHA256="84364eee32ba843d883fb8124867e2bf61a0cd73b6416d9897ceff7b85a24604 gfortran.tar.gz"
-            fi
-
-            # Validate gfortran tarball
-            curl -L $GFORTRAN_URL -o gfortran.tar.gz
-            if ! echo "$KNOWN_SHA256" != "$(shasum --algorithm 256 gfortran.tar.gz)"; then
-              echo "Checksum failed"
-              exit 1
-            fi
-
-            mkdir -p gfortran_installed
-            tar -xv -C gfortran_installed/ -f gfortran.tar.gz
-
-            if [[ $(uname -m) == "x86_64" ]]; then
-              export FC=$(pwd)/gfortran_installed/gfortran-darwin-x86_64-native/bin/gfortran
-              export PATH=$(pwd)/gfortran_installed/gfortran-darwin-x86_64-native/bin:$PATH
-            elif [[ $(uname -m) == "arm64" ]]; then
-              export FC=$(pwd)/gfortran_installed/gfortran-darwin-arm64-native/bin/gfortran
-              export PATH=$(pwd)/gfortran_installed/gfortran-darwin-arm64-native/bin:$PATH
-            fi
-
-            # link libgfortran dylibs and place them in $SOLVER_LIB_PATH
-            # and then change rpath for each of them
-            # Note: libgcc_s.1.dylib not available on macOS arm64; skip for now
-            SOLVER_LIB_PATH=$(pwd)/.idaklu/lib
-            mkdir -p $SOLVER_LIB_PATH
-            if [[ $(uname -m) == "x86_64" ]]; then
-              lib_dir=$(pwd)/gfortran_installed/gfortran-darwin-x86_64-native/lib
-              for lib in libgfortran.5.dylib libgfortran.dylib libquadmath.0.dylib libquadmath.dylib libgcc_s.1.dylib libgcc_s.1.1.dylib; do
-                cp $lib_dir/$lib $SOLVER_LIB_PATH/
-                install_name_tool -id $SOLVER_LIB_PATH/$lib $SOLVER_LIB_PATH/$lib
-                codesign --force --sign - $SOLVER_LIB_PATH/$lib
-              done
-            elif [[ $(uname -m) == "arm64" ]]; then
-              lib_dir=$(pwd)/gfortran_installed/gfortran-darwin-arm64-native/lib
-              for lib in libgfortran.5.dylib libgfortran.dylib libquadmath.0.dylib libquadmath.dylib libgcc_s.1.1.dylib; do
-                cp $lib_dir/$lib $SOLVER_LIB_PATH/.
-                install_name_tool -id $SOLVER_LIB_PATH/$lib $SOLVER_LIB_PATH/$lib
-                codesign --force --sign - $SOLVER_LIB_PATH/$lib
-              done
-            fi
-
             export SDKROOT=${SDKROOT:-$(xcrun --show-sdk-path)}
+            SOLVER_LIB_PATH=$(pwd)/.idaklu/lib
+
+            mkdir -p $SOLVER_LIB_PATH
 
             # Can't download LLVM-OpenMP directly, use conda and set environment variables
             brew install miniforge

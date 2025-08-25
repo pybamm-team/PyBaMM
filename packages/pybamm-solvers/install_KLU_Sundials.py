@@ -59,6 +59,11 @@ def build_solvers():
                 env["CMAKE_OPTIONS"] = (
                     f"-DCMAKE_INSTALL_PREFIX={DEFAULT_INSTALL_DIR} -DCMAKE_INSTALL_RPATH={DEFAULT_INSTALL_DIR}/lib -DCMAKE_INSTALL_RPATH_USE_LINK_PATH=FALSE -DCMAKE_BUILD_WITH_INSTALL_RPATH=FALSE"
                 )
+
+            env["CMAKE_OPTIONS"] += (
+                " -DSUITESPARSE_DEMOS=OFF -DSUITESPARSE_USE_FORTRAN=OFF"
+            )
+
             subprocess.run(make_cmd, cwd=build_dir, env=env, shell=True, check=True)
             subprocess.run(install_cmd, cwd=build_dir, check=True)
 
