@@ -7,6 +7,7 @@ requires = [
     # cross platforms, so updates to its minimum version here should be accompanied
     # by a version bump in https://github.com/pybamm-team/casadi-vcpkg-registry.
     "cmake; platform_system!='Windows'",
+    "pybind11[global]>=3.0.1",
 ]
 build-backend = "setuptools.build_meta"
 

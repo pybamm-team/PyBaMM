@@ -36,10 +36,7 @@ endif ()
 # casadi seems to compile without the newer versions of std::string
 add_compile_definitions(_GLIBCXX_USE_CXX11_ABI=0)
 
-if (NOT PYBIND11_DIR)
-    set(PYBIND11_DIR pybind11)
-endif ()
-add_subdirectory(${PYBIND11_DIR})
+find_package(pybind11 CONFIG REQUIRED)
 
 # Check Casadi build flag
 if (NOT DEFINED PYBAMM_IDAKLU_EXPR_CASADI)

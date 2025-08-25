@@ -21,7 +21,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          submodules: 'true'
+          submodules: 'recursive'
       - uses: actions/setup-python@v5
         with:
           python-version: 3.12
@@ -47,7 +47,7 @@ jobs:
             CMAKE_GENERATOR="Visual Studio 17 2022"
             CMAKE_GENERATOR_PLATFORM=x64
           CIBW_ARCHS: AMD64
-          CIBW_BEFORE_BUILD: python -m pip install setuptools delvewheel # skip CasADi and CMake
+          CIBW_BEFORE_BUILD: python -m pip install setuptools delvewheel pybind11 # skip CasADi and CMake
           CIBW_REPAIR_WHEEL_COMMAND: delvewheel repair --add-path C:/Windows/System32 -w {dest_dir} {wheel}
           CIBW_TEST_EXTRAS: "dev"
           CIBW_TEST_COMMAND: |
@@ -65,7 +65,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          submodules: 'true'
+          submodules: 'recursive'
 
       - uses: actions/setup-python@v5
         with:
@@ -78,7 +78,7 @@ jobs:
           CIBW_BEFORE_ALL_LINUX: >
             yum -y install openblas-devel lapack-devel &&
             python install_KLU_Sundials.py
-          CIBW_BEFORE_BUILD_LINUX: python -m pip install cmake casadi==3.6.7 setuptools wheel
+          CIBW_BEFORE_BUILD_LINUX: python -m pip install cmake casadi==3.6.7 setuptools wheel pybind11
           CIBW_REPAIR_WHEEL_COMMAND_LINUX: auditwheel repair -w {dest_dir} {wheel}
           CIBW_TEST_EXTRAS: "dev"
           CIBW_TEST_COMMAND: |
@@ -102,7 +102,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          submodules: 'true'
+          submodules: 'recursive'
       - uses: actions/setup-python@v5
         with:
           python-version: 3.12
@@ -202,7 +202,7 @@ jobs:
           # 10.13 for Intel (macos-13), 11.0 for Apple Silicon (macos-14 and macos-latest)
           MACOSX_DEPLOYMENT_TARGET: ${{ matrix.os == 'macos-14' && '11.0' || '10.13' }}
           CIBW_ARCHS_MACOS: auto
-          CIBW_BEFORE_BUILD: python -m pip install cmake casadi==3.6.7 setuptools delocate
+          CIBW_BEFORE_BUILD: python -m pip install cmake casadi==3.6.7 setuptools delocate pybind11
           CIBW_REPAIR_WHEEL_COMMAND: |
             if [[ $(uname -m) == "x86_64" ]]; then
               delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel}

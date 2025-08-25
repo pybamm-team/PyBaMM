@@ -21,14 +21,9 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          submodules: 'true'
+          submodules: 'recursive'
 
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Install dependencies (MacOs)
+      - name: Install dependencies (macOS)
         env:
           HOMEBREW_NO_INSTALL_CLEANUP: 1
           HOMEBREW_NO_AUTO_UPDATE: 1
@@ -39,6 +34,11 @@ jobs:
           brew install libomp
           brew reinstall gcc
 
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
       - name: Build and test
         run: |
           cd ..
@@ -46,13 +46,13 @@ jobs:
           # Install PyBaMM
           cd PyBaMM
           pip install -e ".[all,dev,jax]"
-          
+
           # Replace PyBaMM solvers
           cd ../pybammsolvers
           pip uninstall pybammsolvers --yes
           python install_KLU_Sundials.py
           pip install .
-          
+
           # Run pybamm tests
           cd ../PyBaMM
           pytest tests/unit

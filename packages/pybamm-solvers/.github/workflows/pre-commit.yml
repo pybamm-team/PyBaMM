@@ -14,6 +14,6 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          submodules: 'true'
+          submodules: 'recursive'
       - uses: actions/setup-python@v5
       - uses: pre-commit/action@v3.0.1
