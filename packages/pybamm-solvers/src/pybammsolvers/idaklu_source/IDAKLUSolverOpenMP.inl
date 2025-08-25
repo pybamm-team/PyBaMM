@@ -398,6 +398,7 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
 
   sunrealtype t_val = t0;
   sunrealtype t_prev = t0;
+  sunrealtype dt;
   int i_eval = 0;
 
   sunrealtype t_interp_next;
@@ -453,6 +454,12 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
   // Progress one step. This must be done before the while loop to ensure
   // that we can run IDAGetDky at t0 for dky = 1
   int retval = IDASolve(ida_mem, tf_perturbed, &t_val, yy, yyp, IDA_ONE_STEP);
+  dt = t_val - t_prev;
+
+  // Optional method to fail the simulation if the solver is not making progress.
+  NoProgressGuard no_progression(solver_opts.num_steps_no_progress, solver_opts.t_no_progress);
+  no_progression.Initialize();
+  no_progression.AddDt(dt);
 
   // Store consistent initialization
   CheckErrors(IDAGetDky(ida_mem, t0, 0, yy));
@@ -471,7 +478,7 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
     if (retval < 0) {
       // failed
       break;
-    } else if (t_prev == t_val) {
+    } else if (t_prev == t_val || no_progression.Violated()) {
       // IDA sometimes returns an identical time point twice
       // instead of erroring. Assign a retval and break
       retval = IDA_ERR_FAIL;
@@ -523,16 +530,20 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
       i_eval++;
       t_eval_next = t_eval[i_eval];
       CheckErrors(IDASetStopTime(ida_mem, t_eval_next));
-
       // Reinitialize the solver to deal with the discontinuity at t = t_val.
       ReinitializeIntegrator(t_val);
       ConsistentInitialization(t_val, t_eval_next, IDA_YA_YDP_INIT);
+      // Reset the no-progress guard
+      no_progression.Initialize();
     }
 
     t_prev = t_val;
 
     // Progress one step
     retval = IDASolve(ida_mem, tf_perturbed, &t_val, yy, yyp, IDA_ONE_STEP);
+
+    dt = t_val - t_prev;
+    no_progression.AddDt(dt);
   }
 
   int const length_of_final_sv_slice = save_outputs_only ? number_of_states : 0;

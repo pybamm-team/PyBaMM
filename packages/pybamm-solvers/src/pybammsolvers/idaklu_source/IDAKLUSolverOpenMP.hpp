@@ -7,6 +7,7 @@
 using std::vector;
 
 #include "Options.hpp"
+#include "NoProgressGuard.hpp"
 #include "Solution.hpp"
 
 /**

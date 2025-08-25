@@ -163,4 +163,15 @@ SolverOptions::SolverOptions(py::dict &py_opts)
       linear_solution_scaling(py_opts["linear_solution_scaling"].cast<sunbooleantype>()),
       epsilon_linear_tolerance(SUN_RCONST(py_opts["epsilon_linear_tolerance"].cast<double>())),
       increment_factor(SUN_RCONST(py_opts["increment_factor"].cast<double>()))
-{}
+{
+    // Early termination. Key checks enable backward compatibility with previous versions
+    // of pybamm.
+    num_steps_no_progress = 0;
+    t_no_progress = SUN_RCONST(0.0);
+    if (py_opts.contains("num_steps_no_progress")) {
+        num_steps_no_progress = py_opts["num_steps_no_progress"].cast<size_t>();
+    }
+    if (py_opts.contains("t_no_progress")) {
+        t_no_progress = SUN_RCONST(py_opts["t_no_progress"].cast<sunrealtype>());
+    }
+}

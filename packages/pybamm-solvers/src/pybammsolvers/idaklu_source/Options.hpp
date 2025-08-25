@@ -52,6 +52,9 @@ struct SolverOptions {
   sunbooleantype linear_solution_scaling;
   double epsilon_linear_tolerance;
   double increment_factor;
+  // Early termination
+  size_t num_steps_no_progress;
+  sunrealtype t_no_progress;
   explicit SolverOptions(py::dict &py_opts);
 };
 
