@@ -1934,8 +1934,6 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                         disc_left, method=method, direction="tb"
                     )
                     disc_left = pybamm.VectorField(disc_left_lr, disc_left_tb)
-            else:
-                disc_left = pybamm.VectorField(disc_left, disc_left)
             lr_field = pybamm.simplify_if_constant(
                 bin_op.create_copy([disc_left.lr_field, disc_right.lr_field])
             )
