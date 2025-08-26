@@ -784,7 +784,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     raise pybamm.OptionError(
                         f"\n'{value}' is not recognized in option '{option}'. "
                         "Values must be strings or (in some cases) "
-                        "2-tuples of strings"
+                        "2-tuples of strings."
                     )
             # flatten value
             value_list = []
@@ -805,10 +805,16 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                         # "number of MSMR reactions" can be a positive integer
                         pass
                     else:
-                        raise pybamm.OptionError(
-                            f"\n'{val}' is not recognized in option '{option}'. "
-                            f"Possible values are {self.possible_options[option]}"
-                        )
+                        if isinstance(val, str) and val.startswith("override:"):
+                            pass
+                        else:
+                            raise pybamm.OptionError(
+                                f"\n'{val}' is not recognized in option '{option}'. "
+                                f"Possible values are {self.possible_options[option]}."
+                                "If you are using a custom submodel, you can use the "
+                                "'override' prefix to avoid this error, such as "
+                                "'override:my_option'."
+                            )
 
         super().__init__(options.items())
 

@@ -275,6 +275,9 @@ class TestBaseBatteryModel:
                     "total interfacial current density as a state": "false",
                 }
             )
+        # Test override
+        model = pybamm.BaseBatteryModel({"thermal": "override:my_thermal_model"})
+        assert model.options["thermal"] == "override:my_thermal_model"
 
         # loss of active material model
         with pytest.raises(pybamm.OptionError, match="loss of active material"):
