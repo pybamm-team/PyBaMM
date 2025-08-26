@@ -1753,6 +1753,29 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         """
         raise NotImplementedError
 
+    def _inner(self, left, right, disc_left, disc_right):
+        # 1) Ensure both operands are vector fields; if not, treat scalar as same in both directions
+        if not hasattr(disc_left, "lr_field") or not hasattr(disc_left, "tb_field"):
+            disc_left = pybamm.VectorField(disc_left, disc_left)
+        if not hasattr(disc_right, "lr_field") or not hasattr(disc_right, "tb_field"):
+            disc_right = pybamm.VectorField(disc_right, disc_right)
+
+        # 2) Broadcast components back to nodes (convert edge-evaluated to node-evaluated)
+        # Left-right components
+        left_lr = disc_left.lr_field
+        right_lr = disc_right.lr_field
+        left_tb = disc_left.tb_field
+        right_tb = disc_right.tb_field
+        if left.evaluates_on_edges("primary"):
+            left_lr = self.edge_to_node(left_lr, method="arithmetic", direction="lr")
+            left_tb = self.edge_to_node(left_tb, method="arithmetic", direction="tb")
+        if right.evaluates_on_edges("primary"):
+            right_lr = self.edge_to_node(right_lr, method="arithmetic", direction="lr")
+            right_tb = self.edge_to_node(right_tb, method="arithmetic", direction="tb")
+        # 3) Multiply corresponding components and sum
+        out = pybamm.simplify_if_constant(left_lr * right_lr + left_tb * right_tb)
+        return out
+
     def process_binary_operators(self, bin_op, left, right, disc_left, disc_right):
         """Discretise binary operators in model equations.  Performs appropriate
         averaging of diffusivities if one of the children is a gradient operator, so
@@ -1809,6 +1832,10 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         # Post-processing to make sure discretised dimensions match
         left_evaluates_on_edges = left.evaluates_on_edges("primary")
         right_evaluates_on_edges = right.evaluates_on_edges("primary")
+
+        # inner product takes fluxes from edges to nodes
+        if isinstance(bin_op, pybamm.Inner):
+            return self._inner(left, right, disc_left, disc_right)
 
         # This could be cleaned up a bit, but it works for now.
         if hasattr(disc_left, "lr_field") and hasattr(disc_right, "lr_field"):
@@ -1907,6 +1934,8 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                         disc_left, method=method, direction="tb"
                     )
                     disc_left = pybamm.VectorField(disc_left_lr, disc_left_tb)
+            else:
+                disc_left = pybamm.VectorField(disc_left, disc_left)
             lr_field = pybamm.simplify_if_constant(
                 bin_op.create_copy([disc_left.lr_field, disc_right.lr_field])
             )
@@ -1916,16 +1945,10 @@ class FiniteVolume2D(pybamm.SpatialMethod):
             return pybamm.VectorField(lr_field, tb_field)
         else:
             pass
-        # inner product takes fluxes from edges to nodes
-        if isinstance(bin_op, pybamm.Inner):
-            if left_evaluates_on_edges:
-                disc_left = self.edge_to_node(disc_left)
-            if right_evaluates_on_edges:
-                disc_right = self.edge_to_node(disc_right)
 
         # If neither child evaluates on edges, or both children have gradients,
         # no need to do any averaging
-        elif left_evaluates_on_edges == right_evaluates_on_edges:
+        if left_evaluates_on_edges == right_evaluates_on_edges:
             pass
         # If only left child evaluates on edges, map right child onto edges
         # using the harmonic mean if the left child is a gradient (i.e. this
