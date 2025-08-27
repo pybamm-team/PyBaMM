@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib
+import inspect
 import json
 import numbers
 import re
@@ -9,11 +10,39 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
+import black
 import numpy as np
 
 import pybamm
 
 SUPPORTED_SCHEMA_VERSION = "1.0"
+
+
+class ExpressionFunctionParameter(pybamm.UnaryOperator):
+    def __init__(self, name, child, func_name, func_args):
+        super().__init__(name, child)
+        self.func_name = func_name
+        self.func_args = func_args
+
+    def _unary_evaluate(self, child):
+        """Evaluate the symbolic expression (the child)"""
+        return child
+
+    def to_source(self):
+        """
+        Creates python source code for the function.
+        """
+        src = f"def {self.func_name}({', '.join(self.func_args)}):\n"
+
+        expression = self.child.create_copy()
+        for child in expression.pre_order():
+            if isinstance(child, pybamm.Parameter) and child.name not in self.func_args:
+                child.name = f'Parameter("{child.name}")'
+
+        src += f"    return {expression.to_equation()}"
+
+        formatted_src = black.format_str(src, mode=black.FileMode())
+        return formatted_src
 
 
 class Serialise:
@@ -595,6 +624,72 @@ class Serialise:
 
         return model
 
+    @staticmethod
+    def save_parameters(parameters: dict, filename=None):
+        """
+        Serializes a dictionary of parameters to a JSON file.
+        The values can be numbers, PyBaMM symbols, or callables.
+
+        Parameters
+        ----------
+        parameters : dict
+            A dictionary of parameter names and values.
+            Values can be numeric, PyBaMM symbols, or callables.
+
+        filename : str, optional
+            If given, saves the serialized parameters to this file.
+        """
+        parameter_values_dict = {}
+
+        for k, v in parameters.items():
+            if callable(v):
+                parameter_values_dict[k] = Serialise.convert_symbol_to_json(
+                    Serialise.convert_function_to_symbolic_expression(v, k)
+                )
+            else:
+                parameter_values_dict[k] = Serialise.convert_symbol_to_json(v)
+
+        if filename is not None:
+            with open(filename, "w") as f:
+                json.dump(parameter_values_dict, f, indent=4)
+
+    @staticmethod
+    def load_parameters(filename):
+        """
+        Load a JSON file of parameters (either from Serialise.save_parameters
+        or from a standard pybamm.ParameterValues.save), and return a
+        pybamm.ParameterValues object.
+
+        - If a value is a dict with a "type" key, deserialize it as a PyBaMM symbol.
+        - Otherwise (float, int, bool, str, list, dict-without-type), leave it as-is.
+        """
+        with open(filename) as f:
+            raw_dict = json.load(f)
+
+        deserialized = {}
+        for key, val in raw_dict.items():
+            if isinstance(val, dict) and "type" in val:
+                deserialized[key] = Serialise.convert_symbol_from_json(val)
+
+            elif isinstance(val, list):
+                deserialized[key] = val
+
+            elif isinstance(val | (numbers.Number, bool)):
+                deserialized[key] = val
+
+            elif isinstance(val, str):
+                deserialized[key] = val
+
+            elif isinstance(val, dict):
+                deserialized[key] = val
+
+            else:
+                raise ValueError(
+                    f"Unsupported parameter format for key '{key}': {val!r}"
+                )
+
+        return pybamm.ParameterValues(deserialized)
+
     # Helper functions
 
     def _get_pybamm_class(self, snippet: dict):
@@ -758,6 +853,40 @@ class Serialise:
         else:
             return d
 
+    def convert_function_to_symbolic_expression(func, name=None):
+        """
+        Converts a Python function to a PyBaMM ExpressionFunctionParameter object.
+
+
+        Parameters
+        ----------
+        func : callable
+            The Python function to convert. Its body should operate on symbolic inputs
+            (e.g., x+1, x*y) so it can be represented as a PyBaMM expression.
+
+
+        name : str, optional
+            The name of the function to use in the symbolic expression. If not provided,
+            the function's __name__ is used.
+
+
+        Returns
+        -------
+        ExpressionFunctionParameter
+            A symbolic wrapper for the function that preserves its name, arguments,
+            and expression body.
+        """
+        func_name = name or func.__name__
+
+        sig = inspect.signature(func)
+        arg_names = list(sig.parameters.keys())
+
+        sym_inputs = [pybamm.Parameter(arg) for arg in arg_names]
+
+        sym_output = func(*sym_inputs)
+
+        return ExpressionFunctionParameter(func_name, sym_output, func_name, arg_names)
+
     @staticmethod
     def convert_symbol_to_json(
         symbol: pybamm.Symbol | numbers.Number | list,
@@ -792,8 +921,15 @@ class Serialise:
         >>> Serialise.convert_symbol_to_json(v)
         {'type': 'Variable', 'name': 'c', 'domains': {'primary': [], 'secondary': [], 'tertiary': [], 'quaternary': []}, 'bounds': [{'type': 'Scalar', 'value': -inf}, {'type': 'Scalar', 'value': inf}]}
         """
-
-        if isinstance(symbol, numbers.Number | list):
+        if isinstance(symbol, ExpressionFunctionParameter):
+            return {
+                "type": "ExpressionFunctionParameter",
+                "name": symbol.name,
+                "children": [Serialise.convert_symbol_to_json(symbol.child)],
+                "func_name": symbol.func_name,
+                "func_args": symbol.func_args,
+            }
+        elif isinstance(symbol, numbers.Number | list):
             return symbol
         elif isinstance(symbol, pybamm.Time):
             return {"type": "Time"}
@@ -1002,6 +1138,13 @@ class Serialise:
                     for k, v in json_data["inputs"].items()
                 },
                 diff_variable=diff_variable,
+            )
+        elif json_data["type"] == "ExpressionFunctionParameter":
+            return ExpressionFunctionParameter(
+                json_data["name"],
+                Serialise.convert_symbol_from_json(json_data["children"][0]),
+                json_data["func_name"],
+                json_data["func_args"],
             )
         elif symbol_type == "PrimaryBroadcast":
             child = Serialise.convert_symbol_from_json(json_data["children"][0])
