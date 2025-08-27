@@ -506,11 +506,11 @@ class TestExtrapolationFiniteVolume2D:
         result_top_left = discretised_top_left.evaluate(y=lr).flatten()
         np.testing.assert_array_almost_equal(result_top_left, submesh.nodes_lr[0])
 
-        # Test top-right (s/b same as right)
-        boundary_value_top_right = pybamm.BoundaryValue(var, "top-right")
-        discretised_top_right = disc.process_symbol(boundary_value_top_right)
-        result_top_right = discretised_top_right.evaluate(y=lr).flatten()
-        np.testing.assert_array_almost_equal(result_top_right, submesh.nodes_lr[-1])
+        # Test bottom-right (s/b same as right)
+        boundary_value_bottom_right = pybamm.BoundaryValue(var, "bottom-right")
+        discretised_bottom_right = disc.process_symbol(boundary_value_bottom_right)
+        result_bottom_right = discretised_bottom_right.evaluate(y=lr).flatten()
+        np.testing.assert_array_almost_equal(result_bottom_right, submesh.nodes_lr[-1])
 
         # Test top boundary
         boundary_value_top = pybamm.BoundaryValue(var, "top")
