@@ -10,7 +10,6 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
-import black
 import numpy as np
 
 import pybamm
@@ -39,10 +38,8 @@ class ExpressionFunctionParameter(pybamm.UnaryOperator):
             if isinstance(child, pybamm.Parameter) and child.name not in self.func_args:
                 child.name = f'Parameter("{child.name}")'
 
-        src += f"    return {expression.to_equation()}"
-
-        formatted_src = black.format_str(src, mode=black.FileMode())
-        return formatted_src
+        src += f"    return {expression.to_equation()}\n"
+        return src
 
 
 class Serialise:

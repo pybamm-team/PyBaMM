@@ -1435,7 +1435,7 @@ class TestExpressionFunctionParameter:
         src = efp.to_source()
 
         assert "def f(x, y):" in src
-        assert "x * y" in src
+        assert "x*y" in src or "x * y" in src
         assert 'Parameter("d")' in src
 
     def test_nested_expression(self):
