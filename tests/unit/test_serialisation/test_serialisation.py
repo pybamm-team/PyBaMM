@@ -15,6 +15,7 @@ from numpy import testing
 import pybamm
 from pybamm.expression_tree.operations.serialise import (
     SUPPORTED_SCHEMA_VERSION,
+    ExpressionFunctionParameter,
     Serialise,
 )
 from pybamm.models.full_battery_models.lithium_ion.basic_dfn import BasicDFN
@@ -1392,3 +1393,85 @@ class TestSerialise:
         sim = pybamm.Simulation(loaded_model)
         sim.solve([0, 3600])
         sim.plot(show_plot=False)
+
+    def test_parameter_serialisation(self, tmp_path):
+        file_path = tmp_path / "params.json"
+
+        # Load Marquis parameters
+        params = pybamm.ParameterValues("Marquis2019")
+
+        # Save to JSON
+        Serialise.save_parameters(params, file_path)
+
+        # Load back
+        param2 = Serialise.load_parameters(file_path)
+
+        # Build and run
+        model = pybamm.lithium_ion.SPM()
+        sim = pybamm.Simulation(model, parameter_values=param2)
+        sim.solve([0, 3600])
+        sim.plot(show_plot=False)
+
+
+class TestExpressionFunctionParameter:
+    def test_basic_serialisation(self):
+        x = pybamm.SpatialVariable("x", domain="negative electrode")
+        expr = pybamm.FunctionParameter("b", {"x": x}) + pybamm.Parameter("c")
+
+        efp = ExpressionFunctionParameter("f", expr, "f", ["x"])
+        src = efp.to_source()
+
+        # Check flexible matching (order may differ)
+        assert "def f(x):" in src
+        assert 'Parameter("c")' in src
+        assert "b" in src or "FunctionParameter" in src
+
+    def test_multiple_args(self):
+        x = pybamm.Variable("x")
+        y = pybamm.Variable("y")
+        expr = x * y + pybamm.Parameter("d")
+
+        efp = ExpressionFunctionParameter("f", expr, "f", ["x", "y"])
+        src = efp.to_source()
+
+        assert "def f(x, y):" in src
+        assert "x * y" in src
+        assert 'Parameter("d")' in src
+
+    def test_nested_expression(self):
+        z = pybamm.Variable("z")
+        expr = pybamm.Parameter("a") * (z + 2)
+
+        efp = ExpressionFunctionParameter("f", expr, "f", ["z"])
+        src = efp.to_source()
+
+        assert "def f(z):" in src
+        assert 'Parameter("a")' in src
+        assert "(z + 2" in src  # allows 2 or 2.0
+
+    def test_function_executes(self):
+        x = pybamm.Variable("x")
+        expr = x + pybamm.Parameter("k")
+
+        efp = ExpressionFunctionParameter("f", expr, "f", ["x"])
+        src = efp.to_source()
+
+        # Provide Parameter function
+        local_env = {"Parameter": lambda name: 3 if name == "k" else None}
+        exec(src, local_env, local_env)
+        f = local_env["f"]
+
+        assert f(2) == 5
+
+    def test_different_parameter_sets(self):
+        x = pybamm.Variable("x")
+        expr = x + pybamm.Parameter("p1") * pybamm.Parameter("p2")
+
+        efp = ExpressionFunctionParameter("f", expr, "f", ["x"])
+        src = efp.to_source()
+
+        local_env = {"Parameter": lambda name: {"p1": 2, "p2": 4}[name]}
+        exec(src, local_env, local_env)
+        f = local_env["f"]
+
+        assert f(1) == 1 + 8

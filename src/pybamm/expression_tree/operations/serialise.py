@@ -674,7 +674,7 @@ class Serialise:
             elif isinstance(val, list):
                 deserialized[key] = val
 
-            elif isinstance(val | (numbers.Number, bool)):
+            elif isinstance(val, (numbers.Number | bool)):
                 deserialized[key] = val
 
             elif isinstance(val, str):
@@ -1139,7 +1139,7 @@ class Serialise:
                 },
                 diff_variable=diff_variable,
             )
-        elif json_data["type"] == "ExpressionFunctionParameter":
+        elif symbol_type == "ExpressionFunctionParameter":
             return ExpressionFunctionParameter(
                 json_data["name"],
                 Serialise.convert_symbol_from_json(json_data["children"][0]),
