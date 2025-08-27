@@ -1155,6 +1155,23 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                         )
                         additive = pybamm.Scalar(0)
 
+                elif extrap_order_value == "constant":
+                    # For constant extrapolation, use the first column value
+                    row_indices = np.arange(0, n_tb)
+                    col_indices_0 = np.arange(0, n_tb * n_lr, n_lr)
+                    vals_0 = np.ones(n_tb)
+                    sub_matrix = csr_matrix(
+                        (
+                            vals_0,
+                            (
+                                row_indices,
+                                col_indices_0,
+                            ),
+                        ),
+                        shape=(n_tb, n_tb * n_lr),
+                    )
+                    additive = pybamm.Scalar(0)
+
                 elif extrap_order_value == "quadratic":
                     if use_bcs and pybamm.has_bc_of_form(
                         child, symbol.side, bcs, "Neumann"
@@ -1234,6 +1251,24 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                             shape=(n_tb, n_tb * n_lr),
                         )
                         additive = pybamm.Scalar(0)
+
+                elif extrap_order_value == "constant":
+                    # For constant extrapolation, use the last column value
+                    row_indices = np.arange(0, n_tb)
+                    col_indices_N = np.arange(n_lr - 1, n_lr * n_tb, n_lr)
+                    vals_N = np.ones(n_tb)
+                    sub_matrix = csr_matrix(
+                        (
+                            vals_N,
+                            (
+                                row_indices,
+                                col_indices_N,
+                            ),
+                        ),
+                        shape=(n_tb, n_tb * n_lr),
+                    )
+                    additive = pybamm.Scalar(0)
+
                 elif extrap_order_value == "quadratic":
                     if use_bcs and pybamm.has_bc_of_form(
                         child, symbol.side, bcs, "Neumann"
@@ -1359,7 +1394,16 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                     raise NotImplementedError
 
             elif side_first == "top":
-                if extrap_order_value == "linear":
+                if extrap_order_value == "constant":
+                    first_val = np.ones(n_lr)
+                    rows_first = np.arange(0, n_lr)
+                    cols_first = np.arange((n_tb - 1) * n_lr, n_tb * n_lr)
+                    sub_matrix = csr_matrix(
+                        (first_val, (rows_first, cols_first)),
+                        shape=(n_lr, n_lr * n_tb),
+                    )
+                    additive = pybamm.Scalar(0)
+                elif extrap_order_value == "linear":
                     if use_bcs and pybamm.has_bc_of_form(
                         child, side_first, bcs, "Neumann"
                     ):
@@ -1452,6 +1496,26 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                         shape=(1, n_tb),
                     )
                     sub_matrix = sub_matrix_second @ sub_matrix
+
+                elif extrap_order_value == "constant":
+                    # For constant extrapolation, use the bottom row value
+                    # Select bottom row elements: 0, n_tb, 2*n_tb, ..., (n_lr-1)*n_tb
+                    row_indices = [0]
+                    col_indices = [0]
+                    vals = [1]
+                    sub_matrix_second = csr_matrix(
+                        (
+                            vals,
+                            (
+                                row_indices,
+                                col_indices,
+                            ),
+                        ),
+                        shape=(1, n_tb),
+                    )
+                    additive = pybamm.Scalar(0)
+                    sub_matrix = sub_matrix_second @ sub_matrix
+
                 else:
                     dx0 = dx0_tb
                     dx1 = dx1_tb
@@ -1485,6 +1549,26 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                         shape=(1, n_tb),
                     )
                     sub_matrix = sub_matrix_second @ sub_matrix
+
+                elif extrap_order_value == "constant":
+                    # For constant extrapolation, use the top row value
+                    # Select top row elements: n_tb-1, 2*n_tb-1, 3*n_tb-1, ..., n_lr*n_tb-1
+                    row_indices = [0]
+                    col_indices = [n_tb - 1]
+                    vals = [1]
+                    sub_matrix_second = csr_matrix(
+                        (
+                            vals,
+                            (
+                                row_indices,
+                                col_indices,
+                            ),
+                        ),
+                        shape=(1, n_tb),
+                    )
+                    additive = pybamm.Scalar(0)
+                    sub_matrix = sub_matrix_second @ sub_matrix
+
                 else:
                     dxN = dxN_tb
                     dxNm1 = dxNm1_tb
