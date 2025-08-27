@@ -346,6 +346,8 @@ class BaseStep:
             # then truncate the drive cycle
             if t_eval[-1] > tf:
                 t_eval = t_eval[t_eval <= tf]
+            if t_eval[-1] != tf:
+                t_eval = np.append(t_eval, tf)
         else:
             t_eval = np.array([0, tf])
 
