@@ -294,9 +294,9 @@ class TestSimulation:
         options = {"working electrode": "positive"}
         parameter_values["Current function [A]"] = 0.0
         sim = pybamm.Simulation(model, parameter_values=parameter_values)
-        sol = sim.solve([0, 1], initial_soc=f"{ucv} V")
+        sol = sim.solve([0, 1], initial_soc="4.1 V")
         voltage = sol["Terminal voltage [V]"].entries
-        assert voltage[0] == pytest.approx(ucv, abs=1e-05)
+        assert voltage[0] == pytest.approx(4.1, abs=1e-05)
 
         # test with MSMR
         model = pybamm.lithium_ion.MSMR({"number of MSMR reactions": ("6", "4")})

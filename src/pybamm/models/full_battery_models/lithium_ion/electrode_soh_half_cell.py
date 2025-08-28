@@ -151,7 +151,7 @@ def get_initial_stoichiometry_half_cell(
         # initial guess for x linearly interpolates between 0 and 1
         # based on V linearly interpolating between V_max and V_min
         soc_initial_guess = (V_init - V_min) / (V_max - V_min)
-        model.initial_conditions[x] = soc_initial_guess
+        model.initial_conditions[x] = 1 - soc_initial_guess
         if is_composite:
             Up_2 = param.p.sec.U
             x_2 = pybamm.Variable("x_2")
@@ -160,7 +160,9 @@ def get_initial_stoichiometry_half_cell(
             model.initial_conditions[x_2] = soc_initial_guess
 
         parameter_values.process_model(model)
-        sol = pybamm.AlgebraicSolver(tol=tol).solve(model, [0], inputs=inputs)
+        sol = pybamm.AlgebraicSolver("lsq__trf", tol=tol).solve(
+            model, [0], inputs=inputs
+        )
         x = sol["x"].data[0]
         if is_composite:
             x_2 = sol["x_2"].data[0]
