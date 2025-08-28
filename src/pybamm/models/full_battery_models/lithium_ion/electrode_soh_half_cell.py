@@ -131,11 +131,7 @@ def get_initial_stoichiometry_half_cell(
     if is_composite:
         x_0_2, x_100_2 = x_dict["x_0_2"], x_dict["x_100_2"]
 
-    if (
-        isinstance(initial_value, str)
-        and initial_value.endswith("V")
-        and not is_composite
-    ):
+    if isinstance(initial_value, str) and initial_value.endswith("V"):
         V_init = float(initial_value[:-1])
         V_min = parameter_values.evaluate(param.voltage_low_cut, inputs=inputs)
         V_max = parameter_values.evaluate(param.voltage_high_cut, inputs=inputs)
@@ -164,11 +160,10 @@ def get_initial_stoichiometry_half_cell(
             model.initial_conditions[x_2] = soc_initial_guess
 
         parameter_values.process_model(model)
-        x = (
-            pybamm.AlgebraicSolver(tol=tol)
-            .solve(model, [0], inputs=inputs)["x"]
-            .data[0]
-        )
+        sol = pybamm.AlgebraicSolver(tol=tol).solve(model, [0], inputs=inputs)
+        x = sol["x"].data[0]
+        if is_composite:
+            x_2 = sol["x_2"].data[0]
     elif isinstance(initial_value, int | float):
         if not 0 <= initial_value <= 1:
             raise ValueError("Initial SOC should be between 0 and 1")
@@ -183,6 +178,7 @@ def get_initial_stoichiometry_half_cell(
             T_ref = parameter_values["Reference temperature [K]"]
             model.algebraic[x] = U_p(x, T_ref) - U_p_2(x_2, T_ref)
             model.initial_conditions[x] = x_0 + initial_value * (x_100 - x_0)
+            model.initial_conditions[x_2] = x_0_2 + initial_value * (x_100_2 - x_0_2)
             Q_w = parameter_values.evaluate(param.p.prim.Q_init, inputs=inputs)
             Q_w_2 = parameter_values.evaluate(param.p.sec.Q_init, inputs=inputs)
             Q_min = x_100 * Q_w + x_100_2 * Q_w_2
@@ -193,16 +189,9 @@ def get_initial_stoichiometry_half_cell(
             model.variables["x"] = x
             model.variables["x_2"] = x_2
             parameter_values.process_model(model)
-            x = (
-                pybamm.AlgebraicSolver(tol=tol)
-                .solve(model, [0], inputs=inputs)["x"]
-                .data[0]
-            )
-            x_2 = (
-                pybamm.AlgebraicSolver(tol=tol)
-                .solve(model, [0], inputs=inputs)["x_2"]
-                .data[0]
-            )
+            sol = pybamm.AlgebraicSolver(tol=tol).solve(model, [0], inputs=inputs)
+            x = sol["x"].data[0]
+            x_2 = sol["x_2"].data[0]
     else:
         raise ValueError(
             "Initial value must be a float between 0 and 1, or a string ending in 'V'"
