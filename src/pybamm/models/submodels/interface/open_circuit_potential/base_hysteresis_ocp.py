@@ -78,13 +78,15 @@ class BaseHysteresisOpenCircuitPotential(BaseOpenCircuitPotential):
 
         if self.reaction == "lithium-ion main":
             # Get equilibrium, delithiation and lithiation OCPs
-            sto_surf, T = self._get_stoichiometry_and_temperature(variables)
+            sto_surf, sto_bulk, T, T_bulk = self._get_stoichiometry_and_temperature(
+                variables
+            )
             U_eq = self.phase_param.U(sto_surf, T)
             U_eq_x_av = self.phase_param.U(sto_surf, T)
             U_lith = self.phase_param.U(sto_surf, T, "lithiation")
-            U_lith_x_av = pybamm.x_average(U_lith)
+            U_lith_bulk = self.phase_param.U(sto_bulk, T_bulk)
             U_delith = self.phase_param.U(sto_surf, T, "delithiation")
-            U_delith_x_av = pybamm.x_average(U_delith)
+            U_delith_bulk = self.phase_param.U(sto_bulk, T_bulk, "delithiation")
 
             H = U_lith - U_delith
             H_x_av = pybamm.x_average(H)
@@ -122,11 +124,8 @@ class BaseHysteresisOpenCircuitPotential(BaseOpenCircuitPotential):
                 ocp_surf = (1 + h) / 2 * U_delith + (1 - h) / 2 * U_lith
 
             # Size average
-            U_delith_s_av = pybamm.size_average(U_delith_x_av)
-            U_lith_s_av = pybamm.size_average(U_lith_x_av)
             h_s_av = pybamm.size_average(h_x_av)
-
-            ocp_bulk = (1 + h_s_av) / 2 * U_delith_s_av + (1 - h_s_av) / 2 * U_lith_s_av
+            ocp_bulk = (1 + h_s_av) / 2 * U_delith_bulk + (1 - h_s_av) / 2 * U_lith_bulk
             dUdT = self.phase_param.dUdT(sto_surf)
 
         variables.update(self._get_standard_ocp_variables(ocp_surf, ocp_bulk, dUdT))
