@@ -157,7 +157,7 @@ def get_initial_stoichiometry_half_cell(
             x_2 = pybamm.Variable("x_2")
             model.algebraic[x_2] = Up_2(x_2, T_ref) - V_init
             model.variables["x_2"] = x_2
-            model.initial_conditions[x_2] = soc_initial_guess
+            model.initial_conditions[x_2] = 1 - soc_initial_guess
 
         parameter_values.process_model(model)
         sol = pybamm.AlgebraicSolver("lsq__trf", tol=tol).solve(
