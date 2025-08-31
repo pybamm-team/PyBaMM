@@ -12,14 +12,14 @@ class SingleOpenCircuitPotential(BaseOpenCircuitPotential):
         phase_name = self.phase_name
 
         if self.reaction == "lithium-ion main":
-            sto_surf, T = self._get_stoichiometry_and_temperature(variables)
+            sto_surf, sto_bulk, T, T_bulk = self._get_stoichiometry_and_temperature(
+                variables
+            )
 
             ocp_surf = self.phase_param.U(sto_surf, T)
-            dUdT = self.phase_param.dUdT(sto_surf)
-
-            sto_bulk = variables[f"{Domain} electrode {phase_name}stoichiometry"]
-            T_bulk = pybamm.xyzs_average(T)
             ocp_bulk = self.phase_param.U(sto_bulk, T_bulk)
+
+            dUdT = self.phase_param.dUdT(sto_surf)
 
             variables.update(
                 {
