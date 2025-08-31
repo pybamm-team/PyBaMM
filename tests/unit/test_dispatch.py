@@ -7,6 +7,7 @@ import pybamm
 from pybamm.dispatch.entry_points import (
     _get_cache_dir,
     clear_model_cache,
+    get_cache_path,
 )
 
 MODEL_URL = "https://raw.githubusercontent.com/pybamm-team/pybamm-reservoir-example/refs/heads/main/dfn.py"
@@ -126,3 +127,29 @@ class TestDispatch:
             assert bad_path.exists()
         finally:
             bad_path.rmdir()
+
+    def test_model_download_and_cache_integration(self, capsys):
+        """Integration test using a real model URL"""
+
+        cache_path = get_cache_path(MODEL_URL)
+
+        # Clean up: if cache path exists as directory, remove it
+        if cache_path.exists():
+            if cache_path.is_dir():
+                import shutil
+
+                shutil.rmtree(cache_path)
+            else:
+                clear_model_cache()
+
+        # First call -> should download and print "Model cached at"
+        model = pybamm.Model(url=MODEL_URL, force_download=True)
+        captured = capsys.readouterr()
+        assert "Model cached at:" in captured.out
+        assert hasattr(model, "name")
+
+        # Second call -> should use cached file
+        model2 = pybamm.Model(url=MODEL_URL)
+        captured = capsys.readouterr()
+        assert "Using cached model at:" in captured.out
+        assert hasattr(model2, "name")
