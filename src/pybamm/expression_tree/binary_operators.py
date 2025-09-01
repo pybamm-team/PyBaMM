@@ -8,10 +8,11 @@ import numbers
 from collections.abc import Callable
 from typing import cast
 
+import casadi
 import numpy as np
 import numpy.typing as npt
 import sympy
-from scipy.sparse import csr_matrix, issparse
+from scipy.sparse import csr_matrix, issparse, kron
 
 import pybamm
 
@@ -358,6 +359,50 @@ class Multiplication(BinaryOperator):
             return left * right
 
 
+class KroneckerProduct(BinaryOperator):
+    """
+    A node in the expression tree representing a matrix multiplication operator.
+    """
+
+    def __init__(
+        self,
+        left: ChildSymbol,
+        right: ChildSymbol,
+    ):
+        """See :meth:`pybamm.BinaryOperator.__init__()`."""
+        super().__init__("kronecker product", left, right)
+
+    def diff(self, variable):
+        """See :meth:`pybamm.Symbol.diff()`."""
+        # We shouldn't need this
+        raise NotImplementedError(
+            "diff not implemented for symbol of type 'MatrixMultiplication'"
+        )
+
+    def _binary_jac(self, left_jac, right_jac):
+        """See :meth:`pybamm.BinaryOperator._binary_jac()`."""
+        raise NotImplementedError
+
+    def _binary_evaluate(self, left, right):
+        """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
+        if issparse(left) or issparse(right):
+            return kron(left, right)
+        else:
+            return np.kron(left, right)
+
+    def _sympy_operator(self, left, right):
+        """Override :meth:`pybamm.BinaryOperator._sympy_operator`"""
+        raise NotImplementedError
+
+    def _binary_new_copy(
+        self,
+        left: ChildSymbol,
+        right: ChildSymbol,
+    ):
+        """See :meth:`pybamm.BinaryOperator._binary_new_copy()`."""
+        return pybamm.kronecker_product(left, right)
+
+
 class MatrixMultiplication(BinaryOperator):
     """
     A node in the expression tree representing a matrix multiplication operator.
@@ -437,9 +482,11 @@ class Division(BinaryOperator):
 
     def _binary_evaluate(self, left, right):
         """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
-
         if issparse(left):
             return csr_matrix(left.multiply(1 / right))
+        # casadi oversimplifies division of sparse matrices
+        elif isinstance(right, casadi.casadi.MX):
+            return left * (1 / right)
         else:
             return left / right
 
@@ -1361,6 +1408,10 @@ def matmul(
     return pybamm.simplify_if_constant(MatrixMultiplication(left, right))
 
 
+def kronecker_product(left: ChildSymbol, right: ChildSymbol):
+    return pybamm.simplify_if_constant(KroneckerProduct(left, right))
+
+
 def minimum(
     left: ChildSymbol,
     right: ChildSymbol,
@@ -1542,16 +1593,18 @@ def source(
         corresponding to a source term in the bulk.
     """
     # Broadcast if left is number
+    right_domain = right.domain
     if isinstance(left, numbers.Number):
-        left = pybamm.PrimaryBroadcast(left, "current collector")
+        left = pybamm.PrimaryBroadcast(left, right_domain)
 
     # force type cast for mypy
     left = cast(pybamm.Symbol, left)
 
-    if left.domain != ["current collector"] or right.domain != ["current collector"]:
+    allowed_domains = [["cell"], ["current collector"]]
+    if left.domain not in allowed_domains or right_domain not in allowed_domains:
         raise pybamm.DomainError(
-            "'source' only implemented in the 'current collector' domain, "
-            f"but symbols have domains {left.domain} and {right.domain}"
+            "'source' only implemented in the 'cell' or 'current collector' domains, "
+            f"but symbols have domains {left.domain} and {right_domain}"
         )
     if boundary:
         return pybamm.BoundaryMass(right) @ left
