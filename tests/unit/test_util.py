@@ -1,15 +1,15 @@
-import pytest
 import importlib
 import os
 import sys
-import pybamm
-import tempfile
 from io import StringIO
 
+import pytest
+
+import pybamm
 from tests import (
     get_optional_distribution_deps,
-    get_required_distribution_deps,
     get_present_optional_import_deps,
+    get_required_distribution_deps,
 )
 
 
@@ -81,20 +81,14 @@ class TestUtil:
                 == d["Positive particle diffusivity [m2.s-1]"]
             )
 
-    def test_get_parameters_filepath(self):
-        with tempfile.NamedTemporaryFile("w", dir=".") as tempfile_obj:
-            assert (
-                pybamm.get_parameters_filepath(tempfile_obj.name) == tempfile_obj.name
-            )
+    def test_get_parameters_filepath(self, tmp_path):
+        temppath = tmp_path / "temp_file.txt"
+        assert pybamm.get_parameters_filepath(temppath) == str(temppath)
 
-        package_dir = os.path.join(pybamm.root_dir(), "src", "pybamm")
-        with tempfile.NamedTemporaryFile("w", dir=package_dir) as tempfile_obj:
-            path = os.path.join(package_dir, tempfile_obj.name)
-            assert pybamm.get_parameters_filepath(tempfile_obj.name) == path
-
-    @pytest.mark.skipif(not pybamm.has_jax(), reason="JAX is not installed")
-    def test_is_jax_compatible(self):
-        assert pybamm.is_jax_compatible()
+        temppath = "random.txt"
+        assert pybamm.get_parameters_filepath(temppath) == str(
+            os.path.join(pybamm.root_dir(), "src", "pybamm", temppath)
+        )
 
     def test_import_optional_dependency(self):
         optional_distribution_deps = get_optional_distribution_deps("pybamm")

@@ -2,6 +2,7 @@
 # Composite electrolyte potential employing stefan-maxwell
 #
 import pybamm
+
 from .base_electrolyte_conductivity import BaseElectrolyteConductivity
 
 
@@ -151,6 +152,15 @@ class Composite(BaseElectrolyteConductivity):
             - pybamm.boundary_value(eta_c_s, "right")
             - pybamm.boundary_value(eta_c_n, "right")
         )
+        # macinnes_c_e_n = pybamm.x_average(
+        #     self._higher_order_macinnes_function(c_e_n / c_e_av)
+        # )
+        # if self.options.electrode_types["negative"] == "planar":
+        #     ohmic_n = 0
+        # else:
+        #     ohmic_n = L_n / (3 * kappa_n_av)
+
+        # eta_c_av = chi_av * RT_F_av * (macinnes_c_e_p - macinnes_c_e_n)
 
         # average electrolyte ohmic losses
         delta_phi_e_av = (

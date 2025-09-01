@@ -46,3 +46,11 @@ class TestNewmanTobias(BaseUnitTestLithiumIon):
     @pytest.mark.skip(reason="Test currently not implemented")
     def test_well_posed_sei_tunnelling_limited(self):
         pass  # skip this test
+
+    @pytest.mark.skip(reason="Test currently not implemented")
+    def test_well_posed_composite_differential_surface_form(self):
+        pass  # skip this test
+
+    @pytest.mark.skip(reason="Test currently not implemented")
+    def test_well_posed_composite_algebraic_surface_form(self):
+        pass  # skip this test

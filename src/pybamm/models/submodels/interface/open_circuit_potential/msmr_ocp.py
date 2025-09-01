@@ -2,6 +2,7 @@
 # Open-circuit potential from the Multi-Species Multi-Reaction framework
 #
 import pybamm
+
 from . import BaseOpenCircuitPotential
 
 
@@ -12,6 +13,14 @@ class MSMROpenCircuitPotential(BaseOpenCircuitPotential):
     :footcite:t:`Verbrugge2017`, along with parameter values for a number of
     substitutional materials.
     """
+
+    def __init__(
+        self, param, domain, reaction, options, phase="primary", x_average=False
+    ):
+        super().__init__(
+            param, domain, reaction, options=options, phase=phase, x_average=x_average
+        )
+        pybamm.citations.register("Baker2018")
 
     def get_coupled_variables(self, variables):
         domain, Domain = self.domain_Domain
@@ -60,4 +69,12 @@ class MSMROpenCircuitPotential(BaseOpenCircuitPotential):
             dUdT = self.phase_param.dUdT(sto_surf)
 
         variables.update(self._get_standard_ocp_variables(ocp_surf, ocp_bulk, dUdT))
+        variables.update(
+            {
+                f"{Domain} electrode {phase_name}equilibrium open-circuit potential [V]": ocp_surf,
+                f"X-averaged {domain} electrode {phase_name}equilibrium open-circuit potential [V]": pybamm.x_average(
+                    ocp_surf
+                ),
+            }
+        )
         return variables

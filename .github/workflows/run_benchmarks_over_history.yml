@@ -12,12 +12,21 @@ on:
       commit_start:
         description: "Identifier of commit from which to start"
         default: "v0.1.0"
+        type: string
+        pattern: '^[a-zA-Z0-9._-]+$'
       commit_end:
         description: "Identifier of commit at which to end"
         default: "develop"
+        type: string
+        pattern: '^[a-zA-Z0-9._-]+$'
       ncommits:
         description: "Number of commits to benchmark between commit_start and commit_end"
         default: "100"
+        type: string
+        pattern: '^[0-9]+$'
+
+
+permissions: {}
 
 env:
   PYBAMM_DISABLE_TELEMETRY: "true"
@@ -25,10 +34,14 @@ env:
 jobs:
   benchmarks:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
       - name: Set up Python 3.12
-        uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: 3.12
 
@@ -43,27 +56,83 @@ jobs:
         run: |
           git fetch origin develop:develop
 
+      - name: Validate commit_start
+        id: validate_start
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        with:
+          script: |
+            const input = context.payload.inputs.commit_start;
+            if (!input || !/^[a-zA-Z0-9._-]+$/.test(input)) {
+              core.setFailed('Invalid commit_start format');
+              return;
+            }
+            core.setOutput('commit_start', input);
+
+      - name: Validate commit_end
+        id: validate_end
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        with:
+          script: |
+            const input = context.payload.inputs.commit_end;
+            if (!input || !/^[a-zA-Z0-9._-]+$/.test(input)) {
+              core.setFailed('Invalid commit_end format');
+              return;
+            }
+            core.setOutput('commit_end', input);
+
+      - name: Validate ncommits
+        id: validate_ncommits
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        with:
+          script: |
+            const input = context.payload.inputs.ncommits;
+            if (!input || !/^[0-9]+$/.test(input)) {
+              core.setFailed('Invalid ncommits format');
+              return;
+            }
+            const numValue = parseInt(input, 10);
+            if (numValue < 1 || numValue > 10000) {
+              core.setFailed('ncommits must be between 1 and 10000');
+              return;
+            }
+            if (numValue > 5000) {
+              core.warning('Processing a large number of commits. This may take a while....');
+            }
+            core.setOutput('ncommits', numValue.toString());
+
+      - name: Set environment variables
+        env:
+          COMMIT_START: ${{ steps.validate_start.outputs.commit_start }}
+          COMMIT_END: ${{ steps.validate_end.outputs.commit_end }}
+          NCOMMITS: ${{ steps.validate_ncommits.outputs.ncommits }}
+        run: |
+          echo "COMMIT_START=$COMMIT_START" >> $GITHUB_ENV
+          echo "COMMIT_END=$COMMIT_END" >> $GITHUB_ENV
+          echo "NCOMMITS=$NCOMMITS" >> $GITHUB_ENV
+
       - name: Run benchmarks
         run: |
           asv machine --machine "GitHubRunner"
-          asv run -m "GitHubRunner" -s ${{ github.event.inputs.ncommits }} \
-          ${{ github.event.inputs.commit_start }}..${{ github.event.inputs.commit_end }}
+          asv run -m "GitHubRunner" -s $NCOMMITS \
+          $COMMIT_START..$COMMIT_END
 
       - name: Upload results as artifact
-        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: asv_over_history_results
           path: results
           if-no-files-found: error
 
   publish-results:
-    if: github.repository_owner == 'pybamm-team'
+    if: github.repository == 'pybamm-team/PyBaMM'
     name: Push and publish results
     needs: benchmarks
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Set up Python 3.12
-        uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: 3.12
 
@@ -71,16 +140,17 @@ jobs:
         run: pip install asv
 
       - name: Checkout pybamm-bench repo
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           repository: pybamm-team/pybamm-bench
           token: ${{ secrets.BENCH_PAT }}
+          persist-credentials: false
 
       - name: Download results artifact(s)
-        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v4.6.2
         with:
+          name: asv_over_history_results
           path: results
-          merge-multiple: true
 
       - name: Copy new results and push to pybamm-bench repo
         env:
@@ -95,6 +165,5 @@ jobs:
 
       - name: Publish results
         run: |
-          asv publish
           git fetch origin gh-pages:gh-pages
           asv gh-pages

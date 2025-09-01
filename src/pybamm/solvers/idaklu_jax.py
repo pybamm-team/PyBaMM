@@ -1,12 +1,15 @@
-import pybamm
-import numpy as np
-import logging
-import warnings
-import numbers
-import pybammsolvers.idaklu as idaklu
-from typing import Union
+from __future__ import annotations
 
+import logging
+import numbers
+import warnings
 from functools import lru_cache
+
+import numpy as np
+import numpy.typing as npt
+import pybammsolvers.idaklu as idaklu
+
+import pybamm
 
 logger = logging.getLogger("pybamm.solvers.idaklu_jax")
 
@@ -14,9 +17,7 @@ if pybamm.has_jax():
     import jax
     from jax import lax
     from jax import numpy as jnp
-    from jax.interpreters import ad
-    from jax.interpreters import mlir
-    from jax.interpreters import batching
+    from jax.interpreters import ad, batching, mlir
     from jax.interpreters.mlir import custom_call
     from jax.lib import xla_client
     from jax.tree_util import tree_flatten
@@ -258,9 +259,9 @@ class IDAKLUJax:
 
     def jax_value(
         self,
-        t: np.ndarray = None,
-        inputs: Union[dict, None] = None,
-        output_variables: Union[list[str], None] = None,
+        t: npt.NDArray[np.float64] | None = None,
+        inputs: dict | None = None,
+        output_variables: list[str] | None = None,
     ):
         """Helper function to compute the gradient of a jaxified expression
 
@@ -291,9 +292,9 @@ class IDAKLUJax:
 
     def jax_grad(
         self,
-        t: np.ndarray = None,
-        inputs: Union[dict, None] = None,
-        output_variables: Union[list[str], None] = None,
+        t: npt.NDArray[np.float64] | None = None,
+        inputs: dict | None = None,
+        output_variables: list[str] | None = None,
     ):
         """Helper function to compute the gradient of a jaxified expression
 
@@ -344,7 +345,7 @@ class IDAKLUJax:
         d = self._hashabledict()
         if self.jax_inputs is not None:
             # Use hashable dictionaries for caching the solve
-            for key, value in zip(self.jax_inputs.keys(), inputs_values):
+            for key, value in zip(self.jax_inputs.keys(), inputs_values, strict=False):
                 d[key] = value
         # Solver
         logger.debug("_jaxify_solve:")
@@ -395,9 +396,9 @@ class IDAKLUJax:
 
     def _jax_solve(
         self,
-        t: Union[float, np.ndarray],
+        t: float | npt.NDArray[np.float64],
         *inputs,
-    ) -> np.ndarray:
+    ) -> npt.NDArray[np.float64]:
         """Solver implementation used by f-bind"""
         logger.info("jax_solve")
         logger.debug(f"  t: {type(t)}, {t}")
@@ -409,7 +410,7 @@ class IDAKLUJax:
 
     def _jax_jvp_impl(
         self,
-        *args: Union[np.ndarray],
+        *args: npt.NDArray[np.float64],
     ):
         """JVP implementation used by f_jvp bind"""
         primals = args[: len(args) // 2]
@@ -454,9 +455,9 @@ class IDAKLUJax:
 
     def _jax_vjp_impl(
         self,
-        y_bar: np.ndarray,
-        invar: Union[str, int],  # index or name of input variable
-        *primals: np.ndarray,
+        y_bar: npt.NDArray[np.float64],
+        invar: str | int,  # index or name of input variable
+        *primals: npt.NDArray[np.float64],
     ):
         """VJP implementation used by f_vjp bind"""
         logger.info("py:f_vjp_p_impl")
@@ -599,6 +600,7 @@ class IDAKLUJax:
         self._register_callbacks()  # Register python methods as callbacks in IDAKLU-JAX
 
         for _name, _value in idaklu.registrations().items():
+            # todo: This has been removed from jax v0.6.0
             xla_client.register_custom_call_target(
                 f"{_name}_{self._unique_name()}", _value, platform="cpu"
             )
@@ -741,7 +743,10 @@ class IDAKLUJax:
                 return lax.zeros_like_array(prim) if type(tan) is ad.Zero else tan
 
             zero_mapped_tangents = tuple(
-                map(lambda pt: make_zero(pt[0], pt[1]), zip(primals, tangents))
+                map(
+                    lambda pt: make_zero(pt[0], pt[1]),
+                    zip(primals, tangents, strict=False),
+                )
             )
 
             y = f_p.bind(*primals)

@@ -1,14 +1,13 @@
-from bpx import BPX, Function, InterpolatedTable
-from bpx.schema import ElectrodeBlended, ElectrodeBlendedSPM
-import pybamm
 import math
 from dataclasses import dataclass
-import numpy as np
-from pybamm import constants
-from pybamm import exp
-
-
 from functools import partial
+
+import numpy as np
+from bpx import BPX, Function, InterpolatedTable
+from bpx.schema import ElectrodeBlended, ElectrodeBlendedSPM
+
+import pybamm
+from pybamm import constants, exp
 
 
 def _callable_func(var, fun):
@@ -93,7 +92,7 @@ def _get_phase_names(domain):
     """
     Return a list of the phase names in a given domain
     """
-    if isinstance(domain, (ElectrodeBlended, ElectrodeBlendedSPM)):
+    if isinstance(domain, ElectrodeBlended | ElectrodeBlendedSPM):
         phases = len(domain.particle.keys())
     else:
         phases = 1
@@ -451,7 +450,7 @@ def _bpx_to_domain_param_dict(instance: BPX, pybamm_dict: dict, domain: Domain) 
         # Handle blended electrodes, where the field is now an instance of
         # ElectrodeBlended or ElectrodeBlendedSPM
         if (
-            isinstance(instance, (ElectrodeBlended, ElectrodeBlendedSPM))
+            isinstance(instance, ElectrodeBlended | ElectrodeBlendedSPM)
             and name == "particle"
         ):
             particle_instance = instance.particle

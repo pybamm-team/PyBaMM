@@ -2,20 +2,19 @@
 # Tests for the base model class
 #
 
-import pytest
-import pybamm
-
 import numpy as np
-from tests import (
-    get_mesh_for_testing,
-    get_discretisation_for_testing,
-    get_1p1d_discretisation_for_testing,
-    get_2p1d_mesh_for_testing,
-)
-from tests.shared import SpatialMethodForTesting
-
+import pytest
 from scipy.sparse import block_diag, csc_matrix
 from scipy.sparse.linalg import inv
+
+import pybamm
+from tests import (
+    get_1p1d_discretisation_for_testing,
+    get_2p1d_mesh_for_testing,
+    get_discretisation_for_testing,
+    get_mesh_for_testing,
+)
+from tests.shared import SpatialMethodForTesting
 
 
 class TestDiscretise:
@@ -470,6 +469,8 @@ class TestDiscretise:
             np.eye(submesh.nodes.shape[0]), model.mass_matrix.entries.toarray()
         )
 
+        assert model.is_standard_form_dae
+
         # Create StateVector to differentiate model with respect to
         y = pybamm.StateVector(slice(0, submesh.npts))
 
@@ -526,6 +527,8 @@ class TestDiscretise:
         np.testing.assert_array_equal(
             np.eye(np.size(y0)), model.mass_matrix.entries.toarray()
         )
+
+        assert model.is_standard_form_dae
 
         # Create StateVector to differentiate model with respect to
         y = pybamm.StateVector(slice(0, np.size(y0)))
@@ -640,6 +643,7 @@ class TestDiscretise:
         np.testing.assert_array_equal(
             mass.toarray(), model.mass_matrix.entries.toarray()
         )
+        assert model.is_standard_form_dae
 
         # jacobian
         y = pybamm.StateVector(slice(0, np.size(y0)))
@@ -722,6 +726,8 @@ class TestDiscretise:
         # mass matrix is identity upper left, zeros elsewhere
         mass = np.zeros((np.size(submesh.nodes), np.size(submesh.nodes)))
         np.testing.assert_array_equal(mass, model.mass_matrix.entries.toarray())
+
+        assert not model.is_standard_form_dae
 
         # jacobian
         y = pybamm.StateVector(slice(0, np.size(y0)))

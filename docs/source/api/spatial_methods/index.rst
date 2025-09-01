@@ -9,3 +9,4 @@ Discretisation and spatial methods
   spectral_volume
   scikit_finite_element
   zero_dimensional_method
+  scikit_finite_element_3d

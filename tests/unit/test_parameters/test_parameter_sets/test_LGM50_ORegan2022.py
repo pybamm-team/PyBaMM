@@ -2,6 +2,7 @@
 # Tests for LG M50 parameter set loads
 #
 import pytest
+
 import pybamm
 
 

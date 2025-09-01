@@ -1,10 +1,11 @@
-import pybamm
+import os
+
 import numpy as np
 import pandas as pd
-import os
 import pytest
-from tempfile import TemporaryDirectory
-from scipy.integrate import cumulative_trapezoid
+from scipy.integrate import trapezoid
+
+import pybamm
 from tests import no_internet_connection
 
 
@@ -16,9 +17,7 @@ class TestSimulation:
         model.initial_conditions = {v: 1}
         sim = pybamm.Simulation(model)
         sol = sim.solve([0, 1])
-        np.testing.assert_allclose(
-            sol.y.full()[0], np.exp(-sol.t), rtol=1e-6, atol=1e-5
-        )
+        np.testing.assert_allclose(sol.y[0], np.exp(-sol.t), rtol=1e-4, atol=1e-4)
 
     def test_basic_ops(self):
         model = pybamm.lithium_ion.SPM()
@@ -95,9 +94,7 @@ class TestSimulation:
         t = sol["Time [s]"].data
         I = sol["Current [A]"].data
         q = sol["Discharge capacity [A.h]"].data
-        np.testing.assert_allclose(
-            q, cumulative_trapezoid(I, t, initial=0) / 3600, rtol=1e-7, atol=1e-6
-        )
+        np.testing.assert_allclose(q, trapezoid(I, t) / 3600, rtol=1e-7, atol=1e-6)
 
     def test_solve_non_battery_model(self):
         model = pybamm.BaseModel()
@@ -166,29 +163,41 @@ class TestSimulation:
         model = pybamm.lithium_ion.SPM()
         sim = pybamm.Simulation(model)
 
-        sim.step(dt)  # 1 step stores first two points
-        assert sim.solution.y.full()[0, :].size == 2
+        sim.step(dt)  # 1 step stores first 12 points
+        assert sim.solution.y[0, :].size == 12
         np.testing.assert_allclose(
-            sim.solution.t, np.array([0, dt]), rtol=1e-7, atol=1e-6
+            [sim.solution.t[0], sim.solution.t[-1]],
+            np.array([0, dt]),
+            rtol=1e-7,
+            atol=1e-6,
         )
         saved_sol = sim.solution
 
         sim.step(dt)  # automatically append the next step
-        assert sim.solution.y.full()[0, :].size == 4
+        assert sim.solution.y[0, :].size == 24
         np.testing.assert_allclose(
-            sim.solution.t, np.array([0, dt, dt + 1e-9, 2 * dt]), rtol=1e-7, atol=1e-6
+            [sim.solution.t[0], sim.solution.t[-1]],
+            np.array([0, 2 * dt]),
+            rtol=1e-7,
+            atol=1e-6,
         )
 
         sim.step(dt, save=False)  # now only store the two end step points
-        assert sim.solution.y.full()[0, :].size == 2
+        assert sim.solution.y[0, :].size == 12
         np.testing.assert_allclose(
-            sim.solution.t, np.array([2 * dt + 1e-9, 3 * dt]), rtol=1e-7, atol=1e-6
+            [sim.solution.t[0], sim.solution.t[-1]],
+            np.array([2 * dt + 1e-9, 3 * dt]),
+            rtol=1e-7,
+            atol=1e-6,
         )
         # Start from saved solution
         sim.step(dt, starting_solution=saved_sol)
-        assert sim.solution.y.full()[0, :].size == 4
+        assert sim.solution.y[0, :].size == 24
         np.testing.assert_allclose(
-            sim.solution.t, np.array([0, dt, dt + 1e-9, 2 * dt]), rtol=1e-7, atol=1e-6
+            [sim.solution.t[0], sim.solution.t[-1]],
+            np.array([0, 2 * dt]),
+            rtol=1e-7,
+            atol=1e-6,
         )
 
     @pytest.mark.skipif(
@@ -296,6 +305,9 @@ class TestSimulation:
         sim.build(initial_soc=0.5)
         assert sim._built_initial_soc == 0.5
 
+        with pytest.warns(DeprecationWarning):
+            sim.set_initial_soc(0.5)
+
     def test_solve_with_initial_soc_with_input_param_in_ocv(self):
         # test having an input parameter in the ocv function
         model = pybamm.lithium_ion.SPM()
@@ -358,8 +370,11 @@ class TestSimulation:
         param.update({"Current function [A]": "[input]"})
         sim = pybamm.Simulation(model, parameter_values=param)
         h = 1e-6
+        tmax = 600
+        t_interp = np.linspace(0, tmax, 100)
         sol1 = sim.solve(
-            t_eval=[0, 600],
+            t_eval=[0, tmax],
+            t_interp=t_interp,
             inputs={"Current function [A]": 1},
             calculate_sensitivities=True,
         )
@@ -367,7 +382,9 @@ class TestSimulation:
         # check that the sensitivities are stored
         assert "Current function [A]" in sol1.sensitivities
 
-        sol2 = sim.solve(t_eval=[0, 600], inputs={"Current function [A]": 1 + h})
+        sol2 = sim.solve(
+            t_eval=[0, tmax], t_interp=t_interp, inputs={"Current function [A]": 1 + h}
+        )
 
         # check that the sensitivities are not stored
         assert "Current function [A]" not in sol2.sensitivities
@@ -378,11 +395,10 @@ class TestSimulation:
             + h
             * sol1["Terminal voltage [V]"]
             .sensitivities["Current function [A]"]
-            .full()
             .flatten(),
             sol2["Terminal voltage [V]"].entries,
-            rtol=1e-6,
-            atol=1e-5,
+            rtol=5e-6,
+            atol=2e-5,
         )
 
     def test_step_with_inputs(self):
@@ -393,20 +409,23 @@ class TestSimulation:
         sim = pybamm.Simulation(model, parameter_values=param)
         sim.step(
             dt, inputs={"Current function [A]": 1}
-        )  # 1 step stores first two points
-        assert sim.solution.t.size == 2
-        assert sim.solution.y.full()[0, :].size == 2
+        )  # 1 step stores first 12 points
+        assert sim.solution.t.size == 12
+        assert sim.solution.y[0, :].size == 12
         assert sim.solution.t[0] == 0
-        assert sim.solution.t[1] == dt
+        assert sim.solution.t[-1] == dt
         np.testing.assert_array_equal(
             sim.solution.all_inputs[0]["Current function [A]"], 1
         )
         sim.step(
             dt, inputs={"Current function [A]": 2}
         )  # automatically append the next step
-        assert sim.solution.y.full()[0, :].size == 4
+        assert sim.solution.y[0, :].size == 24
         np.testing.assert_allclose(
-            sim.solution.t, np.array([0, dt, dt + 1e-9, 2 * dt]), rtol=1e-7, atol=1e-6
+            [sim.solution.t[0], sim.solution.t[-1]],
+            np.array([0, 2 * dt]),
+            rtol=1e-7,
+            atol=1e-6,
         )
         np.testing.assert_array_equal(
             sim.solution.all_inputs[1]["Current function [A]"], 2
@@ -431,7 +450,7 @@ class TestSimulation:
             step = operating_mode(oscillating, duration=tf / 2)
             experiment = pybamm.Experiment([step, step], period=f"{tf / 100} seconds")
 
-            solver = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8)
+            solver = pybamm.IDAKLUSolver(rtol=1e-8, atol=1e-8)
             sim = pybamm.Simulation(model, experiment=experiment, solver=solver)
             sim.solve()
             for sol in sim.solution.sub_solutions:
@@ -458,37 +477,36 @@ class TestSimulation:
             with pytest.raises(TypeError):
                 operating_mode(g)
 
-    def test_save_load(self):
-        with TemporaryDirectory() as dir_name:
-            test_name = os.path.join(dir_name, "tests.pickle")
+    def test_save_load(self, tmp_path):
+        test_name = tmp_path / "tests.pickle"
 
-            model = pybamm.lead_acid.LOQS()
-            model.use_jacobian = True
-            sim = pybamm.Simulation(model)
+        model = pybamm.lead_acid.LOQS()
+        model.use_jacobian = True
+        sim = pybamm.Simulation(model)
 
+        sim.save(test_name)
+        sim_load = pybamm.load_sim(test_name)
+        assert sim.model.name == sim_load.model.name
+
+        # Save after solving
+        sim.solve([0, 600])
+        sim.save(test_name)
+        sim_load = pybamm.load_sim(test_name)
+        assert sim.model.name == sim_load.model.name
+
+        # with python formats
+        model.convert_to_format = None
+        sim = pybamm.Simulation(model)
+        sim.solve([0, 600])
+        sim.save(test_name)
+        model.convert_to_format = "python"
+        sim = pybamm.Simulation(model)
+        sim.solve([0, 600])
+        with pytest.raises(
+            NotImplementedError,
+            match="Cannot save simulation if model format is python",
+        ):
             sim.save(test_name)
-            sim_load = pybamm.load_sim(test_name)
-            assert sim.model.name == sim_load.model.name
-
-            # save after solving
-            sim.solve([0, 600])
-            sim.save(test_name)
-            sim_load = pybamm.load_sim(test_name)
-            assert sim.model.name == sim_load.model.name
-
-            # with python formats
-            model.convert_to_format = None
-            sim = pybamm.Simulation(model)
-            sim.solve([0, 600])
-            sim.save(test_name)
-            model.convert_to_format = "python"
-            sim = pybamm.Simulation(model)
-            sim.solve([0, 600])
-            with pytest.raises(
-                NotImplementedError,
-                match="Cannot save simulation if model format is python",
-            ):
-                sim.save(test_name)
 
     def test_load_param(self, tmp_path):
         filename = str(tmp_path / "test.pkl")
@@ -505,37 +523,35 @@ class TestSimulation:
             ].__name__
         )
 
-    def test_save_load_dae(self):
-        with TemporaryDirectory() as dir_name:
-            test_name = os.path.join(dir_name, "test.pickle")
+    def test_save_load_dae(self, tmp_path):
+        test_name = tmp_path / "test.pickle"
 
-            model = pybamm.lead_acid.LOQS({"surface form": "algebraic"})
-            model.use_jacobian = True
-            sim = pybamm.Simulation(model)
+        model = pybamm.lead_acid.LOQS({"surface form": "algebraic"})
+        model.use_jacobian = True
+        sim = pybamm.Simulation(model)
 
-            # save after solving
-            sim.solve([0, 600])
-            sim.save(test_name)
-            sim_load = pybamm.load_sim(test_name)
-            assert sim.model.name == sim_load.model.name
+        # save after solving
+        sim.solve([0, 600])
+        sim.save(test_name)
+        sim_load = pybamm.load_sim(test_name)
+        assert sim.model.name == sim_load.model.name
 
-            # with python format
-            model.convert_to_format = None
-            sim = pybamm.Simulation(model)
-            sim.solve([0, 600])
-            sim.save(test_name)
+        # with python format
+        model.convert_to_format = None
+        sim = pybamm.Simulation(model)
+        sim.solve([0, 600])
+        sim.save(test_name)
 
-            # with Casadi solver & experiment
-            model.convert_to_format = "casadi"
-            sim = pybamm.Simulation(
-                model,
-                experiment="Discharge at 1C for 20 minutes",
-                solver=pybamm.CasadiSolver(),
-            )
-            sim.solve([0, 600])
-            sim.save(test_name)
-            sim_load = pybamm.load_sim(test_name)
-            assert sim.model.name == sim_load.model.name
+        # with Casadi format & experiment
+        model.convert_to_format = "casadi"
+        sim = pybamm.Simulation(
+            model,
+            experiment="Discharge at 1C for 20 minutes",
+        )
+        sim.solve([0, 600])
+        sim.save(test_name)
+        sim_load = pybamm.load_sim(test_name)
+        assert sim.model.name == sim_load.model.name
 
     def test_save_load_model(self):
         model = pybamm.lead_acid.LOQS({"surface form": "algebraic"})
@@ -569,24 +585,21 @@ class TestSimulation:
         sim.solve(t_eval=t_eval)
         sim.plot(show_plot=False)
 
-    def test_create_gif(self):
-        with TemporaryDirectory() as dir_name:
-            sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
-            with pytest.raises(
-                ValueError, match="The simulation has not been solved yet."
-            ):
-                sim.create_gif()
-            sim.solve(t_eval=[0, 10])
+    def test_create_gif(self, tmp_path):
+        sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
+        with pytest.raises(ValueError, match="The simulation has not been solved yet."):
+            sim.create_gif()
+        sim.solve(t_eval=[0, 10])
 
-            # Create a temporary file name
-            test_file = os.path.join(dir_name, "test_sim.gif")
+        # Create a temporary file name
+        test_file = tmp_path / "test_sim.gif"
 
-            # create a GIF without calling the plot method
-            sim.create_gif(number_of_images=3, duration=1, output_filename=test_file)
+        # create a GIF without calling the plot method
+        sim.create_gif(number_of_images=3, duration=1, output_filename=test_file)
 
-            # call the plot method before creating the GIF
-            sim.plot(show_plot=False)
-            sim.create_gif(number_of_images=3, duration=1, output_filename=test_file)
+        # call the plot method before creating the GIF
+        sim.plot(show_plot=False)
+        sim.create_gif(number_of_images=3, duration=1, output_filename=test_file)
 
     @pytest.mark.skipif(
         no_internet_connection(),
@@ -616,18 +629,11 @@ class TestSimulation:
 
         # check solution is returned at the times in the data
         sim.solve()
-        np.testing.assert_allclose(sim.solution.t, time_data, rtol=1e-7, atol=1e-6)
-
-        # check warning raised if the largest gap in t_eval is bigger than the
-        # smallest gap in the data
-        with pytest.warns(pybamm.SolverWarning):
-            sim.solve(t_eval=np.linspace(0, 10, 3))
-
-        # check warning raised if t_eval doesnt contain time_data , but has a finer
-        # resolution (can still solve, but good for users to know they dont have
-        # the solution returned at the data points)
-        with pytest.warns(pybamm.SolverWarning):
-            sim.solve(t_eval=np.linspace(0, time_data[-1], 800))
+        i = 0
+        for t in time_data:
+            while abs(sim.solution.t[i] - t) < 1e-6:
+                i += 1
+                assert i < len(sim.solution.t)
 
     def test_discontinuous_current(self):
         def car_current(t):
@@ -662,12 +668,6 @@ class TestSimulation:
         # test t_eval list of length != 2
         with pytest.raises(pybamm.SolverError, match="'t_eval' can be provided"):
             sim.solve(t_eval=[0, 1, 2])
-
-        # tests list gets turned into np.linspace(t0, tf, 100)
-        sim.solve(t_eval=[0, 10])
-        np.testing.assert_allclose(
-            sim.solution.t, np.linspace(0, 10, 100), rtol=1e-7, atol=1e-6
-        )
 
     def test_battery_model_with_input_height(self):
         parameter_values = pybamm.ParameterValues("Marquis2019")

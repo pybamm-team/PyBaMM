@@ -1,14 +1,16 @@
 from __future__ import annotations
-import pickle
-import pybamm
-import numpy as np
-import warnings
-from functools import lru_cache
-from datetime import timedelta
-import pybamm.telemetry
-from pybamm.util import import_optional_dependency
 
+import pickle
+import warnings
+from datetime import timedelta
+from functools import lru_cache
+
+import numpy as np
+
+import pybamm
+import pybamm.telemetry
 from pybamm.expression_tree.operations.serialise import Serialise
+from pybamm.util import import_optional_dependency
 
 
 def is_notebook():
@@ -96,7 +98,7 @@ class Simulation:
                         }
                     )
         else:
-            if isinstance(experiment, (str, pybamm.step.BaseStep)):
+            if isinstance(experiment, str | pybamm.step.BaseStep):
                 experiment = pybamm.Experiment([experiment])
             elif isinstance(experiment, list):
                 experiment = pybamm.Experiment(experiment)
@@ -258,7 +260,7 @@ class Simulation:
         self._parameter_values.process_geometry(self._geometry)
         self._model = self._model_with_set_params
 
-    def set_initial_soc(self, initial_soc, inputs=None):
+    def set_initial_state(self, initial_soc, inputs=None):
         if self._built_initial_soc != initial_soc:
             # reset
             self._model_with_set_params = None
@@ -266,37 +268,19 @@ class Simulation:
             self.steps_to_built_models = None
             self.steps_to_built_solvers = None
 
-        options = self._model.options
         param = self._model.param
-        if options["open-circuit potential"] == "MSMR":
-            self._parameter_values = (
-                self._unprocessed_parameter_values.set_initial_ocps(
-                    initial_soc, param=param, inplace=False, options=options
-                )
-            )
-        elif options["working electrode"] == "positive":
-            self._parameter_values = (
-                self._unprocessed_parameter_values.set_initial_stoichiometry_half_cell(
-                    initial_soc,
-                    param=param,
-                    inplace=False,
-                    options=options,
-                    inputs=inputs,
-                )
-            )
-        else:
-            self._parameter_values = (
-                self._unprocessed_parameter_values.set_initial_stoichiometries(
-                    initial_soc,
-                    param=param,
-                    inplace=False,
-                    options=options,
-                    inputs=inputs,
-                )
-            )
+        options = self._model.options
+        self._parameter_values = self._unprocessed_parameter_values.set_initial_state(
+            initial_soc, param=param, inplace=False, options=options, inputs=inputs
+        )
 
         # Save solved initial SOC in case we need to re-build the model
         self._built_initial_soc = initial_soc
+
+    def set_initial_soc(self, initial_soc, inputs=None):
+        msg = "pybamm.simulation.set_initial_soc is deprecated, please use set_initial_state."
+        warnings.warn(msg, DeprecationWarning, stacklevel=2)
+        return self.set_initial_state(initial_soc=initial_soc, inputs=inputs)
 
     def build(self, initial_soc=None, inputs=None):
         """
@@ -316,7 +300,7 @@ class Simulation:
             A dictionary of input parameters to pass to the model when solving.
         """
         if initial_soc is not None:
-            self.set_initial_soc(initial_soc, inputs=inputs)
+            self.set_initial_state(initial_soc, inputs=inputs)
 
         if self._built_model:
             return
@@ -341,7 +325,7 @@ class Simulation:
         experiment, where there may be several models and solvers to build.
         """
         if initial_soc is not None:
-            self.set_initial_soc(initial_soc, inputs)
+            self.set_initial_state(initial_soc, inputs=inputs)
 
         if self.steps_to_built_models:
             return
@@ -871,6 +855,9 @@ class Simulation:
                                 pybamm.logger.warning(
                                     f"Step '{step_str}' is infeasible at initial conditions, but skip_ok is True. Skipping step."
                                 )
+
+                                # Update the termination and continue
+                                self._solution.termination = step_solution.termination
                                 continue
                             else:
                                 raise pybamm.SolverError(
@@ -976,7 +963,7 @@ class Simulation:
 
         # Make sure we take at least 2 timesteps. The period is hardcoded to 10
         # minutes,the user can always override it by adding a rest step
-        npts = max(int(round(rest_time / 600)) + 1, 2)
+        npts = max(round(rest_time / 600) + 1, 2)
 
         step_solution_with_rest = solver.step(
             step_solution,

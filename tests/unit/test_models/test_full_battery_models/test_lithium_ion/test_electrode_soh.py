@@ -3,6 +3,7 @@
 #
 
 import pytest
+
 import pybamm
 
 
@@ -156,6 +157,132 @@ class TestElectrodeSOH:
             ValueError, match="larger than the maximum possible capacity"
         ):
             esoh_solver.solve(inputs)
+
+
+class TestElectrodeSOHComposite:
+    @staticmethod
+    def _check_phases_equal(results, xy, soc):
+        assert results[f"{xy}_{soc}_1"] == pytest.approx(
+            results[f"{xy}_{soc}_2"], abs=1e-05
+        )
+
+    @staticmethod
+    def _get_params_and_options(composite_electrode):
+        params = pybamm.ParameterValues("Chen2020")
+        if composite_electrode == "negative" or composite_electrode == "both":
+            phases = ("2", "1")
+            params.update(
+                {
+                    "Primary: Negative electrode OCP [V]": params[
+                        "Negative electrode OCP [V]"
+                    ],
+                    "Secondary: Negative electrode OCP [V]": params[
+                        "Negative electrode OCP [V]"
+                    ],
+                    "Primary: Negative electrode active material volume fraction": 0.5,
+                    "Secondary: Negative electrode active material volume fraction": 0.5,
+                    "Primary: Maximum concentration in negative electrode [mol.m-3]": params[
+                        "Maximum concentration in negative electrode [mol.m-3]"
+                    ],
+                    "Secondary: Maximum concentration in negative electrode [mol.m-3]": params[
+                        "Maximum concentration in negative electrode [mol.m-3]"
+                    ],
+                    "Primary: Initial concentration in negative electrode [mol.m-3]": params[
+                        "Initial concentration in negative electrode [mol.m-3]"
+                    ],
+                    "Secondary: Initial concentration in negative electrode [mol.m-3]": params[
+                        "Initial concentration in negative electrode [mol.m-3]"
+                    ],
+                },
+                check_already_exists=False,
+            )
+        if composite_electrode == "positive" or composite_electrode == "both":
+            phases = ("1", "2")
+            params.update(
+                {
+                    "Primary: Positive electrode OCP [V]": params[
+                        "Positive electrode OCP [V]"
+                    ],
+                    "Secondary: Positive electrode OCP [V]": params[
+                        "Positive electrode OCP [V]"
+                    ],
+                    "Primary: Positive electrode active material volume fraction": 0.5,
+                    "Secondary: Positive electrode active material volume fraction": 0.5,
+                    "Primary: Maximum concentration in positive electrode [mol.m-3]": params[
+                        "Maximum concentration in positive electrode [mol.m-3]"
+                    ],
+                    "Secondary: Maximum concentration in positive electrode [mol.m-3]": params[
+                        "Maximum concentration in positive electrode [mol.m-3]"
+                    ],
+                    "Primary: Initial concentration in positive electrode [mol.m-3]": params[
+                        "Initial concentration in positive electrode [mol.m-3]"
+                    ],
+                    "Secondary: Initial concentration in positive electrode [mol.m-3]": params[
+                        "Initial concentration in positive electrode [mol.m-3]"
+                    ],
+                },
+                check_already_exists=False,
+            )
+        if composite_electrode == "both":
+            phases = ("2", "2")
+        options = {"particle phases": phases}
+        return params, options
+
+    @pytest.mark.parametrize("initial_value", ["4.0 V", 0.5])
+    @pytest.mark.parametrize(
+        "composite_electrode",
+        [
+            "both",  # both electrodes composite
+            "negative",  # negative-only composite
+            "positive",  # positive-only composite
+        ],
+    )
+    def test_half_cell_with_same_ocp_curves(self, composite_electrode, initial_value):
+        pvals, options = self._get_params_and_options(composite_electrode)
+        # Use composite ESOH helper to compute initial stoichiometries at a voltage
+        param = pybamm.LithiumIonParameters(options=options)
+        results = pybamm.lithium_ion.get_initial_stoichiometries_composite(
+            "4.0 V", pvals, param=param, options=options
+        )
+        # Ensure keys exist and values are equal for both phases (this is not how the equation is set, but should be true)
+        if composite_electrode == "positive" or composite_electrode == "both":
+            assert pybamm.lithium_ion.check_if_composite(options, "positive")
+            self._check_phases_equal(results, "y", "init")
+            self._check_phases_equal(results, "y", "100")
+            self._check_phases_equal(results, "y", "0")
+        if composite_electrode == "negative" or composite_electrode == "both":
+            assert pybamm.lithium_ion.check_if_composite(options, "negative")
+            self._check_phases_equal(results, "x", "init")
+            self._check_phases_equal(results, "x", "100")
+            self._check_phases_equal(results, "x", "0")
+
+        pvals_set = pybamm.lithium_ion.set_initial_state(
+            initial_value, pvals, param=param, options=options
+        )
+        if initial_value == "4.0 V":
+            assert pvals_set.evaluate(
+                param.p.prim.U(results["y_init_1"], param.T_ref)
+                - param.n.prim.U(results["x_init_1"], param.T_ref)
+            ) == pytest.approx(4.0, abs=1e-05)
+
+    def test_chen2020_composite_defaults(self):
+        pvals = pybamm.ParameterValues("Chen2020_composite")
+        options = {"particle phases": ("2", "1")}
+        param = pybamm.LithiumIonParameters(options=options)
+        results = pybamm.lithium_ion.get_initial_stoichiometries_composite(
+            "4.0 V", pvals, param=param, options=options
+        )
+        # Basic sanity: solution includes expected variables and bounded stoichiometries
+        for key, val in results.items():
+            if key.startswith(("x_", "y_")):
+                assert 0 <= val <= 1
+        pvals_set = pybamm.lithium_ion.set_initial_state(
+            "4.0 V", pvals, param=param, options=options
+        )
+        assert pvals_set.evaluate(
+            param.p.prim.U(results["y_init_1"], param.T_ref)
+            - param.n.prim.U(results["x_init_1"], param.T_ref)
+        ) == pytest.approx(4.0, abs=1e-05)
 
 
 class TestElectrodeSOHMSMR:

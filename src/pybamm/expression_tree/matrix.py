@@ -2,11 +2,15 @@
 # Matrix class
 #
 from __future__ import annotations
+
+from typing import Any
+
 import numpy as np
+import numpy.typing as npt
 from scipy.sparse import csr_matrix, issparse
 
 import pybamm
-from pybamm.type_definitions import DomainType, AuxiliaryDomainType, DomainsType
+from pybamm.type_definitions import AuxiliaryDomainType, DomainsType, DomainType
 
 
 class Matrix(pybamm.Array):
@@ -16,7 +20,7 @@ class Matrix(pybamm.Array):
 
     def __init__(
         self,
-        entries: np.ndarray | list[float] | csr_matrix,
+        entries: npt.NDArray[Any] | list[float] | csr_matrix,
         name: str | None = None,
         domain: DomainType = None,
         auxiliary_domains: AuxiliaryDomainType = None,

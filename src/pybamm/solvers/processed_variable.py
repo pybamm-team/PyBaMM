@@ -1,20 +1,24 @@
-from typing import Optional
+import bisect
+
 import casadi
 import numpy as np
-import pybamm
-from scipy.integrate import cumulative_trapezoid
 import xarray as xr
-import bisect
 from pybammsolvers import idaklu
 
+import pybamm
 
-class ProcessedVariable:
+from .base_processed_variable import BaseProcessedVariable
+
+
+class ProcessedVariable(BaseProcessedVariable):
     """
     An object that can be evaluated at arbitrary (scalars or vectors) t and x, and
     returns the (interpolated) value of the base variable at that t and x.
 
     Parameters
     ----------
+    name : str
+        The name of the variable
     base_variables : list of :class:`pybamm.Symbol`
         A list of base variables with a method `evaluate(t,y)`, each entry of which
         returns the value of that variable for that particular sub-solution.
@@ -34,11 +38,13 @@ class ProcessedVariable:
 
     def __init__(
         self,
+        name: str,
         base_variables,
         base_variables_casadi,
         solution,
-        time_integral: Optional[pybamm.ProcessedVariableTimeIntegral] = None,
+        time_integral: pybamm.ProcessedVariableTimeIntegral | None = None,
     ):
+        self._name = name
         self.base_variables = base_variables
         self.base_variables_casadi = base_variables_casadi
 
@@ -97,7 +103,7 @@ class ProcessedVariable:
         t must be a sorted array of time points.
         """
 
-        entries = self._observe_hermite_cpp(t)
+        entries = self._observe_hermite(t)
         processed_entries = self._observe_postfix(entries, t)
 
         tf = self.t_pts[-1]
@@ -113,9 +119,9 @@ class ProcessedVariable:
         Evaluate the base variable at the given time points and y values.
         """
         t = self.t_pts
-        return self._observe_postfix(self._observe_raw_cpp(), t)
+        return self._observe_postfix(self._observe_raw(), t)
 
-    def _setup_cpp_inputs(self, t, full_range):
+    def _setup_inputs(self, t, full_range):
         pybamm.logger.debug("Setting up C++ interpolation inputs")
 
         ts = self.all_ts
@@ -160,25 +166,22 @@ class ProcessedVariable:
 
         return ts, ys, yps, funcs, inputs, is_f_contiguous
 
-    def _observe_hermite_cpp(self, t):
-        pybamm.logger.debug("Observing and Hermite interpolating the variable in C++")
+    def _observe_hermite(self, t):
+        pybamm.logger.debug("Observing and Hermite interpolating the variable")
 
-        ts, ys, yps, funcs, inputs, _ = self._setup_cpp_inputs(t, full_range=False)
+        ts, ys, yps, funcs, inputs, _ = self._setup_inputs(t, full_range=False)
         shapes = self._shape(t)
         return idaklu.observe_hermite_interp(t, ts, ys, yps, inputs, funcs, shapes)
 
-    def _observe_raw_cpp(self):
-        pybamm.logger.debug("Observing the variable raw data in C++")
+    def _observe_raw(self):
+        pybamm.logger.debug("Observing the variable raw data")
         t = self.t_pts
-        ts, ys, _, funcs, inputs, is_f_contiguous = self._setup_cpp_inputs(
+        ts, ys, _, funcs, inputs, is_f_contiguous = self._setup_inputs(
             t, full_range=True
         )
         shapes = self._shape(self.t_pts)
 
         return idaklu.observe(ts, ys, inputs, funcs, is_f_contiguous, shapes)
-
-    def _observe_raw_python(self):
-        raise NotImplementedError  # pragma: no cover
 
     def _observe_postfix(self, entries, t):
         return entries
@@ -279,7 +282,7 @@ class ProcessedVariable:
             processed_entries = entries
 
         if not is_sorted:
-            idxs_unsort = np.zeros_like(idxs_sort)
+            idxs_unsort = np.empty_like(idxs_sort)
             idxs_unsort[idxs_sort] = np.arange(len(t_observe))
 
             processed_entries = processed_entries[..., idxs_unsort]
@@ -423,6 +426,7 @@ class ProcessedVariable:
             self.all_inputs,
             self.base_variables,
             self.all_solution_sensitivities["all"],
+            strict=False,
         ):
             # Set up symbolic variables
             t_casadi = casadi.MX.sym("t")
@@ -446,85 +450,126 @@ class ProcessedVariable:
             dvar_dp_func = casadi.Function(
                 "dvar_dp", [t_casadi, y_casadi, p_casadi_stacked], [dvar_dp]
             )
-            for idx, t in enumerate(ts):
-                u = ys[:, idx]
-                next_dvar_dy_eval = dvar_dy_func(t, u, inputs_stacked)
-                next_dvar_dp_eval = dvar_dp_func(t, u, inputs_stacked)
-                if idx == 0:
-                    dvar_dy_eval = next_dvar_dy_eval
-                    dvar_dp_eval = next_dvar_dp_eval
-                else:
-                    dvar_dy_eval = casadi.diagcat(dvar_dy_eval, next_dvar_dy_eval)
-                    dvar_dp_eval = casadi.vertcat(dvar_dp_eval, next_dvar_dp_eval)
+            dvar_dy_eval = casadi.diagcat(
+                *[
+                    dvar_dy_func(t, ys[:, idx], inputs_stacked)
+                    for idx, t in enumerate(ts)
+                ]
+            )
+            dvar_dp_eval = casadi.vertcat(
+                *[
+                    dvar_dp_func(t, ys[:, idx], inputs_stacked)
+                    for idx, t in enumerate(ts)
+                ]
+            )
 
             # Compute sensitivity
             S_var = dvar_dy_eval @ dy_dp + dvar_dp_eval
+
+            if self.time_integral is not None:
+                S_var = self.time_integral.postfix_sensitivities(
+                    self._name, self.data, ts, inputs, S_var
+                )
+
             all_S_var.append(S_var)
 
-        S_var = casadi.vertcat(*all_S_var)
+        S_var = np.vstack(all_S_var)
         sensitivities = {"all": S_var}
 
         # Add the individual sensitivity
-        start = 0
-        for name, inp in self.all_inputs[0].items():
-            end = start + inp.shape[0]
-            sensitivities[name] = S_var[:, start:end]
-            start = end
+        for i, name in enumerate(self.all_inputs[0].keys()):
+            sensitivities[name] = S_var[:, i : i + 1].reshape(-1)
 
         # Save attribute
         self._sensitivities = sensitivities
+
+    def _is_discrete_time_method(self):
+        """Check if using discrete time integral method"""
+        return (
+            self.time_integral is not None and self.time_integral.method == "discrete"
+        )
 
     @property
     def hermite_interpolation(self):
         return self.all_yps is not None
 
+    def as_computed(self):
+        """
+        Allows a ProcessedVariable to be converted to a ComputedProcessedVariable for
+        use together, e.g. when using a last state solution with a new simulation running
+        with output variables in the solver.
+        """
+
+        def _stub_solution(self):
+            """
+            Return a lightweight object that looks like the parts of
+            `pybamm.Solution` required by ProcessedVariableComputed, but without
+            keeping the full state vector in memory.
+            """
+
+            class StubSolution:
+                def __init__(self, ts, ys, inputs, inputs_casadi, sensitivities, t_pts):
+                    self.all_ts = ts
+                    self.all_ys = ys
+                    self.all_inputs = inputs
+                    self.all_inputs_casadi = inputs_casadi
+                    self.sensitivities = sensitivities
+                    self.t = t_pts
+
+            return StubSolution(
+                self.all_ts,
+                self.all_ys,
+                self.all_inputs,
+                self.all_inputs_casadi,
+                self.sensitivities,
+                self.t_pts,
+            )
+
+        entries = self.entries  # shape: (..., n_t)
+
+        # Move time to axis 0, then flatten spatial dims per timestep
+        reshaped = np.moveaxis(entries, -1, 0)  # shape: (n_t, ...)
+        base_data = [reshaped.reshape(reshaped.shape[0], -1)]  # (n_t, n_vars)
+
+        cpv = pybamm.ProcessedVariableComputed(
+            self.base_variables,
+            self.base_variables_casadi,
+            base_data,
+            _stub_solution(self),
+        )
+
+        # add sensitivities if they exist
+        if self.sensitivities:
+            # TODO: test once #5058 is fixed
+            cpv._sensitivities = self.sensitivities  # pragma: no cover
+
+        return cpv
+
 
 class ProcessedVariable0D(ProcessedVariable):
     def __init__(
         self,
+        name: str,
         base_variables,
         base_variables_casadi,
         solution,
-        time_integral: Optional[pybamm.ProcessedVariableTimeIntegral] = None,
+        time_integral: pybamm.ProcessedVariableTimeIntegral | None = None,
     ):
         self.dimensions = 0
         super().__init__(
+            name,
             base_variables,
             base_variables_casadi,
             solution,
             time_integral=time_integral,
         )
 
-    def _observe_raw_python(self):
-        pybamm.logger.debug("Observing the variable raw data in Python")
-        # initialise empty array of the correct size
-        entries = np.empty(self._shape(self.t_pts))
-        idx = 0
-        # Evaluate the base_variable index-by-index
-        for ts, ys, inputs, base_var_casadi in zip(
-            self.all_ts, self.all_ys, self.all_inputs_casadi, self.base_variables_casadi
-        ):
-            for inner_idx, t in enumerate(ts):
-                t = ts[inner_idx]
-                y = ys[:, inner_idx]
-                entries[idx] = float(base_var_casadi(t, y, inputs))
-
-                idx += 1
-        return entries
-
     def _observe_postfix(self, entries, t):
         if self.time_integral is None:
             return entries
-        if self.time_integral.method == "discrete":
-            return np.sum(entries, axis=0, initial=self.time_integral.initial_condition)
-        elif self.time_integral.method == "continuous":
-            return cumulative_trapezoid(
-                entries, self.t_pts, initial=float(self.time_integral.initial_condition)
-            )
-        else:
-            raise ValueError(
-                "time_integral method must be 'discrete' or 'continuous'"
-            )  # pragma: no cover
+        return self.time_integral.postfix(
+            entries, self.t_pts, self.all_inputs_casadi[0]
+        )
 
     def _interp_setup(self, entries, t):
         # save attributes for interpolation
@@ -544,6 +589,8 @@ class ProcessedVariable1D(ProcessedVariable):
 
     Parameters
     ----------
+    variable : str
+        The name of the variable
     base_variables : list of :class:`pybamm.Symbol`
         A list of base variables with a method `evaluate(t,y)`, each entry of which
         returns the value of that variable for that particular sub-solution.
@@ -561,34 +608,20 @@ class ProcessedVariable1D(ProcessedVariable):
 
     def __init__(
         self,
+        name: str,
         base_variables,
         base_variables_casadi,
         solution,
-        time_integral: Optional[pybamm.ProcessedVariableTimeIntegral] = None,
+        time_integral: pybamm.ProcessedVariableTimeIntegral | None = None,
     ):
         self.dimensions = 1
         super().__init__(
+            name,
             base_variables,
             base_variables_casadi,
             solution,
             time_integral=time_integral,
         )
-
-    def _observe_raw_python(self):
-        pybamm.logger.debug("Observing the variable raw data in Python")
-        entries = np.empty(self._shape(self.t_pts))
-
-        # Evaluate the base_variable index-by-index
-        idx = 0
-        for ts, ys, inputs, base_var_casadi in zip(
-            self.all_ts, self.all_ys, self.all_inputs_casadi, self.base_variables_casadi
-        ):
-            for inner_idx, t in enumerate(ts):
-                t = ts[inner_idx]
-                y = ys[:, inner_idx]
-                entries[:, idx] = base_var_casadi(t, y, inputs).full()[:, 0]
-                idx += 1
-        return entries
 
     def _interp_setup(self, entries, t):
         # Get node and edge values
@@ -641,6 +674,8 @@ class ProcessedVariable2D(ProcessedVariable):
 
     Parameters
     ----------
+    variable : str
+        The name of the variable
     base_variables : list of :class:`pybamm.Symbol`
         A list of base variables with a method `evaluate(t,y)`, each entry of which
         returns the value of that variable for that particular sub-solution.
@@ -658,13 +693,15 @@ class ProcessedVariable2D(ProcessedVariable):
 
     def __init__(
         self,
+        name: str,
         base_variables,
         base_variables_casadi,
         solution,
-        time_integral: Optional[pybamm.ProcessedVariableTimeIntegral] = None,
+        time_integral: pybamm.ProcessedVariableTimeIntegral | None = None,
     ):
         self.dimensions = 2
         super().__init__(
+            name,
             base_variables,
             base_variables_casadi,
             solution,
@@ -681,30 +718,6 @@ class ProcessedVariable2D(ProcessedVariable):
         second_dim_pts = second_dim_nodes
         self.first_dim_size = len(first_dim_pts)
         self.second_dim_size = len(second_dim_pts)
-
-    def _observe_raw_python(self):
-        """
-        Initialise a 2D object that depends on x and r, x and z, x and R, or R and r.
-        """
-        pybamm.logger.debug("Observing the variable raw data in Python")
-        first_dim_size, second_dim_size, t_size = self._shape(self.t_pts)
-        entries = np.empty((first_dim_size, second_dim_size, t_size))
-
-        # Evaluate the base_variable index-by-index
-        idx = 0
-        for ts, ys, inputs, base_var_casadi in zip(
-            self.all_ts, self.all_ys, self.all_inputs_casadi, self.base_variables_casadi
-        ):
-            for inner_idx, t in enumerate(ts):
-                t = ts[inner_idx]
-                y = ys[:, inner_idx]
-                entries[:, :, idx] = np.reshape(
-                    base_var_casadi(t, y, inputs).full(),
-                    [first_dim_size, second_dim_size],
-                    order="F",
-                )
-                idx += 1
-        return entries
 
     def _interp_setup(self, entries, t):
         """
@@ -807,6 +820,8 @@ class ProcessedVariable2DSciKitFEM(ProcessedVariable2D):
 
     Parameters
     ----------
+    variable : str
+        The name of the variable
     base_variables : list of :class:`pybamm.Symbol`
         A list of base variables with a method `evaluate(t,y)`, each entry of which
         returns the value of that variable for that particular sub-solution.
@@ -824,13 +839,15 @@ class ProcessedVariable2DSciKitFEM(ProcessedVariable2D):
 
     def __init__(
         self,
+        name: str,
         base_variables,
         base_variables_casadi,
         solution,
-        time_integral: Optional[pybamm.ProcessedVariableTimeIntegral] = None,
+        time_integral: pybamm.ProcessedVariableTimeIntegral | None = None,
     ):
         self.dimensions = 2
         super(ProcessedVariable2D, self).__init__(
+            name,
             base_variables,
             base_variables_casadi,
             solution,
@@ -859,8 +876,473 @@ class ProcessedVariable2DSciKitFEM(ProcessedVariable2D):
 
         return entries, coords_for_interp
 
+    def _observe_postfix(self, entries, t):
+        shape = entries.shape
+        entries = entries.transpose(1, 0, 2).reshape(shape)
+        return entries
 
-def process_variable(base_variables, *args, **kwargs):
+
+class ProcessedVariable2DFVM(ProcessedVariable):
+    def __init__(
+        self,
+        name: str,
+        base_variables,
+        base_variables_casadi,
+        solution,
+        time_integral: pybamm.ProcessedVariableTimeIntegral | None = None,
+    ):
+        self.dimensions = 2
+        super().__init__(
+            name,
+            base_variables,
+            base_variables_casadi,
+            solution,
+            time_integral=time_integral,
+        )
+        num_nodes_lr = len(self.mesh.nodes_lr)
+        num_nodes_tb = len(self.mesh.nodes_tb)
+        num_edges_lr = len(self.mesh.edges_lr)
+        num_edges_tb = len(self.mesh.edges_tb)
+
+        if not self.base_variables[0].evaluates_on_edges("primary"):
+            self.first_dim_size = num_nodes_lr
+            self.second_dim_size = num_nodes_tb
+            self.first_dim_pts = self.mesh.nodes_lr
+            self.second_dim_pts = self.mesh.nodes_tb
+        elif base_variables[0].evaluates_on_edges("primary") == "lr":
+            # Evaluates on edges in the LR direction
+            # Note that if the variable has the same number of nodes in the LR direction and the TB direction,
+            # Then we assume it evaluates on edges in the LR direction for lack of a better option
+            self.first_dim_size = num_edges_lr
+            self.second_dim_size = num_nodes_tb
+            self.first_dim_pts = self.mesh.edges_lr
+            self.second_dim_pts = self.mesh.nodes_tb
+        elif base_variables[0].evaluates_on_edges("primary") == "tb":
+            # Evaluates on edges in the TB direction
+            self.first_dim_size = num_nodes_lr
+            self.second_dim_size = num_edges_tb
+            self.first_dim_pts = self.mesh.nodes_lr
+            self.second_dim_pts = self.mesh.edges_tb
+        elif base_variables[0].evaluates_on_edges("primary"):
+            self.first_dim_size = num_edges_lr
+            self.second_dim_size = num_edges_tb
+            self.first_dim_pts = self.mesh.edges_lr
+            self.second_dim_pts = self.mesh.edges_tb
+        else:
+            raise ValueError(
+                f"ProcessedVariable2DFVM: Invalid shape {base_variables[0].shape}"
+            )
+
+    def _interp_setup(self, entries, t):
+        self.first_dimension = "x"
+        self.second_dimension = "z"
+        coords_for_interp = {
+            self.first_dimension: self.first_dim_pts,
+            self.second_dimension: self.second_dim_pts,
+            "t": t,
+        }
+        return entries, coords_for_interp
+
+    def _shape(self, t):
+        return [self.first_dim_size, self.second_dim_size, len(t)]
+
+
+class ProcessedVariableRawFVM(ProcessedVariable):
+    def _shape(self, t):
+        return [self.base_variables[0].size, len(t)]
+
+    def initialise(self):
+        if self.entries_raw_initialized:
+            return
+        entries = self.observe_raw()
+        self._entries_raw = entries
+
+
+class ProcessedVariable3D(ProcessedVariable):
+    """
+    An object that can be evaluated at arbitrary (scalars or vectors) t and x, and
+    returns the (interpolated) value of the base variable at that t and x.
+
+    Parameters
+    ----------
+    variable : str
+        The name of the variable
+    base_variables : list of :class:`pybamm.Symbol`
+        A list of base variables with a method `evaluate(t,y)`, each entry of which
+        returns the value of that variable for that particular sub-solution.
+        A Solution can be comprised of sub-solutions which are the solutions of
+        different models.
+        Note that this can be any kind of node in the expression tree, not
+        just a :class:`pybamm.Variable`.
+        When evaluated, returns an array of size (m,n)
+    base_variables_casadi : list of :class:`casadi.Function`
+        A list of casadi functions. When evaluated, returns the same thing as
+        `base_Variable.evaluate` (but more efficiently).
+    solution : :class:`pybamm.Solution`
+        The solution object to be used to create the processed variables
+    """
+
+    def __init__(
+        self,
+        name: str,
+        base_variables,
+        base_variables_casadi,
+        solution,
+        time_integral: pybamm.ProcessedVariableTimeIntegral | None = None,
+    ):
+        self.dimensions = 3
+        super().__init__(
+            name,
+            base_variables,
+            base_variables_casadi,
+            solution,
+            time_integral=time_integral,
+        )
+        first_dim_nodes = self.mesh.nodes
+        first_dim_edges = self.mesh.edges
+        second_dim_nodes = self.base_variables[0].secondary_mesh.nodes
+        third_dim_nodes = self.base_variables[0].tertiary_mesh.nodes
+        if self.base_eval_size // (len(second_dim_nodes) * len(third_dim_nodes)) == len(
+            first_dim_nodes
+        ):
+            first_dim_pts = first_dim_nodes
+        elif self.base_eval_size // (
+            len(second_dim_nodes) * len(third_dim_nodes)
+        ) == len(first_dim_edges):
+            first_dim_pts = first_dim_edges
+
+        second_dim_pts = second_dim_nodes
+        third_dim_pts = third_dim_nodes
+        self.first_dim_size = len(first_dim_pts)
+        self.second_dim_size = len(second_dim_pts)
+        self.third_dim_size = len(third_dim_pts)
+
+    def _interp_setup(self, entries, t):
+        """
+        Initialise a 3D object that depends on x, y, and z, or x, r, and R.
+        """
+        first_dim_nodes = self.mesh.nodes
+        first_dim_edges = self.mesh.edges
+        second_dim_nodes = self.base_variables[0].secondary_mesh.nodes
+        second_dim_edges = self.base_variables[0].secondary_mesh.edges
+        third_dim_nodes = self.base_variables[0].tertiary_mesh.nodes
+        third_dim_edges = self.base_variables[0].tertiary_mesh.edges
+        if self.base_eval_size // (len(second_dim_nodes) * len(third_dim_nodes)) == len(
+            first_dim_nodes
+        ):
+            first_dim_pts = first_dim_nodes
+        elif self.base_eval_size // (
+            len(second_dim_nodes) * len(third_dim_nodes)
+        ) == len(first_dim_edges):
+            first_dim_pts = first_dim_edges
+
+        second_dim_pts = second_dim_nodes
+        third_dim_pts = third_dim_nodes
+
+        # add points outside first dimension domain for extrapolation to
+        # boundaries
+        extrap_space_first_dim_left = np.array(
+            [2 * first_dim_pts[0] - first_dim_pts[1]]
+        )
+        extrap_space_first_dim_right = np.array(
+            [2 * first_dim_pts[-1] - first_dim_pts[-2]]
+        )
+        first_dim_pts = np.concatenate(
+            [extrap_space_first_dim_left, first_dim_pts, extrap_space_first_dim_right]
+        )
+        extrap_entries_left = np.expand_dims(2 * entries[0] - entries[1], axis=0)
+        extrap_entries_right = np.expand_dims(2 * entries[-1] - entries[-2], axis=0)
+        entries_for_interp = np.concatenate(
+            [extrap_entries_left, entries, extrap_entries_right], axis=0
+        )
+
+        # add points outside second dimension domain for extrapolation to
+        # boundaries
+        extrap_space_second_dim_left = np.array(
+            [2 * second_dim_pts[0] - second_dim_pts[1]]
+        )
+        extrap_space_second_dim_right = np.array(
+            [2 * second_dim_pts[-1] - second_dim_pts[-2]]
+        )
+        second_dim_pts = np.concatenate(
+            [
+                extrap_space_second_dim_left,
+                second_dim_pts,
+                extrap_space_second_dim_right,
+            ]
+        )
+        extrap_entries_second_dim_left = np.expand_dims(
+            2 * entries_for_interp[:, 0, :] - entries_for_interp[:, 1, :], axis=1
+        )
+        extrap_entries_second_dim_right = np.expand_dims(
+            2 * entries_for_interp[:, -1, :] - entries_for_interp[:, -2, :], axis=1
+        )
+        entries_for_interp = np.concatenate(
+            [
+                extrap_entries_second_dim_left,
+                entries_for_interp,
+                extrap_entries_second_dim_right,
+            ],
+            axis=1,
+        )
+
+        # add points outside tertiary dimension domain for extrapolation to
+        # boundaries
+        extrap_space_third_dim_left = np.array(
+            [2 * third_dim_pts[0] - third_dim_pts[1]]
+        )
+        extrap_space_third_dim_right = np.array(
+            [2 * third_dim_pts[-1] - third_dim_pts[-2]]
+        )
+        third_dim_pts = np.concatenate(
+            [
+                extrap_space_third_dim_left,
+                third_dim_pts,
+                extrap_space_third_dim_right,
+            ]
+        )
+        extrap_entries_third_dim_left = np.expand_dims(
+            2 * entries_for_interp[:, :, 0] - entries_for_interp[:, :, 1], axis=2
+        )
+        extrap_entries_third_dim_right = np.expand_dims(
+            2 * entries_for_interp[:, :, -1] - entries_for_interp[:, :, -2], axis=2
+        )
+        entries_for_interp = np.concatenate(
+            [
+                extrap_entries_third_dim_left,
+                entries_for_interp,
+                extrap_entries_third_dim_right,
+            ],
+            axis=2,
+        )
+
+        self.spatial_variable_names = {
+            k: self._process_spatial_variable_names(v)
+            for k, v in self.spatial_variables.items()
+        }
+
+        self.first_dimension = self.spatial_variable_names["primary"]
+        self.second_dimension = self.spatial_variable_names["secondary"]
+        self.third_dimension = self.spatial_variable_names["tertiary"]
+
+        # assign attributes for reference
+        first_dim_pts_for_interp = first_dim_pts
+        second_dim_pts_for_interp = second_dim_pts
+        third_dim_pts_for_interp = third_dim_pts
+
+        # Set pts to edges for nicer plotting
+        self.first_dim_pts = first_dim_edges
+        self.second_dim_pts = second_dim_edges
+        self.third_dim_pts = third_dim_edges
+
+        # save attributes for interpolation
+        coords_for_interp = {
+            self.first_dimension: first_dim_pts_for_interp,
+            self.second_dimension: second_dim_pts_for_interp,
+            self.third_dimension: third_dim_pts_for_interp,
+            "t": t,
+        }
+
+        return entries_for_interp, coords_for_interp
+
+    def _shape(self, t):
+        first_dim_size = self.first_dim_size
+        second_dim_size = self.second_dim_size
+        third_dim_size = self.third_dim_size
+        t_size = len(t)
+        return [first_dim_size, second_dim_size, third_dim_size, t_size]
+
+
+class ProcessedVariable3DSciKitFEM(ProcessedVariable3D):
+    """
+    An object that can be evaluated at arbitrary (scalars or vectors) t and x, and
+    returns the (interpolated) value of the base variable at that t and x.
+
+    Parameters
+    ----------
+    variable : str
+        The name of the variable
+    base_variables : list of :class:`pybamm.Symbol`
+        A list of base variables with a method `evaluate(t,y)`, each entry of which
+        returns the value of that variable for that particular sub-solution.
+        A Solution can be comprised of sub-solutions which are the solutions of
+        different models.
+        Note that this can be any kind of node in the expression tree, not
+        just a :class:`pybamm.Variable`.
+        When evaluated, returns an array of size (m,n)
+    base_variables_casadi : list of :class:`casadi.Function`
+        A list of casadi functions. When evaluated, returns the same thing as
+        `base_Variable.evaluate` (but more efficiently).
+    solution : :class:`pybamm.Solution`
+        The solution object to be used to create the processed variables
+    """
+
+    def __init__(
+        self,
+        name: str,
+        base_variables,
+        base_variables_casadi,
+        solution,
+        time_integral: pybamm.ProcessedVariableTimeIntegral | None = None,
+    ):
+        self.dimensions = 3
+        super(ProcessedVariable3D, self).__init__(
+            name,
+            base_variables,
+            base_variables_casadi,
+            solution,
+            time_integral=time_integral,
+        )
+        x_nodes = self.mesh.nodes
+        x_edges = self.mesh.edges
+        y_sol = self.base_variables[0].secondary_mesh.edges["y"]
+        z_sol = self.base_variables[0].secondary_mesh.edges["z"]
+        if self.base_eval_size // (len(y_sol) * len(z_sol)) == len(x_nodes):
+            x_sol = x_nodes
+        elif self.base_eval_size // (len(y_sol) * len(z_sol)) == len(x_edges):
+            x_sol = x_edges
+
+        self.first_dim_size = len(x_sol)
+        self.second_dim_size = len(y_sol)
+        self.third_dim_size = len(z_sol)
+
+    def _interp_setup(self, entries, t):
+        x_nodes = self.mesh.nodes
+        x_edges = self.mesh.edges
+        y_sol = self.base_variables[0].secondary_mesh.edges["y"]
+        z_sol = self.base_variables[0].secondary_mesh.edges["z"]
+        if self.base_eval_size // (len(y_sol) * len(z_sol)) == len(x_nodes):
+            x_sol = x_nodes
+        elif self.base_eval_size // (len(y_sol) * len(z_sol)) == len(x_edges):
+            x_sol = x_edges
+
+        # assign attributes for reference
+        self.x_sol = x_sol
+        self.y_sol = y_sol
+        self.z_sol = z_sol
+        self.first_dimension = "x"
+        self.second_dimension = "y"
+        self.third_dimension = "z"
+        self.first_dim_pts = x_sol
+        self.second_dim_pts = y_sol
+        self.third_dim_pts = z_sol
+
+        # save attributes for interpolation
+        coords_for_interp = {"x": x_sol, "y": y_sol, "z": z_sol, "t": t}
+
+        return entries, coords_for_interp
+
+    def _observe_postfix(self, entries, t):
+        shape = entries.shape
+        entries = entries.transpose(0, 2, 1, 3).reshape(shape)
+        return entries
+
+
+class ProcessedVariableUnstructured(ProcessedVariable):
+    """
+    A processed variable for data on an unstructured mesh (e.g., from a FEM solution).
+    This class correctly uses scipy's LinearNDInterpolator for spatial interpolation,
+    which is the required method for scattered data points from a FEM mesh.
+
+    Parameters
+    ----------
+    name : str
+        The name of the variable
+    base_variables : list of :class:`pybamm.Symbol`
+        A list of base variables with a method `evaluate(t,y)`, each entry of which
+        returns the value of that variable for that particular sub-solution.
+        A Solution can be comprised of sub-solutions which are the solutions of
+        different models.
+        base_variables : list of :class:`pybamm.Symbol`
+        A list of base variables with a method `evaluate(t,y)`, each entry of which
+        returns the value of that variable for that particular sub-solution.
+        A Solution can be comprised of sub-solutions which are the solutions of
+        different models.
+        Note that this can be any kind of node in the expression tree, not
+        just a :class:`pybamm.Variable`.
+        When evaluated, returns an array of size (m,n)
+    base_variables_casadi : list of :class:`casadi.Function`
+        A list of casadi functions. When evaluated, returns the same thing as
+        `base_Variable.evaluate` (but more efficiently).
+    solution : :class:`pybamm.Solution`
+        The solution object to be used to create the processed variables
+    time_integral : pybamm.ProcessedVariableTimeIntegral, optional
+        An optional time integral object to handle time integration of the variable.
+        If provided, the processed variable will handle time integration using this object.
+    """
+
+    def __init__(
+        self,
+        name: str,
+        base_variables,
+        base_variables_casadi,
+        solution,
+        time_integral: pybamm.ProcessedVariableTimeIntegral | None = None,
+    ):
+        self.dimensions = base_variables[0].mesh.dimension
+        super().__init__(
+            name,
+            base_variables,
+            base_variables_casadi,
+            solution,
+            time_integral=time_integral,
+        )
+        self._time_interpolator = None
+
+    def initialise(self):
+        if self.entries_raw_initialized:
+            return
+        self._entries_raw = self.observe_raw()
+
+        from scipy.interpolate import interp1d
+
+        self._time_interpolator = interp1d(
+            self.t_pts,
+            self._entries_raw,
+            kind="linear",
+            axis=1,  # Interpolate along the time axis
+            bounds_error=False,
+            fill_value="extrapolate",
+        )
+
+    def _shape(self, t):
+        return [self.mesh.npts, len(t)]
+
+    def __call__(self, t, x=None, y=None, z=None, r=None, R=None, fill_value=np.nan):
+        from scipy.interpolate import LinearNDInterpolator
+
+        self.initialise()
+
+        data_at_t = self._time_interpolator(t)
+
+        spatial_coords_provided = any(c is not None for c in [x, y, z])
+        if not spatial_coords_provided:
+            return data_at_t  # Return all node data if no spatial coords are given
+
+        node_coords = self.mesh.nodes
+
+        eval_points = np.column_stack([x.ravel(), y.ravel(), z.ravel()])
+        output_shape = x.shape
+
+        # If t was a single value (scalar), data_at_t is 1D array of (n_nodes)
+        if isinstance(t, int | float):
+            spatial_interpolator = LinearNDInterpolator(
+                points=node_coords, values=data_at_t, fill_value=fill_value
+            )
+            result = spatial_interpolator(eval_points)
+        else:  # If t was a vector, we must create an interpolator for each time step
+            result = np.empty((len(eval_points), len(t)))
+            for i in range(len(t)):
+                spatial_interpolator = LinearNDInterpolator(
+                    points=node_coords, values=data_at_t[:, i], fill_value=fill_value
+                )
+                result[:, i] = spatial_interpolator(eval_points)
+
+        final_shape = (*output_shape, len(t) if not isinstance(t, int | float) else 1)
+        return result.reshape(final_shape).squeeze()
+
+
+def process_variable(name: str, base_variables, *args, **kwargs):
     mesh = base_variables[0].mesh
     domain = base_variables[0].domain
 
@@ -868,39 +1350,62 @@ def process_variable(base_variables, *args, **kwargs):
     base_eval_shape = base_variables[0].shape
     base_eval_size = base_variables[0].size
 
+    if isinstance(mesh, pybamm.ScikitFemSubMesh3D):
+        return ProcessedVariableUnstructured(name, base_variables, *args, **kwargs)
+
     # handle 2D (in space) finite element variables differently
     if (
         mesh
         and "current collector" in domain
         and isinstance(mesh, pybamm.ScikitSubMesh2D)
     ):
-        return ProcessedVariable2DSciKitFEM(base_variables, *args, **kwargs)
+        return ProcessedVariable2DSciKitFEM(name, base_variables, *args, **kwargs)
+    if hasattr(base_variables[0], "secondary_mesh"):
+        if "current collector" in base_variables[0].domains["secondary"] and isinstance(
+            base_variables[0].secondary_mesh, pybamm.ScikitSubMesh2D
+        ):
+            return ProcessedVariable3DSciKitFEM(name, base_variables, *args, **kwargs)
+
+    if mesh and hasattr(mesh, "edges_lr") and hasattr(mesh, "edges_tb"):
+        return ProcessedVariable2DFVM(name, base_variables, *args, **kwargs)
 
     # check variable shape
     if len(base_eval_shape) == 0 or base_eval_shape[0] == 1:
-        return ProcessedVariable0D(base_variables, *args, **kwargs)
+        return ProcessedVariable0D(name, base_variables, *args, **kwargs)
 
+    if mesh is None:
+        return ProcessedVariable2DFVM(name, base_variables, *args, **kwargs)
     n = mesh.npts
     base_shape = base_eval_shape[0]
     # Try some shapes that could make the variable a 1D variable
     if base_shape in [n, n + 1]:
-        return ProcessedVariable1D(base_variables, *args, **kwargs)
+        return ProcessedVariable1D(name, base_variables, *args, **kwargs)
 
     # Try some shapes that could make the variable a 2D variable
     first_dim_nodes = mesh.nodes
     first_dim_edges = mesh.edges
-    second_dim_pts = base_variables[0].secondary_mesh.nodes
+    try:
+        second_dim_pts = base_variables[0].secondary_mesh.nodes
+    except AttributeError:
+        try:
+            return ProcessedVariable2DFVM(name, base_variables, *args, **kwargs)
+        except AttributeError:
+            return ProcessedVariableRawFVM(name, base_variables, *args, **kwargs)
     if base_eval_size // len(second_dim_pts) in [
         len(first_dim_nodes),
         len(first_dim_edges),
     ]:
-        return ProcessedVariable2D(base_variables, *args, **kwargs)
+        return ProcessedVariable2D(name, base_variables, *args, **kwargs)
 
-    # Raise error for 3D variable
-    raise NotImplementedError(
-        f"Shape not recognized for {base_variables[0]}"
-        + "(note processing of 3D variables is not yet implemented)"
-    )
+    # Try some shapes that could make the variable a 3D variable
+    tertiary_pts = base_variables[0].tertiary_mesh.nodes
+    if base_eval_size // (len(second_dim_pts) * len(tertiary_pts)) in [
+        len(first_dim_nodes),
+        len(first_dim_edges),
+    ]:
+        return ProcessedVariable3D(name, base_variables, *args, **kwargs)
+
+    raise NotImplementedError(f"Shape not recognized for {base_variables[0]}")
 
 
 def _is_f_contiguous(all_ys):

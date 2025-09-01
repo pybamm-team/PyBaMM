@@ -1,10 +1,11 @@
-import tempfile
-import json
-import pybamm
 import copy
+import json
+from typing import Any
+
 import numpy as np
 import pytest
-from typing import Any
+
+import pybamm
 
 
 class TestBPX:
@@ -103,7 +104,7 @@ class TestBPX:
             },
         }
 
-    def test_bpx(self):
+    def test_bpx(self, tmp_path):
         bpx_objs = [
             {
                 **copy.deepcopy(self.base),
@@ -127,36 +128,27 @@ class TestBPX:
             ]
         )
 
-        filename = "tmp.json"
         sols = []
         for obj in bpx_objs:
-            with tempfile.NamedTemporaryFile(
-                suffix=filename, delete=False, mode="w"
-            ) as tmp:
-                json.dump(obj, tmp)
-                tmp.flush()
-
-                pv = pybamm.ParameterValues.create_from_bpx(tmp.name)
-                sim = pybamm.Simulation(
-                    model, parameter_values=pv, experiment=experiment
-                )
-                sols.append(sim.solve())
+            temp_file = tmp_path / "tmp.json"
+            temp_file.write_text(json.dumps(obj))
+            pv = pybamm.ParameterValues.create_from_bpx(temp_file)
+            sim = pybamm.Simulation(model, parameter_values=pv, experiment=experiment)
+            sols.append(sim.solve())
 
         with pytest.raises(AssertionError):
             np.testing.assert_allclose(
                 sols[0]["Voltage [V]"].data, sols[1]["Voltage [V]"].data, atol=1e-7
             )
 
-    def test_no_already_exists_in_BPX(self):
-        with tempfile.NamedTemporaryFile(
-            suffix="test.json", delete=False, mode="w"
-        ) as test_file:
-            json.dump(copy.deepcopy(self.base), test_file)
-            test_file.flush()
-            params = pybamm.ParameterValues.create_from_bpx(test_file.name)
-            assert "check_already_exists" not in params.keys()
+    def test_no_already_exists_in_BPX(self, tmp_path):
+        temp_file = tmp_path / "tmp.json"
+        temp_file.write_text(json.dumps(copy.deepcopy(self.base)))
 
-    def test_constant_functions(self):
+        params = pybamm.ParameterValues.create_from_bpx(temp_file)
+        assert "check_already_exists" not in params.keys()
+
+    def test_constant_functions(self, tmp_path):
         bpx_obj = copy.deepcopy(self.base)
         bpx_obj["Parameterisation"]["Electrolyte"].update(
             {
@@ -177,34 +169,30 @@ class TestBPX:
             }
         )
 
-        filename = "tmp.json"
-        with tempfile.NamedTemporaryFile(
-            suffix=filename, delete=False, mode="w"
-        ) as tmp:
-            json.dump(bpx_obj, tmp)
-            tmp.flush()
+        temp_file = tmp_path / "tmp.json"
+        temp_file.write_text(json.dumps(bpx_obj))
 
-            param = pybamm.ParameterValues.create_from_bpx(tmp.name)
+        param = pybamm.ParameterValues.create_from_bpx(temp_file)
 
-            # Function to check that functional parameters output constants
-            def check_constant_output(func):
-                stos = [0, 1]
-                T = 298.15
-                p_vals = [func(sto, T) for sto in stos]
-                assert p_vals[0] == p_vals[1]
+        # Function to check that functional parameters output constants
+        def check_constant_output(func):
+            stos = [0, 1]
+            T = 298.15
+            p_vals = [func(sto, T) for sto in stos]
+            assert p_vals[0] == p_vals[1]
 
-            for electrode in ["Negative", "Positive"]:
-                D = param[f"{electrode} particle diffusivity [m2.s-1]"]
-                dUdT = param[f"{electrode} electrode OCP entropic change [V.K-1]"]
-                check_constant_output(D)
-                assert dUdT == 1
+        for electrode in ["Negative", "Positive"]:
+            D = param[f"{electrode} particle diffusivity [m2.s-1]"]
+            dUdT = param[f"{electrode} electrode OCP entropic change [V.K-1]"]
+            check_constant_output(D)
+            assert dUdT == 1
 
-            kappa = param["Electrolyte conductivity [S.m-1]"]
-            De = param["Electrolyte diffusivity [m2.s-1]"]
-            check_constant_output(kappa)
-            check_constant_output(De)
+        kappa = param["Electrolyte conductivity [S.m-1]"]
+        De = param["Electrolyte diffusivity [m2.s-1]"]
+        check_constant_output(kappa)
+        check_constant_output(De)
 
-    def test_table_data(self):
+    def test_table_data(self, tmp_path):
         bpx_obj = copy.deepcopy(self.base)
         data = {"x": [0, 1], "y": [0, 1]}
         bpx_obj["Parameterisation"]["Electrolyte"].update(
@@ -228,48 +216,40 @@ class TestBPX:
             }
         )
 
-        filename = "tmp.json"
-        with tempfile.NamedTemporaryFile(
-            suffix=filename, delete=False, mode="w"
-        ) as tmp:
-            json.dump(bpx_obj, tmp)
-            tmp.flush()
+        temp_file = tmp_path / "tmp.json"
+        temp_file.write_text(json.dumps(bpx_obj))
 
-            param = pybamm.ParameterValues.create_from_bpx(tmp.name)
+        param = pybamm.ParameterValues.create_from_bpx(temp_file)
 
-            # Check that the electrolyte conductivity is an Interpolant with the
-            # correct child
-            c = pybamm.Variable("c")
-            kappa = param["Electrolyte conductivity [S.m-1]"](c, 298.15)
-            assert isinstance(kappa, pybamm.Interpolant)
-            assert kappa.children[0] == c
-            # Check other parameters give interpolants
-            D = param["Electrolyte diffusivity [m2.s-1]"](c, 298.15)
+        # Check that the electrolyte conductivity is an Interpolant with the
+        # correct child
+        c = pybamm.Variable("c")
+        kappa = param["Electrolyte conductivity [S.m-1]"](c, 298.15)
+        assert isinstance(kappa, pybamm.Interpolant)
+        assert kappa.children[0] == c
+        # Check other parameters give interpolants
+        D = param["Electrolyte diffusivity [m2.s-1]"](c, 298.15)
+        assert isinstance(D, pybamm.Interpolant)
+        for electrode in ["Negative", "Positive"]:
+            D = param[f"{electrode} particle diffusivity [m2.s-1]"](c, 298.15)
             assert isinstance(D, pybamm.Interpolant)
-            for electrode in ["Negative", "Positive"]:
-                D = param[f"{electrode} particle diffusivity [m2.s-1]"](c, 298.15)
-                assert isinstance(D, pybamm.Interpolant)
-                OCP = param[f"{electrode} electrode OCP [V]"](c)
-                assert isinstance(OCP, pybamm.Interpolant)
-                dUdT = param[f"{electrode} electrode OCP entropic change [V.K-1]"](c)
-                assert isinstance(dUdT, pybamm.Interpolant)
+            OCP = param[f"{electrode} electrode OCP [V]"](c)
+            assert isinstance(OCP, pybamm.Interpolant)
+            dUdT = param[f"{electrode} electrode OCP entropic change [V.K-1]"](c)
+            assert isinstance(dUdT, pybamm.Interpolant)
 
     def test_bpx_soc_error(self):
         bpx_obj = copy.deepcopy(self.base)
         with pytest.raises(ValueError, match="Target SOC"):
             pybamm.ParameterValues.create_from_bpx_obj(bpx_obj, target_soc=10)
 
-    def test_bpx_arrhenius(self):
+    def test_bpx_arrhenius(self, tmp_path):
         bpx_obj = copy.deepcopy(self.base)
 
-        filename = "tmp.json"
-        with tempfile.NamedTemporaryFile(
-            suffix=filename, delete=False, mode="w"
-        ) as tmp:
-            json.dump(bpx_obj, tmp)
-            tmp.flush()
+        temp_file = tmp_path / "tmp.json"
+        temp_file.write_text(json.dumps(bpx_obj))
 
-            pv = pybamm.ParameterValues.create_from_bpx(tmp.name)
+        pv = pybamm.ParameterValues.create_from_bpx(temp_file)
 
         def arrhenius_assertion(pv, param_key, Ea_key):
             sto = 0.5
@@ -282,15 +262,18 @@ class TestBPX:
 
             if "exchange-current" in param_key:
                 eval_ratio = (
-                    pv[param_key](c_e, c_s_surf, c_s_max, T).value
-                    / pv[param_key](c_e, c_s_surf, c_s_max, T_ref).value
+                    pv[param_key](c_e, c_s_surf, c_s_max, T).evaluate()
+                    / pv[param_key](c_e, c_s_surf, c_s_max, T_ref).evaluate()
                 )
             else:
                 eval_ratio = (
-                    pv[param_key](sto, T).value / pv[param_key](sto, T_ref).value
+                    pv[param_key](sto, T).evaluate()
+                    / pv[param_key](sto, T_ref).evaluate()
                 )
 
-            calc_ratio = pybamm.exp(Ea / pybamm.constants.R * (1 / T_ref - 1 / T)).value
+            calc_ratio = pybamm.exp(
+                Ea / pybamm.constants.R * (1 / T_ref - 1 / T)
+            ).evaluate()
 
             assert eval_ratio == pytest.approx(calc_ratio)
 
@@ -312,10 +295,10 @@ class TestBPX:
             "Negative electrode reaction rate constant activation energy [J.mol-1]",
         ]
 
-        for param_key, Ea_key in zip(param_keys, Ea_keys):
+        for param_key, Ea_key in zip(param_keys, Ea_keys, strict=False):
             arrhenius_assertion(pv, param_key, Ea_key)
 
-    def test_bpx_blended(self):
+    def test_bpx_blended(self, tmp_path):
         bpx_obj = copy.deepcopy(self.base)
         bpx_obj["Parameterisation"]["Positive electrode"] = {
             "Thickness [m]": 5.23e-05,
@@ -352,33 +335,30 @@ class TestBPX:
             },
         }
 
-        filename = "tmp.json"
-        with tempfile.NamedTemporaryFile(
-            suffix=filename, delete=False, mode="w"
-        ) as tmp:
-            json.dump(bpx_obj, tmp)
-            tmp.flush()
+        temp_file = tmp_path / "tmp.json"
+        temp_file.write_text(json.dumps(bpx_obj))
 
-            pv = pybamm.ParameterValues.create_from_bpx(tmp.name)
-            # initial concentration must be set manually for blended models (for now)
-            pv.update(
-                {
-                    "Initial concentration in negative electrode [mol.m-3]": 22000,
-                    "Primary: Initial concentration in positive electrode [mol.m-3]": 19404,
-                    "Secondary: Initial concentration in positive electrode [mol.m-3]": 19404,
-                },
-                check_already_exists=False,
-            )
-            model = pybamm.lithium_ion.SPM({"particle phases": ("1", "2")})
-            experiment = pybamm.Experiment(
-                [
-                    "Discharge at C/5 for 1 hour",
-                ]
-            )
-            sim = pybamm.Simulation(model, parameter_values=pv, experiment=experiment)
-            sim.solve(calc_esoh=False)
+        pv = pybamm.ParameterValues.create_from_bpx(temp_file)
 
-    def test_bpx_blended_error(self):
+        # initial concentration must be set manually for blended models (for now)
+        pv.update(
+            {
+                "Initial concentration in negative electrode [mol.m-3]": 22000,
+                "Primary: Initial concentration in positive electrode [mol.m-3]": 19404,
+                "Secondary: Initial concentration in positive electrode [mol.m-3]": 19404,
+            },
+            check_already_exists=False,
+        )
+        model = pybamm.lithium_ion.SPM({"particle phases": ("1", "2")})
+        experiment = pybamm.Experiment(
+            [
+                "Discharge at C/5 for 1 hour",
+            ]
+        )
+        sim = pybamm.Simulation(model, parameter_values=pv, experiment=experiment)
+        sim.solve(calc_esoh=False)
+
+    def test_bpx_blended_error(self, tmp_path):
         bpx_obj = copy.deepcopy(self.base)
         bpx_obj["Parameterisation"]["Positive electrode"] = {
             "Thickness [m]": 5.23e-05,
@@ -428,17 +408,12 @@ class TestBPX:
             },
         }
 
-        filename = "tmp.json"
-        with tempfile.NamedTemporaryFile(
-            suffix=filename, delete=False, mode="w"
-        ) as tmp:
-            json.dump(bpx_obj, tmp)
-            tmp.flush()
+        temp_file = tmp_path / "tmp.json"
+        temp_file.write_text(json.dumps(bpx_obj))
+        with pytest.raises(NotImplementedError, match="PyBaMM does not support"):
+            pybamm.ParameterValues.create_from_bpx(temp_file)
 
-            with pytest.raises(NotImplementedError, match="PyBaMM does not support"):
-                pybamm.ParameterValues.create_from_bpx(tmp.name)
-
-    def test_bpx_user_defined(self):
+    def test_bpx_user_defined(self, tmp_path):
         bpx_obj = copy.deepcopy(self.base)
         data = {"x": [0, 1], "y": [0, 1]}
         bpx_obj["Parameterisation"]["User-defined"] = {
@@ -447,40 +422,32 @@ class TestBPX:
             "User-defined parameter data function": "x**2",
         }
 
-        filename = "tmp.json"
-        with tempfile.NamedTemporaryFile(
-            suffix=filename, delete=False, mode="w"
-        ) as tmp:
-            json.dump(bpx_obj, tmp)
-            tmp.flush()
+        temp_file = tmp_path / "tmp.json"
+        temp_file.write_text(json.dumps(bpx_obj))
 
-            param = pybamm.ParameterValues.create_from_bpx(tmp.name)
+        param = pybamm.ParameterValues.create_from_bpx(temp_file)
 
-            assert param["User-defined scalar parameter"] == pytest.approx(
-                1.0, rel=1e-12
-            )
-            var = pybamm.Variable("var")
-            assert isinstance(
-                param["User-defined parameter data"](var), pybamm.Interpolant
-            )
-            assert isinstance(
-                param["User-defined parameter data function"](var), pybamm.Power
-            )
+        assert param["User-defined scalar parameter"] == pytest.approx(1.0, rel=1e-12)
+        var = pybamm.Variable("var")
+        assert isinstance(param["User-defined parameter data"](var), pybamm.Interpolant)
+        assert isinstance(
+            param["User-defined parameter data function"](var), pybamm.Power
+        )
 
-    def test_bpx_activation_energy_default(self):
+    def test_bpx_activation_energy_default(self, tmp_path):
         bpx_obj = copy.deepcopy(self.base)
         del bpx_obj["Parameterisation"]["Negative electrode"][
             "Diffusivity activation energy [J.mol-1]"
         ]
-        with tempfile.NamedTemporaryFile(
-            suffix="test.json", delete=False, mode="w"
-        ) as test_file:
-            json.dump(copy.deepcopy(bpx_obj), test_file)
-            test_file.flush()
-            param = pybamm.ParameterValues.create_from_bpx(test_file.name)
-            assert param[
-                "Negative electrode diffusivity activation energy [J.mol-1]"
-            ] == pytest.approx(0.0, rel=1e-12)
+
+        test_file = tmp_path / "test.json"
+        test_file.write_text(json.dumps(bpx_obj))
+
+        param = pybamm.ParameterValues.create_from_bpx(test_file)
+
+        assert param[
+            "Negative electrode diffusivity activation energy [J.mol-1]"
+        ] == pytest.approx(0.0, rel=1e-12)
 
     def test_bpx_from_obj(self):
         bpx_obj = copy.deepcopy(self.base)

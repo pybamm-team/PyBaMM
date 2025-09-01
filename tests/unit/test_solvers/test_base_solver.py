@@ -2,11 +2,12 @@
 # Tests for the Base Solver class
 #
 
-import pytest
 import casadi
-import pybamm
 import numpy as np
+import pytest
 from scipy.sparse import csr_matrix
+
+import pybamm
 
 
 class TestBaseSolver:
@@ -19,7 +20,6 @@ class TestBaseSolver:
         assert solver.rtol == 1e-5
         solver.rtol = 1e-7
         assert solver.rtol == 1e-7
-        assert solver.requires_explicit_sensitivities
 
     def test_root_method_init(self):
         solver = pybamm.BaseSolver(root_method="casadi")
@@ -40,7 +40,7 @@ class TestBaseSolver:
 
     def test_additional_inputs_provided(self):
         # if additional inputs are provided that are not in the model, this should run as normal
-        sim = pybamm.Simulation(pybamm.lithium_ion.SPM(), solver=pybamm.IDAKLUSolver())
+        sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
         sol1 = sim.solve([0, 3600])["Voltage [V]"].entries
         sol2 = sim.solve([0, 3600], inputs={"Current function [A]": 1})[
             "Voltage [V]"
@@ -93,14 +93,14 @@ class TestBaseSolver:
         t_eval = np.array([0, 1])
         with pytest.raises(
             pybamm.SolverError,
-            match="Elements inside array t_eval must lie in the closed interval 0 to dt",
+            match="The final `t_eval` value \\(1\\) must be equal to the step time `dt` \\(2\\)",
         ):
             solver.step(None, model, dt, t_eval=t_eval)
 
         t_eval = np.array([1, dt])
         with pytest.raises(
             pybamm.SolverError,
-            match="Elements inside array t_eval must lie in the closed interval 0 to dt",
+            match="The first `t_eval` value \\(1\\) must be 0",
         ):
             solver.step(None, model, dt, t_eval=t_eval)
 
@@ -198,6 +198,7 @@ class TestBaseSolver:
         init_states = solver.calculate_consistent_state(model)
         np.testing.assert_allclose(init_states.flatten(), vec, rtol=1e-7, atol=1e-6)
         # with casadi
+        solver_with_casadi.root_method.step_tol = 1e-12
         init_states = solver_with_casadi.calculate_consistent_state(model)
         np.testing.assert_allclose(
             init_states.full().flatten(), vec, rtol=1e-7, atol=1e-6
@@ -247,20 +248,20 @@ class TestBaseSolver:
 
         with pytest.raises(
             pybamm.SolverError,
-            match="Could not find acceptable solution: The iteration is not making",
+            match="Could not find acceptable solution",
         ):
             solver.calculate_consistent_state(Model())
         solver = pybamm.BaseSolver(root_method="lm")
         with pytest.raises(
             pybamm.SolverError,
-            match="Could not find acceptable solution: solver terminated",
+            match="Could not find acceptable solution",
         ):
             solver.calculate_consistent_state(Model())
         # with casadi
         solver = pybamm.BaseSolver(root_method="casadi")
         with pytest.raises(
             pybamm.SolverError,
-            match="Could not find acceptable solution: Error in Function",
+            match="Could not find acceptable solution",
         ):
             solver.calculate_consistent_state(Model())
 
@@ -312,7 +313,7 @@ class TestBaseSolver:
         model.initial_conditions = {v: 1}
         x = np.array([0, 1])
         interp = pybamm.Interpolant(x, x, pybamm.t)
-        solver = pybamm.CasadiSolver()
+        solver = pybamm.IDAKLUSolver()
         for input_key in ["Current input [A]", "Voltage input [V]", "Power input [W]"]:
             sol = solver.step(
                 old_solution=None, model=model, dt=1.0, inputs={input_key: interp}
@@ -367,7 +368,7 @@ class TestBaseSolver:
         solver = pybamm.BaseSolver()
         assert solver.get_platform_context("Win") == "spawn"
         assert solver.get_platform_context("Linux") == "fork"
-        assert solver.get_platform_context("Darwin") == "fork"
+        assert solver.get_platform_context("Darwin") == "spawn"
 
     def test_sensitivities(self):
         def exact_diff_a(y, a, b):
@@ -414,3 +415,34 @@ class TestBaseSolver:
             np.testing.assert_allclose(
                 sens_b, exact_diff_b(y, inputs["a"], inputs["b"])
             )
+
+    def test_on_extrapolation_and_on_failure_settings(self):
+        # Test setting different on_extrapolation and on_failure values on BaseSolver
+        base_solver = pybamm.BaseSolver()
+
+        # Test valid on_extrapolation values
+        base_solver.on_extrapolation = "warn"
+        assert base_solver.on_extrapolation == "warn"
+        base_solver.on_extrapolation = "error"
+        assert base_solver.on_extrapolation == "error"
+        base_solver.on_extrapolation = "ignore"
+        assert base_solver.on_extrapolation == "ignore"
+
+        # Test valid on_failure values
+        base_solver.on_failure = "warn"
+        assert base_solver.on_failure == "warn"
+        base_solver.on_failure = "error"
+        assert base_solver.on_failure == "error"
+        base_solver.on_failure = "ignore"
+        assert base_solver.on_failure == "ignore"
+
+        # Test invalid value
+        with pytest.raises(
+            ValueError, match="on_extrapolation must be 'warn', 'raise', or 'ignore'"
+        ):
+            base_solver.on_extrapolation = "invalid"
+
+        with pytest.raises(
+            ValueError, match="on_failure must be 'warn', 'raise', or 'ignore'"
+        ):
+            base_solver.on_failure = "invalid"

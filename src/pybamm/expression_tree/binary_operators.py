@@ -2,16 +2,19 @@
 # Binary operator classes
 #
 from __future__ import annotations
-import numbers
 
-import numpy as np
-import sympy
-from scipy.sparse import csr_matrix, issparse
 import functools
+import numbers
+from collections.abc import Callable
+from typing import cast
+
+import casadi
+import numpy as np
+import numpy.typing as npt
+import sympy
+from scipy.sparse import csr_matrix, issparse, kron
 
 import pybamm
-
-from typing import Callable, cast
 
 # create type alias(s)
 from pybamm.type_definitions import ChildSymbol, ChildValue, Numeric
@@ -20,13 +23,13 @@ from pybamm.type_definitions import ChildSymbol, ChildValue, Numeric
 def _preprocess_binary(
     left: ChildSymbol, right: ChildSymbol
 ) -> tuple[pybamm.Symbol, pybamm.Symbol]:
-    if isinstance(left, (float, int, np.number)):
+    if isinstance(left, float | int | np.number):
         left = pybamm.Scalar(left)
     elif isinstance(left, np.ndarray):
         if left.ndim > 1:
             raise ValueError("left must be a 1D array")
         left = pybamm.Vector(left)
-    if isinstance(right, (float, int, np.number)):
+    if isinstance(right, float | int | np.number):
         right = pybamm.Scalar(right)
     elif isinstance(right, np.ndarray):
         if right.ndim > 1:
@@ -152,8 +155,8 @@ class BinaryOperator(pybamm.Symbol):
     def evaluate(
         self,
         t: float | None = None,
-        y: np.ndarray | None = None,
-        y_dot: np.ndarray | None = None,
+        y: npt.NDArray[np.float64] | None = None,
+        y_dot: npt.NDArray[np.float64] | None = None,
         inputs: dict | str | None = None,
     ):
         """See :meth:`pybamm.Symbol.evaluate()`."""
@@ -356,6 +359,50 @@ class Multiplication(BinaryOperator):
             return left * right
 
 
+class KroneckerProduct(BinaryOperator):
+    """
+    A node in the expression tree representing a matrix multiplication operator.
+    """
+
+    def __init__(
+        self,
+        left: ChildSymbol,
+        right: ChildSymbol,
+    ):
+        """See :meth:`pybamm.BinaryOperator.__init__()`."""
+        super().__init__("kronecker product", left, right)
+
+    def diff(self, variable):
+        """See :meth:`pybamm.Symbol.diff()`."""
+        # We shouldn't need this
+        raise NotImplementedError(
+            "diff not implemented for symbol of type 'MatrixMultiplication'"
+        )
+
+    def _binary_jac(self, left_jac, right_jac):
+        """See :meth:`pybamm.BinaryOperator._binary_jac()`."""
+        raise NotImplementedError
+
+    def _binary_evaluate(self, left, right):
+        """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
+        if issparse(left) or issparse(right):
+            return kron(left, right)
+        else:
+            return np.kron(left, right)
+
+    def _sympy_operator(self, left, right):
+        """Override :meth:`pybamm.BinaryOperator._sympy_operator`"""
+        raise NotImplementedError
+
+    def _binary_new_copy(
+        self,
+        left: ChildSymbol,
+        right: ChildSymbol,
+    ):
+        """See :meth:`pybamm.BinaryOperator._binary_new_copy()`."""
+        return pybamm.kronecker_product(left, right)
+
+
 class MatrixMultiplication(BinaryOperator):
     """
     A node in the expression tree representing a matrix multiplication operator.
@@ -435,9 +482,11 @@ class Division(BinaryOperator):
 
     def _binary_evaluate(self, left, right):
         """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
-
         if issparse(left):
             return csr_matrix(left.multiply(1 / right))
+        # casadi oversimplifies division of sparse matrices
+        elif isinstance(right, casadi.casadi.MX):
+            return left * (1 / right)
         else:
             return left / right
 
@@ -860,7 +909,9 @@ def _simplified_binary_broadcast_concatenation(
                 return left.create_copy(
                     [
                         operator(left_child, right_child)
-                        for left_child, right_child in zip(left.orphans, right.orphans)
+                        for left_child, right_child in zip(
+                            left.orphans, right.orphans, strict=False
+                        )
                     ]
                 )
             else:
@@ -953,7 +1004,7 @@ def add(left: ChildSymbol, right: ChildSymbol):
         elif all(
             left_dim_size <= right_dim_size
             for left_dim_size, right_dim_size in zip(
-                left.shape_for_testing, right.shape_for_testing
+                left.shape_for_testing, right.shape_for_testing, strict=False
             )
         ) and all(
             left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
@@ -990,7 +1041,7 @@ def add(left: ChildSymbol, right: ChildSymbol):
         return right - left.orphans[0]
 
     if left.is_constant():
-        if isinstance(right, (Addition, Subtraction)) and right.left.is_constant():
+        if isinstance(right, Addition | Subtraction) and right.left.is_constant():
             # Simplify a + (b +- c) to (a + b) +- c if (a + b) is constant
             r_left, r_right = right.orphans
             return right.create_copy([left + r_left, r_right])
@@ -1042,7 +1093,7 @@ def subtract(
         elif all(
             left_dim_size <= right_dim_size
             for left_dim_size, right_dim_size in zip(
-                left.shape_for_testing, right.shape_for_testing
+                left.shape_for_testing, right.shape_for_testing, strict=False
             )
         ) and all(
             left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
@@ -1063,7 +1114,7 @@ def subtract(
         return left + right.orphans[0]
 
     if left.is_constant():
-        if isinstance(right, (Addition, Subtraction)) and right.left.is_constant():
+        if isinstance(right, Addition | Subtraction) and right.left.is_constant():
             # Simplify a - (b +- c) to (a - b) -+ c if (a - b) is constant
             r_left, r_right = right.orphans
             return right.create_copy([left - r_left, -r_right])
@@ -1117,11 +1168,11 @@ def multiply(
         return pybamm.zeros_like(Multiplication(left, right))
 
     # anything multiplied by a scalar one returns itself
-    if pybamm.is_scalar_one(left):
+    if pybamm.is_scalar_one(left) and not isinstance(right, _Heaviside):
         return right
 
     # anything multiplied by a scalar negative one returns negative itself
-    if pybamm.is_scalar_minus_one(left):
+    if pybamm.is_scalar_minus_one(left) and not isinstance(right, _Heaviside):
         return -right
 
     # Return constant if both sides are constant
@@ -1178,7 +1229,7 @@ def multiply(
         # This is a common construction that appears from discretisation of spatial
         # operators
         # Also do this for cases like a * (b @ c + d) where (a * b) is constant
-        elif isinstance(right, (Addition, Subtraction)):
+        elif isinstance(right, Addition | Subtraction):
             mul_classes = (Multiplication, MatrixMultiplication)
             if (
                 right.left.is_constant()
@@ -1258,7 +1309,7 @@ def divide(
         return pybamm.simplify_if_constant(Division(left, right))
 
     if left.is_constant():
-        if isinstance(right, (Multiplication, Division)) and right.left.is_constant():
+        if isinstance(right, Multiplication | Division) and right.left.is_constant():
             r_left, r_right = right.orphans
             # Simplify a / (b */ c) to (a / b) /* c if (a / b) is constant
             if isinstance(right, Multiplication):
@@ -1326,7 +1377,7 @@ def matmul(
         new_mul.copy_domains(right)
         return new_mul
 
-    elif left.is_constant() and isinstance(right, (Addition, Subtraction)):
+    elif left.is_constant() and isinstance(right, Addition | Subtraction):
         # Simplify A @ (b +- c) to (A @ b) +- (A @ c) if (A @ b) or (A @ c) is constant
         # This is a common construction that appears from discretisation of spatial
         # operators
@@ -1355,6 +1406,10 @@ def matmul(
                 return (left @ r_left) - (left @ r_right)
 
     return pybamm.simplify_if_constant(MatrixMultiplication(left, right))
+
+
+def kronecker_product(left: ChildSymbol, right: ChildSymbol):
+    return pybamm.simplify_if_constant(KroneckerProduct(left, right))
 
 
 def minimum(
@@ -1538,16 +1593,18 @@ def source(
         corresponding to a source term in the bulk.
     """
     # Broadcast if left is number
+    right_domain = right.domain
     if isinstance(left, numbers.Number):
-        left = pybamm.PrimaryBroadcast(left, "current collector")
+        left = pybamm.PrimaryBroadcast(left, right_domain)
 
     # force type cast for mypy
     left = cast(pybamm.Symbol, left)
 
-    if left.domain != ["current collector"] or right.domain != ["current collector"]:
+    allowed_domains = [["cell"], ["current collector"]]
+    if left.domain not in allowed_domains or right_domain not in allowed_domains:
         raise pybamm.DomainError(
-            "'source' only implemented in the 'current collector' domain, "
-            f"but symbols have domains {left.domain} and {right.domain}"
+            "'source' only implemented in the 'cell' or 'current collector' domains, "
+            f"but symbols have domains {left.domain} and {right_domain}"
         )
     if boundary:
         return pybamm.BoundaryMass(right) @ left

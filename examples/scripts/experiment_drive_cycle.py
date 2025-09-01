@@ -1,9 +1,9 @@
 #
 # Constant-current constant-voltage charge with US06 Drive Cycle using Experiment Class.
 #
-import pybamm
 import pandas as pd
 
+import pybamm
 
 pybamm.set_logging_level("INFO")
 
@@ -42,7 +42,7 @@ experiment = pybamm.Experiment(
 )
 
 model = pybamm.lithium_ion.DFN()
-sim = pybamm.Simulation(model, experiment=experiment, solver=pybamm.CasadiSolver())
+sim = pybamm.Simulation(model, experiment=experiment)
 sim.solve()
 
 # Show all plots
