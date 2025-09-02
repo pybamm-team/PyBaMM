@@ -126,7 +126,7 @@ def silicon_ocp_delithiation_Mark2016(sto):
         + p6 * sto**2
         + p7 * sto
         + p8
-    ) + 1e-4 * (1 / sto + 1 / (sto - 1))
+    )
     return U_delithiation
 
 

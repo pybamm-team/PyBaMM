@@ -325,8 +325,8 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
 
 def get_initial_stoichiometries_composite(
     initial_value,
-    direction,
     parameter_values,
+    direction=None,
     param=None,
     options=None,
     tol=1e-6,

@@ -715,7 +715,7 @@ class ElectrodeSOHSolver:
             )
 
     def get_initial_stoichiometries(
-        self, initial_value, direction, tol=1e-6, inputs=None
+        self, initial_value, direction=None, tol=1e-6, inputs=None
     ):
         """
         Calculate initial stoichiometries to start off the simulation at a particular
@@ -850,7 +850,7 @@ class ElectrodeSOHSolver:
         sol = self.solve(all_inputs)
         return [sol["x_0"], sol["x_100"], sol["y_100"], sol["y_0"]]
 
-    def get_initial_ocps(self, initial_value, direction, tol=1e-6, inputs=None):
+    def get_initial_ocps(self, initial_value, direction=None, tol=1e-6, inputs=None):
         """
         Calculate initial open-circuit potentials to start off the simulation at a
         particular state of charge, given voltage limits, open-circuit potentials, etc
@@ -876,7 +876,7 @@ class ElectrodeSOHSolver:
         inputs = inputs or {}
         parameter_values = self.parameter_values
         x, y = self.get_initial_stoichiometries(
-            initial_value, direction, tol, inputs=inputs
+            initial_value, tol=tol, inputs=inputs, direction=direction
         )
         if self.options["open-circuit potential"] == "MSMR":
             msmr_pot_model = _get_msmr_potential_model(
@@ -935,8 +935,7 @@ class ElectrodeSOHSolver:
         sol = self.solve(all_inputs)
         return [sol["Un(x_0)"], sol["Un(x_100)"], sol["Up(y_100)"], sol["Up(y_0)"]]
 
-    def theoretical_energy_integral(self, inputs, points=1000):
-        direction = "discharge"
+    def theoretical_energy_integral(self, inputs, points=1000, direction="discharge"):
         x_0 = inputs["x_0"]
         y_0 = inputs["y_0"]
         x_100 = inputs["x_100"]
@@ -969,8 +968,8 @@ class ElectrodeSOHSolver:
 
 def get_initial_stoichiometries(
     initial_value,
-    direction,
     parameter_values,
+    direction=None,
     param=None,
     known_value="cyclable lithium capacity",
     options=None,
@@ -1020,13 +1019,13 @@ def get_initial_stoichiometries(
         options=options,
     )
     return esoh_solver.get_initial_stoichiometries(
-        initial_value, direction, tol, inputs=inputs
+        initial_value, tol=tol, inputs=inputs, direction=direction
     )
 
 
 def get_min_max_stoichiometries(
-    direction,
     parameter_values,
+    direction=None,
     param=None,
     known_value="cyclable lithium capacity",
     options=None,
@@ -1050,6 +1049,8 @@ def get_min_max_stoichiometries(
     options : dict-like, optional
         A dictionary of options to be passed to the model, see
         :class:`pybamm.BatteryModelOptions`.
+    inputs : dict, optional
+        A dictionary of input parameters passed to the model.
 
     Returns
     -------
@@ -1068,9 +1069,9 @@ def get_min_max_stoichiometries(
 
 def get_initial_ocps(
     initial_value,
-    direction,
     parameter_values,
     param=None,
+    direction=None,
     known_value="cyclable lithium capacity",
     options=None,
     tol=1e-6,
@@ -1117,12 +1118,14 @@ def get_initial_ocps(
         known_value=known_value,
         options=options,
     )
-    return esoh_solver.get_initial_ocps(initial_value, direction, tol, inputs=inputs)
+    return esoh_solver.get_initial_ocps(
+        initial_value, direction=direction, tol=tol, inputs=inputs
+    )
 
 
 def get_min_max_ocps(
-    direction,
     parameter_values,
+    direction=None,
     param=None,
     known_value="cyclable lithium capacity",
     options=None,

@@ -12,9 +12,13 @@ def _set_hysteresis_branch(parameter_values, electrode, direction, options, phas
     if direction is None:
         initial_hysteresis_branch = 0
     else:
-        if direction == "discharge":
+        if (direction == "discharge" and electrode == "negative") or (
+            direction == "charge" and electrode == "positive"
+        ):
             initial_hysteresis_branch = 1
-        elif direction == "charge":
+        elif (direction == "charge" and electrode == "negative") or (
+            direction == "discharge" and electrode == "positive"
+        ):
             initial_hysteresis_branch = -1
         else:
             raise ValueError(f"Invalid direction: {direction}")
@@ -90,8 +94,8 @@ def set_initial_state(
         """
         Un, Up = pybamm.lithium_ion.get_initial_ocps(
             initial_value,
-            direction,
             parameter_values,
+            direction=direction,
             param=param,
             known_value=known_value,
             options=options,
@@ -131,8 +135,8 @@ def set_initial_state(
         """
         initial_stoichs = pybamm.lithium_ion.get_initial_stoichiometries_composite(
             initial_value,
-            direction,
             parameter_values,
+            direction=direction,
             param=param,
             options=options,
             tol=tol,
@@ -184,8 +188,8 @@ def set_initial_state(
         """
         x, y = pybamm.lithium_ion.get_initial_stoichiometries(
             initial_value,
-            direction,
             parameter_values,
+            direction=direction,
             param=param,
             known_value=known_value,
             options=options,
