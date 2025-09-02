@@ -66,3 +66,9 @@ class DiscretisationError(Exception):
     """A model could not be discretised."""
 
     pass
+
+
+class InvalidModelJSONError(Exception):
+    """Raised when a model JSON file is invalid or cannot be parsed."""
+
+    pass

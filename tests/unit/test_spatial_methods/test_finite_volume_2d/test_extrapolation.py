@@ -12,6 +12,9 @@ class TestExtrapolationFiniteVolume2D:
         if order == "quadratic" and use_bcs:
             # Not implemented
             return
+        if order == "constant" and use_bcs:
+            # Constant extrapolation doesn't use boundary conditions
+            return
         # Create discretisation
         mesh = get_mesh_for_testing_2d()
         spatial_methods = {
@@ -447,3 +450,76 @@ class TestExtrapolationFiniteVolume2D:
                 solutions_TB[direction],
                 decimal=5,
             )
+
+    def test_boundary_value_constant_extrapolation(self):
+        """Test constant extrapolation for left and right boundaries."""
+        # Create discretisation with constant extrapolation
+        mesh = get_mesh_for_testing_2d()
+        spatial_methods = {
+            "macroscale": pybamm.FiniteVolume2D(
+                {
+                    "extrapolation": {
+                        "order": {"gradient": "linear", "value": "constant"},
+                        "use bcs": False,  # Constant extrapolation doesn't use BCS
+                    }
+                }
+            ),
+        }
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        submesh = mesh[("negative electrode", "separator", "positive electrode")]
+
+        # Create a variable and test data
+        var = pybamm.Variable(
+            "test_var", ["negative electrode", "separator", "positive electrode"]
+        )
+        disc.set_variable_slices([var])
+
+        # Create test data where each column has a distinct value
+        # Column i has value i+1, so we can verify constant extrapolation takes from boundary columns
+        LR, TB = np.meshgrid(submesh.nodes_lr, submesh.nodes_tb)
+        lr = LR.flatten()
+        tb = TB.flatten()
+
+        # For constant extrapolation:
+        # - Left boundary: should return constant value 1 (leftmost column value)
+        # - Right boundary: should return constant value len(submesh.nodes_lr) (rightmost column value)
+        expected_left = np.full(len(submesh.nodes_tb), submesh.nodes_lr[0])
+        expected_right = np.full(len(submesh.nodes_tb), submesh.nodes_lr[-1])
+        expected_top = np.full(len(submesh.nodes_lr), submesh.nodes_tb[-1])
+        expected_bottom = np.full(len(submesh.nodes_lr), submesh.nodes_tb[0])
+
+        # Test left boundary
+        boundary_value_left = pybamm.BoundaryValue(var, "left")
+        discretised_left = disc.process_symbol(boundary_value_left)
+        result_left = discretised_left.evaluate(y=lr).flatten()
+        np.testing.assert_array_almost_equal(result_left, expected_left)
+
+        # Test right boundary
+        boundary_value_right = pybamm.BoundaryValue(var, "right")
+        discretised_right = disc.process_symbol(boundary_value_right)
+        result_right = discretised_right.evaluate(y=lr).flatten()
+        np.testing.assert_array_almost_equal(result_right, expected_right)
+
+        # Test top-left (s/b same as left)
+        boundary_value_top_left = pybamm.BoundaryValue(var, "top-left")
+        discretised_top_left = disc.process_symbol(boundary_value_top_left)
+        result_top_left = discretised_top_left.evaluate(y=lr).flatten()
+        np.testing.assert_array_almost_equal(result_top_left, submesh.nodes_lr[0])
+
+        # Test bottom-right (s/b same as right)
+        boundary_value_bottom_right = pybamm.BoundaryValue(var, "bottom-right")
+        discretised_bottom_right = disc.process_symbol(boundary_value_bottom_right)
+        result_bottom_right = discretised_bottom_right.evaluate(y=lr).flatten()
+        np.testing.assert_array_almost_equal(result_bottom_right, submesh.nodes_lr[-1])
+
+        # Test top boundary
+        boundary_value_top = pybamm.BoundaryValue(var, "top")
+        discretised_top = disc.process_symbol(boundary_value_top)
+        result_top = discretised_top.evaluate(y=tb).flatten()
+        np.testing.assert_array_almost_equal(result_top, expected_top)
+
+        # Test bottom boundary
+        boundary_value_bottom = pybamm.BoundaryValue(var, "bottom")
+        discretised_bottom = disc.process_symbol(boundary_value_bottom)
+        result_bottom = discretised_bottom.evaluate(y=tb).flatten()
+        np.testing.assert_array_almost_equal(result_bottom, expected_bottom)
