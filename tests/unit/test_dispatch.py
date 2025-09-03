@@ -65,7 +65,7 @@ class TestDispatch:
     def test_model_download_runtime_error(self):
         """Test that Model raises RuntimeError when download fails"""
 
-        bad_url = "http://invalid-domain-should-never-exist-123456789.com/model.json"
+        bad_url = "h://example.invalid/model.json"
 
         with pytest.raises(RuntimeError, match="Failed to download model from URL:"):
             pybamm.Model(url=bad_url, force_download=True)
