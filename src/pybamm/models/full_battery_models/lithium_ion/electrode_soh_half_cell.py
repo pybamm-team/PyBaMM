@@ -3,6 +3,8 @@
 #
 import pybamm
 
+from .util import check_if_composite
+
 
 class ElectrodeSOHHalfCell(pybamm.BaseModel):
     """Model to calculate electrode-specific SOH for a half-cell, adapted from
@@ -21,17 +23,32 @@ class ElectrodeSOHHalfCell(pybamm.BaseModel):
 
     """
 
-    def __init__(self, name="ElectrodeSOH model"):
+    def __init__(self, name="ElectrodeSOH model", options=None):
         pybamm.citations.register("Mohtat2019")
         super().__init__(name)
-        param = pybamm.LithiumIonParameters({"working electrode": "positive"})
+        if options is None:
+            options = {"working electrode": "positive"}
+        is_composite = check_if_composite(options, "positive")
+        param = pybamm.LithiumIonParameters(options)
 
         x_100 = pybamm.Variable("x_100", bounds=(0, 1))
         x_0 = pybamm.Variable("x_0", bounds=(0, 1))
+        if is_composite:
+            x_100_2 = pybamm.Variable("x_100_2", bounds=(0, 1))
+            x_0_2 = pybamm.Variable("x_0_2", bounds=(0, 1))
         Q_w = pybamm.InputParameter("Q_w")
+        if is_composite:
+            Q_w_2 = pybamm.InputParameter("Q_w_2")
         T_ref = param.T_ref
         U_w = param.p.prim.U
-        Q = Q_w * (x_0 - x_100)
+        if is_composite:
+            U_w_2 = param.p.sec.U
+        Q_1 = Q_w * (x_0 - x_100)
+        if is_composite:
+            Q_2 = Q_w_2 * (x_0_2 - x_100_2)
+        else:
+            Q_2 = pybamm.Scalar(0)
+        Q = Q_1 + Q_2
 
         V_max = param.ocp_soc_100
         V_min = param.ocp_soc_0
@@ -40,7 +57,13 @@ class ElectrodeSOHHalfCell(pybamm.BaseModel):
             x_100: U_w(x_100, T_ref) - V_max,
             x_0: U_w(x_0, T_ref) - V_min,
         }
+        if is_composite:
+            self.algebraic[x_100_2] = U_w_2(x_100_2, T_ref) - V_max
+            self.algebraic[x_0_2] = U_w_2(x_0_2, T_ref) - V_min
         self.initial_conditions = {x_100: 0.8, x_0: 0.2}
+        if is_composite:
+            self.initial_conditions[x_100_2] = 0.8
+            self.initial_conditions[x_0_2] = 0.2
 
         self.variables = {
             "x_100": x_100,
@@ -50,6 +73,12 @@ class ElectrodeSOHHalfCell(pybamm.BaseModel):
             "Uw(x_0)": U_w(x_0, T_ref),
             "Q_w": Q_w,
         }
+        if is_composite:
+            self.variables["x_100_2"] = x_100_2
+            self.variables["x_0_2"] = x_0_2
+            self.variables["Q_w_2"] = Q_w_2
+            self.variables["Uw(x_100_2)"] = U_w_2(x_100_2, T_ref)
+            self.variables["Uw(x_0_2)"] = U_w_2(x_0_2, T_ref)
 
     @property
     def default_solver(self):
@@ -94,7 +123,13 @@ def get_initial_stoichiometry_half_cell(
         The initial stoichiometry that give the desired initial state of charge
     """
     param = pybamm.LithiumIonParameters(options)
-    x_0, x_100 = get_min_max_stoichiometries(parameter_values, inputs=inputs)
+    x_dict = get_min_max_stoichiometries(
+        parameter_values, inputs=inputs, options=options
+    )
+    x_0, x_100 = x_dict["x_0"], x_dict["x_100"]
+    is_composite = check_if_composite(options, "positive")
+    if is_composite:
+        x_0_2, x_100_2 = x_dict["x_0_2"], x_dict["x_100_2"]
 
     if isinstance(initial_value, str) and initial_value.endswith("V"):
         V_init = float(initial_value[:-1])
@@ -106,38 +141,67 @@ def get_initial_stoichiometry_half_cell(
                 f"Initial voltage {V_init}V is outside the voltage limits "
                 f"({V_min}, {V_max})"
             )
-
         # Solve simple model for initial soc based on target voltage
-        soc_model = pybamm.BaseModel()
-        soc = pybamm.Variable("soc")
+        model = pybamm.BaseModel()
+        x = pybamm.Variable("x")
         Up = param.p.prim.U
         T_ref = parameter_values["Reference temperature [K]"]
-        x = x_0 + soc * (x_100 - x_0)
-
-        soc_model.algebraic[soc] = Up(x, T_ref) - V_init
-        # initial guess for soc linearly interpolates between 0 and 1
+        model.variables["x"] = x
+        model.algebraic[x] = Up(x, T_ref) - V_init
+        # initial guess for x linearly interpolates between 0 and 1
         # based on V linearly interpolating between V_max and V_min
-        soc_model.initial_conditions[soc] = (V_init - V_min) / (V_max - V_min)
-        soc_model.variables["soc"] = soc
-        parameter_values.process_model(soc_model)
-        initial_soc = (
-            pybamm.AlgebraicSolver(tol=tol)
-            .solve(soc_model, [0], inputs=inputs)["soc"]
-            .data[0]
-        )
-    elif isinstance(initial_value, int | float):
-        initial_soc = initial_value
-        if not 0 <= initial_soc <= 1:
-            raise ValueError("Initial SOC should be between 0 and 1")
+        soc_initial_guess = (V_init - V_min) / (V_max - V_min)
+        model.initial_conditions[x] = 1 - soc_initial_guess
+        if is_composite:
+            Up_2 = param.p.sec.U
+            x_2 = pybamm.Variable("x_2")
+            model.algebraic[x_2] = Up_2(x_2, T_ref) - V_init
+            model.variables["x_2"] = x_2
+            model.initial_conditions[x_2] = 1 - soc_initial_guess
 
+        parameter_values.process_model(model)
+        sol = pybamm.AlgebraicSolver("lsq__trf", tol=tol).solve(
+            model, [0], inputs=inputs
+        )
+        x = sol["x"].data[0]
+        if is_composite:
+            x_2 = sol["x_2"].data[0]
+    elif isinstance(initial_value, int | float):
+        if not 0 <= initial_value <= 1:
+            raise ValueError("Initial SOC should be between 0 and 1")
+        if not is_composite:
+            x = x_0 + initial_value * (x_100 - x_0)
+        else:
+            model = pybamm.BaseModel()
+            x = pybamm.Variable("x")
+            x_2 = pybamm.Variable("x_2")
+            U_p = param.p.prim.U
+            U_p_2 = param.p.sec.U
+            T_ref = parameter_values["Reference temperature [K]"]
+            model.algebraic[x] = U_p(x, T_ref) - U_p_2(x_2, T_ref)
+            model.initial_conditions[x] = x_0 + initial_value * (x_100 - x_0)
+            model.initial_conditions[x_2] = x_0_2 + initial_value * (x_100_2 - x_0_2)
+            Q_w = parameter_values.evaluate(param.p.prim.Q_init, inputs=inputs)
+            Q_w_2 = parameter_values.evaluate(param.p.sec.Q_init, inputs=inputs)
+            Q_min = x_100 * Q_w + x_100_2 * Q_w_2
+            Q_max = x_0 * Q_w + x_0_2 * Q_w_2
+            Q_now = Q_w * x + Q_w_2 * x_2
+            soc = (Q_now - Q_min) / (Q_max - Q_min)
+            model.algebraic[x_2] = soc - initial_value
+            model.variables["x"] = x
+            model.variables["x_2"] = x_2
+            parameter_values.process_model(model)
+            sol = pybamm.AlgebraicSolver(tol=tol).solve(model, [0], inputs=inputs)
+            x = sol["x"].data[0]
+            x_2 = sol["x_2"].data[0]
     else:
         raise ValueError(
             "Initial value must be a float between 0 and 1, or a string ending in 'V'"
         )
-
-    x = x_0 + initial_soc * (x_100 - x_0)
-
-    return x
+    ret_dict = {"x": x}
+    if is_composite:
+        ret_dict["x_2"] = x_2
+    return ret_dict
 
 
 def get_min_max_stoichiometries(parameter_values, options=None, inputs=None):
@@ -156,12 +220,26 @@ def get_min_max_stoichiometries(parameter_values, options=None, inputs=None):
     inputs = inputs or {}
     if options is None:
         options = {"working electrode": "positive"}
-    esoh_model = pybamm.lithium_ion.ElectrodeSOHHalfCell("ElectrodeSOH")
+    esoh_model = pybamm.lithium_ion.ElectrodeSOHHalfCell(
+        "ElectrodeSOH", options=options
+    )
     param = pybamm.LithiumIonParameters(options)
-    Q_w = parameter_values.evaluate(param.p.Q_init, inputs=inputs)
+    is_composite = check_if_composite(options, "positive")
+    if is_composite:
+        Q_w = parameter_values.evaluate(param.p.prim.Q_init, inputs=inputs)
+        Q_w_2 = parameter_values.evaluate(param.p.sec.Q_init, inputs=inputs)
+        Q_inputs = {"Q_w": Q_w, "Q_w_2": Q_w_2}
+    else:
+        Q_w = parameter_values.evaluate(param.p.prim.Q_init, inputs=inputs)
+        Q_inputs = {"Q_w": Q_w}
     # Add Q_w to input parameters
-    all_inputs = {**inputs, "Q_w": Q_w}
+    all_inputs = {**inputs, **Q_inputs}
     esoh_sim = pybamm.Simulation(esoh_model, parameter_values=parameter_values)
     esoh_sol = esoh_sim.solve([0], inputs=all_inputs)
     x_0, x_100 = esoh_sol["x_0"].data[0], esoh_sol["x_100"].data[0]
-    return x_0, x_100
+    if is_composite:
+        x_0_2, x_100_2 = esoh_sol["x_0_2"].data[0], esoh_sol["x_100_2"].data[0]
+        ret_dict = {"x_0": x_0, "x_100": x_100, "x_0_2": x_0_2, "x_100_2": x_100_2}
+    else:
+        ret_dict = {"x_0": x_0, "x_100": x_100}
+    return ret_dict
