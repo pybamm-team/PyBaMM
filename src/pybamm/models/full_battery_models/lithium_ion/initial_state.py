@@ -69,7 +69,7 @@ def set_initial_state(
         Set the initial stoichiometry of the working electrode, based on the initial
         SOC or voltage.
         """
-        x = pybamm.lithium_ion.get_initial_stoichiometry_half_cell(
+        results = pybamm.lithium_ion.get_initial_stoichiometry_half_cell(
             initial_value,
             parameter_values,
             param=param,
@@ -78,8 +78,24 @@ def set_initial_state(
             inputs=inputs,
         )
         _set_concentration_from_stoich(
-            parameter_values, param, "positive", "primary", x, inputs, options
+            parameter_values,
+            param,
+            "positive",
+            "primary",
+            results["x"],
+            inputs,
+            options,
         )
+        if check_if_composite(options, "positive"):
+            _set_concentration_from_stoich(
+                parameter_values,
+                param,
+                "positive",
+                "secondary",
+                results["x_2"],
+                inputs,
+                options,
+            )
     elif options is not None and (
         check_if_composite(options, "positive")
         or check_if_composite(options, "negative")
