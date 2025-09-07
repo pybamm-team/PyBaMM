@@ -159,6 +159,132 @@ class TestElectrodeSOH:
             esoh_solver.solve(inputs)
 
 
+class TestElectrodeSOHComposite:
+    @staticmethod
+    def _check_phases_equal(results, xy, soc):
+        assert results[f"{xy}_{soc}_1"] == pytest.approx(
+            results[f"{xy}_{soc}_2"], abs=1e-05
+        )
+
+    @staticmethod
+    def _get_params_and_options(composite_electrode):
+        params = pybamm.ParameterValues("Chen2020")
+        if composite_electrode == "negative" or composite_electrode == "both":
+            phases = ("2", "1")
+            params.update(
+                {
+                    "Primary: Negative electrode OCP [V]": params[
+                        "Negative electrode OCP [V]"
+                    ],
+                    "Secondary: Negative electrode OCP [V]": params[
+                        "Negative electrode OCP [V]"
+                    ],
+                    "Primary: Negative electrode active material volume fraction": 0.5,
+                    "Secondary: Negative electrode active material volume fraction": 0.5,
+                    "Primary: Maximum concentration in negative electrode [mol.m-3]": params[
+                        "Maximum concentration in negative electrode [mol.m-3]"
+                    ],
+                    "Secondary: Maximum concentration in negative electrode [mol.m-3]": params[
+                        "Maximum concentration in negative electrode [mol.m-3]"
+                    ],
+                    "Primary: Initial concentration in negative electrode [mol.m-3]": params[
+                        "Initial concentration in negative electrode [mol.m-3]"
+                    ],
+                    "Secondary: Initial concentration in negative electrode [mol.m-3]": params[
+                        "Initial concentration in negative electrode [mol.m-3]"
+                    ],
+                },
+                check_already_exists=False,
+            )
+        if composite_electrode == "positive" or composite_electrode == "both":
+            phases = ("1", "2")
+            params.update(
+                {
+                    "Primary: Positive electrode OCP [V]": params[
+                        "Positive electrode OCP [V]"
+                    ],
+                    "Secondary: Positive electrode OCP [V]": params[
+                        "Positive electrode OCP [V]"
+                    ],
+                    "Primary: Positive electrode active material volume fraction": 0.5,
+                    "Secondary: Positive electrode active material volume fraction": 0.5,
+                    "Primary: Maximum concentration in positive electrode [mol.m-3]": params[
+                        "Maximum concentration in positive electrode [mol.m-3]"
+                    ],
+                    "Secondary: Maximum concentration in positive electrode [mol.m-3]": params[
+                        "Maximum concentration in positive electrode [mol.m-3]"
+                    ],
+                    "Primary: Initial concentration in positive electrode [mol.m-3]": params[
+                        "Initial concentration in positive electrode [mol.m-3]"
+                    ],
+                    "Secondary: Initial concentration in positive electrode [mol.m-3]": params[
+                        "Initial concentration in positive electrode [mol.m-3]"
+                    ],
+                },
+                check_already_exists=False,
+            )
+        if composite_electrode == "both":
+            phases = ("2", "2")
+        options = {"particle phases": phases}
+        return params, options
+
+    @pytest.mark.parametrize("initial_value", ["4.0 V", 0.5])
+    @pytest.mark.parametrize(
+        "composite_electrode",
+        [
+            "both",  # both electrodes composite
+            "negative",  # negative-only composite
+            "positive",  # positive-only composite
+        ],
+    )
+    def test_half_cell_with_same_ocp_curves(self, composite_electrode, initial_value):
+        pvals, options = self._get_params_and_options(composite_electrode)
+        # Use composite ESOH helper to compute initial stoichiometries at a voltage
+        param = pybamm.LithiumIonParameters(options=options)
+        results = pybamm.lithium_ion.get_initial_stoichiometries_composite(
+            "4.0 V", pvals, param=param, options=options
+        )
+        # Ensure keys exist and values are equal for both phases (this is not how the equation is set, but should be true)
+        if composite_electrode == "positive" or composite_electrode == "both":
+            assert pybamm.lithium_ion.check_if_composite(options, "positive")
+            self._check_phases_equal(results, "y", "init")
+            self._check_phases_equal(results, "y", "100")
+            self._check_phases_equal(results, "y", "0")
+        if composite_electrode == "negative" or composite_electrode == "both":
+            assert pybamm.lithium_ion.check_if_composite(options, "negative")
+            self._check_phases_equal(results, "x", "init")
+            self._check_phases_equal(results, "x", "100")
+            self._check_phases_equal(results, "x", "0")
+
+        pvals_set = pybamm.lithium_ion.set_initial_state(
+            initial_value, pvals, param=param, options=options
+        )
+        if initial_value == "4.0 V":
+            assert pvals_set.evaluate(
+                param.p.prim.U(results["y_init_1"], param.T_ref)
+                - param.n.prim.U(results["x_init_1"], param.T_ref)
+            ) == pytest.approx(4.0, abs=1e-05)
+
+    def test_chen2020_composite_defaults(self):
+        pvals = pybamm.ParameterValues("Chen2020_composite")
+        options = {"particle phases": ("2", "1")}
+        param = pybamm.LithiumIonParameters(options=options)
+        results = pybamm.lithium_ion.get_initial_stoichiometries_composite(
+            "4.0 V", pvals, param=param, options=options
+        )
+        # Basic sanity: solution includes expected variables and bounded stoichiometries
+        for key, val in results.items():
+            if key.startswith(("x_", "y_")):
+                assert 0 <= val <= 1
+        pvals_set = pybamm.lithium_ion.set_initial_state(
+            "4.0 V", pvals, param=param, options=options
+        )
+        assert pvals_set.evaluate(
+            param.p.prim.U(results["y_init_1"], param.T_ref)
+            - param.n.prim.U(results["x_init_1"], param.T_ref)
+        ) == pytest.approx(4.0, abs=1e-05)
+
+
 class TestElectrodeSOHMSMR:
     def test_known_solution(self, options):
         param = pybamm.LithiumIonParameters(options=options)
@@ -240,6 +366,247 @@ class TestElectrodeSOHHalfCell:
         sol = sim.solve([0], inputs={"Q_w": Q_w})
         assert sol["Uw(x_100)"].data[0] == pytest.approx(V_max, abs=1e-05)
         assert sol["Uw(x_0)"].data[0] == pytest.approx(V_min, abs=1e-05)
+
+    @staticmethod
+    def _get_params_and_options_composite_half_cell():
+        """Set up parameters for composite positive electrode using Chen2020_composite negative parameters"""
+        # Start with Chen2020_composite parameters
+        params = pybamm.ParameterValues("Chen2020_composite")
+
+        # Convert essential negative electrode parameters to positive electrode parameters
+        # Remove unnecessary parameters: particle diffusivity, radius, exchange current density
+        # Primary phase (Graphite-like) -> Primary positive
+        params.update(
+            {
+                "Primary: Maximum concentration in positive electrode [mol.m-3]": params[
+                    "Primary: Maximum concentration in negative electrode [mol.m-3]"
+                ],
+                "Primary: Initial concentration in positive electrode [mol.m-3]": params[
+                    "Primary: Initial concentration in negative electrode [mol.m-3]"
+                ],
+                "Primary: Positive electrode OCP [V]": params[
+                    "Primary: Negative electrode OCP [V]"
+                ],
+                "Primary: Positive electrode active material volume fraction": params[
+                    "Primary: Negative electrode active material volume fraction"
+                ],
+                "Primary: Positive electrode density [kg.m-3]": params[
+                    "Primary: Negative electrode density [kg.m-3]"
+                ],
+                "Primary: Positive electrode OCP entropic change [V.K-1]": params[
+                    "Primary: Negative electrode OCP entropic change [V.K-1]"
+                ],
+            },
+            check_already_exists=False,
+        )
+
+        # Secondary phase (Silicon-like) -> Secondary positive
+        params.update(
+            {
+                "Secondary: Maximum concentration in positive electrode [mol.m-3]": params[
+                    "Secondary: Maximum concentration in negative electrode [mol.m-3]"
+                ],
+                "Secondary: Initial concentration in positive electrode [mol.m-3]": params[
+                    "Secondary: Initial concentration in negative electrode [mol.m-3]"
+                ],
+                "Secondary: Positive electrode lithiation OCP [V]": params[
+                    "Secondary: Negative electrode lithiation OCP [V]"
+                ],
+                "Secondary: Positive electrode delithiation OCP [V]": params[
+                    "Secondary: Negative electrode delithiation OCP [V]"
+                ],
+                "Secondary: Positive electrode OCP [V]": params[
+                    "Secondary: Negative electrode OCP [V]"
+                ],
+                "Secondary: Positive electrode active material volume fraction": params[
+                    "Secondary: Negative electrode active material volume fraction"
+                ],
+                "Secondary: Positive electrode density [kg.m-3]": params[
+                    "Secondary: Negative electrode density [kg.m-3]"
+                ],
+                "Secondary: Positive electrode OCP entropic change [V.K-1]": params[
+                    "Secondary: Negative electrode OCP entropic change [V.K-1]"
+                ],
+            },
+            check_already_exists=False,
+        )
+
+        # Adjust voltage cutoffs and OCP values to be more achievable with the parameter mapping
+        params.update(
+            {
+                "Lower voltage cut-off [V]": 0.00001,
+                "Upper voltage cut-off [V]": 2.5,
+                "Open-circuit voltage at 0% SOC [V]": 0.00001,
+                "Open-circuit voltage at 100% SOC [V]": 2.5,
+            },
+            check_already_exists=False,
+        )
+
+        # Set up composite electrode options
+        # For composite positive electrode: negative=1 phase, positive=2 phases
+        options = {
+            "working electrode": "positive",
+            "particle phases": ("1", "2"),  # (negative phases, positive phases)
+            "open-circuit potential": "single",  # Required for ElectrodeSOHSolver
+        }
+
+        return params, options
+
+    @pytest.mark.parametrize("initial_value", ["2.0 V", 0.5])
+    def test_composite_positive_half_cell(self, initial_value):
+        """Test electrode_soh_half_cell with composite positive electrode using Chen2020_composite negative parameters"""
+        params, options = self._get_params_and_options_composite_half_cell()
+
+        # Test that the model can be created with composite options
+        model = pybamm.lithium_ion.ElectrodeSOHHalfCell(options=options)
+        param = pybamm.LithiumIonParameters(options)
+
+        # Verify it's detected as composite
+        assert pybamm.lithium_ion.check_if_composite(options, "positive")
+
+        # Get the required inputs for the simulation
+        Q_w_1 = params.evaluate(param.p.prim.Q_init)
+        Q_w_2 = params.evaluate(param.p.sec.Q_init)
+        inputs = {"Q_w": Q_w_1, "Q_w_2": Q_w_2}
+
+        # Create and run simulation
+        sim = pybamm.Simulation(model, parameter_values=params)
+        sol = sim.solve([0], inputs=inputs)
+
+        # Verify that solution contains expected variables
+        expected_vars = [
+            "x_100",
+            "x_0",
+            "x_100_2",
+            "x_0_2",
+            "Q",
+            "Uw(x_100)",
+            "Uw(x_0)",
+            "Uw(x_100_2)",
+            "Uw(x_0_2)",
+        ]
+        for var in expected_vars:
+            assert var in sol.all_models[0].variables
+            assert len(sol[var].data) == 1  # Should have one data point
+
+        # Verify stoichiometries are within bounds
+        assert 0 <= sol["x_100"].data[0] <= 1
+        assert 0 <= sol["x_0"].data[0] <= 1
+        assert 0 <= sol["x_100_2"].data[0] <= 1
+        assert 0 <= sol["x_0_2"].data[0] <= 1
+
+        # Test voltage initialization
+        if isinstance(initial_value, str) and initial_value.endswith("V"):
+            V_target = float(initial_value[:-1])
+            # Test that we can compute initial stoichiometries for this voltage
+            result = pybamm.lithium_ion.get_initial_stoichiometry_half_cell(
+                initial_value, params, param=param, options=options
+            )
+            assert "x" in result
+            assert "x_2" in result
+
+            # Verify the voltage matches (approximately)
+            x_init_1 = result["x"]
+            x_init_2 = result["x_2"]
+            V_calc_1 = params.evaluate(param.p.prim.U(x_init_1, param.T_ref))
+            V_calc_2 = params.evaluate(param.p.sec.U(x_init_2, param.T_ref))
+            # For composite, we expect approximately the same voltage from both phases
+            assert V_calc_1 == pytest.approx(
+                V_target, abs=1e-5
+            )  # Allow 1e-5V tolerance
+            assert V_calc_2 == pytest.approx(V_target, abs=1e-5)
+
+        # Test SOC initialization
+        elif isinstance(initial_value, float):
+            # Test that we can compute initial stoichiometries for this SOC
+            result = pybamm.lithium_ion.get_initial_stoichiometry_half_cell(
+                initial_value, params, param=param, options=options
+            )
+            assert "x" in result
+            assert "x_2" in result
+
+            # Verify stoichiometries are within reasonable bounds
+            assert 0 <= result["x"] <= 1
+            assert 0 <= result["x_2"] <= 1
+
+    def test_composite_half_cell_min_max_stoichiometries(self):
+        """Test that get_min_max_stoichiometries works with composite half-cell"""
+        params, options = self._get_params_and_options_composite_half_cell()
+
+        # For half-cell models, we use the ElectrodeSOHHalfCell directly
+        # instead of the full-cell ElectrodeSOHSolver
+        model = pybamm.lithium_ion.ElectrodeSOHHalfCell(options=options)
+        param = pybamm.LithiumIonParameters(options)
+
+        # Get the required inputs for the simulation
+        Q_w_1 = params.evaluate(param.p.prim.Q_init)
+        Q_w_2 = params.evaluate(param.p.sec.Q_init)
+        inputs = {"Q_w": Q_w_1, "Q_w_2": Q_w_2}
+
+        # Create and run simulation
+        sim = pybamm.Simulation(model, parameter_values=params)
+        sol = sim.solve([0], inputs=inputs)
+
+        # Extract stoichiometries from the solution
+        result = {
+            "x_0": sol["x_0"].data[0],
+            "x_100": sol["x_100"].data[0],
+            "x_0_2": sol["x_0_2"].data[0],
+            "x_100_2": sol["x_100_2"].data[0],
+        }
+
+        # Should return a dictionary with expected keys
+        expected_keys = ["x_0", "x_100", "x_0_2", "x_100_2"]
+        for key in expected_keys:
+            assert key in result
+            assert 0 <= result[key] <= 1
+
+        # Test that the voltage limits are reasonable
+        # Use the OCP values at 0% and 100% SOC that the SOH model targets
+        V_max = params.evaluate(param.ocp_soc_100)
+        V_min = params.evaluate(param.ocp_soc_0)
+
+        # Calculate voltages at the min/max stoichiometries
+        V_calc_max_1 = params.evaluate(param.p.prim.U(result["x_100"], param.T_ref))
+        V_calc_max_2 = params.evaluate(param.p.sec.U(result["x_100_2"], param.T_ref))
+        V_calc_min_1 = params.evaluate(param.p.prim.U(result["x_0"], param.T_ref))
+        V_calc_min_2 = params.evaluate(param.p.sec.U(result["x_0_2"], param.T_ref))
+
+        # The calculated voltages should be very close to the target limits
+        # Using tight tolerance for voltage limit verification
+        assert V_calc_max_1 == pytest.approx(V_max, abs=1e-5)  # Within 1e-5V of target
+        assert V_calc_max_2 == pytest.approx(V_max, abs=1e-5)  # Within 1e-5V of target
+        assert V_calc_min_1 == pytest.approx(V_min, abs=1e-5)  # Within 1e-5V of target
+        assert V_calc_min_2 == pytest.approx(V_min, abs=1e-5)  # Within 1e-5V of target
+
+    def test_composite_half_cell_error_handling(self):
+        """Test error handling for composite half-cell"""
+        params, options = self._get_params_and_options_composite_half_cell()
+        param = pybamm.LithiumIonParameters(options)
+
+        # Test invalid SOC
+        with pytest.raises(ValueError, match="Initial SOC should be between 0 and 1"):
+            pybamm.lithium_ion.get_initial_stoichiometry_half_cell(
+                1.5, params, param=param, options=options
+            )
+
+        # Test invalid voltage (too low)
+        with pytest.raises(ValueError, match="outside the voltage limits"):
+            pybamm.lithium_ion.get_initial_stoichiometry_half_cell(
+                "0.000001 V", params, param=param, options=options
+            )
+
+        # Test invalid voltage (too high)
+        with pytest.raises(ValueError, match="outside the voltage limits"):
+            pybamm.lithium_ion.get_initial_stoichiometry_half_cell(
+                "5.0 V", params, param=param, options=options
+            )
+
+        # Test invalid voltage format
+        with pytest.raises(ValueError, match="must be a float"):
+            pybamm.lithium_ion.get_initial_stoichiometry_half_cell(
+                "invalid", params, param=param, options=options
+            )
 
 
 class TestCalculateTheoreticalEnergy:

@@ -517,6 +517,12 @@ class TestUnaryOperators:
         assert downwind.children[0].name == a.name
         assert downwind.domain == a.domain
 
+        # 2D
+        a = pybamm.Symbol("a", domain="test domain")
+        symbol = pybamm.UpwindDownwind2D(a, "upwind", "upwind")
+        assert isinstance(symbol, pybamm.UpwindDownwind2D)
+        assert symbol.new_copy([a]) == symbol
+
     def test_diff(self):
         a = pybamm.StateVector(slice(0, 1))
         y = np.array([5])
