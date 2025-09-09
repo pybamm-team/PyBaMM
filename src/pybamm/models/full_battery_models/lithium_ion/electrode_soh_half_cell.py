@@ -145,9 +145,9 @@ def get_initial_stoichiometry_half_cell(
         model = pybamm.BaseModel()
         x = pybamm.Variable("x")
         Up = param.p.prim.U
-        T_ref = parameter_values["Reference temperature [K]"]
+        T_init = parameter_values["Initial temperature [K]"]
         model.variables["x"] = x
-        model.algebraic[x] = Up(x, T_ref) - V_init
+        model.algebraic[x] = Up(x, T_init) - V_init
         # initial guess for x linearly interpolates between 0 and 1
         # based on V linearly interpolating between V_max and V_min
         soc_initial_guess = (V_init - V_min) / (V_max - V_min)
@@ -155,7 +155,7 @@ def get_initial_stoichiometry_half_cell(
         if is_composite:
             Up_2 = param.p.sec.U
             x_2 = pybamm.Variable("x_2")
-            model.algebraic[x_2] = Up_2(x_2, T_ref) - V_init
+            model.algebraic[x_2] = Up_2(x_2, T_init) - V_init
             model.variables["x_2"] = x_2
             model.initial_conditions[x_2] = 1 - soc_initial_guess
 
@@ -177,6 +177,7 @@ def get_initial_stoichiometry_half_cell(
             x_2 = pybamm.Variable("x_2")
             U_p = param.p.prim.U
             U_p_2 = param.p.sec.U
+            # here we use T_ref and SOC 0 and 1 are defined using the reference state
             T_ref = parameter_values["Reference temperature [K]"]
             model.algebraic[x] = U_p(x, T_ref) - U_p_2(x_2, T_ref)
             model.initial_conditions[x] = x_0 + initial_value * (x_100 - x_0)
