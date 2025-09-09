@@ -206,10 +206,7 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
         # based on SOC since the stoichiometry limits are defined using the reference
         # state, and T_init if setting based on voltage since the entropic change is
         # included in the voltage equation
-        if initialization_method == "voltage":
-            T = param.T_init
-        else:
-            T = param.T_ref
+        T = param._init if initialization_method == "voltage" else param.T_ref
         if is_positive_composite:
             y_init_2 = variables["y_init_2"]
             self.algebraic[y_init_2] = param.p.prim.U(y_init_1, T) - param.p.sec.U(
