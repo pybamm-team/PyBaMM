@@ -7,7 +7,8 @@ from .util import _get_lithiation_delithiation, check_if_composite
 
 
 class ElectrodeSOHHalfCell(pybamm.BaseModel):
-    """Model to calculate electrode-specific SOH for a half-cell, adapted from
+    """
+    Model to calculate electrode-specific SOH for a half-cell, adapted from
     :footcite:t:`Mohtat2019`.
     This model is mainly for internal use, to calculate summary variables in a
     simulation.
@@ -25,39 +26,34 @@ class ElectrodeSOHHalfCell(pybamm.BaseModel):
 
     def __init__(self, name="ElectrodeSOH model", direction=None, options=None):
         pybamm.citations.register("Mohtat2019")
-        options = options or {}
         super().__init__(name)
-        if options is None:
-            options = {"working electrode": "positive"}
-        is_composite = check_if_composite(options, "positive")
+        options = options or {"working electrode": "positive"}
         param = pybamm.LithiumIonParameters(options)
+        is_composite = check_if_composite(options, "positive")
 
-        # Cache lithiation/delithiation direction for each phase
+        # Primary phase
+        x_100 = pybamm.Variable("x_100", bounds=(0, 1))
+        x_0 = pybamm.Variable("x_0", bounds=(0, 1))
+        Q_w = pybamm.InputParameter("Q_w")
+        T_ref = param.T_ref
+        U_w = param.p.prim.U
         lith_delith_primary = _get_lithiation_delithiation(
             direction, "positive", options, phase="primary"
         )
+
+        # Secondary phase
+        Q_2 = pybamm.Scalar(0)
         if is_composite:
+            x_100_2 = pybamm.Variable("x_100_2", bounds=(0, 1))
+            x_0_2 = pybamm.Variable("x_0_2", bounds=(0, 1))
+            Q_w_2 = pybamm.InputParameter("Q_w_2")
+            U_w_2 = param.p.sec.U
+            Q_2 = Q_w_2 * (x_0_2 - x_100_2)
             lith_delith_secondary = _get_lithiation_delithiation(
                 direction, "positive", options, phase="secondary"
             )
 
-        x_100 = pybamm.Variable("x_100", bounds=(0, 1))
-        x_0 = pybamm.Variable("x_0", bounds=(0, 1))
-        if is_composite:
-            x_100_2 = pybamm.Variable("x_100_2", bounds=(0, 1))
-            x_0_2 = pybamm.Variable("x_0_2", bounds=(0, 1))
-        Q_w = pybamm.InputParameter("Q_w")
-        if is_composite:
-            Q_w_2 = pybamm.InputParameter("Q_w_2")
-        T_ref = param.T_ref
-        U_w = param.p.prim.U
-        if is_composite:
-            U_w_2 = param.p.sec.U
         Q_1 = Q_w * (x_0 - x_100)
-        if is_composite:
-            Q_2 = Q_w_2 * (x_0_2 - x_100_2)
-        else:
-            Q_2 = pybamm.Scalar(0)
         Q = Q_1 + Q_2
 
         V_max = param.ocp_soc_100
@@ -67,13 +63,12 @@ class ElectrodeSOHHalfCell(pybamm.BaseModel):
             x_100: U_w(x_100, T_ref, lith_delith_primary) - V_max,
             x_0: U_w(x_0, T_ref, lith_delith_primary) - V_min,
         }
+        self.initial_conditions = {x_100: 0.8, x_0: 0.2}
         if is_composite:
             self.algebraic[x_100_2] = (
                 U_w_2(x_100_2, T_ref, lith_delith_secondary) - V_max
             )
             self.algebraic[x_0_2] = U_w_2(x_0_2, T_ref, lith_delith_secondary) - V_min
-        self.initial_conditions = {x_100: 0.8, x_0: 0.2}
-        if is_composite:
             self.initial_conditions[x_100_2] = 0.8
             self.initial_conditions[x_0_2] = 0.2
 
@@ -86,11 +81,15 @@ class ElectrodeSOHHalfCell(pybamm.BaseModel):
             "Q_w": Q_w,
         }
         if is_composite:
-            self.variables["x_100_2"] = x_100_2
-            self.variables["x_0_2"] = x_0_2
-            self.variables["Q_w_2"] = Q_w_2
-            self.variables["Uw(x_100_2)"] = U_w_2(x_100_2, T_ref, lith_delith_secondary)
-            self.variables["Uw(x_0_2)"] = U_w_2(x_0_2, T_ref, lith_delith_secondary)
+            self.variables.update(
+                {
+                    "x_100_2": x_100_2,
+                    "x_0_2": x_0_2,
+                    "Q_w_2": Q_w_2,
+                    "Uw(x_100_2)": U_w_2(x_100_2, T_ref, lith_delith_secondary),
+                    "Uw(x_0_2)": U_w_2(x_0_2, T_ref, lith_delith_secondary),
+                }
+            )
 
     @property
     def default_solver(self):
@@ -130,20 +129,26 @@ def get_initial_stoichiometry_half_cell(
         Default is 1e-6.
     inputs : dict, optional
         A dictionary of input parameters passed to the model.
+
     Returns
     -------
     x
         The initial stoichiometry that give the desired initial state of charge
     """
-    # 'direction' is currently unused; reserved for future behavior
     param = pybamm.LithiumIonParameters(options)
     x_dict = get_min_max_stoichiometries(
         parameter_values, inputs=inputs, direction=direction, options=options
     )
     x_0, x_100 = x_dict["x_0"], x_dict["x_100"]
     is_composite = check_if_composite(options, "positive")
+    lith_delith_primary = _get_lithiation_delithiation(
+        direction, "positive", options, phase="primary"
+    )
     if is_composite:
         x_0_2, x_100_2 = x_dict["x_0_2"], x_dict["x_100_2"]
+        lith_delith_secondary = _get_lithiation_delithiation(
+            direction, "positive", options, phase="secondary"
+        )
 
     if isinstance(initial_value, str) and initial_value.endswith("V"):
         V_init = float(initial_value[:-1])
@@ -160,10 +165,7 @@ def get_initial_stoichiometry_half_cell(
         x = pybamm.Variable("x")
         Up = param.p.prim.U
         T_ref = parameter_values["Reference temperature [K]"]
-        # Cache lithiation/delithiation direction for primary phase
-        lith_delith_primary = _get_lithiation_delithiation(
-            direction, "positive", options, phase="primary"
-        )
+
         model.variables["x"] = x
         model.algebraic[x] = Up(x, T_ref, lith_delith_primary) - V_init
         # initial guess for x linearly interpolates between 0 and 1
@@ -173,10 +175,6 @@ def get_initial_stoichiometry_half_cell(
         if is_composite:
             Up_2 = param.p.sec.U
             x_2 = pybamm.Variable("x_2")
-            # Cache lithiation/delithiation direction for secondary phase
-            lith_delith_secondary = _get_lithiation_delithiation(
-                direction, "positive", options, phase="secondary"
-            )
             model.algebraic[x_2] = Up_2(x_2, T_ref, lith_delith_secondary) - V_init
             model.variables["x_2"] = x_2
             model.initial_conditions[x_2] = 1 - soc_initial_guess
@@ -200,13 +198,6 @@ def get_initial_stoichiometry_half_cell(
             U_p = param.p.prim.U
             U_p_2 = param.p.sec.U
             T_ref = parameter_values["Reference temperature [K]"]
-            # Cache lithiation/delithiation directions for both phases
-            lith_delith_primary = _get_lithiation_delithiation(
-                direction, "positive", options, phase="primary"
-            )
-            lith_delith_secondary = _get_lithiation_delithiation(
-                direction, "positive", options, phase="secondary"
-            )
             model.algebraic[x] = U_p(x, T_ref, lith_delith_primary) - U_p_2(
                 x_2, T_ref, lith_delith_secondary
             )

@@ -297,6 +297,9 @@ class ElectrodeSOHSolver:
     ----------
     parameter_values : :class:`pybamm.ParameterValues.Parameters`
         The parameters of the simulation
+    direction : str, optional
+        The OCV branch to use in the electrode SOH model. Can be "charge" or
+        "discharge".
     param : :class:`pybamm.LithiumIonParameters`, optional
         Specific instance of the symbolic lithium-ion parameter class. If not provided,
         the default set of symbolic lithium-ion parameters will be used.
@@ -729,6 +732,9 @@ class ElectrodeSOHSolver:
             If integer, interpreted as SOC, must be between 0 and 1.
             If string e.g. "4 V", interpreted as voltage,
             must be between V_min and V_max.
+        direction : str, optional
+            The OCV branch to use in the electrode SOH model. Can be "charge" or
+            "discharge".
         tol : float, optional
             The tolerance for the solver used to compute the initial stoichiometries.
             A lower value results in higher precision but may increase computation time.
@@ -863,6 +869,9 @@ class ElectrodeSOHSolver:
             If integer, interpreted as SOC, must be between 0 and 1.
             If string e.g. "4 V", interpreted as voltage,
             must be between V_min and V_max.
+        direction : str, optional
+            The OCV branch to use in the electrode SOH model. Can be "charge" or
+            "discharge".
         tol: float, optional
             Tolerance for the solver used in calculating initial stoichiometries.
         inputs : dict, optional
@@ -911,6 +920,11 @@ class ElectrodeSOHSolver:
         """
         Calculate min/max open-circuit potentials
         given voltage limits, open-circuit potentials, etc defined by parameter_values
+
+        Parameters
+        ----------
+        inputs : dict, optional
+            A dictionary of input parameters passed to the model.
 
         Returns
         -------
@@ -990,6 +1004,9 @@ def get_initial_stoichiometries(
     parameter_values : :class:`pybamm.ParameterValues`
         The parameter values class that will be used for the simulation. Required for
         calculating appropriate initial stoichiometries.
+    direction : str, optional
+        The OCV branch to use in the electrode SOH model. Can be "charge" or
+        "discharge".
     param : :class:`pybamm.LithiumIonParameters`, optional
         The symbolic parameter set to use for the simulation.
         If not provided, the default parameter set will be used.
@@ -1010,7 +1027,6 @@ def get_initial_stoichiometries(
     x, y
         The initial stoichiometries that give the desired initial state of charge
     """
-    # 'direction' is currently unused; reserved for future behavior
     esoh_solver = ElectrodeSOHSolver(
         parameter_values,
         direction=direction,
@@ -1040,6 +1056,9 @@ def get_min_max_stoichiometries(
     parameter_values : :class:`pybamm.ParameterValues`
         The parameter values class that will be used for the simulation. Required for
         calculating appropriate initial stoichiometries.
+    direction : str, optional
+        The OCV branch to use in the electrode SOH model. Can be "charge" or
+        "discharge".
     param : :class:`pybamm.LithiumIonParameters`, optional
         The symbolic parameter set to use for the simulation.
         If not provided, the default parameter set will be used.
@@ -1091,6 +1110,9 @@ def get_initial_ocps(
     parameter_values : :class:`pybamm.ParameterValues`
         The parameter values class that will be used for the simulation. Required for
         calculating appropriate initial stoichiometries.
+    direction : str, optional
+        The OCV branch to use in the electrode SOH model. Can be "charge" or
+        "discharge".
     param : :class:`pybamm.LithiumIonParameters`, optional
         The symbolic parameter set to use for the simulation.
         If not provided, the default parameter set will be used.
@@ -1110,7 +1132,6 @@ def get_initial_ocps(
     Un, Up
         The initial electrode OCPs that give the desired initial state of charge
     """
-    # 'direction' is currently unused; reserved for future behavior
     esoh_solver = ElectrodeSOHSolver(
         parameter_values,
         direction=direction,
@@ -1140,6 +1161,9 @@ def get_min_max_ocps(
     parameter_values : :class:`pybamm.ParameterValues`
         The parameter values class that will be used for the simulation. Required for
         calculating appropriate initial open-circuit potentials.
+    direction : str, optional
+        The OCV branch to use in the electrode SOH model. Can be "charge" or
+        "discharge".
     param : :class:`pybamm.LithiumIonParameters`, optional
         The symbolic parameter set to use for the simulation.
         If not provided, the default parameter set will be used.
@@ -1174,9 +1198,11 @@ def theoretical_energy_integral(parameter_values, param, inputs, points=100):
     ----------
     parameter_values : :class:`pybamm.ParameterValues`
         The parameter values class that will be used for the simulation.
-    n_i, n_f, p_i, p_f : float
-        initial and final stoichiometries for the positive and negative
-        electrodes, respectively
+    param : :class:`pybamm.LithiumIonParameters`, optional
+        Specific instance of the symbolic lithium-ion parameter class. If not provided,
+        the default set of symbolic lithium-ion parameters will be used.
+    inputs : dict, optional
+        A dictionary of input parameters passed to the model.
     points : int
         The number of points at which to calculate voltage.
     Returns
@@ -1235,10 +1261,6 @@ def calculate_theoretical_energy(
 
 
 def _get_msmr_potential_model(parameter_values, param):
-    """
-    Returns a solver to calculate the open-circuit potentials of the individual
-    electrodes at the given stoichiometries
-    """
     V_max = param.voltage_high_cut
     V_min = param.voltage_low_cut
     x_n = param.n.prim.x

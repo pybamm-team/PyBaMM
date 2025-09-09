@@ -104,18 +104,18 @@ def _get_cyclable_lithium_equation(options, soc="100"):
 
 
 class ElectrodeSOHComposite(pybamm.BaseModel):
-    """Model to calculate electrode-specific SOH for a cell with composite electrodes, adapted from
-    :footcite:t:`Mohtat2019`.
-    This model is mainly for internal use, to calculate summary variables in a
+    """Model to calculate electrode-specific SOH for a cell with composite electrodes,
+    adapted from :footcite:t:`Mohtat2019`. This model is mainly for internal use, to
+    calculate summary variables in a
     simulation.
 
-    Subscript w indicates working electrode and subscript c indicates counter electrode.
+    Subscript 1 indicates primary phase and subscript 2 indicates secondary phase.
     """
 
     def __init__(
         self,
         options,
-        direction,
+        direction=None,
         name="ElectrodeSOH model",
         initialization_method="voltage",
     ):
@@ -337,16 +337,26 @@ def get_initial_stoichiometries_composite(
     """
     Get the minimum and maximum stoichiometries from the parameter values
 
-    Parameters
-    ----------
-    parameter_values : pybamm.ParameterValues
-        The parameter values to use in the calculation
-    options : dict, optional
-        A dictionary of options to be passed to the parameters, see
-        :class:`pybamm.BatteryModelOptions`.
-        If None, the default is used: {"working electrode": "positive"}
+        Parameters
+        ----------
+        initial_value : float
+            Target initial value.
+            If integer, interpreted as SOC, must be between 0 and 1.
+            If string e.g. "4 V", interpreted as voltage,
+            must be between V_min and V_max.
+        direction : str, optional
+            The OCV branch to use in the electrode SOH model. Can be "charge" or
+            "discharge".
+        tol : float, optional
+            The tolerance for the solver used to compute the initial stoichiometries.
+            A lower value results in higher precision but may increase computation time.
+            Default is 1e-6.
+        inputs : dict, optional
+            A dictionary of input parameters passed to the model.
+        known_value : str, optional
+            The known value needed to complete the electrode SOH model.
+            Can be "cyclable lithium capacity".
     """
-    # 'direction' is currently unused; reserved for future behavior
     inputs = inputs or {}
     if known_value != "cyclable lithium capacity":
         raise ValueError(
