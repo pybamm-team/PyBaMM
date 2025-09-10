@@ -711,21 +711,21 @@ class ElectrodeSOHSolver:
             soc = pybamm.Variable("soc")
             x = x_0 + soc * (x_100 - x_0)
             y = y_0 - soc * (y_0 - y_100)
-            T_ref = parameter_values["Reference temperature [K]"]
+            T_init = parameter_values["Initial temperature [K]"]
             if self.options["open-circuit potential"] == "MSMR":
                 xn = self.param.n.prim.x
                 xp = self.param.p.prim.x
                 Up = pybamm.Variable("Up")
                 Un = pybamm.Variable("Un")
-                soc_model.algebraic[Up] = x - xn(Un, T_ref)
-                soc_model.algebraic[Un] = y - xp(Up, T_ref)
+                soc_model.algebraic[Up] = x - xn(Un, T_init)
+                soc_model.algebraic[Un] = y - xp(Up, T_init)
                 soc_model.initial_conditions[Un] = 0
                 soc_model.initial_conditions[Up] = V_max
                 soc_model.algebraic[soc] = Up - Un - V_init
             else:
                 Up = self.param.p.prim.U
                 Un = self.param.n.prim.U
-                soc_model.algebraic[soc] = Up(y, T_ref) - Un(x, T_ref) - V_init
+                soc_model.algebraic[soc] = Up(y, T_init) - Un(x, T_init) - V_init
             # initial guess for soc linearly interpolates between 0 and 1
             # based on V linearly interpolating between V_max and V_min
             soc_model.initial_conditions[soc] = (V_init - V_min) / (V_max - V_min)
@@ -821,9 +821,13 @@ class ElectrodeSOHSolver:
             Un = sol["Un"].data[0]
             Up = sol["Up"].data[0]
         else:
-            T_ref = parameter_values["Reference temperature [K]"]
-            Un = parameter_values.evaluate(self.param.n.prim.U(x, T_ref), inputs=inputs)
-            Up = parameter_values.evaluate(self.param.p.prim.U(y, T_ref), inputs=inputs)
+            T_init = parameter_values["Initial temperature [K]"]
+            Un = parameter_values.evaluate(
+                self.param.n.prim.U(x, T_init), inputs=inputs
+            )
+            Up = parameter_values.evaluate(
+                self.param.p.prim.U(y, T_init), inputs=inputs
+            )
         return Un, Up
 
     def get_min_max_ocps(self, inputs=None):
