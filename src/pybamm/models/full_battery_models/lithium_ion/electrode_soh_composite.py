@@ -134,6 +134,8 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
         y_0_1 = variables["y_0_1"]
         V_max = param.voltage_high_cut
         V_min = param.voltage_low_cut
+        # Here we use T_ref as the stoichiometry limits are defined using the reference
+        # state
         if is_negative_composite:
             x_100_2 = variables["x_100_2"]
             x_0_2 = variables["x_0_2"]
@@ -235,18 +237,20 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
         x_init_1 = variables["x_init_1"]
         y_init_1 = variables["y_init_1"]
         if initialization_method == "voltage":
+            # Here we use T_init so that the initial voltage is correct, including the
+            # contribution from the entropic change
             V_init = pybamm.InputParameter("V_init")
             self.algebraic[x_init_1] = (
                 param.p.prim.U(
                     y_init_1,
-                    param.T_ref,
+                    param.T_init,
                     _get_lithiation_delithiation(
                         direction, "positive", options, phase="primary"
                     ),
                 )
                 - param.n.prim.U(
                     x_init_1,
-                    param.T_ref,
+                    param.T_init,
                     _get_lithiation_delithiation(
                         direction, "negative", options, phase="primary"
                     ),
@@ -278,18 +282,22 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
             )
         else:
             raise ValueError("Invalid initialization method")
-        # Add voltage equations for secondary phases (init)
+        # Add voltage equations for secondary phases (init), we use T_ref if setting
+        # based on SOC since the stoichiometry limits are defined using the reference
+        # state, and T_init if setting based on voltage since the entropic change is
+        # included in the voltage equation
+        T = param.T_init if initialization_method == "voltage" else param.T_ref
         if is_positive_composite:
             y_init_2 = variables["y_init_2"]
             self.algebraic[y_init_2] = param.p.prim.U(
                 y_init_1,
-                param.T_ref,
+                T,
                 _get_lithiation_delithiation(
                     direction, "positive", options, phase="primary"
                 ),
             ) - param.p.sec.U(
                 y_init_2,
-                param.T_ref,
+                T,
                 _get_lithiation_delithiation(
                     direction, "positive", options, phase="secondary"
                 ),
@@ -298,13 +306,13 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
             x_init_2 = variables["x_init_2"]
             self.algebraic[x_init_2] = param.n.prim.U(
                 x_init_1,
-                param.T_ref,
+                T,
                 _get_lithiation_delithiation(
                     direction, "negative", options, phase="primary"
                 ),
             ) - param.n.sec.U(
                 x_init_2,
-                param.T_ref,
+                T,
                 _get_lithiation_delithiation(
                     direction, "negative", options, phase="secondary"
                 ),

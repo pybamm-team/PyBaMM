@@ -189,6 +189,12 @@ class TestElectrodeSOHComposite:
                     "Secondary: Negative electrode OCP [V]": params[
                         "Negative electrode OCP [V]"
                     ],
+                    "Primary: Negative electrode OCP entropic change [V.K-1]": params[
+                        "Negative electrode OCP entropic change [V.K-1]"
+                    ],
+                    "Secondary: Negative electrode OCP entropic change [V.K-1]": params[
+                        "Negative electrode OCP entropic change [V.K-1]"
+                    ],
                     "Primary: Negative electrode active material volume fraction": 0.5,
                     "Secondary: Negative electrode active material volume fraction": 0.5,
                     "Primary: Maximum concentration in negative electrode [mol.m-3]": params[
@@ -215,6 +221,12 @@ class TestElectrodeSOHComposite:
                     ],
                     "Secondary: Positive electrode OCP [V]": params[
                         "Positive electrode OCP [V]"
+                    ],
+                    "Primary: Positive electrode OCP entropic change [V.K-1]": params[
+                        "Positive electrode OCP entropic change [V.K-1]"
+                    ],
+                    "Secondary: Positive electrode OCP entropic change [V.K-1]": params[
+                        "Positive electrode OCP entropic change [V.K-1]"
                     ],
                     "Primary: Positive electrode active material volume fraction": 0.5,
                     "Secondary: Positive electrode active material volume fraction": 0.5,

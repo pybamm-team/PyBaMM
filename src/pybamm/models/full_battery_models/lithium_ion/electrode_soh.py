@@ -766,14 +766,14 @@ class ElectrodeSOHSolver:
             soc = pybamm.Variable("soc")
             x = x_0 + soc * (x_100 - x_0)
             y = y_0 - soc * (y_0 - y_100)
-            T_ref = parameter_values["Reference temperature [K]"]
+            T_init = parameter_values["Initial temperature [K]"]
             if self.options["open-circuit potential"] == "MSMR":
                 xn = self.param.n.prim.x
                 xp = self.param.p.prim.x
                 Up = pybamm.Variable("Up")
                 Un = pybamm.Variable("Un")
-                soc_model.algebraic[Up] = x - xn(Un, T_ref)
-                soc_model.algebraic[Un] = y - xp(Up, T_ref)
+                soc_model.algebraic[Up] = x - xn(Un, T_init)
+                soc_model.algebraic[Un] = y - xp(Up, T_init)
                 soc_model.initial_conditions[Un] = 0
                 soc_model.initial_conditions[Up] = V_max
                 soc_model.algebraic[soc] = Up - Un - V_init
@@ -783,14 +783,14 @@ class ElectrodeSOHSolver:
                 soc_model.algebraic[soc] = (
                     Up(
                         y,
-                        T_ref,
+                        T_init,
                         _get_lithiation_delithiation(
                             direction, "positive", self.options
                         ),
                     )
                     - Un(
                         x,
-                        T_ref,
+                        T_init,
                         _get_lithiation_delithiation(
                             direction, "negative", self.options
                         ),
@@ -897,11 +897,11 @@ class ElectrodeSOHSolver:
             Un = sol["Un"].data[0]
             Up = sol["Up"].data[0]
         else:
-            T_ref = parameter_values["Reference temperature [K]"]
+            T_init = parameter_values["Initial temperature [K]"]
             Un = parameter_values.evaluate(
                 self.param.n.prim.U(
                     x,
-                    T_ref,
+                    T_init,
                     _get_lithiation_delithiation(direction, "negative", self.options),
                 ),
                 inputs=inputs,
@@ -909,7 +909,7 @@ class ElectrodeSOHSolver:
             Up = parameter_values.evaluate(
                 self.param.p.prim.U(
                     y,
-                    T_ref,
+                    T_init,
                     _get_lithiation_delithiation(direction, "positive", self.options),
                 ),
                 inputs=inputs,
