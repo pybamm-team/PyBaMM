@@ -24,7 +24,9 @@ class TestElectrodeSOH:
         param = pybamm.LithiumIonParameters()
         parameter_values = pybamm.ParameterValues("Mohtat2020")
 
-        esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(parameter_values, param)
+        esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(
+            parameter_values, direction=None, param=param
+        )
 
         Vmin = 2.8
         Vmax = 4.2
@@ -42,8 +44,8 @@ class TestElectrodeSOH:
         assert sol["Q_Li"] == pytest.approx(Q_Li, abs=1e-05)
 
         # Solve with split esoh and check outputs
-        ics = esoh_solver._set_up_solve(inputs)
-        sol_split = esoh_solver._solve_split(inputs, ics)
+        ics = esoh_solver._set_up_solve(inputs, None)
+        sol_split = esoh_solver._solve_split(inputs, ics, None)
         for key in sol:
             if key != "Maximum theoretical energy [W.h]":
                 assert sol[key] == pytest.approx(sol_split[key].data[0], abs=1e-05)
@@ -61,7 +63,7 @@ class TestElectrodeSOH:
         parameter_values = pybamm.ParameterValues("Mohtat2020")
 
         esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(
-            parameter_values, param, known_value="cell capacity"
+            parameter_values, direction=None, param=param, known_value="cell capacity"
         )
 
         Vmin = 2.8
@@ -83,7 +85,9 @@ class TestElectrodeSOH:
         param = pybamm.LithiumIonParameters()
         parameter_values = pybamm.ParameterValues("Ai2020")
 
-        esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(parameter_values, param)
+        esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(
+            parameter_values, direction=None, param=param
+        )
 
         Q_n = parameter_values.evaluate(param.n.Q_init)
         Q_p = parameter_values.evaluate(param.p.Q_init)
@@ -103,7 +107,9 @@ class TestElectrodeSOH:
             }
             # need to update both the target voltages at 0 and 100% SOC
         )
-        esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(parameter_values, param)
+        esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(
+            parameter_values, direction=None, param=param
+        )
         inputs = {"Q_n": Q_n, "Q_p": Q_p, "Q_Li": Q_Li}
         # Solver fails to find a solution but voltage limits are not violated
         with pytest.raises(
@@ -119,7 +125,9 @@ class TestElectrodeSOH:
                 "Open-circuit voltage at 100% SOC [V]": 6,
             }
         )
-        esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(parameter_values, param)
+        esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(
+            parameter_values, direction=None, param=param
+        )
         inputs = {"Q_n": Q_n, "Q_p": Q_p, "Q_Li": Q_Li}
         with pytest.raises(ValueError, match="upper bound of the voltage"):
             esoh_solver.solve(inputs)
@@ -132,7 +140,9 @@ class TestElectrodeSOH:
                 "Open-circuit voltage at 100% SOC [V]": 5,
             }
         )
-        esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(parameter_values, param)
+        esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(
+            parameter_values, direction=None, param=param
+        )
         inputs = {"Q_n": Q_n, "Q_p": Q_p, "Q_Li": Q_Li}
         with pytest.raises(ValueError, match="lower bound of the voltage"):
             esoh_solver.solve(inputs)
@@ -147,10 +157,10 @@ class TestElectrodeSOH:
             }
         )
         esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(
-            parameter_values, param, known_value="cell capacity"
+            parameter_values, direction=None, param=param, known_value="cell capacity"
         )
         with pytest.raises(ValueError, match="solve_for must be "):
-            esoh_solver._get_electrode_soh_sims_split()
+            esoh_solver._get_electrode_soh_sims_split(None)
 
         inputs = {"Q_n": Q_n, "Q_p": Q_p, "Q": 2 * Q_p}
         with pytest.raises(
@@ -254,7 +264,7 @@ class TestElectrodeSOHComposite:
         # Use composite ESOH helper to compute initial stoichiometries at a voltage
         param = pybamm.LithiumIonParameters(options=options)
         results = pybamm.lithium_ion.get_initial_stoichiometries_composite(
-            "4.0 V", pvals, param=param, options=options
+            "4.0 V", pvals, direction=None, param=param, options=options
         )
         # Ensure keys exist and values are equal for both phases (this is not how the equation is set, but should be true)
         if composite_electrode == "positive" or composite_electrode == "both":
@@ -282,28 +292,52 @@ class TestElectrodeSOHComposite:
         options = {"particle phases": ("2", "1")}
         param = pybamm.LithiumIonParameters(options=options)
         results = pybamm.lithium_ion.get_initial_stoichiometries_composite(
-            "4.0 V", pvals, param=param, options=options
+            "4.0 V", pvals, param=param, options=options, tol=1e-1, direction=None
         )
         # Basic sanity: solution includes expected variables and bounded stoichiometries
         for key, val in results.items():
             if key.startswith(("x_", "y_")):
                 assert 0 <= val <= 1
         pvals_set = pybamm.lithium_ion.set_initial_state(
-            "4.0 V", pvals, param=param, options=options
+            "4.0 V", pvals, param=param, options=options, tol=1e-1
         )
         assert pvals_set.evaluate(
             param.p.prim.U(results["y_init_1"], param.T_ref)
             - param.n.prim.U(results["x_init_1"], param.T_ref)
         ) == pytest.approx(4.0, abs=1e-05)
 
+    def test_chen2020_composite_defaults_hysteresis(self):
+        pvals = pybamm.ParameterValues("Chen2020_composite")
+        options = {
+            "particle phases": ("2", "1"),
+            "open-circuit potential": (("single", "current sigmoid"), "single"),
+        }
+        param = pybamm.LithiumIonParameters(options=options)
+        results_discharge = pybamm.lithium_ion.get_initial_stoichiometries_composite(
+            "4.0 V",
+            pvals,
+            param=param,
+            options=options,
+            tol=1e-1,
+            direction="discharge",
+        )
+        results_charge = pybamm.lithium_ion.get_initial_stoichiometries_composite(
+            "4.0 V", pvals, param=param, options=options, tol=1e-1, direction="charge"
+        )
+        # Basic sanity: solution includes expected variables and bounded stoichiometries
+        for key, val in results_discharge.items():
+            if key.startswith(("x_", "y_")):
+                assert 0 <= val <= 1
+                assert results_discharge[key] != results_charge[key]
+
 
 class TestElectrodeSOHMSMR:
     def test_known_solution(self, options):
         param = pybamm.LithiumIonParameters(options=options)
         parameter_values = pybamm.ParameterValues("MSMR_Example")
-
+        direction = None
         esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(
-            parameter_values, param, options=options
+            parameter_values, direction=direction, param=param, options=options
         )
 
         Vmin = 2.8
@@ -322,21 +356,25 @@ class TestElectrodeSOHMSMR:
         assert sol["Q_Li"] == pytest.approx(Q_Li, abs=1e-05)
 
         # Solve with split esoh and check outputs
-        ics = esoh_solver._set_up_solve(inputs)
-        sol_split = esoh_solver._solve_split(inputs, ics)
+        ics = esoh_solver._set_up_solve(inputs, direction)
+        sol_split = esoh_solver._solve_split(inputs, ics, direction)
         for key in sol:
             if key != "Maximum theoretical energy [W.h]":
                 assert sol[key] == pytest.approx(sol_split[key].data[0], abs=1e-05)
 
         # Check feasibility checks can be performed successfully
-        esoh_solver._check_esoh_feasible(inputs)
+        esoh_solver._check_esoh_feasible(inputs, direction=direction)
 
     def test_known_solution_cell_capacity(self, options):
         param = pybamm.LithiumIonParameters(options)
         parameter_values = pybamm.ParameterValues("MSMR_Example")
 
         esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(
-            parameter_values, param, known_value="cell capacity", options=options
+            parameter_values,
+            direction=None,
+            param=param,
+            known_value="cell capacity",
+            options=options,
         )
 
         Vmin = 2.8
@@ -359,10 +397,14 @@ class TestElectrodeSOHMSMR:
         parameter_values = pybamm.ParameterValues("MSMR_Example")
 
         esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(
-            parameter_values, param, known_value="cell capacity", options=options
+            parameter_values,
+            direction=None,
+            param=param,
+            known_value="cell capacity",
+            options=options,
         )
         with pytest.raises(ValueError, match="solve_for must be "):
-            esoh_solver._get_electrode_soh_sims_split()
+            esoh_solver._get_electrode_soh_sims_split(None)
 
 
 class TestElectrodeSOHHalfCell:
@@ -446,9 +488,9 @@ class TestElectrodeSOHHalfCell:
         # Adjust voltage cutoffs and OCP values to be more achievable with the parameter mapping
         params.update(
             {
-                "Lower voltage cut-off [V]": 0.00001,
+                "Lower voltage cut-off [V]": 0.02,
                 "Upper voltage cut-off [V]": 2.5,
-                "Open-circuit voltage at 0% SOC [V]": 0.00001,
+                "Open-circuit voltage at 0% SOC [V]": 0.02,
                 "Open-circuit voltage at 100% SOC [V]": 2.5,
             },
             check_already_exists=False,
@@ -647,25 +689,25 @@ class TestGetInitialSOC:
         T = parameter_values.evaluate(param.T_ref)
 
         x100, y100 = pybamm.lithium_ion.get_initial_stoichiometries(
-            1, parameter_values, param
+            1, parameter_values, param=param, direction=None
         )
         V = parameter_values.evaluate(param.p.prim.U(y100, T) - param.n.prim.U(x100, T))
         assert V == pytest.approx(4.2)
 
         x0, y0 = pybamm.lithium_ion.get_initial_stoichiometries(
-            0, parameter_values, param
+            0, parameter_values, param=param, direction=None
         )
         V = parameter_values.evaluate(param.p.prim.U(y0, T) - param.n.prim.U(x0, T))
         assert V == pytest.approx(2.8)
 
         x, y = pybamm.lithium_ion.get_initial_stoichiometries(
-            0.4, parameter_values, param
+            0.4, parameter_values, param=param, direction=None
         )
         assert x == x0 + 0.4 * (x100 - x0)
         assert y == y0 - 0.4 * (y0 - y100)
 
         x, y = pybamm.lithium_ion.get_initial_stoichiometries(
-            "4 V", parameter_values, param
+            "4 V", parameter_values, param=param, direction=None
         )
         T = parameter_values.evaluate(param.T_ref)
         V = parameter_values.evaluate(param.p.prim.U(y, T) - param.n.prim.U(x, T))
@@ -677,7 +719,7 @@ class TestGetInitialSOC:
         T = parameter_values.evaluate(param.T_ref)
 
         x0, x100, y100, y0 = pybamm.lithium_ion.get_min_max_stoichiometries(
-            parameter_values, param
+            parameter_values, param=param, direction=None
         )
         V = parameter_values.evaluate(param.p.prim.U(y100, T) - param.n.prim.U(x100, T))
         assert V == pytest.approx(4.2)
@@ -686,8 +728,9 @@ class TestGetInitialSOC:
 
         x0, x100, y100, y0 = pybamm.lithium_ion.get_min_max_stoichiometries(
             parameter_values,
-            param,
+            param=param,
             known_value="cell capacity",
+            direction=None,
         )
         V = parameter_values.evaluate(param.p.prim.U(y100, T) - param.n.prim.U(x100, T))
         assert V == pytest.approx(4.2)
@@ -700,7 +743,11 @@ class TestGetInitialSOC:
         T = parameter_values.evaluate(param.T_ref)
 
         x100, y100 = pybamm.lithium_ion.get_initial_stoichiometries(
-            1, parameter_values, param, known_value="cell capacity"
+            1,
+            parameter_values,
+            param=param,
+            known_value="cell capacity",
+            direction=None,
         )
         V = parameter_values.evaluate(param.p.prim.U(y100, T) - param.n.prim.U(x100, T))
         assert V == pytest.approx(4.2)
@@ -712,13 +759,17 @@ class TestGetInitialSOC:
         ).default_parameter_values
 
         with pytest.raises(ValueError, match="Initial SOC should be between 0 and 1"):
-            pybamm.lithium_ion.get_initial_stoichiometries(2, parameter_values)
+            pybamm.lithium_ion.get_initial_stoichiometries(2, parameter_values, None)
 
         with pytest.raises(ValueError, match="outside the voltage limits"):
-            pybamm.lithium_ion.get_initial_stoichiometries("1 V", parameter_values)
+            pybamm.lithium_ion.get_initial_stoichiometries(
+                "1 V", parameter_values, direction=None
+            )
 
         with pytest.raises(ValueError, match="must be a float"):
-            pybamm.lithium_ion.get_initial_stoichiometries("5 A", parameter_values)
+            pybamm.lithium_ion.get_initial_stoichiometries(
+                "5 A", parameter_values, direction=None
+            )
 
         with pytest.raises(ValueError, match="outside the voltage limits"):
             pybamm.lithium_ion.get_initial_stoichiometry_half_cell(
@@ -740,7 +791,7 @@ class TestGetInitialSOC:
             match="Known value must be cell capacity or cyclable lithium capacity",
         ):
             pybamm.lithium_ion.ElectrodeSOHSolver(
-                parameter_values, known_value="something else"
+                parameter_values, direction=None, known_value="something else"
             )
 
         with pytest.raises(
@@ -751,7 +802,7 @@ class TestGetInitialSOC:
                 {"number of MSMR reactions": "3"}
             ).param
             pybamm.models.full_battery_models.lithium_ion.electrode_soh._ElectrodeSOHMSMR(
-                param=param_MSMR, known_value="something else"
+                None, param=param_MSMR, known_value="something else"
             )
 
         with pytest.raises(
@@ -759,7 +810,7 @@ class TestGetInitialSOC:
             match="Known value must be cell capacity or cyclable lithium capacity",
         ):
             pybamm.models.full_battery_models.lithium_ion.electrode_soh._ElectrodeSOH(
-                known_value="something else"
+                None, known_value="something else"
             )
 
 
@@ -767,11 +818,17 @@ class TestGetInitialOCP:
     def test_get_initial_ocp(self):
         param = pybamm.LithiumIonParameters()
         parameter_values = pybamm.ParameterValues("Mohtat2020")
-        Un, Up = pybamm.lithium_ion.get_initial_ocps(1, parameter_values, param)
+        Un, Up = pybamm.lithium_ion.get_initial_ocps(
+            1, parameter_values, param=param, direction=None
+        )
         assert Up - Un == pytest.approx(4.2)
-        Un, Up = pybamm.lithium_ion.get_initial_ocps(0, parameter_values, param)
+        Un, Up = pybamm.lithium_ion.get_initial_ocps(
+            0, parameter_values, param=param, direction=None
+        )
         assert Up - Un == pytest.approx(2.8)
-        Un, Up = pybamm.lithium_ion.get_initial_ocps("4 V", parameter_values, param)
+        Un, Up = pybamm.lithium_ion.get_initial_ocps(
+            "4 V", parameter_values, param=param, direction=None
+        )
         assert Up - Un == pytest.approx(4)
 
     def test_min_max_ocp(self):
@@ -779,7 +836,7 @@ class TestGetInitialOCP:
         parameter_values = pybamm.ParameterValues("Mohtat2020")
 
         Un_0, Un_100, Up_100, Up_0 = pybamm.lithium_ion.get_min_max_ocps(
-            parameter_values, param
+            parameter_values, param=param, direction=None
         )
         assert Up_100 - Un_100 == pytest.approx(4.2)
         assert Up_0 - Un_0 == pytest.approx(2.8)
@@ -790,15 +847,15 @@ class TestGetInitialOCPMSMR:
         param = pybamm.LithiumIonParameters(options)
         parameter_values = pybamm.ParameterValues("MSMR_Example")
         Un, Up = pybamm.lithium_ion.get_initial_ocps(
-            1, parameter_values, param, options=options
+            1, parameter_values, param=param, options=options
         )
         assert Up - Un == pytest.approx(4.2, abs=1e-05)
         Un, Up = pybamm.lithium_ion.get_initial_ocps(
-            0, parameter_values, param, options=options
+            0, parameter_values, param=param, options=options, direction=None
         )
         assert Up - Un == pytest.approx(2.8, abs=1e-05)
         Un, Up = pybamm.lithium_ion.get_initial_ocps(
-            "4 V", parameter_values, param, options=options
+            "4 V", parameter_values, param=param, options=options
         )
         assert Up - Un == pytest.approx(4)
 
@@ -807,13 +864,13 @@ class TestGetInitialOCPMSMR:
         parameter_values = pybamm.ParameterValues("MSMR_Example")
 
         Un_0, Un_100, Up_100, Up_0 = pybamm.lithium_ion.get_min_max_ocps(
-            parameter_values, param, options=options
+            parameter_values, param=param, direction=None, options=options
         )
         assert Up_100 - Un_100 == pytest.approx(4.2)
         assert Up_0 - Un_0 == pytest.approx(2.8)
 
         Un_0, Un_100, Up_100, Up_0 = pybamm.lithium_ion.get_min_max_ocps(
-            parameter_values, param, known_value="cell capacity", options=options
+            parameter_values, param=param, known_value="cell capacity", options=options
         )
         assert Up_100 - Un_100 == pytest.approx(4.2)
         assert Up_0 - Un_0 == pytest.approx(2.8)
