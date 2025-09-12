@@ -58,6 +58,7 @@ from .expression_tree.operations.evaluate_python import JaxCooMatrix
 from .expression_tree.operations.jacobian import Jacobian
 from .expression_tree.operations.convert_to_casadi import CasadiConverter
 from .expression_tree.operations.unpack_symbols import SymbolUnpacker
+from .expression_tree.operations.serialise import Serialise
 
 # Model classes
 from .models.base_model import BaseModel
@@ -150,6 +151,7 @@ from .meshes.scikit_fem_submeshes import (
 from .meshes.scikit_fem_submeshes_3d import (
     ScikitFemSubMesh3D,
     ScikitFemGenerator3D,
+    UserSuppliedSubmesh3D,
 )
 
 # Serialisation
