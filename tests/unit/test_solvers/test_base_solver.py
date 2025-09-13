@@ -448,7 +448,6 @@ class TestBaseSolver:
             base_solver.on_failure = "invalid"
 
     def test_solver_multiple_inputs_initial_conditions_error(self):
-
         y = pybamm.Variable("y")
         y0 = pybamm.InputParameter("y0")
         k = pybamm.InputParameter("k")
