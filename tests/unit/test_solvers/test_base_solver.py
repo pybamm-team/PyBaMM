@@ -446,3 +446,33 @@ class TestBaseSolver:
             ValueError, match="on_failure must be 'warn', 'raise', or 'ignore'"
         ):
             base_solver.on_failure = "invalid"
+
+    def test_solver_multiple_inputs_initial_conditions_error(self):
+
+        y = pybamm.Variable("y")
+        y0 = pybamm.InputParameter("y0")
+        k = pybamm.InputParameter("k")
+
+        model = pybamm.BaseModel()
+        model.rhs = {y: -k * y}
+        model.initial_conditions = {y: y0}
+        model.variables = {"y": y}
+
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        t_eval = np.linspace(0.0, 1.0, 6)
+
+        # Three different ICs so each run is clearly distinct
+        inputs_list = [
+            {"y0": 1.0, "k": 0.5},
+            {"y0": 2.0, "k": 1.0},
+            {"y0": 3.0, "k": 1.5},
+        ]
+
+        solver = pybamm.BaseSolver()
+        with pytest.raises(
+            pybamm.SolverError,
+            match="Input parameters cannot appear in expression for initial conditions",
+        ):
+            solver.solve(model, t_eval=t_eval, inputs=inputs_list)

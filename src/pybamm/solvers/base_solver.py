@@ -860,7 +860,7 @@ class BaseSolver:
                         for it in model.concatenated_initial_conditions.pre_order()
                     ]
                 )
-                if all_inputs_names.issubset(initial_conditions_node_names):
+                if not initial_conditions_node_names.isdisjoint(all_inputs_names):
                     raise pybamm.SolverError(
                         "Input parameters cannot appear in expression "
                         "for initial conditions."
@@ -910,9 +910,9 @@ class BaseSolver:
                 # If the new initial conditions are different
                 # and cannot be evaluated directly, set up again
                 self.set_up(model, model_inputs_list[0], t_eval, ics_only=True)
-            self._model_set_up[model]["initial conditions"] = (
-                model.concatenated_initial_conditions
-            )
+            self._model_set_up[model][
+                "initial conditions"
+            ] = model.concatenated_initial_conditions
         else:
             # Set the standard initial conditions
             self._set_initial_conditions(model, t_eval[0], model_inputs_list[0])
