@@ -2,6 +2,7 @@
 # Standard thermal parameters
 #
 import pybamm
+
 from .base_parameters import BaseParameters
 
 
@@ -42,6 +43,34 @@ class ThermalParameters(BaseParameters):
 
         # Lumped model heat capacity (volumetric)
         self.cell_heat_capacity = pybamm.Parameter("Cell heat capacity [J.K-1.m-3]")
+
+        # Box geometry faces
+        self.h_edge_x_min = pybamm.Parameter(
+            "Left face heat transfer coefficient [W.m-2.K-1]"
+        )
+        self.h_edge_x_max = pybamm.Parameter(
+            "Right face heat transfer coefficient [W.m-2.K-1]"
+        )
+        self.h_edge_y_max = pybamm.Parameter(
+            "Front face heat transfer coefficient [W.m-2.K-1]"
+        )
+        self.h_edge_y_min = pybamm.Parameter(
+            "Back face heat transfer coefficient [W.m-2.K-1]"
+        )
+        self.h_edge_z_min = pybamm.Parameter(
+            "Bottom face heat transfer coefficient [W.m-2.K-1]"
+        )
+        self.h_edge_z_max = pybamm.Parameter(
+            "Top face heat transfer coefficient [W.m-2.K-1]"
+        )
+
+        # Cylinder specific geometry faces
+        self.h_edge_radial_min = pybamm.Parameter(
+            "Inner radius heat transfer coefficient [W.m-2.K-1]"
+        )
+        self.h_edge_radial_max = pybamm.Parameter(
+            "Outer radius heat transfer coefficient [W.m-2.K-1]"
+        )
 
     def T_amb(self, y, z, t):
         """Ambient temperature [K]"""

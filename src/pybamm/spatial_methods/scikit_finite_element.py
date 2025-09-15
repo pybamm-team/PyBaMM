@@ -1,12 +1,11 @@
 #
 # Finite Element discretisation class which uses scikit-fem
 #
-import pybamm
-
-from scipy.sparse import csr_matrix, csc_matrix
-from scipy.sparse.linalg import inv
 import numpy as np
+from scipy.sparse import csc_matrix, csr_matrix
+from scipy.sparse.linalg import inv
 
+import pybamm
 from pybamm.util import import_optional_dependency
 
 
@@ -283,7 +282,9 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
 
         return pybamm.Matrix(stiffness)
 
-    def integral(self, child, discretised_child, integration_dimension):
+    def integral(
+        self, child, discretised_child, integration_dimension, integration_variable
+    ):
         """Vector-vector dot product to implement the integral operator.
         See :meth:`pybamm.SpatialMethod.integral`
         """

@@ -1,8 +1,9 @@
 #
 # Base unit tests for the lithium-ion models
 #
-import pybamm
 import pytest
+
+import pybamm
 
 
 class BaseUnitTestLithiumIon:
@@ -512,12 +513,14 @@ class BaseUnitTestLithiumIon:
         options = {"open-circuit potential": "current sigmoid"}
         self.check_well_posedness(options)
 
-    def test_well_posed_wycisk_ocp(self):
-        options = {"open-circuit potential": "Wycisk"}
+    def test_well_posed_one_state_differential_capacity_hysteresis_ocp(self):
+        options = {
+            "open-circuit potential": "one-state differential capacity hysteresis"
+        }
         self.check_well_posedness(options)
 
-    def test_well_posed_axen_ocp(self):
-        options = {"open-circuit potential": "Axen"}
+    def test_well_posed_one_state_hysteresis_ocp(self):
+        options = {"open-circuit potential": "one-state hysteresis"}
         self.check_well_posedness(options)
 
     def test_well_posed_msmr(self):
@@ -650,5 +653,19 @@ class BaseUnitTestLithiumIon:
             "particle phases": ("2", "1"),
             "open-circuit potential": (("single", "current sigmoid"), "single"),
             "loss of active material": "stress-driven",
+        }
+        self.check_well_posedness(options)
+
+    def test_well_posed_composite_differential_surface_form(self):
+        options = {
+            "particle phases": ("2", "2"),
+            "surface form": "differential",
+        }
+        self.check_well_posedness(options)
+
+    def test_well_posed_composite_algebraic_surface_form(self):
+        options = {
+            "particle phases": ("2", "2"),
+            "surface form": "algebraic",
         }
         self.check_well_posedness(options)

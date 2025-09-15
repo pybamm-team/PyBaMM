@@ -2,29 +2,31 @@
 # Base Symbol Class for the expression tree
 #
 from __future__ import annotations
+
 import numbers
 import warnings
+from collections.abc import Sequence
+from functools import cached_property
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import numpy.typing as npt
 import sympy
 from scipy.sparse import csr_matrix, issparse
-from functools import cached_property
-from typing import TYPE_CHECKING, cast
-from collections.abc import Sequence
 
 import pybamm
-from pybamm.util import import_optional_dependency
 from pybamm.expression_tree.printing.print_name import prettify_print_name
+from pybamm.util import import_optional_dependency
 
 if TYPE_CHECKING:  # pragma: no cover
     import casadi
+
     from pybamm.type_definitions import (
+        AuxiliaryDomainType,
         ChildSymbol,
         ChildValue,
-        DomainType,
-        AuxiliaryDomainType,
         DomainsType,
+        DomainType,
     )
 
 DOMAIN_LEVELS = ["primary", "secondary", "tertiary", "quaternary"]
@@ -161,7 +163,7 @@ def is_matrix_minus_one(expr: Symbol):
 
 def simplify_if_constant(symbol: pybamm.Symbol):
     """
-    Utility function to simplify an expression tree if it evalutes to a constant
+    Utility function to simplify an expression tree if it evaluates to a constant
     scalar, vector or matrix
     """
     if symbol.is_constant():
@@ -753,7 +755,7 @@ class Symbol:
         See :class:`pybamm.Jacobian`.
         """
         jac = pybamm.Jacobian(known_jacs, clear_domain=clear_domain)
-        if not isinstance(variable, (pybamm.StateVector, pybamm.StateVectorDot)):
+        if not isinstance(variable, pybamm.StateVector | pybamm.StateVectorDot):
             raise TypeError(
                 "Jacobian can only be taken with respect to a 'StateVector' "
                 f"or 'StateVectorDot', but {variable} is a {type(variable)}"
@@ -770,8 +772,8 @@ class Symbol:
     def _base_evaluate(
         self,
         t: float | None = None,
-        y: npt.NDArray | None = None,
-        y_dot: npt.NDArray | None = None,
+        y: npt.NDArray[np.float64] | None = None,
+        y_dot: npt.NDArray[np.float64] | None = None,
         inputs: dict | str | None = None,
     ):
         """
@@ -802,8 +804,8 @@ class Symbol:
     def evaluate(
         self,
         t: float | None = None,
-        y: npt.NDArray | None = None,
-        y_dot: npt.NDArray | None = None,
+        y: npt.NDArray[np.float64] | None = None,
+        y_dot: npt.NDArray[np.float64] | None = None,
         inputs: dict | str | None = None,
     ) -> ChildValue:
         """Evaluate expression tree (wrapper to allow using dict of known values).
@@ -909,11 +911,13 @@ class Symbol:
     def evaluates_to_constant_number(self):
         return self.evaluates_to_number() and self.is_constant()
 
-    def evaluates_on_edges(self, dimension: str) -> bool:
+    def evaluates_on_edges(self, dimension: str) -> bool | str:
         """
         Returns True if a symbol evaluates on an edge, i.e. symbol contains a gradient
         operator, but not a divergence operator, and is not an IndefiniteIntegral.
-        Caches the solution for faster results.
+        Caches the solution for faster results. If the symbol is a component of a
+        vector field, returns a string indicating the direction that it evaluates on
+        edges.
 
         Parameters
         ----------

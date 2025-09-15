@@ -22,29 +22,17 @@ class BaseOpenCircuitPotential(BaseInterface):
         :class:`pybamm.BaseBatteryModel`
     phase : str, optional
         Phase of the particle (default is "primary")
+    x_average : bool
+        Whether the particle concentration is averaged over the x-direction. Default is False.
     """
 
-    def __init__(self, param, domain, reaction, options, phase="primary"):
+    def __init__(
+        self, param, domain, reaction, options, phase="primary", x_average=False
+    ):
         super().__init__(param, domain, reaction, options=options, phase=phase)
+        self.x_average = x_average
 
     def _get_standard_ocp_variables(self, ocp_surf, ocp_bulk, dUdT):
-        """
-        A private function to obtain the open-circuit potential and
-        related standard variables.
-
-        Parameters
-        ----------
-        ocp : :class:`pybamm.Symbol`
-            The open-circuit potential
-        dUdT : :class:`pybamm.Symbol`
-            The entropic change in ocp
-
-        Returns
-        -------
-        variables : dict
-            The variables dictionary including the open-circuit potentials
-            and related standard variables.
-        """
         domain, Domain = self.domain_Domain
         reaction_name = self.reaction_name
 
@@ -105,10 +93,6 @@ class BaseOpenCircuitPotential(BaseInterface):
         return variables
 
     def _get_standard_size_distribution_ocp_variables(self, ocp, dUdT):
-        """
-        A private function to obtain the open-circuit potential and
-        related standard variables when there is a distribution of particle sizes.
-        """
         domain, Domain = self.domain_Domain
         reaction_name = self.reaction_name
 
@@ -142,3 +126,36 @@ class BaseOpenCircuitPotential(BaseInterface):
             )
 
         return variables
+
+    def _get_stoichiometry_and_temperature(self, variables):
+        domain, Domain = self.domain_Domain
+        domain_options = getattr(self.options, domain)
+        phase_name = self.phase_name
+
+        sto_bulk = variables[f"{Domain} electrode {phase_name}stoichiometry"]
+        T = variables[f"{Domain} electrode temperature [K]"]
+        T_bulk = pybamm.xyzs_average(T)
+
+        # For "particle-size distribution" models, take distribution version
+        # of sto_surf that depends on particle size.
+        if domain_options["particle size"] == "distribution":
+            sto_surf = variables[
+                f"{Domain} {phase_name}particle surface stoichiometry distribution"
+            ]
+            # If variable was broadcast, take only the orphan
+            if isinstance(sto_surf, pybamm.Broadcast) and isinstance(
+                T, pybamm.Broadcast
+            ):
+                sto_surf = sto_surf.orphans[0]
+                T = T.orphans[0]
+            T = pybamm.PrimaryBroadcast(T, [f"{domain} {phase_name}particle size"])
+        else:
+            sto_surf = variables[f"{Domain} {phase_name}particle surface stoichiometry"]
+            # If variable was broadcast, take only the orphan
+            if isinstance(sto_surf, pybamm.Broadcast) and isinstance(
+                T, pybamm.Broadcast
+            ):
+                sto_surf = sto_surf.orphans[0]
+                T = T.orphans[0]
+
+        return sto_surf, sto_bulk, T, T_bulk

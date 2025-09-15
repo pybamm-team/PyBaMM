@@ -1,5 +1,4 @@
 import pybamm
-
 from pybamm.type_definitions import DomainType
 
 

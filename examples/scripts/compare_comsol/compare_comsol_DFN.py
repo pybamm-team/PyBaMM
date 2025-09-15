@@ -1,8 +1,10 @@
-import pybamm
-import os
 import json
+import os
+
 import numpy as np
 import scipy.interpolate as interp
+
+import pybamm
 
 # change working directory to the root of pybamm
 os.chdir(pybamm.root_dir())
@@ -57,7 +59,8 @@ disc.process_model(pybamm_model)
 
 # solve model at comsol times
 time = np.array(comsol_variables["time"])
-pybamm_solution = pybamm.CasadiSolver(mode="fast").solve(pybamm_model, time)
+t_eval = [time[0], time[-1]]
+pybamm_solution = pybamm.IDAKLUSolver().solve(pybamm_model, t_eval, t_interp=time)
 
 
 # Make Comsol 'model' for comparison

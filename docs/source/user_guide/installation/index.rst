@@ -33,10 +33,9 @@ It can be installed using ``pip`` or ``conda``, or from source.
 Optional solvers
 ----------------
 
-The following solvers are optionally available:
+The following solver is optionally available:
 
 *  `jax <https://jax.readthedocs.io/en/latest/notebooks/quickstart.html>`_ -based solver, see :ref:`optional-jaxsolver` .
-*  `IREE <https://iree.dev/>`_ (`MLIR <https://mlir.llvm.org/>`_) support, see :ref:`optional-iree-mlir-support`.
 
 Dependencies
 ------------
@@ -210,24 +209,13 @@ Dependency                                                  Minimum Version    p
 Jax dependencies
 ^^^^^^^^^^^^^^^^
 
-Installable with ``pip install "pybamm[jax]"``, currently supported on Python 3.9-3.11.
+Installable with ``pip install "pybamm[jax]"``, currently supported on Python 3.10-3.12.
 
 ========================================================================= ================== ================== =======================
 Dependency                                                                Minimum Version    pip extra          Notes
 ========================================================================= ================== ================== =======================
 `JAX <https://jax.readthedocs.io/en/latest/notebooks/quickstart.html>`__  0.4.20             jax                For the JAX solver
 `jaxlib <https://pypi.org/project/jaxlib/>`__                             0.4.20             jax                Support library for JAX
-========================================================================= ================== ================== =======================
-
-IREE dependencies
-^^^^^^^^^^^^^^^^^
-
-Installable with ``pip install "pybamm[iree]"`` (requires ``jax`` dependencies to be installed).
-
-========================================================================= ================== ================== =======================
-Dependency                                                                Minimum Version    pip extra          Notes
-========================================================================= ================== ================== =======================
-`iree-compiler <https://iree.dev/>`__                                     20240507.886       iree               IREE compiler
 ========================================================================= ================== ================== =======================
 
 Full installation guide

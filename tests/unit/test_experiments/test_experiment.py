@@ -2,12 +2,15 @@
 # Test the base experiment class
 #
 
+import os
 from datetime import datetime
-import pybamm
-import pytest
-import numpy as np
+
 import casadi
+import numpy as np
+import pytest
 from scipy.interpolate import PchipInterpolator
+
+import pybamm
 
 
 class TestExperiment:
@@ -210,7 +213,9 @@ class TestExperiment:
         ]
 
         # Test method directly
-        for next, end, steps in zip(expected_next, expected_end, processed_steps):
+        for next, end, steps in zip(
+            expected_next, expected_end, processed_steps, strict=False
+        ):
             # useful form for debugging
             assert steps.next_start_time == next
             assert steps.end_time == end
@@ -356,3 +361,241 @@ class TestExperiment:
         result = np.array(f(test_points)).flatten()
 
         np.testing.assert_allclose(result, expected, rtol=1e-7, atol=1e-6)
+
+    def test_spm_3d_vs_lumped_pouch(self):
+        models = {
+            "Lumped": pybamm.lithium_ion.SPM(options={"thermal": "lumped"}),
+            "3D": pybamm.lithium_ion.Basic3DThermalSPM(
+                options={"cell geometry": "pouch", "dimensionality": 3}
+            ),
+        }
+
+        parameter_values = pybamm.ParameterValues("Marquis2019")
+        h_values = [0.1, 1, 10, 100]
+
+        experiment = pybamm.Experiment(
+            [
+                ("Discharge at 3C until 2.8V", "Rest for 10 minutes"),
+            ]
+        )
+
+        var_pts = {
+            "x_n": 20,
+            "x_s": 20,
+            "x_p": 20,
+            "r_n": 30,
+            "r_p": 30,
+            "x": None,
+            "y": None,
+            "z": None,
+        }
+
+        all_solutions = {}
+
+        for h in h_values:
+            h_params = parameter_values.copy()
+            h_params.update(
+                {
+                    "Total heat transfer coefficient [W.m-2.K-1]": h,
+                    "Left face heat transfer coefficient [W.m-2.K-1]": h,
+                    "Right face heat transfer coefficient [W.m-2.K-1]": h,
+                    "Front face heat transfer coefficient [W.m-2.K-1]": h,
+                    "Back face heat transfer coefficient [W.m-2.K-1]": h,
+                    "Bottom face heat transfer coefficient [W.m-2.K-1]": h,
+                    "Top face heat transfer coefficient [W.m-2.K-1]": h,
+                },
+                check_already_exists=False,
+            )
+
+            solutions = {}
+            for model_name, model in models.items():
+                sim = pybamm.Simulation(
+                    model,
+                    parameter_values=h_params,
+                    var_pts=var_pts,
+                    experiment=experiment,
+                )
+                solutions[model_name] = sim.solve()
+
+            all_solutions[h] = solutions
+
+        for _h, solutions in all_solutions.items():
+            lumped_sol = solutions["Lumped"]
+            three_d_sol = solutions["3D"]
+
+            np.testing.assert_allclose(lumped_sol.t[-1], three_d_sol.t[-1], rtol=0.01)
+
+            lumped_temp_final = lumped_sol[
+                "Volume-averaged cell temperature [K]"
+            ].entries[-1]
+            three_d_temp_final = three_d_sol[
+                "Volume-averaged cell temperature [K]"
+            ].entries[-1]
+            np.testing.assert_allclose(lumped_temp_final, three_d_temp_final, rtol=0.02)
+
+            lumped_final_voltage = lumped_sol["Voltage [V]"].entries[-1]
+            three_d_final_voltage = three_d_sol["Voltage [V]"].entries[-1]
+            np.testing.assert_allclose(
+                lumped_final_voltage, three_d_final_voltage, rtol=0.01
+            )
+
+    def test_spm_3d_vs_lumped_cylinder(self):
+        models = {
+            "Lumped": pybamm.lithium_ion.SPM(options={"thermal": "lumped"}),
+            "3D": pybamm.lithium_ion.Basic3DThermalSPM(
+                options={"cell geometry": "cylindrical", "dimensionality": 3}
+            ),
+        }
+
+        parameter_values = pybamm.ParameterValues("NCA_Kim2011")
+        h_values = [0.1, 1, 10, 100]
+
+        experiment = pybamm.Experiment(
+            [
+                ("Discharge at 3C until 2.8V", "Rest for 10 minutes"),
+            ]
+        )
+
+        var_pts = {
+            "x_n": 20,
+            "x_s": 20,
+            "x_p": 20,
+            "r_n": 30,
+            "r_p": 30,
+            "r_macro": None,
+            "y": None,
+            "z": None,
+        }
+
+        all_solutions = {}
+
+        for h in h_values:
+            h_params = parameter_values.copy()
+            h_params.update(
+                {
+                    "Inner cell radius [m]": 0.005,
+                    "Outer cell radius [m]": 0.018,
+                    "Total heat transfer coefficient [W.m-2.K-1]": h,
+                    "Outer radius heat transfer coefficient [W.m-2.K-1]": h,
+                    "Inner radius heat transfer coefficient [W.m-2.K-1]": h,
+                    "Bottom face heat transfer coefficient [W.m-2.K-1]": h,
+                    "Top face heat transfer coefficient [W.m-2.K-1]": h,
+                },
+                check_already_exists=False,
+            )
+
+            solutions = {}
+            for model_name, model in models.items():
+                sim = pybamm.Simulation(
+                    model,
+                    parameter_values=h_params,
+                    var_pts=var_pts,
+                    experiment=experiment,
+                )
+                solutions[model_name] = sim.solve()
+
+            all_solutions[h] = solutions
+
+        for _h, solutions in all_solutions.items():
+            lumped_sol = solutions["Lumped"]
+            three_d_sol = solutions["3D"]
+
+            np.testing.assert_allclose(lumped_sol.t[-1], three_d_sol.t[-1], rtol=0.01)
+            lumped_temp_final = lumped_sol[
+                "Volume-averaged cell temperature [K]"
+            ].entries[-1]
+            three_d_temp_final = three_d_sol[
+                "Volume-averaged cell temperature [K]"
+            ].entries[-1]
+            np.testing.assert_allclose(lumped_temp_final, three_d_temp_final, rtol=0.02)
+
+            lumped_final_voltage = lumped_sol["Voltage [V]"].entries[-1]
+            three_d_final_voltage = three_d_sol["Voltage [V]"].entries[-1]
+            np.testing.assert_allclose(
+                lumped_final_voltage, three_d_final_voltage, rtol=0.01
+            )
+
+    def test_spm_3d_vs_lumped_cylinder_with_custom_mesh(self):
+        models = {
+            "Lumped": pybamm.lithium_ion.SPM(options={"thermal": "lumped"}),
+            "3D": pybamm.lithium_ion.Basic3DThermalSPM(
+                options={"cell geometry": "cylindrical", "dimensionality": 3}
+            ),
+        }
+
+        boundary_mapping = {"r_min": 1, "r_max": 2, "z_min": 3, "z_max": 4}
+        domain_mapping = {"current collector": 5}
+
+        MESH_DIR = os.path.join(os.path.dirname(__file__), "assets")
+        file_path = os.path.join(MESH_DIR, "spm_test_mesh.msh")
+        mesh_generator = pybamm.UserSuppliedSubmesh3D(
+            file_path=file_path,
+            boundary_mapping=boundary_mapping,
+            domain_mapping=domain_mapping,
+            coord_sys="cylindrical polar",
+        )
+
+        parameter_values = pybamm.ParameterValues("NCA_Kim2011")
+        h = 10
+
+        parameter_values.update(
+            {
+                "Inner cell radius [m]": 0.005,
+                "Outer cell radius [m]": 0.018,
+                "Cell height [m]": 0.065,
+                "Total heat transfer coefficient [W.m-2.K-1]": h,
+                "Outer radius heat transfer coefficient [W.m-2.K-1]": h,
+                "Inner radius heat transfer coefficient [W.m-2.K-1]": h,
+                "Bottom face heat transfer coefficient [W.m-2.K-1]": h,
+                "Top face heat transfer coefficient [W.m-2.K-1]": h,
+            },
+            check_already_exists=False,
+        )
+
+        experiment = pybamm.Experiment(
+            [("Discharge at 3C until 2.8V", "Rest for 10 minutes")]
+        )
+
+        var_pts = {
+            "x_n": 20,
+            "x_s": 20,
+            "x_p": 20,
+            "r_n": 30,
+            "r_p": 30,
+            "r_macro": None,
+            "y": None,
+            "z": None,
+        }
+
+        solutions = {}
+        for model_name, model in models.items():
+            if model_name == "3D":
+                submesh_types = model.default_submesh_types
+                submesh_types["cell"] = mesh_generator
+
+                sim = pybamm.Simulation(
+                    model,
+                    parameter_values=parameter_values,
+                    var_pts=var_pts,
+                    experiment=experiment,
+                    submesh_types=submesh_types,
+                )
+            else:
+                sim = pybamm.Simulation(
+                    model,
+                    parameter_values=parameter_values,
+                    var_pts=var_pts,
+                    experiment=experiment,
+                )
+            solutions[model_name] = sim.solve()
+
+        lumped_sol = solutions["Lumped"]
+        three_d_sol = solutions["3D"]
+
+        lumped_temp = lumped_sol["Volume-averaged cell temperature [K]"].entries[-1]
+        three_d_temp = three_d_sol["Volume-averaged cell temperature [K]"].entries[-1]
+        np.testing.assert_allclose(lumped_temp, three_d_temp, rtol=0.02)
+
+        lumped_voltage = lumped_sol["Voltage [V]"].entries[-1]
+        three_d_voltage = three_d_sol["Voltage [V]"].entries[-1]
+        np.testing.assert_allclose(lumped_voltage, three_d_voltage, rtol=0.01)

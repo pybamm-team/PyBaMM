@@ -2,10 +2,12 @@
 # Tests for the parameter processing functions
 #
 
-import numpy as np
-import pybamm
-import pytest
 from pathlib import Path
+
+import numpy as np
+import pytest
+
+import pybamm
 
 
 @pytest.fixture

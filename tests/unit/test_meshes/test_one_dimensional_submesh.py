@@ -1,6 +1,7 @@
-import pytest
-import pybamm
 import numpy as np
+import pytest
+
+import pybamm
 
 
 @pytest.fixture()
@@ -33,6 +34,13 @@ class TestSubMesh1D:
         mesh = pybamm.SubMesh1D(edges, None, tabs=tabs)
         assert mesh.tabs["negative tab"] == "left"
         assert mesh.tabs["positive tab"] == "right"
+
+    def test_ghost_cell_top_bottom_error(self):
+        edges = np.linspace(0, 1, 10)
+        tabs = {"negative": {"z_centre": 0}, "positive": {"z_centre": 1}}
+        mesh = pybamm.SubMesh1D(edges, None, tabs=tabs)
+        with pytest.raises(NotImplementedError, match="left and right ghost cells"):
+            mesh.create_ghost_cell("top")
 
     def test_exceptions(self):
         edges = np.linspace(0, 1, 10)
@@ -370,6 +378,7 @@ class TestSpectralVolume1DSubMesh:
         for a, b in zip(
             mesh["negative particle"].edges.tolist(),
             [0, 0.075, 0.225, 0.3, 0.475, 0.825, 1],
+            strict=False,
         ):
             assert a == pytest.approx(b)
 
@@ -387,5 +396,6 @@ class TestSpectralVolume1DSubMesh:
         for a, b in zip(
             mesh["negative particle"].edges.tolist(),
             [0.0, 0.125, 0.375, 0.5, 0.625, 0.875, 1.0],
+            strict=False,
         ):
             assert a == pytest.approx(b)

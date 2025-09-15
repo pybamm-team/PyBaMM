@@ -4,7 +4,7 @@ ci:
 
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: "v0.11.6"
+    rev: "v0.12.12"
     hooks:
       - id: ruff
         args: [--fix, --show-fixes]
@@ -13,13 +13,13 @@ repos:
         types_or: [python, pyi, jupyter]
 
   - repo: https://github.com/adamchainz/blacken-docs
-    rev: "1.19.1"
+    rev: "1.20.0"
     hooks:
        - id: blacken-docs
          additional_dependencies: [black==23.*]
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: v6.0.0
     hooks:
         - id: check-added-large-files
         - id: check-case-conflict
@@ -39,12 +39,11 @@ repos:
         - id: rst-inline-touching-normal
 
   - repo: https://github.com/scientific-python/cookie
-    rev: 2025.01.22
+    rev: 2025.05.02
     hooks:
         - id: sp-repo-review
 
   - repo: https://github.com/woodruffw/zizmor-pre-commit
-    rev: v1.6.0
+    rev: v1.12.1
     hooks:
       - id: zizmor
-        args: [--pedantic]

@@ -1,5 +1,7 @@
-import numpy as onp
 import asyncio
+
+import numpy as onp
+
 import pybamm
 
 if pybamm.has_jax():
@@ -198,7 +200,9 @@ class JaxSolver(pybamm.BaseSolver):
     def requires_explicit_sensitivities(self):
         return False
 
-    def _integrate(self, model, t_eval, inputs=None, t_interp=None):
+    def _integrate(
+        self, model, t_eval, inputs=None, t_interp=None, intial_conditions=None
+    ):
         """
         Solve a model defined by dydt with initial conditions y0.
 
@@ -218,6 +222,10 @@ class JaxSolver(pybamm.BaseSolver):
             various diagnostic messages.
 
         """
+        if intial_conditions is not None:  # pragma: no cover
+            raise NotImplementedError(
+                "Setting initial conditions is not yet implemented for the JAX IDAKLU solver"
+            )
         if isinstance(inputs, dict):
             inputs = [inputs]
         timer = pybamm.Timer()

@@ -1,9 +1,11 @@
-import json
-import pybamm
 import copy
+import json
+from typing import Any
+
 import numpy as np
 import pytest
-from typing import Any
+
+import pybamm
 
 
 class TestBPX:
@@ -260,15 +262,18 @@ class TestBPX:
 
             if "exchange-current" in param_key:
                 eval_ratio = (
-                    pv[param_key](c_e, c_s_surf, c_s_max, T).value
-                    / pv[param_key](c_e, c_s_surf, c_s_max, T_ref).value
+                    pv[param_key](c_e, c_s_surf, c_s_max, T).evaluate()
+                    / pv[param_key](c_e, c_s_surf, c_s_max, T_ref).evaluate()
                 )
             else:
                 eval_ratio = (
-                    pv[param_key](sto, T).value / pv[param_key](sto, T_ref).value
+                    pv[param_key](sto, T).evaluate()
+                    / pv[param_key](sto, T_ref).evaluate()
                 )
 
-            calc_ratio = pybamm.exp(Ea / pybamm.constants.R * (1 / T_ref - 1 / T)).value
+            calc_ratio = pybamm.exp(
+                Ea / pybamm.constants.R * (1 / T_ref - 1 / T)
+            ).evaluate()
 
             assert eval_ratio == pytest.approx(calc_ratio)
 
@@ -290,7 +295,7 @@ class TestBPX:
             "Negative electrode reaction rate constant activation energy [J.mol-1]",
         ]
 
-        for param_key, Ea_key in zip(param_keys, Ea_keys):
+        for param_key, Ea_key in zip(param_keys, Ea_keys, strict=False):
             arrhenius_assertion(pv, param_key, Ea_key)
 
     def test_bpx_blended(self, tmp_path):

@@ -1,6 +1,8 @@
-import pybamm
 import os
+
 import numpy as np
+
+import pybamm
 
 
 def graphite_LGM50_electrolyte_exchange_current_density_Chen2020(
@@ -80,7 +82,7 @@ def silicon_ocp_lithiation_Mark2016(sto):
         + p6 * sto**2
         + p7 * sto
         + p8
-    )
+    ) + 1e-4 * (1 / sto + 1 / (sto - 1))
     return U_lithiation
 
 
@@ -126,6 +128,12 @@ def silicon_ocp_delithiation_Mark2016(sto):
         + p8
     )
     return U_delithiation
+
+
+def silicon_ocp_average_Mark2016(sto):
+    return (
+        silicon_ocp_lithiation_Mark2016(sto) + silicon_ocp_delithiation_Mark2016(sto)
+    ) / 2
 
 
 def silicon_LGM50_electrolyte_exchange_current_density_Chen2020(
@@ -197,7 +205,7 @@ def nmc_LGM50_ocp_Chen2020(sto):
         - 0.0428 * np.tanh(18.5138 * (sto - 0.5542))
         - 17.7326 * np.tanh(15.7890 * (sto - 0.3117))
         + 17.5842 * np.tanh(15.9308 * (sto - 0.3120))
-    )
+    ) + 1e-4 * (1 / sto + 1 / (sto - 1))
 
     return u_eq
 
@@ -406,6 +414,7 @@ def get_parameter_values():
         "": silicon_ocp_lithiation_Mark2016,
         "Secondary: Negative electrode delithiation OCP [V]"
         "": silicon_ocp_delithiation_Mark2016,
+        "Secondary: Negative electrode OCP [V]": silicon_ocp_average_Mark2016,
         "Secondary: Negative electrode active material volume fraction": 0.015,
         "Secondary: Negative particle radius [m]": 1.52e-06,
         "Secondary: Negative electrode exchange-current density [A.m-2]"

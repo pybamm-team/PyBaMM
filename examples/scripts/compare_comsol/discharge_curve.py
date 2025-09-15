@@ -1,8 +1,10 @@
-import pybamm
-import numpy as np
-import os
 import json
+import os
+
 import matplotlib.pyplot as plt
+import numpy as np
+
+import pybamm
 
 # change working directory to the root of pybamm
 os.chdir(pybamm.root_dir())
@@ -68,8 +70,9 @@ for key, C_rate in C_rates.items():
 
     # solve model at comsol times
     t = comsol_time
-    solution = pybamm.CasadiSolver(mode="fast").solve(
-        model, t, inputs={"Current function [A]": current}
+    t_eval = [t[0], t[-1]]
+    solution = pybamm.IDAKLUSolver().solve(
+        model, t_eval, t_interp=t, inputs={"Current function [A]": current}
     )
     time_in_seconds = solution["Time [s]"].entries
 

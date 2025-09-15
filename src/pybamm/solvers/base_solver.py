@@ -2,16 +2,16 @@ import copy
 import itertools
 import multiprocessing as mp
 import numbers
+import platform
 import sys
 import warnings
-import platform
 
 import casadi
 import numpy as np
 
 import pybamm
-from pybamm.expression_tree.binary_operators import _Heaviside
 from pybamm import ParameterValues
+from pybamm.expression_tree.binary_operators import _Heaviside
 
 
 class BaseSolver:
@@ -42,6 +42,9 @@ class BaseSolver:
     on_extrapolation : str, optional
         What to do if the solver is extrapolating. Options are "warn", "error", or "ignore".
         Default is "warn".
+    on_failure : str, optional
+        What to do if a solver error flag occurs. Options are "warn", "error", or "ignore".
+        Default is "raise".
     """
 
     def __init__(
@@ -53,6 +56,7 @@ class BaseSolver:
         root_tol=1e-6,
         extrap_tol=None,
         on_extrapolation=None,
+        on_failure=None,
         output_variables=None,
     ):
         self.method = method
@@ -62,7 +66,8 @@ class BaseSolver:
         self.root_method = root_method
         self.extrap_tol = extrap_tol or -1e-10
         self.output_variables = [] if output_variables is None else output_variables
-        self.on_extrapolation = on_extrapolation or "warn"
+        self._on_extrapolation = on_extrapolation or "warn"
+        self._on_failure = on_failure or "raise"
         self._model_set_up = {}
 
         # Defaults, can be overwritten by specific solver
@@ -98,6 +103,16 @@ class BaseSolver:
         if value not in ["warn", "error", "ignore"]:
             raise ValueError("on_extrapolation must be 'warn', 'raise', or 'ignore'")
         self._on_extrapolation = value
+
+    @property
+    def on_failure(self):
+        return self._on_failure
+
+    @on_failure.setter
+    def on_failure(self, value):
+        if value not in ["warn", "error", "ignore"]:
+            raise ValueError("on_failure must be 'warn', 'raise', or 'ignore'")
+        self._on_failure = value
 
     @property
     def root_method(self):
@@ -232,7 +247,7 @@ class BaseSolver:
         # Save CasADi functions for solvers that use CasADi
         # Note: when we pass to casadi the ode part of the problem must be in
         if isinstance(self.root_method, pybamm.CasadiAlgebraicSolver) or isinstance(
-            self, (pybamm.CasadiSolver, pybamm.CasadiAlgebraicSolver)
+            self, pybamm.CasadiSolver | pybamm.CasadiAlgebraicSolver
         ):
             # can use DAE solver to solve model with algebraic equations only
             if len(model.rhs) > 0:
@@ -260,11 +275,22 @@ class BaseSolver:
         self.computed_var_fcns = {}
         self.computed_dvar_dy_fcns = {}
         self.computed_dvar_dp_fcns = {}
+        self._time_integral_vars = {}
         for key in self.output_variables:
-            # ExplicitTimeIntegral's are not computed as part of the solver and
-            # do not need to be converted
-            if isinstance(model.variables_and_events[key], pybamm.ExplicitTimeIntegral):
-                continue
+            # Check for any ExplicitTimeIntegral or DiscreteTimeSum variables
+            processed_time_integral = (
+                pybamm.ProcessedVariableTimeIntegral.from_pybamm_var(
+                    model.variables_and_events[key],
+                    model.len_rhs_and_alg,
+                )
+            )
+            # We will evaluate the sum node in the solver and sum it afterwards
+            if processed_time_integral is None:
+                var = model.variables_and_events[key]
+            else:
+                var = processed_time_integral.sum_node
+                self._time_integral_vars[key] = processed_time_integral
+
             # Generate Casadi function to calculate variable and derivates
             # to enable sensitivites to be computed within the solver
             (
@@ -273,7 +299,7 @@ class BaseSolver:
                 self.computed_dvar_dp_fcns[key],
                 _,
             ) = process(
-                model.variables_and_events[key],
+                var,
                 BaseSolver._wrangle_name(key),
                 vars_for_processing,
                 use_jacobian=True,
@@ -371,7 +397,7 @@ class BaseSolver:
                 ) from e
 
         if (
-            isinstance(self, (pybamm.CasadiSolver, pybamm.CasadiAlgebraicSolver))
+            isinstance(self, pybamm.CasadiSolver | pybamm.CasadiAlgebraicSolver)
         ) and model.convert_to_format != "casadi":
             pybamm.logger.warning(
                 f"Converting {model.name} to CasADi for solving with CasADi solver"
@@ -711,6 +737,7 @@ class BaseSolver:
         nproc=None,
         calculate_sensitivities=False,
         t_interp=None,
+        initial_conditions=None,
     ):
         """
         Execute the solver setup and calculate the solution of the model at
@@ -741,7 +768,14 @@ class BaseSolver:
         t_interp : None, list or ndarray, optional
             The times (in seconds) at which to interpolate the solution. Defaults to None.
             Only valid for solvers that support intra-solve interpolation (`IDAKLUSolver`).
+        initial_conditions : dict, numpy.ndarray, or list, optional
+            Override the model’s default `y0`.  Can be:
 
+            - a dict mapping variable names → values
+            - a 1D array of length `n_states`
+            - a list of such overrides (one per parallel solve)
+
+            Only valid for IDAKLU solver.
         Returns
         -------
         :class:`pybamm.Solution` or list of :class:`pybamm.Solution` objects.
@@ -902,7 +936,7 @@ class BaseSolver:
         # consistent state afterwards if a DAE)
         old_y0 = model.y0
         solutions = None
-        for start_index, end_index in zip(start_indices, end_indices):
+        for start_index, end_index in zip(start_indices, end_indices, strict=False):
             pybamm.logger.verbose(
                 f"Calling solver for {t_eval[start_index]} < t < {t_eval[end_index - 1]}"
             )
@@ -913,6 +947,7 @@ class BaseSolver:
                     t_eval[start_index:end_index],
                     model_inputs_list,
                     t_interp,
+                    initial_conditions,
                 )
             else:
                 ninputs = len(model_inputs_list)
@@ -933,6 +968,7 @@ class BaseSolver:
                                 [t_eval[start_index:end_index]] * ninputs,
                                 model_inputs_list,
                                 [t_interp] * ninputs,
+                                strict=False,
                             ),
                         )
                         p.close()
@@ -1104,7 +1140,7 @@ class BaseSolver:
     ) -> tuple:
         """
         A restricted version of BaseModel.set_initial_conditions_from that only extracts the
-        sensitivities from a solution object, and only for a model that has been descretised.
+        sensitivities from a solution object, and only for a model that has been discretised.
         This is used when setting the initial conditions for a sensitivity model.
 
         Parameters
@@ -1146,7 +1182,7 @@ class BaseSolver:
 
         # sort equations according to slices
         concatenated_initial_conditions = [
-            casadi.vertcat(*[eq for _, eq in sorted(zip(slices, init))])
+            casadi.vertcat(*[eq for _, eq in sorted(zip(slices, init, strict=False))])
             for init in initial_conditions
         ]
         return concatenated_initial_conditions
@@ -1250,9 +1286,15 @@ class BaseSolver:
             t_eval = np.linspace(0, dt, npts)
         elif t_eval is None:
             t_eval = np.array([0, dt])
-        elif t_eval[0] != 0 or t_eval[-1] != dt:
+        elif t_eval[0] != 0:
             raise pybamm.SolverError(
-                "Elements inside array t_eval must lie in the closed interval 0 to dt"
+                f"The first `t_eval` value ({t_eval[0]}) must be 0."
+                "Please correct your `t_eval` array."
+            )
+        elif t_eval[-1] != dt:
+            raise pybamm.SolverError(
+                f"The final `t_eval` value ({t_eval[-1]}) must be equal "
+                f"to the step time `dt` ({dt}). Please correct your `t_eval` array."
             )
         else:
             pass
@@ -1393,11 +1435,18 @@ class BaseSolver:
         termination_events = [
             x for x in events if x.event_type == pybamm.EventType.TERMINATION
         ]
-        if solution.termination == "final time":
-            return (
-                solution,
-                "the solver successfully reached the end of the integration interval",
-            )
+
+        match solution.termination:
+            case "final time":
+                return (
+                    solution,
+                    "the solver successfully reached the end of the integration interval",
+                )
+            case "failure":
+                return (
+                    solution,
+                    "the solver failed to simulate",
+                )
 
         # solution.termination == "event":
         pybamm.logger.debug("Start post-processing events")
@@ -1530,7 +1579,7 @@ class BaseSolver:
 
     def get_platform_context(self, system_type: str):
         # Set context for parallel processing depending on the platform
-        if system_type.lower() in ["linux", "darwin"]:
+        if system_type.lower() in ["linux"]:
             return "fork"
         return "spawn"
 

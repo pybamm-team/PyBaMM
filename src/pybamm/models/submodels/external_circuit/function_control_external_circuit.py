@@ -2,6 +2,7 @@
 # External circuit with an arbitrary function
 #
 import pybamm
+
 from .base_external_circuit import BaseModel
 
 
@@ -40,7 +41,7 @@ class FunctionControl(BaseModel):
             I = pybamm.maximum(i_var, i_input)
 
         # Update derived variables
-        i_cell = I / (self.param.n_electrodes_parallel * self.param.A_cc)
+        i_cell = I / self.param.A_cc
 
         variables = {
             "Current variable [A]": i_var,

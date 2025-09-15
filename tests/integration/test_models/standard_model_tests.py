@@ -1,11 +1,12 @@
 #
 # Standard basic tests for any model
 #
-import pybamm
-import tests
 import tempfile
 
 import numpy as np
+
+import pybamm
+import tests
 
 
 class StandardModelTest:
@@ -84,7 +85,7 @@ class StandardModelTest:
             Crate = 1
         if t_eval is None:
             t_eval = [0, 3600 / Crate]
-        t_interp = np.linspace(0, t_eval[-1], 100)
+        t_interp = np.linspace(t_eval[0], t_eval[-1], 100)
 
         self.solution = self.solver.solve(
             self.model,
@@ -142,7 +143,7 @@ class StandardModelTest:
         )
         output_neg = sol_neg[output_name].data
         fd = (np.array(output_plus) - np.array(output_neg)) / h
-        fd = fd.transpose().reshape(-1, 1)
+        fd = fd.transpose().reshape(-1)
         np.testing.assert_allclose(
             output_sens,
             fd,
@@ -201,7 +202,7 @@ class StandardModelTest:
 
         if (
             isinstance(
-                self.model, (pybamm.lithium_ion.BaseModel, pybamm.lead_acid.BaseModel)
+                self.model, pybamm.lithium_ion.BaseModel | pybamm.lead_acid.BaseModel
             )
             and not skip_output_tests
         ):

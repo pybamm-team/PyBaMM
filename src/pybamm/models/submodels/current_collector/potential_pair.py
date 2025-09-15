@@ -2,6 +2,7 @@
 # Class for one- and two-dimensional potential pair current collector models
 #
 import pybamm
+
 from .base_current_collector import BaseModel
 
 
@@ -34,7 +35,7 @@ class BasePotentialPair(BaseModel):
         i_boundary_cc = pybamm.Variable(
             "Current collector current density [A.m-2]",
             domain="current collector",
-            scale=self.param.Q / (self.param.A_cc * self.param.n_electrodes_parallel),
+            scale=self.param.Q / self.param.A_cc,
         )
 
         variables.update(self._get_standard_current_variables(i_cc, i_boundary_cc))
