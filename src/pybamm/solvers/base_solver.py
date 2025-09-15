@@ -963,7 +963,28 @@ class BaseSolver:
             return solutions
 
     @staticmethod
-    def _get_discontinuity_start_end_indices(model, inputs, t_eval):
+    def _sort_and_clean_discontinuities(discontinuities, t_eval):
+        # make sure they are increasing in time
+        discontinuities = sorted(discontinuities)
+
+        # remove any identical discontinuities, and also unwanted discontinuities
+        # at the beginning of the integration (see https://github.com/pybamm-team/PyBaMM/pull/5075)
+        discontinuities = [
+            v
+            for i, v in enumerate(discontinuities)
+            if (
+                i == len(discontinuities) - 1
+                or discontinuities[i] < discontinuities[i + 1]
+            )
+            and v > t_eval[0] 
+        ]
+
+        # remove any discontinuities after end of t_eval
+        discontinuities = [v for v in discontinuities if v < t_eval[-1]]
+
+        return discontinuities
+    
+    def _get_discontinuity_start_end_indices(self, model, inputs, t_eval):
         if not model.discontinuity_events_eval:
             pybamm.logger.verbose("No discontinuity events found")
             return [0], [len(t_eval)], t_eval
@@ -978,22 +999,8 @@ class BaseSolver:
             for event in model.discontinuity_events_eval
         ]
 
-        # make sure they are increasing in time
-        discontinuities = sorted(discontinuities)
-
-        # remove any identical discontinuities
-        discontinuities = [
-            v
-            for i, v in enumerate(discontinuities)
-            if (
-                i == len(discontinuities) - 1
-                or discontinuities[i] < discontinuities[i + 1]
-            )
-            and v > t_eval[0]
-        ]
-
-        # remove any discontinuities after end of t_eval
-        discontinuities = [v for v in discontinuities if v < t_eval[-1]]
+        # sort and remove unwanted discontinuities
+        discontinuities = self._sort_and_clean_discontinuities(discontinuities, t_eval)
 
         pybamm.logger.verbose(f"Discontinuity events found at t = {discontinuities}")
         if isinstance(inputs, list):

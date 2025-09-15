@@ -435,18 +435,11 @@ class TestBaseSolver:
             base_solver.on_extrapolation = "invalid"
 
     def test_discontinuity_removed_at_nonzero_initial_time(self):
-        # Test that discontinuity caused by Heaviside(t) is removed when solver called with non-zero initial time
-        model = pybamm.BaseModel()
-        u = pybamm.Variable("u")
-        v = pybamm.Variable("v")
-        model.rhs = {v: -1 * (pybamm.t < 1)}
-        model.algebraic = {u: v - 1 - u}
-        model.initial_conditions = {v: 1, u: 0}
-        disc = pybamm.Discretisation()
-        disc.process_model(model)
-        solver = pybamm.IDAKLUSolver()
-        sol1 = solver.solve(model, t_eval=[0, 1])
+        # Test that the discontinuity caused by Heaviside(t) will be removed when 
+        # the solver is called with t_eval[0] != 0 
+        base_solver = pybamm.BaseSolver()
+        t_eval = [1, 2]
+        uncleaned_discontinuities = [1]
+        cleaned_discontinuities = base_solver._sort_and_clean_discontinuities(uncleaned_discontinuities, t_eval)
 
-        model.set_initial_conditions_from(sol1)
-        sol2 = solver.solve(model, t_eval=[1, 2])
-        assert sol2 is not None
+        assert t_eval[0] not in cleaned_discontinuities
