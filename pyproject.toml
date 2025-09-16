@@ -28,7 +28,9 @@ classifiers = [
     "Topic :: Scientific/Engineering",
 ]
 dependencies = [
-    "pybammsolvers @ git+https://github.com/pybamm-team/pybammsolvers.git@chore/releaseUpdates",
+    # recursive clones won't work due to GHA permissions, remove
+    # "pybammsolvers @ git+https://github.com/pybamm-team/pybammsolvers.git@chore/releaseUpdates",
+    "pybammsolvers",
     "numpy",
     "scipy>=1.11.4",
     "casadi==3.6.7",
