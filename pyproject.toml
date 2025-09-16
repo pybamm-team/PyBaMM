@@ -159,6 +159,7 @@ build.targets.sdist.include = [
   "CITATION.cff",
 ]
 build.hooks.vcs.version-file = "src/pybamm/_version.py"
+metadata.allow-direct-references = true
 
 [tool.repo-review]
 ignore = [
