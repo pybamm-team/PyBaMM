@@ -218,11 +218,9 @@ def bpx_to_param_dict(bpx: BPX) -> dict:
     # transport efficiency
     # Compute Bruggeman coefficient from BPX-specified porosity and transport efficiency
     for domain in [negative_electrode, separator, positive_electrode]:
-        pybamm_dict[domain.pre_name + "Bruggeman coefficient (electrolyte)"] = (
-          math.log(pybamm_dict[domain.pre_name + "transport efficiency"])
-          / math.log(pybamm_dict[domain.pre_name + "porosity"])
-    )
-
+        pybamm_dict[domain.pre_name + "Bruggeman coefficient (electrolyte)"] = math.log(
+            pybamm_dict[domain.pre_name + "transport efficiency"]
+        ) / math.log(pybamm_dict[domain.pre_name + "porosity"])
 
     def _get_activation_energy(var_name):
         return pybamm_dict.get(var_name) or 0.0
