@@ -505,7 +505,7 @@ class BaseSolver:
             )
 
         def heaviside_t_eval(symbol, expr):
-            value = expr.evaluate()
+            value = expr.evaluate(0, model.y0.full(), inputs=inputs)
             append_t_eval(value)
 
             if isinstance(symbol, pybamm.EqualHeaviside):
@@ -542,7 +542,7 @@ class BaseSolver:
                 )
 
         def modulo_t_eval(symbol, expr, num_events):
-            value = expr.evaluate()
+            value = expr.evaluate(0, model.y0.full(), inputs=inputs)
             for i in np.arange(num_events):
                 t = value * (i + 1)
                 # Stop right before t and at t
