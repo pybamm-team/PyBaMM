@@ -28,7 +28,7 @@ classifiers = [
     "Topic :: Scientific/Engineering",
 ]
 dependencies = [
-    "pybammsolvers@git+https://github.com/pybamm-team/pybammsolvers#egg=chore/releaseUpdates",
+    "pybammsolvers @ git+https://github.com/pybamm-team/pybammsolvers.git@chore/releaseUpdates",
     "numpy",
     "scipy>=1.11.4",
     "casadi==3.6.7",
