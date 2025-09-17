@@ -2,6 +2,7 @@
 
 ## Features
 
+- Added the `num_steps_no_progress` and `t_no_progress` options in the `IDAKLUSolver` to early terminate the simulation if little progress is detected. ([#5201](https://github.com/pybamm-team/PyBaMM/pull/5201))
 - Added helper functions to import external 3D meshes in PyBaMM ([#5162](https://github.com/pybamm-team/PyBaMM/pull/5162))
 - Added support for algebraic and differential surface form in composite models. ([#5165](https://github.com/pybamm-team/PyBaMM/pull/5165))
 - Adds a composite electrode electrode soh model ([#5160](https://github.com/pybamm-team/PyBaMM/pull/5129))
@@ -9,9 +10,11 @@
 
 ## Bug fixes
 
+- Fixed a bug using a time-varying input with heaviside or modulo functions using the `IDAKLUSolver`. ([#4994](https://github.com/pybamm-team/PyBaMM/pull/4994))
 - Fix a bug in setting initial stoichiometries where the reference temperature was used instead of the initial temperature. ([#5189](https://github.com/pybamm-team/PyBaMM/pull/5189))
 - Fix a bug in the calculation of "Bulk" OCP terms in hysteresis models ([#5169](https://github.com/pybamm-team/PyBaMM/pull/5169))
 - Fixed a bug where the final duration of a drive cycle would not be inferred correctly. ([#5153](https://github.com/pybamm-team/PyBaMM/pull/5153))
+- Fixes a bug where sensitivities for 1D+ variables calculated using the `output_variables` options were incorrect ([#5118](https://github.com/pybamm-team/PyBaMM/pull/5118))
 
 # [v25.8.0](https://github.com/pybamm-team/PyBaMM/tree/v25.8.0) - 2025-08-04
 
@@ -77,7 +80,7 @@
 
 ## Breaking changes
 
-- Remove sensitivity functionality for Casadi and Scipy solvers, only `pybamm.IDAKLU` solver can calculate sensitivities. ([#4975](https://github.com/pybamm-team/PyBaMM/pull/4975))
+- Remove sensitivity functionality for Casadi and Scipy solvers, only `pybamm.IDAKLUSolver` can calculate sensitivities. ([#4975](https://github.com/pybamm-team/PyBaMM/pull/4975))
 
 # [v25.4.2](https://github.com/pybamm-team/PyBaMM/tree/v25.4.2) - 2025-04-17
 

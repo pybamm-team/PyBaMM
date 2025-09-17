@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pickle
 import warnings
+from copy import copy
 from datetime import timedelta
 from functools import lru_cache
 
@@ -440,6 +441,9 @@ class Simulation:
         """
         pybamm.telemetry.capture("simulation-solved")
 
+        # Copy t_eval to avoid modifying the original
+        t_eval = copy(t_eval)
+
         # Setup
         if solver is None:
             solver = self._solver
@@ -507,7 +511,7 @@ class Simulation:
                 # the time data (to ensure the resolution of t_eval is fine enough).
                 # We only raise a warning here as users may genuinely only want
                 # the solution returned at some specified points.
-                elif not isinstance(solver, pybamm.IDAKLUSolver) and not set(
+                elif not solver.supports_t_eval_discontinuities and not set(
                     np.round(time_data, 12)
                 ).issubset(set(np.round(t_eval, 12))):
                     warnings.warn(
@@ -1028,6 +1032,9 @@ class Simulation:
             Additional key-word arguments passed to `solver.solve`.
             See :meth:`pybamm.BaseSolver.step`.
         """
+        # Copy t_eval to avoid modifying the original
+        t_eval = copy(t_eval)
+
         if self.operating_mode in ["without experiment", "drive cycle"]:
             self.build()
 
