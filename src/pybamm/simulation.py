@@ -511,7 +511,7 @@ class Simulation:
                 # the time data (to ensure the resolution of t_eval is fine enough).
                 # We only raise a warning here as users may genuinely only want
                 # the solution returned at some specified points.
-                elif not isinstance(solver, pybamm.IDAKLUSolver) and not set(
+                elif not solver.supports_t_eval_discontinuities and not set(
                     np.round(time_data, 12)
                 ).issubset(set(np.round(t_eval, 12))):
                     warnings.warn(

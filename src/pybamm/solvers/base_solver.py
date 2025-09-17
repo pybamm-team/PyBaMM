@@ -75,6 +75,7 @@ class BaseSolver:
         self._ode_solver = False
         self._algebraic_solver = False
         self._supports_interp = False
+        self._supports_t_eval_discontinuities = False
         self.computed_var_fcns = {}
         self._mp_context = self.get_platform_context(platform.system())
 
@@ -89,6 +90,10 @@ class BaseSolver:
     @property
     def supports_interp(self):
         return self._supports_interp
+
+    @property
+    def supports_t_eval_discontinuities(self):
+        return self._supports_t_eval_discontinuities
 
     @property
     def supports_parallel_solve(self):
@@ -484,8 +489,8 @@ class BaseSolver:
         def supports_t_eval_discontinuities(expr):
             # Only IDAKLUSolver supports discontinuities represented by t_eval
             return (
-                (t_eval is not None)
-                and isinstance(self, pybamm.IDAKLUSolver)
+                self.supports_t_eval_discontinuities
+                and (t_eval is not None)
                 and expr.is_constant()
             )
 
