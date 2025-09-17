@@ -682,6 +682,9 @@ class TestFiniteVolume:
         position = pybamm.Scalar(mesh["negative electrode"].edges[-1])
         downwind_var = pybamm.downwind(var)
         evaluate_at = pybamm.EvaluateAt(downwind_var, position)
+
+        assert evaluate_at.evaluates_on_edges("primary") is False
+
         evaluate_at_disc = disc.process_symbol(evaluate_at)
 
         assert evaluate_at_disc.evaluate(y=y) == n - 1
