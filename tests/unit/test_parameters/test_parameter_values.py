@@ -104,7 +104,7 @@ class TestParameterValues:
         assert y == pytest.approx(y_0 - 0.4 * (y_0 - y_100))
 
         with pytest.warns(DeprecationWarning):
-            param.set_initial_stoichiometries(0.4)
+            param.set_initial_stoichiometries(0.4, None)
 
         # check that passing inputs gives the same result
         input_param = "Maximum concentration in positive electrode [mol.m-3]"
@@ -209,14 +209,17 @@ class TestParameterValues:
         assert Up_100 - Un_100 == pytest.approx(4.2)
 
         with pytest.warns(DeprecationWarning):
-            param_100.set_initial_ocps("4.2 V", inplace=False, options=options)
+            param_100.set_initial_ocps("4.2 V", None, inplace=False, options=options)
 
         # check that passing inputs gives the same result
         input_param = "Maximum concentration in positive electrode [mol.m-3]"
         input_value = param_100[input_param]
         param_100[input_param] = "[input]"
         param_0_inputs = param_100.set_initial_state(
-            0, inplace=False, options=options, inputs={input_param: input_value}
+            0,
+            inplace=False,
+            options=options,
+            inputs={input_param: input_value},
         )
         assert param_0_inputs["Initial voltage in positive electrode [V]"] == Up_0
 
