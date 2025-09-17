@@ -145,10 +145,6 @@ def bpx_to_param_dict(bpx: BPX) -> dict:
     # activity
     pybamm_dict["Thermodynamic factor"] = 1.0
 
-    # assume Bruggeman relation for effective electrolyte properties
-    for domain in [negative_electrode, separator, positive_electrode]:
-        pybamm_dict[domain.pre_name + "Bruggeman coefficient (electrolyte)"] = 1.5
-
     # solid phase properties reported in BPX are already "effective",
     # so no correction is applied
     for domain in [negative_electrode, positive_electrode]:
