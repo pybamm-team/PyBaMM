@@ -75,6 +75,7 @@ class BaseSolver:
         self._ode_solver = False
         self._algebraic_solver = False
         self._supports_interp = False
+        self._supports_t_eval_discontinuities = False
         self.computed_var_fcns = {}
         self._mp_context = self.get_platform_context(platform.system())
 
@@ -89,6 +90,10 @@ class BaseSolver:
     @property
     def supports_interp(self):
         return self._supports_interp
+
+    @property
+    def supports_t_eval_discontinuities(self):
+        return self._supports_t_eval_discontinuities
 
     @property
     def supports_parallel_solve(self):
@@ -477,46 +482,107 @@ class BaseSolver:
         # discontinuity events if these exist.
         # Note: only checks for the case of t < X, t <= X, X < t, or X <= t,
         # but also accounts for the fact that t might be dimensional
-        # Only do this for DAE models as ODE models can deal with discontinuities
-        # fine
 
-        if len(model.algebraic) > 0:
-            for symbol in itertools.chain(
-                model.concatenated_rhs.pre_order(),
-                model.concatenated_algebraic.pre_order(),
-            ):
-                if isinstance(symbol, _Heaviside):
-                    if symbol.right == pybamm.t:
-                        expr = symbol.left
-                    elif symbol.left == pybamm.t:
-                        expr = symbol.right
-                    else:
-                        # Heaviside function does not contain pybamm.t as an argument.
-                        # Do not create an event
-                        continue  # pragma: no cover
+        t0 = np.min(t_eval)
+        tf = np.max(t_eval)
 
-                    model.events.append(
-                        pybamm.Event(
-                            str(symbol),
-                            expr,
-                            pybamm.EventType.DISCONTINUITY,
-                        )
-                    )
+        def supports_t_eval_discontinuities(expr):
+            # Only IDAKLUSolver supports discontinuities represented by t_eval
+            return (
+                self.supports_t_eval_discontinuities
+                and (t_eval is not None)
+                and expr.is_constant()
+            )
 
-                elif isinstance(symbol, pybamm.Modulo) and symbol.left == pybamm.t:
-                    expr = symbol.right
-                    num_events = 200 if (t_eval is None) else (t_eval[-1] // expr.value)
+        def append_t_eval(t):
+            if t0 <= t <= tf and t not in t_eval:
+                # Insert t in the correct position to maintain sorted order
+                idx = np.searchsorted(t_eval, t)
+                t_eval.insert(idx, t)
 
-                    for i in np.arange(num_events):
-                        model.events.append(
-                            pybamm.Event(
-                                str(symbol),
-                                expr * pybamm.Scalar(i + 1),
-                                pybamm.EventType.DISCONTINUITY,
-                            )
-                        )
+        def heaviside_event(symbol, expr):
+            model.events.append(
+                pybamm.Event(
+                    str(symbol),
+                    expr,
+                    pybamm.EventType.DISCONTINUITY,
+                )
+            )
+
+        def heaviside_t_eval(symbol, expr):
+            value = expr.evaluate(0, model.y0.full(), inputs=inputs)
+            append_t_eval(value)
+
+            if isinstance(symbol, pybamm.EqualHeaviside):
+                if symbol.left == pybamm.t:
+                    # t <= x
+                    # Stop at t = x and right after t = x
+                    append_t_eval(np.nextafter(value, np.inf))
                 else:
-                    continue
+                    # t >= x
+                    # Stop at t = x and right before t = x
+                    append_t_eval(np.nextafter(value, -np.inf))
+            elif isinstance(symbol, pybamm.NotEqualHeaviside):
+                if symbol.left == pybamm.t:
+                    # t < x
+                    # Stop at t = x and right before t = x
+                    append_t_eval(np.nextafter(value, -np.inf))
+                else:
+                    # t > x
+                    # Stop at t = x and right after t = x
+                    append_t_eval(np.nextafter(value, np.inf))
+            else:
+                raise ValueError(
+                    f"Unknown heaviside function: {symbol}"
+                )  # pragma: no cover
+
+        def modulo_event(symbol, expr, num_events):
+            for i in np.arange(num_events):
+                model.events.append(
+                    pybamm.Event(
+                        str(symbol),
+                        expr * pybamm.Scalar(i + 1),
+                        pybamm.EventType.DISCONTINUITY,
+                    )
+                )
+
+        def modulo_t_eval(symbol, expr, num_events):
+            value = expr.evaluate(0, model.y0.full(), inputs=inputs)
+            for i in np.arange(num_events):
+                t = value * (i + 1)
+                # Stop right before t and at t
+                append_t_eval(np.nextafter(t, -np.inf))
+                append_t_eval(t)
+
+        for symbol in itertools.chain(
+            model.concatenated_rhs.pre_order(),
+            model.concatenated_algebraic.pre_order(),
+        ):
+            if isinstance(symbol, _Heaviside):
+                if symbol.right == pybamm.t:
+                    expr = symbol.left
+                elif symbol.left == pybamm.t:
+                    expr = symbol.right
+                else:
+                    # Heaviside function does not contain pybamm.t as an argument.
+                    # Do not create an event
+                    continue  # pragma: no cover
+
+                if supports_t_eval_discontinuities(expr):
+                    heaviside_t_eval(symbol, expr)
+                else:
+                    heaviside_event(symbol, expr)
+
+            elif isinstance(symbol, pybamm.Modulo) and symbol.left == pybamm.t:
+                expr = symbol.right
+                num_events = 200 if (t_eval is None) else (tf // expr.value)
+
+                if supports_t_eval_discontinuities(expr):
+                    modulo_t_eval(symbol, expr, num_events)
+                else:
+                    modulo_event(symbol, expr, num_events)
+            else:
+                continue
 
         casadi_switch_events = []
         terminate_events = []
