@@ -9,6 +9,7 @@
 
 ## Bug fixes
 
+- Fix a bug in setting initial stoichiometries where the reference temperature was used instead of the initial temperature. ([#5189](https://github.com/pybamm-team/PyBaMM/pull/5189))
 - Fix a bug in the calculation of "Bulk" OCP terms in hysteresis models ([#5169](https://github.com/pybamm-team/PyBaMM/pull/5169))
 - Fixed a bug where the final duration of a drive cycle would not be inferred correctly. ([#5153](https://github.com/pybamm-team/PyBaMM/pull/5153))
 
@@ -26,6 +27,7 @@
 - Creates `BaseProcessedVariable` to enable object combination when adding solutions together ([#5076](https://github.com/pybamm-team/PyBaMM/pull/5076))
 - Added a `Constant` symbol for named constants. This is a subclass of `Scalar` and is used to represent named constants such as the gas constant. This avoids constants being simplified out when constructing expressions. ([#5070](https://github.com/pybamm-team/PyBaMM/pull/5070))
 - Generalise `pybamm.DiscreteTimeSum` to allow it to be embedded in other expressions ([#5044](https://github.com/pybamm-team/PyBaMM/pull/5044))
+- Added an option for multiple initial conditions in IDAKLU solver ([#4981](https://github.com/pybamm-team/PyBaMM/pull/4981))
 - Adds `all` key-value pair to `output_variables` sensitivity dictionaries, accessible through `solution[var].sensitivities['all']`. Aligns shape with conventional solution sensitivities object. ([#5067](https://github.com/pybamm-team/PyBaMM/pull/5067))
 - Added a new `BaseHysteresisOpenCircuitPotential` class that sets variables for the lithiation and delithiation OCP and the hysteresis voltage (`H = U_lith - U_delith`). Allow the initial hysteresis state to be a function of position through the electrode. Allow the hysteresis decay rates of the Axen and Wycisk models to be a function of stoichiometry and temperature. Added a heat source term in each active material phase `Q_hys = i_vol * (U - U_eq)` where `i_vol` is the volumetric interfacial current density, `U` is the OCP (i.e. includes hysteresis), and `U_eq` is the "equilibrium OCP". Renamed the open-circuit potential models to be more descriptive. The options "Axen" and "Wycisk" are now "one-state hysteresis" and "one-state differential capacity hysteresis". The old option names still work but will raise a warning. ([#4893](https://github.com/pybamm-team/PyBaMM/pull/4893))
 - Add support for `output_variables` to `pybamm.DiscreteTimeSum` and `pybamm.ExplicitTimeIntegral` expressions. ([#5071](https://github.com/pybamm-team/PyBaMM/pull/5071))

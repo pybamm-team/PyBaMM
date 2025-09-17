@@ -1174,6 +1174,231 @@ class TestIDAKLUSolver:
         np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
         np.testing.assert_allclose(solution.y[-1], 2 * np.exp(0.1 * solution.t))
 
+    def test_multiple_initial_conditions_dict(self):
+        model = pybamm.BaseModel()
+        model.convert_to_format = None
+        u = pybamm.Variable("u")
+        model.rhs = {u: -u}
+        model.initial_conditions = {u: 1}
+        model.variables = {"u": u}
+
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        solver = pybamm.IDAKLUSolver(options={"num_threads": 1})
+
+        n_sims = 3
+        initial_conditions = [{"u": i + 1} for i in range(n_sims)]
+        inputs = [{} for _ in range(n_sims)]
+        t_eval = np.array([0, 1])
+        t_interp = np.linspace(0, 1, 10)
+
+        solutions = solver.solve(
+            model,
+            t_eval,
+            inputs=inputs,
+            initial_conditions=initial_conditions,
+            t_interp=t_interp,
+        )
+
+        assert len(solutions) == n_sims
+        for i, solution in enumerate(solutions):
+            expected_initial_value = i + 1
+            np.testing.assert_allclose(solution["u"](0), expected_initial_value)
+            np.testing.assert_allclose(
+                solution["u"](t_eval),
+                expected_initial_value * np.exp(-t_eval),
+                rtol=1e-3,
+                atol=1e-5,
+            )
+
+    def test_single_initial_condition_dict(self):
+        model = pybamm.BaseModel()
+        model.convert_to_format = "casadi"
+        u = pybamm.Variable("u")
+        model.rhs = {u: -u}
+        model.initial_conditions = {u: 1}
+        model.variables = {"u": u}
+
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        solver = pybamm.IDAKLUSolver()
+
+        initial_condition = {"u": 5}
+        t_eval = np.array([0, 1])
+        t_interp = np.linspace(0, 1, 10)
+
+        solution = solver.solve(
+            model, t_eval, initial_conditions=initial_condition, t_interp=t_interp
+        )
+
+        np.testing.assert_allclose(solution["u"](0), 5)
+        np.testing.assert_allclose(
+            solution["u"](t_eval), 5 * np.exp(-t_eval), rtol=1e-3, atol=1e-5
+        )
+
+        inputs = [{} for _ in range(3)]
+        solutions = solver.solve(
+            model, t_eval, inputs=inputs, initial_conditions=initial_condition
+        )
+
+        assert len(solutions) == 3
+        for solution in solutions:
+            np.testing.assert_allclose(solution["u"](0), 5)
+            np.testing.assert_allclose(
+                solution["u"](t_eval), 5 * np.exp(-t_eval), rtol=1e-3, atol=1e-5
+            )
+
+    def test_initial_condition_array(self):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        model.rhs = {u: -u}
+        model.initial_conditions = {u: 1}
+        model.variables = {"u": u}
+
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        solver = pybamm.IDAKLUSolver()
+        t_eval = np.array([0, 1])
+        t_interp = np.linspace(0, 1, 10)
+
+        ics = [np.array([2.0]), np.array([4.0]), np.array([6.0])]
+        inputs = [{} for _ in ics]
+
+        solutions = solver.solve(
+            model,
+            t_eval,
+            t_interp=t_interp,
+            inputs=inputs,
+            initial_conditions=ics,
+        )
+
+        assert len(solutions) == len(ics)
+
+        for ic_array, sol in zip(ics, solutions, strict=False):
+            start = ic_array.item()
+            got0 = sol["u"](0)
+            np.testing.assert_allclose(got0, start, rtol=1e-3, atol=1e-5)
+            got_curve = sol["u"](t_eval)
+            expected_curve = start * np.exp(-t_eval)
+            np.testing.assert_allclose(got_curve, expected_curve, rtol=1e-3, atol=1e-5)
+
+    def test_multiple_variables(self):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        v = pybamm.Variable("v")
+        model.rhs = {u: -u, v: -2 * v}
+        model.initial_conditions = {u: 1, v: 2}
+        model.variables = {"u": u, "v": v}
+
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        # Use default solver tolerances
+        solver = pybamm.IDAKLUSolver()
+
+        initial_conditions = [{"u": 3, "v": 4}, {"u": 5, "v": 6}]
+
+        t_eval = np.array([0, 1])
+        t_interp = np.linspace(0, 1, 10)
+
+        solutions = solver.solve(
+            model,
+            t_eval,
+            inputs=[{}, {}],
+            initial_conditions=initial_conditions,
+            t_interp=t_interp,
+        )
+
+        assert len(solutions) == 2
+
+        np.testing.assert_allclose(solutions[0]["u"](0), 3)
+        np.testing.assert_allclose(solutions[0]["v"](0), 4)
+        np.testing.assert_allclose(
+            solutions[0]["u"](t_eval), 3 * np.exp(-t_eval), rtol=1e-3, atol=1e-5
+        )
+        np.testing.assert_allclose(
+            solutions[0]["v"](t_eval), 4 * np.exp(-2 * t_eval), rtol=1e-3, atol=1e-5
+        )
+
+        np.testing.assert_allclose(solutions[1]["u"](0), 5)
+        np.testing.assert_allclose(solutions[1]["v"](0), 6)
+        np.testing.assert_allclose(
+            solutions[1]["u"](t_eval), 5 * np.exp(-t_eval), rtol=1e-3, atol=1e-5
+        )
+        np.testing.assert_allclose(
+            solutions[1]["v"](t_eval), 6 * np.exp(-2 * t_eval), rtol=1e-3, atol=1e-5
+        )
+
+    def test_error_variable_not_found(self):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        model.rhs = {u: -u}
+        model.initial_conditions = {u: 1}
+        model.variables = {"u": u}
+
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        solver = pybamm.IDAKLUSolver()
+
+        initial_condition = {"nonexistent_variable": 5}
+
+        t_eval = np.linspace(0, 1, 10)
+
+        with pytest.raises(
+            ValueError, match="Variable 'nonexistent_variable' not found in model"
+        ):
+            solver.solve(model, t_eval, initial_conditions=initial_condition)
+
+    def test_error_initial_conditions_type(self):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        model.rhs = {u: -u}
+        model.initial_conditions = {u: 1}
+        model.variables = {"u": u}
+
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        solver = pybamm.IDAKLUSolver()
+
+        initial_condition = "invalid_type"
+
+        t_eval = np.linspace(0, 1, 10)
+
+        with pytest.raises(
+            TypeError, match="Initial conditions must be dict or numpy array"
+        ):
+            solver.solve(model, t_eval, initial_conditions=initial_condition)
+
+    def test_error_initial_conditions_count_mismatch(self):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        model.rhs = {u: -u}
+        model.initial_conditions = {u: 1}
+        model.variables = {"u": u}
+
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        solver = pybamm.IDAKLUSolver()
+
+        initial_conditions = [{"u": 2}, {"u": 3}]
+        inputs = [{}, {}, {}]
+
+        t_eval = np.linspace(0, 1, 10)
+
+        with pytest.raises(
+            ValueError,
+            match="Number of initial conditions must match number of input sets",
+        ):
+            solver.solve(
+                model, t_eval, inputs=inputs, initial_conditions=initial_conditions
+            )
+
     def test_interpolant_extrapolate(self):
         x = np.linspace(0, 2)
         var = pybamm.Variable("var")
