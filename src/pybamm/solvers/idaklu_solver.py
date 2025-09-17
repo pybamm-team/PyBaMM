@@ -195,8 +195,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
             "linesearch_off_ic": False,
             "init_all_y_ic": False,
             "calc_ic": True,
-            "num_steps_no_progress": 1000,
-            "t_no_progress": 1.0,
+            "num_steps_no_progress": 0,
+            "t_no_progress": 0.0,
         }
         if options is None:
             options = default_options
