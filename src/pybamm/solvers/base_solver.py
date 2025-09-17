@@ -676,6 +676,7 @@ class BaseSolver:
         nproc=None,
         calculate_sensitivities=False,
         t_interp=None,
+        initial_conditions=None,
     ):
         """
         Execute the solver setup and calculate the solution of the model at
@@ -706,7 +707,14 @@ class BaseSolver:
         t_interp : None, list or ndarray, optional
             The times (in seconds) at which to interpolate the solution. Defaults to None.
             Only valid for solvers that support intra-solve interpolation (`IDAKLUSolver`).
+        initial_conditions : dict, numpy.ndarray, or list, optional
+            Override the model’s default `y0`.  Can be:
 
+            - a dict mapping variable names → values
+            - a 1D array of length `n_states`
+            - a list of such overrides (one per parallel solve)
+
+            Only valid for IDAKLU solver.
         Returns
         -------
         :class:`pybamm.Solution` or list of :class:`pybamm.Solution` objects.
@@ -878,6 +886,7 @@ class BaseSolver:
                     t_eval[start_index:end_index],
                     model_inputs_list,
                     t_interp,
+                    initial_conditions,
                 )
             else:
                 ninputs = len(model_inputs_list)
@@ -1216,9 +1225,15 @@ class BaseSolver:
             t_eval = np.linspace(0, dt, npts)
         elif t_eval is None:
             t_eval = np.array([0, dt])
-        elif t_eval[0] != 0 or t_eval[-1] != dt:
+        elif t_eval[0] != 0:
             raise pybamm.SolverError(
-                "Elements inside array t_eval must lie in the closed interval 0 to dt"
+                f"The first `t_eval` value ({t_eval[0]}) must be 0."
+                "Please correct your `t_eval` array."
+            )
+        elif t_eval[-1] != dt:
+            raise pybamm.SolverError(
+                f"The final `t_eval` value ({t_eval[-1]}) must be equal "
+                f"to the step time `dt` ({dt}). Please correct your `t_eval` array."
             )
         else:
             pass

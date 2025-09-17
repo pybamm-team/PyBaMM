@@ -328,6 +328,7 @@ class ParameterValues:
     def set_initial_state(
         self,
         initial_value,
+        direction=None,
         param=None,
         inplace=True,
         options=None,
@@ -336,6 +337,7 @@ class ParameterValues:
         return self._set_initial_state(
             initial_value,
             self,
+            direction=direction,
             param=param,
             inplace=inplace,
             options=options,
@@ -345,6 +347,7 @@ class ParameterValues:
     def set_initial_stoichiometry_half_cell(
         self,
         initial_value,
+        direction=None,
         param=None,
         known_value="cyclable lithium capacity",
         inplace=True,
@@ -356,6 +359,7 @@ class ParameterValues:
         return self._set_initial_state(
             initial_value,
             self,
+            direction=direction,
             param=param,
             known_value=known_value,
             inplace=inplace,
@@ -366,6 +370,7 @@ class ParameterValues:
     def set_initial_stoichiometries(
         self,
         initial_value,
+        direction=None,
         param=None,
         known_value="cyclable lithium capacity",
         inplace=True,
@@ -378,6 +383,7 @@ class ParameterValues:
         return self._set_initial_state(
             initial_value,
             self,
+            direction=direction,
             param=param,
             known_value=known_value,
             inplace=inplace,
@@ -389,6 +395,7 @@ class ParameterValues:
     def set_initial_ocps(
         self,
         initial_value,
+        direction=None,
         param=None,
         known_value="cyclable lithium capacity",
         inplace=True,
@@ -400,6 +407,7 @@ class ParameterValues:
         return self._set_initial_state(
             initial_value,
             self,
+            direction=direction,
             param=param,
             known_value=known_value,
             inplace=inplace,
