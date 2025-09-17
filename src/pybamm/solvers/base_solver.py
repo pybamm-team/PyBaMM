@@ -166,13 +166,13 @@ class BaseSolver:
         else:
             pybamm.logger.info("Start solver set-up")
 
-        self._check_and_prepare_model_inplace(model, inputs, ics_only)
+        self._check_and_prepare_model_inplace(model)
 
         # set default calculate sensitivities on model
         if not hasattr(model, "calculate_sensitivities"):
             model.calculate_sensitivities = []
 
-        self._set_up_model_sensitivities_inplace(model, inputs)
+        self._set_up_model_sensitivities_inplace(model)
 
         vars_for_processing = self._get_vars_for_processing(model, inputs)
 
@@ -369,7 +369,7 @@ class BaseSolver:
             name = name.replace(string, replacement)
         return name
 
-    def _check_and_prepare_model_inplace(self, model, inputs, ics_only):
+    def _check_and_prepare_model_inplace(self, model):
         """
         Performs checks on the model and prepares it for solving.
         """
@@ -461,7 +461,7 @@ class BaseSolver:
             return vars_for_processing
 
     @staticmethod
-    def _set_up_model_sensitivities_inplace(model, inputs):
+    def _set_up_model_sensitivities_inplace(model):
         """
         Set up model attributes related to sensitivities.
         """
@@ -826,14 +826,9 @@ class BaseSolver:
         t_interp = self.process_t_interp(t_interp)
 
         # Set up inputs
-        #
-        # Argument "inputs" can be either a list of input dicts or
-        # a single dict. The remaining of this function is only working
-        # with variable "input_list", which is a list of dictionaries.
-        # If "inputs" is a single dict, "inputs_list" is a list of only one dict.
-        inputs_list = inputs if isinstance(inputs, list) else [inputs]
-        model_inputs_list = [
-            self._set_up_model_inputs(model, inputs) for inputs in inputs_list
+        model_inputs_list: list[dict] = [
+            self._set_up_model_inputs(model, inputs)
+            for inputs in (inputs if isinstance(inputs, list) else [inputs])
         ]
 
         calculate_sensitivities_list, sensitivities_have_changed = (
@@ -848,18 +843,13 @@ class BaseSolver:
         # is passed to `_set_consistent_initialization`.
         # See https://github.com/pybamm-team/PyBaMM/pull/1261
         if len(model_inputs_list) > 1:
-            all_inputs_names = set(
-                itertools.chain.from_iterable(
-                    [model_inputs.keys() for model_inputs in model_inputs_list]
-                )
-            )
+            all_inputs_names = {
+                key for model_inputs in model_inputs_list for key in model_inputs
+            }
             if all_inputs_names:
-                initial_conditions_node_names = set(
-                    [
-                        it.name
-                        for it in model.concatenated_initial_conditions.pre_order()
-                    ]
-                )
+                initial_conditions_node_names = {
+                    it.name for it in model.concatenated_initial_conditions.pre_order()
+                }
                 if not initial_conditions_node_names.isdisjoint(all_inputs_names):
                     raise pybamm.SolverError(
                         "Input parameters cannot appear in expression "
@@ -910,9 +900,9 @@ class BaseSolver:
                 # If the new initial conditions are different
                 # and cannot be evaluated directly, set up again
                 self.set_up(model, model_inputs_list[0], t_eval, ics_only=True)
-            self._model_set_up[model]["initial conditions"] = (
-                model.concatenated_initial_conditions
-            )
+            self._model_set_up[model][
+                "initial conditions"
+            ] = model.concatenated_initial_conditions
         else:
             # Set the standard initial conditions
             self._set_initial_conditions(model, t_eval[0], model_inputs_list[0])
