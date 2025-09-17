@@ -797,27 +797,103 @@ class TestSimulation:
                 i += 1
                 assert i < len(sim.solution.t)
 
-    def test_discontinuous_current(self):
+    # Test with an ODE and DAE model
+    @pytest.mark.parametrize(
+        "model", [pybamm.lithium_ion.SPM(), pybamm.lithium_ion.DFN()]
+    )
+    def test_heaviside_current(self, model):
         def car_current(t):
             current = (
-                1 * (t >= 0) * (t <= 1000)
-                - 0.5 * (1000 < t) * (t <= 2000)
+                1 * (t <= 1000)
+                - 0.5 * (1000 < t) * (t < 1500)
                 + 0.5 * (2000 < t)
+                + 5 * (t >= 3601)
             )
             return current
 
-        model = pybamm.lithium_ion.DFN()
+        def prevfloat(t):
+            return np.nextafter(np.float64(t), -np.inf)
+
+        def nextfloat(t):
+            return np.nextafter(np.float64(t), np.inf)
+
+        t_eval = [0.0, 3600.0]
+
+        t_nodes = np.array(
+            [
+                0.0,  # t_eval[0]
+                1000.0,  # t <= 1000
+                nextfloat(1000.0),  # t <= 1000
+                prevfloat(1500.0),  # t < 1500
+                1500.0,  # t < 1500
+                2000.0,  # 2000 < t
+                nextfloat(2000.0),  # 2000 < t
+                3600.0,  # t_eval[-1]
+            ]
+        )
+
         param = model.default_parameter_values
         param["Current function [A]"] = car_current
 
-        sim = pybamm.Simulation(
-            model, parameter_values=param, solver=pybamm.CasadiSolver(mode="fast")
-        )
-        sim.solve([0, 3600])
+        sim = pybamm.Simulation(model, parameter_values=param)
+
+        # Set t_interp to t_eval to only return the breakpoints
+        sol = sim.solve(t_eval, t_interp=t_eval)
+
+        np.testing.assert_array_equal(sol.t, t_nodes)
+        # Make sure t_eval is not modified
+        assert t_eval == [0.0, 3600.0]
+
         current = sim.solution["Current [A]"]
-        assert current(0) == 1
-        assert current(1500) == -0.5
-        assert current(3000) == 0.5
+
+        for t_node in t_nodes:
+            assert current(t_node) == pytest.approx(car_current(t_node))
+
+    # Test with an ODE and DAE model
+    @pytest.mark.parametrize(
+        "model", [pybamm.lithium_ion.SPM(), pybamm.lithium_ion.DFN()]
+    )
+    def test_modulo_current(self, model):
+        dt = 1.0
+
+        def sawtooth_current(t):
+            return t % dt
+
+        def prevfloat(t):
+            return np.nextafter(np.float64(t), -np.inf)
+
+        t_eval = [0.0, 10.5]
+
+        t_nodes = np.arange(0.0, 10.5 + dt, dt)
+        t_nodes = np.concatenate(
+            [
+                t_nodes,
+                prevfloat(t_nodes),
+                t_eval,
+            ]
+        )
+
+        # Filter out all points not within t_eval
+        t_nodes = t_nodes[(t_nodes >= t_eval[0]) & (t_nodes <= t_eval[1])]
+
+        t_nodes = np.sort(np.unique(t_nodes))
+
+        param = model.default_parameter_values
+        param["Current function [A]"] = sawtooth_current
+
+        sim = pybamm.Simulation(model, parameter_values=param)
+
+        # Set t_interp to t_eval to only return the breakpoints
+        sol = sim.solve(t_eval, t_interp=t_eval)
+
+        np.testing.assert_array_equal(sol.t, t_nodes)
+        # Make sure t_eval is not modified
+        assert t_eval == [0.0, 10.5]
+
+        current = sim.solution["Current [A]"]
+
+        for t_node in t_nodes:
+            assert current(t_node) == pytest.approx(sawtooth_current(t_node))
 
     def test_t_eval(self):
         model = pybamm.lithium_ion.SPM()
