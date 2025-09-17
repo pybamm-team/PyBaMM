@@ -133,6 +133,15 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 "init_all_y_ic": False,
                 # Calculate consistent initial conditions
                 "calc_ic": True,
+                ## Early termination
+                # Maximum number of consecutive steps allowed without advancing
+                # the solution time by at least `t_no_progress` seconds.
+                # If set to 0, this feature is disabled.
+                "num_steps_no_progress": 0,
+                # Minimum required time advancement (in seconds) after
+                # `num_steps_no_progress` consecutive steps.
+                # If set to 0.0, this feature is disabled.
+                "t_no_progress": 0.0,
             }
 
         Note: These options only have an effect if model.convert_to_format == 'casadi'
@@ -186,6 +195,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
             "linesearch_off_ic": False,
             "init_all_y_ic": False,
             "calc_ic": True,
+            "num_steps_no_progress": 0,
+            "t_no_progress": 0.0,
         }
         if options is None:
             options = default_options

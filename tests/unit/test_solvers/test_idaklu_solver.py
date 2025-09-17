@@ -1486,3 +1486,47 @@ class TestIDAKLUSolver:
             )
             assert len(w) > 0
             assert "FAILURE" in str(w[0].message)
+
+    def test_no_progress_early_termination(self):
+        # SPM at rest
+        model = pybamm.lithium_ion.SPM()
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        parameter_values.update({"Current function [A]": 0})
+
+        t_eval = [0, 10000]
+
+        options_successes = [
+            # Case 1: feature disabled because num_steps_no_progress is default (0)
+            # even if t_no_progress is huge
+            {
+                "t_no_progress": 1e10,
+                "num_steps_no_progress": 0,
+            },
+            # Case 2: feature disabled because t_no_progress is default (0.0)
+            # even if num_steps_no_progress is positive
+            {
+                "num_steps_no_progress": 5,
+                "t_no_progress": 0.0,
+            },
+        ]
+
+        for options in options_successes:
+            solver = pybamm.IDAKLUSolver(on_failure="ignore", options=options)
+            sim = pybamm.Simulation(
+                model, parameter_values=parameter_values, solver=solver
+            )
+            sol = sim.solve(t_eval)
+            assert sol.termination == "final time"
+
+        ## Check failure
+        options_failures = {
+            "num_steps_no_progress": 5,
+            "t_no_progress": 1e10,
+        }
+        solver = pybamm.IDAKLUSolver(on_failure="ignore", options=options_failures)
+        sim = pybamm.Simulation(model, parameter_values=parameter_values, solver=solver)
+        sol = sim.solve(t_eval)
+        assert sol.termination == "failure"
+
+        assert len(sol.t) == options_failures["num_steps_no_progress"]
+        assert sol.t[-1] < options_failures["t_no_progress"]
