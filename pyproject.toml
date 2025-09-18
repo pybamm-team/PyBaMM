@@ -28,8 +28,10 @@ classifiers = [
     "Topic :: Scientific/Engineering",
 ]
 dependencies = [
-    "pybammsolvers>=0.3.0,<0.4.0",
-    "numpy",
+    # "pybammsolvers>=0.2.0,<0.3.0",
+    # temporary fix to make CI run
+    "pybammsolvers @ git+https://github.com/DavidMStraub/pybammsolvers.git@py313_np2",
+    "numpy>=2.0.0",
     "scipy>=1.11.4",
     "casadi==3.6.7",
     "xarray>=2022.6.0",
