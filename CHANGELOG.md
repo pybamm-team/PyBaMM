@@ -15,8 +15,10 @@
 - Fix a bug in the calculation of "Bulk" OCP terms in hysteresis models ([#5169](https://github.com/pybamm-team/PyBaMM/pull/5169))
 - Fixed a bug where the final duration of a drive cycle would not be inferred correctly. ([#5153](https://github.com/pybamm-team/PyBaMM/pull/5153))
 - Fixes a bug where sensitivities for 1D+ variables calculated using the `output_variables` options were incorrect ([#5118](https://github.com/pybamm-team/PyBaMM/pull/5118))
+- Fix Bruggeman coefficient computation from BPX porosity and transport efficiency instead of hard-coding, remove redundant values, and add a unit test for verification. ([#5196](https://github.com/pybamm-team/PyBaMM/pull/5196))
 
 # [v25.8.0](https://github.com/pybamm-team/PyBaMM/tree/v25.8.0) - 2025-08-04
+
 
 ## Features
 
