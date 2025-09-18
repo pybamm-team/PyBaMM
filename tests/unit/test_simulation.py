@@ -6,6 +6,7 @@ import pytest
 from scipy.integrate import trapezoid
 
 import pybamm
+from pybamm.solvers.base_solver import BaseSolver
 from tests import no_internet_connection
 
 
@@ -894,6 +895,19 @@ class TestSimulation:
 
         for t_node in t_nodes:
             assert current(t_node) == pytest.approx(sawtooth_current(t_node))
+
+    def test_filter_discontinuities_simple(self):
+        t_eval = [0.0, 3.0, 10.0]
+        t_discon = [-5.0, 0.0, 1.0, 3.0, 3.0, 5.0, 10.0, 12.0]
+
+        result = BaseSolver.filter_discontinuities(t_discon, t_eval)
+        expected = np.array([1.0, 3.0, 5.0])
+
+        # Exclusive of endpoints
+        t_eval_endpoints = [t_eval[0], t_eval[-1]]
+        assert all(t not in result for t in t_eval_endpoints)
+
+        np.testing.assert_array_equal(result, expected)
 
     def test_t_eval(self):
         model = pybamm.lithium_ion.SPM()
