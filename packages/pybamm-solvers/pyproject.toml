@@ -19,7 +19,7 @@ license-files = ["LICENSE"]
 dynamic = ["version", "readme"]
 dependencies = [
     "casadi==3.6.7",
-    "numpy<2.0"
+    "numpy"
 ]
 
 [project.optional-dependencies]

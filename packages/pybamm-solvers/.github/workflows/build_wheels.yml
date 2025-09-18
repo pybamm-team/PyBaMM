@@ -17,7 +17,7 @@ env:
 jobs:
   build_windows_wheels:
     name: Wheels (Windows)
-    runs-on: windows-latest
+    runs-on: windows-2022
     steps:
       - uses: actions/checkout@v5
         with:
@@ -26,13 +26,13 @@ jobs:
         with:
           python-version: 3.12
 
-      # Pin to 2024.12.16 to avoid issues with finding SuiteSparse in manifest mode
+      # Pin to 2025.01.13 to avoid issues with finding SuiteSparse in manifest mode
       # after SuiteSparse was split into subpackages in recent vcpkg releases.
       - name: Install vcpkg on Windows
         run: |
           cd C:\
           rm -r -fo 'C:\vcpkg'
-          git clone https://github.com/microsoft/vcpkg --branch 2024.12.16
+          git clone https://github.com/microsoft/vcpkg --branch 2025.01.13
           cd vcpkg
           .\bootstrap-vcpkg.bat
 
@@ -97,7 +97,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macos-13, macos-14]
+        os: [macos-13, macos-latest]
       fail-fast: false
     steps:
       - uses: actions/checkout@v5
@@ -165,8 +165,8 @@ jobs:
             python install_KLU_Sundials.py
             python -m cibuildwheel --output-dir wheelhouse
         env:
-          # 10.13 for Intel (macos-13), 11.0 for Apple Silicon (macos-14 and macos-latest)
-          MACOSX_DEPLOYMENT_TARGET: ${{ matrix.os == 'macos-14' && '11.0' || '10.13' }}
+          # 10.13 for Intel (macos-13), 11.0 for Apple Silicon (macos-latest)
+          MACOSX_DEPLOYMENT_TARGET: ${{ matrix.os == 'macos-latest' && '11.0' || '10.13' }}
           CIBW_ARCHS_MACOS: auto
           CIBW_BEFORE_BUILD: python -m pip install cmake casadi==3.6.7 setuptools delocate pybind11
           CIBW_REPAIR_WHEEL_COMMAND: |
