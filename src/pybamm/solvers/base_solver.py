@@ -224,6 +224,7 @@ class BaseSolver:
             casadi_switch_events,
             terminate_events,
             interpolant_extrapolation_events,
+            t_discon_constant,
             discontinuity_events,
         ) = self._set_up_events(model, t_eval, inputs, vars_for_processing)
 
@@ -233,8 +234,9 @@ class BaseSolver:
         model.rhs_algebraic_eval = rhs_algebraic
 
         model.terminate_events_eval = terminate_events
-        model.discontinuity_events_eval = discontinuity_events
         model.interpolant_extrapolation_events_eval = interpolant_extrapolation_events
+        model.discontinuity_events_eval = discontinuity_events
+        model.t_discon_constant = t_discon_constant
 
         model.jac_rhs_eval = jac_rhs
         model.jac_rhs_action_eval = jac_rhs_action
@@ -482,23 +484,17 @@ class BaseSolver:
         # discontinuity events if these exist.
         # Note: only checks for the case of t < X, t <= X, X < t, or X <= t,
         # but also accounts for the fact that t might be dimensional
-
-        t0 = np.min(t_eval)
         tf = np.max(t_eval)
 
         def supports_t_eval_discontinuities(expr):
             # Only IDAKLUSolver supports discontinuities represented by t_eval
-            return (
-                self.supports_t_eval_discontinuities
-                and (t_eval is not None)
-                and expr.is_constant()
-            )
+            return self.supports_t_eval_discontinuities and expr.is_constant()
 
-        def append_t_eval(t):
-            if t0 <= t <= tf and t not in t_eval:
-                # Insert t in the correct position to maintain sorted order
-                idx = np.searchsorted(t_eval, t)
-                t_eval.insert(idx, t)
+        # Find all the constant time-based discontinuities
+        t_discon = []
+
+        def append_t_discon(t):
+            t_discon.append(t)
 
         def heaviside_event(symbol, expr):
             model.events.append(
@@ -509,28 +505,28 @@ class BaseSolver:
                 )
             )
 
-        def heaviside_t_eval(symbol, expr):
+        def heaviside_t_discon(symbol, expr):
             value = expr.evaluate(0, model.y0.full(), inputs=inputs)
-            append_t_eval(value)
+            append_t_discon(value)
 
             if isinstance(symbol, pybamm.EqualHeaviside):
                 if symbol.left == pybamm.t:
                     # t <= x
                     # Stop at t = x and right after t = x
-                    append_t_eval(np.nextafter(value, np.inf))
+                    append_t_discon(np.nextafter(value, np.inf))
                 else:
                     # t >= x
                     # Stop at t = x and right before t = x
-                    append_t_eval(np.nextafter(value, -np.inf))
+                    append_t_discon(np.nextafter(value, -np.inf))
             elif isinstance(symbol, pybamm.NotEqualHeaviside):
                 if symbol.left == pybamm.t:
                     # t < x
                     # Stop at t = x and right before t = x
-                    append_t_eval(np.nextafter(value, -np.inf))
+                    append_t_discon(np.nextafter(value, -np.inf))
                 else:
                     # t > x
                     # Stop at t = x and right after t = x
-                    append_t_eval(np.nextafter(value, np.inf))
+                    append_t_discon(np.nextafter(value, np.inf))
             else:
                 raise ValueError(
                     f"Unknown heaviside function: {symbol}"
@@ -546,13 +542,13 @@ class BaseSolver:
                     )
                 )
 
-        def modulo_t_eval(symbol, expr, num_events):
+        def modulo_t_discon(symbol, expr, num_events):
             value = expr.evaluate(0, model.y0.full(), inputs=inputs)
             for i in np.arange(num_events):
                 t = value * (i + 1)
                 # Stop right before t and at t
-                append_t_eval(np.nextafter(t, -np.inf))
-                append_t_eval(t)
+                append_t_discon(np.nextafter(t, -np.inf))
+                append_t_discon(t)
 
         for symbol in itertools.chain(
             model.concatenated_rhs.pre_order(),
@@ -569,7 +565,7 @@ class BaseSolver:
                     continue  # pragma: no cover
 
                 if supports_t_eval_discontinuities(expr):
-                    heaviside_t_eval(symbol, expr)
+                    heaviside_t_discon(symbol, expr)
                 else:
                     heaviside_event(symbol, expr)
 
@@ -578,7 +574,7 @@ class BaseSolver:
                 num_events = 200 if (t_eval is None) else (tf // expr.value)
 
                 if supports_t_eval_discontinuities(expr):
-                    modulo_t_eval(symbol, expr, num_events)
+                    modulo_t_discon(symbol, expr, num_events)
                 else:
                     modulo_event(symbol, expr, num_events)
             else:
@@ -641,6 +637,7 @@ class BaseSolver:
             casadi_switch_events,
             terminate_events,
             interpolant_extrapolation_events,
+            t_discon,
             discontinuity_events,
         )
 
@@ -1053,13 +1050,43 @@ class BaseSolver:
             return solutions
 
     @staticmethod
-    def _get_discontinuity_start_end_indices(model, inputs, t_eval):
+    def filter_discontinuities(t_discon: list, t_eval: list) -> np.ndarray:
+        """
+        Filter the discontinuities to only include the unique and sorted
+        values within the t_eval range (non-exclusive of end points).
+
+        Parameters
+        ----------
+        t_discon : list
+            The list of all possible discontinuity times.
+        t_eval : list
+            The integration time points.
+
+        Returns
+        -------
+        np.ndarray
+            The filtered list of discontinuities within the range of t_eval.
+        """
+        t_discon_unique = np.unique(t_discon)
+
+        # Find the indices within t_eval (non-exclusive of end points)
+        idx_start = np.searchsorted(t_discon_unique, t_eval[0], side="right")
+        idx_end = np.searchsorted(t_discon_unique, t_eval[-1], side="left")
+        return t_discon_unique[idx_start:idx_end]
+
+    def _get_discontinuity_start_end_indices(self, model, inputs, t_eval):
+        if self.supports_t_eval_discontinuities:
+            t_discon_constant = self.filter_discontinuities(
+                model.t_discon_constant, t_eval
+            )
+            t_eval = np.union1d(t_eval, t_discon_constant)
+
         if not model.discontinuity_events_eval:
             pybamm.logger.verbose("No discontinuity events found")
             return [0], [len(t_eval)], t_eval
 
-        # Calculate discontinuities
-        discontinuities = [
+        # Calculate all possible discontinuities
+        _t_discon_full = [
             # Assuming that discontinuities do not depend on
             # input parameters when len(input_list) > 1, only
             # `inputs` is passed to `evaluate`.
@@ -1067,25 +1094,9 @@ class BaseSolver:
             event.expression.evaluate(inputs=inputs)
             for event in model.discontinuity_events_eval
         ]
+        t_discon = self.filter_discontinuities(_t_discon_full, t_eval)
 
-        # make sure they are increasing in time
-        discontinuities = sorted(discontinuities)
-
-        # remove any identical discontinuities
-        discontinuities = [
-            v
-            for i, v in enumerate(discontinuities)
-            if (
-                i == len(discontinuities) - 1
-                or discontinuities[i] < discontinuities[i + 1]
-            )
-            and v > 0
-        ]
-
-        # remove any discontinuities after end of t_eval
-        discontinuities = [v for v in discontinuities if v < t_eval[-1]]
-
-        pybamm.logger.verbose(f"Discontinuity events found at t = {discontinuities}")
+        pybamm.logger.verbose(f"Discontinuity events found at t = {t_discon}")
         if isinstance(inputs, list):
             raise pybamm.SolverError(
                 "Cannot solve for a list of input parameters sets with discontinuities"
@@ -1096,7 +1107,7 @@ class BaseSolver:
         start_indices = [0]
         end_indices = []
         eps = sys.float_info.epsilon
-        for dtime in discontinuities:
+        for dtime in t_discon:
             dindex = np.searchsorted(t_eval, dtime, side="left")
             end_indices.append(dindex + 1)
             start_indices.append(dindex + 1)
