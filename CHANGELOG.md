@@ -10,6 +10,7 @@
 
 ## Bug fixes
 
+- Fixed a bug where time-based Heaviside or modulo discontinuities could trigger out-of-bounds errors in time arrays. ([#5205](https://github.com/pybamm-team/PyBaMM/pull/5205))
 - Fixed a bug using a time-varying input with heaviside or modulo functions using the `IDAKLUSolver`. ([#4994](https://github.com/pybamm-team/PyBaMM/pull/4994))
 - Fix a bug in setting initial stoichiometries where the reference temperature was used instead of the initial temperature. ([#5189](https://github.com/pybamm-team/PyBaMM/pull/5189))
 - Fix a bug in the calculation of "Bulk" OCP terms in hysteresis models ([#5169](https://github.com/pybamm-team/PyBaMM/pull/5169))
