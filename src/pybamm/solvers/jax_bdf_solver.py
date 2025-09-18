@@ -9,6 +9,7 @@ import pybamm
 
 if pybamm.has_jax():
     import functools
+
     import jax
     import jax.numpy as jnp
     from jax import core, dtypes
@@ -889,7 +890,7 @@ if pybamm.has_jax():
 
     _bdf_odeint.defvjp(_bdf_odeint_fwd, _bdf_odeint_rev)
 
-    @functools.lru_cache(maxsize=None)
+    @functools.cache
     def closure_convert(fun, in_tree, in_avals):
         wrapped_fun, out_tree = flatten_fun_nokwargs(lu.wrap_init(fun), in_tree)
         jaxpr, _, consts = pe.trace_to_jaxpr_dynamic(wrapped_fun, in_avals)

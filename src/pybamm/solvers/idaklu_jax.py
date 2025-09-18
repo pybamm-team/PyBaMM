@@ -15,13 +15,12 @@ logger = logging.getLogger("pybamm.solvers.idaklu_jax")
 
 if pybamm.has_jax():
     import jax
-    from jax import lax
+    from jax import ffi, lax
     from jax import numpy as jnp
-    from jax import ffi
     from jax.interpreters import ad, batching, mlir
     from jax.interpreters.mlir import custom_call
     from jax.tree_util import tree_flatten
-    
+
     # Handle JAX version compatibility for Primitive location
     try:
         from jax.core import Primitive
