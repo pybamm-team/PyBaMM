@@ -16,6 +16,7 @@ logger = logging.getLogger("pybamm.solvers.idaklu_jax")
 if pybamm.has_jax():
     import jax
     from jax import lax
+
     try:
         from jax import ffi
     except ImportError:
