@@ -42,7 +42,6 @@
 
 ## Bug fixes
 
-- Added explicit warning in installation docs about unmaintained Conda recipe due to pybammsolvers split (Fixes #5155). See pull request [#5206](https://github.com/pybamm-team/PyBaMM/pull/5206)
 - Fixed non-deterministic plotting CI issues ([#5150](https://github.com/pybamm-team/PyBaMM/pull/5150))
 - Fix non-deterministic ShapeError in 3D FEM gradient method ([#5143](https://github.com/pybamm-team/PyBaMM/pull/5143))
 - Fixes negative electrode boundary values for half-cell voltage contributions. ([#5139](https://github.com/pybamm-team/PyBaMM/pull/5139))
