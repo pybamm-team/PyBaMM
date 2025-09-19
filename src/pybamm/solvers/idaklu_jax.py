@@ -15,7 +15,11 @@ logger = logging.getLogger("pybamm.solvers.idaklu_jax")
 
 if pybamm.has_jax():
     import jax
-    from jax import ffi, lax
+    from jax import lax
+    try:
+        from jax import ffi
+    except ImportError:
+        from jax.extend import ffi
     from jax import numpy as jnp
     from jax.interpreters import ad, batching, mlir
     from jax.interpreters.mlir import custom_call
