@@ -12,7 +12,7 @@ license = { file = "LICENSE.txt" }
 description = "Python Battery Mathematical Modelling"
 authors = [{name = "The PyBaMM Team", email = "pybamm@pybamm.org"}]
 maintainers = [{name = "The PyBaMM Team", email = "pybamm@pybamm.org"}]
-requires-python = ">=3.10, <3.14"
+requires-python = ">=3.10, <3.13"
 readme = {file = "README.md", content-type = "text/markdown"}
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -28,10 +28,8 @@ classifiers = [
     "Topic :: Scientific/Engineering",
 ]
 dependencies = [
-    # "pybammsolvers>=0.2.0,<0.3.0",
-    # temporary fix to make CI run
-    "pybammsolvers @ git+https://github.com/DavidMStraub/pybammsolvers.git@py313_np2",
-    "numpy>=2.0.0",
+    "pybammsolvers>=0.3.0,<0.4.0",
+    "numpy",
     "scipy>=1.11.4",
     "casadi==3.6.7",
     "xarray>=2022.6.0",
@@ -115,7 +113,7 @@ dev = [
     "hypothesis",
 ]
 jax = [
-    "jax>=0.4.36,<0.6.0",
+    "jax>=0.4.36,<0.7.3",
 ]
 # Contains all optional dependencies, except for jax, and dev dependencies
 all = [
@@ -161,7 +159,6 @@ build.targets.sdist.include = [
   "CITATION.cff",
 ]
 build.hooks.vcs.version-file = "src/pybamm/_version.py"
-metadata.allow-direct-references = true
 
 [tool.repo-review]
 ignore = [
