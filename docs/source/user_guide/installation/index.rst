@@ -5,6 +5,8 @@ Installation
 PyBaMM is available on GNU/Linux, MacOS and Windows.
 It can be installed using ``pip`` or ``conda``, or from source.
 
+Warning: The PyBaMM Conda recipe is not currently maintained and lags several releases behind. As a result, installations via Conda may provide an outdated version. To access the latest version, consider installing PyBaMM using pip.
+
 .. tab:: pip
 
    PyBaMM can be installed via pip from `PyPI <https://pypi.org/project/pybamm>`__.
