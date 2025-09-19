@@ -113,7 +113,7 @@ dev = [
     "hypothesis",
 ]
 jax = [
-    "jax>=0.4.36,<0.7.3",
+    "jax>=0.4.36,<0.7.0",
 ]
 # Contains all optional dependencies, except for jax, and dev dependencies
 all = [
