@@ -14,7 +14,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "pybammsolvers"
 description = "Python interface for the IDAKLU solver"
-requires-python = ">=3.10,<3.13"
+requires-python = ">=3.10,<3.14"
 license-files = ["LICENSE"]
 dynamic = ["version", "readme"]
 dependencies = [
