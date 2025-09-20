@@ -66,7 +66,7 @@ PyBaMM requires the following dependencies.
 Package                                                             Supported version(s)
 =================================================================== ==========================
 `PyBaMM solvers <https://github.com/pybamm-team/pybammsolvers>`__     0.0.4
-`NumPy <https://numpy.org>`__                                         >= 1.23.5, <2
+`NumPy <https://numpy.org>`__                                         Whatever recent versions work
 `SciPy <https://docs.scipy.org/doc/scipy/>`__                         Whatever recent versions work. >= 1.9.3
 `CasADi <https://web.casadi.org/docs/>`__                             Whatever recent versions work. >= 3.6.7
 `Xarray <https://docs.xarray.dev/en/stable/>`__                       Whatever recent versions work. >= 2022.6.0
