@@ -5,8 +5,6 @@ Installation
 PyBaMM is available on GNU/Linux, MacOS and Windows.
 It can be installed using ``pip`` or ``conda``, or from source.
 
-Warning: The PyBaMM Conda recipe is not currently maintained and lags several releases behind. As a result, installations via Conda may provide an outdated version. To access the latest version, consider installing PyBaMM using pip.
-
 .. tab:: pip
 
    PyBaMM can be installed via pip from `PyPI <https://pypi.org/project/pybamm>`__.
@@ -31,6 +29,11 @@ Warning: The PyBaMM Conda recipe is not currently maintained and lags several re
 
       conda install -c conda-forge pybamm-base
 
+.. warning::
+
+   The PyBaMM Conda recipe is not currently maintained and lags several releases behind.
+   As a result, installations via Conda may provide an outdated version.
+   To access the latest version, consider installing PyBaMM using pip.
 
 Optional solvers
 ----------------
@@ -62,8 +65,8 @@ PyBaMM requires the following dependencies.
 =================================================================== ==========================
 Package                                                             Supported version(s)
 =================================================================== ==========================
-`PyBaMM solvers <https://github.com/pybamm-team/pybammsolvers>`__     >= 0.2.0, <0.4.0
-`NumPy <https://numpy.org>`__                                         Whatever recent versions work
+`PyBaMM solvers <https://github.com/pybamm-team/pybammsolvers>`__     0.0.4
+`NumPy <https://numpy.org>`__                                         >= 1.23.5, <2
 `SciPy <https://docs.scipy.org/doc/scipy/>`__                         Whatever recent versions work. >= 1.9.3
 `CasADi <https://web.casadi.org/docs/>`__                             Whatever recent versions work. >= 3.6.7
 `Xarray <https://docs.xarray.dev/en/stable/>`__                       Whatever recent versions work. >= 2022.6.0
