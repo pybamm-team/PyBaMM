@@ -32,7 +32,7 @@ It can be installed using ``pip`` or ``conda``, or from source.
 .. warning::
 
    The PyBaMM Conda recipe is not currently maintained and lags several releases behind.
-   As a result, installations via Conda may provide an outdated version.
+   As a result, installations via Conda will provide an outdated version.
    To access the latest version, consider installing PyBaMM using pip.
 
 Optional solvers
