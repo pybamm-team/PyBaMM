@@ -97,7 +97,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macos-13, macos-latest]
+        os: [macos-15-intel, macos-latest]
       fail-fast: false
     steps:
       - uses: actions/checkout@v5
@@ -165,7 +165,7 @@ jobs:
             python install_KLU_Sundials.py
             python -m cibuildwheel --output-dir wheelhouse
         env:
-          # 10.13 for Intel (macos-13), 11.0 for Apple Silicon (macos-latest)
+          # 10.13 for Intel (macos-15-intel), 11.0 for Apple Silicon (macos-latest)
           MACOSX_DEPLOYMENT_TARGET: ${{ matrix.os == 'macos-latest' && '11.0' || '10.13' }}
           CIBW_ARCHS_MACOS: auto
           CIBW_BEFORE_BUILD: python -m pip install cmake casadi==3.6.7 setuptools delocate pybind11
