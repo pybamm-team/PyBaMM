@@ -19,7 +19,6 @@ if pybamm.has_jax():
     from jax.interpreters import partial_eval as pe
     from jax.tree_util import tree_flatten, tree_map, tree_unflatten
 
-    # Simple implementation to replace deprecated jax.util.split_list
     def split_list(lst, indices):
         """Split a list at given indices."""
         if not indices:
