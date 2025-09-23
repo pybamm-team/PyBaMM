@@ -912,11 +912,10 @@ class Serialise:
         >>> from pybamm.expression_tree.operations.serialise import Serialise
         >>> s = pybamm.Scalar(5)
         >>> Serialise.convert_symbol_to_json(s)
-        {'type': 'Scalar', 'value': 5.0}
-
+        {'type': 'Scalar', 'value': np.float64(5.0)}
         >>> v = pybamm.Variable("c")
         >>> Serialise.convert_symbol_to_json(v)
-        {'type': 'Variable', 'name': 'c', 'domains': {'primary': [], 'secondary': [], 'tertiary': [], 'quaternary': []}, 'bounds': [{'type': 'Scalar', 'value': -inf}, {'type': 'Scalar', 'value': inf}]}
+        {'type': 'Variable', 'name': 'c', 'domains': {'primary': [], 'secondary': [], 'tertiary': [], 'quaternary': []}, 'bounds': [{'type': 'Scalar', 'value': np.float64(-inf)}, {'type': 'Scalar', 'value': np.float64(inf)}]}
         """
         if isinstance(symbol, ExpressionFunctionParameter):
             return {

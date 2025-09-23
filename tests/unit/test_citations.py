@@ -323,7 +323,7 @@ class TestCitations:
         assert "Mohtat2019" not in citations._papers_to_cite
         pybamm.lithium_ion.ElectrodeSOHSolver(
             pybamm.ParameterValues("Marquis2019")
-        )._get_electrode_soh_sims_full()
+        )._get_electrode_soh_sims_full(None)
         assert "Mohtat2019" in citations._papers_to_cite
         assert "Mohtat2019" in citations._citation_tags.keys()
 

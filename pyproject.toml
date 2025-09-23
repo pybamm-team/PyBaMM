@@ -28,8 +28,8 @@ classifiers = [
     "Topic :: Scientific/Engineering",
 ]
 dependencies = [
-    "pybammsolvers",
-    "numpy>=1.23.5,<2.0.0",
+    "pybammsolvers>=0.3.0,<0.4.0",
+    "numpy",
     "scipy>=1.11.4",
     "casadi==3.6.7",
     "xarray>=2022.6.0",
@@ -113,7 +113,7 @@ dev = [
     "hypothesis",
 ]
 jax = [
-    "jax>=0.4.36,<0.6.0",
+    "jax>=0.4.36,<0.7.0",
 ]
 # Contains all optional dependencies, except for jax, and dev dependencies
 all = [
