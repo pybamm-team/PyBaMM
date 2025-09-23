@@ -179,32 +179,32 @@ class TestJaxBDFSolver:
     def test_split_list(self):
         """Test the split_list utility function."""
         from pybamm.solvers.jax_bdf_solver import split_list
-        
+
         # Test case 1: Empty indices should return the original list
         original_list = [1, 2, 3, 4, 5]
         result = split_list(original_list, [])
         assert result == [[1, 2, 3, 4, 5]]
-        
+
         # Test case 2: Single index should split at that point
         result = split_list([1, 2, 3, 4, 5], [3])
         assert result == [[1, 2, 3], [4, 5]]
-        
+
         # Test case 3: Multiple indices should create multiple sublists
         result = split_list([1, 2, 3, 4, 5, 6, 7], [2, 5])
         assert result == [[1, 2], [3, 4, 5], [6, 7]]
-        
+
         # Test case 4: Index at the beginning
         result = split_list([1, 2, 3, 4], [0])
         assert result == [[], [1, 2, 3, 4]]
-        
+
         # Test case 5: Index at the end
         result = split_list([1, 2, 3, 4], [4])
         assert result == [[1, 2, 3, 4], []]
-        
+
         # Test case 6: Empty list
         result = split_list([], [])
         assert result == [[]]
-        
+
         # Test case 7: String list to test with different data types
-        result = split_list(['a', 'b', 'c', 'd'], [2])
-        assert result == [['a', 'b'], ['c', 'd']]
+        result = split_list(["a", "b", "c", "d"], [2])
+        assert result == [["a", "b"], ["c", "d"]]
