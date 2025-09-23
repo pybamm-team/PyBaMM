@@ -1155,6 +1155,23 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                         )
                         additive = pybamm.Scalar(0)
 
+                elif extrap_order_value == "constant":
+                    # For constant extrapolation, use the first column value
+                    row_indices = np.arange(0, n_tb)
+                    col_indices_0 = np.arange(0, n_tb * n_lr, n_lr)
+                    vals_0 = np.ones(n_tb)
+                    sub_matrix = csr_matrix(
+                        (
+                            vals_0,
+                            (
+                                row_indices,
+                                col_indices_0,
+                            ),
+                        ),
+                        shape=(n_tb, n_tb * n_lr),
+                    )
+                    additive = pybamm.Scalar(0)
+
                 elif extrap_order_value == "quadratic":
                     if use_bcs and pybamm.has_bc_of_form(
                         child, symbol.side, bcs, "Neumann"
@@ -1234,6 +1251,24 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                             shape=(n_tb, n_tb * n_lr),
                         )
                         additive = pybamm.Scalar(0)
+
+                elif extrap_order_value == "constant":
+                    # For constant extrapolation, use the last column value
+                    row_indices = np.arange(0, n_tb)
+                    col_indices_N = np.arange(n_lr - 1, n_lr * n_tb, n_lr)
+                    vals_N = np.ones(n_tb)
+                    sub_matrix = csr_matrix(
+                        (
+                            vals_N,
+                            (
+                                row_indices,
+                                col_indices_N,
+                            ),
+                        ),
+                        shape=(n_tb, n_tb * n_lr),
+                    )
+                    additive = pybamm.Scalar(0)
+
                 elif extrap_order_value == "quadratic":
                     if use_bcs and pybamm.has_bc_of_form(
                         child, symbol.side, bcs, "Neumann"
@@ -1359,7 +1394,16 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                     raise NotImplementedError
 
             elif side_first == "top":
-                if extrap_order_value == "linear":
+                if extrap_order_value == "constant":
+                    first_val = np.ones(n_lr)
+                    rows_first = np.arange(0, n_lr)
+                    cols_first = np.arange((n_tb - 1) * n_lr, n_tb * n_lr)
+                    sub_matrix = csr_matrix(
+                        (first_val, (rows_first, cols_first)),
+                        shape=(n_lr, n_lr * n_tb),
+                    )
+                    additive = pybamm.Scalar(0)
+                elif extrap_order_value == "linear":
                     if use_bcs and pybamm.has_bc_of_form(
                         child, side_first, bcs, "Neumann"
                     ):
@@ -1452,6 +1496,26 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                         shape=(1, n_tb),
                     )
                     sub_matrix = sub_matrix_second @ sub_matrix
+
+                elif extrap_order_value == "constant":
+                    # For constant extrapolation, use the bottom row value
+                    # Select bottom row elements: 0, n_tb, 2*n_tb, ..., (n_lr-1)*n_tb
+                    row_indices = [0]
+                    col_indices = [0]
+                    vals = [1]
+                    sub_matrix_second = csr_matrix(
+                        (
+                            vals,
+                            (
+                                row_indices,
+                                col_indices,
+                            ),
+                        ),
+                        shape=(1, n_tb),
+                    )
+                    additive = pybamm.Scalar(0)
+                    sub_matrix = sub_matrix_second @ sub_matrix
+
                 else:
                     dx0 = dx0_tb
                     dx1 = dx1_tb
@@ -1485,6 +1549,26 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                         shape=(1, n_tb),
                     )
                     sub_matrix = sub_matrix_second @ sub_matrix
+
+                elif extrap_order_value == "constant":
+                    # For constant extrapolation, use the top row value
+                    # Select top row elements: n_tb-1, 2*n_tb-1, 3*n_tb-1, ..., n_lr*n_tb-1
+                    row_indices = [0]
+                    col_indices = [n_tb - 1]
+                    vals = [1]
+                    sub_matrix_second = csr_matrix(
+                        (
+                            vals,
+                            (
+                                row_indices,
+                                col_indices,
+                            ),
+                        ),
+                        shape=(1, n_tb),
+                    )
+                    additive = pybamm.Scalar(0)
+                    sub_matrix = sub_matrix_second @ sub_matrix
+
                 else:
                     dxN = dxN_tb
                     dxNm1 = dxNm1_tb
@@ -1753,6 +1837,29 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         """
         raise NotImplementedError
 
+    def _inner(self, left, right, disc_left, disc_right):
+        # 1) Ensure both operands are vector fields; if not, treat scalar as same in both directions
+        if not hasattr(disc_left, "lr_field") or not hasattr(disc_left, "tb_field"):
+            disc_left = pybamm.VectorField(disc_left, disc_left)
+        if not hasattr(disc_right, "lr_field") or not hasattr(disc_right, "tb_field"):
+            disc_right = pybamm.VectorField(disc_right, disc_right)
+
+        # 2) Broadcast components back to nodes (convert edge-evaluated to node-evaluated)
+        # Left-right components
+        left_lr = disc_left.lr_field
+        right_lr = disc_right.lr_field
+        left_tb = disc_left.tb_field
+        right_tb = disc_right.tb_field
+        if left.evaluates_on_edges("primary"):
+            left_lr = self.edge_to_node(left_lr, method="arithmetic", direction="lr")
+            left_tb = self.edge_to_node(left_tb, method="arithmetic", direction="tb")
+        if right.evaluates_on_edges("primary"):
+            right_lr = self.edge_to_node(right_lr, method="arithmetic", direction="lr")
+            right_tb = self.edge_to_node(right_tb, method="arithmetic", direction="tb")
+        # 3) Multiply corresponding components and sum
+        out = pybamm.simplify_if_constant(left_lr * right_lr + left_tb * right_tb)
+        return out
+
     def process_binary_operators(self, bin_op, left, right, disc_left, disc_right):
         """Discretise binary operators in model equations.  Performs appropriate
         averaging of diffusivities if one of the children is a gradient operator, so
@@ -1809,6 +1916,10 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         # Post-processing to make sure discretised dimensions match
         left_evaluates_on_edges = left.evaluates_on_edges("primary")
         right_evaluates_on_edges = right.evaluates_on_edges("primary")
+
+        # inner product takes fluxes from edges to nodes
+        if isinstance(bin_op, pybamm.Inner):
+            return self._inner(left, right, disc_left, disc_right)
 
         # This could be cleaned up a bit, but it works for now.
         if hasattr(disc_left, "lr_field") and hasattr(disc_right, "lr_field"):
@@ -1916,16 +2027,10 @@ class FiniteVolume2D(pybamm.SpatialMethod):
             return pybamm.VectorField(lr_field, tb_field)
         else:
             pass
-        # inner product takes fluxes from edges to nodes
-        if isinstance(bin_op, pybamm.Inner):
-            if left_evaluates_on_edges:
-                disc_left = self.edge_to_node(disc_left)
-            if right_evaluates_on_edges:
-                disc_right = self.edge_to_node(disc_right)
 
         # If neither child evaluates on edges, or both children have gradients,
         # no need to do any averaging
-        elif left_evaluates_on_edges == right_evaluates_on_edges:
+        if left_evaluates_on_edges == right_evaluates_on_edges:
             pass
         # If only left child evaluates on edges, map right child onto edges
         # using the harmonic mean if the left child is a gradient (i.e. this

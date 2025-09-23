@@ -242,8 +242,8 @@ class TestFiniteVolume2D:
             pybamm.div(2 * pybamm.grad(var)) + 3 * var,
             -2 * pybamm.div(var * pybamm.grad(var) + 2 * pybamm.grad(var)),
             pybamm.laplacian(var),
-            pybamm.Inner(pybamm.Magnitude(pybamm.grad(var), "lr"), var),
-            pybamm.Inner(var, pybamm.Magnitude(pybamm.grad(var), "lr")),
+            pybamm.Inner(pybamm.grad(var), var),
+            pybamm.Inner(var, pybamm.grad(var)),
         ]:
             # Check that the equation can be evaluated for different combinations
             # of boundary conditions

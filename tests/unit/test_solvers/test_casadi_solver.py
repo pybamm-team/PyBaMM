@@ -648,3 +648,25 @@ class TestCasadiSolver:
             match=f"Explicit interpolation times not implemented for {solver.name}",
         ):
             solver.solve(model, t_eval, t_interp=t_interp)
+
+    def test_discontinuous_current(self):
+        def car_current(t):
+            current = (
+                1 * (t >= 0) * (t <= 1000)
+                - 0.5 * (1000 < t) * (t <= 2000)
+                + 0.5 * (2000 < t)
+            )
+            return current
+
+        model = pybamm.lithium_ion.SPM()
+        param = model.default_parameter_values
+        param["Current function [A]"] = car_current
+
+        sim = pybamm.Simulation(
+            model, parameter_values=param, solver=pybamm.CasadiSolver(mode="fast")
+        )
+        sim.solve([0, 3600])
+        current = sim.solution["Current [A]"]
+        assert current(0) == 1
+        assert current(1500) == -0.5
+        assert current(3000) == 0.5
