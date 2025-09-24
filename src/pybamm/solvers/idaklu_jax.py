@@ -16,11 +16,21 @@ logger = logging.getLogger("pybamm.solvers.idaklu_jax")
 if pybamm.has_jax():
     import jax
     from jax import lax
+
+    try:
+        from jax import ffi
+    except ImportError:
+        from jax.extend import ffi
     from jax import numpy as jnp
     from jax.interpreters import ad, batching, mlir
     from jax.interpreters.mlir import custom_call
-    from jax.lib import xla_client
     from jax.tree_util import tree_flatten
+
+    # Handle JAX version compatibility for Primitive location
+    try:
+        from jax.core import Primitive
+    except ImportError:
+        from jax.extend.core import Primitive
 
 
 class IDAKLUJax:
@@ -600,15 +610,14 @@ class IDAKLUJax:
         self._register_callbacks()  # Register python methods as callbacks in IDAKLU-JAX
 
         for _name, _value in idaklu.registrations().items():
-            # todo: This has been removed from jax v0.6.0
-            xla_client.register_custom_call_target(
-                f"{_name}_{self._unique_name()}", _value, platform="cpu"
+            ffi.register_ffi_target(
+                f"{_name}_{self._unique_name()}", _value, platform="cpu", api_version=0
             )
 
         # --- JAX PRIMITIVE DEFINITION ------------------------------------------------
 
         logger.debug(f"Creating new primitive: {self._unique_name()}")
-        f_p = jax.core.Primitive(f"f_{self._unique_name()}")
+        f_p = Primitive(f"f_{self._unique_name()}")
         f_p.multiple_results = False  # Returns a single multi-dimensional array
 
         def f(t, inputs=None):
@@ -759,7 +768,7 @@ class IDAKLUJax:
 
         ad.primitive_jvps[f_p] = f_jvp
 
-        f_jvp_p = jax.core.Primitive(f"f_jvp_{self._unique_name()}")
+        f_jvp_p = Primitive(f"f_jvp_{self._unique_name()}")
 
         @f_jvp_p.def_impl
         def f_jvp_eval(*args):
@@ -941,7 +950,7 @@ class IDAKLUJax:
 
         # --- JAX PRIMITIVE VJP DEFINITION --------------------------------------------
 
-        f_vjp_p = jax.core.Primitive(f"f_vjp_{self._unique_name()}")
+        f_vjp_p = Primitive(f"f_vjp_{self._unique_name()}")
 
         def f_vjp(y_bar, invar, *primals):
             """Main wrapper for the VJP function"""
