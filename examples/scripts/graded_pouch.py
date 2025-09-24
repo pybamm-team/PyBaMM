@@ -36,8 +36,16 @@ param_dryout.update(
 )
 
 var_pts = {"x_n": 8, "x_s": 8, "x_p": 8, "r_n": 8, "r_p": 8, "z": 32}
-exp = pybamm.Experiment(["Discharge at 1C until 2.7 V", "Charge at 1C until 4.2 V", "Hold at 4.2 V until C/20"])
-sim = pybamm.Simulation(model, var_pts=var_pts, parameter_values=param_dryout, experiment=exp)
+exp = pybamm.Experiment(
+    [
+        "Discharge at 1C until 2.7 V",
+        "Charge at 1C until 4.2 V",
+        "Hold at 4.2 V until C/20"
+    ]
+)
+sim = pybamm.Simulation(
+    model, var_pts=var_pts, parameter_values=param_dryout, experiment=exp
+)
 sol = sim.solve()
 output_variables = [
     "X-averaged negative electrode active material volume fraction",
