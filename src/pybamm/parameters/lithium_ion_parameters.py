@@ -240,9 +240,8 @@ class DomainLithiumIonParameters(BaseParameters):
                 {
                     "Through-cell distance (x) [m]": x,
                     "In-plane coordinate (y) [m]": y,
-                    "In-plane coordinate (z) [m]": z
-
-                }
+                    "In-plane coordinate (z) [m]": z,
+                },
             )
             self.epsilon_inactive = 1 - self.epsilon_init
             return
@@ -257,12 +256,10 @@ class DomainLithiumIonParameters(BaseParameters):
             coord_sys="cartesian",
         )
         y = pybamm.PrimaryBroadcast(
-            pybamm.standard_spatial_vars.y,
-            f"{domain} electrode"
+            pybamm.standard_spatial_vars.y, f"{domain} electrode"
         )
         z = pybamm.PrimaryBroadcast(
-            pybamm.standard_spatial_vars.z,
-            f"{domain} electrode"
+            pybamm.standard_spatial_vars.z, f"{domain} electrode"
         )
 
         # Macroscale geometry
@@ -287,8 +284,8 @@ class DomainLithiumIonParameters(BaseParameters):
                 {
                     "Through-cell distance (x) [m]": x,
                     "In-plane coordinate (y) [m]": y,
-                    "In-plane coordinate (z) [m]": z
-                }
+                    "In-plane coordinate (z) [m]": z,
+                },
             )
             epsilon_s_tot = sum(phase.epsilon_s for phase in self.phase_params.values())
             self.epsilon_inactive = 1 - self.epsilon_init - epsilon_s_tot
@@ -438,12 +435,10 @@ class ParticleLithiumIonParameters(BaseParameters):
             coord_sys="cartesian",
         )
         y = pybamm.PrimaryBroadcast(
-            pybamm.standard_spatial_vars.y,
-            f"{domain} electrode"
+            pybamm.standard_spatial_vars.y, f"{domain} electrode"
         )
         z = pybamm.PrimaryBroadcast(
-            pybamm.standard_spatial_vars.z,
-            f"{domain} electrode"
+            pybamm.standard_spatial_vars.z, f"{domain} electrode"
         )
         r = pybamm.SpatialVariable(
             f"r_{domain[0]}",
@@ -472,7 +467,7 @@ class ParticleLithiumIonParameters(BaseParameters):
             {
                 "Through-cell distance (x) [m]": x,
                 "In-plane coordinate (y) [m]": y,
-                "In-plane coordinate (z) [m]": z
+                "In-plane coordinate (z) [m]": z,
             },
         )
         self.epsilon_s_av = pybamm.xyz_average(self.epsilon_s)

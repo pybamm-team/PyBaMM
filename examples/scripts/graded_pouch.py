@@ -1,5 +1,6 @@
-import pybamm
 import numpy as np
+
+import pybamm
 
 model = pybamm.lithium_ion.DFN(
     {"current collector": "potential pair", "dimensionality": 1}
@@ -7,6 +8,7 @@ model = pybamm.lithium_ion.DFN(
 param = pybamm.ParameterValues("Ecker2015")
 Ly = param["Electrode width [m]"]
 Lz = param["Electrode height [m]"]
+
 
 def sigmoid(arg):
     return (1 + np.tanh(arg)) / 2
@@ -17,15 +19,12 @@ def top_hat(arg, a, b, k=500):
 
 
 def eps_s_n(x, y_cc, z_cc):
-    return 0.372403 * (
-        top_hat(arg=z_cc, a=Lz*0.05, b=Lz*0.95)
-    )
+    return 0.372403 * (top_hat(arg=z_cc, a=Lz * 0.05, b=Lz * 0.95))
 
 
 def eps_s_p(x, y_cc, z_cc):
-    return 0.40832 * (
-        top_hat(arg=z_cc, a=Lz*0.05, b=Lz*0.95)
-    )
+    return 0.40832 * (top_hat(arg=z_cc, a=Lz * 0.05, b=Lz * 0.95))
+
 
 param_dryout = param.copy()
 param_dryout.update(
@@ -40,7 +39,7 @@ exp = pybamm.Experiment(
     [
         "Discharge at 1C until 2.7 V",
         "Charge at 1C until 4.2 V",
-        "Hold at 4.2 V until C/20"
+        "Hold at 4.2 V until C/20",
     ]
 )
 sim = pybamm.Simulation(
