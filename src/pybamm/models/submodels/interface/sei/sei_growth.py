@@ -257,6 +257,11 @@ class SEIGrowth(BaseModel):
                 "surface area to volume ratio [m-1]"
             ]
 
+        # For SEI on cracks, need to use crack area instead of surface area
+        # To do this, use the roughness parameter, which works as follows:
+        # a + a_cr = roughness * a
+        # Rearrange to get a_cr = (roughness - 1) * a
+        # This is done here by replacing a with a_cr using a *= roughness - 1
         if self.reaction == "SEI on cracks":
             if self.reaction_loc == "x-average":
                 roughness = variables[f"X-averaged {domain} electrode roughness ratio"]
