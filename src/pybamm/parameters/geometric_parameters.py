@@ -42,7 +42,12 @@ class GeometricParameters(BaseParameters):
         self.L_z = pybamm.Parameter("Electrode height [m]")
         self.r_inner = pybamm.Parameter("Inner cell radius [m]")
         self.r_outer = pybamm.Parameter("Outer cell radius [m]")
-        self.A_cc = self.L_y * self.L_z  # Current collector cross sectional area
+        self.n_electrodes_parallel = pybamm.Parameter(
+            "Number of electrodes connected in parallel to make a cell"
+        )
+        self.A_cc = (
+            self.L_y * self.L_z * self.n_electrodes_parallel
+        )  # Current collector cross sectional area
 
         # Cell surface area and volume (for thermal models only)
         cell_geometry = self.options.get("cell geometry", None)

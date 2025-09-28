@@ -911,11 +911,13 @@ class Symbol:
     def evaluates_to_constant_number(self):
         return self.evaluates_to_number() and self.is_constant()
 
-    def evaluates_on_edges(self, dimension: str) -> bool:
+    def evaluates_on_edges(self, dimension: str) -> bool | str:
         """
         Returns True if a symbol evaluates on an edge, i.e. symbol contains a gradient
         operator, but not a divergence operator, and is not an IndefiniteIntegral.
-        Caches the solution for faster results.
+        Caches the solution for faster results. If the symbol is a component of a
+        vector field, returns a string indicating the direction that it evaluates on
+        edges.
 
         Parameters
         ----------

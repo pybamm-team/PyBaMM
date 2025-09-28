@@ -220,7 +220,7 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
 
         if self.options.electrode_types["negative"] == "planar":
             # No concentration overpotential in the counter electrode
-            phi_e_n = pybamm.Scalar(0)
+            phi_e_n = variables["Lithium metal interface electrolyte potential [V]"]
             indef_integral_n = pybamm.Scalar(0)
         else:
             phi_e_n = variables["Negative electrolyte potential [V]"]
