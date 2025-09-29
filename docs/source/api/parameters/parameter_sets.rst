@@ -44,7 +44,6 @@ For an example, see the `Marquis2019`_ parameter sets.
     def get_parameter_values():
         """Doc string for cell-alpha"""
         return {
-            "chemistry": "lithium_ion",
             "citation": "@book{van1995python, title={Python reference manual}}",
             # ...
         }

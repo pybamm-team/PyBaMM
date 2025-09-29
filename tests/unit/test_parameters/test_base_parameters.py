@@ -40,15 +40,16 @@ class TestBaseParameters:
         def my_func(x):
             return x
 
-        param_1.update({"Initial state function": my_func})
+        param_1 = pybamm.ParameterValues(param_1, initial_state_function=my_func)
         assert param_1._set_initial_state == my_func
+
         param_2 = pybamm.ParameterValues("ECM_Example")
         assert param_2._set_initial_state == pybamm.equivalent_circuit.set_initial_state
 
         def my_error_func(*args, **kwargs):
             raise NotImplementedError("this function should error")
 
-        param_1.update({"Initial state function": my_error_func})
+        param_1 = pybamm.ParameterValues(param_1, initial_state_function=my_error_func)
         model = pybamm.lithium_ion.SPM()
         sim = pybamm.Simulation(model, parameter_values=param_1)
         with pytest.raises(NotImplementedError, match="this function should error"):

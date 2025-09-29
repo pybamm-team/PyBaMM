@@ -5,9 +5,7 @@
 import pybamm
 
 all_options = pybamm.BatteryModelOptions({}).possible_options
-all_parameter_sets = [
-    k for k, v in pybamm.parameter_sets.items() if v["chemistry"] == "lithium_ion"
-]
+all_parameter_sets = [k for k, v in pybamm.parameter_sets.items()]
 
 for option_name, option_list in all_options.items():
     for parameter_set in all_parameter_sets:
