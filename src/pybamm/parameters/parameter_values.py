@@ -25,6 +25,10 @@ class ParameterValues:
         Explicit set of parameters, or reference to an inbuilt parameter set
         If string and matches one of the inbuilt parameter sets, returns that parameter
         set.
+    initial_state_function : function, optional
+        The function to use to set the initial state of the simulation. By default, set to
+        `pybamm.lithium_ion.set_initial_state`, except for the `ECM_Example` parameter set,
+        which is set to `pybamm.equivalent_circuit.set_initial_state`.
 
     Examples
     --------
@@ -38,7 +42,7 @@ class ParameterValues:
 
     """
 
-    def __init__(self, values):
+    def __init__(self, values, initial_state_function=None):
         # add physical constants as default values
         self._dict_items = pybamm.FuzzyDict(
             {
@@ -52,10 +56,25 @@ class ParameterValues:
         if isinstance(values, dict | ParameterValues):
             # remove the "chemistry" key if it exists
             chemistry = values.pop("chemistry", None)
+            if chemistry == "ecm" and initial_state_function is None:
+                warn(
+                    "The chemistry key is no longer supported. Please use the initial_state_function parameter.",
+                    stacklevel=2,
+                )
+                initial_state_function = pybamm.equivalent_circuit.set_initial_state
+            elif initial_state_function is None:
+                initial_state_function = pybamm.lithium_ion.set_initial_state
             self.update(values, check_already_exists=False)
         else:
             # Check if values is a named parameter set
             if isinstance(values, str) and values in pybamm.parameter_sets.keys():
+                if initial_state_function is None:
+                    if values == "ECM_Example":
+                        initial_state_function = (
+                            pybamm.equivalent_circuit.set_initial_state
+                        )
+                    else:
+                        initial_state_function = pybamm.lithium_ion.set_initial_state
                 values = pybamm.parameter_sets[values]
                 chemistry = values.pop("chemistry", None)
                 self.update(values, check_already_exists=False)
@@ -64,16 +83,7 @@ class ParameterValues:
                 raise ValueError(
                     f"'{values}' is not a valid parameter set. Parameter set must be one of:\n{valid_sets}"
                 )
-
-        if "Initial state function" not in self._dict_items:
-            if chemistry == "ecm":
-                self._dict_items["Initial state function"] = (
-                    pybamm.equivalent_circuit.set_initial_state
-                )
-            else:
-                self._dict_items["Initial state function"] = (
-                    pybamm.lithium_ion.set_initial_state
-                )
+        self._set_initial_state = initial_state_function
 
         # Initialise empty _processed_symbols dict (for caching)
         self._processed_symbols = {}
@@ -239,6 +249,7 @@ class ParameterValues:
         """Returns a copy of the parameter values. Makes sure to copy the internal
         dictionary."""
         new_copy = ParameterValues(self._dict_items.copy())
+        new_copy._set_initial_state = self._set_initial_state
         return new_copy
 
     def search(self, key, print_values=True):
@@ -996,7 +1007,3 @@ class ParameterValues:
 
     def __iter__(self):
         return iter(self._dict_items)
-
-    @property
-    def _set_initial_state(self):
-        return self._dict_items["Initial state function"]

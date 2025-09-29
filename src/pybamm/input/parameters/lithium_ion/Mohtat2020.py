@@ -336,7 +336,6 @@ def get_parameter_values():
     """
 
     return {
-        "chemistry": "lithium_ion",
         # lithium plating
         "Lithium metal partial molar volume [m3.mol-1]": 1.3e-05,
         "Exchange-current density for plating [A.m-2]": 0.001,

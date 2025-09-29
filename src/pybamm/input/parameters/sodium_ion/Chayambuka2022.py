@@ -278,7 +278,6 @@ def get_parameter_values():
     """
 
     return {
-        "chemistry": "sodium_ion",
         # cell
         "Negative electrode thickness [m]": 64e-6,
         "Separator thickness [m]": 25e-6,

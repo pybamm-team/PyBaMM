@@ -78,7 +78,6 @@ def get_parameter_values():
     cell_capacity = 100
 
     values = {
-        "chemistry": "ecm",
         "Initial SoC": 0.5,
         "Initial temperature [K]": 25 + 273.15,
         "Cell capacity [A.h]": cell_capacity,

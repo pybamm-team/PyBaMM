@@ -333,7 +333,6 @@ def get_parameter_values():
     """
 
     return {
-        "chemistry": "lithium_ion",
         # sei
         "Primary: Ratio of lithium moles to SEI moles": 2.0,
         "Primary: SEI partial molar volume [m3.mol-1]": 9.585e-05,

@@ -171,7 +171,6 @@ def get_parameter_values():
     """
 
     return {
-        "chemistry": "lithium_ion",
         # cell
         "Negative electrode thickness [m]": 3.4e-05,
         "Separator thickness [m]": 2.5e-05,

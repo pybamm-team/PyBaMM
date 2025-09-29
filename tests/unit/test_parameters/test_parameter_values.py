@@ -50,7 +50,6 @@ class TestParameterValues:
             "Boltzmann constant [J.K-1]",
             "Electron charge [C]",
             "a",
-            "Initial state function",
         ]
 
     def test_eq(self):
@@ -1099,4 +1098,4 @@ class TestParameterValues:
             values={"Negative particle radius [m]": 1e-6}
         )
         pv = [i for i in parameter_values]
-        assert len(pv) == 6, "Should have 6 keys"
+        assert len(pv) == 5, "Should have 5 keys"

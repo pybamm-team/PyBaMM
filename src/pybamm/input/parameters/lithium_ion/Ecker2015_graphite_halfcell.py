@@ -420,7 +420,6 @@ def get_parameter_values():
     """
 
     return {
-        "chemistry": "lithium_ion",
         # lithium plating
         "Lithium plating kinetic rate constant [m.s-1]": 1e-10,
         "Exchange-current density for plating [A.m-2]"

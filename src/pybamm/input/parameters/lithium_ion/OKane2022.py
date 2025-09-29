@@ -508,7 +508,6 @@ def get_parameter_values():
     """
 
     return {
-        "chemistry": "lithium_ion",
         # lithium plating
         "Lithium metal partial molar volume [m3.mol-1]": 1.3e-05,
         "Lithium plating kinetic rate constant [m.s-1]": 1e-09,

@@ -214,7 +214,6 @@ def get_parameter_values():
     """
 
     return {
-        "chemistry": "lead_acid",
         # cell
         "Negative current collector thickness [m]": 0.0,
         "Negative electrode thickness [m]": 0.0009,

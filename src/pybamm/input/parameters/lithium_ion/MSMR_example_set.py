@@ -92,7 +92,6 @@ def get_parameter_values():
     experimental cycling data.
     """
     return {
-        "chemistry": "lithium_ion",
         # cell
         "Negative electrode thickness [m]": 8.52e-05,
         "Separator thickness [m]": 1.2e-05,
