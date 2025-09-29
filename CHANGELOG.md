@@ -2,6 +2,7 @@
 
 ## Features
 
+- Added the `num_steps_no_progress` and `t_no_progress` options in the `IDAKLUSolver` to early terminate the simulation if little progress is detected. ([#5201](https://github.com/pybamm-team/PyBaMM/pull/5201))
 - Added helper functions to import external 3D meshes in PyBaMM ([#5162](https://github.com/pybamm-team/PyBaMM/pull/5162))
 - Added support for algebraic and differential surface form in composite models. ([#5165](https://github.com/pybamm-team/PyBaMM/pull/5165))
 - Adds a composite electrode electrode soh model ([#5160](https://github.com/pybamm-team/PyBaMM/pull/5129))
@@ -9,11 +10,17 @@
 
 ## Bug fixes
 
+- Added explicit warning in installation docs about unmaintained Conda recipe due to pybammsolvers split (Fixes #5155). See pull request [#5206](https://github.com/pybamm-team/PyBaMM/pull/5206)
+- Fixed a bug where time-based Heaviside or modulo discontinuities could trigger out-of-bounds errors in time arrays. ([#5205](https://github.com/pybamm-team/PyBaMM/pull/5205))
+- Fixed a bug using a time-varying input with heaviside or modulo functions using the `IDAKLUSolver`. ([#4994](https://github.com/pybamm-team/PyBaMM/pull/4994))
 - Fix a bug in setting initial stoichiometries where the reference temperature was used instead of the initial temperature. ([#5189](https://github.com/pybamm-team/PyBaMM/pull/5189))
 - Fix a bug in the calculation of "Bulk" OCP terms in hysteresis models ([#5169](https://github.com/pybamm-team/PyBaMM/pull/5169))
 - Fixed a bug where the final duration of a drive cycle would not be inferred correctly. ([#5153](https://github.com/pybamm-team/PyBaMM/pull/5153))
+- Fixes a bug where sensitivities for 1D+ variables calculated using the `output_variables` options were incorrect ([#5118](https://github.com/pybamm-team/PyBaMM/pull/5118))
+- Fix Bruggeman coefficient computation from BPX porosity and transport efficiency instead of hard-coding, remove redundant values, and add a unit test for verification. ([#5196](https://github.com/pybamm-team/PyBaMM/pull/5196))
 
 # [v25.8.0](https://github.com/pybamm-team/PyBaMM/tree/v25.8.0) - 2025-08-04
+
 
 ## Features
 
@@ -77,7 +84,7 @@
 
 ## Breaking changes
 
-- Remove sensitivity functionality for Casadi and Scipy solvers, only `pybamm.IDAKLU` solver can calculate sensitivities. ([#4975](https://github.com/pybamm-team/PyBaMM/pull/4975))
+- Remove sensitivity functionality for Casadi and Scipy solvers, only `pybamm.IDAKLUSolver` can calculate sensitivities. ([#4975](https://github.com/pybamm-team/PyBaMM/pull/4975))
 
 # [v25.4.2](https://github.com/pybamm-team/PyBaMM/tree/v25.4.2) - 2025-04-17
 
@@ -603,7 +610,7 @@ package to install PyBaMM with only the required dependencies. ([conda-forge/pyb
 - Removed code for generating `ModelingToolkit` problems ([#2432](https://github.com/pybamm-team/PyBaMM/pull/2432))
 - Removed `FirstOrder` and `Composite` lead-acid models, and some submodels specific to those models ([#2431](https://github.com/pybamm-team/PyBaMM/pull/2431))
 
-# [v22.10.post1](https://github.com/pybamm-team/PyBaMM/tree/v22.10.post1) - 2022-10-31
+# v22.10.post1 - 2022-10-31
 
 ## Breaking changes
 
@@ -635,7 +642,7 @@ package to install PyBaMM with only the required dependencies. ([conda-forge/pyb
 - Removed `get_infinite_nested_dict`, `BaseModel.check_default_variables_dictionaries`, and `Discretisation.create_jacobian` methods, which were not used by any other functionality in the repository ([#2384](https://github.com/pybamm-team/PyBaMM/pull/2384))
 - Dropped support for Python 3.7 after the release of Numpy v1.22.0 ([#2379](https://github.com/pybamm-team/PyBaMM/pull/2379))
 - Removed parameter cli tools (add/edit/remove parameters). Parameter sets can now more easily be added via python scripts. ([#2342](https://github.com/pybamm-team/PyBaMM/pull/2342))
-- Parameter sets should now be provided as single python files containing all parameters and functions. Parameters provided as "data" (e.g. OCP vs SOC) can still be csv files, but must be either in the same folder as the parameter file or in a subfolder called "data/". See for example [Ai2020](https://github.com/pybamm-team/PyBaMM/tree/develop/pybamm/input/parameters/lithium_ion/Ai2020.py) ([#2342](https://github.com/pybamm-team/PyBaMM/pull/2342))
+- Parameter sets should now be provided as single python files containing all parameters and functions. Parameters provided as "data" (e.g. OCP vs SOC) can still be csv files, but must be either in the same folder as the parameter file or in a subfolder called "data/". See for example [Ai2020](https://github.com/pybamm-team/PyBaMM/blob/develop/src/pybamm/input/parameters/lithium_ion/Ai2020.py) ([#2342](https://github.com/pybamm-team/PyBaMM/pull/2342))
 
 # [v22.9](https://github.com/pybamm-team/PyBaMM/tree/v22.9) - 2022-09-30
 
@@ -1339,7 +1346,7 @@ This release introduces many new features and optimizations. All models can now 
 - Removed `Outer` and `Kron` nodes as no longer used ([#777](https://github.com/pybamm-team/PyBaMM/pull/777))
 - Moved `results` to separate repositories ([#761](https://github.com/pybamm-team/PyBaMM/pull/761))
 - The parameters "Bruggeman coefficient" must now be specified separately as "Bruggeman coefficient (electrolyte)" and "Bruggeman coefficient (electrode)"
-- The current classes (`GetConstantCurrent`, `GetUserCurrent` and `GetUserData`) have now been removed. Please refer to the [`change-input-current` notebook](https://github.com/pybamm-team/PyBaMM/blob/develop/docs/source/examples/notebooks/change-input-current.ipynb) for information on how to specify an input current
+- The current classes (`GetConstantCurrent`, `GetUserCurrent` and `GetUserData`) have now been removed. Please refer to the [`change-input-current` notebook](https://github.com/pybamm-team/PyBaMM/blob/develop/docs/source/examples/notebooks/parameterization/change-input-current.ipynb) for information on how to specify an input current
 - Parameter functions must now use pybamm functions instead of numpy functions (e.g. `pybamm.exp` instead of `numpy.exp`), as these are then used to construct the expression tree directly. Generally, pybamm syntax follows numpy syntax; please get in touch if a function you need is missing.
 - The current must now be updated by changing "Current function [A]" or "C-rate" instead of "Typical current [A]"
 

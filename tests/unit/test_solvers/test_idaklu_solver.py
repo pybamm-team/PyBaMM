@@ -942,9 +942,10 @@ class TestIDAKLUSolver:
 
         # Use a selection of variables of different types
         output_variables = [
-            "Voltage [V]",
-            "Time [min]",
-            "x [m]",
+            "Voltage [V]",  # 0D
+            "x [m]",  # 1D, empty sensitivities
+            "Negative electrode potential [V]",  # 1D
+            "Negative particle concentration [mol.m-3]",  # 2D
             "Throughput capacity [A.h]",  # ExplicitTimeIntegral
         ]
 
@@ -992,6 +993,17 @@ class TestIDAKLUSolver:
                 sol[varname].sensitivities["all"].shape
                 == sol_all[varname].sensitivities["all"].shape
             )
+
+        # test each of the sensitivity calculations match
+        for varname in output_variables:
+            for key in input_parameters:
+                np.testing.assert_allclose(
+                    sol[varname].sensitivities[key],
+                    sol_all[varname].sensitivities[key],
+                    rtol=tol,
+                    atol=tol,
+                    err_msg=f"Failed for '{varname}', sensitivity '{key}'",
+                )
 
     def test_with_output_variables_and_event_termination(self):
         model = pybamm.lithium_ion.DFN()
@@ -1474,3 +1486,47 @@ class TestIDAKLUSolver:
             )
             assert len(w) > 0
             assert "FAILURE" in str(w[0].message)
+
+    def test_no_progress_early_termination(self):
+        # SPM at rest
+        model = pybamm.lithium_ion.SPM()
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        parameter_values.update({"Current function [A]": 0})
+
+        t_eval = [0, 10000]
+
+        options_successes = [
+            # Case 1: feature disabled because num_steps_no_progress is default (0)
+            # even if t_no_progress is huge
+            {
+                "t_no_progress": 1e10,
+                "num_steps_no_progress": 0,
+            },
+            # Case 2: feature disabled because t_no_progress is default (0.0)
+            # even if num_steps_no_progress is positive
+            {
+                "num_steps_no_progress": 5,
+                "t_no_progress": 0.0,
+            },
+        ]
+
+        for options in options_successes:
+            solver = pybamm.IDAKLUSolver(on_failure="ignore", options=options)
+            sim = pybamm.Simulation(
+                model, parameter_values=parameter_values, solver=solver
+            )
+            sol = sim.solve(t_eval)
+            assert sol.termination == "final time"
+
+        ## Check failure
+        options_failures = {
+            "num_steps_no_progress": 5,
+            "t_no_progress": 1e10,
+        }
+        solver = pybamm.IDAKLUSolver(on_failure="ignore", options=options_failures)
+        sim = pybamm.Simulation(model, parameter_values=parameter_values, solver=solver)
+        sol = sim.solve(t_eval)
+        assert sol.termination == "failure"
+
+        assert len(sol.t) == options_failures["num_steps_no_progress"]
+        assert sol.t[-1] < options_failures["t_no_progress"]
