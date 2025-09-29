@@ -65,10 +65,15 @@ class ParameterValues:
                     f"'{values}' is not a valid parameter set. Parameter set must be one of:\n{valid_sets}"
                 )
 
-        if chemistry == "ecm":
-            self._set_initial_state = pybamm.equivalent_circuit.set_initial_state
-        else:
-            self._set_initial_state = pybamm.lithium_ion.set_initial_state
+        if "Initial state function" not in self._dict_items:
+            if chemistry == "ecm":
+                self._dict_items["Initial state function"] = (
+                    pybamm.equivalent_circuit.set_initial_state
+                )
+            else:
+                self._dict_items["Initial state function"] = (
+                    pybamm.lithium_ion.set_initial_state
+                )
 
         # Initialise empty _processed_symbols dict (for caching)
         self._processed_symbols = {}
@@ -234,7 +239,6 @@ class ParameterValues:
         """Returns a copy of the parameter values. Makes sure to copy the internal
         dictionary."""
         new_copy = ParameterValues(self._dict_items.copy())
-        new_copy._set_initial_state = self._set_initial_state
         return new_copy
 
     def search(self, key, print_values=True):
@@ -992,3 +996,7 @@ class ParameterValues:
 
     def __iter__(self):
         return iter(self._dict_items)
+
+    @property
+    def _set_initial_state(self):
+        return self._dict_items["Initial state function"]
