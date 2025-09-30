@@ -20,7 +20,7 @@
 - Fix Bruggeman coefficient computation from BPX porosity and transport efficiency instead of hard-coding, remove redundant values, and add a unit test for verification. ([#5196](https://github.com/pybamm-team/PyBaMM/pull/5196))
 
 ## Breaking changes
-- Updates the hysteresis decay rate parameters to a "true" hysteresis decay rate. 
+- Updates the hysteresis decay rate parameters to a "true" hysteresis decay rate.
 
 # [v25.8.0](https://github.com/pybamm-team/PyBaMM/tree/v25.8.0) - 2025-08-04
 
