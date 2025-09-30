@@ -1,6 +1,14 @@
+import warnings
+
 import pybamm
 
 from . import BaseHysteresisOpenCircuitPotential
+
+# Only throw the hysteresis decay rate warning once
+warnings.filterwarnings(
+    "once",
+    message="The definition of the hysteresis decay rate parameter has changed*",
+)
 
 
 class OneStateHysteresisOpenCircuitPotential(BaseHysteresisOpenCircuitPotential):
@@ -29,6 +37,10 @@ class OneStateHysteresisOpenCircuitPotential(BaseHysteresisOpenCircuitPotential)
     def __init__(
         self, param, domain, reaction, options, phase="primary", x_average=False
     ):
+        warnings.warn(
+            "The definition of the hysteresis decay rate parameter has changed in "
+            "PyBaMM v25.10. Please see the CHANGELOG for more details."
+        )
         super().__init__(
             param, domain, reaction, options=options, phase=phase, x_average=x_average
         )
@@ -67,7 +79,7 @@ class OneStateHysteresisOpenCircuitPotential(BaseHysteresisOpenCircuitPotential)
         gamma_delith = self.phase_param.hysteresis_decay(sto_surf, T, "delithiation")
 
         i_vol_sign = pybamm.sign(i_vol)
-        signed_h = 1 - i_vol_sign * h
+        signed_h = (1 - i_vol_sign * h) / 2
         gamma = (
             0.5 * (1 - i_vol_sign) * gamma_lith + 0.5 * (1 + i_vol_sign) * gamma_delith
         )
