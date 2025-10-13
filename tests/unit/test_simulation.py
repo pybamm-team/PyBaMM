@@ -963,6 +963,6 @@ class TestSimulation:
         ]
         with pytest.raises(
             pybamm.SolverError,
-            match="list of parameter sets is not supported with experiments",
+            match="list of input sets is not supported with experiments",
         ):
             sim.solve(inputs=parameter_loop)

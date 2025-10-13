@@ -11,6 +11,7 @@
 
 ## Bug fixes
 
+- Fixed a bug where no error was raised if a list of input sets were provided to the solver while Experiments were being used ([#5226](https://github.com/pybamm-team/PyBaMM/pull/5226))
 - Fixed a bug where simulations using output variables in `IDAKLUSolver` couldn't be pickled ([#5225](https://github.com/pybamm-team/PyBaMM/pull/5225))
 - Added explicit warning in installation docs about unmaintained Conda recipe due to pybammsolvers split (Fixes #5155). See pull request [#5206](https://github.com/pybamm-team/PyBaMM/pull/5206)
 - Fixed a bug where time-based Heaviside or modulo discontinuities could trigger out-of-bounds errors in time arrays. ([#5205](https://github.com/pybamm-team/PyBaMM/pull/5205))

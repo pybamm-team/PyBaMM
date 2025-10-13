@@ -550,7 +550,7 @@ class Simulation:
 
             if isinstance(inputs, list):
                 raise pybamm.SolverError(
-                    "Solving with a list of parameter sets is not supported with experiments."
+                    "Solving with a list of input sets is not supported with experiments."
                 )
 
             self.build_for_experiment(
