@@ -1288,6 +1288,9 @@ class EvaluateAt(SpatialOperator):
         """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""
         return pybamm.evaluate_for_shape_using_domain(self.domains)
 
+    def _evaluates_on_edges(self, dimension: str) -> bool:
+        return False
+
 
 class UpwindDownwind(SpatialOperator):
     """
