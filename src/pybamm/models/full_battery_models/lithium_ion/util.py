@@ -24,13 +24,8 @@ def _has_hysteresis(electrode, options, phase=None):
         "Wycisk",
     ]
     domain_options = getattr(options, electrode)
-    if domain_options.get("open-circuit potential") is None:
-        return False
     if isinstance(domain_options["open-circuit potential"], str):
-        if domain_options["open-circuit potential"] in hysteresis_options:
-            return True
-        else:
-            return False
+        return domain_options["open-circuit potential"] in hysteresis_options
     elif isinstance(domain_options["open-circuit potential"], tuple):
         ocp_option = domain_options["open-circuit potential"]
         if phase == "primary":
@@ -42,6 +37,10 @@ def _has_hysteresis(electrode, options, phase=None):
                 isinstance(item, str) and item in hysteresis_options
                 for item in ocp_option
             )
+    else:
+        raise ValueError(
+            f"Invalid open-circuit potential option: {domain_options['open-circuit potential']}"
+        )
 
 
 def _get_lithiation_delithiation(direction, electrode, options, phase=None):
@@ -56,4 +55,4 @@ def _get_lithiation_delithiation(direction, electrode, options, phase=None):
     ):
         return "delithiation"
     else:
-        raise ValueError
+        raise ValueError()

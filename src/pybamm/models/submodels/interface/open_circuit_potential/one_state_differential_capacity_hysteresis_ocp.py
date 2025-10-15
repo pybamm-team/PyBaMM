@@ -120,8 +120,8 @@ class OneStateDifferentialCapacityHysteresisOpenCircuitPotential(
         i_vol_sign = pybamm.sign(i_vol)
         signed_h = (1 - i_vol_sign * h) / 2
         C_diff = dQdU
-        C_ref_vol = 1  # [F/m^3]
-        gamma = Gamma * (C_diff / C_ref_vol) ** (-x)
+        C_ref_vol = 1  # [F]
+        gamma = Gamma * ((C_diff / C_ref_vol) ** (-x))
         dhdt = gamma * i_vol / (self.param.F * c_max * eps) * signed_h
 
         self.rhs[h] = dhdt
