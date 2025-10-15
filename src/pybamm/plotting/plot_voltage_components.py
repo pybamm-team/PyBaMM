@@ -45,15 +45,21 @@ def plot_voltage_components(
 
     # Remove phase name if the electrode is not composite
     electrode_phases = list(electrode_phases)
-    if type(solution.all_models[0].options["particle phases"]) == str: 
-        number_of_phases = (solution.all_models[0].options["particle phases"], solution.all_models[0].options["particle phases"])
-    else: number_of_phases = solution.all_models[0].options["particle phases"]
+    if type(solution.all_models[0].options["particle phases"]) == str:
+        number_of_phases = (
+            solution.all_models[0].options["particle phases"],
+            solution.all_models[0].options["particle phases"],
+        )
+    else:
+        number_of_phases = solution.all_models[0].options["particle phases"]
     for i in [0, 1]:
-        if number_of_phases[i] == '1':
+        if number_of_phases[i] == "1":
             electrode_phases[i] = ""
         else:
             electrode_phases[i] += " "
-    num_cells = solution["Battery voltage [V]"].entries[0] / solution["Voltage [V]"].entries[0]
+    num_cells = (
+        solution["Battery voltage [V]"].entries[0] / solution["Voltage [V]"].entries[0]
+    )
     plt = import_optional_dependency("matplotlib.pyplot")
 
     # Set a default value for alpha, the opacity
@@ -113,8 +119,12 @@ def plot_voltage_components(
             time, ocv, initial_ocv, **kwargs_fill, label="Open-circuit voltage"
         )
     else:
-        ocp_n = solution[f"Negative electrode {electrode_phases[0]}bulk open-circuit potential [V]"]
-        ocp_p = solution[f"Positive electrode {electrode_phases[1]}bulk open-circuit potential [V]"]
+        ocp_n = solution[
+            f"Negative electrode {electrode_phases[0]}bulk open-circuit potential [V]"
+        ]
+        ocp_p = solution[
+            f"Positive electrode {electrode_phases[1]}bulk open-circuit potential [V]"
+        ]
         initial_ocp_n = ocp_n(time[0]) * num_cells
         initial_ocp_p = ocp_p(time[0]) * num_cells
         initial_ocv = initial_ocp_p - initial_ocp_n
