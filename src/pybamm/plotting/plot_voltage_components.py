@@ -50,7 +50,7 @@ def plot_voltage_components(
             electrode_phases[i] = ""
         else:
             electrode_phases[i] += " "
-
+    num_cells = solution["Battery voltage [V]"].entries[0] / solution["Voltage [V]"].entries[0]
     plt = import_optional_dependency("matplotlib.pyplot")
 
     # Set a default value for alpha, the opacity
@@ -112,11 +112,11 @@ def plot_voltage_components(
     else:
         ocp_n = solution[f"Negative electrode {electrode_phases[0]}bulk open-circuit potential [V]"]
         ocp_p = solution[f"Positive electrode {electrode_phases[1]}bulk open-circuit potential [V]"]
-        initial_ocp_n = ocp_n(time[0])
-        initial_ocp_p = ocp_p(time[0])
+        initial_ocp_n = ocp_n(time[0]) * num_cells
+        initial_ocp_p = ocp_p(time[0]) * num_cells
         initial_ocv = initial_ocp_p - initial_ocp_n
-        delta_ocp_n = ocp_n.entries - initial_ocp_n
-        delta_ocp_p = ocp_p.entries - initial_ocp_p
+        delta_ocp_n = ocp_n.entries * num_cells - initial_ocp_n
+        delta_ocp_p = ocp_p.entries * num_cells - initial_ocp_p
         ax.fill_between(
             time,
             initial_ocv - delta_ocp_n,
@@ -138,7 +138,8 @@ def plot_voltage_components(
         # negative overpotentials are positive for a discharge and negative for a charge
         # so we have to multiply by -1 to show them correctly
         sgn = -1 if "egative" in overpotential else 1
-        bottom = top + sgn * solution[overpotential].entries
+        multiplier = sgn if "attery" in overpotential else sgn * num_cells
+        bottom = top + multiplier * solution[overpotential].entries
         ax.fill_between(time, bottom, top, **kwargs_fill, label=label)
         top = bottom
 
