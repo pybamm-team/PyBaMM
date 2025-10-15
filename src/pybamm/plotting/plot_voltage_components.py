@@ -45,7 +45,7 @@ def plot_voltage_components(
 
     # Remove phase name if the electrode is not composite
     electrode_phases = list(electrode_phases)
-    if type(solution.all_models[0].options["particle phases"]) == str:
+    if isinstance(solution.all_models[0].options["particle phases"], str):
         number_of_phases = (
             solution.all_models[0].options["particle phases"],
             solution.all_models[0].options["particle phases"],
