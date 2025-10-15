@@ -19,6 +19,9 @@ def _has_hysteresis(electrode, options, phase=None):
         "current sigmoid",
         "one-state hysteresis",
         "one-state differential capacity hysteresis",
+        # Also catch old names
+        "Axen",
+        "Wycisk",
     ]
     domain_options = getattr(options, electrode)
     if domain_options.get("open-circuit potential") is None:
