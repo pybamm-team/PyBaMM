@@ -41,7 +41,8 @@ class OneStateDifferentialCapacityHysteresisOpenCircuitPotential(
     ):
         warnings.warn(
             "The definition of the hysteresis decay rate parameter has changed in "
-            "PyBaMM v25.10. Please see the CHANGELOG for more details."
+            "PyBaMM v25.10. Please see the CHANGELOG for more details.",
+            stacklevel=2,
         )
         super().__init__(
             param, domain, reaction, options=options, phase=phase, x_average=x_average
@@ -108,11 +109,7 @@ class OneStateDifferentialCapacityHysteresisOpenCircuitPotential(
             dQdU = variables[
                 f"X-averaged {domain} electrode {phase_name}differential capacity [A.s.V-1]"
             ]
-        # check if composite or not
-        if phase_name != "":
-            Q_cell = variables[f"{Domain} electrode {phase_name}phase capacity [A.h]"]
-        else:
-            Q_cell = variables[f"{Domain} electrode capacity [A.h]"]
+            eps = pybamm.x_average(eps)
 
         Gamma = self.phase_param.hysteresis_decay(sto_surf, T)
         x = self.phase_param.hysteresis_switch

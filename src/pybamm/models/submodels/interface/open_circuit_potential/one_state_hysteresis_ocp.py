@@ -39,7 +39,8 @@ class OneStateHysteresisOpenCircuitPotential(BaseHysteresisOpenCircuitPotential)
     ):
         warnings.warn(
             "The definition of the hysteresis decay rate parameter has changed in "
-            "PyBaMM v25.10. Please see the CHANGELOG for more details."
+            "PyBaMM v25.10. Please see the CHANGELOG for more details.",
+            stacklevel=2,
         )
         super().__init__(
             param, domain, reaction, options=options, phase=phase, x_average=x_average
