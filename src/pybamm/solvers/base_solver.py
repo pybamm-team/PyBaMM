@@ -1682,6 +1682,13 @@ class BaseSolver:
                 raise pybamm.SolverError(f"No value provided for input '{name}'")
             inputs_in_model[name] = inputs[name]
 
+        missing_inputs = set(inputs) - set(inputs_in_model)
+        if missing_inputs:
+            warnings.warn(
+                f"The following inputs are not used in the model: {missing_inputs}",
+                pybamm.SolverWarning,
+                stacklevel=2,
+            )
         inputs = inputs_in_model
 
         ordered_inputs_names = list(inputs.keys())
