@@ -137,7 +137,8 @@ class TestBaseSolver:
         # Simple system: a single algebraic equation
         class ScalarModel:
             def __init__(self):
-                self.y0 = np.array([2])
+                self.y0_list = [np.array([2])]
+                self.y0S_list = None
                 self.rhs = {}
                 self.jac_algebraic_eval = None
                 t = casadi.MX.sym("t")
@@ -172,7 +173,8 @@ class TestBaseSolver:
 
         class VectorModel:
             def __init__(self):
-                self.y0 = np.zeros_like(vec)
+                self.y0_list = [np.zeros_like(vec)]
+                self.y0S_list = None
                 self.rhs = {"test": "test"}
                 self.concatenated_rhs = np.array([1])
                 self.jac_algebraic_eval = None
@@ -195,11 +197,11 @@ class TestBaseSolver:
                 return (y[1:] - vec[1:]) ** 2
 
         model = VectorModel()
-        init_states = solver.calculate_consistent_state(model)
+        [init_states] = solver.calculate_consistent_state(model)
         np.testing.assert_allclose(init_states.flatten(), vec, rtol=1e-7, atol=1e-6)
         # with casadi
         solver_with_casadi.root_method.step_tol = 1e-12
-        init_states = solver_with_casadi.calculate_consistent_state(model)
+        [init_states] = solver_with_casadi.calculate_consistent_state(model)
         np.testing.assert_allclose(
             init_states.full().flatten(), vec, rtol=1e-7, atol=1e-6
         )
@@ -209,7 +211,7 @@ class TestBaseSolver:
             return 2 * np.hstack([np.zeros((3, 1)), np.diag(y[1:] - vec[1:])])
 
         model.jac_algebraic_eval = jac_dense
-        init_states = solver.calculate_consistent_state(model)
+        [init_states] = solver.calculate_consistent_state(model)
         np.testing.assert_allclose(init_states.flatten(), vec, rtol=1e-7, atol=1e-6)
 
         # With sparse Jacobian
@@ -219,13 +221,14 @@ class TestBaseSolver:
             )
 
         model.jac_algebraic_eval = jac_sparse
-        init_states = solver.calculate_consistent_state(model)
+        [init_states] = solver.calculate_consistent_state(model)
         np.testing.assert_allclose(init_states.flatten(), vec, rtol=1e-7, atol=1e-6)
 
     def test_fail_consistent_initialization(self):
         class Model:
             def __init__(self):
-                self.y0 = np.array([2])
+                self.y0_list = [np.array([2])]
+                self.y0S_list = None
                 self.rhs = {}
                 self.jac_algebraic_eval = None
                 t = casadi.MX.sym("t")
@@ -447,31 +450,33 @@ class TestBaseSolver:
         ):
             base_solver.on_failure = "invalid"
 
-    def test_solver_multiple_inputs_initial_conditions_error(self):
-        y = pybamm.Variable("y")
-        y0 = pybamm.InputParameter("y0")
-        k = pybamm.InputParameter("k")
+    # need to test this outside the base solver
+    # def test_solver_multiple_inputs_initial_conditions(self):
+    #     y = pybamm.Variable("y")
+    #     y0 = pybamm.InputParameter("y0")
+    #     k = pybamm.InputParameter("k")
 
-        model = pybamm.BaseModel()
-        model.rhs = {y: -k * y}
-        model.initial_conditions = {y: y0}
-        model.variables = {"y": y}
+    #     model = pybamm.BaseModel()
+    #     model.rhs = {y: -k * y}
+    #     model.initial_conditions = {y: y0}
+    #     model.variables = {"y": y}
 
-        disc = pybamm.Discretisation()
-        disc.process_model(model)
+    #     disc = pybamm.Discretisation()
+    #     disc.process_model(model)
 
-        t_eval = np.linspace(0.0, 1.0, 6)
+    #     t_eval = np.linspace(0.0, 1.0, 6)
 
-        # Three different ICs so each run is clearly distinct
-        inputs_list = [
-            {"y0": 1.0, "k": 0.5},
-            {"y0": 2.0, "k": 1.0},
-            {"y0": 3.0, "k": 1.5},
-        ]
+    #     # Three different ICs so each run is clearly distinct
+    #     inputs_list = [
+    #         {"y0": 1.0, "k": 0.5},
+    #         {"y0": 2.0, "k": 1.0},
+    #         {"y0": 3.0, "k": 1.5},
+    #     ]
 
-        solver = pybamm.BaseSolver()
-        with pytest.raises(
-            pybamm.SolverError,
-            match="Input parameters cannot appear in expression for initial conditions",
-        ):
-            solver.solve(model, t_eval=t_eval, inputs=inputs_list)
+    #     solver = pybamm.BaseSolver()
+
+    #     sols = solver.solve(model, t_eval=t_eval, inputs=inputs_list)
+
+    #     # Extract y(0) actually used per run
+    #     ic_used = [float(sol["y"].entries[0]) for sol in sols]
+    #     assert ic_used == [1.0, 2.0, 3.0]

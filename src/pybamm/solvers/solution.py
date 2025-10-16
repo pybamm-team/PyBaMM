@@ -316,7 +316,8 @@ class Solution:
             all_ys = self.all_ys[0][:, :1]
         else:
             # Get first state from initial conditions as all_ys is empty
-            all_ys = self.all_models[0].y0full.reshape(-1, 1)
+            # TODO: What should this look like when there are multiple y0's?
+            all_ys = self.all_models[0].y0full[0].reshape(-1, 1)
 
         new_sol = Solution(
             self.all_ts[0][:1],

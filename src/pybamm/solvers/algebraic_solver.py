@@ -78,7 +78,7 @@ class AlgebraicSolver(pybamm.BaseSolver):
     def tol(self, value):
         self._tol = value
 
-    def _integrate(self, model, t_eval, inputs_dict=None, t_interp=None):
+    def _integrate_single(self, model, t_eval, y0, y0S, inputs_dict, inputs_list=None):
         """
         Calculate the solution of the algebraic equations through root-finding
 
@@ -97,7 +97,6 @@ class AlgebraicSolver(pybamm.BaseSolver):
         else:
             inputs = inputs_dict
 
-        y0 = model.y0
         if isinstance(y0, casadi.DM):
             y0 = y0.full()
         y0 = y0.flatten()

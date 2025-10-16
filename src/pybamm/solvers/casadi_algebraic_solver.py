@@ -87,7 +87,7 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
             The rootfinder function is stored in the model as `algebraic_root_solver`.
         """
         pybamm.logger.info(f"Start building {self.name}")
-        y0 = model.y0
+        y0 = model.y0_list[0]
 
         # The casadi algebraic solver can read rhs equations, but leaves them unchanged
         # i.e. the part of the solution vector that corresponds to the differential
@@ -151,7 +151,7 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
 
         pybamm.logger.info(f"Finish building {self.name}")
 
-    def _integrate(self, model, t_eval, inputs_dict=None, t_interp=None):
+    def _integrate_single(self, model, t_eval, y0, y0S, inputs_dict, inputs_list=None):
         """
         Calculate the solution of the algebraic equations through root-finding
 
@@ -169,8 +169,6 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
 
         # Create casadi objects for the root-finder
         inputs = casadi.vertcat(*[v for v in inputs_dict.values()])
-
-        y0 = model.y0
 
         # The casadi algebraic solver can read rhs equations, but leaves them unchanged
         # i.e. the part of the solution vector that corresponds to the differential

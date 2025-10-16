@@ -254,15 +254,22 @@ class IDAKLUSolver(pybamm.BaseSolver):
     def set_up(self, model, inputs=None, t_eval=None, ics_only=False):
         base_set_up_return = super().set_up(model, inputs, t_eval, ics_only)
 
-        inputs_dict = inputs or {}
+        if isinstance(inputs, dict):
+            inputs_list = [inputs]
+        else:
+            inputs_list = inputs or [{}]
+
         # stack inputs
-        if inputs_dict:
-            arrays_to_stack = [np.array(x).reshape(-1, 1) for x in inputs_dict.values()]
+        if inputs_list and inputs_list[0]:
+            arrays_to_stack = [
+                np.array(x).reshape(-1, 1) for x in inputs_list[0].values()
+            ]
             inputs = np.vstack(arrays_to_stack)
         else:
             inputs = np.array([[]])
 
-        y0 = model.y0
+        y0 = model.y0_list[0]
+
         if isinstance(y0, casadi.DM):
             y0 = y0.full()
         y0 = y0.flatten()
@@ -294,7 +301,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         y_casadi = casadi.MX.sym("y", model.len_rhs_and_alg)
         cj_casadi = casadi.MX.sym("cj")
         p_casadi = {}
-        for name, value in inputs_dict.items():
+        for name, value in inputs_list[0].items():
             if isinstance(value, numbers.Number):
                 p_casadi[name] = casadi.MX.sym(name)
             else:
@@ -401,7 +408,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 idaklu.generate_function(self.var_idaklu_fcns_pkl[-1])
             )
             # Convert derivative functions for sensitivities
-            if (len(inputs) > 0) and (model.calculate_sensitivities):
+            if (inputs.shape[0] > 0) and (model.calculate_sensitivities):
                 self.dvar_dy_idaklu_fcns_pkl.append(
                     self.computed_dvar_dy_fcns[key].serialize()
                 )
@@ -565,70 +572,16 @@ class IDAKLUSolver(pybamm.BaseSolver):
     def supports_parallel_solve(self):
         return True
 
-    def _apply_solver_initial_conditions(self, model, initial_conditions):
+    def _integrate(self, model, t_eval, inputs_list=None, t_interp=None, nproc=None):
         """
-        Apply custom initial conditions to a model by overriding model.y0.
-
-        Parameters
-        ----------
-        model : pybamm.BaseModel
-            A model with a precomputed y0 vector.
-        initial_conditions : dict or numpy.ndarray
-            Either a mapping from variable names to values (scalar or array),
-            or a flat numpy array matching the length of model.y0.
-        """
-        if isinstance(initial_conditions, dict):
-            y0_np = (
-                model.y0.full() if isinstance(model.y0, casadi.DM) else model.y0.copy()
-            )
-
-            for var_name, value in initial_conditions.items():
-                found = False
-                for symbol, slice_info in model.y_slices.items():
-                    if symbol.name == var_name:
-                        var_slice = slice_info[0]
-                        y0_np[var_slice] = value
-                        found = True
-                        break
-                if not found:
-                    raise ValueError(f"Variable '{var_name}' not found in model")
-
-            model.y0 = casadi.DM(y0_np)
-
-        elif isinstance(initial_conditions, np.ndarray):
-            model.y0 = casadi.DM(initial_conditions)
-        else:
-            raise TypeError("Initial conditions must be dict or numpy array")
-
-    def _integrate(
-        self, model, t_eval, inputs_list=None, t_interp=None, initial_conditions=None
-    ):
-        """
-        Solve a DAE model defined by residuals with initial conditions y0.
-
-        Parameters
-        ----------
-        model : :class:`pybamm.BaseModel`
-            The model whose solution to calculate.
-        t_eval : numeric type
-            The times at which to stop the integration due to a discontinuity in time.
-        inputs_list: list of dict, optional
-            Any input parameters to pass to the model when solving.
-        t_interp : None, list or ndarray, optional
-            The times (in seconds) at which to interpolate the solution. Defaults to `None`,
-            which returns the adaptive time-stepping times.
-        initial_conditions : dict, numpy.ndarray, or list, optional
-            Override the model’s default `y0`.  Can be:
-
-            - a dict mapping variable names → values
-            - a 1D array of length `n_states`
-            - a list of such overrides (one per parallel solve)
-
+        Overloads the _integrate method from BaseSolver to use the IDAKLU solver
         """
         if model.convert_to_format != "casadi":  # pragma: no cover
             # Shouldn't ever reach this point
             raise pybamm.SolverError("Unsupported IDAKLU solver configuration.")
 
+        if isinstance(inputs_list, dict):
+            inputs_list = [inputs_list]
         inputs_list = inputs_list or [{}]
 
         # stack inputs so that they are a 2D array of shape (number_of_inputs, number_of_parameters)
@@ -642,36 +595,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
         else:
             inputs = np.array([[]] * len(inputs_list))
 
-        if initial_conditions is not None:
-            if isinstance(initial_conditions, list):
-                if len(initial_conditions) != len(inputs_list):
-                    raise ValueError(
-                        "Number of initial conditions must match number of input sets"
-                    )
-
-                y0_list = []
-
-                model_copy = model.new_copy()
-                for ic in initial_conditions:
-                    self._apply_solver_initial_conditions(model_copy, ic)
-                    y0_list.append(model_copy.y0.full().flatten())
-
-                y0full = np.vstack(y0_list)
-                ydot0full = np.zeros_like(y0full)
-
-            else:
-                self._apply_solver_initial_conditions(model, initial_conditions)
-
-                y0_np = model.y0.full()
-
-                y0full = np.vstack([y0_np for _ in range(len(inputs_list))])
-                ydot0full = np.zeros_like(y0full)
-        else:
-            # stack y0full and ydot0full so they are a 2D array of shape (number_of_inputs, number_of_states + number_of_parameters * number_of_states)
-            # note that y0full and ydot0full are currently 1D arrays (i.e. independent of inputs), but in the future we will support
-            # different initial conditions for different inputs. For now we just repeat the same initial conditions for each input
-            y0full = np.vstack([model.y0full] * len(inputs_list))
-            ydot0full = np.vstack([model.ydot0full] * len(inputs_list))
+        # y0full is now a list with length = number of input sets
+        y0full = np.vstack(model.y0full)
+        ydot0full = np.vstack(model.ydot0full)
 
         atol = getattr(model, "atol", self.atol)
         atol = self._check_atol_type(atol, y0full.size)
@@ -831,7 +757,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 f"{model.convert_to_format}"
             )
 
-    def _set_consistent_initialization(self, model, time, inputs_dict):
+    def _set_consistent_initialization(self, model, time, inputs_list):
         """
         Initialize y0 and ydot0 for the solver. In addition to calculating
         y0 from BaseSolver, we also calculate ydot0 for semi-explicit DAEs
@@ -846,33 +772,47 @@ class IDAKLUSolver(pybamm.BaseSolver):
             Any input parameters to pass to the model when solving.
         """
 
-        # set model.y0
-        super()._set_consistent_initialization(model, time, inputs_dict)
+        # set model.y0_list
+        super()._set_consistent_initialization(model, time, inputs_list)
 
         casadi_format = model.convert_to_format == "casadi"
 
-        y0 = model.y0
-        if isinstance(y0, casadi.DM):
-            y0 = y0.full()
-        y0 = y0.flatten()
+        def handle_y0(y0):
+            if y0 is None:
+                return y0
+            if isinstance(y0, casadi.DM):
+                y0 = y0.full()
+            return y0.flatten()
+
+        y0_list = [handle_y0(y0) for y0 in model.y0_list]
+        # inputs_full = [handle_y0(input) for input in inputs_list]
 
         # calculate the time derivatives of the differential equations
         # for semi-explicit DAEs
         if model.len_rhs > 0:
-            ydot0 = self._rhs_dot_consistent_initialization(
-                y0, model, time, inputs_dict
-            )
+            ydot0_list = [
+                self._rhs_dot_consistent_initialization(y0, model, time, inputs_dict)
+                for y0, inputs_dict in zip(y0_list, inputs_list, strict=False)
+            ]
         else:
-            ydot0 = np.zeros_like(y0)
+            ydot0_list = [np.zeros_like(y0) for y0 in y0_list]
 
-        sensitivity = (model.y0S is not None) and casadi_format
+        sensitivity = model.y0S_list and casadi_format
         if sensitivity:
-            y0full, ydot0full = self._sensitivity_consistent_initialization(
-                y0, ydot0, model, time, inputs_dict
-            )
+            y0S_list = model.y0S_list
+            y0full = []
+            ydot0full = []
+            for y0, ydot0, y0S, inputs_dict in zip(
+                y0_list, ydot0_list, y0S_list, inputs_list, strict=False
+            ):
+                y0f, ydot0f = self._sensitivity_consistent_initialization(
+                    y0, ydot0, y0S, time, inputs_dict
+                )
+                y0full.append(y0f)
+                ydot0full.append(ydot0f)
         else:
-            y0full = y0
-            ydot0full = ydot0
+            y0full = y0_list
+            ydot0full = ydot0_list
 
         model.y0full = y0full
         model.ydot0full = ydot0full
@@ -924,9 +864,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         return ydot0
 
-    def _sensitivity_consistent_initialization(
-        self, y0, ydot0, model, time, inputs_dict
-    ):
+    def _sensitivity_consistent_initialization(self, y0, ydot0, y0S, time, inputs_dict):
         """
         Extend the consistent initialization to include the sensitivty equations
 
@@ -936,16 +874,14 @@ class IDAKLUSolver(pybamm.BaseSolver):
             The initial values of the state vector.
         ydot0 : :class:`numpy.array`
             The initial values of the time derivatives of the state vector.
+        y0S : :class:`numpy.array`
+            The initial values of the sensitivity state vectors.
         time : numeric type
             The time at which to calculate the initial conditions.
-        model : :class:`pybamm.BaseModel`
-            The model for which to calculate initial conditions.
         inputs_dict : dict
             Any input parameters to pass to the model when solving.
 
         """
-
-        y0S = model.y0S
 
         if isinstance(y0S, casadi.DM):
             y0S = (y0S,)
