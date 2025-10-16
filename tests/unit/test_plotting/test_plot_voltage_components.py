@@ -14,13 +14,12 @@ def solved_simulations():
     sim = pybamm.Simulation(model)
     sol = sim.solve([0, 3600])
 
-    model_composite = pybamm.lithium_ion.SPM({
-        "particle phases": ("2", "1")
-    })
+    model_composite = pybamm.lithium_ion.SPM({"particle phases": ("2", "1")})
     params = pybamm.ParameterValues("Chen2020_composite")
     sim_composite = pybamm.Simulation(model_composite, parameter_values=params)
     sol_composite = sim_composite.solve([0, 3600])
     return sim, sol, sim_composite, sol_composite
+
 
 @pytest.mark.parametrize(
     "split_by_electrode",
@@ -31,16 +30,23 @@ def solved_simulations():
     "from_solution", [True, False], ids=["from_solution", "from_simulation"]
 )
 @pytest.mark.parametrize(
-    "anode", ["primary", "secondary", "single"], ids=["composite_anode_primary", "composite_anode_secondary", "single_phase_anode"]
+    "anode",
+    ["primary", "secondary", "single"],
+    ids=["composite_anode_primary", "composite_anode_secondary", "single_phase_anode"],
 )
-def test_plot_voltage_components(solved_simulations, from_solution, split_by_electrode, anode):
+def test_plot_voltage_components(
+    solved_simulations, from_solution, split_by_electrode, anode
+):
     sim, sol, sim_composite, sol_composite = solved_simulations
-    if anode != "single": sim, sol = (sim_composite, sol_composite)
+    if anode != "single":
+        sim, sol = (sim_composite, sol_composite)
     target = sol if from_solution else sim
 
     _, ax = target.plot_voltage_components(
         # If anode not composite then the string value does not matter
-        show_plot=False, split_by_electrode=split_by_electrode, electrode_phases=(anode, "primary")
+        show_plot=False,
+        split_by_electrode=split_by_electrode,
+        electrode_phases=(anode, "primary"),
     )
     t, V = ax.get_lines()[0].get_data()
     np.testing.assert_array_equal(t, sol["Time [h]"].data)
