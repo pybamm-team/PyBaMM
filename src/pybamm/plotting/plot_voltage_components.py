@@ -60,6 +60,7 @@ def plot_voltage_components(
     num_cells = (
         solution["Battery voltage [V]"].entries[0] / solution["Voltage [V]"].entries[0]
     )
+    full_cell = solution.all_models[0].options["working electrode"] == "both"
     plt = import_optional_dependency("matplotlib.pyplot")
 
     # Set a default value for alpha, the opacity
@@ -90,7 +91,7 @@ def plot_voltage_components(
         overpotentials = [
             f"Negative {electrode_phases[0]}particle concentration overpotential [V]",
             f"Positive {electrode_phases[1]}particle concentration overpotential [V]",
-            f"X-averaged negative electrode {electrode_phases[0]}reaction overpotential [V]",
+            f"X-averaged negative electrode {electrode_phases[0]}reaction overpotential [V]" if full_cell else "X-averaged battery negative reaction overpotential [V]",
             f"X-averaged positive electrode {electrode_phases[1]}reaction overpotential [V]",
             "X-averaged battery concentration overpotential [V]",
             "X-averaged battery electrolyte ohmic losses [V]",
