@@ -33,13 +33,15 @@ class ConstantSEI(BaseModel):
 
     def get_fundamental_variables(self):
         domain = self.domain.lower()
+        L_sei_0 = self.phase_param.L_sei_0
+        V_bar_sei = self.phase_param.V_bar_sei
         # Constant concentration
         if self.reaction_loc == "interface":
             # c_sei is an interfacial quantity [mol.m-2]
-            c_sei = self.phase_param.c_sei_planar_0
+            c_sei = L_sei_0 / V_bar_sei
         else:
             # c_sei is a bulk quantity [mol.m-3]
-            c_sei = self.phase_param.c_sei_0
+            c_sei = L_sei_0 * self.phase_param.a_typ / V_bar_sei
         variables = self._get_standard_concentration_variables(c_sei)
 
         # Reactions

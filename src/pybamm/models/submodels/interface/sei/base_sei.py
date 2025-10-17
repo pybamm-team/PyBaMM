@@ -102,20 +102,22 @@ class BaseModel(BaseInterface):
         # by parameter values in general
         if isinstance(self, pybamm.sei.NoSEI):
             c_sei_0 = 0
-            c_sei_crack_0 = 0
+            c_sei_cr0 = 0
             z_sei = 1
         else:
+            L_sei_0 = phase_param.L_sei_0
+            V_bar_sei = phase_param.V_bar_sei
             z_sei = phase_param.z_sei
             if self.reaction_loc == "interface":
-                c_sei_0 = phase_param.c_sei_planar_0  # mol.m-2
+                c_sei_0 = L_sei_0 / V_bar_sei  # mol.m-2
             else:
-                c_sei_0 = phase_param.c_sei_0  # mol.m-3
-                c_sei_crack_0 = phase_param.c_sei_crack_0
+                c_sei_0 = L_sei_0 * phase_param.a_typ / V_bar_sei  # mol.m-3
+                c_sei_cr0 = phase_param.L_sei_cr0 * phase_param.a_typ / V_bar_sei
 
         if self.reaction == "SEI":
             delta_c_sei = c_sei_av - c_sei_0
         elif self.reaction == "SEI on cracks":
-            delta_c_sei = c_sei_av - c_sei_crack_0
+            delta_c_sei = c_sei_av - c_sei_cr0
 
         if self.reaction_loc == "interface":
             L_k = 1
