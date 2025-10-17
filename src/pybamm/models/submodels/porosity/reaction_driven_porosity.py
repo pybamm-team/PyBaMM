@@ -49,15 +49,7 @@ class ReactionDriven(BaseModel):
                     if SEI_option == "none":
                         L_sei_0 = pybamm.Scalar(0)
                     else:
-                        c_sei_0 = pybamm.Parameter(
-                            f"{pref}Initial SEI concentration [mol.m-3]"
-                        )
-                        V_bar_sei = pybamm.Parameter(
-                            f"{pref}SEI partial molar volume [m3.mol-1]"
-                        )
-                        # Use of a_k to calculate L_sei_0 introduces errors if there is
-                        # a lot of LAM and c_sei_0 is large, but Li is still conserved
-                        L_sei_0 = c_sei_0 * V_bar_sei / a_k
+                        L_sei_0 = pybamm.Parameter(f"{pref}Initial SEI thickness [m]")
                     L_sei_k = variables[f"{Domain} {phase_name}SEI thickness [m]"]
                     L_pl_k = variables[
                         f"{Domain} {phase_name}lithium plating thickness [m]"

@@ -50,9 +50,11 @@ class SEIGrowth(BaseModel):
 
     def get_fundamental_variables(self):
         domain, Domain = self.domain_Domain
-        scale = self.phase_param.c_sei_0
+        L_sei_0 = self.phase_param.L_sei_0
+        V_bar_sei = self.phase_param.V_bar_sei
         if self.reaction_loc == "x-average":
             # c_sei_xav and c_sei are bulk quantities [mol.m-3]
+            scale = L_sei_0 * self.phase_param.a_typ / V_bar_sei
             c_sei_xav = pybamm.Variable(
                 f"X-averaged {domain} {self.reaction_name}concentration [mol.m-3]",
                 domain="current collector",
@@ -62,6 +64,7 @@ class SEIGrowth(BaseModel):
             c_sei = pybamm.PrimaryBroadcast(c_sei_xav, f"{domain} electrode")
         elif self.reaction_loc == "full electrode":
             # c_sei is a bulk quantity [mol.m-3]
+            scale = L_sei_0 * self.phase_param.a_typ / V_bar_sei
             c_sei = pybamm.Variable(
                 f"{Domain} {self.reaction_name}concentration [mol.m-3]",
                 domain=f"{domain} electrode",
@@ -70,6 +73,7 @@ class SEIGrowth(BaseModel):
             )
         elif self.reaction_loc == "interface":
             # c_sei is an interfacial quantity [mol.m-2]
+            scale = L_sei_0 / V_bar_sei
             c_sei = pybamm.Variable(
                 f"{Domain} {self.reaction_name}concentration [mol.m-2]",
                 domain="current collector",
@@ -278,24 +282,26 @@ class SEIGrowth(BaseModel):
 
     def set_initial_conditions(self, variables):
         domain, Domain = self.domain_Domain
+        L_sei_0 = self.phase_param.L_sei_0
+        V_bar_sei = self.phase_param.V_bar_sei
         if self.reaction_loc == "interface":
             # c_sei is an interfacial quantity [mol.m-2]
             c_sei = variables[f"{Domain} {self.reaction_name}concentration [mol.m-2]"]
-            c_sei_0 = self.phase_param.c_sei_planar_0
+            c_sei_0 = L_sei_0 / V_bar_sei
         elif self.reaction_loc == "x-average":
             # c_sei is a bulk quantity [mol.m-3]
             c_sei = variables[
                 f"X-averaged {domain} {self.reaction_name}concentration [mol.m-3]"
             ]
-            c_sei_0 = self.phase_param.c_sei_0
-            c_sei_crack_0 = self.phase_param.c_sei_crack_0
+            c_sei_0 = L_sei_0 * self.phase_param.a_typ / V_bar_sei
+            c_sei_cr0 = self.phase_param.L_sei_cr0 * self.phase_param.a_typ / V_bar_sei
         else:
             # c_sei is a bulk quantity [mol.m-3]
             c_sei = variables[f"{Domain} {self.reaction_name}concentration [mol.m-3]"]
-            c_sei_0 = self.phase_param.c_sei_0
-            c_sei_crack_0 = self.phase_param.c_sei_crack_0
+            c_sei_0 = L_sei_0 * self.phase_param.a_typ / V_bar_sei
+            c_sei_cr0 = self.phase_param.L_sei_cr0 * self.phase_param.a_typ / V_bar_sei
 
         if self.reaction == "SEI on cracks":
-            self.initial_conditions = {c_sei: c_sei_crack_0}
+            self.initial_conditions = {c_sei: c_sei_cr0}
         else:
             self.initial_conditions = {c_sei: c_sei_0}

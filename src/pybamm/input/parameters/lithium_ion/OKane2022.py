@@ -87,7 +87,7 @@ def SEI_limited_dead_lithium_OKane2022(L_sei):
     """
 
     gamma_0 = pybamm.Parameter("Dead lithium decay constant [s-1]")
-    L_sei_0 = pybamm.Scalar(5e-9)
+    L_sei_0 = pybamm.Parameter("Initial SEI thickness [m]")
 
     gamma = gamma_0 * L_sei_0 / L_sei
 
@@ -532,8 +532,8 @@ def get_parameter_values():
         "SEI electron conductivity [S.m-1]": 8.95e-14,
         "SEI lithium interstitial diffusivity [m2.s-1]": 1e-20,
         "Lithium interstitial reference concentration [mol.m-3]": 15.0,
-        "Initial SEI concentration [mol.m-3]": 20.03,
-        "Initial SEI on cracks concentration [mol.m-3]": 0.002003,
+        "Initial SEI thickness [m]": 5e-09,
+        "Initial SEI on cracks thickness [m]": 5e-13,  # practically zero
         "EC initial concentration in electrolyte [mol.m-3]": 4541.0,
         "EC diffusivity [m2.s-1]": 2e-18,
         "SEI kinetic rate constant [m.s-1]": 1e-12,

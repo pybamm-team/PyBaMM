@@ -369,13 +369,8 @@ class ParticleLithiumIonParameters(BaseParameters):
         self.kappa_Li_ion = pybamm.Parameter(
             f"{pref}SEI lithium ion conductivity [S.m-1]"
         )
-        self.c_sei_0 = pybamm.Parameter(f"{pref}Initial SEI concentration [mol.m-3]")
-        self.c_sei_planar_0 = pybamm.Parameter(
-            "Initial SEI concentration on Li metal [mol.m-2]"
-        )
-        self.c_sei_crack_0 = pybamm.Parameter(
-            f"{pref}Initial SEI on cracks concentration [mol.m-3]"
-        )
+        self.L_sei_0 = pybamm.Parameter(f"{pref}Initial SEI thickness [m]")
+        self.L_sei_cr0 = pybamm.Parameter(f"{pref}Initial SEI on cracks thickness [m]")
         self.L_tunneling = pybamm.Parameter(
             f"{pref}Tunneling distance for electrons [m]"
         )
