@@ -25,7 +25,6 @@
 ## Breaking changes
 
 - Changed fundamental variable for all SEI models from thickness to concentration ([#4869](https://github.com/pybamm-team/PyBaMM/pull/4869))
-- Replaced parameter `"Initial SEI thickness [m]"` with `"Initial SEI concentration [mol.m-3]"` ([#4869](https://github.com/pybamm-team/PyBaMM/pull/4869))
 
 # [v25.8.0](https://github.com/pybamm-team/PyBaMM/tree/v25.8.0) - 2025-08-04
 
