@@ -736,6 +736,16 @@ class TestSimulation:
 
         os.remove("sim_save.json")
 
+    def test_save_load_outvars(self, tmp_path):
+        filename = str(tmp_path / "test.pkl")
+        model = pybamm.lithium_ion.SPM()
+        solver = pybamm.IDAKLUSolver(output_variables=["Voltage [V]"])
+        sim = pybamm.Simulation(model, solver=solver)
+        sim.solve([0, 600])
+        sim.save(filename)
+        pkl_obj = pybamm.load_sim(filename)
+        assert list(pkl_obj.solver.output_variables) == ["Voltage [V]"]
+
     def test_plot(self):
         sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
 
