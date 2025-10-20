@@ -1252,6 +1252,7 @@ class Simulation:
         ax=None,
         show_legend=True,
         split_by_electrode=False,
+        electrode_phases=("primary", "primary"),
         show_plot=True,
         **kwargs_fill,
     ):
@@ -1282,6 +1283,7 @@ class Simulation:
             ax=ax,
             show_legend=show_legend,
             split_by_electrode=split_by_electrode,
+            electrode_phases=("primary", "primary"),
             show_plot=show_plot,
             **kwargs_fill,
         )
