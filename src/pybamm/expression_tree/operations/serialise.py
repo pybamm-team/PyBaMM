@@ -85,31 +85,32 @@ class Serialise:
 
         pass
 
-    def save_model(
+    def serialise_model(
         self,
         model: pybamm.BaseModel,
         mesh: pybamm.Mesh | None = None,
         variables: pybamm.FuzzyDict | None = None,
-        filename: str | None = None,
-    ):
-        """Saves a discretised model to a JSON file.
+    ) -> dict:
+        """Converts a discretised model to a JSON-serialisable dictionary.
 
         As the model is discretised and ready to solve, only the right hand side,
-        algebraic and initial condition variables are saved.
+        algebraic and initial condition variables are serialised.
 
         Parameters
         ----------
         model : :class:`pybamm.BaseModel`
-            The discretised model to be saved
+            The discretised model to be serialised
         mesh : :class:`pybamm.Mesh` (optional)
-            The mesh the model has been discretised over. Not neccesary to solve
+            The mesh the model has been discretised over. Not necessary to solve
             the model when read in, but required to use pybamm's plotting tools.
         variables: :class:`pybamm.FuzzyDict` (optional)
-            The discretised model varaibles. Not necessary to solve a model, but
+            The discretised model variables. Not necessary to solve a model, but
             required to use pybamm's plotting tools.
-        filename: str (optional)
-            The desired name of the JSON file. If no name is provided, one will be
-            created based on the model name, and the current datetime.
+
+        Returns
+        -------
+        dict
+            A JSON-serialisable dictionary representation of the model
         """
         if model.is_discretised is False:
             raise NotImplementedError(
@@ -145,6 +146,36 @@ class Serialise:
                 k: self._SymbolEncoder().default(v) for k, v in dict(variables).items()
             }
 
+        return model_json
+
+    def save_model(
+        self,
+        model: pybamm.BaseModel,
+        mesh: pybamm.Mesh | None = None,
+        variables: pybamm.FuzzyDict | None = None,
+        filename: str | None = None,
+    ):
+        """Saves a discretised model to a JSON file.
+
+        As the model is discretised and ready to solve, only the right hand side,
+        algebraic and initial condition variables are saved.
+
+        Parameters
+        ----------
+        model : :class:`pybamm.BaseModel`
+            The discretised model to be saved
+        mesh : :class:`pybamm.Mesh` (optional)
+            The mesh the model has been discretised over. Not neccesary to solve
+            the model when read in, but required to use pybamm's plotting tools.
+        variables: :class:`pybamm.FuzzyDict` (optional)
+            The discretised model varaibles. Not necessary to solve a model, but
+            required to use pybamm's plotting tools.
+        filename: str (optional)
+            The desired name of the JSON file. If no name is provided, one will be
+            created based on the model name, and the current datetime.
+        """
+        model_json = self.serialise_model(model, mesh, variables)
+
         if filename is None:
             filename = model.name + "_" + datetime.now().strftime("%Y_%m_%d-%p%I_%M")
 
@@ -152,7 +183,7 @@ class Serialise:
             json.dump(model_json, f)
 
     def load_model(
-        self, filename: str, battery_model: pybamm.BaseModel | None = None
+        self, filename: str | dict, battery_model: pybamm.BaseModel | None = None
     ) -> pybamm.BaseModel:
         """
         Loads a discretised, ready to solve model into PyBaMM.
@@ -169,8 +200,9 @@ class Serialise:
         Parameters
         ----------
 
-        filename: str
-            Path to the JSON file containing the serialised model file
+        filename: str or dict
+            Path to the JSON file containing the serialised model file, or a dictionary
+            containing the serialised model data
         battery_model:  :class:`pybamm.BaseModel` (optional)
             PyBaMM model to be created (e.g. pybamm.lithium_ion.SPM), which will
             override any model names within the file. If None, the function will look
@@ -183,8 +215,11 @@ class Serialise:
             `battery_model`.
         """
 
-        with open(filename) as f:
-            model_data = json.load(f)
+        if isinstance(filename, dict):
+            model_data = filename
+        else:
+            with open(filename) as f:
+                model_data = json.load(f)
 
         recon_model_dict = {
             "name": model_data["name"],
@@ -257,6 +292,118 @@ class Serialise:
             raise TypeError(f"Object of type {type(obj)} is not JSON serializable.")
 
     @staticmethod
+    def serialise_custom_model(model: pybamm.BaseModel) -> dict:
+        """
+        Converts a custom (non-discretised) PyBaMM model to a JSON-serialisable dictionary.
+
+        This includes symbolic expressions for rhs, algebraic, initial and boundary
+        conditions, events, and variables. Works for user defined models that are
+        subclasses of BaseModel.
+
+        Parameters
+        ----------
+        model : :class:`pybamm.BaseModel`
+            The custom symbolic model to be serialised.
+
+        Returns
+        -------
+        dict
+            A JSON-serialisable dictionary representation of the model
+
+        Raises
+        ------
+        AttributeError
+            If the model is missing required sections
+        """
+        required_attrs = [
+            "rhs",
+            "algebraic",
+            "initial_conditions",
+            "boundary_conditions",
+            "events",
+            "variables",
+        ]
+        missing = [attr for attr in required_attrs if not hasattr(model, attr)]
+        if missing:
+            raise AttributeError(f"Model is missing required sections: {missing}")
+
+        base_cls = model.__class__.__bases__[0] if model.__class__.__bases__ else object
+        # If the base class is object or builtins.object, use pybamm.BaseModel instead
+        if base_cls is object or (
+            base_cls.__module__ == "builtins" and base_cls.__name__ == "object"
+        ):
+            base_cls_str = "pybamm.BaseModel"
+        else:
+            base_cls_str = f"{base_cls.__module__}.{base_cls.__name__}"
+
+        model_content = {
+            "name": getattr(model, "name", "unnamed_model"),
+            "base_class": base_cls_str,
+            "options": getattr(model, "options", {}),
+            "rhs": [
+                (
+                    Serialise.convert_symbol_to_json(variable),
+                    Serialise.convert_symbol_to_json(rhs_expression),
+                )
+                for variable, rhs_expression in getattr(model, "rhs", {}).items()
+            ],
+            "algebraic": [
+                (
+                    Serialise.convert_symbol_to_json(variable),
+                    Serialise.convert_symbol_to_json(algebraic_expression),
+                )
+                for variable, algebraic_expression in getattr(
+                    model, "algebraic", {}
+                ).items()
+            ],
+            "initial_conditions": [
+                (
+                    Serialise.convert_symbol_to_json(variable),
+                    Serialise.convert_symbol_to_json(initial_value),
+                )
+                for variable, initial_value in getattr(
+                    model, "initial_conditions", {}
+                ).items()
+            ],
+            "boundary_conditions": [
+                (
+                    Serialise.convert_symbol_to_json(variable),
+                    {
+                        side: [
+                            Serialise.convert_symbol_to_json(expression),
+                            boundary_type,
+                        ]
+                        for side, (expression, boundary_type) in conditions.items()
+                    },
+                )
+                for variable, conditions in getattr(
+                    model, "boundary_conditions", {}
+                ).items()
+            ],
+            "events": [
+                {
+                    "name": event.name,
+                    "expression": Serialise.convert_symbol_to_json(event.expression),
+                    "event_type": event.event_type,
+                }
+                for event in getattr(model, "events", [])
+            ],
+            "variables": {
+                str(variable_name): Serialise.convert_symbol_to_json(expression)
+                for variable_name, expression in getattr(model, "variables", {}).items()
+            },
+        }
+
+        SCHEMA_VERSION = "1.0"
+        model_json = {
+            "schema_version": SCHEMA_VERSION,
+            "pybamm_version": pybamm.__version__,
+            "model": model_content,
+        }
+
+        return model_json
+
+    @staticmethod
     def save_custom_model(
         model: pybamm.BaseModel, filename: str | Path | None = None
     ) -> None:
@@ -283,103 +430,14 @@ class Serialise:
         >>> Serialise.save_custom_model(model, "basicdfn_model.json")
 
         """
-        required_attrs = [
-            "rhs",
-            "algebraic",
-            "initial_conditions",
-            "boundary_conditions",
-            "events",
-            "variables",
-        ]
-        missing = [attr for attr in required_attrs if not hasattr(model, attr)]
-        if missing:
-            raise AttributeError(f"Model is missing required sections: {missing}")
-
         try:
-            base_cls = (
-                model.__class__.__bases__[0] if model.__class__.__bases__ else object
-            )
-            # If the base class is object or builtins.object, use pybamm.BaseModel instead
-            if base_cls is object or (
-                base_cls.__module__ == "builtins" and base_cls.__name__ == "object"
-            ):
-                base_cls_str = "pybamm.BaseModel"
-            else:
-                base_cls_str = f"{base_cls.__module__}.{base_cls.__name__}"
+            model_json = Serialise.serialise_custom_model(model)
 
-            model_content = {
-                "name": getattr(model, "name", "unnamed_model"),
-                "base_class": base_cls_str,
-                "options": getattr(model, "options", {}),
-                "rhs": [
-                    (
-                        Serialise.convert_symbol_to_json(variable),
-                        Serialise.convert_symbol_to_json(rhs_expression),
-                    )
-                    for variable, rhs_expression in getattr(model, "rhs", {}).items()
-                ],
-                "algebraic": [
-                    (
-                        Serialise.convert_symbol_to_json(variable),
-                        Serialise.convert_symbol_to_json(algebraic_expression),
-                    )
-                    for variable, algebraic_expression in getattr(
-                        model, "algebraic", {}
-                    ).items()
-                ],
-                "initial_conditions": [
-                    (
-                        Serialise.convert_symbol_to_json(variable),
-                        Serialise.convert_symbol_to_json(initial_value),
-                    )
-                    for variable, initial_value in getattr(
-                        model, "initial_conditions", {}
-                    ).items()
-                ],
-                "boundary_conditions": [
-                    (
-                        Serialise.convert_symbol_to_json(variable),
-                        {
-                            side: [
-                                Serialise.convert_symbol_to_json(expression),
-                                boundary_type,
-                            ]
-                            for side, (expression, boundary_type) in conditions.items()
-                        },
-                    )
-                    for variable, conditions in getattr(
-                        model, "boundary_conditions", {}
-                    ).items()
-                ],
-                "events": [
-                    {
-                        "name": event.name,
-                        "expression": Serialise.convert_symbol_to_json(
-                            event.expression
-                        ),
-                        "event_type": event.event_type,
-                    }
-                    for event in getattr(model, "events", [])
-                ],
-                "variables": {
-                    str(variable_name): Serialise.convert_symbol_to_json(expression)
-                    for variable_name, expression in getattr(
-                        model, "variables", {}
-                    ).items()
-                },
-            }
-
-            SCHEMA_VERSION = "1.0"
-            model_json = {
-                "schema_version": SCHEMA_VERSION,
-                "pybamm_version": pybamm.__version__,
-                "model": model_content,
-            }
+            # Extract model name for filename generation
+            model_name = model_json["model"]["name"]
 
             if filename is None:
-                safe_name = re.sub(
-                    r"[^\w\-_.]", "_", model_content["name"] or "unnamed_model"
-                )
+                safe_name = re.sub(r"[^\w\-_.]", "_", model_name or "unnamed_model")
                 timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
                 filename = f"{safe_name}_{timestamp}.json"
                 filename = Path(filename)
@@ -403,6 +461,9 @@ class Serialise:
                     f"Failed to write model JSON to file '{filename}': {file_err}"
                 ) from file_err
 
+        except AttributeError:
+            # Let AttributeError propagate directly
+            raise
         except Exception as e:
             raise ValueError(f"Failed to save custom model: {e}") from e
 
@@ -415,9 +476,9 @@ class Serialise:
         return json.dumps(symbol_json, sort_keys=True)
 
     @staticmethod
-    def load_custom_model(filename: str) -> pybamm.BaseModel:
+    def load_custom_model(filename: str | dict) -> pybamm.BaseModel:
         """
-        Loads a custom (symbolic) PyBaMM model from a JSON file.
+        Loads a custom (symbolic) PyBaMM model from a JSON file or dictionary.
 
         Reconstructs a model saved using `save_custom_model`, including its rhs,
         algebraic equations, initial and boundary conditions, events, and variables.
@@ -425,8 +486,9 @@ class Serialise:
 
         Parameters
         ----------
-        filename : str
-            Path to the JSON file containing the saved model.
+        filename : str or dict
+            Path to the JSON file containing the saved model, or a dictionary
+            containing the serialised model data.
 
         Returns
         -------
@@ -442,15 +504,18 @@ class Serialise:
         >>> loaded_model = Serialise.load_custom_model("basicdfn_model.json")
 
         """
-        try:
-            with open(filename) as file:
-                data = json.load(file)
-        except FileNotFoundError as err:
-            raise FileNotFoundError(f"Could not find file: {filename}") from err
-        except json.JSONDecodeError as e:
-            raise pybamm.InvalidModelJSONError(
-                f"The model defined in the file '{filename}' contains invalid JSON: {e!s}"
-            ) from e
+        if isinstance(filename, dict):
+            data = filename
+        else:
+            try:
+                with open(filename) as file:
+                    data = json.load(file)
+            except FileNotFoundError as err:
+                raise FileNotFoundError(f"Could not find file: {filename}") from err
+            except json.JSONDecodeError as e:
+                raise pybamm.InvalidModelJSONError(
+                    f"The model defined in the file '{filename}' contains invalid JSON: {e!s}"
+                ) from e
 
         # Validate outer structure
         schema_version = data.get("schema_version", SUPPORTED_SCHEMA_VERSION)
