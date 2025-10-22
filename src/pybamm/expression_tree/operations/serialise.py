@@ -183,7 +183,7 @@ class Serialise:
             json.dump(model_json, f)
 
     def load_model(
-        self, filename: str, battery_model: pybamm.BaseModel | None = None
+        self, filename: str | dict, battery_model: pybamm.BaseModel | None = None
     ) -> pybamm.BaseModel:
         """
         Loads a discretised, ready to solve model into PyBaMM.
@@ -200,8 +200,9 @@ class Serialise:
         Parameters
         ----------
 
-        filename: str
-            Path to the JSON file containing the serialised model file
+        filename: str or dict
+            Path to the JSON file containing the serialised model file, or a dictionary
+            containing the serialised model data
         battery_model:  :class:`pybamm.BaseModel` (optional)
             PyBaMM model to be created (e.g. pybamm.lithium_ion.SPM), which will
             override any model names within the file. If None, the function will look
@@ -214,8 +215,11 @@ class Serialise:
             `battery_model`.
         """
 
-        with open(filename) as f:
-            model_data = json.load(f)
+        if isinstance(filename, dict):
+            model_data = filename
+        else:
+            with open(filename) as f:
+                model_data = json.load(f)
 
         recon_model_dict = {
             "name": model_data["name"],
@@ -472,9 +476,9 @@ class Serialise:
         return json.dumps(symbol_json, sort_keys=True)
 
     @staticmethod
-    def load_custom_model(filename: str) -> pybamm.BaseModel:
+    def load_custom_model(filename: str | dict) -> pybamm.BaseModel:
         """
-        Loads a custom (symbolic) PyBaMM model from a JSON file.
+        Loads a custom (symbolic) PyBaMM model from a JSON file or dictionary.
 
         Reconstructs a model saved using `save_custom_model`, including its rhs,
         algebraic equations, initial and boundary conditions, events, and variables.
@@ -482,8 +486,9 @@ class Serialise:
 
         Parameters
         ----------
-        filename : str
-            Path to the JSON file containing the saved model.
+        filename : str or dict
+            Path to the JSON file containing the saved model, or a dictionary
+            containing the serialised model data.
 
         Returns
         -------
@@ -499,15 +504,18 @@ class Serialise:
         >>> loaded_model = Serialise.load_custom_model("basicdfn_model.json")
 
         """
-        try:
-            with open(filename) as file:
-                data = json.load(file)
-        except FileNotFoundError as err:
-            raise FileNotFoundError(f"Could not find file: {filename}") from err
-        except json.JSONDecodeError as e:
-            raise pybamm.InvalidModelJSONError(
-                f"The model defined in the file '{filename}' contains invalid JSON: {e!s}"
-            ) from e
+        if isinstance(filename, dict):
+            data = filename
+        else:
+            try:
+                with open(filename) as file:
+                    data = json.load(file)
+            except FileNotFoundError as err:
+                raise FileNotFoundError(f"Could not find file: {filename}") from err
+            except json.JSONDecodeError as e:
+                raise pybamm.InvalidModelJSONError(
+                    f"The model defined in the file '{filename}' contains invalid JSON: {e!s}"
+                ) from e
 
         # Validate outer structure
         schema_version = data.get("schema_version", SUPPORTED_SCHEMA_VERSION)
