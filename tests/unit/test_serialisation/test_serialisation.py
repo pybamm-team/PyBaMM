@@ -1836,3 +1836,210 @@ class TestSerializationErrorHandling:
         """Test FileNotFoundError for non-existent file."""
         with pytest.raises(FileNotFoundError):
             Serialise.load_submesh_types("nonexistent_file.json")
+
+
+class TestSerializationEdgeCases:
+    """Tests for edge cases and uncovered code paths in serialization."""
+
+    def test_geometry_with_symbol_keys(self):
+        """Test geometry serialization with Symbol keys (not string keys)."""
+        # Create a geometry with SpatialVariable as keys
+        x_n = pybamm.SpatialVariable("x_n", domain="negative electrode")
+        r_n = pybamm.SpatialVariable("r_n", domain="negative particle")
+
+        # Create a custom geometry with Symbol keys
+        geometry = pybamm.Geometry(
+            {
+                "negative electrode": {
+                    x_n: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}
+                },
+                "negative particle": {
+                    r_n: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}
+                },
+            }
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            filepath = Path(tmpdir) / "geometry_symbol_keys.json"
+
+            # Save and load
+            Serialise.save_custom_geometry(geometry, filename=str(filepath))
+            loaded_geometry = Serialise.load_custom_geometry(str(filepath))
+
+            # Verify domains exist
+            assert "negative electrode" in loaded_geometry
+            assert "negative particle" in loaded_geometry
+
+            # Verify Symbol keys are reconstructed
+            for domain in loaded_geometry:
+                for key in loaded_geometry[domain].keys():
+                    if isinstance(key, pybamm.Symbol):
+                        assert hasattr(key, "name")
+
+    def test_geometry_with_non_dict_value(self):
+        """Test geometry with non-dict value for string key."""
+        # Create a custom geometry with a non-dict value (primitive)
+        geometry = pybamm.Geometry(
+            {
+                "current collector": {
+                    "position": 1  # Non-dict value (primitive)
+                }
+            }
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            filepath = Path(tmpdir) / "geometry_non_dict.json"
+
+            # Save and load
+            Serialise.save_custom_geometry(geometry, filename=str(filepath))
+            loaded_geometry = Serialise.load_custom_geometry(str(filepath))
+
+            # Verify the geometry was saved and loaded
+            assert "current collector" in loaded_geometry
+            assert loaded_geometry["current collector"]["position"] == 1
+
+    def test_geometry_file_write_error(self, monkeypatch):
+        """Test OSError handling when writing geometry file."""
+        geometry = pybamm.battery_geometry()
+
+        # Mock open to raise OSError
+        def mock_open_error(*args, **kwargs):
+            raise OSError("Permission denied")
+
+        monkeypatch.setattr("builtins.open", mock_open_error)
+
+        with pytest.raises(ValueError, match="Failed to save custom geometry"):
+            Serialise.save_custom_geometry(geometry, filename="test.json")
+
+    def test_geometry_invalid_json(self):
+        """Test JSONDecodeError when loading geometry with invalid JSON."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            filepath = Path(tmpdir) / "invalid.json"
+
+            # Write invalid JSON
+            with open(filepath, "w") as f:
+                f.write("{invalid json content")
+
+            with pytest.raises(ValueError, match="contains invalid JSON"):
+                Serialise.load_custom_geometry(str(filepath))
+
+    def test_spatial_methods_invalid_filename_extension(self):
+        """Test that non-.json filename raises error for spatial methods."""
+        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
+
+        with pytest.raises(ValueError, match="must end with '.json' extension"):
+            Serialise.save_spatial_methods(spatial_methods, filename="test.txt")
+
+    def test_spatial_methods_file_write_error(self, monkeypatch):
+        """Test OSError handling when writing spatial methods file."""
+        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
+
+        # Mock open to raise OSError
+        def mock_open_error(*args, **kwargs):
+            raise OSError("Disk full")
+
+        monkeypatch.setattr("builtins.open", mock_open_error)
+
+        with pytest.raises(ValueError, match="Failed to save spatial methods"):
+            Serialise.save_spatial_methods(spatial_methods, filename="test.json")
+
+    def test_spatial_methods_general_error(self, monkeypatch):
+        """Test general exception handling in save_spatial_methods."""
+        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
+
+        # Mock serialise to raise an exception
+        def mock_serialise_error(*args):
+            raise RuntimeError("Serialization failed")
+
+        monkeypatch.setattr(
+            "pybamm.expression_tree.operations.serialise.Serialise.serialise_spatial_methods",
+            mock_serialise_error,
+        )
+
+        with pytest.raises(ValueError, match="Failed to save spatial methods"):
+            Serialise.save_spatial_methods(spatial_methods)
+
+    def test_var_pts_invalid_filename_extension(self):
+        """Test that non-.json filename raises error for var_pts."""
+        var_pts = {"x_n": 20}
+
+        with pytest.raises(ValueError, match="must end with '.json' extension"):
+            Serialise.save_var_pts(var_pts, filename="test.txt")
+
+    def test_var_pts_file_write_error(self, monkeypatch):
+        """Test OSError handling when writing var_pts file."""
+        var_pts = {"x_n": 20}
+
+        # Mock open to raise OSError
+        def mock_open_error(*args, **kwargs):
+            raise OSError("Write failed")
+
+        monkeypatch.setattr("builtins.open", mock_open_error)
+
+        with pytest.raises(ValueError, match="Failed to save var_pts"):
+            Serialise.save_var_pts(var_pts, filename="test.json")
+
+    def test_var_pts_general_error(self, monkeypatch):
+        """Test general exception handling in save_var_pts."""
+        var_pts = {"x_n": 20}
+
+        # Mock serialise to raise an exception
+        def mock_serialise_error(*args):
+            raise RuntimeError("Serialization failed")
+
+        monkeypatch.setattr(
+            "pybamm.expression_tree.operations.serialise.Serialise.serialise_var_pts",
+            mock_serialise_error,
+        )
+
+        with pytest.raises(ValueError, match="Failed to save var_pts"):
+            Serialise.save_var_pts(var_pts)
+
+    def test_submesh_types_file_write_error(self, monkeypatch):
+        """Test OSError handling when writing submesh types file."""
+        submesh_types = {
+            "negative electrode": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh)
+        }
+
+        # Mock open to raise OSError
+        def mock_open_error(*args, **kwargs):
+            raise OSError("Write failed")
+
+        monkeypatch.setattr("builtins.open", mock_open_error)
+
+        with pytest.raises(ValueError, match="Failed to save submesh types"):
+            Serialise.save_submesh_types(submesh_types, filename="test.json")
+
+    def test_submesh_types_general_error(self, monkeypatch):
+        """Test general exception handling in save_submesh_types."""
+        submesh_types = {
+            "negative electrode": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh)
+        }
+
+        # Mock serialise to raise an exception
+        def mock_serialise_error(*args):
+            raise RuntimeError("Serialization failed")
+
+        monkeypatch.setattr(
+            "pybamm.expression_tree.operations.serialise.Serialise.serialise_submesh_types",
+            mock_serialise_error,
+        )
+
+        with pytest.raises(ValueError, match="Failed to save submesh types"):
+            Serialise.save_submesh_types(submesh_types)
+
+    def test_geometry_general_error(self, monkeypatch):
+        """Test general exception handling in save_custom_geometry."""
+        geometry = pybamm.battery_geometry()
+
+        # Mock serialise to raise an exception
+        def mock_serialise_error(*args):
+            raise RuntimeError("Geometry serialization failed")
+
+        monkeypatch.setattr(
+            "pybamm.expression_tree.operations.serialise.Serialise.serialise_custom_geometry",
+            mock_serialise_error,
+        )
+
+        with pytest.raises(ValueError, match="Failed to save custom geometry"):
+            Serialise.save_custom_geometry(geometry)
