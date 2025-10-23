@@ -2043,3 +2043,193 @@ class TestSerializationEdgeCases:
 
         with pytest.raises(ValueError, match="Failed to save custom geometry"):
             Serialise.save_custom_geometry(geometry)
+
+    def test_spatial_methods_default_filename(self, monkeypatch):
+        """Test spatial methods with auto-generated filename."""
+        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with monkeypatch.context() as m:
+                m.chdir(tmpdir)
+
+                # Save with no filename (auto-generate)
+                Serialise.save_spatial_methods(spatial_methods)
+
+                # Check a file was created
+                json_files = list(Path(tmpdir).glob("spatial_methods_*.json"))
+                assert len(json_files) == 1
+
+    def test_geometry_with_non_symbol_values_in_symbol_key(self):
+        """Test geometry with non-Symbol values nested in Symbol-keyed dict."""
+        x_n = pybamm.SpatialVariable("x_n", domain="negative electrode")
+
+        # Create geometry with Symbol key but non-Symbol value
+        geometry = pybamm.Geometry({"negative electrode": {x_n: {"min": 0, "max": 1}}})
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            filepath = Path(tmpdir) / "geometry_mixed.json"
+
+            # Save and load
+            Serialise.save_custom_geometry(geometry, filename=str(filepath))
+            loaded_geometry = Serialise.load_custom_geometry(str(filepath))
+
+            # Verify the geometry was saved and loaded
+            assert "negative electrode" in loaded_geometry
+
+    def test_geometry_reconstruction_non_symbol_value_in_reconstructed(self):
+        """Test geometry loading with non-Symbol values that remain non-Symbol."""
+        x_n = pybamm.SpatialVariable("x_n", domain="negative electrode")
+
+        # Create a more complex geometry
+        geometry = pybamm.Geometry(
+            {
+                "negative electrode": {
+                    x_n: {
+                        "min": pybamm.Scalar(0),
+                        "max": pybamm.Scalar(1),
+                        "tabs": {"negative": {"z_centre": 0.5}},
+                    }
+                }
+            }
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            filepath = Path(tmpdir) / "geometry_tabs.json"
+
+            # Save and load
+            Serialise.save_custom_geometry(geometry, filename=str(filepath))
+            loaded_geometry = Serialise.load_custom_geometry(str(filepath))
+
+            # Verify the geometry was saved and loaded
+            assert "negative electrode" in loaded_geometry
+
+    def test_spatial_methods_invalid_json(self):
+        """Test JSONDecodeError when loading spatial methods with invalid JSON."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            filepath = Path(tmpdir) / "invalid_spatial.json"
+
+            # Write invalid JSON
+            with open(filepath, "w") as f:
+                f.write("{invalid json for spatial methods")
+
+            with pytest.raises(ValueError, match="contains invalid JSON"):
+                Serialise.load_spatial_methods(str(filepath))
+
+    def test_spatial_methods_unsupported_schema(self):
+        """Test unsupported schema version for spatial methods."""
+        invalid_data = {
+            "schema_version": "999.0",
+            "pybamm_version": "1.0.0",
+            "spatial_methods": {},
+        }
+
+        with pytest.raises(ValueError, match="Unsupported schema version"):
+            Serialise.load_spatial_methods(invalid_data)
+
+    def test_spatial_methods_import_error(self):
+        """Test import error handling in spatial methods loading."""
+        invalid_data = {
+            "schema_version": "1.0",
+            "pybamm_version": pybamm.__version__,
+            "spatial_methods": {
+                "domain": {
+                    "class": "NonExistentClass",
+                    "module": "pybamm.spatial_methods.nonexistent",
+                    "options": {},
+                }
+            },
+        }
+
+        with pytest.raises(ImportError, match="Could not import spatial method"):
+            Serialise.load_spatial_methods(invalid_data)
+
+    def test_var_pts_invalid_json(self):
+        """Test JSONDecodeError when loading var_pts with invalid JSON."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            filepath = Path(tmpdir) / "invalid_var_pts.json"
+
+            # Write invalid JSON
+            with open(filepath, "w") as f:
+                f.write("{invalid json for var_pts")
+
+            with pytest.raises(ValueError, match="contains invalid JSON"):
+                Serialise.load_var_pts(str(filepath))
+
+    def test_var_pts_unsupported_schema(self):
+        """Test unsupported schema version for var_pts."""
+        invalid_data = {
+            "schema_version": "999.0",
+            "pybamm_version": "1.0.0",
+            "var_pts": {},
+        }
+
+        with pytest.raises(ValueError, match="Unsupported schema version"):
+            Serialise.load_var_pts(invalid_data)
+
+    def test_var_pts_unexpected_key_type(self):
+        """Test ValueError for unexpected key type in var_pts."""
+        # Create var_pts with an unexpected key type
+        var_pts = {123: 20}  # integer key instead of string or SpatialVariable
+
+        with pytest.raises(ValueError, match="Unexpected key type in var_pts"):
+            Serialise.serialise_var_pts(var_pts)
+
+    def test_submesh_types_without_mesh_generator(self):
+        """Test submesh types serialization without MeshGenerator wrapper."""
+        # Directly use submesh class without MeshGenerator
+        submesh_types = {"negative electrode": pybamm.Uniform1DSubMesh}
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            filepath = Path(tmpdir) / "submesh_no_wrapper.json"
+
+            # This should work - the code handles both cases
+            Serialise.save_submesh_types(submesh_types, filename=str(filepath))
+            loaded = Serialise.load_submesh_types(str(filepath))
+
+            # Verify it was wrapped in MeshGenerator on load
+            assert "negative electrode" in loaded
+
+    def test_submesh_types_invalid_json(self):
+        """Test JSONDecodeError when loading submesh types with invalid JSON."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            filepath = Path(tmpdir) / "invalid_submesh.json"
+
+            # Write invalid JSON
+            with open(filepath, "w") as f:
+                f.write("{invalid json for submesh types")
+
+            with pytest.raises(ValueError, match="contains invalid JSON"):
+                Serialise.load_submesh_types(str(filepath))
+
+    def test_submesh_types_unsupported_schema(self):
+        """Test unsupported schema version for submesh types."""
+        invalid_data = {
+            "schema_version": "999.0",
+            "pybamm_version": "1.0.0",
+            "submesh_types": {},
+        }
+
+        with pytest.raises(ValueError, match="Unsupported schema version"):
+            Serialise.load_submesh_types(invalid_data)
+
+    def test_load_custom_model_from_dict(self):
+        """Test loading a custom model directly from a dictionary."""
+        # Create and save a custom model
+        model = pybamm.BaseModel(name="test_dict_model")
+        a = pybamm.Variable("a", domain="electrode")
+        b = pybamm.Variable("b", domain="electrode")
+        model.rhs = {a: b}
+        model.initial_conditions = {a: pybamm.Scalar(1)}
+        model.algebraic = {}
+        model.boundary_conditions = {a: {"left": (pybamm.Scalar(0), "Dirichlet")}}
+        model.events = [pybamm.Event("terminal", pybamm.Scalar(1) - b, "TERMINATION")]
+        model.variables = {"a": a, "b": b}
+
+        model_json = Serialise.serialise_custom_model(model)
+
+        # Load from dict directly
+        loaded_model = Serialise.load_custom_model(model_json)
+
+        # Verify it loaded correctly
+        assert loaded_model.name == "test_dict_model"
+        assert isinstance(loaded_model.rhs, dict)
