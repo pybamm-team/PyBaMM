@@ -155,6 +155,7 @@ class TestSerialiseModels:
 
 class TestSerialise:
     # test the symbol encoder
+    # hi
 
     def test_symbol_encoder_symbol(self, mocker):
         """test basic symbol encoder with & without children"""
