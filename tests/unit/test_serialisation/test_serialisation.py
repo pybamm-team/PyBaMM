@@ -1347,7 +1347,7 @@ class TestSerialise:
         ):
             Serialise.load_custom_model(str(file))
 
-    def test_save_and_load_custom_model(self, tmp_path):
+    def test_save_and_load_custom_model(self, tmp_path, monkeypatch):
         model = pybamm.BaseModel(name="test_model")
         a = pybamm.Variable("a", domain="electrode")
         b = pybamm.Variable("b", domain="electrode")
@@ -1364,7 +1364,7 @@ class TestSerialise:
         assert file_path.exists()
 
         # Save using default filename logic
-        os.chdir(tmp_path)
+        monkeypatch.chdir(tmp_path)
         Serialise().save_custom_model(model)
         pattern = r"test_model_\d{4}_\d{2}_\d{2}_\d{2}_\d{2}_\d{2}\.json"
         matched = [f for f in os.listdir(tmp_path) if re.fullmatch(pattern, f)]
@@ -1451,12 +1451,12 @@ class TestGeometrySerialization:
         # Verify domains match
         assert set(loaded_geometry.keys()) == set(geometry.keys())
 
-    def test_geometry_with_default_filename(self):
+    def test_geometry_with_default_filename(self, monkeypatch):
         """Test geometry saving with auto-generated filename."""
         geometry = pybamm.battery_geometry()
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            os.chdir(tmpdir)
+            monkeypatch.chdir(tmpdir)
 
             # Save with no filename (auto-generate)
             Serialise.save_custom_geometry(geometry)
@@ -1652,12 +1652,12 @@ class TestVarPtsSerialization:
         # All keys should be strings
         assert set(var_pts_dict["var_pts"].keys()) == {"x_n", "x_s", "x_p"}
 
-    def test_var_pts_with_default_filename(self):
+    def test_var_pts_with_default_filename(self, monkeypatch):
         """Test var_pts saving with auto-generated filename."""
         var_pts = {"x_n": 20}
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            os.chdir(tmpdir)
+            monkeypatch.chdir(tmpdir)
 
             # Save with no filename (auto-generate)
             Serialise.save_var_pts(var_pts)
@@ -1718,14 +1718,14 @@ class TestSubmeshTypesSerialization:
         # Verify domains match
         assert set(loaded_submesh_types.keys()) == set(submesh_types.keys())
 
-    def test_submesh_types_with_default_filename(self):
+    def test_submesh_types_with_default_filename(self, monkeypatch):
         """Test submesh types saving with auto-generated filename."""
         submesh_types = {
             "negative electrode": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
         }
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            os.chdir(tmpdir)
+            monkeypatch.chdir(tmpdir)
 
             # Save with no filename (auto-generate)
             Serialise.save_submesh_types(submesh_types)
