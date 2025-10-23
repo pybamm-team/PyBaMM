@@ -445,8 +445,11 @@ class IDAKLUSolver(pybamm.BaseSolver):
             "output_variables": self.output_variables,
             "var_fcns": self.computed_var_fcns,
             "var_idaklu_fcns": self.var_idaklu_fcns,
+            "var_idaklu_fcns_pkl": self.var_idaklu_fcns_pkl,
             "dvar_dy_idaklu_fcns": self.dvar_dy_idaklu_fcns,
+            "dvar_dy_idaklu_fcns_pkl": self.dvar_dy_idaklu_fcns_pkl,
             "dvar_dp_idaklu_fcns": self.dvar_dp_idaklu_fcns,
+            "dvar_dp_idaklu_fcns_pkl": self.dvar_dp_idaklu_fcns_pkl,
         }
 
         solver = self._setup["solver_function"](
@@ -483,6 +486,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
         if not hasattr(self, "_setup"):
             return self.__dict__
 
+        self.var_idaklu_fcns = []
+
         for key in [
             "solver",
             "solver_function",
@@ -492,8 +497,11 @@ class IDAKLUSolver(pybamm.BaseSolver):
             "mass_action",
             "sensfn",
             "rootfn",
+            "var_idaklu_fcns",
+            "dvar_dy_idaklu_fcns",
+            "dvar_dp_idaklu_fcns",
         ]:
-            del self._setup[key]
+            self._setup.pop(key, None)
         return self.__dict__
 
     def __setstate__(self, d):
@@ -502,6 +510,10 @@ class IDAKLUSolver(pybamm.BaseSolver):
         # if _setup is not defined then we haven't called set_up yet
         if not hasattr(self, "_setup"):
             return
+
+        self.var_idaklu_fcns = [
+            idaklu.generate_function(f) for f in self.var_idaklu_fcns_pkl
+        ]
 
         for key in [
             "rhs_algebraic",
@@ -512,6 +524,15 @@ class IDAKLUSolver(pybamm.BaseSolver):
             "rootfn",
         ]:
             self._setup[key] = idaklu.generate_function(self._setup[key + "_pkl"])
+
+        for key in [
+            "var_idaklu_fcns",
+            "dvar_dy_idaklu_fcns",
+            "dvar_dp_idaklu_fcns",
+        ]:
+            self._setup[key] = [
+                idaklu.generate_function(f) for f in self._setup[key + "_pkl"]
+            ]
 
         self._setup["solver_function"] = idaklu.create_casadi_solver_group
 
@@ -543,6 +564,10 @@ class IDAKLUSolver(pybamm.BaseSolver):
     @property
     def supports_parallel_solve(self):
         return True
+
+    @property
+    def options(self):
+        return self._options
 
     def _apply_solver_initial_conditions(self, model, initial_conditions):
         """
