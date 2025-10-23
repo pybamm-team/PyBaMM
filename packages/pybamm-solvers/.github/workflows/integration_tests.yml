@@ -39,28 +39,11 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Clone PyBaMM repository
-        uses: actions/checkout@v5
-        with:
-          repository: pybamm-team/PyBaMM
-          path: PyBaMM
-          fetch-depth: 0
-          fetch-tags: true
+      - name: Install uv
+        run: |
+          pip install uv
 
       - name: Build and test
         run: |
-          # Install PyBaMM with dependencies
-          cd ./PyBaMM
-          pip install -e ".[all,dev,jax]"
-          cd ..
-
-          # Replace PyBaMM solvers
-          pip uninstall pybammsolvers --yes
-          python install_KLU_Sundials.py
-          pip install "numpy>=2" --upgrade
-          pip install .
-
-          # Run pybamm tests
-          cd ./PyBaMM
-          pytest tests/unit
-          pytest tests/integration
+          # Use PyBaMM-tests nox session
+          uvx nox -s pybamm-tests

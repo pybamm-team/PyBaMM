@@ -1,4 +1,4 @@
-name: Unit tests
+name: Benchmarks
 
 on:
   pull_request:
@@ -15,17 +15,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-15-intel, macos-latest]
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        os: [macos-latest]
+        python-version: ["3.12"]
 
     steps:
       - uses: actions/checkout@v5
         with:
           submodules: 'recursive'
-
-      - name: Install dependencies (Linux)
-        if: matrix.os == 'ubuntu-latest'
-        run: sudo apt-get install gfortran gcc libopenblas-dev
 
       - name: Install dependencies (macOS)
         if: matrix.os == 'macos-15-intel' || matrix.os == 'macos-latest'
@@ -48,6 +44,6 @@ jobs:
         run: |
           pip install uv
 
-      - name: Build and test
+      - name: Run benchmarks
         run: |
-          uvx nox
+          uvx nox -s benchmarks

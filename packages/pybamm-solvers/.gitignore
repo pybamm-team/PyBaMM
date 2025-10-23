@@ -16,3 +16,7 @@ build
 # Extra directories for local work
 workspace
 deploy
+PyBaMM
+
+# benchmark results
+performance_results.json

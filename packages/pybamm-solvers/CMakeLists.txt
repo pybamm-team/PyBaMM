@@ -137,25 +137,51 @@ if (${USE_PYTHON_CASADI})
         message("Found Python CasADi library directory: ${CASADI_LIB_DIR}")
         target_link_directories(idaklu PRIVATE ${CASADI_LIB_DIR})
 
-        set_target_properties(
-                idaklu PROPERTIES
-                INSTALL_RPATH "${CASADI_LIB_DIR}"
-                INSTALL_RPATH_USE_LINK_PATH TRUE
-        )
-        # Attempt to link the casadi library directly if found
-        find_library(CASADI_LIBRARY NAMES casadi PATHS ${CASADI_LIB_DIR} NO_DEFAULT_PATH)
-        if (CASADI_LIBRARY)
-            message("Found CasADi library: ${CASADI_LIBRARY}")
-            target_link_libraries(idaklu PRIVATE ${CASADI_LIBRARY})
-        else ()
-            message(WARNING "CasADi library not found in ${CASADI_LIB_DIR}. The target will rely on transitive linkage via CMake config if available.")
-        endif ()
+        # Set RPATH to find libraries relative to the module location
+        # This allows finding casadi in the same Python environment at runtime
+        # Module is at: site-packages/pybammsolvers/idaklu.so
+        # CasADi is at: site-packages/casadi/libcasadi.dylib
+        # SuiteSparse/SUNDIALS are found via DYLD_LIBRARY_PATH/LD_LIBRARY_PATH
+        # (set by noxfile or user environment) pointing to .idaklu/lib
+        # Note: Windows uses vcpkg with static linking, no RPATH needed
+        
+        # For CI wheel builds, use BUILD_WITH_INSTALL_RPATH=FALSE so that
+        # wheel repair tools (delocate/auditwheel) can properly analyze dependencies.
+        # For local development, use BUILD_WITH_INSTALL_RPATH=TRUE so the module
+        # works immediately after pip install without wheel repair.
+        if(DEFINED ENV{CIBUILDWHEEL})
+            set(USE_INSTALL_RPATH_AT_BUILD FALSE)
+        else()
+            set(USE_INSTALL_RPATH_AT_BUILD TRUE)
+        endif()
+        
+        if (APPLE)
+            set_target_properties(
+                    idaklu PROPERTIES
+                    BUILD_RPATH "${CASADI_LIB_DIR}"
+                    BUILD_RPATH_USE_LINK_PATH FALSE
+                    INSTALL_RPATH "@loader_path/../casadi"
+                    BUILD_WITH_INSTALL_RPATH ${USE_INSTALL_RPATH_AT_BUILD}
+            )
+        else()
+            set_target_properties(
+                    idaklu PROPERTIES
+                    BUILD_RPATH "${CASADI_LIB_DIR}"
+                    BUILD_RPATH_USE_LINK_PATH FALSE
+                    INSTALL_RPATH "$ORIGIN/../casadi"
+                    BUILD_WITH_INSTALL_RPATH ${USE_INSTALL_RPATH_AT_BUILD}
+            )
+        endif()
+        # Link against casadi by name, not absolute path, to avoid issues with
+        # pip's isolated build environments changing paths between configure and build
+        target_link_libraries(idaklu PRIVATE casadi)
     else ()
         message(FATAL_ERROR "Could not find CasADi library directory")
     endif ()
 else ()
     message("Trying to link against any casadi package apart from the Python one")
     find_package(casadi CONFIG REQUIRED)
+    target_link_libraries(idaklu PRIVATE casadi)
 endif ()
 
 # openmp
@@ -180,7 +206,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR})
 find_package(SUNDIALS REQUIRED)
 message("SUNDIALS found in ${SUNDIALS_INCLUDE_DIR}: ${SUNDIALS_LIBRARIES}")
 target_include_directories(idaklu PRIVATE ${SUNDIALS_INCLUDE_DIR})
-target_link_libraries(idaklu PRIVATE ${SUNDIALS_LIBRARIES} casadi)
+target_link_libraries(idaklu PRIVATE ${SUNDIALS_LIBRARIES})
 
 # link suitesparse
 # if using vcpkg, use config mode to

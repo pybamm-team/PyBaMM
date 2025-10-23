@@ -19,12 +19,15 @@ license-files = ["LICENSE"]
 dynamic = ["version", "readme"]
 dependencies = [
     "casadi==3.6.7",
-    "numpy"
+    "numpy",
 ]
 
 [project.optional-dependencies]
 dev = [
+    "nox[uv]",
     "pytest",
+    "pytest-cov",
+    "psutil>=7.1.0",
     "setuptools",
     "wheel",
 ]
