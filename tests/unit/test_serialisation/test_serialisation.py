@@ -1364,11 +1364,12 @@ class TestSerialise:
         assert file_path.exists()
 
         # Save using default filename logic
-        monkeypatch.chdir(tmp_path)
-        Serialise().save_custom_model(model)
-        pattern = r"test_model_\d{4}_\d{2}_\d{2}_\d{2}_\d{2}_\d{2}\.json"
-        matched = [f for f in os.listdir(tmp_path) if re.fullmatch(pattern, f)]
-        assert matched
+        with monkeypatch.context() as m:
+            m.chdir(tmp_path)
+            Serialise().save_custom_model(model)
+            pattern = r"test_model_\d{4}_\d{2}_\d{2}_\d{2}_\d{2}_\d{2}\.json"
+            matched = [f for f in os.listdir(tmp_path) if re.fullmatch(pattern, f)]
+            assert matched
 
         # Load and test model
         loaded_model = Serialise.load_custom_model(str(file_path))
@@ -1456,14 +1457,15 @@ class TestGeometrySerialization:
         geometry = pybamm.battery_geometry()
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            monkeypatch.chdir(tmpdir)
+            with monkeypatch.context() as m:
+                m.chdir(tmpdir)
 
-            # Save with no filename (auto-generate)
-            Serialise.save_custom_geometry(geometry)
+                # Save with no filename (auto-generate)
+                Serialise.save_custom_geometry(geometry)
 
-            # Check a file was created
-            json_files = list(Path(tmpdir).glob("geometry_*.json"))
-            assert len(json_files) == 1
+                # Check a file was created
+                json_files = list(Path(tmpdir).glob("geometry_*.json"))
+                assert len(json_files) == 1
 
     def test_geometry_invalid_extension(self):
         """Test that non-.json extension raises error."""
@@ -1657,14 +1659,15 @@ class TestVarPtsSerialization:
         var_pts = {"x_n": 20}
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            monkeypatch.chdir(tmpdir)
+            with monkeypatch.context() as m:
+                m.chdir(tmpdir)
 
-            # Save with no filename (auto-generate)
-            Serialise.save_var_pts(var_pts)
+                # Save with no filename (auto-generate)
+                Serialise.save_var_pts(var_pts)
 
-            # Check a file was created
-            json_files = list(Path(tmpdir).glob("var_pts_*.json"))
-            assert len(json_files) == 1
+                # Check a file was created
+                json_files = list(Path(tmpdir).glob("var_pts_*.json"))
+                assert len(json_files) == 1
 
 
 class TestSubmeshTypesSerialization:
@@ -1725,14 +1728,15 @@ class TestSubmeshTypesSerialization:
         }
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            monkeypatch.chdir(tmpdir)
+            with monkeypatch.context() as m:
+                m.chdir(tmpdir)
 
-            # Save with no filename (auto-generate)
-            Serialise.save_submesh_types(submesh_types)
+                # Save with no filename (auto-generate)
+                Serialise.save_submesh_types(submesh_types)
 
-            # Check a file was created
-            json_files = list(Path(tmpdir).glob("submesh_types_*.json"))
-            assert len(json_files) == 1
+                # Check a file was created
+                json_files = list(Path(tmpdir).glob("submesh_types_*.json"))
+                assert len(json_files) == 1
 
     def test_submesh_types_invalid_class(self):
         """Test error handling for invalid submesh type class."""
