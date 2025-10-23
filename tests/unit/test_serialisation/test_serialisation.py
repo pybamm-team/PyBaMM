@@ -95,6 +95,9 @@ def mesh_var_dict(mocker):
 
 class TestSerialiseModels:
     def test_user_defined_model_recreaction(self):
+        import tempfile
+        from pathlib import Path
+
         # Start with a base model
         model = pybamm.BaseModel()
 
@@ -140,17 +143,18 @@ class TestSerialiseModels:
         t = np.linspace(0, 1, 100)
         solution = solver.solve(model, t)
 
-        model.save_model("heat_equation", variables=model._variables, mesh=mesh)
-        new_model = pybamm.load_model("heat_equation.json")
+        with tempfile.TemporaryDirectory() as tmpdir:
+            filepath = str(Path(tmpdir) / "heat_equation")
+            model.save_model(filepath, variables=model._variables, mesh=mesh)
+            new_model = pybamm.load_model(filepath + ".json")
 
-        new_solver = pybamm.ScipySolver()
-        new_solution = new_solver.solve(new_model, t)
+            new_solver = pybamm.ScipySolver()
+            new_solution = new_solver.solve(new_model, t)
 
-        for x, _ in enumerate(solution.all_ys):
-            np.testing.assert_allclose(
-                solution.all_ys[x], new_solution.all_ys[x], rtol=1e-7, atol=1e-6
-            )
-        os.remove("heat_equation.json")
+            for x, _ in enumerate(solution.all_ys):
+                np.testing.assert_allclose(
+                    solution.all_ys[x], new_solution.all_ys[x], rtol=1e-7, atol=1e-6
+                )
 
 
 class TestSerialise:
@@ -472,6 +476,9 @@ class TestSerialise:
         assert Serialise()._convert_options(options_dict) == options_result
 
     def test_save_load_model(self):
+        import tempfile
+        from pathlib import Path
+
         model = pybamm.lithium_ion.SPM(name="test_spm")
         geometry = model.default_geometry
         param = model.default_parameter_values
@@ -479,59 +486,65 @@ class TestSerialise:
         param.process_geometry(geometry)
         mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
 
-        # test error if not discretised
-        with pytest.raises(
-            NotImplementedError,
-            match="PyBaMM can only serialise a discretised, ready-to-solve model",
-        ):
-            Serialise().save_model(model, filename="test_model")
+        with tempfile.TemporaryDirectory() as tmpdir:
+            test_model_path = str(Path(tmpdir) / "test_model")
 
-        disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
-        disc.process_model(model)
+            # test error if not discretised
+            with pytest.raises(
+                NotImplementedError,
+                match="PyBaMM can only serialise a discretised, ready-to-solve model",
+            ):
+                Serialise().save_model(model, filename=test_model_path)
 
-        # default save
-        Serialise().save_model(model, filename="test_model")
-        assert os.path.exists("test_model.json")
+            disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+            disc.process_model(model)
 
-        # default save where filename isn't provided
-        Serialise().save_model(model)
-        filename = "test_spm_" + datetime.now().strftime("%Y_%m_%d-%p%I_%M") + ".json"
-        assert os.path.exists(filename)
-        os.remove(filename)
+            # default save
+            Serialise().save_model(model, filename=test_model_path)
+            assert os.path.exists(test_model_path + ".json")
 
-        # default load
-        new_model = Serialise().load_model("test_model.json")
+            # default save where filename isn't provided
+            old_cwd = os.getcwd()
+            os.chdir(tmpdir)
+            Serialise().save_model(model)
+            filename = (
+                "test_spm_" + datetime.now().strftime("%Y_%m_%d-%p%I_%M") + ".json"
+            )
+            assert os.path.exists(filename)
+            os.remove(filename)
+            os.chdir(old_cwd)
 
-        # check new model solves
-        new_solver = new_model.default_solver
-        new_solution = new_solver.solve(new_model, [0, 3600])
+            # default load
+            new_model = Serialise().load_model(test_model_path + ".json")
 
-        # check an error is raised when plotting the solution
-        with pytest.raises(
-            AttributeError,
-            match="No variables to plot",
-        ):
-            new_solution.plot()
+            # check new model solves
+            new_solver = new_model.default_solver
+            new_solution = new_solver.solve(new_model, [0, 3600])
 
-        # load when specifying the battery model to use
-        newest_model = Serialise().load_model("test_model.json")
+            # check an error is raised when plotting the solution
+            with pytest.raises(
+                AttributeError,
+                match="No variables to plot",
+            ):
+                new_solution.plot()
 
-        # Test for error if no model type is provided
-        with open("test_model.json") as f:
-            model_data = json.load(f)
-            del model_data["py/object"]
+            # load when specifying the battery model to use
+            newest_model = Serialise().load_model(test_model_path + ".json")
 
-        with open("test_model.json", "w") as f:
-            json.dump(model_data, f)
+            # Test for error if no model type is provided
+            with open(test_model_path + ".json") as f:
+                model_data = json.load(f)
+                del model_data["py/object"]
 
-        with pytest.raises(TypeError):
-            Serialise().load_model("test_model.json")
+            with open(test_model_path + ".json", "w") as f:
+                json.dump(model_data, f)
 
-        os.remove("test_model.json")
+            with pytest.raises(TypeError):
+                Serialise().load_model(test_model_path + ".json")
 
-        # check new model solves
-        newest_solver = newest_model.default_solver
-        newest_solver.solve(newest_model, [0, 3600])
+            # check new model solves
+            newest_solver = newest_model.default_solver
+            newest_solver.solve(newest_model, [0, 3600])
 
     def test_save_experiment_model_error(self):
         model = pybamm.lithium_ion.SPM()
@@ -546,56 +559,62 @@ class TestSerialise:
             sim.save_model("spm_experiment", mesh=False, variables=False)
 
     def test_serialised_model_plotting(self):
-        # models without a mesh
-        model = pybamm.BaseModel()
-        c = pybamm.Variable("c")
-        model.rhs = {c: -c}
-        model.initial_conditions = {c: 1}
-        model.variables["c"] = c
-        model.variables["2c"] = 2 * c
+        import tempfile
+        from pathlib import Path
 
-        # setup and discretise
-        _ = pybamm.ScipySolver().solve(model, np.linspace(0, 1))
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # models without a mesh
+            model = pybamm.BaseModel()
+            c = pybamm.Variable("c")
+            model.rhs = {c: -c}
+            model.initial_conditions = {c: 1}
+            model.variables["c"] = c
+            model.variables["2c"] = 2 * c
 
-        Serialise().save_model(
-            model,
-            variables=model.variables,
-            filename="test_base_model",
-        )
+            # setup and discretise
+            _ = pybamm.ScipySolver().solve(model, np.linspace(0, 1))
 
-        new_model = Serialise().load_model("test_base_model.json")
-        os.remove("test_base_model.json")
+            test_base_model_path = str(Path(tmpdir) / "test_base_model")
+            Serialise().save_model(
+                model,
+                variables=model.variables,
+                filename=test_base_model_path,
+            )
 
-        new_solution = pybamm.ScipySolver().solve(new_model, np.linspace(0, 1))
+            new_model = Serialise().load_model(test_base_model_path + ".json")
 
-        # check dynamic plot loads
-        new_solution.plot(["c", "2c"], show_plot=False)
+            new_solution = pybamm.ScipySolver().solve(new_model, np.linspace(0, 1))
 
-        # models with a mesh ----------------
-        model = pybamm.lithium_ion.SPM(name="test_spm_plotting")
-        geometry = model.default_geometry
-        param = model.default_parameter_values
-        param.process_model(model)
-        param.process_geometry(geometry)
-        mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
-        disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
-        disc.process_model(model)
+            # check dynamic plot loads
+            new_solution.plot(["c", "2c"], show_plot=False)
 
-        Serialise().save_model(
-            model,
-            variables=model.variables,
-            mesh=mesh,
-            filename="test_plotting_model",
-        )
+            # models with a mesh ----------------
+            model = pybamm.lithium_ion.SPM(name="test_spm_plotting")
+            geometry = model.default_geometry
+            param = model.default_parameter_values
+            param.process_model(model)
+            param.process_geometry(geometry)
+            mesh = pybamm.Mesh(
+                geometry, model.default_submesh_types, model.default_var_pts
+            )
+            disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+            disc.process_model(model)
 
-        new_model = Serialise().load_model("test_plotting_model.json")
-        os.remove("test_plotting_model.json")
+            test_plotting_model_path = str(Path(tmpdir) / "test_plotting_model")
+            Serialise().save_model(
+                model,
+                variables=model.variables,
+                mesh=mesh,
+                filename=test_plotting_model_path,
+            )
 
-        new_solver = new_model.default_solver
-        new_solution = new_solver.solve(new_model, [0, 3600])
+            new_model = Serialise().load_model(test_plotting_model_path + ".json")
 
-        # check dynamic plot loads
-        new_solution.plot(show_plot=False)
+            new_solver = new_model.default_solver
+            new_solution = new_solver.solve(new_model, [0, 3600])
+
+            # check dynamic plot loads
+            new_solution.plot(show_plot=False)
 
     # testing custom models serilaisation and deserialisation
 
