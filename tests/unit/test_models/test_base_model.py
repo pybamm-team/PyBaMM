@@ -1320,3 +1320,148 @@ class TestBaseModel:
         new_model = pybamm.load_model("test_base_model.json")
 
         os.remove("test_base_model.json")
+
+    def test_default_var_pts_setter(self):
+        model = pybamm.BaseModel()
+
+        # Test default value is empty dict
+        assert model.default_var_pts == {}
+
+        # Test setting var_pts
+        var_pts = {"x_n": 20, "x_s": 25, "x_p": 30}
+        model.default_var_pts = var_pts
+        assert model.default_var_pts == var_pts
+
+        # Test updating var_pts
+        new_var_pts = {"r_n": 10, "r_p": 15}
+        model.default_var_pts = new_var_pts
+        assert model.default_var_pts == new_var_pts
+
+        # Test setting empty dict
+        model.default_var_pts = {}
+        assert model.default_var_pts == {}
+
+    def test_default_geometry_setter(self):
+        model = pybamm.BaseModel()
+
+        # Test default value is empty dict
+        assert model.default_geometry == {}
+
+        # Test setting geometry
+        geometry = {
+            "negative electrode": {"x_n": {"min": 0, "max": 1}},
+            "separator": {"x_s": {"min": 1, "max": 2}},
+        }
+        model.default_geometry = geometry
+        assert model.default_geometry == geometry
+
+        # Test updating geometry
+        new_geometry = pybamm.battery_geometry()
+        model.default_geometry = new_geometry
+        assert model.default_geometry == new_geometry
+
+        # Test setting empty dict
+        model.default_geometry = {}
+        assert model.default_geometry == {}
+
+    def test_default_submesh_types_setter(self):
+        model = pybamm.BaseModel()
+
+        # Test default value is empty dict
+        assert model.default_submesh_types == {}
+
+        # Test setting submesh types
+        submesh_types = {
+            "negative electrode": pybamm.Uniform1DSubMesh,
+            "separator": pybamm.Uniform1DSubMesh,
+            "positive electrode": pybamm.Uniform1DSubMesh,
+        }
+        model.default_submesh_types = submesh_types
+        assert model.default_submesh_types == submesh_types
+
+        # Test updating submesh types with MeshGenerator
+        new_submesh_types = {
+            "negative electrode": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
+            "current collector": pybamm.MeshGenerator(pybamm.SubMesh0D),
+        }
+        model.default_submesh_types = new_submesh_types
+        assert model.default_submesh_types == new_submesh_types
+
+        # Test setting empty dict
+        model.default_submesh_types = {}
+        assert model.default_submesh_types == {}
+
+    def test_default_spatial_methods_setter(self):
+        model = pybamm.BaseModel()
+
+        # Test default value is empty dict
+        assert model.default_spatial_methods == {}
+
+        # Test setting spatial methods
+        spatial_methods = {
+            "negative electrode": pybamm.FiniteVolume(),
+            "separator": pybamm.FiniteVolume(),
+            "positive electrode": pybamm.FiniteVolume(),
+        }
+        model.default_spatial_methods = spatial_methods
+        assert model.default_spatial_methods == spatial_methods
+
+        # Test updating spatial methods with different types
+        new_spatial_methods = {
+            "macroscale": pybamm.FiniteVolume(),
+            "negative particle": pybamm.FiniteVolume(),
+            "positive particle": pybamm.FiniteVolume(),
+        }
+        model.default_spatial_methods = new_spatial_methods
+        assert model.default_spatial_methods == new_spatial_methods
+
+        # Test setting empty dict
+        model.default_spatial_methods = {}
+        assert model.default_spatial_methods == {}
+
+    def test_default_properties_independence(self):
+        """Test that setting default properties on different models doesn't interfere."""
+        model1 = pybamm.BaseModel()
+        model2 = pybamm.BaseModel()
+
+        # Set different values on each model
+        var_pts_1 = {"x_n": 20}
+        var_pts_2 = {"x_n": 30}
+
+        model1.default_var_pts = var_pts_1
+        model2.default_var_pts = var_pts_2
+
+        # Verify they are independent
+        assert model1.default_var_pts == var_pts_1
+        assert model2.default_var_pts == var_pts_2
+        assert model1.default_var_pts != model2.default_var_pts
+
+    def test_default_properties_multiple_set_operations(self):
+        """Test multiple set operations on the same model instance."""
+        model = pybamm.BaseModel()
+
+        # Set all four properties
+        var_pts = {"x_n": 15, "x_s": 10, "x_p": 15}
+        geometry = {"negative electrode": {"x_n": {"min": 0, "max": 1}}}
+        submesh_types = {"negative electrode": pybamm.Uniform1DSubMesh}
+        spatial_methods = {"negative electrode": pybamm.FiniteVolume()}
+
+        model.default_var_pts = var_pts
+        model.default_geometry = geometry
+        model.default_submesh_types = submesh_types
+        model.default_spatial_methods = spatial_methods
+
+        # Verify all are set correctly
+        assert model.default_var_pts == var_pts
+        assert model.default_geometry == geometry
+        assert model.default_submesh_types == submesh_types
+        assert model.default_spatial_methods == spatial_methods
+
+        # Update one property and verify others are unchanged
+        new_var_pts = {"r_n": 20}
+        model.default_var_pts = new_var_pts
+
+        assert model.default_var_pts == new_var_pts
+        assert model.default_geometry == geometry  # unchanged
+        assert model.default_submesh_types == submesh_types  # unchanged
+        assert model.default_spatial_methods == spatial_methods  # unchanged
