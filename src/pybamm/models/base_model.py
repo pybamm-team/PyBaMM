@@ -395,22 +395,42 @@ class BaseModel:
     @property
     def default_var_pts(self):
         """Returns a dictionary of the default variable points for the model, which is empty by default."""
-        return {}
+        return getattr(self, "_default_var_pts", {})
+
+    @default_var_pts.setter
+    def default_var_pts(self, var_pts):
+        """Sets the default variable points for the model."""
+        self._default_var_pts = var_pts
 
     @property
     def default_geometry(self):
         """Returns a  dictionary of the default geometry for the model, which is empty by default."""
-        return {}
+        return getattr(self, "_default_geometry", {})
+
+    @default_geometry.setter
+    def default_geometry(self, geometry):
+        """Sets the default geometry for the model."""
+        self._default_geometry = geometry
 
     @property
     def default_submesh_types(self):
         """Returns a dictionary of the default submesh types for the model, which is empty by default."""
-        return {}
+        return getattr(self, "_default_submesh_types", {})
+
+    @default_submesh_types.setter
+    def default_submesh_types(self, submesh_types):
+        """Sets the default submesh types for the model."""
+        self._default_submesh_types = submesh_types
 
     @property
     def default_spatial_methods(self):
         """Returns a dictionary of the default spatial methods for the model, which is empty by default."""
-        return {}
+        return getattr(self, "_default_spatial_methods", {})
+
+    @default_spatial_methods.setter
+    def default_spatial_methods(self, spatial_methods):
+        """Sets the default spatial methods for the model."""
+        self._default_spatial_methods = spatial_methods
 
     @property
     def default_solver(self):
