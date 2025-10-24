@@ -798,7 +798,7 @@ class BaseSolver:
                         y0_list,
                         y0S_list,
                         inputs_list,
-                        strict=False,
+                        strict=True,
                     ),
                 )
                 p.close()
@@ -976,7 +976,7 @@ class BaseSolver:
         timer.reset()
 
         # Check initial conditions don't violate events
-        for y0, inpts in zip(model.y0_list, model_inputs_list, strict=False):
+        for y0, inpts in zip(model.y0_list, model_inputs_list, strict=True):
             self._check_events_with_initialization(t_eval, model, y0, inpts)
 
         # Process discontinuities
@@ -1427,7 +1427,7 @@ class BaseSolver:
 
         else:
             model.y0_list = []
-            for soln, inputs in zip(old_solutions, model_inputs_list, strict=False):
+            for soln, inputs in zip(old_solutions, model_inputs_list, strict=True):
                 _, concatenated_initial_conditions = model.set_initial_conditions_from(
                     soln, return_type="ics"
                 )
@@ -1447,7 +1447,7 @@ class BaseSolver:
         self._set_consistent_initialization(model, t_start_shifted, model_inputs_list)
 
         # Check consistent initialization doesn't violate events
-        for y0, inpts in zip(model.y0_list, model_inputs_list, strict=False):
+        for y0, inpts in zip(model.y0_list, model_inputs_list, strict=True):
             self._check_events_with_initialization(t_eval, model, y0, inpts)
 
         # Step
@@ -1480,7 +1480,7 @@ class BaseSolver:
             ret = solutions
         else:
             ret = [
-                old_s + s for (old_s, s) in zip(old_solutions, solutions, strict=False)
+                old_s + s for (old_s, s) in zip(old_solutions, solutions, strict=True)
             ]
 
         if len(ret) == 1:

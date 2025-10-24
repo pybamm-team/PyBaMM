@@ -243,7 +243,7 @@ class JaxSolver(pybamm.BaseSolver):
                     return self._cached_solves[model](inputs_v, y0)
 
                 coro = []
-                for inputs_v, y0 in zip(inputs, y0_list, strict=False):
+                for inputs_v, y0 in zip(inputs, y0_list, strict=True):
                     coro.append(asyncio.create_task(solve_model_async(inputs_v, y0)))
                 return await asyncio.gather(*coro)
 
@@ -268,7 +268,7 @@ class JaxSolver(pybamm.BaseSolver):
                 f'Unknown platform requested: "{platform}", '
                 "falling back to serial execution"
             )
-            for inputs_v, y0 in zip(inputs, y0_list, strict=False):
+            for inputs_v, y0 in zip(inputs, y0_list, strict=True):
                 y.append(self._cached_solves[model](inputs_v, y0))
 
         # This code block implements single-program multiple-data execution

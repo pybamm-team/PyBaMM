@@ -796,7 +796,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         if model.len_rhs > 0:
             ydot0_list = [
                 self._rhs_dot_consistent_initialization(y0, model, time, inputs_dict)
-                for y0, inputs_dict in zip(y0_list, inputs_list, strict=False)
+                for y0, inputs_dict in zip(y0_list, inputs_list, strict=True)
             ]
         else:
             ydot0_list = [np.zeros_like(y0) for y0 in y0_list]
@@ -807,7 +807,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             y0full = []
             ydot0full = []
             for y0, ydot0, y0S, inputs_dict in zip(
-                y0_list, ydot0_list, y0S_list, inputs_list, strict=False
+                y0_list, ydot0_list, y0S_list, inputs_list, strict=True
             ):
                 y0f, ydot0f = self._sensitivity_consistent_initialization(
                     y0, ydot0, y0S, time, inputs_dict
