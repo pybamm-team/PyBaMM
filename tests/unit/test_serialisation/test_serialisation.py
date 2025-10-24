@@ -1479,6 +1479,7 @@ class TestExpressionFunctionParameter:
 
         assert f(1) == 1 + 8
 
+
 class TestGeometrySerialization:
     def test_serialise_and_load_geometry(self):
         """Test saving and loading geometry to/from file."""
