@@ -861,14 +861,6 @@ class BaseSolver:
         t_interp : None, list or ndarray, optional
             The times (in seconds) at which to interpolate the solution. Defaults to None.
             Only valid for solvers that support intra-solve interpolation (`IDAKLUSolver`).
-        initial_conditions : dict, numpy.ndarray, or list, optional
-            Override the model's default `y0`.  Can be:
-
-            - a dict mapping variable names → values
-            - a 1D array of length `n_states`
-            - a list of such overrides (one per parallel solve)
-
-            Only valid for IDAKLU solver.
         Returns
         -------
         :class:`pybamm.Solution` or list of :class:`pybamm.Solution` objects.
@@ -1184,7 +1176,7 @@ class BaseSolver:
             idxs = np.where(events_eval < 0)[0]
             event_names = [termination_events[idx].name for idx in idxs]
             raise pybamm.SolverError(
-                f"Events {event_names} are non-positive at initial conditions"
+                f"Events {event_names} are non-positive at initial conditions with inputs {inputs_dict}"
             )
 
     def _set_sens_initial_conditions_from(

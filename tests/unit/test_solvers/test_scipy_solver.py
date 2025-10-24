@@ -428,10 +428,16 @@ class TestScipySolver:
         # Solve
         solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8)
         t_eval = np.linspace(0, 5, 100)
-        solution = solver.solve(model, t_eval, inputs={"rate": -1, "ic 1": 0.1})
-        np.testing.assert_allclose(
-            solution.y[0], 0.1 * np.exp(-solution.t), rtol=1e-6, atol=1e-5
-        )
+        inputs_list = [{"rate": -1, "ic 1": 0.1}, {"rate": -2, "ic 1": 0.2}]
+        solutions = solver.solve(model, t_eval, inputs=inputs_list)
+        for i, ic in enumerate(inputs_list):
+            np.testing.assert_allclose(
+                solutions[i].y[0],
+                ic["ic 1"] * np.exp(ic["rate"] * solutions[i].t),
+                rtol=1e-6,
+                atol=1e-5,
+            )
+            np.testing.assert_equal(solutions[i]["var1"](0), ic["ic 1"])
 
         # Solve again with different initial conditions
         solution = solver.solve(model, t_eval, inputs={"rate": -0.1, "ic 1": 1})

@@ -261,7 +261,6 @@ class JaxSolver(pybamm.BaseSolver):
             inputs_v = {
                 key: jnp.array([dic[key] for dic in inputs]) for key in inputs[0]
             }
-            # TODO: not sure about this one - need to check that y0_list broadcasts correctly
             y.extend(jax.vmap(self._cached_solves[model])(inputs_v, model.y0_list))
         else:
             # Unknown platform, use serial execution as fallback

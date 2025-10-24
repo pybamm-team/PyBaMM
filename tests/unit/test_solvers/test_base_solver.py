@@ -2,6 +2,8 @@
 # Tests for the Base Solver class
 #
 
+import re
+
 import casadi
 import numpy as np
 import pytest
@@ -449,3 +451,32 @@ class TestBaseSolver:
             ValueError, match="on_failure must be 'warn', 'raise', or 'ignore'"
         ):
             base_solver.on_failure = "invalid"
+
+    @pytest.mark.parametrize("format", ["casadi", "python", "jax"])
+    def test_events_fail_on_initialisation_multiple_input_params(self, format):
+        # Test that events fail on initialisation when multiple input parameters are used
+        # if it's not the first set of parameters
+        model = pybamm.BaseModel()
+        model.convert_to_format = format
+        u = pybamm.Variable("u")
+        u0 = pybamm.InputParameter("u0")
+        model.rhs = {u: -u}
+        model.initial_conditions = {u: u0}
+        model.events.append(pybamm.Event("test event", u - 0.2))
+        model.variables = {"u": u}
+
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        solver = pybamm.BaseSolver()
+
+        initial_condition_input = [{"u0": 5}, {"u0": 0.1}]
+        t_eval = np.array([0, 1])
+
+        with pytest.raises(
+            pybamm.SolverError,
+            match=re.escape(
+                "Events ['test event'] are non-positive at initial conditions with inputs {'u0': 0.1}"
+            ),
+        ):
+            solver.solve(model, t_eval, initial_condition_input)
