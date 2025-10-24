@@ -750,7 +750,14 @@ class BaseSolver:
 
         return calculate_sensitivities_list, sensitivities_have_changed
 
-    def _integrate(self, model, t_eval, inputs_list=None, t_interp=None, nproc=1):
+    def _integrate(
+        self,
+        model: pybamm.BaseModel,
+        t_eval,
+        inputs_list: list[dict] | None = None,
+        t_interp=None,
+        nproc=1,
+    ):
         """
         Solve a DAE model defined by residuals with initial conditions y0.
 
@@ -760,12 +767,10 @@ class BaseSolver:
             The model whose solution to calculate.
         t_eval : numeric type
             The times at which to compute the solution
-        inputs_list : list of dict
+        inputs_list : list of dict, optional
             Any input parameters to pass to the model when solving
         """
 
-        if isinstance(inputs_list, dict):
-            inputs_list = [inputs_list]
         inputs_list = inputs_list or [{}]
 
         y0S_list = (
@@ -962,9 +967,9 @@ class BaseSolver:
                 # If the new initial conditions are different
                 # and cannot be evaluated directly, set up again
                 self.set_up(model, model_inputs_list, t_eval, ics_only=True)
-            self._model_set_up[model]["initial conditions"] = (
-                model.concatenated_initial_conditions
-            )
+            self._model_set_up[model][
+                "initial conditions"
+            ] = model.concatenated_initial_conditions
         else:
             # Set the standard initial conditions
             self._set_initial_conditions(model, t_eval[0], model_inputs_list)

@@ -576,7 +576,14 @@ class IDAKLUSolver(pybamm.BaseSolver):
     def options(self):
         return self._options
 
-    def _integrate(self, model, t_eval, inputs_list=None, t_interp=None, nproc=None):
+    def _integrate(
+        self,
+        model,
+        t_eval,
+        inputs_list: list[dict] | None = None,
+        t_interp=None,
+        nproc=None,
+    ):
         """
         Overloads the _integrate method from BaseSolver to use the IDAKLU solver
         """
@@ -584,8 +591,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
             # Shouldn't ever reach this point
             raise pybamm.SolverError("Unsupported IDAKLU solver configuration.")
 
-        if isinstance(inputs_list, dict):
-            inputs_list = [inputs_list]
         inputs_list = inputs_list or [{}]
 
         # stack inputs so that they are a 2D array of shape (number_of_inputs, number_of_parameters)

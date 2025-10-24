@@ -204,7 +204,14 @@ class JaxSolver(pybamm.BaseSolver):
     def requires_explicit_sensitivities(self):
         return False
 
-    def _integrate(self, model, t_eval, inputs=None, t_interp=None, nproc=None):
+    def _integrate(
+        self,
+        model,
+        t_eval,
+        inputs_list: list[dict] | None = None,
+        t_interp=None,
+        nproc=None,
+    ):
         """
         Solve a model defined by dydt with initial conditions y0.
 
@@ -214,7 +221,7 @@ class JaxSolver(pybamm.BaseSolver):
             The model whose solution to calculate.
         t_eval : :class:`numpy.array`, size (k,)
             The times at which to compute the solution
-        inputs : dict, list[dict], optional
+        inputs : list[dict], optional
             Any input parameters to pass to the model when solving
 
         Returns
@@ -224,9 +231,7 @@ class JaxSolver(pybamm.BaseSolver):
             various diagnostic messages.
 
         """
-        if isinstance(inputs, dict):
-            inputs = [inputs]
-        inputs = inputs or [{}]
+        inputs = inputs_list or [{}]
 
         y0_list = model.y0_list
 
