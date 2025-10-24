@@ -1099,3 +1099,146 @@ class TestParameterValues:
         )
         pv = [i for i in parameter_values]
         assert len(pv) == 5, "Should have 5 keys"
+
+    def test_process_function_parameter_with_diff_variable(self):
+        """Test _process_function_parameter with diff_variable (NotConstant wrapping)."""
+        # Create a simple function that uses a spatial variable
+        r = pybamm.SpatialVariable("r", domain=["negative particle"])
+
+        # Create an expression function parameter
+        from pybamm.expression_tree.operations.serialise import (
+            ExpressionFunctionParameter,
+        )
+
+        # Expression: r^2
+        expr = r**2
+        efp = ExpressionFunctionParameter("test_func", expr, "test_func", ["r"])
+
+        # Create a function parameter with diff_variable
+        func_param = pybamm.FunctionParameter("test_func", {"r": r}, diff_variable=r)
+
+        # Set up parameter values with the expression function
+        param_values = pybamm.ParameterValues({"test_func": efp})
+
+        # Process the function parameter (this should trigger diff_variable path)
+        result = param_values.process_symbol(func_param)
+
+        # Verify result is a symbol
+        assert isinstance(result, pybamm.Symbol)
+
+    def test_process_function_parameter_with_nested_function_parameters(self):
+        """Test _process_function_parameter with FunctionParameter children."""
+        x = pybamm.SpatialVariable("x", domain=["negative electrode"])
+
+        # Create nested expression functions
+        from pybamm.expression_tree.operations.serialise import (
+            ExpressionFunctionParameter,
+        )
+
+        # Inner function: x^2
+        inner_expr = x**2
+        inner_efp = ExpressionFunctionParameter("inner", inner_expr, "inner", ["x"])
+
+        # Outer function that calls inner: inner(x) + 1
+        outer_expr = pybamm.FunctionParameter("inner", {"x": x}) + pybamm.Scalar(1)
+        outer_efp = ExpressionFunctionParameter("outer", outer_expr, "outer", ["x"])
+
+        # Set up parameter values
+        param_values = pybamm.ParameterValues(
+            {
+                "inner": inner_efp,
+                "outer": outer_efp,
+            }
+        )
+
+        # Create a function parameter that uses the outer function
+        func_param = pybamm.FunctionParameter("outer", {"x": x})
+
+        # Process the function parameter
+        result = param_values.process_symbol(func_param)
+
+        # Verify result is a symbol
+        assert isinstance(result, pybamm.Symbol)
+
+    def test_process_function_parameter_with_diff_and_nested(self):
+        """Test _process_function_parameter with diff_variable and nested FunctionParameter."""
+        r = pybamm.SpatialVariable("r", domain=["negative particle"])
+
+        from pybamm.expression_tree.operations.serialise import (
+            ExpressionFunctionParameter,
+        )
+
+        # Inner function: r^2
+        inner_expr = r**2
+        inner_efp = ExpressionFunctionParameter("inner", inner_expr, "inner", ["r"])
+
+        # Outer function with nested call: inner(r) + r
+        outer_expr = pybamm.FunctionParameter("inner", {"r": r}) + r
+        outer_efp = ExpressionFunctionParameter("outer", outer_expr, "outer", ["r"])
+
+        param_values = pybamm.ParameterValues(
+            {
+                "inner": inner_efp,
+                "outer": outer_efp,
+            }
+        )
+
+        # Create function parameter with diff_variable
+        func_param = pybamm.FunctionParameter("outer", {"r": r}, diff_variable=r)
+
+        # Process
+        result = param_values.process_symbol(func_param)
+
+        # Verify result is a symbol
+        assert isinstance(result, pybamm.Symbol)
+
+    def test_from_json_with_string_path(self):
+        """Test from_json with string filename."""
+        import json
+        import tempfile
+
+        params = {
+            "param1": 42,
+            "param2": 3.14,
+        }
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            json.dump(params, f)
+            temp_path = f.name
+
+        try:
+            loaded = pybamm.ParameterValues.from_json(temp_path)
+            assert loaded["param1"] == 42
+            assert loaded["param2"] == 3.14
+        finally:
+            os.remove(temp_path)
+
+    def test_from_json_with_path_object(self):
+        """Test from_json with pathlib.Path object."""
+        import json
+        import tempfile
+        from pathlib import Path
+
+        params = {
+            "param1": 100,
+            "param2": 2.71,
+        }
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            json.dump(params, f)
+            temp_path = Path(f.name)
+
+        try:
+            loaded = pybamm.ParameterValues.from_json(temp_path)
+            assert loaded["param1"] == 100
+            assert loaded["param2"] == 2.71
+        finally:
+            os.remove(temp_path)
+
+    def test_from_json_with_invalid_input_type(self):
+        """Test from_json with invalid input type."""
+        with pytest.raises(TypeError, match="Input must be a filename.*or a dict"):
+            pybamm.ParameterValues.from_json(123)  # Integer is invalid
+
+        with pytest.raises(TypeError, match="Input must be a filename.*or a dict"):
+            pybamm.ParameterValues.from_json([1, 2, 3])  # List is invalid
