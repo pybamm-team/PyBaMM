@@ -4,21 +4,42 @@ on:
   discussion:
     types: [created]
 
-
-permissions: {}
+permissions:
+  discussions: write
+  contents: read
 
 jobs:
   autorespond:
     name: Autorespond to New Discussions
     runs-on: ubuntu-latest
-    permissions:
-      discussions: write
-      contents: read
 
     steps:
-      - name: Run Discussion Autoresponder
-        uses: wesleyscholl/discussion-auto-responder@b1a3c1b9a1e3d1b1a3c1b9a1e3d1b1a3c1b9a1e3 # v1.0.8
+      - name: Redirect New Discussions to Discourse
+        uses: actions/github-script@v7
         with:
-          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-          comment_body: "Hi! We have now moved our discussions to [Discourse](https://pybamm.discourse.group/). Please post your question there."
-          delay_milliseconds: 0
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const discussion = context.payload.discussion;
+
+            const message = "Hi @" + discussion.user.login + "!\n\n" +
+                            "We have now moved our discussions to [Discourse](https://pybamm.discourse.group/).\n" +
+                            "Please post your question there. This discussion will now be closed.";
+
+            // Add a comment
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: discussion.number,
+              body: message
+            });
+
+            // Wait 1 second to ensure comment is posted
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+            // Close the discussion
+            await github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: discussion.number,
+              state: "closed"
+            });
