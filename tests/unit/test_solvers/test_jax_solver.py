@@ -109,7 +109,7 @@ class TestJaxSolver:
 
             # create a dummy "model" where we calculate the sum of the time series
             def solve_model(rate, solve=solve):
-                return jax.numpy.sum(solve({"rate": rate}, model.y0_list[0]))
+                return jax.numpy.sum(solve({"rate": rate}, model.y0))
 
             # check answers with finite difference
             eval_plus = solve_model(rate + h)
@@ -230,11 +230,11 @@ class TestJaxSolver:
 
         solver.solve(model, t_eval, inputs={"rate": 0.1})
         solver = solver.get_solve(model, t_eval)
-        y = solver({"rate": 0.1}, model.y0_list[0])
+        y = solver({"rate": 0.1}, model.y0)
 
         np.testing.assert_allclose(y[0], np.exp(-0.1 * t_eval), rtol=1e-6, atol=1e-6)
 
-        y = solver({"rate": 0.2}, model.y0_list[0])
+        y = solver({"rate": 0.2}, model.y0)
 
         np.testing.assert_allclose(y[0], np.exp(-0.2 * t_eval), rtol=1e-6, atol=1e-6)
 
