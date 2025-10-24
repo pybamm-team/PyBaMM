@@ -1,11 +1,14 @@
+import json
 import numbers
 from collections import defaultdict
+from pathlib import Path
 from pprint import pformat
 from warnings import warn
 
 import numpy as np
 
 import pybamm
+from pybamm.expression_tree.operations.serialise import Serialise
 from pybamm.models.full_battery_models.lithium_ion.msmr import (
     is_deprecated_msmr_name,
     replace_deprecated_msmr_name,
@@ -1077,3 +1080,32 @@ class ParameterValues:
 
     def __iter__(self):
         return iter(self._dict_items)
+
+    @staticmethod
+    def from_json(filename_or_dict):
+        """
+        Loads a ParameterValues object from a JSON file or a dictionary.
+
+        Parameters
+        ----------
+        filename_or_dict : string-like or dict
+            The filename to load the JSON file from, or a dictionary.
+
+        Returns
+        -------
+        ParameterValues
+            The ParameterValues object
+        """
+        if isinstance(filename_or_dict, str | Path):
+            with open(filename_or_dict) as f:
+                parameter_values_dict = json.load(f)
+        elif isinstance(filename_or_dict, dict):
+            parameter_values_dict = filename_or_dict.copy()
+        else:
+            raise TypeError("Input must be a filename (str or pathlib.Path) or a dict")
+
+        for key, value in parameter_values_dict.items():
+            if isinstance(value, dict):
+                parameter_values_dict[key] = Serialise.convert_symbol_from_json(value)
+
+        return ParameterValues(parameter_values_dict)

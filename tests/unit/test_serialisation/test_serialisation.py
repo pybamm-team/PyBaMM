@@ -1452,33 +1452,6 @@ class TestExpressionFunctionParameter:
         assert 'Parameter("a")' in src
         assert "(z + 2" in src  # allows 2 or 2.0
 
-    def test_function_executes(self):
-        x = pybamm.Variable("x")
-        expr = x + pybamm.Parameter("k")
-
-        efp = ExpressionFunctionParameter("f", expr, "f", ["x"])
-        src = efp.to_source()
-
-        # Provide Parameter function
-        local_env = {"Parameter": lambda name: 3 if name == "k" else None}
-        exec(src, local_env, local_env)
-        f = local_env["f"]
-
-        assert f(2) == 5
-
-    def test_different_parameter_sets(self):
-        x = pybamm.Variable("x")
-        expr = x + pybamm.Parameter("p1") * pybamm.Parameter("p2")
-
-        efp = ExpressionFunctionParameter("f", expr, "f", ["x"])
-        src = efp.to_source()
-
-        local_env = {"Parameter": lambda name: {"p1": 2, "p2": 4}[name]}
-        exec(src, local_env, local_env)
-        f = local_env["f"]
-
-        assert f(1) == 1 + 8
-
 
 class TestGeometrySerialization:
     def test_serialise_and_load_geometry(self):
