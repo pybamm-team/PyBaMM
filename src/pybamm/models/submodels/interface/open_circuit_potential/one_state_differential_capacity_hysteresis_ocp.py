@@ -1,6 +1,14 @@
+import warnings
+
 import pybamm
 
 from . import BaseHysteresisOpenCircuitPotential
+
+# Only throw the hysteresis decay rate warning once
+warnings.filterwarnings(
+    "once",
+    message="The definition of the hysteresis decay rate parameter has changed*",
+)
 
 
 class OneStateDifferentialCapacityHysteresisOpenCircuitPotential(
@@ -31,6 +39,11 @@ class OneStateDifferentialCapacityHysteresisOpenCircuitPotential(
     def __init__(
         self, param, domain, reaction, options, phase="primary", x_average=False
     ):
+        warnings.warn(
+            "The definition of the hysteresis decay rate parameter has changed in "
+            "PyBaMM v25.10. Please see the CHANGELOG for more details.",
+            stacklevel=2,
+        )
         super().__init__(
             param, domain, reaction, options=options, phase=phase, x_average=x_average
         )
@@ -72,9 +85,11 @@ class OneStateDifferentialCapacityHysteresisOpenCircuitPotential(
         domain, Domain = self.domain_Domain
         phase_name = self.phase_name
 
+        c_max = self.phase_param.c_max
+        eps = self.phase_param.epsilon_s
         if self.x_average is False:
-            i_surf = variables[
-                f"{Domain} electrode {phase_name}interfacial current density [A.m-2]"
+            i_vol = variables[
+                f"{Domain} electrode {phase_name}volumetric interfacial current density [A.m-3]"
             ]
             sto_surf = variables[f"{Domain} {phase_name}particle surface stoichiometry"]
             T = variables[f"{Domain} electrode temperature [K]"]
@@ -83,8 +98,8 @@ class OneStateDifferentialCapacityHysteresisOpenCircuitPotential(
                 f"{Domain} electrode {phase_name}differential capacity [A.s.V-1]"
             ]
         else:
-            i_surf = variables[
-                f"X-averaged {domain} electrode {phase_name}interfacial current density [A.m-2]"
+            i_vol = variables[
+                f"X-averaged {domain} electrode {phase_name}volumetric interfacial current density [A.m-3]"
             ]
             sto_surf = variables[
                 f"X-averaged {domain} {phase_name}particle surface stoichiometry"
@@ -94,18 +109,16 @@ class OneStateDifferentialCapacityHysteresisOpenCircuitPotential(
             dQdU = variables[
                 f"X-averaged {domain} electrode {phase_name}differential capacity [A.s.V-1]"
             ]
-        # check if composite or not
-        if phase_name != "":
-            Q_cell = variables[f"{Domain} electrode {phase_name}phase capacity [A.h]"]
-        else:
-            Q_cell = variables[f"{Domain} electrode capacity [A.h]"]
+            eps = pybamm.x_average(eps)
 
         Gamma = self.phase_param.hysteresis_decay(sto_surf, T)
         x = self.phase_param.hysteresis_switch
 
-        i_surf_sign = pybamm.sign(i_surf)
-        signed_h = 1 - i_surf_sign * h
-        gamma = Gamma * (1 / dQdU**x)
-        dhdt = gamma * i_surf / Q_cell * signed_h
+        i_vol_sign = pybamm.sign(i_vol)
+        signed_h = (1 - i_vol_sign * h) / 2
+        C_diff = dQdU
+        C_ref_vol = 1  # [F]
+        gamma = Gamma * ((C_diff / C_ref_vol) ** (-x))
+        dhdt = gamma * i_vol / (self.param.F * c_max * eps) * signed_h
 
         self.rhs[h] = dhdt

@@ -508,7 +508,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             "dvar_dy_idaklu_fcns",
             "dvar_dp_idaklu_fcns",
         ]:
-            del self._setup[key]
+            self._setup.pop(key, None)
         return self.__dict__
 
     def __setstate__(self, d):
@@ -571,6 +571,10 @@ class IDAKLUSolver(pybamm.BaseSolver):
     @property
     def supports_parallel_solve(self):
         return True
+
+    @property
+    def options(self):
+        return self._options
 
     def _integrate(self, model, t_eval, inputs_list=None, t_interp=None, nproc=None):
         """

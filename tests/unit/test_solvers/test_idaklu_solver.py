@@ -760,6 +760,8 @@ class TestIDAKLUSolver:
             solver = pybamm.IDAKLUSolver(rtol=1e-6, atol=1e-6, options=options)
             soln = solver.solve(model, t_eval, t_interp=t_interp)
 
+            # Asserts
+            assert options == solver.options
             np.testing.assert_allclose(soln.y, soln_base.y, rtol=1e-5, atol=1e-4)
 
         options_fail = {

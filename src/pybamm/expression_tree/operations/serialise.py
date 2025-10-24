@@ -85,31 +85,32 @@ class Serialise:
 
         pass
 
-    def save_model(
+    def serialise_model(
         self,
         model: pybamm.BaseModel,
         mesh: pybamm.Mesh | None = None,
         variables: pybamm.FuzzyDict | None = None,
-        filename: str | None = None,
-    ):
-        """Saves a discretised model to a JSON file.
+    ) -> dict:
+        """Converts a discretised model to a JSON-serialisable dictionary.
 
         As the model is discretised and ready to solve, only the right hand side,
-        algebraic and initial condition variables are saved.
+        algebraic and initial condition variables are serialised.
 
         Parameters
         ----------
         model : :class:`pybamm.BaseModel`
-            The discretised model to be saved
+            The discretised model to be serialised
         mesh : :class:`pybamm.Mesh` (optional)
-            The mesh the model has been discretised over. Not neccesary to solve
+            The mesh the model has been discretised over. Not necessary to solve
             the model when read in, but required to use pybamm's plotting tools.
         variables: :class:`pybamm.FuzzyDict` (optional)
-            The discretised model varaibles. Not necessary to solve a model, but
+            The discretised model variables. Not necessary to solve a model, but
             required to use pybamm's plotting tools.
-        filename: str (optional)
-            The desired name of the JSON file. If no name is provided, one will be
-            created based on the model name, and the current datetime.
+
+        Returns
+        -------
+        dict
+            A JSON-serialisable dictionary representation of the model
         """
         if model.is_discretised is False:
             raise NotImplementedError(
@@ -145,6 +146,36 @@ class Serialise:
                 k: self._SymbolEncoder().default(v) for k, v in dict(variables).items()
             }
 
+        return model_json
+
+    def save_model(
+        self,
+        model: pybamm.BaseModel,
+        mesh: pybamm.Mesh | None = None,
+        variables: pybamm.FuzzyDict | None = None,
+        filename: str | None = None,
+    ):
+        """Saves a discretised model to a JSON file.
+
+        As the model is discretised and ready to solve, only the right hand side,
+        algebraic and initial condition variables are saved.
+
+        Parameters
+        ----------
+        model : :class:`pybamm.BaseModel`
+            The discretised model to be saved
+        mesh : :class:`pybamm.Mesh` (optional)
+            The mesh the model has been discretised over. Not neccesary to solve
+            the model when read in, but required to use pybamm's plotting tools.
+        variables: :class:`pybamm.FuzzyDict` (optional)
+            The discretised model varaibles. Not necessary to solve a model, but
+            required to use pybamm's plotting tools.
+        filename: str (optional)
+            The desired name of the JSON file. If no name is provided, one will be
+            created based on the model name, and the current datetime.
+        """
+        model_json = self.serialise_model(model, mesh, variables)
+
         if filename is None:
             filename = model.name + "_" + datetime.now().strftime("%Y_%m_%d-%p%I_%M")
 
@@ -152,7 +183,7 @@ class Serialise:
             json.dump(model_json, f)
 
     def load_model(
-        self, filename: str, battery_model: pybamm.BaseModel | None = None
+        self, filename: str | dict, battery_model: pybamm.BaseModel | None = None
     ) -> pybamm.BaseModel:
         """
         Loads a discretised, ready to solve model into PyBaMM.
@@ -169,8 +200,9 @@ class Serialise:
         Parameters
         ----------
 
-        filename: str
-            Path to the JSON file containing the serialised model file
+        filename: str or dict
+            Path to the JSON file containing the serialised model file, or a dictionary
+            containing the serialised model data
         battery_model:  :class:`pybamm.BaseModel` (optional)
             PyBaMM model to be created (e.g. pybamm.lithium_ion.SPM), which will
             override any model names within the file. If None, the function will look
@@ -183,8 +215,11 @@ class Serialise:
             `battery_model`.
         """
 
-        with open(filename) as f:
-            model_data = json.load(f)
+        if isinstance(filename, dict):
+            model_data = filename
+        else:
+            with open(filename) as f:
+                model_data = json.load(f)
 
         recon_model_dict = {
             "name": model_data["name"],
@@ -257,6 +292,118 @@ class Serialise:
             raise TypeError(f"Object of type {type(obj)} is not JSON serializable.")
 
     @staticmethod
+    def serialise_custom_model(model: pybamm.BaseModel) -> dict:
+        """
+        Converts a custom (non-discretised) PyBaMM model to a JSON-serialisable dictionary.
+
+        This includes symbolic expressions for rhs, algebraic, initial and boundary
+        conditions, events, and variables. Works for user defined models that are
+        subclasses of BaseModel.
+
+        Parameters
+        ----------
+        model : :class:`pybamm.BaseModel`
+            The custom symbolic model to be serialised.
+
+        Returns
+        -------
+        dict
+            A JSON-serialisable dictionary representation of the model
+
+        Raises
+        ------
+        AttributeError
+            If the model is missing required sections
+        """
+        required_attrs = [
+            "rhs",
+            "algebraic",
+            "initial_conditions",
+            "boundary_conditions",
+            "events",
+            "variables",
+        ]
+        missing = [attr for attr in required_attrs if not hasattr(model, attr)]
+        if missing:
+            raise AttributeError(f"Model is missing required sections: {missing}")
+
+        base_cls = model.__class__.__bases__[0] if model.__class__.__bases__ else object
+        # If the base class is object or builtins.object, use pybamm.BaseModel instead
+        if base_cls is object or (
+            base_cls.__module__ == "builtins" and base_cls.__name__ == "object"
+        ):
+            base_cls_str = "pybamm.BaseModel"
+        else:
+            base_cls_str = f"{base_cls.__module__}.{base_cls.__name__}"
+
+        model_content = {
+            "name": getattr(model, "name", "unnamed_model"),
+            "base_class": base_cls_str,
+            "options": getattr(model, "options", {}),
+            "rhs": [
+                (
+                    Serialise.convert_symbol_to_json(variable),
+                    Serialise.convert_symbol_to_json(rhs_expression),
+                )
+                for variable, rhs_expression in getattr(model, "rhs", {}).items()
+            ],
+            "algebraic": [
+                (
+                    Serialise.convert_symbol_to_json(variable),
+                    Serialise.convert_symbol_to_json(algebraic_expression),
+                )
+                for variable, algebraic_expression in getattr(
+                    model, "algebraic", {}
+                ).items()
+            ],
+            "initial_conditions": [
+                (
+                    Serialise.convert_symbol_to_json(variable),
+                    Serialise.convert_symbol_to_json(initial_value),
+                )
+                for variable, initial_value in getattr(
+                    model, "initial_conditions", {}
+                ).items()
+            ],
+            "boundary_conditions": [
+                (
+                    Serialise.convert_symbol_to_json(variable),
+                    {
+                        side: [
+                            Serialise.convert_symbol_to_json(expression),
+                            boundary_type,
+                        ]
+                        for side, (expression, boundary_type) in conditions.items()
+                    },
+                )
+                for variable, conditions in getattr(
+                    model, "boundary_conditions", {}
+                ).items()
+            ],
+            "events": [
+                {
+                    "name": event.name,
+                    "expression": Serialise.convert_symbol_to_json(event.expression),
+                    "event_type": event.event_type,
+                }
+                for event in getattr(model, "events", [])
+            ],
+            "variables": {
+                str(variable_name): Serialise.convert_symbol_to_json(expression)
+                for variable_name, expression in getattr(model, "variables", {}).items()
+            },
+        }
+
+        SCHEMA_VERSION = "1.0"
+        model_json = {
+            "schema_version": SCHEMA_VERSION,
+            "pybamm_version": pybamm.__version__,
+            "model": model_content,
+        }
+
+        return model_json
+
+    @staticmethod
     def save_custom_model(
         model: pybamm.BaseModel, filename: str | Path | None = None
     ) -> None:
@@ -283,103 +430,14 @@ class Serialise:
         >>> Serialise.save_custom_model(model, "basicdfn_model.json")
 
         """
-        required_attrs = [
-            "rhs",
-            "algebraic",
-            "initial_conditions",
-            "boundary_conditions",
-            "events",
-            "variables",
-        ]
-        missing = [attr for attr in required_attrs if not hasattr(model, attr)]
-        if missing:
-            raise AttributeError(f"Model is missing required sections: {missing}")
-
         try:
-            base_cls = (
-                model.__class__.__bases__[0] if model.__class__.__bases__ else object
-            )
-            # If the base class is object or builtins.object, use pybamm.BaseModel instead
-            if base_cls is object or (
-                base_cls.__module__ == "builtins" and base_cls.__name__ == "object"
-            ):
-                base_cls_str = "pybamm.BaseModel"
-            else:
-                base_cls_str = f"{base_cls.__module__}.{base_cls.__name__}"
+            model_json = Serialise.serialise_custom_model(model)
 
-            model_content = {
-                "name": getattr(model, "name", "unnamed_model"),
-                "base_class": base_cls_str,
-                "options": getattr(model, "options", {}),
-                "rhs": [
-                    (
-                        Serialise.convert_symbol_to_json(variable),
-                        Serialise.convert_symbol_to_json(rhs_expression),
-                    )
-                    for variable, rhs_expression in getattr(model, "rhs", {}).items()
-                ],
-                "algebraic": [
-                    (
-                        Serialise.convert_symbol_to_json(variable),
-                        Serialise.convert_symbol_to_json(algebraic_expression),
-                    )
-                    for variable, algebraic_expression in getattr(
-                        model, "algebraic", {}
-                    ).items()
-                ],
-                "initial_conditions": [
-                    (
-                        Serialise.convert_symbol_to_json(variable),
-                        Serialise.convert_symbol_to_json(initial_value),
-                    )
-                    for variable, initial_value in getattr(
-                        model, "initial_conditions", {}
-                    ).items()
-                ],
-                "boundary_conditions": [
-                    (
-                        Serialise.convert_symbol_to_json(variable),
-                        {
-                            side: [
-                                Serialise.convert_symbol_to_json(expression),
-                                boundary_type,
-                            ]
-                            for side, (expression, boundary_type) in conditions.items()
-                        },
-                    )
-                    for variable, conditions in getattr(
-                        model, "boundary_conditions", {}
-                    ).items()
-                ],
-                "events": [
-                    {
-                        "name": event.name,
-                        "expression": Serialise.convert_symbol_to_json(
-                            event.expression
-                        ),
-                        "event_type": event.event_type,
-                    }
-                    for event in getattr(model, "events", [])
-                ],
-                "variables": {
-                    str(variable_name): Serialise.convert_symbol_to_json(expression)
-                    for variable_name, expression in getattr(
-                        model, "variables", {}
-                    ).items()
-                },
-            }
-
-            SCHEMA_VERSION = "1.0"
-            model_json = {
-                "schema_version": SCHEMA_VERSION,
-                "pybamm_version": pybamm.__version__,
-                "model": model_content,
-            }
+            # Extract model name for filename generation
+            model_name = model_json["model"]["name"]
 
             if filename is None:
-                safe_name = re.sub(
-                    r"[^\w\-_.]", "_", model_content["name"] or "unnamed_model"
-                )
+                safe_name = re.sub(r"[^\w\-_.]", "_", model_name or "unnamed_model")
                 timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
                 filename = f"{safe_name}_{timestamp}.json"
                 filename = Path(filename)
@@ -403,8 +461,636 @@ class Serialise:
                     f"Failed to write model JSON to file '{filename}': {file_err}"
                 ) from file_err
 
+        except AttributeError:
+            # Let AttributeError propagate directly
+            raise
         except Exception as e:
             raise ValueError(f"Failed to save custom model: {e}") from e
+
+    @staticmethod
+    def serialise_custom_geometry(geometry: pybamm.Geometry) -> dict:
+        """
+        Converts a custom PyBaMM geometry to a JSON-serialisable dictionary.
+
+        Parameters
+        ----------
+        geometry : :class:`pybamm.Geometry`
+            The geometry object to be serialised.
+
+        Returns
+        -------
+        dict
+            A JSON-serialisable dictionary representation of the geometry
+        """
+        # Serialize the geometry dict using convert_symbol_to_json for nested symbols
+        geometry_dict_serialized: dict = {}
+        for domain, domain_geom in geometry.items():
+            geometry_dict_serialized[domain] = {}
+            for key, value in domain_geom.items():
+                # Convert SpatialVariable keys to strings and serialize the key itself
+                if isinstance(key, pybamm.Symbol):
+                    key_str = key.name if hasattr(key, "name") else str(key)
+                    geometry_dict_serialized[domain]["symbol_" + key_str] = (
+                        Serialise.convert_symbol_to_json(key)
+                    )
+                    # Serialize the value dict
+                    serialized_value = {}
+                    for k, v in value.items():
+                        if isinstance(v, pybamm.Symbol):
+                            serialized_value[k] = Serialise.convert_symbol_to_json(v)
+                        else:
+                            serialized_value[k] = v
+                    geometry_dict_serialized[domain][key_str] = serialized_value
+                elif isinstance(key, str):
+                    # String keys (like 'tabs') - keep as is
+                    if isinstance(value, dict):
+                        serialized_value = {}
+                        for k, v in value.items():
+                            if isinstance(v, pybamm.Symbol):
+                                serialized_value[k] = Serialise.convert_symbol_to_json(
+                                    v
+                                )
+                            else:
+                                serialized_value[k] = v
+                        geometry_dict_serialized[domain][key] = serialized_value
+                    else:
+                        geometry_dict_serialized[domain][key] = value
+
+        SCHEMA_VERSION = "1.0"
+        geometry_json = {
+            "schema_version": SCHEMA_VERSION,
+            "pybamm_version": pybamm.__version__,
+            "geometry": geometry_dict_serialized,
+        }
+
+        return geometry_json
+
+    @staticmethod
+    def save_custom_geometry(
+        geometry: pybamm.Geometry, filename: str | Path | None = None
+    ) -> None:
+        """
+        Saves a custom PyBaMM geometry to a JSON file.
+
+        Parameters
+        ----------
+        geometry : :class:`pybamm.Geometry`
+            The geometry object to be saved.
+        filename : str or Path, optional
+            The desired name of the JSON file. If not provided, a name will be
+            generated using current datetime.
+        """
+        try:
+            geometry_json = Serialise.serialise_custom_geometry(geometry)
+
+            if filename is None:
+                timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+                filename = f"geometry_{timestamp}.json"
+                filename = Path(filename)
+            else:
+                filename = Path(filename)
+
+                if not filename.name.endswith(".json"):
+                    raise ValueError(
+                        f"Filename '{filename}' must end with '.json' extension."
+                    )
+
+                # Sanitize only the filename, not the directory path
+                safe_stem = re.sub(r"[^\w\-_.]", "_", filename.stem)
+                filename = filename.with_name(f"{safe_stem}.json")
+
+            try:
+                with open(filename, "w") as f:
+                    json.dump(
+                        geometry_json, f, indent=2, default=Serialise._json_encoder
+                    )
+            except OSError as file_err:
+                raise OSError(
+                    f"Failed to write geometry JSON to file '{filename}': {file_err}"
+                ) from file_err
+
+        except Exception as e:
+            raise ValueError(f"Failed to save custom geometry: {e}") from e
+
+    @staticmethod
+    def load_custom_geometry(filename: str | dict) -> pybamm.Geometry:
+        """
+        Loads a custom PyBaMM geometry from a JSON file or dictionary.
+
+        Parameters
+        ----------
+        filename : str or dict
+            Path to the JSON file containing the saved geometry, or a dictionary
+            containing the serialised geometry data.
+
+        Returns
+        -------
+        :class:`pybamm.Geometry`
+            The reconstructed geometry object.
+        """
+        if isinstance(filename, dict):
+            data = filename
+        else:
+            try:
+                with open(filename) as file:
+                    data = json.load(file)
+            except FileNotFoundError as err:
+                raise FileNotFoundError(f"Could not find file: {filename}") from err
+            except json.JSONDecodeError as e:
+                raise ValueError(
+                    f"The file '{filename}' contains invalid JSON: {e!s}"
+                ) from e
+
+        # Validate schema version
+        schema_version = data.get("schema_version", SUPPORTED_SCHEMA_VERSION)
+        if schema_version != SUPPORTED_SCHEMA_VERSION:
+            raise ValueError(
+                f"Unsupported schema version: {schema_version}. "
+                f"Expected: {SUPPORTED_SCHEMA_VERSION}"
+            )
+
+        # Extract geometry data
+        geometry_data = data.get("geometry")
+        if geometry_data is None:
+            raise KeyError("Missing 'geometry' section in JSON data.")
+
+        # Reconstruct geometry
+        reconstructed_geometry: dict = {}
+
+        for domain, domain_geom in geometry_data.items():
+            reconstructed_geometry[domain] = {}
+
+            # Find symbol keys and reconstruct SpatialVariables
+            symbol_keys = {}
+            for key in domain_geom.keys():
+                if key.startswith("symbol_"):
+                    var_name = key[7:]  # Remove "symbol_" prefix
+                    symbol_keys[var_name] = Serialise.convert_symbol_from_json(
+                        domain_geom[key]
+                    )
+
+            # Now reconstruct the domain geometry with proper keys
+            for key, value in domain_geom.items():
+                if key.startswith("symbol_"):
+                    continue  # Skip symbol definitions
+
+                if key in symbol_keys:
+                    # Use the reconstructed SpatialVariable as key
+                    spatial_var = symbol_keys[key]
+                    reconstructed_value = {}
+                    for k, v in value.items():
+                        if isinstance(v, dict) and "type" in v:
+                            # Reconstruct PyBaMM Symbol using convert_symbol_from_json
+                            reconstructed_value[k] = Serialise.convert_symbol_from_json(
+                                v
+                            )
+                        else:
+                            reconstructed_value[k] = v
+                    reconstructed_geometry[domain][spatial_var] = reconstructed_value
+                else:
+                    # String key (like 'tabs')
+                    if isinstance(value, dict):
+                        reconstructed_value = {}
+                        for k, v in value.items():
+                            if isinstance(v, dict) and "type" in v:
+                                reconstructed_value[k] = (
+                                    Serialise.convert_symbol_from_json(v)
+                                )
+                            else:
+                                reconstructed_value[k] = v
+                        reconstructed_geometry[domain][key] = reconstructed_value
+                    else:
+                        reconstructed_geometry[domain][key] = value
+
+        return pybamm.Geometry(reconstructed_geometry)
+
+    @staticmethod
+    def serialise_spatial_methods(spatial_methods: dict) -> dict:
+        """
+        Converts a dictionary of spatial methods to a JSON-serialisable dictionary.
+
+        Parameters
+        ----------
+        spatial_methods : dict
+            Dictionary mapping domain names to spatial method instances.
+
+        Returns
+        -------
+        dict
+            A JSON-serialisable dictionary representation of the spatial methods
+        """
+        spatial_methods_dict = {}
+        for domain, method in spatial_methods.items():
+            spatial_methods_dict[domain] = {
+                "class": type(method).__name__,
+                "module": type(method).__module__,
+                "options": method.options if hasattr(method, "options") else {},
+            }
+
+        SCHEMA_VERSION = "1.0"
+        spatial_methods_json = {
+            "schema_version": SCHEMA_VERSION,
+            "pybamm_version": pybamm.__version__,
+            "spatial_methods": spatial_methods_dict,
+        }
+
+        return spatial_methods_json
+
+    @staticmethod
+    def save_spatial_methods(
+        spatial_methods: dict, filename: str | Path | None = None
+    ) -> None:
+        """
+        Saves spatial methods to a JSON file.
+
+        Parameters
+        ----------
+        spatial_methods : dict
+            Dictionary mapping domain names to spatial method instances.
+        filename : str or Path, optional
+            The desired name of the JSON file. If not provided, a name will be
+            generated using current datetime.
+        """
+        try:
+            spatial_methods_json = Serialise.serialise_spatial_methods(spatial_methods)
+
+            if filename is None:
+                timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+                filename = f"spatial_methods_{timestamp}.json"
+                filename = Path(filename)
+            else:
+                filename = Path(filename)
+
+                if not filename.name.endswith(".json"):
+                    raise ValueError(
+                        f"Filename '{filename}' must end with '.json' extension."
+                    )
+
+                # Sanitize only the filename, not the directory path
+                safe_stem = re.sub(r"[^\w\-_.]", "_", filename.stem)
+                filename = filename.with_name(f"{safe_stem}.json")
+
+            try:
+                with open(filename, "w") as f:
+                    json.dump(
+                        spatial_methods_json,
+                        f,
+                        indent=2,
+                        default=Serialise._json_encoder,
+                    )
+            except OSError as file_err:
+                raise OSError(
+                    f"Failed to write spatial methods JSON to file '{filename}': {file_err}"
+                ) from file_err
+
+        except Exception as e:
+            raise ValueError(f"Failed to save spatial methods: {e}") from e
+
+    @staticmethod
+    def load_spatial_methods(filename: str | dict) -> dict:
+        """
+        Loads spatial methods from a JSON file or dictionary.
+
+        Parameters
+        ----------
+        filename : str or dict
+            Path to the JSON file containing the saved spatial methods, or a dictionary
+            containing the serialised spatial methods data.
+
+        Returns
+        -------
+        dict
+            Dictionary mapping domain names to spatial method instances.
+        """
+        if isinstance(filename, dict):
+            data = filename
+        else:
+            try:
+                with open(filename) as file:
+                    data = json.load(file)
+            except FileNotFoundError as err:
+                raise FileNotFoundError(f"Could not find file: {filename}") from err
+            except json.JSONDecodeError as e:
+                raise ValueError(
+                    f"The file '{filename}' contains invalid JSON: {e!s}"
+                ) from e
+
+        # Validate schema version
+        schema_version = data.get("schema_version", SUPPORTED_SCHEMA_VERSION)
+        if schema_version != SUPPORTED_SCHEMA_VERSION:
+            raise ValueError(
+                f"Unsupported schema version: {schema_version}. "
+                f"Expected: {SUPPORTED_SCHEMA_VERSION}"
+            )
+
+        # Extract spatial methods data
+        spatial_methods_data = data.get("spatial_methods")
+        if spatial_methods_data is None:
+            raise KeyError("Missing 'spatial_methods' section in JSON data.")
+
+        # Reconstruct spatial methods
+        reconstructed_methods = {}
+        for domain, method_info in spatial_methods_data.items():
+            try:
+                module_name = method_info["module"]
+                class_name = method_info["class"]
+                options = method_info.get("options", {})
+
+                # Import module and get class
+                module = importlib.import_module(module_name)
+                method_class = getattr(module, class_name)
+
+                # Instantiate with options
+                reconstructed_methods[domain] = method_class(options=options)
+
+            except (ModuleNotFoundError, AttributeError) as e:
+                raise ImportError(
+                    f"Could not import spatial method '{class_name}' from '{module_name}': {e}"
+                ) from e
+            except Exception as e:
+                raise ValueError(
+                    f"Failed to reconstruct spatial method for domain '{domain}': {e}"
+                ) from e
+
+        return reconstructed_methods
+
+    @staticmethod
+    def serialise_var_pts(var_pts: dict) -> dict:
+        """
+        Converts a var_pts dictionary to a JSON-serialisable dictionary.
+
+        Parameters
+        ----------
+        var_pts : dict
+            Dictionary mapping spatial variable names (str or SpatialVariable) to
+            number of points (int).
+
+        Returns
+        -------
+        dict
+            A JSON-serialisable dictionary representation of var_pts
+        """
+        # Convert all keys to strings
+        var_pts_dict = {}
+        for key, value in var_pts.items():
+            if isinstance(key, str):
+                var_pts_dict[key] = value
+            elif hasattr(key, "name"):
+                # SpatialVariable or similar object with name attribute
+                var_pts_dict[key.name] = value
+            else:
+                raise ValueError(f"Unexpected key type in var_pts: {type(key)}")
+
+        SCHEMA_VERSION = "1.0"
+        var_pts_json = {
+            "schema_version": SCHEMA_VERSION,
+            "pybamm_version": pybamm.__version__,
+            "var_pts": var_pts_dict,
+        }
+
+        return var_pts_json
+
+    @staticmethod
+    def save_var_pts(var_pts: dict, filename: str | Path | None = None) -> None:
+        """
+        Saves var_pts to a JSON file.
+
+        Parameters
+        ----------
+        var_pts : dict
+            Dictionary mapping spatial variable names to number of points.
+        filename : str or Path, optional
+            The desired name of the JSON file. If not provided, a name will be
+            generated using current datetime.
+        """
+        try:
+            var_pts_json = Serialise.serialise_var_pts(var_pts)
+
+            if filename is None:
+                timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+                filename = f"var_pts_{timestamp}.json"
+                filename = Path(filename)
+            else:
+                filename = Path(filename)
+
+                if not filename.name.endswith(".json"):
+                    raise ValueError(
+                        f"Filename '{filename}' must end with '.json' extension."
+                    )
+
+                # Sanitize only the filename, not the directory path
+                safe_stem = re.sub(r"[^\w\-_.]", "_", filename.stem)
+                filename = filename.with_name(f"{safe_stem}.json")
+
+            try:
+                with open(filename, "w") as f:
+                    json.dump(
+                        var_pts_json, f, indent=2, default=Serialise._json_encoder
+                    )
+            except OSError as file_err:
+                raise OSError(
+                    f"Failed to write var_pts JSON to file '{filename}': {file_err}"
+                ) from file_err
+
+        except Exception as e:
+            raise ValueError(f"Failed to save var_pts: {e}") from e
+
+    @staticmethod
+    def load_var_pts(filename: str | dict) -> dict:
+        """
+        Loads var_pts from a JSON file or dictionary.
+
+        Parameters
+        ----------
+        filename : str or dict
+            Path to the JSON file containing the saved var_pts, or a dictionary
+            containing the serialised var_pts data.
+
+        Returns
+        -------
+        dict
+            Dictionary mapping spatial variable names (strings) to number of points.
+        """
+        if isinstance(filename, dict):
+            data = filename
+        else:
+            try:
+                with open(filename) as file:
+                    data = json.load(file)
+            except FileNotFoundError as err:
+                raise FileNotFoundError(f"Could not find file: {filename}") from err
+            except json.JSONDecodeError as e:
+                raise ValueError(
+                    f"The file '{filename}' contains invalid JSON: {e!s}"
+                ) from e
+
+        # Validate schema version
+        schema_version = data.get("schema_version", SUPPORTED_SCHEMA_VERSION)
+        if schema_version != SUPPORTED_SCHEMA_VERSION:
+            raise ValueError(
+                f"Unsupported schema version: {schema_version}. "
+                f"Expected: {SUPPORTED_SCHEMA_VERSION}"
+            )
+
+        # Extract var_pts data
+        var_pts_data = data.get("var_pts")
+        if var_pts_data is None:
+            raise KeyError("Missing 'var_pts' section in JSON data.")
+
+        return var_pts_data
+
+    @staticmethod
+    def serialise_submesh_types(submesh_types: dict) -> dict:
+        """
+        Converts a dictionary of submesh types to a JSON-serialisable dictionary.
+
+        Parameters
+        ----------
+        submesh_types : dict
+            Dictionary mapping domain names to submesh classes or MeshGenerator objects.
+
+        Returns
+        -------
+        dict
+            A JSON-serialisable dictionary representation of the submesh types
+        """
+        submesh_types_dict = {}
+        for domain, submesh_item in submesh_types.items():
+            # Handle MeshGenerator wrapper objects
+            if hasattr(submesh_item, "submesh_type"):
+                submesh_class = submesh_item.submesh_type
+            else:
+                submesh_class = submesh_item
+
+            submesh_types_dict[domain] = {
+                "class": submesh_class.__name__,
+                "module": submesh_class.__module__,
+            }
+
+        SCHEMA_VERSION = "1.0"
+        submesh_types_json = {
+            "schema_version": SCHEMA_VERSION,
+            "pybamm_version": pybamm.__version__,
+            "submesh_types": submesh_types_dict,
+        }
+
+        return submesh_types_json
+
+    @staticmethod
+    def save_submesh_types(
+        submesh_types: dict, filename: str | Path | None = None
+    ) -> None:
+        """
+        Saves submesh types to a JSON file.
+
+        Parameters
+        ----------
+        submesh_types : dict
+            Dictionary mapping domain names to submesh classes.
+        filename : str or Path, optional
+            The desired name of the JSON file. If not provided, a name will be
+            generated using current datetime.
+        """
+        try:
+            submesh_types_json = Serialise.serialise_submesh_types(submesh_types)
+
+            if filename is None:
+                timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+                filename = f"submesh_types_{timestamp}.json"
+                filename = Path(filename)
+            else:
+                filename = Path(filename)
+
+                if not filename.name.endswith(".json"):
+                    raise ValueError(
+                        f"Filename '{filename}' must end with '.json' extension."
+                    )
+
+                # Sanitize only the filename, not the directory path
+                safe_stem = re.sub(r"[^\w\-_.]", "_", filename.stem)
+                filename = filename.with_name(f"{safe_stem}.json")
+
+            try:
+                with open(filename, "w") as f:
+                    json.dump(
+                        submesh_types_json, f, indent=2, default=Serialise._json_encoder
+                    )
+            except OSError as file_err:
+                raise OSError(
+                    f"Failed to write submesh types JSON to file '{filename}': {file_err}"
+                ) from file_err
+
+        except Exception as e:
+            raise ValueError(f"Failed to save submesh types: {e}") from e
+
+    @staticmethod
+    def load_submesh_types(filename: str | dict) -> dict:
+        """
+        Loads submesh types from a JSON file or dictionary.
+
+        Parameters
+        ----------
+        filename : str or dict
+            Path to the JSON file containing the saved submesh types, or a dictionary
+            containing the serialised submesh types data.
+
+        Returns
+        -------
+        dict
+            Dictionary mapping domain names to MeshGenerator objects.
+        """
+        if isinstance(filename, dict):
+            data = filename
+        else:
+            try:
+                with open(filename) as file:
+                    data = json.load(file)
+            except FileNotFoundError as err:
+                raise FileNotFoundError(f"Could not find file: {filename}") from err
+            except json.JSONDecodeError as e:
+                raise ValueError(
+                    f"The file '{filename}' contains invalid JSON: {e!s}"
+                ) from e
+
+        # Validate schema version
+        schema_version = data.get("schema_version", SUPPORTED_SCHEMA_VERSION)
+        if schema_version != SUPPORTED_SCHEMA_VERSION:
+            raise ValueError(
+                f"Unsupported schema version: {schema_version}. "
+                f"Expected: {SUPPORTED_SCHEMA_VERSION}"
+            )
+
+        # Extract submesh types data
+        submesh_types_data = data.get("submesh_types")
+        if submesh_types_data is None:
+            raise KeyError("Missing 'submesh_types' section in JSON data.")
+
+        # Reconstruct submesh types
+        reconstructed_submesh_types = {}
+        for domain, submesh_info in submesh_types_data.items():
+            try:
+                module_name = submesh_info["module"]
+                class_name = submesh_info["class"]
+
+                # Import module and get class
+                module = importlib.import_module(module_name)
+                submesh_class = getattr(module, class_name)
+
+                # Wrap in MeshGenerator to match the expected format
+                reconstructed_submesh_types[domain] = pybamm.MeshGenerator(
+                    submesh_class
+                )
+
+            except (ModuleNotFoundError, AttributeError) as e:
+                raise ImportError(
+                    f"Could not import submesh type '{class_name}' from '{module_name}': {e}"
+                ) from e
+            except Exception as e:
+                raise ValueError(
+                    f"Failed to reconstruct submesh type for domain '{domain}': {e}"
+                ) from e
+
+        return reconstructed_submesh_types
 
     @staticmethod
     def _create_symbol_key(symbol_json: dict) -> str:
@@ -415,9 +1101,9 @@ class Serialise:
         return json.dumps(symbol_json, sort_keys=True)
 
     @staticmethod
-    def load_custom_model(filename: str) -> pybamm.BaseModel:
+    def load_custom_model(filename: str | dict) -> pybamm.BaseModel:
         """
-        Loads a custom (symbolic) PyBaMM model from a JSON file.
+        Loads a custom (symbolic) PyBaMM model from a JSON file or dictionary.
 
         Reconstructs a model saved using `save_custom_model`, including its rhs,
         algebraic equations, initial and boundary conditions, events, and variables.
@@ -425,8 +1111,9 @@ class Serialise:
 
         Parameters
         ----------
-        filename : str
-            Path to the JSON file containing the saved model.
+        filename : str or dict
+            Path to the JSON file containing the saved model, or a dictionary
+            containing the serialised model data.
 
         Returns
         -------
@@ -442,15 +1129,18 @@ class Serialise:
         >>> loaded_model = Serialise.load_custom_model("basicdfn_model.json")
 
         """
-        try:
-            with open(filename) as file:
-                data = json.load(file)
-        except FileNotFoundError as err:
-            raise FileNotFoundError(f"Could not find file: {filename}") from err
-        except json.JSONDecodeError as e:
-            raise pybamm.InvalidModelJSONError(
-                f"The model defined in the file '{filename}' contains invalid JSON: {e!s}"
-            ) from e
+        if isinstance(filename, dict):
+            data = filename
+        else:
+            try:
+                with open(filename) as file:
+                    data = json.load(file)
+            except FileNotFoundError as err:
+                raise FileNotFoundError(f"Could not find file: {filename}") from err
+            except json.JSONDecodeError as e:
+                raise pybamm.InvalidModelJSONError(
+                    f"The model defined in the file '{filename}' contains invalid JSON: {e!s}"
+                ) from e
 
         # Validate outer structure
         schema_version = data.get("schema_version", SUPPORTED_SCHEMA_VERSION)
