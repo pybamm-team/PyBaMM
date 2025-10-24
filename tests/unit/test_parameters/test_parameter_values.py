@@ -1242,3 +1242,34 @@ class TestParameterValues:
 
         with pytest.raises(TypeError, match="Input must be a filename.*or a dict"):
             pybamm.ParameterValues.from_json([1, 2, 3])  # List is invalid
+
+    def test_from_json_with_dict_input(self):
+        """Test from_json with dict input (covers line 1103)."""
+        params = {
+            "param1": 42,
+            "param2": 3.14,
+        }
+
+        # Pass dict directly instead of filename
+        loaded = pybamm.ParameterValues.from_json(params)
+        assert loaded["param1"] == 42
+        assert loaded["param2"] == 3.14
+
+    def test_from_json_with_serialized_symbols(self):
+        """Test from_json with dict containing serialized symbols (covers line 1109)."""
+        from pybamm.expression_tree.operations.serialise import Serialise
+
+        # Create a serialized symbol (dict representation)
+        scalar_symbol = pybamm.Scalar(2.718)
+        serialized_scalar = Serialise.convert_symbol_to_json(scalar_symbol)
+
+        params = {
+            "param1": 42,  # Regular value
+            "param2": serialized_scalar,  # Serialized symbol (dict)
+        }
+
+        # This should convert the serialized symbol back
+        loaded = pybamm.ParameterValues.from_json(params)
+        assert loaded["param1"] == 42
+        assert isinstance(loaded["param2"], pybamm.Scalar)
+        assert loaded["param2"].value == pytest.approx(2.718)
