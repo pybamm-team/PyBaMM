@@ -93,6 +93,7 @@ class CasadiSolver(pybamm.BaseSolver):
         return_solution_if_failed_early=False,
         perturb_algebraic_initial_conditions=None,
         integrators_maxcount=100,
+        max_wall_time=None,
     ):
         on_extrapolation = on_extrapolation or "error"
         super().__init__(
@@ -103,6 +104,7 @@ class CasadiSolver(pybamm.BaseSolver):
             root_tol=root_tol,
             extrap_tol=extrap_tol,
             on_extrapolation=on_extrapolation,
+            max_wall_time=max_wall_time,
         )
         if mode in ["safe", "fast", "fast with events", "safe without grid"]:
             self.mode = mode

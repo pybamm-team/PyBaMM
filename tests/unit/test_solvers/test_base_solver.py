@@ -2,12 +2,72 @@
 # Tests for the Base Solver class
 #
 
+import time
+import unittest
+
 import casadi
 import numpy as np
 import pytest
 from scipy.sparse import csr_matrix
 
 import pybamm
+
+
+class TestWallTimeTimeout(unittest.TestCase):
+    """Tests for max_wall_time functionality"""
+
+    def test_no_timeout_when_not_specified(self):
+        """Test that solver works normally without timeout (experiment terminates on event)"""
+        experiment = pybamm.Experiment([("Discharge at 1C until 2.5V",)])
+
+        model = pybamm.lithium_ion.SPM()
+        sim = pybamm.Simulation(model, experiment=experiment)
+
+        solution = sim.solve()
+        assert solution is not None
+        assert len(solution.t) > 0  # Basic check: some data
+
+    def test_timeout_with_experiment(self):
+        """Test timeout with IDAKLUSolver and long experiment"""
+        experiment = pybamm.Experiment(
+            [
+                (
+                    "Discharge at 1C until 2.5V",
+                    "Rest for 1 hour",
+                    "Charge at 1C until 4.2V",
+                    "Rest for 1 hour",
+                )
+            ]
+            * 500
+        )
+        model = pybamm.lithium_ion.SPM()
+        solver = pybamm.CasadiSolver(max_wall_time=1)
+        sim = pybamm.Simulation(model, solver=solver, experiment=experiment)
+
+        start = time.time()
+        with pytest.raises(pybamm.SolverError) as context:
+            sim.solve()
+
+        elapsed = time.time() - start
+        assert elapsed < 3
+        assert "Wall time limit" in str(context.exception)
+
+    def test_timeout_via_simulation_solve(self):
+        """Test passing max_wall_time through Simulation.solve()"""
+        experiment = pybamm.Experiment(
+            [("Discharge at 1C until 2.5V", "Rest for 1 hour")] * 500
+        )
+
+        model = pybamm.lithium_ion.SPM()
+        sim = pybamm.Simulation(model, experiment=experiment)
+
+        start = time.time()
+        with pytest.raises(pybamm.SolverError) as context:
+            sim.solve(max_wall_time=1)  # 1s limit
+
+        elapsed = time.time() - start
+        assert elapsed < 3
+        assert "Wall time limit" in str(context.exception)
 
 
 class TestBaseSolver:

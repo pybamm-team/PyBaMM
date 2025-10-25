@@ -4,6 +4,7 @@ import multiprocessing as mp
 import numbers
 import platform
 import sys
+import time
 import warnings
 
 import casadi
@@ -58,6 +59,7 @@ class BaseSolver:
         on_extrapolation=None,
         on_failure=None,
         output_variables=None,
+        max_wall_time=None,
     ):
         self.method = method
         self.rtol = rtol
@@ -69,6 +71,8 @@ class BaseSolver:
         self._on_extrapolation = on_extrapolation or "warn"
         self._on_failure = on_failure or "raise"
         self._model_set_up = {}
+        self.max_wall_time = max_wall_time
+        self._wall_time_start = None
 
         # Defaults, can be overwritten by specific solver
         self.name = "Base solver"
@@ -795,6 +799,11 @@ class BaseSolver:
         """
         pybamm.logger.info(f"Start solving {model.name} with {self.name}")
 
+        import time
+
+        if self.max_wall_time is not None:
+            self._wall_time_start = time.time()
+
         # Make sure model isn't empty
         self._check_empty_model(model)
 
@@ -1273,6 +1282,15 @@ class BaseSolver:
             `model.variables = {}`)
 
         """
+
+        if self.max_wall_time is not None and self._wall_time_start is not None:
+            elapsed = time.time() - self._wall_time_start
+            if elapsed > self.max_wall_time:
+                raise pybamm.SolverError(
+                    f"Wall time limit ({self.max_wall_time}s) exceeded "
+                    f"(elapsed: {elapsed:.2f}s)"
+                )
+
         if old_solution is None:
             old_solution = pybamm.EmptySolution()
 

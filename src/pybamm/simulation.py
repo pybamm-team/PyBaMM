@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pickle
+import time
 import warnings
 from copy import copy
 from datetime import timedelta
@@ -380,6 +381,7 @@ class Simulation:
         inputs=None,
         t_interp=None,
         initial_conditions=None,
+        max_wall_time=None,
         **kwargs,
     ):
         """
@@ -447,6 +449,12 @@ class Simulation:
         # Setup
         if solver is None:
             solver = self._solver
+
+        if max_wall_time is not None:
+            solver.max_wall_time = max_wall_time
+
+        if solver.max_wall_time is not None and solver._wall_time_start is None:
+            solver._wall_time_start = time.time()
 
         if calc_esoh is None:
             calc_esoh = self._model.calc_esoh
@@ -764,6 +772,9 @@ class Simulation:
                             **kwargs,
                         )
                     except pybamm.SolverError as error:
+                        if "Wall time limit" in str(error):
+                            raise
+
                         if (
                             "non-positive at initial conditions" in error.message
                             and "[experiment]" in error.message

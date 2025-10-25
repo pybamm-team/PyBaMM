@@ -160,6 +160,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         output_variables=None,
         on_failure=None,
         options=None,
+        max_wall_time=None,
     ):
         # set default options,
         # (only if user does not supply)
@@ -220,6 +221,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             output_variables=output_variables,
             on_extrapolation=on_extrapolation,
             on_failure=on_failure,
+            max_wall_time=max_wall_time,
         )
         self.name = "IDA KLU solver"
         self._supports_interp = True
