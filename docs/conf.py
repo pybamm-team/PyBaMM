@@ -92,6 +92,7 @@ linkcheck_ignore = [
     "https://doi.org/10.1137/20M1336898",  # DOI link to ignore
     "https://en.wikipedia.org/wiki/",  # Wikipedia link to ignore
     "https://books.google.co.uk/books",
+    "https://docs.scipy.org/doc/scipy",  # SciPy docs timeout intermittently
 ]
 
 
