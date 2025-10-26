@@ -1,4 +1,8 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
+## Bug Fixes
+
+- Set `zip(..., strict=True)` in solver and expression tree files to ensure iterable length safety. ([#5241](https://github.com/pybamm-team/PyBaMM/pull/5241))
+
 
 ## Features
 
