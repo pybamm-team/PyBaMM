@@ -1,4 +1,5 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
+- Added docstring to `FuzzyDict.copy` explaining its return value and behavior. ([#5242](https://github.com/pybamm-team/PyBaMM/pull/5242))
 
 ## Features
 
