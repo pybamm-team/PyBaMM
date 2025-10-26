@@ -426,7 +426,7 @@ class ProcessedVariable(BaseProcessedVariable):
             self.all_inputs,
             self.base_variables,
             self.all_solution_sensitivities["all"],
-            strict=False,
+            strict=True,
         ):
             # Set up symbolic variables
             t_casadi = casadi.MX.sym("t")

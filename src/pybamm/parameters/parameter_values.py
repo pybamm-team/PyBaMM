@@ -863,7 +863,7 @@ class ParameterValues:
             inputs = {
                 arg: child
                 for arg, child in zip(
-                    function_parameter.func_args, symbol.children, strict=False
+                    function_parameter.func_args, symbol.children, strict=True
                 )
             }
 
