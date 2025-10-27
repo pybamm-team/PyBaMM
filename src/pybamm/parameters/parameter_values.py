@@ -1,11 +1,14 @@
+import json
 import numbers
 from collections import defaultdict
+from pathlib import Path
 from pprint import pformat
 from warnings import warn
 
 import numpy as np
 
 import pybamm
+from pybamm.expression_tree.operations.serialise import Serialise
 from pybamm.models.full_battery_models.lithium_ion.msmr import (
     is_deprecated_msmr_name,
     replace_deprecated_msmr_name,
@@ -668,7 +671,10 @@ class ParameterValues:
         try:
             return self._processed_symbols[symbol]
         except KeyError:
-            processed_symbol = self._process_symbol(symbol)
+            if not isinstance(symbol, pybamm.FunctionParameter):
+                processed_symbol = self._process_symbol(symbol)
+            else:
+                processed_symbol = self._process_function_parameter(symbol)
             self._processed_symbols[symbol] = processed_symbol
 
             return processed_symbol
@@ -835,6 +841,88 @@ class ParameterValues:
             # Backup option: return the object
             return symbol
 
+    def _process_function_parameter(self, symbol):
+        function_parameter = self[symbol.name]
+        # Handle symbolic function parameter case
+        if isinstance(function_parameter, pybamm.ExpressionFunctionParameter):
+            # Process children
+            new_children = []
+            for child in symbol.children:
+                if symbol.diff_variable is not None and any(
+                    x == symbol.diff_variable for x in child.pre_order()
+                ):
+                    # Wrap with NotConstant to avoid simplification,
+                    # which would stop symbolic diff from working properly
+                    new_child = pybamm.NotConstant(child)
+                    new_children.append(self.process_symbol(new_child))
+                else:
+                    new_children.append(self.process_symbol(child))
+
+            # Get the expression and inputs for the function
+            expression = function_parameter.child
+            inputs = {
+                arg: child
+                for arg, child in zip(
+                    function_parameter.func_args, symbol.children, strict=False
+                )
+            }
+
+            # Set domains for function inputs in post-order traversal
+            for node in expression.post_order():
+                if node.name in inputs:
+                    node.domains = inputs[node.name].domains
+                else:
+                    node.domains = node.get_children_domains(node.children)
+
+            # Combine parameter values with inputs
+            combined_params = ParameterValues({**self, **inputs})
+
+            # Process any FunctionParameter children first to avoid recursion
+            for child in expression.pre_order():
+                if isinstance(child, pybamm.FunctionParameter):
+                    # Build new child with parent inputs
+                    new_child_children = [
+                        inputs[child_child.name]
+                        if isinstance(child_child, pybamm.Parameter)
+                        and child_child.name in inputs
+                        else child_child
+                        for child_child in child.children
+                    ]
+                    new_child = pybamm.FunctionParameter(
+                        child.name,
+                        dict(zip(child.input_names, new_child_children, strict=False)),
+                        diff_variable=child.diff_variable,
+                        print_name=child.print_name,
+                    )
+
+                    # For this local combined parameter values, process the new child
+                    # and store the result as the processed symbol for this child
+                    # This means the child is evaluated with the parent inputs only when
+                    # it is called from within the parent function (not elsewhere in
+                    # the expression tree)
+                    combined_params._processed_symbols[child] = (
+                        combined_params.process_symbol(new_child)
+                    )
+
+            # Process function with combined parameter values to get a symbolic
+            # expression
+            function = combined_params.process_symbol(expression)
+
+            # Differentiate if necessary
+            if symbol.diff_variable is None:
+                # Use ones_like so that we get the right shapes
+                function_out = function * pybamm.ones_like(*new_children)
+            else:
+                # return differentiated function
+                new_diff_variable = self.process_symbol(symbol.diff_variable)
+                function_out = function.diff(new_diff_variable)
+
+            return function_out
+
+        # Handle non-symbolic function_name case
+        else:
+            return self._process_symbol(symbol)
+
     def evaluate(self, symbol, inputs=None):
         """
         Process and evaluate a symbol.
@@ -992,3 +1080,32 @@ class ParameterValues:
 
     def __iter__(self):
         return iter(self._dict_items)
+
+    @staticmethod
+    def from_json(filename_or_dict):
+        """
+        Loads a ParameterValues object from a JSON file or a dictionary.
+
+        Parameters
+        ----------
+        filename_or_dict : string-like or dict
+            The filename to load the JSON file from, or a dictionary.
+
+        Returns
+        -------
+        ParameterValues
+            The ParameterValues object
+        """
+        if isinstance(filename_or_dict, str | Path):
+            with open(filename_or_dict) as f:
+                parameter_values_dict = json.load(f)
+        elif isinstance(filename_or_dict, dict):
+            parameter_values_dict = filename_or_dict.copy()
+        else:
+            raise TypeError("Input must be a filename (str or pathlib.Path) or a dict")
+
+        for key, value in parameter_values_dict.items():
+            if isinstance(value, dict):
+                parameter_values_dict[key] = Serialise.convert_symbol_from_json(value)
+
+        return ParameterValues(parameter_values_dict)

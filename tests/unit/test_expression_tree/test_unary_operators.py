@@ -719,9 +719,10 @@ class TestUnaryOperators:
         d = pybamm.Symbol("d", domain=["negative electrode"])
         one = pybamm.Symbol("1", domain="negative particle")
 
-        # Test print_name
-        pybamm.Floor.print_name = "test"
-        assert pybamm.Floor(-2.5).to_equation() == sympy.Symbol("test")
+        # Test print_name on an instance to avoid leaking global class state
+        op = pybamm.Floor(-2.5)
+        op.print_name = "test"
+        assert op.to_equation() == sympy.Symbol("test")
 
         # Test Negate
         value = 4
