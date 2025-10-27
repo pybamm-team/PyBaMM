@@ -52,7 +52,7 @@ class ScipySolver(pybamm.BaseSolver):
         self.name = f"Scipy solver ({method})"
         pybamm.citations.register("Virtanen2020")
 
-    def _integrate_single(self, model, t_eval, inputs_dict, y0, y0S):
+    def _integrate_single(self, model, t_eval, inputs_dict, y0):
         """
         Solve a model defined by dydt with initial conditions y0.
 
@@ -66,14 +66,12 @@ class ScipySolver(pybamm.BaseSolver):
             Any input parameters to pass to the model when solving
         y0 : array-like
             The initial conditions for the model
-        y0S : array-like
-            The initial sensitivities for the model
 
         Returns
         -------
-        object
-            An object containing the times and values of the solution, as well as
-            various diagnostic messages.
+        :class:`pybamm.Solution`
+            A Solution object containing the times and values of the solution,
+            as well as various diagnostic messages.
 
         """
         # scipy solver does not support sensitivity analysis

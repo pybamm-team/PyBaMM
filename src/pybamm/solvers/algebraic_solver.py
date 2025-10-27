@@ -78,7 +78,7 @@ class AlgebraicSolver(pybamm.BaseSolver):
     def tol(self, value):
         self._tol = value
 
-    def _integrate_single(self, model, t_eval, inputs_dict, y0, y0S):
+    def _integrate_single(self, model, t_eval, inputs_dict, y0):
         """
         Calculate the solution of the algebraic equations through root-finding
 
@@ -92,8 +92,12 @@ class AlgebraicSolver(pybamm.BaseSolver):
             Any input parameters to pass to the model when solving
         y0 : array-like
             The initial conditions for the model
-        y0S : array-like
-            The initial sensitivities for the model
+
+        Returns
+        -------
+        :class:`pybamm.Solution`
+            A Solution object containing the times and values of the solution,
+            as well as various diagnostic messages.
         """
         inputs_dict = inputs_dict or {}
         if model.convert_to_format == "casadi":

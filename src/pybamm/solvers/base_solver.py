@@ -773,12 +773,6 @@ class BaseSolver:
 
         inputs_list = inputs_list or [{}]
 
-        y0S_list = (
-            model.y0S_list
-            if model.y0S_list is not None
-            else ([None] * len(inputs_list))
-        )
-
         ninputs = len(inputs_list)
         if ninputs == 1:
             new_solution = self._integrate_single(
@@ -786,7 +780,6 @@ class BaseSolver:
                 t_eval,
                 inputs_list[0],
                 model.y0_list[0],
-                y0S_list[0],
             )
             new_solutions = [new_solution]
         else:
@@ -801,7 +794,6 @@ class BaseSolver:
                         t_eval_list,
                         inputs_list,
                         y0_list,
-                        y0S_list,
                         strict=True,
                     ),
                 )
@@ -810,7 +802,7 @@ class BaseSolver:
 
         return new_solutions
 
-    def _integrate_single(self, model, t_eval, inputs_dict, y0, y0S):
+    def _integrate_single(self, model, t_eval, inputs_dict, y0):
         """
         Solve a single model instance with initial conditions y0.
 
@@ -824,8 +816,6 @@ class BaseSolver:
             Any input parameters to pass to the model when solving
         y0 : array-like
             The initial conditions for the model
-        y0S : array-like
-            The initial sensitivities for the model
         """
         raise NotImplementedError("BaseSolver does not implement _integrate_single.")
 
@@ -968,9 +958,9 @@ class BaseSolver:
                 # If the new initial conditions are different
                 # and cannot be evaluated directly, set up again
                 self.set_up(model, model_inputs_list, t_eval, ics_only=True)
-            self._model_set_up[model]["initial conditions"] = (
-                model.concatenated_initial_conditions
-            )
+            self._model_set_up[model][
+                "initial conditions"
+            ] = model.concatenated_initial_conditions
         else:
             # Set the standard initial conditions
             self._set_initial_conditions(model, t_eval[0], model_inputs_list)

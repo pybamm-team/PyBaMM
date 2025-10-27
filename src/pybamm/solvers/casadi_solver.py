@@ -140,7 +140,7 @@ class CasadiSolver(pybamm.BaseSolver):
 
         pybamm.citations.register("Andersson2019")
 
-    def _integrate_single(self, model, t_eval, inputs_dict, y0, y0S):
+    def _integrate_single(self, model, t_eval, inputs_dict, y0):
         """
         Solve a single DAE model defined by residuals with initial conditions y0.
 
@@ -154,8 +154,12 @@ class CasadiSolver(pybamm.BaseSolver):
             Any input parameters to pass to the model when solving
         y0 : array-like
             The initial conditions for the model
-        y0S : array-like
-            The initial sensitivities for the model
+
+        Returns
+        -------
+        :class:`pybamm.Solution`
+            A Solution object containing the times and values of the solution,
+            as well as various diagnostic messages.
         """
 
         # casadi solver does not support sensitivity analysis

@@ -489,4 +489,4 @@ class TestBaseSolver:
             NotImplementedError,
             match="BaseSolver does not implement _integrate_single.",
         ):
-            solver._integrate_single(model, np.array([0, 1]), {}, np.array([1]), None)
+            solver._integrate_single(model, np.array([0, 1]), {}, np.array([1]))
