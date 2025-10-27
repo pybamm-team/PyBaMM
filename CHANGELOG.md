@@ -24,7 +24,6 @@
 - Fixes a bug where sensitivities for 1D+ variables calculated using the `output_variables` options were incorrect ([#5118](https://github.com/pybamm-team/PyBaMM/pull/5118))
 - Fix Bruggeman coefficient computation from BPX porosity and transport efficiency instead of hard-coding, remove redundant values, and add a unit test for verification. ([#5196](https://github.com/pybamm-team/PyBaMM/pull/5196))
 
-
 ## Breaking changes
 - Updates the hysteresis decay rate parameters to a "true" hysteresis decay rate which changes the interpretation of the units of the hysteresis decay rate parameters. ([#5217](https://github.com/pybamm-team/PyBaMM/pull/5217))
 - Changed fundamental variable for all SEI models from thickness to concentration ([#4869](https://github.com/pybamm-team/PyBaMM/pull/4869))
