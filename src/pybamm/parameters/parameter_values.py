@@ -1113,6 +1113,16 @@ class ParameterValues:
         return ParameterValues(parameter_values_dict)
 
 
+_SCALAR_KEY_RE = re.compile(
+    r""" ^
+         (?P<base>[^\[\]]+?)           # foo
+         \s\((?P<idx>\d+)\)            # (0)
+         (?: \s\[(?P<tag>[^\]]+)\])?   # optional [unit]
+         $ """,
+    re.VERBOSE,
+)
+
+
 def convert_symbols_in_dict(
     data_dict: dict | None = None,
 ) -> dict:
@@ -1155,6 +1165,38 @@ def convert_symbols_in_dict(
         data_dict = {}
 
     return data_dict
+
+
+class _KeyMatch:
+    """
+    Match a parameter name against the key grammar.
+    """
+
+    __slots__ = ["base", "idx", "is_match", "name", "tag"]
+
+    def __init__(self, name: str):
+        if not isinstance(name, str):
+            raise ValueError("name must be a string")
+        self.name = name
+
+        match = _SCALAR_KEY_RE.match(name)
+        self.is_match = bool(match)
+
+        if match:
+            base = match["base"]
+            idx = int(match["idx"])
+            tag = match["tag"]
+        else:
+            base = ""
+            idx = -1
+            tag = ""
+
+        self.base = base
+        self.idx = idx
+        self.tag = tag
+
+    def __bool__(self):
+        return self.is_match
 
 
 def scalarize_dict(
@@ -1241,3 +1283,90 @@ def _add_units(base: str, tag: str | None) -> str:
     if tag:
         out += f" [{tag}]"
     return out
+
+
+def arrayize_dict(
+    scalar_dict: dict[str, Any],
+) -> dict[str, Any]:
+    """
+    Collapse scalar keys back into lists.  Tags are kept with the base name
+    (``'a [V]'``).  A sequence is collapsed only if indices 0…N are all present.
+
+    Parameters
+    ----------
+    scalar_dict : dict[str, Any]
+        The dictionary to arrayize
+
+    Returns
+    -------
+    dict[str, Any]
+        The arrayized dictionary
+    """
+    out = {}
+    processed = set()
+
+    # discover (base, tag) pairs that appear scalarised
+    pairs = set()
+    for k in scalar_dict:
+        match = _KeyMatch(k)
+        if match:
+            pairs.add((match.base, match.tag))
+
+    # rebuild each pair
+    for base, tag in pairs:
+        idx_val = {}
+        own_keys = []
+
+        for k, v in scalar_dict.items():
+            match = _KeyMatch(k)
+            if match and match.base == base and match.tag == tag:
+                if match.idx in idx_val:
+                    raise ValueError(f"Duplicate index {match.idx} for '{base}'")
+                idx_val[match.idx] = v
+                own_keys.append(k)
+
+        if not idx_val:
+            raise ValueError(
+                f"No indices found for '{base}'. "
+                "It should not be possible to reach here. Please report this bug."
+            )
+
+        indices = set(idx_val)
+        if not _contiguous_and_ordered_indices(indices):
+            missing = sorted(set(range(max(indices) + 1)) - indices)
+            raise ValueError(f"Missing indices {missing} for '{base}'")
+
+        collapsed_key = _add_units(base, tag)
+        if collapsed_key in out:
+            raise ValueError(f"Duplicate key after rebuild: {collapsed_key!r}")
+
+        out[collapsed_key] = [idx_val[i] for i in range(max(idx_val) + 1)]
+        processed.update(own_keys)
+
+    # copy untouched scalars
+    for k, v in scalar_dict.items():
+        if k not in processed:
+            if k in out:
+                raise ValueError(f"Duplicate key: {k!r}")
+            out[k] = v
+
+    return out
+
+
+def _contiguous_and_ordered_indices(indices: set[int]) -> bool:
+    """
+    Check if a set of indices forms a contiguous sequence starting from 0
+    to max(indices).
+
+    Parameters
+    ----------
+    indices : set[int]
+        Set of integer indices to check for contiguity
+
+    Returns
+    -------
+    bool
+        True if indices form the sequence {0, 1, 2, ..., max(indices)},
+        False otherwise. Returns False for empty sets.
+    """
+    return bool(indices) and indices == set(range(max(indices) + 1))
