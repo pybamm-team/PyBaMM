@@ -1,8 +1,10 @@
 import json
 import numbers
+import re
 from collections import defaultdict
 from pathlib import Path
 from pprint import pformat
+from typing import Any
 from warnings import warn
 
 import numpy as np
@@ -420,6 +422,7 @@ class ParameterValues:
 
     @staticmethod
     def check_parameter_values(values):
+        values = scalarize_dict(values)
         for param in list(values.keys()):
             if "propotional term" in param:
                 raise ValueError(
@@ -904,8 +907,7 @@ class ParameterValues:
                         combined_params.process_symbol(new_child)
                     )
 
-            # Process function with combined parameter values to get a symbolic
-            # expression
+            # Process function with combined parameter values to get a symbolic expression
             function = combined_params.process_symbol(expression)
 
             # Differentiate if necessary
@@ -1109,3 +1111,133 @@ class ParameterValues:
                 parameter_values_dict[key] = Serialise.convert_symbol_from_json(value)
 
         return ParameterValues(parameter_values_dict)
+
+
+def convert_symbols_in_dict(
+    data_dict: dict | None = None,
+) -> dict:
+    """Recursively converts nested dicts using convert_symbol_from_json."""
+    # Create parameter values
+    if data_dict:
+        for key, value in data_dict.items():
+            if isinstance(value, dict) and "interpolator" in value:
+                # handle interpolant
+                interpolator = value.get("interpolator", "linear")
+                x = value.get("x", [])
+                y = value.get("y", [])
+
+                # Convert list to pybamm.Interpolant
+                def interpolant_function(sto, x=x, y=y, interpolator=interpolator):
+                    try:
+                        return pybamm.Interpolant(x, y, sto, interpolator=interpolator)
+                    except Exception as e:
+                        print(e)
+                        return pybamm.Scalar(0)
+
+                data_dict[key] = interpolant_function
+            elif isinstance(value, dict):
+                # Handle function parameters in JSON format
+                # Recursively process nested dictionaries
+                data_dict[key] = Serialise.convert_symbol_from_json(value)
+            elif isinstance(value, list):
+                data_dict[key] = [
+                    Serialise.convert_symbol_from_json(item)
+                    if isinstance(item, dict)
+                    else item
+                    for item in value
+                ]
+            elif isinstance(value, str):
+                # Handle function parameters in string format
+                data_dict[key] = float(value)
+            # Keep other types as is
+    else:
+        # Return an empty dict if input is None
+        data_dict = {}
+
+    return data_dict
+
+
+def scalarize_dict(
+    params: dict[str, Any], ignored_keys: list[str] | None = None
+) -> dict[str, Any]:
+    """
+    Expand list-valued items into scalar keys while preserving tags.
+    Example
+    -------
+    {'a [V]': [1, 2]}  →  {'a (0) [V]': 1, 'a (1) [V]': 2}
+
+    Parameters
+    ----------
+    params : dict[str, Any]
+        The dictionary to scalarize
+    ignored_keys : list[str], optional
+        The keys to ignore. Defaults to ``["citations"]``.
+
+    Returns
+    -------
+    dict[str, Any]
+        The scalarized dictionary
+    """
+    out = {}
+
+    # Default ignored keys. Special case for citations in `pybamm.ParameterValues`
+    if ignored_keys is None:
+        ignored_keys = ["citations"]
+
+    for key, val in params.items():
+        if (
+            (key not in ignored_keys)
+            and _is_iterable(val)
+            and isinstance(val, pybamm.Symbol)
+        ):
+            base, tag = _split_key(key)  # accepts 'a' or 'a [V]'
+            for i, item in enumerate(val):
+                key_i = _combine_name(base, i, tag)
+                if key_i in out:
+                    raise ValueError(f"Duplicate key {key_i!r}")
+                out[key_i] = item
+        else:
+            if key in out:
+                raise ValueError(f"Duplicate key {key!r}")
+            out[key] = val
+    return out
+
+
+def _is_iterable(val: Any) -> bool:
+    return hasattr(val, "__iter__") and not isinstance(val, (str | dict | bytes))
+
+
+_KEY_RE = re.compile(
+    r""" ^
+         (?P<base>[^\[\]]+?)           # foo
+         (?: \s\[(?P<tag>[^\]]+)\])?   # optional [unit]   (for collapsed keys)
+         $ """,
+    re.VERBOSE,
+)
+
+
+def _split_key(name: str) -> tuple[str, str | None]:
+    """
+    Separate *name* into ``(base, tag)`` where *tag* can be ``None``.
+    Works for either collapsed or scalar keys.
+    """
+    m = _KEY_RE.match(name)
+    if not m:
+        raise ValueError(f"Illegal parameter name {name!r}")
+    return m["base"].rstrip(), m["tag"]
+
+
+def _combine_name(base: str, idx: int, tag: str | None = None) -> str:
+    """Return ``'base (idx)'`` or ``'base (idx) [tag]'``."""
+    if idx < 0:
+        raise ValueError("idx must be ≥ 0")
+    out = f"{base} ({idx})"
+    return _add_units(out, tag)
+
+
+def _add_units(base: str, tag: str | None) -> str:
+    """Return ``'base'`` or ``'base [tag]'``."""
+    out = f"{base}"
+    if tag:
+        out += f" [{tag}]"
+    return out

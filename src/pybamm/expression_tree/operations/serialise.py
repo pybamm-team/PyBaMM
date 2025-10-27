@@ -10,6 +10,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
+import black
 import numpy as np
 
 import pybamm
@@ -33,13 +34,30 @@ class ExpressionFunctionParameter(pybamm.UnaryOperator):
         """
         src = f"def {self.func_name}({', '.join(self.func_args)}):\n"
 
+        # Fix printing of parameters so they print as Parameter('name'). Do this on a
+        # copy to avoid modifying the original expression.
         expression = self.child.create_copy()
         for child in expression.pre_order():
-            if isinstance(child, pybamm.Parameter) and child.name not in self.func_args:
+            if isinstance(child, pybamm.FunctionParameter):
+                # Replace FunctionParameter with a constructor call
+                # Build the inputs dict string mapping input names to actual parameter
+                # names
+                inputs_str = ", ".join(
+                    f'"{input_name}": {child.children[i].name}'
+                    for i, input_name in enumerate(child.input_names)
+                )
+                child.print_name = (
+                    f'FunctionParameter("{child.name}", {{{inputs_str}}})'
+                )
+            elif (
+                isinstance(child, pybamm.Parameter) and child.name not in self.func_args
+            ):
                 child.name = f'Parameter("{child.name}")'
 
-        src += f"    return {expression.to_equation()}\n"
-        return src
+        src += f"    return {expression.to_equation()}"
+
+        formatted_src = black.format_str(src, mode=black.FileMode())
+        return formatted_src
 
 
 class Serialise:

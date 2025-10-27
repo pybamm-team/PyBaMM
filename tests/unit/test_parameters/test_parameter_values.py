@@ -769,7 +769,7 @@ class TestParameterValues:
         interpolation = pybamm.FunctionParameter("interpolation", {"x1": x1, "x2": x2})
         processed_interpolation = parameter_values.process_symbol(interpolation)
 
-        # It's also helpful to check the casadi conversion here aswell
+        # It's also helpful to check the casadi conversion here as well
         # We check elsewhere but this helps catch additional bugs
         casadi_y = casadi.MX.sym("y", 2)
         interp_casadi = processed_interpolation.to_casadi(y=casadi_y)
