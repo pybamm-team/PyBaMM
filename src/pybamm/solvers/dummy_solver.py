@@ -13,7 +13,7 @@ class DummySolver(pybamm.BaseSolver):
         super().__init__()
         self.name = "Dummy solver"
 
-    def _integrate_single(self, model, t_eval, y0, y0S, inputs_dict, inputs_list=None):
+    def _integrate_single(self, model, t_eval, inputs_dict, y0, y0S):
         """
         Solve an empty model.
 
@@ -23,6 +23,10 @@ class DummySolver(pybamm.BaseSolver):
             The model whose solution to calculate.
         t_eval : :class:`numpy.array`, size (k,)
             The times at which to compute the solution
+        y0 : array-like
+            The initial conditions for the model
+        y0S : array-like
+            The initial sensitivities for the model
         inputs_dict : dict, optional
             Any input parameters to pass to the model when solving
 

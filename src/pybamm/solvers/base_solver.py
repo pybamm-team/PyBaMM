@@ -784,10 +784,9 @@ class BaseSolver:
             new_solution = self._integrate_single(
                 model,
                 t_eval,
+                inputs_list[0],
                 model.y0_list[0],
                 y0S_list[0],
-                inputs_list[0],
-                inputs_list=inputs_list,
             )
             new_solutions = [new_solution]
         else:
@@ -800,9 +799,9 @@ class BaseSolver:
                     zip(
                         model_list,
                         t_eval_list,
+                        inputs_list,
                         y0_list,
                         y0S_list,
-                        inputs_list,
                         strict=True,
                     ),
                 )
@@ -811,9 +810,9 @@ class BaseSolver:
 
         return new_solutions
 
-    def _integrate_single(self, model, t_eval, y0, y0S, inputs_dict, inputs_list=None):
+    def _integrate_single(self, model, t_eval, inputs_dict, y0, y0S):
         """
-        Solve a single batch for the DAE model defined by residuals with initial conditions y0.
+        Solve a single model instance with initial conditions y0.
 
         Parameters
         ----------
@@ -821,12 +820,14 @@ class BaseSolver:
             The model whose solution to calculate.
         t_eval : numeric type
             The times at which to compute the solution
-        inputs_list : list of dict, optional
+        inputs_dict : dict, optional
             Any input parameters to pass to the model when solving
-        inputs : array, optional
-            The input parameters in array form, to pass to the model when solving
+        y0 : array-like
+            The initial conditions for the model
+        y0S : array-like
+            The initial sensitivities for the model
         """
-        raise NotImplementedError
+        raise NotImplementedError("BaseSolver does not implement _integrate_single.")
 
     def solve(
         self,

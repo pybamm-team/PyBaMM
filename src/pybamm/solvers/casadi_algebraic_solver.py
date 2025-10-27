@@ -151,7 +151,7 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
 
         pybamm.logger.info(f"Finish building {self.name}")
 
-    def _integrate_single(self, model, t_eval, y0, y0S, inputs_dict, inputs_list=None):
+    def _integrate_single(self, model, t_eval, inputs_dict, y0, y0S):
         """
         Calculate the solution of the algebraic equations through root-finding
 
@@ -162,7 +162,11 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
         t_eval : :class:`numpy.array`, size (k,)
             The times at which to compute the solution
         inputs_dict : dict, optional
-            Any input parameters to pass to the model when solving.
+            Any input parameters to pass to the model when solving
+        y0 : array-like
+            The initial conditions for the model
+        y0S : array-like
+            The initial sensitivities for the model
         """
         # Record whether there are any symbolic inputs
         inputs_dict = inputs_dict or {}

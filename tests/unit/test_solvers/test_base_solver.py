@@ -480,3 +480,13 @@ class TestBaseSolver:
             ),
         ):
             solver.solve(model, t_eval, initial_condition_input)
+
+    def test_integrate_single_error(self):
+        solver = pybamm.BaseSolver()
+        model = pybamm.BaseModel()
+
+        with pytest.raises(
+            NotImplementedError,
+            match="BaseSolver does not implement _integrate_single.",
+        ):
+            solver._integrate_single(model, np.array([0, 1]), {}, np.array([1]), None)
