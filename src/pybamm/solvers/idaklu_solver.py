@@ -777,7 +777,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             The model for which to calculate initial conditions.
         time : numeric type
             The time at which to calculate the initial conditions.
-        inputs_dict : dict
+        inputs_list : list of dict
             Any input parameters to pass to the model when solving.
         """
 
