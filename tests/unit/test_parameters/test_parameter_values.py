@@ -571,7 +571,7 @@ class TestParameterValues:
     def test_process_interpolant(self):
         x = np.linspace(0, 10)[:, np.newaxis]
         data = np.hstack([x, 2 * x])
-        parameter_values = pybamm.ParameterValues({"Times two": ("times two", data)})
+        parameter_values = pybamm.ParameterValues({"Times two": data})
 
         a = pybamm.InputParameter("a")
         func = pybamm.FunctionParameter("Times two", {"a": a})
@@ -1257,11 +1257,14 @@ class TestParameterValues:
 
     def test_from_json_with_serialized_symbols(self):
         """Test from_json with dict containing serialized symbols (covers line 1109)."""
-        from pybamm.expression_tree.operations.serialise import Serialise
 
         # Create a serialized symbol (dict representation)
         scalar_symbol = pybamm.Scalar(2.718)
-        serialized_scalar = Serialise.convert_symbol_to_json(scalar_symbol)
+        serialized_scalar = (
+            pybamm.expression_tree.operations.serialise.convert_symbol_to_json(
+                scalar_symbol
+            )
+        )
 
         params = {
             "param1": 42,  # Regular value

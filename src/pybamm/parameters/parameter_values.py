@@ -10,7 +10,12 @@ from warnings import warn
 import numpy as np
 
 import pybamm
-from pybamm.expression_tree.operations.serialise import Serialise
+from pybamm.expression_tree.operations.serialise import (
+    Serialise,
+    convert_function_to_symbolic_expression,
+    convert_symbol_from_json,
+    convert_symbol_to_json,
+)
 from pybamm.models.full_battery_models.lithium_ion.msmr import (
     is_deprecated_msmr_name,
     replace_deprecated_msmr_name,
@@ -1108,7 +1113,7 @@ class ParameterValues:
 
         for key, value in parameter_values_dict.items():
             if isinstance(value, dict):
-                parameter_values_dict[key] = Serialise.convert_symbol_from_json(value)
+                parameter_values_dict[key] = convert_symbol_from_json(value)
 
         return ParameterValues(parameter_values_dict)
 
@@ -1166,12 +1171,10 @@ def convert_symbols_in_dict(
             elif isinstance(value, dict):
                 # Handle function parameters in JSON format
                 # Recursively process nested dictionaries
-                data_dict[key] = Serialise.convert_symbol_from_json(value)
+                data_dict[key] = convert_symbol_from_json(value)
             elif isinstance(value, list):
                 data_dict[key] = [
-                    Serialise.convert_symbol_from_json(item)
-                    if isinstance(item, dict)
-                    else item
+                    convert_symbol_from_json(item) if isinstance(item, dict) else item
                     for item in value
                 ]
             elif isinstance(value, str):
@@ -1301,11 +1304,7 @@ def scalarize_dict(
         ignored_keys = ["citations"]
 
     for key, val in params.items():
-        if (
-            (key not in ignored_keys)
-            and _is_iterable(val)
-            and (isinstance(val, ListParameter) or not isinstance(val, pybamm.Symbol))
-        ):
+        if key not in ignored_keys and isinstance(val, ListParameter):
             base, tag = _split_key(key)  # accepts 'a' or 'a [V]'
             for i, item in enumerate(val):
                 key_i = _combine_name(base, i, tag)
@@ -1466,11 +1465,11 @@ def convert_parameter_values_to_json(parameter_values, filename=None):
 
     for k, v in parameter_values.items():
         if callable(v):
-            parameter_values_dict[k] = Serialise.convert_symbol_to_json(
-                Serialise.convert_function_to_symbolic_expression(v, k)
+            parameter_values_dict[k] = convert_symbol_to_json(
+                convert_function_to_symbolic_expression(v, k)
             )
         else:
-            parameter_values_dict[k] = Serialise.convert_symbol_to_json(v)
+            parameter_values_dict[k] = convert_symbol_to_json(v)
 
     if filename is not None:
         with open(filename, "w") as f:
