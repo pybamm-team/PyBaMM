@@ -918,9 +918,7 @@ class TestIDAKLUJax:
                     idaklu_jax_solver.get_var(outvar),
                     argnums=1,
                 ),
-            )(
-                t_eval[k], inputs
-            )  # output should be a dictionary of inputs
+            )(t_eval[k], inputs)  # output should be a dictionary of inputs
             flat_out, _ = tree_flatten(out)
             flat_out = np.array([f for f in flat_out]).flatten()
             check = np.array([sim[outvar].sensitivities[invar][k] for invar in inputs])
