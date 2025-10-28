@@ -109,7 +109,7 @@ from .expression_tree.independent_variable import KNOWN_COORD_SYS
 from .geometry import standard_spatial_vars
 
 # Parameter classes and methods
-from .parameters.parameter_values import ParameterValues
+from .parameters.parameter_values import ParameterValues, scalarize_dict, arrayize_dict, ListParameter
 from .parameters import constants
 from .parameters.geometric_parameters import geometric_parameters, GeometricParameters
 from .parameters.electrical_parameters import (

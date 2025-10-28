@@ -1595,6 +1595,7 @@ class Serialise:
     @staticmethod
     def convert_symbol_to_json(
         symbol: pybamm.Symbol | numbers.Number | list,
+        filename: str | None = None,
     ) -> dict[str, Any] | numbers.Number | list:
         """
         Recursively converts a PyBaMM symbolic expression into a JSON-serializable format.
@@ -1772,6 +1773,9 @@ class Serialise:
             raise ValueError(
                 f"Error processing '{symbol.name}'. Unknown symbol type: {type(symbol)}"
             )
+        if filename is not None:
+            with open(filename, "w") as f:
+                json.dump(json_dict, f, indent=2, default=Serialise._json_encoder)
         return json_dict
 
     @staticmethod

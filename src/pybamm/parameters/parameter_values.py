@@ -1112,6 +1112,24 @@ class ParameterValues:
 
         return ParameterValues(parameter_values_dict)
 
+    def to_json(self, filename=None):
+        """
+        Converts the parameter values to a JSON-serializable dictionary and optionally
+        saves it to a file.
+
+        Parameters
+        ----------
+        filename : str, optional
+            The filename to save the JSON file to. If not provided, the dictionary is
+            not saved.
+
+        Returns
+        -------
+        dict
+            The JSON-serializable dictionary
+        """
+        return convert_parameter_values_to_json(self, filename)
+
 
 _SCALAR_KEY_RE = re.compile(
     r""" ^
@@ -1199,6 +1217,62 @@ class _KeyMatch:
         return self.is_match
 
 
+class ListParameter(pybamm.Symbol):
+    """
+    A wrapper around a list that allows it to be treated as a pybamm Symbol.
+    This is used by arrayize_dict to wrap list values while maintaining
+    list-like behavior.
+    """
+
+    def __init__(self, items):
+        """Initialize with a list of items."""
+        super().__init__(name=f"ListParameter[{len(items)}]")
+        self._items = list(items)
+
+    # List-like interface methods
+    def __getitem__(self, index):
+        return self._items[index]
+
+    def __setitem__(self, index, value):
+        self._items[index] = value
+
+    def __len__(self):
+        return len(self._items)
+
+    def __iter__(self):
+        return iter(self._items)
+
+    def __contains__(self, item):
+        return item in self._items
+
+    def append(self, item):
+        self._items.append(item)
+
+    def extend(self, items):
+        self._items.extend(items)
+
+    def insert(self, index, item):
+        self._items.insert(index, item)
+
+    def remove(self, item):
+        self._items.remove(item)
+
+    def pop(self, index=-1):
+        return self._items.pop(index)
+
+    def __repr__(self):
+        return f"ListParameter({self._items})"
+
+    def __eq__(self, other):
+        """Allow comparison with lists and pytest approx."""
+        if isinstance(other, ListParameter):
+            return self._items == other._items
+        elif isinstance(other, list):
+            return self._items == other
+        # Return NotImplemented for other types to allow pytest approx to handle it
+        return NotImplemented
+
+
 def scalarize_dict(
     params: dict[str, Any], ignored_keys: list[str] | None = None
 ) -> dict[str, Any]:
@@ -1230,7 +1304,7 @@ def scalarize_dict(
         if (
             (key not in ignored_keys)
             and _is_iterable(val)
-            and isinstance(val, pybamm.Symbol)
+            and (isinstance(val, ListParameter) or not isinstance(val, pybamm.Symbol))
         ):
             base, tag = _split_key(key)  # accepts 'a' or 'a [V]'
             for i, item in enumerate(val):
@@ -1340,7 +1414,9 @@ def arrayize_dict(
         if collapsed_key in out:
             raise ValueError(f"Duplicate key after rebuild: {collapsed_key!r}")
 
-        out[collapsed_key] = [idx_val[i] for i in range(max(idx_val) + 1)]
+        out[collapsed_key] = ListParameter(
+            [idx_val[i] for i in range(max(idx_val) + 1)]
+        )
         processed.update(own_keys)
 
     # copy untouched scalars
@@ -1370,3 +1446,36 @@ def _contiguous_and_ordered_indices(indices: set[int]) -> bool:
         False otherwise. Returns False for empty sets.
     """
     return bool(indices) and indices == set(range(max(indices) + 1))
+
+
+def convert_parameter_values_to_json(parameter_values, filename=None):
+    """
+    Converts a ParameterValues object to a JSON-serializable dictionary and optionally
+    saves it to a file.
+
+    Parameters
+    ----------
+    parameter_values : ParameterValues
+        The ParameterValues object to convert
+
+    filename : str, optional
+        The filename to save the JSON file to. If not provided, the dictionary is
+        not saved.
+    """
+    parameter_values_dict = {}
+
+    for k, v in parameter_values.items():
+        if callable(v):
+            parameter_values_dict[k] = Serialise.convert_symbol_to_json(
+                Serialise.convert_function_to_symbolic_expression(v, k)
+            )
+        else:
+            parameter_values_dict[k] = Serialise.convert_symbol_to_json(v)
+
+    if filename is not None:
+        with open(filename, "w") as f:
+            json.dump(
+                parameter_values_dict, f, indent=2, default=Serialise._json_encoder
+            )
+
+    return parameter_values_dict
