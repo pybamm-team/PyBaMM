@@ -571,7 +571,7 @@ class TestParameterValues:
     def test_process_interpolant(self):
         x = np.linspace(0, 10)[:, np.newaxis]
         data = np.hstack([x, 2 * x])
-        parameter_values = pybamm.ParameterValues({"Times two": data})
+        parameter_values = pybamm.ParameterValues({"Times two": ("times two", data)})
 
         a = pybamm.InputParameter("a")
         func = pybamm.FunctionParameter("Times two", {"a": a})

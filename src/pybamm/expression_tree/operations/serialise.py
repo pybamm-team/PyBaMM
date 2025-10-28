@@ -1610,6 +1610,16 @@ def convert_symbol_from_json(json_data):
     pybamm.Symbol
         The reconstructed PyBaMM symbolic expression
     """
+    if isinstance(json_data, float | int | bool):
+        return json_data
+
+    if isinstance(json_data, str):
+        raise ValueError(f"Unexpected raw string in JSON: {json_data}")
+
+    if json_data is None:
+        return None
+    if "type" not in json_data:
+        raise ValueError(f"Missing 'type' key in JSON data: {json_data}")
     if isinstance(json_data, numbers.Number | list):
         return json_data
     elif json_data["type"] == "Parameter":
@@ -1646,11 +1656,60 @@ def convert_symbol_from_json(json_data):
             json_data["func_name"],
             json_data["func_args"],
         )
-    else:
-        # Recursively convert operators (like +, -, *, /) and their operands
+    elif json_data["type"] == "PrimaryBroadcast":
+        child = convert_symbol_from_json(json_data["children"][0])
+        domain = json_data["broadcast_domain"]
+        return pybamm.PrimaryBroadcast(child, domain)
+    elif json_data["type"] == "FullBroadcast":
+        child = convert_symbol_from_json(json_data["children"][0])
+        domains = json_data["domains"]
+        return pybamm.FullBroadcast(child, broadcast_domains=domains)
+    elif json_data["type"] == "SecondaryBroadcast":
+        child = convert_symbol_from_json(json_data["children"][0])
+        domain = json_data["broadcast_domain"]
+        return pybamm.SecondaryBroadcast(child, domain)
+    elif json_data["type"] == "BoundaryValue":
+        child = convert_symbol_from_json(json_data["children"][0])
+        side = json_data["side"]
+        return pybamm.BoundaryValue(child, side)
+    elif json_data["type"] == "Variable":
+        bounds = tuple(
+            convert_symbol_from_json(b)
+            for b in json_data.get("bounds", [-float("inf"), float("inf")])
+        )
+        return pybamm.Variable(
+            json_data["name"],
+            domains=json_data["domains"],
+            bounds=bounds,
+        )
+    elif json_data["type"] == "IndefiniteIntegral":
+        child = convert_symbol_from_json(json_data["children"][0])
+        integration_var_json = json_data["integration_variable"]
+        integration_variable = convert_symbol_from_json(integration_var_json)
+        if not isinstance(integration_variable, pybamm.SpatialVariable):
+            raise TypeError(
+                f"Expected SpatialVariable, got {type(integration_variable)}"
+            )
+        return pybamm.IndefiniteIntegral(child, [integration_variable])
+    elif json_data["type"] == "SpatialVariable":
+        return pybamm.SpatialVariable(
+            json_data["name"],
+            coord_sys=json_data.get("coord_sys", "cartesian"),
+            domains=json_data.get("domains"),
+        )
+    elif json_data["type"] == "Time":
+        return pybamm.Time()
+    elif json_data["type"] == "Symbol":
+        return pybamm.Symbol(
+            json_data["name"],
+            domains=json_data.get("domains", {}),
+        )
+    elif "children" in json_data:
         return getattr(pybamm, json_data["type"])(
             *[convert_symbol_from_json(c) for c in json_data["children"]]
         )
+    else:
+        raise ValueError(f"Unknown symbol type: {json_data['type']}")
 
 
 def convert_symbol_to_json(symbol):
@@ -1683,15 +1742,9 @@ def convert_symbol_to_json(symbol):
     elif isinstance(symbol, pybamm.Scalar):
         # Scalar values are stored with their numerical value
         return {"type": "Scalar", "value": symbol.value}
-    elif isinstance(symbol, pybamm.BinaryOperator | pybamm.UnaryOperator):
-        # Operators (like +, -, *, /) are stored with their type and operands
-        return {
-            "type": symbol.__class__.__name__,
-            "children": [convert_symbol_to_json(c) for c in symbol.children],
-        }
     elif isinstance(symbol, pybamm.SpecificFunction):
         if symbol.__class__ == pybamm.SpecificFunction:
-            raise NotImplementedError("SpecificFunction is not supported")
+            raise NotImplementedError("SpecificFunction is not supported directly")
         else:
             # Subclasses of SpecificFunction (e.g. Exp, Sin, etc.) can be reconstructed
             # from only the children
@@ -1699,6 +1752,46 @@ def convert_symbol_to_json(symbol):
                 "type": symbol.__class__.__name__,
                 "children": [convert_symbol_to_json(c) for c in symbol.children],
             }
+    elif isinstance(symbol, pybamm.PrimaryBroadcast):
+        json_dict = {
+            "type": "PrimaryBroadcast",
+            "children": [convert_symbol_to_json(symbol.child)],
+            "broadcast_domain": symbol.broadcast_domain,
+        }
+        return json_dict
+    elif isinstance(symbol, pybamm.IndefiniteIntegral):
+        integration_var = (
+            symbol.integration_variable[0]
+            if isinstance(symbol.integration_variable, list)
+            else symbol.integration_variable
+        )
+        json_dict = {
+            "type": "IndefiniteIntegral",
+            "children": [convert_symbol_to_json(symbol.child)],
+            "integration_variable": convert_symbol_to_json(integration_var),
+        }
+        return json_dict
+    elif isinstance(symbol, pybamm.BoundaryValue):
+        json_dict = {
+            "type": "BoundaryValue",
+            "side": symbol.side,
+            "children": [convert_symbol_to_json(symbol.orphans[0])],
+        }
+        return json_dict
+    elif isinstance(symbol, pybamm.SecondaryBroadcast):
+        json_dict = {
+            "type": "SecondaryBroadcast",
+            "children": [convert_symbol_to_json(symbol.child)],
+            "broadcast_domain": symbol.broadcast_domain,
+        }
+        return json_dict
+    elif isinstance(symbol, pybamm.FullBroadcast):
+        json_dict = {
+            "type": "FullBroadcast",
+            "children": [convert_symbol_to_json(symbol.child)],
+            "domains": symbol.domains,
+        }
+        return json_dict
     elif isinstance(symbol, pybamm.Interpolant):
         return {
             "type": symbol.__class__.__name__,

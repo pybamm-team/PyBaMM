@@ -957,13 +957,13 @@ class TestSerialise:
         unhandled_json = {"type": "NotARealSymbol", "foo": "bar"}
         with pytest.raises(
             ValueError,
-            match=r"Unhandled symbol type or malformed entry: .*NotARealSymbol",
+            match=r"Unknown symbol type: NotARealSymbol",
         ):
             convert_symbol_from_json(unhandled_json)
 
         unhandled_json2 = {"a": 1, "b": 2}
         with pytest.raises(
-            ValueError, match=r"Unhandled symbol type or malformed entry: .*"
+            ValueError, match=r"Missing 'type' key in JSON data: {'a': 1, 'b': 2}"
         ):
             convert_symbol_from_json(unhandled_json2)
 
@@ -985,9 +985,8 @@ class TestSerialise:
         model.name = "TestModel"
         model.rhs = {pybamm.Variable("c"): pybamm.Variable("c")}
 
-        with patch.object(
-            Serialise,
-            "convert_symbol_to_json",
+        with patch(
+            "pybamm.expression_tree.operations.serialise.convert_symbol_to_json",
             side_effect=Exception("conversion failed"),
         ):
             with pytest.raises(
@@ -1066,7 +1065,8 @@ class TestSerialise:
             json.dump(model_json, f)
 
         with pytest.raises(
-            ValueError, match=r"(?i)failed to process symbol key.*unhandled symbol type"
+            ValueError,
+            match=r"Failed to process symbol key for variable {'not_a_valid_symbol': 123}",
         ):
             Serialise.load_custom_model(str(file_path))
 
@@ -1138,7 +1138,7 @@ class TestSerialise:
 
         with pytest.raises(
             ValueError,
-            match=r"(?i)failed to convert rhs.*unhandled symbol type or malformed entry",
+            match=r"Failed to convert rhs",
         ):
             Serialise.load_custom_model(str(file_path))
 
@@ -1174,7 +1174,7 @@ class TestSerialise:
 
         with pytest.raises(
             ValueError,
-            match=r"(?i)failed to convert algebraic.*unhandled symbol type or malformed entry",
+            match=r"Failed to convert algebraic",
         ):
             Serialise.load_custom_model(str(file_path))
 
@@ -1210,7 +1210,7 @@ class TestSerialise:
 
         with pytest.raises(
             ValueError,
-            match=r"(?i)failed to convert initial condition.*unhandled symbol type or malformed entry",
+            match=r"Failed to convert initial condition",
         ):
             Serialise.load_custom_model(str(file_path))
 
@@ -1320,7 +1320,7 @@ class TestSerialise:
 
         with pytest.raises(
             ValueError,
-            match=r"(?i)failed to convert event 'bad event'.*unhandled symbol type or malformed entry",
+            match=r"Failed to convert event 'Bad Event'",
         ):
             Serialise.load_custom_model(str(file))
 
@@ -1346,7 +1346,7 @@ class TestSerialise:
 
         with pytest.raises(
             ValueError,
-            match=r"(?i)failed to convert variable 'bad variable'.*unhandled symbol type or malformed entry",
+            match=r"Failed to convert variable 'Bad Variable'",
         ):
             Serialise.load_custom_model(str(file))
 
