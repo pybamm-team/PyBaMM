@@ -1220,68 +1220,6 @@ class _KeyMatch:
         return self.is_match
 
 
-class ListParameter(pybamm.Symbol):
-    """
-    A wrapper around a list that allows it to be treated as a pybamm Symbol.
-    This is used by arrayize_dict to wrap list values while maintaining
-    list-like behavior.
-    """
-
-    def __init__(self, items):
-        """Initialize with a list of items."""
-        self._items = list(items)
-        super().__init__(name=f"ListParameter[{len(items)}]")
-
-    def _base_evaluate(self, t=None, y=None, y_dot=None, inputs=None):
-        """Return the list as a numpy array (required for Symbol base class)."""
-        import numpy as np
-
-        return np.array(self._items)
-
-    # List-like interface methods
-    def __getitem__(self, index):
-        return self._items[index]
-
-    def __setitem__(self, index, value):
-        self._items[index] = value
-
-    def __len__(self):
-        return len(self._items)
-
-    def __iter__(self):
-        return iter(self._items)
-
-    def __contains__(self, item):
-        return item in self._items
-
-    def append(self, item):
-        self._items.append(item)
-
-    def extend(self, items):
-        self._items.extend(items)
-
-    def insert(self, index, item):
-        self._items.insert(index, item)
-
-    def remove(self, item):
-        self._items.remove(item)
-
-    def pop(self, index=-1):
-        return self._items.pop(index)
-
-    def __repr__(self):
-        return f"ListParameter({self._items})"
-
-    def __eq__(self, other):
-        """Allow comparison with lists and pytest approx."""
-        if isinstance(other, ListParameter):
-            return self._items == other._items
-        elif isinstance(other, list):
-            return self._items == other
-        # Return NotImplemented for other types to allow pytest approx to handle it
-        return NotImplemented
-
-
 def scalarize_dict(
     params: dict[str, Any], ignored_keys: list[str] | None = None
 ) -> dict[str, Any]:
@@ -1310,7 +1248,7 @@ def scalarize_dict(
         ignored_keys = ["citations"]
 
     for key, val in params.items():
-        if key not in ignored_keys and isinstance(val, ListParameter):
+        if key not in ignored_keys and isinstance(val, list):
             base, tag = _split_key(key)  # accepts 'a' or 'a [V]'
             for i, item in enumerate(val):
                 key_i = _combine_name(base, i, tag)
@@ -1419,9 +1357,7 @@ def arrayize_dict(
         if collapsed_key in out:
             raise ValueError(f"Duplicate key after rebuild: {collapsed_key!r}")
 
-        out[collapsed_key] = ListParameter(
-            [idx_val[i] for i in range(max(idx_val) + 1)]
-        )
+        out[collapsed_key] = [idx_val[i] for i in range(max(idx_val) + 1)]
         processed.update(own_keys)
 
     # copy untouched scalars

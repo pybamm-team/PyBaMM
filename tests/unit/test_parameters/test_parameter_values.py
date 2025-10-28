@@ -1393,10 +1393,10 @@ class TestParameterValues:
         assert not bool(match)
 
     def test_list_parameter_class(self):
-        """Test ListParameter class methods (covers lines 1232-1276)."""
+        """Test that arrayize_dict returns plain lists."""
         from pybamm.parameters.parameter_values import arrayize_dict
 
-        # Test ListParameter through arrayize_dict which creates ListParameter objects
+        # Test that arrayize_dict creates plain list objects
         scalar_dict = {
             "voltage (0) [V]": 1,
             "voltage (1) [V]": 2,
@@ -1404,59 +1404,59 @@ class TestParameterValues:
         }
 
         result = arrayize_dict(scalar_dict)
-        lp = result["voltage [V]"]
+        lst = result["voltage [V]"]
 
-        # Test initialization (lines 1232-1233) - name is set
-        assert "ListParameter" in lp.name or "ListParameter" in str(type(lp))
+        # Test that it's a plain list
+        assert isinstance(lst, list)
 
-        # Test __getitem__ (line 1237)
-        assert lp[0] == 1
-        assert lp[1] == 2
+        # Test __getitem__
+        assert lst[0] == 1
+        assert lst[1] == 2
 
-        # Test __setitem__ (line 1240)
-        lp[0] = 10
-        assert lp[0] == 10
+        # Test __setitem__
+        lst[0] = 10
+        assert lst[0] == 10
 
-        # Test __len__ (line 1243)
-        assert len(lp) == 3
+        # Test __len__
+        assert len(lst) == 3
 
-        # Test __iter__ (line 1246)
-        items_list = [x for x in lp]
+        # Test __iter__
+        items_list = [x for x in lst]
         assert items_list == [10, 2, 3]
 
-        # Test __contains__ (line 1249)
-        assert 2 in lp
-        assert 99 not in lp
+        # Test __contains__
+        assert 2 in lst
+        assert 99 not in lst
 
-        # Test append (line 1252)
-        lp.append(4)
-        assert len(lp) == 4
-        assert lp[3] == 4
+        # Test append
+        lst.append(4)
+        assert len(lst) == 4
+        assert lst[3] == 4
 
-        # Test extend (line 1255)
-        lp.extend([5, 6])
-        assert len(lp) == 6
-        assert lp[5] == 6
+        # Test extend
+        lst.extend([5, 6])
+        assert len(lst) == 6
+        assert lst[5] == 6
 
-        # Test insert (line 1258)
-        lp.insert(0, 0)
-        assert lp[0] == 0
-        assert len(lp) == 7
+        # Test insert
+        lst.insert(0, 0)
+        assert lst[0] == 0
+        assert len(lst) == 7
 
-        # Test remove (line 1261)
-        lp.remove(0)
-        assert len(lp) == 6
+        # Test remove
+        lst.remove(0)
+        assert len(lst) == 6
 
-        # Test pop (line 1264)
-        last = lp.pop()
+        # Test pop
+        last = lst.pop()
         assert last == 6
-        assert len(lp) == 5
+        assert len(lst) == 5
 
-        # Test __repr__ (line 1267)
-        repr_str = repr(lp)
-        assert "ListParameter" in repr_str
+        # Test __repr__
+        repr_str = repr(lst)
+        assert "[" in repr_str
 
-        # Test __eq__ with ListParameter (lines 1271-1272)
+        # Test __eq__ with list
         scalar_dict2 = {
             "v (0) [V]": 10,
             "v (1) [V]": 2,
@@ -1465,21 +1465,17 @@ class TestParameterValues:
             "v (4) [V]": 5,
         }
         result2 = arrayize_dict(scalar_dict2)
-        lp2 = result2["v [V]"]
-        assert lp == lp2
+        lst2 = result2["v [V]"]
+        assert lst == lst2
 
-        # Test __eq__ with list (lines 1273-1274)
-        assert lp == [10, 2, 3, 4, 5]
-
-        # Test __eq__ with other types (lines 1275-1276)
-        result_eq = lp.__eq__("not a list")
-        assert result_eq == NotImplemented
+        # Test __eq__ with list
+        assert lst == [10, 2, 3, 4, 5]
 
     def test_scalarize_dict_with_list_parameter(self):
-        """Test scalarize_dict with ListParameter (covers lines 1307-1313)."""
+        """Test scalarize_dict with plain lists."""
         from pybamm.parameters.parameter_values import arrayize_dict, scalarize_dict
 
-        # First create a ListParameter using arrayize_dict
+        # First create a list using arrayize_dict
         scalar_dict = {
             "voltage (0) [V]": 3.7,
             "voltage (1) [V]": 3.8,
@@ -1569,7 +1565,7 @@ class TestParameterValues:
 
         result = arrayize_dict(scalar_dict)
         assert "voltage [V]" in result
-        # Check that it's a ListParameter by checking it has list-like behavior
+        # Check that it's a list by checking it has list-like behavior
         assert hasattr(result["voltage [V]"], "__getitem__")
         assert hasattr(result["voltage [V]"], "__len__")
         assert result["voltage [V]"] == [3.7, 3.8, 3.9]
@@ -1674,8 +1670,8 @@ class TestParameterValues:
         # Should return Scalar(0) due to exception
         assert isinstance(result_val, pybamm.Scalar)
 
-    def test_scalarize_dict_duplicate_key_in_list_parameter(self):
-        """Test scalarize_dict with duplicate key when scalarizing ListParameter (covers line 1318)."""
+    def test_scalarize_dict_duplicate_key_in_list(self):
+        """Test scalarize_dict with duplicate key when scalarizing lists."""
 
         # This is difficult to trigger naturally since dict keys must be unique
         # We would need to manually construct a scenario where the scalarization
