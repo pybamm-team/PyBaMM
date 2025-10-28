@@ -1320,7 +1320,7 @@ class TestParameterValues:
         interp_result = result["param1"](sto)
         # The function creates an Interpolant or catches an exception and returns Scalar(0)
         # Test that it is callable and returns something
-        assert isinstance(interp_result, (pybamm.Interpolant, pybamm.Scalar))
+        assert isinstance(interp_result, pybamm.Interpolant | pybamm.Scalar)
 
     def test_convert_symbols_in_dict_with_nested_dict(self):
         """Test convert_symbols_in_dict with nested dict (covers lines 1171-1174)."""
@@ -1503,15 +1503,11 @@ class TestParameterValues:
         """Test scalarize_dict raises error on duplicate key (covers line 1316)."""
         from pybamm.parameters.parameter_values import scalarize_dict
 
-        params = {
-            "voltage [V]": 3.7,
-            "voltage [V]": 3.8,  # Duplicate (Python keeps last)
-        }
         # Python dicts don't allow duplicate keys, but we can test the error path
         # by creating a scenario where the key appears in the output
         params_dict = {}
         params_dict["voltage [V]"] = 3.7
-        result = scalarize_dict(params_dict)
+        scalarize_dict(params_dict)
         # Now try to add it again manually - this path is hard to trigger naturally
         # The error is in line 1316 which checks for duplicates in the output
 
