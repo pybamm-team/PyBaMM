@@ -1229,8 +1229,14 @@ class ListParameter(pybamm.Symbol):
 
     def __init__(self, items):
         """Initialize with a list of items."""
-        super().__init__(name=f"ListParameter[{len(items)}]")
         self._items = list(items)
+        super().__init__(name=f"ListParameter[{len(items)}]")
+
+    def _base_evaluate(self, t=None, y=None, y_dot=None, inputs=None):
+        """Return the list as a numpy array (required for Symbol base class)."""
+        import numpy as np
+
+        return np.array(self._items)
 
     # List-like interface methods
     def __getitem__(self, index):
