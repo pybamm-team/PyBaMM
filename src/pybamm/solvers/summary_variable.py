@@ -103,7 +103,10 @@ class SummaryVariables:
     def esoh_variables(self) -> list[str] | None:
         """Return names of all eSOH variables."""
         if self.calc_esoh and self._esoh_variables is None:
-            esoh_model = self.esoh_solver._get_electrode_soh_sims_full().model
+            # assume direction is None
+            esoh_model = self.esoh_solver._get_electrode_soh_sims_full(
+                direction=None
+            ).model
             esoh_vars = list(esoh_model.variables.keys())
             self._esoh_variables = esoh_vars
         return self._esoh_variables
