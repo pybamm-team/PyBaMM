@@ -89,7 +89,8 @@ class Lumped(BaseThermal):
 
     def set_initial_conditions(self, variables):
         T_vol_av = variables["Volume-averaged cell temperature [K]"]
-        self.initial_conditions = {T_vol_av: self.param.T_init}
+        T_init_av = pybamm.x_average(self.param.T_init)
+        self.initial_conditions = {T_vol_av: T_init_av}
 
     def calculate_Q_cr_W(self, current, contact_resistance):
         Q_cr_W = current**2 * contact_resistance

@@ -51,6 +51,7 @@
 
 ## Bug fixes
 
+- Fixed domain handling and temperature initialization in the lumped thermal model to ensure consistent behavior with spatial `T_init`. ([#5248](https://github.com/pybamm-team/PyBaMM/pull/5248))
 - Fixed non-deterministic plotting CI issues ([#5150](https://github.com/pybamm-team/PyBaMM/pull/5150))
 - Fix non-deterministic ShapeError in 3D FEM gradient method ([#5143](https://github.com/pybamm-team/PyBaMM/pull/5143))
 - Fixes negative electrode boundary values for half-cell voltage contributions. ([#5139](https://github.com/pybamm-team/PyBaMM/pull/5139))
