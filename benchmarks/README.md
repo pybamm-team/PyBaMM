@@ -32,7 +32,7 @@ asv run v0.3..develop
 
 Further information on how to run benchmarks with `asv` can be found in the documentation at [Using airspeed velocity](https://asv.readthedocs.io/en/stable/using.html).
 
-`asv` is configured using a file `asv.conf.json` located at the root of the PyBaMM repository. See the [asv reference](https://asv.readthedocs.io/en/stable/reference.html) for details on available settings and options.
+`asv` is configured using a file `asv.conf.json` located at the root of the PyBaMM repository. See the [asv reference](https://asv.readthedocs.io/en/stable/user_reference.html) for details on available settings and options.
 
 Benchmark results are stored in a directory `results/` at the location of the configuration file. There is one result file per commit, per machine.
 

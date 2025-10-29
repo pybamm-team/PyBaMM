@@ -47,7 +47,9 @@ class ZeroDimensionalSpatialMethod(pybamm.SpatialMethod):
         elif direction == "backward":
             return -discretised_child
 
-    def integral(self, child, discretised_child, integration_dimension):
+    def integral(
+        self, child, discretised_child, integration_dimension, integration_variable
+    ):
         """
         Calculates the zero-dimensional integral, i.e. the identity operator
         """

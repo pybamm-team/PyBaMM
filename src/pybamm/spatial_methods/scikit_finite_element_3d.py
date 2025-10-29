@@ -374,7 +374,9 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
 
         return current_boundary_load_symbol
 
-    def integral(self, child, discretised_child, integration_dimension):
+    def integral(
+        self, child, discretised_child, integration_dimension, integration_variable
+    ):
         """
         Vector-vector dot product to implement the 3D integral operator.
 
@@ -629,3 +631,52 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
         M.indices = M_csr.indices
         M.indptr = M_csr.indptr
         M._shape = M_csr._shape
+
+    def process_binary_operators(self, bin_op, left, right, disc_left, disc_right):
+        """
+        Process binary operators, with a specific fix for Inner products
+        involving Concatenations that may have been created without a
+        concatenation_function.
+
+        Parameters
+        ----------
+        bin_op : :class:`pybamm.BinaryOperator`
+            The binary operator to process.
+        left : :class:`pybamm.Symbol`
+            The left child of the operator.
+        right : :class:`pybamm.Symbol`
+            The right child of the operator.
+        disc_left : :class:`pybamm.Symbol`
+            The discretised left child of the operator.
+        disc_right : :class:`pybamm.Symbol`
+            The discretised right child of the operator.
+
+        Returns
+        -------
+        :class:`pybamm.Symbol`
+            The discretised binary operator.
+        """
+        if isinstance(bin_op, pybamm.Inner):
+            if (
+                isinstance(disc_left, pybamm.Concatenation)
+                and disc_left.concatenation_function is None
+            ):
+                target_domain = bin_op.domain
+                new_children = [
+                    pybamm.PrimaryBroadcast(child, target_domain)
+                    for child in disc_left.children
+                ]
+                disc_left = pybamm.Concatenation(*new_children, concat_fun=np.hstack)
+            if (
+                isinstance(disc_right, pybamm.Concatenation)
+                and disc_right.concatenation_function is None
+            ):
+                target_domain = bin_op.domain
+                new_children = [
+                    pybamm.PrimaryBroadcast(child, target_domain)
+                    for child in disc_right.children
+                ]
+                disc_right = pybamm.Concatenation(*new_children, concat_fun=np.hstack)
+        return super().process_binary_operators(
+            bin_op, left, right, disc_left, disc_right
+        )

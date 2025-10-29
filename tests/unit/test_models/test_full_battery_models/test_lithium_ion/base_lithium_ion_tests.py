@@ -655,3 +655,17 @@ class BaseUnitTestLithiumIon:
             "loss of active material": "stress-driven",
         }
         self.check_well_posedness(options)
+
+    def test_well_posed_composite_differential_surface_form(self):
+        options = {
+            "particle phases": ("2", "2"),
+            "surface form": "differential",
+        }
+        self.check_well_posedness(options)
+
+    def test_well_posed_composite_algebraic_surface_form(self):
+        options = {
+            "particle phases": ("2", "2"),
+            "surface form": "algebraic",
+        }
+        self.check_well_posedness(options)

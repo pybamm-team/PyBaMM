@@ -101,3 +101,29 @@ class TestExperiments:
         # Add a small tolerance to account for numerical errors
         V_max = 4.00 - 1e-4
         assert np.all(sol["Terminal voltage [V]"].entries >= V_max)
+
+    def test_drive_cycle_duration(self):
+        # Test that the drive cycle is truncated to duration timespan
+        tf = 1
+        drive_cycle = np.column_stack(
+            (
+                np.array([0, tf + 1]),
+                np.array([0, -1 / 100]),
+            )
+        )
+        c_step = pybamm.step.current(value=drive_cycle, duration=tf)
+        experiment = pybamm.Experiment(
+            [
+                c_step,
+            ],
+        )
+        model = pybamm.lithium_ion.SPM()
+        param = pybamm.ParameterValues("Chen2020")
+        sim = pybamm.Simulation(
+            model,
+            experiment=experiment,
+            parameter_values=param,
+        )
+        sol = sim.solve()
+
+        assert sol.t[-1] == tf
