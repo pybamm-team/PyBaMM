@@ -27,10 +27,11 @@ class Lumped(BaseThermal):
     def get_fundamental_variables(self):
         T_vol_av = pybamm.Variable(
             "Volume-averaged cell temperature [K]",
+            domain=["current collector"],
             scale=self.param.T_ref,
             print_name="T_av",
         )
-        T_x_av = pybamm.PrimaryBroadcast(T_vol_av, ["current collector"])
+        T_x_av = T_vol_av
         T_dict = {
             "negative current collector": T_x_av,
             "positive current collector": T_x_av,
@@ -89,7 +90,12 @@ class Lumped(BaseThermal):
 
     def set_initial_conditions(self, variables):
         T_vol_av = variables["Volume-averaged cell temperature [K]"]
-        self.initial_conditions = {T_vol_av: self.param.T_init}
+
+        # Compute x-averaged initial temperature from spatial field T_init(x)
+        T_init_av = pybamm.x_average(self.param.T_init)
+        T_init_av = pybamm.PrimaryBroadcast(T_init_av, T_vol_av.domain)
+
+        self.initial_conditions = {T_vol_av: T_init_av}
 
     def calculate_Q_cr_W(self, current, contact_resistance):
         Q_cr_W = current**2 * contact_resistance
