@@ -432,9 +432,7 @@ class Solution:
         # therefore only get set up once
         vars_casadi = []
         for i, (model, ys, inputs, var_pybamm) in enumerate(
-            zip(
-                self.all_models, self.all_ys, self.all_inputs, vars_pybamm, strict=False
-            )
+            zip(self.all_models, self.all_ys, self.all_inputs, vars_pybamm, strict=True)
         ):
             if self.variables_returned and var_pybamm.has_symbol_of_classes(
                 pybamm.expression_tree.state_vector.StateVector

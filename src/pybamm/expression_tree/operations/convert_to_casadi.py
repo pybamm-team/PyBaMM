@@ -279,7 +279,7 @@ class CasadiConverter:
                 for i in range(symbol.secondary_dimensions_npts):
                     child_vectors = []
                     for child_var, slices in zip(
-                        converted_children, symbol._children_slices, strict=False
+                        converted_children, symbol._children_slices, strict=True
                     ):
                         for child_dom, child_slice in slices.items():
                             slice_starts.append(symbol._slices[child_dom][i].start)

@@ -12,6 +12,7 @@
 
 ## Bug fixes
 
+- Set `zip(..., strict=True)` in solver and expression tree files to ensure iterable length safety. ([#5241](https://github.com/pybamm-team/PyBaMM/pull/5241))
 - Adds `options` property to IDAKLU, fixes pickling issue with `__getstate__` when keys are not available. ([#5234](https://github.com/pybamm-team/PyBaMM/pull/5234))
 - Fixed a bug where simulations using output variables in `IDAKLUSolver` couldn't be pickled ([#5225](https://github.com/pybamm-team/PyBaMM/pull/5225))
 - Added explicit warning in installation docs about unmaintained Conda recipe due to pybammsolvers split (Fixes #5155). See pull request [#5206](https://github.com/pybamm-team/PyBaMM/pull/5206)
