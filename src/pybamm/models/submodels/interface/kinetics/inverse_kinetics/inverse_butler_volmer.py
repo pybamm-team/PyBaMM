@@ -71,9 +71,9 @@ class InverseButlerVolmer(BaseInterface):
         if self.options["SEI film resistance"] != "none":
             R_sei = self.phase_param.R_sei
             if self.options.electrode_types[domain] == "planar":
-                L_sei = variables[f"{Domain} total SEI thickness [m]"]
+                L_sei = variables[f"{Domain} SEI thickness [m]"]
             else:
-                L_sei = variables[f"X-averaged {domain} total SEI thickness [m]"]
+                L_sei = variables[f"X-averaged {domain} SEI thickness [m]"]
             eta_sei = -j_tot * L_sei * R_sei
         # Without SEI resistance
         else:
