@@ -1174,9 +1174,7 @@ class Discretisation:
         equations = list(var_eqn_dict.values())
 
         # sort equations according to slices
-        sorted_equations = [
-            eq for _, eq in sorted(zip(slices, equations, strict=False))
-        ]
+        sorted_equations = [eq for _, eq in sorted(zip(slices, equations, strict=True))]
 
         return self.concatenate(*sorted_equations, sparse=sparse)
 
