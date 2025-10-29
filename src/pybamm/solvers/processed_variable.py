@@ -426,7 +426,7 @@ class ProcessedVariable(BaseProcessedVariable):
             self.all_inputs,
             self.base_variables,
             self.all_solution_sensitivities["all"],
-            strict=False,
+            strict=True,
         ):
             # Set up symbolic variables
             t_casadi = casadi.MX.sym("t")
@@ -882,6 +882,82 @@ class ProcessedVariable2DSciKitFEM(ProcessedVariable2D):
         return entries
 
 
+class ProcessedVariable2DFVM(ProcessedVariable):
+    def __init__(
+        self,
+        name: str,
+        base_variables,
+        base_variables_casadi,
+        solution,
+        time_integral: pybamm.ProcessedVariableTimeIntegral | None = None,
+    ):
+        self.dimensions = 2
+        super().__init__(
+            name,
+            base_variables,
+            base_variables_casadi,
+            solution,
+            time_integral=time_integral,
+        )
+        num_nodes_lr = len(self.mesh.nodes_lr)
+        num_nodes_tb = len(self.mesh.nodes_tb)
+        num_edges_lr = len(self.mesh.edges_lr)
+        num_edges_tb = len(self.mesh.edges_tb)
+
+        if not self.base_variables[0].evaluates_on_edges("primary"):
+            self.first_dim_size = num_nodes_lr
+            self.second_dim_size = num_nodes_tb
+            self.first_dim_pts = self.mesh.nodes_lr
+            self.second_dim_pts = self.mesh.nodes_tb
+        elif base_variables[0].evaluates_on_edges("primary") == "lr":
+            # Evaluates on edges in the LR direction
+            # Note that if the variable has the same number of nodes in the LR direction and the TB direction,
+            # Then we assume it evaluates on edges in the LR direction for lack of a better option
+            self.first_dim_size = num_edges_lr
+            self.second_dim_size = num_nodes_tb
+            self.first_dim_pts = self.mesh.edges_lr
+            self.second_dim_pts = self.mesh.nodes_tb
+        elif base_variables[0].evaluates_on_edges("primary") == "tb":
+            # Evaluates on edges in the TB direction
+            self.first_dim_size = num_nodes_lr
+            self.second_dim_size = num_edges_tb
+            self.first_dim_pts = self.mesh.nodes_lr
+            self.second_dim_pts = self.mesh.edges_tb
+        elif base_variables[0].evaluates_on_edges("primary"):
+            self.first_dim_size = num_edges_lr
+            self.second_dim_size = num_edges_tb
+            self.first_dim_pts = self.mesh.edges_lr
+            self.second_dim_pts = self.mesh.edges_tb
+        else:
+            raise ValueError(
+                f"ProcessedVariable2DFVM: Invalid shape {base_variables[0].shape}"
+            )
+
+    def _interp_setup(self, entries, t):
+        self.first_dimension = "x"
+        self.second_dimension = "z"
+        coords_for_interp = {
+            self.first_dimension: self.first_dim_pts,
+            self.second_dimension: self.second_dim_pts,
+            "t": t,
+        }
+        return entries, coords_for_interp
+
+    def _shape(self, t):
+        return [self.first_dim_size, self.second_dim_size, len(t)]
+
+
+class ProcessedVariableRawFVM(ProcessedVariable):
+    def _shape(self, t):
+        return [self.base_variables[0].size, len(t)]
+
+    def initialise(self):
+        if self.entries_raw_initialized:
+            return
+        entries = self.observe_raw()
+        self._entries_raw = entries
+
+
 class ProcessedVariable3D(ProcessedVariable):
     """
     An object that can be evaluated at arbitrary (scalars or vectors) t and x, and
@@ -1290,10 +1366,15 @@ def process_variable(name: str, base_variables, *args, **kwargs):
         ):
             return ProcessedVariable3DSciKitFEM(name, base_variables, *args, **kwargs)
 
+    if mesh and hasattr(mesh, "edges_lr") and hasattr(mesh, "edges_tb"):
+        return ProcessedVariable2DFVM(name, base_variables, *args, **kwargs)
+
     # check variable shape
     if len(base_eval_shape) == 0 or base_eval_shape[0] == 1:
         return ProcessedVariable0D(name, base_variables, *args, **kwargs)
 
+    if mesh is None:
+        return ProcessedVariable2DFVM(name, base_variables, *args, **kwargs)
     n = mesh.npts
     base_shape = base_eval_shape[0]
     # Try some shapes that could make the variable a 1D variable
@@ -1303,7 +1384,13 @@ def process_variable(name: str, base_variables, *args, **kwargs):
     # Try some shapes that could make the variable a 2D variable
     first_dim_nodes = mesh.nodes
     first_dim_edges = mesh.edges
-    second_dim_pts = base_variables[0].secondary_mesh.nodes
+    try:
+        second_dim_pts = base_variables[0].secondary_mesh.nodes
+    except AttributeError:
+        try:
+            return ProcessedVariable2DFVM(name, base_variables, *args, **kwargs)
+        except AttributeError:
+            return ProcessedVariableRawFVM(name, base_variables, *args, **kwargs)
     if base_eval_size // len(second_dim_pts) in [
         len(first_dim_nodes),
         len(first_dim_edges),

@@ -910,7 +910,7 @@ def _simplified_binary_broadcast_concatenation(
                     [
                         operator(left_child, right_child)
                         for left_child, right_child in zip(
-                            left.orphans, right.orphans, strict=False
+                            left.orphans, right.orphans, strict=True
                         )
                     ]
                 )
@@ -1004,7 +1004,7 @@ def add(left: ChildSymbol, right: ChildSymbol):
         elif all(
             left_dim_size <= right_dim_size
             for left_dim_size, right_dim_size in zip(
-                left.shape_for_testing, right.shape_for_testing, strict=False
+                left.shape_for_testing, right.shape_for_testing, strict=True
             )
         ) and all(
             left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
@@ -1093,7 +1093,7 @@ def subtract(
         elif all(
             left_dim_size <= right_dim_size
             for left_dim_size, right_dim_size in zip(
-                left.shape_for_testing, right.shape_for_testing, strict=False
+                left.shape_for_testing, right.shape_for_testing, strict=True
             )
         ) and all(
             left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)

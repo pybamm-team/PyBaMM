@@ -376,7 +376,7 @@ class DomainConcatenation(Concatenation):
 
         # loop through domains of children writing subvectors to final vector
         for child_vector, slices in zip(
-            children_eval, self._children_slices, strict=False
+            children_eval, self._children_slices, strict=True
         ):
             for child_dom, child_slice in slices.items():
                 for i, _slice in enumerate(child_slice):
@@ -391,7 +391,7 @@ class DomainConcatenation(Concatenation):
         jacs = []
         for i in range(self.secondary_dimensions_npts):
             for child_jac, slices in zip(
-                children_jacs, self._children_slices, strict=False
+                children_jacs, self._children_slices, strict=True
             ):
                 if len(slices) > 1:
                     raise NotImplementedError(
@@ -454,7 +454,7 @@ class SparseStack(Concatenation):
         The equations to concatenate
     """
 
-    def __init__(self, *children):
+    def __init__(self, *children, name="sparse_stack"):
         children = list(children)
         if not any(issparse(child.evaluate_for_shape()) for child in children):
             concatenation_function = np.vstack
@@ -462,7 +462,7 @@ class SparseStack(Concatenation):
             concatenation_function = vstack
         super().__init__(
             *children,
-            name="sparse_stack",
+            name=name,
             check_domain=False,
             concat_fun=concatenation_function,
         )

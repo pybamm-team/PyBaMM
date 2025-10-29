@@ -1,11 +1,14 @@
+import json
 import numbers
 from collections import defaultdict
+from pathlib import Path
 from pprint import pformat
 from warnings import warn
 
 import numpy as np
 
 import pybamm
+from pybamm.expression_tree.operations.serialise import Serialise
 from pybamm.models.full_battery_models.lithium_ion.msmr import (
     is_deprecated_msmr_name,
     replace_deprecated_msmr_name,
@@ -51,19 +54,24 @@ class ParameterValues:
 
         if isinstance(values, dict | ParameterValues):
             # remove the "chemistry" key if it exists
-            values.pop("chemistry", None)
+            chemistry = values.pop("chemistry", None)
             self.update(values, check_already_exists=False)
         else:
             # Check if values is a named parameter set
             if isinstance(values, str) and values in pybamm.parameter_sets.keys():
                 values = pybamm.parameter_sets[values]
-                values.pop("chemistry", None)
+                chemistry = values.pop("chemistry", None)
                 self.update(values, check_already_exists=False)
             else:
                 valid_sets = "\n".join(pybamm.parameter_sets.keys())
                 raise ValueError(
                     f"'{values}' is not a valid parameter set. Parameter set must be one of:\n{valid_sets}"
                 )
+
+        if chemistry == "ecm":
+            self._set_initial_state = pybamm.equivalent_circuit.set_initial_state
+        else:
+            self._set_initial_state = pybamm.lithium_ion.set_initial_state
 
         # Initialise empty _processed_symbols dict (for caching)
         self._processed_symbols = {}
@@ -229,6 +237,7 @@ class ParameterValues:
         """Returns a copy of the parameter values. Makes sure to copy the internal
         dictionary."""
         new_copy = ParameterValues(self._dict_items.copy())
+        new_copy._set_initial_state = self._set_initial_state
         return new_copy
 
     def search(self, key, print_values=True):
@@ -319,47 +328,52 @@ class ParameterValues:
         # reset processed symbols
         self._processed_symbols = {}
 
+    def set_initial_state(
+        self,
+        initial_value,
+        direction=None,
+        param=None,
+        inplace=True,
+        options=None,
+        inputs=None,
+    ):
+        return self._set_initial_state(
+            initial_value,
+            self,
+            direction=direction,
+            param=param,
+            inplace=inplace,
+            options=options,
+            inputs=inputs,
+        )
+
     def set_initial_stoichiometry_half_cell(
         self,
         initial_value,
+        direction=None,
         param=None,
         known_value="cyclable lithium capacity",
         inplace=True,
         options=None,
         inputs=None,
     ):
-        """
-        Set the initial stoichiometry of the working electrode, based on the initial
-        SOC or voltage
-        """
-        param = param or pybamm.LithiumIonParameters(options)
-        x = pybamm.lithium_ion.get_initial_stoichiometry_half_cell(
+        msg = "pybamm.parameter_values.set_initial_stoichiometry_half_cell is deprecated, please use set_initial_state."
+        warn(msg, DeprecationWarning, stacklevel=2)
+        return self._set_initial_state(
             initial_value,
             self,
+            direction=direction,
             param=param,
             known_value=known_value,
+            inplace=inplace,
             options=options,
             inputs=inputs,
         )
-        if inplace:
-            parameter_values = self
-        else:
-            parameter_values = self.copy()
-
-        c_max = self.evaluate(param.p.prim.c_max, inputs=inputs)
-
-        parameter_values.update(
-            {
-                "Initial concentration in {} electrode [mol.m-3]".format(
-                    options["working electrode"]
-                ): x * c_max
-            }
-        )
-        return parameter_values
 
     def set_initial_stoichiometries(
         self,
         initial_value,
+        direction=None,
         param=None,
         known_value="cyclable lithium capacity",
         inplace=True,
@@ -367,67 +381,42 @@ class ParameterValues:
         inputs=None,
         tol=1e-6,
     ):
-        """
-        Set the initial stoichiometry of each electrode, based on the initial
-        SOC or voltage
-        """
-        param = param or pybamm.LithiumIonParameters(options)
-        x, y = pybamm.lithium_ion.get_initial_stoichiometries(
+        msg = "pybamm.parameter_values.set_initial_stoichiometries is deprecated, please use set_initial_state."
+        warn(msg, DeprecationWarning, stacklevel=2)
+        return self._set_initial_state(
             initial_value,
             self,
+            direction=direction,
             param=param,
             known_value=known_value,
+            inplace=inplace,
             options=options,
-            tol=tol,
             inputs=inputs,
+            tol=tol,
         )
-        if inplace:
-            parameter_values = self
-        else:
-            parameter_values = self.copy()
-        c_n_max = self.evaluate(param.n.prim.c_max, inputs=inputs)
-        c_p_max = self.evaluate(param.p.prim.c_max, inputs=inputs)
-        parameter_values.update(
-            {
-                "Initial concentration in negative electrode [mol.m-3]": x * c_n_max,
-                "Initial concentration in positive electrode [mol.m-3]": y * c_p_max,
-            }
-        )
-        return parameter_values
 
     def set_initial_ocps(
         self,
         initial_value,
+        direction=None,
         param=None,
         known_value="cyclable lithium capacity",
         inplace=True,
         options=None,
         inputs=None,
     ):
-        """
-        Set the initial OCP of each electrode, based on the initial
-        SOC or voltage
-        """
-        param = param or pybamm.LithiumIonParameters(options)
-        Un, Up = pybamm.lithium_ion.get_initial_ocps(
+        msg = "pybamm.parameter_values.set_initial_ocps is deprecated, please use set_initial_state."
+        warn(msg, DeprecationWarning, stacklevel=2)
+        return self._set_initial_state(
             initial_value,
             self,
+            direction=direction,
             param=param,
             known_value=known_value,
+            inplace=inplace,
             options=options,
             inputs=inputs,
         )
-        if inplace:
-            parameter_values = self
-        else:
-            parameter_values = self.copy()
-        parameter_values.update(
-            {
-                "Initial voltage in negative electrode [V]": Un,
-                "Initial voltage in positive electrode [V]": Up,
-            }
-        )
-        return parameter_values
 
     @staticmethod
     def check_parameter_values(values):
@@ -596,6 +585,8 @@ class ParameterValues:
             "negative tab",
             "positive tab",
             "no tab",
+            "top",
+            "bottom",
             "x_min",
             "x_max",
             "y_min",
@@ -680,7 +671,10 @@ class ParameterValues:
         try:
             return self._processed_symbols[symbol]
         except KeyError:
-            processed_symbol = self._process_symbol(symbol)
+            if not isinstance(symbol, pybamm.FunctionParameter):
+                processed_symbol = self._process_symbol(symbol)
+            else:
+                processed_symbol = self._process_function_parameter(symbol)
             self._processed_symbols[symbol] = processed_symbol
 
             return processed_symbol
@@ -822,6 +816,11 @@ class ParameterValues:
             new_children = [self.process_symbol(child) for child in symbol.children]
             return symbol.create_copy(new_children)
 
+        elif isinstance(symbol, pybamm.VectorField):
+            left_symbol = self.process_symbol(symbol.lr_field)
+            right_symbol = self.process_symbol(symbol.tb_field)
+            return symbol.create_copy(new_children=[left_symbol, right_symbol])
+
         # Variables: update scale
         elif isinstance(symbol, pybamm.Variable):
             new_symbol = symbol.create_copy()
@@ -841,6 +840,88 @@ class ParameterValues:
         else:
             # Backup option: return the object
             return symbol
+
+    def _process_function_parameter(self, symbol):
+        function_parameter = self[symbol.name]
+        # Handle symbolic function parameter case
+        if isinstance(function_parameter, pybamm.ExpressionFunctionParameter):
+            # Process children
+            new_children = []
+            for child in symbol.children:
+                if symbol.diff_variable is not None and any(
+                    x == symbol.diff_variable for x in child.pre_order()
+                ):
+                    # Wrap with NotConstant to avoid simplification,
+                    # which would stop symbolic diff from working properly
+                    new_child = pybamm.NotConstant(child)
+                    new_children.append(self.process_symbol(new_child))
+                else:
+                    new_children.append(self.process_symbol(child))
+
+            # Get the expression and inputs for the function
+            expression = function_parameter.child
+            inputs = {
+                arg: child
+                for arg, child in zip(
+                    function_parameter.func_args, symbol.children, strict=True
+                )
+            }
+
+            # Set domains for function inputs in post-order traversal
+            for node in expression.post_order():
+                if node.name in inputs:
+                    node.domains = inputs[node.name].domains
+                else:
+                    node.domains = node.get_children_domains(node.children)
+
+            # Combine parameter values with inputs
+            combined_params = ParameterValues({**self, **inputs})
+
+            # Process any FunctionParameter children first to avoid recursion
+            for child in expression.pre_order():
+                if isinstance(child, pybamm.FunctionParameter):
+                    # Build new child with parent inputs
+                    new_child_children = [
+                        inputs[child_child.name]
+                        if isinstance(child_child, pybamm.Parameter)
+                        and child_child.name in inputs
+                        else child_child
+                        for child_child in child.children
+                    ]
+                    new_child = pybamm.FunctionParameter(
+                        child.name,
+                        dict(zip(child.input_names, new_child_children, strict=False)),
+                        diff_variable=child.diff_variable,
+                        print_name=child.print_name,
+                    )
+
+                    # For this local combined parameter values, process the new child
+                    # and store the result as the processed symbol for this child
+                    # This means the child is evaluated with the parent inputs only when
+                    # it is called from within the parent function (not elsewhere in
+                    # the expression tree)
+                    combined_params._processed_symbols[child] = (
+                        combined_params.process_symbol(new_child)
+                    )
+
+            # Process function with combined parameter values to get a symbolic
+            # expression
+            function = combined_params.process_symbol(expression)
+
+            # Differentiate if necessary
+            if symbol.diff_variable is None:
+                # Use ones_like so that we get the right shapes
+                function_out = function * pybamm.ones_like(*new_children)
+            else:
+                # return differentiated function
+                new_diff_variable = self.process_symbol(symbol.diff_variable)
+                function_out = function.diff(new_diff_variable)
+
+            return function_out
+
+        # Handle non-symbolic function_name case
+        else:
+            return self._process_symbol(symbol)
 
     def evaluate(self, symbol, inputs=None):
         """
@@ -999,3 +1080,32 @@ class ParameterValues:
 
     def __iter__(self):
         return iter(self._dict_items)
+
+    @staticmethod
+    def from_json(filename_or_dict):
+        """
+        Loads a ParameterValues object from a JSON file or a dictionary.
+
+        Parameters
+        ----------
+        filename_or_dict : string-like or dict
+            The filename to load the JSON file from, or a dictionary.
+
+        Returns
+        -------
+        ParameterValues
+            The ParameterValues object
+        """
+        if isinstance(filename_or_dict, str | Path):
+            with open(filename_or_dict) as f:
+                parameter_values_dict = json.load(f)
+        elif isinstance(filename_or_dict, dict):
+            parameter_values_dict = filename_or_dict.copy()
+        else:
+            raise TypeError("Input must be a filename (str or pathlib.Path) or a dict")
+
+        for key, value in parameter_values_dict.items():
+            if isinstance(value, dict):
+                parameter_values_dict[key] = Serialise.convert_symbol_from_json(value)
+
+        return ParameterValues(parameter_values_dict)

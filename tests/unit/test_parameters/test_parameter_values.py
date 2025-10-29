@@ -87,9 +87,9 @@ class TestParameterValues:
 
     def test_set_initial_stoichiometries(self):
         param = pybamm.ParameterValues("Chen2020")
-        param.set_initial_stoichiometries(0.4)
-        param_0 = param.set_initial_stoichiometries(0, inplace=False)
-        param_100 = param.set_initial_stoichiometries(1, inplace=False)
+        param.set_initial_state(0.4)
+        param_0 = param.set_initial_state(0, inplace=False)
+        param_100 = param.set_initial_state(1, inplace=False)
 
         # check that the stoichiometry of param is linearly interpolated between
         # the min and max stoichiometries
@@ -103,11 +103,14 @@ class TestParameterValues:
         y_100 = param_100["Initial concentration in positive electrode [mol.m-3]"]
         assert y == pytest.approx(y_0 - 0.4 * (y_0 - y_100))
 
+        with pytest.warns(DeprecationWarning):
+            param.set_initial_stoichiometries(0.4, None)
+
         # check that passing inputs gives the same result
         input_param = "Maximum concentration in positive electrode [mol.m-3]"
         input_value = param[input_param]
         param[input_param] = "[input]"
-        param_0_inputs = param.set_initial_stoichiometries(
+        param_0_inputs = param.set_initial_state(
             0, inplace=False, inputs={input_param: input_value}
         )
         assert (
@@ -122,13 +125,13 @@ class TestParameterValues:
         param = pybamm.lithium_ion.DFN(
             {"working electrode": "positive"}
         ).default_parameter_values
-        param = param.set_initial_stoichiometry_half_cell(
-            0.4, inplace=False, options={"working electrode": "positive"}
+        param.set_initial_state(
+            0.4, inplace=True, options={"working electrode": "positive"}
         )
-        param_0 = param.set_initial_stoichiometry_half_cell(
+        param_0 = param.set_initial_state(
             0, inplace=False, options={"working electrode": "positive"}
         )
-        param_100 = param.set_initial_stoichiometry_half_cell(
+        param_100 = param.set_initial_state(
             1, inplace=False, options={"working electrode": "positive"}
         )
 
@@ -141,31 +144,36 @@ class TestParameterValues:
         param_t = pybamm.lithium_ion.DFN(
             {"working electrode": "positive"}
         ).default_parameter_values
-        param_t.set_initial_stoichiometry_half_cell(
+        param_t.set_initial_state(
             0.4, inplace=True, options={"working electrode": "positive"}
         )
         y = param_t["Initial concentration in positive electrode [mol.m-3]"]
         param_0 = pybamm.lithium_ion.DFN(
             {"working electrode": "positive"}
         ).default_parameter_values
-        param_0.set_initial_stoichiometry_half_cell(
+        param_0.set_initial_state(
             0, inplace=True, options={"working electrode": "positive"}
         )
         y_0 = param_0["Initial concentration in positive electrode [mol.m-3]"]
         param_100 = pybamm.lithium_ion.DFN(
             {"working electrode": "positive"}
         ).default_parameter_values
-        param_100.set_initial_stoichiometry_half_cell(
+        param_100.set_initial_state(
             1, inplace=True, options={"working electrode": "positive"}
         )
         y_100 = param_100["Initial concentration in positive electrode [mol.m-3]"]
         assert y == pytest.approx(y_0 - 0.4 * (y_0 - y_100))
 
+        with pytest.warns(DeprecationWarning):
+            param.set_initial_stoichiometry_half_cell(
+                0.4, options={"working electrode": "positive"}
+            )
+
         # check that passing inputs gives the same result
         input_param = "Maximum concentration in positive electrode [mol.m-3]"
         input_value = param[input_param]
         param[input_param] = "[input]"
-        param_0_inputs = param.set_initial_stoichiometry_half_cell(
+        param_0_inputs = param.set_initial_state(
             0,
             inplace=False,
             options={"working electrode": "positive"},
@@ -179,9 +187,7 @@ class TestParameterValues:
         # test error
         param = pybamm.ParameterValues("Chen2020")
         with pytest.raises(OptionError, match="working electrode"):
-            param.set_initial_stoichiometry_half_cell(
-                0.1, options={"working electrode": "negative"}
-            )
+            param.set_initial_state(0.1, options={"working electrode": "negative"})
 
     def test_set_initial_ocps(self):
         options = {
@@ -191,8 +197,8 @@ class TestParameterValues:
             "intercalation kinetics": "MSMR",
         }
         param_100 = pybamm.ParameterValues("MSMR_Example")
-        param_100.set_initial_ocps(1, inplace=True, options=options)
-        param_0 = param_100.set_initial_ocps(0, inplace=False, options=options)
+        param_100.set_initial_state(1, inplace=True, options=options)
+        param_0 = param_100.set_initial_state(0, inplace=False, options=options)
 
         Un_0 = param_0["Initial voltage in negative electrode [V]"]
         Up_0 = param_0["Initial voltage in positive electrode [V]"]
@@ -202,12 +208,18 @@ class TestParameterValues:
         Up_100 = param_100["Initial voltage in positive electrode [V]"]
         assert Up_100 - Un_100 == pytest.approx(4.2)
 
+        with pytest.warns(DeprecationWarning):
+            param_100.set_initial_ocps("4.2 V", None, inplace=False, options=options)
+
         # check that passing inputs gives the same result
         input_param = "Maximum concentration in positive electrode [mol.m-3]"
         input_value = param_100[input_param]
         param_100[input_param] = "[input]"
-        param_0_inputs = param_100.set_initial_ocps(
-            0, inplace=False, options=options, inputs={input_param: input_value}
+        param_0_inputs = param_100.set_initial_state(
+            0,
+            inplace=False,
+            options=options,
+            inputs={input_param: input_value},
         )
         assert param_0_inputs["Initial voltage in positive electrode [V]"] == Up_0
 
@@ -361,6 +373,16 @@ class TestParameterValues:
         np.testing.assert_array_equal(
             processed_g.evaluate(y=np.ones(10)), np.ones((10, 1))
         )
+
+        # process vector field
+        parameter_values = pybamm.ParameterValues({"lr param": 1, "tb param": 2})
+        h = pybamm.VectorField(
+            pybamm.Parameter("lr param"), pybamm.Parameter("tb param")
+        )
+        processed_h = parameter_values.process_symbol(h)
+        assert isinstance(processed_h, pybamm.VectorField)
+        assert processed_h.lr_field.evaluate() == 1
+        assert processed_h.tb_field.evaluate() == 2
 
         # not found
         with pytest.raises(KeyError):
@@ -1077,3 +1099,177 @@ class TestParameterValues:
         )
         pv = [i for i in parameter_values]
         assert len(pv) == 5, "Should have 5 keys"
+
+    def test_process_function_parameter_with_diff_variable(self):
+        """Test _process_function_parameter with diff_variable (NotConstant wrapping)."""
+        # Create a simple function that uses a spatial variable
+        r = pybamm.SpatialVariable("r", domain=["negative particle"])
+
+        # Create an expression function parameter
+        from pybamm.expression_tree.operations.serialise import (
+            ExpressionFunctionParameter,
+        )
+
+        # Expression: r^2
+        expr = r**2
+        efp = ExpressionFunctionParameter("test_func", expr, "test_func", ["r"])
+
+        # Create a function parameter with diff_variable
+        func_param = pybamm.FunctionParameter("test_func", {"r": r}, diff_variable=r)
+
+        # Set up parameter values with the expression function
+        param_values = pybamm.ParameterValues({"test_func": efp})
+
+        # Process the function parameter (this should trigger diff_variable path)
+        result = param_values.process_symbol(func_param)
+
+        # Verify result is a symbol
+        assert isinstance(result, pybamm.Symbol)
+
+    def test_process_function_parameter_with_nested_function_parameters(self):
+        """Test _process_function_parameter with FunctionParameter children."""
+        x = pybamm.SpatialVariable("x", domain=["negative electrode"])
+
+        # Create nested expression functions
+        from pybamm.expression_tree.operations.serialise import (
+            ExpressionFunctionParameter,
+        )
+
+        # Inner function: x^2
+        inner_expr = x**2
+        inner_efp = ExpressionFunctionParameter("inner", inner_expr, "inner", ["x"])
+
+        # Outer function that calls inner: inner(x) + 1
+        outer_expr = pybamm.FunctionParameter("inner", {"x": x}) + pybamm.Scalar(1)
+        outer_efp = ExpressionFunctionParameter("outer", outer_expr, "outer", ["x"])
+
+        # Set up parameter values
+        param_values = pybamm.ParameterValues(
+            {
+                "inner": inner_efp,
+                "outer": outer_efp,
+            }
+        )
+
+        # Create a function parameter that uses the outer function
+        func_param = pybamm.FunctionParameter("outer", {"x": x})
+
+        # Process the function parameter
+        result = param_values.process_symbol(func_param)
+
+        # Verify result is a symbol
+        assert isinstance(result, pybamm.Symbol)
+
+    def test_process_function_parameter_with_diff_and_nested(self):
+        """Test _process_function_parameter with diff_variable and nested FunctionParameter."""
+        r = pybamm.SpatialVariable("r", domain=["negative particle"])
+
+        from pybamm.expression_tree.operations.serialise import (
+            ExpressionFunctionParameter,
+        )
+
+        # Inner function: r^2
+        inner_expr = r**2
+        inner_efp = ExpressionFunctionParameter("inner", inner_expr, "inner", ["r"])
+
+        # Outer function with nested call: inner(r) + r
+        outer_expr = pybamm.FunctionParameter("inner", {"r": r}) + r
+        outer_efp = ExpressionFunctionParameter("outer", outer_expr, "outer", ["r"])
+
+        param_values = pybamm.ParameterValues(
+            {
+                "inner": inner_efp,
+                "outer": outer_efp,
+            }
+        )
+
+        # Create function parameter with diff_variable
+        func_param = pybamm.FunctionParameter("outer", {"r": r}, diff_variable=r)
+
+        # Process
+        result = param_values.process_symbol(func_param)
+
+        # Verify result is a symbol
+        assert isinstance(result, pybamm.Symbol)
+
+    def test_from_json_with_string_path(self):
+        """Test from_json with string filename."""
+        import json
+        import tempfile
+
+        params = {
+            "param1": 42,
+            "param2": 3.14,
+        }
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            json.dump(params, f)
+            temp_path = f.name
+
+        try:
+            loaded = pybamm.ParameterValues.from_json(temp_path)
+            assert loaded["param1"] == 42
+            assert loaded["param2"] == 3.14
+        finally:
+            os.remove(temp_path)
+
+    def test_from_json_with_path_object(self):
+        """Test from_json with pathlib.Path object."""
+        import json
+        import tempfile
+        from pathlib import Path
+
+        params = {
+            "param1": 100,
+            "param2": 2.71,
+        }
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            json.dump(params, f)
+            temp_path = Path(f.name)
+
+        try:
+            loaded = pybamm.ParameterValues.from_json(temp_path)
+            assert loaded["param1"] == 100
+            assert loaded["param2"] == 2.71
+        finally:
+            os.remove(temp_path)
+
+    def test_from_json_with_invalid_input_type(self):
+        """Test from_json with invalid input type."""
+        with pytest.raises(TypeError, match="Input must be a filename.*or a dict"):
+            pybamm.ParameterValues.from_json(123)  # Integer is invalid
+
+        with pytest.raises(TypeError, match="Input must be a filename.*or a dict"):
+            pybamm.ParameterValues.from_json([1, 2, 3])  # List is invalid
+
+    def test_from_json_with_dict_input(self):
+        """Test from_json with dict input (covers line 1103)."""
+        params = {
+            "param1": 42,
+            "param2": 3.14,
+        }
+
+        # Pass dict directly instead of filename
+        loaded = pybamm.ParameterValues.from_json(params)
+        assert loaded["param1"] == 42
+        assert loaded["param2"] == 3.14
+
+    def test_from_json_with_serialized_symbols(self):
+        """Test from_json with dict containing serialized symbols (covers line 1109)."""
+        from pybamm.expression_tree.operations.serialise import Serialise
+
+        # Create a serialized symbol (dict representation)
+        scalar_symbol = pybamm.Scalar(2.718)
+        serialized_scalar = Serialise.convert_symbol_to_json(scalar_symbol)
+
+        params = {
+            "param1": 42,  # Regular value
+            "param2": serialized_scalar,  # Serialized symbol (dict)
+        }
+
+        # This should convert the serialized symbol back
+        loaded = pybamm.ParameterValues.from_json(params)
+        assert loaded["param1"] == 42
+        assert isinstance(loaded["param2"], pybamm.Scalar)
+        assert loaded["param2"].value == pytest.approx(2.718)

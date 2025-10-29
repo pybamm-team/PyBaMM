@@ -6,6 +6,7 @@ import pytest
 from scipy.integrate import trapezoid
 
 import pybamm
+from pybamm.solvers.base_solver import BaseSolver
 from tests import no_internet_connection
 
 
@@ -294,9 +295,9 @@ class TestSimulation:
         options = {"working electrode": "positive"}
         parameter_values["Current function [A]"] = 0.0
         sim = pybamm.Simulation(model, parameter_values=parameter_values)
-        sol = sim.solve([0, 1], initial_soc=f"{ucv} V")
+        sol = sim.solve([0, 1], initial_soc="4.1 V")
         voltage = sol["Terminal voltage [V]"].entries
-        assert voltage[0] == pytest.approx(ucv, abs=1e-05)
+        assert voltage[0] == pytest.approx(4.1, abs=1e-05)
 
         # test with MSMR
         model = pybamm.lithium_ion.MSMR({"number of MSMR reactions": ("6", "4")})
@@ -304,6 +305,171 @@ class TestSimulation:
         sim = pybamm.Simulation(model, parameter_values=param)
         sim.build(initial_soc=0.5)
         assert sim._built_initial_soc == 0.5
+
+        # Test whether initial_soc works with half cell composite positive electrode
+        # Use actual negative electrode parameters from Chen2020_composite
+        options = {"working electrode": "positive", "particle phases": ("1", "2")}
+        model = pybamm.lithium_ion.SPM(options)
+        param = pybamm.ParameterValues("Chen2020_composite")
+
+        # Map Chen2020_composite negative electrode parameters to positive electrode
+        # Primary phase: Graphite (from Chen2020_composite negative primary)
+        # Secondary phase: Silicon (from Chen2020_composite negative secondary)
+
+        param.update(
+            {
+                # Primary phase (Graphite-like from Chen2020_composite negative)
+                "Primary: Maximum concentration in positive electrode [mol.m-3]": (
+                    param[
+                        "Primary: Maximum concentration in negative electrode [mol.m-3]"
+                    ]
+                ),
+                "Primary: Initial concentration in positive electrode [mol.m-3]": (
+                    param[
+                        "Primary: Initial concentration in negative electrode [mol.m-3]"
+                    ]
+                ),
+                "Primary: Positive particle diffusivity [m2.s-1]": (
+                    param["Primary: Negative particle diffusivity [m2.s-1]"]
+                ),
+                "Primary: Positive electrode OCP [V]": (
+                    param["Primary: Negative electrode OCP [V]"]
+                ),
+                "Primary: Positive electrode active material volume fraction": (
+                    param["Primary: Negative electrode active material volume fraction"]
+                ),
+                "Primary: Positive particle radius [m]": (
+                    param["Primary: Negative particle radius [m]"]
+                ),
+                "Primary: Positive electrode exchange-current density [A.m-2]": (
+                    param[
+                        "Primary: Negative electrode exchange-current density [A.m-2]"
+                    ]
+                ),
+                "Primary: Positive electrode density [kg.m-3]": (
+                    param["Primary: Negative electrode density [kg.m-3]"]
+                ),
+                "Primary: Positive electrode OCP entropic change [V.K-1]": (
+                    param["Primary: Negative electrode OCP entropic change [V.K-1]"]
+                ),
+                # Secondary phase (Silicon-like from Chen2020_composite negative)
+                "Secondary: Maximum concentration in positive electrode [mol.m-3]": (
+                    param[
+                        "Secondary: Maximum concentration in negative electrode [mol.m-3]"
+                    ]
+                ),
+                "Secondary: Initial concentration in positive electrode [mol.m-3]": (
+                    param[
+                        "Secondary: Initial concentration in negative electrode [mol.m-3]"
+                    ]
+                ),
+                "Secondary: Positive particle diffusivity [m2.s-1]": (
+                    param["Secondary: Negative particle diffusivity [m2.s-1]"]
+                ),
+                "Secondary: Positive electrode lithiation OCP [V]": (
+                    param["Secondary: Negative electrode lithiation OCP [V]"]
+                ),
+                "Secondary: Positive electrode delithiation OCP [V]": (
+                    param["Secondary: Negative electrode delithiation OCP [V]"]
+                ),
+                "Secondary: Positive electrode OCP [V]": (
+                    param["Primary: Negative electrode OCP [V]"]
+                ),
+                "Secondary: Positive electrode active material volume fraction": (
+                    param[
+                        "Secondary: Negative electrode active material volume fraction"
+                    ]
+                ),
+                "Secondary: Positive particle radius [m]": (
+                    param["Secondary: Negative particle radius [m]"]
+                ),
+                "Secondary: Positive electrode exchange-current density [A.m-2]": (
+                    param[
+                        "Secondary: Negative electrode exchange-current density [A.m-2]"
+                    ]
+                ),
+                "Secondary: Positive electrode density [kg.m-3]": (
+                    param["Secondary: Negative electrode density [kg.m-3]"]
+                ),
+                "Secondary: Positive electrode OCP entropic change [V.K-1]": (
+                    param["Secondary: Negative electrode OCP entropic change [V.K-1]"]
+                ),
+            },
+            check_already_exists=False,
+        )
+
+        # Set voltage cutoffs to match the graphite/silicon OCP range
+        param["Lower voltage cut-off [V]"] = (
+            0.1  # Very small number < 1e-2 as requested
+        )
+        param["Upper voltage cut-off [V]"] = 1.0  # Matches silicon OCP range
+        param["Open-circuit voltage at 0% SOC [V]"] = 0.1
+        param["Open-circuit voltage at 100% SOC [V]"] = 1.0
+
+        # Keep other positive electrode parameters the same
+        param["Positive electrode conductivity [S.m-1]"] = param[
+            "Positive electrode conductivity [S.m-1]"
+        ]
+        param["Positive electrode porosity"] = param["Positive electrode porosity"]
+        param["Positive electrode Bruggeman coefficient (electrolyte)"] = param[
+            "Positive electrode Bruggeman coefficient (electrolyte)"
+        ]
+        param["Positive electrode Bruggeman coefficient (electrode)"] = param[
+            "Positive electrode Bruggeman coefficient (electrode)"
+        ]
+        param["Positive electrode charge transfer coefficient"] = param[
+            "Positive electrode charge transfer coefficient"
+        ]
+        param["Positive electrode double-layer capacity [F.m-2]"] = param[
+            "Positive electrode double-layer capacity [F.m-2]"
+        ]
+        param["Positive electrode specific heat capacity [J.kg-1.K-1]"] = param[
+            "Positive electrode specific heat capacity [J.kg-1.K-1]"
+        ]
+        param["Positive electrode thermal conductivity [W.m-1.K-1]"] = param[
+            "Positive electrode thermal conductivity [W.m-1.K-1]"
+        ]
+
+        # Add lithium metal electrode parameters required for half-cell
+        # Import the lithium metal exchange current density function
+        def li_metal_electrolyte_exchange_current_density_Xu2019(c_e, c_Li, T):
+            """
+            Exchange-current density for Butler-Volmer reactions between li metal and LiPF6 in
+            EC:DMC.
+            """
+            import pybamm
+
+            m_ref = (
+                3.5e-8 * pybamm.constants.F
+            )  # (A/m2)(mol/m3) - includes ref concentrations
+            return m_ref * c_Li**0.7 * c_e**0.3
+
+        param.update(
+            {
+                "Exchange-current density for lithium metal electrode [A.m-2]": li_metal_electrolyte_exchange_current_density_Xu2019,
+                "Lithium metal partial molar volume [m3.mol-1]": 1.3e-05,  # From Xu2019 parameter set
+                "Lithium metal interface surface potential difference [V]": 0.0,
+                "Current function [A]": 0.0,
+            },
+            check_already_exists=False,
+        )
+
+        sim = pybamm.Simulation(model, parameter_values=param)
+        sim.solve([0, 1], initial_soc=0.8)
+        assert sim._built_initial_soc == 0.8
+
+        # Test with initial voltage for composite half-cell
+        sim = pybamm.Simulation(model, parameter_values=param)
+        sol = sim.solve(
+            [0, 1], initial_soc="0.15 V"
+        )  # Test with voltage initialization within composite OCP range
+        voltage = sol["Terminal voltage [V]"].entries
+        assert voltage[0] == pytest.approx(
+            0.15, abs=1e-5
+        )  # More relaxed tolerance for composite electrode initialization
+
+        with pytest.warns(DeprecationWarning):
+            sim.set_initial_soc(0.5, None)
 
     def test_solve_with_initial_soc_with_input_param_in_ocv(self):
         # test having an input parameter in the ocv function
@@ -570,6 +736,16 @@ class TestSimulation:
 
         os.remove("sim_save.json")
 
+    def test_save_load_outvars(self, tmp_path):
+        filename = str(tmp_path / "test.pkl")
+        model = pybamm.lithium_ion.SPM()
+        solver = pybamm.IDAKLUSolver(output_variables=["Voltage [V]"])
+        sim = pybamm.Simulation(model, solver=solver)
+        sim.solve([0, 600])
+        sim.save(filename)
+        pkl_obj = pybamm.load_sim(filename)
+        assert list(pkl_obj.solver.output_variables) == ["Voltage [V]"]
+
     def test_plot(self):
         sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
 
@@ -632,27 +808,116 @@ class TestSimulation:
                 i += 1
                 assert i < len(sim.solution.t)
 
-    def test_discontinuous_current(self):
+    # Test with an ODE and DAE model
+    @pytest.mark.parametrize(
+        "model", [pybamm.lithium_ion.SPM(), pybamm.lithium_ion.DFN()]
+    )
+    def test_heaviside_current(self, model):
         def car_current(t):
             current = (
-                1 * (t >= 0) * (t <= 1000)
-                - 0.5 * (1000 < t) * (t <= 2000)
+                1 * (t <= 1000)
+                - 0.5 * (1000 < t) * (t < 1500)
                 + 0.5 * (2000 < t)
+                + 5 * (t >= 3601)
             )
             return current
 
-        model = pybamm.lithium_ion.DFN()
+        def prevfloat(t):
+            return np.nextafter(np.float64(t), -np.inf)
+
+        def nextfloat(t):
+            return np.nextafter(np.float64(t), np.inf)
+
+        t_eval = [0.0, 3600.0]
+
+        t_nodes = np.array(
+            [
+                0.0,  # t_eval[0]
+                1000.0,  # t <= 1000
+                nextfloat(1000.0),  # t <= 1000
+                prevfloat(1500.0),  # t < 1500
+                1500.0,  # t < 1500
+                2000.0,  # 2000 < t
+                nextfloat(2000.0),  # 2000 < t
+                3600.0,  # t_eval[-1]
+            ]
+        )
+
         param = model.default_parameter_values
         param["Current function [A]"] = car_current
 
-        sim = pybamm.Simulation(
-            model, parameter_values=param, solver=pybamm.CasadiSolver(mode="fast")
-        )
-        sim.solve([0, 3600])
+        sim = pybamm.Simulation(model, parameter_values=param)
+
+        # Set t_interp to t_eval to only return the breakpoints
+        sol = sim.solve(t_eval, t_interp=t_eval)
+
+        np.testing.assert_array_equal(sol.t, t_nodes)
+        # Make sure t_eval is not modified
+        assert t_eval == [0.0, 3600.0]
+
         current = sim.solution["Current [A]"]
-        assert current(0) == 1
-        assert current(1500) == -0.5
-        assert current(3000) == 0.5
+
+        for t_node in t_nodes:
+            assert current(t_node) == pytest.approx(car_current(t_node))
+
+    # Test with an ODE and DAE model
+    @pytest.mark.parametrize(
+        "model", [pybamm.lithium_ion.SPM(), pybamm.lithium_ion.DFN()]
+    )
+    def test_modulo_current(self, model):
+        dt = 1.0
+
+        def sawtooth_current(t):
+            return t % dt
+
+        def prevfloat(t):
+            return np.nextafter(np.float64(t), -np.inf)
+
+        t_eval = [0.0, 10.5]
+
+        t_nodes = np.arange(0.0, 10.5 + dt, dt)
+        t_nodes = np.concatenate(
+            [
+                t_nodes,
+                prevfloat(t_nodes),
+                t_eval,
+            ]
+        )
+
+        # Filter out all points not within t_eval
+        t_nodes = t_nodes[(t_nodes >= t_eval[0]) & (t_nodes <= t_eval[1])]
+
+        t_nodes = np.sort(np.unique(t_nodes))
+
+        param = model.default_parameter_values
+        param["Current function [A]"] = sawtooth_current
+
+        sim = pybamm.Simulation(model, parameter_values=param)
+
+        # Set t_interp to t_eval to only return the breakpoints
+        sol = sim.solve(t_eval, t_interp=t_eval)
+
+        np.testing.assert_array_equal(sol.t, t_nodes)
+        # Make sure t_eval is not modified
+        assert t_eval == [0.0, 10.5]
+
+        current = sim.solution["Current [A]"]
+
+        for t_node in t_nodes:
+            assert current(t_node) == pytest.approx(sawtooth_current(t_node))
+
+    def test_filter_discontinuities_simple(self):
+        t_eval = [0.0, 3.0, 10.0]
+        t_discon = [-5.0, 0.0, 1.0, 3.0, 3.0, 5.0, 10.0, 12.0]
+
+        result = BaseSolver.filter_discontinuities(t_discon, t_eval)
+        expected = np.array([1.0, 3.0, 5.0])
+
+        # Exclusive of endpoints
+        t_eval_endpoints = [t_eval[0], t_eval[-1]]
+        assert all(t not in result for t in t_eval_endpoints)
+
+        np.testing.assert_array_equal(result, expected)
 
     def test_t_eval(self):
         model = pybamm.lithium_ion.SPM()
