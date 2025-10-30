@@ -799,8 +799,6 @@ class BaseSolver:
         """
         pybamm.logger.info(f"Start solving {model.name} with {self.name}")
 
-        import time
-
         if self.max_wall_time is not None:
             self._wall_time_start = time.time()
 
