@@ -71,7 +71,6 @@ class BaseSolver:
         self._on_extrapolation = on_extrapolation or "warn"
         self._on_failure = on_failure or "raise"
         self._model_set_up = {}
-        self.max_wall_time = max_wall_time
         self._wall_time_start = None
 
         # Defaults, can be overwritten by specific solver
