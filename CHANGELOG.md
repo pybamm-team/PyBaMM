@@ -1,5 +1,7 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+# [v25.10.0](https://github.com/pybamm-team/PyBaMM/tree/v25.10.0) - 2025-10-29
+
 ## Features
 
 - Added uniform grid sizing across subdomains in the x-dimension, ensuring consistent grid spacing when geometries have varying lengths. ([#5253](https://github.com/pybamm-team/PyBaMM/pull/5253))
