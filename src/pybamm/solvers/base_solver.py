@@ -735,82 +735,85 @@ class BaseSolver:
         return calculate_sensitivities_list, sensitivities_have_changed
 
     def solve(
-        self,
-        model,
-        t_eval=None,
-        inputs=None,
-        nproc=None,
-        calculate_sensitivities=False,
-        t_interp=None,
-        initial_conditions=None,
-    ):
-        """
-        Execute the solver setup and calculate the solution of the model at
-        specified times.
+    self,
+    model,
+    t_eval=None,
+    inputs=None,
+    nproc=None,
+    calculate_sensitivities=False,
+    t_interp=None,
+    initial_conditions=None,
+    max_wall_time=None,
+):
+    """
+    Execute the solver setup and calculate the solution of the model at
+    specified times.
 
-        Parameters
-        ----------
-        model : :class:`pybamm.BaseModel`
-            The model whose solution to calculate. Must have attributes rhs and
-            initial_conditions. All calls to solve must pass in the same model or
-            an error is raised
-        t_eval : None, list or ndarray, optional
-            The times (in seconds) at which to compute the solution. Defaults to None.
-        inputs : dict or list, optional
-            A dictionary or list of dictionaries describing any input parameters to
-            pass to the model when solving
-        nproc : int, optional
-            Number of processes to use when solving for more than one set of input
-            parameters. Defaults to value returned by "os.cpu_count()".
-        calculate_sensitivities : list of str or bool, optional
-            Whether the solver calculates sensitivities of all input parameters. Defaults to False.
-            If only a subset of sensitivities are required, can also pass a
-            list of input parameter names.  **Limitations**: sensitivities are not calculated up to numerical tolerances
-            so are not guarenteed to be within the tolerances set by the solver, please raise an issue if you
-            require this functionality. Also, when using this feature with `pybamm.Experiment`, the sensitivities
-            do not take into account the movement of step-transitions wrt input parameters, so do not use this feature
-            if the timings of your experimental protocol change rapidly with respect to your input parameters.
-        t_interp : None, list or ndarray, optional
-            The times (in seconds) at which to interpolate the solution. Defaults to None.
-            Only valid for solvers that support intra-solve interpolation (`IDAKLUSolver`).
-        initial_conditions : dict, numpy.ndarray, or list, optional
-            Override the model’s default `y0`.  Can be:
+    Parameters
+    ----------
+    model : :class:`pybamm.BaseModel`
+        The model whose solution to calculate. Must have attributes rhs and
+        initial_conditions. All calls to solve must pass in the same model or
+        an error is raised
+    t_eval : None, list or ndarray, optional
+        The times (in seconds) at which to compute the solution. Defaults to None.
+    inputs : dict or list, optional
+        A dictionary or list of dictionaries describing any input parameters to
+        pass to the model when solving
+    nproc : int, optional
+        Number of processes to use when solving for more than one set of input
+        parameters. Defaults to value returned by "os.cpu_count()".
+    calculate_sensitivities : list of str or bool, optional
+        Whether the solver calculates sensitivities of all input parameters. Defaults to False.
+        If only a subset of sensitivities are required, can also pass a
+        list of input parameter names.  **Limitations**: sensitivities are not calculated up to numerical tolerances
+        so are not guarenteed to be within the tolerances set by the solver, please raise an issue if you
+        require this functionality. Also, when using this feature with `pybamm.Experiment`, the sensitivities
+        do not take into account the movement of step-transitions wrt input parameters, so do not use this feature
+        if the timings of your experimental protocol change rapidly with respect to your input parameters.
+    t_interp : None, list or ndarray, optional
+        The times (in seconds) at which to interpolate the solution. Defaults to None.
+        Only valid for solvers that support intra-solve interpolation (`IDAKLUSolver`).
+    initial_conditions : dict, numpy.ndarray, or list, optional
+        Override the model’s default `y0`.  Can be:
 
-            - a dict mapping variable names → values
-            - a 1D array of length `n_states`
-            - a list of such overrides (one per parallel solve)
+        - a dict mapping variable names → values
+        - a 1D array of length `n_states`
+        - a list of such overrides (one per parallel solve)
 
-            Only valid for IDAKLU solver.
-        Returns
-        -------
-        :class:`pybamm.Solution` or list of :class:`pybamm.Solution` objects.
-             If type of `inputs` is `list`, return a list of corresponding
-             :class:`pybamm.Solution` objects.
+        Only valid for IDAKLU solver.
+    Returns
+    -------
+    :class:`pybamm.Solution` or list of :class:`pybamm.Solution` objects.
+         If type of `inputs` is `list`, return a list of corresponding
+         :class:`pybamm.Solution` objects.
 
-        Raises
-        ------
-        :class:`pybamm.ModelError`
-            If an empty model is passed (`model.rhs = {}` and `model.algebraic={}` and
-            `model.variables = {}`)
-        :class:`RuntimeError`
-            If multiple calls to `solve` pass in different models
+    Raises
+    ------
+    :class:`pybamm.ModelError`
+        If an empty model is passed (`model.rhs = {}` and `model.algebraic={}` and
+        `model.variables = {}`)
+    :class:`RuntimeError`
+        If multiple calls to `solve` pass in different models
 
-        """
+    """
+    start_time = time.time()
+    try:
         pybamm.logger.info(f"Start solving {model.name} with {self.name}")
-
-        if self.max_wall_time is not None:
+        
+        if max_wall_time is not None:
             self._wall_time_start = time.time()
-
+        
         # Make sure model isn't empty
         self._check_empty_model(model)
-
+        
         # t_eval can only be None if the solver is an algebraic solver. In that case
         # set it to 0
         if t_eval is None:
             if self._algebraic_solver is False:
                 raise ValueError("t_eval cannot be None")
             t_eval = np.array([0])
-
+        
         # If t_eval is provided as [t0, tf] return the solution at 100 points
         elif isinstance(t_eval, list):
             if len(t_eval) == 1 and self._algebraic_solver is True:
@@ -824,13 +827,13 @@ class BaseSolver:
                 )
             elif not self.supports_interp:
                 t_eval = np.linspace(t_eval[0], t_eval[-1], 100)
-
+        
         # Make sure t_eval is monotonic
         if (np.diff(t_eval) < 0).any():
             raise pybamm.SolverError("t_eval must increase monotonically")
-
+        
         t_interp = self.process_t_interp(t_interp)
-
+        
         # Set up inputs
         #
         # Argument "inputs" can be either a list of input dicts or
@@ -841,18 +844,18 @@ class BaseSolver:
         model_inputs_list = [
             self._set_up_model_inputs(model, inputs) for inputs in inputs_list
         ]
-
+        
         calculate_sensitivities_list, sensitivities_have_changed = (
             BaseSolver._solve_process_calculate_sensitivities_arg(
                 model_inputs_list[0], model, calculate_sensitivities
             )
         )
-
+        
         # (Re-)calculate consistent initialization
         # Assuming initial conditions do not depend on input parameters
         # when len(inputs_list) > 1, only `model_inputs_list[0]`
         # is passed to `_set_consistent_initialization`.
-        # See https://github.com/pybamm-team/PyBaMM/pull/1261
+        # See [https://github.com/pybamm-team/PyBaMM/pull/1261](https://github.com/pybamm-team/PyBaMM/pull/1261)
         if len(model_inputs_list) > 1:
             all_inputs_names = set(
                 itertools.chain.from_iterable(
@@ -871,18 +874,18 @@ class BaseSolver:
                         "Input parameters cannot appear in expression "
                         "for initial conditions."
                     )
-
+        
         # if any setup configuration has changed, we need to re-set up
         if sensitivities_have_changed:
             self._model_set_up.pop(model, None)
             # CasadiSolver caches its integrators using model, so delete this too
             if isinstance(self, pybamm.CasadiSolver):
                 self.integrators.pop(model, None)
-
+        
         # save sensitivity parameters so we can identify them later on
         # (FYI: this is used in the Solution class)
         model.calculate_sensitivities = calculate_sensitivities_list
-
+        
         # Set up (if not done already)
         timer = pybamm.Timer()
         # Set the initial conditions
@@ -898,7 +901,7 @@ class BaseSolver:
             # up (initial condition, time-scale and length-scale) does
             # not depend on input parameters. Therefore, only `model_inputs[0]`
             # is passed to `set_up`.
-            # See https://github.com/pybamm-team/PyBaMM/pull/1261
+            # See [https://github.com/pybamm-team/PyBaMM/pull/1261](https://github.com/pybamm-team/PyBaMM/pull/1261)
             self.set_up(model, model_inputs_list[0], t_eval)
             self._model_set_up.update(
                 {model: {"initial conditions": model.concatenated_initial_conditions}}
@@ -922,23 +925,23 @@ class BaseSolver:
         else:
             # Set the standard initial conditions
             self._set_initial_conditions(model, t_eval[0], model_inputs_list[0])
-
+        
         # Solve for the consistent initialization
         self._set_consistent_initialization(model, t_eval[0], model_inputs_list[0])
-
+        
         set_up_time = timer.time()
         timer.reset()
-
+        
         # Check initial conditions don't violate events
         self._check_events_with_initialization(t_eval, model, model_inputs_list[0])
-
+        
         # Process discontinuities
         (
             start_indices,
             end_indices,
             t_eval,
         ) = self._get_discontinuity_start_end_indices(model, inputs, t_eval)
-
+        
         # Integrate separately over each time segment and accumulate into the solution
         # object, restarting the solver at each discontinuity (and recalculating a
         # consistent state afterwards if a DAE)
@@ -956,6 +959,7 @@ class BaseSolver:
                     model_inputs_list,
                     t_interp,
                     initial_conditions,
+                    max_wall_time=max_wall_time
                 )
             else:
                 ninputs = len(model_inputs_list)
@@ -965,6 +969,7 @@ class BaseSolver:
                         t_eval[start_index:end_index],
                         model_inputs_list[0],
                         t_interp=t_interp,
+                        max_wall_time=max_wall_time
                     )
                     new_solutions = [new_solution]
                 else:
@@ -977,7 +982,7 @@ class BaseSolver:
                                 model_inputs_list,
                                 [t_interp] * ninputs,
                                 strict=False,
-                            ),
+                            ) + ((max_wall_time,) * ninputs,)
                         )
                         p.close()
                         p.join()
@@ -991,10 +996,10 @@ class BaseSolver:
             else:
                 for i, new_solution in enumerate(new_solutions):
                     solutions[i] = solutions[i] + new_solution
-
+            
             if solutions[0].termination != "final time":
                 break
-
+            
             if end_index != len(t_eval):
                 # setup for next integration subsection
                 last_state = solutions[0].y[:, -1]
@@ -1006,7 +1011,7 @@ class BaseSolver:
                         model, t_eval[end_index], model_inputs_list[0]
                     )
         solve_time = timer.time()
-
+        
         for i, solution in enumerate(solutions):
             # Check if extrapolation occurred
             self.check_extrapolation(solution, model.events)
@@ -1020,10 +1025,10 @@ class BaseSolver:
             # all solutions get the same solve time, but their integration time
             # will be different (see https://github.com/pybamm-team/PyBaMM/pull/1261)
             solutions[i].solve_time = solve_time
-
+        
         # Restore old y0
         model.y0 = old_y0
-
+        
         # Report times
         if len(solutions) == 1:
             pybamm.logger.info(f"Finish solving {model.name} ({termination})")
@@ -1036,7 +1041,7 @@ class BaseSolver:
             pybamm.logger.info(
                 f"Set-up time: {solutions[0].set_up_time}, Solve time: {solutions[0].solve_time}, Total time: {solutions[0].total_time}"
             )
-
+        
         # Raise error if solutions[0] only contains one timestep (except for algebraic
         # solvers, where we may only expect one time in the solution)
         if (
@@ -1049,11 +1054,25 @@ class BaseSolver:
                 "Check whether simulation terminated too early."
             )
 
-        # Return solution(s)
-        if len(solutions) == 1:
-            return solutions[0]
-        else:
-            return solutions
+    except pybamm.SolverError as e:
+        if max_wall_time is not None and "Wall time limit exceeded" in str(e):
+            raise
+        raise e
+
+    elapsed = time.time() - start_time
+    if max_wall_time is not None and elapsed > max_wall_time:
+        partial_sol = solutions[0] if 'solutions' in locals() else None
+        raise pybamm.SolverError(
+            f"Wall time limit ({max_wall_time}s) exceeded during solve (took {elapsed:.2f}s)",
+            solution=partial_sol
+        )
+
+    # Return solution(s)
+    if len(solutions) == 1:
+        return solutions[0]
+    else:
+        return solutions
+
 
     @staticmethod
     def filter_discontinuities(t_discon: list, t_eval: list) -> np.ndarray:
