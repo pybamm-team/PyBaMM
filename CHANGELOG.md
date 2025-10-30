@@ -2,6 +2,7 @@
 
 ## Features
 
+- Added the max_wall_time parameter to BaseSolver (and child classes) for optional wall-clock timeout handling during solver steps, raising SolverError on exceedance while preserving partial solutions. ([#5240](https://github.com/pybamm-team/PyBaMM/pull/5240))
 - Added the `electrode_phases` kwarg to `plot_voltage_components()` which allows choosing between plotting primary or secondary phase overpotentials. ([#5229](https://github.com/pybamm-team/PyBaMM/pull/5229))
 - Added the `num_steps_no_progress` and `t_no_progress` options in the `IDAKLUSolver` to early terminate the simulation if little progress is detected. ([#5201](https://github.com/pybamm-team/PyBaMM/pull/5201))
 - EvaluateAt symbol: add support for children evaluated at edges ([#5190](https://github.com/pybamm-team/PyBaMM/pull/5190))
