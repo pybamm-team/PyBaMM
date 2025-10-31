@@ -9,6 +9,45 @@ import numpy as np
 import pybamm
 
 
+def compute_var_pts_from_thicknesses(electrode_thicknesses, grid_size):
+    """
+    Compute a ``var_pts`` dictionary from electrode thicknesses and a given
+    uniform grid size.
+
+    Added following maintainer feedback in issue #<issue-number> for a more
+    consistent and deterministic way of defining grid points across domains.
+
+    Parameters
+    ----------
+    electrode_thicknesses : dict
+        Thickness values for each electrode domain.
+    grid_size : int or float
+        Desired number of grid points for the reference (negative electrode).
+
+    Returns
+    -------
+    dict
+        Dictionary mapping each domain to its computed number of grid points.
+    """
+    if not isinstance(electrode_thicknesses, dict):
+        raise TypeError("electrode_thicknesses must be a dictionary")
+    if not isinstance(grid_size, int | float) or grid_size <= 0:
+        raise ValueError("grid_size must be positive")
+    if "negative electrode" not in electrode_thicknesses:
+        raise ValueError("Missing 'negative electrode' in electrode_thicknesses")
+
+    ref_thickness = electrode_thicknesses["negative electrode"]
+    ref_pts = round(grid_size)
+    dx = ref_thickness / ref_pts
+
+    var_pts = {}
+    for domain, thickness in electrode_thicknesses.items():
+        npts = max(round(thickness / dx), 2)
+        var_pts[domain] = {f"x_{domain[0]}": npts}
+
+    return var_pts
+
+
 class Mesh(dict):
     """
     Mesh contains a list of submeshes on each subdomain.
@@ -101,47 +140,6 @@ class Mesh(dict):
                         # Otherwise add to the dictionary of submesh points
                         submesh_pts[domain][var.name] = var_name_pts[var.name]
         self.submesh_pts = submesh_pts
-        # Optional uniform grid sizing across all subdomains
-        if uniform_grid:
-            # Find the domain where npts is specified (e.g., negative electrode)
-            specified_domain = None
-            specified_var = None
-            for domain, vars_pts in self.submesh_pts.items():
-                for var_name, npts in vars_pts.items():
-                    if npts is not None:
-                        specified_domain = domain
-                        specified_var = var_name
-                        break
-                if specified_domain:
-                    break
-
-            if specified_domain is None:
-                raise ValueError(
-                    "At least one subdomain must have specified npts for uniform grid sizing."
-                )
-
-            # Compute dx from the specified domain
-            geom = geometry[specified_domain]
-            L_spec = geom[specified_var]["max"] - geom[specified_var]["min"]
-            n_spec = self.submesh_pts[specified_domain][specified_var]
-            dx = L_spec / n_spec
-
-            # Now compute npts for all other subdomains
-            for domain, vars_pts in self.submesh_pts.items():
-                for var_name, npts in vars_pts.items():
-                    if npts is None:
-                        geom = geometry[domain]
-                        L = geom[var_name]["max"] - geom[var_name]["min"]
-                        # Round to nearest integer
-                        computed_pts = round(L / dx)
-                        if computed_pts < 2:
-                            computed_pts = 2  # avoid degenerate meshes
-                        self.submesh_pts[domain][var_name] = computed_pts
-
-            pybamm.logger.info(
-                f"Uniform grid sizing enabled. Computed Δx = {dx:.4g} "
-                f"based on '{specified_domain}' ({n_spec} pts)."
-            )
 
         # evaluate any expressions in geometry
         for domain in geometry:
