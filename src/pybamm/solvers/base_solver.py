@@ -970,7 +970,7 @@ class BaseSolver:
                                 [t_eval[start_index:end_index]] * ninputs,
                                 model_inputs_list,
                                 [t_interp] * ninputs,
-                                strict=False,
+                                strict=True,
                             ),
                         )
                         p.close()
@@ -1198,7 +1198,7 @@ class BaseSolver:
 
         # sort equations according to slices
         concatenated_initial_conditions = [
-            casadi.vertcat(*[eq for _, eq in sorted(zip(slices, init, strict=False))])
+            casadi.vertcat(*[eq for _, eq in sorted(zip(slices, init, strict=True))])
             for init in initial_conditions
         ]
         return concatenated_initial_conditions
