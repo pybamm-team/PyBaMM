@@ -11,38 +11,32 @@ import pybamm
 
 def compute_var_pts_from_thicknesses(electrode_thicknesses, grid_size):
     """
-    Compute a ``var_pts`` dictionary from electrode thicknesses and a given
-    uniform grid size.
+    Compute a ``var_pts`` dictionary using electrode thicknesses and a target cell size (dx).
 
-    Added following maintainer feedback in issue #<issue-number> for a more
-    consistent and deterministic way of defining grid points across domains.
+    Added as per maintainer feedback in issue #<your-issue-number> to make mesh generation
+    explicit — ``grid_size`` now represents the mesh cell size in metres.
 
     Parameters
     ----------
     electrode_thicknesses : dict
-        Thickness values for each electrode domain.
-    grid_size : int or float
-        Desired number of grid points for the reference (negative electrode).
+        Domain thicknesses in metres.
+    grid_size : float
+        Desired uniform mesh cell size (m).
 
     Returns
     -------
     dict
-        Dictionary mapping each domain to its computed number of grid points.
+        Mapping of each domain to its computed grid points.
     """
     if not isinstance(electrode_thicknesses, dict):
         raise TypeError("electrode_thicknesses must be a dictionary")
-    if not isinstance(grid_size, int | float) or grid_size <= 0:
-        raise ValueError("grid_size must be positive")
-    if "negative electrode" not in electrode_thicknesses:
-        raise ValueError("Missing 'negative electrode' in electrode_thicknesses")
 
-    ref_thickness = electrode_thicknesses["negative electrode"]
-    ref_pts = round(grid_size)
-    dx = ref_thickness / ref_pts
+    if not isinstance(grid_size, (int | float)) or grid_size <= 0:
+        raise ValueError("grid_size must be a positive number")
 
     var_pts = {}
     for domain, thickness in electrode_thicknesses.items():
-        npts = max(round(thickness / dx), 2)
+        npts = max(round(thickness / grid_size), 2)
         var_pts[domain] = {f"x_{domain[0]}": npts}
 
     return var_pts
