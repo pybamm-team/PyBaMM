@@ -58,7 +58,7 @@ class Mesh(dict):
 
     """
 
-    def __init__(self, geometry, submesh_types, var_pts, uniform_grid=False):
+    def __init__(self, geometry, submesh_types, var_pts):
         super().__init__()
 
         # Save geometry
