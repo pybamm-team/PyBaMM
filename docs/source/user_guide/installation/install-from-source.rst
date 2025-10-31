@@ -16,7 +16,7 @@ Prerequisites
 ---------------
 
 The following instructions are valid for both GNU/Linux distributions and MacOS.
-If you are running Windows, consider using the `Windows Subsystem for Linux (WSL) <https://docs.microsoft.com/en-us/windows/wsl/install-win10>`_.
+If you are running Windows, consider using the `Windows Subsystem for Linux (WSL) <https://learn.microsoft.com/en-us/windows/wsl/install-win10>`_.
 
 To obtain the PyBaMM source code, clone the GitHub repository
 
