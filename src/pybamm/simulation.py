@@ -427,6 +427,8 @@ class Simulation:
             Initial State of Charge (SOC) for the simulation. Must be between 0 and 1.
             If given, overwrites the initial concentrations provided in the parameter
             set.
+        direction : str, optional
+            Direction of the solve ("forward" or "backward"). Defaults to "forward".
         callbacks : list of callbacks, optional
             A list of callbacks to be called at each time step. Each callback must
             implement all the methods defined in :class:`pybamm.callbacks.BaseCallback`.
@@ -434,9 +436,15 @@ class Simulation:
             Whether to show a progress bar for cycling. If true, shows a progress bar
             for cycles. Has no effect when not used with an experiment.
             Default is False.
+        inputs : dict, optional
+            Dictionary of input values to override model defaults. If None, uses built-in
+            values from the parameter set.
         t_interp : None, list or ndarray, optional
             The times (in seconds) at which to interpolate the solution. Defaults to None.
             Only valid for solvers that support intra-solve interpolation (`IDAKLUSolver`).
+        initial_conditions : dict, optional
+            Dictionary of initial conditions for the variables. If None, the initial
+            conditions are inferred from the model.
         max_wall_time : float, optional
             Maximum wall-clock time (in seconds) for the entire solve process. If
             exceeded during solver steps, raises a :class:`pybamm.SolverError` while
