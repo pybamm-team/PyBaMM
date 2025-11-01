@@ -1145,6 +1145,46 @@ class TestBaseModel:
             new_model_disc.concatenated_initial_conditions.evaluate(), 5
         )
 
+    def test_set_initial_conditions_from_y_slices(self):
+        """Test that set_initial_conditions_from uses y_slices for discretised models."""
+        # Set up a simple discretised model
+        model = pybamm.BaseModel()
+        var = pybamm.Variable("test_var", domain="negative electrode")
+        model.rhs = {var: -var}
+        model.initial_conditions = {var: 1}
+
+        # Discretise
+        geometry = {"negative electrode": {"x_n": {"min": 0, "max": 1}}}
+        mesh = pybamm.Mesh(
+            geometry, {"negative electrode": pybamm.Uniform1DSubMesh}, {"x_n": 5}
+        )
+        disc = pybamm.Discretisation(
+            mesh, {"negative electrode": pybamm.FiniteVolume()}
+        )
+        model_disc = disc.process_model(model, inplace=False)
+
+        # Get the discretised variable (key from initial_conditions)
+        disc_var = next(iter(model_disc.initial_conditions.keys()))
+
+        # Create solution with known values
+        t = np.array([0, 1])
+        # y has shape (n_vars, n_time), with value 10 for test_var's slice
+        y = np.zeros((model_disc.len_rhs_and_alg, 2))
+        # Set last time step to 10 for the variable's slice using y_slices
+        if disc_var in model_disc.y_slices:
+            y_slice = model_disc.y_slices[disc_var][0]
+            y[y_slice, -1] = 10
+        sol = pybamm.Solution(t, y, model_disc, {})
+
+        # Update initial conditions - should use y_slices path
+        model_disc.set_initial_conditions_from(sol)
+
+        # Verify initial conditions were updated correctly
+        assert isinstance(model_disc.initial_conditions[disc_var], pybamm.Vector)
+        np.testing.assert_array_equal(
+            model_disc.initial_conditions[disc_var].entries, 10
+        )
+
     def test_set_initial_condition_errors(self):
         model = pybamm.BaseModel()
         var = pybamm.Scalar(1)

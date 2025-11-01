@@ -930,15 +930,55 @@ class BaseModel:
         if isinstance(solution, pybamm.Solution):
             solution = solution.last_state
 
+        def _evaluate_symbol(symbol):
+            if hasattr(symbol, "evaluate"):
+                return symbol.evaluate()
+            return symbol
+
+        def _find_matching_variable(var, solution_model):
+            if not (
+                solution_model.is_discretised and solution_model.y_slices is not None
+            ):
+                return None
+            var_id = var.id
+            for sol_var in solution_model.y_slices.keys():
+                if sol_var.id == var_id:
+                    return sol_var
+            return None
+
+        def _extract_from_y_slices(var, solution_var, solution_model, solution):
+            solution_y_slice = solution_model.y_slices[solution_var][0]
+            y_last = solution.y[:, -1] if solution.y.ndim > 1 else solution.y
+
+            # Validate slice bounds
+            slice_stop = (
+                solution_y_slice.stop
+                if solution_y_slice.stop is not None
+                else len(y_last)
+            )
+            slice_start = (
+                solution_y_slice.start if solution_y_slice.start is not None else 0
+            )
+            if slice_start < 0 or slice_stop > len(y_last):
+                return None
+
+            # Extract scaled state vector values
+            y_scaled = np.array(y_last[solution_y_slice])
+
+            # Convert from scaled state vector to physical values
+            # physical = reference + scale * y_scaled
+            solution_scale = _evaluate_symbol(solution_var.scale)
+            solution_reference = _evaluate_symbol(solution_var.reference)
+            return solution_reference + solution_scale * y_scaled
+
         def get_final_state_eval(final_state):
-            # If already a numpy array (from y_slices), it's already the final state
+            # If already a numpy array (e.g. from y_slices), it's already the final state
             if isinstance(final_state, np.ndarray):
                 return np.array(final_state)
 
             # Otherwise, it's a ProcessedVariable - extract .data if available
-            if isinstance(solution, pybamm.Solution):
-                if hasattr(final_state, "data"):
-                    final_state = final_state.data
+            if isinstance(solution, pybamm.Solution) and hasattr(final_state, "data"):
+                final_state = final_state.data
 
             final_state = np.array(final_state)
 
@@ -958,27 +998,27 @@ class BaseModel:
 
         def get_variable_state(var):
             var_name = var.name
-            if self.is_discretised:
+
+            # Try y_slices for discretised models
+            if (
+                self.is_discretised
+                and var in self.y_slices
+                and isinstance(solution, pybamm.Solution)
+                and len(solution.all_models) > 0
+            ):
                 try:
-                    # Try to get slice directly from y_slices using variable object
-                    if var in self.y_slices:
-                        # Get slice and extract from solution.y
-                        if isinstance(solution, pybamm.Solution):
-                            y_slice = self.y_slices[var][0]
-                            # Get last state from solution.y
-                            y_last = (
-                                solution.y[:, -1] if solution.y.ndim > 1 else solution.y
-                            )
-                            # Already have the final state from y_slices, return directly
-                            return np.array(y_last[y_slice])
-                        else:
-                            # If solution is a dict, can't use y_slices approach
-                            raise KeyError(var_name)
-                except (KeyError, AttributeError, IndexError):
-                    # Fall through to try solution[var_name]
+                    solution_model = solution.all_models[-1]
+                    solution_var = _find_matching_variable(var, solution_model)
+                    if solution_var is not None:
+                        final_state = _extract_from_y_slices(
+                            var, solution_var, solution_model, solution
+                        )
+                        if final_state is not None:
+                            return final_state
+                except (KeyError, AttributeError, IndexError, TypeError):
                     pass
 
-            # Try solution[var_name] (either not discretised or y_slices failed)
+            # Fall back to solution[var_name] lookup
             try:
                 return solution[var_name]
             except KeyError as e:
