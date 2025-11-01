@@ -931,15 +931,24 @@ class BaseModel:
             solution = solution.last_state
 
         def get_final_state_eval(final_state):
-            if isinstance(solution, pybamm.Solution):
-                final_state = final_state.data
+            # If already a numpy array (from y_slices), it's already the final state
+            if isinstance(final_state, np.ndarray):
+                return np.array(final_state)
 
+            # Otherwise, it's a ProcessedVariable - extract .data if available
+            if isinstance(solution, pybamm.Solution):
+                if hasattr(final_state, "data"):
+                    final_state = final_state.data
+
+            final_state = np.array(final_state)
+
+            # Extract final state from time series
             if final_state.ndim == 0:
                 return np.array([final_state])
             elif final_state.ndim == 1:
-                return final_state[-1:]
+                return np.array(final_state[-1:])
             elif final_state.ndim == 2:
-                return final_state[:, -1]
+                return np.array(final_state[:, -1])
             elif final_state.ndim == 3:
                 return final_state[:, :, -1].flatten(order="F")
             elif final_state.ndim == 4:
@@ -947,7 +956,29 @@ class BaseModel:
             else:
                 raise NotImplementedError("Variable must be 0D, 1D, 2D, or 3D")
 
-        def get_variable_state(var_name):
+        def get_variable_state(var):
+            var_name = var.name
+            if self.is_discretised:
+                try:
+                    # Try to get slice directly from y_slices using variable object
+                    if var in self.y_slices:
+                        # Get slice and extract from solution.y
+                        if isinstance(solution, pybamm.Solution):
+                            y_slice = self.y_slices[var][0]
+                            # Get last state from solution.y
+                            y_last = (
+                                solution.y[:, -1] if solution.y.ndim > 1 else solution.y
+                            )
+                            # Already have the final state from y_slices, return directly
+                            return np.array(y_last[y_slice])
+                        else:
+                            # If solution is a dict, can't use y_slices approach
+                            raise KeyError(var_name)
+                except (KeyError, AttributeError, IndexError):
+                    # Fall through to try solution[var_name]
+                    pass
+
+            # Try solution[var_name] (either not discretised or y_slices failed)
             try:
                 return solution[var_name]
             except KeyError as e:
@@ -963,13 +994,13 @@ class BaseModel:
                 var, pybamm.Concatenation
             ):
                 try:
-                    final_state = get_variable_state(var.name)
+                    final_state = get_variable_state(var)
                     final_state_eval = get_final_state_eval(final_state)
                 except pybamm.ModelError as e:
                     if isinstance(var, pybamm.Concatenation):
                         children = []
                         for child in var.orphans:
-                            final_state = get_variable_state(child.name)
+                            final_state = get_variable_state(child)
                             final_state_eval = get_final_state_eval(final_state)
                             children.append(final_state_eval)
                         final_state_eval = np.concatenate(children)
