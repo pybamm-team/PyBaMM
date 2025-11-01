@@ -437,6 +437,10 @@ class Simulation:
         t_interp : None, list or ndarray, optional
             The times (in seconds) at which to interpolate the solution. Defaults to None.
             Only valid for solvers that support intra-solve interpolation (`IDAKLUSolver`).
+        max_wall_time : float, optional
+            Maximum wall-clock time (in seconds) for the entire solve process. If
+            exceeded during solver steps, raises a :class:`pybamm.SolverError` while
+            preserving partial solution data. Defaults to None (no limit).
         **kwargs
             Additional key-word arguments passed to `solver.solve`.
             See :meth:`pybamm.BaseSolver.solve`.
