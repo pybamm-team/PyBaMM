@@ -42,12 +42,13 @@ jobs:
           sudo apt-get update
           sudo apt-get install gfortran gcc libopenblas-dev
 
-      - name: Set up uv
-        run: python -m pip install uv
+      - uses: astral-sh/setup-uv@85856786d1ce8acfbcc2f13a5f3fbd6b938f9f41 # v7.1.2
+        with:
+          version: "latest"
+          enable-cache: true
 
       - name: Install python dependencies
-        run: |
-          python -m uv pip install asv[virtualenv]
+        run: uv pip install asv[virtualenv]
 
       - name: Run benchmarks
         run: |
