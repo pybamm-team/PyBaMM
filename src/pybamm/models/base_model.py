@@ -927,15 +927,40 @@ class BaseModel:
         """
         mesh = mesh or {}
         initial_conditions = {}
+        is_dict_input = isinstance(solution, dict)
         if isinstance(solution, pybamm.Solution):
             solution = solution.last_state
 
         def _evaluate_symbol(symbol):
+            """Evaluate symbol to numpy array, handling errors gracefully."""
+            if isinstance(symbol, numbers.Number):
+                return np.array(symbol)
+            if isinstance(symbol, np.ndarray):
+                return symbol
             if hasattr(symbol, "evaluate"):
-                return symbol.evaluate()
+                try:
+                    result = symbol.evaluate()
+                    # Ensure result is numpy array
+                    if isinstance(result, numbers.Number):
+                        return np.array(result)
+                    if isinstance(result, np.ndarray):
+                        return result
+                    # If evaluate returns a Symbol, try to get value
+                    if hasattr(result, "value"):
+                        return np.array(result.value)
+                except (NotImplementedError, AttributeError):
+                    # If evaluation fails, try to get value attribute
+                    if hasattr(symbol, "value"):
+                        val = symbol.value
+                        return np.array(val) if not isinstance(val, np.ndarray) else val
+            # Fallback: if it has a value attribute, use it
+            if hasattr(symbol, "value"):
+                val = symbol.value
+                return np.array(val) if not isinstance(val, np.ndarray) else val
             return symbol
 
         def _find_matching_variable(var, solution_model):
+            """Find variable in solution model that matches var by id."""
             if not (
                 solution_model.is_discretised and solution_model.y_slices is not None
             ):
@@ -947,6 +972,7 @@ class BaseModel:
             return None
 
         def _extract_from_y_slices(var, solution_var, solution_model, solution):
+            """Extract variable state from solution.y using y_slices."""
             solution_y_slice = solution_model.y_slices[solution_var][0]
             y_last = solution.y[:, -1] if solution.y.ndim > 1 else solution.y
 
@@ -967,16 +993,56 @@ class BaseModel:
 
             # Convert from scaled state vector to physical values
             # physical = reference + scale * y_scaled
-            solution_scale = _evaluate_symbol(solution_var.scale)
-            solution_reference = _evaluate_symbol(solution_var.reference)
-            return solution_reference + solution_scale * y_scaled
+            try:
+                solution_scale = _evaluate_symbol(solution_var.scale)
+                solution_reference = _evaluate_symbol(solution_var.reference)
+                # Ensure scale and reference are numpy arrays of compatible shape
+                solution_scale = np.asarray(solution_scale)
+                solution_reference = np.asarray(solution_reference)
+                # Broadcast if needed
+                if solution_reference.ndim == 0:
+                    solution_reference = solution_reference * np.ones_like(y_scaled)
+                elif solution_reference.shape != y_scaled.shape:
+                    # Try to broadcast
+                    try:
+                        solution_reference = np.broadcast_to(
+                            solution_reference, y_scaled.shape
+                        )
+                    except ValueError:
+                        return None  # Shape mismatch, fall back to dict lookup
+
+                if solution_scale.ndim == 0:
+                    solution_scale = solution_scale * np.ones_like(y_scaled)
+                elif solution_scale.shape != y_scaled.shape:
+                    try:
+                        solution_scale = np.broadcast_to(solution_scale, y_scaled.shape)
+                    except ValueError:
+                        return None  # Shape mismatch, fall back to dict lookup
+
+                return solution_reference + solution_scale * y_scaled
+            except (TypeError, ValueError, AttributeError):
+                # If conversion fails, fall back to dict lookup
+                return None
+
+        def _extract_final_time_step(var_data):
+            """Extract final time step from time series data."""
+            var_data = np.array(var_data)
+            if var_data.ndim == 0:
+                return var_data
+            elif var_data.ndim == 1:
+                # 1D: could be time series, take last element
+                return np.array(var_data[-1:])
+            elif var_data.ndim == 2:
+                return np.array(var_data[:, -1])
+            elif var_data.ndim == 3:
+                return var_data[:, :, -1].flatten(order="F")
+            elif var_data.ndim == 4:
+                return var_data[:, :, :, -1].flatten(order="F")
+            else:
+                raise NotImplementedError("Variable must be 0D, 1D, 2D, 3D, or 4D")
 
         def get_final_state_eval(final_state):
-            # If already a numpy array (e.g. from y_slices), it's already the final state
-            if isinstance(final_state, np.ndarray):
-                return np.array(final_state)
-
-            # Otherwise, it's a ProcessedVariable - extract .data if available
+            # If it's a ProcessedVariable, extract .data first
             if isinstance(solution, pybamm.Solution) and hasattr(final_state, "data"):
                 final_state = final_state.data
 
@@ -986,7 +1052,8 @@ class BaseModel:
             if final_state.ndim == 0:
                 return np.array([final_state])
             elif final_state.ndim == 1:
-                return np.array(final_state[-1:])
+                # 1D arrays are already final state (from y_slices or processed from dict)
+                return np.array(final_state)
             elif final_state.ndim == 2:
                 return np.array(final_state[:, -1])
             elif final_state.ndim == 3:
@@ -994,7 +1061,7 @@ class BaseModel:
             elif final_state.ndim == 4:
                 return final_state[:, :, :, -1].flatten(order="F")
             else:
-                raise NotImplementedError("Variable must be 0D, 1D, 2D, or 3D")
+                raise NotImplementedError("Variable must be 0D, 1D, 2D, 3D, or 4D")
 
         def get_variable_state(var):
             var_name = var.name
@@ -1020,7 +1087,12 @@ class BaseModel:
 
             # Fall back to solution[var_name] lookup
             try:
-                return solution[var_name]
+                var_data = solution[var_name]
+                # For dict inputs, extract final time step here
+                if is_dict_input:
+                    return _extract_final_time_step(var_data)
+                else:
+                    return var_data
             except KeyError as e:
                 raise pybamm.ModelError(
                     "To update a model from a solution, each variable in "
@@ -1057,10 +1129,10 @@ class BaseModel:
             if self.is_discretised:
                 scale, reference = var.scale, var.reference
             else:
-                scale, reference = 1, 0
+                scale, reference = pybamm.Scalar(1), pybamm.Scalar(0)
             initial_conditions[var] = (
                 pybamm.Vector(final_state_eval) - reference
-            ) / scale
+            ) / scale.evaluate()
 
         # Also update the concatenated initial conditions if the model is already
         # discretised
