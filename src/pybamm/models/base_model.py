@@ -931,8 +931,7 @@ class BaseModel:
         if isinstance(solution, pybamm.Solution):
             solution = solution.last_state
 
-        def _evaluate_symbol(symbol):
-            """Evaluate symbol to numpy array, handling errors gracefully."""
+        def _evaluate_symbol_to_array(symbol):
             if isinstance(symbol, numbers.Number):
                 return np.array(symbol)
             if isinstance(symbol, np.ndarray):
@@ -960,7 +959,6 @@ class BaseModel:
             return symbol
 
         def _find_matching_variable(var, solution_model):
-            """Find variable in solution model that matches var by id."""
             if not (
                 solution_model.is_discretised and solution_model.y_slices is not None
             ):
@@ -972,7 +970,6 @@ class BaseModel:
             return None
 
         def _extract_from_y_slices(var, solution_var, solution_model, solution):
-            """Extract variable state from solution.y using y_slices."""
             solution_y_slice = solution_model.y_slices[solution_var][0]
             y_last = solution.y[:, -1] if solution.y.ndim > 1 else solution.y
 
@@ -994,8 +991,8 @@ class BaseModel:
             # Convert from scaled state vector to physical values
             # physical = reference + scale * y_scaled
             try:
-                solution_scale = _evaluate_symbol(solution_var.scale)
-                solution_reference = _evaluate_symbol(solution_var.reference)
+                solution_scale = _evaluate_symbol_to_array(solution_var.scale)
+                solution_reference = _evaluate_symbol_to_array(solution_var.reference)
                 # Ensure scale and reference are numpy arrays of compatible shape
                 solution_scale = np.asarray(solution_scale)
                 solution_reference = np.asarray(solution_reference)
@@ -1025,12 +1022,10 @@ class BaseModel:
                 return None
 
         def _extract_final_time_step(var_data):
-            """Extract final time step from time series data."""
             var_data = np.array(var_data)
             if var_data.ndim == 0:
                 return var_data
             elif var_data.ndim == 1:
-                # 1D: could be time series, take last element
                 return np.array(var_data[-1:])
             elif var_data.ndim == 2:
                 return np.array(var_data[:, -1])

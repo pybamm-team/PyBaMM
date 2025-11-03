@@ -1146,7 +1146,6 @@ class TestBaseModel:
         )
 
     def test_set_initial_conditions_from_y_slices(self):
-        """Test that set_initial_conditions_from uses y_slices for discretised models."""
         # Set up a simple discretised model
         model = pybamm.BaseModel()
         var = pybamm.Variable("test_var", domain="negative electrode")
