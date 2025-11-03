@@ -1,5 +1,12 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
+
+## Features
+
 - Added docstring to `FuzzyDict.copy` explaining its return value and behavior. ([#5242](https://github.com/pybamm-team/PyBaMM/pull/5242))
+
+## Bug fixes
+
+- Fixed a bug where simulations whose initial conditions violated the events could continue solving. ([#5260](https://github.com/pybamm-team/PyBaMM/pull/5260))
 
 # [v25.10.0](https://github.com/pybamm-team/PyBaMM/tree/v25.10.0) - 2025-10-29
 
