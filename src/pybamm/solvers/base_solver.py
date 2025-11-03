@@ -1139,8 +1139,7 @@ class BaseSolver:
                 event_eval = event(t=t_eval[0], y=model.y0, inputs=inputs_dict)
             events_eval[idx] = event_eval
 
-        events_eval = np.array(events_eval)
-        if np.any(events_eval <= 0):
+        if events_eval.min() <= 0:
             # find the events that were triggered by initial conditions
             termination_events = [
                 x for x in model.events if x.event_type == pybamm.EventType.TERMINATION
