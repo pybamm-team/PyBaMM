@@ -1,4 +1,7 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
+- Added docstring to `FuzzyDict.copy` explaining its return value and behavior. ([#5242](https://github.com/pybamm-team/PyBaMM/pull/5242))
+
+# [v25.10.0](https://github.com/pybamm-team/PyBaMM/tree/v25.10.0) - 2025-10-29
 
 ## Features
 
@@ -12,6 +15,7 @@
 
 ## Bug fixes
 
+- Set `zip(..., strict=True)` in solver and expression tree files to ensure iterable length safety. ([#5241](https://github.com/pybamm-team/PyBaMM/pull/5241))
 - Adds `options` property to IDAKLU, fixes pickling issue with `__getstate__` when keys are not available. ([#5234](https://github.com/pybamm-team/PyBaMM/pull/5234))
 - Fixed a bug where no error was raised if a list of input sets were provided to the solver while Experiments were being used ([#5226](https://github.com/pybamm-team/PyBaMM/pull/5226))
 - Fixed a bug where simulations using output variables in `IDAKLUSolver` couldn't be pickled ([#5225](https://github.com/pybamm-team/PyBaMM/pull/5225))
@@ -51,6 +55,7 @@
 
 ## Bug fixes
 
+- Fixed domain handling and temperature initialization in the lumped thermal model to ensure consistent behavior with spatial `T_init`. ([#5248](https://github.com/pybamm-team/PyBaMM/pull/5248))
 - Fixed non-deterministic plotting CI issues ([#5150](https://github.com/pybamm-team/PyBaMM/pull/5150))
 - Fix non-deterministic ShapeError in 3D FEM gradient method ([#5143](https://github.com/pybamm-team/PyBaMM/pull/5143))
 - Fixes negative electrode boundary values for half-cell voltage contributions. ([#5139](https://github.com/pybamm-team/PyBaMM/pull/5139))
