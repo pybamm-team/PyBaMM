@@ -29,6 +29,7 @@ classifiers = [
 ]
 dependencies = [
     "pybammsolvers>=0.3.0,<0.4.0",
+    "black",
     "numpy",
     "scipy>=1.11.4",
     "casadi==3.6.7",

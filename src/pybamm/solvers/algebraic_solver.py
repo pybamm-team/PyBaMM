@@ -222,7 +222,7 @@ class AlgebraicSolver(pybamm.BaseSolver):
                         bounds = [
                             (lb, ub)
                             for lb, ub in zip(
-                                model.bounds[0], model.bounds[1], strict=False
+                                model.bounds[0], model.bounds[1], strict=True
                             )
                         ]
                     else:
