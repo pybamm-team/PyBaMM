@@ -1176,7 +1176,7 @@ class TestIDAKLUSolver:
         np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
         np.testing.assert_allclose(solution.y[-1], 2 * np.exp(0.1 * solution.t))
 
-    def test_multiple_initial_conditions_dict(self):
+    def test_multiple_initial_conditions_single_variable(self):
         model = pybamm.BaseModel()
         model.convert_to_format = None
         u = pybamm.Variable("u")
@@ -1213,7 +1213,7 @@ class TestIDAKLUSolver:
                 atol=1e-5,
             )
 
-    def test_single_initial_condition_dict(self):
+    def test_single_initial_condition_single_variable(self):
         model = pybamm.BaseModel()
         model.convert_to_format = "casadi"
         u = pybamm.Variable("u")
@@ -1240,7 +1240,7 @@ class TestIDAKLUSolver:
             solution["u"](t_eval), 5 * np.exp(-t_eval), rtol=1e-3, atol=1e-5
         )
 
-    def test_multiple_variables(self):
+    def test_multiple_initial_conditions_multiple_variables(self):
         model = pybamm.BaseModel()
         u = pybamm.Variable("u")
         v = pybamm.Variable("v")
