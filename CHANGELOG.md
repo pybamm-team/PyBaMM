@@ -22,7 +22,6 @@
 
 ## Bug fixes
 
-- Fixed Discussion Autoresponder workflow by replacing the unmaintained action with a maintained github-script implementation ([#5261](https://github.com/pybamm-team/PyBaMM/pull/5261))
 - Set `zip(..., strict=True)` in solver and expression tree files to ensure iterable length safety. ([#5241](https://github.com/pybamm-team/PyBaMM/pull/5241))
 - Adds `options` property to IDAKLU, fixes pickling issue with `__getstate__` when keys are not available. ([#5234](https://github.com/pybamm-team/PyBaMM/pull/5234))
 - Fixed a bug where simulations using output variables in `IDAKLUSolver` couldn't be pickled ([#5225](https://github.com/pybamm-team/PyBaMM/pull/5225))
