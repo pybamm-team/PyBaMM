@@ -20,11 +20,14 @@ jobs:
         with:
           script: |
             const discussion = context.payload.discussion;
-            const message = `Hi! We have now moved our discussions to [Discourse](https://pybamm.discourse.group/). Please post your question there.`;
+            const message = "Hi! We have now moved our discussions to [Discourse](https://pybamm.discourse.group/). Please post your question there.";
 
-            await github.rest.discussions.createComment({
+            await github.request('POST /repos/{owner}/{repo}/discussions/{discussion_number}/comments', {
               owner: context.repo.owner,
               repo: context.repo.repo,
               discussion_number: discussion.number,
               body: message,
+              headers: {
+                'X-GitHub-Api-Version': '2022-11-28',
+              },
             });
