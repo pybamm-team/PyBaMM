@@ -1291,11 +1291,11 @@ class TestBaseModel:
         var = pybamm.Variable("var")
         model.rhs = {var: -var}
         model.initial_conditions = {var: 1}
-        
+
         # Create 3D array data
         var_data_3d = np.random.rand(2, 3, 10)  # 3D array with time as last dimension
         sol_dict = {"var": var_data_3d}
-        
+
         model.set_initial_conditions_from(sol_dict)
         assert isinstance(model.initial_conditions[var], pybamm.Vector)
         expected = var_data_3d[:, :, -1].flatten(order="F")
@@ -1309,12 +1309,14 @@ class TestBaseModel:
         var = pybamm.Variable("var")
         model.rhs = {var: -var}
         model.initial_conditions = {var: 1}
-        
+
         # Create 5D array data (should raise NotImplementedError)
         var_data_5d = np.random.rand(2, 3, 4, 5, 10)
         sol_dict = {"var": var_data_5d}
-        
-        with pytest.raises(NotImplementedError, match="Variable must be 0D, 1D, 2D, 3D, or 4D"):
+
+        with pytest.raises(
+            NotImplementedError, match="Variable must be 0D, 1D, 2D, 3D, or 4D"
+        ):
             model.set_initial_conditions_from(sol_dict)
 
     def test_set_variables_error(self):
