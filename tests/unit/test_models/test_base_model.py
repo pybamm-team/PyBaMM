@@ -1319,6 +1319,60 @@ class TestBaseModel:
         ):
             model.set_initial_conditions_from(sol_dict)
 
+    def test_set_initial_conditions_evaluate_symbol_to_array_paths(self):
+        model = pybamm.BaseModel()
+        var = pybamm.Variable("var", domain="negative electrode")
+        model.rhs = {var: -var}
+        model.initial_conditions = {var: 1}
+
+        # Discretise to enable y_slices path which calls _evaluate_symbol_to_array
+        geometry = {"negative electrode": {"x_n": {"min": 0, "max": 1}}}
+        mesh = pybamm.Mesh(
+            geometry, {"negative electrode": pybamm.Uniform1DSubMesh}, {"x_n": 5}
+        )
+        disc = pybamm.Discretisation(
+            mesh, {"negative electrode": pybamm.FiniteVolume()}
+        )
+        model_disc = disc.process_model(model, inplace=False)
+
+        # Create solution - this triggers _evaluate_symbol_to_array when evaluating
+        # scale/reference (which are Scalar = numbers.Number)
+        t = np.array([0, 1])
+        y = np.ones((model_disc.len_rhs_and_alg, 2)) * 5
+        sol = pybamm.Solution(t, y, model_disc, {})
+        model_disc.set_initial_conditions_from(sol)
+        disc_var = next(iter(model_disc.initial_conditions.keys()))
+        assert isinstance(model_disc.initial_conditions[disc_var], pybamm.Vector)
+
+        # Test with dict containing numpy array
+        var_data = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
+        sol_dict = {"var": var_data}
+        model_disc.set_initial_conditions_from(sol_dict)
+
+    def test_set_initial_conditions_extract_from_y_slices_broadcast_failures(self):
+        model = pybamm.BaseModel()
+        var = pybamm.Variable("var", domain="negative electrode")
+        model.rhs = {var: -var}
+        model.initial_conditions = {var: 1}
+
+        # Discretise
+        geometry = {"negative electrode": {"x_n": {"min": 0, "max": 1}}}
+        mesh = pybamm.Mesh(
+            geometry, {"negative electrode": pybamm.Uniform1DSubMesh}, {"x_n": 5}
+        )
+        disc = pybamm.Discretisation(
+            mesh, {"negative electrode": pybamm.FiniteVolume()}
+        )
+        model_disc = disc.process_model(model, inplace=False)
+
+        # Use dict fallback to test - the broadcast failure paths in y_slices
+        # will return None and fall back to dict lookup, which we test here
+        var_data = np.ones((5, 10)) * 6
+        sol_dict = {"var": var_data}
+        model_disc.set_initial_conditions_from(sol_dict)
+        disc_var = next(iter(model_disc.initial_conditions.keys()))
+        assert isinstance(model_disc.initial_conditions[disc_var], pybamm.Vector)
+
     def test_set_variables_error(self):
         var = pybamm.Variable("var")
         model = pybamm.BaseModel()
