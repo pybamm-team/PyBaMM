@@ -239,8 +239,8 @@ class DomainLithiumIonParameters(BaseParameters):
                 "Separator porosity",
                 {
                     "Through-cell distance (x) [m]": x,
-                    "In-plane coordinate (y) [m]": y,
-                    "In-plane coordinate (z) [m]": z,
+                    "Horizontal distance (y) [m]": y,
+                    "Vertical distance (z) [m]": z,
                 },
             )
             self.epsilon_inactive = 1 - self.epsilon_init
@@ -283,8 +283,8 @@ class DomainLithiumIonParameters(BaseParameters):
                 f"{Domain} electrode porosity",
                 {
                     "Through-cell distance (x) [m]": x,
-                    "In-plane coordinate (y) [m]": y,
-                    "In-plane coordinate (z) [m]": z,
+                    "Horizontal distance (y) [m]": y,
+                    "Vertical distance (z) [m]": z,
                 },
             )
             epsilon_s_tot = sum(phase.epsilon_s for phase in self.phase_params.values())
@@ -466,8 +466,8 @@ class ParticleLithiumIonParameters(BaseParameters):
             f"{pref}{Domain} electrode active material volume fraction",
             {
                 "Through-cell distance (x) [m]": x,
-                "In-plane coordinate (y) [m]": y,
-                "In-plane coordinate (z) [m]": z,
+                "Horizontal distance (y) [m]": y,
+                "Vertical distance (z) [m]": z,
             },
         )
         self.epsilon_s_av = pybamm.xyz_average(self.epsilon_s)
