@@ -58,7 +58,7 @@ from .expression_tree.operations.evaluate_python import JaxCooMatrix
 from .expression_tree.operations.jacobian import Jacobian
 from .expression_tree.operations.convert_to_casadi import CasadiConverter
 from .expression_tree.operations.unpack_symbols import SymbolUnpacker
-from .expression_tree.operations.serialise import Serialise
+from .expression_tree.operations.serialise import Serialise,ExpressionFunctionParameter
 
 # Model classes
 from .models.base_model import BaseModel
@@ -109,7 +109,7 @@ from .expression_tree.independent_variable import KNOWN_COORD_SYS
 from .geometry import standard_spatial_vars
 
 # Parameter classes and methods
-from .parameters.parameter_values import ParameterValues
+from .parameters.parameter_values import ParameterValues, scalarize_dict, arrayize_dict
 from .parameters import constants
 from .parameters.geometric_parameters import geometric_parameters, GeometricParameters
 from .parameters.electrical_parameters import (

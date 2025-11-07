@@ -1145,6 +1145,45 @@ class TestBaseModel:
             new_model_disc.concatenated_initial_conditions.evaluate(), 5
         )
 
+    def test_set_initial_conditions_from_y_slices(self):
+        # Set up a simple discretised model
+        model = pybamm.BaseModel()
+        var = pybamm.Variable("test_var", domain="negative electrode")
+        model.rhs = {var: -var}
+        model.initial_conditions = {var: 1}
+
+        # Discretise
+        geometry = {"negative electrode": {"x_n": {"min": 0, "max": 1}}}
+        mesh = pybamm.Mesh(
+            geometry, {"negative electrode": pybamm.Uniform1DSubMesh}, {"x_n": 5}
+        )
+        disc = pybamm.Discretisation(
+            mesh, {"negative electrode": pybamm.FiniteVolume()}
+        )
+        model_disc = disc.process_model(model, inplace=False)
+
+        # Get the discretised variable (key from initial_conditions)
+        disc_var = next(iter(model_disc.initial_conditions.keys()))
+
+        # Create solution with known values
+        t = np.array([0, 1])
+        # y has shape (n_vars, n_time), with value 10 for test_var's slice
+        y = np.zeros((model_disc.len_rhs_and_alg, 2))
+        # Set last time step to 10 for the variable's slice using y_slices
+        if disc_var in model_disc.y_slices:
+            y_slice = model_disc.y_slices[disc_var][0]
+            y[y_slice, -1] = 10
+        sol = pybamm.Solution(t, y, model_disc, {})
+
+        # Update initial conditions - should use y_slices path
+        model_disc.set_initial_conditions_from(sol)
+
+        # Verify initial conditions were updated correctly
+        assert isinstance(model_disc.initial_conditions[disc_var], pybamm.Vector)
+        np.testing.assert_array_equal(
+            model_disc.initial_conditions[disc_var].entries, 10
+        )
+
     def test_set_initial_condition_errors(self):
         model = pybamm.BaseModel()
         var = pybamm.Scalar(1)
@@ -1167,6 +1206,84 @@ class TestBaseModel:
         model.initial_conditions = {var: pybamm.Scalar(1)}
         with pytest.raises(pybamm.ModelError, match="must appear in the solution"):
             model.set_initial_conditions_from({"wrong var": 2})
+
+    def test_set_initial_conditions_4d_array(self):
+        # Test 4D array handling in _extract_final_time_step
+        model = pybamm.BaseModel()
+        var = pybamm.Variable("var")
+        model.rhs = {var: -var}
+        model.initial_conditions = {var: 1}
+
+        # Create 4D array data
+        var_data_4d = np.random.rand(
+            2, 3, 4, 10
+        )  # 4D array with time as last dimension
+        sol_dict = {"var": var_data_4d}
+
+        model.set_initial_conditions_from(sol_dict)
+        # Should extract final time step correctly
+        assert isinstance(model.initial_conditions[var], pybamm.Vector)
+        expected = var_data_4d[:, :, :, -1].flatten(order="F")
+        # Entries are stored as column vector, so compare flattened
+        np.testing.assert_array_equal(
+            model.initial_conditions[var].entries.flatten(), expected
+        )
+
+    def test_set_initial_conditions_processed_variable_with_data(self):
+        # Test ProcessedVariable with .data attribute
+        model = pybamm.BaseModel()
+        var = pybamm.Variable("var", domain="negative electrode")
+        model.rhs = {var: -var}
+        model.initial_conditions = {var: 1}
+
+        # Discretise
+        geometry = {"negative electrode": {"x_n": {"min": 0, "max": 1}}}
+        mesh = pybamm.Mesh(
+            geometry, {"negative electrode": pybamm.Uniform1DSubMesh}, {"x_n": 5}
+        )
+        disc = pybamm.Discretisation(
+            mesh, {"negative electrode": pybamm.FiniteVolume()}
+        )
+        model_disc = disc.process_model(model, inplace=False)
+
+        # Create solution
+        t = np.array([0, 1])
+        y = np.ones((model_disc.len_rhs_and_alg, 2)) * 5
+        sol = pybamm.Solution(t, y, model_disc, {})
+
+        disc_var = next(iter(model_disc.initial_conditions.keys()))
+        # The solution should handle ProcessedVariable correctly
+        model_disc.set_initial_conditions_from(sol)
+        assert isinstance(model_disc.initial_conditions[disc_var], pybamm.Vector)
+
+    def test_set_initial_conditions_y_slices_fallback(self):
+        # Test fallback when y_slices extraction fails (e.g., invalid bounds)
+        model = pybamm.BaseModel()
+        var = pybamm.Variable("var", domain="negative electrode")
+        model.rhs = {var: -var}
+        model.initial_conditions = {var: 1}
+
+        # Discretise
+        geometry = {"negative electrode": {"x_n": {"min": 0, "max": 1}}}
+        mesh = pybamm.Mesh(
+            geometry, {"negative electrode": pybamm.Uniform1DSubMesh}, {"x_n": 5}
+        )
+        disc = pybamm.Discretisation(
+            mesh, {"negative electrode": pybamm.FiniteVolume()}
+        )
+        model_disc = disc.process_model(model, inplace=False)
+
+        # Create solution with dict fallback (simulating y_slices failure)
+        var_data = np.ones((5, 10)) * 7
+        sol_dict = {"var": var_data}
+
+        # Should fall back to dict lookup
+        model_disc.set_initial_conditions_from(sol_dict)
+        disc_var = next(iter(model_disc.initial_conditions.keys()))
+        assert isinstance(model_disc.initial_conditions[disc_var], pybamm.Vector)
+        np.testing.assert_array_equal(
+            model_disc.initial_conditions[disc_var].entries, 7
+        )
 
     def test_set_variables_error(self):
         var = pybamm.Variable("var")

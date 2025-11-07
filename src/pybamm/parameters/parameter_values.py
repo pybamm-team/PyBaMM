@@ -1,11 +1,21 @@
+import json
 import numbers
+import re
 from collections import defaultdict
+from pathlib import Path
 from pprint import pformat
+from typing import Any
 from warnings import warn
 
 import numpy as np
 
 import pybamm
+from pybamm.expression_tree.operations.serialise import (
+    Serialise,
+    convert_function_to_symbolic_expression,
+    convert_symbol_from_json,
+    convert_symbol_to_json,
+)
 from pybamm.models.full_battery_models.lithium_ion.msmr import (
     is_deprecated_msmr_name,
     replace_deprecated_msmr_name,
@@ -417,6 +427,7 @@ class ParameterValues:
 
     @staticmethod
     def check_parameter_values(values):
+        values = scalarize_dict(values)
         for param in list(values.keys()):
             if "propotional term" in param:
                 raise ValueError(
@@ -668,7 +679,10 @@ class ParameterValues:
         try:
             return self._processed_symbols[symbol]
         except KeyError:
-            processed_symbol = self._process_symbol(symbol)
+            if not isinstance(symbol, pybamm.FunctionParameter):
+                processed_symbol = self._process_symbol(symbol)
+            else:
+                processed_symbol = self._process_function_parameter(symbol)
             self._processed_symbols[symbol] = processed_symbol
 
             return processed_symbol
@@ -835,6 +849,87 @@ class ParameterValues:
             # Backup option: return the object
             return symbol
 
+    def _process_function_parameter(self, symbol):
+        function_parameter = self[symbol.name]
+        # Handle symbolic function parameter case
+        if isinstance(function_parameter, pybamm.ExpressionFunctionParameter):
+            # Process children
+            new_children = []
+            for child in symbol.children:
+                if symbol.diff_variable is not None and any(
+                    x == symbol.diff_variable for x in child.pre_order()
+                ):
+                    # Wrap with NotConstant to avoid simplification,
+                    # which would stop symbolic diff from working properly
+                    new_child = pybamm.NotConstant(child)
+                    new_children.append(self.process_symbol(new_child))
+                else:
+                    new_children.append(self.process_symbol(child))
+
+            # Get the expression and inputs for the function
+            expression = function_parameter.child
+            inputs = {
+                arg: child
+                for arg, child in zip(
+                    function_parameter.func_args, symbol.children, strict=True
+                )
+            }
+
+            # Set domains for function inputs in post-order traversal
+            for node in expression.post_order():
+                if node.name in inputs:
+                    node.domains = inputs[node.name].domains
+                else:
+                    node.domains = node.get_children_domains(node.children)
+
+            # Combine parameter values with inputs
+            combined_params = ParameterValues({**self, **inputs})
+
+            # Process any FunctionParameter children first to avoid recursion
+            for child in expression.pre_order():
+                if isinstance(child, pybamm.FunctionParameter):
+                    # Build new child with parent inputs
+                    new_child_children = [
+                        inputs[child_child.name]
+                        if isinstance(child_child, pybamm.Parameter)
+                        and child_child.name in inputs
+                        else child_child
+                        for child_child in child.children
+                    ]
+                    new_child = pybamm.FunctionParameter(
+                        child.name,
+                        dict(zip(child.input_names, new_child_children, strict=False)),
+                        diff_variable=child.diff_variable,
+                        print_name=child.print_name,
+                    )
+
+                    # For this local combined parameter values, process the new child
+                    # and store the result as the processed symbol for this child
+                    # This means the child is evaluated with the parent inputs only when
+                    # it is called from within the parent function (not elsewhere in
+                    # the expression tree)
+                    combined_params._processed_symbols[child] = (
+                        combined_params.process_symbol(new_child)
+                    )
+
+            # Process function with combined parameter values to get a symbolic expression
+            function = combined_params.process_symbol(expression)
+
+            # Differentiate if necessary
+            if symbol.diff_variable is None:
+                # Use ones_like so that we get the right shapes
+                function_out = function * pybamm.ones_like(*new_children)
+            else:
+                # return differentiated function
+                new_diff_variable = self.process_symbol(symbol.diff_variable)
+                function_out = function.diff(new_diff_variable)
+
+            return function_out
+
+        # Handle non-symbolic function_name case
+        else:
+            return self._process_symbol(symbol)
+
     def evaluate(self, symbol, inputs=None):
         """
         Process and evaluate a symbol.
@@ -992,3 +1087,336 @@ class ParameterValues:
 
     def __iter__(self):
         return iter(self._dict_items)
+
+    @staticmethod
+    def from_json(filename_or_dict):
+        """
+        Loads a ParameterValues object from a JSON file or a dictionary.
+
+        Parameters
+        ----------
+        filename_or_dict : string-like or dict
+            The filename to load the JSON file from, or a dictionary.
+
+        Returns
+        -------
+        ParameterValues
+            The ParameterValues object
+        """
+        if isinstance(filename_or_dict, str | Path):
+            with open(filename_or_dict) as f:
+                parameter_values_dict = json.load(f)
+        elif isinstance(filename_or_dict, dict):
+            parameter_values_dict = filename_or_dict.copy()
+        else:
+            raise TypeError("Input must be a filename (str or pathlib.Path) or a dict")
+
+        for key, value in parameter_values_dict.items():
+            if isinstance(value, dict):
+                parameter_values_dict[key] = convert_symbol_from_json(value)
+
+        return ParameterValues(parameter_values_dict)
+
+    def to_json(self, filename=None):
+        """
+        Converts the parameter values to a JSON-serializable dictionary and optionally
+        saves it to a file.
+
+        Parameters
+        ----------
+        filename : str, optional
+            The filename to save the JSON file to. If not provided, the dictionary is
+            not saved.
+
+        Returns
+        -------
+        dict
+            The JSON-serializable dictionary
+        """
+        return convert_parameter_values_to_json(self, filename)
+
+
+_SCALAR_KEY_RE = re.compile(
+    r""" ^
+         (?P<base>[^\[\]]+?)           # foo
+         \s\((?P<idx>\d+)\)            # (0)
+         (?: \s\[(?P<tag>[^\]]+)\])?   # optional [unit]
+         $ """,
+    re.VERBOSE,
+)
+
+
+def convert_symbols_in_dict(
+    data_dict: dict | None = None,
+) -> dict:
+    """Recursively converts nested dicts using convert_symbol_from_json."""
+    # Create parameter values
+    if data_dict:
+        for key, value in data_dict.items():
+            if isinstance(value, dict) and "interpolator" in value:
+                # handle interpolant
+                interpolator = value.get("interpolator", "linear")
+                x = value.get("x", [])
+                y = value.get("y", [])
+
+                # Convert list to pybamm.Interpolant
+                def interpolant_function(sto, x=x, y=y, interpolator=interpolator):
+                    try:
+                        return pybamm.Interpolant(x, y, sto, interpolator=interpolator)
+                    except Exception as e:
+                        print(e)
+                        return pybamm.Scalar(0)
+
+                data_dict[key] = interpolant_function
+            elif isinstance(value, dict):
+                # Handle function parameters in JSON format
+                # Recursively process nested dictionaries
+                data_dict[key] = convert_symbol_from_json(value)
+            elif isinstance(value, list):
+                data_dict[key] = [
+                    convert_symbol_from_json(item) if isinstance(item, dict) else item
+                    for item in value
+                ]
+            elif isinstance(value, str):
+                # Handle function parameters in string format
+                data_dict[key] = float(value)
+            # Keep other types as is
+    else:
+        # Return an empty dict if input is None
+        data_dict = {}
+
+    return data_dict
+
+
+class _KeyMatch:
+    """
+    Match a parameter name against the key grammar.
+    """
+
+    __slots__ = ["base", "idx", "is_match", "name", "tag"]
+
+    def __init__(self, name: str):
+        if not isinstance(name, str):
+            raise ValueError("name must be a string")
+        self.name = name
+
+        match = _SCALAR_KEY_RE.match(name)
+        self.is_match = bool(match)
+
+        if match:
+            base = match["base"]
+            idx = int(match["idx"])
+            tag = match["tag"]
+        else:
+            base = ""
+            idx = -1
+            tag = ""
+
+        self.base = base
+        self.idx = idx
+        self.tag = tag
+
+    def __bool__(self):
+        return self.is_match
+
+
+def scalarize_dict(
+    params: dict[str, Any], ignored_keys: list[str] | None = None
+) -> dict[str, Any]:
+    """
+    Expand list-valued items into scalar keys while preserving tags.
+    Example
+    -------
+    {'a [V]': [1, 2]}  →  {'a (0) [V]': 1, 'a (1) [V]': 2}
+
+    Parameters
+    ----------
+    params : dict[str, Any]
+        The dictionary to scalarize
+    ignored_keys : list[str], optional
+        The keys to ignore. Defaults to ``["citations"]``.
+
+    Returns
+    -------
+    dict[str, Any]
+        The scalarized dictionary
+    """
+    out = {}
+
+    # Default ignored keys. Special case for citations in `pybamm.ParameterValues`
+    if ignored_keys is None:
+        ignored_keys = ["citations"]
+
+    for key, val in params.items():
+        if key not in ignored_keys and isinstance(val, list):
+            base, tag = _split_key(key)  # accepts 'a' or 'a [V]'
+            for i, item in enumerate(val):
+                key_i = _combine_name(base, i, tag)
+                if key_i in out:
+                    raise ValueError(f"Duplicate key {key_i!r}")
+                out[key_i] = item
+        else:
+            if key in out:
+                raise ValueError(f"Duplicate key {key!r}")
+            out[key] = val
+    return out
+
+
+def _is_iterable(val: Any) -> bool:
+    return hasattr(val, "__iter__") and not isinstance(val, (str | dict | bytes))
+
+
+_KEY_RE = re.compile(
+    r""" ^
+         (?P<base>[^\[\]]+?)           # foo
+         (?: \s\[(?P<tag>[^\]]+)\])?   # optional [unit]   (for collapsed keys)
+         $ """,
+    re.VERBOSE,
+)
+
+
+def _split_key(name: str) -> tuple[str, str | None]:
+    """
+    Separate *name* into ``(base, tag)`` where *tag* can be ``None``.
+    Works for either collapsed or scalar keys.
+    """
+    m = _KEY_RE.match(name)
+    if not m:
+        raise ValueError(f"Illegal parameter name {name!r}")
+    return m["base"].rstrip(), m["tag"]
+
+
+def _combine_name(base: str, idx: int, tag: str | None = None) -> str:
+    """Return ``'base (idx)'`` or ``'base (idx) [tag]'``."""
+    if idx < 0:
+        raise ValueError("idx must be ≥ 0")
+    out = f"{base} ({idx})"
+    return _add_units(out, tag)
+
+
+def _add_units(base: str, tag: str | None) -> str:
+    """Return ``'base'`` or ``'base [tag]'``."""
+    out = f"{base}"
+    if tag:
+        out += f" [{tag}]"
+    return out
+
+
+def arrayize_dict(
+    scalar_dict: dict[str, Any],
+) -> dict[str, Any]:
+    """
+    Collapse scalar keys back into lists.  Tags are kept with the base name
+    (``'a [V]'``).  A sequence is collapsed only if indices 0…N are all present.
+
+    Parameters
+    ----------
+    scalar_dict : dict[str, Any]
+        The dictionary to arrayize
+
+    Returns
+    -------
+    dict[str, Any]
+        The arrayized dictionary
+    """
+    out = {}
+    processed = set()
+
+    # discover (base, tag) pairs that appear scalarised
+    pairs = set()
+    for k in scalar_dict:
+        match = _KeyMatch(k)
+        if match:
+            pairs.add((match.base, match.tag))
+
+    # rebuild each pair
+    for base, tag in pairs:
+        idx_val = {}
+        own_keys = []
+
+        for k, v in scalar_dict.items():
+            match = _KeyMatch(k)
+            if match and match.base == base and match.tag == tag:
+                if match.idx in idx_val:
+                    raise ValueError(f"Duplicate index {match.idx} for '{base}'")
+                idx_val[match.idx] = v
+                own_keys.append(k)
+
+        if not idx_val:
+            raise ValueError(
+                f"No indices found for '{base}'. "
+                "It should not be possible to reach here. Please report this bug."
+            )
+
+        indices = set(idx_val)
+        if not _contiguous_and_ordered_indices(indices):
+            missing = sorted(set(range(max(indices) + 1)) - indices)
+            raise ValueError(f"Missing indices {missing} for '{base}'")
+
+        collapsed_key = _add_units(base, tag)
+        if collapsed_key in out:
+            raise ValueError(f"Duplicate key after rebuild: {collapsed_key!r}")
+
+        out[collapsed_key] = [idx_val[i] for i in range(max(idx_val) + 1)]
+        processed.update(own_keys)
+
+    # copy untouched scalars
+    for k, v in scalar_dict.items():
+        if k not in processed:
+            if k in out:
+                raise ValueError(f"Duplicate key: {k!r}")
+            out[k] = v
+
+    return out
+
+
+def _contiguous_and_ordered_indices(indices: set[int]) -> bool:
+    """
+    Check if a set of indices forms a contiguous sequence starting from 0
+    to max(indices).
+
+    Parameters
+    ----------
+    indices : set[int]
+        Set of integer indices to check for contiguity
+
+    Returns
+    -------
+    bool
+        True if indices form the sequence {0, 1, 2, ..., max(indices)},
+        False otherwise. Returns False for empty sets.
+    """
+    return bool(indices) and indices == set(range(max(indices) + 1))
+
+
+def convert_parameter_values_to_json(parameter_values, filename=None):
+    """
+    Converts a ParameterValues object to a JSON-serializable dictionary and optionally
+    saves it to a file.
+
+    Parameters
+    ----------
+    parameter_values : ParameterValues
+        The ParameterValues object to convert
+
+    filename : str, optional
+        The filename to save the JSON file to. If not provided, the dictionary is
+        not saved.
+    """
+    parameter_values_dict = {}
+
+    for k, v in parameter_values.items():
+        if callable(v):
+            parameter_values_dict[k] = convert_symbol_to_json(
+                convert_function_to_symbolic_expression(v, k)
+            )
+        else:
+            parameter_values_dict[k] = convert_symbol_to_json(v)
+
+    if filename is not None:
+        with open(filename, "w") as f:
+            json.dump(
+                parameter_values_dict, f, indent=2, default=Serialise._json_encoder
+            )
+
+    return parameter_values_dict

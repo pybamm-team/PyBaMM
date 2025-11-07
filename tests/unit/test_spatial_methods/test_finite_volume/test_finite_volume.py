@@ -673,6 +673,22 @@ class TestFiniteVolume:
         y = np.arange(n)[:, np.newaxis]
         assert evaluate_at_disc.evaluate(y=y) == y[idx]
 
+        disc.bcs = {
+            var: {
+                "left": (pybamm.Scalar(0), "Dirichlet"),
+                "right": (pybamm.Scalar(n - 1), "Dirichlet"),
+            }
+        }
+        position = pybamm.Scalar(mesh["negative electrode"].edges[-1])
+        downwind_var = pybamm.downwind(var)
+        evaluate_at = pybamm.EvaluateAt(downwind_var, position)
+
+        assert evaluate_at.evaluates_on_edges("primary") is False
+
+        evaluate_at_disc = disc.process_symbol(evaluate_at)
+
+        assert evaluate_at_disc.evaluate(y=y) == n - 1
+
         mesh = get_mesh_for_testing_symbolic()
         spatial_methods = {"domain": pybamm.FiniteVolume()}
         var = pybamm.Variable("var", domain="domain")

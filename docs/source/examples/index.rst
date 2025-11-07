@@ -111,6 +111,7 @@ The notebooks are organised into subfolders, and can be viewed in the galleries 
     notebooks/simulations_and_experiments/callbacks.ipynb
     notebooks/simulations_and_experiments/custom-experiments.ipynb
     notebooks/simulations_and_experiments/experiments-start-time.ipynb
+    notebooks/simulations_and_experiments/formation-storage-loss.ipynb
     notebooks/simulations_and_experiments/rpt-experiment.ipynb
     notebooks/simulations_and_experiments/simulating-long-experiments.ipynb
     notebooks/simulations_and_experiments/simulation-class.ipynb

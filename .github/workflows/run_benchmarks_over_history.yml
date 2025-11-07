@@ -1,0 +1,169 @@
+# GitHub actions workflow that runs the benchmark suite in benchmarks/
+# from "commit_start" to "commit_end".  It pushes the results to the
+# pybamm-bench repo and updates the display website.
+
+# This workflow is meant to be triggered manually, see
+# https://docs.github.com/en/enterprise-server@3.0/actions/managing-workflow-runs/manually-running-a-workflow
+
+name: Manual benchmarks
+on:
+  workflow_dispatch:
+    inputs:
+      commit_start:
+        description: "Identifier of commit from which to start"
+        default: "v0.1.0"
+        type: string
+        pattern: '^[a-zA-Z0-9._-]+$'
+      commit_end:
+        description: "Identifier of commit at which to end"
+        default: "develop"
+        type: string
+        pattern: '^[a-zA-Z0-9._-]+$'
+      ncommits:
+        description: "Number of commits to benchmark between commit_start and commit_end"
+        default: "100"
+        type: string
+        pattern: '^[0-9]+$'
+
+
+permissions: {}
+
+env:
+  PYBAMM_DISABLE_TELEMETRY: "true"
+
+jobs:
+  benchmarks:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
+      - name: Set up Python 3.12
+        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        with:
+          python-version: 3.12
+
+      - name: Install nox and asv
+        run: pip install -U pip nox asv
+
+      - name: Fetch develop branch
+        # Not required when worklow trigerred
+        # on develop, but useful when
+        # experimenting/developing on another branch.
+        if: github.ref != 'refs/heads/develop'
+        run: |
+          git fetch origin develop:develop
+
+      - name: Validate commit_start
+        id: validate_start
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        with:
+          script: |
+            const input = context.payload.inputs.commit_start;
+            if (!input || !/^[a-zA-Z0-9._-]+$/.test(input)) {
+              core.setFailed('Invalid commit_start format');
+              return;
+            }
+            core.setOutput('commit_start', input);
+
+      - name: Validate commit_end
+        id: validate_end
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        with:
+          script: |
+            const input = context.payload.inputs.commit_end;
+            if (!input || !/^[a-zA-Z0-9._-]+$/.test(input)) {
+              core.setFailed('Invalid commit_end format');
+              return;
+            }
+            core.setOutput('commit_end', input);
+
+      - name: Validate ncommits
+        id: validate_ncommits
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        with:
+          script: |
+            const input = context.payload.inputs.ncommits;
+            if (!input || !/^[0-9]+$/.test(input)) {
+              core.setFailed('Invalid ncommits format');
+              return;
+            }
+            const numValue = parseInt(input, 10);
+            if (numValue < 1 || numValue > 10000) {
+              core.setFailed('ncommits must be between 1 and 10000');
+              return;
+            }
+            if (numValue > 5000) {
+              core.warning('Processing a large number of commits. This may take a while....');
+            }
+            core.setOutput('ncommits', numValue.toString());
+
+      - name: Set environment variables
+        env:
+          COMMIT_START: ${{ steps.validate_start.outputs.commit_start }}
+          COMMIT_END: ${{ steps.validate_end.outputs.commit_end }}
+          NCOMMITS: ${{ steps.validate_ncommits.outputs.ncommits }}
+        run: |
+          echo "COMMIT_START=$COMMIT_START" >> $GITHUB_ENV
+          echo "COMMIT_END=$COMMIT_END" >> $GITHUB_ENV
+          echo "NCOMMITS=$NCOMMITS" >> $GITHUB_ENV
+
+      - name: Run benchmarks
+        run: |
+          asv machine --machine "GitHubRunner"
+          asv run -m "GitHubRunner" -s $NCOMMITS \
+          $COMMIT_START..$COMMIT_END
+
+      - name: Upload results as artifact
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: asv_over_history_results
+          path: results
+          if-no-files-found: error
+
+  publish-results:
+    if: github.repository == 'pybamm-team/PyBaMM'
+    name: Push and publish results
+    needs: benchmarks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Set up Python 3.12
+        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        with:
+          python-version: 3.12
+
+      - name: Install asv
+        run: pip install asv
+
+      - name: Checkout pybamm-bench repo
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          repository: pybamm-team/pybamm-bench
+          token: ${{ secrets.BENCH_PAT }}
+          persist-credentials: false
+
+      - name: Download results artifact(s)
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v4.6.2
+        with:
+          name: asv_over_history_results
+          path: results
+
+      - name: Copy new results and push to pybamm-bench repo
+        env:
+          PUSH_BENCH_EMAIL: ${{ secrets.PUSH_BENCH_EMAIL }}
+          PUSH_BENCH_NAME: ${{ secrets.PUSH_BENCH_NAME }}
+        run: |
+          git config --global user.email "$PUSH_BENCH_EMAIL"
+          git config --global user.name "$PUSH_BENCH_NAME"
+          git add results
+          git commit -am "Add new results"
+          git push
+
+      - name: Publish results
+        run: |
+          git fetch origin gh-pages:gh-pages
+          asv gh-pages

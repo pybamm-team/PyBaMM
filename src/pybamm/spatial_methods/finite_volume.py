@@ -1357,7 +1357,10 @@ class FiniteVolume(pybamm.SpatialMethod):
         # Get mesh nodes
         domain = discretised_child.domain
         mesh = self.mesh[domain]
-        nodes = mesh.nodes
+        if symbol.children[0].evaluates_on_edges("primary"):
+            nodes = mesh.edges
+        else:
+            nodes = mesh.nodes
         if hasattr(mesh, "length"):
             domain = discretised_child.domain
             raise NotImplementedError(
@@ -1369,7 +1372,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         index = np.argmin(np.abs(nodes - position.value))
 
         # Create a sparse matrix with a 1 at the index
-        sub_matrix = csr_matrix(([1], ([0], [index])), shape=(1, mesh.npts))
+        sub_matrix = csr_matrix(([1], ([0], [index])), shape=(1, len(nodes)))
         # repeat across auxiliary domains
         matrix = csr_matrix(kron(eye(repeats), sub_matrix))
 

@@ -970,7 +970,7 @@ class BaseSolver:
                                 [t_eval[start_index:end_index]] * ninputs,
                                 model_inputs_list,
                                 [t_interp] * ninputs,
-                                strict=False,
+                                strict=True,
                             ),
                         )
                         p.close()
@@ -1131,7 +1131,7 @@ class BaseSolver:
         if model.convert_to_format == "casadi":
             inputs = casadi.vertcat(*[x for x in inputs_dict.values()])
 
-        events_eval = [None] * num_terminate_events
+        events_eval = np.empty(num_terminate_events)
         for idx, event in enumerate(model.terminate_events_eval):
             if model.convert_to_format == "casadi":
                 event_eval = event(t_eval[0], model.y0, inputs)
@@ -1139,13 +1139,12 @@ class BaseSolver:
                 event_eval = event(t=t_eval[0], y=model.y0, inputs=inputs_dict)
             events_eval[idx] = event_eval
 
-        events_eval = np.array(events_eval)
-        if any(events_eval < 0):
+        if events_eval.min() <= 0:
             # find the events that were triggered by initial conditions
             termination_events = [
                 x for x in model.events if x.event_type == pybamm.EventType.TERMINATION
             ]
-            idxs = np.where(events_eval < 0)[0]
+            idxs = np.where(events_eval <= 0)[0]
             event_names = [termination_events[idx].name for idx in idxs]
             raise pybamm.SolverError(
                 f"Events {event_names} are non-positive at initial conditions"
@@ -1198,7 +1197,7 @@ class BaseSolver:
 
         # sort equations according to slices
         concatenated_initial_conditions = [
-            casadi.vertcat(*[eq for _, eq in sorted(zip(slices, init, strict=False))])
+            casadi.vertcat(*[eq for _, eq in sorted(zip(slices, init, strict=True))])
             for init in initial_conditions
         ]
         return concatenated_initial_conditions
