@@ -1,0 +1,34 @@
+name: Remove needs-reply label
+
+on:
+  schedule:
+      - cron:  '0 3 * * 1'
+  issue_comment:
+    types:
+      - created
+
+permissions: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+      contents: read
+    if: |
+      github.event.comment.author_association != 'OWNER' &&
+      github.event.comment.author_association != 'COLLABORATOR' &&
+      github.repository == 'pybamm-team/PyBaMM' &&
+      github.event_name != 'pull_request'
+    steps:
+      - name: Remove needs-reply label
+        uses: octokit/request-action@dad4362715b7fb2ddedf9772c8670824af564f0d # v2.4.0
+        continue-on-error: true
+        with:
+          route: DELETE /repos/:repository/issues/:issue/labels/:label
+          repository: ${{ github.repository }}
+          issue: ${{ github.event.issue.number }}
+          label: needs-reply
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
