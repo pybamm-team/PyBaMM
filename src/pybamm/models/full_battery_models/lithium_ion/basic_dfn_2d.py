@@ -133,20 +133,29 @@ class BasicDFN2D(BaseModel):
         # Porosity
         # Primary broadcasts are used to broadcast scalar quantities across a domain
         # into a vector of the right shape, for multiplying with other vectors
-        eps_n = pybamm.PrimaryBroadcast(
-            pybamm.Parameter("Negative electrode porosity"), "negative electrode"
+        eps_n = pybamm.FunctionParameter(
+            "Negative electrode porosity",
+            {"Through-cell distance (x) [m]": x_n, "Vertical distance (z) [m]": z_n}
         )
-        eps_s = pybamm.PrimaryBroadcast(
-            pybamm.Parameter("Separator porosity"), "separator"
+        eps_s = pybamm.FunctionParameter(
+            "Separator porosity",
+            {"Through-cell distance (x) [m]": x_s, "Vertical distance (z) [m]": z_s}
         )
-        eps_p = pybamm.PrimaryBroadcast(
-            pybamm.Parameter("Positive electrode porosity"), "positive electrode"
+        eps_p = pybamm.FunctionParameter(
+            "Positive electrode porosity",
+            {"Through-cell distance (x) [m]": x_p, "Vertical distance (z) [m]": z_p}
         )
         eps = pybamm.concatenation(eps_n, eps_s, eps_p)
 
         # Active material volume fraction (eps + eps_s + eps_inactive = 1)
-        eps_s_n = pybamm.Parameter("Negative electrode active material volume fraction")
-        eps_s_p = pybamm.Parameter("Positive electrode active material volume fraction")
+        eps_s_n = pybamm.FunctionParameter(
+            "Negative electrode active material volume fraction",
+            {"Through-cell distance (x) [m]": x_n, "Vertical distance (z) [m]": z_n}
+        )
+        eps_s_p = pybamm.FunctionParameter(
+            "Positive electrode active material volume fraction",
+            {"Through-cell distance (x) [m]": x_p, "Vertical distance (z) [m]": z_p}
+        )
 
         # transport_efficiency
         tor = pybamm.concatenation(
@@ -431,5 +440,5 @@ class BasicDFN2D(BaseModel):
             "x_p": 20,
             "r_p": 20,
             "r_n": 20,
-            z_2d: 10,
+            z_2d: 20,
         }
