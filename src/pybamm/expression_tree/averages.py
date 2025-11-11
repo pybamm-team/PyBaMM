@@ -124,7 +124,7 @@ class RAverage(_BaseAverage):
 
 class SizeAverage(_BaseAverage):
     def __init__(self, child: pybamm.Symbol, f_a_dist) -> None:
-        R = pybamm.SpatialVariable("R", domains=child.domains, coord_sys="cartesian")
+        R = pybamm.SpatialVariable("R", domains=child.domains)
         integration_variable: list[pybamm.IndependentVariable] = [R]
         super().__init__(child, "size-average", integration_variable)
         self.f_a_dist = f_a_dist
@@ -418,7 +418,7 @@ def size_average(
             elif "secondary" in symbol.domain[0]:
                 name += "_sec"
             R = pybamm.SpatialVariable(
-                name, domains=symbol.domains, coord_sys="cartesian"
+                name, domains=symbol.domains
             )
             if ["negative particle size"] in symbol.domains.values() or [
                 "negative primary particle size"

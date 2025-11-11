@@ -106,9 +106,8 @@ class SubMesh1D(SubMesh):
 
 
 class SymbolicUniform1DSubMesh(SubMesh1D):
-    def __init__(self, lims, npts, tabs=None):
+    def __init__(self, lims, npts, coord_sys, tabs=None):
         spatial_var, spatial_lims, tabs = self.read_lims(lims)
-        coord_sys = spatial_var.coord_sys
         x0 = spatial_lims["min"]
         if tabs is not None:
             raise NotImplementedError("Tabs not supported for symbolic uniform submesh")
@@ -220,12 +219,11 @@ class Exponential1DSubMesh(SubMesh1D):
         default stretch is 2.3.
     """
 
-    def __init__(self, lims, npts, side="symmetric", stretch=None):
+    def __init__(self, lims, npts, coord_sys, side="symmetric", stretch=None):
         spatial_var, spatial_lims, tabs = self.read_lims(lims)
         a = spatial_lims["min"]
         b = spatial_lims["max"]
         npts = npts[spatial_var.name]
-        coord_sys = spatial_var.coord_sys
 
         # Set stretch if not provided
         if not stretch:
@@ -298,7 +296,7 @@ class Chebyshev1DSubMesh(SubMesh1D):
         the tabs
     """
 
-    def __init__(self, lims, npts, tabs=None):
+    def __init__(self, lims, npts, coord_sys, tabs=None):
         spatial_var, spatial_lims, tabs = self.read_lims(lims)
         npts = npts[spatial_var.name]
 
@@ -312,7 +310,6 @@ class Chebyshev1DSubMesh(SubMesh1D):
         # Append the boundary nodes. Note: we need to flip the order the Chebyshev
         # nodes as they are created in descending order.
         edges = np.concatenate(([a], np.flip(x_cheb), [b]))
-        coord_sys = spatial_var.coord_sys
 
         super().__init__(edges, coord_sys=coord_sys, tabs=tabs)
 
@@ -334,7 +331,7 @@ class UserSupplied1DSubMesh(SubMesh1D):
         The array of points which correspond to the edges of the mesh.
     """
 
-    def __init__(self, lims, npts, edges=None):
+    def __init__(self, lims, npts, coord_sys, edges=None):
         if edges is None:
             raise pybamm.GeometryError("User mesh requires parameter 'edges'")
 
@@ -365,8 +362,6 @@ class UserSupplied1DSubMesh(SubMesh1D):
                 )
             )
 
-        coord_sys = spatial_var.coord_sys
-
         super().__init__(edges, coord_sys=coord_sys, tabs=tabs)
 
 
@@ -393,7 +388,7 @@ class SpectralVolume1DSubMesh(SubMesh1D):
         Spectral Volume method don't match, the method will fail.
     """
 
-    def __init__(self, lims, npts, edges=None, order=2):
+    def __init__(self, lims, npts, coord_sys, edges=None, order=2):
         spatial_var, spatial_lims, tabs = self.read_lims(lims)
         npts = npts[spatial_var.name]
 
@@ -422,8 +417,6 @@ class SpectralVolume1DSubMesh(SubMesh1D):
                     edges[-1], spatial_lims["max"], spatial_var.domain
                 )
             )
-
-        coord_sys = spatial_var.coord_sys
 
         array = np.array(
             [

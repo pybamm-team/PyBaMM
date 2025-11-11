@@ -37,31 +37,29 @@ class BasicDFN2D(BaseModel):
         x = pybamm.SpatialVariable(
             "x",
             domain=["negative electrode", "separator", "positive electrode"],
-            coord_sys="cartesian",
             direction="lr",
         )
         x_n = pybamm.SpatialVariable(
-            "x_n", domain="negative electrode", coord_sys="cartesian", direction="lr"
+            "x_n", domain="negative electrode", direction="lr"
         )
         x_s = pybamm.SpatialVariable(
-            "x_s", domain="separator", coord_sys="cartesian", direction="lr"
+            "x_s", domain="separator", direction="lr"
         )
         x_p = pybamm.SpatialVariable(
-            "x_p", domain="positive electrode", coord_sys="cartesian", direction="lr"
+            "x_p", domain="positive electrode", direction="lr"
         )
         z_n = pybamm.SpatialVariable(
-            "z_n", domain="negative electrode", coord_sys="cartesian", direction="tb"
+            "z_n", domain="negative electrode", direction="tb"
         )
         z_s = pybamm.SpatialVariable(
-            "z_s", domain="separator", coord_sys="cartesian", direction="tb"
+            "z_s", domain="separator", direction="tb"
         )
         z_p = pybamm.SpatialVariable(
-            "z_p", domain="positive electrode", coord_sys="cartesian", direction="tb"
+            "z_p", domain="positive electrode", direction="tb"
         )
         z = pybamm.SpatialVariable(
             "z",
             domain=["negative electrode", "separator", "positive electrode"],
-            coord_sys="cartesian",
             direction="tb",
         )
 
@@ -365,7 +363,6 @@ class BasicDFN2D(BaseModel):
         z_2d = pybamm.SpatialVariable(
             "z_2d",
             domain=["negative electrode", "separator", "positive electrode"],
-            coord_sys="cartesian",
             direction="tb",
         )
         return {
@@ -422,7 +419,6 @@ class BasicDFN2D(BaseModel):
         z_2d = pybamm.SpatialVariable(
             "z_2d",
             domain=["negative electrode", "separator", "positive electrode"],
-            coord_sys="cartesian",
             direction="tb",
         )
         return {

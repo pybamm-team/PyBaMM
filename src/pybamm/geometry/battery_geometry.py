@@ -86,7 +86,8 @@ def battery_geometry(
                                     f"R_{d}": {
                                         "min": geo_domain.prim.R_min,
                                         "max": geo_domain.prim.R_max,
-                                    }
+                                    },
+                                    "coord_sys": "cartesian",
                                 },
                             }
                         )
@@ -97,13 +98,15 @@ def battery_geometry(
                                     f"R_{d}_prim": {
                                         "min": geo_domain.prim.R_min,
                                         "max": geo_domain.prim.R_max,
-                                    }
+                                    },
+                                    "coord_sys": "cartesian",
                                 },
                                 f"{domain} secondary particle size": {
                                     f"R_{d}_sec": {
                                         "min": geo_domain.sec.R_min,
                                         "max": geo_domain.sec.R_max,
-                                    }
+                                    },
+                                    "coord_sys": "cartesian",
                                 },
                             }
                         )
@@ -146,6 +149,7 @@ def battery_geometry(
                 "x": {"min": 0, "max": geo.L_x},
                 "y": {"min": 0, "max": geo.L_y},
                 "z": {"min": 0, "max": geo.L_z},
+                "coord_sys": "cartesian",
             }
 
     elif form_factor == "cylindrical":
@@ -161,6 +165,7 @@ def battery_geometry(
             geometry["cell"] = {
                 "r_macro": {"min": geo.r_inner, "max": geo.r_outer},
                 "z": {"min": 0, "max": geo.L_z},
+                "coord_sys": "cylindrical polar",
             }
         else:
             raise pybamm.GeometryError(

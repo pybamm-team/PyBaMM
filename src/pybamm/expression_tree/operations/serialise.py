@@ -685,8 +685,11 @@ class Serialise:
                             reconstructed_value[k] = v
                     reconstructed_geometry[domain][spatial_var] = reconstructed_value
                 else:
-                    # String key (like 'tabs')
-                    if isinstance(value, dict):
+                    # String key (like 'tabs' or 'coord_sys')
+                    # Preserve coord_sys for backward compatibility
+                    if key == "coord_sys":
+                        reconstructed_geometry[domain][key] = value
+                    elif isinstance(value, dict):
                         reconstructed_value = {}
                         for k, v in value.items():
                             if isinstance(v, dict) and "type" in v:
@@ -1692,9 +1695,11 @@ def convert_symbol_from_json(json_data):
             )
         return pybamm.IndefiniteIntegral(child, [integration_variable])
     elif json_data["type"] == "SpatialVariable":
+        # Note: coord_sys is ignored for backward compatibility with old serialized
+        # models. In the new format, coord_sys is stored in the geometry dictionary
+        # rather than on the SpatialVariable object.
         return pybamm.SpatialVariable(
             json_data["name"],
-            coord_sys=json_data.get("coord_sys", "cartesian"),
             domains=json_data.get("domains"),
         )
     elif json_data["type"] == "Time":

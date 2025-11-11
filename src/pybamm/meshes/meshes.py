@@ -76,7 +76,13 @@ class Mesh(dict):
             # other cases
             else:
                 submesh_pts[domain] = {}
-                if len(list(geometry[domain].keys())) > 3:
+                # Count keys excluding tabs and coord_sys for the limit check
+                spatial_keys = [
+                    k
+                    for k in geometry[domain].keys()
+                    if k not in ["tabs", "coord_sys"]
+                ]
+                if len(spatial_keys) > 3:
                     raise pybamm.GeometryError("Too many keys provided")
                 for var in list(geometry[domain].keys()):
                     if var in ["primary", "secondary"]:
@@ -87,7 +93,12 @@ class Mesh(dict):
                     # skip over tabs and coord_sys keys
                     if var not in ["tabs", "coord_sys"]:
                         if isinstance(var, str):
-                            var = getattr(pybamm.standard_spatial_vars, var)
+                            try:
+                                var = getattr(pybamm.standard_spatial_vars, var)
+                            except AttributeError:
+                                # Skip if attribute doesn't exist (e.g., coord_sys
+                                # in old serialized models)
+                                continue
                         # Raise error if the number of points for a particular
                         # variable haven't been provided, unless that variable
                         # doesn't appear in the geometry
@@ -102,11 +113,17 @@ class Mesh(dict):
                         submesh_pts[domain][var.name] = var_name_pts[var.name]
         self.submesh_pts = submesh_pts
 
+        # Extract coord_sys from geometry dictionary (backward compatible with
+        # old serialized models that have coord_sys in geometry)
+        # New format should always include coord_sys, but we default to "cartesian"
+        # for backward compatibility
         coord_sys = {}
         for domain in geometry:
             if "coord_sys" in geometry[domain].keys():
                 coord_sys[domain] = geometry[domain].pop("coord_sys")
             else:
+                # Default to cartesian for backward compatibility with old models
+                # New format should always include coord_sys explicitly
                 coord_sys[domain] = "cartesian"
 
         # evaluate any expressions in geometry
