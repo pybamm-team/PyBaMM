@@ -2,14 +2,16 @@
 # Concatenation classes
 #
 from __future__ import annotations
+
 import copy
 from collections import defaultdict
-from typing import Optional
+from collections.abc import Sequence
+from typing import Any
 
 import numpy as np
+import numpy.typing as npt
 import sympy
 from scipy.sparse import issparse, vstack
-from collections.abc import Sequence
 
 import pybamm
 
@@ -112,7 +114,7 @@ class Concatenation(pybamm.Symbol):
 
         return domains
 
-    def _concatenation_evaluate(self, children_eval: list[np.ndarray]):
+    def _concatenation_evaluate(self, children_eval: list[npt.NDArray[Any]]):
         """See :meth:`Concatenation._concatenation_evaluate()`."""
         if len(children_eval) == 0:
             return np.array([])
@@ -122,8 +124,8 @@ class Concatenation(pybamm.Symbol):
     def evaluate(
         self,
         t: float | None = None,
-        y: np.ndarray | None = None,
-        y_dot: np.ndarray | None = None,
+        y: npt.NDArray[np.float64] | None = None,
+        y_dot: npt.NDArray[np.float64] | None = None,
         inputs: dict | str | None = None,
     ):
         """See :meth:`pybamm.Symbol.evaluate()`."""
@@ -367,13 +369,15 @@ class DomainConcatenation(Concatenation):
                 start = end
         return slices
 
-    def _concatenation_evaluate(self, children_eval: list[np.ndarray]):
+    def _concatenation_evaluate(self, children_eval: list[npt.NDArray[Any]]):
         """See :meth:`Concatenation._concatenation_evaluate()`."""
         # preallocate vector
         vector = np.empty((self._size, 1))
 
         # loop through domains of children writing subvectors to final vector
-        for child_vector, slices in zip(children_eval, self._children_slices):
+        for child_vector, slices in zip(
+            children_eval, self._children_slices, strict=True
+        ):
             for child_dom, child_slice in slices.items():
                 for i, _slice in enumerate(child_slice):
                     vector[self._slices[child_dom][i]] = child_vector[_slice]
@@ -386,7 +390,9 @@ class DomainConcatenation(Concatenation):
         # one domain each
         jacs = []
         for i in range(self.secondary_dimensions_npts):
-            for child_jac, slices in zip(children_jacs, self._children_slices):
+            for child_jac, slices in zip(
+                children_jacs, self._children_slices, strict=True
+            ):
                 if len(slices) > 1:
                     raise NotImplementedError(
                         """jacobian only implemented for when each child has
@@ -448,7 +454,7 @@ class SparseStack(Concatenation):
         The equations to concatenate
     """
 
-    def __init__(self, *children):
+    def __init__(self, *children, name="sparse_stack"):
         children = list(children)
         if not any(issparse(child.evaluate_for_shape()) for child in children):
             concatenation_function = np.vstack
@@ -456,7 +462,7 @@ class SparseStack(Concatenation):
             concatenation_function = vstack
         super().__init__(
             *children,
-            name="sparse_stack",
+            name=name,
             check_domain=False,
             concat_fun=concatenation_function,
         )
@@ -469,7 +475,7 @@ class SparseStack(Concatenation):
 class ConcatenationVariable(Concatenation):
     """A Variable representing a concatenation of variables."""
 
-    def __init__(self, *children, name: Optional[str] = None):
+    def __init__(self, *children, name: str | None = None):
         if name is None:
             # Name is the intersection of the children names (should usually make sense
             # if the children have been named consistently)
@@ -525,7 +531,7 @@ def intersect(s1: str, s2: str):
     return intersect.lstrip().rstrip()
 
 
-def simplified_concatenation(*children, name: Optional[str] = None):
+def simplified_concatenation(*children, name: str | None = None):
     """Perform simplifications on a concatenation."""
     # remove children that are None
     children = list(filter(lambda x: x is not None, children))
@@ -555,7 +561,7 @@ def simplified_concatenation(*children, name: Optional[str] = None):
             return concat
 
 
-def concatenation(*children, name: Optional[str] = None):
+def concatenation(*children, name: str | None = None):
     """Helper function to create concatenations."""
     # TODO: add option to turn off simplifications
     return simplified_concatenation(*children, name=name)

@@ -1,5 +1,6 @@
-import pybamm
 from warnings import warn
+
+import pybamm
 
 
 class BaseTermination:
@@ -199,9 +200,9 @@ class CustomTermination(BaseTermination):
         return pybamm.Event(self.name, self.event_function(variables))
 
 
-def _read_termination(termination):
+def _read_termination(termination, operator=None):
     if isinstance(termination, tuple):
-        typ, value = termination
+        op, typ, value = termination
     else:
         return termination
 
@@ -210,4 +211,4 @@ def _read_termination(termination):
         "voltage": VoltageTermination,
         "C-rate": CRateTermination,
     }[typ]
-    return termination_class(value)
+    return termination_class(value, operator=op)

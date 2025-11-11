@@ -140,6 +140,14 @@ def battery_geometry(
                     },
                 },
             }
+        elif current_collector_dimension == 3:
+            geometry["current collector"] = {"z": {"position": 1}}
+            geometry["cell"] = {
+                "x": {"min": 0, "max": geo.L_x},
+                "y": {"min": 0, "max": geo.L_y},
+                "z": {"min": 0, "max": geo.L_z},
+            }
+
     elif form_factor == "cylindrical":
         if current_collector_dimension == 0:
             geometry["current collector"] = {"r_macro": {"position": 1}}
@@ -148,6 +156,12 @@ def battery_geometry(
                 "r_macro": {"min": geo.r_inner, "max": 1},
                 "coord_sys": "cylindrical polar",
             }
+        elif current_collector_dimension == 3:
+            geometry["current collector"] = {"z": {"position": 1}}
+            geometry["cell"] = {
+                "r_macro": {"min": geo.r_inner, "max": geo.r_outer},
+                "z": {"min": 0, "max": geo.L_z},
+            }
         else:
             raise pybamm.GeometryError(
                 f"Invalid current collector dimension '{current_collector_dimension}' (should be 0 or 1 for "
@@ -155,7 +169,7 @@ def battery_geometry(
             )
     else:
         raise pybamm.GeometryError(
-            f"Invalid form factor '{form_factor}' (should be 'pouch' or 'cylindrical'"
+            f"Invalid form factor '{form_factor}' (should be 'pouch' or 'cylindrical')"
         )
 
     return pybamm.Geometry(geometry)

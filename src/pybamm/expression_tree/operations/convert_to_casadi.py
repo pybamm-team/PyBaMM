@@ -3,11 +3,11 @@
 #
 from __future__ import annotations
 
-import pybamm
 import casadi
 import numpy as np
-from scipy import special
-from scipy import interpolate
+from scipy import interpolate, special
+
+import pybamm
 
 
 class CasadiConverter:
@@ -60,12 +60,7 @@ class CasadiConverter:
         """See :meth:`CasadiConverter.convert()`."""
         if isinstance(
             symbol,
-            (
-                pybamm.Scalar,
-                pybamm.Array,
-                pybamm.Time,
-                pybamm.InputParameter,
-            ),
+            pybamm.Scalar | pybamm.Array | pybamm.Time | pybamm.InputParameter,
         ):
             return casadi.MX(symbol.evaluate(t, y, y_dot, inputs))
 
@@ -91,12 +86,16 @@ class CasadiConverter:
                 return casadi.fmin(converted_left, converted_right)
             if isinstance(symbol, pybamm.Maximum):
                 return casadi.fmax(converted_left, converted_right)
+            if isinstance(symbol, pybamm.KroneckerProduct):
+                return casadi.kron(converted_left, converted_right)
 
             # _binary_evaluate defined in derived classes for specific rules
             return symbol._binary_evaluate(converted_left, converted_right)
 
         elif isinstance(symbol, pybamm.UnaryOperator):
             converted_child = self.convert(symbol.child, t, y, y_dot, inputs)
+            if isinstance(symbol, pybamm.Transpose):
+                return converted_child.T
             if isinstance(symbol, pybamm.AbsoluteValue):
                 return casadi.fabs(converted_child)
             if isinstance(symbol, pybamm.Floor):
@@ -146,12 +145,48 @@ class CasadiConverter:
                 elif symbol.interpolator == "cubic":
                     solver = "bspline"
                 elif symbol.interpolator == "pchip":
-                    raise NotImplementedError(
-                        "The interpolator 'pchip' is not supported by CasAdi. "
-                        "Use 'linear' or 'cubic' instead. "
-                        "Alternatively, set 'model.convert_to_format = 'python'' "
-                        "and use a non-CasADi solver. "
+                    x_np = np.array(symbol.x[0])
+                    y_np = np.array(symbol.y)
+                    pchip_interp = interpolate.PchipInterpolator(x_np, y_np)
+                    d_np = pchip_interp.derivative()(x_np)
+                    x = converted_children[0]
+
+                    def hermite_poly(i):
+                        x0 = x_np[i]
+                        x1 = x_np[i + 1]
+                        h_val = x1 - x0
+                        h_val_mx = casadi.MX(h_val)
+                        y0 = casadi.MX(y_np[i])
+                        y1 = casadi.MX(y_np[i + 1])
+                        d0 = casadi.MX(d_np[i])
+                        d1 = casadi.MX(d_np[i + 1])
+                        xn = (x - x0) / h_val_mx
+                        h00 = 2 * xn**3 - 3 * xn**2 + 1
+                        h10 = xn**3 - 2 * xn**2 + xn
+                        h01 = -2 * xn**3 + 3 * xn**2
+                        h11 = xn**3 - xn**2
+                        return (
+                            h00 * y0
+                            + h10 * h_val_mx * d0
+                            + h01 * y1
+                            + h11 * h_val_mx * d1
+                        )
+
+                    # Build piecewise polynomial for points inside the domain.
+                    inside = casadi.MX.zeros(x.shape)
+                    for i in range(len(x_np) - 1):
+                        cond = casadi.logic_and(x >= x_np[i], x <= x_np[i + 1])
+                        inside = casadi.if_else(cond, hermite_poly(i), inside)
+
+                    # Extrapolation:
+                    left = hermite_poly(0)  # For x < x_np[0]
+                    right = hermite_poly(len(x_np) - 2)  # For x > x_np[-1]
+
+                    # if greater than the maximum, use right; otherwise, use the piecewise value.
+                    result = casadi.if_else(
+                        x < x_np[0], left, casadi.if_else(x > x_np[-1], right, inside)
                     )
+                    return result
                 else:  # pragma: no cover
                     raise NotImplementedError(
                         f"Unknown interpolator: {symbol.interpolator}"
@@ -234,7 +269,7 @@ class CasadiConverter:
             converted_children = [
                 self.convert(child, t, y, y_dot, inputs) for child in symbol.children
             ]
-            if isinstance(symbol, (pybamm.NumpyConcatenation, pybamm.SparseStack)):
+            if isinstance(symbol, pybamm.NumpyConcatenation | pybamm.SparseStack):
                 return casadi.vertcat(*converted_children)
             # DomainConcatenation specifies a particular ordering for the concatenation,
             # which we must follow
@@ -244,7 +279,7 @@ class CasadiConverter:
                 for i in range(symbol.secondary_dimensions_npts):
                     child_vectors = []
                     for child_var, slices in zip(
-                        converted_children, symbol._children_slices
+                        converted_children, symbol._children_slices, strict=True
                     ):
                         for child_dom, child_slice in slices.items():
                             slice_starts.append(symbol._slices[child_dom][i].start)
@@ -252,7 +287,12 @@ class CasadiConverter:
                                 child_var[child_slice[i].start : child_slice[i].stop]
                             )
                     all_child_vectors.extend(
-                        [v for _, v in sorted(zip(slice_starts, child_vectors))]
+                        [
+                            v
+                            for _, v in sorted(
+                                zip(slice_starts, child_vectors, strict=False)
+                            )
+                        ]
                     )
                 return casadi.vertcat(*all_child_vectors)
 

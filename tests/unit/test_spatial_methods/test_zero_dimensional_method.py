@@ -2,8 +2,9 @@
 # Test for the base Spatial Method class
 #
 import numpy as np
+
 import pybamm
-from tests import get_mesh_for_testing, get_discretisation_for_testing
+from tests import get_discretisation_for_testing, get_mesh_for_testing
 
 
 class TestZeroDimensionalSpatialMethod:
@@ -14,7 +15,7 @@ class TestZeroDimensionalSpatialMethod:
         np.testing.assert_array_equal(spatial_method._mesh, test_mesh)
 
         a = pybamm.Symbol("a")
-        assert a == spatial_method.integral(None, a, "primary")
+        assert a == spatial_method.integral(None, a, "primary", None)
         assert a == spatial_method.indefinite_integral(None, a, "forward")
         assert a == spatial_method.boundary_value_or_flux(None, a)
         assert (-a) == spatial_method.indefinite_integral(None, a, "backward")

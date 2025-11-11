@@ -4,10 +4,11 @@
 
 import casadi
 import numpy as np
-import pybamm
 import pytest
-from tests import get_mesh_for_testing, get_1p1d_discretisation_for_testing
 from scipy import special
+
+import pybamm
+from tests import get_1p1d_discretisation_for_testing, get_mesh_for_testing
 
 
 class TestCasadiConverter:
@@ -80,7 +81,8 @@ class TestCasadiConverter:
         # Arrays
         a = np.array([1, 2, 3, 4, 5])
         pybamm_a = pybamm.Array(a)
-        self.assert_casadi_equal(pybamm_a.to_casadi(), casadi.MX(a))
+        casadi_a = casadi.MX(a)
+        self.assert_casadi_equal(pybamm_a.to_casadi(), casadi_a)
 
         casadi_t = casadi.MX.sym("t")
         casadi_y = casadi.MX.sym("y", 10)
@@ -153,19 +155,35 @@ class TestCasadiConverter:
                 evalf=True,
             )
 
+    def test_kronecker_product(self):
+        a = np.array([1.0, 2.0, 3.0])
+        b = np.array([[1, 2, 3], [4, 5, 6]])
+        pybamm_a = pybamm.Vector(a)
+        pybamm_b = pybamm.Matrix(b)
+        symbol_pybamm = pybamm.KroneckerProduct(pybamm_a, pybamm_b)
+        symbol_casadi = casadi.kron(casadi.MX(a), casadi.MX(b))
+        self.assert_casadi_equal(symbol_pybamm.to_casadi(), symbol_casadi, evalf=True)
+
+    def test_transpose(self):
+        a = np.array([[1, 2, 3], [4, 5, 6]])
+        pybamm_a = pybamm.Matrix(a)
+        symbol_pybamm = pybamm.Transpose(pybamm_a)
+        symbol_casadi = casadi.MX(a).T
+        self.assert_casadi_equal(symbol_pybamm.to_casadi(), symbol_casadi, evalf=True)
+
     def test_interpolation(self):
         x = np.linspace(0, 1)
         y = pybamm.StateVector(slice(0, 2))
         casadi_y = casadi.MX.sym("y", 2)
         # linear
         y_test = np.array([0.4, 0.6])
-        for interpolator in ["linear", "cubic"]:
+        for interpolator in ["linear", "cubic", "pchip"]:
             interp = pybamm.Interpolant(x, 2 * x, y, interpolator=interpolator)
             interp_casadi = interp.to_casadi(y=casadi_y)
             f = casadi.Function("f", [casadi_y], [interp_casadi])
-            np.testing.assert_allclose(
-                interp.evaluate(y=y_test), f(y_test), rtol=1e-7, atol=1e-6
-            )
+            expected = interp.evaluate(y=y_test)
+            np.testing.assert_allclose(expected, f(y_test), rtol=1e-7, atol=1e-6)
+
         # square
         y = pybamm.StateVector(slice(0, 1))
         interp = pybamm.Interpolant(x, x**2, y, interpolator="cubic")
@@ -187,11 +205,6 @@ class TestCasadiConverter:
             np.testing.assert_allclose(
                 interp.evaluate(y=y_test), f(y_test), rtol=1e-7, atol=1e-6
             )
-
-        # error for pchip interpolator
-        interp = pybamm.Interpolant(x, data, y, interpolator="pchip")
-        with pytest.raises(NotImplementedError, match="The interpolator"):
-            interp_casadi = interp.to_casadi(y=casadi_y)
 
         # error for not recognized interpolator
         with pytest.raises(ValueError, match="interpolator"):

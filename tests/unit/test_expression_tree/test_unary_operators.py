@@ -1,16 +1,17 @@
 #
 # Tests for the Unary Operator classes
 #
-import pytest
-
 import numpy as np
-from scipy.sparse import diags
+import pytest
 import sympy
+from hypothesis import HealthCheck, given, settings
+from hypothesis import strategies as st
+from scipy.sparse import diags
 from sympy.vector.operators import Divergence as sympy_Divergence
 from sympy.vector.operators import Gradient as sympy_Gradient
-from tests import assert_domain_equal
 
 import pybamm
+from tests import assert_domain_equal
 
 
 class TestUnaryOperators:
@@ -25,15 +26,17 @@ class TestUnaryOperators:
         absval = pybamm.AbsoluteValue(-a)
         assert absval.evaluate(inputs={"a": 10}) == 10
 
-    def test_negation(self, mocker):
+    @settings(suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @given(random_value=st.floats(min_value=-1e38, max_value=1e38))
+    def test_negation(self, mocker, random_value):
         a = pybamm.Symbol("a")
         nega = pybamm.Negate(a)
         assert nega.name == "-"
         assert nega.children[0].name == a.name
 
-        b = pybamm.Scalar(4)
+        b = pybamm.Scalar(random_value)
         negb = pybamm.Negate(b)
-        assert negb.evaluate() == -4
+        assert negb.evaluate() == -random_value
 
         # Test broadcast gets switched
         broad_a = pybamm.PrimaryBroadcast(a, "test")
@@ -65,15 +68,17 @@ class TestUnaryOperators:
         }
         assert pybamm.Negate._from_json(input_json) == nega
 
-    def test_absolute(self, mocker):
+    @settings(suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @given(st.floats(min_value=-1e38, max_value=0))
+    def test_absolute(self, mocker, random_value):
         a = pybamm.Symbol("a")
         absa = pybamm.AbsoluteValue(a)
         assert absa.name == "abs"
         assert absa.children[0].name == a.name
 
-        b = pybamm.Scalar(-4)
+        b = pybamm.Scalar(random_value)
         absb = pybamm.AbsoluteValue(b)
-        assert absb.evaluate() == 4
+        assert absb.evaluate() == -random_value
 
         # Test broadcast gets switched
         broad_a = pybamm.PrimaryBroadcast(a, "test")
@@ -116,17 +121,23 @@ class TestUnaryOperators:
             "/ (exp(10.0 * y[0:1]) + exp(-10.0 * y[0:1]))"
         )
 
-    def test_sign(self):
-        b = pybamm.Scalar(-4)
+    @given(
+        random_value=st.integers(),
+        random_matrix=st.lists(
+            st.floats(min_value=-10, max_value=10), min_size=10, max_size=15
+        ),
+    )
+    def test_sign(self, random_value, random_matrix):
+        b = pybamm.Scalar(random_value)
         signb = pybamm.sign(b)
-        assert signb.evaluate() == -1
+        assert signb.evaluate() == -1 if random_value < 0 else 1
 
-        A = diags(np.linspace(-1, 1, 5))
+        A = diags(random_matrix)
         b = pybamm.Matrix(A)
         signb = pybamm.sign(b)
-        np.testing.assert_array_equal(
-            np.diag(signb.evaluate().toarray()), [-1, -1, 0, 1, 1]
-        )
+        evaluated_sign = signb.evaluate().toarray()
+        expected_sign = np.sign(np.diag(A.toarray()))
+        np.testing.assert_array_equal(np.diag(evaluated_sign), expected_sign)
 
         broad = pybamm.PrimaryBroadcast(-4, "test domain")
         assert pybamm.sign(broad) == pybamm.PrimaryBroadcast(-1, "test domain")
@@ -138,7 +149,7 @@ class TestUnaryOperators:
         )
 
         # Test from_json
-        c = pybamm.Multiplication(pybamm.Variable("a"), pybamm.Scalar(3))
+        c = pybamm.Multiplication(pybamm.Variable("a"), pybamm.Scalar(random_value))
         sign_json = {
             "name": "sign",
             "id": 5341515228900508018,
@@ -153,19 +164,24 @@ class TestUnaryOperators:
 
         assert pybamm.sign(c) == pybamm.Sign._from_json(sign_json)
 
-    def test_floor(self, mocker):
+    @settings(suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @given(
+        random_value1=st.floats(min_value=-1e38, max_value=1e38),
+        random_value2=st.floats(min_value=-1e38, max_value=1e38),
+    )
+    def test_floor(self, mocker, random_value1, random_value2):
         a = pybamm.Symbol("a")
         floora = pybamm.Floor(a)
         assert floora.name == "floor"
         assert floora.children[0].name == a.name
 
-        b = pybamm.Scalar(3.5)
+        b = pybamm.Scalar(random_value1)
         floorb = pybamm.Floor(b)
-        assert floorb.evaluate() == 3
+        assert floorb.evaluate() == np.floor(random_value1)
 
-        c = pybamm.Scalar(-3.2)
+        c = pybamm.Scalar(random_value2)
         floorc = pybamm.Floor(c)
-        assert floorc.evaluate() == -4
+        assert floorc.evaluate() == np.floor(random_value2)
 
         # Test from_json
         input_json = {
@@ -181,19 +197,24 @@ class TestUnaryOperators:
         }
         assert pybamm.Floor._from_json(input_json) == floora
 
-    def test_ceiling(self, mocker):
+    @settings(suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @given(
+        random_value1=st.floats(min_value=-1e38, max_value=1e38),
+        random_value2=st.floats(min_value=-1e38, max_value=1e38),
+    )
+    def test_ceiling(self, mocker, random_value1, random_value2):
         a = pybamm.Symbol("a")
         ceila = pybamm.Ceiling(a)
         assert ceila.name == "ceil"
         assert ceila.children[0].name == a.name
 
-        b = pybamm.Scalar(3.5)
+        b = pybamm.Scalar(random_value1)
         ceilb = pybamm.Ceiling(b)
-        assert ceilb.evaluate() == 4
+        assert ceilb.evaluate() == np.ceil(random_value1)
 
-        c = pybamm.Scalar(-3.2)
+        c = pybamm.Scalar(random_value2)
         ceilc = pybamm.Ceiling(c)
-        assert ceilc.evaluate() == -3
+        assert ceilc.evaluate() == np.ceil(random_value2)
 
         # Test from_json
         input_json = {
@@ -209,7 +230,8 @@ class TestUnaryOperators:
         }
         assert pybamm.Ceiling._from_json(input_json) == ceila
 
-    def test_gradient(self):
+    @given(st.integers())
+    def test_gradient(self, random_value):
         # gradient of scalar symbol should fail
         a = pybamm.Symbol("a")
         with pytest.raises(
@@ -219,7 +241,7 @@ class TestUnaryOperators:
             pybamm.Gradient(a)
 
         # gradient of variable evaluating on edges should fail
-        a = pybamm.PrimaryBroadcastToEdges(pybamm.Scalar(1), "test")
+        a = pybamm.PrimaryBroadcastToEdges(pybamm.Scalar(random_value), "test")
         with pytest.raises(TypeError, match="evaluates on edges"):
             pybamm.Gradient(a)
 
@@ -240,7 +262,8 @@ class TestUnaryOperators:
         assert grad.children[0].name == a.name
         assert grad.domain == a.domain
 
-    def test_div(self):
+    @given(st.integers())
+    def test_div(self, random_value):
         # divergence of scalar symbol should fail
         a = pybamm.Symbol("a")
         with pytest.raises(
@@ -250,7 +273,7 @@ class TestUnaryOperators:
             pybamm.Divergence(a)
 
         # divergence of variable evaluating on edges should fail
-        a = pybamm.PrimaryBroadcast(pybamm.Scalar(1), "test")
+        a = pybamm.PrimaryBroadcast(pybamm.Scalar(random_value), "test")
         with pytest.raises(TypeError, match="evaluate on edges"):
             pybamm.Divergence(a)
 
@@ -494,6 +517,12 @@ class TestUnaryOperators:
         assert downwind.children[0].name == a.name
         assert downwind.domain == a.domain
 
+        # 2D
+        a = pybamm.Symbol("a", domain="test domain")
+        symbol = pybamm.UpwindDownwind2D(a, "upwind", "upwind")
+        assert isinstance(symbol, pybamm.UpwindDownwind2D)
+        assert symbol.new_copy([a]) == symbol
+
     def test_diff(self):
         a = pybamm.StateVector(slice(0, 1))
         y = np.array([5])
@@ -690,9 +719,10 @@ class TestUnaryOperators:
         d = pybamm.Symbol("d", domain=["negative electrode"])
         one = pybamm.Symbol("1", domain="negative particle")
 
-        # Test print_name
-        pybamm.Floor.print_name = "test"
-        assert pybamm.Floor(-2.5).to_equation() == sympy.Symbol("test")
+        # Test print_name on an instance to avoid leaking global class state
+        op = pybamm.Floor(-2.5)
+        op.print_name = "test"
+        assert op.to_equation() == sympy.Symbol("test")
 
         # Test Negate
         value = 4
@@ -750,7 +780,7 @@ class TestUnaryOperators:
             pybamm.DiscreteTimeSum(2 * y)
 
         # check that raises error if two data are present
-        data2 = pybamm.DiscreteTimeData(values, times, "test2")
+        data2 = pybamm.DiscreteTimeData(times, values, "test2")
         with pytest.raises(pybamm.ModelError, match="only have one DiscreteTimeData"):
             pybamm.DiscreteTimeSum(data + data2)
 

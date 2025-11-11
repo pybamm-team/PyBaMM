@@ -1,6 +1,7 @@
-import pybamm
-import pandas as pd
 import numpy as np
+import pandas as pd
+
+import pybamm
 
 
 def process_2D(name, data):

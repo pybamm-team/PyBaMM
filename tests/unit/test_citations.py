@@ -1,25 +1,11 @@
 import contextlib
 import io
-import os
 import warnings
-from tempfile import NamedTemporaryFile
 
 import pytest
 from pybtex.database import Entry
 
 import pybamm
-
-
-@contextlib.contextmanager
-def temporary_filename():
-    """Create a temporary-file and return yield its filename"""
-
-    f = NamedTemporaryFile(delete=False)
-    try:
-        f.close()
-        yield f.name
-    finally:
-        os.remove(f.name)
 
 
 class TestCitations:
@@ -43,20 +29,18 @@ class TestCitations:
         # Test unknown citations at registration
         assert "not a citation" in citations._unknown_citations
 
-    def test_print_citations(self):
+    def test_print_citations(self, tmp_path):
         pybamm.citations._reset()
 
         # Text Style
-        with temporary_filename() as filename:
-            pybamm.print_citations(filename, "text")
-            with open(filename) as f:
-                assert len(f.readlines()) > 0
+        text_file = tmp_path / "citations.txt"
+        pybamm.print_citations(text_file, "text")
+        assert text_file.read_text().strip() != ""
 
         # Bibtext Style
-        with temporary_filename() as filename:
-            pybamm.print_citations(filename, "bibtex")
-            with open(filename) as f:
-                assert len(f.readlines()) > 0
+        bibtex_file = tmp_path / "citations.bib"
+        pybamm.print_citations(bibtex_file, "bibtex")
+        assert bibtex_file.read_text().strip() != ""
 
         # Write to stdout
         f = io.StringIO()
@@ -339,7 +323,7 @@ class TestCitations:
         assert "Mohtat2019" not in citations._papers_to_cite
         pybamm.lithium_ion.ElectrodeSOHSolver(
             pybamm.ParameterValues("Marquis2019")
-        )._get_electrode_soh_sims_full()
+        )._get_electrode_soh_sims_full(None)
         assert "Mohtat2019" in citations._papers_to_cite
         assert "Mohtat2019" in citations._citation_tags.keys()
 

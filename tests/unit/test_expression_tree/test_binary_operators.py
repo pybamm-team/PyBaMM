@@ -2,14 +2,12 @@
 # Tests for the Binary Operator classes
 #
 
-import pytest
-
-
 import numpy as np
+import pytest
+import sympy
 from scipy.sparse import coo_matrix
 
 import pybamm
-import sympy
 
 EMPTY_DOMAINS = {
     "primary": [],
@@ -789,9 +787,10 @@ class TestBinaryOperators:
         assert pybamm.inner(a3, a3).evaluate() == 9
 
     def test_to_equation(self):
-        # Test print_name
-        pybamm.Addition.print_name = "test"
-        assert pybamm.Addition(1, 2).to_equation() == sympy.Symbol("test")
+        # Test print_name on an instance to avoid leaking global class state
+        op = pybamm.Addition(1, 2)
+        op.print_name = "test"
+        assert op.to_equation() == sympy.Symbol("test")
 
         # Test Power
         assert pybamm.Power(7, 2).to_equation() == 49

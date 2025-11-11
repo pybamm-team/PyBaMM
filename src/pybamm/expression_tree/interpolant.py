@@ -2,10 +2,14 @@
 # Interpolating class
 #
 from __future__ import annotations
-import numpy as np
-from scipy import interpolate
-from collections.abc import Sequence
+
 import numbers
+from collections.abc import Sequence
+from typing import Any
+
+import numpy as np
+import numpy.typing as npt
+from scipy import interpolate
 
 import pybamm
 
@@ -43,8 +47,8 @@ class Interpolant(pybamm.Function):
 
     def __init__(
         self,
-        x: np.ndarray | Sequence[np.ndarray],
-        y: np.ndarray,
+        x: npt.NDArray[np.float64] | Sequence[npt.NDArray[np.float64]],
+        y: npt.NDArray[Any],
         children: Sequence[pybamm.Symbol] | pybamm.Time,
         name: str | None = None,
         interpolator: str | None = "linear",
@@ -57,7 +61,7 @@ class Interpolant(pybamm.Function):
             raise ValueError(f"interpolator '{interpolator}' not recognised")
 
         # Perform some checks on the data
-        if isinstance(x, (tuple, list)) and len(x) == 2:
+        if isinstance(x, tuple | list) and len(x) == 2:
             x1, x2 = x
             if y.ndim != 2:
                 raise ValueError("y should be two-dimensional if len(x)=2")
@@ -71,7 +75,7 @@ class Interpolant(pybamm.Function):
                     "len(x2) should equal y=shape[0], "
                     f"but x2.shape={x2.shape} and y.shape={y.shape}"
                 )
-        elif isinstance(x, (tuple, list)) and len(x) == 3:
+        elif isinstance(x, tuple | list) and len(x) == 3:
             x1, x2, x3 = x
             if y.ndim != 3:
                 raise ValueError("y should be three-dimensional if len(x)=3")
@@ -92,19 +96,22 @@ class Interpolant(pybamm.Function):
                     f"but x3.shape={x3.shape} and y.shape={y.shape}"
                 )
         else:
-            if isinstance(x, (tuple, list)):
+            if isinstance(x, tuple | list):
                 x1 = x[0]
             else:
                 x1 = x
-                x: list[np.ndarray] = [x]  # type: ignore[no-redef]
+                x: list[npt.NDArray[np.float64]] = [x]  # type: ignore[no-redef]
             x2 = None
             if x1.shape[0] != y.shape[0]:
                 raise ValueError(
                     "len(x1) should equal y=shape[0], "
                     f"but x1.shape={x1.shape} and y.shape={y.shape}"
                 )
+            # if 1d then x should be monotonically increasing
+            if np.any(x1[:-1] > x1[1:]):
+                raise ValueError("x should be monotonically increasing")
         # children should be a list not a symbol or a number
-        if isinstance(children, (pybamm.Symbol, numbers.Number)):
+        if isinstance(children, pybamm.Symbol | numbers.Number):
             children = [children]
         # Either a single x is provided and there is one child
         # or x is a 2-tuple and there are two children
@@ -279,7 +286,7 @@ class Interpolant(pybamm.Function):
             # If the children are scalars, we need to add a dimension
             shapes = []
             for child in evaluated_children:
-                if isinstance(child, (float, int)):
+                if isinstance(child, float | int):
                     shapes.append(())
                 else:
                     shapes.append(child.shape)
@@ -307,7 +314,7 @@ class Interpolant(pybamm.Function):
             if np.any(nans):
                 nan_children = []
                 for child, interp_range in zip(
-                    new_evaluated_children, self.function.grid
+                    new_evaluated_children, self.function.grid, strict=True
                 ):
                     nan_children.append(np.ones_like(child) * interp_range.mean())
                 nan_eval = self.function(np.transpose(nan_children))

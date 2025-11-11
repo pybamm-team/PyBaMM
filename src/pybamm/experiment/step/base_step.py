@@ -1,9 +1,13 @@
 from __future__ import annotations
-import pybamm
-import numpy as np
-from datetime import datetime
-from .step_termination import _read_termination
+
 import numbers
+from datetime import datetime
+
+import numpy as np
+
+import pybamm
+
+from .step_termination import _read_termination
 
 _examples = """
 
@@ -79,13 +83,13 @@ class BaseStep:
                 f"Invalid direction: {direction}. Must be one of {potential_directions}"
             )
         self.input_duration = duration
-        self.input_duration = duration
         self.input_value = value
         self.skip_ok = skip_ok
+
         # Check if drive cycle
-        is_drive_cycle = isinstance(value, np.ndarray)
-        is_python_function = callable(value)
-        if is_drive_cycle:
+        self.is_drive_cycle = isinstance(value, np.ndarray)
+        self.is_python_function = callable(value)
+        if self.is_drive_cycle:
             if value.ndim != 2 or value.shape[1] != 2:
                 raise ValueError(
                     "Drive cycle must be a 2-column array with time in the first column"
@@ -95,7 +99,7 @@ class BaseStep:
             t = value[:, 0]
             if t[0] != 0:
                 raise ValueError("Drive cycle must start at t=0")
-        elif is_python_function:
+        elif self.is_python_function:
             t0 = 0
             # Check if the function is only a function of t
             try:
@@ -113,15 +117,16 @@ class BaseStep:
 
         # Record whether the step uses the default duration
         # This will be used by the experiment to check whether the step is feasible
-        self.uses_default_duration = duration is None
+        self.uses_default_duration = duration is None and not self.is_drive_cycle
+
         # Set duration
-        if self.uses_default_duration:
+        if duration is None:
             duration = self.default_duration(value)
         self.duration = _convert_time_to_seconds(duration)
 
         # If drive cycle, repeat the drive cycle until the end of the experiment,
         # and create an interpolant
-        if is_drive_cycle:
+        if self.is_drive_cycle:
             t_max = self.duration
             if t_max > value[-1, 0]:
                 # duration longer than drive cycle values so loop
@@ -143,21 +148,13 @@ class BaseStep:
                 pybamm.t - pybamm.InputParameter("start time"),
                 name="Drive Cycle",
             )
-            self.period = np.diff(t).min()
-        elif is_python_function:
+
+        elif self.is_python_function:
             t = pybamm.t - pybamm.InputParameter("start time")
             self.value = value(t)
-            self.period = _convert_time_to_seconds(period)
         else:
             self.value = value
-            self.period = _convert_time_to_seconds(period)
-
-        if (
-            hasattr(self, "calculate_charge_or_discharge")
-            and self.calculate_charge_or_discharge
-        ):
-            direction = self.value_based_charge_or_discharge()
-        self.direction = direction
+        self.period = _convert_time_to_seconds(period)
 
         self.repr_args, self.hash_args = self.record_tags(
             value,
@@ -179,10 +176,20 @@ class BaseStep:
             termination = [termination]
         self.termination = []
         for term in termination:
+            term_obj = None
             if isinstance(term, str):
-                term = _convert_electric(term)
-            term = _read_termination(term)
-            self.termination.append(term)
+                operator, typ, val = _parse_termination(term, self.value)
+                term_obj = _read_termination((operator, typ, val))
+            else:
+                term_obj = _read_termination(term)
+            self.termination.append(term_obj)
+
+        if (
+            hasattr(self, "calculate_charge_or_discharge")
+            and self.calculate_charge_or_discharge
+        ):
+            direction = self.value_based_charge_or_discharge()
+        self.direction = direction
 
         self.temperature = _convert_temperature_to_kelvin(temperature)
 
@@ -265,6 +272,12 @@ class BaseStep:
     def __hash__(self):
         return hash(self.basic_repr())
 
+    def _default_timespan(self, value):
+        """
+        Default timespan for the step is one day (24 hours).
+        """
+        return 24 * 3600
+
     def default_duration(self, value):
         """
         Default duration for the step is one day (24 hours) or the duration of the
@@ -274,18 +287,21 @@ class BaseStep:
             t = value[:, 0]
             return t[-1]
         else:
-            return 24 * 3600  # one day in seconds
+            return self._default_timespan(value)
 
     @staticmethod
     def default_period():
         return 60.0  # seconds
 
-    def default_time_vector(self, tf, t0=0):
-        if self.period is None:
-            period = self.default_period()
-        else:
+    def default_time_vector(self, solver, tf, t0=0):
+        if self.period is not None:
             period = self.period
-        npts = max(int(round(np.abs(tf - t0) / period)) + 1, 2)
+        elif self.is_drive_cycle and solver.supports_interp:
+            # Infer the period from the drive cycle
+            period = np.diff(self.value.x[0]).min()
+        else:
+            period = self.default_period()
+        npts = max(round(np.abs(tf - t0) / period) + 1, 2)
 
         return np.linspace(t0, tf, npts)
 
@@ -324,10 +340,20 @@ class BaseStep:
         t_interp: np.array | None
             The time points at which to interpolate the solution
         """
-        t_eval = np.array([0, tf])
+        if self.is_drive_cycle:
+            t_eval = self.value.x[0]
+            # If the drive cycle is longer than the final time,
+            # then truncate the drive cycle
+            if t_eval[-1] > tf:
+                t_eval = t_eval[t_eval <= tf]
+            if t_eval[-1] != tf:
+                t_eval = np.append(t_eval, tf)
+        else:
+            t_eval = np.array([0, tf])
+
         if t_interp is None:
             if self.period is not None:
-                t_interp = self.default_time_vector(tf)
+                t_interp = self.default_time_vector(solver, tf)
             else:
                 t_interp = solver.process_t_interp(t_interp)
 
@@ -348,7 +374,7 @@ class BaseStep:
         t_interp: np.array | None
             The time points at which to interpolate the solution
         """
-        t_eval = self.default_time_vector(tf)
+        t_eval = self.default_time_vector(solver, tf)
 
         t_interp = solver.process_t_interp(t_interp)
 
@@ -389,9 +415,11 @@ class BaseStep:
     def value_based_charge_or_discharge(self):
         """
         Determine whether the step is a charge or discharge step based on the value of the
-        step
+        step. If an operator is provided, the step direction is not used, so we return None.
         """
         if isinstance(self.value, pybamm.Symbol):
+            if _check_input_params(self.value):
+                return None
             inpt = {"start time": 0}
             init_curr = self.value.evaluate(t=0, inputs=inpt).flatten()[0]
         else:
@@ -537,7 +565,7 @@ def _convert_time_to_seconds(time_and_units):
 def _convert_temperature_to_kelvin(temperature_and_units):
     """Convert a temperature in Celsius or Kelvin to a temperature in Kelvin"""
     # If the temperature is a number, assume it is in Kelvin
-    if isinstance(temperature_and_units, (int, float)) or temperature_and_units is None:
+    if isinstance(temperature_and_units, int | float) or temperature_and_units is None:
         return temperature_and_units
 
     # Split number and units
@@ -582,3 +610,32 @@ def _convert_electric(value_string):
             f"units must be 'A', 'V', 'W', 'Ohm', or 'C'. For example: {_examples}"
         ) from error
     return typ, value
+
+
+def _parse_termination(term_str, value):
+    """Parse a termination string into its components"""
+    term_str = term_str.strip()
+    operator = None
+    remaining = term_str
+    # Check if the string starts with '<' or '>'
+    if term_str and term_str[0] in ("<", ">"):
+        operator = term_str[0]
+        remaining = term_str[1:].strip()
+    remaining = remaining.replace(" ", "")
+    typ, val = _convert_electric(remaining)
+    if (
+        isinstance(value, pybamm.Symbol) and _check_input_params(value)
+    ) and operator is None:
+        raise ValueError(
+            "Termination must include an operator when using InputParameter."
+        )
+    return operator, typ, val
+
+
+def _check_input_params(value):
+    """Check if self.value is a function of input parameters"""
+    leaves = value.post_order(filter=lambda node: len(node.children) == 0)
+    contains_input_parameter = any(
+        isinstance(leaf, pybamm.InputParameter) for leaf in leaves
+    )
+    return contains_input_parameter

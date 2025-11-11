@@ -2,12 +2,13 @@
 # Test for the base Spatial Method class
 #
 
-import pytest
 import numpy as np
+import pytest
+
 import pybamm
 from tests import (
-    get_mesh_for_testing,
     get_1p1d_mesh_for_testing,
+    get_mesh_for_testing,
     get_size_distribution_mesh_for_testing,
 )
 

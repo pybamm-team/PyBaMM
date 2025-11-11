@@ -3,6 +3,7 @@
 #
 
 import pytest
+
 import pybamm
 
 
@@ -96,16 +97,16 @@ class TestMPM:
         model = pybamm.lithium_ion.MPM(options)
         model.check_well_posedness()
 
-    def test_wycisk_ocp(self):
+    def test_one_state_differential_capacity_hysteresis_ocp(self):
         options = {
-            "open-circuit potential": "Wycisk",
+            "open-circuit potential": "one-state differential capacity hysteresis",
         }
         model = pybamm.lithium_ion.MPM(options)
         model.check_well_posedness()
 
-    def test_axen_ocp(self):
+    def test_one_state_hysteresis_ocp(self):
         options = {
-            "open-circuit potential": "Axen",
+            "open-circuit potential": "one-state hysteresis",
         }
         model = pybamm.lithium_ion.MPM(options)
         model.check_well_posedness()

@@ -2,12 +2,13 @@
 # Class for constant SEI thickness
 #
 import pybamm
+
 from .base_sei import BaseModel
 
 
 class ConstantSEI(BaseModel):
     """
-    Class for SEI with constant thickness.
+    Class for SEI with constant concentration.
 
     Note that there is no SEI current, so we don't need to update the "sum of
     interfacial current densities" variables from
@@ -32,9 +33,16 @@ class ConstantSEI(BaseModel):
 
     def get_fundamental_variables(self):
         domain = self.domain.lower()
-        # Constant thicknesses
-        L_sei = self.phase_param.L_sei_0
-        variables = self._get_standard_thickness_variables(L_sei)
+        L_sei_0 = self.phase_param.L_sei_0
+        V_bar_sei = self.phase_param.V_bar_sei
+        # Constant concentration
+        if self.reaction_loc == "interface":
+            # c_sei is an interfacial quantity [mol.m-2]
+            c_sei = L_sei_0 / V_bar_sei
+        else:
+            # c_sei is a bulk quantity [mol.m-3]
+            c_sei = L_sei_0 * self.phase_param.a_typ / V_bar_sei
+        variables = self._get_standard_concentration_variables(c_sei)
 
         # Reactions
         if self.reaction_loc == "interface":
@@ -44,14 +52,5 @@ class ConstantSEI(BaseModel):
                 pybamm.Scalar(0), f"{domain} electrode", "current collector"
             )
         variables.update(self._get_standard_reaction_variables(zero))
-
-        return variables
-
-    def get_coupled_variables(self, variables):
-        # Concentrations (derived from thicknesses)
-        variables.update(self._get_standard_concentration_variables(variables))
-
-        # Add other standard coupled variables
-        variables.update(super().get_coupled_variables(variables))
 
         return variables

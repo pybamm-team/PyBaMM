@@ -2,10 +2,10 @@
 # Tests for the Function classes
 #
 
-import pybamm
-
-import pytest
 import numpy as np
+import pytest
+
+import pybamm
 
 
 class TestInterpolant:
@@ -75,6 +75,11 @@ class TestInterpolant:
             np.testing.assert_array_equal(
                 interp.evaluate(y=np.array([2]))[:, 0], np.array([np.nan])
             )
+
+    def test_interpolation_non_increasing(self):
+        x = np.flip(np.linspace(0, 1, 200))
+        with pytest.raises(ValueError, match="x should be monotonically increasing"):
+            pybamm.Interpolant(x, 2 * x, 0.5)
 
     def test_interpolation_float(self):
         x = np.linspace(0, 1, 200)

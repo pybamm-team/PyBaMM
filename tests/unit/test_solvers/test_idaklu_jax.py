@@ -1,8 +1,9 @@
 import sys
 
-import pytest
-import pybamm
 import numpy as np
+import pytest
+
+import pybamm
 
 
 def make_model():
@@ -22,9 +23,9 @@ def make_model():
 
 
 if pybamm.has_jax():
-    from jax.tree_util import tree_flatten
     import jax
     import jax.numpy as jnp
+    from jax.tree_util import tree_flatten
 
     inputs = {
         "a": 0.1,
@@ -617,7 +618,7 @@ class TestIDAKLUJax:
         check = {  # Form dictionary of results from IDAKLU simulation
             invar: np.concatenate(
                 [
-                    np.array(sim[outvar].sensitivities[invar])
+                    sim[outvar].sensitivities[invar].reshape(-1, 1)
                     for outvar in output_variables
                 ],
                 axis=1,
@@ -754,7 +755,7 @@ class TestIDAKLUJax:
         check = {  # Form dictionary of results from IDAKLU simulation
             invar: np.concatenate(
                 [
-                    np.array(sim[outvar].sensitivities[invar])
+                    sim[outvar].sensitivities[invar].reshape(-1, 1)
                     for outvar in output_variables
                 ],
                 axis=1,

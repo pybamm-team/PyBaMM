@@ -1,9 +1,10 @@
 #
 # Tests for the lithium-ion MPM model
 #
+import numpy as np
+
 import pybamm
 import tests
-import numpy as np
 
 
 class TestMPM:
@@ -66,8 +67,13 @@ class TestMPM:
         modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
         modeltest.test_all(skip_output_tests=True)
 
-    def test_wycisk_ocp(self):
-        options = {"open-circuit potential": ("Wycisk", "single")}
+    def test_one_state_differential_capacity_hysteresis_ocp(self):
+        options = {
+            "open-circuit potential": (
+                "one-state differential capacity hysteresis",
+                "single",
+            )
+        }
         model = pybamm.lithium_ion.MPM(options)
         parameter_values = pybamm.ParameterValues("Chen2020")
         parameter_values = pybamm.get_size_distribution_parameters(parameter_values)
@@ -90,8 +96,8 @@ class TestMPM:
         modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
         modeltest.test_all(skip_output_tests=True)
 
-    def test_axen_ocp(self):
-        options = {"open-circuit potential": ("Axen", "single")}
+    def test_one_state_hysteresis_ocp(self):
+        options = {"open-circuit potential": ("one-state hysteresis", "single")}
         model = pybamm.lithium_ion.MPM(options)
         parameter_values = pybamm.ParameterValues("Chen2020")
         parameter_values = pybamm.get_size_distribution_parameters(parameter_values)
@@ -131,15 +137,17 @@ class TestMPM:
 
         # reduce number of particle sizes, for a crude discretization
         var_pts = {"R_n": 3, "R_p": 3}
-        solver = pybamm.CasadiSolver(mode="fast")
+
+        t_eval = [0, 3500]
+        t_interp = np.linspace(t_eval[0], t_eval[-1], 100)
 
         # solve
         neg_Li = []
         pos_Li = []
         for model in models:
-            sim = pybamm.Simulation(model, solver=solver)
+            sim = pybamm.Simulation(model)
             sim.var_pts.update(var_pts)
-            solution = sim.solve([0, 3500])
+            solution = sim.solve(t_eval, t_interp=t_interp)
             neg = solution["Total lithium in negative electrode [mol]"].entries[-1]
             pos = solution["Total lithium in positive electrode [mol]"].entries[-1]
             neg_Li.append(neg)

@@ -2,9 +2,10 @@
 # Tests for the Summary Variables class
 #
 
-import pybamm
 import numpy as np
 import pytest
+
+import pybamm
 
 
 class TestSummaryVariables:
@@ -88,7 +89,7 @@ class TestSummaryVariables:
         model = pybamm.lithium_ion.SPM()
         sim = pybamm.Simulation(model)
         sol = sim.solve(np.linspace(0, 1))
-        esoh_solver = sim.get_esoh_solver(True)
+        esoh_solver = sim.get_esoh_solver(True, None)
         sum_vars_esoh = pybamm.SummaryVariables(sol, esoh_solver=esoh_solver)
 
         assert np.isclose(sum_vars_esoh["x_100"], 0.9493)
@@ -112,7 +113,7 @@ class TestSummaryVariables:
         model = pybamm.lithium_ion.SPM()
         sim = pybamm.Simulation(model)
         sol = sim.solve(np.linspace(0, 1))
-        esoh_solver = sim.get_esoh_solver(True)
+        esoh_solver = sim.get_esoh_solver(True, None)
         sum_vars_esoh = pybamm.SummaryVariables(sol, esoh_solver=esoh_solver)
 
         assert sum_vars_esoh.calc_esoh is True

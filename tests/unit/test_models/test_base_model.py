@@ -2,15 +2,15 @@
 # Tests for the base model class
 #
 
-import pytest
 import os
 import platform
 import subprocess  # nosec
-from io import StringIO
 import sys
+from io import StringIO
 
 import casadi
 import numpy as np
+import pytest
 from numpy import testing
 
 import pybamm
@@ -150,7 +150,7 @@ class TestBaseModel:
             [x.name for x in [a, b, c, d, e, f, g, h, i]]
         )
         assert all(
-            isinstance(x, (pybamm.Parameter, pybamm.InputParameter))
+            isinstance(x, pybamm.Parameter | pybamm.InputParameter)
             for x in model.parameters
         )
 
@@ -838,16 +838,35 @@ class TestBaseModel:
             domain="negative particle",
             auxiliary_domains={"secondary": "negative electrode"},
         )
+        var_3D = pybamm.Variable(
+            "var_3D",
+            domain="negative particle",
+            auxiliary_domains={
+                "secondary": "negative electrode",
+                "tertiary": "current collector",
+            },
+        )
         var_concat_neg = pybamm.Variable("var_concat_neg", domain="negative electrode")
         var_concat_sep = pybamm.Variable("var_concat_sep", domain="separator")
         var_concat = pybamm.concatenation(var_concat_neg, var_concat_sep)
         model.rhs = {var_scalar: -var_scalar, var_1D: -var_1D}
-        model.algebraic = {var_2D: -var_2D, var_concat: -var_concat}
-        model.initial_conditions = {var_scalar: 1, var_1D: 1, var_2D: 1, var_concat: 1}
+        model.algebraic = {
+            var_2D: -var_2D,
+            var_concat: -var_concat,
+            var_3D: -var_3D,
+        }
+        model.initial_conditions = {
+            var_scalar: 1,
+            var_1D: 1,
+            var_2D: 1,
+            var_3D: 1,
+            var_concat: 1,
+        }
         model.variables = {
             "var_scalar": var_scalar,
             "var_1D": var_1D,
             "var_2D": var_2D,
+            "var_3D": var_3D,
             "var_concat_neg": var_concat_neg,
             "var_concat_sep": var_concat_sep,
             "var_concat": var_concat,
@@ -857,30 +876,33 @@ class TestBaseModel:
         assert model.initial_conditions[var_scalar].value == 1
         assert model.initial_conditions[var_1D].value == 1
         assert model.initial_conditions[var_2D].value == 1
+        assert model.initial_conditions[var_3D].value == 1
         assert model.initial_conditions[var_concat].value == 1
-
         # Discretise
         geometry = {
             "negative electrode": {"x_n": {"min": 0, "max": 1}},
             "separator": {"x_s": {"min": 1, "max": 2}},
             "negative particle": {"r_n": {"min": 0, "max": 1}},
+            "current collector": {"z": {"min": 0, "max": 3}},
         }
         submeshes = {
             "negative electrode": pybamm.Uniform1DSubMesh,
             "separator": pybamm.Uniform1DSubMesh,
             "negative particle": pybamm.Uniform1DSubMesh,
+            "current collector": pybamm.Uniform1DSubMesh,
         }
-        var_pts = {"x_n": 10, "x_s": 10, "r_n": 5}
+        var_pts = {"x_n": 10, "x_s": 10, "r_n": 5, "z": 3}
         mesh = pybamm.Mesh(geometry, submeshes, var_pts)
         spatial_methods = {
             "negative electrode": pybamm.FiniteVolume(),
             "separator": pybamm.FiniteVolume(),
             "negative particle": pybamm.FiniteVolume(),
+            "current collector": pybamm.FiniteVolume(),
         }
         disc = pybamm.Discretisation(mesh, spatial_methods)
         model_disc = disc.process_model(model, inplace=False)
         t = np.linspace(0, 1)
-        y = np.tile(3 * t, (1 + 30 + 50, 1))
+        y = np.tile(3 * t, (1 + 30 + 50 + 150, 1))
         sol = pybamm.Solution(t, y, model_disc, {})
 
         # Update out-of-place first, since otherwise we'll have already modified the
@@ -892,6 +914,7 @@ class TestBaseModel:
         )
         np.testing.assert_array_equal(model.initial_conditions[var_1D].evaluate(), 1)
         np.testing.assert_array_equal(model.initial_conditions[var_2D].evaluate(), 1)
+        np.testing.assert_array_equal(model.initial_conditions[var_3D].evaluate(), 1)
         np.testing.assert_array_equal(
             model.initial_conditions[var_concat].evaluate(), 1
         )
@@ -914,6 +937,11 @@ class TestBaseModel:
             assert isinstance(mdl.initial_conditions[var_2D], pybamm.Vector)
             assert mdl.initial_conditions[var_2D].shape == (50, 1)
             np.testing.assert_array_equal(mdl.initial_conditions[var_2D].entries, 3)
+
+            var_3D = mdl.variables["var_3D"]
+            assert isinstance(mdl.initial_conditions[var_3D], pybamm.Vector)
+            assert mdl.initial_conditions[var_3D].shape == (150, 1)
+            np.testing.assert_array_equal(mdl.initial_conditions[var_3D].entries, 3)
 
             var_concat = mdl.variables["var_concat"]
             assert isinstance(mdl.initial_conditions[var_concat], pybamm.Vector)
@@ -942,7 +970,14 @@ class TestBaseModel:
             new_model_disc.initial_conditions[var_2D].entries, 3
         )
 
-        var_concat = list(new_model_disc.initial_conditions.keys())[3]
+        var_3D = list(new_model_disc.initial_conditions.keys())[3]
+        assert isinstance(new_model_disc.initial_conditions[var_3D], pybamm.Vector)
+        assert new_model_disc.initial_conditions[var_3D].shape == (150, 1)
+        np.testing.assert_array_equal(
+            new_model_disc.initial_conditions[var_3D].entries, 3
+        )
+
+        var_concat = list(new_model_disc.initial_conditions.keys())[4]
         assert isinstance(new_model_disc.initial_conditions[var_concat], pybamm.Vector)
         assert new_model_disc.initial_conditions[var_concat].shape == (20, 1)
         np.testing.assert_array_equal(
@@ -962,6 +997,14 @@ class TestBaseModel:
             domain="negative particle",
             auxiliary_domains={"secondary": "negative electrode"},
         )
+        new_var_3D = pybamm.Variable(
+            "var_3D",
+            domain="negative particle",
+            auxiliary_domains={
+                "secondary": "negative electrode",
+                "tertiary": "current collector",
+            },
+        )
         new_var_concat_neg = pybamm.Variable(
             "var_concat_neg", domain="negative electrode"
         )
@@ -974,17 +1017,20 @@ class TestBaseModel:
         new_model.algebraic = {
             new_var_2D: -2 * new_var_2D,
             new_var_concat: -2 * new_var_concat,
+            new_var_3D: -2 * new_var_3D,
         }
         new_model.initial_conditions = {
             new_var_scalar: 1,
             new_var_1D: 1,
             new_var_2D: 1,
+            new_var_3D: 1,
             new_var_concat: 1,
         }
         new_model.variables = {
             "var_scalar": new_var_scalar,
             "var_1D": new_var_1D,
             "var_2D": new_var_2D,
+            "var_3D": new_var_3D,
             "var_concat_neg": new_var_concat_neg,
             "var_concat_sep": new_var_concat_sep,
             "var_concat": new_var_concat,
@@ -1008,6 +1054,11 @@ class TestBaseModel:
         assert new_model.initial_conditions[var_2D].shape == (50, 1)
         np.testing.assert_array_equal(new_model.initial_conditions[var_2D].entries, 3)
 
+        var_3D = new_model.variables["var_3D"]
+        assert isinstance(new_model.initial_conditions[var_3D], pybamm.Vector)
+        assert new_model.initial_conditions[var_3D].shape == (150, 1)
+        np.testing.assert_array_equal(new_model.initial_conditions[var_3D].entries, 3)
+
         var_concat = new_model.variables["var_concat"]
         assert isinstance(new_model.initial_conditions[var_concat], pybamm.Vector)
         assert new_model.initial_conditions[var_concat].shape == (20, 1)
@@ -1022,6 +1073,7 @@ class TestBaseModel:
             "var_concat_neg": np.tile(5 * t, (10, 1)),
             "var_concat_sep": np.tile(5 * t, (10, 1)),
             "var_2D": np.tile(5 * t, (10, 5, 1)),
+            "var_3D": np.tile(5 * t, (3, 10, 5, 1)),
         }
         new_model.set_initial_conditions_from(sol_dict)
 
@@ -1039,6 +1091,11 @@ class TestBaseModel:
         assert isinstance(new_model.initial_conditions[var_2D], pybamm.Vector)
         assert new_model.initial_conditions[var_2D].shape == (50, 1)
         np.testing.assert_array_equal(new_model.initial_conditions[var_2D].entries, 5)
+
+        var_3D = new_model.variables["var_3D"]
+        assert isinstance(new_model.initial_conditions[var_3D], pybamm.Vector)
+        assert new_model.initial_conditions[var_3D].shape == (150, 1)
+        np.testing.assert_array_equal(new_model.initial_conditions[var_3D].entries, 5)
 
         var_concat = new_model.variables["var_concat"]
         assert isinstance(new_model.initial_conditions[var_concat], pybamm.Vector)
@@ -1070,7 +1127,14 @@ class TestBaseModel:
             new_model_disc.initial_conditions[var_2D].entries, 5
         )
 
-        var_concat = list(new_model_disc.initial_conditions.keys())[3]
+        var_3D = list(new_model_disc.initial_conditions.keys())[3]
+        assert isinstance(new_model_disc.initial_conditions[var_3D], pybamm.Vector)
+        assert new_model_disc.initial_conditions[var_3D].shape == (150, 1)
+        np.testing.assert_array_equal(
+            new_model_disc.initial_conditions[var_3D].entries, 5
+        )
+
+        var_concat = list(new_model_disc.initial_conditions.keys())[4]
         assert isinstance(new_model_disc.initial_conditions[var_concat], pybamm.Vector)
         assert new_model_disc.initial_conditions[var_concat].shape == (20, 1)
         np.testing.assert_array_equal(
@@ -1088,29 +1152,6 @@ class TestBaseModel:
         model.initial_conditions = {var: 1}
         with pytest.raises(NotImplementedError, match="Variable must have type"):
             model.set_initial_conditions_from({})
-
-        var = pybamm.Variable(
-            "var",
-            domain="negative particle",
-            auxiliary_domains={
-                "secondary": "negative electrode",
-                "tertiary": "current collector",
-            },
-        )
-        model.rhs = {var: -var}
-        model.initial_conditions = {var: 1}
-        with pytest.raises(NotImplementedError, match="Variable must be 0D, 1D, or 2D"):
-            model.set_initial_conditions_from({"var": np.ones((5, 6, 7, 8))})
-
-        var_concat_neg = pybamm.Variable("var concat neg", domain="negative electrode")
-        var_concat_sep = pybamm.Variable("var concat sep", domain="separator")
-        var_concat = pybamm.concatenation(var_concat_neg, var_concat_sep)
-        model.algebraic = {var_concat: -var_concat}
-        model.initial_conditions = {var_concat: 1}
-        with pytest.raises(
-            NotImplementedError, match="Variable in concatenation must be 1D"
-        ):
-            model.set_initial_conditions_from({"var concat neg": np.ones((5, 6, 7))})
 
         # Inconsistent model and variable names
         model = pybamm.BaseModel()
@@ -1186,6 +1227,7 @@ class TestBaseModel:
         assert not model._built
         model.build_model()
         assert model._built
+        assert model._built == model.built
         u = model.variables["u"]
         v = model.variables["v"]
         assert model.rhs[u].value == 2

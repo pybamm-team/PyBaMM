@@ -1,55 +1,60 @@
-#
-# Tests for the lead-acid Full model
-#
+import pytest
+
 import pybamm
 
 
 class TestLeadAcidFull:
-    def test_well_posed(self):
-        model = pybamm.lead_acid.Full()
-        model.check_well_posedness()
-
-    def test_well_posed_with_convection(self):
-        options = {"convection": "uniform transverse"}
-        model = pybamm.lead_acid.Full(options)
-        model.check_well_posedness()
-
-        options = {"dimensionality": 1, "convection": "full transverse"}
+    @pytest.mark.parametrize(
+        "options",
+        [
+            {},
+            {"convection": "uniform transverse"},
+            {"dimensionality": 1, "convection": "full transverse"},
+        ],
+        ids=["well_posed", "with_convention", "with_convention_1plus1d"],
+    )
+    def test_well_posed(self, options):
         model = pybamm.lead_acid.Full(options)
         model.check_well_posedness()
 
 
 class TestLeadAcidFullSurfaceForm:
-    def test_well_posed_differential(self):
-        options = {"surface form": "differential"}
-        model = pybamm.lead_acid.Full(options)
-        model.check_well_posedness()
-
-    def test_well_posed_differential_1plus1d(self):
-        options = {"surface form": "differential", "dimensionality": 1}
-        model = pybamm.lead_acid.Full(options)
-        model.check_well_posedness()
-
-    def test_well_posed_algebraic(self):
-        options = {"surface form": "algebraic"}
+    @pytest.mark.parametrize(
+        "options",
+        [
+            {"surface form": "differential"},
+            {"surface form": "differential", "dimensionality": 1},
+            {"surface form": "algebraic"},
+        ],
+        ids=["differential", "differential_1plus1d", "algebraic"],
+    )
+    def test_well_posed(self, options):
         model = pybamm.lead_acid.Full(options)
         model.check_well_posedness()
 
 
 class TestLeadAcidFullSideReactions:
-    def test_well_posed(self):
+    def test_model_well_posedness(self):
         options = {"hydrolysis": "true"}
         model = pybamm.lead_acid.Full(options)
         model.check_well_posedness()
 
-    def test_well_posed_surface_form_differential(self):
-        options = {"hydrolysis": "true", "surface form": "differential"}
+    @pytest.mark.parametrize(
+        "options, expected_solver",
+        [
+            (
+                {"hydrolysis": "true", "surface form": "differential"},
+                pybamm.IDAKLUSolver,
+            ),
+            ({"hydrolysis": "true", "surface form": "algebraic"}, pybamm.IDAKLUSolver),
+        ],
+        ids=[
+            "surface_form_differential",
+            "surface_form_algebraic",
+        ],
+    )
+    def test_well_posed(self, options, expected_solver):
         model = pybamm.lead_acid.Full(options)
         model.check_well_posedness()
-        assert isinstance(model.default_solver, pybamm.CasadiSolver)
-
-    def test_well_posed_surface_form_algebraic(self):
-        options = {"hydrolysis": "true", "surface form": "algebraic"}
-        model = pybamm.lead_acid.Full(options)
-        model.check_well_posedness()
-        assert isinstance(model.default_solver, pybamm.CasadiSolver)
+        if expected_solver is not None:
+            assert isinstance(model.default_solver, expected_solver)
