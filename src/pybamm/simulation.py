@@ -1288,7 +1288,7 @@ class Simulation:
             ax=ax,
             show_legend=show_legend,
             split_by_electrode=split_by_electrode,
-            electrode_phases=("primary", "primary"),
+            electrode_phases=electrode_phases,
             show_plot=show_plot,
             **kwargs_fill,
         )
