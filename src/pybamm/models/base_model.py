@@ -934,8 +934,6 @@ class BaseModel:
         def _evaluate_symbol_to_array(symbol):
             if isinstance(symbol, numbers.Number):
                 return np.array(symbol)
-            if isinstance(symbol, np.ndarray):
-                return symbol
             if hasattr(symbol, "evaluate"):
                 try:
                     result = symbol.evaluate()

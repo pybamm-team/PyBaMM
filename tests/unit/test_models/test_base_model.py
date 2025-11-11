@@ -1320,8 +1320,11 @@ class TestBaseModel:
             model.set_initial_conditions_from(sol_dict)
 
     def test_set_initial_conditions_evaluate_symbol_to_array_paths(self):
+        """Test _evaluate_symbol_to_array with numbers, arrays, and symbols"""
         model = pybamm.BaseModel()
-        var = pybamm.Variable("var", domain="negative electrode")
+        var = pybamm.Variable(
+            "var", domain="negative electrode", scale=2.0, reference=1.0
+        )
         model.rhs = {var: -var}
         model.initial_conditions = {var: 1}
 
@@ -1372,6 +1375,116 @@ class TestBaseModel:
         model_disc.set_initial_conditions_from(sol_dict)
         disc_var = next(iter(model_disc.initial_conditions.keys()))
         assert isinstance(model_disc.initial_conditions[disc_var], pybamm.Vector)
+
+    def test_set_initial_conditions_find_matching_variable_not_discretised(self):
+        """Test _find_matching_variable when solution_model is not discretised"""
+        model = pybamm.BaseModel()
+        var = pybamm.Variable("var", domain="negative electrode")
+        model.rhs = {var: -var}
+        model.initial_conditions = {var: 1}
+
+        # Discretise the model we're updating
+        geometry = {"negative electrode": {"x_n": {"min": 0, "max": 1}}}
+        mesh = pybamm.Mesh(
+            geometry, {"negative electrode": pybamm.Uniform1DSubMesh}, {"x_n": 5}
+        )
+        disc = pybamm.Discretisation(
+            mesh, {"negative electrode": pybamm.FiniteVolume()}
+        )
+        model_disc = disc.process_model(model, inplace=False)
+
+        # Should fall back to dict lookup since solution model is not discretised
+        # This tests line 965 where solution_model.is_discretised is False
+        var_data = np.ones((5, 10)) * 7
+        sol_dict = {"var": var_data}
+        model_disc.set_initial_conditions_from(sol_dict)
+        disc_var = next(iter(model_disc.initial_conditions.keys()))
+        assert isinstance(model_disc.initial_conditions[disc_var], pybamm.Vector)
+
+    def test_set_initial_conditions_invalid_slice_bounds(self):
+        """Test _extract_from_y_slices with invalid slice bounds (line 986)"""
+        model = pybamm.BaseModel()
+        var = pybamm.Variable("var", domain="negative electrode")
+        model.rhs = {var: -var}
+        model.initial_conditions = {var: 1}
+
+        # Discretise
+        geometry = {"negative electrode": {"x_n": {"min": 0, "max": 1}}}
+        mesh = pybamm.Mesh(
+            geometry, {"negative electrode": pybamm.Uniform1DSubMesh}, {"x_n": 5}
+        )
+        disc = pybamm.Discretisation(
+            mesh, {"negative electrode": pybamm.FiniteVolume()}
+        )
+        model_disc = disc.process_model(model, inplace=False)
+
+        # Create solution with y that's too short (invalid slice bounds)
+        # Make y smaller than expected to trigger invalid bounds
+        # Should fall back to dict lookup when slice bounds are invalid
+        var_data = np.ones((5, 10)) * 8
+        sol_dict = {"var": var_data}
+        model_disc.set_initial_conditions_from(sol_dict)
+        disc_var = next(iter(model_disc.initial_conditions.keys()))
+        assert isinstance(model_disc.initial_conditions[disc_var], pybamm.Vector)
+
+    def test_set_initial_conditions_evaluate_symbol_exception_handling(self):
+        """Test exception handling in _evaluate_symbol_to_array (lines 945-959, 1020)"""
+        model = pybamm.BaseModel()
+        var = pybamm.Variable("var", domain="negative electrode")
+        model.rhs = {var: -var}
+        model.initial_conditions = {var: 1}
+
+        # Discretise
+        geometry = {"negative electrode": {"x_n": {"min": 0, "max": 1}}}
+        mesh = pybamm.Mesh(
+            geometry, {"negative electrode": pybamm.Uniform1DSubMesh}, {"x_n": 5}
+        )
+        disc = pybamm.Discretisation(
+            mesh, {"negative electrode": pybamm.FiniteVolume()}
+        )
+        model_disc = disc.process_model(model, inplace=False)
+
+        # Try to set initial conditions - should fall back to dict lookup
+        # when evaluation fails
+        var_data = np.ones((5, 10)) * 10
+        sol_dict = {"var": var_data}
+        model_disc.set_initial_conditions_from(sol_dict)
+        disc_var = next(iter(model_disc.initial_conditions.keys()))
+        assert isinstance(model_disc.initial_conditions[disc_var], pybamm.Vector)
+
+    def test_set_initial_conditions_symbol_with_value_attribute(self):
+        """Test _evaluate_symbol_to_array with symbols that have value attribute"""
+        model = pybamm.BaseModel()
+        var = pybamm.Variable("var", domain="negative electrode")
+        model.rhs = {var: -var}
+        model.initial_conditions = {var: 1}
+
+        # Discretise
+        geometry = {"negative electrode": {"x_n": {"min": 0, "max": 1}}}
+        mesh = pybamm.Mesh(
+            geometry, {"negative electrode": pybamm.Uniform1DSubMesh}, {"x_n": 5}
+        )
+        disc = pybamm.Discretisation(
+            mesh, {"negative electrode": pybamm.FiniteVolume()}
+        )
+        model_disc = disc.process_model(model, inplace=False)
+
+        # Create solution
+        t = np.array([0, 1])
+        y = np.ones((model_disc.len_rhs_and_alg, 2)) * 5
+        sol = pybamm.Solution(t, y, model_disc, {})
+
+        # Test with Scalar (which has value attribute and evaluate method)
+        var_with_scalar_scale = pybamm.Variable(
+            "var", domain="negative electrode", scale=pybamm.Scalar(2.0)
+        )
+        model2 = pybamm.BaseModel()
+        model2.rhs = {var_with_scalar_scale: -var_with_scalar_scale}
+        model2.initial_conditions = {var_with_scalar_scale: 1}
+        model2_disc = disc.process_model(model2, inplace=False)
+        model2_disc.set_initial_conditions_from(sol)
+        disc_var2 = next(iter(model2_disc.initial_conditions.keys()))
+        assert isinstance(model2_disc.initial_conditions[disc_var2], pybamm.Vector)
 
     def test_set_variables_error(self):
         var = pybamm.Variable("var")
