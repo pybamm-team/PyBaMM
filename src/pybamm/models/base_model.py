@@ -931,31 +931,6 @@ class BaseModel:
         if isinstance(solution, pybamm.Solution):
             solution = solution.last_state
 
-        def _evaluate_symbol_to_array(symbol):
-            if isinstance(symbol, numbers.Number):
-                return np.array(symbol)
-            if hasattr(symbol, "evaluate"):
-                try:
-                    result = symbol.evaluate()
-                    # Ensure result is numpy array
-                    if isinstance(result, numbers.Number):
-                        return np.array(result)
-                    if isinstance(result, np.ndarray):
-                        return result
-                    # If evaluate returns a Symbol, try to get value
-                    if hasattr(result, "value"):
-                        return np.array(result.value)
-                except (NotImplementedError, AttributeError):
-                    # If evaluation fails, try to get value attribute
-                    if hasattr(symbol, "value"):
-                        val = symbol.value
-                        return np.array(val) if not isinstance(val, np.ndarray) else val
-            # Fallback: if it has a value attribute, use it
-            if hasattr(symbol, "value"):
-                val = symbol.value
-                return np.array(val) if not isinstance(val, np.ndarray) else val
-            return symbol
-
         def _find_matching_variable(var, solution_model):
             if not (
                 solution_model.is_discretised and solution_model.y_slices is not None
@@ -989,34 +964,15 @@ class BaseModel:
             # Convert from scaled state vector to physical values
             # physical = reference + scale * y_scaled
             try:
-                solution_scale = _evaluate_symbol_to_array(solution_var.scale)
-                solution_reference = _evaluate_symbol_to_array(solution_var.reference)
-                # Ensure scale and reference are numpy arrays of compatible shape
-                solution_scale = np.asarray(solution_scale)
-                solution_reference = np.asarray(solution_reference)
-                # Broadcast if needed
-                if solution_reference.ndim == 0:
-                    solution_reference = solution_reference * np.ones_like(y_scaled)
-                elif solution_reference.shape != y_scaled.shape:
-                    # Try to broadcast
-                    try:
-                        solution_reference = np.broadcast_to(
-                            solution_reference, y_scaled.shape
-                        )
-                    except ValueError:
-                        return None  # Shape mismatch, fall back to dict lookup
-
-                if solution_scale.ndim == 0:
-                    solution_scale = solution_scale * np.ones_like(y_scaled)
-                elif solution_scale.shape != y_scaled.shape:
-                    try:
-                        solution_scale = np.broadcast_to(solution_scale, y_scaled.shape)
-                    except ValueError:
-                        return None  # Shape mismatch, fall back to dict lookup
-
+                solution_scale = np.asarray(
+                    solution_var.scale.evaluate()
+                ) * np.ones_like(y_scaled)
+                solution_reference = np.asarray(
+                    solution_var.reference.evaluate()
+                ) * np.ones_like(y_scaled)
                 return solution_reference + solution_scale * y_scaled
             except (TypeError, ValueError, AttributeError):
-                # If conversion fails, fall back to dict lookup
+                # Fall back to dict lookup
                 return None
 
         def _extract_final_time_step(var_data):
