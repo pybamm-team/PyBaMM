@@ -102,10 +102,9 @@ dev = [
     # For doctest
     "pytest-doctestplus",
     # pytest and its plugins
-    "pytest",
+    "pytest>=9.0",
     "pytest-xdist",
     "pytest-mock",
-    "pytest-subtests",
     # For testing Jupyter notebooks
     "nbmake",
     # To access the metadata for python packages
@@ -225,11 +224,10 @@ ignore = [
 "docs/source/examples/notebooks/models/lithium-plating.ipynb" = ["F821"]
 
 [tool.pytest.ini_options]
-minversion = "8"
+minversion = "9.0"
 required_plugins = [
     "pytest-xdist",
     "pytest-mock",
-    "pytest-subtests",
 ]
 addopts = [
     "-nauto",
