@@ -417,9 +417,7 @@ def size_average(
                 name += "_prim"
             elif "secondary" in symbol.domain[0]:
                 name += "_sec"
-            R = pybamm.SpatialVariable(
-                name, domains=symbol.domains
-            )
+            R = pybamm.SpatialVariable(name, domains=symbol.domains)
             if ["negative particle size"] in symbol.domains.values() or [
                 "negative primary particle size"
             ] in symbol.domains.values():

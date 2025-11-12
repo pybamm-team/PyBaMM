@@ -78,9 +78,7 @@ class Mesh(dict):
                 submesh_pts[domain] = {}
                 # Count keys excluding tabs and coord_sys for the limit check
                 spatial_keys = [
-                    k
-                    for k in geometry[domain].keys()
-                    if k not in ["tabs", "coord_sys"]
+                    k for k in geometry[domain].keys() if k not in ["tabs", "coord_sys"]
                 ]
                 if len(spatial_keys) > 3:
                     raise pybamm.GeometryError("Too many keys provided")
