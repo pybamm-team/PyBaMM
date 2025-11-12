@@ -84,14 +84,14 @@ class TestScikitFiniteElement2DSubMesh:
 
         lims = {"x_n": {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
         with pytest.raises(pybamm.GeometryError):
-            pybamm.ScikitUniform2DSubMesh(lims, None)
+            pybamm.ScikitUniform2DSubMesh(lims, None, "cartesian")
 
         lims = {
             "x_n": {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
             "x_p": {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
         }
         with pytest.raises(pybamm.DomainError):
-            pybamm.ScikitUniform2DSubMesh(lims, None)
+            pybamm.ScikitUniform2DSubMesh(lims, None, "cartesian")
 
         lims = {
             "y": {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
@@ -104,7 +104,7 @@ class TestScikitFiniteElement2DSubMesh:
             z: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
         }
         with pytest.raises(pybamm.DomainError):
-            pybamm.ScikitUniform2DSubMesh(lims, npts)
+            pybamm.ScikitUniform2DSubMesh(lims, npts, "cartesian")
 
     def test_tab_error(self):
         # set variables and submesh types
@@ -320,7 +320,7 @@ class TestScikitFiniteElementChebyshev2DSubMesh:
         # only one lim
         lims = {"x_n": {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
         with pytest.raises(pybamm.GeometryError):
-            pybamm.ScikitChebyshev2DSubMesh(lims, None)
+            pybamm.ScikitChebyshev2DSubMesh(lims, None, "cartesian")
 
         # different coord_sys
         lims = {
@@ -328,7 +328,7 @@ class TestScikitFiniteElementChebyshev2DSubMesh:
             "z": {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
         }
         with pytest.raises(pybamm.DomainError):
-            pybamm.ScikitChebyshev2DSubMesh(lims, None)
+            pybamm.ScikitChebyshev2DSubMesh(lims, None, "cartesian")
 
         # not y and z
         lims = {
@@ -336,7 +336,7 @@ class TestScikitFiniteElementChebyshev2DSubMesh:
             "z": {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
         }
         with pytest.raises(pybamm.DomainError):
-            pybamm.ScikitChebyshev2DSubMesh(lims, None)
+            pybamm.ScikitChebyshev2DSubMesh(lims, None, "cartesian")
 
 
 class TestScikitExponential2DSubMesh:
@@ -379,7 +379,7 @@ class TestScikitExponential2DSubMesh:
         # only one lim
         lims = {"x_n": {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
         with pytest.raises(pybamm.GeometryError):
-            pybamm.ScikitExponential2DSubMesh(lims, None)
+            pybamm.ScikitExponential2DSubMesh(lims, None, "cartesian")
 
         # different coord_sys
         lims = {
@@ -387,7 +387,7 @@ class TestScikitExponential2DSubMesh:
             "z": {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
         }
         with pytest.raises(pybamm.DomainError):
-            pybamm.ScikitExponential2DSubMesh(lims, None)
+            pybamm.ScikitExponential2DSubMesh(lims, None, "cartesian")
 
         # not y and z
         lims = {
@@ -395,7 +395,7 @@ class TestScikitExponential2DSubMesh:
             "z": {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
         }
         with pytest.raises(pybamm.DomainError):
-            pybamm.ScikitExponential2DSubMesh(lims, None)
+            pybamm.ScikitExponential2DSubMesh(lims, None, "cartesian")
 
         # side not top
         with pytest.raises(pybamm.GeometryError):

@@ -34,12 +34,13 @@ class TestMesh:
         return submesh_types
 
     def test_mesh_creation_no_parameters(self):
-        r = pybamm.SpatialVariable(
-            "r", domain=["negative particle"], coord_sys="spherical polar"
-        )
+        r = pybamm.SpatialVariable("r", domain=["negative particle"])
 
         geometry = {
-            "negative particle": {r: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
+            "negative particle": {
+                r: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+                "coord_sys": "spherical polar",
+            }
         }
 
         submesh_types = {"negative particle": pybamm.Uniform1DSubMesh}
@@ -194,8 +195,14 @@ class TestMesh:
 
         # test errors
         geometry = {
-            "negative electrode": {"x_n": {"min": 0, "max": 0.5}},
-            "negative particle": {"r_n": {"min": 0.5, "max": 1}},
+            "negative electrode": {
+                "x_n": {"min": 0, "max": 0.5},
+                "coord_sys": "cartesian",
+            },
+            "negative particle": {
+                "r_n": {"min": 0.5, "max": 1},
+                "coord_sys": "spherical polar",
+            },
         }
         param.process_geometry(geometry)
 
@@ -565,12 +572,13 @@ class TestMesh:
         assert mesh["current collector"].tabs["positive tab"] == "left"
 
     def test_to_json(self):
-        r = pybamm.SpatialVariable(
-            "r", domain=["negative particle"], coord_sys="spherical polar"
-        )
+        r = pybamm.SpatialVariable("r", domain=["negative particle"])
 
         geometry = {
-            "negative particle": {r: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
+            "negative particle": {
+                r: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+                "coord_sys": "spherical polar",
+            }
         }
 
         submesh_types = {"negative particle": pybamm.Uniform1DSubMesh}

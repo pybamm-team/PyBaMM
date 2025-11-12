@@ -44,12 +44,13 @@ def scalar_var_dict(mocker):
 def mesh_var_dict(mocker):
     """mesh, json pair for a pybamm.Mesh instance"""
 
-    r = pybamm.SpatialVariable(
-        "r", domain=["negative particle"], coord_sys="spherical polar"
-    )
+    r = pybamm.SpatialVariable("r", domain=["negative particle"])
 
     geometry = {
-        "negative particle": {r: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
+        "negative particle": {
+            r: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+            "coord_sys": "spherical polar",
+        }
     }
 
     submesh_types = {"negative particle": pybamm.Uniform1DSubMesh}
@@ -104,7 +105,7 @@ class TestSerialiseModels:
         model = pybamm.BaseModel()
 
         # Define the variables and parameters
-        x = pybamm.SpatialVariable("x", domain="rod", coord_sys="cartesian")
+        x = pybamm.SpatialVariable("x", domain="rod")
         T = pybamm.Variable("Temperature", domain="rod")
         k = pybamm.Parameter("Thermal diffusivity")
 
@@ -125,7 +126,12 @@ class TestSerialiseModels:
 
         # Add desired output variables, geometry, parameters
         model.variables = {"Temperature": T, "Heat flux": N, "Heat source": Q}
-        geometry = {"rod": {x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(2)}}}
+        geometry = {
+            "rod": {
+                x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(2)},
+                "coord_sys": "cartesian",
+            }
+        }
         param = pybamm.ParameterValues({"Thermal diffusivity": 0.75})
 
         # Process model and geometry
@@ -279,7 +285,7 @@ class TestSerialise:
 
         x = pybamm.SpatialVariable("x", "negative electrode")
 
-        test_dict = {"rod": {x: {"min": 0.0, "max": 2.0}}}
+        test_dict = {"rod": {x: {"min": 0.0, "max": 2.0}, "coord_sys": "cartesian"}}
 
         ser_dict = {
             "rod": {
@@ -430,7 +436,7 @@ class TestSerialise:
     def test_reconstruct_pybamm_dict(self, mocker):
         x = pybamm.SpatialVariable("x", "negative electrode")
 
-        test_dict = {"rod": {x: {"min": 0.0, "max": 2.0}}}
+        test_dict = {"rod": {x: {"min": 0.0, "max": 2.0}, "coord_sys": "cartesian"}}
 
         ser_dict = {
             "rod": {
@@ -772,16 +778,15 @@ class TestSerialise:
         assert sb2.child.domain == ["negative electrode"]
 
     def test_spatial_variable_serialisation(self):
-        sv = pybamm.SpatialVariable(
-            "x", domain="negative electrode", coord_sys="cartesian"
-        )
+        sv = pybamm.SpatialVariable("x", domain="negative electrode")
         json_dict = convert_symbol_to_json(sv)
         sv2 = convert_symbol_from_json(json_dict)
 
         assert isinstance(sv2, pybamm.SpatialVariable)
         assert sv2.name == "x"
         assert sv2.domains["primary"] == ["negative electrode"]
-        assert sv2.coord_sys == "cartesian"
+        # coord_sys is no longer stored on SpatialVariable, it's in geometry
+        # So we just verify the SpatialVariable was deserialized correctly
 
     def test_boundary_value_serialisation(self):
         var = pybamm.SpatialVariable("x", domain="electrode")
@@ -1909,10 +1914,12 @@ class TestSerializationEdgeCases:
         geometry = pybamm.Geometry(
             {
                 "negative electrode": {
-                    x_n: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}
+                    x_n: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+                    "coord_sys": "cartesian",
                 },
                 "negative particle": {
-                    r_n: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}
+                    r_n: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+                    "coord_sys": "spherical polar",
                 },
             }
         )
@@ -2122,7 +2129,14 @@ class TestSerializationEdgeCases:
         x_n = pybamm.SpatialVariable("x_n", domain="negative electrode")
 
         # Create geometry with Symbol key but non-Symbol value
-        geometry = pybamm.Geometry({"negative electrode": {x_n: {"min": 0, "max": 1}}})
+        geometry = pybamm.Geometry(
+            {
+                "negative electrode": {
+                    x_n: {"min": 0, "max": 1},
+                    "coord_sys": "cartesian",
+                }
+            }
+        )
 
         with tempfile.TemporaryDirectory() as tmpdir:
             filepath = Path(tmpdir) / "geometry_mixed.json"

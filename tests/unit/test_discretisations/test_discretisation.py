@@ -78,13 +78,13 @@ class TestDiscretise:
             "middle domain": pybamm.FiniteVolume(),
             "right domain": pybamm.FiniteVolume(),
         }
-        x_l = pybamm.SpatialVariable("x_l", ["left domain"], coord_sys="cartesian")
-        x_m = pybamm.SpatialVariable("x_m", ["middle domain"], coord_sys="cartesian")
-        x_r = pybamm.SpatialVariable("x_r", ["right domain"], coord_sys="cartesian")
+        x_l = pybamm.SpatialVariable("x_l", ["left domain"])
+        x_m = pybamm.SpatialVariable("x_m", ["middle domain"])
+        x_r = pybamm.SpatialVariable("x_r", ["right domain"])
         geometry = {
-            "left domain": {x_l: {"min": 0, "max": 1}},
-            "middle domain": {x_m: {"min": 1, "max": 2}},
-            "right domain": {x_r: {"min": 2, "max": 3}},
+            "left domain": {x_l: {"min": 0, "max": 1}, "coord_sys": "cartesian"},
+            "middle domain": {x_m: {"min": 1, "max": 2}, "coord_sys": "cartesian"},
+            "right domain": {x_r: {"min": 2, "max": 3}, "coord_sys": "cartesian"},
         }
         var_pts = {x_l: 10, x_m: 10, x_r: 10}
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
