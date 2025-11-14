@@ -427,7 +427,11 @@ class Serialise:
                 {
                     "name": event.name,
                     "expression": convert_symbol_to_json(event.expression),
-                    "event_type": event.event_type,
+                    # Use Event.to_json() format for consistency: [str, value]
+                    "event_type": [
+                        str(event.event_type),
+                        event.event_type.value,
+                    ],
                 }
                 for event in getattr(model, "events", [])
             ],
@@ -1298,7 +1302,16 @@ class Serialise:
             try:
                 name = event_data["name"]
                 expr = convert_symbol_from_json(event_data["expression"])
-                event_type = event_data["event_type"]
+                # Convert event_type from string to EventType enum
+                event_type_str = event_data["event_type"]
+                if isinstance(event_type_str, str):
+                    event_type = pybamm.EventType[event_type_str]
+                elif isinstance(event_type_str, list):
+                    # Handle format [str, value] from Event.to_json()
+                    event_type = pybamm.EventType(event_type_str[1])
+                else:
+                    # Assume it's already an EventType enum (shouldn't happen)
+                    event_type = event_type_str
                 model.events.append(pybamm.Event(name, expr, event_type))
             except Exception as e:
                 raise ValueError(
