@@ -1,5 +1,20 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Features
+
+## Bug fixes
+
+# [v25.10.1](https://github.com/pybamm-team/PyBaMM/tree/v25.10.1) - 2025-11-14
+
+## Features
+- Allow setting initial conditions from `y_slices` of a `Solution` object. ([#5257](https://github.com/pybamm-team/PyBaMM/pull/5257))
+- Added docstring to `FuzzyDict.copy` explaining its return value and behavior. ([#5242](https://github.com/pybamm-team/PyBaMM/pull/5242))
+
+## Bug fixes
+
+- Fixed a bug where simulations whose initial conditions violated the events could continue solving. ([#5260](https://github.com/pybamm-team/PyBaMM/pull/5260))
+- Fixed an issues with composite electrode and "swelling only" mechanics sub-models, which were not creating the cell thickness variable. ([#5272](https://github.com/pybamm-team/PyBaMM/pull/5272))
+
 # [v25.10.0](https://github.com/pybamm-team/PyBaMM/tree/v25.10.0) - 2025-10-29
 
 ## Features
