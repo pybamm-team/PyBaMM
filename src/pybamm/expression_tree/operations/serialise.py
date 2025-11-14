@@ -16,6 +16,21 @@ import pybamm
 
 SUPPORTED_SCHEMA_VERSION = "1.0"
 
+# Module-level caches for memoization during serialization/deserialization
+_serialized_symbols = {}  # Maps symbol id -> (reference_id, JSON representation)
+_serialized_ref_counter = 0  # Counter for generating unique reference IDs
+_deserialized_symbols = {}  # Maps reference_id -> deserialized symbol
+
+
+def _reset_serialization_caches():
+    """Reset the serialization and deserialization caches.
+    Useful for testing or when serializing multiple independent models.
+    """
+    global _serialized_symbols, _serialized_ref_counter, _deserialized_symbols
+    _serialized_symbols = {}
+    _serialized_ref_counter = 0
+    _deserialized_symbols = {}
+
 
 class ExpressionFunctionParameter(pybamm.UnaryOperator):
     def __init__(self, name, child, func_name, func_args):
@@ -358,6 +373,9 @@ class Serialise:
         AttributeError
             If the model is missing required sections
         """
+        # Reset caches for a clean serialization
+        _reset_serialization_caches()
+
         required_attrs = [
             "rhs",
             "algebraic",
@@ -1168,6 +1186,9 @@ class Serialise:
         >>> loaded_model = Serialise.load_custom_model("basicdfn_model.json")
 
         """
+        # Reset caches for a clean deserialization
+        _reset_serialization_caches()
+
         if isinstance(filename, dict):
             data = filename
         else:
@@ -1227,17 +1248,62 @@ class Serialise:
         model.name = model_data["name"]
         model.schema_version = schema_version
 
+        # Two-pass deserialization to handle forward references:
+        # Pass 1: Deserialize all symbols (including expressions) to populate cache
+        # This ensures all symbol definitions are available before we try to resolve
+        # references
+        all_symbols_to_deserialize = []
         all_variable_keys = (
             [lhs_json for lhs_json, _ in model_data["rhs"]]
             + [lhs_json for lhs_json, _ in model_data["initial_conditions"]]
             + [lhs_json for lhs_json, _ in model_data["algebraic"]]
             + [variable_json for variable_json, _ in model_data["boundary_conditions"]]
         )
+        # Collect all symbols that need to be deserialized
+        for variable_json in all_variable_keys:
+            all_symbols_to_deserialize.append(variable_json)
+        for _, rhs_expr_json in model_data["rhs"]:
+            all_symbols_to_deserialize.append(rhs_expr_json)
+        for _, algebraic_expr_json in model_data["algebraic"]:
+            all_symbols_to_deserialize.append(algebraic_expr_json)
+        for _, initial_value_json in model_data["initial_conditions"]:
+            all_symbols_to_deserialize.append(initial_value_json)
+        for variable_json, condition_dict in model_data["boundary_conditions"]:
+            all_symbols_to_deserialize.append(variable_json)
+            for _, (expression_json, _) in condition_dict.items():
+                all_symbols_to_deserialize.append(expression_json)
+        for event_data in model_data["events"]:
+            all_symbols_to_deserialize.append(event_data["expression"])
+        for expression_json in model_data["variables"].values():
+            all_symbols_to_deserialize.append(expression_json)
 
+        # Pass 1: Deserialize all symbols to populate cache and resolve references
+        for symbol_json in all_symbols_to_deserialize:
+            try:
+                convert_symbol_from_json(symbol_json)
+            except Exception as e:
+                # If it's a reference that hasn't been resolved, that's OK for now
+                # We'll handle it in pass 2
+                if isinstance(symbol_json, dict) and "py/ref" in symbol_json:
+                    continue
+                raise ValueError(
+                    f"Failed to deserialize symbol {symbol_json}: {e!s}"
+                ) from e
+
+        # Pass 2: Build symbol_map and model structure
+        # Now all symbols should be in cache, so references will resolve
         symbol_map = {}
         for variable_json in all_variable_keys:
             try:
                 symbol = convert_symbol_from_json(variable_json)
+                # If we got a placeholder, try to get the resolved symbol
+                if isinstance(symbol, _ReferencePlaceholder):
+                    if symbol._resolved:
+                        symbol = symbol._resolved_symbol
+                    else:
+                        raise ValueError(
+                            f"Placeholder for {variable_json} was not resolved"
+                        )
                 key = Serialise._create_symbol_key(variable_json)
                 symbol_map[key] = symbol
             except Exception as e:
@@ -1623,7 +1689,8 @@ def convert_symbol_from_json(json_data):
     pybamm.Symbol
         The reconstructed PyBaMM symbolic expression
     """
-    if isinstance(json_data, float | int | bool):
+    # Handle non-dict types
+    if isinstance(json_data, float | int | bool | numbers.Number | list):
         return json_data
 
     if isinstance(json_data, str):
@@ -1631,11 +1698,82 @@ def convert_symbol_from_json(json_data):
 
     if json_data is None:
         return None
-    if "type" not in json_data:
+
+    # Check for reference first (pure reference with only py/ref key)
+    if isinstance(json_data, dict) and "py/ref" in json_data and len(json_data) == 1:
+        ref_id = json_data["py/ref"]
+        if ref_id in _deserialized_symbols:
+            cached = _deserialized_symbols[ref_id]
+            # If it's a placeholder, return it (will be resolved later)
+            if isinstance(cached, _ReferencePlaceholder):
+                return cached
+            return cached
+        else:
+            # Reference seen before definition - create a placeholder
+            placeholder = _ReferencePlaceholder(ref_id)
+            _deserialized_symbols[ref_id] = placeholder
+            return placeholder
+
+    if not isinstance(json_data, dict) or "type" not in json_data:
         raise ValueError(f"Missing 'type' key in JSON data: {json_data}")
-    if isinstance(json_data, numbers.Number | list):
-        return json_data
-    elif json_data["type"] == "Parameter":
+
+    # Check cache using JSON key (for deduplication of identical symbols)
+    json_key = Serialise._create_symbol_key(json_data)
+    if json_key in _deserialized_symbols:
+        return _deserialized_symbols[json_key]
+
+    # Deserialize the symbol
+    symbol = _deserialize_symbol_from_json(json_data)
+
+    # Store in cache (using both json_key and ref_id if present)
+    _deserialized_symbols[json_key] = symbol
+    if "py/ref" in json_data:
+        ref_id = json_data["py/ref"]
+        # If there was a placeholder, resolve it
+        if ref_id in _deserialized_symbols:
+            old = _deserialized_symbols[ref_id]
+            if isinstance(old, _ReferencePlaceholder):
+                old.resolve(symbol)
+        _deserialized_symbols[ref_id] = symbol
+
+    return symbol
+
+
+class _ReferencePlaceholder:
+    """Placeholder for a symbol that will be resolved later when we encounter
+    its definition. This allows forward references during deserialization.
+    """
+
+    def __init__(self, ref_id):
+        self.ref_id = ref_id
+        self._resolved_symbol = None
+        self._resolved = False
+
+    def resolve(self, symbol):
+        """Resolve this placeholder to an actual symbol."""
+        self._resolved_symbol = symbol
+        self._resolved = True
+
+    def __getattr__(self, name):
+        """Delegate attribute access to the resolved symbol."""
+        if not self._resolved:
+            raise AttributeError(
+                f"Placeholder for ref_id {self.ref_id} has not been resolved yet. "
+                "This should not happen in normal usage."
+            )
+        return getattr(self._resolved_symbol, name)
+
+    def __repr__(self):
+        if self._resolved:
+            return repr(self._resolved_symbol)
+        return f"_ReferencePlaceholder(ref_id={self.ref_id}, unresolved)"
+
+
+def _deserialize_symbol_from_json(json_data):
+    """Internal helper to deserialize a symbol without caching.
+    The caching is handled by convert_symbol_from_json.
+    """
+    if json_data["type"] == "Parameter":
         # Convert stored parameters back to PyBaMM Parameter objects
         return pybamm.Parameter(json_data["name"])
     elif json_data["type"] == "Scalar":
@@ -1739,6 +1877,39 @@ def convert_symbol_to_json(symbol):
     dict
         The JSON-serializable dictionary
     """
+    # Handle non-symbol types (numbers, lists) - these don't need memoization
+    if isinstance(symbol, numbers.Number | list):
+        return symbol
+
+    # Check cache first for memoization (only for Symbol types)
+    if isinstance(symbol, pybamm.Symbol):
+        symbol_id = id(symbol)
+        if symbol_id in _serialized_symbols:
+            # Return a reference to the already-serialized symbol
+            ref_id, _ = _serialized_symbols[symbol_id]
+            return {"py/ref": ref_id}
+
+    # Serialize the symbol
+    json_dict = _serialize_symbol_to_json(symbol)
+
+    # Store in cache if it's a Symbol type
+    if isinstance(symbol, pybamm.Symbol):
+        global _serialized_ref_counter
+        symbol_id = id(symbol)
+        ref_id = _serialized_ref_counter
+        _serialized_ref_counter += 1
+        # Store both ref_id and full JSON in cache
+        _serialized_symbols[symbol_id] = (ref_id, json_dict)
+        # Include ref_id in the JSON so we can resolve it during deserialization
+        json_dict["py/ref"] = ref_id
+
+    return json_dict
+
+
+def _serialize_symbol_to_json(symbol):
+    """Internal helper to serialize a symbol without caching.
+    The caching is handled by convert_symbol_to_json.
+    """
     if isinstance(symbol, ExpressionFunctionParameter):
         return {
             "type": "ExpressionFunctionParameter",
@@ -1747,8 +1918,6 @@ def convert_symbol_to_json(symbol):
             "func_name": symbol.func_name,
             "func_args": symbol.func_args,
         }
-    elif isinstance(symbol, numbers.Number | list):
-        return symbol
     elif isinstance(symbol, pybamm.Parameter):
         # Parameters are stored with their type and name
         return {"type": "Parameter", "name": symbol.name}

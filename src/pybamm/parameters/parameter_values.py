@@ -1403,6 +1403,10 @@ def convert_parameter_values_to_json(parameter_values, filename=None):
         The filename to save the JSON file to. If not provided, the dictionary is
         not saved.
     """
+    # Reset caches for a clean serialization
+    from pybamm.expression_tree.operations.serialise import _reset_serialization_caches
+
+    _reset_serialization_caches()
     parameter_values_dict = {}
 
     for k, v in parameter_values.items():

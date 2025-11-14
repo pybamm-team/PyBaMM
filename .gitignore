@@ -4,6 +4,7 @@
 *.png
 *.gif
 /local/
+.local
 *.DS_Store
 *.mat
 *.csv
