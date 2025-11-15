@@ -445,11 +445,8 @@ class Serialise:
                 {
                     "name": event.name,
                     "expression": convert_symbol_to_json(event.expression),
-                    # Use Event.to_json() format for consistency: [str, value]
-                    "event_type": [
-                        str(event.event_type),
-                        event.event_type.value,
-                    ],
+                    # Store just the enum name as a string
+                    "event_type": event.event_type.name,
                 }
                 for event in getattr(model, "events", [])
             ],
@@ -1265,105 +1262,84 @@ class Serialise:
             else:
                 model.options = options_dict
 
-        # Two-pass deserialization to handle forward references:
-        # Pass 1: Deserialize all symbols (including expressions) to populate cache
-        # This ensures all symbol definitions are available before we try to resolve
-        # references
-        all_symbols_to_deserialize = []
+        # Pre-populate cache by deserializing all unique symbols
+        # This ensures references are resolved when building the model structure
+        # Collect all JSON symbol definitions (not pure references)
+        all_symbols = []
+        for _, rhs_json in model_data["rhs"]:
+            all_symbols.append(rhs_json)
+        for _, alg_json in model_data["algebraic"]:
+            all_symbols.append(alg_json)
+        for _, ic_json in model_data["initial_conditions"]:
+            all_symbols.append(ic_json)
+        for _, bc_dict in model_data["boundary_conditions"]:
+            for _, (expr_json, _) in bc_dict.items():
+                all_symbols.append(expr_json)
+        for event_data in model_data["events"]:
+            all_symbols.append(event_data["expression"])
+        for var_json in model_data["variables"].values():
+            all_symbols.append(var_json)
+
+        # Also collect LHS variable definitions
         all_variable_keys = (
             [lhs_json for lhs_json, _ in model_data["rhs"]]
             + [lhs_json for lhs_json, _ in model_data["initial_conditions"]]
             + [lhs_json for lhs_json, _ in model_data["algebraic"]]
             + [variable_json for variable_json, _ in model_data["boundary_conditions"]]
         )
-        # Collect all symbols that need to be deserialized
-        for variable_json in all_variable_keys:
-            all_symbols_to_deserialize.append(variable_json)
-        for _, rhs_expr_json in model_data["rhs"]:
-            all_symbols_to_deserialize.append(rhs_expr_json)
-        for _, algebraic_expr_json in model_data["algebraic"]:
-            all_symbols_to_deserialize.append(algebraic_expr_json)
-        for _, initial_value_json in model_data["initial_conditions"]:
-            all_symbols_to_deserialize.append(initial_value_json)
-        for variable_json, condition_dict in model_data["boundary_conditions"]:
-            all_symbols_to_deserialize.append(variable_json)
-            for _, (expression_json, _) in condition_dict.items():
-                all_symbols_to_deserialize.append(expression_json)
-        for event_data in model_data["events"]:
-            all_symbols_to_deserialize.append(event_data["expression"])
-        for expression_json in model_data["variables"].values():
-            all_symbols_to_deserialize.append(expression_json)
+        all_symbols.extend(all_variable_keys)
 
-        # Pass 1: Deserialize all symbols to populate cache and resolve references
-        # Expand keys first for all symbols
-        expanded_symbols = []
-        for symbol_json in all_symbols_to_deserialize:
-            if isinstance(symbol_json, dict):
-                # Expand keys recursively
-                if any(k in _KEY_EXPANSIONS for k in symbol_json.keys()):
-                    symbol_json = _expand_json_dict(symbol_json)
-            expanded_symbols.append(symbol_json)
+        # Deserialize all symbols to populate cache (ignore pure references)
+        # Do multiple passes until no new symbols are cached (handles forward references)
+        max_passes = 3
+        for _ in range(max_passes):
+            newly_cached = 0
+            for symbol_json in all_symbols:
+                if isinstance(symbol_json, dict):
+                    # Skip pure references
+                    if len(symbol_json) == 1 and ("py/ref" in symbol_json or "r" in symbol_json):
+                        continue
+                    # Check if already cached
+                    ref_id = symbol_json.get("py/ref") or symbol_json.get("r")
+                    if ref_id is not None and ref_id in _deserialized_symbols:
+                        continue
+                    # Deserialize to populate cache
+                    try:
+                        convert_symbol_from_json(symbol_json)
+                        newly_cached += 1
+                    except Exception:
+                        # If it fails due to forward reference, it will work on next pass
+                        pass
+            # If nothing new was cached, we're done
+            if newly_cached == 0:
+                break
 
-        # Now deserialize all expanded symbols (pass 1: populate cache)
-        # Try to deserialize all symbols - forward references will be handled in pass 2
-        for symbol_json in expanded_symbols:
-            # Skip pure references in pass 1 - they'll be resolved in pass 2
-            if isinstance(symbol_json, dict) and len(symbol_json) == 1:
-                if "py/ref" in symbol_json or "r" in symbol_json:
-                    continue
-            try:
-                # Deserialize - if a forward reference is encountered, it will raise ValueError
-                convert_symbol_from_json(symbol_json)
-            except ValueError as e:
-                # Forward reference error - this is expected and will be resolved in pass 2
-                error_str = str(e)
-                if "Reference" in error_str and "encountered before" in error_str:
-                    continue
-                # Other ValueError - re-raise
-                raise
-            except Exception as e:
-                # For other errors, try to continue - might work in pass 2 when all refs are resolved
-                error_str = str(e).lower()
-                if any(
-                    keyword in error_str for keyword in ["index", "domain", "attribute"]
-                ):
-                    # Likely a forward reference issue - continue
-                    continue
-                # Unexpected error - log but continue
-                continue
-
-        # Pass 2: Build symbol_map and model structure
-        # Now all symbols should be in cache, so references will resolve
+        # Build symbol_map for LHS lookups
         symbol_map = {}
         for variable_json in all_variable_keys:
+            # Skip pure references
+            if isinstance(variable_json, dict):
+                if len(variable_json) == 1 and ("py/ref" in variable_json or "r" in variable_json):
+                    continue
             try:
-                # Expand keys if needed (for both lookup and deserialization)
-                variable_json_expanded = variable_json
-                if isinstance(variable_json, dict):
-                    if any(k in _KEY_EXPANSIONS for k in variable_json.keys()):
-                        variable_json_expanded = _expand_json_dict(variable_json)
-
-                symbol = convert_symbol_from_json(variable_json_expanded)
-                # Use expanded JSON for key creation to ensure consistency
-                key = Serialise._create_symbol_key(variable_json_expanded)
+                # Should now work since cache is populated
+                symbol = convert_symbol_from_json(variable_json)
+                key = Serialise._create_symbol_key(variable_json)
                 symbol_map[key] = symbol
             except Exception as e:
                 raise ValueError(
                     f"Failed to process symbol key for variable {variable_json}: {e!s}"
                 ) from e
 
-        # Helper to expand keys and create lookup key
-        def expand_and_key(json_data):
-            if isinstance(json_data, dict):
-                if any(k in _KEY_EXPANSIONS for k in json_data.keys()):
-                    json_data = _expand_json_dict(json_data)
-            return json_data, Serialise._create_symbol_key(json_data)
-
         model.rhs = {}
         for lhs_json, rhs_expr_json in model_data["rhs"]:
             try:
-                lhs_expanded, lhs_key = expand_and_key(lhs_json)
-                lhs = symbol_map[lhs_key]
+                lhs_key = Serialise._create_symbol_key(lhs_json)
+                # Check if it's in symbol_map, otherwise deserialize from cache
+                if lhs_key in symbol_map:
+                    lhs = symbol_map[lhs_key]
+                else:
+                    lhs = convert_symbol_from_json(lhs_json)
                 rhs = convert_symbol_from_json(rhs_expr_json)
                 model.rhs[lhs] = rhs
             except Exception as e:
@@ -1374,8 +1350,11 @@ class Serialise:
         model.algebraic = {}
         for lhs_json, algebraic_expr_json in model_data["algebraic"]:
             try:
-                lhs_expanded, lhs_key = expand_and_key(lhs_json)
-                lhs = symbol_map[lhs_key]
+                lhs_key = Serialise._create_symbol_key(lhs_json)
+                if lhs_key in symbol_map:
+                    lhs = symbol_map[lhs_key]
+                else:
+                    lhs = convert_symbol_from_json(lhs_json)
                 rhs = convert_symbol_from_json(algebraic_expr_json)
                 model.algebraic[lhs] = rhs
             except Exception as e:
@@ -1386,8 +1365,11 @@ class Serialise:
         model.initial_conditions = {}
         for lhs_json, initial_value_json in model_data["initial_conditions"]:
             try:
-                lhs_expanded, lhs_key = expand_and_key(lhs_json)
-                lhs = symbol_map[lhs_key]
+                lhs_key = Serialise._create_symbol_key(lhs_json)
+                if lhs_key in symbol_map:
+                    lhs = symbol_map[lhs_key]
+                else:
+                    lhs = convert_symbol_from_json(lhs_json)
                 rhs = convert_symbol_from_json(initial_value_json)
                 model.initial_conditions[lhs] = rhs
             except Exception as e:
@@ -1398,8 +1380,11 @@ class Serialise:
         model.boundary_conditions = {}
         for variable_json, condition_dict in model_data["boundary_conditions"]:
             try:
-                var_expanded, var_key = expand_and_key(variable_json)
-                variable = symbol_map[var_key]
+                var_key = Serialise._create_symbol_key(variable_json)
+                if var_key in symbol_map:
+                    variable = symbol_map[var_key]
+                else:
+                    variable = convert_symbol_from_json(variable_json)
                 sides = {}
                 for side, (expression_json, boundary_type) in condition_dict.items():
                     try:
@@ -1421,28 +1406,8 @@ class Serialise:
                 name = event_data["name"]
                 expr = convert_symbol_from_json(event_data["expression"])
                 # Convert event_type from string to EventType enum
-                event_type_str = event_data.get("event_type") or event_data.get("et")
-                if isinstance(event_type_str, str):
-                    event_type = pybamm.EventType[event_type_str]
-                elif isinstance(event_type_str, list):
-                    # Handle format [str, value] from Event.to_json()
-                    if len(event_type_str) >= 2:
-                        event_type = pybamm.EventType(event_type_str[1])
-                    elif len(event_type_str) == 1:
-                        # Try to use the string name if only one element
-                        try:
-                            event_type = pybamm.EventType[event_type_str[0]]
-                        except (KeyError, TypeError):
-                            event_type = pybamm.EventType.TERMINATION
-                    else:
-                        # Empty list - use default
-                        event_type = pybamm.EventType.TERMINATION
-                elif event_type_str is None:
-                    # Default to TERMINATION if not specified
-                    event_type = pybamm.EventType.TERMINATION
-                else:
-                    # Assume it's already an EventType enum (shouldn't happen)
-                    event_type = event_type_str
+                event_type_str = event_data.get("event_type", "TERMINATION")
+                event_type = pybamm.EventType[event_type_str]
                 model.events.append(pybamm.Event(name, expr, event_type))
             except Exception as e:
                 raise ValueError(
@@ -1799,30 +1764,22 @@ def convert_symbol_from_json(json_data):
                         "This may indicate the symbol needs to be deserialized first."
                     )
 
-        # Expand abbreviated keys for non-reference dicts (recursively)
-        # Always expand if we detect any abbreviated keys
-        needs_expansion = any(k in _KEY_EXPANSIONS for k in json_data.keys())
-        if needs_expansion:
-            json_data = _expand_json_dict(json_data)
-
     if not isinstance(json_data, dict):
         raise ValueError(f"Expected dict, got {type(json_data)}: {json_data}")
 
-    # Check for type key (after expansion, should be "type" not "t")
+    # Check for type key (handles both "type" and abbreviated "t")
     if "type" not in json_data and "t" not in json_data:
         raise ValueError(f"Missing 'type' key in JSON data: {json_data}")
 
-    # Check cache using JSON key (for deduplication of identical symbols)
-    json_key = Serialise._create_symbol_key(json_data)
-    if json_key in _deserialized_symbols:
-        return _deserialized_symbols[json_key]
+    # Check cache - prefer ref_id if available (faster lookup, no key computation)
+    ref_id = json_data.get("py/ref") or json_data.get("r")
+    if ref_id is not None and ref_id in _deserialized_symbols:
+        return _deserialized_symbols[ref_id]
 
     # Deserialize the symbol
     symbol = _deserialize_symbol_from_json(json_data)
 
-    # Store in cache (using both json_key and ref_id if present)
-    _deserialized_symbols[json_key] = symbol
-    ref_id = json_data.get("py/ref") or json_data.get("r")
+    # Store in cache using ref_id (if available)
     if ref_id is not None:
         _deserialized_symbols[ref_id] = symbol
 
@@ -1991,13 +1948,12 @@ def _deserialize_symbol_from_json(json_data):
             if not isinstance(child_symbol, pybamm.Symbol):
                 raise ValueError(
                     f"ConcatenationVariable child [{i}] deserialized to {type(child_symbol).__name__} "
-                    f"instead of a Symbol. Got: {child_symbol} (value: {repr(child_symbol)})"
+                    f"instead of a Symbol. Got: {child_symbol} (value: {child_symbol!r})"
                 )
             deserialized_children.append(child_symbol)
-        return pybamm.ConcatenationVariable(
-            *deserialized_children,
-            name=get_key("name", "n"),
-        )
+        # ConcatenationVariable automatically derives its name from children
+        # Only pass name if it was explicitly stored and is different
+        return pybamm.ConcatenationVariable(*deserialized_children)
     elif "children" in json_data or "c" in json_data:
         # Use expanded type name for getattr
         return getattr(pybamm, type_name)(
@@ -2187,7 +2143,7 @@ def _compact_domains(domains):
 
     # If only one domain is non-empty, return just that value
     if len(compact) == 1:
-        return list(compact.values())[0]
+        return next(iter(compact.values()))
 
     return compact if compact else None
 
