@@ -897,14 +897,20 @@ class TestSerialise:
 
         json_dict = convert_symbol_to_json(ind_int)
         # Check abbreviated or full keys
-        assert json_dict.get("t") == "Int" or json_dict.get("type") == "IndefiniteIntegral"
+        assert (
+            json_dict.get("t") == "Int" or json_dict.get("type") == "IndefiniteIntegral"
+        )
 
         children_key = "c" if "c" in json_dict else "children"
         assert (
-            isinstance(json_dict[children_key], list) and len(json_dict[children_key]) == 1
+            isinstance(json_dict[children_key], list)
+            and len(json_dict[children_key]) == 1
         )
         child_json = json_dict[children_key][0]
-        assert child_json.get("t") == "SpatialVariable" or child_json.get("type") == "SpatialVariable"
+        assert (
+            child_json.get("t") == "SpatialVariable"
+            or child_json.get("type") == "SpatialVariable"
+        )
         assert child_json.get("n") == "x" or child_json.get("name") == "x"
 
         iv_key = "iv" if "iv" in json_dict else "integration_variable"
@@ -914,7 +920,10 @@ class TestSerialise:
             # It's a reference - this is valid, deserialization will handle it
             pass
         else:
-            assert int_var_json.get("t") == "SpatialVariable" or int_var_json.get("type") == "SpatialVariable"
+            assert (
+                int_var_json.get("t") == "SpatialVariable"
+                or int_var_json.get("type") == "SpatialVariable"
+            )
             assert int_var_json.get("n") == "x" or int_var_json.get("name") == "x"
 
         expr2 = convert_symbol_from_json(json_dict)
