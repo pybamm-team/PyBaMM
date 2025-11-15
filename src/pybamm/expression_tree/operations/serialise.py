@@ -1297,7 +1297,9 @@ class Serialise:
             for symbol_json in all_symbols:
                 if isinstance(symbol_json, dict):
                     # Skip pure references
-                    if len(symbol_json) == 1 and ("py/ref" in symbol_json or "r" in symbol_json):
+                    if len(symbol_json) == 1 and (
+                        "py/ref" in symbol_json or "r" in symbol_json
+                    ):
                         continue
                     # Check if already cached
                     ref_id = symbol_json.get("py/ref") or symbol_json.get("r")
@@ -1319,7 +1321,9 @@ class Serialise:
         for variable_json in all_variable_keys:
             # Skip pure references
             if isinstance(variable_json, dict):
-                if len(variable_json) == 1 and ("py/ref" in variable_json or "r" in variable_json):
+                if len(variable_json) == 1 and (
+                    "py/ref" in variable_json or "r" in variable_json
+                ):
                     continue
             try:
                 # Should now work since cache is populated
