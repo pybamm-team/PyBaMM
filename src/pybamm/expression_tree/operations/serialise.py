@@ -1991,7 +1991,7 @@ def _deserialize_symbol_from_json(json_data):
             if not isinstance(child_symbol, pybamm.Symbol):
                 raise ValueError(
                     f"ConcatenationVariable child [{i}] deserialized to {type(child_symbol).__name__} "
-                    f"instead of a Symbol. Got: {child_symbol} (value: {repr(child_symbol)})"
+                    f"instead of a Symbol. Got: {child_symbol} (value: {child_symbol!r})"
                 )
             deserialized_children.append(child_symbol)
         return pybamm.ConcatenationVariable(
