@@ -1026,6 +1026,63 @@ class TestSerialise:
         assert hasattr(loaded_model, "schema_version")
         assert loaded_model.schema_version == SUPPORTED_SCHEMA_VERSION
 
+    def test_deserialize_old_format_v1_0(self):
+        """Test that models serialized with schema version 1.0 (old format)
+        can be deserialized with the current code (backward compatibility).
+        """
+        # Path to stored old format model (serialized on develop branch)
+        test_dir = Path(__file__).parent
+        old_format_file = test_dir / "old_format_model_v1.0.json"
+
+        if not old_format_file.exists():
+            pytest.skip(
+                f"Old format test file not found: {old_format_file}. "
+                "Run test_backward_compat.py to generate it."
+            )
+
+        # Load the old format model
+        loaded_model = Serialise.load_custom_model(str(old_format_file))
+
+        # Verify it loaded correctly
+        assert loaded_model.name == "Single Particle Model"
+        assert len(loaded_model.rhs) > 0
+        assert len(loaded_model.events) > 0
+        assert hasattr(loaded_model, "schema_version")
+        # Old format models should have schema_version 1.0
+        assert loaded_model.schema_version == "1.0"
+
+        # Verify we can solve it with an experiment (termination at 2.5V)
+        param = pybamm.ParameterValues("Chen2020")
+
+        # Create experiment: 1C discharge to 2.5V
+        experiment = pybamm.Experiment(
+            [
+                pybamm.step.current(
+                    value=param["Nominal cell capacity [A.h]"] * 1.0,  # 1C
+                    duration=3600,  # 1 hour max
+                    termination="2.5 V",  # Stop at 2.5V
+                )
+            ]
+        )
+
+        sim = pybamm.Simulation(
+            loaded_model, parameter_values=param, experiment=experiment
+        )
+        solution = sim.solve()
+
+        # Experiments return a list of solutions (one per step)
+        if isinstance(solution, list):
+            solution = solution[0]  # Get the first (and only) step
+
+        assert solution is not None
+        assert len(solution.t) > 0
+
+        # Verify final voltage is 2.5V (within tolerance)
+        final_voltage = solution["Voltage [V]"].data[-1]
+        assert abs(final_voltage - 2.5) < 0.01, (
+            f"Final voltage should be 2.5V, got {final_voltage:.3f}V"
+        )
+
     def test_load_invalid_json(self):
         invalid_json = "{ invalid json"
 

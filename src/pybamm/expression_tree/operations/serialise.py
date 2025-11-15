@@ -14,7 +14,7 @@ import numpy as np
 
 import pybamm
 
-SUPPORTED_SCHEMA_VERSION = "1.0"
+SUPPORTED_SCHEMA_VERSION = "1.1"
 
 # Module-level caches for memoization during serialization/deserialization
 _serialized_symbols = {}  # Maps symbol id -> (reference_id, JSON representation)
@@ -456,7 +456,7 @@ class Serialise:
             },
         }
 
-        SCHEMA_VERSION = "1.0"
+        SCHEMA_VERSION = "1.1"
         model_json = {
             "schema_version": SCHEMA_VERSION,
             "pybamm_version": pybamm.__version__,
@@ -576,7 +576,7 @@ class Serialise:
                     else:
                         geometry_dict_serialized[domain][key] = value
 
-        SCHEMA_VERSION = "1.0"
+        SCHEMA_VERSION = "1.1"
         geometry_json = {
             "schema_version": SCHEMA_VERSION,
             "pybamm_version": pybamm.__version__,
@@ -661,12 +661,12 @@ class Serialise:
                     f"The file '{filename}' contains invalid JSON: {e!s}"
                 ) from e
 
-        # Validate schema version
+        # Validate schema version (accept 1.0 for backward compatibility)
         schema_version = data.get("schema_version", SUPPORTED_SCHEMA_VERSION)
-        if schema_version != SUPPORTED_SCHEMA_VERSION:
+        if schema_version not in ["1.0", SUPPORTED_SCHEMA_VERSION]:
             raise ValueError(
                 f"Unsupported schema version: {schema_version}. "
-                f"Expected: {SUPPORTED_SCHEMA_VERSION}"
+                f"Expected: 1.0 or {SUPPORTED_SCHEMA_VERSION}"
             )
 
         # Extract geometry data
@@ -741,7 +741,7 @@ class Serialise:
                 "options": method.options if hasattr(method, "options") else {},
             }
 
-        SCHEMA_VERSION = "1.0"
+        SCHEMA_VERSION = "1.1"
         spatial_methods_json = {
             "schema_version": SCHEMA_VERSION,
             "pybamm_version": pybamm.__version__,
@@ -829,12 +829,12 @@ class Serialise:
                     f"The file '{filename}' contains invalid JSON: {e!s}"
                 ) from e
 
-        # Validate schema version
+        # Validate schema version (accept 1.0 for backward compatibility)
         schema_version = data.get("schema_version", SUPPORTED_SCHEMA_VERSION)
-        if schema_version != SUPPORTED_SCHEMA_VERSION:
+        if schema_version not in ["1.0", SUPPORTED_SCHEMA_VERSION]:
             raise ValueError(
                 f"Unsupported schema version: {schema_version}. "
-                f"Expected: {SUPPORTED_SCHEMA_VERSION}"
+                f"Expected: 1.0 or {SUPPORTED_SCHEMA_VERSION}"
             )
 
         # Extract spatial methods data
@@ -895,7 +895,7 @@ class Serialise:
             else:
                 raise ValueError(f"Unexpected key type in var_pts: {type(key)}")
 
-        SCHEMA_VERSION = "1.0"
+        SCHEMA_VERSION = "1.1"
         var_pts_json = {
             "schema_version": SCHEMA_VERSION,
             "pybamm_version": pybamm.__version__,
@@ -978,12 +978,12 @@ class Serialise:
                     f"The file '{filename}' contains invalid JSON: {e!s}"
                 ) from e
 
-        # Validate schema version
+        # Validate schema version (accept 1.0 for backward compatibility)
         schema_version = data.get("schema_version", SUPPORTED_SCHEMA_VERSION)
-        if schema_version != SUPPORTED_SCHEMA_VERSION:
+        if schema_version not in ["1.0", SUPPORTED_SCHEMA_VERSION]:
             raise ValueError(
                 f"Unsupported schema version: {schema_version}. "
-                f"Expected: {SUPPORTED_SCHEMA_VERSION}"
+                f"Expected: 1.0 or {SUPPORTED_SCHEMA_VERSION}"
             )
 
         # Extract var_pts data
@@ -1021,7 +1021,7 @@ class Serialise:
                 "module": submesh_class.__module__,
             }
 
-        SCHEMA_VERSION = "1.0"
+        SCHEMA_VERSION = "1.1"
         submesh_types_json = {
             "schema_version": SCHEMA_VERSION,
             "pybamm_version": pybamm.__version__,
@@ -1106,12 +1106,12 @@ class Serialise:
                     f"The file '{filename}' contains invalid JSON: {e!s}"
                 ) from e
 
-        # Validate schema version
+        # Validate schema version (accept 1.0 for backward compatibility)
         schema_version = data.get("schema_version", SUPPORTED_SCHEMA_VERSION)
-        if schema_version != SUPPORTED_SCHEMA_VERSION:
+        if schema_version not in ["1.0", SUPPORTED_SCHEMA_VERSION]:
             raise ValueError(
                 f"Unsupported schema version: {schema_version}. "
-                f"Expected: {SUPPORTED_SCHEMA_VERSION}"
+                f"Expected: 1.0 or {SUPPORTED_SCHEMA_VERSION}"
             )
 
         # Extract submesh types data
@@ -1199,12 +1199,12 @@ class Serialise:
                     f"The model defined in the file '{filename}' contains invalid JSON: {e!s}"
                 ) from e
 
-        # Validate outer structure
+        # Validate outer structure (accept 1.0 for backward compatibility)
         schema_version = data.get("schema_version", SUPPORTED_SCHEMA_VERSION)
-        if schema_version != SUPPORTED_SCHEMA_VERSION:
+        if schema_version not in ["1.0", SUPPORTED_SCHEMA_VERSION]:
             raise ValueError(
                 f"Unsupported schema version: {schema_version}. "
-                f"Expected: {SUPPORTED_SCHEMA_VERSION}"
+                f"Expected: 1.0 or {SUPPORTED_SCHEMA_VERSION}"
             )
 
         model_data = data.get("model")
@@ -1297,7 +1297,9 @@ class Serialise:
             for symbol_json in all_symbols:
                 if isinstance(symbol_json, dict):
                     # Skip pure references
-                    if len(symbol_json) == 1 and ("py/ref" in symbol_json or "r" in symbol_json):
+                    if len(symbol_json) == 1 and (
+                        "py/ref" in symbol_json or "r" in symbol_json
+                    ):
                         continue
                     # Check if already cached
                     ref_id = symbol_json.get("py/ref") or symbol_json.get("r")
@@ -1319,7 +1321,9 @@ class Serialise:
         for variable_json in all_variable_keys:
             # Skip pure references
             if isinstance(variable_json, dict):
-                if len(variable_json) == 1 and ("py/ref" in variable_json or "r" in variable_json):
+                if len(variable_json) == 1 and (
+                    "py/ref" in variable_json or "r" in variable_json
+                ):
                     continue
             try:
                 # Should now work since cache is populated
