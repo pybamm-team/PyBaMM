@@ -1270,6 +1270,9 @@ class Simulation:
         split_by_electrode : bool, optional
             Whether to show the overpotentials for the negative and positive electrodes
             separately. Default is False.
+        electrode_phases : (str, str), optional
+            The phases for which to plot the anode and cathode overpotentials, respectively.
+            Default is `("primary", "primary")`.
         show_plot : bool, optional
             Whether to show the plots. Default is True. Set to False if you want to
             only display the plot after plt.show() has been called.
@@ -1285,7 +1288,7 @@ class Simulation:
             ax=ax,
             show_legend=show_legend,
             split_by_electrode=split_by_electrode,
-            electrode_phases=("primary", "primary"),
+            electrode_phases=electrode_phases,
             show_plot=show_plot,
             **kwargs_fill,
         )

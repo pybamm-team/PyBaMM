@@ -402,7 +402,7 @@ class TestBaseSolver:
                         inputs = {"a": a_value, "b": b_value}
                         all_inputs.append((t, y, inputs))
         for t, y, inputs in all_inputs:
-            use_inputs = casadi.vertcat(*[x for x in inputs.values()])
+            use_inputs = casadi.vertcat(*list(inputs.values()))
 
             sens = model.jacp_rhs_algebraic_eval(t, y, use_inputs)
 
