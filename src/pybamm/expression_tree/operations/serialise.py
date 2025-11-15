@@ -1272,9 +1272,16 @@ class Serialise:
             all_symbols.append(alg_json)
         for _, ic_json in model_data["initial_conditions"]:
             all_symbols.append(ic_json)
-        for _, bc_dict in model_data["boundary_conditions"]:
-            for _, (expr_json, _) in bc_dict.items():
-                all_symbols.append(expr_json)
+        for variable_json, bc_dict in model_data["boundary_conditions"]:
+            for side, bc_value in bc_dict.items():
+                try:
+                    expr_json, _ = bc_value
+                    all_symbols.append(expr_json)
+                except (TypeError, ValueError) as e:
+                    raise ValueError(
+                        f"Failed to convert boundary condition for variable {variable_json} "
+                        f"on side '{side}': {e!s}"
+                    ) from e
         for event_data in model_data["events"]:
             all_symbols.append(event_data["expression"])
         for var_json in model_data["variables"].values():
