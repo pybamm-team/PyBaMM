@@ -1,18 +1,17 @@
 #
 # Tests for the Unary Operator classes
 #
-import pytest
-
 import numpy as np
-from scipy.sparse import diags
+import pytest
 import sympy
+from hypothesis import HealthCheck, given, settings
+from hypothesis import strategies as st
+from scipy.sparse import diags
 from sympy.vector.operators import Divergence as sympy_Divergence
 from sympy.vector.operators import Gradient as sympy_Gradient
-from tests import assert_domain_equal
-from hypothesis import strategies as st
-from hypothesis import given, settings, HealthCheck
 
 import pybamm
+from tests import assert_domain_equal
 
 
 class TestUnaryOperators:
@@ -518,6 +517,12 @@ class TestUnaryOperators:
         assert downwind.children[0].name == a.name
         assert downwind.domain == a.domain
 
+        # 2D
+        a = pybamm.Symbol("a", domain="test domain")
+        symbol = pybamm.UpwindDownwind2D(a, "upwind", "upwind")
+        assert isinstance(symbol, pybamm.UpwindDownwind2D)
+        assert symbol.new_copy([a]) == symbol
+
     def test_diff(self):
         a = pybamm.StateVector(slice(0, 1))
         y = np.array([5])
@@ -714,9 +719,10 @@ class TestUnaryOperators:
         d = pybamm.Symbol("d", domain=["negative electrode"])
         one = pybamm.Symbol("1", domain="negative particle")
 
-        # Test print_name
-        pybamm.Floor.print_name = "test"
-        assert pybamm.Floor(-2.5).to_equation() == sympy.Symbol("test")
+        # Test print_name on an instance to avoid leaking global class state
+        op = pybamm.Floor(-2.5)
+        op.print_name = "test"
+        assert op.to_equation() == sympy.Symbol("test")
 
         # Test Negate
         value = 4
@@ -774,7 +780,7 @@ class TestUnaryOperators:
             pybamm.DiscreteTimeSum(2 * y)
 
         # check that raises error if two data are present
-        data2 = pybamm.DiscreteTimeData(values, times, "test2")
+        data2 = pybamm.DiscreteTimeData(times, values, "test2")
         with pytest.raises(pybamm.ModelError, match="only have one DiscreteTimeData"):
             pybamm.DiscreteTimeSum(data + data2)
 

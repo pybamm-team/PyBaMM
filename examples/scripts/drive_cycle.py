@@ -1,9 +1,9 @@
 #
 # Simulate drive cycle loaded from csv file
 #
-import pybamm
 import pandas as pd
 
+import pybamm
 
 pybamm.set_logging_level("INFO")
 
@@ -22,14 +22,11 @@ drive_cycle = pd.read_csv(
 current_interpolant = pybamm.Interpolant(drive_cycle[:, 0], drive_cycle[:, 1], pybamm.t)
 
 # set drive cycle
-param["Current function [A]"] = current_interpolant
+experiment = pybamm.Experiment([pybamm.step.current(drive_cycle)])
 
 
-# create and run simulation using the CasadiSolver in "fast" mode, remembering to
-# pass in the updated parameters
-sim = pybamm.Simulation(
-    model, parameter_values=param, solver=pybamm.CasadiSolver(mode="fast")
-)
+# create and run simulation with the updated parameters
+sim = pybamm.Simulation(model, parameter_values=param, experiment=experiment)
 sim.solve()
 sim.plot(
     [

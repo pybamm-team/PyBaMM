@@ -4,15 +4,35 @@ on:
   discussion:
     types: [created]
 
+permissions: {}
+
 jobs:
   autorespond:
     name: Autorespond to New Discussions
     runs-on: ubuntu-latest
+    permissions:
+      discussions: write
+      contents: read
 
     steps:
       - name: Run Discussion Autoresponder
-        uses: wesleyscholl/discussion-auto-responder@v1.0.8
+        uses: actions/github-script@v7
         with:
-          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-          comment_body: "Hi! We have now moved our discussions to [Discourse](https://pybamm.discourse.group/). Please post your question there."
-          delay_milliseconds: 0
+          script: |
+            const discussion = context.payload.discussion;
+            const message = "Hi! We have now moved our discussions to [Discourse](https://pybamm.discourse.group/). Please post your question there.";
+
+            const query = `
+              mutation($discussionId: ID!, $body: String!) {
+                addDiscussionComment(input: {discussionId: $discussionId, body: $body}) {
+                  comment {
+                    id
+                  }
+                }
+              }
+            `;
+
+            await github.graphql(query, {
+              discussionId: discussion.node_id,
+              body: message,
+            });

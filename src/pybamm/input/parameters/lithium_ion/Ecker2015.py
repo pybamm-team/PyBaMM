@@ -1,5 +1,6 @@
-import pybamm
 import numpy as np
+
+import pybamm
 
 
 def graphite_diffusivity_Ecker2015(sto, T):
@@ -367,7 +368,7 @@ def SEI_limited_dead_lithium_OKane2022(L_sei):
     Parameters
     ----------
     L_sei : :class:`pybamm.Symbol`
-        Total SEI thickness [m]
+        SEI thickness [m]
     Returns
     -------
     :class:`pybamm.Symbol`

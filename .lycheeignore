@@ -3,6 +3,7 @@ https://github.com/DrTimothyAldenDavis/SuiteSparse/archive/v%7BSUITESPARSE_VERSI
 https://github.com/LLNL/sundials/releases/download/v%7BSUNDIALS_VERSION%7D/sundials-%7BSUNDIALS_VERSION%7D.tar.gz
 https://mac.r-project.org/openmp/openmp-%7BOPENMP_VERSION%7D-darwin20-Release.tar.gz
 https://github.com/pybamm-team/pybamm-data/releases/download/%7Bself.version%7D
+https://github.com/pybamm-team/PyBaMM/tree/v%7Brelease_version%7D
 
 # Errors in docs/source/user_guide/getting_started.md
 file:///home/runner/work/PyBaMM/PyBaMM/docs/source/user_guide/api_docs
@@ -12,9 +13,6 @@ file:///home/runner/work/PyBaMM/PyBaMM/docs/source/user_guide/fundamentals/base_
 file:///home/runner/work/PyBaMM/PyBaMM/docs/source/user_guide/fundamentals/parameter_sets
 file:///home/runner/work/PyBaMM/PyBaMM/docs/source/user_guide/fundamentals/quick_plot
 file:///home/runner/work/PyBaMM/PyBaMM/docs/source/user_guide/fundamentals/pybamm.plot_voltage_components
-
-# Errors in docs/source/user_guide/index.md
-file:///home/runner/work/PyBaMM/PyBaMM/docs/source/user_guide/api_docs
 
 # Telemetry
 https://us.i.posthog.com

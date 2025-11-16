@@ -1,20 +1,16 @@
 from __future__ import annotations
-import importlib.util
+
+import difflib
 import importlib.metadata
+import importlib.util
 import numbers
 import os
 import pathlib
 import pickle
 import timeit
-import difflib
 from warnings import warn
 
 import pybamm
-
-# Versions of jax and jaxlib compatible with PyBaMM. Note: these are also defined in
-# the extras dependencies in pyproject.toml, and therefore must be kept in sync.
-JAX_VERSION = "0.4.27"
-JAXLIB_VERSION = "0.4.27"
 
 
 def root_dir():
@@ -152,7 +148,7 @@ class FuzzyDict(dict):
             Default is 0.4
         """
 
-        if not isinstance(keys, (str, list)) or not all(
+        if not isinstance(keys, str | list) or not all(
             isinstance(k, str) for k in keys
         ):
             msg = f"'keys' must be a string or a list of strings, got {type(keys)}"
@@ -202,7 +198,7 @@ class FuzzyDict(dict):
             return
 
         # If no exact matches, iterate over search keys individually
-        for original_key, search_key in zip(original_keys, search_keys):
+        for original_key, search_key in zip(original_keys, search_keys, strict=False):
             exact_key_matches, partial_matches = self._find_matches(
                 search_key, known_keys, min_similarity
             )
@@ -221,7 +217,15 @@ class FuzzyDict(dict):
                     print(f"No matches found for '{original_key}'")
 
     def copy(self):
-        return FuzzyDict(super().copy())
+        """
+        Return a shallow copy of the FuzzyDict.
+
+        Returns
+        -------
+        FuzzyDict
+            A new FuzzyDict object with the same keys and values as the original.
+        """
+        return FuzzyDict(self)
 
 
 class Timer:
@@ -272,7 +276,7 @@ class TimerTime:
         elif time < 60:
             return f"{time:.3f} s"
         output = []
-        time = int(round(time))
+        time = round(time)
         units = [(604800, "week"), (86400, "day"), (3600, "hour"), (60, "minute")]
         for k, name in units:
             f = time // k
@@ -353,25 +357,9 @@ def has_jax():
         True if jax and jaxlib are installed with the correct versions, False if otherwise
 
     """
-    return (
-        (importlib.util.find_spec("jax") is not None)
-        and (importlib.util.find_spec("jaxlib") is not None)
-        and is_jax_compatible()
+    return (importlib.util.find_spec("jax") is not None) and (
+        importlib.util.find_spec("jaxlib") is not None
     )
-
-
-def is_jax_compatible():
-    """
-    Check if the available versions of jax and jaxlib are compatible with PyBaMM
-
-    Returns
-    -------
-    bool
-        True if jax and jaxlib are compatible with PyBaMM, False if otherwise
-    """
-    return importlib.metadata.distribution("jax").version.startswith(
-        JAX_VERSION
-    ) and importlib.metadata.distribution("jaxlib").version.startswith(JAXLIB_VERSION)
 
 
 def is_constant_and_can_evaluate(symbol):

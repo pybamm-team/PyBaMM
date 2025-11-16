@@ -2,9 +2,9 @@
 # Base battery model class
 #
 
-import pybamm
 from functools import cached_property
 
+import pybamm
 from pybamm.expression_tree.operations.serialise import Serialise
 
 
@@ -16,6 +16,66 @@ def represents_positive_integer(s):
         return False
     else:
         return val > 0
+
+
+def _rename_option(options_dict, option_name, old_name, new_name):
+    if option_name not in options_dict:
+        return
+
+    option = options_dict[option_name]
+
+    if option is None:
+        return
+
+    if isinstance(option, str):
+        if option == old_name:
+            pybamm.logger.warning(
+                f"The '{old_name}' {option_name} model has been renamed to '{new_name}'"
+            )
+            options_dict[option_name] = new_name
+        return
+
+    if isinstance(option, tuple):
+        # Handle tuple of tuples case
+        if isinstance(option[0], tuple):
+            # Check if any element contains old_name
+            has_old_name = False
+            for x in option:
+                if isinstance(x, tuple):
+                    if isinstance(x[0], tuple):
+                        # Handle 2-tuple of 2-tuple of 2-tuple case
+                        for y in x:
+                            if isinstance(y, tuple):
+                                if old_name in y:
+                                    has_old_name = True
+                    # Handle 2-tuple of 2-tuple case
+                    elif old_name in x:
+                        has_old_name = True
+                elif x == old_name:
+                    has_old_name = True
+
+            if has_old_name:
+                pybamm.logger.warning(
+                    f"The '{old_name}' {option_name} model has been renamed to "
+                    f"'{new_name}'"
+                )
+
+                # Replace old_name with new_name at any nesting level
+                def replace_name(t):
+                    if isinstance(t, tuple):
+                        return tuple(replace_name(x) for x in t)
+                    return new_name if t == old_name else t
+
+                options_dict[option_name] = replace_name(option)
+
+        # Handle single tuple case
+        elif old_name in option:
+            pybamm.logger.warning(
+                f"The '{old_name}' {option_name} model has been renamed to '{new_name}'"
+            )
+            options_dict[option_name] = tuple(
+                new_name if x == old_name else x for x in option
+            )
 
 
 class BatteryModelOptions(pybamm.FuzzyDict):
@@ -102,7 +162,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 reactions.
             * "open-circuit potential" : str
                 Sets the model for the open circuit potential. Can be "single"
-                (default), "current sigmoid", "Wycisk", "Axen", or "MSMR".
+                (default), "current sigmoid", "one-state hysteresis", "one-state differential capacity hysteresis", or "MSMR".
                 If "MSMR" then the "particle" option must also be "MSMR".
                 A 2-tuple can be provided for different behaviour in negative
                 and positive electrodes.
@@ -224,13 +284,17 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 the respective porosity change) over the x-axis in Single Particle
                 Models, can be "false" or "true". Default is "false" for SPMe and
                 "true" for SPM.
+            * "use lumped thermal capacity" : str
+                Whether to use a lumped capacity model for the thermal model. Can be
+                "false" (default) or "true". This is only available for the lumped
+                thermal model.
     """
 
     def __init__(self, extra_options):
         self.possible_options = {
             "calculate discharge energy": ["false", "true"],
             "calculate heat source for isothermal models": ["false", "true"],
-            "cell geometry": ["arbitrary", "pouch"],
+            "cell geometry": ["arbitrary", "pouch", "cylindrical"],
             "contact resistance": ["false", "true"],
             "convection": ["none", "uniform transverse", "full transverse"],
             "current collector": [
@@ -239,7 +303,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "potential pair quite conductive",
             ],
             "diffusivity": ["single", "current sigmoid"],
-            "dimensionality": [0, 1, 2],
+            "dimensionality": [0, 1, 2, 3],
             "electrolyte conductivity": [
                 "default",
                 "full",
@@ -278,8 +342,8 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "single",
                 "current sigmoid",
                 "MSMR",
-                "Wycisk",
-                "Axen",
+                "one-state hysteresis",
+                "one-state differential capacity hysteresis",
             ],
             "operating mode": [
                 "current",
@@ -337,12 +401,28 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             "voltage as a state": ["false", "true"],
             "working electrode": ["both", "positive"],
             "x-average side reactions": ["false", "true"],
+            "use lumped thermal capacity": ["false", "true"],
         }
 
         default_options = {
             name: options[0] for name, options in self.possible_options.items()
         }
         extra_options = extra_options or {}
+
+        # Handle OCP option renaming
+        _rename_option(
+            extra_options,
+            "open-circuit potential",
+            "Wycisk",
+            "one-state differential capacity hysteresis",
+        )
+
+        _rename_option(
+            extra_options,
+            "open-circuit potential",
+            "Axen",
+            "one-state hysteresis",
+        )
 
         working_electrode_option = extra_options.get("working electrode", "both")
         SEI_option = extra_options.get("SEI", "none")  # return "none" if not given
@@ -582,6 +662,17 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 raise pybamm.OptionError(
                     "cannot have transverse convection in 0D model"
                 )
+        if options["dimensionality"] == 3:
+            if options["cell geometry"] not in ["pouch", "cylindrical"]:
+                raise pybamm.OptionError(
+                    "'cell geometry' must be 'pouch' or 'cylindrical' if 'dimensionality' is '3'"
+                )
+
+        if options["cell geometry"] == "cylindrical":
+            if options["dimensionality"] != 3:
+                raise pybamm.OptionError(
+                    "'dimensionality' must be '3' if 'cell geometry' is 'cylindrical'"
+                )
 
         if (
             options["thermal"] in ["x-lumped", "x-full"]
@@ -594,6 +685,15 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             n = options["dimensionality"]
             raise pybamm.OptionError(
                 f"X-full thermal submodels do not yet support {n}D current collectors"
+            )
+
+        if (
+            options["use lumped thermal capacity"] == "true"
+            and "lumped" not in options["thermal"]
+        ):
+            raise pybamm.OptionError(
+                "Lumped thermal capacity model only compatible with lumped thermal "
+                "models"
             )
 
         if isinstance(options["stress-induced diffusion"], str):
@@ -642,7 +742,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 p_mechanics = (p_mechanics, p_mechanics)
             if any(
                 sei == "true" and mech != "swelling and cracking"
-                for mech, sei in zip(p_mechanics, sei_on_cr)
+                for mech, sei in zip(p_mechanics, sei_on_cr, strict=False)
             ):
                 raise pybamm.OptionError(
                     "If 'SEI on cracks' is 'true' then 'particle mechanics' must be "
@@ -847,7 +947,12 @@ class BaseBatteryModel(pybamm.BaseModel):
 
     @property
     def default_geometry(self):
-        return pybamm.battery_geometry(options=self.options)
+        if self.options["cell geometry"] == "cylindrical":
+            return pybamm.battery_geometry(
+                options=self.options, form_factor="cylindrical"
+            )
+        else:
+            return pybamm.battery_geometry(options=self.options)
 
     @property
     def default_var_pts(self):
@@ -901,6 +1006,17 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         elif self.options["dimensionality"] == 2:
             base_submeshes["current collector"] = pybamm.ScikitUniform2DSubMesh
+        elif self.options["dimensionality"] == 3:
+            base_submeshes["current collector"] = pybamm.SubMesh0D
+            geom_type = self.options.get("cell geometry", "pouch")
+            if geom_type == "pouch":
+                base_submeshes["cell"] = pybamm.ScikitFemGenerator3D(
+                    geom_type="pouch", h="0.1"
+                )
+            elif geom_type == "cylindrical":
+                base_submeshes["cell"] = pybamm.ScikitFemGenerator3D(
+                    geom_type="cylinder", h="0.1"
+                )
         return base_submeshes
 
     @property
@@ -929,6 +1045,11 @@ class BaseBatteryModel(pybamm.BaseModel):
             base_spatial_methods["current collector"] = pybamm.FiniteVolume()
         elif self.options["dimensionality"] == 2:
             base_spatial_methods["current collector"] = pybamm.ScikitFiniteElement()
+        elif self.options["dimensionality"] == 3:
+            base_spatial_methods["current collector"] = (
+                pybamm.ZeroDimensionalSpatialMethod()
+            )
+            base_spatial_methods["cell"] = pybamm.ScikitFiniteElement3D()
         return base_spatial_methods
 
     @property

@@ -1,11 +1,14 @@
 #
 # Interface for discretisation
 #
-import pybamm
+import itertools
+from collections import OrderedDict, defaultdict
+
 import numpy as np
-from collections import defaultdict, OrderedDict
 from scipy.sparse import block_diag, csc_matrix, csr_matrix
 from scipy.sparse.linalg import inv
+
+import pybamm
 
 
 def has_bc_of_form(symbol, side, bcs, form):
@@ -270,26 +273,59 @@ class Discretisation:
         end = 0
         lower_bounds = []
         upper_bounds = []
+
         # Iterate through unpacked variables, adding appropriate slices to y_slices
         for variable in variables:
+            if variable in y_slices:
+                continue
             # Add up the size of all the domains in variable.domain
             if isinstance(variable, pybamm.ConcatenationVariable):
-                start_ = start
                 spatial_method = self.spatial_methods[variable.domain[0]]
+                dimension = spatial_method.mesh[variable.domain[0]].dimension
+                start_ = start
                 children = variable.children
                 meshes = OrderedDict()
+                lr_points = OrderedDict()
+                tb_points = OrderedDict()
                 for child in children:
                     meshes[child] = [spatial_method.mesh[dom] for dom in child.domain]
+                    if dimension == 2:
+                        lr_points[child] = sum(
+                            spatial_method.mesh[dom].npts_lr for dom in child.domain
+                        )
+                        tb_points[child] = sum(
+                            spatial_method.mesh[dom].npts_tb for dom in child.domain
+                        )
                 sec_points = spatial_method._get_auxiliary_domain_repeats(
                     variable.domains
                 )
                 for _ in range(sec_points):
+                    start_this_child = start_
                     for child, mesh in meshes.items():
                         for domain_mesh in mesh:
                             end += domain_mesh.npts_for_broadcast_to_nodes
                         # Add to slices
-                        y_slices[child].append(slice(start_, end))
-                        y_slices_explicit[child].append(slice(start_, end))
+                        if dimension == 2:
+                            other_children = set(meshes.keys()) - {child}
+                            num_pts_to_skip = sum(
+                                lr_points[other_child] for other_child in other_children
+                            )
+                            for row in range(tb_points[child]):
+                                start_this_row = (
+                                    start_this_child
+                                    + (lr_points[child] + num_pts_to_skip) * row
+                                )
+                                end_this_row = start_this_row + lr_points[child]
+                                y_slices[child].append(
+                                    slice(start_this_row, end_this_row)
+                                )
+                                y_slices_explicit[child].append(
+                                    slice(start_this_row, end_this_row)
+                                )
+                            start_this_child += lr_points[child]
+                        else:
+                            y_slices[child].append(slice(start_, end))
+                            y_slices_explicit[child].append(slice(start_, end))
                         # Increment start_
                         start_ = end
             else:
@@ -382,7 +418,7 @@ class Discretisation:
                 if first_child not in bc_keys:
                     internal_bcs.update({first_child: {"left": lbc, "right": rbc}})
 
-                for current_child, next_child in zip(children[1:-1], children[2:]):
+                for current_child, next_child in itertools.pairwise(children[1:]):
                     lbc = rbc
                     rbc = (boundary_gradient(current_child, next_child), "Neumann")
                     if current_child not in bc_keys:
@@ -606,7 +642,7 @@ class Discretisation:
         for v in model_variables:
             model_slices.append(self.y_slices[v][0])
         sorted_model_variables = [
-            v for _, v in sorted(zip(model_slices, model_variables))
+            v for _, v in sorted(zip(model_slices, model_variables, strict=False))
         ]
 
         # Process mass matrices for the differential equations
@@ -623,7 +659,7 @@ class Discretisation:
                 )
                 if isinstance(
                     self.spatial_methods[var.domain[0]],
-                    (pybamm.ZeroDimensionalSpatialMethod, pybamm.FiniteVolume),
+                    pybamm.ZeroDimensionalSpatialMethod | pybamm.FiniteVolume,
                 ):
                     # for 0D methods the mass matrix is just a scalar 1 and for
                     # finite volumes the mass matrix is identity, so no need to
@@ -734,6 +770,7 @@ class Discretisation:
                     eqn = pybamm.FullBroadcast(eqn, broadcast_domains=eqn_key.domains)
 
             pybamm.logger.debug(f"Discretise {eqn_key!r}")
+
             processed_eqn = self.process_symbol(eqn)
             # Calculate scale if the key has a scale
             scale = getattr(eqn_key, "scale", 1)
@@ -783,6 +820,13 @@ class Discretisation:
                 ]
             else:
                 discretised_symbol.secondary_mesh = None
+
+            # Assign tertiary mesh
+            if symbol.domains["tertiary"] != []:
+                discretised_symbol.tertiary_mesh = self.mesh[symbol.domains["tertiary"]]
+            else:
+                discretised_symbol.tertiary_mesh = None
+
             return discretised_symbol
 
     def _process_symbol(self, symbol):
@@ -801,9 +845,46 @@ class Discretisation:
         if isinstance(symbol, pybamm.BinaryOperator):
             # Pre-process children
             left, right = symbol.children
+            # Catch case where diffusion is a scalar and turn it into an identity matrix vector field.
+            if len(symbol.domain) != 0:
+                spatial_method = self.spatial_methods[symbol.domain[0]]
+            else:
+                spatial_method = None
+            if isinstance(spatial_method, pybamm.FiniteVolume2D):
+                if isinstance(left, pybamm.Scalar) and (
+                    isinstance(right, pybamm.VectorField)
+                    or isinstance(right, pybamm.Gradient)
+                ):
+                    left = pybamm.VectorField(left, left)
+                elif isinstance(right, pybamm.Scalar) and (
+                    isinstance(left, pybamm.VectorField)
+                    or isinstance(left, pybamm.Gradient)
+                ):
+                    right = pybamm.VectorField(right, right)
             disc_left = self.process_symbol(left)
             disc_right = self.process_symbol(right)
             if symbol.domain == []:
+                if isinstance(disc_left, pybamm.VectorField) or isinstance(
+                    disc_right, pybamm.VectorField
+                ):
+                    if not isinstance(disc_right, pybamm.VectorField):
+                        disc_right = pybamm.VectorField(disc_right, disc_right)
+                    if not isinstance(disc_left, pybamm.VectorField):
+                        disc_left = pybamm.VectorField(disc_left, disc_left)
+                    else:  # both are vector fields already
+                        pass
+                    disc_lr = pybamm.simplify_if_constant(
+                        symbol.create_copy(
+                            new_children=[disc_left.lr_field, disc_right.lr_field]
+                        )
+                    )
+                    disc_tb = pybamm.simplify_if_constant(
+                        symbol.create_copy(
+                            new_children=[disc_left.tb_field, disc_right.tb_field]
+                        )
+                    )
+                    return pybamm.VectorField(disc_lr, disc_tb)
+
                 return pybamm.simplify_if_constant(
                     symbol.create_copy(new_children=[disc_left, disc_right])
                 )
@@ -868,7 +949,10 @@ class Discretisation:
                     symbol.integration_variable[0].domain[0]
                 ]
                 out = integral_spatial_method.integral(
-                    child, disc_child, symbol._integration_dimension
+                    child,
+                    disc_child,
+                    symbol._integration_dimension,
+                    symbol.integration_variable,
                 )
                 out.copy_domains(symbol)
                 return out
@@ -878,6 +962,17 @@ class Discretisation:
                     child, vector_type=symbol.vector_type
                 )
 
+            elif isinstance(symbol, pybamm.OneDimensionalIntegral):
+                child_spatial_method = self.spatial_methods[
+                    symbol.integration_domain[0]
+                ]
+                return child_spatial_method.one_dimensional_integral(
+                    symbol,
+                    child,
+                    disc_child,
+                    symbol.integration_domain,
+                    symbol.direction,
+                )
             elif isinstance(symbol, pybamm.BoundaryIntegral):
                 return child_spatial_method.boundary_integral(
                     child, disc_child, symbol.region
@@ -908,6 +1003,14 @@ class Discretisation:
                 return child_spatial_method.evaluate_at(
                     symbol, disc_child, symbol.position
                 )
+            elif isinstance(symbol, pybamm.UpwindDownwind2D):
+                return spatial_method.upwind_or_downwind(
+                    child,
+                    disc_child,
+                    self.bcs,
+                    symbol.lr_direction,
+                    symbol.tb_direction,
+                )
             elif isinstance(symbol, pybamm.UpwindDownwind):
                 direction = symbol.name  # upwind or downwind
                 return spatial_method.upwind_or_downwind(
@@ -916,8 +1019,24 @@ class Discretisation:
             elif isinstance(symbol, pybamm.NotConstant):
                 # After discretisation, we can make the symbol constant
                 return disc_child
+            elif isinstance(symbol, pybamm.Magnitude):
+                if not isinstance(disc_child, pybamm.VectorField):
+                    raise ValueError("Magnitude can only be applied to a vector field")
+                direction = symbol.direction
+                if direction == "lr":
+                    return disc_child.lr_field
+                elif direction == "tb":
+                    return disc_child.tb_field
+                else:
+                    raise ValueError("Invalid direction")
             else:
-                return symbol.create_copy(new_children=[disc_child])
+                if isinstance(disc_child, pybamm.VectorField):
+                    return pybamm.VectorField(
+                        symbol.create_copy(new_children=[disc_child.lr_field]),
+                        symbol.create_copy(new_children=[disc_child.tb_field]),
+                    )
+                else:
+                    return symbol.create_copy(new_children=[disc_child])
 
         elif isinstance(symbol, pybamm.Function):
             disc_children = [self.process_symbol(child) for child in symbol.children]
@@ -987,6 +1106,14 @@ class Discretisation:
             new_symbol = self.process_symbol(symbol.children[0])
             return new_symbol
 
+        elif isinstance(symbol, pybamm.VectorField):
+            left_symbol = self.process_symbol(symbol.lr_field)
+            right_symbol = self.process_symbol(symbol.tb_field)
+            return symbol.create_copy(new_children=[left_symbol, right_symbol])
+
+        elif isinstance(symbol, pybamm.Constant):
+            # after discretisation we just care about the value, not the name
+            return self.process_symbol(pybamm.Scalar(symbol.value))
         else:
             # Backup option: return the object
             return symbol
@@ -1047,7 +1174,7 @@ class Discretisation:
         equations = list(var_eqn_dict.values())
 
         # sort equations according to slices
-        sorted_equations = [eq for _, eq in sorted(zip(slices, equations))]
+        sorted_equations = [eq for _, eq in sorted(zip(slices, equations, strict=True))]
 
         return self.concatenate(*sorted_equations, sparse=sparse)
 

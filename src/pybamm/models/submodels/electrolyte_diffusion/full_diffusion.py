@@ -1,8 +1,10 @@
 #
 # Class for electrolyte diffusion employing stefan-maxwell
 #
-import pybamm
 import numpy as np
+
+import pybamm
+
 from .base_electrolyte_diffusion import BaseElectrolyteDiffusion
 
 

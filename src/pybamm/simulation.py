@@ -1,14 +1,17 @@
 from __future__ import annotations
-import pickle
-import pybamm
-import numpy as np
-import warnings
-from functools import lru_cache
-from datetime import timedelta
-import pybamm.telemetry
-from pybamm.util import import_optional_dependency
 
+import pickle
+import warnings
+from copy import copy
+from datetime import timedelta
+from functools import lru_cache
+
+import numpy as np
+
+import pybamm
+import pybamm.telemetry
 from pybamm.expression_tree.operations.serialise import Serialise
+from pybamm.util import import_optional_dependency
 
 
 def is_notebook():
@@ -96,7 +99,7 @@ class Simulation:
                         }
                     )
         else:
-            if isinstance(experiment, (str, pybamm.step.BaseStep)):
+            if isinstance(experiment, str | pybamm.step.BaseStep):
                 experiment = pybamm.Experiment([experiment])
             elif isinstance(experiment, list):
                 experiment = pybamm.Experiment(experiment)
@@ -258,7 +261,7 @@ class Simulation:
         self._parameter_values.process_geometry(self._geometry)
         self._model = self._model_with_set_params
 
-    def set_initial_soc(self, initial_soc, inputs=None):
+    def set_initial_state(self, initial_soc, direction=None, inputs=None):
         if self._built_initial_soc != initial_soc:
             # reset
             self._model_with_set_params = None
@@ -266,39 +269,28 @@ class Simulation:
             self.steps_to_built_models = None
             self.steps_to_built_solvers = None
 
-        options = self._model.options
         param = self._model.param
-        if options["open-circuit potential"] == "MSMR":
-            self._parameter_values = (
-                self._unprocessed_parameter_values.set_initial_ocps(
-                    initial_soc, param=param, inplace=False, options=options
-                )
-            )
-        elif options["working electrode"] == "positive":
-            self._parameter_values = (
-                self._unprocessed_parameter_values.set_initial_stoichiometry_half_cell(
-                    initial_soc,
-                    param=param,
-                    inplace=False,
-                    options=options,
-                    inputs=inputs,
-                )
-            )
-        else:
-            self._parameter_values = (
-                self._unprocessed_parameter_values.set_initial_stoichiometries(
-                    initial_soc,
-                    param=param,
-                    inplace=False,
-                    options=options,
-                    inputs=inputs,
-                )
-            )
+        options = self._model.options
+        self._parameter_values = self._unprocessed_parameter_values.set_initial_state(
+            initial_soc,
+            direction=direction,
+            param=param,
+            inplace=False,
+            options=options,
+            inputs=inputs,
+        )
 
         # Save solved initial SOC in case we need to re-build the model
         self._built_initial_soc = initial_soc
 
-    def build(self, initial_soc=None, inputs=None):
+    def set_initial_soc(self, initial_soc, direction, inputs=None):
+        msg = "pybamm.simulation.set_initial_soc is deprecated, please use set_initial_state."
+        warnings.warn(msg, DeprecationWarning, stacklevel=2)
+        return self.set_initial_state(
+            initial_soc=initial_soc, direction=direction, inputs=inputs
+        )
+
+    def build(self, initial_soc=None, direction=None, inputs=None):
         """
         A method to build the model into a system of matrices and vectors suitable for
         performing numerical computations. If the model has already been built or
@@ -316,7 +308,7 @@ class Simulation:
             A dictionary of input parameters to pass to the model when solving.
         """
         if initial_soc is not None:
-            self.set_initial_soc(initial_soc, inputs=inputs)
+            self.set_initial_state(initial_soc, direction=direction, inputs=inputs)
 
         if self._built_model:
             return
@@ -335,13 +327,15 @@ class Simulation:
             # rebuilt model so clear solver setup
             self._solver._model_set_up = {}
 
-    def build_for_experiment(self, initial_soc=None, inputs=None, solve_kwargs=None):
+    def build_for_experiment(
+        self, initial_soc=None, direction=None, inputs=None, solve_kwargs=None
+    ):
         """
         Similar to :meth:`Simulation.build`, but for the case of simulating an
         experiment, where there may be several models and solvers to build.
         """
         if initial_soc is not None:
-            self.set_initial_soc(initial_soc, inputs)
+            self.set_initial_state(initial_soc, direction=direction, inputs=inputs)
 
         if self.steps_to_built_models:
             return
@@ -380,10 +374,12 @@ class Simulation:
         calc_esoh=None,
         starting_solution=None,
         initial_soc=None,
+        direction=None,
         callbacks=None,
         showprogress=False,
         inputs=None,
         t_interp=None,
+        initial_conditions=None,
         **kwargs,
     ):
         """
@@ -445,6 +441,9 @@ class Simulation:
         """
         pybamm.telemetry.capture("simulation-solved")
 
+        # Copy t_eval to avoid modifying the original
+        t_eval = copy(t_eval)
+
         # Setup
         if solver is None:
             solver = self._solver
@@ -469,7 +468,7 @@ class Simulation:
         inputs = inputs or {}
 
         if self.operating_mode in ["without experiment", "drive cycle"]:
-            self.build(initial_soc=initial_soc, inputs=inputs)
+            self.build(initial_soc=initial_soc, direction=direction, inputs=inputs)
             if save_at_cycles is not None:
                 raise ValueError(
                     "'save_at_cycles' option can only be used if simulating an "
@@ -512,7 +511,7 @@ class Simulation:
                 # the time data (to ensure the resolution of t_eval is fine enough).
                 # We only raise a warning here as users may genuinely only want
                 # the solution returned at some specified points.
-                elif not isinstance(solver, pybamm.IDAKLUSolver) and not set(
+                elif not solver.supports_t_eval_discontinuities and not set(
                     np.round(time_data, 12)
                 ).issubset(set(np.round(t_eval, 12))):
                     warnings.warn(
@@ -537,15 +536,22 @@ class Simulation:
                             pybamm.SolverWarning,
                             stacklevel=2,
                         )
-
             self._solution = solver.solve(
-                self._built_model, t_eval, inputs=inputs, t_interp=t_interp, **kwargs
+                self._built_model,
+                t_eval,
+                inputs=inputs,
+                t_interp=t_interp,
+                **kwargs,
+                initial_conditions=initial_conditions,
             )
 
         elif self.operating_mode == "with experiment":
             callbacks.on_experiment_start(logs)
             self.build_for_experiment(
-                initial_soc=initial_soc, inputs=inputs, solve_kwargs=kwargs
+                initial_soc=initial_soc,
+                direction=direction,
+                inputs=inputs,
+                solve_kwargs=kwargs,
             )
             if t_eval is not None:
                 pybamm.logger.warning(
@@ -559,7 +565,7 @@ class Simulation:
             timer = pybamm.Timer()
 
             # Set up eSOH solver (for summary variables)
-            esoh_solver = self.get_esoh_solver(calc_esoh)
+            esoh_solver = self.get_esoh_solver(calc_esoh, direction)
 
             if starting_solution is None:
                 starting_solution_cycles = []
@@ -871,6 +877,9 @@ class Simulation:
                                 pybamm.logger.warning(
                                     f"Step '{step_str}' is infeasible at initial conditions, but skip_ok is True. Skipping step."
                                 )
+
+                                # Update the termination and continue
+                                self._solution.termination = step_solution.termination
                                 continue
                             else:
                                 raise pybamm.SolverError(
@@ -976,7 +985,7 @@ class Simulation:
 
         # Make sure we take at least 2 timesteps. The period is hardcoded to 10
         # minutes,the user can always override it by adding a rest step
-        npts = max(int(round(rest_time / 600)) + 1, 2)
+        npts = max(round(rest_time / 600) + 1, 2)
 
         step_solution_with_rest = solver.step(
             step_solution,
@@ -1023,6 +1032,9 @@ class Simulation:
             Additional key-word arguments passed to `solver.solve`.
             See :meth:`pybamm.BaseSolver.step`.
         """
+        # Copy t_eval to avoid modifying the original
+        t_eval = copy(t_eval)
+
         if self.operating_mode in ["without experiment", "drive cycle"]:
             self.build()
 
@@ -1044,12 +1056,15 @@ class Simulation:
 
         return self._solution
 
-    def _get_esoh_solver(self, calc_esoh):
+    def _get_esoh_solver(self, calc_esoh, direction):
         if calc_esoh is False:
             return None
 
         return pybamm.lithium_ion.ElectrodeSOHSolver(
-            self._parameter_values, self._model.param, options=self._model.options
+            self._parameter_values,
+            param=self._model.param,
+            direction=direction,
+            options=self._model.options,
         )
 
     def plot(self, output_variables=None, **kwargs):
@@ -1239,6 +1254,7 @@ class Simulation:
         ax=None,
         show_legend=True,
         split_by_electrode=False,
+        electrode_phases=("primary", "primary"),
         show_plot=True,
         **kwargs_fill,
     ):
@@ -1254,6 +1270,9 @@ class Simulation:
         split_by_electrode : bool, optional
             Whether to show the overpotentials for the negative and positive electrodes
             separately. Default is False.
+        electrode_phases : (str, str), optional
+            The phases for which to plot the anode and cathode overpotentials, respectively.
+            Default is `("primary", "primary")`.
         show_plot : bool, optional
             Whether to show the plots. Default is True. Set to False if you want to
             only display the plot after plt.show() has been called.
@@ -1269,6 +1288,7 @@ class Simulation:
             ax=ax,
             show_legend=show_legend,
             split_by_electrode=split_by_electrode,
+            electrode_phases=electrode_phases,
             show_plot=show_plot,
             **kwargs_fill,
         )

@@ -2,10 +2,11 @@
 # Test for the operator class
 #
 
+import numpy as np
 import pytest
+
 import pybamm
 from tests import get_2p1d_mesh_for_testing, get_unit_2p1D_mesh_for_testing
-import numpy as np
 
 
 class TestScikitFiniteElement:

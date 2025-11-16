@@ -1,6 +1,8 @@
 #
 # Base unit tests for the lithium-ion models
 #
+import pytest
+
 import pybamm
 
 
@@ -54,6 +56,18 @@ class BaseUnitTestLithiumIon:
             "thermal": "lumped",
         }
         self.check_well_posedness(options)
+
+    def test_well_posed_lumped_thermal_capacity_model(self):
+        options = {"thermal": "lumped", "use lumped thermal capacity": "true"}
+        self.check_well_posedness(options)
+
+    def test_incompatible_lumped_thermal_capacity_option(self):
+        options = {"thermal": "x-full", "use lumped thermal capacity": "true"}
+        with pytest.raises(
+            pybamm.OptionError,
+            match="Lumped thermal capacity model only compatible with lumped thermal models",
+        ):
+            self.check_well_posedness(options)
 
     def test_well_posed_thermal_1plus1D(self):
         options = {
@@ -499,12 +513,14 @@ class BaseUnitTestLithiumIon:
         options = {"open-circuit potential": "current sigmoid"}
         self.check_well_posedness(options)
 
-    def test_well_posed_wycisk_ocp(self):
-        options = {"open-circuit potential": "Wycisk"}
+    def test_well_posed_one_state_differential_capacity_hysteresis_ocp(self):
+        options = {
+            "open-circuit potential": "one-state differential capacity hysteresis"
+        }
         self.check_well_posedness(options)
 
-    def test_well_posed_axen_ocp(self):
-        options = {"open-circuit potential": "Axen"}
+    def test_well_posed_one_state_hysteresis_ocp(self):
+        options = {"open-circuit potential": "one-state hysteresis"}
         self.check_well_posedness(options)
 
     def test_well_posed_msmr(self):
@@ -637,5 +653,19 @@ class BaseUnitTestLithiumIon:
             "particle phases": ("2", "1"),
             "open-circuit potential": (("single", "current sigmoid"), "single"),
             "loss of active material": "stress-driven",
+        }
+        self.check_well_posedness(options)
+
+    def test_well_posed_composite_differential_surface_form(self):
+        options = {
+            "particle phases": ("2", "2"),
+            "surface form": "differential",
+        }
+        self.check_well_posedness(options)
+
+    def test_well_posed_composite_algebraic_surface_form(self):
+        options = {
+            "particle phases": ("2", "2"),
+            "surface form": "algebraic",
         }
         self.check_well_posedness(options)

@@ -1,8 +1,5 @@
 from pybamm.version import __version__
 
-# Demote expressions to 32-bit floats/ints - option used for IDAKLU-MLIR compilation
-demote_expressions_to_32bit = False
-
 # Utility classes and methods
 from .util import root_dir
 from .util import Timer, TimerTime, FuzzyDict
@@ -15,7 +12,6 @@ from .util import (
     get_parameters_filepath,
     has_jax,
     import_optional_dependency,
-    is_jax_compatible,
 )
 from .logger import logger, set_logging_level, get_new_logger
 from .settings import settings
@@ -37,12 +33,13 @@ from .expression_tree.interpolant import Interpolant
 from .expression_tree.discrete_time_sum import *
 from .expression_tree.input_parameter import InputParameter
 from .expression_tree.parameter import Parameter, FunctionParameter
-from .expression_tree.scalar import Scalar
+from .expression_tree.scalar import Scalar, Constant
 from .expression_tree.variable import *
 from .expression_tree.coupled_variable import *
 from .expression_tree.independent_variable import *
 from .expression_tree.independent_variable import t
 from .expression_tree.vector import Vector
+from .expression_tree.vector_field import VectorField
 from .expression_tree.state_vector import StateVectorBase, StateVector, StateVectorDot
 
 from .expression_tree.exceptions import *
@@ -61,6 +58,7 @@ from .expression_tree.operations.evaluate_python import JaxCooMatrix
 from .expression_tree.operations.jacobian import Jacobian
 from .expression_tree.operations.convert_to_casadi import CasadiConverter
 from .expression_tree.operations.unpack_symbols import SymbolUnpacker
+from .expression_tree.operations.serialise import Serialise,ExpressionFunctionParameter
 
 # Model classes
 from .models.base_model import BaseModel
@@ -111,7 +109,7 @@ from .expression_tree.independent_variable import KNOWN_COORD_SYS
 from .geometry import standard_spatial_vars
 
 # Parameter classes and methods
-from .parameters.parameter_values import ParameterValues
+from .parameters.parameter_values import ParameterValues, scalarize_dict, arrayize_dict
 from .parameters import constants
 from .parameters.geometric_parameters import geometric_parameters, GeometricParameters
 from .parameters.electrical_parameters import (
@@ -123,7 +121,6 @@ from .parameters.lithium_ion_parameters import LithiumIonParameters
 from .parameters.lead_acid_parameters import LeadAcidParameters
 from .parameters.ecm_parameters import EcmParameters
 from .parameters.size_distribution_parameters import *
-from .parameters.parameter_sets import parameter_sets
 
 # Mesh and Discretisation classes
 from .discretisations.discretisation import Discretisation
@@ -139,12 +136,22 @@ from .meshes.one_dimensional_submeshes import (
     SpectralVolume1DSubMesh,
     SymbolicUniform1DSubMesh,
 )
+from .meshes.two_dimensional_submeshes import (
+    SubMesh2D,
+    Uniform2DSubMesh,
+)
 from .meshes.scikit_fem_submeshes import (
     ScikitSubMesh2D,
     ScikitUniform2DSubMesh,
     ScikitExponential2DSubMesh,
     ScikitChebyshev2DSubMesh,
     UserSupplied2DSubMesh,
+)
+
+from .meshes.scikit_fem_submeshes_3d import (
+    ScikitFemSubMesh3D,
+    ScikitFemGenerator3D,
+    UserSuppliedSubmesh3D,
 )
 
 # Serialisation
@@ -154,14 +161,17 @@ from .models.base_model import load_model
 from .spatial_methods.spatial_method import SpatialMethod
 from .spatial_methods.zero_dimensional_method import ZeroDimensionalSpatialMethod
 from .spatial_methods.finite_volume import FiniteVolume
+from .spatial_methods.finite_volume_2d import FiniteVolume2D
 from .spatial_methods.spectral_volume import SpectralVolume
 from .spatial_methods.scikit_finite_element import ScikitFiniteElement
+from .spatial_methods.scikit_finite_element_3d import ScikitFiniteElement3D
 
 # Solver classes
 from .solvers.solution import Solution, EmptySolution, make_cycle_solution
 from .solvers.processed_variable_time_integral import ProcessedVariableTimeIntegral
-from .solvers.processed_variable import ProcessedVariable, process_variable
+from .solvers.processed_variable import ProcessedVariable, ProcessedVariable2DFVM, process_variable
 from .solvers.processed_variable_computed import ProcessedVariableComputed
+from .solvers.processed_variable import ProcessedVariableUnstructured
 from .solvers.summary_variable import SummaryVariables
 from .solvers.base_solver import BaseSolver
 from .solvers.dummy_solver import DummySolver
@@ -174,7 +184,7 @@ from .solvers.jax_solver import JaxSolver
 from .solvers.jax_bdf_solver import jax_bdf_integrate
 
 from .solvers.idaklu_jax import IDAKLUJax
-from .solvers.idaklu_solver import IDAKLUSolver, has_iree
+from .solvers.idaklu_solver import IDAKLUSolver
 
 # Experiments
 from .experiment.experiment import Experiment
@@ -189,6 +199,8 @@ from .plotting.plot_voltage_components import plot_voltage_components
 from .plotting.plot_thermal_components import plot_thermal_components
 from .plotting.plot_summary_variables import plot_summary_variables
 from .plotting.dynamic_plot import dynamic_plot
+from .plotting.plot_3d_cross_section import plot_3d_cross_section
+from .plotting.plot_3d_heatmap import plot_3d_heatmap
 
 # Simulation
 from .simulation import Simulation, load_sim, is_notebook
@@ -201,6 +213,8 @@ from . import callbacks, telemetry, config
 
 # Pybamm Data manager using pooch
 from .pybamm_data import DataLoader
+
+from .dispatch import parameter_sets, Model
 
 # Fix Casadi import
 import os
@@ -234,6 +248,7 @@ __all__ = [
     "util",
     "version",
     "pybamm_data",
+    "dispatch",
 ]
 
 config.generate()

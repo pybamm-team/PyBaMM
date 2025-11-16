@@ -11,8 +11,10 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
+import importlib.metadata
 import os
 import sys
+
 import pybamm
 
 # Path for repository root
@@ -29,7 +31,7 @@ copyright = "2018-2025, The PyBaMM Team"
 author = "The PyBaMM Team"
 
 # The short X.Y version
-version = pybamm.__version__
+version = importlib.metadata.version("pybamm")
 # The full version, including alpha/beta/rc tags
 release = version
 
@@ -65,7 +67,6 @@ extensions = [
     "nbsphinx",  # to be kept below JavaScript-enabled extensions, always
     "IPython.sphinxext.ipython_console_highlighting",
     "sphinx_gallery.load_style",
-    "hoverxref.extension",
 ]
 
 
@@ -91,6 +92,7 @@ linkcheck_ignore = [
     "https://doi.org/10.1137/20M1336898",  # DOI link to ignore
     "https://en.wikipedia.org/wiki/",  # Wikipedia link to ignore
     "https://books.google.co.uk/books",
+    "https://docs.scipy.org/doc/scipy",  # SciPy docs timeout intermittently
 ]
 
 
@@ -433,29 +435,6 @@ inheritance_edge_attrs = dict(
     style='"setlinewidth(0.5)"',
 )
 
-# -- Options for sphinx-hoverxref --------------------------------------------
-
-# Hoverxref settings
-
-hoverxref_default_type = "tooltip"
-hoverxref_auto_ref = True
-
-hoverxref_roles = ["class", "meth", "func", "ref", "term"]
-hoverxref_role_types = dict.fromkeys(hoverxref_roles, "tooltip")
-
-hoverxref_domains = ["py"]
-
-# Currently, only projects that are hosted on readthedocs + CPython, NumPy, and
-# SymPy are supported
-hoverxref_intersphinx = list(intersphinx_mapping.keys())
-
-# Tooltips settings
-hoverxref_tooltip_lazy = False
-hoverxref_tooltip_maxwidth = 750
-hoverxref_tooltip_animation = "fade"
-hoverxref_tooltip_animation_duration = 1
-hoverxref_tooltip_content = "Loading information..."
-hoverxref_tooltip_theme = ["tooltipster-shadow", "tooltipster-shadow-custom"]
 
 # -- Options for Algolia DocSearch (sphinx-docsearch) ------------------------
 

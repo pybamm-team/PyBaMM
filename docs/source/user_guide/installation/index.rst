@@ -29,14 +29,18 @@ It can be installed using ``pip`` or ``conda``, or from source.
 
       conda install -c conda-forge pybamm-base
 
+.. warning::
+
+   The PyBaMM Conda recipe is not currently maintained and lags several releases behind.
+   As a result, installations via Conda will provide an outdated version.
+   To access the latest version, consider installing PyBaMM using pip.
 
 Optional solvers
 ----------------
 
-The following solvers are optionally available:
+The following solver is optionally available:
 
 *  `jax <https://jax.readthedocs.io/en/latest/notebooks/quickstart.html>`_ -based solver, see :ref:`optional-jaxsolver` .
-*  `IREE <https://iree.dev/>`_ (`MLIR <https://mlir.llvm.org/>`_) support, see :ref:`optional-iree-mlir-support`.
 
 Dependencies
 ------------
@@ -61,8 +65,8 @@ PyBaMM requires the following dependencies.
 =================================================================== ==========================
 Package                                                             Supported version(s)
 =================================================================== ==========================
-`PyBaMM solvers <https://github.com/pybamm-team/pybammsolvers>`__     0.0.4
-`NumPy <https://numpy.org>`__                                         >= 1.23.5, <2
+`PyBaMM solvers <https://github.com/pybamm-team/pybammsolvers>`__     >= 0.2.0, <0.4.0
+`NumPy <https://numpy.org>`__                                         Whatever recent versions work
 `SciPy <https://docs.scipy.org/doc/scipy/>`__                         Whatever recent versions work. >= 1.9.3
 `CasADi <https://web.casadi.org/docs/>`__                             Whatever recent versions work. >= 3.6.7
 `Xarray <https://docs.xarray.dev/en/stable/>`__                       Whatever recent versions work. >= 2022.6.0
@@ -125,7 +129,6 @@ Dependency                                                                      
 `ipykernel <https://pypi.org/project/ipykernel/>`__                                               \-                 docs               Provides the IPython kernel for Jupyter.
 `ipywidgets <https://ipywidgets.readthedocs.io/en/latest/>`__                                     \-                 docs               Interactive HTML widgets for Jupyter notebooks and the IPython kernel.
 `sphinx-gallery <https://pypi.org/project/sphinx-gallery/>`__                                     \-                 docs               Builds an HTML gallery of examples from any set of Python scripts.
-`sphinx-hoverxref <https://sphinx-hoverxref.readthedocs.io/en/latest/index.html>`__               \-                 docs               Sphinx extension to show a floating window.
 `sphinx-docsearch <https://sphinx-docsearch.readthedocs.io/>`__                                   \-                 docs               To replaces Sphinx’s built-in search with Algolia DocSearch.
 ================================================================================================= ================== ================== =======================================================================
 
@@ -155,9 +158,8 @@ Dependency                                                                      
 `pre-commit <https://pre-commit.com/index.html>`__                               \-                 dev                For managing and maintaining multi-language pre-commit hooks.
 `ruff <https://beta.ruff.rs/docs/>`__                                            \-                 dev                For code formatting.
 `nox <https://nox.thea.codes/en/stable/>`__                                      \-                 dev                For running testing sessions in multiple environments.
-`pytest-subtests <https://github.com/pytest-dev/pytest-subtests/>`__             \-                 dev                For subtests pytest fixture.
 `pytest-cov <https://pytest-cov.readthedocs.io/en/stable/>`__                    \-                 dev                For calculating test coverage.
-`pytest <https://docs.pytest.org/en/stable/>`__                                  6.0.0              dev                For running the test suites.
+`pytest <https://docs.pytest.org/en/stable/>`__                                  9.0.0              dev                For running the test suites (includes subtests support).
 `pytest-doctestplus <https://github.com/scientific-python/pytest-doctestplus>`__ \-                 dev                For running doctests.
 `pytest-xdist <https://pytest-xdist.readthedocs.io/en/latest/>`__                \-                 dev                For running tests in parallel across distributed workers.
 `pytest-mock <https://pytest-mock.readthedocs.io/en/latest/index.html>`__        \-                 dev                Provides a mocker fixture.
@@ -211,24 +213,13 @@ Dependency                                                  Minimum Version    p
 Jax dependencies
 ^^^^^^^^^^^^^^^^
 
-Installable with ``pip install "pybamm[jax]"``, currently supported on Python 3.9-3.11.
+Installable with ``pip install "pybamm[jax]"``, currently supported on Python 3.10-3.12.
 
 ========================================================================= ================== ================== =======================
 Dependency                                                                Minimum Version    pip extra          Notes
 ========================================================================= ================== ================== =======================
 `JAX <https://jax.readthedocs.io/en/latest/notebooks/quickstart.html>`__  0.4.20             jax                For the JAX solver
 `jaxlib <https://pypi.org/project/jaxlib/>`__                             0.4.20             jax                Support library for JAX
-========================================================================= ================== ================== =======================
-
-IREE dependencies
-^^^^^^^^^^^^^^^^^
-
-Installable with ``pip install "pybamm[iree]"`` (requires ``jax`` dependencies to be installed).
-
-========================================================================= ================== ================== =======================
-Dependency                                                                Minimum Version    pip extra          Notes
-========================================================================= ================== ================== =======================
-`iree-compiler <https://iree.dev/>`__                                     20240507.886       iree               IREE compiler
 ========================================================================= ================== ================== =======================
 
 Full installation guide

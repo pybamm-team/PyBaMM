@@ -2,9 +2,10 @@
 # Test for the Finite Volume Mesh class
 #
 
-import pytest
-import pybamm
 import numpy as np
+import pytest
+
+import pybamm
 
 
 def get_param():
@@ -230,6 +231,147 @@ class TestMesh:
         )
         assert submesh.min == mesh["negative electrode"].min
 
+    def test_combine_submeshes_2d(self):
+        # 2D geometry
+        x = pybamm.SpatialVariable(
+            "x", domain=["negative electrode", "separator"], direction="lr"
+        )
+        z = pybamm.SpatialVariable(
+            "z", domain=["negative electrode", "separator"], direction="tb"
+        )
+        geometry = {
+            "negative electrode": {
+                x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+                z: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+            },
+            "separator": {
+                x: {"min": pybamm.Scalar(1), "max": pybamm.Scalar(2)},
+            },
+        }
+        submesh_types = {
+            "negative electrode": pybamm.Uniform2DSubMesh,
+            "separator": pybamm.Uniform1DSubMesh,
+        }
+        var_pts = {
+            x: 10,
+            z: 10,
+        }
+        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+        with pytest.raises(pybamm.GeometryError, match="Cannot combine"):
+            mesh[("negative electrode", "separator")]
+
+        geometry = {
+            "negative electrode": {
+                x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+                z: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+            },
+            "separator": {
+                x: {"min": pybamm.Scalar(1), "max": pybamm.Scalar(2)},
+                z: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(0.5)},
+            },
+        }
+        submesh_types = {
+            "negative electrode": pybamm.Uniform2DSubMesh,
+            "separator": pybamm.Uniform2DSubMesh,
+        }
+        var_pts = {
+            x: 10,
+            z: 10,
+        }
+        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+        with pytest.raises(pybamm.DomainError, match="lr edges are not aligned"):
+            mesh[("negative electrode_left ghost cell", "separator")]
+
+        geometry = {
+            "left": {
+                x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+                z: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+            },
+            "right": {
+                x: {"min": pybamm.Scalar(1), "max": pybamm.Scalar(2)},
+                z: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(0.5)},
+            },
+        }
+        submesh_types = {
+            "left": pybamm.Uniform2DSubMesh,
+            "right": pybamm.Uniform2DSubMesh,
+        }
+        var_pts = {
+            x: 10,
+            z: 10,
+        }
+        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+        with pytest.raises(pybamm.DomainError, match="tb edges are not aligned"):
+            mesh[("left", "right")]
+
+        geometry = {
+            "top": {
+                x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+                z: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+            },
+            "bottom": {
+                x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+                z: {"min": pybamm.Scalar(2), "max": pybamm.Scalar(3)},
+            },
+        }
+        submesh_types = {
+            "top": pybamm.Uniform2DSubMesh,
+            "bottom": pybamm.Uniform2DSubMesh,
+        }
+        var_pts = {
+            x: 10,
+            z: 10,
+        }
+        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+        with pytest.raises(pybamm.DomainError, match="tb edges are not aligned"):
+            mesh[("top", "bottom")]
+
+        geometry = {
+            "top": {
+                x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+                z: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+            },
+            "bottom": {
+                x: {"min": pybamm.Scalar(1), "max": pybamm.Scalar(2)},
+                z: {"min": pybamm.Scalar(1), "max": pybamm.Scalar(2)},
+            },
+        }
+        submesh_types = {
+            "top": pybamm.Uniform2DSubMesh,
+            "bottom": pybamm.Uniform2DSubMesh,
+        }
+        var_pts = {
+            x: 10,
+            z: 10,
+        }
+        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+        with pytest.raises(pybamm.DomainError, match="lr edges are not aligned"):
+            mesh[("top", "bottom")]
+
+        geometry = {
+            "top": {
+                x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+                z: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+            },
+            "bottom": {
+                x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+                z: {"min": pybamm.Scalar(1), "max": pybamm.Scalar(2)},
+            },
+        }
+        submesh_types = {
+            "top": pybamm.Uniform2DSubMesh,
+            "bottom": pybamm.Uniform2DSubMesh,
+        }
+        var_pts = {
+            x: 10,
+            z: 10,
+        }
+        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+        assert mesh[("top", "bottom")].edges_lr[0] == 0
+        assert mesh[("top", "bottom")].edges_lr[-1] == 1
+        assert mesh[("top", "bottom")].edges_tb[0] == 0
+        assert mesh[("top", "bottom")].edges_tb[-1] == 2
+
     def test_ghost_cells(self, submesh_types):
         param = get_param()
 
@@ -441,6 +583,37 @@ class TestMesh:
         }
 
         assert mesh_json == expected_json
+
+    def test_compute_var_pts_from_thicknesses_cell_size(self):
+        from pybamm.meshes.meshes import compute_var_pts_from_thicknesses
+
+        electrode_thicknesses = {
+            "negative electrode": 100e-6,
+            "separator": 25e-6,
+            "positive electrode": 100e-6,
+        }
+
+        cell_size = 5e-6  # 5 micrometres per cell
+        var_pts = compute_var_pts_from_thicknesses(electrode_thicknesses, cell_size)
+
+        assert isinstance(var_pts, dict)
+        assert all(isinstance(v, dict) for v in var_pts.values())
+        assert var_pts["negative electrode"]["x_n"] == 20
+        assert var_pts["separator"]["x_s"] == 5
+        assert var_pts["positive electrode"]["x_p"] == 20
+
+    def test_compute_var_pts_from_thicknesses_invalid_thickness_type(self):
+        from pybamm.meshes.meshes import compute_var_pts_from_thicknesses
+
+        with pytest.raises(TypeError):
+            compute_var_pts_from_thicknesses(["not", "a", "dict"], 1e-6)
+
+    def test_compute_var_pts_from_thicknesses_invalid_grid_size(self):
+        from pybamm.meshes.meshes import compute_var_pts_from_thicknesses
+
+        electrode_thicknesses = {"negative electrode": 100e-6}
+        with pytest.raises(ValueError):
+            compute_var_pts_from_thicknesses(electrode_thicknesses, -1e-6)
 
 
 class TestMeshGenerator:

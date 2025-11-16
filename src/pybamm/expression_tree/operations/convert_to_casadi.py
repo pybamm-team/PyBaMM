@@ -3,11 +3,11 @@
 #
 from __future__ import annotations
 
-import pybamm
 import casadi
 import numpy as np
-from scipy import special
-from scipy import interpolate
+from scipy import interpolate, special
+
+import pybamm
 
 
 class CasadiConverter:
@@ -60,12 +60,7 @@ class CasadiConverter:
         """See :meth:`CasadiConverter.convert()`."""
         if isinstance(
             symbol,
-            (
-                pybamm.Scalar,
-                pybamm.Array,
-                pybamm.Time,
-                pybamm.InputParameter,
-            ),
+            pybamm.Scalar | pybamm.Array | pybamm.Time | pybamm.InputParameter,
         ):
             return casadi.MX(symbol.evaluate(t, y, y_dot, inputs))
 
@@ -91,12 +86,16 @@ class CasadiConverter:
                 return casadi.fmin(converted_left, converted_right)
             if isinstance(symbol, pybamm.Maximum):
                 return casadi.fmax(converted_left, converted_right)
+            if isinstance(symbol, pybamm.KroneckerProduct):
+                return casadi.kron(converted_left, converted_right)
 
             # _binary_evaluate defined in derived classes for specific rules
             return symbol._binary_evaluate(converted_left, converted_right)
 
         elif isinstance(symbol, pybamm.UnaryOperator):
             converted_child = self.convert(symbol.child, t, y, y_dot, inputs)
+            if isinstance(symbol, pybamm.Transpose):
+                return converted_child.T
             if isinstance(symbol, pybamm.AbsoluteValue):
                 return casadi.fabs(converted_child)
             if isinstance(symbol, pybamm.Floor):
@@ -270,7 +269,7 @@ class CasadiConverter:
             converted_children = [
                 self.convert(child, t, y, y_dot, inputs) for child in symbol.children
             ]
-            if isinstance(symbol, (pybamm.NumpyConcatenation, pybamm.SparseStack)):
+            if isinstance(symbol, pybamm.NumpyConcatenation | pybamm.SparseStack):
                 return casadi.vertcat(*converted_children)
             # DomainConcatenation specifies a particular ordering for the concatenation,
             # which we must follow
@@ -280,7 +279,7 @@ class CasadiConverter:
                 for i in range(symbol.secondary_dimensions_npts):
                     child_vectors = []
                     for child_var, slices in zip(
-                        converted_children, symbol._children_slices
+                        converted_children, symbol._children_slices, strict=True
                     ):
                         for child_dom, child_slice in slices.items():
                             slice_starts.append(symbol._slices[child_dom][i].start)
@@ -288,7 +287,12 @@ class CasadiConverter:
                                 child_var[child_slice[i].start : child_slice[i].stop]
                             )
                     all_child_vectors.extend(
-                        [v for _, v in sorted(zip(slice_starts, child_vectors))]
+                        [
+                            v
+                            for _, v in sorted(
+                                zip(slice_starts, child_vectors, strict=False)
+                            )
+                        ]
                     )
                 return casadi.vertcat(*all_child_vectors)
 

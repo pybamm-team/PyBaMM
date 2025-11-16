@@ -16,6 +16,4 @@ Utility functions
 
 .. autofunction:: pybamm.has_jax
 
-.. autofunction:: pybamm.is_jax_compatible
-
 .. autofunction:: pybamm.set_logging_level

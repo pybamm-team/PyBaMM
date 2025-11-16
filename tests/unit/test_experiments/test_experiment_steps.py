@@ -1,10 +1,12 @@
 #
 # Test the experiment steps
 #
-import pytest
-import pybamm
-import numpy as np
 from datetime import datetime
+
+import numpy as np
+import pytest
+
+import pybamm
 
 
 class TestExperimentSteps:
@@ -173,7 +175,7 @@ class TestExperimentSteps:
             },
         ]
 
-        for step, expected in zip(steps, expected_result):
+        for step, expected in zip(steps, expected_result, strict=False):
             actual = pybamm.step.string(step).to_dict()
             for k in expected.keys():
                 # useful form for debugging
@@ -195,7 +197,7 @@ class TestExperimentSteps:
         drive_cycle_step = pybamm.step.current(drive_cycle, temperature="-5oC")
         # Check drive cycle operating conditions
         assert drive_cycle_step.duration == 9
-        assert drive_cycle_step.period == 1
+        assert drive_cycle_step.period is None
         assert drive_cycle_step.temperature == 273.15 - 5
 
         bad_drive_cycle = np.ones((10, 3))
@@ -213,7 +215,7 @@ class TestExperimentSteps:
         )
         # Check drive cycle operating conditions
         assert drive_cycle_step.duration == 20
-        assert drive_cycle_step.period == 1
+        assert drive_cycle_step.period is None
         assert drive_cycle_step.temperature == 273.15 - 5
 
         # Check duration shorter than drive cycle data
@@ -223,8 +225,22 @@ class TestExperimentSteps:
         )
         # Check drive cycle operating conditions
         assert drive_cycle_step.duration == 5
-        assert drive_cycle_step.period == 1
+        assert drive_cycle_step.period is None
         assert drive_cycle_step.temperature == 273.15 - 5
+
+        # Check that the default c_rate duration is the length of the drive cycle
+        drive_cycle_step_c_rate = pybamm.step.c_rate(drive_cycle)
+        assert drive_cycle_step_c_rate.duration == 9
+
+    def test_drive_cycle_period(self):
+        # Import drive cycle from file
+        drive_cycle = np.array([np.arange(10), np.arange(10)]).T
+
+        drive_cycle_step = pybamm.step.current(drive_cycle, period=0.01)
+        assert drive_cycle_step.period == 0.01
+
+        drive_cycle_step_no_period = pybamm.step.current(drive_cycle)
+        assert drive_cycle_step_no_period.period is None
 
     def test_bad_strings(self):
         with pytest.raises(TypeError, match="Input to step.string"):
