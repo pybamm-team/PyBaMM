@@ -8,7 +8,6 @@
 
 - Fixed a bug where simulations whose initial conditions violated the events could continue solving. ([#5260](https://github.com/pybamm-team/PyBaMM/pull/5260))
 - Fixed an issues with composite electrode and "swelling only" mechanics sub-models, which were not creating the cell thickness variable. ([#5272](https://github.com/pybamm-team/PyBaMM/pull/5272))
-- Removed $ character in `docs/source/examples/notebooks/creating_models/4-comparing-full-and-reduced-order-models.ipynb` that breaks latex rendering. ([#5284](https://github.com/pybamm-team/PyBaMM/pull/5284))
 
 # [v25.10.0](https://github.com/pybamm-team/PyBaMM/tree/v25.10.0) - 2025-10-29
 
