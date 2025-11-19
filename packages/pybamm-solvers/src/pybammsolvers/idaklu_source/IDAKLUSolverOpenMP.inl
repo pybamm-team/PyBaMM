@@ -41,6 +41,11 @@ IDAKLUSolverOpenMP<ExprSet>::IDAKLUSolverOpenMP(
 
   // create SUNDIALS context object
   SUNContext_Create(NULL, &sunctx);  // calls null-wrapper if Sundials Ver<6
+  
+  // Error messages are handled in PyBaMM, silence them except in debug mode
+  #if defined(NDEBUG) && SUNDIALS_VERSION_MAJOR >= 7
+    SUNContext_ClearErrHandlers(sunctx);
+  #endif
 
   // allocate memory for solver
   ida_mem = IDACreate(sunctx);

@@ -44,6 +44,7 @@ find_path(SUNDIALS_INCLUDE_DIR
   )
 
 set(SUNDIALS_WANT_COMPONENTS
+  sundials_core
   sundials_idas
   sundials_sunlinsolklu
   sundials_sunlinsoldense
@@ -63,6 +64,10 @@ foreach(LIB ${SUNDIALS_WANT_COMPONENTS})
         # first for the full static library name, but fall back to a
         # generic search on the name if the static search fails.
         set(THIS_LIBRARY_SEARCH lib${LIB}.a ${LIB})
+    elseif(WIN32)
+        # On Windows, try both libsundials_* and sundials_* naming conventions
+        # CMake's find_library will automatically add .lib extension
+        set(THIS_LIBRARY_SEARCH lib${LIB} ${LIB})
     else()
         set(THIS_LIBRARY_SEARCH ${LIB})
     endif()
