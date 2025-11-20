@@ -906,7 +906,12 @@ class BaseModel:
         self.build_model_equations()
 
     def set_initial_conditions_from(
-        self, solution, inputs=None, inplace=True, return_type="model", mesh=None,
+        self,
+        solution,
+        inputs=None,
+        inplace=True,
+        return_type="model",
+        mesh=None,
     ):
         """
         Update initial conditions with the final states from a Solution object or from
