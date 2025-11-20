@@ -4,11 +4,13 @@
 *.png
 *.gif
 /local/
+.local
 *.DS_Store
 *.mat
 *.csv
 *.hidden
 *.pkl
+.claude
 
 # don't ignore important .txt and .csv files
 !requirements*

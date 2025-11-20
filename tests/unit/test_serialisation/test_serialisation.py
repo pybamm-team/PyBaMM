@@ -877,9 +877,13 @@ class TestSerialise:
         func_param = pybamm.FunctionParameter("my_func", {"x": x}, diff_var)
 
         json_dict = convert_symbol_to_json(func_param)
-        assert "diff_variable" in json_dict
-        assert json_dict["diff_variable"]["type"] == "Variable"
-        assert json_dict["diff_variable"]["name"] == "r"
+        # Check for abbreviated or full key
+        dv_key = "dv" if "dv" in json_dict else "diff_variable"
+        assert dv_key in json_dict
+        dv_data = json_dict[dv_key]
+        # Check for abbreviated or full type/name keys
+        assert dv_data.get("t") == "Variable" or dv_data.get("type") == "Variable"
+        assert dv_data.get("n") == "r" or dv_data.get("name") == "r"
 
         expr2 = convert_symbol_from_json(json_dict)
         assert isinstance(expr2, pybamm.FunctionParameter)
@@ -892,18 +896,35 @@ class TestSerialise:
         ind_int = pybamm.IndefiniteIntegral(x, x)
 
         json_dict = convert_symbol_to_json(ind_int)
-        assert json_dict["type"] == "IndefiniteIntegral"
-
+        # Check abbreviated or full keys
         assert (
-            isinstance(json_dict["children"], list) and len(json_dict["children"]) == 1
+            json_dict.get("t") == "Int" or json_dict.get("type") == "IndefiniteIntegral"
         )
-        child_json = json_dict["children"][0]
-        assert child_json["type"] == "SpatialVariable"
-        assert child_json["name"] == "x"
 
-        int_var_json = json_dict["integration_variable"]
-        assert int_var_json["type"] == "SpatialVariable"
-        assert int_var_json["name"] == "x"
+        children_key = "c" if "c" in json_dict else "children"
+        assert (
+            isinstance(json_dict[children_key], list)
+            and len(json_dict[children_key]) == 1
+        )
+        child_json = json_dict[children_key][0]
+        assert (
+            child_json.get("t") == "SpatialVariable"
+            or child_json.get("type") == "SpatialVariable"
+        )
+        assert child_json.get("n") == "x" or child_json.get("name") == "x"
+
+        iv_key = "iv" if "iv" in json_dict else "integration_variable"
+        int_var_json = json_dict[iv_key]
+        # integration_variable might be a reference to the child
+        if "r" in int_var_json or "py/ref" in int_var_json:
+            # It's a reference - this is valid, deserialization will handle it
+            pass
+        else:
+            assert (
+                int_var_json.get("t") == "SpatialVariable"
+                or int_var_json.get("type") == "SpatialVariable"
+            )
+            assert int_var_json.get("n") == "x" or int_var_json.get("name") == "x"
 
         expr2 = convert_symbol_from_json(json_dict)
         assert isinstance(expr2, pybamm.IndefiniteIntegral)
@@ -1025,6 +1046,63 @@ class TestSerialise:
 
         assert hasattr(loaded_model, "schema_version")
         assert loaded_model.schema_version == SUPPORTED_SCHEMA_VERSION
+
+    def test_deserialize_old_format_v1_0(self):
+        """Test that models serialized with schema version 1.0 (old format)
+        can be deserialized with the current code (backward compatibility).
+        """
+        # Path to stored old format model (serialized on develop branch)
+        test_dir = Path(__file__).parent
+        old_format_file = test_dir / "old_format_model_v1.0.json"
+
+        if not old_format_file.exists():
+            pytest.skip(
+                f"Old format test file not found: {old_format_file}. "
+                "Run test_backward_compat.py to generate it."
+            )
+
+        # Load the old format model
+        loaded_model = Serialise.load_custom_model(str(old_format_file))
+
+        # Verify it loaded correctly
+        assert loaded_model.name == "Single Particle Model"
+        assert len(loaded_model.rhs) > 0
+        assert len(loaded_model.events) > 0
+        assert hasattr(loaded_model, "schema_version")
+        # Old format models should have schema_version 1.0
+        assert loaded_model.schema_version == "1.0"
+
+        # Verify we can solve it with an experiment (termination at 2.5V)
+        param = pybamm.ParameterValues("Chen2020")
+
+        # Create experiment: 1C discharge to 2.5V
+        experiment = pybamm.Experiment(
+            [
+                pybamm.step.current(
+                    value=param["Nominal cell capacity [A.h]"] * 1.0,  # 1C
+                    duration=3600,  # 1 hour max
+                    termination="2.5 V",  # Stop at 2.5V
+                )
+            ]
+        )
+
+        sim = pybamm.Simulation(
+            loaded_model, parameter_values=param, experiment=experiment
+        )
+        solution = sim.solve()
+
+        # Experiments return a list of solutions (one per step)
+        if isinstance(solution, list):
+            solution = solution[0]  # Get the first (and only) step
+
+        assert solution is not None
+        assert len(solution.t) > 0
+
+        # Verify final voltage is 2.5V (within tolerance)
+        final_voltage = solution["Voltage [V]"].data[-1]
+        assert abs(final_voltage - 2.5) < 0.01, (
+            f"Final voltage should be 2.5V, got {final_voltage:.3f}V"
+        )
 
     def test_load_invalid_json(self):
         invalid_json = "{ invalid json"

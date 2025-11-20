@@ -14,7 +14,22 @@ import numpy as np
 
 import pybamm
 
-SUPPORTED_SCHEMA_VERSION = "1.0"
+SUPPORTED_SCHEMA_VERSION = "1.1"
+
+# Module-level caches for memoization during serialization/deserialization
+_serialized_symbols = {}  # Maps symbol id -> (reference_id, JSON representation)
+_serialized_ref_counter = 0  # Counter for generating unique reference IDs
+_deserialized_symbols = {}  # Maps reference_id -> deserialized symbol
+
+
+def _reset_serialization_caches():
+    """Reset the serialization and deserialization caches.
+    Useful for testing or when serializing multiple independent models.
+    """
+    global _serialized_symbols, _serialized_ref_counter, _deserialized_symbols
+    _serialized_symbols = {}
+    _serialized_ref_counter = 0
+    _deserialized_symbols = {}
 
 
 class ExpressionFunctionParameter(pybamm.UnaryOperator):
@@ -358,6 +373,9 @@ class Serialise:
         AttributeError
             If the model is missing required sections
         """
+        # Reset caches for a clean serialization
+        _reset_serialization_caches()
+
         required_attrs = [
             "rhs",
             "algebraic",
@@ -427,7 +445,8 @@ class Serialise:
                 {
                     "name": event.name,
                     "expression": convert_symbol_to_json(event.expression),
-                    "event_type": event.event_type,
+                    # Store just the enum name as a string
+                    "event_type": event.event_type.name,
                 }
                 for event in getattr(model, "events", [])
             ],
@@ -437,7 +456,7 @@ class Serialise:
             },
         }
 
-        SCHEMA_VERSION = "1.0"
+        SCHEMA_VERSION = "1.1"
         model_json = {
             "schema_version": SCHEMA_VERSION,
             "pybamm_version": pybamm.__version__,
@@ -557,7 +576,7 @@ class Serialise:
                     else:
                         geometry_dict_serialized[domain][key] = value
 
-        SCHEMA_VERSION = "1.0"
+        SCHEMA_VERSION = "1.1"
         geometry_json = {
             "schema_version": SCHEMA_VERSION,
             "pybamm_version": pybamm.__version__,
@@ -642,12 +661,12 @@ class Serialise:
                     f"The file '{filename}' contains invalid JSON: {e!s}"
                 ) from e
 
-        # Validate schema version
+        # Validate schema version (accept 1.0 for backward compatibility)
         schema_version = data.get("schema_version", SUPPORTED_SCHEMA_VERSION)
-        if schema_version != SUPPORTED_SCHEMA_VERSION:
+        if schema_version not in ["1.0", SUPPORTED_SCHEMA_VERSION]:
             raise ValueError(
                 f"Unsupported schema version: {schema_version}. "
-                f"Expected: {SUPPORTED_SCHEMA_VERSION}"
+                f"Expected: 1.0 or {SUPPORTED_SCHEMA_VERSION}"
             )
 
         # Extract geometry data
@@ -722,7 +741,7 @@ class Serialise:
                 "options": method.options if hasattr(method, "options") else {},
             }
 
-        SCHEMA_VERSION = "1.0"
+        SCHEMA_VERSION = "1.1"
         spatial_methods_json = {
             "schema_version": SCHEMA_VERSION,
             "pybamm_version": pybamm.__version__,
@@ -810,12 +829,12 @@ class Serialise:
                     f"The file '{filename}' contains invalid JSON: {e!s}"
                 ) from e
 
-        # Validate schema version
+        # Validate schema version (accept 1.0 for backward compatibility)
         schema_version = data.get("schema_version", SUPPORTED_SCHEMA_VERSION)
-        if schema_version != SUPPORTED_SCHEMA_VERSION:
+        if schema_version not in ["1.0", SUPPORTED_SCHEMA_VERSION]:
             raise ValueError(
                 f"Unsupported schema version: {schema_version}. "
-                f"Expected: {SUPPORTED_SCHEMA_VERSION}"
+                f"Expected: 1.0 or {SUPPORTED_SCHEMA_VERSION}"
             )
 
         # Extract spatial methods data
@@ -876,7 +895,7 @@ class Serialise:
             else:
                 raise ValueError(f"Unexpected key type in var_pts: {type(key)}")
 
-        SCHEMA_VERSION = "1.0"
+        SCHEMA_VERSION = "1.1"
         var_pts_json = {
             "schema_version": SCHEMA_VERSION,
             "pybamm_version": pybamm.__version__,
@@ -959,12 +978,12 @@ class Serialise:
                     f"The file '{filename}' contains invalid JSON: {e!s}"
                 ) from e
 
-        # Validate schema version
+        # Validate schema version (accept 1.0 for backward compatibility)
         schema_version = data.get("schema_version", SUPPORTED_SCHEMA_VERSION)
-        if schema_version != SUPPORTED_SCHEMA_VERSION:
+        if schema_version not in ["1.0", SUPPORTED_SCHEMA_VERSION]:
             raise ValueError(
                 f"Unsupported schema version: {schema_version}. "
-                f"Expected: {SUPPORTED_SCHEMA_VERSION}"
+                f"Expected: 1.0 or {SUPPORTED_SCHEMA_VERSION}"
             )
 
         # Extract var_pts data
@@ -1002,7 +1021,7 @@ class Serialise:
                 "module": submesh_class.__module__,
             }
 
-        SCHEMA_VERSION = "1.0"
+        SCHEMA_VERSION = "1.1"
         submesh_types_json = {
             "schema_version": SCHEMA_VERSION,
             "pybamm_version": pybamm.__version__,
@@ -1087,12 +1106,12 @@ class Serialise:
                     f"The file '{filename}' contains invalid JSON: {e!s}"
                 ) from e
 
-        # Validate schema version
+        # Validate schema version (accept 1.0 for backward compatibility)
         schema_version = data.get("schema_version", SUPPORTED_SCHEMA_VERSION)
-        if schema_version != SUPPORTED_SCHEMA_VERSION:
+        if schema_version not in ["1.0", SUPPORTED_SCHEMA_VERSION]:
             raise ValueError(
                 f"Unsupported schema version: {schema_version}. "
-                f"Expected: {SUPPORTED_SCHEMA_VERSION}"
+                f"Expected: 1.0 or {SUPPORTED_SCHEMA_VERSION}"
             )
 
         # Extract submesh types data
@@ -1164,6 +1183,9 @@ class Serialise:
         >>> loaded_model = Serialise.load_custom_model("basicdfn_model.json")
 
         """
+        # Reset caches for a clean deserialization
+        _reset_serialization_caches()
+
         if isinstance(filename, dict):
             data = filename
         else:
@@ -1177,12 +1199,12 @@ class Serialise:
                     f"The model defined in the file '{filename}' contains invalid JSON: {e!s}"
                 ) from e
 
-        # Validate outer structure
+        # Validate outer structure (accept 1.0 for backward compatibility)
         schema_version = data.get("schema_version", SUPPORTED_SCHEMA_VERSION)
-        if schema_version != SUPPORTED_SCHEMA_VERSION:
+        if schema_version not in ["1.0", SUPPORTED_SCHEMA_VERSION]:
             raise ValueError(
                 f"Unsupported schema version: {schema_version}. "
-                f"Expected: {SUPPORTED_SCHEMA_VERSION}"
+                f"Expected: 1.0 or {SUPPORTED_SCHEMA_VERSION}"
             )
 
         model_data = data.get("model")
@@ -1222,17 +1244,96 @@ class Serialise:
         model = base_cls()
         model.name = model_data["name"]
         model.schema_version = schema_version
+        # Restore model options if present
+        # Convert lists back to tuples (JSON converts tuples to lists)
+        if "options" in model_data:
+            options_dict = model_data["options"]
+            # Recursively convert lists to tuples for options that expect tuples
+            # (e.g., SEI option can be a 2-tuple for different electrode behavior)
+            if isinstance(options_dict, dict):
+                converted_options = {}
+                for key, value in options_dict.items():
+                    if isinstance(value, list):
+                        # Convert list to tuple (for options like SEI that can be tuples)
+                        converted_options[key] = tuple(value)
+                    else:
+                        converted_options[key] = value
+                model.options = converted_options
+            else:
+                model.options = options_dict
 
+        # Pre-populate cache by deserializing all unique symbols
+        # This ensures references are resolved when building the model structure
+        # Collect all JSON symbol definitions (not pure references)
+        all_symbols = []
+        for _, rhs_json in model_data["rhs"]:
+            all_symbols.append(rhs_json)
+        for _, alg_json in model_data["algebraic"]:
+            all_symbols.append(alg_json)
+        for _, ic_json in model_data["initial_conditions"]:
+            all_symbols.append(ic_json)
+        for variable_json, bc_dict in model_data["boundary_conditions"]:
+            for side, bc_value in bc_dict.items():
+                try:
+                    expr_json, _ = bc_value
+                    all_symbols.append(expr_json)
+                except (TypeError, ValueError) as e:
+                    raise ValueError(
+                        f"Failed to convert boundary condition for variable {variable_json} "
+                        f"on side '{side}': {e!s}"
+                    ) from e
+        for event_data in model_data["events"]:
+            all_symbols.append(event_data["expression"])
+        for var_json in model_data["variables"].values():
+            all_symbols.append(var_json)
+
+        # Also collect LHS variable definitions
         all_variable_keys = (
             [lhs_json for lhs_json, _ in model_data["rhs"]]
             + [lhs_json for lhs_json, _ in model_data["initial_conditions"]]
             + [lhs_json for lhs_json, _ in model_data["algebraic"]]
             + [variable_json for variable_json, _ in model_data["boundary_conditions"]]
         )
+        all_symbols.extend(all_variable_keys)
 
+        # Deserialize all symbols to populate cache (ignore pure references)
+        # Do multiple passes until no new symbols are cached (handles forward references)
+        max_passes = 3
+        for _ in range(max_passes):
+            newly_cached = 0
+            for symbol_json in all_symbols:
+                if isinstance(symbol_json, dict):
+                    # Skip pure references
+                    if len(symbol_json) == 1 and (
+                        "py/ref" in symbol_json or "r" in symbol_json
+                    ):
+                        continue
+                    # Check if already cached
+                    ref_id = symbol_json.get("py/ref") or symbol_json.get("r")
+                    if ref_id is not None and ref_id in _deserialized_symbols:
+                        continue
+                    # Deserialize to populate cache
+                    try:
+                        convert_symbol_from_json(symbol_json)
+                        newly_cached += 1
+                    except Exception:
+                        # If it fails due to forward reference, it will work on next pass
+                        pass
+            # If nothing new was cached, we're done
+            if newly_cached == 0:
+                break
+
+        # Build symbol_map for LHS lookups
         symbol_map = {}
         for variable_json in all_variable_keys:
+            # Skip pure references
+            if isinstance(variable_json, dict):
+                if len(variable_json) == 1 and (
+                    "py/ref" in variable_json or "r" in variable_json
+                ):
+                    continue
             try:
+                # Should now work since cache is populated
                 symbol = convert_symbol_from_json(variable_json)
                 key = Serialise._create_symbol_key(variable_json)
                 symbol_map[key] = symbol
@@ -1244,7 +1345,12 @@ class Serialise:
         model.rhs = {}
         for lhs_json, rhs_expr_json in model_data["rhs"]:
             try:
-                lhs = symbol_map[Serialise._create_symbol_key(lhs_json)]
+                lhs_key = Serialise._create_symbol_key(lhs_json)
+                # Check if it's in symbol_map, otherwise deserialize from cache
+                if lhs_key in symbol_map:
+                    lhs = symbol_map[lhs_key]
+                else:
+                    lhs = convert_symbol_from_json(lhs_json)
                 rhs = convert_symbol_from_json(rhs_expr_json)
                 model.rhs[lhs] = rhs
             except Exception as e:
@@ -1255,7 +1361,11 @@ class Serialise:
         model.algebraic = {}
         for lhs_json, algebraic_expr_json in model_data["algebraic"]:
             try:
-                lhs = symbol_map[Serialise._create_symbol_key(lhs_json)]
+                lhs_key = Serialise._create_symbol_key(lhs_json)
+                if lhs_key in symbol_map:
+                    lhs = symbol_map[lhs_key]
+                else:
+                    lhs = convert_symbol_from_json(lhs_json)
                 rhs = convert_symbol_from_json(algebraic_expr_json)
                 model.algebraic[lhs] = rhs
             except Exception as e:
@@ -1266,7 +1376,11 @@ class Serialise:
         model.initial_conditions = {}
         for lhs_json, initial_value_json in model_data["initial_conditions"]:
             try:
-                lhs = symbol_map[Serialise._create_symbol_key(lhs_json)]
+                lhs_key = Serialise._create_symbol_key(lhs_json)
+                if lhs_key in symbol_map:
+                    lhs = symbol_map[lhs_key]
+                else:
+                    lhs = convert_symbol_from_json(lhs_json)
                 rhs = convert_symbol_from_json(initial_value_json)
                 model.initial_conditions[lhs] = rhs
             except Exception as e:
@@ -1277,7 +1391,11 @@ class Serialise:
         model.boundary_conditions = {}
         for variable_json, condition_dict in model_data["boundary_conditions"]:
             try:
-                variable = symbol_map[Serialise._create_symbol_key(variable_json)]
+                var_key = Serialise._create_symbol_key(variable_json)
+                if var_key in symbol_map:
+                    variable = symbol_map[var_key]
+                else:
+                    variable = convert_symbol_from_json(variable_json)
                 sides = {}
                 for side, (expression_json, boundary_type) in condition_dict.items():
                     try:
@@ -1298,7 +1416,9 @@ class Serialise:
             try:
                 name = event_data["name"]
                 expr = convert_symbol_from_json(event_data["expression"])
-                event_type = event_data["event_type"]
+                # Convert event_type from string to EventType enum
+                event_type_str = event_data.get("event_type", "TERMINATION")
+                event_type = pybamm.EventType[event_type_str]
                 model.events.append(pybamm.Event(name, expr, event_type))
             except Exception as e:
                 raise ValueError(
@@ -1317,6 +1437,20 @@ class Serialise:
                 raise ValueError(
                     f"Failed to convert variable '{variable_name}': {e!s}"
                 ) from e
+
+        # Ensure the model is in a clean, unprocessed state
+        # Reset any attributes that might interfere with processing
+        if hasattr(model, "_processed"):
+            model._processed = False
+        if hasattr(model, "_built"):
+            model._built = False
+        # Clear any cached geometry or mesh
+        if hasattr(model, "_geometry"):
+            model._geometry = None
+        if hasattr(model, "_mesh"):
+            model._mesh = None
+        if hasattr(model, "_disc"):
+            model._disc = None
 
         return model
 
@@ -1610,7 +1744,8 @@ def convert_symbol_from_json(json_data):
     pybamm.Symbol
         The reconstructed PyBaMM symbolic expression
     """
-    if isinstance(json_data, float | int | bool):
+    # Handle non-dict types
+    if isinstance(json_data, float | int | bool | numbers.Number | list):
         return json_data
 
     if isinstance(json_data, str):
@@ -1618,95 +1753,222 @@ def convert_symbol_from_json(json_data):
 
     if json_data is None:
         return None
-    if "type" not in json_data:
+
+    # Check for reference first (handle both abbreviated "r" and full "py/ref")
+    if isinstance(json_data, dict):
+        # Check for pure reference (either "r" or "py/ref" as only key)
+        if len(json_data) == 1:
+            ref_id = None
+            if "r" in json_data:
+                ref_id = json_data["r"]
+            elif "py/ref" in json_data:
+                ref_id = json_data["py/ref"]
+
+            if ref_id is not None:
+                if ref_id in _deserialized_symbols:
+                    return _deserialized_symbols[ref_id]
+                else:
+                    # Reference seen before definition - this shouldn't happen in normal flow
+                    # but if it does, raise an error that will be caught and retried
+                    raise ValueError(
+                        f"Reference {ref_id} encountered before its definition. "
+                        "This may indicate the symbol needs to be deserialized first."
+                    )
+
+    if not isinstance(json_data, dict):
+        raise ValueError(f"Expected dict, got {type(json_data)}: {json_data}")
+
+    # Check for type key (handles both "type" and abbreviated "t")
+    if "type" not in json_data and "t" not in json_data:
         raise ValueError(f"Missing 'type' key in JSON data: {json_data}")
-    if isinstance(json_data, numbers.Number | list):
-        return json_data
-    elif json_data["type"] == "Parameter":
+
+    # Check cache - prefer ref_id if available (faster lookup, no key computation)
+    ref_id = json_data.get("py/ref") or json_data.get("r")
+    if ref_id is not None and ref_id in _deserialized_symbols:
+        return _deserialized_symbols[ref_id]
+
+    # Deserialize the symbol
+    symbol = _deserialize_symbol_from_json(json_data)
+
+    # Store in cache using ref_id (if available)
+    if ref_id is not None:
+        _deserialized_symbols[ref_id] = symbol
+
+    return symbol
+
+
+def _deserialize_symbol_from_json(json_data):
+    """Internal helper to deserialize a symbol without caching.
+    The caching is handled by convert_symbol_from_json.
+    """
+    # Get type (handle both "type" and "t" keys)
+    type_name = json_data.get("type") or json_data.get("t")
+    if type_name is None:
+        raise ValueError(f"Missing 'type' key in JSON data: {json_data}")
+    # Expand type abbreviation if present
+    type_name = _TYPE_EXPANSIONS.get(type_name, type_name)
+
+    # Helper to expand domains (handle both "domains" and "d" keys)
+    def get_domains():
+        domains_data = json_data.get("domains") or json_data.get("d")
+        if domains_data is not None:
+            return _expand_domains(domains_data)
+        return {"primary": [], "secondary": [], "tertiary": [], "quaternary": []}
+
+    if type_name == "Parameter":
         # Convert stored parameters back to PyBaMM Parameter objects
-        return pybamm.Parameter(json_data["name"])
-    elif json_data["type"] == "Scalar":
+        return pybamm.Parameter(json_data.get("name") or json_data.get("n"))
+    elif type_name == "Scalar":
         # Convert stored numerical values back to PyBaMM Scalar objects
-        return pybamm.Scalar(json_data["value"])
-    elif json_data["type"] == "Interpolant":
+        # Use explicit check to handle 0 correctly (can't use 'or' since 0 is falsy)
+        if "value" in json_data:
+            value = json_data["value"]
+        elif "v" in json_data:
+            value = json_data["v"]
+        else:
+            value = 0  # Default to 0 if not found
+        # Handle infinity strings
+        if value == "Inf":
+            value = float("inf")
+        elif value == "-Inf":
+            value = float("-inf")
+        return pybamm.Scalar(value)
+
+    # Helper to get value with fallback for abbreviated keys
+    def get_key(key, abbrev=None, default=None):
+        if abbrev is None:
+            abbrev = _KEY_ABBREVIATIONS.get(key, key)
+        if key in json_data:
+            return json_data[key]
+        if abbrev in json_data:
+            return json_data[abbrev]
+        return default
+
+    # Helper to get children (handle both "children" and "c")
+    def get_children():
+        if "children" in json_data:
+            return json_data["children"]
+        if "c" in json_data:
+            return json_data["c"]
+        return []
+
+    if type_name == "Interpolant":
         return pybamm.Interpolant(
             [np.array(x) for x in json_data["x"]],
             np.array(json_data["y"]),
-            [convert_symbol_from_json(c) for c in json_data["children"]],
-            name=json_data["name"],
-            interpolator=json_data["interpolator"],
-            entries_string=json_data["entries_string"],
+            [convert_symbol_from_json(c) for c in get_children()],
+            name=get_key("name", "n"),
+            interpolator=get_key("interpolator", "i"),
+            entries_string=get_key("entries_string", "es"),
         )
-    elif json_data["type"] == "FunctionParameter":
-        diff_variable = json_data["diff_variable"]
+    elif type_name == "FunctionParameter":
+        diff_variable = get_key("diff_variable", "dv")
         if diff_variable is not None:
             diff_variable = convert_symbol_from_json(diff_variable)
-        # Use the parameter name as print_name to avoid showing
-        # 'convert_symbol_from_json' in displays
+        inputs_key = get_key("inputs", "in", {})
         return pybamm.FunctionParameter(
-            json_data["name"],
-            {k: convert_symbol_from_json(v) for k, v in json_data["inputs"].items()},
+            get_key("name", "n"),
+            {k: convert_symbol_from_json(v) for k, v in inputs_key.items()},
             diff_variable=diff_variable,
-            print_name=json_data["name"],
+            print_name=get_key("name", "n"),
         )
-    elif json_data["type"] == "ExpressionFunctionParameter":
+    elif type_name == "ExpressionFunctionParameter":
+        children = get_children()
         return ExpressionFunctionParameter(
-            json_data["name"],
-            convert_symbol_from_json(json_data["children"][0]),
-            json_data["func_name"],
-            json_data["func_args"],
+            get_key("name", "n"),
+            convert_symbol_from_json(children[0]) if children else None,
+            get_key("func_name", "fn"),
+            get_key("func_args", "fa"),
         )
-    elif json_data["type"] == "PrimaryBroadcast":
-        child = convert_symbol_from_json(json_data["children"][0])
-        domain = json_data["broadcast_domain"]
-        return pybamm.PrimaryBroadcast(child, domain)
-    elif json_data["type"] == "FullBroadcast":
-        child = convert_symbol_from_json(json_data["children"][0])
-        domains = json_data["domains"]
-        return pybamm.FullBroadcast(child, broadcast_domains=domains)
-    elif json_data["type"] == "SecondaryBroadcast":
-        child = convert_symbol_from_json(json_data["children"][0])
-        domain = json_data["broadcast_domain"]
-        return pybamm.SecondaryBroadcast(child, domain)
-    elif json_data["type"] == "BoundaryValue":
-        child = convert_symbol_from_json(json_data["children"][0])
-        side = json_data["side"]
-        return pybamm.BoundaryValue(child, side)
-    elif json_data["type"] == "Variable":
-        bounds = tuple(
-            convert_symbol_from_json(b)
-            for b in json_data.get("bounds", [-float("inf"), float("inf")])
+    elif type_name == "PrimaryBroadcast":
+        children = get_children()
+        domain = get_key("broadcast_domain", "bd")
+        return pybamm.PrimaryBroadcast(
+            convert_symbol_from_json(children[0]) if children else None, domain
         )
+    elif type_name == "FullBroadcast":
+        children = get_children()
+        domains = _expand_domains(get_key("domains", "d"))
+        return pybamm.FullBroadcast(
+            convert_symbol_from_json(children[0]) if children else None,
+            broadcast_domains=domains,
+        )
+    elif type_name == "SecondaryBroadcast":
+        children = get_children()
+        domain = get_key("broadcast_domain", "bd")
+        return pybamm.SecondaryBroadcast(
+            convert_symbol_from_json(children[0]) if children else None, domain
+        )
+    elif type_name == "BoundaryValue":
+        children = get_children()
+        side = get_key("side", "s")
+        return pybamm.BoundaryValue(
+            convert_symbol_from_json(children[0]) if children else None, side
+        )
+    elif type_name == "Variable":
+        bounds_data = get_key("bounds", "b", [-float("inf"), float("inf")])
+        bounds = tuple(convert_symbol_from_json(b) for b in bounds_data)
         return pybamm.Variable(
-            json_data["name"],
-            domains=json_data["domains"],
+            get_key("name", "n"),
+            domains=get_domains(),
             bounds=bounds,
         )
-    elif json_data["type"] == "IndefiniteIntegral":
-        child = convert_symbol_from_json(json_data["children"][0])
-        integration_var_json = json_data["integration_variable"]
+    elif type_name == "IndefiniteIntegral":
+        children = get_children()
+        integration_var_json = get_key("integration_variable", "iv")
         integration_variable = convert_symbol_from_json(integration_var_json)
         if not isinstance(integration_variable, pybamm.SpatialVariable):
             raise TypeError(
                 f"Expected SpatialVariable, got {type(integration_variable)}"
             )
-        return pybamm.IndefiniteIntegral(child, [integration_variable])
-    elif json_data["type"] == "SpatialVariable":
+        return pybamm.IndefiniteIntegral(
+            convert_symbol_from_json(children[0]) if children else None,
+            [integration_variable],
+        )
+    elif type_name == "SpatialVariable":
         return pybamm.SpatialVariable(
-            json_data["name"],
-            coord_sys=json_data.get("coord_sys", "cartesian"),
-            domains=json_data.get("domains"),
+            get_key("name", "n"),
+            coord_sys=get_key("coord_sys", "cs", "cartesian"),
+            domains=_expand_domains(get_key("domains", "d")),
         )
-    elif json_data["type"] == "Time":
+    elif type_name == "Time":
         return pybamm.Time()
-    elif json_data["type"] == "Symbol":
+    elif type_name == "Symbol":
         return pybamm.Symbol(
-            json_data["name"],
-            domains=json_data.get("domains", {}),
+            get_key("name", "n"),
+            domains=get_domains(),
         )
-    elif "children" in json_data:
-        return getattr(pybamm, json_data["type"])(
-            *[convert_symbol_from_json(c) for c in json_data["children"]]
+    elif type_name == "ConcatenationVariable":
+        children = get_children()
+        # Convert children to symbols, ensuring they're all Symbols
+        deserialized_children = []
+        for i, child_json in enumerate(children):
+            if isinstance(child_json, str):
+                # If child is a string, it might be a reference or name - this shouldn't happen
+                raise ValueError(
+                    f"ConcatenationVariable child [{i}] is a string '{child_json}' "
+                    f"instead of a symbol dict. This may indicate a serialization issue."
+                )
+            try:
+                child_symbol = convert_symbol_from_json(child_json)
+            except Exception as e:
+                raise ValueError(
+                    f"Failed to deserialize ConcatenationVariable child [{i}]: {e!s}. "
+                    f"Child JSON: {child_json}"
+                ) from e
+            if not isinstance(child_symbol, pybamm.Symbol):
+                raise ValueError(
+                    f"ConcatenationVariable child [{i}] deserialized to {type(child_symbol).__name__} "
+                    f"instead of a Symbol. Got: {child_symbol} (value: {child_symbol!r})"
+                )
+            deserialized_children.append(child_symbol)
+        # ConcatenationVariable automatically derives its name from children
+        # Only pass name if it was explicitly stored and is different
+        return pybamm.ConcatenationVariable(*deserialized_children)
+    elif "children" in json_data or "c" in json_data:
+        # Use expanded type name for getattr
+        return getattr(pybamm, type_name)(
+            *[convert_symbol_from_json(c) for c in get_children()]
         )
     else:
         raise ValueError(f"Unknown symbol type: {json_data['type']}")
@@ -1726,6 +1988,232 @@ def convert_symbol_to_json(symbol):
     dict
         The JSON-serializable dictionary
     """
+    # Handle non-symbol types (numbers, lists) - these don't need memoization
+    if isinstance(symbol, numbers.Number | list):
+        return symbol
+
+    # Check cache first for memoization (only for Symbol types)
+    if isinstance(symbol, pybamm.Symbol):
+        symbol_id = id(symbol)
+        if symbol_id in _serialized_symbols:
+            # Return a reference to the already-serialized symbol
+            ref_id, _ = _serialized_symbols[symbol_id]
+            return {"py/ref": ref_id}
+
+    # Serialize the symbol
+    json_dict = _serialize_symbol_to_json(symbol)
+
+    # Store in cache if it's a Symbol type
+    if isinstance(symbol, pybamm.Symbol):
+        global _serialized_ref_counter
+        symbol_id = id(symbol)
+        ref_id = _serialized_ref_counter
+        _serialized_ref_counter += 1
+        # Store both ref_id and full JSON in cache (before compaction for cache lookup)
+        _serialized_symbols[symbol_id] = (ref_id, json_dict)
+        # Include ref_id in the JSON so we can resolve it during deserialization
+        json_dict["py/ref"] = ref_id
+
+    # Compact the JSON dict (abbreviate keys, omit nulls, etc.)
+    return _compact_json_dict(json_dict)
+
+
+# Type name abbreviations to reduce JSON size
+# Use mathematical symbols where appropriate for maximum compression
+_TYPE_ABBREVIATIONS = {
+    # Binary operators - use symbols
+    "Multiplication": "*",
+    "Division": "/",
+    "Addition": "+",
+    "Subtraction": "-",
+    "Power": "**",
+    "Modulo": "%",
+    "MatrixMultiplication": "@",
+    "Equality": "==",
+    "Minimum": "min",
+    "Maximum": "max",
+    # Unary operators - use short names
+    "Negate": "neg",  # Use "neg" to avoid conflict with binary "-"
+    "AbsoluteValue": "abs",
+    "Transpose": "T",
+    "Sign": "sign",
+    "Floor": "floor",
+    "Ceiling": "ceil",
+    # Other operators
+    "PrimaryBroadcast": "PBroad",
+    "SecondaryBroadcast": "SBroad",
+    "FullBroadcast": "FBroad",
+    "IndefiniteIntegral": "Int",
+    "BoundaryValue": "BVal",
+    "ConcatenationVariable": "ConcatVar",
+    "ExpressionFunctionParameter": "ExprFP",
+    "FunctionParameter": "FP",
+}
+
+# Reverse mapping for deserialization
+_TYPE_EXPANSIONS = {v: k for k, v in _TYPE_ABBREVIATIONS.items()}
+
+# Key abbreviations to reduce JSON size
+_KEY_ABBREVIATIONS = {
+    "type": "t",
+    "children": "c",
+    "domains": "d",
+    "name": "n",
+    "value": "v",
+    "broadcast_domain": "bd",
+    "integration_variable": "iv",
+    "side": "s",
+    "inputs": "in",
+    "diff_variable": "dv",
+    "func_name": "fn",
+    "func_args": "fa",
+    "bounds": "b",
+    "coord_sys": "cs",
+    "interpolator": "i",
+    "entries_string": "es",
+    "py/ref": "r",  # Keep short already
+}
+
+# Reverse mapping for deserialization
+_KEY_EXPANSIONS = {v: k for k, v in _KEY_ABBREVIATIONS.items()}
+
+
+def _compact_json_dict(d):
+    """Compact a JSON dictionary by:
+    1. Using abbreviated keys
+    2. Omitting null values
+    3. Omitting empty arrays
+    4. Omitting redundant names (when name == type or name == '*')
+    5. Recursively compacting nested structures
+    """
+    if isinstance(d, dict):
+        compact = {}
+        type_val = d.get("type") or d.get("t")
+        name_val = d.get("name") or d.get("n")
+
+        for key, value in d.items():
+            # Skip null values
+            if value is None:
+                continue
+
+            # Skip empty arrays
+            if isinstance(value, list) and len(value) == 0:
+                continue
+
+            # Skip redundant names
+            if key == "name" and (name_val == type_val or name_val == "*"):
+                continue
+
+            # Recursively compact nested structures
+            if isinstance(value, dict):
+                value = _compact_json_dict(value)
+            elif isinstance(value, list):
+                value = [
+                    _compact_json_dict(item) if isinstance(item, dict) else item
+                    for item in value
+                ]
+
+            # Use abbreviated key
+            abbrev_key = _KEY_ABBREVIATIONS.get(key, key)
+            compact[abbrev_key] = value
+
+        return compact
+    elif isinstance(d, list):
+        return [
+            _compact_json_dict(item) if isinstance(item, dict) else item for item in d
+        ]
+    else:
+        return d
+
+
+def _compact_domains(domains):
+    """Compact domain representation by omitting empty domains and using
+    shorter format when possible.
+    """
+    if not domains:
+        return None
+
+    # Check if all domains are empty
+    if all(not v for v in domains.values()):
+        return None
+
+    # Check if only primary domain is non-empty (common case)
+    if (
+        domains.get("primary")
+        and not domains.get("secondary")
+        and not domains.get("tertiary")
+        and not domains.get("quaternary")
+    ):
+        return domains["primary"]
+
+    # Return compact dict with only non-empty domains
+    compact = {}
+    for key, value in domains.items():
+        if value:  # Only include non-empty domains
+            compact[key] = value
+
+    # If only one domain is non-empty, return just that value
+    if len(compact) == 1:
+        return next(iter(compact.values()))
+
+    return compact if compact else None
+
+
+def _expand_domains(domains_data):
+    """Expand compact domain representation back to full format."""
+    if domains_data is None:
+        return {"primary": [], "secondary": [], "tertiary": [], "quaternary": []}
+
+    # If it's a list, it's the primary domain
+    if isinstance(domains_data, list):
+        return {
+            "primary": domains_data,
+            "secondary": [],
+            "tertiary": [],
+            "quaternary": [],
+        }
+
+    # If it's a dict, expand with defaults
+    if isinstance(domains_data, dict):
+        result = {"primary": [], "secondary": [], "tertiary": [], "quaternary": []}
+        result.update(domains_data)
+        return result
+
+    # Fallback
+    return {"primary": [], "secondary": [], "tertiary": [], "quaternary": []}
+
+
+def _expand_json_dict(d):
+    """Expand abbreviated keys back to full keys for deserialization."""
+    if isinstance(d, dict):
+        expanded = {}
+        for key, value in d.items():
+            # Expand key
+            full_key = _KEY_EXPANSIONS.get(key, key)
+
+            # Recursively expand nested structures
+            if isinstance(value, dict):
+                value = _expand_json_dict(value)
+            elif isinstance(value, list):
+                value = [
+                    _expand_json_dict(item) if isinstance(item, dict) else item
+                    for item in value
+                ]
+
+            expanded[full_key] = value
+        return expanded
+    elif isinstance(d, list):
+        return [
+            _expand_json_dict(item) if isinstance(item, dict) else item for item in d
+        ]
+    else:
+        return d
+
+
+def _serialize_symbol_to_json(symbol):
+    """Internal helper to serialize a symbol without caching.
+    The caching is handled by convert_symbol_to_json.
+    """
     if isinstance(symbol, ExpressionFunctionParameter):
         return {
             "type": "ExpressionFunctionParameter",
@@ -1734,27 +2222,32 @@ def convert_symbol_to_json(symbol):
             "func_name": symbol.func_name,
             "func_args": symbol.func_args,
         }
-    elif isinstance(symbol, numbers.Number | list):
-        return symbol
     elif isinstance(symbol, pybamm.Parameter):
         # Parameters are stored with their type and name
         return {"type": "Parameter", "name": symbol.name}
     elif isinstance(symbol, pybamm.Scalar):
         # Scalar values are stored with their numerical value
-        return {"type": "Scalar", "value": symbol.value}
+        # Use special values for infinity to save space
+        value = symbol.value
+        if value == float("inf"):
+            value = "Inf"
+        elif value == float("-inf"):
+            value = "-Inf"
+        return {"type": "Scalar", "value": value}
     elif isinstance(symbol, pybamm.SpecificFunction):
         if symbol.__class__ == pybamm.SpecificFunction:
             raise NotImplementedError("SpecificFunction is not supported directly")
         else:
             # Subclasses of SpecificFunction (e.g. Exp, Sin, etc.) can be reconstructed
             # from only the children
+            type_name = symbol.__class__.__name__
             return {
-                "type": symbol.__class__.__name__,
+                "type": _TYPE_ABBREVIATIONS.get(type_name, type_name),
                 "children": [convert_symbol_to_json(c) for c in symbol.children],
             }
     elif isinstance(symbol, pybamm.PrimaryBroadcast):
         json_dict = {
-            "type": "PrimaryBroadcast",
+            "type": "PBroad",
             "children": [convert_symbol_to_json(symbol.child)],
             "broadcast_domain": symbol.broadcast_domain,
         }
@@ -1766,30 +2259,30 @@ def convert_symbol_to_json(symbol):
             else symbol.integration_variable
         )
         json_dict = {
-            "type": "IndefiniteIntegral",
+            "type": "Int",
             "children": [convert_symbol_to_json(symbol.child)],
             "integration_variable": convert_symbol_to_json(integration_var),
         }
         return json_dict
     elif isinstance(symbol, pybamm.BoundaryValue):
         json_dict = {
-            "type": "BoundaryValue",
+            "type": "BVal",
             "side": symbol.side,
             "children": [convert_symbol_to_json(symbol.orphans[0])],
         }
         return json_dict
     elif isinstance(symbol, pybamm.SecondaryBroadcast):
         json_dict = {
-            "type": "SecondaryBroadcast",
+            "type": "SBroad",
             "children": [convert_symbol_to_json(symbol.child)],
             "broadcast_domain": symbol.broadcast_domain,
         }
         return json_dict
     elif isinstance(symbol, pybamm.FullBroadcast):
         json_dict = {
-            "type": "FullBroadcast",
+            "type": "FBroad",
             "children": [convert_symbol_to_json(symbol.child)],
-            "domains": symbol.domains,
+            "domains": _compact_domains(symbol.domains),
         }
         return json_dict
     elif isinstance(symbol, pybamm.Interpolant):
@@ -1806,16 +2299,19 @@ def convert_symbol_to_json(symbol):
         json_dict = {
             "type": "Variable",
             "name": symbol.name,
-            "domains": symbol.domains,
             "bounds": [
                 convert_symbol_to_json(symbol.bounds[0]),
                 convert_symbol_to_json(symbol.bounds[1]),
             ],
         }
+        # Only include domains if non-empty
+        compact_domains = _compact_domains(symbol.domains)
+        if compact_domains is not None:
+            json_dict["domains"] = compact_domains
         return json_dict
     elif isinstance(symbol, pybamm.ConcatenationVariable):
         json_dict = {
-            "type": "ConcatenationVariable",
+            "type": "ConcatVar",
             "name": symbol.name,
             "children": [convert_symbol_to_json(child) for child in symbol.children],
         }
@@ -1831,19 +2327,24 @@ def convert_symbol_to_json(symbol):
         diff_variable = symbol.diff_variable
         if diff_variable is not None:
             diff_variable = convert_symbol_to_json(diff_variable)
+        type_name = symbol.__class__.__name__
         return {
-            "type": symbol.__class__.__name__,
+            "type": _TYPE_ABBREVIATIONS.get(type_name, type_name),
             "inputs": inputs,
             "diff_variable": diff_variable,
             "name": symbol.name,
         }
     elif isinstance(symbol, pybamm.Symbol):
         # Generic fallback for other symbols with children
+        type_name = symbol.__class__.__name__
         json_dict = {
-            "type": symbol.__class__.__name__,
-            "domains": symbol.domains,
+            "type": _TYPE_ABBREVIATIONS.get(type_name, type_name),
             "children": [convert_symbol_to_json(c) for c in symbol.children],
         }
+        # Only include domains if non-empty
+        compact_domains = _compact_domains(symbol.domains)
+        if compact_domains is not None:
+            json_dict["domains"] = compact_domains
         if hasattr(symbol, "name"):
             json_dict["name"] = symbol.name
         return json_dict
