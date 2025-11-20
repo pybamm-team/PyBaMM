@@ -41,7 +41,7 @@ output_variables = [
     "X-averaged negative electrode porosity",
     "X-averaged negative particle surface stoichiometry",
     "X-averaged negative electrode surface potential difference [V]",
-    "Current collector current density",
+    "Current collector current density [A.m-2]",
     "Current [A]",
     "Voltage [V]",
 ]
