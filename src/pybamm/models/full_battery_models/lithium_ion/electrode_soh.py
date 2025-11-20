@@ -561,14 +561,14 @@ class ElectrodeSOHSolver:
     def _solve_full(self, inputs, ics, direction):
         sim = self._get_electrode_soh_sims_full(direction)
         sim.build()
-        sim.built_model.set_initial_conditions_from(ics)
+        sim.built_model.set_initial_conditions_from(ics, inputs=inputs)
         sol = sim.solve([0], inputs=inputs)
         return sol
 
     def _solve_split(self, inputs, ics, direction):
         x100_sim, x0_sim = self._get_electrode_soh_sims_split(direction)
         x100_sim.build()
-        x100_sim.built_model.set_initial_conditions_from(ics)
+        x100_sim.built_model.set_initial_conditions_from(ics, inputs=inputs)
         x100_sol = x100_sim.solve([0], inputs=inputs)
         if self.options["open-circuit potential"] == "MSMR":
             inputs["Un(x_100)"] = x100_sol["Un(x_100)"].data[0]
@@ -577,7 +577,7 @@ class ElectrodeSOHSolver:
             inputs["x_100"] = x100_sol["x_100"].data[0]
             inputs["y_100"] = x100_sol["y_100"].data[0]
         x0_sim.build()
-        x0_sim.built_model.set_initial_conditions_from(ics)
+        x0_sim.built_model.set_initial_conditions_from(ics, inputs=inputs)
         x0_sol = x0_sim.solve([0], inputs=inputs)
 
         return x0_sol
