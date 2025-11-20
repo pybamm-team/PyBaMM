@@ -1,6 +1,14 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
 ## Features
+
+## Bug fixes
+
+- Fix a bug with serialising `InputParameter`s. ([#5289](https://github.com/pybamm-team/PyBaMM/pull/5289))
+
+# [v25.10.1](https://github.com/pybamm-team/PyBaMM/tree/v25.10.1) - 2025-11-14
+
+## Features
 - Allow setting initial conditions from `y_slices` of a `Solution` object. ([#5257](https://github.com/pybamm-team/PyBaMM/pull/5257))
 - Added docstring to `FuzzyDict.copy` explaining its return value and behavior. ([#5242](https://github.com/pybamm-team/PyBaMM/pull/5242))
 
