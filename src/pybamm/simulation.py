@@ -170,32 +170,35 @@ class Simulation:
         if needed. This re-processes the models without rebuilding the mesh and
         discretisation.
         """
-        current_capacity = self._parameter_values.get("Nominal cell capacity [A.h]", None)
-        
+        current_capacity = self._parameter_values.get(
+            "Nominal cell capacity [A.h]", None
+        )
+
         # If capacity hasn't been stored yet or hasn't changed, no update needed
         if not hasattr(self, "_built_nominal_capacity"):
             self._built_nominal_capacity = current_capacity
             return
-        
+
         if self._built_nominal_capacity == current_capacity:
             return
-        
+
         # Capacity has changed, need to re-process the models
         pybamm.logger.info(
             f"Nominal capacity changed from {self._built_nominal_capacity} to "
             f"{current_capacity}. Re-processing experiment models."
         )
-        
+
         # Re-parameterise the experiment with the new capacity
         self._set_up_and_parameterise_experiment(solve_kwargs)
-        
+
         # Re-discretise the models
         self.steps_to_built_models = {}
         self.steps_to_built_solvers = {}
-        for step, model_with_set_params in self.experiment_unique_steps_to_model.items():
-            built_model = self._disc.process_model(
-                model_with_set_params, inplace=True
-            )
+        for (
+            step,
+            model_with_set_params,
+        ) in self.experiment_unique_steps_to_model.items():
+            built_model = self._disc.process_model(model_with_set_params, inplace=True)
             solver = self._solver.copy()
             self.steps_to_built_solvers[step] = solver
             self.steps_to_built_models[step] = built_model
