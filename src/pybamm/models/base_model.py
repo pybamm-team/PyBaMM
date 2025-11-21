@@ -906,7 +906,12 @@ class BaseModel:
         self.build_model_equations()
 
     def set_initial_conditions_from(
-        self, solution, inplace=True, return_type="model", mesh=None
+        self,
+        solution,
+        inputs=None,
+        inplace=True,
+        return_type="model",
+        mesh=None,
     ):
         """
         Update initial conditions with the final states from a Solution object or from
@@ -918,6 +923,8 @@ class BaseModel:
         ----------
         solution : :class:`pybamm.Solution`, or dict
             The solution to use to initialize the model
+        inputs : dict
+            The dictionary of model input parameters.
         inplace : bool, optional
             Whether to modify the model inplace or create a new model (default True)
         return_type : str, optional
@@ -1081,7 +1088,7 @@ class BaseModel:
                 scale, reference = pybamm.Scalar(1), pybamm.Scalar(0)
             initial_conditions[var] = (
                 pybamm.Vector(final_state_eval) - reference
-            ) / scale.evaluate()
+            ) / scale.evaluate(inputs=inputs)
 
         # Also update the concatenated initial conditions if the model is already
         # discretised
