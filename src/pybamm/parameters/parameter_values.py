@@ -866,12 +866,21 @@ class ParameterValues:
                 else:
                     new_children.append(self.process_symbol(child))
 
-            # Get the expression and inputs for the function
+            # Get the expression and inputs for the function.
+            # func_args may include arguments that were not explicitly wired up
+            # in this FunctionParameter (e.g., kwargs with default values). After
+            # serialisation/deserialisation, we only recover the children that were
+            # actually connected.
+            #
+            # Using strict=True here therefore raises a ValueError when there are
+            # more args than children. We allow func_args to be longer than
+            # symbol.children and only build the mapping for the args for which we
+            # actually have children.
             expression = function_parameter.child
             inputs = {
                 arg: child
                 for arg, child in zip(
-                    function_parameter.func_args, symbol.children, strict=True
+                    function_parameter.func_args, symbol.children, strict=False
                 )
             }
 
