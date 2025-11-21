@@ -12,7 +12,7 @@ class SymmetricButlerVolmer(BaseKinetics):
     Submodel which implements the symmetric forward Butler-Volmer equation:
 
     .. math::
-        j = 2 * j_0(c) * \\sinh(ne * F * \\eta_r(c) / RT)
+        j = 2 * j_0(c) * \\sinh(ne * F * \\eta_r(c) / 2RT)
 
     Parameters
     ----------

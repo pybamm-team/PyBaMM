@@ -84,7 +84,7 @@ class BaseHysteresisOpenCircuitPotential(BaseOpenCircuitPotential):
             U_eq = self.phase_param.U(sto_surf, T)
             U_eq_x_av = self.phase_param.U(sto_surf, T)
             U_lith = self.phase_param.U(sto_surf, T, "lithiation")
-            U_lith_bulk = self.phase_param.U(sto_bulk, T_bulk)
+            U_lith_bulk = self.phase_param.U(sto_bulk, T_bulk, "lithiation")
             U_delith = self.phase_param.U(sto_surf, T, "delithiation")
             U_delith_bulk = self.phase_param.U(sto_bulk, T_bulk, "delithiation")
 
