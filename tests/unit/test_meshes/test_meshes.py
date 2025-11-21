@@ -584,6 +584,37 @@ class TestMesh:
 
         assert mesh_json == expected_json
 
+    def test_compute_var_pts_from_thicknesses_cell_size(self):
+        from pybamm.meshes.meshes import compute_var_pts_from_thicknesses
+
+        electrode_thicknesses = {
+            "negative electrode": 100e-6,
+            "separator": 25e-6,
+            "positive electrode": 100e-6,
+        }
+
+        cell_size = 5e-6  # 5 micrometres per cell
+        var_pts = compute_var_pts_from_thicknesses(electrode_thicknesses, cell_size)
+
+        assert isinstance(var_pts, dict)
+        assert all(isinstance(v, dict) for v in var_pts.values())
+        assert var_pts["negative electrode"]["x_n"] == 20
+        assert var_pts["separator"]["x_s"] == 5
+        assert var_pts["positive electrode"]["x_p"] == 20
+
+    def test_compute_var_pts_from_thicknesses_invalid_thickness_type(self):
+        from pybamm.meshes.meshes import compute_var_pts_from_thicknesses
+
+        with pytest.raises(TypeError):
+            compute_var_pts_from_thicknesses(["not", "a", "dict"], 1e-6)
+
+    def test_compute_var_pts_from_thicknesses_invalid_grid_size(self):
+        from pybamm.meshes.meshes import compute_var_pts_from_thicknesses
+
+        electrode_thicknesses = {"negative electrode": 100e-6}
+        with pytest.raises(ValueError):
+            compute_var_pts_from_thicknesses(electrode_thicknesses, -1e-6)
+
 
 class TestMeshGenerator:
     def test_init_name(self):

@@ -40,7 +40,7 @@ jobs:
           enable-cache: true
 
       - name: Install python dependencies
-        run: uv pip install asv[virtualenv]
+        run: uv pip install --system asv
 
       - name: Fetch base branch
         run: |

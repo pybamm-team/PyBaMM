@@ -617,6 +617,14 @@ class TestSerialise:
         t2 = convert_symbol_from_json(j)
         assert isinstance(t2, pybamm.Time)
 
+    def test_serialise_input_parameter(self):
+        """Test InputParameter serialization and deserialization."""
+        ip = pybamm.InputParameter("test_param")
+        j = convert_symbol_to_json(ip)
+        ip_restored = convert_symbol_from_json(j)
+        assert isinstance(ip_restored, pybamm.InputParameter)
+        assert ip_restored.name == "test_param"
+
     def test_convert_symbol_to_json_with_number_and_list(self):
         for val in (0, 3.14, -7, True):
             out = convert_symbol_to_json(val)

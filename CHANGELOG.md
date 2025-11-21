@@ -1,10 +1,27 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
+
+## Features
+
+## Bug fixes
+
+- Fix a bug with serialising `InputParameter`s. ([#5289](https://github.com/pybamm-team/PyBaMM/pull/5289))
+
+# [v25.10.1](https://github.com/pybamm-team/PyBaMM/tree/v25.10.1) - 2025-11-14
+
+## Features
+- Allow setting initial conditions from `y_slices` of a `Solution` object. ([#5257](https://github.com/pybamm-team/PyBaMM/pull/5257))
 - Added docstring to `FuzzyDict.copy` explaining its return value and behavior. ([#5242](https://github.com/pybamm-team/PyBaMM/pull/5242))
+
+## Bug fixes
+
+- Fixed a bug where simulations whose initial conditions violated the events could continue solving. ([#5260](https://github.com/pybamm-team/PyBaMM/pull/5260))
+- Fixed an issues with composite electrode and "swelling only" mechanics sub-models, which were not creating the cell thickness variable. ([#5272](https://github.com/pybamm-team/PyBaMM/pull/5272))
 
 # [v25.10.0](https://github.com/pybamm-team/PyBaMM/tree/v25.10.0) - 2025-10-29
 
 ## Features
 
+- Added uniform grid sizing across subdomains in the x-dimension, ensuring consistent grid spacing when geometries have varying lengths. ([#5253](https://github.com/pybamm-team/PyBaMM/pull/5253))
 - Added the `electrode_phases` kwarg to `plot_voltage_components()` which allows choosing between plotting primary or secondary phase overpotentials. ([#5229](https://github.com/pybamm-team/PyBaMM/pull/5229))
 - Added the `num_steps_no_progress` and `t_no_progress` options in the `IDAKLUSolver` to early terminate the simulation if little progress is detected. ([#5201](https://github.com/pybamm-team/PyBaMM/pull/5201))
 - EvaluateAt symbol: add support for children evaluated at edges ([#5190](https://github.com/pybamm-team/PyBaMM/pull/5190))
