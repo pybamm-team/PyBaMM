@@ -684,6 +684,14 @@ class IDAKLUSolver(pybamm.BaseSolver):
         try:
             solns = self._setup["solver"].solve(
                 t_eval,
+                t_interp,
+                y0full,
+                ydot0full,
+                inputs,
+            )
+        except ValueError as e:
+            # Return from None to replace the C++ runtime error
+            raise pybamm.SolverError(str(e)) from None
         integration_time = timer.time()
 
         return [
