@@ -681,13 +681,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
         atol = self._check_atol_type(atol, y0full.size)
 
         timer = pybamm.Timer()
-        solns = self._setup["solver"].solve(
-            t_eval,
-            t_interp,
-            y0full,
-            ydot0full,
-            inputs,
-        )
+        try:
+            solns = self._setup["solver"].solve(
+                t_eval,
         integration_time = timer.time()
 
         return [
