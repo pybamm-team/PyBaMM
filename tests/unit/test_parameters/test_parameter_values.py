@@ -1298,6 +1298,31 @@ class TestParameterValues:
         finally:
             os.remove(temp_path)
 
+    def test_roundtrip_with_keyword_args(self):
+        def func_no_kwargs(x):
+            return 2 * x
+
+        def func_with_kwargs(x, y=1):
+            return 2 * x
+
+        x = pybamm.Scalar(2)
+        func_param = pybamm.FunctionParameter("func", {"x": x})
+
+        parameter_values = pybamm.ParameterValues({"func": func_no_kwargs})
+        assert parameter_values.evaluate(func_param) == 4.0
+
+        serialized = parameter_values.to_json()
+        parameter_values_loaded = pybamm.ParameterValues.from_json(serialized)
+        assert parameter_values_loaded.evaluate(func_param) == 4.0
+
+        parameter_values = pybamm.ParameterValues({"func": func_with_kwargs})
+        assert parameter_values.evaluate(func_param) == 4.0
+
+        serialized = parameter_values.to_json()
+        parameter_values_loaded = pybamm.ParameterValues.from_json(serialized)
+
+        assert parameter_values_loaded.evaluate(func_param) == 4.0
+
     def test_convert_symbols_in_dict_with_interpolator(self):
         """Test convert_symbols_in_dict with interpolator (covers lines 1154-1170)."""
         import numpy as np
