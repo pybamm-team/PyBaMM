@@ -2,7 +2,7 @@
 
 ## Features
 
-- Adds `silence_sundials_warnings` IDAKLU solver option with `default=False` to match historical output. ([#5290](https://github.com/pybamm-team/PyBaMM/pull/5290))
+- Adds `silence_sundials_errors` IDAKLU solver option with `default=False` to match historical output. ([#5290](https://github.com/pybamm-team/PyBaMM/pull/5290))
 
 ## Bug fixes
 
