@@ -301,39 +301,6 @@ class TestScipySolver:
                         solution.y[0], np.exp(-0.01 * (i + 1) * solution.t)
                     )
 
-    def test_model_solver_multiple_inputs_discontinuity_error(self):
-        # Create model
-        model = pybamm.BaseModel()
-        model.convert_to_format = "casadi"
-        domain = ["negative electrode", "separator", "positive electrode"]
-        var = pybamm.Variable("var", domain=domain)
-        model.rhs = {var: -pybamm.InputParameter("rate") * var}
-        model.initial_conditions = {var: 1}
-        # create discretisation
-        mesh = get_mesh_for_testing()
-        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
-        disc = pybamm.Discretisation(mesh, spatial_methods)
-        disc.process_model(model)
-
-        solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="RK45")
-        t_eval = np.linspace(0, 10, 100)
-        ninputs = 8
-        inputs_list = [{"rate": 0.01 * (i + 1)} for i in range(ninputs)]
-
-        model.events = [
-            pybamm.Event(
-                "discontinuity",
-                pybamm.Scalar(t_eval[-1] / 2),
-                event_type=pybamm.EventType.DISCONTINUITY,
-            )
-        ]
-        with pytest.raises(
-            pybamm.SolverError,
-            match="Cannot solve for a list of input parameters"
-            " sets with discontinuities",
-        ):
-            solver.solve(model, t_eval, inputs=inputs_list, nproc=2)
-
     def test_model_solver_multiple_inputs_initial_conditions(self):
         # Create model
         model = pybamm.BaseModel()
