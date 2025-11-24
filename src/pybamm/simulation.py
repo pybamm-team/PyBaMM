@@ -778,7 +778,7 @@ class Simulation:
                             feasible = False
                             # If none of the cycles worked, raise an error
                             if cycle_num == 1 and step_num == 1:
-                                raise error
+                                raise error from error
                             # Otherwise, just stop this cycle
                             break
 
