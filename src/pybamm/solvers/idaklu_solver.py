@@ -76,6 +76,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 "increment_factor": 1.0,
                 # Enable or disable linear solution scaling
                 "linear_solution_scaling": True,
+                # Silence Sundials errors during solve
+                "silence_sundials_errors": False,
                 ## Main solver
                 # Maximum order of the linear multistep method
                 "max_order_bdf": 5,
@@ -176,6 +178,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             "epsilon_linear_tolerance": 0.05,
             "increment_factor": 1.0,
             "linear_solution_scaling": True,
+            "silence_sundials_errors": False,
             "max_order_bdf": 5,
             "max_num_steps": 100000,
             "dt_init": 0.0,
