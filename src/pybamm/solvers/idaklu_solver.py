@@ -572,10 +572,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
         )
 
     @property
-    def supports_parallel_solve(self):
-        return True
-
-    @property
     def options(self):
         return self._options
 

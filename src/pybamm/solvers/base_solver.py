@@ -96,10 +96,6 @@ class BaseSolver:
         return self._supports_t_eval_discontinuities
 
     @property
-    def supports_parallel_solve(self):
-        return False
-
-    @property
     def on_extrapolation(self):
         return self._on_extrapolation
 

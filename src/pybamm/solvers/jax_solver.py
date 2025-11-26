@@ -196,14 +196,6 @@ class JaxSolver(pybamm.BaseSolver):
         else:
             return jax.jit(solve_model_bdf)
 
-    @property
-    def supports_parallel_solve(self):
-        return True
-
-    @property
-    def requires_explicit_sensitivities(self):
-        return False
-
     def _integrate(
         self,
         model,
@@ -257,7 +249,7 @@ class JaxSolver(pybamm.BaseSolver):
             platform.startswith("gpu")
             or platform.startswith("tpu")
             or platform.startswith("metal")
-        ):
+        ):  # pragma: no cover
             # gpu execution runs faster when parallelised with vmap
             # (see also comment below regarding single-program multiple-data
             #  execution (SPMD) using pmap on multiple XLAs)
@@ -267,7 +259,7 @@ class JaxSolver(pybamm.BaseSolver):
                 key: jnp.array([dic[key] for dic in inputs]) for key in inputs[0]
             }
             y.extend(jax.vmap(self._cached_solves[model])(inputs_v, model.y0_list))
-        else:
+        else:  # pragma: no cover
             # Unknown platform, use serial execution as fallback
             print(
                 f'Unknown platform requested: "{platform}", '
