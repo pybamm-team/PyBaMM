@@ -4,7 +4,6 @@
 
 from pathlib import Path
 
-import numpy as np
 import pytest
 
 import pybamm
@@ -34,18 +33,13 @@ class TestProcessParameterData:
         name, processed = parameter_data
         assert processed[0] == name
 
-    def test_processed_structure(self, parameter_data):
-        name, processed = parameter_data
+    def test_processed_structure(self, parameter_data, assert_is_ndarray):
+        _, processed = parameter_data
+
         assert isinstance(processed[1], tuple)
-        assert isinstance(processed[1][0][0], np.ndarray)
-        assert isinstance(processed[1][1], np.ndarray)
 
-        if len(processed[1][0]) > 1:
-            assert isinstance(processed[1][0][1], np.ndarray)
-
-        elif len(processed[1]) == 3:
-            assert isinstance(processed[1][0][1], np.ndarray)
-            assert isinstance(processed[1][0][2], np.ndarray)
+        # Recursively check that all numpy arrays exist where expected
+        assert_is_ndarray(processed[1])
 
     def test_error(self):
         with pytest.raises(FileNotFoundError, match="Could not find file"):
