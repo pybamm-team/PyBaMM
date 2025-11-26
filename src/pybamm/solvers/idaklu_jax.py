@@ -176,7 +176,7 @@ class IDAKLUJax:
 
         # Otherwise, return a function that slices the output
         def f_isolated(*args, **kwargs):
-            return slice_out(self.jaxify_f(*args, **kwargs))
+            return slice_out(f(*args, **kwargs))
 
         return f_isolated
 
@@ -263,7 +263,7 @@ class IDAKLUJax:
 
         # Otherwise, return a function that slices the output
         def f_isolated(*args, **kwargs):
-            return slice_out(self.jaxify_f(*args, **kwargs))
+            return slice_out(f(*args, **kwargs))
 
         return f_isolated
 
