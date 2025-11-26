@@ -790,8 +790,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
         casadi_format = model.convert_to_format == "casadi"
 
         def handle_y0(y0):
-            if y0 is None:
-                return y0
             if isinstance(y0, casadi.DM):
                 y0 = y0.full()
             return y0.flatten()

@@ -687,7 +687,7 @@ class _Heaviside(BinaryOperator):
     def _t_discon_next(self, value: float):
         raise NotImplementedError(
             "_t_discon_next method should be implemented in subclasses of _Heaviside"
-        )
+        )  # pragma: no cover
 
 
 class EqualHeaviside(_Heaviside):
