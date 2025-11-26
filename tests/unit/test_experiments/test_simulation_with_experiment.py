@@ -1,10 +1,10 @@
+import logging
 import os
 from datetime import datetime
 
 import casadi
 import numpy as np
 import pytest
-import logging
 
 import pybamm
 
