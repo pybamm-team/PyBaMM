@@ -160,9 +160,11 @@ class IDAKLUJax:
         else:
             raise ValueError("Invalid call signature")
 
+        # Capture the index value eagerly to avoid self reference issues
+        index = self.jax_output_variables.index(varname)
+
         # Utility function to slice the output
         def slice_out(out):
-            index = self.jax_output_variables.index(varname)
             if out.ndim == 0:
                 return out  # pragma: no cover
             elif out.ndim == 1:
@@ -245,11 +247,13 @@ class IDAKLUJax:
         else:
             raise ValueError("Invalid call signature")
 
+        # Capture the index array eagerly to avoid self reference issues
+        index = np.array(
+            [self.jax_output_variables.index(varname) for varname in varnames]
+        )
+
         # Utility function to slice the output
         def slice_out(out):
-            index = np.array(
-                [self.jax_output_variables.index(varname) for varname in varnames]
-            )
             if out.ndim == 0:
                 return out  # pragma: no cover
             elif out.ndim == 1:
