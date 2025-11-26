@@ -613,7 +613,9 @@ class BaseSolver:
             discontinuity_events,
         )
 
-    def _set_consistent_initialization(self, model, time, inputs_list):
+    def _set_consistent_initialization(
+        self, model: pybamm.BaseModel, time: float, inputs_list: list[dict]
+    ):
         """
         Set initialized states for the model. This is skipped if the solver is an
         algebraic solver (since this would make the algebraic solver redundant), and if
@@ -637,7 +639,9 @@ class BaseSolver:
         # Calculate consistent states for the algebraic equations
         model.y0_list = self.calculate_consistent_state(model, time, inputs_list)
 
-    def calculate_consistent_state(self, model, time=0, inputs=None):
+    def calculate_consistent_state(
+        self, model: pybamm.BaseModel, time: float = 0, inputs: list[dict] | None = None
+    ):
         """
         Calculate consistent state for the algebraic equations through
         root-finding. model.y0_list is used as the initial guess for rootfinding
@@ -659,8 +663,6 @@ class BaseSolver:
             model.y0_list.
         """
         pybamm.logger.debug("Start calculating consistent states")
-        if isinstance(inputs, dict):
-            inputs = [inputs]
         inputs = inputs or [{}]
 
         if self.root_method is None:
@@ -680,7 +682,7 @@ class BaseSolver:
         return y0s
 
     def _solve_process_calculate_sensitivities_arg(
-        inputs, model, calculate_sensitivities
+        inputs: dict, model: pybamm.BaseModel, calculate_sensitivities: list[str] | bool
     ):
         # get a list-only version of calculate_sensitivities
         if isinstance(calculate_sensitivities, bool):
@@ -1242,7 +1244,7 @@ class BaseSolver:
             (Note: t_eval is the time measured from the start of the step, so should start at 0 and end at dt).
             By default, the solution is returned at t0 and t0 + dt.
         npts : deprecated
-        inputs : dict, or list of dict, optional
+        inputs : dict, optional
             Any input parameters to pass to the model when solving
         save : bool, optional
             Save solution with all previous timesteps. Defaults to True.
@@ -1250,7 +1252,7 @@ class BaseSolver:
             Whether the solver calculates sensitivities of all input parameters. Defaults to False.
             If only a subset of sensitivities are required, can also pass a
             list of input parameter names. **Limitations**: sensitivities are not calculated up to numerical tolerances
-            so are not guarenteed to be within the tolerances set by the solver, please raise an issue if you
+            so are not guaranteed to be within the tolerances set by the solver, please raise an issue if you
             require this functionality. Also, when using this feature with `pybamm.Experiment`, the sensitivities
             do not take into account the movement of step-transitions wrt input parameters, so do not use this feature
             if the timings of your experimental protocol change rapidly with respect to your input parameters.
@@ -1266,27 +1268,19 @@ class BaseSolver:
         """
 
         # Set up inputs
-        if isinstance(inputs, dict):
-            inputs_list = [inputs]
-        else:
-            inputs_list = inputs or [{}]
+        inputs = inputs or {}
 
         if old_solution is None:
-            old_solutions = [pybamm.EmptySolution()] * len(inputs_list)
-        elif not isinstance(old_solution, list):
-            old_solutions = [old_solution]
+            old_solution = pybamm.EmptySolution()
 
         if not (
-            isinstance(old_solutions[0], pybamm.EmptySolution)
-            or old_solutions[0].termination == "final time"
-            or "[experiment]" in old_solutions[0].termination
+            isinstance(old_solution, pybamm.EmptySolution)
+            or old_solution.termination == "final time"
+            or "[experiment]" in old_solution.termination
         ):
             # Return same solution as an event has already been triggered
             # With hack to allow stepping past experiment current / voltage cut-off
-            if len(old_solutions) == 1:
-                return old_solutions[0]
-            else:
-                return old_solutions
+            return old_solution
 
         # Make sure model isn't empty
         self._check_empty_model(model)
@@ -1320,7 +1314,7 @@ class BaseSolver:
 
         t_interp = self.process_t_interp(t_interp)
 
-        t_start = old_solutions[0].t[-1]
+        t_start = old_solution.t[-1]
         t_eval = t_start + t_eval
         t_interp = t_start + t_interp
         t_end = t_start + dt
@@ -1341,14 +1335,12 @@ class BaseSolver:
         timer = pybamm.Timer()
 
         # Set up inputs
-        model_inputs_list: list[dict] = [
-            self._set_up_model_inputs(model, inputs) for inputs in inputs_list
-        ]
+        model_inputs = self._set_up_model_inputs(model, inputs)
 
         # process calculate_sensitivities argument
         _, sensitivities_have_changed = (
             BaseSolver._solve_process_calculate_sensitivities_arg(
-                model_inputs_list[0], model, calculate_sensitivities
+                model_inputs, model, calculate_sensitivities
             )
         )
 
@@ -1361,95 +1353,81 @@ class BaseSolver:
                     f'"{existing_model.name}". Please create a separate '
                     "solver for this model"
                 )
-            self.set_up(model, model_inputs_list)
+            self.set_up(model, model_inputs)
             self._model_set_up.update(
                 {model: {"initial conditions": model.concatenated_initial_conditions}}
             )
 
         if (
-            isinstance(old_solutions[0], pybamm.EmptySolution)
-            and old_solutions[0].termination is None
+            isinstance(old_solution, pybamm.EmptySolution)
+            and old_solution.termination is None
         ):
             pybamm.logger.verbose(f"Start stepping {model.name} with {self.name}")
 
         using_sensitivities = len(model.calculate_sensitivities) > 0
 
-        if isinstance(old_solutions[0], pybamm.EmptySolution):
+        if isinstance(old_solution, pybamm.EmptySolution):
             if not first_step_this_model:
                 # reset y0 to original initial conditions
-                self.set_up(model, model_inputs_list, ics_only=True)
-        elif old_solutions[0].all_models[-1] == model:
-            model.y0_list = [s.last_state.all_ys[0] for s in old_solutions]
+                self.set_up(model, model_inputs, ics_only=True)
+        elif old_solution.all_models[-1] == model:
+            last_state = old_solution.last_state
+            model.y0_list = [last_state.all_ys[0]]
             if using_sensitivities:
-                model.y0S_list = []
-                for soln in old_solutions:
-                    full_sens = soln.last_state._all_sensitivities["all"][0]
-                    model.y0S_list.append(
-                        tuple(full_sens[:, i] for i in range(full_sens.shape[1]))
-                    )
+                full_sens = last_state._all_sensitivities["all"][0]
+                model.y0S_list = [
+                    tuple(full_sens[:, i] for i in range(full_sens.shape[1]))
+                ]
 
         else:
-            model.y0_list = []
-            for soln, inputs in zip(old_solutions, model_inputs_list, strict=True):
-                _, concatenated_initial_conditions = model.set_initial_conditions_from(
-                    soln, inputs=inputs, return_type="ics"
-                )
-                model.y0_list.append(
-                    concatenated_initial_conditions.evaluate(0, inputs=inputs)
-                )
+            _, concatenated_initial_conditions = model.set_initial_conditions_from(
+                old_solution, inputs=model_inputs, return_type="ics"
+            )
+            model.y0_list = [
+                concatenated_initial_conditions.evaluate(0, inputs=model_inputs)
+            ]
 
             if using_sensitivities:
                 model.y0S_list = [
-                    self._set_sens_initial_conditions_from(soln, model)
-                    for soln in old_solutions
+                    self._set_sens_initial_conditions_from(old_solution, model)
                 ]
 
         set_up_time = timer.time()
 
         # (Re-)calculate consistent initialization
-        self._set_consistent_initialization(model, t_start_shifted, model_inputs_list)
+        self._set_consistent_initialization(model, t_start_shifted, [model_inputs])
 
         # Check consistent initialization doesn't violate events
-        for y0, inpts in zip(model.y0_list, model_inputs_list, strict=True):
-            self._check_events_with_initialization(t_eval, model, y0, inpts)
+        self._check_events_with_initialization(t_eval, model, model.y0, model_inputs)
 
         # Step
         pybamm.logger.verbose(f"Stepping for {t_start_shifted:.0f} < t < {t_end:.0f}")
         timer.reset()
 
-        solutions = self._integrate(model, t_eval, model_inputs_list, t_interp)
-        for i, s in enumerate(solutions):
-            solutions[i].solve_time = timer.time()
+        solution = self._integrate(model, t_eval, [model_inputs], t_interp)[0]
+        solution.solve_time = timer.time()
 
-            # Check if extrapolation occurred
-            self.check_extrapolation(s, model.events)
+        # Check if extrapolation occurred
+        self.check_extrapolation(solution, model.events)
+        # Identify the event that caused termination and update the solution to
+        # include the event time and state
+        solution, termination = self.get_termination_reason(solution, model.events)
 
-            # Identify the event that caused termination and update the solution to
-            # include the event time and state
-            solutions[i], termination = self.get_termination_reason(s, model.events)
-
-            # Assign setup time
-            solutions[i].set_up_time = set_up_time
+        # Assign setup time
+        solution.set_up_time = set_up_time
 
         # Report times
         pybamm.logger.verbose(f"Finish stepping {model.name} ({termination})")
         pybamm.logger.verbose(
-            f"Set-up time: {solutions[0].set_up_time}, Step time: {solutions[0].solve_time} (of which integration time: {solutions[0].integration_time}), "
-            f"Total time: {solutions[0].total_time}"
+            f"Set-up time: {solution.set_up_time}, Step time: {solution.solve_time} (of which integration time: {solution.integration_time}), "
+            f"Total time: {solution.total_time}"
         )
 
         # Return solution
         if save is False:
-            ret = solutions
+            return solution
         else:
-            ret = [
-                old_s + s for (old_s, s) in zip(old_solutions, solutions, strict=True)
-            ]
-
-        if len(ret) == 1:
-            return ret[0]
-        else:
-            return ret
+            return old_solution + solution
 
     @staticmethod
     def get_termination_reason(solution, events):
@@ -1620,12 +1598,9 @@ class BaseSolver:
         return "spawn"
 
     @staticmethod
-    def _set_up_model_inputs(model, inputs):
+    def _set_up_model_inputs(model: pybamm.BaseModel, inputs: dict):
         """Set up input parameters"""
-        if inputs is None:
-            inputs = {}
-        else:
-            inputs = ParameterValues.check_parameter_values(inputs)
+        inputs = ParameterValues.check_parameter_values(inputs)
 
         # Go through all input parameters that can be found in the model
         # Only keep the ones that are actually used in the model
