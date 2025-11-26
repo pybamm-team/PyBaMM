@@ -174,11 +174,6 @@ class Simulation:
             "Nominal cell capacity [A.h]", None
         )
 
-        # If capacity hasn't been stored yet or hasn't changed, no update needed
-        if not hasattr(self, "_built_nominal_capacity"):
-            self._built_nominal_capacity = current_capacity
-            return
-
         if self._built_nominal_capacity == current_capacity:
             return
 
