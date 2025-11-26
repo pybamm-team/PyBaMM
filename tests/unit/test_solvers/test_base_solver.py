@@ -490,3 +490,28 @@ class TestBaseSolver:
             match="BaseSolver does not implement _integrate_single.",
         ):
             solver._integrate_single(model, np.array([0, 1]), {}, np.array([1]))
+
+    def test_discontinuity_events_different_times_error(self):
+        # Test that an error is raised when discontinuity events occur at different
+        # times for different input parameter sets
+        model = pybamm.BaseModel()
+        v = pybamm.Variable("v")
+        t_event = pybamm.InputParameter("t_event")
+        model.rhs = {v: pybamm.t > t_event}
+        model.initial_conditions = {v: 0}
+        model.variables = {"v": v}
+
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        solver = pybamm.BaseSolver()
+        t_eval = np.linspace(0, 10)
+
+        # Different input sets with discontinuities at different times
+        inputs_list = [{"t_event": 3.0}, {"t_event": 5.0}]
+
+        with pytest.raises(
+            pybamm.SolverError,
+            match="Discontinuity events occur at different times between input parameter sets",
+        ):
+            solver.solve(model, t_eval, inputs=inputs_list)
