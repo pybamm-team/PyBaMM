@@ -322,6 +322,10 @@ class TestScipySolver:
 
         solutions = solver.solve(model, t_eval, inputs=inputs_list, nproc=2)
 
+        with pytest.raises(ValueError, match="Model contains multiple initial states"):
+            # try to access y0 property where there's more than 1
+            _ = model.y0
+
         # Extract y(0) actually used per run
         ic_used = [float(sol["var"].entries[0][0]) for sol in solutions]
         assert ic_used == [0.02, 0.04, 0.06, 0.08, 0.1, 0.12, 0.14, 0.16]
