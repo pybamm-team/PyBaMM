@@ -665,8 +665,11 @@ class TestUnaryOperators:
 
         # error if boundary value on tabs and domain is not "current collector"
         var = pybamm.Variable("var", domain=["negative electrode"])
+
         with pytest.raises(pybamm.ModelError, match="Can only take boundary"):
             pybamm.boundary_value(var, "negative tab")
+
+        with pytest.raises(pybamm.ModelError, match="Can only take boundary"):
             pybamm.boundary_value(var, "positive tab")
 
         # boundary value of symbol that evaluates on edges raises error

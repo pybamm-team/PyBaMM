@@ -22,7 +22,9 @@ def test_fetch():
 )
 def test_fetch_fake():
     # Try to fetch a fake file not present in the registry
-    with pytest.raises(ValueError):
+    with pytest.raises(
+        ValueError, match="File 'NotAfile.json' is not in the registry."
+    ):
         data_loader.get_data("NotAfile.json")
 
 

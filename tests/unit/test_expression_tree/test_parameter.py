@@ -87,12 +87,12 @@ class TestFunctionParameter:
 
         assert func.input_names == new_input_names
 
+        new_input_names = {"wrong": "input type"}
         with pytest.raises(TypeError):
-            new_input_names = {"wrong": "input type"}
             func.input_names = new_input_names
 
+        new_input_names = [var]
         with pytest.raises(TypeError):
-            new_input_names = [var]
             func.input_names = new_input_names
 
     def test_print_name(self):

@@ -101,7 +101,10 @@ class TestScikitFiniteElement:
                 "positive tab": (pybamm.Scalar(1), "Other BC"),
             }
         }
-        with pytest.raises(ValueError):
+        with pytest.raises(
+            ValueError,
+            match="boundary condition must be Dirichlet or Neumann, not 'Other BC'",
+        ):
             eqn_disc = disc.process_symbol(eqn)
         disc.bcs = {
             var: {
@@ -109,7 +112,10 @@ class TestScikitFiniteElement:
                 "positive tab": (pybamm.Scalar(1), "Neumann"),
             }
         }
-        with pytest.raises(ValueError):
+        with pytest.raises(
+            ValueError,
+            match="boundary condition must be Dirichlet or Neumann, not 'Other BC'",
+        ):
             eqn_disc = disc.process_symbol(eqn)
 
         # raise ModelError if no BCs provided

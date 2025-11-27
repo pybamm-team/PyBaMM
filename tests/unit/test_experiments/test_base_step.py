@@ -4,7 +4,7 @@ import pybamm
 
 
 @pytest.mark.parametrize(
-    "test_string, unit_string",
+    ("test_string", "unit_string"),
     [
         ("123e-1 W", "W"),
         ("123K", "K"),

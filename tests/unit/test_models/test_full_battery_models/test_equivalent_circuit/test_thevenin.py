@@ -47,8 +47,8 @@ class TestThevenin:
         model = pybamm.equivalent_circuit.Thevenin(options=options)
         model.check_well_posedness()
 
-        with pytest.raises(pybamm.OptionError, match="natural numbers"):
-            options = {"number of rc elements": -1}
+        options = {"number of rc elements": -1}
+        with pytest.raises(pybamm.OptionError, match="natural numbers"):  # noqa: PT012
             model = pybamm.equivalent_circuit.Thevenin(options=options)
             model.check_well_posedness()
 

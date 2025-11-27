@@ -367,7 +367,10 @@ class TestSolution:
         solution = pybamm.ScipySolver().solve(model, np.linspace(0, 1))
 
         # test save data
-        with pytest.raises(ValueError):
+        with pytest.raises(
+            ValueError,
+            match="Solution does not have any data.",
+        ):
             solution.save_data(f"{test_stub}.pickle")
 
         # set variables first then save

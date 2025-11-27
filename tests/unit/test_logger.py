@@ -32,5 +32,5 @@ class TestLogger:
         pybamm.set_logging_level("WARNING")
 
     def test_exceptions(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="filename must be specified"):
             pybamm.get_new_logger("test", None)

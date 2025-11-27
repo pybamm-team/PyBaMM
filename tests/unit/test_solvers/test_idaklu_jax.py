@@ -200,7 +200,7 @@ class TestIDAKLUJax:
     # Scalar evaluation
 
     @pytest.mark.parametrize(
-        "output_variables,idaklu_jax_solver,f,wrapper", make_test_cases()
+        ("output_variables", "idaklu_jax_solver", "f", "wrapper"), make_test_cases()
     )
     def test_f_scalar(self, output_variables, idaklu_jax_solver, f, wrapper):
         out = wrapper(f)(t_eval[k], inputs)
@@ -209,7 +209,7 @@ class TestIDAKLUJax:
         )
 
     @pytest.mark.parametrize(
-        "output_variables,idaklu_jax_solver,f,wrapper", make_test_cases()
+        ("output_variables", "idaklu_jax_solver", "f", "wrapper"), make_test_cases()
     )
     def test_f_vector(self, output_variables, idaklu_jax_solver, f, wrapper):
         out = wrapper(f)(t_eval, inputs)
@@ -218,7 +218,7 @@ class TestIDAKLUJax:
         )
 
     @pytest.mark.parametrize(
-        "output_variables,idaklu_jax_solver,f,wrapper", make_test_cases()
+        ("output_variables", "idaklu_jax_solver", "f", "wrapper"), make_test_cases()
     )
     def test_f_vmap(self, output_variables, idaklu_jax_solver, f, wrapper):
         out = wrapper(jax.vmap(f, in_axes=in_axes))(t_eval, inputs)
@@ -227,7 +227,7 @@ class TestIDAKLUJax:
         )
 
     @pytest.mark.parametrize(
-        "output_variables,idaklu_jax_solver,f,wrapper", make_test_cases()
+        ("output_variables", "idaklu_jax_solver", "f", "wrapper"), make_test_cases()
     )
     def test_f_batch_over_inputs(self, output_variables, idaklu_jax_solver, f, wrapper):
         inputs_mock = np.array([1.0, 2.0, 3.0])
@@ -237,22 +237,22 @@ class TestIDAKLUJax:
     # Get all vars (should mirror test_f_* [above])
 
     @pytest.mark.parametrize(
-        "output_variables,idaklu_jax_solver,f,wrapper", make_test_cases()
+        ("output_variables", "idaklu_jax_solver", "f", "wrapper"), make_test_cases()
     )
     def test_getvars_call_signature(
         self, output_variables, idaklu_jax_solver, f, wrapper
     ):
         if wrapper == jax.jit:
             return  # test does not involve a JAX expression
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Invalid call signature"):
             idaklu_jax_solver.get_vars()  # no variable name specified
         idaklu_jax_solver.get_vars(output_variables)  # (okay)
         idaklu_jax_solver.get_vars(f, output_variables)  # (okay)
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Invalid call signature"):
             idaklu_jax_solver.get_vars(1, 2, 3)  # too many arguments
 
     @pytest.mark.parametrize(
-        "output_variables,idaklu_jax_solver,f,wrapper", make_test_cases()
+        ("output_variables", "idaklu_jax_solver", "f", "wrapper"), make_test_cases()
     )
     def test_getvars_scalar(self, output_variables, idaklu_jax_solver, f, wrapper):
         out = wrapper(idaklu_jax_solver.get_vars(output_variables))(t_eval[k], inputs)
@@ -261,7 +261,7 @@ class TestIDAKLUJax:
         )
 
     @pytest.mark.parametrize(
-        "output_variables,idaklu_jax_solver,f,wrapper", make_test_cases()
+        ("output_variables", "idaklu_jax_solver", "f", "wrapper"), make_test_cases()
     )
     def test_getvars_vector(self, output_variables, idaklu_jax_solver, f, wrapper):
         out = wrapper(idaklu_jax_solver.get_vars(output_variables))(t_eval, inputs)
@@ -270,7 +270,7 @@ class TestIDAKLUJax:
         )
 
     @pytest.mark.parametrize(
-        "output_variables,idaklu_jax_solver,f,wrapper", make_test_cases()
+        ("output_variables", "idaklu_jax_solver", "f", "wrapper"), make_test_cases()
     )
     def test_getvars_vector_array(
         self, output_variables, idaklu_jax_solver, f, wrapper
@@ -282,7 +282,7 @@ class TestIDAKLUJax:
         np.testing.assert_allclose(out, array)
 
     @pytest.mark.parametrize(
-        "output_variables,idaklu_jax_solver,f,wrapper", make_test_cases()
+        ("output_variables", "idaklu_jax_solver", "f", "wrapper"), make_test_cases()
     )
     def test_getvars_vmap(self, output_variables, idaklu_jax_solver, f, wrapper):
         out = wrapper(
@@ -298,22 +298,22 @@ class TestIDAKLUJax:
     # Isolate single output variable
 
     @pytest.mark.parametrize(
-        "output_variables,idaklu_jax_solver,f,wrapper", make_test_cases()
+        ("output_variables", "idaklu_jax_solver", "f", "wrapper"), make_test_cases()
     )
     def test_getvar_call_signature(
         self, output_variables, idaklu_jax_solver, f, wrapper
     ):
         if wrapper == jax.jit:
             return  # test does not involve a JAX expression
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Invalid call signature"):
             idaklu_jax_solver.get_var()  # no variable name specified
         idaklu_jax_solver.get_var(output_variables[0])  # (okay)
         idaklu_jax_solver.get_var(f, output_variables[0])  # (okay)
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Invalid call signature"):
             idaklu_jax_solver.get_var(1, 2, 3)  # too many arguments
 
     @pytest.mark.parametrize(
-        "output_variables,idaklu_jax_solver,f,wrapper", make_test_cases()
+        ("output_variables", "idaklu_jax_solver", "f", "wrapper"), make_test_cases()
     )
     def test_getvar_scalar_float_jaxpr(
         self, output_variables, idaklu_jax_solver, f, wrapper
@@ -324,7 +324,7 @@ class TestIDAKLUJax:
             np.testing.assert_allclose(out, sim[outvar](float(t_eval[k])))
 
     @pytest.mark.parametrize(
-        "output_variables,idaklu_jax_solver,f,wrapper", make_test_cases()
+        ("output_variables", "idaklu_jax_solver", "f", "wrapper"), make_test_cases()
     )
     def test_getvar_scalar_float_f(
         self, output_variables, idaklu_jax_solver, f, wrapper
@@ -337,7 +337,7 @@ class TestIDAKLUJax:
             np.testing.assert_allclose(out, sim[outvar](float(t_eval[k])))
 
     @pytest.mark.parametrize(
-        "output_variables,idaklu_jax_solver,f,wrapper", make_test_cases()
+        ("output_variables", "idaklu_jax_solver", "f", "wrapper"), make_test_cases()
     )
     def test_getvar_scalar_jaxpr(self, output_variables, idaklu_jax_solver, f, wrapper):
         # Per variable checks using the default JAX expression (self.jaxpr)
@@ -346,7 +346,7 @@ class TestIDAKLUJax:
             np.testing.assert_allclose(out, sim[outvar](t_eval[k]))
 
     @pytest.mark.parametrize(
-        "output_variables,idaklu_jax_solver,f,wrapper", make_test_cases()
+        ("output_variables", "idaklu_jax_solver", "f", "wrapper"), make_test_cases()
     )
     def test_getvar_scalar_f(self, output_variables, idaklu_jax_solver, f, wrapper):
         # Per variable checks using a provided JAX expression (f)
@@ -355,7 +355,7 @@ class TestIDAKLUJax:
             np.testing.assert_allclose(out, sim[outvar](t_eval[k]))
 
     @pytest.mark.parametrize(
-        "output_variables,idaklu_jax_solver,f,wrapper", make_test_cases()
+        ("output_variables", "idaklu_jax_solver", "f", "wrapper"), make_test_cases()
     )
     def test_getvar_vector_jaxpr(self, output_variables, idaklu_jax_solver, f, wrapper):
         # Per variable checks using the default JAX expression (self.jaxpr)
@@ -364,7 +364,7 @@ class TestIDAKLUJax:
             np.testing.assert_allclose(out, sim[outvar](t_eval))
 
     @pytest.mark.parametrize(
-        "output_variables,idaklu_jax_solver,f,wrapper", make_test_cases()
+        ("output_variables", "idaklu_jax_solver", "f", "wrapper"), make_test_cases()
     )
     def test_getvar_vector_f(self, output_variables, idaklu_jax_solver, f, wrapper):
         # Per variable checks using a provided JAX expression (f)
@@ -373,7 +373,7 @@ class TestIDAKLUJax:
             np.testing.assert_allclose(out, sim[outvar](t_eval))
 
     @pytest.mark.parametrize(
-        "output_variables,idaklu_jax_solver,f,wrapper", make_test_cases()
+        ("output_variables", "idaklu_jax_solver", "f", "wrapper"), make_test_cases()
     )
     def test_getvar_vector_array(self, output_variables, idaklu_jax_solver, f, wrapper):
         # Per variable checks using a provided np.ndarray
@@ -385,7 +385,7 @@ class TestIDAKLUJax:
             np.testing.assert_allclose(out, sim[outvar](t_eval))
 
     @pytest.mark.parametrize(
-        "output_variables,idaklu_jax_solver,f,wrapper", make_test_cases()
+        ("output_variables", "idaklu_jax_solver", "f", "wrapper"), make_test_cases()
     )
     def test_getvar_vmap(self, output_variables, idaklu_jax_solver, f, wrapper):
         for outvar in output_variables:
@@ -400,7 +400,7 @@ class TestIDAKLUJax:
     # Differentiation rules (jacfwd)
 
     @pytest.mark.parametrize(
-        "output_variables,idaklu_jax_solver,f,wrapper", make_test_cases()
+        ("output_variables", "idaklu_jax_solver", "f", "wrapper"), make_test_cases()
     )
     def test_jacfwd_scalar(self, output_variables, idaklu_jax_solver, f, wrapper):
         out = wrapper(jax.jacfwd(f, argnums=1))(t_eval[k], inputs)
@@ -416,7 +416,7 @@ class TestIDAKLUJax:
         np.testing.assert_allclose(flat_out, check.flatten())
 
     @pytest.mark.parametrize(
-        "output_variables,idaklu_jax_solver,f,wrapper", make_test_cases()
+        ("output_variables", "idaklu_jax_solver", "f", "wrapper"), make_test_cases()
     )
     def test_jacfwd_vector(self, output_variables, idaklu_jax_solver, f, wrapper):
         out = wrapper(jax.jacfwd(f, argnums=1))(t_eval, inputs)
@@ -435,7 +435,7 @@ class TestIDAKLUJax:
         )
 
     @pytest.mark.parametrize(
-        "output_variables,idaklu_jax_solver,f,wrapper", make_test_cases()
+        ("output_variables", "idaklu_jax_solver", "f", "wrapper"), make_test_cases()
     )
     def test_jacfwd_vmap(self, output_variables, idaklu_jax_solver, f, wrapper):
         out = wrapper(
@@ -456,7 +456,7 @@ class TestIDAKLUJax:
         np.testing.assert_allclose(flat_out, check.flatten())
 
     @pytest.mark.parametrize(
-        "output_variables,idaklu_jax_solver,f,wrapper", make_test_cases()
+        ("output_variables", "idaklu_jax_solver", "f", "wrapper"), make_test_cases()
     )
     def test_jacfwd_vmap_wrt_time(
         self, output_variables, idaklu_jax_solver, f, wrapper
@@ -470,7 +470,7 @@ class TestIDAKLUJax:
             )(t_eval, inputs)
 
     @pytest.mark.parametrize(
-        "output_variables,idaklu_jax_solver,f,wrapper", make_test_cases()
+        ("output_variables", "idaklu_jax_solver", "f", "wrapper"), make_test_cases()
     )
     def test_jacfwd_batch_over_inputs(
         self, output_variables, idaklu_jax_solver, f, wrapper
@@ -487,7 +487,7 @@ class TestIDAKLUJax:
     # Differentiation rules (jacrev)
 
     @pytest.mark.parametrize(
-        "output_variables,idaklu_jax_solver,f,wrapper", make_test_cases()
+        ("output_variables", "idaklu_jax_solver", "f", "wrapper"), make_test_cases()
     )
     def test_jacrev_scalar(self, output_variables, idaklu_jax_solver, f, wrapper):
         out = wrapper(jax.jacrev(f, argnums=1))(t_eval[k], inputs)
@@ -503,7 +503,7 @@ class TestIDAKLUJax:
         np.testing.assert_allclose(flat_out, check.flatten())
 
     @pytest.mark.parametrize(
-        "output_variables,idaklu_jax_solver,f,wrapper", make_test_cases()
+        ("output_variables", "idaklu_jax_solver", "f", "wrapper"), make_test_cases()
     )
     def test_jacrev_vector(self, output_variables, idaklu_jax_solver, f, wrapper):
         out = wrapper(jax.jacrev(f, argnums=1))(t_eval, inputs)
@@ -519,7 +519,7 @@ class TestIDAKLUJax:
         np.testing.assert_allclose(flat_out, check.flatten())
 
     @pytest.mark.parametrize(
-        "output_variables,idaklu_jax_solver,f,wrapper", make_test_cases()
+        ("output_variables", "idaklu_jax_solver", "f", "wrapper"), make_test_cases()
     )
     def test_jacrev_vmap(self, output_variables, idaklu_jax_solver, f, wrapper):
         out = wrapper(
@@ -540,7 +540,7 @@ class TestIDAKLUJax:
         np.testing.assert_allclose(flat_out, check.flatten())
 
     @pytest.mark.parametrize(
-        "output_variables,idaklu_jax_solver,f,wrapper", make_test_cases()
+        ("output_variables", "idaklu_jax_solver", "f", "wrapper"), make_test_cases()
     )
     def test_jacrev_batch_over_inputs(
         self, output_variables, idaklu_jax_solver, f, wrapper
@@ -557,7 +557,7 @@ class TestIDAKLUJax:
     # Forward differentiation rules with get_vars (multiple) and get_var (singular)
 
     @pytest.mark.parametrize(
-        "output_variables,idaklu_jax_solver,f,wrapper", make_test_cases()
+        ("output_variables", "idaklu_jax_solver", "f", "wrapper"), make_test_cases()
     )
     def test_jacfwd_scalar_getvars(
         self, output_variables, idaklu_jax_solver, f, wrapper
@@ -582,7 +582,7 @@ class TestIDAKLUJax:
         np.testing.assert_allclose(flat_out, flat_check)
 
     @pytest.mark.parametrize(
-        "output_variables,idaklu_jax_solver,f,wrapper", make_test_cases()
+        ("output_variables", "idaklu_jax_solver", "f", "wrapper"), make_test_cases()
     )
     def test_jacfwd_scalar_getvar(
         self, output_variables, idaklu_jax_solver, f, wrapper
@@ -603,7 +603,7 @@ class TestIDAKLUJax:
             np.testing.assert_allclose(flat_out, flat_check)
 
     @pytest.mark.parametrize(
-        "output_variables,idaklu_jax_solver,f,wrapper", make_test_cases()
+        ("output_variables", "idaklu_jax_solver", "f", "wrapper"), make_test_cases()
     )
     def test_jacfwd_vector_getvars(
         self, output_variables, idaklu_jax_solver, f, wrapper
@@ -629,7 +629,7 @@ class TestIDAKLUJax:
         np.testing.assert_allclose(flat_out, flat_check)
 
     @pytest.mark.parametrize(
-        "output_variables,idaklu_jax_solver,f,wrapper", make_test_cases()
+        ("output_variables", "idaklu_jax_solver", "f", "wrapper"), make_test_cases()
     )
     def test_jacfwd_vector_getvar(
         self, output_variables, idaklu_jax_solver, f, wrapper
@@ -650,7 +650,7 @@ class TestIDAKLUJax:
             np.testing.assert_allclose(flat_out, flat_check)
 
     @pytest.mark.parametrize(
-        "output_variables,idaklu_jax_solver,f,wrapper", make_test_cases()
+        ("output_variables", "idaklu_jax_solver", "f", "wrapper"), make_test_cases()
     )
     def test_jacfwd_vmap_getvars(self, output_variables, idaklu_jax_solver, f, wrapper):
         out = wrapper(
@@ -671,7 +671,7 @@ class TestIDAKLUJax:
         np.testing.assert_allclose(flat_out, check.flatten())
 
     @pytest.mark.parametrize(
-        "output_variables,idaklu_jax_solver,f,wrapper", make_test_cases()
+        ("output_variables", "idaklu_jax_solver", "f", "wrapper"), make_test_cases()
     )
     def test_jacfwd_vmap_getvar(self, output_variables, idaklu_jax_solver, f, wrapper):
         for outvar in output_variables:
@@ -692,7 +692,7 @@ class TestIDAKLUJax:
     # Reverse differentiation rules with get_vars (multiple) and get_var (singular)
 
     @pytest.mark.parametrize(
-        "output_variables,idaklu_jax_solver,f,wrapper", make_test_cases()
+        ("output_variables", "idaklu_jax_solver", "f", "wrapper"), make_test_cases()
     )
     def test_jacrev_scalar_getvars(
         self, output_variables, idaklu_jax_solver, f, wrapper
@@ -717,7 +717,7 @@ class TestIDAKLUJax:
         np.testing.assert_allclose(flat_out, flat_check)
 
     @pytest.mark.parametrize(
-        "output_variables,idaklu_jax_solver,f,wrapper", make_test_cases()
+        ("output_variables", "idaklu_jax_solver", "f", "wrapper"), make_test_cases()
     )
     def test_jacrev_scalar_getvar(
         self, output_variables, idaklu_jax_solver, f, wrapper
@@ -740,7 +740,7 @@ class TestIDAKLUJax:
             )
 
     @pytest.mark.parametrize(
-        "output_variables,idaklu_jax_solver,f,wrapper", make_test_cases()
+        ("output_variables", "idaklu_jax_solver", "f", "wrapper"), make_test_cases()
     )
     def test_jacrev_vector_getvars(
         self, output_variables, idaklu_jax_solver, f, wrapper
@@ -766,7 +766,7 @@ class TestIDAKLUJax:
         np.testing.assert_allclose(flat_out, flat_check)
 
     @pytest.mark.parametrize(
-        "output_variables,idaklu_jax_solver,f,wrapper", make_test_cases()
+        ("output_variables", "idaklu_jax_solver", "f", "wrapper"), make_test_cases()
     )
     def test_jacrev_vector_getvar(
         self, output_variables, idaklu_jax_solver, f, wrapper
@@ -787,7 +787,7 @@ class TestIDAKLUJax:
             np.testing.assert_allclose(flat_out, flat_check)
 
     @pytest.mark.parametrize(
-        "output_variables,idaklu_jax_solver,f,wrapper", make_test_cases()
+        ("output_variables", "idaklu_jax_solver", "f", "wrapper"), make_test_cases()
     )
     def test_jacrev_vmap_getvars(self, output_variables, idaklu_jax_solver, f, wrapper):
         out = wrapper(
@@ -808,7 +808,7 @@ class TestIDAKLUJax:
         np.testing.assert_allclose(flat_out, check.flatten())
 
     @pytest.mark.parametrize(
-        "output_variables,idaklu_jax_solver,f,wrapper", make_test_cases()
+        ("output_variables", "idaklu_jax_solver", "f", "wrapper"), make_test_cases()
     )
     def test_jacrev_vmap_getvar(self, output_variables, idaklu_jax_solver, f, wrapper):
         for outvar in output_variables:
@@ -829,7 +829,7 @@ class TestIDAKLUJax:
     # Gradient rule (takes single variable)
 
     @pytest.mark.parametrize(
-        "output_variables,idaklu_jax_solver,f,wrapper", make_test_cases()
+        ("output_variables", "idaklu_jax_solver", "f", "wrapper"), make_test_cases()
     )
     def test_grad_scalar_getvar(self, output_variables, idaklu_jax_solver, f, wrapper):
         for outvar in output_variables:
@@ -845,7 +845,7 @@ class TestIDAKLUJax:
             np.testing.assert_allclose(flat_out, check.flatten())
 
     @pytest.mark.parametrize(
-        "output_variables,idaklu_jax_solver,f,wrapper", make_test_cases()
+        ("output_variables", "idaklu_jax_solver", "f", "wrapper"), make_test_cases()
     )
     def test_grad_vmap_getvar(self, output_variables, idaklu_jax_solver, f, wrapper):
         for outvar in output_variables:
@@ -866,7 +866,7 @@ class TestIDAKLUJax:
     # Value and gradient (takes single variable)
 
     @pytest.mark.parametrize(
-        "output_variables,idaklu_jax_solver,f,wrapper", make_test_cases()
+        ("output_variables", "idaklu_jax_solver", "f", "wrapper"), make_test_cases()
     )
     def test_value_and_grad_scalar(
         self, output_variables, idaklu_jax_solver, f, wrapper
@@ -888,7 +888,7 @@ class TestIDAKLUJax:
             np.testing.assert_allclose(flat_t, check.flatten())
 
     @pytest.mark.parametrize(
-        "output_variables,idaklu_jax_solver,f,wrapper", make_test_cases()
+        ("output_variables", "idaklu_jax_solver", "f", "wrapper"), make_test_cases()
     )
     def test_value_and_grad_vmap(self, output_variables, idaklu_jax_solver, f, wrapper):
         for outvar in output_variables:
@@ -913,7 +913,7 @@ class TestIDAKLUJax:
     # Helper functions - These return values (not jaxexprs) so cannot be JITed
 
     @pytest.mark.parametrize(
-        "output_variables,idaklu_jax_solver,f,wrapper", make_test_cases()
+        ("output_variables", "idaklu_jax_solver", "f", "wrapper"), make_test_cases()
     )
     def test_jax_vars(self, output_variables, idaklu_jax_solver, f, wrapper):
         if wrapper == jax.jit:
@@ -930,7 +930,7 @@ class TestIDAKLUJax:
             )
 
     @pytest.mark.parametrize(
-        "output_variables,idaklu_jax_solver,f,wrapper", make_test_cases()
+        ("output_variables", "idaklu_jax_solver", "f", "wrapper"), make_test_cases()
     )
     def test_jax_grad(self, output_variables, idaklu_jax_solver, f, wrapper):
         if wrapper == jax.jit:
@@ -949,7 +949,7 @@ class TestIDAKLUJax:
     # Wrap jaxified expression in another function and take the gradient
 
     @pytest.mark.parametrize(
-        "output_variables,idaklu_jax_solver,f,wrapper", make_test_cases()
+        ("output_variables", "idaklu_jax_solver", "f", "wrapper"), make_test_cases()
     )
     def test_grad_wrapper_sse(self, output_variables, idaklu_jax_solver, f, wrapper):
         # Use surrogate for experimental data

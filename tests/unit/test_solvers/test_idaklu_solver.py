@@ -583,7 +583,8 @@ class TestIDAKLUSolver:
         solver = pybamm.IDAKLUSolver()
 
         t_eval = [0, 3]
-        with pytest.raises(ValueError):
+        # raises `std::exception` on UNIX and `IDA failed with flag -22` on Windows
+        with pytest.raises(ValueError):  # noqa: PT011
             solver.solve(model, t_eval)
 
     def test_dae_solver_algebraic_model(self):
@@ -711,7 +712,7 @@ class TestIDAKLUSolver:
                             soln.y, soln_base.y, rtol=1e-5, atol=1e-4
                         )
                     else:
-                        with pytest.raises(ValueError):
+                        with pytest.raises(ValueError, match="Unknown"):
                             soln = solver.solve(model, t_eval, t_interp=t_interp)
 
     def test_solver_options(self):
@@ -779,7 +780,8 @@ class TestIDAKLUSolver:
             options = {option: options_fail[option]}
             solver = pybamm.IDAKLUSolver(options=options)
 
-            with pytest.raises(ValueError):
+            # raises `std::exception` on UNIX and `IDA failed with flag -22` on Windows
+            with pytest.raises(ValueError):  # noqa: PT011
                 solver.solve(model, t_eval)
 
     def test_with_output_variables(self):

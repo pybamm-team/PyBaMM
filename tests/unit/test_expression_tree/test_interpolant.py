@@ -193,8 +193,8 @@ class TestInterpolant:
         value = interp._function_evaluate(evaluated_children)
 
         # Test evaluation fails with different child shapes
-        with pytest.raises(ValueError, match="All children must"):
-            evaluated_children = [np.array([[1, 1]]), np.array([7])]
+        evaluated_children = [np.array([[1, 1]]), np.array([7])]
+        with pytest.raises(ValueError, match="All children must have the same shape"):
             value = interp._function_evaluate(evaluated_children)
 
         # Test runs when all children are scalars
@@ -300,8 +300,8 @@ class TestInterpolant:
         value = interp._function_evaluate(evaluated_children)
 
         # Test evaluation fails with different child shapes
-        with pytest.raises(ValueError, match="All children must"):
-            evaluated_children = [np.array([[1, 1]]), np.ones(()) * 4, np.array([[7]])]
+        evaluated_children = [np.array([[1, 1]]), np.ones(()) * 4, np.array([[7]])]
+        with pytest.raises(ValueError, match="All children must have the same shape"):
             value = interp._function_evaluate(evaluated_children)
 
         # Test runs when all children are scalsrs

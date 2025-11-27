@@ -317,15 +317,16 @@ class TestSerialise:
 
         assert isinstance(mesh_class, pybamm.Mesh)
 
+        unrecognised_symbol = {
+            "py/id": mocker.ANY,
+            "py/object": "pybamm.expression_tree.scalar.Scale",
+            "name": "5.0",
+            "id": mocker.ANY,
+            "value": 5.0,
+            "children": [],
+        }
+
         with pytest.raises(AttributeError):
-            unrecognised_symbol = {
-                "py/id": mocker.ANY,
-                "py/object": "pybamm.expression_tree.scalar.Scale",
-                "name": "5.0",
-                "id": mocker.ANY,
-                "value": 5.0,
-                "children": [],
-            }
             Serialise()._get_pybamm_class(unrecognised_symbol)
 
     def test_reconstruct_symbol(self, mocker):

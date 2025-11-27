@@ -23,13 +23,13 @@ class TestIndependentVariable:
         t = pybamm.Time()
         assert t.name == "time"
         assert t.evaluate(4) == 4
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="t must be provided"):
             t.evaluate(None)
 
         t = pybamm.t
         assert t.name == "time"
         assert t.evaluate(4) == 4
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="t must be provided"):
             t.evaluate(None)
 
         assert t.evaluate_for_shape() == 0
