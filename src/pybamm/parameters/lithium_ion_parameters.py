@@ -233,8 +233,15 @@ class DomainLithiumIonParameters(BaseParameters):
 
         if domain == "separator":
             x = pybamm.standard_spatial_vars.x_s
+            y = pybamm.PrimaryBroadcast(pybamm.standard_spatial_vars.y, "separator")
+            z = pybamm.PrimaryBroadcast(pybamm.standard_spatial_vars.z, "separator")
             self.epsilon_init = pybamm.FunctionParameter(
-                "Separator porosity", {"Through-cell distance (x) [m]": x}
+                "Separator porosity",
+                {
+                    "Through-cell distance (x) [m]": x,
+                    "Horizontal distance (y) [m]": y,
+                    "Vertical distance (z) [m]": z,
+                },
             )
             self.epsilon_inactive = 1 - self.epsilon_init
             return
@@ -247,6 +254,12 @@ class DomainLithiumIonParameters(BaseParameters):
             domain=[f"{domain} electrode"],
             auxiliary_domains={"secondary": "current collector"},
             coord_sys="cartesian",
+        )
+        y = pybamm.PrimaryBroadcast(
+            pybamm.standard_spatial_vars.y, f"{domain} electrode"
+        )
+        z = pybamm.PrimaryBroadcast(
+            pybamm.standard_spatial_vars.z, f"{domain} electrode"
         )
 
         # Macroscale geometry
@@ -267,7 +280,12 @@ class DomainLithiumIonParameters(BaseParameters):
         )
         if main.options.electrode_types[domain] == "porous":
             self.epsilon_init = pybamm.FunctionParameter(
-                f"{Domain} electrode porosity", {"Through-cell distance (x) [m]": x}
+                f"{Domain} electrode porosity",
+                {
+                    "Through-cell distance (x) [m]": x,
+                    "Horizontal distance (y) [m]": y,
+                    "Vertical distance (z) [m]": z,
+                },
             )
             epsilon_s_tot = sum(phase.epsilon_s for phase in self.phase_params.values())
             self.epsilon_inactive = 1 - self.epsilon_init - epsilon_s_tot
@@ -414,6 +432,12 @@ class ParticleLithiumIonParameters(BaseParameters):
             auxiliary_domains={"secondary": "current collector"},
             coord_sys="cartesian",
         )
+        y = pybamm.PrimaryBroadcast(
+            pybamm.standard_spatial_vars.y, f"{domain} electrode"
+        )
+        z = pybamm.PrimaryBroadcast(
+            pybamm.standard_spatial_vars.z, f"{domain} electrode"
+        )
         r = pybamm.SpatialVariable(
             f"r_{domain[0]}",
             domain=[f"{domain} {self.phase_name}particle"],
@@ -438,7 +462,11 @@ class ParticleLithiumIonParameters(BaseParameters):
         # Particle properties
         self.epsilon_s = pybamm.FunctionParameter(
             f"{pref}{Domain} electrode active material volume fraction",
-            {"Through-cell distance (x) [m]": x},
+            {
+                "Through-cell distance (x) [m]": x,
+                "Horizontal distance (y) [m]": y,
+                "Vertical distance (z) [m]": z,
+            },
         )
         self.epsilon_s_av = pybamm.xyz_average(self.epsilon_s)
         self.c_max = pybamm.Parameter(
