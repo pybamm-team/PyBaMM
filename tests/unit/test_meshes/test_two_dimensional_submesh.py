@@ -6,13 +6,13 @@ import pybamm
 
 @pytest.fixture()
 def x():
-    x = pybamm.SpatialVariable("x", domain=["my 2d domain"], coord_sys="cartesian")
+    x = pybamm.SpatialVariable("x", domain=["my 2d domain"])
     return x
 
 
 @pytest.fixture()
 def y():
-    return pybamm.SpatialVariable("y", domain=["my 2d domain"], coord_sys="cartesian")
+    return pybamm.SpatialVariable("y", domain=["my 2d domain"])
 
 
 @pytest.fixture()
@@ -21,6 +21,7 @@ def geometry(x, y):
         "my 2d domain": {
             x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(2)},
             y: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+            "coord_sys": "cartesian",
         }
     }
     return geometry
@@ -190,7 +191,7 @@ class TestUniform2DSubMesh:
     def test_exceptions(self):
         lims = {"a": 1}
         with pytest.raises(pybamm.GeometryError):
-            pybamm.Uniform2DSubMesh(lims, None)
+            pybamm.Uniform2DSubMesh(lims, None, "cartesian")
 
     def test_symmetric_mesh_creation_no_parameters(self, x, y, geometry):
         submesh_types = {"my 2d domain": pybamm.Uniform2DSubMesh}
@@ -223,7 +224,7 @@ class TestUniform2DSubMesh:
         lims = {x: {"min": 0.0, "max": 2.0}, y: {"min": -1.0, "max": 3.0}}
         npts = {x.name: 10, y.name: 15}
 
-        submesh = pybamm.Uniform2DSubMesh(lims, npts)
+        submesh = pybamm.Uniform2DSubMesh(lims, npts, "cartesian")
 
         # Test basic properties
         assert submesh.npts_lr == 10
@@ -280,7 +281,7 @@ class TestUniform2DSubMesh:
         }
         npts = {x.name: 20, y.name: 20}
 
-        submesh = pybamm.Uniform2DSubMesh(lims, npts)
+        submesh = pybamm.Uniform2DSubMesh(lims, npts, "cartesian")
 
         # Test that tabs are preserved
         assert submesh.tabs is not None
@@ -291,19 +292,20 @@ class TestUniform2DSubMesh:
     def test_uniform_2d_submesh_coordinate_system_mismatch(self, x):
         """
         Test that coordinate system mismatch raises an error
+        Note: This test is now less relevant since coord_sys is in geometry,
+        but we can still test that the submesh accepts a single coord_sys.
         """
-        # Create a y variable with different coordinate system
-        y_cylindrical = pybamm.SpatialVariable(
-            "y", domain=["my 2d domain"], coord_sys="cylindrical polar"
-        )
+        # Create a y variable
+        y_cylindrical = pybamm.SpatialVariable("y", domain=["my 2d domain"])
 
         lims = {x: {"min": 0.0, "max": 1.0}, y_cylindrical: {"min": 0.0, "max": 1.0}}
         npts = {x.name: 10, y_cylindrical.name: 10}
 
-        with pytest.raises(
-            pybamm.GeometryError, match="Coordinate systems must be the same"
-        ):
-            pybamm.Uniform2DSubMesh(lims, npts)
+        # The submesh now takes coord_sys as a parameter, so we can create it
+        # with a single coord_sys. The mismatch check was removed since coord_sys
+        # is now stored in geometry, not on SpatialVariable objects.
+        submesh = pybamm.Uniform2DSubMesh(lims, npts, "cartesian")
+        assert submesh.coord_sys == "cartesian"
 
     def test_uniform_2d_submesh_string_variables(self):
         """
@@ -312,7 +314,7 @@ class TestUniform2DSubMesh:
         lims = {"x": {"min": 0.0, "max": 1.0}, "y": {"min": 0.0, "max": 1.0}}
         npts = {"x": 5, "y": 8}
 
-        submesh = pybamm.Uniform2DSubMesh(lims, npts)
+        submesh = pybamm.Uniform2DSubMesh(lims, npts, "cartesian")
 
         assert submesh.npts_lr == 5
         assert submesh.npts_tb == 8
@@ -326,7 +328,7 @@ class TestUniform2DSubMesh:
         lims = {x: {"min": 0.0, "max": 1.0}, y: {"min": 0.0, "max": 1.0}}
         npts = {x.name: 1, y.name: 1}
 
-        submesh = pybamm.Uniform2DSubMesh(lims, npts)
+        submesh = pybamm.Uniform2DSubMesh(lims, npts, "cartesian")
 
         assert submesh.npts_lr == 1
         assert submesh.npts_tb == 1
@@ -346,7 +348,7 @@ class TestUniform2DSubMesh:
         lims = {x: {"min": 0.0, "max": 1.0}, y: {"min": 0.0, "max": 1.0}}
         npts = {x.name: 5, y.name: 5}
 
-        submesh = pybamm.Uniform2DSubMesh(lims, npts)
+        submesh = pybamm.Uniform2DSubMesh(lims, npts, "cartesian")
 
         # Test left ghost cell
         left_ghost = submesh.create_ghost_cell("left")
@@ -395,7 +397,7 @@ class TestUniform2DSubMesh:
         }
         npts = {x.name: 3, y.name: 4}
 
-        submesh = pybamm.Uniform2DSubMesh(lims, npts)
+        submesh = pybamm.Uniform2DSubMesh(lims, npts, "cartesian")
 
         # Test JSON conversion - now that the bug is fixed
         json_dict = submesh.to_json()
