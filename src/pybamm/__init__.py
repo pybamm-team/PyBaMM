@@ -50,6 +50,7 @@ from .expression_tree.operations.evaluate_python import (
     id_to_python_variable,
     to_python,
     EvaluatorPython,
+    DiffslExport
 )
 
 from .expression_tree.operations.evaluate_python import EvaluatorJax
@@ -185,8 +186,6 @@ from .solvers.jax_bdf_solver import jax_bdf_integrate
 
 from .solvers.idaklu_jax import IDAKLUJax
 from .solvers.idaklu_solver import IDAKLUSolver
-
-from .solvers.export_to_diffsl import DiffslExport
 
 # Experiments
 from .experiment.experiment import Experiment
