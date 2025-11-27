@@ -4,7 +4,10 @@
 
 ## Bug fixes
 
+# [v25.10.2](https://github.com/pybamm-team/PyBaMM/tree/v25.10.2) - 2025-11-27
+
 - Fix a bug with serialising `InputParameter`s. ([#5289](https://github.com/pybamm-team/PyBaMM/pull/5289))
+- Fix a bug with missing inputs for `initial_conditions_from` scale evaluation ([#5285](https://github.com/pybamm-team/PyBaMM/pull/5285))
 
 # [v25.10.1](https://github.com/pybamm-team/PyBaMM/tree/v25.10.1) - 2025-11-14
 
