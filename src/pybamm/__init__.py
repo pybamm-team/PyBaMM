@@ -50,7 +50,7 @@ from .expression_tree.operations.evaluate_python import (
     id_to_python_variable,
     to_python,
     EvaluatorPython,
-    DiffslExport
+    DiffSLExport
 )
 
 from .expression_tree.operations.evaluate_python import EvaluatorJax
