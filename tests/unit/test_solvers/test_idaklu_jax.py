@@ -95,7 +95,7 @@ def make_test_cases():
             calculate_sensitivities=True,
             t_interp=t_eval,
         )
-        f4 = jax_multi.get_jaxpr()
+        f4 = jax_multi2.get_jaxpr()
 
         return [
             # single output
