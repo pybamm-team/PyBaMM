@@ -1,7 +1,7 @@
 #ifndef PYBAMM_IDAKLU_SOLUTION_DATA_HPP
 #define PYBAMM_IDAKLU_SOLUTION_DATA_HPP
 
-
+#include <memory>
 #include "common.hpp"
 #include "Solution.hpp"
 
@@ -17,44 +17,63 @@ class SolutionData
     SolutionData() = default;
 
     /**
-     * @brief constructor using fields
+     * @brief Constructor using fields
      */
     SolutionData(
-      const int flag,
-      const int number_of_timesteps,
-      const int length_of_return_vector,
-      const int arg_sens0,
-      const int arg_sens1,
-      const int arg_sens2,
-      const int length_of_final_sv_slice,
-      const bool save_hermite,
-      sunrealtype *t_return,
-      sunrealtype *y_return,
-      sunrealtype *yp_return,
-      sunrealtype *yS_return,
-      sunrealtype *ypS_return,
-      sunrealtype *yterm_return):
-      flag(flag),
-      number_of_timesteps(number_of_timesteps),
-      length_of_return_vector(length_of_return_vector),
-      arg_sens0(arg_sens0),
-      arg_sens1(arg_sens1),
-      arg_sens2(arg_sens2),
-      length_of_final_sv_slice(length_of_final_sv_slice),
-      save_hermite(save_hermite),
-      t_return(t_return),
-      y_return(y_return),
-      yp_return(yp_return),
-      yS_return(yS_return),
-      ypS_return(ypS_return),
-      yterm_return(yterm_return)
+      int flag,
+      int number_of_timesteps,
+      int length_of_return_vector,
+      int arg_sens0,
+      int arg_sens1,
+      int arg_sens2,
+      int length_of_final_sv_slice,
+      bool save_hermite,
+      std::unique_ptr<sunrealtype[]> t_return,
+      std::unique_ptr<sunrealtype[]> y_return,
+      std::unique_ptr<sunrealtype[]> yp_return,
+      std::unique_ptr<sunrealtype[]> yS_return,
+      std::unique_ptr<sunrealtype[]> ypS_return,
+      std::unique_ptr<sunrealtype[]> yterm_return)
+      : flag(flag),
+        number_of_timesteps(number_of_timesteps),
+        length_of_return_vector(length_of_return_vector),
+        arg_sens0(arg_sens0),
+        arg_sens1(arg_sens1),
+        arg_sens2(arg_sens2),
+        length_of_final_sv_slice(length_of_final_sv_slice),
+        save_hermite(save_hermite),
+        t_return(std::move(t_return)),
+        y_return(std::move(y_return)),
+        yp_return(std::move(yp_return)),
+        yS_return(std::move(yS_return)),
+        ypS_return(std::move(ypS_return)),
+        yterm_return(std::move(yterm_return))
     {}
 
+    /**
+     * @brief Destructor - unique_ptr handles cleanup automatically
+     */
+    ~SolutionData() = default;
 
     /**
-     * @brief Default copy from another SolutionData
+     * @brief Deleted copy constructor
      */
-    SolutionData(const SolutionData &solution_data) = default;
+    SolutionData(const SolutionData &solution_data) = delete;
+
+    /**
+     * @brief Deleted copy assignment
+     */
+    SolutionData& operator=(const SolutionData &solution_data) = delete;
+
+    /**
+     * @brief Move constructor - unique_ptr handles transfer automatically
+     */
+    SolutionData(SolutionData &&solution_data) noexcept = default;
+
+    /**
+     * @brief Move assignment - unique_ptr handles transfer automatically
+     */
+    SolutionData& operator=(SolutionData &&solution_data) noexcept = default;
 
     /**
      * @brief Create a solution object from this data
@@ -62,21 +81,20 @@ class SolutionData
     Solution generate_solution();
 
 private:
-
-    int flag;
-    int number_of_timesteps;
-    int length_of_return_vector;
-    int arg_sens0;
-    int arg_sens1;
-    int arg_sens2;
-    int length_of_final_sv_slice;
-    bool save_hermite;
-    sunrealtype *t_return;
-    sunrealtype *y_return;
-    sunrealtype *yp_return;
-    sunrealtype *yS_return;
-    sunrealtype *ypS_return;
-    sunrealtype *yterm_return;
+    int flag = 0;
+    int number_of_timesteps = 0;
+    int length_of_return_vector = 0;
+    int arg_sens0 = 0;
+    int arg_sens1 = 0;
+    int arg_sens2 = 0;
+    int length_of_final_sv_slice = 0;
+    bool save_hermite = false;
+    std::unique_ptr<sunrealtype[]> t_return;
+    std::unique_ptr<sunrealtype[]> y_return;
+    std::unique_ptr<sunrealtype[]> yp_return;
+    std::unique_ptr<sunrealtype[]> yS_return;
+    std::unique_ptr<sunrealtype[]> ypS_return;
+    std::unique_ptr<sunrealtype[]> yterm_return;
 };
 
 #endif // PYBAMM_IDAKLU_SOLUTION_DATA_HPP

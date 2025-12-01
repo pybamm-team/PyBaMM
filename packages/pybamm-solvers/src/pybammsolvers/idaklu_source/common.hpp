@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <limits>
+#include <mutex>
 
 #include <idas/idas.h>                 /* prototypes for IDAS fcts., consts.    */
 #include <idas/idas_bbdpre.h>         /* access to IDABBDPRE preconditioner          */
@@ -125,7 +126,14 @@ inline sunrealtype perturb_time(const sunrealtype t, bool increasing) {
 #define ASSERT(x)
 #else
 
+// Global mutex for thread-safe DEBUG output
+inline std::mutex& get_debug_mutex() {
+  static std::mutex debug_mutex;
+  return debug_mutex;
+}
+
 #define DEBUG_VECTORn(vector, L) {\
+  std::lock_guard<std::mutex> lock(get_debug_mutex()); \
   auto M = N_VGetLength(vector); \
   auto N = (M < L) ? M : L; \
   std::cout << #vector << "[" << N << " of " << M << "] = ["; \
@@ -139,6 +147,7 @@ inline sunrealtype perturb_time(const sunrealtype t, bool increasing) {
   std::cout << "]" << std::endl;  }
 
 #define DEBUG_VECTOR(vector) {\
+  std::lock_guard<std::mutex> lock(get_debug_mutex()); \
   std::cout << #vector << " = ["; \
   auto array_ptr = N_VGetArrayPointer(vector); \
   auto N = N_VGetLength(vector); \
@@ -151,6 +160,7 @@ inline sunrealtype perturb_time(const sunrealtype t, bool increasing) {
   std::cout << "]" << std::endl;  }
 
 #define DEBUG_v(v, N) {\
+  std::lock_guard<std::mutex> lock(get_debug_mutex()); \
   std::cout << #v << "[n=" << N << "] = ["; \
   for (int i = 0; i < N; i++) { \
     std::cout << v[i]; \
@@ -161,15 +171,18 @@ inline sunrealtype perturb_time(const sunrealtype t, bool increasing) {
   std::cout << "]" << std::endl;  }
 
 #define DEBUG(x) { \
+    std::lock_guard<std::mutex> lock(get_debug_mutex()); \
     std::cerr << __FILE__ << ":" << __LINE__ << " " << x << std::endl; \
   }
 
 #define DEBUG_n(x) { \
+    std::lock_guard<std::mutex> lock(get_debug_mutex()); \
     std::cerr << __FILE__ << ":" << __LINE__ << "," << #x << " = " << x << std::endl; \
   }
 
 #define ASSERT(x) { \
     if (!(x)) { \
+      std::lock_guard<std::mutex> lock(get_debug_mutex()); \
       std::cerr << __FILE__ << ":" << __LINE__ << " Assertion failed: " << #x << std::endl; \
       throw std::runtime_error("Assertion failed: " #x); \
     } \

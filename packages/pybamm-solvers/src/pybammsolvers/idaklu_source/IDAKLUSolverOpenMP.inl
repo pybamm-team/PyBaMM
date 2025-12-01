@@ -5,6 +5,7 @@
 #include <vector>
 #include "common.hpp"
 #include "SolutionData.hpp"
+#include "sundials_error_handler.hpp"
 
 template <class ExprSet>
 IDAKLUSolverOpenMP<ExprSet>::IDAKLUSolverOpenMP(
@@ -41,10 +42,12 @@ IDAKLUSolverOpenMP<ExprSet>::IDAKLUSolverOpenMP(
 
   // create SUNDIALS context object
   SUNContext_Create(NULL, &sunctx);  // calls null-wrapper if Sundials Ver<6
-  
-  // Error messages are handled in PyBaMM, silence them except in debug mode
-  #if defined(NDEBUG) && SUNDIALS_VERSION_MAJOR >= 7
-    SUNContext_ClearErrHandlers(sunctx);
+
+  // Optionally silence SUNDIALS error messages (handled in PyBaMM)
+  #if SUNDIALS_VERSION_MAJOR >= 7
+    if (solver_input.silence_sundials_errors) {
+      SUNContext_ClearErrHandlers(sunctx);
+    }
   #endif
 
   // allocate memory for solver
@@ -190,68 +193,68 @@ int IDAKLUSolverOpenMP<ExprSet>::ReturnVectorLength() {
 template <class ExprSet>
 void IDAKLUSolverOpenMP<ExprSet>::SetSolverOptions() {
   // Maximum order of the linear multistep method
-  CheckErrors(IDASetMaxOrd(ida_mem, solver_opts.max_order_bdf));
+  CheckErrors(IDASetMaxOrd(ida_mem, solver_opts.max_order_bdf), "IDASetMaxOrd");
 
   // Maximum number of steps to be taken by the solver in its attempt to reach
   // the next output time
-  CheckErrors(IDASetMaxNumSteps(ida_mem, solver_opts.max_num_steps));
+  CheckErrors(IDASetMaxNumSteps(ida_mem, solver_opts.max_num_steps), "IDASetMaxNumSteps");
 
   // Initial step size
-  CheckErrors(IDASetInitStep(ida_mem, solver_opts.dt_init));
+  CheckErrors(IDASetInitStep(ida_mem, solver_opts.dt_init), "IDASetInitStep");
 
   // Minimum absolute step size
-  CheckErrors(IDASetMinStep(ida_mem, solver_opts.dt_min));
+  CheckErrors(IDASetMinStep(ida_mem, solver_opts.dt_min), "IDASetMinStep");
 
   // Maximum absolute step size
-  CheckErrors(IDASetMaxStep(ida_mem, solver_opts.dt_max));
+  CheckErrors(IDASetMaxStep(ida_mem, solver_opts.dt_max), "IDASetMaxStep");
 
   // Maximum number of error test failures in attempting one step
-  CheckErrors(IDASetMaxErrTestFails(ida_mem, solver_opts.max_error_test_failures));
+  CheckErrors(IDASetMaxErrTestFails(ida_mem, solver_opts.max_error_test_failures), "IDASetMaxErrTestFails");
 
   // Maximum number of nonlinear solver iterations at one step
-  CheckErrors(IDASetMaxNonlinIters(ida_mem, solver_opts.max_nonlinear_iterations));
+  CheckErrors(IDASetMaxNonlinIters(ida_mem, solver_opts.max_nonlinear_iterations), "IDASetMaxNonlinIters");
 
   // Maximum number of nonlinear solver convergence failures at one step
-  CheckErrors(IDASetMaxConvFails(ida_mem, solver_opts.max_convergence_failures));
+  CheckErrors(IDASetMaxConvFails(ida_mem, solver_opts.max_convergence_failures), "IDASetMaxConvFails");
 
   // Safety factor in the nonlinear convergence test
-  CheckErrors(IDASetNonlinConvCoef(ida_mem, solver_opts.nonlinear_convergence_coefficient));
+  CheckErrors(IDASetNonlinConvCoef(ida_mem, solver_opts.nonlinear_convergence_coefficient), "IDASetNonlinConvCoef");
 
   // Suppress algebraic variables from error test
-  CheckErrors(IDASetSuppressAlg(ida_mem, solver_opts.suppress_algebraic_error));
+  CheckErrors(IDASetSuppressAlg(ida_mem, solver_opts.suppress_algebraic_error), "IDASetSuppressAlg");
 
   // Positive constant in the Newton iteration convergence test within the initial
   // condition calculation
-  CheckErrors(IDASetNonlinConvCoefIC(ida_mem, solver_opts.nonlinear_convergence_coefficient_ic));
+  CheckErrors(IDASetNonlinConvCoefIC(ida_mem, solver_opts.nonlinear_convergence_coefficient_ic), "IDASetNonlinConvCoefIC");
 
   // Maximum number of steps allowed when icopt=IDA_YA_YDP_INIT in IDACalcIC
-  CheckErrors(IDASetMaxNumStepsIC(ida_mem, solver_opts.max_num_steps_ic));
+  CheckErrors(IDASetMaxNumStepsIC(ida_mem, solver_opts.max_num_steps_ic), "IDASetMaxNumStepsIC");
 
   // Maximum number of the approximate Jacobian or preconditioner evaluations
   // allowed when the Newton iteration appears to be slowly converging
-  CheckErrors(IDASetMaxNumJacsIC(ida_mem, solver_opts.max_num_jacobians_ic));
+  CheckErrors(IDASetMaxNumJacsIC(ida_mem, solver_opts.max_num_jacobians_ic), "IDASetMaxNumJacsIC");
 
   // Maximum number of Newton iterations allowed in any one attempt to solve
   // the initial conditions calculation problem
-  CheckErrors(IDASetMaxNumItersIC(ida_mem, solver_opts.max_num_iterations_ic));
+  CheckErrors(IDASetMaxNumItersIC(ida_mem, solver_opts.max_num_iterations_ic), "IDASetMaxNumItersIC");
 
   // Maximum number of linesearch backtracks allowed in any Newton iteration,
   // when solving the initial conditions calculation problem
-  CheckErrors(IDASetMaxBacksIC(ida_mem, solver_opts.max_linesearch_backtracks_ic));
+  CheckErrors(IDASetMaxBacksIC(ida_mem, solver_opts.max_linesearch_backtracks_ic), "IDASetMaxBacksIC");
 
   // Turn off linesearch
-  CheckErrors(IDASetLineSearchOffIC(ida_mem, solver_opts.linesearch_off_ic));
+  CheckErrors(IDASetLineSearchOffIC(ida_mem, solver_opts.linesearch_off_ic), "IDASetLineSearchOffIC");
 
   // Ratio between linear and nonlinear tolerances
-  CheckErrors(IDASetEpsLin(ida_mem, solver_opts.epsilon_linear_tolerance));
+  CheckErrors(IDASetEpsLin(ida_mem, solver_opts.epsilon_linear_tolerance), "IDASetEpsLin");
 
   // Increment factor used in DQ Jv approximation
-  CheckErrors(IDASetIncrementFactor(ida_mem, solver_opts.increment_factor));
+  CheckErrors(IDASetIncrementFactor(ida_mem, solver_opts.increment_factor), "IDASetIncrementFactor");
 
   int LS_type = SUNLinSolGetType(LS);
   if (LS_type == SUNLINEARSOLVER_DIRECT || LS_type == SUNLINEARSOLVER_MATRIX_ITERATIVE) {
     // Enable or disable linear solution scaling
-    CheckErrors(IDASetLinearSolutionScaling(ida_mem, solver_opts.linear_solution_scaling));
+    CheckErrors(IDASetLinearSolutionScaling(ida_mem, solver_opts.linear_solution_scaling), "IDASetLinearSolutionScaling");
   }
 }
 
@@ -298,7 +301,7 @@ void IDAKLUSolverOpenMP<ExprSet>::Initialize() {
   if (LS == nullptr) {
     throw std::invalid_argument("Linear solver not set");
   }
-  CheckErrors(IDASetLinearSolver(ida_mem, LS, J));
+  CheckErrors(IDASetLinearSolver(ida_mem, LS, J), "IDASetLinearSolver");
 
   if (setup_opts.preconditioner != "none") {
     DEBUG("\tsetting IDADDB preconditioner");
@@ -306,22 +309,22 @@ void IDAKLUSolverOpenMP<ExprSet>::Initialize() {
     CheckErrors(IDABBDPrecInit(
       ida_mem, number_of_states, setup_opts.precon_half_bandwidth,
       setup_opts.precon_half_bandwidth, setup_opts.precon_half_bandwidth_keep,
-      setup_opts.precon_half_bandwidth_keep, 0.0, residual_eval_approx<ExprSet>, NULL));
+      setup_opts.precon_half_bandwidth_keep, 0.0, residual_eval_approx<ExprSet>, NULL), "IDABBDPrecInit");
   }
 
   if (setup_opts.jacobian == "matrix-free") {
-    CheckErrors(IDASetJacTimes(ida_mem, NULL, jtimes_eval<ExprSet>));
+    CheckErrors(IDASetJacTimes(ida_mem, NULL, jtimes_eval<ExprSet>), "IDASetJacTimes");
   } else if (setup_opts.jacobian != "none") {
-    CheckErrors(IDASetJacFn(ida_mem, jacobian_eval<ExprSet>));
+    CheckErrors(IDASetJacFn(ida_mem, jacobian_eval<ExprSet>), "IDASetJacFn");
   }
 
   if (sensitivity) {
     CheckErrors(IDASensInit(ida_mem, number_of_parameters, IDA_SIMULTANEOUS,
-      sensitivities_eval<ExprSet>, yyS, yypS));
-    CheckErrors(IDASensEEtolerances(ida_mem));
+      sensitivities_eval<ExprSet>, yyS, yypS), "IDASensInit");
+    CheckErrors(IDASensEEtolerances(ida_mem), "IDASensEEtolerances");
   }
 
-  CheckErrors(SUNLinSolInitialize(LS));
+  CheckErrors(SUNLinSolInitialize(LS), "SUNLinSolInitialize");
 
   auto id_np_val = rhs_alg_id.unchecked<1>();
   sunrealtype *id_val;
@@ -337,7 +340,7 @@ void IDAKLUSolverOpenMP<ExprSet>::Initialize() {
   }
 
   // Variable types: differential (1) and algebraic (0)
-  CheckErrors(IDASetId(ida_mem, id));
+  CheckErrors(IDASetId(ida_mem, id), "IDASetId");
 }
 
 template <class ExprSet>
@@ -348,7 +351,7 @@ IDAKLUSolverOpenMP<ExprSet>::~IDAKLUSolverOpenMP() {
       IDASensFree(ida_mem);
   }
 
-  CheckErrors(SUNLinSolFree(LS));
+  CheckErrors(SUNLinSolFree(LS), "SUNLinSolFree");
 
   SUNMatDestroy(J);
   N_VDestroy(avtol);
@@ -467,15 +470,15 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
   no_progression.AddDt(dt);
 
   // Store consistent initialization
-  CheckErrors(IDAGetDky(ida_mem, t0, 0, yy));
+  CheckErrors(IDAGetDky(ida_mem, t0, 0, yy), "IDAGetDky at t0");
   if (sensitivity) {
-    CheckErrors(IDAGetSensDky(ida_mem, t0, 0, yyS));
+    CheckErrors(IDAGetSensDky(ida_mem, t0, 0, yyS), "IDAGetSensDky at t0");
   }
 
   SetStep(t0, y_val, yp_val, yS_val, ypS_val, i_save);
 
   // Reset the states at t = t_val. Sensitivities are handled in the while-loop
-  CheckErrors(IDAGetDky(ida_mem, t_val, 0, yy));
+  CheckErrors(IDAGetDky(ida_mem, t_val, 0, yy), "IDAGetDky at t_val");
 
   // Solve the system
   DEBUG("IDASolve");
@@ -497,7 +500,7 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
     bool hit_adaptive = save_adaptive_steps && retval == IDA_SUCCESS;
 
     if (sensitivity) {
-      CheckErrors(IDAGetSensDky(ida_mem, t_val, 0, yyS));
+      CheckErrors(IDAGetSensDky(ida_mem, t_val, 0, yyS), "IDAGetSensDky during solve");
     }
 
     if (hit_tinterp) {
@@ -534,7 +537,7 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
       // Set the next stop time
       i_eval++;
       t_eval_next = t_eval[i_eval];
-      CheckErrors(IDASetStopTime(ida_mem, t_eval_next));
+      CheckErrors(IDASetStopTime(ida_mem, t_eval_next), "IDASetStopTime");
       // Reinitialize the solver to deal with the discontinuity at t = t_val.
       ReinitializeIntegrator(t_val);
       ConsistentInitialization(t_val, t_eval_next, IDA_YA_YDP_INIT);
@@ -551,11 +554,11 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
     no_progression.AddDt(dt);
   }
 
+  // Allocate and populate final state slice if needed
   int const length_of_final_sv_slice = save_outputs_only ? number_of_states : 0;
-  sunrealtype *yterm_return = new sunrealtype[length_of_final_sv_slice];
+  auto yterm_return = std::make_unique<sunrealtype[]>(length_of_final_sv_slice);
   if (save_outputs_only) {
-    // store final state slice if outout variables are specified
-    std::memcpy(yterm_return, y_val, length_of_final_sv_slice * sizeof(sunrealtype*));
+    std::memcpy(yterm_return.get(), y_val, length_of_final_sv_slice * sizeof(sunrealtype));
   }
 
   if (solver_opts.print_stats) {
@@ -566,15 +569,18 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
   number_of_timesteps = i_save;
 
   // Copy the data to return as numpy arrays
-
   // Time, t
-  sunrealtype *t_return = new sunrealtype[number_of_timesteps];
+  auto t_return = std::make_unique<sunrealtype[]>(number_of_timesteps);
   for (size_t i = 0; i < number_of_timesteps; i++) {
     t_return[i] = t[i];
   }
 
-  // States, y
-  sunrealtype *y_return = new sunrealtype[number_of_timesteps * length_of_return_vector];
+  // States, y - check for overflow before allocation
+  size_t y_size;
+  if (check_size_t_multiply_overflow(number_of_timesteps, length_of_return_vector, &y_size)) {
+    throw std::runtime_error("Integer overflow when computing state vector size (number_of_timesteps * length_of_return_vector)");
+  }
+  auto y_return = std::make_unique<sunrealtype[]>(y_size);
   int count = 0;
   for (size_t i = 0; i < number_of_timesteps; i++) {
     for (size_t j = 0; j < length_of_return_vector; j++) {
@@ -590,23 +596,45 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
   auto const arg_sens1 = (save_outputs_only ? length_of_return_vector : number_of_timesteps);
   auto const arg_sens2 = (save_outputs_only ? number_of_parameters : length_of_return_vector);
 
-  sunrealtype *yS_return = new sunrealtype[arg_sens0 * arg_sens1 * arg_sens2];
-  count = 0;
-  for (size_t idx0 = 0; idx0 < arg_sens0; idx0++) {
-    for (size_t idx1 = 0; idx1 < arg_sens1; idx1++) {
-      for (size_t idx2 = 0; idx2 < arg_sens2; idx2++) {
-        auto i = (save_outputs_only ? idx0 : idx1);
-        auto j = (save_outputs_only ? idx1 : idx2);
-        auto k = (save_outputs_only ? idx2 : idx0);
+  // Check for overflow before allocation (only if sensitivity enabled and dimensions non-zero)
+  size_t yS_size = 0;
+  if (sensitivity) {
+    if (check_size_t_multiply_overflow_3(arg_sens0, arg_sens1, arg_sens2, &yS_size)) {
+      throw std::runtime_error("Integer overflow when computing sensitivity state vector size (arg_sens0 * arg_sens1 * arg_sens2)");
+    }
+  }
+  auto yS_return = std::make_unique<sunrealtype[]>(yS_size);
+  if (sensitivity) {
+    count = 0;
+    for (size_t idx0 = 0; idx0 < arg_sens0; idx0++) {
+      for (size_t idx1 = 0; idx1 < arg_sens1; idx1++) {
+        for (size_t idx2 = 0; idx2 < arg_sens2; idx2++) {
+          auto i = (save_outputs_only ? idx0 : idx1);
+          auto j = (save_outputs_only ? idx1 : idx2);
+          auto k = (save_outputs_only ? idx2 : idx0);
 
-        yS_return[count] = yS[i][k][j];
-        count++;
+          yS_return[count] = yS[i][k][j];
+          count++;
+        }
       }
     }
   }
 
-  sunrealtype *yp_return = new sunrealtype[(save_hermite ? 1 : 0) * (number_of_timesteps * number_of_states)];
-  sunrealtype *ypS_return = new sunrealtype[(save_hermite ? 1 : 0) * (arg_sens0 * arg_sens1 * arg_sens2)];
+  // Hermite interpolation data - check for overflow
+  size_t yp_size = 0;
+  size_t ypS_size = 0;
+  if (save_hermite) {
+    if (check_size_t_multiply_overflow(number_of_timesteps, number_of_states, &yp_size)) {
+      throw std::runtime_error("Integer overflow when computing Hermite state derivative vector size (number_of_timesteps * number_of_states)");
+    }
+    if (sensitivity) {
+      if (check_size_t_multiply_overflow_3(arg_sens0, arg_sens1, arg_sens2, &ypS_size)) {
+        throw std::runtime_error("Integer overflow when computing Hermite sensitivity derivative vector size (arg_sens0 * arg_sens1 * arg_sens2)");
+      }
+    }
+  }
+  auto yp_return = std::make_unique<sunrealtype[]>(yp_size);
+  auto ypS_return = std::make_unique<sunrealtype[]>(ypS_size);
   if (save_hermite) {
     count = 0;
     for (size_t i = 0; i < number_of_timesteps; i++) {
@@ -616,24 +644,25 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
       }
     }
 
-    // Sensitivity states, ypS
-    // Note: Ordering of vector is different if computing outputs vs returning
-    // the complete state vector
-    count = 0;
-    for (size_t idx0 = 0; idx0 < arg_sens0; idx0++) {
-      for (size_t idx1 = 0; idx1 < arg_sens1; idx1++) {
-        for (size_t idx2 = 0; idx2 < arg_sens2; idx2++) {
-          auto i = (save_outputs_only ? idx0 : idx1);
-          auto j = (save_outputs_only ? idx1 : idx2);
-          auto k = (save_outputs_only ? idx2 : idx0);
+    // Sensitivity derivatives, ypS - only populate if sensitivity is enabled
+    if (sensitivity) {
+      count = 0;
+      for (size_t idx0 = 0; idx0 < arg_sens0; idx0++) {
+        for (size_t idx1 = 0; idx1 < arg_sens1; idx1++) {
+          for (size_t idx2 = 0; idx2 < arg_sens2; idx2++) {
+            auto i = (save_outputs_only ? idx0 : idx1);
+            auto j = (save_outputs_only ? idx1 : idx2);
+            auto k = (save_outputs_only ? idx2 : idx0);
 
-          ypS_return[count] = ypS[i][k][j];
-          count++;
+            ypS_return[count] = ypS[i][k][j];
+            count++;
+          }
         }
       }
     }
   }
 
+  // Transfer ownership of unique_ptrs to SolutionData
   return SolutionData(
     retval,
     number_of_timesteps,
@@ -643,12 +672,12 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
     arg_sens2,
     length_of_final_sv_slice,
     save_hermite,
-    t_return,
-    y_return,
-    yp_return,
-    yS_return,
-    ypS_return,
-    yterm_return);
+    std::move(t_return),
+    std::move(y_return),
+    std::move(yp_return),
+    std::move(yS_return),
+    std::move(ypS_return),
+    std::move(yterm_return));
 }
 
 template <class ExprSet>
@@ -685,9 +714,9 @@ void IDAKLUSolverOpenMP<ExprSet>::ExtendHermiteArrays() {
 template <class ExprSet>
 void IDAKLUSolverOpenMP<ExprSet>::ReinitializeIntegrator(const sunrealtype& t_val) {
   DEBUG("IDAKLUSolver::ReinitializeIntegrator");
-  CheckErrors(IDAReInit(ida_mem, t_val, yy, yyp));
+  CheckErrors(IDAReInit(ida_mem, t_val, yy, yyp), "IDAReInit");
   if (sensitivity) {
-    CheckErrors(IDASensReInit(ida_mem, IDA_SIMULTANEOUS, yyS, yypS));
+    CheckErrors(IDASensReInit(ida_mem, IDA_SIMULTANEOUS, yyS, yypS), "IDASensReInit");
   }
 }
 
@@ -781,9 +810,9 @@ void IDAKLUSolverOpenMP<ExprSet>::SetStepInterp(
   DEBUG("IDAKLUSolver::SetStepInterp");
 
   while (i_interp <= (t_interp.size()-1) && t_interp_next <= t_val) {
-    CheckErrors(IDAGetDky(ida_mem, t_interp_next, 0, yy));
+    CheckErrors(IDAGetDky(ida_mem, t_interp_next, 0, yy), "IDAGetDky for interpolation");
     if (sensitivity) {
-      CheckErrors(IDAGetSensDky(ida_mem, t_interp_next, 0, yyS));
+      CheckErrors(IDAGetSensDky(ida_mem, t_interp_next, 0, yyS), "IDAGetSensDky for interpolation");
     }
 
     // Memory is already allocated for the interpolated values
@@ -798,9 +827,9 @@ void IDAKLUSolverOpenMP<ExprSet>::SetStepInterp(
   }
 
   // Reset the states and sensitivities to t = t_val
-  CheckErrors(IDAGetDky(ida_mem, t_val, 0, yy));
+  CheckErrors(IDAGetDky(ida_mem, t_val, 0, yy), "IDAGetDky reset after interpolation");
   if (sensitivity) {
-    CheckErrors(IDAGetSensDky(ida_mem, t_val, 0, yyS));
+    CheckErrors(IDAGetSensDky(ida_mem, t_val, 0, yyS), "IDAGetSensDky reset after interpolation");
   }
 }
 
@@ -953,7 +982,7 @@ void IDAKLUSolverOpenMP<ExprSet>::SetStepHermite(
   DEBUG("IDAKLUSolver::SetStepHermite");
 
   // States
-  CheckErrors(IDAGetDky(ida_mem, tval, 1, yyp));
+  CheckErrors(IDAGetDky(ida_mem, tval, 1, yyp), "IDAGetDky for Hermite (derivative 1)");
   auto &yp_back = yp[i_save];
     for (size_t j = 0; j < length_of_return_vector; ++j) {
     yp_back[j] = yp_val[j];
@@ -976,7 +1005,7 @@ void IDAKLUSolverOpenMP<ExprSet>::SetStepHermiteSensitivities(
   DEBUG("IDAKLUSolver::SetStepHermiteSensitivities");
 
   // Calculate sensitivities for the full ypS array
-  CheckErrors(IDAGetSensDky(ida_mem, tval, 1, yypS));
+  CheckErrors(IDAGetSensDky(ida_mem, tval, 1, yypS), "IDAGetSensDky for Hermite (derivative 1)");
   for (size_t j = 0; j < number_of_parameters; ++j) {
     auto &ypS_back_j = ypS[i_save][j];
     auto &ypSval_j = ypS_val[j];
@@ -989,8 +1018,14 @@ void IDAKLUSolverOpenMP<ExprSet>::SetStepHermiteSensitivities(
 template <class ExprSet>
 void IDAKLUSolverOpenMP<ExprSet>::CheckErrors(int const & flag) {
   if (flag < 0) {
-    auto message = std::string("IDA failed with flag ") + std::to_string(flag);
-    throw std::runtime_error(message.c_str());
+    throw_sundials_error(flag, "SUNDIALS operation");
+  }
+}
+
+template <class ExprSet>
+void IDAKLUSolverOpenMP<ExprSet>::CheckErrors(int const & flag, const char* context) {
+  if (flag < 0) {
+    throw_sundials_error(flag, context);
   }
 }
 
@@ -1012,14 +1047,14 @@ void IDAKLUSolverOpenMP<ExprSet>::PrintStats() {
     &hlast,
     &hcur,
     &tcur
-  ));
+  ), "IDAGetIntegratorStats");
 
   long nniters, nncfails;
-  CheckErrors(IDAGetNonlinSolvStats(ida_mem, &nniters, &nncfails));
+  CheckErrors(IDAGetNonlinSolvStats(ida_mem, &nniters, &nncfails), "IDAGetNonlinSolvStats");
 
   long int ngevalsBBDP = 0;
   if (setup_opts.using_iterative_solver) {
-    CheckErrors(IDABBDPrecGetNumGfnEvals(ida_mem, &ngevalsBBDP));
+    CheckErrors(IDABBDPrecGetNumGfnEvals(ida_mem, &ngevalsBBDP), "IDABBDPrecGetNumGfnEvals");
   }
 
   py::print("Solver Stats:");

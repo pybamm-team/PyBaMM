@@ -138,6 +138,7 @@ SetupOptions::SetupOptions(py::dict &py_opts)
 
 SolverOptions::SolverOptions(py::dict &py_opts)
     : print_stats(py_opts["print_stats"].cast<bool>()),
+      silence_sundials_errors(false),
       // IDA main solver
       max_order_bdf(py_opts["max_order_bdf"].cast<int>()),
       max_num_steps(py_opts["max_num_steps"].cast<int>()),
@@ -173,5 +174,10 @@ SolverOptions::SolverOptions(py::dict &py_opts)
     }
     if (py_opts.contains("t_no_progress")) {
         t_no_progress = SUN_RCONST(py_opts["t_no_progress"].cast<sunrealtype>());
+    }
+
+    // Silence Sundials warnings w/ key checks for previous pybamm versions
+    if (py_opts.contains("silence_sundials_errors")) {
+        silence_sundials_errors = py_opts["silence_sundials_errors"].cast<bool>();
     }
 }

@@ -27,6 +27,7 @@ struct SetupOptions {
  */
 struct SolverOptions {
   bool print_stats;
+  bool silence_sundials_errors;
   // IDA main solver
   int max_order_bdf;
   int max_num_steps;

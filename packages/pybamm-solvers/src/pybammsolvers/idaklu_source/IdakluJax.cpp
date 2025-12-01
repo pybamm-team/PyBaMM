@@ -50,7 +50,9 @@ void IdakluJax::cpu_idaklu_eval(void *out_tuple, const void **in) {
   const std::int64_t n_vars = *reinterpret_cast<const std::int64_t *>(in[k++]);
   const std::int64_t n_inputs = *reinterpret_cast<const std::int64_t *>(in[k++]);
   const auto *t = reinterpret_cast<const sunrealtype *>(in[k++]);
-  auto *inputs = new sunrealtype(n_inputs);
+  
+  // Use std::vector for automatic memory management (RAII)
+  std::vector<sunrealtype> inputs(n_inputs);
   for (int i = 0; i < n_inputs; i++) {
     inputs[i] = reinterpret_cast<const sunrealtype *>(in[k++])[0];
   }
@@ -63,7 +65,7 @@ void IdakluJax::cpu_idaklu_eval(void *out_tuple, const void **in) {
   DEBUG_n(n_vars);
   DEBUG_n(n_inputs);
   DEBUG_v(t, n_t);
-  DEBUG_v(inputs, n_inputs);
+  DEBUG_v(inputs.data(), n_inputs);
 
   // Acquire GIL (since this function is called as a capsule)
   py::gil_scoped_acquire acquire;
@@ -74,8 +76,8 @@ void IdakluJax::cpu_idaklu_eval(void *out_tuple, const void **in) {
   const auto t_np = np_array({n_t}, {sizeof(sunrealtype)}, t, t_capsule);
 
   // Convert inputs to an np_array
-  const py::capsule in_capsule(inputs, "in_capsule");
-  const auto in_np = np_array({n_inputs}, {sizeof(sunrealtype)}, inputs, in_capsule);
+  const py::capsule in_capsule(inputs.data(), "in_capsule");
+  const auto in_np = np_array({n_inputs}, {sizeof(sunrealtype)}, inputs.data(), in_capsule);
 
   // Call solve function in python to obtain an np_array
   const np_array out_np = callback_eval(t_np, in_np);
@@ -96,12 +98,12 @@ void IdakluJax::cpu_idaklu_jvp(void *out_tuple, const void **in) {
   const std::int64_t n_vars = *reinterpret_cast<const std::int64_t *>(in[k++]);
   const std::int64_t n_inputs = *reinterpret_cast<const std::int64_t *>(in[k++]);
   const auto *primal_t = reinterpret_cast<const sunrealtype *>(in[k++]);
-  auto *primal_inputs = new sunrealtype(n_inputs);
+  std::vector<sunrealtype> primal_inputs(n_inputs);
   for (int i = 0; i < n_inputs; i++) {
     primal_inputs[i] = reinterpret_cast<const sunrealtype *>(in[k++])[0];
   }
   const auto *tangent_t = reinterpret_cast<const sunrealtype *>(in[k++]);
-  auto *tangent_inputs = new sunrealtype(n_inputs);
+  std::vector<sunrealtype> tangent_inputs(n_inputs);
   for (int i = 0; i < n_inputs; i++) {
     tangent_inputs[i] = reinterpret_cast<const sunrealtype *>(in[k++])[0];
   }
@@ -113,9 +115,9 @@ void IdakluJax::cpu_idaklu_jvp(void *out_tuple, const void **in) {
   DEBUG_n(n_vars);
   DEBUG_n(n_inputs);
   DEBUG_v(primal_t, n_t);
-  DEBUG_v(primal_inputs, n_inputs);
+  DEBUG_v(primal_inputs.data(), n_inputs);
   DEBUG_v(tangent_t, n_t);
-  DEBUG_v(tangent_inputs, n_inputs);
+  DEBUG_v(tangent_inputs.data(), n_inputs);
 
   // Acquire GIL (since this function is called as a capsule)
   py::gil_scoped_acquire acquire;
@@ -131,11 +133,11 @@ void IdakluJax::cpu_idaklu_jvp(void *out_tuple, const void **in) {
   );
 
   // Pack primals as np_array
-  py::capsule primal_inputs_capsule(primal_inputs, "primal_inputs_capsule");
+  py::capsule primal_inputs_capsule(primal_inputs.data(), "primal_inputs_capsule");
   const auto primal_inputs_np = np_array(
     {n_inputs},
     {sizeof(sunrealtype)},
-    primal_inputs,
+    primal_inputs.data(),
     primal_inputs_capsule
   );
 
@@ -149,11 +151,11 @@ void IdakluJax::cpu_idaklu_jvp(void *out_tuple, const void **in) {
   );
 
   // Pack tangents as np_array
-  const py::capsule tangent_inputs_capsule(tangent_inputs, "tangent_inputs_capsule");
+  const py::capsule tangent_inputs_capsule(tangent_inputs.data(), "tangent_inputs_capsule");
   const auto tangent_inputs_np = np_array(
     {n_inputs},
     {sizeof(sunrealtype)},
-    tangent_inputs,
+    tangent_inputs.data(),
     tangent_inputs_capsule
   );
 
@@ -182,7 +184,7 @@ void IdakluJax::cpu_idaklu_vjp(void *out_tuple, const void **in) {
   const auto *y_bar = reinterpret_cast<const sunrealtype *>(in[k++]);
   const auto *invar = reinterpret_cast<const std::int64_t *>(in[k++]);
   const auto *t = reinterpret_cast<const sunrealtype *>(in[k++]);
-  auto *inputs = new sunrealtype(n_inputs);
+  std::vector<sunrealtype> inputs(n_inputs);
   for (int i = 0; i < n_inputs; i++) {
     inputs[i] = reinterpret_cast<const sunrealtype *>(in[k++])[0];
   }
@@ -197,7 +199,7 @@ void IdakluJax::cpu_idaklu_vjp(void *out_tuple, const void **in) {
   DEBUG_v(y_bar, n_y_bar0*n_y_bar1);
   DEBUG_v(invar, 1);
   DEBUG_v(t, n_t);
-  DEBUG_v(inputs, n_inputs);
+  DEBUG_v(inputs.data(), n_inputs);
 
   // Acquire GIL (since this function is called as a capsule)
   py::gil_scoped_acquire acquire;
@@ -217,8 +219,8 @@ void IdakluJax::cpu_idaklu_vjp(void *out_tuple, const void **in) {
     );
 
   // Convert inputs to an np_array
-  py::capsule in_capsule(inputs, "in_capsule");
-  np_array in_np = np_array({n_inputs}, {sizeof(sunrealtype)}, inputs, in_capsule);
+  py::capsule in_capsule(inputs.data(), "in_capsule");
+  np_array in_np = np_array({n_inputs}, {sizeof(sunrealtype)}, inputs.data(), in_capsule);
 
   // Call VJP function in python to obtain an np_array
   np_array y_dot = callback_vjp(y_bar_np, n_y_bar0, n_y_bar1, invar[0], t_np, in_np);

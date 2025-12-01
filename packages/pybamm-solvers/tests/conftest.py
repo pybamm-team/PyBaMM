@@ -196,6 +196,7 @@ def exponential_decay_solver(idaklu_module, exponential_decay_model):
         "linsol_max_iterations": 5,
         # SolverOptions
         "print_stats": False,
+        "silence_sundials_errors": True,
         "max_order_bdf": 5,
         "max_num_steps": 10000,
         "dt_init": 0.01,
