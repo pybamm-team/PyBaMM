@@ -462,6 +462,8 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
   // Progress one step. This must be done before the while loop to ensure
   // that we can run IDAGetDky at t0 for dky = 1
   int retval = IDASolve(ida_mem, tf_perturbed, &t_val, yy, yyp, IDA_ONE_STEP);
+  // If the solver cannot make the first step, throw an error
+  CheckErrors(retval, "IDASolve at t0");
   dt = t_val - t_prev;
 
   // Optional method to fail the simulation if the solver is not making progress.

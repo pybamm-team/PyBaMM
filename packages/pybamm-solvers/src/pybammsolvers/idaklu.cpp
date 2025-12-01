@@ -14,6 +14,7 @@
 #include "idaklu_source/IdakluJax.hpp"
 #include "idaklu_source/common.hpp"
 #include "idaklu_source/Expressions/Casadi/CasadiFunctions.hpp"
+#include "idaklu_source/sundials_error_handler.hpp"
 
 
 casadi::Function generate_casadi_function(const std::string &data)
@@ -96,6 +97,11 @@ PYBIND11_MODULE(idaklu, m)
     "Generate a casadi function",
     py::arg("string"),
     py::return_value_policy::take_ownership);
+
+  m.def("sundials_error_message", &sundials_error_message,
+    "Get a human-readable message for a SUNDIALS error code",
+    py::arg("flag"),
+    py::return_value_policy::copy);
 
   // IdakluJax interface routines
   py::class_<IdakluJax>(m, "IdakluJax")

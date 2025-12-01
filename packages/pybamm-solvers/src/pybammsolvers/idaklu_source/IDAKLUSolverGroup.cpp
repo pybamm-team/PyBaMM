@@ -103,7 +103,7 @@ std::vector<Solution> IDAKLUSolverGroup::solve(
 
   std::vector<SolutionData> results(number_of_groups);
 
-  std::optional<std::exception> exception;
+  std::optional<std::string> exception_message;
 
   omp_set_num_threads(m_solvers.size());
   #pragma omp parallel for
@@ -120,13 +120,13 @@ std::vector<Solution> IDAKLUSolverGroup::solve(
       // If an exception is thrown, we need to catch it and rethrow it outside the parallel region
       #pragma omp critical
       {
-        exception = e;
+        exception_message = std::string(e.what());
       }
     }
   }
 
-  if (exception.has_value()) {
-    py::set_error(PyExc_ValueError, exception->what());
+  if (exception_message.has_value()) {
+    py::set_error(PyExc_ValueError, exception_message->c_str());
     throw py::error_already_set();
   }
 
