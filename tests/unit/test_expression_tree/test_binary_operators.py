@@ -876,3 +876,10 @@ class TestBinaryOperators:
 
         not_equal_json["children"] = [pybamm.Scalar(2), pybamm.Scalar(4)]
         assert pybamm.NotEqualHeaviside._from_json(not_equal_json) == ne_h
+
+    def test_t_discon_error(self):
+        a = pybamm.Symbol("a")
+        b = pybamm.Symbol("b")
+        bin = pybamm.BinaryOperator("binary test", a, b)
+        with pytest.raises(NotImplementedError):
+            bin._t_discon(None, None, None, None)
