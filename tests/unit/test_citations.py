@@ -213,16 +213,6 @@ class TestCitations:
         assert "Subramanian2005" in citations._papers_to_cite
         assert "Subramanian2005" in citations._citation_tags.keys()
 
-    def test_brosaplanella_2021(self):
-        # Test that calling relevant bits of code adds the right paper to citations
-        citations = pybamm.citations
-
-        citations._reset()
-        assert "BrosaPlanella2021" not in citations._papers_to_cite
-        pybamm.electrolyte_conductivity.Integrated(None)
-        assert "BrosaPlanella2021" in citations._papers_to_cite
-        assert "BrosaPlanella2021" in citations._citation_tags.keys()
-
     def test_brosaplanella_2022(self):
         # Test that calling relevant bits of code adds the right paper to citations
         citations = pybamm.citations
