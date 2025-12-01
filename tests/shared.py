@@ -583,7 +583,10 @@ def assert_domain_equal(a, b):
 def get_mesh_for_testing_symbolic():
     submesh_types = {"domain": pybamm.SymbolicUniform1DSubMesh}
     geometry = {
-        "domain": {"x": {"min": pybamm.Scalar(0), "max": pybamm.Scalar(2)}},
+        "domain": {
+            "x": {"min": pybamm.Scalar(0), "max": pybamm.Scalar(2)},
+            "coord_sys": "cartesian",
+        },
     }
     var_pts = {"x": 15}
     mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
@@ -596,8 +599,14 @@ def get_mesh_for_testing_symbolic_concatenation():
         "domain 2": pybamm.SymbolicUniform1DSubMesh,
     }
     geometry = {
-        "domain 1": {"x": {"min": pybamm.Scalar(0), "max": pybamm.Scalar(2)}},
-        "domain 2": {"x": {"min": pybamm.Scalar(2), "max": pybamm.Scalar(4)}},
+        "domain 1": {
+            "x": {"min": pybamm.Scalar(0), "max": pybamm.Scalar(2)},
+            "coord_sys": "cartesian",
+        },
+        "domain 2": {
+            "x": {"min": pybamm.Scalar(2), "max": pybamm.Scalar(4)},
+            "coord_sys": "cartesian",
+        },
     }
     var_pts = {"x": 15}
     mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
@@ -607,7 +616,10 @@ def get_mesh_for_testing_symbolic_concatenation():
 def get_spherical_mesh_for_testing_symbolic():
     submesh_types = {"spherical domain": pybamm.SymbolicUniform1DSubMesh}
     geometry = {
-        "spherical domain": {"r_n": {"min": pybamm.Scalar(0), "max": pybamm.Scalar(2)}},
+        "spherical domain": {
+            "r_n": {"min": pybamm.Scalar(0), "max": pybamm.Scalar(2)},
+            "coord_sys": "spherical polar",
+        },
     }
     var_pts = {"r_n": 15}
     mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
@@ -616,12 +628,11 @@ def get_spherical_mesh_for_testing_symbolic():
 
 def get_cylindrical_mesh_for_testing_symbolic():
     submesh_types = {"cylindrical domain": pybamm.SymbolicUniform1DSubMesh}
-    cylindrical_r = pybamm.SpatialVariable(
-        "r", ["cylindrical domain"], coord_sys="cylindrical polar"
-    )
+    cylindrical_r = pybamm.SpatialVariable("r", ["cylindrical domain"])
     geometry = {
         "cylindrical domain": {
-            cylindrical_r: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(2)}
+            cylindrical_r: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(2)},
+            "coord_sys": "cylindrical polar",
         },
     }
     var_pts = {cylindrical_r: 15}

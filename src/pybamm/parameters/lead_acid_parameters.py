@@ -354,7 +354,6 @@ class PhaseLeadAcidParameters(BaseParameters):
             f"x_{domain[0]}",
             domain=[f"{domain} electrode"],
             auxiliary_domains={"secondary": "current collector"},
-            coord_sys="cartesian",
         )
         self.a = pybamm.FunctionParameter(
             f"{Domain} electrode surface area to volume ratio [m-1]",

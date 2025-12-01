@@ -247,16 +247,12 @@ class Thevenin(pybamm.BaseModel):
 
     @property
     def default_var_pts(self):
-        x = pybamm.SpatialVariable(
-            "x ECMD", domain=["ECMD particle"], coord_sys="Cartesian"
-        )
+        x = pybamm.SpatialVariable("x ECMD", domain=["ECMD particle"])
         return {x: 20}
 
     @property
     def default_geometry(self):
-        x = pybamm.SpatialVariable(
-            "x ECMD", domain=["ECMD particle"], coord_sys="Cartesian"
-        )
+        x = pybamm.SpatialVariable("x ECMD", domain=["ECMD particle"])
         return {"ECMD particle": {x: {"min": 0, "max": 1}}}
 
     @property
