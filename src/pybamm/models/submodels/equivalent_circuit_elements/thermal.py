@@ -20,8 +20,9 @@ class ThermalSubModel(pybamm.BaseSubModel):
 
     def get_fundamental_variables(self):
         T_cell = pybamm.Variable("Cell temperature [degC]")
+        T_cell.print_name = "T_cell"
         T_jig = pybamm.Variable("Jig temperature [degC]")
-
+        T_jig.print_name = "T_jig"
         # Note this is defined in deg C
         T_amb = self.param.T_amb(pybamm.t)
 
