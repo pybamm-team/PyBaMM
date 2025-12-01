@@ -41,10 +41,9 @@ class TestParameterValues:
         with pytest.raises(ValueError, match="'Junk' is not a valid parameter set."):
             pybamm.ParameterValues("Junk")
 
-    def test_repr(self):
-        param = pybamm.ParameterValues({"a": 1})
-        assert "'a': 1" in repr(param)
-        assert param._ipython_key_completions_() == [
+    def test_repr(self, simple_param):
+        assert "'a': 1" in repr(simple_param)
+        assert simple_param._ipython_key_completions_() == [
             "Ideal gas constant [J.K-1.mol-1]",
             "Faraday constant [C.mol-1]",
             "Boltzmann constant [J.K-1]",
@@ -52,8 +51,8 @@ class TestParameterValues:
             "a",
         ]
 
-    def test_eq(self):
-        assert pybamm.ParameterValues({"a": 1}) == pybamm.ParameterValues({"a": 1})
+    def test_eq(self, simple_param):
+        assert simple_param == pybamm.ParameterValues({"a": 1})
 
     def test_update(self):
         # equate values
