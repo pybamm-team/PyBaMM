@@ -1231,6 +1231,8 @@ class BaseBatteryModel(pybamm.BaseModel):
     def get_inverse_intercalation_kinetics(self):
         if self.options["intercalation kinetics"] == "symmetric Butler-Volmer":
             return pybamm.kinetics.InverseButlerVolmer
+        elif self.options["intercalation kinetics"] == "linear":
+            return pybamm.kinetics.InverseLinear
         else:
             raise pybamm.OptionError(
                 "Inverse kinetics are only implemented for symmetric Butler-Volmer. "

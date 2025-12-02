@@ -67,7 +67,7 @@ class SPM(BaseModel):
                     self.param, domain, "lithium-ion main", self.options
                 )
                 self.submodels[f"{domain} interface current"] = (
-                    pybamm.kinetics.CurrentForInverseButlerVolmer(
+                    pybamm.kinetics.CurrentForInverseKinetics(
                         self.param, domain, "lithium-ion main", self.options
                     )
                 )
