@@ -42,7 +42,7 @@ def run_coverage(session):
     if "CI" in os.environ:
         session.install("pytest-github-actions-annotate-failures")
     session.install("-e", ".[all,dev,jax]", silent=False)
-    session.run("pytest", "--cov=pybamm", "--cov-report=xml", "tests/unit")
+    session.run("pytest", "--cov=pybamm", "--cov-report=xml", "tests/unit", "-n", "0")
 
 
 @nox.session(name="integration")
@@ -79,7 +79,7 @@ def run_unit(session):
     """Run the unit tests."""
     set_environment_variables(PYBAMM_ENV, session=session)
     session.install("-e", ".[all,dev,jax]", silent=False)
-    session.run("python", "-m", "pytest", "-m", "unit")
+    session.run("python", "-m", "pytest", "-m", "unit", "-n", "0")
 
 
 @nox.session(name="examples")
