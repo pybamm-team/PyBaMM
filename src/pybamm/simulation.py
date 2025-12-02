@@ -128,6 +128,7 @@ class Simulation:
         self._model_with_set_params = None
         self._built_model = None
         self._built_initial_soc = None
+        self._built_nominal_capacity = None
         self.steps_to_built_models = None
         self.steps_to_built_solvers = None
         self._mesh = None
@@ -162,6 +163,42 @@ class Simulation:
         msg = "pybamm.simulation.set_up_and_parameterise_experiment is deprecated and not meant to be accessed by users."
         warnings.warn(msg, DeprecationWarning, stacklevel=2)
         self._set_up_and_parameterise_experiment(solve_kwargs=solve_kwargs)
+
+    def _update_experiment_models_for_capacity(self, solve_kwargs=None):
+        """
+        Check if the nominal capacity has changed and update the experiment models
+        if needed. This re-processes the models without rebuilding the mesh and
+        discretisation.
+        """
+        current_capacity = self._parameter_values.get(
+            "Nominal cell capacity [A.h]", None
+        )
+
+        if self._built_nominal_capacity == current_capacity:
+            return
+
+        # Capacity has changed, need to re-process the models
+        pybamm.logger.info(
+            f"Nominal capacity changed from {self._built_nominal_capacity} to "
+            f"{current_capacity}. Re-processing experiment models."
+        )
+
+        # Re-parameterise the experiment with the new capacity
+        self._set_up_and_parameterise_experiment(solve_kwargs)
+
+        # Re-discretise the models
+        self.steps_to_built_models = {}
+        self.steps_to_built_solvers = {}
+        for (
+            step,
+            model_with_set_params,
+        ) in self.experiment_unique_steps_to_model.items():
+            built_model = self._disc.process_model(model_with_set_params, inplace=True)
+            solver = self._solver.copy()
+            self.steps_to_built_solvers[step] = solver
+            self.steps_to_built_models[step] = built_model
+
+        self._built_nominal_capacity = current_capacity
 
     def _set_up_and_parameterise_experiment(self, solve_kwargs=None):
         """
@@ -266,6 +303,7 @@ class Simulation:
             # reset
             self._model_with_set_params = None
             self._built_model = None
+            self._built_nominal_capacity = None
             self.steps_to_built_models = None
             self.steps_to_built_solvers = None
 
@@ -338,6 +376,8 @@ class Simulation:
             self.set_initial_state(initial_soc, direction=direction, inputs=inputs)
 
         if self.steps_to_built_models:
+            # Check if we need to update the models due to capacity change
+            self._update_experiment_models_for_capacity(solve_kwargs)
             return
         else:
             self._set_up_and_parameterise_experiment(solve_kwargs)
@@ -365,6 +405,10 @@ class Simulation:
                 solver = self._solver.copy()
                 self.steps_to_built_solvers[step] = solver
                 self.steps_to_built_models[step] = built_model
+
+            self._built_nominal_capacity = self._parameter_values.get(
+                "Nominal cell capacity [A.h]", None
+            )
 
     def solve(
         self,
@@ -778,7 +822,7 @@ class Simulation:
                             feasible = False
                             # If none of the cycles worked, raise an error
                             if cycle_num == 1 and step_num == 1:
-                                raise error
+                                raise error from error
                             # Otherwise, just stop this cycle
                             break
 

@@ -1625,6 +1625,8 @@ def convert_symbol_from_json(json_data):
     elif json_data["type"] == "Parameter":
         # Convert stored parameters back to PyBaMM Parameter objects
         return pybamm.Parameter(json_data["name"])
+    elif json_data["type"] == "InputParameter":
+        return pybamm.InputParameter(json_data["name"])
     elif json_data["type"] == "Scalar":
         # Convert stored numerical values back to PyBaMM Scalar objects
         return pybamm.Scalar(json_data["value"])
