@@ -91,7 +91,7 @@ def run_unit_idaklujax(session):
         "python",
         "-m",
         "pytest",
-        "tests/unit/test_solvers/test_idaklu_jax.py",
+        "tests/unit/test_solvers",
         "-n",
         "0",
         "--log-cli-level=DEBUG",

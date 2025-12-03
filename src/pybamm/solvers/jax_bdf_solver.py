@@ -342,7 +342,7 @@ if pybamm.has_jax():
 
         def while_cond(while_state):
             k, converged, _, _, _ = while_state
-            return (converged == False) * (k < ROOT_SOLVE_MAXITER)  # noqa: E712
+            return (~converged) & (k < ROOT_SOLVE_MAXITER)
 
         def while_body(while_state):
             k, converged, dy_norm_old, d, y_a = while_state
@@ -510,7 +510,7 @@ if pybamm.has_jax():
 
         def while_cond(while_state):
             k, converged, _, _, _, _ = while_state
-            return (converged == False) * (k < NEWTON_MAXITER)  # noqa: E712
+            return (~converged) & (k < NEWTON_MAXITER)
 
         def while_body(while_state):
             k, converged, dy_norm_old, d, y, n_function_evals = while_state
