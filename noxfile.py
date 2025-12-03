@@ -82,6 +82,22 @@ def run_unit(session):
     session.run("python", "-m", "pytest", "-m", "unit")
 
 
+@nox.session(name="unit_ij")
+def run_unit_idaklujax(session):
+    """Run the unit tests."""
+    set_environment_variables(PYBAMM_ENV, session=session)
+    session.install("-e", ".[all,dev,jax]", silent=False)
+    session.run(
+        "python",
+        "-m",
+        "pytest",
+        "tests/unit/test_solvers/test_idaklu_jax.py",
+        "-n",
+        "0",
+        "--log-cli-level=DEBUG",
+    )
+
+
 @nox.session(name="examples")
 def run_examples(session):
     """Run the examples tests for Jupyter notebooks."""
