@@ -79,7 +79,7 @@ def run_unit(session):
     """Run the unit tests."""
     set_environment_variables(PYBAMM_ENV, session=session)
     session.install("-e", ".[all,dev,jax]", silent=False)
-    session.run("python", "-m", "pytest", "-m", "unit", "-n", "0")
+    session.run("python", "-m", "pytest", "-m", "unit")
 
 
 @nox.session(name="examples")

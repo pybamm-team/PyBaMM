@@ -54,6 +54,15 @@ def sim(model, idaklu_solver):
     )
 
 
+@pytest.fixture(autouse=True)
+def clear_lru_cache():
+    # Execute the test...
+    yield
+
+    # ...then clear the cache.
+    pybamm.IDAKLUJax._cached_solve.cache_clear()
+
+
 def no_jit(f):
     return f
 
