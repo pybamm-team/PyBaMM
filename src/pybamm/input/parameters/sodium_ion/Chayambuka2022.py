@@ -37,7 +37,7 @@ def HC_ocp_Chayambuka2022(sto):
     """
 
     name, (x, y) = U_n_data
-    return pybamm.Interpolant(x, y, sto, name)
+    return pybamm.Interpolant(x, y, sto, name, extrapolate=True)
 
 
 def HC_diffusivity_Chayambuka2022(sto, T):
@@ -96,7 +96,7 @@ def HC_electrolyte_exchange_current_density_Chayambuka2022(c_e, c_s_surf, c_s_ma
         Exchange-current density [A.m-2]
     """
     name, (x, y) = k_n_data
-    k_n = pybamm.Interpolant(x, y, c_s_surf, name)
+    k_n = pybamm.Interpolant(x, y, c_s_surf, name, extrapolate=True)
     c_e0 = pybamm.Parameter("Initial concentration in electrolyte [mol.m-3]")
 
     return (
@@ -132,7 +132,7 @@ def NVPF_ocp_Chayambuka2022(sto):
     """
 
     name, (x, y) = U_p_data
-    return pybamm.Interpolant(x, y, sto, name)
+    return pybamm.Interpolant(x, y, sto, name, extrapolate=True)
 
 
 def NVPF_diffusivity_Chayambuka2022(sto, T):
@@ -191,7 +191,7 @@ def NVPF_electrolyte_exchange_current_density_Chayambuka2022(c_e, c_s_surf, c_s_
         Exchange-current density [A.m-2]
     """
     name, (x, y) = k_p_data
-    k_p = pybamm.Interpolant(x, y, c_s_surf, name)
+    k_p = pybamm.Interpolant(x, y, c_s_surf, name, extrapolate=True)
     c_e0 = pybamm.Parameter("Initial concentration in electrolyte [mol.m-3]")
 
     return (
