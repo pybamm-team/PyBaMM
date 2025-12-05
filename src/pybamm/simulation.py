@@ -317,6 +317,7 @@ class Simulation:
             options=options,
             inputs=inputs,
         )
+        self._model.parameter_values = self._parameter_values
 
         # Save solved initial SOC in case we need to re-build the model
         self._built_initial_soc = initial_soc

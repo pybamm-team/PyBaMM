@@ -73,6 +73,7 @@ class BaseModel:
         self._is_standard_form_dae = None
         self._variables_casadi = {}
         self._geometry = pybamm.Geometry({})
+        self._parameter_values = None
 
         # Default behaviour is to use the jacobian
         self.use_jacobian = True
@@ -431,6 +432,26 @@ class BaseModel:
         return pybamm.ParameterValues({})
 
     @property
+    def parameter_values(self):
+        """Returns the parameter values for the model."""
+        return self._parameter_values
+
+    @parameter_values.setter
+    def parameter_values(self, parameter_values):
+        self._parameter_values = parameter_values
+
+    @property
+    def fixed_input_parameters(self):
+        """Returns a dictionary of all fixed input parameters from parameter_values."""
+        if self._parameter_values is None:
+            return {}
+        return {
+            k: v
+            for k, v in self._parameter_values.items()
+            if isinstance(v, pybamm.InputParameter)
+        }
+
+    @property
     def parameters(self):
         """Returns a  list of all parameter symbols used in the model."""
         self._parameters = self._find_symbols(
@@ -736,6 +757,7 @@ class BaseModel:
                 for side in x.keys()
             ]
             + list(self.variables.values())
+            + list(self.fixed_input_parameters.values())
             + [event.expression for event in self.events]
         )
         return list(all_input_parameters)
@@ -753,6 +775,7 @@ class BaseModel:
                 for side in x.keys()
             ]
             + list(self._variables_by_submodel[submodel].values())
+            + list(self.submodels[submodel].fixed_input_parameters.values())
             + [event.expression for event in self.submodels[submodel].events]
         )
         return list(all_input_parameters)
@@ -770,6 +793,11 @@ class BaseModel:
         new_model._variables = self.variables.copy()
         new_model._events = self.events.copy()
         new_model._variables_casadi = self._variables_casadi.copy()
+        new_model._parameter_values = (
+            self._parameter_values.copy()
+            if self._parameter_values is not None
+            else None
+        )
         return new_model
 
     def update(self, *submodels):
