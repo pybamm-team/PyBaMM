@@ -217,8 +217,11 @@ class VariableReplacementMap:
     ...     "Current [A]": pybamm.Parameter("Nominal cell capacity [A.h]") * 2
     ... })
     >>> var = pybamm.Variable("Voltage [V]")
-    >>> replacement_map[var]  # Returns pybamm.Scalar(3.7)
+    >>> result = replacement_map[var]  # Returns pybamm.Scalar(3.7)
+    >>> isinstance(result, pybamm.Scalar)
+    True
     >>> var in replacement_map  # Returns True
+    True
     """
 
     __slots__ = ["_symbol_replacement_map"]
