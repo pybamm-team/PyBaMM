@@ -90,4 +90,32 @@ def test_process_model():
     assert isinstance(model.variables["d_var1"].children[1], pybamm.Variable)
 
 
+def test_variable_replacement_map():
+    var1 = pybamm.Variable("Voltage [V]")
+    var2 = pybamm.Variable("Current [A]")
+    replacement1 = pybamm.Scalar(3.7)
+    replacement2 = pybamm.Parameter("I")
+
+    replacement_map = VariableReplacementMap({
+        "Voltage [V]": replacement1,
+        "Current [A]": replacement2,
+    })
+
+    # Test __getitem__
+    assert replacement_map[var1] is replacement1
+    assert replacement_map[var2] is replacement2
+
+    # Test __contains__
+    assert var1 in replacement_map
+    assert var2 in replacement_map
+    assert pybamm.Variable("Other [V]") not in replacement_map
+
+    # Test get method
+    assert replacement_map.get(var1) == replacement1
+    assert replacement_map.get(var2) == replacement2
+    assert replacement_map.get(pybamm.Variable("Other [V]")) is None
+    assert replacement_map.get(pybamm.Variable("Other [V]"), default=pybamm.Scalar(0)) == pybamm.Scalar(0)
+
+    # Test that non-Variable symbols return default
+    assert replacement_map.get(pybamm.Parameter("a")) is None
     assert replacement_map.get(pybamm.Scalar(1)) is None

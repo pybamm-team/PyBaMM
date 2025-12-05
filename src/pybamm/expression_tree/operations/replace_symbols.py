@@ -190,4 +190,56 @@ class SymbolReplacer:
             return symbol
 
 
+class VariableReplacementMap:
+    """
+    A simple dict-like object that efficiently resolves `pybamm.Variable`s by name.
+
+    This class provides a lightweight alternative to using a full `dict` mapping
+    `pybamm.Variable` objects to replacement symbols. Instead of requiring actual
+    `pybamm.Variable` instances as keys (which can be expensive to create), this
+    class uses variable names (strings) as keys and matches them to `pybamm.Variable`
+    objects by name lookup.
+
+    This avoids creating unnecessary `pybamm.Variable` objects, which can be
+    expensive for many variables, while still providing dict-like access patterns.
+
+    Parameters
+    ----------
+    symbol_replacement_map : dict[str, pybamm.Symbol]
+        Dictionary mapping variable names (strings) to their replacement symbols.
+        The keys should be the names of variables (e.g., "Voltage [V]"), and the
+        values are the symbols that should replace those variables.
+
+    Examples
+    --------
+    >>> replacement_map = VariableReplacementMap({
+    ...     "Voltage [V]": pybamm.Scalar(3.7),
+    ...     "Current [A]": pybamm.Parameter("Nominal cell capacity [A.h]") * 2
+    ... })
+    >>> var = pybamm.Variable("Voltage [V]")
+    >>> replacement_map[var]  # Returns pybamm.Scalar(3.7)
+    >>> var in replacement_map  # Returns True
+    """
+
+    __slots__ = ["_symbol_replacement_map"]
+
+    def __init__(self, symbol_replacement_map: dict[str, pybamm.Symbol]):
+        self._symbol_replacement_map = symbol_replacement_map
+
+    def __getitem__(self, symbol):
+        return self._symbol_replacement_map[symbol.name]
+
+    def __contains__(self, symbol):
+        return self.get(symbol) is not None
+
+    def get(self, symbol, default=None):
+        if not isinstance(symbol, pybamm.Variable):
+            return default
+
+        name = symbol.name
+        value = self._symbol_replacement_map.get(name)
+
+        # Check exact variable match
+        if value is not None and pybamm.Variable(name) == symbol:
+            return value
         return default
