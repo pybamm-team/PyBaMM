@@ -209,19 +209,6 @@ class VariableReplacementMap:
         Dictionary mapping variable names (strings) to their replacement symbols.
         The keys should be the names of variables (e.g., "Voltage [V]"), and the
         values are the symbols that should replace those variables.
-
-    Examples
-    --------
-    >>> replacement_map = VariableReplacementMap({
-    ...     "Voltage [V]": pybamm.Scalar(3.7),
-    ...     "Current [A]": pybamm.Parameter("Nominal cell capacity [A.h]") * 2
-    ... })
-    >>> var = pybamm.Variable("Voltage [V]")
-    >>> result = replacement_map[var]  # Returns pybamm.Scalar(3.7)
-    >>> isinstance(result, pybamm.Scalar)
-    True
-    >>> var in replacement_map  # Returns True
-    True
     """
 
     __slots__ = ["_symbol_replacement_map"]
