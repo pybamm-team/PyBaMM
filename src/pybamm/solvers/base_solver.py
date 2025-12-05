@@ -1340,7 +1340,7 @@ class BaseSolver:
         model_inputs = self._set_up_model_inputs(model, inputs)
 
         # process calculate_sensitivities argument
-        calculate_sensitivities_list, sensitivities_have_changed = (
+        _, sensitivities_have_changed = (
             BaseSolver._solve_process_calculate_sensitivities_arg(
                 model_inputs, model, calculate_sensitivities
             )

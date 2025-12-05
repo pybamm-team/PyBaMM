@@ -350,7 +350,7 @@ class Simulation:
 
         if self._built_model:
             return
-        elif self._model.is_discretised:
+        if self._model.is_discretised:
             self._model_with_set_params = self._model
             self._built_model = self._model
         else:
