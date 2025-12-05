@@ -569,7 +569,7 @@ class Solution:
         name : str, optional
             The name of the variable. If None, the name is the symbol's id.
         replace_variables : bool, optional
-            Whether to replace `pybamm.Variable`s in the symbol with the
+            Whether to replace ``pybamm.Variable`` objects in the symbol with the
             discretized variables. Defaults to True.
 
         Returns
