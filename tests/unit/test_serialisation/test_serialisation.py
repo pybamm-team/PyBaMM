@@ -1345,6 +1345,7 @@ class TestSerialise:
                 "boundary_conditions": [],
                 "events": [],
                 "variables": {"Bad Variable": {"bad": "structure"}},
+                "fixed_input_parameters": {},
             },
         }
 
@@ -2299,6 +2300,118 @@ class TestSerializationEdgeCases:
         # Verify it loaded correctly
         assert loaded_model.name == "test_dict_model"
         assert isinstance(loaded_model.rhs, dict)
+
+    def test_parameter_values_serialisation(self, tmp_path):
+        """Test serialization and deserialization of parameter_values."""
+        # Create a model with parameter_values
+        model = pybamm.BaseModel(name="test_param_values_model")
+        a = pybamm.Variable("a", domain="electrode")
+        model.rhs = {a: pybamm.Scalar(1) * a}
+        model.initial_conditions = {a: pybamm.Scalar(1)}
+        model.algebraic = {}
+        model.boundary_conditions = {a: {"left": (pybamm.Scalar(0), "Dirichlet")}}
+        model.events = []
+        model.variables = {"a": a}
+
+        # Set parameter_values using ParameterValues.process_model
+        param_values = pybamm.ParameterValues(
+            {
+                "param1": 10.0,
+                "param2": 20.0,
+                "input_param": pybamm.InputParameter("input1"),
+            }
+        )
+        param_values.process_model(model)
+
+        # Verify parameter_values are set
+        assert hasattr(model, "_parameter_values")
+        assert model._parameter_values is not None
+        assert "param1" in model._parameter_values
+        assert model._parameter_values["param1"] == 10.0
+
+        # Serialize the model
+        file_path = tmp_path / "test_param_values.json"
+        Serialise.save_custom_model(model, filename=str(file_path))
+        assert file_path.exists()
+
+        # Load the model back
+        loaded_model = Serialise.load_custom_model(str(file_path))
+
+        # Verify parameter_values are correctly loaded
+        assert hasattr(loaded_model, "_parameter_values")
+        assert loaded_model._parameter_values is not None
+        assert "param1" in loaded_model._parameter_values
+        assert loaded_model._parameter_values["param1"] == 10.0
+        assert "param2" in loaded_model._parameter_values
+        assert loaded_model._parameter_values["param2"] == 20.0
+        assert "input_param" in loaded_model._parameter_values
+        assert isinstance(
+            loaded_model._parameter_values["input_param"], pybamm.InputParameter
+        )
+
+    def test_parameter_values_none(self, tmp_path):
+        """Test serialization when parameter_values is None."""
+        # Create a model without parameter_values
+        model = pybamm.BaseModel(name="test_no_param_values")
+        a = pybamm.Variable("a", domain="electrode")
+        model.rhs = {a: pybamm.Scalar(1) * a}
+        model.initial_conditions = {a: pybamm.Scalar(1)}
+        model.algebraic = {}
+        model.boundary_conditions = {a: {"left": (pybamm.Scalar(0), "Dirichlet")}}
+        model.events = []
+        model.variables = {"a": a}
+        model._parameter_values = None
+
+        # Serialize and load
+        file_path = tmp_path / "test_no_param_values.json"
+        Serialise.save_custom_model(model, filename=str(file_path))
+        loaded_model = Serialise.load_custom_model(str(file_path))
+
+        # Verify parameter_values is None
+        assert hasattr(loaded_model, "_parameter_values")
+        assert loaded_model._parameter_values is None
+
+    def test_parameter_values_serialise_from_dict(self):
+        """Test serialization of parameter_values when serializing to dict."""
+        # Create a model with parameter_values
+        model = pybamm.BaseModel(name="test_param_values_dict")
+        a = pybamm.Variable("a", domain="electrode")
+        model.rhs = {a: pybamm.Scalar(1) * a}
+        model.initial_conditions = {a: pybamm.Scalar(1)}
+        model.algebraic = {}
+        model.boundary_conditions = {a: {"left": (pybamm.Scalar(0), "Dirichlet")}}
+        model.events = []
+        model.variables = {"a": a}
+
+        param_values = pybamm.ParameterValues(
+            {
+                "test_param": 42.0,
+                "test_input": pybamm.InputParameter("input1"),
+            }
+        )
+        param_values.process_model(model)
+
+        # Serialize to dict
+        model_json = Serialise.serialise_custom_model(model)
+
+        # Verify the JSON structure
+        assert "parameter_values" in model_json["model"]
+        assert model_json["model"]["parameter_values"] is not None
+        assert "test_param" in model_json["model"]["parameter_values"]
+        assert model_json["model"]["parameter_values"]["test_param"] == 42.0
+
+        # Load from dict
+        loaded_model = Serialise.load_custom_model(model_json)
+
+        # Verify it loaded correctly
+        assert hasattr(loaded_model, "_parameter_values")
+        assert loaded_model._parameter_values is not None
+        assert "test_param" in loaded_model._parameter_values
+        assert loaded_model._parameter_values["test_param"] == 42.0
+        assert "test_input" in loaded_model._parameter_values
+        assert isinstance(
+            loaded_model._parameter_values["test_input"], pybamm.InputParameter
+        )
 
     def test_expression_function_parameter_evaluate(self):
         """Test _unary_evaluate method of ExpressionFunctionParameter."""
