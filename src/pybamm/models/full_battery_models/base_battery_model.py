@@ -1228,10 +1228,11 @@ class BaseBatteryModel(pybamm.BaseModel):
         elif options["intercalation kinetics"] == "MSMR":
             return pybamm.kinetics.MSMRButlerVolmer
 
-    def get_inverse_intercalation_kinetics(self):
-        if self.options["intercalation kinetics"] == "symmetric Butler-Volmer":
+    def get_inverse_intercalation_kinetics(self, domain):
+        options = getattr(self.options, domain)
+        if options["intercalation kinetics"] == "symmetric Butler-Volmer":
             return pybamm.kinetics.InverseButlerVolmer
-        elif self.options["intercalation kinetics"] == "linear":
+        elif options["intercalation kinetics"] == "linear":
             return pybamm.kinetics.InverseLinear
         else:
             raise pybamm.OptionError(
