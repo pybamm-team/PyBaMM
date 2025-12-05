@@ -247,13 +247,10 @@ class Symbol:
 
         # Test shape on everything but nodes that contain the base Symbol class or
         # the base BinaryOperator class
-        if pybamm.settings.debug_mode is True:
-            if not any(
-                issubclass(pybamm.Symbol, type(x))
-                or issubclass(pybamm.BinaryOperator, type(x))
-                for x in self.pre_order()
-            ):
-                self.test_shape()
+        if pybamm.settings.debug_mode is True and not any(
+            isinstance(x, (Symbol | pybamm.BinaryOperator)) for x in self.pre_order()
+        ):
+            self.test_shape()
 
     @classmethod
     def _from_json(cls, snippet: dict):

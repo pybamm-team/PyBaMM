@@ -496,6 +496,8 @@ class ParameterValues:
         ):
             raise pybamm.ModelError("Cannot process parameters for empty model")
 
+        model.parameter_values = self
+
         new_rhs = {}
         for variable, equation in unprocessed_model.rhs.items():
             pybamm.logger.verbose(f"Processing parameters for {variable!r} (rhs)")

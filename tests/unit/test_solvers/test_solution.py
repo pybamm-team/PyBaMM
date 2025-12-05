@@ -731,3 +731,94 @@ class TestSolution:
                     atol=1e-2,
                 )
                 assert isinstance(sol["integral"].sensitivities["a"], np.ndarray)
+
+    def test_observe(self):
+        """Test the observe method with pybamm symbols, comparing with model variables."""
+        # Set up a simple model
+        model = pybamm.lithium_ion.SPM()
+        parameter_values = pybamm.ParameterValues("Chen2020")
+
+        # Solve the model
+        sim = pybamm.Simulation(model, parameter_values=parameter_values)
+        sol = sim.solve([0, 3600])
+
+        # Test observing "Voltage [V]" symbol - should match exactly with model variable
+        voltage_symbol = pybamm.Variable("Voltage [V]")
+        observed_voltage = sol.observe(voltage_symbol)
+
+        # Compare with the actual variable from solution
+        actual_voltage = sol["Voltage [V]"]
+
+        # They should match exactly
+        np.testing.assert_array_equal(observed_voltage.data, actual_voltage.data)
+        np.testing.assert_array_equal(observed_voltage.entries, actual_voltage.entries)
+
+        # Test with "Current [A]" - another model variable
+        current_symbol = pybamm.Variable("Current [A]")
+        observed_current = sol.observe(current_symbol)
+        actual_current = sol["Current [A]"]
+        np.testing.assert_array_equal(observed_current.data, actual_current.data)
+        np.testing.assert_array_equal(observed_current.entries, actual_current.entries)
+
+        # Test that observe returns a ProcessedVariable
+        assert isinstance(observed_voltage, pybamm.ProcessedVariable)
+        assert isinstance(observed_current, pybamm.ProcessedVariable)
+
+        # Test that we can call observe multiple times and get the same result
+        observed_voltage2 = sol.observe(voltage_symbol)
+        np.testing.assert_array_equal(observed_voltage2.data, observed_voltage.data)
+
+        # Test that the cache works - verify it's the same object (not just equal)
+        observed_voltage3 = sol.observe(voltage_symbol)
+        assert observed_voltage3 is observed_voltage  # Should be the same cached object
+
+        # Test that observing with a different name still uses cache if symbol.id is the same
+        observed_voltage4 = sol.observe(voltage_symbol, name="DifferentName")
+        assert (
+            observed_voltage4 is observed_voltage
+        )  # Should use cache based on symbol.id
+
+    def test_observe_failure(self):
+        """Test that observe raises an error if the solver includes `output_variables`."""
+        model = pybamm.lithium_ion.SPM()
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        sim = pybamm.Simulation(model, parameter_values=parameter_values)
+        sol = sim.solve([0, 3600])
+
+        c = pybamm.Variable("Positive particle concentration [mol.m-3]")
+        with pytest.raises(
+            ValueError, match="`observe` currently only supports 0D variables"
+        ):
+            sol.observe(c)
+
+        # test that `output_variables` are unsupported
+        solver = pybamm.IDAKLUSolver(output_variables=["Voltage [V]"])
+        sim = pybamm.Simulation(model, parameter_values=parameter_values, solver=solver)
+        sol = sim.solve([0, 3600])
+
+        with pytest.raises(
+            ValueError,
+            match="Cannot use `observe` if the solver includes `output_variables`. Please re-run the simulation without `output_variables`.",
+        ):
+            sol.observe(pybamm.Variable("Voltage [V]"))
+
+        with pytest.raises(ValueError, match="Input is not a valid PyBaMM symbol"):
+            sol.observe(None)
+
+    def test_observe_with_numeric_inputs(self):
+        """Test that observe works with numeric inputs like 0, which get converted to symbols."""
+        # Set up a simple model
+        model = pybamm.lithium_ion.SPM()
+        sim = pybamm.Simulation(model)
+
+        sol = sim.solve([0, 1])
+
+        # Test observing a scalar value (0) - should convert to pybamm.Scalar(0)
+        observed_zero = sol.observe(0)
+        assert isinstance(observed_zero, pybamm.ProcessedVariable)
+        # Should be a constant array of zeros
+        np.testing.assert_array_equal(observed_zero.data, np.zeros(len(sol.t)))
+
+        # Test that numeric inputs are cached correctly
+        observed_zero2 = sol.observe(0)
+        assert observed_zero2 is observed_zero  # Should be cached

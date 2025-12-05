@@ -800,34 +800,32 @@ class Discretisation:
             Discretised symbol
 
         """
-        try:
-            return self._discretised_symbols[symbol]
-        except KeyError:
-            discretised_symbol = self._process_symbol(symbol)
-            self._discretised_symbols[symbol] = discretised_symbol
-            discretised_symbol.test_shape()
+        _discretised_symbol = self._discretised_symbols.get(symbol)
+        if _discretised_symbol is not None:
+            return _discretised_symbol
+        discretised_symbol = self._process_symbol(symbol)
+        self._discretised_symbols[symbol] = discretised_symbol
+        discretised_symbol.test_shape()
 
-            # Assign mesh as an attribute to the processed variable
-            if symbol.domain != []:
-                discretised_symbol.mesh = self.mesh[symbol.domain]
-            else:
-                discretised_symbol.mesh = None
+        # Assign mesh as an attribute to the processed variable
+        if symbol.domain != []:
+            discretised_symbol.mesh = self.mesh[symbol.domain]
+        else:
+            discretised_symbol.mesh = None
 
-            # Assign secondary mesh
-            if symbol.domains["secondary"] != []:
-                discretised_symbol.secondary_mesh = self.mesh[
-                    symbol.domains["secondary"]
-                ]
-            else:
-                discretised_symbol.secondary_mesh = None
+        # Assign secondary mesh
+        if symbol.domains["secondary"] != []:
+            discretised_symbol.secondary_mesh = self.mesh[symbol.domains["secondary"]]
+        else:
+            discretised_symbol.secondary_mesh = None
 
-            # Assign tertiary mesh
-            if symbol.domains["tertiary"] != []:
-                discretised_symbol.tertiary_mesh = self.mesh[symbol.domains["tertiary"]]
-            else:
-                discretised_symbol.tertiary_mesh = None
+        # Assign tertiary mesh
+        if symbol.domains["tertiary"] != []:
+            discretised_symbol.tertiary_mesh = self.mesh[symbol.domains["tertiary"]]
+        else:
+            discretised_symbol.tertiary_mesh = None
 
-            return discretised_symbol
+        return discretised_symbol
 
     def _process_symbol(self, symbol):
         """See :meth:`Discretisation.process_symbol()`."""
@@ -841,15 +839,13 @@ class Discretisation:
                     self.bcs[key_id] = self.check_tab_conditions(
                         symbol, self.bcs[key_id]
                     )
+        else:
+            spatial_method = None
 
         if isinstance(symbol, pybamm.BinaryOperator):
             # Pre-process children
             left, right = symbol.children
             # Catch case where diffusion is a scalar and turn it into an identity matrix vector field.
-            if len(symbol.domain) != 0:
-                spatial_method = self.spatial_methods[symbol.domain[0]]
-            else:
-                spatial_method = None
             if isinstance(spatial_method, pybamm.FiniteVolume2D):
                 if isinstance(left, pybamm.Scalar) and (
                     isinstance(right, pybamm.VectorField)

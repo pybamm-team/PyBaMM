@@ -317,6 +317,7 @@ class Simulation:
             options=options,
             inputs=inputs,
         )
+        self._model.parameter_values = self._parameter_values
 
         # Save solved initial SOC in case we need to re-build the model
         self._built_initial_soc = initial_soc
@@ -350,7 +351,7 @@ class Simulation:
 
         if self._built_model:
             return
-        elif self._model.is_discretised:
+        if self._model.is_discretised:
             self._model_with_set_params = self._model
             self._built_model = self._model
         else:

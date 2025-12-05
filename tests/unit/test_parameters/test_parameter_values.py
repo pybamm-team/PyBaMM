@@ -1018,6 +1018,25 @@ class TestParameterValues:
         assert isinstance(model.variables["d_var1"].children[0], pybamm.Scalar)
         assert isinstance(model.variables["d_var1"].children[1], pybamm.Variable)
 
+        # Check fixed_input_parameters - should be empty when no InputParameters
+        assert hasattr(model, "fixed_input_parameters")
+        assert model.fixed_input_parameters == {}
+
+        # Test with InputParameters
+        model2 = pybamm.BaseModel()
+        input_param1 = pybamm.InputParameter("input1")
+        input_param2 = pybamm.InputParameter("input2")
+        model2.rhs = {var1: a * var1}
+        parameter_values2 = pybamm.ParameterValues(
+            {"a": 1, "input1": input_param1, "input2": input_param2}
+        )
+        parameter_values2.process_model(model2)
+        assert hasattr(model2, "fixed_input_parameters")
+        assert "input1" in model2.fixed_input_parameters
+        assert "input2" in model2.fixed_input_parameters
+        assert model2.fixed_input_parameters["input1"] == input_param1
+        assert model2.fixed_input_parameters["input2"] == input_param2
+
         # bad boundary conditions
         model = pybamm.BaseModel()
         model.algebraic = {var1: var1}

@@ -46,15 +46,15 @@ class CasadiConverter:
         :class:`casadi.MX`
             The converted symbol
         """
-        try:
-            return self._casadi_symbols[symbol]
-        except KeyError:
-            # Change inputs to empty dictionary if it's None
-            inputs = inputs or {}
-            casadi_symbol = self._convert(symbol, t, y, y_dot, inputs)
-            self._casadi_symbols[symbol] = casadi_symbol
+        _casadi_symbol = self._casadi_symbols.get(symbol)
+        if _casadi_symbol is not None:
+            return _casadi_symbol
+        # Change inputs to empty dictionary if it's None
+        inputs = inputs or {}
+        casadi_symbol = self._convert(symbol, t, y, y_dot, inputs)
+        self._casadi_symbols[symbol] = casadi_symbol
 
-            return casadi_symbol
+        return casadi_symbol
 
     def _convert(self, symbol, t, y, y_dot, inputs):
         """See :meth:`CasadiConverter.convert()`."""
