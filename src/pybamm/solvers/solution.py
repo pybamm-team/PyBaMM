@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 #
 # Solution class
 #
@@ -12,6 +14,10 @@ import pandas as pd
 from scipy.io import savemat
 
 import pybamm
+from pybamm.expression_tree.operations.replace_symbols import (
+    SymbolReplacer,
+    VariableReplacementMap,
+)
 
 
 class NumpyEncoder(json.JSONEncoder):
@@ -137,8 +143,8 @@ class Solution:
         self.solve_time = None
         self.integration_time = None
 
-        # initialize empty variables and data
-        self._variables = pybamm.FuzzyDict()
+        # initialize empty variable cache and data
+        self._variables = {}
         self._data = pybamm.FuzzyDict()
 
         # Add self as sub-solution for compatibility with ProcessedVariable
@@ -226,29 +232,31 @@ class Solution:
         # restraint, so if y gets large in the middle then comes back down that is ok
         y, model = self.all_ys[-1], self.all_models[-1]
         y = y[:, -1]
-        if np.any(y > pybamm.settings.max_y_value):
-            for var in [*model.rhs.keys(), *model.algebraic.keys()]:
-                var = model.variables[var.name]
-                # find the statevector corresponding to this variable
-                statevector = None
-                for node in var.pre_order():
-                    if isinstance(node, pybamm.StateVector):
-                        statevector = node
+        if np.max(y, initial=0) <= pybamm.settings.max_y_value:
+            return
 
-                # there will always be a statevector, but just in case
-                if statevector is None:  # pragma: no cover
-                    raise RuntimeError(
-                        f"Cannot find statevector corresponding to variable {var.name}"
-                    )
-                y_var = y[statevector.y_slices[0]]
-                if np.any(y_var > pybamm.settings.max_y_value):
-                    pybamm.logger.error(
-                        f"Solution for '{var}' exceeds the maximum allowed value "
-                        f"of `{pybamm.settings.max_y_value}. This could be due to "
-                        "incorrect scaling, model formulation, or "
-                        "parameter values. The maximum allowed value is set by "
-                        "'pybammm.settings.max_y_value'."
-                    )
+        for var in [*model.rhs.keys(), *model.algebraic.keys()]:
+            var = model.variables[var.name]
+            # find the statevector corresponding to this variable
+            statevector = None
+            for node in var.pre_order():
+                if isinstance(node, pybamm.StateVector):
+                    statevector = node
+
+            # there will always be a statevector, but just in case
+            if statevector is None:  # pragma: no cover
+                raise RuntimeError(
+                    f"Cannot find statevector corresponding to variable {var.name}"
+                )
+            y_var = y[statevector.y_slices[0]]
+            if np.any(y_var > pybamm.settings.max_y_value):
+                pybamm.logger.error(
+                    f"Solution for '{var}' exceeds the maximum allowed value "
+                    f"of `{pybamm.settings.max_y_value}. This could be due to "
+                    "incorrect scaling, model formulation, or "
+                    "parameter values. The maximum allowed value is set by "
+                    "'pybammm.settings.max_y_value'."
+                )
 
     @property
     def all_ts(self):
@@ -411,7 +419,7 @@ class Solution:
             self, cycle_summary_variables=all_summary_variables
         )
 
-    def update(self, variables):
+    def update(self, variables: str | list[str]):
         """Add ProcessedVariables to the dictionary of variables in the solution"""
         # Single variable
         if isinstance(variables, str):
@@ -421,59 +429,187 @@ class Solution:
         for variable in variables:
             self._update_variable(variable)
 
-    def _update_variable(self, variable):
+    def _update_model_variable(
+        self,
+        model: pybamm.BaseModel,
+        var_pybamm: pybamm.Symbol,
+        time_integral: pybamm.ProcessedVariableTimeIntegral | None,
+        inputs: dict,
+        ys_shape: tuple,
+        cache_key,
+    ):
+        _var_casadi = model._variables_casadi.get(cache_key)
+        if _var_casadi is not None:
+            return _var_casadi, var_pybamm, time_integral
+
+        var_casadi, var_pybamm, time_integral = self._convert_to_casadi(
+            var_pybamm, inputs, ys_shape
+        )
+
+        # Only cache if it's not a time integral
+        if time_integral is None:
+            model._variables_casadi[cache_key] = var_casadi
+        return var_casadi, var_pybamm, time_integral
+
+    def _update_variable(self, name: str):
         time_integral = None
-        pybamm.logger.debug(f"Post-processing {variable}")
-        vars_pybamm = [
-            model.variables_and_events[variable] for model in self.all_models
-        ]
+        pybamm.logger.debug(f"Post-processing {name}")
 
         # Iterate through all models, some may be in the list several times and
         # therefore only get set up once
-        vars_casadi = []
-        for i, (model, ys, inputs, var_pybamm) in enumerate(
-            zip(self.all_models, self.all_ys, self.all_inputs, vars_pybamm, strict=True)
+        vars_pybamm = [model.variables_and_events[name] for model in self.all_models]
+        vars_casadi = [None] * len(self.all_models)
+        for i, (model, ys, inputs) in enumerate(
+            zip(self.all_models, self.all_ys, self.all_inputs, strict=True)
         ):
-            if self.variables_returned and var_pybamm.has_symbol_of_classes(
+            _var_pybamm = vars_pybamm[i]
+            if self.variables_returned and _var_pybamm.has_symbol_of_classes(
                 pybamm.expression_tree.state_vector.StateVector
             ):
                 raise KeyError(
-                    f"Cannot process variable '{variable}' as it was not part of the "
+                    f"Cannot process variable '{name}' as it was not part of the "
                     "solve. Please re-run the solve with `output_variables` set to "
                     "include this variable."
                 )
-            elif variable in model._variables_casadi:
-                var_casadi = model._variables_casadi[variable]
-            else:
-                time_integral = pybamm.ProcessedVariableTimeIntegral.from_pybamm_var(
-                    var_pybamm, self.all_ys[i].shape[0]
-                )
-                if time_integral is not None:
-                    vars_pybamm[i] = time_integral.sum_node.child
-                    var_casadi = self.process_casadi_var(
-                        time_integral.sum_node.child,
-                        inputs,
-                        ys.shape,
-                    )
-                    if time_integral.post_sum_node is not None:
-                        time_integral.post_sum = self.process_casadi_var(
-                            time_integral.post_sum_node,
-                            inputs,
-                            ys.shape,
-                        )
-                else:
-                    var_casadi = self.process_casadi_var(
-                        var_pybamm,
-                        inputs,
-                        ys.shape,
-                    )
-                    model._variables_casadi[variable] = var_casadi
-            vars_casadi.append(var_casadi)
+            var_casadi, var_pybamm, time_integral = self._update_model_variable(
+                model,
+                _var_pybamm,
+                inputs=inputs,
+                ys_shape=ys.shape,
+                time_integral=time_integral,
+                cache_key=name,
+            )
+            vars_pybamm[i] = var_pybamm
+            vars_casadi[i] = var_casadi
         var = pybamm.process_variable(
-            variable, vars_pybamm, vars_casadi, self, time_integral=time_integral
+            name, vars_pybamm, vars_casadi, self, time_integral=time_integral
         )
 
-        self._variables[variable] = var
+        self._variables[name] = var
+
+    def _update_observe_variable(
+        self,
+        symbol: pybamm.Symbol,
+        name: str,
+        replace_variables: bool | None = None,
+    ):
+        if self.variables_returned:
+            raise ValueError(
+                "Cannot use `observe` if the solver includes `output_variables`. "
+                "Please re-run the simulation without `output_variables`."
+            )
+        if replace_variables is None:
+            replace_variables = True
+        symbol_id = symbol.id
+
+        # Use model hashmap to avoid redundant symbol processing
+        vars_pybamm_map: dict[pybamm.BaseModel, pybamm.Symbol] = {}
+
+        def _process_symbol(
+            symbol: pybamm.Symbol, model: pybamm.BaseModel
+        ) -> pybamm.Symbol:
+            _var_pybamm = vars_pybamm_map.get(model)
+            if _var_pybamm is not None:
+                return _var_pybamm
+
+            if replace_variables:
+                symbol_replacer = SymbolReplacer(
+                    VariableReplacementMap(model.variables_and_events)
+                )
+                symbol = symbol_replacer.process_symbol(symbol)
+
+            var_pybamm = model._parameter_values.process_symbol(symbol)
+            dims = np.prod(var_pybamm.shape)
+            if dims > 1:
+                raise ValueError("`observe` currently only supports 0D variables.")
+
+            # Cache the processed symbol for this model
+            vars_pybamm_map[model] = var_pybamm
+            return var_pybamm
+
+        time_integral = None
+        # Iterate through all models, some may be in the list several times and
+        # therefore only get set up once
+        vars_casadi = [None] * len(self.all_models)
+        vars_pybamm = [None] * len(self.all_models)
+        for i, (model, ys, inputs) in enumerate(
+            zip(self.all_models, self.all_ys, self.all_inputs, strict=True)
+        ):
+            _var_pybamm = _process_symbol(symbol, model)
+            var_casadi, var_pybamm, time_integral = self._update_model_variable(
+                model,
+                _var_pybamm,
+                inputs=inputs,
+                ys_shape=ys.shape,
+                time_integral=time_integral,
+                cache_key=symbol_id,
+            )
+            vars_pybamm[i] = var_pybamm
+            vars_casadi[i] = var_casadi
+        var = pybamm.process_variable(
+            name, vars_pybamm, vars_casadi, self, time_integral=time_integral
+        )
+        self._variables[symbol_id] = var
+        return var
+
+    def observe(
+        self,
+        symbol: pybamm.Symbol,
+        name: str | None = None,
+        replace_variables: bool | None = None,
+    ):
+        """
+        Observe a `pybamm.Symbol` object from the solution.
+        Note: this currently only supports 0D variables.
+
+        Parameters
+        ----------
+        symbol : pybamm.Symbol
+            The symbol to observe.
+        name : str, optional
+            The name of the variable. If None, the name is the symbol's id.
+        replace_variables : bool, optional
+            Whether to replace `pybamm.Variable`s in the symbol with the
+            discretized variables. Defaults to True.
+
+        Returns
+        -------
+        :class:`pybamm.ProcessedVariable`
+            The observed variable.
+        """
+        if not isinstance(symbol, pybamm.Symbol):
+            try:
+                # Try to convert the input to a pybamm.Symbol
+                symbol = symbol * pybamm.Scalar(1)
+            except Exception:
+                raise ValueError("Input is not a valid PyBaMM symbol") from None
+
+        value = self._variables.get(symbol.id)
+        if value is None:
+            name = name if name is not None else str(symbol.id)
+            value = self._update_observe_variable(
+                symbol, name, replace_variables=replace_variables
+            )
+        return value
+
+    def _convert_to_casadi(self, var_pybamm, inputs, ys_shape):
+        time_integral = pybamm.ProcessedVariableTimeIntegral.from_pybamm_var(
+            var_pybamm, ys_shape[0]
+        )
+        if time_integral is not None:
+            var_pybamm = time_integral.sum_node.child
+            if time_integral.post_sum_node is not None:
+                time_integral.post_sum = self.process_casadi_var(
+                    time_integral.post_sum_node,
+                    inputs,
+                    ys_shape,
+                )
+        var_casadi = self.process_casadi_var(
+            var_pybamm,
+            inputs,
+            ys_shape,
+        )
+        return var_casadi, var_pybamm, time_integral
 
     def process_casadi_var(self, var_pybamm, inputs, ys_shape):
         t_MX = casadi.MX.sym("t")
@@ -533,14 +669,13 @@ class Solution:
             A variable that can be evaluated at any time or spatial point. The
             underlying data for this variable is available in its attribute ".data"
         """
+        value = self._variables.get(key)
+        if value is not None:
+            return value
 
-        # return it if it exists
-        if key in self._variables:
-            return self._variables[key]
-        else:
-            # otherwise create it, save it and then return it
-            self.update(key)
-            return self._variables[key]
+        # otherwise create it, save it and then return it
+        self.update(key)
+        return self._variables[key]
 
     def plot(self, output_variables=None, **kwargs):
         """
