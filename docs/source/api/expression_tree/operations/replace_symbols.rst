@@ -9,4 +9,3 @@ Variable Replacement Map
 
 .. autoclass:: pybamm.VariableReplacementMap
   :members:
-

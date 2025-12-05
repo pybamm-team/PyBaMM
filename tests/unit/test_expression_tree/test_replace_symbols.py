@@ -1,5 +1,9 @@
 import pybamm
-from pybamm.expression_tree.operations.replace_symbols import SymbolReplacer, VariableReplacementMap
+from pybamm.expression_tree.operations.replace_symbols import (
+    SymbolReplacer,
+    VariableReplacementMap,
+)
+
 
 def test_symbol_replacements():
     a = pybamm.Parameter("a")
@@ -74,9 +78,9 @@ def test_process_model():
     assert isinstance(model.initial_conditions[var1], pybamm.Scalar)
     assert model.initial_conditions[var1].value == 2
     # boundary conditions
-    bc_key = list(model.boundary_conditions.keys())[0]
+    bc_key = next(iter(model.boundary_conditions.keys()))
     assert isinstance(bc_key, pybamm.Variable)
-    bc_value = list(model.boundary_conditions.values())[0]
+    bc_value = next(iter(model.boundary_conditions.values()))
     assert isinstance(bc_value["left"][0], pybamm.Scalar)
     assert bc_value["left"][0].value == 3
     assert isinstance(bc_value["right"][0], pybamm.Scalar)
@@ -96,10 +100,12 @@ def test_variable_replacement_map():
     replacement1 = pybamm.Scalar(3.7)
     replacement2 = pybamm.Parameter("I")
 
-    replacement_map = VariableReplacementMap({
-        "Voltage [V]": replacement1,
-        "Current [A]": replacement2,
-    })
+    replacement_map = VariableReplacementMap(
+        {
+            "Voltage [V]": replacement1,
+            "Current [A]": replacement2,
+        }
+    )
 
     # Test __getitem__
     assert replacement_map[var1] is replacement1
@@ -114,7 +120,9 @@ def test_variable_replacement_map():
     assert replacement_map.get(var1) == replacement1
     assert replacement_map.get(var2) == replacement2
     assert replacement_map.get(pybamm.Variable("Other [V]")) is None
-    assert replacement_map.get(pybamm.Variable("Other [V]"), default=pybamm.Scalar(0)) == pybamm.Scalar(0)
+    assert replacement_map.get(
+        pybamm.Variable("Other [V]"), default=pybamm.Scalar(0)
+    ) == pybamm.Scalar(0)
 
     # Test that non-Variable symbols return default
     assert replacement_map.get(pybamm.Parameter("a")) is None
