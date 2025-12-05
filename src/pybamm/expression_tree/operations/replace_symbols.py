@@ -192,21 +192,7 @@ class SymbolReplacer:
 
 class VariableReplacementMap:
     """
-    A simple dict-like object that efficiently resolves :class:`pybamm.Symbol`s by name.
-
-    This class provides a lightweight alternative to using a full `dict` mapping
-    :class:`pybamm.Symbol` objects to replacement symbols. Instead of requiring actual
-    :class:`pybamm.Symbol` instances as keys (which can be expensive to create), this
-    class uses variable names (strings) as keys and matches them to `pybamm.Variable`
-    objects by name lookup.
-
-    This avoids creating unnecessary :class:`pybamm.Symbol` objects, which can be
-    expensive for many variables, while still providing dict-like access patterns.
-
-    Parameters
-    ----------
-    symbol_replacement_map : dict[str, :class:`pybamm.Symbol`]
-        Dictionary mapping variable names (strings) to their replacement symbols.
+    A simple dict-like object that efficiently resolves pybamm symbols by name.
     """
 
     __slots__ = ["_symbol_replacement_map"]
