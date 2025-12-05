@@ -1,14 +1,13 @@
 #
-# Inverse Butler-Volmer class
+# Inverse linear class
 #
-import pybamm
 
 from .base_inverse import BaseInverseKinetics
 
 
-class InverseButlerVolmer(BaseInverseKinetics):
+class InverseLinear(BaseInverseKinetics):
     """
-    Submodel which implements the inverted form of the Butler-Volmer relation to
+    Submodel which implements the inverted form of the linear relation to
     solve for the reaction overpotential.
 
     Parameters
@@ -26,6 +25,4 @@ class InverseButlerVolmer(BaseInverseKinetics):
     """
 
     def _get_overpotential(self, j, j0, ne, T, u):
-        return (2 * (self.param.R * T) / self.param.F / ne) * pybamm.arcsinh(
-            j / (2 * j0 * u)
-        )
+        return (2 * (self.param.R * T) / self.param.F / ne) * j / (2 * j0 * u)
