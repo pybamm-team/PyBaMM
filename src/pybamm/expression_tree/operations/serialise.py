@@ -435,6 +435,13 @@ class Serialise:
                 str(variable_name): convert_symbol_to_json(expression)
                 for variable_name, expression in getattr(model, "variables", {}).items()
             },
+            "parameter_values": (
+                Serialise._serialise_parameter_values(
+                    getattr(model, "_parameter_values", None)
+                )
+                if getattr(model, "_parameter_values", None) is not None
+                else None
+            ),
         }
 
         SCHEMA_VERSION = "1.0"
@@ -1318,6 +1325,21 @@ class Serialise:
                     f"Failed to convert variable '{variable_name}': {e!s}"
                 ) from e
 
+        # Load parameter_values if present
+        # Note: fixed_input_parameters is now computed from parameter_values, so no need to load separately
+        if (
+            "parameter_values" in model_data
+            and model_data["parameter_values"] is not None
+        ):
+            try:
+                model._parameter_values = Serialise._deserialise_parameter_values(
+                    model_data["parameter_values"]
+                )
+            except Exception as e:
+                raise ValueError(f"Failed to convert parameter_values: {e!s}") from e
+        else:
+            model._parameter_values = None
+
         return model
 
     @staticmethod
@@ -1548,6 +1570,73 @@ class Serialise:
             return tuple(self._convert_options(item) for item in d)
         else:
             return d
+
+    @staticmethod
+    def _serialise_parameter_values(
+        parameter_values: pybamm.ParameterValues | None,
+    ) -> dict | None:
+        """
+        Serializes a ParameterValues object to a JSON-serializable dictionary.
+
+        Parameters
+        ----------
+        parameter_values : :class:`pybamm.ParameterValues` or None
+            The parameter values to serialize.
+
+        Returns
+        -------
+        dict or None
+            A JSON-serializable dictionary representation of the parameter values, or None if input is None.
+        """
+        if parameter_values is None:
+            return None
+
+        parameter_values_dict = {}
+        for k, v in parameter_values.items():
+            if callable(v):
+                parameter_values_dict[k] = convert_symbol_to_json(
+                    convert_function_to_symbolic_expression(v, k)
+                )
+            else:
+                parameter_values_dict[k] = convert_symbol_to_json(v)
+
+        return parameter_values_dict
+
+    @staticmethod
+    def _deserialise_parameter_values(
+        parameter_values_dict: dict,
+    ) -> pybamm.ParameterValues:
+        """
+        Deserializes a dictionary back into a ParameterValues object.
+
+        Parameters
+        ----------
+        parameter_values_dict : dict
+            Dictionary containing the serialized parameter values.
+
+        Returns
+        -------
+        :class:`pybamm.ParameterValues`
+            The reconstructed ParameterValues object.
+        """
+        deserialized = {}
+        for key, val in parameter_values_dict.items():
+            if isinstance(val, dict) and "type" in val:
+                deserialized[key] = convert_symbol_from_json(val)
+            elif isinstance(val, list):
+                deserialized[key] = val
+            elif isinstance(val, (numbers.Number | bool)):
+                deserialized[key] = val
+            elif isinstance(val, str):
+                deserialized[key] = val
+            elif isinstance(val, dict):
+                deserialized[key] = val
+            else:
+                raise ValueError(
+                    f"Unsupported parameter format for key '{key}': {val!r}"
+                )
+
+        return pybamm.ParameterValues(deserialized)
 
 
 def convert_function_to_symbolic_expression(func, name=None):
