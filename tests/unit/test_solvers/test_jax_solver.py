@@ -9,6 +9,7 @@ if pybamm.has_jax():
 
 
 @pytest.mark.skipif(not pybamm.has_jax(), reason="jax or jaxlib is not installed")
+@pytest.mark.timeout(60, method="thread")
 class TestJaxSolver:
     def test_model_solver(self):
         # Create model

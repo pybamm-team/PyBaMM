@@ -21,7 +21,7 @@ if pybamm.has_jax():
 # --------------------------
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture()
 def model():
     model = pybamm.BaseModel()
     v = pybamm.Variable("v")
@@ -38,12 +38,12 @@ def model():
     return model
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture()
 def idaklu_solver():
     return pybamm.IDAKLUSolver(rtol=1e-6, atol=1e-6)
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture()
 def sim(model, idaklu_solver):
     return idaklu_solver.solve(
         model,
