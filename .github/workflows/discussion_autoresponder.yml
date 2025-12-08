@@ -16,7 +16,7 @@ jobs:
 
     steps:
       - name: Run Discussion Autoresponder
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const discussion = context.payload.discussion;
