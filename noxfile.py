@@ -94,7 +94,7 @@ def run_unit_idaklujax(session):
         "tests/unit/test_solvers",
         "-n",
         "0",
-        "--log-cli-level=DEBUG",
+        "--log-cli-level=WARN",
     )
 
 

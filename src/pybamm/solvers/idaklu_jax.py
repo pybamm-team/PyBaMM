@@ -65,7 +65,8 @@ class IDAKLUJax:
         )
         self.idaklu_jax_obj = None  # Low-level IDAKLU-JAX primitives object
         self.solver = solver  # Originating IDAKLU Solver object
-        self.jax_inputs = {k: [] for k, v in model.get_parameter_info().items()}
+        # Keep a stable list of input names; avoid mutating per-call to stay thread-safe
+        self.jax_input_keys = list(model.get_parameter_info().keys())
 
         # JAXify the solver ready for use
         self.jaxify(
@@ -353,9 +354,9 @@ class IDAKLUJax:
         """
         # Reconstruct dictionary of inputs
         d = self._hashabledict()
-        if self.jax_inputs is not None:
+        if self.jax_input_keys is not None:
             # Use hashable dictionaries for caching the solve
-            for key, value in zip(self.jax_inputs.keys(), inputs_values, strict=False):
+            for key, value in zip(self.jax_input_keys, inputs_values, strict=False):
                 d[key] = value
         # Solver
         logger.debug("_jaxify_solve:")
@@ -375,7 +376,7 @@ class IDAKLUJax:
         )
         if invar is not None:
             if isinstance(invar, numbers.Number):
-                invar = list(self.jax_inputs.keys())[invar]
+                invar = self.jax_input_keys[invar]
             # Provide vector support for time
             if t.ndim == 0:
                 t = np.array([t])
@@ -437,7 +438,7 @@ class IDAKLUJax:
         for index, value in enumerate(inputs_t):
             # Skipping zero values greatly improves performance
             if value > 0.0:
-                invar = list(self.jax_inputs.keys())[index]
+                invar = self.jax_input_keys[index]
                 js = self._jaxify_solve(t, invar, *inputs)
                 if js.ndim == 0:
                     js = jnp.array([js])
@@ -632,8 +633,7 @@ class IDAKLUJax:
                          {'Current function [A]': 0.222, 'Separator porosity': 0.3}
             """
             logger.info("f")
-            flatargs, treedef = tree_flatten((t, inputs))
-            self.jax_inputs = inputs
+            flatargs, _ = tree_flatten((t, inputs))
             out = f_p.bind(*flatargs)
             return out
 
@@ -856,7 +856,7 @@ class IDAKLUJax:
             primals = args[: len(args) // 2]
 
             tangents_out = []
-            for invar in self.jax_inputs.keys():
+            for invar in self.jax_input_keys:
                 js = f_vjp(y_bar, invar, *primals)
                 tangents_out.append(js)
 
@@ -957,7 +957,7 @@ class IDAKLUJax:
             logger.info("f_vjp")
             logger.debug(f"  y_bar: {y_bar}, {type(y_bar)}, {y_bar.shape}")
             if isinstance(invar, str):
-                invar = list(self.jax_inputs.keys()).index(invar)
+                invar = self.jax_input_keys.index(invar)
             return f_vjp_p.bind(y_bar, invar, *primals)
 
         @f_vjp_p.def_impl
@@ -1053,7 +1053,7 @@ class IDAKLUJax:
                         self.idaklu_jax_obj.get_index()
                     ),  # solver index reference
                     mlir.ir_constant(size_t),  # 'size' argument
-                    mlir.ir_constant(len(self.jax_inputs)),  # number of inputs
+                    mlir.ir_constant(len(self.jax_input_keys)),  # number of inputs
                     mlir.ir_constant(dims_y_bar[0]),  # 'y_bar' shape[0]
                     mlir.ir_constant(  # 'y_bar' shape[1]
                         dims_y_bar[1] if len(dims_y_bar) > 1 else -1
