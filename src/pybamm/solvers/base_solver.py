@@ -1377,7 +1377,9 @@ class BaseSolver:
 
         else:
             _, concatenated_initial_conditions = model.set_initial_conditions_from(
-                old_solution, inputs=model_inputs, return_type="ics"
+                old_solution,
+                inputs=model_inputs,
+                return_type="ics",
             )
             model.y0_list = [
                 concatenated_initial_conditions.evaluate(0, inputs=model_inputs)
