@@ -437,7 +437,6 @@ class TestSimulation:
             Exchange-current density for Butler-Volmer reactions between li metal and LiPF6 in
             EC:DMC.
             """
-            import pybamm
 
             m_ref = (
                 3.5e-8 * pybamm.constants.F

@@ -5,14 +5,19 @@ import pytest
 
 import pybamm
 
+if pybamm.has_skfem():
+    from pybamm.meshes.scikit_fem_submeshes_3d import (
+        ScikitFemGenerator3D,
+        ScikitFemSubMesh3D,
+    )
 
+
+@pytest.mark.skipif(
+    not pybamm.has_skfem(),
+    reason="scikit-fem is not available",
+)
 class TestScikitFemGenerator3D:
     def test_pouch_mesh_creation(self):
-        try:
-            from pybamm.meshes.scikit_fem_submeshes_3d import ScikitFemGenerator3D
-        except ImportError:
-            pytest.skip("scikit-fem not available")
-
         geometry = {
             "domain": {
                 pybamm.standard_spatial_vars.x: {"min": 0, "max": 1},
@@ -43,11 +48,6 @@ class TestScikitFemGenerator3D:
         assert submesh.coord_sys == "cartesian", "Pouch mesh should be cartesian"
 
     def test_cylinder_mesh_creation(self):
-        try:
-            from pybamm.meshes.scikit_fem_submeshes_3d import ScikitFemGenerator3D
-        except ImportError:
-            pytest.skip("scikit-fem not available")
-
         r = pybamm.SpatialVariable("r", ["domain"], coord_sys="cylindrical polar")
         z = pybamm.SpatialVariable("z", ["domain"], coord_sys="cylindrical polar")
 
@@ -79,25 +79,12 @@ class TestScikitFemGenerator3D:
         assert np.max(z_coords) <= 2.0 + 1e-7
 
     def test_invalid_geometry_type(self):
-        try:
-            from pybamm.meshes.scikit_fem_submeshes_3d import ScikitFemGenerator3D
-        except ImportError:
-            pytest.skip("scikit-fem not available")
-
         with pytest.raises(pybamm.GeometryError, match="geom_type must be one of"):
             ScikitFemGenerator3D("invalid_type", h=0.3)
 
 
 class TestScikitFemSubMesh3D:
     def test_submesh_properties(self):
-        try:
-            from pybamm.meshes.scikit_fem_submeshes_3d import (
-                ScikitFemGenerator3D,
-                ScikitFemSubMesh3D,
-            )
-        except ImportError:
-            pytest.skip("scikit-fem not available")
-
         geometry = {
             "domain": {
                 pybamm.standard_spatial_vars.x: {"min": 0, "max": 1},
@@ -136,14 +123,6 @@ class TestScikitFemSubMesh3D:
         assert len(submesh.elements) > 0, "Should have elements"
 
     def test_serialization(self):
-        try:
-            from pybamm.meshes.scikit_fem_submeshes_3d import (
-                ScikitFemGenerator3D,
-                ScikitFemSubMesh3D,
-            )
-        except ImportError:
-            pytest.skip("scikit-fem not available")
-
         geometry = {
             "domain": {
                 pybamm.standard_spatial_vars.x: {"min": 0, "max": 1},

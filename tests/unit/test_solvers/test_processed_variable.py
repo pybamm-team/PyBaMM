@@ -5,6 +5,7 @@ from scipy.interpolate import CubicHermiteSpline
 
 import pybamm
 import tests
+from pybamm.meshes.scikit_fem_submeshes_3d import ScikitFemGenerator3D
 from tests.shared import get_mesh_for_testing_2d
 
 _hermite_args = [True, False]
@@ -1729,8 +1730,6 @@ class TestProcessedVariable:
         )
 
     def test_processed_variable_unstructured_3d_pouch(self):
-        from pybamm.meshes.scikit_fem_submeshes_3d import ScikitFemGenerator3D
-
         x = pybamm.SpatialVariable(
             "x", domain=["current collector"], coord_sys="cartesian"
         )
@@ -1797,8 +1796,6 @@ class TestProcessedVariable:
         assert result_no_coords.shape == (var_disc.mesh.npts,)
 
     def test_processed_variable_unstructured_scalar_vs_vector_time(self):
-        from pybamm.meshes.scikit_fem_submeshes_3d import ScikitFemGenerator3D
-
         x = pybamm.SpatialVariable(
             "x", domain=["current collector"], coord_sys="cartesian"
         )
@@ -1862,8 +1859,6 @@ class TestProcessedVariable:
         assert result_vector.shape == (3, 2)
 
     def test_processed_variable_unstructured_fill_value(self):
-        from pybamm.meshes.scikit_fem_submeshes_3d import ScikitFemGenerator3D
-
         x = pybamm.SpatialVariable(
             "x", domain=["current collector"], coord_sys="cartesian"
         )
@@ -1921,8 +1916,6 @@ class TestProcessedVariable:
         assert result_custom == 999
 
     def test_processed_variable_unstructured_shape_method(self):
-        from pybamm.meshes.scikit_fem_submeshes_3d import ScikitFemGenerator3D
-
         x = pybamm.SpatialVariable(
             "x", domain=["current collector"], coord_sys="cartesian"
         )
@@ -1971,8 +1964,6 @@ class TestProcessedVariable:
         assert shape == [var_disc.mesh.npts, len(t_sol)]
 
     def test_processed_variable_unstructured_time_integral(self):
-        from pybamm.meshes.scikit_fem_submeshes_3d import ScikitFemGenerator3D
-
         x = pybamm.SpatialVariable(
             "x", domain=["current collector"], coord_sys="cartesian"
         )
@@ -2054,8 +2045,6 @@ class TestProcessedVariable:
         assert not isinstance(processed_var, pybamm.ProcessedVariableUnstructured)
 
     def test_process_variable_unstructured_detection(self):
-        from pybamm.meshes.scikit_fem_submeshes_3d import ScikitFemGenerator3D
-
         x = pybamm.SpatialVariable(
             "x", domain=["current collector"], coord_sys="cartesian"
         )

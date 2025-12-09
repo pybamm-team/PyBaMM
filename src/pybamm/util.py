@@ -362,6 +362,19 @@ def has_jax():
     )
 
 
+def has_skfem():
+    """
+    Check if scikit-fem is installed
+
+    Returns
+    -------
+    bool
+        True if scikit-fem is installed, False if otherwise
+
+    """
+    return importlib.util.find_spec("skfem") is not None
+
+
 def is_constant_and_can_evaluate(symbol):
     """
     Returns True if symbol is constant and evaluation does not raise any errors.

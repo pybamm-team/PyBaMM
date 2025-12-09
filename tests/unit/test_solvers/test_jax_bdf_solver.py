@@ -7,6 +7,8 @@ from tests import get_mesh_for_testing
 if pybamm.has_jax():
     import jax
 
+    from pybamm.solvers.jax_bdf_solver import split_list
+
 
 @pytest.mark.skipif(not pybamm.has_jax(), reason="jax or jaxlib is not installed")
 class TestJaxBDFSolver:
@@ -178,8 +180,6 @@ class TestJaxBDFSolver:
 
     def test_split_list(self):
         """Test the split_list utility function."""
-        from pybamm.solvers.jax_bdf_solver import split_list
-
         # Test case 1: Empty indices should return the original list
         original_list = [1, 2, 3, 4, 5]
         result = split_list(original_list, [])

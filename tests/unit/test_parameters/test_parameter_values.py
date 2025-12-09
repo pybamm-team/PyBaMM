@@ -3,7 +3,10 @@
 #
 
 
+import json
 import os
+import tempfile
+from pathlib import Path
 
 import casadi
 import numpy as np
@@ -13,11 +16,26 @@ import pytest
 import pybamm
 import tests.shared as shared
 from pybamm.expression_tree.exceptions import OptionError
+from pybamm.expression_tree.operations.serialise import (
+    ExpressionFunctionParameter,
+)
 from pybamm.input.parameters.lithium_ion.Marquis2019 import (
     lico2_diffusivity_Dualfoil1998,
     lico2_ocp_Dualfoil1998,
 )
-from pybamm.parameters.parameter_values import ParameterValues
+from pybamm.parameters.parameter_values import (
+    ParameterValues,
+    _add_units,
+    _combine_name,
+    _contiguous_and_ordered_indices,
+    _is_iterable,
+    _KeyMatch,
+    _split_key,
+    arrayize_dict,
+    convert_parameter_values_to_json,
+    convert_symbols_in_dict,
+    scalarize_dict,
+)
 
 
 class TestParameterValues:
@@ -1106,9 +1124,6 @@ class TestParameterValues:
         r = pybamm.SpatialVariable("r", domain=["negative particle"])
 
         # Create an expression function parameter
-        from pybamm.expression_tree.operations.serialise import (
-            ExpressionFunctionParameter,
-        )
 
         # Expression: r^2
         expr = r**2
@@ -1131,9 +1146,6 @@ class TestParameterValues:
         x = pybamm.SpatialVariable("x", domain=["negative electrode"])
 
         # Create nested expression functions
-        from pybamm.expression_tree.operations.serialise import (
-            ExpressionFunctionParameter,
-        )
 
         # Inner function: x^2
         inner_expr = x**2
@@ -1164,10 +1176,6 @@ class TestParameterValues:
         """Test _process_function_parameter with diff_variable and nested FunctionParameter."""
         r = pybamm.SpatialVariable("r", domain=["negative particle"])
 
-        from pybamm.expression_tree.operations.serialise import (
-            ExpressionFunctionParameter,
-        )
-
         # Inner function: r^2
         inner_expr = r**2
         inner_efp = ExpressionFunctionParameter("inner", inner_expr, "inner", ["r"])
@@ -1194,8 +1202,6 @@ class TestParameterValues:
 
     def test_from_json_with_string_path(self):
         """Test from_json with string filename."""
-        import json
-        import tempfile
 
         params = {
             "param1": 42,
@@ -1215,9 +1221,6 @@ class TestParameterValues:
 
     def test_from_json_with_path_object(self):
         """Test from_json with pathlib.Path object."""
-        import json
-        import tempfile
-        from pathlib import Path
 
         params = {
             "param1": 100,
@@ -1279,8 +1282,6 @@ class TestParameterValues:
 
     def test_to_json_with_filename(self):
         """Test to_json with filename parameter (covers line 1136)."""
-        import tempfile
-
         param = pybamm.ParameterValues({"param1": 42, "param2": 3.14})
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
@@ -1289,7 +1290,6 @@ class TestParameterValues:
         try:
             param.to_json(temp_path)
             # Verify file was created and contains correct data
-            import json
 
             with open(temp_path) as f:
                 data = json.load(f)
@@ -1325,10 +1325,6 @@ class TestParameterValues:
 
     def test_convert_symbols_in_dict_with_interpolator(self):
         """Test convert_symbols_in_dict with interpolator (covers lines 1154-1170)."""
-        import numpy as np
-
-        from pybamm.parameters.parameter_values import convert_symbols_in_dict
-
         data_dict = {
             "param1": {
                 "interpolator": "linear",
@@ -1349,7 +1345,6 @@ class TestParameterValues:
 
     def test_convert_symbols_in_dict_with_nested_dict(self):
         """Test convert_symbols_in_dict with nested dict (covers lines 1171-1174)."""
-        from pybamm.parameters.parameter_values import convert_symbols_in_dict
 
         scalar_symbol = pybamm.Scalar(2.718)
         serialized_scalar = (
@@ -1364,7 +1359,6 @@ class TestParameterValues:
 
     def test_convert_symbols_in_dict_with_list(self):
         """Test convert_symbols_in_dict with list (covers lines 1175-1179)."""
-        from pybamm.parameters.parameter_values import convert_symbols_in_dict
 
         scalar_symbol = pybamm.Scalar(2.718)
         serialized_scalar = (
@@ -1380,7 +1374,6 @@ class TestParameterValues:
 
     def test_convert_symbols_in_dict_with_string(self):
         """Test convert_symbols_in_dict with string (covers lines 1180-1182)."""
-        from pybamm.parameters.parameter_values import convert_symbols_in_dict
 
         data_dict = {"param1": "3.14"}
         result = convert_symbols_in_dict(data_dict)
@@ -1388,14 +1381,12 @@ class TestParameterValues:
 
     def test_convert_symbols_in_dict_with_none(self):
         """Test convert_symbols_in_dict with None input (covers lines 1184-1188)."""
-        from pybamm.parameters.parameter_values import convert_symbols_in_dict
 
         result = convert_symbols_in_dict(None)
         assert result == {}
 
     def test_key_match_class(self):
         """Test _KeyMatch class (covers lines 1198-1220)."""
-        from pybamm.parameters.parameter_values import _KeyMatch
 
         # Test invalid name (not a string)
         with pytest.raises(ValueError, match="name must be a string"):
@@ -1419,7 +1410,6 @@ class TestParameterValues:
 
     def test_list_parameter_class(self):
         """Test that arrayize_dict returns plain lists."""
-        from pybamm.parameters.parameter_values import arrayize_dict
 
         # Test that arrayize_dict creates plain list objects
         scalar_dict = {
@@ -1498,7 +1488,6 @@ class TestParameterValues:
 
     def test_scalarize_dict_with_list_parameter(self):
         """Test scalarize_dict with plain lists."""
-        from pybamm.parameters.parameter_values import arrayize_dict, scalarize_dict
 
         # First create a list using arrayize_dict
         scalar_dict = {
@@ -1522,7 +1511,6 @@ class TestParameterValues:
 
     def test_scalarize_dict_duplicate_key_error(self):
         """Test scalarize_dict raises error on duplicate key (covers line 1316)."""
-        from pybamm.parameters.parameter_values import scalarize_dict
 
         # Python dicts don't allow duplicate keys, but we can test the error path
         # by creating a scenario where the key appears in the output
@@ -1534,7 +1522,6 @@ class TestParameterValues:
 
     def test_is_iterable_function(self):
         """Test _is_iterable function (covers line 1322)."""
-        from pybamm.parameters.parameter_values import _is_iterable
 
         assert _is_iterable([1, 2, 3])
         assert _is_iterable((1, 2, 3))
@@ -1546,14 +1533,12 @@ class TestParameterValues:
 
     def test_split_key_error(self):
         """Test _split_key with illegal parameter name (covers lines 1339-1342)."""
-        from pybamm.parameters.parameter_values import _split_key
 
         with pytest.raises(ValueError, match="Illegal parameter name"):
             _split_key("[invalid]")
 
     def test_combine_name_negative_index(self):
         """Test _combine_name with negative index (covers lines 1347-1350)."""
-        from pybamm.parameters.parameter_values import _combine_name
 
         with pytest.raises(ValueError, match="idx must be ≥ 0"):
             _combine_name("param", -1)
@@ -1568,7 +1553,6 @@ class TestParameterValues:
 
     def test_add_units_function(self):
         """Test _add_units function (covers lines 1355-1358)."""
-        from pybamm.parameters.parameter_values import _add_units
 
         result = _add_units("param", None)
         assert result == "param"
@@ -1578,7 +1562,6 @@ class TestParameterValues:
 
     def test_arrayize_dict_function(self):
         """Test arrayize_dict function (covers lines 1378-1428)."""
-        from pybamm.parameters.parameter_values import arrayize_dict
 
         # Test basic arrayization
         scalar_dict = {
@@ -1604,7 +1587,6 @@ class TestParameterValues:
 
     def test_arrayize_dict_missing_indices_error(self):
         """Test arrayize_dict with missing indices (covers lines 1408-1410)."""
-        from pybamm.parameters.parameter_values import arrayize_dict
 
         scalar_dict = {
             "voltage (0) [V]": 3.7,
@@ -1624,9 +1606,6 @@ class TestParameterValues:
 
     def test_contiguous_and_ordered_indices_function(self):
         """Test _contiguous_and_ordered_indices (covers line 1447)."""
-        from pybamm.parameters.parameter_values import (
-            _contiguous_and_ordered_indices,
-        )
 
         # Test contiguous indices
         assert _contiguous_and_ordered_indices({0, 1, 2, 3})
@@ -1640,11 +1619,6 @@ class TestParameterValues:
 
     def test_convert_parameter_values_to_json_with_callable(self):
         """Test convert_parameter_values_to_json with callable (covers lines 1464-1480)."""
-        import tempfile
-
-        from pybamm.parameters.parameter_values import (
-            convert_parameter_values_to_json,
-        )
 
         # Create parameter values with a callable
         def my_function(x):
@@ -1664,7 +1638,6 @@ class TestParameterValues:
         try:
             convert_parameter_values_to_json(param, temp_path)
             # Verify file was created
-            import json
 
             with open(temp_path) as f:
                 data = json.load(f)
@@ -1675,7 +1648,6 @@ class TestParameterValues:
 
     def test_convert_symbols_in_dict_interpolator_exception(self):
         """Test convert_symbols_in_dict when interpolator raises exception (covers lines 1166-1168)."""
-        from pybamm.parameters.parameter_values import convert_symbols_in_dict
 
         # Create an interpolator dict with invalid data that will cause an exception
         data_dict = {

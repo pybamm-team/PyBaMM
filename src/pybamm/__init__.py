@@ -11,6 +11,7 @@ from .util import (
 from .util import (
     get_parameters_filepath,
     has_jax,
+    has_skfem,
     import_optional_dependency,
 )
 from .logger import logger, set_logging_level, get_new_logger
@@ -58,7 +59,7 @@ from .expression_tree.operations.evaluate_python import JaxCooMatrix
 from .expression_tree.operations.jacobian import Jacobian
 from .expression_tree.operations.convert_to_casadi import CasadiConverter
 from .expression_tree.operations.unpack_symbols import SymbolUnpacker
-from .expression_tree.operations.serialise import Serialise,ExpressionFunctionParameter
+from .expression_tree.operations.serialise import Serialise, ExpressionFunctionParameter
 
 # Model classes
 from .models.base_model import BaseModel
@@ -169,7 +170,11 @@ from .spatial_methods.scikit_finite_element_3d import ScikitFiniteElement3D
 # Solver classes
 from .solvers.solution import Solution, EmptySolution, make_cycle_solution
 from .solvers.processed_variable_time_integral import ProcessedVariableTimeIntegral
-from .solvers.processed_variable import ProcessedVariable, ProcessedVariable2DFVM, process_variable
+from .solvers.processed_variable import (
+    ProcessedVariable,
+    ProcessedVariable2DFVM,
+    process_variable,
+)
 from .solvers.processed_variable_computed import ProcessedVariableComputed
 from .solvers.processed_variable import ProcessedVariableUnstructured
 from .solvers.summary_variable import SummaryVariables

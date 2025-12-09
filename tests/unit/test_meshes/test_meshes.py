@@ -6,6 +6,7 @@ import numpy as np
 import pytest
 
 import pybamm
+from pybamm.meshes.meshes import compute_var_pts_from_thicknesses
 
 
 def get_param():
@@ -585,8 +586,6 @@ class TestMesh:
         assert mesh_json == expected_json
 
     def test_compute_var_pts_from_thicknesses_cell_size(self):
-        from pybamm.meshes.meshes import compute_var_pts_from_thicknesses
-
         electrode_thicknesses = {
             "negative electrode": 100e-6,
             "separator": 25e-6,
@@ -603,14 +602,10 @@ class TestMesh:
         assert var_pts["positive electrode"]["x_p"] == 20
 
     def test_compute_var_pts_from_thicknesses_invalid_thickness_type(self):
-        from pybamm.meshes.meshes import compute_var_pts_from_thicknesses
-
         with pytest.raises(TypeError):
             compute_var_pts_from_thicknesses(["not", "a", "dict"], 1e-6)
 
     def test_compute_var_pts_from_thicknesses_invalid_grid_size(self):
-        from pybamm.meshes.meshes import compute_var_pts_from_thicknesses
-
         electrode_thicknesses = {"negative electrode": 100e-6}
         with pytest.raises(ValueError):
             compute_var_pts_from_thicknesses(electrode_thicknesses, -1e-6)
