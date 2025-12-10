@@ -50,7 +50,6 @@ from .expression_tree.operations.evaluate_python import (
     id_to_python_variable,
     to_python,
     EvaluatorPython,
-    DiffSLExport
 )
 
 from .expression_tree.operations.evaluate_python import EvaluatorJax
@@ -65,6 +64,9 @@ from .expression_tree.operations.serialise import Serialise,ExpressionFunctionPa
 from .models.base_model import BaseModel
 from .models.event import Event
 from .models.event import EventType
+
+# DiffSL export
+from .expression_tree.operations.diffsl import DiffSLExport
 
 # Battery models
 from .models.full_battery_models.base_battery_model import (
