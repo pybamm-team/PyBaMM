@@ -8,6 +8,8 @@ import numpy as onp
 import pybamm
 
 if pybamm.has_jax():
+    import functools
+
     import jax
     import jax.numpy as jnp
     from jax import core, dtypes
@@ -16,7 +18,19 @@ if pybamm.has_jax():
     from jax.flatten_util import ravel_pytree
     from jax.interpreters import partial_eval as pe
     from jax.tree_util import tree_flatten, tree_map, tree_unflatten
-    from jax.util import cache, safe_map, split_list
+
+    def split_list(lst, indices):
+        """Split a list at given indices."""
+        if not indices:
+            return [lst]
+
+        result = []
+        start = 0
+        for idx in indices:
+            result.append(lst[start:idx])
+            start = idx
+        result.append(lst[start:])
+        return result
 
     platform = jax.lib.xla_bridge.get_backend().platform.casefold()
     if platform != "metal":
@@ -875,7 +889,7 @@ if pybamm.has_jax():
 
     _bdf_odeint.defvjp(_bdf_odeint_fwd, _bdf_odeint_rev)
 
-    @cache()
+    @functools.cache
     def closure_convert(fun, in_tree, in_avals):
         wrapped_fun, out_tree = flatten_fun_nokwargs(lu.wrap_init(fun), in_tree)
         jaxpr, _, consts = pe.trace_to_jaxpr_dynamic(wrapped_fun, in_avals)
@@ -910,7 +924,7 @@ if pybamm.has_jax():
         return out, merge
 
     def abstractify(x):
-        return core.raise_to_shaped(core.get_aval(x))
+        return core.get_aval(x)
 
     def ravel_first_arg(f, unravel):
         return ravel_first_arg_(lu.wrap_init(f), unravel).call_wrapped
@@ -975,7 +989,7 @@ def jax_bdf_integrate(func, y0, t_eval, *args, rtol=1e-6, atol=1e-6, mass=None):
         raise TypeError(msg.format(arg))
 
     flat_args, in_tree = tree_flatten((y0, t_eval[0], *args))
-    in_avals = tuple(safe_map(abstractify, flat_args))
+    in_avals = tuple(map(abstractify, flat_args))
     converted, consts = closure_convert(func, in_tree, in_avals)
     if mass is None:
         mass = onp.identity(y0.shape[0], dtype=y0.dtype)

@@ -11,6 +11,7 @@ from tests import (
     get_cylindrical_mesh_for_testing_symbolic,
     get_mesh_for_testing,
     get_mesh_for_testing_symbolic,
+    get_mesh_for_testing_symbolic_concatenation,
     get_p2d_mesh_for_testing,
     get_spherical_mesh_for_testing_symbolic,
 )
@@ -816,3 +817,54 @@ class TestFiniteVolumeGradDiv:
         div_eval = div_eqn_disc.evaluate(None, linear_y)
         div_eval = np.reshape(div_eval, [15, 1])
         np.testing.assert_allclose(div_eval, np.zeros([15, 1]), rtol=1e-7, atol=1e-6)
+
+    def test_grad_div_shapes_symbolic_mesh_concatenation(self):
+        mesh = get_mesh_for_testing_symbolic_concatenation()
+        spatial_methods = {
+            "domain 1": pybamm.FiniteVolume(),
+            "domain 2": pybamm.FiniteVolume(),
+        }
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        var_1 = pybamm.Variable("var", domain="domain 1")
+        var_2 = pybamm.Variable("var", domain="domain 2")
+        var = pybamm.concatenation(var_1, var_2)
+        grad_eqn = pybamm.grad(var)
+        div_eqn = pybamm.div(grad_eqn)
+        boundary_conditions = {
+            var: {
+                "left": (pybamm.Scalar(1), "Neumann"),
+                "right": (pybamm.Scalar(1), "Neumann"),
+            }
+        }
+        disc.bcs = boundary_conditions
+        disc.set_variable_slices([var])
+        grad_eqn_disc = disc.process_symbol(grad_eqn)
+        div_eqn_disc = disc.process_symbol(div_eqn)
+
+        # Evaluate grad
+        dom = (
+            "domain 1_left ghost cell",
+            "domain 1",
+            "domain 2",
+            "domain 2_right ghost cell",
+        )
+        submeshes = [mesh[domain_] for domain_ in dom]
+        nodes_list = []
+        for submesh_ in submeshes:
+            nodes_ = submesh_.nodes
+            if hasattr(submesh_, "length"):
+                nodes_ = nodes_ * submesh_.length + submesh_.min
+            nodes_list.append(nodes_)
+        linear_y = np.concatenate(nodes_list)
+        expected = np.ones((31, 1))
+        np.testing.assert_allclose(
+            grad_eqn_disc.evaluate(None, linear_y), expected, rtol=1e-7, atol=1e-6
+        )
+
+        # Evaluate div
+        div_eqn = pybamm.div(pybamm.grad(var))
+        div_eqn_disc = disc.process_symbol(div_eqn)
+        div_eval = div_eqn_disc.evaluate(None, linear_y)
+        div_eval = np.reshape(div_eval, [30, 1])
+        np.testing.assert_allclose(div_eval, np.zeros([30, 1]), rtol=1e-7, atol=1e-6)

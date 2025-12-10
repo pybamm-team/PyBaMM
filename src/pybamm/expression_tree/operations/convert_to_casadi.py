@@ -86,12 +86,16 @@ class CasadiConverter:
                 return casadi.fmin(converted_left, converted_right)
             if isinstance(symbol, pybamm.Maximum):
                 return casadi.fmax(converted_left, converted_right)
+            if isinstance(symbol, pybamm.KroneckerProduct):
+                return casadi.kron(converted_left, converted_right)
 
             # _binary_evaluate defined in derived classes for specific rules
             return symbol._binary_evaluate(converted_left, converted_right)
 
         elif isinstance(symbol, pybamm.UnaryOperator):
             converted_child = self.convert(symbol.child, t, y, y_dot, inputs)
+            if isinstance(symbol, pybamm.Transpose):
+                return converted_child.T
             if isinstance(symbol, pybamm.AbsoluteValue):
                 return casadi.fabs(converted_child)
             if isinstance(symbol, pybamm.Floor):
@@ -275,7 +279,7 @@ class CasadiConverter:
                 for i in range(symbol.secondary_dimensions_npts):
                     child_vectors = []
                     for child_var, slices in zip(
-                        converted_children, symbol._children_slices, strict=False
+                        converted_children, symbol._children_slices, strict=True
                     ):
                         for child_dom, child_slice in slices.items():
                             slice_starts.append(symbol._slices[child_dom][i].start)

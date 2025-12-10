@@ -195,15 +195,6 @@ class TestSolution:
         # check solution still tagged as 'variables_returned'
         assert sol_sum.variables_returned is True
 
-        # add a solution with computed variable to an empty solution
-        empty_sol = pybamm.Solution(
-            sol1.all_ts, sol1["2u"].base_variables_data, model, {u: 0, v: 1}
-        )
-
-        sol4 = empty_sol + sol2
-        assert sol4["2u"] == sol2["2u"]
-        assert sol4.variables_returned is True
-
     def test_copy(self):
         # Set up first solution
         t1 = [np.linspace(0, 1), np.linspace(1, 2, 5)]
@@ -596,6 +587,7 @@ class TestSolution:
                 sol["data_comparison"](), expected, rtol=1e-3, atol=1e-2
             )
             assert isinstance(sol["data_comparison"].data, np.ndarray)
+            assert sol["data_comparison"].data.shape == (1,)
 
             # sensitivity calculation only supported for IDAKLUSolver
             if solver_class == pybamm.IDAKLUSolver:
@@ -642,6 +634,7 @@ class TestSolution:
                     atol=1e-2,
                 )
                 assert isinstance(sol["data_comparison"].sensitivities["a"], np.ndarray)
+                assert sol["data_comparison"].sensitivities["a"].shape == (1,)
 
                 # should raise error if t_interp is not equal to data_times
                 with pytest.raises(

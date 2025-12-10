@@ -20,12 +20,12 @@ OPTIONS_DICT = {
 PRINT_OPTIONS_OUTPUT = """\
 'calculate discharge energy': 'false' (possible: ['false', 'true'])
 'calculate heat source for isothermal models': 'false' (possible: ['false', 'true'])
-'cell geometry': 'pouch' (possible: ['arbitrary', 'pouch'])
+'cell geometry': 'pouch' (possible: ['arbitrary', 'pouch', 'cylindrical'])
 'contact resistance': 'false' (possible: ['false', 'true'])
 'convection': 'none' (possible: ['none', 'uniform transverse', 'full transverse'])
 'current collector': 'uniform' (possible: ['uniform', 'potential pair', 'potential pair quite conductive'])
 'diffusivity': 'single' (possible: ['single', 'current sigmoid'])
-'dimensionality': 0 (possible: [0, 1, 2])
+'dimensionality': 0 (possible: [0, 1, 2, 3])
 'electrolyte conductivity': 'default' (possible: ['default', 'full', 'leading order', 'composite', 'integrated'])
 'exchange-current density': 'single' (possible: ['single', 'current sigmoid'])
 'heat of mixing': 'false' (possible: ['false', 'true'])
@@ -36,7 +36,7 @@ PRINT_OPTIONS_OUTPUT = """\
 'lithium plating porosity change': 'false' (possible: ['false', 'true'])
 'loss of active material': 'stress-driven' (possible: ['none', 'stress-driven', 'reaction-driven', 'current-driven', 'stress and reaction-driven'])
 'number of MSMR reactions': 'none' (possible: ['none'])
-'open-circuit potential': 'single' (possible: ['single', 'current sigmoid', 'MSMR', 'Wycisk', 'Axen'])
+'open-circuit potential': 'single' (possible: ['single', 'current sigmoid', 'MSMR', 'one-state hysteresis', 'one-state differential capacity hysteresis'])
 'operating mode': 'current' (possible: ['current', 'voltage', 'power', 'differential power', 'explicit power', 'resistance', 'differential resistance', 'explicit resistance', 'CCCV'])
 'particle': 'Fickian diffusion' (possible: ['Fickian diffusion', 'uniform profile', 'quadratic profile', 'quartic profile', 'MSMR'])
 'particle mechanics': 'swelling only' (possible: ['none', 'swelling only', 'swelling and cracking'])
@@ -128,6 +128,15 @@ class TestBaseBatteryModel:
             model.default_submesh_types["current collector"],
             pybamm.ScikitUniform2DSubMesh,
         )
+        model = pybamm.BaseBatteryModel({"dimensionality": 3, "cell geometry": "pouch"})
+        assert issubclass(
+            model.default_submesh_types["current collector"],
+            pybamm.SubMesh0D,
+        )
+        assert isinstance(
+            model.default_submesh_types["cell"],
+            pybamm.ScikitFemGenerator3D,
+        )
 
     def test_default_var_pts(self):
         var_pts = {
@@ -170,6 +179,15 @@ class TestBaseBatteryModel:
         assert isinstance(
             model.default_spatial_methods["current collector"],
             pybamm.ScikitFiniteElement,
+        )
+        model = pybamm.BaseBatteryModel({"dimensionality": 3, "cell geometry": "pouch"})
+        assert isinstance(
+            model.default_spatial_methods["current collector"],
+            pybamm.ZeroDimensionalSpatialMethod,
+        )
+        assert isinstance(
+            model.default_spatial_methods["cell"],
+            pybamm.ScikitFiniteElement3D,
         )
 
     def test_options(self):
@@ -553,3 +571,38 @@ class TestOptions:
             "separator",
             "positive electrode",
         ]
+
+    @pytest.mark.parametrize(
+        "ocp_option",
+        [
+            ["Axen", "one-state hysteresis"],
+            ["Wycisk", "one-state differential capacity hysteresis"],
+            [("Axen", "single"), ("one-state hysteresis", "single")],
+            [
+                ("Wycisk", "single"),
+                ("one-state differential capacity hysteresis", "single"),
+            ],
+            [
+                ("Axen", "Wycisk"),
+                ("one-state hysteresis", "one-state differential capacity hysteresis"),
+            ],
+            [
+                (("Axen", "Wycisk"), "single"),
+                (
+                    (
+                        "one-state hysteresis",
+                        "one-state differential capacity hysteresis",
+                    ),
+                    "single",
+                ),
+            ],
+        ],
+    )
+    def test_renamed_hysteresis_ocp(self, ocp_option):
+        # check old option is renamed to new option
+        assert (
+            BatteryModelOptions({"open-circuit potential": ocp_option[0]}).get(
+                "open-circuit potential"
+            )
+            == ocp_option[1]
+        )

@@ -432,9 +432,7 @@ class Solution:
         # therefore only get set up once
         vars_casadi = []
         for i, (model, ys, inputs, var_pybamm) in enumerate(
-            zip(
-                self.all_models, self.all_ys, self.all_inputs, vars_pybamm, strict=False
-            )
+            zip(self.all_models, self.all_ys, self.all_inputs, vars_pybamm, strict=True)
         ):
             if self.variables_returned and var_pybamm.has_symbol_of_classes(
                 pybamm.expression_tree.state_vector.StateVector
@@ -801,17 +799,10 @@ class Solution:
         new_sol._sub_solutions = self.sub_solutions + other.sub_solutions
 
         # update variables which were derived at the solver stage
-        if other._variables and all(
-            isinstance(v, pybamm.ProcessedVariableComputed)
-            for v in other._variables.values()
-        ):
-            if not self._variables:
-                new_sol._variables = other._variables.copy()
-            else:
-                new_sol._variables = {
-                    v: self._variables[v]._update(other._variables[v], new_sol)
-                    for v in self._variables.keys()
-                }
+        if any([self.variables_returned, other.variables_returned]):
+            vars = {*self._variables.keys(), *other._variables.keys()}
+            new_sol._variables = {v: self[v].update(other[v], new_sol) for v in vars}
+            new_sol.variables_returned = True
 
         return new_sol
 

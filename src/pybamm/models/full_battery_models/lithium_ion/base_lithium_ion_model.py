@@ -299,16 +299,14 @@ class BaseModel(pybamm.BaseBatteryModel):
                     ocp_model = ocp_submodels.SingleOpenCircuitPotential
                 elif ocp_option == "current sigmoid":
                     ocp_model = ocp_submodels.CurrentSigmoidOpenCircuitPotential
-                elif ocp_option == "Wycisk":
-                    pybamm.citations.register("Wycisk2022")
-                    ocp_model = ocp_submodels.WyciskOpenCircuitPotential
-                elif ocp_option == "Axen":
-                    pybamm.citations.register("Axen2022")
-                    ocp_model = ocp_submodels.AxenOpenCircuitPotential
+                elif ocp_option == "one-state hysteresis":
+                    ocp_model = ocp_submodels.OneStateHysteresisOpenCircuitPotential
+                elif ocp_option == "one-state differential capacity hysteresis":
+                    ocp_model = ocp_submodels.OneStateDifferentialCapacityHysteresisOpenCircuitPotential
                 elif ocp_option == "MSMR":
                     ocp_model = ocp_submodels.MSMROpenCircuitPotential
                 self.submodels[f"{domain} {phase} open-circuit potential"] = ocp_model(
-                    self.param, domain, reaction, self.options, phase
+                    self.param, domain, reaction, self.options, phase, self.x_average
                 )
 
     def set_pe_degradation_submodel(self):
@@ -347,12 +345,6 @@ class BaseModel(pybamm.BaseBatteryModel):
 
     def set_sei_submodel(self):
         for domain in ["negative", "positive"]:
-            if self.options.electrode_types[domain] == "planar":
-                reaction_loc = "interface"
-            elif self.options["x-average side reactions"] == "true":
-                reaction_loc = "x-average"
-            else:
-                reaction_loc = "full electrode"
             phases = self.options.phases[domain]
             for phase in phases:
                 sei_option = getattr(getattr(self.options, domain), phase)["SEI"]
@@ -366,12 +358,16 @@ class BaseModel(pybamm.BaseBatteryModel):
                     submodel = pybamm.sei.SEIGrowth(
                         self.param,
                         domain,
-                        reaction_loc,
                         self.options,
                         phase,
                         cracks=False,
                     )
                 self.submodels[f"{domain} {phase} sei"] = submodel
+                self.submodels[f"{domain} {phase} sei thickness"] = (
+                    pybamm.sei.SEIThickness(
+                        self.param, domain, self.options, phase, cracks=False
+                    )
+                )
             if len(phases) > 1:
                 self.submodels[f"{domain} total sei"] = pybamm.sei.TotalSEI(
                     self.param, domain, self.options
@@ -395,19 +391,23 @@ class BaseModel(pybamm.BaseBatteryModel):
                             self.param, domain, self.options, phase, cracks=True
                         )
                     else:
-                        if self.options["x-average side reactions"] == "true":
-                            reaction_loc = "x-average"
-                        else:
-                            reaction_loc = "full electrode"
                         submodel = pybamm.sei.SEIGrowth(
                             self.param,
                             domain,
-                            reaction_loc,
                             self.options,
                             phase,
                             cracks=True,
                         )
                     self.submodels[f"{domain} {phase} sei on cracks"] = submodel
+                    self.submodels[f"{domain} {phase} sei on cracks thickness"] = (
+                        pybamm.sei.SEIThickness(
+                            self.param,
+                            domain,
+                            self.options,
+                            phase,
+                            cracks=True,
+                        )
+                    )
                 if len(phases) > 1:
                     self.submodels[f"{domain} total sei on cracks"] = (
                         pybamm.sei.TotalSEI(

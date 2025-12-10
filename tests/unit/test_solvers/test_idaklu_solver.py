@@ -389,7 +389,7 @@ class TestIDAKLUSolver:
         # get the sensitivities for the variable
         d2uda = sol["2u"].sensitivities["a"]
         np.testing.assert_allclose(
-            2 * dyda_ida[0:200:2],
+            2 * dyda_ida[0:200:2].flatten(),
             d2uda,
             rtol=1e-7,
             atol=1e-6,
@@ -583,7 +583,7 @@ class TestIDAKLUSolver:
         solver = pybamm.IDAKLUSolver()
 
         t_eval = [0, 3]
-        with pytest.raises(ValueError):
+        with pytest.raises(pybamm.SolverError):
             solver.solve(model, t_eval)
 
     def test_dae_solver_algebraic_model(self):
@@ -760,6 +760,8 @@ class TestIDAKLUSolver:
             solver = pybamm.IDAKLUSolver(rtol=1e-6, atol=1e-6, options=options)
             soln = solver.solve(model, t_eval, t_interp=t_interp)
 
+            # Asserts
+            assert options == solver.options
             np.testing.assert_allclose(soln.y, soln_base.y, rtol=1e-5, atol=1e-4)
 
         options_fail = {
@@ -777,7 +779,7 @@ class TestIDAKLUSolver:
             options = {option: options_fail[option]}
             solver = pybamm.IDAKLUSolver(options=options)
 
-            with pytest.raises(ValueError):
+            with pytest.raises(pybamm.SolverError):
                 solver.solve(model, t_eval)
 
     def test_with_output_variables(self):
@@ -886,6 +888,29 @@ class TestIDAKLUSolver:
         # Check Solution is marked
         assert sol.variables_returned is True
 
+    def test_with_sparse_output_variables_and_sensitivities(self):
+        # Construct a model and solve for all variables, then test
+        # the 'output_variables' option for each variable in turn, confirming
+        # equivalence
+        input_parameters = {  # Sensitivities dictionary
+            "Current function [A]": 0.222,
+            "Separator porosity": 0.3,
+        }
+
+        # construct model
+        solver = pybamm.IDAKLUSolver(
+            output_variables=["Negative particle flux [mol.m-2.s-1]"],
+        )
+        model = pybamm.lithium_ion.DFN()
+        params = model.default_parameter_values
+        params.update({"Current function [A]": "[input]"})
+        sim = pybamm.Simulation(model, solver=solver, parameter_values=params)
+        with pytest.raises(
+            pybamm.SolverError,
+            match="Sensitivity of sparse variables not supported",
+        ):
+            sim.solve([0, 100], inputs=input_parameters, calculate_sensitivities=True)
+
     def test_with_output_variables_and_sensitivities(self):
         # Construct a model and solve for all variables, then test
         # the 'output_variables' option for each variable in turn, confirming
@@ -919,10 +944,10 @@ class TestIDAKLUSolver:
 
         # Use a selection of variables of different types
         output_variables = [
-            "Voltage [V]",
-            "Time [min]",
-            "x [m]",
-            "Negative particle flux [mol.m-2.s-1]",
+            "Voltage [V]",  # 0D
+            "x [m]",  # 1D, empty sensitivities
+            "Negative electrode potential [V]",  # 1D
+            "Negative particle concentration [mol.m-3]",  # 2D
             "Throughput capacity [A.h]",  # ExplicitTimeIntegral
         ]
 
@@ -970,6 +995,17 @@ class TestIDAKLUSolver:
                 sol[varname].sensitivities["all"].shape
                 == sol_all[varname].sensitivities["all"].shape
             )
+
+        # test each of the sensitivity calculations match
+        for varname in output_variables:
+            for key in input_parameters:
+                np.testing.assert_allclose(
+                    sol[varname].sensitivities[key],
+                    sol_all[varname].sensitivities[key],
+                    rtol=tol,
+                    atol=tol,
+                    err_msg=f"Failed for '{varname}', sensitivity '{key}'",
+                )
 
     def test_with_output_variables_and_event_termination(self):
         model = pybamm.lithium_ion.DFN()
@@ -1140,6 +1176,231 @@ class TestIDAKLUSolver:
         np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
         np.testing.assert_allclose(solution.y[-1], 2 * np.exp(0.1 * solution.t))
 
+    def test_multiple_initial_conditions_dict(self):
+        model = pybamm.BaseModel()
+        model.convert_to_format = None
+        u = pybamm.Variable("u")
+        model.rhs = {u: -u}
+        model.initial_conditions = {u: 1}
+        model.variables = {"u": u}
+
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        solver = pybamm.IDAKLUSolver(options={"num_threads": 1})
+
+        n_sims = 3
+        initial_conditions = [{"u": i + 1} for i in range(n_sims)]
+        inputs = [{} for _ in range(n_sims)]
+        t_eval = np.array([0, 1])
+        t_interp = np.linspace(0, 1, 10)
+
+        solutions = solver.solve(
+            model,
+            t_eval,
+            inputs=inputs,
+            initial_conditions=initial_conditions,
+            t_interp=t_interp,
+        )
+
+        assert len(solutions) == n_sims
+        for i, solution in enumerate(solutions):
+            expected_initial_value = i + 1
+            np.testing.assert_allclose(solution["u"](0), expected_initial_value)
+            np.testing.assert_allclose(
+                solution["u"](t_eval),
+                expected_initial_value * np.exp(-t_eval),
+                rtol=1e-3,
+                atol=1e-5,
+            )
+
+    def test_single_initial_condition_dict(self):
+        model = pybamm.BaseModel()
+        model.convert_to_format = "casadi"
+        u = pybamm.Variable("u")
+        model.rhs = {u: -u}
+        model.initial_conditions = {u: 1}
+        model.variables = {"u": u}
+
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        solver = pybamm.IDAKLUSolver()
+
+        initial_condition = {"u": 5}
+        t_eval = np.array([0, 1])
+        t_interp = np.linspace(0, 1, 10)
+
+        solution = solver.solve(
+            model, t_eval, initial_conditions=initial_condition, t_interp=t_interp
+        )
+
+        np.testing.assert_allclose(solution["u"](0), 5)
+        np.testing.assert_allclose(
+            solution["u"](t_eval), 5 * np.exp(-t_eval), rtol=1e-3, atol=1e-5
+        )
+
+        inputs = [{} for _ in range(3)]
+        solutions = solver.solve(
+            model, t_eval, inputs=inputs, initial_conditions=initial_condition
+        )
+
+        assert len(solutions) == 3
+        for solution in solutions:
+            np.testing.assert_allclose(solution["u"](0), 5)
+            np.testing.assert_allclose(
+                solution["u"](t_eval), 5 * np.exp(-t_eval), rtol=1e-3, atol=1e-5
+            )
+
+    def test_initial_condition_array(self):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        model.rhs = {u: -u}
+        model.initial_conditions = {u: 1}
+        model.variables = {"u": u}
+
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        solver = pybamm.IDAKLUSolver()
+        t_eval = np.array([0, 1])
+        t_interp = np.linspace(0, 1, 10)
+
+        ics = [np.array([2.0]), np.array([4.0]), np.array([6.0])]
+        inputs = [{} for _ in ics]
+
+        solutions = solver.solve(
+            model,
+            t_eval,
+            t_interp=t_interp,
+            inputs=inputs,
+            initial_conditions=ics,
+        )
+
+        assert len(solutions) == len(ics)
+
+        for ic_array, sol in zip(ics, solutions, strict=False):
+            start = ic_array.item()
+            got0 = sol["u"](0)
+            np.testing.assert_allclose(got0, start, rtol=1e-3, atol=1e-5)
+            got_curve = sol["u"](t_eval)
+            expected_curve = start * np.exp(-t_eval)
+            np.testing.assert_allclose(got_curve, expected_curve, rtol=1e-3, atol=1e-5)
+
+    def test_multiple_variables(self):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        v = pybamm.Variable("v")
+        model.rhs = {u: -u, v: -2 * v}
+        model.initial_conditions = {u: 1, v: 2}
+        model.variables = {"u": u, "v": v}
+
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        # Use default solver tolerances
+        solver = pybamm.IDAKLUSolver()
+
+        initial_conditions = [{"u": 3, "v": 4}, {"u": 5, "v": 6}]
+
+        t_eval = np.array([0, 1])
+        t_interp = np.linspace(0, 1, 10)
+
+        solutions = solver.solve(
+            model,
+            t_eval,
+            inputs=[{}, {}],
+            initial_conditions=initial_conditions,
+            t_interp=t_interp,
+        )
+
+        assert len(solutions) == 2
+
+        np.testing.assert_allclose(solutions[0]["u"](0), 3)
+        np.testing.assert_allclose(solutions[0]["v"](0), 4)
+        np.testing.assert_allclose(
+            solutions[0]["u"](t_eval), 3 * np.exp(-t_eval), rtol=1e-3, atol=1e-5
+        )
+        np.testing.assert_allclose(
+            solutions[0]["v"](t_eval), 4 * np.exp(-2 * t_eval), rtol=1e-3, atol=1e-5
+        )
+
+        np.testing.assert_allclose(solutions[1]["u"](0), 5)
+        np.testing.assert_allclose(solutions[1]["v"](0), 6)
+        np.testing.assert_allclose(
+            solutions[1]["u"](t_eval), 5 * np.exp(-t_eval), rtol=1e-3, atol=1e-5
+        )
+        np.testing.assert_allclose(
+            solutions[1]["v"](t_eval), 6 * np.exp(-2 * t_eval), rtol=1e-3, atol=1e-5
+        )
+
+    def test_error_variable_not_found(self):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        model.rhs = {u: -u}
+        model.initial_conditions = {u: 1}
+        model.variables = {"u": u}
+
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        solver = pybamm.IDAKLUSolver()
+
+        initial_condition = {"nonexistent_variable": 5}
+
+        t_eval = np.linspace(0, 1, 10)
+
+        with pytest.raises(
+            ValueError, match="Variable 'nonexistent_variable' not found in model"
+        ):
+            solver.solve(model, t_eval, initial_conditions=initial_condition)
+
+    def test_error_initial_conditions_type(self):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        model.rhs = {u: -u}
+        model.initial_conditions = {u: 1}
+        model.variables = {"u": u}
+
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        solver = pybamm.IDAKLUSolver()
+
+        initial_condition = "invalid_type"
+
+        t_eval = np.linspace(0, 1, 10)
+
+        with pytest.raises(
+            TypeError, match="Initial conditions must be dict or numpy array"
+        ):
+            solver.solve(model, t_eval, initial_conditions=initial_condition)
+
+    def test_error_initial_conditions_count_mismatch(self):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        model.rhs = {u: -u}
+        model.initial_conditions = {u: 1}
+        model.variables = {"u": u}
+
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        solver = pybamm.IDAKLUSolver()
+
+        initial_conditions = [{"u": 2}, {"u": 3}]
+        inputs = [{}, {}, {}]
+
+        t_eval = np.linspace(0, 1, 10)
+
+        with pytest.raises(
+            ValueError,
+            match="Number of initial conditions must match number of input sets",
+        ):
+            solver.solve(
+                model, t_eval, inputs=inputs, initial_conditions=initial_conditions
+            )
+
     def test_interpolant_extrapolate(self):
         x = np.linspace(0, 2)
         var = pybamm.Variable("var")
@@ -1183,3 +1444,91 @@ class TestIDAKLUSolver:
             warnings.simplefilter("always")
             solver.solve(model, t_eval)
             assert len(w) == 0
+
+    def test_on_failure_option(self):
+        input_parameters = {"Positive electrode active material volume fraction": 0.01}
+        t_eval = [0, 100]
+        t_interp = np.linspace(t_eval[0], t_eval[-1], 10)
+
+        model = pybamm.lithium_ion.DFN()
+        model.events = []  # Requires events to be off
+        geometry = model.default_geometry
+        param = model.default_parameter_values
+        param.update({key: "[input]" for key in input_parameters})
+        param.process_model(model)
+        param.process_geometry(geometry)
+        mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
+        disc = pybamm.Discretisation(
+            mesh,
+            model.default_spatial_methods,
+            remove_independent_variables_from_rhs=True,
+        )
+        disc.process_model(model)
+
+        # Test default "raise"
+        solver = pybamm.IDAKLUSolver()
+        with pytest.raises(pybamm.SolverError):
+            solver.solve(
+                model, t_eval=t_eval, t_interp=t_interp, inputs=input_parameters
+            )
+
+        # Test "ignore"
+        solver = pybamm.IDAKLUSolver(on_failure="ignore")
+        sol = solver.solve(
+            model, t_eval=t_eval, t_interp=t_interp, inputs=input_parameters
+        )
+        assert sol.termination == "failure"
+
+        # Test "warn"
+        solver = pybamm.IDAKLUSolver(on_failure="warn")
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            solver.solve(
+                model, t_eval=t_eval, t_interp=t_interp, inputs=input_parameters
+            )
+            assert len(w) > 0
+            assert "_FAIL" in str(w[0].message)
+
+    def test_no_progress_early_termination(self):
+        # SPM at rest
+        model = pybamm.lithium_ion.SPM()
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        parameter_values.update({"Current function [A]": 0})
+
+        t_eval = [0, 10000]
+
+        options_successes = [
+            # Case 1: feature disabled because num_steps_no_progress is default (0)
+            # even if t_no_progress is huge
+            {
+                "t_no_progress": 1e10,
+                "num_steps_no_progress": 0,
+            },
+            # Case 2: feature disabled because t_no_progress is default (0.0)
+            # even if num_steps_no_progress is positive
+            {
+                "num_steps_no_progress": 5,
+                "t_no_progress": 0.0,
+            },
+        ]
+
+        for options in options_successes:
+            solver = pybamm.IDAKLUSolver(on_failure="ignore", options=options)
+            sim = pybamm.Simulation(
+                model, parameter_values=parameter_values, solver=solver
+            )
+            sol = sim.solve(t_eval)
+            assert sol.termination == "final time"
+
+        ## Check failure
+        options_failures = {
+            "num_steps_no_progress": 5,
+            "t_no_progress": 1e10,
+        }
+        solver = pybamm.IDAKLUSolver(on_failure="ignore", options=options_failures)
+        sim = pybamm.Simulation(model, parameter_values=parameter_values, solver=solver)
+        sol = sim.solve(t_eval)
+        assert sol.termination == "failure"
+
+        assert len(sol.t) == options_failures["num_steps_no_progress"]
+        assert sol.t[-1] < options_failures["t_no_progress"]
