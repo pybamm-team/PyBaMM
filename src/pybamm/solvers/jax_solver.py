@@ -162,7 +162,7 @@ class JaxSolver(pybamm.BaseSolver):
                 [model.rhs_eval(t, y, inputs), model.algebraic_eval(t, y, inputs)]
             )
 
-        def solve_model_rk45(inputs, y0):
+        def solve_model_rk45(y0, inputs: dict | list[dict]):
             # Initial conditions, make sure they are an 0D array
             y0 = jnp.array(y0).reshape(-1)
             y = odeint(
@@ -176,7 +176,7 @@ class JaxSolver(pybamm.BaseSolver):
             )
             return jnp.transpose(y)
 
-        def solve_model_bdf(inputs, y0):
+        def solve_model_bdf(y0, inputs: dict | list[dict]):
             # Initial conditions, make sure they are an 0D array
             y0 = jnp.array(y0).reshape(-1)
             y = pybamm.jax_bdf_integrate(
@@ -231,17 +231,18 @@ class JaxSolver(pybamm.BaseSolver):
         if model not in self._cached_solves:
             self._cached_solves[model] = self.create_solve(model, t_eval)
 
-        y = []
         platform = jax.lib.xla_bridge.get_backend().platform.casefold()
-        if len(inputs) <= 1 or platform.startswith("cpu"):
+        if len(inputs) == 1:
+            y = [self._cached_solves[model](y0_list[0], inputs[0])]
+        elif platform.startswith("cpu"):
             # cpu execution runs faster when multithreaded
             async def solve_model_for_inputs():
-                async def solve_model_async(inputs_v, y0):
-                    return self._cached_solves[model](inputs_v, y0)
+                async def solve_model_async(y0, inputs_v):
+                    return self._cached_solves[model](y0, inputs_v)
 
                 coro = []
-                for inputs_v, y0 in zip(inputs, y0_list, strict=True):
-                    coro.append(asyncio.create_task(solve_model_async(inputs_v, y0)))
+                for y0, inputs_v in zip(y0_list, inputs, strict=True):
+                    coro.append(asyncio.create_task(solve_model_async(y0, inputs_v)))
                 return await asyncio.gather(*coro)
 
             y = asyncio.run(solve_model_for_inputs())
@@ -255,18 +256,21 @@ class JaxSolver(pybamm.BaseSolver):
             #  execution (SPMD) using pmap on multiple XLAs)
 
             # convert inputs (array of dict) to a dict of arrays for vmap
+            y = []
             inputs_v = {
                 key: jnp.array([dic[key] for dic in inputs]) for key in inputs[0]
             }
-            y.extend(jax.vmap(self._cached_solves[model])(inputs_v, model.y0_list))
+            y0 = onp.vstack([model.y0_list[i].flatten() for i in range(len(inputs))])
+            y.extend(jax.vmap(self._cached_solves[model])(y0, inputs_v))
         else:  # pragma: no cover
             # Unknown platform, use serial execution as fallback
             print(
                 f'Unknown platform requested: "{platform}", '
                 "falling back to serial execution"
             )
+            y = []
             for inputs_v, y0 in zip(inputs, y0_list, strict=True):
-                y.append(self._cached_solves[model](inputs_v, y0))
+                y.append(self._cached_solves[model](y0, inputs_v))
 
         # This code block implements single-program multiple-data execution
         # using pmap across multiple XLAs. It is currently commented out
