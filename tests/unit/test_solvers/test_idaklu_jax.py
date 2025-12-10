@@ -43,9 +43,22 @@ def idaklu_solver():
     return pybamm.IDAKLUSolver(rtol=1e-6, atol=1e-6)
 
 
-@pytest.fixture()
-def sim(model, idaklu_solver):
-    return idaklu_solver.solve(
+@pytest.fixture(scope="module")
+def sim():
+    model = pybamm.BaseModel()
+    v = pybamm.Variable("v")
+    u1 = pybamm.Variable("u1")
+    u2 = pybamm.Variable("u2")
+    a = pybamm.InputParameter("a")
+    b = pybamm.InputParameter("b")
+    model.rhs = {u1: a * v, u2: b * v}
+    model.algebraic = {v: 1 - v}
+    model.initial_conditions = {u1: 0, u2: 0, v: 1}
+    model.variables = {"v": v, "u1": u1, "u2": u2}
+    disc = pybamm.Discretisation()
+    disc.process_model(model)
+
+    return pybamm.IDAKLUSolver(rtol=1e-6, atol=1e-6).solve(
         model,
         t_eval,
         inputs=inputs,
