@@ -8,6 +8,16 @@ if pybamm.has_jax():
     import jax
 
 
+@pytest.fixture(autouse=True)
+def clear_jax_cache():
+    # Execute the test...
+    yield
+
+    # ...then clear JAX's global compilation cache to prevent state pollution
+    if pybamm.has_jax():
+        jax.clear_caches()
+
+
 @pytest.mark.skipif(not pybamm.has_jax(), reason="jax or jaxlib is not installed")
 @pytest.mark.timeout(60, method="thread")
 class TestJaxSolver:

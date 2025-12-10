@@ -74,6 +74,8 @@ def clear_lru_cache():
 
     # ...then clear the cache.
     pybamm.IDAKLUJax._cached_solve.cache_clear()
+    # Also clear JAX's global compilation cache to prevent state pollution
+    jax.clear_caches()
 
 
 def no_jit(f):

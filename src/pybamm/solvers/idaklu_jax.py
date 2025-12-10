@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import numbers
+import threading
 import warnings
 from functools import lru_cache
 
@@ -341,9 +342,21 @@ class IDAKLUJax:
             return hash(tuple(sorted(self.items())))
 
     @lru_cache(maxsize=1)  # noqa: B019
-    def _cached_solve(self, model, t_hashable, *args, **kwargs):
-        """Cache the last solve for reuse"""
-        return self.solve(model, t_hashable, *args, **kwargs)
+    def _cached_solve(solver, model, t_hashable, *args, **kwargs):
+        """Cache the last solve for reuse
+
+        Uses a threading lock to prevent concurrent access to the solver,
+        which is not thread-safe during setup and solve operations.
+
+        Note: This is a static method cached at the class level, where
+        'solver' is the IDAKLUSolver instance.
+        """
+        # Get or create a lock for this solver instance
+        if not hasattr(solver, "_idaklu_jax_lock"):
+            solver._idaklu_jax_lock = threading.Lock()
+
+        with solver._idaklu_jax_lock:
+            return solver.solve(model, t_hashable, *args, **kwargs)
 
     def _jaxify_solve(self, t, invar, *inputs_values):
         """Solve the model using the IDAKLU solver
