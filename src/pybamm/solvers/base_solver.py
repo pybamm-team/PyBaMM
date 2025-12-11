@@ -1592,6 +1592,10 @@ class BaseSolver:
     def get_platform_context(self, system_type: str):
         # Set context for parallel processing depending on the platform
         if system_type.lower() in ["linux"]:
+            # JAX is incompatible with fork (see https://github.com/google/jax/issues/1805)
+            # Use spawn if JAX is available to avoid corruption of JAX's global state
+            if pybamm.has_jax():
+                return "spawn"
             return "fork"
         return "spawn"
 
