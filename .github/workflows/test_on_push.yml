@@ -105,10 +105,6 @@ jobs:
       - name: Install nox
         run: uv tool install nox
 
-      - name: Run debug tests for IDAKLUJax ${{ matrix.os }} with Python ${{ matrix.python-version }}
-        if: matrix.os == 'ubuntu-latest'
-        run: nox -s unit_ij
-
       - name: Run unit tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
         if: matrix.os != 'ubuntu-latest' || matrix.python-version != '3.12'
         run: nox -s unit

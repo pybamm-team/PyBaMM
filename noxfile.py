@@ -42,7 +42,7 @@ def run_coverage(session):
     if "CI" in os.environ:
         session.install("pytest-github-actions-annotate-failures")
     session.install("-e", ".[all,dev,jax]", silent=False)
-    session.run("pytest", "--cov=pybamm", "--cov-report=xml", "tests/unit", "-n", "0")
+    session.run("pytest", "--cov=pybamm", "--cov-report=xml", "tests/unit")
 
 
 @nox.session(name="integration")
