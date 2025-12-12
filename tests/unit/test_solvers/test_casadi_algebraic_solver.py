@@ -68,7 +68,8 @@ class TestCasadiAlgebraicSolver:
 
     def test_root_find_fail(self):
         class Model:
-            y0 = np.array([2])
+            y0_list = [np.array([2])]
+            y0S_list = None
             t = casadi.MX.sym("t")
             y = casadi.MX.sym("y")
             p = casadi.MX.sym("p")
@@ -98,7 +99,8 @@ class TestCasadiAlgebraicSolver:
 
         # Model returns Nan
         class NaNModel:
-            y0 = np.array([-2])
+            y0_list = [np.array([-2])]
+            y0S_list = None
             t = casadi.MX.sym("t")
             y = casadi.MX.sym("y")
             p = casadi.MX.sym("p")

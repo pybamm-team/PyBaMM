@@ -109,7 +109,7 @@ class TestJaxSolver:
 
             # create a dummy "model" where we calculate the sum of the time series
             def solve_model(rate, solve=solve):
-                return jax.numpy.sum(solve({"rate": rate}))
+                return jax.numpy.sum(solve(model.y0, {"rate": rate}))
 
             # check answers with finite difference
             eval_plus = solve_model(rate + h)
@@ -230,12 +230,11 @@ class TestJaxSolver:
 
         solver.solve(model, t_eval, inputs={"rate": 0.1})
         solver = solver.get_solve(model, t_eval)
-        y = solver({"rate": 0.1})
+        y = solver(model.y0, {"rate": 0.1})
 
         np.testing.assert_allclose(y[0], np.exp(-0.1 * t_eval), rtol=1e-6, atol=1e-6)
 
-        y = solver({"rate": 0.2})
-
+        y = solver(model.y0, {"rate": 0.2})
         np.testing.assert_allclose(y[0], np.exp(-0.2 * t_eval), rtol=1e-6, atol=1e-6)
 
         # Reset solver, test passing `calculate_sensitivities`
@@ -273,3 +272,39 @@ class TestJaxSolver:
                 np.testing.assert_allclose(
                     solution.y[0], np.exp(-0.01 * (i + 1) * solution.t)
                 )
+
+    def test_model_solver_multiple_input_params_jax_format(self, subtests):
+        # Create model
+        model = pybamm.BaseModel()
+        model.convert_to_format = "jax"
+        u = pybamm.Variable("u")
+        v = pybamm.Variable("v")
+        u0 = pybamm.InputParameter("u0")
+        v0 = pybamm.InputParameter("v0")
+        model.rhs = {u: -u, v: -2 * v}
+        model.initial_conditions = {u: u0, v: v0}
+        model.variables = {"u": u, "v": v}
+        # create discretisation
+        mesh = get_mesh_for_testing()
+        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        disc.process_model(model)
+
+        solver = pybamm.JaxSolver(rtol=1e-8, atol=1e-8, method="RK45")
+        t_eval = np.linspace(0, 10, 100)
+        initial_conditions = [{"u0": 3, "v0": 4}, {"u0": 5, "v0": 6}]
+
+        single_solutions = []
+        for ic in initial_conditions:
+            sol = solver.solve(model, t_eval, inputs=ic)
+            single_solutions.append(sol)
+
+        solutions = solver.solve(model, t_eval, inputs=initial_conditions, nproc=2)
+        for i, ic in enumerate(initial_conditions):
+            with subtests.test(i=i):
+                multi_sol = solutions[i]
+                np.testing.assert_equal(multi_sol["u"](0), ic["u0"])
+                np.testing.assert_equal(multi_sol["v"](0), ic["v0"])
+
+                single_sol = single_solutions[i]
+                np.testing.assert_array_equal(single_sol.y, multi_sol.y)
