@@ -372,8 +372,14 @@ class TestBaseSolver:
     def test_multiprocess_context(self):
         solver = pybamm.BaseSolver()
         assert solver.get_platform_context("Win") == "spawn"
-        assert solver.get_platform_context("Linux") == "fork"
         assert solver.get_platform_context("Darwin") == "spawn"
+
+        if pybamm.has_jax():
+            # JAX is incompatible with fork (see https://github.com/google/jax/issues/1805)
+            # Causes issues with tests crashing in CI
+            assert solver.get_platform_context("Linux") == "spawn"
+        else:
+            assert solver.get_platform_context("Linux") == "fork"
 
     def test_sensitivities(self):
         def exact_diff_a(y, a, b):
