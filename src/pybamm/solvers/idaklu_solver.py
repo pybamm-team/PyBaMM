@@ -254,13 +254,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         return atol
 
-    def set_up(
-        self,
-        model: pybamm.BaseModel,
-        inputs: dict | list[dict] | None = None,
-        t_eval=None,
-        ics_only=False,
-    ):
+    def set_up(self, model, inputs=None, t_eval=None, ics_only=False):
         base_set_up_return = super().set_up(model, inputs, t_eval, ics_only)
 
         if isinstance(inputs, list):
@@ -276,6 +270,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             stacked_inputs = np.array([[]])
 
         y0 = model.y0_list[0]
+
         if isinstance(y0, casadi.DM):
             y0 = y0.full()
         y0 = y0.flatten()
@@ -575,31 +570,19 @@ class IDAKLUSolver(pybamm.BaseSolver):
         )
 
     @property
-    def supports_parallel_solve(self):
-        return True
-
-    @property
     def options(self):
         return self._options
 
     def _integrate(
-        self, model, t_eval, inputs_list=None, t_interp=None, initial_conditions=None
+        self,
+        model,
+        t_eval,
+        inputs_list: list[dict] | None = None,
+        t_interp=None,
+        nproc=None,
     ):
         """
-        Solve a DAE model defined by residuals with initial conditions y0.
-
-        Parameters
-        ----------
-        model : :class:`pybamm.BaseModel`
-            The model whose solution to calculate.
-        t_eval : numeric type
-            The times at which to stop the integration due to a discontinuity in time.
-        inputs_list: list of dict, optional
-            Any input parameters to pass to the model when solving.
-        t_interp : None, list or ndarray, optional
-            The times (in seconds) at which to interpolate the solution. Defaults to `None`,
-            which returns the adaptive time-stepping times.
-
+        Overloads the _integrate method from BaseSolver to use the IDAKLU solver
         """
         if model.convert_to_format != "casadi":  # pragma: no cover
             # Shouldn't ever reach this point

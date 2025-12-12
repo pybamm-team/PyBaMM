@@ -96,10 +96,6 @@ class BaseSolver:
         return self._supports_t_eval_discontinuities
 
     @property
-    def supports_parallel_solve(self):
-        return False
-
-    @property
     def on_extrapolation(self):
         return self._on_extrapolation
 
@@ -232,7 +228,7 @@ class BaseSolver:
             casadi_switch_events,
             terminate_events,
             interpolant_extrapolation_events,
-            t_discon_constant,
+            t_discon_constant_symbols,
             discontinuity_events,
         ) = self._set_up_events(model, t_eval, inputs, vars_for_processing)
 
@@ -244,7 +240,7 @@ class BaseSolver:
         model.terminate_events_eval = terminate_events
         model.interpolant_extrapolation_events_eval = interpolant_extrapolation_events
         model.discontinuity_events_eval = discontinuity_events
-        model.t_discon_constant = t_discon_constant
+        model.t_discon_constant_symbols = t_discon_constant_symbols
 
         model.jac_rhs_eval = jac_rhs
         model.jac_rhs_action_eval = jac_rhs_action
@@ -503,64 +499,7 @@ class BaseSolver:
             return self.supports_t_eval_discontinuities and expr.is_constant()
 
         # Find all the constant time-based discontinuities
-        t_discon = []
-
-        def append_t_discon(t):
-            t_discon.append(t)
-
-        def heaviside_event(symbol, expr):
-            model.events.append(
-                pybamm.Event(
-                    str(symbol),
-                    expr,
-                    pybamm.EventType.DISCONTINUITY,
-                )
-            )
-
-        def heaviside_t_discon(symbol, expr):
-            value = expr.evaluate(0, model.y0_list[0].full(), inputs=inputs)
-            append_t_discon(value)
-
-            if isinstance(symbol, pybamm.EqualHeaviside):
-                if symbol.left == pybamm.t:
-                    # t <= x
-                    # Stop at t = x and right after t = x
-                    append_t_discon(np.nextafter(value, np.inf))
-                else:
-                    # t >= x
-                    # Stop at t = x and right before t = x
-                    append_t_discon(np.nextafter(value, -np.inf))
-            elif isinstance(symbol, pybamm.NotEqualHeaviside):
-                if symbol.left == pybamm.t:
-                    # t < x
-                    # Stop at t = x and right before t = x
-                    append_t_discon(np.nextafter(value, -np.inf))
-                else:
-                    # t > x
-                    # Stop at t = x and right after t = x
-                    append_t_discon(np.nextafter(value, np.inf))
-            else:
-                raise ValueError(
-                    f"Unknown heaviside function: {symbol}"
-                )  # pragma: no cover
-
-        def modulo_event(symbol, expr, num_events):
-            for i in np.arange(num_events):
-                model.events.append(
-                    pybamm.Event(
-                        str(symbol),
-                        expr * pybamm.Scalar(i + 1),
-                        pybamm.EventType.DISCONTINUITY,
-                    )
-                )
-
-        def modulo_t_discon(symbol, expr, num_events):
-            value = expr.evaluate(0, model.y0_list[0].full(), inputs=inputs)
-            for i in np.arange(num_events):
-                t = value * (i + 1)
-                # Stop right before t and at t
-                append_t_discon(np.nextafter(t, -np.inf))
-                append_t_discon(t)
+        t_discon_symbols = []
 
         for symbol in itertools.chain(
             model.concatenated_rhs.pre_order(),
@@ -577,18 +516,32 @@ class BaseSolver:
                     continue  # pragma: no cover
 
                 if supports_t_eval_discontinuities(expr):
-                    heaviside_t_discon(symbol, expr)
+                    # save the symbol and expression ready for evaluation later
+                    t_discon_symbols.append((symbol, expr, None))
                 else:
-                    heaviside_event(symbol, expr)
+                    model.events.append(
+                        pybamm.Event(
+                            str(symbol),
+                            expr,
+                            pybamm.EventType.DISCONTINUITY,
+                        )
+                    )
 
             elif isinstance(symbol, pybamm.Modulo) and symbol.left == pybamm.t:
                 expr = symbol.right
                 num_events = 200 if (t_eval is None) else (tf // expr.value)
 
                 if supports_t_eval_discontinuities(expr):
-                    modulo_t_discon(symbol, expr, num_events)
+                    t_discon_symbols.append((symbol, expr, num_events))
                 else:
-                    modulo_event(symbol, expr, num_events)
+                    for i in np.arange(num_events):
+                        model.events.append(
+                            pybamm.Event(
+                                str(symbol),
+                                expr * pybamm.Scalar(i + 1),
+                                pybamm.EventType.DISCONTINUITY,
+                            )
+                        )
             else:
                 continue
 
@@ -652,7 +605,7 @@ class BaseSolver:
             casadi_switch_events,
             terminate_events,
             interpolant_extrapolation_events,
-            t_discon,
+            t_discon_symbols,
             discontinuity_events,
         )
 
@@ -673,7 +626,6 @@ class BaseSolver:
             The time at which to calculate the initial conditions
         inputs_list : list of dict
             Any input parameters to pass to the model when solving
-
         """
 
         if self._algebraic_solver or model.len_alg == 0:
@@ -762,13 +714,14 @@ class BaseSolver:
     ):
         """
         Solve a DAE model defined by residuals with initial conditions y0.
+
         Parameters
         ----------
         model : :class:`pybamm.BaseModel`
             The model whose solution to calculate.
         t_eval : numeric type
             The times at which to compute the solution
-        inputs_list : list of dict
+        inputs_list : list of dict, optional
             Any input parameters to pass to the model when solving
         """
 
@@ -828,7 +781,6 @@ class BaseSolver:
         nproc=None,
         calculate_sensitivities=False,
         t_interp=None,
-        initial_conditions=None,
     ):
         """
         Execute the solver setup and calculate the solution of the model at
@@ -842,7 +794,7 @@ class BaseSolver:
             an error is raised
         t_eval : None, list or ndarray, optional
             The times (in seconds) at which to compute the solution. Defaults to None.
-        inputs : dict or list, optional
+        inputs : dict or list of dict, optional
             A dictionary or list of dictionaries describing any input parameters to
             pass to the model when solving
         nproc : int, optional
@@ -978,11 +930,26 @@ class BaseSolver:
             self._check_events_with_initialization(t_eval, model, y0, inpts)
 
         # Process discontinuities
-        (
-            start_indices,
-            end_indices,
-            t_eval,
-        ) = self._get_discontinuity_start_end_indices(model, inputs, t_eval)
+        t_eval_info = [
+            self._get_discontinuity_start_end_indices(
+                model, model.y0_list[i], inputs, t_eval
+            )
+            for i, inputs in enumerate(model_inputs_list)
+        ]
+
+        first_row = t_eval_info[0]
+        for row in t_eval_info[1:]:
+            if not all(
+                np.array_equal(row_ele, first_row_ele)
+                for row_ele, first_row_ele in zip(row, first_row, strict=True)
+            ):
+                # Can't handle different `t_eval`s for each input set
+                raise pybamm.SolverError(
+                    "Discontinuity events occur at different times between input parameter sets. "
+                    "Please ensure that all input sets produce the same discontinuities."
+                )
+
+        start_indices, end_indices, t_eval = first_row
 
         # Integrate separately over each time segment and accumulate into the solution
         # object, restarting the solver at each discontinuity (and recalculating a
@@ -993,25 +960,13 @@ class BaseSolver:
             pybamm.logger.verbose(
                 f"Calling solver for {t_eval[start_index]} < t < {t_eval[end_index - 1]}"
             )
-            if self.supports_parallel_solve:
-                model.y0 = model.y0_list[0]
-                new_solutions = self._integrate(
-                    model,
-                    t_eval[start_index:end_index],
-                    model_inputs_list,
-                    t_interp,
-                    initial_conditions=initial_conditions,
-                )
-
-            else:
-                new_solutions = self._integrate(
-                    model,
-                    t_eval[start_index:end_index],
-                    model_inputs_list,
-                    t_interp,
-                    nproc=nproc,
-                )
-
+            new_solutions = self._integrate(
+                model,
+                t_eval[start_index:end_index],
+                model_inputs_list,
+                t_interp,
+                nproc=nproc,
+            )
             # Setting the solve time for each segment.
             # pybamm.Solution.__add__ assumes attribute solve_time.
             solve_time = timer.time()
@@ -1112,33 +1067,30 @@ class BaseSolver:
         idx_end = np.searchsorted(t_discon_unique, t_eval[-1], side="left")
         return t_discon_unique[idx_start:idx_end]
 
-    def _get_discontinuity_start_end_indices(self, model, inputs, t_eval):
-        if self.supports_t_eval_discontinuities:
-            t_discon_constant = self.filter_discontinuities(
-                model.t_discon_constant, t_eval
-            )
+    def _get_discontinuity_start_end_indices(self, model, y0, inputs, t_eval):
+        if self.supports_t_eval_discontinuities and model.t_discon_constant_symbols:
+            pybamm.logger.verbose("Discontinuity events found for constant symbols")
+            _t_discon_constant = []
+            for symbol, expr, num_events in model.t_discon_constant_symbols:
+                _t_discon_constant.extend(
+                    symbol._t_discon(expr, y0, inputs, num_events)
+                )
+
+            t_discon_constant = self.filter_discontinuities(_t_discon_constant, t_eval)
             t_eval = np.union1d(t_eval, t_discon_constant)
 
         if not model.discontinuity_events_eval:
-            pybamm.logger.verbose("No discontinuity events found")
+            pybamm.logger.verbose("No additional discontinuity events found")
             return [0], [len(t_eval)], t_eval
 
         # Calculate all possible discontinuities
         _t_discon_full = [
-            # Assuming that discontinuities do not depend on
-            # input parameters when len(input_list) > 1, only
-            # `inputs` is passed to `evaluate`.
-            # See https://github.com/pybamm-team/PyBaMM/pull/1261
             event.expression.evaluate(inputs=inputs)
             for event in model.discontinuity_events_eval
         ]
         t_discon = self.filter_discontinuities(_t_discon_full, t_eval)
 
         pybamm.logger.verbose(f"Discontinuity events found at t = {t_discon}")
-        if isinstance(inputs, list):
-            raise pybamm.SolverError(
-                "Cannot solve for a list of input parameters sets with discontinuities"
-            )
 
         # insert time points around discontinuities in t_eval
         # keep track of subsections to integrate by storing start and end indices
@@ -1175,7 +1127,7 @@ class BaseSolver:
                 event_eval = event(t_eval[0], y0, inputs)
             elif model.convert_to_format in ["python", "jax"]:
                 event_eval = event(t=t_eval[0], y=y0, inputs=inputs_dict)
-            events_eval[idx] = np.array(event_eval)  # TODO: why the change?
+            events_eval[idx] = np.array(event_eval)
 
         if events_eval.min() <= 0:
             # find the events that were triggered by initial conditions
@@ -1310,6 +1262,8 @@ class BaseSolver:
             `model.variables = {}`)
 
         """
+
+        # Set up inputs
         inputs = inputs or {}
 
         if old_solution is None:
@@ -1430,6 +1384,7 @@ class BaseSolver:
             model.y0_list = [
                 concatenated_initial_conditions.evaluate(0, inputs=model_inputs)
             ]
+
             if using_sensitivities:
                 model.y0S_list = [
                     self._set_sens_initial_conditions_from(old_solution, model)
@@ -1441,24 +1396,17 @@ class BaseSolver:
         self._set_consistent_initialization(model, t_start_shifted, [model_inputs])
 
         # Check consistent initialization doesn't violate events
-        self._check_events_with_initialization(
-            t_eval, model, model.y0_list[0], model_inputs
-        )
+        self._check_events_with_initialization(t_eval, model, model.y0, model_inputs)
 
         # Step
         pybamm.logger.verbose(f"Stepping for {t_start_shifted:.0f} < t < {t_end:.0f}")
         timer.reset()
 
-        if self.supports_parallel_solve:
-            model.y0 = model.y0_list[0]
-            solution = self._integrate(model, t_eval, [model_inputs], t_interp)[0]
-        else:
-            solution = self._integrate(model, t_eval, [model_inputs], t_interp)[0]
+        solution = self._integrate(model, t_eval, [model_inputs], t_interp)[0]
         solution.solve_time = timer.time()
 
         # Check if extrapolation occurred
         self.check_extrapolation(solution, model.events)
-
         # Identify the event that caused termination and update the solution to
         # include the event time and state
         solution, termination = self.get_termination_reason(solution, model.events)
@@ -1669,7 +1617,6 @@ class BaseSolver:
                 pybamm.SolverWarning,
                 stacklevel=2,
             )
-
         inputs = inputs_in_model
 
         ordered_inputs_names = list(inputs.keys())

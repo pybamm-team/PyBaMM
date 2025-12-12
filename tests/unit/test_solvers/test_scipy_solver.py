@@ -301,39 +301,6 @@ class TestScipySolver:
                         solution.y[0], np.exp(-0.01 * (i + 1) * solution.t)
                     )
 
-    def test_model_solver_multiple_inputs_discontinuity_error(self):
-        # Create model
-        model = pybamm.BaseModel()
-        model.convert_to_format = "casadi"
-        domain = ["negative electrode", "separator", "positive electrode"]
-        var = pybamm.Variable("var", domain=domain)
-        model.rhs = {var: -pybamm.InputParameter("rate") * var}
-        model.initial_conditions = {var: 1}
-        # create discretisation
-        mesh = get_mesh_for_testing()
-        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
-        disc = pybamm.Discretisation(mesh, spatial_methods)
-        disc.process_model(model)
-
-        solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="RK45")
-        t_eval = np.linspace(0, 10, 100)
-        ninputs = 8
-        inputs_list = [{"rate": 0.01 * (i + 1)} for i in range(ninputs)]
-
-        model.events = [
-            pybamm.Event(
-                "discontinuity",
-                pybamm.Scalar(t_eval[-1] / 2),
-                event_type=pybamm.EventType.DISCONTINUITY,
-            )
-        ]
-        with pytest.raises(
-            pybamm.SolverError,
-            match="Cannot solve for a list of input parameters"
-            " sets with discontinuities",
-        ):
-            solver.solve(model, t_eval, inputs=inputs_list, nproc=2)
-
     def test_model_solver_multiple_inputs_initial_conditions(self):
         # Create model
         model = pybamm.BaseModel()
@@ -354,6 +321,10 @@ class TestScipySolver:
         inputs_list = [{"rate": 0.01 * (i + 1)} for i in range(ninputs)]
 
         solutions = solver.solve(model, t_eval, inputs=inputs_list, nproc=2)
+
+        with pytest.raises(ValueError, match="Model contains multiple initial states"):
+            # try to access y0 property where there's more than 1
+            _ = model.y0
 
         # Extract y(0) actually used per run
         ic_used = [float(sol["var"].entries[0][0]) for sol in solutions]
@@ -428,10 +399,16 @@ class TestScipySolver:
         # Solve
         solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8)
         t_eval = np.linspace(0, 5, 100)
-        solution = solver.solve(model, t_eval, inputs={"rate": -1, "ic 1": 0.1})
-        np.testing.assert_allclose(
-            solution.y[0], 0.1 * np.exp(-solution.t), rtol=1e-6, atol=1e-5
-        )
+        inputs_list = [{"rate": -1, "ic 1": 0.1}, {"rate": -2, "ic 1": 0.2}]
+        solutions = solver.solve(model, t_eval, inputs=inputs_list)
+        for i, ic in enumerate(inputs_list):
+            np.testing.assert_allclose(
+                solutions[i].y[0],
+                ic["ic 1"] * np.exp(ic["rate"] * solutions[i].t),
+                rtol=1e-6,
+                atol=1e-5,
+            )
+            np.testing.assert_equal(solutions[i]["var1"](0), ic["ic 1"])
 
         # Solve again with different initial conditions
         solution = solver.solve(model, t_eval, inputs={"rate": -0.1, "ic 1": 1})
