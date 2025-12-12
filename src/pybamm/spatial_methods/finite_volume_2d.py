@@ -2088,7 +2088,6 @@ class FiniteVolume2D(pybamm.SpatialMethod):
             ]
             tb_mesh_points = self.mesh[disc_children[0].domain[0]].npts_tb
             num_children = len(disc_children)
-
             rows = np.arange(0, tb_mesh_points * sum(lr_mesh_points))
             cols = []
             for j in range(tb_mesh_points):
