@@ -467,15 +467,25 @@ class TestCasadiSolver:
         # Solve
         solver = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8)
         t_eval = np.linspace(0, 5, 100)
-        solution = solver.solve(
-            model, t_eval, inputs={"rate": -1, "ic 1": 0.1, "ic 2": 2}
-        )
-        np.testing.assert_allclose(
-            solution.y.full()[0], 0.1 * np.exp(-solution.t), rtol=1e-6, atol=1e-5
-        )
-        np.testing.assert_allclose(
-            solution.y.full()[-1], 0.1 * np.exp(-solution.t), rtol=1e-6, atol=1e-5
-        )
+        inputs_list = [
+            {"rate": -1, "ic 1": 0.1, "ic 2": 2},
+            {"rate": -2, "ic 1": 0.2, "ic 2": 4},
+        ]
+        solutions = solver.solve(model, t_eval, inputs=inputs_list)
+        for i, ipts in enumerate(inputs_list):
+            np.testing.assert_equal(solutions[i]["var1"](0), ipts["ic 1"])
+            np.testing.assert_allclose(
+                solutions[i].y.full()[0],
+                ipts["ic 1"] * np.exp(ipts["rate"] * solutions[i].t),
+                rtol=1e-6,
+                atol=1e-5,
+            )
+            np.testing.assert_allclose(
+                solutions[i].y.full()[-1],
+                ipts["ic 1"] * np.exp(ipts["rate"] * solutions[i].t),
+                rtol=1e-6,
+                atol=1e-5,
+            )
 
         # Solve again with different initial conditions
         solution = solver.solve(
