@@ -200,7 +200,11 @@ class Simulation:
             step,
             model_with_set_params,
         ) in self.experiment_unique_steps_to_model.items():
-            built_model = self._disc.process_model(model_with_set_params, inplace=True)
+            built_model = self._disc.process_model(
+                model_with_set_params,
+                inplace=True,
+                delayed_variable_processing=True,
+            )
             solver = self._solver.copy()
             self.steps_to_built_solvers[step] = solver
             self.steps_to_built_models[step] = built_model
@@ -268,10 +272,12 @@ class Simulation:
         # Process each step
         self.experiment_unique_steps_to_model = {}
         for step in self.experiment.unique_steps:
-            parameterised_model = step.process_model(self._model, parameter_values)
-            self.experiment_unique_steps_to_model[step.basic_repr()] = (
-                parameterised_model
+            new_model = step.process_model(
+                self._model,
+                parameter_values,
+                delayed_variable_processing=True,
             )
+            self.experiment_unique_steps_to_model[step.basic_repr()] = new_model
 
         # Set up rest model if experiment has start times
         if self.experiment.initial_start_time:
@@ -280,10 +286,12 @@ class Simulation:
             # Change ambient temperature to be an input, which will be changed at
             # solve time
             parameter_values["Ambient temperature [K]"] = "[input]"
-            parameterised_model = rest_step.process_model(self._model, parameter_values)
-            self.experiment_unique_steps_to_model["Rest for padding"] = (
-                parameterised_model
+            new_model = rest_step.process_model(
+                self._model,
+                parameter_values,
+                delayed_variable_processing=True,
             )
+            self.experiment_unique_steps_to_model["Rest for padding"] = new_model
 
     def set_parameters(self):
         msg = (
@@ -300,7 +308,9 @@ class Simulation:
             return
 
         self._model_with_set_params = self._parameter_values.process_model(
-            self._unprocessed_model, inplace=False
+            self._unprocessed_model,
+            inplace=False,
+            delayed_variable_processing=True,
         )
         self._parameter_values.process_geometry(self._geometry)
         self._model = self._model_with_set_params
@@ -324,7 +334,6 @@ class Simulation:
             options=options,
             inputs=inputs,
         )
-        self._model.parameter_values = self._parameter_values
 
         # Save solved initial SOC in case we need to re-build the model
         self._built_initial_soc = initial_soc
@@ -368,7 +377,9 @@ class Simulation:
                 self._mesh, self._spatial_methods, **self._discretisation_kwargs
             )
             self._built_model = self._disc.process_model(
-                self._model_with_set_params, inplace=False
+                self._model_with_set_params,
+                inplace=False,
+                delayed_variable_processing=True,
             )
             # rebuilt model so clear solver setup
             self._solver._model_set_up = {}
@@ -408,7 +419,9 @@ class Simulation:
                 # It's ok to modify the model with set parameters in place as it's
                 # not returned anywhere
                 built_model = self._disc.process_model(
-                    model_with_set_params, inplace=True
+                    model_with_set_params,
+                    inplace=True,
+                    delayed_variable_processing=True,
                 )
                 solver = self._solver.copy()
                 self.steps_to_built_solvers[step] = solver
