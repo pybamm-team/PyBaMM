@@ -23,9 +23,6 @@ class BaseInverseKinetics(BaseInterface):
 
     """
 
-    def __init__(self, param, domain, reaction, options=None):
-        super().__init__(param, domain, reaction, options=options)
-
     def get_coupled_variables(self, variables):
         domain, Domain = self.domain_Domain
         reaction_name = self.reaction_name
@@ -172,8 +169,8 @@ class CurrentForInverseKineticsLithiumMetal(BaseInterface):
 
     def get_coupled_variables(self, variables):
         i_boundary_cc = variables["Current collector current density [A.m-2]"]
-        j = i_boundary_cc
-
-        variables.update(self._get_standard_interfacial_current_variables(j))
+        variables.update(
+            self._get_standard_interfacial_current_variables(i_boundary_cc)
+        )
 
         return variables
