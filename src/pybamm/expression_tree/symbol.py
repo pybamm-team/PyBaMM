@@ -459,7 +459,7 @@ class Symbol:
 
     @scale.setter
     def scale(self, scale: float | pybamm.Symbol):
-        self._scale = scale
+        self._scale = pybamm.convert_to_symbol(scale)
         self.set_id()
 
     @property
@@ -468,7 +468,7 @@ class Symbol:
 
     @reference.setter
     def reference(self, reference: float | pybamm.Symbol):
-        self._reference = reference
+        self._reference = pybamm.convert_to_symbol(reference)
         self.set_id()
 
     def __eq__(self, other):
