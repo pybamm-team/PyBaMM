@@ -12,6 +12,8 @@ import scipy.sparse
 import pybamm
 from pybamm.type_definitions import DomainType
 
+DUMMY_INPUT_PARAMETER_VALUE = 123456789.0
+
 
 class InputParameter(pybamm.Symbol):
     """
