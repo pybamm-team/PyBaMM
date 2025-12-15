@@ -10,4 +10,3 @@ Classes and functions that operate on the expression tree
   convert_to_casadi
   serialise
   unpack_symbol
-  replace_symbols
