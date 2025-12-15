@@ -113,6 +113,7 @@ class Simulation:
             # Save the experiment
             self.experiment = experiment.copy()
 
+        model = model.new_copy()
         self._unprocessed_model = model
         self._model = model
 
