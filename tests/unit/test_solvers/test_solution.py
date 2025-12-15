@@ -805,7 +805,12 @@ class TestSolution:
         with pytest.raises(ValueError, match="Input cannot be converted"):
             sol.observe(None)
 
-        # 2. Solver includes `output_variables` - solution not observable but models
+        # 2. Trying to observe a symbol which is not part of the parameter_values or model
+        symbol = pybamm.Parameter("_not_in_model")
+        with pytest.raises(ValueError, match="not found"):
+            sol.observe(symbol)
+
+        # 3. Solver includes `output_variables` - solution not observable but models
         # can still process symbols
         solver = pybamm.IDAKLUSolver(output_variables=["Voltage [V]"])
         sim = pybamm.Simulation(model, parameter_values=parameter_values, solver=solver)
@@ -817,7 +822,7 @@ class TestSolution:
         with pytest.raises(ValueError, match="solver includes `output_variables`"):
             sol.observe(model.variables["Current [A]"])
 
-        # 3. `disable_solution_observability` is called on the model - solution not
+        # 4. `disable_solution_observability` is called on the model - solution not
         # observable but models can still process symbols
         model = pybamm.lithium_ion.SPM()
         model.disable_solution_observability(pybamm.ModelSolutionObservability.DISABLED)
@@ -829,7 +834,7 @@ class TestSolution:
         with pytest.raises(ValueError, match="disable_solution_observability"):
             sol.observe(model.variables["Current [A]"])
 
-        # 4. Missing non-strictly required input parameters - solution not observable
+        # 5. Missing non-strictly required input parameters - solution not observable
         # but models can still process symbols
         model = pybamm.lithium_ion.SPM()
         parameter_values = pybamm.ParameterValues("Chen2020")
@@ -871,7 +876,7 @@ class TestSolution:
         with pytest.raises(ValueError, match="input parameters were not provided"):
             sol.observe(model.variables["Current [A]"])
 
-        # 5. Model is partially processed before simulation is built - models cannot
+        # 6. Model is partially processed before simulation is built - models cannot
         # process symbols at all
         model = pybamm.lithium_ion.SPM()
         parameter_values = pybamm.ParameterValues("Chen2020")
