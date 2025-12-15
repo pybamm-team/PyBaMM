@@ -385,7 +385,6 @@ class Serialise:
             "boundary_conditions",
             "events",
             "variables",
-            "_solution_observable",
         ]
         missing = [attr for attr in required_attrs if not hasattr(model, attr)]
         if missing:
@@ -456,7 +455,6 @@ class Serialise:
                 str(variable_name): convert_symbol_to_json(expression)
                 for variable_name, expression in getattr(model, "variables", {}).items()
             },
-            "_solution_observable": model._solution_observable.name,
         }
 
         SCHEMA_VERSION = "1.1"
