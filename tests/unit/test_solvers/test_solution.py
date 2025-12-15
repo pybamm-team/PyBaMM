@@ -807,7 +807,7 @@ class TestSolution:
 
         # 2. Trying to observe a symbol which is not part of the parameter_values or model
         symbol = pybamm.Parameter("_not_in_model")
-        with pytest.raises(ValueError, match="not found"):
+        with pytest.raises(KeyError, match="not found"):
             sol.observe(symbol)
 
         # 3. Solver includes `output_variables` - solution not observable but models
