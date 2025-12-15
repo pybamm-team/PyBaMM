@@ -162,13 +162,13 @@ class TestScipySolver:
 
         T, Y = solution.t, solution.y
         np.testing.assert_allclose(
-            model.variables["var1"].evaluate(T, Y),
+            model.get_processed_variable("var1").evaluate(T, Y),
             np.ones((N, T.size)) * np.exp(T[np.newaxis, :]),
             rtol=1e-7,
             atol=1e-6,
         )
         np.testing.assert_allclose(
-            model.variables["var2"].evaluate(T, Y),
+            model.get_processed_variable("var2").evaluate(T, Y),
             np.ones((N, T.size)) * (T[np.newaxis, :] - np.exp(T[np.newaxis, :])),
             rtol=1e-7,
             atol=1e-6,
