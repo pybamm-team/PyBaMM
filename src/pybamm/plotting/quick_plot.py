@@ -225,7 +225,6 @@ class QuickPlot:
         output_variable_tuples = []
         self.variable_limits = {}
         for variable_list in output_variables:
-            print(variable_list)
             # Make sure we always have a list of lists of variables, e.g.
             # [["var 1"], ["variable 2", "var 3"]]
             if isinstance(variable_list, str):
