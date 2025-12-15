@@ -23,6 +23,9 @@ class TotalMainKinetics(pybamm.BaseSubModel):
         See :class:`pybamm.BaseBatteryModel`
     """
 
+    def __init__(self, param, domain, reaction, options):
+        super().__init__(param, domain, name=reaction, options=options)
+
     def get_coupled_variables(self, variables):
         domain, Domain = self.domain_Domain
 
