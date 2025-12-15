@@ -4,6 +4,7 @@
 import numpy as np
 
 import pybamm
+from pybamm.models.base_model import ModelSolutionObservability
 
 
 class TestSolution:
@@ -48,4 +49,47 @@ class TestSolution:
             step_solution["Voltage [V]"](solution.t[:-1]),
             rtol=1e-5,
             atol=1e-4,
+        )
+
+    def test_observe(self):
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        inputs = {
+            "dummy": 2.0,
+            "Positive electrode active material volume fraction": 0.5,
+        }
+        t_eval = [0, 1]
+        parameter_values.update(
+            {k: "[input]" for k in inputs.keys()}, check_already_exists=False
+        )
+
+        model_unobservable = pybamm.lithium_ion.SPM()
+        model_unobservable.disable_solution_observability(
+            ModelSolutionObservability.DISABLED
+        )
+        sim_unobservable = pybamm.Simulation(
+            model_unobservable, parameter_values=parameter_values
+        )
+        sol_unobservable = sim_unobservable.solve(t_eval, inputs=inputs)
+        assert sol_unobservable.observable is False
+
+        model_observable = pybamm.lithium_ion.SPM()
+        sim_observable = pybamm.Simulation(
+            model_observable, parameter_values=parameter_values
+        )
+        sol_observable = sim_observable.solve(t_eval, inputs=inputs)
+        assert sol_observable.observable is True
+
+        model = pybamm.lithium_ion.SPM()
+        for name, variable in model.variables.items():
+            out_unobservable = sol_unobservable[name].data
+            out_observable = sol_observable.observe(variable).data
+            # Check exact equality
+            np.testing.assert_array_equal(out_unobservable, out_observable)
+
+        # check that observe works with input parameters that are not part of the model
+        out_true = sol_observable["Current [A]"].data * inputs["dummy"] ** 2
+        symbol = pybamm.Parameter("dummy") ** 2 * model.variables["Current [A]"]
+        np.testing.assert_allclose(
+            sol_observable.observe(symbol).data,
+            out_true,
         )
