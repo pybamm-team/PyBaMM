@@ -869,13 +869,13 @@ class ParameterValues:
         # Variables: update scale
         elif isinstance(symbol, pybamm.Variable):
             new_symbol = symbol.create_copy()
-            new_symbol._scale = self.process_symbol(symbol.scale)
+            new_symbol.scale = self.process_symbol(symbol.scale)
             reference = self.process_symbol(symbol.reference)
             if isinstance(reference, pybamm.Vector):
                 # address numpy 1.25 deprecation warning: array should have ndim=0
                 # before conversion
                 reference = pybamm.Scalar((reference.evaluate()).item())
-            new_symbol._reference = reference
+            new_symbol.reference = reference
             new_symbol.bounds = tuple([self.process_symbol(b) for b in symbol.bounds])
             return new_symbol
 
