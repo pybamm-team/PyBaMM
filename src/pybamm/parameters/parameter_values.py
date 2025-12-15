@@ -16,6 +16,7 @@ from pybamm.expression_tree.operations.serialise import (
     convert_symbol_from_json,
     convert_symbol_to_json,
 )
+from pybamm.models.base_model import ModelSolutionObservability
 from pybamm.models.full_battery_models.lithium_ion.msmr import (
     is_deprecated_msmr_name,
     replace_deprecated_msmr_name,
@@ -459,7 +460,9 @@ class ParameterValues:
 
         return values
 
-    def process_model(self, unprocessed_model, inplace=True):
+    def process_model(
+        self, unprocessed_model, inplace=True, delayed_variable_processing=None
+    ):
         """Assign parameter values to a model.
         Currently inplace, could be changed to return a new model.
 
@@ -470,6 +473,9 @@ class ParameterValues:
         inplace: bool, optional
             If True, replace the parameters in the model in place. Otherwise, return a
             new model with parameter values set. Default is True.
+        delayed_variable_processing: bool, optional
+            If True, make variable processing a post-processing step.
+            Default is False.
 
         Raises
         ------
@@ -479,6 +485,9 @@ class ParameterValues:
 
         """
         pybamm.logger.info(f"Start setting parameters for {unprocessed_model.name}")
+
+        if delayed_variable_processing is None:
+            delayed_variable_processing = False
 
         # set up inplace vs not inplace
         if inplace:
@@ -496,7 +505,9 @@ class ParameterValues:
         ):
             raise pybamm.ModelError("Cannot process parameters for empty model")
 
-        model.parameter_values = self
+        model.fixed_input_parameters = {
+            k: v for k, v in self.items() if isinstance(v, pybamm.InputParameter)
+        }
 
         new_rhs = {}
         for variable, equation in unprocessed_model.rhs.items():
@@ -523,11 +534,21 @@ class ParameterValues:
 
         model.boundary_conditions = self.process_boundary_conditions(unprocessed_model)
 
-        new_variables = {}
-        for variable, equation in unprocessed_model.variables.items():
-            pybamm.logger.verbose(f"Processing parameters for {variable!r} (variables)")
-            new_variables[variable] = self.process_symbol(equation)
-        model.variables = new_variables
+        if not delayed_variable_processing:
+            # Process variables and store in _variables_processed, NOT in variables
+            # This preserves the original variable expressions in model.variables
+            # Merge original variables with any already-processed variables
+            variables_to_process = (
+                unprocessed_model.variables
+                | unprocessed_model.get_processed_variables_dict()
+            )
+            processed_variables = {}
+            for variable, equation in variables_to_process.items():
+                pybamm.logger.verbose(
+                    f"Processing parameters for {variable!r} (variables)"
+                )
+                processed_variables[variable] = self.process_symbol(equation)
+            model.update_processed_variables(processed_variables)
 
         new_events = []
         for event in unprocessed_model.events:
@@ -551,6 +572,20 @@ class ParameterValues:
 
         pybamm.logger.info(f"Finish setting parameters for {model.name}")
 
+        if unprocessed_model.is_parameterised:
+            pybamm.logger.debug(
+                f"Model '{model.name}' is being re-processed, "
+                "which makes it unable to process symbols using `model.process_symbol`"
+            )
+            model.disable_symbol_processing(
+                ModelSolutionObservability.REPARAMETERISED_MODEL
+            )
+        pybamm.logger.debug(
+            "Attaching the `parameter_values` to the `symbol_processor`"
+        )
+        model.symbol_processor.parameter_values = self
+
+        model.is_parameterised = True
         return model
 
     def _get_interpolant_events(self, model):
