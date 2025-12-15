@@ -64,9 +64,13 @@ class VariableBase(pybamm.Symbol):
         domains: DomainsType = None,
         bounds: tuple[pybamm.Symbol] | None = None,
         print_name: str | None = None,
-        scale: float | pybamm.Symbol | None = 1,
-        reference: float | pybamm.Symbol | None = 0,
+        scale: float | pybamm.Symbol | None = None,
+        reference: float | pybamm.Symbol | None = None,
     ):
+        if scale is None:
+            scale = 1
+        if reference is None:
+            reference = 0
         if isinstance(scale, numbers.Number):
             scale = pybamm.Scalar(scale)
         if isinstance(reference, numbers.Number):
@@ -111,13 +115,14 @@ class VariableBase(pybamm.Symbol):
         self._bounds = tuple(values)
 
     def set_id(self):
+        domains_tuple = tuple((k, tuple(v)) for k, v in self.domains.items() if v != [])
         self._id = hash(
             (
                 self.__class__,
-                self.name,
-                self.scale,
-                self.reference,
-                *tuple([(k, tuple(v)) for k, v in self.domains.items() if v != []]),
+                self._name,
+                self._scale,
+                self._reference,
+                domains_tuple,
             )
         )
 
