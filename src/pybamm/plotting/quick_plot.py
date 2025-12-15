@@ -144,7 +144,10 @@ class QuickPlot:
                 )
 
         # check variables have been provided after any serialisation
-        if any(len(m.variables) == 0 for m in models):
+        if any(
+            len(m.variables) == 0 and len(m.get_processed_variables_dict()) == 0
+            for m in models
+        ):
             raise AttributeError("No variables to plot")
 
         self.n_rows = n_rows or int(
@@ -222,6 +225,7 @@ class QuickPlot:
         output_variable_tuples = []
         self.variable_limits = {}
         for variable_list in output_variables:
+            print(variable_list)
             # Make sure we always have a list of lists of variables, e.g.
             # [["var 1"], ["variable 2", "var 3"]]
             if isinstance(variable_list, str):

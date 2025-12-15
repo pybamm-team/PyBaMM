@@ -166,7 +166,9 @@ class Serialise:
                 DeprecationWarning,
                 stacklevel=2,
             )
-        variables = model._variables_processed
+        for k in model.variables.keys():
+            model.get_processed_variable(k)
+        variables_processed = model.get_processed_variables_dict()
 
         model_json = {
             "py/object": str(type(model))[8:-2],
@@ -185,23 +187,19 @@ class Serialise:
             "events": [self._SymbolEncoder().default(event) for event in model.events],
             "mass_matrix": self._SymbolEncoder().default(model.mass_matrix),
             "mass_matrix_inv": self._SymbolEncoder().default(model.mass_matrix_inv),
-            # Serialize _variables_processed as a dict of {name: symbol}
-            "_variables_processed": {
-                k: self._SymbolEncoder().default(v)
-                for k, v in model._variables_processed.items()
-            },
             "_solution_observable": model._solution_observable.name,
         }
 
         if mesh:
             model_json["mesh"] = self._MeshEncoder().default(mesh)
 
-        if variables:
-            variables = dict(variables)
+        if variables_processed:
+            variables_processed = dict(variables_processed)
             if model._geometry:
                 model_json["geometry"] = self._deconstruct_pybamm_dicts(model._geometry)
-            model_json["variables"] = {
-                k: self._SymbolEncoder().default(v) for k, v in variables.items()
+            model_json["_variables_processed"] = {
+                k: self._SymbolEncoder().default(v)
+                for k, v in variables_processed.items()
             }
 
         return model_json
@@ -313,38 +311,16 @@ class Serialise:
             else None
         )
 
-        recon_model_dict["variables"] = (
+        vars_processed_data = model_data.get("_variables_processed") or {}
+        recon_model_dict["_variables_processed"] = (
             {
                 k: self._reconstruct_expression_tree(v)
-                for k, v in model_data["variables"].items()
+                for k, v in vars_processed_data.items()
             }
-            if "variables" in model_data.keys()
-            else None
+            if vars_processed_data
+            else {}
         )
-        # Handle both old format (list) and new format (dict) for _variables_processed
-        vars_processed_data = model_data.get("_variables_processed", {})
-        if isinstance(vars_processed_data, list):
-            # Old format: list of names - convert to dict using reconstructed variables
-            recon_model_dict["_variables_processed"] = (
-                {
-                    name: recon_model_dict["variables"][name]
-                    for name in vars_processed_data
-                    if recon_model_dict["variables"]
-                    and name in recon_model_dict["variables"]
-                }
-                if vars_processed_data
-                else {}
-            )
-        else:
-            # New format: dict of {name: symbol}
-            recon_model_dict["_variables_processed"] = (
-                {
-                    k: self._reconstruct_expression_tree(v)
-                    for k, v in vars_processed_data.items()
-                }
-                if vars_processed_data
-                else {}
-            )
+
         recon_model_dict["_solution_observable"] = model_data.get(
             "_solution_observable", False
         )
