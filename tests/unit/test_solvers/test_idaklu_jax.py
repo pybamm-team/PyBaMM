@@ -16,6 +16,12 @@ if pybamm.has_jax():
     output_variables = ["v", "u1", "u2"]
 
 
+@pytest.fixture(autouse=True)
+def clear_lru_cache():
+    yield
+    pybamm.IDAKLUJax._cached_solve.cache_clear()
+
+
 @pytest.fixture(scope="module")
 def sim():
     model = pybamm.BaseModel()
