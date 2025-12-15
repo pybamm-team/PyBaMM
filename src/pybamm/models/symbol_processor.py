@@ -28,10 +28,10 @@ class SymbolProcessor:
 
     Examples
     --------
-    >>> processor = pybamm.SymbolProcessor()
-    >>> processor.parameter_values = param
-    >>> processor.discretisation = disc
-    >>> processed_symbol = processor("my variable", symbol)
+    >>> processor = pybamm.SymbolProcessor()  # doctest: +SKIP
+    >>> processor.parameter_values = param  # doctest: +SKIP
+    >>> processor.discretisation = disc  # doctest: +SKIP
+    >>> processed_symbol = processor("my variable", symbol)  # doctest: +SKIP
     """
 
     _can_process_symbols: bool = True
