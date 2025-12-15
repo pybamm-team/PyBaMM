@@ -454,12 +454,22 @@ class Symbol:
         )
 
     @property
-    def scale(self):
+    def scale(self) -> float | pybamm.Symbol:
         return self._scale
 
+    @scale.setter
+    def scale(self, scale: float | pybamm.Symbol):
+        self._scale = scale
+        self.set_id()
+
     @property
-    def reference(self):
+    def reference(self) -> float | pybamm.Symbol:
         return self._reference
+
+    @reference.setter
+    def reference(self, reference: float | pybamm.Symbol):
+        self._reference = reference
+        self.set_id()
 
     def __eq__(self, other):
         try:
@@ -1108,3 +1118,27 @@ class Symbol:
         }
 
         return json_dict
+
+
+def convert_to_symbol(value) -> Symbol:
+    """
+    Convert a value to a pybamm.Symbol.
+
+    Parameters
+    ----------
+    value : any
+        The value to convert to a pybamm.Symbol.
+
+    Returns
+    -------
+    pybamm.Symbol : The converted symbol.
+    """
+
+    if isinstance(value, Symbol):
+        return value
+
+    try:
+        # Try to convert the input to a pybamm.Symbol
+        return value * pybamm.Scalar(1)
+    except Exception:
+        raise ValueError("Input cannot be converted to a `pybamm.Symbol`") from None
