@@ -80,7 +80,6 @@ class SymbolProcessor:
 
     @property
     def discretisation(self) -> pybamm.Discretisation | None:
-        """The discretisation used to process symbols."""
         return self._discretisation
 
     @discretisation.setter
@@ -95,7 +94,6 @@ class SymbolProcessor:
 
     @property
     def parameter_values(self) -> pybamm.ParameterValues | None:
-        """The parameter values used to process symbols."""
         return self._parameter_values
 
     @parameter_values.setter
@@ -110,7 +108,6 @@ class SymbolProcessor:
 
     @property
     def can_process_symbols(self) -> bool:
-        """Whether symbol processing is enabled."""
         return bool(self)
 
     def disable(self):
