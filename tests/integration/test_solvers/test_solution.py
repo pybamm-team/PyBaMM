@@ -86,9 +86,13 @@ class TestSolution:
             # Check exact equality
             np.testing.assert_array_equal(out_unobservable, out_observable)
 
-        # check that observe works with input parameters that are not part of the model
-        out_true = sol_observable["Current [A]"].data * inputs["dummy"] ** 2
-        symbol = pybamm.Parameter("dummy") ** 2 * model.variables["Current [A]"]
+        # Check that input parameters which appear in parameter_values but
+        # not in the model can still be observed
+        def func(current, dummy):
+            return current * dummy**2
+
+        symbol = func(model.variables["Current [A]"], pybamm.Parameter("dummy"))
+        out_true = func(sol_observable["Current [A]"].data, inputs["dummy"])
         np.testing.assert_allclose(
             sol_observable.observe(symbol).data,
             out_true,
