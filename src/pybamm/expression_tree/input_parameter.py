@@ -12,7 +12,7 @@ import scipy.sparse
 import pybamm
 from pybamm.type_definitions import DomainType
 
-DUMMY_INPUT_PARAMETER_VALUE = 123456789.0
+DUMMY_INPUT_PARAMETER_VALUE = np.nan
 
 
 class InputParameter(pybamm.Symbol):

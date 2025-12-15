@@ -12,7 +12,6 @@ import scipy
 from scipy.io import loadmat
 
 import pybamm
-from pybamm.expression_tree.input_parameter import DUMMY_INPUT_PARAMETER_VALUE
 from tests import get_discretisation_for_testing
 
 
@@ -834,7 +833,7 @@ class TestSolution:
         with pytest.raises(ValueError, match="disable_solution_observability"):
             sol.observe(model.variables["Current [A]"])
 
-        # 5. Missing non-strictly required input parameters - solution not observable
+        # 5. Missing non-strictly required input parameters - solution unobservable
         # but models can still process symbols
         model = pybamm.lithium_ion.SPM()
         parameter_values = pybamm.ParameterValues("Chen2020")
@@ -849,13 +848,16 @@ class TestSolution:
         # purposefully missing the dummy input
         inputs = {name: 0.5 for name in input_names if name != "dummy"}
 
-        # check that BaseSolver raises a warning about missing inputs
+        # check that BaseSolver raises a warning about missing inputs,
+        # and is unobservable, but it is still solvable
         log_capture = io.StringIO()
         handler = logging.StreamHandler(log_capture)
         handler.setLevel(logging.WARNING)
         logger = logging.getLogger("pybamm.logger")
         logger.addHandler(handler)
+
         sol = sim.solve(t_eval, inputs=inputs)
+
         log_output = log_capture.getvalue()
         assert "No value provided for input" in log_output
         assert "dummy" in log_output
@@ -870,8 +872,8 @@ class TestSolution:
         assert set(ip.name for ip in model.required_input_parameters) == set(
             inputs.keys()
         )
-        # check that missing input is set to DUMMY_INPUT_PARAMETER_VALUE
-        assert sol.all_inputs[0]["dummy"] == DUMMY_INPUT_PARAMETER_VALUE
+        # check that missing input is set to DUMMY_INPUT_PARAMETER_VALUE (np.nan)
+        assert np.isnan(sol.all_inputs[0]["dummy"])
 
         with pytest.raises(ValueError, match="input parameters were not provided"):
             sol.observe(model.variables["Current [A]"])

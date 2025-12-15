@@ -1646,7 +1646,7 @@ class BaseSolver:
                 # Since the solver has all the strictly required input parameters, but
                 # lacks the total set of input parameters, the model is solvable, but
                 # unobservable. In this case, we can safely set the input parameter to
-                # a dummy value.
+                # a dummy value (np.nan)
                 missing_inputs.append(name)
                 value = DUMMY_INPUT_PARAMETER_VALUE
                 model.disable_solution_observability(
