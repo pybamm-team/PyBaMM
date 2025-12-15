@@ -13,6 +13,29 @@ import pybamm
 from pybamm.expression_tree.operations.serialise import Serialise
 
 
+class ModelSolutionObservability(str, Enum):
+    """
+    Enum to specify the observability states for a PyBaMM model's solution.
+
+    This enum tracks why a solution may or may not be observable via
+    ``solution.observe(symbol)``.
+    """
+
+    ENABLED = "solution is observable"
+    DISABLED = "`disable_solution_observability()` was called on the model"
+    SOLVER_OUTPUT_VARIABLES = "the solver includes `output_variables`"
+    MISSING_INPUT_PARAMETERS = "some input parameters were not provided to the solver"
+    REPARAMETERISED_MODEL = (
+        "the model was re-parameterised with `ParameterValues.process_model()`"
+    )
+    REDISCRETISED_MODEL = (
+        "the model was re-discretised with `Discretisation.process_model()`"
+    )
+
+    def __bool__(self) -> bool:
+        return bool(self == ModelSolutionObservability.ENABLED)
+
+
 class BaseModel:
     """
     Base model class for other models to extend.
