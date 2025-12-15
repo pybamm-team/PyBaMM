@@ -11,6 +11,7 @@ import numpy as np
 import pybamm
 import pybamm.telemetry
 from pybamm.expression_tree.operations.serialise import Serialise
+from pybamm.models.base_model import ModelSolutionObservability
 from pybamm.util import import_optional_dependency
 
 
@@ -124,6 +125,11 @@ class Simulation:
         self._solver = solver or self._model.default_solver
         self._output_variables = output_variables
         self._discretisation_kwargs = discretisation_kwargs or {}
+
+        if bool(getattr(self._solver, "output_variables", [])):
+            model.disable_solution_observability(
+                ModelSolutionObservability.SOLVER_OUTPUT_VARIABLES
+            )
 
         # Initialize empty built states
         self._model_with_set_params = None
