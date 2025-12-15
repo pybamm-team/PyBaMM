@@ -2090,9 +2090,11 @@ class FiniteVolume2D(pybamm.SpatialMethod):
             num_children = len(disc_children)
             rows = np.arange(0, tb_mesh_points * sum(lr_mesh_points))
             cols = []
-            for _ in range(tb_mesh_points):
+            for j in range(tb_mesh_points):
                 for i in range(num_children):
-                    row_start = sum(lr_mesh_points[:i]) * tb_mesh_points
+                    row_start = (
+                        sum(lr_mesh_points[:i]) * tb_mesh_points + j * lr_mesh_points[i]
+                    )
                     row_end = row_start + lr_mesh_points[i]
                     cols.append(np.arange(row_start, row_end))
             cols = np.hstack(cols)
