@@ -7,6 +7,7 @@ import json
 import numbers
 import pickle
 from functools import cached_property
+from itertools import chain
 
 import casadi
 import numpy as np
@@ -14,10 +15,6 @@ import pandas as pd
 from scipy.io import savemat
 
 import pybamm
-from pybamm.expression_tree.operations.replace_symbols import (
-    SymbolReplacer,
-    VariableReplacementMap,
-)
 
 
 class NumpyEncoder(json.JSONEncoder):
@@ -104,6 +101,9 @@ class Solution:
         self._all_yps = all_yps
 
         self.variables_returned = variables_returned
+        self._observable = self._all_models and all(
+            model.solution_observable for model in self._all_models
+        )
 
         # Set up inputs
         if not isinstance(all_inputs, list):
@@ -128,10 +128,6 @@ class Solution:
             else:
                 self._all_sensitivities[key] = [value]
 
-        # Check no ys are too large
-        if check_solution:
-            self.check_ys_are_not_too_large()
-
         # Events
         self._t_event = t_event
         self._y_event = y_event
@@ -153,11 +149,20 @@ class Solution:
         # initialize empty cycles
         self._cycles = []
 
+        # Initialize empty inputs
+        self._t = None
+        self._y = None
+        self._sensitivities = None
+
         # Initialize empty summary variables
         self._summary_variables = None
 
         # Initialise initial start time
         self.initial_start_time = None
+
+        # Check no ys are too large
+        if check_solution:
+            self.check_ys_are_not_too_large()
 
         # Solution now uses CasADi
         pybamm.citations.register("Andersson2019")
@@ -168,51 +173,22 @@ class Solution:
     @property
     def t(self):
         """Times at which the solution is evaluated"""
-        try:
-            return self._t
-        except AttributeError:
+        if self._t is None:
             self.set_t()
-            return self._t
+        return self._t
 
     def set_t(self):
-        self._t = np.concatenate(self.all_ts)
-        if any(np.diff(self._t) <= 0):
+        t = np.concatenate(self.all_ts)
+        if any(np.diff(t) <= 0):
             raise ValueError("Solution time vector must be strictly increasing")
+        self._t = t
 
     @property
     def y(self):
         """Values of the solution"""
-        try:
-            return self._y
-        except AttributeError:
+        if self._y is None:
             self.set_y()
-
-            return self._y
-
-    @property
-    def data(self):
-        for k, v in self._variables.items():
-            if k not in self._data:
-                self._data[k] = v.data
-        return self._data
-
-    @property
-    def sensitivities(self):
-        """Values of the sensitivities. Returns a dict of param_name: np_array"""
-        try:
-            return self._sensitivities
-        except AttributeError:
-            self.set_sensitivities()
-        return self._sensitivities
-
-    def set_sensitivities(self):
-        if not self.has_sensitivities():
-            self._sensitivities = {}
-            return
-
-        self._sensitivities = {}
-        for key, sens in self._all_sensitivities.items():
-            self._sensitivities[key] = np.vstack(sens)
+        return self._y
 
     def set_y(self):
         try:
@@ -226,33 +202,47 @@ class Solution:
                 "computed explicitly."
             ) from error
 
+    @property
+    def data(self):
+        for k, v in self._variables.items():
+            if k not in self._data:
+                self._data[k] = v.data
+        return self._data
+
+    @property
+    def sensitivities(self):
+        """Values of the sensitivities. Returns a dict of param_name: np_array"""
+        if self._sensitivities is None:
+            self.set_sensitivities()
+        return self._sensitivities
+
+    def set_sensitivities(self):
+        if not self.has_sensitivities():
+            self._sensitivities = {}
+            return
+
+        self._sensitivities = {}
+        for key, sens in self._all_sensitivities.items():
+            self._sensitivities[key] = np.vstack(sens)
+
     def check_ys_are_not_too_large(self):
         # Only check last one so that it doesn't take too long
         # We only care about the cases where y is growing too large without any
         # restraint, so if y gets large in the middle then comes back down that is ok
-        y, model = self.all_ys[-1], self.all_models[-1]
+        t, y, model = self.all_ts[-1], self.all_ys[-1], self.all_models[-1]
+        t = t[-1]
         y = y[:, -1]
-        if np.max(y, initial=0) <= pybamm.settings.max_y_value:
+
+        max_y_value = pybamm.settings.max_y_value
+        if y.size == 0 or np.max(y) <= max_y_value:
             return
 
-        for var in [*model.rhs.keys(), *model.algebraic.keys()]:
-            var = model.variables[var.name]
-            # find the statevector corresponding to this variable
-            statevector = None
-            for node in var.pre_order():
-                if isinstance(node, pybamm.StateVector):
-                    statevector = node
-
-            # there will always be a statevector, but just in case
-            if statevector is None:  # pragma: no cover
-                raise RuntimeError(
-                    f"Cannot find statevector corresponding to variable {var.name}"
-                )
-            y_var = y[statevector.y_slices[0]]
-            if np.any(y_var > pybamm.settings.max_y_value):
+        for var in chain(model.rhs.keys(), model.algebraic.keys()):
+            y_var = self[var.name](t)
+            if np.any(y_var > max_y_value):
                 pybamm.logger.error(
                     f"Solution for '{var}' exceeds the maximum allowed value "
-                    f"of `{pybamm.settings.max_y_value}. This could be due to "
+                    f"of `{max_y_value}. This could be due to "
                     "incorrect scaling, model formulation, or "
                     "parameter values. The maximum allowed value is set by "
                     "'pybammm.settings.max_y_value'."
@@ -302,6 +292,24 @@ class Solution:
     def termination(self, value):
         """Updates the reason for termination"""
         self._termination = value
+
+    @property
+    def observable(self):
+        return self._observable
+
+    def _check_observable(self):
+        if self._observable:
+            return
+
+        # Collect unique reasons from all models
+        unique_reasons = set(
+            model.solution_observable_status
+            for model in self.all_models
+            if not model.solution_observable
+        )
+        if unique_reasons:
+            reasons_str = ", ".join(sorted(unique_reasons))
+            raise ValueError(f"Solution is not observable: {reasons_str}")
 
     @cached_property
     def first_state(self):
@@ -457,7 +465,9 @@ class Solution:
 
         # Iterate through all models, some may be in the list several times and
         # therefore only get set up once
-        vars_pybamm = [model.variables_and_events[name] for model in self.all_models]
+        vars_pybamm = [
+            model.get_processed_variable_or_event(name) for model in self.all_models
+        ]
         vars_casadi = [None] * len(self.all_models)
         for i, (model, ys, inputs) in enumerate(
             zip(self.all_models, self.all_ys, self.all_inputs, strict=True)
@@ -487,80 +497,9 @@ class Solution:
 
         self._variables[name] = var
 
-    def _update_observe_variable(
-        self,
-        symbol: pybamm.Symbol,
-        name: str,
-        replace_variables: bool | None = None,
-    ):
-        if self.variables_returned:
-            raise ValueError(
-                "Cannot use `observe` if the solver includes `output_variables`. "
-                "Please re-run the simulation without `output_variables`."
-            )
-        if replace_variables is None:
-            replace_variables = True
-        symbol_id = symbol.id
-
-        # Use model hashmap to avoid redundant symbol processing
-        vars_pybamm_map: dict[pybamm.BaseModel, pybamm.Symbol] = {}
-
-        def _process_symbol(
-            symbol: pybamm.Symbol, model: pybamm.BaseModel
-        ) -> pybamm.Symbol:
-            _var_pybamm = vars_pybamm_map.get(model)
-            if _var_pybamm is not None:
-                return _var_pybamm
-
-            if replace_variables:
-                symbol_replacer = SymbolReplacer(
-                    VariableReplacementMap(model.variables_and_events)
-                )
-                symbol = symbol_replacer.process_symbol(symbol)
-
-            var_pybamm = model._parameter_values.process_symbol(symbol)
-            dims = np.prod(var_pybamm.shape)
-            if dims > 1:
-                raise ValueError("`observe` currently only supports 0D variables.")
-
-            # Cache the processed symbol for this model
-            vars_pybamm_map[model] = var_pybamm
-            return var_pybamm
-
-        time_integral = None
-        # Iterate through all models, some may be in the list several times and
-        # therefore only get set up once
-        vars_casadi = [None] * len(self.all_models)
-        vars_pybamm = [None] * len(self.all_models)
-        for i, (model, ys, inputs) in enumerate(
-            zip(self.all_models, self.all_ys, self.all_inputs, strict=True)
-        ):
-            _var_pybamm = _process_symbol(symbol, model)
-            var_casadi, var_pybamm, time_integral = self._update_model_variable(
-                model,
-                _var_pybamm,
-                inputs=inputs,
-                ys_shape=ys.shape,
-                time_integral=time_integral,
-                cache_key=symbol_id,
-            )
-            vars_pybamm[i] = var_pybamm
-            vars_casadi[i] = var_casadi
-        var = pybamm.process_variable(
-            name, vars_pybamm, vars_casadi, self, time_integral=time_integral
-        )
-        self._variables[symbol_id] = var
-        return var
-
-    def observe(
-        self,
-        symbol: pybamm.Symbol,
-        name: str | None = None,
-        replace_variables: bool | None = None,
-    ):
+    def observe(self, symbol: pybamm.Symbol) -> pybamm.ProcessedVariable:
         """
         Observe a `pybamm.Symbol` object from the solution.
-        Note: this currently only supports 0D variables.
 
         Parameters
         ----------
@@ -568,29 +507,23 @@ class Solution:
             The symbol to observe.
         name : str, optional
             The name of the variable. If None, the name is the symbol's id.
-        replace_variables : bool, optional
-            Whether to replace ``pybamm.Variable`` objects in the symbol with the
-            discretized variables. Defaults to True.
 
         Returns
         -------
         :class:`pybamm.ProcessedVariable`
             The observed variable.
         """
-        if not isinstance(symbol, pybamm.Symbol):
-            try:
-                # Try to convert the input to a pybamm.Symbol
-                symbol = symbol * pybamm.Scalar(1)
-            except Exception:
-                raise ValueError("Input is not a valid PyBaMM symbol") from None
+        self._check_observable()
+        symbol = pybamm.convert_to_symbol(symbol)
+        name = str(symbol.id)
 
-        value = self._variables.get(symbol.id)
-        if value is None:
-            name = name if name is not None else str(symbol.id)
-            value = self._update_observe_variable(
-                symbol, name, replace_variables=replace_variables
-            )
-        return value
+        value = self._variables.get(name, None)
+        if value is not None:
+            return value
+
+        for model in self.all_models:
+            model.process_and_register_variable(name=name, symbol=symbol)
+        return self[name]
 
     def _convert_to_casadi(self, var_pybamm, inputs, ys_shape):
         time_integral = pybamm.ProcessedVariableTimeIntegral.from_pybamm_var(
