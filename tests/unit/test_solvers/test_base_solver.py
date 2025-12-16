@@ -375,7 +375,7 @@ class TestBaseSolver:
         assert solver.get_platform_context("Darwin") == "spawn"
 
         if pybamm.has_jax():
-            # JAX is incompatible with fork (see https://github.com/google/jax/issues/1805)
+            # JAX is incompatible with fork (see https://github.com/jax-ml/jax/issues/1805)
             # Causes issues with tests crashing in CI
             assert solver.get_platform_context("Linux") == "spawn"
         else:
