@@ -185,8 +185,6 @@ class TimeSolveSEI(SolveModel):
             "electron-migration limited",
             "interstitial-diffusion limited",
             "ec reaction limited",
-            # "tunnelling limited",
-            # "VonKolzenberg2020",
         ],
         [pybamm.CasadiSolver, pybamm.IDAKLUSolver],
     )
