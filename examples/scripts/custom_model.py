@@ -61,7 +61,7 @@ for domain in ["negative", "positive"]:
         pybamm.interface_utilisation.Full(model.param, domain, model.options)
     )
     model.submodels[f"{domain} interface current"] = (
-        pybamm.kinetics.CurrentForInverseButlerVolmer(
+        pybamm.kinetics.CurrentForInverseKinetics(
             model.param, domain, "lithium-ion main"
         )
     )
