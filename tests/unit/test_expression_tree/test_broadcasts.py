@@ -1,6 +1,8 @@
 #
 # Tests for the Broadcast class
 #
+import re
+
 import numpy as np
 import pytest
 
@@ -72,7 +74,10 @@ class TestBroadcasts:
             pybamm.PrimaryBroadcast(a, "negative electrode")
         a = pybamm.Symbol("a", domain="negative particle")
         with pytest.raises(
-            pybamm.DomainError, match="Cannot do primary broadcast from particle domain"
+            pybamm.DomainError,
+            match=re.escape(
+                "Cannot do primary broadcast from particle (core or shell) domain"
+            ),
         ):
             pybamm.PrimaryBroadcast(a, "current collector")
 

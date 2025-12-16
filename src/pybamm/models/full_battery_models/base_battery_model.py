@@ -207,6 +207,13 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 Sets the model to include a single active particle size or a
                 distribution of sizes at any macroscale location. Can be "single"
                 (default) or "distribution". Option applies to both electrodes.
+            * "PE degradation": str
+                Set the Positive Electrode (PE) degradation submodel to be used.
+                Options are:
+
+                - "none": : no action taken
+                - "phase transition": :class:`pybamm.pe_degradation.PhaseTransition`, \
+                    this submodel (core-shell) will replace the particle fickian submodel
             * "SEI" : str
                 Set the SEI submodel to be used. Options are:
 
@@ -367,6 +374,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             "particle phases": ["1", "2"],
             "particle shape": ["spherical", "no particles"],
             "particle size": ["single", "distribution"],
+            "PE degradation": ["none", "phase transition"],
             "SEI": [
                 "none",
                 "constant",
@@ -579,6 +587,26 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 raise pybamm.OptionError(
                     "If 'sei film resistance' is 'distributed' then 'total interfacial "
                     "current density as a state' must be 'true'"
+                )
+
+        # If "PE degradation" is "phase transition" then "total interfacial current
+        # density as a state" must be "true" to enable distributed current density
+        if options["PE degradation"] == "phase transition":
+            options["total interfacial current density as a state"] = "true"
+            # Check that extra_options did not try to provide a clashing option
+            if (
+                extra_options.get("total interfacial current density as a state")
+                == "false"
+            ):
+                raise pybamm.OptionError(
+                    "If 'PE degradation' is 'phase transition' then 'total interfacial "
+                    "current density as a state' must be 'true'"
+                )
+            # Options not yet compatible with phase transition PE degradation
+            if options["particle size"] == "distribution":
+                raise pybamm.OptionError(
+                    "Positive Electrode phase transition submodel only implemented for "
+                    "particles of single size, i.e, no distribution."
                 )
 
         # If "SEI film resistance" is not "none" and there are multiple phases
@@ -978,6 +1006,19 @@ class BaseBatteryModel(pybamm.BaseModel):
         # Reduce the default points for 2D current collectors
         if self.options["dimensionality"] == 2:
             base_var_pts.update({"x_n": 10, "x_s": 10, "x_p": 10})
+        if self.options["PE degradation"] == "phase transition":
+            phases = int(self.options.positive["particle phases"])
+            if phases == 1:
+                base_var_pts.update({"r_co": 20, "r_sh": 20})
+            elif phases >= 2:
+                base_var_pts.update(
+                    {
+                        "r_co_prim": 20,
+                        "r_sh_prim": 20,
+                        "r_co_sec": 20,
+                        "r_sh_sec": 20,
+                    }
+                )
         return base_var_pts
 
     @property
@@ -1003,7 +1044,6 @@ class BaseBatteryModel(pybamm.BaseModel):
             base_submeshes["current collector"] = pybamm.SubMesh0D
         elif self.options["dimensionality"] == 1:
             base_submeshes["current collector"] = pybamm.Uniform1DSubMesh
-
         elif self.options["dimensionality"] == 2:
             base_submeshes["current collector"] = pybamm.ScikitUniform2DSubMesh
         elif self.options["dimensionality"] == 3:
@@ -1016,6 +1056,25 @@ class BaseBatteryModel(pybamm.BaseModel):
             elif geom_type == "cylindrical":
                 base_submeshes["cell"] = pybamm.ScikitFemGenerator3D(
                     geom_type="cylinder", h="0.1"
+                )
+
+        if self.options["PE degradation"] == "phase transition":
+            phases = int(self.options.positive["particle phases"])
+            if phases == 1:
+                base_submeshes.update(
+                    {
+                        "positive core": pybamm.Uniform1DSubMesh,
+                        "positive shell": pybamm.Uniform1DSubMesh,
+                    }
+                )
+            elif phases >= 2:
+                base_submeshes.update(
+                    {
+                        "positive primary core": pybamm.Uniform1DSubMesh,
+                        "positive primary shell": pybamm.Uniform1DSubMesh,
+                        "positive secondary core": pybamm.Uniform1DSubMesh,
+                        "positive secondary shell": pybamm.Uniform1DSubMesh,
+                    }
                 )
         return base_submeshes
 
@@ -1050,6 +1109,26 @@ class BaseBatteryModel(pybamm.BaseModel):
                 pybamm.ZeroDimensionalSpatialMethod()
             )
             base_spatial_methods["cell"] = pybamm.ScikitFiniteElement3D()
+
+        if self.options["PE degradation"] == "phase transition":
+            phases = int(self.options.positive["particle phases"])
+            if phases == 1:
+                base_spatial_methods.update(
+                    {
+                        "positive core": pybamm.FiniteVolume(),
+                        "positive shell": pybamm.FiniteVolume(),
+                    }
+                )
+            elif phases >= 2:
+                base_spatial_methods.update(
+                    {
+                        "positive primary core": pybamm.FiniteVolume(),
+                        "positive primary shell": pybamm.FiniteVolume(),
+                        "positive secondary core": pybamm.FiniteVolume(),
+                        "positive secondary shell": pybamm.FiniteVolume(),
+                    }
+                )
+
         return base_spatial_methods
 
     @property

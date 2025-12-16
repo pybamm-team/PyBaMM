@@ -1165,6 +1165,62 @@ class BoundaryValue(BoundaryOperator):
             return sympy.Symbol(latex_child)
 
 
+class BoundaryCellValue(BoundaryOperator):
+    """A node in the expression tree which gets the nodal value of boundary cell
+    on its primary domain.
+
+    Parameters
+    ----------
+    child : :class:`pybamm.Symbol`
+        The variable whose boundary value to take
+    side : str
+        Which side to take the boundary value on ("left" or "right")
+    """
+
+    def __init__(self, child, side):
+        super().__init__("boundary cell value", child, side)
+
+    def _unary_new_copy(self, child, perform_simplifications: bool = True):
+        """
+        Creates a new copy of the operator with the child `child`.
+
+        Uses the convenience function :meth:`boundary_value` to perform checks before
+        creating a BoundaryValue object.
+        """
+        if perform_simplifications:
+            return boundary_cell_value(child, self.side)
+        else:
+            return BoundaryCellValue(child, self.side)
+
+
+class BoundaryCellLength(BoundaryOperator):
+    """A node in the expression tree which gets half the cell length of the
+    boundary cell on its primary domain.
+
+    Parameters
+    ----------
+    child : :class:`pybamm.Symbol`
+        The variable whose boundary value to take
+    side : str
+        Which side to take the boundary value on ("left" or "right")
+    """
+
+    def __init__(self, child, side):
+        super().__init__("boundary cell length", child, side)
+
+    def _unary_new_copy(self, child, perform_simplifications: bool = True):
+        """
+        Creates a new copy of the operator with the child `child`.
+
+        Uses the convenience function :meth:`boundary_cell_length` to perform
+        checks before creating a BoundaryValue object.
+        """
+        if perform_simplifications:
+            return boundary_cell_length(child, self.side)
+        else:
+            return BoundaryCellLength(child, self.side)
+
+
 class BoundaryMeshSize(BoundaryOperator):
     """
     A node in the expression tree which gets the width of the control volume at the boundary of a variable's domain.
@@ -1580,6 +1636,48 @@ def boundary_value(symbol, side, order=None):
     # Otherwise, calculate boundary value
     else:
         return BoundaryValue(symbol, side, order)
+
+
+def boundary_cell_value(symbol, side):
+    """convenience function for creating a :class:`pybamm.BoundaryCellValue`
+
+    not boundary value but the nodal value of boundary cell, i.e.,
+    the unknown for this cell: c_0 or c_N
+
+    Parameters
+    ----------
+    symbol : `pybamm.Symbol`
+        The symbol whose boundary value to take
+    side : str
+        Which side to take the boundary value on ("left" or "right")
+
+    Returns
+    -------
+    :class:`BoundaryCellValue`
+        the new integrated expression tree
+    """
+    return BoundaryCellValue(symbol, side)
+
+
+def boundary_cell_length(symbol, side):
+    """convenience function for creating a :class:`pybamm.BoundaryCellLength`
+
+    half of the length of the boundary cell, i.e., distance from cell
+    midpoint to boundary
+
+    Parameters
+    ----------
+    symbol : `pybamm.Symbol`
+        The symbol whose boundary value to take
+    side : str
+        Which side to take the boundary value on ("left" or "right")
+
+    Returns
+    -------
+    :class:`BoundaryCellValue`
+        the new integrated expression tree
+    """
+    return BoundaryCellLength(symbol, side)
 
 
 def boundary_gradient(symbol, side, order=None):
