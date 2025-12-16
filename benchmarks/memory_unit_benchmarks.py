@@ -1,4 +1,5 @@
 import numpy as np
+from asv_runner.benchmarks.mark import skip_benchmark_if
 
 import pybamm
 from benchmarks.benchmark_utils import set_random_seed
@@ -70,6 +71,8 @@ class MemParameteriseModel(MemCreateExpression):
         return param
 
 
+# Skip for now due to https://github.com/pympler/pympler/issues/151
+@skip_benchmark_if(True)
 class MemDiscretiseModel(MemParameteriseModel):
     def setup(self):
         set_random_seed()
