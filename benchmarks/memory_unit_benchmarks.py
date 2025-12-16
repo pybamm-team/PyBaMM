@@ -71,14 +71,14 @@ class MemParameteriseModel(MemCreateExpression):
         return param
 
 
-# Skip for now due to https://github.com/pympler/pympler/issues/151
-@skip_benchmark_if(True)
 class MemDiscretiseModel(MemParameteriseModel):
     def setup(self):
         set_random_seed()
         MemCreateExpression.mem_create_expression(self)
         MemParameteriseModel.mem_parameterise(self)
 
+    # Skip for now due to https://github.com/pympler/pympler/issues/151
+    @skip_benchmark_if(True)
     def mem_discretise(self):
         MemCreateExpression.mem_create_expression(self)
         MemParameteriseModel.mem_parameterise(self)
@@ -99,6 +99,8 @@ class MemSolveModel(MemDiscretiseModel):
         MemParameteriseModel.mem_parameterise(self)
         MemDiscretiseModel.mem_discretise(self)
 
+    # Skip for now due to https://github.com/pympler/pympler/issues/151
+    @skip_benchmark_if(True)
     def mem_solve(self):
         solver = pybamm.ScipySolver()
         t = np.linspace(0, 3600, 600)
