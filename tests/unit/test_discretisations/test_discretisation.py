@@ -461,8 +461,13 @@ class TestDiscretise:
         np.testing.assert_array_equal(y0, model.concatenated_rhs.evaluate(None, y0))
 
         # grad and div are identity operators here
-        np.testing.assert_array_equal(y0, model.variables["c"].evaluate(None, y0))
-        np.testing.assert_array_equal(y0, model.variables["N"].evaluate(None, y0))
+        # Use get_processed_variable to get the discretised variables
+        np.testing.assert_array_equal(
+            y0, model.get_processed_variable("c").evaluate(None, y0)
+        )
+        np.testing.assert_array_equal(
+            y0, model.get_processed_variable("N").evaluate(None, y0)
+        )
 
         # mass matrix is identity
         np.testing.assert_array_equal(
@@ -521,7 +526,9 @@ class TestDiscretise:
         T0 = model.initial_conditions[T].evaluate() * np.ones_like(
             mesh[T.domain[0]].nodes[:, np.newaxis]
         )
-        np.testing.assert_array_equal(S0 * T0, model.variables["ST"].evaluate(None, y0))
+        np.testing.assert_array_equal(
+            S0 * T0, model.get_processed_variable("ST").evaluate(None, y0)
+        )
 
         # mass matrix is identity
         np.testing.assert_array_equal(
@@ -1293,3 +1300,84 @@ class TestDiscretise:
             pybamm.ModelError, match="Variable 'b' should have expression"
         ):
             disc.process_model(model, inplace=False)
+
+    def test_process_model_attaches_to_symbol_processor(self):
+        """Test that process_model attaches discretisation to model's symbol_processor."""
+        model = pybamm.lithium_ion.SPM()
+        param = pybamm.ParameterValues("Chen2020")
+        param.process_model(model)
+        geometry = model.default_geometry
+        param.process_geometry(geometry)
+        mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
+        disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+
+        disc.process_model(model)
+
+        assert model.symbol_processor.discretisation is not None
+        # Should be a copy, not the same object
+        assert model.symbol_processor.discretisation is not disc
+
+    def test_delayed_variable_processing(self):
+        """Test that delayed_variable_processing defers variable processing."""
+        model = pybamm.lithium_ion.SPM()
+        param = pybamm.ParameterValues("Chen2020")
+        param.process_model(model, delayed_variable_processing=True)
+        geometry = model.default_geometry
+        param.process_geometry(geometry)
+        mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
+        disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+
+        # With delayed_variable_processing=True, variables should not be processed
+        disc.process_model(model, delayed_variable_processing=True)
+
+        assert model.is_discretised is True
+        # _variables_processed should be empty (not processed yet)
+        assert len(model._variables_processed) == 0
+
+        # With delayed_variable_processing=False (default), variables are processed
+        model2 = pybamm.lithium_ion.SPM()
+        param2 = pybamm.ParameterValues("Chen2020")
+        param2.process_model(model2)
+        geometry2 = model2.default_geometry
+        param2.process_geometry(geometry2)
+        mesh2 = pybamm.Mesh(
+            geometry2, model2.default_submesh_types, model2.default_var_pts
+        )
+        disc2 = pybamm.Discretisation(mesh2, model2.default_spatial_methods)
+        disc2.process_model(model2, delayed_variable_processing=False)
+
+        assert model2.is_discretised is True
+        # Variables should be processed
+        assert len(model2._variables_processed) > 0
+
+    def test_process_model_preserves_variables_except_pre_process(self):
+        """Test that process_model preserves model.variables, except for _pre_process_variables."""
+        model = pybamm.lithium_ion.SPM()
+        param = pybamm.ParameterValues("Chen2020")
+        param.process_model(model)
+
+        # Store original variable expressions (by id) before discretisation
+        original_var_ids = {name: var.id for name, var in model.variables.items()}
+        original_var_names = set(model.variables.keys())
+
+        geometry = model.default_geometry
+        param.process_geometry(geometry)
+        mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
+        disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+        disc.process_model(model)
+
+        # Existing variables should have the same expressions (same ids)
+        for name in original_var_names:
+            assert model.variables[name].id == original_var_ids[name], (
+                f"Variable '{name}' expression was modified by process_model"
+            )
+
+        # _pre_process_variables may add new variables for state variables
+        # These are the only additions allowed
+        new_var_names = set(model.variables.keys()) - original_var_names
+        for name in new_var_names:
+            # New variables should be state variables (from initial_conditions)
+            var = model.variables[name]
+            assert isinstance(var, (pybamm.Variable | pybamm.Concatenation)), (
+                f"Unexpected new variable '{name}' added by process_model"
+            )

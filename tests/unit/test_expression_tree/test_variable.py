@@ -51,6 +51,8 @@ class TestVariable:
             pybamm.Variable("var", bounds=(1, 0))
         with pytest.raises(ValueError, match="Invalid bounds"):
             pybamm.Variable("var", bounds=(1, 1))
+        with pytest.raises(ValueError, match="Must be a tuple of length 2"):
+            pybamm.Variable("var", bounds=(0, 1, 2))
 
     def test_to_equation(self):
         # Test print_name
