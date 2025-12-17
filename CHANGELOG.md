@@ -2,16 +2,26 @@
 
 ## Features
 
+- Added inverse kinetics for linear kinetics. ([#5303](https://github.com/pybamm-team/PyBaMM/pull/5303))
 - Adds `silence_sundials_errors` IDAKLU solver option with `default=False` to match historical output. ([#5290](https://github.com/pybamm-team/PyBaMM/pull/5290))
 
 ## Bug fixes
 
+- Fixed a bug with domain shape evaluation. ([#5316](https://github.com/pybamm-team/PyBaMM/pull/5316))
 - Fixed a bug where `IDAKLUSolver` errors were not raised correctly. ([#5291](https://github.com/pybamm-team/PyBaMM/pull/5291))
+- Fixed a bug in 2D concatenatations for quantities that vary in the `tb` direction ([#5310](https://github.com/pybamm-team/PyBaMM/pull/5310))
+
+# [v25.10.2](https://github.com/pybamm-team/PyBaMM/tree/v25.10.2) - 2025-11-27
+
+## Bug fixes
+
 - Fix a bug with serialising `InputParameter`s. ([#5289](https://github.com/pybamm-team/PyBaMM/pull/5289))
+- Fix a bug with missing inputs for `initial_conditions_from` scale evaluation ([#5285](https://github.com/pybamm-team/PyBaMM/pull/5285))
 
 # [v25.10.1](https://github.com/pybamm-team/PyBaMM/tree/v25.10.1) - 2025-11-14
 
 ## Features
+
 - Allow setting initial conditions from `y_slices` of a `Solution` object. ([#5257](https://github.com/pybamm-team/PyBaMM/pull/5257))
 - Added docstring to `FuzzyDict.copy` explaining its return value and behavior. ([#5242](https://github.com/pybamm-team/PyBaMM/pull/5242))
 - Porosity and active material fractions are now `FunctionParameters` of y and z, as well as x ([#5214](https://github.com/pybamm-team/PyBaMM/pull/5214))

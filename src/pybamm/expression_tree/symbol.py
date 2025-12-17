@@ -57,7 +57,8 @@ def domain_size(domain: list[str] | str):
     elif all(dom in fixed_domain_sizes for dom in domain):
         size = sum(fixed_domain_sizes[dom] for dom in domain)
     else:
-        size = sum(hash(dom) % 100 for dom in domain)
+        # Add 2 to ensure size is always >= 2 for non-empty domains
+        size = 2 + sum(hash(dom) % 100 for dom in domain)
     return size
 
 
