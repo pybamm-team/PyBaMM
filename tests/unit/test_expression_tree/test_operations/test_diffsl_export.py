@@ -43,7 +43,9 @@ class TestDiffSLExport:
             ds_inputs.append(pv[input])
             pv[input] = "[input]"
         t0 = time.perf_counter()
-        sim = pybamm.Simulation(model=model, parameter_values=pv)
+        sim = pybamm.Simulation(
+            model=model, parameter_values=pv, output_variables=["Terminal voltage [V"]
+        )
         sim.build()
         print(
             f"Pybamm simulation creation time: {time.perf_counter() - t0:.5f} seconds"
@@ -68,8 +70,11 @@ class TestDiffSLExport:
             ode.ic_armijo_constant = 1e-1
 
         t_eval = [0, 3600]
-        t_interp = np.linspace(t_eval[0], t_eval[1], 100)
+        t_interp = np.linspace(t_eval[0], t_eval[1], 10)
 
+        voltage_pybamm = sim.solve(t_eval, t_interp=t_interp, inputs=pv_inputs)[
+            "Terminal voltage [V]"
+        ].data
         t0 = time.perf_counter()
         voltage_pybamm = sim.solve(t_eval, t_interp=t_interp, inputs=pv_inputs)[
             "Terminal voltage [V]"

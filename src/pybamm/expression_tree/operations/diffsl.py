@@ -170,13 +170,6 @@ class DiffSLExport:
                     ):
                         colj = symbol.entries.indices[j]
                         lines += [f"  ({rowi},{colj}): {symbol.entries.data[j]},"]
-                    # if there are no entries in this row, add a zero entry at (rowi, ncols-1)
-                    # this is to ensure that this matrix multipled with a vector gives a
-                    # dense vector
-                    if symbol.entries.indptr[rowi] == symbol.entries.indptr[rowi + 1]:
-                        lines += [f"  ({rowi},{ncols - 1}): 0.0,"]
-                        max_colj = max(max_colj, ncols - 1)
-                        max_rowi = max(max_rowi, rowi)
 
                 if max_colj < ncols - 1 or max_rowi < nrows - 1:
                     # add a zero entry to the end to make sure the matrix is the right size
