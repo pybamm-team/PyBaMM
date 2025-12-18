@@ -57,7 +57,8 @@ def domain_size(domain: list[str] | str):
     elif all(dom in fixed_domain_sizes for dom in domain):
         size = sum(fixed_domain_sizes[dom] for dom in domain)
     else:
-        size = sum(hash(dom) % 100 for dom in domain)
+        # Add 2 to ensure size is always >= 2 for non-empty domains
+        size = 2 + sum(hash(dom) % 100 for dom in domain)
     return size
 
 
@@ -247,13 +248,10 @@ class Symbol:
 
         # Test shape on everything but nodes that contain the base Symbol class or
         # the base BinaryOperator class
-        if pybamm.settings.debug_mode is True:
-            if not any(
-                issubclass(pybamm.Symbol, type(x))
-                or issubclass(pybamm.BinaryOperator, type(x))
-                for x in self.pre_order()
-            ):
-                self.test_shape()
+        if pybamm.settings.debug_mode is True and not any(
+            isinstance(x, (Symbol | pybamm.BinaryOperator)) for x in self.pre_order()
+        ):
+            self.test_shape()
 
     @classmethod
     def _from_json(cls, snippet: dict):
@@ -457,12 +455,22 @@ class Symbol:
         )
 
     @property
-    def scale(self):
+    def scale(self) -> float | pybamm.Symbol:
         return self._scale
 
+    @scale.setter
+    def scale(self, scale: float | pybamm.Symbol):
+        self._scale = pybamm.convert_to_symbol(scale)
+        self.set_id()
+
     @property
-    def reference(self):
+    def reference(self) -> float | pybamm.Symbol:
         return self._reference
+
+    @reference.setter
+    def reference(self, reference: float | pybamm.Symbol):
+        self._reference = pybamm.convert_to_symbol(reference)
+        self.set_id()
 
     def __eq__(self, other):
         try:
@@ -1111,3 +1119,27 @@ class Symbol:
         }
 
         return json_dict
+
+
+def convert_to_symbol(value) -> Symbol:
+    """
+    Convert a value to a pybamm.Symbol.
+
+    Parameters
+    ----------
+    value : any
+        The value to convert to a pybamm.Symbol.
+
+    Returns
+    -------
+    pybamm.Symbol : The converted symbol.
+    """
+
+    if isinstance(value, Symbol):
+        return value
+
+    try:
+        # Try to convert the input to a pybamm.Symbol
+        return value * pybamm.Scalar(1)
+    except Exception:
+        raise ValueError("Input cannot be converted to a `pybamm.Symbol`") from None

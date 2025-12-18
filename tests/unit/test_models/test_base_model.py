@@ -1624,15 +1624,7 @@ class TestBaseModel:
         # model solutions match
         testing.assert_array_equal(solution.all_ys, new_solution.all_ys)
 
-        # raises warning if variables are saved without mesh
-        with pytest.warns(pybamm.ModelWarning):
-            model_disc.save_model(
-                filename="test_base_model", variables=model_disc.variables
-            )
-
-        model_disc.save_model(
-            filename="test_base_model", variables=model_disc.variables, mesh=mesh
-        )
+        model_disc.save_model(filename="test_base_model", mesh=mesh)
 
         # load with variables & mesh
         new_model = pybamm.load_model("test_base_model.json")

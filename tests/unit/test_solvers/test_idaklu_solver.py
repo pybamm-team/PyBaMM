@@ -583,7 +583,7 @@ class TestIDAKLUSolver:
         solver = pybamm.IDAKLUSolver()
 
         t_eval = [0, 3]
-        with pytest.raises(ValueError):
+        with pytest.raises(pybamm.SolverError):
             solver.solve(model, t_eval)
 
     def test_dae_solver_algebraic_model(self):
@@ -779,7 +779,7 @@ class TestIDAKLUSolver:
             options = {option: options_fail[option]}
             solver = pybamm.IDAKLUSolver(options=options)
 
-            with pytest.raises(ValueError):
+            with pytest.raises(pybamm.SolverError):
                 solver.solve(model, t_eval)
 
     def test_with_output_variables(self):
@@ -1487,7 +1487,7 @@ class TestIDAKLUSolver:
                 model, t_eval=t_eval, t_interp=t_interp, inputs=input_parameters
             )
             assert len(w) > 0
-            assert "FAILURE" in str(w[0].message)
+            assert "_FAIL" in str(w[0].message)
 
     def test_no_progress_early_termination(self):
         # SPM at rest

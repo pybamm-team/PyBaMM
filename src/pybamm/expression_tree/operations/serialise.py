@@ -5,6 +5,7 @@ import inspect
 import json
 import numbers
 import re
+import warnings
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
@@ -147,7 +148,7 @@ class Serialise:
         self,
         model: pybamm.BaseModel,
         mesh: pybamm.Mesh | None = None,
-        variables: pybamm.FuzzyDict | None = None,
+        variables: None = None,
     ) -> dict:
         """Converts a discretised model to a JSON-serialisable dictionary.
 
@@ -161,9 +162,8 @@ class Serialise:
         mesh : :class:`pybamm.Mesh` (optional)
             The mesh the model has been discretised over. Not necessary to solve
             the model when read in, but required to use pybamm's plotting tools.
-        variables: :class:`pybamm.FuzzyDict` (optional)
-            The discretised model variables. Not necessary to solve a model, but
-            required to use pybamm's plotting tools.
+        variables: None (optional)
+            This parameter is deprecated and enabled by default.
 
         Returns
         -------
@@ -174,6 +174,16 @@ class Serialise:
             raise NotImplementedError(
                 "PyBaMM can only serialise a discretised, ready-to-solve model."
             )
+        if variables is not None:
+            warnings.warn(
+                "The `variables` parameter is deprecated and will be removed in a future version. "
+                "Use `model._variables_processed` instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+        for k in model.variables.keys():
+            model.get_processed_variable(k)
+        variables_processed = model.get_processed_variables_dict()
 
         model_json = {
             "py/object": str(type(model))[8:-2],
@@ -192,16 +202,19 @@ class Serialise:
             "events": [self._SymbolEncoder().default(event) for event in model.events],
             "mass_matrix": self._SymbolEncoder().default(model.mass_matrix),
             "mass_matrix_inv": self._SymbolEncoder().default(model.mass_matrix_inv),
+            "_solution_observable": model._solution_observable.name,
         }
 
         if mesh:
             model_json["mesh"] = self._MeshEncoder().default(mesh)
 
-        if variables:
+        if variables_processed:
+            variables_processed = dict(variables_processed)
             if model._geometry:
                 model_json["geometry"] = self._deconstruct_pybamm_dicts(model._geometry)
-            model_json["variables"] = {
-                k: self._SymbolEncoder().default(v) for k, v in dict(variables).items()
+            model_json["_variables_processed"] = {
+                k: self._SymbolEncoder().default(v)
+                for k, v in variables_processed.items()
             }
 
         return model_json
@@ -210,7 +223,7 @@ class Serialise:
         self,
         model: pybamm.BaseModel,
         mesh: pybamm.Mesh | None = None,
-        variables: pybamm.FuzzyDict | None = None,
+        variables: None = None,
         filename: str | None = None,
     ):
         """Saves a discretised model to a JSON file.
@@ -225,9 +238,8 @@ class Serialise:
         mesh : :class:`pybamm.Mesh` (optional)
             The mesh the model has been discretised over. Not neccesary to solve
             the model when read in, but required to use pybamm's plotting tools.
-        variables: :class:`pybamm.FuzzyDict` (optional)
-            The discretised model varaibles. Not necessary to solve a model, but
-            required to use pybamm's plotting tools.
+        variables: None (optional)
+            This parameter is deprecated and enabled by default.
         filename: str (optional)
             The desired name of the JSON file. If no name is provided, one will be
             created based on the model name, and the current datetime.
@@ -314,13 +326,18 @@ class Serialise:
             else None
         )
 
-        recon_model_dict["variables"] = (
+        vars_processed_data = model_data.get("_variables_processed") or {}
+        recon_model_dict["_variables_processed"] = (
             {
                 k: self._reconstruct_expression_tree(v)
-                for k, v in model_data["variables"].items()
+                for k, v in vars_processed_data.items()
             }
-            if "variables" in model_data.keys()
-            else None
+            if vars_processed_data
+            else {}
+        )
+
+        recon_model_dict["_solution_observable"] = model_data.get(
+            "_solution_observable", False
         )
 
         if battery_model:
@@ -375,6 +392,8 @@ class Serialise:
         """
         # Reset caches for a clean serialization
         _reset_serialization_caches()
+        if getattr(model, "is_processed", True):
+            raise ValueError("Cannot serialise a built model.")
 
         required_attrs = [
             "rhs",
@@ -1451,6 +1470,8 @@ class Serialise:
             model._mesh = None
         if hasattr(model, "_disc"):
             model._disc = None
+        # Restore observable state
+        model._solution_observable = False
 
         return model
 
@@ -1819,6 +1840,10 @@ def _deserialize_symbol_from_json(json_data):
         # Convert stored parameters back to PyBaMM Parameter objects
         return pybamm.Parameter(json_data.get("name") or json_data.get("n"))
     elif type_name == "Scalar":
+        return pybamm.Parameter(json_data["name"])
+    elif json_data["type"] == "InputParameter":
+        return pybamm.InputParameter(json_data["name"])
+    elif json_data["type"] == "Scalar":
         # Convert stored numerical values back to PyBaMM Scalar objects
         # Use explicit check to handle 0 correctly (can't use 'or' since 0 is falsy)
         if "value" in json_data:
