@@ -8,6 +8,7 @@ import pytest
 from scipy.sparse import csr_matrix
 
 import pybamm
+from pybamm.models.base_model import ModelSolutionObservability
 
 
 class TestBaseSolver:
@@ -121,7 +122,9 @@ class TestBaseSolver:
         a = pybamm.Variable("a")
         p = pybamm.InputParameter("p")
         model.rhs = {a: a * p}
-        with pytest.raises(pybamm.SolverError, match="No value provided for input 'p'"):
+        with pytest.raises(
+            pybamm.SolverError, match="No value provided for input: \\['p'\\]"
+        ):
             solver.solve(model, np.array([1, 2, 3]))
 
     def test_ode_solver_fail_with_dae(self):
@@ -150,6 +153,7 @@ class TestBaseSolver:
                 self.bounds = (np.array([-np.inf]), np.array([np.inf]))
                 self.len_rhs_and_alg = 1
                 self.events = []
+                self.solution_observable = ModelSolutionObservability.DISABLED
 
             def rhs_eval(self, t, y, inputs):
                 return np.array([])
@@ -187,6 +191,7 @@ class TestBaseSolver:
                 self.len_rhs = 1
                 self.len_rhs_and_alg = 4
                 self.events = []
+                self.solution_observable = ModelSolutionObservability.DISABLED
 
             def rhs_eval(self, t, y, inputs):
                 return y[0:1]

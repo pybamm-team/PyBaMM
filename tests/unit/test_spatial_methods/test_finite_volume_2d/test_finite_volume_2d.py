@@ -716,6 +716,34 @@ class TestFiniteVolume2D:
         total_add = concat_var + source_concat
         neg_add_disc = disc.process_symbol(neg_add)
 
+        # test functions that vary in X and Z
+        z_neg = pybamm.SpatialVariable(
+            "z_neg",
+            domain="negative electrode",
+            direction="tb",
+        )
+        z_sep = pybamm.SpatialVariable(
+            "z_sep",
+            domain="separator",
+            direction="tb",
+        )
+        z_pos = pybamm.SpatialVariable(
+            "z_pos",
+            domain="positive electrode",
+            direction="tb",
+        )
+        z_concat = pybamm.concatenation(z_neg, z_sep, z_pos)
+        z_concat_disc = disc.process_symbol(z_concat)
+        z_concat_result = z_concat_disc.evaluate(None, None).flatten()
+        z = pybamm.SpatialVariable(
+            "z",
+            ["negative electrode", "separator", "positive electrode"],
+            direction="tb",
+        )
+        z_disc = disc.process_symbol(z)
+        z_result = z_disc.evaluate(None, None).flatten()
+        np.testing.assert_array_equal(z_concat_result, z_result)
+
     def test_vector_boundary_conditions(self):
         """
         Test using vector quantities as boundary conditions, such as spatial variables

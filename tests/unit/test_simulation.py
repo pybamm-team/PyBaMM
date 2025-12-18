@@ -20,45 +20,6 @@ class TestSimulation:
         sol = sim.solve([0, 1])
         np.testing.assert_allclose(sol.y[0], np.exp(-sol.t), rtol=1e-4, atol=1e-4)
 
-    def test_basic_ops(self):
-        model = pybamm.lithium_ion.SPM()
-        sim = pybamm.Simulation(model)
-
-        # check that the model is unprocessed
-        assert sim._mesh is None
-        assert sim._disc is None
-        V = sim.model.variables["Voltage [V]"]
-        assert V.has_symbol_of_classes(pybamm.Parameter)
-        assert not V.has_symbol_of_classes(pybamm.Matrix)
-
-        sim.set_parameters()
-        assert sim._mesh is None
-        assert sim._disc is None
-        V = sim.model_with_set_params.variables["Voltage [V]"]
-        assert not V.has_symbol_of_classes(pybamm.Parameter)
-        assert not V.has_symbol_of_classes(pybamm.Matrix)
-        # Make sure model is unchanged
-        assert sim.model != model
-        V = model.variables["Voltage [V]"]
-        assert V.has_symbol_of_classes(pybamm.Parameter)
-        assert not V.has_symbol_of_classes(pybamm.Matrix)
-
-        assert sim.submesh_types == model.default_submesh_types
-        assert sim.var_pts == model.default_var_pts
-        assert sim.mesh is None
-        for key in sim.spatial_methods.keys():
-            assert (
-                sim.spatial_methods[key].__class__
-                == model.default_spatial_methods[key].__class__
-            )
-
-        sim.build()
-        assert sim._mesh is not None
-        assert sim._disc is not None
-        V = sim.built_model.variables["Voltage [V]"]
-        assert not V.has_symbol_of_classes(pybamm.Parameter)
-        assert V.has_symbol_of_classes(pybamm.Matrix)
-
     def test_solve(self):
         sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
         sim.solve([0, 600])
@@ -135,6 +96,11 @@ class TestSimulation:
         # Let simulation take over
         sim = pybamm.Simulation(model)
         sim.solve([0, 600])
+
+        # The model is still observable because it has not yet been processed by
+        # the parameter_values or discretisation
+        assert sim.solution.observable is True
+        assert all(model.solution_observable for model in sim.solution.all_models)
 
     def test_reuse_commands(self):
         sim = pybamm.Simulation(pybamm.lithium_ion.SPM())

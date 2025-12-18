@@ -380,7 +380,11 @@ class BaseStep:
 
         return t_eval, t_interp
 
-    def process_model(self, model, parameter_values):
+    def process_model(
+        self, model, parameter_values, inplace=None, delayed_variable_processing=None
+    ):
+        if inplace is None:
+            inplace = False
         new_model = model.new_copy()
         new_parameter_values = parameter_values.copy()
         new_model, new_parameter_values = self.set_up(new_model, new_parameter_values)
@@ -391,11 +395,11 @@ class BaseStep:
             new_parameter_values["Ambient temperature [K]"] = self.temperature
 
         # Parameterise the model
-        parameterised_model = new_parameter_values.process_model(
-            new_model, inplace=False
+        return new_parameter_values.process_model(
+            new_model,
+            inplace=inplace,
+            delayed_variable_processing=delayed_variable_processing,
         )
-
-        return parameterised_model
 
     def update_model_events(self, new_model):
         for term in self.termination:
