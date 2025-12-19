@@ -6,6 +6,7 @@
 - Adds the ability to observe custom variables from a `Solution` object using `Solution.observe(symbol)`. ([#5308](https://github.com/pybamm-team/PyBaMM/pull/5308))
 - Added inverse kinetics for linear kinetics. ([#5303](https://github.com/pybamm-team/PyBaMM/pull/5303))
 - Adds `silence_sundials_errors` IDAKLU solver option with `default=False` to match historical output. ([#5290](https://github.com/pybamm-team/PyBaMM/pull/5290))
+- `BasicDFN2D` model now takes porosities and active fractions as functions of `x` and `z` ([#5266](https://github.com/pybamm-team/PyBaMM/pull/5266))
 
 ## Bug fixes
 

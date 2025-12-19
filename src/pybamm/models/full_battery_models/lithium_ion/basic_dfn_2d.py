@@ -171,14 +171,16 @@ class BasicDFN2D(BaseModel):
         c_s_surf_n = pybamm.surf(c_s_n)
         sto_surf_n = c_s_surf_n / self.param.n.prim.c_max
         j0_n = self.param.n.prim.j0(c_e_n, c_s_surf_n, T)
-        eta_n = phi_s_n - phi_e_n - self.param.n.prim.U(sto_surf_n, T)
+        delta_phi_n = phi_s_n - phi_e_n
+        eta_n = delta_phi_n - self.param.n.prim.U(sto_surf_n, T)
         Feta_RT_n = self.param.F * eta_n / (self.param.R * T)
         j_n = 2 * j0_n * pybamm.sinh(self.param.n.prim.ne / 2 * Feta_RT_n)
 
         c_s_surf_p = pybamm.surf(c_s_p)
         sto_surf_p = c_s_surf_p / self.param.p.prim.c_max
         j0_p = self.param.p.prim.j0(c_e_p, c_s_surf_p, T)
-        eta_p = phi_s_p - phi_e_p - self.param.p.prim.U(sto_surf_p, T)
+        delta_phi_p = phi_s_p - phi_e_p
+        eta_p = delta_phi_p - self.param.p.prim.U(sto_surf_p, T)
         Feta_RT_p = self.param.F * eta_p / (self.param.R * T)
         j_s = pybamm.PrimaryBroadcast(0, "separator")
         j_p = 2 * j0_p * pybamm.sinh(self.param.p.prim.ne / 2 * Feta_RT_p)
@@ -350,7 +352,11 @@ class BasicDFN2D(BaseModel):
             "z_s": z_s,
             "z_p": z_p,
             "Negative electrode surface concentration [mol.m-3]": c_s_surf_n,
+            "Negative electrode surface stoichiometry": sto_surf_n,
             "Positive electrode surface concentration [mol.m-3]": c_s_surf_p,
+            "Positive electrode surface stoichiometry": sto_surf_p,
+            "Positive electrode surface potential difference [V]": delta_phi_p,
+            "Negative electrode surface potential difference [V]": delta_phi_n,
             "Positive electrode overpotential [V]": eta_p,
             "Negative electrode overpotential [V]": eta_n,
             "Positive electrode ocp [V]": self.param.p.prim.U(sto_surf_p, T),
@@ -440,5 +446,5 @@ class BasicDFN2D(BaseModel):
             "x_p": 20,
             "r_p": 20,
             "r_n": 20,
-            z_2d: 20,
+            z_2d: 10,
         }
