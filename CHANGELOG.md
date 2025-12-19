@@ -9,6 +9,7 @@
 
 ## Bug fixes
 
+- Fixed a bug where `fixed_input_parameters` ignored `InputParameter` values within expressions in `ParameterValues`. ([#5321](https://github.com/pybamm-team/PyBaMM/pull/5321))
 - Fixed a bug with domain shape evaluation. ([#5316](https://github.com/pybamm-team/PyBaMM/pull/5316))
 - Fixed a bug where `IDAKLUSolver` errors were not raised correctly. ([#5291](https://github.com/pybamm-team/PyBaMM/pull/5291))
 - Fixed a bug in 2D concatenatations for quantities that vary in the `tb` direction ([#5310](https://github.com/pybamm-team/PyBaMM/pull/5310))
