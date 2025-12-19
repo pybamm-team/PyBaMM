@@ -61,7 +61,8 @@ from .expression_tree.operations.unpack_symbols import SymbolUnpacker
 from .expression_tree.operations.serialise import Serialise,ExpressionFunctionParameter
 
 # Model classes
-from .models.base_model import BaseModel
+from .models.base_model import BaseModel, ModelSolutionObservability
+from .models.symbol_processor import SymbolProcessor
 from .models.event import Event
 from .models.event import EventType
 

@@ -666,7 +666,9 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
                     pybamm.PrimaryBroadcast(child, target_domain)
                     for child in disc_left.children
                 ]
-                disc_left = pybamm.Concatenation(*new_children, concat_fun=np.hstack)
+                disc_left = pybamm.Concatenation(
+                    *new_children, concat_fun=np.hstack, check_domain=False
+                )
             if (
                 isinstance(disc_right, pybamm.Concatenation)
                 and disc_right.concatenation_function is None
@@ -676,7 +678,9 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
                     pybamm.PrimaryBroadcast(child, target_domain)
                     for child in disc_right.children
                 ]
-                disc_right = pybamm.Concatenation(*new_children, concat_fun=np.hstack)
+                disc_right = pybamm.Concatenation(
+                    *new_children, concat_fun=np.hstack, check_domain=False
+                )
         return super().process_binary_operators(
             bin_op, left, right, disc_left, disc_right
         )
