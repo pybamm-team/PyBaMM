@@ -18,6 +18,7 @@ class TestScikitFemGenerator3D:
                 pybamm.standard_spatial_vars.x: {"min": 0, "max": 1},
                 pybamm.standard_spatial_vars.y: {"min": 0, "max": 2},
                 pybamm.standard_spatial_vars.z: {"min": 0, "max": 3},
+                "coord_sys": "cartesian",
             }
         }
 
@@ -48,13 +49,14 @@ class TestScikitFemGenerator3D:
         except ImportError:
             pytest.skip("scikit-fem not available")
 
-        r = pybamm.SpatialVariable("r", ["domain"], coord_sys="cylindrical polar")
-        z = pybamm.SpatialVariable("z", ["domain"], coord_sys="cylindrical polar")
+        r = pybamm.SpatialVariable("r", ["domain"])
+        z = pybamm.SpatialVariable("z", ["domain"])
 
         geometry = {
             "domain": {
                 r: {"min": 0.1, "max": 1.0},
                 z: {"min": 0, "max": 2.0},
+                "coord_sys": "cylindrical polar",
             }
         }
 
@@ -103,6 +105,7 @@ class TestScikitFemSubMesh3D:
                 pybamm.standard_spatial_vars.x: {"min": 0, "max": 1},
                 pybamm.standard_spatial_vars.y: {"min": 0, "max": 2},
                 pybamm.standard_spatial_vars.z: {"min": 0, "max": 3},
+                "coord_sys": "cartesian",
             }
         }
 
@@ -149,6 +152,7 @@ class TestScikitFemSubMesh3D:
                 pybamm.standard_spatial_vars.x: {"min": 0, "max": 1},
                 pybamm.standard_spatial_vars.y: {"min": 0, "max": 2},
                 pybamm.standard_spatial_vars.z: {"min": 0, "max": 3},
+                "coord_sys": "cartesian",
             }
         }
 

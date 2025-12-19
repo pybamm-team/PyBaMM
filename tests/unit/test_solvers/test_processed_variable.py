@@ -324,9 +324,14 @@ class TestProcessedVariable:
 
     @pytest.mark.parametrize("hermite_interp", _hermite_args)
     def test_processed_variable_1D_unknown_domain(self, hermite_interp):
-        x = pybamm.SpatialVariable("x", domain="SEI layer", coord_sys="cartesian")
+        x = pybamm.SpatialVariable("x", domain="SEI layer")
         geometry = pybamm.Geometry(
-            {"SEI layer": {x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}}
+            {
+                "SEI layer": {
+                    x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+                    "coord_sys": "cartesian",
+                }
+            }
         )
 
         submesh_types = {"SEI layer": pybamm.Uniform1DSubMesh}

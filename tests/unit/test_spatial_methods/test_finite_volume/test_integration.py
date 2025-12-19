@@ -189,7 +189,7 @@ class TestFiniteVolumeIntegration:
         spatial_methods = {"spherical domain": pybamm.FiniteVolume()}
         disc = pybamm.Discretisation(mesh, spatial_methods)
         var = pybamm.Variable("var", domain="spherical domain")
-        r = pybamm.SpatialVariable("r", "spherical domain", coord_sys="spherical polar")
+        r = pybamm.SpatialVariable("r", "spherical domain")
         integral_eqn = pybamm.Integral(var, r)
         disc.set_variable_slices([var])
         integral_eqn_disc = disc.process_symbol(integral_eqn)

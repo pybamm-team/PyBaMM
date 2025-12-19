@@ -115,7 +115,7 @@ class Uniform2DSubMesh(SubMesh2D):
     A 2D submesh with uniform spacing in both dimensions
     """
 
-    def __init__(self, lims, npts):
+    def __init__(self, lims, npts, coord_sys):
         spatial_var_lr, spatial_lims_lr, spatial_var_tb, spatial_lims_tb, tabs = (
             self.read_lims(lims)
         )
@@ -128,11 +128,6 @@ class Uniform2DSubMesh(SubMesh2D):
         edges_tb = np.linspace(
             spatial_lims_tb["min"], spatial_lims_tb["max"], npts_tb + 1
         )
-        if spatial_var_lr.coord_sys != spatial_var_tb.coord_sys:
-            raise pybamm.GeometryError(
-                "Coordinate systems must be the same for 2D submeshes"
-            )
-        coord_sys = spatial_var_lr.coord_sys
 
         super().__init__(edges_lr, edges_tb, coord_sys, tabs=tabs)
 
