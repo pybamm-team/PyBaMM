@@ -46,7 +46,7 @@ You now have everything you need to start making changes!
 
 6. PyBaMM is developed in [Python](https://www.python.org), and makes heavy use of [NumPy](https://numpy.org/).
 7. Make sure to follow our [coding style guidelines](#coding-style-guidelines).
-8. Commit your changes to your branch with [useful, descriptive commit messages](https://chris.beams.io/posts/git-commit/): Remember these are
+8. Commit your changes to your branch with [useful, descriptive commit messages](https://cbea.ms/git-commit/): Remember these are
    publicly visible and should still make sense a few months ahead in time.
    While developing, you can keep using the GitHub issue you're working on
    as a place for discussion.
@@ -329,7 +329,7 @@ This also means that, if you can't fix the bug yourself, it will be much easier 
    ```python3
    pybamm.set_logging_level("DEBUG")
    ```
-6. In models that inherit from `pybamm.BaseBatteryModel` (i.e. any battery model), you can use `self.process_parameters_and_discretise` to process a symbol and see what it will look like.
+6. In models that inherit from `pybamm.BaseBatteryModel` (i.e. any battery model), you can use `self.process_symbol` to process a symbol with a fully built model to see what it will look like.
 
 ### Profiling
 

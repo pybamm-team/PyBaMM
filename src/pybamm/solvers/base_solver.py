@@ -12,6 +12,8 @@ import numpy as np
 import pybamm
 from pybamm import ParameterValues
 from pybamm.expression_tree.binary_operators import _Heaviside
+from pybamm.expression_tree.input_parameter import DUMMY_INPUT_PARAMETER_VALUE
+from pybamm.models.base_model import ModelSolutionObservability
 
 
 class BaseSolver:
@@ -287,13 +289,13 @@ class BaseSolver:
             # Check for any ExplicitTimeIntegral or DiscreteTimeSum variables
             processed_time_integral = (
                 pybamm.ProcessedVariableTimeIntegral.from_pybamm_var(
-                    model.variables_and_events[key],
+                    model.get_processed_variable_or_event(key),
                     model.len_rhs_and_alg,
                 )
             )
             # We will evaluate the sum node in the solver and sum it afterwards
             if processed_time_integral is None:
-                var = model.variables_and_events[key]
+                var = model.get_processed_variable_or_event(key)
             else:
                 var = processed_time_integral.sum_node
                 self._time_integral_vars[key] = processed_time_integral
@@ -970,7 +972,7 @@ class BaseSolver:
                                 [t_eval[start_index:end_index]] * ninputs,
                                 model_inputs_list,
                                 [t_interp] * ninputs,
-                                strict=False,
+                                strict=True,
                             ),
                         )
                         p.close()
@@ -1131,7 +1133,7 @@ class BaseSolver:
         if model.convert_to_format == "casadi":
             inputs = casadi.vertcat(*[x for x in inputs_dict.values()])
 
-        events_eval = [None] * num_terminate_events
+        events_eval = np.empty(num_terminate_events)
         for idx, event in enumerate(model.terminate_events_eval):
             if model.convert_to_format == "casadi":
                 event_eval = event(t_eval[0], model.y0, inputs)
@@ -1139,13 +1141,12 @@ class BaseSolver:
                 event_eval = event(t=t_eval[0], y=model.y0, inputs=inputs_dict)
             events_eval[idx] = event_eval
 
-        events_eval = np.array(events_eval)
-        if any(events_eval < 0):
+        if events_eval.min() <= 0:
             # find the events that were triggered by initial conditions
             termination_events = [
                 x for x in model.events if x.event_type == pybamm.EventType.TERMINATION
             ]
-            idxs = np.where(events_eval < 0)[0]
+            idxs = np.where(events_eval <= 0)[0]
             event_names = [termination_events[idx].name for idx in idxs]
             raise pybamm.SolverError(
                 f"Events {event_names} are non-positive at initial conditions"
@@ -1198,7 +1199,7 @@ class BaseSolver:
 
         # sort equations according to slices
         concatenated_initial_conditions = [
-            casadi.vertcat(*[eq for _, eq in sorted(zip(slices, init, strict=False))])
+            casadi.vertcat(*[eq for _, eq in sorted(zip(slices, init, strict=True))])
             for init in initial_conditions
         ]
         return concatenated_initial_conditions
@@ -1341,7 +1342,7 @@ class BaseSolver:
         model_inputs = self._set_up_model_inputs(model, inputs)
 
         # process calculate_sensitivities argument
-        calculate_sensitivities_list, sensitivities_have_changed = (
+        _, sensitivities_have_changed = (
             BaseSolver._solve_process_calculate_sensitivities_arg(
                 model_inputs, model, calculate_sensitivities
             )
@@ -1382,7 +1383,9 @@ class BaseSolver:
 
         else:
             _, concatenated_initial_conditions = model.set_initial_conditions_from(
-                old_solution, return_type="ics"
+                old_solution,
+                inputs=model_inputs,
+                return_type="ics",
             )
             model.y0 = concatenated_initial_conditions.evaluate(0, inputs=model_inputs)
             if using_sensitivities:
@@ -1607,21 +1610,63 @@ class BaseSolver:
         else:
             inputs = ParameterValues.check_parameter_values(inputs)
 
-        # Go through all input parameters that can be found in the model
-        # Only keep the ones that are actually used in the model
-        # If any of them are *not* provided by "inputs", raise an error
+        # First, check all the strictly required input parameters that must be included
+        # for the model to be solvable.
         inputs_in_model = {}
-        for input_param in model.input_parameters:
-            name = input_param.name
-            if name not in inputs:
-                raise pybamm.SolverError(f"No value provided for input '{name}'")
-            inputs_in_model[name] = inputs[name]
+        missing_required_inputs = False
 
-        inputs = inputs_in_model
+        required_input_parameters = [ip.name for ip in model.required_input_parameters]
 
-        ordered_inputs_names = list(inputs.keys())
-        ordered_inputs_names.sort()
-        ordered_inputs = {name: inputs[name] for name in ordered_inputs_names}
+        for name in required_input_parameters:
+            value = inputs.get(name)
+            missing_required_inputs |= value is None
+            if name and value is not None:
+                inputs_in_model[name] = value
+
+        input_parameters = [ip.name for ip in model.input_parameters]
+        if missing_required_inputs:
+            ip = sorted(input_parameters)
+            missing = sorted(set(ip) - set(inputs.keys()))
+
+            ip_str = ", ".join(f"'{n}'" for n in ip)
+            missing_str = ", ".join(f"'{n}'" for n in missing)
+            raise pybamm.SolverError(
+                f"No value provided for input: [{missing_str}].\n"
+                f"Required inputs: [{ip_str}].\n"
+            )
+
+        # Next, check the full set of specified input parameters that are required for
+        # the model to be observable.
+        missing_inputs = []
+        solution_is_observable = model.solution_observable
+        for name in input_parameters:
+            value = inputs.get(name)
+
+            if value is None:
+                # Since the solver has all the strictly required input parameters, but
+                # lacks the total set of input parameters, the model is solvable, but
+                # unobservable. In this case, we can safely set the input parameter to
+                # a dummy value (np.nan)
+                missing_inputs.append(name)
+                value = DUMMY_INPUT_PARAMETER_VALUE
+                model.disable_solution_observability(
+                    ModelSolutionObservability.MISSING_INPUT_PARAMETERS
+                )
+
+            if name not in inputs_in_model:
+                inputs_in_model[name] = value
+
+        if solution_is_observable and missing_inputs:
+            missing_inputs_str = ", ".join(f"'{n}'" for n in missing_inputs)
+            pybamm.logger.warning(
+                f"No value provided for input: [{missing_inputs_str}]. "
+                "The `Solution` can no longer be observed with `solution.observe(symbol)`. "
+                "To fix this, provide all input parameter values to `simulation.solve(..., inputs=inputs)` "
+                "or `simulation.step(..., inputs=inputs)`.",
+            )
+
+        ordered_inputs_names = sorted(inputs_in_model.keys())
+        ordered_inputs = {name: inputs_in_model[name] for name in ordered_inputs_names}
 
         return ordered_inputs
 

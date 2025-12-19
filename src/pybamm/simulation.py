@@ -11,6 +11,7 @@ import numpy as np
 import pybamm
 import pybamm.telemetry
 from pybamm.expression_tree.operations.serialise import Serialise
+from pybamm.models.base_model import ModelSolutionObservability
 from pybamm.util import import_optional_dependency
 
 
@@ -113,6 +114,7 @@ class Simulation:
             # Save the experiment
             self.experiment = experiment.copy()
 
+        model = model.new_copy()
         self._unprocessed_model = model
         self._model = model
 
@@ -124,10 +126,16 @@ class Simulation:
         self._output_variables = output_variables
         self._discretisation_kwargs = discretisation_kwargs or {}
 
+        if bool(getattr(self._solver, "output_variables", [])):
+            model.disable_solution_observability(
+                ModelSolutionObservability.SOLVER_OUTPUT_VARIABLES
+            )
+
         # Initialize empty built states
         self._model_with_set_params = None
         self._built_model = None
         self._built_initial_soc = None
+        self._built_nominal_capacity = None
         self.steps_to_built_models = None
         self.steps_to_built_solvers = None
         self._mesh = None
@@ -162,6 +170,46 @@ class Simulation:
         msg = "pybamm.simulation.set_up_and_parameterise_experiment is deprecated and not meant to be accessed by users."
         warnings.warn(msg, DeprecationWarning, stacklevel=2)
         self._set_up_and_parameterise_experiment(solve_kwargs=solve_kwargs)
+
+    def _update_experiment_models_for_capacity(self, solve_kwargs=None):
+        """
+        Check if the nominal capacity has changed and update the experiment models
+        if needed. This re-processes the models without rebuilding the mesh and
+        discretisation.
+        """
+        current_capacity = self._parameter_values.get(
+            "Nominal cell capacity [A.h]", None
+        )
+
+        if self._built_nominal_capacity == current_capacity:
+            return
+
+        # Capacity has changed, need to re-process the models
+        pybamm.logger.info(
+            f"Nominal capacity changed from {self._built_nominal_capacity} to "
+            f"{current_capacity}. Re-processing experiment models."
+        )
+
+        # Re-parameterise the experiment with the new capacity
+        self._set_up_and_parameterise_experiment(solve_kwargs)
+
+        # Re-discretise the models
+        self.steps_to_built_models = {}
+        self.steps_to_built_solvers = {}
+        for (
+            step,
+            model_with_set_params,
+        ) in self.experiment_unique_steps_to_model.items():
+            built_model = self._disc.process_model(
+                model_with_set_params,
+                inplace=True,
+                delayed_variable_processing=True,
+            )
+            solver = self._solver.copy()
+            self.steps_to_built_solvers[step] = solver
+            self.steps_to_built_models[step] = built_model
+
+        self._built_nominal_capacity = current_capacity
 
     def _set_up_and_parameterise_experiment(self, solve_kwargs=None):
         """
@@ -224,10 +272,12 @@ class Simulation:
         # Process each step
         self.experiment_unique_steps_to_model = {}
         for step in self.experiment.unique_steps:
-            parameterised_model = step.process_model(self._model, parameter_values)
-            self.experiment_unique_steps_to_model[step.basic_repr()] = (
-                parameterised_model
+            new_model = step.process_model(
+                self._model,
+                parameter_values,
+                delayed_variable_processing=True,
             )
+            self.experiment_unique_steps_to_model[step.basic_repr()] = new_model
 
         # Set up rest model if experiment has start times
         if self.experiment.initial_start_time:
@@ -236,10 +286,12 @@ class Simulation:
             # Change ambient temperature to be an input, which will be changed at
             # solve time
             parameter_values["Ambient temperature [K]"] = "[input]"
-            parameterised_model = rest_step.process_model(self._model, parameter_values)
-            self.experiment_unique_steps_to_model["Rest for padding"] = (
-                parameterised_model
+            new_model = rest_step.process_model(
+                self._model,
+                parameter_values,
+                delayed_variable_processing=True,
             )
+            self.experiment_unique_steps_to_model["Rest for padding"] = new_model
 
     def set_parameters(self):
         msg = (
@@ -256,7 +308,9 @@ class Simulation:
             return
 
         self._model_with_set_params = self._parameter_values.process_model(
-            self._unprocessed_model, inplace=False
+            self._unprocessed_model,
+            inplace=False,
+            delayed_variable_processing=True,
         )
         self._parameter_values.process_geometry(self._geometry)
         self._model = self._model_with_set_params
@@ -266,6 +320,7 @@ class Simulation:
             # reset
             self._model_with_set_params = None
             self._built_model = None
+            self._built_nominal_capacity = None
             self.steps_to_built_models = None
             self.steps_to_built_solvers = None
 
@@ -312,7 +367,7 @@ class Simulation:
 
         if self._built_model:
             return
-        elif self._model.is_discretised:
+        if self._model.is_discretised:
             self._model_with_set_params = self._model
             self._built_model = self._model
         else:
@@ -322,7 +377,9 @@ class Simulation:
                 self._mesh, self._spatial_methods, **self._discretisation_kwargs
             )
             self._built_model = self._disc.process_model(
-                self._model_with_set_params, inplace=False
+                self._model_with_set_params,
+                inplace=False,
+                delayed_variable_processing=True,
             )
             # rebuilt model so clear solver setup
             self._solver._model_set_up = {}
@@ -338,6 +395,8 @@ class Simulation:
             self.set_initial_state(initial_soc, direction=direction, inputs=inputs)
 
         if self.steps_to_built_models:
+            # Check if we need to update the models due to capacity change
+            self._update_experiment_models_for_capacity(solve_kwargs)
             return
         else:
             self._set_up_and_parameterise_experiment(solve_kwargs)
@@ -360,11 +419,17 @@ class Simulation:
                 # It's ok to modify the model with set parameters in place as it's
                 # not returned anywhere
                 built_model = self._disc.process_model(
-                    model_with_set_params, inplace=True
+                    model_with_set_params,
+                    inplace=True,
+                    delayed_variable_processing=True,
                 )
                 solver = self._solver.copy()
                 self.steps_to_built_solvers[step] = solver
                 self.steps_to_built_models[step] = built_model
+
+            self._built_nominal_capacity = self._parameter_values.get(
+                "Nominal cell capacity [A.h]", None
+            )
 
     def solve(
         self,
@@ -778,7 +843,7 @@ class Simulation:
                             feasible = False
                             # If none of the cycles worked, raise an error
                             if cycle_num == 1 and step_num == 1:
-                                raise error
+                                raise error from error
                             # Otherwise, just stop this cycle
                             break
 
@@ -1270,6 +1335,9 @@ class Simulation:
         split_by_electrode : bool, optional
             Whether to show the overpotentials for the negative and positive electrodes
             separately. Default is False.
+        electrode_phases : (str, str), optional
+            The phases for which to plot the anode and cathode overpotentials, respectively.
+            Default is `("primary", "primary")`.
         show_plot : bool, optional
             Whether to show the plots. Default is True. Set to False if you want to
             only display the plot after plt.show() has been called.
@@ -1285,7 +1353,7 @@ class Simulation:
             ax=ax,
             show_legend=show_legend,
             split_by_electrode=split_by_electrode,
-            electrode_phases=("primary", "primary"),
+            electrode_phases=electrode_phases,
             show_plot=show_plot,
             **kwargs_fill,
         )

@@ -6,7 +6,7 @@ To make it easier to install PyBaMM, we recommend using the Windows Subsystem fo
 Install WSL
 -----------
 
-Install Ubuntu 22.04 or 20.04 LTS as a distribution for WSL following `Microsoft's guide to install WSL <https://docs.microsoft.com/en-us/windows/wsl/install-win10>`__. For a seamless development environment, refer to `this guide <https://docs.microsoft.com/en-us/windows/wsl/setup/environment>`__.
+Install Ubuntu 22.04 or 20.04 LTS as a distribution for WSL following `Microsoft's guide to install WSL <https://learn.microsoft.com/en-us/windows/wsl/install-win10>`__.
 
 Install PyBaMM
 --------------

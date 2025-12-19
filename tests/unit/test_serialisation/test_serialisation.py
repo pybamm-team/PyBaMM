@@ -19,6 +19,8 @@ from pybamm.expression_tree.operations.serialise import (
     SUPPORTED_SCHEMA_VERSION,
     ExpressionFunctionParameter,
     Serialise,
+    convert_symbol_from_json,
+    convert_symbol_to_json,
 )
 from pybamm.models.full_battery_models.lithium_ion.basic_dfn import BasicDFN
 from pybamm.models.full_battery_models.lithium_ion.basic_spm import BasicSPM
@@ -143,7 +145,7 @@ class TestSerialiseModels:
         t = np.linspace(0, 1, 100)
         solution = solver.solve(model, t)
 
-        model.save_model("heat_equation", variables=model._variables, mesh=mesh)
+        model.save_model("heat_equation", mesh=mesh)
         new_model = pybamm.load_model("heat_equation.json")
 
         new_solver = pybamm.ScipySolver()
@@ -510,10 +512,7 @@ class TestSerialise:
         new_solution = new_solver.solve(new_model, [0, 3600])
 
         # check an error is raised when plotting the solution
-        with pytest.raises(
-            AttributeError,
-            match="No variables to plot",
-        ):
+        with pytest.raises(AttributeError):
             new_solution.plot()
 
         # load when specifying the battery model to use
@@ -560,14 +559,21 @@ class TestSerialise:
         # setup and discretise
         _ = pybamm.ScipySolver().solve(model, np.linspace(0, 1))
 
+        assert set(model.get_processed_variables_dict().keys()) == set(
+            model.variables.keys()
+        )
+
         Serialise().save_model(
             model,
-            variables=model.variables,
             filename="test_base_model",
         )
 
         new_model = Serialise().load_model("test_base_model.json")
         os.remove("test_base_model.json")
+
+        assert set(new_model.get_processed_variables_dict().keys()) == set(
+            model.variables.keys()
+        )
 
         new_solution = pybamm.ScipySolver().solve(new_model, np.linspace(0, 1))
 
@@ -586,7 +592,6 @@ class TestSerialise:
 
         Serialise().save_model(
             model,
-            variables=model.variables,
             mesh=mesh,
             filename="test_plotting_model",
         )
@@ -604,37 +609,45 @@ class TestSerialise:
 
     def test_serialise_scalar(self):
         S = pybamm.Scalar(2.718)
-        j = Serialise.convert_symbol_to_json(S)
-        S2 = Serialise.convert_symbol_from_json(j)
+        j = convert_symbol_to_json(S)
+        S2 = convert_symbol_from_json(j)
         assert isinstance(S2, pybamm.Scalar)
         assert S2.value == pytest.approx(2.718)
 
     def test_serialise_time(self):
         t = pybamm.Time()
-        j = Serialise.convert_symbol_to_json(t)
-        t2 = Serialise.convert_symbol_from_json(j)
+        j = convert_symbol_to_json(t)
+        t2 = convert_symbol_from_json(j)
         assert isinstance(t2, pybamm.Time)
+
+    def test_serialise_input_parameter(self):
+        """Test InputParameter serialization and deserialization."""
+        ip = pybamm.InputParameter("test_param")
+        j = convert_symbol_to_json(ip)
+        ip_restored = convert_symbol_from_json(j)
+        assert isinstance(ip_restored, pybamm.InputParameter)
+        assert ip_restored.name == "test_param"
 
     def test_convert_symbol_to_json_with_number_and_list(self):
         for val in (0, 3.14, -7, True):
-            out = Serialise.convert_symbol_to_json(val)
+            out = convert_symbol_to_json(val)
             assert out is val or out == val
 
         sample = [1, 2, 3, "foo", 4.5]
-        out = Serialise.convert_symbol_to_json(sample)
+        out = convert_symbol_to_json(sample)
         assert out is sample
 
     def test_convert_symbol_from_json_with_primitives(self):
-        assert Serialise.convert_symbol_from_json(3.14) == 3.14
-        assert Serialise.convert_symbol_from_json(42) == 42
-        assert Serialise.convert_symbol_from_json(True) is True
+        assert convert_symbol_from_json(3.14) == 3.14
+        assert convert_symbol_from_json(42) == 42
+        assert convert_symbol_from_json(True) is True
 
     def test_convert_symbol_from_json_with_none(self):
-        assert Serialise.convert_symbol_from_json(None) is None
+        assert convert_symbol_from_json(None) is None
 
     def test_convert_symbol_from_json_unexpected_string(self):
         with pytest.raises(ValueError, match=r"Unexpected raw string in JSON: foo"):
-            Serialise.convert_symbol_from_json("foo")
+            convert_symbol_from_json("foo")
 
     def test_numpy_array_conversion(self):
         arr = np.array([1, 2, 3])
@@ -673,8 +686,8 @@ class TestSerialise:
         var1 = pybamm.Variable("x", bounds=(0, 1))
         var2 = pybamm.Variable("x", bounds=(0, 2))
 
-        json1 = Serialise.convert_symbol_to_json(var1)
-        json2 = Serialise.convert_symbol_to_json(var2)
+        json1 = convert_symbol_to_json(var1)
+        json2 = convert_symbol_to_json(var2)
 
         key1 = Serialise._create_symbol_key(json1)
         key2 = Serialise._create_symbol_key(json2)
@@ -686,8 +699,8 @@ class TestSerialise:
     def test_primary_broadcast_serialisation(self):
         child = pybamm.Scalar(42)
         symbol = pybamm.PrimaryBroadcast(child, "negative electrode")
-        json_dict = Serialise.convert_symbol_to_json(symbol)
-        symbol2 = Serialise.convert_symbol_from_json(json_dict)
+        json_dict = convert_symbol_to_json(symbol)
+        symbol2 = convert_symbol_from_json(json_dict)
 
         assert isinstance(symbol2, pybamm.PrimaryBroadcast)
         assert symbol2.broadcast_domain == ["negative electrode"]
@@ -701,8 +714,8 @@ class TestSerialise:
         interp = pybamm.Interpolant(
             x, y, child, name="test_interplolant", interpolator="linear"
         )
-        json_dict = Serialise.convert_symbol_to_json(interp)
-        interp2 = Serialise.convert_symbol_from_json(json_dict)
+        json_dict = convert_symbol_to_json(interp)
+        interp2 = convert_symbol_from_json(json_dict)
 
         assert isinstance(interp2, pybamm.Interpolant)
         assert interp2.name == "test_interplolant"
@@ -713,8 +726,8 @@ class TestSerialise:
 
     def test_variable_serialisation(self):
         var = pybamm.Variable("var", domain="separator")
-        json_dict = Serialise.convert_symbol_to_json(var)
-        var2 = Serialise.convert_symbol_from_json(json_dict)
+        json_dict = convert_symbol_to_json(var)
+        var2 = convert_symbol_from_json(json_dict)
 
         assert isinstance(var2, pybamm.Variable)
         assert var2.name == "var"
@@ -727,8 +740,8 @@ class TestSerialise:
         var2 = pybamm.Variable("a", domain="separator")
         var3 = pybamm.Variable("a", domain="positive electrode")
         concat_var = pybamm.ConcatenationVariable(var1, var2, var3, name="conc_var")
-        json_dict = Serialise.convert_symbol_to_json(concat_var)
-        concat_var2 = Serialise.convert_symbol_from_json(json_dict)
+        json_dict = convert_symbol_to_json(concat_var)
+        concat_var2 = convert_symbol_from_json(json_dict)
 
         assert isinstance(concat_var2, pybamm.ConcatenationVariable)
         assert concat_var2.name == "a"
@@ -747,8 +760,8 @@ class TestSerialise:
             "negative electrode",
             {"primary": ["negative electrode"], "secondary": ["current collector"]},
         )
-        json_dict = Serialise.convert_symbol_to_json(fb)
-        fb2 = Serialise.convert_symbol_from_json(json_dict)
+        json_dict = convert_symbol_to_json(fb)
+        fb2 = convert_symbol_from_json(json_dict)
 
         assert isinstance(fb2, pybamm.FullBroadcast)
         assert fb2.broadcast_domain == ["negative electrode"]
@@ -761,8 +774,8 @@ class TestSerialise:
         child = pybamm.Variable("c", domain="negative electrode")
         sb = pybamm.SecondaryBroadcast(child, "current collector")
 
-        json_dict = Serialise.convert_symbol_to_json(sb)
-        sb2 = Serialise.convert_symbol_from_json(json_dict)
+        json_dict = convert_symbol_to_json(sb)
+        sb2 = convert_symbol_from_json(json_dict)
 
         assert isinstance(sb2, pybamm.SecondaryBroadcast)
         assert sb2.broadcast_domain == ["current collector"]
@@ -773,8 +786,8 @@ class TestSerialise:
         sv = pybamm.SpatialVariable(
             "x", domain="negative electrode", coord_sys="cartesian"
         )
-        json_dict = Serialise.convert_symbol_to_json(sv)
-        sv2 = Serialise.convert_symbol_from_json(json_dict)
+        json_dict = convert_symbol_to_json(sv)
+        sv2 = convert_symbol_from_json(json_dict)
 
         assert isinstance(sv2, pybamm.SpatialVariable)
         assert sv2.name == "x"
@@ -784,8 +797,8 @@ class TestSerialise:
     def test_boundary_value_serialisation(self):
         var = pybamm.SpatialVariable("x", domain="electrode")
         bv = pybamm.BoundaryValue(var, "left")
-        json_dict = Serialise.convert_symbol_to_json(bv)
-        bv2 = Serialise.convert_symbol_from_json(json_dict)
+        json_dict = convert_symbol_to_json(bv)
+        bv2 = convert_symbol_from_json(json_dict)
 
         assert isinstance(bv2, pybamm.BoundaryValue)
         assert bv2.side == "left"
@@ -800,12 +813,12 @@ class TestSerialise:
         with pytest.raises(
             NotImplementedError, match="SpecificFunction is not supported directly"
         ):
-            Serialise.convert_symbol_to_json(symbol)
+            convert_symbol_to_json(symbol)
 
     def test_unary_operator_serialisation(self):
         expr = pybamm.Negate(pybamm.Scalar(5))
-        json_dict = Serialise.convert_symbol_to_json(expr)
-        expr2 = Serialise.convert_symbol_from_json(json_dict)
+        json_dict = convert_symbol_to_json(expr)
+        expr2 = convert_symbol_from_json(json_dict)
 
         assert isinstance(expr2, pybamm.Negate)
         assert isinstance(expr2.child, pybamm.Scalar)
@@ -813,8 +826,8 @@ class TestSerialise:
 
     def test_binary_operator_serialisation(self):
         expr = pybamm.Addition(pybamm.Scalar(2), pybamm.Scalar(3))
-        json_dict = Serialise.convert_symbol_to_json(expr)
-        expr2 = Serialise.convert_symbol_from_json(json_dict)
+        json_dict = convert_symbol_to_json(expr)
+        expr2 = convert_symbol_from_json(json_dict)
 
         assert isinstance(expr2, pybamm.Addition)
         values = [c.value for c in expr2.children]
@@ -830,7 +843,7 @@ class TestSerialise:
             },
         }
 
-        symbol = Serialise.convert_symbol_from_json(json_data)
+        symbol = convert_symbol_from_json(json_data)
 
         assert isinstance(symbol, pybamm.Symbol)
         assert symbol.name == "test symbol"
@@ -844,7 +857,7 @@ class TestSerialise:
     def test_import_base_class_non_builtin_object(self, tmp_path):
         # Minimal model JSON with a non-existent base class
         model_json = {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "pybamm_version": pybamm.__version__,
             "model": {
                 "base_class": "nonexistent_module.DummyModel",
@@ -874,12 +887,12 @@ class TestSerialise:
         diff_var = pybamm.Variable("r")
         func_param = pybamm.FunctionParameter("my_func", {"x": x}, diff_var)
 
-        json_dict = Serialise.convert_symbol_to_json(func_param)
+        json_dict = convert_symbol_to_json(func_param)
         assert "diff_variable" in json_dict
         assert json_dict["diff_variable"]["type"] == "Variable"
         assert json_dict["diff_variable"]["name"] == "r"
 
-        expr2 = Serialise.convert_symbol_from_json(json_dict)
+        expr2 = convert_symbol_from_json(json_dict)
         assert isinstance(expr2, pybamm.FunctionParameter)
         assert expr2.diff_variable.name == "r"
         assert expr2.name == "my_func"
@@ -889,7 +902,7 @@ class TestSerialise:
         x = pybamm.SpatialVariable("x", domain="negative electrode")
         ind_int = pybamm.IndefiniteIntegral(x, x)
 
-        json_dict = Serialise.convert_symbol_to_json(ind_int)
+        json_dict = convert_symbol_to_json(ind_int)
         assert json_dict["type"] == "IndefiniteIntegral"
 
         assert (
@@ -903,7 +916,7 @@ class TestSerialise:
         assert int_var_json["type"] == "SpatialVariable"
         assert int_var_json["name"] == "x"
 
-        expr2 = Serialise.convert_symbol_from_json(json_dict)
+        expr2 = convert_symbol_from_json(json_dict)
         assert isinstance(expr2, pybamm.IndefiniteIntegral)
         assert isinstance(expr2.child, pybamm.SpatialVariable)
         assert expr2.child.name == "x"
@@ -920,7 +933,7 @@ class TestSerialise:
         }
 
         with pytest.raises(TypeError, match=r"Expected SpatialVariable"):
-            Serialise.convert_symbol_from_json(bad_json_dict)
+            convert_symbol_from_json(bad_json_dict)
 
     def test_invalid_filename(self):
         model = pybamm.lithium_ion.DFN()
@@ -932,8 +945,8 @@ class TestSerialise:
     def test_symbol_fallback_serialisation(self):
         var = pybamm.Variable("v", domain="electrode")
         diff = pybamm.Gradient(var)
-        json_dict = Serialise.convert_symbol_to_json(diff)
-        diff2 = Serialise.convert_symbol_from_json(json_dict)
+        json_dict = convert_symbol_to_json(diff)
+        diff2 = convert_symbol_from_json(json_dict)
 
         assert isinstance(diff2, pybamm.Gradient)
         assert isinstance(diff2.children[0], pybamm.Variable)
@@ -947,7 +960,7 @@ class TestSerialise:
 
         dummy = NotSymbol()
         with pytest.raises(ValueError) as e:
-            Serialise.convert_symbol_to_json(dummy)
+            convert_symbol_to_json(dummy)
 
         assert "Error processing 'not_a_symbol'. Unknown symbol type:" in str(e.value)
 
@@ -955,15 +968,15 @@ class TestSerialise:
         unhandled_json = {"type": "NotARealSymbol", "foo": "bar"}
         with pytest.raises(
             ValueError,
-            match=r"Unhandled symbol type or malformed entry: .*NotARealSymbol",
+            match=r"Unknown symbol type: NotARealSymbol",
         ):
-            Serialise.convert_symbol_from_json(unhandled_json)
+            convert_symbol_from_json(unhandled_json)
 
         unhandled_json2 = {"a": 1, "b": 2}
         with pytest.raises(
-            ValueError, match=r"Unhandled symbol type or malformed entry: .*"
+            ValueError, match=r"Missing 'type' key in JSON data: {'a': 1, 'b': 2}"
         ):
-            Serialise.convert_symbol_from_json(unhandled_json2)
+            convert_symbol_from_json(unhandled_json2)
 
     def test_file_write_raises_ioerror(self):
         # testing behaviour when file system is read-only to raise exception
@@ -983,9 +996,8 @@ class TestSerialise:
         model.name = "TestModel"
         model.rhs = {pybamm.Variable("c"): pybamm.Variable("c")}
 
-        with patch.object(
-            Serialise,
-            "convert_symbol_to_json",
+        with patch(
+            "pybamm.expression_tree.operations.serialise.convert_symbol_to_json",
             side_effect=Exception("conversion failed"),
         ):
             with pytest.raises(
@@ -1045,7 +1057,7 @@ class TestSerialise:
         rhs_expr = {"type": "Scalar", "value": 1.0}
 
         model_json = {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "pybamm_version": pybamm.__version__,
             "model": {
                 "base_class": "",
@@ -1064,7 +1076,8 @@ class TestSerialise:
             json.dump(model_json, f)
 
         with pytest.raises(
-            ValueError, match=r"(?i)failed to process symbol key.*unhandled symbol type"
+            ValueError,
+            match=r"Failed to process symbol key for variable {'not_a_valid_symbol': 123}",
         ):
             Serialise.load_custom_model(str(file_path))
 
@@ -1074,6 +1087,7 @@ class TestSerialise:
             def __init__(self):
                 self.rhs = {}
                 self.algebraic = {}
+                self.is_processed = False
 
         m = DummyModelMissing()
         with pytest.raises(AttributeError) as e:
@@ -1084,9 +1098,19 @@ class TestSerialise:
             section in msg for section in ["initial_conditions", "events", "variables"]
         )
 
+    def test_save_raises_for_being_processed(self):
+        class DummyModelMissing:
+            # e.g. only has rhs and algebraic
+            def __init__(self):
+                self.is_processed = True
+
+        m = DummyModelMissing()
+        with pytest.raises(ValueError, match="Cannot serialise a built model."):
+            Serialise.save_custom_model(m, filename="irrelevant")
+
     def test_model_with_missing_json_sections(self, tmp_path):
         model_json = {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "pybamm_version": pybamm.__version__,
             "model": {
                 "name": "BadModel",
@@ -1115,7 +1139,7 @@ class TestSerialise:
         bad_rhs = {"this_will_fail": True}
 
         model_json = {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "pybamm_version": pybamm.__version__,
             "model": {
                 "base_class": "",
@@ -1136,7 +1160,7 @@ class TestSerialise:
 
         with pytest.raises(
             ValueError,
-            match=r"(?i)failed to convert rhs.*unhandled symbol type or malformed entry",
+            match=r"Failed to convert rhs",
         ):
             Serialise.load_custom_model(str(file_path))
 
@@ -1151,7 +1175,7 @@ class TestSerialise:
 
         # 2) Build JSON with all required keys
         model_json = {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "pybamm_version": pybamm.__version__,
             "model": {
                 "base_class": "",
@@ -1172,7 +1196,7 @@ class TestSerialise:
 
         with pytest.raises(
             ValueError,
-            match=r"(?i)failed to convert algebraic.*unhandled symbol type or malformed entry",
+            match=r"Failed to convert algebraic",
         ):
             Serialise.load_custom_model(str(file_path))
 
@@ -1187,7 +1211,7 @@ class TestSerialise:
 
         # 2) Build JSON with all required keys
         model_json = {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "pybamm_version": pybamm.__version__,
             "model": {
                 "base_class": "",
@@ -1208,7 +1232,7 @@ class TestSerialise:
 
         with pytest.raises(
             ValueError,
-            match=r"(?i)failed to convert initial condition.*unhandled symbol type or malformed entry",
+            match=r"Failed to convert initial condition",
         ):
             Serialise.load_custom_model(str(file_path))
 
@@ -1227,7 +1251,7 @@ class TestSerialise:
         }
 
         model_json = {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "pybamm_version": pybamm.__version__,
             "model": {
                 "base_class": "",
@@ -1265,7 +1289,7 @@ class TestSerialise:
         condition_dict = {"left": (invalid_expression_json, "Dirichlet")}
 
         model_data = {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "pybamm_version": pybamm.__version__,
             "model": {
                 "base_class": "",
@@ -1292,7 +1316,7 @@ class TestSerialise:
 
     def test_event_conversion_failure(self, tmp_path):
         model_data = {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "pybamm_version": pybamm.__version__,
             "model": {
                 "base_class": "",
@@ -1318,13 +1342,13 @@ class TestSerialise:
 
         with pytest.raises(
             ValueError,
-            match=r"(?i)failed to convert event 'bad event'.*unhandled symbol type or malformed entry",
+            match=r"Failed to convert event 'Bad Event'",
         ):
             Serialise.load_custom_model(str(file))
 
     def test_variable_conversion_failure(self, tmp_path):
         model_data = {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "pybamm_version": pybamm.__version__,
             "model": {
                 "base_class": "",
@@ -1335,6 +1359,7 @@ class TestSerialise:
                 "boundary_conditions": [],
                 "events": [],
                 "variables": {"Bad Variable": {"bad": "structure"}},
+                "fixed_input_parameters": {},
             },
         }
 
@@ -1344,7 +1369,7 @@ class TestSerialise:
 
         with pytest.raises(
             ValueError,
-            match=r"(?i)failed to convert variable 'bad variable'.*unhandled symbol type or malformed entry",
+            match=r"Failed to convert variable 'Bad Variable'",
         ):
             Serialise.load_custom_model(str(file))
 
@@ -1612,7 +1637,7 @@ class TestSpatialMethodsSerialization:
         """Test error handling for invalid spatial method class."""
         # Create invalid spatial methods data
         invalid_data = {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "pybamm_version": pybamm.__version__,
             "spatial_methods": {
                 "macroscale": {
@@ -1798,7 +1823,7 @@ class TestSubmeshTypesSerialization:
         """Test error handling for invalid submesh type class."""
         # Create invalid submesh types data
         invalid_data = {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "pybamm_version": pybamm.__version__,
             "submesh_types": {
                 "negative electrode": {
@@ -1836,7 +1861,7 @@ class TestSerializationErrorHandling:
     def test_missing_geometry_section(self):
         """Test error when geometry section is missing."""
         invalid_data = {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "pybamm_version": pybamm.__version__,
         }
 
@@ -1846,7 +1871,7 @@ class TestSerializationErrorHandling:
     def test_missing_spatial_methods_section(self):
         """Test error when spatial_methods section is missing."""
         invalid_data = {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "pybamm_version": pybamm.__version__,
         }
 
@@ -1856,7 +1881,7 @@ class TestSerializationErrorHandling:
     def test_missing_var_pts_section(self):
         """Test error when var_pts section is missing."""
         invalid_data = {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "pybamm_version": pybamm.__version__,
         }
 
@@ -1881,7 +1906,7 @@ class TestSerializationErrorHandling:
     def test_missing_submesh_types_section(self):
         """Test error when submesh_types section is missing."""
         invalid_data = {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "pybamm_version": pybamm.__version__,
         }
 
@@ -2185,7 +2210,7 @@ class TestSerializationEdgeCases:
     def test_spatial_methods_import_error(self):
         """Test import error handling in spatial methods loading."""
         invalid_data = {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "pybamm_version": pybamm.__version__,
             "spatial_methods": {
                 "domain": {
@@ -2354,7 +2379,7 @@ class TestSerializationEdgeCases:
     def test_load_spatial_methods_general_exception(self):
         """Test general exception handling in load_spatial_methods."""
         invalid_data = {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "pybamm_version": pybamm.__version__,
             "spatial_methods": {
                 "domain": {
@@ -2372,7 +2397,7 @@ class TestSerializationEdgeCases:
     def test_load_submesh_types_general_exception(self):
         """Test general exception handling in load_submesh_types."""
         invalid_data = {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "pybamm_version": pybamm.__version__,
             "submesh_types": {
                 "domain": {
@@ -2388,7 +2413,7 @@ class TestSerializationEdgeCases:
     def test_load_custom_model_missing_model_section(self, tmp_path):
         """Test that missing 'model' section raises KeyError."""
         model_json = {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "pybamm_version": pybamm.__version__,
             # Missing 'model' key
         }
@@ -2403,7 +2428,7 @@ class TestSerializationEdgeCases:
     def test_load_custom_model_empty_base_class(self, tmp_path):
         """Test loading custom model with empty base class (should use pybamm.BaseModel)."""
         model_json = {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "pybamm_version": pybamm.__version__,
             "model": {
                 "name": "TestModel",

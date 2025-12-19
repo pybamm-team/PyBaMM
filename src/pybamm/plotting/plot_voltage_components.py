@@ -31,6 +31,9 @@ def plot_voltage_components(
     split_by_electrode : bool, optional
         Whether to show the overpotentials for the negative and positive electrodes
         separately. Default is False.
+    electrode_phases : (str, str), optional
+        The phases for which to plot the anode and cathode overpotentials, respectively.
+        Default is `("primary", "primary")`.
     show_plot : bool, optional
         Whether to show the plots. Default is True. Set to False if you want to
         only display the plot after plt.show() has been called.
@@ -110,6 +113,12 @@ def plot_voltage_components(
             "Ohmic negative electrode overpotential",
             "Ohmic positive electrode overpotential",
         ]
+    # Only add the contact overpotential label if its values are not (numerically) all zero
+    if not np.allclose(
+        solution["Contact overpotential [V]"].entries, 0, atol=1e-12, equal_nan=True
+    ):
+        overpotentials.append("Contact overpotential [V]")
+        labels.append("Contact overpotential")
 
     # Plot
     # Initialise
@@ -152,8 +161,9 @@ def plot_voltage_components(
     # Plot components
     for overpotential, label in zip(overpotentials, labels, strict=False):
         # negative overpotentials are positive for a discharge and negative for a charge
+        # Contact overpotential is positive for a discharge and negative for a charge
         # so we have to multiply by -1 to show them correctly
-        sgn = -1 if "egative" in overpotential else 1
+        sgn = -1 if ("egative" in overpotential or "Contact" in overpotential) else 1
         multiplier = sgn if "attery" in overpotential else sgn * num_cells
         bottom = top + multiplier * solution[overpotential].entries
         ax.fill_between(time, bottom, top, **kwargs_fill, label=label)

@@ -287,8 +287,14 @@ class Basic3DThermalSPM(BaseModel):
             )  # pragma: no cover
 
         self.boundary_conditions[T] = {}
-        lambda_eff = self.param.lambda_eff(T)
 
         for face, h_coeff in face_params.items():
-            q_face = -h_coeff * (T - T_amb)
-            self.boundary_conditions[T][face] = (q_face / lambda_eff, "Neumann")
+            # Evaluate T and lambda_eff at the boundary
+            T_boundary = pybamm.boundary_value(T, face)
+            lambda_eff_boundary = pybamm.boundary_value(self.param.lambda_eff(T), face)
+            # T_amb is already evaluated at the boundary coordinates
+            q_face = -h_coeff * (T_boundary - T_amb)
+            self.boundary_conditions[T][face] = (
+                q_face / lambda_eff_boundary,
+                "Neumann",
+            )

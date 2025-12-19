@@ -61,7 +61,8 @@ from .expression_tree.operations.unpack_symbols import SymbolUnpacker
 from .expression_tree.operations.serialise import Serialise,ExpressionFunctionParameter
 
 # Model classes
-from .models.base_model import BaseModel
+from .models.base_model import BaseModel, ModelSolutionObservability
+from .models.symbol_processor import SymbolProcessor
 from .models.event import Event
 from .models.event import EventType
 
@@ -109,7 +110,7 @@ from .expression_tree.independent_variable import KNOWN_COORD_SYS
 from .geometry import standard_spatial_vars
 
 # Parameter classes and methods
-from .parameters.parameter_values import ParameterValues
+from .parameters.parameter_values import ParameterValues, scalarize_dict, arrayize_dict
 from .parameters import constants
 from .parameters.geometric_parameters import geometric_parameters, GeometricParameters
 from .parameters.electrical_parameters import (
