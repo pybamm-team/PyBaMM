@@ -990,7 +990,9 @@ class TestParameterValues:
             "d_var1": d * var1,
         }
 
-        parameter_values = pybamm.ParameterValues({"a": 1, "b": 2, "c": 3, "d": 42})
+        parameter_values = pybamm.ParameterValues(
+            {"a": 1, "b": 2, "c": 3, "d": 42, "e": 1 + pybamm.InputParameter("f")}
+        )
         parameter_values.process_model(model)
         # rhs
         assert isinstance(model.rhs[var1], pybamm.Gradient)
@@ -1020,9 +1022,11 @@ class TestParameterValues:
         assert isinstance(proc_d.children[0], pybamm.Scalar)
         assert isinstance(proc_d.children[1], pybamm.Variable)
 
-        # Check fixed_input_parameters - should be empty when no InputParameters
+        # Check fixed_input_parameters - should find the InputParameter within
+        # the expression for e
         assert hasattr(model, "fixed_input_parameters")
-        assert model.fixed_input_parameters == {}
+        assert isinstance(model.fixed_input_parameters, set)
+        assert model.fixed_input_parameters == {pybamm.InputParameter("f")}
 
         # Test with InputParameters
         model2 = pybamm.BaseModel()
@@ -1034,10 +1038,8 @@ class TestParameterValues:
         )
         parameter_values2.process_model(model2)
         assert hasattr(model2, "fixed_input_parameters")
-        assert "input1" in model2.fixed_input_parameters
-        assert "input2" in model2.fixed_input_parameters
-        assert model2.fixed_input_parameters["input1"] == input_param1
-        assert model2.fixed_input_parameters["input2"] == input_param2
+        assert input_param1 in model2.fixed_input_parameters
+        assert input_param2 in model2.fixed_input_parameters
 
         # bad boundary conditions
         model = pybamm.BaseModel()
