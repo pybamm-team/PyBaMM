@@ -1,0 +1,77 @@
+[workspace]
+channels = ["conda-forge"]
+platforms = ["win-64", "linux-64", "osx-64", "osx-arm64"]
+
+[dependencies]
+python = ">=3.10,<3.13"
+black = "*"
+numpy = "*"
+scipy = ">=1.11.4"
+casadi = "==3.6.7"
+xarray = ">=2022.6.0"
+anytree = ">=2.8.0"
+sympy = ">=1.12"
+typing-extensions = ">=4.10.0"
+pandas = ">=1.5.0"
+pooch = ">=1.8.1"
+posthog = "*"
+pyyaml = "*"
+platformdirs = "*"
+
+[pypi-dependencies]
+pybamm = { path = ".", editable = true }
+pybammsolvers = ">=0.3.3,<0.4.0"
+
+[feature.dev.dependencies]
+pytest = ">=9.0"
+pytest-xdist = "*"
+pytest-mock = "*"
+pytest-cov = "*"
+hypothesis = "*"
+nbmake = "*"
+ruff = "*"
+nox = "*"
+pre-commit = "*"
+
+[feature.docs.dependencies]
+sphinx = ">=6"
+sphinx-rtd-theme = ">=0.5"
+pydata-sphinx-theme = "*"
+myst-parser = "*"
+nbsphinx = "*"
+ipykernel = "*"
+ipywidgets = "*"
+
+[feature.plot.dependencies]
+matplotlib = ">=3.6.0"
+
+[feature.examples.dependencies]
+jupyter = "*"
+
+[feature.jax.dependencies]
+jax = ">=0.4.36,<0.7.0"
+
+[feature.jax]
+platforms = ["linux-64", "osx-64", "osx-arm64"]
+
+[feature.bpx.dependencies]
+bpx = ">=0.5.0,<0.6.0"
+
+[feature.cite.dependencies]
+pybtex = ">=0.25.0"
+
+[feature.tqdm.dependencies]
+tqdm = "*"
+
+[environments]
+default = { solve-group = "default" }
+bpx = { features = ["bpx"], solve-group = "default" }
+cite = { features = ["cite"], solve-group = "default" }
+dev = { features = ["dev"], solve-group = "default" }
+docs = { features = ["docs"], solve-group = "default" }
+examples = { features = ["examples"], solve-group = "default" }
+jax = { features = ["jax"], solve-group = "jax" }
+plot = { features = ["plot"], solve-group = "default" }
+tqdm = { features = ["tqdm"], solve-group = "default" }
+
+[tasks]

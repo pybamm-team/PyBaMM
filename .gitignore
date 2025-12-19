@@ -117,3 +117,6 @@ results/
 
 # tests
 test_callback.log
+# pixi environments
+.pixi/*
+!.pixi/config.toml
