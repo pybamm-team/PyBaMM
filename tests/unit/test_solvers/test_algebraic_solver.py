@@ -137,10 +137,12 @@ class TestAlgebraicSolver:
         solver = pybamm.AlgebraicSolver()
         solution = solver.solve(model)
         np.testing.assert_array_equal(
-            model.variables["var1"].evaluate(t=None, y=solution.y), sol[:100]
+            model.get_processed_variable("var1").evaluate(t=None, y=solution.y),
+            sol[:100],
         )
         np.testing.assert_array_equal(
-            model.variables["var2"].evaluate(t=None, y=solution.y), sol[100:]
+            model.get_processed_variable("var2").evaluate(t=None, y=solution.y),
+            sol[100:],
         )
 
         # Test without Jacobian
@@ -148,10 +150,12 @@ class TestAlgebraicSolver:
         solver.models_set_up = set()
         solution_no_jac = solver.solve(model)
         np.testing.assert_array_equal(
-            model.variables["var1"].evaluate(t=None, y=solution_no_jac.y), sol[:100]
+            model.get_processed_variable("var1").evaluate(t=None, y=solution_no_jac.y),
+            sol[:100],
         )
         np.testing.assert_array_equal(
-            model.variables["var2"].evaluate(t=None, y=solution_no_jac.y), sol[100:]
+            model.get_processed_variable("var2").evaluate(t=None, y=solution_no_jac.y),
+            sol[100:],
         )
 
     def test_model_solver_least_squares(self):
@@ -172,13 +176,13 @@ class TestAlgebraicSolver:
         solver = pybamm.AlgebraicSolver("lsq")
         solution = solver.solve(model)
         np.testing.assert_allclose(
-            model.variables["var1"].evaluate(t=None, y=solution.y),
+            model.get_processed_variable("var1").evaluate(t=None, y=solution.y),
             sol[:100],
             rtol=1e-7,
             atol=1e-6,
         )
         np.testing.assert_allclose(
-            model.variables["var2"].evaluate(t=None, y=solution.y),
+            model.get_processed_variable("var2").evaluate(t=None, y=solution.y),
             sol[100:],
             rtol=1e-7,
             atol=1e-6,
@@ -189,13 +193,13 @@ class TestAlgebraicSolver:
         solver = pybamm.AlgebraicSolver("lsq__trf")
         solution_no_jac = solver.solve(model)
         np.testing.assert_allclose(
-            model.variables["var1"].evaluate(t=None, y=solution_no_jac.y),
+            model.get_processed_variable("var1").evaluate(t=None, y=solution_no_jac.y),
             sol[:100],
             rtol=1e-7,
             atol=1e-6,
         )
         np.testing.assert_allclose(
-            model.variables["var2"].evaluate(t=None, y=solution_no_jac.y),
+            model.get_processed_variable("var2").evaluate(t=None, y=solution_no_jac.y),
             sol[100:],
             rtol=1e-7,
             atol=1e-6,
@@ -219,13 +223,13 @@ class TestAlgebraicSolver:
         solver = pybamm.AlgebraicSolver("minimize", tol=1e-8)
         solution = solver.solve(model)
         np.testing.assert_allclose(
-            model.variables["var1"].evaluate(t=None, y=solution.y),
+            model.get_processed_variable("var1").evaluate(t=None, y=solution.y),
             sol[:100],
             rtol=1e-7,
             atol=1e-6,
         )
         np.testing.assert_allclose(
-            model.variables["var2"].evaluate(t=None, y=solution.y),
+            model.get_processed_variable("var2").evaluate(t=None, y=solution.y),
             sol[100:],
             rtol=1e-7,
             atol=1e-6,
@@ -236,13 +240,13 @@ class TestAlgebraicSolver:
         solver = pybamm.AlgebraicSolver("minimize__BFGS")
         solution_no_jac = solver.solve(model)
         np.testing.assert_allclose(
-            model.variables["var1"].evaluate(t=None, y=solution_no_jac.y),
+            model.get_processed_variable("var1").evaluate(t=None, y=solution_no_jac.y),
             sol[:100],
             rtol=1e-7,
             atol=1e-6,
         )
         np.testing.assert_allclose(
-            model.variables["var2"].evaluate(t=None, y=solution_no_jac.y),
+            model.get_processed_variable("var2").evaluate(t=None, y=solution_no_jac.y),
             sol[100:],
             rtol=1e-7,
             atol=1e-6,
@@ -261,7 +265,7 @@ class TestAlgebraicSolver:
         solver = pybamm.AlgebraicSolver("lsq", tol=1e-5)
         solution = solver.solve(model)
         np.testing.assert_allclose(
-            model.variables["var1"].evaluate(t=None, y=solution.y),
+            model.get_processed_variable("var1").evaluate(t=None, y=solution.y),
             3 * np.pi / 2,
             rtol=1e-3,
             atol=1e-2,
@@ -280,7 +284,7 @@ class TestAlgebraicSolver:
         solver = pybamm.AlgebraicSolver("minimize", tol=1e-16)
         solution = solver.solve(model)
         np.testing.assert_allclose(
-            model.variables["var1"].evaluate(t=None, y=solution.y),
+            model.get_processed_variable("var1").evaluate(t=None, y=solution.y),
             3 * np.pi / 2,
             rtol=1e-5,
             atol=1e-4,
@@ -306,11 +310,15 @@ class TestAlgebraicSolver:
         sol = np.vstack((3 * t_eval, 6 * t_eval))
         np.testing.assert_array_equal(solution.y, sol)
         np.testing.assert_array_equal(
-            model.variables["var1"].evaluate(t=t_eval, y=solution.y).flatten(),
+            model.get_processed_variable("var1")
+            .evaluate(t=t_eval, y=solution.y)
+            .flatten(),
             sol[0, :],
         )
         np.testing.assert_array_equal(
-            model.variables["var2"].evaluate(t=t_eval, y=solution.y).flatten(),
+            model.get_processed_variable("var2")
+            .evaluate(t=t_eval, y=solution.y)
+            .flatten(),
             sol[1, :],
         )
 

@@ -1012,11 +1012,32 @@ class TestParameterValues:
         assert bc_value["right"][0].value == 42
         # variables
         assert model.variables["var1"] == var1
-        assert isinstance(model.variables["grad_var1"], pybamm.Gradient)
-        assert isinstance(model.variables["grad_var1"].children[0], pybamm.Variable)
-        assert model.variables["d_var1"] == (pybamm.Scalar(42, name="d") * var1)
-        assert isinstance(model.variables["d_var1"].children[0], pybamm.Scalar)
-        assert isinstance(model.variables["d_var1"].children[1], pybamm.Variable)
+        proc_grad = model.get_processed_variable("grad_var1")
+        assert isinstance(proc_grad, pybamm.Gradient)
+        assert isinstance(proc_grad.children[0], pybamm.Variable)
+        proc_d = model.get_processed_variable("d_var1")
+        assert proc_d == (pybamm.Scalar(42, name="d") * var1)
+        assert isinstance(proc_d.children[0], pybamm.Scalar)
+        assert isinstance(proc_d.children[1], pybamm.Variable)
+
+        # Check fixed_input_parameters - should be empty when no InputParameters
+        assert hasattr(model, "fixed_input_parameters")
+        assert model.fixed_input_parameters == {}
+
+        # Test with InputParameters
+        model2 = pybamm.BaseModel()
+        input_param1 = pybamm.InputParameter("input1")
+        input_param2 = pybamm.InputParameter("input2")
+        model2.rhs = {var1: a * var1}
+        parameter_values2 = pybamm.ParameterValues(
+            {"a": 1, "input1": input_param1, "input2": input_param2}
+        )
+        parameter_values2.process_model(model2)
+        assert hasattr(model2, "fixed_input_parameters")
+        assert "input1" in model2.fixed_input_parameters
+        assert "input2" in model2.fixed_input_parameters
+        assert model2.fixed_input_parameters["input1"] == input_param1
+        assert model2.fixed_input_parameters["input2"] == input_param2
 
         # bad boundary conditions
         model = pybamm.BaseModel()
@@ -1037,11 +1058,13 @@ class TestParameterValues:
         param = model.default_parameter_values
         new_model = param.process_model(model, inplace=False)
 
+        # Original model still has Parameters in variables
         V = model.variables["Voltage [V]"]
         assert V.has_symbol_of_classes(pybamm.Parameter)
 
-        V = new_model.variables["Voltage [V]"]
-        assert not V.has_symbol_of_classes(pybamm.Parameter)
+        # Processed model should have Parameters replaced in _variables_processed
+        V_processed = new_model.get_processed_variable("Voltage [V]")
+        assert not V_processed.has_symbol_of_classes(pybamm.Parameter)
 
     def test_process_empty_model(self):
         model = pybamm.BaseModel()
@@ -1732,3 +1755,53 @@ class TestParameterValues:
 
         # This would require a key to appear in both processed and untouched scalars
         # which shouldn't happen in normal operation
+
+    def test_process_model_attaches_to_symbol_processor(self):
+        """Test that process_model attaches parameter_values to model's symbol_processor."""
+        model = pybamm.lithium_ion.SPM()
+        param = pybamm.ParameterValues("Chen2020")
+
+        param.process_model(model)
+
+        assert model.symbol_processor.parameter_values is not None
+        # Should be a copy, not the same object
+        assert model.symbol_processor.parameter_values is not param
+
+    def test_delayed_variable_processing(self):
+        """Test that delayed_variable_processing defers variable processing."""
+        model = pybamm.lithium_ion.SPM()
+        param = pybamm.ParameterValues("Chen2020")
+
+        # With delayed_variable_processing=True, variables should not be processed yet
+        param.process_model(model, delayed_variable_processing=True)
+
+        # Model should be parameterised
+        assert model.is_parameterised is True
+        # But _variables_processed should be empty (not processed yet)
+        assert len(model._variables_processed) == 0
+
+        # With delayed_variable_processing=False (default), variables are processed
+        model2 = pybamm.lithium_ion.SPM()
+        param2 = pybamm.ParameterValues("Chen2020")
+        param2.process_model(model2, delayed_variable_processing=False)
+
+        assert model2.is_parameterised is True
+        # Variables should be processed
+        assert len(model2._variables_processed) > 0
+
+    def test_process_model_preserves_variables(self):
+        """Test that process_model does not modify model.variables expressions."""
+        model = pybamm.lithium_ion.SPM()
+
+        # Store original variable expressions (by id) before processing
+        original_var_ids = {name: var.id for name, var in model.variables.items()}
+
+        param = pybamm.ParameterValues("Chen2020")
+        param.process_model(model)
+
+        # model.variables should have the same expressions (same ids)
+        for name, var in model.variables.items():
+            if name in original_var_ids:
+                assert var.id == original_var_ids[name], (
+                    f"Variable '{name}' expression was modified by process_model"
+                )

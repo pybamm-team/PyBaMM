@@ -12,6 +12,8 @@ import numpy as np
 import pybamm
 from pybamm import ParameterValues
 from pybamm.expression_tree.binary_operators import _Heaviside
+from pybamm.expression_tree.input_parameter import DUMMY_INPUT_PARAMETER_VALUE
+from pybamm.models.base_model import ModelSolutionObservability
 
 
 class BaseSolver:
@@ -291,13 +293,13 @@ class BaseSolver:
             # Check for any ExplicitTimeIntegral or DiscreteTimeSum variables
             processed_time_integral = (
                 pybamm.ProcessedVariableTimeIntegral.from_pybamm_var(
-                    model.variables_and_events[key],
+                    model.get_processed_variable_or_event(key),
                     model.len_rhs_and_alg,
                 )
             )
             # We will evaluate the sum node in the solver and sum it afterwards
             if processed_time_integral is None:
-                var = model.variables_and_events[key]
+                var = model.get_processed_variable_or_event(key)
             else:
                 var = processed_time_integral.sum_node
                 self._time_integral_vars[key] = processed_time_integral
@@ -1605,28 +1607,63 @@ class BaseSolver:
         """Set up input parameters"""
         inputs = ParameterValues.check_parameter_values(inputs)
 
-        # Go through all input parameters that can be found in the model
-        # Only keep the ones that are actually used in the model
-        # If any of them are *not* provided by "inputs", raise an error
+        # First, check all the strictly required input parameters that must be included
+        # for the model to be solvable.
         inputs_in_model = {}
-        for input_param in model.input_parameters:
-            name = input_param.name
-            if name not in inputs:
-                raise pybamm.SolverError(f"No value provided for input '{name}'")
-            inputs_in_model[name] = inputs[name]
+        missing_required_inputs = False
 
-        missing_inputs = set(inputs) - set(inputs_in_model)
-        if missing_inputs:
-            warnings.warn(
-                f"The following inputs are not used in the model: {missing_inputs}",
-                pybamm.SolverWarning,
-                stacklevel=2,
+        required_input_parameters = [ip.name for ip in model.required_input_parameters]
+
+        for name in required_input_parameters:
+            value = inputs.get(name)
+            missing_required_inputs |= value is None
+            if name and value is not None:
+                inputs_in_model[name] = value
+
+        input_parameters = [ip.name for ip in model.input_parameters]
+        if missing_required_inputs:
+            ip = sorted(input_parameters)
+            missing = sorted(set(ip) - set(inputs.keys()))
+
+            ip_str = ", ".join(f"'{n}'" for n in ip)
+            missing_str = ", ".join(f"'{n}'" for n in missing)
+            raise pybamm.SolverError(
+                f"No value provided for input: [{missing_str}].\n"
+                f"Required inputs: [{ip_str}].\n"
             )
-        inputs = inputs_in_model
 
-        ordered_inputs_names = list(inputs.keys())
-        ordered_inputs_names.sort()
-        ordered_inputs = {name: inputs[name] for name in ordered_inputs_names}
+        # Next, check the full set of specified input parameters that are required for
+        # the model to be observable.
+        missing_inputs = []
+        solution_is_observable = model.solution_observable
+        for name in input_parameters:
+            value = inputs.get(name)
+
+            if value is None:
+                # Since the solver has all the strictly required input parameters, but
+                # lacks the total set of input parameters, the model is solvable, but
+                # unobservable. In this case, we can safely set the input parameter to
+                # a dummy value (np.nan)
+                missing_inputs.append(name)
+                value = DUMMY_INPUT_PARAMETER_VALUE
+                model.disable_solution_observability(
+                    ModelSolutionObservability.MISSING_INPUT_PARAMETERS
+                )
+
+            if name not in inputs_in_model:
+                inputs_in_model[name] = value
+
+        if solution_is_observable and missing_inputs:
+            missing_inputs_str = ", ".join(f"'{n}'" for n in missing_inputs)
+            pybamm.logger.warning(
+                f"No value provided for input: [{missing_inputs_str}]. "
+                "The `Solution` can no longer be observed with `solution.observe(symbol)`. "
+                "To fix this, provide all input parameter values to `simulation.solve(..., inputs=inputs)` "
+                "or `simulation.step(..., inputs=inputs)`.",
+            )
+
+        ordered_inputs_names = sorted(inputs_in_model.keys())
+        ordered_inputs = {name: inputs_in_model[name] for name in ordered_inputs_names}
 
         return ordered_inputs
 

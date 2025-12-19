@@ -9,6 +9,7 @@ from scipy.sparse import block_diag, csc_matrix, csr_matrix
 from scipy.sparse.linalg import inv
 
 import pybamm
+from pybamm.models.base_model import ModelSolutionObservability
 
 
 def has_bc_of_form(symbol, side, bcs, form):
@@ -108,7 +109,7 @@ class Discretisation:
         # reset discretised_symbols
         self._discretised_symbols = {}
 
-    def process_model(self, model, inplace=True):
+    def process_model(self, model, inplace=True, delayed_variable_processing=None):
         """
         Discretise a model. Currently inplace, could be changed to return a new model.
 
@@ -120,6 +121,9 @@ class Discretisation:
         inplace : bool, optional
             If True, discretise the model in place. Otherwise, return a new
             discretised model. Default is True.
+        delayed_variable_processing: bool, optional
+            If True, make variable processing a post-processing step.
+            Default is False.
 
         Returns
         -------
@@ -141,6 +145,8 @@ class Discretisation:
                 "Set 'inplace=False' when first discretising a model to then be able "
                 "to discretise it more times (e.g. for convergence studies)."
             )
+        if delayed_variable_processing is None:
+            delayed_variable_processing = False
 
         pybamm.logger.info(f"Start discretising {model.name}")
 
@@ -196,11 +202,6 @@ class Discretisation:
 
         model_disc.bcs = self.bcs
 
-        # pre-process variables so that all state variables are included
-        pre_processed_variables = self._pre_process_variables(
-            model.variables, model.initial_conditions
-        )
-
         pybamm.logger.verbose(f"Discretise initial conditions for {model.name}")
         ics, concat_ics = self.process_initial_conditions(model)
         model_disc.initial_conditions = ics
@@ -211,7 +212,22 @@ class Discretisation:
         # model.initial_conditions and model.boundary_conditions
         pybamm.logger.verbose(f"Discretise variables for {model.name}")
 
-        model_disc.variables = self.process_dict(pre_processed_variables)
+        # pre-process variables so that all state variables are included
+        # This is the ONLY place where model.variables should be modified
+        pre_processed_variables = self._pre_process_variables(
+            model.variables, model.initial_conditions
+        )
+        model_disc.variables = pybamm.FuzzyDict(pre_processed_variables)
+
+        if not delayed_variable_processing:
+            # Process variables and store in _variables_processed
+            variables_to_process = model.get_processed_variables_dict()
+            for name, var in pre_processed_variables.items():
+                if name not in variables_to_process:
+                    # New variable (e.g., added by _pre_process_variables)
+                    variables_to_process[name] = var
+            processed_variables = self.process_dict(variables_to_process)
+            model_disc.update_processed_variables(processed_variables)
 
         # Process parabolic and elliptic equations
         pybamm.logger.verbose(f"Discretise model equations for {model.name}")
@@ -252,9 +268,21 @@ class Discretisation:
 
         pybamm.logger.info(f"Finish discretising {model.name}")
 
-        # Record that the model has been discretised
-        model_disc.is_discretised = True
+        # Re-discretising the model means it can no longer safely process symbols.
+        # Not currently reachable, but keeping the check for safety
+        if model.is_discretised:
+            pybamm.logger.debug(
+                f"Model '{model.name}' is being re-discretised, "
+                "which makes it unable to process symbols using `model.process_symbol`"
+            )  # pragma: no cover
+            model_disc.disable_symbol_processing(
+                ModelSolutionObservability.REDISCRETISED_MODEL
+            )  # pragma: no cover
 
+        pybamm.logger.debug("Attaching the `discretisation` to the `symbol_processor`")
+        model_disc.symbol_processor.discretisation = self
+
+        model_disc.is_discretised = True
         return model_disc
 
     def set_variable_slices(self, variables):
@@ -406,30 +434,29 @@ class Discretisation:
 
         internal_bcs = {}
         for var in model.boundary_conditions.keys():
-            if isinstance(var, pybamm.Concatenation):
-                children = var.orphans
+            if not isinstance(var, pybamm.Concatenation):
+                continue
+            children = var.orphans
 
-                first_child = children[0]
-                next_child = children[1]
+            first_child = children[0]
+            next_child = children[1]
 
-                lbc = self.bcs[var]["left"]
-                rbc = (boundary_gradient(first_child, next_child), "Neumann")
+            lbc = self.bcs[var]["left"]
+            rbc = (boundary_gradient(first_child, next_child), "Neumann")
 
-                if first_child not in bc_keys:
-                    internal_bcs.update({first_child: {"left": lbc, "right": rbc}})
+            if first_child not in bc_keys:
+                internal_bcs.update({first_child: {"left": lbc, "right": rbc}})
 
-                for current_child, next_child in itertools.pairwise(children[1:]):
-                    lbc = rbc
-                    rbc = (boundary_gradient(current_child, next_child), "Neumann")
-                    if current_child not in bc_keys:
-                        internal_bcs.update(
-                            {current_child: {"left": lbc, "right": rbc}}
-                        )
-
+            for current_child, next_child in itertools.pairwise(children[1:]):
                 lbc = rbc
-                rbc = self.bcs[var]["right"]
-                if children[-1] not in bc_keys:
-                    internal_bcs.update({children[-1]: {"left": lbc, "right": rbc}})
+                rbc = (boundary_gradient(current_child, next_child), "Neumann")
+                if current_child not in bc_keys:
+                    internal_bcs.update({current_child: {"left": lbc, "right": rbc}})
+
+            lbc = rbc
+            rbc = self.bcs[var]["right"]
+            if children[-1] not in bc_keys:
+                internal_bcs.update({children[-1]: {"left": lbc, "right": rbc}})
 
         self.bcs.update(internal_bcs)
 
@@ -727,15 +754,17 @@ class Discretisation:
             If any state variable names are already included but with
             incorrect expressions
         """
-        new_variables = {k: v for k, v in variables.items()}
+        new_variables = dict(variables)
         for var in initial_conditions.keys():
             if var.name not in new_variables:
                 new_variables[var.name] = var
             else:
-                if new_variables[var.name] != var:
+                existing_var = new_variables[var.name]
+                # Compare by name and domains, not identity (handles unpickling case)
+                if existing_var.name != var.name or existing_var.domains != var.domains:
                     raise pybamm.ModelError(
                         f"Variable '{var.name}' should have expression "
-                        f"'{var}', but has expression '{new_variables[var.name]}'"
+                        f"'{var}', but has expression '{existing_var}'"
                     )
         return new_variables
 
@@ -760,30 +789,50 @@ class Discretisation:
             Discretised equations
 
         """
-        new_var_eqn_dict = {}
-        for eqn_key, eqn in var_eqn_dict.items():
-            # Broadcast if the equation evaluates to a number (e.g. Scalar)
-            if np.prod(eqn.shape_for_testing) == 1 and not isinstance(eqn_key, str):
-                if eqn_key.domain == []:
-                    eqn = eqn * pybamm.Vector([1])
-                else:
-                    eqn = pybamm.FullBroadcast(eqn, broadcast_domains=eqn_key.domains)
+        return {
+            k: self.process_equation(k, v, ics=ics) for k, v in var_eqn_dict.items()
+        }
 
-            pybamm.logger.debug(f"Discretise {eqn_key!r}")
+    def process_equation(self, name, eqn, ics=False):
+        """Discretise a dictionary of {variable: equation}, broadcasting if necessary
+        (can be model.rhs, model.algebraic, model.initial_conditions or
+        model.variables).
 
-            processed_eqn = self.process_symbol(eqn)
-            # Calculate scale if the key has a scale
-            scale = getattr(eqn_key, "scale", 1)
-            if ics:
-                reference = getattr(eqn_key, "reference", 0)
+        Parameters
+        ----------
+        var_eqn_dict : dict
+            Equations ({variable: equation} dict) to dicretise
+            (can be model.rhs, model.algebraic, model.initial_conditions or
+            model.variables)
+        ics : bool, optional
+            Whether the equations are initial conditions. If True, the equations are
+            scaled by the reference value of the variable, if given
+
+        Returns
+        -------
+        processed_eqn
+            Discretised equation
+
+        """
+        # Broadcast if the equation evaluates to a number (e.g. Scalar)
+        if np.prod(eqn.shape_for_testing) == 1 and not isinstance(name, str):
+            if name.domain == []:
+                eqn = eqn * pybamm.Vector([1])
             else:
-                reference = 0
+                eqn = pybamm.FullBroadcast(eqn, broadcast_domains=name.domains)
 
-            if scale != 1 or reference != 0:
-                processed_eqn = (processed_eqn - reference) / scale
+        pybamm.logger.debug(f"Discretise {name!r}")
 
-            new_var_eqn_dict[eqn_key] = processed_eqn
-        return new_var_eqn_dict
+        processed_eqn = self.process_symbol(eqn)
+        if ics and (reference := getattr(name, "reference", 0)) != 0:
+            processed_eqn = processed_eqn - reference
+
+        # Calculate scale if the key has a scale
+        scale = getattr(name, "scale", 1)
+        if scale != 1:
+            processed_eqn = processed_eqn / scale
+
+        return processed_eqn
 
     def process_symbol(self, symbol):
         """Discretise operators in model equations.
@@ -800,34 +849,32 @@ class Discretisation:
             Discretised symbol
 
         """
-        try:
-            return self._discretised_symbols[symbol]
-        except KeyError:
-            discretised_symbol = self._process_symbol(symbol)
-            self._discretised_symbols[symbol] = discretised_symbol
-            discretised_symbol.test_shape()
+        _discretised_symbol = self._discretised_symbols.get(symbol)
+        if _discretised_symbol is not None:
+            return _discretised_symbol
+        discretised_symbol = self._process_symbol(symbol)
+        self._discretised_symbols[symbol] = discretised_symbol
+        discretised_symbol.test_shape()
 
-            # Assign mesh as an attribute to the processed variable
-            if symbol.domain != []:
-                discretised_symbol.mesh = self.mesh[symbol.domain]
-            else:
-                discretised_symbol.mesh = None
+        # Assign mesh as an attribute to the processed variable
+        if symbol.domain != []:
+            discretised_symbol.mesh = self.mesh[symbol.domain]
+        else:
+            discretised_symbol.mesh = None
 
-            # Assign secondary mesh
-            if symbol.domains["secondary"] != []:
-                discretised_symbol.secondary_mesh = self.mesh[
-                    symbol.domains["secondary"]
-                ]
-            else:
-                discretised_symbol.secondary_mesh = None
+        # Assign secondary mesh
+        if symbol.domains["secondary"] != []:
+            discretised_symbol.secondary_mesh = self.mesh[symbol.domains["secondary"]]
+        else:
+            discretised_symbol.secondary_mesh = None
 
-            # Assign tertiary mesh
-            if symbol.domains["tertiary"] != []:
-                discretised_symbol.tertiary_mesh = self.mesh[symbol.domains["tertiary"]]
-            else:
-                discretised_symbol.tertiary_mesh = None
+        # Assign tertiary mesh
+        if symbol.domains["tertiary"] != []:
+            discretised_symbol.tertiary_mesh = self.mesh[symbol.domains["tertiary"]]
+        else:
+            discretised_symbol.tertiary_mesh = None
 
-            return discretised_symbol
+        return discretised_symbol
 
     def _process_symbol(self, symbol):
         """See :meth:`Discretisation.process_symbol()`."""
@@ -841,15 +888,13 @@ class Discretisation:
                     self.bcs[key_id] = self.check_tab_conditions(
                         symbol, self.bcs[key_id]
                     )
+        else:
+            spatial_method = None
 
         if isinstance(symbol, pybamm.BinaryOperator):
             # Pre-process children
             left, right = symbol.children
             # Catch case where diffusion is a scalar and turn it into an identity matrix vector field.
-            if len(symbol.domain) != 0:
-                spatial_method = self.spatial_methods[symbol.domain[0]]
-            else:
-                spatial_method = None
             if isinstance(spatial_method, pybamm.FiniteVolume2D):
                 if isinstance(left, pybamm.Scalar) and (
                     isinstance(right, pybamm.VectorField)
@@ -1078,9 +1123,8 @@ class Discretisation:
             old_y_slices = self.y_slices.copy()
             for child in symbol.children:
                 child_no_scale = child.create_copy()
-                child_no_scale._scale = 1
-                child_no_scale._reference = 0
-                child_no_scale.set_id()
+                child_no_scale.scale = 1
+                child_no_scale.reference = 0
                 self.y_slices[child_no_scale] = self.y_slices[child]
                 new_children.append(self.process_symbol(child_no_scale))
             self.y_slices = old_y_slices
@@ -1262,15 +1306,19 @@ class Discretisation:
                 if len(model.rhs) != 1:
                     pybamm.logger.info(f"removing variable {var} from rhs")
                     my_initial_condition = model.initial_conditions[var]
-                    model.variables[var.name] = pybamm.ExplicitTimeIntegral(
+                    explicit_integral = pybamm.ExplicitTimeIntegral(
                         model.rhs[var], my_initial_condition
                     )
+                    # Collect variables to update in _variables_processed
+                    # Do NOT modify model.variables - only update _variables_processed
+                    vars_to_update = {var.name: explicit_integral}
                     # edge case where a variable appears
                     # in variables twice under different names
                     for key in model.variables:
                         if model.variables[key] == var:
-                            print("here")
-                            model.variables[key] = model.variables[var.name]
+                            vars_to_update[key] = explicit_integral
+                    # Update _variables_processed using the proper method
+                    model.update_processed_variables(vars_to_update)
                     del model.rhs[var]
                     del model.initial_conditions[var]
                 else:
