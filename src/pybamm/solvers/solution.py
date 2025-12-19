@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 #
 # Solution class
 #
@@ -5,6 +7,7 @@ import json
 import numbers
 import pickle
 from functools import cached_property
+from itertools import chain
 
 import casadi
 import numpy as np
@@ -98,6 +101,9 @@ class Solution:
         self._all_yps = all_yps
 
         self.variables_returned = variables_returned
+        self._observable = self._all_models and all(
+            model.solution_observable for model in self._all_models
+        )
 
         # Set up inputs
         if not isinstance(all_inputs, list):
@@ -122,10 +128,6 @@ class Solution:
             else:
                 self._all_sensitivities[key] = [value]
 
-        # Check no ys are too large
-        if check_solution:
-            self.check_ys_are_not_too_large()
-
         # Events
         self._t_event = t_event
         self._y_event = y_event
@@ -137,8 +139,8 @@ class Solution:
         self.solve_time = None
         self.integration_time = None
 
-        # initialize empty variables and data
-        self._variables = pybamm.FuzzyDict()
+        # initialize empty variable cache and data
+        self._variables = {}
         self._data = pybamm.FuzzyDict()
 
         # Add self as sub-solution for compatibility with ProcessedVariable
@@ -147,11 +149,20 @@ class Solution:
         # initialize empty cycles
         self._cycles = []
 
+        # Initialize empty inputs
+        self._t = None
+        self._y = None
+        self._sensitivities = None
+
         # Initialize empty summary variables
         self._summary_variables = None
 
         # Initialise initial start time
         self.initial_start_time = None
+
+        # Check no ys are too large
+        if check_solution:
+            self.check_ys_are_not_too_large()
 
         # Solution now uses CasADi
         pybamm.citations.register("Andersson2019")
@@ -162,51 +173,22 @@ class Solution:
     @property
     def t(self):
         """Times at which the solution is evaluated"""
-        try:
-            return self._t
-        except AttributeError:
+        if self._t is None:
             self.set_t()
-            return self._t
+        return self._t
 
     def set_t(self):
-        self._t = np.concatenate(self.all_ts)
-        if any(np.diff(self._t) <= 0):
+        t = np.concatenate(self.all_ts)
+        if any(np.diff(t) <= 0):
             raise ValueError("Solution time vector must be strictly increasing")
+        self._t = t
 
     @property
     def y(self):
         """Values of the solution"""
-        try:
-            return self._y
-        except AttributeError:
+        if self._y is None:
             self.set_y()
-
-            return self._y
-
-    @property
-    def data(self):
-        for k, v in self._variables.items():
-            if k not in self._data:
-                self._data[k] = v.data
-        return self._data
-
-    @property
-    def sensitivities(self):
-        """Values of the sensitivities. Returns a dict of param_name: np_array"""
-        try:
-            return self._sensitivities
-        except AttributeError:
-            self.set_sensitivities()
-        return self._sensitivities
-
-    def set_sensitivities(self):
-        if not self.has_sensitivities():
-            self._sensitivities = {}
-            return
-
-        self._sensitivities = {}
-        for key, sens in self._all_sensitivities.items():
-            self._sensitivities[key] = np.vstack(sens)
+        return self._y
 
     def set_y(self):
         try:
@@ -220,35 +202,51 @@ class Solution:
                 "computed explicitly."
             ) from error
 
+    @property
+    def data(self):
+        for k, v in self._variables.items():
+            if k not in self._data:
+                self._data[k] = v.data
+        return self._data
+
+    @property
+    def sensitivities(self):
+        """Values of the sensitivities. Returns a dict of param_name: np_array"""
+        if self._sensitivities is None:
+            self.set_sensitivities()
+        return self._sensitivities
+
+    def set_sensitivities(self):
+        if not self.has_sensitivities():
+            self._sensitivities = {}
+            return
+
+        self._sensitivities = {}
+        for key, sens in self._all_sensitivities.items():
+            self._sensitivities[key] = np.vstack(sens)
+
     def check_ys_are_not_too_large(self):
         # Only check last one so that it doesn't take too long
         # We only care about the cases where y is growing too large without any
         # restraint, so if y gets large in the middle then comes back down that is ok
-        y, model = self.all_ys[-1], self.all_models[-1]
+        t, y, model = self.all_ts[-1], self.all_ys[-1], self.all_models[-1]
+        t = t[-1]
         y = y[:, -1]
-        if np.any(y > pybamm.settings.max_y_value):
-            for var in [*model.rhs.keys(), *model.algebraic.keys()]:
-                var = model.variables[var.name]
-                # find the statevector corresponding to this variable
-                statevector = None
-                for node in var.pre_order():
-                    if isinstance(node, pybamm.StateVector):
-                        statevector = node
 
-                # there will always be a statevector, but just in case
-                if statevector is None:  # pragma: no cover
-                    raise RuntimeError(
-                        f"Cannot find statevector corresponding to variable {var.name}"
-                    )
-                y_var = y[statevector.y_slices[0]]
-                if np.any(y_var > pybamm.settings.max_y_value):
-                    pybamm.logger.error(
-                        f"Solution for '{var}' exceeds the maximum allowed value "
-                        f"of `{pybamm.settings.max_y_value}. This could be due to "
-                        "incorrect scaling, model formulation, or "
-                        "parameter values. The maximum allowed value is set by "
-                        "'pybammm.settings.max_y_value'."
-                    )
+        max_y_value = pybamm.settings.max_y_value
+        if y.size == 0 or np.max(y) <= max_y_value:
+            return
+
+        for var in chain(model.rhs.keys(), model.algebraic.keys()):
+            y_var = self[var.name](t)
+            if np.any(y_var > max_y_value):
+                pybamm.logger.error(
+                    f"Solution for '{var}' exceeds the maximum allowed value "
+                    f"of `{max_y_value}. This could be due to "
+                    "incorrect scaling, model formulation, or "
+                    "parameter values. The maximum allowed value is set by "
+                    "'pybammm.settings.max_y_value'."
+                )
 
     @property
     def all_ts(self):
@@ -294,6 +292,24 @@ class Solution:
     def termination(self, value):
         """Updates the reason for termination"""
         self._termination = value
+
+    @property
+    def observable(self):
+        return self._observable
+
+    def _check_observable(self):
+        if self._observable:
+            return
+
+        # Collect unique reasons from all models
+        unique_reasons = set(
+            model.solution_observable_status
+            for model in self.all_models
+            if not model.solution_observable
+        )
+        if unique_reasons:
+            reasons_str = ", ".join(sorted(unique_reasons))
+            raise ValueError(f"Solution is not observable: {reasons_str}")
 
     @cached_property
     def first_state(self):
@@ -411,7 +427,7 @@ class Solution:
             self, cycle_summary_variables=all_summary_variables
         )
 
-    def update(self, variables):
+    def update(self, variables: str | list[str]):
         """Add ProcessedVariables to the dictionary of variables in the solution"""
         # Single variable
         if isinstance(variables, str):
@@ -421,59 +437,112 @@ class Solution:
         for variable in variables:
             self._update_variable(variable)
 
-    def _update_variable(self, variable):
+    def _update_model_variable(
+        self,
+        model: pybamm.BaseModel,
+        var_pybamm: pybamm.Symbol,
+        time_integral: pybamm.ProcessedVariableTimeIntegral | None,
+        inputs: dict,
+        ys_shape: tuple,
+        cache_key,
+    ):
+        _var_casadi = model._variables_casadi.get(cache_key)
+        if _var_casadi is not None:
+            return _var_casadi, var_pybamm, time_integral
+
+        var_casadi, var_pybamm, time_integral = self._convert_to_casadi(
+            var_pybamm, inputs, ys_shape
+        )
+
+        # Only cache if it's not a time integral
+        if time_integral is None:
+            model._variables_casadi[cache_key] = var_casadi
+        return var_casadi, var_pybamm, time_integral
+
+    def _update_variable(self, name: str):
         time_integral = None
-        pybamm.logger.debug(f"Post-processing {variable}")
-        vars_pybamm = [
-            model.variables_and_events[variable] for model in self.all_models
-        ]
+        pybamm.logger.debug(f"Post-processing {name}")
 
         # Iterate through all models, some may be in the list several times and
         # therefore only get set up once
-        vars_casadi = []
-        for i, (model, ys, inputs, var_pybamm) in enumerate(
-            zip(self.all_models, self.all_ys, self.all_inputs, vars_pybamm, strict=True)
+        vars_pybamm = [
+            model.get_processed_variable_or_event(name) for model in self.all_models
+        ]
+        vars_casadi = [None] * len(self.all_models)
+        for i, (model, ys, inputs) in enumerate(
+            zip(self.all_models, self.all_ys, self.all_inputs, strict=True)
         ):
-            if self.variables_returned and var_pybamm.has_symbol_of_classes(
+            _var_pybamm = vars_pybamm[i]
+            if self.variables_returned and _var_pybamm.has_symbol_of_classes(
                 pybamm.expression_tree.state_vector.StateVector
             ):
                 raise KeyError(
-                    f"Cannot process variable '{variable}' as it was not part of the "
+                    f"Cannot process variable '{name}' as it was not part of the "
                     "solve. Please re-run the solve with `output_variables` set to "
                     "include this variable."
                 )
-            elif variable in model._variables_casadi:
-                var_casadi = model._variables_casadi[variable]
-            else:
-                time_integral = pybamm.ProcessedVariableTimeIntegral.from_pybamm_var(
-                    var_pybamm, self.all_ys[i].shape[0]
-                )
-                if time_integral is not None:
-                    vars_pybamm[i] = time_integral.sum_node.child
-                    var_casadi = self.process_casadi_var(
-                        time_integral.sum_node.child,
-                        inputs,
-                        ys.shape,
-                    )
-                    if time_integral.post_sum_node is not None:
-                        time_integral.post_sum = self.process_casadi_var(
-                            time_integral.post_sum_node,
-                            inputs,
-                            ys.shape,
-                        )
-                else:
-                    var_casadi = self.process_casadi_var(
-                        var_pybamm,
-                        inputs,
-                        ys.shape,
-                    )
-                    model._variables_casadi[variable] = var_casadi
-            vars_casadi.append(var_casadi)
+            var_casadi, var_pybamm, time_integral = self._update_model_variable(
+                model,
+                _var_pybamm,
+                inputs=inputs,
+                ys_shape=ys.shape,
+                time_integral=time_integral,
+                cache_key=name,
+            )
+            vars_pybamm[i] = var_pybamm
+            vars_casadi[i] = var_casadi
         var = pybamm.process_variable(
-            variable, vars_pybamm, vars_casadi, self, time_integral=time_integral
+            name, vars_pybamm, vars_casadi, self, time_integral=time_integral
         )
 
-        self._variables[variable] = var
+        self._variables[name] = var
+
+    def observe(self, symbol: pybamm.Symbol) -> pybamm.ProcessedVariable:
+        """
+        Observe a `pybamm.Symbol` object from the solution.
+
+        Parameters
+        ----------
+        symbol : pybamm.Symbol
+            The symbol to observe.
+        name : str, optional
+            The name of the variable. If None, the name is the symbol's id.
+
+        Returns
+        -------
+        :class:`pybamm.ProcessedVariable`
+            The observed variable.
+        """
+        self._check_observable()
+        symbol = pybamm.convert_to_symbol(symbol)
+        name = str(symbol.id)
+
+        value = self._variables.get(name, None)
+        if value is not None:
+            return value
+
+        for model in self.all_models:
+            model.process_and_register_variable(name=name, symbol=symbol)
+        return self[name]
+
+    def _convert_to_casadi(self, var_pybamm, inputs, ys_shape):
+        time_integral = pybamm.ProcessedVariableTimeIntegral.from_pybamm_var(
+            var_pybamm, ys_shape[0]
+        )
+        if time_integral is not None:
+            var_pybamm = time_integral.sum_node.child
+            if time_integral.post_sum_node is not None:
+                time_integral.post_sum = self.process_casadi_var(
+                    time_integral.post_sum_node,
+                    inputs,
+                    ys_shape,
+                )
+        var_casadi = self.process_casadi_var(
+            var_pybamm,
+            inputs,
+            ys_shape,
+        )
+        return var_casadi, var_pybamm, time_integral
 
     def process_casadi_var(self, var_pybamm, inputs, ys_shape):
         t_MX = casadi.MX.sym("t")
@@ -533,14 +602,13 @@ class Solution:
             A variable that can be evaluated at any time or spatial point. The
             underlying data for this variable is available in its attribute ".data"
         """
+        value = self._variables.get(key)
+        if value is not None:
+            return value
 
-        # return it if it exists
-        if key in self._variables:
-            return self._variables[key]
-        else:
-            # otherwise create it, save it and then return it
-            self.update(key)
-            return self._variables[key]
+        # otherwise create it, save it and then return it
+        self.update(key)
+        return self._variables[key]
 
     def plot(self, output_variables=None, **kwargs):
         """
