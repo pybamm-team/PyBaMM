@@ -171,6 +171,7 @@
 
 ## Bug fixes
 
+- Added code to `base_battery_model` to ensure default options for stress-induced diffusion change correctly if particle mechanics is only enabled on one electrode ([#4944](https://github.com/pybamm-team/PyBaMM/pull/4944))
 - Fixed a bug with observing the outputs of 2D FEM simulations. ([#4912](https://github.com/pybamm-team/PyBaMM/pull/4912))
 - Fixed a bug in simulating FEM models with the `IDAKLUSolver`. ([#4879](https://github.com/pybamm-team/PyBaMM/pull/4879))
 - Moved concentration inside x-averaged when calculating LLI due to LAM variables ([#4858](https://github.com/pybamm-team/PyBaMM/pull/4858))

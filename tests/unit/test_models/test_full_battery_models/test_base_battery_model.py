@@ -313,11 +313,20 @@ class TestBaseBatteryModel:
         assert model.options["particle mechanics"] == "swelling and cracking"
         assert model.options["stress-induced diffusion"] == "true"
 
-        # crack model
+        # particle mechanics
         with pytest.raises(pybamm.OptionError, match="particle mechanics"):
-            pybamm.BaseBatteryModel({"particle mechanics": "bad particle cracking"})
+            pybamm.BaseBatteryModel({"particle mechanics": "bad particle mechanics"})
         with pytest.raises(pybamm.OptionError, match="particle cracking"):
             pybamm.BaseBatteryModel({"particle cracking": "bad particle cracking"})
+        # check default options change correctly
+        model = pybamm.BaseBatteryModel(
+            {"particle mechanics": ("none", "swelling-only")}
+        )
+        assert model.options["stress-induced diffusion"] == ("false", "true")
+        model = pybamm.BaseBatteryModel(
+            {"particle mechanics": ("swelling-only", "none")}
+        )
+        assert model.options["stress-induced diffusion"] == ("true", "false")
 
         # SEI on cracks
         with pytest.raises(pybamm.OptionError, match="SEI on cracks"):
