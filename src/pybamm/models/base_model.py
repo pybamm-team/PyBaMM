@@ -4,6 +4,8 @@ import copy
 import numbers
 import warnings
 from collections import OrderedDict
+from enum import Enum
+from itertools import chain
 
 import casadi
 import numpy as np
@@ -11,6 +13,30 @@ import scipy
 
 import pybamm
 from pybamm.expression_tree.operations.serialise import Serialise
+from pybamm.models.symbol_processor import SymbolProcessor
+
+
+class ModelSolutionObservability(str, Enum):
+    """
+    Enum to specify the observability states for a PyBaMM model's solution.
+
+    This enum tracks why a solution may or may not be observable via
+    ``solution.observe(symbol)``.
+    """
+
+    ENABLED = "solution is observable"
+    DISABLED = "`disable_solution_observability()` was called on the model"
+    SOLVER_OUTPUT_VARIABLES = "the solver includes `output_variables`"
+    MISSING_INPUT_PARAMETERS = "some input parameters were not provided to the solver"
+    REPARAMETERISED_MODEL = (
+        "the model was re-parameterised with `ParameterValues.process_model()`"
+    )
+    REDISCRETISED_MODEL = (
+        "the model was re-discretised with `Discretisation.process_model()`"
+    )
+
+    def __bool__(self) -> bool:
+        return bool(self == ModelSolutionObservability.ENABLED)
 
 
 class BaseModel:
@@ -57,9 +83,11 @@ class BaseModel:
         self._boundary_conditions = {}
         self._variables_by_submodel = {}
         self._variables = pybamm.FuzzyDict({})
+        self._variables_processed = {}
         self._coupled_variables = {}
         self._summary_variables = []
         self._events = []
+        self._events_dict = None
         self._concatenated_rhs = None
         self._concatenated_algebraic = None
         self._concatenated_initial_conditions = None
@@ -69,17 +97,22 @@ class BaseModel:
         self._jacobian_algebraic = None
         self._parameters = None
         self._input_parameters = None
+        self._required_input_parameters = None
+        self._fixed_input_parameters = {}
         self._parameter_info = None
         self._is_standard_form_dae = None
         self._variables_casadi = {}
         self._geometry = pybamm.Geometry({})
+        self._symbol_processor = SymbolProcessor()
+        self._solution_observable = ModelSolutionObservability.ENABLED
 
         # Default behaviour is to use the jacobian
         self.use_jacobian = True
         self.convert_to_format = "casadi"
 
-        # Model is not initially discretised
+        # Model is not initially discretised or parameterised
         self.is_discretised = False
+        self.is_parameterised = False
         self.y_slices = None
         self.len_rhs_and_alg = None
 
@@ -117,32 +150,45 @@ class BaseModel:
         instance.events = properties["events"]
         instance.mass_matrix = properties["mass_matrix"]
         instance.mass_matrix_inv = properties["mass_matrix_inv"]
-        # add optional properties not required for model to solve
-        if properties["variables"]:
-            instance._variables = pybamm.FuzzyDict(properties["variables"])
+        instance._variables_processed = dict(properties.get("_variables_processed", {}))
 
-            # assign meshes to each variable
-            for var in instance._variables.values():
+        def assign_meshes_to_variables(variables_dict, mesh):
+            if not mesh:
+                return
+            for var in variables_dict.values():
                 if var.domain != []:
-                    var.mesh = properties["mesh"][var.domain]
+                    var.mesh = mesh[var.domain]
 
                 if var.domains["secondary"] != []:
-                    var.secondary_mesh = properties["mesh"][var.domains["secondary"]]
+                    var.secondary_mesh = mesh[var.domains["secondary"]]
                 else:
                     var.secondary_mesh = None
 
                 if var.domains["tertiary"] != []:
-                    var.tertiary_mesh = properties["mesh"][var.domains["tertiary"]]
+                    var.tertiary_mesh = mesh[var.domains["tertiary"]]
                 else:
                     var.tertiary_mesh = None
 
-            if properties["geometry"]:
-                instance._geometry = pybamm.Geometry(properties["geometry"])
-        else:
-            # Delete the default variables which have not been discretised
-            instance._variables = pybamm.FuzzyDict({})
-        # Model has already been discretised
+        # add optional properties not required for model to solve
+        _variables = properties.get("variables") or {}
+        instance._variables = pybamm.FuzzyDict(_variables)
+        assign_meshes_to_variables(instance._variables, properties.get("mesh"))
+
+        if properties["geometry"]:
+            instance._geometry = pybamm.Geometry(properties["geometry"])
+
+        # Also assign meshes to _variables_processed
+        assign_meshes_to_variables(
+            instance._variables_processed, properties.get("mesh")
+        )
+        # Model has already been discretised and parameterised
         instance.is_discretised = True
+        instance.is_parameterised = True
+        instance._solution_observable = ModelSolutionObservability[
+            properties.get(
+                "_solution_observable", ModelSolutionObservability.DISABLED.value
+            )
+        ]
         return instance
 
     @property
@@ -240,6 +286,117 @@ class BaseModel:
                 )
         self._variables = pybamm.FuzzyDict(variables)
 
+    def get_processed_variables_dict(self) -> dict[str, pybamm.Symbol]:
+        """
+        Get a dictionary of processed variables.
+        """
+        return dict(self._variables_processed)
+
+    def get_processed_variable(self, name: str) -> pybamm.Symbol:
+        """
+        Get a processed variable by name.
+
+        Parameters
+        ----------
+        name : str
+            The name of the variable to get.
+
+        Returns
+        -------
+        pybamm.Symbol
+            The processed variable.
+
+        Raises
+        ------
+        KeyError
+            If the variable is not found.
+        """
+        value = self._variables_processed.get(name)
+        if value is not None:
+            return value
+
+        value = self._variables[name]
+        self.process_and_register_variable(name, value)
+        return self._variables_processed[name]
+
+    def get_processed_variable_or_event(self, name: str) -> pybamm.Symbol:
+        """
+        Get a processed variable or event by name.
+
+        Parameters
+        ----------
+        name : str
+            The name of the variable or event to get.
+
+        Returns
+        -------
+        pybamm.Symbol
+            The processed variable or event expression.
+
+        Raises
+        ------
+        KeyError
+            If the variable or event is not found.
+        """
+        value = self._variables_processed.get(name)
+        if value is not None:
+            return value
+
+        value = self._variables.get(name)
+        if value is not None:
+            self.process_and_register_variable(name, value)
+            return self._variables_processed[name]
+
+        value = self.events_dict.get(name)
+        if value is not None:
+            return value
+
+        # Raise a more helpful error message from the fuzzy dict
+        return self.variables_and_events[name]
+
+    def process_and_register_variable(self, name: str, symbol: pybamm.Symbol):
+        """
+        Process a variable and store it in _variables_processed.
+
+        This method does NOT modify self.variables - the original variable
+        expression is preserved. The processed variable is stored separately
+        in _variables_processed.
+
+        Parameters
+        ----------
+        name : str
+            The name of the variable.
+        symbol : pybamm.Symbol
+            The unprocessed variable symbol.
+        """
+        if name in self._variables_processed:
+            return
+        pybamm.logger.info(f"Processing variable '{name}' for model '{self.name}'")
+
+        if not self.symbol_processor:
+            raise ValueError(
+                f"Cannot process variable '{name}' without a `symbol_processor`."
+            )
+
+        value = self.symbol_processor(name=name, symbol=symbol)
+        self._variables_processed[name] = value
+
+    def update_processed_variables(self, processed_vars: dict[str, pybamm.Symbol]):
+        """
+        Update the _variables_processed dict with new processed variables.
+
+        Parameters
+        ----------
+        processed_vars : dict or list
+            Either a dictionary of {name: processed_symbol} pairs, or a list of
+            names (for backward compatibility, where the processed symbol is
+            taken from self.variables).
+        """
+        if not processed_vars:
+            return
+
+        self._variables_processed.update(processed_vars)
+
     def variable_names(self):
         return list(self._variables.keys())
 
@@ -250,10 +407,12 @@ class BaseModel:
             return self._variables_and_events
         except AttributeError:
             self._variables_and_events = self.variables.copy()
-            self._variables_and_events.update(
-                {f"Event: {event.name}": event.expression for event in self.events}
-            )
+            self._variables_and_events.update(self.events_dict)
             return self._variables_and_events
+
+    @property
+    def symbol_processor(self) -> SymbolProcessor:
+        return self._symbol_processor
 
     @property
     def events(self):
@@ -264,6 +423,14 @@ class BaseModel:
     @events.setter
     def events(self, events):
         self._events = events
+
+    @property
+    def events_dict(self) -> dict[str, pybamm.Symbol]:
+        if self._events_dict is None:
+            self._events_dict = {
+                f"Event: {event.name}": event.expression for event in self.events
+            }
+        return self._events_dict
 
     @property
     def concatenated_rhs(self):
@@ -431,6 +598,14 @@ class BaseModel:
         return pybamm.ParameterValues({})
 
     @property
+    def fixed_input_parameters(self):
+        return self._fixed_input_parameters
+
+    @fixed_input_parameters.setter
+    def fixed_input_parameters(self, fixed_input_parameters):
+        self._fixed_input_parameters = fixed_input_parameters
+
+    @property
     def parameters(self):
         """Returns a  list of all parameter symbols used in the model."""
         self._parameters = self._find_symbols(
@@ -446,7 +621,16 @@ class BaseModel:
         return self._input_parameters
 
     @property
-    def is_standard_form_dae(self):
+    def required_input_parameters(self):
+        """Returns a list of all input parameter symbols used in the model."""
+        if self._required_input_parameters is None:
+            self._required_input_parameters = self._find_symbols(
+                pybamm.InputParameter, fixed_input_parameters={}
+            )
+        return self._required_input_parameters
+
+    @property
+    def is_standard_form_dae(self) -> bool:
         """
         Check if the model is a DAE in standard form with a mass matrix that is all
         zeros except for along the diagonal, which is either ones or zeros.
@@ -454,6 +638,70 @@ class BaseModel:
         if self._is_standard_form_dae is None:
             self._is_standard_form_dae = self._check_standard_form_dae()
         return self._is_standard_form_dae
+
+    @property
+    def is_processed(self) -> bool:
+        """
+        Returns True if the model is processed by `Discretisation.process_model` or `ParameterValues.process_model`.
+        """
+        return self._variables_processed or self.is_discretised or self.is_parameterised
+
+    def disable_symbol_processing(self, reason: ModelSolutionObservability):
+        """
+        Disable custom symbol processing by the model.
+
+        Parameters
+        ----------
+        reason : ModelSolutionObservability, optional
+            The reason why symbol processing is being disabled.
+            Defaults to ModelSolutionObservability.DISABLED.
+        """
+        self.disable_solution_observability(reason)
+        self.symbol_processor.disable()
+
+    @property
+    def can_process_symbols(self) -> bool:
+        """
+        Returns ``True`` if the model has a symbol processor that is
+        capable of processing symbols.
+        """
+        return bool(self.symbol_processor.can_process_symbols)
+
+    @property
+    def solution_observable(self) -> bool:
+        """
+        Returns the observability state for ``solution.observe(symbol)``.
+
+        Returns ``ModelSolutionObservability.ENABLED`` if observable, otherwise
+        returns a reason why the solution is not observable.
+        """
+        return self.can_process_symbols and bool(self._solution_observable)
+
+    @property
+    def solution_observable_status(self) -> ModelSolutionObservability:
+        """
+        Returns the status of the solution observability as a string.
+        """
+        return self._solution_observable
+
+    def disable_solution_observability(self, reason: ModelSolutionObservability):
+        """
+        Disable observing the solution with ``solution.observe(symbol)``.
+
+        Parameters
+        ----------
+        reason : ModelSolutionObservability
+            The reason why the solution is or is not observable.
+        """
+        if not isinstance(reason, ModelSolutionObservability):
+            raise ValueError(
+                f"Invalid reason: {reason}. Must be a ModelSolutionObservability enum value."
+            )
+        if reason:
+            raise ValueError(
+                "Cannot re-enable solution observability after it has been disabled."
+            )
+        self._solution_observable = reason
 
     @property
     def calc_esoh(self):
@@ -723,38 +971,48 @@ class BaseModel:
             table.encode("utf-8")
             print(table)
 
-    def _find_symbols(self, typ):
+    def _find_symbols(self, typ, fixed_input_parameters=None) -> list[pybamm.Symbol]:
         """Find all the instances of `typ` in the model"""
+        if fixed_input_parameters is None:
+            fixed_input_parameters = self.fixed_input_parameters
         unpacker = pybamm.SymbolUnpacker(typ)
-        all_input_parameters = unpacker.unpack_list_of_symbols(
-            list(self.rhs.values())
-            + list(self.algebraic.values())
-            + list(self.initial_conditions.values())
-            + [
+        all_items = chain(
+            self.rhs.values(),
+            self.algebraic.values(),
+            self.initial_conditions.values(),
+            (
                 x[side][0]
                 for x in self.boundary_conditions.values()
                 for side in x.keys()
-            ]
-            + list(self.variables.values())
-            + [event.expression for event in self.events]
+            ),
+            self.variables.values(),
+            fixed_input_parameters.values(),
+            (event.expression for event in self.events),
         )
+        all_input_parameters = unpacker.unpack_list_of_symbols(list(all_items))
         return list(all_input_parameters)
 
-    def _find_symbols_by_submodel(self, typ, submodel):
+    def _find_symbols_by_submodel(
+        self, typ, submodel, fixed_input_parameters=None
+    ) -> list[pybamm.Symbol]:
         """Find all the instances of `typ` in the submodel"""
+        if fixed_input_parameters is None:
+            fixed_input_parameters = self.submodels[submodel].fixed_input_parameters
         unpacker = pybamm.SymbolUnpacker(typ)
-        all_input_parameters = unpacker.unpack_list_of_symbols(
-            list(self.submodels[submodel].rhs.values())
-            + list(self.submodels[submodel].algebraic.values())
-            + list(self.submodels[submodel].initial_conditions.values())
-            + [
+        all_items = chain(
+            self.submodels[submodel].rhs.values(),
+            self.submodels[submodel].algebraic.values(),
+            self.submodels[submodel].initial_conditions.values(),
+            (
                 x[side][0]
                 for x in self.submodels[submodel].boundary_conditions.values()
                 for side in x.keys()
-            ]
-            + list(self._variables_by_submodel[submodel].values())
-            + [event.expression for event in self.submodels[submodel].events]
+            ),
+            self._variables_by_submodel[submodel].values(),
+            fixed_input_parameters.values(),
+            (event.expression for event in self.submodels[submodel].events),
         )
+        all_input_parameters = unpacker.unpack_list_of_symbols(list(all_items))
         return list(all_input_parameters)
 
     def new_copy(self):
@@ -768,8 +1026,11 @@ class BaseModel:
         new_model._initial_conditions = self.initial_conditions.copy()
         new_model._boundary_conditions = self.boundary_conditions.copy()
         new_model._variables = self.variables.copy()
+        new_model._variables_processed = self._variables_processed.copy()
         new_model._events = self.events.copy()
         new_model._variables_casadi = self._variables_casadi.copy()
+        new_model._symbol_processor = self.symbol_processor.copy()
+        new_model._solution_observable = self._solution_observable
         return new_model
 
     def update(self, *submodels):
@@ -1293,19 +1554,24 @@ class BaseModel:
         unpacker = pybamm.SymbolUnpacker(pybamm.Variable)
         all_vars = unpacker.unpack_list_of_symbols(self.variables.values())
 
-        vars_in_keys = set()
+        # Build a set of names for keys to allow matching by name
+        # instead of by object identity (handles cases where Variables may have different
+        # _id values due to scale/reference processing)
+        var_names_in_keys = set()
 
         model_keys = list(self.rhs.keys()) + list(self.algebraic.keys())
 
         for var in model_keys:
             if isinstance(var, pybamm.Variable):
-                vars_in_keys.add(var)
+                var_names_in_keys.add(var.name)
             # Key can be a concatenation
             elif isinstance(var, pybamm.Concatenation):
-                vars_in_keys.update(var.children)
+                for child in var.children:
+                    if isinstance(child, pybamm.Variable):
+                        var_names_in_keys.add(child.name)
 
         for var in all_vars:
-            if var not in vars_in_keys:
+            if var.name not in var_names_in_keys:
                 raise pybamm.ModelError(
                     f"No key set for variable '{var}'. Make sure it is included in either "
                     "model.rhs or model.algebraic, in an unmodified form "
@@ -1430,7 +1696,7 @@ class BaseModel:
         # For specified variables, convert to casadi
         variables = OrderedDict()
         for name in variable_names:
-            var = self.variables[name]
+            var = self.get_processed_variable(name)
             variables[name] = var.to_casadi(t_casadi, y_casadi, inputs=inputs)
 
         casadi_dict = {
@@ -1540,52 +1806,30 @@ class BaseModel:
             output_variables=output_variables
         )
 
+    def process_symbol(self, symbol: pybamm.Symbol):
+        if not self.can_process_symbols:
+            raise ValueError(
+                "Cannot use `process_symbol`. This may be because the model has been "
+                "re-processed with `ParameterValues.process_model`, or the "
+                "`parameter_values` or `discretisation` in `model.symbol_processor` "
+                "have been reset."
+            )
+        symbol = pybamm.convert_to_symbol(symbol)
+        return self.symbol_processor(name=str(symbol.id), symbol=symbol)
+
     def process_parameters_and_discretise(self, symbol, parameter_values, disc):
         """
-        Process parameters and discretise a symbol using supplied parameter values
-        and discretisation. Note: care should be taken if using spatial operators
-        on dimensional symbols. Operators in pybamm are written in non-dimensional
-        form, so may need to be scaled by the appropriate length scale. It is
-        recommended to use this method on non-dimensional symbols.
+        Process parameters and discretise a symbol.
 
-        Parameters
-        ----------
-        symbol : :class:`pybamm.Symbol`
-            Symbol to be processed
-        parameter_values : :class:`pybamm.ParameterValues`
-            The parameter values to use during processing
-        disc : :class:`pybamm.Discretisation`
-            The discrisation to use
-
-        Returns
-        -------
-        :class:`pybamm.Symbol`
-            Processed symbol
+        This method is deprecated. Please process the model first with
+        :meth:`ParameterValues.process_model` and :meth:`Discretisation.process_model`,
+        then call :meth:`model.process_symbol(symbol)`.
         """
-        # Set y slices
-        if disc.y_slices == {}:
-            variables = list(self.rhs.keys()) + list(self.algebraic.keys())
-            for variable in variables:
-                variable.bounds = tuple(
-                    [
-                        parameter_values.process_symbol(bound)
-                        for bound in variable.bounds
-                    ]
-                )
-            disc.set_variable_slices(variables)
-
-        # Set boundary conditions (also requires setting parameter values)
-        if disc.bcs == {}:
-            self.boundary_conditions = parameter_values.process_boundary_conditions(
-                self
-            )
-            disc.bcs = disc.process_boundary_conditions(self)
-
-        # Process
-        param_symbol = parameter_values.process_symbol(symbol)
-        disc_symbol = disc.process_symbol(param_symbol)
-
-        return disc_symbol
+        raise NotImplementedError(
+            "process_parameters_and_discretise is deprecated.\n"
+            "Please first process the model with `ParameterValues.process_model` "
+            "and `Discretisation.process_model`, then run `model.observe(symbol)`."
+        )
 
     def save_model(self, filename=None, mesh=None, variables=None):
         """
