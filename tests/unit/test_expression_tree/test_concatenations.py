@@ -110,33 +110,48 @@ class TestConcatenations:
         assert conc.scale == 1
         assert conc.reference == 0
 
-        a._scale = 2
+        id_old = a.id
+        a.scale = 2
+        assert a.id != id_old
         with pytest.raises(
             ValueError, match="Cannot concatenate symbols with different scales"
         ):
             pybamm.concatenation(a, b)
 
-        b._scale = 2
+        id_old = b.id
+        b.scale = 2
+        assert b.id != id_old
         conc = pybamm.concatenation(a, b)
         assert conc.scale == 2
 
-        a._reference = 3
+        id_old = a.id
+        a.reference = 3
+        assert a.id != id_old
+        a.reference = 3
         with pytest.raises(
             ValueError, match="Cannot concatenate symbols with different references"
         ):
             pybamm.concatenation(a, b)
 
-        b._reference = 3
+        id_old = b.id
+        b.reference = 3
+        assert b.id != id_old
         conc = pybamm.concatenation(a, b)
         assert conc.reference == 3
 
+        a.bounds = (-100, 100)
+        id_old = a.id
         a.bounds = (0, 1)
+        assert a.id != id_old
         with pytest.raises(
             ValueError, match="Cannot concatenate symbols with different bounds"
         ):
             pybamm.concatenation(a, b)
 
+        b.bounds = (-100, 100)
+        id_old = b.id
         b.bounds = (0, 1)
+        assert b.id != id_old
         conc = pybamm.concatenation(a, b)
         assert conc.bounds == (0, 1)
 

@@ -61,21 +61,24 @@ PRINT_OPTIONS_OUTPUT = """\
 
 
 class TestBaseBatteryModel:
-    def test_process_parameters_and_discretise(self):
+    def test_symbol_processor(self):
         model = pybamm.lithium_ion.SPM()
         # Set up geometry and parameters
         geometry = model.default_geometry
         parameter_values = model.default_parameter_values
         parameter_values.process_geometry(geometry)
+        parameter_values.process_model(model)
         # Set up discretisation
         mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
         disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
-        # Process expression
+        disc.process_model(model)
+
+        # Process expression. We need to get the original model variables to use with `observe`
         c = (
             pybamm.Parameter("Negative electrode thickness [m]")
             * model.variables["X-averaged negative particle concentration [mol.m-3]"]
         )
-        processed_c = model.process_parameters_and_discretise(c, parameter_values, disc)
+        processed_c = model.process_symbol(c)
         assert isinstance(processed_c, pybamm.Multiplication)
         assert isinstance(processed_c.left, pybamm.Scalar)
         assert isinstance(processed_c.right, pybamm.StateVector)
@@ -89,7 +92,7 @@ class TestBaseBatteryModel:
         D = model.param.n.prim.D(c_n, T)
         N = -D * pybamm.grad(c_n)
 
-        flux_1 = model.process_parameters_and_discretise(N, parameter_values, disc)
+        flux_1 = model.process_symbol(N)
         flux_2 = model.variables["X-averaged negative particle flux [mol.m-2.s-1]"]
         param_flux_2 = parameter_values.process_symbol(flux_2)
         disc_flux_2 = disc.process_symbol(param_flux_2)
@@ -483,27 +486,25 @@ class TestBaseBatteryModel:
         assert model.options == options
 
     def test_save_load_model(self):
-        model = pybamm.lithium_ion.SPM()
-        geometry = model.default_geometry
-        param = model.default_parameter_values
-        param.process_model(model)
-        param.process_geometry(geometry)
-        mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
-        disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
-        disc.process_model(model)
-
-        # save model
-        model.save_model(
-            filename="test_base_battery_model", mesh=mesh, variables=model.variables
-        )
-
-        # raises error if variables are saved without mesh
-        with pytest.raises(ValueError):
-            model.save_model(
-                filename="test_base_battery_model", variables=model.variables
+        try:
+            model = pybamm.lithium_ion.SPM()
+            geometry = model.default_geometry
+            param = model.default_parameter_values
+            param.process_model(model)
+            param.process_geometry(geometry)
+            mesh = pybamm.Mesh(
+                geometry, model.default_submesh_types, model.default_var_pts
             )
+            disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+            disc.process_model(model)
 
-        os.remove("test_base_battery_model.json")
+            # save model
+            model.save_model(
+                filename="test_base_battery_model",
+                mesh=mesh,
+            )
+        finally:
+            os.remove("test_base_battery_model.json")
 
     def test_voltage_as_state(self):
         model = pybamm.lithium_ion.SPM({"voltage as a state": "true"})

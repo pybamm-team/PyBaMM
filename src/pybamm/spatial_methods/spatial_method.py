@@ -13,6 +13,8 @@ class SpatialMethod:
     a gradient operator, and a divergence operator.
     """
 
+    __slots__ = ["_mesh", "options"]
+
     def __init__(self, options=None):
         self.options = {
             "extrapolation": {

@@ -795,7 +795,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 time_indep = True
 
             newsol._variables[var] = pybamm.ProcessedVariableComputed(
-                [model.variables_and_events[var]],
+                [model.get_processed_variable_or_event(var)],
                 base_variables,
                 [data],
                 newsol,
