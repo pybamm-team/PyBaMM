@@ -1839,11 +1839,9 @@ def _deserialize_symbol_from_json(json_data):
     if type_name == "Parameter":
         # Convert stored parameters back to PyBaMM Parameter objects
         return pybamm.Parameter(json_data.get("name") or json_data.get("n"))
+    elif type_name == "InputParameter":
+        return pybamm.InputParameter(json_data.get("name") or json_data.get("n"))
     elif type_name == "Scalar":
-        return pybamm.Parameter(json_data["name"])
-    elif json_data["type"] == "InputParameter":
-        return pybamm.InputParameter(json_data["name"])
-    elif json_data["type"] == "Scalar":
         # Convert stored numerical values back to PyBaMM Scalar objects
         # Use explicit check to handle 0 correctly (can't use 'or' since 0 is falsy)
         if "value" in json_data:
