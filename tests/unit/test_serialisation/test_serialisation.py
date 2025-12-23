@@ -1111,7 +1111,7 @@ class TestSerialise:
                 self.is_processed = True
 
         m = DummyModelMissing()
-        with pytest.raises(ValueError, match="Cannot serialise a built model."):
+        with pytest.raises(ValueError, match=r"Cannot serialise a built model."):
             Serialise.save_custom_model(m, filename="irrelevant")
 
     def test_model_with_missing_json_sections(self, tmp_path):
