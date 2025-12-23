@@ -831,7 +831,10 @@ class ParameterValues:
         # Unary operators
         elif isinstance(symbol, pybamm.UnaryOperator):
             new_child = self.process_symbol(symbol.child)
-            new_symbol = symbol.create_copy(new_children=[new_child])
+            # Don't perform simplifications during parameter processing
+            new_symbol = symbol.create_copy(
+                new_children=[new_child], perform_simplifications=False
+            )
             # x_average can sometimes create a new symbol with electrode thickness
             # parameters, so we process again to make sure these parameters are set
             if isinstance(symbol, pybamm.XAverage) and not isinstance(
@@ -859,16 +862,21 @@ class ParameterValues:
             or isinstance(symbol, pybamm.BinaryOperator)
         ):
             new_children = [self.process_symbol(child) for child in symbol.children]
-            return symbol.create_copy(new_children)
+            # Don't perform simplifications during parameter processing to avoid
+            # evaluation errors (e.g., ZeroDivisionError) when creating copies
+            return symbol.create_copy(new_children, perform_simplifications=False)
 
         elif isinstance(symbol, pybamm.VectorField):
             left_symbol = self.process_symbol(symbol.lr_field)
             right_symbol = self.process_symbol(symbol.tb_field)
-            return symbol.create_copy(new_children=[left_symbol, right_symbol])
+            # Don't perform simplifications during parameter processing
+            return symbol.create_copy(
+                new_children=[left_symbol, right_symbol], perform_simplifications=False
+            )
 
         # Variables: update scale
         elif isinstance(symbol, pybamm.Variable):
-            new_symbol = symbol.create_copy()
+            new_symbol = symbol.create_copy(perform_simplifications=False)
             new_symbol.scale = self.process_symbol(symbol.scale)
             reference = self.process_symbol(symbol.reference)
             if isinstance(reference, pybamm.Vector):
@@ -1449,6 +1457,10 @@ def convert_parameter_values_to_json(parameter_values, filename=None):
         The filename to save the JSON file to. If not provided, the dictionary is
         not saved.
     """
+    # Reset caches for a clean serialization
+    from pybamm.expression_tree.operations.serialise import _reset_serialization_caches
+
+    _reset_serialization_caches()
     parameter_values_dict = {}
 
     for k, v in parameter_values.items():
