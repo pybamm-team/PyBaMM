@@ -460,22 +460,30 @@ class BaseModel(pybamm.BaseBatteryModel):
                 continue
             if (
                 self.options["SEI"] in ["none", "constant"]
-                and self.options["intercalation kinetics"] == "symmetric Butler-Volmer"
+                and self.options["intercalation kinetics"]
+                in ["linear", "symmetric Butler-Volmer"]
                 and self.options["surface form"] == "false"
             ):
-                # only symmetric Butler-Volmer can be inverted
+                # only symmetric Butler-Volmer or linear kinetics can be inverted
                 self.submodels[f"{domain} electrode potential"] = (
                     pybamm.electrode.ohm.LithiumMetalExplicit(
                         self.param, domain, self.options
                     )
                 )
-                self.submodels[f"{domain} electrode interface"] = (
-                    pybamm.kinetics.InverseButlerVolmer(
-                        self.param, domain, "lithium metal plating", self.options
+                if self.options["intercalation kinetics"] == "symmetric Butler-Volmer":
+                    self.submodels[f"{domain} electrode interface"] = (
+                        pybamm.kinetics.InverseButlerVolmer(
+                            self.param, domain, "lithium metal plating", self.options
+                        )
                     )
-                )  # assuming symmetric reaction for now so we can take the inverse
+                else:
+                    self.submodels[f"{domain} electrode interface"] = (
+                        pybamm.kinetics.InverseLinear(
+                            self.param, domain, "lithium metal plating", self.options
+                        )
+                    )
                 self.submodels[f"{domain} electrode interface current"] = (
-                    pybamm.kinetics.CurrentForInverseButlerVolmerLithiumMetal(
+                    pybamm.kinetics.CurrentForInverseKineticsLithiumMetal(
                         self.param, domain, "lithium metal plating", self.options
                     )
                 )
