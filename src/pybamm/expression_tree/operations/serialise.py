@@ -1701,6 +1701,11 @@ def convert_symbol_from_json(json_data):
         )
     elif json_data["type"] == "Time":
         return pybamm.Time()
+    elif json_data["type"] == "CoupledVariable":
+        return pybamm.CoupledVariable(
+            json_data["name"],
+            domain=json_data.get("domains", {}).get("primary", None),
+        )
     elif json_data["type"] == "Symbol":
         return pybamm.Symbol(
             json_data["name"],
