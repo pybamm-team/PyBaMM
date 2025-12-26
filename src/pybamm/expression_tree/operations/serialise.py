@@ -1922,3 +1922,58 @@ def convert_symbol_to_json(symbol):
         raise ValueError(
             f"Error processing '{symbol.name}'. Unknown symbol type: {type(symbol)}"
         )
+
+
+def add_variables_from_dict(model, variables_dict):
+    """
+    Add variables to a model from an external dictionary of serialized expressions.
+
+    This function deserializes expressions and adds them to the model's variables.
+    Any CoupledVariable nodes in the expressions are replaced with the actual
+    model variables they reference.
+
+    Parameters
+    ----------
+    model : pybamm.BaseModel
+        The model to add variables to. Must be built (have variables populated).
+    variables_dict : dict
+        Dictionary mapping new variable names to serialized expressions.
+        Expressions should use CoupledVariable nodes to reference model variables.
+
+    Raises
+    ------
+    ValueError
+        If a CoupledVariable references a variable not found in the model.
+
+    Examples
+    --------
+    >>> model = pybamm.lithium_ion.SPM()
+    >>> model.build_model()
+    >>> # Create a serialized expression for "Double voltage [V]" = Voltage [V] * 2
+    >>> voltage_cv = pybamm.CoupledVariable("Voltage [V]")
+    >>> serialized = convert_symbol_to_json(voltage_cv * 2)
+    >>> add_variables_from_dict(model, {"Double voltage [V]": serialized})
+    """
+    for new_var_name, serialized_expr in variables_dict.items():
+        # Deserialize the expression (CoupledVariable nodes are preserved)
+        new_var_expr = convert_symbol_from_json(serialized_expr)
+
+        # Replace CoupledVariable nodes with the actual model variables
+        def replace_coupled_vars(expr):
+            if isinstance(expr, pybamm.CoupledVariable):
+                depends_on_name = expr.name
+                if depends_on_name in model.variables:
+                    return model.variables[depends_on_name]
+                raise ValueError(
+                    f"Variable '{depends_on_name}' not found in model. "
+                    f"Available variables: {list(model.variables.keys())[:10]}..."
+                )
+            elif hasattr(expr, "children") and expr.children:
+                new_children = [replace_coupled_vars(c) for c in expr.children]
+                return expr.create_copy(new_children=new_children)
+            return expr
+
+        new_var_expr = replace_coupled_vars(new_var_expr)
+
+        # Add the new variable to the model
+        model.variables[new_var_name] = new_var_expr

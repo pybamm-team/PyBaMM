@@ -8,44 +8,9 @@ with a CoupledVariable placeholder that references the dependent variable.
 
 import pybamm
 from pybamm.expression_tree.operations.serialise import (
-    convert_symbol_from_json,
+    add_variables_from_dict,
     convert_symbol_to_json,
 )
-
-
-def add_coupled_variables_from_dict(model, coupled_vars_dict):
-    """
-    Add coupled variables to a model from an external dictionary.
-
-    Parameters
-    ----------
-    model : pybamm.BaseModel
-        The model to add coupled variables to
-    coupled_vars_dict : dict
-        Dictionary mapping new variable names to serialized expressions.
-        Expressions should use CoupledVariable nodes to reference model variables.
-    """
-    for new_var_name, serialized_expr in coupled_vars_dict.items():
-        # Deserialize the expression (CoupledVariable nodes are preserved)
-        new_var_expr = convert_symbol_from_json(serialized_expr)
-
-        # Replace CoupledVariable nodes with the actual model variables
-        def replace_coupled_vars(expr):
-            if isinstance(expr, pybamm.CoupledVariable):
-                depends_on_name = expr.name
-                if depends_on_name in model.variables:
-                    return model.variables[depends_on_name]
-                raise ValueError(f"Variable '{depends_on_name}' not found in model")
-            elif hasattr(expr, "children") and expr.children:
-                new_children = [replace_coupled_vars(c) for c in expr.children]
-                return expr.create_copy(new_children=new_children)
-            return expr
-
-        new_var_expr = replace_coupled_vars(new_var_expr)
-
-        # Add the new variable to the model
-        model.variables[new_var_name] = new_var_expr
-
 
 # Example usage
 if __name__ == "__main__":
@@ -73,7 +38,7 @@ if __name__ == "__main__":
     }
 
     # Add the coupled variables to the model
-    add_coupled_variables_from_dict(model, coupled_vars_dict)
+    add_variables_from_dict(model, coupled_vars_dict)
 
     print(f"\nCoupled variables: {model.list_coupled_variables()}")
     print(f"Double voltage expression: {model.variables['Double voltage [V]']}")
