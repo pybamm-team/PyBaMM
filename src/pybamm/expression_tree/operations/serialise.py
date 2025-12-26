@@ -1948,7 +1948,6 @@ def add_variables_from_dict(model, variables_dict):
     Examples
     --------
     >>> model = pybamm.lithium_ion.SPM()
-    >>> model.build_model()
     >>> # Create a serialized expression for "Double voltage [V]" = Voltage [V] * 2
     >>> voltage_cv = pybamm.CoupledVariable("Voltage [V]")
     >>> serialized = convert_symbol_to_json(voltage_cv * 2)
