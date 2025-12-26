@@ -735,6 +735,32 @@ class TestSerialise:
         assert var2.bounds[0].value == -float("inf")
         assert var2.bounds[1].value == float("inf")
 
+    def test_coupled_variable_serialisation(self):
+        # Test basic CoupledVariable serialisation
+        cv = pybamm.CoupledVariable("Voltage [V]")
+        json_dict = convert_symbol_to_json(cv)
+        cv2 = convert_symbol_from_json(json_dict)
+
+        assert isinstance(cv2, pybamm.CoupledVariable)
+        assert cv2.name == "Voltage [V]"
+
+    def test_coupled_variable_in_expression_serialisation(self):
+        # Test CoupledVariable used in an expression
+        cv = pybamm.CoupledVariable("Voltage [V]")
+        expr = cv * 2
+        json_dict = convert_symbol_to_json(expr)
+        expr2 = convert_symbol_from_json(json_dict)
+
+        assert isinstance(expr2, pybamm.Multiplication)
+        # Find the CoupledVariable in the expression
+        coupled_vars = [
+            node
+            for node in expr2.pre_order()
+            if isinstance(node, pybamm.CoupledVariable)
+        ]
+        assert len(coupled_vars) == 1
+        assert coupled_vars[0].name == "Voltage [V]"
+
     def test_concatenation_variable_serialisation(self):
         var1 = pybamm.Variable("a", domain="negative electrode")
         var2 = pybamm.Variable("a", domain="separator")
