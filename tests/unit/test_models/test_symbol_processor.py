@@ -68,13 +68,13 @@ class TestSymbolProcessor:
     def test_invalid_parameter_values(self):
         processor = pybamm.SymbolProcessor()
 
-        with pytest.raises(ValueError, match="`parameter_values` must be"):
+        with pytest.raises(ValueError, match=r"`parameter_values` must be"):
             processor.parameter_values = "not a ParameterValues"
 
     def test_invalid_discretisation(self):
         processor = pybamm.SymbolProcessor()
 
-        with pytest.raises(ValueError, match="`discretisation` must be"):
+        with pytest.raises(ValueError, match=r"`discretisation` must be"):
             processor.discretisation = "not a Discretisation"
 
     def test_disable(self):
@@ -142,5 +142,5 @@ class TestSymbolProcessor:
         processor = pybamm.SymbolProcessor()
         symbol = pybamm.Scalar(1)
 
-        with pytest.raises(ValueError, match="Cannot process a symbol"):
+        with pytest.raises(ValueError, match=r"Cannot process a symbol"):
             processor("test", symbol)

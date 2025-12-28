@@ -275,7 +275,7 @@ class TestEvaluate:
 
         # test a * b
         expr = a + b
-        constant_str, variable_str = pybamm.to_python(expr)
+        _constant_str, variable_str = pybamm.to_python(expr)
         expected_str = (
             r"var_[0-9m]+ = y\[0:1\].*\n"
             r"var_[0-9m]+ = y\[1:2\].*\n"

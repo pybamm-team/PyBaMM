@@ -428,7 +428,7 @@ class MatrixMultiplication(BinaryOperator):
         # We only need the case where left is an array and right
         # is a (slice of a) state vector, e.g. for discretised spatial
         # operators of the form D @ u (also catch cases of (-D) @ u)
-        left, right = self.orphans
+        left, _right = self.orphans
         if isinstance(left, pybamm.Array) or (
             isinstance(left, pybamm.Negate) and isinstance(left.child, pybamm.Array)
         ):

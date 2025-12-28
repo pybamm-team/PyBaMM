@@ -10,35 +10,35 @@ import pybamm
 
 class TestInterpolant:
     def test_errors(self):
-        with pytest.raises(ValueError, match="x1"):
+        with pytest.raises(ValueError, match=r"x1"):
             pybamm.Interpolant(np.ones(10), np.ones(11), pybamm.Symbol("a"))
-        with pytest.raises(ValueError, match="x2"):
+        with pytest.raises(ValueError, match=r"x2"):
             pybamm.Interpolant(
                 (np.ones(10), np.ones(11)), np.ones((10, 12)), pybamm.Symbol("a")
             )
-        with pytest.raises(ValueError, match="x1"):
+        with pytest.raises(ValueError, match=r"x1"):
             pybamm.Interpolant(
                 (np.ones(11), np.ones(12)), np.ones((10, 12)), pybamm.Symbol("a")
             )
-        with pytest.raises(ValueError, match="y should"):
+        with pytest.raises(ValueError, match=r"y should"):
             pybamm.Interpolant(
                 (np.ones(10), np.ones(11)), np.ones(10), pybamm.Symbol("a")
             )
-        with pytest.raises(ValueError, match="interpolator 'bla' not recognised"):
+        with pytest.raises(ValueError, match=r"interpolator 'bla' not recognised"):
             pybamm.Interpolant(
                 np.ones(10), np.ones(10), pybamm.Symbol("a"), interpolator="bla"
             )
-        with pytest.raises(ValueError, match="child should have size 1"):
+        with pytest.raises(ValueError, match=r"child should have size 1"):
             pybamm.Interpolant(
                 np.ones(10), np.ones((10, 11)), pybamm.StateVector(slice(0, 2))
             )
-        with pytest.raises(ValueError, match="should equal"):
+        with pytest.raises(ValueError, match=r"should equal"):
             pybamm.Interpolant(
                 (np.ones(12), np.ones(10)), np.ones((10, 12)), pybamm.Symbol("a")
             )
 
         with pytest.raises(
-            ValueError, match="len\\(x\\) should equal len\\(children\\)"
+            ValueError, match=r"len\\(x\\) should equal len\\(children\\)"
         ):
             pybamm.Interpolant(
                 (np.ones(10), np.ones(12)), np.ones((10, 12)), pybamm.Symbol("a")
@@ -78,7 +78,7 @@ class TestInterpolant:
 
     def test_interpolation_non_increasing(self):
         x = np.flip(np.linspace(0, 1, 200))
-        with pytest.raises(ValueError, match="x should be monotonically increasing"):
+        with pytest.raises(ValueError, match=r"x should be monotonically increasing"):
             pybamm.Interpolant(x, 2 * x, 0.5)
 
     def test_interpolation_float(self):
@@ -150,25 +150,25 @@ class TestInterpolant:
 
         # Test raising error if data is not 2D
         data_3d = np.zeros((11, 22, 33))
-        with pytest.raises(ValueError, match="y should be two-dimensional"):
+        with pytest.raises(ValueError, match=r"y should be two-dimensional"):
             interp = pybamm.Interpolant(
                 x_in, data_3d, (var1, var2), interpolator="linear"
             )
 
         # Test raising error if wrong shapes
-        with pytest.raises(ValueError, match="x1.shape"):
+        with pytest.raises(ValueError, match=r"x1.shape"):
             interp = pybamm.Interpolant(
                 x_in, np.zeros((12, 22)), (var1, var2), interpolator="linear"
             )
 
-        with pytest.raises(ValueError, match="x2.shape"):
+        with pytest.raises(ValueError, match=r"x2.shape"):
             interp = pybamm.Interpolant(
                 x_in, np.zeros((11, 23)), (var1, var2), interpolator="linear"
             )
 
         # Raise error if not linear
         with pytest.raises(
-            ValueError, match="interpolator should be 'linear' or 'cubic'"
+            ValueError, match=r"interpolator should be 'linear' or 'cubic'"
         ):
             interp = pybamm.Interpolant(x_in, data, (var1, var2), interpolator="pchip")
 
@@ -193,7 +193,7 @@ class TestInterpolant:
         value = interp._function_evaluate(evaluated_children)
 
         # Test evaluation fails with different child shapes
-        with pytest.raises(ValueError, match="All children must"):
+        with pytest.raises(ValueError, match=r"All children must"):
             evaluated_children = [np.array([[1, 1]]), np.array([7])]
             value = interp._function_evaluate(evaluated_children)
 
@@ -248,30 +248,30 @@ class TestInterpolant:
 
         # Test raising error if data is not 3D
         data_4d = np.zeros((11, 22, 33, 5))
-        with pytest.raises(ValueError, match="y should be three-dimensional"):
+        with pytest.raises(ValueError, match=r"y should be three-dimensional"):
             interp = pybamm.Interpolant(
                 x_in, data_4d, (var1, var2, var3), interpolator="linear"
             )
 
         # Test raising error if wrong shapes
-        with pytest.raises(ValueError, match="x1.shape"):
+        with pytest.raises(ValueError, match=r"x1.shape"):
             interp = pybamm.Interpolant(
                 x_in, np.zeros((12, 22, 33)), (var1, var2, var3), interpolator="linear"
             )
 
-        with pytest.raises(ValueError, match="x2.shape"):
+        with pytest.raises(ValueError, match=r"x2.shape"):
             interp = pybamm.Interpolant(
                 x_in, np.zeros((11, 23, 33)), (var1, var2, var3), interpolator="linear"
             )
 
-        with pytest.raises(ValueError, match="x3.shape"):
+        with pytest.raises(ValueError, match=r"x3.shape"):
             interp = pybamm.Interpolant(
                 x_in, np.zeros((11, 22, 34)), (var1, var2, var3), interpolator="linear"
             )
 
         # Raise error if not linear
         with pytest.raises(
-            ValueError, match="interpolator should be 'linear' or 'cubic'"
+            ValueError, match=r"interpolator should be 'linear' or 'cubic'"
         ):
             interp = pybamm.Interpolant(
                 x_in, data, (var1, var2, var3), interpolator="pchip"
@@ -300,7 +300,7 @@ class TestInterpolant:
         value = interp._function_evaluate(evaluated_children)
 
         # Test evaluation fails with different child shapes
-        with pytest.raises(ValueError, match="All children must"):
+        with pytest.raises(ValueError, match=r"All children must"):
             evaluated_children = [np.array([[1, 1]]), np.ones(()) * 4, np.array([[7]])]
             value = interp._function_evaluate(evaluated_children)
 
@@ -353,7 +353,7 @@ class TestInterpolant:
         interp = pybamm.Interpolant(x, z, (var1, var2), interpolator="linear")
         with pytest.raises(
             NotImplementedError,
-            match="differentiation not implemented for functions with more than one child",
+            match=r"differentiation not implemented for functions with more than one child",
         ):
             interp.diff(var1)
 
