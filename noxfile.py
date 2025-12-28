@@ -7,7 +7,7 @@ import nox
 # Options to modify nox behaviour
 nox.options.default_venv_backend = "uv|virtualenv"
 nox.options.reuse_existing_virtualenvs = True
-nox.needs_version = "2025.10.14"
+nox.needs_version = ">= 2025.10.14"
 
 homedir = os.getenv("HOME")
 PYBAMM_ENV = {
