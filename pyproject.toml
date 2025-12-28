@@ -48,7 +48,7 @@ Repository = "https://github.com/pybamm-team/PyBaMM"
 Releases = "https://github.com/pybamm-team/PyBaMM/releases"
 Changelog = "https://github.com/pybamm-team/PyBaMM/blob/develop/CHANGELOG.md"
 
-[project.optional-dependencies]
+[dependency-groups]
 docs = [
     "sphinx>=6",
     "sphinx_rtd_theme>=0.5",
