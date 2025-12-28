@@ -9,6 +9,8 @@
 *.csv
 *.hidden
 *.pkl
+.claude
+.local
 
 # don't ignore important .txt and .csv files
 !requirements*
