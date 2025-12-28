@@ -94,7 +94,7 @@ class TestBaseSolver:
         t_eval = np.array([0, 1])
         with pytest.raises(
             pybamm.SolverError,
-            match=r"The final `t_eval` value \\(1\\) must be equal to the step time `dt` \\(2\\)",
+            match=r"The final `t_eval` value (1) must be equal to the step time `dt` (2)",
         ):
             solver.step(None, model, dt, t_eval=t_eval)
 
@@ -123,7 +123,7 @@ class TestBaseSolver:
         p = pybamm.InputParameter("p")
         model.rhs = {a: a * p}
         with pytest.raises(
-            pybamm.SolverError, match=r"No value provided for input: \\['p'\\]"
+            pybamm.SolverError, match=r"No value provided for input: ['p']"
         ):
             solver.solve(model, np.array([1, 2, 3]))
 

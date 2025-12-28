@@ -38,7 +38,7 @@ class TestInterpolant:
             )
 
         with pytest.raises(
-            ValueError, match=r"len\\(x\\) should equal len\\(children\\)"
+            ValueError, match=r"len(x) should equal len(children)"
         ):
             pybamm.Interpolant(
                 (np.ones(10), np.ones(12)), np.ones((10, 12)), pybamm.Symbol("a")
