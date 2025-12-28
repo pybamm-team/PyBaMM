@@ -2,6 +2,8 @@
 # Tests for the Function classes
 #
 
+import re
+
 import numpy as np
 import pytest
 
@@ -37,7 +39,9 @@ class TestInterpolant:
                 (np.ones(12), np.ones(10)), np.ones((10, 12)), pybamm.Symbol("a")
             )
 
-        with pytest.raises(ValueError, match=r"len(x) should equal len(children)"):
+        with pytest.raises(
+            ValueError, match=re.escape("len(x) should equal len(children)")
+        ):
             pybamm.Interpolant(
                 (np.ones(10), np.ones(12)), np.ones((10, 12)), pybamm.Symbol("a")
             )

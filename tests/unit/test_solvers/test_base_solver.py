@@ -2,6 +2,8 @@
 # Tests for the Base Solver class
 #
 
+import re
+
 import casadi
 import numpy as np
 import pytest
@@ -94,14 +96,16 @@ class TestBaseSolver:
         t_eval = np.array([0, 1])
         with pytest.raises(
             pybamm.SolverError,
-            match=r"The final `t_eval` value (1) must be equal to the step time `dt` (2)",
+            match=re.escape(
+                "The final `t_eval` value (1) must be equal to the step time `dt` (2)"
+            ),
         ):
             solver.step(None, model, dt, t_eval=t_eval)
 
         t_eval = np.array([1, dt])
         with pytest.raises(
             pybamm.SolverError,
-            match=r"The first `t_eval` value \\(1\\) must be 0",
+            match=re.escape("The first `t_eval` value (1) must be 0"),
         ):
             solver.step(None, model, dt, t_eval=t_eval)
 
@@ -123,7 +127,7 @@ class TestBaseSolver:
         p = pybamm.InputParameter("p")
         model.rhs = {a: a * p}
         with pytest.raises(
-            pybamm.SolverError, match=r"No value provided for input: ['p']"
+            pybamm.SolverError, match=re.escape("No value provided for input: ['p']")
         ):
             solver.solve(model, np.array([1, 2, 3]))
 
