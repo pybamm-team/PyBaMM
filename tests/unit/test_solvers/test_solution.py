@@ -44,12 +44,16 @@ class TestSolution:
         ):
             sol.set_t()
 
-        ts = [np.array([1, 2, 3])]
-        bad_ys = [(pybamm.settings.max_y_value + 1) * np.ones((1, 3))]
-        model = pybamm.BaseModel()
-        var = pybamm.StateVector(slice(0, 1))
-        model.rhs = {var: 0}
-        model.variables = {var.name: var}
+        # Create a mock solution with an SPM
+        model = pybamm.lithium_ion.SPM()
+        sim = pybamm.Simulation(model)
+        t = [0, 1]
+        sol = sim.solve(t, t_interp=t)
+
+        ts = sol.all_ts[0]
+        bad_ys = np.full_like(sol.all_ys[0], pybamm.settings.max_y_value + 1)
+        model = sol.all_models[0]
+
         log_capture = io.StringIO()
         handler = logging.StreamHandler(log_capture)
         handler.setLevel(logging.ERROR)
@@ -474,8 +478,6 @@ class TestSolution:
         geometry = model.default_geometry
         param = model.default_parameter_values
         param.update({"Negative electrode conductivity [S.m-1]": "[input]"})
-        param.process_model(model)
-        param.process_geometry(geometry)
         var_pts = {"x_n": 5, "x_s": 5, "x_p": 5, "r_n": 10, "r_p": 10}
         spatial_methods = model.default_spatial_methods
         solver = model.default_solver
@@ -731,3 +733,161 @@ class TestSolution:
                     atol=1e-2,
                 )
                 assert isinstance(sol["integral"].sensitivities["a"], np.ndarray)
+
+    def test_observe(self):
+        """Test the observe method with pybamm symbols, comparing with model variables."""
+        # Set up a simple model
+        model = pybamm.lithium_ion.SPM()
+        parameter_values = pybamm.ParameterValues("Chen2020")
+
+        # Solve the model
+        sim = pybamm.Simulation(model, parameter_values=parameter_values)
+        sol = sim.solve([0, 3600])
+
+        # Test observing "Voltage [V]" symbol - should match exactly with model variable
+        voltage_symbol = model.variables["Voltage [V]"]
+        observed_voltage = sol.observe(voltage_symbol)
+
+        # Compare with the actual variable from solution
+        actual_voltage = sol["Voltage [V]"]
+
+        # They should match exactly
+        np.testing.assert_array_equal(observed_voltage.data, actual_voltage.data)
+        np.testing.assert_array_equal(observed_voltage.entries, actual_voltage.entries)
+
+        # Test with "Current [A]" - another model variable
+        current_symbol = model.variables["Current [A]"]
+        observed_current = sol.observe(current_symbol)
+        actual_current = sol["Current [A]"]
+        np.testing.assert_array_equal(observed_current.data, actual_current.data)
+        np.testing.assert_array_equal(observed_current.entries, actual_current.entries)
+
+        # Test that observe returns a ProcessedVariable
+        assert isinstance(observed_voltage, pybamm.ProcessedVariable)
+        assert isinstance(observed_current, pybamm.ProcessedVariable)
+
+        # Test that we can call observe multiple times and get the same result
+        observed_voltage2 = sol.observe(voltage_symbol)
+        np.testing.assert_array_equal(observed_voltage2.data, observed_voltage.data)
+
+        # Test that the cache works - verify it's the same object (not just equal)
+        observed_voltage3 = sol.observe(voltage_symbol)
+        assert observed_voltage3 is observed_voltage  # Should be the same cached object
+
+    def test_observe_with_numeric_inputs(self):
+        """Test that observe works with numeric inputs like 0, which get converted to symbols."""
+        # Set up a simple model
+        model = pybamm.lithium_ion.SPM()
+        sim = pybamm.Simulation(model)
+
+        sol = sim.solve([0, 1])
+
+        # Test observing a scalar value (0) - should convert to pybamm.Scalar(0)
+        observed_zero = sol.observe(0)
+        assert isinstance(observed_zero, pybamm.ProcessedVariable)
+        # Should be a constant array of zeros
+        np.testing.assert_array_equal(observed_zero.data, np.zeros(len(sol.t)))
+
+        # Test that numeric inputs are cached correctly
+        observed_zero2 = sol.observe(0)
+        assert observed_zero2 is observed_zero  # cached
+
+    def test_observe_failure(self):
+        """Test that observe raises an error if the solver includes `output_variables`."""
+        # 1. Input is invalid
+        t_eval = [0, 1]
+        model = pybamm.lithium_ion.SPM()
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        sim = pybamm.Simulation(model, parameter_values=parameter_values)
+        sol = sim.solve(t_eval)
+
+        with pytest.raises(ValueError, match="Input cannot be converted"):
+            sol.observe(None)
+
+        # 2. Trying to observe a symbol which is not part of the parameter_values or model
+        symbol = pybamm.Parameter("_not_in_model")
+        with pytest.raises(KeyError, match="not found"):
+            sol.observe(symbol)
+
+        # 3. Solver includes `output_variables` - solution not observable but models
+        # can still process symbols
+        solver = pybamm.IDAKLUSolver(output_variables=["Voltage [V]"])
+        sim = pybamm.Simulation(model, parameter_values=parameter_values, solver=solver)
+        sol = sim.solve(t_eval)
+        assert sol.observable is False
+        # Models can still process symbols (delayed variable processing is enabled)
+        assert all(model.can_process_symbols for model in sol.all_models)
+
+        with pytest.raises(ValueError, match="solver includes `output_variables`"):
+            sol.observe(model.variables["Current [A]"])
+
+        # 4. `disable_solution_observability` is called on the model - solution not
+        # observable but models can still process symbols
+        model = pybamm.lithium_ion.SPM()
+        model.disable_solution_observability(pybamm.ModelSolutionObservability.DISABLED)
+        sim = pybamm.Simulation(model)
+        sol = sim.solve(t_eval)
+        assert sol.observable is False
+        assert all(model.can_process_symbols for model in sol.all_models)
+
+        with pytest.raises(ValueError, match="disable_solution_observability"):
+            sol.observe(model.variables["Current [A]"])
+
+        # 5. Missing non-strictly required input parameters - solution unobservable
+        # but models can still process symbols
+        model = pybamm.lithium_ion.SPM()
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        input_names = sorted(
+            ["dummy", "Positive electrode active material volume fraction"]
+        )
+        parameter_values.update(
+            {k: "[input]" for k in input_names}, check_already_exists=False
+        )
+        sim = pybamm.Simulation(model, parameter_values=parameter_values)
+
+        # purposefully missing the dummy input
+        inputs = {name: 0.5 for name in input_names if name != "dummy"}
+
+        # check that BaseSolver raises a warning about missing inputs,
+        # and is unobservable, but it is still solvable
+        log_capture = io.StringIO()
+        handler = logging.StreamHandler(log_capture)
+        handler.setLevel(logging.WARNING)
+        logger = logging.getLogger("pybamm.logger")
+        logger.addHandler(handler)
+
+        sol = sim.solve(t_eval, inputs=inputs)
+
+        log_output = log_capture.getvalue()
+        assert "No value provided for input" in log_output
+        assert "dummy" in log_output
+        assert "can no longer be observed" in log_output
+        logger.removeHandler(handler)
+
+        assert sol.observable is False
+        assert all(not model.solution_observable for model in sol.all_models)
+
+        model = sol.all_models[0]
+        assert set(ip.name for ip in model.input_parameters) == set(input_names)
+        assert set(ip.name for ip in model.required_input_parameters) == set(
+            inputs.keys()
+        )
+        # check that missing input is set to DUMMY_INPUT_PARAMETER_VALUE (np.nan)
+        assert np.isnan(sol.all_inputs[0]["dummy"])
+
+        with pytest.raises(ValueError, match="input parameters were not provided"):
+            sol.observe(model.variables["Current [A]"])
+
+        # 6. Model is partially processed before simulation is built - models cannot
+        # process symbols at all
+        model = pybamm.lithium_ion.SPM()
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        parameter_values.process_model(model)
+        sim = pybamm.Simulation(model, parameter_values=parameter_values)
+        sol = sim.solve(t_eval)
+        assert sol.observable is False
+        assert all(not model.can_process_symbols for model in sol.all_models)
+        model = sol.all_models[0]
+
+        with pytest.raises(ValueError, match="re-parameterised"):
+            sol.observe(model.variables["Current [A]"])

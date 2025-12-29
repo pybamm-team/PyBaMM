@@ -329,7 +329,7 @@ This also means that, if you can't fix the bug yourself, it will be much easier 
    ```python3
    pybamm.set_logging_level("DEBUG")
    ```
-6. In models that inherit from `pybamm.BaseBatteryModel` (i.e. any battery model), you can use `self.process_parameters_and_discretise` to process a symbol and see what it will look like.
+6. In models that inherit from `pybamm.BaseBatteryModel` (i.e. any battery model), you can use `self.process_symbol` to process a symbol with a fully built model to see what it will look like.
 
 ### Profiling
 
