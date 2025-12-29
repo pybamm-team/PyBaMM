@@ -1032,11 +1032,14 @@ class TestSerialise:
         with pytest.raises(ValueError, match=r"Unsupported schema version: 9\.9"):
             Serialise.load_custom_model(file_path)
 
-    def test_model_has_correct_schema_version(self, tmp_path):
+    @pytest.mark.parametrize(
+        "compress", [False, True], ids=["uncompressed", "compressed"]
+    )
+    def test_model_has_correct_schema_version(self, tmp_path, compress):
         model = BasicDFN()
         file_path = tmp_path / "test_schema_version.json"
 
-        Serialise.save_custom_model(model, filename=str(file_path))
+        Serialise.save_custom_model(model, filename=str(file_path), compress=compress)
 
         loaded_model = Serialise.load_custom_model(str(file_path))
 
@@ -1379,7 +1382,10 @@ class TestSerialise:
         ):
             Serialise.load_custom_model(str(file))
 
-    def test_save_and_load_custom_model(self, tmp_path, monkeypatch):
+    @pytest.mark.parametrize(
+        "compress", [False, True], ids=["uncompressed", "compressed"]
+    )
+    def test_save_and_load_custom_model(self, tmp_path, monkeypatch, compress):
         model = pybamm.BaseModel(name="test_model")
         a = pybamm.Variable("a", domain="electrode")
         b = pybamm.Variable("b", domain="electrode")
@@ -1392,13 +1398,13 @@ class TestSerialise:
 
         # Save model to specified filename
         file_path = tmp_path / "test_model.json"
-        Serialise.save_custom_model(model, filename=str(file_path))
+        Serialise.save_custom_model(model, filename=str(file_path), compress=compress)
         assert file_path.exists()
 
         # Save using default filename logic
         with monkeypatch.context() as m:
             m.chdir(tmp_path)
-            Serialise().save_custom_model(model)
+            Serialise().save_custom_model(model, compress=compress)
             pattern = r"test_model_\d{4}_\d{2}_\d{2}_\d{2}_\d{2}_\d{2}\.json"
             matched = [f for f in os.listdir(tmp_path) if re.fullmatch(pattern, f)]
             assert matched
@@ -1411,6 +1417,9 @@ class TestSerialise:
         assert next(iter(loaded_model.rhs.values())).name == "b"
 
     @pytest.mark.parametrize(
+        "compress", [False, True], ids=["uncompressed", "compressed"]
+    )
+    @pytest.mark.parametrize(
         "model, filename",
         [
             (BasicSPM(), "basic_spm.json"),
@@ -1420,9 +1429,9 @@ class TestSerialise:
         ],
         ids=["basic_spm", "basic_dfn", "spm", "dfn"],
     )
-    def test_plotting_serialised_models(self, model, filename, tmp_path):
+    def test_plotting_serialised_models(self, model, filename, tmp_path, compress):
         path = tmp_path / filename
-        Serialise.save_custom_model(model, filename=str(path))
+        Serialise.save_custom_model(model, filename=str(path), compress=compress)
         loaded_model = Serialise.load_custom_model(str(path))
         sim = pybamm.Simulation(loaded_model)
         sim.solve([0, 3600])
@@ -2299,7 +2308,10 @@ class TestSerializationEdgeCases:
         with pytest.raises(ValueError, match="Unsupported schema version"):
             Serialise.load_submesh_types(invalid_data)
 
-    def test_load_custom_model_from_dict(self):
+    @pytest.mark.parametrize(
+        "compress", [False, True], ids=["uncompressed", "compressed"]
+    )
+    def test_load_custom_model_from_dict(self, compress):
         """Test loading a custom model directly from a dictionary."""
         # Create and save a custom model
         model = pybamm.BaseModel(name="test_dict_model")
@@ -2312,7 +2324,7 @@ class TestSerializationEdgeCases:
         model.events = [pybamm.Event("terminal", pybamm.Scalar(1) - b, "TERMINATION")]
         model.variables = {"a": a, "b": b}
 
-        model_json = Serialise.serialise_custom_model(model)
+        model_json = Serialise.serialise_custom_model(model, compress=compress)
 
         # Load from dict directly
         loaded_model = Serialise.load_custom_model(model_json)
@@ -2500,3 +2512,58 @@ class TestSerializationEdgeCases:
 
         with pytest.raises(ValueError, match="Unsupported parameter format"):
             Serialise.load_parameters(str(file_path))
+
+    def test_load_compressed_model_with_corrupted_data(self, tmp_path):
+        """Test that corrupted compressed data raises ValueError."""
+        # Create a file with corrupted compressed data
+        corrupted_data = {
+            "compressed": True,
+            "data": "this_is_not_valid_base64_zlib_data!!!",
+        }
+
+        file_path = tmp_path / "corrupted_compressed.json"
+        with open(file_path, "w") as f:
+            json.dump(corrupted_data, f)
+
+        with pytest.raises(ValueError, match="Failed to decompress model data"):
+            Serialise.load_custom_model(str(file_path))
+
+    def test_compression_reduces_size(self):
+        """Test that compression actually reduces the serialized size."""
+        model = BasicDFN()
+
+        uncompressed = Serialise.serialise_custom_model(model, compress=False)
+        compressed = Serialise.serialise_custom_model(model, compress=True)
+
+        # Convert to JSON strings to compare sizes
+        uncompressed_str = json.dumps(uncompressed, default=Serialise._json_encoder)
+        compressed_str = json.dumps(compressed)
+
+        # Compressed version should be smaller
+        assert len(compressed_str) < len(uncompressed_str)
+
+        # Compressed version should have the marker
+        assert compressed.get("compressed") is True
+        assert "data" in compressed
+
+    def test_compressed_format_structure(self):
+        """Test that compressed output has the expected structure."""
+        model = pybamm.BaseModel(name="test")
+        a = pybamm.Variable("a")
+        model.rhs = {a: pybamm.Scalar(1)}
+        model.initial_conditions = {a: pybamm.Scalar(0)}
+        model.algebraic = {}
+        model.boundary_conditions = {}
+        model.events = []
+        model.variables = {"a": a}
+
+        compressed = Serialise.serialise_custom_model(model, compress=True)
+
+        # Check structure
+        assert set(compressed.keys()) == {"compressed", "data"}
+        assert compressed["compressed"] is True
+        assert isinstance(compressed["data"], str)
+
+        # Verify the data can be decompressed
+        loaded = Serialise.load_custom_model(compressed)
+        assert loaded.name == "test"
