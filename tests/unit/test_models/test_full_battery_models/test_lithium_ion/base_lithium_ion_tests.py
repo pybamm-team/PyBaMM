@@ -65,7 +65,7 @@ class BaseUnitTestLithiumIon:
         options = {"thermal": "x-full", "use lumped thermal capacity": "true"}
         with pytest.raises(
             pybamm.OptionError,
-            match="Lumped thermal capacity model only compatible with lumped thermal models",
+            match=r"Lumped thermal capacity model only compatible with lumped thermal models",
         ):
             self.check_well_posedness(options)
 

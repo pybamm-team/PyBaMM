@@ -37,7 +37,7 @@ class TestConcatenations:
             pybamm.concatenation(1, 2)
 
         # concatenation of length 0
-        with pytest.raises(ValueError, match="Cannot create empty concatenation"):
+        with pytest.raises(ValueError, match=r"Cannot create empty concatenation"):
             pybamm.concatenation()
 
         # concatenation of lenght 1
@@ -45,7 +45,7 @@ class TestConcatenations:
 
         a = pybamm.Variable("a", domain="test a")
         b = pybamm.Variable("b", domain="test b")
-        with pytest.raises(TypeError, match="ConcatenationVariable"):
+        with pytest.raises(TypeError, match=r"ConcatenationVariable"):
             pybamm.Concatenation(a, b)
 
         # base concatenation jacobian
@@ -98,7 +98,7 @@ class TestConcatenations:
         )
         with pytest.raises(
             pybamm.DomainError,
-            match="children must have same or empty auxiliary domains",
+            match=r"children must have same or empty auxiliary domains",
         ):
             pybamm.concatenation(a, b, c)
 
@@ -114,7 +114,7 @@ class TestConcatenations:
         a.scale = 2
         assert a.id != id_old
         with pytest.raises(
-            ValueError, match="Cannot concatenate symbols with different scales"
+            ValueError, match=r"Cannot concatenate symbols with different scales"
         ):
             pybamm.concatenation(a, b)
 
@@ -129,7 +129,7 @@ class TestConcatenations:
         assert a.id != id_old
         a.reference = 3
         with pytest.raises(
-            ValueError, match="Cannot concatenate symbols with different references"
+            ValueError, match=r"Cannot concatenate symbols with different references"
         ):
             pybamm.concatenation(a, b)
 
@@ -144,7 +144,7 @@ class TestConcatenations:
         a.bounds = (0, 1)
         assert a.id != id_old
         with pytest.raises(
-            ValueError, match="Cannot concatenate symbols with different bounds"
+            ValueError, match=r"Cannot concatenate symbols with different bounds"
         ):
             pybamm.concatenation(a, b)
 
@@ -244,7 +244,7 @@ class TestConcatenations:
         ]
 
         conc.secondary_dimensions_npts = 2
-        with pytest.raises(ValueError, match="Concatenation and children must have"):
+        with pytest.raises(ValueError, match=r"Concatenation and children must have"):
             conc.create_slices(None)
 
     def test_concatenation_orphans(self):
@@ -367,7 +367,7 @@ class TestConcatenations:
         a = pybamm.Symbol("a")
         b = pybamm.Symbol("b")
         with pytest.raises(
-            pybamm.DomainError, match="Cannot concatenate child 'a' with empty domain"
+            pybamm.DomainError, match=r"Cannot concatenate child 'a' with empty domain"
         ):
             pybamm.DomainConcatenation([a, b], None)
 
@@ -473,6 +473,7 @@ class TestConcatenations:
         d_concat = pybamm.concatenation(pybamm.sin(d1), pybamm.sin(d2), pybamm.sin(d3))
         a_concat = pybamm.concatenation(pybamm.sin(a), pybamm.sin(b))
         with pytest.raises(
-            AssertionError, match="Concatenations must have the same number of children"
+            AssertionError,
+            match=r"Concatenations must have the same number of children",
         ):
             a_concat + d_concat

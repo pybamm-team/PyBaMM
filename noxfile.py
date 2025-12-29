@@ -7,7 +7,7 @@ import nox
 # Options to modify nox behaviour
 nox.options.default_venv_backend = "uv|virtualenv"
 nox.options.reuse_existing_virtualenvs = True
-nox.options.sessions = ["pre-commit", "unit"]
+nox.needs_version = ">= 2025.10.14"
 
 homedir = os.getenv("HOME")
 PYBAMM_ENV = {
@@ -33,7 +33,7 @@ def set_environment_variables(env_dict, session):
         session.env[key] = value
 
 
-@nox.session(name="coverage")
+@nox.session(name="coverage", default=False)
 def run_coverage(session):
     """Run the coverage tests and generate an XML report."""
     set_environment_variables(PYBAMM_ENV, session=session)
@@ -45,7 +45,7 @@ def run_coverage(session):
     session.run("pytest", "--cov=pybamm", "--cov-report=xml", "tests/unit")
 
 
-@nox.session(name="integration")
+@nox.session(name="integration", default=False)
 def run_integration(session):
     """Run the integration tests."""
     set_environment_variables(PYBAMM_ENV, session=session)
@@ -59,7 +59,7 @@ def run_integration(session):
     session.run("python", "-m", "pytest", "-m", "integration")
 
 
-@nox.session(name="doctests")
+@nox.session(name="doctests", default=False)
 def run_doctests(session):
     """Run the doctests and generate the output(s) in the docs/build/ directory."""
     # Fix for Python 3.12 CI. This can be removed after pybtex is replaced.
@@ -74,7 +74,7 @@ def run_doctests(session):
     )
 
 
-@nox.session(name="unit")
+@nox.session(name="unit", default=True)
 def run_unit(session):
     """Run the unit tests."""
     set_environment_variables(PYBAMM_ENV, session=session)
@@ -82,7 +82,7 @@ def run_unit(session):
     session.run("python", "-m", "pytest", "-m", "unit")
 
 
-@nox.session(name="examples")
+@nox.session(name="examples", default=False)
 def run_examples(session):
     """Run the examples tests for Jupyter notebooks."""
     set_environment_variables(PYBAMM_ENV, session=session)
@@ -93,7 +93,7 @@ def run_examples(session):
     )
 
 
-@nox.session(name="scripts")
+@nox.session(name="scripts", default=False)
 def run_scripts(session):
     """Run the scripts tests for Python scripts."""
     set_environment_variables(PYBAMM_ENV, session=session)
@@ -103,7 +103,7 @@ def run_scripts(session):
     session.run("python", "-m", "pytest", "-m", "scripts")
 
 
-@nox.session(name="dev")
+@nox.session(name="dev", default=False)
 def set_dev(session):
     """Install PyBaMM in editable mode."""
     set_environment_variables(PYBAMM_ENV, session=session)
@@ -126,7 +126,7 @@ def set_dev(session):
     )
 
 
-@nox.session(name="tests")
+@nox.session(name="tests", default=False)
 def run_tests(session):
     """Run the unit tests and integration tests sequentially."""
     set_environment_variables(PYBAMM_ENV, session=session)
@@ -139,7 +139,7 @@ def run_tests(session):
     )
 
 
-@nox.session(name="docs")
+@nox.session(name="docs", default=False)
 def build_docs(session):
     """Build the documentation and load it in a browser tab, rebuilding on changes."""
     envbindir = session.bin
@@ -173,15 +173,19 @@ def build_docs(session):
         )
 
 
-@nox.session(name="pre-commit")
+@nox.session(name="pre-commit", default=True)
 def lint(session):
     """Check all files against the defined pre-commit hooks."""
     session.install("pre-commit", silent=False)
     session.run("pre-commit", "run", "--all-files")
 
 
-@nox.session(name="quick", reuse_venv=True)
+@nox.session(name="quick", reuse_venv=True, default=False)
 def run_quick(session):
     """Run integration tests, unit tests, and doctests sequentially"""
     run_tests(session)
     run_doctests(session)
+
+
+if __name__ == "__main__":
+    nox.main()
