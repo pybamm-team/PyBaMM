@@ -175,7 +175,7 @@ class TestDiscretise:
         np.testing.assert_array_equal(y[disc.y_slices[d][0]], d_true)
         np.testing.assert_array_equal(y[disc.y_slices[jn][0]], jn_true)
 
-        with pytest.raises(TypeError, match="y_slices should be"):
+        with pytest.raises(TypeError, match=r"y_slices should be"):
             disc.y_slices = 1
 
         # bounds with an InputParameter
@@ -545,7 +545,7 @@ class TestDiscretise:
         np.testing.assert_array_equal(np.eye(np.size(y0)), jacobian.toarray())
 
         # test that discretising again gives an error
-        with pytest.raises(pybamm.ModelError, match="Cannot re-discretise a model"):
+        with pytest.raises(pybamm.ModelError, match=r"Cannot re-discretise a model"):
             disc.process_model(model)
 
         # test that not enough initial conditions raises an error
@@ -592,7 +592,7 @@ class TestDiscretise:
         # turn debug mode off to not check well posedness
         debug_mode = pybamm.settings.debug_mode
         pybamm.settings.debug_mode = False
-        with pytest.raises(pybamm.ModelError, match="No key set for variable"):
+        with pytest.raises(pybamm.ModelError, match=r"No key set for variable"):
             disc.process_model(model)
         pybamm.settings.debug_mode = debug_mode
 
@@ -811,14 +811,14 @@ class TestDiscretise:
 
         disc = pybamm.Discretisation()
         with pytest.raises(
-            pybamm.ModelError, match="initial condition is outside of variable bounds"
+            pybamm.ModelError, match=r"initial condition is outside of variable bounds"
         ):
             disc.process_model(model)
 
     def test_process_empty_model(self):
         model = pybamm.BaseModel()
         disc = pybamm.Discretisation()
-        with pytest.raises(pybamm.ModelError, match="Cannot discretise empty model"):
+        with pytest.raises(pybamm.ModelError, match=r"Cannot discretise empty model"):
             disc.process_model(model)
 
     def test_broadcast(self):
@@ -1072,7 +1072,8 @@ class TestDiscretise:
             "positive particle": pybamm.ZeroDimensionalSpatialMethod(),
         }
         with pytest.raises(
-            pybamm.DiscretisationError, match="Zero-dimensional spatial method for the "
+            pybamm.DiscretisationError,
+            match=r"Zero-dimensional spatial method for the ",
         ):
             pybamm.Discretisation(mesh, spatial_methods)
 
@@ -1088,7 +1089,7 @@ class TestDiscretise:
         assert list(bcs.keys()) == list(new_bcs.keys())
 
         # error if domain not "current collector"
-        with pytest.raises(pybamm.ModelError, match="Boundary conditions"):
+        with pytest.raises(pybamm.ModelError, match=r"Boundary conditions"):
             disc.check_tab_conditions(b, bcs)
 
     def test_mass_matrix_inverse(self):
@@ -1180,7 +1181,7 @@ class TestDiscretise:
 
         # discretise
         disc = pybamm.Discretisation(mesh, spatial_methods)
-        with pytest.raises(pybamm.ModelError, match="Boundary condition at r = 0"):
+        with pytest.raises(pybamm.ModelError, match=r"Boundary condition at r = 0"):
             disc.process_model(model)
 
         # boundary conditions (non-homog Neumann)
@@ -1192,7 +1193,7 @@ class TestDiscretise:
 
         # discretise
         disc = pybamm.Discretisation(mesh, spatial_methods)
-        with pytest.raises(pybamm.ModelError, match="Boundary condition at r = 0"):
+        with pytest.raises(pybamm.ModelError, match=r"Boundary condition at r = 0"):
             disc.process_model(model)
 
     def test_check_model_errors(self):
@@ -1202,20 +1203,20 @@ class TestDiscretise:
         model.rhs = {var: pybamm.Vector([1, 1])}
         model.initial_conditions = {var: 1}
         with pytest.raises(
-            pybamm.ModelError, match="initial conditions must be numpy array"
+            pybamm.ModelError, match=r"initial conditions must be numpy array"
         ):
             disc.check_model(model)
         model.initial_conditions = {var: pybamm.Vector([1, 1, 1])}
         with pytest.raises(
             pybamm.ModelError,
-            match="rhs and initial conditions must have the same shape",
+            match=r"rhs and initial conditions must have the same shape",
         ):
             disc.check_model(model)
         model.rhs = {}
         model.algebraic = {var: pybamm.Vector([1, 1])}
         with pytest.raises(
             pybamm.ModelError,
-            match="algebraic and initial conditions must have the same shape",
+            match=r"algebraic and initial conditions must have the same shape",
         ):
             disc.check_model(model)
 
@@ -1297,7 +1298,7 @@ class TestDiscretise:
             "b": 2 * a,
         }
         with pytest.raises(
-            pybamm.ModelError, match="Variable 'b' should have expression"
+            pybamm.ModelError, match=r"Variable 'b' should have expression"
         ):
             disc.process_model(model, inplace=False)
 

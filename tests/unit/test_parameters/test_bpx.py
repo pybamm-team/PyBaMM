@@ -240,7 +240,7 @@ class TestBPX:
 
     def test_bpx_soc_error(self):
         bpx_obj = copy.deepcopy(self.base)
-        with pytest.raises(ValueError, match="Target SOC"):
+        with pytest.raises(ValueError, match=r"Target SOC"):
             pybamm.ParameterValues.create_from_bpx_obj(bpx_obj, target_soc=10)
 
     def test_bpx_arrhenius(self, tmp_path):
@@ -410,7 +410,7 @@ class TestBPX:
 
         temp_file = tmp_path / "tmp.json"
         temp_file.write_text(json.dumps(bpx_obj))
-        with pytest.raises(NotImplementedError, match="PyBaMM does not support"):
+        with pytest.raises(NotImplementedError, match=r"PyBaMM does not support"):
             pybamm.ParameterValues.create_from_bpx(temp_file)
 
     def test_bpx_user_defined(self, tmp_path):
@@ -478,6 +478,6 @@ class TestBPX:
         bpx_obj["Parameterisation"]["Negative electrode"]["Porosity"] = 0  # Invalid
 
         with pytest.raises(
-            ValueError, match="math domain error"
+            ValueError, match=r"math domain error"
         ):  # Matches log(0) error
             pybamm.ParameterValues.create_from_bpx_obj(bpx_obj)

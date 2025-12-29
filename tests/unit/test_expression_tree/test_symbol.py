@@ -46,26 +46,26 @@ class TestSymbol:
             a = pybamm.Symbol("a", domain=1)
         with pytest.raises(
             pybamm.DomainError,
-            match="Domain levels must be filled in order",
+            match=r"Domain levels must be filled in order",
         ):
             b = pybamm.Symbol("b", auxiliary_domains={"secondary": ["test sec"]})
         b = pybamm.Symbol(
             "b", domain="test", auxiliary_domains={"secondary": ["test sec"]}
         )
 
-        with pytest.raises(pybamm.DomainError, match="keys must be one of"):
+        with pytest.raises(pybamm.DomainError, match=r"keys must be one of"):
             b.domains = {"test": "test"}
-        with pytest.raises(ValueError, match="Only one of 'domain' or 'domains'"):
+        with pytest.raises(ValueError, match=r"Only one of 'domain' or 'domains'"):
             pybamm.Symbol("b", domain="test", domains={"primary": "test"})
         with pytest.raises(
-            ValueError, match="Only one of 'auxiliary_domains' or 'domains'"
+            ValueError, match=r"Only one of 'auxiliary_domains' or 'domains'"
         ):
             pybamm.Symbol(
                 "b",
                 auxiliary_domains={"secondary": "other test"},
                 domains={"test": "test"},
             )
-        with pytest.raises(NotImplementedError, match="Cannot set domain directly"):
+        with pytest.raises(NotImplementedError, match=r"Cannot set domain directly"):
             b.domain = "test"
 
     def test_symbol_auxiliary_domains(self):
@@ -95,16 +95,16 @@ class TestSymbol:
         with pytest.raises(TypeError):
             a = pybamm.Symbol("a", domain=1)
         b = pybamm.Symbol("b", domain="test sec")
-        with pytest.raises(pybamm.DomainError, match="All domains must be different"):
+        with pytest.raises(pybamm.DomainError, match=r"All domains must be different"):
             b.domains = {"primary": "test", "secondary": "test"}
-        with pytest.raises(pybamm.DomainError, match="All domains must be different"):
+        with pytest.raises(pybamm.DomainError, match=r"All domains must be different"):
             b = pybamm.Symbol(
                 "b",
                 domain="test",
                 auxiliary_domains={"secondary": ["test sec"], "tertiary": ["test sec"]},
             )
 
-        with pytest.raises(NotImplementedError, match="auxiliary_domains"):
+        with pytest.raises(NotImplementedError, match=r"auxiliary_domains"):
             a.auxiliary_domains
 
     def test_symbol_methods(self):
@@ -157,7 +157,7 @@ class TestSymbol:
         # error raising
         with pytest.raises(
             NotImplementedError,
-            match="BinaryOperator not implemented for symbols of type",
+            match=r"BinaryOperator not implemented for symbols of type",
         ):
             a + "two"
 
@@ -556,9 +556,9 @@ class TestIsZero:
 
     def test_bool(self):
         a = pybamm.Symbol("a")
-        with pytest.raises(NotImplementedError, match="Boolean"):
+        with pytest.raises(NotImplementedError, match=r"Boolean"):
             bool(a)
         # if statement calls Boolean
-        with pytest.raises(NotImplementedError, match="Boolean"):
+        with pytest.raises(NotImplementedError, match=r"Boolean"):
             if a > 1:
                 print("a is greater than 1")
