@@ -52,7 +52,7 @@ class TestFunction:
         func = pybamm.Function(function_test, a)
         with pytest.raises(
             NotImplementedError,
-            match="Derivative of base Function class is not implemented",
+            match=r"Derivative of base Function class is not implemented",
         ):
             func.diff(a)
 

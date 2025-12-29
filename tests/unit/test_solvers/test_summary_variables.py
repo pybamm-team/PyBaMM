@@ -100,7 +100,7 @@ class TestSummaryVariables:
     def test_get_variable_error_not_summary_variable(self):
         sum_vars, _ = self.create_sum_vars()
 
-        with pytest.raises(KeyError, match="Variable 'c' is not a summary variable"):
+        with pytest.raises(KeyError, match=r"Variable 'c' is not a summary variable"):
             sum_vars["c"]
 
     def test_summary_vars_all_variables(self):

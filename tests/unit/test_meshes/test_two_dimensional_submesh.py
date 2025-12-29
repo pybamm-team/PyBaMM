@@ -85,7 +85,7 @@ class TestSubMesh2D:
         lims_strings = {"x": {"min": 0.0, "max": 1.0}, "y": {"min": 0.0, "max": 2.0}}
 
         lims_copy = lims_strings.copy()
-        spatial_var_lr, spatial_lims_lr, spatial_var_tb, spatial_lims_tb, tabs = (
+        spatial_var_lr, _spatial_lims_lr, spatial_var_tb, _spatial_lims_tb, tabs = (
             submesh.read_lims(lims_copy)
         )
 
@@ -140,7 +140,7 @@ class TestSubMesh2D:
         # Test with wrong number of variables (too few)
         lims_too_few = {"x": {"min": 0.0, "max": 1.0}}
         with pytest.raises(
-            pybamm.GeometryError, match="lims should only contain two variables"
+            pybamm.GeometryError, match=r"lims should only contain two variables"
         ):
             submesh.read_lims(lims_too_few)
 
@@ -151,7 +151,7 @@ class TestSubMesh2D:
             "z": {"min": 0.0, "max": 1.0},
         }
         with pytest.raises(
-            pybamm.GeometryError, match="lims should only contain two variables"
+            pybamm.GeometryError, match=r"lims should only contain two variables"
         ):
             submesh.read_lims(lims_too_many)
 
@@ -171,7 +171,7 @@ class TestSubMesh2D:
         }
 
         lims_copy = lims_mixed.copy()
-        spatial_var_lr, spatial_lims_lr, spatial_var_tb, spatial_lims_tb, tabs = (
+        spatial_var_lr, _spatial_lims_lr, spatial_var_tb, _spatial_lims_tb, _tabs = (
             submesh.read_lims(lims_copy)
         )
 
@@ -301,7 +301,7 @@ class TestUniform2DSubMesh:
         npts = {x.name: 10, y_cylindrical.name: 10}
 
         with pytest.raises(
-            pybamm.GeometryError, match="Coordinate systems must be the same"
+            pybamm.GeometryError, match=r"Coordinate systems must be the same"
         ):
             pybamm.Uniform2DSubMesh(lims, npts)
 
@@ -381,7 +381,7 @@ class TestUniform2DSubMesh:
         )  # Ghost cell connects to original
 
         # Test invalid side
-        with pytest.raises(ValueError, match="Invalid side"):
+        with pytest.raises(ValueError, match=r"Invalid side"):
             submesh.create_ghost_cell("invalid")
 
     def test_uniform_2d_submesh_json_serialization(self, x, y):

@@ -11,23 +11,23 @@ class TestBaseParameters:
     def test_getattr__(self):
         param = pybamm.LithiumIonParameters()
         # ending in _n / _s / _p
-        with pytest.raises(AttributeError, match="param.n.L"):
+        with pytest.raises(AttributeError, match=r"param.n.L"):
             param.L_n
-        with pytest.raises(AttributeError, match="param.s.L"):
+        with pytest.raises(AttributeError, match=r"param.s.L"):
             param.L_s
-        with pytest.raises(AttributeError, match="param.p.L"):
+        with pytest.raises(AttributeError, match=r"param.p.L"):
             param.L_p
         # _n_ in the name
-        with pytest.raises(AttributeError, match="param.n.prim.c_max"):
+        with pytest.raises(AttributeError, match=r"param.n.prim.c_max"):
             param.c_n_max
 
         # _n_ or _p_ not in name
         with pytest.raises(
-            AttributeError, match="has no attribute 'c_n_not_a_parameter"
+            AttributeError, match=r"has no attribute 'c_n_not_a_parameter"
         ):
             param.c_n_not_a_parameter
 
-        with pytest.raises(AttributeError, match="has no attribute 'c_s_test"):
+        with pytest.raises(AttributeError, match=r"has no attribute 'c_s_test"):
             pybamm.electrical_parameters.c_s_test
 
         assert param.n.cap_init == param.n.Q_init

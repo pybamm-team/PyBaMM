@@ -826,7 +826,7 @@ class ParticleLithiumIonParameters(BaseParameters):
 
     def Omega(self, sto, T):
         """Dimensional partial molar volume of Li in solid solution [m3.mol-1]"""
-        domain, Domain = self.domain_Domain
+        _domain, Domain = self.domain_Domain
         inputs = {
             f"{self.phase_prefactor} particle stoichiometry": sto,
             "Temperature [K]": T,
@@ -838,7 +838,7 @@ class ParticleLithiumIonParameters(BaseParameters):
 
     def E(self, sto, T):
         """Dimensional Young's modulus"""
-        domain, Domain = self.domain_Domain
+        _domain, Domain = self.domain_Domain
         inputs = {
             f"{self.phase_prefactor} particle stoichiometry": sto,
             "Temperature [K]": T,
