@@ -476,7 +476,10 @@ class TestSerialise:
 
         assert Serialise()._convert_options(options_dict) == options_result
 
-    def test_save_load_model(self):
+    def test_save_load_model(self, mocker, tmp_path, request):
+        os.chdir(tmp_path)
+        request.addfinalizer(lambda: os.chdir(os.getcwd()))
+
         model = pybamm.lithium_ion.SPM(name="test_spm")
         geometry = model.default_geometry
         param = model.default_parameter_values
@@ -499,8 +502,11 @@ class TestSerialise:
         assert os.path.exists("test_model.json")
 
         # default save where filename isn't provided
+        fixed_dt = datetime(2025, 12, 25, 0, 0, 0)
+        mocked_dt = mocker.patch("pybamm.expression_tree.operations.serialise.datetime")
+        mocked_dt.now.return_value = fixed_dt
         Serialise().save_model(model)
-        filename = "test_spm_" + datetime.now().strftime("%Y_%m_%d-%p%I_%M") + ".json"
+        filename = "test_spm_" + fixed_dt.strftime("%Y_%m_%d-%p%I_%M") + ".json"
         assert os.path.exists(filename)
         os.remove(filename)
 
