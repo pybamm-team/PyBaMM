@@ -49,7 +49,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-15-intel, macos-latest, windows-latest]
-        python-version: ["3.10", "3.11", "3.12"]
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
     name: Tests (${{ matrix.os }} / Python ${{ matrix.python-version }})
 
     steps:
@@ -106,21 +106,21 @@ jobs:
         run: uv tool install nox
 
       - name: Run unit tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
-        if: matrix.os != 'ubuntu-latest' || matrix.python-version != '3.12'
+        if: matrix.os != 'ubuntu-latest' || matrix.python-version != '3.13'
         run: nox -s unit
 
       - name: Run coverage tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13'
         run: nox -s coverage
 
       - name: Upload coverage report
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13'
         uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5.5.2
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Run integration tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13'
         run: nox -s integration
 
   run_doctests:
@@ -129,7 +129,7 @@ jobs:
       contents: read
     strategy:
       fail-fast: false
-    name: Doctests (ubuntu-latest / Python 3.11)
+    name: Doctests (ubuntu-latest / Python 3.13)
 
     steps:
       - name: Check out PyBaMM repository
@@ -155,7 +155,7 @@ jobs:
         id: setup-python
         uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
         with:
-          python-version: 3.11
+          python-version: 3.13
 
       - uses: astral-sh/setup-uv@681c641aba71e4a1c380be3ab5e12ad51f415867 # v7.1.6
         with:
@@ -177,7 +177,7 @@ jobs:
       contents: read
     strategy:
       fail-fast: false
-    name: Example notebooks (ubuntu-latest / Python 3.12)
+    name: Example notebooks (ubuntu-latest / Python 3.13)
 
     steps:
       - name: Check out PyBaMM repository
@@ -198,11 +198,11 @@ jobs:
           sudo dot -c
           sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
 
-      - name: Set up Python 3.12
+      - name: Set up Python 3.13
         id: setup-python
         uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
         with:
-          python-version: 3.12
+          python-version: 3.13
 
       - uses: astral-sh/setup-uv@681c641aba71e4a1c380be3ab5e12ad51f415867 # v7.1.6
         with:
@@ -212,7 +212,7 @@ jobs:
       - name: Install nox
         run: uv tool install nox
 
-      - name: Run example notebooks tests for GNU/Linux with Python 3.12
+      - name: Run example notebooks tests for GNU/Linux with Python 3.13
         run: nox -s examples
 
   run_scripts_tests:
@@ -221,7 +221,7 @@ jobs:
       contents: read
     strategy:
       fail-fast: false
-    name: Example scripts (ubuntu-latest / Python 3.12)
+    name: Example scripts (ubuntu-latest / Python 3.13)
 
     steps:
       - name: Check out PyBaMM repository
@@ -242,11 +242,11 @@ jobs:
           sudo dot -c
           sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
 
-      - name: Set up Python 3.12
+      - name: Set up Python 3.13
         id: setup-python
         uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
         with:
-          python-version: 3.12
+          python-version: 3.13
 
       - uses: astral-sh/setup-uv@681c641aba71e4a1c380be3ab5e12ad51f415867 # v7.1.6
         with:
@@ -256,5 +256,5 @@ jobs:
       - name: Install nox
         run: uv tool install nox
 
-      - name: Run example scripts tests for GNU/Linux with Python 3.12
+      - name: Run example scripts tests for GNU/Linux with Python 3.13
         run: nox -s scripts

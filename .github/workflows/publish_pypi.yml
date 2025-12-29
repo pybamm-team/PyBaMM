@@ -18,7 +18,7 @@ jobs:
           persist-credentials: true
       - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
         with:
-          python-version: 3.12
+          python-version: 3.13
 
       - name: Build wheel
         run: pipx run build --outdir deploy
