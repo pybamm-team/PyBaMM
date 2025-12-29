@@ -139,7 +139,7 @@ class TestScikitFiniteElement3D:
         u = pybamm.Variable("u", domain="current collector")
         disc.set_variable_slices([u])
 
-        x, y, z = mesh["current collector"].nodes.T
+        x, _y, _z = mesh["current collector"].nodes.T
         u_exact = 4.5 * x**2
 
         grad_u = pybamm.grad(u)

@@ -424,7 +424,7 @@ class TestSerialise:
 
         # reconstructed meshes are only used for plotting, geometry not reconstructed.
         with pytest.raises(
-            AttributeError, match="'Mesh' object has no attribute '_geometry'"
+            AttributeError, match=r"'Mesh' object has no attribute '_geometry'"
         ):
             assert new_mesh.geometry == mesh.geometry
 
@@ -477,7 +477,10 @@ class TestSerialise:
 
         assert Serialise()._convert_options(options_dict) == options_result
 
-    def test_save_load_model(self):
+    def test_save_load_model(self, mocker, tmp_path, request):
+        os.chdir(tmp_path)
+        request.addfinalizer(lambda: os.chdir(os.getcwd()))
+
         model = pybamm.lithium_ion.SPM(name="test_spm")
         geometry = model.default_geometry
         param = model.default_parameter_values
@@ -488,7 +491,7 @@ class TestSerialise:
         # test error if not discretised
         with pytest.raises(
             NotImplementedError,
-            match="PyBaMM can only serialise a discretised, ready-to-solve model",
+            match=r"PyBaMM can only serialise a discretised, ready-to-solve model",
         ):
             Serialise().save_model(model, filename="test_model")
 
@@ -500,8 +503,11 @@ class TestSerialise:
         assert os.path.exists("test_model.json")
 
         # default save where filename isn't provided
+        fixed_dt = datetime(2025, 12, 25, 0, 0, 0)
+        mocked_dt = mocker.patch("pybamm.expression_tree.operations.serialise.datetime")
+        mocked_dt.now.return_value = fixed_dt
         Serialise().save_model(model)
-        filename = "test_spm_" + datetime.now().strftime("%Y_%m_%d-%p%I_%M") + ".json"
+        filename = "test_spm_" + fixed_dt.strftime("%Y_%m_%d-%p%I_%M") + ".json"
         assert os.path.exists(filename)
         os.remove(filename)
 
@@ -680,7 +686,7 @@ class TestSerialise:
         class Dummy:
             pass
 
-        with pytest.raises(TypeError, match="is not JSON serializable"):
+        with pytest.raises(TypeError, match=r"is not JSON serializable"):
             Serialise._json_encoder(Dummy())
 
     def test_create_symbol_key(self):
@@ -878,7 +884,7 @@ class TestSerialise:
 
         symbol = pybamm.SpecificFunction(dummy_func, pybamm.Scalar(1))
         with pytest.raises(
-            NotImplementedError, match="SpecificFunction is not supported directly"
+            NotImplementedError, match=r"SpecificFunction is not supported directly"
         ):
             convert_symbol_to_json(symbol)
 
@@ -1054,7 +1060,7 @@ class TestSerialise:
 
             with pytest.raises(
                 ValueError,
-                match="Failed to save custom model: Failed to write model JSON to file",
+                match=r"Failed to save custom model: Failed to write model JSON to file",
             ):
                 Serialise.save_custom_model(model, "readonly_test.json")
 
@@ -1068,7 +1074,7 @@ class TestSerialise:
             side_effect=Exception("conversion failed"),
         ):
             with pytest.raises(
-                ValueError, match="Failed to save custom model: conversion failed"
+                ValueError, match=r"Failed to save custom model: conversion failed"
             ):
                 Serialise.save_custom_model(model, "conversion_fail")
 
@@ -1175,7 +1181,7 @@ class TestSerialise:
                 self.is_processed = True
 
         m = DummyModelMissing()
-        with pytest.raises(ValueError, match="Cannot serialise a built model."):
+        with pytest.raises(ValueError, match=r"Cannot serialise a built model."):
             Serialise.save_custom_model(m, filename="irrelevant")
 
     def test_model_with_missing_json_sections(self, tmp_path):
@@ -1931,7 +1937,7 @@ class TestSerializationErrorHandling:
             "geometry": {},
         }
 
-        with pytest.raises(ValueError, match="Unsupported schema version"):
+        with pytest.raises(ValueError, match=r"Unsupported schema version"):
             Serialise.load_custom_geometry(invalid_data)
 
     def test_missing_geometry_section(self):
@@ -1941,7 +1947,7 @@ class TestSerializationErrorHandling:
             "pybamm_version": pybamm.__version__,
         }
 
-        with pytest.raises(KeyError, match="Missing 'geometry' section"):
+        with pytest.raises(KeyError, match=r"Missing 'geometry' section"):
             Serialise.load_custom_geometry(invalid_data)
 
     def test_missing_spatial_methods_section(self):
@@ -1951,7 +1957,7 @@ class TestSerializationErrorHandling:
             "pybamm_version": pybamm.__version__,
         }
 
-        with pytest.raises(KeyError, match="Missing 'spatial_methods' section"):
+        with pytest.raises(KeyError, match=r"Missing 'spatial_methods' section"):
             Serialise.load_spatial_methods(invalid_data)
 
     def test_missing_var_pts_section(self):
@@ -1961,7 +1967,7 @@ class TestSerializationErrorHandling:
             "pybamm_version": pybamm.__version__,
         }
 
-        with pytest.raises(KeyError, match="Missing 'var_pts' section"):
+        with pytest.raises(KeyError, match=r"Missing 'var_pts' section"):
             Serialise.load_var_pts(invalid_data)
 
     def test_file_not_found_geometry(self):
@@ -1986,7 +1992,7 @@ class TestSerializationErrorHandling:
             "pybamm_version": pybamm.__version__,
         }
 
-        with pytest.raises(KeyError, match="Missing 'submesh_types' section"):
+        with pytest.raises(KeyError, match=r"Missing 'submesh_types' section"):
             Serialise.load_submesh_types(invalid_data)
 
     def test_file_not_found_submesh_types(self):
@@ -2065,7 +2071,7 @@ class TestSerializationEdgeCases:
 
         monkeypatch.setattr("builtins.open", mock_open_error)
 
-        with pytest.raises(ValueError, match="Failed to save custom geometry"):
+        with pytest.raises(ValueError, match=r"Failed to save custom geometry"):
             Serialise.save_custom_geometry(geometry, filename="test.json")
 
     def test_geometry_invalid_json(self):
@@ -2077,7 +2083,7 @@ class TestSerializationEdgeCases:
             with open(filepath, "w") as f:
                 f.write("{invalid json content")
 
-            with pytest.raises(ValueError, match="contains invalid JSON"):
+            with pytest.raises(ValueError, match=r"contains invalid JSON"):
                 Serialise.load_custom_geometry(str(filepath))
 
     def test_spatial_methods_invalid_filename_extension(self):
@@ -2097,7 +2103,7 @@ class TestSerializationEdgeCases:
 
         monkeypatch.setattr("builtins.open", mock_open_error)
 
-        with pytest.raises(ValueError, match="Failed to save spatial methods"):
+        with pytest.raises(ValueError, match=r"Failed to save spatial methods"):
             Serialise.save_spatial_methods(spatial_methods, filename="test.json")
 
     def test_spatial_methods_general_error(self, monkeypatch):
@@ -2113,7 +2119,7 @@ class TestSerializationEdgeCases:
             mock_serialise_error,
         )
 
-        with pytest.raises(ValueError, match="Failed to save spatial methods"):
+        with pytest.raises(ValueError, match=r"Failed to save spatial methods"):
             Serialise.save_spatial_methods(spatial_methods)
 
     def test_var_pts_invalid_filename_extension(self):
@@ -2133,7 +2139,7 @@ class TestSerializationEdgeCases:
 
         monkeypatch.setattr("builtins.open", mock_open_error)
 
-        with pytest.raises(ValueError, match="Failed to save var_pts"):
+        with pytest.raises(ValueError, match=r"Failed to save var_pts"):
             Serialise.save_var_pts(var_pts, filename="test.json")
 
     def test_var_pts_general_error(self, monkeypatch):
@@ -2149,7 +2155,7 @@ class TestSerializationEdgeCases:
             mock_serialise_error,
         )
 
-        with pytest.raises(ValueError, match="Failed to save var_pts"):
+        with pytest.raises(ValueError, match=r"Failed to save var_pts"):
             Serialise.save_var_pts(var_pts)
 
     def test_submesh_types_file_write_error(self, monkeypatch):
@@ -2164,7 +2170,7 @@ class TestSerializationEdgeCases:
 
         monkeypatch.setattr("builtins.open", mock_open_error)
 
-        with pytest.raises(ValueError, match="Failed to save submesh types"):
+        with pytest.raises(ValueError, match=r"Failed to save submesh types"):
             Serialise.save_submesh_types(submesh_types, filename="test.json")
 
     def test_submesh_types_general_error(self, monkeypatch):
@@ -2182,7 +2188,7 @@ class TestSerializationEdgeCases:
             mock_serialise_error,
         )
 
-        with pytest.raises(ValueError, match="Failed to save submesh types"):
+        with pytest.raises(ValueError, match=r"Failed to save submesh types"):
             Serialise.save_submesh_types(submesh_types)
 
     def test_geometry_general_error(self, monkeypatch):
@@ -2198,7 +2204,7 @@ class TestSerializationEdgeCases:
             mock_serialise_error,
         )
 
-        with pytest.raises(ValueError, match="Failed to save custom geometry"):
+        with pytest.raises(ValueError, match=r"Failed to save custom geometry"):
             Serialise.save_custom_geometry(geometry)
 
     def test_spatial_methods_default_filename(self, monkeypatch):
@@ -2269,7 +2275,7 @@ class TestSerializationEdgeCases:
             with open(filepath, "w") as f:
                 f.write("{invalid json for spatial methods")
 
-            with pytest.raises(ValueError, match="contains invalid JSON"):
+            with pytest.raises(ValueError, match=r"contains invalid JSON"):
                 Serialise.load_spatial_methods(str(filepath))
 
     def test_spatial_methods_unsupported_schema(self):
@@ -2280,7 +2286,7 @@ class TestSerializationEdgeCases:
             "spatial_methods": {},
         }
 
-        with pytest.raises(ValueError, match="Unsupported schema version"):
+        with pytest.raises(ValueError, match=r"Unsupported schema version"):
             Serialise.load_spatial_methods(invalid_data)
 
     def test_spatial_methods_import_error(self):
@@ -2297,7 +2303,7 @@ class TestSerializationEdgeCases:
             },
         }
 
-        with pytest.raises(ImportError, match="Could not import spatial method"):
+        with pytest.raises(ImportError, match=r"Could not import spatial method"):
             Serialise.load_spatial_methods(invalid_data)
 
     def test_var_pts_invalid_json(self):
@@ -2309,7 +2315,7 @@ class TestSerializationEdgeCases:
             with open(filepath, "w") as f:
                 f.write("{invalid json for var_pts")
 
-            with pytest.raises(ValueError, match="contains invalid JSON"):
+            with pytest.raises(ValueError, match=r"contains invalid JSON"):
                 Serialise.load_var_pts(str(filepath))
 
     def test_var_pts_unsupported_schema(self):
@@ -2320,7 +2326,7 @@ class TestSerializationEdgeCases:
             "var_pts": {},
         }
 
-        with pytest.raises(ValueError, match="Unsupported schema version"):
+        with pytest.raises(ValueError, match=r"Unsupported schema version"):
             Serialise.load_var_pts(invalid_data)
 
     def test_var_pts_unexpected_key_type(self):
@@ -2328,7 +2334,7 @@ class TestSerializationEdgeCases:
         # Create var_pts with an unexpected key type
         var_pts = {123: 20}  # integer key instead of string or SpatialVariable
 
-        with pytest.raises(ValueError, match="Unexpected key type in var_pts"):
+        with pytest.raises(ValueError, match=r"Unexpected key type in var_pts"):
             Serialise.serialise_var_pts(var_pts)
 
     def test_submesh_types_without_mesh_generator(self):
@@ -2355,7 +2361,7 @@ class TestSerializationEdgeCases:
             with open(filepath, "w") as f:
                 f.write("{invalid json for submesh types")
 
-            with pytest.raises(ValueError, match="contains invalid JSON"):
+            with pytest.raises(ValueError, match=r"contains invalid JSON"):
                 Serialise.load_submesh_types(str(filepath))
 
     def test_submesh_types_unsupported_schema(self):
@@ -2366,7 +2372,7 @@ class TestSerializationEdgeCases:
             "submesh_types": {},
         }
 
-        with pytest.raises(ValueError, match="Unsupported schema version"):
+        with pytest.raises(ValueError, match=r"Unsupported schema version"):
             Serialise.load_submesh_types(invalid_data)
 
     @pytest.mark.parametrize(
@@ -2470,7 +2476,7 @@ class TestSerializationEdgeCases:
         }
 
         # This should raise ImportError because AttributeError is caught and converted
-        with pytest.raises(ImportError, match="Could not import spatial method"):
+        with pytest.raises(ImportError, match=r"Could not import spatial method"):
             Serialise.load_spatial_methods(invalid_data)
 
     def test_load_submesh_types_general_exception(self):
@@ -2486,7 +2492,7 @@ class TestSerializationEdgeCases:
             },
         }
 
-        with pytest.raises(ValueError, match="Failed to reconstruct submesh type"):
+        with pytest.raises(ValueError, match=r"Failed to reconstruct submesh type"):
             Serialise.load_submesh_types(invalid_data)
 
     def test_load_custom_model_missing_model_section(self, tmp_path):
@@ -2501,7 +2507,7 @@ class TestSerializationEdgeCases:
         with open(file_path, "w") as f:
             json.dump(model_json, f)
 
-        with pytest.raises(KeyError, match="Missing 'model' section"):
+        with pytest.raises(KeyError, match=r"Missing 'model' section"):
             Serialise.load_custom_model(str(file_path))
 
     def test_load_custom_model_empty_base_class(self, tmp_path):
@@ -2571,7 +2577,7 @@ class TestSerializationEdgeCases:
         with open(file_path, "w") as f:
             json.dump(params, f)
 
-        with pytest.raises(ValueError, match="Unsupported parameter format"):
+        with pytest.raises(ValueError, match=r"Unsupported parameter format"):
             Serialise.load_parameters(str(file_path))
 
     def test_load_compressed_model_with_corrupted_data(self, tmp_path):
@@ -2586,7 +2592,7 @@ class TestSerializationEdgeCases:
         with open(file_path, "w") as f:
             json.dump(corrupted_data, f)
 
-        with pytest.raises(ValueError, match="Failed to decompress model data"):
+        with pytest.raises(ValueError, match=r"Failed to decompress model data"):
             Serialise.load_custom_model(str(file_path))
 
     def test_compression_reduces_size(self):
