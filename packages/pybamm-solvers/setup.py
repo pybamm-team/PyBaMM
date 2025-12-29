@@ -300,8 +300,7 @@ ext_modules = [
 # Project metadata was moved to pyproject.toml (which is read by pip). However, custom
 # build commands and setuptools extension modules are still defined here.
 setup(
-    # silence "Package would be ignored" warnings
-    include_package_data=True,
+    include_package_data=False,
     ext_modules=ext_modules,
     cmdclass={
         "build_ext": CMakeBuild,
