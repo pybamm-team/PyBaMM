@@ -51,7 +51,7 @@ def run_integration(session):
     set_environment_variables(PYBAMM_ENV, session=session)
     if (
         "CI" in os.environ
-        and sys.version_info[:2] == (3, 12)
+        and sys.version_info[:2] >= (3, 12)
         and sys.platform == "linux"
     ):
         session.install("pytest-github-actions-annotate-failures")

@@ -9,7 +9,7 @@ license = { file = "LICENSE.txt" }
 description = "Python Battery Mathematical Modelling"
 authors = [{ name = "The PyBaMM Team", email = "pybamm@pybamm.org" }]
 maintainers = [{ name = "The PyBaMM Team", email = "pybamm@pybamm.org" }]
-requires-python = ">=3.10, <3.13"
+requires-python = ">=3.10, <3.14"
 readme = { file = "README.md", content-type = "text/markdown" }
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -22,6 +22,7 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering",
 ]
 dependencies = [
