@@ -22,7 +22,7 @@ class CoupledVariable(pybamm.Symbol):
     Example
     -------
     >>> # In submodel 1: reference a variable defined elsewhere
-    >>> temperature = pybamm.CoupledVariable("Temperature")
+    >>> temperature = pybamm.CoupledVariable("Temperature", domain="positive electrode")
     >>> k = pybamm.Parameter("Thermal conductivity")
     >>> heat_flux = -k * pybamm.grad(temperature)
     >>>
