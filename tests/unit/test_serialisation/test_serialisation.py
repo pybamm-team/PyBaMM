@@ -19,7 +19,6 @@ from pybamm.expression_tree.operations.serialise import (
     SUPPORTED_SCHEMA_VERSION,
     ExpressionFunctionParameter,
     Serialise,
-    add_variables_from_dict,
     convert_symbol_from_json,
     convert_symbol_to_json,
 )
@@ -767,46 +766,6 @@ class TestSerialise:
         ]
         assert len(coupled_vars) == 1
         assert coupled_vars[0].name == "Voltage [V]"
-
-    def test_add_variables_from_dict(self):
-        # Create a simple model with a variable
-        model = pybamm.BaseModel()
-        var = pybamm.Variable("x")
-        model.rhs = {var: -var}
-        model.initial_conditions = {var: pybamm.Scalar(1)}
-        model.variables = {"x": var}
-
-        # Create a serialized expression for "double x" = x * 2
-        x_cv = pybamm.CoupledVariable("x")
-        serialized = convert_symbol_to_json(x_cv * 2)
-
-        # Add the variable from dict
-        add_variables_from_dict(model, {"double x": serialized})
-
-        # Check the variable was added
-        assert "double x" in model.variables
-        # Check that the CoupledVariable was replaced with the actual variable
-        double_x = model.variables["double x"]
-        assert isinstance(double_x, pybamm.Multiplication)
-        # The expression should reference the actual variable, not a CoupledVariable
-        coupled_vars = [
-            node
-            for node in double_x.pre_order()
-            if isinstance(node, pybamm.CoupledVariable)
-        ]
-        assert len(coupled_vars) == 0
-
-    def test_add_variables_from_dict_missing_variable(self):
-        # Create a model without the referenced variable
-        model = pybamm.BaseModel()
-        model.variables = {}
-
-        # Try to add a variable that references a non-existent variable
-        cv = pybamm.CoupledVariable("nonexistent")
-        serialized = convert_symbol_to_json(cv * 2)
-
-        with pytest.raises(ValueError, match="Variable 'nonexistent' not found"):
-            add_variables_from_dict(model, {"new_var": serialized})
 
     def test_concatenation_variable_serialisation(self):
         var1 = pybamm.Variable("a", domain="negative electrode")
