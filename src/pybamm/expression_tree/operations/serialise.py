@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import base64
 import importlib
 import inspect
 import json
 import numbers
 import re
 import warnings
+import zlib
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
@@ -352,7 +354,7 @@ class Serialise:
             raise TypeError(f"Object of type {type(obj)} is not JSON serializable.")
 
     @staticmethod
-    def serialise_custom_model(model: pybamm.BaseModel) -> dict:
+    def serialise_custom_model(model: pybamm.BaseModel, compress: bool = False) -> dict:
         """
         Converts a custom (non-discretised) PyBaMM model to a JSON-serialisable dictionary.
 
@@ -364,11 +366,16 @@ class Serialise:
         ----------
         model : :class:`pybamm.BaseModel`
             The custom symbolic model to be serialised.
+        compress : bool, optional
+            If True, the resulting dictionary will be compressed using zlib and
+            encoded as base64. The output will contain a "compressed" flag set to
+            True and a "data" field with the compressed payload. Default is False.
 
         Returns
         -------
         dict
-            A JSON-serialisable dictionary representation of the model
+            A JSON-serialisable dictionary representation of the model. If compress
+            is True, returns {"compressed": True, "data": <base64-encoded-zlib-data>}.
 
         Raises
         ------
@@ -464,11 +471,23 @@ class Serialise:
             "model": model_content,
         }
 
+        if compress:
+            # Serialize to JSON string, compress with zlib, and encode as base64
+            json_str = json.dumps(model_json, default=Serialise._json_encoder)
+            compressed_bytes = zlib.compress(json_str.encode("utf-8"))
+            compressed_b64 = base64.b64encode(compressed_bytes).decode("ascii")
+            return {
+                "compressed": True,
+                "data": compressed_b64,
+            }
+
         return model_json
 
     @staticmethod
     def save_custom_model(
-        model: pybamm.BaseModel, filename: str | Path | None = None
+        model: pybamm.BaseModel,
+        filename: str | Path | None = None,
+        compress: bool = False,
     ) -> None:
         """
         Saves a custom (non-discretised) PyBaMM model to a JSON file. Works for user defined models that are subclasses of BaseModel.
@@ -484,6 +503,9 @@ class Serialise:
         filename : str, optional
             The desired name of the JSON file. If not provided, a name will be
             generated from the model name and current datetime.
+        compress : bool, optional
+            If True, the model data will be compressed using zlib before saving.
+            This can significantly reduce file size. Default is False.
 
         Example
         -------
@@ -491,13 +513,19 @@ class Serialise:
         >>> model = pybamm.lithium_ion.BasicDFN()
         >>> from pybamm.expression_tree.operations.serialise import Serialise
         >>> Serialise.save_custom_model(model, "basicdfn_model.json")
+        >>> # Or with compression:
+        >>> Serialise.save_custom_model(model, "basicdfn_model.json", compress=True)
 
         """
         try:
-            model_json = Serialise.serialise_custom_model(model)
+            model_json = Serialise.serialise_custom_model(model, compress=compress)
 
             # Extract model name for filename generation
-            model_name = model_json["model"]["name"]
+            # When compressed, use the model's name attribute directly
+            if compress:
+                model_name = getattr(model, "name", "unnamed_model")
+            else:
+                model_name = model_json["model"]["name"]
 
             if filename is None:
                 safe_name = re.sub(r"[^\w\-_.]", "_", model_name or "unnamed_model")
@@ -1164,11 +1192,14 @@ class Serialise:
         algebraic equations, initial and boundary conditions, events, and variables.
         Returns a fully symbolic model ready for further processing or discretisation.
 
+        Automatically detects and decompresses data that was serialised with
+        compression enabled (compress=True in serialise_custom_model).
+
         Parameters
         ----------
         filename : str or dict
             Path to the JSON file containing the saved model, or a dictionary
-            containing the serialised model data.
+            containing the serialised model data (optionally compressed).
 
         Returns
         -------
@@ -1196,6 +1227,16 @@ class Serialise:
                 raise pybamm.InvalidModelJSONError(
                     f"The model defined in the file '{filename}' contains invalid JSON: {e!s}"
                 ) from e
+
+        # Check if the data is compressed and decompress if needed
+        if data.get("compressed", False):
+            try:
+                compressed_b64 = data["data"]
+                compressed_bytes = base64.b64decode(compressed_b64)
+                json_str = zlib.decompress(compressed_bytes).decode("utf-8")
+                data = json.loads(json_str)
+            except (KeyError, zlib.error, base64.binascii.Error) as e:
+                raise ValueError(f"Failed to decompress model data: {e}") from e
 
         # Validate outer structure
         schema_version = data.get("schema_version", SUPPORTED_SCHEMA_VERSION)
@@ -1724,6 +1765,11 @@ def convert_symbol_from_json(json_data):
         )
     elif json_data["type"] == "Time":
         return pybamm.Time()
+    elif json_data["type"] == "CoupledVariable":
+        return pybamm.CoupledVariable(
+            json_data["name"],
+            domain=json_data.get("domains", {}).get("primary", None),
+        )
     elif json_data["type"] == "Symbol":
         return pybamm.Symbol(
             json_data["name"],
@@ -1876,3 +1922,57 @@ def convert_symbol_to_json(symbol):
         raise ValueError(
             f"Error processing '{symbol.name}'. Unknown symbol type: {type(symbol)}"
         )
+
+
+def add_variables_from_dict(model, variables_dict):
+    """
+    Add variables to a model from an external dictionary of serialized expressions.
+
+    This function deserializes expressions and adds them to the model's variables.
+    Any CoupledVariable nodes in the expressions are replaced with the actual
+    model variables they reference.
+
+    Parameters
+    ----------
+    model : pybamm.BaseModel
+        The model to add variables to. Must be built (have variables populated).
+    variables_dict : dict
+        Dictionary mapping new variable names to serialized expressions.
+        Expressions should use CoupledVariable nodes to reference model variables.
+
+    Raises
+    ------
+    ValueError
+        If a CoupledVariable references a variable not found in the model.
+
+    Examples
+    --------
+    >>> model = pybamm.lithium_ion.SPM()
+    >>> # Create a serialized expression for "Double voltage [V]" = Voltage [V] * 2
+    >>> voltage_cv = pybamm.CoupledVariable("Voltage [V]")
+    >>> serialized = convert_symbol_to_json(voltage_cv * 2)
+    >>> add_variables_from_dict(model, {"Double voltage [V]": serialized})
+    """
+    for new_var_name, serialized_expr in variables_dict.items():
+        # Deserialize the expression (CoupledVariable nodes are preserved)
+        new_var_expr = convert_symbol_from_json(serialized_expr)
+
+        # Replace CoupledVariable nodes with the actual model variables
+        def replace_coupled_vars(expr):
+            if isinstance(expr, pybamm.CoupledVariable):
+                depends_on_name = expr.name
+                if depends_on_name in model.variables:
+                    return model.variables[depends_on_name]
+                raise ValueError(
+                    f"Variable '{depends_on_name}' not found in model. "
+                    f"Available variables: {list(model.variables.keys())[:10]}..."
+                )
+            elif hasattr(expr, "children") and expr.children:
+                new_children = [replace_coupled_vars(c) for c in expr.children]
+                return expr.create_copy(new_children=new_children)
+            return expr
+
+        new_var_expr = replace_coupled_vars(new_var_expr)
+
+        # Add the new variable to the model
+        model.variables[new_var_name] = new_var_expr

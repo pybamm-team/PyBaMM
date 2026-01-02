@@ -230,7 +230,6 @@ __all__ = [
     "citations",
     "config",
     "discretisations",
-    "doc_utils",
     "experiment",
     "expression_tree",
     "geometry",

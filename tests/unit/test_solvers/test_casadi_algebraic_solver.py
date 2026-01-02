@@ -86,13 +86,13 @@ class TestCasadiAlgebraicSolver:
         solver = pybamm.CasadiAlgebraicSolver()
         with pytest.raises(
             pybamm.SolverError,
-            match="Could not find acceptable solution",
+            match=r"Could not find acceptable solution",
         ):
             solver._integrate(model, np.array([0]), {})
         solver = pybamm.CasadiAlgebraicSolver(extra_options={"error_on_fail": False})
         with pytest.raises(
             pybamm.SolverError,
-            match="Could not find acceptable solution: solver terminated",
+            match=r"Could not find acceptable solution: solver terminated",
         ):
             solver._integrate(model, np.array([0]), {})
 
@@ -114,7 +114,7 @@ class TestCasadiAlgebraicSolver:
         model = NaNModel()
         with pytest.raises(
             pybamm.SolverError,
-            match="Could not find acceptable solution: solver returned NaNs",
+            match=r"Could not find acceptable solution: solver returned NaNs",
         ):
             solver._integrate(model, np.array([0]), {})
 

@@ -520,7 +520,7 @@ class Symbol:
         if filename[-4:] != ".png":
             raise ValueError("filename should end in .png")
 
-        new_node, counter = self.relabel_tree(self, 0)
+        new_node, _counter = self.relabel_tree(self, 0)
 
         try:
             DotExporter(

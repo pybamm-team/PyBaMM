@@ -72,28 +72,30 @@ def no_jit(f):
     return f
 
 
-@pytest.fixture(
-    params=[
-        (output_variables[:1], no_jit),
-        (output_variables[:1], jax.jit),
-        (output_variables, no_jit),
-        (output_variables, jax.jit),
-    ],
-    ids=["single-no-jit", "single-jit", "multiple-no-jit", "multiple-jit"],
-)
-def case(request, model):
-    outvars, wrapper = request.param
+if pybamm.has_jax():
 
-    # Build jaxified solver and function
-    idaklu_jax_solver = pybamm.IDAKLUSolver(rtol=1e-6, atol=1e-6).jaxify(
-        model,
-        t_eval,
-        output_variables=outvars,
-        calculate_sensitivities=True,
-        t_interp=t_eval,
+    @pytest.fixture(
+        params=[
+            (output_variables[:1], no_jit),
+            (output_variables[:1], jax.jit),
+            (output_variables, no_jit),
+            (output_variables, jax.jit),
+        ],
+        ids=["single-no-jit", "single-jit", "multiple-no-jit", "multiple-jit"],
     )
-    f = idaklu_jax_solver.get_jaxpr()
-    return outvars, idaklu_jax_solver, f, wrapper
+    def case(request, model):
+        outvars, wrapper = request.param
+
+        # Build jaxified solver and function
+        idaklu_jax_solver = pybamm.IDAKLUSolver(rtol=1e-6, atol=1e-6).jaxify(
+            model,
+            t_eval,
+            output_variables=outvars,
+            calculate_sensitivities=True,
+            t_interp=t_eval,
+        )
+        f = idaklu_jax_solver.get_jaxpr()
+        return outvars, idaklu_jax_solver, f, wrapper
 
 
 # Check the interface throws an appropriate error if either IDAKLU or JAX not available

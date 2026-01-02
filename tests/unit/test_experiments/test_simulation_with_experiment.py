@@ -44,7 +44,7 @@ class TestSimulationExperiment:
         ]
 
         # fails if trying to set up with something that isn't an experiment
-        with pytest.raises(TypeError, match="experiment must be"):
+        with pytest.raises(TypeError, match=r"experiment must be"):
             pybamm.Simulation(model, experiment=0)
 
     def test_setup_experiment_string_or_list(self):
@@ -188,7 +188,7 @@ class TestSimulationExperiment:
         ]
         experiment = pybamm.Experiment(steps)
         sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
-        with pytest.raises(pybamm.SolverError, match="skip_ok is True for all steps"):
+        with pytest.raises(pybamm.SolverError, match=r"skip_ok is True for all steps"):
             sim.solve()
 
         # Check termination after a skipped step
@@ -213,7 +213,7 @@ class TestSimulationExperiment:
         sim = pybamm.Simulation(
             model, experiment=experiment, parameter_values=parameter_values
         )
-        with pytest.raises(pybamm.SolverError, match="All steps in the cycle"):
+        with pytest.raises(pybamm.SolverError, match=r"All steps in the cycle"):
             sim.solve()
 
     def test_run_experiment_multiple_times(self):
@@ -897,7 +897,7 @@ class TestSimulationExperiment:
         )
 
         sim = pybamm.Simulation(model, experiment=experiment)
-        with pytest.raises(ValueError, match="experiments with `start_time`"):
+        with pytest.raises(ValueError, match=r"experiments with `start_time`"):
             sim.solve(starting_solution=solution)
 
         # Test starting_solution works well with start_time

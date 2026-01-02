@@ -78,7 +78,7 @@ class TestScikitFiniteElement2DSubMesh:
         # there are parameters in the variables that need to be processed
         with pytest.raises(
             pybamm.DiscretisationError,
-            match="Parameter values have not yet been set for geometry",
+            match=r"Parameter values have not yet been set for geometry",
         ):
             pybamm.Mesh(geometry, submesh_types, var_pts)
 
@@ -477,10 +477,10 @@ class TestScikitUser2DSubMesh:
             mesh(lims, npts)
 
         mesh = pybamm.MeshGenerator(pybamm.UserSupplied2DSubMesh)
-        with pytest.raises(pybamm.GeometryError, match="User mesh requires"):
+        with pytest.raises(pybamm.GeometryError, match=r"User mesh requires"):
             mesh(None, None)
 
         submesh_params = {"y_edges": np.array([0, 0.3, 1])}
         mesh = pybamm.MeshGenerator(pybamm.UserSupplied2DSubMesh, submesh_params)
-        with pytest.raises(pybamm.GeometryError, match="User mesh requires"):
+        with pytest.raises(pybamm.GeometryError, match=r"User mesh requires"):
             mesh(None, None)
