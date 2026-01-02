@@ -19,19 +19,6 @@ class CoupledVariable(pybamm.Symbol):
     domain : iterable of str, optional
         List of domains that this coupled variable is valid over.
 
-    Example
-    -------
-    >>> # In submodel 1: reference a variable defined elsewhere
-    >>> temperature = pybamm.CoupledVariable("Temperature", domain="positive electrode")
-    >>> k = pybamm.Parameter("Thermal conductivity")
-    >>> heat_flux = -k * pybamm.grad(temperature)
-    >>>
-    >>> # In submodel 2: define the actual variable
-    >>> T = pybamm.Variable("Temperature", domain="electrode")
-    >>> model.variables["Temperature"] = T
-    >>>
-    >>> # During discretisation, CoupledVariable("Temperature") will automatically
-    >>> # resolve to model.variables["Temperature"]
     """
 
     def __init__(
