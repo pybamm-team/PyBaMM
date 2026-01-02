@@ -94,8 +94,27 @@ class TestCoupledVariable:
         }  # Note: "missing_variable" is NOT in variables
 
         sim = pybamm.Simulation(model)
+        sim.solve([0, 1])
 
-        # Error is raised during build/solve when CoupledVariable can't be resolved
+        # Error is raised when accessing the variable (during lazy processing)
+        with pytest.raises(
+            ValueError,
+            match="CoupledVariable 'missing_variable' not found",
+        ):
+            _ = sim.solution["uses_missing"]
+
+    def test_unresolved_coupled_variable_in_rhs_raises_error(self):
+        """Test that a CoupledVariable in rhs raises error during discretisation."""
+        model = pybamm.BaseModel()
+        a = pybamm.Variable("a")
+        unresolved = pybamm.CoupledVariable("missing_variable")
+
+        model.rhs = {a: unresolved}  # CoupledVariable in rhs
+        model.initial_conditions = {a: pybamm.Scalar(1)}
+        model.variables = {"a": a}  # "missing_variable" NOT in variables
+
+        sim = pybamm.Simulation(model)
+
         with pytest.raises(
             pybamm.DiscretisationError,
             match="CoupledVariable 'missing_variable' not found",
