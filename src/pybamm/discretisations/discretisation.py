@@ -40,6 +40,9 @@ class Discretisation:
         (not used anywhere in the model, len(rhs)>1), then the variable
         is moved to be explicitly integrated when called by the solution object.
         Default is False.
+    resolve_coupled_variables : bool, optional
+        If True, resolve CoupledVariables in rhs, algebraic, initial_conditions,
+        and boundary_conditions before processing. Default is False.
     """
 
     def __init__(
@@ -48,6 +51,7 @@ class Discretisation:
         spatial_methods=None,
         check_model=True,
         remove_independent_variables_from_rhs=False,
+        resolve_coupled_variables=False,
     ):
         self._mesh = mesh
         if mesh is None:
@@ -79,7 +83,7 @@ class Discretisation:
         self._remove_independent_variables_from_rhs_flag = (
             remove_independent_variables_from_rhs
         )
-        # Store model variables during processing for CoupledVariable resolution
+        self._resolve_coupled_variables = resolve_coupled_variables
 
     @property
     def mesh(self):
@@ -110,7 +114,12 @@ class Discretisation:
         # reset discretised_symbols
         self._discretised_symbols = {}
 
-    def process_model(self, model, inplace=True, delayed_variable_processing=None):
+    def process_model(
+        self,
+        model,
+        inplace=True,
+        delayed_variable_processing=None,
+    ):
         """
         Discretise a model. Currently inplace, could be changed to return a new model.
 
@@ -196,8 +205,8 @@ class Discretisation:
             # create a copy of the original model
             model_disc = model.new_copy()
 
-        # Resolve CoupledVariables in rhs, algebraic, initial_conditions before processing
-        self._resolve_coupled_variables_in_model(model)
+        if self._resolve_coupled_variables:
+            self._resolve_coupled_variables_in_model(model)
 
         # Keep a record of y_slices in the model
         model_disc.y_slices = self.y_slices_explicit
@@ -290,23 +299,16 @@ class Discretisation:
         return model_disc
 
     def _resolve_coupled_variables_in_model(self, model):
-        """
-        Resolve CoupledVariables in the model's rhs, algebraic, and initial_conditions
-        by substituting them with the actual variables from model.variables.
-        """
+        """Resolve CoupledVariables in rhs, algebraic, initial_conditions, and boundary_conditions."""
 
         def resolve_symbol(symbol):
-            """Recursively resolve CoupledVariables in a symbol."""
             if isinstance(symbol, pybamm.CoupledVariable):
                 if symbol.name not in model.variables:
                     raise pybamm.DiscretisationError(
                         f"CoupledVariable '{symbol.name}' not found in model.variables."
                     )
-                # Get the target and recursively resolve any nested CoupledVariables
-                target = model.variables[symbol.name]
-                return resolve_symbol(target)
+                return resolve_symbol(model.variables[symbol.name])
             elif hasattr(symbol, "children") and symbol.children:
-                # Only create a copy if any child actually changed
                 new_children = []
                 changed = False
                 for child in symbol.children:
@@ -316,27 +318,28 @@ class Discretisation:
                         changed = True
                 if changed:
                     return symbol.create_copy(new_children=new_children)
-                return symbol
-            else:
-                return symbol
+            return symbol
 
-        # Resolve in rhs values (only update if changed)
         for var, expr in list(model.rhs.items()):
             resolved = resolve_symbol(expr)
             if resolved is not expr:
                 model.rhs[var] = resolved
 
-        # Resolve in algebraic values (only update if changed)
         for var, expr in list(model.algebraic.items()):
             resolved = resolve_symbol(expr)
             if resolved is not expr:
                 model.algebraic[var] = resolved
 
-        # Resolve in initial_conditions values (only update if changed)
         for var, expr in list(model.initial_conditions.items()):
             resolved = resolve_symbol(expr)
             if resolved is not expr:
                 model.initial_conditions[var] = resolved
+
+        for var, bcs in list(model.boundary_conditions.items()):
+            for side, (expr, bc_type) in list(bcs.items()):
+                resolved = resolve_symbol(expr)
+                if resolved is not expr:
+                    model.boundary_conditions[var][side] = (resolved, bc_type)
 
     def set_variable_slices(self, variables):
         """
@@ -1200,9 +1203,6 @@ class Discretisation:
             return symbol.create_copy()
 
         elif isinstance(symbol, pybamm.CoupledVariable):
-            # CoupledVariables should be resolved before discretisation:
-            # - For rhs/algebraic/initial_conditions: by _resolve_coupled_variables_in_model
-            # - For lazily processed variables: by BaseModel._resolve_coupled_variables
             raise pybamm.DiscretisationError(
                 f"CoupledVariable '{symbol.name}' was not resolved before discretisation. "
                 "Ensure the variable exists in model.variables."

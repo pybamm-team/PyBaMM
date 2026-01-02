@@ -34,14 +34,14 @@ def combine_models(list_of_models):
 
 class TestCoupledVariable:
     def test_coupled_variable(self):
-        """Test combining models with CoupledVariables using Simulation."""
+        """Test combining models with CoupledVariables in rhs."""
         model_1 = pybamm.BaseModel()
         model_1_var_1 = pybamm.CoupledVariable("a")
         model_1_var_2 = pybamm.Variable("b")
         model_1.rhs[model_1_var_2] = -0.2 * model_1_var_1
         model_1.variables["b"] = model_1_var_2
         model_1.coupled_variables["a"] = model_1_var_1
-        model_1.initial_conditions[model_1_var_2] = 1.0
+        model_1.initial_conditions[model_1_var_2] = pybamm.Scalar(1)
 
         model_2 = pybamm.BaseModel()
         model_2_var_1 = pybamm.Variable("a")
@@ -49,20 +49,22 @@ class TestCoupledVariable:
         model_2.rhs[model_2_var_1] = -0.2 * model_2_var_2
         model_2.variables["a"] = model_2_var_1
         model_2.coupled_variables["b"] = model_2_var_2
-        model_2.initial_conditions[model_2_var_1] = 1.0
+        model_2.initial_conditions[model_2_var_1] = pybamm.Scalar(1)
 
         model = combine_models([model_1, model_2])
 
-        # Use Simulation which handles CoupledVariable resolution via SymbolProcessor
-        sim = pybamm.Simulation(model)
-        t_eval = [0, 10]
-        solution = sim.solve(t_eval)
+        # CoupledVariables in rhs require resolve_coupled_variables=True
+        disc = pybamm.Discretisation(resolve_coupled_variables=True)
+        disc.process_model(model)
+
+        solver = pybamm.IDAKLUSolver()
+        solution = solver.solve(model, [0, 10])
 
         np.testing.assert_almost_equal(
             solution["a"].entries, solution["b"].entries, decimal=10
         )
 
-        assert set(sim.built_model.list_coupled_variables()) == set(["a", "b"])
+        assert set(model.list_coupled_variables()) == set(["a", "b"])
 
     def test_create_copy(self):
         a = pybamm.CoupledVariable("a")
@@ -115,9 +117,11 @@ class TestCoupledVariable:
 
         sim = pybamm.Simulation(model)
 
+        # Without resolve_coupled_variables=True, CoupledVariable is not resolved
+        # and hits the discretisation error
         with pytest.raises(
             pybamm.DiscretisationError,
-            match="CoupledVariable 'missing_variable' not found",
+            match="CoupledVariable 'missing_variable' was not resolved",
         ):
             sim.solve([0, 1])
 

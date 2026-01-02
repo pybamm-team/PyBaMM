@@ -381,30 +381,18 @@ class BaseModel:
                 f"Cannot process variable '{name}' without a `symbol_processor`."
             )
 
-        # Resolve CoupledVariables by getting their processed targets
         symbol = self._resolve_coupled_variables(symbol)
-
         value = self.symbol_processor(name=name, symbol=symbol)
         self._variables_processed[name] = value
 
     def _resolve_coupled_variables(self, symbol: pybamm.Symbol) -> pybamm.Symbol:
-        """
-        Resolve CoupledVariables by substituting them with their raw targets.
-
-        This method recursively resolves CoupledVariables by looking up the
-        referenced variable in self._variables (raw, unprocessed form).
-        The result is then processed together with the rest of the expression.
-
-        Only creates new symbol copies when a CoupledVariable is actually replaced.
-        """
+        """Resolve CoupledVariables by looking up their targets in self._variables."""
         if isinstance(symbol, pybamm.CoupledVariable):
             if symbol.name not in self._variables:
                 raise ValueError(
                     f"CoupledVariable '{symbol.name}' not found in model.variables"
                 )
-            # Get the raw variable and recursively resolve any nested CoupledVariables
-            target = self._variables[symbol.name]
-            return self._resolve_coupled_variables(target)
+            return self._resolve_coupled_variables(self._variables[symbol.name])
         elif hasattr(symbol, "children") and symbol.children:
             new_children = []
             changed = False
@@ -415,9 +403,7 @@ class BaseModel:
                     changed = True
             if changed:
                 return symbol.create_copy(new_children=new_children)
-            return symbol
-        else:
-            return symbol
+        return symbol
 
     def update_processed_variables(self, processed_vars: dict[str, pybamm.Symbol]):
         """

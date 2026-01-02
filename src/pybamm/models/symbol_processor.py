@@ -64,9 +64,6 @@ class SymbolProcessor:
                 "Cannot process a symbol if neither `parameter_values` nor "
                 "`discretisation` have been set."
             )
-        # Note: CoupledVariables should be resolved before calling this processor.
-        # For rhs/algebraic/initial_conditions, this happens in discretisation.
-        # For lazily processed variables, this happens in base_model.process_and_register_variable.
         if self.parameter_values:
             symbol = self.parameter_values.process_symbol(symbol)
         if self.discretisation:
