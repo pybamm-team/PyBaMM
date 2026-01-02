@@ -10,6 +10,13 @@ import pybamm
 
 
 def combine_models(list_of_models):
+    """
+    Combine multiple models into one.
+
+    With lazy resolution of CoupledVariables, we no longer need to manually
+    call set_coupled_variable. The discretisation will automatically resolve
+    CoupledVariables by looking them up in model.variables.
+    """
     model = pybamm.BaseModel()
 
     for submodel in list_of_models:
@@ -20,17 +27,14 @@ def combine_models(list_of_models):
         model.initial_conditions.update(submodel.initial_conditions)
         model.boundary_conditions.update(submodel.boundary_conditions)
 
-    for name, coupled_variable in model.coupled_variables.items():
-        if name in model.variables:
-            for sym in model.rhs.values():
-                coupled_variable.set_coupled_variable(sym, model.variables[name])
-            for sym in model.algebraic.values():
-                coupled_variable.set_coupled_variable(sym, model.variables[name])
+    # No manual linking needed - CoupledVariables are resolved lazily
+    # during discretisation by looking up names in model.variables
     return model
 
 
 class TestCoupledVariable:
     def test_coupled_variable(self):
+        """Test combining models with CoupledVariables using Simulation."""
         model_1 = pybamm.BaseModel()
         model_1_var_1 = pybamm.CoupledVariable("a")
         model_1_var_2 = pybamm.Variable("b")
@@ -49,33 +53,16 @@ class TestCoupledVariable:
 
         model = combine_models([model_1, model_2])
 
-        params = pybamm.ParameterValues({})
-        geometry = {}
-
-        # Process parameters
-        params.process_model(model)
-        params.process_geometry(geometry)
-
-        # mesh and discretise
-        submesh_types = {}
-        var_pts = {}
-        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
-
-        spatial_methods = {}
-        disc = pybamm.Discretisation(mesh, spatial_methods)
-        disc.process_model(model)
-
-        # solve
-        solver = pybamm.IDAKLUSolver()
+        # Use Simulation which handles CoupledVariable resolution via SymbolProcessor
+        sim = pybamm.Simulation(model)
         t_eval = [0, 10]
-        t_interp = np.linspace(t_eval[0], t_eval[-1], 1000)
-        solution = solver.solve(model, t_eval, t_interp=t_interp)
+        solution = sim.solve(t_eval)
 
         np.testing.assert_almost_equal(
             solution["a"].entries, solution["b"].entries, decimal=10
         )
 
-        assert set(model.list_coupled_variables()) == set(["a", "b"])
+        assert set(sim.built_model.list_coupled_variables()) == set(["a", "b"])
 
     def test_create_copy(self):
         a = pybamm.CoupledVariable("a")
@@ -92,3 +79,42 @@ class TestCoupledVariable:
         with pytest.raises(ValueError, match="Coupled variable with name"):
             coupled_variables = {"b": a}
             model.coupled_variables = coupled_variables
+
+    def test_unresolved_coupled_variable_raises_error(self):
+        """Test that an unresolved CoupledVariable raises a clear error."""
+        model = pybamm.BaseModel()
+        a = pybamm.Variable("a")
+        unresolved = pybamm.CoupledVariable("missing_variable")
+
+        model.rhs = {a: pybamm.Scalar(1)}
+        model.initial_conditions = {a: pybamm.Scalar(1)}
+        model.variables = {
+            "a": a,
+            "uses_missing": unresolved,
+        }  # Note: "missing_variable" is NOT in variables
+
+        sim = pybamm.Simulation(model)
+
+        # Error is raised during build/solve when CoupledVariable can't be resolved
+        with pytest.raises(
+            pybamm.DiscretisationError,
+            match="CoupledVariable 'missing_variable' not found",
+        ):
+            sim.solve([0, 1])
+
+    def test_coupled_variable_with_battery_model(self):
+        """Test CoupledVariable with a real battery model (SPM)."""
+        model = pybamm.lithium_ion.SPM()
+
+        # Add a variable that references an existing variable via CoupledVariable
+        model.variables["Double voltage"] = 2 * pybamm.CoupledVariable("Voltage [V]")
+
+        sim = pybamm.Simulation(model)
+        sim.solve([0, 3600])
+
+        # Verify the values are correct
+        double_voltage = sim.solution["Double voltage"].entries
+        voltage = sim.solution["Voltage [V]"].entries
+
+        # Double voltage should be exactly 2x the voltage
+        np.testing.assert_allclose(double_voltage, 2 * voltage, rtol=1e-10)

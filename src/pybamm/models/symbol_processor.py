@@ -64,11 +64,43 @@ class SymbolProcessor:
                 "Cannot process a symbol if neither `parameter_values` nor "
                 "`discretisation` have been set."
             )
+        # First resolve any CoupledVariables before parameter substitution
+        if self.discretisation and self.discretisation._processing_model:
+            symbol = self._resolve_coupled_variables(
+                symbol, self.discretisation._processing_model.variables
+            )
         if self.parameter_values:
             symbol = self.parameter_values.process_symbol(symbol)
         if self.discretisation:
             symbol = self.discretisation.process_equation(name, eqn=symbol)
         return symbol
+
+    def _resolve_coupled_variables(
+        self, symbol: pybamm.Symbol, variables: dict
+    ) -> pybamm.Symbol:
+        """
+        Recursively resolve CoupledVariables by substituting them with the
+        actual variable from the model's variables dict.
+        """
+        if isinstance(symbol, pybamm.CoupledVariable):
+            if symbol.name in variables:
+                # Recursively resolve in case the variable itself contains CoupledVariables
+                return self._resolve_coupled_variables(
+                    variables[symbol.name], variables
+                )
+            else:
+                raise ValueError(
+                    f"CoupledVariable '{symbol.name}' not found in model.variables"
+                )
+        elif hasattr(symbol, "children") and symbol.children:
+            # Process children and create a new symbol with resolved children
+            new_children = [
+                self._resolve_coupled_variables(child, variables)
+                for child in symbol.children
+            ]
+            return symbol.create_copy(new_children=new_children)
+        else:
+            return symbol
 
     def __bool__(self) -> bool:
         """Return True if the processor can process symbols."""

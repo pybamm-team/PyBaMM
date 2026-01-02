@@ -4,15 +4,33 @@ from pybamm.type_definitions import DomainType
 
 class CoupledVariable(pybamm.Symbol):
     """
-    A node in the expression tree representing a variable whose equation is set by a different model or submodel.
+    A node in the expression tree representing a variable whose equation is set by
+    a different model or submodel.
 
+    CoupledVariables are resolved lazily during discretisation by looking up the
+    variable name in model.variables. This means you don't need to manually link
+    coupled variables - just ensure the variable with the matching name exists in
+    the combined model's variables dictionary.
 
     Parameters
     ----------
     name : str
-        name of the node
-    domain : iterable of str
-        list of domains that this coupled variable is valid over
+        Name of the variable to couple to. Must match a key in model.variables.
+    domain : iterable of str, optional
+        List of domains that this coupled variable is valid over.
+
+    Example
+    -------
+    >>> # In submodel 1: reference a variable defined elsewhere
+    >>> temperature = pybamm.CoupledVariable("Temperature")
+    >>> heat_flux = -k * pybamm.grad(temperature)
+    >>>
+    >>> # In submodel 2: define the actual variable
+    >>> T = pybamm.Variable("Temperature", domain="electrode")
+    >>> model.variables["Temperature"] = T
+    >>>
+    >>> # During discretisation, CoupledVariable("Temperature") will automatically
+    >>> # resolve to model.variables["Temperature"]
     """
 
     def __init__(
@@ -31,24 +49,4 @@ class CoupledVariable(pybamm.Symbol):
 
     def create_copy(self):
         """Creates a new copy of the coupled variable."""
-        new_coupled_variable = CoupledVariable(self.name, self.domain)
-        return new_coupled_variable
-
-    @property
-    def children(self):
-        return self._children
-
-    @children.setter
-    def children(self, expr):
-        self._children = expr
-
-    def set_coupled_variable(self, symbol, expr):
-        """Sets the children of the coupled variable to the expression passed in expr. If the symbol is not the coupled variable, then it searches the children of the symbol for the coupled variable. The coupled variable will be replaced by its first child (symbol.children[0], which should be expr) in the discretisation step."""
-        if self == symbol:
-            symbol.children = [
-                expr,
-            ]
-        else:
-            for child in symbol.children:
-                self.set_coupled_variable(child, expr)
-        symbol.set_id()
+        return CoupledVariable(self.name, self.domain)
