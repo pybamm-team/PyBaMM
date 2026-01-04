@@ -39,7 +39,7 @@ class TestSubMesh1D:
         edges = np.linspace(0, 1, 10)
         tabs = {"negative": {"z_centre": 0}, "positive": {"z_centre": 1}}
         mesh = pybamm.SubMesh1D(edges, None, tabs=tabs)
-        with pytest.raises(NotImplementedError, match="left and right ghost cells"):
+        with pytest.raises(NotImplementedError, match=r"left and right ghost cells"):
             mesh.create_ghost_cell("top")
 
     def test_exceptions(self):
@@ -296,7 +296,7 @@ class TestUser1DSubMesh:
 
         # no user points
         mesh = pybamm.MeshGenerator(pybamm.UserSupplied1DSubMesh)
-        with pytest.raises(pybamm.GeometryError, match="User mesh requires"):
+        with pytest.raises(pybamm.GeometryError, match=r"User mesh requires"):
             mesh(None, None)
 
     def test_mesh_creation_no_parameters(self, r, geometry):

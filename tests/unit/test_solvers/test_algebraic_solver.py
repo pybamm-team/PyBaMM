@@ -34,7 +34,7 @@ class TestAlgebraicSolver:
         solver = pybamm.AlgebraicSolver()
         with pytest.raises(
             pybamm.SolverError,
-            match="Cannot use algebraic solver to solve model with time derivatives",
+            match=r"Cannot use algebraic solver to solve model with time derivatives",
         ):
             solver.solve(model)
 
@@ -79,14 +79,14 @@ class TestAlgebraicSolver:
         solver = pybamm.AlgebraicSolver(method="hybr")
         with pytest.raises(
             pybamm.SolverError,
-            match="Could not find acceptable solution",
+            match=r"Could not find acceptable solution",
         ):
             solver._integrate(model, np.array([0]))
 
         solver = pybamm.AlgebraicSolver()
         with pytest.raises(
             pybamm.SolverError,
-            match="Could not find acceptable solution",
+            match=r"Could not find acceptable solution",
         ):
             solver._integrate(model, np.array([0]))
 

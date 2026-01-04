@@ -149,7 +149,7 @@ class TestUnaryOperators:
         )
         with pytest.raises(
             ValueError,
-            match="Can't take the x-average of a symbol that evaluates on edges",
+            match=r"Can't take the x-average of a symbol that evaluates on edges",
         ):
             pybamm.x_average(symbol_on_edges)
 
@@ -226,7 +226,7 @@ class TestUnaryOperators:
         symbol_on_edges = pybamm.PrimaryBroadcastToEdges(1, "domain")
         with pytest.raises(
             ValueError,
-            match="""Can't take the size-average of a symbol that evaluates on edges""",
+            match=r"""Can't take the size-average of a symbol that evaluates on edges""",
         ):
             pybamm.size_average(symbol_on_edges)
 
@@ -262,7 +262,7 @@ class TestUnaryOperators:
         symbol_on_edges = pybamm.PrimaryBroadcastToEdges(1, "domain")
         with pytest.raises(
             ValueError,
-            match="Can't take the r-average of a symbol that evaluates on edges",
+            match=r"Can't take the r-average of a symbol that evaluates on edges",
         ):
             pybamm.r_average(symbol_on_edges)
 
@@ -314,7 +314,7 @@ class TestUnaryOperators:
         symbol_on_edges = pybamm.PrimaryBroadcastToEdges(1, "domain")
         with pytest.raises(
             ValueError,
-            match="Can't take the z-average of a symbol that evaluates on edges",
+            match=r"Can't take the z-average of a symbol that evaluates on edges",
         ):
             pybamm.z_average(symbol_on_edges)
 

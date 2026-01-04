@@ -48,13 +48,13 @@ class TestCitations:
             pybamm.print_citations()
         assert "Python Battery Mathematical Modelling (PyBaMM)." in f.getvalue()
 
-        with pytest.raises(pybamm.OptionError, match="'text' or 'bibtex'"):
+        with pytest.raises(pybamm.OptionError, match=r"'text' or 'bibtex'"):
             pybamm.print_citations("test_citations.txt", "bad format")
 
         # Test that unknown citation raises warning message on printing
         pybamm.citations._reset()
         pybamm.citations.register("not a citation")
-        with pytest.warns(UserWarning, match="not a citation"):
+        with pytest.warns(UserWarning, match=r"not a citation"):
             pybamm.print_citations()
 
     def test_overwrite_citation(self):

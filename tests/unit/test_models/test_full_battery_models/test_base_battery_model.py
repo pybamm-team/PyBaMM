@@ -103,7 +103,7 @@ class TestBaseBatteryModel:
         model.variables["var"] = pybamm.Scalar(1)
         model.summary_variables = ["var"]
         assert model.summary_variables == ["var"]
-        with pytest.raises(KeyError, match="No cycling variable defined"):
+        with pytest.raises(KeyError, match=r"No cycling variable defined"):
             model.summary_variables = ["bad var"]
 
     def test_default_geometry(self):
@@ -193,21 +193,21 @@ class TestBaseBatteryModel:
         )
 
     def test_options(self):
-        with pytest.raises(pybamm.OptionError, match="Option"):
+        with pytest.raises(pybamm.OptionError, match=r"Option"):
             pybamm.BaseBatteryModel({"bad option": "bad option"})
-        with pytest.raises(pybamm.OptionError, match="current collector model"):
+        with pytest.raises(pybamm.OptionError, match=r"current collector model"):
             pybamm.BaseBatteryModel({"current collector": "bad current collector"})
-        with pytest.raises(pybamm.OptionError, match="thermal"):
+        with pytest.raises(pybamm.OptionError, match=r"thermal"):
             pybamm.BaseBatteryModel({"thermal": "bad thermal"})
-        with pytest.raises(pybamm.OptionError, match="cell geometry"):
+        with pytest.raises(pybamm.OptionError, match=r"cell geometry"):
             pybamm.BaseBatteryModel({"cell geometry": "bad geometry"})
-        with pytest.raises(pybamm.OptionError, match="dimensionality"):
+        with pytest.raises(pybamm.OptionError, match=r"dimensionality"):
             pybamm.BaseBatteryModel({"dimensionality": 5})
-        with pytest.raises(pybamm.OptionError, match="current collector"):
+        with pytest.raises(pybamm.OptionError, match=r"current collector"):
             pybamm.BaseBatteryModel(
                 {"dimensionality": 1, "current collector": "bad option"}
             )
-        with pytest.raises(pybamm.OptionError, match="1D current collectors"):
+        with pytest.raises(pybamm.OptionError, match=r"1D current collectors"):
             pybamm.BaseBatteryModel(
                 {
                     "current collector": "potential pair",
@@ -215,7 +215,7 @@ class TestBaseBatteryModel:
                     "thermal": "x-full",
                 }
             )
-        with pytest.raises(pybamm.OptionError, match="2D current collectors"):
+        with pytest.raises(pybamm.OptionError, match=r"2D current collectors"):
             pybamm.BaseBatteryModel(
                 {
                     "current collector": "potential pair",
@@ -223,35 +223,35 @@ class TestBaseBatteryModel:
                     "thermal": "x-full",
                 }
             )
-        with pytest.raises(pybamm.OptionError, match="surface form"):
+        with pytest.raises(pybamm.OptionError, match=r"surface form"):
             pybamm.BaseBatteryModel({"surface form": "bad surface form"})
-        with pytest.raises(pybamm.OptionError, match="convection"):
+        with pytest.raises(pybamm.OptionError, match=r"convection"):
             pybamm.BaseBatteryModel({"convection": "bad convection"})
         with pytest.raises(
-            pybamm.OptionError, match="cannot have transverse convection in 0D model"
+            pybamm.OptionError, match=r"cannot have transverse convection in 0D model"
         ):
             pybamm.BaseBatteryModel({"convection": "full transverse"})
-        with pytest.raises(pybamm.OptionError, match="particle"):
+        with pytest.raises(pybamm.OptionError, match=r"particle"):
             pybamm.BaseBatteryModel({"particle": "bad particle"})
-        with pytest.raises(pybamm.OptionError, match="working electrode"):
+        with pytest.raises(pybamm.OptionError, match=r"working electrode"):
             pybamm.BaseBatteryModel({"working electrode": "bad working electrode"})
-        with pytest.raises(pybamm.OptionError, match="The 'negative' working"):
+        with pytest.raises(pybamm.OptionError, match=r"The 'negative' working"):
             pybamm.BaseBatteryModel({"working electrode": "negative"})
-        with pytest.raises(pybamm.OptionError, match="particle shape"):
+        with pytest.raises(pybamm.OptionError, match=r"particle shape"):
             pybamm.BaseBatteryModel({"particle shape": "bad particle shape"})
-        with pytest.raises(pybamm.OptionError, match="operating mode"):
+        with pytest.raises(pybamm.OptionError, match=r"operating mode"):
             pybamm.BaseBatteryModel({"operating mode": "bad operating mode"})
-        with pytest.raises(pybamm.OptionError, match="electrolyte conductivity"):
+        with pytest.raises(pybamm.OptionError, match=r"electrolyte conductivity"):
             pybamm.BaseBatteryModel(
                 {"electrolyte conductivity": "bad electrolyte conductivity"}
             )
 
         # SEI options
-        with pytest.raises(pybamm.OptionError, match="SEI"):
+        with pytest.raises(pybamm.OptionError, match=r"SEI"):
             pybamm.BaseBatteryModel({"SEI": "bad sei"})
-        with pytest.raises(pybamm.OptionError, match="SEI film resistance"):
+        with pytest.raises(pybamm.OptionError, match=r"SEI film resistance"):
             pybamm.BaseBatteryModel({"SEI film resistance": "bad SEI film resistance"})
-        with pytest.raises(pybamm.OptionError, match="SEI porosity change"):
+        with pytest.raises(pybamm.OptionError, match=r"SEI porosity change"):
             pybamm.BaseBatteryModel({"SEI porosity change": "bad SEI porosity change"})
         # changing defaults based on other options
         model = pybamm.BaseBatteryModel()
@@ -263,14 +263,14 @@ class TestBaseBatteryModel:
             {"SEI film resistance": "average", "particle phases": "2"}
         )
         assert model.options["total interfacial current density as a state"] == "true"
-        with pytest.raises(pybamm.OptionError, match="must be 'true'"):
+        with pytest.raises(pybamm.OptionError, match=r"must be 'true'"):
             pybamm.BaseBatteryModel(
                 {
                     "SEI film resistance": "distributed",
                     "total interfacial current density as a state": "false",
                 }
             )
-        with pytest.raises(pybamm.OptionError, match="must be 'true'"):
+        with pytest.raises(pybamm.OptionError, match=r"must be 'true'"):
             pybamm.BaseBatteryModel(
                 {
                     "SEI film resistance": "average",
@@ -280,9 +280,9 @@ class TestBaseBatteryModel:
             )
 
         # loss of active material model
-        with pytest.raises(pybamm.OptionError, match="loss of active material"):
+        with pytest.raises(pybamm.OptionError, match=r"loss of active material"):
             pybamm.BaseBatteryModel({"loss of active material": "bad LAM model"})
-        with pytest.raises(pybamm.OptionError, match="loss of active material"):
+        with pytest.raises(pybamm.OptionError, match=r"loss of active material"):
             # can't have a 3-tuple
             pybamm.BaseBatteryModel(
                 {
@@ -314,30 +314,32 @@ class TestBaseBatteryModel:
         assert model.options["stress-induced diffusion"] == "true"
 
         # crack model
-        with pytest.raises(pybamm.OptionError, match="particle mechanics"):
+        with pytest.raises(pybamm.OptionError, match=r"particle mechanics"):
             pybamm.BaseBatteryModel({"particle mechanics": "bad particle cracking"})
-        with pytest.raises(pybamm.OptionError, match="particle cracking"):
+        with pytest.raises(pybamm.OptionError, match=r"particle cracking"):
             pybamm.BaseBatteryModel({"particle cracking": "bad particle cracking"})
 
         # SEI on cracks
-        with pytest.raises(pybamm.OptionError, match="SEI on cracks"):
+        with pytest.raises(pybamm.OptionError, match=r"SEI on cracks"):
             pybamm.BaseBatteryModel({"SEI on cracks": "bad SEI on cracks"})
-        with pytest.raises(pybamm.OptionError, match="'SEI on cracks' is 'true'"):
+        with pytest.raises(pybamm.OptionError, match=r"'SEI on cracks' is 'true'"):
             pybamm.BaseBatteryModel(
                 {"SEI on cracks": "true", "particle mechanics": "swelling only"}
             )
 
         # plating model
-        with pytest.raises(pybamm.OptionError, match="lithium plating"):
+        with pytest.raises(pybamm.OptionError, match=r"lithium plating"):
             pybamm.BaseBatteryModel({"lithium plating": "bad plating"})
-        with pytest.raises(pybamm.OptionError, match="lithium plating porosity change"):
+        with pytest.raises(
+            pybamm.OptionError, match=r"lithium plating porosity change"
+        ):
             pybamm.BaseBatteryModel(
                 {
                     "lithium plating porosity change": "bad lithium "
                     "plating porosity change"
                 }
             )
-        with pytest.raises(pybamm.OptionError, match="distributions"):
+        with pytest.raises(pybamm.OptionError, match=r"distributions"):
             pybamm.BaseBatteryModel(
                 {
                     "particle size": "distribution",
@@ -346,16 +348,16 @@ class TestBaseBatteryModel:
             )
 
         # contact resistance
-        with pytest.raises(pybamm.OptionError, match="contact resistance"):
+        with pytest.raises(pybamm.OptionError, match=r"contact resistance"):
             pybamm.BaseBatteryModel({"contact resistance": "bad contact resistance"})
-        with pytest.raises(NotImplementedError, match="Contact resistance not yet"):
+        with pytest.raises(NotImplementedError, match=r"Contact resistance not yet"):
             pybamm.BaseBatteryModel(
                 {
                     "contact resistance": "true",
                     "operating mode": "explicit power",
                 }
             )
-        with pytest.raises(NotImplementedError, match="Contact resistance not yet"):
+        with pytest.raises(NotImplementedError, match=r"Contact resistance not yet"):
             pybamm.BaseBatteryModel(
                 {
                     "contact resistance": "true",
@@ -364,29 +366,29 @@ class TestBaseBatteryModel:
             )
 
         # stress-induced diffusion
-        with pytest.raises(pybamm.OptionError, match="cannot have stress"):
+        with pytest.raises(pybamm.OptionError, match=r"cannot have stress"):
             pybamm.BaseBatteryModel({"stress-induced diffusion": "true"})
 
         # hydrolysis
-        with pytest.raises(pybamm.OptionError, match="surface formulation"):
+        with pytest.raises(pybamm.OptionError, match=r"surface formulation"):
             pybamm.lead_acid.LOQS({"hydrolysis": "true", "surface form": "false"})
 
         # timescale
-        with pytest.raises(pybamm.OptionError, match="timescale"):
+        with pytest.raises(pybamm.OptionError, match=r"timescale"):
             pybamm.BaseBatteryModel({"timescale": "bad timescale"})
 
         # thermal x-lumped
-        with pytest.raises(pybamm.OptionError, match="x-lumped"):
+        with pytest.raises(pybamm.OptionError, match=r"x-lumped"):
             pybamm.lithium_ion.BaseModel(
                 {"cell geometry": "arbitrary", "thermal": "x-lumped"}
             )
 
         # thermal half-cell
-        with pytest.raises(pybamm.OptionError, match="X-full"):
+        with pytest.raises(pybamm.OptionError, match=r"X-full"):
             pybamm.BaseBatteryModel(
                 {"thermal": "x-full", "working electrode": "positive"}
             )
-        with pytest.raises(pybamm.OptionError, match="X-lumped"):
+        with pytest.raises(pybamm.OptionError, match=r"X-lumped"):
             pybamm.BaseBatteryModel(
                 {
                     "dimensionality": 2,
@@ -396,7 +398,7 @@ class TestBaseBatteryModel:
             )
 
         # thermal heat of mixing
-        with pytest.raises(NotImplementedError, match="Heat of mixing"):
+        with pytest.raises(NotImplementedError, match=r"Heat of mixing"):
             pybamm.BaseBatteryModel(
                 {
                     "heat of mixing": "true",
@@ -405,35 +407,35 @@ class TestBaseBatteryModel:
             )
 
         # surface thermal model
-        with pytest.raises(pybamm.OptionError, match="surface temperature"):
+        with pytest.raises(pybamm.OptionError, match=r"surface temperature"):
             pybamm.BaseBatteryModel(
                 {"surface temperature": "lumped", "thermal": "x-full"}
             )
 
         # phases
-        with pytest.raises(pybamm.OptionError, match="multiple particle phases"):
+        with pytest.raises(pybamm.OptionError, match=r"multiple particle phases"):
             pybamm.BaseBatteryModel({"particle phases": "2", "surface form": "false"})
 
         # msmr
-        with pytest.raises(pybamm.OptionError, match="MSMR"):
+        with pytest.raises(pybamm.OptionError, match=r"MSMR"):
             pybamm.BaseBatteryModel({"open-circuit potential": "MSMR"})
-        with pytest.raises(pybamm.OptionError, match="MSMR"):
+        with pytest.raises(pybamm.OptionError, match=r"MSMR"):
             pybamm.BaseBatteryModel({"particle": "MSMR"})
-        with pytest.raises(pybamm.OptionError, match="MSMR"):
+        with pytest.raises(pybamm.OptionError, match=r"MSMR"):
             pybamm.BaseBatteryModel({"intercalation kinetics": "MSMR"})
-        with pytest.raises(pybamm.OptionError, match="MSMR"):
+        with pytest.raises(pybamm.OptionError, match=r"MSMR"):
             pybamm.BaseBatteryModel(
                 {"open-circuit potential": "MSMR", "particle": "MSMR"}
             )
-        with pytest.raises(pybamm.OptionError, match="MSMR"):
+        with pytest.raises(pybamm.OptionError, match=r"MSMR"):
             pybamm.BaseBatteryModel(
                 {"open-circuit potential": "MSMR", "intercalation kinetics": "MSMR"}
             )
-        with pytest.raises(pybamm.OptionError, match="MSMR"):
+        with pytest.raises(pybamm.OptionError, match=r"MSMR"):
             pybamm.BaseBatteryModel(
                 {"particle": "MSMR", "intercalation kinetics": "MSMR"}
             )
-        with pytest.raises(pybamm.OptionError, match="MSMR"):
+        with pytest.raises(pybamm.OptionError, match=r"MSMR"):
             pybamm.BaseBatteryModel(
                 {
                     "open-circuit potential": "MSMR",
@@ -445,7 +447,7 @@ class TestBaseBatteryModel:
 
     def test_build_twice(self):
         model = pybamm.lithium_ion.SPM()  # need to pick a model to set vars and build
-        with pytest.raises(pybamm.ModelError, match="Model already built"):
+        with pytest.raises(pybamm.ModelError, match=r"Model already built"):
             model.build_model()
 
     def test_get_coupled_variables(self):
@@ -453,7 +455,7 @@ class TestBaseBatteryModel:
         model.submodels["current collector"] = pybamm.current_collector.Uniform(
             model.param
         )
-        with pytest.raises(pybamm.ModelError, match="Missing variable"):
+        with pytest.raises(pybamm.ModelError, match=r"Missing variable"):
             model.build_model()
 
     def test_default_solver(self):

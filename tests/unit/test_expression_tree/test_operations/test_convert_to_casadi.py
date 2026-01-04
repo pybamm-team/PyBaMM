@@ -207,7 +207,7 @@ class TestCasadiConverter:
             )
 
         # error for not recognized interpolator
-        with pytest.raises(ValueError, match="interpolator"):
+        with pytest.raises(ValueError, match=r"interpolator"):
             interp = pybamm.Interpolant(x, data, y, interpolator="idonotexist")
             interp_casadi = interp.to_casadi(y=casadi_y)
 
@@ -221,7 +221,7 @@ class TestCasadiConverter:
         x4_ = [np.linspace(0, 1) for _ in range(4)]
         x4 = np.column_stack(x4_)
         data4 = 2 * x4  # np.tile(2 * x3, (10, 1)).T
-        with pytest.raises(ValueError, match="Invalid dimension of x"):
+        with pytest.raises(ValueError, match=r"Invalid dimension of x"):
             interp = pybamm.Interpolant(x4_, data4, y4, interpolator="linear")
             interp_casadi = interp.to_casadi(y=casadi_y)
 
@@ -265,7 +265,7 @@ class TestCasadiConverter:
         #     np.testing.assert_allclose(interp.evaluate(y=y_test), f(y_test), rtol=1e-7, atol=1e-6)
 
         # error for pchip interpolator
-        with pytest.raises(ValueError, match="interpolator should be"):
+        with pytest.raises(ValueError, match=r"interpolator should be"):
             interp = pybamm.Interpolant(x_, Y, y, interpolator="pchip")
             interp_casadi = interp.to_casadi(y=casadi_y)
 
@@ -369,14 +369,14 @@ class TestCasadiConverter:
     def test_errors(self):
         y = pybamm.StateVector(slice(0, 10))
         with pytest.raises(
-            ValueError, match="Must provide a 'y' for converting state vectors"
+            ValueError, match=r"Must provide a 'y' for converting state vectors"
         ):
             y.to_casadi()
         y_dot = pybamm.StateVectorDot(slice(0, 10))
         with pytest.raises(
-            ValueError, match="Must provide a 'y_dot' for converting state vectors"
+            ValueError, match=r"Must provide a 'y_dot' for converting state vectors"
         ):
             y_dot.to_casadi()
         var = pybamm.Variable("var")
-        with pytest.raises(TypeError, match="Cannot convert symbol of type"):
+        with pytest.raises(TypeError, match=r"Cannot convert symbol of type"):
             var.to_casadi()
