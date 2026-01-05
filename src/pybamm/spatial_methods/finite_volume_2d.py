@@ -211,17 +211,15 @@ class FiniteVolume2D(pybamm.SpatialMethod):
             isinstance(discretised_symbol, pybamm.TensorField)
             and discretised_symbol.rank == 2
         ):
-            # Tensor divergence: div(T) = vector where component i = sum_j d(T_ij)/dx_j
-            # For 2D: result_lr = div of row 0, result_tb = div of row 1
-            row0 = pybamm.VectorField(
-                discretised_symbol[0, 0], discretised_symbol[0, 1]
+            # Tensor divergence: div(T)_i = sum_j d(T_ij)/dx_j
+            # For 2D: result_lr = d(T[0,0])/dx + d(T[0,1])/dy
+            #         result_tb = d(T[1,0])/dx + d(T[1,1])/dy
+            div_row0 = self._divergence_of_tensor_row(
+                symbol, discretised_symbol[0, 0], discretised_symbol[0, 1]
             )
-            row1 = pybamm.VectorField(
-                discretised_symbol[1, 0], discretised_symbol[1, 1]
+            div_row1 = self._divergence_of_tensor_row(
+                symbol, discretised_symbol[1, 0], discretised_symbol[1, 1]
             )
-
-            div_row0 = self._divergence_of_vector(symbol, row0)
-            div_row1 = self._divergence_of_vector(symbol, row1)
 
             return pybamm.VectorField(div_row0, div_row1)
         else:
@@ -229,7 +227,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
             return self._divergence_of_vector(symbol, discretised_symbol)
 
     def _divergence_of_vector(self, symbol, discretised_symbol):
-        """Divergence of a vector field, returning a scalar."""
+        """Divergence of a vector field (edge-evaluated), returning a scalar."""
         divergence_matrix_lr = self.divergence_matrix(symbol.domains, "lr")
         divergence_matrix_tb = self.divergence_matrix(symbol.domains, "tb")
 
@@ -238,6 +236,29 @@ class FiniteVolume2D(pybamm.SpatialMethod):
 
         div_lr = divergence_matrix_lr @ grad_lr
         div_tb = divergence_matrix_tb @ grad_tb
+
+        return div_lr + div_tb
+
+    def _divergence_of_tensor_row(self, symbol, component_lr, component_tb):
+        """Divergence of a tensor row (node-evaluated components), returning a scalar.
+
+        Computes d(component_lr)/dx + d(component_tb)/dy.
+        Components are on nodes, so we convert to edges first, then apply divergence.
+        """
+        divergence_matrix_lr = self.divergence_matrix(symbol.domains, "lr")
+        divergence_matrix_tb = self.divergence_matrix(symbol.domains, "tb")
+
+        # Convert node-evaluated components to edges
+        component_lr_edge = self.node_to_edge(
+            component_lr, method="arithmetic", direction="lr"
+        )
+        component_tb_edge = self.node_to_edge(
+            component_tb, method="arithmetic", direction="tb"
+        )
+
+        # Apply divergence matrices
+        div_lr = divergence_matrix_lr @ component_lr_edge
+        div_tb = divergence_matrix_tb @ component_tb_edge
 
         return div_lr + div_tb
 
