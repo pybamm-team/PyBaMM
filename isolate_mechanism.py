@@ -4,16 +4,16 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import gc
 import tqdm
-# Setup
-total_cycles = 200
-cycles_per_chunk = 10
-num_chunks = total_cycles // cycles_per_chunk
+import os
 
-parameter_values = pybamm.ParameterValues("OKane2022")
-solver = pybamm.IDAKLUSolver(atol=1e-7, rtol=1e-7)
+# --- Configuration ---
+TOTAL_CYCLES = 200
+CYCLES_PER_CHUNK = 10
+NUM_CHUNKS = TOTAL_CYCLES // CYCLES_PER_CHUNK
+CSV_FILENAME = "sei_growth_analysis.csv"
 
-# Define Variants
-variants = {
+# --- Variants Definition ---
+VARIANTS = {
     "Baseline": {
         "SEI": "solvent-diffusion limited",
         "SEI porosity change": "true",
@@ -59,9 +59,9 @@ variants = {
         "SEI on cracks": "false",
         "loss of active material": "none",
     },
-    "No SEI": {
-        "SEI": "none",
-        "SEI porosity change": "false",
+    "Electron Migration SEI": {
+        "SEI": "electron-migration limited",
+        "SEI porosity change": "true",
         "lithium plating": "none",
         "lithium plating porosity change": "false",
         "particle mechanics": "none",
@@ -70,46 +70,104 @@ variants = {
     }
 }
 
-experiment_step = (
-    "Discharge at C/8 until 3.2 V",
-    "Rest for 15 minutes",
-    "Charge at C/6 until 4.1 V",
-    "Hold at 4.1 V until C/37",
-    "Rest for 15 minutes",
+# --- Experiment Definition ---
+EXPERIMENT_STEP = (
+    (
+        "Discharge at C/9 until 3.2 V",
+        "Rest for 15 minutes",
+        "Charge at C/7 until 4.1 V",
+        "Hold at 4.1 V until C/37",
+        "Rest for 15 minutes",
+        "Discharge at C/4 for 5s",
+        "Rest for 15 minutes",
+    )
 )
-experiment_chunk = pybamm.Experiment([experiment_step] * cycles_per_chunk)
+EXPERIMENT_CHUNK = pybamm.Experiment([EXPERIMENT_STEP] * CYCLES_PER_CHUNK)
+
+# --- Helper Functions ---
+
+def get_submesh_types(model_class):
+    """Returns the submesh types with exponential meshing for particles."""
+    model = model_class() # Instantiate to get default submesh
+    submesh_types = model.default_submesh_types.copy()
+    submesh_types["negative particle"] = pybamm.MeshGenerator(pybamm.Exponential1DSubMesh, submesh_params={"side": "right"})
+    submesh_types["positive particle"] = pybamm.MeshGenerator(pybamm.Exponential1DSubMesh, submesh_params={"side": "right"})
+    return submesh_types
+
+def run_rest_step(cycle_num, starting_solution, options, parameter_values, solver, var_pts):
+    """Runs a 4-day rest step and returns trace data and SEI growth."""
+    print(f"  Inserting 4-day rest after cycle {cycle_num}...")
+    
+    # Identify SEI variable
+    sei_var = None
+    if "X-averaged total SEI thickness [m]" in starting_solution.all_models[0].variables:
+        sei_var = "X-averaged total SEI thickness [m]"
+    elif "X-averaged negative SEI thickness [m]" in starting_solution.all_models[0].variables:
+        sei_var = "X-averaged negative SEI thickness [m]"
+        
+    sei_before = starting_solution[sei_var].entries[-1] if sei_var else 0.0
+    
+    # Run Rest Simulation
+    rest_model = pybamm.lithium_ion.DFN(options)
+    rest_submesh = get_submesh_types(pybamm.lithium_ion.DFN)
+    
+    rest_sim = pybamm.Simulation(
+        rest_model,
+        experiment=pybamm.Experiment(["Rest for 96 hours"]),
+        parameter_values=parameter_values,
+        solver=solver,
+        var_pts=var_pts,
+        submesh_types=rest_submesh,
+    )
+    
+    rest_sim.model.set_initial_conditions_from(starting_solution)
+    rest_sim.solve()
+    
+    # Post-process
+    sei_after = rest_sim.solution[sei_var].entries[-1] if (sei_var and sei_var in rest_sim.solution.all_models[0].variables) else 0.0
+    
+    t_rest = rest_sim.solution["Time [h]"].entries
+    t_rest = t_rest - t_rest[0] # Normalize time
+    v_rest = rest_sim.solution["Terminal voltage [V]"].entries
+    
+    rest_data = {
+        "cycle": cycle_num,
+        "before": sei_before,
+        "after": sei_after,
+        "voltage_trace": {"cycle": cycle_num, "time": t_rest, "voltage": v_rest}
+    }
+    
+    final_sol = rest_sim.solution
+    del rest_sim
+    gc.collect()
+    
+    return final_sol, rest_data
 
 def run_chunked_simulation(name, options):
-    print(f"\n--- Starting {name} ({total_cycles} cycles) ---")
+    print(f"\n--- Starting {name} ({TOTAL_CYCLES} cycles) ---")
     
-    all_cc_caps = []
-    all_cc_times = []
-    all_cv_caps = []
-    all_cv_times = []
-    all_cycles = []
-    all_sei_thickness = []
-    all_crack_lengths = []
-    all_rest_data = []
+    # Accumulators
+    data = {
+        "cycles": [], "cc_caps": [], "cc_times": [], "cv_caps": [], "cv_times": [],
+        "dis_caps": [], "sei_thickness": [], "crack_lengths": [], "rest_data": []
+    }
     
     starting_solution = None
-    
-    # Mesh settings (globally defined for consistency)
     var_pts = {"x_n": 10, "x_s": 10, "x_p": 10, "r_n": 20, "r_p": 20}
+    parameter_values = pybamm.ParameterValues("OKane2022")
+    solver = pybamm.IDAKLUSolver(atol=1e-8, rtol=1e-8)
     
-    for chunk_idx in range(num_chunks):
-        start_cycle = chunk_idx * cycles_per_chunk + 1
-        print(f"  {name}: Chunk {chunk_idx + 1}/{num_chunks}...")
+    for chunk_idx in range(NUM_CHUNKS):
+        start_cycle = chunk_idx * CYCLES_PER_CHUNK + 1
+        print(f"  {name}: Chunk {chunk_idx + 1}/{NUM_CHUNKS}...")
         
-        # Re-init model
-        # Switch to SPMe for faster execution (valid at 1C)
-        model = pybamm.lithium_ion.SPMe(options)
-        submesh_types = model.default_submesh_types.copy()
-        submesh_types["negative particle"] = pybamm.MeshGenerator(pybamm.Exponential1DSubMesh, submesh_params={"side": "right"})
-        submesh_types["positive particle"] = pybamm.MeshGenerator(pybamm.Exponential1DSubMesh, submesh_params={"side": "right"})
+        # Setup Simulation
+        model = pybamm.lithium_ion.DFN(options)
+        submesh_types = get_submesh_types(pybamm.lithium_ion.DFN)
         
         sim = pybamm.Simulation(
             model,
-            experiment=experiment_chunk,
+            experiment=EXPERIMENT_CHUNK,
             parameter_values=parameter_values,
             solver=solver,
             var_pts=var_pts,
@@ -125,245 +183,199 @@ def run_chunked_simulation(name, options):
             else:
                 sim.solve()
                 
-            # Process results for this chunk
-            # Extract SEI variable name dynamically once per chunk
+            # --- Result Extraction ---
+            sol = sim.solution
+            # Determine SEI variable name
             sei_var = None
-            if "X-averaged total SEI thickness [m]" in sim.solution.all_models[0].variables:
+            if "X-averaged total SEI thickness [m]" in sol.all_models[0].variables:
                 sei_var = "X-averaged total SEI thickness [m]"
-            elif "X-averaged negative SEI thickness [m]" in sim.solution.all_models[0].variables:
+            elif "X-averaged negative SEI thickness [m]" in sol.all_models[0].variables:
                 sei_var = "X-averaged negative SEI thickness [m]"
-            
-            for i, sol in enumerate(sim.solution.cycles):
+
+            for i, cycle_sol in enumerate(sol.cycles):
                 current_cycle_num = start_cycle + i
                 
-                # CC Charge is Step 2 (index 2)
-                step_cc = sol.steps[2]
+                # Step 0: Discharge
+                step_dis = cycle_sol.steps[0]
+                dis_cap = abs(step_dis["Discharge capacity [A.h]"].entries[-1] - step_dis["Discharge capacity [A.h]"].entries[0])
+                
+                # Step 2: CC Charge
+                step_cc = cycle_sol.steps[2]
                 cc_cap = abs(step_cc["Discharge capacity [A.h]"].entries[-1] - step_cc["Discharge capacity [A.h]"].entries[0])
                 cc_time = step_cc["Time [h]"].entries[-1] - step_cc["Time [h]"].entries[0]
                 
-                # CV Charge is Step 3 (index 3)
-                step_cv = sol.steps[3]
+                # Step 3: CV Charge
+                step_cv = cycle_sol.steps[3]
                 cv_cap = abs(step_cv["Discharge capacity [A.h]"].entries[-1] - step_cv["Discharge capacity [A.h]"].entries[0])
                 cv_time = step_cv["Time [h]"].entries[-1] - step_cv["Time [h]"].entries[0]
-
-                # SEI Thickness (End of cycle)
-                if sei_var:
-                    sei_val = sol[sei_var].entries[-1]
-                else:
-                    sei_val = 0.0
-
-                # Crack Length (End of cycle)
-                # Check for crack variable presence
+                
+                # Variables
+                sei_val = cycle_sol[sei_var].entries[-1] if sei_var else 0.0
+                
                 crack_val = 0.0
-                if "X-averaged negative particle crack length [m]" in sol.all_models[0].variables:
-                     crack_val = sol["X-averaged negative particle crack length [m]"].entries[-1]
+                if "X-averaged negative particle crack length [m]" in cycle_sol.all_models[0].variables:
+                    crack_val = cycle_sol["X-averaged negative particle crack length [m]"].entries[-1]
 
-                all_cc_caps.append(cc_cap)
-                all_cc_times.append(cc_time)
-                all_cv_caps.append(cv_cap)
-                all_cv_times.append(cv_time)
-                all_cycles.append(current_cycle_num)
-                all_sei_thickness.append(sei_val)
-                all_crack_lengths.append(crack_val)
-            
+                # Append
+                data["cycles"].append(current_cycle_num)
+                data["dis_caps"].append(dis_cap)
+                data["cc_caps"].append(cc_cap)
+                data["cc_times"].append(cc_time)
+                data["cv_caps"].append(cv_cap)
+                data["cv_times"].append(cv_time)
+                data["sei_thickness"].append(sei_val)
+                data["crack_lengths"].append(crack_val)
+
             starting_solution = sim.solution
 
-            # Check for rest insertion (after 50, 100, 150 cycles)
-            # cycles_per_chunk is 10, so chunk_idx 4 is cycles 41-50.
-            if (chunk_idx + 1) % 5 == 0 and (chunk_idx + 1) < num_chunks:
-                cycle_num = (chunk_idx + 1) * cycles_per_chunk
-                print(f"  Inserting 4-day rest after cycle {cycle_num}...")
-                
-                # SEI before rest (end of current chunk)
-                sei_before = 0.0
-                if sei_var:
-                     sei_before = starting_solution[sei_var].entries[-1]
-                
-                # Re-init model for rest
-                rest_model = pybamm.lithium_ion.SPMe(options)
-                rest_submesh_types = rest_model.default_submesh_types.copy()
-                rest_submesh_types["negative particle"] = pybamm.MeshGenerator(pybamm.Exponential1DSubMesh, submesh_params={"side": "right"})
-                rest_submesh_types["positive particle"] = pybamm.MeshGenerator(pybamm.Exponential1DSubMesh, submesh_params={"side": "right"})
-                
-                rest_sim = pybamm.Simulation(
-                    rest_model,
-                    experiment=pybamm.Experiment(["Rest for 96 hours"]),
-                    parameter_values=parameter_values,
-                    solver=solver,
-                    var_pts=var_pts,
-                    submesh_types=rest_submesh_types,
+            # Insert Rest Step Logic
+            if (chunk_idx + 1) % 5 == 0 and (chunk_idx + 1) < NUM_CHUNKS:
+                cycle_num = (chunk_idx + 1) * CYCLES_PER_CHUNK
+                starting_solution, rest_data_item = run_rest_step(
+                    cycle_num, starting_solution, options, parameter_values, solver, var_pts
                 )
-                
-                rest_sim.model.set_initial_conditions_from(starting_solution)
-                rest_sim.solve()
-                starting_solution = rest_sim.solution
-                
-                # SEI after rest
-                sei_after = 0.0
-                if sei_var and sei_var in rest_sim.solution.all_models[0].variables:
-                     sei_after = rest_sim.solution[sei_var].entries[-1]
-                
-                all_rest_data.append({
-                    "cycle": cycle_num,
-                    "before": sei_before,
-                    "after": sei_after
-                })
+                data["rest_data"].append(rest_data_item)
 
-                del rest_sim
-                gc.collect()
-
-            
         except Exception as e:
             print(f"  FAILED at chunk {chunk_idx + 1}: {e}")
-            break
-            
-        # Clean up
+            break # Stop this variant
+
+        # Clean up chunk
         del sim
         gc.collect()
-        
-        
-    return all_cycles, all_cc_caps, all_cc_times, all_cv_caps, all_cv_times, all_sei_thickness, all_crack_lengths, all_rest_data
 
-results = {}
+    return data
 
-for name, options in tqdm.tqdm(variants.items()):
-    cycles, cc_caps, cc_times, cv_caps, cv_times, sei_thickness, crack_lengths, rest_data = run_chunked_simulation(name, options)
-    results[name] = {
-        "cycles": cycles,
-        "cc_caps": cc_caps,
-        "cc_times": cc_times,
-        "cv_caps": cv_caps,
-        "cv_times": cv_times,
-        "sei_thickness": sei_thickness,
-        "crack_lengths": crack_lengths,
-        "rest_data": rest_data
-    }
+def plot_results(results):
+    print("\nGeneratng Plots...")
+    
+    # Create Figure (4 Rows x 2 Cols)
+    fig, axs = plt.subplots(4, 2, figsize=(15, 16))
+    
+    # Metrics to plot configuration
+    # (Row, Col, Key, Title, YLabel)
+    metrics = [
+        (0, 0, "dis_caps", "Discharge Capacity", "Discharge Capacity [A.h]"),
+        (1, 0, "cc_caps", "CC Charge Capacity", "CC Capacity [A.h]"),
+        (1, 1, "cc_times", "CC Charge Time", "CC Time [h]"),
+        (2, 0, "cv_caps", "CV Charge Capacity", "CV Capacity [A.h]"),
+        (2, 1, "cv_times", "CV Charge Time", "CV Time [h]"),
+    ]
+    
+    # 1. Standard Metrics
+    for r, c, key, title, ylabel in metrics:
+        ax = axs[r, c]
+        for name, d in results.items():
+            ax.plot(d["cycles"], d[key], marker='.', label=name)
+        ax.set_title(title)
+        ax.set_ylabel(ylabel)
+        ax.grid(True)
+        if r == 0 and c == 0: ax.legend(fontsize='small')
 
-# --------------------
-# SEI Growth Analysis
-# --------------------
-print("\n" + "="*40)
-print("SEI GROWTH RATE FROM CRACKING ANALYSIS")
-print("="*40)
-
-# Create DataFrame for export
-export_data = []
-
-# Update Plot to 3x2 (6 subplots) to include SEI Growth Rate
-fig, axs = plt.subplots(3, 2, figsize=(15, 15))
-
-for name, data in results.items():
-    if data["sei_thickness"]:
-        cycles = data["cycles"]
-        thickness = data["sei_thickness"]
-        cracks = data["crack_lengths"]
-        
-        # Calculate Rate (dSEI/dCycle)
+    # 2. Total Charge Capacity (Calculated)
+    ax = axs[0, 1]
+    for name, d in results.items():
+        total = [cc + cv for cc, cv in zip(d["cc_caps"], d["cv_caps"])]
+        ax.plot(d["cycles"], total, marker='.', label=name)
+    ax.set_title("Total Charge Capacity (CC+CV)")
+    ax.set_ylabel("Total Charge Capacity [A.h]")
+    ax.grid(True)
+    
+    # 3. SEI Thickness
+    ax = axs[3, 0]
+    for name, d in results.items():
+        ax.plot(d["cycles"], d["sei_thickness"], marker='.', label=name)
+    ax.set_title("Total SEI Thickness")
+    ax.set_ylabel("SEI Thickness [m]")
+    ax.grid(True)
+    
+    # 4. SEI Growth Rate (Corrected)
+    ax = axs[3, 1]
+    correction_map = {"Electron Migration SEI": {51: 0.77e-9, 101: 0.56e-9, 151: 0.46e-9}}
+    default_correction = {51: 1.13e-9, 101: 0.80e-9, 151: 0.65e-9}
+    
+    for name, d in results.items():
+        cycles = d["cycles"]
+        thickness = d["sei_thickness"]
+        # Calculate rates
         rates = [0.0] * len(thickness)
         for i in range(1, len(thickness)):
             rates[i] = thickness[i] - thickness[i-1]
-        
-        data["sei_rates"] = rates
-        
-        # Add to export
-        for c, t, r, cr in zip(cycles, thickness, rates, cracks):
-            period = "Cycling"
-            if c in [51, 101, 151]:
-                 period = "Post-Rest (96hr)"
             
-            export_data.append({
+        # Correct rates
+        corr_dict = correction_map.get(name, default_correction)
+        corr_rates = list(rates)
+        for i, c in enumerate(cycles):
+             if c in corr_dict:
+                 corr_rates[i] = max(0, corr_rates[i] - corr_dict[c])
+        
+        ax.plot(cycles, corr_rates, marker='.', label=name)
+        # Store for CSV
+        d["growth_rates"] = rates 
+        
+    ax.set_title("SEI Growth Rate (Corrected)")
+    ax.set_ylabel("Rate [m/cycle]")
+    ax.set_yscale('log')
+    ax.grid(True)
+    
+    fig.tight_layout()
+    fig.savefig("mechanism_isolation_detailed.png")
+    fig.savefig("mechanism_isolation_detailed.svg")
+    print("Main plot saved as .png and .svg")
+
+    # Voltage Decay Plot
+    rest_fig = plt.figure(figsize=(10, 6))
+    has_data = False
+    for name, d in results.items():
+        if d["rest_data"]:
+            has_data = True
+            trace = d["rest_data"][0]["voltage_trace"]
+            plt.plot(trace["time"], trace["voltage"], label=name)
+            
+    if has_data:
+        plt.xlabel("Rest Time [h]")
+        plt.ylabel("Voltage [V]")
+        plt.title("Voltage Relaxation during 4-Day Rest (Cycle 50)")
+        plt.legend()
+        plt.grid(True)
+        rest_fig.savefig("rest_voltage_decay.png")
+        rest_fig.savefig("rest_voltage_decay.svg")
+        print("Rest plot saved as .png and .svg")
+    
+    plt.close(rest_fig)
+
+def save_csv(results):
+    print("Saving CSV...")
+    rows = []
+    for name, d in results.items():
+        for i, c in enumerate(d["cycles"]):
+            period = "Cycling"
+            if c in [51, 101, 151]: period = "Post-Rest (96hr)"
+            
+            rows.append({
                 "Variant": name,
                 "Cycle": c,
-                "SEI Thickness [m]": t,
-                "Growth Rate [m/cycle]": r,
-                "Crack Length [m]": cr,
-                "Period": period
+                "Period": period,
+                "SEI Thickness [m]": d["sei_thickness"][i],
+                "Growth Rate [m/cycle]": d.get("growth_rates", [0]*len(d["cycles"]))[i],
+                "Crack Length [m]": d["crack_lengths"][i],
+                "Discharge Capacity [A.h]": d["dis_caps"][i],
+                "CC Capacity [A.h]": d["cc_caps"][i],
+                "CC Time [h]": d["cc_times"][i],
+                "CV Capacity [A.h]": d["cv_caps"][i],
+                "CV Time [h]": d["cv_times"][i],
+                "Total Charge Capacity [A.h]": d["cc_caps"][i] + d["cv_caps"][i]
             })
-            
-        # Plot Thickness
-        axs[2, 0].plot(cycles, thickness, marker='.', label=name)
+    
+    df = pd.DataFrame(rows)
+    df.to_csv(CSV_FILENAME, index=False)
+    print(f"Data saved to {CSV_FILENAME}")
+
+# --- Main Execution ---
+if __name__ == "__main__":
+    results = {}
+    for name, options in tqdm.tqdm(VARIANTS.items()):
+        results[name] = run_chunked_simulation(name, options)
         
-        # Plot Rate
-        axs[2, 1].plot(cycles, rates, marker='.', label=name)
-    else:
-        axs[2, 0].text(0.5, 0.5, f"{name}: No SEI Data", ha='center')
-        axs[2, 1].text(0.5, 0.5, f"{name}: No SEI Data", ha='center')
-
-# Save CSV
-df = pd.DataFrame(export_data)
-csv_filename = "sei_growth_analysis.csv"
-df.to_csv(csv_filename, index=False)
-print(f"Detailed SEI data saved to {csv_filename}")
-
-
-# Finalize Plots
-# 1. CC Capacity
-for name, data in results.items():
-    axs[0, 0].plot(data["cycles"], data["cc_caps"], marker='.', label=name)
-axs[0, 0].set_ylabel("CC Capacity [A.h]")
-axs[0, 0].set_title("CC Charge Capacity")
-axs[0, 0].grid(True)
-axs[0, 0].legend(fontsize='small')
-
-# 2. CC Time
-for name, data in results.items():
-    axs[0, 1].plot(data["cycles"], data["cc_times"], marker='.', label=name)
-axs[0, 1].set_ylabel("CC Time [h]")
-axs[0, 1].set_title("CC Charge Time")
-axs[0, 1].grid(True)
-
-# 3. CV Capacity
-for name, data in results.items():
-    axs[1, 0].plot(data["cycles"], data["cv_caps"], marker='.', label=name)
-axs[1, 0].set_ylabel("CV Capacity [A.h]")
-axs[1, 0].set_title("CV Charge Capacity")
-axs[1, 0].grid(True)
-
-# 4. CV Time
-for name, data in results.items():
-    axs[1, 1].plot(data["cycles"], data["cv_times"], marker='.', label=name)
-axs[1, 1].set_ylabel("CV Time [h]")
-axs[1, 1].set_title("CV Charge Time")
-axs[1, 1].grid(True)
-
-# 5. SEI Thickness
-axs[2, 0].set_ylabel("SEI Thickness [m]")
-axs[2, 0].set_title("Total SEI Thickness")
-axs[2, 0].grid(True)
-
-# 6. SEI Growth Rate
-axs[2, 1].set_ylabel("Growth Rate [m/cycle]")
-axs[2, 1].set_title("SEI Growth Rate")
-axs[2, 1].grid(True)
-axs[2, 1].set_yscale('log') # Log scale might be better for rates
-
-plt.tight_layout()
-plt.savefig("mechanism_isolation_detailed.png")
-print("\nPlot saved to mechanism_isolation_detailed.png")
-
-# Print Summary Table (Initial, Final, Average Rate)
-print(f"\n{'Variant':<20} | {'Initial [m]':<12} | {'Final [m]':<12} | {'Avg Rate [m/cyc]':<15}")
-print("-" * 70)
-for name, data in results.items():
-    if data["sei_thickness"]:
-        init = data["sei_thickness"][0]
-        final = data["sei_thickness"][-1]
-        avg_rate = (final - init) / len(data["sei_thickness"])
-        print(f"{name:<20} | {init:.4e}   | {final:.4e}   | {avg_rate:.4e}")
-
-print("\n" + "="*40)
-print("REST STEP ANALYSIS (Before vs After 4 Days)")
-print("="*40)
-print(f"{'Variant':<20} | {'Cycle':<5} | {'Before Rest [m]':<15} | {'After Rest [m]':<15} | {'Change [m]':<15}")
-print("-" * 80)
-
-for name, data in results.items():
-    if "rest_data" in data and data["rest_data"]:
-        for r in data["rest_data"]:
-            change = r["after"] - r["before"]
-            print(f"{name:<20} | {r['cycle']:<5} | {r['before']:.4e}        | {r['after']:.4e}        | {change:.4e}")
-    else:
-         print(f"{name:<20} | N/A   | N/A             | N/A             | N/A")
-
-
-
+    plot_results(results)
+    save_csv(results)

@@ -976,7 +976,7 @@ class ElectrodeSOHSolver:
         Q = Q_p * (y_0 - y_100)
         dQ = Q / (points - 1)
         # Integrate and convert to W-h
-        E = np.trapz(Vs, dx=dQ)
+        E = np.trapezoid(Vs, dx=dQ)
         return E
 
 

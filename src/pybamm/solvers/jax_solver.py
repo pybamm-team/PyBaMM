@@ -233,7 +233,12 @@ class JaxSolver(pybamm.BaseSolver):
             self._cached_solves[model] = self.create_solve(model, t_eval)
 
         y = []
-        platform = jax.lib.xla_bridge.get_backend().platform.casefold()
+        try:
+            import jax.extend.backend
+            platform = jax.extend.backend.get_backend().platform.casefold()
+        except (ImportError, AttributeError):
+            import jax.lib.xla_bridge
+            platform = jax.lib.xla_bridge.get_backend().platform.casefold()
         if len(inputs) <= 1 or platform.startswith("cpu"):
             # cpu execution runs faster when multithreaded
             async def solve_model_for_inputs():

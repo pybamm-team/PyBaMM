@@ -10,7 +10,10 @@ from datetime import datetime
 from enum import Enum
 from pathlib import Path
 
-import black
+try:
+    import black
+except ImportError:
+    black = None
 import numpy as np
 
 import pybamm
@@ -56,7 +59,10 @@ class ExpressionFunctionParameter(pybamm.UnaryOperator):
 
         src += f"    return {expression.to_equation()}"
 
-        formatted_src = black.format_str(src, mode=black.FileMode())
+        if black:
+            formatted_src = black.format_str(src, mode=black.FileMode())
+        else:
+            formatted_src = src
         return formatted_src
 
 
