@@ -362,6 +362,9 @@ class BaseModel:
         expression is preserved. The processed variable is stored separately
         in _variables_processed.
 
+        CoupledVariables in the symbol are resolved by recursively getting
+        the processed version of the referenced variable.
+
         Parameters
         ----------
         name : str
@@ -378,8 +381,29 @@ class BaseModel:
                 f"Cannot process variable '{name}' without a `symbol_processor`."
             )
 
+        symbol = self._resolve_coupled_variables(symbol)
         value = self.symbol_processor(name=name, symbol=symbol)
         self._variables_processed[name] = value
+
+    def _resolve_coupled_variables(self, symbol: pybamm.Symbol) -> pybamm.Symbol:
+        """Resolve CoupledVariables by looking up their targets in self._variables."""
+        if isinstance(symbol, pybamm.CoupledVariable):
+            if symbol.name not in self._variables:
+                raise ValueError(
+                    f"CoupledVariable '{symbol.name}' not found in model.variables"
+                )
+            return self._resolve_coupled_variables(self._variables[symbol.name])
+        elif hasattr(symbol, "children") and symbol.children:
+            new_children = []
+            changed = False
+            for child in symbol.children:
+                new_child = self._resolve_coupled_variables(child)
+                new_children.append(new_child)
+                if new_child is not child:
+                    changed = True
+            if changed:
+                return symbol.create_copy(new_children=new_children)
+        return symbol
 
     def update_processed_variables(self, processed_vars: dict[str, pybamm.Symbol]):
         """

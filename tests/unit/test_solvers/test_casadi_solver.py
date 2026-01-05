@@ -16,14 +16,14 @@ class TestCasadiSolver:
         )
         with pytest.raises(
             NotImplementedError,
-            match="Sensitivity analysis is not implemented",
+            match=r"Sensitivity analysis is not implemented",
         ):
             sim.solve(
                 [0, 1], inputs={"Current function [A]": 1}, calculate_sensitivities=True
             )
 
     def test_bad_mode(self):
-        with pytest.raises(ValueError, match="invalid mode"):
+        with pytest.raises(ValueError, match=r"invalid mode"):
             pybamm.CasadiSolver(mode="bad mode")
 
     def test_model_solver(self):
@@ -118,7 +118,7 @@ class TestCasadiSolver:
 
         # Safe mode, without grid (enforce events that won't be triggered)
         solver = pybamm.CasadiSolver(mode="safe without grid", rtol=1e-8, atol=1e-8)
-        with pytest.raises(pybamm.SolverError, match="Maximum number of decreased"):
+        with pytest.raises(pybamm.SolverError, match=r"Maximum number of decreased"):
             solver.solve(model, [0, 10])
 
     def test_model_solver_python(self):
@@ -171,7 +171,7 @@ class TestCasadiSolver:
         t_eval = np.linspace(0, 20, 100)
         # This one should fail immediately and throw a `SolverError`
         # since no progress can be made from the first timestep
-        with pytest.raises(pybamm.SolverError, match="Maximum number of decreased"):
+        with pytest.raises(pybamm.SolverError, match=r"Maximum number of decreased"):
             solver.solve(model, t_eval)
 
     def test_solver_error(self):
@@ -188,7 +188,7 @@ class TestCasadiSolver:
             solver=pybamm.CasadiSolver(mode="fast"),
         )
 
-        with pytest.raises(pybamm.SolverError, match="IDA_CONV_FAIL"):
+        with pytest.raises(pybamm.SolverError, match=r"IDA_CONV_FAIL"):
             sim.solve()
 
     def test_model_solver_events(self):
@@ -528,7 +528,8 @@ class TestCasadiSolver:
         solver = pybamm.CasadiSolver()
         t_eval = np.linspace(0, 1)
         with pytest.raises(
-            pybamm.SolverError, match="Cannot use CasadiSolver to solve algebraic model"
+            pybamm.SolverError,
+            match=r"Cannot use CasadiSolver to solve algebraic model",
         ):
             solver.solve(model, t_eval)
 
@@ -552,7 +553,7 @@ class TestCasadiSolver:
         solver = pybamm.CasadiSolver()
         t_eval = [0, 5]
 
-        with pytest.raises(pybamm.SolverError, match="interpolation bounds"):
+        with pytest.raises(pybamm.SolverError, match=r"interpolation bounds"):
             solver.solve(model, t_eval)
 
     def test_casadi_safe_no_termination(self):
@@ -577,7 +578,7 @@ class TestCasadiSolver:
         solver = pybamm.CasadiSolver(mode="safe")
         solver.set_up(model)
 
-        with pytest.raises(pybamm.SolverError, match="interpolation bounds"):
+        with pytest.raises(pybamm.SolverError, match=r"interpolation bounds"):
             solver.solve(model, t_eval=[0, 1])
 
     def test_modulo_non_smooth_events(self):

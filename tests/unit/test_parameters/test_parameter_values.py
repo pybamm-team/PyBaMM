@@ -38,7 +38,7 @@ class TestParameterValues:
         assert "chemistry" not in param.keys()
 
         # junk param values rejected
-        with pytest.raises(ValueError, match="'Junk' is not a valid parameter set."):
+        with pytest.raises(ValueError, match=r"'Junk' is not a valid parameter set."):
             pybamm.ParameterValues("Junk")
 
     def test_repr(self):
@@ -70,11 +70,11 @@ class TestParameterValues:
         param["a"] = 2
         assert param["a"] == 2
         with pytest.raises(
-            ValueError, match="parameter 'a' already defined with value '2'"
+            ValueError, match=r"parameter 'a' already defined with value '2'"
         ):
             param.update({"a": 4}, check_conflict=True)
         # with parameter not existing yet
-        with pytest.raises(KeyError, match="Cannot update parameter"):
+        with pytest.raises(KeyError, match=r"Cannot update parameter"):
             param.update({"b": 1})
 
         # update with a ParameterValues object
@@ -186,7 +186,7 @@ class TestParameterValues:
 
         # test error
         param = pybamm.ParameterValues("Chen2020")
-        with pytest.raises(OptionError, match="working electrode"):
+        with pytest.raises(OptionError, match=r"working electrode"):
             param.set_initial_state(0.1, options={"working electrode": "negative"})
 
     def test_set_initial_ocps(self):
@@ -224,13 +224,13 @@ class TestParameterValues:
         assert param_0_inputs["Initial voltage in positive electrode [V]"] == Up_0
 
     def test_check_parameter_values(self):
-        with pytest.raises(ValueError, match="propotional term"):
+        with pytest.raises(ValueError, match=r"propotional term"):
             pybamm.ParameterValues(
                 {"Negative electrode LAM constant propotional term": 1}
             )
             # The + character in "1 + dlnf/dlnc" is appended with a backslash (\+),
             # since + has other meanings in regex
-        with pytest.raises(ValueError, match="Thermodynamic factor"):
+        with pytest.raises(ValueError, match=r"Thermodynamic factor"):
             pybamm.ParameterValues({"1 + dlnf/dlnc": 1})
 
     def test_process_symbol(self):
@@ -307,7 +307,7 @@ class TestParameterValues:
         assert isinstance(processed_evaluate_at, pybamm.EvaluateAt)
         assert processed_evaluate_at.children[0] == x
         assert processed_evaluate_at.position == 4
-        with pytest.raises(ValueError, match="'position' in 'EvaluateAt'"):
+        with pytest.raises(ValueError, match=r"'position' in 'EvaluateAt'"):
             parameter_values.process_symbol(pybamm.EvaluateAt(x, x))
 
         # process broadcast
@@ -390,10 +390,10 @@ class TestParameterValues:
             parameter_values.process_symbol(x)
 
         parameter_values = pybamm.ParameterValues({"x": np.nan})
-        with pytest.raises(ValueError, match="Parameter 'x' not found"):
+        with pytest.raises(ValueError, match=r"Parameter 'x' not found"):
             x = pybamm.Parameter("x")
             parameter_values.process_symbol(x)
-        with pytest.raises(ValueError, match="possibly a function"):
+        with pytest.raises(ValueError, match=r"possibly a function"):
             x = pybamm.FunctionParameter("x", {})
             parameter_values.process_symbol(x)
 
@@ -409,7 +409,7 @@ class TestParameterValues:
 
         # case where parameter can't be processed
         b = pybamm.Parameter("b")
-        with pytest.raises(TypeError, match="Cannot process parameter"):
+        with pytest.raises(TypeError, match=r"Cannot process parameter"):
             parameter_values.process_symbol(b)
 
     def test_process_input_parameter(self):
@@ -488,7 +488,7 @@ class TestParameterValues:
 
         # weird type raises error
         func = pybamm.FunctionParameter("bad type", {"a": a})
-        with pytest.raises(TypeError, match="Parameter provided for"):
+        with pytest.raises(TypeError, match=r"Parameter provided for"):
             parameter_values.process_symbol(func)
 
         # function itself as input (different to the variable being an input)
@@ -521,7 +521,7 @@ class TestParameterValues:
         assert func1.domains == func3.domains
 
         # [function] is deprecated
-        with pytest.raises(ValueError, match="[function]"):
+        with pytest.raises(ValueError, match=r"[function]"):
             pybamm.ParameterValues({"func": "[function]something"})
 
     def test_process_inline_function_parameters(self):
@@ -1052,7 +1052,7 @@ class TestParameterValues:
     def test_process_geometry(self):
         var = pybamm.Variable("var")
         geometry = {"negative electrode": {"x": {"min": 0, "max": var}}}
-        with pytest.raises(ValueError, match="Geometry parameters must be Scalars"):
+        with pytest.raises(ValueError, match=r"Geometry parameters must be Scalars"):
             pybamm.ParameterValues({}).process_geometry(geometry)
 
     def test_inplace(self):
@@ -1072,7 +1072,7 @@ class TestParameterValues:
         model = pybamm.BaseModel()
         parameter_values = pybamm.ParameterValues({"a": 1, "b": 2, "c": 3, "d": 42})
         with pytest.raises(
-            pybamm.ModelError, match="Cannot process parameters for empty model"
+            pybamm.ModelError, match=r"Cannot process parameters for empty model"
         ):
             parameter_values.process_model(model)
 
@@ -1101,7 +1101,7 @@ class TestParameterValues:
         )
         with pytest.raises(
             KeyError,
-            match="referring to the reaction at the surface of a lithium metal electrode",
+            match=r"referring to the reaction at the surface of a lithium metal electrode",
         ):
             parameter_values.evaluate(param)
 
@@ -1262,10 +1262,10 @@ class TestParameterValues:
 
     def test_from_json_with_invalid_input_type(self):
         """Test from_json with invalid input type."""
-        with pytest.raises(TypeError, match="Input must be a filename.*or a dict"):
+        with pytest.raises(TypeError, match=r"Input must be a filename.*or a dict"):
             pybamm.ParameterValues.from_json(123)  # Integer is invalid
 
-        with pytest.raises(TypeError, match="Input must be a filename.*or a dict"):
+        with pytest.raises(TypeError, match=r"Input must be a filename.*or a dict"):
             pybamm.ParameterValues.from_json([1, 2, 3])  # List is invalid
 
     def test_from_json_with_dict_input(self):
@@ -1423,7 +1423,7 @@ class TestParameterValues:
         from pybamm.parameters.parameter_values import _KeyMatch
 
         # Test invalid name (not a string)
-        with pytest.raises(ValueError, match="name must be a string"):
+        with pytest.raises(ValueError, match=r"name must be a string"):
             _KeyMatch(123)
 
         # Test matching key
@@ -1573,14 +1573,14 @@ class TestParameterValues:
         """Test _split_key with illegal parameter name (covers lines 1339-1342)."""
         from pybamm.parameters.parameter_values import _split_key
 
-        with pytest.raises(ValueError, match="Illegal parameter name"):
+        with pytest.raises(ValueError, match=r"Illegal parameter name"):
             _split_key("[invalid]")
 
     def test_combine_name_negative_index(self):
         """Test _combine_name with negative index (covers lines 1347-1350)."""
         from pybamm.parameters.parameter_values import _combine_name
 
-        with pytest.raises(ValueError, match="idx must be ≥ 0"):
+        with pytest.raises(ValueError, match=r"idx must be ≥ 0"):
             _combine_name("param", -1)
 
         # Test with valid index and no tag
@@ -1636,7 +1636,7 @@ class TestParameterValues:
             "voltage (2) [V]": 3.9,  # Missing index 1
         }
 
-        with pytest.raises(ValueError, match="Missing indices"):
+        with pytest.raises(ValueError, match=r"Missing indices"):
             arrayize_dict(scalar_dict)
 
     def test_arrayize_dict_duplicate_key_after_rebuild(self):

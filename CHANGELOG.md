@@ -2,6 +2,7 @@
 
 ## Features
 
+- Added support for Python 3.13. ([#5330](https://github.com/pybamm-team/PyBaMM/pull/5330))
 - Reduced the time to build `Simulation`s by creating a post-processing step for variables. ([#5308](https://github.com/pybamm-team/PyBaMM/pull/5308))
 - Adds the ability to observe custom variables from a `Solution` object using `Solution.observe(symbol)`. ([#5308](https://github.com/pybamm-team/PyBaMM/pull/5308))
 - Added inverse kinetics for linear kinetics. ([#5303](https://github.com/pybamm-team/PyBaMM/pull/5303))
@@ -48,6 +49,7 @@
 
 ## Bug fixes
 
+- Fixes `KeyError: 'min'` in `latexify()` for lithium plating models when certain geometry keys are missing. ([#5245](https://github.com/pybamm-team/PyBaMM/pull/5245))
 - Set `zip(..., strict=True)` in solver and expression tree files to ensure iterable length safety. ([#5241](https://github.com/pybamm-team/PyBaMM/pull/5241))
 - Adds `options` property to IDAKLU, fixes pickling issue with `__getstate__` when keys are not available. ([#5234](https://github.com/pybamm-team/PyBaMM/pull/5234))
 - Fixed a bug where simulations using output variables in `IDAKLUSolver` couldn't be pickled ([#5225](https://github.com/pybamm-team/PyBaMM/pull/5225))

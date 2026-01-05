@@ -195,16 +195,16 @@ class TestPlot3DHeatmap:
 
     def test_plot_3d_heatmap_non_3d_model_error(self, non_3d_solution):
         with pytest.raises(
-            TypeError, match="This function requires a 3D model solution"
+            TypeError, match=r"This function requires a 3D model solution"
         ):
             pybamm.plot_3d_heatmap(
                 non_3d_solution, variable="Cell temperature [K]", t=None
             )
 
     def test_plot_3d_heatmap_non_3d_axes_error(self, box_3d_solution):
-        fig, ax = plt.subplots()
+        _, ax = plt.subplots()
         with pytest.raises(
-            TypeError, match="The provided axes `ax` must be a 3D projection"
+            TypeError, match=r"The provided axes `ax` must be a 3D projection"
         ):
             pybamm.plot_3d_heatmap(
                 box_3d_solution,
