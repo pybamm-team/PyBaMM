@@ -505,9 +505,11 @@ class ParameterValues:
         ):
             raise pybamm.ModelError("Cannot process parameters for empty model")
 
-        model.fixed_input_parameters = {
-            k: v for k, v in self.items() if isinstance(v, pybamm.InputParameter)
-        }
+        # Find all InputParameters in the parameter values
+        unpacker = pybamm.SymbolUnpacker(pybamm.InputParameter)
+        model.fixed_input_parameters = unpacker.unpack_list_of_symbols(
+            v for v in self.values() if isinstance(v, pybamm.Symbol)
+        )
 
         new_rhs = {}
         for variable, equation in unprocessed_model.rhs.items():
