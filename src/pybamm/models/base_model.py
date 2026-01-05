@@ -622,11 +622,12 @@ class BaseModel:
         return pybamm.ParameterValues({})
 
     @property
-    def fixed_input_parameters(self):
+    def fixed_input_parameters(self) -> set[pybamm.Symbol]:
+        """Returns a set of all fixed input parameter symbols used in the parameter values."""
         return self._fixed_input_parameters
 
     @fixed_input_parameters.setter
-    def fixed_input_parameters(self, fixed_input_parameters):
+    def fixed_input_parameters(self, fixed_input_parameters: set[pybamm.Symbol]):
         self._fixed_input_parameters = fixed_input_parameters
 
     @property
@@ -1010,7 +1011,7 @@ class BaseModel:
                 for side in x.keys()
             ),
             self.variables.values(),
-            fixed_input_parameters.values(),
+            fixed_input_parameters,
             (event.expression for event in self.events),
         )
         all_input_parameters = unpacker.unpack_list_of_symbols(list(all_items))
@@ -1033,7 +1034,7 @@ class BaseModel:
                 for side in x.keys()
             ),
             self._variables_by_submodel[submodel].values(),
-            fixed_input_parameters.values(),
+            fixed_input_parameters,
             (event.expression for event in self.submodels[submodel].events),
         )
         all_input_parameters = unpacker.unpack_list_of_symbols(list(all_items))
