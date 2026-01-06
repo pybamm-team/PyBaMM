@@ -107,7 +107,9 @@ class TestParameterValues:
             param.update({"b": 1})
 
         # test deprecated check_already_exists=False
-        with pytest.warns(DeprecationWarning, match=r"check_already_exists=False is deprecated"):
+        with pytest.warns(
+            DeprecationWarning, match=r"check_already_exists=False is deprecated"
+        ):
             param.update({"c": 1}, check_already_exists=False)
         assert param["c"] == 1
 

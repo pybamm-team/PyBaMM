@@ -398,7 +398,9 @@ class ParameterValues:
         >>> param = pybamm.ParameterValues("Chen2020")
         >>> param.set({"My custom parameter": 42})
         """
-        self._update(values, check_conflict=False, check_already_exists=False, path=path)
+        self._update(
+            values, check_conflict=False, check_already_exists=False, path=path
+        )
 
     def set_initial_state(
         self,
