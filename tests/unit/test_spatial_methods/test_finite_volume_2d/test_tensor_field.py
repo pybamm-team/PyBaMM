@@ -84,6 +84,52 @@ class TestTensorField:
         assert t_copy.rank == 2
         assert t_copy.shape == (2, 2)
 
+    def test_evaluates_on_edges_all_false(self):
+        """Test evaluates_on_edges returns False when no components are on edges."""
+        a = pybamm.Scalar(1)
+        b = pybamm.Scalar(2)
+        t = TensorField([a, b])
+
+        assert t.evaluates_on_edges("primary") is False
+
+    def test_evaluates_on_edges_all_true(self):
+        """Test evaluates_on_edges returns True when all components are on edges."""
+        # Create variables and take gradients (which evaluate on edges)
+        var = pybamm.Variable("var", domain="negative electrode")
+        grad_var = pybamm.grad(var)
+
+        # VectorField from gradient components - both evaluate on edges
+        # Note: grad returns VectorField, so we test with that
+        assert grad_var.evaluates_on_edges("primary") is True
+
+    def test_evaluates_on_edges_mixed_raises(self):
+        """Test evaluates_on_edges raises error for mixed edge/node components."""
+        # Create one edge-evaluated and one node-evaluated symbol
+        var = pybamm.Variable("var", domain="negative electrode")
+        grad_var = pybamm.grad(var)  # VectorField on edges
+        scalar = pybamm.PrimaryBroadcast(pybamm.Scalar(1), "negative electrode")
+
+        # Create tensor with mixed edge status - should raise on evaluates_on_edges
+        # We need to create a TensorField where some children are on edges and some not
+        # This requires accessing the internal components of grad_var
+        edge_component = grad_var.lr_field  # On edges
+        node_component = scalar  # On nodes
+
+        t = TensorField([edge_component, node_component], domain=["negative electrode"])
+
+        with pytest.raises(ValueError, match="All tensor components must either"):
+            t.evaluates_on_edges("primary")
+
+    def test_rank2_evaluates_on_edges(self):
+        """Test evaluates_on_edges for rank-2 tensor."""
+        a = pybamm.Scalar(1)
+        b = pybamm.Scalar(2)
+        c = pybamm.Scalar(3)
+        d = pybamm.Scalar(4)
+
+        t = TensorField([[a, b], [c, d]])
+        assert t.evaluates_on_edges("primary") is False
+
 
 class TestVectorFieldInheritance:
     """Tests for VectorField inheriting from TensorField."""

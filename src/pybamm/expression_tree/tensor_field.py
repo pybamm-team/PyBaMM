@@ -17,24 +17,10 @@ class TensorField(pybamm.Symbol):
     Parameters
     ----------
     components : list
-        For rank-1: list of symbols [c0, c1, ...]
-        For rank-2: list of lists [[c00, c01, ...], [c10, c11, ...], ...]
+        For rank-1: list of symbols [c0, c1]
+        For rank-2: list of lists [[c00, c01], [c10, c11]]
     domain : list, optional
         Domain of the tensor field. If not provided, inferred from components.
-
-    Examples
-    --------
-    >>> # Rank-1 tensor (vector)
-    >>> v = TensorField([field_x, field_y])
-    >>> v.rank  # 1
-    >>> v.shape  # (2,)
-    >>> v[0]  # field_x
-
-    >>> # Rank-2 tensor (matrix)
-    >>> T = TensorField([[T00, T01], [T10, T11]])
-    >>> T.rank  # 2
-    >>> T.shape  # (2, 2)
-    >>> T[0, 1]  # T01
     """
 
     def __init__(self, components, domain=None):
