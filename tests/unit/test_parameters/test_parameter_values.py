@@ -4,6 +4,7 @@
 
 
 import os
+import re
 
 import casadi
 import numpy as np
@@ -51,6 +52,34 @@ class TestParameterValues:
             "Electron charge [C]",
             "a",
         ]
+
+    def test_deprecated_constants_warning(self):
+        """Test that accessing physical constants emits a warning."""
+
+        param = pybamm.ParameterValues({"a": 1})
+        deprecated_constants = {
+            "Ideal gas constant [J.K-1.mol-1]": "pybamm.constants.R",
+            "Faraday constant [C.mol-1]": "pybamm.constants.F",
+            "Boltzmann constant [J.K-1]": "pybamm.constants.k_b",
+            "Electron charge [C]": "pybamm.constants.q_e",
+        }
+
+        for key, replacement in deprecated_constants.items():
+            # Escape regex special characters in the key
+            escaped_key = re.escape(key)
+            with pytest.warns(
+                DeprecationWarning,
+                match=f"Accessing '{escaped_key}' from ParameterValues is deprecated.*{replacement}",
+            ):
+                # Access via __getitem__
+                _ = param[key]
+
+            with pytest.warns(
+                DeprecationWarning,
+                match=f"Accessing '{escaped_key}' from ParameterValues is deprecated.*{replacement}",
+            ):
+                # Access via get
+                _ = param.get(key)
 
     def test_eq(self):
         assert pybamm.ParameterValues({"a": 1}) == pybamm.ParameterValues({"a": 1})
