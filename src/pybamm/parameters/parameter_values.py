@@ -49,6 +49,14 @@ class ParameterValues:
 
     """
 
+    # Physical constants are deprecated in ParameterValues
+    _DEPRECATED_CONSTANTS = {
+        "Ideal gas constant [J.K-1.mol-1]": "pybamm.constants.R",
+        "Faraday constant [C.mol-1]": "pybamm.constants.F",
+        "Boltzmann constant [J.K-1]": "pybamm.constants.k_b",
+        "Electron charge [C]": "pybamm.constants.q_e",
+    }
+
     def __init__(self, values):
         # add physical constants as default values
         self._dict_items = pybamm.FuzzyDict(
@@ -186,6 +194,13 @@ class ParameterValues:
         return ParameterValues._create_from_bpx(bpx, target_soc)
 
     def __getitem__(self, key):
+        if key in self._DEPRECATED_CONSTANTS:
+            warn(
+                f"Accessing '{key}' from ParameterValues is deprecated. "
+                f"Use {self._DEPRECATED_CONSTANTS[key]} instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
         try:
             return self._dict_items[key]
         except KeyError as err:
@@ -208,6 +223,13 @@ class ParameterValues:
 
     def get(self, key, default=None):
         """Return item corresponding to key if it exists, otherwise return default"""
+        if key in self._DEPRECATED_CONSTANTS:
+            warn(
+                f"Accessing '{key}' from ParameterValues is deprecated. "
+                f"Use {self._DEPRECATED_CONSTANTS[key]} instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
         try:
             return self._dict_items[key]
         except KeyError:
