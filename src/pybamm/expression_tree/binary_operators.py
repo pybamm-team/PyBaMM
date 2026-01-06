@@ -15,6 +15,7 @@ import sympy
 from scipy.sparse import csr_matrix, issparse, kron
 
 import pybamm
+from pybamm.expression_tree.symbol import simplify_if_constant
 
 # create type alias(s)
 from pybamm.type_definitions import ChildSymbol, ChildValue, Numeric
@@ -1701,4 +1702,4 @@ def tensor_product(
     >>> v2 = pybamm.VectorField(c, d)  # rank-1
     >>> T = pybamm.tensor_product(v1, v2)  # rank-2 tensor
     """
-    return TensorProduct(left, right)
+    return TensorProduct(simplify_if_constant(left), simplify_if_constant(right))

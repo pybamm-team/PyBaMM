@@ -104,18 +104,15 @@ class TestTensorField:
 
     def test_evaluates_on_edges_mixed_raises(self):
         """Test evaluates_on_edges raises error for mixed edge/node components."""
-        # Create one edge-evaluated and one node-evaluated symbol
+        # Create symbols with different edge evaluation status
         var = pybamm.Variable("var", domain="negative electrode")
-        grad_var = pybamm.grad(var)  # VectorField on edges
-        scalar = pybamm.PrimaryBroadcast(pybamm.Scalar(1), "negative electrode")
+        # Gradient evaluates on edges
+        edge_symbol = pybamm.grad(var)
+        # Variable evaluates on nodes
+        node_symbol = var
 
         # Create tensor with mixed edge status - should raise on evaluates_on_edges
-        # We need to create a TensorField where some children are on edges and some not
-        # This requires accessing the internal components of grad_var
-        edge_component = grad_var.lr_field  # On edges
-        node_component = scalar  # On nodes
-
-        t = TensorField([edge_component, node_component], domain=["negative electrode"])
+        t = TensorField([edge_symbol, node_symbol], domain=["negative electrode"])
 
         with pytest.raises(ValueError, match="All tensor components must either"):
             t.evaluates_on_edges("primary")
