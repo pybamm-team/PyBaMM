@@ -2,6 +2,7 @@
 
 ## Features
 
+- Restructures `ParameterValues`. Adds deprecation notice on `update`'s `check_already_exists` argument. ([#5339](https://github.com/pybamm-team/PyBaMM/pull/5339))
 - Added `TensorField` for rank-1 and rank-2 tensors, `TensorProduct` for outer products, and tensor divergence support in 2D finite volume. `VectorField` now inherits from `TensorField`. ([#5335](https://github.com/pybamm-team/PyBaMM/pull/5335))
 - Added support for Python 3.13. ([#5330](https://github.com/pybamm-team/PyBaMM/pull/5330))
 - Reduced the time to build `Simulation`s by creating a post-processing step for variables. ([#5308](https://github.com/pybamm-team/PyBaMM/pull/5308))

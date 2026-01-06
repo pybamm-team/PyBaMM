@@ -71,13 +71,13 @@ class ParameterValues:
         if isinstance(values, dict | ParameterValues):
             # remove the "chemistry" key if it exists
             chemistry = values.pop("chemistry", None)
-            self.update(values, check_already_exists=False)
+            self._update(values, check_already_exists=False)
         else:
             # Check if values is a named parameter set
             if isinstance(values, str) and values in pybamm.parameter_sets.keys():
                 values = pybamm.parameter_sets[values]
                 chemistry = values.pop("chemistry", None)
-                self.update(values, check_already_exists=False)
+                self._update(values, check_already_exists=False)
             else:
                 valid_sets = "\n".join(pybamm.parameter_sets.keys())
                 raise ValueError(
@@ -236,8 +236,8 @@ class ParameterValues:
             return default
 
     def __setitem__(self, key, value):
-        """Call the update functionality when doing a setitem"""
-        self.update({key: value})
+        """Set a parameter value (allows new parameters)."""
+        self.set({key: value})
 
     def __delitem__(self, key):
         del self._dict_items[key]
@@ -278,26 +278,11 @@ class ParameterValues:
         """
         return self._dict_items.search(key, print_values)
 
-    def update(self, values, check_conflict=False, check_already_exists=True, path=""):
+    def _update(self, values, check_conflict=False, check_already_exists=True, path=""):
         """
-        Update parameter dictionary, while also performing some basic checks.
+        Internal update method that performs the actual parameter update logic.
 
-        Parameters
-        ----------
-        values : dict
-            Dictionary of parameter values to update parameter dictionary with
-        check_conflict : bool, optional
-            Whether to check that a parameter in `values` has not already been defined
-            in the parameter class when updating it, and if so that its value does not
-            change. This is set to True during initialisation, when parameters are
-            combined from different sources, and is False by default otherwise
-        check_already_exists : bool, optional
-            Whether to check that a parameter in `values` already exists when trying to
-            update it. This is to avoid cases where an intended change in the parameters
-            is ignored due a typo in the parameter name, and is True by default but can
-            be manually overridden.
-        path : string, optional
-            Path from which to load functions
+        This is called by both :meth:`update` and :meth:`set`.
         """
         # check if values is not a dictionary
         if not isinstance(values, dict):
@@ -324,7 +309,7 @@ class ParameterValues:
                         f"Cannot update parameter '{name}' as it does not "
                         + f"have a default value. ({err.args[0]}). If you are "
                         + "sure you want to update this parameter, use "
-                        + "param.update({name: value}, check_already_exists=False)"
+                        + "param.set({name: value})"
                     ) from err
             if isinstance(value, str):
                 if (
@@ -357,6 +342,63 @@ class ParameterValues:
                 self._dict_items[name] = value
         # reset processed symbols
         self._processed_symbols = {}
+
+    def update(self, values, check_conflict=False, check_already_exists=True, path=""):
+        """
+        Update parameter dictionary, while also performing some key checks.
+
+        Parameters
+        ----------
+        values : dict
+            Dictionary of parameter values to update parameter dictionary with
+        check_conflict : bool, optional
+            Whether to check that a parameter in `values` has not already been defined
+            in the parameter class when updating it, and if so that its value does not
+            change. This is set to True during initialisation, when parameters are
+            combined from different sources, and is False by default otherwise
+        check_already_exists : bool, optional
+            Whether to check that a parameter in `values` already exists when trying to
+            update it. This is to avoid cases where an intended change in the parameters
+            is ignored due a typo in the parameter name, and is True by default but can
+            be manually overridden.
+        path : string, optional
+            Path from which to load functions
+
+        .. deprecated::
+            The ``check_already_exists`` parameter is deprecated.
+            Use :meth:`set` instead for adding new parameters.
+        """
+        # Emit deprecation warning if check_already_exists=False is explicitly passed
+        if check_already_exists is False:
+            warn(
+                "Passing check_already_exists=False is deprecated. "
+                "Use param.set(values) instead for adding new parameters.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+        self._update(values, check_conflict, check_already_exists, path)
+
+    def set(self, values, path=""):
+        """
+        Set parameter values without existence checks.
+
+        This method allows adding new parameters or updating existing ones
+        without raising an error. Use this when adding custom parameters
+        that are not part of the base parameter set.
+
+        Parameters
+        ----------
+        values : dict
+            Dictionary of parameter values to set
+        path : str, optional
+            Path from which to load functions
+
+        Examples
+        --------
+        >>> param = pybamm.ParameterValues("Chen2020")
+        >>> param.set({"My custom parameter": 42})
+        """
+        self._update(values, check_conflict=False, check_already_exists=False, path=path)
 
     def set_initial_state(
         self,
