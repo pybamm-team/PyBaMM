@@ -1695,11 +1695,5 @@ def tensor_product(
     -------
     TensorProduct
         A TensorProduct node representing the outer product.
-
-    Examples
-    --------
-    >>> v1 = pybamm.VectorField(a, b)  # rank-1
-    >>> v2 = pybamm.VectorField(c, d)  # rank-1
-    >>> T = pybamm.tensor_product(v1, v2)  # rank-2 tensor
     """
     return TensorProduct(simplify_if_constant(left), simplify_if_constant(right))
