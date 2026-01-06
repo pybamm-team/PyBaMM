@@ -165,8 +165,19 @@ def is_matrix_minus_one(expr: Symbol):
 def simplify_if_constant(symbol: pybamm.Symbol):
     """
     Utility function to simplify an expression tree if it evaluates to a constant
-    scalar, vector or matrix
+    scalar, vector or matrix. Also handles TensorField by simplifying each component.
     """
+    # Handle TensorField by simplifying each component
+    if isinstance(symbol, pybamm.TensorField):
+        simplified_children = [simplify_if_constant(child) for child in symbol.children]
+        # Check if any simplification occurred
+        if any(
+            s is not c
+            for s, c in zip(simplified_children, symbol.children, strict=True)
+        ):
+            return symbol.create_copy(new_children=simplified_children)
+        return symbol
+
     if symbol.is_constant():
         result = symbol.evaluate_ignoring_errors()
         if result is not None:

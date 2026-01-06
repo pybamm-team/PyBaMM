@@ -531,6 +531,9 @@ class Gradient(SpatialOperator):
 class Divergence(SpatialOperator):
     """
     A node in the expression tree representing a div operator.
+
+    For vector fields (rank-1 tensors), returns a scalar.
+    For tensor fields (rank-2 tensors), returns a vector field.
     """
 
     def __init__(self, child):
@@ -540,7 +543,9 @@ class Divergence(SpatialOperator):
                 + "Try broadcasting the object first, e.g.\n\n"
                 "\tpybamm.div(pybamm.PrimaryBroadcast(symbol, 'domain'))"
             )
-        if child.evaluates_on_edges("primary") is False:
+        # Allow TensorField of rank >= 1, or symbols that evaluate on edges
+        is_tensor = isinstance(child, pybamm.TensorField) and child.rank >= 1
+        if not is_tensor and child.evaluates_on_edges("primary") is False:
             raise TypeError(
                 f"Cannot take divergence of '{child}' since it does not "
                 + "evaluate on edges. Usually, a gradient should be taken before the "
