@@ -1209,9 +1209,15 @@ class Discretisation:
             )
 
         elif isinstance(symbol, pybamm.VectorField):
+            # VectorField is a subclass of TensorField, handle it first for specificity
             left_symbol = self.process_symbol(symbol.lr_field)
             right_symbol = self.process_symbol(symbol.tb_field)
             return symbol.create_copy(new_children=[left_symbol, right_symbol])
+
+        elif isinstance(symbol, pybamm.TensorField):
+            # General TensorField handling (rank-2 tensors)
+            processed_children = [self.process_symbol(c) for c in symbol.children]
+            return symbol.create_copy(new_children=processed_children)
 
         elif isinstance(symbol, pybamm.Constant):
             # after discretisation we just care about the value, not the name
