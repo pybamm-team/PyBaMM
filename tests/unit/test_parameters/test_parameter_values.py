@@ -4,12 +4,12 @@
 
 
 import os
+import re
 
 import casadi
 import numpy as np
 import pandas as pd
 import pytest
-import re
 
 import pybamm
 import tests.shared as shared
