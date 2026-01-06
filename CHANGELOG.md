@@ -2,6 +2,7 @@
 
 ## Features
 
+- Adds `set` method to `ParameterValues` providing upsert functionality. Adds deprecation notice on `update`'s `check_already_exists` argument. ([#5337](https://github.com/pybamm-team/PyBaMM/pull/5337))
 - Added support for Python 3.13. ([#5330](https://github.com/pybamm-team/PyBaMM/pull/5330))
 - Reduced the time to build `Simulation`s by creating a post-processing step for variables. ([#5308](https://github.com/pybamm-team/PyBaMM/pull/5308))
 - Adds the ability to observe custom variables from a `Solution` object using `Solution.observe(symbol)`. ([#5308](https://github.com/pybamm-team/PyBaMM/pull/5308))
