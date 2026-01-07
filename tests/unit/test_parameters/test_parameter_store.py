@@ -5,8 +5,6 @@ import pytest
 import pybamm
 from pybamm.parameters.parameter_store import (
     ParameterCategory,
-    ParameterDiff,
-    ParameterInfo,
     ParameterStore,
     _detect_category,
     _parse_units,

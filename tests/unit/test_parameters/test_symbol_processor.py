@@ -1,7 +1,6 @@
 """Tests for the SymbolProcessor class."""
 
 import pytest
-import numpy as np
 
 import pybamm
 from pybamm.parameters.parameter_store import ParameterStore

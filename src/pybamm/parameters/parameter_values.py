@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import json
-import numbers
 import re
 from collections import defaultdict
+from collections.abc import Iterator
 from pathlib import Path
 from pprint import pformat
-from typing import TYPE_CHECKING, Any, Iterator, Literal
+from typing import TYPE_CHECKING, Any
 from warnings import warn
 
 import numpy as np
@@ -74,7 +74,7 @@ class ParameterValues:
         "Electron charge [C]": "pybamm.constants.q_e",
     }
 
-    def __init__(self, values: dict[str, Any] | str | "ParameterValues") -> None:
+    def __init__(self, values: dict[str, Any] | str | ParameterValues) -> None:
         # Initialize the store with physical constants as default values
         self._store = ParameterStore(
             {
@@ -124,7 +124,7 @@ class ParameterValues:
     @classmethod
     def create_from_bpx(
         cls, filename: str | Path, target_soc: float = 1.0
-    ) -> "ParameterValues":
+    ) -> ParameterValues:
         """
         Create ParameterValues from a BPX file.
 
@@ -153,7 +153,7 @@ class ParameterValues:
     @classmethod
     def create_from_bpx_obj(
         cls, bpx_obj: dict, target_soc: float = 1.0
-    ) -> "ParameterValues":
+    ) -> ParameterValues:
         """
         Create ParameterValues from a BPX dictionary object.
 
@@ -182,7 +182,7 @@ class ParameterValues:
         return cls._create_from_bpx(bpx, target_soc)
 
     @classmethod
-    def _create_from_bpx(cls, bpx, target_soc: float) -> "ParameterValues":
+    def _create_from_bpx(cls, bpx, target_soc: float) -> ParameterValues:
         """Internal method to create ParameterValues from a parsed BPX object."""
         from bpx import get_electrode_concentrations
         from bpx.schema import ElectrodeBlended, ElectrodeBlendedSPM
@@ -235,7 +235,7 @@ class ParameterValues:
         return cls(pybamm_dict)
 
     @staticmethod
-    def from_json(filename_or_dict: str | Path | dict) -> "ParameterValues":
+    def from_json(filename_or_dict: str | Path | dict) -> ParameterValues:
         """
         Load a ParameterValues object from a JSON file or a dictionary.
 
@@ -479,7 +479,7 @@ class ParameterValues:
         self._processor.clear_cache()
         return result
 
-    def copy(self) -> "ParameterValues":
+    def copy(self) -> ParameterValues:
         """
         Return a copy of the parameter values.
 
@@ -1042,7 +1042,7 @@ class ParameterValues:
         """
         return self._store.categories()
 
-    def diff(self, other: "ParameterValues", *, rtol: float = 0.0) -> ParameterDiff:
+    def diff(self, other: ParameterValues, *, rtol: float = 0.0) -> ParameterDiff:
         """
         Compare this ParameterValues with another and return differences.
 

@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Iterator
 from dataclasses import dataclass
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Iterator, Literal
+from typing import TYPE_CHECKING, Any, Literal
 from warnings import warn
 
 import pybamm
@@ -321,7 +322,7 @@ class ParameterStore:
         """
         return self._data.pop(key, *args)
 
-    def copy(self) -> "ParameterStore":
+    def copy(self) -> ParameterStore:
         """
         Return a shallow copy of the store.
 
@@ -431,7 +432,7 @@ class ParameterStore:
             result[cat].append(key)
         return result
 
-    def diff(self, other: "ParameterStore", *, rtol: float = 0.0) -> ParameterDiff:
+    def diff(self, other: ParameterStore, *, rtol: float = 0.0) -> ParameterDiff:
         """
         Compare this store with another and return differences.
 

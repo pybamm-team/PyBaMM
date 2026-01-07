@@ -6,9 +6,8 @@ import os
 import re
 from datetime import date
 
-from pybamm._version import __version__ as release_version
-
 import pybamm
+from pybamm._version import __version__ as release_version
 
 
 def update_version():
