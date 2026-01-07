@@ -45,13 +45,7 @@ class TestParameterValues:
     def test_repr(self):
         param = pybamm.ParameterValues({"a": 1})
         assert "'a': 1" in repr(param)
-        assert param._ipython_key_completions_() == [
-            "Ideal gas constant [J.K-1.mol-1]",
-            "Faraday constant [C.mol-1]",
-            "Boltzmann constant [J.K-1]",
-            "Electron charge [C]",
-            "a",
-        ]
+        assert param._ipython_key_completions_() == ["a"]
 
     def test_deprecated_constants_warning(self):
         """Test that accessing physical constants emits a warning."""
@@ -67,8 +61,8 @@ class TestParameterValues:
         for key, replacement in deprecated_constants.items():
             # Escape regex special characters in the key
             escaped_key = re.escape(key)
-            with pytest.warns(
-                DeprecationWarning,
+            with pytest.raises(
+                KeyError,
                 match=f"Accessing '{escaped_key}' from ParameterValues is deprecated.*{replacement}",
             ):
                 # Access via __getitem__
@@ -1182,7 +1176,7 @@ class TestParameterValues:
             values={"Negative particle radius [m]": 1e-6}
         )
         pv = [i for i in parameter_values]
-        assert len(pv) == 5, "Should have 5 keys"
+        assert len(pv) == 1, "Should have 1 keys"
 
     def test_process_function_parameter_with_diff_variable(self):
         """Test _process_function_parameter with diff_variable (NotConstant wrapping)."""

@@ -75,15 +75,8 @@ class ParameterValues:
     }
 
     def __init__(self, values: dict[str, Any] | str | ParameterValues) -> None:
-        # Initialize the store with physical constants as default values
-        self._store = ParameterStore(
-            {
-                "Ideal gas constant [J.K-1.mol-1]": pybamm.constants.R.value,
-                "Faraday constant [C.mol-1]": pybamm.constants.F.value,
-                "Boltzmann constant [J.K-1]": pybamm.constants.k_b.value,
-                "Electron charge [C]": pybamm.constants.q_e.value,
-            }
-        )
+        # Initialize the store
+        self._store = ParameterStore({})
 
         # Initialize the processor (uses this instance's store)
         self._processor = SymbolProcessor(self._store)
@@ -298,12 +291,13 @@ class ParameterValues:
     def __getitem__(self, key: str) -> Any:
         """Get a parameter value by key."""
         if key in self._DEPRECATED_CONSTANTS:
-            warn(
-                f"Accessing '{key}' from ParameterValues is deprecated. "
-                f"Use {self._DEPRECATED_CONSTANTS[key]} instead.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
+            try:
+                _ = self._store[key]
+            except KeyError as e:
+                raise KeyError(
+                    f"Accessing '{key}' from ParameterValues is deprecated. "
+                    f"Use {self._DEPRECATED_CONSTANTS[key]} instead."
+                ) from e
         try:
             return self._store[key]
         except KeyError as err:
