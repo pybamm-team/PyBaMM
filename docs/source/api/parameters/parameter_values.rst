@@ -16,7 +16,7 @@ The ``ParameterValues`` class now includes several helpful features:
   (e.g., "negative electrode", "thermal").
 - **Parameter Comparison**: Use :meth:`diff` to compare two parameter sets and see
   what's added, removed, or changed.
-- **Unified Update API**: The `check_already_exists` argument in :meth:`update` has
+- **Unified Update API**: The ``check_already_exists`` argument in :meth:`update` has
   been deprecated. Use :meth:`set` instead
 
 Example usage::
