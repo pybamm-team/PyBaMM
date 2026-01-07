@@ -840,9 +840,7 @@ class TestSolution:
         input_names = sorted(
             ["dummy", "Positive electrode active material volume fraction"]
         )
-        parameter_values.update(
-            {k: "[input]" for k in input_names}, check_already_exists=False
-        )
+        parameter_values.update({k: "[input]" for k in input_names})
         sim = pybamm.Simulation(model, parameter_values=parameter_values)
 
         # purposefully missing the dummy input

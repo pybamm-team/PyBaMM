@@ -346,8 +346,7 @@ class TestBPX:
                 "Initial concentration in negative electrode [mol.m-3]": 22000,
                 "Primary: Initial concentration in positive electrode [mol.m-3]": 19404,
                 "Secondary: Initial concentration in positive electrode [mol.m-3]": 19404,
-            },
-            check_already_exists=False,
+            }
         )
         model = pybamm.lithium_ion.SPM({"particle phases": ("1", "2")})
         experiment = pybamm.Experiment(

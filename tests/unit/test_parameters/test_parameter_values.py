@@ -92,19 +92,17 @@ class TestParameterValues:
         # via __setitem__
         param["a"] = 2
         assert param["a"] == 2
-        with pytest.raises(
-            ValueError, match=r"parameter 'a' already defined with value '2'"
-        ):
-            param.update({"a": 4}, check_conflict=True)
-        # with parameter not existing yet
-        with pytest.raises(KeyError, match=r"Cannot update parameter"):
-            param.update({"b": 1})
 
-        # test deprecated check_already_exists=False
+        # test deprecated check_already_exists
         with pytest.warns(
-            DeprecationWarning, match=r"check_already_exists=False is deprecated"
+            DeprecationWarning, match=r"check_already_exists is deprecated"
         ):
-            param.update({"c": 1}, check_already_exists=False)
+            param.update({"c": 1}, check_already_exists=True)
+        assert param["c"] == 1
+
+        # test deprecated check_conflict
+        with pytest.warns(DeprecationWarning, match=r"check_conflict is deprecated"):
+            param.update({"c": 1}, check_conflict=True)
         assert param["c"] == 1
 
         # update with a ParameterValues object
@@ -114,29 +112,6 @@ class TestParameterValues:
         # test deleting a parameter
         del param["a"]
         assert "a" not in param.keys()
-
-    def test_set(self):
-        # test set method - adding new parameters
-        param = pybamm.ParameterValues({"a": 1})
-        param.set({"b": 2})
-        assert param["b"] == 2
-
-        # test set method - updating existing parameters
-        param.set({"a": 10})
-        assert param["a"] == 10
-
-        # test set method - mixed new and existing
-        param.set({"a": 20, "c": 3})
-        assert param["a"] == 20
-        assert param["c"] == 3
-
-        # test __setitem__ uses set (allows new parameters)
-        param["new_param"] = 42
-        assert param["new_param"] == 42
-
-        # test __setitem__ updates existing parameters
-        param["a"] = 100
-        assert param["a"] == 100
 
     def test_set_initial_stoichiometries(self):
         param = pybamm.ParameterValues("Chen2020")
@@ -723,7 +698,7 @@ class TestParameterValues:
             return pybamm.Interpolant(x, y, [sto], name=name)
 
         parameter_values.update(
-            {"interpolation": lico2_ocv_example}, check_already_exists=False
+            {"interpolation": lico2_ocv_example},
         )
 
         a = pybamm.Scalar(0.6)
@@ -750,10 +725,7 @@ class TestParameterValues:
             name, (xs, y) = lico2_diffusivity_Dualfoil1998_2D_data
             return pybamm.Interpolant(xs, y, [c_s, T], name=name)
 
-        parameter_values.update(
-            {"interpolation": lico2_diffusivity_Dualfoil1998_2D},
-            check_already_exists=False,
-        )
+        parameter_values.update({"interpolation": lico2_diffusivity_Dualfoil1998_2D})
 
         a = pybamm.Scalar(0.6)
         b = pybamm.Scalar(300.0)

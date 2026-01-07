@@ -89,13 +89,13 @@ class ParameterValues:
                 values_dict = dict(values)
             # Remove the "chemistry" key if it exists
             chemistry = values_dict.pop("chemistry", None)
-            self._update_internal(values_dict, check_already_exists=False)
+            self.update(values_dict)
         else:
             # Check if values is a named parameter set
             if isinstance(values, str) and values in pybamm.parameter_sets.keys():
                 values_dict = dict(pybamm.parameter_sets[values])
                 chemistry = values_dict.pop("chemistry", None)
-                self._update_internal(values_dict, check_already_exists=False)
+                self.update(values_dict)
             else:
                 valid_sets = "\n".join(pybamm.parameter_sets.keys())
                 raise ValueError(
@@ -504,7 +504,7 @@ class ParameterValues:
         values: Mapping[str, Any],
         *,
         check_conflict: bool = False,
-        check_already_exists: bool = True,
+        check_already_exists: bool = False,
         path: str = "",
     ) -> None:
         """
@@ -515,10 +515,9 @@ class ParameterValues:
         values : dict
             Dictionary of parameter values to update.
         check_conflict : bool, optional
-            Whether to check that a parameter has not already been defined
-            with a different value. Default is False.
+            Deprecated.
         check_already_exists : bool, optional
-            Deprecated. Use `set` method instead.
+            Deprecated.
         path : str, optional
             Path from which to load functions (legacy parameter).
 
@@ -526,60 +525,29 @@ class ParameterValues:
         -------
         >>> params = pybamm.ParameterValues("Chen2020")
         >>> params.update({"Current function [A]": 2.0})  # Update existing
+        >>> params.update({'a': 1.0})  # Create new
 
         Notes
         -----
-        The `check_already_exists` parameter is deprecated. Use `set`
-        to add new parameters.
+        The `check_already_exists` parameter is deprecated.
         """
-        # Handle deprecated parameter
-        if check_already_exists is not None:
-            if not check_already_exists:
-                warn(
-                    "Passing check_already_exists=False is deprecated. "
-                    "Use param.set(values) instead.",
-                    DeprecationWarning,
-                    stacklevel=2,
-                )
-                check_already_exists = False
+        # Handle deprecated arguments
+        if check_already_exists is not False:
+            warn(
+                "check_already_exists is deprecated."
+                "this check is no longer supported in pybamm",
+                DeprecationWarning,
+                stacklevel=2,
+            )
 
-        self._update_internal(
-            values,
-            check_conflict=check_conflict,
-            check_already_exists=check_already_exists,
-        )
+        if check_conflict is not False:
+            warn(
+                "check_conflict is deprecated."
+                "this check is no longer supported in pybamm",
+                DeprecationWarning,
+                stacklevel=2,
+            )
 
-    def set(self, values: Mapping[str, Any], path: str = "") -> None:
-        """
-        Set parameter values without existence checks.
-
-        This method allows adding new parameters or updating existing ones
-        without raising an error. Use this when adding custom parameters
-        that are not part of the base parameter set.
-
-        Parameters
-        ----------
-        values : dict
-            Dictionary of parameter values to set.
-        path : str, optional
-            Path from which to load functions (legacy parameter).
-
-        Examples
-        --------
-        >>> param = pybamm.ParameterValues("Chen2020")
-        >>> param.set({"My custom parameter": 42})
-        """
-        self._update_internal(values, check_conflict=False, check_already_exists=False)
-
-    def _update_internal(
-        self,
-        values: Mapping[str, Any],
-        check_conflict: bool = False,
-        check_already_exists: bool = True,
-    ) -> None:
-        """
-        Internal update method that performs the actual parameter update logic.
-        """
         # Convert ParameterValues to dict
         if isinstance(values, ParameterValues):
             values = dict(values._store._data)
@@ -588,32 +556,6 @@ class ParameterValues:
         values = self.check_parameter_values(dict(values))
 
         for name, value in values.items():
-            # Check for conflicts
-            if (
-                check_conflict
-                and name in self._store
-                and not (
-                    self._store[name] == float(value)
-                    if isinstance(value, (int, float))
-                    else self._store[name] == value
-                )
-            ):
-                raise ValueError(
-                    f"parameter '{name}' already defined with value '{self._store[name]}'"
-                )
-
-            # Check parameter already exists
-            if check_already_exists and name not in self._store:
-                try:
-                    # Raises a KeyError and catch it
-                    _ = self._store[name]
-                except KeyError as err:
-                    raise KeyError(
-                        f"Cannot update parameter '{name}' as it does not "
-                        f"have a default value. ({err.args[0] if err.args else ''}). "
-                        "Use param.set({name: value}) to add new parameters."
-                    ) from err
-
             # Process value
             if isinstance(value, str):
                 if (

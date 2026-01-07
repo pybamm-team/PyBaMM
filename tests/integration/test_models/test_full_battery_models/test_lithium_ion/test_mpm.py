@@ -61,8 +61,7 @@ class TestMPM:
                 "Negative electrode delithiation OCP [V]": parameter_values[
                     "Negative electrode OCP [V]"
                 ],
-            },
-            check_already_exists=False,
+            }
         )
         modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
         modeltest.test_all(skip_output_tests=True)
@@ -90,8 +89,7 @@ class TestMPM:
                 "Negative particle hysteresis decay rate": 1,
                 "Negative particle hysteresis switching factor": 1,
                 "Initial hysteresis state in negative electrode": -0.5,
-            },
-            check_already_exists=False,
+            }
         )
         modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
         modeltest.test_all(skip_output_tests=True)
@@ -114,8 +112,7 @@ class TestMPM:
                 "Negative particle lithiation hysteresis decay rate": 10,
                 "Negative particle delithiation hysteresis decay rate": 10,
                 "Initial hysteresis state in negative electrode": 0.0,
-            },
-            check_already_exists=False,
+            }
         )
         modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
         modeltest.test_all(skip_output_tests=True)
@@ -124,7 +121,7 @@ class TestMPM:
         options = {"operating mode": "voltage"}
         model = pybamm.lithium_ion.MPM(options)
         param = model.default_parameter_values
-        param.update({"Voltage function [V]": 3.8}, check_already_exists=False)
+        param.update({"Voltage function [V]": 3.8})
         modeltest = tests.StandardModelTest(model, parameter_values=param)
         modeltest.test_all(skip_output_tests=True)
 

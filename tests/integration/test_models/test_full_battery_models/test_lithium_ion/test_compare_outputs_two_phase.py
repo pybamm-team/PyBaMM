@@ -39,8 +39,7 @@ class TestCompareOutputsTwoPhase:
                 {
                     f"Primary: {parameter}": parameter_values_two_phase[parameter],
                     f"Secondary: {parameter}": parameter_values_two_phase[parameter],
-                },
-                check_already_exists=False,
+                }
             )
             del parameter_values_two_phase[parameter]
         parameter_values_two_phase.update(
@@ -55,8 +54,7 @@ class TestCompareOutputsTwoPhase:
                     "Negative electrode active material volume fraction"
                 ]
                 * (1 - ratio),
-            },
-            check_already_exists=False,
+            }
         )
         del parameter_values_two_phase[
             "Negative electrode active material volume fraction"

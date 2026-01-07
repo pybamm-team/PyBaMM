@@ -49,8 +49,7 @@ class TestSizeDistributionParameters:
                 "Primary: Positive particle radius [m]": 1e-6,
                 "Secondary: Positive particle radius [m]": 1e-6,
                 "Negative particle radius [m]": 1e-6,
-            },
-            check_already_exists=False,
+            }
         )
         values_composite = pybamm.get_size_distribution_parameters(
             params_composite,
@@ -70,8 +69,7 @@ class TestSizeDistributionParameters:
                 "Primary: Positive particle radius [m]": 1e-6,
                 "Secondary: Positive particle radius [m]": 1e-6,
                 "Negative particle radius [m]": 1e-6,
-            },
-            check_already_exists=False,
+            }
         )
         values_composite = pybamm.get_size_distribution_parameters(
             params_composite,
@@ -91,8 +89,7 @@ class TestSizeDistributionParameters:
                 "Primary: Positive particle radius [m]": 1e-6,
                 "Secondary: Positive particle radius [m]": 1e-6,
                 "Negative particle radius [m]": 1e-6,
-            },
-            check_already_exists=False,
+            }
         )
         values_composite = pybamm.get_size_distribution_parameters(
             params_composite,
@@ -106,8 +103,7 @@ class TestSizeDistributionParameters:
                 "Primary: Positive particle radius [m]": 1e-6,
                 "Secondary: Positive particle radius [m]": 1e-6,
                 "Negative particle radius [m]": 1e-6,
-            },
-            check_already_exists=False,
+            }
         )
         values_composite = pybamm.get_size_distribution_parameters(
             params_composite,
