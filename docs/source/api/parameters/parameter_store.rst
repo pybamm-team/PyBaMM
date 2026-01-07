@@ -31,4 +31,3 @@ ParameterCategory
 .. autoclass:: pybamm.parameters.ParameterCategory
   :members:
   :undoc-members:
-

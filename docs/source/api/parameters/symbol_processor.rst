@@ -8,4 +8,3 @@ corresponding values.
 .. autoclass:: pybamm.parameters.SymbolProcessor
   :members:
   :undoc-members:
-
