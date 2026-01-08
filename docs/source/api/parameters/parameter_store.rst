@@ -15,14 +15,12 @@ ParameterInfo
 -------------
 
 .. autoclass:: pybamm.parameters.ParameterInfo
-  :members:
   :undoc-members:
 
 ParameterDiff
 -------------
 
 .. autoclass:: pybamm.parameters.ParameterDiff
-  :members:
   :undoc-members:
 
 ParameterCategory
