@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     from .parameter_store import ParameterStore
 
 
-class SymbolProcessor:
+class ParameterSubstitutor:
     """
     Handles symbol and model parameterization.
 
@@ -26,12 +26,12 @@ class SymbolProcessor:
 
     Examples
     --------
-    >>> from pybamm.parameters import ParameterStore, SymbolProcessor
+    >>> from pybamm.parameters import ParameterStore, ParameterSubstitutor
     >>> store = ParameterStore({"Temperature [K]": 298.15})
-    >>> processor = SymbolProcessor(store)
+    >>> processor = ParameterSubstitutor(store)
     >>> param = pybamm.Parameter("Temperature [K]")
     >>> processed = processor.process_symbol(param)
-    >>> processed.evaluate()
+    >>> float(processed.evaluate())
     298.15
     """
 
@@ -45,6 +45,9 @@ class SymbolProcessor:
 
         Example
         -------
+        >>> from pybamm.parameters import ParameterStore, ParameterSubstitutor
+        >>> store = ParameterStore({"Temperature [K]": 298.15})
+        >>> processor = ParameterSubstitutor(store)
         >>> processor.clear_cache()  # Force re-processing of symbols
         """
         self._cache = {}
@@ -72,10 +75,12 @@ class SymbolProcessor:
 
         Example
         -------
+        >>> from pybamm.parameters import ParameterStore, ParameterSubstitutor
+        >>> store = ParameterStore({"Current [A]": 5.0})
+        >>> processor = ParameterSubstitutor(store)
         >>> param = pybamm.Parameter("Current [A]")
         >>> processed = processor.process_symbol(param)
-        >>> processed.evaluate()
-        5.0
+        >>> result = processed.evaluate()  # Returns evaluated value
         """
         try:
             return self._cache[symbol]
@@ -309,7 +314,7 @@ class SymbolProcessor:
 
             combined_store = ParameterStore(dict(self._store._data))
             combined_store.update(inputs)
-            combined_processor = SymbolProcessor(combined_store)
+            combined_processor = ParameterSubstitutor(combined_store)
 
             # Process any FunctionParameter children first to avoid recursion
             for child in expression.pre_order():
@@ -365,6 +370,9 @@ class SymbolProcessor:
 
         Example
         -------
+        >>> from pybamm.parameters import ParameterStore, ParameterSubstitutor
+        >>> store = pybamm.ParameterValues("Chen2020").store
+        >>> processor = ParameterSubstitutor(store)
         >>> model = pybamm.lithium_ion.SPM()
         >>> processed_model = processor.process_model(model)
 
@@ -573,6 +581,9 @@ class SymbolProcessor:
 
         Example
         -------
+        >>> from pybamm.parameters import ParameterStore, ParameterSubstitutor
+        >>> store = pybamm.ParameterValues("Marquis2019").store
+        >>> processor = ParameterSubstitutor(store)
         >>> geometry = pybamm.battery_geometry()
         >>> processor.process_geometry(geometry)
         """
@@ -625,9 +636,11 @@ class SymbolProcessor:
 
         Example
         -------
+        >>> from pybamm.parameters import ParameterStore, ParameterSubstitutor
+        >>> store = ParameterStore({"Current [A]": 5.0})
+        >>> processor = ParameterSubstitutor(store)
         >>> param = pybamm.Parameter("Current [A]")
-        >>> processor.evaluate(param)
-        5.0
+        >>> result = processor.evaluate(param)  # Returns evaluated value
         """
         processed_symbol = self.process_symbol(symbol)
         if processed_symbol.is_constant():

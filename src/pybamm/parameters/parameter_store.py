@@ -342,8 +342,9 @@ class ParameterStore:
 
         Example
         -------
-        >>> store = ParameterStore({"Temperature [K]": 298.15})
-        >>> store.search("Temperature")  # Prints matching parameters
+        >>> store = ParameterStore({"Temperature [K]": 298.15, "Voltage [V]": 3.7})
+        >>> store.search("Temperature", print_values=False)
+        Results for 'Temperature': ...
         """
         return self._data.search(key, print_values)
 

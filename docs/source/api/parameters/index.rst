@@ -5,7 +5,7 @@ Parameters
 
   parameter_values
   parameter_store
-  symbol_processor
+  parameter_substitutor
   geometric_parameters
   electrical_parameters
   thermal_parameters

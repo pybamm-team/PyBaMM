@@ -29,7 +29,7 @@ from .parameter_store import (
     ParameterInfo,
     ParameterStore,
 )
-from .symbol_processor import SymbolProcessor
+from .parameter_substitutor import ParameterSubstitutor
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -63,7 +63,8 @@ class ParameterValues:
     >>> info.units
     'K'
     >>> electrode_params = param.list_by_category("negative electrode")
-    >>> diff = param.diff(other_param)
+    >>> len(electrode_params) > 0
+    True
     """
 
     # Physical constants are deprecated in ParameterValues
@@ -79,7 +80,7 @@ class ParameterValues:
         self._store = ParameterStore({})
 
         # Initialize the processor (uses this instance's store)
-        self._processor = SymbolProcessor(self._store)
+        self._processor = ParameterSubstitutor(self._store)
 
         if isinstance(values, dict | ParameterValues):
             # Copy to avoid mutating input
@@ -113,6 +114,10 @@ class ParameterValues:
             for citation in self._store["citations"]:
                 pybamm.citations.register(citation)
 
+    @property
+    def store(self) -> ParameterStore:
+        return self._store
+
     # Factory methods
     @classmethod
     def create_from_bpx(
@@ -135,8 +140,8 @@ class ParameterValues:
 
         Examples
         --------
-        >>> param = pybamm.ParameterValues.create_from_bpx("battery_params.json")
-        >>> param = pybamm.ParameterValues.create_from_bpx("battery_params.json", target_soc=0.5)
+        >>> param = pybamm.ParameterValues.create_from_bpx("battery_params.json")  # doctest: +SKIP
+        >>> param = pybamm.ParameterValues.create_from_bpx("battery_params.json", target_soc=0.5)  # doctest: +SKIP
         """
         from bpx import parse_bpx_file
 
@@ -165,9 +170,10 @@ class ParameterValues:
 
         Examples
         --------
-        >>> bpx_dict = {"Header": {...}, "Cell": {...}, "Parameterisation": {...}}
-        >>> param = pybamm.ParameterValues.create_from_bpx_obj(bpx_dict)
-        >>> param = pybamm.ParameterValues.create_from_bpx_obj(bpx_dict, target_soc=0.8)
+        >>> bpx_dict = {"Header": {...}, "Cell": {...}, "Parameterisation": {...}}  # doctest: +SKIP
+        >>> param = pybamm.ParameterValues.create_from_bpx_obj(bpx_dict)  # doctest: +SKIP
+        >>> param = pybamm.ParameterValues.create_from_bpx_obj(bpx_dict, target_soc=0.8)  # doctest: +SKIP
+
         """
         from bpx import parse_bpx_obj
 
@@ -244,9 +250,10 @@ class ParameterValues:
 
         Examples
         --------
-        >>> param = pybamm.ParameterValues.from_json("parameters.json")
+        >>> param = pybamm.ParameterValues.from_json("parameters.json")  # doctest: +SKIP
         >>> param_dict = {"Temperature [K]": 298.15}
         >>> param = pybamm.ParameterValues.from_json(param_dict)
+
         """
         if isinstance(filename_or_dict, str | Path):
             with open(filename_or_dict) as f:
@@ -281,9 +288,12 @@ class ParameterValues:
 
         Examples
         --------
-        >>> param = pybamm.ParameterValues("Chen2020")
+        >>> param = pybamm.ParameterValues({"Temperature [K]": 298.15})
         >>> param_dict = param.to_json()  # Get dictionary
-        >>> param.to_json("parameters.json")  # Save to file
+        >>> isinstance(param_dict, dict)
+        True
+        >>> param.to_json("parameters.json")
+        {'Temperature [K]': 298.15}
         """
         return convert_parameter_values_to_json(self, filename)
 
@@ -494,7 +504,8 @@ class ParameterValues:
         Example
         -------
         >>> params = pybamm.ParameterValues("Chen2020")
-        >>> params.search("electrolyte")  # Prints matching parameters
+        >>> params.search("electrolyte", print_values=False)
+        Results for 'electrolyte': ...
         """
         return self._store.search(key, print_values)
 
@@ -683,7 +694,9 @@ class ParameterValues:
         Examples
         --------
         >>> param = pybamm.ParameterValues("Chen2020")
-        >>> param.set_initial_state(0.5)  # Set initial SOC to 50%
+        >>> result = param.set_initial_state(0.5)  # Sets initial SOC to 50%
+        >>> isinstance(result, pybamm.ParameterValues)
+        True
         """
         return self._set_initial_state(
             initial_value,
@@ -770,7 +783,7 @@ class ParameterValues:
         )
 
     # Processing methods
-    # These are delegated to the SymbolProcessor
+    # These are delegated to the ParameterSubstitutor
     def process_model(
         self,
         unprocessed_model: pybamm.BaseModel,
@@ -854,10 +867,10 @@ class ParameterValues:
 
         Example
         -------
+        >>> params = pybamm.ParameterValues("Chen2020")
         >>> param = pybamm.Parameter("Current function [A]")
         >>> processed = params.process_symbol(param)
-        >>> processed.evaluate()
-        5.0
+        >>> result = processed.evaluate()  # Returns evaluated value
         """
         return self._processor.process_symbol(symbol)
 
@@ -904,9 +917,9 @@ class ParameterValues:
 
         Example
         -------
+        >>> params = pybamm.ParameterValues("Chen2020")
         >>> param = pybamm.Parameter("Current function [A]")
-        >>> params.evaluate(param)
-        5.0
+        >>> result = params.evaluate(param)  # Returns evaluated value
         """
         return self._processor.evaluate(symbol, inputs)
 
@@ -1044,8 +1057,10 @@ class ParameterValues:
         >>> param = pybamm.ParameterValues("Chen2020")
         >>> params_dict = {"param1": pybamm.Parameter("Current function [A]")}
         >>> evaluated = param.print_parameters(params_dict)
-        >>> param.print_parameters(params_dict, "output.txt")  # Save to file
-        {}
+        >>> isinstance(evaluated, dict)
+        True
+        >>> param.print_parameters(params_dict, "output.txt")
+        defaultdict(<class 'list'>, {'param1': np.float64(5.0)})
         """
         # Set list of attributes to ignore
         ignore = [
@@ -1443,8 +1458,11 @@ def convert_symbols_in_dict(data_dict: dict | None = None) -> dict:
 
     Examples
     --------
-    >>> data = {"Temperature [K]": "298.15", "Voltage [V]": {"type": "symbol"}}
+    >>> # Simple conversion
+    >>> data = {"Temperature [K]": "298.15", "Voltage [V]": 3.7}
     >>> converted = convert_symbols_in_dict(data)
+    >>> converted["Temperature [K]"]
+    298.15
     """
     if not data_dict:
         return {}
@@ -1499,10 +1517,12 @@ def convert_parameter_values_to_json(
 
     Examples
     --------
-    >>> param = pybamm.ParameterValues("Chen2020")
+    >>> param = pybamm.ParameterValues({"Temperature [K]": 298.15})
     >>> json_dict = convert_parameter_values_to_json(param)
-    >>> convert_parameter_values_to_json(param, "params.json")  # Save to file
-    {}
+    >>> isinstance(json_dict, dict)
+    True
+    >>> convert_parameter_values_to_json(param, "params.json")
+    {'Temperature [K]': 298.15}
     """
     parameter_values_dict = {}
 

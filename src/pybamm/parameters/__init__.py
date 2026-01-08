@@ -10,7 +10,7 @@ from .parameter_store import (
     ParameterInfo,
     ParameterStore,
 )
-from .symbol_processor import SymbolProcessor
+from .parameter_substitutor import ParameterSubstitutor
 
 __all__ = [
     'base_parameters',
@@ -31,5 +31,5 @@ __all__ = [
     'ParameterDiff',
     'ParameterInfo',
     'ParameterStore',
-    'SymbolProcessor',
+    'ParameterSubstitutor',
 ]
