@@ -316,6 +316,9 @@ class ParameterSubstitutor:
             combined_store.update(inputs)
             combined_processor = ParameterSubstitutor(combined_store)
 
+            # Copy parent cache to combined processor
+            combined_processor._cache.update(self._cache)
+
             # Process any FunctionParameter children first to avoid recursion
             for child in expression.pre_order():
                 if isinstance(child, pybamm.FunctionParameter):
@@ -342,6 +345,12 @@ class ParameterSubstitutor:
 
             # Process function with combined processor to get a symbolic expression
             function = combined_processor.process_symbol(expression)
+
+            # Propagate newly cached symbols back to parent cache for reuse
+            # Only propagate symbols that don't depend on the local inputs
+            for sym, processed in combined_processor._cache.items():
+                if sym not in self._cache and sym not in inputs.values():
+                    self._cache[sym] = processed
 
             # Differentiate if necessary
             if symbol.diff_variable is None:

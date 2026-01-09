@@ -300,17 +300,16 @@ class ParameterValues:
     # Dictionary-like interface
     def __getitem__(self, key: str) -> Any:
         """Get a parameter value by key."""
-        if key in self._DEPRECATED_CONSTANTS:
-            try:
-                _ = self._store[key]
-            except KeyError as e:
-                raise KeyError(
-                    f"Accessing '{key}' from ParameterValues is deprecated. "
-                    f"Use {self._DEPRECATED_CONSTANTS[key]} instead."
-                ) from e
         try:
             return self._store[key]
         except KeyError as err:
+            # Provide helpful error for deprecated physical constants
+            if key in self._DEPRECATED_CONSTANTS:
+                raise KeyError(
+                    f"Accessing '{key}' from ParameterValues is deprecated. "
+                    f"Use {self._DEPRECATED_CONSTANTS[key]} instead."
+                ) from err
+            # Provide helpful error for renamed parameter
             if (
                 "Exchange-current density for lithium metal electrode [A.m-2]"
                 in str(err)
@@ -325,8 +324,7 @@ class ParameterValues:
                     "electrode. To avoid this error, change your parameter file to use "
                     "the new name."
                 ) from err
-            else:
-                raise
+            raise
 
     def get(self, key: str, default: Any = None) -> Any:
         """
@@ -391,7 +389,7 @@ class ParameterValues:
 
     def __delitem__(self, key: str) -> None:
         """Delete a parameter."""
-        del self._store._data[key]
+        del self._store[key]
         self._processor.clear_cache()
 
     def __contains__(self, key: str) -> bool:
@@ -545,16 +543,16 @@ class ParameterValues:
         # Handle deprecated arguments
         if check_already_exists is not False:
             warn(
-                "check_already_exists is deprecated."
-                "this check is no longer supported in pybamm",
+                "check_already_exists is deprecated. "
+                "This check is no longer supported in pybamm.",
                 DeprecationWarning,
                 stacklevel=2,
             )
 
         if check_conflict is not False:
             warn(
-                "check_conflict is deprecated."
-                "this check is no longer supported in pybamm",
+                "check_conflict is deprecated. "
+                "This check is no longer supported in pybamm.",
                 DeprecationWarning,
                 stacklevel=2,
             )
