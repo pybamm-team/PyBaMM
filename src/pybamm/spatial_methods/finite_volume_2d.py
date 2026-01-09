@@ -86,9 +86,16 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         # Vector should be size npts_lr x npts_tb
         # Do LR first, then TB
         if symbol.evaluates_on_edges("primary"):
-            LR, TB = np.meshgrid(symbol_mesh.edges_lr, symbol_mesh.edges_tb)
-            lr = LR.flatten()
-            tb = TB.flatten()
+            if symbol.direction == "lr":
+                LR, TB = np.meshgrid(symbol_mesh.edges_lr, symbol_mesh.nodes_tb)
+                lr = LR.flatten()
+                tb = TB.flatten()
+            elif symbol.direction == "tb":
+                LR, TB = np.meshgrid(symbol_mesh.nodes_lr, symbol_mesh.edges_tb)
+                lr = LR.flatten()
+                tb = TB.flatten()
+            else:
+                raise ValueError(f"Direction {symbol.direction} not supported")
         else:
             LR, TB = np.meshgrid(symbol_mesh.nodes_lr, symbol_mesh.nodes_tb)
             lr = LR.flatten()
@@ -2138,10 +2145,10 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         # using the harmonic mean if the right child is a gradient (i.e. this
         # binary operator represents a flux)
         elif right_evaluates_on_edges and not left_evaluates_on_edges:
-            if not isinstance(right, pybamm.Magnitude):
-                raise NotImplementedError(
-                    "Symbols that evaluate on edges must either be a vector field or a magnitude of a vector field"
-                )
+            # if not isinstance(right, pybamm.Magnitude):
+            #    raise NotImplementedError(
+            #        "Symbols that evaluate on edges must either be a vector field or a magnitude of a vector field"
+            #    )
             method = "arithmetic"
             direction = right.direction
             disc_left = self.node_to_edge(disc_left, method=method, direction=direction)
