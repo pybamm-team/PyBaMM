@@ -4,6 +4,8 @@ Parameters
 .. toctree::
 
   parameter_values
+  parameter_store
+  parameter_substitutor
   geometric_parameters
   electrical_parameters
   thermal_parameters

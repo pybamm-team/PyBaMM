@@ -403,8 +403,7 @@ class TestExperiment:
                     "Back face heat transfer coefficient [W.m-2.K-1]": h,
                     "Bottom face heat transfer coefficient [W.m-2.K-1]": h,
                     "Top face heat transfer coefficient [W.m-2.K-1]": h,
-                },
-                check_already_exists=False,
+                }
             )
 
             solutions = {}
@@ -480,8 +479,7 @@ class TestExperiment:
                     "Inner radius heat transfer coefficient [W.m-2.K-1]": h,
                     "Bottom face heat transfer coefficient [W.m-2.K-1]": h,
                     "Top face heat transfer coefficient [W.m-2.K-1]": h,
-                },
-                check_already_exists=False,
+                }
             )
 
             solutions = {}
@@ -548,8 +546,7 @@ class TestExperiment:
                 "Inner radius heat transfer coefficient [W.m-2.K-1]": h,
                 "Bottom face heat transfer coefficient [W.m-2.K-1]": h,
                 "Top face heat transfer coefficient [W.m-2.K-1]": h,
-            },
-            check_already_exists=False,
+            }
         )
 
         experiment = pybamm.Experiment(

@@ -117,8 +117,7 @@ class TestLithiumIonParameterValues:
                 "Top face heat transfer coefficient [W.m-2.K-1]": 5.0,
                 "Inner radius heat transfer coefficient [W.m-2.K-1]": 5.0,
                 "Outer radius heat transfer coefficient [W.m-2.K-1]": 5.0,
-            },
-            check_already_exists=False,
+            }
         )
         param = pybamm.LithiumIonParameters()
         T = param.T_ref
