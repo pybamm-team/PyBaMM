@@ -494,9 +494,6 @@ class ParticleLithiumIonParameters(BaseParameters):
         self.m_LAM = pybamm.Parameter(
             f"{pref}{Domain} electrode LAM constant exponential term"
         )
-        self.beta_LAM = pybamm.Parameter(
-            f"{pref}{Domain} electrode LAM constant proportional term [s-1]"
-        )
         self.stress_critical = pybamm.Parameter(
             f"{pref}{Domain} electrode critical stress [Pa]"
         )
@@ -845,4 +842,19 @@ class ParticleLithiumIonParameters(BaseParameters):
         }
         return pybamm.FunctionParameter(
             f"{self.phase_prefactor}{Domain} electrode Young's modulus [Pa]", inputs
+        )
+
+    def beta_LAM(self, T, direction=None):
+        """Dimensional LAM constant proportional term [s-1]"""
+        _domain, Domain = self.domain_Domain
+        if direction is None:
+            direction = ""
+        else:
+            direction = f" ({direction})"
+        inputs = {
+            "Temperature [K]": T,
+        }
+        return pybamm.FunctionParameter(
+            f"{self.phase_prefactor}{Domain} electrode LAM constant proportional term{direction} [s-1]",
+            inputs,
         )
