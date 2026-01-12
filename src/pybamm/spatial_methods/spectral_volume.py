@@ -158,7 +158,7 @@ class SpectralVolume(pybamm.FiniteVolume):
         # Create 1D matrix using submesh
         # n is the number of SVs, submesh.npts is the number of CVs
         n = submesh.npts // self.order
-        sub_matrix = csr_matrix(kron(eye(n), recon_sub_matrix))
+        sub_matrix = csr_matrix(kron(eye(n, dtype=float), recon_sub_matrix))
 
         # number of repeats
         second_dim_repeats = self._get_auxiliary_domain_repeats(domains)
@@ -168,7 +168,7 @@ class SpectralVolume(pybamm.FiniteVolume):
         # (row-slicing), which is not supported by the default kron
         # format. Note that this makes column-slicing inefficient,
         # but this should not be an issue.
-        matrix = csr_matrix(kron(eye(second_dim_repeats), sub_matrix))
+        matrix = csr_matrix(kron(eye(second_dim_repeats, dtype=float), sub_matrix))
 
         return pybamm.Matrix(matrix)
 
@@ -361,7 +361,7 @@ class SpectralVolume(pybamm.FiniteVolume):
         # (row-slicing), which is not supported by the default kron
         # format. Note that this makes column-slicing inefficient,
         # but this should not be an issue.
-        matrix = csr_matrix(kron(eye(second_dim_repeats), sub_matrix))
+        matrix = csr_matrix(kron(eye(second_dim_repeats, dtype=float), sub_matrix))
 
         return pybamm.Matrix(matrix)
 
@@ -405,7 +405,7 @@ class SpectralVolume(pybamm.FiniteVolume):
         # (row-slicing), which is not supported by the default kron
         # format. Note that this makes column-slicing inefficient, but
         # this should not be an issue.
-        matrix = csr_matrix(kron(eye(second_dim_repeats), sub_matrix))
+        matrix = csr_matrix(kron(eye(second_dim_repeats, dtype=float), sub_matrix))
 
         return pybamm.Matrix(matrix)
 
@@ -519,8 +519,10 @@ class SpectralVolume(pybamm.FiniteVolume):
 
         # write boundary values into vectors of according shape
         if lbc_type == "Dirichlet":
-            lbc_sub_matrix = coo_matrix(([1], ([0], [0])), shape=(n, 1))
-            lbc_matrix = csr_matrix(kron(eye(second_dim_repeats), lbc_sub_matrix))
+            lbc_sub_matrix = coo_matrix(([1.0], ([0], [0])), shape=(n, 1))
+            lbc_matrix = csr_matrix(
+                kron(eye(second_dim_repeats, dtype=float), lbc_sub_matrix)
+            )
             if lbc_value.evaluates_to_number():
                 left_bc = lbc_value * pybamm.Vector(np.ones(second_dim_repeats))
             else:
@@ -534,8 +536,10 @@ class SpectralVolume(pybamm.FiniteVolume):
             )
 
         if rbc_type == "Dirichlet":
-            rbc_sub_matrix = coo_matrix(([1], ([n - 1], [0])), shape=(n, 1))
-            rbc_matrix = csr_matrix(kron(eye(second_dim_repeats), rbc_sub_matrix))
+            rbc_sub_matrix = coo_matrix(([1.0], ([n - 1], [0])), shape=(n, 1))
+            rbc_matrix = csr_matrix(
+                kron(eye(second_dim_repeats, dtype=float), rbc_sub_matrix)
+            )
             if rbc_value.evaluates_to_number():
                 right_bc = rbc_value * pybamm.Vector(np.ones(second_dim_repeats))
             else:
@@ -559,9 +563,10 @@ class SpectralVolume(pybamm.FiniteVolume):
         # the known Dirichlet values will be added. If the boundary
         # condition is not Dirichlet, it acts as identity.
         sub_matrix = diags(
-            [int(lbc_type != "Dirichlet")]
-            + [1 for i in range(n - 2)]
-            + [int(rbc_type != "Dirichlet")]
+            [float(lbc_type != "Dirichlet")]
+            + [1.0 for i in range(n - 2)]
+            + [float(rbc_type != "Dirichlet")],
+            dtype=None,
         )
 
         # repeat matrix for secondary dimensions
@@ -569,7 +574,7 @@ class SpectralVolume(pybamm.FiniteVolume):
         # (row-slicing), which is not supported by the default kron
         # format. Note that this makes column-slicing inefficient, but
         # this should not be an issue.
-        matrix = csr_matrix(kron(eye(second_dim_repeats), sub_matrix))
+        matrix = csr_matrix(kron(eye(second_dim_repeats, dtype=float), sub_matrix))
 
         new_symbol = pybamm.Matrix(matrix) @ discretised_symbol + bcs_vector
 
@@ -611,8 +616,10 @@ class SpectralVolume(pybamm.FiniteVolume):
 
         # Add any values from Neumann boundary conditions to the bcs vector
         if lbc_type == "Neumann":
-            lbc_sub_matrix = coo_matrix(([1], ([0], [0])), shape=(n, 1))
-            lbc_matrix = csr_matrix(kron(eye(second_dim_repeats), lbc_sub_matrix))
+            lbc_sub_matrix = coo_matrix(([1.0], ([0], [0])), shape=(n, 1))
+            lbc_matrix = csr_matrix(
+                kron(eye(second_dim_repeats, dtype=float), lbc_sub_matrix)
+            )
             if lbc_value.evaluates_to_number():
                 left_bc = lbc_value * pybamm.Vector(np.ones(second_dim_repeats))
             else:
@@ -626,8 +633,10 @@ class SpectralVolume(pybamm.FiniteVolume):
             )
 
         if rbc_type == "Neumann":
-            rbc_sub_matrix = coo_matrix(([1], ([n - 1], [0])), shape=(n, 1))
-            rbc_matrix = csr_matrix(kron(eye(second_dim_repeats), rbc_sub_matrix))
+            rbc_sub_matrix = coo_matrix(([1.0], ([n - 1], [0])), shape=(n, 1))
+            rbc_matrix = csr_matrix(
+                kron(eye(second_dim_repeats, dtype=float), rbc_sub_matrix)
+            )
             if rbc_value.evaluates_to_number():
                 right_bc = rbc_value * pybamm.Vector(np.ones(second_dim_repeats))
             else:
@@ -651,9 +660,10 @@ class SpectralVolume(pybamm.FiniteVolume):
         # the known Neumann values will be added. If the boundary
         # condition is not Neumann, it acts as identity.
         sub_matrix = diags(
-            [int(lbc_type != "Neumann")]
-            + [1 for i in range(n - 2)]
-            + [int(rbc_type != "Neumann")]
+            [float(lbc_type != "Neumann")]
+            + [1.0 for i in range(n - 2)]
+            + [float(rbc_type != "Neumann")],
+            dtype=None,
         )
 
         # repeat matrix for secondary dimensions
@@ -661,7 +671,7 @@ class SpectralVolume(pybamm.FiniteVolume):
         # (row-slicing), which is not supported by the default kron
         # format. Note that this makes column-slicing inefficient, but
         # this should not be an issue.
-        matrix = csr_matrix(kron(eye(second_dim_repeats), sub_matrix))
+        matrix = csr_matrix(kron(eye(second_dim_repeats, dtype=float), sub_matrix))
 
         new_gradient = pybamm.Matrix(matrix) @ discretised_gradient + bcs_vector
 
