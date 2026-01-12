@@ -422,7 +422,9 @@ class FiniteVolume2D(pybamm.SpatialMethod):
             child, direction, domains=integration_domain
         )
         second_dim_repeats = self._get_auxiliary_domain_repeats(child.domains)
-        integral_matrix = kron(eye(second_dim_repeats, dtype=np.float64), integral_matrix)
+        integral_matrix = kron(
+            eye(second_dim_repeats, dtype=np.float64), integral_matrix
+        )
         return pybamm.Matrix(integral_matrix) @ discretised_child
 
     def boundary_integral(self, child, discretised_child, region):
@@ -446,7 +448,9 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         integral_matrix = self.one_dimensional_integral_matrix(child, direction)
         domains = child.domains
         second_dim_repeats = self._get_auxiliary_domain_repeats(domains)
-        integral_matrix = kron(eye(second_dim_repeats, dtype=np.float64), integral_matrix)
+        integral_matrix = kron(
+            eye(second_dim_repeats, dtype=np.float64), integral_matrix
+        )
         return pybamm.Matrix(integral_matrix) @ boundary_value
 
     def indefinite_integral(self, child, discretised_child, direction):
@@ -515,7 +519,9 @@ class FiniteVolume2D(pybamm.SpatialMethod):
             right_sub_matrix[i, i * right_npts_lr] = 1
 
         right_matrix = pybamm.Matrix(
-            csr_matrix(kron(eye(second_dim_repeats, dtype=np.float64), right_sub_matrix))
+            csr_matrix(
+                kron(eye(second_dim_repeats, dtype=np.float64), right_sub_matrix)
+            )
         )
 
         # Finite volume derivative
@@ -1081,7 +1087,9 @@ class FiniteVolume2D(pybamm.SpatialMethod):
             bottom_vector = None
 
         if lbc_type == "Neumann" or rbc_type == "Neumann":
-            sub_matrix = vstack([left_vector, eye(n_lr - 1, dtype=np.float64), right_vector])
+            sub_matrix = vstack(
+                [left_vector, eye(n_lr - 1, dtype=np.float64), right_vector]
+            )
             sub_matrix = block_diag((sub_matrix,) * n_tb)
         elif tbc_type == "Neumann" or bbc_type == "Neumann":
             sub_matrix = vstack(
@@ -2370,7 +2378,9 @@ class FiniteVolume2D(pybamm.SpatialMethod):
             # is not supported by the default kron format
             # Note that this makes column-slicing inefficient, but this should not be an
             # issue
-            matrix = csr_matrix(kron(eye(second_dim_repeats, dtype=np.float64), sub_matrix))
+            matrix = csr_matrix(
+                kron(eye(second_dim_repeats, dtype=np.float64), sub_matrix)
+            )
             return pybamm.Matrix(matrix) @ array
 
         def harmonic_mean(array, direction):
@@ -2434,7 +2444,9 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                     # Note that this makes column-slicing inefficient, but this should
                     # not be an issue
                     edges_matrix = csr_matrix(
-                        kron(eye(second_dim_repeats, dtype=np.float64), edges_sub_matrix)
+                        kron(
+                            eye(second_dim_repeats, dtype=np.float64), edges_sub_matrix
+                        )
                     )
 
                     # Matrix to extract the node values running from the first node
@@ -2535,7 +2547,9 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                     # Note that this makes column-slicing inefficient, but this should
                     # not be an issue
                     edges_matrix = csr_matrix(
-                        kron(eye(second_dim_repeats, dtype=np.float64), edges_sub_matrix)
+                        kron(
+                            eye(second_dim_repeats, dtype=np.float64), edges_sub_matrix
+                        )
                     )
 
                     # Matrix to extract the node values running from the first node

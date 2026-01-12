@@ -715,7 +715,8 @@ class FiniteVolume(pybamm.SpatialMethod):
         # Note that this makes column-slicing inefficient, but this should not be an
         # issue
         matrix = pybamm.kronecker_product(
-            pybamm.Matrix(eye(second_dim_repeats, dtype=np.float64).toarray()), sub_matrix
+            pybamm.Matrix(eye(second_dim_repeats, dtype=np.float64).toarray()),
+            sub_matrix,
         )
 
         # Return delta function, keep domains
@@ -766,7 +767,9 @@ class FiniteVolume(pybamm.SpatialMethod):
         right_sub_matrix = np.zeros((1, right_npts))
         right_sub_matrix[0][0] = 1
         right_matrix = pybamm.Matrix(
-            csr_matrix(kron(eye(second_dim_repeats, dtype=np.float64), right_sub_matrix))
+            csr_matrix(
+                kron(eye(second_dim_repeats, dtype=np.float64), right_sub_matrix)
+            )
         )
 
         # Finite volume derivative
@@ -1576,7 +1579,9 @@ class FiniteVolume(pybamm.SpatialMethod):
             # is not supported by the default kron format
             # Note that this makes column-slicing inefficient, but this should not be an
             # issue
-            matrix = csr_matrix(kron(eye(second_dim_repeats, dtype=np.float64), sub_matrix))
+            matrix = csr_matrix(
+                kron(eye(second_dim_repeats, dtype=np.float64), sub_matrix)
+            )
 
             return pybamm.Matrix(matrix) @ array
 
