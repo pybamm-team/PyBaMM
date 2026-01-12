@@ -196,7 +196,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         # not supported by the default kron format
         # Note that this makes column-slicing inefficient, but this should not be an
         # issue
-        matrix = csr_matrix(kron(eye(second_dim_repeats, dtype=float), sub_matrix))
+        matrix = csr_matrix(kron(eye(second_dim_repeats, dtype=np.float64), sub_matrix))
         return pybamm.Matrix(matrix)
 
     def divergence(self, symbol, discretised_symbol, boundary_conditions):
@@ -307,7 +307,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         domains = child.domains
         second_dim_repeats = self._get_auxiliary_domain_repeats(domains)
         integration_matrix = kron(
-            eye(second_dim_repeats, dtype=float), integration_matrix
+            eye(second_dim_repeats, dtype=np.float64), integration_matrix
         )
         return pybamm.Matrix(integration_matrix) @ discretised_child
 
@@ -397,7 +397,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         # repeat matrix for each node in secondary dimensions
         second_dim_repeats = self._get_auxiliary_domain_repeats(domains)
         # generate full matrix from the submatrix
-        matrix = kron(eye(second_dim_repeats, dtype=float), d_edges)
+        matrix = kron(eye(second_dim_repeats, dtype=np.float64), d_edges)
 
         return matrix
 
@@ -422,7 +422,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
             child, direction, domains=integration_domain
         )
         second_dim_repeats = self._get_auxiliary_domain_repeats(child.domains)
-        integral_matrix = kron(eye(second_dim_repeats, dtype=float), integral_matrix)
+        integral_matrix = kron(eye(second_dim_repeats, dtype=np.float64), integral_matrix)
         return pybamm.Matrix(integral_matrix) @ discretised_child
 
     def boundary_integral(self, child, discretised_child, region):
@@ -446,7 +446,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         integral_matrix = self.one_dimensional_integral_matrix(child, direction)
         domains = child.domains
         second_dim_repeats = self._get_auxiliary_domain_repeats(domains)
-        integral_matrix = kron(eye(second_dim_repeats, dtype=float), integral_matrix)
+        integral_matrix = kron(eye(second_dim_repeats, dtype=np.float64), integral_matrix)
         return pybamm.Matrix(integral_matrix) @ boundary_value
 
     def indefinite_integral(self, child, discretised_child, direction):
@@ -505,7 +505,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
             left_sub_matrix[i, i * left_npts_lr + (left_npts_lr - 1)] = 1
 
         left_matrix = pybamm.Matrix(
-            csr_matrix(kron(eye(second_dim_repeats, dtype=float), left_sub_matrix))
+            csr_matrix(kron(eye(second_dim_repeats, dtype=np.float64), left_sub_matrix))
         )
 
         # Create matrix to extract leftmost lr values for each tb row in right domain
@@ -515,7 +515,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
             right_sub_matrix[i, i * right_npts_lr] = 1
 
         right_matrix = pybamm.Matrix(
-            csr_matrix(kron(eye(second_dim_repeats, dtype=float), right_sub_matrix))
+            csr_matrix(kron(eye(second_dim_repeats, dtype=np.float64), right_sub_matrix))
         )
 
         # Finite volume derivative
@@ -614,7 +614,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
             # Create matrix to extract the leftmost column of values
             lbc_sub_matrix = coo_matrix(([1.0], ([0], [0])), shape=(n_lr + n_bcs, 1))
             lbc_matrix = csr_matrix(
-                kron(eye(second_dim_repeats, dtype=float), lbc_sub_matrix)
+                kron(eye(second_dim_repeats, dtype=np.float64), lbc_sub_matrix)
             )
             lbc_matrix = vstack(
                 [
@@ -659,7 +659,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                 ([1], ([n_lr + n_bcs - 1], [0])), shape=(n_lr + n_bcs, 1)
             )
             rbc_matrix = csr_matrix(
-                kron(eye(second_dim_repeats, dtype=float), rbc_sub_matrix)
+                kron(eye(second_dim_repeats, dtype=np.float64), rbc_sub_matrix)
             )
             rbc_matrix = vstack(
                 [
@@ -709,7 +709,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                 (vals, (row_indices, col_indices)), shape=((n_tb + n_bcs) * n_lr, 1)
             )
             bbc_matrix = csr_matrix(
-                kron(eye(second_dim_repeats, dtype=float), bbc_sub_matrix)
+                kron(eye(second_dim_repeats, dtype=np.float64), bbc_sub_matrix)
             )
 
             if bbc_value.evaluates_to_number():
@@ -753,7 +753,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                 (vals, (row_indices, col_indices)), shape=((n_tb + n_bcs) * n_lr, 1)
             )
             tbc_matrix = csr_matrix(
-                kron(eye(second_dim_repeats, dtype=float), tbc_sub_matrix)
+                kron(eye(second_dim_repeats, dtype=np.float64), tbc_sub_matrix)
             )
 
             if tbc_value.evaluates_to_number():
@@ -823,7 +823,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
 
         if lbc_type == "Dirichlet" or rbc_type == "Dirichlet":
             sub_matrix = vstack(
-                [left_ghost_vector, eye(n_lr, dtype=float), right_ghost_vector]
+                [left_ghost_vector, eye(n_lr, dtype=np.float64), right_ghost_vector]
             )
             sub_matrix = block_diag((sub_matrix,) * n_tb)
         else:
@@ -831,7 +831,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                 [
                     left_ghost_vector,
                     bottom_ghost_vector,
-                    eye(n, dtype=float),
+                    eye(n, dtype=np.float64),
                     top_ghost_vector,
                     right_ghost_vector,
                 ]
@@ -842,7 +842,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         # not supported by the default kron format
         # Note that this makes column-slicing inefficient, but this should not be an
         # issue
-        matrix = csr_matrix(kron(eye(second_dim_repeats, dtype=float), sub_matrix))
+        matrix = csr_matrix(kron(eye(second_dim_repeats, dtype=np.float64), sub_matrix))
 
         new_symbol = pybamm.Matrix(matrix) @ discretised_symbol + bcs_vector
 
@@ -907,7 +907,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                 ([1.0], ([0], [0])), shape=(n_lr - 1 + n_bcs, 1)
             )
             lbc_matrix = csr_matrix(
-                kron(eye(second_dim_repeats, dtype=float), lbc_sub_matrix)
+                kron(eye(second_dim_repeats, dtype=np.float64), lbc_sub_matrix)
             )
             lbc_matrix = vstack([lbc_matrix] * n_tb)
             if lbc_value.evaluates_to_number():
@@ -943,7 +943,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                 ([1], ([n_lr + n_bcs - 2], [0])), shape=(n_lr - 1 + n_bcs, 1)
             )
             rbc_matrix = csr_matrix(
-                kron(eye(second_dim_repeats, dtype=float), rbc_sub_matrix)
+                kron(eye(second_dim_repeats, dtype=np.float64), rbc_sub_matrix)
             )
             rbc_matrix = vstack([rbc_matrix] * n_tb)
             if rbc_value.evaluates_to_number():
@@ -985,7 +985,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                 (vals, (row_indices, col_indices)), shape=((n_tb - 1 + n_bcs) * n_lr, 1)
             )
             bbc_matrix = csr_matrix(
-                kron(eye(second_dim_repeats, dtype=float), bbc_sub_matrix)
+                kron(eye(second_dim_repeats, dtype=np.float64), bbc_sub_matrix)
             )
             if bbc_value.evaluates_to_number():
                 bottom_bc = bbc_value * pybamm.Vector(np.ones(second_dim_repeats))
@@ -1025,7 +1025,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                 (vals, (row_indices, col_indices)), shape=((n_tb - 1 + n_bcs) * n_lr, 1)
             )
             tbc_matrix = csr_matrix(
-                kron(eye(second_dim_repeats, dtype=float), tbc_sub_matrix)
+                kron(eye(second_dim_repeats, dtype=np.float64), tbc_sub_matrix)
             )
             if tbc_value.evaluates_to_number():
                 top_bc = tbc_value * pybamm.Vector(np.ones(second_dim_repeats))
@@ -1081,11 +1081,11 @@ class FiniteVolume2D(pybamm.SpatialMethod):
             bottom_vector = None
 
         if lbc_type == "Neumann" or rbc_type == "Neumann":
-            sub_matrix = vstack([left_vector, eye(n_lr - 1, dtype=float), right_vector])
+            sub_matrix = vstack([left_vector, eye(n_lr - 1, dtype=np.float64), right_vector])
             sub_matrix = block_diag((sub_matrix,) * n_tb)
         elif tbc_type == "Neumann" or bbc_type == "Neumann":
             sub_matrix = vstack(
-                [bottom_vector, eye((n_tb - 1) * n_lr, dtype=float), top_vector]
+                [bottom_vector, eye((n_tb - 1) * n_lr, dtype=np.float64), top_vector]
             )
 
         # repeat matrix for secondary dimensions
@@ -1093,7 +1093,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         # not supported by the default kron format
         # Note that this makes column-slicing inefficient, but this should not be an
         # issue
-        matrix = csr_matrix(kron(eye(second_dim_repeats, dtype=float), sub_matrix))
+        matrix = csr_matrix(kron(eye(second_dim_repeats, dtype=np.float64), sub_matrix))
 
         new_gradient = pybamm.Matrix(matrix) @ discretised_gradient + bcs_vector
 
@@ -1876,7 +1876,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         # not supported by the default kron format
         # Note that this makes column-slicing inefficient, but this should not be an
         # issue
-        matrix = csr_matrix(kron(eye(repeats, dtype=float), sub_matrix))
+        matrix = csr_matrix(kron(eye(repeats, dtype=np.float64), sub_matrix))
 
         # Return boundary value with domain given by symbol
         matrix = pybamm.Matrix(matrix)
@@ -2219,7 +2219,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                     tb_mesh_points * sum(lr_mesh_points),
                 ),
             )
-            block_mat = kron(eye(repeats, dtype=float), block_mat)
+            block_mat = kron(eye(repeats, dtype=np.float64), block_mat)
             matrix = pybamm.Matrix(block_mat)
             repeats = self._get_auxiliary_domain_repeats(disc_children[0].domains)
             return matrix @ pybamm.domain_concatenation(disc_children, self.mesh)
@@ -2370,7 +2370,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
             # is not supported by the default kron format
             # Note that this makes column-slicing inefficient, but this should not be an
             # issue
-            matrix = csr_matrix(kron(eye(second_dim_repeats, dtype=float), sub_matrix))
+            matrix = csr_matrix(kron(eye(second_dim_repeats, dtype=np.float64), sub_matrix))
             return pybamm.Matrix(matrix) @ array
 
         def harmonic_mean(array, direction):
@@ -2434,18 +2434,18 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                     # Note that this makes column-slicing inefficient, but this should
                     # not be an issue
                     edges_matrix = csr_matrix(
-                        kron(eye(second_dim_repeats, dtype=float), edges_sub_matrix)
+                        kron(eye(second_dim_repeats, dtype=np.float64), edges_sub_matrix)
                     )
 
                     # Matrix to extract the node values running from the first node
                     # to the penultimate node in the primary dimension (D_1 in the
                     # definiton of the harmonic mean)
                     sub_matrix_D1 = hstack(
-                        [eye(n_lr - 1, dtype=float), csr_matrix((n_lr - 1, 1))]
+                        [eye(n_lr - 1, dtype=np.float64), csr_matrix((n_lr - 1, 1))]
                     )
                     sub_matrix_D1 = block_diag((sub_matrix_D1,) * n_tb)
                     matrix_D1 = csr_matrix(
-                        kron(eye(second_dim_repeats, dtype=float), sub_matrix_D1)
+                        kron(eye(second_dim_repeats, dtype=np.float64), sub_matrix_D1)
                     )
                     D1 = pybamm.Matrix(matrix_D1) @ array
 
@@ -2453,11 +2453,11 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                     # to the final node in the primary dimension  (D_2 in the
                     # definiton of the harmonic mean)
                     sub_matrix_D2 = hstack(
-                        [csr_matrix((n_lr - 1, 1)), eye(n_lr - 1, dtype=float)]
+                        [csr_matrix((n_lr - 1, 1)), eye(n_lr - 1, dtype=np.float64)]
                     )
                     sub_matrix_D2 = block_diag((sub_matrix_D2,) * n_tb)
                     matrix_D2 = csr_matrix(
-                        kron(eye(second_dim_repeats, dtype=float), sub_matrix_D2)
+                        kron(eye(second_dim_repeats, dtype=np.float64), sub_matrix_D2)
                     )
                     D2 = pybamm.Matrix(matrix_D2) @ array
 
@@ -2478,7 +2478,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                     sub_matrix = vstack(
                         [
                             csr_matrix((1, n_lr - 1)),
-                            eye(n_lr - 1, dtype=float),
+                            eye(n_lr - 1, dtype=np.float64),
                             csr_matrix((1, n_lr - 1)),
                         ]
                     )
@@ -2490,7 +2490,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                     # Note that this makes column-slicing inefficient, but this should
                     # not be an issue
                     matrix = csr_matrix(
-                        kron(eye(second_dim_repeats, dtype=float), sub_matrix)
+                        kron(eye(second_dim_repeats, dtype=np.float64), sub_matrix)
                     )
 
                     return (
@@ -2535,7 +2535,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                     # Note that this makes column-slicing inefficient, but this should
                     # not be an issue
                     edges_matrix = csr_matrix(
-                        kron(eye(second_dim_repeats, dtype=float), edges_sub_matrix)
+                        kron(eye(second_dim_repeats, dtype=np.float64), edges_sub_matrix)
                     )
 
                     # Matrix to extract the node values running from the first node
@@ -2545,7 +2545,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                         [eye(n_lr * (n_tb - 1)), csr_matrix((n_lr * (n_tb - 1), n_lr))]
                     )
                     matrix_D1 = csr_matrix(
-                        kron(eye(second_dim_repeats, dtype=float), sub_matrix_D1)
+                        kron(eye(second_dim_repeats, dtype=np.float64), sub_matrix_D1)
                     )
                     D1 = pybamm.Matrix(matrix_D1) @ array
 
@@ -2556,7 +2556,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                         [csr_matrix((n_lr * (n_tb - 1), n_lr)), eye(n_lr * (n_tb - 1))]
                     )
                     matrix_D2 = csr_matrix(
-                        kron(eye(second_dim_repeats, dtype=float), sub_matrix_D2)
+                        kron(eye(second_dim_repeats, dtype=np.float64), sub_matrix_D2)
                     )
                     D2 = pybamm.Matrix(matrix_D2) @ array
 
@@ -2589,7 +2589,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                     # Note that this makes column-slicing inefficient, but this should
                     # not be an issue
                     matrix = csr_matrix(
-                        kron(eye(second_dim_repeats, dtype=float), sub_matrix)
+                        kron(eye(second_dim_repeats, dtype=np.float64), sub_matrix)
                     )
 
                     return (

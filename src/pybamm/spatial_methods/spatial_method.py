@@ -426,13 +426,13 @@ class SpatialMethod:
         n = submesh.npts
 
         # Create mass matrix for primary dimension
-        prim_mass = eye(n, dtype=float)
+        prim_mass = eye(n, dtype=np.float64)
 
         # Get number of points in secondary dimension
         second_dim_repeats = self._get_auxiliary_domain_repeats(symbol.domains)
 
         # Convert to csr_matrix as required by some solvers
-        mass = csr_matrix(kron(eye(second_dim_repeats, dtype=float), prim_mass))
+        mass = csr_matrix(kron(eye(second_dim_repeats, dtype=np.float64), prim_mass))
         return pybamm.Matrix(mass)
 
     def process_binary_operators(self, bin_op, left, right, disc_left, disc_right):
