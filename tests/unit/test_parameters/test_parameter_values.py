@@ -4,6 +4,7 @@
 
 
 import os
+import re
 
 import casadi
 import numpy as np
@@ -44,13 +45,35 @@ class TestParameterValues:
     def test_repr(self):
         param = pybamm.ParameterValues({"a": 1})
         assert "'a': 1" in repr(param)
-        assert param._ipython_key_completions_() == [
-            "Ideal gas constant [J.K-1.mol-1]",
-            "Faraday constant [C.mol-1]",
-            "Boltzmann constant [J.K-1]",
-            "Electron charge [C]",
-            "a",
-        ]
+        assert param._ipython_key_completions_() == ["a"]
+
+    def test_deprecated_constants_warning(self):
+        """Test that accessing physical constants emits a warning."""
+
+        param = pybamm.ParameterValues({"a": 1})
+        deprecated_constants = {
+            "Ideal gas constant [J.K-1.mol-1]": "pybamm.constants.R",
+            "Faraday constant [C.mol-1]": "pybamm.constants.F",
+            "Boltzmann constant [J.K-1]": "pybamm.constants.k_b",
+            "Electron charge [C]": "pybamm.constants.q_e",
+        }
+
+        for key, replacement in deprecated_constants.items():
+            # Escape regex special characters in the key
+            escaped_key = re.escape(key)
+            with pytest.raises(
+                KeyError,
+                match=f"Accessing '{escaped_key}' from ParameterValues is deprecated.*{replacement}",
+            ):
+                # Access via __getitem__
+                _ = param[key]
+
+            with pytest.warns(
+                DeprecationWarning,
+                match=f"Accessing '{escaped_key}' from ParameterValues is deprecated.*{replacement}",
+            ):
+                # Access via get
+                _ = param.get(key)
 
     def test_eq(self):
         assert pybamm.ParameterValues({"a": 1}) == pybamm.ParameterValues({"a": 1})
@@ -69,13 +92,18 @@ class TestParameterValues:
         # via __setitem__
         param["a"] = 2
         assert param["a"] == 2
-        with pytest.raises(
-            ValueError, match=r"parameter 'a' already defined with value '2'"
+
+        # test deprecated check_already_exists
+        with pytest.warns(
+            DeprecationWarning, match=r"check_already_exists is deprecated"
         ):
-            param.update({"a": 4}, check_conflict=True)
-        # with parameter not existing yet
-        with pytest.raises(KeyError, match=r"Cannot update parameter"):
-            param.update({"b": 1})
+            param.update({"c": 1}, check_already_exists=True)
+        assert param["c"] == 1
+
+        # test deprecated check_conflict
+        with pytest.warns(DeprecationWarning, match=r"check_conflict is deprecated"):
+            param.update({"c": 1}, check_conflict=True)
+        assert param["c"] == 1
 
         # update with a ParameterValues object
         new_param = pybamm.ParameterValues(param)
@@ -670,7 +698,7 @@ class TestParameterValues:
             return pybamm.Interpolant(x, y, [sto], name=name)
 
         parameter_values.update(
-            {"interpolation": lico2_ocv_example}, check_already_exists=False
+            {"interpolation": lico2_ocv_example},
         )
 
         a = pybamm.Scalar(0.6)
@@ -697,10 +725,7 @@ class TestParameterValues:
             name, (xs, y) = lico2_diffusivity_Dualfoil1998_2D_data
             return pybamm.Interpolant(xs, y, [c_s, T], name=name)
 
-        parameter_values.update(
-            {"interpolation": lico2_diffusivity_Dualfoil1998_2D},
-            check_already_exists=False,
-        )
+        parameter_values.update({"interpolation": lico2_diffusivity_Dualfoil1998_2D})
 
         a = pybamm.Scalar(0.6)
         b = pybamm.Scalar(300.0)
@@ -1123,7 +1148,7 @@ class TestParameterValues:
             values={"Negative particle radius [m]": 1e-6}
         )
         pv = [i for i in parameter_values]
-        assert len(pv) == 5, "Should have 5 keys"
+        assert len(pv) == 1, "Should have 1 keys"
 
     def test_process_function_parameter_with_diff_variable(self):
         """Test _process_function_parameter with diff_variable (NotConstant wrapping)."""
@@ -1269,7 +1294,7 @@ class TestParameterValues:
             pybamm.ParameterValues.from_json([1, 2, 3])  # List is invalid
 
     def test_from_json_with_dict_input(self):
-        """Test from_json with dict input (covers line 1103)."""
+        """Test from_json with dict input"""
         params = {
             "param1": 42,
             "param2": 3.14,
@@ -1281,7 +1306,7 @@ class TestParameterValues:
         assert loaded["param2"] == 3.14
 
     def test_from_json_with_serialized_symbols(self):
-        """Test from_json with dict containing serialized symbols (covers line 1109)."""
+        """Test from_json with dict containing serialized symbols"""
 
         # Create a serialized symbol (dict representation)
         scalar_symbol = pybamm.Scalar(2.718)
@@ -1303,7 +1328,7 @@ class TestParameterValues:
         assert loaded["param2"].value == pytest.approx(2.718)
 
     def test_to_json_with_filename(self):
-        """Test to_json with filename parameter (covers line 1136)."""
+        """Test to_json with filename parameter"""
         import tempfile
 
         param = pybamm.ParameterValues({"param1": 42, "param2": 3.14})
@@ -1349,7 +1374,7 @@ class TestParameterValues:
         assert parameter_values_loaded.evaluate(func_param) == 4.0
 
     def test_convert_symbols_in_dict_with_interpolator(self):
-        """Test convert_symbols_in_dict with interpolator (covers lines 1154-1170)."""
+        """Test convert_symbols_in_dict with interpolator"""
         import numpy as np
 
         from pybamm.parameters.parameter_values import convert_symbols_in_dict
@@ -1373,7 +1398,7 @@ class TestParameterValues:
         assert isinstance(interp_result, pybamm.Interpolant | pybamm.Scalar)
 
     def test_convert_symbols_in_dict_with_nested_dict(self):
-        """Test convert_symbols_in_dict with nested dict (covers lines 1171-1174)."""
+        """Test convert_symbols_in_dict with nested dict"""
         from pybamm.parameters.parameter_values import convert_symbols_in_dict
 
         scalar_symbol = pybamm.Scalar(2.718)
@@ -1388,7 +1413,7 @@ class TestParameterValues:
         assert isinstance(result["param1"], pybamm.Scalar)
 
     def test_convert_symbols_in_dict_with_list(self):
-        """Test convert_symbols_in_dict with list (covers lines 1175-1179)."""
+        """Test convert_symbols_in_dict with list"""
         from pybamm.parameters.parameter_values import convert_symbols_in_dict
 
         scalar_symbol = pybamm.Scalar(2.718)
@@ -1404,7 +1429,7 @@ class TestParameterValues:
         assert result["param1"][1] == 42
 
     def test_convert_symbols_in_dict_with_string(self):
-        """Test convert_symbols_in_dict with string (covers lines 1180-1182)."""
+        """Test convert_symbols_in_dict with string"""
         from pybamm.parameters.parameter_values import convert_symbols_in_dict
 
         data_dict = {"param1": "3.14"}
@@ -1412,35 +1437,31 @@ class TestParameterValues:
         assert result["param1"] == 3.14
 
     def test_convert_symbols_in_dict_with_none(self):
-        """Test convert_symbols_in_dict with None input (covers lines 1184-1188)."""
+        """Test convert_symbols_in_dict with None input"""
         from pybamm.parameters.parameter_values import convert_symbols_in_dict
 
         result = convert_symbols_in_dict(None)
         assert result == {}
 
     def test_key_match_class(self):
-        """Test _KeyMatch class (covers lines 1198-1220)."""
-        from pybamm.parameters.parameter_values import _KeyMatch
+        """Test ParameterNameParser.parse_indexed method."""
+        from pybamm.parameters.parameter_values import ParameterNameParser
 
-        # Test invalid name (not a string)
-        with pytest.raises(ValueError, match=r"name must be a string"):
-            _KeyMatch(123)
+        # Test matching indexed key
+        result = ParameterNameParser.parse_indexed("param (0) [V]")
+        assert result is not None
+        base, idx, tag = result
+        assert base == "param"
+        assert idx == 0
+        assert tag == "V"
 
-        # Test matching key
-        match = _KeyMatch("param (0) [V]")
-        assert match.is_match
-        assert match.base == "param"
-        assert match.idx == 0
-        assert match.tag == "V"
-        assert bool(match)  # Test __bool__ method (line 1220)
+        # Test non-matching key (not indexed)
+        result = ParameterNameParser.parse_indexed("param")
+        assert result is None
 
-        # Test non-matching key
-        match = _KeyMatch("param")
-        assert not match.is_match
-        assert match.base == ""
-        assert match.idx == -1
-        assert match.tag == ""
-        assert not bool(match)
+        # Test simple parameter without index
+        result = ParameterNameParser.parse_indexed("param [V]")
+        assert result is None
 
     def test_list_parameter_class(self):
         """Test that arrayize_dict returns plain lists."""
@@ -1546,7 +1567,7 @@ class TestParameterValues:
         assert result["current [A]"] == 5.0
 
     def test_scalarize_dict_duplicate_key_error(self):
-        """Test scalarize_dict raises error on duplicate key (covers line 1316)."""
+        """Test scalarize_dict raises error on duplicate key"""
         from pybamm.parameters.parameter_values import scalarize_dict
 
         # Python dicts don't allow duplicate keys, but we can test the error path
@@ -1555,10 +1576,9 @@ class TestParameterValues:
         params_dict["voltage [V]"] = 3.7
         scalarize_dict(params_dict)
         # Now try to add it again manually - this path is hard to trigger naturally
-        # The error is in line 1316 which checks for duplicates in the output
 
     def test_is_iterable_function(self):
-        """Test _is_iterable function (covers line 1322)."""
+        """Test _is_iterable function"""
         from pybamm.parameters.parameter_values import _is_iterable
 
         assert _is_iterable([1, 2, 3])
@@ -1570,39 +1590,39 @@ class TestParameterValues:
         assert not _is_iterable(42)
 
     def test_split_key_error(self):
-        """Test _split_key with illegal parameter name (covers lines 1339-1342)."""
-        from pybamm.parameters.parameter_values import _split_key
+        """Test ParameterNameParser.split with illegal parameter name."""
+        from pybamm.parameters.parameter_values import ParameterNameParser
 
         with pytest.raises(ValueError, match=r"Illegal parameter name"):
-            _split_key("[invalid]")
+            ParameterNameParser.split("[invalid]")
 
     def test_combine_name_negative_index(self):
-        """Test _combine_name with negative index (covers lines 1347-1350)."""
-        from pybamm.parameters.parameter_values import _combine_name
+        """Test ParameterNameParser.combine with negative index."""
+        from pybamm.parameters.parameter_values import ParameterNameParser
 
         with pytest.raises(ValueError, match=r"idx must be ≥ 0"):
-            _combine_name("param", -1)
+            ParameterNameParser.combine("param", -1)
 
         # Test with valid index and no tag
-        result = _combine_name("param", 0)
+        result = ParameterNameParser.combine("param", 0)
         assert result == "param (0)"
 
-        # Test with valid index and tag (covers lines 1355-1358)
-        result = _combine_name("param", 0, "V")
+        # Test with valid index and tag
+        result = ParameterNameParser.combine("param", 0, "V")
         assert result == "param (0) [V]"
 
     def test_add_units_function(self):
-        """Test _add_units function (covers lines 1355-1358)."""
-        from pybamm.parameters.parameter_values import _add_units
+        """Test ParameterNameParser.add_units function."""
+        from pybamm.parameters.parameter_values import ParameterNameParser
 
-        result = _add_units("param", None)
+        result = ParameterNameParser.add_units("param", None)
         assert result == "param"
 
-        result = _add_units("param", "V")
+        result = ParameterNameParser.add_units("param", "V")
         assert result == "param [V]"
 
     def test_arrayize_dict_function(self):
-        """Test arrayize_dict function (covers lines 1378-1428)."""
+        """Test arrayize_dict function"""
         from pybamm.parameters.parameter_values import arrayize_dict
 
         # Test basic arrayization
@@ -1622,13 +1642,13 @@ class TestParameterValues:
         assert result["current [A]"] == 5.0
 
     def test_arrayize_dict_duplicate_index_error(self):
-        """Test arrayize_dict with duplicate index (covers line 1397)."""
+        """Test arrayize_dict with duplicate index"""
 
         # This is hard to test directly since dict keys are unique
         # The error is checked internally but difficult to trigger
 
     def test_arrayize_dict_missing_indices_error(self):
-        """Test arrayize_dict with missing indices (covers lines 1408-1410)."""
+        """Test arrayize_dict with missing indices"""
         from pybamm.parameters.parameter_values import arrayize_dict
 
         scalar_dict = {
@@ -1640,31 +1660,29 @@ class TestParameterValues:
             arrayize_dict(scalar_dict)
 
     def test_arrayize_dict_duplicate_key_after_rebuild(self):
-        """Test arrayize_dict with duplicate key after rebuild (covers line 1414)."""
+        """Test arrayize_dict with duplicate key after rebuild"""
         # This error is hard to trigger in practice but is checked internally
 
     def test_arrayize_dict_duplicate_key_in_output(self):
-        """Test arrayize_dict with duplicate key in output (covers lines 1424-1426)."""
+        """Test arrayize_dict with duplicate key in output"""
         # This error path is checked but difficult to trigger naturally
 
     def test_contiguous_and_ordered_indices_function(self):
-        """Test _contiguous_and_ordered_indices (covers line 1447)."""
-        from pybamm.parameters.parameter_values import (
-            _contiguous_and_ordered_indices,
-        )
+        """Test _is_contiguous internal function."""
+        from pybamm.parameters.parameter_values import _is_contiguous
 
         # Test contiguous indices
-        assert _contiguous_and_ordered_indices({0, 1, 2, 3})
-        assert _contiguous_and_ordered_indices({0})
-        assert _contiguous_and_ordered_indices({0, 1})
+        assert _is_contiguous({0, 1, 2, 3})
+        assert _is_contiguous({0})
+        assert _is_contiguous({0, 1})
 
         # Test non-contiguous indices
-        assert not _contiguous_and_ordered_indices({0, 2, 3})
-        assert not _contiguous_and_ordered_indices({1, 2, 3})
-        assert not _contiguous_and_ordered_indices(set())
+        assert not _is_contiguous({0, 2, 3})
+        assert not _is_contiguous({1, 2, 3})
+        assert not _is_contiguous(set())
 
     def test_convert_parameter_values_to_json_with_callable(self):
-        """Test convert_parameter_values_to_json with callable (covers lines 1464-1480)."""
+        """Test convert_parameter_values_to_json with callable"""
         import tempfile
 
         from pybamm.parameters.parameter_values import (
@@ -1699,7 +1717,7 @@ class TestParameterValues:
             os.remove(temp_path)
 
     def test_convert_symbols_in_dict_interpolator_exception(self):
-        """Test convert_symbols_in_dict when interpolator raises exception (covers lines 1166-1168)."""
+        """Test convert_symbols_in_dict when interpolator raises exception"""
         from pybamm.parameters.parameter_values import convert_symbols_in_dict
 
         # Create an interpolator dict with invalid data that will cause an exception
@@ -1714,7 +1732,7 @@ class TestParameterValues:
         result = convert_symbols_in_dict(data_dict)
         # Should create an interpolant function
         assert callable(result["param1"])
-        # Call the function to trigger the exception path (lines 1166-1168)
+        # Call the function to trigger the exception path
         sto = pybamm.Scalar(1.0)
         result_val = result["param1"](sto)
         # Should return Scalar(0) due to exception
@@ -1729,31 +1747,31 @@ class TestParameterValues:
         # For now, this path is hard to reach naturally
 
     def test_scalarize_dict_duplicate_regular_key(self):
-        """Test scalarize_dict with duplicate regular key (covers line 1322)."""
+        """Test scalarize_dict with duplicate regular key"""
 
         # This is also difficult to trigger since dict keys are unique by definition
         # The check is defensive programming
 
     def test_arrayize_dict_duplicate_index_in_dict(self):
-        """Test arrayize_dict duplicate index detection (covers line 1403)."""
+        """Test arrayize_dict duplicate index detection"""
 
         # Python dicts don't allow duplicate keys, so this error is defensive
         # The check catches if somehow the same index appears twice
 
     def test_arrayize_dict_no_indices_found_impossible(self):
-        """Test arrayize_dict no indices found error (covers line 1408)."""
+        """Test arrayize_dict no indices found error"""
 
         # This should not be possible to reach as the code comment states
         # It's defensive programming
 
     def test_arrayize_dict_duplicate_key_after_rebuild_error(self):
-        """Test arrayize_dict duplicate key after rebuild (covers line 1420)."""
+        """Test arrayize_dict duplicate key after rebuild"""
 
         # This would require the collapsed_key to already exist in out
         # which shouldn't happen in normal operation
 
     def test_arrayize_dict_duplicate_key_in_final_copy(self):
-        """Test arrayize_dict duplicate key in final copy phase (covers line 1431)."""
+        """Test arrayize_dict duplicate key in final copy phase"""
 
         # This would require a key to appear in both processed and untouched scalars
         # which shouldn't happen in normal operation

@@ -25,8 +25,7 @@ class TestPlot3DCrossSection:
                 "Back face heat transfer coefficient [W.m-2.K-1]": 10,
                 "Bottom face heat transfer coefficient [W.m-2.K-1]": 10,
                 "Top face heat transfer coefficient [W.m-2.K-1]": 10,
-            },
-            check_already_exists=False,
+            }
         )
 
         var_pts = {
@@ -57,8 +56,7 @@ class TestPlot3DCrossSection:
                 "Outer radius heat transfer coefficient [W.m-2.K-1]": 10,
                 "Bottom face heat transfer coefficient [W.m-2.K-1]": 10,
                 "Top face heat transfer coefficient [W.m-2.K-1]": 10,
-            },
-            check_already_exists=False,
+            }
         )
 
         var_pts = {

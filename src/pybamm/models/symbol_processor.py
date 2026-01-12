@@ -34,9 +34,11 @@ class SymbolProcessor:
     >>> processed_symbol = processor("my variable", symbol)  # doctest: +SKIP
     """
 
-    _can_process_symbols: bool = True
-    _discretisation: pybamm.Discretisation | None = None
-    _parameter_values: pybamm.ParameterValues | None = None
+    def __init__(self):
+        """Initialize a new SymbolProcessor instance."""
+        self._can_process_symbols = True
+        self._discretisation = None
+        self._parameter_values = None
 
     def __call__(self, name: str, symbol: pybamm.Symbol) -> pybamm.Symbol:
         """
@@ -118,8 +120,8 @@ class SymbolProcessor:
         """Return a copy of this SymbolProcessor."""
         new_symbol_processor = SymbolProcessor()
         new_symbol_processor._can_process_symbols = self._can_process_symbols
-        if self._discretisation:
+        if self._discretisation is not None:
             new_symbol_processor._discretisation = copy.copy(self._discretisation)
-        if self._parameter_values:
+        if self._parameter_values is not None:
             new_symbol_processor._parameter_values = self._parameter_values.copy()
         return new_symbol_processor

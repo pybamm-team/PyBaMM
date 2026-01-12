@@ -202,8 +202,32 @@ class FiniteVolume2D(pybamm.SpatialMethod):
     def divergence(self, symbol, discretised_symbol, boundary_conditions):
         """Matrix-vector multiplication to implement the divergence operator.
         See :meth:`pybamm.SpatialMethod.divergence`
-        """
 
+        For rank-1 tensors (VectorField), returns a scalar.
+        For rank-2 tensors (TensorField), applies divergence row-wise to return a vector.
+        """
+        # Check if it's a rank-2 tensor (returns vector) or rank-1/VectorField (returns scalar)
+        if (
+            isinstance(discretised_symbol, pybamm.TensorField)
+            and discretised_symbol.rank == 2
+        ):
+            # Tensor divergence: div(T)_i = sum_j d(T_ij)/dx_j
+            # For 2D: result_lr = d(T[0,0])/dx + d(T[0,1])/dy
+            #         result_tb = d(T[1,0])/dx + d(T[1,1])/dy
+            div_row0 = self._divergence_of_tensor_row(
+                symbol, discretised_symbol[0, 0], discretised_symbol[0, 1]
+            )
+            div_row1 = self._divergence_of_tensor_row(
+                symbol, discretised_symbol[1, 0], discretised_symbol[1, 1]
+            )
+
+            return pybamm.VectorField(div_row0, div_row1)
+        else:
+            # Existing behavior for VectorField (rank-1)
+            return self._divergence_of_vector(symbol, discretised_symbol)
+
+    def _divergence_of_vector(self, symbol, discretised_symbol):
+        """Divergence of a vector field (edge-evaluated), returning a scalar."""
         divergence_matrix_lr = self.divergence_matrix(symbol.domains, "lr")
         divergence_matrix_tb = self.divergence_matrix(symbol.domains, "tb")
 
@@ -213,9 +237,30 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         div_lr = divergence_matrix_lr @ grad_lr
         div_tb = divergence_matrix_tb @ grad_tb
 
-        out = div_lr + div_tb
+        return div_lr + div_tb
 
-        return out
+    def _divergence_of_tensor_row(self, symbol, component_lr, component_tb):
+        """Divergence of a tensor row (node-evaluated components), returning a scalar.
+
+        Computes d(component_lr)/dx + d(component_tb)/dy.
+        Components are on nodes, so we convert to edges first, then apply divergence.
+        """
+        divergence_matrix_lr = self.divergence_matrix(symbol.domains, "lr")
+        divergence_matrix_tb = self.divergence_matrix(symbol.domains, "tb")
+
+        # Convert node-evaluated components to edges
+        component_lr_edge = self.node_to_edge(
+            component_lr, method="arithmetic", direction="lr"
+        )
+        component_tb_edge = self.node_to_edge(
+            component_tb, method="arithmetic", direction="tb"
+        )
+
+        # Apply divergence matrices
+        div_lr = divergence_matrix_lr @ component_lr_edge
+        div_tb = divergence_matrix_tb @ component_tb_edge
+
+        return div_lr + div_tb
 
     def divergence_matrix(self, domains, direction):
         """
@@ -1860,6 +1905,45 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         out = pybamm.simplify_if_constant(left_lr * right_lr + left_tb * right_tb)
         return out
 
+    def _tensor_product(self, left, right, disc_left, disc_right):
+        """Compute tensor (outer) product of two vector fields.
+
+        Returns a rank-2 TensorField where T[i,j] = left[i] * right[j].
+        If either operand evaluates on edges, convert to nodes first.
+        """
+        from pybamm.expression_tree.tensor_field import TensorField
+
+        # 1) Ensure both operands are vector fields; if not, treat scalar as same in both directions
+        if not hasattr(disc_left, "lr_field") or not hasattr(disc_left, "tb_field"):
+            disc_left = pybamm.VectorField(disc_left, disc_left)
+        if not hasattr(disc_right, "lr_field") or not hasattr(disc_right, "tb_field"):
+            disc_right = pybamm.VectorField(disc_right, disc_right)
+
+        # 2) Convert edge-evaluated components to nodes
+        left_lr = disc_left.lr_field
+        left_tb = disc_left.tb_field
+        right_lr = disc_right.lr_field
+        right_tb = disc_right.tb_field
+
+        if left.evaluates_on_edges("primary"):
+            left_lr = self.edge_to_node(left_lr, method="arithmetic", direction="lr")
+            left_tb = self.edge_to_node(left_tb, method="arithmetic", direction="tb")
+        if right.evaluates_on_edges("primary"):
+            right_lr = self.edge_to_node(right_lr, method="arithmetic", direction="lr")
+            right_tb = self.edge_to_node(right_tb, method="arithmetic", direction="tb")
+
+        # 3) Compute outer product components: T[i,j] = left[i] * right[j]
+        # For 2D vectors [lr, tb], this gives a 2x2 matrix:
+        # [[lr*lr, lr*tb],
+        #  [tb*lr, tb*tb]]
+        t00 = pybamm.simplify_if_constant(left_lr * right_lr)
+        t01 = pybamm.simplify_if_constant(left_lr * right_tb)
+        t10 = pybamm.simplify_if_constant(left_tb * right_lr)
+        t11 = pybamm.simplify_if_constant(left_tb * right_tb)
+
+        # 4) Return as rank-2 TensorField
+        return TensorField([[t00, t01], [t10, t11]], domain=disc_left.domain)
+
     def process_binary_operators(self, bin_op, left, right, disc_left, disc_right):
         """Discretise binary operators in model equations.  Performs appropriate
         averaging of diffusivities if one of the children is a gradient operator, so
@@ -1920,6 +2004,10 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         # inner product takes fluxes from edges to nodes
         if isinstance(bin_op, pybamm.Inner):
             return self._inner(left, right, disc_left, disc_right)
+
+        # Tensor product: vector x vector -> rank-2 tensor
+        if isinstance(bin_op, pybamm.TensorProduct):
+            return self._tensor_product(left, right, disc_left, disc_right)
 
         # This could be cleaned up a bit, but it works for now.
         if hasattr(disc_left, "lr_field") and hasattr(disc_right, "lr_field"):

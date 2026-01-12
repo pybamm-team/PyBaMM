@@ -1,10 +1,12 @@
+from __future__ import annotations
+
 import json
-import numbers
 import re
 from collections import defaultdict
+from collections.abc import Iterator
 from pathlib import Path
 from pprint import pformat
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from warnings import warn
 
 import numpy as np
@@ -16,11 +18,21 @@ from pybamm.expression_tree.operations.serialise import (
     convert_symbol_from_json,
     convert_symbol_to_json,
 )
-from pybamm.models.base_model import ModelSolutionObservability
 from pybamm.models.full_battery_models.lithium_ion.msmr import (
     is_deprecated_msmr_name,
     replace_deprecated_msmr_name,
 )
+
+from .parameter_store import (
+    ParameterCategory,
+    ParameterDiff,
+    ParameterInfo,
+    ParameterStore,
+)
+from .parameter_substitutor import ParameterSubstitutor
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
 
 
 class ParameterValues:
@@ -32,10 +44,10 @@ class ParameterValues:
 
     Parameters
     ----------
-    values : dict or string
-        Explicit set of parameters, or reference to an inbuilt parameter set
-        If string and matches one of the inbuilt parameter sets, returns that parameter
-        set.
+    values : dict or string or ParameterValues
+        Explicit set of parameters, or reference to an inbuilt parameter set.
+        If string and matches one of the inbuilt parameter sets, returns that
+        parameter set.
 
     Examples
     --------
@@ -47,33 +59,49 @@ class ParameterValues:
     >>> param["Reference temperature [K]"]
     298.15
 
+    >>> info = param.get_info("Reference temperature [K]")
+    >>> info.units
+    'K'
+    >>> electrode_params = param.list_by_category("negative electrode")
+    >>> len(electrode_params) > 0
+    True
     """
 
-    def __init__(self, values):
-        # add physical constants as default values
-        self._dict_items = pybamm.FuzzyDict(
-            {
-                "Ideal gas constant [J.K-1.mol-1]": pybamm.constants.R.value,
-                "Faraday constant [C.mol-1]": pybamm.constants.F.value,
-                "Boltzmann constant [J.K-1]": pybamm.constants.k_b.value,
-                "Electron charge [C]": pybamm.constants.q_e.value,
-            }
-        )
+    # Physical constants are deprecated in ParameterValues
+    _DEPRECATED_CONSTANTS = {
+        "Ideal gas constant [J.K-1.mol-1]": "pybamm.constants.R",
+        "Faraday constant [C.mol-1]": "pybamm.constants.F",
+        "Boltzmann constant [J.K-1]": "pybamm.constants.k_b",
+        "Electron charge [C]": "pybamm.constants.q_e",
+    }
+
+    def __init__(self, values: dict[str, Any] | str | ParameterValues) -> None:
+        # Initialize the store
+        self._store = ParameterStore({})
+
+        # Initialize the processor (uses this instance's store)
+        self._processor = ParameterSubstitutor(self._store)
 
         if isinstance(values, dict | ParameterValues):
-            # remove the "chemistry" key if it exists
-            chemistry = values.pop("chemistry", None)
-            self.update(values, check_already_exists=False)
+            # Copy to avoid mutating input
+            if isinstance(values, ParameterValues):
+                values_dict = dict(values._store._data)
+            else:
+                values_dict = dict(values)
+            # Remove the "chemistry" key if it exists
+            chemistry = values_dict.pop("chemistry", None)
+            self.update(values_dict)
         else:
             # Check if values is a named parameter set
             if isinstance(values, str) and values in pybamm.parameter_sets.keys():
-                values = pybamm.parameter_sets[values]
-                chemistry = values.pop("chemistry", None)
-                self.update(values, check_already_exists=False)
+                values_dict = dict(pybamm.parameter_sets[values])
+                chemistry = values_dict.pop("chemistry", None)
+                self.update(values_dict)
             else:
                 valid_sets = "\n".join(pybamm.parameter_sets.keys())
                 raise ValueError(
-                    f"'{values}' is not a valid parameter set. Parameter set must be one of:\n{valid_sets}"
+                    f"'{values}' is not a valid parameter set. "
+                    f"Parameter set must be one of:\n{valid_sets}"
                 )
 
         if chemistry == "ecm":
@@ -81,16 +109,80 @@ class ParameterValues:
         else:
             self._set_initial_state = pybamm.lithium_ion.set_initial_state
 
-        # Initialise empty _processed_symbols dict (for caching)
-        self._processed_symbols = {}
-
-        # save citations
-        if "citations" in self._dict_items:
-            for citation in self._dict_items["citations"]:
+        # Save citations
+        if "citations" in self._store:
+            for citation in self._store["citations"]:
                 pybamm.citations.register(citation)
 
-    @staticmethod
-    def _create_from_bpx(bpx, target_soc):
+    @property
+    def store(self) -> ParameterStore:
+        return self._store
+
+    # Factory methods
+    @classmethod
+    def create_from_bpx(
+        cls, filename: str | Path, target_soc: float = 1.0
+    ) -> ParameterValues:
+        """
+        Create ParameterValues from a BPX file.
+
+        Parameters
+        ----------
+        filename : str or Path
+            The filename of the `BPX <https://bpxstandard.com/>`_ file.
+        target_soc : float, optional
+            Target state of charge. Must be between 0 and 1. Default is 1.
+
+        Returns
+        -------
+        ParameterValues
+            A parameter values object with the parameters from the BPX file.
+
+        Examples
+        --------
+        >>> param = pybamm.ParameterValues.create_from_bpx("battery_params.json")  # doctest: +SKIP
+        >>> param = pybamm.ParameterValues.create_from_bpx("battery_params.json", target_soc=0.5)  # doctest: +SKIP
+        """
+        from bpx import parse_bpx_file
+
+        bpx = parse_bpx_file(str(filename))
+        return cls._create_from_bpx(bpx, target_soc)
+
+    @classmethod
+    def create_from_bpx_obj(
+        cls, bpx_obj: dict, target_soc: float = 1.0
+    ) -> ParameterValues:
+        """
+        Create ParameterValues from a BPX dictionary object.
+
+        Parameters
+        ----------
+        bpx_obj : dict
+            A dictionary containing the parameters in the
+            `BPX <https://bpxstandard.com/>`_ format.
+        target_soc : float, optional
+            Target state of charge. Must be between 0 and 1. Default is 1.
+
+        Returns
+        -------
+        ParameterValues
+            A parameter values object with the parameters in the BPX file.
+
+        Examples
+        --------
+        >>> bpx_dict = {"Header": {...}, "Cell": {...}, "Parameterisation": {...}}  # doctest: +SKIP
+        >>> param = pybamm.ParameterValues.create_from_bpx_obj(bpx_dict)  # doctest: +SKIP
+        >>> param = pybamm.ParameterValues.create_from_bpx_obj(bpx_dict, target_soc=0.8)  # doctest: +SKIP
+
+        """
+        from bpx import parse_bpx_obj
+
+        bpx = parse_bpx_obj(bpx_obj)
+        return cls._create_from_bpx(bpx, target_soc)
+
+    @classmethod
+    def _create_from_bpx(cls, bpx, target_soc: float) -> ParameterValues:
+        """Internal method to create ParameterValues from a parsed BPX object."""
         from bpx import get_electrode_concentrations
         from bpx.schema import ElectrodeBlended, ElectrodeBlendedSPM
 
@@ -120,9 +212,7 @@ class ParameterValues:
                 stacklevel=2,
             )
 
-        # get initial concentrations based on SOC
-        # Note: we cannot set SOC for blended electrodes,
-        # see https://github.com/pybamm-team/PyBaMM/issues/2682
+        # Get initial concentrations based on SOC
         bpx_neg = bpx.parameterisation.negative_electrode
         bpx_pos = bpx.parameterisation.positive_electrode
         if isinstance(bpx_neg, ElectrodeBlended | ElectrodeBlendedSPM) or isinstance(
@@ -141,58 +231,89 @@ class ParameterValues:
                 c_p_init
             )
 
-        return pybamm.ParameterValues(pybamm_dict)
+        return cls(pybamm_dict)
 
     @staticmethod
-    def create_from_bpx_obj(bpx_obj, target_soc: float = 1):
+    def from_json(filename_or_dict: str | Path | dict) -> ParameterValues:
         """
+        Load a ParameterValues object from a JSON file or a dictionary.
+
         Parameters
         ----------
-        bpx_obj: dict
-            A dictionary containing the parameters in the `BPX <https://bpxstandard.com/>`_ format
-        target_soc : float, optional
-            Target state of charge. Must be between 0 and 1. Default is 1.
+        filename_or_dict : str, Path, or dict
+            The filename to load the JSON file from, or a dictionary.
 
         Returns
         -------
         ParameterValues
-            A parameter values object with the parameters in the bpx file
+            The ParameterValues object.
+
+        Examples
+        --------
+        >>> param = pybamm.ParameterValues.from_json("parameters.json")  # doctest: +SKIP
+        >>> param_dict = {"Temperature [K]": 298.15}
+        >>> param = pybamm.ParameterValues.from_json(param_dict)
 
         """
-        from bpx import parse_bpx_obj
+        if isinstance(filename_or_dict, str | Path):
+            with open(filename_or_dict) as f:
+                parameter_values_dict = json.load(f)
+        elif isinstance(filename_or_dict, dict):
+            parameter_values_dict = filename_or_dict.copy()
+        else:
+            raise TypeError("Input must be a filename (str or pathlib.Path) or a dict")
 
-        bpx = parse_bpx_obj(bpx_obj)
-        return ParameterValues._create_from_bpx(bpx, target_soc)
+        for key, value in parameter_values_dict.items():
+            if isinstance(value, dict):
+                parameter_values_dict[key] = convert_symbol_from_json(value)
 
-    @staticmethod
-    def create_from_bpx(filename, target_soc: float = 1):
+        return ParameterValues(parameter_values_dict)
+
+    def to_json(self, filename: str | None = None) -> dict:
         """
+        Convert the parameter values to a JSON-serializable dictionary.
+
+        Optionally saves to a file.
+
         Parameters
         ----------
-        filename: str
-            The filename of the `BPX <https://bpxstandard.com/>`_ file
-        target_soc : float, optional
-            Target state of charge. Must be between 0 and 1. Default is 1.
+        filename : str, optional
+            The filename to save the JSON file to. If not provided, the
+            dictionary is not saved.
 
         Returns
         -------
-        ParameterValues
-            A parameter values object with the parameters in the bpx file
+        dict
+            The JSON-serializable dictionary.
 
+        Examples
+        --------
+        >>> param = pybamm.ParameterValues({"Temperature [K]": 298.15})
+        >>> param_dict = param.to_json()  # Get dictionary
+        >>> isinstance(param_dict, dict)
+        True
+        >>> param.to_json("parameters.json")
+        {'Temperature [K]': 298.15}
         """
-        from bpx import parse_bpx_file
+        return convert_parameter_values_to_json(self, filename)
 
-        bpx = parse_bpx_file(filename)
-        return ParameterValues._create_from_bpx(bpx, target_soc)
-
-    def __getitem__(self, key):
+    # Dictionary-like interface
+    def __getitem__(self, key: str) -> Any:
+        """Get a parameter value by key."""
         try:
-            return self._dict_items[key]
+            return self._store[key]
         except KeyError as err:
+            # Provide helpful error for deprecated physical constants
+            if key in self._DEPRECATED_CONSTANTS:
+                raise KeyError(
+                    f"Accessing '{key}' from ParameterValues is deprecated. "
+                    f"Use {self._DEPRECATED_CONSTANTS[key]} instead."
+                ) from err
+            # Provide helpful error for renamed parameter
             if (
                 "Exchange-current density for lithium metal electrode [A.m-2]"
-                in err.args[0]
-                and "Exchange-current density for plating [A.m-2]" in self._dict_items
+                in str(err)
+                and "Exchange-current density for plating [A.m-2]" in self._store
             ):
                 raise KeyError(
                     "'Exchange-current density for plating [A.m-2]' has been renamed "
@@ -203,107 +324,248 @@ class ParameterValues:
                     "electrode. To avoid this error, change your parameter file to use "
                     "the new name."
                 ) from err
+            raise
+
+    def get(self, key: str, default: Any = None) -> Any:
+        """
+        Return item corresponding to key if it exists, otherwise return default.
+
+        Parameters
+        ----------
+        key : str
+            The parameter name to retrieve.
+        default : Any, optional
+            The default value to return if key is not found. Default is None.
+
+        Returns
+        -------
+        Any
+            The parameter value if found, otherwise the default value.
+
+        Examples
+        --------
+        >>> param = pybamm.ParameterValues("Chen2020")
+        >>> param.get("Current function [A]")
+        5.0
+        >>> param.get("NonExistent Parameter", 42)
+        42
+        """
+        if key in self._DEPRECATED_CONSTANTS:
+            warn(
+                f"Accessing '{key}' from ParameterValues is deprecated. "
+                f"Use {self._DEPRECATED_CONSTANTS[key]} instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+        return self._store.get(key, default)
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        """Set a parameter value (allows new parameters)."""
+        # Process special string values like "[input]"
+        if isinstance(value, str):
+            if value == "[input]":
+                value = pybamm.InputParameter(key)
+            elif (
+                value.startswith("[function]")
+                or value.startswith("[current data]")
+                or value.startswith("[data]")
+                or value.startswith("[2D data]")
+            ):
+                raise ValueError(
+                    "Specifying parameters via [function], [current data], [data] "
+                    "or [2D data] is no longer supported. For functions, pass in a "
+                    "python function object. For data, pass in a python function "
+                    "that returns a pybamm Interpolant object. "
+                    "See the Ai2020 parameter set for an example with both."
+                )
             else:
-                raise err
+                # Try to convert to float
+                try:
+                    value = float(value)
+                except ValueError:
+                    pass  # Keep as string if not convertible
+        self._store[key] = value
+        self._processor.clear_cache()
 
-    def get(self, key, default=None):
-        """Return item corresponding to key if it exists, otherwise return default"""
-        try:
-            return self._dict_items[key]
-        except KeyError:
-            return default
+    def __delitem__(self, key: str) -> None:
+        """Delete a parameter."""
+        del self._store[key]
+        self._processor.clear_cache()
 
-    def __setitem__(self, key, value):
-        """Call the update functionality when doing a setitem"""
-        self.update({key: value})
+    def __contains__(self, key: str) -> bool:
+        """Check if a parameter exists."""
+        return key in self._store
 
-    def __delitem__(self, key):
-        del self._dict_items[key]
+    def __iter__(self) -> Iterator[str]:
+        """Iterate over parameter keys."""
+        return iter(self._store)
 
-    def __repr__(self):
-        return pformat(self._dict_items, width=1)
+    def __len__(self) -> int:
+        """Return the number of parameters."""
+        return len(self._store)
 
-    def __eq__(self, other):
-        return self._dict_items == other._dict_items
+    def __repr__(self) -> str:
+        """Return a string representation."""
+        return pformat(dict(self._store._data), width=1)
+
+    def __eq__(self, other: object) -> bool:
+        """Check equality with another ParameterValues."""
+        if not isinstance(other, ParameterValues):
+            return NotImplemented
+        return dict(self._store._data) == dict(other._store._data)
 
     def keys(self):
-        """Get the keys of the dictionary"""
-        return self._dict_items.keys()
+        """
+        Return parameter keys.
+
+        Returns
+        -------
+        dict_keys
+            The parameter keys.
+
+        Examples
+        --------
+        >>> param = pybamm.ParameterValues("Chen2020")
+        >>> keys = list(param.keys())
+        >>> "Current function [A]" in keys
+        True
+        """
+        return self._store.keys()
 
     def values(self):
-        """Get the values of the dictionary"""
-        return self._dict_items.values()
+        """
+        Return parameter values.
+
+        Returns
+        -------
+        dict_values
+            The parameter values.
+
+        Examples
+        --------
+        >>> param = pybamm.ParameterValues({"Temperature [K]": 298.15})
+        >>> vals = list(param.values())
+        >>> 298.15 in vals
+        True
+        """
+        return self._store.values()
 
     def items(self):
-        """Get the items of the dictionary"""
-        return self._dict_items.items()
+        """
+        Return parameter items.
 
-    def pop(self, *args, **kwargs):
-        return self._dict_items.pop(*args, **kwargs)
+        Returns
+        -------
+        dict_items
+            The parameter items as (key, value) pairs.
 
-    def copy(self):
-        """Returns a copy of the parameter values. Makes sure to copy the internal
-        dictionary."""
-        new_copy = ParameterValues(self._dict_items.copy())
+        Examples
+        --------
+        >>> param = pybamm.ParameterValues({"Temperature [K]": 298.15})
+        >>> items = list(param.items())
+        >>> ("Temperature [K]", 298.15) in items
+        True
+        """
+        return self._store.items()
+
+    def pop(self, *args, **kwargs) -> Any:
+        """
+        Remove and return a parameter value.
+
+        Example
+        -------
+        >>> params = pybamm.ParameterValues("Chen2020")
+        >>> val = params.pop("Current function [A]")
+        """
+        result = self._store.pop(*args, **kwargs)
+        self._processor.clear_cache()
+        return result
+
+    def copy(self) -> ParameterValues:
+        """
+        Return a copy of the parameter values.
+
+        Example
+        -------
+        >>> params = pybamm.ParameterValues("Chen2020")
+        >>> params_copy = params.copy()
+        >>> params_copy["Current function [A]"] = 10.0  # Original unchanged
+        """
+        new_copy = ParameterValues(dict(self._store._data))
         new_copy._set_initial_state = self._set_initial_state
         return new_copy
 
-    def search(self, key, print_values=True):
+    def search(self, key: str, print_values: bool = True) -> None:
         """
         Search dictionary for keys containing 'key'.
 
-        See :meth:`pybamm.FuzzyDict.search()`.
+        Example
+        -------
+        >>> params = pybamm.ParameterValues("Chen2020")
+        >>> params.search("electrolyte", print_values=False)
+        Results for 'electrolyte': ...
         """
-        return self._dict_items.search(key, print_values)
+        return self._store.search(key, print_values)
 
-    def update(self, values, check_conflict=False, check_already_exists=True, path=""):
+    # Update methods
+    def update(
+        self,
+        values: Mapping[str, Any],
+        *,
+        check_conflict: bool = False,
+        check_already_exists: bool = False,
+        path: str = "",
+    ) -> None:
         """
-        Update parameter dictionary, while also performing some basic checks.
+        Update parameter values.
 
         Parameters
         ----------
         values : dict
-            Dictionary of parameter values to update parameter dictionary with
+            Dictionary of parameter values to update.
         check_conflict : bool, optional
-            Whether to check that a parameter in `values` has not already been defined
-            in the parameter class when updating it, and if so that its value does not
-            change. This is set to True during initialisation, when parameters are
-            combined from different sources, and is False by default otherwise
+            Deprecated.
         check_already_exists : bool, optional
-            Whether to check that a parameter in `values` already exists when trying to
-            update it. This is to avoid cases where an intended change in the parameters
-            is ignored due a typo in the parameter name, and is True by default but can
-            be manually overridden.
-        path : string, optional
-            Path from which to load functions
+            Deprecated.
+        path : str, optional
+            Path from which to load functions (legacy parameter).
+
+        Example
+        -------
+        >>> params = pybamm.ParameterValues("Chen2020")
+        >>> params.update({"Current function [A]": 2.0})  # Update existing
+        >>> params.update({'a': 1.0})  # Create new
+
+        Notes
+        -----
+        The `check_already_exists` parameter is deprecated.
         """
-        # check if values is not a dictionary
-        if not isinstance(values, dict):
-            values = values._dict_items
-        # check parameter values
-        values = self.check_parameter_values(values)
-        # update
+        # Handle deprecated arguments
+        if check_already_exists is not False:
+            warn(
+                "check_already_exists is deprecated. "
+                "This check is no longer supported in pybamm.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+
+        if check_conflict is not False:
+            warn(
+                "check_conflict is deprecated. "
+                "This check is no longer supported in pybamm.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+
+        # Convert ParameterValues to dict
+        if isinstance(values, ParameterValues):
+            values = dict(values._store._data)
+
+        # Check and transform parameter values
+        values = self.check_parameter_values(dict(values))
+
         for name, value in values.items():
-            # check for conflicts
-            if (
-                check_conflict is True
-                and name in self.keys()
-                and not (self[name] == float(value) or self[name] == value)
-            ):
-                raise ValueError(
-                    f"parameter '{name}' already defined with value '{self[name]}'"
-                )
-            # check parameter already exists (for updating parameters)
-            if check_already_exists is True:
-                try:
-                    self._dict_items[name]
-                except KeyError as err:
-                    raise KeyError(
-                        f"Cannot update parameter '{name}' as it does not "
-                        + f"have a default value. ({err.args[0]}). If you are "
-                        + "sure you want to update this parameter, use "
-                        + "param.update({name: value}, check_already_exists=False)"
-                    ) from err
+            # Process value
             if isinstance(value, str):
                 if (
                     value.startswith("[function]")
@@ -318,116 +580,48 @@ class ParameterValues:
                         "that returns a pybamm Interpolant object. "
                         "See the Ai2020 parameter set for an example with both."
                     )
-
                 elif value == "[input]":
-                    self._dict_items[name] = pybamm.InputParameter(name)
-                # Anything else should be a converted to a float
+                    self._store[name] = pybamm.InputParameter(name)
                 else:
-                    self._dict_items[name] = float(value)
+                    # Convert to float
+                    self._store[name] = float(value)
             elif isinstance(value, tuple) and isinstance(value[1], np.ndarray):
                 # If data is provided as a 2-column array (1D data),
                 # convert to two arrays for compatibility with 2D data
-                # see #1805
                 func_name, data = value
                 data = ([data[:, 0]], data[:, 1])
-                self._dict_items[name] = (func_name, data)
+                self._store[name] = (func_name, data)
             else:
-                self._dict_items[name] = value
-        # reset processed symbols
-        self._processed_symbols = {}
+                self._store[name] = value
 
-    def set_initial_state(
-        self,
-        initial_value,
-        direction=None,
-        param=None,
-        inplace=True,
-        options=None,
-        inputs=None,
-    ):
-        return self._set_initial_state(
-            initial_value,
-            self,
-            direction=direction,
-            param=param,
-            inplace=inplace,
-            options=options,
-            inputs=inputs,
-        )
-
-    def set_initial_stoichiometry_half_cell(
-        self,
-        initial_value,
-        direction=None,
-        param=None,
-        known_value="cyclable lithium capacity",
-        inplace=True,
-        options=None,
-        inputs=None,
-    ):
-        msg = "pybamm.parameter_values.set_initial_stoichiometry_half_cell is deprecated, please use set_initial_state."
-        warn(msg, DeprecationWarning, stacklevel=2)
-        return self._set_initial_state(
-            initial_value,
-            self,
-            direction=direction,
-            param=param,
-            known_value=known_value,
-            inplace=inplace,
-            options=options,
-            inputs=inputs,
-        )
-
-    def set_initial_stoichiometries(
-        self,
-        initial_value,
-        direction=None,
-        param=None,
-        known_value="cyclable lithium capacity",
-        inplace=True,
-        options=None,
-        inputs=None,
-        tol=1e-6,
-    ):
-        msg = "pybamm.parameter_values.set_initial_stoichiometries is deprecated, please use set_initial_state."
-        warn(msg, DeprecationWarning, stacklevel=2)
-        return self._set_initial_state(
-            initial_value,
-            self,
-            direction=direction,
-            param=param,
-            known_value=known_value,
-            inplace=inplace,
-            options=options,
-            inputs=inputs,
-            tol=tol,
-        )
-
-    def set_initial_ocps(
-        self,
-        initial_value,
-        direction=None,
-        param=None,
-        known_value="cyclable lithium capacity",
-        inplace=True,
-        options=None,
-        inputs=None,
-    ):
-        msg = "pybamm.parameter_values.set_initial_ocps is deprecated, please use set_initial_state."
-        warn(msg, DeprecationWarning, stacklevel=2)
-        return self._set_initial_state(
-            initial_value,
-            self,
-            direction=direction,
-            param=param,
-            known_value=known_value,
-            inplace=inplace,
-            options=options,
-            inputs=inputs,
-        )
+        # Clear processor cache
+        self._processor.clear_cache()
 
     @staticmethod
-    def check_parameter_values(values):
+    def check_parameter_values(values: dict) -> dict:
+        """
+        Check and transform parameter values.
+
+        Parameters
+        ----------
+        values : dict
+            Dictionary of parameter values to check.
+
+        Returns
+        -------
+        dict
+            Checked and transformed parameter values.
+
+        Raises
+        ------
+        ValueError
+            If parameter names contain deprecated or invalid formats.
+
+        Examples
+        --------
+        >>> values = {"Electrode height [m]": 0.065}
+        >>> checked = pybamm.ParameterValues.check_parameter_values(values)
+        """
         values = scalarize_dict(values)
         for param in list(values.keys()):
             if "propotional term" in param:
@@ -460,581 +654,413 @@ class ParameterValues:
 
         return values
 
-    def process_model(
-        self, unprocessed_model, inplace=True, delayed_variable_processing=None
+    # Initial state methods
+    def set_initial_state(
+        self,
+        initial_value,
+        direction=None,
+        param=None,
+        inplace: bool = True,
+        options=None,
+        inputs=None,
     ):
-        """Assign parameter values to a model.
-        Currently inplace, could be changed to return a new model.
+        """
+        Set the initial state of the battery.
+
+        Delegates to chemistry-specific implementation.
 
         Parameters
         ----------
-        unprocessed_model : :class:`pybamm.BaseModel`
-            Model to assign parameter values for
-        inplace: bool, optional
-            If True, replace the parameters in the model in place. Otherwise, return a
-            new model with parameter values set. Default is True.
-        delayed_variable_processing: bool, optional
+        initial_value : float
+            The initial state value (e.g., SOC or voltage).
+        direction : str, optional
+            Direction for setting state. Default is None.
+        param : pybamm.ParameterValues, optional
+            Parameter values to use. Default is None (uses self).
+        inplace : bool, optional
+            If True, modify parameters in place. Default is True.
+        options : dict, optional
+            Model options. Default is None.
+        inputs : dict, optional
+            Input parameters. Default is None.
+
+        Returns
+        -------
+        ParameterValues or None
+            Updated parameter values if inplace=False, otherwise None.
+
+        Examples
+        --------
+        >>> param = pybamm.ParameterValues("Chen2020")
+        >>> result = param.set_initial_state(0.5)  # Sets initial SOC to 50%
+        >>> isinstance(result, pybamm.ParameterValues)
+        True
+        """
+        return self._set_initial_state(
+            initial_value,
+            self,
+            direction=direction,
+            param=param,
+            inplace=inplace,
+            options=options,
+            inputs=inputs,
+        )
+
+    def set_initial_stoichiometry_half_cell(
+        self,
+        initial_value,
+        direction=None,
+        param=None,
+        known_value="cyclable lithium capacity",
+        inplace=True,
+        options=None,
+        inputs=None,
+    ):
+        """Deprecated: Use set_initial_state instead."""
+        msg = "pybamm.parameter_values.set_initial_stoichiometry_half_cell is deprecated, please use set_initial_state."
+        warn(msg, DeprecationWarning, stacklevel=2)
+        return self._set_initial_state(
+            initial_value,
+            self,
+            direction=direction,
+            param=param,
+            known_value=known_value,
+            inplace=inplace,
+            options=options,
+            inputs=inputs,
+        )
+
+    def set_initial_stoichiometries(
+        self,
+        initial_value,
+        direction=None,
+        param=None,
+        known_value="cyclable lithium capacity",
+        inplace=True,
+        options=None,
+        inputs=None,
+        tol=1e-6,
+    ):
+        """Deprecated: Use set_initial_state instead."""
+        msg = "pybamm.parameter_values.set_initial_stoichiometries is deprecated, please use set_initial_state."
+        warn(msg, DeprecationWarning, stacklevel=2)
+        return self._set_initial_state(
+            initial_value,
+            self,
+            direction=direction,
+            param=param,
+            known_value=known_value,
+            inplace=inplace,
+            options=options,
+            inputs=inputs,
+            tol=tol,
+        )
+
+    def set_initial_ocps(
+        self,
+        initial_value,
+        direction=None,
+        param=None,
+        known_value="cyclable lithium capacity",
+        inplace=True,
+        options=None,
+        inputs=None,
+    ):
+        """Deprecated: Use set_initial_state instead."""
+        msg = "pybamm.parameter_values.set_initial_ocps is deprecated, please use set_initial_state."
+        warn(msg, DeprecationWarning, stacklevel=2)
+        return self._set_initial_state(
+            initial_value,
+            self,
+            direction=direction,
+            param=param,
+            known_value=known_value,
+            inplace=inplace,
+            options=options,
+            inputs=inputs,
+        )
+
+    # Processing methods
+    # These are delegated to the ParameterSubstitutor
+    def process_model(
+        self,
+        unprocessed_model: pybamm.BaseModel,
+        inplace: bool = True,
+        delayed_variable_processing: bool | None = None,
+    ) -> pybamm.BaseModel:
+        """
+        Assign parameter values to a model.
+
+        Parameters
+        ----------
+        unprocessed_model : pybamm.BaseModel
+            Model to assign parameter values for.
+        inplace : bool, optional
+            If True (default), replace parameters in place.
+            If False, return a new model with parameter values set.
+        delayed_variable_processing : bool, optional
             If True, make variable processing a post-processing step.
             Default is False.
 
+        Returns
+        -------
+        pybamm.BaseModel
+            The parameterized model.
+
         Raises
         ------
-        :class:`pybamm.ModelError`
-            If an empty model is passed (`model.rhs = {}` and `model.algebraic = {}` and
-            `model.variables = {}`)
+        pybamm.ModelError
+            If an empty model is passed.
 
+        Example
+        -------
+        >>> model = pybamm.lithium_ion.SPM()
+        >>> params = pybamm.ParameterValues("Chen2020")
+        >>> processed_model = params.process_model(model)
         """
-        pybamm.logger.info(f"Start setting parameters for {unprocessed_model.name}")
-
-        if delayed_variable_processing is None:
-            delayed_variable_processing = False
-
-        # set up inplace vs not inplace
-        if inplace:
-            # any changes to unprocessed_model attributes will change model attributes
-            # since they point to the same object
-            model = unprocessed_model
-        else:
-            # create a copy of the model
-            model = unprocessed_model.new_copy()
-
-        if (
-            len(unprocessed_model.rhs) == 0
-            and len(unprocessed_model.algebraic) == 0
-            and len(unprocessed_model.variables) == 0
-        ):
-            raise pybamm.ModelError("Cannot process parameters for empty model")
-
-        # Find all InputParameters in the parameter values
-        unpacker = pybamm.SymbolUnpacker(pybamm.InputParameter)
-        model.fixed_input_parameters = unpacker.unpack_list_of_symbols(
-            v for v in self.values() if isinstance(v, pybamm.Symbol)
+        model = self._processor.process_model(
+            unprocessed_model,
+            inplace=inplace,
+            delayed_variable_processing=delayed_variable_processing,
         )
-
-        new_rhs = {}
-        for variable, equation in unprocessed_model.rhs.items():
-            pybamm.logger.verbose(f"Processing parameters for {variable!r} (rhs)")
-            new_variable = self.process_symbol(variable)
-            new_rhs[new_variable] = self.process_symbol(equation)
-        model.rhs = new_rhs
-
-        new_algebraic = {}
-        for variable, equation in unprocessed_model.algebraic.items():
-            pybamm.logger.verbose(f"Processing parameters for {variable!r} (algebraic)")
-            new_variable = self.process_symbol(variable)
-            new_algebraic[new_variable] = self.process_symbol(equation)
-        model.algebraic = new_algebraic
-
-        new_initial_conditions = {}
-        for variable, equation in unprocessed_model.initial_conditions.items():
-            pybamm.logger.verbose(
-                f"Processing parameters for {variable!r} (initial conditions)"
-            )
-            new_variable = self.process_symbol(variable)
-            new_initial_conditions[new_variable] = self.process_symbol(equation)
-        model.initial_conditions = new_initial_conditions
-
-        model.boundary_conditions = self.process_boundary_conditions(unprocessed_model)
-
-        if not delayed_variable_processing:
-            # Process variables and store in _variables_processed, NOT in variables
-            # This preserves the original variable expressions in model.variables
-            # Merge original variables with any already-processed variables
-            variables_to_process = (
-                unprocessed_model.variables
-                | unprocessed_model.get_processed_variables_dict()
-            )
-            processed_variables = {}
-            for variable, equation in variables_to_process.items():
-                pybamm.logger.verbose(
-                    f"Processing parameters for {variable!r} (variables)"
-                )
-                processed_variables[variable] = self.process_symbol(equation)
-            model.update_processed_variables(processed_variables)
-
-        new_events = []
-        for event in unprocessed_model.events:
-            pybamm.logger.verbose(f"Processing parameters for event '{event.name}''")
-            new_events.append(
-                pybamm.Event(
-                    event.name, self.process_symbol(event.expression), event.event_type
-                )
-            )
-
-        interpolant_events = self._get_interpolant_events(model)
-        for event in interpolant_events:
-            pybamm.logger.verbose(f"Processing parameters for event '{event.name}''")
-            new_events.append(
-                pybamm.Event(
-                    event.name, self.process_symbol(event.expression), event.event_type
-                )
-            )
-
-        model.events = new_events
-
-        pybamm.logger.info(f"Finish setting parameters for {model.name}")
-
-        if unprocessed_model.is_parameterised:
-            pybamm.logger.debug(
-                f"Model '{model.name}' is being re-processed, "
-                "which makes it unable to process symbols using `model.process_symbol`"
-            )
-            model.disable_symbol_processing(
-                ModelSolutionObservability.REPARAMETERISED_MODEL
-            )
+        # Attach parameter_values to the model's symbol_processor
         pybamm.logger.debug(
             "Attaching the `parameter_values` to the `symbol_processor`"
         )
         model.symbol_processor.parameter_values = self
-
-        model.is_parameterised = True
         return model
 
-    def _get_interpolant_events(self, model):
-        """Add events for functions that have been defined as parameters"""
-        # Define events to catch extrapolation. In these events the sign is
-        # important: it should be positive inside of the range and negative
-        # outside of it
-        interpolants = model._find_symbols(pybamm.Interpolant)
-        interpolant_events = []
-        for interpolant in interpolants:
-            xs = interpolant.x
-            children = interpolant.children
-            for x, child in zip(xs, children, strict=False):
-                interpolant_events.extend(
-                    [
-                        pybamm.Event(
-                            f"Interpolant '{interpolant.name}' lower bound",
-                            pybamm.min(child - min(x)),
-                            pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
-                        ),
-                        pybamm.Event(
-                            f"Interpolant '{interpolant.name}' upper bound",
-                            pybamm.min(max(x) - child),
-                            pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
-                        ),
-                    ]
-                )
-        return interpolant_events
-
-    def process_boundary_conditions(self, model):
-        """
-        Process boundary conditions for a model
-        Boundary conditions are dictionaries {"left": left bc, "right": right bc}
-        in general, but may be imposed on the tabs (or *not* on the tab) for a
-        small number of variables, e.g. {"negative tab": neg. tab bc,
-        "positive tab": pos. tab bc "no tab": no tab bc}.
-        """
-        new_boundary_conditions = {}
-        sides = [
-            "left",
-            "right",
-            "negative tab",
-            "positive tab",
-            "no tab",
-            "top",
-            "bottom",
-            "x_min",
-            "x_max",
-            "y_min",
-            "y_max",
-            "z_min",
-            "z_max",
-            "r_min",
-            "r_max",
-        ]
-        for variable, bcs in model.boundary_conditions.items():
-            processed_variable = self.process_symbol(variable)
-            new_boundary_conditions[processed_variable] = {}
-            for side in sides:
-                try:
-                    bc, typ = bcs[side]
-                    pybamm.logger.verbose(
-                        f"Processing parameters for {variable!r} ({side} bc)"
-                    )
-                    processed_bc = (self.process_symbol(bc), typ)
-                    new_boundary_conditions[processed_variable][side] = processed_bc
-                except KeyError as err:
-                    # don't raise error if the key error comes from the side not being
-                    # found
-                    if err.args[0] in side:
-                        pass
-                    # do raise error otherwise (e.g. can't process symbol)
-                    else:
-                        raise err
-
-        return new_boundary_conditions
-
-    def process_geometry(self, geometry):
+    def process_geometry(self, geometry: dict) -> None:
         """
         Assign parameter values to a geometry (inplace).
 
         Parameters
         ----------
         geometry : dict
-            Geometry specs to assign parameter values to
+            Geometry specs to assign parameter values to.
+
+        Examples
+        --------
+        >>> geometry = pybamm.battery_geometry()
+        >>> param = pybamm.ParameterValues("Chen2020")
+        >>> param.process_geometry(geometry)
         """
+        self._processor.process_geometry(geometry)
 
-        def process_and_check(sym):
-            new_sym = self.process_symbol(sym)
-            leaves = new_sym.post_order(filter=lambda node: len(node.children) == 0)
-            for leaf in leaves:
-                if not isinstance(leaf, pybamm.Scalar) and not isinstance(
-                    leaf, pybamm.InputParameter
-                ):
-                    raise ValueError(
-                        "Geometry parameters must be Scalars or InputParameters after parameter processing"
-                    )
-            return new_sym
+    def process_symbol(self, symbol: pybamm.Symbol) -> pybamm.Symbol:
+        """
+        Walk through the symbol and replace any Parameter with a Value.
 
-        for domain in geometry:
-            for spatial_variable, spatial_limits in geometry[domain].items():
-                # process tab information if using 1 or 2D current collectors
-                if spatial_variable == "tabs":
-                    for tab, position_info in spatial_limits.items():
-                        for position_size, sym in position_info.items():
-                            geometry[domain]["tabs"][tab][position_size] = (
-                                process_and_check(sym)
-                            )
-                else:
-                    for lim, sym in spatial_limits.items():
-                        geometry[domain][spatial_variable][lim] = process_and_check(sym)
-
-    def process_symbol(self, symbol):
-        """Walk through the symbol and replace any Parameter with a Value.
-        If a symbol has already been processed, the stored value is returned.
+        If a symbol has already been processed, the cached value is returned.
 
         Parameters
         ----------
-        symbol : :class:`pybamm.Symbol`
-            Symbol or Expression tree to set parameters for
+        symbol : pybamm.Symbol
+            Symbol or Expression tree to set parameters for.
 
         Returns
         -------
-        symbol : :class:`pybamm.Symbol`
-            Symbol with Parameter instances replaced by Value
+        pybamm.Symbol
+            Symbol with Parameter instances replaced by values.
 
+        Example
+        -------
+        >>> params = pybamm.ParameterValues("Chen2020")
+        >>> param = pybamm.Parameter("Current function [A]")
+        >>> processed = params.process_symbol(param)
+        >>> result = processed.evaluate()  # Returns evaluated value
         """
-        try:
-            return self._processed_symbols[symbol]
-        except KeyError:
-            if not isinstance(symbol, pybamm.FunctionParameter):
-                processed_symbol = self._process_symbol(symbol)
-            else:
-                processed_symbol = self._process_function_parameter(symbol)
-            self._processed_symbols[symbol] = processed_symbol
+        return self._processor.process_symbol(symbol)
 
-            return processed_symbol
+    def process_boundary_conditions(self, model: pybamm.BaseModel) -> dict:
+        """
+        Process boundary conditions for a model.
 
-    def _process_symbol(self, symbol):
-        """See :meth:`ParameterValues.process_symbol()`."""
+        Boundary conditions are dictionaries {"left": left bc, "right": right bc}
+        in general, but may be imposed on the tabs for some variables.
 
-        if isinstance(symbol, pybamm.Parameter):
-            value = self[symbol.name]
-            if isinstance(value, numbers.Number):
-                # Check not NaN (parameter in csv file but no value given)
-                if np.isnan(value):
-                    raise ValueError(f"Parameter '{symbol.name}' not found")
-                # Scalar inherits name
-                return pybamm.Scalar(value, name=symbol.name)
-            elif isinstance(value, pybamm.Symbol):
-                new_value = self.process_symbol(value)
-                new_value.copy_domains(symbol)
-                return new_value
-            else:
-                raise TypeError(f"Cannot process parameter '{value}'")
+        Parameters
+        ----------
+        model : pybamm.BaseModel
+            Model whose boundary conditions to process.
 
-        elif isinstance(symbol, pybamm.FunctionParameter):
-            function_name = self[symbol.name]
-            if isinstance(
-                function_name,
-                numbers.Number | pybamm.Interpolant | pybamm.InputParameter,
-            ) or (
-                isinstance(function_name, pybamm.Symbol)
-                and function_name.size_for_testing == 1
-            ):
-                # no need to process children, they will only be used for shape
-                new_children = symbol.children
-            else:
-                # process children
-                new_children = []
-                for child in symbol.children:
-                    if symbol.diff_variable is not None and any(
-                        x == symbol.diff_variable for x in child.pre_order()
-                    ):
-                        # Wrap with NotConstant to avoid simplification,
-                        # which would stop symbolic diff from working properly
-                        new_child = pybamm.NotConstant(child)
-                        new_children.append(self.process_symbol(new_child))
-                    else:
-                        new_children.append(self.process_symbol(child))
+        Returns
+        -------
+        dict
+            Processed boundary conditions.
 
-            # Create Function or Interpolant or Scalar object
-            if isinstance(function_name, tuple):
-                if len(function_name) == 2:  # CSV or JSON parsed data
-                    # to create an Interpolant
-                    name, data = function_name
+        Examples
+        --------
+        >>> model = pybamm.lithium_ion.SPM()
+        >>> param = pybamm.ParameterValues("Chen2020")
+        >>> bcs = param.process_boundary_conditions(model)
+        """
+        return self._processor.process_boundary_conditions(model)
 
-                    if len(data[0]) == 1:
-                        input_data = data[0][0], data[1]
-
-                    else:
-                        input_data = data
-
-                    # For parameters provided as data we use a cubic interpolant
-                    # Note: the cubic interpolant can be differentiated
-                    function = pybamm.Interpolant(
-                        input_data[0],
-                        input_data[-1],
-                        new_children,
-                        name=name,
-                    )
-
-                else:  # pragma: no cover
-                    raise ValueError(
-                        f"Invalid function name length: {len(function_name)}"
-                    )
-
-            elif isinstance(function_name, numbers.Number):
-                # Check not NaN (parameter in csv file but no value given)
-                if np.isnan(function_name):
-                    raise ValueError(
-                        f"Parameter '{symbol.name}' (possibly a function) not found"
-                    )
-                # If the "function" is provided is actually a scalar, return a Scalar
-                # object instead of throwing an error.
-                function = pybamm.Scalar(function_name, name=symbol.name)
-            elif callable(function_name):
-                # otherwise evaluate the function to create a new PyBaMM object
-                function = function_name(*new_children)
-            elif isinstance(
-                function_name, pybamm.Interpolant | pybamm.InputParameter
-            ) or (
-                isinstance(function_name, pybamm.Symbol)
-                and function_name.size_for_testing == 1
-            ):
-                function = function_name
-            else:
-                raise TypeError(
-                    f"Parameter provided for '{symbol.name}' "
-                    + "is of the wrong type (should either be scalar-like or callable)"
-                )
-            # Differentiate if necessary
-            if symbol.diff_variable is None:
-                # Use ones_like so that we get the right shapes
-                function_out = function * pybamm.ones_like(*new_children)
-            else:
-                # return differentiated function
-                new_diff_variable = self.process_symbol(symbol.diff_variable)
-                function_out = function.diff(new_diff_variable)
-            # Process again just to be sure
-            return self.process_symbol(function_out)
-
-        # Unary operators
-        elif isinstance(symbol, pybamm.UnaryOperator):
-            new_child = self.process_symbol(symbol.child)
-            new_symbol = symbol.create_copy(new_children=[new_child])
-            # x_average can sometimes create a new symbol with electrode thickness
-            # parameters, so we process again to make sure these parameters are set
-            if isinstance(symbol, pybamm.XAverage) and not isinstance(
-                new_symbol, pybamm.XAverage
-            ):
-                new_symbol = self.process_symbol(new_symbol)
-            # f_a_dist in the size average needs to be processed
-            if isinstance(new_symbol, pybamm.SizeAverage):
-                new_symbol.f_a_dist = self.process_symbol(new_symbol.f_a_dist)
-            # position in evaluate at needs to be processed, and should be a Scalar
-            if isinstance(new_symbol, pybamm.EvaluateAt):
-                new_symbol_position = self.process_symbol(new_symbol.position)
-                if not isinstance(new_symbol_position, pybamm.Scalar):
-                    raise ValueError(
-                        "'position' in 'EvaluateAt' must evaluate to a scalar"
-                    )
-                else:
-                    new_symbol.position = new_symbol_position
-            return new_symbol
-
-        # Functions, BinaryOperators & Concatenations
-        elif (
-            isinstance(symbol, pybamm.Function)
-            or isinstance(symbol, pybamm.Concatenation)
-            or isinstance(symbol, pybamm.BinaryOperator)
-        ):
-            new_children = [self.process_symbol(child) for child in symbol.children]
-            return symbol.create_copy(new_children)
-
-        elif isinstance(symbol, pybamm.VectorField):
-            left_symbol = self.process_symbol(symbol.lr_field)
-            right_symbol = self.process_symbol(symbol.tb_field)
-            return symbol.create_copy(new_children=[left_symbol, right_symbol])
-
-        # Variables: update scale
-        elif isinstance(symbol, pybamm.Variable):
-            new_symbol = symbol.create_copy()
-            new_symbol.scale = self.process_symbol(symbol.scale)
-            reference = self.process_symbol(symbol.reference)
-            if isinstance(reference, pybamm.Vector):
-                # address numpy 1.25 deprecation warning: array should have ndim=0
-                # before conversion
-                reference = pybamm.Scalar((reference.evaluate()).item())
-            new_symbol.reference = reference
-            new_symbol.bounds = tuple([self.process_symbol(b) for b in symbol.bounds])
-            return new_symbol
-
-        elif isinstance(symbol, numbers.Number):
-            return pybamm.Scalar(symbol)
-
-        else:
-            # Backup option: return the object
-            return symbol
-
-    def _process_function_parameter(self, symbol):
-        function_parameter = self[symbol.name]
-        # Handle symbolic function parameter case
-        if isinstance(function_parameter, pybamm.ExpressionFunctionParameter):
-            # Process children
-            new_children = []
-            for child in symbol.children:
-                if symbol.diff_variable is not None and any(
-                    x == symbol.diff_variable for x in child.pre_order()
-                ):
-                    # Wrap with NotConstant to avoid simplification,
-                    # which would stop symbolic diff from working properly
-                    new_child = pybamm.NotConstant(child)
-                    new_children.append(self.process_symbol(new_child))
-                else:
-                    new_children.append(self.process_symbol(child))
-
-            # Get the expression and inputs for the function.
-            # func_args may include arguments that were not explicitly wired up
-            # in this FunctionParameter (e.g., kwargs with default values). After
-            # serialisation/deserialisation, we only recover the children that were
-            # actually connected.
-            #
-            # Using strict=True here therefore raises a ValueError when there are
-            # more args than children. We allow func_args to be longer than
-            # symbol.children and only build the mapping for the args for which we
-            # actually have children.
-            expression = function_parameter.child
-            inputs = {
-                arg: child
-                for arg, child in zip(
-                    function_parameter.func_args, symbol.children, strict=False
-                )
-            }
-
-            # Set domains for function inputs in post-order traversal
-            for node in expression.post_order():
-                if node.name in inputs:
-                    node.domains = inputs[node.name].domains
-                else:
-                    node.domains = node.get_children_domains(node.children)
-
-            # Combine parameter values with inputs
-            combined_params = ParameterValues({**self, **inputs})
-
-            # Process any FunctionParameter children first to avoid recursion
-            for child in expression.pre_order():
-                if isinstance(child, pybamm.FunctionParameter):
-                    # Build new child with parent inputs
-                    new_child_children = [
-                        inputs[child_child.name]
-                        if isinstance(child_child, pybamm.Parameter)
-                        and child_child.name in inputs
-                        else child_child
-                        for child_child in child.children
-                    ]
-                    new_child = pybamm.FunctionParameter(
-                        child.name,
-                        dict(zip(child.input_names, new_child_children, strict=False)),
-                        diff_variable=child.diff_variable,
-                        print_name=child.print_name,
-                    )
-
-                    # For this local combined parameter values, process the new child
-                    # and store the result as the processed symbol for this child
-                    # This means the child is evaluated with the parent inputs only when
-                    # it is called from within the parent function (not elsewhere in
-                    # the expression tree)
-                    combined_params._processed_symbols[child] = (
-                        combined_params.process_symbol(new_child)
-                    )
-
-            # Process function with combined parameter values to get a symbolic expression
-            function = combined_params.process_symbol(expression)
-
-            # Differentiate if necessary
-            if symbol.diff_variable is None:
-                # Use ones_like so that we get the right shapes
-                function_out = function * pybamm.ones_like(*new_children)
-            else:
-                # return differentiated function
-                new_diff_variable = self.process_symbol(symbol.diff_variable)
-                function_out = function.diff(new_diff_variable)
-
-            return function_out
-
-        # Handle non-symbolic function_name case
-        else:
-            return self._process_symbol(symbol)
-
-    def evaluate(self, symbol, inputs=None):
+    def evaluate(self, symbol: pybamm.Symbol, inputs: dict | None = None) -> Any:
         """
         Process and evaluate a symbol.
 
         Parameters
         ----------
-        symbol : :class:`pybamm.Symbol`
-            Symbol or Expression tree to evaluate
+        symbol : pybamm.Symbol
+            Symbol or Expression tree to evaluate.
+        inputs : dict, optional
+            Input parameter values for evaluation.
 
         Returns
         -------
         number or array
-            The evaluated symbol
-        """
-        processed_symbol = self.process_symbol(symbol)
-        if processed_symbol.is_constant():
-            return processed_symbol.evaluate()
-        else:
-            # In the case that the only issue is an input parameter contained in inputs,
-            # go ahead and try and evaluate it with the inputs. If it doesn't work, raise
-            # the value error.
-            try:
-                return processed_symbol.evaluate(inputs=inputs)
-            except Exception as exc:
-                raise ValueError(
-                    "symbol must evaluate to a constant scalar or array"
-                ) from exc
+            The evaluated symbol.
 
-    def _ipython_key_completions_(self):
-        return list(self._dict_items.keys())
-
-    def print_parameters(self, parameters, output_file=None):
+        Example
+        -------
+        >>> params = pybamm.ParameterValues("Chen2020")
+        >>> param = pybamm.Parameter("Current function [A]")
+        >>> result = params.evaluate(param)  # Returns evaluated value
         """
-        Return dictionary of evaluated parameters, and optionally print these evaluated
-        parameters to an output file.
+        return self._processor.evaluate(symbol, inputs)
+
+    # Metatdata methods
+    def get_info(self, key: str) -> ParameterInfo:
+        """
+        Get metadata about a parameter.
 
         Parameters
         ----------
-        parameters : class or dict containing :class:`pybamm.Parameter` objects
-            Class or dictionary containing all the parameters to be evaluated
-        output_file : string, optional
-            The file to print parameters to. If None, the parameters are not printed,
-            and this function simply acts as a test that all the parameters can be
-            evaluated, and returns the dictionary of evaluated parameters.
+        key : str
+            The parameter name.
 
         Returns
         -------
-        evaluated_parameters : defaultdict
-            The evaluated parameters, for further processing if needed
+        ParameterInfo
+            Metadata including value, units, category, and type information.
 
-        Notes
-        -----
-        A C-rate of 1 C is the current required to fully discharge the battery in 1
-        hour, 2 C is current to discharge the battery in 0.5 hours, etc
+        Examples
+        --------
+        >>> param = pybamm.ParameterValues("Chen2020")
+        >>> info = param.get_info("Maximum concentration in negative electrode [mol.m-3]")
+        >>> info.units
+        'mol.m-3'
+        >>> info.category
+        'negative electrode'
         """
-        # Set list of attributes to ignore, for when we are evaluating parameters from
-        # a class of parameters
+        return self._store.get_info(key)
+
+    def list_by_category(self, category: ParameterCategory | str) -> list[str]:
+        """
+        Return all parameter names in a given category.
+
+        Parameters
+        ----------
+        category : ParameterCategory or str
+            The category to filter by. Can be a ParameterCategory enum value
+            or a string like "negative electrode".
+
+        Returns
+        -------
+        list[str]
+            List of parameter names in the category.
+
+        Examples
+        --------
+        >>> param = pybamm.ParameterValues("Chen2020")
+        >>> electrode_params = param.list_by_category("negative electrode")
+        >>> len(electrode_params) > 0
+        True
+        """
+        return self._store.list_by_category(category)
+
+    def categories(self) -> dict[str, list[str]]:
+        """
+        Return all parameters grouped by category.
+
+        Returns
+        -------
+        dict[str, list[str]]
+            Dictionary mapping category names to lists of parameter names.
+
+        Examples
+        --------
+        >>> param = pybamm.ParameterValues("Chen2020")
+        >>> cats = param.categories()
+        >>> "negative electrode" in cats
+        True
+        """
+        return self._store.categories()
+
+    def diff(self, other: ParameterValues, *, rtol: float = 0.0) -> ParameterDiff:
+        """
+        Compare this ParameterValues with another and return differences.
+
+        Parameters
+        ----------
+        other : ParameterValues
+            The other parameter values to compare against.
+        rtol : float, optional
+            Relative tolerance for numerical comparisons. Differences smaller
+            than ``rtol * max(|a|, |b|)`` are ignored. Default is 0.0 (exact
+            comparison). Set to e.g. 1e-6 to ignore tiny floating-point
+            differences.
+
+        Returns
+        -------
+        ParameterDiff
+            Object containing added, removed, and changed parameters.
+
+        Examples
+        --------
+        >>> chen = pybamm.ParameterValues("Chen2020")
+        >>> marquis = pybamm.ParameterValues("Marquis2019")
+        >>> diff = chen.diff(marquis)
+        >>> isinstance(diff.changed, dict)
+        True
+
+        With tolerance:
+
+        >>> params1 = pybamm.ParameterValues({"x": 1.0})
+        >>> params2 = pybamm.ParameterValues({"x": 1.0 + 1e-10})
+        >>> params1.diff(params2, rtol=1e-9).changed  # Empty
+        {}
+        """
+        return self._store.diff(other._store, rtol=rtol)
+
+    # Utility methods
+    def _ipython_key_completions_(self) -> list[str]:
+        """Provide key completions for IPython."""
+        return list(self._store.keys())
+
+    def print_parameters(self, parameters, output_file: str | None = None) -> dict:
+        """
+        Return dictionary of evaluated parameters.
+
+        Optionally print these evaluated parameters to an output file.
+
+        Parameters
+        ----------
+        parameters : class or dict containing pybamm.Parameter objects
+            Class or dictionary containing all the parameters to be evaluated.
+        output_file : str, optional
+            The file to print parameters to. If None, the parameters are not
+            printed, and this function simply acts as a test that all the
+            parameters can be evaluated.
+
+        Returns
+        -------
+        dict
+            The evaluated parameters.
+
+        Examples
+        --------
+        >>> param = pybamm.ParameterValues("Chen2020")
+        >>> params_dict = {"param1": pybamm.Parameter("Current function [A]")}
+        >>> evaluated = param.print_parameters(params_dict)
+        >>> isinstance(evaluated, dict)
+        True
+        >>> param.print_parameters(params_dict, "output.txt")
+        defaultdict(<class 'list'>, {'param1': np.float64(5.0)})
+        """
+        # Set list of attributes to ignore
         ignore = [
             "__name__",
             "__doc__",
@@ -1078,9 +1104,6 @@ class ParameterValues:
 
         evaluated_parameters = defaultdict(list)
 
-        # Turn to regular dictionary for faster KeyErrors
-        self._dict_items = dict(self._dict_items)
-
         for name, symbol in parameters.items():
             if isinstance(symbol, pybamm.Symbol):
                 try:
@@ -1097,28 +1120,30 @@ class ParameterValues:
                 ):
                     evaluated_parameters[name] = proc_symbol.evaluate(t=0)
 
-            # Turn back to FuzzyDict
-            self._dict_items = pybamm.FuzzyDict(self._dict_items)
-
         # Print the evaluated_parameters dict to output_file
         if output_file:
             self.print_evaluated_parameters(evaluated_parameters, output_file)
 
         return evaluated_parameters
 
-    def print_evaluated_parameters(self, evaluated_parameters, output_file):
+    def print_evaluated_parameters(
+        self, evaluated_parameters: dict, output_file: str
+    ) -> None:
         """
-        Print a dictionary of evaluated parameters to an output file
+        Print a dictionary of evaluated parameters to an output file.
 
         Parameters
         ----------
-        evaluated_parameters : defaultdict
-            The evaluated parameters, for further processing if needed
-        output_file : string, optional
-            The file to print parameters to. If None, the parameters are not printed,
-            and this function simply acts as a test that all the parameters can be
-            evaluated
+        evaluated_parameters : dict
+            The evaluated parameters.
+        output_file : str
+            The file to print parameters to.
 
+        Examples
+        --------
+        >>> param = pybamm.ParameterValues("Chen2020")
+        >>> evaluated_params = {"Temperature [K]": 298.15, "Voltage [V]": 3.7}
+        >>> param.print_evaluated_parameters(evaluated_params, "params.txt")
         """
         # Get column width for pretty printing
         column_width = max(len(name) for name in evaluated_parameters.keys())
@@ -1130,179 +1155,198 @@ class ParameterValues:
                 else:
                     file.write((s + " : {:10.3E}\n").format(name, value))
 
-    def __contains__(self, key):
-        return key in self._dict_items
 
-    def __iter__(self):
-        return iter(self._dict_items)
+class ParameterNameParser:
+    """
+    Utility class for parsing and manipulating parameter names.
 
-    @staticmethod
-    def from_json(filename_or_dict):
+    Parameter names follow a grammar:
+        - Base: "Parameter name"
+        - With units: "Parameter name [unit]"
+        - With index: "Parameter name (idx) [unit]"
+
+    Examples
+    --------
+    >>> parser = ParameterNameParser()
+    >>> parser.parse_units("Temperature [K]")
+    'K'
+    >>> parser.split("Temperature [K]")
+    ('Temperature', 'K')
+    >>> parser.combine("Temperature", 0, "K")
+    'Temperature (0) [K]'
+    """
+
+    # Regex for indexed parameter names: "name (idx) [unit]"
+    _INDEXED_RE = re.compile(
+        r"""^
+            (?P<base>[^\[\]]+?)     # base name (non-greedy)
+            \s\((?P<idx>\d+)\)      # (index)
+            (?:\s\[(?P<tag>[^\]]+)\])? # optional [unit]
+        $""",
+        re.VERBOSE,
+    )
+
+    # Regex for simple parameter names: "name [unit]"
+    _SIMPLE_RE = re.compile(
+        r"""^
+            (?P<base>[^\[\]]+?)     # base name (non-greedy)
+            (?:\s\[(?P<tag>[^\]]+)\])? # optional [unit]
+        $""",
+        re.VERBOSE,
+    )
+
+    @classmethod
+    def parse_units(cls, name: str) -> str | None:
         """
-        Loads a ParameterValues object from a JSON file or a dictionary.
+        Extract units from a parameter name.
+
+        Example
+        -------
+        >>> ParameterNameParser.parse_units("Temperature [K]")
+        'K'
+        """
+        match = cls._SIMPLE_RE.match(name)
+        return match["tag"] if match else None
+
+    @classmethod
+    def split(cls, name: str) -> tuple[str, str | None]:
+        """
+        Split a parameter name into (base, units).
 
         Parameters
         ----------
-        filename_or_dict : string-like or dict
-            The filename to load the JSON file from, or a dictionary.
+        name : str
+            Parameter name like "Temperature [K]".
 
         Returns
         -------
-        ParameterValues
-            The ParameterValues object
+        tuple[str, str | None]
+            (base_name, units) where units may be None.
+
+        Raises
+        ------
+        ValueError
+            If the name doesn't match the expected grammar.
+
+        Example
+        -------
+        >>> ParameterNameParser.split("Temperature [K]")
+        ('Temperature', 'K')
         """
-        if isinstance(filename_or_dict, str | Path):
-            with open(filename_or_dict) as f:
-                parameter_values_dict = json.load(f)
-        elif isinstance(filename_or_dict, dict):
-            parameter_values_dict = filename_or_dict.copy()
-        else:
-            raise TypeError("Input must be a filename (str or pathlib.Path) or a dict")
+        match = cls._SIMPLE_RE.match(name)
+        if not match:
+            raise ValueError(f"Illegal parameter name {name!r}")
+        return match["base"].rstrip(), match["tag"]
 
-        for key, value in parameter_values_dict.items():
-            if isinstance(value, dict):
-                parameter_values_dict[key] = convert_symbol_from_json(value)
-
-        return ParameterValues(parameter_values_dict)
-
-    def to_json(self, filename=None):
+    @classmethod
+    def combine(cls, base: str, idx: int, units: str | None = None) -> str:
         """
-        Converts the parameter values to a JSON-serializable dictionary and optionally
-        saves it to a file.
+        Combine base name, index, and optional units into a parameter name.
 
         Parameters
         ----------
-        filename : str, optional
-            The filename to save the JSON file to. If not provided, the dictionary is
-            not saved.
+        base : str
+            Base parameter name.
+        idx : int
+            Index (must be >= 0).
+        units : str, optional
+            Units to append.
 
         Returns
         -------
-        dict
-            The JSON-serializable dictionary
+        str
+            Combined name like "base (idx) [units]".
+
+        Example
+        -------
+        >>> ParameterNameParser.combine("a", 0, "V")
+        'a (0) [V]'
         """
-        return convert_parameter_values_to_json(self, filename)
+        if idx < 0:
+            raise ValueError("idx must be ≥ 0")
+        result = f"{base} ({idx})"
+        if units:
+            result += f" [{units}]"
+        return result
+
+    @classmethod
+    def add_units(cls, base: str, units: str | None) -> str:
+        """
+        Add units to a base name.
+
+        Example
+        -------
+        >>> ParameterNameParser.add_units("Temperature", "K")
+        'Temperature [K]'
+        """
+        if units:
+            return f"{base} [{units}]"
+        return base
+
+    @classmethod
+    def parse_indexed(cls, name: str) -> tuple[str, int, str | None] | None:
+        """
+        Parse an indexed parameter name.
+
+        Parameters
+        ----------
+        name : str
+            Parameter name like "param (0) [unit]".
+
+        Returns
+        -------
+        tuple[str, int, str | None] | None
+            (base, index, units) or None if not an indexed name.
+
+        Example
+        -------
+        >>> ParameterNameParser.parse_indexed("a (1) [V]")
+        ('a', 1, 'V')
+        >>> ParameterNameParser.parse_indexed("not indexed")  # Returns None
+        """
+        match = cls._INDEXED_RE.match(name)
+        if not match:
+            return None
+        return match["base"], int(match["idx"]), match["tag"]
 
 
-_SCALAR_KEY_RE = re.compile(
-    r""" ^
-         (?P<base>[^\[\]]+?)           # foo
-         \s\((?P<idx>\d+)\)            # (0)
-         (?: \s\[(?P<tag>[^\]]+)\])?   # optional [unit]
-         $ """,
-    re.VERBOSE,
-)
-
-
-def convert_symbols_in_dict(
-    data_dict: dict | None = None,
-) -> dict:
-    """Recursively converts nested dicts using convert_symbol_from_json."""
-    # Create parameter values
-    if data_dict:
-        for key, value in data_dict.items():
-            if isinstance(value, dict) and "interpolator" in value:
-                # handle interpolant
-                interpolator = value.get("interpolator", "linear")
-                x = value.get("x", [])
-                y = value.get("y", [])
-
-                # Convert list to pybamm.Interpolant
-                def interpolant_function(sto, x=x, y=y, interpolator=interpolator):
-                    try:
-                        return pybamm.Interpolant(x, y, sto, interpolator=interpolator)
-                    except Exception as e:
-                        print(e)
-                        return pybamm.Scalar(0)
-
-                data_dict[key] = interpolant_function
-            elif isinstance(value, dict):
-                # Handle function parameters in JSON format
-                # Recursively process nested dictionaries
-                data_dict[key] = convert_symbol_from_json(value)
-            elif isinstance(value, list):
-                data_dict[key] = [
-                    convert_symbol_from_json(item) if isinstance(item, dict) else item
-                    for item in value
-                ]
-            elif isinstance(value, str):
-                # Handle function parameters in string format
-                data_dict[key] = float(value)
-            # Keep other types as is
-    else:
-        # Return an empty dict if input is None
-        data_dict = {}
-
-    return data_dict
-
-
-class _KeyMatch:
-    """
-    Match a parameter name against the key grammar.
-    """
-
-    __slots__ = ["base", "idx", "is_match", "name", "tag"]
-
-    def __init__(self, name: str):
-        if not isinstance(name, str):
-            raise ValueError("name must be a string")
-        self.name = name
-
-        match = _SCALAR_KEY_RE.match(name)
-        self.is_match = bool(match)
-
-        if match:
-            base = match["base"]
-            idx = int(match["idx"])
-            tag = match["tag"]
-        else:
-            base = ""
-            idx = -1
-            tag = ""
-
-        self.base = base
-        self.idx = idx
-        self.tag = tag
-
-    def __bool__(self):
-        return self.is_match
-
-
+# Dictionary Transformation Utilities
 def scalarize_dict(
     params: dict[str, Any], ignored_keys: list[str] | None = None
 ) -> dict[str, Any]:
     """
     Expand list-valued items into scalar keys while preserving tags.
-    Example
-    -------
-    {'a [V]': [1, 2]}  →  {'a (0) [V]': 1, 'a (1) [V]': 2}
+
+    This is useful for serialization where lists need to be flattened.
 
     Parameters
     ----------
     params : dict[str, Any]
-        The dictionary to scalarize
+        The dictionary to scalarize.
     ignored_keys : list[str], optional
-        The keys to ignore. Defaults to ``["citations"]``.
+        Keys to skip (not expand). Defaults to ["citations"].
 
     Returns
     -------
     dict[str, Any]
-        The scalarized dictionary
+        The scalarized dictionary.
+
+    Examples
+    --------
+    >>> scalarize_dict({'a [V]': [1, 2]})
+    {'a (0) [V]': 1, 'a (1) [V]': 2}
     """
     out = {}
-
-    # Default ignored keys. Special case for citations in `pybamm.ParameterValues`
-    if ignored_keys is None:
-        ignored_keys = ["citations"]
+    ignored_keys = ignored_keys or ["citations"]
 
     for key, val in params.items():
         if key not in ignored_keys and isinstance(val, list):
-            base, tag = _split_key(key)  # accepts 'a' or 'a [V]'
+            base, units = ParameterNameParser.split(key)
             for i, item in enumerate(val):
-                key_i = _combine_name(base, i, tag)
-                if key_i in out:
-                    raise ValueError(f"Duplicate key {key_i!r}")
-                out[key_i] = item
+                indexed_key = ParameterNameParser.combine(base, i, units)
+                if indexed_key in out:
+                    raise ValueError(f"Duplicate key {indexed_key!r}")
+                out[indexed_key] = item
         else:
             if key in out:
                 raise ValueError(f"Duplicate key {key!r}")
@@ -1310,146 +1354,173 @@ def scalarize_dict(
     return out
 
 
-def _is_iterable(val: Any) -> bool:
-    return hasattr(val, "__iter__") and not isinstance(val, (str | dict | bytes))
-
-
-_KEY_RE = re.compile(
-    r""" ^
-         (?P<base>[^\[\]]+?)           # foo
-         (?: \s\[(?P<tag>[^\]]+)\])?   # optional [unit]   (for collapsed keys)
-         $ """,
-    re.VERBOSE,
-)
-
-
-def _split_key(name: str) -> tuple[str, str | None]:
+def arrayize_dict(scalar_dict: dict[str, Any]) -> dict[str, Any]:
     """
-    Separate *name* into ``(base, tag)`` where *tag* can be ``None``.
-    Works for either collapsed or scalar keys.
-    """
-    m = _KEY_RE.match(name)
-    if not m:
-        raise ValueError(f"Illegal parameter name {name!r}")
-    return m["base"].rstrip(), m["tag"]
+    Collapse indexed scalar keys back into lists.
 
-
-def _combine_name(base: str, idx: int, tag: str | None = None) -> str:
-    """Return ``'base (idx)'`` or ``'base (idx) [tag]'``."""
-    if idx < 0:
-        raise ValueError("idx must be ≥ 0")
-    out = f"{base} ({idx})"
-    return _add_units(out, tag)
-
-
-def _add_units(base: str, tag: str | None) -> str:
-    """Return ``'base'`` or ``'base [tag]'``."""
-    out = f"{base}"
-    if tag:
-        out += f" [{tag}]"
-    return out
-
-
-def arrayize_dict(
-    scalar_dict: dict[str, Any],
-) -> dict[str, Any]:
-    """
-    Collapse scalar keys back into lists.  Tags are kept with the base name
-    (``'a [V]'``).  A sequence is collapsed only if indices 0…N are all present.
+    This is the inverse of scalarize_dict. A sequence is collapsed
+    only if indices 0…N are all present.
 
     Parameters
     ----------
     scalar_dict : dict[str, Any]
-        The dictionary to arrayize
+        The dictionary with indexed keys.
 
     Returns
     -------
     dict[str, Any]
-        The arrayized dictionary
+        The arrayized dictionary.
+
+    Examples
+    --------
+    >>> arrayize_dict({'a (0) [V]': 1, 'a (1) [V]': 2})
+    {'a [V]': [1, 2]}
     """
     out = {}
     processed = set()
 
-    # discover (base, tag) pairs that appear scalarised
+    # Discover (base, tag) pairs that appear indexed
     pairs = set()
-    for k in scalar_dict:
-        match = _KeyMatch(k)
-        if match:
-            pairs.add((match.base, match.tag))
+    for key in scalar_dict:
+        parsed = ParameterNameParser.parse_indexed(key)
+        if parsed:
+            base, _, units = parsed
+            pairs.add((base, units))
 
-    # rebuild each pair
-    for base, tag in pairs:
+    # Rebuild each pair
+    for base, units in pairs:
         idx_val = {}
         own_keys = []
 
-        for k, v in scalar_dict.items():
-            match = _KeyMatch(k)
-            if match and match.base == base and match.tag == tag:
-                if match.idx in idx_val:
-                    raise ValueError(f"Duplicate index {match.idx} for '{base}'")
-                idx_val[match.idx] = v
-                own_keys.append(k)
+        for key, val in scalar_dict.items():
+            parsed = ParameterNameParser.parse_indexed(key)
+            if parsed and parsed[0] == base and parsed[2] == units:
+                idx = parsed[1]
+                if idx in idx_val:
+                    raise ValueError(f"Duplicate index {idx} for '{base}'")
+                idx_val[idx] = val
+                own_keys.append(key)
 
         if not idx_val:
             raise ValueError(
                 f"No indices found for '{base}'. "
-                "It should not be possible to reach here. Please report this bug."
+                "This should not happen. Please report this bug."
             )
 
         indices = set(idx_val)
-        if not _contiguous_and_ordered_indices(indices):
+        if not _is_contiguous(indices):
             missing = sorted(set(range(max(indices) + 1)) - indices)
             raise ValueError(f"Missing indices {missing} for '{base}'")
 
-        collapsed_key = _add_units(base, tag)
+        collapsed_key = ParameterNameParser.add_units(base, units)
         if collapsed_key in out:
             raise ValueError(f"Duplicate key after rebuild: {collapsed_key!r}")
 
         out[collapsed_key] = [idx_val[i] for i in range(max(idx_val) + 1)]
         processed.update(own_keys)
 
-    # copy untouched scalars
-    for k, v in scalar_dict.items():
-        if k not in processed:
-            if k in out:
-                raise ValueError(f"Duplicate key: {k!r}")
-            out[k] = v
+    # Copy non-indexed entries
+    for key, val in scalar_dict.items():
+        if key not in processed:
+            if key in out:
+                raise ValueError(f"Duplicate key: {key!r}")
+            out[key] = val
 
     return out
 
 
-def _contiguous_and_ordered_indices(indices: set[int]) -> bool:
-    """
-    Check if a set of indices forms a contiguous sequence starting from 0
-    to max(indices).
-
-    Parameters
-    ----------
-    indices : set[int]
-        Set of integer indices to check for contiguity
-
-    Returns
-    -------
-    bool
-        True if indices form the sequence {0, 1, 2, ..., max(indices)},
-        False otherwise. Returns False for empty sets.
-    """
+def _is_contiguous(indices: set[int]) -> bool:
+    """Check if indices form a contiguous sequence starting from 0."""
     return bool(indices) and indices == set(range(max(indices) + 1))
 
 
-def convert_parameter_values_to_json(parameter_values, filename=None):
+def _is_iterable(val: Any) -> bool:
+    """Check if a value is iterable (but not string, dict, or bytes)."""
+    return hasattr(val, "__iter__") and not isinstance(val, (str, dict, bytes))
+
+
+# JSON Conversion Utilities
+def convert_symbols_in_dict(data_dict: dict | None = None) -> dict:
     """
-    Converts a ParameterValues object to a JSON-serializable dictionary and optionally
-    saves it to a file.
+    Recursively convert nested dicts using convert_symbol_from_json.
+
+    Parameters
+    ----------
+    data_dict : dict, optional
+        Dictionary to process. Returns empty dict if None.
+
+    Returns
+    -------
+    dict
+        Dictionary with symbols converted.
+
+    Examples
+    --------
+    >>> # Simple conversion
+    >>> data = {"Temperature [K]": "298.15", "Voltage [V]": 3.7}
+    >>> converted = convert_symbols_in_dict(data)
+    >>> converted["Temperature [K]"]
+    298.15
+    """
+    if not data_dict:
+        return {}
+
+    for key, value in data_dict.items():
+        if isinstance(value, dict) and "interpolator" in value:
+            # Handle interpolant specification
+            interpolator = value.get("interpolator", "linear")
+            x = value.get("x", [])
+            y = value.get("y", [])
+
+            def interpolant_function(sto, x=x, y=y, interpolator=interpolator):
+                try:
+                    return pybamm.Interpolant(x, y, sto, interpolator=interpolator)
+                except Exception as e:
+                    print(e)
+                    return pybamm.Scalar(0)
+
+            data_dict[key] = interpolant_function
+        elif isinstance(value, dict):
+            data_dict[key] = convert_symbol_from_json(value)
+        elif isinstance(value, list):
+            data_dict[key] = [
+                convert_symbol_from_json(item) if isinstance(item, dict) else item
+                for item in value
+            ]
+        elif isinstance(value, str):
+            data_dict[key] = float(value)
+
+    return data_dict
+
+
+def convert_parameter_values_to_json(
+    parameter_values: ParameterValues, filename: str | None = None
+) -> dict:
+    """
+    Convert a ParameterValues object to a JSON-serializable dictionary.
+
+    Optionally saves it to a file.
 
     Parameters
     ----------
     parameter_values : ParameterValues
-        The ParameterValues object to convert
-
+        The ParameterValues object to convert.
     filename : str, optional
-        The filename to save the JSON file to. If not provided, the dictionary is
-        not saved.
+        The filename to save the JSON file to.
+
+    Returns
+    -------
+    dict
+        The JSON-serializable dictionary.
+
+    Examples
+    --------
+    >>> param = pybamm.ParameterValues({"Temperature [K]": 298.15})
+    >>> json_dict = convert_parameter_values_to_json(param)
+    >>> isinstance(json_dict, dict)
+    True
+    >>> convert_parameter_values_to_json(param, "params.json")
+    {'Temperature [K]': 298.15}
     """
     parameter_values_dict = {}
 

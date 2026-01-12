@@ -15,6 +15,7 @@ The notebooks are organised into subfolders, and can be viewed in the galleries 
     notebooks/getting_started/tutorial-2-compare-models.ipynb
     notebooks/getting_started/tutorial-3-basic-plotting.ipynb
     notebooks/getting_started/tutorial-4-setting-parameter-values.ipynb
+    notebooks/getting_started/tutorial-4b-parameter-introspection.ipynb
     notebooks/getting_started/tutorial-5-run-experiments.ipynb
     notebooks/getting_started/tutorial-6-managing-simulation-outputs.ipynb
     notebooks/getting_started/tutorial-7-model-options.ipynb
