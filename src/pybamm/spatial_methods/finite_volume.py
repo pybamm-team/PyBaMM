@@ -863,7 +863,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         if rbc_type == "Dirichlet":
             rbc_sub_matrix = coo_matrix(
-                ([1], ([n + n_bcs - 1], [0])), shape=(n + n_bcs, 1)
+                ([1.0], ([n + n_bcs - 1], [0])), shape=(n + n_bcs, 1)
             )
             rbc_matrix = csr_matrix(
                 kron(eye(second_dim_repeats, dtype=np.float64), rbc_sub_matrix)
@@ -979,7 +979,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             )
         if rbc_type == "Neumann" and rbc_value != 0:
             rbc_sub_matrix = coo_matrix(
-                ([1], ([n + n_bcs - 1], [0])), shape=(n + n_bcs, 1)
+                ([1.0], ([n + n_bcs - 1], [0])), shape=(n + n_bcs, 1)
             )
             rbc_matrix = csr_matrix(
                 kron(eye(second_dim_repeats, dtype=np.float64), rbc_sub_matrix)
@@ -1648,7 +1648,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                 # Matrix to extract the node values running from the first node
                 # to the penultimate node in the primary dimension (D_1 in the
                 # definiton of the harmonic mean)
-                sub_matrix_D1 = hstack([eye(n - 1), csr_matrix((n - 1, 1))])
+                sub_matrix_D1 = hstack([eye(n - 1, dtype=np.float64), csr_matrix((n - 1, 1))])
                 matrix_D1 = csr_matrix(
                     kron(eye(second_dim_repeats, dtype=np.float64), sub_matrix_D1)
                 )
@@ -1657,7 +1657,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                 # Matrix to extract the node values running from the second node
                 # to the final node in the primary dimension  (D_2 in the
                 # definiton of the harmonic mean)
-                sub_matrix_D2 = hstack([csr_matrix((n - 1, 1)), eye(n - 1)])
+                sub_matrix_D2 = hstack([csr_matrix((n - 1, 1)), eye(n - 1, dtype=np.float64)])
                 matrix_D2 = csr_matrix(
                     kron(eye(second_dim_repeats, dtype=np.float64), sub_matrix_D2)
                 )

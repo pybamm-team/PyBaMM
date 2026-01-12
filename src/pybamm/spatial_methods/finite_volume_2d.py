@@ -662,7 +662,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         if rbc_type == "Dirichlet":
             # Create matrix to extract the leftmost column of values
             rbc_sub_matrix = coo_matrix(
-                ([1], ([n_lr + n_bcs - 1], [0])), shape=(n_lr + n_bcs, 1)
+                ([1.0], ([n_lr + n_bcs - 1], [0])), shape=(n_lr + n_bcs, 1)
             )
             rbc_matrix = csr_matrix(
                 kron(eye(second_dim_repeats, dtype=np.float64), rbc_sub_matrix)
@@ -946,7 +946,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
 
         if rbc_type == "Neumann" and rbc_value != 0:
             rbc_sub_matrix = coo_matrix(
-                ([1], ([n_lr + n_bcs - 2], [0])), shape=(n_lr - 1 + n_bcs, 1)
+                ([1.0], ([n_lr + n_bcs - 2], [0])), shape=(n_lr - 1 + n_bcs, 1)
             )
             rbc_matrix = csr_matrix(
                 kron(eye(second_dim_repeats, dtype=np.float64), rbc_sub_matrix)
