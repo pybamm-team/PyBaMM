@@ -42,9 +42,18 @@ class TestDiffSLExport:
             pv_inputs[input] = pv[input]
             ds_inputs.append(pv[input])
             pv[input] = "[input]"
+        output_variable = "Terminal voltage [V]"
+        output_variable = "X-averaged negative particle concentration [mol.m-3]"
+        output_variable = "X-averaged positive particle concentration [mol.m-3]"
+        output_variable = "Porosity times concentration [mol.m-3]"
+        output_variable = "Terminal voltage [V]"
         t0 = time.perf_counter()
+        solver = pybamm.IDAKLUSolver()
         sim = pybamm.Simulation(
-            model=model, parameter_values=pv, output_variables=["Terminal voltage [V"]
+            model=model,
+            parameter_values=pv,
+            output_variables=[output_variable],
+            solver=solver,
         )
         sim.build()
         print(
@@ -52,39 +61,62 @@ class TestDiffSLExport:
         )
         t0 = time.perf_counter()
         diffsl_code = pybamm.DiffSLExport(model).to_diffeq(
-            inputs=inputs, outputs=["Terminal voltage [V]"]
+            inputs=inputs, outputs=[output_variable]
         )
         print(f"DiffSL export time: {time.perf_counter() - t0:.5f} seconds")
-        # write code to file
-        with open("diffsl_code.diffeq", "w") as f:
-            f.write(diffsl_code)
+
         t0 = time.perf_counter()
         ode = ds.Ode(
             diffsl_code,
-            matrix_type=ds.faer_sparse_f64,
+            matrix_type=ds.faer_sparse,
+            scalar_type=ds.f64,
             linear_solver=ds.lu,
-            method=ds.bdf,
+            method=ds.tr_bdf2,
         )
         print(f"DiffSL Ode compilation time: {time.perf_counter() - t0:.5f} seconds")
+        ode.rtol = 1e-4
+        ode.atol = 1e-6
         if isinstance(model, pybamm.lithium_ion.DFN):
-            ode.ic_armijo_constant = 1e-1
+            ode.ic_options.armijo_constant = 1e-1
 
-        t_eval = [0, 3600]
+        t_eval = [0, 2600]
         t_interp = np.linspace(t_eval[0], t_eval[1], 10)
 
-        voltage_pybamm = sim.solve(t_eval, t_interp=t_interp, inputs=pv_inputs)[
-            "Terminal voltage [V]"
-        ].data
+        soln_pybamm = sim.solve(t_eval, t_interp=t_interp, inputs=pv_inputs).y
+
+        with open("pybamm_code.txt", "w") as f:
+            for key, value in sim.built_model.rhs.items():
+                f.write(f"{key.name}: {value}\n")
         t0 = time.perf_counter()
         voltage_pybamm = sim.solve(t_eval, t_interp=t_interp, inputs=pv_inputs)[
-            "Terminal voltage [V]"
+            output_variable
         ].data
         print(f"Pybamm solve time: {time.perf_counter() - t0:.5f} seconds")
+
+        n = sim.built_model.y0.shape[0]
+        v = np.ones(n)
+        for i in range(soln_pybamm.shape[1]):
+            y = soln_pybamm[:, i]
+            pybamm_jac = sim.built_model.jac_rhs_algebraic_action_eval(
+                0, y, np.array(ds_inputs), v
+            )
+            pybamm_dydt = sim.built_model.rhs_algebraic_eval(0, y, np.array(ds_inputs))
+            diffsol_dydt = ode.rhs(np.array(ds_inputs), 0, y.flatten())
+            diffsol_jac = ode.rhs_jac_mul(np.array(ds_inputs), 0, y.flatten(), v)
+            np.testing.assert_allclose(
+                pybamm_dydt.full().flatten(), diffsol_dydt, rtol=1e-5, atol=1e-8
+            )
+            np.testing.assert_allclose(
+                pybamm_jac.full().flatten(), diffsol_jac, rtol=1e-5, atol=1e-8
+            )
+
+        ds_inputs = np.array(ds_inputs)
         t0 = time.perf_counter()
         voltage_diffsol = ode.solve_dense(np.array(ds_inputs), t_interp)
         print(f"DiffSL solve time: {time.perf_counter() - t0:.5f} seconds")
-
-        np.testing.assert_allclose(voltage_pybamm, voltage_diffsol.flatten(), rtol=1e-5)
+        if voltage_diffsol.shape[0] == 1:
+            voltage_diffsol = voltage_diffsol.flatten()
+        np.testing.assert_allclose(voltage_pybamm, voltage_diffsol, rtol=1e-5)
 
     def test_ode(self):
         model = pybamm.BaseModel()

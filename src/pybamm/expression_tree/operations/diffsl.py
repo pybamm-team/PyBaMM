@@ -125,11 +125,11 @@ class DiffSLExport:
         for i in range(1, vector.size):
             if vector[i] != curr_value:
                 end_index = i
-                lines += [f"  ({start_index}:{end_index}): {curr_value},"]
+                lines += [f"  ({start_index}:{end_index}): {curr_value:.20f},"]
                 start_index = i
                 curr_value = vector[i]
         end_index = vector.size
-        lines += [f"  ({start_index}:{end_index}): {curr_value},"]
+        lines += [f"  ({start_index}:{end_index}): {curr_value:.20f},"]
         new_line = "\n"
         return tensor_name, new_line.join(lines) + new_line + "}"
 
@@ -162,14 +162,16 @@ class DiffSLExport:
                     f"  (0..{min_dim - 1},0..{min_dim - 1}): {symbol.entries.data[0]},"
                 ]
             elif is_row_vector and is_constant and symbol.entries.nnz == ncols:
-                lines += [f"  (0,0:{ncols}): {symbol.entries.data[0]},"]
+                lines += [f"  (0,0:{ncols}): {symbol.entries.data[0]:.20f},"]
             else:
                 for rowi in range(nrows):
-                    for j in range(
-                        symbol.entries.indptr[rowi], symbol.entries.indptr[rowi + 1]
+                    for j in reversed(
+                        range(
+                            symbol.entries.indptr[rowi], symbol.entries.indptr[rowi + 1]
+                        )
                     ):
                         colj = symbol.entries.indices[j]
-                        lines += [f"  ({rowi},{colj}): {symbol.entries.data[j]},"]
+                        lines += [f"  ({rowi},{colj}): {symbol.entries.data[j]:.20f},"]
 
                 if max_colj < ncols - 1 or max_rowi < nrows - 1:
                     # add a zero entry to the end to make sure the matrix is the right size
@@ -186,15 +188,19 @@ class DiffSLExport:
                     value = symbol.entries[0, coli]
                     if value != curr_value:
                         end_index = coli
-                        lines += [f"  (0, {start_index}:{end_index}): {curr_value},"]
+                        lines += [
+                            f"  (0, {start_index}:{end_index}): {curr_value:.20f},"
+                        ]
                         start_index = coli
                         curr_value = value
                 end_index = ncols
-                lines += [f"  (0, {start_index}:{end_index}): {curr_value},"]
+                lines += [f"  (0, {start_index}:{end_index}): {curr_value:.20f},"]
             else:
                 for rowi in range(nrows):
                     for colj in range(ncols):
-                        lines += [f"  ({rowi},{colj}): {symbol.entries[rowi, colj]},"]
+                        lines += [
+                            f"  ({rowi},{colj}): {symbol.entries[rowi, colj]:.20f},"
+                        ]
         else:
             raise TypeError(f"{type(symbol.entries)} not implemented")
         new_line = "\n"
@@ -228,7 +234,6 @@ class DiffSLExport:
                 )
                 if has_scalar:
                     continue
-                print("extracting binary operator:", symbol, symbol_counts[symbol])
                 tensor_name = DiffSLExport._name_tensor(
                     symbol, tensor_index, is_variable, is_event
                 )
@@ -328,10 +333,11 @@ class DiffSLExport:
         new_line = "\n"
 
         # inputs
-        for inpt in inputs:
-            lines = [f"{to_variable_name(inpt)} " + "{"]
-            lines += ["  1"]
-            diffeq[to_variable_name(inpt)] = new_line.join(lines) + new_line + "}"
+        if len(inputs) > 0:
+            lines = ["in_i {"]
+            for inpt in inputs:
+                lines += [f"  {to_variable_name(inpt)} = 1,"]
+            diffeq["in"] = new_line.join(lines) + new_line + "}"
 
         # extract constant vectors and matrices from model as tensors
         symbol_to_tensor_name = {}
@@ -481,7 +487,6 @@ class DiffSLExport:
             diffeq["M"] = new_line.join(lines) + new_line + "}"
 
         # F
-        print("adding F:")
         lines = ["F_i {"]
         for rhs in model.rhs.values():
             eqn = equation_to_diffeq(rhs, y_slice_to_label, symbol_to_tensor_name)
@@ -508,7 +513,6 @@ class DiffSLExport:
         if has_events:
             lines = ["stop_i {"]
             for event in model.events:
-                print(event)
                 if event.event_type == pybamm.EventType.TERMINATION:
                     eqn = equation_to_diffeq(
                         event.expression,
@@ -518,7 +522,7 @@ class DiffSLExport:
                     lines += [f"  {eqn},"]
             diffeq["stop"] = new_line.join(lines) + new_line + "}"
 
-        all_lines = [f"in = [{', '.join([to_variable_name(p) for p in inputs])}]"]
+        all_lines = []
 
         if is_ode:
             state_tensors = ["u"]
@@ -533,8 +537,8 @@ class DiffSLExport:
         out = ["out"]
 
         # inputs and constants
-        for inpt in inputs:
-            all_lines += [diffeq[to_variable_name(inpt)]]
+        if "in" in diffeq:
+            all_lines = [diffeq["in"]]
         for key in diffeq.keys():
             if key.startswith("constant"):
                 all_lines += [diffeq[key]]
