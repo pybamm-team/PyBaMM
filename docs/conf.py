@@ -27,7 +27,7 @@ sys.path.append(os.path.abspath("./sphinxext/"))
 # -- Project information -----------------------------------------------------
 
 project = "PyBaMM"
-copyright = "2018-2025, The PyBaMM Team"
+copyright = "2018, The PyBaMM Team"
 author = "The PyBaMM Team"
 
 # The short X.Y version
@@ -161,8 +161,8 @@ html_theme_options = {
         "plausible_analytics_domain": "docs.pybamm.org",
         "plausible_analytics_url": "https://plausible.io/js/script.js",
     },
-    "pygment_light_style": "xcode",
-    "pygment_dark_style": "monokai",
+    "pygments_light_style": "xcode",
+    "pygments_dark_style": "monokai",
     "footer_start": [
         "copyright",
         "sphinx-version",

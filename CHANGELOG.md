@@ -2,6 +2,11 @@
 
 ## Features
 
+- Added support for asymmetric loss of active material. ([#5343](https://github.com/pybamm-team/PyBaMM/pull/5343))
+- Restructures `ParameterValues`. Adds deprecation notice on `update`'s `check_already_exists` argument. ([#5339](https://github.com/pybamm-team/PyBaMM/pull/5339))
+- Added `Solution.yp` property to return the time derivatives of the solution. ([#5341](https://github.com/pybamm-team/PyBaMM/pull/5341))
+- Added `TensorField` for rank-1 and rank-2 tensors, `TensorProduct` for outer products, and tensor divergence support in 2D finite volume. `VectorField` now inherits from `TensorField`. ([#5335](https://github.com/pybamm-team/PyBaMM/pull/5335))
+- Added support for Python 3.13. ([#5330](https://github.com/pybamm-team/PyBaMM/pull/5330))
 - Reduced the time to build `Simulation`s by creating a post-processing step for variables. ([#5308](https://github.com/pybamm-team/PyBaMM/pull/5308))
 - Adds the ability to observe custom variables from a `Solution` object using `Solution.observe(symbol)`. ([#5308](https://github.com/pybamm-team/PyBaMM/pull/5308))
 - Added inverse kinetics for linear kinetics. ([#5303](https://github.com/pybamm-team/PyBaMM/pull/5303))
@@ -9,9 +14,13 @@
 
 ## Bug fixes
 
+- Fixed a bug where `fixed_input_parameters` ignored `InputParameter` values within expressions in `ParameterValues`. ([#5321](https://github.com/pybamm-team/PyBaMM/pull/5321))
 - Fixed a bug with domain shape evaluation. ([#5316](https://github.com/pybamm-team/PyBaMM/pull/5316))
 - Fixed a bug where `IDAKLUSolver` errors were not raised correctly. ([#5291](https://github.com/pybamm-team/PyBaMM/pull/5291))
 - Fixed a bug in 2D concatenatations for quantities that vary in the `tb` direction ([#5310](https://github.com/pybamm-team/PyBaMM/pull/5310))
+
+# Breaking changes
+- Removes default constants added to  `ParameterValues` on construction. **Only breaking if you rely on this functionality in custom models, parameters, etc.** ([#5336](https://github.com/pybamm-team/PyBaMM/pull/5336))
 
 # [v25.10.2](https://github.com/pybamm-team/PyBaMM/tree/v25.10.2) - 2025-11-27
 
@@ -48,6 +57,7 @@
 
 ## Bug fixes
 
+- Fixes `KeyError: 'min'` in `latexify()` for lithium plating models when certain geometry keys are missing. ([#5245](https://github.com/pybamm-team/PyBaMM/pull/5245))
 - Set `zip(..., strict=True)` in solver and expression tree files to ensure iterable length safety. ([#5241](https://github.com/pybamm-team/PyBaMM/pull/5241))
 - Adds `options` property to IDAKLU, fixes pickling issue with `__getstate__` when keys are not available. ([#5234](https://github.com/pybamm-team/PyBaMM/pull/5234))
 - Fixed a bug where simulations using output variables in `IDAKLUSolver` couldn't be pickled ([#5225](https://github.com/pybamm-team/PyBaMM/pull/5225))

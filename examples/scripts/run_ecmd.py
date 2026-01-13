@@ -5,9 +5,7 @@ pybamm.set_logging_level("INFO")
 model = pybamm.equivalent_circuit.Thevenin(options={"diffusion element": "true"})
 parameter_values = model.default_parameter_values
 
-parameter_values.update(
-    {"Diffusion time constant [s]": 580}, check_already_exists=False
-)
+parameter_values.update({"Diffusion time constant [s]": 580})
 
 experiment = pybamm.Experiment(
     [

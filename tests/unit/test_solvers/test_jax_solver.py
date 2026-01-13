@@ -139,7 +139,7 @@ class TestJaxSolver:
             model.convert_to_format = convert_to_format
 
             solver = pybamm.JaxSolver()
-            with pytest.raises(RuntimeError, match="must be converted to JAX"):
+            with pytest.raises(RuntimeError, match=r"must be converted to JAX"):
                 solver.solve(model, t_eval)
 
     def test_solver_doesnt_support_events(self):
@@ -166,7 +166,7 @@ class TestJaxSolver:
         # Solve
         solver = pybamm.JaxSolver()
         t_eval = np.linspace(0, 10, 100)
-        with pytest.raises(RuntimeError, match="Terminate events not supported"):
+        with pytest.raises(RuntimeError, match=r"Terminate events not supported"):
             solver.solve(model, t_eval)
 
     def test_model_solver_with_inputs(self):
@@ -225,7 +225,7 @@ class TestJaxSolver:
         solver = pybamm.JaxSolver(rtol=1e-8, atol=1e-8)
         t_eval = np.linspace(0, 5, 80)
 
-        with pytest.raises(RuntimeError, match="Model is not set up for solving"):
+        with pytest.raises(RuntimeError, match=r"Model is not set up for solving"):
             solver.get_solve(model, t_eval)
 
         solver.solve(model, t_eval, inputs={"rate": 0.1})

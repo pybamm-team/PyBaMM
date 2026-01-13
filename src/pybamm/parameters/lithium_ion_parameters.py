@@ -42,10 +42,10 @@ class LithiumIonParameters(BaseParameters):
     def _set_parameters(self):
         """Defines the dimensional parameters"""
         # Physical constants
-        self.R = pybamm.Parameter("Ideal gas constant [J.K-1.mol-1]")
-        self.F = pybamm.Parameter("Faraday constant [C.mol-1]")
-        self.k_b = pybamm.Parameter("Boltzmann constant [J.K-1]")
-        self.q_e = pybamm.Parameter("Elementary charge [C]")
+        self.R = pybamm.constants.R
+        self.F = pybamm.constants.F
+        self.k_b = pybamm.constants.k_b
+        self.q_e = pybamm.constants.q_e
 
         # Thermal parameters
         self.T_ref = self.therm.T_ref
@@ -522,9 +522,6 @@ class ParticleLithiumIonParameters(BaseParameters):
         self.m_LAM = pybamm.Parameter(
             f"{pref}{Domain} electrode LAM constant exponential term"
         )
-        self.beta_LAM = pybamm.Parameter(
-            f"{pref}{Domain} electrode LAM constant proportional term [s-1]"
-        )
         self.stress_critical = pybamm.Parameter(
             f"{pref}{Domain} electrode critical stress [Pa]"
         )
@@ -854,7 +851,7 @@ class ParticleLithiumIonParameters(BaseParameters):
 
     def Omega(self, sto, T):
         """Dimensional partial molar volume of Li in solid solution [m3.mol-1]"""
-        domain, Domain = self.domain_Domain
+        _domain, Domain = self.domain_Domain
         inputs = {
             f"{self.phase_prefactor} particle stoichiometry": sto,
             "Temperature [K]": T,
@@ -866,11 +863,26 @@ class ParticleLithiumIonParameters(BaseParameters):
 
     def E(self, sto, T):
         """Dimensional Young's modulus"""
-        domain, Domain = self.domain_Domain
+        _domain, Domain = self.domain_Domain
         inputs = {
             f"{self.phase_prefactor} particle stoichiometry": sto,
             "Temperature [K]": T,
         }
         return pybamm.FunctionParameter(
             f"{self.phase_prefactor}{Domain} electrode Young's modulus [Pa]", inputs
+        )
+
+    def beta_LAM(self, T, direction=None):
+        """Dimensional LAM constant proportional term [s-1]"""
+        _domain, Domain = self.domain_Domain
+        if direction is None:
+            direction = ""
+        else:
+            direction = f" ({direction})"
+        inputs = {
+            "Temperature [K]": T,
+        }
+        return pybamm.FunctionParameter(
+            f"{self.phase_prefactor}{Domain} electrode LAM constant proportional term{direction} [s-1]",
+            inputs,
         )
