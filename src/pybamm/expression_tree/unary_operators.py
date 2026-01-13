@@ -1368,7 +1368,10 @@ class NodeToEdge2D(SpatialOperator):
         self.direction = direction
 
     def _evaluates_on_edges(self, dimension: str) -> bool:
-        """Returns the direction string for primary dimension."""
+        """
+        Return True to indicate that this symbol evaluates on edges in the
+        specified direction, regardless of the given dimension.
+        """
         return True
 
     def _unary_new_copy(self, child, perform_simplifications=True):
