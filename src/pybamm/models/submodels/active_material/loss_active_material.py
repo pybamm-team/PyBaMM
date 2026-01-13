@@ -94,7 +94,7 @@ class LossActiveMaterial(BaseModel):
             stress_h_surf_tensile = stress_h_surf * (stress_h_surf > 0)
 
             if "asymmetric stress" in lam_option:
-                pybamm.citations.register("Panalla2024")
+                pybamm.citations.register("Pannala2024")
                 # semi-empirical model for stress-driven LAM that includes both
                 # compressive and tensile stresses
                 beta_LAM_compressive = self.phase_param.beta_LAM(
