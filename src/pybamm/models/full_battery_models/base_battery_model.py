@@ -149,8 +149,9 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "false" (default) or "true".
             * "loss of active material" : str
                 Sets the model for loss of active material. Can be "none" (default),
-                "stress-driven", "reaction-driven", "current-driven", or
-                "stress and reaction-driven".
+                "stress-driven", "asymmetric stress-driven", "reaction-driven",
+                "current-driven", "stress and reaction-driven", or
+                "asymmetric stress and reaction-driven".
                 A 2-tuple can be provided for different behaviour in negative and
                 positive electrodes.
             * "number of MSMR reactions" : str
@@ -333,9 +334,11 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             "loss of active material": [
                 "none",
                 "stress-driven",
+                "asymmetric stress-driven",
                 "reaction-driven",
                 "current-driven",
                 "stress and reaction-driven",
+                "asymmetric stress and reaction-driven",
             ],
             "number of MSMR reactions": ["none"],
             "open-circuit potential": [
@@ -476,7 +479,15 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         if SEI_cracks_option == "true":
             default_options["particle mechanics"] = "swelling and cracking"
         elif SEI_cracks_option == ("true", "false"):
-            if "stress-driven" in LAM_opt or "stress and reaction-driven" in LAM_opt:
+            if any(
+                s in LAM_opt
+                for s in [
+                    "stress-driven",
+                    "stress and reaction-driven",
+                    "asymmetric stress-driven",
+                    "asymmetric stress and reaction-driven",
+                ]
+            ):
                 default_options["particle mechanics"] = (
                     "swelling and cracking",
                     "swelling only",
@@ -487,7 +498,15 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     "none",
                 )
         else:
-            if "stress-driven" in LAM_opt or "stress and reaction-driven" in LAM_opt:
+            if any(
+                s in LAM_opt
+                for s in [
+                    "stress-driven",
+                    "stress and reaction-driven",
+                    "asymmetric stress-driven",
+                    "asymmetric stress and reaction-driven",
+                ]
+            ):
                 default_options["particle mechanics"] = "swelling only"
             else:
                 default_options["particle mechanics"] = "none"

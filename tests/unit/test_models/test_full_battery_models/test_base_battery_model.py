@@ -34,7 +34,7 @@ PRINT_OPTIONS_OUTPUT = """\
 'interface utilisation': 'full' (possible: ['full', 'constant', 'current-driven'])
 'lithium plating': 'none' (possible: ['none', 'reversible', 'partially reversible', 'irreversible'])
 'lithium plating porosity change': 'false' (possible: ['false', 'true'])
-'loss of active material': 'stress-driven' (possible: ['none', 'stress-driven', 'reaction-driven', 'current-driven', 'stress and reaction-driven'])
+'loss of active material': 'stress-driven' (possible: ['none', 'stress-driven', 'asymmetric stress-driven', 'reaction-driven', 'current-driven', 'stress and reaction-driven', 'asymmetric stress and reaction-driven'])
 'number of MSMR reactions': 'none' (possible: ['none'])
 'open-circuit potential': 'single' (possible: ['single', 'current sigmoid', 'MSMR', 'one-state hysteresis', 'one-state differential capacity hysteresis'])
 'operating mode': 'current' (possible: ['current', 'voltage', 'power', 'differential power', 'explicit power', 'resistance', 'differential resistance', 'explicit resistance', 'CCCV'])
