@@ -2165,10 +2165,6 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         # using the harmonic mean if the left child is a gradient (i.e. this
         # binary operator represents a flux)
         elif left_evaluates_on_edges and not right_evaluates_on_edges:
-            if not isinstance(left, pybamm.Magnitude):
-                raise NotImplementedError(
-                    "Symbols that evaluate on edges must either be a vector field or a magnitude of a vector field"
-                )
             method = "arithmetic"
             direction = left.direction
             disc_right = self.node_to_edge(
@@ -2179,10 +2175,6 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         # using the harmonic mean if the right child is a gradient (i.e. this
         # binary operator represents a flux)
         elif right_evaluates_on_edges and not left_evaluates_on_edges:
-            # if not isinstance(right, pybamm.Magnitude):
-            #    raise NotImplementedError(
-            #        "Symbols that evaluate on edges must either be a vector field or a magnitude of a vector field"
-            #    )
             method = "arithmetic"
             direction = right.direction
             disc_left = self.node_to_edge(disc_left, method=method, direction=direction)
