@@ -2,6 +2,7 @@
 
 ## Features
 
+- Added support for asymmetric loss of active material. ([#5343](https://github.com/pybamm-team/PyBaMM/pull/5343))
 - Restructures `ParameterValues`. Adds deprecation notice on `update`'s `check_already_exists` argument. ([#5339](https://github.com/pybamm-team/PyBaMM/pull/5339))
 - Added `Solution.yp` property to return the time derivatives of the solution. ([#5341](https://github.com/pybamm-team/PyBaMM/pull/5341))
 - Added `TensorField` for rank-1 and rank-2 tensors, `TensorProduct` for outer products, and tensor divergence support in 2D finite volume. `VectorField` now inherits from `TensorField`. ([#5335](https://github.com/pybamm-team/PyBaMM/pull/5335))
