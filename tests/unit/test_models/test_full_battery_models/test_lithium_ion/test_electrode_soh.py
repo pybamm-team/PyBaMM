@@ -209,8 +209,7 @@ class TestElectrodeSOHComposite:
                     "Secondary: Initial concentration in negative electrode [mol.m-3]": params[
                         "Initial concentration in negative electrode [mol.m-3]"
                     ],
-                },
-                check_already_exists=False,
+                }
             )
         if composite_electrode == "positive" or composite_electrode == "both":
             phases = ("1", "2")
@@ -242,8 +241,7 @@ class TestElectrodeSOHComposite:
                     "Secondary: Initial concentration in positive electrode [mol.m-3]": params[
                         "Initial concentration in positive electrode [mol.m-3]"
                     ],
-                },
-                check_already_exists=False,
+                }
             )
         if composite_electrode == "both":
             phases = ("2", "2")
@@ -450,8 +448,7 @@ class TestElectrodeSOHHalfCell:
                 "Primary: Positive electrode OCP entropic change [V.K-1]": params[
                     "Primary: Negative electrode OCP entropic change [V.K-1]"
                 ],
-            },
-            check_already_exists=False,
+            }
         )
 
         # Secondary phase (Silicon-like) -> Secondary positive
@@ -481,8 +478,7 @@ class TestElectrodeSOHHalfCell:
                 "Secondary: Positive electrode OCP entropic change [V.K-1]": params[
                     "Secondary: Negative electrode OCP entropic change [V.K-1]"
                 ],
-            },
-            check_already_exists=False,
+            }
         )
 
         # Adjust voltage cutoffs and OCP values to be more achievable with the parameter mapping
@@ -492,8 +488,7 @@ class TestElectrodeSOHHalfCell:
                 "Upper voltage cut-off [V]": 2.5,
                 "Open-circuit voltage at 0% SOC [V]": 0.02,
                 "Open-circuit voltage at 100% SOC [V]": 2.5,
-            },
-            check_already_exists=False,
+            }
         )
 
         # Set up composite electrode options

@@ -520,7 +520,7 @@ class BaseStepImplicit(BaseStep):
         new_parameter_values["Current function [A]"] = submodel.variables["Current [A]"]
         # Update any other parameters as necessary
         new_parameter_values.update(
-            self.get_parameter_values(variables), check_already_exists=False
+            self.get_parameter_values(variables),
         )
 
         return new_model, new_parameter_values

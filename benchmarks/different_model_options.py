@@ -63,7 +63,7 @@ class SolveModel:
         # load parameter values and process model and geometry
         param = pybamm.ParameterValues(parameter)
         if additional_params is not None:
-            param.update(additional_params, check_already_exists=False)
+            param.update(additional_params)
         param.process_model(self.model)
         param.process_geometry(geometry)
 

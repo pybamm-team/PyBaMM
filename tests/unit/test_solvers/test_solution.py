@@ -28,6 +28,21 @@ class TestSolution:
         assert sol.all_inputs == [{}]
         assert isinstance(sol.all_models[0], pybamm.BaseModel)
 
+    def test_yp(self):
+        t = np.linspace(0, 1)
+        y = np.tile(t, (20, 1))
+        yp = np.tile(t, (20, 1)) * 2  # time derivatives
+
+        # Without yps, yp should be None
+        sol_no_yp = pybamm.Solution(t, y, pybamm.BaseModel(), {})
+        assert sol_no_yp.hermite_interpolation is False
+        assert sol_no_yp.yp is None
+
+        # With yps, yp should return the concatenated time derivatives
+        sol_with_yp = pybamm.Solution(t, y, pybamm.BaseModel(), {}, all_yps=yp)
+        assert sol_with_yp.hermite_interpolation is True
+        np.testing.assert_array_equal(sol_with_yp.yp, yp)
+
     def test_sensitivities(self):
         t = np.linspace(0, 1)
         y = np.tile(t, (20, 1))
@@ -840,9 +855,7 @@ class TestSolution:
         input_names = sorted(
             ["dummy", "Positive electrode active material volume fraction"]
         )
-        parameter_values.update(
-            {k: "[input]" for k in input_names}, check_already_exists=False
-        )
+        parameter_values.update({k: "[input]" for k in input_names})
         sim = pybamm.Simulation(model, parameter_values=parameter_values)
 
         # purposefully missing the dummy input

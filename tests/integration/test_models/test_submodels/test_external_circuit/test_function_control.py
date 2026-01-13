@@ -73,7 +73,7 @@ class TestFunctionControl:
         params = [model.default_parameter_values for model in models]
 
         # First model: 4.08V charge
-        params[0].update({"Voltage function [V]": 4.08}, check_already_exists=False)
+        params[0].update({"Voltage function [V]": 4.08})
 
         # set parameters and discretise models
         var_pts = {"x_n": 5, "x_s": 5, "x_p": 30, "r_n": 10, "r_p": 10}
@@ -122,7 +122,7 @@ class TestFunctionControl:
             # create geometry
             geometry = model.default_geometry
             param = model.default_parameter_values
-            param.update({"Power function [W]": 4}, check_already_exists=False)
+            param.update({"Power function [W]": 4})
             param.process_model(model)
             param.process_geometry(geometry)
             mesh = pybamm.Mesh(
@@ -162,7 +162,7 @@ class TestFunctionControl:
             # create geometry
             geometry = model.default_geometry
             param = model.default_parameter_values
-            param.update({"Resistance function [Ohm]": 2}, check_already_exists=False)
+            param.update({"Resistance function [Ohm]": 2})
             param.process_model(model)
             param.process_geometry(geometry)
             mesh = pybamm.Mesh(
@@ -187,10 +187,7 @@ class TestFunctionControl:
         # load parameter values and process models and geometry
         param = model.default_parameter_values
 
-        param.update(
-            {"CCCV current function [A]": -0.5, "Voltage function [V]": 4.2},
-            check_already_exists=False,
-        )
+        param.update({"CCCV current function [A]": -0.5, "Voltage function [V]": 4.2})
 
         # set parameters and discretise models
         # create geometry

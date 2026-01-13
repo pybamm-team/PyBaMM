@@ -231,7 +231,7 @@ class TestSimulation:
                 "Positive electrode OCP [V]": ocv_with_parameter,
             }
         )
-        parameter_values.update({"a": "[input]"}, check_already_exists=False)
+        parameter_values.update({"a": "[input]"})
         experiment = pybamm.Experiment(["Discharge at 1C until 2.5 V"])
         sim = pybamm.Simulation(
             model, parameter_values=parameter_values, experiment=experiment
@@ -360,8 +360,7 @@ class TestSimulation:
                 "Secondary: Positive electrode OCP entropic change [V.K-1]": (
                     param["Secondary: Negative electrode OCP entropic change [V.K-1]"]
                 ),
-            },
-            check_already_exists=False,
+            }
         )
 
         # Set voltage cutoffs to match the graphite/silicon OCP range
@@ -416,8 +415,7 @@ class TestSimulation:
                 "Lithium metal partial molar volume [m3.mol-1]": 1.3e-05,  # From Xu2019 parameter set
                 "Lithium metal interface surface potential difference [V]": 0.0,
                 "Current function [A]": 0.0,
-            },
-            check_already_exists=False,
+            }
         )
 
         sim = pybamm.Simulation(model, parameter_values=param)
@@ -452,7 +450,7 @@ class TestSimulation:
                 "Positive electrode OCP [V]": ocv_with_parameter,
             }
         )
-        parameter_values.update({"a": "[input]"}, check_already_exists=False)
+        parameter_values.update({"a": "[input]"})
         experiment = pybamm.Experiment(["Discharge at 1C until 2.5 V"])
         sim = pybamm.Simulation(
             model, parameter_values=parameter_values, experiment=experiment

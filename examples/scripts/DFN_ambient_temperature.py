@@ -22,9 +22,7 @@ def ambient_temperature(y, z, t):
 
 
 param = model.default_parameter_values
-param.update(
-    {"Ambient temperature [K]": ambient_temperature}, check_already_exists=False
-)
+param.update({"Ambient temperature [K]": ambient_temperature})
 param.process_model(model)
 param.process_geometry(geometry)
 
