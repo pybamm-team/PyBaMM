@@ -1360,6 +1360,10 @@ class NodeToEdge2D(SpatialOperator):
             raise pybamm.DomainError(
                 f"Cannot convert '{child}' to edges since its domain is empty."
             )
+        if child.evaluates_on_edges("primary") is True:
+            raise TypeError(
+                f"Cannot convert '{child}' to edges since it already evaluates on edges"
+            )
         super().__init__(f"node_to_edge_{direction}", child)
         self.direction = direction
 
