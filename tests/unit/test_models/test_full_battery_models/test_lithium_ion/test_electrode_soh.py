@@ -289,15 +289,23 @@ class TestElectrodeSOHComposite:
         pvals = pybamm.ParameterValues("Chen2020_composite")
         options = {"particle phases": ("2", "1")}
         param = pybamm.LithiumIonParameters(options=options)
+        # Solving ESOH with the original Chen2020_composite parameters gives a 0% SOC
+        # voltage of 2.53V not 2.5V. We fix this by reducing the secondary initial
+        # concentration, which adjusts Q_Li to make the system consistent.
+        pvals.update(
+            {
+                "Secondary: Initial concentration in negative electrode [mol.m-3]": 2.3512e05
+            }
+        )
         results = pybamm.lithium_ion.get_initial_stoichiometries_composite(
-            "4.0 V", pvals, param=param, options=options, tol=1e-1, direction=None
+            "4.0 V", pvals, param=param, options=options, tol=1e-6, direction=None
         )
         # Basic sanity: solution includes expected variables and bounded stoichiometries
         for key, val in results.items():
             if key.startswith(("x_", "y_")):
                 assert 0 <= val <= 1
         pvals_set = pybamm.lithium_ion.set_initial_state(
-            "4.0 V", pvals, param=param, options=options, tol=1e-1
+            "4.0 V", pvals, param=param, options=options, tol=1e-6
         )
         assert pvals_set.evaluate(
             param.p.prim.U(results["y_init_1"], param.T_ref)
