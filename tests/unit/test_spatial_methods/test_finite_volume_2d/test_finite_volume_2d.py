@@ -136,13 +136,25 @@ class TestFiniteVolume2D:
                 pybamm.SpatialVariable("q", ["negative electrode"], direction="asdf")
             )
 
-        x_edges = pybamm.SpatialVariable(
+        # Test SpatialVariableEdge with direction="lr" - edges in lr, nodes in tb
+        x_edges_lr = pybamm.SpatialVariableEdge(
             "x_edges", ["negative electrode", "separator"], direction="lr"
         )
-        x_edges._evaluates_on_edges = lambda _: True
-        x_edges_disc = disc.process_symbol(x_edges)
-        LR, TB = np.meshgrid(submesh.edges_lr, submesh.edges_tb)
-        np.testing.assert_array_equal(x_edges_disc.evaluate().flatten(), LR.flatten())
+        x_edges_lr_disc = disc.process_symbol(x_edges_lr)
+        LR_edges, _ = np.meshgrid(submesh.edges_lr, submesh.nodes_tb)
+        np.testing.assert_array_equal(
+            x_edges_lr_disc.evaluate().flatten(), LR_edges.flatten()
+        )
+
+        # Test SpatialVariableEdge with direction="tb" - nodes in lr, edges in tb
+        z_edges_tb = pybamm.SpatialVariableEdge(
+            "z_edges", ["negative electrode", "separator"], direction="tb"
+        )
+        z_edges_tb_disc = disc.process_symbol(z_edges_tb)
+        _, TB_edges = np.meshgrid(submesh.nodes_lr, submesh.edges_tb)
+        np.testing.assert_array_equal(
+            z_edges_tb_disc.evaluate().flatten(), TB_edges.flatten()
+        )
 
         mesh_1d = get_mesh_for_testing()
         spatial_methods_1d = {"macroscale": pybamm.FiniteVolume2D()}
