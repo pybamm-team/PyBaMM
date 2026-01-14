@@ -1340,6 +1340,45 @@ class UpwindDownwind2D(UpwindDownwind):
         return self.__class__(child, self.lr_direction, self.tb_direction)
 
 
+class NodeToEdge2D(SpatialOperator):
+    """
+    A node in the expression tree representing a node-to-edge conversion in 2D.
+    Marks a symbol as evaluating on edges in a specific direction.
+
+    Parameters
+    ----------
+    child : :class:`pybamm.Symbol`
+        The symbol to convert from nodes to edges
+    direction : str
+        The direction for the edges: "lr" (left-right) or "tb" (top-bottom)
+    """
+
+    def __init__(self, child, direction):
+        if direction not in ("lr", "tb"):
+            raise ValueError(f"direction must be 'lr' or 'tb', got '{direction}'")
+        if child.domain == []:
+            raise pybamm.DomainError(
+                f"Cannot convert '{child}' to edges since its domain is empty."
+            )
+        if child.evaluates_on_edges("primary") is True:
+            raise TypeError(
+                f"Cannot convert '{child}' to edges since it already evaluates on edges"
+            )
+        super().__init__(f"node_to_edge_{direction}", child)
+        self.direction = direction
+
+    def _evaluates_on_edges(self, dimension: str) -> bool:
+        """
+        Return True to indicate that this symbol evaluates on edges in the
+        specified direction, regardless of the given dimension.
+        """
+        return True
+
+    def _unary_new_copy(self, child, perform_simplifications=True):
+        """See :meth:`UnaryOperator._unary_new_copy()`."""
+        return self.__class__(child, self.direction)
+
+
 class Magnitude(UnaryOperator):
     """
     A node in the expression tree representing the magnitude of a vector field.

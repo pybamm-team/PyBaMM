@@ -1112,6 +1112,12 @@ class Discretisation:
                     symbol.lr_direction,
                     symbol.tb_direction,
                 )
+            elif isinstance(symbol, pybamm.NodeToEdge2D):
+                return spatial_method.node_to_edge(
+                    disc_child,
+                    method="arithmetic",
+                    direction=symbol.direction,
+                )
             elif isinstance(symbol, pybamm.UpwindDownwind):
                 direction = symbol.name  # upwind or downwind
                 return spatial_method.upwind_or_downwind(
