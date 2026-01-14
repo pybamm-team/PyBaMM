@@ -314,6 +314,14 @@ class TestElectrodeSOHComposite:
 
     def test_chen2020_composite_defaults_hysteresis(self):
         pvals = pybamm.ParameterValues("Chen2020_composite")
+        # Solving ESOH with the original Chen2020_composite parameters gives a 0% SOC
+        # voltage of 2.53V not 2.5V. We fix this by reducing the secondary initial
+        # concentration, which adjusts Q_Li to make the system consistent.
+        pvals.update(
+            {
+                "Secondary: Initial concentration in negative electrode [mol.m-3]": 2.3512e05
+            }
+        )
         options = {
             "particle phases": ("2", "1"),
             "open-circuit potential": (("single", "current sigmoid"), "single"),
@@ -324,17 +332,24 @@ class TestElectrodeSOHComposite:
             pvals,
             param=param,
             options=options,
-            tol=1e-1,
+            tol=1e-6,
             direction="discharge",
         )
         results_charge = pybamm.lithium_ion.get_initial_stoichiometries_composite(
-            "4.0 V", pvals, param=param, options=options, tol=1e-1, direction="charge"
+            "4.0 V", pvals, param=param, options=options, tol=1e-6, direction="charge"
         )
         # Basic sanity: solution includes expected variables and bounded stoichiometries
-        for key, val in results_discharge.items():
+        for key in results_discharge:
             if key.startswith(("x_", "y_")):
-                assert 0 <= val <= 1
-                assert results_discharge[key] != results_charge[key]
+                val_discharge = results_discharge[key]
+                val_charge = results_charge[key]
+                # Check both values are bounded
+                assert 0 <= val_discharge <= 1
+                assert 0 <= val_charge <= 1
+                # Check values are approximately equal if not 'init' in key (same
+                # voltage may be different stoichiometries due to hysteresis)
+                if "init" not in key:
+                    assert val_discharge == pytest.approx(val_charge, abs=1e-04)
 
 
 class TestElectrodeSOHMSMR:
