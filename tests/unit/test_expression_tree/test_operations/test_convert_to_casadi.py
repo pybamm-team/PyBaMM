@@ -8,6 +8,7 @@ import pytest
 from scipy import special
 
 import pybamm
+from pybamm.expression_tree.operations.convert_to_casadi import try_repeated_row_matmul
 from tests import get_1p1d_discretisation_for_testing, get_mesh_for_testing
 
 
@@ -387,9 +388,6 @@ class TestRepeatedRowMatmulOptimization:
 
     def test_identical_rows(self):
         """Test optimization when all rows are identical."""
-        from pybamm.expression_tree.operations.convert_to_casadi import (
-            try_repeated_row_matmul,
-        )
 
         rng = np.random.default_rng(0)
         n, m = 100, 50
@@ -411,9 +409,6 @@ class TestRepeatedRowMatmulOptimization:
 
     def test_boundary_differs(self):
         """Test optimization when interior rows identical but boundaries differ."""
-        from pybamm.expression_tree.operations.convert_to_casadi import (
-            try_repeated_row_matmul,
-        )
 
         rng = np.random.default_rng(0)
         n, m = 100, 50
@@ -440,9 +435,6 @@ class TestRepeatedRowMatmulOptimization:
 
     def test_two_rows_identical(self):
         """Test m=2 with identical rows."""
-        from pybamm.expression_tree.operations.convert_to_casadi import (
-            try_repeated_row_matmul,
-        )
 
         rng = np.random.default_rng(0)
         n = 100
@@ -463,9 +455,6 @@ class TestRepeatedRowMatmulOptimization:
 
     def test_two_rows_different(self):
         """Test m=2 with different rows returns None."""
-        from pybamm.expression_tree.operations.convert_to_casadi import (
-            try_repeated_row_matmul,
-        )
 
         rng = np.random.default_rng(0)
         n = 100
@@ -479,9 +468,6 @@ class TestRepeatedRowMatmulOptimization:
 
     def test_random_matrix_returns_none(self):
         """Test that random matrices return None (no optimization)."""
-        from pybamm.expression_tree.operations.convert_to_casadi import (
-            try_repeated_row_matmul,
-        )
 
         rng = np.random.default_rng(0)
         n, m = 100, 50
@@ -495,9 +481,6 @@ class TestRepeatedRowMatmulOptimization:
 
     def test_non_array_returns_none(self):
         """Test that non-Array symbols return None."""
-        from pybamm.expression_tree.operations.convert_to_casadi import (
-            try_repeated_row_matmul,
-        )
 
         y = casadi.MX.sym("y", 10)
         scalar = pybamm.Scalar(5)
