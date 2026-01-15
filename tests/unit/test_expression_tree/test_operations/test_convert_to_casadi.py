@@ -380,3 +380,92 @@ class TestCasadiConverter:
         var = pybamm.Variable("var")
         with pytest.raises(TypeError, match=r"Cannot convert symbol of type"):
             var.to_casadi()
+
+
+class TestRepeatedRowMatmulOptimization:
+    """Tests for the repeated-row matrix multiplication optimization."""
+
+    def test_identical_rows(self):
+        """Test optimization when all rows are identical."""
+        rng = np.random.default_rng(0)
+        n = 100
+        m = 50
+        row = rng.random(n)
+        M = np.tile(row, (m, 1))
+
+        mat = pybamm.Matrix(M)
+        y_pybamm = pybamm.StateVector(slice(0, n))
+        expr = mat @ y_pybamm
+
+        y_casadi = casadi.MX.sym("y", n)
+        result = expr.to_casadi(y=y_casadi)
+
+        # Evaluate and compare
+        x = rng.random(n)
+        f = casadi.Function("f", [y_casadi], [result])
+        expected = M @ x
+        actual = np.array(f(x)).flatten()
+
+        np.testing.assert_allclose(actual, expected, rtol=1e-14)
+
+    def test_boundary_differs(self):
+        """Test optimization when interior rows are identical but boundaries differ."""
+        rng = np.random.default_rng(0)
+        n = 100
+        m = 50
+        interior_row = rng.random(n)
+        first_row = rng.random(n) * 0.5
+        last_row = rng.random(n) * 2
+
+        M = np.tile(interior_row, (m, 1))
+        M[0, :] = first_row
+        M[-1, :] = last_row
+
+        mat = pybamm.Matrix(M)
+        y_pybamm = pybamm.StateVector(slice(0, n))
+        expr = mat @ y_pybamm
+
+        y_casadi = casadi.MX.sym("y", n)
+        result = expr.to_casadi(y=y_casadi)
+
+        # Evaluate and compare
+        x = rng.random(n)
+        f = casadi.Function("f", [y_casadi], [result])
+        expected = M @ x
+        actual = np.array(f(x)).flatten()
+
+        np.testing.assert_allclose(actual, expected, rtol=1e-14)
+
+    def test_two_row_matrix(self):
+        """Test that m=2 matrices are handled correctly."""
+        rng = np.random.default_rng(0)
+        n = 100
+        row = rng.random(n)
+
+        # Case 1: Both rows identical
+        M1 = np.vstack([row, row])
+        mat1 = pybamm.Matrix(M1)
+        y_pybamm = pybamm.StateVector(slice(0, n))
+        expr1 = mat1 @ y_pybamm
+
+        y_casadi = casadi.MX.sym("y", n)
+        result1 = expr1.to_casadi(y=y_casadi)
+
+        x = rng.random(n)
+        f1 = casadi.Function("f1", [y_casadi], [result1])
+        expected1 = M1 @ x
+        actual1 = np.array(f1(x)).flatten()
+
+        np.testing.assert_allclose(actual1, expected1, rtol=1e-14)
+
+        # Case 2: Rows different
+        M2 = np.vstack([row, row * 2])
+        mat2 = pybamm.Matrix(M2)
+        expr2 = mat2 @ y_pybamm
+        result2 = expr2.to_casadi(y=y_casadi)
+
+        f2 = casadi.Function("f2", [y_casadi], [result2])
+        expected2 = M2 @ x
+        actual2 = np.array(f2(x)).flatten()
+
+        np.testing.assert_allclose(actual2, expected2, rtol=1e-14)
