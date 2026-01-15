@@ -8,42 +8,44 @@ from .util import _get_lithiation_delithiation, check_if_composite
 
 def _get_stoich_variables(options):
     variables = {
-        "x_100_1": pybamm.Variable("x_100_1"),
-        "y_100_1": pybamm.Variable("y_100_1"),
-        "x_0_1": pybamm.Variable("x_0_1"),
-        "y_0_1": pybamm.Variable("y_0_1"),
-        "x_init_1": pybamm.Variable("x_init_1"),
-        "y_init_1": pybamm.Variable("y_init_1"),
+        "x_100_1": pybamm.Variable("x_100_1", bounds=(0, 1)),
+        "y_100_1": pybamm.Variable("y_100_1", bounds=(0, 1)),
+        "x_0_1": pybamm.Variable("x_0_1", bounds=(0, 1)),
+        "y_0_1": pybamm.Variable("y_0_1", bounds=(0, 1)),
+        "x_init_1": pybamm.Variable("x_init_1", bounds=(0, 1)),
+        "y_init_1": pybamm.Variable("y_init_1", bounds=(0, 1)),
     }
     is_positive_composite = check_if_composite(options, "positive")
     is_negative_composite = check_if_composite(options, "negative")
     if is_positive_composite:
-        variables["y_100_2"] = pybamm.Variable("y_100_2")
-        variables["y_0_2"] = pybamm.Variable("y_0_2")
-        variables["y_init_2"] = pybamm.Variable("y_init_2")
+        variables["y_100_2"] = pybamm.Variable("y_100_2", bounds=(0, 1))
+        variables["y_0_2"] = pybamm.Variable("y_0_2", bounds=(0, 1))
+        variables["y_init_2"] = pybamm.Variable("y_init_2", bounds=(0, 1))
     if is_negative_composite:
-        variables["x_100_2"] = pybamm.Variable("x_100_2")
-        variables["x_0_2"] = pybamm.Variable("x_0_2")
-        variables["x_init_2"] = pybamm.Variable("x_init_2")
+        variables["x_100_2"] = pybamm.Variable("x_100_2", bounds=(0, 1))
+        variables["x_0_2"] = pybamm.Variable("x_0_2", bounds=(0, 1))
+        variables["x_init_2"] = pybamm.Variable("x_init_2", bounds=(0, 1))
     return variables
 
 
 def _get_initial_conditions(options, soc_init):
     variables = _get_stoich_variables(options)
     ics = {}
+    # Avoid exact boundary values for better numerical stability
+    eps = 0.01
     for name, var in variables.items():
         if "100" in name and "x" in name:
-            ics[var] = 0.8
+            ics[var] = 0.85
         elif "0" in name and "x" in name:
-            ics[var] = 0.2
+            ics[var] = 0.15
         elif "100" in name and "y" in name:
-            ics[var] = 0.8
+            ics[var] = 0.15
         elif "0" in name and "y" in name:
-            ics[var] = 0.2
+            ics[var] = 0.85
         elif "init" in name and "x" in name:
-            ics[var] = soc_init
+            ics[var] = pybamm.maximum(eps, pybamm.minimum(1 - eps, soc_init))
         elif "init" in name and "y" in name:
-            ics[var] = 1 - soc_init
+            ics[var] = pybamm.maximum(eps, pybamm.minimum(1 - eps, 1 - soc_init))
     return ics
 
 
@@ -84,8 +86,8 @@ def _get_electrode_capacity_equation(options, electrode):
 
 
 def _get_cyclable_lithium_equation(options, soc="100"):
-    x_soc_1 = pybamm.Variable(f"x_{soc}_1")
-    y_soc_1 = pybamm.Variable(f"y_{soc}_1")
+    x_soc_1 = pybamm.Variable(f"x_{soc}_1", bounds=(0, 1))
+    y_soc_1 = pybamm.Variable(f"y_{soc}_1", bounds=(0, 1))
     Q_n_1 = pybamm.InputParameter("Q_n_1")
     Q_p_1 = pybamm.InputParameter("Q_p_1")
     lithium_primary_phases = Q_n_1 * x_soc_1 + Q_p_1 * y_soc_1
@@ -94,11 +96,11 @@ def _get_cyclable_lithium_equation(options, soc="100"):
     is_negative_composite = check_if_composite(options, "negative")
     if is_positive_composite:
         Q_p_2 = pybamm.InputParameter("Q_p_2")
-        y_soc_2 = pybamm.Variable(f"y_{soc}_2")
+        y_soc_2 = pybamm.Variable(f"y_{soc}_2", bounds=(0, 1))
         lithium_secondary_phases += Q_p_2 * y_soc_2
     if is_negative_composite:
         Q_n_2 = pybamm.InputParameter("Q_n_2")
-        x_soc_2 = pybamm.Variable(f"x_{soc}_2")
+        x_soc_2 = pybamm.Variable(f"x_{soc}_2", bounds=(0, 1))
         lithium_secondary_phases += Q_n_2 * x_soc_2
     return lithium_primary_phases + lithium_secondary_phases
 
@@ -132,8 +134,8 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
         y_100_1 = variables["y_100_1"]
         x_0_1 = variables["x_0_1"]
         y_0_1 = variables["y_0_1"]
-        V_max = param.voltage_high_cut
-        V_min = param.voltage_low_cut
+        V_max = param.ocp_soc_100
+        V_min = param.ocp_soc_0
         # Here we use T_ref as the stoichiometry limits are defined using the reference
         # state
         if is_negative_composite:
@@ -322,13 +324,12 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
         if initialization_method == "SOC":
             soc_init = pybamm.InputParameter("SOC_init")
         else:
-            soc_init = 0.5
+            soc_init = (V_init - V_min) / (V_max - V_min)
         self.initial_conditions.update(_get_initial_conditions(options, soc_init))
 
     @property
     def default_solver(self):
-        # Use AlgebraicSolver as CasadiAlgebraicSolver gives unnecessary warnings
-        return pybamm.AlgebraicSolver()
+        return pybamm.AlgebraicSolver(method="lsq")
 
 
 def get_initial_stoichiometries_composite(

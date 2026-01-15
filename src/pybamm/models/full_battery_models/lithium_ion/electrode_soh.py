@@ -224,8 +224,8 @@ class _ElectrodeSOHMSMR(_BaseElectrodeSOH):
         x_p = param.p.prim.x
 
         T = param.T_ref
-        V_max = param.voltage_high_cut
-        V_min = param.voltage_low_cut
+        V_max = param.ocp_soc_100
+        V_min = param.ocp_soc_0
         Q_n = pybamm.InputParameter("Q_n")
         Q_p = pybamm.InputParameter("Q_p")
 
@@ -1267,8 +1267,8 @@ def calculate_theoretical_energy(
 
 
 def _get_msmr_potential_model(parameter_values, param):
-    V_max = param.voltage_high_cut
-    V_min = param.voltage_low_cut
+    V_max = param.ocp_soc_100
+    V_min = param.ocp_soc_0
     x_n = param.n.prim.x
     x_p = param.p.prim.x
     T = param.T_ref
