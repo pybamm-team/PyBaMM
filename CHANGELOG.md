@@ -2,6 +2,8 @@
 
 ## Features
 
+- Improve the performance of matrix multiplication with CasADi expressions. ([#5351](https://github.com/pybamm-team/PyBaMM/pull/5351))
+
 ## Bug fixes
 
 # [v25.12.0](https://github.com/pybamm-team/PyBaMM/tree/v25.12.0) - 2026-01-15
