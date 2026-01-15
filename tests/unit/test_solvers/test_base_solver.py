@@ -2,12 +2,15 @@
 # Tests for the Base Solver class
 #
 
+import re
+
 import casadi
 import numpy as np
 import pytest
 from scipy.sparse import csr_matrix
 
 import pybamm
+from pybamm.models.base_model import ModelSolutionObservability
 
 
 class TestBaseSolver:
@@ -34,7 +37,7 @@ class TestBaseSolver:
         assert solver.root_method == root_solver
 
         with pytest.raises(
-            pybamm.SolverError, match="Root method must be an algebraic solver"
+            pybamm.SolverError, match=r"Root method must be an algebraic solver"
         ):
             pybamm.BaseSolver(root_method=pybamm.ScipySolver())
 
@@ -70,7 +73,7 @@ class TestBaseSolver:
         disc.process_model(model)
 
         solver = pybamm.BaseSolver()
-        with pytest.raises(ValueError, match="t_eval cannot be None"):
+        with pytest.raises(ValueError, match=r"t_eval cannot be None"):
             solver.solve(model, None)
 
     def test_nonmonotonic_teval(self):
@@ -79,13 +82,13 @@ class TestBaseSolver:
         a = pybamm.Scalar(0)
         model.rhs = {a: a}
         with pytest.raises(
-            pybamm.SolverError, match="t_eval must increase monotonically"
+            pybamm.SolverError, match=r"t_eval must increase monotonically"
         ):
             solver.solve(model, np.array([1, 2, 3, 2]))
 
         # Check stepping with step size too small
         dt = -1e-9
-        with pytest.raises(pybamm.SolverError, match="Step time must be >0"):
+        with pytest.raises(pybamm.SolverError, match=r"Step time must be >0"):
             solver.step(None, model, dt)
 
         # Checking if array t_eval lies within range
@@ -93,14 +96,16 @@ class TestBaseSolver:
         t_eval = np.array([0, 1])
         with pytest.raises(
             pybamm.SolverError,
-            match="The final `t_eval` value \\(1\\) must be equal to the step time `dt` \\(2\\)",
+            match=re.escape(
+                "The final `t_eval` value (1) must be equal to the step time `dt` (2)"
+            ),
         ):
             solver.step(None, model, dt, t_eval=t_eval)
 
         t_eval = np.array([1, dt])
         with pytest.raises(
             pybamm.SolverError,
-            match="The first `t_eval` value \\(1\\) must be 0",
+            match=re.escape("The first `t_eval` value (1) must be 0"),
         ):
             solver.step(None, model, dt, t_eval=t_eval)
 
@@ -111,7 +116,7 @@ class TestBaseSolver:
         solver = pybamm.DummySolver()
         t_eval = np.array([0])
         with pytest.raises(
-            pybamm.SolverError, match="Solution time vector has length 1"
+            pybamm.SolverError, match=r"Solution time vector has length 1"
         ):
             solver.solve(model, t_eval)
 
@@ -121,7 +126,9 @@ class TestBaseSolver:
         a = pybamm.Variable("a")
         p = pybamm.InputParameter("p")
         model.rhs = {a: a * p}
-        with pytest.raises(pybamm.SolverError, match="No value provided for input 'p'"):
+        with pytest.raises(
+            pybamm.SolverError, match=re.escape("No value provided for input: ['p']")
+        ):
             solver.solve(model, np.array([1, 2, 3]))
 
     def test_ode_solver_fail_with_dae(self):
@@ -130,7 +137,7 @@ class TestBaseSolver:
         model.algebraic = {a: a}
         model.concatenated_initial_conditions = pybamm.Scalar(0)
         solver = pybamm.ScipySolver()
-        with pytest.raises(pybamm.SolverError, match="Cannot use ODE solver"):
+        with pytest.raises(pybamm.SolverError, match=r"Cannot use ODE solver"):
             solver.set_up(model)
 
     def test_find_consistent_initialization(self):
@@ -150,6 +157,7 @@ class TestBaseSolver:
                 self.bounds = (np.array([-np.inf]), np.array([np.inf]))
                 self.len_rhs_and_alg = 1
                 self.events = []
+                self.solution_observable = ModelSolutionObservability.DISABLED
 
             def rhs_eval(self, t, y, inputs):
                 return np.array([])
@@ -187,6 +195,7 @@ class TestBaseSolver:
                 self.len_rhs = 1
                 self.len_rhs_and_alg = 4
                 self.events = []
+                self.solution_observable = ModelSolutionObservability.DISABLED
 
             def rhs_eval(self, t, y, inputs):
                 return y[0:1]
@@ -248,20 +257,20 @@ class TestBaseSolver:
 
         with pytest.raises(
             pybamm.SolverError,
-            match="Could not find acceptable solution",
+            match=r"Could not find acceptable solution",
         ):
             solver.calculate_consistent_state(Model())
         solver = pybamm.BaseSolver(root_method="lm")
         with pytest.raises(
             pybamm.SolverError,
-            match="Could not find acceptable solution",
+            match=r"Could not find acceptable solution",
         ):
             solver.calculate_consistent_state(Model())
         # with casadi
         solver = pybamm.BaseSolver(root_method="casadi")
         with pytest.raises(
             pybamm.SolverError,
-            match="Could not find acceptable solution",
+            match=r"Could not find acceptable solution",
         ):
             solver.calculate_consistent_state(Model())
 
@@ -284,7 +293,7 @@ class TestBaseSolver:
         model.initial_conditions = {v: 1}
 
         with pytest.raises(
-            pybamm.DiscretisationError, match="Cannot automatically discretise model"
+            pybamm.DiscretisationError, match=r"Cannot automatically discretise model"
         ):
             solver.set_up(model, {})
 
@@ -361,7 +370,7 @@ class TestBaseSolver:
 
         solver = pybamm.ScipySolver()
         solver.solve(model, t_eval=[0, 1])
-        with pytest.raises(RuntimeError, match="already been initialised"):
+        with pytest.raises(RuntimeError, match=r"already been initialised"):
             solver.solve(model2, t_eval=[0, 1])
 
     def test_multiprocess_context(self):
@@ -438,11 +447,11 @@ class TestBaseSolver:
 
         # Test invalid value
         with pytest.raises(
-            ValueError, match="on_extrapolation must be 'warn', 'raise', or 'ignore'"
+            ValueError, match=r"on_extrapolation must be 'warn', 'raise', or 'ignore'"
         ):
             base_solver.on_extrapolation = "invalid"
 
         with pytest.raises(
-            ValueError, match="on_failure must be 'warn', 'raise', or 'ignore'"
+            ValueError, match=r"on_failure must be 'warn', 'raise', or 'ignore'"
         ):
             base_solver.on_failure = "invalid"

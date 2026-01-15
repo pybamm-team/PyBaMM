@@ -38,7 +38,15 @@ class SolveModel:
     t_eval: npt.NDArray[np.float64]
     t_interp: npt.NDArray[np.float64] | None
 
-    def solve_setup(self, parameter, model_, option, value, solver_class):
+    def solve_setup(
+        self,
+        parameter,
+        model_,
+        option,
+        value,
+        solver_class,
+        additional_params: dict | None = None,
+    ):
         self.solver = solver_class()
         self.model = model_({option: value})
         c_rate = 1
@@ -54,6 +62,8 @@ class SolveModel:
 
         # load parameter values and process model and geometry
         param = pybamm.ParameterValues(parameter)
+        if additional_params is not None:
+            param.update(additional_params)
         param.process_model(self.model)
         param.process_geometry(geometry)
 
@@ -175,6 +185,23 @@ class TimeSolveSEI(SolveModel):
             "electron-migration limited",
             "interstitial-diffusion limited",
             "ec reaction limited",
+        ],
+        [pybamm.CasadiSolver, pybamm.IDAKLUSolver],
+    )
+
+    def setup(self, model, params, solver_class):
+        set_random_seed()
+        SolveModel.solve_setup(self, "Marquis2019", model, "SEI", params, solver_class)
+
+    def time_solve_model(self, _model, _params, _solver_class):
+        self.solver.solve(self.model, t_eval=self.t_eval, t_interp=self.t_interp)
+
+
+class TimeSolveSEITunnelling(SolveModel):
+    param_names = ["model", "model option", "solver class"]
+    params = (
+        [pybamm.lithium_ion.SPM, pybamm.lithium_ion.DFN],
+        [
             "tunnelling limited",
             "VonKolzenberg2020",
         ],
@@ -183,7 +210,18 @@ class TimeSolveSEI(SolveModel):
 
     def setup(self, model, params, solver_class):
         set_random_seed()
-        SolveModel.solve_setup(self, "Marquis2019", model, "SEI", params, solver_class)
+        if params == "tunnelling limited":
+            additional_params = {"Tunneling barrier factor [m-1]": 6.0e9}
+        elif params == "VonKolzenberg2020":
+            additional_params = {
+                "Tunneling distance for electrons [m]": 0,
+                "SEI lithium ion conductivity [S.m-1]": 1.0e-7,
+            }
+        else:
+            additional_params = None
+        SolveModel.solve_setup(
+            self, "Chen2020", model, "SEI", params, solver_class, additional_params
+        )
 
     def time_solve_model(self, _model, _params, _solver_class):
         self.solver.solve(self.model, t_eval=self.t_eval, t_interp=self.t_interp)

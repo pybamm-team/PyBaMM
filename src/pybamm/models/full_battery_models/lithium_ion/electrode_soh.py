@@ -224,8 +224,8 @@ class _ElectrodeSOHMSMR(_BaseElectrodeSOH):
         x_p = param.p.prim.x
 
         T = param.T_ref
-        V_max = param.voltage_high_cut
-        V_min = param.voltage_low_cut
+        V_max = param.ocp_soc_100
+        V_min = param.ocp_soc_0
         Q_n = pybamm.InputParameter("Q_n")
         Q_p = pybamm.InputParameter("Q_p")
 
@@ -976,7 +976,13 @@ class ElectrodeSOHSolver:
         Q = Q_p * (y_0 - y_100)
         dQ = Q / (points - 1)
         # Integrate and convert to W-h
-        E = np.trapz(Vs, dx=dQ)
+        # Use trapezoid for newer NumPy, trapz for older NumPy (backwards
+        # compatible)
+        if hasattr(np, "trapezoid"):
+            E = np.trapezoid(Vs, dx=dQ)
+        else:
+            # Fallback to trapz for older NumPy versions
+            E = np.trapz(Vs, dx=dQ)
         return E
 
 
@@ -1261,8 +1267,8 @@ def calculate_theoretical_energy(
 
 
 def _get_msmr_potential_model(parameter_values, param):
-    V_max = param.voltage_high_cut
-    V_min = param.voltage_low_cut
+    V_max = param.ocp_soc_100
+    V_min = param.ocp_soc_0
     x_n = param.n.prim.x
     x_p = param.p.prim.x
     T = param.T_ref

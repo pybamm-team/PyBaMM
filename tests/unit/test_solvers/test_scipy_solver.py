@@ -19,7 +19,7 @@ class TestScipySolver:
         )
         with pytest.raises(
             NotImplementedError,
-            match="Sensitivity analysis is not implemented",
+            match=r"Sensitivity analysis is not implemented",
         ):
             sim.solve(
                 [0, 1], inputs={"Current function [A]": 1}, calculate_sensitivities=True
@@ -162,13 +162,13 @@ class TestScipySolver:
 
         T, Y = solution.t, solution.y
         np.testing.assert_allclose(
-            model.variables["var1"].evaluate(T, Y),
+            model.get_processed_variable("var1").evaluate(T, Y),
             np.ones((N, T.size)) * np.exp(T[np.newaxis, :]),
             rtol=1e-7,
             atol=1e-6,
         )
         np.testing.assert_allclose(
-            model.variables["var2"].evaluate(T, Y),
+            model.get_processed_variable("var2").evaluate(T, Y),
             np.ones((N, T.size)) * (T[np.newaxis, :] - np.exp(T[np.newaxis, :])),
             rtol=1e-7,
             atol=1e-6,
@@ -245,7 +245,7 @@ class TestScipySolver:
         )
 
         # Step again, the model has changed so this raises an error
-        with pytest.raises(RuntimeError, match="already been initialised"):
+        with pytest.raises(RuntimeError, match=r"already been initialised"):
             solver.step(step_sol1, model2, dt)
 
     def test_model_solver_with_inputs(self):
@@ -329,7 +329,7 @@ class TestScipySolver:
         ]
         with pytest.raises(
             pybamm.SolverError,
-            match="Cannot solve for a list of input parameters"
+            match=r"Cannot solve for a list of input parameters"
             " sets with discontinuities",
         ):
             solver.solve(model, t_eval, inputs=inputs_list, nproc=2)
@@ -355,7 +355,7 @@ class TestScipySolver:
 
         with pytest.raises(
             pybamm.SolverError,
-            match="Input parameters cannot appear in expression "
+            match=r"Input parameters cannot appear in expression "
             "for initial conditions.",
         ):
             solver.solve(model, t_eval, inputs=inputs_list, nproc=2)

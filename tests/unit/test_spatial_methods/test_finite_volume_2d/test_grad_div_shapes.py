@@ -541,12 +541,6 @@ class TestFiniteVolume2DGradDiv:
             np.zeros((submesh.npts_lr) * (submesh.npts_tb + 1)),
         )
 
-        # Test operations on linear x
-        # Create x-dependent values for each domain and concatenate
-        LR_n, TB_n = np.meshgrid(submesh_n.nodes_lr, submesh_n.nodes_tb)
-        LR_s, TB_s = np.meshgrid(submesh_s.nodes_lr, submesh_s.nodes_tb)
-        LR_p, TB_p = np.meshgrid(submesh_p.nodes_lr, submesh_p.nodes_tb)
-
         submesh = mesh[("negative electrode", "separator", "positive electrode")]
         LR, TB = np.meshgrid(submesh.nodes_lr, submesh.nodes_tb)
         linear_x = LR.flatten()
@@ -739,9 +733,9 @@ class TestFiniteVolume2DGradDiv:
 
         # Test 1: Internal Neumann condition between negative electrode and separator
         # Create a linear function across both domains
-        LR_n, TB_n = np.meshgrid(submesh_n.nodes_lr, submesh_n.nodes_tb)
-        LR_s, TB_s = np.meshgrid(submesh_s.nodes_lr, submesh_s.nodes_tb)
-        LR_p, TB_p = np.meshgrid(submesh_p.nodes_lr, submesh_p.nodes_tb)
+        LR_n, _TB_n = np.meshgrid(submesh_n.nodes_lr, submesh_n.nodes_tb)
+        LR_s, _TB_s = np.meshgrid(submesh_s.nodes_lr, submesh_s.nodes_tb)
+        LR_p, _TB_p = np.meshgrid(submesh_p.nodes_lr, submesh_p.nodes_tb)
 
         # Linear x function - should have continuous gradient across boundary
         linear_x_n = LR_n.flatten()
@@ -850,5 +844,5 @@ class TestFiniteVolume2DGradDiv:
         symbol = pybamm.Gradient(var)
         spatial_method = pybamm.FiniteVolume2D()
         spatial_method.build(mesh)
-        with pytest.raises(ValueError, match="Direction asdf not supported"):
+        with pytest.raises(ValueError, match=r"Direction asdf not supported"):
             spatial_method._gradient(symbol, disc_var, None, direction="asdf")

@@ -69,7 +69,7 @@ class TestMesh:
             }
         }
         with pytest.raises(
-            pybamm.GeometryError, match="Geometry should no longer be given keys"
+            pybamm.GeometryError, match=r"Geometry should no longer be given keys"
         ):
             mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 
@@ -101,12 +101,12 @@ class TestMesh:
     def test_init_failure(self, submesh_types):
         geometry = pybamm.battery_geometry()
 
-        with pytest.raises(KeyError, match="Points not given"):
+        with pytest.raises(KeyError, match=r"Points not given"):
             pybamm.Mesh(geometry, submesh_types, {})
 
         var_pts = {"x_n": 10, "x_s": 10, "x_p": 12}
         geometry = pybamm.battery_geometry(options={"dimensionality": 1})
-        with pytest.raises(KeyError, match="Points not given"):
+        with pytest.raises(KeyError, match=r"Points not given"):
             pybamm.Mesh(geometry, submesh_types, var_pts)
 
         # Not processing geometry parameters
@@ -114,14 +114,14 @@ class TestMesh:
 
         var_pts = {"x_n": 10, "x_s": 10, "x_p": 12, "r_n": 5, "r_p": 6}
 
-        with pytest.raises(pybamm.DiscretisationError, match="Parameter values"):
+        with pytest.raises(pybamm.DiscretisationError, match=r"Parameter values"):
             pybamm.Mesh(geometry, submesh_types, var_pts)
 
         # Geometry has an unrecognized variable type
         geometry["negative electrode"] = {
             "x_n": {"min": 0, "max": pybamm.Variable("var")}
         }
-        with pytest.raises(NotImplementedError, match="for symbol var"):
+        with pytest.raises(NotImplementedError, match=r"for symbol var"):
             pybamm.Mesh(geometry, submesh_types, var_pts)
 
     def test_mesh_sizes(self, submesh_types):
@@ -201,11 +201,11 @@ class TestMesh:
 
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 
-        with pytest.raises(pybamm.DomainError, match="trying"):
+        with pytest.raises(pybamm.DomainError, match=r"trying"):
             mesh.combine_submeshes("negative electrode", "negative particle")
 
         with pytest.raises(
-            ValueError, match="Submesh domains being combined cannot be empty"
+            ValueError, match=r"Submesh domains being combined cannot be empty"
         ):
             mesh.combine_submeshes()
 
@@ -257,7 +257,7 @@ class TestMesh:
             z: 10,
         }
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
-        with pytest.raises(pybamm.GeometryError, match="Cannot combine"):
+        with pytest.raises(pybamm.GeometryError, match=r"Cannot combine"):
             mesh[("negative electrode", "separator")]
 
         geometry = {
@@ -279,7 +279,7 @@ class TestMesh:
             z: 10,
         }
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
-        with pytest.raises(pybamm.DomainError, match="lr edges are not aligned"):
+        with pytest.raises(pybamm.DomainError, match=r"lr edges are not aligned"):
             mesh[("negative electrode_left ghost cell", "separator")]
 
         geometry = {
@@ -301,7 +301,7 @@ class TestMesh:
             z: 10,
         }
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
-        with pytest.raises(pybamm.DomainError, match="tb edges are not aligned"):
+        with pytest.raises(pybamm.DomainError, match=r"tb edges are not aligned"):
             mesh[("left", "right")]
 
         geometry = {
@@ -323,7 +323,7 @@ class TestMesh:
             z: 10,
         }
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
-        with pytest.raises(pybamm.DomainError, match="tb edges are not aligned"):
+        with pytest.raises(pybamm.DomainError, match=r"tb edges are not aligned"):
             mesh[("top", "bottom")]
 
         geometry = {
@@ -345,7 +345,7 @@ class TestMesh:
             z: 10,
         }
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
-        with pytest.raises(pybamm.DomainError, match="lr edges are not aligned"):
+        with pytest.raises(pybamm.DomainError, match=r"lr edges are not aligned"):
             mesh[("top", "bottom")]
 
         geometry = {
@@ -583,6 +583,37 @@ class TestMesh:
         }
 
         assert mesh_json == expected_json
+
+    def test_compute_var_pts_from_thicknesses_cell_size(self):
+        from pybamm.meshes.meshes import compute_var_pts_from_thicknesses
+
+        electrode_thicknesses = {
+            "negative electrode": 100e-6,
+            "separator": 25e-6,
+            "positive electrode": 100e-6,
+        }
+
+        cell_size = 5e-6  # 5 micrometres per cell
+        var_pts = compute_var_pts_from_thicknesses(electrode_thicknesses, cell_size)
+
+        assert isinstance(var_pts, dict)
+        assert all(isinstance(v, dict) for v in var_pts.values())
+        assert var_pts["negative electrode"]["x_n"] == 20
+        assert var_pts["separator"]["x_s"] == 5
+        assert var_pts["positive electrode"]["x_p"] == 20
+
+    def test_compute_var_pts_from_thicknesses_invalid_thickness_type(self):
+        from pybamm.meshes.meshes import compute_var_pts_from_thicknesses
+
+        with pytest.raises(TypeError):
+            compute_var_pts_from_thicknesses(["not", "a", "dict"], 1e-6)
+
+    def test_compute_var_pts_from_thicknesses_invalid_grid_size(self):
+        from pybamm.meshes.meshes import compute_var_pts_from_thicknesses
+
+        electrode_thicknesses = {"negative electrode": 100e-6}
+        with pytest.raises(ValueError):
+            compute_var_pts_from_thicknesses(electrode_thicknesses, -1e-6)
 
 
 class TestMeshGenerator:
