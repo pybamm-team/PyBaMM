@@ -76,6 +76,7 @@ def _get_initial_conditions(options, soc_init):
     """Get initial conditions for stoichiometry variables."""
     variables = _get_stoich_variables(options)
     ics = {}
+    # Avoid exact boundary values for better numerical stability
     eps = 0.01
     for name, var in variables.items():
         if "100" in name and "x" in name:
