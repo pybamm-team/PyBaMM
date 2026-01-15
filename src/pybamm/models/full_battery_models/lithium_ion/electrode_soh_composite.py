@@ -280,8 +280,8 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
         y_100_1 = variables["y_100_1"]
         x_0_1 = variables["x_0_1"]
         y_0_1 = variables["y_0_1"]
-        V_max = param.voltage_high_cut
-        V_min = param.voltage_low_cut
+        V_max = param.ocp_soc_100
+        V_min = param.ocp_soc_0
         if is_negative_composite:
             x_100_2 = variables["x_100_2"]
             x_0_2 = variables["x_0_2"]
