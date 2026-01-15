@@ -383,36 +383,40 @@ class TestCasadiConverter:
 
 
 class TestRepeatedRowMatmulOptimization:
-    """Tests for the repeated-row matrix multiplication optimization."""
+    """Tests for try_repeated_row_matmul optimization."""
 
     def test_identical_rows(self):
         """Test optimization when all rows are identical."""
+        from pybamm.expression_tree.operations.convert_to_casadi import (
+            try_repeated_row_matmul,
+        )
+
         rng = np.random.default_rng(0)
-        n = 100
-        m = 50
+        n, m = 100, 50
         row = rng.random(n)
         M = np.tile(row, (m, 1))
 
         mat = pybamm.Matrix(M)
-        y_pybamm = pybamm.StateVector(slice(0, n))
-        expr = mat @ y_pybamm
+        y = casadi.MX.sym("y", n)
 
-        y_casadi = casadi.MX.sym("y", n)
-        result = expr.to_casadi(y=y_casadi)
+        result = try_repeated_row_matmul(mat, y)
+        assert result is not None
 
         # Evaluate and compare
         x = rng.random(n)
-        f = casadi.Function("f", [y_casadi], [result])
+        f = casadi.Function("f", [y], [result])
         expected = M @ x
         actual = np.array(f(x)).flatten()
-
         np.testing.assert_allclose(actual, expected, rtol=1e-14)
 
     def test_boundary_differs(self):
-        """Test optimization when interior rows are identical but boundaries differ."""
+        """Test optimization when interior rows identical but boundaries differ."""
+        from pybamm.expression_tree.operations.convert_to_casadi import (
+            try_repeated_row_matmul,
+        )
+
         rng = np.random.default_rng(0)
-        n = 100
-        m = 50
+        n, m = 100, 50
         interior_row = rng.random(n)
         first_row = rng.random(n) * 0.5
         last_row = rng.random(n) * 2
@@ -422,50 +426,81 @@ class TestRepeatedRowMatmulOptimization:
         M[-1, :] = last_row
 
         mat = pybamm.Matrix(M)
-        y_pybamm = pybamm.StateVector(slice(0, n))
-        expr = mat @ y_pybamm
+        y = casadi.MX.sym("y", n)
 
-        y_casadi = casadi.MX.sym("y", n)
-        result = expr.to_casadi(y=y_casadi)
+        result = try_repeated_row_matmul(mat, y)
+        assert result is not None
 
         # Evaluate and compare
         x = rng.random(n)
-        f = casadi.Function("f", [y_casadi], [result])
+        f = casadi.Function("f", [y], [result])
         expected = M @ x
         actual = np.array(f(x)).flatten()
-
         np.testing.assert_allclose(actual, expected, rtol=1e-14)
 
-    def test_two_row_matrix(self):
-        """Test that m=2 matrices are handled correctly."""
+    def test_two_rows_identical(self):
+        """Test m=2 with identical rows."""
+        from pybamm.expression_tree.operations.convert_to_casadi import (
+            try_repeated_row_matmul,
+        )
+
         rng = np.random.default_rng(0)
         n = 100
         row = rng.random(n)
+        M = np.vstack([row, row])
 
-        # Case 1: Both rows identical
-        M1 = np.vstack([row, row])
-        mat1 = pybamm.Matrix(M1)
-        y_pybamm = pybamm.StateVector(slice(0, n))
-        expr1 = mat1 @ y_pybamm
+        mat = pybamm.Matrix(M)
+        y = casadi.MX.sym("y", n)
 
-        y_casadi = casadi.MX.sym("y", n)
-        result1 = expr1.to_casadi(y=y_casadi)
+        result = try_repeated_row_matmul(mat, y)
+        assert result is not None
 
         x = rng.random(n)
-        f1 = casadi.Function("f1", [y_casadi], [result1])
-        expected1 = M1 @ x
-        actual1 = np.array(f1(x)).flatten()
+        f = casadi.Function("f", [y], [result])
+        expected = M @ x
+        actual = np.array(f(x)).flatten()
+        np.testing.assert_allclose(actual, expected, rtol=1e-14)
 
-        np.testing.assert_allclose(actual1, expected1, rtol=1e-14)
+    def test_two_rows_different(self):
+        """Test m=2 with different rows returns None."""
+        from pybamm.expression_tree.operations.convert_to_casadi import (
+            try_repeated_row_matmul,
+        )
 
-        # Case 2: Rows different
-        M2 = np.vstack([row, row * 2])
-        mat2 = pybamm.Matrix(M2)
-        expr2 = mat2 @ y_pybamm
-        result2 = expr2.to_casadi(y=y_casadi)
+        rng = np.random.default_rng(0)
+        n = 100
+        M = rng.random((2, n))
 
-        f2 = casadi.Function("f2", [y_casadi], [result2])
-        expected2 = M2 @ x
-        actual2 = np.array(f2(x)).flatten()
+        mat = pybamm.Matrix(M)
+        y = casadi.MX.sym("y", n)
 
-        np.testing.assert_allclose(actual2, expected2, rtol=1e-14)
+        result = try_repeated_row_matmul(mat, y)
+        assert result is None
+
+    def test_random_matrix_returns_none(self):
+        """Test that random matrices return None (no optimization)."""
+        from pybamm.expression_tree.operations.convert_to_casadi import (
+            try_repeated_row_matmul,
+        )
+
+        rng = np.random.default_rng(0)
+        n, m = 100, 50
+        M = rng.random((m, n))
+
+        mat = pybamm.Matrix(M)
+        y = casadi.MX.sym("y", n)
+
+        result = try_repeated_row_matmul(mat, y)
+        assert result is None
+
+    def test_non_array_returns_none(self):
+        """Test that non-Array symbols return None."""
+        from pybamm.expression_tree.operations.convert_to_casadi import (
+            try_repeated_row_matmul,
+        )
+
+        y = casadi.MX.sym("y", 10)
+        scalar = pybamm.Scalar(5)
+
+        result = try_repeated_row_matmul(scalar, y)
+        assert result is None

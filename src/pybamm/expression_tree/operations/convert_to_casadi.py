@@ -12,41 +12,8 @@ from scipy import interpolate, special
 import pybamm
 
 
-@dataclass
-class MatMulIdenticalRows:
-    """All rows are identical: M @ x = ones(m,1) * (row @ x)"""
-
-    row: np.ndarray
-    m: int
-
-    def apply(self, converted_right: casadi.MX) -> casadi.MX:
-        return casadi.DM.ones(self.m, 1) * (casadi.DM(self.row).T @ converted_right)
-
-
-@dataclass
-class MatMulBoundaryDiffers:
-    """Interior rows identical, boundary rows differ."""
-
-    interior_row: np.ndarray
-    first_row: np.ndarray | None  # None if same as interior
-    last_row: np.ndarray | None  # None if same as interior
-    m: int
-
-    def apply(self, converted_right: casadi.MX) -> casadi.MX:
-        first = self.first_row if self.first_row is not None else self.interior_row
-        last = self.last_row if self.last_row is not None else self.interior_row
-
-        first_result = casadi.DM(first).T @ converted_right
-        interior_result = casadi.DM.ones(self.m - 2, 1) * (
-            casadi.DM(self.interior_row).T @ converted_right
-        )
-        last_result = casadi.DM(last).T @ converted_right
-        return casadi.vertcat(first_result, interior_result, last_result)
-
-
 class CasadiConverter:
     def __init__(self, casadi_symbols=None):
-        self._repeated_row_cache = {}
         self._casadi_symbols = casadi_symbols or {}
 
         pybamm.citations.register("Andersson2019")
@@ -125,7 +92,7 @@ class CasadiConverter:
                 return casadi.kron(converted_left, converted_right)
             # Optimize repeated-row matrix multiplications: M @ x -> ones * (row @ x)
             if isinstance(symbol, pybamm.MatrixMultiplication):
-                result = self._try_repeated_row_matmul(left, converted_right)
+                result = try_repeated_row_matmul(left, converted_right)
                 if result is not None:
                     return result
             # _binary_evaluate defined in derived classes for specific rules
@@ -341,48 +308,68 @@ class CasadiConverter:
                 "'linear algebra' at this stage."
             )
 
-    def _try_repeated_row_matmul(
-        self, left_symbol: pybamm.Array, converted_right: casadi.MX
-    ) -> casadi.MX | None:
-        """
-        Optimize M @ x when M has repeated or scaled rows.
 
-        Detects three patterns:
-        - MatMulIdenticalRows: All rows are the same
-        - MatMulBoundaryDiffers: Interior rows identical, edges differ
-        - MatMulRank1Matrix: All rows are scalar multiples of a reference
+def try_repeated_row_matmul(
+    left_symbol: pybamm.Array, converted_right: casadi.MX
+) -> casadi.MX | None:
+    """
+    Optimize M @ x when M has repeated or scaled rows.
 
-        This reduces O(m*n) to O(n) for the repeated section.
-        """
-        if not isinstance(left_symbol, pybamm.Array):
-            return None
+    Detects three patterns:
+    - MatMulIdenticalRows: All rows are the same
+    - MatMulBoundaryDiffers: Interior rows identical, edges differ
 
-        entries = left_symbol.entries
-        m = entries.shape[0]
-
-        if m < 2:
-            return None
-
-        # Check cache
-        cache_key = id(left_symbol)
-        if cache_key in self._repeated_row_cache:
-            cached = self._repeated_row_cache[cache_key]
-            if cached is None:
-                return None
-            return cached.apply(converted_right)
-
-        # Convert to dense array for comparison
-        dense = (
-            entries.toarray() if hasattr(entries, "toarray") else np.asarray(entries)
-        )
-
-        opt = check_identical_rows(dense)
-        if opt is not None:
-            self._repeated_row_cache[cache_key] = opt
-            return opt.apply(converted_right)
-
-        self._repeated_row_cache[cache_key] = None
+    This reduces O(m*n) to O(n) for the repeated section.
+    """
+    if not isinstance(left_symbol, pybamm.Array):
         return None
+
+    entries = left_symbol.entries
+    m = entries.shape[0]
+
+    if m < 2:
+        return None
+
+    # Convert to dense array for comparison
+    dense = entries.toarray() if hasattr(entries, "toarray") else np.asarray(entries)
+
+    opt = check_identical_rows(dense)
+    if opt:
+        return opt.apply(converted_right)
+
+    return None
+
+
+@dataclass
+class MatMulIdenticalRows:
+    """All rows are identical: M @ x = ones(m,1) * (row @ x)"""
+
+    row: np.ndarray
+    m: int
+
+    def apply(self, converted_right: casadi.MX) -> casadi.MX:
+        return casadi.DM.ones(self.m, 1) * (casadi.DM(self.row).T @ converted_right)
+
+
+@dataclass
+class MatMulBoundaryDiffers:
+    """Interior rows identical, boundary rows differ."""
+
+    interior_row: np.ndarray
+    first_row: np.ndarray | None  # None if same as interior
+    last_row: np.ndarray | None  # None if same as interior
+    m: int
+
+    def apply(self, converted_right: casadi.MX) -> casadi.MX:
+        first = self.first_row if self.first_row is not None else self.interior_row
+        last = self.last_row if self.last_row is not None else self.interior_row
+
+        first_result = casadi.DM(first).T @ converted_right
+        interior_result = casadi.DM.ones(self.m - 2, 1) * (
+            casadi.DM(self.interior_row).T @ converted_right
+        )
+        last_result = casadi.DM(last).T @ converted_right
+        return casadi.vertcat(first_result, interior_result, last_result)
 
 
 def check_identical_rows(
