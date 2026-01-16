@@ -313,13 +313,13 @@ def try_repeated_row_matmul(
     left_symbol: pybamm.Array, converted_right: casadi.MX
 ) -> casadi.MX | None:
     """
-    Optimize M @ x when M has repeated or scaled rows.
+    Optimize M @ x when M has repeated rows.
 
-    Detects three patterns:
+    Detects two patterns:
     - MatMulIdenticalRows: All rows are the same
     - MatMulBoundaryDiffers: Interior rows identical, edges differ
 
-    This reduces O(m*n) to O(n) for the repeated section.
+    This reduces O(m*n) to O(m+n) for the repeated section.
     """
     if not isinstance(left_symbol, pybamm.Array):
         return None
@@ -388,8 +388,8 @@ def check_identical_rows(
     # For m >= 3: check interior rows, then boundaries
     interior_row = dense[1, :]
 
-    # Check interior rows are all identical
-    if not (dense[1:-1] == interior_row).all():
+    # Check interior rows are all identical (start at row 2 since row 1 is the template)
+    if not (dense[2:-1] == interior_row).all():
         return None
 
     last_row = dense[-1, :]
