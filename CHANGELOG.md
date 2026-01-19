@@ -6,6 +6,8 @@
 
 ## Bug fixes
 
+- Fixed a bug where `ExpressionFunctionParameter` children were not properly substituted after JSON deserialization, causing `ElectrodeSOHSolver` to fail with "Variable not implemented" errors. ([#5352](https://github.com/pybamm-team/PyBaMM/pull/5352))
+
 # [v25.12.0](https://github.com/pybamm-team/PyBaMM/tree/v25.12.0) - 2026-01-15
 
 ## Features
