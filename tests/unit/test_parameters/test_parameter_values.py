@@ -1825,3 +1825,32 @@ class TestParameterValues:
                 assert var.id == original_var_ids[name], (
                     f"Variable '{name}' expression was modified by process_model"
                 )
+
+    def test_json_roundtrip_with_electrode_soh_solver(self):
+        """Test json roundtrip with electrode soh_solver"""
+        # Serialize and deserialize parameter values
+        pv = pybamm.ParameterValues("Chen2020")
+        pv_dict = pv.to_json()
+        pv_reconstructed = pybamm.ParameterValues.from_json(pv_dict)
+
+        # The ElectrodeSOHSolver uses OCP functions which are converted to
+        # ExpressionFunctionParameter after JSON roundtrip
+        param = pybamm.LithiumIonParameters()
+        esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(
+            pv_reconstructed, direction=None, param=param
+        )
+
+        # Get inputs for the solver
+        Q_n = pv_reconstructed.evaluate(param.n.Q_init)
+        Q_p = pv_reconstructed.evaluate(param.p.Q_init)
+        Q_Li = pv_reconstructed.evaluate(param.Q_Li_particles_init)
+        inputs = {"Q_Li": Q_Li, "Q_n": Q_n, "Q_p": Q_p}
+
+        # Should solve w/o issue
+        sol = esoh_solver.solve(inputs)
+
+        # Verify the solution is valid
+        assert "x_100" in sol
+        assert "y_100" in sol
+        assert "Maximum theoretical energy [W.h]" in sol
+        assert sol["Maximum theoretical energy [W.h]"] > 0
