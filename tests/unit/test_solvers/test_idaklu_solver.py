@@ -1305,56 +1305,11 @@ class TestIDAKLUSolver:
 
         t_eval = np.linspace(0, 1, 10)
 
-        with pytest.raises(
-            ValueError, match=r"Variable 'nonexistent_variable' not found in model"
+        with pytest.warns(
+            pybamm.SolverWarning,
+            match=r"not present in the model: 'nonexistent_variable'",
         ):
-            solver.solve(model, t_eval, initial_conditions=initial_condition)
-
-    def test_error_initial_conditions_type(self):
-        model = pybamm.BaseModel()
-        u = pybamm.Variable("u")
-        model.rhs = {u: -u}
-        model.initial_conditions = {u: 1}
-        model.variables = {"u": u}
-
-        disc = pybamm.Discretisation()
-        disc.process_model(model)
-
-        solver = pybamm.IDAKLUSolver()
-
-        initial_condition = "invalid_type"
-
-        t_eval = np.linspace(0, 1, 10)
-
-        with pytest.raises(
-            TypeError, match=r"Initial conditions must be dict or numpy array"
-        ):
-            solver.solve(model, t_eval, initial_conditions=initial_condition)
-
-    def test_error_initial_conditions_count_mismatch(self):
-        model = pybamm.BaseModel()
-        u = pybamm.Variable("u")
-        model.rhs = {u: -u}
-        model.initial_conditions = {u: 1}
-        model.variables = {"u": u}
-
-        disc = pybamm.Discretisation()
-        disc.process_model(model)
-
-        solver = pybamm.IDAKLUSolver()
-
-        initial_conditions = [{"u": 2}, {"u": 3}]
-        inputs = [{}, {}, {}]
-
-        t_eval = np.linspace(0, 1, 10)
-
-        with pytest.raises(
-            ValueError,
-            match=r"Number of initial conditions must match number of input sets",
-        ):
-            solver.solve(
-                model, t_eval, inputs=inputs, initial_conditions=initial_conditions
-            )
+            solver.solve(model, t_eval, inputs=initial_condition)
 
     def test_interpolant_extrapolate(self):
         x = np.linspace(0, 2)
