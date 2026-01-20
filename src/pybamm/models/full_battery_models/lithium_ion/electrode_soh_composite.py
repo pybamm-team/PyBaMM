@@ -847,9 +847,7 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
             sim.built_model.set_initial_conditions_from(
                 initial_conditions, inputs=all_inputs
             )
-            sol = sim.solve([0, 1], inputs=all_inputs)
-        else:
-            sol = sim.solve([0, 1], inputs=all_inputs)
+        sol = sim.solve([0], inputs=all_inputs)
 
         return {var: sol[var].entries[0] for var in model.variables.keys()}
 
