@@ -47,7 +47,7 @@ Homepage = "https://pybamm.org"
 Documentation = "https://docs.pybamm.org"
 Repository = "https://github.com/pybamm-team/PyBaMM"
 Releases = "https://github.com/pybamm-team/PyBaMM/releases"
-Changelog = "https://github.com/pybamm-team/PyBaMM/blob/develop/CHANGELOG.md"
+Changelog = "https://github.com/pybamm-team/PyBaMM/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 docs = [

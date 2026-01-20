@@ -1,7 +1,7 @@
 name: Run benchmarks on push
 on:
   push:
-    branches: [main, develop]
+    branches: [main]
 
 
 permissions: {}
@@ -45,21 +45,21 @@ jobs:
       - name: Fetch base branch
         run: |
           # This workflow also runs for merge commits
-          # on develop. In this case, we don't want to be
-          # fetching the develop branch.
+          # on main. In this case, we don't want to be
+          # fetching the main branch.
           current_branch=$(git rev-parse --abbrev-ref HEAD)
           # This workflow should also run on forks; hence,
-          # we should fetch the upstream develop branch.
+          # we should fetch the upstream main branch.
           git remote add upstream https://github.com/pybamm-team/PyBaMM/
-          if [ $current_branch != "develop" ]; then
-              git fetch upstream develop:develop
+          if [ $current_branch != "main" ]; then
+              git fetch upstream main:main
           fi
 
       - name: Run benchmarks
         run: |
           asv machine --machine "GitHubRunner"
           # Get IDs of branch and PR commits
-          BASE_COMMIT=$(git rev-parse develop)
+          BASE_COMMIT=$(git rev-parse main)
           HEAD_COMMIT=$(git rev-parse HEAD)
           echo $BASE_COMMIT | tee commits_to_compare.txt
           echo $HEAD_COMMIT | tee -a commits_to_compare.txt
