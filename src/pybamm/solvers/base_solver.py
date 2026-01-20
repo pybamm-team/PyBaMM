@@ -1129,7 +1129,9 @@ class BaseSolver:
                 event_eval = event(t_eval[0], y0, inputs)
             elif model.convert_to_format in ["python", "jax"]:
                 event_eval = event(t=t_eval[0], y=y0, inputs=inputs_dict)
-            events_eval[idx] = np.array(event_eval)
+                if not isinstance(event_eval, float):
+                    event_eval = event_eval.item()
+            events_eval[idx] = event_eval
 
         if events_eval.min() <= 0:
             # find the events that were triggered by initial conditions
