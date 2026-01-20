@@ -7,7 +7,7 @@ import numpy as np
 
 import pybamm
 
-from .util import _get_lithiation_delithiation
+from .util import get_equilibrium_direction, get_lithiation_delithiation
 
 
 class _BaseElectrodeSOH(pybamm.BaseModel):
@@ -96,6 +96,13 @@ class _ElectrodeSOH(_BaseElectrodeSOH):
     .. math::
         y_0 = y_{100} + \\frac{Q}{Q_p}.
 
+    Stoichiometry limits (x_0, x_100, y_0, y_100) are evaluated in a
+    temperature-independent manner (at the reference temperature, ignoring entropy
+    effects), so that the SOC range is not temperature-dependent. In the presence of
+    a hysteresis model, equilibration in the charging direction is assumed for 100%
+    SOC (charging OCP branch), and equilibration in the discharging direction is
+    assumed for 0% SOC (discharging OCP branch).
+
     """
 
     def __init__(
@@ -147,10 +154,22 @@ class _ElectrodeSOH(_BaseElectrodeSOH):
             x_100 = pybamm.InputParameter("x_100")
             y_100 = pybamm.InputParameter("y_100")
         Un_100 = Un(
-            x_100, T_ref, _get_lithiation_delithiation(direction, "negative", options)
+            x_100,
+            T_ref,
+            get_lithiation_delithiation(
+                get_equilibrium_direction("100", "negative", options),
+                "negative",
+                options,
+            ),
         )
         Up_100 = Up(
-            y_100, T_ref, _get_lithiation_delithiation(direction, "positive", options)
+            y_100,
+            T_ref,
+            get_lithiation_delithiation(
+                get_equilibrium_direction("100", "positive", options),
+                "positive",
+                options,
+            ),
         )
 
         # Define equations for 100% state of charge
@@ -178,10 +197,22 @@ class _ElectrodeSOH(_BaseElectrodeSOH):
                 var = y_100
             y_0 = y_100 + Q / Q_p
             Un_0 = Un(
-                x_0, T_ref, _get_lithiation_delithiation(direction, "negative", options)
+                x_0,
+                T_ref,
+                get_lithiation_delithiation(
+                    get_equilibrium_direction("0", "negative", options),
+                    "negative",
+                    options,
+                ),
             )
             Up_0 = Up(
-                y_0, T_ref, _get_lithiation_delithiation(direction, "positive", options)
+                y_0,
+                T_ref,
+                get_lithiation_delithiation(
+                    get_equilibrium_direction("0", "positive", options),
+                    "positive",
+                    options,
+                ),
             )
             self.algebraic[var] = Up_0 - Un_0 - V_min
             self.initial_conditions[var] = pybamm.Scalar(0.1)
@@ -658,14 +689,14 @@ class ElectrodeSOHSolver:
                     self.param.p.prim.U(
                         y,
                         T,
-                        _get_lithiation_delithiation(
+                        get_lithiation_delithiation(
                             direction, "positive", self.options
                         ),
                     )
                     - self.param.n.prim.U(
                         x,
                         T,
-                        _get_lithiation_delithiation(
+                        get_lithiation_delithiation(
                             direction, "negative", self.options
                         ),
                     )
@@ -784,14 +815,14 @@ class ElectrodeSOHSolver:
                     Up(
                         y,
                         T_init,
-                        _get_lithiation_delithiation(
+                        get_lithiation_delithiation(
                             direction, "positive", self.options
                         ),
                     )
                     - Un(
                         x,
                         T_init,
-                        _get_lithiation_delithiation(
+                        get_lithiation_delithiation(
                             direction, "negative", self.options
                         ),
                     )
@@ -902,7 +933,7 @@ class ElectrodeSOHSolver:
                 self.param.n.prim.U(
                     x,
                     T_init,
-                    _get_lithiation_delithiation(direction, "negative", self.options),
+                    get_lithiation_delithiation(direction, "negative", self.options),
                 ),
                 inputs=inputs,
             )
@@ -910,7 +941,7 @@ class ElectrodeSOHSolver:
                 self.param.p.prim.U(
                     y,
                     T_init,
-                    _get_lithiation_delithiation(direction, "positive", self.options),
+                    get_lithiation_delithiation(direction, "positive", self.options),
                 ),
                 inputs=inputs,
             )
@@ -963,12 +994,12 @@ class ElectrodeSOHSolver:
             self.param.p.prim.U(
                 y_vals,
                 T,
-                _get_lithiation_delithiation(direction, "positive", self.options),
+                get_lithiation_delithiation(direction, "positive", self.options),
             )
             - self.param.n.prim.U(
                 x_vals,
                 T,
-                _get_lithiation_delithiation(direction, "negative", self.options),
+                get_lithiation_delithiation(direction, "negative", self.options),
             ),
             inputs=inputs,
         ).flatten()

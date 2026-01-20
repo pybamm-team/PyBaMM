@@ -2,6 +2,8 @@
 
 ## Features
 
+- Improve the robustness of the `ElectrodeSOHComposite` model and ensure the calculation of equilibrium stoichiometries is consistent for models with hysteresis. ([#5347](https://github.com/pybamm-team/PyBaMM/pull/5347))
+
 ## Bug fixes
 
 - Fixed a bug where `ExpressionFunctionParameter` children were not properly substituted after JSON deserialization, causing `ElectrodeSOHSolver` to fail with "Variable not implemented" errors. ([#5352](https://github.com/pybamm-team/PyBaMM/pull/5352))
