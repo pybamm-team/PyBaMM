@@ -1,6 +1,8 @@
 #
 # A model to calculate electrode-specific SOH
 #
+from __future__ import annotations
+
 from functools import lru_cache
 
 import numpy as np
@@ -75,8 +77,7 @@ class _BaseElectrodeSOH(pybamm.BaseModel):
 
     @property
     def default_solver(self):
-        # Use AlgebraicSolver as CasadiAlgebraicSolver gives unnecessary warnings
-        return pybamm.AlgebraicSolver()
+        return get_esoh_default_solver()
 
 
 class _ElectrodeSOH(_BaseElectrodeSOH):
@@ -569,10 +570,11 @@ class ElectrodeSOHSolver:
             msmr_pot_model = _get_msmr_potential_model(
                 self.parameter_values, self.param
             )
-            sol0 = pybamm.AlgebraicSolver().solve(
+            solver = get_esoh_default_solver()
+            sol0 = solver.solve(
                 msmr_pot_model, inputs={**inputs, "x": x0_init, "y": y0_init}
             )
-            sol100 = pybamm.AlgebraicSolver().solve(
+            sol100 = solver.solve(
                 msmr_pot_model, inputs={**inputs, "x": x100_init, "y": y100_init}
             )
             return {
@@ -707,10 +709,11 @@ class ElectrodeSOHSolver:
             msmr_pot_model = _get_msmr_potential_model(
                 self.parameter_values, self.param
             )
-            sol0 = pybamm.AlgebraicSolver(tol=1e-4).solve(
+            solver = get_esoh_default_solver(tol=1e-4)
+            sol0 = solver.solve(
                 msmr_pot_model, inputs={**inputs, "x": x0_min, "y": y0_max}
             )
-            sol100 = pybamm.AlgebraicSolver(tol=1e-4).solve(
+            sol100 = solver.solve(
                 msmr_pot_model, inputs={**inputs, "x": x100_max, "y": y100_min}
             )
             Up0 = sol0["Up"].data[0]
@@ -1322,3 +1325,14 @@ def _get_msmr_potential_model(parameter_values, param):
     }
     parameter_values.process_model(model)
     return model
+
+
+def get_esoh_default_solver(tol: float = 1e-6) -> pybamm.CompositeSolver:
+    return pybamm.CompositeSolver(
+        [
+            pybamm.AlgebraicSolver(tol=tol),
+            pybamm.CasadiAlgebraicSolver(tol=tol, step_tol=0),
+            pybamm.AlgebraicSolver(method="lsq", tol=tol),
+            pybamm.AlgebraicSolver(method="minimize", tol=tol),
+        ]
+    )
