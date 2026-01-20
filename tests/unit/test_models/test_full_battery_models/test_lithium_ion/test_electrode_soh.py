@@ -108,11 +108,11 @@ class TestElectrodeSOH:
             parameter_values, direction=None, param=param
         )
         inputs = {"Q_n": Q_n, "Q_p": Q_p, "Q_Li": Q_Li}
-        # Solver fails to find a solution but voltage limits are not violated
+        # large voltage limits
         sol0 = esoh_solver.solve(inputs)
         check_solution(sol0)
 
-        # Solver fails to find a solution due to upper voltage limit
+        # upper voltage limit
         parameter_values.update(
             {
                 "Lower voltage cut-off [V]": 0,
@@ -128,7 +128,7 @@ class TestElectrodeSOH:
         sol1 = esoh_solver.solve(inputs)
         check_solution(sol1)
 
-        # Solver fails to find a solution due to lower voltage limit
+        # lower voltage limit
         parameter_values.update(
             {
                 "Lower voltage cut-off [V]": -10,
@@ -144,7 +144,7 @@ class TestElectrodeSOH:
         sol2 = esoh_solver.solve(inputs)
         check_solution(sol2)
 
-        # Solver fails to find a solution due to extreme lower voltage limit
+        # extreme lower voltage limit
         parameter_values.update(
             {
                 "Lower voltage cut-off [V]": -1000,
@@ -160,7 +160,7 @@ class TestElectrodeSOH:
         sol3 = esoh_solver.solve(inputs)
         check_solution(sol3)
 
-    def test_impossible_conditions(self):
+    def test_error(self):
         param = pybamm.LithiumIonParameters()
         parameter_values = pybamm.ParameterValues("Ai2020")
 
