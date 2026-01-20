@@ -2,6 +2,7 @@
 
 ## Features
 
+- Improve the robustness of the `ElectrodeSOHComposite` model and ensure the calculation of equilibrium stoichiometries is consistent for models with hysteresis. ([#5347](https://github.com/pybamm-team/PyBaMM/pull/5347))
 - Improve the performance of matrix multiplication with CasADi expressions. ([#5351](https://github.com/pybamm-team/PyBaMM/pull/5351))
 
 ## Bug fixes

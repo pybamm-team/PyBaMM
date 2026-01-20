@@ -3,7 +3,7 @@
 #
 import pybamm
 
-from .util import _get_lithiation_delithiation, check_if_composite
+from .util import check_if_composite, get_lithiation_delithiation
 
 
 class ElectrodeSOHHalfCell(pybamm.BaseModel):
@@ -37,7 +37,7 @@ class ElectrodeSOHHalfCell(pybamm.BaseModel):
         Q_w = pybamm.InputParameter("Q_w")
         T_ref = param.T_ref
         U_w = param.p.prim.U
-        lith_delith_primary = _get_lithiation_delithiation(
+        lith_delith_primary = get_lithiation_delithiation(
             direction, "positive", options, phase="primary"
         )
 
@@ -49,7 +49,7 @@ class ElectrodeSOHHalfCell(pybamm.BaseModel):
             Q_w_2 = pybamm.InputParameter("Q_w_2")
             U_w_2 = param.p.sec.U
             Q_2 = Q_w_2 * (x_0_2 - x_100_2)
-            lith_delith_secondary = _get_lithiation_delithiation(
+            lith_delith_secondary = get_lithiation_delithiation(
                 direction, "positive", options, phase="secondary"
             )
 
@@ -141,12 +141,12 @@ def get_initial_stoichiometry_half_cell(
     )
     x_0, x_100 = x_dict["x_0"], x_dict["x_100"]
     is_composite = check_if_composite(options, "positive")
-    lith_delith_primary = _get_lithiation_delithiation(
+    lith_delith_primary = get_lithiation_delithiation(
         direction, "positive", options, phase="primary"
     )
     if is_composite:
         x_0_2, x_100_2 = x_dict["x_0_2"], x_dict["x_100_2"]
-        lith_delith_secondary = _get_lithiation_delithiation(
+        lith_delith_secondary = get_lithiation_delithiation(
             direction, "positive", options, phase="secondary"
         )
 
