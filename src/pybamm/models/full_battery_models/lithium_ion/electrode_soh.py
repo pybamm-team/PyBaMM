@@ -7,7 +7,7 @@ import numpy as np
 
 import pybamm
 
-from .util import _get_lithiation_delithiation
+from .util import _get_equilibrium_direction, _get_lithiation_delithiation
 
 
 class _BaseElectrodeSOH(pybamm.BaseModel):
@@ -85,10 +85,6 @@ class _ElectrodeSOH(_BaseElectrodeSOH):
     model is mainly for internal use, to calculate summary variables in a simulation.
     Some of the output variables are defined in :footcite:t:`Weng2023`.
 
-    The stoichiometries at 0% and 100% SOC (x_0, x_100, y_0, y_100) represent
-    equilibrium states and are calculated on the equilibrium OCP branch
-    (direction=None).
-
     .. math::
         Q_{Li} = y_{100}Q_p + x_{100}Q_n,
     .. math::
@@ -99,6 +95,13 @@ class _ElectrodeSOH(_BaseElectrodeSOH):
         x_0 = x_{100} - \\frac{Q}{Q_n},
     .. math::
         y_0 = y_{100} + \\frac{Q}{Q_p}.
+
+    Stoichiometry limits (x_0, x_100, y_0, y_100) are evaluated in a
+    temperature-independent manner (at the reference temperature, ignoring entropy
+    effects), so that the SOC range is not temperature-dependent. In the presence of
+    a hysteresis model, equilibration in the charging direction is assumed for 100%
+    SOC (charging OCP branch), and equilibration in the discharging direction is
+    assumed for 0% SOC (discharging OCP branch).
 
     """
 
@@ -151,10 +154,22 @@ class _ElectrodeSOH(_BaseElectrodeSOH):
             x_100 = pybamm.InputParameter("x_100")
             y_100 = pybamm.InputParameter("y_100")
         Un_100 = Un(
-            x_100, T_ref, _get_lithiation_delithiation(None, "negative", options)
+            x_100,
+            T_ref,
+            _get_lithiation_delithiation(
+                _get_equilibrium_direction("100", "negative", options),
+                "negative",
+                options,
+            ),
         )
         Up_100 = Up(
-            y_100, T_ref, _get_lithiation_delithiation(None, "positive", options)
+            y_100,
+            T_ref,
+            _get_lithiation_delithiation(
+                _get_equilibrium_direction("100", "positive", options),
+                "positive",
+                options,
+            ),
         )
 
         # Define equations for 100% state of charge
@@ -182,10 +197,22 @@ class _ElectrodeSOH(_BaseElectrodeSOH):
                 var = y_100
             y_0 = y_100 + Q / Q_p
             Un_0 = Un(
-                x_0, T_ref, _get_lithiation_delithiation(None, "negative", options)
+                x_0,
+                T_ref,
+                _get_lithiation_delithiation(
+                    _get_equilibrium_direction("0", "negative", options),
+                    "negative",
+                    options,
+                ),
             )
             Up_0 = Up(
-                y_0, T_ref, _get_lithiation_delithiation(None, "positive", options)
+                y_0,
+                T_ref,
+                _get_lithiation_delithiation(
+                    _get_equilibrium_direction("0", "positive", options),
+                    "positive",
+                    options,
+                ),
             )
             self.algebraic[var] = Up_0 - Un_0 - V_min
             self.initial_conditions[var] = pybamm.Scalar(0.1)

@@ -4,7 +4,11 @@
 import pybamm
 
 from .electrode_soh import _ElectrodeSOH
-from .util import _get_lithiation_delithiation, check_if_composite
+from .util import (
+    _get_equilibrium_direction,
+    _get_lithiation_delithiation,
+    check_if_composite,
+)
 
 
 def _get_primary_only_options(options):
@@ -241,14 +245,19 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
     Subscript 1 indicates primary phase and subscript 2 indicates secondary phase.
 
     The model calculates stoichiometries at three states:
-    - 100% SOC (x_100, y_100): Equilibrium state, calculated with direction=None
-    - 0% SOC (x_0, y_0): Equilibrium state, calculated with direction=None
+
+    - 100% SOC (x_100, y_100): Limit state reached via charging
+    - 0% SOC (x_0, y_0): Limit state reached via discharging
     - Initial SOC (x_init, y_init): Dynamic state, uses specified direction
 
-    The equilibrium stoichiometries (_100 and _0 variables) are calculated on the
-    equilibrium OCP branch (direction=None). Only the initial stoichiometries
-    (_init variables) use the specified direction to account for hysteresis during
-    charge/discharge.
+    Stoichiometry limits (_100 and _0 variables) are evaluated in a
+    temperature-independent manner (at the reference temperature, ignoring entropy
+    effects), so that the SOC range is not temperature-dependent. In the presence of
+    a hysteresis model, equilibration in the charging direction is assumed for 100%
+    SOC (charging OCP branch for each material), and equilibration in the discharging
+    direction is assumed for 0% SOC (discharging OCP branch for each material). The
+    initial stoichiometries (_init variables) use the specified direction to account
+    for hysteresis during charge/discharge.
 
     Parameters
     ----------
@@ -290,26 +299,38 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
                 x_100_2,
                 param.T_ref,
                 _get_lithiation_delithiation(
-                    None, "negative", options, phase="secondary"
+                    _get_equilibrium_direction("100", "negative", options, "secondary"),
+                    "negative",
+                    options,
+                    phase="secondary",
                 ),
             ) - param.n.prim.U(
                 x_100_1,
                 param.T_ref,
                 _get_lithiation_delithiation(
-                    None, "negative", options, phase="primary"
+                    _get_equilibrium_direction("100", "negative", options, "primary"),
+                    "negative",
+                    options,
+                    phase="primary",
                 ),
             )
             self.algebraic[x_0_2] = param.n.sec.U(
                 x_0_2,
                 param.T_ref,
                 _get_lithiation_delithiation(
-                    None, "negative", options, phase="secondary"
+                    _get_equilibrium_direction("0", "negative", options, "secondary"),
+                    "negative",
+                    options,
+                    phase="secondary",
                 ),
             ) - param.n.prim.U(
                 x_0_1,
                 param.T_ref,
                 _get_lithiation_delithiation(
-                    None, "negative", options, phase="primary"
+                    _get_equilibrium_direction("0", "negative", options, "primary"),
+                    "negative",
+                    options,
+                    phase="primary",
                 ),
             )
         if is_positive_composite:
@@ -319,26 +340,38 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
                 y_100_2,
                 param.T_ref,
                 _get_lithiation_delithiation(
-                    None, "positive", options, phase="secondary"
+                    _get_equilibrium_direction("100", "positive", options, "secondary"),
+                    "positive",
+                    options,
+                    phase="secondary",
                 ),
             ) - param.p.prim.U(
                 y_100_1,
                 param.T_ref,
                 _get_lithiation_delithiation(
-                    None, "positive", options, phase="primary"
+                    _get_equilibrium_direction("100", "positive", options, "primary"),
+                    "positive",
+                    options,
+                    phase="primary",
                 ),
             )
             self.algebraic[y_0_2] = param.p.prim.U(
                 y_0_1,
                 param.T_ref,
                 _get_lithiation_delithiation(
-                    None, "positive", options, phase="primary"
+                    _get_equilibrium_direction("0", "positive", options, "primary"),
+                    "positive",
+                    options,
+                    phase="primary",
                 ),
             ) - param.p.sec.U(
                 y_0_2,
                 param.T_ref,
                 _get_lithiation_delithiation(
-                    None, "positive", options, phase="secondary"
+                    _get_equilibrium_direction("0", "positive", options, "secondary"),
+                    "positive",
+                    options,
+                    phase="secondary",
                 ),
             )
         self.algebraic[x_100_1] = (
@@ -346,14 +379,20 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
                 y_100_1,
                 param.T_ref,
                 _get_lithiation_delithiation(
-                    None, "positive", options, phase="primary"
+                    _get_equilibrium_direction("100", "positive", options, "primary"),
+                    "positive",
+                    options,
+                    phase="primary",
                 ),
             )
             - param.n.prim.U(
                 x_100_1,
                 param.T_ref,
                 _get_lithiation_delithiation(
-                    None, "negative", options, phase="primary"
+                    _get_equilibrium_direction("100", "negative", options, "primary"),
+                    "negative",
+                    options,
+                    phase="primary",
                 ),
             )
             - V_max
@@ -363,14 +402,20 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
                 y_0_1,
                 param.T_ref,
                 _get_lithiation_delithiation(
-                    None, "positive", options, phase="primary"
+                    _get_equilibrium_direction("0", "positive", options, "primary"),
+                    "positive",
+                    options,
+                    phase="primary",
                 ),
             )
             - param.n.prim.U(
                 x_0_1,
                 param.T_ref,
                 _get_lithiation_delithiation(
-                    None, "negative", options, phase="primary"
+                    _get_equilibrium_direction("0", "negative", options, "primary"),
+                    "negative",
+                    options,
+                    phase="primary",
                 ),
             )
             - V_min
@@ -575,18 +620,46 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
 
         if is_negative_composite:
             result["x_100_2"] = _solve_secondary_stoichiometry(
-                x_100_1, parameter_values, param, "negative", None, options, T_ref, tol
+                x_100_1,
+                parameter_values,
+                param,
+                "negative",
+                "charge",  # 100% SOC is reached via charging
+                options,
+                T_ref,
+                tol,
             )
             result["x_0_2"] = _solve_secondary_stoichiometry(
-                x_0_1, parameter_values, param, "negative", None, options, T_ref, tol
+                x_0_1,
+                parameter_values,
+                param,
+                "negative",
+                "discharge",  # 0% SOC is reached via discharging
+                options,
+                T_ref,
+                tol,
             )
 
         if is_positive_composite:
             result["y_100_2"] = _solve_secondary_stoichiometry(
-                y_100_1, parameter_values, param, "positive", None, options, T_ref, tol
+                y_100_1,
+                parameter_values,
+                param,
+                "positive",
+                "charge",  # 100% SOC is reached via charging
+                options,
+                T_ref,
+                tol,
             )
             result["y_0_2"] = _solve_secondary_stoichiometry(
-                y_0_1, parameter_values, param, "positive", None, options, T_ref, tol
+                y_0_1,
+                parameter_values,
+                param,
+                "positive",
+                "discharge",  # 0% SOC is reached via discharging
+                options,
+                T_ref,
+                tol,
             )
 
         if initialization_method == "voltage":

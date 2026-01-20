@@ -38,12 +38,30 @@ def _has_hysteresis(electrode, options, phase=None):
                 for item in ocp_option
             )
     else:
-        raise ValueError(
-            f"Invalid open-circuit potential option: {domain_options['open-circuit potential']}"
-        )
+        ocp_opt = domain_options["open-circuit potential"]
+        raise ValueError(f"Invalid open-circuit potential option: {ocp_opt}")
 
 
 def _get_lithiation_delithiation(direction, electrode, options, phase=None):
+    """
+    Get the lithiation/delithiation direction for OCP evaluation.
+
+    Parameters
+    ----------
+    direction : str or None
+        The cell-level direction: "charge", "discharge", or None (equilibrium).
+    electrode : str
+        "negative" or "positive"
+    options : dict or BatteryModelOptions
+        Model options containing OCP settings
+    phase : str, optional
+        "primary" or "secondary" for composite electrodes
+
+    Returns
+    -------
+    str or None
+        "lithiation", "delithiation", or None (for equilibrium/no hysteresis)
+    """
     if direction is None or not _has_hysteresis(electrode, options, phase):
         return None
     elif (direction == "charge" and electrode == "negative") or (
@@ -56,3 +74,44 @@ def _get_lithiation_delithiation(direction, electrode, options, phase=None):
         return "delithiation"
     else:
         raise ValueError()
+
+
+def _get_equilibrium_direction(soc_state, electrode, options, phase=None):
+    """
+    Get the appropriate cell direction for equilibrium stoichiometry calculation.
+
+    For electrodes with hysteresis, equilibrium stoichiometries should be calculated
+    on the OCP branch corresponding to how the cell reached that SOC:
+    - 100% SOC: reached via charging → use "charge" direction
+    - 0% SOC: reached via discharging → use "discharge" direction
+
+    For electrodes without hysteresis, returns None (use equilibrium OCP).
+
+    Parameters
+    ----------
+    soc_state : str
+        "100" for 100% SOC or "0" for 0% SOC
+    electrode : str
+        "negative" or "positive"
+    options : dict or BatteryModelOptions
+        Model options containing OCP settings
+    phase : str, optional
+        "primary" or "secondary" for composite electrodes
+
+    Returns
+    -------
+    str or None
+        "charge" (for 100% SOC with hysteresis), "discharge" (for 0% SOC with
+        hysteresis), or None (no hysteresis)
+    """
+    if not _has_hysteresis(electrode, options, phase):
+        return None
+
+    if soc_state == "100":
+        # 100% SOC is reached by charging
+        return "charge"
+    elif soc_state == "0":
+        # 0% SOC is reached by discharging
+        return "discharge"
+    else:
+        raise ValueError(f"soc_state must be '100' or '0', got '{soc_state}'")
