@@ -645,7 +645,7 @@ class IDAKLUJax:
                          {'Current function [A]': 0.222, 'Separator porosity': 0.3}
             """
             logger.info("f")
-            flatargs, treedef = tree_flatten((t, inputs))
+            flatargs, _treedef = tree_flatten((t, inputs))
             self.jax_inputs = inputs
             out = f_p.bind(*flatargs)
             return out

@@ -58,9 +58,7 @@ class TestSolution:
             "Positive electrode active material volume fraction": 0.5,
         }
         t_eval = [0, 1]
-        parameter_values.update(
-            {k: "[input]" for k in inputs.keys()}, check_already_exists=False
-        )
+        parameter_values.update({k: "[input]" for k in inputs.keys()})
 
         model_unobservable = pybamm.lithium_ion.SPM()
         model_unobservable.disable_solution_observability(

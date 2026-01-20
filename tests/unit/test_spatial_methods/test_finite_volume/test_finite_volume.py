@@ -48,14 +48,14 @@ class TestFiniteVolume:
         )
 
         # bad shift key
-        with pytest.raises(ValueError, match="shift key"):
+        with pytest.raises(ValueError, match=r"shift key"):
             fin_vol.shift(c, "bad shift key", "arithmetic")
 
-        with pytest.raises(ValueError, match="shift key"):
+        with pytest.raises(ValueError, match=r"shift key"):
             fin_vol.shift(c, "bad shift key", "harmonic")
 
         # bad method
-        with pytest.raises(ValueError, match="method"):
+        with pytest.raises(ValueError, match=r"method"):
             fin_vol.shift(c, "shift key", "bad method")
 
     def test_node_to_edge_to_node_symbolic(self):
@@ -104,7 +104,7 @@ class TestFiniteVolume:
         edges = [
             pybamm.Vector(np.ones(mesh[dom].npts + 2), domain=dom) for dom in whole_cell
         ]
-        with pytest.raises(pybamm.ShapeError, match="child must have size n_nodes"):
+        with pytest.raises(pybamm.ShapeError, match=r"child must have size n_nodes"):
             fin_vol.concatenation(edges)
 
     def test_discretise_diffusivity_times_spatial_operator(self):
@@ -518,7 +518,7 @@ class TestFiniteVolume:
         # Remove boundary conditions and check error is raised
         disc.bcs = {}
         disc._discretised_symbols = {}
-        with pytest.raises(pybamm.ModelError, match="Boundary conditions"):
+        with pytest.raises(pybamm.ModelError, match=r"Boundary conditions"):
             disc.process_symbol(upwind)
 
         # Set wrong boundary conditions and check error is raised
@@ -528,9 +528,9 @@ class TestFiniteVolume:
                 "right": (pybamm.Scalar(3), "Neumann"),
             }
         }
-        with pytest.raises(pybamm.ModelError, match="Dirichlet boundary conditions"):
+        with pytest.raises(pybamm.ModelError, match=r"Dirichlet boundary conditions"):
             disc.process_symbol(upwind)
-        with pytest.raises(pybamm.ModelError, match="Dirichlet boundary conditions"):
+        with pytest.raises(pybamm.ModelError, match=r"Dirichlet boundary conditions"):
             disc.process_symbol(downwind)
 
     def test_grad_div_with_bcs_on_tab(self):

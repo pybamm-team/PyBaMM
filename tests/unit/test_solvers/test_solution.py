@@ -28,6 +28,21 @@ class TestSolution:
         assert sol.all_inputs == [{}]
         assert isinstance(sol.all_models[0], pybamm.BaseModel)
 
+    def test_yp(self):
+        t = np.linspace(0, 1)
+        y = np.tile(t, (20, 1))
+        yp = np.tile(t, (20, 1)) * 2  # time derivatives
+
+        # Without yps, yp should be None
+        sol_no_yp = pybamm.Solution(t, y, pybamm.BaseModel(), {})
+        assert sol_no_yp.hermite_interpolation is False
+        assert sol_no_yp.yp is None
+
+        # With yps, yp should return the concatenated time derivatives
+        sol_with_yp = pybamm.Solution(t, y, pybamm.BaseModel(), {}, all_yps=yp)
+        assert sol_with_yp.hermite_interpolation is True
+        np.testing.assert_array_equal(sol_with_yp.yp, yp)
+
     def test_sensitivities(self):
         t = np.linspace(0, 1)
         y = np.tile(t, (20, 1))
@@ -40,7 +55,7 @@ class TestSolution:
             bad_ts, [np.ones((1, 3)), np.ones((1, 3))], pybamm.BaseModel(), {}
         )
         with pytest.raises(
-            ValueError, match="Solution time vector must be strictly increasing"
+            ValueError, match=r"Solution time vector must be strictly increasing"
         ):
             sol.set_t()
 
@@ -64,7 +79,7 @@ class TestSolution:
         assert "exceeds the maximum" in log_output
         logger.removeHandler(handler)
 
-        with pytest.raises(TypeError, match="sensitivities arg needs to be a dict"):
+        with pytest.raises(TypeError, match=r"sensitivities arg needs to be a dict"):
             pybamm.Solution(ts, bad_ys, model, {}, all_sensitivities="bad")
 
         sol = pybamm.Solution(ts, bad_ys, model, {}, all_sensitivities={})
@@ -123,12 +138,12 @@ class TestSolution:
         # radd failure
         with pytest.raises(
             pybamm.SolverError,
-            match="Only a Solution or None can be added to a Solution",
+            match=r"Only a Solution or None can be added to a Solution",
         ):
             sol3 + 2
         with pytest.raises(
             pybamm.SolverError,
-            match="Only a Solution or None can be added to a Solution",
+            match=r"Only a Solution or None can be added to a Solution",
         ):
             2 + sol3
 
@@ -163,7 +178,7 @@ class TestSolution:
         # Test
         np.testing.assert_array_equal(sol_sum.t, np.concatenate([t1, t2[1:]]))
         with pytest.raises(
-            pybamm.SolverError, match="The solution is made up from different models"
+            pybamm.SolverError, match=r"The solution is made up from different models"
         ):
             sol_sum.y
 
@@ -376,7 +391,7 @@ class TestSolution:
 
         # set variables first then save
         solution.update(["c", "d"])
-        with pytest.raises(ValueError, match="pickle"):
+        with pytest.raises(ValueError, match=r"pickle"):
             solution.save_data(to_format="pickle")
         solution.save_data(f"{test_stub}.pickle")
 
@@ -390,12 +405,12 @@ class TestSolution:
         np.testing.assert_array_equal(solution.data["c"], data_load["c"].flatten())
         np.testing.assert_array_equal(solution.data["d"], data_load["d"])
 
-        with pytest.raises(ValueError, match="matlab"):
+        with pytest.raises(ValueError, match=r"matlab"):
             solution.save_data(to_format="matlab")
 
         # to matlab with bad variables name fails
         solution.update(["c + d"])
-        with pytest.raises(ValueError, match="Invalid character"):
+        with pytest.raises(ValueError, match=r"Invalid character"):
             solution.save_data(f"{test_stub}.mat", to_format="matlab")
         # Works if providing alternative name
         solution.save_data(
@@ -407,7 +422,7 @@ class TestSolution:
         np.testing.assert_array_equal(solution.data["c + d"], data_load["c_plus_d"])
 
         # to csv
-        with pytest.raises(ValueError, match="only 0D variables can be saved to csv"):
+        with pytest.raises(ValueError, match=r"only 0D variables can be saved to csv"):
             solution.save_data(f"{test_stub}.csv", to_format="csv")
         # only save "c" and "2c"
         solution.save_data(f"{test_stub}.csv", ["c", "2c"], to_format="csv")
@@ -442,7 +457,7 @@ class TestSolution:
         )
 
         # raise error if format is unknown
-        with pytest.raises(ValueError, match="format 'wrong_format' not recognised"):
+        with pytest.raises(ValueError, match=r"format 'wrong_format' not recognised"):
             solution.save_data(f"{test_stub}.csv", to_format="wrong_format")
 
         # test save whole solution
@@ -508,7 +523,7 @@ class TestSolution:
         solver = pybamm.IDAKLUSolver()
         with pytest.raises(
             ValueError,
-            match="time or state vector nodes should only appear within the time integral node",
+            match=r"time or state vector nodes should only appear within the time integral node",
         ):
             solver.solve(model, t_eval=[0, 0.1])["dts"]
 
@@ -520,7 +535,7 @@ class TestSolution:
         solver = pybamm.IDAKLUSolver()
         with pytest.raises(
             ValueError,
-            match="More than one time integral node found",
+            match=r"More than one time integral node found",
         ):
             solver.solve(model, t_eval=[0, 0.1])["dts"]
 
@@ -641,7 +656,7 @@ class TestSolution:
                 # should raise error if t_interp is not equal to data_times
                 with pytest.raises(
                     pybamm.SolverError,
-                    match="solution times and discrete times of the time integral are not equal",
+                    match=r"solution times and discrete times of the time integral are not equal",
                 ):
                     solver.solve(
                         model,
@@ -801,12 +816,12 @@ class TestSolution:
         sim = pybamm.Simulation(model, parameter_values=parameter_values)
         sol = sim.solve(t_eval)
 
-        with pytest.raises(ValueError, match="Input cannot be converted"):
+        with pytest.raises(ValueError, match=r"Input cannot be converted"):
             sol.observe(None)
 
         # 2. Trying to observe a symbol which is not part of the parameter_values or model
         symbol = pybamm.Parameter("_not_in_model")
-        with pytest.raises(KeyError, match="not found"):
+        with pytest.raises(KeyError, match=r"not found"):
             sol.observe(symbol)
 
         # 3. Solver includes `output_variables` - solution not observable but models
@@ -818,7 +833,7 @@ class TestSolution:
         # Models can still process symbols (delayed variable processing is enabled)
         assert all(model.can_process_symbols for model in sol.all_models)
 
-        with pytest.raises(ValueError, match="solver includes `output_variables`"):
+        with pytest.raises(ValueError, match=r"solver includes `output_variables`"):
             sol.observe(model.variables["Current [A]"])
 
         # 4. `disable_solution_observability` is called on the model - solution not
@@ -830,7 +845,7 @@ class TestSolution:
         assert sol.observable is False
         assert all(model.can_process_symbols for model in sol.all_models)
 
-        with pytest.raises(ValueError, match="disable_solution_observability"):
+        with pytest.raises(ValueError, match=r"disable_solution_observability"):
             sol.observe(model.variables["Current [A]"])
 
         # 5. Missing non-strictly required input parameters - solution unobservable
@@ -840,9 +855,7 @@ class TestSolution:
         input_names = sorted(
             ["dummy", "Positive electrode active material volume fraction"]
         )
-        parameter_values.update(
-            {k: "[input]" for k in input_names}, check_already_exists=False
-        )
+        parameter_values.update({k: "[input]" for k in input_names})
         sim = pybamm.Simulation(model, parameter_values=parameter_values)
 
         # purposefully missing the dummy input
@@ -875,7 +888,7 @@ class TestSolution:
         # check that missing input is set to DUMMY_INPUT_PARAMETER_VALUE (np.nan)
         assert np.isnan(sol.all_inputs[0]["dummy"])
 
-        with pytest.raises(ValueError, match="input parameters were not provided"):
+        with pytest.raises(ValueError, match=r"input parameters were not provided"):
             sol.observe(model.variables["Current [A]"])
 
         # 6. Model is partially processed before simulation is built - models cannot
@@ -889,5 +902,5 @@ class TestSolution:
         assert all(not model.can_process_symbols for model in sol.all_models)
         model = sol.all_models[0]
 
-        with pytest.raises(ValueError, match="re-parameterised"):
+        with pytest.raises(ValueError, match=r"re-parameterised"):
             sol.observe(model.variables["Current [A]"])

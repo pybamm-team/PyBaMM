@@ -551,7 +551,7 @@ class TestIDAKLUSolver:
         solver = pybamm.IDAKLUSolver()
 
         t_eval = [0, 3]
-        with pytest.raises(pybamm.SolverError, match="KLU requires the Jacobian"):
+        with pytest.raises(pybamm.SolverError, match=r"KLU requires the Jacobian"):
             solver.solve(model, t_eval)
 
         model = pybamm.BaseModel()
@@ -567,7 +567,7 @@ class TestIDAKLUSolver:
         # will give solver error
         t_eval = [0, -3]
         with pytest.raises(
-            pybamm.SolverError, match="t_eval must increase monotonically"
+            pybamm.SolverError, match=r"t_eval must increase monotonically"
         ):
             solver.solve(model, t_eval)
 
@@ -907,7 +907,7 @@ class TestIDAKLUSolver:
         sim = pybamm.Simulation(model, solver=solver, parameter_values=params)
         with pytest.raises(
             pybamm.SolverError,
-            match="Sensitivity of sparse variables not supported",
+            match=r"Sensitivity of sparse variables not supported",
         ):
             sim.solve([0, 100], inputs=input_parameters, calculate_sensitivities=True)
 
@@ -1115,11 +1115,11 @@ class TestIDAKLUSolver:
 
         with pytest.raises(
             pybamm.SolverError,
-            match="Unsupported option for convert_to_format=python",
+            match=r"Unsupported option for convert_to_format=python",
         ):
             with pytest.raises(
                 DeprecationWarning,
-                match="The python-idaklu solver has been deprecated.",
+                match=r"The python-idaklu solver has been deprecated.",
             ):
                 _ = solver.solve(model, t_eval)
 
@@ -1141,7 +1141,7 @@ class TestIDAKLUSolver:
         solver = pybamm.IDAKLUSolver(output_variables=["c"])
         solver.set_up(model)
 
-        with pytest.warns(pybamm.SolverWarning, match="extrapolation occurred for"):
+        with pytest.warns(pybamm.SolverWarning, match=r"extrapolation occurred for"):
             solver.solve(model, t_eval=[0, 1])
 
     def test_model_solver_with_non_identity_mass(self):
@@ -1305,8 +1305,56 @@ class TestIDAKLUSolver:
 
         t_eval = np.linspace(0, 1, 10)
 
-        with pytest.warns(pybamm.SolverWarning, match="not used in the model"):
-            solver.solve(model, t_eval, inputs=initial_condition)
+        with pytest.raises(
+            ValueError, match=r"Variable 'nonexistent_variable' not found in model"
+        ):
+            solver.solve(model, t_eval, initial_conditions=initial_condition)
+
+    def test_error_initial_conditions_type(self):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        model.rhs = {u: -u}
+        model.initial_conditions = {u: 1}
+        model.variables = {"u": u}
+
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        solver = pybamm.IDAKLUSolver()
+
+        initial_condition = "invalid_type"
+
+        t_eval = np.linspace(0, 1, 10)
+
+        with pytest.raises(
+            TypeError, match=r"Initial conditions must be dict or numpy array"
+        ):
+            solver.solve(model, t_eval, initial_conditions=initial_condition)
+
+    def test_error_initial_conditions_count_mismatch(self):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        model.rhs = {u: -u}
+        model.initial_conditions = {u: 1}
+        model.variables = {"u": u}
+
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        solver = pybamm.IDAKLUSolver()
+
+        initial_conditions = [{"u": 2}, {"u": 3}]
+        inputs = [{}, {}, {}]
+
+        t_eval = np.linspace(0, 1, 10)
+
+        with pytest.raises(
+            ValueError,
+            match=r"Number of initial conditions must match number of input sets",
+        ):
+            solver.solve(
+                model, t_eval, inputs=inputs, initial_conditions=initial_conditions
+            )
 
     def test_interpolant_extrapolate(self):
         x = np.linspace(0, 2)
@@ -1329,7 +1377,7 @@ class TestIDAKLUSolver:
         solver = pybamm.IDAKLUSolver(on_extrapolation="error")
         t_eval = [0, 5]
 
-        with pytest.raises(pybamm.SolverError, match="interpolation bounds"):
+        with pytest.raises(pybamm.SolverError, match=r"interpolation bounds"):
             solver.solve(model, t_eval)
 
         # Test with on_extrapolation="warn"

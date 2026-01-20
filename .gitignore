@@ -9,6 +9,8 @@
 *.csv
 *.hidden
 *.pkl
+.claude
+.local
 
 # don't ignore important .txt and .csv files
 !requirements*
@@ -117,3 +119,6 @@ results/
 
 # tests
 test_callback.log
+
+# log files
+setup.log

@@ -240,7 +240,7 @@ class TestProcessedVariable:
         )
 
         # test no sensitivity raises error
-        with pytest.raises(ValueError, match="Cannot compute sensitivities"):
+        with pytest.raises(ValueError, match=r"Cannot compute sensitivities"):
             print(processed_var.sensitivities)
 
     @pytest.mark.parametrize("hermite_interp", _hermite_args)
@@ -908,7 +908,7 @@ class TestProcessedVariable:
                 "domain B": {b: {"min": 0, "max": 1}},
             }
         )
-        with pytest.raises(NotImplementedError, match="Spatial variable name"):
+        with pytest.raises(NotImplementedError, match=r"Spatial variable name"):
             pybamm.process_variable(
                 "test",
                 [var_sol],
@@ -1472,7 +1472,7 @@ class TestProcessedVariable:
         assert processed_var._process_spatial_variable_names(["R_a", "R_b"]) == "R"
 
         # Test error raised if spatial variable name not recognised
-        with pytest.raises(NotImplementedError, match="Spatial variable name"):
+        with pytest.raises(NotImplementedError, match=r"Spatial variable name"):
             processed_var._process_spatial_variable_names(["var1", "var2"])
 
     def test_hermite_interpolator(self):
@@ -1532,7 +1532,7 @@ class TestProcessedVariable:
         # Test extrapolation before the first solution time
         t_left_extrap = t0 - 1
         with pytest.raises(
-            ValueError, match="interpolation points must be greater than"
+            ValueError, match=r"interpolation points must be greater than"
         ):
             processed_var(t_left_extrap)
 

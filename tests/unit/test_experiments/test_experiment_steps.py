@@ -42,10 +42,10 @@ class TestExperimentSteps:
         step = pybamm.step.current(1, temperature="298K")
         assert step.temperature == 298
 
-        with pytest.raises(ValueError, match="temperature units"):
+        with pytest.raises(ValueError, match=r"temperature units"):
             step = pybamm.step.current(1, temperature="298T")
 
-        with pytest.raises(ValueError, match="time must be positive"):
+        with pytest.raises(ValueError, match=r"time must be positive"):
             pybamm.step.current(1, duration=0)
 
     def test_specific_steps(self):
@@ -181,12 +181,12 @@ class TestExperimentSteps:
                 # useful form for debugging
                 assert [k, expected[k]] == [k, actual[k]]
 
-        with pytest.raises(ValueError, match="Period cannot be"):
+        with pytest.raises(ValueError, match=r"Period cannot be"):
             pybamm.step.string(
                 "Discharge at 1C for 1 hour (1 minute period)", period=60
             )
 
-        with pytest.raises(ValueError, match="Temperature must be"):
+        with pytest.raises(ValueError, match=r"Temperature must be"):
             pybamm.step.string("Discharge at 1C for 1 hour at 298.15oC")
 
     def test_drive_cycle(self):
@@ -201,7 +201,7 @@ class TestExperimentSteps:
         assert drive_cycle_step.temperature == 273.15 - 5
 
         bad_drive_cycle = np.ones((10, 3))
-        with pytest.raises(ValueError, match="Drive cycle must be a 2-column array"):
+        with pytest.raises(ValueError, match=r"Drive cycle must be a 2-column array"):
             pybamm.step.current(bad_drive_cycle)
 
     def test_drive_cycle_duration(self):
@@ -243,23 +243,23 @@ class TestExperimentSteps:
         assert drive_cycle_step_no_period.period is None
 
     def test_bad_strings(self):
-        with pytest.raises(TypeError, match="Input to step.string"):
+        with pytest.raises(TypeError, match=r"Input to step.string"):
             pybamm.step.string(1)
-        with pytest.raises(TypeError, match="Input to step.string"):
+        with pytest.raises(TypeError, match=r"Input to step.string"):
             pybamm.step.string((1, 2, 3))
-        with pytest.raises(ValueError, match="Operating conditions must"):
+        with pytest.raises(ValueError, match=r"Operating conditions must"):
             pybamm.step.string("Discharge at 1 A at 2 hours")
-        with pytest.raises(ValueError, match="drive cycles"):
+        with pytest.raises(ValueError, match=r"drive cycles"):
             pybamm.step.string("Run at 1 A for 2 hours")
-        with pytest.raises(ValueError, match="Instruction must be"):
+        with pytest.raises(ValueError, match=r"Instruction must be"):
             pybamm.step.string("Play at 1 A for 2 hours")
-        with pytest.raises(ValueError, match="Operating conditions must"):
+        with pytest.raises(ValueError, match=r"Operating conditions must"):
             pybamm.step.string("Do at 1 A")
-        with pytest.raises(ValueError, match="Instruction"):
+        with pytest.raises(ValueError, match=r"Instruction"):
             pybamm.step.string("Cell Charge at 1 A for 2 hours")
-        with pytest.raises(ValueError, match="units must be"):
+        with pytest.raises(ValueError, match=r"units must be"):
             pybamm.step.string("Discharge at 1 B for 2 hours")
-        with pytest.raises(ValueError, match="time units must be"):
+        with pytest.raises(ValueError, match=r"time units must be"):
             pybamm.step.string("Discharge at 1 A for 2 years")
 
     def test_start_times(self):
@@ -270,7 +270,7 @@ class TestExperimentSteps:
         assert step.start_time == datetime(2020, 1, 1, 0, 0, 0)
 
         # Test bad start_times
-        with pytest.raises(TypeError, match="`start_time` should be"):
+        with pytest.raises(TypeError, match=r"`start_time` should be"):
             pybamm.step.current(1, duration=3600, start_time="bad start_time")
 
     def test_custom_termination(self):
@@ -289,7 +289,7 @@ class TestExperimentSteps:
         # An example where start_time t>0
         t = np.array([[1, 1], [2, 2], [3, 3]])
 
-        with pytest.raises(ValueError, match="Drive cycle must start at t=0"):
+        with pytest.raises(ValueError, match=r"Drive cycle must start at t=0"):
             pybamm.step.current(t)
 
     def test_base_custom_steps(self):
@@ -321,11 +321,11 @@ class TestExperimentSteps:
         )
         assert custom_step_diff.control == "differential"
 
-        with pytest.raises(ValueError, match="control must be"):
+        with pytest.raises(ValueError, match=r"control must be"):
             pybamm.step.CustomStepImplicit(custom_step_voltage, control="bla")
 
     def test_bad_direction(self):
-        with pytest.raises(ValueError, match="Invalid direction"):
+        with pytest.raises(ValueError, match=r"Invalid direction"):
             pybamm.step.Voltage(4.1, direction="foo")
 
     def test_steps_with_operators(self):
@@ -350,7 +350,7 @@ class TestExperimentSteps:
         np.testing.assert_allclose(event_gt_0_05.expression, 0.05 - 0.06)
 
         # error
-        with pytest.raises(ValueError, match="Invalid operator"):
+        with pytest.raises(ValueError, match=r"Invalid operator"):
             pybamm.step.CurrentTermination(0.05, operator="=")
 
         # operator overloading

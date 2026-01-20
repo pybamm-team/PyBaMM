@@ -75,9 +75,9 @@ class TestBinaryOperators:
 
         # should error if numpy array is not 1D
         array = np.array([[1, 2, 3], [4, 5, 6]])
-        with pytest.raises(ValueError, match="left must be a 1D array"):
+        with pytest.raises(ValueError, match=r"left must be a 1D array"):
             pybamm.Addition(array, a)
-        with pytest.raises(ValueError, match="right must be a 1D array"):
+        with pytest.raises(ValueError, match=r"right must be a 1D array"):
             pybamm.Addition(a, array)
 
     def test_power(self):
@@ -223,11 +223,11 @@ class TestBinaryOperators:
         np.testing.assert_array_equal(
             (pybammS2 * pybammD2).evaluate().toarray(), S2.toarray() * D2
         )
-        with pytest.raises(pybamm.ShapeError, match="inconsistent shapes"):
+        with pytest.raises(pybamm.ShapeError, match=r"inconsistent shapes"):
             (pybammS1 * pybammS2).test_shape()
-        with pytest.raises(pybamm.ShapeError, match="inconsistent shapes"):
+        with pytest.raises(pybamm.ShapeError, match=r"inconsistent shapes"):
             (pybammS2 * pybammS1).test_shape()
-        with pytest.raises(pybamm.ShapeError, match="inconsistent shapes"):
+        with pytest.raises(pybamm.ShapeError, match=r"inconsistent shapes"):
             (pybammS2 * pybammS1).evaluate_ignoring_errors()
 
         # Matrix multiplication is normal matrix multiplication
@@ -241,9 +241,9 @@ class TestBinaryOperators:
         np.testing.assert_array_equal((pybammD2 @ pybammS1).evaluate(), D2 * S1)
         np.testing.assert_array_equal((pybammS2 @ pybammD1).evaluate(), S2 * D1)
         np.testing.assert_array_equal((pybammD1 @ pybammS2).evaluate(), D1 * S2)
-        with pytest.raises(pybamm.ShapeError, match="dimension mismatch"):
+        with pytest.raises(pybamm.ShapeError, match=r"dimension mismatch"):
             (pybammS1 @ pybammS1).test_shape()
-        with pytest.raises(pybamm.ShapeError, match="dimension mismatch"):
+        with pytest.raises(pybamm.ShapeError, match=r"dimension mismatch"):
             (pybammS2 @ pybammS2).test_shape()
 
     def test_sparse_divide(self):
@@ -307,7 +307,7 @@ class TestBinaryOperators:
         # test error with domain not current collector
         v = pybamm.Vector(np.ones(5), domain="current collector")
         w = pybamm.Vector(2 * np.ones(3), domain="test")
-        with pytest.raises(pybamm.DomainError, match="'source'"):
+        with pytest.raises(pybamm.DomainError, match=r"'source'"):
             pybamm.source(v, w)
 
     def test_heaviside(self):

@@ -42,9 +42,9 @@ class TestSimulation:
                 assert val.has_symbol_of_classes(pybamm.Matrix)
 
         # Test options that are only available when simulating an experiment
-        with pytest.raises(ValueError, match="save_at_cycles"):
+        with pytest.raises(ValueError, match=r"save_at_cycles"):
             sim.solve(save_at_cycles=2)
-        with pytest.raises(ValueError, match="starting_solution"):
+        with pytest.raises(ValueError, match=r"starting_solution"):
             sim.solve(starting_solution=sol)
 
     def test_solve_remove_independent_variables_from_rhs(self):
@@ -231,7 +231,7 @@ class TestSimulation:
                 "Positive electrode OCP [V]": ocv_with_parameter,
             }
         )
-        parameter_values.update({"a": "[input]"}, check_already_exists=False)
+        parameter_values.update({"a": "[input]"})
         experiment = pybamm.Experiment(["Discharge at 1C until 2.5 V"])
         sim = pybamm.Simulation(
             model, parameter_values=parameter_values, experiment=experiment
@@ -360,8 +360,7 @@ class TestSimulation:
                 "Secondary: Positive electrode OCP entropic change [V.K-1]": (
                     param["Secondary: Negative electrode OCP entropic change [V.K-1]"]
                 ),
-            },
-            check_already_exists=False,
+            }
         )
 
         # Set voltage cutoffs to match the graphite/silicon OCP range
@@ -416,8 +415,7 @@ class TestSimulation:
                 "Lithium metal partial molar volume [m3.mol-1]": 1.3e-05,  # From Xu2019 parameter set
                 "Lithium metal interface surface potential difference [V]": 0.0,
                 "Current function [A]": 0.0,
-            },
-            check_already_exists=False,
+            }
         )
 
         sim = pybamm.Simulation(model, parameter_values=param)
@@ -452,7 +450,7 @@ class TestSimulation:
                 "Positive electrode OCP [V]": ocv_with_parameter,
             }
         )
-        parameter_values.update({"a": "[input]"}, check_already_exists=False)
+        parameter_values.update({"a": "[input]"})
         experiment = pybamm.Experiment(["Discharge at 1C until 2.5 V"])
         sim = pybamm.Simulation(
             model, parameter_values=parameter_values, experiment=experiment
@@ -468,7 +466,7 @@ class TestSimulation:
         sim = pybamm.Simulation(
             model, parameter_values=parameter_values, experiment=experiment
         )
-        with pytest.raises(pybamm.ModelError, match="Initial temperature"):
+        with pytest.raises(pybamm.ModelError, match=r"Initial temperature"):
             sim.solve([0, 3600])
 
     def test_esoh_with_input_param(self):
@@ -633,7 +631,7 @@ class TestSimulation:
         sim.solve([0, 600])
         with pytest.raises(
             NotImplementedError,
-            match="Cannot save simulation if model format is python",
+            match=r"Cannot save simulation if model format is python",
         ):
             sim.save(test_name)
 
@@ -726,7 +724,9 @@ class TestSimulation:
 
     def test_create_gif(self, tmp_path):
         sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
-        with pytest.raises(ValueError, match="The simulation has not been solved yet."):
+        with pytest.raises(
+            ValueError, match=r"The simulation has not been solved yet."
+        ):
             sim.create_gif()
         sim.solve(t_eval=[0, 10])
 
@@ -890,11 +890,11 @@ class TestSimulation:
         sim = pybamm.Simulation(model)
 
         # test no t_eval
-        with pytest.raises(pybamm.SolverError, match="'t_eval' must be provided"):
+        with pytest.raises(pybamm.SolverError, match=r"'t_eval' must be provided"):
             sim.solve()
 
         # test t_eval list of length != 2
-        with pytest.raises(pybamm.SolverError, match="'t_eval' can be provided"):
+        with pytest.raises(pybamm.SolverError, match=r"'t_eval' can be provided"):
             sim.solve(t_eval=[0, 1, 2])
 
     def test_battery_model_with_input_height(self):
@@ -915,6 +915,6 @@ class TestSimulation:
         sim = pybamm.Simulation(model)
 
         with pytest.warns(
-            UserWarning, match="Model is not suitable for calculating eSOH"
+            UserWarning, match=r"Model is not suitable for calculating eSOH"
         ):
             sim.solve([0, 1], calc_esoh=True)
