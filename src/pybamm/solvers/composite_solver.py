@@ -3,7 +3,7 @@ from functools import wraps
 import pybamm
 
 
-def iterate_solver(func):
+def iterate_solvers(func):
     """
     Decorator that evaluates a for loop over the sub_solvers to test
     each solver's method until one succeeds.
@@ -41,11 +41,8 @@ class CompositeSolver(pybamm.BaseSolver):
         ):
             raise ValueError("sub_solvers must be a list of pybamm.BaseSolver")
         self.sub_solvers: list[pybamm.BaseSolver] = sub_solvers
+        self.name = "Composite solver"
 
-    @iterate_solver
+    @iterate_solvers
     def solve(self, *args, **kwargs):
-        pass
-
-    @iterate_solver
-    def _integrate(self, *args, **kwargs):
         pass

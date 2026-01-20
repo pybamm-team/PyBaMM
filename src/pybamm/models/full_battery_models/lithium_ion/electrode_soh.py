@@ -1330,8 +1330,8 @@ def _get_msmr_potential_model(parameter_values, param):
 def get_esoh_default_solver(tol: float = 1e-6) -> pybamm.CompositeSolver:
     return pybamm.CompositeSolver(
         [
-            pybamm.AlgebraicSolver(tol=tol),
             pybamm.CasadiAlgebraicSolver(tol=tol, step_tol=0),
+            pybamm.AlgebraicSolver(tol=tol),
             pybamm.AlgebraicSolver(method="lsq", tol=tol),
             pybamm.AlgebraicSolver(method="minimize", tol=tol),
         ]

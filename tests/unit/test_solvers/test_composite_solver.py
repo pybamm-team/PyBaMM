@@ -54,9 +54,6 @@ class TestCompositeSolver:
 
         # Create a mock solver that always fails
         class FailingSolver(pybamm.BaseSolver):
-            def _integrate(self, model, t_eval, inputs=None):
-                raise pybamm.SolverError("Intentional failure")
-
             def solve(self, *args, **kwargs):
                 raise pybamm.SolverError("Intentional failure")
 
@@ -81,9 +78,6 @@ class TestCompositeSolver:
         class FailingSolver(pybamm.BaseSolver):
             def __init__(self, name):
                 self.name = name
-
-            def _integrate(self, model, t_eval, inputs=None):
-                raise pybamm.SolverError(f"{self.name} failed")
 
             def solve(self, *args, **kwargs):
                 raise pybamm.SolverError(f"{self.name} failed")
