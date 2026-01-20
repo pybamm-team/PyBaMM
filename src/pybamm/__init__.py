@@ -181,6 +181,7 @@ from .solvers.algebraic_solver import AlgebraicSolver
 from .solvers.casadi_solver import CasadiSolver
 from .solvers.casadi_algebraic_solver import CasadiAlgebraicSolver
 from .solvers.scipy_solver import ScipySolver
+from .solvers.composite_solver import CompositeSolver
 
 from .solvers.jax_solver import JaxSolver
 from .solvers.jax_bdf_solver import jax_bdf_integrate
