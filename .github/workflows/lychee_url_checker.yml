@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - develop
   pull_request:
   schedule:
     # Run everyday at 3 am UTC
