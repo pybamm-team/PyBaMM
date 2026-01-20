@@ -7,7 +7,7 @@ import numpy as np
 
 import pybamm
 
-from .util import _get_equilibrium_direction, _get_lithiation_delithiation
+from .util import get_equilibrium_direction, get_lithiation_delithiation
 
 
 class _BaseElectrodeSOH(pybamm.BaseModel):
@@ -156,8 +156,8 @@ class _ElectrodeSOH(_BaseElectrodeSOH):
         Un_100 = Un(
             x_100,
             T_ref,
-            _get_lithiation_delithiation(
-                _get_equilibrium_direction("100", "negative", options),
+            get_lithiation_delithiation(
+                get_equilibrium_direction("100", "negative", options),
                 "negative",
                 options,
             ),
@@ -165,8 +165,8 @@ class _ElectrodeSOH(_BaseElectrodeSOH):
         Up_100 = Up(
             y_100,
             T_ref,
-            _get_lithiation_delithiation(
-                _get_equilibrium_direction("100", "positive", options),
+            get_lithiation_delithiation(
+                get_equilibrium_direction("100", "positive", options),
                 "positive",
                 options,
             ),
@@ -199,8 +199,8 @@ class _ElectrodeSOH(_BaseElectrodeSOH):
             Un_0 = Un(
                 x_0,
                 T_ref,
-                _get_lithiation_delithiation(
-                    _get_equilibrium_direction("0", "negative", options),
+                get_lithiation_delithiation(
+                    get_equilibrium_direction("0", "negative", options),
                     "negative",
                     options,
                 ),
@@ -208,8 +208,8 @@ class _ElectrodeSOH(_BaseElectrodeSOH):
             Up_0 = Up(
                 y_0,
                 T_ref,
-                _get_lithiation_delithiation(
-                    _get_equilibrium_direction("0", "positive", options),
+                get_lithiation_delithiation(
+                    get_equilibrium_direction("0", "positive", options),
                     "positive",
                     options,
                 ),
@@ -689,14 +689,14 @@ class ElectrodeSOHSolver:
                     self.param.p.prim.U(
                         y,
                         T,
-                        _get_lithiation_delithiation(
+                        get_lithiation_delithiation(
                             direction, "positive", self.options
                         ),
                     )
                     - self.param.n.prim.U(
                         x,
                         T,
-                        _get_lithiation_delithiation(
+                        get_lithiation_delithiation(
                             direction, "negative", self.options
                         ),
                     )
@@ -815,14 +815,14 @@ class ElectrodeSOHSolver:
                     Up(
                         y,
                         T_init,
-                        _get_lithiation_delithiation(
+                        get_lithiation_delithiation(
                             direction, "positive", self.options
                         ),
                     )
                     - Un(
                         x,
                         T_init,
-                        _get_lithiation_delithiation(
+                        get_lithiation_delithiation(
                             direction, "negative", self.options
                         ),
                     )
@@ -933,7 +933,7 @@ class ElectrodeSOHSolver:
                 self.param.n.prim.U(
                     x,
                     T_init,
-                    _get_lithiation_delithiation(direction, "negative", self.options),
+                    get_lithiation_delithiation(direction, "negative", self.options),
                 ),
                 inputs=inputs,
             )
@@ -941,7 +941,7 @@ class ElectrodeSOHSolver:
                 self.param.p.prim.U(
                     y,
                     T_init,
-                    _get_lithiation_delithiation(direction, "positive", self.options),
+                    get_lithiation_delithiation(direction, "positive", self.options),
                 ),
                 inputs=inputs,
             )
@@ -994,12 +994,12 @@ class ElectrodeSOHSolver:
             self.param.p.prim.U(
                 y_vals,
                 T,
-                _get_lithiation_delithiation(direction, "positive", self.options),
+                get_lithiation_delithiation(direction, "positive", self.options),
             )
             - self.param.n.prim.U(
                 x_vals,
                 T,
-                _get_lithiation_delithiation(direction, "negative", self.options),
+                get_lithiation_delithiation(direction, "negative", self.options),
             ),
             inputs=inputs,
         ).flatten()

@@ -42,7 +42,7 @@ def _has_hysteresis(electrode, options, phase=None):
         raise ValueError(f"Invalid open-circuit potential option: {ocp_opt}")
 
 
-def _get_lithiation_delithiation(direction, electrode, options, phase=None):
+def get_lithiation_delithiation(direction, electrode, options, phase=None):
     """
     Get the lithiation/delithiation direction for OCP evaluation.
 
@@ -76,7 +76,7 @@ def _get_lithiation_delithiation(direction, electrode, options, phase=None):
         raise ValueError()
 
 
-def _get_equilibrium_direction(soc_state, electrode, options, phase=None):
+def get_equilibrium_direction(soc_state, electrode, options, phase=None):
     """
     Get the appropriate cell direction for equilibrium stoichiometry calculation.
 
