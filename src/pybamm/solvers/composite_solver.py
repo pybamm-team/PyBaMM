@@ -1,5 +1,6 @@
-import pybamm
 from functools import wraps
+
+import pybamm
 
 
 def iterate_solver(func):
@@ -7,6 +8,7 @@ def iterate_solver(func):
     Decorator that evaluates a for loop over the sub_solvers to test
     each solver's method until one succeeds.
     """
+
     @wraps(func)
     def wrapper(self, *args, **kwargs):
         errors = []
@@ -16,6 +18,7 @@ def iterate_solver(func):
             except pybamm.SolverError as e:
                 errors.append(str(e))
         raise pybamm.SolverError(f"All sub_solvers failed: {errors}") from None
+
     return wrapper
 
 
@@ -33,7 +36,9 @@ class CompositeSolver(pybamm.BaseSolver):
         """
         if not sub_solvers:
             raise ValueError("No sub_solvers provided")
-        if not isinstance(sub_solvers, list) and not all(isinstance(s, pybamm.BaseSolver) for s in sub_solvers):
+        if not isinstance(sub_solvers, list) and not all(
+            isinstance(s, pybamm.BaseSolver) for s in sub_solvers
+        ):
             raise ValueError("sub_solvers must be a list of pybamm.BaseSolver")
         self.sub_solvers: list[pybamm.BaseSolver] = sub_solvers
 
