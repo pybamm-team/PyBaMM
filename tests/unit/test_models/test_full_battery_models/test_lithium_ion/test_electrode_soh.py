@@ -112,9 +112,7 @@ class TestElectrodeSOH:
         )
         inputs = {"Q_n": Q_n, "Q_p": Q_p, "Q_Li": Q_Li}
         # Solver fails to find a solution but voltage limits are not violated
-        with pytest.raises(
-            pybamm.SolverError, match=r"Could not find acceptable solution"
-        ):
+        with pytest.raises(pybamm.SolverError, match=r"All sub_solvers failed"):
             esoh_solver.solve(inputs)
         # Solver fails to find a solution due to upper voltage limit
         parameter_values.update(
@@ -375,16 +373,22 @@ class TestElectrodeSOHComposite:
             "open-circuit potential": (("single", "current sigmoid"), "single"),
         }
         param = pybamm.LithiumIonParameters(options=options)
+        tol = 1e-6
         results_discharge = pybamm.lithium_ion.get_initial_stoichiometries_composite(
             "4.0 V",
             pvals,
             param=param,
             options=options,
-            tol=1e-6,
+            tol=tol,
             direction="discharge",
         )
         results_charge = pybamm.lithium_ion.get_initial_stoichiometries_composite(
-            "4.0 V", pvals, param=param, options=options, tol=1e-6, direction="charge"
+            "4.0 V",
+            pvals,
+            param=param,
+            options=options,
+            tol=tol,
+            direction="charge",
         )
         # Basic sanity: solution includes expected variables and bounded stoichiometries
         for key in results_discharge:
