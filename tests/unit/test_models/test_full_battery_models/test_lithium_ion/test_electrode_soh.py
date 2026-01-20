@@ -248,7 +248,7 @@ class TestElectrodeSOHComposite:
         options = {"particle phases": phases}
         return params, options
 
-    @pytest.mark.parametrize("initial_value", ["4.0 V", 0.5])
+    @pytest.mark.parametrize("initial_value", ["2.7V", "4.0 V", 0.1, 0.5, 0.9])
     @pytest.mark.parametrize(
         "composite_electrode",
         [
@@ -285,7 +285,8 @@ class TestElectrodeSOHComposite:
                 - param.n.prim.U(results["x_init_1"], param.T_ref)
             ) == pytest.approx(4.0, abs=1e-05)
 
-    def test_chen2020_composite_defaults(self):
+    @pytest.mark.parametrize("initial_value", ["2.7V", "4.0 V", 0.1, 0.5, 0.9])
+    def test_chen2020_composite_defaults(self, initial_value):
         pvals = pybamm.ParameterValues("Chen2020_composite")
         options = {"particle phases": ("2", "1")}
         param = pybamm.LithiumIonParameters(options=options)
@@ -298,22 +299,77 @@ class TestElectrodeSOHComposite:
             }
         )
         results = pybamm.lithium_ion.get_initial_stoichiometries_composite(
-            "4.0 V", pvals, param=param, options=options, tol=1e-6, direction=None
+            initial_value, pvals, param=param, options=options, tol=1e-6, direction=None
         )
         # Basic sanity: solution includes expected variables and bounded stoichiometries
         for key, val in results.items():
             if key.startswith(("x_", "y_")):
                 assert 0 <= val <= 1
         pvals_set = pybamm.lithium_ion.set_initial_state(
-            "4.0 V", pvals, param=param, options=options, tol=1e-6
+            initial_value, pvals, param=param, options=options, tol=1e-6
         )
-        assert pvals_set.evaluate(
-            param.p.prim.U(results["y_init_1"], param.T_ref)
-            - param.n.prim.U(results["x_init_1"], param.T_ref)
-        ) == pytest.approx(4.0, abs=1e-05)
+        if isinstance(initial_value, str):
+            V_target = float(initial_value[:-1])
+            assert pvals_set.evaluate(
+                param.p.prim.U(results["y_init_1"], param.T_ref)
+                - param.n.prim.U(results["x_init_1"], param.T_ref)
+            ) == pytest.approx(V_target, abs=1e-05)
+
+    def test_chen2020_composite_default_solve(self):
+        pvals = pybamm.ParameterValues("Chen2020_composite")
+        options = {"particle phases": ("2", "1")}
+        param = pybamm.LithiumIonParameters(options=options)
+        pvals.update(
+            {
+                "Secondary: Initial concentration in negative electrode [mol.m-3]": 2.3512e05
+            }
+        )
+
+        # Test default solve with split fallback enabled
+        results_with_fallback = (
+            pybamm.lithium_ion.get_initial_stoichiometries_composite(
+                "4.0 V",
+                pvals,
+                param=param,
+                options=options,
+                tol=1e-6,
+                direction=None,
+                try_split_solve=True,
+            )
+        )
+
+        # Test without fallback (should also work for this case)
+        results_no_fallback = pybamm.lithium_ion.get_initial_stoichiometries_composite(
+            "4.0 V",
+            pvals,
+            param=param,
+            options=options,
+            tol=1e-6,
+            direction=None,
+            try_split_solve=False,
+        )
+
+        # Both should give similar results for this well-behaved case
+        for key in results_with_fallback:
+            if key.startswith(("x_", "y_")):
+                assert results_with_fallback[key] == pytest.approx(
+                    results_no_fallback[key], abs=1e-5
+                ), (
+                    f"Mismatch for {key}: "
+                    f"with_fallback={results_with_fallback[key]}, "
+                    f"no_fallback={results_no_fallback[key]}"
+                )
 
     def test_chen2020_composite_defaults_hysteresis(self):
         pvals = pybamm.ParameterValues("Chen2020_composite")
+        # Solving ESOH with the original Chen2020_composite parameters gives a 0% SOC
+        # voltage of 2.53V not 2.5V. We fix this by reducing the secondary initial
+        # concentration, which adjusts Q_Li to make the system consistent.
+        pvals.update(
+            {
+                "Secondary: Initial concentration in negative electrode [mol.m-3]": 2.3512e05
+            }
+        )
         options = {
             "particle phases": ("2", "1"),
             "open-circuit potential": (("single", "current sigmoid"), "single"),
@@ -324,17 +380,55 @@ class TestElectrodeSOHComposite:
             pvals,
             param=param,
             options=options,
-            tol=1e-1,
+            tol=1e-6,
             direction="discharge",
         )
         results_charge = pybamm.lithium_ion.get_initial_stoichiometries_composite(
-            "4.0 V", pvals, param=param, options=options, tol=1e-1, direction="charge"
+            "4.0 V", pvals, param=param, options=options, tol=1e-6, direction="charge"
         )
         # Basic sanity: solution includes expected variables and bounded stoichiometries
-        for key, val in results_discharge.items():
+        for key in results_discharge:
             if key.startswith(("x_", "y_")):
-                assert 0 <= val <= 1
-                assert results_discharge[key] != results_charge[key]
+                val_discharge = results_discharge[key]
+                val_charge = results_charge[key]
+                # Check both values are bounded
+                assert 0 <= val_discharge <= 1
+                assert 0 <= val_charge <= 1
+                # Check values are approximately equal if not 'init' in key (same
+                # voltage may be different stoichiometries due to hysteresis)
+                if "init" not in key:
+                    assert val_discharge == pytest.approx(val_charge, abs=1e-04)
+
+    def test_chen2020_composite_solve_with_hysteresis(self):
+        pvals = pybamm.ParameterValues("Chen2020_composite")
+        pvals.update(
+            {
+                "Secondary: Initial concentration in negative electrode [mol.m-3]": 2.3512e05
+            }
+        )
+        options = {
+            "particle phases": ("2", "1"),
+            "open-circuit potential": (("single", "current sigmoid"), "single"),
+        }
+        param = pybamm.LithiumIonParameters(options=options)
+
+        # Test that solver works with hysteresis in both directions
+        for direction in ["charge", "discharge"]:
+            results = pybamm.lithium_ion.get_initial_stoichiometries_composite(
+                "4.0 V",
+                pvals,
+                param=param,
+                options=options,
+                tol=1e-6,
+                direction=direction,
+            )
+
+            # Verify all stoichiometries are within bounds
+            for key in results:
+                if key.startswith(("x_", "y_")):
+                    assert 0 <= results[key] <= 1, (
+                        f"Stoichiometry {key} out of bounds: {results[key]}"
+                    )
 
 
 class TestElectrodeSOHMSMR:
