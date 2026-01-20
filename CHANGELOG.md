@@ -2,6 +2,17 @@
 
 ## Features
 
+- Improve the performance of matrix multiplication with CasADi expressions. ([#5351](https://github.com/pybamm-team/PyBaMM/pull/5351))
+
+## Bug fixes
+
+- Fixed a bug where `ExpressionFunctionParameter` children were not properly substituted after JSON deserialization, causing `ElectrodeSOHSolver` to fail with "Variable not implemented" errors. ([#5352](https://github.com/pybamm-team/PyBaMM/pull/5352))
+
+# [v25.12.0](https://github.com/pybamm-team/PyBaMM/tree/v25.12.0) - 2026-01-15
+
+## Features
+
+- Porosity and active material fractions are now `FunctionParameters` of y and z, as well as x ([#5214](https://github.com/pybamm-team/PyBaMM/pull/5214))
 - Added support for asymmetric loss of active material. ([#5343](https://github.com/pybamm-team/PyBaMM/pull/5343))
 - Restructures `ParameterValues`. Adds deprecation notice on `update`'s `check_already_exists` argument. ([#5339](https://github.com/pybamm-team/PyBaMM/pull/5339))
 - Added `Solution.yp` property to return the time derivatives of the solution. ([#5341](https://github.com/pybamm-team/PyBaMM/pull/5341))
@@ -36,7 +47,6 @@
 
 - Allow setting initial conditions from `y_slices` of a `Solution` object. ([#5257](https://github.com/pybamm-team/PyBaMM/pull/5257))
 - Added docstring to `FuzzyDict.copy` explaining its return value and behavior. ([#5242](https://github.com/pybamm-team/PyBaMM/pull/5242))
-- Porosity and active material fractions are now `FunctionParameters` of y and z, as well as x ([#5214](https://github.com/pybamm-team/PyBaMM/pull/5214))
 
 ## Bug fixes
 

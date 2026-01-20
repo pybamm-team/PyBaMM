@@ -297,7 +297,7 @@ class ParameterSubstitutor:
             inputs = {
                 arg: child
                 for arg, child in zip(
-                    function_parameter.func_args, symbol.children, strict=False
+                    function_parameter.func_args, new_children, strict=False
                 )
             }
 
@@ -315,9 +315,6 @@ class ParameterSubstitutor:
             combined_store = ParameterStore(dict(self._store._data))
             combined_store.update(inputs)
             combined_processor = ParameterSubstitutor(combined_store)
-
-            # Copy parent cache to combined processor
-            combined_processor._cache.update(self._cache)
 
             # Process any FunctionParameter children first to avoid recursion
             for child in expression.pre_order():
@@ -345,12 +342,6 @@ class ParameterSubstitutor:
 
             # Process function with combined processor to get a symbolic expression
             function = combined_processor.process_symbol(expression)
-
-            # Propagate newly cached symbols back to parent cache for reuse
-            # Only propagate symbols that don't depend on the local inputs
-            for sym, processed in combined_processor._cache.items():
-                if sym not in self._cache and sym not in inputs.values():
-                    self._cache[sym] = processed
 
             # Differentiate if necessary
             if symbol.diff_variable is None:
