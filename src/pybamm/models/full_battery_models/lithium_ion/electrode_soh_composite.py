@@ -613,10 +613,10 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
         Q_p_total = Q_p_1 + (Qs.get("Q_p_2", 0))
 
         primary_options = _get_primary_only_options(options)
-        # Use direction=None for equilibrium stoichiometries (x_0, x_100, y_0, y_100)
-        # The direction parameter only affects initial stoichiometries calculated later
+        # _ElectrodeSOH uses get_equilibrium_direction internally for the equilibrium
+        # stoichiometries (x_0, x_100, y_0, y_100), consistent with the full solve
         primary_model = _ElectrodeSOH(
-            direction=None,
+            direction=direction,
             param=param,
             solve_for=["x_0", "x_100"],
             known_value="cyclable lithium capacity",
