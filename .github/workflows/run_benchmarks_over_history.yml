@@ -16,7 +16,7 @@ on:
         pattern: '^[a-zA-Z0-9._-]+$'
       commit_end:
         description: "Identifier of commit at which to end"
-        default: "develop"
+        default: "main"
         type: string
         pattern: '^[a-zA-Z0-9._-]+$'
       ncommits:
@@ -48,13 +48,13 @@ jobs:
       - name: Install nox and asv
         run: pip install -U pip nox asv
 
-      - name: Fetch develop branch
-        # Not required when worklow trigerred
-        # on develop, but useful when
+      - name: Fetch main branch
+        # Not required when workflow triggered
+        # on main, but useful when
         # experimenting/developing on another branch.
-        if: github.ref != 'refs/heads/develop'
+        if: github.ref != 'refs/heads/main'
         run: |
-          git fetch origin develop:develop
+          git fetch origin main:main
 
       - name: Validate commit_start
         id: validate_start

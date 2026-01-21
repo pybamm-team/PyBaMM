@@ -5,7 +5,7 @@ GitHub, PyPI, and conda-forge by the maintainers.
 
 ## Creating a release
 
-1. Checkout the latest develop branch, then create a local tag `vYY.MM.0`
+1. Checkout the latest main branch, then create a local tag `vYY.MM.0`
    with the new version. The year and month are taken from the date of the
    release. The final number represents the bug fix version, which is zero for
    a new release.
@@ -32,7 +32,7 @@ If a new bugfix release is required after the release of `vYY.MM.{x-1}` -
 1. Create a new branch for the `vYY.MM.x` release using the `vYY.MM.{x-1}` tag.
 
 2. Cherry-pick the bug fixes to `vYY.MM.x` branch once the fix is
-   merged into `develop`. The CHANGELOG entry for such fixes should go under the
+   merged into `main`. The CHANGELOG entry for such fixes should go under the
    `YY.MM.x` heading in `CHANGELOG.md`
 
 3. Run `scripts/update_version.py` manually to update:
