@@ -3,6 +3,7 @@
 #
 import pybamm
 
+from .electrode_soh import get_esoh_default_solver
 from .util import check_if_composite, get_lithiation_delithiation
 
 
@@ -93,8 +94,7 @@ class ElectrodeSOHHalfCell(pybamm.BaseModel):
 
     @property
     def default_solver(self):
-        # Use AlgebraicSolver as CasadiAlgebraicSolver gives unnecessary warnings
-        return pybamm.AlgebraicSolver(method="lsq__trf", tol=1e-7)
+        return get_esoh_default_solver(tol=1e-7)
 
 
 def get_initial_stoichiometry_half_cell(
@@ -179,9 +179,8 @@ def get_initial_stoichiometry_half_cell(
             model.initial_conditions[x_2] = 1 - soc_initial_guess
 
         parameter_values.process_model(model)
-        sol = pybamm.AlgebraicSolver("lsq__trf", tol=tol).solve(
-            model, [0], inputs=inputs
-        )
+        solver = get_esoh_default_solver(tol=tol)
+        sol = solver.solve(model, [0], inputs=inputs)
         x = sol["x"].data[0]
         if is_composite:
             x_2 = sol["x_2"].data[0]
@@ -213,7 +212,8 @@ def get_initial_stoichiometry_half_cell(
             model.variables["x"] = x
             model.variables["x_2"] = x_2
             parameter_values.process_model(model)
-            sol = pybamm.AlgebraicSolver(tol=tol).solve(model, [0], inputs=inputs)
+            solver = get_esoh_default_solver(tol=tol)
+            sol = solver.solve(model, [0], inputs=inputs)
             x = sol["x"].data[0]
             x_2 = sol["x_2"].data[0]
     else:
