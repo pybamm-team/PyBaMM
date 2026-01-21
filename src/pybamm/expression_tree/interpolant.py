@@ -9,7 +9,6 @@ from typing import Any
 
 import numpy as np
 import numpy.typing as npt
-from scipy import interpolate
 
 import pybamm
 
@@ -56,6 +55,8 @@ class Interpolant(pybamm.Function):
         entries_string: str | None = None,
         _num_derivatives: int = 0,
     ):
+        from scipy import interpolate  # lazy import for faster pybamm load time
+
         # Check interpolator is valid
         if interpolator not in ["linear", "cubic", "pchip"]:
             raise ValueError(f"interpolator '{interpolator}' not recognised")
