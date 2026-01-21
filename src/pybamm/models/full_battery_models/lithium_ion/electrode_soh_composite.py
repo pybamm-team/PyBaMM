@@ -7,7 +7,7 @@ from typing import Any
 
 import pybamm
 
-from .electrode_soh import _ElectrodeSOH
+from .electrode_soh import _ElectrodeSOH, get_esoh_default_solver
 from .util import (
     check_if_composite,
     get_equilibrium_direction,
@@ -251,7 +251,7 @@ def _solve_secondary_stoichiometry(
     model.variables["z_2"] = z_2
 
     sim = pybamm.Simulation(
-        model, parameter_values=parameter_values, solver=pybamm.AlgebraicSolver(tol=tol)
+        model, parameter_values=parameter_values, solver=get_esoh_default_solver(tol)
     )
     sol = sim.solve([0], inputs={"z_1": primary_stoich})
     return sol["z_2"].data[0]
@@ -532,7 +532,7 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
 
     @property
     def default_solver(self):
-        return pybamm.AlgebraicSolver(method="lsq")
+        return get_esoh_default_solver()
 
     @staticmethod
     def solve_split(
@@ -627,7 +627,7 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
         primary_sim = pybamm.Simulation(
             primary_model,
             parameter_values=parameter_values,
-            solver=pybamm.AlgebraicSolver(tol=tol),
+            solver=get_esoh_default_solver(tol),
         )
 
         primary_sol = primary_sim.solve([0], inputs=primary_inputs)
@@ -708,7 +708,7 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
             soc_sim = pybamm.Simulation(
                 soc_model,
                 parameter_values=parameter_values,
-                solver=pybamm.AlgebraicSolver(tol=tol),
+                solver=get_esoh_default_solver(tol),
             )
             soc_sol = soc_sim.solve([0], inputs=inputs)
             x_init_1 = soc_sol["x_init"].data[0]
@@ -839,7 +839,7 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
         sim = pybamm.Simulation(
             model,
             parameter_values=parameter_values,
-            solver=pybamm.AlgebraicSolver(tol=tol),
+            solver=get_esoh_default_solver(tol),
         )
 
         if initial_conditions is not None:
