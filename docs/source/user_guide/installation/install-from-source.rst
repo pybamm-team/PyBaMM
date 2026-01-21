@@ -132,7 +132,7 @@ If you are using ``zsh`` or ``tcsh``, you would need to use different pattern ma
 	  pip install -e '.[all,dev,docs]'
 
 Before you start contributing to PyBaMM, please read the `contributing
-guidelines <https://github.com/pybamm-team/PyBaMM/blob/develop/CONTRIBUTING.md>`__.
+guidelines <https://github.com/pybamm-team/PyBaMM/blob/main/CONTRIBUTING.md>`__.
 
 Running the tests
 -----------------
