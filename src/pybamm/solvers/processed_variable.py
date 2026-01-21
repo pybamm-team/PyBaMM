@@ -7,6 +7,19 @@ import pybamm
 
 from .base_processed_variable import BaseProcessedVariable
 
+# Module-level cache for lazy import
+_idaklu = None
+
+
+def _get_idaklu():
+    """Lazily import idaklu module (cached for performance)."""
+    global _idaklu
+    if _idaklu is None:
+        from pybammsolvers import idaklu
+
+        _idaklu = idaklu
+    return _idaklu
+
 
 class ProcessedVariable(BaseProcessedVariable):
     """
@@ -120,7 +133,7 @@ class ProcessedVariable(BaseProcessedVariable):
         return self._observe_postfix(self._observe_raw(), t)
 
     def _setup_inputs(self, t, full_range):
-        from pybammsolvers import idaklu  # lazy import for faster pybamm load time
+        idaklu = _get_idaklu()
 
         pybamm.logger.debug("Setting up C++ interpolation inputs")
 
@@ -167,7 +180,7 @@ class ProcessedVariable(BaseProcessedVariable):
         return ts, ys, yps, funcs, inputs, is_f_contiguous
 
     def _observe_hermite(self, t):
-        from pybammsolvers import idaklu  # lazy import for faster pybamm load time
+        idaklu = _get_idaklu()
 
         pybamm.logger.debug("Observing and Hermite interpolating the variable")
 
@@ -176,7 +189,7 @@ class ProcessedVariable(BaseProcessedVariable):
         return idaklu.observe_hermite_interp(t, ts, ys, yps, inputs, funcs, shapes)
 
     def _observe_raw(self):
-        from pybammsolvers import idaklu  # lazy import for faster pybamm load time
+        idaklu = _get_idaklu()
 
         pybamm.logger.debug("Observing the variable raw data")
         t = self.t_pts

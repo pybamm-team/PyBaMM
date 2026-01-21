@@ -14,6 +14,30 @@ import numpy as np
 
 import pybamm
 
+# Module-level caches for lazy imports
+_savemat = None
+_pandas = None
+
+
+def _get_savemat():
+    """Lazily import savemat from scipy.io (cached for performance)."""
+    global _savemat
+    if _savemat is None:
+        from scipy.io import savemat
+
+        _savemat = savemat
+    return _savemat
+
+
+def _get_pandas():
+    """Lazily import pandas module (cached for performance)."""
+    global _pandas
+    if _pandas is None:
+        import pandas as pd
+
+        _pandas = pd
+    return _pandas
+
 
 class NumpyEncoder(json.JSONEncoder):
     """
@@ -776,7 +800,7 @@ class Solution:
                             "['Electrolyte concentration'], to_format='matlab, "
                             "short_names={'Electrolyte concentration': 'c_e'})"
                         )
-            from scipy.io import savemat  # lazy import for faster pybamm load time
+            savemat = _get_savemat()
 
             savemat(filename, data)
         elif to_format == "csv":
@@ -785,7 +809,7 @@ class Solution:
                     raise ValueError(
                         f"only 0D variables can be saved to csv, but '{name}' is {var.ndim - 1}D"
                     )
-            import pandas as pd  # lazy import for faster pybamm load time
+            pd = _get_pandas()
 
             df = pd.DataFrame(data)
             return df.to_csv(filename, index=False)
