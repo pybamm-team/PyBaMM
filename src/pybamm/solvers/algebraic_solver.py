@@ -189,7 +189,6 @@ class AlgebraicSolver(pybamm.BaseSolver):
                             bounds=model.bounds,
                             **self.extra_options,
                         )
-                        success |= sol.success
                     except ValueError as e:
                         if "array must not contain infs or NaNs" in str(e):
                             raise pybamm.SolverError(str(e)) from e

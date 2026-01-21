@@ -27,16 +27,17 @@ class CompositeSolver(pybamm.BaseSolver):
     Experimental composite solver that tries each solver in order until one succeeds.
     """
 
-    def __init__(self, sub_solvers: list[pybamm.BaseSolver] | None = None):
+    def __init__(self, sub_solvers: list[pybamm.BaseSolver]):
         """
         Parameters
         ----------
         sub_solvers : list[pybamm.BaseSolver]
             The list of solvers to try in order.
         """
+        super().__init__()
         if not sub_solvers:
             raise ValueError("No sub_solvers provided")
-        if not isinstance(sub_solvers, list) and not all(
+        if not isinstance(sub_solvers, list) or not all(
             isinstance(s, pybamm.BaseSolver) for s in sub_solvers
         ):
             raise ValueError("sub_solvers must be a list of pybamm.BaseSolver")
