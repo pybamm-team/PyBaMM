@@ -1,5 +1,14 @@
 # Lazy loading implementation using lazy_loader package
 # Essential imports only - everything else is lazily loaded via stub file
+#
+# The stub file (__init__.pyi) is auto-generated. To regenerate:
+#   python scripts/generate_pyi_stub.py
+#
+# To validate all imports are correct:
+#   python scripts/generate_pyi_stub.py --validate
+#
+# For CI checks (exits non-zero if stub is outdated):
+#   python scripts/generate_pyi_stub.py --check
 
 import importlib
 
@@ -37,6 +46,7 @@ _lazy_getattr, _lazy_dir, _stub_all = lazy.attach_stub(__name__, __file__)
 
 # Submodule aliases that need special handling (module path mappings)
 # These are submodules that we want to expose at the top level
+# NOTE: Keep in sync with SUBMODULE_ALIASES in scripts/generate_pyi_stub.py
 _SUBMODULE_ALIASES: dict[str, str] = {
     # Battery models (as modules)
     "lead_acid": ".models.full_battery_models.lead_acid",
