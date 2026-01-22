@@ -2,8 +2,15 @@
 
 ## Features
 
-- Added experimental `CompositeSolver` that tries many solver until one succeeds and updated the ESOH solvers to use a composite algebraic solver. ([#5357](https://github.com/pybamm-team/PyBaMM/pull/5357))
 - Improve the performance of matrix multiplication with CasADi expressions. ([#5351](https://github.com/pybamm-team/PyBaMM/pull/5351))
+
+## Bug fixes
+
+# [v25.12.2](https://github.com/pybamm-team/PyBaMM/tree/v25.12.2) - 2026-01-22
+
+## Features
+
+- Added experimental `CompositeSolver` that tries many solver until one succeeds and updated the ESOH solvers to use a composite algebraic solver. ([#5357](https://github.com/pybamm-team/PyBaMM/pull/5357))
 
 ## Bug fixes
 
