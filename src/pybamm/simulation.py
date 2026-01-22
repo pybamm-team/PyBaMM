@@ -444,7 +444,6 @@ class Simulation:
         showprogress=False,
         inputs=None,
         t_interp=None,
-        initial_conditions=None,
         **kwargs,
     ):
         """
@@ -607,7 +606,6 @@ class Simulation:
                 inputs=inputs,
                 t_interp=t_interp,
                 **kwargs,
-                initial_conditions=initial_conditions,
             )
 
         elif self.operating_mode == "with experiment":

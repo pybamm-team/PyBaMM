@@ -741,6 +741,17 @@ class BaseModel:
     def algebraic_root_solver(self, algebraic_root_solver):
         self._algebraic_root_solver = algebraic_root_solver
 
+    @property
+    def y0(self):
+        if not hasattr(self, "y0_list") or self.y0_list is None:
+            return None
+        elif len(self.y0_list) == 1:
+            return self.y0_list[0]
+        else:
+            raise ValueError(
+                "Model contains multiple initial states. Access using y0_list instead."
+            )
+
     def get_parameter_info(self, by_submodel=False):
         """
         Extracts the parameter information and returns it as a dictionary.
