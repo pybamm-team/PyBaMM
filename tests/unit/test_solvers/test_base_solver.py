@@ -52,8 +52,8 @@ class TestBaseSolver:
             [0, 3600], inputs=[{"Current function [A]": 1}, {"Current function [A]": 2}]
         )[0]["Voltage [V]"].entries
         # check that the solutions are the same
-        np.testing.assert_array_almost_equal(sol1, sol2)
-        np.testing.assert_array_almost_equal(sol2, sol3)
+        np.testing.assert_allclose(sol1, sol2)
+        np.testing.assert_allclose(sol2, sol3)
 
     def test_step_or_solve_empty_model(self):
         model = pybamm.BaseModel()

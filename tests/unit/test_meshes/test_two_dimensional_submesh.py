@@ -248,8 +248,8 @@ class TestUniform2DSubMesh:
         expected_dx = 2.0 / 10  # (max - min) / npts
         expected_dy = 4.0 / 15  # (max - min) / npts
 
-        np.testing.assert_array_almost_equal(submesh.d_edges_lr, expected_dx)
-        np.testing.assert_array_almost_equal(submesh.d_edges_tb, expected_dy)
+        np.testing.assert_allclose(submesh.d_edges_lr, expected_dx)
+        np.testing.assert_allclose(submesh.d_edges_tb, expected_dy)
 
         # Test that nodes are at cell centers
         expected_nodes_lr = np.linspace(
@@ -259,15 +259,15 @@ class TestUniform2DSubMesh:
             -1.0 + expected_dy / 2, 3.0 - expected_dy / 2, 15
         )
 
-        np.testing.assert_array_almost_equal(submesh.nodes_lr, expected_nodes_lr)
-        np.testing.assert_array_almost_equal(submesh.nodes_tb, expected_nodes_tb)
+        np.testing.assert_allclose(submesh.nodes_lr, expected_nodes_lr)
+        np.testing.assert_allclose(submesh.nodes_tb, expected_nodes_tb)
 
         # Test d_nodes (spacing between node centers)
         expected_d_nodes_lr = np.full(9, expected_dx)  # npts - 1
         expected_d_nodes_tb = np.full(14, expected_dy)  # npts - 1
 
-        np.testing.assert_array_almost_equal(submesh.d_nodes_lr, expected_d_nodes_lr)
-        np.testing.assert_array_almost_equal(submesh.d_nodes_tb, expected_d_nodes_tb)
+        np.testing.assert_allclose(submesh.d_nodes_lr, expected_d_nodes_lr)
+        np.testing.assert_allclose(submesh.d_nodes_tb, expected_d_nodes_tb)
 
     def test_uniform_2d_submesh_with_tabs(self, x, y):
         """
@@ -406,8 +406,8 @@ class TestUniform2DSubMesh:
         assert "tabs" in json_dict
 
         # Test that edges are correctly serialized
-        np.testing.assert_array_almost_equal(json_dict["edges_lr"], submesh.edges_lr)
-        np.testing.assert_array_almost_equal(json_dict["edges_tb"], submesh.edges_tb)
+        np.testing.assert_allclose(json_dict["edges_lr"], submesh.edges_lr)
+        np.testing.assert_allclose(json_dict["edges_tb"], submesh.edges_tb)
 
         # Test that coordinate system is correct
         assert json_dict["coord_sys"] == "cartesian"
