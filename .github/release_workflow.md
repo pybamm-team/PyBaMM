@@ -19,17 +19,29 @@ GitHub, PyPI, and conda-forge by the maintainers.
 
 If a new bugfix release is required after the release of `vYY.MM.{x-1}`:
 
-1. Create a new branch `release/vYY.MM.x` from the `vYY.MM.{x-1}` tag.
+1. Ensure all bug fixes are merged to `main` first via normal PRs.
 
-2. Cherry-pick the bug fixes to `release/vYY.MM.x` once each fix is merged into `main`. Add CHANGELOG entries under the `vYY.MM.x` heading.
+2. Create a new branch `release/vYY.MM.x` from the `vYY.MM.{x-1}` tag.
 
-3. Run `scripts/update_version.py` to update `CITATION.cff` and `CHANGELOG.md`, then commit the changes.
+3. Cherry-pick the bug fixes to `release/vYY.MM.x` using the `-x` flag to record the original commit hash:
+   ```bash
+   git cherry-pick -x <commit-sha-from-main>
+   ```
 
-4. Create a new GitHub release with the tag `vYY.MM.x` from the `release/vYY.MM.x` branch (not `main`) and a description copied from `CHANGELOG.md`. This ensures the release contains only the bugfixes, not all changes on `main`. This will automatically trigger `publish_pypi.yml` and create a _release_ on PyPI.
+4. Run `scripts/update_version.py` to update `CITATION.cff` and `CHANGELOG.md`, then commit the changes.
 
-5. Verify the release installs correctly: `pip install pybamm==YY.MM.x`
+5. Create a new GitHub release with the tag `vYY.MM.x` from the `release/vYY.MM.x` branch (not `main`) and a description copied from `CHANGELOG.md`. This ensures the release contains only the bugfixes, not all changes on `main`. This will automatically trigger `publish_pypi.yml` and create a _release_ on PyPI.
 
-6. Create a PR from `release/vYY.MM.x` to `main` to sync the changelog and version updates, then merge it.
+6. Verify the release installs correctly: `pip install pybamm==YY.MM.x`
+
+7. Update the changelog on `main` separately. **Do not merge the release branch back to `main`** as this creates duplicate commits with different hashes. Instead:
+   ```bash
+   git checkout main
+   git checkout -b update-changelog-vYY.MM.x
+   ```
+   Edit `CHANGELOG.md` to add the `vYY.MM.x` release section (moving entries from Unreleased) and update `CITATION.cff` with the new version. Create a PR to `main` with these changes.
+
+8. The release branch can be deleted after tagging since it is no longer needed.
 
 ## Conda-forge
 
