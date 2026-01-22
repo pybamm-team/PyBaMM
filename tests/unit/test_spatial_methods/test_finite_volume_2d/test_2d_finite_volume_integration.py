@@ -264,7 +264,7 @@ class TestFiniteVolumeIntegration:
         result_left = boundary_integral_left_disc.evaluate(
             None, y=np.ones(submesh.npts)
         )
-        np.testing.assert_array_almost_equal(result_left, 0.0)
+        np.testing.assert_allclose(result_left, 0.0, atol=1e-6)
 
     def test_one_dimensional_integral(self):
         mesh = get_mesh_for_testing_2d()

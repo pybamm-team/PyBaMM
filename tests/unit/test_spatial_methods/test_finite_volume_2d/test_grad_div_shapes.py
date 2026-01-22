@@ -65,13 +65,15 @@ class TestFiniteVolume2DGradDiv:
         disc.bcs = boundary_conditions
         # grad(x) = 1
         grad_eqn_disc = disc.process_symbol(grad_eqn)
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             grad_eqn_disc.lr_field.evaluate(None, linear_y).flatten(),
             np.ones((submesh.npts_lr + 1) * (submesh.npts_tb)),
+            atol=1e-6,
         )
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             grad_eqn_disc.tb_field.evaluate(None, linear_y).flatten(),
             np.zeros((submesh.npts_lr) * (submesh.npts_tb + 1)),
+            atol=1e-6,
         )
         # div(grad(x)) = 0
         div_eqn_disc = disc.process_symbol(div_eqn)
@@ -98,13 +100,15 @@ class TestFiniteVolume2DGradDiv:
         grad_eqn_disc = disc.process_symbol(grad_eqn)
         linear_y = TB_neg.flatten()
         submesh = mesh["negative electrode"]
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             grad_eqn_disc.lr_field.evaluate(None, linear_y).flatten(),
             np.zeros((submesh.npts_lr + 1) * (submesh.npts_tb)),
+            atol=1e-6,
         )
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             grad_eqn_disc.tb_field.evaluate(None, linear_y).flatten(),
             np.ones((submesh.npts_lr) * (submesh.npts_tb + 1)),
+            atol=1e-6,
         )
 
         # Now do linear in y direction but with a variable BC
@@ -128,13 +132,15 @@ class TestFiniteVolume2DGradDiv:
         grad_eqn_disc = disc.process_symbol(grad_eqn)
         linear_y = np.concatenate([[0], [1], TB_neg.flatten()])
         submesh = mesh["negative electrode"]
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             grad_eqn_disc.lr_field.evaluate(None, linear_y).flatten(),
             np.zeros((submesh.npts_lr + 1) * (submesh.npts_tb)),
+            atol=1e-6,
         )
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             grad_eqn_disc.tb_field.evaluate(None, linear_y).flatten(),
             np.ones((submesh.npts_lr) * (submesh.npts_tb + 1)),
+            atol=1e-6,
         )
 
         # Now do linear in x direction but with a variable BC
@@ -152,13 +158,15 @@ class TestFiniteVolume2DGradDiv:
         grad_eqn_disc = disc.process_symbol(grad_eqn)
         linear_y = np.concatenate([[0], [1 / 3], LR_neg.flatten()])
         submesh = mesh["negative electrode"]
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             grad_eqn_disc.tb_field.evaluate(None, linear_y).flatten(),
             np.zeros((submesh.npts_tb + 1) * (submesh.npts_lr)),
+            atol=1e-6,
         )
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             grad_eqn_disc.lr_field.evaluate(None, linear_y).flatten(),
             np.ones((submesh.npts_tb) * (submesh.npts_lr + 1)),
+            atol=1e-6,
         )
 
     def test_grad_div_shapes_Neumann_bcs(self):
@@ -188,13 +196,15 @@ class TestFiniteVolume2DGradDiv:
         disc.bcs = boundary_conditions
         disc.set_variable_slices([var])
         grad_eqn_disc = disc.process_symbol(grad_eqn)
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             grad_eqn_disc.lr_field.evaluate(None, constant_y).flatten(),
             np.zeros((submesh.npts_lr + 1) * (submesh.npts_tb)),
+            atol=1e-6,
         )
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             grad_eqn_disc.tb_field.evaluate(None, constant_y).flatten(),
             np.zeros((submesh.npts_lr) * (submesh.npts_tb + 1)),
+            atol=1e-6,
         )
 
         ## Test operations on linear x
@@ -213,19 +223,22 @@ class TestFiniteVolume2DGradDiv:
         disc.bcs = boundary_conditions
         # grad(x) = 1
         grad_eqn_disc = disc.process_symbol(grad_eqn)
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             grad_eqn_disc.lr_field.evaluate(None, linear_y).flatten(),
             np.ones((submesh.npts_lr + 1) * (submesh.npts_tb)),
+            atol=1e-6,
         )
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             grad_eqn_disc.tb_field.evaluate(None, linear_y).flatten(),
             np.zeros((submesh.npts_lr) * (submesh.npts_tb + 1)),
+            atol=1e-6,
         )
         # div(grad(x)) = 0
         div_eqn_disc = disc.process_symbol(div_eqn)
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             div_eqn_disc.evaluate(None, linear_y).flatten(),
             np.zeros((submesh.npts_lr) * (submesh.npts_tb)),
+            atol=1e-6,
         )
 
         ## Test operations on linear y
@@ -244,19 +257,22 @@ class TestFiniteVolume2DGradDiv:
         disc.bcs = boundary_conditions
         # grad(x) = 1
         grad_eqn_disc = disc.process_symbol(grad_eqn)
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             grad_eqn_disc.lr_field.evaluate(None, linear_y).flatten(),
             np.zeros((submesh.npts_lr + 1) * (submesh.npts_tb)),
+            atol=1e-6,
         )
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             grad_eqn_disc.tb_field.evaluate(None, linear_y).flatten(),
             np.ones((submesh.npts_lr) * (submesh.npts_tb + 1)),
+            atol=1e-6,
         )
         # div(grad(x)) = 0
         div_eqn_disc = disc.process_symbol(div_eqn)
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             div_eqn_disc.evaluate(None, linear_y).flatten(),
             np.zeros((submesh.npts_lr) * (submesh.npts_tb)),
+            atol=1e-6,
         )
 
         ## Test operations on linear y with input parameter BC's
@@ -280,25 +296,28 @@ class TestFiniteVolume2DGradDiv:
         disc.bcs = disc.process_boundary_conditions(myclass)
         # grad(x) = 1
         grad_eqn_disc = disc.process_symbol(grad_eqn)
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             grad_eqn_disc.tb_field.evaluate(
                 inputs={"top_bc": 1, "bottom_bc": 1}, y=linear_y
             ).flatten(),
             np.zeros((submesh.npts_tb + 1) * (submesh.npts_lr)),
+            atol=1e-6,
         )
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             grad_eqn_disc.lr_field.evaluate(
                 inputs={"top_bc": 1, "bottom_bc": 1}, y=linear_y
             ).flatten(),
             np.ones((submesh.npts_tb) * (submesh.npts_lr + 1)),
+            atol=1e-6,
         )
         # div(grad(x)) = 0
         div_eqn_disc = disc.process_symbol(div_eqn)
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             div_eqn_disc.evaluate(
                 inputs={"top_bc": 1, "bottom_bc": 1}, y=linear_y
             ).flatten(),
             np.zeros((submesh.npts_tb) * (submesh.npts_lr)),
+            atol=1e-6,
         )
 
         ## Test operations on linear y with input parameter BC's
@@ -322,25 +341,28 @@ class TestFiniteVolume2DGradDiv:
         disc.bcs = disc.process_boundary_conditions(myclass)
         # grad(x) = 1
         grad_eqn_disc = disc.process_symbol(grad_eqn)
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             grad_eqn_disc.lr_field.evaluate(
                 inputs={"top_bc": 1, "bottom_bc": 1}, y=linear_y
             ).flatten(),
             np.zeros((submesh.npts_lr + 1) * (submesh.npts_tb)),
+            atol=1e-6,
         )
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             grad_eqn_disc.tb_field.evaluate(
                 inputs={"top_bc": 1, "bottom_bc": 1}, y=linear_y
             ).flatten(),
             np.ones((submesh.npts_lr) * (submesh.npts_tb + 1)),
+            atol=1e-6,
         )
         # div(grad(x)) = 0
         div_eqn_disc = disc.process_symbol(div_eqn)
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             div_eqn_disc.evaluate(
                 inputs={"top_bc": 1, "bottom_bc": 1}, y=linear_y
             ).flatten(),
             np.zeros((submesh.npts_lr) * (submesh.npts_tb)),
+            atol=1e-6,
         )
 
     @pytest.mark.parametrize(
@@ -380,19 +402,22 @@ class TestFiniteVolume2DGradDiv:
         disc.set_variable_slices([var])
         # grad(1) = 0
         grad_eqn_disc = disc.process_symbol(grad_eqn)
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             grad_eqn_disc.lr_field.evaluate(None, constant_y).flatten(),
             np.zeros((submesh.npts_lr + 1) * (submesh.npts_tb)),
+            atol=1e-6,
         )
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             grad_eqn_disc.tb_field.evaluate(None, constant_y).flatten(),
             np.zeros((submesh.npts_lr) * (submesh.npts_tb + 1)),
+            atol=1e-6,
         )
         # div(grad(1)) = 0
         div_eqn_disc = disc.process_symbol(div_eqn)
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             div_eqn_disc.evaluate(None, constant_y).flatten(),
             np.zeros((submesh.npts_lr) * (submesh.npts_tb)),
+            atol=1e-6,
         )
 
         ## Test gradient and divergence of linear x
@@ -410,19 +435,22 @@ class TestFiniteVolume2DGradDiv:
         disc.bcs = boundary_conditions
         ## grad(x) = 1
         grad_eqn_disc = disc.process_symbol(grad_eqn)
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             grad_eqn_disc.lr_field.evaluate(None, linear_y).flatten(),
             np.ones((submesh.npts_lr + 1) * (submesh.npts_tb)),
+            atol=1e-6,
         )
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             grad_eqn_disc.tb_field.evaluate(None, linear_y).flatten(),
             np.zeros((submesh.npts_lr) * (submesh.npts_tb + 1)),
+            atol=1e-6,
         )
         ## div(grad(x)) = 0
         div_eqn_disc = disc.process_symbol(div_eqn)
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             div_eqn_disc.evaluate(None, linear_y).flatten(),
             np.zeros((submesh.npts_lr) * (submesh.npts_tb)),
+            atol=1e-6,
         )
 
         ## Test gradient and divergence of linear y
@@ -439,19 +467,22 @@ class TestFiniteVolume2DGradDiv:
         disc.bcs = boundary_conditions
         ## grad(x) = 1
         grad_eqn_disc = disc.process_symbol(grad_eqn)
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             grad_eqn_disc.lr_field.evaluate(None, linear_y).flatten(),
             np.zeros((submesh.npts_lr + 1) * (submesh.npts_tb)),
+            atol=1e-6,
         )
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             grad_eqn_disc.tb_field.evaluate(None, linear_y).flatten(),
             np.ones((submesh.npts_lr) * (submesh.npts_tb + 1)),
+            atol=1e-6,
         )
         ## div(grad(x)) = 0
         div_eqn_disc = disc.process_symbol(div_eqn)
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             div_eqn_disc.evaluate(None, linear_y).flatten(),
             np.zeros((submesh.npts_lr) * (submesh.npts_tb)),
+            atol=1e-6,
         )
 
         ## Test gradient and divergence of linear y
@@ -468,19 +499,22 @@ class TestFiniteVolume2DGradDiv:
         disc.bcs = boundary_conditions
         ## grad(x) = 1
         grad_eqn_disc = disc.process_symbol(grad_eqn)
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             grad_eqn_disc.lr_field.evaluate(None, linear_y).flatten(),
             np.zeros((submesh.npts_lr + 1) * (submesh.npts_tb)),
+            atol=1e-6,
         )
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             grad_eqn_disc.tb_field.evaluate(None, linear_y).flatten(),
             np.ones((submesh.npts_lr) * (submesh.npts_tb + 1)),
+            atol=1e-6,
         )
         ## div(grad(x)) = 0
         div_eqn_disc = disc.process_symbol(div_eqn)
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             div_eqn_disc.evaluate(None, linear_y).flatten(),
             np.zeros((submesh.npts_lr) * (submesh.npts_tb)),
+            atol=1e-6,
         )
 
     def test_grad_div_shapes_concatenation(self):
@@ -532,13 +566,15 @@ class TestFiniteVolume2DGradDiv:
         constant_p = np.ones(submesh_p.npts)
         constant_y = np.concatenate([constant_n, constant_s, constant_p])
 
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             grad_eqn_disc.lr_field.evaluate(None, constant_y).flatten(),
             np.zeros((submesh.npts_lr + 1) * (submesh.npts_tb)),
+            atol=1e-6,
         )
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             grad_eqn_disc.tb_field.evaluate(None, constant_y).flatten(),
             np.zeros((submesh.npts_lr) * (submesh.npts_tb + 1)),
+            atol=1e-6,
         )
 
         submesh = mesh[("negative electrode", "separator", "positive electrode")]
@@ -559,13 +595,15 @@ class TestFiniteVolume2DGradDiv:
 
         # grad(x) = 1 in lr direction, 0 in tb direction
         grad_eqn_disc = disc.process_symbol(grad_eqn)
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             grad_eqn_disc.lr_field.evaluate(None, linear_x).flatten(),
             np.ones((submesh.npts_lr + 1) * (submesh.npts_tb)),
+            atol=1e-6,
         )
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             grad_eqn_disc.tb_field.evaluate(None, linear_x).flatten(),
             np.zeros((submesh.npts_lr) * (submesh.npts_tb + 1)),
+            atol=1e-6,
         )
 
         # div(grad(x)) = 0
@@ -593,13 +631,15 @@ class TestFiniteVolume2DGradDiv:
 
         # grad(z) = 0 in lr direction, 1 in tb direction
         grad_eqn_disc = disc.process_symbol(grad_eqn)
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             grad_eqn_disc.lr_field.evaluate(None, linear_z).flatten(),
             np.zeros((submesh.npts_lr + 1) * (submesh.npts_tb)),
+            atol=1e-6,
         )
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             grad_eqn_disc.tb_field.evaluate(None, linear_z).flatten(),
             np.ones((submesh.npts_lr) * (submesh.npts_tb + 1)),
+            atol=1e-6,
         )
 
         # div(grad(z)) = 0
@@ -660,9 +700,10 @@ class TestFiniteVolume2DGradDiv:
         constant_p = np.ones(submesh_p.npts)
         constant_y = np.concatenate([constant_n, constant_s, constant_p])
 
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             laplacian_eqn_disc.evaluate(None, constant_y).flatten(),
             np.zeros(submesh.npts),
+            atol=1e-6,
         )
 
         # Test Laplacian of linear x is zero
@@ -681,9 +722,10 @@ class TestFiniteVolume2DGradDiv:
         disc.bcs = boundary_conditions
 
         laplacian_eqn_disc = disc.process_symbol(laplacian_eqn)
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             laplacian_eqn_disc.evaluate(None, linear_x).flatten(),
             np.zeros(submesh.npts),
+            atol=1e-6,
         )
 
         # Test Laplacian of linear z is zero
@@ -701,9 +743,10 @@ class TestFiniteVolume2DGradDiv:
         disc.bcs = boundary_conditions
 
         laplacian_eqn_disc = disc.process_symbol(laplacian_eqn)
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             laplacian_eqn_disc.evaluate(None, linear_z).flatten(),
             np.zeros(submesh.npts),
+            atol=1e-6,
         )
 
     def test_internal_neumann_condition(self):

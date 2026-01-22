@@ -553,15 +553,15 @@ class TestTensorAccuracy:
         disc_grad = disc.process_symbol(grad_var)
 
         # Verify gradient is [1, 0]
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             disc_grad.lr_field.evaluate(None, linear_x).flatten(),
             np.ones((n_lr + 1) * n_tb),
-            decimal=5,
+            atol=1e-5,
         )
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             disc_grad.tb_field.evaluate(None, linear_x).flatten(),
             np.zeros(n_lr * (n_tb + 1)),
-            decimal=5,
+            atol=1e-5,
         )
 
         # Compute tensor product
@@ -572,25 +572,25 @@ class TestTensorAccuracy:
         # T[0,1] = lr * tb = 1 * 0 = 0
         # T[1,0] = tb * lr = 0 * 1 = 0
         # T[1,1] = tb * tb = 0 * 0 = 0
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             disc_tp[0, 0].evaluate(None, linear_x).flatten(),
             np.ones(n_lr * n_tb),
-            decimal=5,
+            atol=1e-5,
         )
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             disc_tp[0, 1].evaluate(None, linear_x).flatten(),
             np.zeros(n_lr * n_tb),
-            decimal=5,
+            atol=1e-5,
         )
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             disc_tp[1, 0].evaluate(None, linear_x).flatten(),
             np.zeros(n_lr * n_tb),
-            decimal=5,
+            atol=1e-5,
         )
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             disc_tp[1, 1].evaluate(None, linear_x).flatten(),
             np.zeros(n_lr * n_tb),
-            decimal=5,
+            atol=1e-5,
         )
 
     def test_tensor_divergence_of_constant_tensor(self, setup_accuracy_test):

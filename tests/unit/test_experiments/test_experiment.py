@@ -239,7 +239,7 @@ class TestExperiment:
 
         current = solution["Current [A]"].entries
 
-        assert np.allclose(current, 1, atol=1e-3)
+        np.testing.assert_allclose(current, 1, atol=1e-3)
 
     def test_current_step_raises_error_without_operator_with_input_parameters(self):
         pybamm.lithium_ion.SPM()
@@ -288,7 +288,7 @@ class TestExperiment:
         solution = sim.solution
 
         voltage = solution["Terminal voltage [V]"].entries
-        assert np.allclose(voltage, 2.5, atol=1e-3, rtol=1e-3)
+        np.testing.assert_allclose(voltage, 2.5, atol=1e-3, rtol=1e-3)
 
     def test_pchip_interpolation_experiment(self):
         x = np.linspace(0, 1, 11)

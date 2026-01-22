@@ -403,9 +403,7 @@ class TestFiniteVolume:
         assert delta_fn_left_disc.domains == delta_fn_left.domains
         assert isinstance(delta_fn_left_disc, pybamm.Multiplication)
         assert isinstance(delta_fn_left_disc.left, pybamm.Symbol)
-        np.testing.assert_array_almost_equal(
-            delta_fn_left_disc.left.evaluate()[:, 1:], 0
-        )
+        np.testing.assert_allclose(delta_fn_left_disc.left.evaluate()[:, 1:], 0)
         assert delta_fn_left_disc.shape == y.shape
         # Right
         assert delta_fn_right_disc.domains == delta_fn_right.domains
@@ -442,9 +440,7 @@ class TestFiniteVolume:
         assert delta_fn_left_disc.domains == delta_fn_left.domains
         assert isinstance(delta_fn_left_disc, pybamm.Multiplication)
         assert isinstance(delta_fn_left_disc.left, pybamm.Symbol)
-        np.testing.assert_array_almost_equal(
-            delta_fn_left_disc.left.evaluate()[:, 1:], 0
-        )
+        np.testing.assert_allclose(delta_fn_left_disc.left.evaluate()[:, 1:], 0)
         assert delta_fn_left_disc.shape == y.shape
         # Right
         assert delta_fn_right_disc.domains == delta_fn_right.domains

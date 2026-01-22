@@ -88,10 +88,10 @@ class TestFiniteVolume2D:
         right_grad = fin_vol.edge_to_node(
             disc_symbol.tb_field, method="arithmetic", direction="tb"
         )
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             left_grad.evaluate(None, lr).flatten(), np.ones(n_lr * n_tb)
         )
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             right_grad.evaluate(None, tb).flatten(), np.ones(n_lr * n_tb)
         )
 
@@ -386,8 +386,8 @@ class TestFiniteVolume2D:
         lr_direct = node_to_edge_lr.evaluate(None, test_values)
         tb_direct = node_to_edge_tb.evaluate(None, test_values)
 
-        np.testing.assert_array_almost_equal(lr_result.flatten(), lr_direct.flatten())
-        np.testing.assert_array_almost_equal(tb_result.flatten(), tb_direct.flatten())
+        np.testing.assert_allclose(lr_result.flatten(), lr_direct.flatten())
+        np.testing.assert_allclose(tb_result.flatten(), tb_direct.flatten())
 
         # Test 1b: Test with only lr_direction=None (tb_direction should be ignored when None)
         result_lr_none = spatial_method.upwind_or_downwind(
@@ -398,8 +398,8 @@ class TestFiniteVolume2D:
         lr_result_b = result_lr_none.lr_field.evaluate(None, test_values)
         tb_result_b = result_lr_none.tb_field.evaluate(None, test_values)
 
-        np.testing.assert_array_almost_equal(lr_result_b.flatten(), lr_direct.flatten())
-        np.testing.assert_array_almost_equal(tb_result_b.flatten(), tb_direct.flatten())
+        np.testing.assert_allclose(lr_result_b.flatten(), lr_direct.flatten())
+        np.testing.assert_allclose(tb_result_b.flatten(), tb_direct.flatten())
 
         # Test 1c: Test with only tb_direction=None (lr_direction should be ignored when None)
         result_tb_none = spatial_method.upwind_or_downwind(
@@ -410,8 +410,8 @@ class TestFiniteVolume2D:
         lr_result_c = result_tb_none.lr_field.evaluate(None, test_values)
         tb_result_c = result_tb_none.tb_field.evaluate(None, test_values)
 
-        np.testing.assert_array_almost_equal(lr_result_c.flatten(), lr_direct.flatten())
-        np.testing.assert_array_almost_equal(tb_result_c.flatten(), tb_direct.flatten())
+        np.testing.assert_allclose(lr_result_c.flatten(), lr_direct.flatten())
+        np.testing.assert_allclose(tb_result_c.flatten(), tb_direct.flatten())
 
         # Test 2: Error cases - missing boundary conditions for upwind
         # Should raise error when upwinding without left Dirichlet BC
