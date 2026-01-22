@@ -70,7 +70,7 @@ nox -s pybamm-tests -- --unit-only     # Run only unit tests
 nox -s pybamm-tests -- --integration-only  # Run only integration tests
 nox -s pybamm-tests -- --no-update     # Skip git pull (use current version)
 nox -s pybamm-tests -- --pybamm-dir ./custom/path  # Use existing PyBaMM clone
-nox -s pybamm-tests -- --branch develop  # Use specific branch/tag
+nox -s pybamm-tests -- --branch main  # Use specific branch/tag
 ```
 
 The integration tests ensure that changes to pybammsolvers don't break PyBaMM functionality.

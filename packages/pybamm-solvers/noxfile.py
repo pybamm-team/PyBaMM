@@ -130,7 +130,7 @@ def run_pybamm_tests(session):
     """Run PyBaMM's full test suite with local pybammsolvers.
 
     1. Clones PyBaMM repository (if not already present)
-    2. Updates to latest develop version (unless --no-update is specified)
+    2. Updates to latest main version (unless --no-update is specified)
     3. Installs PyBaMM with all dependencies
     4. Replaces bundled pybammsolvers with local version
     5. Runs PyBaMM's unit and integration tests
@@ -141,7 +141,7 @@ def run_pybamm_tests(session):
         nox -s pybamm-tests -- --integration-only  # Run only integration tests
         nox -s pybamm-tests -- --no-update     # Skip git pull (use current version)
         nox -s pybamm-tests -- --pybamm-dir ./custom/path  # Use existing PyBaMM clone
-        nox -s pybamm-tests -- --branch develop  # Use specific branch/tag
+        nox -s pybamm-tests -- --branch main  # Use specific branch/tag
     """
     set_environment_variables(PYBAMM_ENV, session=session)
 
@@ -150,7 +150,7 @@ def run_pybamm_tests(session):
     unit_only = False
     integration_only = False
     no_update = False
-    branch = "develop"
+    branch = "main"
     pytest_args = []
 
     i = 0
