@@ -3,6 +3,8 @@
 ## Features
 
 - Improve the performance of matrix multiplication with CasADi expressions. ([#5351](https://github.com/pybamm-team/PyBaMM/pull/5351))
+- Adds option for lists of inputs to `solve` to include input parameters which are used
+as initial conditions. ([#5311](https://github.com/pybamm-team/PyBaMM/pull/5311))
 
 ## Bug fixes
 

@@ -214,6 +214,10 @@ class BinaryOperator(pybamm.Symbol):
 
         return json_dict
 
+    def _t_discon(self, expr, y0, inputs, num_events):
+        """Returns the discontinuity time-points for a function."""
+        raise NotImplementedError(f"`_t_discon` not implemented for {self.name}")
+
 
 class Power(BinaryOperator):
     """
@@ -735,6 +739,18 @@ class _Heaviside(BinaryOperator):
         # an array of NaNs
         return self._binary_evaluate(left, right) * np.nan
 
+    def _t_discon(self, expr, y0, inputs, num_events):
+        """Returns the discontinuity time-points for the heaviside function."""
+        value = expr.evaluate(0, y0, inputs=inputs)
+        t_discon = [value]
+        t_discon.append(self._t_discon_next(value))
+        return t_discon
+
+    def _t_discon_next(self, value: float):
+        raise NotImplementedError(
+            "_t_discon_next method should be implemented in subclasses of _Heaviside"
+        )  # pragma: no cover
+
 
 class EqualHeaviside(_Heaviside):
     """A heaviside function with equality (return 1 when left = right)"""
@@ -757,6 +773,16 @@ class EqualHeaviside(_Heaviside):
         with np.errstate(invalid="ignore"):
             return left <= right
 
+    def _t_discon_next(self, value: float):
+        if self.left == pybamm.t:
+            # t <= x
+            # Stop at t = x and right after t = x
+            return np.nextafter(value, np.inf)
+        else:
+            # t >= x
+            # Stop at t = x and right before t = x
+            return np.nextafter(value, -np.inf)
+
 
 class NotEqualHeaviside(_Heaviside):
     """A heaviside function without equality (return 0 when left = right)"""
@@ -777,6 +803,16 @@ class NotEqualHeaviside(_Heaviside):
         # don't raise RuntimeWarning for NaNs
         with np.errstate(invalid="ignore"):
             return left < right
+
+    def _t_discon_next(self, value: float):
+        if self.left == pybamm.t:
+            # t < x
+            # Stop at t = x and right before t = x
+            return np.nextafter(value, -np.inf)
+        else:
+            # t > x
+            # Stop at t = x and right after t = x
+            return np.nextafter(value, np.inf)
 
 
 class Modulo(BinaryOperator):
@@ -819,6 +855,17 @@ class Modulo(BinaryOperator):
     def _binary_evaluate(self, left, right):
         """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
         return left % right
+
+    def _t_discon(self, expr, y0, inputs, num_events):
+        value = expr.evaluate(0, y0, inputs=inputs)
+        t_discon = []
+
+        for i in np.arange(num_events):
+            t = value * (i + 1)
+            # Stop right before t and at t
+            t_discon.append(np.nextafter(t, -np.inf))
+            t_discon.append(t)
+        return t_discon
 
 
 class Minimum(BinaryOperator):

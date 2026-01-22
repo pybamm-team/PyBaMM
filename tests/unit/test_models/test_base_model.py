@@ -1632,3 +1632,7 @@ class TestBaseModel:
         new_model = pybamm.load_model("test_base_model.json")
 
         os.remove("test_base_model.json")
+
+    def test_y0_property(self):
+        model = pybamm.BaseModel()
+        assert model.y0 is None

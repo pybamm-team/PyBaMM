@@ -144,7 +144,8 @@ class TestBaseSolver:
         # Simple system: a single algebraic equation
         class ScalarModel:
             def __init__(self):
-                self.y0 = np.array([2])
+                self.y0_list = [np.array([2])]
+                self.y0S_list = None
                 self.rhs = {}
                 self.jac_algebraic_eval = None
                 t = casadi.MX.sym("t")
@@ -180,7 +181,8 @@ class TestBaseSolver:
 
         class VectorModel:
             def __init__(self):
-                self.y0 = np.zeros_like(vec)
+                self.y0_list = [np.zeros_like(vec)]
+                self.y0S_list = None
                 self.rhs = {"test": "test"}
                 self.concatenated_rhs = np.array([1])
                 self.jac_algebraic_eval = None
@@ -204,11 +206,11 @@ class TestBaseSolver:
                 return (y[1:] - vec[1:]) ** 2
 
         model = VectorModel()
-        init_states = solver.calculate_consistent_state(model)
+        [init_states] = solver.calculate_consistent_state(model)
         np.testing.assert_allclose(init_states.flatten(), vec, rtol=1e-7, atol=1e-6)
         # with casadi
         solver_with_casadi.root_method.step_tol = 1e-12
-        init_states = solver_with_casadi.calculate_consistent_state(model)
+        [init_states] = solver_with_casadi.calculate_consistent_state(model)
         np.testing.assert_allclose(
             init_states.full().flatten(), vec, rtol=1e-7, atol=1e-6
         )
@@ -218,7 +220,7 @@ class TestBaseSolver:
             return 2 * np.hstack([np.zeros((3, 1)), np.diag(y[1:] - vec[1:])])
 
         model.jac_algebraic_eval = jac_dense
-        init_states = solver.calculate_consistent_state(model)
+        [init_states] = solver.calculate_consistent_state(model)
         np.testing.assert_allclose(init_states.flatten(), vec, rtol=1e-7, atol=1e-6)
 
         # With sparse Jacobian
@@ -228,13 +230,14 @@ class TestBaseSolver:
             )
 
         model.jac_algebraic_eval = jac_sparse
-        init_states = solver.calculate_consistent_state(model)
+        [init_states] = solver.calculate_consistent_state(model)
         np.testing.assert_allclose(init_states.flatten(), vec, rtol=1e-7, atol=1e-6)
 
     def test_fail_consistent_initialization(self):
         class Model:
             def __init__(self):
-                self.y0 = np.array([2])
+                self.y0_list = [np.array([2])]
+                self.y0S_list = None
                 self.rhs = {}
                 self.jac_algebraic_eval = None
                 t = casadi.MX.sym("t")
@@ -376,8 +379,14 @@ class TestBaseSolver:
     def test_multiprocess_context(self):
         solver = pybamm.BaseSolver()
         assert solver.get_platform_context("Win") == "spawn"
-        assert solver.get_platform_context("Linux") == "fork"
         assert solver.get_platform_context("Darwin") == "spawn"
+
+        if pybamm.has_jax():
+            # JAX is incompatible with fork (see https://github.com/jax-ml/jax/issues/1805)
+            # Causes issues with tests crashing in CI
+            assert solver.get_platform_context("Linux") == "spawn"
+        else:
+            assert solver.get_platform_context("Linux") == "fork"
 
     def test_sensitivities(self):
         def exact_diff_a(y, a, b):
@@ -455,3 +464,67 @@ class TestBaseSolver:
             ValueError, match=r"on_failure must be 'warn', 'raise', or 'ignore'"
         ):
             base_solver.on_failure = "invalid"
+
+    @pytest.mark.parametrize("format", ["casadi", "python", "jax"])
+    def test_events_fail_on_initialisation_multiple_input_params(self, format):
+        # Test that events fail on initialisation when multiple input parameters are used
+        # if it's not the first set of parameters
+        model = pybamm.BaseModel()
+        model.convert_to_format = format
+        u = pybamm.Variable("u")
+        u0 = pybamm.InputParameter("u0")
+        model.rhs = {u: -u}
+        model.initial_conditions = {u: u0}
+        model.events.append(pybamm.Event("test event", u - 0.2))
+        model.variables = {"u": u}
+
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        solver = pybamm.BaseSolver()
+
+        initial_condition_input = [{"u0": 5}, {"u0": 0.1}]
+        t_eval = np.array([0, 1])
+
+        with pytest.raises(
+            pybamm.SolverError,
+            match=re.escape(
+                "Events ['test event'] are non-positive at initial conditions with inputs {'u0': 0.1}"
+            ),
+        ):
+            solver.solve(model, t_eval, initial_condition_input)
+
+    def test_integrate_single_error(self):
+        solver = pybamm.BaseSolver()
+        model = pybamm.BaseModel()
+
+        with pytest.raises(
+            NotImplementedError,
+            match=re.escape("BaseSolver does not implement _integrate_single."),
+        ):
+            solver._integrate_single(model, np.array([0, 1]), {}, np.array([1]))
+
+    def test_discontinuity_events_different_times_error(self):
+        # Test that an error is raised when discontinuity events occur at different
+        # times for different input parameter sets
+        model = pybamm.BaseModel()
+        v = pybamm.Variable("v")
+        t_event = pybamm.InputParameter("t_event")
+        model.rhs = {v: pybamm.t > t_event}
+        model.initial_conditions = {v: 0}
+        model.variables = {"v": v}
+
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        solver = pybamm.BaseSolver()
+        t_eval = np.linspace(0, 10)
+
+        # Different input sets with discontinuities at different times
+        inputs_list = [{"t_event": 3.0}, {"t_event": 5.0}]
+
+        with pytest.raises(
+            pybamm.SolverError,
+            match="Discontinuity events occur at different times between input parameter sets",
+        ):
+            solver.solve(model, t_eval, inputs=inputs_list)

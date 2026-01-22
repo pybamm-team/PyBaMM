@@ -68,7 +68,8 @@ class TestCasadiAlgebraicSolver:
 
     def test_root_find_fail(self):
         class Model:
-            y0 = np.array([2])
+            y0_list = [np.array([2])]
+            y0S_list = None
             t = casadi.MX.sym("t")
             y = casadi.MX.sym("y")
             p = casadi.MX.sym("p")
@@ -88,17 +89,18 @@ class TestCasadiAlgebraicSolver:
             pybamm.SolverError,
             match=r"Could not find acceptable solution",
         ):
-            solver._integrate(model, np.array([0]), {})
+            solver._integrate(model, np.array([0]), [{}])
         solver = pybamm.CasadiAlgebraicSolver(extra_options={"error_on_fail": False})
         with pytest.raises(
             pybamm.SolverError,
             match=r"Could not find acceptable solution: solver terminated",
         ):
-            solver._integrate(model, np.array([0]), {})
+            solver._integrate(model, np.array([0]), [{}])
 
         # Model returns Nan
         class NaNModel:
-            y0 = np.array([-2])
+            y0_list = [np.array([-2])]
+            y0S_list = None
             t = casadi.MX.sym("t")
             y = casadi.MX.sym("y")
             p = casadi.MX.sym("p")
@@ -116,7 +118,7 @@ class TestCasadiAlgebraicSolver:
             pybamm.SolverError,
             match=r"Could not find acceptable solution: solver returned NaNs",
         ):
-            solver._integrate(model, np.array([0]), {})
+            solver._integrate(model, np.array([0]), [{}])
 
     def test_model_solver_with_time(self):
         # Create model
