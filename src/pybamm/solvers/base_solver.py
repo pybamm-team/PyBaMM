@@ -571,7 +571,7 @@ class BaseSolver:
                 # note: assumes that the sign for all batches is the same
                 init_sign = float(
                     np.sign(
-                        event.evaluate(0, model.y0_list[0].full(), inputs=inputs)
+                        event.evaluate(0, model.y0_list[0].full(), inputs=inputs[0])
                     ).item()
                 )
                 # We create a sigmoid for each event which will multiply the
