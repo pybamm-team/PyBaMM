@@ -10,33 +10,14 @@ from functools import cached_property
 from itertools import chain
 
 import casadi
+import lazy_loader as lazy
 import numpy as np
 
 import pybamm
 
-# Module-level caches for lazy imports
-_savemat = None
-_pandas = None
-
-
-def _get_savemat():
-    """Lazily import savemat from scipy.io (cached for performance)."""
-    global _savemat
-    if _savemat is None:
-        from scipy.io import savemat
-
-        _savemat = savemat
-    return _savemat
-
-
-def _get_pandas():
-    """Lazily import pandas module (cached for performance)."""
-    global _pandas
-    if _pandas is None:
-        import pandas as pd
-
-        _pandas = pd
-    return _pandas
+# Lazy imports for heavy dependencies
+scipy_io = lazy.load("scipy.io")
+pd = lazy.load("pandas")
 
 
 class NumpyEncoder(json.JSONEncoder):
@@ -800,17 +781,13 @@ class Solution:
                             "['Electrolyte concentration'], to_format='matlab, "
                             "short_names={'Electrolyte concentration': 'c_e'})"
                         )
-            savemat = _get_savemat()
-
-            savemat(filename, data)
+            scipy_io.savemat(filename, data)
         elif to_format == "csv":
             for name, var in data.items():
                 if var.ndim >= 2:
                     raise ValueError(
                         f"only 0D variables can be saved to csv, but '{name}' is {var.ndim - 1}D"
                     )
-            pd = _get_pandas()
-
             df = pd.DataFrame(data)
             return df.to_csv(filename, index=False)
         elif to_format == "json":

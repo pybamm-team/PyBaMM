@@ -1,24 +1,15 @@
 import bisect
 
 import casadi
+import lazy_loader as lazy
 import numpy as np
 
 import pybamm
 
 from .base_processed_variable import BaseProcessedVariable
 
-# Module-level cache for lazy import
-_idaklu = None
-
-
-def _get_idaklu():
-    """Lazily import idaklu module (cached for performance)."""
-    global _idaklu
-    if _idaklu is None:
-        from pybammsolvers import idaklu
-
-        _idaklu = idaklu
-    return _idaklu
+# Lazy import for idaklu (heavy dependency)
+idaklu = lazy.load("pybammsolvers.idaklu")
 
 
 class ProcessedVariable(BaseProcessedVariable):
@@ -133,8 +124,7 @@ class ProcessedVariable(BaseProcessedVariable):
         return self._observe_postfix(self._observe_raw(), t)
 
     def _setup_inputs(self, t, full_range):
-        idaklu = _get_idaklu()
-
+        
         pybamm.logger.debug("Setting up C++ interpolation inputs")
 
         ts = self.all_ts
@@ -180,8 +170,7 @@ class ProcessedVariable(BaseProcessedVariable):
         return ts, ys, yps, funcs, inputs, is_f_contiguous
 
     def _observe_hermite(self, t):
-        idaklu = _get_idaklu()
-
+        
         pybamm.logger.debug("Observing and Hermite interpolating the variable")
 
         ts, ys, yps, funcs, inputs, _ = self._setup_inputs(t, full_range=False)
@@ -189,8 +178,7 @@ class ProcessedVariable(BaseProcessedVariable):
         return idaklu.observe_hermite_interp(t, ts, ys, yps, inputs, funcs, shapes)
 
     def _observe_raw(self):
-        idaklu = _get_idaklu()
-
+        
         pybamm.logger.debug("Observing the variable raw data")
         t = self.t_pts
         ts, ys, _, funcs, inputs, is_f_contiguous = self._setup_inputs(
