@@ -218,6 +218,68 @@ class TestThreadSafety:
                 )
 
 
+class TestJaxConfiguration:
+    """Tests for JAX lazy configuration."""
+
+    def test_get_jax_available(self):
+        """Test that get_jax is accessible."""
+        import pybamm
+
+        assert hasattr(pybamm, "get_jax")
+        assert callable(pybamm.get_jax)
+
+    def test_get_jax_returns_none_when_unavailable(self):
+        """Test that get_jax raises ModuleNotFoundError when JAX is not installed."""
+        import pybamm
+
+        if not pybamm.has_jax():
+            with pytest.raises(ModuleNotFoundError):
+                pybamm.get_jax()
+
+    @pytest.mark.skipif(not __import__("pybamm").has_jax(), reason="JAX not installed")
+    def test_get_jax_returns_jax_module(self):
+        """Test that get_jax returns the jax module when available."""
+        import pybamm
+
+        jax = pybamm.get_jax()
+        assert jax is not None
+        assert hasattr(jax, "numpy")
+        assert hasattr(jax, "config")
+
+    @pytest.mark.skipif(not __import__("pybamm").has_jax(), reason="JAX not installed")
+    def test_get_jax_configures_x64(self):
+        """Test that get_jax configures JAX for float64 precision."""
+        import pybamm
+
+        jax = pybamm.get_jax()
+        # After calling get_jax, x64 should be enabled (unless on Metal)
+        platform = jax.lib.xla_bridge.get_backend().platform.casefold()
+        if platform != "metal":
+            assert jax.config.x64_enabled, "JAX x64 should be enabled after get_jax()"
+
+    @pytest.mark.skipif(not __import__("pybamm").has_jax(), reason="JAX not installed")
+    def test_get_jax_caches_configuration(self):
+        """Test that get_jax only configures JAX once."""
+        import pybamm
+        from pybamm import util
+
+        # Reset the configuration flag for testing
+        original_configured = util._jax_configured
+        util._jax_configured = False
+
+        try:
+            # First call should configure
+            jax1 = pybamm.get_jax()
+            assert util._jax_configured is True
+
+            # Second call should return same module without reconfiguring
+            jax2 = pybamm.get_jax()
+            assert jax1 is jax2
+        finally:
+            # Restore original state
+            util._jax_configured = original_configured
+
+
 class TestEagerImportMode:
     """Tests for EAGER_IMPORT environment variable mode."""
 

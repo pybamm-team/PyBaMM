@@ -362,6 +362,58 @@ def has_jax():
     )
 
 
+# Track whether JAX has been configured
+_jax_configured = False
+
+
+def get_jax():
+    """
+    Import and configure JAX for PyBaMM use.
+
+    This function lazily imports JAX and configures it for float64 precision
+    (except on Metal backend where float64 is not supported). The configuration
+    is only applied once, on first call.
+
+    Returns
+    -------
+    module or None
+        The configured jax module if available, None otherwise
+
+    Raises
+    ------
+    ModuleNotFoundError
+        If JAX is not installed (use has_jax() to check first)
+
+    Examples
+    --------
+    >>> if pybamm.has_jax():
+    ...     jax = pybamm.get_jax()
+    ...     # JAX is now configured and ready to use
+    """
+    global _jax_configured
+
+    if not has_jax():
+        raise ModuleNotFoundError(
+            "JAX is not installed. See "
+            "https://docs.pybamm.org/en/latest/source/user_guide/installation/gnu-linux-mac.html#optional-jaxsolver"
+        )
+
+    import jax
+
+    if not _jax_configured:
+        try:
+            platform = jax.lib.xla_bridge.get_backend().platform.casefold()
+            if platform != "metal":
+                jax.config.update("jax_enable_x64", True)
+        except Exception:
+            # If we can't get the backend
+            # try to enable x64
+            jax.config.update("jax_enable_x64", True)
+        _jax_configured = True
+
+    return jax
+
+
 def is_constant_and_can_evaluate(symbol):
     """
     Returns True if symbol is constant and evaluation does not raise any errors.

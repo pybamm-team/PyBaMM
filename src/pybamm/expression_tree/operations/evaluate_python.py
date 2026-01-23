@@ -13,7 +13,7 @@ from numpy.typing import ArrayLike
 import pybamm
 
 if pybamm.has_jax():
-    import jax
+    jax = pybamm.get_jax()
 
 
 class JaxCooMatrix:

@@ -15,7 +15,7 @@ import pybamm
 logger = logging.getLogger("pybamm.solvers.idaklu_jax")
 
 if pybamm.has_jax():
-    import jax
+    jax = pybamm.get_jax()
     from jax import lax
 
     try:

@@ -10,7 +10,7 @@ import pybamm
 if pybamm.has_jax():
     import functools
 
-    import jax
+    jax = pybamm.get_jax()
     import jax.numpy as jnp
     from jax import core, dtypes
     from jax.api_util import flatten_fun_nokwargs

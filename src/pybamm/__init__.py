@@ -16,18 +16,6 @@ import lazy_loader as lazy
 
 from pybamm.version import __version__
 
-# Configure JAX for float64 precision early, before any JAX-dependent code runs
-# This must happen before lazy-loaded modules that use JAX are imported
-if (
-    importlib.util.find_spec("jax") is not None
-    and importlib.util.find_spec("jaxlib") is not None
-):
-    import jax
-
-    platform = jax.lib.xla_bridge.get_backend().platform.casefold()
-    if platform != "metal":
-        jax.config.update("jax_enable_x64", True)
-
 # Core utilities that are lightweight and commonly needed
 from .logger import logger, set_logging_level, get_new_logger
 from .settings import settings

@@ -8,17 +8,30 @@ This script generates the stub file that enables:
 3. lazy_loader integration for lazy imports
 
 Usage:
-    python scripts/generate_pyi_stub.py [--check]
+    python scripts/generate_pyi_stub.py [options]
 
 Options:
-    --check     Don't write the file, just check if it would change (for CI)
+    --check          Don't write the file, just check if it would change (for CI)
+    --validate       Validate that all configured imports exist in the modules
+    --check-exports  Check for exports in modules' __all__ that are missing from
+                     the stub config (helps catch forgotten exports)
+
+Examples:
+    # Generate/update the stub file
+    python scripts/generate_pyi_stub.py
+
+    # CI check: validate imports exist and stub is up to date
+    python scripts/generate_pyi_stub.py --validate --check-exports
+    python scripts/generate_pyi_stub.py --check
+
+    # Just check for missing exports
+    python scripts/generate_pyi_stub.py --check-exports
 """
 
 from __future__ import annotations
 
 import argparse
 import importlib
-import inspect
 import sys
 from pathlib import Path
 from typing import NamedTuple
@@ -251,6 +264,7 @@ LAZY_IMPORTS: dict[str, list[str]] = {
         "is_constant_and_can_evaluate",
         "get_parameters_filepath",
         "has_jax",
+        "get_jax",
         "import_optional_dependency",
     ],
     # Operations
@@ -375,7 +389,7 @@ LAZY_IMPORTS: dict[str, list[str]] = {
     # Pybamm Data
     ".pybamm_data": ["DataLoader"],
     # Dispatch
-    ".dispatch": ["parameter_sets", "Model"],
+    ".dispatch": ["parameter_sets", "models", "Model"],
 }
 
 # Submodule aliases (handled by custom __getattr__, not lazy_loader)
@@ -521,6 +535,75 @@ def validate_imports() -> list[str]:
     return errors
 
 
+def check_missing_exports() -> tuple[list[str], list[str]]:
+    """
+    Check for exports in modules' __all__ that are not in our configuration.
+
+    This helps catch cases where someone adds a new export to a module
+    but forgets to update the stub generator.
+
+    Returns
+    -------
+    tuple[list[str], list[str]]
+        A tuple of (missing_exports, warnings) where missing_exports are errors
+        and warnings are informational messages.
+    """
+    missing = []
+    warnings_list = []
+
+    # Modules where we explicitly want to check __all__
+    # These are modules where we use wildcard imports or want complete coverage
+    all_imports = {**EAGER_IMPORTS, **LAZY_IMPORTS}
+
+    for module_path, configured_attrs in all_imports.items():
+        try:
+            full_path = f"pybamm{module_path}"
+            module = importlib.import_module(full_path)
+
+            # Get the module's __all__ if it exists
+            module_all = getattr(module, "__all__", None)
+            if module_all is None:
+                # No __all__ defined, skip this module
+                continue
+
+            # Convert to sets for comparison
+            configured_set = set(configured_attrs)
+            module_all_set = set(module_all)
+
+            # Find exports in __all__ that we don't have configured
+            missing_from_config = module_all_set - configured_set
+
+            # Filter out private attributes (starting with _) unless they're
+            # explicitly in our config (like _BaseAverage)
+            public_missing = {
+                attr for attr in missing_from_config if not attr.startswith("_")
+            }
+
+            if public_missing:
+                for attr in sorted(public_missing):
+                    missing.append(
+                        f"MISSING: {module_path}.{attr} is in module's __all__ "
+                        f"but not in stub config"
+                    )
+
+            # Also check for attrs we have that aren't in __all__ (informational)
+            extra_in_config = configured_set - module_all_set
+            if extra_in_config:
+                for attr in sorted(extra_in_config):
+                    # Only warn if the attr actually exists (it might be intentional)
+                    if hasattr(module, attr):
+                        warnings_list.append(
+                            f"INFO: {module_path}.{attr} is in stub config "
+                            f"but not in module's __all__"
+                        )
+
+        except ImportError:
+            # Module import failed, already caught by validate_imports
+            pass
+
+    return missing, warnings_list
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Generate __init__.pyi stub file for PyBaMM"
@@ -535,6 +618,11 @@ def main():
         action="store_true",
         help="Validate that all configured imports exist",
     )
+    parser.add_argument(
+        "--check-exports",
+        action="store_true",
+        help="Check for missing exports in modules' __all__ (for CI)",
+    )
     args = parser.parse_args()
 
     stub_path = REPO_ROOT / "src" / "pybamm" / "__init__.pyi"
@@ -548,6 +636,36 @@ def main():
                 print(f"  - {error}")
             sys.exit(1)
         print("All imports validated successfully!")
+
+        # Also run export check if validating
+        if args.check_exports:
+            print("\nChecking for missing exports...")
+            missing, warnings_list = check_missing_exports()
+            if warnings_list:
+                print("Warnings (informational):")
+                for warning in warnings_list:
+                    print(f"  - {warning}")
+            if missing:
+                print("\nMissing exports (these should be added to the stub config):")
+                for error in missing:
+                    print(f"  - {error}")
+                sys.exit(1)
+            print("No missing exports found!")
+        return
+
+    if args.check_exports:
+        print("Checking for missing exports...")
+        missing, warnings_list = check_missing_exports()
+        if warnings_list:
+            print("Warnings (informational):")
+            for warning in warnings_list:
+                print(f"  - {warning}")
+        if missing:
+            print("\nMissing exports (these should be added to the stub config):")
+            for error in missing:
+                print(f"  - {error}")
+            sys.exit(1)
+        print("No missing exports found!")
         return
 
     content = generate_stub_content()
