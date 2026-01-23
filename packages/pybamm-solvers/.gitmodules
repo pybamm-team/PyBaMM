@@ -1,6 +1,6 @@
 [submodule "sundials"]
-	path = sundials
-	url = git@github.com:LLNL/sundials.git
+    path = sundials
+    url = https://github.com/LLNL/sundials.git
 [submodule "SuiteSparse"]
-	path = SuiteSparse
-	url = git@github.com:DrTimothyAldenDavis/SuiteSparse.git
+    path = SuiteSparse
+    url = https://github.com/DrTimothyAldenDavis/SuiteSparse.git
