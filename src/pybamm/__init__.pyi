@@ -31,7 +31,9 @@ from .citations import print_citations as print_citations
 from .expression_tree.symbol import Symbol as Symbol
 from .expression_tree.symbol import domain_size as domain_size
 from .expression_tree.symbol import create_object_of_size as create_object_of_size
-from .expression_tree.symbol import evaluate_for_shape_using_domain as evaluate_for_shape_using_domain
+from .expression_tree.symbol import (
+    evaluate_for_shape_using_domain as evaluate_for_shape_using_domain,
+)
 from .expression_tree.symbol import is_constant as is_constant
 from .expression_tree.symbol import is_scalar_zero as is_scalar_zero
 from .expression_tree.symbol import is_scalar_one as is_scalar_one
@@ -50,7 +52,9 @@ from .expression_tree.binary_operators import Subtraction as Subtraction
 from .expression_tree.binary_operators import Multiplication as Multiplication
 from .expression_tree.binary_operators import KroneckerProduct as KroneckerProduct
 from .expression_tree.binary_operators import TensorProduct as TensorProduct
-from .expression_tree.binary_operators import MatrixMultiplication as MatrixMultiplication
+from .expression_tree.binary_operators import (
+    MatrixMultiplication as MatrixMultiplication,
+)
 from .expression_tree.binary_operators import Division as Division
 from .expression_tree.binary_operators import Inner as Inner
 from .expression_tree.binary_operators import Equality as Equality
@@ -69,7 +73,9 @@ from .expression_tree.concatenations import Concatenation as Concatenation
 from .expression_tree.concatenations import NumpyConcatenation as NumpyConcatenation
 from .expression_tree.concatenations import DomainConcatenation as DomainConcatenation
 from .expression_tree.concatenations import SparseStack as SparseStack
-from .expression_tree.concatenations import ConcatenationVariable as ConcatenationVariable
+from .expression_tree.concatenations import (
+    ConcatenationVariable as ConcatenationVariable,
+)
 from .expression_tree.concatenations import concatenation as concatenation
 from .expression_tree.concatenations import numpy_concatenation as numpy_concatenation
 
@@ -90,17 +96,27 @@ from .expression_tree.unary_operators import GradientSquared as GradientSquared
 from .expression_tree.unary_operators import Mass as Mass
 from .expression_tree.unary_operators import BoundaryMass as BoundaryMass
 from .expression_tree.unary_operators import Integral as Integral
-from .expression_tree.unary_operators import BaseIndefiniteIntegral as BaseIndefiniteIntegral
+from .expression_tree.unary_operators import (
+    BaseIndefiniteIntegral as BaseIndefiniteIntegral,
+)
 from .expression_tree.unary_operators import IndefiniteIntegral as IndefiniteIntegral
-from .expression_tree.unary_operators import BackwardIndefiniteIntegral as BackwardIndefiniteIntegral
-from .expression_tree.unary_operators import DefiniteIntegralVector as DefiniteIntegralVector
+from .expression_tree.unary_operators import (
+    BackwardIndefiniteIntegral as BackwardIndefiniteIntegral,
+)
+from .expression_tree.unary_operators import (
+    DefiniteIntegralVector as DefiniteIntegralVector,
+)
 from .expression_tree.unary_operators import BoundaryIntegral as BoundaryIntegral
-from .expression_tree.unary_operators import OneDimensionalIntegral as OneDimensionalIntegral
+from .expression_tree.unary_operators import (
+    OneDimensionalIntegral as OneDimensionalIntegral,
+)
 from .expression_tree.unary_operators import DeltaFunction as DeltaFunction
 from .expression_tree.unary_operators import BoundaryOperator as BoundaryOperator
 from .expression_tree.unary_operators import BoundaryValue as BoundaryValue
 from .expression_tree.unary_operators import BoundaryMeshSize as BoundaryMeshSize
-from .expression_tree.unary_operators import ExplicitTimeIntegral as ExplicitTimeIntegral
+from .expression_tree.unary_operators import (
+    ExplicitTimeIntegral as ExplicitTimeIntegral,
+)
 from .expression_tree.unary_operators import BoundaryGradient as BoundaryGradient
 from .expression_tree.unary_operators import EvaluateAt as EvaluateAt
 from .expression_tree.unary_operators import UpwindDownwind as UpwindDownwind
@@ -136,11 +152,17 @@ from .expression_tree.averages import size_average as size_average
 # broadcasts
 from .expression_tree.broadcasts import Broadcast as Broadcast
 from .expression_tree.broadcasts import PrimaryBroadcast as PrimaryBroadcast
-from .expression_tree.broadcasts import PrimaryBroadcastToEdges as PrimaryBroadcastToEdges
+from .expression_tree.broadcasts import (
+    PrimaryBroadcastToEdges as PrimaryBroadcastToEdges,
+)
 from .expression_tree.broadcasts import SecondaryBroadcast as SecondaryBroadcast
-from .expression_tree.broadcasts import SecondaryBroadcastToEdges as SecondaryBroadcastToEdges
+from .expression_tree.broadcasts import (
+    SecondaryBroadcastToEdges as SecondaryBroadcastToEdges,
+)
 from .expression_tree.broadcasts import TertiaryBroadcast as TertiaryBroadcast
-from .expression_tree.broadcasts import TertiaryBroadcastToEdges as TertiaryBroadcastToEdges
+from .expression_tree.broadcasts import (
+    TertiaryBroadcastToEdges as TertiaryBroadcastToEdges,
+)
 from .expression_tree.broadcasts import FullBroadcast as FullBroadcast
 from .expression_tree.broadcasts import FullBroadcastToEdges as FullBroadcastToEdges
 from .expression_tree.broadcasts import ones_like as ones_like
@@ -193,10 +215,14 @@ from .expression_tree.variable import VariableDot as VariableDot
 from .expression_tree.coupled_variable import CoupledVariable as CoupledVariable
 
 # independent_variable
-from .expression_tree.independent_variable import IndependentVariable as IndependentVariable
+from .expression_tree.independent_variable import (
+    IndependentVariable as IndependentVariable,
+)
 from .expression_tree.independent_variable import Time as Time
 from .expression_tree.independent_variable import SpatialVariable as SpatialVariable
-from .expression_tree.independent_variable import SpatialVariableEdge as SpatialVariableEdge
+from .expression_tree.independent_variable import (
+    SpatialVariableEdge as SpatialVariableEdge,
+)
 from .expression_tree.independent_variable import t as t
 from .expression_tree.independent_variable import KNOWN_COORD_SYS as KNOWN_COORD_SYS
 
@@ -266,9 +292,13 @@ from .expression_tree.state_vector import StateVectorDot as StateVectorDot
 
 # evaluate_python
 from .expression_tree.operations.evaluate_python import find_symbols as find_symbols
-from .expression_tree.operations.evaluate_python import id_to_python_variable as id_to_python_variable
+from .expression_tree.operations.evaluate_python import (
+    id_to_python_variable as id_to_python_variable,
+)
 from .expression_tree.operations.evaluate_python import to_python as to_python
-from .expression_tree.operations.evaluate_python import EvaluatorPython as EvaluatorPython
+from .expression_tree.operations.evaluate_python import (
+    EvaluatorPython as EvaluatorPython,
+)
 from .expression_tree.operations.evaluate_python import EvaluatorJax as EvaluatorJax
 from .expression_tree.operations.evaluate_python import JaxCooMatrix as JaxCooMatrix
 
@@ -276,14 +306,18 @@ from .expression_tree.operations.evaluate_python import JaxCooMatrix as JaxCooMa
 from .expression_tree.operations.jacobian import Jacobian as Jacobian
 
 # convert_to_casadi
-from .expression_tree.operations.convert_to_casadi import CasadiConverter as CasadiConverter
+from .expression_tree.operations.convert_to_casadi import (
+    CasadiConverter as CasadiConverter,
+)
 
 # unpack_symbols
 from .expression_tree.operations.unpack_symbols import SymbolUnpacker as SymbolUnpacker
 
 # serialise
 from .expression_tree.operations.serialise import Serialise as Serialise
-from .expression_tree.operations.serialise import ExpressionFunctionParameter as ExpressionFunctionParameter
+from .expression_tree.operations.serialise import (
+    ExpressionFunctionParameter as ExpressionFunctionParameter,
+)
 
 # base_model
 from .models.base_model import BaseModel as BaseModel
@@ -298,8 +332,12 @@ from .models.event import Event as Event
 from .models.event import EventType as EventType
 
 # base_battery_model
-from .models.full_battery_models.base_battery_model import BaseBatteryModel as BaseBatteryModel
-from .models.full_battery_models.base_battery_model import BatteryModelOptions as BatteryModelOptions
+from .models.full_battery_models.base_battery_model import (
+    BaseBatteryModel as BaseBatteryModel,
+)
+from .models.full_battery_models.base_battery_model import (
+    BatteryModelOptions as BatteryModelOptions,
+)
 
 # base_submodel
 from .models.submodels.base_submodel import BaseSubModel as BaseSubModel
@@ -316,19 +354,27 @@ from .parameters.parameter_values import scalarize_dict as scalarize_dict
 from .parameters.parameter_values import arrayize_dict as arrayize_dict
 
 # geometric_parameters
-from .parameters.geometric_parameters import geometric_parameters as geometric_parameters
+from .parameters.geometric_parameters import (
+    geometric_parameters as geometric_parameters,
+)
 from .parameters.geometric_parameters import GeometricParameters as GeometricParameters
 
 # electrical_parameters
-from .parameters.electrical_parameters import electrical_parameters as electrical_parameters
-from .parameters.electrical_parameters import ElectricalParameters as ElectricalParameters
+from .parameters.electrical_parameters import (
+    electrical_parameters as electrical_parameters,
+)
+from .parameters.electrical_parameters import (
+    ElectricalParameters as ElectricalParameters,
+)
 
 # thermal_parameters
 from .parameters.thermal_parameters import thermal_parameters as thermal_parameters
 from .parameters.thermal_parameters import ThermalParameters as ThermalParameters
 
 # lithium_ion_parameters
-from .parameters.lithium_ion_parameters import LithiumIonParameters as LithiumIonParameters
+from .parameters.lithium_ion_parameters import (
+    LithiumIonParameters as LithiumIonParameters,
+)
 
 # lead_acid_parameters
 from .parameters.lead_acid_parameters import LeadAcidParameters as LeadAcidParameters
@@ -337,7 +383,9 @@ from .parameters.lead_acid_parameters import LeadAcidParameters as LeadAcidParam
 from .parameters.ecm_parameters import EcmParameters as EcmParameters
 
 # size_distribution_parameters
-from .parameters.size_distribution_parameters import get_size_distribution_parameters as get_size_distribution_parameters
+from .parameters.size_distribution_parameters import (
+    get_size_distribution_parameters as get_size_distribution_parameters,
+)
 from .parameters.size_distribution_parameters import lognormal as lognormal
 
 # discretisation
@@ -355,11 +403,19 @@ from .meshes.zero_dimensional_submesh import SubMesh0D as SubMesh0D
 # one_dimensional_submeshes
 from .meshes.one_dimensional_submeshes import SubMesh1D as SubMesh1D
 from .meshes.one_dimensional_submeshes import Uniform1DSubMesh as Uniform1DSubMesh
-from .meshes.one_dimensional_submeshes import Exponential1DSubMesh as Exponential1DSubMesh
+from .meshes.one_dimensional_submeshes import (
+    Exponential1DSubMesh as Exponential1DSubMesh,
+)
 from .meshes.one_dimensional_submeshes import Chebyshev1DSubMesh as Chebyshev1DSubMesh
-from .meshes.one_dimensional_submeshes import UserSupplied1DSubMesh as UserSupplied1DSubMesh
-from .meshes.one_dimensional_submeshes import SpectralVolume1DSubMesh as SpectralVolume1DSubMesh
-from .meshes.one_dimensional_submeshes import SymbolicUniform1DSubMesh as SymbolicUniform1DSubMesh
+from .meshes.one_dimensional_submeshes import (
+    UserSupplied1DSubMesh as UserSupplied1DSubMesh,
+)
+from .meshes.one_dimensional_submeshes import (
+    SpectralVolume1DSubMesh as SpectralVolume1DSubMesh,
+)
+from .meshes.one_dimensional_submeshes import (
+    SymbolicUniform1DSubMesh as SymbolicUniform1DSubMesh,
+)
 
 # two_dimensional_submeshes
 from .meshes.two_dimensional_submeshes import SubMesh2D as SubMesh2D
@@ -367,21 +423,31 @@ from .meshes.two_dimensional_submeshes import Uniform2DSubMesh as Uniform2DSubMe
 
 # scikit_fem_submeshes
 from .meshes.scikit_fem_submeshes import ScikitSubMesh2D as ScikitSubMesh2D
-from .meshes.scikit_fem_submeshes import ScikitUniform2DSubMesh as ScikitUniform2DSubMesh
-from .meshes.scikit_fem_submeshes import ScikitExponential2DSubMesh as ScikitExponential2DSubMesh
-from .meshes.scikit_fem_submeshes import ScikitChebyshev2DSubMesh as ScikitChebyshev2DSubMesh
+from .meshes.scikit_fem_submeshes import (
+    ScikitUniform2DSubMesh as ScikitUniform2DSubMesh,
+)
+from .meshes.scikit_fem_submeshes import (
+    ScikitExponential2DSubMesh as ScikitExponential2DSubMesh,
+)
+from .meshes.scikit_fem_submeshes import (
+    ScikitChebyshev2DSubMesh as ScikitChebyshev2DSubMesh,
+)
 from .meshes.scikit_fem_submeshes import UserSupplied2DSubMesh as UserSupplied2DSubMesh
 
 # scikit_fem_submeshes_3d
 from .meshes.scikit_fem_submeshes_3d import ScikitFemSubMesh3D as ScikitFemSubMesh3D
 from .meshes.scikit_fem_submeshes_3d import ScikitFemGenerator3D as ScikitFemGenerator3D
-from .meshes.scikit_fem_submeshes_3d import UserSuppliedSubmesh3D as UserSuppliedSubmesh3D
+from .meshes.scikit_fem_submeshes_3d import (
+    UserSuppliedSubmesh3D as UserSuppliedSubmesh3D,
+)
 
 # spatial_method
 from .spatial_methods.spatial_method import SpatialMethod as SpatialMethod
 
 # zero_dimensional_method
-from .spatial_methods.zero_dimensional_method import ZeroDimensionalSpatialMethod as ZeroDimensionalSpatialMethod
+from .spatial_methods.zero_dimensional_method import (
+    ZeroDimensionalSpatialMethod as ZeroDimensionalSpatialMethod,
+)
 
 # finite_volume
 from .spatial_methods.finite_volume import FiniteVolume as FiniteVolume
@@ -393,10 +459,14 @@ from .spatial_methods.finite_volume_2d import FiniteVolume2D as FiniteVolume2D
 from .spatial_methods.spectral_volume import SpectralVolume as SpectralVolume
 
 # scikit_finite_element
-from .spatial_methods.scikit_finite_element import ScikitFiniteElement as ScikitFiniteElement
+from .spatial_methods.scikit_finite_element import (
+    ScikitFiniteElement as ScikitFiniteElement,
+)
 
 # scikit_finite_element_3d
-from .spatial_methods.scikit_finite_element_3d import ScikitFiniteElement3D as ScikitFiniteElement3D
+from .spatial_methods.scikit_finite_element_3d import (
+    ScikitFiniteElement3D as ScikitFiniteElement3D,
+)
 
 # solution
 from .solvers.solution import Solution as Solution
@@ -404,16 +474,22 @@ from .solvers.solution import EmptySolution as EmptySolution
 from .solvers.solution import make_cycle_solution as make_cycle_solution
 
 # processed_variable_time_integral
-from .solvers.processed_variable_time_integral import ProcessedVariableTimeIntegral as ProcessedVariableTimeIntegral
+from .solvers.processed_variable_time_integral import (
+    ProcessedVariableTimeIntegral as ProcessedVariableTimeIntegral,
+)
 
 # processed_variable
 from .solvers.processed_variable import ProcessedVariable as ProcessedVariable
 from .solvers.processed_variable import ProcessedVariable2DFVM as ProcessedVariable2DFVM
 from .solvers.processed_variable import process_variable as process_variable
-from .solvers.processed_variable import ProcessedVariableUnstructured as ProcessedVariableUnstructured
+from .solvers.processed_variable import (
+    ProcessedVariableUnstructured as ProcessedVariableUnstructured,
+)
 
 # processed_variable_computed
-from .solvers.processed_variable_computed import ProcessedVariableComputed as ProcessedVariableComputed
+from .solvers.processed_variable_computed import (
+    ProcessedVariableComputed as ProcessedVariableComputed,
+)
 
 # summary_variable
 from .solvers.summary_variable import SummaryVariables as SummaryVariables
@@ -431,7 +507,9 @@ from .solvers.algebraic_solver import AlgebraicSolver as AlgebraicSolver
 from .solvers.casadi_solver import CasadiSolver as CasadiSolver
 
 # casadi_algebraic_solver
-from .solvers.casadi_algebraic_solver import CasadiAlgebraicSolver as CasadiAlgebraicSolver
+from .solvers.casadi_algebraic_solver import (
+    CasadiAlgebraicSolver as CasadiAlgebraicSolver,
+)
 
 # scipy_solver
 from .solvers.scipy_solver import ScipySolver as ScipySolver
@@ -466,19 +544,27 @@ from .plotting.plot import plot as plot
 from .plotting.plot2D import plot2D as plot2D
 
 # plot_voltage_components
-from .plotting.plot_voltage_components import plot_voltage_components as plot_voltage_components
+from .plotting.plot_voltage_components import (
+    plot_voltage_components as plot_voltage_components,
+)
 
 # plot_thermal_components
-from .plotting.plot_thermal_components import plot_thermal_components as plot_thermal_components
+from .plotting.plot_thermal_components import (
+    plot_thermal_components as plot_thermal_components,
+)
 
 # plot_summary_variables
-from .plotting.plot_summary_variables import plot_summary_variables as plot_summary_variables
+from .plotting.plot_summary_variables import (
+    plot_summary_variables as plot_summary_variables,
+)
 
 # dynamic_plot
 from .plotting.dynamic_plot import dynamic_plot as dynamic_plot
 
 # plot_3d_cross_section
-from .plotting.plot_3d_cross_section import plot_3d_cross_section as plot_3d_cross_section
+from .plotting.plot_3d_cross_section import (
+    plot_3d_cross_section as plot_3d_cross_section,
+)
 
 # plot_3d_heatmap
 from .plotting.plot_3d_heatmap import plot_3d_heatmap as plot_3d_heatmap

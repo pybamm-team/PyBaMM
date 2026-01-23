@@ -249,7 +249,11 @@ LAZY_IMPORTS: dict[str, list[str]] = {
     ".expression_tree.input_parameter": ["InputParameter"],
     ".expression_tree.parameter": ["Parameter", "FunctionParameter"],
     ".expression_tree.scalar": ["Scalar", "Constant"],
-    ".expression_tree.state_vector": ["StateVectorBase", "StateVector", "StateVectorDot"],
+    ".expression_tree.state_vector": [
+        "StateVectorBase",
+        "StateVector",
+        "StateVectorDot",
+    ],
     # Operations
     ".expression_tree.operations.evaluate_python": [
         "find_symbols",
@@ -262,7 +266,10 @@ LAZY_IMPORTS: dict[str, list[str]] = {
     ".expression_tree.operations.jacobian": ["Jacobian"],
     ".expression_tree.operations.convert_to_casadi": ["CasadiConverter"],
     ".expression_tree.operations.unpack_symbols": ["SymbolUnpacker"],
-    ".expression_tree.operations.serialise": ["Serialise", "ExpressionFunctionParameter"],
+    ".expression_tree.operations.serialise": [
+        "Serialise",
+        "ExpressionFunctionParameter",
+    ],
     # Model classes
     ".models.base_model": ["BaseModel", "ModelSolutionObservability", "load_model"],
     ".models.symbol_processor": ["SymbolProcessor"],
@@ -276,9 +283,16 @@ LAZY_IMPORTS: dict[str, list[str]] = {
     ".geometry.geometry": ["Geometry"],
     ".geometry.battery_geometry": ["battery_geometry"],
     # Parameters
-    ".parameters.parameter_values": ["ParameterValues", "scalarize_dict", "arrayize_dict"],
+    ".parameters.parameter_values": [
+        "ParameterValues",
+        "scalarize_dict",
+        "arrayize_dict",
+    ],
     ".parameters.geometric_parameters": ["geometric_parameters", "GeometricParameters"],
-    ".parameters.electrical_parameters": ["electrical_parameters", "ElectricalParameters"],
+    ".parameters.electrical_parameters": [
+        "electrical_parameters",
+        "ElectricalParameters",
+    ],
     ".parameters.thermal_parameters": ["thermal_parameters", "ThermalParameters"],
     ".parameters.lithium_ion_parameters": ["LithiumIonParameters"],
     ".parameters.lead_acid_parameters": ["LeadAcidParameters"],
@@ -367,44 +381,8 @@ LAZY_IMPORTS: dict[str, list[str]] = {
 
 # Submodule aliases (handled by custom __getattr__, not lazy_loader)
 # These are declared in the stub for documentation but lazy_loader won't process them
-SUBMODULE_ALIASES: dict[str, str] = {
-    # Battery models (as modules)
-    "lead_acid": ".models.full_battery_models.lead_acid",
-    "lithium_ion": ".models.full_battery_models.lithium_ion",
-    "equivalent_circuit": ".models.full_battery_models.equivalent_circuit",
-    "sodium_ion": ".models.full_battery_models.sodium_ion",
-    # Submodels
-    "active_material": ".models.submodels.active_material",
-    "convection": ".models.submodels.convection",
-    "current_collector": ".models.submodels.current_collector",
-    "electrolyte_conductivity": ".models.submodels.electrolyte_conductivity",
-    "electrolyte_diffusion": ".models.submodels.electrolyte_diffusion",
-    "electrode": ".models.submodels.electrode",
-    "external_circuit": ".models.submodels.external_circuit",
-    "interface": ".models.submodels.interface",
-    "oxygen_diffusion": ".models.submodels.oxygen_diffusion",
-    "particle": ".models.submodels.particle",
-    "porosity": ".models.submodels.porosity",
-    "thermal": ".models.submodels.thermal",
-    "transport_efficiency": ".models.submodels.transport_efficiency",
-    "particle_mechanics": ".models.submodels.particle_mechanics",
-    "equivalent_circuit_elements": ".models.submodels.equivalent_circuit_elements",
-    "kinetics": ".models.submodels.interface.kinetics",
-    "sei": ".models.submodels.interface.sei",
-    "lithium_plating": ".models.submodels.interface.lithium_plating",
-    "interface_utilisation": ".models.submodels.interface.interface_utilisation",
-    "open_circuit_potential": ".models.submodels.interface.open_circuit_potential",
-    # Geometry
-    "standard_spatial_vars": ".geometry.standard_spatial_vars",
-    # Parameters
-    "constants": ".parameters.constants",
-    # Experiments
-    "experiment": ".experiment",
-    "step": ".experiment.step",
-    # Callbacks and telemetry
-    "callbacks": ".callbacks",
-    "telemetry": ".telemetry",
-}
+# Import from _lazy_config.py
+from pybamm._lazy_config import SUBMODULE_ALIASES
 
 
 # ============================================================================
@@ -435,9 +413,13 @@ def generate_stub_content() -> str:
     ]
 
     # Add eagerly loaded imports
-    lines.append("# ============================================================================")
+    lines.append(
+        "# ============================================================================"
+    )
     lines.append("# EAGERLY LOADED (imported at module load time)")
-    lines.append("# ============================================================================")
+    lines.append(
+        "# ============================================================================"
+    )
     lines.append("")
 
     # Group by module for readability
@@ -454,9 +436,13 @@ def generate_stub_content() -> str:
     lines.append("")
 
     # Add lazily loaded imports
-    lines.append("# ============================================================================")
+    lines.append(
+        "# ============================================================================"
+    )
     lines.append("# LAZILY LOADED (via lazy_loader stub mechanism)")
-    lines.append("# ============================================================================")
+    lines.append(
+        "# ============================================================================"
+    )
     lines.append("")
 
     for module_path, attrs in LAZY_IMPORTS.items():
@@ -467,16 +453,26 @@ def generate_stub_content() -> str:
         lines.append("")
 
     # Note about submodule aliases
-    lines.append("# ============================================================================")
+    lines.append(
+        "# ============================================================================"
+    )
     lines.append("# SUBMODULE ALIASES")
-    lines.append("# These are handled by custom __getattr__ in __init__.py, not lazy_loader.")
-    lines.append("# They are documented here for reference but not included in the stub imports")
-    lines.append("# because lazy_loader cannot handle aliasing nested submodules to top level.")
+    lines.append(
+        "# These are handled by custom __getattr__ in __init__.py, not lazy_loader."
+    )
+    lines.append(
+        "# They are documented here for reference but not included in the stub imports"
+    )
+    lines.append(
+        "# because lazy_loader cannot handle aliasing nested submodules to top level."
+    )
     lines.append("#")
     lines.append("# Available submodule aliases:")
     for alias, path in sorted(SUBMODULE_ALIASES.items()):
         lines.append(f"#   pybamm.{alias} -> pybamm{path}")
-    lines.append("# ============================================================================")
+    lines.append(
+        "# ============================================================================"
+    )
 
     return "\n".join(lines) + "\n"
 
@@ -556,7 +552,9 @@ def main():
                 print("Stub file is up to date.")
                 sys.exit(0)
             else:
-                print("Stub file is out of date. Run 'python scripts/generate_pyi_stub.py' to update.")
+                print(
+                    "Stub file is out of date. Run 'python scripts/generate_pyi_stub.py' to update."
+                )
                 sys.exit(1)
         else:
             print("Stub file does not exist.")

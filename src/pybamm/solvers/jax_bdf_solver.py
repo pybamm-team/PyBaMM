@@ -32,10 +32,6 @@ if pybamm.has_jax():
         result.append(lst[start:])
         return result
 
-    platform = jax.lib.xla_bridge.get_backend().platform.casefold()
-    if platform != "metal":
-        jax.config.update("jax_enable_x64", True)
-
     MAX_ORDER = 5
     NEWTON_MAXITER = 4
     ROOT_SOLVE_MAXITER = 15

@@ -8,8 +8,9 @@ import pybamm
 
 from .base_processed_variable import BaseProcessedVariable
 
-# Lazy import for idaklu (heavy dependency)
+# Lazy imports
 idaklu = lazy.load("pybammsolvers.idaklu")
+xr = lazy.load("xarray")
 
 
 class ProcessedVariable(BaseProcessedVariable):
@@ -124,7 +125,6 @@ class ProcessedVariable(BaseProcessedVariable):
         return self._observe_postfix(self._observe_raw(), t)
 
     def _setup_inputs(self, t, full_range):
-        
         pybamm.logger.debug("Setting up C++ interpolation inputs")
 
         ts = self.all_ts
@@ -170,7 +170,6 @@ class ProcessedVariable(BaseProcessedVariable):
         return ts, ys, yps, funcs, inputs, is_f_contiguous
 
     def _observe_hermite(self, t):
-        
         pybamm.logger.debug("Observing and Hermite interpolating the variable")
 
         ts, ys, yps, funcs, inputs, _ = self._setup_inputs(t, full_range=False)
@@ -178,7 +177,6 @@ class ProcessedVariable(BaseProcessedVariable):
         return idaklu.observe_hermite_interp(t, ts, ys, yps, inputs, funcs, shapes)
 
     def _observe_raw(self):
-        
         pybamm.logger.debug("Observing the variable raw data")
         t = self.t_pts
         ts, ys, _, funcs, inputs, is_f_contiguous = self._setup_inputs(
@@ -315,8 +313,6 @@ class ProcessedVariable(BaseProcessedVariable):
         Evaluate the variable at arbitrary *dimensional* t (and x, r, y, z and/or R),
         using interpolation
         """
-        import xarray as xr  # lazy import for faster pybamm load time
-
         if observe_raw:
             if not self.xr_array_raw_initialized:
                 self._xr_array_raw = xr.DataArray(entries_for_interp, coords=coords)

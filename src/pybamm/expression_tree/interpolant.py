@@ -7,10 +7,14 @@ import numbers
 from collections.abc import Sequence
 from typing import Any
 
+import lazy_loader as lazy
 import numpy as np
 import numpy.typing as npt
 
 import pybamm
+
+# Lazy imports
+interpolate = lazy.load("scipy.interpolate")
 
 
 class Interpolant(pybamm.Function):
@@ -55,8 +59,6 @@ class Interpolant(pybamm.Function):
         entries_string: str | None = None,
         _num_derivatives: int = 0,
     ):
-        from scipy import interpolate  # lazy import for faster pybamm load time
-
         # Check interpolator is valid
         if interpolator not in ["linear", "cubic", "pchip"]:
             raise ValueError(f"interpolator '{interpolator}' not recognised")

@@ -16,6 +16,18 @@ import lazy_loader as lazy
 
 from pybamm.version import __version__
 
+# Configure JAX for float64 precision early, before any JAX-dependent code runs
+# This must happen before lazy-loaded modules that use JAX are imported
+if (
+    importlib.util.find_spec("jax") is not None
+    and importlib.util.find_spec("jaxlib") is not None
+):
+    import jax
+
+    platform = jax.lib.xla_bridge.get_backend().platform.casefold()
+    if platform != "metal":
+        jax.config.update("jax_enable_x64", True)
+
 # Core utilities that are lightweight and commonly needed
 from .logger import logger, set_logging_level, get_new_logger
 from .settings import settings
@@ -44,47 +56,8 @@ from .expression_tree.exceptions import *
 # Lazy loading via stub file - get the base __getattr__ and __dir__
 _lazy_getattr, _lazy_dir, _stub_all = lazy.attach_stub(__name__, __file__)
 
-# Submodule aliases that need special handling (module path mappings)
-# These are submodules that we want to expose at the top level
-# NOTE: Keep in sync with SUBMODULE_ALIASES in scripts/generate_pyi_stub.py
-_SUBMODULE_ALIASES: dict[str, str] = {
-    # Battery models (as modules)
-    "lead_acid": ".models.full_battery_models.lead_acid",
-    "lithium_ion": ".models.full_battery_models.lithium_ion",
-    "equivalent_circuit": ".models.full_battery_models.equivalent_circuit",
-    "sodium_ion": ".models.full_battery_models.sodium_ion",
-    # Submodels
-    "active_material": ".models.submodels.active_material",
-    "convection": ".models.submodels.convection",
-    "current_collector": ".models.submodels.current_collector",
-    "electrolyte_conductivity": ".models.submodels.electrolyte_conductivity",
-    "electrolyte_diffusion": ".models.submodels.electrolyte_diffusion",
-    "electrode": ".models.submodels.electrode",
-    "external_circuit": ".models.submodels.external_circuit",
-    "interface": ".models.submodels.interface",
-    "oxygen_diffusion": ".models.submodels.oxygen_diffusion",
-    "particle": ".models.submodels.particle",
-    "porosity": ".models.submodels.porosity",
-    "thermal": ".models.submodels.thermal",
-    "transport_efficiency": ".models.submodels.transport_efficiency",
-    "particle_mechanics": ".models.submodels.particle_mechanics",
-    "equivalent_circuit_elements": ".models.submodels.equivalent_circuit_elements",
-    "kinetics": ".models.submodels.interface.kinetics",
-    "sei": ".models.submodels.interface.sei",
-    "lithium_plating": ".models.submodels.interface.lithium_plating",
-    "interface_utilisation": ".models.submodels.interface.interface_utilisation",
-    "open_circuit_potential": ".models.submodels.interface.open_circuit_potential",
-    # Geometry
-    "standard_spatial_vars": ".geometry.standard_spatial_vars",
-    # Parameters
-    "constants": ".parameters.constants",
-    # Experiments
-    "experiment": ".experiment",
-    "step": ".experiment.step",
-    # Callbacks and telemetry
-    "callbacks": ".callbacks",
-    "telemetry": ".telemetry",
-}
+# These are submodules that we want to expose at the top level (e.g., pybamm.lithium_ion)
+from ._lazy_config import SUBMODULE_ALIASES as _SUBMODULE_ALIASES
 
 # Cache for loaded submodule aliases
 _loaded_submodules: dict[str, object] = {}

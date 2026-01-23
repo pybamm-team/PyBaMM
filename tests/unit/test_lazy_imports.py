@@ -94,7 +94,9 @@ class TestLazyImports:
         """Test that accessing undefined attributes raises AttributeError."""
         import pybamm
 
-        with pytest.raises(AttributeError, match="this_attribute_definitely_does_not_exist_xyz123"):
+        with pytest.raises(
+            AttributeError, match="this_attribute_definitely_does_not_exist_xyz123"
+        ):
             _ = pybamm.this_attribute_definitely_does_not_exist_xyz123
 
     def test_lazy_module_imports(self):
@@ -112,9 +114,9 @@ class TestLazyImports:
 
         for name in module_imports:
             attr = getattr(pybamm, name)
-            assert isinstance(
-                attr, types.ModuleType
-            ), f"{name} should be a module, got {type(attr)}"
+            assert isinstance(attr, types.ModuleType), (
+                f"{name} should be a module, got {type(attr)}"
+            )
 
     def test_lazy_class_imports(self):
         """Test that lazy class imports return type (class objects)."""
@@ -211,7 +213,9 @@ class TestThreadSafety:
             for result in results[1:]:
                 assert result[0] is first_result[0], "CasadiSolver not cached properly"
                 assert result[1] is first_result[1], "Simulation not cached properly"
-                assert result[2] is first_result[2], "ParameterValues not cached properly"
+                assert result[2] is first_result[2], (
+                    "ParameterValues not cached properly"
+                )
 
 
 class TestEagerImportMode:
