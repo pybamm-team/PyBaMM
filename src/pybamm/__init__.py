@@ -52,6 +52,15 @@ from .expression_tree.variable import *
 from .expression_tree.coupled_variable import *
 from .expression_tree.independent_variable import *
 from .expression_tree.exceptions import *
+from .expression_tree.scalar import *
+from .expression_tree.state_vector import *
+from .expression_tree.tensor_field import *
+from .expression_tree.parameter import *
+from .expression_tree.input_parameter import *
+from .expression_tree.array import *
+from .expression_tree.vector_field import *
+from .expression_tree.matrix import *
+from .expression_tree.vector import *
 
 # Lazy loading via stub file - get the base __getattr__ and __dir__
 _lazy_getattr, _lazy_dir, _stub_all = lazy.attach_stub(__name__, __file__)
@@ -97,3 +106,11 @@ import sysconfig
 os.environ["CASADIPATH"] = str(pathlib.Path(sysconfig.get_path("purelib")) / "casadi")
 
 config.generate()
+
+# Eagerly load core simulation modules to optimize first-solve performance
+from . import simulation  # noqa: F401, E402
+from . import solvers  # noqa: F401, E402
+from .parameters import parameter_values  # noqa: F401, E402
+from . import meshes  # noqa: F401, E402
+from . import spatial_methods  # noqa: F401, E402
+from .expression_tree.operations import convert_to_casadi  # noqa: F401, E402

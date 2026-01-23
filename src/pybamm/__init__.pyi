@@ -239,6 +239,39 @@ from .expression_tree.exceptions import ModelWarning as ModelWarning
 from .expression_tree.exceptions import DiscretisationError as DiscretisationError
 from .expression_tree.exceptions import InvalidModelJSONError as InvalidModelJSONError
 
+# scalar
+from .expression_tree.scalar import Scalar as Scalar
+from .expression_tree.scalar import Constant as Constant
+
+# state_vector
+from .expression_tree.state_vector import StateVectorBase as StateVectorBase
+from .expression_tree.state_vector import StateVector as StateVector
+from .expression_tree.state_vector import StateVectorDot as StateVectorDot
+
+# tensor_field
+from .expression_tree.tensor_field import TensorField as TensorField
+
+# parameter
+from .expression_tree.parameter import Parameter as Parameter
+from .expression_tree.parameter import FunctionParameter as FunctionParameter
+
+# input_parameter
+from .expression_tree.input_parameter import InputParameter as InputParameter
+
+# array
+from .expression_tree.array import Array as Array
+from .expression_tree.array import linspace as linspace
+from .expression_tree.array import meshgrid as meshgrid
+
+# vector_field
+from .expression_tree.vector_field import VectorField as VectorField
+
+# matrix
+from .expression_tree.matrix import Matrix as Matrix
+
+# vector
+from .expression_tree.vector import Vector as Vector
+
 # Config module
 from . import config as config
 
@@ -256,39 +289,6 @@ from .util import is_constant_and_can_evaluate as is_constant_and_can_evaluate
 from .util import get_parameters_filepath as get_parameters_filepath
 from .util import has_jax as has_jax
 from .util import import_optional_dependency as import_optional_dependency
-
-# array
-from .expression_tree.array import Array as Array
-from .expression_tree.array import linspace as linspace
-from .expression_tree.array import meshgrid as meshgrid
-
-# matrix
-from .expression_tree.matrix import Matrix as Matrix
-
-# vector
-from .expression_tree.vector import Vector as Vector
-
-# tensor_field
-from .expression_tree.tensor_field import TensorField as TensorField
-
-# vector_field
-from .expression_tree.vector_field import VectorField as VectorField
-
-# input_parameter
-from .expression_tree.input_parameter import InputParameter as InputParameter
-
-# parameter
-from .expression_tree.parameter import Parameter as Parameter
-from .expression_tree.parameter import FunctionParameter as FunctionParameter
-
-# scalar
-from .expression_tree.scalar import Scalar as Scalar
-from .expression_tree.scalar import Constant as Constant
-
-# state_vector
-from .expression_tree.state_vector import StateVectorBase as StateVectorBase
-from .expression_tree.state_vector import StateVector as StateVector
-from .expression_tree.state_vector import StateVectorDot as StateVectorDot
 
 # evaluate_python
 from .expression_tree.operations.evaluate_python import find_symbols as find_symbols

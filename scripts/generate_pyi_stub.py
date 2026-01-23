@@ -223,6 +223,20 @@ EAGER_IMPORTS: dict[str, list[str]] = {
         "DiscretisationError",
         "InvalidModelJSONError",
     ],
+    # Additional expression tree types eagerly loaded for solve performance
+    ".expression_tree.scalar": ["Scalar", "Constant"],
+    ".expression_tree.state_vector": [
+        "StateVectorBase",
+        "StateVector",
+        "StateVectorDot",
+    ],
+    ".expression_tree.tensor_field": ["TensorField"],
+    ".expression_tree.parameter": ["Parameter", "FunctionParameter"],
+    ".expression_tree.input_parameter": ["InputParameter"],
+    ".expression_tree.array": ["Array", "linspace", "meshgrid"],
+    ".expression_tree.vector_field": ["VectorField"],
+    ".expression_tree.matrix": ["Matrix"],
+    ".expression_tree.vector": ["Vector"],
 }
 
 # Lazily loaded attributes (loaded on first access via lazy_loader)
@@ -238,21 +252,6 @@ LAZY_IMPORTS: dict[str, list[str]] = {
         "get_parameters_filepath",
         "has_jax",
         "import_optional_dependency",
-    ],
-    # Array/Matrix
-    ".expression_tree.array": ["Array", "linspace", "meshgrid"],
-    ".expression_tree.matrix": ["Matrix"],
-    ".expression_tree.vector": ["Vector"],
-    ".expression_tree.tensor_field": ["TensorField"],
-    ".expression_tree.vector_field": ["VectorField"],
-    # Parameters (expression tree)
-    ".expression_tree.input_parameter": ["InputParameter"],
-    ".expression_tree.parameter": ["Parameter", "FunctionParameter"],
-    ".expression_tree.scalar": ["Scalar", "Constant"],
-    ".expression_tree.state_vector": [
-        "StateVectorBase",
-        "StateVector",
-        "StateVectorDot",
     ],
     # Operations
     ".expression_tree.operations.evaluate_python": [
