@@ -4,16 +4,11 @@
 from __future__ import annotations
 
 import casadi
-import lazy_loader as lazy
 import numpy as np
 
 import pybamm
 
 from .base_processed_variable import BaseProcessedVariable
-
-# Lazy imports
-xr = lazy.load("xarray")
-scipy_integrate = lazy.load("scipy.integrate")
 
 
 class ProcessedVariableComputed(BaseProcessedVariable):
@@ -248,10 +243,14 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         self.dimensions = 0
 
     def initialise_0D(self):
+        import xarray as xr
+
         entries = self.unroll_0D()
 
         if self.cumtrapz_ic is not None:
-            entries = scipy_integrate.cumulative_trapezoid(
+            from scipy.integrate import cumulative_trapezoid
+
+            entries = cumulative_trapezoid(
                 entries, self.t_pts, initial=float(self.cumtrapz_ic)
             )
 
@@ -262,6 +261,8 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         self.dimensions = 0
 
     def initialise_1D(self):
+        import xarray as xr
+
         entries = self.unroll_1D()
 
         # Get node and edge values
@@ -322,6 +323,8 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         """
         Initialise a 2D object that depends on x and r, x and z, x and R, or R and r.
         """
+        import xarray as xr
+
         first_dim_nodes = self.mesh.nodes
         first_dim_edges = self.mesh.edges
         second_dim_nodes = self.base_variables[0].secondary_mesh.nodes
@@ -453,6 +456,8 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         )
 
     def initialise_2D_scikit_fem(self):
+        import xarray as xr
+
         y_sol = self.mesh.edges["y"]
         len_y = len(y_sol)
         z_sol = self.mesh.edges["z"]
@@ -484,6 +489,8 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         """
         Initialise a 3D object that depends on x, r, and R.
         """
+        import xarray as xr
+
         first_dim_nodes = self.mesh.nodes
         first_dim_edges = self.mesh.edges
         second_dim_nodes = self.base_variables[0].secondary_mesh.nodes
@@ -632,6 +639,8 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         )
 
     def initialise_3D_scikit_fem(self):
+        import xarray as xr
+
         x_nodes = self.mesh.nodes
         x_edges = self.mesh.edges
         y_sol = self.base_variables[0].secondary_mesh.edges["y"]

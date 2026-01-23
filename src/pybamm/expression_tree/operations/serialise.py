@@ -12,13 +12,9 @@ from datetime import datetime
 from enum import Enum
 from pathlib import Path
 
-import lazy_loader as lazy
 import numpy as np
 
 import pybamm
-
-# Lazy imports
-black = lazy.load("black")
 
 SUPPORTED_SCHEMA_VERSION = "1.1"
 
@@ -60,6 +56,8 @@ class ExpressionFunctionParameter(pybamm.UnaryOperator):
                 child.name = f'Parameter("{child.name}")'
 
         src += f"    return {expression.to_equation()}"
+
+        import black
 
         formatted_src = black.format_str(src, mode=black.FileMode())
         return formatted_src

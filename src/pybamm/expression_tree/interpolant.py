@@ -7,14 +7,10 @@ import numbers
 from collections.abc import Sequence
 from typing import Any
 
-import lazy_loader as lazy
 import numpy as np
 import numpy.typing as npt
 
 import pybamm
-
-# Lazy imports
-interpolate = lazy.load("scipy.interpolate")
 
 
 class Interpolant(pybamm.Function):
@@ -128,6 +124,8 @@ class Interpolant(pybamm.Function):
             )
 
         # Create interpolating function
+        from scipy import interpolate
+
         if len(x) == 1:
             self.dimension = 1
             if interpolator == "linear":
