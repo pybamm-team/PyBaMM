@@ -93,6 +93,7 @@ linkcheck_ignore = [
     "https://en.wikipedia.org/wiki/",  # Wikipedia link to ignore
     "https://books.google.co.uk/books",
     "https://docs.scipy.org/doc/scipy",  # SciPy docs timeout intermittently
+    "https://chemrxiv.org",  # ChemRxiv blocks automated link checking
 ]
 
 
