@@ -380,8 +380,14 @@ LAZY_IMPORTS: dict[str, list[str]] = {
 
 # Submodule aliases (handled by custom __getattr__, not lazy_loader)
 # These are declared in the stub for documentation but lazy_loader won't process them
-# Import from _lazy_config.py
-from pybamm._lazy_config import SUBMODULE_ALIASES
+# Import directly using importlib.util to avoid triggering pybamm's lazy_loader
+import importlib.util as _imp_util
+
+_lazy_config_path = REPO_ROOT / "src" / "pybamm" / "_lazy_config.py"
+_spec = _imp_util.spec_from_file_location("_lazy_config", _lazy_config_path)
+_lazy_config = _imp_util.module_from_spec(_spec)
+_spec.loader.exec_module(_lazy_config)
+SUBMODULE_ALIASES = _lazy_config.SUBMODULE_ALIASES
 
 
 # ============================================================================
@@ -451,27 +457,29 @@ def generate_stub_content() -> str:
             lines.append(generate_import_line(module_path, attr))
         lines.append("")
 
-    # Note about submodule aliases
+    # Submodule aliases
     lines.append(
         "# ============================================================================"
     )
     lines.append("# SUBMODULE ALIASES")
     lines.append(
-        "# These are handled by custom __getattr__ in __init__.py, not lazy_loader."
+        "# These allow accessing nested submodules at the top level (e.g., pybamm.lithium_ion)"
     )
-    lines.append(
-        "# They are documented here for reference but not included in the stub imports"
-    )
-    lines.append(
-        "# because lazy_loader cannot handle aliasing nested submodules to top level."
-    )
-    lines.append("#")
-    lines.append("# Available submodule aliases:")
-    for alias, path in sorted(SUBMODULE_ALIASES.items()):
-        lines.append(f"#   pybamm.{alias} -> pybamm{path}")
     lines.append(
         "# ============================================================================"
     )
+    lines.append("")
+    for alias, path in sorted(SUBMODULE_ALIASES.items()):
+        # Extract parent module path and module name for proper import
+        parts = path.rsplit(".", 1)
+        if len(parts) == 2 and parts[0]:
+            # Nested module with non-empty parent path
+            parent_path, module_name = parts
+            lines.append(f"from {parent_path} import {module_name} as {alias}")
+        else:
+            # Top-level module like ".callbacks" -> rsplit gives ['', 'callbacks']
+            module_name = path.lstrip(".")
+            lines.append(f"from . import {module_name} as {alias}")
 
     return "\n".join(lines) + "\n"
 

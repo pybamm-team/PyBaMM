@@ -586,39 +586,36 @@ from .dispatch import Model as Model
 
 # ============================================================================
 # SUBMODULE ALIASES
-# These are handled by custom __getattr__ in __init__.py, not lazy_loader.
-# They are documented here for reference but not included in the stub imports
-# because lazy_loader cannot handle aliasing nested submodules to top level.
-#
-# Available submodule aliases:
-#   pybamm.active_material -> pybamm.models.submodels.active_material
-#   pybamm.callbacks -> pybamm.callbacks
-#   pybamm.constants -> pybamm.parameters.constants
-#   pybamm.convection -> pybamm.models.submodels.convection
-#   pybamm.current_collector -> pybamm.models.submodels.current_collector
-#   pybamm.electrode -> pybamm.models.submodels.electrode
-#   pybamm.electrolyte_conductivity -> pybamm.models.submodels.electrolyte_conductivity
-#   pybamm.electrolyte_diffusion -> pybamm.models.submodels.electrolyte_diffusion
-#   pybamm.equivalent_circuit -> pybamm.models.full_battery_models.equivalent_circuit
-#   pybamm.equivalent_circuit_elements -> pybamm.models.submodels.equivalent_circuit_elements
-#   pybamm.experiment -> pybamm.experiment
-#   pybamm.external_circuit -> pybamm.models.submodels.external_circuit
-#   pybamm.interface -> pybamm.models.submodels.interface
-#   pybamm.interface_utilisation -> pybamm.models.submodels.interface.interface_utilisation
-#   pybamm.kinetics -> pybamm.models.submodels.interface.kinetics
-#   pybamm.lead_acid -> pybamm.models.full_battery_models.lead_acid
-#   pybamm.lithium_ion -> pybamm.models.full_battery_models.lithium_ion
-#   pybamm.lithium_plating -> pybamm.models.submodels.interface.lithium_plating
-#   pybamm.open_circuit_potential -> pybamm.models.submodels.interface.open_circuit_potential
-#   pybamm.oxygen_diffusion -> pybamm.models.submodels.oxygen_diffusion
-#   pybamm.particle -> pybamm.models.submodels.particle
-#   pybamm.particle_mechanics -> pybamm.models.submodels.particle_mechanics
-#   pybamm.porosity -> pybamm.models.submodels.porosity
-#   pybamm.sei -> pybamm.models.submodels.interface.sei
-#   pybamm.sodium_ion -> pybamm.models.full_battery_models.sodium_ion
-#   pybamm.standard_spatial_vars -> pybamm.geometry.standard_spatial_vars
-#   pybamm.step -> pybamm.experiment.step
-#   pybamm.telemetry -> pybamm.telemetry
-#   pybamm.thermal -> pybamm.models.submodels.thermal
-#   pybamm.transport_efficiency -> pybamm.models.submodels.transport_efficiency
+# These allow accessing nested submodules at the top level (e.g., pybamm.lithium_ion)
 # ============================================================================
+
+from .models.submodels import active_material as active_material
+from . import callbacks as callbacks
+from .parameters import constants as constants
+from .models.submodels import convection as convection
+from .models.submodels import current_collector as current_collector
+from .models.submodels import electrode as electrode
+from .models.submodels import electrolyte_conductivity as electrolyte_conductivity
+from .models.submodels import electrolyte_diffusion as electrolyte_diffusion
+from .models.full_battery_models import equivalent_circuit as equivalent_circuit
+from .models.submodels import equivalent_circuit_elements as equivalent_circuit_elements
+from . import experiment as experiment
+from .models.submodels import external_circuit as external_circuit
+from .models.submodels import interface as interface
+from .models.submodels.interface import interface_utilisation as interface_utilisation
+from .models.submodels.interface import kinetics as kinetics
+from .models.full_battery_models import lead_acid as lead_acid
+from .models.full_battery_models import lithium_ion as lithium_ion
+from .models.submodels.interface import lithium_plating as lithium_plating
+from .models.submodels.interface import open_circuit_potential as open_circuit_potential
+from .models.submodels import oxygen_diffusion as oxygen_diffusion
+from .models.submodels import particle as particle
+from .models.submodels import particle_mechanics as particle_mechanics
+from .models.submodels import porosity as porosity
+from .models.submodels.interface import sei as sei
+from .models.full_battery_models import sodium_ion as sodium_ion
+from .geometry import standard_spatial_vars as standard_spatial_vars
+from .experiment import step as step
+from . import telemetry as telemetry
+from .models.submodels import thermal as thermal
+from .models.submodels import transport_efficiency as transport_efficiency
