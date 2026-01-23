@@ -436,6 +436,9 @@ from .solvers.casadi_algebraic_solver import CasadiAlgebraicSolver as CasadiAlge
 # scipy_solver
 from .solvers.scipy_solver import ScipySolver as ScipySolver
 
+# composite_solver
+from .solvers.composite_solver import CompositeSolver as CompositeSolver
+
 # jax_solver
 from .solvers.jax_solver import JaxSolver as JaxSolver
 

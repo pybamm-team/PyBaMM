@@ -338,6 +338,7 @@ LAZY_IMPORTS: dict[str, list[str]] = {
     ".solvers.casadi_solver": ["CasadiSolver"],
     ".solvers.casadi_algebraic_solver": ["CasadiAlgebraicSolver"],
     ".solvers.scipy_solver": ["ScipySolver"],
+    ".solvers.composite_solver": ["CompositeSolver"],
     ".solvers.jax_solver": ["JaxSolver"],
     ".solvers.jax_bdf_solver": ["jax_bdf_integrate"],
     ".solvers.idaklu_jax": ["IDAKLUJax"],
