@@ -89,7 +89,7 @@ jobs:
 
       - name: Install Windows system dependencies
         if: matrix.os == 'windows-latest'
-        run: choco install graphviz --version=8.0.5
+        run: winget install --id Graphviz.Graphviz --exact --accept-source-agreements --accept-package-agreements
 
       - name: Set up Python ${{ matrix.python-version }}
         id: setup-python
