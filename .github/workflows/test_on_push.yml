@@ -89,9 +89,7 @@ jobs:
 
       - name: Install Windows system dependencies
         if: matrix.os == 'windows-latest'
-        run: |
-          winget install --id Graphviz.Graphviz --exact --accept-source-agreements --accept-package-agreements
-          dot -c
+        run: winget install --id Graphviz.Graphviz --exact --accept-source-agreements --accept-package-agreements
 
       - name: Set up Python ${{ matrix.python-version }}
         id: setup-python
