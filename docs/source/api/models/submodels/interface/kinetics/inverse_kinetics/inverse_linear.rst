@@ -1,5 +1,5 @@
 Inverse Linear
 ==============
 
-.. autoclass:: pybamm.kinetics.InverseLinear
+.. autoclass:: pybamm.models.submodels.interface.kinetics.InverseLinear
     :members:

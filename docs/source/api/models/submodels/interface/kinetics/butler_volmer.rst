@@ -1,8 +1,8 @@
 Butler Volmer
 =============
 
-.. autoclass:: pybamm.kinetics.SymmetricButlerVolmer
+.. autoclass:: pybamm.models.submodels.interface.kinetics.SymmetricButlerVolmer
     :members:
 
-.. autoclass:: pybamm.kinetics.AsymmetricButlerVolmer
+.. autoclass:: pybamm.models.submodels.interface.kinetics.AsymmetricButlerVolmer
     :members:

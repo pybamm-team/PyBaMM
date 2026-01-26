@@ -1,5 +1,5 @@
 Constant Utilisation
 ====================
 
-.. autoclass:: pybamm.interface.interface_utilisation.Constant
+.. autoclass:: pybamm.models.submodels.interface.interface_utilisation.Constant
     :members:

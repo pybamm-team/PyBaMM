@@ -1,5 +1,5 @@
 Marcus
 ======
 
-.. autoclass:: pybamm.kinetics.Marcus
+.. autoclass:: pybamm.models.submodels.interface.kinetics.Marcus
     :members:

@@ -2,5 +2,5 @@ Total Main Kinetics
 ===================
 
 
-.. autoclass:: pybamm.kinetics.TotalMainKinetics
+.. autoclass:: pybamm.models.submodels.interface.kinetics.TotalMainKinetics
     :members:

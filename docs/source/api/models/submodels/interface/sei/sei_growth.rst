@@ -1,7 +1,7 @@
 SEI Growth
 ==========
 
-.. autoclass:: pybamm.sei.SEIGrowth
+.. autoclass:: pybamm.models.submodels.interface.sei.SEIGrowth
     :members:
 
 .. footbibliography::

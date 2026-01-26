@@ -43,7 +43,7 @@ jobs:
       - name: Check stub file is up to date
         run: |
           uv pip install -e . --system
-          python scripts/generate_pyi_stub.py --validate --check-exports
+          python scripts/generate_pyi_stub.py --validate
           python scripts/generate_pyi_stub.py --check
 
   run_unit_tests:

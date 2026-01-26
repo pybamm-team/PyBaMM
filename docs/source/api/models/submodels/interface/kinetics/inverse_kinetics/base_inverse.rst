@@ -1,5 +1,5 @@
 Base Inverse Kinetics
 =====================
 
-.. autoclass:: pybamm.kinetics.BaseInverseKinetics
+.. autoclass:: pybamm.models.submodels.interface.kinetics.BaseInverseKinetics
     :members:

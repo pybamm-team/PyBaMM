@@ -1,8 +1,8 @@
 Base Open Circuit Potential
 ===========================
 
-.. autoclass:: pybamm.open_circuit_potential.BaseOpenCircuitPotential
+.. autoclass:: pybamm.models.submodels.interface.open_circuit_potential.BaseOpenCircuitPotential
     :members:
 
-.. autoclass:: pybamm.open_circuit_potential.BaseHysteresisOpenCircuitPotential
+.. autoclass:: pybamm.models.submodels.interface.open_circuit_potential.BaseHysteresisOpenCircuitPotential
     :members:
