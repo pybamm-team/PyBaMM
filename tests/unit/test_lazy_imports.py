@@ -1,20 +1,7 @@
 """
 Tests for the lazy import mechanism in PyBaMM using lazy_loader.
-
-These tests verify that:
-1. All lazy imports resolve correctly via the stub file
-2. Caching works as expected
-3. dir() includes all lazy imports
-4. AttributeError is raised for undefined attributes
-5. Module and class imports return correct types
-6. Known special attributes (KNOWN_COORD_SYS, t) are accessible
-7. Thread safety of lazy loading
-8. EAGER_IMPORT mode works correctly
 """
 
-import os
-import subprocess
-import sys
 import types
 
 import pytest
@@ -278,40 +265,6 @@ class TestJaxConfiguration:
         finally:
             # Restore original state
             util._jax_configured = original_configured
-
-
-class TestEagerImportMode:
-    """Tests for EAGER_IMPORT environment variable mode."""
-
-    @pytest.mark.skip(
-        reason="EAGER_IMPORT=1 causes circular import due to PyBaMM's module structure"
-    )
-    def test_eager_import_mode(self):
-        """Test that EAGER_IMPORT=1 forces eager loading of all imports.
-
-        Note: This test is skipped because PyBaMM has circular dependencies
-        that are resolved by lazy loading. EAGER_IMPORT mode exposes these
-        circular imports and fails. This is expected behavior - the lazy
-        loading is what makes PyBaMM work correctly.
-        """
-        # Run a subprocess with EAGER_IMPORT=1 to test eager loading
-        env = os.environ.copy()
-        env["EAGER_IMPORT"] = "1"
-
-        result = subprocess.run(
-            [
-                sys.executable,
-                "-c",
-                "import pybamm; print(pybamm.CasadiSolver)",
-            ],
-            capture_output=True,
-            text=True,
-            env=env,
-        )
-
-        # Should complete without error
-        assert result.returncode == 0, f"EAGER_IMPORT failed: {result.stderr}"
-        assert "CasadiSolver" in result.stdout
 
 
 class TestStubFileIntegrity:

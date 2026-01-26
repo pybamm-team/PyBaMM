@@ -27,11 +27,11 @@ import importlib
 import sys
 from pathlib import Path
 
+from pybamm._lazy_config import EAGER_IMPORTS, LAZY_IMPORTS, SUBMODULE_ALIASES
+
 # Add src to path for imports
 REPO_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(REPO_ROOT / "src"))
-
-from pybamm._lazy_config import EAGER_IMPORTS, LAZY_IMPORTS, SUBMODULE_ALIASES
 
 
 def generate_stub_content() -> str:
@@ -148,7 +148,9 @@ def main():
                 print("Stub file is up to date.")
                 sys.exit(0)
             else:
-                print("Stub file is out of date. Run 'python scripts/generate_pyi_stub.py' to update.")
+                print(
+                    "Stub file is out of date. Run 'python scripts/generate_pyi_stub.py' to update."
+                )
                 sys.exit(1)
         else:
             print("Stub file does not exist.")
