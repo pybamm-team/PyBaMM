@@ -11,21 +11,13 @@ Usage:
     python scripts/generate_pyi_stub.py [options]
 
 Options:
-    --check          Don't write the file, just check if it would change (for CI)
-    --validate       Validate that all configured imports exist in the modules
-    --check-exports  Check for exports in modules' __all__ that are missing from
-                     the stub config (helps catch forgotten exports)
+    --check     Don't write the file, just check if it would change (for CI)
+    --validate  Validate that all configured imports exist in the modules
 
 Examples:
-    # Generate/update the stub file
-    python scripts/generate_pyi_stub.py
-
-    # CI check: validate imports exist and stub is up to date
-    python scripts/generate_pyi_stub.py --validate --check-exports
-    python scripts/generate_pyi_stub.py --check
-
-    # Just check for missing exports
-    python scripts/generate_pyi_stub.py --check-exports
+    python scripts/generate_pyi_stub.py              # Generate/update stub
+    python scripts/generate_pyi_stub.py --validate   # Validate imports exist
+    python scripts/generate_pyi_stub.py --check      # CI check (exit 1 if outdated)
 """
 
 from __future__ import annotations
@@ -34,464 +26,61 @@ import argparse
 import importlib
 import sys
 from pathlib import Path
-from typing import NamedTuple
 
 # Add src to path for imports
 REPO_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
-
-class ImportEntry(NamedTuple):
-    """Represents a single import in the stub file."""
-
-    module_path: str  # e.g., ".util" or ".solvers.casadi_solver"
-    attr_name: str  # e.g., "Timer" or "CasadiSolver"
-    alias: str | None = None  # If different from attr_name
-
-
-# ============================================================================
-# CONFIGURATION: Define what gets exported from pybamm
-# ============================================================================
-
-# Eagerly loaded items (imported at module load time)
-# These are imported via wildcard (*) or explicit imports in __init__.py
-EAGER_IMPORTS: dict[str, list[str]] = {
-    # Logger and settings
-    ".logger": ["logger", "set_logging_level", "get_new_logger"],
-    ".settings": ["settings"],
-    ".citations": ["Citations", "citations", "print_citations"],
-    # Expression tree modules (wildcard imports)
-    ".expression_tree.symbol": [
-        "Symbol",
-        "domain_size",
-        "create_object_of_size",
-        "evaluate_for_shape_using_domain",
-        "is_constant",
-        "is_scalar_zero",
-        "is_scalar_one",
-        "is_scalar_minus_one",
-        "is_matrix_zero",
-        "is_matrix_one",
-        "is_matrix_minus_one",
-        "simplify_if_constant",
-        "convert_to_symbol",
-    ],
-    ".expression_tree.binary_operators": [
-        "BinaryOperator",
-        "Power",
-        "Addition",
-        "Subtraction",
-        "Multiplication",
-        "KroneckerProduct",
-        "TensorProduct",
-        "MatrixMultiplication",
-        "Division",
-        "Inner",
-        "Equality",
-        "EqualHeaviside",
-        "NotEqualHeaviside",
-        "Modulo",
-        "Minimum",
-        "Maximum",
-        "softplus",
-        "softminus",
-        "sigmoid",
-        "source",
-    ],
-    ".expression_tree.concatenations": [
-        "Concatenation",
-        "NumpyConcatenation",
-        "DomainConcatenation",
-        "SparseStack",
-        "ConcatenationVariable",
-        "concatenation",
-        "numpy_concatenation",
-    ],
-    ".expression_tree.unary_operators": [
-        "UnaryOperator",
-        "Negate",
-        "AbsoluteValue",
-        "Transpose",
-        "Sign",
-        "Floor",
-        "Ceiling",
-        "Index",
-        "SpatialOperator",
-        "Gradient",
-        "Divergence",
-        "Laplacian",
-        "GradientSquared",
-        "Mass",
-        "BoundaryMass",
-        "Integral",
-        "BaseIndefiniteIntegral",
-        "IndefiniteIntegral",
-        "BackwardIndefiniteIntegral",
-        "DefiniteIntegralVector",
-        "BoundaryIntegral",
-        "OneDimensionalIntegral",
-        "DeltaFunction",
-        "BoundaryOperator",
-        "BoundaryValue",
-        "BoundaryMeshSize",
-        "ExplicitTimeIntegral",
-        "BoundaryGradient",
-        "EvaluateAt",
-        "UpwindDownwind",
-        "UpwindDownwind2D",
-        "NodeToEdge2D",
-        "Magnitude",
-        "Upwind",
-        "Downwind",
-        "NotConstant",
-        "grad",
-        "div",
-        "laplacian",
-        "grad_squared",
-        "surf",
-        "boundary_value",
-        "sign",
-        "upwind",
-        "downwind",
-    ],
-    ".expression_tree.averages": [
-        "_BaseAverage",
-        "XAverage",
-        "YZAverage",
-        "ZAverage",
-        "RAverage",
-        "SizeAverage",
-        "x_average",
-        "yz_average",
-        "z_average",
-        "r_average",
-        "size_average",
-    ],
-    ".expression_tree.broadcasts": [
-        "Broadcast",
-        "PrimaryBroadcast",
-        "PrimaryBroadcastToEdges",
-        "SecondaryBroadcast",
-        "SecondaryBroadcastToEdges",
-        "TertiaryBroadcast",
-        "TertiaryBroadcastToEdges",
-        "FullBroadcast",
-        "FullBroadcastToEdges",
-        "ones_like",
-        "zeros_like",
-    ],
-    ".expression_tree.functions": [
-        "Function",
-        "SpecificFunction",
-        "Arcsinh",
-        "Arctan",
-        "Cos",
-        "Cosh",
-        "Erf",
-        "Exp",
-        "Log",
-        "Max",
-        "Min",
-        "Sin",
-        "Sinh",
-        "Sqrt",
-        "Tanh",
-        "arcsinh",
-        "arctan",
-        "cos",
-        "cosh",
-        "erf",
-        "exp",
-        "log",
-        "log10",
-        "max",
-        "min",
-        "sin",
-        "sinh",
-        "sqrt",
-        "tanh",
-    ],
-    ".expression_tree.interpolant": ["Interpolant"],
-    ".expression_tree.discrete_time_sum": ["DiscreteTimeData", "DiscreteTimeSum"],
-    ".expression_tree.variable": ["VariableBase", "Variable", "VariableDot"],
-    ".expression_tree.coupled_variable": ["CoupledVariable"],
-    ".expression_tree.independent_variable": [
-        "IndependentVariable",
-        "Time",
-        "SpatialVariable",
-        "SpatialVariableEdge",
-        "t",
-        "KNOWN_COORD_SYS",
-    ],
-    ".expression_tree.exceptions": [
-        "DomainError",
-        "OptionError",
-        "OptionWarning",
-        "GeometryError",
-        "ModelError",
-        "SolverError",
-        "SolverWarning",
-        "ShapeError",
-        "ModelWarning",
-        "DiscretisationError",
-        "InvalidModelJSONError",
-    ],
-    # Additional expression tree types eagerly loaded for solve performance
-    ".expression_tree.scalar": ["Scalar", "Constant"],
-    ".expression_tree.state_vector": [
-        "StateVectorBase",
-        "StateVector",
-        "StateVectorDot",
-    ],
-    ".expression_tree.tensor_field": ["TensorField"],
-    ".expression_tree.parameter": ["Parameter", "FunctionParameter"],
-    ".expression_tree.input_parameter": ["InputParameter"],
-    ".expression_tree.array": ["Array", "linspace", "meshgrid"],
-    ".expression_tree.vector_field": ["VectorField"],
-    ".expression_tree.matrix": ["Matrix"],
-    ".expression_tree.vector": ["Vector"],
-}
-
-# Lazily loaded attributes (loaded on first access via lazy_loader)
-LAZY_IMPORTS: dict[str, list[str]] = {
-    # Utility classes and methods
-    ".util": [
-        "root_dir",
-        "Timer",
-        "TimerTime",
-        "FuzzyDict",
-        "load",
-        "is_constant_and_can_evaluate",
-        "get_parameters_filepath",
-        "has_jax",
-        "get_jax",
-        "import_optional_dependency",
-    ],
-    # Operations
-    ".expression_tree.operations.evaluate_python": [
-        "find_symbols",
-        "id_to_python_variable",
-        "to_python",
-        "EvaluatorPython",
-        "EvaluatorJax",
-        "JaxCooMatrix",
-    ],
-    ".expression_tree.operations.jacobian": ["Jacobian"],
-    ".expression_tree.operations.convert_to_casadi": ["CasadiConverter"],
-    ".expression_tree.operations.unpack_symbols": ["SymbolUnpacker"],
-    ".expression_tree.operations.serialise": [
-        "Serialise",
-        "ExpressionFunctionParameter",
-    ],
-    # Model classes
-    ".models.base_model": ["BaseModel", "ModelSolutionObservability", "load_model"],
-    ".models.symbol_processor": ["SymbolProcessor"],
-    ".models.event": ["Event", "EventType"],
-    ".models.full_battery_models.base_battery_model": [
-        "BaseBatteryModel",
-        "BatteryModelOptions",
-    ],
-    ".models.submodels.base_submodel": ["BaseSubModel"],
-    # Geometry
-    ".geometry.geometry": ["Geometry"],
-    ".geometry.battery_geometry": ["battery_geometry"],
-    # Parameters
-    ".parameters.parameter_values": [
-        "ParameterValues",
-        "scalarize_dict",
-        "arrayize_dict",
-    ],
-    ".parameters.geometric_parameters": ["geometric_parameters", "GeometricParameters"],
-    ".parameters.electrical_parameters": [
-        "electrical_parameters",
-        "ElectricalParameters",
-    ],
-    ".parameters.thermal_parameters": ["thermal_parameters", "ThermalParameters"],
-    ".parameters.lithium_ion_parameters": ["LithiumIonParameters"],
-    ".parameters.lead_acid_parameters": ["LeadAcidParameters"],
-    ".parameters.ecm_parameters": ["EcmParameters"],
-    ".parameters.size_distribution_parameters": [
-        "get_size_distribution_parameters",
-        "lognormal",
-    ],
-    # Mesh and Discretisation
-    ".discretisations.discretisation": ["Discretisation", "has_bc_of_form"],
-    ".meshes.meshes": ["Mesh", "SubMesh", "MeshGenerator"],
-    ".meshes.zero_dimensional_submesh": ["SubMesh0D"],
-    ".meshes.one_dimensional_submeshes": [
-        "SubMesh1D",
-        "Uniform1DSubMesh",
-        "Exponential1DSubMesh",
-        "Chebyshev1DSubMesh",
-        "UserSupplied1DSubMesh",
-        "SpectralVolume1DSubMesh",
-        "SymbolicUniform1DSubMesh",
-    ],
-    ".meshes.two_dimensional_submeshes": ["SubMesh2D", "Uniform2DSubMesh"],
-    ".meshes.scikit_fem_submeshes": [
-        "ScikitSubMesh2D",
-        "ScikitUniform2DSubMesh",
-        "ScikitExponential2DSubMesh",
-        "ScikitChebyshev2DSubMesh",
-        "UserSupplied2DSubMesh",
-    ],
-    ".meshes.scikit_fem_submeshes_3d": [
-        "ScikitFemSubMesh3D",
-        "ScikitFemGenerator3D",
-        "UserSuppliedSubmesh3D",
-    ],
-    # Spatial Methods
-    ".spatial_methods.spatial_method": ["SpatialMethod"],
-    ".spatial_methods.zero_dimensional_method": ["ZeroDimensionalSpatialMethod"],
-    ".spatial_methods.finite_volume": ["FiniteVolume"],
-    ".spatial_methods.finite_volume_2d": ["FiniteVolume2D"],
-    ".spatial_methods.spectral_volume": ["SpectralVolume"],
-    ".spatial_methods.scikit_finite_element": ["ScikitFiniteElement"],
-    ".spatial_methods.scikit_finite_element_3d": ["ScikitFiniteElement3D"],
-    # Solvers
-    ".solvers.solution": ["Solution", "EmptySolution", "make_cycle_solution"],
-    ".solvers.processed_variable_time_integral": ["ProcessedVariableTimeIntegral"],
-    ".solvers.processed_variable": [
-        "ProcessedVariable",
-        "ProcessedVariable2DFVM",
-        "process_variable",
-        "ProcessedVariableUnstructured",
-    ],
-    ".solvers.processed_variable_computed": ["ProcessedVariableComputed"],
-    ".solvers.summary_variable": ["SummaryVariables"],
-    ".solvers.base_solver": ["BaseSolver"],
-    ".solvers.dummy_solver": ["DummySolver"],
-    ".solvers.algebraic_solver": ["AlgebraicSolver"],
-    ".solvers.casadi_solver": ["CasadiSolver"],
-    ".solvers.casadi_algebraic_solver": ["CasadiAlgebraicSolver"],
-    ".solvers.scipy_solver": ["ScipySolver"],
-    ".solvers.composite_solver": ["CompositeSolver"],
-    ".solvers.jax_solver": ["JaxSolver"],
-    ".solvers.jax_bdf_solver": ["jax_bdf_integrate"],
-    ".solvers.idaklu_jax": ["IDAKLUJax"],
-    ".solvers.idaklu_solver": ["IDAKLUSolver"],
-    # Experiments
-    ".experiment.experiment": ["Experiment"],
-    # Plotting
-    ".plotting.quick_plot": ["QuickPlot", "close_plots", "QuickPlotAxes"],
-    ".plotting.plot": ["plot"],
-    ".plotting.plot2D": ["plot2D"],
-    ".plotting.plot_voltage_components": ["plot_voltage_components"],
-    ".plotting.plot_thermal_components": ["plot_thermal_components"],
-    ".plotting.plot_summary_variables": ["plot_summary_variables"],
-    ".plotting.dynamic_plot": ["dynamic_plot"],
-    ".plotting.plot_3d_cross_section": ["plot_3d_cross_section"],
-    ".plotting.plot_3d_heatmap": ["plot_3d_heatmap"],
-    # Simulation
-    ".simulation": ["Simulation", "load_sim", "is_notebook"],
-    # Batch Study
-    ".batch_study": ["BatchStudy"],
-    # Pybamm Data
-    ".pybamm_data": ["DataLoader"],
-    # Dispatch
-    ".dispatch": ["parameter_sets", "models", "Model"],
-}
-
-# Submodule aliases (handled by custom __getattr__, not lazy_loader)
-# These are declared in the stub for documentation but lazy_loader won't process them
-# Import directly using importlib.util to avoid triggering pybamm's lazy_loader
-import importlib.util as _imp_util
-
-_lazy_config_path = REPO_ROOT / "src" / "pybamm" / "_lazy_config.py"
-_spec = _imp_util.spec_from_file_location("_lazy_config", _lazy_config_path)
-_lazy_config = _imp_util.module_from_spec(_spec)
-_spec.loader.exec_module(_lazy_config)
-SUBMODULE_ALIASES = _lazy_config.SUBMODULE_ALIASES
-
-
-# ============================================================================
-# STUB GENERATION
-# ============================================================================
-
-
-def generate_import_line(module_path: str, attr: str) -> str:
-    """Generate a single import line for the stub file."""
-    return f"from {module_path} import {attr} as {attr}"
+from pybamm._lazy_config import EAGER_IMPORTS, LAZY_IMPORTS, SUBMODULE_ALIASES
 
 
 def generate_stub_content() -> str:
     """Generate the complete stub file content."""
     lines = [
         "# PyBaMM stub file for IDE support and type hints",
-        "# This file is auto-generated by scripts/generate_pyi_stub.py",
-        "# Do not edit manually - regenerate with: python scripts/generate_pyi_stub.py",
-        "#",
-        "# This file enables:",
-        "# - IDE autocomplete for lazy-loaded attributes",
-        "# - Type checking support via mypy/pyright",
-        "# - lazy_loader integration for lazy imports",
+        "# Auto-generated by scripts/generate_pyi_stub.py - do not edit manually",
         "",
         "# Version",
         "from .version import __version__ as __version__",
         "",
+        "# EAGERLY LOADED (imported at module load time)",
+        "",
     ]
 
-    # Add eagerly loaded imports
-    lines.append(
-        "# ============================================================================"
-    )
-    lines.append("# EAGERLY LOADED (imported at module load time)")
-    lines.append(
-        "# ============================================================================"
-    )
-    lines.append("")
-
-    # Group by module for readability
+    # Eager imports
     for module_path, attrs in EAGER_IMPORTS.items():
         module_name = module_path.split(".")[-1]
         lines.append(f"# {module_name}")
         for attr in attrs:
-            lines.append(generate_import_line(module_path, attr))
+            lines.append(f"from {module_path} import {attr} as {attr}")
         lines.append("")
 
-    # Add config import
+    # Config module
     lines.append("# Config module")
     lines.append("from . import config as config")
     lines.append("")
 
-    # Add lazily loaded imports
-    lines.append(
-        "# ============================================================================"
-    )
+    # Lazy imports
     lines.append("# LAZILY LOADED (via lazy_loader stub mechanism)")
-    lines.append(
-        "# ============================================================================"
-    )
     lines.append("")
 
     for module_path, attrs in LAZY_IMPORTS.items():
         module_name = module_path.split(".")[-1]
         lines.append(f"# {module_name}")
         for attr in attrs:
-            lines.append(generate_import_line(module_path, attr))
+            lines.append(f"from {module_path} import {attr} as {attr}")
         lines.append("")
 
     # Submodule aliases
-    lines.append(
-        "# ============================================================================"
-    )
     lines.append("# SUBMODULE ALIASES")
-    lines.append(
-        "# These allow accessing nested submodules at the top level (e.g., pybamm.lithium_ion)"
-    )
-    lines.append(
-        "# ============================================================================"
-    )
     lines.append("")
+
     for alias, path in sorted(SUBMODULE_ALIASES.items()):
-        # Extract parent module path and module name for proper import
         parts = path.rsplit(".", 1)
         if len(parts) == 2 and parts[0]:
-            # Nested module with non-empty parent path
             parent_path, module_name = parts
             lines.append(f"from {parent_path} import {module_name} as {alias}")
         else:
-            # Top-level module like ".callbacks" -> rsplit gives ['', 'callbacks']
             module_name = path.lstrip(".")
             lines.append(f"from . import {module_name} as {alias}")
 
@@ -502,106 +91,23 @@ def validate_imports() -> list[str]:
     """Validate that all configured imports actually exist."""
     errors = []
 
-    # Check eager imports
-    for module_path, attrs in EAGER_IMPORTS.items():
-        try:
-            full_path = f"pybamm{module_path}"
-            module = importlib.import_module(full_path)
-            for attr in attrs:
-                if not hasattr(module, attr):
-                    errors.append(f"EAGER: {module_path}.{attr} not found")
-        except ImportError as e:
-            errors.append(f"EAGER: Cannot import {module_path}: {e}")
+    for label, imports in [("EAGER", EAGER_IMPORTS), ("LAZY", LAZY_IMPORTS)]:
+        for module_path, attrs in imports.items():
+            try:
+                module = importlib.import_module(f"pybamm{module_path}")
+                for attr in attrs:
+                    if not hasattr(module, attr):
+                        errors.append(f"{label}: {module_path}.{attr} not found")
+            except ImportError as e:
+                errors.append(f"{label}: Cannot import {module_path}: {e}")
 
-    # Check lazy imports
-    for module_path, attrs in LAZY_IMPORTS.items():
-        try:
-            full_path = f"pybamm{module_path}"
-            module = importlib.import_module(full_path)
-            for attr in attrs:
-                if not hasattr(module, attr):
-                    errors.append(f"LAZY: {module_path}.{attr} not found")
-        except ImportError as e:
-            errors.append(f"LAZY: Cannot import {module_path}: {e}")
-
-    # Check submodule aliases
     for alias, module_path in SUBMODULE_ALIASES.items():
         try:
-            full_path = f"pybamm{module_path}"
-            importlib.import_module(full_path)
+            importlib.import_module(f"pybamm{module_path}")
         except ImportError as e:
             errors.append(f"SUBMODULE: {alias} -> {module_path}: {e}")
 
     return errors
-
-
-def check_missing_exports() -> tuple[list[str], list[str]]:
-    """
-    Check for exports in modules' __all__ that are not in our configuration.
-
-    This helps catch cases where someone adds a new export to a module
-    but forgets to update the stub generator.
-
-    Returns
-    -------
-    tuple[list[str], list[str]]
-        A tuple of (missing_exports, warnings) where missing_exports are errors
-        and warnings are informational messages.
-    """
-    missing = []
-    warnings_list = []
-
-    # Modules where we explicitly want to check __all__
-    # These are modules where we use wildcard imports or want complete coverage
-    all_imports = {**EAGER_IMPORTS, **LAZY_IMPORTS}
-
-    for module_path, configured_attrs in all_imports.items():
-        try:
-            full_path = f"pybamm{module_path}"
-            module = importlib.import_module(full_path)
-
-            # Get the module's __all__ if it exists
-            module_all = getattr(module, "__all__", None)
-            if module_all is None:
-                # No __all__ defined, skip this module
-                continue
-
-            # Convert to sets for comparison
-            configured_set = set(configured_attrs)
-            module_all_set = set(module_all)
-
-            # Find exports in __all__ that we don't have configured
-            missing_from_config = module_all_set - configured_set
-
-            # Filter out private attributes (starting with _) unless they're
-            # explicitly in our config (like _BaseAverage)
-            public_missing = {
-                attr for attr in missing_from_config if not attr.startswith("_")
-            }
-
-            if public_missing:
-                for attr in sorted(public_missing):
-                    missing.append(
-                        f"MISSING: {module_path}.{attr} is in module's __all__ "
-                        f"but not in stub config"
-                    )
-
-            # Also check for attrs we have that aren't in __all__ (informational)
-            extra_in_config = configured_set - module_all_set
-            if extra_in_config:
-                for attr in sorted(extra_in_config):
-                    # Only warn if the attr actually exists (it might be intentional)
-                    if hasattr(module, attr):
-                        warnings_list.append(
-                            f"INFO: {module_path}.{attr} is in stub config "
-                            f"but not in module's __all__"
-                        )
-
-        except ImportError:
-            # Module import failed, already caught by validate_imports
-            pass
-
-    return missing, warnings_list
 
 
 def main():
@@ -618,11 +124,6 @@ def main():
         action="store_true",
         help="Validate that all configured imports exist",
     )
-    parser.add_argument(
-        "--check-exports",
-        action="store_true",
-        help="Check for missing exports in modules' __all__ (for CI)",
-    )
     args = parser.parse_args()
 
     stub_path = REPO_ROOT / "src" / "pybamm" / "__init__.pyi"
@@ -636,36 +137,6 @@ def main():
                 print(f"  - {error}")
             sys.exit(1)
         print("All imports validated successfully!")
-
-        # Also run export check if validating
-        if args.check_exports:
-            print("\nChecking for missing exports...")
-            missing, warnings_list = check_missing_exports()
-            if warnings_list:
-                print("Warnings (informational):")
-                for warning in warnings_list:
-                    print(f"  - {warning}")
-            if missing:
-                print("\nMissing exports (these should be added to the stub config):")
-                for error in missing:
-                    print(f"  - {error}")
-                sys.exit(1)
-            print("No missing exports found!")
-        return
-
-    if args.check_exports:
-        print("Checking for missing exports...")
-        missing, warnings_list = check_missing_exports()
-        if warnings_list:
-            print("Warnings (informational):")
-            for warning in warnings_list:
-                print(f"  - {warning}")
-        if missing:
-            print("\nMissing exports (these should be added to the stub config):")
-            for error in missing:
-                print(f"  - {error}")
-            sys.exit(1)
-        print("No missing exports found!")
         return
 
     content = generate_stub_content()
@@ -677,19 +148,15 @@ def main():
                 print("Stub file is up to date.")
                 sys.exit(0)
             else:
-                print(
-                    "Stub file is out of date. Run 'python scripts/generate_pyi_stub.py' to update."
-                )
+                print("Stub file is out of date. Run 'python scripts/generate_pyi_stub.py' to update.")
                 sys.exit(1)
         else:
             print("Stub file does not exist.")
             sys.exit(1)
 
-    # Write the stub file
     stub_path.write_text(content)
     print(f"Generated {stub_path}")
 
-    # Count exports
     eager_count = sum(len(attrs) for attrs in EAGER_IMPORTS.values())
     lazy_count = sum(len(attrs) for attrs in LAZY_IMPORTS.values())
     submodule_count = len(SUBMODULE_ALIASES)
