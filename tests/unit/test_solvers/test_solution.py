@@ -28,6 +28,21 @@ class TestSolution:
         assert sol.all_inputs == [{}]
         assert isinstance(sol.all_models[0], pybamm.BaseModel)
 
+    def test_yp(self):
+        t = np.linspace(0, 1)
+        y = np.tile(t, (20, 1))
+        yp = np.tile(t, (20, 1)) * 2  # time derivatives
+
+        # Without yps, yp should be None
+        sol_no_yp = pybamm.Solution(t, y, pybamm.BaseModel(), {})
+        assert sol_no_yp.hermite_interpolation is False
+        assert sol_no_yp.yp is None
+
+        # With yps, yp should return the concatenated time derivatives
+        sol_with_yp = pybamm.Solution(t, y, pybamm.BaseModel(), {}, all_yps=yp)
+        assert sol_with_yp.hermite_interpolation is True
+        np.testing.assert_array_equal(sol_with_yp.yp, yp)
+
     def test_sensitivities(self):
         t = np.linspace(0, 1)
         y = np.tile(t, (20, 1))
@@ -40,16 +55,20 @@ class TestSolution:
             bad_ts, [np.ones((1, 3)), np.ones((1, 3))], pybamm.BaseModel(), {}
         )
         with pytest.raises(
-            ValueError, match="Solution time vector must be strictly increasing"
+            ValueError, match=r"Solution time vector must be strictly increasing"
         ):
             sol.set_t()
 
-        ts = [np.array([1, 2, 3])]
-        bad_ys = [(pybamm.settings.max_y_value + 1) * np.ones((1, 3))]
-        model = pybamm.BaseModel()
-        var = pybamm.StateVector(slice(0, 1))
-        model.rhs = {var: 0}
-        model.variables = {var.name: var}
+        # Create a mock solution with an SPM
+        model = pybamm.lithium_ion.SPM()
+        sim = pybamm.Simulation(model)
+        t = [0, 1]
+        sol = sim.solve(t, t_interp=t)
+
+        ts = sol.all_ts[0]
+        bad_ys = np.full_like(sol.all_ys[0], pybamm.settings.max_y_value + 1)
+        model = sol.all_models[0]
+
         log_capture = io.StringIO()
         handler = logging.StreamHandler(log_capture)
         handler.setLevel(logging.ERROR)
@@ -60,7 +79,7 @@ class TestSolution:
         assert "exceeds the maximum" in log_output
         logger.removeHandler(handler)
 
-        with pytest.raises(TypeError, match="sensitivities arg needs to be a dict"):
+        with pytest.raises(TypeError, match=r"sensitivities arg needs to be a dict"):
             pybamm.Solution(ts, bad_ys, model, {}, all_sensitivities="bad")
 
         sol = pybamm.Solution(ts, bad_ys, model, {}, all_sensitivities={})
@@ -119,12 +138,12 @@ class TestSolution:
         # radd failure
         with pytest.raises(
             pybamm.SolverError,
-            match="Only a Solution or None can be added to a Solution",
+            match=r"Only a Solution or None can be added to a Solution",
         ):
             sol3 + 2
         with pytest.raises(
             pybamm.SolverError,
-            match="Only a Solution or None can be added to a Solution",
+            match=r"Only a Solution or None can be added to a Solution",
         ):
             2 + sol3
 
@@ -159,7 +178,7 @@ class TestSolution:
         # Test
         np.testing.assert_array_equal(sol_sum.t, np.concatenate([t1, t2[1:]]))
         with pytest.raises(
-            pybamm.SolverError, match="The solution is made up from different models"
+            pybamm.SolverError, match=r"The solution is made up from different models"
         ):
             sol_sum.y
 
@@ -372,7 +391,7 @@ class TestSolution:
 
         # set variables first then save
         solution.update(["c", "d"])
-        with pytest.raises(ValueError, match="pickle"):
+        with pytest.raises(ValueError, match=r"pickle"):
             solution.save_data(to_format="pickle")
         solution.save_data(f"{test_stub}.pickle")
 
@@ -386,12 +405,12 @@ class TestSolution:
         np.testing.assert_array_equal(solution.data["c"], data_load["c"].flatten())
         np.testing.assert_array_equal(solution.data["d"], data_load["d"])
 
-        with pytest.raises(ValueError, match="matlab"):
+        with pytest.raises(ValueError, match=r"matlab"):
             solution.save_data(to_format="matlab")
 
         # to matlab with bad variables name fails
         solution.update(["c + d"])
-        with pytest.raises(ValueError, match="Invalid character"):
+        with pytest.raises(ValueError, match=r"Invalid character"):
             solution.save_data(f"{test_stub}.mat", to_format="matlab")
         # Works if providing alternative name
         solution.save_data(
@@ -403,7 +422,7 @@ class TestSolution:
         np.testing.assert_array_equal(solution.data["c + d"], data_load["c_plus_d"])
 
         # to csv
-        with pytest.raises(ValueError, match="only 0D variables can be saved to csv"):
+        with pytest.raises(ValueError, match=r"only 0D variables can be saved to csv"):
             solution.save_data(f"{test_stub}.csv", to_format="csv")
         # only save "c" and "2c"
         solution.save_data(f"{test_stub}.csv", ["c", "2c"], to_format="csv")
@@ -438,7 +457,7 @@ class TestSolution:
         )
 
         # raise error if format is unknown
-        with pytest.raises(ValueError, match="format 'wrong_format' not recognised"):
+        with pytest.raises(ValueError, match=r"format 'wrong_format' not recognised"):
             solution.save_data(f"{test_stub}.csv", to_format="wrong_format")
 
         # test save whole solution
@@ -474,8 +493,6 @@ class TestSolution:
         geometry = model.default_geometry
         param = model.default_parameter_values
         param.update({"Negative electrode conductivity [S.m-1]": "[input]"})
-        param.process_model(model)
-        param.process_geometry(geometry)
         var_pts = {"x_n": 5, "x_s": 5, "x_p": 5, "r_n": 10, "r_p": 10}
         spatial_methods = model.default_spatial_methods
         solver = model.default_solver
@@ -506,7 +523,7 @@ class TestSolution:
         solver = pybamm.IDAKLUSolver()
         with pytest.raises(
             ValueError,
-            match="time or state vector nodes should only appear within the time integral node",
+            match=r"time or state vector nodes should only appear within the time integral node",
         ):
             solver.solve(model, t_eval=[0, 0.1])["dts"]
 
@@ -518,7 +535,7 @@ class TestSolution:
         solver = pybamm.IDAKLUSolver()
         with pytest.raises(
             ValueError,
-            match="More than one time integral node found",
+            match=r"More than one time integral node found",
         ):
             solver.solve(model, t_eval=[0, 0.1])["dts"]
 
@@ -639,7 +656,7 @@ class TestSolution:
                 # should raise error if t_interp is not equal to data_times
                 with pytest.raises(
                     pybamm.SolverError,
-                    match="solution times and discrete times of the time integral are not equal",
+                    match=r"solution times and discrete times of the time integral are not equal",
                 ):
                     solver.solve(
                         model,
@@ -731,3 +748,159 @@ class TestSolution:
                     atol=1e-2,
                 )
                 assert isinstance(sol["integral"].sensitivities["a"], np.ndarray)
+
+    def test_observe(self):
+        """Test the observe method with pybamm symbols, comparing with model variables."""
+        # Set up a simple model
+        model = pybamm.lithium_ion.SPM()
+        parameter_values = pybamm.ParameterValues("Chen2020")
+
+        # Solve the model
+        sim = pybamm.Simulation(model, parameter_values=parameter_values)
+        sol = sim.solve([0, 3600])
+
+        # Test observing "Voltage [V]" symbol - should match exactly with model variable
+        voltage_symbol = model.variables["Voltage [V]"]
+        observed_voltage = sol.observe(voltage_symbol)
+
+        # Compare with the actual variable from solution
+        actual_voltage = sol["Voltage [V]"]
+
+        # They should match exactly
+        np.testing.assert_array_equal(observed_voltage.data, actual_voltage.data)
+        np.testing.assert_array_equal(observed_voltage.entries, actual_voltage.entries)
+
+        # Test with "Current [A]" - another model variable
+        current_symbol = model.variables["Current [A]"]
+        observed_current = sol.observe(current_symbol)
+        actual_current = sol["Current [A]"]
+        np.testing.assert_array_equal(observed_current.data, actual_current.data)
+        np.testing.assert_array_equal(observed_current.entries, actual_current.entries)
+
+        # Test that observe returns a ProcessedVariable
+        assert isinstance(observed_voltage, pybamm.ProcessedVariable)
+        assert isinstance(observed_current, pybamm.ProcessedVariable)
+
+        # Test that we can call observe multiple times and get the same result
+        observed_voltage2 = sol.observe(voltage_symbol)
+        np.testing.assert_array_equal(observed_voltage2.data, observed_voltage.data)
+
+        # Test that the cache works - verify it's the same object (not just equal)
+        observed_voltage3 = sol.observe(voltage_symbol)
+        assert observed_voltage3 is observed_voltage  # Should be the same cached object
+
+    def test_observe_with_numeric_inputs(self):
+        """Test that observe works with numeric inputs like 0, which get converted to symbols."""
+        # Set up a simple model
+        model = pybamm.lithium_ion.SPM()
+        sim = pybamm.Simulation(model)
+
+        sol = sim.solve([0, 1])
+
+        # Test observing a scalar value (0) - should convert to pybamm.Scalar(0)
+        observed_zero = sol.observe(0)
+        assert isinstance(observed_zero, pybamm.ProcessedVariable)
+        # Should be a constant array of zeros
+        np.testing.assert_array_equal(observed_zero.data, np.zeros(len(sol.t)))
+
+        # Test that numeric inputs are cached correctly
+        observed_zero2 = sol.observe(0)
+        assert observed_zero2 is observed_zero  # cached
+
+    def test_observe_failure(self):
+        """Test that observe raises an error if the solver includes `output_variables`."""
+        # 1. Input is invalid
+        t_eval = [0, 1]
+        model = pybamm.lithium_ion.SPM()
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        sim = pybamm.Simulation(model, parameter_values=parameter_values)
+        sol = sim.solve(t_eval)
+
+        with pytest.raises(ValueError, match=r"Input cannot be converted"):
+            sol.observe(None)
+
+        # 2. Trying to observe a symbol which is not part of the parameter_values or model
+        symbol = pybamm.Parameter("_not_in_model")
+        with pytest.raises(KeyError, match=r"not found"):
+            sol.observe(symbol)
+
+        # 3. Solver includes `output_variables` - solution not observable but models
+        # can still process symbols
+        solver = pybamm.IDAKLUSolver(output_variables=["Voltage [V]"])
+        sim = pybamm.Simulation(model, parameter_values=parameter_values, solver=solver)
+        sol = sim.solve(t_eval)
+        assert sol.observable is False
+        # Models can still process symbols (delayed variable processing is enabled)
+        assert all(model.can_process_symbols for model in sol.all_models)
+
+        with pytest.raises(ValueError, match=r"solver includes `output_variables`"):
+            sol.observe(model.variables["Current [A]"])
+
+        # 4. `disable_solution_observability` is called on the model - solution not
+        # observable but models can still process symbols
+        model = pybamm.lithium_ion.SPM()
+        model.disable_solution_observability(pybamm.ModelSolutionObservability.DISABLED)
+        sim = pybamm.Simulation(model)
+        sol = sim.solve(t_eval)
+        assert sol.observable is False
+        assert all(model.can_process_symbols for model in sol.all_models)
+
+        with pytest.raises(ValueError, match=r"disable_solution_observability"):
+            sol.observe(model.variables["Current [A]"])
+
+        # 5. Missing non-strictly required input parameters - solution unobservable
+        # but models can still process symbols
+        model = pybamm.lithium_ion.SPM()
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        input_names = sorted(
+            ["dummy", "Positive electrode active material volume fraction"]
+        )
+        parameter_values.update({k: "[input]" for k in input_names})
+        sim = pybamm.Simulation(model, parameter_values=parameter_values)
+
+        # purposefully missing the dummy input
+        inputs = {name: 0.5 for name in input_names if name != "dummy"}
+
+        # check that BaseSolver raises a warning about missing inputs,
+        # and is unobservable, but it is still solvable
+        log_capture = io.StringIO()
+        handler = logging.StreamHandler(log_capture)
+        handler.setLevel(logging.WARNING)
+        logger = logging.getLogger("pybamm.logger")
+        logger.addHandler(handler)
+
+        sol = sim.solve(t_eval, inputs=inputs)
+
+        log_output = log_capture.getvalue()
+        assert "No value provided for input" in log_output
+        assert "dummy" in log_output
+        assert "can no longer be observed" in log_output
+        logger.removeHandler(handler)
+
+        assert sol.observable is False
+        assert all(not model.solution_observable for model in sol.all_models)
+
+        model = sol.all_models[0]
+        assert set(ip.name for ip in model.input_parameters) == set(input_names)
+        assert set(ip.name for ip in model.required_input_parameters) == set(
+            inputs.keys()
+        )
+        # check that missing input is set to DUMMY_INPUT_PARAMETER_VALUE (np.nan)
+        assert np.isnan(sol.all_inputs[0]["dummy"])
+
+        with pytest.raises(ValueError, match=r"input parameters were not provided"):
+            sol.observe(model.variables["Current [A]"])
+
+        # 6. Model is partially processed before simulation is built - models cannot
+        # process symbols at all
+        model = pybamm.lithium_ion.SPM()
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        parameter_values.process_model(model)
+        sim = pybamm.Simulation(model, parameter_values=parameter_values)
+        sol = sim.solve(t_eval)
+        assert sol.observable is False
+        assert all(not model.can_process_symbols for model in sol.all_models)
+        model = sol.all_models[0]
+
+        with pytest.raises(ValueError, match=r"re-parameterised"):
+            sol.observe(model.variables["Current [A]"])

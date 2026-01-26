@@ -136,33 +136,37 @@ class TestExtrapolationFiniteVolume2D:
             )
 
         for direction in directions:
-            np.testing.assert_array_almost_equal(
+            np.testing.assert_allclose(
                 discretised_extrapolations_LR[direction]
                 .evaluate(y=LR.flatten())
                 .flatten(),
                 solutions_LR[direction],
+                atol=1e-6,
             )
         for direction in directions:
-            np.testing.assert_array_almost_equal(
+            np.testing.assert_allclose(
                 discretised_extrapolations_LR_neumann[direction]
                 .evaluate(y=LR.flatten())
                 .flatten(),
                 solutions_LR[direction],
+                atol=1e-6,
             )
 
         for direction in directions:
-            np.testing.assert_array_almost_equal(
+            np.testing.assert_allclose(
                 discretised_extrapolations_TB[direction]
                 .evaluate(y=TB.flatten())
                 .flatten(),
                 solutions_TB[direction],
+                atol=1e-6,
             )
         for direction in directions:
-            np.testing.assert_array_almost_equal(
+            np.testing.assert_allclose(
                 discretised_extrapolations_TB_neumann[direction]
                 .evaluate(y=TB.flatten())
                 .flatten(),
                 solutions_TB[direction],
+                atol=1e-6,
             )
 
     @pytest.mark.parametrize("use_bcs", [True, False])
@@ -281,11 +285,11 @@ class TestExtrapolationFiniteVolume2D:
 
         # Check results for linear x function
         for direction in directions_LR:
-            np.testing.assert_array_almost_equal(
+            np.testing.assert_allclose(
                 discretised_gradients_LR[direction].evaluate(y=LR.flatten()).flatten(),
                 solutions_LR[direction],
             )
-            np.testing.assert_array_almost_equal(
+            np.testing.assert_allclose(
                 discretised_gradients_LR_neumann[direction]
                 .evaluate(y=LR.flatten())
                 .flatten(),
@@ -294,11 +298,11 @@ class TestExtrapolationFiniteVolume2D:
 
         # Check results for linear z function
         for direction in directions_TB:
-            np.testing.assert_array_almost_equal(
+            np.testing.assert_allclose(
                 discretised_gradients_TB[direction].evaluate(y=TB.flatten()).flatten(),
                 solutions_TB[direction],
             )
-            np.testing.assert_array_almost_equal(
+            np.testing.assert_allclose(
                 discretised_gradients_TB_neumann[direction]
                 .evaluate(y=TB.flatten())
                 .flatten(),
@@ -433,22 +437,22 @@ class TestExtrapolationFiniteVolume2D:
 
         # Check results for quadratic x^2 function
         for direction in directions_LR:
-            np.testing.assert_array_almost_equal(
+            np.testing.assert_allclose(
                 discretised_gradients_LR[direction]
                 .evaluate(y=x_squared_data)
                 .flatten(),
                 solutions_LR[direction],
-                decimal=5,
+                atol=1e-5,
             )
 
         # Check results for quadratic z^2 function
         for direction in directions_TB:
-            np.testing.assert_array_almost_equal(
+            np.testing.assert_allclose(
                 discretised_gradients_TB[direction]
                 .evaluate(y=z_squared_data)
                 .flatten(),
                 solutions_TB[direction],
-                decimal=5,
+                atol=1e-5,
             )
 
     def test_boundary_value_constant_extrapolation(self):
@@ -492,34 +496,34 @@ class TestExtrapolationFiniteVolume2D:
         boundary_value_left = pybamm.BoundaryValue(var, "left")
         discretised_left = disc.process_symbol(boundary_value_left)
         result_left = discretised_left.evaluate(y=lr).flatten()
-        np.testing.assert_array_almost_equal(result_left, expected_left)
+        np.testing.assert_allclose(result_left, expected_left)
 
         # Test right boundary
         boundary_value_right = pybamm.BoundaryValue(var, "right")
         discretised_right = disc.process_symbol(boundary_value_right)
         result_right = discretised_right.evaluate(y=lr).flatten()
-        np.testing.assert_array_almost_equal(result_right, expected_right)
+        np.testing.assert_allclose(result_right, expected_right)
 
         # Test top-left (s/b same as left)
         boundary_value_top_left = pybamm.BoundaryValue(var, "top-left")
         discretised_top_left = disc.process_symbol(boundary_value_top_left)
         result_top_left = discretised_top_left.evaluate(y=lr).flatten()
-        np.testing.assert_array_almost_equal(result_top_left, submesh.nodes_lr[0])
+        np.testing.assert_allclose(result_top_left, submesh.nodes_lr[0])
 
         # Test bottom-right (s/b same as right)
         boundary_value_bottom_right = pybamm.BoundaryValue(var, "bottom-right")
         discretised_bottom_right = disc.process_symbol(boundary_value_bottom_right)
         result_bottom_right = discretised_bottom_right.evaluate(y=lr).flatten()
-        np.testing.assert_array_almost_equal(result_bottom_right, submesh.nodes_lr[-1])
+        np.testing.assert_allclose(result_bottom_right, submesh.nodes_lr[-1])
 
         # Test top boundary
         boundary_value_top = pybamm.BoundaryValue(var, "top")
         discretised_top = disc.process_symbol(boundary_value_top)
         result_top = discretised_top.evaluate(y=tb).flatten()
-        np.testing.assert_array_almost_equal(result_top, expected_top)
+        np.testing.assert_allclose(result_top, expected_top)
 
         # Test bottom boundary
         boundary_value_bottom = pybamm.BoundaryValue(var, "bottom")
         discretised_bottom = disc.process_symbol(boundary_value_bottom)
         result_bottom = discretised_bottom.evaluate(y=tb).flatten()
-        np.testing.assert_array_almost_equal(result_bottom, expected_bottom)
+        np.testing.assert_allclose(result_bottom, expected_bottom)

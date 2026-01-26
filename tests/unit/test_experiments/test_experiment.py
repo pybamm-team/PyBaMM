@@ -75,7 +75,7 @@ class TestExperiment:
         period = 1
         temperature = 300.0
         with pytest.raises(
-            TypeError, match="Operating conditions must be a Step object or string."
+            TypeError, match=r"Operating conditions must be a Step object or string."
         ):
             pybamm.Experiment.process_steps(unprocessed, period, temperature)
 
@@ -95,11 +95,11 @@ class TestExperiment:
 
     def test_bad_strings(self):
         with pytest.raises(
-            TypeError, match="Operating conditions must be a Step object or string."
+            TypeError, match=r"Operating conditions must be a Step object or string."
         ):
             pybamm.Experiment([1, 2, 3])
         with pytest.raises(
-            TypeError, match="Operating conditions must be a Step object or string."
+            TypeError, match=r"Operating conditions must be a Step object or string."
         ):
             pybamm.Experiment([(1, 2, 3)])
 
@@ -127,15 +127,15 @@ class TestExperiment:
         )
         assert experiment.termination == {"capacity": (4.1, "Ah")}
 
-        with pytest.raises(ValueError, match="Only capacity"):
+        with pytest.raises(ValueError, match=r"Only capacity"):
             experiment = pybamm.Experiment(
                 ["Discharge at 1 C for 20 seconds"], termination="bla bla capacity bla"
             )
-        with pytest.raises(ValueError, match="Only capacity"):
+        with pytest.raises(ValueError, match=r"Only capacity"):
             experiment = pybamm.Experiment(
                 ["Discharge at 1 C for 20 seconds"], termination="4 A.h something else"
             )
-        with pytest.raises(ValueError, match="Capacity termination"):
+        with pytest.raises(ValueError, match=r"Capacity termination"):
             experiment = pybamm.Experiment(
                 ["Discharge at 1 C for 20 seconds"], termination="1 capacity"
             )
@@ -168,7 +168,7 @@ class TestExperiment:
 
     def test_no_initial_start_time(self):
         s = pybamm.step.string
-        with pytest.raises(ValueError, match="first step must have a `start_time`"):
+        with pytest.raises(ValueError, match=r"first step must have a `start_time`"):
             pybamm.Experiment(
                 [
                     s("Rest for 1 hour"),
@@ -239,13 +239,13 @@ class TestExperiment:
 
         current = solution["Current [A]"].entries
 
-        assert np.allclose(current, 1, atol=1e-3)
+        np.testing.assert_allclose(current, 1, atol=1e-3)
 
     def test_current_step_raises_error_without_operator_with_input_parameters(self):
         pybamm.lithium_ion.SPM()
         with pytest.raises(
             ValueError,
-            match="Termination must include an operator when using InputParameter.",
+            match=r"Termination must include an operator when using InputParameter.",
         ):
             pybamm.step.current(pybamm.InputParameter("I_app"), termination="2.5 V")
 
@@ -288,7 +288,7 @@ class TestExperiment:
         solution = sim.solution
 
         voltage = solution["Terminal voltage [V]"].entries
-        assert np.allclose(voltage, 2.5, atol=1e-3, rtol=1e-3)
+        np.testing.assert_allclose(voltage, 2.5, atol=1e-3, rtol=1e-3)
 
     def test_pchip_interpolation_experiment(self):
         x = np.linspace(0, 1, 11)
@@ -343,7 +343,7 @@ class TestExperiment:
         x = np.array([0, 0.5, 0.5, 1.0])
         y_values = np.linspace(0, 1, 4)
         state = pybamm.StateVector(slice(0, 1))
-        with pytest.raises(ValueError, match="strictly increasing sequence"):
+        with pytest.raises(ValueError, match=r"strictly increasing sequence"):
             _ = pybamm.Interpolant(x, y_values, state, interpolator="pchip")
 
     def test_pchip_extrapolation(self):
@@ -403,8 +403,7 @@ class TestExperiment:
                     "Back face heat transfer coefficient [W.m-2.K-1]": h,
                     "Bottom face heat transfer coefficient [W.m-2.K-1]": h,
                     "Top face heat transfer coefficient [W.m-2.K-1]": h,
-                },
-                check_already_exists=False,
+                }
             )
 
             solutions = {}
@@ -480,8 +479,7 @@ class TestExperiment:
                     "Inner radius heat transfer coefficient [W.m-2.K-1]": h,
                     "Bottom face heat transfer coefficient [W.m-2.K-1]": h,
                     "Top face heat transfer coefficient [W.m-2.K-1]": h,
-                },
-                check_already_exists=False,
+                }
             )
 
             solutions = {}
@@ -548,8 +546,7 @@ class TestExperiment:
                 "Inner radius heat transfer coefficient [W.m-2.K-1]": h,
                 "Bottom face heat transfer coefficient [W.m-2.K-1]": h,
                 "Top face heat transfer coefficient [W.m-2.K-1]": h,
-            },
-            check_already_exists=False,
+            }
         )
 
         experiment = pybamm.Experiment(

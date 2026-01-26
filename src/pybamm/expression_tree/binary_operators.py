@@ -15,6 +15,7 @@ import sympy
 from scipy.sparse import csr_matrix, issparse, kron
 
 import pybamm
+from pybamm.expression_tree.symbol import simplify_if_constant
 
 # create type alias(s)
 from pybamm.type_definitions import ChildSymbol, ChildValue, Numeric
@@ -213,6 +214,10 @@ class BinaryOperator(pybamm.Symbol):
 
         return json_dict
 
+    def _t_discon(self, expr, y0, inputs, num_events):
+        """Returns the discontinuity time-points for a function."""
+        raise NotImplementedError(f"`_t_discon` not implemented for {self.name}")
+
 
 class Power(BinaryOperator):
     """
@@ -403,6 +408,67 @@ class KroneckerProduct(BinaryOperator):
         return pybamm.kronecker_product(left, right)
 
 
+class TensorProduct(BinaryOperator):
+    """
+    A node in the expression tree representing an outer (tensor) product.
+
+    The outer product of two tensors creates a new tensor with rank equal to
+    the sum of the input ranks. For example:
+    - scalar x scalar = scalar (rank 0)
+    - scalar x vector = vector (rank 1)
+    - vector x vector = matrix (rank 2)
+
+    The result rank is capped at 2.
+    """
+
+    def __init__(
+        self,
+        left: ChildSymbol,
+        right: ChildSymbol,
+    ):
+        """See :meth:`pybamm.BinaryOperator.__init__()`."""
+        left_rank = getattr(left, "rank", 0)
+        right_rank = getattr(right, "rank", 0)
+        result_rank = left_rank + right_rank
+        if result_rank > 2:
+            raise ValueError(
+                f"Tensor product result rank {result_rank} exceeds maximum of 2. "
+                f"Left rank: {left_rank}, right rank: {right_rank}"
+            )
+        self._result_rank = result_rank
+        super().__init__("tensor_product", left, right)
+
+    @property
+    def result_rank(self):
+        """Return the rank of the resulting tensor."""
+        return self._result_rank
+
+    def diff(self, variable):
+        """See :meth:`pybamm.Symbol.diff()`."""
+        raise NotImplementedError("diff not implemented for TensorProduct")
+
+    def _binary_jac(self, left_jac, right_jac):
+        """See :meth:`pybamm.BinaryOperator._binary_jac()`."""
+        raise NotImplementedError("Jacobian not implemented for TensorProduct")
+
+    def _binary_evaluate(self, left, right):
+        """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
+        # Outer product: result[i,j] = left[i] * right[j]
+        return np.outer(np.asarray(left).flatten(), np.asarray(right).flatten())
+
+    def _sympy_operator(self, left, right):
+        """Override :meth:`pybamm.BinaryOperator._sympy_operator`"""
+        raise NotImplementedError("sympy not implemented for TensorProduct")
+
+    def _binary_new_copy(
+        self,
+        left: ChildSymbol,
+        right: ChildSymbol,
+    ):
+        """See :meth:`pybamm.BinaryOperator._binary_new_copy()`."""
+        return tensor_product(left, right)
+
+
 class MatrixMultiplication(BinaryOperator):
     """
     A node in the expression tree representing a matrix multiplication operator.
@@ -428,7 +494,7 @@ class MatrixMultiplication(BinaryOperator):
         # We only need the case where left is an array and right
         # is a (slice of a) state vector, e.g. for discretised spatial
         # operators of the form D @ u (also catch cases of (-D) @ u)
-        left, right = self.orphans
+        left, _right = self.orphans
         if isinstance(left, pybamm.Array) or (
             isinstance(left, pybamm.Negate) and isinstance(left.child, pybamm.Array)
         ):
@@ -673,6 +739,18 @@ class _Heaviside(BinaryOperator):
         # an array of NaNs
         return self._binary_evaluate(left, right) * np.nan
 
+    def _t_discon(self, expr, y0, inputs, num_events):
+        """Returns the discontinuity time-points for the heaviside function."""
+        value = expr.evaluate(0, y0, inputs=inputs)
+        t_discon = [value]
+        t_discon.append(self._t_discon_next(value))
+        return t_discon
+
+    def _t_discon_next(self, value: float):
+        raise NotImplementedError(
+            "_t_discon_next method should be implemented in subclasses of _Heaviside"
+        )  # pragma: no cover
+
 
 class EqualHeaviside(_Heaviside):
     """A heaviside function with equality (return 1 when left = right)"""
@@ -695,6 +773,16 @@ class EqualHeaviside(_Heaviside):
         with np.errstate(invalid="ignore"):
             return left <= right
 
+    def _t_discon_next(self, value: float):
+        if self.left == pybamm.t:
+            # t <= x
+            # Stop at t = x and right after t = x
+            return np.nextafter(value, np.inf)
+        else:
+            # t >= x
+            # Stop at t = x and right before t = x
+            return np.nextafter(value, -np.inf)
+
 
 class NotEqualHeaviside(_Heaviside):
     """A heaviside function without equality (return 0 when left = right)"""
@@ -715,6 +803,16 @@ class NotEqualHeaviside(_Heaviside):
         # don't raise RuntimeWarning for NaNs
         with np.errstate(invalid="ignore"):
             return left < right
+
+    def _t_discon_next(self, value: float):
+        if self.left == pybamm.t:
+            # t < x
+            # Stop at t = x and right before t = x
+            return np.nextafter(value, -np.inf)
+        else:
+            # t > x
+            # Stop at t = x and right after t = x
+            return np.nextafter(value, np.inf)
 
 
 class Modulo(BinaryOperator):
@@ -757,6 +855,17 @@ class Modulo(BinaryOperator):
     def _binary_evaluate(self, left, right):
         """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
         return left % right
+
+    def _t_discon(self, expr, y0, inputs, num_events):
+        value = expr.evaluate(0, y0, inputs=inputs)
+        t_discon = []
+
+        for i in np.arange(num_events):
+            t = value * (i + 1)
+            # Stop right before t and at t
+            t_discon.append(np.nextafter(t, -np.inf))
+            t_discon.append(t)
+        return t_discon
 
 
 class Minimum(BinaryOperator):
@@ -1610,3 +1719,28 @@ def source(
         return pybamm.BoundaryMass(right) @ left
     else:
         return pybamm.Mass(right) @ left
+
+
+def tensor_product(
+    left: pybamm.Symbol,
+    right: pybamm.Symbol,
+) -> TensorProduct:
+    """
+    Create an outer (tensor) product of two symbols.
+
+    The outer product of two tensors creates a new tensor with rank equal to
+    the sum of the input ranks.
+
+    Parameters
+    ----------
+    left : pybamm.Symbol
+        The left operand (scalar, vector, or tensor).
+    right : pybamm.Symbol
+        The right operand (scalar, vector, or tensor).
+
+    Returns
+    -------
+    TensorProduct
+        A TensorProduct node representing the outer product.
+    """
+    return TensorProduct(simplify_if_constant(left), simplify_if_constant(right))
