@@ -5,7 +5,6 @@ import pytest
 
 import pybamm
 from pybamm.expression_tree.tensor_field import TensorField
-from tests import get_mesh_for_testing_2d
 
 
 class TestTensorField:
@@ -210,9 +209,9 @@ class TestTensorDivergence:
     """Tests for divergence of tensor fields."""
 
     @pytest.fixture
-    def setup_divergence_test(self):
+    def setup_divergence_test(self, mesh_2d):
         """Set up mesh and discretisation for divergence tests."""
-        mesh = get_mesh_for_testing_2d()
+        mesh = mesh_2d
         fin_vol = pybamm.FiniteVolume2D()
         fin_vol.build(mesh)
 
@@ -397,9 +396,9 @@ class TestTensorDiscretisation:
     """Tests for tensor discretisation in 2D finite volume."""
 
     @pytest.fixture
-    def setup_2d_mesh(self):
+    def setup_2d_mesh(self, mesh_2d):
         """Set up 2D mesh and discretisation."""
-        mesh = get_mesh_for_testing_2d()
+        mesh = mesh_2d
         fin_vol = pybamm.FiniteVolume2D()
         fin_vol.build(mesh)
 
@@ -491,9 +490,9 @@ class TestTensorAccuracy:
     """Accuracy tests for tensor operations following finite volume conventions."""
 
     @pytest.fixture
-    def setup_accuracy_test(self):
+    def setup_accuracy_test(self, mesh_2d):
         """Set up mesh and discretisation for accuracy tests."""
-        mesh = get_mesh_for_testing_2d()
+        mesh = mesh_2d
         fin_vol = pybamm.FiniteVolume2D()
         fin_vol.build(mesh)
 

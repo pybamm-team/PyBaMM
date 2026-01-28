@@ -6,12 +6,11 @@ import numpy as np
 import pytest
 
 import pybamm
-from tests.shared import get_mesh_for_testing_2d
 
 
 class TestFiniteVolumeIntegration:
-    def test_indefinite_integral(self):
-        mesh = get_mesh_for_testing_2d()
+    def test_indefinite_integral(self, mesh_2d):
+        mesh = mesh_2d
         spatial_methods = {"macroscale": pybamm.FiniteVolume2D()}
         disc = pybamm.Discretisation(mesh, spatial_methods)
         var = pybamm.Variable(
@@ -36,9 +35,9 @@ class TestFiniteVolumeIntegration:
                 "negative electrode", "left"
             )
 
-    def test_definite_integral(self):
+    def test_definite_integral(self, mesh_2d):
         # create discretisation
-        mesh = get_mesh_for_testing_2d()
+        mesh = mesh_2d
         spatial_methods = {
             "negative electrode": pybamm.FiniteVolume2D(),
             "separator": pybamm.FiniteVolume2D(),
@@ -110,8 +109,8 @@ class TestFiniteVolumeIntegration:
         ):
             spatial_method.definite_integral_matrix(child)
 
-    def test_area_integral(self):
-        mesh = get_mesh_for_testing_2d()
+    def test_area_integral(self, mesh_2d):
+        mesh = mesh_2d
         spatial_methods = {"macroscale": pybamm.FiniteVolume2D()}
         disc = pybamm.Discretisation(mesh, spatial_methods)
         var = pybamm.Variable(
@@ -158,9 +157,9 @@ class TestFiniteVolumeIntegration:
         ):
             disc.process_symbol(pybamm.Integral(var, [x, x]))
 
-    def test_boundary_integral(self):
+    def test_boundary_integral(self, mesh_2d):
         # create discretisation
-        mesh = get_mesh_for_testing_2d()
+        mesh = mesh_2d
         spatial_methods = {
             "negative electrode": pybamm.FiniteVolume2D(),
             "separator": pybamm.FiniteVolume2D(),
@@ -266,8 +265,8 @@ class TestFiniteVolumeIntegration:
         )
         np.testing.assert_allclose(result_left, 0.0, atol=1e-6)
 
-    def test_one_dimensional_integral(self):
-        mesh = get_mesh_for_testing_2d()
+    def test_one_dimensional_integral(self, mesh_2d):
+        mesh = mesh_2d
         spatial_methods = {"macroscale": pybamm.FiniteVolume2D()}
         disc = pybamm.Discretisation(mesh, spatial_methods)
         var = pybamm.Variable(

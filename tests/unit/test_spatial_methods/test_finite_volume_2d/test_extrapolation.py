@@ -2,13 +2,12 @@ import numpy as np
 import pytest
 
 import pybamm
-from tests.shared import get_mesh_for_testing_2d
 
 
 class TestExtrapolationFiniteVolume2D:
     @pytest.mark.parametrize("use_bcs", [True, False])
     @pytest.mark.parametrize("order", ["linear", "quadratic"])
-    def test_boundary_value_finite_volume_2d(self, use_bcs, order):
+    def test_boundary_value_finite_volume_2d(self, use_bcs, order, mesh_2d):
         if order == "quadratic" and use_bcs:
             # Not implemented
             return
@@ -16,7 +15,7 @@ class TestExtrapolationFiniteVolume2D:
             # Constant extrapolation doesn't use boundary conditions
             return
         # Create discretisation
-        mesh = get_mesh_for_testing_2d()
+        mesh = mesh_2d
         spatial_methods = {
             "macroscale": pybamm.FiniteVolume2D(
                 {
@@ -171,9 +170,9 @@ class TestExtrapolationFiniteVolume2D:
 
     @pytest.mark.parametrize("use_bcs", [True, False])
     @pytest.mark.parametrize("order", ["linear", "quadratic"])
-    def test_boundary_gradient_finite_volume_2d(self, use_bcs, order):
+    def test_boundary_gradient_finite_volume_2d(self, use_bcs, order, mesh_2d):
         # Create discretisation
-        mesh = get_mesh_for_testing_2d()
+        mesh = mesh_2d
         spatial_methods = {
             "macroscale": pybamm.FiniteVolume2D(
                 {
@@ -323,8 +322,8 @@ class TestExtrapolationFiniteVolume2D:
             "bottom-right",
         ],
     )
-    def test_cubic_not_implemented(self, use_bcs, direction):
-        mesh = get_mesh_for_testing_2d()
+    def test_cubic_not_implemented(self, use_bcs, direction, mesh_2d):
+        mesh = mesh_2d
         spatial_methods = {
             "macroscale": pybamm.FiniteVolume2D(
                 {
@@ -344,9 +343,11 @@ class TestExtrapolationFiniteVolume2D:
             disc.process_symbol(pybamm.BoundaryValue(var, direction))
 
     @pytest.mark.parametrize("use_bcs", [True, False])
-    def test_boundary_gradient_quadratic_function_finite_volume_2d(self, use_bcs):
+    def test_boundary_gradient_quadratic_function_finite_volume_2d(
+        self, use_bcs, mesh_2d
+    ):
         # Create discretisation with quadratic gradient extrapolation
-        mesh = get_mesh_for_testing_2d()
+        mesh = mesh_2d
         spatial_methods = {
             "macroscale": pybamm.FiniteVolume2D(
                 {
@@ -455,10 +456,10 @@ class TestExtrapolationFiniteVolume2D:
                 atol=1e-5,
             )
 
-    def test_boundary_value_constant_extrapolation(self):
+    def test_boundary_value_constant_extrapolation(self, mesh_2d):
         """Test constant extrapolation for left and right boundaries."""
         # Create discretisation with constant extrapolation
-        mesh = get_mesh_for_testing_2d()
+        mesh = mesh_2d
         spatial_methods = {
             "macroscale": pybamm.FiniteVolume2D(
                 {

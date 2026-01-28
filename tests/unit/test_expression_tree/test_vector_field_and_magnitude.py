@@ -1,12 +1,11 @@
 import pytest
 
 import pybamm
-from tests.shared import get_mesh_for_testing_2d
 
 
 class TestVectorFieldAndMagnitude:
-    def test_vector_field_and_magnitude(self):
-        mesh = get_mesh_for_testing_2d()
+    def test_vector_field_and_magnitude(self, mesh_2d):
+        mesh = mesh_2d
         spatial_methods = {
             "macroscale": pybamm.FiniteVolume2D(),
         }
