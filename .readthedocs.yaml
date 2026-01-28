@@ -21,6 +21,10 @@ build:
   tools:
     python: "3.13"
   jobs:
+    install:
+      - pip install --upgrade uv
+      - uv pip install ".[all]"
+      - uv pip install --group docs
     pre_build:
       - python -m sphinx -b linkcheck -D linkcheck_timeout=20 docs/ ./linkcheck_output
     # Unshallow the git clone otherwise this may cause issues with Sphinx extensions
@@ -37,12 +41,3 @@ build:
       - cd docs/build/ && latexmk -r latexmkrc -pdf -f -dvi- -ps- -jobname=pybamm -interaction=nonstopmode || true
       - test -f docs/build/pybamm.pdf && echo "pybamm.pdf exists. Copying source file to $READTHEDOCS_OUTPUT/pdf/."
       - cp "docs/build/pybamm.pdf" $READTHEDOCS_OUTPUT/pdf/
-
-# Optionally declare the Python requirements required to build your docs
-python:
-  install:
-    - method: pip
-      path: .
-      extra_requirements:
-        - docs
-        - all
