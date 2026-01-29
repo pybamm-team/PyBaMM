@@ -444,6 +444,9 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
 
   SetSolverOptions();
 
+  // Reset accumulated stats for this solve
+  accumulated_stats.reset();
+
   // Prepare first time step
   i_eval = 1;
   sunrealtype t_eval_next = t_eval[i_eval];
@@ -540,6 +543,10 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
       i_eval++;
       t_eval_next = t_eval[i_eval];
       CheckErrors(IDASetStopTime(ida_mem, t_eval_next), "IDASetStopTime");
+      if (solver_opts.print_stats) {
+          // Save stats before reinitializing (reinit resets IDA counters)
+          SaveStats();
+      }
       // Reinitialize the solver to deal with the discontinuity at t = t_val.
       ReinitializeIntegrator(t_val);
       ConsistentInitialization(t_val, t_eval_next, IDA_YA_YDP_INIT);
@@ -564,7 +571,9 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
   }
 
   if (solver_opts.print_stats) {
-    PrintStats();
+    // Save final segment stats and print accumulated totals
+    SaveStats();
+    PrintStats(accumulated_stats);
   }
 
   // store number of timesteps so we can generate the solution later
@@ -1032,17 +1041,17 @@ void IDAKLUSolverOpenMP<ExprSet>::CheckErrors(int const & flag, const char* cont
 }
 
 template <class ExprSet>
-void IDAKLUSolverOpenMP<ExprSet>::PrintStats() {
-  long nsteps, nrevals, nlinsetups, netfails;
+IDAKLUStats IDAKLUSolverOpenMP<ExprSet>::GetStats() {
+  IDAKLUStats stats;
   int klast, kcur;
   sunrealtype hinused, hlast, hcur, tcur;
 
   CheckErrors(IDAGetIntegratorStats(
     ida_mem,
-    &nsteps,
-    &nrevals,
-    &nlinsetups,
-    &netfails,
+    &stats.nsteps,
+    &stats.nrevals,
+    &stats.nlinsetups,
+    &stats.netfails,
     &klast,
     &kcur,
     &hinused,
@@ -1051,27 +1060,54 @@ void IDAKLUSolverOpenMP<ExprSet>::PrintStats() {
     &tcur
   ), "IDAGetIntegratorStats");
 
-  long nniters, nncfails;
-  CheckErrors(IDAGetNonlinSolvStats(ida_mem, &nniters, &nncfails), "IDAGetNonlinSolvStats");
+  CheckErrors(IDAGetNonlinSolvStats(ida_mem, &stats.nniters, &stats.nncfails), "IDAGetNonlinSolvStats");
 
-  long int ngevalsBBDP = 0;
   if (setup_opts.using_iterative_solver) {
-    CheckErrors(IDABBDPrecGetNumGfnEvals(ida_mem, &ngevalsBBDP), "IDABBDPrecGetNumGfnEvals");
+    CheckErrors(IDABBDPrecGetNumGfnEvals(ida_mem, &stats.ngevalsBBDP), "IDABBDPrecGetNumGfnEvals");
   }
 
+  return stats;
+}
+
+template <class ExprSet>
+void IDAKLUSolverOpenMP<ExprSet>::SaveStats() {
+  accumulated_stats += GetStats();
+}
+
+template <class ExprSet>
+void IDAKLUSolverOpenMP<ExprSet>::PrintStats(const IDAKLUStats& stats) {
+  // Get current point-in-time values from IDA (these are not accumulated)
+  long nsteps_unused, nrevals_unused, nlinsetups_unused, netfails_unused;
+  int klast, kcur;
+  sunrealtype hinused, hlast, hcur, tcur;
+
+  CheckErrors(IDAGetIntegratorStats(
+    ida_mem,
+    &nsteps_unused,
+    &nrevals_unused,
+    &nlinsetups_unused,
+    &netfails_unused,
+    &klast,
+    &kcur,
+    &hinused,
+    &hlast,
+    &hcur,
+    &tcur
+  ), "IDAGetIntegratorStats");
+
   py::print("Solver Stats:");
-  py::print("\tNumber of steps =", nsteps);
-  py::print("\tNumber of calls to residual function =", nrevals);
+  py::print("\tNumber of steps =", stats.nsteps);
+  py::print("\tNumber of calls to residual function =", stats.nrevals);
   py::print("\tNumber of calls to residual function in preconditioner =",
-            ngevalsBBDP);
-  py::print("\tNumber of linear solver setup calls =", nlinsetups);
-  py::print("\tNumber of error test failures =", netfails);
+            stats.ngevalsBBDP);
+  py::print("\tNumber of linear solver setup calls =", stats.nlinsetups);
+  py::print("\tNumber of error test failures =", stats.netfails);
   py::print("\tMethod order used on last step =", klast);
   py::print("\tMethod order used on next step =", kcur);
   py::print("\tInitial step size =", hinused);
   py::print("\tStep size on last step =", hlast);
   py::print("\tStep size on next step =", hcur);
   py::print("\tCurrent internal time reached =", tcur);
-  py::print("\tNumber of nonlinear iterations performed =", nniters);
-  py::print("\tNumber of nonlinear convergence failures =", nncfails);
+  py::print("\tNumber of nonlinear iterations performed =", stats.nniters);
+  py::print("\tNumber of nonlinear convergence failures =", stats.nncfails);
 }

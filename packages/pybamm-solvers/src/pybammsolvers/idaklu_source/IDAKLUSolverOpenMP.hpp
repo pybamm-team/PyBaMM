@@ -10,6 +10,7 @@ using std::vector;
 #include "Options.hpp"
 #include "NoProgressGuard.hpp"
 #include "Solution.hpp"
+#include "IDAKLUStats.hpp"
 
 /**
  * @brief Abstract solver class based on OpenMP vectors
@@ -81,6 +82,7 @@ public:
   vector<vector<vector<sunrealtype>>> ypS;  // cppcheck-suppress unusedStructMember
   SetupOptions const setup_opts;
   SolverOptions const solver_opts;
+  IDAKLUStats accumulated_stats;  // Accumulated stats across reinitializations
 
 #if SUNDIALS_VERSION_MAJOR >= 6
   SUNContext sunctx;
@@ -171,7 +173,20 @@ public:
   /**
    * @brief Print the solver statistics
    */
-  void PrintStats();
+  void PrintStats(IDAKLUStats const& stats);
+
+  /**
+   * @brief Get current statistics from IDA solver
+   */
+  IDAKLUStats GetStats();
+
+  /**
+   * @brief Save current stats to accumulated_stats
+   *
+   * This should be called before ReinitializeIntegrator() to preserve
+   * statistics that would otherwise be lost during reinitialization.
+   */
+  void SaveStats();
 
   /**
    * @brief Set a consistent initialization for ODEs
