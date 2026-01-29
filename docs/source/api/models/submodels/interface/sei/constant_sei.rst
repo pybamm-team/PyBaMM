@@ -1,5 +1,5 @@
 Constant SEI
 ============
 
-.. autoclass:: pybamm.sei.ConstantSEI
+.. autoclass:: pybamm.models.submodels.interface.sei.ConstantSEI
     :members:

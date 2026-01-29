@@ -13,11 +13,7 @@ from numpy.typing import ArrayLike
 import pybamm
 
 if pybamm.has_jax():
-    import jax
-
-    platform = jax.lib.xla_bridge.get_backend().platform.casefold()
-    if platform != "metal":
-        jax.config.update("jax_enable_x64", True)
+    jax = pybamm.get_jax()
 
 
 class JaxCooMatrix:

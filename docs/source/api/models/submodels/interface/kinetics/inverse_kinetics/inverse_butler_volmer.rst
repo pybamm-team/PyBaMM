@@ -1,5 +1,5 @@
 Inverse Butler-Volmer
 =====================
 
-.. autoclass:: pybamm.kinetics.InverseButlerVolmer
+.. autoclass:: pybamm.models.submodels.interface.kinetics.InverseButlerVolmer
     :members:

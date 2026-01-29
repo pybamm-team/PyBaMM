@@ -1,5 +1,5 @@
 Total SEI
 =========
 
-.. autoclass:: pybamm.sei.TotalSEI
+.. autoclass:: pybamm.models.submodels.interface.sei.TotalSEI
     :members:

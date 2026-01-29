@@ -1,5 +1,5 @@
 SEI Base Model
 ==============
 
-.. autoclass:: pybamm.sei.BaseModel
+.. autoclass:: pybamm.models.submodels.interface.sei.BaseModel
     :members:

@@ -40,6 +40,12 @@ jobs:
       - name: Check style
         run: uvx pre-commit run -a
 
+      - name: Check stub file is up to date
+        run: |
+          uv pip install -e . --system
+          python scripts/generate_pyi_stub.py --validate
+          python scripts/generate_pyi_stub.py --check
+
   run_unit_tests:
     runs-on: ${{ matrix.os }}
     permissions:

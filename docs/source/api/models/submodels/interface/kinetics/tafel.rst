@@ -1,5 +1,5 @@
 Tafel
 =====
 
-.. autoclass:: pybamm.kinetics.ForwardTafel
+.. autoclass:: pybamm.models.submodels.interface.kinetics.ForwardTafel
     :members:

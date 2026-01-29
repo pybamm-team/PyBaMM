@@ -32,7 +32,9 @@ class Citations:
     def __init__(self):
         self._check_for_bibtex()
         # Dict mapping citations keys to BibTex entries
-        self._all_citations: dict[str, str] = dict()
+        self._all_citations: dict = dict()
+        # Cache for string representations (populated lazily)
+        self._citation_strings: dict[str, str] = dict()
 
         self.read_citations()
         self._reset()
@@ -82,13 +84,25 @@ class Citations:
             if not isinstance(key, str) or not isinstance(entry, Entry):
                 raise TypeError()
 
-            # Warn if overwriting a previous citation
-            new_citation = entry.to_string("bibtex")
-            if key in self._all_citations and new_citation != self._all_citations[key]:
-                warnings.warn(f"Replacing citation for {key}", stacklevel=2)
+            # Store entry object -- defer to_string until citation is actually used
+            if key in self._all_citations:
+                # Only warn if actually different (compare lazily)
+                old_str = self._get_citation_string(key)
+                new_str = entry.to_string("bibtex")
+                if new_str != old_str:
+                    warnings.warn(f"Replacing citation for {key}", stacklevel=2)
+                self._citation_strings[key] = new_str
 
-            # Add to database
-            self._all_citations[key] = new_citation
+            # Add entry object to database
+            self._all_citations[key] = entry
+
+    def _get_citation_string(self, key):
+        """Get the BibTeX string for a citation, caching the result."""
+        if key not in self._citation_strings:
+            entry = self._all_citations.get(key)
+            if entry is not None:
+                self._citation_strings[key] = entry.to_string("bibtex")
+        return self._citation_strings.get(key)
 
     def _add_citation_tag(self, key, entry):
         """Adds a tag for a citation key in the dict, which represents the name of the
@@ -98,7 +112,7 @@ class Citations:
     @property
     def _cited(self):
         """Return a list of the BibTeX entries that have been cited"""
-        return [self._all_citations[key] for key in self._papers_to_cite]
+        return [self._get_citation_string(key) for key in self._papers_to_cite]
 
     def register(self, key):
         """Register a paper to be cited, one at a time. The intended use is that

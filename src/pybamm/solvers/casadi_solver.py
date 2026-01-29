@@ -2,7 +2,6 @@ import warnings
 
 import casadi
 import numpy as np
-from scipy.interpolate import interp1d
 
 import pybamm
 
@@ -424,6 +423,8 @@ class CasadiSolver(pybamm.BaseSolver):
                 t_event = np.nanmin(t_events)
                 # create interpolant to evaluate y in the current integration
                 # window
+                from scipy.interpolate import interp1d
+
                 y_sol = interp1d(sol.t, sol.y, kind="linear")
                 y_event = y_sol(t_event)
 

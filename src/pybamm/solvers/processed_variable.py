@@ -2,8 +2,6 @@ import bisect
 
 import casadi
 import numpy as np
-import xarray as xr
-from pybammsolvers import idaklu
 
 import pybamm
 
@@ -122,6 +120,8 @@ class ProcessedVariable(BaseProcessedVariable):
         return self._observe_postfix(self._observe_raw(), t)
 
     def _setup_inputs(self, t, full_range):
+        import pybammsolvers.idaklu as idaklu
+
         pybamm.logger.debug("Setting up C++ interpolation inputs")
 
         ts = self.all_ts
@@ -167,6 +167,8 @@ class ProcessedVariable(BaseProcessedVariable):
         return ts, ys, yps, funcs, inputs, is_f_contiguous
 
     def _observe_hermite(self, t):
+        import pybammsolvers.idaklu as idaklu
+
         pybamm.logger.debug("Observing and Hermite interpolating the variable")
 
         ts, ys, yps, funcs, inputs, _ = self._setup_inputs(t, full_range=False)
@@ -174,6 +176,8 @@ class ProcessedVariable(BaseProcessedVariable):
         return idaklu.observe_hermite_interp(t, ts, ys, yps, inputs, funcs, shapes)
 
     def _observe_raw(self):
+        import pybammsolvers.idaklu as idaklu
+
         pybamm.logger.debug("Observing the variable raw data")
         t = self.t_pts
         ts, ys, _, funcs, inputs, is_f_contiguous = self._setup_inputs(
@@ -310,6 +314,8 @@ class ProcessedVariable(BaseProcessedVariable):
         Evaluate the variable at arbitrary *dimensional* t (and x, r, y, z and/or R),
         using interpolation
         """
+        import xarray as xr
+
         if observe_raw:
             if not self.xr_array_raw_initialized:
                 self._xr_array_raw = xr.DataArray(entries_for_interp, coords=coords)

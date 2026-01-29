@@ -1,5 +1,5 @@
 Full Utilisation
 ================
 
-.. autoclass:: pybamm.interface.interface_utilisation.Full
+.. autoclass:: pybamm.models.submodels.interface.interface_utilisation.Full
     :members:

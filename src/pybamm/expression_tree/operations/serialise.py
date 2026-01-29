@@ -12,7 +12,6 @@ from datetime import datetime
 from enum import Enum
 from pathlib import Path
 
-import black
 import numpy as np
 
 import pybamm
@@ -57,6 +56,8 @@ class ExpressionFunctionParameter(pybamm.UnaryOperator):
                 child.name = f'Parameter("{child.name}")'
 
         src += f"    return {expression.to_equation()}"
+
+        import black
 
         formatted_src = black.format_str(src, mode=black.FileMode())
         return formatted_src

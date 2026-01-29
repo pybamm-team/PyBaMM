@@ -1,5 +1,5 @@
 Total Interfacial Current Model
 ===============================
 
-.. autoclass:: pybamm.interface.TotalInterfacialCurrent
+.. autoclass:: pybamm.models.submodels.interface.TotalInterfacialCurrent
     :members:

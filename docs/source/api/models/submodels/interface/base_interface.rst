@@ -1,5 +1,5 @@
 Interface Base Model
 ====================
 
-.. autoclass:: pybamm.interface.BaseInterface
+.. autoclass:: pybamm.models.submodels.interface.BaseInterface
     :members:

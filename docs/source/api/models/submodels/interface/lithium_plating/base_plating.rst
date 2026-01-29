@@ -1,7 +1,7 @@
 Base Plating
 ============
 
-.. autoclass:: pybamm.lithium_plating.BasePlating
+.. autoclass:: pybamm.models.submodels.interface.lithium_plating.BasePlating
     :members:
 
 .. footbibliography::

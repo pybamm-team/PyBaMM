@@ -10,7 +10,7 @@ import pybamm
 if pybamm.has_jax():
     import functools
 
-    import jax
+    jax = pybamm.get_jax()
     import jax.numpy as jnp
     from jax import core, dtypes
     from jax.api_util import flatten_fun_nokwargs
@@ -31,10 +31,6 @@ if pybamm.has_jax():
             start = idx
         result.append(lst[start:])
         return result
-
-    platform = jax.lib.xla_bridge.get_backend().platform.casefold()
-    if platform != "metal":
-        jax.config.update("jax_enable_x64", True)
 
     MAX_ORDER = 5
     NEWTON_MAXITER = 4
