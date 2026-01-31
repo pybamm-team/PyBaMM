@@ -918,3 +918,17 @@ class TestSimulation:
             UserWarning, match=r"Model is not suitable for calculating eSOH"
         ):
             sim.solve([0, 1], calc_esoh=True)
+
+    def test_error_solve_with_multiple_inputs_and_experiment(self):
+        experiment = pybamm.Experiment([("Charge at 1C for 1 hour")])
+        model = pybamm.lithium_ion.SPM()
+        sim = pybamm.Simulation(model, experiment=experiment)
+        parameter_loop = [
+            {"Current function [A]": 2},
+            {"Current function [A]": 4},
+        ]
+        with pytest.raises(
+            pybamm.SolverError,
+            match="list of input sets is not supported with experiments",
+        ):
+            sim.solve(inputs=parameter_loop)
