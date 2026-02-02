@@ -110,7 +110,7 @@ class RegulariseSqrtAndPower:
             scale = self._get_scale(base, resolved_scales)
             return pybamm.RegPower(base, exponent, scale=scale)
 
-        if any(n is not o for n, o in zip(new_children, sym.children)):
+        if any(n is not o for n, o in zip(new_children, sym.children, strict=True)):
             return sym.create_copy(new_children=new_children)
         return sym
 

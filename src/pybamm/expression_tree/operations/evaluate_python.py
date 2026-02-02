@@ -279,15 +279,11 @@ def find_symbols(
             base_var = children_vars[0]
             exp_var = children_vars[1]
             if symbol._scale is None:
-                symbol_str = (
-                    f"({base_var}) * (({base_var})**2 + {delta}**2) ** (({exp_var} - 1) / 2)"
-                )
+                symbol_str = f"({base_var}) * (({base_var})**2 + {delta}**2) ** (({exp_var} - 1) / 2)"
             elif symbol._scale.is_constant():
                 # Scale is constant, evaluate and inline
                 scale_val = symbol._scale.evaluate()
-                symbol_str = (
-                    f"(({base_var}) / {scale_val}) * ((({base_var}) / {scale_val})**2 + {delta}**2) ** (({exp_var} - 1) / 2) * ({scale_val}**{exp_var})"
-                )
+                symbol_str = f"(({base_var}) / {scale_val}) * ((({base_var}) / {scale_val})**2 + {delta}**2) ** (({exp_var} - 1) / 2) * ({scale_val}**{exp_var})"
             else:
                 # Non-constant scale: store the RegPower as a constant and call evaluate
                 constant_symbols[symbol.id] = symbol

@@ -2651,8 +2651,6 @@ class TestRegularisationSerialisation:
         assert json_dict["eps"] == eps
 
         # Test _from_json
-        reconstructed = pybamm.Arcsinh2._from_json(
-            {"children": [a, b], "eps": eps}
-        )
+        reconstructed = pybamm.Arcsinh2._from_json({"children": [a, b], "eps": eps})
         assert isinstance(reconstructed, pybamm.Arcsinh2)
         assert reconstructed.eps == eps

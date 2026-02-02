@@ -196,7 +196,11 @@ class TestRegulariseSqrtAndPower:
         }
 
         # Expression built from processed symbols (as returned by user's function)
-        expr = pybamm.sqrt(c_e_proc) * pybamm.sqrt(c_s_proc) * pybamm.sqrt(c_s_max_proc - c_s_proc)
+        expr = (
+            pybamm.sqrt(c_e_proc)
+            * pybamm.sqrt(c_s_proc)
+            * pybamm.sqrt(c_s_max_proc - c_s_proc)
+        )
         result = regulariser(expr, inputs=processed_inputs)
 
         # Check that all sqrts were replaced

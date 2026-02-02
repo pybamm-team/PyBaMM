@@ -420,7 +420,9 @@ class ParticleLithiumIonParameters(BaseParameters):
         )
         self.alpha_stripping = 1 - self.alpha_plating
 
-        self.c_e_init = pybamm.Parameter("Initial concentration in electrolyte [mol.m-3]")
+        self.c_e_init = pybamm.Parameter(
+            "Initial concentration in electrolyte [mol.m-3]"
+        )
 
         if main.options.electrode_types[domain] == "planar":
             self.n_Li_init = pybamm.Scalar(0)
