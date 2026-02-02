@@ -10,6 +10,10 @@ as initial conditions. ([#5311](https://github.com/pybamm-team/PyBaMM/pull/5311)
 
 - Fix a bug with serialising `InputParameter`s. ([#5289](https://github.com/pybamm-team/PyBaMM/pull/5289))
 
+## Breaking changes
+
+- Migrated `docs` and `dev` dependencies from `project.optional-dependencies` to `dependency-groups` per PEP 735. ([#5368](https://github.com/pybamm-team/PyBaMM/pull/5368))
+
 # [v25.12.2](https://github.com/pybamm-team/PyBaMM/tree/v25.12.2) - 2026-01-22
 
 ## Features
