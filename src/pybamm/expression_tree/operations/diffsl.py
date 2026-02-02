@@ -8,7 +8,26 @@ import pybamm
 
 
 class DiffSLExport:
+    """
+    A class to export parameterised and discretised PyBaMM models to the DiffSL format.
+
+    Attributes:
+        model (pybamm.BaseModel): The PyBaMM model to be exported. This model should be
+            parameterised and discretised before exporting.
+        float_precision (int): The number of significant digits for float representation.
+    """
+
     def __init__(self, model: pybamm.BaseModel, float_precision: int = 20):
+        """
+        Initializes the DiffSLExport class.
+
+        Args:
+            model (pybamm.BaseModel): The model to export.
+            float_precision (int): The number of significant digits for float representation.
+
+        Raises:
+            ValueError: If float_precision is not a positive integer.
+        """
         self.model = model
         if not isinstance(float_precision, int) or float_precision <= 0:
             raise ValueError("float_precision must be a positive integer")
@@ -362,7 +381,6 @@ class DiffSLExport:
         # diff of state vector u
         if not is_ode:
             lines = ["dudt_i {"]
-            yp_slice_to_label = {}
             start_index = 0
             for i, ic in enumerate(initial_conditions):
                 label = state_name_to_dstate_name(state_labels[i])
@@ -377,7 +395,6 @@ class DiffSLExport:
                     float_precision=self.float_precision,
                 )
                 lines += [f"  {indices}{label} = {eqn},"]
-                yp_slice_to_label[(start_index, start_index + ic.size)] = label
                 start_index += ic.size
             diffeq["dudt"] = new_line.join(lines) + new_line + "}"
 
@@ -678,33 +695,6 @@ def to_variable_name(name: str) -> str:
     for char in convert_to_underscore:
         name = name.replace(char, "")
     return name
-
-
-def vector_to_diffeq_constant(
-    vector: pybamm.Vector,
-    start_index: int,
-    value: int | None = None,
-    label: str | None = None,
-) -> str:
-    """Convert a vector to a diffeq constant"""
-    if isinstance(vector, pybamm.Vector) and isinstance(vector.entries, np.ndarray):
-        if value is None:
-            value = vector.entries[0, 0]
-            all_same = True
-        else:
-            value = vector.entries[0, 0]
-            all_same = all(vector.entries == value)
-        n = vector.entries.size
-        indices = f"({start_index}:{start_index + n}): " if n > 1 else ""
-        label = f"{label} = " if label is not None else ""
-        if n == 1 or all_same:
-            return f"{indices}{label}{value}"
-        else:
-            raise NotImplementedError(
-                "Cannot convert vector with different entries to diffeq constant"
-            )
-    else:
-        raise TypeError("vector must be a pybamm.Vector and ndarray")
 
 
 def state_name_to_dstate_name(state_name: str) -> str:

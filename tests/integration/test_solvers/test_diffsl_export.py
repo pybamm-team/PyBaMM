@@ -36,10 +36,10 @@ class TestDiffSLExport:
         pv = model.default_parameter_values
         pv_inputs = {}
         ds_inputs = []
-        for input in inputs:
-            pv_inputs[input] = pv[input]
-            ds_inputs.append(pv[input])
-            pv[input] = "[input]"
+        for input_name in inputs:
+            pv_inputs[input_name] = pv[input_name]
+            ds_inputs.append(pv[input_name])
+            pv[input_name] = "[input]"
         output_variable = "Voltage [V]"
 
         t0 = time.perf_counter()
