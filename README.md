@@ -5,7 +5,7 @@
 <div align="center">
 
 [![Powered by NumFOCUS](https://img.shields.io/badge/powered%20by-NumFOCUS-orange.svg?style=flat&colorA=E1523D&colorB=007D8A)](http://numfocus.org)
-[![Scheduled](https://github.com/pybamm-team/PyBaMM/actions/workflows/run_periodic_tests.yml/badge.svg?branch=develop)](https://github.com/pybamm-team/PyBaMM/actions/workflows/run_periodic_tests.yml)
+[![Scheduled](https://github.com/pybamm-team/PyBaMM/actions/workflows/run_periodic_tests.yml/badge.svg?branch=main)](https://github.com/pybamm-team/PyBaMM/actions/workflows/run_periodic_tests.yml)
 [![readthedocs](https://readthedocs.org/projects/pybamm/badge/?version=latest)](https://docs.pybamm.org/en/latest/?badge=latest)
 [![codecov](https://codecov.io/gh/pybamm-team/PyBaMM/branch/main/graph/badge.svg)](https://codecov.io/gh/pybamm-team/PyBaMM)
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/pybamm-team/PyBaMM/blob/main/)
@@ -81,17 +81,17 @@ sim.solve()
 sim.plot()
 ```
 
-However, much greater customisation is available. It is possible to change the physics, parameter values, geometry, submesh type, number of submesh points, methods for spatial discretisation and solver for integration (see DFN [script](https://github.com/pybamm-team/PyBaMM/blob/develop/examples/scripts/DFN.py) or [notebook](https://github.com/pybamm-team/PyBaMM/blob/develop/docs/source/examples/notebooks/models/DFN.ipynb)).
+However, much greater customisation is available. It is possible to change the physics, parameter values, geometry, submesh type, number of submesh points, methods for spatial discretisation and solver for integration (see DFN [script](https://github.com/pybamm-team/PyBaMM/blob/main/examples/scripts/DFN.py) or [notebook](https://github.com/pybamm-team/PyBaMM/blob/main/docs/source/examples/notebooks/models/DFN.ipynb)).
 
-For new users we recommend the [Getting Started](https://github.com/pybamm-team/PyBaMM/tree/develop/docs/source/examples/notebooks/getting_started/) guides. These are intended to be very simple step-by-step guides to show the basic functionality of PyBaMM, and can either be downloaded and used locally, or used online through [Google Colab](https://colab.research.google.com/github/pybamm-team/PyBaMM/blob/main/).
+For new users we recommend the [Getting Started](https://github.com/pybamm-team/PyBaMM/tree/main/docs/source/examples/notebooks/getting_started/) guides. These are intended to be very simple step-by-step guides to show the basic functionality of PyBaMM, and can either be downloaded and used locally, or used online through [Google Colab](https://colab.research.google.com/github/pybamm-team/PyBaMM/blob/main/).
 
-Further details can be found in a number of [detailed examples](https://github.com/pybamm-team/PyBaMM/tree/develop/examples), hosted here on
+Further details can be found in a number of [detailed examples](https://github.com/pybamm-team/PyBaMM/tree/main/examples), hosted here on
 github. In addition, there is a [full API documentation](https://docs.pybamm.org/en/latest/source/api/index.html),
 hosted on [Read The Docs](https://readthedocs.org/).
 Additional supporting material can be found
 [here](https://github.com/pybamm-team/pybamm-supporting-material/).
 
-Note that the examples on the default `develop` branch are tested on the latest `develop` commit. This may sometimes cause errors when running the examples on the pybamm pip package, which is synced to the `main` branch. You can switch to the `main` branch on github to see the version of the examples that is compatible with the latest pip release.
+Note that the examples on the `main` branch are tested on the latest commit. If you are using an older version of PyBaMM from pip, you can switch to the corresponding release tag on GitHub to see the version of the examples that is compatible with that release.
 
 ## Versioning
 
@@ -157,12 +157,12 @@ We would be grateful if you could also cite the relevant papers. These will chan
 pybamm.print_citations()
 ```
 
-to the end of your script. This will print BibTeX information to the terminal; passing a filename to `print_citations` will print the BibTeX information to the specified file instead. A list of all citations can also be found in the [citations file](https://github.com/pybamm-team/PyBaMM/blob/develop/src/pybamm/CITATIONS.bib). In particular, PyBaMM relies heavily on [CasADi](https://web.casadi.org/publications/).
-See [CONTRIBUTING.md](https://github.com/pybamm-team/PyBaMM/blob/develop/CONTRIBUTING.md#citations) for information on how to add your own citations when you contribute.
+to the end of your script. This will print BibTeX information to the terminal; passing a filename to `print_citations` will print the BibTeX information to the specified file instead. A list of all citations can also be found in the [citations file](https://github.com/pybamm-team/PyBaMM/blob/main/src/pybamm/CITATIONS.bib). In particular, PyBaMM relies heavily on [CasADi](https://web.casadi.org/publications/).
+See [CONTRIBUTING.md](https://github.com/pybamm-team/PyBaMM/blob/main/CONTRIBUTING.md#citations) for information on how to add your own citations when you contribute.
 
 ## 🛠️ Contributing to PyBaMM
 
-If you'd like to help us develop PyBaMM by adding new methods, writing documentation, or fixing embarrassing bugs, please have a look at these [guidelines](https://github.com/pybamm-team/PyBaMM/blob/develop/CONTRIBUTING.md) first.
+If you'd like to help us develop PyBaMM by adding new methods, writing documentation, or fixing embarrassing bugs, please have a look at these [guidelines](https://github.com/pybamm-team/PyBaMM/blob/main/CONTRIBUTING.md) first.
 
 ## 📫 Get in touch
 
@@ -173,4 +173,4 @@ For any questions, comments, suggestions or bug reports, please visit:
 
 ## 📃 License
 
-PyBaMM is fully open source. For more information about its license, see [LICENSE](https://github.com/pybamm-team/PyBaMM/blob/develop/LICENSE.txt).
+PyBaMM is fully open source. For more information about its license, see [LICENSE](https://github.com/pybamm-team/PyBaMM/blob/main/LICENSE.txt).

@@ -17,9 +17,6 @@ class NoPlating(BasePlating):
         A dictionary of options to be passed to the model.
     """
 
-    def __init__(self, param, domain, options=None, phase="primary"):
-        super().__init__(param, domain, options=options, phase=phase)
-
     def get_fundamental_variables(self):
         phase_name = self.phase_name
         if self.size_distribution is False:

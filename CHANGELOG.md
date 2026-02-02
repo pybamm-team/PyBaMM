@@ -2,16 +2,70 @@
 
 ## Features
 
-- Adds `silence_sundials_errors` IDAKLU solver option with `default=False` to match historical output. ([#5290](https://github.com/pybamm-team/PyBaMM/pull/5290))
+- Improve the performance of matrix multiplication with CasADi expressions. ([#5351](https://github.com/pybamm-team/PyBaMM/pull/5351))
+- Adds option for lists of inputs to `solve` to include input parameters which are used
+as initial conditions. ([#5311](https://github.com/pybamm-team/PyBaMM/pull/5311))
+- DiffSL export for discretised PyBaMM models.
 
 ## Bug fixes
 
-- Fixed a bug where `IDAKLUSolver` errors were not raised correctly. ([#5291](https://github.com/pybamm-team/PyBaMM/pull/5291))
 - Fix a bug with serialising `InputParameter`s. ([#5289](https://github.com/pybamm-team/PyBaMM/pull/5289))
+
+# [v25.12.2](https://github.com/pybamm-team/PyBaMM/tree/v25.12.2) - 2026-01-22
+
+## Features
+
+- Added experimental `CompositeSolver` that tries many solver until one succeeds and updated the ESOH solvers to use a composite algebraic solver. ([#5357](https://github.com/pybamm-team/PyBaMM/pull/5357))
+
+## Bug fixes
+
+# [v25.12.1](https://github.com/pybamm-team/PyBaMM/tree/v25.12.1) - 2026-01-21
+
+## Features
+
+- Improve the robustness of the `ElectrodeSOHComposite` model and ensure the calculation of equilibrium stoichiometries is consistent for models with hysteresis. ([#5347](https://github.com/pybamm-team/PyBaMM/pull/5347))
+
+## Bug fixes
+
+- Fixed a bug where `ExpressionFunctionParameter` children were not properly substituted after JSON deserialization, causing `ElectrodeSOHSolver` to fail with "Variable not implemented" errors. ([#5352](https://github.com/pybamm-team/PyBaMM/pull/5352))
+
+# [v25.12.0](https://github.com/pybamm-team/PyBaMM/tree/v25.12.0) - 2026-01-15
+
+## Features
+
+- Porosity and active material fractions are now `FunctionParameters` of y and z, as well as x ([#5214](https://github.com/pybamm-team/PyBaMM/pull/5214))
+- Added support for asymmetric loss of active material. ([#5343](https://github.com/pybamm-team/PyBaMM/pull/5343))
+- Restructures `ParameterValues`. Adds deprecation notice on `update`'s `check_already_exists` argument. ([#5339](https://github.com/pybamm-team/PyBaMM/pull/5339))
+- Added `Solution.yp` property to return the time derivatives of the solution. ([#5341](https://github.com/pybamm-team/PyBaMM/pull/5341))
+- Added `TensorField` for rank-1 and rank-2 tensors, `TensorProduct` for outer products, and tensor divergence support in 2D finite volume. `VectorField` now inherits from `TensorField`. ([#5335](https://github.com/pybamm-team/PyBaMM/pull/5335))
+- Added support for Python 3.13. ([#5330](https://github.com/pybamm-team/PyBaMM/pull/5330))
+- Reduced the time to build `Simulation`s by creating a post-processing step for variables. ([#5308](https://github.com/pybamm-team/PyBaMM/pull/5308))
+- Adds the ability to observe custom variables from a `Solution` object using `Solution.observe(symbol)`. ([#5308](https://github.com/pybamm-team/PyBaMM/pull/5308))
+- Added inverse kinetics for linear kinetics. ([#5303](https://github.com/pybamm-team/PyBaMM/pull/5303))
+- Adds `silence_sundials_errors` IDAKLU solver option with `default=False` to match historical output. ([#5290](https://github.com/pybamm-team/PyBaMM/pull/5290))
+- `BasicDFN2D` model now takes porosities and active fractions as functions of `x` and `z` ([#5266](https://github.com/pybamm-team/PyBaMM/pull/5266))
+
+## Bug fixes
+
+- Fixed a bug where `fixed_input_parameters` ignored `InputParameter` values within expressions in `ParameterValues`. ([#5321](https://github.com/pybamm-team/PyBaMM/pull/5321))
+- Fixed a bug with domain shape evaluation. ([#5316](https://github.com/pybamm-team/PyBaMM/pull/5316))
+- Fixed a bug where `IDAKLUSolver` errors were not raised correctly. ([#5291](https://github.com/pybamm-team/PyBaMM/pull/5291))
+- Fixed a bug in 2D concatenatations for quantities that vary in the `tb` direction ([#5310](https://github.com/pybamm-team/PyBaMM/pull/5310))
+
+# Breaking changes
+- Removes default constants added to  `ParameterValues` on construction. **Only breaking if you rely on this functionality in custom models, parameters, etc.** ([#5336](https://github.com/pybamm-team/PyBaMM/pull/5336))
+
+# [v25.10.2](https://github.com/pybamm-team/PyBaMM/tree/v25.10.2) - 2025-11-27
+
+## Bug fixes
+
+- Fix a bug with serialising `InputParameter`s. ([#5289](https://github.com/pybamm-team/PyBaMM/pull/5289))
+- Fix a bug with missing inputs for `initial_conditions_from` scale evaluation ([#5285](https://github.com/pybamm-team/PyBaMM/pull/5285))
 
 # [v25.10.1](https://github.com/pybamm-team/PyBaMM/tree/v25.10.1) - 2025-11-14
 
 ## Features
+
 - Allow setting initial conditions from `y_slices` of a `Solution` object. ([#5257](https://github.com/pybamm-team/PyBaMM/pull/5257))
 - Added docstring to `FuzzyDict.copy` explaining its return value and behavior. ([#5242](https://github.com/pybamm-team/PyBaMM/pull/5242))
 
@@ -35,8 +89,10 @@
 
 ## Bug fixes
 
+- Fixes `KeyError: 'min'` in `latexify()` for lithium plating models when certain geometry keys are missing. ([#5245](https://github.com/pybamm-team/PyBaMM/pull/5245))
 - Set `zip(..., strict=True)` in solver and expression tree files to ensure iterable length safety. ([#5241](https://github.com/pybamm-team/PyBaMM/pull/5241))
 - Adds `options` property to IDAKLU, fixes pickling issue with `__getstate__` when keys are not available. ([#5234](https://github.com/pybamm-team/PyBaMM/pull/5234))
+- Fixed a bug where no error was raised if a list of input sets were provided to the solver while Experiments were being used ([#5226](https://github.com/pybamm-team/PyBaMM/pull/5226))
 - Fixed a bug where simulations using output variables in `IDAKLUSolver` couldn't be pickled ([#5225](https://github.com/pybamm-team/PyBaMM/pull/5225))
 - Added explicit warning in installation docs about unmaintained Conda recipe due to pybammsolvers split (Fixes #5155). See pull request [#5206](https://github.com/pybamm-team/PyBaMM/pull/5206)
 - Fixed a bug where time-based Heaviside or modulo discontinuities could trigger out-of-bounds errors in time arrays. ([#5205](https://github.com/pybamm-team/PyBaMM/pull/5205))

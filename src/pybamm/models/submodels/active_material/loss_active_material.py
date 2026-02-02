@@ -69,6 +69,8 @@ class LossActiveMaterial(BaseModel):
         if "stress" in lam_option:
             # obtain the rate of loss of active materials (LAM) by stress
             # This is loss of active material model by mechanical effects
+            stress_critical = self.phase_param.stress_critical
+            m_LAM = self.phase_param.m_LAM
             if self.x_average is True:
                 stress_t_surf = variables[
                     f"X-averaged {domain} {phase_name}particle surface tangential stress [Pa]"
@@ -76,6 +78,7 @@ class LossActiveMaterial(BaseModel):
                 stress_r_surf = variables[
                     f"X-averaged {domain} {phase_name}particle surface radial stress [Pa]"
                 ]
+                T = variables[f"X-averaged {domain} electrode temperature [K]"]
             else:
                 stress_t_surf = variables[
                     f"{Domain} {phase_name}particle surface tangential stress [Pa]"
@@ -83,20 +86,38 @@ class LossActiveMaterial(BaseModel):
                 stress_r_surf = variables[
                     f"{Domain} {phase_name}particle surface radial stress [Pa]"
                 ]
-
-            beta_LAM = self.phase_param.beta_LAM
-            stress_critical = self.phase_param.stress_critical
-            m_LAM = self.phase_param.m_LAM
-
+                T = variables[f"{Domain} electrode temperature [K]"]
+            # compute hydrostatic stress
             stress_h_surf = (stress_r_surf + 2 * stress_t_surf) / 3
-            # compressive stress make no contribution
-            stress_h_surf *= stress_h_surf > 0
-            # assuming the minimum hydrostatic stress is zero for full cycles
-            stress_h_surf_min = stress_h_surf * 0
-            j_stress_LAM = (
-                -beta_LAM
-                * ((stress_h_surf - stress_h_surf_min) / stress_critical) ** m_LAM
-            )
+            # separate compressive and tensile stresses
+            stress_h_surf_compressive = stress_h_surf * (stress_h_surf < 0)
+            stress_h_surf_tensile = stress_h_surf * (stress_h_surf > 0)
+
+            if "asymmetric stress" in lam_option:
+                pybamm.citations.register("Pannala2024")
+                # semi-empirical model for stress-driven LAM that includes both
+                # compressive and tensile stresses
+                beta_LAM_compressive = self.phase_param.beta_LAM(
+                    T, direction="compressive"
+                )
+                beta_LAM_tensile = self.phase_param.beta_LAM(T, direction="tensile")
+                j_stress_LAM = (
+                    -beta_LAM_compressive
+                    * (abs(stress_h_surf_compressive) / stress_critical) ** m_LAM
+                    - beta_LAM_tensile
+                    * (abs(stress_h_surf_tensile) / stress_critical) ** m_LAM
+                )
+            else:
+                beta_LAM = self.phase_param.beta_LAM(T)
+                # assuming that only tensile stress contributes and that the minimum
+                # (tensile) hydrostatic stress is zero for full cycles
+                stress_h_surf_min = stress_h_surf * 0
+                j_stress_LAM = (
+                    -beta_LAM
+                    * ((stress_h_surf_tensile - stress_h_surf_min) / stress_critical)
+                    ** m_LAM
+                )
+
             deps_solid_dt += j_stress_LAM
 
         if "reaction" in lam_option:
