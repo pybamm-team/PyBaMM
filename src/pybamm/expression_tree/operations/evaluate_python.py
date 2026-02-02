@@ -273,6 +273,25 @@ def find_symbols(
                 symbol_str = (
                     children_vars[0] + " " + symbol.name + " " + children_vars[1]
                 )
+        elif isinstance(symbol, pybamm.RegPower):
+            # RegPower: x * (x^2 + delta^2)^((a-1)/2) * scale^a (if scale is set)
+            delta = pybamm.settings.tolerances.get("reg_power", 1e-3)
+            base_var = children_vars[0]
+            exp_var = children_vars[1]
+            if symbol._scale is None:
+                symbol_str = (
+                    f"({base_var}) * (({base_var})**2 + {delta}**2) ** (({exp_var} - 1) / 2)"
+                )
+            elif symbol._scale.is_constant():
+                # Scale is constant, evaluate and inline
+                scale_val = symbol._scale.evaluate()
+                symbol_str = (
+                    f"(({base_var}) / {scale_val}) * ((({base_var}) / {scale_val})**2 + {delta}**2) ** (({exp_var} - 1) / 2) * ({scale_val}**{exp_var})"
+                )
+            else:
+                # Non-constant scale: store the RegPower as a constant and call evaluate
+                constant_symbols[symbol.id] = symbol
+                symbol_str = f"constants[{len(constant_symbols) - 1}]._binary_evaluate({base_var}, {exp_var})"
         else:
             symbol_str = children_vars[0] + " " + symbol.name + " " + children_vars[1]
 

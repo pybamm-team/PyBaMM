@@ -88,8 +88,22 @@ class CasadiConverter:
                 return casadi.fmin(converted_left, converted_right)
             if isinstance(symbol, pybamm.Maximum):
                 return casadi.fmax(converted_left, converted_right)
+            if isinstance(symbol, pybamm.Hypot):
+                return casadi.hypot(converted_left, converted_right)
             if isinstance(symbol, pybamm.KroneckerProduct):
                 return casadi.kron(converted_left, converted_right)
+            if isinstance(symbol, pybamm.RegPower):
+                # Regularised power: y = x * (x^2 + delta^2)^((a-1)/2) * scale^a
+                delta = symbol._get_delta()
+                x = converted_left
+                if symbol.scale is None:
+                    scale_pow_a = 1.0
+                else:
+                    scale_val = self.convert(symbol.scale, t, y, y_dot, inputs)
+                    x = x / scale_val
+                    scale_pow_a = scale_val**converted_right
+                x2_d2 = x**2 + delta**2
+                return x * (x2_d2 ** ((converted_right - 1) / 2)) * scale_pow_a
             # Optimize repeated-row matrix multiplications: M @ x -> ones * (row @ x)
             if isinstance(symbol, pybamm.MatrixMultiplication):
                 result = try_repeated_row_matmul(left, converted_right)
@@ -145,6 +159,16 @@ class CasadiConverter:
                 return casadi.sign(*converted_children)
             elif symbol.function == special.erf:
                 return casadi.erf(*converted_children)
+            elif isinstance(symbol, pybamm.Arcsinh2):
+                a, b = converted_children
+                eps = symbol.eps
+                _sign = casadi.sign(a) * casadi.sign(b)
+                a_abs = casadi.fabs(a)
+                b_abs = casadi.fabs(b)
+                b_eff = casadi.hypot(b_abs, eps)
+                return _sign * (
+                    casadi.log(a_abs + casadi.hypot(a_abs, b_eff)) - casadi.log(b_eff)
+                )
             elif isinstance(symbol, pybamm.Interpolant):
                 if symbol.interpolator == "linear":
                     solver = "linear"

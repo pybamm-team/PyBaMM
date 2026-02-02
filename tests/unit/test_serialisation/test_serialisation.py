@@ -2593,3 +2593,66 @@ class TestSerializationEdgeCases:
         # Verify the data can be decompressed
         loaded = Serialise.load_custom_model(compressed)
         assert loaded.name == "test"
+
+
+class TestRegularisationSerialisation:
+    """Tests for serialisation of regularisation-related symbols."""
+
+    def test_regpower_serialisation(self):
+        """Test round-trip serialisation of RegPower with scale."""
+        x = pybamm.Variable("x")
+        scale = pybamm.Scalar(10.0)
+        rp = pybamm.RegPower(x, 0.5, scale=scale)
+
+        # Convert to JSON and back
+        json_dict = convert_symbol_to_json(rp)
+        assert json_dict["type"] == "RegPower"
+        assert json_dict["scale"] is not None
+
+        # Reconstruct from JSON
+        reconstructed = convert_symbol_from_json(json_dict)
+        assert isinstance(reconstructed, pybamm.RegPower)
+        assert reconstructed.scale == scale
+
+    def test_regpower_serialisation_no_scale(self):
+        """Test round-trip serialisation of RegPower without scale."""
+        x = pybamm.Variable("x")
+        rp = pybamm.RegPower(x, 0.5)
+
+        json_dict = convert_symbol_to_json(rp)
+        assert json_dict["type"] == "RegPower"
+
+        reconstructed = convert_symbol_from_json(json_dict)
+        assert isinstance(reconstructed, pybamm.RegPower)
+        # scale defaults to Scalar(1) when _scale is None
+        assert reconstructed._scale is None
+
+    def test_hypot_serialisation(self):
+        """Test round-trip serialisation of Hypot."""
+        a = pybamm.Variable("a")
+        b = pybamm.Variable("b")
+        h = pybamm.Hypot(a, b)
+
+        json_dict = convert_symbol_to_json(h)
+        reconstructed = convert_symbol_from_json(json_dict)
+
+        assert isinstance(reconstructed, pybamm.Hypot)
+        assert reconstructed.name == "hypot"
+
+    def test_arcsinh2_serialisation(self):
+        """Test round-trip serialisation of Arcsinh2."""
+        a = pybamm.Variable("a")
+        b = pybamm.Variable("b")
+        eps = 1e-10
+        f = pybamm.Arcsinh2(a, b, eps=eps)
+
+        json_dict = f.to_json()
+        assert json_dict["function"] == "arcsinh2"
+        assert json_dict["eps"] == eps
+
+        # Test _from_json
+        reconstructed = pybamm.Arcsinh2._from_json(
+            {"children": [a, b], "eps": eps}
+        )
+        assert isinstance(reconstructed, pybamm.Arcsinh2)
+        assert reconstructed.eps == eps
