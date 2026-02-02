@@ -37,8 +37,8 @@ class TestDiffSLExport:
         pv_inputs = {}
         ds_inputs = []
         for input_name in inputs:
-            pv_inputs[input_name] = pv[input_name]
-            ds_inputs.append(pv[input_name])
+            pv_inputs[input_name] = 0.9 * pv[input_name]
+            ds_inputs.append(0.9 * pv[input_name])
             pv[input_name] = "[input]"
         output_variable = "Voltage [V]"
 
@@ -59,7 +59,7 @@ class TestDiffSLExport:
 
         t0 = time.perf_counter()
         diffsl_code = pybamm.DiffSLExport(model_disc).to_diffeq(
-            inputs=inputs, outputs=[output_variable]
+            outputs=[output_variable]
         )
         logger.info(f"DiffSL export time: {time.perf_counter() - t0:.5f} seconds")
 

@@ -1,4 +1,3 @@
-import numbers
 from itertools import chain
 
 import numpy as np
@@ -34,32 +33,32 @@ class DiffSLExport:
         self.float_precision = float_precision
 
     @staticmethod
-    # check that symbol has a state vector or dot state vector somewhere
-    def _has_state_vector(symbol: pybamm.Symbol) -> bool:
-        has_state_vector = False
-        for s in symbol.pre_order():
-            if isinstance(s, pybamm.StateVector | pybamm.StateVectorDot):
-                has_state_vector = True
-                break
-        return has_state_vector
-
-    @staticmethod
     def _name_tensor(
         symbol: pybamm.Symbol,
         tensor_index: int,
         is_variable: bool = False,
         is_event: bool = False,
     ) -> str:
-        if DiffSLExport._has_state_vector(symbol):
-            if is_variable:
-                tensor_name = f"variable{tensor_index}"
-            elif is_event:
-                tensor_name = f"event{tensor_index}"
-            else:
-                tensor_name = f"varying{tensor_index}"
+        if is_variable:
+            tensor_name = f"variable{tensor_index}"
+        elif is_event:
+            tensor_name = f"event{tensor_index}"
         else:
-            tensor_name = f"constant{tensor_index}"
+            tensor_name = f"varying{tensor_index}"
         return tensor_name
+
+    @staticmethod
+    def scalar_to_diffeq(
+        symbol: pybamm.Scalar, tensor_index: int, float_precision: int = 20
+    ) -> tuple[str, str]:
+        tensor_name = f"constant{tensor_index}"
+        tensor_def = (
+            f"{tensor_name}_i "
+            + "{"
+            + f"\n  (0:1): {symbol.value:.{float_precision}g},\n"
+            + "}"
+        )
+        return tensor_name, tensor_def
 
     @staticmethod
     def vector_to_diffeq(
@@ -70,7 +69,9 @@ class DiffSLExport:
         elif isinstance(symbol.entries, np.ndarray):
             vector = symbol.entries.flatten()
         else:
-            raise TypeError(f"{type(symbol.entries)} not implemented")
+            raise TypeError(
+                f"{type(symbol.entries)} not implemented"
+            )  # pragma: no cover
 
         tensor_name = f"constant{tensor_index}"
 
@@ -168,7 +169,9 @@ class DiffSLExport:
                             f"  ({rowi},{colj}): {symbol.entries[rowi, colj]:.{float_precision}g},"
                         ]
         else:
-            raise TypeError(f"{type(symbol.entries)} not implemented")
+            raise TypeError(
+                f"{type(symbol.entries)} not implemented"
+            )  # pragma: no cover
         new_line = "\n"
         return tensor_name, new_line.join(lines) + new_line + "}"
 
@@ -222,17 +225,7 @@ class DiffSLExport:
                     and symbol.name == "@"
                     and isinstance(symbol.left, pybamm.Matrix)
                 ):
-                    n = symbol.left.entries.shape[1]
-
-                    # check that rhs is a vector with n rows
-                    eval_for_shape = symbol.right.evaluate_for_shape()
-                    if isinstance(eval_for_shape, numbers.Number):
-                        continue
-                    shape = eval_for_shape.shape
-                    if shape[0] != n:
-                        continue
-
-                    # now extract the matrix vector product as a separate tensor
+                    # extract the matrix vector product as a separate tensor
                     if symbol in symbol_to_tensor_name:
                         continue
                     tensor_name = DiffSLExport._name_tensor(
@@ -276,32 +269,25 @@ class DiffSLExport:
 
         return tensor_index
 
-    def to_diffeq(self, inputs: list[str], outputs: list[str]) -> str:
+    def to_diffeq(self, outputs: list[str]) -> str:
         """Convert a pybamm model to a diffeq model"""
         model = self.model.new_copy()
-        params = self.model.default_parameter_values
-        params_names = params.keys()
         all_vars = model.get_processed_variables_dict()
-        for inpt in inputs:
-            if not isinstance(inpt, str):
-                raise TypeError("inputs must be a list of str")
-            if inpt not in params_names:
-                raise ValueError(f"input {inpt} not in params")
-            params[inpt] = "[input]"
+        if len(all_vars) == 0 and len(model.variables) > 0:
+            all_vars = model.variables
+        if not isinstance(outputs, list) or any(
+            not isinstance(o, str) for o in outputs
+        ):
+            raise TypeError("outputs must be a list of str")
         if len(outputs) == 0:
             raise ValueError("outputs must be a non-empty list of str")
         for out in outputs:
-            if not isinstance(out, str):
-                raise TypeError("outputs must be a list of str")
             if out not in all_vars:
                 print("all_vars keys:", all_vars.keys())  # DEBUG
                 raise ValueError(f"output {out} not in model")
             eqn = all_vars[out]
-        sim = pybamm.Simulation(model, parameter_values=params)
-        sim.build()
-        model = sim._built_model
         has_events = len(model.events) > 0
-        is_ode = model.len_alg == 0
+        is_ode = len(model.algebraic) == 0
 
         states = list(chain(model.rhs.keys(), model.algebraic.keys()))
         state_labels = [to_variable_name(v.name) for v in states]
@@ -309,7 +295,20 @@ class DiffSLExport:
         diffeq = {}
         new_line = "\n"
 
-        # inputs
+        # inputs, find all pybamm.InputParameters in the model
+        inputs = []
+        for eqn in chain(
+            model.rhs.values(),
+            model.algebraic.values(),
+            [all_vars[output] for output in outputs],
+            [e.expression for e in model.events],
+        ):
+            for symbol in eqn.pre_order():
+                if isinstance(symbol, pybamm.InputParameter):
+                    input_name = to_variable_name(symbol.name)
+                    if input_name not in inputs:
+                        inputs.append(input_name)
+
         if len(inputs) > 0:
             lines = ["in_i {"]
             for inpt in inputs:
@@ -361,9 +360,18 @@ class DiffSLExport:
         y_slice_to_label = {}
         new_line = "\n"
         for i, ic in enumerate(initial_conditions):
-            tensor_name, tensor_def = DiffSLExport.vector_to_diffeq(
-                ic, tensor_index, float_precision=self.float_precision
-            )
+            if isinstance(ic, pybamm.Vector):
+                tensor_name, tensor_def = DiffSLExport.vector_to_diffeq(
+                    ic, tensor_index, float_precision=self.float_precision
+                )
+            elif isinstance(ic, pybamm.Scalar):
+                tensor_name, tensor_def = DiffSLExport.scalar_to_diffeq(
+                    ic, tensor_index, float_precision=self.float_precision
+                )
+            else:
+                raise TypeError(
+                    f"Initial condition of type {type(ic)} not supported"
+                )  # pragma: no cover
             input_lines += [tensor_def]
             tensor_index += 1
             label = state_labels[i]
@@ -460,7 +468,7 @@ class DiffSLExport:
                 start_index += rhs.size
             for algebraic in model.algebraic.values():
                 n = algebraic.size
-                if n == 0:
+                if n == 1:
                     eqn = "0.0"
                 else:
                     eqn = f"({start_index}:{start_index + n}): 0.0"
@@ -625,23 +633,11 @@ def _equation_to_diffeq(
         return f"{name}({args})"
     elif isinstance(equation, pybamm.Scalar):
         return f"{equation.value:.{float_precision}g}"
-    elif isinstance(equation, pybamm.Vector):
-        all_same = isinstance(equation.entries, np.ndarray) and all(
-            equation.entries == equation.entries[0, 0]
-        )
-        if all_same:
-            return f"{equation.entries[0, 0]}"
-        if equation not in symbol_to_tensor_name:
-            raise ValueError(f"equation {equation} not in symbol_to_tensor_name")
-        index = "j" if transpose else "i"
-        return f"{symbol_to_tensor_name[equation]}_{index}"
-    elif isinstance(equation, pybamm.Matrix):
-        if equation not in symbol_to_tensor_name:
-            raise ValueError(f"equation {equation} not in symbol_to_tensor_name")
-        return f"{symbol_to_tensor_name[equation]}_ij"
     elif isinstance(equation, pybamm.StateVector):
         if len(equation.y_slices) != 1:
-            raise NotImplementedError("only one state vector slice supported")
+            raise NotImplementedError(
+                "only one state vector slice supported"
+            )  # pragma: no cover
         start = equation.y_slices[0].start
         end = equation.y_slices[0].stop
         index = "j" if transpose else "i"
@@ -655,19 +651,18 @@ def _equation_to_diffeq(
                 start_offset = start - sl[0]
                 end_offset = end - sl[0]
                 return f"{label}_{index}[{start_offset}:{end_offset}]"
-        raise ValueError(f"equation {equation} not in slice_to_label")
+        raise ValueError(
+            f"equation {equation} not in slice_to_label"
+        )  # pragma: no cover
 
     elif isinstance(equation, pybamm.InputParameter):
         return f"{to_variable_name(equation.name)}"
     elif isinstance(equation, pybamm.Time):
         return "t"
-    elif isinstance(equation, pybamm.DomainConcatenation):
-        if equation not in symbol_to_tensor_name:
-            raise ValueError(f"equation {equation} not in symbol_to_tensor_name")
-        index = "j" if transpose else "i"
-        return f"{symbol_to_tensor_name[equation]}_{index}"
     else:
-        raise TypeError(f"{type(equation)} not implemented for symbol {equation}")
+        raise TypeError(
+            f"{type(equation)} not implemented for symbol {equation}"
+        )  # pragma: no cover
 
 
 def equation_to_diffeq(
@@ -678,7 +673,7 @@ def equation_to_diffeq(
     transpose: bool = False,
 ) -> str:
     if not isinstance(equation, pybamm.Symbol):
-        raise TypeError("equation must be a pybamm.Symbol")
+        raise TypeError("equation must be a pybamm.Symbol")  # pragma: no cover
     return _equation_to_diffeq(
         equation,
         slice_to_label,
