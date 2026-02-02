@@ -44,21 +44,21 @@ class TestDiffSLExport:
 
         t0 = time.perf_counter()
         geometry = model.default_geometry
-        pv.process_model(model)
+        model_param = pv.process_model(model, inplace=False)
         pv.process_geometry(geometry)
         spatial_methods = model.default_spatial_methods
         var_pts = model.default_var_pts
         submesh_types = model.default_submesh_types
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
         disc = pybamm.Discretisation(mesh, spatial_methods)
-        disc.process_model(model)
+        model_disc = disc.process_model(model_param, inplace=True)
         logger = logging.getLogger()
         logger.info(
             f"Pybamm simulation creation time: {time.perf_counter() - t0:.5f} seconds"
         )
 
         t0 = time.perf_counter()
-        diffsl_code = pybamm.DiffSLExport(model).to_diffeq(
+        diffsl_code = pybamm.DiffSLExport(model_disc).to_diffeq(
             inputs=inputs, outputs=[output_variable]
         )
         logger.info(f"DiffSL export time: {time.perf_counter() - t0:.5f} seconds")
@@ -83,22 +83,24 @@ class TestDiffSLExport:
         t_interp = np.linspace(t_eval[0], t_eval[1], 100)
 
         solver = pybamm.IDAKLUSolver()
-        soln_pybamm = solver.solve(model, t_eval, t_interp=t_interp, inputs=pv_inputs).y
+        soln_pybamm = solver.solve(
+            model_disc, t_eval, t_interp=t_interp, inputs=pv_inputs
+        ).y
 
         t0 = time.perf_counter()
         voltage_pybamm = solver.solve(
-            model, t_eval, t_interp=t_interp, inputs=pv_inputs
+            model_disc, t_eval, t_interp=t_interp, inputs=pv_inputs
         )[output_variable].data
         logger.info(f"Pybamm solve time: {time.perf_counter() - t0:.5f} seconds")
 
-        n = model.y0.shape[0]
+        n = model_disc.y0.shape[0]
         v = np.ones(n)
         for i in range(soln_pybamm.shape[1]):
             y = soln_pybamm[:, i]
-            pybamm_jac = model.jac_rhs_algebraic_action_eval(
+            pybamm_jac = model_disc.jac_rhs_algebraic_action_eval(
                 0, y, np.array(ds_inputs), v
             )
-            pybamm_dydt = model.rhs_algebraic_eval(0, y, np.array(ds_inputs))
+            pybamm_dydt = model_disc.rhs_algebraic_eval(0, y, np.array(ds_inputs))
             diffsol_dydt = ode.rhs(np.array(ds_inputs), 0, y.flatten())
             diffsol_jac = ode.rhs_jac_mul(np.array(ds_inputs), 0, y.flatten(), v)
             np.testing.assert_allclose(
