@@ -956,6 +956,59 @@ class Maximum(BinaryOperator):
         return sympy.Max(left, right)
 
 
+class Hypot(BinaryOperator):
+    """Returns the hypotenuse: sqrt(left**2 + right**2)."""
+
+    def __init__(
+        self,
+        left: ChildSymbol,
+        right: ChildSymbol,
+    ):
+        super().__init__("hypot", left, right)
+
+    def __str__(self):
+        """See :meth:`pybamm.Symbol.__str__()`."""
+        return f"hypot({self.left!s}, {self.right!s})"
+
+    def _diff(self, variable: pybamm.Symbol):
+        """See :meth:`pybamm.Symbol._diff()`."""
+        left, right = self.orphans
+        h = pybamm.hypot(left, right)
+        return (left / h) * left.diff(variable) + (right / h) * right.diff(variable)
+
+    def _binary_jac(self, left_jac, right_jac):
+        """See :meth:`pybamm.BinaryOperator._binary_jac()`."""
+        left, right = self.orphans
+        h = pybamm.hypot(left, right)
+        return (left / h) * left_jac + (right / h) * right_jac
+
+    def _binary_evaluate(self, left, right):
+        """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
+        return np.hypot(left, right)
+
+    def _binary_new_copy(
+        self,
+        left: ChildSymbol,
+        right: ChildSymbol,
+    ):
+        """See :meth:`pybamm.BinaryOperator._binary_new_copy()`."""
+        return pybamm.hypot(left, right)
+
+    def _sympy_operator(self, left, right):
+        """Override :meth:`pybamm.BinaryOperator._sympy_operator`"""
+        return sympy.sqrt(left**2 + right**2)
+
+
+def hypot(left: ChildSymbol, right: ChildSymbol) -> pybamm.Symbol:
+    """
+    Returns the hypotenuse: sqrt(left**2 + right**2).
+
+    This is equivalent to np.hypot but works with PyBaMM symbols.
+    """
+    left, right = _preprocess_binary(left, right)
+    return pybamm.simplify_if_constant(Hypot(left, right))
+
+
 def _simplify_elementwise_binary_broadcasts(
     left_child: ChildSymbol,
     right_child: ChildSymbol,
@@ -1744,3 +1797,273 @@ def tensor_product(
         A TensorProduct node representing the outer product.
     """
     return TensorProduct(simplify_if_constant(left), simplify_if_constant(right))
+
+
+class RegPower(BinaryOperator):
+    """
+    Regularised power: |x|^a * sign(x) with finite derivative at x=0.
+
+    Approximates |x|^a * sign(x) using:
+        y = x * (x^2 + delta^2)^((a-1)/2)
+
+    When scale is set:
+        y = (x/scale) * ((x/scale)^2 + delta^2)^((a-1)/2) * scale^a
+
+    Behavior:
+    - For |x| >> delta: returns |x|^a * sign(x)
+    - For |x| << delta: returns x * delta^(a-1) (linear)
+    - Smooth transition in between
+
+    This is an anti-symmetric function: RegPower(-x, a) = -RegPower(x, a)
+
+    Parameters
+    ----------
+    left : :class:`pybamm.Symbol`
+        Base expression (x)
+    right : :class:`pybamm.Symbol` or float
+        Exponent expression (a)
+    scale : :class:`pybamm.Symbol` or float, optional
+        Scale factor for the input. Defaults to None (no scaling).
+
+    References
+    ----------
+    .. [1] Modelica.Fluid.Utilities.reg_power
+    """
+
+    def __init__(
+        self,
+        left: ChildSymbol,
+        right: ChildSymbol,
+        scale: ChildSymbol | None = None,
+    ):
+        # Set _scale before super().__init__ because set_id() is called during init
+        self._scale = pybamm.convert_to_symbol(scale) if scale is not None else None
+        super().__init__("reg_power", left, right)
+
+    @property
+    def scale(self) -> pybamm.Symbol | None:
+        """Scale factor for the input."""
+        if self._scale is None:
+            return pybamm.Scalar(1)
+        return self._scale
+
+    @scale.setter
+    def scale(self, value: ChildSymbol | None):
+        if value is None:
+            return
+        self._scale = pybamm.convert_to_symbol(value)
+        self.set_id()
+
+    def __str__(self):
+        """See :meth:`pybamm.Symbol.__str__()`."""
+        return f"reg_power({self.left!s}, {self.right!s}, scale={self.scale!s})"
+
+    def set_id(self):
+        """See :meth:`pybamm.Symbol.set_id()`"""
+        scale_id = self._scale.id if self._scale is not None else None
+        self._id = hash(
+            (
+                self.__class__,
+                self.name,
+                self.children[0].id,
+                self.children[1].id,
+                scale_id,
+                *tuple(self.domain),
+            )
+        )
+
+    def _get_delta(self) -> float:
+        """Get delta from global settings."""
+        return pybamm.settings.tolerances.get("reg_power", 1e-3)
+
+    def _diff(self, variable: pybamm.Symbol):
+        """See :meth:`pybamm.Symbol._diff()`."""
+        # Get base (x) and exponent (a)
+        base, exponent = self.orphans
+        delta = self._get_delta()
+
+        # Compute x (possibly scaled)
+        if self._scale is None:
+            x = base
+            scale_factor = pybamm.Scalar(1)
+        else:
+            x = base / self._scale
+            scale_factor = self._scale**exponent
+
+        x2_d2 = x**2 + delta**2
+
+        # Derivative of reg_power w.r.t. x:
+        # d/dx [x * (x^2 + d^2)^((a-1)/2)] = (x^2 + d^2)^((a-3)/2) * (a*x^2 + d^2)
+        # With scaling: multiply by scale^(a-1) for the chain rule
+        dreg_dx = (x2_d2 ** ((exponent - 3) / 2)) * (exponent * x**2 + delta**2)
+
+        if self._scale is not None:
+            # Chain rule: d/d(base) = d/dx * dx/d(base) = d/dx * (1/scale)
+            # And multiply by scale^a for the output scaling
+            dreg_dx = dreg_dx * (self.scale ** (exponent - 1))
+
+        diff = dreg_dx * base.diff(variable)
+
+        # Handle derivative w.r.t. exponent
+        if any(variable == v for v in exponent.pre_order()):
+            reg_val = x * (x2_d2 ** ((exponent - 1) / 2)) * scale_factor
+            dreg_da = reg_val * pybamm.log(x2_d2) / 2
+            if self._scale is not None:
+                dreg_da = dreg_da + reg_val * pybamm.log(self._scale)
+            diff = diff + dreg_da * exponent.diff(variable)
+
+        return diff
+
+    def _binary_jac(self, left_jac, right_jac):
+        """See :meth:`pybamm.BinaryOperator._binary_jac()`."""
+        base, exponent = self.orphans
+        delta = self._get_delta()
+
+        if self._scale is None:
+            x = base
+        else:
+            x = base / self._scale
+
+        x2_d2 = x**2 + delta**2
+
+        # Derivative w.r.t. base
+        dreg_dx = (x2_d2 ** ((exponent - 3) / 2)) * (exponent * x**2 + delta**2)
+
+        if self._scale is not None:
+            dreg_dx = dreg_dx * (self._scale ** (exponent - 1))
+
+        if exponent.evaluates_to_constant_number():
+            return dreg_dx * left_jac
+        elif base.evaluates_to_constant_number():
+            # Derivative w.r.t. exponent
+            if self._scale is None:
+                scale_factor = pybamm.Scalar(1)
+            else:
+                scale_factor = self._scale**exponent
+            reg_val = x * (x2_d2 ** ((exponent - 1) / 2)) * scale_factor
+            dreg_da = reg_val * pybamm.log(x2_d2) / 2
+            if self._scale is not None:
+                dreg_da = dreg_da + reg_val * pybamm.log(self._scale)
+            return dreg_da * right_jac
+        else:
+            # Both vary - combine contributions
+            if self._scale is None:
+                scale_factor = pybamm.Scalar(1)
+            else:
+                scale_factor = self._scale**exponent
+            reg_val = x * (x2_d2 ** ((exponent - 1) / 2)) * scale_factor
+            dreg_da = reg_val * pybamm.log(x2_d2) / 2
+            if self._scale is not None:
+                dreg_da = dreg_da + reg_val * pybamm.log(self._scale)
+            return dreg_dx * left_jac + dreg_da * right_jac
+
+    def _evaluate_for_shape(self):
+        """See :meth:`pybamm.Symbol.evaluate_for_shape()`."""
+        left = self.children[0].evaluate_for_shape()
+        right = self.children[1].evaluate_for_shape()
+        return self._compute_reg_pow(left, right, for_shape=True)
+
+    def _binary_evaluate(
+        self,
+        left: ChildValue,
+        right: ChildValue,
+    ):
+        """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
+        return self._compute_reg_pow(left, right, for_shape=False)
+
+    def _compute_reg_pow(self, left, right, for_shape=False):
+        """Compute the regularised power."""
+        delta = self._get_delta()
+
+        if self._scale is None:
+            x = left
+            scale_pow_a = 1.0
+        else:
+            if for_shape:
+                scale_val = self._scale.evaluate_for_shape()
+            else:
+                scale_val = self._scale.evaluate()
+            x = left / scale_val
+            scale_pow_a = scale_val**right
+
+        x2_d2 = x**2 + delta**2
+        result = x * (x2_d2 ** ((right - 1) / 2)) * scale_pow_a
+
+        return result
+
+    def _binary_new_copy(self, left: ChildSymbol, right: ChildSymbol):
+        """See :meth:`pybamm.BinaryOperator._binary_new_copy()`."""
+        # Don't try to evaluate, just create a new RegPower
+        return RegPower(left, right, scale=self._scale)
+
+    def to_json(self):
+        """Method to serialise a RegPower object into JSON."""
+        json_dict = {
+            "name": self.name,
+            "id": self.id,
+            "domains": self.domains,
+        }
+        # Note: scale is handled separately via convert_symbol_to_json
+        # Don't include it here as it would not be JSON-serializable
+        return json_dict
+
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        """Use to instantiate when deserialising."""
+        instance = cls.__new__(cls)
+        # Set _scale before calling parent __init__ (which calls set_id)
+        instance._scale = snippet.get("scale")
+
+        super(BinaryOperator, instance).__init__(
+            snippet["name"],
+            children=[snippet["children"][0], snippet["children"][1]],
+            domains=snippet["domains"],
+        )
+        instance.left = instance.children[0]
+        instance.right = instance.children[1]
+
+        return instance
+
+    def create_copy(
+        self,
+        new_children: list[pybamm.Symbol] | None = None,
+        perform_simplifications: bool = True,
+    ):
+        """See :meth:`pybamm.Symbol.new_copy()`."""
+        if new_children and len(new_children) != 2:
+            raise ValueError(
+                f"Symbol of type {type(self)} must have exactly two children."
+            )
+        children = self._children_for_copying(new_children)
+
+        out = RegPower(children[0], children[1], scale=self._scale)
+        out.copy_domains(self)
+
+        return out
+
+
+def reg_power(x, a, scale=None):
+    """
+    Regularised power: |x|^a * sign(x) with finite derivative at x=0.
+
+    Convenience function that creates a :class:`RegPower` node.
+
+    Parameters
+    ----------
+    x : :class:`pybamm.Symbol`
+        Input expression
+    a : float
+        Power exponent (must be > 0)
+    scale : float, optional
+        Scale factor for the input. Defaults to None (no scaling).
+
+    Returns
+    -------
+    :class:`RegPower`
+        Regularised power node
+
+    References
+    ----------
+    .. [1] Modelica.Fluid.Utilities.reg_power
+    """
+    return simplify_if_constant(RegPower(x, a, scale=scale))
