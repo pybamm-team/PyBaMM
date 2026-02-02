@@ -3,6 +3,7 @@
 #
 
 import numpy as np
+import pytest
 
 import pybamm
 
@@ -157,3 +158,52 @@ class TestLithiumIonParameterValues:
         c_e_test = 1000
         values.evaluate(param.D_e(c_e_test, T_test))
         values.evaluate(param.kappa_e(c_e_test, T_test))
+
+
+class TestUAsymptotes:
+    """Tests for the OCP asymptote functions."""
+
+    def test_U_asymptote_approaching_zero_values(self):
+        """Test that U_asymptote_approaching_zero returns expected values."""
+        from pybamm.parameters.lithium_ion_parameters import (
+            U_asymptote_approaching_zero,
+        )
+
+        # Test at sto = 0: should be ~1000 mV (1 V)
+        val_at_zero = U_asymptote_approaching_zero(0.0)
+        assert val_at_zero == pytest.approx(1.0, rel=1e-3)
+
+        # Test at sto = 0.001: should be ~1 mV
+        val_at_001 = U_asymptote_approaching_zero(0.001)
+        assert val_at_001 == pytest.approx(0.001, rel=1e-2)
+
+        # Test at sto = 1: should be essentially 0
+        val_at_one = U_asymptote_approaching_zero(1.0)
+        assert val_at_one < 1e-10
+
+    def test_U_asymptotes_antisymmetry(self):
+        """Test that U_asymptotes is antisymmetric: U(sto) = -U(1-sto)."""
+        from pybamm.parameters.lithium_ion_parameters import U_asymptotes
+
+        test_points = [0.001, 0.01, 0.1, 0.3, 0.5, 0.7, 0.9, 0.99, 0.999]
+
+        for sto in test_points:
+            u_sto = U_asymptotes(sto)
+            u_1_minus_sto = U_asymptotes(1 - sto)
+            # U(sto) + U(1-sto) should equal 0 (antisymmetry)
+            assert u_sto + u_1_minus_sto == pytest.approx(0.0, abs=1e-12)
+
+    def test_U_asymptotes_boundary_values(self):
+        """Test U_asymptotes at boundary values."""
+        from pybamm.parameters.lithium_ion_parameters import U_asymptotes
+
+        # At sto = 0: should be positive (~1 V)
+        assert U_asymptotes(0.0) > 0
+        assert U_asymptotes(0.0) == pytest.approx(1.0, rel=1e-3)
+
+        # At sto = 1: should be negative (~-1 V)
+        assert U_asymptotes(1.0) < 0
+        assert U_asymptotes(1.0) == pytest.approx(-1.0, rel=1e-3)
+
+        # At sto = 0.5: should be 0
+        assert U_asymptotes(0.5) == pytest.approx(0.0, abs=1e-10)
