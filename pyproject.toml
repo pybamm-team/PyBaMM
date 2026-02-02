@@ -101,8 +101,8 @@ dev = [
     "importlib-metadata; python_version < '3.10'",
     # For property based testing
     "hypothesis",
-    # For diffsl tests
-    "pydiffsol",
+    # For diffsl tests (not available on Mac Intel x86_64)
+    "pydiffsol; platform_system != 'Darwin' or platform_machine != 'x86_64'",
 ]
 jax = ["jax>=0.4.36,<0.7.0"]
 # Contains all optional dependencies, except for jax, and dev dependencies
