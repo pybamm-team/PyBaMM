@@ -201,6 +201,15 @@ class ParameterSubstitutor:
                     + "is of the wrong type (should either be scalar-like or callable)"
                 )
 
+            # Apply post_processor if provided (e.g., for regularisation)
+            if symbol.post_processor is not None:
+                # Build input dict mapping input names to processed symbols
+                input_dict = {
+                    symbol.input_names[i]: new_children[i]
+                    for i in range(len(symbol.input_names))
+                }
+                function = symbol.post_processor(function, inputs=input_dict)
+
             # Differentiate if necessary
             if symbol.diff_variable is None:
                 # Use ones_like so that we get the right shapes
@@ -244,7 +253,11 @@ class ParameterSubstitutor:
             or isinstance(symbol, pybamm.BinaryOperator)
         ):
             new_children = [self.process_symbol(child) for child in symbol.children]
-            return symbol.create_copy(new_children)
+            new_symbol = symbol.create_copy(new_children)
+            # RegPower has a scale attribute that also needs processing
+            if isinstance(symbol, pybamm.RegPower):
+                new_symbol.scale = self.process_symbol(symbol.scale)
+            return new_symbol
 
         elif isinstance(symbol, pybamm.VectorField):
             left_symbol = self.process_symbol(symbol.lr_field)
@@ -342,6 +355,10 @@ class ParameterSubstitutor:
 
             # Process function with combined processor to get a symbolic expression
             function = combined_processor.process_symbol(expression)
+
+            # Apply post_processor if provided (e.g., for regularisation)
+            if symbol.post_processor is not None:
+                function = symbol.post_processor(function, inputs=inputs)
 
             # Differentiate if necessary
             if symbol.diff_variable is None:
