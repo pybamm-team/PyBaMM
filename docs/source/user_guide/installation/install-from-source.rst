@@ -123,13 +123,13 @@ tools for development and documentation:
 
 .. code:: bash
 
-	  pip install -e .[all,dev,docs]
+	  pip install -e .[all] --group dev --group docs
 
 If you are using ``zsh`` or ``tcsh``, you would need to use different pattern matching:
 
 .. code:: bash
 
-	  pip install -e '.[all,dev,docs]'
+	  pip install -e '.[all]' --group dev --group docs
 
 Before you start contributing to PyBaMM, please read the `contributing
 guidelines <https://github.com/pybamm-team/PyBaMM/blob/main/CONTRIBUTING.md>`__.
