@@ -14,74 +14,6 @@ class DiffSLExport:
             raise ValueError("float_precision must be a positive integer")
         self.float_precision = float_precision
 
-    def get_all_parameters(self) -> list[str]:
-        params = self.model.parameters
-
-        # filter out length parameters ending in "[m]"
-        params = [p for p in params if not p.name.endswith("[m]")]
-
-        # filter out "Number of *"
-        params = [p for p in params if not p.name.startswith("Number of ")]
-
-        # filter out constants
-        params = [p for p in params if "constant" not in p.name.lower()]
-
-        # do some manual filtering for stuff we don't support yet
-        filter_out = [
-            # results in addition of two sparse vectors with different sparcity patterns
-            "Ambient temperature [K]",
-            # results in addition of two sparse vectors with different sparcity patterns
-            "Positive electrode diffusivity [m2.s-1]",
-            # results in addition of two sparse vectors with different sparcity patterns
-            "Negative electrode diffusivity [m2.s-1]",
-            # need to implement max(v)/min(v), where v in a sparse or dense vector
-            "Maximum concentration in negative electrode [mol.m-3]",
-            # need to implement max(v)/min(v), where v in a sparse or dense vector
-            "Maximum concentration in positive electrode [mol.m-3]",
-        ]
-        params = [p for p in params if p.name not in filter_out]
-
-        return [p.name for p in params]
-
-    def get_all_outputs(self) -> list[str]:
-        all_vars = self.model.variables
-
-        vars = []
-        for var in all_vars.keys():
-            reject = False
-            for _s in all_vars[var].pre_order():
-                # only scalar outputs
-                eval_for_shape = all_vars[var].evaluate_for_shape()
-                if not isinstance(eval_for_shape, numbers.Number):
-                    shape = eval_for_shape.shape
-                    if shape != (1, 1):
-                        reject = True
-
-            if not reject:
-                vars.append(var)
-
-        # filter out some variables that we don't support yet
-        filter_out = [
-            # results in ExplicitTimeIntegral
-            "Discharge capacity [A.h]",
-            # results in ExplicitTimeIntegral
-            "Throughput capacity [A.h]",
-            # need to implement min(v), where v in a sparse or dense vector
-            "Minimum negative particle concentration",
-            # need to implement sign function (map to copysign),
-            # and comparison operators <, >, <=, >=
-            "Resistance [Ohm]",
-        ]
-        vars = [v for v in vars if v not in filter_out]
-
-        # filter out all minimum/maximum outputs,
-        # we need to implement min(v) and max(v), where v in a sparse or dense vector
-        vars = [
-            v for v in vars if "minimum" not in v.lower() and "maximum" not in v.lower()
-        ]
-
-        return vars
-
     @staticmethod
     # check that symbol has a state vector or dot state vector somewhere
     def _has_state_vector(symbol: pybamm.Symbol) -> bool:
@@ -330,6 +262,7 @@ class DiffSLExport:
         model = self.model.new_copy()
         params = self.model.default_parameter_values
         params_names = params.keys()
+        all_vars = model.get_processed_variables_dict()
         for inpt in inputs:
             if not isinstance(inpt, str):
                 raise TypeError("inputs must be a list of str")
@@ -341,9 +274,10 @@ class DiffSLExport:
         for out in outputs:
             if not isinstance(out, str):
                 raise TypeError("outputs must be a list of str")
-            if out not in model.variables:
+            if out not in all_vars:
+                print("all_vars keys:", all_vars.keys())  # DEBUG
                 raise ValueError(f"output {out} not in model")
-            eqn = model.variables[out]
+            eqn = all_vars[out]
         sim = pybamm.Simulation(model, parameter_values=params)
         sim.build()
         model = sim._built_model
@@ -375,7 +309,7 @@ class DiffSLExport:
         for eqn in chain(
             model.rhs.values(),
             model.algebraic.values(),
-            [model.variables[output] for output in outputs],
+            [all_vars[output] for output in outputs],
             termination_events,
         ):
             for symbol in eqn.pre_order():
@@ -452,7 +386,7 @@ class DiffSLExport:
             model.rhs.values(),
             model.algebraic.values(),
             termination_events,
-            [model.variables[output] for output in outputs],
+            [all_vars[output] for output in outputs],
         ):
             for s in eqn.pre_order():
                 if s in symbol_counts:
@@ -487,7 +421,7 @@ class DiffSLExport:
             )
 
         for eqn in chain(
-            [model.variables[output] for output in outputs],
+            [all_vars[output] for output in outputs],
         ):
             tensor_index = self.extract_pre_calculated_tensors(
                 eqn,
@@ -543,7 +477,7 @@ class DiffSLExport:
         lines = ["out_i {"]
         for output in outputs:
             eqn = equation_to_diffeq(
-                model.variables[output],
+                all_vars[output],
                 y_slice_to_label,
                 symbol_to_tensor_name,
                 float_precision=self.float_precision,
@@ -716,7 +650,7 @@ def _equation_to_diffeq(
         index = "j" if transpose else "i"
         return f"{symbol_to_tensor_name[equation]}_{index}"
     else:
-        raise TypeError(f"{type(equation)} not implemented")
+        raise TypeError(f"{type(equation)} not implemented for symbol {equation}")
 
 
 def equation_to_diffeq(
