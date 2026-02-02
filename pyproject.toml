@@ -100,6 +100,8 @@ dev = [
     "importlib-metadata; python_version < '3.10'",
     # For property based testing
     "hypothesis",
+    # For diffsl tests
+    "pydiffsol",
 ]
 jax = ["jax>=0.4.36,<0.7.0"]
 # Contains all optional dependencies, except for jax, and dev dependencies
@@ -227,8 +229,8 @@ filterwarnings = [
 
 # Logging configuration
 log_cli = true
-log_cli_level = "INFO"
-log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+log_cli_level = "WARNING"
+log_format = "%(levelname)s - %(message)s"
 log_date_format = "%Y-%m-%d %H:%M:%S"
 
 [tool.coverage.run]

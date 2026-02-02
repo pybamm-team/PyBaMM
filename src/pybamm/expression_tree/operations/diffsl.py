@@ -8,8 +8,11 @@ import pybamm
 
 
 class DiffSLExport:
-    def __init__(self, model: pybamm.BaseModel):
+    def __init__(self, model: pybamm.BaseModel, float_precision: int = 20):
         self.model = model
+        if not isinstance(float_precision, int) or float_precision <= 0:
+            raise ValueError("float_precision must be a positive integer")
+        self.float_precision = float_precision
 
     def get_all_parameters(self) -> list[str]:
         params = self.model.parameters
@@ -108,7 +111,9 @@ class DiffSLExport:
         return tensor_name
 
     @staticmethod
-    def vector_to_diffeq(symbol: pybamm.Vector, tensor_index: int) -> tuple[str, str]:
+    def vector_to_diffeq(
+        symbol: pybamm.Vector, tensor_index: int, float_precision: int = 20
+    ) -> tuple[str, str]:
         if isinstance(symbol.entries, csr_matrix):
             vector = symbol.entries.toarray().flatten()
         elif isinstance(symbol.entries, np.ndarray):
@@ -125,16 +130,20 @@ class DiffSLExport:
         for i in range(1, vector.size):
             if vector[i] != curr_value:
                 end_index = i
-                lines += [f"  ({start_index}:{end_index}): {curr_value:.20f},"]
+                lines += [
+                    f"  ({start_index}:{end_index}): {curr_value:.{float_precision}g},"
+                ]
                 start_index = i
                 curr_value = vector[i]
         end_index = vector.size
-        lines += [f"  ({start_index}:{end_index}): {curr_value:.20f},"]
+        lines += [f"  ({start_index}:{end_index}): {curr_value:.{float_precision}g},"]
         new_line = "\n"
         return tensor_name, new_line.join(lines) + new_line + "}"
 
     @staticmethod
-    def matrix_to_diffeq(symbol: pybamm.Matrix, tensor_index: int) -> tuple[str, str]:
+    def matrix_to_diffeq(
+        symbol: pybamm.Matrix, tensor_index: int, float_precision: int = 20
+    ) -> tuple[str, str]:
         tensor_name = f"constant{tensor_index}"
         if isinstance(symbol.entries, csr_matrix):
             nrows, ncols = symbol.entries.shape
@@ -159,10 +168,12 @@ class DiffSLExport:
             if is_diagonal and is_constant and symbol.entries.nnz == min(nrows, ncols):
                 min_dim = min(nrows, ncols)
                 lines += [
-                    f"  (0..{min_dim - 1},0..{min_dim - 1}): {symbol.entries.data[0]},"
+                    f"  (0..{min_dim - 1},0..{min_dim - 1}): {symbol.entries.data[0]:.{float_precision}g},"
                 ]
             elif is_row_vector and is_constant and symbol.entries.nnz == ncols:
-                lines += [f"  (0,0:{ncols}): {symbol.entries.data[0]:.20f},"]
+                lines += [
+                    f"  (0,0:{ncols}): {symbol.entries.data[0]:.{float_precision}g},"
+                ]
             else:
                 for rowi in range(nrows):
                     for j in reversed(
@@ -171,7 +182,9 @@ class DiffSLExport:
                         )
                     ):
                         colj = symbol.entries.indices[j]
-                        lines += [f"  ({rowi},{colj}): {symbol.entries.data[j]:.20f},"]
+                        lines += [
+                            f"  ({rowi},{colj}): {symbol.entries.data[j]:.{float_precision}g},"
+                        ]
 
                 if max_colj < ncols - 1 or max_rowi < nrows - 1:
                     # add a zero entry to the end to make sure the matrix is the right size
@@ -189,25 +202,27 @@ class DiffSLExport:
                     if value != curr_value:
                         end_index = coli
                         lines += [
-                            f"  (0, {start_index}:{end_index}): {curr_value:.20f},"
+                            f"  (0, {start_index}:{end_index}): {curr_value:.{float_precision}g},"
                         ]
                         start_index = coli
                         curr_value = value
                 end_index = ncols
-                lines += [f"  (0, {start_index}:{end_index}): {curr_value:.20f},"]
+                lines += [
+                    f"  (0, {start_index}:{end_index}): {curr_value:.{float_precision}g},"
+                ]
             else:
                 for rowi in range(nrows):
                     for colj in range(ncols):
                         lines += [
-                            f"  ({rowi},{colj}): {symbol.entries[rowi, colj]:.20f},"
+                            f"  ({rowi},{colj}): {symbol.entries[rowi, colj]:.{float_precision}g},"
                         ]
         else:
             raise TypeError(f"{type(symbol.entries)} not implemented")
         new_line = "\n"
         return tensor_name, new_line.join(lines) + new_line + "}"
 
-    @staticmethod
     def extract_pre_calculated_tensors(
+        self,
         eqn: pybamm.Symbol,
         symbol_to_tensor_name: dict[pybamm.Symbol, str],
         tensor_index: int,
@@ -240,7 +255,10 @@ class DiffSLExport:
                 tensor_index += 1
                 lines = [f"{tensor_name}_i " + "{"]
                 eqn_str = equation_to_diffeq(
-                    symbol, y_slice_to_label, symbol_to_tensor_name
+                    symbol,
+                    y_slice_to_label,
+                    symbol_to_tensor_name,
+                    float_precision=self.float_precision,
                 )
                 lines += [f"  {eqn_str},"]
                 symbol_to_tensor_name[symbol] = tensor_name
@@ -272,7 +290,10 @@ class DiffSLExport:
                     tensor_index += 1
                     lines = [f"{tensor_name}_i " + "{"]
                     eqn = equation_to_diffeq(
-                        symbol, y_slice_to_label, symbol_to_tensor_name
+                        symbol,
+                        y_slice_to_label,
+                        symbol_to_tensor_name,
+                        float_precision=self.float_precision,
                     )
                     lines += [f"  {eqn},"]
                     symbol_to_tensor_name[symbol] = tensor_name
@@ -290,7 +311,10 @@ class DiffSLExport:
                         symbol.children, symbol._children_slices, strict=False
                     ):
                         eqn = equation_to_diffeq(
-                            child, y_slice_to_label, symbol_to_tensor_name
+                            child,
+                            y_slice_to_label,
+                            symbol_to_tensor_name,
+                            float_precision=self.float_precision,
                         )
                         for child_dom, child_slice in slices.items():
                             for i, _slice in enumerate(child_slice):
@@ -363,7 +387,7 @@ class DiffSLExport:
         tensor_index = 0
         for symbol in vectors:
             tensor_name, tensor_def = DiffSLExport.vector_to_diffeq(
-                symbol, tensor_index
+                symbol, tensor_index, float_precision=self.float_precision
             )
             tensor_index += 1
             symbol_to_tensor_name[symbol] = tensor_name
@@ -371,7 +395,7 @@ class DiffSLExport:
 
         for symbol in matrices:
             tensor_name, tensor_def = DiffSLExport.matrix_to_diffeq(
-                symbol, tensor_index
+                symbol, tensor_index, float_precision=self.float_precision
             )
             tensor_index += 1
             symbol_to_tensor_name[symbol] = tensor_name
@@ -384,7 +408,9 @@ class DiffSLExport:
         y_slice_to_label = {}
         new_line = "\n"
         for i, ic in enumerate(initial_conditions):
-            tensor_name, tensor_def = DiffSLExport.vector_to_diffeq(ic, tensor_index)
+            tensor_name, tensor_def = DiffSLExport.vector_to_diffeq(
+                ic, tensor_index, float_precision=self.float_precision
+            )
             input_lines += [tensor_def]
             tensor_index += 1
             label = state_labels[i]
@@ -410,7 +436,12 @@ class DiffSLExport:
                     f"({start_index}:{start_index + ic.size}): " if ic.size > 1 else ""
                 )
                 zero = pybamm.Scalar(0)
-                eqn = equation_to_diffeq(zero, {}, symbol_to_tensor_name)
+                eqn = equation_to_diffeq(
+                    zero,
+                    {},
+                    symbol_to_tensor_name,
+                    float_precision=self.float_precision,
+                )
                 lines += [f"  {indices}{label} = {eqn},"]
                 yp_slice_to_label[(start_index, start_index + ic.size)] = label
                 start_index += ic.size
@@ -433,7 +464,7 @@ class DiffSLExport:
             model.rhs.values(),
             model.algebraic.values(),
         ):
-            tensor_index = DiffSLExport.extract_pre_calculated_tensors(
+            tensor_index = self.extract_pre_calculated_tensors(
                 eqn,
                 symbol_to_tensor_name,
                 tensor_index,
@@ -445,7 +476,7 @@ class DiffSLExport:
         for eqn in chain(
             termination_events,
         ):
-            tensor_index = DiffSLExport.extract_pre_calculated_tensors(
+            tensor_index = self.extract_pre_calculated_tensors(
                 eqn,
                 symbol_to_tensor_name,
                 tensor_index,
@@ -458,7 +489,7 @@ class DiffSLExport:
         for eqn in chain(
             [model.variables[output] for output in outputs],
         ):
-            tensor_index = DiffSLExport.extract_pre_calculated_tensors(
+            tensor_index = self.extract_pre_calculated_tensors(
                 eqn,
                 symbol_to_tensor_name,
                 tensor_index,
@@ -489,11 +520,21 @@ class DiffSLExport:
         # F
         lines = ["F_i {"]
         for rhs in model.rhs.values():
-            eqn = equation_to_diffeq(rhs, y_slice_to_label, symbol_to_tensor_name)
+            eqn = equation_to_diffeq(
+                rhs,
+                y_slice_to_label,
+                symbol_to_tensor_name,
+                float_precision=self.float_precision,
+            )
             lines += [f"  {eqn},"]
             start_index += rhs.size
         for algebraic in model.algebraic.values():
-            eqn = equation_to_diffeq(algebraic, y_slice_to_label, symbol_to_tensor_name)
+            eqn = equation_to_diffeq(
+                algebraic,
+                y_slice_to_label,
+                symbol_to_tensor_name,
+                float_precision=self.float_precision,
+            )
             lines += [f"  {eqn},"]
             start_index += algebraic.size
         diffeq["F"] = new_line.join(lines) + new_line + "}"
@@ -505,6 +546,7 @@ class DiffSLExport:
                 model.variables[output],
                 y_slice_to_label,
                 symbol_to_tensor_name,
+                float_precision=self.float_precision,
             )
             lines += [f"  {eqn},"]
         diffeq["out"] = new_line.join(lines) + new_line + "}"
@@ -518,6 +560,7 @@ class DiffSLExport:
                         event.expression,
                         y_slice_to_label,
                         symbol_to_tensor_name,
+                        float_precision=self.float_precision,
                     )
                     lines += [f"  {eqn},"]
             diffeq["stop"] = new_line.join(lines) + new_line + "}"
@@ -567,6 +610,7 @@ def _equation_to_diffeq(
     equation: pybamm.Symbol,
     y_slice_to_label: dict[tuple[int], str],
     symbol_to_tensor_name: dict[pybamm.Symbol, str],
+    float_precision: int = 20,
     transpose: bool = False,
 ) -> str:
     if equation in symbol_to_tensor_name:
@@ -577,7 +621,11 @@ def _equation_to_diffeq(
         return f"{symbol_to_tensor_name[equation]}_{index}"
     if isinstance(equation, pybamm.BinaryOperator):
         left = _equation_to_diffeq(
-            equation.left, y_slice_to_label, symbol_to_tensor_name, transpose=transpose
+            equation.left,
+            y_slice_to_label,
+            symbol_to_tensor_name,
+            float_precision=float_precision,
+            transpose=transpose,
         )
 
         if equation.name == "@" and isinstance(equation.left, pybamm.Matrix):
@@ -585,6 +633,7 @@ def _equation_to_diffeq(
                 equation.right,
                 y_slice_to_label,
                 symbol_to_tensor_name,
+                float_precision=float_precision,
                 transpose=not transpose,
             )
             return f"({left} * {right})"
@@ -593,6 +642,7 @@ def _equation_to_diffeq(
                 equation.right,
                 y_slice_to_label,
                 symbol_to_tensor_name,
+                float_precision=float_precision,
                 transpose=transpose,
             )
 
@@ -606,20 +656,24 @@ def _equation_to_diffeq(
             return f"pow({left}, {right})"
         return f"({left} {equation.name} {right})"
     elif isinstance(equation, pybamm.UnaryOperator):
-        return f"{equation.name}({_equation_to_diffeq(equation.child, y_slice_to_label, symbol_to_tensor_name, transpose=transpose)})"
+        return f"{equation.name}({_equation_to_diffeq(equation.child, y_slice_to_label, symbol_to_tensor_name, float_precision=float_precision, transpose=transpose)})"
     elif isinstance(equation, pybamm.Function):
         name = equation.function.__name__
         args = ", ".join(
             [
                 _equation_to_diffeq(
-                    x, y_slice_to_label, symbol_to_tensor_name, transpose=transpose
+                    x,
+                    y_slice_to_label,
+                    symbol_to_tensor_name,
+                    float_precision=float_precision,
+                    transpose=transpose,
                 )
                 for x in equation.children
             ]
         )
         return f"{name}({args})"
     elif isinstance(equation, pybamm.Scalar):
-        return f"{equation.value:.40f}"
+        return f"{equation.value:.{float_precision}g}"
     elif isinstance(equation, pybamm.Vector):
         all_same = isinstance(equation.entries, np.ndarray) and all(
             equation.entries == equation.entries[0, 0]
@@ -669,12 +723,17 @@ def equation_to_diffeq(
     equation: pybamm.Symbol,
     slice_to_label: dict[tuple[int], str],
     symbol_to_tensor_name: dict[pybamm.Symbol, str],
-    transponse: bool = False,
+    float_precision: int = 20,
+    transpose: bool = False,
 ) -> str:
     if not isinstance(equation, pybamm.Symbol):
         raise TypeError("equation must be a pybamm.Symbol")
     return _equation_to_diffeq(
-        equation, slice_to_label, symbol_to_tensor_name, transponse
+        equation,
+        slice_to_label,
+        symbol_to_tensor_name,
+        float_precision=float_precision,
+        transpose=transpose,
     )
 
 
