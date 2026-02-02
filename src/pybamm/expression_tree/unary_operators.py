@@ -1656,3 +1656,5 @@ def smooth_absolute_value(symbol, k):
     exp = pybamm.exp
     kx = k * symbol
     return x * (exp(kx) - exp(-kx)) / (exp(kx) + exp(-kx))
+
+

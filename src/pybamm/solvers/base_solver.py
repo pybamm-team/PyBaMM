@@ -1614,7 +1614,7 @@ class BaseSolver:
         inputs_in_model = {}
         missing_required_inputs = False
 
-        required_input_parameters = [ip.name for ip in model.required_input_parameters]
+        required_input_parameters = {ip.name for ip in model.required_input_parameters}
 
         for name in required_input_parameters:
             value = inputs.get(name)
@@ -1622,18 +1622,7 @@ class BaseSolver:
             if name and value is not None:
                 inputs_in_model[name] = value
 
-        input_parameters = [ip.name for ip in model.input_parameters]
-
-        non_existent_parameters = set(inputs) - set(input_parameters)
-        if non_existent_parameters:
-            non_existent_str = ", ".join(
-                f"'{n}'" for n in sorted(non_existent_parameters)
-            )
-            warnings.warn(
-                f"The following inputs are not present in the model: {non_existent_str}",
-                pybamm.SolverWarning,
-                stacklevel=2,
-            )
+        input_parameters = {ip.name for ip in model.input_parameters}
 
         if missing_required_inputs:
             ip = sorted(input_parameters)

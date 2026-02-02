@@ -597,7 +597,10 @@ class TestSimulationExperiment:
             * 10,
         )
         model = pybamm.lithium_ion.SPM()
-        sim = pybamm.Simulation(model, experiment=experiment)
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        sim = pybamm.Simulation(
+            model, experiment=experiment, parameter_values=parameter_values
+        )
         sol = sim.solve(save_at_cycles=2)
         # Solution saves "None" for the cycles that are not saved
         for cycle_num in [2, 4, 6, 8]:
