@@ -2,6 +2,8 @@
 # Tests for the Function classes
 #
 
+import itertools
+
 import numpy as np
 import pytest
 import sympy
@@ -157,6 +159,85 @@ class TestSpecificFunctions:
             "children": [a],
         }
         assert pybamm.Arcsinh._from_json(input_json) == fun
+
+    def test_arcsinh2(self, mocker):
+        """Test arcsinh2(a, b) = arcsinh(a/b) with regularisation.
+
+        The key feature is that arcsinh2 returns FINITE values for ALL inputs,
+        including a=0, b=0, and a=b=0.
+        """
+        a = pybamm.InputParameter("a")
+        b = pybamm.InputParameter("b")
+        fun = pybamm.arcsinh2(a, b)
+        da_fun = fun.diff(a)
+        db_fun = fun.diff(b)
+        assert isinstance(fun, pybamm.Arcsinh2)
+
+        fun_true = pybamm.arcsinh(a / b)
+        da_fun_true = fun_true.diff(a)
+        db_fun_true = fun_true.diff(b)
+
+        # Make sure arcsinh2 returns finite values and matches arcsinh(a/b),
+        # except when b is zero
+        test_values = 10.0 ** np.linspace(-10, 3, 10)
+        test_values = np.concatenate([-test_values, [0], test_values])
+        test_values.sort()
+
+        for a_val, b_val in itertools.product(test_values, test_values):
+            result = fun.evaluate(inputs={"a": a_val, "b": b_val})
+            assert np.isfinite(result), (
+                f"arcsinh2({a_val}, {b_val}) returned non-finite: {result}"
+            )
+
+            # Arcsinh2 differentiation
+            da_2 = da_fun.evaluate(inputs={"a": a_val, "b": b_val})
+            db_2 = db_fun.evaluate(inputs={"a": a_val, "b": b_val})
+
+            assert np.isfinite(da_2)
+            assert np.isfinite(db_2)
+
+            # Compare witb the true arcsinh function for non-zero b
+            if b_val == 0:
+                continue
+
+            expected = np.arcsinh(a_val / b_val)
+            assert result == pytest.approx(expected, rel=1e-9)
+
+            # Arcsinh analytical derivatives
+            da_true = da_fun_true.evaluate(inputs={"a": a_val, "b": b_val})
+            db_true = db_fun_true.evaluate(inputs={"a": a_val, "b": b_val})
+
+            assert da_2 == pytest.approx(da_true, rel=1e-9)
+            assert db_2 == pytest.approx(db_true, rel=1e-9)
+
+        # Test serialisation and epsilon
+        eps = 1e-10
+        fun_custom_eps = pybamm.arcsinh2(a, b, eps=eps)
+        assert fun_custom_eps.eps == eps
+
+        # Test new_copy preserves epsilon
+        new_copy = fun_custom_eps._function_new_copy([a, b])
+        assert new_copy.eps == eps
+
+        # Test sympy conversion
+        sym_a = sympy.Symbol("a")
+        sym_b = sympy.Symbol("b")
+        sympy_expr = fun._sympy_operator(sym_a, sym_b)
+        assert sympy_expr is not None
+
+        # Test to_json
+        json_repr = fun.to_json()
+        assert json_repr["function"] == "arcsinh2"
+        assert "eps" in json_repr
+
+        input_json = {
+            "name": "arcsinh2",
+            "id": mocker.ANY,
+            "function": "arcsinh2",
+            "children": [a, b],
+            "eps": eps,
+        }
+        assert pybamm.Arcsinh2._from_json(input_json) == fun
 
     def test_arctan(self, mocker):
         a = pybamm.InputParameter("a")

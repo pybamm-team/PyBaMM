@@ -329,6 +329,150 @@ def arcsinh(child: pybamm.Symbol):
     return simplified_function(Arcsinh, child)
 
 
+class Arcsinh2(Function):
+    """
+    Two-argument arcsinh function for arcsinh(a/b) that avoids division by zero
+    by adding a small regularisation term to the denominator.
+
+    Computes sign(a) * sign(b) * (log(|a| + hypot(|a|, b_eff)) - log(b_eff))
+    where b_eff = hypot(|b|, eps).
+
+    Parameters
+    ----------
+    a : pybamm.Symbol or float
+        The numerator argument
+    b : pybamm.Symbol or float
+        The denominator argument
+    eps : float, optional
+        Small regularisation parameter. Defaults to
+        pybamm.settings.tolerances["reg_arcsinh2"]
+
+    Returns
+    -------
+    pybamm.Symbol
+        The regularised arcsinh(a/b) value
+    """
+
+    def __init__(
+        self,
+        a: pybamm.Symbol,
+        b: pybamm.Symbol,
+        eps: float | None = None,
+    ):
+        if eps is None:
+            eps = pybamm.settings.tolerances["reg_arcsinh2"]
+        self.eps = eps
+        super().__init__(self._arcsinh2_evaluate, a, b, name="arcsinh2")
+
+    @staticmethod
+    def _arcsinh2_evaluate(a, b, eps):
+        """Evaluate arcsinh2 using numpy."""
+        _sign = np.sign(a) * np.sign(b)
+        a_abs = np.abs(a)
+        b_abs = np.abs(b)
+        b_eff = np.hypot(b_abs, eps)
+        return _sign * (np.log(a_abs + np.hypot(a_abs, b_eff)) - np.log(b_eff))
+
+    def _function_evaluate(self, evaluated_children):
+        """See :meth:`pybamm.Function._function_evaluate()`."""
+        return self._arcsinh2_evaluate(
+            evaluated_children[0], evaluated_children[1], self.eps
+        )
+
+    def _function_diff(self, children, idx):
+        """
+        Derivative with respect to child number 'idx'.
+
+        For f(a, b) = sign(a)*sign(b) * (log(|a| + hypot(|a|, b_eff)) - log(b_eff))
+        where b_eff = hypot(|b|, eps):
+
+        df/da = sign(b) / hypot(|a|, b_eff)
+        df/db = -sign(a) * |a| / (|b| * hypot(|a|, b_eff))
+        """
+        a, b = children
+        a_abs = abs(a)
+        b_abs = abs(b)
+        b_eff = pybamm.hypot(b_abs, self.eps)
+        h = pybamm.hypot(a_abs, b_eff)
+
+        if idx == 0:
+            # df/da = sign(b) / hypot(|a|, b_eff)
+            return pybamm.sign(b) / h
+        elif idx == 1:
+            # df/db = -sign(a) * |a| / (|b| * hypot(|a|, b_eff))
+            # Use b_eff instead of |b| to avoid division by zero
+            return -pybamm.sign(a) * a_abs / (b_eff * h)
+        else:
+            raise IndexError("Arcsinh2 only has two children (a, b)")
+
+    def _function_new_copy(self, children):
+        """See :meth:`pybamm.Function._function_new_copy()`"""
+        return Arcsinh2(*children, eps=self.eps)
+
+    def _sympy_operator(self, a, b):
+        """Convert to SymPy expression."""
+        a_abs = sympy.Abs(a)
+        b_abs = sympy.Abs(b)
+        b_eff = sympy.sqrt(b_abs**2 + self.eps**2)
+        h = sympy.sqrt(a_abs**2 + b_eff**2)
+        return sympy.sign(a) * sympy.sign(b) * (sympy.log(a_abs + h) - sympy.log(b_eff))
+
+    def to_json(self):
+        """Method to serialise a Arcsinh2 object into JSON."""
+        return {
+            "name": self.name,
+            "id": self.id,
+            "function": "arcsinh2",
+            "eps": self.eps,
+        }
+
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        """Reconstruct a Arcsinh2 instance from JSON."""
+        instance = cls.__new__(cls)
+        instance.eps = snippet.get("eps", pybamm.settings.tolerances["reg_arcsinh2"])
+        # The parent Function.__init__ will be called with children from snippet
+        super(Arcsinh2, instance).__init__(
+            instance._arcsinh2_evaluate,
+            *snippet["children"],
+            name="arcsinh2",
+        )
+        return instance
+
+
+def arcsinh2(
+    a: pybamm.Symbol | float,
+    b: pybamm.Symbol | float,
+    eps: float | None = None,
+) -> pybamm.Symbol:
+    """
+    Two-argument arcsinh function for arcsinh(a/b) that avoids division by zero
+    by adding a small regularisation term to the denominator.
+
+    Computes sign(a) * sign(b) * (log(|a| + hypot(|a|, b_eff)) - log(b_eff))
+    where b_eff = hypot(|b|, eps).
+
+    Parameters
+    ----------
+    a : pybamm.Symbol or float
+        The numerator argument
+    b : pybamm.Symbol or float
+        The denominator argument
+    eps : float, optional
+        Small regularisation parameter. Defaults to
+        pybamm.settings.tolerances["reg_arcsinh2"]
+
+    Returns
+    -------
+    pybamm.Symbol
+        The regularised arcsinh(a/b) value
+    """
+    # Convert scalars to pybamm types
+    a = pybamm.convert_to_symbol(a)
+    b = pybamm.convert_to_symbol(b)
+    return Arcsinh2(a, b, eps=eps)
+
+
 class Arctan(SpecificFunction):
     """Arctan function."""
 
