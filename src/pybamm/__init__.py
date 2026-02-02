@@ -60,6 +60,7 @@ from .expression_tree.operations.jacobian import Jacobian
 from .expression_tree.operations.convert_to_casadi import CasadiConverter
 from .expression_tree.operations.unpack_symbols import SymbolUnpacker
 from .expression_tree.operations.serialise import Serialise,ExpressionFunctionParameter
+from .expression_tree.operations.regularise import RegulariseSqrtAndPower
 
 # Model classes
 from .models.base_model import BaseModel, ModelSolutionObservability
