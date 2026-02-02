@@ -1827,7 +1827,7 @@ class RegPower(BinaryOperator):
 
     References
     ----------
-    .. [1] Modelica.Fluid.Utilities.reg_power
+    .. [1] Modelica.Fluid.Utilities.regPow
     """
 
     def __init__(
@@ -2064,6 +2064,6 @@ def reg_power(x, a, scale=None):
 
     References
     ----------
-    .. [1] Modelica.Fluid.Utilities.reg_power
+    .. [1] Modelica.Fluid.Utilities.regPow
     """
     return simplify_if_constant(RegPower(x, a, scale=scale))
