@@ -734,7 +734,7 @@ class ParticleLithiumIonParameters(BaseParameters):
         # Add a term to the OCPs to ensure they approach a large positive value
         # as sto -> 0 and a large negative value as sto -> 1. This will not affect
         # the OCP for most values of sto.
-        # see #1435 for discussion on OCP asymptotes.
+        # see #1435 and #5371 for discussion on OCP asymptotes.
         out = u_ref + U_asymptotes(sto)
 
         if self.domain == "negative":
