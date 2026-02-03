@@ -334,8 +334,7 @@ class Arcsinh2(Function):
     Two-argument arcsinh function for arcsinh(a/b) that avoids division by zero
     by adding a small regularisation term to the denominator.
 
-    Computes sign(a) * sign(b) * (log(|a| + hypot(|a|, b_eff)) - log(b_eff))
-    where b_eff = hypot(|b|, eps).
+    Computes arcsinh(a / b_eff) where b_eff = sign(b) * hypot(b, eps).
 
     Parameters
     ----------
@@ -372,7 +371,7 @@ class Arcsinh2(Function):
         Uses arcsinh(a / b_eff) where b_eff = sign(b) * hypot(b, eps).
         This formula has the correct derivative 1/b_eff at a=0.
         """
-        # sign(b) but treat b=0 as positive
+        # sign(b) but treat sign(0) as non-zero
         sign_b = np.where(b >= 0, 1.0, -1.0)
         b_eff = sign_b * np.hypot(b, eps)
         return np.arcsinh(a / b_eff)
@@ -387,25 +386,26 @@ class Arcsinh2(Function):
         """
         Derivative with respect to child number 'idx'.
 
-        For f(a, b) = sign(a)*sign(b) * (log(|a| + hypot(|a|, b_eff)) - log(b_eff))
-        where b_eff = hypot(|b|, eps):
+        For f(a, b) = arcsinh(a / b_eff) where b_eff = sign(b) * hypot(b, eps):
 
-        df/da = sign(b) / hypot(|a|, b_eff)
-        df/db = -sign(a) * |a| / (|b| * hypot(|a|, b_eff))
+        df/da = sign(b) / hypot(a, hypot(b, eps))
+        df/db = -a * |b| / (hypot(a, hypot(b, eps)) * hypot(b, eps)^2)
+
+        Note: sign(b) = 1 when b >= 0.
         """
         a, b = children
-        a_abs = abs(a)
-        b_abs = abs(b)
-        b_eff = pybamm.hypot(b_abs, self.eps)
-        h = pybamm.hypot(a_abs, b_eff)
+        b_eff = pybamm.hypot(b, self.eps)  # |b_eff| = hypot(b, eps), always positive
+        h = pybamm.hypot(a, b_eff)
+
+        # sign(b) but treat sign(0) as non-zero
+        sign_b = 2 * (b >= 0) - 1
 
         if idx == 0:
-            # df/da = sign(b) / hypot(|a|, b_eff)
-            return pybamm.sign(b) / h
+            # df/da = sign(b) / hypot(a, |b_eff|)
+            return sign_b / h
         elif idx == 1:
-            # df/db = -sign(a) * |a| / (|b| * hypot(|a|, b_eff))
-            # Use b_eff instead of |b| to avoid division by zero
-            return -pybamm.sign(a) * a_abs / (b_eff * h)
+            # df/db = -a * |b| / (h * |b_eff|^2)
+            return -a * abs(b) / (h * b_eff**2)
         else:
             raise IndexError("Arcsinh2 only has two children (a, b)")
 
@@ -415,11 +415,10 @@ class Arcsinh2(Function):
 
     def _sympy_operator(self, a, b):
         """Convert to SymPy expression."""
-        a_abs = sympy.Abs(a)
-        b_abs = sympy.Abs(b)
-        b_eff = sympy.sqrt(b_abs**2 + self.eps**2)
-        h = sympy.sqrt(a_abs**2 + b_eff**2)
-        return sympy.sign(a) * sympy.sign(b) * (sympy.log(a_abs + h) - sympy.log(b_eff))
+        # sign(b) but treat sign(0) as non-zero
+        sign_b = sympy.Piecewise((1, b >= 0), (-1, True))
+        b_eff = sign_b * sympy.sqrt(b**2 + self.eps**2)
+        return sympy.asinh(a / b_eff)
 
     def to_json(self):
         """Method to serialise a Arcsinh2 object into JSON."""
