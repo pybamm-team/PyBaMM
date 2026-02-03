@@ -225,6 +225,15 @@ class TestSpecificFunctions:
         sympy_expr = fun._sympy_operator(sym_a, sym_b)
         assert sympy_expr is not None
 
+        # Test derivative at a=0 is non-zero (critical for Newton solver convergence)
+        # d/da[arcsinh(a/b)] at a=0 should be 1/b, not 0
+        for b_val in [1.0, 0.1, 0.01]:
+            da_at_zero = da_fun.evaluate(inputs={"a": 0.0, "b": b_val})
+            expected_da = 1.0 / b_val  # d/da[arcsinh(a/b)] = 1/b at a=0
+            assert da_at_zero == pytest.approx(expected_da, rel=1e-6), (
+                f"d(arcsinh2)/da at a=0, b={b_val} should be {expected_da}, got {da_at_zero}"
+            )
+
         # Test to_json
         json_repr = fun.to_json()
         assert json_repr["function"] == "arcsinh2"

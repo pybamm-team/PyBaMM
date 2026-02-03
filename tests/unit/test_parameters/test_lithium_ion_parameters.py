@@ -207,3 +207,19 @@ class TestUAsymptotes:
 
         # At sto = 0.5: should be 0
         assert U_asymptotes(0.5) == pytest.approx(0.0, abs=1e-10)
+
+    def test_U_asymptote_numerical_stability(self):
+        """Test that U_asymptote_approaching_zero doesn't overflow for extreme values."""
+        from pybamm.parameters.lithium_ion_parameters import (
+            U_asymptote_approaching_zero,
+        )
+
+        # For very negative stoichiometries, should return finite large values
+        # This tests the logaddexp fix: np.log(1 + exp(7000)) would overflow
+        val_neg = U_asymptote_approaching_zero(-1.0)
+        assert np.isfinite(val_neg)
+        assert val_neg > 0  # Should be a large positive barrier
+
+        val_very_neg = U_asymptote_approaching_zero(-10.0)
+        assert np.isfinite(val_very_neg)
+        assert val_very_neg > val_neg  # More negative sto = larger barrier

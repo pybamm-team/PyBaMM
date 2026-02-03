@@ -949,12 +949,23 @@ def U_asymptote_approaching_zero(sto):
     float
         The OCP asymptote.
     """
-    # return 1e-6/sto
     a = 205.0568621937484
     b = 6910.192179565431
     c = -7.7e-4
 
-    return a * np.log(1 + np.exp(-b * (sto - c)))
+    # Clamp sto to avoid exp overflow (float64 max is ~exp(709))
+    max_safe_exp = 700
+    sto_limit = c - max_safe_exp / b
+
+    # For sto >= sto_limit: use log(1 + exp(...))
+    # For sto < sto_limit: continue linearly with slope -b -- this is an exact floating
+    # point match for large sto values.
+    out = (
+        np.log(1 + np.exp(-b * (np.maximum(sto_limit, sto) - c)))
+        + -b * (np.minimum(0, sto - sto_limit))
+    )
+
+    return a * out
 
 
 def U_asymptotes(sto):

@@ -366,12 +366,16 @@ class Arcsinh2(Function):
 
     @staticmethod
     def _arcsinh2_evaluate(a, b, eps):
-        """Evaluate arcsinh2 using numpy."""
-        _sign = np.sign(a) * np.sign(b)
-        a_abs = np.abs(a)
-        b_abs = np.abs(b)
-        b_eff = np.hypot(b_abs, eps)
-        return _sign * (np.log(a_abs + np.hypot(a_abs, b_eff)) - np.log(b_eff))
+        """Evaluate arcsinh2 using numpy.
+
+        Computes arcsinh(a/b) with regularization to avoid division by zero.
+        Uses arcsinh(a / b_eff) where b_eff = sign(b) * hypot(b, eps).
+        This formula has the correct derivative 1/b_eff at a=0.
+        """
+        # sign(b) but treat b=0 as positive
+        sign_b = np.where(b >= 0, 1.0, -1.0)
+        b_eff = sign_b * np.hypot(b, eps)
+        return np.arcsinh(a / b_eff)
 
     def _function_evaluate(self, evaluated_children):
         """See :meth:`pybamm.Function._function_evaluate()`."""

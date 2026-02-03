@@ -162,13 +162,10 @@ class CasadiConverter:
             elif isinstance(symbol, pybamm.Arcsinh2):
                 a, b = converted_children
                 eps = symbol.eps
-                _sign = casadi.sign(a) * casadi.sign(b)
-                a_abs = casadi.fabs(a)
-                b_abs = casadi.fabs(b)
-                b_eff = casadi.hypot(b_abs, eps)
-                return _sign * (
-                    casadi.log(a_abs + casadi.hypot(a_abs, b_eff)) - casadi.log(b_eff)
-                )
+                # sign(b) but treat b=0 as positive
+                sign_b = casadi.if_else(b >= 0, 1.0, -1.0)
+                b_eff = sign_b * casadi.hypot(b, eps)
+                return casadi.arcsinh(a / b_eff)
             elif isinstance(symbol, pybamm.Interpolant):
                 if symbol.interpolator == "linear":
                     solver = "linear"
