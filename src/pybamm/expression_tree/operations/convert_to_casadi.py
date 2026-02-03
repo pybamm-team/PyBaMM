@@ -102,8 +102,8 @@ class CasadiConverter:
                     scale_val = self.convert(symbol._scale, t, y, y_dot, inputs)
                     x = x / scale_val
                     scale_pow_a = scale_val**converted_right
-                hypot_x_d = casadi.hypot(x, delta)
-                return x * (hypot_x_d ** (converted_right - 1)) * scale_pow_a
+                x2_d2 = x**2 + delta**2
+                return x * (x2_d2 ** ((converted_right - 1) / 2)) * scale_pow_a
             # Optimize repeated-row matrix multiplications: M @ x -> ones * (row @ x)
             if isinstance(symbol, pybamm.MatrixMultiplication):
                 result = try_repeated_row_matmul(left, converted_right)
