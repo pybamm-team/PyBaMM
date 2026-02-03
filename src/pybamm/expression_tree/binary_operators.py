@@ -1883,12 +1883,9 @@ class RegPower(BinaryOperator):
         delta = self._get_delta()
 
         # Compute x (possibly scaled)
-        if self._scale is None:
-            x = base
-            scale_factor = pybamm.Scalar(1)
-        else:
-            x = base / self._scale
-            scale_factor = self._scale**exponent
+        scale = self.scale
+        x = base / scale
+        scale_factor = scale**exponent
 
         x2_d2 = x**2 + delta**2
 
@@ -1897,10 +1894,9 @@ class RegPower(BinaryOperator):
         # With scaling: multiply by scale^(a-1) for the chain rule
         dreg_dx = (x2_d2 ** ((exponent - 3) / 2)) * (exponent * x**2 + delta**2)
 
-        if self._scale is not None:
-            # Chain rule: d/d(base) = d/dx * dx/d(base) = d/dx * (1/scale)
-            # And multiply by scale^a for the output scaling
-            dreg_dx = dreg_dx * (self.scale ** (exponent - 1))
+        # Chain rule: d/d(base) = d/dx * dx/d(base) = d/dx * (1/scale)
+        # And multiply by scale^a for the output scaling
+        dreg_dx = dreg_dx * (scale ** (exponent - 1))
 
         diff = dreg_dx * base.diff(variable)
 
@@ -1908,8 +1904,7 @@ class RegPower(BinaryOperator):
         if any(variable == v for v in exponent.pre_order()):
             reg_val = x * (x2_d2 ** ((exponent - 1) / 2)) * scale_factor
             dreg_da = reg_val * pybamm.log(x2_d2) / 2
-            if self._scale is not None:
-                dreg_da = dreg_da + reg_val * pybamm.log(self._scale)
+            dreg_da = dreg_da + reg_val * pybamm.log(scale)
             diff = diff + dreg_da * exponent.diff(variable)
 
         return diff
@@ -1918,50 +1913,49 @@ class RegPower(BinaryOperator):
         """See :meth:`pybamm.BinaryOperator._binary_jac()`."""
         base, exponent = self.orphans
         delta = self._get_delta()
+        scale = self.scale
 
-        if self._scale is None:
-            x = base
-        else:
-            x = base / self._scale
+        x = base / scale
 
         x2_d2 = x**2 + delta**2
 
         # Derivative w.r.t. base
         dreg_dx = (x2_d2 ** ((exponent - 3) / 2)) * (exponent * x**2 + delta**2)
 
-        if self._scale is not None:
-            dreg_dx = dreg_dx * (self._scale ** (exponent - 1))
+        dreg_dx = dreg_dx * (scale ** (exponent - 1))
 
         if exponent.evaluates_to_constant_number():
             return dreg_dx * left_jac
         elif base.evaluates_to_constant_number():
             # Derivative w.r.t. exponent
-            if self._scale is None:
-                scale_factor = pybamm.Scalar(1)
-            else:
-                scale_factor = self._scale**exponent
+            scale_factor = scale**exponent
             reg_val = x * (x2_d2 ** ((exponent - 1) / 2)) * scale_factor
             dreg_da = reg_val * pybamm.log(x2_d2) / 2
-            if self._scale is not None:
-                dreg_da = dreg_da + reg_val * pybamm.log(self._scale)
+            dreg_da = dreg_da + reg_val * pybamm.log(scale)
             return dreg_da * right_jac
         else:
             # Both vary - combine contributions
-            if self._scale is None:
-                scale_factor = pybamm.Scalar(1)
-            else:
-                scale_factor = self._scale**exponent
+            scale_factor = scale**exponent
             reg_val = x * (x2_d2 ** ((exponent - 1) / 2)) * scale_factor
             dreg_da = reg_val * pybamm.log(x2_d2) / 2
-            if self._scale is not None:
-                dreg_da = dreg_da + reg_val * pybamm.log(self._scale)
+            dreg_da = dreg_da + reg_val * pybamm.log(scale)
             return dreg_dx * left_jac + dreg_da * right_jac
 
-    def _evaluate_for_shape(self):
-        """See :meth:`pybamm.Symbol.evaluate_for_shape()`."""
-        left = self.children[0].evaluate_for_shape()
-        right = self.children[1].evaluate_for_shape()
-        return self._compute_reg_pow(left, right, for_shape=True)
+    def evaluate(
+        self,
+        t: float | None = None,
+        y: npt.NDArray[np.float64] | None = None,
+        y_dot: npt.NDArray[np.float64] | None = None,
+        inputs: dict | str | None = None,
+    ):
+        """See :meth:`pybamm.Symbol.evaluate()`.
+
+        Override to handle non-constant scale properly.
+        """
+        left = self.left.evaluate(t, y, y_dot, inputs)
+        right = self.right.evaluate(t, y, y_dot, inputs)
+        scale_val = self.scale.evaluate(t, y, y_dot, inputs)
+        return self._compute_reg_pow_with_scale(left, right, scale_val)
 
     def _binary_evaluate(
         self,
@@ -1969,27 +1963,27 @@ class RegPower(BinaryOperator):
         right: ChildValue,
     ):
         """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
-        return self._compute_reg_pow(left, right, for_shape=False)
+        # Only used when scale is constant (otherwise evaluate() is called directly)
+        scale_val = self.scale.evaluate()
+        return self._compute_reg_pow_with_scale(left, right, scale_val)
 
-    def _compute_reg_pow(self, left, right, for_shape=False):
-        """Compute the regularised power."""
+    def _compute_reg_pow_with_scale(self, left, right, scale_val):
+        """Compute the regularised power with pre-evaluated scale."""
         delta = self._get_delta()
-
-        if self._scale is None:
-            x = left
-            scale_pow_a = 1.0
-        else:
-            if for_shape:
-                scale_val = self._scale.evaluate_for_shape()
-            else:
-                scale_val = self._scale.evaluate()
-            x = left / scale_val
-            scale_pow_a = scale_val**right
+        x = left / scale_val
+        scale_pow_a = scale_val**right
 
         x2_d2 = x**2 + delta**2
         result = x * (x2_d2 ** ((right - 1) / 2)) * scale_pow_a
 
         return result
+
+    def _evaluate_for_shape(self):
+        """See :meth:`pybamm.Symbol.evaluate_for_shape()`."""
+        left = self.children[0].evaluate_for_shape()
+        right = self.children[1].evaluate_for_shape()
+        scale_val = self.scale.evaluate_for_shape()
+        return self._compute_reg_pow_with_scale(left, right, scale_val)
 
     def _binary_new_copy(self, left: ChildSymbol, right: ChildSymbol):
         """See :meth:`pybamm.BinaryOperator._binary_new_copy()`."""
@@ -2012,7 +2006,7 @@ class RegPower(BinaryOperator):
         """Use to instantiate when deserialising."""
         instance = cls.__new__(cls)
         # Set _scale before calling parent __init__ (which calls set_id)
-        instance._scale = snippet.get("scale")
+        instance._scale = snippet.get("scale", None)
 
         super(BinaryOperator, instance).__init__(
             snippet["name"],

@@ -830,8 +830,8 @@ class ParticleLithiumIonParameters(BaseParameters):
         domain = self.domain
         Electrode = domain.capitalize()
 
-        # tol = pybamm.settings.tolerances["j0__c_e"] * 0
-        # c_e = pybamm.maximum(c_e, tol)
+        tol = pybamm.settings.tolerances["j0__c_e"]
+        c_e = pybamm.maximum(c_e, tol)
         c_e_ref = self.main_param.c_e_init
         xj = self.x_j(U, T, index)
         # xj = pybamm.maximum(pybamm.minimum(xj, (1 - tol)), tol)

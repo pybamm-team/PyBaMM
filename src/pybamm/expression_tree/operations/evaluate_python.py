@@ -285,9 +285,12 @@ def find_symbols(
                 scale_val = symbol._scale.evaluate()
                 symbol_str = f"(({base_var}) / {scale_val}) * ((({base_var}) / {scale_val})**2 + {delta}**2) ** (({exp_var} - 1) / 2) * ({scale_val}**{exp_var})"
             else:
-                # Non-constant scale: store the RegPower as a constant and call evaluate
-                constant_symbols[symbol.id] = symbol
-                symbol_str = f"constants[{len(constant_symbols) - 1}]._binary_evaluate({base_var}, {exp_var})"
+                # Non-constant scale: recursively process scale and inline
+                find_symbols(
+                    symbol._scale, constant_symbols, variable_symbols, output_jax
+                )
+                scale_var = id_to_python_variable(symbol._scale.id)
+                symbol_str = f"(({base_var}) / {scale_var}) * ((({base_var}) / {scale_var})**2 + {delta}**2) ** (({exp_var} - 1) / 2) * ({scale_var}**{exp_var})"
         else:
             symbol_str = children_vars[0] + " " + symbol.name + " " + children_vars[1]
 

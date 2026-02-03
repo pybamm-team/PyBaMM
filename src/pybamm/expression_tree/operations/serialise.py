@@ -1927,7 +1927,7 @@ def convert_symbol_to_json(symbol):
             "type": "RegPower",
             "domains": symbol.domains,
             "children": [convert_symbol_to_json(c) for c in symbol.children],
-            "scale": convert_symbol_to_json(symbol._scale)
+            "scale": convert_symbol_to_json(symbol.scale)
             if symbol._scale is not None
             else None,
         }
