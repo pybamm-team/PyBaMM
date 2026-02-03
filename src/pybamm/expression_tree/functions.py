@@ -335,6 +335,7 @@ class Arcsinh2(Function):
     by adding a small regularisation term to the denominator.
 
     Computes arcsinh(a / b_eff) where b_eff = sign(b) * hypot(b, eps).
+    Note: the sign(b) function treats sign(0) as 1 for numerical stability.
 
     Parameters
     ----------
