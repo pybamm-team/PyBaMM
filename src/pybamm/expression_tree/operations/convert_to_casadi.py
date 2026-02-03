@@ -93,17 +93,17 @@ class CasadiConverter:
             if isinstance(symbol, pybamm.KroneckerProduct):
                 return casadi.kron(converted_left, converted_right)
             if isinstance(symbol, pybamm.RegPower):
-                # Regularised power: y = x * (x^2 + delta^2)^((a-1)/2) * scale^a
+                # Regularised power: y = x * hypot(x, delta)^(a-1) * scale^a
                 delta = symbol._get_delta()
                 x = converted_left
-                if symbol.scale is None:
+                if symbol._scale is None:
                     scale_pow_a = 1.0
                 else:
-                    scale_val = self.convert(symbol.scale, t, y, y_dot, inputs)
+                    scale_val = self.convert(symbol._scale, t, y, y_dot, inputs)
                     x = x / scale_val
                     scale_pow_a = scale_val**converted_right
-                x2_d2 = x**2 + delta**2
-                return x * (x2_d2 ** ((converted_right - 1) / 2)) * scale_pow_a
+                hypot_x_d = casadi.hypot(x, delta)
+                return x * (hypot_x_d ** (converted_right - 1)) * scale_pow_a
             # Optimize repeated-row matrix multiplications: M @ x -> ones * (row @ x)
             if isinstance(symbol, pybamm.MatrixMultiplication):
                 result = try_repeated_row_matmul(left, converted_right)

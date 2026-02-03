@@ -1887,12 +1887,12 @@ class RegPower(BinaryOperator):
         x = base / scale
         scale_factor = scale**exponent
 
-        x2_d2 = x**2 + delta**2
+        hypot_x_d = pybamm.hypot(x, delta)
 
         # Derivative of reg_power w.r.t. x:
         # d/dx [x * (x^2 + d^2)^((a-1)/2)] = (x^2 + d^2)^((a-3)/2) * (a*x^2 + d^2)
         # With scaling: multiply by scale^(a-1) for the chain rule
-        dreg_dx = (x2_d2 ** ((exponent - 3) / 2)) * (exponent * x**2 + delta**2)
+        dreg_dx = (hypot_x_d ** ((exponent - 3))) * (exponent * hypot_x_d**2)
 
         # Chain rule: d/d(base) = d/dx * dx/d(base) = d/dx * (1/scale)
         # And multiply by scale^a for the output scaling
@@ -1902,8 +1902,8 @@ class RegPower(BinaryOperator):
 
         # Handle derivative w.r.t. exponent
         if any(variable == v for v in exponent.pre_order()):
-            reg_val = x * (x2_d2 ** ((exponent - 1) / 2)) * scale_factor
-            dreg_da = reg_val * pybamm.log(x2_d2) / 2
+            reg_val = x * (hypot_x_d ** ((exponent - 1))) * scale_factor
+            dreg_da = reg_val * pybamm.log(hypot_x_d)
             dreg_da = dreg_da + reg_val * pybamm.log(scale)
             diff = diff + dreg_da * exponent.diff(variable)
 
@@ -1917,10 +1917,10 @@ class RegPower(BinaryOperator):
 
         x = base / scale
 
-        x2_d2 = x**2 + delta**2
+        hypot_x_d = pybamm.hypot(x, delta)
 
         # Derivative w.r.t. base
-        dreg_dx = (x2_d2 ** ((exponent - 3) / 2)) * (exponent * x**2 + delta**2)
+        dreg_dx = (hypot_x_d ** ((exponent - 3))) * (exponent * hypot_x_d**2)
 
         dreg_dx = dreg_dx * (scale ** (exponent - 1))
 
@@ -1929,15 +1929,15 @@ class RegPower(BinaryOperator):
         elif base.evaluates_to_constant_number():
             # Derivative w.r.t. exponent
             scale_factor = scale**exponent
-            reg_val = x * (x2_d2 ** ((exponent - 1) / 2)) * scale_factor
-            dreg_da = reg_val * pybamm.log(x2_d2) / 2
+            reg_val = x * (hypot_x_d ** ((exponent - 1))) * scale_factor
+            dreg_da = reg_val * pybamm.log(hypot_x_d)
             dreg_da = dreg_da + reg_val * pybamm.log(scale)
             return dreg_da * right_jac
         else:
             # Both vary - combine contributions
             scale_factor = scale**exponent
-            reg_val = x * (x2_d2 ** ((exponent - 1) / 2)) * scale_factor
-            dreg_da = reg_val * pybamm.log(x2_d2) / 2
+            reg_val = x * (hypot_x_d ** ((exponent - 1))) * scale_factor
+            dreg_da = reg_val * pybamm.log(hypot_x_d)
             dreg_da = dreg_da + reg_val * pybamm.log(scale)
             return dreg_dx * left_jac + dreg_da * right_jac
 
@@ -1968,13 +1968,14 @@ class RegPower(BinaryOperator):
         return self._compute_reg_pow_with_scale(left, right, scale_val)
 
     def _compute_reg_pow_with_scale(self, left, right, scale_val):
-        """Compute the regularised power with pre-evaluated scale."""
+        """Compute the regularised power with pre-evaluated scale (for numpy arrays)."""
         delta = self._get_delta()
         x = left / scale_val
         scale_pow_a = scale_val**right
 
-        x2_d2 = x**2 + delta**2
-        result = x * (x2_d2 ** ((right - 1) / 2)) * scale_pow_a
+        # Use np.hypot for numeric evaluation
+        hypot_x_d = np.hypot(x, delta)
+        result = x * (hypot_x_d ** (right - 1)) * scale_pow_a
 
         return result
 
