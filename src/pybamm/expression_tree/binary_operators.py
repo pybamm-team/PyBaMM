@@ -1892,7 +1892,7 @@ class RegPower(BinaryOperator):
         # Derivative of reg_power w.r.t. x:
         # d/dx [x * (x^2 + d^2)^((a-1)/2)] = (x^2 + d^2)^((a-3)/2) * (a*x^2 + d^2)
         # With scaling: multiply by scale^(a-1) for the chain rule
-        dreg_dx = (hypot_x_d ** ((exponent - 3))) * (exponent * hypot_x_d**2)
+        dreg_dx = (hypot_x_d ** (exponent - 3)) * (exponent * hypot_x_d**2)
 
         # Chain rule: d/d(base) = d/dx * dx/d(base) = d/dx * (1/scale)
         # And multiply by scale^a for the output scaling
@@ -1902,7 +1902,7 @@ class RegPower(BinaryOperator):
 
         # Handle derivative w.r.t. exponent
         if any(variable == v for v in exponent.pre_order()):
-            reg_val = x * (hypot_x_d ** ((exponent - 1))) * scale_factor
+            reg_val = x * (hypot_x_d ** (exponent - 1)) * scale_factor
             dreg_da = reg_val * pybamm.log(hypot_x_d)
             dreg_da = dreg_da + reg_val * pybamm.log(scale)
             diff = diff + dreg_da * exponent.diff(variable)
@@ -1920,7 +1920,7 @@ class RegPower(BinaryOperator):
         hypot_x_d = pybamm.hypot(x, delta)
 
         # Derivative w.r.t. base
-        dreg_dx = (hypot_x_d ** ((exponent - 3))) * (exponent * hypot_x_d**2)
+        dreg_dx = (hypot_x_d ** (exponent - 3)) * (exponent * hypot_x_d**2)
 
         dreg_dx = dreg_dx * (scale ** (exponent - 1))
 
@@ -1929,14 +1929,14 @@ class RegPower(BinaryOperator):
         elif base.evaluates_to_constant_number():
             # Derivative w.r.t. exponent
             scale_factor = scale**exponent
-            reg_val = x * (hypot_x_d ** ((exponent - 1))) * scale_factor
+            reg_val = x * (hypot_x_d ** (exponent - 1)) * scale_factor
             dreg_da = reg_val * pybamm.log(hypot_x_d)
             dreg_da = dreg_da + reg_val * pybamm.log(scale)
             return dreg_da * right_jac
         else:
             # Both vary - combine contributions
             scale_factor = scale**exponent
-            reg_val = x * (hypot_x_d ** ((exponent - 1))) * scale_factor
+            reg_val = x * (hypot_x_d ** (exponent - 1)) * scale_factor
             dreg_da = reg_val * pybamm.log(hypot_x_d)
             dreg_da = dreg_da + reg_val * pybamm.log(scale)
             return dreg_dx * left_jac + dreg_da * right_jac
