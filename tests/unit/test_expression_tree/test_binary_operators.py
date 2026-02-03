@@ -413,6 +413,17 @@ class TestBinaryOperators:
         # d(hypot(c, d))/dd = d / hypot(c, d)
         assert h3.diff(d).evaluate(y=y2) == pytest.approx(4.0 / 5.0)
 
+        # test jacobian
+        full_y = pybamm.StateVector(slice(0, 2))
+        jac = h3.jac(full_y)
+        jac_result = jac.evaluate(y=y2)
+        # Convert sparse matrix to dense if needed
+        if hasattr(jac_result, "toarray"):
+            jac_result = jac_result.toarray()
+        assert np.isfinite(jac_result).all()
+        # Jacobian should be [c/hypot, d/hypot] = [3/5, 4/5]
+        np.testing.assert_allclose(jac_result.flatten(), [3.0 / 5.0, 4.0 / 5.0])
+
     def test_softminus_softplus(self):
         a = pybamm.Scalar(1)
         b = pybamm.StateVector(slice(0, 1))
@@ -962,3 +973,41 @@ class TestBinaryOperators:
         # Test that result is a RegPower instance
         assert isinstance(expr_scaled, pybamm.RegPower)
         assert expr_scaled.scale == pybamm.Scalar(scale)
+
+        # Test differentiation with respect to varying exponent
+        y = pybamm.InputParameter("y")
+        rp_var_exp = pybamm.reg_power(x, y)
+        drp_dy = rp_var_exp.diff(y)
+        # Should be finite for all inputs
+        for x_val in [2.0, 0.0, -2.0]:
+            for y_val in [0.5, 0.25, 1.0]:
+                result = drp_dy.evaluate(inputs={"x": x_val, "y": y_val})
+                assert np.isfinite(result), (
+                    f"d/dy reg_power({x_val}, {y_val}) is not finite"
+                )
+
+        # Test jacobian with varying exponent (StateVectors)
+        sv_x = pybamm.StateVector(slice(0, 1))
+        sv_a = pybamm.StateVector(slice(1, 2))
+        rp_jac = pybamm.RegPower(sv_x, sv_a)
+        jac = rp_jac.jac(pybamm.StateVector(slice(0, 2)))
+        # Verify jacobian is finite even at x=0
+        for y in [np.array([0.0, 0.5]), np.array([2.0, 0.5]), np.array([-2.0, 0.25])]:
+            jac_result = jac.evaluate(y=y)
+            # Convert sparse matrix to dense if needed
+            if hasattr(jac_result, "toarray"):
+                jac_result = jac_result.toarray()
+            assert np.isfinite(jac_result).all(), (
+                f"jacobian of reg_power at y={y} is not finite"
+            )
+
+        # Test jacobian when base is constant (exponent varies)
+        const_base = pybamm.Scalar(4.0)
+        sv_a_only = pybamm.StateVector(slice(0, 1))
+        rp_const_base = pybamm.RegPower(const_base, sv_a_only)
+        jac_const_base = rp_const_base.jac(sv_a_only)
+        result = jac_const_base.evaluate(y=np.array([0.5]))
+        # Convert sparse matrix to dense if needed
+        if hasattr(result, "toarray"):
+            result = result.toarray()
+        assert np.isfinite(result).all()

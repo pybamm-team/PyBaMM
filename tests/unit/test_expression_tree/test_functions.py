@@ -234,6 +234,20 @@ class TestSpecificFunctions:
                 f"d(arcsinh2)/da at a=0, b={b_val} should be {expected_da}, got {da_at_zero}"
             )
 
+        # Test at b=0 boundary (uses regularization with eps)
+        # When b=0, b_eff = eps, so derivative should be finite
+        eps = fun.eps
+        da_at_b0 = da_fun.evaluate(inputs={"a": 1.0, "b": 0.0})
+        assert np.isfinite(da_at_b0), "d(arcsinh2)/da at b=0 should be finite"
+        # Expected: sign(0) = 1, so da = 1 / hypot(a, eps) ≈ 1 for small eps
+        assert da_at_b0 == pytest.approx(1.0, rel=1e-6)
+
+        # Test arcsinh2 value at b=0
+        f_at_b0 = fun.evaluate(inputs={"a": 1.0, "b": 0.0})
+        assert np.isfinite(f_at_b0), "arcsinh2(1, 0) should be finite"
+        # arcsinh(1/eps) is large but finite
+        assert f_at_b0 > 10  # Should be arcsinh(1/1e-16) which is huge
+
         # Test to_json
         json_repr = fun.to_json()
         assert json_repr["function"] == "arcsinh2"

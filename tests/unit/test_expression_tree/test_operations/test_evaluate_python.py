@@ -446,6 +446,21 @@ class TestEvaluate:
             result = evaluator(t=t, y=y)
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
+        # test RegPower without scale
+        x = pybamm.StateVector(slice(0, 1))
+        rp = pybamm.RegPower(x, 0.5)
+        evaluator = pybamm.EvaluatorPython(rp)
+        for y in [np.array([[4.0]]), np.array([[9.0]]), np.array([[0.0]])]:
+            result = evaluator(y=y)
+            np.testing.assert_allclose(result, rp.evaluate(y=y))
+
+        # test RegPower with constant scale
+        rp_scaled = pybamm.RegPower(x, 0.5, scale=10.0)
+        evaluator_scaled = pybamm.EvaluatorPython(rp_scaled)
+        for y in [np.array([[4.0]]), np.array([[100.0]])]:
+            result = evaluator_scaled(y=y)
+            np.testing.assert_allclose(result, rp_scaled.evaluate(y=y))
+
     @pytest.mark.skipif(not pybamm.has_jax(), reason="jax or jaxlib is not installed")
     def test_find_symbols_jax(self):
         # test sparse conversion
