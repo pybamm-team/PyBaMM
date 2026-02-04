@@ -2607,12 +2607,14 @@ class TestRegularisationSerialisation:
         # Convert to JSON and back
         json_dict = convert_symbol_to_json(rp)
         assert json_dict["type"] == "RegPower"
-        assert json_dict["scale"] is not None
+        # Scale is serialized as the third child
+        assert len(json_dict["children"]) == 3
 
         # Reconstruct from JSON
         reconstructed = convert_symbol_from_json(json_dict)
         assert isinstance(reconstructed, pybamm.RegPower)
-        assert reconstructed.scale == scale
+        # Scale is the third child
+        assert reconstructed.children[2] == scale
 
     def test_regpower_serialisation_no_scale(self):
         """Test round-trip serialisation of RegPower without scale."""
@@ -2624,8 +2626,8 @@ class TestRegularisationSerialisation:
 
         reconstructed = convert_symbol_from_json(json_dict)
         assert isinstance(reconstructed, pybamm.RegPower)
-        # scale defaults to Scalar(1) when _scale is None
-        assert reconstructed._scale is None
+        # scale defaults to Scalar(1)
+        assert reconstructed.children[2] == pybamm.Scalar(1)
 
     def test_hypot_serialisation(self):
         """Test round-trip serialisation of Hypot."""

@@ -62,9 +62,10 @@ class TestRegulariseSqrtAndPower:
         # Should be replaced with RegPower (no Sqrt)
         has_sqrt = any(isinstance(n, pybamm.Sqrt) for n in result.pre_order())
         assert not has_sqrt
-        # Check it's a RegPower with scale=None
+        # Check it's a RegPower with scale=1 (default)
         assert isinstance(result, pybamm.RegPower)
-        assert result.scale == pybamm.Scalar(1)
+        # Scale is the third child
+        assert result.children[2] == pybamm.Scalar(1)
 
     def test_exact_match_only(self):
         """Test that only exact matches are used for scales."""
@@ -110,14 +111,16 @@ class TestRegulariseSqrtAndPower:
         expr1 = pybamm.sqrt(c_s)
         result1 = regulariser(expr1, inputs=inputs)
         assert isinstance(result1, pybamm.RegPower)
-        assert result1.scale == c_s_max
+        # Scale is the third child
+        assert result1.children[2] == c_s_max
 
-        # sqrt(c_s / c_s_max) should get scale=None (NOT c_s_max!)
+        # sqrt(c_s / c_s_max) should get scale=1 (NOT c_s_max!)
         # because c_s / c_s_max is a different expression that wasn't registered
         expr2 = pybamm.sqrt(c_s / c_s_max)
         result2 = regulariser(expr2, inputs=inputs)
         assert isinstance(result2, pybamm.RegPower)
-        assert result2.scale == pybamm.Scalar(1)  # CRITICAL: must be None, not c_s_max
+        # CRITICAL: must be Scalar(1), not c_s_max
+        assert result2.children[2] == pybamm.Scalar(1)
 
     def test_explicit_pattern_matching(self):
         """Test that explicit patterns like c_max - c_s can be added."""

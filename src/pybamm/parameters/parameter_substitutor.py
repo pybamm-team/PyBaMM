@@ -254,9 +254,6 @@ class ParameterSubstitutor:
         ):
             new_children = [self.process_symbol(child) for child in symbol.children]
             new_symbol = symbol.create_copy(new_children)
-            # RegPower has a scale attribute that also needs processing
-            if isinstance(symbol, pybamm.RegPower):
-                new_symbol.scale = self.process_symbol(symbol.scale)
             return new_symbol
 
         elif isinstance(symbol, pybamm.VectorField):

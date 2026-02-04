@@ -970,9 +970,10 @@ class TestBinaryOperators:
             10.0, rel=1e-2
         )
 
-        # Test that result is a RegPower instance
+        # Test that result is a RegPower instance with scale as third child
         assert isinstance(expr_scaled, pybamm.RegPower)
-        assert expr_scaled.scale == pybamm.Scalar(scale)
+        # Scale is the third child
+        assert expr_scaled.children[2] == pybamm.Scalar(scale)
 
         # Test differentiation with respect to varying exponent
         y = pybamm.InputParameter("y")

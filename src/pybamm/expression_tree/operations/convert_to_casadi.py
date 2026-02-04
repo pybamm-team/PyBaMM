@@ -92,18 +92,6 @@ class CasadiConverter:
                 return casadi.hypot(converted_left, converted_right)
             if isinstance(symbol, pybamm.KroneckerProduct):
                 return casadi.kron(converted_left, converted_right)
-            if isinstance(symbol, pybamm.RegPower):
-                # Regularised power: y = x * hypot(x, delta)^(a-1) * scale^a
-                delta = symbol._get_delta()
-                x = converted_left
-                if symbol._scale is None:
-                    scale_pow_a = 1.0
-                else:
-                    scale_val = self.convert(symbol._scale, t, y, y_dot, inputs)
-                    x = x / scale_val
-                    scale_pow_a = scale_val**converted_right
-                x2_d2 = x**2 + delta**2
-                return x * (x2_d2 ** ((converted_right - 1) / 2)) * scale_pow_a
             # Optimize repeated-row matrix multiplications: M @ x -> ones * (row @ x)
             if isinstance(symbol, pybamm.MatrixMultiplication):
                 result = try_repeated_row_matmul(left, converted_right)
@@ -166,6 +154,13 @@ class CasadiConverter:
                 sign_b = casadi.if_else(b >= 0, 1.0, -1.0)
                 b_eff = sign_b * casadi.hypot(b, eps)
                 return casadi.arcsinh(a / b_eff)
+            elif isinstance(symbol, pybamm.RegPower):
+                # Regularised power: y = x * (x^2 + delta^2)^((a-1)/2) * scale^a
+                base, exponent, scale = converted_children
+                delta = symbol.delta
+                x = base / scale
+                x2_d2 = x**2 + delta**2
+                return x * (x2_d2 ** ((exponent - 1) / 2)) * (scale**exponent)
             elif isinstance(symbol, pybamm.Interpolant):
                 if symbol.interpolator == "linear":
                     solver = "linear"

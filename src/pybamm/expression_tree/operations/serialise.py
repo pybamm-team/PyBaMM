@@ -1543,10 +1543,6 @@ class Serialise:
             expression_obj = self._reconstruct_expression_tree(node["expression"])
             node["expression"] = expression_obj
 
-        # Handle RegPower's scale attribute
-        if "scale" in node and node["scale"] is not None:
-            node["scale"] = self._reconstruct_expression_tree(node["scale"])
-
         obj = self._reconstruct_symbol(node)
 
         return obj
@@ -1782,12 +1778,6 @@ def convert_symbol_from_json(json_data):
             json_data["name"],
             domains=json_data.get("domains", {}),
         )
-    elif json_data["type"] == "RegPower":
-        children = [convert_symbol_from_json(c) for c in json_data["children"]]
-        scale_json = json_data.get("scale")
-        scale = convert_symbol_from_json(scale_json) if scale_json else None
-        result = pybamm.RegPower(children[0], children[1], scale=scale)
-        return result
     elif "children" in json_data:
         return getattr(pybamm, json_data["type"])(
             *[convert_symbol_from_json(c) for c in json_data["children"]]
@@ -1921,17 +1911,6 @@ def convert_symbol_to_json(symbol):
             "diff_variable": diff_variable,
             "name": symbol.name,
         }
-    elif isinstance(symbol, pybamm.RegPower):
-        # RegPower has an additional scale attribute
-        json_dict = {
-            "type": "RegPower",
-            "domains": symbol.domains,
-            "children": [convert_symbol_to_json(c) for c in symbol.children],
-            "scale": convert_symbol_to_json(symbol.scale)
-            if symbol._scale is not None
-            else None,
-        }
-        return json_dict
     elif isinstance(symbol, pybamm.Symbol):
         # Generic fallback for other symbols with children
         json_dict = {
