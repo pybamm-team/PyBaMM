@@ -5,7 +5,6 @@ from scipy.interpolate import CubicHermiteSpline
 
 import pybamm
 import tests
-from tests.shared import get_mesh_for_testing_2d
 
 _hermite_args = [True, False]
 
@@ -374,9 +373,9 @@ class TestProcessedVariable:
             var, r, x, disc=disc, hermite_interp=hermite_interp
         )
 
-    def test_processed_variable_2D_fvm(self):
+    def test_processed_variable_2D_fvm(self, mesh_2d):
         var = pybamm.Variable("var", domain=["negative electrode"])
-        mesh = get_mesh_for_testing_2d()
+        mesh = mesh_2d
         fin_vol = pybamm.FiniteVolume2D()
         disc = pybamm.Discretisation(mesh, {"negative electrode": fin_vol})
         disc.set_variable_slices([var])
