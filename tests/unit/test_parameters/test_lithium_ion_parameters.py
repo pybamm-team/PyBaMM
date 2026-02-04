@@ -6,6 +6,10 @@ import numpy as np
 import pytest
 
 import pybamm
+from pybamm.parameters.lithium_ion_parameters import (
+    U_asymptote_approaching_zero,
+    U_asymptotes,
+)
 
 
 class TestLithiumIonParameterValues:
@@ -165,10 +169,6 @@ class TestUAsymptotes:
 
     def test_U_asymptote_approaching_zero_values(self):
         """Test that U_asymptote_approaching_zero returns expected values."""
-        from pybamm.parameters.lithium_ion_parameters import (
-            U_asymptote_approaching_zero,
-        )
-
         # Test at sto = 0: should be ~1000 mV (1 V)
         val_at_zero = U_asymptote_approaching_zero(0.0)
         assert val_at_zero == pytest.approx(1.0, rel=1e-3)
@@ -183,8 +183,6 @@ class TestUAsymptotes:
 
     def test_U_asymptotes_antisymmetry(self):
         """Test that U_asymptotes is antisymmetric: U(sto) = -U(1-sto)."""
-        from pybamm.parameters.lithium_ion_parameters import U_asymptotes
-
         test_points = [0.001, 0.01, 0.1, 0.3, 0.5, 0.7, 0.9, 0.99, 0.999]
 
         for sto in test_points:
@@ -195,7 +193,6 @@ class TestUAsymptotes:
 
     def test_U_asymptotes_boundary_values(self):
         """Test U_asymptotes at boundary values."""
-        from pybamm.parameters.lithium_ion_parameters import U_asymptotes
 
         # At sto = 0: should be positive (~1 V)
         assert U_asymptotes(0.0) > 0
@@ -210,10 +207,6 @@ class TestUAsymptotes:
 
     def test_U_asymptote_numerical_stability(self):
         """Test that U_asymptote_approaching_zero doesn't overflow for extreme values."""
-        from pybamm.parameters.lithium_ion_parameters import (
-            U_asymptote_approaching_zero,
-        )
-
         # For very negative stoichiometries, should return finite large values
         # This tests the logaddexp fix: np.log(1 + exp(7000)) would overflow
         val_neg = U_asymptote_approaching_zero(-1.0)

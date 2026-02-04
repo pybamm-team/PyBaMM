@@ -253,8 +253,7 @@ class ParameterSubstitutor:
             or isinstance(symbol, pybamm.BinaryOperator)
         ):
             new_children = [self.process_symbol(child) for child in symbol.children]
-            new_symbol = symbol.create_copy(new_children)
-            return new_symbol
+            return symbol.create_copy(new_children)
 
         elif isinstance(symbol, pybamm.VectorField):
             left_symbol = self.process_symbol(symbol.lr_field)
