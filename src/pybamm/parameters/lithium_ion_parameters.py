@@ -1,7 +1,6 @@
 #
 # Standard parameters for lithium-ion battery models
 #
-import numpy as np
 
 import pybamm
 
@@ -960,8 +959,8 @@ def U_asymptote_approaching_zero(sto):
     # For sto >= sto_limit: use log(1 + exp(...))
     # For sto < sto_limit: continue linearly with slope -b -- this is an exact floating
     # point match for large sto values.
-    out = np.log(1 + np.exp(-b * (np.maximum(sto_limit, sto) - c))) + -b * (
-        np.minimum(0, sto - sto_limit)
+    out = pybamm.log(1 + pybamm.exp(-b * (pybamm.maximum(sto_limit, sto) - c))) + -b * (
+        pybamm.minimum(0, sto - sto_limit)
     )
 
     return a * out
