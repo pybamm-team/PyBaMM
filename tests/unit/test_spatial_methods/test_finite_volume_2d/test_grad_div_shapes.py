@@ -6,17 +6,17 @@ import numpy as np
 import pytest
 
 import pybamm
-from tests import DummyDiscretisationClass, get_mesh_for_testing_2d
+from tests import DummyDiscretisationClass
 
 
 class TestFiniteVolume2DGradDiv:
-    def test_grad_div_shapes_Dirichlet_bcs(self):
+    def test_grad_div_shapes_Dirichlet_bcs(self, mesh_2d):
         """
         Test grad and div with Dirichlet boundary conditions in Cartesian coordinates
         """
         # Create discretisation
         whole_cell = ["negative electrode", "separator", "positive electrode"]
-        mesh = get_mesh_for_testing_2d()
+        mesh = mesh_2d
         spatial_methods = {"macroscale": pybamm.FiniteVolume2D()}
         disc = pybamm.Discretisation(mesh, spatial_methods)
         submesh = mesh[whole_cell]
@@ -169,13 +169,13 @@ class TestFiniteVolume2DGradDiv:
             atol=1e-6,
         )
 
-    def test_grad_div_shapes_Neumann_bcs(self):
+    def test_grad_div_shapes_Neumann_bcs(self, mesh_2d):
         """
         Test grad and div with Neumann boundary conditions in Cartesian coordinates
         """
         # Create discretisation
         whole_cell = ["negative electrode", "separator", "positive electrode"]
-        mesh = get_mesh_for_testing_2d()
+        mesh = mesh_2d
         spatial_methods = {"macroscale": pybamm.FiniteVolume2D()}
         disc = pybamm.Discretisation(mesh, spatial_methods)
         submesh = mesh[whole_cell]
@@ -372,14 +372,14 @@ class TestFiniteVolume2DGradDiv:
             "negative electrode",
         ],
     )
-    def test_grad_div_shapes_Dirichlet_and_Neumann_bcs(self, domain):
+    def test_grad_div_shapes_Dirichlet_and_Neumann_bcs(self, domain, mesh_2d):
         """
         Test grad and div with a Dirichlet boundary condition on one side and
         a Neumann boundary conditions on the other side in Cartesian coordinates
         """
         # Create discretisation
         domain = domain
-        mesh = get_mesh_for_testing_2d()
+        mesh = mesh_2d
         spatial_methods = {"macroscale": pybamm.FiniteVolume2D()}
         disc = pybamm.Discretisation(mesh, spatial_methods)
         submesh = mesh[domain]
@@ -517,12 +517,12 @@ class TestFiniteVolume2DGradDiv:
             atol=1e-6,
         )
 
-    def test_grad_div_shapes_concatenation(self):
+    def test_grad_div_shapes_concatenation(self, mesh_2d):
         """
         Test grad and div with concatenation variables using Dirichlet boundary conditions
         """
         # Create discretisation
-        mesh = get_mesh_for_testing_2d()
+        mesh = mesh_2d
         spatial_methods = {
             "negative electrode": pybamm.FiniteVolume2D(),
             "separator": pybamm.FiniteVolume2D(),
@@ -651,12 +651,12 @@ class TestFiniteVolume2DGradDiv:
             atol=1e-6,
         )
 
-    def test_laplacian_shapes(self):
+    def test_laplacian_shapes(self, mesh_2d):
         """
         Test Laplacian with concatenation variables using Dirichlet boundary conditions
         """
         # Create discretisation
-        mesh = get_mesh_for_testing_2d()
+        mesh = mesh_2d
         spatial_methods = {
             "negative electrode": pybamm.FiniteVolume2D(),
             "separator": pybamm.FiniteVolume2D(),
@@ -749,12 +749,12 @@ class TestFiniteVolume2DGradDiv:
             atol=1e-6,
         )
 
-    def test_internal_neumann_condition(self):
+    def test_internal_neumann_condition(self, mesh_2d):
         """
         Test internal Neumann conditions (flux continuity) between domains
         """
         # Create discretisation
-        mesh = get_mesh_for_testing_2d()
+        mesh = mesh_2d
         spatial_methods = {
             "negative electrode": pybamm.FiniteVolume2D(),
             "separator": pybamm.FiniteVolume2D(),
@@ -876,8 +876,8 @@ class TestFiniteVolume2DGradDiv:
             rtol=1e-6,
         )
 
-    def test_grad_direction_error(self):
-        mesh = get_mesh_for_testing_2d()
+    def test_grad_direction_error(self, mesh_2d):
+        mesh = mesh_2d
         spatial_methods = {"macroscale": pybamm.FiniteVolume2D()}
         disc = pybamm.Discretisation(mesh, spatial_methods)
         var = pybamm.Variable(
