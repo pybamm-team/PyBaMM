@@ -5,7 +5,7 @@ import numpy as onp
 import pybamm
 
 if pybamm.has_jax():
-    import jax
+    jax = pybamm.get_jax()
     import jax.numpy as jnp
     from jax.experimental.ode import odeint
 

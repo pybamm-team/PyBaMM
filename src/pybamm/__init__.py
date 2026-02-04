@@ -1,256 +1,104 @@
+# Lazy loading implementation using lazy_loader package
+# Essential imports only - everything else is lazily loaded via stub file
+#
+# The stub file (__init__.pyi) is auto-generated. To regenerate:
+#   python scripts/generate_pyi_stub.py
+#
+# To validate all imports are correct:
+#   python scripts/generate_pyi_stub.py --validate
+#
+# For CI checks (exits non-zero if stub is outdated):
+#   python scripts/generate_pyi_stub.py --check
+
+import importlib
+
+import lazy_loader as lazy
+
 from pybamm.version import __version__
 
-# Utility classes and methods
-from .util import root_dir
-from .util import Timer, TimerTime, FuzzyDict
-from .util import (
-    root_dir,
-    load,
-    is_constant_and_can_evaluate,
-)
-from .util import (
-    get_parameters_filepath,
-    has_jax,
-    import_optional_dependency,
-)
+# Core utilities that are lightweight and commonly needed
 from .logger import logger, set_logging_level, get_new_logger
 from .settings import settings
-from .citations import Citations, citations, print_citations
 from . import config
 
-# Classes for the Expression Tree
+# These need to be imported eagerly to shadow the submodule names
+from .citations import Citations, citations, print_citations
+
+# Expression tree modules are accessed thousands of times during model building
+# so we eagerly import them to avoid __getattr__ overhead
 from .expression_tree.symbol import *
 from .expression_tree.binary_operators import *
 from .expression_tree.concatenations import *
-from .expression_tree.array import Array, linspace, meshgrid
-from .expression_tree.matrix import Matrix
 from .expression_tree.unary_operators import *
 from .expression_tree.averages import *
 from .expression_tree.averages import _BaseAverage
 from .expression_tree.broadcasts import *
 from .expression_tree.functions import *
-from .expression_tree.interpolant import Interpolant
+from .expression_tree.interpolant import Interpolant  # needed before discrete_time_sum
 from .expression_tree.discrete_time_sum import *
-from .expression_tree.input_parameter import InputParameter
-from .expression_tree.parameter import Parameter, FunctionParameter
-from .expression_tree.scalar import Scalar, Constant
 from .expression_tree.variable import *
 from .expression_tree.coupled_variable import *
 from .expression_tree.independent_variable import *
-from .expression_tree.independent_variable import t
-from .expression_tree.vector import Vector
-from .expression_tree.tensor_field import TensorField
-from .expression_tree.vector_field import VectorField
-from .expression_tree.state_vector import StateVectorBase, StateVector, StateVectorDot
-
 from .expression_tree.exceptions import *
+from .expression_tree.scalar import *
+from .expression_tree.state_vector import *
+from .expression_tree.tensor_field import *
+from .expression_tree.parameter import *
+from .expression_tree.input_parameter import *
+from .expression_tree.array import *
+from .expression_tree.vector_field import *
+from .expression_tree.matrix import *
+from .expression_tree.vector import *
 
-# Operations
-from .expression_tree.operations.evaluate_python import (
-    find_symbols,
-    id_to_python_variable,
-    to_python,
-    EvaluatorPython,
-)
+# Lazy loading via stub file - get the base __getattr__ and __dir__
+_lazy_getattr, _lazy_dir, _stub_all = lazy.attach_stub(__name__, __file__)
 
-from .expression_tree.operations.evaluate_python import EvaluatorJax
-from .expression_tree.operations.evaluate_python import JaxCooMatrix
+# These are submodules that we want to expose at the top level (e.g., pybamm.lithium_ion)
+from ._lazy_config import SUBMODULE_ALIASES as _SUBMODULE_ALIASES
 
-from .expression_tree.operations.jacobian import Jacobian
-from .expression_tree.operations.convert_to_casadi import CasadiConverter
-from .expression_tree.operations.unpack_symbols import SymbolUnpacker
-from .expression_tree.operations.serialise import Serialise,ExpressionFunctionParameter
+# Cache for loaded submodule aliases
+_loaded_submodules: dict[str, object] = {}
 
-# Model classes
-from .models.base_model import BaseModel, ModelSolutionObservability
-from .models.symbol_processor import SymbolProcessor
-from .models.event import Event
-from .models.event import EventType
 
-# Battery models
-from .models.full_battery_models.base_battery_model import (
-    BaseBatteryModel,
-    BatteryModelOptions,
-)
-from .models.full_battery_models import lead_acid
-from .models.full_battery_models import lithium_ion
-from .models.full_battery_models import equivalent_circuit
-from .models.full_battery_models import sodium_ion
+def __getattr__(name: str) -> object:
+    """Custom __getattr__ that handles submodule aliases and falls back to lazy_loader."""
+    # Fast path: check submodule cache
+    if name in _loaded_submodules:
+        return _loaded_submodules[name]
 
-# Submodel classes
-from .models.submodels.base_submodel import BaseSubModel
+    # Check if it's a submodule alias
+    if name in _SUBMODULE_ALIASES:
+        module_path = _SUBMODULE_ALIASES[name]
+        module = importlib.import_module(module_path, package="pybamm")
+        _loaded_submodules[name] = module
+        return module
 
-from .models.submodels import (
-    active_material,
-    convection,
-    current_collector,
-    electrolyte_conductivity,
-    electrolyte_diffusion,
-    electrode,
-    external_circuit,
-    interface,
-    oxygen_diffusion,
-    particle,
-    porosity,
-    thermal,
-    transport_efficiency,
-    particle_mechanics,
-    equivalent_circuit_elements,
-)
-from .models.submodels.interface import kinetics
-from .models.submodels.interface import sei
-from .models.submodels.interface import lithium_plating
-from .models.submodels.interface import interface_utilisation
-from .models.submodels.interface import open_circuit_potential
+    # Fall back to lazy_loader's __getattr__
+    return _lazy_getattr(name)
 
-# Geometry
-from .geometry.geometry import Geometry
-from .geometry.battery_geometry import battery_geometry
 
-from .expression_tree.independent_variable import KNOWN_COORD_SYS
-from .geometry import standard_spatial_vars
+def __dir__() -> list[str]:
+    """Include submodule aliases in dir() output."""
+    return sorted(set(_lazy_dir()) | set(_SUBMODULE_ALIASES.keys()))
 
-# Parameter classes and methods
-from .parameters.parameter_values import ParameterValues, scalarize_dict, arrayize_dict
-from .parameters import constants
-from .parameters.geometric_parameters import geometric_parameters, GeometricParameters
-from .parameters.electrical_parameters import (
-    electrical_parameters,
-    ElectricalParameters,
-)
-from .parameters.thermal_parameters import thermal_parameters, ThermalParameters
-from .parameters.lithium_ion_parameters import LithiumIonParameters
-from .parameters.lead_acid_parameters import LeadAcidParameters
-from .parameters.ecm_parameters import EcmParameters
-from .parameters.size_distribution_parameters import *
 
-# Mesh and Discretisation classes
-from .discretisations.discretisation import Discretisation
-from .discretisations.discretisation import has_bc_of_form
-from .meshes.meshes import Mesh, SubMesh, MeshGenerator
-from .meshes.zero_dimensional_submesh import SubMesh0D
-from .meshes.one_dimensional_submeshes import (
-    SubMesh1D,
-    Uniform1DSubMesh,
-    Exponential1DSubMesh,
-    Chebyshev1DSubMesh,
-    UserSupplied1DSubMesh,
-    SpectralVolume1DSubMesh,
-    SymbolicUniform1DSubMesh,
-)
-from .meshes.two_dimensional_submeshes import (
-    SubMesh2D,
-    Uniform2DSubMesh,
-)
-from .meshes.scikit_fem_submeshes import (
-    ScikitSubMesh2D,
-    ScikitUniform2DSubMesh,
-    ScikitExponential2DSubMesh,
-    ScikitChebyshev2DSubMesh,
-    UserSupplied2DSubMesh,
-)
+# Extend __all__ to include submodule aliases
+__all__ = _stub_all + list(_SUBMODULE_ALIASES.keys())
 
-from .meshes.scikit_fem_submeshes_3d import (
-    ScikitFemSubMesh3D,
-    ScikitFemGenerator3D,
-    UserSuppliedSubmesh3D,
-)
 
-# Serialisation
-from .models.base_model import load_model
-
-# Spatial Methods
-from .spatial_methods.spatial_method import SpatialMethod
-from .spatial_methods.zero_dimensional_method import ZeroDimensionalSpatialMethod
-from .spatial_methods.finite_volume import FiniteVolume
-from .spatial_methods.finite_volume_2d import FiniteVolume2D
-from .spatial_methods.spectral_volume import SpectralVolume
-from .spatial_methods.scikit_finite_element import ScikitFiniteElement
-from .spatial_methods.scikit_finite_element_3d import ScikitFiniteElement3D
-
-# Solver classes
-from .solvers.solution import Solution, EmptySolution, make_cycle_solution
-from .solvers.processed_variable_time_integral import ProcessedVariableTimeIntegral
-from .solvers.processed_variable import ProcessedVariable, ProcessedVariable2DFVM, process_variable
-from .solvers.processed_variable_computed import ProcessedVariableComputed
-from .solvers.processed_variable import ProcessedVariableUnstructured
-from .solvers.summary_variable import SummaryVariables
-from .solvers.base_solver import BaseSolver
-from .solvers.dummy_solver import DummySolver
-from .solvers.algebraic_solver import AlgebraicSolver
-from .solvers.casadi_solver import CasadiSolver
-from .solvers.casadi_algebraic_solver import CasadiAlgebraicSolver
-from .solvers.scipy_solver import ScipySolver
-from .solvers.composite_solver import CompositeSolver
-
-from .solvers.jax_solver import JaxSolver
-from .solvers.jax_bdf_solver import jax_bdf_integrate
-
-from .solvers.idaklu_jax import IDAKLUJax
-from .solvers.idaklu_solver import IDAKLUSolver
-
-# Experiments
-from .experiment.experiment import Experiment
-from . import experiment
-from .experiment import step
-
-# Plotting
-from .plotting.quick_plot import QuickPlot, close_plots, QuickPlotAxes
-from .plotting.plot import plot
-from .plotting.plot2D import plot2D
-from .plotting.plot_voltage_components import plot_voltage_components
-from .plotting.plot_thermal_components import plot_thermal_components
-from .plotting.plot_summary_variables import plot_summary_variables
-from .plotting.dynamic_plot import dynamic_plot
-from .plotting.plot_3d_cross_section import plot_3d_cross_section
-from .plotting.plot_3d_heatmap import plot_3d_heatmap
-
-# Simulation
-from .simulation import Simulation, load_sim, is_notebook
-
-# Batch Study
-from .batch_study import BatchStudy
-
-# Callbacks, telemetry, config
-from . import callbacks, telemetry, config
-
-# Pybamm Data manager using pooch
-from .pybamm_data import DataLoader
-
-from .dispatch import parameter_sets, Model
-
-# Fix Casadi import
+# Fix Casadi import - this needs to happen at import time
 import os
 import pathlib
 import sysconfig
 
 os.environ["CASADIPATH"] = str(pathlib.Path(sysconfig.get_path("purelib")) / "casadi")
 
-__all__ = [
-    "batch_study",
-    "callbacks",
-    "citations",
-    "config",
-    "discretisations",
-    "experiment",
-    "expression_tree",
-    "geometry",
-    "input",
-    "logger",
-    "meshes",
-    "models",
-    "parameters",
-    "plotting",
-    "settings",
-    "simulation",
-    "solvers",
-    "spatial_methods",
-    "telemetry",
-    "type_definitions",
-    "util",
-    "version",
-    "pybamm_data",
-    "dispatch",
-]
-
 config.generate()
+
+# Eagerly load core simulation modules to optimize first-solve performance
+from . import simulation  # noqa: F401, E402
+from . import solvers  # noqa: F401, E402
+from .parameters import parameter_values  # noqa: F401, E402
+from . import meshes  # noqa: F401, E402
+from . import spatial_methods  # noqa: F401, E402
+from .expression_tree.operations import convert_to_casadi  # noqa: F401, E402

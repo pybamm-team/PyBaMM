@@ -1,5 +1,5 @@
 CurrentDriven Utilisation
 =========================
 
-.. autoclass:: pybamm.interface.interface_utilisation.CurrentDriven
+.. autoclass:: pybamm.models.submodels.interface.interface_utilisation.CurrentDriven
     :members:

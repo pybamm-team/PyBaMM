@@ -1,5 +1,5 @@
 Utilisation Base Model
 ======================
 
-.. autoclass:: pybamm.interface.interface_utilisation.BaseModel
+.. autoclass:: pybamm.models.submodels.interface.interface_utilisation.BaseModel
     :members:

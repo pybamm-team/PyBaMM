@@ -1,5 +1,5 @@
 No Plating
 ==========
 
-.. autoclass:: pybamm.lithium_plating.NoPlating
+.. autoclass:: pybamm.models.submodels.interface.lithium_plating.NoPlating
     :members:

@@ -9,7 +9,6 @@ from typing import Any
 
 import numpy as np
 import numpy.typing as npt
-from scipy import interpolate
 
 import pybamm
 
@@ -125,6 +124,8 @@ class Interpolant(pybamm.Function):
             )
 
         # Create interpolating function
+        from scipy import interpolate
+
         if len(x) == 1:
             self.dimension = 1
             if interpolator == "linear":

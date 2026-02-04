@@ -10,8 +10,10 @@ repos:
       - id: ruff-check
         args: [--fix, --show-fixes]
         types_or: [python, pyi, jupyter]
+        exclude: ^src/pybamm/__init__\.pyi$
       - id: ruff-format
         types_or: [python, pyi, jupyter]
+        exclude: ^src/pybamm/__init__\.pyi$
 
   - repo: https://github.com/adamchainz/blacken-docs
     rev: "1.20.0"
