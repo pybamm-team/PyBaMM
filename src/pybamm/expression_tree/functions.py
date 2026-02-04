@@ -453,8 +453,7 @@ def arcsinh2(
     Two-argument arcsinh function for arcsinh(a/b) that avoids division by zero
     by adding a small regularisation term to the denominator.
 
-    Computes sign(a) * sign(b) * (log(|a| + hypot(|a|, b_eff)) - log(b_eff))
-    where b_eff = hypot(|b|, eps).
+    Computes arcsinh(a / b_eff), where b_eff = sign(b) * hypot(b, eps).
 
     Parameters
     ----------
