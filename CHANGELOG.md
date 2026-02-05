@@ -2,6 +2,7 @@
 
 ## Features
 
+- Added support for Python 3.14. ([#5374](https://github.com/pybamm-team/PyBaMM/pull/5374))
 - Improve the performance of matrix multiplication with CasADi expressions. ([#5351](https://github.com/pybamm-team/PyBaMM/pull/5351))
 - Adds option for lists of inputs to `solve` to include input parameters which are used
 as initial conditions. ([#5311](https://github.com/pybamm-team/PyBaMM/pull/5311))
@@ -12,6 +13,7 @@ as initial conditions. ([#5311](https://github.com/pybamm-team/PyBaMM/pull/5311)
 
 ## Breaking changes
 
+- Dropped JAX support on macOS with Intel (x86_64) processors. JAX dropped macOS Intel wheels in version 0.5.0, and the minimum JAX version has been bumped to >=0.7.0 for Python 3.14 compatibility. macOS users require Apple Silicon (M-series) for JAX features. ([#5374](https://github.com/pybamm-team/PyBaMM/pull/5374))
 - Migrated `docs` and `dev` dependencies from `project.optional-dependencies` to `dependency-groups` per PEP 735. ([#5368](https://github.com/pybamm-team/PyBaMM/pull/5368))
 
 # [v25.12.2](https://github.com/pybamm-team/PyBaMM/tree/v25.12.2) - 2026-01-22
