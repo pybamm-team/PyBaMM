@@ -48,3 +48,17 @@ class TestSettings:
         with pytest.raises(ValueError, match=r"'soft', or 'smooth'"):
             pybamm.settings.min_max_mode = "unknown"
         pybamm.settings.set_smoothing_parameters("exact")
+
+    def test_regularisation_tolerances(self):
+        """Test that regularisation tolerances exist and have sensible defaults."""
+        # Check reg_power tolerance exists
+        assert "reg_power" in pybamm.settings.tolerances
+        assert pybamm.settings.tolerances["reg_power"] > 0
+
+        # Check reg_arcsinh2 tolerance exists
+        assert "reg_arcsinh2" in pybamm.settings.tolerances
+        assert pybamm.settings.tolerances["reg_arcsinh2"] > 0
+
+        # Verify defaults are sensible small values
+        assert pybamm.settings.tolerances["reg_power"] <= 1e-2
+        assert pybamm.settings.tolerances["reg_arcsinh2"] <= 1e-10

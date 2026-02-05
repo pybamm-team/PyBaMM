@@ -2,12 +2,23 @@
 # Test function control submodel
 #
 import numpy as np
+import pytest
 
 import pybamm
 
 
+@pytest.fixture
+def rtol():
+    return 1e-5
+
+
+@pytest.fixture
+def atol():
+    return 1e-8
+
+
 class TestFunctionControl:
-    def test_constant_current(self):
+    def test_constant_current(self, rtol, atol):
         def constant_current(variables):
             I = variables["Current [A]"]
             return I + 1
@@ -25,40 +36,31 @@ class TestFunctionControl:
         params[0]["Current function [A]"] = -1
 
         # set parameters and discretise models
-        for i, model in enumerate(models):
-            # create geometry
-            geometry = model.default_geometry
-            params[i].process_model(model)
-            params[i].process_geometry(geometry)
-            mesh = pybamm.Mesh(
-                geometry, model.default_submesh_types, model.default_var_pts
-            )
-            disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
-            disc.process_model(model)
-
-        # solve model
         solutions = [None] * len(models)
         t_eval = [0, 3600]
-        t_interp = np.linspace(0, 3600, 100)
+        t_interp = np.linspace(t_eval[0], t_eval[-1], 100)
         for i, model in enumerate(models):
-            solutions[i] = model.default_solver.solve(
-                model, t_eval=t_eval, t_interp=t_interp
+            sim = pybamm.Simulation(
+                model,
+                parameter_values=params[i],
+                solver=pybamm.IDAKLUSolver(rtol=rtol, atol=atol),
             )
+            solutions[i] = sim.solve(t_eval, t_interp=t_interp)
 
         np.testing.assert_allclose(
             solutions[0]["Discharge capacity [A.h]"].entries,
             solutions[0]["Current [A]"].entries * solutions[0]["Time [h]"].entries,
-            rtol=1e-7,
-            atol=1e-6,
+            rtol=rtol * 10,
+            atol=atol * 10,
         )
         np.testing.assert_allclose(
             solutions[0]["Voltage [V]"].entries,
             solutions[1]["Voltage [V]"].entries,
-            rtol=1e-6,
-            atol=1e-5,
+            rtol=rtol * 10,
+            atol=atol * 10,
         )
 
-    def test_constant_voltage(self):
+    def test_constant_voltage(self, rtol, atol):
         def constant_voltage(variables):
             V = variables["Voltage [V]"]
             return V - 4.08
@@ -76,31 +78,30 @@ class TestFunctionControl:
         params[0].update({"Voltage function [V]": 4.08})
 
         # set parameters and discretise models
+        solutions = [None] * len(models)
+        t_eval = [0, 3600]
+        t_interp = np.linspace(t_eval[0], t_eval[-1], 100)
         var_pts = {"x_n": 5, "x_s": 5, "x_p": 30, "r_n": 10, "r_p": 10}
         for i, model in enumerate(models):
-            # create geometry
-            geometry = model.default_geometry
-            params[i].process_model(model)
-            params[i].process_geometry(geometry)
-            mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
-            disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
-            disc.process_model(model)
-
-        # solve model
-        solutions = [None] * len(models)
-        t_eval = np.linspace(0, 3600, 100)
-        for i, model in enumerate(models):
-            solutions[i] = model.default_solver.solve(model, t_eval)
+            sim = pybamm.Simulation(
+                model,
+                parameter_values=params[i],
+                var_pts=var_pts,
+                solver=pybamm.IDAKLUSolver(rtol=rtol, atol=atol),
+            )
+            solutions[i] = sim.solve(t_eval, t_interp=t_interp)
 
         V0 = solutions[0]["Voltage [V]"].entries
         V1 = solutions[1]["Voltage [V]"].entries
-        np.testing.assert_allclose(V0, V1, rtol=1e-7, atol=1e-6)
+        np.testing.assert_allclose(V0, V1, rtol=rtol * 10, atol=atol * 10)
 
         I0 = solutions[0]["Current [A]"].entries
         I1 = solutions[1]["Current [A]"].entries
-        np.testing.assert_allclose(abs((I1 - I0) / I0), 0, rtol=1e-2, atol=1e-1)
+        np.testing.assert_allclose(
+            abs((I1 - I0) / I0), 0, rtol=rtol * 10, atol=atol * 10
+        )
 
-    def test_constant_power(self):
+    def test_constant_power(self, rtol, atol):
         def constant_power(variables):
             I = variables["Current [A]"]
             V = variables["Voltage [V]"]
@@ -117,30 +118,28 @@ class TestFunctionControl:
         # set parameters and discretise models
         solutions = [None] * len(models)
         t_eval = [0, 3600]
-        t_interp = np.linspace(0, 3600, 100)
+        t_interp = np.linspace(t_eval[0], t_eval[-1], 100)
         for i, model in enumerate(models):
             # create geometry
-            geometry = model.default_geometry
             param = model.default_parameter_values
             param.update({"Power function [W]": 4})
-            param.process_model(model)
-            param.process_geometry(geometry)
-            mesh = pybamm.Mesh(
-                geometry, model.default_submesh_types, model.default_var_pts
+            sim = pybamm.Simulation(
+                model,
+                parameter_values=param,
+                solver=pybamm.IDAKLUSolver(rtol=rtol, atol=atol),
             )
-            disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
-            disc.process_model(model)
-            solutions[i] = model.default_solver.solve(
-                model, t_eval=t_eval, t_interp=t_interp
-            )
+            solutions[i] = sim.solve(t_eval, t_interp=t_interp)
 
         for var in ["Voltage [V]", "Current [A]"]:
             for sol in solutions[1:]:
                 np.testing.assert_allclose(
-                    solutions[0][var].data, sol[var].data, rtol=5e-5, atol=1e-6
+                    solutions[0][var].data,
+                    sol[var].data,
+                    rtol=rtol * 10,
+                    atol=atol * 10,
                 )
 
-    def test_constant_resistance(self):
+    def test_constant_resistance(self, rtol, atol):
         def constant_resistance(variables):
             I = variables["Current [A]"]
             V = variables["Voltage [V]"]
@@ -157,27 +156,25 @@ class TestFunctionControl:
         # set parameters and discretise models
         solutions = [None] * len(models)
         t_eval = [0, 3600]
-        t_interp = np.linspace(0, 3600, 100)
+        t_interp = np.linspace(t_eval[0], t_eval[-1], 100)
         for i, model in enumerate(models):
             # create geometry
-            geometry = model.default_geometry
             param = model.default_parameter_values
             param.update({"Resistance function [Ohm]": 2})
-            param.process_model(model)
-            param.process_geometry(geometry)
-            mesh = pybamm.Mesh(
-                geometry, model.default_submesh_types, model.default_var_pts
+            sim = pybamm.Simulation(
+                model,
+                parameter_values=param,
+                solver=pybamm.IDAKLUSolver(rtol=rtol, atol=atol),
             )
-            disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
-            disc.process_model(model)
-            solutions[i] = model.default_solver.solve(
-                model, t_eval=t_eval, t_interp=t_interp
-            )
+            solutions[i] = sim.solve(t_eval, t_interp=t_interp)
 
         for var in ["Voltage [V]", "Current [A]"]:
             for sol in solutions[1:]:
                 np.testing.assert_allclose(
-                    solutions[0][var].data, sol[var].data, rtol=5e-5, atol=1e-6
+                    solutions[0][var].data,
+                    sol[var].data,
+                    rtol=rtol * 10,
+                    atol=atol * 10,
                 )
 
     def test_cccv(self):

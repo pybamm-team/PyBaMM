@@ -27,7 +27,8 @@ def eps_n(x, y, z):
 
 
 param.update({"Negative electrode porosity": eps_n})
-var_pts = {"x_n": 8, "x_s": 8, "x_p": 8, "r_n": 8, "r_p": 8, "y": 24, "z": 24}
+# Increase y and z for higher resolution
+var_pts = {"x_n": 8, "x_s": 8, "x_p": 8, "r_n": 8, "r_p": 8, "y": 10, "z": 10}
 exp = pybamm.Experiment(
     [
         "Discharge at 1C until 2.7 V",

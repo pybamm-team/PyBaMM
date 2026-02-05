@@ -82,13 +82,10 @@ class TestElectrodeSOH:
         assert sol["Q"] == pytest.approx(Q, abs=1e-05)
 
     def test_difficult_solver_conditions(self):
+        # Test that the solve is successful, but the feasability checks
+        # are not satisfied.
         param = pybamm.LithiumIonParameters()
         parameter_values = pybamm.ParameterValues("Ai2020")
-
-        def check_solution(sol):
-            names = ["x_0", "x_100", "y_100", "y_0"]
-            for name in names:
-                assert 1 > sol[name] > 0
 
         esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(
             parameter_values, direction=None, param=param
@@ -108,9 +105,9 @@ class TestElectrodeSOH:
             parameter_values, direction=None, param=param
         )
         inputs = {"Q_n": Q_n, "Q_p": Q_p, "Q_Li": Q_Li}
-        # large voltage limits
+        # large voltage limits. difficult but not impossible to satisfy
         sol0 = esoh_solver.solve(inputs)
-        check_solution(sol0)
+        esoh_solver._check_esoh_feasible(sol0, direction=None)
 
         # upper voltage limit
         parameter_values.update(
@@ -126,7 +123,8 @@ class TestElectrodeSOH:
         )
         inputs = {"Q_n": Q_n, "Q_p": Q_p, "Q_Li": Q_Li}
         sol1 = esoh_solver.solve(inputs)
-        check_solution(sol1)
+        with pytest.raises(ValueError, match=r"upper bound of the voltage, 5.5807V"):
+            esoh_solver._check_esoh_feasible(sol1, direction=None)
 
         # lower voltage limit
         parameter_values.update(
@@ -142,7 +140,8 @@ class TestElectrodeSOH:
         )
         inputs = {"Q_n": Q_n, "Q_p": Q_p, "Q_Li": Q_Li}
         sol2 = esoh_solver.solve(inputs)
-        check_solution(sol2)
+        with pytest.raises(ValueError, match=r"lower bound of the voltage, -0.7375V"):
+            esoh_solver._check_esoh_feasible(sol2, direction=None)
 
         # extreme lower voltage limit
         parameter_values.update(
@@ -158,7 +157,8 @@ class TestElectrodeSOH:
         )
         inputs = {"Q_n": Q_n, "Q_p": Q_p, "Q_Li": Q_Li}
         sol3 = esoh_solver.solve(inputs)
-        check_solution(sol3)
+        with pytest.raises(ValueError, match=r"lower bound of the voltage, -0.7375V"):
+            esoh_solver._check_esoh_feasible(sol3, direction=None)
 
     def test_error(self):
         param = pybamm.LithiumIonParameters()
@@ -406,7 +406,7 @@ class TestElectrodeSOHComposite:
             "open-circuit potential": (("single", "current sigmoid"), "single"),
         }
         param = pybamm.LithiumIonParameters(options=options)
-        tol = 1e-6
+        tol = 1e-12
         results_discharge = pybamm.lithium_ion.get_initial_stoichiometries_composite(
             "4.0 V",
             pvals,
@@ -434,7 +434,7 @@ class TestElectrodeSOHComposite:
                 # Check values are approximately equal if not 'init' in key (same
                 # voltage may be different stoichiometries due to hysteresis)
                 if "init" not in key:
-                    assert val_discharge == pytest.approx(val_charge, abs=1e-04)
+                    assert val_discharge == pytest.approx(val_charge, rel=tol * 100)
 
     def test_chen2020_composite_solve_with_hysteresis(self):
         pvals = pybamm.ParameterValues("Chen2020_composite")

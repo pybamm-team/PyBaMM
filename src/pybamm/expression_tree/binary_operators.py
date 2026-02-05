@@ -956,6 +956,59 @@ class Maximum(BinaryOperator):
         return sympy.Max(left, right)
 
 
+class Hypot(BinaryOperator):
+    """Returns the hypotenuse: sqrt(left**2 + right**2)."""
+
+    def __init__(
+        self,
+        left: ChildSymbol,
+        right: ChildSymbol,
+    ):
+        super().__init__("hypot", left, right)
+
+    def __str__(self):
+        """See :meth:`pybamm.Symbol.__str__()`."""
+        return f"hypot({self.left!s}, {self.right!s})"
+
+    def _diff(self, variable: pybamm.Symbol):
+        """See :meth:`pybamm.Symbol._diff()`."""
+        left, right = self.orphans
+        h = pybamm.hypot(left, right)
+        return (left / h) * left.diff(variable) + (right / h) * right.diff(variable)
+
+    def _binary_jac(self, left_jac, right_jac):
+        """See :meth:`pybamm.BinaryOperator._binary_jac()`."""
+        left, right = self.orphans
+        h = pybamm.hypot(left, right)
+        return (left / h) * left_jac + (right / h) * right_jac
+
+    def _binary_evaluate(self, left, right):
+        """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
+        return np.hypot(left, right)
+
+    def _binary_new_copy(
+        self,
+        left: ChildSymbol,
+        right: ChildSymbol,
+    ):
+        """See :meth:`pybamm.BinaryOperator._binary_new_copy()`."""
+        return pybamm.hypot(left, right)
+
+    def _sympy_operator(self, left, right):
+        """Override :meth:`pybamm.BinaryOperator._sympy_operator`"""
+        return sympy.sqrt(left**2 + right**2)
+
+
+def hypot(left: ChildSymbol, right: ChildSymbol) -> pybamm.Symbol:
+    """
+    Returns the hypotenuse: sqrt(left**2 + right**2).
+
+    This is equivalent to np.hypot but works with PyBaMM symbols.
+    """
+    left, right = _preprocess_binary(left, right)
+    return pybamm.simplify_if_constant(Hypot(left, right))
+
+
 def _simplify_elementwise_binary_broadcasts(
     left_child: ChildSymbol,
     right_child: ChildSymbol,
