@@ -62,7 +62,7 @@ cite = ["pybtex>=0.25.0"]
 bpx = ["bpx>=0.5.0,<0.6.0"]
 # Low-overhead progress bars
 tqdm = ["tqdm"]
-jax = ["jax>=0.7.0, <0.9.0; sys_platform != 'darwin' or platform_machine != 'x86_64'"]
+jax = ["jax>=0.7.0, <0.9.0; python_version >= '3.11' and (sys_platform != 'darwin' or platform_machine != 'x86_64')"]
 # Contains all optional dependencies, except for jax, and dev dependencies
 all = [
     "scikit-fem>=8.1.0",

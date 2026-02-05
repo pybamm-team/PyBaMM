@@ -477,6 +477,6 @@ class TestBPX:
         bpx_obj["Parameterisation"]["Negative electrode"]["Porosity"] = 0  # Invalid
 
         with pytest.raises(
-            ValueError, match=r"math domain error"
-        ):  # Matches log(0) error
+            ValueError, match=r"math domain error|expected a positive input"
+        ):  # Matches log(0) error (message changed in Python 3.14)
             pybamm.ParameterValues.create_from_bpx_obj(bpx_obj)
