@@ -33,6 +33,7 @@ if pybamm.has_jax():
         return result
 
     import jax.extend
+
     platform = jax.extend.backend.get_backend().platform.casefold()
     if platform != "metal":
         jax.config.update("jax_enable_x64", True)

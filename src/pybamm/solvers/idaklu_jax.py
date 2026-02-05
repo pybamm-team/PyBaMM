@@ -23,8 +23,8 @@ if pybamm.has_jax():
     except ImportError:
         from jax.extend import ffi
     from jax import numpy as jnp
-    from jax.interpreters import ad, batching, mlir
     from jax._src.interpreters.mlir import custom_call
+    from jax.interpreters import ad, batching, mlir
     from jax.tree_util import tree_flatten
 
     # Handle JAX version compatibility for Primitive location
