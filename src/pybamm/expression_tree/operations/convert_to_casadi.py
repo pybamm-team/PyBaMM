@@ -88,6 +88,8 @@ class CasadiConverter:
                 return casadi.fmin(converted_left, converted_right)
             if isinstance(symbol, pybamm.Maximum):
                 return casadi.fmax(converted_left, converted_right)
+            if isinstance(symbol, pybamm.Hypot):
+                return casadi.hypot(converted_left, converted_right)
             if isinstance(symbol, pybamm.KroneckerProduct):
                 return casadi.kron(converted_left, converted_right)
             # Optimize repeated-row matrix multiplications: M @ x -> ones * (row @ x)
@@ -145,6 +147,20 @@ class CasadiConverter:
                 return casadi.sign(*converted_children)
             elif symbol.function == special.erf:
                 return casadi.erf(*converted_children)
+            elif isinstance(symbol, pybamm.Arcsinh2):
+                a, b = converted_children
+                eps = symbol.eps
+                # sign(b) but treat b=0 as positive
+                sign_b = casadi.if_else(b >= 0, 1.0, -1.0)
+                b_eff = sign_b * casadi.hypot(b, eps)
+                return casadi.arcsinh(a / b_eff)
+            elif isinstance(symbol, pybamm.RegPower):
+                # Regularised power: y = x * (x^2 + delta^2)^((a-1)/2) * scale^a
+                base, exponent, scale = converted_children
+                delta = symbol.delta
+                x = base / scale
+                x2_d2 = x**2 + delta**2
+                return x * (x2_d2 ** ((exponent - 1) / 2)) * (scale**exponent)
             elif isinstance(symbol, pybamm.Interpolant):
                 if symbol.interpolator == "linear":
                     solver = "linear"

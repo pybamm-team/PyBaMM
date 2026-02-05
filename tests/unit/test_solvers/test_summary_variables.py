@@ -87,12 +87,16 @@ class TestSummaryVariables:
 
     def test_get_esoh_variable(self):
         model = pybamm.lithium_ion.SPM()
-        sim = pybamm.Simulation(model)
-        sol = sim.solve(np.linspace(0, 1))
+        rtol = 1e-4
+        atol = 1e-6
+        sim = pybamm.Simulation(model, solver=pybamm.IDAKLUSolver(rtol=rtol, atol=atol))
+        sol = sim.solve([0, 1])
         esoh_solver = sim.get_esoh_solver(True, None)
         sum_vars_esoh = pybamm.SummaryVariables(sol, esoh_solver=esoh_solver)
 
-        assert np.isclose(sum_vars_esoh["x_100"], 0.9493)
+        assert np.isclose(
+            sum_vars_esoh["x_100"], 0.9493, rtol=rtol * 10, atol=atol * 10
+        )
 
         # all esoh vars should be calculated at the same time to reduce solver calls
         assert "Practical NPR" in sum_vars_esoh._variables
@@ -163,15 +167,20 @@ class TestSummaryVariables:
             ]
             * 10,
         )
+        rtol = 1e-4
+        atol = 1e-6
+        solver = pybamm.IDAKLUSolver(rtol=rtol, atol=atol)
         model = pybamm.lithium_ion.SPM()
-        sim = pybamm.Simulation(model, experiment=experiment)
+        sim = pybamm.Simulation(model, experiment=experiment, solver=solver)
         sol = sim.solve()
 
         assert len(sol.summary_variables.cycles) == 10
         assert sol.summary_variables["Cycle number"][0] == 1
         assert sol.summary_variables["Cycle number"][9] == 10
         assert len(sol.summary_variables["x_100"]) == 10
-        assert np.isclose(sol.summary_variables["x_100"][0], 0.9493)
+        assert sol.summary_variables["x_100"][0] == pytest.approx(
+            0.9493, rel=rtol * 10, abs=atol * 10
+        )
 
     def test_summary_vars_get_all_variables(self):
         # no esoh

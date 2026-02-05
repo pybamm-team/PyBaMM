@@ -78,6 +78,9 @@ class TestCasadiConverter:
         assert pybamm.Minimum(a, b).to_casadi() == casadi.MX(0)
         assert pybamm.Maximum(a, b).to_casadi() == casadi.MX(1)
 
+        # hypot
+        assert pybamm.Hypot(e, d).to_casadi() == casadi.MX(np.hypot(3, 2))
+
     def test_convert_array_symbols(self):
         # Arrays
         a = np.array([1, 2, 3, 4, 5])
@@ -155,6 +158,101 @@ class TestCasadiConverter:
                 decimal=15,
                 evalf=True,
             )
+
+    def test_arcsinh2_casadi(self):
+        """Test CasADi conversion of arcsinh2."""
+        a = pybamm.InputParameter("a")
+        b = pybamm.InputParameter("b")
+
+        casadi_inputs = {
+            "a": casadi.MX.sym("a"),
+            "b": casadi.MX.sym("b"),
+        }
+
+        # Test arcsinh2 conversion
+        fun = pybamm.arcsinh2(a, b)
+        casadi_expr = fun.to_casadi(inputs=casadi_inputs)
+
+        # Create a CasADi function to evaluate
+        f = casadi.Function(
+            "f", [casadi_inputs["a"], casadi_inputs["b"]], [casadi_expr]
+        )
+
+        # Test numerical values match
+        test_cases = [
+            (3.0, 1.0),  # arcsinh(3)
+            (1.0, 2.0),  # arcsinh(0.5)
+            (-3.0, 1.0),  # arcsinh(-3)
+            (3.0, -1.0),  # -arcsinh(3)
+            (0.0, 1.0),  # arcsinh(0) = 0
+        ]
+
+        for a_val, b_val in test_cases:
+            casadi_result = float(f(a_val, b_val))
+            pybamm_result = fun.evaluate(inputs={"a": a_val, "b": b_val})
+            np.testing.assert_allclose(casadi_result, pybamm_result, rtol=1e-10)
+
+    def test_hypot_casadi(self):
+        """Test CasADi conversion of hypot."""
+        casadi_y = casadi.MX.sym("y", 2)
+
+        a = pybamm.StateVector(slice(0, 1))
+        b = pybamm.StateVector(slice(1, 2))
+
+        h = pybamm.hypot(a, b)
+        casadi_expr = h.to_casadi(y=casadi_y)
+
+        # Create a CasADi function
+        f = casadi.Function("f", [casadi_y], [casadi_expr])
+
+        # Test 3-4-5 triangle
+        y_test = np.array([3.0, 4.0])
+        casadi_result = float(f(y_test))
+        np.testing.assert_allclose(casadi_result, 5.0, rtol=1e-14)
+
+        # Test other values
+        y_test2 = np.array([5.0, 12.0])
+        casadi_result2 = float(f(y_test2))
+        np.testing.assert_allclose(casadi_result2, 13.0, rtol=1e-14)
+
+    def test_reg_power_casadi(self):
+        """Test CasADi conversion of RegPower."""
+        x = pybamm.InputParameter("x")
+        casadi_inputs = {"x": casadi.MX.sym("x")}
+
+        # Test RegPower without scale
+        rp = pybamm.reg_power(x, 0.5)
+        casadi_expr = rp.to_casadi(inputs=casadi_inputs)
+        f = casadi.Function("f", [casadi_inputs["x"]], [casadi_expr])
+
+        # Test values: should behave like sqrt for large positive values
+        for x_val in [100.0, 10.0, 1.0]:
+            casadi_result = float(f(x_val))
+            pybamm_result = rp.evaluate(inputs={"x": x_val})
+            np.testing.assert_allclose(casadi_result, pybamm_result, rtol=1e-10)
+
+        # Test antisymmetry: reg_power(-x, a) = -reg_power(x, a)
+        for x_val in [10.0, 1.0, 0.1]:
+            pos_result = float(f(x_val))
+            neg_result = float(f(-x_val))
+            np.testing.assert_allclose(neg_result, -pos_result, rtol=1e-12)
+
+    def test_reg_power_casadi_with_scale(self):
+        """Test CasADi conversion of RegPower with scale."""
+        x = pybamm.InputParameter("x")
+        casadi_inputs = {"x": casadi.MX.sym("x")}
+        scale = 10.0
+
+        # Test RegPower with scale
+        rp_scaled = pybamm.reg_power(x, 0.5, scale=scale)
+        casadi_expr_scaled = rp_scaled.to_casadi(inputs=casadi_inputs)
+        f_scaled = casadi.Function("f", [casadi_inputs["x"]], [casadi_expr_scaled])
+
+        # Test values match pybamm evaluation
+        for x_val in [100.0, 10.0, 1.0, -1.0, -10.0]:
+            casadi_result = float(f_scaled(x_val))
+            pybamm_result = rp_scaled.evaluate(inputs={"x": x_val})
+            np.testing.assert_allclose(casadi_result, pybamm_result, rtol=1e-10)
 
     def test_kronecker_product(self):
         a = np.array([1.0, 2.0, 3.0])
