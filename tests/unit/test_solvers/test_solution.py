@@ -50,14 +50,25 @@ class TestSolution:
             pybamm.Solution(t, y, pybamm.BaseModel(), {}, sensitivities=1.0)
 
     def test_errors(self):
-        bad_ts = [np.array([1, 2, 3]), np.array([3, 4, 5])]
-        sol = pybamm.Solution(
-            bad_ts, [np.ones((1, 3)), np.ones((1, 3))], pybamm.BaseModel(), {}
-        )
+        bad_ts_single_segment = [np.array([1, 2, 3, -1])]
         with pytest.raises(
-            ValueError, match=r"Solution time vector must be strictly increasing"
+            ValueError, match=r"must be unique and sorted in increasing order"
         ):
-            sol.set_t()
+            _ = pybamm.Solution(
+                bad_ts_single_segment, [np.ones((1, 3))], pybamm.BaseModel(), {}
+            )
+
+        bad_ts_multiple_segments = [np.array([1, 2, 3]), np.array([2, 3, 4])]
+        with pytest.raises(
+            ValueError,
+            match=r"must be strictly increasing across all segments of the sub-solutions",
+        ):
+            _ = pybamm.Solution(
+                bad_ts_multiple_segments,
+                [np.ones((1, 3)), np.ones((1, 3))],
+                pybamm.BaseModel(),
+                {},
+            )
 
         # Create a mock solution with an SPM
         model = pybamm.lithium_ion.SPM()
@@ -83,6 +94,165 @@ class TestSolution:
             pybamm.Solution(ts, bad_ys, model, {}, all_sensitivities="bad")
 
         sol = pybamm.Solution(ts, bad_ys, model, {}, all_sensitivities={})
+
+    def test_all_t_evals_default(self):
+        """When all_t_evals is None, it defaults to all_ts."""
+        t = np.linspace(0, 1, 10)
+        y = np.tile(t, (5, 1))
+        sol = pybamm.Solution(t, y, pybamm.BaseModel(), {})
+        assert sol.all_t_evals is sol._all_ts
+
+    def test_all_t_evals_explicit(self):
+        """Explicit all_t_evals (non-list ndarray) is wrapped in a list."""
+        t = np.linspace(0, 1, 20)
+        y = np.tile(t, (5, 1))
+        t_eval = np.array([0.0, 0.5, 1.0])
+        sol = pybamm.Solution(t, y, pybamm.BaseModel(), {}, all_t_evals=t_eval)
+        assert isinstance(sol.all_t_evals, list)
+        assert len(sol.all_t_evals) == 1
+        np.testing.assert_array_equal(sol.all_t_evals[0], t_eval)
+
+    def test_all_t_evals_as_list(self):
+        """Explicit all_t_evals provided as a list of arrays."""
+        t = np.linspace(0, 1, 20)
+        y = np.tile(t, (5, 1))
+        t_eval = [np.array([0.0, 0.5, 1.0])]
+        sol = pybamm.Solution(t, y, pybamm.BaseModel(), {}, all_t_evals=t_eval)
+        assert len(sol.all_t_evals) == 1
+        np.testing.assert_array_equal(sol.all_t_evals[0], t_eval[0])
+
+    def test_t_eval_property(self):
+        """t_eval property concatenates all_t_evals."""
+        t1 = np.linspace(0, 1, 10)
+        t2_start = np.nextafter(1.0, np.inf)
+        t2 = np.linspace(t2_start, 2, 10)
+        y1 = np.tile(t1, (5, 1))
+        y2 = np.tile(t2, (5, 1))
+        te1 = np.array([0.0, 0.5, 1.0])
+        te2 = np.array([t2_start, 1.5, 2.0])
+        sol = pybamm.Solution(
+            [t1, t2],
+            [y1, y2],
+            pybamm.BaseModel(),
+            [{}, {}],
+            all_t_evals=[te1, te2],
+        )
+        expected = np.concatenate([te1, te2])
+        np.testing.assert_array_equal(sol.t_eval, expected)
+
+    def test_ensure_t_evals_mismatched_length(self):
+        """Mismatched segment count raises ValueError."""
+        t = np.linspace(0, 1, 10)
+        y = np.tile(t, (5, 1))
+        bad_t_evals = [np.array([0.0, 1.0]), np.array([1.0, 2.0])]
+        with pytest.raises(ValueError, match=r"must match the length"):
+            pybamm.Solution(t, y, pybamm.BaseModel(), {}, all_t_evals=bad_t_evals)
+
+    def test_ensure_t_evals_unsorted(self):
+        """Unsorted t_evals raises ValueError."""
+        t = np.linspace(0, 1, 10)
+        y = np.tile(t, (5, 1))
+        bad_t_evals = [np.array([1.0, 0.5, 0.0])]
+        with pytest.raises(ValueError, match=r"sorted in increasing order"):
+            pybamm.Solution(t, y, pybamm.BaseModel(), {}, all_t_evals=bad_t_evals)
+
+    def test_ensure_t_evals_out_of_range(self):
+        """t_eval values outside all_ts range raise ValueError."""
+        t = np.linspace(0, 1, 10)
+        y = np.tile(t, (5, 1))
+        # t_eval starts before t
+        with pytest.raises(ValueError, match=r"within the same interval"):
+            pybamm.Solution(
+                t,
+                y,
+                pybamm.BaseModel(),
+                {},
+                all_t_evals=[np.array([-0.1, 0.5, 1.0])],
+            )
+        # t_eval ends after t
+        with pytest.raises(ValueError, match=r"within the same interval"):
+            pybamm.Solution(
+                t,
+                y,
+                pybamm.BaseModel(),
+                {},
+                all_t_evals=[np.array([0.0, 0.5, 1.1])],
+            )
+
+    def test_all_t_evals_copy(self):
+        """all_t_evals is preserved through copy."""
+        t = np.linspace(0, 1, 10)
+        y = np.tile(t, (5, 1))
+        t_eval = [np.array([0.0, 0.5, 1.0])]
+        sol = pybamm.Solution(t, y, pybamm.BaseModel(), {}, all_t_evals=t_eval)
+        sol_copy = sol.copy()
+        np.testing.assert_array_equal(sol_copy.all_t_evals[0], t_eval[0])
+
+    def test_all_t_evals_add_overlapping(self):
+        """all_t_evals propagation when adding solutions with overlapping first time."""
+        t1 = np.linspace(0, 1, 10)
+        y1 = np.tile(t1, (5, 1))
+        te1 = np.array([0.0, 0.5, 1.0])
+        sol1 = pybamm.Solution(t1, y1, pybamm.BaseModel(), {"a": 1}, all_t_evals=te1)
+        sol1.solve_time = 1.0
+        sol1.integration_time = 0.1
+
+        t2 = np.linspace(1, 2, 10)
+        y2 = np.tile(t2, (5, 1))
+        te2 = np.array([1.0, 1.5, 2.0])
+        sol2 = pybamm.Solution(t2, y2, pybamm.BaseModel(), {"a": 2}, all_t_evals=te2)
+        sol2.solve_time = 1.0
+        sol2.integration_time = 0.1
+
+        sol_sum = sol1 + sol2
+        # First time overlaps: te2[0] == te1[-1], so te2[1:] is used
+        assert len(sol_sum.all_t_evals) == 2
+        np.testing.assert_array_equal(sol_sum.all_t_evals[0], te1)
+        np.testing.assert_array_equal(sol_sum.all_t_evals[1], te2[1:])
+
+    def test_all_t_evals_add_non_overlapping(self):
+        """all_t_evals propagation when adding solutions without overlapping first time."""
+        t1 = np.linspace(0, 1, 10)
+        y1 = np.tile(t1, (5, 1))
+        te1 = np.array([0.0, 0.5, 1.0])
+        sol1 = pybamm.Solution(t1, y1, pybamm.BaseModel(), {"a": 1}, all_t_evals=te1)
+        sol1.solve_time = 1.0
+        sol1.integration_time = 0.1
+
+        t2 = np.linspace(1.5, 2.5, 10)
+        y2 = np.tile(t2, (5, 1))
+        te2 = np.array([1.5, 2.0, 2.5])
+        sol2 = pybamm.Solution(t2, y2, pybamm.BaseModel(), {"a": 2}, all_t_evals=te2)
+        sol2.solve_time = 1.0
+        sol2.integration_time = 0.1
+
+        sol_sum = sol1 + sol2
+        assert len(sol_sum.all_t_evals) == 2
+        np.testing.assert_array_equal(sol_sum.all_t_evals[0], te1)
+        np.testing.assert_array_equal(sol_sum.all_t_evals[1], te2)
+
+    def test_all_t_evals_add_none_fallback(self):
+        """When one solution has no all_t_evals, result falls back to None then all_ts."""
+        t1 = np.linspace(0, 1, 10)
+        y1 = np.tile(t1, (5, 1))
+        te1 = np.array([0.0, 0.5, 1.0])
+        sol1 = pybamm.Solution(t1, y1, pybamm.BaseModel(), {"a": 1}, all_t_evals=te1)
+        sol1.solve_time = 1.0
+        sol1.integration_time = 0.1
+
+        t2 = np.linspace(1.5, 2.5, 10)
+        y2 = np.tile(t2, (5, 1))
+        sol2 = pybamm.Solution(t2, y2, pybamm.BaseModel(), {"a": 2})
+        sol2.solve_time = 1.0
+        sol2.integration_time = 0.1
+        # Manually set _all_t_evals to None to simulate missing t_evals
+        sol2._all_t_evals = None
+
+        sol_sum = sol1 + sol2
+        # When one is None, result should have all_t_evals == None,
+        # which means the constructor will set it to all_ts
+        # But in __add__, all_t_evals=None is passed, so in constructor it becomes all_ts
+        assert sol_sum._all_t_evals is sol_sum._all_ts
 
     def test_add_solutions(self):
         # Set up first solution
@@ -217,6 +387,9 @@ class TestSolution:
     def test_copy(self):
         # Set up first solution
         t1 = [np.linspace(0, 1), np.linspace(1, 2, 5)]
+        # make sure the second solution is not exactly the same as the first
+        t1[1][0] = np.nextafter(t1[1][0], np.inf)
+
         y1 = [np.tile(t1[0], (20, 1)), np.tile(t1[1], (20, 1))]
         sol1 = pybamm.Solution(t1, y1, pybamm.BaseModel(), [{"a": 1}, {"a": 2}])
 
@@ -262,6 +435,7 @@ class TestSolution:
     def test_last_state(self):
         # Set up first solution
         t1 = [np.linspace(0, 1), np.linspace(1, 2, 5)]
+        t1[1][0] = np.nextafter(t1[1][0], np.inf)
         y1 = [np.tile(t1[0], (20, 1)), np.tile(t1[1], (20, 1))]
         sol1 = pybamm.Solution(t1, y1, pybamm.BaseModel(), [{"a": 1}, {"a": 2}])
 

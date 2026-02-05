@@ -36,7 +36,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         Default is "warn".
     on_failure : str, optional
         What to do if a solver error flag occurs. Options are "warn", "error", or "ignore".
-        Default is "raise".
+        Default is "error".
     output_variables : list[str], optional
         List of variables to calculate and return. If none are specified then
         the complete state vector is returned (can be very large) (default is [])
@@ -109,6 +109,14 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 # Note: this option is always disabled if output_variables are given
                 # or if t_interp values are specified
                 "hermite_interpolation": True,
+                # Setting hermite_reduction_factor > 1.0 compresses the solution size
+                # by introducing a small amount of error to the Hermite spline
+                # interpolant. A value of `M = 2.0` roughly corresponds to a maximum 2x
+                # increase in error (practically the error is much smaller), while
+                # reducing the number of saved states by around 5-6x. This option is
+                # only active if `hermite_interpolation` is True and sensitivities
+                # are disabled.
+                "hermite_reduction_factor": 1.0,
                 ## Initial conditions calculation
                 # Positive constant in the Newton iteration convergence test within the
                 # initial condition calculation
@@ -163,53 +171,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         on_failure=None,
         options=None,
     ):
-        # set default options,
-        # (only if user does not supply)
-        default_options = {
-            "print_stats": False,
-            "jacobian": "sparse",
-            "preconditioner": "BBDP",
-            "precon_half_bandwidth": 5,
-            "precon_half_bandwidth_keep": 5,
-            "num_threads": 1,
-            "num_solvers": 1,
-            "linear_solver": "SUNLinSol_KLU",
-            "linsol_max_iterations": 5,
-            "epsilon_linear_tolerance": 0.05,
-            "increment_factor": 1.0,
-            "linear_solution_scaling": True,
-            "silence_sundials_errors": False,
-            "max_order_bdf": 5,
-            "max_num_steps": 100000,
-            "dt_init": 0.0,
-            "dt_min": 0.0,
-            "dt_max": 0.0,
-            "max_error_test_failures": 10,
-            "max_nonlinear_iterations": 40,
-            "max_convergence_failures": 100,
-            "nonlinear_convergence_coefficient": 0.33,
-            "suppress_algebraic_error": False,
-            "hermite_interpolation": True,
-            "nonlinear_convergence_coefficient_ic": 0.0033,
-            "max_num_steps_ic": 50,
-            "max_num_jacobians_ic": 40,
-            "max_num_iterations_ic": 100,
-            "max_linesearch_backtracks_ic": 100,
-            "linesearch_off_ic": False,
-            "init_all_y_ic": False,
-            "calc_ic": True,
-            "num_steps_no_progress": 0,
-            "t_no_progress": 0.0,
-        }
-        if options is None:
-            options = default_options
-        else:
-            if "num_threads" in options and "num_solvers" not in options:
-                options["num_solvers"] = options["num_threads"]
-            for key, value in default_options.items():
-                if key not in options:
-                    options[key] = value
-        self._options = options
+        self._options = self._check_and_combine_options(options)
 
         self.output_variables = [] if output_variables is None else output_variables
 
@@ -231,30 +193,61 @@ class IDAKLUSolver(pybamm.BaseSolver):
         pybamm.citations.register("Hindmarsh2000")
         pybamm.citations.register("Hindmarsh2005")
 
+        # set default options,
+
+    def _check_and_combine_options(self, user_options: dict | None) -> dict:
+        num_solvers = user_options.get("num_threads", 1) if user_options else 1
+        default_options = {
+            "print_stats": False,
+            "jacobian": "sparse",
+            "preconditioner": "BBDP",
+            "precon_half_bandwidth": 5,
+            "precon_half_bandwidth_keep": 5,
+            "num_threads": 1,
+            "num_solvers": num_solvers,
+            "linear_solver": "SUNLinSol_KLU",
+            "linsol_max_iterations": 5,
+            "epsilon_linear_tolerance": 0.05,
+            "increment_factor": 1.0,
+            "linear_solution_scaling": True,
+            "silence_sundials_errors": False,
+            "max_order_bdf": 5,
+            "max_num_steps": 100000,
+            "dt_init": 0.0,
+            "dt_min": 0.0,
+            "dt_max": 0.0,
+            "max_error_test_failures": 10,
+            "max_nonlinear_iterations": 40,
+            "max_convergence_failures": 100,
+            "nonlinear_convergence_coefficient": 0.33,
+            "suppress_algebraic_error": False,
+            "hermite_interpolation": True,
+            "hermite_reduction_factor": 1.0,
+            "nonlinear_convergence_coefficient_ic": 0.0033,
+            "max_num_steps_ic": 50,
+            "max_num_jacobians_ic": 40,
+            "max_num_iterations_ic": 100,
+            "max_linesearch_backtracks_ic": 100,
+            "linesearch_off_ic": False,
+            "init_all_y_ic": False,
+            "calc_ic": True,
+            "num_steps_no_progress": 0,
+            "t_no_progress": 0.0,
+        }
+        if not user_options:
+            return default_options
+
+        return default_options | user_options
+
     def _check_atol_type(self, atol, model):
-        """
-        This method checks that the atol vector is of the right shape and
-        type.
-
-        Parameters
-        ----------
-        atol: double or np.array or list
-            Absolute tolerances. If this is a vector then each entry corresponds to
-            the absolute tolerance of one entry in the state vector.
-        model: pybamm.BaseModel
-            The model to check the atol for.
-        stacked_inputs: np.ndarray
-            The stacked inputs.
-        """
-
         if isinstance(atol, float):
-            atol = np.full(model.len_rhs_and_alg, atol)
-        elif not isinstance(atol, np.ndarray):
+            return np.full(model.len_rhs_and_alg, atol)
+        elif isinstance(atol, np.ndarray):
+            return atol
+        else:
             raise pybamm.SolverError(
                 "Absolute tolerances must be a numpy array or float"
             )
-
-        return atol
 
     def set_up(self, model, inputs=None, t_eval=None, ics_only=False):
         base_set_up_return = super().set_up(model, inputs, t_eval, ics_only)
@@ -625,11 +618,13 @@ class IDAKLUSolver(pybamm.BaseSolver):
         integration_time = timer.time()
 
         return [
-            self._post_process_solution(soln, model, integration_time, inputs_dict)
+            self._post_process_solution(
+                soln, model, integration_time, inputs_dict, t_eval
+            )
             for soln, inputs_dict in zip(solns, inputs_list, strict=False)
         ]
 
-    def _post_process_solution(self, sol, model, integration_time, inputs_dict):
+    def _post_process_solution(self, sol, model, integration_time, inputs_dict, t_eval):
         number_of_sensitivity_parameters = self._setup[
             "number_of_sensitivity_parameters"
         ]
@@ -675,7 +670,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                         msg + ", returning a partial solution.",
                         stacklevel=2,
                     )
-                case "raise":
+                case "error":
                     raise pybamm.SolverError(msg)
 
         if sol.yp.size > 0:
@@ -683,8 +678,18 @@ class IDAKLUSolver(pybamm.BaseSolver):
         else:
             yp = None
 
+        t = sol.t
+        t_eval = np.array(t_eval)
+        if t[-1] != t_eval[-1]:
+            idx_final = np.searchsorted(t_eval, t[-1]) + 1
+            t_eval = t_eval[:idx_final]
+
+            # the final index may differ due to an event;
+            # manually set it to the true final time
+            t_eval[-1] = t[-1]
+
         newsol = pybamm.Solution(
-            sol.t,
+            t,
             np.transpose(y_out),
             model,
             inputs_dict,
@@ -693,6 +698,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             termination,
             all_sensitivities=yS_out,
             all_yps=yp,
+            all_t_evals=t_eval,
             variables_returned=bool(save_outputs_only),
         )
 
@@ -944,3 +950,102 @@ class IDAKLUSolver(pybamm.BaseSolver):
             t_interp=t_interp,
         )
         return obj
+
+    def reduce_solution(
+        self,
+        solution,
+        hermite_reduction_factor=2.0,
+    ) -> pybamm.Solution:
+        """Reduce knots in a pybamm.Solution using Hermite spline compression.
+
+        The multiplier M controls the total error budget relative to the
+        solver's own WRMS tolerance.  The knot reducer is allowed an
+        additional WRMS error of (M-1), so the total error satisfies
+        ``||e_total||_WRMS <= M``.  M = 2 (default) means the reduced
+        solution may have up to 2x the solver's local error.
+
+        Parameters
+        ----------
+        solution : :class:`pybamm.Solution`
+            The solution to reduce. Must have hermite interpolation data
+            (all_yps is not None).
+        hermite_reduction_factor : float, optional
+            Total error multiplier (>= 1.0, default 2.0). The knot
+            reducer's WRMS threshold is N * (M-1)^2. Larger values
+            allow more aggressive reduction.
+
+        Returns
+        -------
+        :class:`pybamm.Solution`
+            The modified solution.
+        """
+        if not solution.hermite_interpolation:
+            raise pybamm.SolverError(
+                "reduce_solution requires Hermite interpolation data (all_yps)."
+            )
+        if self.options["hermite_reduction_factor"] != 1.0:
+            raise pybamm.SolverError(
+                "reduce_solution requires the original solver to have "
+                "`hermite_reduction_factor = 1.0`"
+            )
+
+        all_ts = solution.all_ts
+        all_ys = solution.all_ys
+        all_yps = solution.all_yps
+        all_models = solution.all_models
+        n_seg = len(all_ts)
+
+        rtol = self.rtol
+        atol = self.atol
+
+        # Build flat time-major arrays for the C++ reducer.
+        # all_ys[i] is (n_states, M) transposed view whose underlying
+        # buffer is already time-major (M * n_states,).  .T.ravel()
+        # returns a 1D view of that buffer -- no copy.
+        flat_ys = [all_ys[i].T.ravel() for i in range(n_seg)]
+        flat_yps = [all_yps[i].T.ravel() for i in range(n_seg)]
+
+        # Build per-segment atol vectors
+        atol_vecs = [None] * n_seg
+        for i, model in enumerate(all_models):
+            atol_vecs[i] = self._check_atol_type(atol, model)
+
+        ts_vec = idaklu.VectorRealtypeNdArray(all_ts)
+        ys_vec = idaklu.VectorRealtypeNdArray(flat_ys)
+        yps_vec = idaklu.VectorRealtypeNdArray(flat_yps)
+        atols_vec = idaklu.VectorRealtypeNdArray(atol_vecs)
+        t_evals_vec = idaklu.VectorRealtypeNdArray(solution.all_t_evals)
+
+        red_ts, red_ys, red_yps = idaklu.reduce_knots(
+            ts_vec,
+            ys_vec,
+            yps_vec,
+            atols_vec,
+            t_evals_vec,
+            float(rtol),
+            float(hermite_reduction_factor),
+        )
+
+        # Reshape reduced flat arrays back to (n_states, K) convention
+        new_ts = [np.asarray(red_ts[i]) for i in range(n_seg)]
+        new_ys = []
+        new_yps = []
+        for i in range(n_seg):
+            K = len(new_ts[i])
+            N = all_ys[i].shape[0]
+            new_ys.append(np.asarray(red_ys[i]).reshape(K, N).T)
+            new_yps.append(np.asarray(red_yps[i]).reshape(K, N).T)
+
+        return pybamm.Solution(
+            all_ts=new_ts,
+            all_ys=new_ys,
+            all_yps=new_yps,
+            all_models=all_models,
+            all_inputs=solution.all_inputs,
+            t_event=solution.t_event,
+            y_event=solution.y_event,
+            termination=solution.termination,
+            all_sensitivities=solution._all_sensitivities,
+            all_t_evals=solution.all_t_evals,
+            variables_returned=solution.variables_returned,
+        )

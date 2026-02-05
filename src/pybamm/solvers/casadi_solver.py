@@ -490,6 +490,7 @@ class CasadiSolver(pybamm.BaseSolver):
             np.array([t_event]),
             y_event[:, np.newaxis],
             "event",
+            all_t_evals=t_sol,
         )
         solution.integration_time = (
             coarse_solution.integration_time + dense_step_sol.integration_time
@@ -687,6 +688,7 @@ class CasadiSolver(pybamm.BaseSolver):
                 model,
                 inputs_dict,
                 check_solution=False,
+                all_t_evals=t_eval,
             )
             sol.integration_time = integration_time
             return sol
@@ -725,6 +727,7 @@ class CasadiSolver(pybamm.BaseSolver):
                 y_sol,
                 model,
                 inputs_dict,
+                all_t_evals=t_eval,
                 check_solution=False,
             )
             sol.integration_time = integration_time
