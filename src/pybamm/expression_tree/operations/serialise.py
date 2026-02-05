@@ -87,9 +87,6 @@ class Serialise:
                         node.initial_condition
                     )
 
-                if hasattr(node, "scale"):
-                    node_dict["scale"] = self.default(node.scale)
-
                 return node_dict
 
             if isinstance(node, pybamm.Event):
