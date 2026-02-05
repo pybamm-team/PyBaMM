@@ -977,9 +977,7 @@ def jax_bdf_integrate(func, y0, t_eval, *args, rtol=1e-6, atol=1e-6, mass=None):
 
     """
     if not pybamm.has_jax():
-        raise ModuleNotFoundError(
-            "Jax or jaxlib is not installed, please see https://docs.pybamm.org/en/latest/source/user_guide/installation/gnu-linux-mac.html#optional-jaxsolver"
-        )
+        pybamm.raise_jax_not_found()
 
     def _check_arg(arg):
         if not isinstance(arg, core.Tracer) and not core.valid_jaxtype(arg):

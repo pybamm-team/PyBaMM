@@ -62,9 +62,7 @@ class JaxSolver(pybamm.BaseSolver):
         extra_options=None,
     ):
         if not pybamm.has_jax():
-            raise ModuleNotFoundError(
-                "Jax or jaxlib is not installed, please see https://docs.pybamm.org/en/latest/source/user_guide/installation/gnu-linux-mac.html#optional-jaxsolver"
-            )
+            pybamm.raise_jax_not_found()
 
         # note: bdf solver itself calculates consistent initial conditions so can set
         # root_method to none, allow user to override this behavior
