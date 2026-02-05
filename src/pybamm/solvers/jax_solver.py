@@ -6,6 +6,7 @@ import pybamm
 
 if pybamm.has_jax():
     import jax
+    import jax.extend
     import jax.numpy as jnp
     from jax.experimental.ode import odeint
 
@@ -229,7 +230,7 @@ class JaxSolver(pybamm.BaseSolver):
         if model not in self._cached_solves:
             self._cached_solves[model] = self.create_solve(model, t_eval)
 
-        platform = jax.lib.xla_bridge.get_backend().platform.casefold()
+        platform = jax.extend.backend.get_backend().platform.casefold()
         if len(inputs) == 1:
             y = [self._cached_solves[model](y0_list[0], inputs[0])]
         elif platform.startswith("cpu"):
