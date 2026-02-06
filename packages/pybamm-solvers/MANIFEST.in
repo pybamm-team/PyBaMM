@@ -1,2 +1,5 @@
+include CMakeLists.txt
+include FindSuiteSparse.cmake
+include FindSUNDIALS.cmake
 include src/pybammsolvers/idaklu_source/NoProgressGuard.hpp
 include src/pybammsolvers/idaklu_source/sundials_error_handler.hpp

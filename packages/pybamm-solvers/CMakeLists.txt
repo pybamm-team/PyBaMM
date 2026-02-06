@@ -174,14 +174,24 @@ if (${USE_PYTHON_CASADI})
         endif()
         # Link against casadi by name, not absolute path, to avoid issues with
         # pip's isolated build environments changing paths between configure and build
-        target_link_libraries(idaklu PRIVATE casadi)
+        # casadi 3.7+ exports the target as casadi::casadi instead of casadi
+        if(TARGET casadi::casadi)
+            target_link_libraries(idaklu PRIVATE casadi::casadi)
+        else()
+            target_link_libraries(idaklu PRIVATE casadi)
+        endif()
     else ()
         message(FATAL_ERROR "Could not find CasADi library directory")
     endif ()
 else ()
     message("Trying to link against any casadi package apart from the Python one")
     find_package(casadi CONFIG REQUIRED)
-    target_link_libraries(idaklu PRIVATE casadi)
+    # casadi 3.7+ exports the target as casadi::casadi instead of casadi
+    if(TARGET casadi::casadi)
+        target_link_libraries(idaklu PRIVATE casadi::casadi)
+    else()
+        target_link_libraries(idaklu PRIVATE casadi)
+    endif()
 endif ()
 
 # openmp

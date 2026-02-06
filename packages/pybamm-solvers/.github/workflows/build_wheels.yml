@@ -10,8 +10,8 @@ on:
 env:
   CIBW_BUILD_VERBOSITY: 2
   CIBW_BUILD_FRONTEND: "pip; args: --no-build-isolation"
-  # Skip PyPy and MUSL builds in any and all jobs
-  CIBW_SKIP: "pp* *musllinux*"
+  # Skip PyPy, MUSL, and free-threaded Python builds (CasADi lacks cp314t wheels)
+  CIBW_SKIP: "pp* *musllinux* cp314t*"
   FORCE_COLOR: 3
 
 jobs:
@@ -78,7 +78,7 @@ jobs:
           CIBW_BEFORE_ALL_LINUX: >
             yum -y install openblas-devel lapack-devel &&
             python install_KLU_Sundials.py
-          CIBW_BEFORE_BUILD_LINUX: python -m pip install cmake casadi==3.6.7 setuptools wheel pybind11
+          CIBW_BEFORE_BUILD_LINUX: python -m pip install cmake casadi==3.7.2 setuptools wheel pybind11
           CIBW_REPAIR_WHEEL_COMMAND_LINUX: auditwheel repair -w {dest_dir} {wheel}
           CIBW_TEST_EXTRAS: "dev"
           CIBW_TEST_COMMAND: |
@@ -168,7 +168,7 @@ jobs:
           # 10.13 for Intel (macos-15-intel), 11.0 for Apple Silicon (macos-latest)
           MACOSX_DEPLOYMENT_TARGET: ${{ matrix.os == 'macos-latest' && '11.0' || '10.13' }}
           CIBW_ARCHS_MACOS: auto
-          CIBW_BEFORE_BUILD: python -m pip install cmake casadi==3.6.7 setuptools delocate pybind11
+          CIBW_BEFORE_BUILD: python -m pip install cmake casadi==3.7.2 setuptools delocate pybind11
           CIBW_REPAIR_WHEEL_COMMAND: |
             if [[ $(uname -m) == "x86_64" ]]; then
               delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel}

@@ -2,7 +2,7 @@
 requires = [
     "setuptools",
     # On Windows, use the CasADi vcpkg registry and CMake bundled from MSVC
-    "casadi==3.6.7; platform_system!='Windows'",
+    "casadi==3.7.2; platform_system!='Windows'",
     # Note: the version of CasADi as a build-time dependency should be matched
     # cross platforms, so updates to its minimum version here should be accompanied
     # by a version bump in https://github.com/pybamm-team/casadi-vcpkg-registry.
@@ -14,11 +14,11 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "pybammsolvers"
 description = "Python interface for the IDAKLU solver"
-requires-python = ">=3.10,<3.14"
+requires-python = ">=3.10,<3.15"
 license-files = ["LICENSE"]
 dynamic = ["version", "readme"]
 dependencies = [
-    "casadi==3.6.7",
+    "casadi==3.7.2",
     "numpy",
 ]
 

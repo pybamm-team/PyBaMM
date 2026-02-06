@@ -215,19 +215,11 @@ def run_pybamm_tests(session):
         else:
             session.log("Skipping PyBaMM update (--no-update specified)")
 
-    # Install PyBaMM with all dependencies
-    session.log("Installing PyBaMM with all dependencies...")
-    session.cd(str(pybamm_dir))
-    session.install("-e", ".[all,dev,jax]", silent=False)
-
     # Go back to pybammsolvers root
     session.cd(str(Path(__file__).parent))
 
-    # Uninstall bundled pybammsolvers
-    session.log("Uninstalling bundled pybammsolvers...")
-    session.run("uv", "pip", "uninstall", "pybammsolvers", silent=False)
-
     # Build and install local pybammsolvers
+    # This ensures PyBaMM will use the local version instead of fetching from PyPI
     session.log("Building and installing local pybammsolvers...")
     if sys.platform != "win32":
         session.run("python", "install_KLU_Sundials.py")
@@ -235,7 +227,16 @@ def run_pybamm_tests(session):
         session.warn("Skipping install_KLU_Sundials.py on Windows")
 
     # Install local pybammsolvers
-    session.install(".", silent=False)
+    # Use --force-reinstall to ensure uv uses the local source and doesn't fetch from PyPI
+    session.install(".", "--force-reinstall", silent=False)
+
+    # Install PyBaMM with all dependencies
+    # pybammsolvers is already installed locally, so it won't fetch from PyPI
+    session.log("Installing PyBaMM with all dependencies...")
+    session.cd(str(pybamm_dir))
+    # Install PyBaMM extras and dev dependency group (PEP 735)
+    session.install("-e", ".[all,jax]", silent=False)
+    session.install("--group", "dev", silent=False)
 
     # Run PyBaMM tests
     session.cd(str(pybamm_dir))

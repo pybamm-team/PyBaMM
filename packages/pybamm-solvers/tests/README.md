@@ -11,7 +11,7 @@ This directory contains the standardized test suite for the pybammsolvers packag
 nox -s test
 
 # Run with specific Python version
-nox -s test --python 3.11
+nox -s test --python 3.13
 ```
 
 ### Using Pytest
