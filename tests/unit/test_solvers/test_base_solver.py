@@ -465,7 +465,20 @@ class TestBaseSolver:
         ):
             base_solver.on_failure = "invalid"
 
-    @pytest.mark.parametrize("format", ["casadi", "python", "jax"])
+    @pytest.mark.parametrize(
+        "format",
+        [
+            "casadi",
+            "python",
+            pytest.param(
+                "jax",
+                marks=pytest.mark.skipif(
+                    not pybamm.has_jax(),
+                    reason="jax or jaxlib is not installed",
+                ),
+            ),
+        ],
+    )
     def test_events_fail_on_initialisation_multiple_input_params(self, format):
         # Test that events fail on initialisation when multiple input parameters are used
         # if it's not the first set of parameters
