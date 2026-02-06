@@ -69,6 +69,9 @@ from .models.symbol_processor import SymbolProcessor
 from .models.event import Event
 from .models.event import EventType
 
+# DiffSL export
+from .expression_tree.operations.diffsl import DiffSLExport
+
 # Battery models
 from .models.full_battery_models.base_battery_model import (
     BaseBatteryModel,
