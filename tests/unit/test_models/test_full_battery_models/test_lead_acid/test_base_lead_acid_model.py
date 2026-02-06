@@ -18,14 +18,14 @@ class TestBaseLeadAcidModel:
     def test_incompatible_options(self):
         with pytest.raises(
             pybamm.OptionError,
-            match="Lead-acid models can only have thermal effects if dimensionality is 0.",
+            match=r"Lead-acid models can only have thermal effects if dimensionality is 0.",
         ):
             pybamm.lead_acid.BaseModel({"dimensionality": 1, "thermal": "lumped"})
-        with pytest.raises(pybamm.OptionError, match="SEI"):
+        with pytest.raises(pybamm.OptionError, match=r"SEI"):
             pybamm.lead_acid.BaseModel({"SEI": "constant"})
-        with pytest.raises(pybamm.OptionError, match="lithium plating"):
+        with pytest.raises(pybamm.OptionError, match=r"lithium plating"):
             pybamm.lead_acid.BaseModel({"lithium plating": "reversible"})
-        with pytest.raises(pybamm.OptionError, match="MSMR"):
+        with pytest.raises(pybamm.OptionError, match=r"MSMR"):
             pybamm.lead_acid.BaseModel(
                 {
                     "open-circuit potential": "MSMR",

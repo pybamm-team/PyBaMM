@@ -123,12 +123,12 @@ class LOQS(BaseModel):
                 )
             )
             self.submodels["negative interface current"] = (
-                pybamm.kinetics.CurrentForInverseButlerVolmer(
+                pybamm.kinetics.CurrentForInverseKinetics(
                     self.param, "negative", "lead-acid main"
                 )
             )
             self.submodels["positive interface current"] = (
-                pybamm.kinetics.CurrentForInverseButlerVolmer(
+                pybamm.kinetics.CurrentForInverseKinetics(
                     self.param, "positive", "lead-acid main"
                 )
             )

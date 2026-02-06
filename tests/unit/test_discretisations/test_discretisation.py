@@ -175,7 +175,7 @@ class TestDiscretise:
         np.testing.assert_array_equal(y[disc.y_slices[d][0]], d_true)
         np.testing.assert_array_equal(y[disc.y_slices[jn][0]], jn_true)
 
-        with pytest.raises(TypeError, match="y_slices should be"):
+        with pytest.raises(TypeError, match=r"y_slices should be"):
             disc.y_slices = 1
 
         # bounds with an InputParameter
@@ -461,8 +461,13 @@ class TestDiscretise:
         np.testing.assert_array_equal(y0, model.concatenated_rhs.evaluate(None, y0))
 
         # grad and div are identity operators here
-        np.testing.assert_array_equal(y0, model.variables["c"].evaluate(None, y0))
-        np.testing.assert_array_equal(y0, model.variables["N"].evaluate(None, y0))
+        # Use get_processed_variable to get the discretised variables
+        np.testing.assert_array_equal(
+            y0, model.get_processed_variable("c").evaluate(None, y0)
+        )
+        np.testing.assert_array_equal(
+            y0, model.get_processed_variable("N").evaluate(None, y0)
+        )
 
         # mass matrix is identity
         np.testing.assert_array_equal(
@@ -521,7 +526,9 @@ class TestDiscretise:
         T0 = model.initial_conditions[T].evaluate() * np.ones_like(
             mesh[T.domain[0]].nodes[:, np.newaxis]
         )
-        np.testing.assert_array_equal(S0 * T0, model.variables["ST"].evaluate(None, y0))
+        np.testing.assert_array_equal(
+            S0 * T0, model.get_processed_variable("ST").evaluate(None, y0)
+        )
 
         # mass matrix is identity
         np.testing.assert_array_equal(
@@ -538,7 +545,7 @@ class TestDiscretise:
         np.testing.assert_array_equal(np.eye(np.size(y0)), jacobian.toarray())
 
         # test that discretising again gives an error
-        with pytest.raises(pybamm.ModelError, match="Cannot re-discretise a model"):
+        with pytest.raises(pybamm.ModelError, match=r"Cannot re-discretise a model"):
             disc.process_model(model)
 
         # test that not enough initial conditions raises an error
@@ -585,7 +592,7 @@ class TestDiscretise:
         # turn debug mode off to not check well posedness
         debug_mode = pybamm.settings.debug_mode
         pybamm.settings.debug_mode = False
-        with pytest.raises(pybamm.ModelError, match="No key set for variable"):
+        with pytest.raises(pybamm.ModelError, match=r"No key set for variable"):
             disc.process_model(model)
         pybamm.settings.debug_mode = debug_mode
 
@@ -804,14 +811,14 @@ class TestDiscretise:
 
         disc = pybamm.Discretisation()
         with pytest.raises(
-            pybamm.ModelError, match="initial condition is outside of variable bounds"
+            pybamm.ModelError, match=r"initial condition is outside of variable bounds"
         ):
             disc.process_model(model)
 
     def test_process_empty_model(self):
         model = pybamm.BaseModel()
         disc = pybamm.Discretisation()
-        with pytest.raises(pybamm.ModelError, match="Cannot discretise empty model"):
+        with pytest.raises(pybamm.ModelError, match=r"Cannot discretise empty model"):
             disc.process_model(model)
 
     def test_broadcast(self):
@@ -1065,7 +1072,8 @@ class TestDiscretise:
             "positive particle": pybamm.ZeroDimensionalSpatialMethod(),
         }
         with pytest.raises(
-            pybamm.DiscretisationError, match="Zero-dimensional spatial method for the "
+            pybamm.DiscretisationError,
+            match=r"Zero-dimensional spatial method for the ",
         ):
             pybamm.Discretisation(mesh, spatial_methods)
 
@@ -1081,7 +1089,7 @@ class TestDiscretise:
         assert list(bcs.keys()) == list(new_bcs.keys())
 
         # error if domain not "current collector"
-        with pytest.raises(pybamm.ModelError, match="Boundary conditions"):
+        with pytest.raises(pybamm.ModelError, match=r"Boundary conditions"):
             disc.check_tab_conditions(b, bcs)
 
     def test_mass_matrix_inverse(self):
@@ -1173,7 +1181,7 @@ class TestDiscretise:
 
         # discretise
         disc = pybamm.Discretisation(mesh, spatial_methods)
-        with pytest.raises(pybamm.ModelError, match="Boundary condition at r = 0"):
+        with pytest.raises(pybamm.ModelError, match=r"Boundary condition at r = 0"):
             disc.process_model(model)
 
         # boundary conditions (non-homog Neumann)
@@ -1185,7 +1193,7 @@ class TestDiscretise:
 
         # discretise
         disc = pybamm.Discretisation(mesh, spatial_methods)
-        with pytest.raises(pybamm.ModelError, match="Boundary condition at r = 0"):
+        with pytest.raises(pybamm.ModelError, match=r"Boundary condition at r = 0"):
             disc.process_model(model)
 
     def test_check_model_errors(self):
@@ -1195,20 +1203,20 @@ class TestDiscretise:
         model.rhs = {var: pybamm.Vector([1, 1])}
         model.initial_conditions = {var: 1}
         with pytest.raises(
-            pybamm.ModelError, match="initial conditions must be numpy array"
+            pybamm.ModelError, match=r"initial conditions must be numpy array"
         ):
             disc.check_model(model)
         model.initial_conditions = {var: pybamm.Vector([1, 1, 1])}
         with pytest.raises(
             pybamm.ModelError,
-            match="rhs and initial conditions must have the same shape",
+            match=r"rhs and initial conditions must have the same shape",
         ):
             disc.check_model(model)
         model.rhs = {}
         model.algebraic = {var: pybamm.Vector([1, 1])}
         with pytest.raises(
             pybamm.ModelError,
-            match="algebraic and initial conditions must have the same shape",
+            match=r"algebraic and initial conditions must have the same shape",
         ):
             disc.check_model(model)
 
@@ -1290,6 +1298,87 @@ class TestDiscretise:
             "b": 2 * a,
         }
         with pytest.raises(
-            pybamm.ModelError, match="Variable 'b' should have expression"
+            pybamm.ModelError, match=r"Variable 'b' should have expression"
         ):
             disc.process_model(model, inplace=False)
+
+    def test_process_model_attaches_to_symbol_processor(self):
+        """Test that process_model attaches discretisation to model's symbol_processor."""
+        model = pybamm.lithium_ion.SPM()
+        param = pybamm.ParameterValues("Chen2020")
+        param.process_model(model)
+        geometry = model.default_geometry
+        param.process_geometry(geometry)
+        mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
+        disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+
+        disc.process_model(model)
+
+        assert model.symbol_processor.discretisation is not None
+        # Should be a copy, not the same object
+        assert model.symbol_processor.discretisation is not disc
+
+    def test_delayed_variable_processing(self):
+        """Test that delayed_variable_processing defers variable processing."""
+        model = pybamm.lithium_ion.SPM()
+        param = pybamm.ParameterValues("Chen2020")
+        param.process_model(model, delayed_variable_processing=True)
+        geometry = model.default_geometry
+        param.process_geometry(geometry)
+        mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
+        disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+
+        # With delayed_variable_processing=True, variables should not be processed
+        disc.process_model(model, delayed_variable_processing=True)
+
+        assert model.is_discretised is True
+        # _variables_processed should be empty (not processed yet)
+        assert len(model._variables_processed) == 0
+
+        # With delayed_variable_processing=False (default), variables are processed
+        model2 = pybamm.lithium_ion.SPM()
+        param2 = pybamm.ParameterValues("Chen2020")
+        param2.process_model(model2)
+        geometry2 = model2.default_geometry
+        param2.process_geometry(geometry2)
+        mesh2 = pybamm.Mesh(
+            geometry2, model2.default_submesh_types, model2.default_var_pts
+        )
+        disc2 = pybamm.Discretisation(mesh2, model2.default_spatial_methods)
+        disc2.process_model(model2, delayed_variable_processing=False)
+
+        assert model2.is_discretised is True
+        # Variables should be processed
+        assert len(model2._variables_processed) > 0
+
+    def test_process_model_preserves_variables_except_pre_process(self):
+        """Test that process_model preserves model.variables, except for _pre_process_variables."""
+        model = pybamm.lithium_ion.SPM()
+        param = pybamm.ParameterValues("Chen2020")
+        param.process_model(model)
+
+        # Store original variable expressions (by id) before discretisation
+        original_var_ids = {name: var.id for name, var in model.variables.items()}
+        original_var_names = set(model.variables.keys())
+
+        geometry = model.default_geometry
+        param.process_geometry(geometry)
+        mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
+        disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+        disc.process_model(model)
+
+        # Existing variables should have the same expressions (same ids)
+        for name in original_var_names:
+            assert model.variables[name].id == original_var_ids[name], (
+                f"Variable '{name}' expression was modified by process_model"
+            )
+
+        # _pre_process_variables may add new variables for state variables
+        # These are the only additions allowed
+        new_var_names = set(model.variables.keys()) - original_var_names
+        for name in new_var_names:
+            # New variables should be state variables (from initial_conditions)
+            var = model.variables[name]
+            assert isinstance(var, (pybamm.Variable | pybamm.Concatenation)), (
+                f"Unexpected new variable '{name}' added by process_model"
+            )

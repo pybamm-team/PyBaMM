@@ -39,6 +39,7 @@ from .expression_tree.coupled_variable import *
 from .expression_tree.independent_variable import *
 from .expression_tree.independent_variable import t
 from .expression_tree.vector import Vector
+from .expression_tree.tensor_field import TensorField
 from .expression_tree.vector_field import VectorField
 from .expression_tree.state_vector import StateVectorBase, StateVector, StateVectorDot
 
@@ -59,9 +60,11 @@ from .expression_tree.operations.jacobian import Jacobian
 from .expression_tree.operations.convert_to_casadi import CasadiConverter
 from .expression_tree.operations.unpack_symbols import SymbolUnpacker
 from .expression_tree.operations.serialise import Serialise,ExpressionFunctionParameter
+from .expression_tree.operations.regularise import RegulariseSqrtAndPower
 
 # Model classes
-from .models.base_model import BaseModel
+from .models.base_model import BaseModel, ModelSolutionObservability
+from .models.symbol_processor import SymbolProcessor
 from .models.event import Event
 from .models.event import EventType
 
@@ -179,6 +182,7 @@ from .solvers.algebraic_solver import AlgebraicSolver
 from .solvers.casadi_solver import CasadiSolver
 from .solvers.casadi_algebraic_solver import CasadiAlgebraicSolver
 from .solvers.scipy_solver import ScipySolver
+from .solvers.composite_solver import CompositeSolver
 
 from .solvers.jax_solver import JaxSolver
 from .solvers.jax_bdf_solver import jax_bdf_integrate
@@ -229,7 +233,6 @@ __all__ = [
     "citations",
     "config",
     "discretisations",
-    "doc_utils",
     "experiment",
     "expression_tree",
     "geometry",

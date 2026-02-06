@@ -75,9 +75,9 @@ class TestBinaryOperators:
 
         # should error if numpy array is not 1D
         array = np.array([[1, 2, 3], [4, 5, 6]])
-        with pytest.raises(ValueError, match="left must be a 1D array"):
+        with pytest.raises(ValueError, match=r"left must be a 1D array"):
             pybamm.Addition(array, a)
-        with pytest.raises(ValueError, match="right must be a 1D array"):
+        with pytest.raises(ValueError, match=r"right must be a 1D array"):
             pybamm.Addition(a, array)
 
     def test_power(self):
@@ -223,11 +223,11 @@ class TestBinaryOperators:
         np.testing.assert_array_equal(
             (pybammS2 * pybammD2).evaluate().toarray(), S2.toarray() * D2
         )
-        with pytest.raises(pybamm.ShapeError, match="inconsistent shapes"):
+        with pytest.raises(pybamm.ShapeError, match=r"inconsistent shapes"):
             (pybammS1 * pybammS2).test_shape()
-        with pytest.raises(pybamm.ShapeError, match="inconsistent shapes"):
+        with pytest.raises(pybamm.ShapeError, match=r"inconsistent shapes"):
             (pybammS2 * pybammS1).test_shape()
-        with pytest.raises(pybamm.ShapeError, match="inconsistent shapes"):
+        with pytest.raises(pybamm.ShapeError, match=r"inconsistent shapes"):
             (pybammS2 * pybammS1).evaluate_ignoring_errors()
 
         # Matrix multiplication is normal matrix multiplication
@@ -241,9 +241,9 @@ class TestBinaryOperators:
         np.testing.assert_array_equal((pybammD2 @ pybammS1).evaluate(), D2 * S1)
         np.testing.assert_array_equal((pybammS2 @ pybammD1).evaluate(), S2 * D1)
         np.testing.assert_array_equal((pybammD1 @ pybammS2).evaluate(), D1 * S2)
-        with pytest.raises(pybamm.ShapeError, match="dimension mismatch"):
+        with pytest.raises(pybamm.ShapeError, match=r"dimension mismatch"):
             (pybammS1 @ pybammS1).test_shape()
-        with pytest.raises(pybamm.ShapeError, match="dimension mismatch"):
+        with pytest.raises(pybamm.ShapeError, match=r"dimension mismatch"):
             (pybammS2 @ pybammS2).test_shape()
 
     def test_sparse_divide(self):
@@ -307,7 +307,7 @@ class TestBinaryOperators:
         # test error with domain not current collector
         v = pybamm.Vector(np.ones(5), domain="current collector")
         w = pybamm.Vector(2 * np.ones(3), domain="test")
-        with pytest.raises(pybamm.DomainError, match="'source'"):
+        with pytest.raises(pybamm.DomainError, match=r"'source'"):
             pybamm.source(v, w)
 
     def test_heaviside(self):
@@ -383,6 +383,46 @@ class TestBinaryOperators:
         assert maximum.evaluate(y=np.array([1])) == 1
         assert maximum.evaluate(y=np.array([0])) == 1
         assert str(maximum) == "maximum(1.0, y[0:1])"
+
+    def test_hypot(self):
+        a = pybamm.Scalar(3)
+        b = pybamm.Scalar(4)
+        h = pybamm.hypot(a, b)
+        assert isinstance(h, pybamm.Scalar)  # simplified to constant
+        assert h.evaluate() == 5.0  # 3-4-5 triangle
+        assert str(pybamm.Hypot(a, b)) == "hypot(3.0, 4.0)"
+
+        # with state vector
+        c = pybamm.StateVector(slice(0, 1))
+        h2 = pybamm.hypot(a, c)
+        assert h2.evaluate(y=np.array([4])) == 5.0
+        assert h2.evaluate(y=np.array([0])) == 3.0
+
+        # test differentiation
+        y = np.array([4.0])
+        # d(hypot(3, c))/dc = c / hypot(3, c) = 4/5
+        assert pybamm.hypot(a, c).diff(c).evaluate(y=y) == pytest.approx(4.0 / 5.0)
+
+        # test with two state vectors
+        d = pybamm.StateVector(slice(1, 2))
+        y2 = np.array([3, 4])
+        h3 = pybamm.hypot(c, d)
+        assert h3.evaluate(y=y2) == 5.0
+        # d(hypot(c, d))/dc = c / hypot(c, d)
+        assert h3.diff(c).evaluate(y=y2) == pytest.approx(3.0 / 5.0)
+        # d(hypot(c, d))/dd = d / hypot(c, d)
+        assert h3.diff(d).evaluate(y=y2) == pytest.approx(4.0 / 5.0)
+
+        # test jacobian
+        full_y = pybamm.StateVector(slice(0, 2))
+        jac = h3.jac(full_y)
+        jac_result = jac.evaluate(y=y2)
+        # Convert sparse matrix to dense if needed
+        if hasattr(jac_result, "toarray"):
+            jac_result = jac_result.toarray()
+        assert np.isfinite(jac_result).all()
+        # Jacobian should be [c/hypot, d/hypot] = [3/5, 4/5]
+        np.testing.assert_allclose(jac_result.flatten(), [3.0 / 5.0, 4.0 / 5.0])
 
     def test_softminus_softplus(self):
         a = pybamm.Scalar(1)
@@ -876,3 +916,10 @@ class TestBinaryOperators:
 
         not_equal_json["children"] = [pybamm.Scalar(2), pybamm.Scalar(4)]
         assert pybamm.NotEqualHeaviside._from_json(not_equal_json) == ne_h
+
+    def test_t_discon_error(self):
+        a = pybamm.Symbol("a")
+        b = pybamm.Symbol("b")
+        bin = pybamm.BinaryOperator("binary test", a, b)
+        with pytest.raises(NotImplementedError):
+            bin._t_discon(None, None, None, None)

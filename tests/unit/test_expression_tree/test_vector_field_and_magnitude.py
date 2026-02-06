@@ -1,12 +1,11 @@
 import pytest
 
 import pybamm
-from tests.shared import get_mesh_for_testing_2d
 
 
 class TestVectorFieldAndMagnitude:
-    def test_vector_field_and_magnitude(self):
-        mesh = get_mesh_for_testing_2d()
+    def test_vector_field_and_magnitude(self, mesh_2d):
+        mesh = mesh_2d
         spatial_methods = {
             "macroscale": pybamm.FiniteVolume2D(),
         }
@@ -43,7 +42,7 @@ class TestVectorFieldAndMagnitude:
         )
         assert vf_processed == pybamm.VectorField(pybamm.Scalar(1), pybamm.Scalar(2))
 
-        with pytest.raises(ValueError, match="applied to a vector field"):
+        with pytest.raises(ValueError, match=r"applied to a vector field"):
             disc.process_symbol(pybamm.Magnitude(pybamm.Scalar(1), "lr"))
 
         assert negative_vf_processed == pybamm.VectorField(
@@ -52,16 +51,16 @@ class TestVectorFieldAndMagnitude:
 
         thing_lr = pybamm.PrimaryBroadcast(pybamm.Scalar(1), "domain_1")
         thing_tb = pybamm.PrimaryBroadcast(pybamm.Scalar(2), "domain_2")
-        with pytest.raises(ValueError, match="same domain"):
+        with pytest.raises(ValueError, match=r"same domain"):
             pybamm.VectorField(thing_lr, thing_tb)
 
         vf_evaluates_on_edges = pybamm.VectorField(pybamm.Scalar(1), pybamm.Scalar(2))
         vf_evaluates_on_edges.lr_field._evaluates_on_edges = lambda _: True
         vf_evaluates_on_edges.tb_field._evaluates_on_edges = lambda _: False
-        with pytest.raises(ValueError, match="must either"):
+        with pytest.raises(ValueError, match=r"must either"):
             vf_evaluates_on_edges.evaluates_on_edges("primary")
 
         assert magnitude_lr.new_copy([vector_field]) == magnitude_lr
 
-        with pytest.raises(ValueError, match="Invalid direction"):
+        with pytest.raises(ValueError, match=r"Invalid direction"):
             disc.process_symbol(pybamm.Magnitude(vector_field, "asdf"))

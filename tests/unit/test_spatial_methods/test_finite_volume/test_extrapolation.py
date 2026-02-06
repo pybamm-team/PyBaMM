@@ -196,10 +196,10 @@ class TestExtrapolation:
         pts = 10 ** np.arange(1, 6, 1)
         dx = 1 / pts
 
-        l_errors_lin, r_errors_lin, l_grad_errors_lin, r_grad_errors_lin = get_errors(
+        l_errors_lin, r_errors_lin, _l_grad_errors_lin, _r_grad_errors_lin = get_errors(
             x_squared, linear, pts
         )
-        l_errors_quad, r_errors_quad, l_grad_errors_quad, r_grad_errors_quad = (
+        l_errors_quad, r_errors_quad, _l_grad_errors_quad, _r_grad_errors_quad = (
             get_errors(x_squared, quad, pts)
         )
 
@@ -223,7 +223,7 @@ class TestExtrapolation:
             r_true = 1
             return y, l_true, r_true
 
-        l_errors_lin, r_errors_lin, l_grad_errors_lin, r_grad_errors_lin = get_errors(
+        l_errors_lin, r_errors_lin, _l_grad_errors_lin, _r_grad_errors_lin = get_errors(
             x_squared, linear, pts
         )
 
@@ -241,7 +241,7 @@ class TestExtrapolation:
         # quadratic case
         pts = 5 ** np.arange(1, 7, 1)
         dx = 1 / pts
-        l_errors_quad, r_errors_quad, l_grad_errors_quad, r_grad_errors_quad = (
+        l_errors_quad, r_errors_quad, _l_grad_errors_quad, _r_grad_errors_quad = (
             get_errors(x_cubed, quad, pts)
         )
 
@@ -295,26 +295,26 @@ class TestExtrapolation:
             (
                 l_errors_lin_no_bc,
                 r_errors_lin_no_bc,
-                l_grad_errors_lin_no_bc,
-                r_grad_errors_lin_no_bc,
+                _l_grad_errors_lin_no_bc,
+                _r_grad_errors_lin_no_bc,
             ) = get_errors(x_cubed, linear, pts, submesh_type=submesh_type)
             (
                 l_errors_quad_no_bc,
                 r_errors_quad_no_bc,
-                l_grad_errors_quad_no_bc,
-                r_grad_errors_quad_no_bc,
+                _l_grad_errors_quad_no_bc,
+                _r_grad_errors_quad_no_bc,
             ) = get_errors(x_cubed, quad, pts, submesh_type=submesh_type)
 
             (
                 l_errors_lin_with_bc,
                 r_errors_lin_with_bc,
-                l_grad_errors_lin_with_bc,
+                _l_grad_errors_lin_with_bc,
                 r_grad_errors_lin_with_bc,
             ) = get_errors(x_cubed, linear, pts, bcs, submesh_type=submesh_type)
             (
                 l_errors_quad_with_bc,
                 r_errors_quad_with_bc,
-                l_grad_errors_quad_with_bc,
+                _l_grad_errors_quad_with_bc,
                 r_grad_errors_quad_with_bc,
             ) = get_errors(x_cubed, quad, pts, bcs, submesh_type=submesh_type)
 
@@ -385,27 +385,27 @@ class TestExtrapolation:
             (
                 l_errors_lin_no_bc,
                 r_errors_lin_no_bc,
-                l_grad_errors_lin_no_bc,
-                r_grad_errors_lin_no_bc,
+                _l_grad_errors_lin_no_bc,
+                _r_grad_errors_lin_no_bc,
             ) = get_errors(x_cubed, linear, pts, submesh_type=submesh_type)
             (
                 l_errors_quad_no_bc,
                 r_errors_quad_no_bc,
-                l_grad_errors_quad_no_bc,
-                r_grad_errors_quad_no_bc,
+                _l_grad_errors_quad_no_bc,
+                _r_grad_errors_quad_no_bc,
             ) = get_errors(x_cubed, quad, pts, submesh_type=submesh_type)
 
             (
                 l_errors_lin_with_bc,
                 r_errors_lin_with_bc,
                 l_grad_errors_lin_with_bc,
-                r_grad_errors_lin_with_bc,
+                _r_grad_errors_lin_with_bc,
             ) = get_errors(x_cubed, linear, pts, bcs, submesh_type=submesh_type)
             (
                 l_errors_quad_with_bc,
                 r_errors_quad_with_bc,
                 l_grad_errors_quad_with_bc,
-                r_grad_errors_quad_with_bc,
+                _r_grad_errors_quad_with_bc,
             ) = get_errors(x_cubed, quad, pts, bcs, submesh_type=submesh_type)
 
             # test that with bc is better than without
@@ -969,7 +969,7 @@ class TestExtrapolation:
 
         # Test error handling for invalid side
         var_error = pybamm.Variable("var", domain="domain")
-        with pytest.raises(ValueError, match="Invalid side"):
+        with pytest.raises(ValueError, match=r"Invalid side"):
             invalid_mesh_size = pybamm.BoundaryMeshSize(var_error, "invalid")
             disc.set_variable_slices([var_error])
             disc.process_symbol(invalid_mesh_size)
