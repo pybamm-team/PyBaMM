@@ -11,6 +11,7 @@ from .util import (
 from .util import (
     get_parameters_filepath,
     has_jax,
+    raise_jax_not_found,
     import_optional_dependency,
 )
 from .logger import logger, set_logging_level, get_new_logger
