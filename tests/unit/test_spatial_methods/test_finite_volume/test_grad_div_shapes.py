@@ -12,7 +12,6 @@ from tests import (
     get_mesh_for_testing,
     get_mesh_for_testing_symbolic,
     get_mesh_for_testing_symbolic_concatenation,
-    get_p2d_mesh_for_testing,
     get_spherical_mesh_for_testing_symbolic,
 )
 
@@ -137,7 +136,7 @@ class TestFiniteVolumeGradDiv:
             div_eval[1:-1], 4 * np.ones((npts - 2, 1)), rtol=1e-7, atol=1e-6
         )
 
-    def test_spherical_grad_div_shapes_Dirichlet_bcs(self):
+    def test_spherical_grad_div_shapes_Dirichlet_bcs(self, p2d_mesh):
         """
         Test grad and div with Dirichlet boundary conditions in spherical polar
         coordinates
@@ -212,13 +211,13 @@ class TestFiniteVolumeGradDiv:
             div_eval[:, :-1], 6 * np.ones([sec_npts, npts - 1]), rtol=1e-7, atol=1e-6
         )
 
-    def test_p2d_spherical_grad_div_shapes_Dirichlet_bcs(self):
+    def test_p2d_spherical_grad_div_shapes_Dirichlet_bcs(self, p2d_mesh):
         """
         Test grad and div with Dirichlet boundary conditions in the pseudo
         2-dimensional case
         """
         # Create discretisation
-        mesh = get_p2d_mesh_for_testing()
+        mesh = p2d_mesh
         spatial_methods = {"negative particle": pybamm.FiniteVolume()}
         disc = pybamm.Discretisation(mesh, spatial_methods)
         prim_pts = mesh["negative particle"].npts
@@ -633,13 +632,13 @@ class TestFiniteVolumeGradDiv:
             atol=1e-6,
         )
 
-    def test_p2d_spherical_grad_div_shapes_Neumann_bcs(self):
+    def test_p2d_spherical_grad_div_shapes_Neumann_bcs(self, p2d_mesh):
         """
         Test grad and div with Neumann boundary conditions in the pseudo
         2-dimensional case
         """
         # Create discretisation
-        mesh = get_p2d_mesh_for_testing()
+        mesh = p2d_mesh
         spatial_methods = {"negative particle": pybamm.FiniteVolume()}
         disc = pybamm.Discretisation(mesh, spatial_methods)
         prim_pts = mesh["negative particle"].npts

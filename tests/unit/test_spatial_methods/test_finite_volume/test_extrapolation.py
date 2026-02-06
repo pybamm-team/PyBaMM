@@ -10,7 +10,6 @@ from tests import (
     get_1p1d_mesh_for_testing,
     get_mesh_for_testing,
     get_mesh_for_testing_symbolic,
-    get_p2d_mesh_for_testing,
 )
 
 
@@ -733,9 +732,9 @@ class TestExtrapolation:
             surf_eqn_disc.evaluate(None, linear_y), y_surf, rtol=1e-7, atol=1e-6
         )
 
-    def test_extrapolate_2d_models(self):
+    def test_extrapolate_2d_models(self, p2d_mesh):
         # create discretisation
-        mesh = get_p2d_mesh_for_testing()
+        mesh = p2d_mesh
         method_options = {
             "extrapolation": {
                 "order": {"gradient": "linear", "value": "linear"},
