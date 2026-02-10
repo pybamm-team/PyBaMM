@@ -78,14 +78,12 @@ class TestMPM:
         parameter_values = pybamm.get_size_distribution_parameters(parameter_values)
         parameter_values.update(
             {
-                "Negative electrode lithiation OCP [V]": lambda sto: parameter_values[
-                    "Negative electrode OCP [V]"
-                ](sto)
-                - 0.1,
-                "Negative electrode delithiation OCP [V]": lambda sto: parameter_values[
-                    "Negative electrode OCP [V]"
-                ](sto)
-                + 0.1,
+                "Negative electrode lithiation OCP [V]": lambda sto: (
+                    parameter_values["Negative electrode OCP [V]"](sto) - 0.1
+                ),
+                "Negative electrode delithiation OCP [V]": lambda sto: (
+                    parameter_values["Negative electrode OCP [V]"](sto) + 0.1
+                ),
                 "Negative particle hysteresis decay rate": 1,
                 "Negative particle hysteresis switching factor": 1,
                 "Initial hysteresis state in negative electrode": -0.5,
@@ -101,14 +99,12 @@ class TestMPM:
         parameter_values = pybamm.get_size_distribution_parameters(parameter_values)
         parameter_values.update(
             {
-                "Negative electrode lithiation OCP [V]": lambda sto: parameter_values[
-                    "Negative electrode OCP [V]"
-                ](sto)
-                - 0.1,
-                "Negative electrode delithiation OCP [V]": lambda sto: parameter_values[
-                    "Negative electrode OCP [V]"
-                ](sto)
-                + 0.1,
+                "Negative electrode lithiation OCP [V]": lambda sto: (
+                    parameter_values["Negative electrode OCP [V]"](sto) - 0.1
+                ),
+                "Negative electrode delithiation OCP [V]": lambda sto: (
+                    parameter_values["Negative electrode OCP [V]"](sto) + 0.1
+                ),
                 "Negative particle lithiation hysteresis decay rate": 10,
                 "Negative particle delithiation hysteresis decay rate": 10,
                 "Initial hysteresis state in negative electrode": 0.0,
