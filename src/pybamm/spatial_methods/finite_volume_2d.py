@@ -22,17 +22,13 @@ def _evaluates_on_edges_one_side(symbol, direction):
         return symbol
     if direction == "lr":
         symbol._evaluates_on_edges_original = symbol._evaluates_on_edges
-        symbol._evaluates_on_edges = (
-            lambda dim: "lr"
-            if dim == "primary"
-            else symbol._evaluates_on_edges_original(dim)
+        symbol._evaluates_on_edges = lambda dim: (
+            "lr" if dim == "primary" else symbol._evaluates_on_edges_original(dim)
         )
     elif direction == "tb":
         symbol._evaluates_on_edges_original = symbol._evaluates_on_edges
-        symbol._evaluates_on_edges = (
-            lambda dim: "tb"
-            if dim == "primary"
-            else symbol._evaluates_on_edges_original(dim)
+        symbol._evaluates_on_edges = lambda dim: (
+            "tb" if dim == "primary" else symbol._evaluates_on_edges_original(dim)
         )
     return symbol
 

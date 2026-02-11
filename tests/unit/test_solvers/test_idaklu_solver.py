@@ -124,7 +124,7 @@ class TestIDAKLUSolver:
 
         # Check invalid atol type raises an error
         with pytest.raises(pybamm.SolverError):
-            solver._check_atol_type({"key": "value"}, [])
+            solver._check_atol_type({"key": "value"}, model)
 
         # enforce events that won't be triggered
         model.events = [pybamm.Event("an event", var + 1)]
@@ -1287,29 +1287,6 @@ class TestIDAKLUSolver:
         np.testing.assert_allclose(
             solutions[1]["v"](t_eval), 6 * np.exp(-2 * t_eval), rtol=1e-3, atol=1e-5
         )
-
-    def test_warning_variable_not_used(self):
-        model = pybamm.BaseModel()
-        u = pybamm.Variable("u")
-        u0 = pybamm.InputParameter("u0")
-        model.rhs = {u: -u}
-        model.initial_conditions = {u: u0}
-        model.variables = {"u": u}
-
-        disc = pybamm.Discretisation()
-        disc.process_model(model)
-
-        solver = pybamm.IDAKLUSolver()
-
-        initial_condition = {"nonexistent_variable": 5, "u0": 1}
-
-        t_eval = np.linspace(0, 1, 10)
-
-        with pytest.warns(
-            pybamm.SolverWarning,
-            match=r"not present in the model: 'nonexistent_variable'",
-        ):
-            solver.solve(model, t_eval, inputs=initial_condition)
 
     def test_interpolant_extrapolate(self):
         x = np.linspace(0, 2)

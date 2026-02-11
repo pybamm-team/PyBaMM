@@ -40,10 +40,10 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
-      - name: Set up Python 3.12
+      - name: Set up Python 3.14
         uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
         with:
-          python-version: 3.12
+          python-version: 3.14
 
       - name: Install nox and asv
         run: pip install -U pip nox asv
@@ -131,10 +131,10 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Set up Python 3.12
+      - name: Set up Python 3.14
         uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
         with:
-          python-version: 3.12
+          python-version: 3.14
 
       - name: Install asv
         run: pip install asv

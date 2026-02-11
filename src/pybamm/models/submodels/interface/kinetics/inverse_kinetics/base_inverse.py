@@ -89,8 +89,10 @@ class BaseInverseKinetics(BaseInterface):
         return variables
 
     def _get_overpotential(self, j, j0, ne, T, u):
-        return (2 * (self.param.R * T) / self.param.F / ne) * pybamm.arcsinh(
-            j / (2 * j0 * u)
+        # Use a specialized arcsinh2(a,b) = arcsinh(a/b) to avoid division by zero
+        # errors when j0 is close to zero
+        return (2 * (self.param.R * T) / self.param.F / ne) * pybamm.arcsinh2(
+            j, 2 * j0 * u
         )
 
 

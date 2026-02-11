@@ -384,6 +384,46 @@ class TestBinaryOperators:
         assert maximum.evaluate(y=np.array([0])) == 1
         assert str(maximum) == "maximum(1.0, y[0:1])"
 
+    def test_hypot(self):
+        a = pybamm.Scalar(3)
+        b = pybamm.Scalar(4)
+        h = pybamm.hypot(a, b)
+        assert isinstance(h, pybamm.Scalar)  # simplified to constant
+        assert h.evaluate() == 5.0  # 3-4-5 triangle
+        assert str(pybamm.Hypot(a, b)) == "hypot(3.0, 4.0)"
+
+        # with state vector
+        c = pybamm.StateVector(slice(0, 1))
+        h2 = pybamm.hypot(a, c)
+        assert h2.evaluate(y=np.array([4])) == 5.0
+        assert h2.evaluate(y=np.array([0])) == 3.0
+
+        # test differentiation
+        y = np.array([4.0])
+        # d(hypot(3, c))/dc = c / hypot(3, c) = 4/5
+        assert pybamm.hypot(a, c).diff(c).evaluate(y=y) == pytest.approx(4.0 / 5.0)
+
+        # test with two state vectors
+        d = pybamm.StateVector(slice(1, 2))
+        y2 = np.array([3, 4])
+        h3 = pybamm.hypot(c, d)
+        assert h3.evaluate(y=y2) == 5.0
+        # d(hypot(c, d))/dc = c / hypot(c, d)
+        assert h3.diff(c).evaluate(y=y2) == pytest.approx(3.0 / 5.0)
+        # d(hypot(c, d))/dd = d / hypot(c, d)
+        assert h3.diff(d).evaluate(y=y2) == pytest.approx(4.0 / 5.0)
+
+        # test jacobian
+        full_y = pybamm.StateVector(slice(0, 2))
+        jac = h3.jac(full_y)
+        jac_result = jac.evaluate(y=y2)
+        # Convert sparse matrix to dense if needed
+        if hasattr(jac_result, "toarray"):
+            jac_result = jac_result.toarray()
+        assert np.isfinite(jac_result).all()
+        # Jacobian should be [c/hypot, d/hypot] = [3/5, 4/5]
+        np.testing.assert_allclose(jac_result.flatten(), [3.0 / 5.0, 4.0 / 5.0])
+
     def test_softminus_softplus(self):
         a = pybamm.Scalar(1)
         b = pybamm.StateVector(slice(0, 1))

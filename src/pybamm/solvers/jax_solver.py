@@ -6,6 +6,7 @@ import pybamm
 
 if pybamm.has_jax():
     import jax
+    import jax.extend
     import jax.numpy as jnp
     from jax.experimental.ode import odeint
 
@@ -62,9 +63,7 @@ class JaxSolver(pybamm.BaseSolver):
         extra_options=None,
     ):
         if not pybamm.has_jax():
-            raise ModuleNotFoundError(
-                "Jax or jaxlib is not installed, please see https://docs.pybamm.org/en/latest/source/user_guide/installation/gnu-linux-mac.html#optional-jaxsolver"
-            )
+            pybamm.raise_jax_not_found()
 
         # note: bdf solver itself calculates consistent initial conditions so can set
         # root_method to none, allow user to override this behavior
@@ -231,7 +230,7 @@ class JaxSolver(pybamm.BaseSolver):
         if model not in self._cached_solves:
             self._cached_solves[model] = self.create_solve(model, t_eval)
 
-        platform = jax.lib.xla_bridge.get_backend().platform.casefold()
+        platform = jax.extend.backend.get_backend().platform.casefold()
         if len(inputs) == 1:
             y = [self._cached_solves[model](y0_list[0], inputs[0])]
         elif platform.startswith("cpu"):

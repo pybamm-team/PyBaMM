@@ -2,13 +2,13 @@ import numpy as np
 import pytest
 
 import pybamm
-from tests import get_mesh_for_testing, get_mesh_for_testing_2d
+from tests import get_mesh_for_testing
 
 
 class TestFiniteVolume2D:
-    def test_node_to_edge_to_node(self):
+    def test_node_to_edge_to_node(self, mesh_2d):
         # Create discretisation
-        mesh = get_mesh_for_testing_2d()
+        mesh = mesh_2d
         fin_vol = pybamm.FiniteVolume2D()
         fin_vol.build(mesh)
         n_lr = mesh[("negative electrode", "separator", "positive electrode")].npts_lr
@@ -95,9 +95,9 @@ class TestFiniteVolume2D:
             right_grad.evaluate(None, tb).flatten(), np.ones(n_lr * n_tb)
         )
 
-    def test_discretise_spatial_variable(self):
+    def test_discretise_spatial_variable(self, mesh_2d):
         # Create discretisation
-        mesh = get_mesh_for_testing_2d()
+        mesh = mesh_2d
         spatial_methods = {
             "macroscale": pybamm.FiniteVolume2D(),
         }
@@ -156,16 +156,16 @@ class TestFiniteVolume2D:
             z_edges_tb_disc.evaluate().flatten(), TB_edges.flatten()
         )
 
-        mesh_1d = get_mesh_for_testing()
+        mesh_1d = get_mesh_for_testing(xpts=10)
         spatial_methods_1d = {"macroscale": pybamm.FiniteVolume2D()}
         disc_1d = pybamm.Discretisation(mesh_1d, spatial_methods_1d)
         x_1d = pybamm.SpatialVariable("x_1d", ["negative electrode"], direction="lr")
         with pytest.raises(ValueError, match=r"Spatial variable x_1d is not in 2D"):
             disc_1d.process_symbol(x_1d)
 
-    def test_process_binary_operators(self):
+    def test_process_binary_operators(self, mesh_2d):
         # Setup mesh and discretisation
-        mesh = get_mesh_for_testing_2d()
+        mesh = mesh_2d
         spatial_methods = {"macroscale": pybamm.FiniteVolume2D()}
         disc = pybamm.Discretisation(mesh, spatial_methods)
         whole_cell = ["negative electrode", "separator", "positive electrode"]
@@ -315,12 +315,12 @@ class TestFiniteVolume2D:
             eqn_disc.evaluate(None, LR.flatten())
             eqn_disc.evaluate(None, TB.flatten())
 
-    def test_upwind_downwind_2d(self):
+    def test_upwind_downwind_2d(self, mesh_2d):
         """
         Test upwind and downwind operators in 2D finite volume method
         """
         # Create discretisation
-        mesh = get_mesh_for_testing_2d()
+        mesh = mesh_2d
         spatial_methods = {
             "negative electrode": pybamm.FiniteVolume2D(),
         }
@@ -638,9 +638,9 @@ class TestFiniteVolume2D:
         # Verify it's a VectorField
         assert isinstance(result_both_ghost, pybamm.VectorField)
 
-    def test_2d_concatenations(self):
+    def test_2d_concatenations(self, mesh_2d):
         # Create discretisation
-        mesh = get_mesh_for_testing_2d()
+        mesh = mesh_2d
         spatial_methods = {
             "macroscale": pybamm.FiniteVolume2D(),
         }
@@ -756,14 +756,14 @@ class TestFiniteVolume2D:
         z_result = z_disc.evaluate(None, None).flatten()
         np.testing.assert_array_equal(z_concat_result, z_result)
 
-    def test_vector_boundary_conditions(self):
+    def test_vector_boundary_conditions(self, mesh_2d):
         """
         Test using vector quantities as boundary conditions, such as spatial variables
         with BoundaryGradient. This tests the case where boundary conditions are
         functions of spatial coordinates rather than scalar constants.
         """
         # Create discretisation with 2D mesh
-        mesh = get_mesh_for_testing_2d()
+        mesh = mesh_2d
         spatial_methods = {"macroscale": pybamm.FiniteVolume2D()}
         disc = pybamm.Discretisation(mesh, spatial_methods)
 
@@ -1054,9 +1054,9 @@ class TestFiniteVolume2D:
         assert result_complex_neumann is not None
         assert result_complex_neumann.shape[0] == submesh.npts
 
-    def test_delta_function(self):
+    def test_delta_function(self, mesh_2d):
         # Create discretisation
-        mesh = get_mesh_for_testing_2d()
+        mesh = mesh_2d
         spatial_methods = {"macroscale": pybamm.FiniteVolume2D()}
         disc = pybamm.Discretisation(mesh, spatial_methods)
         var = pybamm.Variable(

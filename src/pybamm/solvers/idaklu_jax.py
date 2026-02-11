@@ -23,8 +23,8 @@ if pybamm.has_jax():
     except ImportError:
         from jax.extend import ffi
     from jax import numpy as jnp
+    from jax._src.interpreters.mlir import custom_call
     from jax.interpreters import ad, batching, mlir
-    from jax.interpreters.mlir import custom_call
     from jax.tree_util import tree_flatten
 
     # Handle JAX version compatibility for Primitive location
@@ -58,9 +58,7 @@ class IDAKLUJax:
         t_interp=None,
     ):
         if not pybamm.has_jax():
-            raise ModuleNotFoundError(
-                "Jax or jaxlib is not installed, please see https://docs.pybamm.org/en/latest/source/user_guide/installation/gnu-linux-mac.html#optional-jaxsolver"
-            )  # pragma: no cover
+            pybamm.raise_jax_not_found()  # pragma: no cover
         self.jaxpr = (
             None  # JAX expression representing the IDAKLU-wrapped solver object
         )
@@ -491,10 +489,10 @@ class IDAKLUJax:
         t = primals[0]
         inputs = primals[1:]
 
-        if isinstance(invar, float):
-            invar = round(invar)
-        if isinstance(t, float):
-            t = np.array(t)
+        if not isinstance(invar, (int, str)):
+            invar = int(invar)
+        if not isinstance(t, (np.ndarray, jnp.ndarray)):
+            t = np.asarray(t)
 
         if t.ndim == 0 or (t.ndim == 1 and t.shape[0] == 1):
             # scalar time input
@@ -727,11 +725,13 @@ class IDAKLUJax:
                 # The inputs
                 operands=[
                     mlir.ir_constant(
-                        self.idaklu_jax_obj.get_index()
+                        np.int64(self.idaklu_jax_obj.get_index())
                     ),  # solver index reference
                     mlir.ir_constant(size_t),  # 'size' argument
-                    mlir.ir_constant(len(self.jax_output_variables)),  # 'vars' argument
-                    mlir.ir_constant(len(inputs)),  # 'vars' argument
+                    mlir.ir_constant(
+                        np.int64(len(self.jax_output_variables))
+                    ),  # 'vars' argument
+                    mlir.ir_constant(np.int64(len(inputs))),  # 'vars' argument
                     t,
                     *inputs,
                 ],
@@ -930,11 +930,13 @@ class IDAKLUJax:
                 # The inputs
                 operands=[
                     mlir.ir_constant(
-                        self.idaklu_jax_obj.get_index()
+                        np.int64(self.idaklu_jax_obj.get_index())
                     ),  # solver index reference
                     mlir.ir_constant(size_t),  # 'size' argument
-                    mlir.ir_constant(len(self.jax_output_variables)),  # 'vars' argument
-                    mlir.ir_constant(len(inputs_primals)),  # 'vars' argument
+                    mlir.ir_constant(
+                        np.int64(len(self.jax_output_variables))
+                    ),  # 'vars' argument
+                    mlir.ir_constant(np.int64(len(inputs_primals))),  # 'vars' argument
                     t_primal,  # 't'
                     *inputs_primals,  # inputs
                     t_tangent,  # 't'
@@ -1063,13 +1065,17 @@ class IDAKLUJax:
                 # The inputs
                 operands=[
                     mlir.ir_constant(
-                        self.idaklu_jax_obj.get_index()
+                        np.int64(self.idaklu_jax_obj.get_index())
                     ),  # solver index reference
                     mlir.ir_constant(size_t),  # 'size' argument
-                    mlir.ir_constant(len(self.jax_inputs)),  # number of inputs
-                    mlir.ir_constant(dims_y_bar[0]),  # 'y_bar' shape[0]
-                    mlir.ir_constant(  # 'y_bar' shape[1]
-                        dims_y_bar[1] if len(dims_y_bar) > 1 else -1
+                    mlir.ir_constant(
+                        np.int64(len(self.jax_inputs))
+                    ),  # number of inputs
+                    mlir.ir_constant(np.int64(dims_y_bar[0])),  # 'y_bar' shape[0]
+                    mlir.ir_constant(
+                        np.int64(  # 'y_bar' shape[1]
+                            dims_y_bar[1] if len(dims_y_bar) > 1 else -1
+                        )
                     ),  # 'y_bar' argument
                     y_bar,  # 'y_bar'
                     invar,  # 'invar'
