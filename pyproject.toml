@@ -110,6 +110,8 @@ dev = [
     "importlib-metadata; python_version < '3.10'",
     # For property based testing
     "hypothesis",
+    # For diffsl tests (not available on Mac Intel x86_64)
+    "pydiffsol; platform_system != 'Darwin' or platform_machine != 'x86_64'",
 ]
 
 [project.entry-points."pybamm_parameter_sets"]
