@@ -1,17 +1,14 @@
-
 import pandas as pd
+
 import pybamm
-import numpy as np
-import os
 
 pybamm.set_logging_level("INFO")
 
 # Import drive cycle from file
 data_loader = pybamm.DataLoader()
-drive_cycle_path = data_loader.get_data('US06.csv')
-drive_cycle_current = pd.read_csv(
-    drive_cycle_path, comment="#", header=None
-).to_numpy()
+drive_cycle_path = data_loader.get_data("US06.csv")
+drive_cycle_current = pd.read_csv(drive_cycle_path, comment="#", header=None).to_numpy()
+
 
 # Map Drive Cycle
 def map_drive_cycle(x, min_op_value, max_op_value):
@@ -21,6 +18,7 @@ def map_drive_cycle(x, min_op_value, max_op_value):
         max_op_value - min_op_value
     ) + min_op_value
     return x
+
 
 # Map current drive cycle to voltage and power
 drive_cycle_power = map_drive_cycle(drive_cycle_current.copy(), 1.5, 3.5)
@@ -53,7 +51,9 @@ param["SEI kinetic rate constant [m.s-1]"] = 1e-13
 
 # Create the simulation
 solver = pybamm.CasadiSolver(mode="safe")
-sim = pybamm.Simulation(model, experiment=experiment, solver=solver, parameter_values=param)
+sim = pybamm.Simulation(
+    model, experiment=experiment, solver=solver, parameter_values=param
+)
 
 # Solve the simulation
 sim.solve()
@@ -70,7 +70,7 @@ plot_electrical = sim.plot(
         "Current [A]",
         "Terminal power [W]",
     ],
-    show_plot=True
+    show_plot=True,
 )
 plot_electrical.fig.savefig("plot_electrical.png")
 
@@ -82,7 +82,7 @@ plot_particle = sim.plot(
         "X-averaged negative particle surface concentration",
         "Electrolyte concentration [mol.m-3]",
     ],
-    show_plot=False
+    show_plot=False,
 )
 plot_particle.fig.savefig("plot_particle.png")
 
@@ -96,7 +96,7 @@ plot_ageing = sim.plot(
         "Loss of lithium inventory [%]",
         ["Total lithium lost [mol]", "Loss of lithium to negative SEI [mol]"],
     ],
-    show_plot=False
+    show_plot=False,
 )
 plot_ageing.fig.savefig("plot_ageing.png")
 

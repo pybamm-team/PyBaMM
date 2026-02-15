@@ -6,7 +6,7 @@ This file provides guidance to WARP (warp.dev) when working with code in this re
 
 PyBaMM (Python Battery Mathematical Modelling) is an open-source battery simulation package written in Python. The project consists of three main components:
 1. A framework for writing and solving systems of differential equations
-2. A library of battery models and parameters 
+2. A library of battery models and parameters
 3. Specialized tools for simulating battery-specific experiments and visualizing results
 
 ## Architecture
@@ -83,7 +83,7 @@ nox -s coverage
 # Test example notebooks
 nox -s examples
 
-# Test example scripts  
+# Test example scripts
 nox -s scripts
 
 # Test documentation builds and doctests
@@ -157,12 +157,14 @@ sim = pybamm.Simulation(model)
 sim.solve([0, 3600])
 sim.plot()
 
-# With experiment protocol  
-experiment = pybamm.Experiment([
-    "Discharge at 1C until 3.0V",
-    "Rest for 1 hour", 
-    "Charge at C/10 until 4.2V",
-])
+# With experiment protocol
+experiment = pybamm.Experiment(
+    [
+        "Discharge at 1C until 3.0V",
+        "Rest for 1 hour",
+        "Charge at C/10 until 4.2V",
+    ]
+)
 sim = pybamm.Simulation(model, experiment=experiment)
 sim.solve()
 ```

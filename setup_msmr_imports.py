@@ -5,7 +5,6 @@ Run this script before importing MSMR modules.
 """
 
 import sys
-import os
 from pathlib import Path
 
 # Get the path to the MSMR jupyter folder (parent of utilities)
@@ -21,8 +20,9 @@ if str(msmr_jupyter_path) not in sys.path:
 try:
     import utilities.msmr as msmr
     import utilities.plotting as plotting
+
     print("✓ Successfully imported MSMR modules")
-    print(f"Available modules: utilities.msmr, utilities.plotting")
+    print("Available modules: utilities.msmr, utilities.plotting")
 except ImportError as e:
     print(f"✗ Error importing MSMR modules: {e}")
 
@@ -31,4 +31,4 @@ if __name__ == "__main__":
     print("You can now import the modules in your scripts:")
     print("from setup_msmr_imports import *")
     print("import utilities.msmr as msmr")
-    print("import utilities.plotting as plotting") 
+    print("import utilities.plotting as plotting")

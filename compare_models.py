@@ -1,12 +1,12 @@
-import pybamm
-import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
 import gc
+
+import matplotlib.pyplot as plt
+
+import pybamm
 
 # Define generic SEI parameters (taken from Mohtat2020 default to apply to Chen)
 sei_params = {
-    "SEI kinetic rate constant [m.s-1]": 1e-15, # Tuned value we used earlier
+    "SEI kinetic rate constant [m.s-1]": 1e-15,  # Tuned value we used earlier
     "SEI open-circuit potential [V]": 0.4,
     "SEI resistivity [Ohm.m]": 200000.0,
     "Outer SEI partial molar volume [m3.mol-1]": 9.585e-05,
@@ -29,7 +29,8 @@ experiment = pybamm.Experiment(
             "Discharge at C/4 for 5s",
             "Rest for 15 minutes",
         )
-    ] * 50  # 50 cycles for speed
+    ]
+    * 50  # 50 cycles for speed
 )
 
 # Mesh settings from isolate_mechanism.py
@@ -53,75 +54,86 @@ for mech in mechanisms:
         # Handle Parameter Loading
         base_name = "OKane2022" if "OKane" in p_name else p_name
         params = pybamm.ParameterValues(base_name)
-        
+
         # Inject SEI Parameters (Baseline)
         params.update(sei_params, check_already_exists=False)
-        
+
         # Inject Chen Diffusivity if requested
         if "(Chen Diffusivity)" in p_name:
             # Chen's constant value (hardcoded or extracted)
             # From previous diff: 3.3e-14
             new_diff = 3.3e-14
-            params.update({
-                "Negative particle diffusivity [m2.s-1]": new_diff
-            }, check_already_exists=False)
-            print(f"  -> INJECTED Diffusivity: {params['Negative particle diffusivity [m2.s-1]']}")
+            params.update(
+                {"Negative particle diffusivity [m2.s-1]": new_diff},
+                check_already_exists=False,
+            )
+            print(
+                f"  -> INJECTED Diffusivity: {params['Negative particle diffusivity [m2.s-1]']}"
+            )
         else:
-            print(f"  -> Default Diffusivity: {params['Negative particle diffusivity [m2.s-1]']}")
-        
+            print(
+                f"  -> Default Diffusivity: {params['Negative particle diffusivity [m2.s-1]']}"
+            )
+
         # Inject Chen Kinetics/OCP (Removing this for now to isolate Diffusivity)
         if "(Chen Kinetics)" in p_name:
-             pass 
+            pass
 
         # Create Model
         options = {"SEI": mech, "SEI porosity change": "true"}
         model = pybamm.lithium_ion.DFN(options)
-        
+
         # Apply submesh types (Exponential for particles)
         submesh_types = model.default_submesh_types.copy()
-        submesh_types["negative particle"] = pybamm.MeshGenerator(pybamm.Exponential1DSubMesh, submesh_params={"side": "right"})
-        submesh_types["positive particle"] = pybamm.MeshGenerator(pybamm.Exponential1DSubMesh, submesh_params={"side": "right"})
-        
+        submesh_types["negative particle"] = pybamm.MeshGenerator(
+            pybamm.Exponential1DSubMesh, submesh_params={"side": "right"}
+        )
+        submesh_types["positive particle"] = pybamm.MeshGenerator(
+            pybamm.Exponential1DSubMesh, submesh_params={"side": "right"}
+        )
+
         solver = pybamm.IDAKLUSolver(atol=1e-8, rtol=1e-8)
-        
+
         sim = pybamm.Simulation(
-            model, 
-            experiment=experiment, 
-            parameter_values=params, 
+            model,
+            experiment=experiment,
+            parameter_values=params,
             solver=solver,
             var_pts=var_pts,
-            submesh_types=submesh_types
+            submesh_types=submesh_types,
         )
-        
+
         try:
             sim.solve()
-            
+
             # Extract Data
             sol = sim.solution
             t = sol["Time [h]"].entries
             # cycles = sol["Cycle number"].entries # Not reliable
-            
+
             # Extract SEI
             # Check variable names
             sei_var = "X-averaged total SEI thickness [m]"
             if sei_var not in sol.all_models[0].variables:
                 # Fallback
-                 sei_var = "X-averaged negative SEI thickness [m]"
-            
+                sei_var = "X-averaged negative SEI thickness [m]"
+
             sei_thickness = sol[sei_var].entries
-            
-            results.append({
-                "ParameterSet": p_name,
-                "Mechanism": mech,
-                "Time": t,
-                "SEI Thickness": sei_thickness
-            })
-            
+
+            results.append(
+                {
+                    "ParameterSet": p_name,
+                    "Mechanism": mech,
+                    "Time": t,
+                    "SEI Thickness": sei_thickness,
+                }
+            )
+
             del sol, t, sei_thickness
-            
+
         except Exception as e:
             print(f"Failed {p_name} {mech}: {e}")
-            
+
         # Cleanup memory
         del sim, model, params
         gc.collect()
@@ -129,7 +141,12 @@ for mech in mechanisms:
 # Plotting
 plt.figure(figsize=(10, 8))
 
-colors = {"Mohtat2020": "blue", "Chen2020": "red", "OKane2022": "green", "OKane2022 (Chen Diffusivity)": "purple"}
+colors = {
+    "Mohtat2020": "blue",
+    "Chen2020": "red",
+    "OKane2022": "green",
+    "OKane2022 (Chen Diffusivity)": "purple",
+}
 linestyles = {"reaction limited": "-", "solvent-diffusion limited": "--"}
 
 for res in results:
@@ -137,7 +154,7 @@ for res in results:
     mech = res["Mechanism"]
     t = res["Time"]
     sei = res["SEI Thickness"]
-    
+
     label = f"{p_name} - {mech}"
     plt.plot(t, sei, color=colors[p_name], linestyle=linestyles[mech], label=label)
 
@@ -149,7 +166,7 @@ plt.grid(True)
 plt.savefig("compare_mohtat_chen.png")
 
 # Analyze total growth
-print(f"--- Summary (End of Experiment) ---")
+print("--- Summary (End of Experiment) ---")
 print(f"{'Setup':<40} | {'Initial [m]':<15} | {'Final [m]':<15}")
 for res in results:
     p_name = res["ParameterSet"]

@@ -1,5 +1,6 @@
-import pybamm
 import matplotlib.pyplot as plt
+
+import pybamm
 
 # --------------------
 # Basic settings
@@ -84,33 +85,39 @@ for label, sol in solutions.items():
         "cc_cap": [],
         "cc_time": [],
         "cv_cap": [],
-        "cv_time": []
+        "cv_time": [],
     }
-    
+
     # Iterate through cycles to extract step data
     # Experiment: Discharge(0), Rest(1), CC(2), CV(3), Rest(4)
     for i, cycle in enumerate(sol.cycles):
         # Step 0: Discharge
         step_dis = cycle.steps[0]
         dis_time = step_dis["Time [h]"].entries[-1] - step_dis["Time [h]"].entries[0]
-        
+
         # Step 2: CC Charge
         step_cc = cycle.steps[2]
-        cc_cap = abs(step_cc["Discharge capacity [A.h]"].entries[-1] - step_cc["Discharge capacity [A.h]"].entries[0])
+        cc_cap = abs(
+            step_cc["Discharge capacity [A.h]"].entries[-1]
+            - step_cc["Discharge capacity [A.h]"].entries[0]
+        )
         cc_time = step_cc["Time [h]"].entries[-1] - step_cc["Time [h]"].entries[0]
-        
+
         # Step 3: CV Charge
         step_cv = cycle.steps[3]
-        cv_cap = abs(step_cv["Discharge capacity [A.h]"].entries[-1] - step_cv["Discharge capacity [A.h]"].entries[0])
+        cv_cap = abs(
+            step_cv["Discharge capacity [A.h]"].entries[-1]
+            - step_cv["Discharge capacity [A.h]"].entries[0]
+        )
         cv_time = step_cv["Time [h]"].entries[-1] - step_cv["Time [h]"].entries[0]
-        
+
         m["cycles"].append(i + 1)
         m["dis_time"].append(dis_time)
         m["cc_cap"].append(cc_cap)
         m["cc_time"].append(cc_time)
         m["cv_cap"].append(cv_cap)
         m["cv_time"].append(cv_time)
-        
+
     metrics[label] = m
 
 # --------------------
@@ -125,7 +132,7 @@ for label, m in metrics.items():
     ax.plot(m["cycles"], m["cc_cap"], label=label)
 ax.set_ylabel("CC Capacity [A.h]")
 ax.set_title("CC Charge Capacity")
-ax.legend(fontsize='small')
+ax.legend(fontsize="small")
 ax.grid(True)
 
 # 2. CC Time
@@ -161,26 +168,26 @@ ax.set_title("Discharge Time")
 ax.grid(True)
 
 # 6. Empty or Summary (Optional)
-axs[2, 1].axis('off')
+axs[2, 1].axis("off")
 
 plt.tight_layout(rect=[0, 0.03, 1, 0.95])
 plt.savefig("testfromchatgpt_detailed.png")
 print("Saved testfromchatgpt_detailed.png")
 
-print("\n" + "="*40)
+print("\n" + "=" * 40)
 print("SEI THICKNESS ANALYSIS")
-print("="*40)
+print("=" * 40)
 for label, sol in solutions.items():
     try:
         # Check standard variable for total SEI thickness
         if "X-averaged total SEI thickness [m]" in sol.all_models[0].variables:
-             var_name = "X-averaged total SEI thickness [m]"
+            var_name = "X-averaged total SEI thickness [m]"
         elif "X-averaged negative SEI thickness [m]" in sol.all_models[0].variables:
-             var_name = "X-averaged negative SEI thickness [m]"
+            var_name = "X-averaged negative SEI thickness [m]"
         else:
-             # Fallback or specific check
-             var_name = "Negative SEI thickness [m]"
-        
+            # Fallback or specific check
+            var_name = "Negative SEI thickness [m]"
+
         sei_data = sol[var_name].entries
         init_val = sei_data[0]
         final_val = sei_data[-1]
@@ -190,6 +197,3 @@ for label, sol in solutions.items():
         print(f"  Growth:  {final_val - init_val:.6e} m")
     except Exception as e:
         print(f"{label}: Could not extract SEI thickness ({e})")
-
-
-

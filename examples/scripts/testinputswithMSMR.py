@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+
 import pybamm
 
 model = pybamm.lithium_ion.MSMR({"number of MSMR reactions": ("6", "4")})
@@ -7,7 +8,9 @@ parameter_values["Positive electrode host site occupancy fraction (0)"] = "[inpu
 parameter_values["Positive electrode host site standard potential (0) [V]"] = 3.62274
 parameter_values["Positive electrode host site ideality factor (0)"] = 0.9671
 parameter_values["Positive electrode host site charge transfer coefficient (0)"] = 0.5
-parameter_values["Positive electrode host site reference exchange-current density (0) [A.m-2]"] = 5
+parameter_values[
+    "Positive electrode host site reference exchange-current density (0) [A.m-2]"
+] = 5
 parameter_values["Negative electrode host site occupancy fraction (0)"] = 0.43336
 parameter_values["Negative electrode host site standard potential (0) [V]"] = 0.08843
 
@@ -134,4 +137,4 @@ sim.plot(
         "Voltage [V]",
     ],
     variable_limits="tight",  # make axes tight to plot at each timestep
-)            
+)

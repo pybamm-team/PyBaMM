@@ -1,7 +1,4 @@
-
 import pybamm
-import pandas as pd
-import os
 
 # Setup simulation for 40 cycles CONTINUOUS
 total_cycles = 40
@@ -46,7 +43,7 @@ sim = pybamm.Simulation(
     experiment=experiment,
     parameter_values=parameter_values,
     solver=solver,
-    var_pts=var_pts, 
+    var_pts=var_pts,
     submesh_types=submesh_types,
 )
 sim.solve(initial_soc=0.3)
@@ -56,5 +53,8 @@ for i, sol in enumerate(sim.solution.cycles):
     cycle_num = i + 1
     if 10 <= cycle_num <= 30:
         step_charge_cv = sol.steps[3]
-        c_cap_cv = abs(step_charge_cv["Discharge capacity [A.h]"].entries[-1] - step_charge_cv["Discharge capacity [A.h]"].entries[0])
+        c_cap_cv = abs(
+            step_charge_cv["Discharge capacity [A.h]"].entries[-1]
+            - step_charge_cv["Discharge capacity [A.h]"].entries[0]
+        )
         print(f"Cycle {cycle_num}: {c_cap_cv:.6f}")

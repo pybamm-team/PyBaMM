@@ -1,12 +1,12 @@
 #
 # Constant-current constant-voltage charge
 #
+import os
+
 import matplotlib.pyplot as plt
+import plotly.graph_objects as go
 
 import pybamm
-import pandas as pd
-import os
-import plotly.graph_objects as go
 
 pybamm.set_logging_level("NOTICE")
 
@@ -37,7 +37,9 @@ aging_file = "aging_results.csv"
 if os.path.exists(capacity_file):
     os.remove(capacity_file)
 with open(capacity_file, "w") as f:
-    f.write("Cycle,Discharge Capacity [A.h],CC Charge Capacity [A.h],CV Charge Capacity [A.h]\n")
+    f.write(
+        "Cycle,Discharge Capacity [A.h],CC Charge Capacity [A.h],CV Charge Capacity [A.h]\n"
+    )
 
 # Aging CSV
 aging_vars = [
@@ -60,7 +62,9 @@ with open(aging_file, "w") as f:
 
 starting_solution = None
 
-print(f"Starting simulation: {total_cycles} cycles in {num_chunks} chunks of {cycles_per_chunk}.")
+print(
+    f"Starting simulation: {total_cycles} cycles in {num_chunks} chunks of {cycles_per_chunk}."
+)
 
 # Initialize Plotly figure
 fig_plotly = go.Figure()
@@ -75,15 +79,15 @@ parameter_values = pybamm.ParameterValues("OKane2022")
 # parameter_values["SEI kinetic rate constant [m.s-1]"] = 1e-11
 
 # Print relevant parameters for "ec reaction limited" model
-sei_parameters = {
-    k: v for k, v in parameter_values.items() if "SEI" in k or "sei" in k
-}
+sei_parameters = {k: v for k, v in parameter_values.items() if "SEI" in k or "sei" in k}
 print("SEI Parameters:")
 for k, v in sei_parameters.items():
     print(f"  {k}: {v}")
 
 # Submesh types and var_pts are defined once as they are constant
-submesh_types = pybamm.lithium_ion.DFN().default_submesh_types.copy() # Initialize from a dummy model
+submesh_types = (
+    pybamm.lithium_ion.DFN().default_submesh_types.copy()
+)  # Initialize from a dummy model
 submesh_types["negative particle"] = pybamm.MeshGenerator(
     pybamm.Exponential1DSubMesh, submesh_params={"side": "right"}
 )
@@ -97,12 +101,14 @@ var_pts = {"x_n": 10, "x_s": 10, "x_p": 10, "r_n": 40, "r_p": 40}
 for chunk_idx in range(num_chunks):
     start_cycle = chunk_idx * cycles_per_chunk + 1
     end_cycle = (chunk_idx + 1) * cycles_per_chunk
-    print(f"\n--- Running Chunk {chunk_idx + 1}/{num_chunks} (Cycles {start_cycle}-{end_cycle}) ---")
+    print(
+        f"\n--- Running Chunk {chunk_idx + 1}/{num_chunks} (Cycles {start_cycle}-{end_cycle}) ---"
+    )
 
-    # Re-initialize model to ensure clean state, but we might need to be careful 
+    # Re-initialize model to ensure clean state, but we might need to be careful
     # if model has internal state that isn't captured by set_initial_conditions_from.
     # Usually recreating the model object is safer.
-    
+
     # model = pybamm.lithium_ion.DFN({"SEI": "ec reaction limited"})
     model = pybamm.lithium_ion.DFN(
         {
@@ -125,7 +131,7 @@ for chunk_idx in range(num_chunks):
         experiment=experiment_chunk,
         parameter_values=parameter_values,
         solver=solver,
-        var_pts=var_pts, 
+        var_pts=var_pts,
         submesh_types=submesh_types,
     )
 
@@ -133,7 +139,7 @@ for chunk_idx in range(num_chunks):
     if starting_solution is not None:
         print("Setting initial conditions from previous chunk...")
         sim.model.set_initial_conditions_from(starting_solution)
-    
+
     # Solve
     # Only use initial_soc for the VERY FIRST chunk
     if chunk_idx == 0:
@@ -144,7 +150,7 @@ for chunk_idx in range(num_chunks):
 
     # Process Results for this Chunk
     sol = sim.solution
-    
+
     # 1. Capacity Data
     cycle_offset = start_cycle - 1
     chunk_discharge_caps = []
@@ -156,17 +162,26 @@ for chunk_idx in range(num_chunks):
         for i, cycle_sol in enumerate(sol.cycles):
             # Calculate capacities
             step_discharge = cycle_sol.steps[0]
-            d_cap = abs(step_discharge["Discharge capacity [A.h]"].entries[-1] - step_discharge["Discharge capacity [A.h]"].entries[0])
-            
+            d_cap = abs(
+                step_discharge["Discharge capacity [A.h]"].entries[-1]
+                - step_discharge["Discharge capacity [A.h]"].entries[0]
+            )
+
             step_charge_cc = cycle_sol.steps[2]
-            c_cap_cc = abs(step_charge_cc["Discharge capacity [A.h]"].entries[-1] - step_charge_cc["Discharge capacity [A.h]"].entries[0])
-            
+            c_cap_cc = abs(
+                step_charge_cc["Discharge capacity [A.h]"].entries[-1]
+                - step_charge_cc["Discharge capacity [A.h]"].entries[0]
+            )
+
             step_charge_cv = cycle_sol.steps[3]
-            c_cap_cv = abs(step_charge_cv["Discharge capacity [A.h]"].entries[-1] - step_charge_cv["Discharge capacity [A.h]"].entries[0])
+            c_cap_cv = abs(
+                step_charge_cv["Discharge capacity [A.h]"].entries[-1]
+                - step_charge_cv["Discharge capacity [A.h]"].entries[0]
+            )
 
             current_cycle_num = cycle_offset + i + 1
             f.write(f"{current_cycle_num},{d_cap:.6f},{c_cap_cc:.6f},{c_cap_cv:.6f}\n")
-            
+
             # Store for plotting later
             chunk_discharge_caps.append(d_cap)
             chunk_cc_charge_caps.append(c_cap_cc)
@@ -187,21 +202,49 @@ for chunk_idx in range(num_chunks):
                     init_val = data[0]
                     final_val = data[-1]
                     change = final_val - init_val
-                    f.write(f"{start_cycle},{end_cycle},{var},{init_val:.6e},{final_val:.6e},{change:.6e}\n")
+                    f.write(
+                        f"{start_cycle},{end_cycle},{var},{init_val:.6e},{final_val:.6e},{change:.6e}\n"
+                    )
                 else:
                     f.write(f"{start_cycle},{end_cycle},{var},N/A,N/A,N/A\n")
             except Exception as e:
-                f.write(f"{start_cycle},{end_cycle},{var},Error,Error,{str(e)}\n")
+                f.write(f"{start_cycle},{end_cycle},{var},Error,Error,{e!s}\n")
 
     # Update starting solution for next chunk
     starting_solution = sol
-    
+
     # Save Plotly figure incrementally (rewrite file)
     fig_plotly = go.Figure()
-    fig_plotly.add_trace(go.Scatter(x=all_cycle_nums, y=all_discharge_caps, mode='lines+markers', name='Discharge Capacity'))
-    fig_plotly.add_trace(go.Scatter(x=all_cycle_nums, y=all_cc_charge_caps, mode='lines+markers', name='CC Charge Capacity'))
-    fig_plotly.add_trace(go.Scatter(x=all_cycle_nums, y=all_cv_charge_caps, mode='lines+markers', name='CV Charge Capacity'))
-    fig_plotly.update_layout(title="Capacity per Cycle", xaxis_title="Cycle Number", yaxis_title="Capacity [A.h]", hovermode="x unified")
+    fig_plotly.add_trace(
+        go.Scatter(
+            x=all_cycle_nums,
+            y=all_discharge_caps,
+            mode="lines+markers",
+            name="Discharge Capacity",
+        )
+    )
+    fig_plotly.add_trace(
+        go.Scatter(
+            x=all_cycle_nums,
+            y=all_cc_charge_caps,
+            mode="lines+markers",
+            name="CC Charge Capacity",
+        )
+    )
+    fig_plotly.add_trace(
+        go.Scatter(
+            x=all_cycle_nums,
+            y=all_cv_charge_caps,
+            mode="lines+markers",
+            name="CV Charge Capacity",
+        )
+    )
+    fig_plotly.update_layout(
+        title="Capacity per Cycle",
+        xaxis_title="Cycle Number",
+        yaxis_title="Capacity [A.h]",
+        hovermode="x unified",
+    )
     fig_plotly.write_html("cccv_capacity.html")
 
     print(f"Chunk {chunk_idx + 1} completed. Data saved.")
@@ -217,17 +260,21 @@ fig, axs = plt.subplots(3, 1, figsize=(8, 12), sharex=True)
 # Note: sol is the solution from the last chunk
 for i in range(len(sol.cycles)):
     cycle_sol = sol.cycles[i]
-    
+
     # Extract variables for plots
     t = cycle_sol["Time [h]"].entries
     V = cycle_sol["Voltage [V]"].entries
-    ocv_p = cycle_sol["X-averaged positive electrode open-circuit potential [V]"].entries
-    ocv_n = cycle_sol["X-averaged negative electrode open-circuit potential [V]"].entries
+    ocv_p = cycle_sol[
+        "X-averaged positive electrode open-circuit potential [V]"
+    ].entries
+    ocv_n = cycle_sol[
+        "X-averaged negative electrode open-circuit potential [V]"
+    ].entries
 
     # Plot Cell Voltage
     axs[0].plot(t - t[0], V, label=f"Cycle {start_cycle + i}")
     axs[0].set_ylabel("Voltage [V]")
-    
+
     # Plot Cathode OCV
     axs[1].plot(t - t[0], ocv_p, label=f"Cycle {start_cycle + i}")
     axs[1].set_ylabel("Cathode OCV [V]")
@@ -244,9 +291,9 @@ fig.savefig("cccv_results.png")
 
 # Plot Capacity per Cycle (using accumulated data)
 plt.figure(figsize=(6, 4))
-plt.plot(all_cycle_nums, all_discharge_caps, 'o-', label="Discharge Capacity")
-plt.plot(all_cycle_nums, all_cc_charge_caps, 's-', label="CC Charge Capacity")
-plt.plot(all_cycle_nums, all_cv_charge_caps, '^-', label="CV Charge Capacity")
+plt.plot(all_cycle_nums, all_discharge_caps, "o-", label="Discharge Capacity")
+plt.plot(all_cycle_nums, all_cc_charge_caps, "s-", label="CC Charge Capacity")
+plt.plot(all_cycle_nums, all_cv_charge_caps, "^-", label="CV Charge Capacity")
 plt.xlabel("Cycle Number")
 plt.ylabel("Capacity [A.h]")
 plt.title("Capacity per Cycle")
@@ -255,10 +302,14 @@ plt.grid(True)
 
 # Print capacity data for each cycle (from accumulated data)
 print("\nCapacity Data per Cycle:")
-print(f"{'Cycle':<6} | {'Discharge [A.h]':<16} | {'CC Charge [A.h]':<16} | {'CV Charge [A.h]':<16}")
+print(
+    f"{'Cycle':<6} | {'Discharge [A.h]':<16} | {'CC Charge [A.h]':<16} | {'CV Charge [A.h]':<16}"
+)
 print("-" * 60)
 for i in range(len(all_discharge_caps)):
-    print(f"{all_cycle_nums[i]:<6} | {all_discharge_caps[i]:<16.4f} | {all_cc_charge_caps[i]:<16.4f} | {all_cv_charge_caps[i]:<16.4f}")
+    print(
+        f"{all_cycle_nums[i]:<6} | {all_discharge_caps[i]:<16.4f} | {all_cc_charge_caps[i]:<16.4f} | {all_cv_charge_caps[i]:<16.4f}"
+    )
 
 plt.savefig("cccv_capacity.png")
 
@@ -311,4 +362,3 @@ sol.save_data(
 print("\n" + "=" * 80)
 print("AGING PARAMETERS TRACKING - See aging_results.csv for full data")
 print("=" * 80 + "\n")
-
