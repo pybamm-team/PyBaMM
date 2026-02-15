@@ -210,7 +210,7 @@ class TestCopy:
         a = pybamm.Parameter("a")
         b = pybamm.Parameter("b")
 
-        with pytest.raises(ValueError, match="must have exactly two children"):
+        with pytest.raises(ValueError, match=r"must have exactly two children"):
             (a + b).create_copy(new_children=[a])
 
     def test_create_copy_new_children_scalars(self):
@@ -220,7 +220,7 @@ class TestCopy:
         assert (a + b).create_copy() == a + b
         # a+b produces a scalar, not an addition object.
         with pytest.raises(
-            ValueError, match="Cannot create a copy of a scalar with new children"
+            ValueError, match=r"Cannot create a copy of a scalar with new children"
         ):
             (a + b).create_copy(new_children=[a, b])
 
@@ -245,7 +245,7 @@ class TestCopy:
 
         I = pybamm.Index(vec, 1)
 
-        with pytest.raises(ValueError, match="must have exactly one child"):
+        with pytest.raises(ValueError, match=r"must have exactly one child"):
             I.create_copy(new_children=[vec, vec_b])
 
     def test_unary_create_copy_no_simplification(self):
@@ -346,7 +346,7 @@ class TestCopy:
 
         with pytest.raises(
             NotImplementedError,
-            match="should always be copied using simplification checks",
+            match=r"should always be copied using simplification checks",
         ):
             pybamm.NumpyConcatenation(a, b, v_s).create_copy(
                 new_children=[a, b], perform_simplifications=False

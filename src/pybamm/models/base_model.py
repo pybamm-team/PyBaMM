@@ -362,6 +362,9 @@ class BaseModel:
         expression is preserved. The processed variable is stored separately
         in _variables_processed.
 
+        CoupledVariables in the symbol are resolved by recursively getting
+        the processed version of the referenced variable.
+
         Parameters
         ----------
         name : str
@@ -378,8 +381,29 @@ class BaseModel:
                 f"Cannot process variable '{name}' without a `symbol_processor`."
             )
 
+        symbol = self._resolve_coupled_variables(symbol)
         value = self.symbol_processor(name=name, symbol=symbol)
         self._variables_processed[name] = value
+
+    def _resolve_coupled_variables(self, symbol: pybamm.Symbol) -> pybamm.Symbol:
+        """Resolve CoupledVariables by looking up their targets in self._variables."""
+        if isinstance(symbol, pybamm.CoupledVariable):
+            if symbol.name not in self._variables:
+                raise ValueError(
+                    f"CoupledVariable '{symbol.name}' not found in model.variables"
+                )
+            return self._resolve_coupled_variables(self._variables[symbol.name])
+        elif hasattr(symbol, "children") and symbol.children:
+            new_children = []
+            changed = False
+            for child in symbol.children:
+                new_child = self._resolve_coupled_variables(child)
+                new_children.append(new_child)
+                if new_child is not child:
+                    changed = True
+            if changed:
+                return symbol.create_copy(new_children=new_children)
+        return symbol
 
     def update_processed_variables(self, processed_vars: dict[str, pybamm.Symbol]):
         """
@@ -598,11 +622,12 @@ class BaseModel:
         return pybamm.ParameterValues({})
 
     @property
-    def fixed_input_parameters(self):
+    def fixed_input_parameters(self) -> set[pybamm.Symbol]:
+        """Returns a set of all fixed input parameter symbols used in the parameter values."""
         return self._fixed_input_parameters
 
     @fixed_input_parameters.setter
-    def fixed_input_parameters(self, fixed_input_parameters):
+    def fixed_input_parameters(self, fixed_input_parameters: set[pybamm.Symbol]):
         self._fixed_input_parameters = fixed_input_parameters
 
     @property
@@ -715,6 +740,17 @@ class BaseModel:
     @algebraic_root_solver.setter
     def algebraic_root_solver(self, algebraic_root_solver):
         self._algebraic_root_solver = algebraic_root_solver
+
+    @property
+    def y0(self):
+        if not hasattr(self, "y0_list") or self.y0_list is None:
+            return None
+        elif len(self.y0_list) == 1:
+            return self.y0_list[0]
+        else:
+            raise ValueError(
+                "Model contains multiple initial states. Access using y0_list instead."
+            )
 
     def get_parameter_info(self, by_submodel=False):
         """
@@ -986,7 +1022,7 @@ class BaseModel:
                 for side in x.keys()
             ),
             self.variables.values(),
-            fixed_input_parameters.values(),
+            fixed_input_parameters,
             (event.expression for event in self.events),
         )
         all_input_parameters = unpacker.unpack_list_of_symbols(list(all_items))
@@ -1009,7 +1045,7 @@ class BaseModel:
                 for side in x.keys()
             ),
             self._variables_by_submodel[submodel].values(),
-            fixed_input_parameters.values(),
+            fixed_input_parameters,
             (event.expression for event in self.submodels[submodel].events),
         )
         all_input_parameters = unpacker.unpack_list_of_symbols(list(all_items))

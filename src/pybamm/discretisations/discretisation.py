@@ -40,6 +40,9 @@ class Discretisation:
         (not used anywhere in the model, len(rhs)>1), then the variable
         is moved to be explicitly integrated when called by the solution object.
         Default is False.
+    resolve_coupled_variables : bool, optional
+        If True, resolve CoupledVariables in rhs, algebraic, initial_conditions,
+        and boundary_conditions before processing. Default is False.
     """
 
     def __init__(
@@ -48,6 +51,7 @@ class Discretisation:
         spatial_methods=None,
         check_model=True,
         remove_independent_variables_from_rhs=False,
+        resolve_coupled_variables=False,
     ):
         self._mesh = mesh
         if mesh is None:
@@ -79,6 +83,7 @@ class Discretisation:
         self._remove_independent_variables_from_rhs_flag = (
             remove_independent_variables_from_rhs
         )
+        self._resolve_coupled_variables = resolve_coupled_variables
 
     @property
     def mesh(self):
@@ -109,7 +114,12 @@ class Discretisation:
         # reset discretised_symbols
         self._discretised_symbols = {}
 
-    def process_model(self, model, inplace=True, delayed_variable_processing=None):
+    def process_model(
+        self,
+        model,
+        inplace=True,
+        delayed_variable_processing=None,
+    ):
         """
         Discretise a model. Currently inplace, could be changed to return a new model.
 
@@ -194,6 +204,9 @@ class Discretisation:
         else:
             # create a copy of the original model
             model_disc = model.new_copy()
+
+        if self._resolve_coupled_variables:
+            self._resolve_coupled_variables_in_model(model)
 
         # Keep a record of y_slices in the model
         model_disc.y_slices = self.y_slices_explicit
@@ -284,6 +297,49 @@ class Discretisation:
 
         model_disc.is_discretised = True
         return model_disc
+
+    def _resolve_coupled_variables_in_model(self, model):
+        """Resolve CoupledVariables in rhs, algebraic, initial_conditions, and boundary_conditions."""
+
+        def resolve_symbol(symbol):
+            if isinstance(symbol, pybamm.CoupledVariable):
+                if symbol.name not in model.variables:
+                    raise pybamm.DiscretisationError(
+                        f"CoupledVariable '{symbol.name}' not found in model.variables."
+                    )
+                return resolve_symbol(model.variables[symbol.name])
+            elif hasattr(symbol, "children") and symbol.children:
+                new_children = []
+                changed = False
+                for child in symbol.children:
+                    new_child = resolve_symbol(child)
+                    new_children.append(new_child)
+                    if new_child is not child:
+                        changed = True
+                if changed:
+                    return symbol.create_copy(new_children=new_children)
+            return symbol
+
+        for var, expr in list(model.rhs.items()):
+            resolved = resolve_symbol(expr)
+            if resolved is not expr:
+                model.rhs[var] = resolved
+
+        for var, expr in list(model.algebraic.items()):
+            resolved = resolve_symbol(expr)
+            if resolved is not expr:
+                model.algebraic[var] = resolved
+
+        for var, expr in list(model.initial_conditions.items()):
+            resolved = resolve_symbol(expr)
+            if resolved is not expr:
+                model.initial_conditions[var] = resolved
+
+        for var, bcs in list(model.boundary_conditions.items()):
+            for side, (expr, bc_type) in list(bcs.items()):
+                resolved = resolve_symbol(expr)
+                if resolved is not expr:
+                    model.boundary_conditions[var][side] = (resolved, bc_type)
 
     def set_variable_slices(self, variables):
         """
@@ -1056,6 +1112,12 @@ class Discretisation:
                     symbol.lr_direction,
                     symbol.tb_direction,
                 )
+            elif isinstance(symbol, pybamm.NodeToEdge2D):
+                return spatial_method.node_to_edge(
+                    disc_child,
+                    method="arithmetic",
+                    direction=symbol.direction,
+                )
             elif isinstance(symbol, pybamm.UpwindDownwind):
                 direction = symbol.name  # upwind or downwind
                 return spatial_method.upwind_or_downwind(
@@ -1147,13 +1209,21 @@ class Discretisation:
             return symbol.create_copy()
 
         elif isinstance(symbol, pybamm.CoupledVariable):
-            new_symbol = self.process_symbol(symbol.children[0])
-            return new_symbol
+            raise pybamm.DiscretisationError(
+                f"CoupledVariable '{symbol.name}' was not resolved before discretisation. "
+                "Ensure the variable exists in model.variables."
+            )
 
         elif isinstance(symbol, pybamm.VectorField):
+            # VectorField is a subclass of TensorField, handle it first for specificity
             left_symbol = self.process_symbol(symbol.lr_field)
             right_symbol = self.process_symbol(symbol.tb_field)
             return symbol.create_copy(new_children=[left_symbol, right_symbol])
+
+        elif isinstance(symbol, pybamm.TensorField):
+            # General TensorField handling (rank-2 tensors)
+            processed_children = [self.process_symbol(c) for c in symbol.children]
+            return symbol.create_copy(new_children=processed_children)
 
         elif isinstance(symbol, pybamm.Constant):
             # after discretisation we just care about the value, not the name

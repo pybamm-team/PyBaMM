@@ -34,14 +34,15 @@ class TestAlgebraicSolver:
         solver = pybamm.AlgebraicSolver()
         with pytest.raises(
             pybamm.SolverError,
-            match="Cannot use algebraic solver to solve model with time derivatives",
+            match=r"Cannot use algebraic solver to solve model with time derivatives",
         ):
             solver.solve(model)
 
     def test_simple_root_find(self):
         # Simple system: a single algebraic equation
         class Model(pybamm.BaseModel):
-            y0 = np.array([2])
+            y0_list = [np.array([2])]
+            y0S_list = None
             rhs = {}
             jac_algebraic_eval = None
             len_rhs_and_alg = 1
@@ -56,12 +57,13 @@ class TestAlgebraicSolver:
         # Try passing extra options to solver
         solver = pybamm.AlgebraicSolver(extra_options={"maxiter": 100})
         model = Model()
-        solution = solver._integrate(model, np.array([0]))
-        np.testing.assert_array_equal(solution.y, -2)
+        solutions = solver._integrate(model, np.array([0]))
+        np.testing.assert_array_equal(solutions[0].y, -2)
 
     def test_root_find_fail(self):
         class Model(pybamm.BaseModel):
-            y0 = np.array([2])
+            y0_list = [np.array([2])]
+            y0S_list = None
             rhs = {}
             jac_algebraic_eval = None
             len_rhs_and_alg = 1
@@ -79,14 +81,14 @@ class TestAlgebraicSolver:
         solver = pybamm.AlgebraicSolver(method="hybr")
         with pytest.raises(
             pybamm.SolverError,
-            match="Could not find acceptable solution",
+            match=r"Could not find acceptable solution",
         ):
             solver._integrate(model, np.array([0]))
 
         solver = pybamm.AlgebraicSolver()
         with pytest.raises(
             pybamm.SolverError,
-            match="Could not find acceptable solution",
+            match=r"Could not find acceptable solution",
         ):
             solver._integrate(model, np.array([0]))
 
@@ -95,7 +97,8 @@ class TestAlgebraicSolver:
         b = np.array([0, 7])
 
         class Model(pybamm.BaseModel):
-            y0 = np.zeros(2)
+            y0_list = [np.zeros(2)]
+            y0S_list = None
             rhs = {}
             len_rhs_and_alg = 2
 
@@ -113,8 +116,8 @@ class TestAlgebraicSolver:
         sol = np.array([3, -4])[:, np.newaxis]
 
         solver = pybamm.AlgebraicSolver()
-        solution = solver._integrate(model, np.array([0]))
-        np.testing.assert_allclose(solution.y, sol, rtol=1e-7, atol=1e-6)
+        solutions = solver._integrate(model, np.array([0]))
+        np.testing.assert_allclose(solutions[0].y, sol, rtol=1e-7, atol=1e-6)
 
     def test_model_solver(self):
         # Create model

@@ -32,16 +32,11 @@ if pybamm.has_jax():
         result.append(lst[start:])
         return result
 
-    try:
-        import jax.extend.backend
-        platform = jax.extend.backend.get_backend().platform.casefold()
-    except (ImportError, AttributeError):
-        import jax.lib.xla_bridge
-        platform = jax.lib.xla_bridge.get_backend().platform.casefold()
+    import jax.extend
 
-    if platform == "metal":
-        # jax.config.update("jax_metal_enabled", True)
-        pass
+    platform = jax.extend.backend.get_backend().platform.casefold()
+    if platform != "metal":
+        jax.config.update("jax_enable_x64", True)
 
     MAX_ORDER = 5
     NEWTON_MAXITER = 4
@@ -984,9 +979,7 @@ def jax_bdf_integrate(func, y0, t_eval, *args, rtol=1e-6, atol=1e-6, mass=None):
 
     """
     if not pybamm.has_jax():
-        raise ModuleNotFoundError(
-            "Jax or jaxlib is not installed, please see https://docs.pybamm.org/en/latest/source/user_guide/installation/gnu-linux-mac.html#optional-jaxsolver"
-        )
+        pybamm.raise_jax_not_found()
 
     def _check_arg(arg):
         if not isinstance(arg, core.Tracer) and not core.valid_jaxtype(arg):

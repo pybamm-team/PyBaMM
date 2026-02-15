@@ -6,6 +6,7 @@ import pybamm
 
 if pybamm.has_jax():
     import jax
+    import jax.extend
     import jax.numpy as jnp
     from jax.experimental.ode import odeint
 
@@ -62,9 +63,7 @@ class JaxSolver(pybamm.BaseSolver):
         extra_options=None,
     ):
         if not pybamm.has_jax():
-            raise ModuleNotFoundError(
-                "Jax or jaxlib is not installed, please see https://docs.pybamm.org/en/latest/source/user_guide/installation/gnu-linux-mac.html#optional-jaxsolver"
-            )
+            pybamm.raise_jax_not_found()
 
         # note: bdf solver itself calculates consistent initial conditions so can set
         # root_method to none, allow user to override this behavior
@@ -99,8 +98,9 @@ class JaxSolver(pybamm.BaseSolver):
         Returns
         -------
         function
-            A function with signature `f(inputs)`, where inputs are a dict containing
-            any input parameters to pass to the model when solving
+            A function with signature `f(inputs, y0)`, where inputs are a dict containing
+            any input parameters to pass to the model when solving, and y0 is the initial state vector
+            (i.e. one entry from model.y0_list)
 
         """
         if model not in self._cached_solves:
@@ -127,8 +127,9 @@ class JaxSolver(pybamm.BaseSolver):
         Returns
         -------
         function
-            A function with signature `f(inputs)`, where inputs are a dict containing
-            any input parameters to pass to the model when solving
+            A function with signature `f(inputs, y0)`, where inputs are a dict containing
+            any input parameters to pass to the model when solving, and y0 is the initial state vector
+            (i.e. one entry from model.y0_list)
 
         """
         if model.convert_to_format != "jax":
@@ -148,8 +149,6 @@ class JaxSolver(pybamm.BaseSolver):
                 " end-time"
             )
 
-        # Initial conditions, make sure they are an 0D array
-        y0 = jnp.array(model.y0).reshape(-1)
         mass = None
         if self.method == "BDF":
             mass = model.mass_matrix.entries.toarray()
@@ -162,7 +161,9 @@ class JaxSolver(pybamm.BaseSolver):
                 [model.rhs_eval(t, y, inputs), model.algebraic_eval(t, y, inputs)]
             )
 
-        def solve_model_rk45(inputs):
+        def solve_model_rk45(y0, inputs: dict | list[dict]):
+            # Initial conditions, make sure they are an 0D array
+            y0 = jnp.array(y0).reshape(-1)
             y = odeint(
                 rhs_ode,
                 y0,
@@ -174,7 +175,9 @@ class JaxSolver(pybamm.BaseSolver):
             )
             return jnp.transpose(y)
 
-        def solve_model_bdf(inputs):
+        def solve_model_bdf(y0, inputs: dict | list[dict]):
+            # Initial conditions, make sure they are an 0D array
+            y0 = jnp.array(y0).reshape(-1)
             y = pybamm.jax_bdf_integrate(
                 rhs_dae,
                 y0,
@@ -192,16 +195,13 @@ class JaxSolver(pybamm.BaseSolver):
         else:
             return jax.jit(solve_model_bdf)
 
-    @property
-    def supports_parallel_solve(self):
-        return True
-
-    @property
-    def requires_explicit_sensitivities(self):
-        return False
-
     def _integrate(
-        self, model, t_eval, inputs=None, t_interp=None, intial_conditions=None
+        self,
+        model,
+        t_eval,
+        inputs_list: list[dict] | None = None,
+        t_interp=None,
+        nproc=None,
     ):
         """
         Solve a model defined by dydt with initial conditions y0.
@@ -212,7 +212,7 @@ class JaxSolver(pybamm.BaseSolver):
             The model whose solution to calculate.
         t_eval : :class:`numpy.array`, size (k,)
             The times at which to compute the solution
-        inputs : dict, list[dict], optional
+        inputs_list : list[dict], optional
             Any input parameters to pass to the model when solving
 
         Returns
@@ -222,32 +222,26 @@ class JaxSolver(pybamm.BaseSolver):
             various diagnostic messages.
 
         """
-        if intial_conditions is not None:  # pragma: no cover
-            raise NotImplementedError(
-                "Setting initial conditions is not yet implemented for the JAX IDAKLU solver"
-            )
-        if isinstance(inputs, dict):
-            inputs = [inputs]
+        inputs = inputs_list or [{}]
+
+        y0_list = model.y0_list
+
         timer = pybamm.Timer()
         if model not in self._cached_solves:
             self._cached_solves[model] = self.create_solve(model, t_eval)
 
-        y = []
-        try:
-            import jax.extend.backend
-            platform = jax.extend.backend.get_backend().platform.casefold()
-        except (ImportError, AttributeError):
-            import jax.lib.xla_bridge
-            platform = jax.lib.xla_bridge.get_backend().platform.casefold()
-        if len(inputs) <= 1 or platform.startswith("cpu"):
+        platform = jax.extend.backend.get_backend().platform.casefold()
+        if len(inputs) == 1:
+            y = [self._cached_solves[model](y0_list[0], inputs[0])]
+        elif platform.startswith("cpu"):
             # cpu execution runs faster when multithreaded
             async def solve_model_for_inputs():
-                async def solve_model_async(inputs_v):
-                    return self._cached_solves[model](inputs_v)
+                async def solve_model_async(y0, inputs_v):
+                    return self._cached_solves[model](y0, inputs_v)
 
                 coro = []
-                for inputs_v in inputs:
-                    coro.append(asyncio.create_task(solve_model_async(inputs_v)))
+                for y0, inputs_v in zip(y0_list, inputs, strict=True):
+                    coro.append(asyncio.create_task(solve_model_async(y0, inputs_v)))
                 return await asyncio.gather(*coro)
 
             y = asyncio.run(solve_model_for_inputs())
@@ -255,24 +249,27 @@ class JaxSolver(pybamm.BaseSolver):
             platform.startswith("gpu")
             or platform.startswith("tpu")
             or platform.startswith("metal")
-        ):
+        ):  # pragma: no cover
             # gpu execution runs faster when parallelised with vmap
             # (see also comment below regarding single-program multiple-data
             #  execution (SPMD) using pmap on multiple XLAs)
 
             # convert inputs (array of dict) to a dict of arrays for vmap
+            y = []
             inputs_v = {
                 key: jnp.array([dic[key] for dic in inputs]) for key in inputs[0]
             }
-            y.extend(jax.vmap(self._cached_solves[model])(inputs_v))
-        else:
+            y0 = onp.vstack([model.y0_list[i].flatten() for i in range(len(inputs))])
+            y.extend(jax.vmap(self._cached_solves[model])(y0, inputs_v))
+        else:  # pragma: no cover
             # Unknown platform, use serial execution as fallback
             print(
                 f'Unknown platform requested: "{platform}", '
                 "falling back to serial execution"
             )
-            for inputs_v in inputs:
-                y.append(self._cached_solves[model](inputs_v))
+            y = []
+            for inputs_v, y0 in zip(inputs, y0_list, strict=True):
+                y.append(self._cached_solves[model](y0, inputs_v))
 
         # This code block implements single-program multiple-data execution
         # using pmap across multiple XLAs. It is currently commented out

@@ -152,6 +152,7 @@ class Solution:
         # Initialize empty inputs
         self._t = None
         self._y = None
+        self._yp = None
         self._sensitivities = None
 
         # Initialize empty summary variables
@@ -187,18 +188,30 @@ class Solution:
     def y(self):
         """Values of the solution"""
         if self._y is None:
-            self.set_y()
+            self._y = self._concatenate_states(self.all_ys)
         return self._y
 
-    def set_y(self):
+    @property
+    def yp(self):
+        """Time derivatives of the solution"""
+        if self.hermite_interpolation and self._yp is None:
+            self._yp = self._concatenate_states(self.all_yps)
+        return self._yp
+
+    def _concatenate_states(
+        self, states: list[np.ndarray | casadi.DM | casadi.MX]
+    ) -> np.ndarray | casadi.DM | casadi.MX:
+        if len(states) == 1:
+            return states[0]
+
         try:
-            if isinstance(self.all_ys[0], casadi.DM | casadi.MX):
-                self._y = casadi.horzcat(*self.all_ys)
+            if isinstance(states[0], casadi.DM | casadi.MX):
+                return casadi.horzcat(*states)
             else:
-                self._y = np.hstack(self.all_ys)
+                return np.hstack(states)
         except ValueError as error:
             raise pybamm.SolverError(
-                "The solution is made up from different models, so `y` cannot be "
+                "The solution is made up from different models, so the states cannot be "
                 "computed explicitly."
             ) from error
 
@@ -249,11 +262,11 @@ class Solution:
                 )
 
     @property
-    def all_ts(self):
+    def all_ts(self) -> list[np.ndarray | casadi.DM | casadi.MX]:
         return self._all_ts
 
     @property
-    def all_ys(self):
+    def all_ys(self) -> list[np.ndarray | casadi.DM | casadi.MX]:
         return self._all_ys
 
     @property
@@ -266,11 +279,11 @@ class Solution:
         return [casadi.vertcat(*inp.values()) for inp in self.all_inputs]
 
     @property
-    def all_yps(self):
+    def all_yps(self) -> list[np.ndarray | casadi.DM | casadi.MX] | None:
         return self._all_yps
 
     @property
-    def hermite_interpolation(self):
+    def hermite_interpolation(self) -> bool:
         return self.all_yps is not None
 
     @property
@@ -294,7 +307,7 @@ class Solution:
         self._termination = value
 
     @property
-    def observable(self):
+    def observable(self) -> bool:
         return self._observable
 
     def _check_observable(self):
@@ -332,7 +345,7 @@ class Solution:
             all_ys = self.all_ys[0][:, :1]
         else:
             # Get first state from initial conditions as all_ys is empty
-            all_ys = self.all_models[0].y0full.reshape(-1, 1)
+            all_ys = self.all_models[0].y0full[0].reshape(-1, 1)
 
         new_sol = Solution(
             self.all_ts[0][:1],

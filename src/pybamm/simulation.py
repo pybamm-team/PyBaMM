@@ -444,7 +444,6 @@ class Simulation:
         showprogress=False,
         inputs=None,
         t_interp=None,
-        initial_conditions=None,
         **kwargs,
     ):
         """
@@ -607,11 +606,16 @@ class Simulation:
                 inputs=inputs,
                 t_interp=t_interp,
                 **kwargs,
-                initial_conditions=initial_conditions,
             )
 
         elif self.operating_mode == "with experiment":
             callbacks.on_experiment_start(logs)
+
+            if isinstance(inputs, list):
+                raise pybamm.SolverError(
+                    "Solving with a list of input sets is not supported with experiments."
+                )
+
             self.build_for_experiment(
                 initial_soc=initial_soc,
                 direction=direction,

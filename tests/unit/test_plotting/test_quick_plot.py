@@ -193,7 +193,7 @@ class TestQuickPlot:
             rtol=1e-7,
             atol=1e-6,
         )
-        with pytest.raises(ValueError, match="time unit"):
+        with pytest.raises(ValueError, match=r"time unit"):
             pybamm.QuickPlot(solution, ["a"], time_unit="bad unit")
         # long solution defaults to hours instead of seconds
         solution_long = solver.solve(model, np.linspace(0, 1e5))
@@ -209,7 +209,7 @@ class TestQuickPlot:
         assert quick_plot.spatial_unit == "mm"
         quick_plot = pybamm.QuickPlot(solution, ["a"], spatial_unit="um")
         assert quick_plot.spatial_unit == r"$\mu$m"
-        with pytest.raises(ValueError, match="spatial unit"):
+        with pytest.raises(ValueError, match=r"spatial unit"):
             pybamm.QuickPlot(solution, ["a"], spatial_unit="bad unit")
 
         # Test 2D variables
@@ -218,7 +218,7 @@ class TestQuickPlot:
         quick_plot.dynamic_plot(show_plot=False)
         quick_plot.slider_update(0.01)
 
-        with pytest.raises(NotImplementedError, match="Cannot plot 2D variables"):
+        with pytest.raises(NotImplementedError, match=r"Cannot plot 2D variables"):
             pybamm.QuickPlot([solution, solution], ["2D variable"])
 
         # Test different variable limits
@@ -259,23 +259,23 @@ class TestQuickPlot:
         quick_plot.slider_update(1)
 
         with pytest.raises(
-            TypeError, match="variable_limits must be 'fixed', 'tight', or a dict"
+            TypeError, match=r"variable_limits must be 'fixed', 'tight', or a dict"
         ):
             pybamm.QuickPlot(
                 solution, ["a", "b broadcasted"], variable_limits="bad variable limits"
             )
 
         # Test errors
-        with pytest.raises(ValueError, match="Mismatching variable domains"):
+        with pytest.raises(ValueError, match=r"Mismatching variable domains"):
             pybamm.QuickPlot(solution, [["a", "b broadcasted"]])
-        with pytest.raises(ValueError, match="labels"):
+        with pytest.raises(ValueError, match=r"labels"):
             pybamm.QuickPlot(
                 [solution, solution], ["a"], labels=["sol 1", "sol 2", "sol 3"]
             )
 
         # No variable can be NaN
         with pytest.raises(
-            ValueError, match="All-NaN variable 'NaN variable' provided"
+            ValueError, match=r"All-NaN variable 'NaN variable' provided"
         ):
             pybamm.QuickPlot(solution, ["NaN variable"])
 
@@ -287,7 +287,7 @@ class TestQuickPlot:
         model.rhs = {a: pybamm.Scalar(0)}
         model.initial_conditions = {a: pybamm.Scalar(0)}
         solution = pybamm.IDAKLUSolver().solve(model, [0, 1])
-        with pytest.raises(ValueError, match="No default output variables"):
+        with pytest.raises(ValueError, match=r"No default output variables"):
             pybamm.QuickPlot(solution)
 
     def test_spm_simulation(self, tmp_path):
@@ -487,17 +487,17 @@ class TestQuickPlot:
             ][1]
             np.testing.assert_allclose(qp_data.T, phi_n[:, :, -1], rtol=1e-7, atol=1e-6)
 
-        with pytest.raises(NotImplementedError, match="Shape not recognized for"):
+        with pytest.raises(NotImplementedError, match=r"Shape not recognized for"):
             pybamm.QuickPlot(solution, ["Negative particle concentration [mol.m-3]"])
 
         pybamm.close_plots()
 
     def test_invalid_input_type_failure(self):
-        with pytest.raises(TypeError, match="Solutions must be"):
+        with pytest.raises(TypeError, match=r"Solutions must be"):
             pybamm.QuickPlot(1)
 
     def test_empty_list_failure(self):
-        with pytest.raises(TypeError, match="QuickPlot requires at least 1"):
+        with pytest.raises(TypeError, match=r"QuickPlot requires at least 1"):
             pybamm.QuickPlot([])
 
     def test_model_with_inputs(self):

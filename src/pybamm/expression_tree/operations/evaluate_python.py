@@ -14,19 +14,11 @@ import pybamm
 
 if pybamm.has_jax():
     import jax
-    import jax.numpy as jnp
-    from scipy import special
+    import jax.extend
 
-    try:
-        import jax.extend.backend
-        platform = jax.extend.backend.get_backend().platform.casefold()
-    except (ImportError, AttributeError):
-        import jax.lib.xla_bridge
-        platform = jax.lib.xla_bridge.get_backend().platform.casefold()
-
-    if platform == "metal":
-        # jax.config.update("jax_metal_enabled", True)
-        pass
+    platform = jax.extend.backend.get_backend().platform.casefold()
+    if platform != "metal":
+        jax.config.update("jax_enable_x64", True)
 
 
 class JaxCooMatrix:
