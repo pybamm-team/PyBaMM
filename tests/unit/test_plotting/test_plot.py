@@ -20,9 +20,9 @@ class TestPlot:
 
     def test_plot_fail(self):
         x = pybamm.Array(np.array([0]))
-        with pytest.raises(TypeError, match="x must be 'pybamm.Array'"):
+        with pytest.raises(TypeError, match=r"x must be 'pybamm.Array'"):
             pybamm.plot("bad", x)
-        with pytest.raises(TypeError, match="y must be 'pybamm.Array'"):
+        with pytest.raises(TypeError, match=r"y must be 'pybamm.Array'"):
             pybamm.plot(x, "bad")
 
     def test_plot2D(self):
@@ -42,9 +42,9 @@ class TestPlot:
 
     def test_plot2D_fail(self):
         x = pybamm.Array(np.array([0]))
-        with pytest.raises(TypeError, match="x must be 'pybamm.Array'"):
+        with pytest.raises(TypeError, match=r"x must be 'pybamm.Array'"):
             pybamm.plot2D("bad", x, x)
-        with pytest.raises(TypeError, match="y must be 'pybamm.Array'"):
+        with pytest.raises(TypeError, match=r"y must be 'pybamm.Array'"):
             pybamm.plot2D(x, "bad", x)
-        with pytest.raises(TypeError, match="z must be 'pybamm.Array'"):
+        with pytest.raises(TypeError, match=r"z must be 'pybamm.Array'"):
             pybamm.plot2D(x, x, "bad")

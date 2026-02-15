@@ -13,7 +13,7 @@ class TestSPM(BaseUnitTestLithiumIon):
 
     def test_electrolyte_options(self):
         options = {"electrolyte conductivity": "full"}
-        with pytest.raises(pybamm.OptionError, match="electrolyte conductivity"):
+        with pytest.raises(pybamm.OptionError, match=r"electrolyte conductivity"):
             pybamm.lithium_ion.SPM(options)
 
     def test_kinetics_options(self):
@@ -21,7 +21,7 @@ class TestSPM(BaseUnitTestLithiumIon):
             "surface form": "false",
             "intercalation kinetics": "Marcus-Hush-Chidsey",
         }
-        with pytest.raises(pybamm.OptionError, match="Inverse kinetics"):
+        with pytest.raises(pybamm.OptionError, match=r"Inverse kinetics"):
             pybamm.lithium_ion.SPM(options)
 
     def test_x_average_options(self):
@@ -37,11 +37,11 @@ class TestSPM(BaseUnitTestLithiumIon):
 
         # Check model with distributed side reactions throws an error
         options["x-average side reactions"] = "false"
-        with pytest.raises(pybamm.OptionError, match="cannot be 'false' for SPM"):
+        with pytest.raises(pybamm.OptionError, match=r"cannot be 'false' for SPM"):
             pybamm.lithium_ion.SPM(options)
 
     def test_distribution_options(self):
-        with pytest.raises(pybamm.OptionError, match="surface form"):
+        with pytest.raises(pybamm.OptionError, match=r"surface form"):
             pybamm.lithium_ion.SPM({"particle size": "distribution"})
 
     def test_particle_size_distribution(self):
@@ -89,13 +89,13 @@ class TestSPM(BaseUnitTestLithiumIon):
         self.model = pybamm.lithium_ion.Basic3DThermalSPM
         with pytest.raises(
             pybamm.OptionError,
-            match="'dimensionality' must be '3' if 'cell geometry' is 'cylindrical'",
+            match=r"'dimensionality' must be '3' if 'cell geometry' is 'cylindrical'",
         ):
             self.check_well_posedness(options)
 
         options = {"cell geometry": "arbitrary", "dimensionality": 3}
         with pytest.raises(
             pybamm.OptionError,
-            match="'cell geometry' must be 'pouch' or 'cylindrical' if 'dimensionality' is '3'",
+            match=r"'cell geometry' must be 'pouch' or 'cylindrical' if 'dimensionality' is '3'",
         ):
             self.check_well_posedness(options)

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import numbers
+import threading
 import warnings
 from functools import lru_cache
 
@@ -22,8 +23,8 @@ if pybamm.has_jax():
     except ImportError:
         from jax.extend import ffi
     from jax import numpy as jnp
+    from jax._src.interpreters.mlir import custom_call
     from jax.interpreters import ad, batching, mlir
-    from jax.interpreters.mlir import custom_call
     from jax.tree_util import tree_flatten
 
     # Handle JAX version compatibility for Primitive location
@@ -57,9 +58,7 @@ class IDAKLUJax:
         t_interp=None,
     ):
         if not pybamm.has_jax():
-            raise ModuleNotFoundError(
-                "Jax or jaxlib is not installed, please see https://docs.pybamm.org/en/latest/source/user_guide/installation/gnu-linux-mac.html#optional-jaxsolver"
-            )  # pragma: no cover
+            pybamm.raise_jax_not_found()  # pragma: no cover
         self.jaxpr = (
             None  # JAX expression representing the IDAKLU-wrapped solver object
         )
@@ -341,9 +340,21 @@ class IDAKLUJax:
             return hash(tuple(sorted(self.items())))
 
     @lru_cache(maxsize=1)  # noqa: B019
-    def _cached_solve(self, model, t_hashable, *args, **kwargs):
-        """Cache the last solve for reuse"""
-        return self.solve(model, t_hashable, *args, **kwargs)
+    def _cached_solve(solver, model, t_hashable, *args, **kwargs):
+        """Cache the last solve for reuse
+
+        Uses a threading lock to prevent concurrent access to the solver,
+        which is not thread-safe during setup and solve operations.
+
+        Note: This is a static method cached at the class level, where
+        'solver' is the IDAKLUSolver instance.
+        """
+        # Get or create a lock for this solver instance
+        if not hasattr(solver, "_idaklu_jax_lock"):
+            solver._idaklu_jax_lock = threading.Lock()
+
+        with solver._idaklu_jax_lock:
+            return solver.solve(model, t_hashable, *args, **kwargs)
 
     def _jaxify_solve(self, t, invar, *inputs_values):
         """Solve the model using the IDAKLU solver
@@ -478,10 +489,10 @@ class IDAKLUJax:
         t = primals[0]
         inputs = primals[1:]
 
-        if isinstance(invar, float):
-            invar = round(invar)
-        if isinstance(t, float):
-            t = np.array(t)
+        if not isinstance(invar, (int, str)):
+            invar = int(invar)
+        if not isinstance(t, (np.ndarray, jnp.ndarray)):
+            t = np.asarray(t)
 
         if t.ndim == 0 or (t.ndim == 1 and t.shape[0] == 1):
             # scalar time input
@@ -632,7 +643,7 @@ class IDAKLUJax:
                          {'Current function [A]': 0.222, 'Separator porosity': 0.3}
             """
             logger.info("f")
-            flatargs, treedef = tree_flatten((t, inputs))
+            flatargs, _treedef = tree_flatten((t, inputs))
             self.jax_inputs = inputs
             out = f_p.bind(*flatargs)
             return out
@@ -714,11 +725,13 @@ class IDAKLUJax:
                 # The inputs
                 operands=[
                     mlir.ir_constant(
-                        self.idaklu_jax_obj.get_index()
+                        np.int64(self.idaklu_jax_obj.get_index())
                     ),  # solver index reference
                     mlir.ir_constant(size_t),  # 'size' argument
-                    mlir.ir_constant(len(self.jax_output_variables)),  # 'vars' argument
-                    mlir.ir_constant(len(inputs)),  # 'vars' argument
+                    mlir.ir_constant(
+                        np.int64(len(self.jax_output_variables))
+                    ),  # 'vars' argument
+                    mlir.ir_constant(np.int64(len(inputs))),  # 'vars' argument
                     t,
                     *inputs,
                 ],
@@ -917,11 +930,13 @@ class IDAKLUJax:
                 # The inputs
                 operands=[
                     mlir.ir_constant(
-                        self.idaklu_jax_obj.get_index()
+                        np.int64(self.idaklu_jax_obj.get_index())
                     ),  # solver index reference
                     mlir.ir_constant(size_t),  # 'size' argument
-                    mlir.ir_constant(len(self.jax_output_variables)),  # 'vars' argument
-                    mlir.ir_constant(len(inputs_primals)),  # 'vars' argument
+                    mlir.ir_constant(
+                        np.int64(len(self.jax_output_variables))
+                    ),  # 'vars' argument
+                    mlir.ir_constant(np.int64(len(inputs_primals))),  # 'vars' argument
                     t_primal,  # 't'
                     *inputs_primals,  # inputs
                     t_tangent,  # 't'
@@ -1050,13 +1065,17 @@ class IDAKLUJax:
                 # The inputs
                 operands=[
                     mlir.ir_constant(
-                        self.idaklu_jax_obj.get_index()
+                        np.int64(self.idaklu_jax_obj.get_index())
                     ),  # solver index reference
                     mlir.ir_constant(size_t),  # 'size' argument
-                    mlir.ir_constant(len(self.jax_inputs)),  # number of inputs
-                    mlir.ir_constant(dims_y_bar[0]),  # 'y_bar' shape[0]
-                    mlir.ir_constant(  # 'y_bar' shape[1]
-                        dims_y_bar[1] if len(dims_y_bar) > 1 else -1
+                    mlir.ir_constant(
+                        np.int64(len(self.jax_inputs))
+                    ),  # number of inputs
+                    mlir.ir_constant(np.int64(dims_y_bar[0])),  # 'y_bar' shape[0]
+                    mlir.ir_constant(
+                        np.int64(  # 'y_bar' shape[1]
+                            dims_y_bar[1] if len(dims_y_bar) > 1 else -1
+                        )
                     ),  # 'y_bar' argument
                     y_bar,  # 'y_bar'
                     invar,  # 'invar'

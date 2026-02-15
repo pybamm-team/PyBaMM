@@ -9,7 +9,7 @@ license = { file = "LICENSE.txt" }
 description = "Python Battery Mathematical Modelling"
 authors = [{ name = "The PyBaMM Team", email = "pybamm@pybamm.org" }]
 maintainers = [{ name = "The PyBaMM Team", email = "pybamm@pybamm.org" }]
-requires-python = ">=3.10, <3.13"
+requires-python = ">=3.10, <3.15"
 readme = { file = "README.md", content-type = "text/markdown" }
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -22,14 +22,15 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Scientific/Engineering",
 ]
 dependencies = [
-    "pybammsolvers>=0.3.3,<0.4.0",
+    "pybammsolvers>=0.3.3,<0.5.0",
     "black",
     "numpy",
     "scipy>=1.11.4",
-    "casadi==3.6.7",
     "xarray>=2022.6.0",
     "anytree>=2.8.0",
     "sympy>=1.12",
@@ -46,9 +47,31 @@ Homepage = "https://pybamm.org"
 Documentation = "https://docs.pybamm.org"
 Repository = "https://github.com/pybamm-team/PyBaMM"
 Releases = "https://github.com/pybamm-team/PyBaMM/releases"
-Changelog = "https://github.com/pybamm-team/PyBaMM/blob/develop/CHANGELOG.md"
+Changelog = "https://github.com/pybamm-team/PyBaMM/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
+# For example notebooks
+examples = ["jupyter"]
+plot = [
+    # Note: matplotlib is loaded for debug plots, but to ensure PyBaMM runs
+    # on systems without an attached display, it should never be imported
+    # outside of plot() methods.
+    "matplotlib>=3.6.0",
+]
+cite = ["pybtex>=0.25.0"]
+# Battery Parameter eXchange format
+bpx = ["bpx>=0.5.0,<0.6.0"]
+# Low-overhead progress bars
+tqdm = ["tqdm"]
+jax = ["jax>=0.7.0, <0.9.0; python_version >= '3.11' and (sys_platform != 'darwin' or platform_machine != 'x86_64')"]
+# Contains all optional dependencies, except for jax, and dev dependencies
+all = [
+    "scikit-fem>=8.1.0",
+    "meshio>=5.3.0",
+    "pybamm[examples,plot,cite,bpx,tqdm]",
+]
+
+[dependency-groups]
 docs = [
     "sphinx>=6",
     "sphinx_rtd_theme>=0.5",
@@ -66,19 +89,6 @@ docs = [
     "sphinx-gallery",
     "sphinx-docsearch",
 ]
-# For example notebooks
-examples = ["jupyter"]
-plot = [
-    # Note: matplotlib is loaded for debug plots, but to ensure PyBaMM runs
-    # on systems without an attached display, it should never be imported
-    # outside of plot() methods.
-    "matplotlib>=3.6.0",
-]
-cite = ["pybtex>=0.25.0"]
-# Battery Parameter eXchange format
-bpx = ["bpx>=0.5.0,<0.6.0"]
-# Low-overhead progress bars
-tqdm = ["tqdm"]
 dev = [
     # For working with pre-commit hooks
     "pre-commit",
@@ -100,13 +110,6 @@ dev = [
     "importlib-metadata; python_version < '3.10'",
     # For property based testing
     "hypothesis",
-]
-jax = ["jax>=0.4.36,<0.7.0"]
-# Contains all optional dependencies, except for jax, and dev dependencies
-all = [
-    "scikit-fem>=8.1.0",
-    "meshio>=5.3.0",
-    "pybamm[examples,plot,cite,bpx,tqdm]",
 ]
 
 [project.entry-points."pybamm_parameter_sets"]
@@ -146,13 +149,16 @@ build.hooks.vcs.version-file = "src/pybamm/_version.py"
 
 [tool.repo-review]
 ignore = [
-    "MY",    # ignore all MyPy setting checks (MY101, MY103, MY104, MY105, MY106)
-    "PP004", # ignore the check that prevents an upper cap on Python requires
-    "PP308", # ignore the explicit pytest summary flag (-ra) check
-    "PC140", # ignore missing type checker in pre-commit
-    "PC160", # ignore missing spell checker in pre-commit
-    "PC180", # ignore missing markdown formatter in pre-commit
-    "RF102", # ignore the missing isort selection in Ruff configuration
+    "MY",     # ignore all MyPy setting checks (MY101, MY103, MY104, MY105, MY106)
+    "PP004",  # ignore the check that prevents an upper cap on Python requires
+    "PP308",  # ignore the explicit pytest summary flag (-ra) check
+    "PC140",  # ignore missing type checker in pre-commit
+    "PC160",  # ignore missing spell checker in pre-commit
+    "PC180",  # ignore missing markdown formatter in pre-commit
+    "RF102",  # ignore the missing isort selection in Ruff configuration
+    "PP006",  # ignore dev dependency group should be defined
+    "NOX201", # ignore set a script block with dependencies in your noxfile
+    "NOX202", # ignore noxfile has a shebang line
 ]
 
 [tool.ruff]
@@ -227,7 +233,7 @@ filterwarnings = [
 
 # Logging configuration
 log_cli = true
-log_cli_level = "INFO"
+log_level = "INFO"
 log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 log_date_format = "%Y-%m-%d %H:%M:%S"
 

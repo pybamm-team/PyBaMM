@@ -6,12 +6,11 @@ import numpy as np
 import pytest
 
 import pybamm
-from tests.shared import get_mesh_for_testing_2d
 
 
 class TestFiniteVolumeIntegration:
-    def test_indefinite_integral(self):
-        mesh = get_mesh_for_testing_2d()
+    def test_indefinite_integral(self, mesh_2d):
+        mesh = mesh_2d
         spatial_methods = {"macroscale": pybamm.FiniteVolume2D()}
         disc = pybamm.Discretisation(mesh, spatial_methods)
         var = pybamm.Variable(
@@ -36,9 +35,9 @@ class TestFiniteVolumeIntegration:
                 "negative electrode", "left"
             )
 
-    def test_definite_integral(self):
+    def test_definite_integral(self, mesh_2d):
         # create discretisation
-        mesh = get_mesh_for_testing_2d()
+        mesh = mesh_2d
         spatial_methods = {
             "negative electrode": pybamm.FiniteVolume2D(),
             "separator": pybamm.FiniteVolume2D(),
@@ -88,7 +87,7 @@ class TestFiniteVolumeIntegration:
         disc.set_variable_slices([var])
         integral_eqn_disc = disc.process_symbol(integral_eqn)
         submesh = mesh[("negative electrode", "separator", "positive electrode")]
-        LR, TB = np.meshgrid(submesh.nodes_lr, submesh.nodes_tb)
+        LR, _TB = np.meshgrid(submesh.nodes_lr, submesh.nodes_tb)
         lr = LR.flatten()
         np.testing.assert_allclose(
             integral_eqn_disc.evaluate(None, lr),
@@ -105,12 +104,13 @@ class TestFiniteVolumeIntegration:
         )
         spatial_method.build(mesh)
         with pytest.raises(
-            ValueError, match="Integration variable must be provided for 2D integration"
+            ValueError,
+            match=r"Integration variable must be provided for 2D integration",
         ):
             spatial_method.definite_integral_matrix(child)
 
-    def test_area_integral(self):
-        mesh = get_mesh_for_testing_2d()
+    def test_area_integral(self, mesh_2d):
+        mesh = mesh_2d
         spatial_methods = {"macroscale": pybamm.FiniteVolume2D()}
         disc = pybamm.Discretisation(mesh, spatial_methods)
         var = pybamm.Variable(
@@ -153,13 +153,13 @@ class TestFiniteVolumeIntegration:
         )
 
         with pytest.raises(
-            ValueError, match="Integration variables must be in different directions"
+            ValueError, match=r"Integration variables must be in different directions"
         ):
             disc.process_symbol(pybamm.Integral(var, [x, x]))
 
-    def test_boundary_integral(self):
+    def test_boundary_integral(self, mesh_2d):
         # create discretisation
-        mesh = get_mesh_for_testing_2d()
+        mesh = mesh_2d
         spatial_methods = {
             "negative electrode": pybamm.FiniteVolume2D(),
             "separator": pybamm.FiniteVolume2D(),
@@ -229,7 +229,7 @@ class TestFiniteVolumeIntegration:
         np.testing.assert_allclose(result_bottom_x, 0.5, rtol=1e-6)
 
         # Error
-        with pytest.raises(ValueError, match="not supported"):
+        with pytest.raises(ValueError, match=r"not supported"):
             boundary_integral_bottom = disc.process_symbol(
                 pybamm.BoundaryIntegral(var, region="tab")
             )
@@ -263,10 +263,10 @@ class TestFiniteVolumeIntegration:
         result_left = boundary_integral_left_disc.evaluate(
             None, y=np.ones(submesh.npts)
         )
-        np.testing.assert_array_almost_equal(result_left, 0.0)
+        np.testing.assert_allclose(result_left, 0.0, atol=1e-6)
 
-    def test_one_dimensional_integral(self):
-        mesh = get_mesh_for_testing_2d()
+    def test_one_dimensional_integral(self, mesh_2d):
+        mesh = mesh_2d
         spatial_methods = {"macroscale": pybamm.FiniteVolume2D()}
         disc = pybamm.Discretisation(mesh, spatial_methods)
         var = pybamm.Variable(
@@ -326,7 +326,7 @@ class TestFiniteVolumeIntegration:
             atol=1e-6,
         )
 
-        with pytest.raises(ValueError, match="not supported"):
+        with pytest.raises(ValueError, match=r"not supported"):
             disc.process_symbol(
                 pybamm.OneDimensionalIntegral(
                     pybamm.Scalar(0),
@@ -341,7 +341,7 @@ class TestFiniteVolumeIntegration:
 
         child_edges = pybamm.Vector(submesh.edges_lr)
         child_edges._evaluates_on_edges = lambda _: True
-        with pytest.raises(NotImplementedError, match="not implemented"):
+        with pytest.raises(NotImplementedError, match=r"not implemented"):
             disc.process_symbol(
                 pybamm.OneDimensionalIntegral(
                     child_edges,

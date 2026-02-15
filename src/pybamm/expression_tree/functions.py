@@ -329,6 +329,153 @@ def arcsinh(child: pybamm.Symbol):
     return simplified_function(Arcsinh, child)
 
 
+class Arcsinh2(Function):
+    """
+    Two-argument arcsinh function for arcsinh(a/b) that avoids division by zero
+    by adding a small regularisation term to the denominator.
+
+    Computes arcsinh(a / b_eff) where b_eff = sign(b) * hypot(b, eps).
+    Note: the sign(b) function treats sign(0) as 1 for numerical stability.
+
+    Parameters
+    ----------
+    a : pybamm.Symbol or float
+        The numerator argument
+    b : pybamm.Symbol or float
+        The denominator argument
+    eps : float, optional
+        Small regularisation parameter. Defaults to
+        pybamm.settings.tolerances["reg_arcsinh2"]
+
+    Returns
+    -------
+    pybamm.Symbol
+        The regularised arcsinh(a/b) value
+    """
+
+    def __init__(
+        self,
+        a: pybamm.Symbol,
+        b: pybamm.Symbol,
+        eps: float | None = None,
+    ):
+        if eps is None:
+            eps = pybamm.settings.tolerances["reg_arcsinh2"]
+        self.eps = eps
+        super().__init__(self._arcsinh2_evaluate, a, b, name="arcsinh2")
+
+    @staticmethod
+    def _arcsinh2_evaluate(a, b, eps):
+        """Evaluate arcsinh2 using numpy.
+
+        Computes arcsinh(a/b) with regularization to avoid division by zero.
+        Uses arcsinh(a / b_eff) where b_eff = sign(b) * hypot(b, eps).
+        This formula has the correct derivative 1/b_eff at a=0.
+        """
+        # sign(b) but treat sign(0) as non-zero
+        sign_b = np.where(b >= 0, 1.0, -1.0)
+        b_eff = sign_b * np.hypot(b, eps)
+        return np.arcsinh(a / b_eff)
+
+    def _function_evaluate(self, evaluated_children):
+        """See :meth:`pybamm.Function._function_evaluate()`."""
+        return self._arcsinh2_evaluate(
+            evaluated_children[0], evaluated_children[1], self.eps
+        )
+
+    def _function_diff(self, children, idx):
+        """
+        Derivative with respect to child number 'idx'.
+
+        For f(a, b) = arcsinh(a / b_eff) where b_eff = sign(b) * hypot(b, eps):
+
+        df/da = sign(b) / hypot(a, hypot(b, eps))
+        df/db = -a * |b| / (hypot(a, hypot(b, eps)) * hypot(b, eps)^2)
+
+        Note: sign(b) = 1 when b >= 0.
+        """
+        a, b = children
+        b_eff = pybamm.hypot(b, self.eps)  # |b_eff| = hypot(b, eps), always positive
+        h = pybamm.hypot(a, b_eff)
+
+        # sign(b) but treat sign(0) as non-zero
+        sign_b = 2 * (b >= 0) - 1
+
+        if idx == 0:
+            # df/da = sign(b) / hypot(a, |b_eff|)
+            return sign_b / h
+        elif idx == 1:
+            # df/db = -a * |b| / (h * |b_eff|^2)
+            return -a * abs(b) / (h * b_eff**2)
+        else:
+            raise IndexError("Arcsinh2 only has two children (a, b)")
+
+    def _function_new_copy(self, children):
+        """See :meth:`pybamm.Function._function_new_copy()`"""
+        return Arcsinh2(*children, eps=self.eps)
+
+    def _sympy_operator(self, a, b):
+        """Convert to SymPy expression."""
+        # sign(b) but treat sign(0) as non-zero
+        sign_b = sympy.Piecewise((1, b >= 0), (-1, True))
+        b_eff = sign_b * sympy.sqrt(b**2 + self.eps**2)
+        return sympy.asinh(a / b_eff)
+
+    def to_json(self):
+        """Method to serialise a Arcsinh2 object into JSON."""
+        return {
+            "name": self.name,
+            "id": self.id,
+            "function": "arcsinh2",
+            "eps": self.eps,
+        }
+
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        """Reconstruct a Arcsinh2 instance from JSON."""
+        instance = cls.__new__(cls)
+        instance.eps = snippet.get("eps", pybamm.settings.tolerances["reg_arcsinh2"])
+        # The parent Function.__init__ will be called with children from snippet
+        super(Arcsinh2, instance).__init__(
+            instance._arcsinh2_evaluate,
+            *snippet["children"],
+            name="arcsinh2",
+        )
+        return instance
+
+
+def arcsinh2(
+    a: pybamm.Symbol | float,
+    b: pybamm.Symbol | float,
+    eps: float | None = None,
+) -> pybamm.Symbol:
+    """
+    Two-argument arcsinh function for arcsinh(a/b) that avoids division by zero
+    by adding a small regularisation term to the denominator.
+
+    Computes arcsinh(a / b_eff), where b_eff = sign(b) * hypot(b, eps).
+
+    Parameters
+    ----------
+    a : pybamm.Symbol or float
+        The numerator argument
+    b : pybamm.Symbol or float
+        The denominator argument
+    eps : float, optional
+        Small regularisation parameter. Defaults to
+        pybamm.settings.tolerances["reg_arcsinh2"]
+
+    Returns
+    -------
+    pybamm.Symbol
+        The regularised arcsinh(a/b) value
+    """
+    # Convert scalars to pybamm types
+    a = pybamm.convert_to_symbol(a)
+    b = pybamm.convert_to_symbol(b)
+    return Arcsinh2(a, b, eps=eps)
+
+
 class Arctan(SpecificFunction):
     """Arctan function."""
 
@@ -621,6 +768,233 @@ class Sqrt(SpecificFunction):
 def sqrt(child: pybamm.Symbol):
     """Returns square root function of child."""
     return simplified_function(Sqrt, child)
+
+
+class RegPower(Function):
+    """
+    Regularised power: |x|^a * sign(x) with finite derivative at x=0.
+
+    Approximates |x|^a * sign(x) using:
+        y = x * (x^2 + delta^2)^((a-1)/2)
+
+    When scale is set:
+        y = (x/scale) * ((x/scale)^2 + delta^2)^((a-1)/2) * scale^a
+
+    Behavior:
+    - For |x| >> delta: returns |x|^a * sign(x)
+    - For |x| << delta: returns x * delta^(a-1) (linear)
+    - Smooth transition in between
+
+    This is an anti-symmetric function: RegPower(-x, a) = -RegPower(x, a)
+
+    Parameters
+    ----------
+    base : :class:`pybamm.Symbol`
+        Base expression (x)
+    exponent : :class:`pybamm.Symbol` or float
+        Exponent expression (a)
+    scale : :class:`pybamm.Symbol` or float, optional
+        Scale factor for the input. Defaults to 1 (no scaling).
+
+    References
+    ----------
+    .. [1] Modelica.Fluid.Utilities.regPow
+    """
+
+    def __init__(
+        self,
+        base: pybamm.Symbol | float,
+        exponent: pybamm.Symbol | float,
+        scale: pybamm.Symbol | float | None = None,
+        delta: float | None = None,
+    ):
+        # Convert to symbols
+        base = pybamm.convert_to_symbol(base)
+        exponent = pybamm.convert_to_symbol(exponent)
+        if scale is None:
+            scale = pybamm.Scalar(1)
+        else:
+            scale = pybamm.convert_to_symbol(scale)
+
+        if delta is None:
+            delta = pybamm.settings.tolerances["reg_power"]
+        self.delta = delta
+
+        super().__init__(
+            self._reg_power_evaluate, base, exponent, scale, name="reg_power"
+        )
+
+    def _reg_power_evaluate(self, base, exponent, scale):
+        """Evaluate reg_power using numpy."""
+        x = base / scale
+        x2_d2 = x**2 + self.delta**2
+        return x * (x2_d2 ** ((exponent - 1) / 2)) * (scale**exponent)
+
+    def _function_evaluate(self, evaluated_children):
+        """See :meth:`pybamm.Function._function_evaluate()`."""
+        return self._reg_power_evaluate(*evaluated_children)
+
+    def _function_diff(self, children, idx):
+        """
+        Derivative with respect to child number 'idx'.
+
+        Children are: [base, exponent, scale]
+        """
+        base, exponent, scale = children
+        delta = self.delta
+
+        x = base / scale
+        x2_d2 = x**2 + delta**2
+        scale_factor = scale**exponent
+
+        if idx == 0:
+            # Derivative w.r.t. base
+            # d/dx [x * (x^2 + d^2)^((a-1)/2)] = (x^2 + d^2)^((a-3)/2) * (a*x^2 + d^2)
+            dreg_dx = (x2_d2 ** ((exponent - 3) / 2)) * (exponent * x**2 + delta**2)
+            # Chain rule: d/d(base) = dreg_dx * (1/scale) * scale^a = dreg_dx * scale^(a-1)
+            return dreg_dx * (scale ** (exponent - 1))
+        elif idx == 1:
+            # Derivative w.r.t. exponent
+            reg_val = x * (x2_d2 ** ((exponent - 1) / 2)) * scale_factor
+            # d/da = reg_val * (log(x^2 + d^2) / 2 + log(scale))
+            return reg_val * (pybamm.log(x2_d2) / 2 + pybamm.log(scale))
+        elif idx == 2:
+            # Derivative w.r.t. scale
+            # y = x * (x^2 + d^2)^((a-1)/2) * scale^a, where x = base/scale
+            # Using quotient rule and chain rule:
+            # dy/dscale = -base/scale^2 * (x^2+d^2)^((a-3)/2) * (a*x^2 + d^2) * scale^a
+            #           + x * (x^2+d^2)^((a-1)/2) * a * scale^(a-1)
+            # Simplified:
+            reg_val = x * (x2_d2 ** ((exponent - 1) / 2)) * scale_factor
+            dreg_dx = (x2_d2 ** ((exponent - 3) / 2)) * (exponent * x**2 + delta**2)
+            # dy/dscale = reg_val * a / scale - dreg_dx * x * scale^(a-1)
+            #           = reg_val * a / scale - dreg_dx * base / scale * scale^(a-1) / scale
+            #           = (reg_val * a - base * dreg_dx * scale^(a-1)) / scale
+            return (
+                reg_val * exponent - base * dreg_dx * (scale ** (exponent - 1))
+            ) / scale
+        else:
+            raise IndexError("RegPower has three children (base, exponent, scale)")
+
+    def _function_jac(self, children_jacs):
+        """See :meth:`pybamm.Function._function_jac()`."""
+        children = self.orphans
+        base, exponent, scale = children
+        delta = self.delta
+
+        x = base / scale
+        x2_d2 = x**2 + delta**2
+        scale_factor = scale**exponent
+
+        jacobian = None
+
+        # Base Jacobian
+        if not base.evaluates_to_constant_number():
+            dreg_dx = (x2_d2 ** ((exponent - 3) / 2)) * (exponent * x**2 + delta**2)
+            dreg_dbase = dreg_dx * (scale ** (exponent - 1))
+            jac_term = dreg_dbase * children_jacs[0]
+            jac_term.clear_domains()
+            jacobian = jac_term
+
+        # Exponent Jacobian
+        if not exponent.evaluates_to_constant_number():
+            reg_val = x * (x2_d2 ** ((exponent - 1) / 2)) * scale_factor
+            dreg_da = reg_val * (pybamm.log(x2_d2) / 2 + pybamm.log(scale))
+            jac_term = dreg_da * children_jacs[1]
+            jac_term.clear_domains()
+            if jacobian is None:
+                jacobian = jac_term
+            else:
+                jacobian += jac_term
+
+        # Scale Jacobian
+        if not scale.evaluates_to_constant_number():
+            reg_val = x * (x2_d2 ** ((exponent - 1) / 2)) * scale_factor
+            dreg_dx = (x2_d2 ** ((exponent - 3) / 2)) * (exponent * x**2 + delta**2)
+            dreg_dscale = (
+                reg_val * exponent - base * dreg_dx * (scale ** (exponent - 1))
+            ) / scale
+            jac_term = dreg_dscale * children_jacs[2]
+            jac_term.clear_domains()
+            if jacobian is None:
+                jacobian = jac_term
+            else:
+                jacobian += jac_term
+
+        if jacobian is None:
+            jacobian = pybamm.Scalar(0)
+
+        return jacobian
+
+    def _function_new_copy(self, children):
+        """See :meth:`pybamm.Function._function_new_copy()`"""
+        base, exponent, scale = children
+        return pybamm.simplify_if_constant(
+            RegPower(base, exponent, scale=scale, delta=self.delta)
+        )
+
+    def _sympy_operator(self, base, exponent, scale):
+        """Convert to SymPy expression."""
+        x = base / scale
+        x2_d2 = x**2 + self.delta**2
+        return x * sympy.Pow(x2_d2, (exponent - 1) / 2) * sympy.Pow(scale, exponent)
+
+    def __str__(self):
+        """See :meth:`pybamm.Symbol.__str__()`."""
+        base, exponent, scale = self.children
+        return f"reg_power({base!s}, {exponent!s}, scale={scale!s})"
+
+    def to_json(self):
+        """Method to serialise a RegPower object into JSON."""
+        return {
+            "name": self.name,
+            "id": self.id,
+            "function": "reg_power",
+            "delta": self.delta,
+        }
+
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        """Reconstruct a RegPower instance from JSON."""
+        instance = cls.__new__(cls)
+        instance.delta = snippet.get("delta", pybamm.settings.tolerances["reg_power"])
+        super(RegPower, instance).__init__(
+            instance._reg_power_evaluate,
+            *snippet["children"],
+            name="reg_power",
+        )
+        return instance
+
+
+def reg_power(
+    base: pybamm.Symbol | float,
+    exponent: pybamm.Symbol | float,
+    scale: pybamm.Symbol | float | None = None,
+) -> pybamm.Symbol:
+    """
+    Regularised power: |x|^a * sign(x) with finite derivative at x=0.
+
+    Convenience function that creates a :class:`RegPower` node.
+
+    Parameters
+    ----------
+    base : :class:`pybamm.Symbol` or float
+        Input expression (x)
+    exponent : float
+        Power exponent (must be > 0)
+    scale : float, optional
+        Scale factor for the input. Defaults to 1 (no scaling).
+
+    Returns
+    -------
+    :class:`RegPower`
+        Regularised power node
+
+    References
+    ----------
+    .. [1] Modelica.Fluid.Utilities.regPow
+    """
+    return pybamm.simplify_if_constant(RegPower(base, exponent, scale=scale))
 
 
 class Tanh(SpecificFunction):

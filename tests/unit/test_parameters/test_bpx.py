@@ -240,7 +240,7 @@ class TestBPX:
 
     def test_bpx_soc_error(self):
         bpx_obj = copy.deepcopy(self.base)
-        with pytest.raises(ValueError, match="Target SOC"):
+        with pytest.raises(ValueError, match=r"Target SOC"):
             pybamm.ParameterValues.create_from_bpx_obj(bpx_obj, target_soc=10)
 
     def test_bpx_arrhenius(self, tmp_path):
@@ -346,8 +346,7 @@ class TestBPX:
                 "Initial concentration in negative electrode [mol.m-3]": 22000,
                 "Primary: Initial concentration in positive electrode [mol.m-3]": 19404,
                 "Secondary: Initial concentration in positive electrode [mol.m-3]": 19404,
-            },
-            check_already_exists=False,
+            }
         )
         model = pybamm.lithium_ion.SPM({"particle phases": ("1", "2")})
         experiment = pybamm.Experiment(
@@ -410,7 +409,7 @@ class TestBPX:
 
         temp_file = tmp_path / "tmp.json"
         temp_file.write_text(json.dumps(bpx_obj))
-        with pytest.raises(NotImplementedError, match="PyBaMM does not support"):
+        with pytest.raises(NotImplementedError, match=r"PyBaMM does not support"):
             pybamm.ParameterValues.create_from_bpx(temp_file)
 
     def test_bpx_user_defined(self, tmp_path):
@@ -478,6 +477,6 @@ class TestBPX:
         bpx_obj["Parameterisation"]["Negative electrode"]["Porosity"] = 0  # Invalid
 
         with pytest.raises(
-            ValueError, match="math domain error"
-        ):  # Matches log(0) error
+            ValueError, match=r"math domain error|expected a positive input"
+        ):  # Matches log(0) error (message changed in Python 3.14)
             pybamm.ParameterValues.create_from_bpx_obj(bpx_obj)
