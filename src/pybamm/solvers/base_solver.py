@@ -1224,6 +1224,7 @@ class BaseSolver:
         save=True,
         calculate_sensitivities=False,
         t_interp=None,
+        state_mapper=None,
     ):
         """
         Step the solution of the model forward by a given time increment. The
@@ -1380,14 +1381,19 @@ class BaseSolver:
                 ]
 
         else:
-            _, concatenated_initial_conditions = model.set_initial_conditions_from(
-                old_solution,
-                inputs=model_inputs,
-                return_type="ics",
-            )
-            model.y0_list = [
-                concatenated_initial_conditions.evaluate(0, inputs=model_inputs)
-            ]
+            if state_mapper is not None:
+                last_state = old_solution.last_state
+                y_from = last_state.all_ys[0]
+                model.y0_list = [state_mapper(y_from, inputs=model_inputs)]
+            else:
+                _, concatenated_initial_conditions = model.set_initial_conditions_from(
+                    old_solution,
+                    inputs=model_inputs,
+                    return_type="ics",
+                )
+                model.y0_list = [
+                    concatenated_initial_conditions.evaluate(0, inputs=model_inputs)
+                ]
 
             if using_sensitivities:
                 model.y0S_list = [

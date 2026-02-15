@@ -1428,6 +1428,91 @@ class BaseModel:
         elif return_type == "ics":
             return initial_conditions, concatenated_initial_conditions
 
+    def build_initial_state_mapper(self, from_model):
+        """
+        Build a mapper that maps a final state vector from a discretised model to
+        this model's discretised initial conditions.
+
+        Parameters
+        ----------
+        from_model : :class:`pybamm.BaseModel`
+            The discretised model that provides the final state vector.
+        """
+        if not self.is_discretised or not from_model.is_discretised:
+            raise pybamm.ModelError(
+                "Both models must be discretised to build an initial state mapper."
+            )
+        if self.y_slices is None or from_model.y_slices is None:
+            raise pybamm.ModelError(
+                "Both models must define y_slices to build an initial state mapper."
+            )
+
+        from_vars_by_id = {var.id: var for var in from_model.y_slices}
+        from_vars_by_name = {var.name: var for var in from_model.y_slices}
+
+        def _resolve_from_var(target_var):
+            from_var = from_vars_by_id.get(target_var.id)
+            if from_var is None:
+                from_var = from_vars_by_name.get(target_var.name)
+            if from_var is None:
+                raise pybamm.ModelError(
+                    "To map initial conditions, each variable in "
+                    "model.initial_conditions must appear in the source model "
+                    "with the same id or name."
+                )
+            return from_var
+
+        entries = []
+        for var in self.initial_conditions:
+            if isinstance(var, pybamm.Concatenation):
+                child_entries = []
+                for child in var.orphans:
+                    from_var = _resolve_from_var(child)
+                    child_entries.append((from_var, from_model.y_slices[from_var][0]))
+                entries.append((var, child_entries))
+            else:
+                from_var = _resolve_from_var(var)
+                entries.append((var, [(from_var, from_model.y_slices[from_var][0])]))
+
+        def mapper(y_from, inputs=None):
+            y_from_arr = np.asarray(y_from)
+            if y_from_arr.ndim > 1:
+                y_from_arr = y_from_arr[:, -1]
+            expected_len = from_model.concatenated_initial_conditions.size
+            if y_from_arr.shape[0] != expected_len:
+                raise pybamm.ModelError(
+                    "Source model state vector size does not match expected length."
+                )
+
+            mapped_parts = []
+            for target_var, child_entries in entries:
+                physical_parts = []
+                for from_var, from_slice in child_entries:
+                    y_scaled = np.asarray(y_from_arr[from_slice])
+
+                    from_scale = np.asarray(from_var.scale.evaluate(inputs=inputs))
+                    from_reference = np.asarray(
+                        from_var.reference.evaluate(inputs=inputs)
+                    )
+                    from_scale = from_scale * np.ones_like(y_scaled)
+                    from_reference = from_reference * np.ones_like(y_scaled)
+                    physical_parts.append(from_reference + from_scale * y_scaled)
+
+                physical = np.concatenate(physical_parts)
+                target_scale = np.asarray(target_var.scale.evaluate(inputs=inputs))
+                target_reference = np.asarray(
+                    target_var.reference.evaluate(inputs=inputs)
+                )
+                target_scale = target_scale * np.ones_like(physical)
+                target_reference = target_reference * np.ones_like(physical)
+                mapped = (physical - target_reference) / target_scale
+                mapped_parts.append(mapped)
+
+            mapped_vec = np.concatenate(mapped_parts)
+            return mapped_vec
+
+        return mapper
+
     def check_and_combine_dict(self, dict1, dict2):
         # check that the key ids are distinct
         ids1 = set(x for x in dict1.keys())
