@@ -1465,14 +1465,28 @@ class BaseModel:
         entries = []
         for var in self.initial_conditions:
             if isinstance(var, pybamm.Concatenation):
+                target_slice = slice(
+                    self.y_slices[var.children[0]][0].start,
+                    self.y_slices[var.children[-1]][0].stop,
+                )
+            else:
+                target_slice = self.y_slices[var][0]
+
+            if isinstance(var, pybamm.Concatenation):
                 child_entries = []
                 for child in var.orphans:
                     from_var = _resolve_from_var(child)
                     child_entries.append((from_var, from_model.y_slices[from_var][0]))
-                entries.append((var, child_entries))
+                entries.append((target_slice, var, child_entries))
             else:
                 from_var = _resolve_from_var(var)
-                entries.append((var, [(from_var, from_model.y_slices[from_var][0])]))
+                entries.append(
+                    (
+                        target_slice,
+                        var,
+                        [(from_var, from_model.y_slices[from_var][0])],
+                    )
+                )
 
         def mapper(y_from, inputs=None):
             y_from_arr = np.asarray(y_from)
@@ -1485,7 +1499,7 @@ class BaseModel:
                 )
 
             mapped_parts = []
-            for target_var, child_entries in entries:
+            for target_slice, target_var, child_entries in entries:
                 physical_parts = []
                 for from_var, from_slice in child_entries:
                     y_scaled = np.asarray(y_from_arr[from_slice])
@@ -1506,9 +1520,13 @@ class BaseModel:
                 target_scale = target_scale * np.ones_like(physical)
                 target_reference = target_reference * np.ones_like(physical)
                 mapped = (physical - target_reference) / target_scale
-                mapped_parts.append(mapped)
+                mapped_parts.append((target_slice, mapped))
 
-            mapped_vec = np.concatenate(mapped_parts)
+            # Match the ordering used in set_initial_conditions_from: concatenated
+            # state entries are sorted by target y_slices, not insertion order.
+            mapped_vec = np.concatenate(
+                [mapped for _, mapped in sorted(mapped_parts, key=lambda x: x[0].start)]
+            )
             return mapped_vec
 
         return mapper
