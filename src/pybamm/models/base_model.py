@@ -1497,52 +1497,31 @@ class BaseModel:
                             [(from_var, from_model.y_slices[from_var][0])],
                         )
                     )
+        # sort entries according to target slices
+        entries.sort(key=lambda x: x[0].start)
 
-        def mapper(y_from, current_value, inputs=None):
-            y_from_arr = np.asarray(y_from)
-            if y_from_arr.ndim > 1:
-                y_from_arr = y_from_arr[:, -1]
-            expected_len = from_model.concatenated_initial_conditions.size
-            if y_from_arr.shape[0] != expected_len:
-                raise pybamm.ModelError(
-                    "Source model state vector size does not match expected length."
-                )
-
-            mapped_parts = []
-            for target_slice, target_var, child_entries in entries:
-                physical_parts = []
-                for from_var, from_slice in child_entries:
-                    if from_var is None:
-                        current_value = np.asarray(current_value)
-                        physical_parts.append(np.atleast_1d(current_value))
-                        continue
-
-                    y_scaled = np.asarray(y_from_arr[from_slice])
-
-                    from_scale = np.asarray(from_var.scale.evaluate(inputs=inputs))
-                    from_reference = np.asarray(
-                        from_var.reference.evaluate(inputs=inputs)
+        # create a pybamm expression tree that maps from the final state vector of the from_model to the initial conditions of this model
+        equations = []
+        for _target_slice, target_var, child_entries in entries:
+            physical_parts = []
+            for from_var, from_slice in child_entries:
+                if from_var is None:
+                    physical_parts.append(pybamm.InputParameter("Current variable [A]"))
+                else:
+                    physical_parts.append(
+                        from_var.reference
+                        + from_var.scale * pybamm.StateVector(from_slice)
                     )
-                    from_scale = from_scale * np.ones_like(y_scaled)
-                    from_reference = from_reference * np.ones_like(y_scaled)
-                    physical_parts.append(from_reference + from_scale * y_scaled)
 
-                physical = np.concatenate(physical_parts)
-                target_scale = np.asarray(target_var.scale.evaluate(inputs=inputs))
-                target_reference = np.asarray(
-                    target_var.reference.evaluate(inputs=inputs)
-                )
-                target_scale = target_scale * np.ones_like(physical)
-                target_reference = target_reference * np.ones_like(physical)
-                mapped = (physical - target_reference) / target_scale
-                mapped_parts.append((target_slice, mapped))
+            if len(physical_parts) == 1:
+                physical = physical_parts[0]
+            else:
+                physical = pybamm.NumpyConcatenation(*physical_parts)
 
-            # Match the ordering used in set_initial_conditions_from: concatenated
-            # state entries are sorted by target y_slices, not insertion order.
-            mapped_vec = np.concatenate(
-                [mapped for _, mapped in sorted(mapped_parts, key=lambda x: x[0].start)]
-            )
-            return mapped_vec
+            mapped = (physical - target_var.reference) / target_var.scale
+            equations.append(mapped)
+
+        mapper = pybamm.NumpyConcatenation(*equations)
 
         return mapper
 

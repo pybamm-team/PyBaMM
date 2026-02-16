@@ -12,6 +12,7 @@ import pybamm
 import pybamm.telemetry
 from pybamm.expression_tree.operations.serialise import Serialise
 from pybamm.models.base_model import ModelSolutionObservability
+from pybamm.solvers.base_solver import process
 from pybamm.util import import_optional_dependency
 
 
@@ -175,7 +176,7 @@ class Simulation:
         warnings.warn(msg, DeprecationWarning, stacklevel=2)
         self._set_up_and_parameterise_experiment(solve_kwargs=solve_kwargs)
 
-    def _update_experiment_models_for_capacity(self, solve_kwargs=None):
+    def _update_experiment_models_for_capacity(self, inputs, solve_kwargs=None):
         """
         Check if the nominal capacity has changed and update the experiment models
         if needed. This re-processes the models without rebuilding the mesh and
@@ -213,7 +214,7 @@ class Simulation:
             self.steps_to_built_solvers[step] = solver
             self.steps_to_built_models[step] = built_model
 
-        self._build_experiment_state_mappers()
+        self._build_experiment_state_mappers(inputs)
         self._built_nominal_capacity = current_capacity
 
     def _set_up_and_parameterise_experiment(self, solve_kwargs=None):
@@ -401,7 +402,7 @@ class Simulation:
 
         if self.steps_to_built_models:
             # Check if we need to update the models due to capacity change
-            self._update_experiment_models_for_capacity(solve_kwargs)
+            self._update_experiment_models_for_capacity(inputs, solve_kwargs)
             return
         else:
             self._set_up_and_parameterise_experiment(solve_kwargs)
@@ -432,12 +433,12 @@ class Simulation:
                 self.steps_to_built_solvers[step] = solver
                 self.steps_to_built_models[step] = built_model
 
-            self._build_experiment_state_mappers()
+            self._build_experiment_state_mappers(inputs)
             self._built_nominal_capacity = self._parameter_values.get(
                 "Nominal cell capacity [A.h]", None
             )
 
-    def _build_experiment_state_mappers(self):
+    def _build_experiment_state_mappers(self, inputs: dict):
         self._model_state_mappers = {}
         if not self.experiment or not self.steps_to_built_models:
             return
@@ -455,23 +456,34 @@ class Simulation:
             previous_model = model
 
         rest_model = self.steps_to_built_models.get("Rest for padding")
-        if rest_model is None:
-            return
+        if rest_model is not None:
+            unique_models = set(self.steps_to_built_models.values())
+            for model in unique_models:
+                if model is rest_model:
+                    continue
+                to_rest_key = (model, rest_model)
+                if to_rest_key not in self._model_state_mappers:
+                    self._model_state_mappers[to_rest_key] = (
+                        rest_model.build_initial_state_mapper(model)
+                    )
+                from_rest_key = (rest_model, model)
+                if from_rest_key not in self._model_state_mappers:
+                    self._model_state_mappers[from_rest_key] = (
+                        model.build_initial_state_mapper(rest_model)
+                    )
 
-        unique_models = set(self.steps_to_built_models.values())
-        for model in unique_models:
-            if model is rest_model:
-                continue
-            to_rest_key = (model, rest_model)
-            if to_rest_key not in self._model_state_mappers:
-                self._model_state_mappers[to_rest_key] = (
-                    rest_model.build_initial_state_mapper(model)
-                )
-            from_rest_key = (rest_model, model)
-            if from_rest_key not in self._model_state_mappers:
-                self._model_state_mappers[from_rest_key] = (
-                    model.build_initial_state_mapper(rest_model)
-                )
+        # compile all the mappers
+        for (previous_model, next_model), mapper in self._model_state_mappers.items():
+            # add "Current function [A]" to the inputs if it's an input parameter, since this is needed for the mappers
+            inputs_copy = inputs.copy() if inputs else {}
+            inputs_copy["Current variable [A]"] = 1.0
+            vars_for_processing = pybamm.BaseSolver._get_vars_for_processing(
+                previous_model, inputs_copy
+            )
+            if not hasattr(next_model, "calculate_sensitivities"):
+                previous_model.calculate_sensitivities = []
+            f, _jac, _jacp, _jac_action = process(mapper, "mapper", vars_for_processing)
+            self._model_state_mappers[(previous_model, next_model)] = f
 
     def _get_state_mapper_for_solution(self, solution, model):
         if not self._model_state_mappers or isinstance(solution, pybamm.EmptySolution):
