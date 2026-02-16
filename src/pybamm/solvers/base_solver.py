@@ -1384,24 +1384,8 @@ class BaseSolver:
             if state_mapper is not None:
                 last_state = old_solution.last_state
                 y_from = last_state.all_ys[0]
-
-                # add the current variable to the model inputs if it's not already there, as this is needed for the state mapping
-                model_inputs_copy = model_inputs.copy()
-                model_inputs_copy["Current variable [A]"] = old_solution[
-                    "Current variable [A]"
-                ].data[-1]
-
-                # Extract the function and input keys from the mapper tuple
-                mapper_func, mapper_input_keys = state_mapper
-                # Only use the inputs that were present when compiling the mapper
-                filtered_inputs = {
-                    k: model_inputs_copy[k]
-                    for k in mapper_input_keys
-                    if k in model_inputs_copy
-                }
-                p_casadi_stacked = casadi.vertcat(
-                    *[p for p in filtered_inputs.values()]
-                )
+                mapper_func, _mapper_jac, _mapper_jacp = state_mapper
+                p_casadi_stacked = casadi.vertcat(*[p for p in model_inputs.values()])
 
                 model.y0_list = [
                     mapper_func(

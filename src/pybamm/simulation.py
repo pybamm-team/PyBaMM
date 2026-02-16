@@ -474,20 +474,15 @@ class Simulation:
 
         # compile all the mappers
         for (previous_model, next_model), mapper in self._model_state_mappers.items():
-            # add "Current function [A]" to the inputs if it's an input parameter, since this is needed for the mappers
-            inputs_copy = inputs.copy() if inputs else {}
-            inputs_copy["Current variable [A]"] = 1.0
             vars_for_processing = pybamm.BaseSolver._get_vars_for_processing(
-                previous_model, inputs_copy
+                previous_model, inputs
             )
             if not hasattr(previous_model, "calculate_sensitivities"):
                 previous_model.calculate_sensitivities = []
-            f, _jac, _jacp, _jac_action = process(mapper, "mapper", vars_for_processing)
+            f, jac, jacp, _jac_action = process(mapper, "mapper", vars_for_processing)
             # Store both the compiled mapper and the input keys used
-            self._model_state_mappers[(previous_model, next_model)] = (
-                f,
-                list(inputs_copy.keys()),
-            )
+            # we don't need jac and jacp yet, but should use them for sensitivity calculations in the future
+            self._model_state_mappers[(previous_model, next_model)] = (f, jac, jacp)
 
     def _get_state_mapper_for_solution(self, solution, model):
         if not self._model_state_mappers or isinstance(solution, pybamm.EmptySolution):

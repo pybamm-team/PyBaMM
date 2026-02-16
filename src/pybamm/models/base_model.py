@@ -1454,14 +1454,6 @@ class BaseModel:
             from_var = from_vars_by_id.get(target_var.id)
             if from_var is None:
                 from_var = from_vars_by_name.get(target_var.name)
-            if from_var is None:
-                if target_var.name == "Current variable [A]":
-                    return None
-                raise pybamm.ModelError(
-                    "To map initial conditions, each variable in "
-                    "model.initial_conditions must appear in the source model "
-                    "with the same id or name."
-                )
             return from_var
 
         entries = []
@@ -1506,7 +1498,8 @@ class BaseModel:
             physical_parts = []
             for from_var, from_slice in child_entries:
                 if from_var is None:
-                    physical_parts.append(pybamm.InputParameter("Current variable [A]"))
+                    # not in the previous model, so just use current ic
+                    physical_parts.append(self.initial_conditions[target_var])
                 else:
                     physical_parts.append(
                         from_var.reference
