@@ -1390,12 +1390,21 @@ class BaseSolver:
                 model_inputs_copy["Current variable [A]"] = old_solution[
                     "Current variable [A]"
                 ].data[-1]
+
+                # Extract the function and input keys from the mapper tuple
+                mapper_func, mapper_input_keys = state_mapper
+                # Only use the inputs that were present when compiling the mapper
+                filtered_inputs = {
+                    k: model_inputs_copy[k]
+                    for k in mapper_input_keys
+                    if k in model_inputs_copy
+                }
                 p_casadi_stacked = casadi.vertcat(
-                    *[p for p in model_inputs_copy.values()]
+                    *[p for p in filtered_inputs.values()]
                 )
 
                 model.y0_list = [
-                    state_mapper(
+                    mapper_func(
                         t_start_shifted,
                         y_from,
                         p_casadi_stacked,

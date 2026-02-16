@@ -483,7 +483,11 @@ class Simulation:
             if not hasattr(previous_model, "calculate_sensitivities"):
                 previous_model.calculate_sensitivities = []
             f, _jac, _jacp, _jac_action = process(mapper, "mapper", vars_for_processing)
-            self._model_state_mappers[(previous_model, next_model)] = f
+            # Store both the compiled mapper and the input keys used
+            self._model_state_mappers[(previous_model, next_model)] = (
+                f,
+                list(inputs_copy.keys()),
+            )
 
     def _get_state_mapper_for_solution(self, solution, model):
         if not self._model_state_mappers or isinstance(solution, pybamm.EmptySolution):
