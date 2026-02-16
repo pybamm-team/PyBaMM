@@ -449,14 +449,9 @@ class Simulation:
             if previous_model is not None and previous_model is not model:
                 key = (previous_model, model)
                 if key not in self._model_state_mappers:
-                    try:
-                        self._model_state_mappers[key] = (
-                            model.build_initial_state_mapper(previous_model)
-                        )
-                    except pybamm.ModelError:
-                        pybamm.logger.debug(
-                            "Skipping state mapper build for experiment step pair."
-                        )
+                    self._model_state_mappers[key] = model.build_initial_state_mapper(
+                        previous_model
+                    )
             previous_model = model
 
         rest_model = self.steps_to_built_models.get("Rest for padding")
@@ -469,24 +464,14 @@ class Simulation:
                 continue
             to_rest_key = (model, rest_model)
             if to_rest_key not in self._model_state_mappers:
-                try:
-                    self._model_state_mappers[to_rest_key] = (
-                        rest_model.build_initial_state_mapper(model)
-                    )
-                except pybamm.ModelError:
-                    pybamm.logger.debug(
-                        "Skipping state mapper build for rest step target."
-                    )
+                self._model_state_mappers[to_rest_key] = (
+                    rest_model.build_initial_state_mapper(model)
+                )
             from_rest_key = (rest_model, model)
             if from_rest_key not in self._model_state_mappers:
-                try:
-                    self._model_state_mappers[from_rest_key] = (
-                        model.build_initial_state_mapper(rest_model)
-                    )
-                except pybamm.ModelError:
-                    pybamm.logger.debug(
-                        "Skipping state mapper build for rest step source."
-                    )
+                self._model_state_mappers[from_rest_key] = (
+                    model.build_initial_state_mapper(rest_model)
+                )
 
     def _get_state_mapper_for_solution(self, solution, model):
         if not self._model_state_mappers or isinstance(solution, pybamm.EmptySolution):

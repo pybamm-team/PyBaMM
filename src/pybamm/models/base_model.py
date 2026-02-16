@@ -1455,6 +1455,8 @@ class BaseModel:
             if from_var is None:
                 from_var = from_vars_by_name.get(target_var.name)
             if from_var is None:
+                if target_var.name == "Current variable [A]":
+                    return None
                 raise pybamm.ModelError(
                     "To map initial conditions, each variable in "
                     "model.initial_conditions must appear in the source model "
@@ -1476,19 +1478,27 @@ class BaseModel:
                 child_entries = []
                 for child in var.orphans:
                     from_var = _resolve_from_var(child)
-                    child_entries.append((from_var, from_model.y_slices[from_var][0]))
+                    if from_var is None:
+                        child_entries.append((None, None))
+                    else:
+                        child_entries.append(
+                            (from_var, from_model.y_slices[from_var][0])
+                        )
                 entries.append((target_slice, var, child_entries))
             else:
                 from_var = _resolve_from_var(var)
-                entries.append(
-                    (
-                        target_slice,
-                        var,
-                        [(from_var, from_model.y_slices[from_var][0])],
+                if from_var is None:
+                    entries.append((target_slice, var, [(None, None)]))
+                else:
+                    entries.append(
+                        (
+                            target_slice,
+                            var,
+                            [(from_var, from_model.y_slices[from_var][0])],
+                        )
                     )
-                )
 
-        def mapper(y_from, inputs=None):
+        def mapper(y_from, current_value, inputs=None):
             y_from_arr = np.asarray(y_from)
             if y_from_arr.ndim > 1:
                 y_from_arr = y_from_arr[:, -1]
@@ -1502,6 +1512,11 @@ class BaseModel:
             for target_slice, target_var, child_entries in entries:
                 physical_parts = []
                 for from_var, from_slice in child_entries:
+                    if from_var is None:
+                        current_value = np.asarray(current_value)
+                        physical_parts.append(np.atleast_1d(current_value))
+                        continue
+
                     y_scaled = np.asarray(y_from_arr[from_slice])
 
                     from_scale = np.asarray(from_var.scale.evaluate(inputs=inputs))

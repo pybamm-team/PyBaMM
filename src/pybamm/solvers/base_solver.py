@@ -1384,7 +1384,14 @@ class BaseSolver:
             if state_mapper is not None:
                 last_state = old_solution.last_state
                 y_from = last_state.all_ys[0]
-                model.y0_list = [state_mapper(y_from, inputs=model_inputs)]
+                current_value = old_solution["Current variable [A]"].data[-1]
+                model.y0_list = [
+                    state_mapper(
+                        y_from,
+                        current_value,
+                        inputs=model_inputs,
+                    )
+                ]
             else:
                 _, concatenated_initial_conditions = model.set_initial_conditions_from(
                     old_solution,
