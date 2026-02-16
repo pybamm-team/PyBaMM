@@ -480,7 +480,7 @@ class Simulation:
             vars_for_processing = pybamm.BaseSolver._get_vars_for_processing(
                 previous_model, inputs_copy
             )
-            if not hasattr(next_model, "calculate_sensitivities"):
+            if not hasattr(previous_model, "calculate_sensitivities"):
                 previous_model.calculate_sensitivities = []
             f, _jac, _jacp, _jac_action = process(mapper, "mapper", vars_for_processing)
             self._model_state_mappers[(previous_model, next_model)] = f
