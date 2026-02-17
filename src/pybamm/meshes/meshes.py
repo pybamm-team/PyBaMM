@@ -7,6 +7,7 @@ import warnings
 import numpy as np
 
 import pybamm
+from pybamm.expression_tree.operations.serialise import Serialise
 
 
 def compute_var_pts_from_thicknesses(electrode_thicknesses, grid_size):
@@ -435,6 +436,16 @@ class SubMesh:
     def __init__(self):
         pass
 
+    @classmethod
+    def to_config(cls) -> dict:
+        """Serialise this SubMesh class to a JSON-serialisable dict (for submesh_types)."""
+        return Serialise.serialise_submesh_item(cls)
+
+    @classmethod
+    def from_config(cls, data: dict):
+        """Deserialise a SubMesh class from a dict (class only, not instance)."""
+        return Serialise.deserialise_submesh_item(data, return_class_only=True)
+
 
 class MeshGenerator:
     """
@@ -458,3 +469,12 @@ class MeshGenerator:
 
     def __repr__(self):
         return f"Generator for {self.submesh_type.__name__}"
+
+    def to_config(self) -> dict:
+        """Serialise this MeshGenerator to a JSON-serialisable dict (for submesh_types)."""
+        return Serialise.serialise_submesh_item(self)
+
+    @staticmethod
+    def from_config(data: dict):
+        """Deserialise a MeshGenerator from a dict."""
+        return Serialise.deserialise_submesh_item(data, return_class_only=False)

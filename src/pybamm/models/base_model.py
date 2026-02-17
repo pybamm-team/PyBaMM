@@ -1945,6 +1945,8 @@ class BaseModel:
                 ) from file_err
         return model_json
 
+    to_config = to_json
+
     @staticmethod
     def from_json(filename: str | dict) -> BaseModel:
         """
@@ -1971,6 +1973,8 @@ class BaseModel:
         >>> loaded = pybamm.BaseModel.from_json("model.json")
         """
         return Serialise.load_custom_model(filename)
+
+    from_config = from_json
 
 
 def load_model(filename, battery_model: BaseModel | None = None):

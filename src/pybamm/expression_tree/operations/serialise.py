@@ -1023,6 +1023,66 @@ class Serialise:
         return var_pts_data
 
     @staticmethod
+    def serialise_submesh_item(submesh_item) -> dict:
+        """
+        Serialise a single submesh type (SubMesh class or MeshGenerator instance).
+
+        Parameters
+        ----------
+        submesh_item : type or MeshGenerator
+            A SubMesh class (e.g. Uniform1DSubMesh) or a MeshGenerator instance.
+
+        Returns
+        -------
+        dict
+            JSON-serialisable dict with "class", "module", and optionally
+            "submesh_params" for MeshGenerator.
+        """
+        if hasattr(submesh_item, "submesh_type"):
+            submesh_class = submesh_item.submesh_type
+            result = {
+                "class": submesh_class.__name__,
+                "module": submesh_class.__module__,
+            }
+            if getattr(submesh_item, "submesh_params", None):
+                result["submesh_params"] = dict(submesh_item.submesh_params)
+            return result
+        # SubMesh class
+        return {
+            "class": submesh_item.__name__,
+            "module": submesh_item.__module__,
+        }
+
+    @staticmethod
+    def deserialise_submesh_item(
+        submesh_info: dict, return_class_only: bool = False
+    ):
+        """
+        Deserialise a single submesh type from a dict (one entry from submesh_types).
+
+        Parameters
+        ----------
+        submesh_info : dict
+            Dict with "class", "module", and optionally "submesh_params".
+        return_class_only : bool, optional
+            If True, return the SubMesh class. If False, return a MeshGenerator
+            instance. Default is False.
+
+        Returns
+        -------
+        type or MeshGenerator
+            The SubMesh class or a MeshGenerator instance.
+        """
+        module_name = submesh_info["module"]
+        class_name = submesh_info["class"]
+        module = importlib.import_module(module_name)
+        submesh_class = getattr(module, class_name)
+        if return_class_only:
+            return submesh_class
+        params = submesh_info.get("submesh_params") or {}
+        return pybamm.MeshGenerator(submesh_class, params)
+
+    @staticmethod
     def serialise_submesh_types(submesh_types: dict) -> dict:
         """
         Converts a dictionary of submesh types to a JSON-serialisable dictionary.
@@ -1039,16 +1099,9 @@ class Serialise:
         """
         submesh_types_dict = {}
         for domain, submesh_item in submesh_types.items():
-            # Handle MeshGenerator wrapper objects
-            if hasattr(submesh_item, "submesh_type"):
-                submesh_class = submesh_item.submesh_type
-            else:
-                submesh_class = submesh_item
-
-            submesh_types_dict[domain] = {
-                "class": submesh_class.__name__,
-                "module": submesh_class.__module__,
-            }
+            submesh_types_dict[domain] = Serialise.serialise_submesh_item(
+                submesh_item
+            )
 
         SCHEMA_VERSION = "1.1"
         submesh_types_json = {
@@ -1152,19 +1205,14 @@ class Serialise:
         reconstructed_submesh_types = {}
         for domain, submesh_info in submesh_types_data.items():
             try:
-                module_name = submesh_info["module"]
-                class_name = submesh_info["class"]
-
-                # Import module and get class
-                module = importlib.import_module(module_name)
-                submesh_class = getattr(module, class_name)
-
-                # Wrap in MeshGenerator to match the expected format
-                reconstructed_submesh_types[domain] = pybamm.MeshGenerator(
-                    submesh_class
+                reconstructed_submesh_types[domain] = (
+                    Serialise.deserialise_submesh_item(
+                        submesh_info, return_class_only=False
+                    )
                 )
-
             except (ModuleNotFoundError, AttributeError) as e:
+                class_name = submesh_info.get("class", "?")
+                module_name = submesh_info.get("module", "?")
                 raise ImportError(
                     f"Could not import submesh type '{class_name}' from '{module_name}': {e}"
                 ) from e

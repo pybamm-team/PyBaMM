@@ -269,6 +269,8 @@ class ParameterValues:
 
         return ParameterValues(parameter_values_dict)
 
+    from_config = from_json
+
     def to_json(self, filename: str | None = None) -> dict:
         """
         Convert the parameter values to a JSON-serializable dictionary.
@@ -296,6 +298,8 @@ class ParameterValues:
         {'Temperature [K]': 298.15}
         """
         return convert_parameter_values_to_json(self, filename)
+
+    to_config = to_json
 
     # Dictionary-like interface
     def __getitem__(self, key: str) -> Any:
