@@ -1283,6 +1283,10 @@ class Serialise:
         model = base_cls()
         model.name = model_data["name"]
         model.schema_version = schema_version
+        # Restore options so round-trip serialisation produces an equivalent model
+        opts = model_data.get("options", {})
+        if opts is not None:
+            model.options = dict(opts)
 
         all_variable_keys = (
             [lhs_json for lhs_json, _ in model_data["rhs"]]

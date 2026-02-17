@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import copy
+import json
 import numbers
 import warnings
 from collections import OrderedDict
 from enum import Enum
 from itertools import chain
+from pathlib import Path
 
 import casadi
 import numpy as np
@@ -1888,6 +1890,87 @@ class BaseModel:
             )
 
         Serialise().save_model(self, filename=filename, mesh=mesh, variables=variables)
+
+    def to_json(
+        self, filename: str | Path | None = None, compress: bool = False
+    ) -> dict:
+        """
+        Convert the model to a JSON-serialisable dictionary.
+
+        Optionally saves to a file. Works for custom (non-discretised) models
+        that are subclasses of BaseModel. Use :meth:`save_model` for discretised
+        models.
+
+        Parameters
+        ----------
+        filename : str or pathlib.Path, optional
+            The filename to save the JSON file to. If not provided, the
+            dictionary is not saved. Must end with ``.json`` if provided.
+        compress : bool, optional
+            If True, the model data will be compressed (zlib + base64) in the
+            returned dict and in the file if filename is set. Default is False.
+
+        Returns
+        -------
+        dict
+            The JSON-serialisable dictionary (optionally compressed).
+
+        Examples
+        --------
+        >>> model = pybamm.lithium_ion.SPM()
+        >>> param_dict = model.to_json()  # Get dictionary only
+        >>> isinstance(param_dict, dict)
+        True
+        >>> model.to_json("model.json")  # Save and return dict
+        {'schema_version': '1.1', ...}
+        """
+        model_json = Serialise.serialise_custom_model(self, compress=compress)
+        if filename is not None:
+            filename = Path(filename)
+            if not filename.name.endswith(".json"):
+                raise ValueError(
+                    f"Filename '{filename}' must end with '.json' extension."
+                )
+            try:
+                with open(filename, "w") as f:
+                    json.dump(
+                        model_json,
+                        f,
+                        indent=2,
+                        default=Serialise._json_encoder,
+                    )
+            except OSError as file_err:
+                raise OSError(
+                    f"Failed to write model JSON to file '{filename}': {file_err}"
+                ) from file_err
+        return model_json
+
+    @staticmethod
+    def from_json(filename: str | dict) -> BaseModel:
+        """
+        Load a custom (symbolic) model from a JSON file or dictionary.
+
+        Use this for models saved with :meth:`to_json`. For discretised models
+        saved with :meth:`save_model`, use :func:`pybamm.load_model` instead.
+
+        Parameters
+        ----------
+        filename : str or dict
+            Path to a JSON file containing the saved model, or a dictionary
+            (e.g. from :meth:`to_json`).
+
+        Returns
+        -------
+        :class:`pybamm.BaseModel` or subclass
+            The reconstructed symbolic model.
+
+        Examples
+        --------
+        >>> model = pybamm.lithium_ion.SPM()
+        >>> loaded = pybamm.BaseModel.from_json(model.to_json())
+        >>> loaded = pybamm.BaseModel.from_json("model.json")
+        """
+        return Serialise.load_custom_model(filename)
 
 
 def load_model(filename, battery_model: BaseModel | None = None):
