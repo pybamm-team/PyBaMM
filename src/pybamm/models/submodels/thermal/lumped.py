@@ -78,14 +78,40 @@ class Lumped(BaseThermal):
 
     def set_rhs(self, variables):
         T_vol_av = variables["Volume-averaged cell temperature [K]"]
-        Q_vol_av = variables["Volume-averaged total heating [W.m-3]"]
+
+        # ---- Named heating sub-components for readable equations ----
+        Q_ohm = variables["Volume-averaged Ohmic heating [W.m-3]"]
+        Q_rxn = variables[
+            "Volume-averaged irreversible electrochemical heating [W.m-3]"
+        ]
+        Q_rev = variables["Volume-averaged reversible heating [W.m-3]"]
+
+        Q_ohm.print_name = r"\bar{Q}_{\mathrm{ohm}}"
+        Q_rxn.print_name = r"\bar{Q}_{\mathrm{rxn}}"
+        Q_rev.print_name = r"\bar{Q}_{\mathrm{rev}}"
+
+        # Build decomposed total heating from named sub-components.
+        # Mixing and hysteresis are included for correctness but not named
+        # (they are zero when those options are disabled).
+        Q_mix = variables["Volume-averaged heat of mixing [W.m-3]"]
+        Q_hys = variables["Volume-averaged hysteresis electrochemical heating [W.m-3]"]
+        Q_total = Q_ohm + Q_rxn + Q_rev + Q_mix + Q_hys
+        Q_total.print_name = r"\bar{Q}"
+
+        # ---- Cooling ----
         Q_cool_vol_av = variables["Surface total cooling [W.m-3]"]
+        Q_cool_vol_av.print_name = r"\bar{Q}_{\mathrm{cool}}"
+
+        # ---- Contact resistance ----
         Q_cr_vol_av = variables["Lumped contact resistance heating [W.m-3]"]
+
+        # ---- Effective heat capacity ----
         rho_c_p_eff_av = variables[
             "Volume-averaged effective heat capacity [J.K-1.m-3]"
         ]
+        rho_c_p_eff_av.print_name = r"(\rho c_p)_{\mathrm{eff}}"
 
-        self.rhs = {T_vol_av: (Q_vol_av + Q_cr_vol_av + Q_cool_vol_av) / rho_c_p_eff_av}
+        self.rhs = {T_vol_av: (Q_total + Q_cr_vol_av + Q_cool_vol_av) / rho_c_p_eff_av}
 
     def set_initial_conditions(self, variables):
         T_vol_av = variables["Volume-averaged cell temperature [K]"]
