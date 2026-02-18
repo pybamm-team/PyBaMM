@@ -748,6 +748,49 @@ class Serialise:
         return pybamm.Geometry(reconstructed_geometry)
 
     @staticmethod
+    def serialise_spatial_method_item(method) -> dict:
+        """
+        Serialise a single spatial method instance.
+
+        Parameters
+        ----------
+        method : SpatialMethod
+            A spatial method instance (e.g. FiniteVolume(), ZeroDimensionalSpatialMethod()).
+
+        Returns
+        -------
+        dict
+            JSON-serialisable dict with "class", "module", and "options".
+        """
+        return {
+            "class": type(method).__name__,
+            "module": type(method).__module__,
+            "options": method.options if hasattr(method, "options") else {},
+        }
+
+    @staticmethod
+    def deserialise_spatial_method_item(method_info: dict):
+        """
+        Deserialise a single spatial method from a dict (one entry from spatial_methods).
+
+        Parameters
+        ----------
+        method_info : dict
+            Dict with "class", "module", and optionally "options".
+
+        Returns
+        -------
+        SpatialMethod
+            A spatial method instance.
+        """
+        module_name = method_info["module"]
+        class_name = method_info["class"]
+        options = method_info.get("options") or {}
+        module = importlib.import_module(module_name)
+        method_class = getattr(module, class_name)
+        return method_class(options=options)
+
+    @staticmethod
     def serialise_spatial_methods(spatial_methods: dict) -> dict:
         """
         Converts a dictionary of spatial methods to a JSON-serialisable dictionary.
@@ -764,11 +807,9 @@ class Serialise:
         """
         spatial_methods_dict = {}
         for domain, method in spatial_methods.items():
-            spatial_methods_dict[domain] = {
-                "class": type(method).__name__,
-                "module": type(method).__module__,
-                "options": method.options if hasattr(method, "options") else {},
-            }
+            spatial_methods_dict[domain] = Serialise.serialise_spatial_method_item(
+                method
+            )
 
         SCHEMA_VERSION = "1.1"
         spatial_methods_json = {
@@ -875,18 +916,12 @@ class Serialise:
         reconstructed_methods = {}
         for domain, method_info in spatial_methods_data.items():
             try:
-                module_name = method_info["module"]
-                class_name = method_info["class"]
-                options = method_info.get("options", {})
-
-                # Import module and get class
-                module = importlib.import_module(module_name)
-                method_class = getattr(module, class_name)
-
-                # Instantiate with options
-                reconstructed_methods[domain] = method_class(options=options)
-
+                reconstructed_methods[domain] = (
+                    Serialise.deserialise_spatial_method_item(method_info)
+                )
             except (ModuleNotFoundError, AttributeError) as e:
+                class_name = method_info.get("class", "?")
+                module_name = method_info.get("module", "?")
                 raise ImportError(
                     f"Could not import spatial method '{class_name}' from '{module_name}': {e}"
                 ) from e
