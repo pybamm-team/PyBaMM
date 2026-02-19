@@ -607,11 +607,13 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
                 warnings.warn(
                     message=f"Initial SoC {initial_value} is greater than 1",
                     category=UserWarning,
+                    stacklevel=2,
                 )
             elif initial_value < 0:
                 warnings.warn(
                     message=f"Initial SoC {initial_value} is less than 0",
                     category=UserWarning,
+                    stacklevel=2,
                 )
 
         else:

@@ -162,6 +162,7 @@ def get_initial_stoichiometry_half_cell(
                 message=f"Initial voltage {V_init}V is outside the voltage limits "
                 f"({V_min}, {V_max})",
                 category=UserWarning,
+                stacklevel=2,
             )
         # Solve simple model for initial soc based on target voltage
         model = pybamm.BaseModel()
@@ -192,11 +193,13 @@ def get_initial_stoichiometry_half_cell(
             warnings.warn(
                 message=f"Initial SoC {initial_value} is greater than 1",
                 category=UserWarning,
+                stacklevel=2,
             )
         elif initial_value < 0:
             warnings.warn(
                 message=f"Initial SoC {initial_value} is less than 0",
                 category=UserWarning,
+                stacklevel=2,
             )
         if not is_composite:
             x = x_0 + initial_value * (x_100 - x_0)

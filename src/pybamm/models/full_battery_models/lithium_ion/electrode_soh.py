@@ -795,6 +795,7 @@ class ElectrodeSOHSolver:
                     message=f"Initial voltage {V_init}V is outside the voltage limits "
                     f"({V_min}, {V_max})",
                     category=UserWarning,
+                    stacklevel=2,
                 )
 
             # Solve simple model for initial soc based on target voltage
@@ -849,11 +850,13 @@ class ElectrodeSOHSolver:
                 warnings.warn(
                     message=f"Initial SoC {initial_soc} is greater than 1",
                     category=UserWarning,
+                    stacklevel=2,
                 )
             elif initial_soc < 0:
                 warnings.warn(
                     message=f"Initial SoC {initial_soc} is less than 0",
                     category=UserWarning,
+                    stacklevel=2,
                 )
 
         else:
