@@ -2,6 +2,7 @@
 # A model to calculate electrode-specific SOH, adapted to a half-cell
 #
 import pybamm
+import warnings
 
 from .electrode_soh import get_esoh_default_solver
 from .util import check_if_composite, get_lithiation_delithiation
@@ -156,9 +157,10 @@ def get_initial_stoichiometry_half_cell(
         V_max = parameter_values.evaluate(param.voltage_high_cut, inputs=inputs)
 
         if not V_min - tol <= V_init <= V_max + tol:
-            raise ValueError(
-                f"Initial voltage {V_init}V is outside the voltage limits "
-                f"({V_min}, {V_max})"
+            warnings.warn(
+                message = f"Initial voltage {V_init}V is outside the voltage limits "
+                f"({V_min}, {V_max})",
+                category=UserWarning
             )
         # Solve simple model for initial soc based on target voltage
         model = pybamm.BaseModel()
@@ -185,8 +187,16 @@ def get_initial_stoichiometry_half_cell(
         if is_composite:
             x_2 = sol["x_2"].data[0]
     elif isinstance(initial_value, int | float):
-        if not 0 <= initial_value <= 1:
-            raise ValueError("Initial SOC should be between 0 and 1")
+        if initial_value > 1:
+            warnings.warn(
+                message=f"Initial SoC {initial_value} is greater than 1",
+                category=UserWarning
+            )
+        elif initial_value < 0:
+            warnings.warn(
+                message=f"Initial SoC {initial_value} is less than 0",
+                category=UserWarning
+            )
         if not is_composite:
             x = x_0 + initial_value * (x_100 - x_0)
         else:
@@ -218,8 +228,10 @@ def get_initial_stoichiometry_half_cell(
             x_2 = sol["x_2"].data[0]
     else:
         raise ValueError(
-            "Initial value must be a float between 0 and 1, or a string ending in 'V'"
-        )
+                "Invalid initial value. Expected a float (for SoC, "
+                "1.0 for 100%) or a string ending in 'V' (for voltage), got "
+                f"{initial_value!r} of type {type(initial_value).__name__}"
+            )
     ret_dict = {"x": x}
     if is_composite:
         ret_dict["x_2"] = x_2
