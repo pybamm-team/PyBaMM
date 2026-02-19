@@ -858,8 +858,9 @@ class ElectrodeSOHSolver:
 
         else:
             raise ValueError(
-                "Initial value must be a float (0 corresponding to "
-                "0% SoC and 1 to 100% SoC), or a string ending in 'V'"
+                "Invalid initial value. Expected a float (for SoC, "
+                "1.0 for 100%) or a string ending in 'V' (for voltage), got "
+                f"{initial_value!r} of type {type(initial_value).__name__}"
             )
 
         x = x_0 + initial_soc * (x_100 - x_0)
