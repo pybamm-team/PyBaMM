@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
+import warnings
 
 import numpy as np
 
@@ -790,9 +791,10 @@ class ElectrodeSOHSolver:
             V_max = parameter_values.evaluate(self.param.ocp_soc_100, inputs=inputs)
 
             if not V_min - tol <= V_init <= V_max + tol:
-                raise ValueError(
-                    f"Initial voltage {V_init}V is outside the voltage limits "
-                    f"({V_min}, {V_max})"
+                warnings.warn(
+                    message = f"Initial voltage {V_init}V is outside the voltage limits "
+                    f"({V_min}, {V_max})",
+                    category=UserWarning
                 )
 
             # Solve simple model for initial soc based on target voltage
@@ -843,13 +845,21 @@ class ElectrodeSOHSolver:
             )
         elif isinstance(initial_value, int | float):
             initial_soc = initial_value
-            if not 0 <= initial_soc <= 1:
-                raise ValueError("Initial SOC should be between 0 and 1")
+            if initial_soc > 1:
+                warnings.warn(
+                    message=f"Initial SoC {initial_soc} is greater than 1",
+                    category=UserWarning
+                )
+            elif initial_soc < 0:
+                warnings.warn(
+                    message=f"Initial SoC {initial_soc} is less than 0",
+                    category=UserWarning
+                )
 
         else:
             raise ValueError(
-                "Initial value must be a float between 0 and 1, "
-                "or a string ending in 'V'"
+                "Initial value must be a float (0 corresponding to " 
+                "0% SoC and 1 to 100% SoC), or a string ending in 'V'"
             )
 
         x = x_0 + initial_soc * (x_100 - x_0)
