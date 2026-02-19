@@ -3,8 +3,8 @@
 #
 from __future__ import annotations
 
-from functools import lru_cache
 import warnings
+from functools import lru_cache
 
 import numpy as np
 
@@ -792,9 +792,9 @@ class ElectrodeSOHSolver:
 
             if not V_min - tol <= V_init <= V_max + tol:
                 warnings.warn(
-                    message = f"Initial voltage {V_init}V is outside the voltage limits "
+                    message=f"Initial voltage {V_init}V is outside the voltage limits "
                     f"({V_min}, {V_max})",
-                    category=UserWarning
+                    category=UserWarning,
                 )
 
             # Solve simple model for initial soc based on target voltage
@@ -848,17 +848,17 @@ class ElectrodeSOHSolver:
             if initial_soc > 1:
                 warnings.warn(
                     message=f"Initial SoC {initial_soc} is greater than 1",
-                    category=UserWarning
+                    category=UserWarning,
                 )
             elif initial_soc < 0:
                 warnings.warn(
                     message=f"Initial SoC {initial_soc} is less than 0",
-                    category=UserWarning
+                    category=UserWarning,
                 )
 
         else:
             raise ValueError(
-                "Initial value must be a float (0 corresponding to " 
+                "Initial value must be a float (0 corresponding to "
                 "0% SoC and 1 to 100% SoC), or a string ending in 'V'"
             )
 

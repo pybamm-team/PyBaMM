@@ -3,8 +3,8 @@
 #
 from __future__ import annotations
 
-from typing import Any
 import warnings
+from typing import Any
 
 import pybamm
 
@@ -606,12 +606,12 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
             if initial_value > 1:
                 warnings.warn(
                     message=f"Initial SoC {initial_value} is greater than 1",
-                    category=UserWarning
+                    category=UserWarning,
                 )
             elif initial_value < 0:
                 warnings.warn(
                     message=f"Initial SoC {initial_value} is less than 0",
-                    category=UserWarning
+                    category=UserWarning,
                 )
 
         else:

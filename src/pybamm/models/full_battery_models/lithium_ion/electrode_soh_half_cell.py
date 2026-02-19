@@ -1,8 +1,9 @@
 #
 # A model to calculate electrode-specific SOH, adapted to a half-cell
 #
-import pybamm
 import warnings
+
+import pybamm
 
 from .electrode_soh import get_esoh_default_solver
 from .util import check_if_composite, get_lithiation_delithiation
@@ -158,9 +159,9 @@ def get_initial_stoichiometry_half_cell(
 
         if not V_min - tol <= V_init <= V_max + tol:
             warnings.warn(
-                message = f"Initial voltage {V_init}V is outside the voltage limits "
+                message=f"Initial voltage {V_init}V is outside the voltage limits "
                 f"({V_min}, {V_max})",
-                category=UserWarning
+                category=UserWarning,
             )
         # Solve simple model for initial soc based on target voltage
         model = pybamm.BaseModel()
@@ -190,12 +191,12 @@ def get_initial_stoichiometry_half_cell(
         if initial_value > 1:
             warnings.warn(
                 message=f"Initial SoC {initial_value} is greater than 1",
-                category=UserWarning
+                category=UserWarning,
             )
         elif initial_value < 0:
             warnings.warn(
                 message=f"Initial SoC {initial_value} is less than 0",
-                category=UserWarning
+                category=UserWarning,
             )
         if not is_composite:
             x = x_0 + initial_value * (x_100 - x_0)
@@ -228,10 +229,10 @@ def get_initial_stoichiometry_half_cell(
             x_2 = sol["x_2"].data[0]
     else:
         raise ValueError(
-                "Invalid initial value. Expected a float (for SoC, "
-                "1.0 for 100%) or a string ending in 'V' (for voltage), got "
-                f"{initial_value!r} of type {type(initial_value).__name__}"
-            )
+            "Invalid initial value. Expected a float (for SoC, "
+            "1.0 for 100%) or a string ending in 'V' (for voltage), got "
+            f"{initial_value!r} of type {type(initial_value).__name__}"
+        )
     ret_dict = {"x": x}
     if is_composite:
         ret_dict["x_2"] = x_2
