@@ -882,7 +882,14 @@ class Solution:
         # update variables which were derived at the solver stage
         if any([self.variables_returned, other.variables_returned]):
             vars = {*self._variables.keys(), *other._variables.keys()}
-            new_sol._variables = {v: self[v].update(other[v], new_sol) for v in vars}
+            new_sol._variables = {}
+            for v in vars:
+                try:
+                    new_sol._variables[v] = self[v].update(other[v], new_sol)
+                except KeyError:
+                    # Skip variables that contain StateVector references and
+                    # weren't part of the output_variables
+                    pass
             new_sol.variables_returned = True
 
         return new_sol

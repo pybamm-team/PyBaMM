@@ -1428,6 +1428,96 @@ class BaseModel:
         elif return_type == "ics":
             return initial_conditions, concatenated_initial_conditions
 
+    def build_initial_state_mapper(self, from_model):
+        """
+        Build a mapper that maps a final state vector from a discretised model to
+        this model's discretised initial conditions.
+
+        Parameters
+        ----------
+        from_model : :class:`pybamm.BaseModel`
+            The discretised model that provides the final state vector.
+        """
+        if not self.is_discretised or not from_model.is_discretised:
+            raise pybamm.ModelError(
+                "Both models must be discretised to build an initial state mapper."
+            )
+        if self.y_slices is None or from_model.y_slices is None:
+            raise pybamm.ModelError(
+                "Both models must define y_slices to build an initial state mapper."
+            )
+
+        from_vars_by_id = {var.id: var for var in from_model.y_slices}
+        from_vars_by_name = {var.name: var for var in from_model.y_slices}
+
+        def _resolve_from_var(target_var):
+            from_var = from_vars_by_id.get(target_var.id)
+            if from_var is None:
+                from_var = from_vars_by_name.get(target_var.name)
+            return from_var
+
+        entries = []
+        for var in self.initial_conditions:
+            if isinstance(var, pybamm.Concatenation):
+                target_slice = slice(
+                    self.y_slices[var.children[0]][0].start,
+                    self.y_slices[var.children[-1]][0].stop,
+                )
+            else:
+                target_slice = self.y_slices[var][0]
+
+            if isinstance(var, pybamm.Concatenation):
+                child_entries = []
+                for child in var.orphans:
+                    from_var = _resolve_from_var(child)
+                    if from_var is None:
+                        child_entries.append((None, None))
+                    else:
+                        child_entries.append(
+                            (from_var, from_model.y_slices[from_var][0])
+                        )
+                entries.append((target_slice, var, child_entries))
+            else:
+                from_var = _resolve_from_var(var)
+                if from_var is None:
+                    entries.append((target_slice, var, [(None, None)]))
+                else:
+                    entries.append(
+                        (
+                            target_slice,
+                            var,
+                            [(from_var, from_model.y_slices[from_var][0])],
+                        )
+                    )
+        # sort entries according to target slices
+        entries.sort(key=lambda x: x[0].start)
+
+        # create a pybamm expression tree that maps from the final state vector of the from_model to the initial conditions of this model
+        equations = []
+        for _target_slice, target_var, child_entries in entries:
+            physical_parts = []
+            for from_var, from_slice in child_entries:
+                if from_var is None:
+                    # not in the previous model, so just use current ic
+                    physical_parts.append(self.initial_conditions[target_var])
+                else:
+                    physical_parts.append(
+                        from_var.reference
+                        + from_var.scale * pybamm.StateVector(from_slice)
+                    )
+
+            if len(physical_parts) == 1:
+                physical = physical_parts[0]
+            else:
+                physical = pybamm.NumpyConcatenation(*physical_parts)
+
+            mapped = (physical - target_var.reference) / target_var.scale
+            equations.append(mapped)
+
+        mapper = pybamm.NumpyConcatenation(*equations)
+
+        return mapper
+
     def check_and_combine_dict(self, dict1, dict2):
         # check that the key ids are distinct
         ids1 = set(x for x in dict1.keys())

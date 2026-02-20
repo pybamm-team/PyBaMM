@@ -61,6 +61,21 @@ class TestSimulationExperiment:
         sim.build_for_experiment()
         assert len(sim.experiment.steps) == 2
 
+    def test_experiment_state_mappers_built(self):
+        model = pybamm.lithium_ion.SPM()
+        experiment = pybamm.Experiment(
+            ["Discharge at C/20 for 1 hour", "Rest for 10 minutes"]
+        )
+        sim = pybamm.Simulation(model, experiment=experiment)
+        sim.build_for_experiment()
+
+        steps = sim.experiment.steps
+        model_0 = sim.steps_to_built_models[steps[0].basic_repr()]
+        model_1 = sim.steps_to_built_models[steps[1].basic_repr()]
+
+        key = (model_0, model_1)
+        assert key in sim.model_state_mappers
+
     def test_run_experiment(self):
         s = pybamm.step.string
         experiment = pybamm.Experiment(
