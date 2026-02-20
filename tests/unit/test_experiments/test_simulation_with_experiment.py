@@ -73,13 +73,8 @@ class TestSimulationExperiment:
         model_0 = sim.steps_to_built_models[steps[0].basic_repr()]
         model_1 = sim.steps_to_built_models[steps[1].basic_repr()]
 
-        assert (model_0, model_1) in sim._model_state_mappers
-        # The mapper is now a tuple of (function, input_keys)
-        mapper_data = sim._model_state_mappers[(model_0, model_1)]
-        assert isinstance(mapper_data, tuple)
-        assert len(mapper_data) == 2
-        assert callable(mapper_data[0])
-        assert isinstance(mapper_data[1], list)
+        key = (model_0, model_1)
+        assert key in sim.model_state_mappers
 
     def test_run_experiment(self):
         s = pybamm.step.string

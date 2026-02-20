@@ -139,7 +139,8 @@ class Simulation:
         self._built_nominal_capacity = None
         self.steps_to_built_models = None
         self.steps_to_built_solvers = None
-        self._model_state_mappers = {}
+        self.model_state_mappers = {}
+        self._compiled_model_state_mappers = {}
         self._mesh = None
         self._disc = None
         self._solution = None
@@ -159,7 +160,9 @@ class Simulation:
         """
         result = self.__dict__.copy()
         result["get_esoh_solver"] = None  # Exclude LRU cache
+        result["model_state_mappers"] = {}
         result["_model_state_mappers"] = {}
+        result["_compiled_model_state_mappers"] = {}
         return result
 
     def __setstate__(self, state):
@@ -168,8 +171,10 @@ class Simulation:
         """
         self.__dict__ = state
         self.get_esoh_solver = lru_cache()(self._get_esoh_solver)
-        if "_model_state_mappers" not in self.__dict__:
-            self._model_state_mappers = {}
+        if "model_state_mappers" not in self.__dict__:
+            self.model_state_mappers = {}
+        if "_compiled_model_state_mappers" not in self.__dict__:
+            self._compiled_model_state_mappers = {}
 
     def set_up_and_parameterise_experiment(self, solve_kwargs=None):
         msg = "pybamm.simulation.set_up_and_parameterise_experiment is deprecated and not meant to be accessed by users."
@@ -433,13 +438,16 @@ class Simulation:
                 self.steps_to_built_solvers[step] = solver
                 self.steps_to_built_models[step] = built_model
 
+            if inputs is None:
+                inputs = {}
             self._build_experiment_state_mappers(inputs)
             self._built_nominal_capacity = self._parameter_values.get(
                 "Nominal cell capacity [A.h]", None
             )
 
     def _build_experiment_state_mappers(self, inputs: dict):
-        self._model_state_mappers = {}
+        self.model_state_mappers = {}
+        self._compiled_model_state_mappers = {}
         if not self.experiment or not self.steps_to_built_models:
             return
 
@@ -449,8 +457,8 @@ class Simulation:
             model = self.steps_to_built_models[step.basic_repr()]
             if previous_model is not None and previous_model is not model:
                 key = (previous_model, model)
-                if key not in self._model_state_mappers:
-                    self._model_state_mappers[key] = model.build_initial_state_mapper(
+                if key not in self.model_state_mappers:
+                    self.model_state_mappers[key] = model.build_initial_state_mapper(
                         previous_model
                     )
             previous_model = model
@@ -462,18 +470,18 @@ class Simulation:
                 if model is rest_model:
                     continue
                 to_rest_key = (model, rest_model)
-                if to_rest_key not in self._model_state_mappers:
-                    self._model_state_mappers[to_rest_key] = (
+                if to_rest_key not in self.model_state_mappers:
+                    self.model_state_mappers[to_rest_key] = (
                         rest_model.build_initial_state_mapper(model)
                     )
                 from_rest_key = (rest_model, model)
-                if from_rest_key not in self._model_state_mappers:
-                    self._model_state_mappers[from_rest_key] = (
+                if from_rest_key not in self.model_state_mappers:
+                    self.model_state_mappers[from_rest_key] = (
                         model.build_initial_state_mapper(rest_model)
                     )
 
         # compile all the mappers
-        for (previous_model, next_model), mapper in self._model_state_mappers.items():
+        for (previous_model, next_model), mapper in self.model_state_mappers.items():
             vars_for_processing = pybamm.BaseSolver._get_vars_for_processing(
                 previous_model, inputs
             )
@@ -482,17 +490,23 @@ class Simulation:
             f, jac, jacp, _jac_action = process(mapper, "mapper", vars_for_processing)
             # Store both the compiled mapper and the input keys used
             # we don't need jac and jacp yet, but should use them for sensitivity calculations in the future
-            self._model_state_mappers[(previous_model, next_model)] = (f, jac, jacp)
+            self._compiled_model_state_mappers[(previous_model, next_model)] = (
+                f,
+                jac,
+                jacp,
+            )
 
     def _get_state_mapper_for_solution(self, solution, model):
-        if not self._model_state_mappers or isinstance(solution, pybamm.EmptySolution):
+        if not self._compiled_model_state_mappers or isinstance(
+            solution, pybamm.EmptySolution
+        ):
             return None
         if not solution.all_models:
             return None
         from_model = solution.all_models[-1]
         if from_model is model:
             return None
-        return self._model_state_mappers.get((from_model, model))
+        return self._compiled_model_state_mappers.get((from_model, model))
 
     def solve(
         self,
