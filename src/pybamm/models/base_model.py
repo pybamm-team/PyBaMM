@@ -1458,58 +1458,48 @@ class BaseModel:
 
         entries = []
         for var in self.initial_conditions:
-            if isinstance(var, pybamm.Concatenation):
+            if var in self.y_slices:
+                target_slice = self.y_slices[var][0]
+            elif isinstance(var, pybamm.Concatenation):
+                # Fallback for concatenations that don't have an explicit key in y_slices
                 target_slice = slice(
                     self.y_slices[var.children[0]][0].start,
                     self.y_slices[var.children[-1]][0].stop,
                 )
             else:
-                target_slice = self.y_slices[var][0]
+                raise pybamm.ModelError(
+                    "Could not find a y-slice for an initial condition variable."
+                )
 
-            if isinstance(var, pybamm.Concatenation):
-                child_entries = []
-                for child in var.orphans:
-                    from_var = _resolve_from_var(child)
-                    if from_var is None:
-                        child_entries.append((None, None))
-                    else:
-                        child_entries.append(
-                            (from_var, from_model.y_slices[from_var][0])
-                        )
-                entries.append((target_slice, var, child_entries))
-            else:
-                from_var = _resolve_from_var(var)
-                if from_var is None:
-                    entries.append((target_slice, var, [(None, None)]))
-                else:
-                    entries.append(
-                        (
-                            target_slice,
-                            var,
-                            [(from_var, from_model.y_slices[from_var][0])],
-                        )
+            from_var = _resolve_from_var(var)
+            from_slice = None
+            if from_var is not None:
+                from_slice = from_model.y_slices[from_var][0]
+                target_len = target_slice.stop - target_slice.start
+                from_len = from_slice.stop - from_slice.start
+                if from_len != target_len:
+                    raise pybamm.ModelError(
+                        "Mapped variable slice length mismatch between models: "
+                        f"'{var.name}' has source length {from_len} and target length {target_len}."
                     )
+
+            entries.append((target_slice, var, from_var, from_slice))
         # sort entries according to target slices
         entries.sort(key=lambda x: x[0].start)
 
         # create a pybamm expression tree that maps from the final state vector of the from_model to the initial conditions of this model
         equations = []
-        for _target_slice, target_var, child_entries in entries:
-            physical_parts = []
-            for from_var, from_slice in child_entries:
-                if from_var is None:
-                    # not in the previous model, so just use current ic
-                    physical_parts.append(self.initial_conditions[target_var])
-                else:
-                    physical_parts.append(
-                        from_var.reference
-                        + from_var.scale * pybamm.StateVector(from_slice)
-                    )
-
-            if len(physical_parts) == 1:
-                physical = physical_parts[0]
+        for _target_slice, target_var, from_var, from_slice in entries:
+            if from_var is None:
+                # Keep the target-model initial condition for unmapped variables
+                physical = (
+                    target_var.reference
+                    + target_var.scale * self.initial_conditions[target_var]
+                )
             else:
-                physical = pybamm.NumpyConcatenation(*physical_parts)
+                physical = from_var.reference + from_var.scale * pybamm.StateVector(
+                    from_slice
+                )
 
             mapped = (physical - target_var.reference) / target_var.scale
             equations.append(mapped)
