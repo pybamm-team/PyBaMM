@@ -618,19 +618,42 @@ def _equation_to_diffeq(
         return f"{equation.name}({_equation_to_diffeq(equation.child, y_slice_to_label, symbol_to_tensor_name, float_precision=float_precision, transpose=transpose)})"
     elif isinstance(equation, pybamm.Function):
         name = equation.function.__name__
-        args = ", ".join(
-            [
-                _equation_to_diffeq(
-                    x,
-                    y_slice_to_label,
-                    symbol_to_tensor_name,
-                    float_precision=float_precision,
-                    transpose=transpose,
-                )
-                for x in equation.children
-            ]
-        )
-        return f"{name}({args})"
+        args = [
+            _equation_to_diffeq(
+                x,
+                y_slice_to_label,
+                symbol_to_tensor_name,
+                float_precision=float_precision,
+                transpose=transpose,
+            )
+            for x in equation.children
+        ]
+        if name == "_reg_power_evaluate":
+            # three args: x, a, scale (optional)
+            # Approximates |x|^a * sign(x) using:
+            #  y = x * (x^2 + delta^2)^((a-1)/2)
+            # When scale is set:
+            #    y = (x/scale) * ((x/scale)^2 + delta^2)^((a-1)/2) * scale^a
+            delta = equation.delta
+            x = args[0]
+            a = args[1]
+            if len(equation.children) == 3:
+                x = f"({x} / {args[2]})"
+                return f"({x} * pow((pow({x}, 2) + {delta**2:.{float_precision}g}), ({a} - 1) / 2)) * pow({args[2]}, {a})"
+            else:
+                return f"({x} * pow((pow({x}, 2) + {delta**2:.{float_precision}g}), ({a} - 1) / 2))"
+        elif name == "_arcsinh2_evaluate":
+            # Two-argument arcsinh function for arcsinh(a/b) that avoids division by zero
+            # by adding a small regularisation term to the denominator.
+            # Computes arcsinh(a / b_eff) where b_eff = sign(b) * hypot(b, eps), where hypot = sqrt(b^2 + eps^2)
+            # Note: the sign(b) function treats sign(0) as 1 for numerical stability.
+            a = args[0]
+            b = args[1]
+            eps2 = equation.eps**2
+            return f"arcsinh({a} / (copysign(sqrt(pow({b}, 2) + {eps2:.{float_precision}g}), {b})))"
+        else:
+            args = ",".join(args)
+            return f"{name}({args})"
     elif isinstance(equation, pybamm.Scalar):
         return f"{equation.value:.{float_precision}g}"
     elif isinstance(equation, pybamm.StateVector):
