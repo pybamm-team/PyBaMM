@@ -779,15 +779,15 @@ class TestElectrodeSOHHalfCell:
                 pybamm.lithium_ion.get_initial_stoichiometry_half_cell(
                     1.5, params, param=param, options=options
                 )
-            except:
-                pass
+            except Exception as ex:
+                assert isinstance(ex, pybamm.SolverError)
         with pytest.warns(UserWarning, match=r"is less than 0"):
             try:
                 pybamm.lithium_ion.get_initial_stoichiometry_half_cell(
                     -0.1, params, param=param, options=options
                 )
-            except:
-                pass
+            except Exception as ex:
+                assert isinstance(ex, pybamm.SolverError)
 
         # Test invalid voltage (too low)
         with pytest.warns(UserWarning, match=r"outside the voltage limits"):
@@ -795,8 +795,8 @@ class TestElectrodeSOHHalfCell:
                 pybamm.lithium_ion.get_initial_stoichiometry_half_cell(
                     "0.000001 V", params, param=param, options=options
                 )
-            except:
-                pass
+            except Exception as ex:
+                assert isinstance(ex, pybamm.SolverError)
 
         # Test invalid voltage (too high)
         with pytest.warns(UserWarning, match=r"outside the voltage limits"):
