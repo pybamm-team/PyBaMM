@@ -1895,11 +1895,12 @@ class BaseModel:
         self, filename: str | Path | None = None, compress: bool = False
     ) -> dict:
         """
-        Convert the model to a JSON-serialisable dictionary.
+        Convert the model to a JSON-serialisable dictionary (raw format).
 
         Optionally saves to a file. Works for custom (non-discretised) models
         that are subclasses of BaseModel. Use :meth:`save_model` for discretised
-        models.
+        models. For a wrapped config format (``type`` + ``model``), use
+        :meth:`to_config` instead.
 
         Parameters
         ----------
@@ -1945,7 +1946,55 @@ class BaseModel:
                 ) from file_err
         return model_json
 
-    to_config = to_json
+    def to_config(
+        self,
+        filename: str | Path | None = None,
+        compress: bool = False,
+    ) -> dict:
+        """
+        Convert the model to a config dictionary with wrapped structure.
+
+        Returns a dict with ``"type": "custom"`` and ``"model"`` (the
+        serialised model), suitable for embedding in larger configs. Use
+        :meth:`to_json` for the raw model dictionary.
+
+        Parameters
+        ----------
+        filename : str or pathlib.Path, optional
+            If provided, save the config dict to this file. Must end with
+            ``.json``.
+        compress : bool, optional
+            If True, the inner model data is compressed (zlib + base64).
+            Default is False.
+
+        Returns
+        -------
+        dict
+            Config dict with keys ``"type"`` (``"custom"``) and ``"model"``.
+        """
+        model_config = {
+            "type": "custom",
+            "model": Serialise.serialise_custom_model(self, compress=compress),
+        }
+        if filename is not None:
+            filename = Path(filename)
+            if not filename.name.endswith(".json"):
+                raise ValueError(
+                    f"Filename '{filename}' must end with '.json' extension."
+                )
+            try:
+                with open(filename, "w") as f:
+                    json.dump(
+                        model_config,
+                        f,
+                        indent=2,
+                        default=Serialise._json_encoder,
+                    )
+            except OSError as file_err:
+                raise OSError(
+                    f"Failed to write model config to file '{filename}': {file_err}"
+                ) from file_err
+        return model_config
 
     @staticmethod
     def from_json(filename: str | dict) -> BaseModel:
@@ -1954,6 +2003,8 @@ class BaseModel:
 
         Use this for models saved with :meth:`to_json`. For discretised models
         saved with :meth:`save_model`, use :func:`pybamm.load_model` instead.
+        For the wrapped config format (from :meth:`to_config`), use
+        :meth:`from_config` instead.
 
         Parameters
         ----------
@@ -1974,7 +2025,33 @@ class BaseModel:
         """
         return Serialise.load_custom_model(filename)
 
-    from_config = from_json
+    @staticmethod
+    def from_config(filename: str | dict) -> BaseModel:
+        """
+        Load a model from a config dict, raw model dict, or file path.
+
+        Accepts (1) the wrapped config from :meth:`to_config` (dict with
+        ``"type": "custom"`` and ``"model"``), (2) the raw model dict from
+        :meth:`to_json`, or (3) a path to a JSON file in either format.
+
+        Parameters
+        ----------
+        filename : str or dict
+            Config or model dictionary, or path to a JSON file.
+
+        Returns
+        -------
+        :class:`pybamm.BaseModel` or subclass
+            The reconstructed symbolic model.
+        """
+        if isinstance(filename, dict):
+            data = filename
+        else:
+            with open(filename) as f:
+                data = json.load(f)
+        if data.get("type") == "custom" and "model" in data:
+            return Serialise.load_custom_model(data["model"])
+        return Serialise.load_custom_model(data)
 
 
 def load_model(filename, battery_model: BaseModel | None = None):

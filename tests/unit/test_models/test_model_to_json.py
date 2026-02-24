@@ -152,3 +152,69 @@ class TestBaseModelToJson:
         solution_loaded = loaded.default_solver.solve(loaded, t_eval)
 
         _assert_solution_y_almost_equal(solution_original, solution_loaded)
+
+
+class TestBaseModelToConfig:
+    """Tests for BaseModel to_config and from_config (wrapped format)."""
+
+    def test_to_config_returns_type_and_model(self):
+        """to_config() returns dict with 'type': 'custom' and 'model'."""
+        model = _minimal_custom_model()
+        config = model.to_config()
+        assert isinstance(config, dict)
+        assert config.get("type") == "custom"
+        assert "model" in config
+        model_data = config["model"]
+        assert "schema_version" in model_data
+        assert "pybamm_version" in model_data
+        assert "model" in model_data
+        assert model_data["model"]["name"] == "test_to_json_model"
+
+    def test_to_config_filename_writes_and_from_config_loads(self, tmp_path):
+        """to_config(filename=path) writes file; from_config(path) loads model."""
+        model = _minimal_custom_model()
+        file_path = tmp_path / "config.json"
+        result = model.to_config(filename=str(file_path))
+        assert result.get("type") == "custom"
+        assert file_path.exists()
+        with open(file_path) as f:
+            data = json.load(f)
+        assert data.get("type") == "custom" and "model" in data
+
+        loaded = pybamm.BaseModel.from_config(str(file_path))
+        assert loaded.name == model.name
+        assert getattr(loaded, "options", {}) == getattr(model, "options", {})
+        assert "a" in loaded.variables and "b" in loaded.variables
+
+    def test_from_config_round_trip_from_to_config(self):
+        """from_config(model.to_config()) round-trips."""
+        model = _minimal_custom_model()
+        config = model.to_config()
+        loaded = pybamm.BaseModel.from_config(config)
+        assert loaded.name == model.name
+        assert getattr(loaded, "options", {}) == getattr(model, "options", {})
+        assert isinstance(loaded.rhs, dict)
+        assert "a" in loaded.variables and "b" in loaded.variables
+
+    def test_from_config_accepts_raw_to_json_dict(self):
+        """from_config(model.to_json()) still works (backward compatibility)."""
+        model = _minimal_custom_model()
+        raw = model.to_json()
+        loaded = pybamm.BaseModel.from_config(raw)
+        assert loaded.name == model.name
+        assert "a" in loaded.variables and "b" in loaded.variables
+
+    def test_to_config_requires_json_extension(self):
+        """to_config(filename=...) raises if filename does not end with .json."""
+        model = _minimal_custom_model()
+        with pytest.raises(ValueError, match=r"must end with '\.json' extension"):
+            model.to_config(filename="config.txt")
+
+    def test_model_with_default_bounds_variables_produces_valid_json(self):
+        """Model with Variables (default bounds) serialises to valid JSON (no Infinity)."""
+        model = _minimal_custom_model()
+        d = model.to_json()
+        json_str = json.dumps(d)
+        assert "Infinity" not in json_str
+        loaded = pybamm.BaseModel.from_json(json.loads(json_str))
+        assert loaded.name == model.name
