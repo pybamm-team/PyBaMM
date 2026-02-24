@@ -895,7 +895,7 @@ class BaseSolver:
         t_interp = self.process_t_interp(t_interp)
 
         # Set up inputs
-        if isinstance(inputs, dict):
+        if isinstance(inputs, (dict, pybamm.ParameterValues)):
             inputs_list = [inputs]
         else:
             inputs_list = inputs or [{}]

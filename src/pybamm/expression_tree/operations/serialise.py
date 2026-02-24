@@ -397,8 +397,8 @@ class Serialise:
         if missing:
             raise AttributeError(f"Model is missing required sections: {missing}")
 
-        base_cls = model.__class__.__bases__[0] if model.__class__.__bases__ else object
-        # If the base class is object or builtins.object, use pybamm.BaseModel instead
+        base_cls = model.__class__
+        # If the class is object or builtins.object, use pybamm.BaseModel instead
         if base_cls is object or (
             base_cls.__module__ == "builtins" and base_cls.__name__ == "object"
         ):
