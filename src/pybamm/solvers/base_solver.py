@@ -1260,6 +1260,11 @@ class BaseSolver:
         t_interp : None, list or ndarray, optional
             The times (in seconds) at which to interpolate the solution. Defaults to None.
             Only valid for solvers that support intra-solve interpolation (`IDAKLUSolver`).
+        state_mapper : tuple of (function, jacobian, jacobian_p), optional
+            A tuple containing a function and its Jacobians to map the state from the old solution to the new solution.
+            `function`, `jacobian` and `jacobian_p` are casadi/jax/python functions that have been processed using `BaseSolver.process`.
+            If not provided, then `BaseModel.set_initial_conditions_from` is used to map the state from the old solution to the new solution
+
         Raises
         ------
         :class:`pybamm.ModelError`
