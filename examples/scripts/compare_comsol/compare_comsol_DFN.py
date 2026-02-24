@@ -24,7 +24,8 @@ comsol_results_path = pybamm.get_parameters_filepath(
     f"{data_loader.get_data(f'comsol_{C_rate}C.json')}"
 )
 
-comsol_variables = json.load(open(comsol_results_path))
+with open(comsol_results_path) as f:
+    comsol_variables = json.load(f)
 
 "-----------------------------------------------------------------------------"
 "Create and solve pybamm model"
