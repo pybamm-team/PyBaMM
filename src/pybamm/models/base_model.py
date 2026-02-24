@@ -1935,9 +1935,7 @@ class BaseModel:
         """Write *data* to *filename* as JSON, raising clear errors on failure."""
         filename = Path(filename)
         if not filename.name.endswith(".json"):
-            raise ValueError(
-                f"Filename '{filename}' must end with '.json' extension."
-            )
+            raise ValueError(f"Filename '{filename}' must end with '.json' extension.")
         try:
             with open(filename, "w") as f:
                 json.dump(data, f, indent=2, default=Serialise._json_encoder)
