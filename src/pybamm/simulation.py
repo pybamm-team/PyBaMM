@@ -161,7 +161,6 @@ class Simulation:
         result = self.__dict__.copy()
         result["get_esoh_solver"] = None  # Exclude LRU cache
         result["model_state_mappers"] = {}
-        result["_model_state_mappers"] = {}
         result["_compiled_model_state_mappers"] = {}
         return result
 
