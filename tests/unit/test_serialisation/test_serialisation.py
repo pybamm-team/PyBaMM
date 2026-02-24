@@ -2691,8 +2691,7 @@ def _steps_equal(s1, s2):
     assert type(s1) is type(s2)
     assert s1.duration == s2.duration
     if hasattr(s1, "value") and not (
-        isinstance(s1.value, pybamm.Symbol)
-        or isinstance(s2.value, pybamm.Symbol)
+        isinstance(s1.value, pybamm.Symbol) or isinstance(s2.value, pybamm.Symbol)
     ):
         assert s1.value == s2.value
     assert len(s1.termination) == len(s2.termination)
@@ -2707,7 +2706,9 @@ class TestExperimentSerialization:
 
     def test_current_step_round_trip(self):
         term = pybamm.step.VoltageTermination(2.5, operator="<")
-        exp = pybamm.Experiment([pybamm.step.current(1.0, duration=3600, termination=[term])])
+        exp = pybamm.Experiment(
+            [pybamm.step.current(1.0, duration=3600, termination=[term])]
+        )
         config = exp.to_config()
         assert config["cycles"][0][0]["type"] == "current"
         assert config["cycles"][0][0]["value"] == 1.0
@@ -2716,7 +2717,9 @@ class TestExperimentSerialization:
 
     def test_voltage_step_round_trip(self):
         term = pybamm.step.CurrentTermination(0.1, operator="<")
-        exp = pybamm.Experiment([pybamm.step.voltage(4.2, duration=3600, termination=[term])])
+        exp = pybamm.Experiment(
+            [pybamm.step.voltage(4.2, duration=3600, termination=[term])]
+        )
         config = exp.to_config()
         assert config["cycles"][0][0]["type"] == "voltage"
         exp2 = pybamm.Experiment.from_config(config)
@@ -2724,7 +2727,9 @@ class TestExperimentSerialization:
 
     def test_power_step_round_trip(self):
         term = pybamm.step.VoltageTermination(3.0, operator="<")
-        exp = pybamm.Experiment([pybamm.step.power(5.0, duration=7200, termination=[term])])
+        exp = pybamm.Experiment(
+            [pybamm.step.power(5.0, duration=7200, termination=[term])]
+        )
         config = exp.to_config()
         assert config["cycles"][0][0]["type"] == "power"
         exp2 = pybamm.Experiment.from_config(config)
@@ -2732,7 +2737,9 @@ class TestExperimentSerialization:
 
     def test_crate_step_round_trip(self):
         term = pybamm.step.VoltageTermination(2.5, operator="<")
-        exp = pybamm.Experiment([pybamm.step.c_rate(1.0, duration=3600, termination=[term])])
+        exp = pybamm.Experiment(
+            [pybamm.step.c_rate(1.0, duration=3600, termination=[term])]
+        )
         config = exp.to_config()
         assert config["cycles"][0][0]["type"] == "c-rate"
         exp2 = pybamm.Experiment.from_config(config)
@@ -2748,7 +2755,11 @@ class TestExperimentSerialization:
 
     def test_multi_cycle_round_trip(self):
         steps = [
-            pybamm.step.current(1.0, duration=3600, termination=[pybamm.step.VoltageTermination(2.5, operator="<")]),
+            pybamm.step.current(
+                1.0,
+                duration=3600,
+                termination=[pybamm.step.VoltageTermination(2.5, operator="<")],
+            ),
             pybamm.step.rest(600),
         ]
         exp = pybamm.Experiment([(steps[0], steps[1]), (steps[0], steps[1])])
@@ -2760,7 +2771,9 @@ class TestExperimentSerialization:
         assert len(exp2.steps) == len(exp.steps)
 
     def test_input_parameter_value_round_trip(self):
-        exp = pybamm.Experiment([pybamm.step.c_rate(pybamm.InputParameter("1C"), duration=3600)])
+        exp = pybamm.Experiment(
+            [pybamm.step.c_rate(pybamm.InputParameter("1C"), duration=3600)]
+        )
         config = exp.to_config()
         assert config["cycles"][0][0]["value"] == "1C"
         exp2 = pybamm.Experiment.from_config(config)
@@ -2781,7 +2794,9 @@ class TestExperimentSerialization:
 
     def test_c_rate_termination_round_trip(self):
         term = pybamm.step.CrateTermination(0.05, operator="<")
-        exp = pybamm.Experiment([pybamm.step.current(1.0, duration=3600, termination=[term])])
+        exp = pybamm.Experiment(
+            [pybamm.step.current(1.0, duration=3600, termination=[term])]
+        )
         config = exp.to_config()
         assert config["cycles"][0][0]["terminations"][0]["type"] == "c-rate"
         exp2 = pybamm.Experiment.from_config(config)

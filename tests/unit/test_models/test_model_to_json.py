@@ -26,12 +26,8 @@ def _minimal_custom_model():
     model.rhs = {a: b}
     model.initial_conditions = {a: pybamm.Scalar(1)}
     model.algebraic = {}
-    model.boundary_conditions = {
-        a: {"left": (pybamm.Scalar(0), "Dirichlet")}
-    }
-    model.events = [
-        pybamm.Event("terminal", pybamm.Scalar(1) - b, "TERMINATION")
-    ]
+    model.boundary_conditions = {a: {"left": (pybamm.Scalar(0), "Dirichlet")}}
+    model.events = [pybamm.Event("terminal", pybamm.Scalar(1) - b, "TERMINATION")]
     model.variables = {"a": a, "b": b}
     return model
 
@@ -112,9 +108,7 @@ class TestBaseModelToJson:
         mesh_loaded = pybamm.Mesh(
             geometry, loaded.default_submesh_types, loaded.default_var_pts
         )
-        disc_loaded = pybamm.Discretisation(
-            mesh_loaded, loaded.default_spatial_methods
-        )
+        disc_loaded = pybamm.Discretisation(mesh_loaded, loaded.default_spatial_methods)
         disc_loaded.process_model(loaded)
         solution_loaded = loaded.default_solver.solve(loaded, t_eval)
 
@@ -153,9 +147,7 @@ class TestBaseModelToJson:
         mesh_loaded = pybamm.Mesh(
             geometry, loaded.default_submesh_types, loaded.default_var_pts
         )
-        disc_loaded = pybamm.Discretisation(
-            mesh_loaded, loaded.default_spatial_methods
-        )
+        disc_loaded = pybamm.Discretisation(mesh_loaded, loaded.default_spatial_methods)
         disc_loaded.process_model(loaded)
         solution_loaded = loaded.default_solver.solve(loaded, t_eval)
 

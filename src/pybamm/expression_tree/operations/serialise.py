@@ -1089,9 +1089,7 @@ class Serialise:
         }
 
     @staticmethod
-    def deserialise_submesh_item(
-        submesh_info: dict, return_class_only: bool = False
-    ):
+    def deserialise_submesh_item(submesh_info: dict, return_class_only: bool = False):
         """
         Deserialise a single submesh type from a dict (one entry from submesh_types).
 
@@ -1134,9 +1132,7 @@ class Serialise:
         """
         submesh_types_dict = {}
         for domain, submesh_item in submesh_types.items():
-            submesh_types_dict[domain] = Serialise.serialise_submesh_item(
-                submesh_item
-            )
+            submesh_types_dict[domain] = Serialise.serialise_submesh_item(submesh_item)
 
         SCHEMA_VERSION = "1.1"
         submesh_types_json = {
@@ -1879,9 +1875,7 @@ class Serialise:
             processed_steps = [_parse_step(s) for s in data["steps"]]
             return pybamm.Experiment(processed_steps)
         else:
-            raise ValueError(
-                "Experiment config must have 'steps' or 'cycles'."
-            )
+            raise ValueError("Experiment config must have 'steps' or 'cycles'.")
 
     @staticmethod
     def serialise_solver(solver) -> dict:
@@ -2107,9 +2101,7 @@ def convert_symbol_from_json(json_data):
                 pybamm.Scalar(np.inf),
             )
         else:
-            bounds = tuple(
-                convert_symbol_from_json(b) for b in bounds_data
-            )
+            bounds = tuple(convert_symbol_from_json(b) for b in bounds_data)
         return pybamm.Variable(
             json_data["name"],
             domains=json_data["domains"],

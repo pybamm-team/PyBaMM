@@ -2,7 +2,6 @@
 # Tests for SpatialMethod to_config / from_config
 #
 
-import pytest
 
 import pybamm
 from pybamm.expression_tree.operations.serialise import Serialise
@@ -62,8 +61,7 @@ class TestSpatialMethodsDictRoundTrip:
         }
         serialised = {k: v.to_config() for k, v in spatial_methods.items()}
         restored = {
-            k: pybamm.SpatialMethod.from_config(v)
-            for k, v in serialised.items()
+            k: pybamm.SpatialMethod.from_config(v) for k, v in serialised.items()
         }
         assert set(restored.keys()) == set(spatial_methods.keys())
         for domain in spatial_methods:
@@ -77,9 +75,7 @@ class TestSpatialMethodSerialiseCompatibility:
     def test_spatial_method_to_config_matches_serialise_spatial_method_item(self):
         """SpatialMethod.to_config() matches Serialise.serialise_spatial_method_item."""
         method = pybamm.FiniteVolume()
-        assert method.to_config() == Serialise.serialise_spatial_method_item(
-            method
-        )
+        assert method.to_config() == Serialise.serialise_spatial_method_item(method)
 
     def test_full_dict_serialise_load_matches_spatial_method_from_config(self):
         """Full dict via serialise_spatial_methods/load_spatial_methods matches from_config per entry."""

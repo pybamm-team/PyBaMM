@@ -2,7 +2,6 @@
 # Tests for SubMesh and MeshGenerator to_config / from_config
 #
 
-import pytest
 
 import pybamm
 from pybamm.expression_tree.operations.serialise import Serialise
@@ -59,9 +58,7 @@ class TestMeshGeneratorToConfig:
     def test_mesh_generator_from_config_with_params(self):
         """MeshGenerator with submesh_params round-trips correctly."""
         params = {"a": 1, "b": 2}
-        gen = pybamm.MeshGenerator(
-            pybamm.Uniform1DSubMesh, submesh_params=params
-        )
+        gen = pybamm.MeshGenerator(pybamm.Uniform1DSubMesh, submesh_params=params)
         restored = pybamm.MeshGenerator.from_config(gen.to_config())
         assert restored.submesh_type is pybamm.Uniform1DSubMesh
         assert restored.submesh_params == params
@@ -77,9 +74,7 @@ class TestSubmeshTypesDictRoundTrip:
             "current collector": pybamm.SubMesh0D,
         }
         serialised = {k: v.to_config() for k, v in submesh_types.items()}
-        restored = {
-            k: pybamm.SubMesh.from_config(v) for k, v in serialised.items()
-        }
+        restored = {k: pybamm.SubMesh.from_config(v) for k, v in serialised.items()}
         assert set(restored.keys()) == set(submesh_types.keys())
         for domain in submesh_types:
             assert restored[domain] is submesh_types[domain]
@@ -94,17 +89,14 @@ class TestSubmeshTypesDictRoundTrip:
         }
         serialised = {k: v.to_config() for k, v in submesh_types.items()}
         restored = {
-            k: pybamm.MeshGenerator.from_config(v)
-            for k, v in serialised.items()
+            k: pybamm.MeshGenerator.from_config(v) for k, v in serialised.items()
         }
         assert set(restored.keys()) == set(submesh_types.keys())
         for domain in submesh_types:
-            assert restored[domain].submesh_type is submesh_types[
-                domain
-            ].submesh_type
-            assert restored[domain].submesh_params == submesh_types[
-                domain
-            ].submesh_params
+            assert restored[domain].submesh_type is submesh_types[domain].submesh_type
+            assert (
+                restored[domain].submesh_params == submesh_types[domain].submesh_params
+            )
 
 
 class TestSubmeshSerialiseCompatibility:

@@ -216,7 +216,7 @@ class Experiment:
         return Serialise.serialise_experiment(self)
 
     @staticmethod
-    def from_config(data: dict) -> "Experiment":
+    def from_config(data: dict) -> Experiment:
         """Create an :class:`Experiment` from a config dict.
 
         Accepts ``{"cycles": [[step_config, ...], ...]}`` (new format) or
