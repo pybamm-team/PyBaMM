@@ -111,7 +111,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 "hermite_interpolation": True,
                 # Setting hermite_reduction_factor > 1.0 compresses the solution size
                 # by introducing a small amount of error to the Hermite spline
-                # interpolant. A value of `M = 2.0` roughly corresponds to a maximum 2x
+                # interpolant. A value of `2.0` roughly corresponds to a maximum 2x
                 # increase in error (practically the error is much smaller), while
                 # reducing the number of saved states by around 5-6x. This option is
                 # only active if `hermite_interpolation` is True and sensitivities
