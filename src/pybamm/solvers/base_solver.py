@@ -81,6 +81,40 @@ class BaseSolver:
         self.computed_var_fcns = {}
         self._mp_context = self.get_platform_context(platform.system())
 
+    def to_config(self) -> dict:
+        """Convert this solver to a JSON-serialisable config dict.
+
+        Returns a dict with a ``"type"`` key (the solver class name) and one
+        key per serialisable ``__init__`` parameter.  ``CompositeSolver``
+        instances include a ``"sub_solvers"`` key with nested config dicts.
+
+        Returns
+        -------
+        dict
+            Config dict suitable for passing back to :meth:`from_config`.
+        """
+        from pybamm.expression_tree.operations.serialise import Serialise
+
+        return Serialise.serialise_solver(self)
+
+    @staticmethod
+    def from_config(data: dict) -> "BaseSolver":
+        """Create a solver from a config dict.
+
+        Parameters
+        ----------
+        data : dict
+            Config dict as produced by :meth:`to_config`, with a ``"type"``
+            key and solver-specific keyword arguments.
+
+        Returns
+        -------
+        :class:`BaseSolver`
+        """
+        from pybamm.expression_tree.operations.serialise import Serialise
+
+        return Serialise.deserialise_solver(data)
+
     @property
     def ode_solver(self):
         return self._ode_solver

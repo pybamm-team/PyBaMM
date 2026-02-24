@@ -200,6 +200,41 @@ class Experiment:
                 )
         return termination_dict
 
+    def to_config(self) -> dict:
+        """Convert this experiment to a JSON-serialisable config dict.
+
+        Returns ``{"cycles": [[step_config, ...], ...]}`` suitable for
+        passing back to :meth:`from_config`.
+
+        Returns
+        -------
+        dict
+            Config dict with key ``"cycles"``.
+        """
+        from pybamm.expression_tree.operations.serialise import Serialise
+
+        return Serialise.serialise_experiment(self)
+
+    @staticmethod
+    def from_config(data: dict) -> "Experiment":
+        """Create an :class:`Experiment` from a config dict.
+
+        Accepts ``{"cycles": [[step_config, ...], ...]}`` (new format) or
+        ``{"steps": [step_config, ...]}`` (legacy flat format).
+
+        Parameters
+        ----------
+        data : dict
+            Config dict as produced by :meth:`to_config`.
+
+        Returns
+        -------
+        :class:`Experiment`
+        """
+        from pybamm.expression_tree.operations.serialise import Serialise
+
+        return Serialise.deserialise_experiment(data)
+
     def search_tag(self, tag):
         """
         Search for a tag in the experiment and return the cycles in which it appears.

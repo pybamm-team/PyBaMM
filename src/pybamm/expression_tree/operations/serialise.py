@@ -1700,6 +1700,280 @@ class Serialise:
         else:
             return d
 
+    @staticmethod
+    def _to_json_safe(value):
+        """Convert a value to a JSON-serializable form (native Python types).
+
+        Handles numpy scalars, arrays, booleans, and nested dicts/lists.
+        """
+        if isinstance(value, (np.floating, float)):
+            return float(value)
+        if isinstance(value, (np.integer, int)):
+            return int(value)
+        if isinstance(value, np.ndarray):
+            return value.tolist()
+        if isinstance(value, np.bool_):
+            return bool(value)
+        if isinstance(value, dict):
+            return {k: Serialise._to_json_safe(v) for k, v in value.items()}
+        if isinstance(value, list):
+            return [Serialise._to_json_safe(v) for v in value]
+        return value
+
+    @staticmethod
+    def serialise_experiment(experiment) -> dict:
+        """Convert a :class:`pybamm.Experiment` to a JSON-serialisable dict.
+
+        Returns ``{"cycles": [[step_config, ...], ...]}``, grouping steps
+        into cycles according to ``experiment.cycle_lengths``.
+
+        Parameters
+        ----------
+        experiment : :class:`pybamm.Experiment`
+            The experiment to serialise.
+
+        Returns
+        -------
+        dict
+            Config dict with key ``"cycles"``.
+        """
+        step_type_map = {
+            "Current": "current",
+            "Voltage": "voltage",
+            "Power": "power",
+            "CRate": "c-rate",
+        }
+        termination_type_map = {
+            "VoltageTermination": "voltage",
+            "CurrentTermination": "current",
+            "CrateTermination": "c-rate",
+            "CRateTermination": "c-rate",
+        }
+
+        def _serialise_step(step):
+            step_class_name = step.__class__.__name__
+            step_type = step_type_map.get(step_class_name, step_class_name.lower())
+
+            # Current with value 0 is a rest step
+            if step_class_name == "Current" and step.value == 0:
+                step_type = "rest"
+
+            step_config = {"type": step_type, "duration": step.duration}
+
+            if step_type != "rest":
+                value = step.value
+                if isinstance(value, pybamm.InputParameter):
+                    param_name = value.name
+                    step_config["value"] = (
+                        param_name if isinstance(param_name, str) else str(value)
+                    )
+                elif isinstance(value, (int, float, str)):
+                    step_config["value"] = value
+                else:
+                    step_config["value"] = str(value)
+
+            if step.termination:
+                terminations = []
+                for term in step.termination:
+                    term_class_name = term.__class__.__name__
+                    term_type = termination_type_map.get(
+                        term_class_name, term_class_name.lower()
+                    )
+                    term_config = {"type": term_type, "value": term.value}
+                    if hasattr(term, "operator") and term.operator:
+                        term_config["operator"] = term.operator
+                    terminations.append(term_config)
+                step_config["terminations"] = terminations
+
+            return step_config
+
+        steps_config = [_serialise_step(step) for step in experiment.steps]
+
+        cycles_config = []
+        step_idx = 0
+        for cycle_length in experiment.cycle_lengths:
+            cycles_config.append(steps_config[step_idx : step_idx + cycle_length])
+            step_idx += cycle_length
+
+        return {"cycles": cycles_config}
+
+    @staticmethod
+    def deserialise_experiment(data: dict):
+        """Convert a config dict to a :class:`pybamm.Experiment`.
+
+        Accepts ``{"cycles": [[step_config, ...], ...]}`` (new format) or
+        ``{"steps": [step_config, ...]}`` (legacy flat format).
+
+        Parameters
+        ----------
+        data : dict
+            Config dict as produced by :meth:`serialise_experiment`.
+
+        Returns
+        -------
+        :class:`pybamm.Experiment`
+        """
+        step_func_map = {
+            "current": pybamm.step.current,
+            "voltage": pybamm.step.voltage,
+            "power": pybamm.step.power,
+            "c-rate": pybamm.step.c_rate,
+            "rest": pybamm.step.current,
+        }
+        term_class_map = {
+            "voltage": pybamm.step.VoltageTermination,
+            "current": pybamm.step.CurrentTermination,
+            "c-rate": pybamm.step.CrateTermination,
+        }
+
+        def _parse_termination(term_dict):
+            term_type = term_dict.get("type")
+            if term_type not in term_class_map:
+                raise ValueError(
+                    f"Unknown termination type: {term_type!r}. "
+                    f"Expected one of {list(term_class_map)!r}."
+                )
+            value = float(term_dict["value"])
+            operator = term_dict.get("operator")
+            return term_class_map[term_type](value, operator=operator)
+
+        def _parse_step(step_dict):
+            step_type = step_dict.get("type")
+            if step_type not in step_func_map:
+                raise ValueError(
+                    f"Unknown step type: {step_type!r}. "
+                    f"Expected one of {list(step_func_map)!r}."
+                )
+            step_func = step_func_map[step_type]
+
+            if step_type == "rest":
+                value = 0.0
+            elif "value" in step_dict and step_dict["value"] is not None:
+                raw = step_dict["value"]
+                try:
+                    value = float(raw)
+                except (ValueError, TypeError):
+                    if isinstance(raw, str):
+                        value = pybamm.InputParameter(raw)
+                    else:
+                        raise
+            else:
+                raise ValueError(f"Value is required for {step_type!r} steps.")
+
+            duration = float(step_dict.get("duration", 86400))
+            terminations = None
+            if step_dict.get("terminations"):
+                terminations = [
+                    _parse_termination(t) for t in step_dict["terminations"]
+                ]
+
+            return step_func(value, duration=duration, termination=terminations)
+
+        if "cycles" in data and data["cycles"] is not None:
+            processed_cycles = []
+            for cycle_steps in data["cycles"]:
+                processed_cycle = tuple(_parse_step(s) for s in cycle_steps)
+                processed_cycles.append(processed_cycle)
+            return pybamm.Experiment(processed_cycles)
+        elif "steps" in data and data["steps"] is not None:
+            processed_steps = [_parse_step(s) for s in data["steps"]]
+            return pybamm.Experiment(processed_steps)
+        else:
+            raise ValueError(
+                "Experiment config must have 'steps' or 'cycles'."
+            )
+
+    @staticmethod
+    def serialise_solver(solver) -> dict:
+        """Convert a :class:`pybamm.BaseSolver` to a JSON-serialisable config dict.
+
+        Uses ``inspect.signature`` to discover ``__init__`` parameters, reads
+        the corresponding attribute values from the instance (trying both
+        ``solver.<name>`` and ``solver._<name>``), and filters out values that
+        are not JSON-serialisable.  Handles ``CompositeSolver`` recursively.
+
+        Parameters
+        ----------
+        solver : :class:`pybamm.BaseSolver`
+            The solver to serialise.
+
+        Returns
+        -------
+        dict
+            Config dict with a ``"type"`` key and one key per serialisable
+            init parameter.
+        """
+        if solver.__class__.__name__ == "CompositeSolver":
+            return {
+                "type": "CompositeSolver",
+                "sub_solvers": [
+                    Serialise.serialise_solver(sub) for sub in solver.sub_solvers
+                ],
+            }
+
+        config = {"type": solver.__class__.__name__}
+
+        sig = inspect.signature(solver.__class__.__init__)
+        for param_name in sig.parameters:
+            if param_name == "self":
+                continue
+
+            value = None
+            found = False
+            for attr_name in (param_name, f"_{param_name}"):
+                if hasattr(solver, attr_name):
+                    value = getattr(solver, attr_name)
+                    found = True
+                    break
+
+            if not found:
+                continue
+
+            value = Serialise._to_json_safe(value)
+            try:
+                json.dumps(value)
+            except (TypeError, ValueError):
+                continue
+
+            config[param_name] = value
+
+        return config
+
+    @staticmethod
+    def deserialise_solver(data: dict):
+        """Convert a config dict to a :class:`pybamm.BaseSolver` instance.
+
+        Handles ``CompositeSolver`` by recursively deserialising ``sub_solvers``.
+
+        Parameters
+        ----------
+        data : dict
+            Config dict as produced by :meth:`serialise_solver`.
+
+        Returns
+        -------
+        :class:`pybamm.BaseSolver`
+        """
+        data = dict(data)
+        solver_type = data.pop("type")
+        solver_class = getattr(pybamm, solver_type, None)
+        if solver_class is None:
+            raise ValueError(
+                f"Unknown solver type '{solver_type}'. "
+                "Must be a class available on the pybamm module."
+            )
+
+        if solver_type == "CompositeSolver":
+            sub_solvers_config = data.pop("sub_solvers", None)
+            if sub_solvers_config is None:
+                raise ValueError(
+                    "CompositeSolver config must include a 'sub_solvers' list."
+                )
+            sub_solvers = [Serialise.deserialise_solver(c) for c in sub_solvers_config]
+            return solver_class(sub_solvers)
+
+        return solver_class(**data)
+
 
 def convert_function_to_symbolic_expression(func, name=None):
     """
@@ -1826,10 +2100,16 @@ def convert_symbol_from_json(json_data):
         side = json_data["side"]
         return pybamm.BoundaryValue(child, side)
     elif json_data["type"] == "Variable":
-        bounds = tuple(
-            convert_symbol_from_json(b)
-            for b in json_data.get("bounds", [-float("inf"), float("inf")])
-        )
+        bounds_data = json_data.get("bounds")
+        if bounds_data is None:
+            bounds = (
+                pybamm.Scalar(-np.inf),
+                pybamm.Scalar(np.inf),
+            )
+        else:
+            bounds = tuple(
+                convert_symbol_from_json(b) for b in bounds_data
+            )
         return pybamm.Variable(
             json_data["name"],
             domains=json_data["domains"],
@@ -1961,14 +2241,26 @@ def convert_symbol_to_json(symbol):
             "entries_string": symbol.entries_string,
         }
     elif isinstance(symbol, pybamm.Variable):
+        lb, ub = symbol.bounds[0], symbol.bounds[1]
+        if (
+            isinstance(lb, pybamm.Scalar)
+            and isinstance(ub, pybamm.Scalar)
+            and np.isinf(lb.value)
+            and np.isinf(ub.value)
+            and lb.value < 0
+            and ub.value > 0
+        ):
+            bounds_json = None
+        else:
+            bounds_json = [
+                convert_symbol_to_json(lb),
+                convert_symbol_to_json(ub),
+            ]
         json_dict = {
             "type": "Variable",
             "name": symbol.name,
             "domains": symbol.domains,
-            "bounds": [
-                convert_symbol_to_json(symbol.bounds[0]),
-                convert_symbol_to_json(symbol.bounds[1]),
-            ],
+            "bounds": bounds_json,
         }
         return json_dict
     elif isinstance(symbol, pybamm.ConcatenationVariable):
