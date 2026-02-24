@@ -2003,7 +2003,7 @@ class BaseModel:
         --------
         >>> model = pybamm.lithium_ion.SPM()
         >>> loaded = pybamm.BaseModel.from_json(model.to_json())
-        >>> loaded = pybamm.BaseModel.from_json("model.json")
+        >>> loaded = pybamm.BaseModel.from_json("model.json")  # doctest: +SKIP
         """
         return Serialise.load_custom_model(filename)
 

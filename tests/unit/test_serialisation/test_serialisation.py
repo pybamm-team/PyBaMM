@@ -2695,7 +2695,7 @@ def _steps_equal(s1, s2):
     ):
         assert s1.value == s2.value
     assert len(s1.termination) == len(s2.termination)
-    for t1, t2 in zip(s1.termination, s2.termination):
+    for t1, t2 in zip(s1.termination, s2.termination, strict=True):
         assert type(t1) is type(t2)
         assert t1.value == t2.value
         assert t1.operator == t2.operator
