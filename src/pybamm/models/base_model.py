@@ -1927,24 +1927,24 @@ class BaseModel:
         """
         model_json = Serialise.serialise_custom_model(self, compress=compress)
         if filename is not None:
-            filename = Path(filename)
-            if not filename.name.endswith(".json"):
-                raise ValueError(
-                    f"Filename '{filename}' must end with '.json' extension."
-                )
-            try:
-                with open(filename, "w") as f:
-                    json.dump(
-                        model_json,
-                        f,
-                        indent=2,
-                        default=Serialise._json_encoder,
-                    )
-            except OSError as file_err:
-                raise OSError(
-                    f"Failed to write model JSON to file '{filename}': {file_err}"
-                ) from file_err
+            self._write_json_to_file(model_json, filename, label="model JSON")
         return model_json
+
+    @staticmethod
+    def _write_json_to_file(data: dict, filename: str | Path, label: str) -> None:
+        """Write *data* to *filename* as JSON, raising clear errors on failure."""
+        filename = Path(filename)
+        if not filename.name.endswith(".json"):
+            raise ValueError(
+                f"Filename '{filename}' must end with '.json' extension."
+            )
+        try:
+            with open(filename, "w") as f:
+                json.dump(data, f, indent=2, default=Serialise._json_encoder)
+        except OSError as file_err:
+            raise OSError(
+                f"Failed to write {label} to file '{filename}': {file_err}"
+            ) from file_err
 
     def to_config(
         self,
@@ -1977,23 +1977,7 @@ class BaseModel:
             "model": Serialise.serialise_custom_model(self, compress=compress),
         }
         if filename is not None:
-            filename = Path(filename)
-            if not filename.name.endswith(".json"):
-                raise ValueError(
-                    f"Filename '{filename}' must end with '.json' extension."
-                )
-            try:
-                with open(filename, "w") as f:
-                    json.dump(
-                        model_config,
-                        f,
-                        indent=2,
-                        default=Serialise._json_encoder,
-                    )
-            except OSError as file_err:
-                raise OSError(
-                    f"Failed to write model config to file '{filename}': {file_err}"
-                ) from file_err
+            self._write_json_to_file(model_config, filename, label="model config")
         return model_config
 
     @staticmethod
