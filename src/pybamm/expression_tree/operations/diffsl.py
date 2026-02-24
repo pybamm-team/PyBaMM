@@ -652,6 +652,7 @@ def _equation_to_diffeq(
             eps2 = equation.eps**2
             return f"arcsinh({a} / (copysign(sqrt(pow({b}, 2) + {eps2:.{float_precision}g}), {b})))"
         else:
+            # all the other functions have the same signature as in diffsl
             args = ",".join(args)
             return f"{name}({args})"
     elif isinstance(equation, pybamm.Scalar):
