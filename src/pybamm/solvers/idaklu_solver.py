@@ -1,4 +1,5 @@
 # mypy: ignore-errors
+import logging
 import math
 import numbers
 import warnings
@@ -619,6 +620,11 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 y0full,
                 ydot0full,
                 inputs,
+                logger=(
+                    pybamm.logger.debug
+                    if pybamm.logger.isEnabledFor(logging.DEBUG)
+                    else None
+                ),
             )
         except ValueError as e:
             # Return from None to replace the C++ runtime error
