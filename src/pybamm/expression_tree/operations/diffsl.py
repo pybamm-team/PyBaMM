@@ -283,9 +283,7 @@ class DiffSLExport:
             raise ValueError("outputs must be a non-empty list of str")
         for out in outputs:
             if out not in all_vars:
-                print("all_vars keys:", all_vars.keys())  # DEBUG
                 raise ValueError(f"output {out} not in model")
-            eqn = all_vars[out]
         has_events = len(model.events) > 0
         is_ode = len(model.algebraic) == 0
 
@@ -317,8 +315,8 @@ class DiffSLExport:
 
         # extract constant vectors and matrices from model as tensors
         symbol_to_tensor_name = {}
-        vectors: set[pybamm.Vector] = set()
-        matrices: set[pybamm.Matrix] = set()
+        vectors = {}
+        matrices = {}
         termination_events = [
             e.expression
             for e in model.events
@@ -332,12 +330,12 @@ class DiffSLExport:
         ):
             for symbol in eqn.pre_order():
                 if isinstance(symbol, pybamm.Vector):
-                    vectors.add(symbol)
+                    vectors[symbol] = None
                 elif isinstance(symbol, pybamm.Matrix):
-                    matrices.add(symbol)
+                    matrices[symbol] = None
 
         tensor_index = 0
-        for symbol in vectors:
+        for symbol in vectors.keys():
             tensor_name, tensor_def = DiffSLExport.vector_to_diffeq(
                 symbol, tensor_index, float_precision=self.float_precision
             )
@@ -345,7 +343,7 @@ class DiffSLExport:
             symbol_to_tensor_name[symbol] = tensor_name
             diffeq[tensor_name] = tensor_def
 
-        for symbol in matrices:
+        for symbol in matrices.keys():
             tensor_name, tensor_def = DiffSLExport.matrix_to_diffeq(
                 symbol, tensor_index, float_precision=self.float_precision
             )
