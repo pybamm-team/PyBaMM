@@ -51,6 +51,11 @@ def _assert_evaluate_equal_array(pv_original, pv_loaded, name, inputs, y):
 # Unit tests: roundtrip for each value type
 # ------------------------------------------------------------------ #
 class TestRoundtripValueTypes:
+    def test_empty_parameter_values(self):
+        pv = pybamm.ParameterValues({})
+        pv2 = _roundtrip(pv)
+        assert len(pv2) == 0
+
     def test_numeric_int(self):
         pv = pybamm.ParameterValues({"a": 42})
         pv2 = _roundtrip(pv)
@@ -60,6 +65,19 @@ class TestRoundtripValueTypes:
         pv = pybamm.ParameterValues({"a": 3.14})
         pv2 = _roundtrip(pv)
         assert pv2["a"] == pytest.approx(3.14)
+
+    def test_numeric_negative(self):
+        pv = pybamm.ParameterValues({"a": -42, "b": -0.001})
+        pv2 = _roundtrip(pv)
+        assert pv2["a"] == -42
+        assert pv2["b"] == pytest.approx(-0.001)
+
+    def test_numeric_extreme_values(self):
+        pv = pybamm.ParameterValues({"tiny": 1e-300, "huge": 1e300, "zero": 0.0})
+        pv2 = _roundtrip(pv)
+        assert pv2["tiny"] == pytest.approx(1e-300)
+        assert pv2["huge"] == pytest.approx(1e300)
+        assert pv2["zero"] == 0.0
 
     def test_string_converted_to_float(self):
         pv = pybamm.ParameterValues({"a": "2.718"})
@@ -254,6 +272,46 @@ class TestRoundtripValueTypes:
         x = pybamm.Scalar(1)
         _assert_evaluate_equal(pv, pv2, "f", {"x": x})
 
+    def test_scalar_object_as_value(self):
+        pv = pybamm.ParameterValues({"a": pybamm.Scalar(7.5)})
+        pv2 = _roundtrip(pv)
+        assert isinstance(pv2["a"], pybamm.Scalar)
+        assert pv2["a"].evaluate() == pytest.approx(7.5)
+
+    def test_callable_returning_constant(self):
+        def const(x):
+            return pybamm.Scalar(42)
+
+        pv = pybamm.ParameterValues({"f": const})
+        pv2 = _roundtrip(pv)
+        _assert_evaluate_equal(pv, pv2, "f", {"x": pybamm.Scalar(999)})
+
+    def test_expression_with_time(self):
+        expr = 1 + pybamm.t
+        pv = pybamm.ParameterValues({"expr": expr})
+        pv2 = _roundtrip(pv)
+        result = pv2["expr"].evaluate(t=5)
+        assert result == pytest.approx(6)
+
+    def test_expression_with_trig_and_abs(self):
+        x = pybamm.Parameter("x")
+        expr = pybamm.sin(x) + pybamm.cos(x) + abs(x)
+        pv = pybamm.ParameterValues({"expr": expr, "x": 1.0})
+        pv2 = _roundtrip(pv)
+        expected = np.sin(1) + np.cos(1) + np.abs(1)
+        assert pv2.evaluate(pv2["expr"]) == pytest.approx(expected)
+
+    def test_double_roundtrip(self):
+        def my_func(x):
+            return 2 * x + pybamm.Parameter("b")
+
+        pv = pybamm.ParameterValues({"f": my_func, "b": 10})
+        pv2 = _roundtrip(_roundtrip(pv))
+
+        x = pybamm.Scalar(3)
+        _assert_evaluate_equal(pv, pv2, "f", {"x": x})
+        assert pv2["b"] == 10
+
 
 # ------------------------------------------------------------------ #
 # Integration tests: nested / composite structures
@@ -271,6 +329,20 @@ class TestRoundtripNestedStructures:
 
         x = pybamm.Scalar(4)
         _assert_evaluate_equal(pv, pv2, "f", {"x": x})
+
+    def test_deeply_nested_expression(self):
+        """5+ levels of nesting to stress recursive serialization."""
+
+        def f(x):
+            return pybamm.exp(
+                pybamm.sin(pybamm.cos(pybamm.log(1 + abs(x))))
+            ) + pybamm.Parameter("offset")
+
+        pv = pybamm.ParameterValues({"f": f, "offset": 0.1})
+        pv2 = _roundtrip(pv)
+
+        for val in [0.5, 1.0, 2.0]:
+            _assert_evaluate_equal(pv, pv2, "f", {"x": pybamm.Scalar(val)})
 
     def test_interpolant_inside_function_expression(self):
         x_data = np.linspace(0, 1, 50)
