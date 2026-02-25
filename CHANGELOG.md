@@ -8,6 +8,7 @@
 - Adds option for lists of inputs to `solve` to include input parameters which are used
 as initial conditions. ([#5311](https://github.com/pybamm-team/PyBaMM/pull/5311))
 - DiffSL export for discretised PyBaMM models. ([#5370](https://github.com/pybamm-team/PyBaMM/pull/5370))
+- Optimize state mapper for multi-step experiments by pre-calculating mapper during setup. ([#5380](https://github.com/pybamm-team/PyBaMM/pull/5380))
 
 ## Bug fixes
 

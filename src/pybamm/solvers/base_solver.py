@@ -1224,6 +1224,7 @@ class BaseSolver:
         save=True,
         calculate_sensitivities=False,
         t_interp=None,
+        state_mapper=None,
     ):
         """
         Step the solution of the model forward by a given time increment. The
@@ -1259,6 +1260,11 @@ class BaseSolver:
         t_interp : None, list or ndarray, optional
             The times (in seconds) at which to interpolate the solution. Defaults to None.
             Only valid for solvers that support intra-solve interpolation (`IDAKLUSolver`).
+        state_mapper : tuple of (function, jacobian_y, jacobian_p), optional
+            A tuple containing a function and its Jacobians to map the state from the old solution to the new solution.
+            `function`, `jacobian_y` and `jacobian_p` are casadi/jax/python functions that have been processed using `BaseSolver.process`.
+            If not provided, then `BaseModel.set_initial_conditions_from` is used to map the state from the old solution to the new solution
+
         Raises
         ------
         :class:`pybamm.ModelError`
@@ -1380,14 +1386,28 @@ class BaseSolver:
                 ]
 
         else:
-            _, concatenated_initial_conditions = model.set_initial_conditions_from(
-                old_solution,
-                inputs=model_inputs,
-                return_type="ics",
-            )
-            model.y0_list = [
-                concatenated_initial_conditions.evaluate(0, inputs=model_inputs)
-            ]
+            if state_mapper is not None:
+                last_state = old_solution.last_state
+                y_from = last_state.all_ys[0]
+                mapper_func, _mapper_jac, _mapper_jacp = state_mapper
+                p_casadi_stacked = casadi.vertcat(*[p for p in model_inputs.values()])
+
+                model.y0_list = [
+                    mapper_func(
+                        t_start_shifted,
+                        y_from,
+                        p_casadi_stacked,
+                    )
+                ]
+            else:
+                _, concatenated_initial_conditions = model.set_initial_conditions_from(
+                    old_solution,
+                    inputs=model_inputs,
+                    return_type="ics",
+                )
+                model.y0_list = [
+                    concatenated_initial_conditions.evaluate(0, inputs=model_inputs)
+                ]
 
             if using_sensitivities:
                 model.y0S_list = [
