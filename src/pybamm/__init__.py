@@ -176,6 +176,7 @@ from .spatial_methods.finite_volume_2d import FiniteVolume2D
 from .spatial_methods.spectral_volume import SpectralVolume
 from .spatial_methods.scikit_finite_element import ScikitFiniteElement
 from .spatial_methods.scikit_finite_element_3d import ScikitFiniteElement3D
+from .spatial_methods.finite_volume_unstructured import FiniteVolumeUnstructured
 
 # Solver classes
 from .solvers.solution import Solution, EmptySolution, make_cycle_solution

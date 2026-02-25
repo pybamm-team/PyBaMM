@@ -7,18 +7,23 @@ from .meshes import MeshGenerator, SubMesh
 
 class UnstructuredSubMesh(SubMesh):
     """
-    Cell-centered finite volume submesh on simplex elements
-    (triangles in 2D, tetrahedra in 3D).
+    Cell-centered finite volume submesh on polygonal/polyhedral elements.
 
-    All algorithms are dimension-agnostic: the same code path handles
-    both 2D and 3D, with dimension inferred from `nodes.shape[1]`.
+    Supported element types:
+
+    * **2D**: triangles (3 vertices) or quadrilaterals (4 vertices)
+    * **3D**: tetrahedra (4 vertices)
+
+    All operators are dimension-agnostic: the same code path handles
+    both 2D and 3D, with dimension inferred from ``nodes.shape[1]``.
 
     Parameters
     ----------
     nodes : numpy.ndarray, shape (n_nodes, d)
         Vertex coordinates (d = 2 or 3).
-    elements : numpy.ndarray, shape (n_cells, d+1)
-        Simplex vertex indices (triangles or tets).
+    elements : numpy.ndarray, shape (n_cells, n_verts_per_cell)
+        Element vertex indices.  For 2D: 3 (triangles) or 4 (quads).
+        For 3D: 4 (tetrahedra).
     coord_sys : str, optional
         Coordinate system, default ``"cartesian"``.
     boundary_faces : dict[str, numpy.ndarray] or None, optional
@@ -32,6 +37,18 @@ class UnstructuredSubMesh(SubMesh):
         self.elements = np.asarray(elements, dtype=int)
         self.dimension = self.nodes.shape[1]
         self.coord_sys = coord_sys
+
+        verts_per_cell = self.elements.shape[1]
+        if self.dimension == 2 and verts_per_cell == 4:
+            self.element_type = "quad"
+        elif self.dimension == 2 and verts_per_cell == 3:
+            self.element_type = "triangle"
+        elif self.dimension == 3 and verts_per_cell == 4:
+            self.element_type = "tetrahedron"
+        else:
+            raise ValueError(
+                f"Unsupported: {verts_per_cell} vertices per cell in {self.dimension}D"
+            )
 
         self._compute_cell_geometry()
         self._build_face_connectivity()
@@ -51,16 +68,25 @@ class UnstructuredSubMesh(SubMesh):
     # ------------------------------------------------------------------
 
     def _compute_cell_geometry(self):
-        verts = self.nodes[self.elements]  # (n_cells, d+1, d)
+        verts = self.nodes[self.elements]  # (n_cells, n_verts, d)
         self.cell_centroids = verts.mean(axis=1)
 
-        if self.dimension == 2:
+        if self.element_type == "triangle":
             v0, v1, v2 = verts[:, 0], verts[:, 1], verts[:, 2]
             cross = (v1[:, 0] - v0[:, 0]) * (v2[:, 1] - v0[:, 1]) - (
                 v1[:, 1] - v0[:, 1]
             ) * (v2[:, 0] - v0[:, 0])
             self.cell_volumes = 0.5 * np.abs(cross)
-        else:
+        elif self.element_type == "quad":
+            # Shoelace formula for arbitrary (convex) quadrilaterals
+            # Vertices ordered: v0, v1, v2, v3 (counterclockwise or clockwise)
+            x = verts[:, :, 0]  # (n_cells, 4)
+            y = verts[:, :, 1]  # (n_cells, 4)
+            # shoelace: sum_i (x_i * y_{i+1} - x_{i+1} * y_i)
+            x_next = np.roll(x, -1, axis=1)
+            y_next = np.roll(y, -1, axis=1)
+            self.cell_volumes = 0.5 * np.abs(np.sum(x * y_next - x_next * y, axis=1))
+        elif self.element_type == "tetrahedron":
             v0, v1, v2, v3 = verts[:, 0], verts[:, 1], verts[:, 2], verts[:, 3]
             d1 = v1 - v0
             d2 = v2 - v0
@@ -81,19 +107,14 @@ class UnstructuredSubMesh(SubMesh):
         d = self.dimension
         n_verts_per_face = d  # edges (2 verts) in 2D, triangles (3 verts) in 3D
 
-        face_dict = {}  # canonical key -> (owner_cell, face_local_verts)
+        face_dict = {}  # canonical key -> owner_cell
 
         internal_owner = []
         internal_neighbor = []
         internal_face_verts = []
 
-        boundary_owner_list = []
-        boundary_face_verts = []
-
         for cell_idx, cell_verts in enumerate(self.elements):
-            # Each simplex has d+1 faces; face i omits vertex i
-            for skip in range(d + 1):
-                face_verts = tuple(cell_verts[j] for j in range(d + 1) if j != skip)
+            for face_verts in self._cell_faces(cell_verts):
                 key = tuple(sorted(face_verts))
 
                 if key in face_dict:
@@ -105,6 +126,8 @@ class UnstructuredSubMesh(SubMesh):
                     face_dict[key] = cell_idx
 
         # Remaining entries are boundary faces
+        boundary_owner_list = []
+        boundary_face_verts = []
         for key, cell_idx in face_dict.items():
             boundary_owner_list.append(cell_idx)
             boundary_face_verts.append(key)
@@ -121,6 +144,18 @@ class UnstructuredSubMesh(SubMesh):
         self.n_internal_faces = n_internal
         self._n_boundary_faces = n_boundary
         self._boundary_face_start = n_internal
+
+    def _cell_faces(self, cell_verts):
+        """Yield face vertex tuples for a single cell."""
+        n = len(cell_verts)
+        if self.element_type == "quad":
+            # 4 edges: (v0,v1), (v1,v2), (v2,v3), (v3,v0)
+            for i in range(n):
+                yield (cell_verts[i], cell_verts[(i + 1) % n])
+        else:
+            # Simplex: d+1 faces, face i omits vertex i
+            for skip in range(n):
+                yield tuple(cell_verts[j] for j in range(n) if j != skip)
 
     # ------------------------------------------------------------------
     # Face geometry
@@ -206,10 +241,10 @@ class UnstructuredSubMesh(SubMesh):
 
 class UnstructuredMeshGenerator(MeshGenerator):
     """
-    Built-in generator that creates simplex meshes from structured grids.
+    Built-in generator that creates meshes from structured grids.
 
-    * **2D**: rectangular domain triangulated by splitting each quad into
-      2 triangles.
+    * **2D**: rectangular domain meshed as quads or triangulated by
+      splitting each quad into 2 triangles.
     * **3D**: rectangular prism meshed by splitting each hex into 5
       tetrahedra.
 
@@ -217,12 +252,19 @@ class UnstructuredMeshGenerator(MeshGenerator):
     ----------
     coord_sys : str, optional
         Coordinate system, default ``"cartesian"``.
+    element_type : str, optional
+        ``"quad"`` for quadrilateral cells (2D only, TPFA-orthogonal),
+        ``"triangle"`` for triangular cells (2D default),
+        ``"tetrahedron"`` for tetrahedral cells (3D default).
+        If ``None``, defaults to ``"triangle"`` in 2D and
+        ``"tetrahedron"`` in 3D.
     """
 
-    def __init__(self, coord_sys="cartesian"):
+    def __init__(self, coord_sys="cartesian", element_type=None):
         self.submesh_type = UnstructuredSubMesh
         self.submesh_params = {}
         self.coord_sys = coord_sys
+        self._element_type = element_type
 
     def __call__(self, lims, npts):
         spatial_vars, spatial_lims = self._parse_lims(lims)
@@ -255,7 +297,7 @@ class UnstructuredMeshGenerator(MeshGenerator):
         return spatial_vars, spatial_lims
 
     # ------------------------------------------------------------------
-    # 2D: quad -> 2 triangles
+    # 2D
     # ------------------------------------------------------------------
 
     def _generate_2d(self, spatial_vars, spatial_lims, npts):
@@ -267,7 +309,13 @@ class UnstructuredMeshGenerator(MeshGenerator):
         x_edges = np.linspace(lim_x["min"], lim_x["max"], nx + 1)
         z_edges = np.linspace(lim_z["min"], lim_z["max"], nz + 1)
 
-        nodes, elements = _quad_to_tri(x_edges, z_edges)
+        etype = self._element_type or "triangle"
+        if etype == "quad":
+            nodes, elements = _make_quad_grid(x_edges, z_edges)
+        elif etype == "triangle":
+            nodes, elements = _quad_to_tri(x_edges, z_edges)
+        else:
+            raise ValueError(f"Unsupported 2D element_type: {etype!r}")
         return UnstructuredSubMesh(nodes, elements, coord_sys=self.coord_sys)
 
     # ------------------------------------------------------------------
@@ -492,6 +540,39 @@ def compute_interface_data(left_mesh, right_mesh, left_name=None, right_name=Non
 # ======================================================================
 # Grid-to-simplex helpers
 # ======================================================================
+
+
+def _make_quad_grid(x_edges, z_edges):
+    """
+    Build a structured quadrilateral mesh on a rectangle.
+
+    Vertices are ordered counterclockwise so that the shoelace formula
+    gives a positive area and consecutive-edge face enumeration is
+    consistent.
+
+    Returns
+    -------
+    nodes : (n_nodes, 2)
+    elements : (n_cells, 4)
+    """
+    nx = len(x_edges) - 1
+    nz = len(z_edges) - 1
+    xx, zz = np.meshgrid(x_edges, z_edges, indexing="ij")
+    nodes = np.column_stack([xx.ravel(), zz.ravel()])
+
+    def node_id(i, j):
+        return i * (nz + 1) + j
+
+    elements = []
+    for i in range(nx):
+        for j in range(nz):
+            n0 = node_id(i, j)
+            n1 = node_id(i + 1, j)
+            n2 = node_id(i + 1, j + 1)
+            n3 = node_id(i, j + 1)
+            elements.append([n0, n1, n2, n3])
+
+    return nodes, np.array(elements, dtype=int)
 
 
 def _quad_to_tri(x_edges, z_edges):
