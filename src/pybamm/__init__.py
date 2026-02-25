@@ -54,8 +54,8 @@ from .expression_tree.operations.evaluate_python import (
     EvaluatorPython,
 )
 
-from .expression_tree.operations.evaluate_python import EvaluatorJax
-from .expression_tree.operations.evaluate_python import JaxCooMatrix
+# from .expression_tree.operations.evaluate_python import EvaluatorJax
+# from .expression_tree.operations.evaluate_python import JaxCooMatrix
 
 from .expression_tree.operations.jacobian import Jacobian
 from .expression_tree.operations.convert_to_casadi import CasadiConverter
@@ -185,10 +185,10 @@ from .solvers.casadi_algebraic_solver import CasadiAlgebraicSolver
 from .solvers.scipy_solver import ScipySolver
 from .solvers.composite_solver import CompositeSolver
 
-from .solvers.jax_solver import JaxSolver
-from .solvers.jax_bdf_solver import jax_bdf_integrate
+# from .solvers.jax_solver import JaxSolver
+# from .solvers.jax_bdf_solver import jax_bdf_integrate
 
-from .solvers.idaklu_jax import IDAKLUJax
+# from .solvers.idaklu_jax import IDAKLUJax
 from .solvers.idaklu_solver import IDAKLUSolver
 
 # Experiments
