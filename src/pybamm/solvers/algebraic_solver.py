@@ -289,7 +289,12 @@ class AlgebraicSolver(pybamm.BaseSolver):
         y_sol = np.r_[y_diff, y_alg]
         # Return solution object (no events, so pass None to t_event, y_event)
         sol = pybamm.Solution(
-            t_eval, y_sol, model, inputs_dict, termination="final time"
+            t_eval,
+            y_sol,
+            model,
+            inputs_dict,
+            termination="final time",
+            all_t_evals=t_eval,
         )
         sol.integration_time = integration_time
         return sol

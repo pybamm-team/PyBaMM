@@ -64,6 +64,12 @@ class Solution:
         String to indicate why the solution terminated
     all_sensitivities: dict of lists
         sensitivities are provided as a dict of {parameter: [sensitivities]} pairs.
+    all_t_evals : :class:`numpy.array` (or list of these), optional
+        Evaluation time breakpoints for each segment, one array per entry in
+        ``all_ts``.  When provided by the solver these contain the ``t_eval``
+        times (including merged discontinuity times).  If None (the default),
+        the property returns ``all_ts`` for each segment, since each point
+        is asssumed to be an evaluation time.
     variables_returned: bool
         Bool to indicate if `all_ys` contains the full state vector, or is empty because
         only requested variables have been returned. True if `output_variables` is used
@@ -82,11 +88,13 @@ class Solution:
         termination="final time",
         all_sensitivities=None,
         all_yps=None,
+        all_t_evals=None,
         variables_returned=False,
         check_solution=True,
     ):
         if not isinstance(all_ts, list):
             all_ts = [all_ts]
+        self._ensure_sorted_t(all_ts, "all_ts")
         if not isinstance(all_ys, list):
             all_ys = [all_ys]
         if not isinstance(all_models, list):
@@ -99,6 +107,14 @@ class Solution:
         if (all_yps is not None) and not isinstance(all_yps, list):
             all_yps = [all_yps]
         self._all_yps = all_yps
+
+        if all_t_evals is None:
+            all_t_evals = all_ts
+        else:
+            if not isinstance(all_t_evals, list):
+                all_t_evals = [all_t_evals]
+            self._ensure_t_evals(all_ts=all_ts, all_t_evals=all_t_evals)
+        self._all_t_evals = all_t_evals
 
         self.variables_returned = variables_returned
         self._observable = self._all_models and all(
@@ -151,6 +167,7 @@ class Solution:
 
         # Initialize empty inputs
         self._t = None
+        self._t_eval = None
         self._y = None
         self._yp = None
         self._sensitivities = None
@@ -171,18 +188,60 @@ class Solution:
     def has_sensitivities(self) -> bool:
         return len(self._all_sensitivities) > 0
 
+    @staticmethod
+    def _ensure_t_evals(all_ts, all_t_evals):
+        # all_ts is already checked upstream
+        if all_ts is all_t_evals:
+            return
+
+        if len(all_ts) != len(all_t_evals):
+            raise ValueError(
+                "The length of `all_t_evals` must match the length of `all_ts`"
+            )
+        Solution._ensure_sorted_t(all_t_evals, "all_t_evals")
+
+        for t, t_eval in zip(all_ts, all_t_evals, strict=True):
+            if len(t) == 0:
+                continue
+
+            if t_eval[0] < t[0] or t_eval[-1] > t[-1]:
+                raise ValueError(
+                    "The values of the `all_t_evals` segments must be within the same interval as `all_ts`"
+                )
+
+    @staticmethod
+    def _ensure_sorted_t(ts: list[np.ndarray | casadi.DM | casadi.MX], name: str):
+        t_f_previous = None
+        for t in ts:
+            if len(t) == 0:
+                continue
+
+            if not pybamm.solvers.processed_variable._is_sorted(t):
+                raise ValueError(
+                    f"Time segment `{name}` must be unique and sorted in increasing order."
+                )
+
+            t_0_current = t[0]
+            if t_f_previous is not None and t_0_current <= t_f_previous:
+                raise ValueError(
+                    f"The `{name}` time vector must be strictly increasing across all segments "
+                    "of the sub-solutions."
+                )
+            t_f_previous = t[-1]
+
     @property
-    def t(self):
+    def t(self) -> np.ndarray:
         """Times at which the solution is evaluated"""
         if self._t is None:
-            self.set_t()
+            self._t = np.concatenate(self.all_ts)
         return self._t
 
-    def set_t(self):
-        t = np.concatenate(self.all_ts)
-        if any(np.diff(t) <= 0):
-            raise ValueError("Solution time vector must be strictly increasing")
-        self._t = t
+    @property
+    def t_eval(self) -> np.ndarray:
+        """Evaluation time breakpoints for each segment"""
+        if self._t_eval is None:
+            self._t_eval = np.concatenate(self.all_t_evals)
+        return self._t_eval
 
     @property
     def y(self):
@@ -264,6 +323,10 @@ class Solution:
     @property
     def all_ts(self) -> list[np.ndarray | casadi.DM | casadi.MX]:
         return self._all_ts
+
+    @property
+    def all_t_evals(self) -> list[np.ndarray | casadi.DM | casadi.MX]:
+        return self._all_t_evals
 
     @property
     def all_ys(self) -> list[np.ndarray | casadi.DM | casadi.MX]:
@@ -518,8 +581,6 @@ class Solution:
         ----------
         symbol : pybamm.Symbol
             The symbol to observe.
-        name : str, optional
-            The name of the variable. If None, the name is the symbol's id.
 
         Returns
         -------
@@ -835,11 +896,23 @@ class Solution:
             all_ys = [*self.all_ys, other.all_ys[0][:, 1:], *other.all_ys[1:]]
             if hermite_interpolation:
                 all_yps = [*self.all_yps, other.all_yps[0][:, 1:], *other.all_yps[1:]]
+            if self._all_t_evals is not None and other._all_t_evals is not None:
+                all_t_evals = [
+                    *self._all_t_evals,
+                    other._all_t_evals[0][1:],
+                    *other._all_t_evals[1:],
+                ]
+            else:
+                all_t_evals = None
         else:
             all_ts = self.all_ts + other.all_ts
             all_ys = self.all_ys + other.all_ys
             if hermite_interpolation:
                 all_yps = self.all_yps + other.all_yps
+            if self._all_t_evals is not None and other._all_t_evals is not None:
+                all_t_evals = self._all_t_evals + other._all_t_evals
+            else:
+                all_t_evals = None
 
         if not hermite_interpolation:
             all_yps = None
@@ -862,6 +935,7 @@ class Solution:
             other.termination,
             all_sensitivities=all_sensitivities,
             all_yps=all_yps,
+            all_t_evals=all_t_evals,
             variables_returned=other.variables_returned,
         )
 
@@ -899,9 +973,10 @@ class Solution:
             self.t_event,
             self.y_event,
             self.termination,
-            self._all_sensitivities,
-            self.all_yps,
-            self.variables_returned,
+            all_sensitivities=self._all_sensitivities,
+            all_yps=self.all_yps,
+            all_t_evals=self._all_t_evals,
+            variables_returned=self.variables_returned,
         )
         new_sol._all_inputs_casadi = self.all_inputs_casadi
         new_sol._sub_solutions = self.sub_solutions
@@ -1021,9 +1096,10 @@ def make_cycle_solution(
         sum_sols.t_event,
         sum_sols.y_event,
         sum_sols.termination,
-        sum_sols._all_sensitivities,
-        sum_sols.all_yps,
-        sum_sols.variables_returned,
+        all_sensitivities=sum_sols._all_sensitivities,
+        all_yps=sum_sols.all_yps,
+        all_t_evals=sum_sols._all_t_evals,
+        variables_returned=sum_sols.variables_returned,
     )
 
     if sum_sols.variables_returned:
