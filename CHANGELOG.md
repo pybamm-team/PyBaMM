@@ -8,6 +8,7 @@
 - Improve the performance of matrix multiplication with CasADi expressions. ([#5351](https://github.com/pybamm-team/PyBaMM/pull/5351))
 - Adds option for lists of inputs to `solve` to include input parameters which are used
 as initial conditions. ([#5311](https://github.com/pybamm-team/PyBaMM/pull/5311))
+- Optimize state mapper for multi-step experiments by pre-calculating mapper during setup. ([#5380](https://github.com/pybamm-team/PyBaMM/pull/5380))
 
 ## Bug fixes
 
