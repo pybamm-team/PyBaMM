@@ -498,15 +498,6 @@ class BaseModel:
         self._mass_matrix = mass_matrix
 
     @property
-    def mass_matrix_inv(self):
-        """Returns the inverse of the mass matrix for the differential equations after discretisation."""
-        return self._mass_matrix_inv
-
-    @mass_matrix_inv.setter
-    def mass_matrix_inv(self, mass_matrix_inv):
-        self._mass_matrix_inv = mass_matrix_inv
-
-    @property
     def jacobian(self):
         """Returns the Jacobian matrix for the model, computed automatically if `use_jacobian` is True."""
         return self._jacobian
