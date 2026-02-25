@@ -214,6 +214,46 @@ class TestRoundtripValueTypes:
         x = pybamm.Scalar(4)
         _assert_evaluate_equal(pv, pv2, "callable", {"x": x})
 
+    def test_expression_scalar_plus_parameter(self):
+        expr = 1 + pybamm.Parameter("k")
+        pv = pybamm.ParameterValues({"expr": expr, "k": 5})
+        pv2 = _roundtrip(pv)
+        assert pv2.evaluate(pv2["expr"]) == pytest.approx(6)
+
+    def test_expression_arithmetic_tree(self):
+        a = pybamm.Parameter("a")
+        b = pybamm.Parameter("b")
+        expr = (2 * a + b) / (a - b + 1)
+        pv = pybamm.ParameterValues({"expr": expr, "a": 10, "b": 3})
+        pv2 = _roundtrip(pv)
+        expected = (2 * 10 + 3) / (10 - 3 + 1)
+        assert pv2.evaluate(pv2["expr"]) == pytest.approx(expected)
+
+    def test_expression_with_exp_and_log(self):
+        x = pybamm.Parameter("x")
+        expr = pybamm.exp(x) + pybamm.log(x + 1)
+        pv = pybamm.ParameterValues({"expr": expr, "x": 2})
+        pv2 = _roundtrip(pv)
+        expected = np.exp(2) + np.log(3)
+        assert pv2.evaluate(pv2["expr"]) == pytest.approx(expected)
+
+    def test_expression_with_min_max(self):
+        a = pybamm.Parameter("a")
+        b = pybamm.Parameter("b")
+        expr = pybamm.minimum(a, b) + pybamm.maximum(a, b)
+        pv = pybamm.ParameterValues({"expr": expr, "a": 3, "b": 7})
+        pv2 = _roundtrip(pv)
+        assert pv2.evaluate(pv2["expr"]) == pytest.approx(10)
+
+    def test_callable_returning_expression(self):
+        def my_func(x):
+            return pybamm.exp(-x) + pybamm.Parameter("offset")
+
+        pv = pybamm.ParameterValues({"f": my_func, "offset": 0.5})
+        pv2 = _roundtrip(pv)
+        x = pybamm.Scalar(1)
+        _assert_evaluate_equal(pv, pv2, "f", {"x": x})
+
 
 # ------------------------------------------------------------------ #
 # Integration tests: nested / composite structures
@@ -246,6 +286,103 @@ class TestRoundtripNestedStructures:
 
         sto = pybamm.Scalar(0.3)
         _assert_evaluate_equal(pv, pv2, "OCP [V]", {"sto": sto})
+
+    def test_callable_with_expression_and_parameter(self):
+        """Function that builds an expression tree using Parameter
+        and arithmetic, nested inside a callable parameter value."""
+
+        def reaction_rate(T):
+            Ea = pybamm.Parameter("Ea [J.mol-1]")
+            k0 = pybamm.Parameter("k0 [s-1]")
+            R = 8.314
+            return k0 * pybamm.exp(-Ea / (R * T))
+
+        pv = pybamm.ParameterValues(
+            {
+                "rate": reaction_rate,
+                "Ea [J.mol-1]": 50000,
+                "k0 [s-1]": 1e6,
+            }
+        )
+        pv2 = _roundtrip(pv)
+
+        T = pybamm.Scalar(300)
+        _assert_evaluate_equal(pv, pv2, "rate", {"T": T})
+
+        y = np.linspace(280, 320, 5).reshape(-1, 1)
+        _assert_evaluate_equal_array(pv, pv2, "rate", {"T": _sv(0)}, y)
+
+    def test_interpolant_scaled_by_parameter(self):
+        """Interpolant output multiplied by a Parameter inside a
+        callable — tests nested interpolant + expression."""
+        x_data = np.linspace(0, 1, 50)
+        y_data = np.sin(np.pi * x_data)
+
+        def ocp(sto):
+            scale = pybamm.Parameter("scale [V]")
+            return scale * pybamm.Interpolant(x_data, y_data, sto, name="sin_pi")
+
+        pv = pybamm.ParameterValues({"OCP [V]": ocp, "scale [V]": 3.7})
+        pv2 = _roundtrip(pv)
+
+        _assert_evaluate_equal(pv, pv2, "OCP [V]", {"sto": pybamm.Scalar(0.5)})
+        y = np.linspace(0.1, 0.9, 5).reshape(-1, 1)
+        _assert_evaluate_equal_array(pv, pv2, "OCP [V]", {"sto": _sv(0)}, y)
+
+    def test_expression_combining_two_interpolants(self):
+        """Callable that adds two different interpolants plus a
+        constant offset."""
+        x_data = np.linspace(0, 1, 50)
+        y1 = np.cos(x_data)
+        y2 = x_data**2
+
+        def combined(sto):
+            interp1 = pybamm.Interpolant(x_data, y1, sto, name="cos")
+            interp2 = pybamm.Interpolant(x_data, y2, sto, name="sq")
+            return interp1 + 2 * interp2 - 0.1
+
+        pv = pybamm.ParameterValues({"f": combined})
+        pv2 = _roundtrip(pv)
+
+        _assert_evaluate_equal(pv, pv2, "f", {"sto": pybamm.Scalar(0.4)})
+        y = np.linspace(0.1, 0.9, 5).reshape(-1, 1)
+        _assert_evaluate_equal_array(pv, pv2, "f", {"sto": _sv(0)}, y)
+
+    def test_callable_with_conditional_expression(self):
+        """Callable using pybamm.minimum / maximum to build a
+        piecewise-like expression."""
+
+        def clipped_func(x):
+            return pybamm.maximum(
+                pybamm.minimum(3 * x, pybamm.Scalar(2)), pybamm.Scalar(0)
+            )
+
+        pv = pybamm.ParameterValues({"f": clipped_func})
+        pv2 = _roundtrip(pv)
+
+        for val in [-1, 0.3, 0.5, 1, 2]:
+            _assert_evaluate_equal(pv, pv2, "f", {"x": pybamm.Scalar(val)})
+
+    def test_nested_callable_parameter_expression_mix(self):
+        """Several parameter values that cross-reference each other
+        through expressions and callables."""
+
+        def rate(T):
+            Ea = pybamm.Parameter("Ea")
+            return pybamm.exp(-Ea / T)
+
+        def scaled_rate(T):
+            k0 = pybamm.Parameter("k0")
+            return k0 * rate(T)
+
+        pv = pybamm.ParameterValues({"f": scaled_rate, "Ea": 5000, "k0": 1e4})
+        pv2 = _roundtrip(pv)
+
+        T = pybamm.Scalar(300)
+        _assert_evaluate_equal(pv, pv2, "f", {"T": T})
+
+        y = np.linspace(280, 320, 5).reshape(-1, 1)
+        _assert_evaluate_equal_array(pv, pv2, "f", {"T": _sv(0)}, y)
 
     def test_full_parameter_set_roundtrip_ai2020(self):
         """Ai2020 has interpolant-based OCPs, functions using
