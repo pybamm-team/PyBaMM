@@ -947,6 +947,184 @@ class ProcessedVariable2DFVM(ProcessedVariable):
         return [self.first_dim_size, self.second_dim_size, len(t)]
 
 
+class ProcessedVariableUnstructuredFVM(ProcessedVariable):
+    """
+    Processed variable for cell-centered data on an unstructured mesh
+    (triangles, quads in 2D; tetrahedra in 3D).
+
+    Spatial interpolation uses ``scipy.interpolate.LinearNDInterpolator``
+    on cell centroids.  For 2D meshes, a regular visualisation grid is
+    created so that ``solution.plot()`` works out of the box.
+    """
+
+    N_VIS = 50
+
+    def __init__(
+        self,
+        name: str,
+        base_variables,
+        base_variables_casadi,
+        solution,
+        time_integral: pybamm.ProcessedVariableTimeIntegral | None = None,
+    ):
+        mesh = base_variables[0].mesh
+        self.dimensions = 3 if mesh.dimension == 3 else 2
+        super().__init__(
+            name,
+            base_variables,
+            base_variables_casadi,
+            solution,
+            time_integral=time_integral,
+        )
+        self._time_interpolator = None
+        self.internal_boundaries = []
+
+        nodes = mesh.nodes
+        x_min, x_max = nodes[:, 0].min(), nodes[:, 0].max()
+
+        self.first_dimension = "x"
+        self.first_dim_pts = np.linspace(x_min, x_max, self.N_VIS)
+        self.first_dim_size = self.N_VIS
+
+        if mesh.dimension == 3:
+            y_min, y_max = nodes[:, 1].min(), nodes[:, 1].max()
+            z_min, z_max = nodes[:, 2].min(), nodes[:, 2].max()
+            self.second_dimension = "y"
+            self.second_dim_pts = np.linspace(y_min, y_max, self.N_VIS)
+            self.second_dim_size = self.N_VIS
+            self.third_dimension = "z"
+            self.third_dim_pts = np.linspace(z_min, z_max, self.N_VIS)
+            self.third_dim_size = self.N_VIS
+            self._slice_positions = {
+                "y": 0.5 * (y_min + y_max),
+                "z": 0.5 * (z_min + z_max),
+            }
+        else:
+            z_col = 1
+            z_min, z_max = nodes[:, z_col].min(), nodes[:, z_col].max()
+            self.second_dimension = "z"
+            self.second_dim_pts = np.linspace(z_min, z_max, self.N_VIS)
+            self.second_dim_size = self.N_VIS
+
+    def _shape(self, t):
+        return [self.mesh.npts, len(t)]
+
+    def initialise(self):
+        if self.entries_raw_initialized:
+            return
+        self._entries_raw = self.observe_raw()
+
+        from scipy.interpolate import interp1d
+
+        self._time_interpolator = interp1d(
+            self.t_pts,
+            self._entries_raw,
+            kind="linear",
+            axis=1,
+            bounds_error=False,
+            fill_value="extrapolate",
+        )
+
+    def _interpolate_spatial(self, values, query_pts):
+        """Interpolate cell-centered data to query points.
+
+        Uses linear interpolation inside the centroid convex hull and
+        nearest-neighbor extrapolation outside it.
+        """
+        from scipy.interpolate import LinearNDInterpolator, NearestNDInterpolator
+
+        pts = self.mesh.cell_centroids
+
+        linear = LinearNDInterpolator(pts, values)
+        result = linear(query_pts)
+
+        mask = np.isnan(result)
+        if np.any(mask):
+            nearest = NearestNDInterpolator(pts, values)
+            result[mask] = nearest(query_pts[mask])
+
+        return result
+
+    def _data_at_time(self, t):
+        """Return cell-centered data at time t."""
+        self.initialise()
+        t_observe, observe_raw = self._check_observe_raw(t)
+        if observe_raw:
+            return self._entries_raw
+        return self._time_interpolator(t_observe)
+
+    def __call__(
+        self, t=None, x=None, r=None, y=None, z=None, R=None, fill_value=np.nan
+    ):
+        data_at_t = self._data_at_time(t)
+        scalar_t = isinstance(t, int | float)
+
+        spatial_provided = any(c is not None for c in [x, y, z])
+        if not spatial_provided:
+            return data_at_t
+
+        if self.mesh.dimension == 2:
+            x_q = np.asarray(x).ravel()
+            z_q = np.asarray(z).ravel() if z is not None else np.zeros_like(x_q)
+            grid = np.meshgrid(x_q, z_q, indexing="ij")
+            query = np.column_stack([g.ravel() for g in grid])
+            out_shape = grid[0].shape
+        else:
+            x_q = np.asarray(x).ravel()
+            y_q = np.asarray(y).ravel() if y is not None else np.zeros_like(x_q)
+            z_q = np.asarray(z).ravel() if z is not None else np.zeros_like(x_q)
+            grid = np.meshgrid(x_q, y_q, z_q, indexing="ij")
+            query = np.column_stack([g.ravel() for g in grid])
+            out_shape = grid[0].shape
+
+        n_t = data_at_t.shape[1] if data_at_t.ndim > 1 else 1
+        if n_t == 1:
+            result = self._interpolate_spatial(data_at_t.ravel(), query).reshape(
+                out_shape
+            )
+        else:
+            result = np.empty((*out_shape, n_t))
+            for i in range(n_t):
+                result[..., i] = self._interpolate_spatial(
+                    data_at_t[:, i], query
+                ).reshape(out_shape)
+
+        if scalar_t and result.ndim > len(out_shape):
+            result = result[..., 0]
+
+        return result
+
+    def get_3d_slices(self, t):
+        """Compute two orthogonal slices through the 3D domain for plotting.
+
+        Returns (slice_xz, xx_xz, yy_xz, zz_xz,
+                 slice_xy, xx_xy, yy_xy, zz_xy)
+        where each slice is on a regular grid at the midplane.
+        """
+        data_at_t = self._data_at_time(t)
+        vals = data_at_t.ravel() if data_at_t.ndim == 1 else data_at_t[:, -1]
+
+        x_pts = self.first_dim_pts
+        y_pts = self.second_dim_pts
+        z_pts = self.third_dim_pts
+        y_mid = self._slice_positions["y"]
+        z_mid = self._slice_positions["z"]
+
+        # x-z plane at y = y_mid
+        xx1, zz1 = np.meshgrid(x_pts, z_pts, indexing="ij")
+        yy1 = np.full_like(xx1, y_mid)
+        q1 = np.column_stack([xx1.ravel(), yy1.ravel(), zz1.ravel()])
+        s1 = self._interpolate_spatial(vals, q1).reshape(xx1.shape)
+
+        # x-y plane at z = z_mid
+        xx2, yy2 = np.meshgrid(x_pts, y_pts, indexing="ij")
+        zz2 = np.full_like(xx2, z_mid)
+        q2 = np.column_stack([xx2.ravel(), yy2.ravel(), zz2.ravel()])
+        s2 = self._interpolate_spatial(vals, q2).reshape(xx2.shape)
+
+        return s1, xx1, yy1, zz1, s2, xx2, yy2, zz2
+
+
 class ProcessedVariableRawFVM(ProcessedVariable):
     def _shape(self, t):
         return [self.base_variables[0].size, len(t)]
@@ -1368,6 +1546,9 @@ def process_variable(name: str, base_variables, *args, **kwargs):
 
     if mesh and hasattr(mesh, "edges_lr") and hasattr(mesh, "edges_tb"):
         return ProcessedVariable2DFVM(name, base_variables, *args, **kwargs)
+
+    if isinstance(mesh, pybamm.UnstructuredSubMesh):
+        return ProcessedVariableUnstructuredFVM(name, base_variables, *args, **kwargs)
 
     # check variable shape
     if len(base_eval_shape) == 0 or base_eval_shape[0] == 1:
