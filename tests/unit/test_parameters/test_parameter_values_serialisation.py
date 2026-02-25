@@ -29,7 +29,7 @@ def _assert_evaluate_equal(pv_original, pv_loaded, name, inputs):
     orig = pv_original.process_symbol(fp).evaluate()
     loaded = pv_loaded.process_symbol(fp).evaluate()
     assert not np.any(np.isnan(orig)), f"'{name}' original has NaN"
-    np.testing.assert_allclose(orig, loaded)
+    np.testing.assert_array_equal(orig, loaded)
 
 
 def _sv(start, n=5):
@@ -44,7 +44,19 @@ def _assert_evaluate_equal_array(pv_original, pv_loaded, name, inputs, y):
     orig = pv_original.process_symbol(fp).evaluate(y=y)
     loaded = pv_loaded.process_symbol(fp).evaluate(y=y)
     assert not np.any(np.isnan(orig)), f"'{name}' original has NaN"
-    np.testing.assert_allclose(orig, loaded)
+    np.testing.assert_array_equal(orig, loaded)
+
+
+def _assert_evaluate_close(pv_original, pv_loaded, name, inputs, y):
+    """Like _assert_evaluate_equal_array but allows machine-epsilon
+    differences.  Use for real parameter sets where the original
+    callable and the reconstructed ExpressionFunctionParameter may
+    follow slightly different floating-point evaluation orders."""
+    fp = pybamm.FunctionParameter(name, inputs)
+    orig = pv_original.process_symbol(fp).evaluate(y=y)
+    loaded = pv_loaded.process_symbol(fp).evaluate(y=y)
+    assert not np.any(np.isnan(orig)), f"'{name}' original has NaN"
+    np.testing.assert_allclose(orig, loaded, rtol=1e-14)
 
 
 # ------------------------------------------------------------------ #
@@ -64,25 +76,25 @@ class TestRoundtripValueTypes:
     def test_numeric_float(self):
         pv = pybamm.ParameterValues({"a": 3.14})
         pv2 = _roundtrip(pv)
-        assert pv2["a"] == pytest.approx(3.14)
+        assert pv2["a"] == 3.14
 
     def test_numeric_negative(self):
         pv = pybamm.ParameterValues({"a": -42, "b": -0.001})
         pv2 = _roundtrip(pv)
         assert pv2["a"] == -42
-        assert pv2["b"] == pytest.approx(-0.001)
+        assert pv2["b"] == -0.001
 
     def test_numeric_extreme_values(self):
         pv = pybamm.ParameterValues({"tiny": 1e-300, "huge": 1e300, "zero": 0.0})
         pv2 = _roundtrip(pv)
-        assert pv2["tiny"] == pytest.approx(1e-300)
-        assert pv2["huge"] == pytest.approx(1e300)
+        assert pv2["tiny"] == 1e-300
+        assert pv2["huge"] == 1e300
         assert pv2["zero"] == 0.0
 
     def test_string_converted_to_float(self):
         pv = pybamm.ParameterValues({"a": "2.718"})
         pv2 = _roundtrip(pv)
-        assert pv2["a"] == pytest.approx(2.718)
+        assert pv2["a"] == 2.718
 
     def test_input_parameter(self):
         pv = pybamm.ParameterValues({"a [m]": "[input]"})
@@ -226,7 +238,7 @@ class TestRoundtripValueTypes:
         pv2 = _roundtrip(pv)
 
         assert pv2["scalar_int"] == 1
-        assert pv2["scalar_float"] == pytest.approx(2.5)
+        assert pv2["scalar_float"] == 2.5
         assert isinstance(pv2["input_param [A]"], pybamm.InputParameter)
 
         x = pybamm.Scalar(4)
@@ -236,7 +248,7 @@ class TestRoundtripValueTypes:
         expr = 1 + pybamm.Parameter("k")
         pv = pybamm.ParameterValues({"expr": expr, "k": 5})
         pv2 = _roundtrip(pv)
-        assert pv2.evaluate(pv2["expr"]) == pytest.approx(6)
+        assert pv2.evaluate(pv2["expr"]) == 6
 
     def test_expression_arithmetic_tree(self):
         a = pybamm.Parameter("a")
@@ -245,7 +257,7 @@ class TestRoundtripValueTypes:
         pv = pybamm.ParameterValues({"expr": expr, "a": 10, "b": 3})
         pv2 = _roundtrip(pv)
         expected = (2 * 10 + 3) / (10 - 3 + 1)
-        assert pv2.evaluate(pv2["expr"]) == pytest.approx(expected)
+        assert pv2.evaluate(pv2["expr"]) == expected
 
     def test_expression_with_exp_and_log(self):
         x = pybamm.Parameter("x")
@@ -253,7 +265,7 @@ class TestRoundtripValueTypes:
         pv = pybamm.ParameterValues({"expr": expr, "x": 2})
         pv2 = _roundtrip(pv)
         expected = np.exp(2) + np.log(3)
-        assert pv2.evaluate(pv2["expr"]) == pytest.approx(expected)
+        assert pv2.evaluate(pv2["expr"]) == expected
 
     def test_expression_with_min_max(self):
         a = pybamm.Parameter("a")
@@ -261,7 +273,7 @@ class TestRoundtripValueTypes:
         expr = pybamm.minimum(a, b) + pybamm.maximum(a, b)
         pv = pybamm.ParameterValues({"expr": expr, "a": 3, "b": 7})
         pv2 = _roundtrip(pv)
-        assert pv2.evaluate(pv2["expr"]) == pytest.approx(10)
+        assert pv2.evaluate(pv2["expr"]) == 10
 
     def test_callable_returning_expression(self):
         def my_func(x):
@@ -276,7 +288,7 @@ class TestRoundtripValueTypes:
         pv = pybamm.ParameterValues({"a": pybamm.Scalar(7.5)})
         pv2 = _roundtrip(pv)
         assert isinstance(pv2["a"], pybamm.Scalar)
-        assert pv2["a"].evaluate() == pytest.approx(7.5)
+        assert pv2["a"].evaluate() == 7.5
 
     def test_callable_returning_constant(self):
         def const(x):
@@ -291,7 +303,7 @@ class TestRoundtripValueTypes:
         pv = pybamm.ParameterValues({"expr": expr})
         pv2 = _roundtrip(pv)
         result = pv2["expr"].evaluate(t=5)
-        assert result == pytest.approx(6)
+        assert result == 6
 
     def test_expression_with_trig_and_abs(self):
         x = pybamm.Parameter("x")
@@ -299,7 +311,7 @@ class TestRoundtripValueTypes:
         pv = pybamm.ParameterValues({"expr": expr, "x": 1.0})
         pv2 = _roundtrip(pv)
         expected = np.sin(1) + np.cos(1) + np.abs(1)
-        assert pv2.evaluate(pv2["expr"]) == pytest.approx(expected)
+        assert pv2.evaluate(pv2["expr"]) == expected
 
     def test_double_roundtrip(self):
         def my_func(x):
@@ -469,7 +481,7 @@ class TestRoundtripNestedStructures:
             orig = pv[key]
             loaded = pv2[key]
             if isinstance(orig, int | float):
-                assert loaded == pytest.approx(orig), f"Numeric mismatch for '{key}'"
+                assert loaded == orig, f"Numeric mismatch for '{key}'"
 
         # Callable parameters evaluate to the same result after
         # roundtrip — tested with arrays via StateVector to exercise
@@ -489,7 +501,7 @@ class TestRoundtripNestedStructures:
             "Negative electrode OCP [V]",
             "Positive electrode OCP [V]",
         ]:
-            _assert_evaluate_equal_array(pv, pv2, ocp_name, {"sto": _sv(0, n)}, y_sto)
+            _assert_evaluate_close(pv, pv2, ocp_name, {"sto": _sv(0, n)}, y_sto)
 
         # 2-arg diffusivities (sto, T)
         y_sto_T = np.vstack([sto_vals, T_vals])
@@ -497,7 +509,7 @@ class TestRoundtripNestedStructures:
             "Negative electrode diffusivity [m2.s-1]",
             "Positive electrode diffusivity [m2.s-1]",
         ]:
-            _assert_evaluate_equal_array(
+            _assert_evaluate_close(
                 pv,
                 pv2,
                 diff_name,
@@ -516,7 +528,7 @@ class TestRoundtripNestedStructures:
                 T_vals,
             ]
         )
-        _assert_evaluate_equal_array(
+        _assert_evaluate_close(
             pv,
             pv2,
             "Negative electrode exchange-current density [A.m-2]",
@@ -535,7 +547,7 @@ class TestRoundtripNestedStructures:
             "Electrolyte diffusivity [m2.s-1]",
             "Electrolyte conductivity [S.m-1]",
         ]:
-            _assert_evaluate_equal_array(
+            _assert_evaluate_close(
                 pv,
                 pv2,
                 elyte_name,
@@ -567,7 +579,7 @@ class TestRoundtripNestedStructures:
             np.testing.assert_allclose(
                 sol_rt[key],
                 sol_orig[key],
-                rtol=1e-10,
+                rtol=1e-14,
                 err_msg=f"SOH mismatch for '{key}'",
             )
 
@@ -582,7 +594,7 @@ class TestFileIO:
         pv.to_json(filepath)
         pv2 = pybamm.ParameterValues.from_json(filepath)
         assert pv2["a"] == 42
-        assert pv2["b"] == pytest.approx(3.14)
+        assert pv2["b"] == 3.14
 
     def test_roundtrip_via_pathlib_path(self, tmp_path):
         pv = pybamm.ParameterValues({"a": 100, "b": 2.71})
@@ -590,7 +602,7 @@ class TestFileIO:
         pv.to_json(str(filepath))
         pv2 = pybamm.ParameterValues.from_json(filepath)
         assert pv2["a"] == 100
-        assert pv2["b"] == pytest.approx(2.71)
+        assert pv2["b"] == 2.71
 
     def test_roundtrip_callable_via_file(self, tmp_path):
         def my_func(x):
@@ -634,7 +646,7 @@ class TestConvertSymbolsInDict:
         serialized = convert_symbol_to_json(scalar)
         result = convert_symbols_in_dict({"p": serialized})
         assert isinstance(result["p"], pybamm.Scalar)
-        assert result["p"].value == pytest.approx(2.718)
+        assert result["p"].value == 2.718
 
     def test_list_with_serialized_symbol(self):
         scalar = pybamm.Scalar(2.718)
@@ -645,7 +657,7 @@ class TestConvertSymbolsInDict:
 
     def test_string_converted_to_float(self):
         result = convert_symbols_in_dict({"p": "3.14"})
-        assert result["p"] == pytest.approx(3.14)
+        assert result["p"] == 3.14
 
     def test_none_returns_empty_dict(self):
         assert convert_symbols_in_dict(None) == {}
