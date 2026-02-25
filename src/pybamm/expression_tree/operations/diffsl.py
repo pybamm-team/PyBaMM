@@ -233,13 +233,13 @@ class DiffSLExport:
                     )
                     tensor_index += 1
                     lines = [f"{tensor_name}_i " + "{"]
-                    eqn = equation_to_diffeq(
+                    eqn_str = equation_to_diffeq(
                         symbol,
                         y_slice_to_label,
                         symbol_to_tensor_name,
                         float_precision=self.float_precision,
                     )
-                    lines += [f"  {eqn},"]
+                    lines += [f"  {eqn_str},"]
                     symbol_to_tensor_name[symbol] = tensor_name
                     diffeq[tensor_name] = new_line.join(lines) + new_line + "}"
 
@@ -254,7 +254,7 @@ class DiffSLExport:
                     for child, slices in zip(
                         symbol.children, symbol._children_slices, strict=False
                     ):
-                        eqn = equation_to_diffeq(
+                        eqn_str = equation_to_diffeq(
                             child,
                             y_slice_to_label,
                             symbol_to_tensor_name,
@@ -263,7 +263,7 @@ class DiffSLExport:
                         for child_dom, child_slice in slices.items():
                             for i, _slice in enumerate(child_slice):
                                 s = symbol._slices[child_dom][i]
-                                lines += [f"  ({s.start}:{s.stop}): {eqn},"]
+                                lines += [f"  ({s.start}:{s.stop}): {eqn_str},"]
                     symbol_to_tensor_name[symbol] = tensor_name
                     diffeq[tensor_name] = new_line.join(lines) + new_line + "}"
 
