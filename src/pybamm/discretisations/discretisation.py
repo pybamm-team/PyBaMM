@@ -914,7 +914,11 @@ class Discretisation:
 
         # Assign mesh as an attribute to the processed variable
         if symbol.domain != []:
-            discretised_symbol.mesh = self.mesh[symbol.domain]
+            mesh_for_symbol = self.mesh[symbol.domain]
+            discretised_symbol.mesh = mesh_for_symbol
+            if isinstance(discretised_symbol, pybamm.VectorField):
+                for comp in discretised_symbol._components:
+                    comp.mesh = mesh_for_symbol
         else:
             discretised_symbol.mesh = None
 
@@ -962,29 +966,49 @@ class Discretisation:
                     or isinstance(left, pybamm.Gradient)
                 ):
                     right = pybamm.VectorField(right, right)
+            elif isinstance(spatial_method, pybamm.FiniteVolumeUnstructured):
+                dim = self.mesh[symbol.domain[0]].dimension
+                if isinstance(left, pybamm.Scalar) and (
+                    isinstance(right, pybamm.VectorField)
+                    or isinstance(right, pybamm.Gradient)
+                ):
+                    left = pybamm.VectorField(*[left] * dim)
+                elif isinstance(right, pybamm.Scalar) and (
+                    isinstance(left, pybamm.VectorField)
+                    or isinstance(left, pybamm.Gradient)
+                ):
+                    right = pybamm.VectorField(*[right] * dim)
             disc_left = self.process_symbol(left)
             disc_right = self.process_symbol(right)
             if symbol.domain == []:
                 if isinstance(disc_left, pybamm.VectorField) or isinstance(
                     disc_right, pybamm.VectorField
                 ):
+                    if isinstance(disc_left, pybamm.VectorField):
+                        n = disc_left.n_components
+                    else:
+                        n = disc_right.n_components
                     if not isinstance(disc_right, pybamm.VectorField):
-                        disc_right = pybamm.VectorField(disc_right, disc_right)
+                        disc_right = pybamm.VectorField(*[disc_right] * n)
                     if not isinstance(disc_left, pybamm.VectorField):
-                        disc_left = pybamm.VectorField(disc_left, disc_left)
-                    else:  # both are vector fields already
-                        pass
-                    disc_lr = pybamm.simplify_if_constant(
-                        symbol.create_copy(
-                            new_children=[disc_left.lr_field, disc_right.lr_field]
+                        disc_left = pybamm.VectorField(*[disc_left] * n)
+                    new_comps = [
+                        pybamm.simplify_if_constant(
+                            symbol.create_copy(
+                                new_children=[
+                                    disc_left._components[k],
+                                    disc_right._components[k],
+                                ]
+                            )
                         )
-                    )
-                    disc_tb = pybamm.simplify_if_constant(
-                        symbol.create_copy(
-                            new_children=[disc_left.tb_field, disc_right.tb_field]
-                        )
-                    )
-                    return pybamm.VectorField(disc_lr, disc_tb)
+                        for k in range(n)
+                    ]
+                    result = pybamm.VectorField(*new_comps)
+                    for src in (disc_left, disc_right):
+                        if hasattr(src, "_disc_state_vector"):
+                            result._disc_state_vector = src._disc_state_vector
+                            break
+                    return result
 
                 return pybamm.simplify_if_constant(
                     symbol.create_copy(new_children=[disc_left, disc_right])
@@ -1126,6 +1150,18 @@ class Discretisation:
             elif isinstance(symbol, pybamm.NotConstant):
                 # After discretisation, we can make the symbol constant
                 return disc_child
+            elif isinstance(symbol, pybamm.Component):
+                if not isinstance(disc_child, pybamm.VectorField):
+                    raise ValueError("Component can only be applied to a VectorField")
+                return disc_child._components[symbol.index]
+            elif isinstance(symbol, pybamm.Norm):
+                if not isinstance(disc_child, pybamm.VectorField):
+                    raise ValueError("Norm can only be applied to a VectorField")
+                result = None
+                for comp in disc_child._components:
+                    sq = comp**2
+                    result = sq if result is None else result + sq
+                return result**0.5
             elif isinstance(symbol, pybamm.Magnitude):
                 if not isinstance(disc_child, pybamm.VectorField):
                     raise ValueError("Magnitude can only be applied to a vector field")
@@ -1138,10 +1174,14 @@ class Discretisation:
                     raise ValueError("Invalid direction")
             else:
                 if isinstance(disc_child, pybamm.VectorField):
-                    return pybamm.VectorField(
-                        symbol.create_copy(new_children=[disc_child.lr_field]),
-                        symbol.create_copy(new_children=[disc_child.tb_field]),
-                    )
+                    new_comps = [
+                        symbol.create_copy(new_children=[c])
+                        for c in disc_child._components
+                    ]
+                    result = pybamm.VectorField(*new_comps)
+                    if hasattr(disc_child, "_disc_state_vector"):
+                        result._disc_state_vector = disc_child._disc_state_vector
+                    return result
                 else:
                     return symbol.create_copy(new_children=[disc_child])
 
@@ -1215,10 +1255,8 @@ class Discretisation:
             )
 
         elif isinstance(symbol, pybamm.VectorField):
-            # VectorField is a subclass of TensorField, handle it first for specificity
-            left_symbol = self.process_symbol(symbol.lr_field)
-            right_symbol = self.process_symbol(symbol.tb_field)
-            return symbol.create_copy(new_children=[left_symbol, right_symbol])
+            processed = [self.process_symbol(c) for c in symbol._components]
+            return symbol.create_copy(new_children=processed)
 
         elif isinstance(symbol, pybamm.TensorField):
             # General TensorField handling (rank-2 tensors)

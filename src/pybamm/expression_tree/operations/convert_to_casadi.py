@@ -318,6 +318,11 @@ class CasadiConverter:
                     )
                 return casadi.vertcat(*all_child_vectors)
 
+        elif isinstance(symbol, pybamm.VectorField):
+            return casadi.vertcat(
+                *[self.convert(c, t, y, y_dot, inputs) for c in symbol._components]
+            )
+
         else:
             raise TypeError(
                 f"Cannot convert symbol of type '{type(symbol)}' to CasADi. Symbols must all be "

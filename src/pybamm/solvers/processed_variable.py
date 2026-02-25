@@ -1025,22 +1025,35 @@ class ProcessedVariableUnstructuredFVM(ProcessedVariable):
             fill_value="extrapolate",
         )
 
+    def _augmented_points_and_values(self, values):
+        """Append boundary face centroids (with owning-cell values) to the
+        cell centroid cloud so that LinearNDInterpolator's convex hull
+        reaches the true mesh boundary."""
+        mesh = self.mesh
+        bnd_start = mesh._boundary_face_start
+        bnd_centroids = mesh.face_centroids[bnd_start:]
+        bnd_owners = mesh.face_owner[bnd_start:]
+        pts = np.concatenate([mesh.cell_centroids, bnd_centroids], axis=0)
+        vals = np.concatenate([values, values[bnd_owners]])
+        return pts, vals
+
     def _interpolate_spatial(self, values, query_pts):
         """Interpolate cell-centered data to query points.
 
-        Uses linear interpolation inside the centroid convex hull and
-        nearest-neighbor extrapolation outside it.
+        Boundary face centroids are added to the interpolation cloud
+        so the convex hull covers the full domain.  Any residual
+        extrapolation uses nearest-neighbor.
         """
         from scipy.interpolate import LinearNDInterpolator, NearestNDInterpolator
 
-        pts = self.mesh.cell_centroids
+        pts, vals = self._augmented_points_and_values(values)
 
-        linear = LinearNDInterpolator(pts, values)
+        linear = LinearNDInterpolator(pts, vals)
         result = linear(query_pts)
 
         mask = np.isnan(result)
         if np.any(mask):
-            nearest = NearestNDInterpolator(pts, values)
+            nearest = NearestNDInterpolator(pts, vals)
             result[mask] = nearest(query_pts[mask])
 
         return result
@@ -1123,6 +1136,134 @@ class ProcessedVariableUnstructuredFVM(ProcessedVariable):
         s2 = self._interpolate_spatial(vals, q2).reshape(xx2.shape)
 
         return s1, xx1, yy1, zz1, s2, xx2, yy2, zz2
+
+
+class ProcessedVariableVectorFieldUnstructuredFVM:
+    """
+    Processed variable for a VectorField on an unstructured mesh.
+
+    Wraps N scalar ``ProcessedVariableUnstructuredFVM`` instances (one per
+    component) and provides a unified interface for querying and plotting
+    vector-valued data.
+    """
+
+    N_QUIVER = 20
+
+    def __init__(
+        self,
+        name: str,
+        base_variables,
+        base_variables_casadi,
+        solution,
+        time_integral=None,
+    ):
+        vf = base_variables[0]
+
+        self.name = name
+        self.mesh = vf.mesh
+        self.domain = vf.domain
+        self.is_vector_field = True
+        self.n_components = vf.n_components
+        self.internal_boundaries = []
+
+        self._component_vars = []
+        for k in range(vf.n_components):
+            comp_base_k = [bv._components[k] for bv in base_variables]
+            comp_casadi_k = []
+            for bvc in base_variables_casadi:
+                if isinstance(bvc, list):
+                    comp_casadi_k.append(bvc[k])
+                elif isinstance(bvc, pybamm.VectorField):
+                    comp_casadi_k.append(bvc._components[k])
+                else:
+                    comp_casadi_k.append(bvc)
+            pv = ProcessedVariableUnstructuredFVM(
+                f"{name}[{k}]",
+                comp_base_k,
+                comp_casadi_k,
+                solution,
+                time_integral=time_integral,
+            )
+            self._component_vars.append(pv)
+
+        ref = self._component_vars[0]
+        self.dimensions = ref.dimensions
+        self.first_dimension = ref.first_dimension
+        self.first_dim_pts = ref.first_dim_pts
+        self.first_dim_size = ref.first_dim_size
+        self.second_dimension = ref.second_dimension
+        self.second_dim_pts = ref.second_dim_pts
+        self.second_dim_size = ref.second_dim_size
+
+        if self.dimensions == 3:
+            self.third_dimension = ref.third_dimension
+            self.third_dim_pts = ref.third_dim_pts
+            self.third_dim_size = ref.third_dim_size
+            self._slice_positions = ref._slice_positions
+
+    @property
+    def entries(self):
+        return self._component_vars[0].entries
+
+    def __call__(
+        self, t=None, x=None, r=None, y=None, z=None, R=None, fill_value=np.nan
+    ):
+        """Return a tuple of arrays, one per component."""
+        return tuple(
+            pv(t=t, x=x, r=r, y=y, z=z, R=R, fill_value=fill_value)
+            for pv in self._component_vars
+        )
+
+    def get_quiver_data(self, t):
+        """Interpolate vector components onto a coarser grid for quiver arrows.
+
+        Returns ``(X, Z, U, W)`` for 2D or ``(X, Y, Z, U, V, W)`` for 3D.
+        """
+        nq = self.N_QUIVER
+        x_pts = np.linspace(self.first_dim_pts[0], self.first_dim_pts[-1], nq)
+
+        if self.dimensions == 2:
+            z_pts = np.linspace(self.second_dim_pts[0], self.second_dim_pts[-1], nq)
+            comp_u = self._component_vars[0](t=t, x=x_pts, z=z_pts)
+            comp_w = self._component_vars[1](t=t, x=x_pts, z=z_pts)
+            X, Z = np.meshgrid(x_pts, z_pts, indexing="ij")
+            return X, Z, comp_u, comp_w
+        else:
+            y_pts = np.linspace(self.second_dim_pts[0], self.second_dim_pts[-1], nq)
+            z_pts = np.linspace(self.third_dim_pts[0], self.third_dim_pts[-1], nq)
+            y_mid = self._slice_positions["y"]
+            z_mid = self._slice_positions["z"]
+
+            # x-z plane at y_mid
+            comp_u_xz = self._component_vars[0](
+                t=t, x=x_pts, y=np.array([y_mid]), z=z_pts
+            ).squeeze(axis=1)
+            comp_w_xz = self._component_vars[2](
+                t=t, x=x_pts, y=np.array([y_mid]), z=z_pts
+            ).squeeze(axis=1)
+            X1, Z1 = np.meshgrid(x_pts, z_pts, indexing="ij")
+
+            # x-y plane at z_mid
+            comp_u_xy = self._component_vars[0](
+                t=t, x=x_pts, y=y_pts, z=np.array([z_mid])
+            ).squeeze(axis=2)
+            comp_v_xy = self._component_vars[1](
+                t=t, x=x_pts, y=y_pts, z=np.array([z_mid])
+            ).squeeze(axis=2)
+            X2, Y2 = np.meshgrid(x_pts, y_pts, indexing="ij")
+
+            return (
+                X1,
+                Z1,
+                comp_u_xz,
+                comp_w_xz,
+                y_mid,
+                X2,
+                Y2,
+                comp_u_xy,
+                comp_v_xy,
+                z_mid,
+            )
 
 
 class ProcessedVariableRawFVM(ProcessedVariable):
@@ -1548,6 +1689,10 @@ def process_variable(name: str, base_variables, *args, **kwargs):
         return ProcessedVariable2DFVM(name, base_variables, *args, **kwargs)
 
     if isinstance(mesh, pybamm.UnstructuredSubMesh):
+        if isinstance(base_variables[0], pybamm.VectorField):
+            return ProcessedVariableVectorFieldUnstructuredFVM(
+                name, base_variables, *args, **kwargs
+            )
         return ProcessedVariableUnstructuredFVM(name, base_variables, *args, **kwargs)
 
     # check variable shape

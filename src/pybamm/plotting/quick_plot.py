@@ -290,6 +290,7 @@ class QuickPlot:
         self.second_spatial_variable = {}
         self.x_first_and_y_second = {}
         self.is_y_z = {}
+        self.is_vector_field = {}
 
         # Calculate subplot positions based on number of variables supplied
         self.subplot_positions = {}
@@ -384,6 +385,9 @@ class QuickPlot:
 
             # Store variables and subplot position
             self.variables[variable_tuple] = variables
+            self.is_vector_field[variable_tuple] = getattr(
+                first_variable, "is_vector_field", False
+            )
             self.subplot_positions[variable_tuple] = (self.n_rows, self.n_cols, k + 1)
 
     def _get_spatial_var(self, key, variable, dimension):
@@ -406,6 +410,7 @@ class QuickPlot:
                 (
                     pybamm.ProcessedVariable2DFVM,
                     pybamm.ProcessedVariableUnstructuredFVM,
+                    pybamm.ProcessedVariableVectorFieldUnstructuredFVM,
                 ),
             ):
                 domain = variable.domain[0]
@@ -452,7 +457,9 @@ class QuickPlot:
                 self.axis_limits[key] = [x_min, x_max, y_min, y_max]
 
             # Get min and max variable values
-            if self.variable_limits[key] == "fixed":
+            if self.is_vector_field.get(key, False):
+                var_min, var_max = None, None
+            elif self.variable_limits[key] == "fixed":
                 # fixed variable limits: calculate "globlal" min and max
                 if variable_lists[0][0].dimensions == 3:
                     var_min = np.min(
@@ -616,6 +623,39 @@ class QuickPlot:
                 for boundary in variable_lists[0][0].internal_boundaries:
                     boundary_scaled = boundary * self.spatial_factor
                     ax.axvline(boundary_scaled, color="0.5", lw=1, zorder=0)
+            elif self.is_vector_field.get(key, False):
+                variable = variable_lists[0][0]
+                if variable.dimensions == 2:
+                    X, Z, U, W = variable.get_quiver_data(t_in_seconds)
+                    Xs = X * self.spatial_factor
+                    Zs = Z * self.spatial_factor
+                    mag = np.sqrt(U**2 + W**2)
+                    mag_max = np.max(mag) if np.max(mag) > 0 else 1.0
+                    norm = colors.Normalize(vmin=0, vmax=mag_max)
+                    safe_mag = np.where(mag > 0, mag, 1.0)
+                    U_norm = U / safe_mag
+                    W_norm = W / safe_mag
+                    ax.set_xlabel(f"x [{self.spatial_unit}]")
+                    ax.set_ylabel(f"z [{self.spatial_unit}]")
+                    self.plots[key][0][0] = ax.quiver(
+                        Xs,
+                        Zs,
+                        U_norm,
+                        W_norm,
+                        mag,
+                        cmap="viridis",
+                        norm=norm,
+                        scale=X.shape[0] * 1.2,
+                        scale_units="width",
+                        width=0.004,
+                    )
+                    self.colorbars[key] = self.fig.colorbar(
+                        self.plots[key][0][0],
+                        ax=ax,
+                        label="|" + str(key[0]) + "|",
+                    )
+                else:
+                    self._plot_3d_quiver(ax, variable, t_in_seconds, key, cm, colors)
             elif variable_lists[0][0].dimensions == 2:
                 # Read dictionary of spatial variables
                 spatial_vars = self.spatial_variable_dict[key]
@@ -743,6 +783,49 @@ class QuickPlot:
         bottom = max(legend_top, slider_top)
         self.gridspec.tight_layout(self.fig, rect=[0, bottom, 1, 1])
 
+    def _plot_3d_quiver(self, ax, variable, t, key, cm, colors):
+        """Render quiver arrows on two orthogonal 3D slice planes."""
+        sf = self.spatial_factor
+        data = variable.get_quiver_data(t)
+        X1, Z1, U_xz, W_xz, y_mid = data[0:5]
+        X2, Y2, U_xy, V_xy, z_mid = data[5:10]
+
+        x_span = (X1.max() - X1.min()) * sf
+        arrow_len = x_span * 0.08 if x_span > 0 else 0.08
+
+        Y1_plane = np.full_like(X1, y_mid * sf)
+        ax.quiver(
+            X1 * sf,
+            Y1_plane,
+            Z1 * sf,
+            U_xz,
+            np.zeros_like(U_xz),
+            W_xz,
+            length=arrow_len,
+            normalize=True,
+            color="steelblue",
+            alpha=0.8,
+        )
+
+        Z2_plane = np.full_like(X2, z_mid * sf)
+        ax.quiver(
+            X2 * sf,
+            Y2 * sf,
+            Z2_plane,
+            U_xy,
+            V_xy,
+            np.zeros_like(U_xy),
+            length=arrow_len,
+            normalize=True,
+            color="darkorange",
+            alpha=0.8,
+        )
+
+        ax.set_xlabel(f"$x$ [{self.spatial_unit}]")
+        ax.set_ylabel(f"$y$ [{self.spatial_unit}]")
+        ax.set_zlabel(f"$z$ [{self.spatial_unit}]")
+        self.plots[key][0][0] = "quiver_3d"
+
     def dynamic_plot(self, show_plot=True, step=None):
         """
         Generate a dynamic plot with a slider to control the time.
@@ -866,6 +949,39 @@ class QuickPlot:
                 y_min, y_max = self.axis_limits[key][2:]
                 if y_min is None and y_max is None:
                     ax.set_ylim(var_min, var_max)
+            elif self.is_vector_field.get(key, False):
+                variable = self.variables[key][0][0]
+                ax.clear()
+                if variable.dimensions == 2:
+                    X, Z, U, W = variable.get_quiver_data(time_in_seconds)
+                    Xs = X * self.spatial_factor
+                    Zs = Z * self.spatial_factor
+                    mag = np.sqrt(U**2 + W**2)
+                    mag_max = np.max(mag) if np.max(mag) > 0 else 1.0
+                    norm = colors.Normalize(vmin=0, vmax=mag_max)
+                    safe_mag = np.where(mag > 0, mag, 1.0)
+                    U_norm = U / safe_mag
+                    W_norm = W / safe_mag
+                    ax.set_xlabel(f"x [{self.spatial_unit}]")
+                    ax.set_ylabel(f"z [{self.spatial_unit}]")
+                    self.plots[key][0][0] = ax.quiver(
+                        Xs,
+                        Zs,
+                        U_norm,
+                        W_norm,
+                        mag,
+                        cmap="viridis",
+                        norm=norm,
+                        scale=X.shape[0] * 1.2,
+                        scale_units="width",
+                        width=0.004,
+                    )
+                    if key in self.colorbars:
+                        self.colorbars[key].update_normal(self.plots[key][0][0])
+                else:
+                    self._plot_3d_quiver(ax, variable, time_in_seconds, key, cm, colors)
+                title = split_long_string(key[0]) if len(key) == 1 else ""
+                ax.set_title(title, fontsize="medium")
             elif self.variables[key][0][0].dimensions == 2:
                 # 2D plot: plot as a function of x and y at time t
                 # Read dictionary of spatial variables

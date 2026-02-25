@@ -236,16 +236,18 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
                 submesh, G_components, bc_vecs, bcs
             )
 
-        results = []
+        components = []
         for k in range(d):
             Gk = csr_matrix(kron(eye(repeats, dtype=np.float64), G_components[k]))
-            comp = Gk @ discretised_symbol
+            comp = pybamm.Matrix(Gk) @ discretised_symbol
             if np.any(bc_vecs[k] != 0):
                 bc_full = np.tile(bc_vecs[k], repeats)
                 comp = comp + pybamm.Vector(bc_full)
-            results.append(comp)
+            components.append(comp)
 
-        return results
+        vf = pybamm.VectorField(*components)
+        vf._disc_state_vector = discretised_symbol
+        return vf
 
     def _green_gauss_matrices(self, submesh):
         """
@@ -401,10 +403,14 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         d = submesh.dimension
         repeats = self._get_auxiliary_domain_repeats(symbol.domains)
 
-        if not isinstance(discretised_symbol, (list, tuple)):
+        if isinstance(discretised_symbol, pybamm.VectorField):
+            comps = discretised_symbol._components
+        elif isinstance(discretised_symbol, (list, tuple)):
+            comps = list(discretised_symbol)
+        else:
             raise TypeError(
-                "FiniteVolumeUnstructured.divergence expects a list of "
-                f"{d} component arrays, got {type(discretised_symbol)}"
+                "FiniteVolumeUnstructured.divergence expects a VectorField or "
+                f"list of {d} component arrays, got {type(discretised_symbol)}"
             )
 
         D_components = self._divergence_matrices(submesh)
@@ -412,9 +418,89 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         result = pybamm.Vector(np.zeros(n * repeats))
         for k in range(d):
             Dk = csr_matrix(kron(eye(repeats, dtype=np.float64), D_components[k]))
-            result = result + Dk @ discretised_symbol[k]
+            result = result + pybamm.Matrix(Dk) @ comps[k]
+
+        disc_sv = getattr(discretised_symbol, "_disc_state_vector", None)
+        if disc_sv is not None:
+            L_bc, bc_rhs, D_bnd = self._div_boundary_correction(
+                submesh, boundary_conditions, domain=domain
+            )
+            if D_bnd is not None:
+                for k in range(d):
+                    Dk_bnd = csr_matrix(kron(eye(repeats, dtype=np.float64), D_bnd[k]))
+                    result = result - pybamm.Matrix(Dk_bnd) @ comps[k]
+            if L_bc is not None:
+                L_bc_full = csr_matrix(kron(eye(repeats, dtype=np.float64), L_bc))
+                result = result + pybamm.Matrix(L_bc_full) @ disc_sv
+            if np.any(bc_rhs != 0):
+                bc_rhs_full = np.tile(bc_rhs, repeats)
+                result = result + pybamm.Vector(bc_rhs_full)
 
         return result
+
+    def _div_boundary_correction(self, submesh, boundary_conditions, domain=None):
+        """Build boundary corrections for the divergence operator.
+
+        When computing ``div(D * grad(u))``, the divergence matrices use
+        cell-centered flux values at boundary faces, which is incorrect.
+        This method returns:
+
+        * ``L_bc`` – sparse matrix for TPFA Dirichlet correction on state vector
+        * ``bc_rhs`` – constant vector for Dirichlet/Neumann RHS
+        * ``D_bnd`` – list of sparse matrices (boundary-only divergence terms
+          to subtract from the cell-centered approximation)
+
+        The corrected divergence is::
+
+            div(F) = sum_k D_k @ F_k - sum_k D_bnd_k @ F_k + L_bc @ u + bc_rhs
+        """
+        n = submesh.npts
+        d = submesh.dimension
+        L_bc = None
+        bc_rhs = np.zeros(n)
+        D_bnd = None
+
+        for var, bcs in boundary_conditions.items():
+            if not hasattr(var, "domain"):
+                continue
+            if domain is not None and var.domain != domain:
+                continue
+            for side, (bc_value, bc_type) in bcs.items():
+                face_tag = self._side_to_boundary_tag(side)
+                if face_tag not in submesh.boundary_faces:
+                    continue
+                face_indices = submesh.boundary_faces[face_tag]
+                bc_val = float(bc_value.evaluate())
+
+                for fi in face_indices:
+                    cell = submesh.face_owner[fi]
+                    area = submesh.face_areas[fi]
+                    vol = submesh.cell_volumes[cell]
+                    normal = submesh.face_normals[fi]
+
+                    if D_bnd is None:
+                        D_bnd = [csr_matrix((n, n)).tolil() for _ in range(d)]
+                    for k in range(d):
+                        D_bnd[k][cell, cell] += normal[k] * area / vol
+
+                    if bc_type == "Dirichlet":
+                        face_c = submesh.face_centroids[fi]
+                        cell_c = submesh.cell_centroids[cell]
+                        d_perp = np.linalg.norm(face_c - cell_c)
+                        coeff = area / d_perp
+
+                        if L_bc is None:
+                            L_bc = csr_matrix((n, n)).tolil()
+                        L_bc[cell, cell] -= coeff / vol
+                        bc_rhs[cell] += coeff * bc_val / vol
+                    elif bc_type == "Neumann":
+                        bc_rhs[cell] += bc_val * area / vol
+
+        if L_bc is not None:
+            L_bc = csr_matrix(L_bc)
+        if D_bnd is not None:
+            D_bnd = [csr_matrix(m) for m in D_bnd]
+        return L_bc, bc_rhs, D_bnd
 
     def _divergence_matrices(self, submesh):
         """
@@ -440,7 +526,6 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
 
         D = [csr_matrix((n, n)) for _ in range(d)]
 
-        # Internal faces
         int_owner = owner[:n_int]
         int_neighbor = neighbor[:n_int]
 
@@ -491,10 +576,46 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
     def gradient_squared(self, symbol, discretised_symbol, boundary_conditions):
         grad = self.gradient(symbol, discretised_symbol, boundary_conditions)
         result = None
-        for comp in grad:
+        for comp in grad._components:
             sq = comp**2
             result = sq if result is None else result + sq
         return result
+
+    # ------------------------------------------------------------------
+    # Binary operator handling (scalar * VectorField, etc.)
+    # ------------------------------------------------------------------
+
+    def process_binary_operators(self, bin_op, left, right, disc_left, disc_right):
+        if isinstance(disc_left, pybamm.VectorField) or isinstance(
+            disc_right, pybamm.VectorField
+        ):
+            if isinstance(disc_left, pybamm.VectorField) and isinstance(
+                disc_right, pybamm.VectorField
+            ):
+                n = disc_left.n_components
+            elif isinstance(disc_left, pybamm.VectorField):
+                n = disc_left.n_components
+                disc_right = pybamm.VectorField(*[disc_right] * n)
+            else:
+                n = disc_right.n_components
+                disc_left = pybamm.VectorField(*[disc_left] * n)
+
+            new_comps = [
+                pybamm.simplify_if_constant(
+                    bin_op.create_copy(
+                        [disc_left._components[k], disc_right._components[k]]
+                    )
+                )
+                for k in range(n)
+            ]
+            result = pybamm.VectorField(*new_comps)
+            for src in (disc_left, disc_right):
+                if hasattr(src, "_disc_state_vector"):
+                    result._disc_state_vector = src._disc_state_vector
+                    break
+            return result
+
+        return bin_op._binary_new_copy(disc_left, disc_right)
 
     # ------------------------------------------------------------------
     # Integral operators
