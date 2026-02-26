@@ -149,7 +149,6 @@ class BaseModel:
         instance.bounds = properties["bounds"]
         instance.events = properties["events"]
         instance.mass_matrix = properties["mass_matrix"]
-        instance.mass_matrix_inv = properties["mass_matrix_inv"]
         instance._variables_processed = dict(properties.get("_variables_processed", {}))
 
         def assign_meshes_to_variables(variables_dict, mesh):
@@ -497,15 +496,6 @@ class BaseModel:
     @mass_matrix.setter
     def mass_matrix(self, mass_matrix):
         self._mass_matrix = mass_matrix
-
-    @property
-    def mass_matrix_inv(self):
-        """Returns the inverse of the mass matrix for the differential equations after discretisation."""
-        return self._mass_matrix_inv
-
-    @mass_matrix_inv.setter
-    def mass_matrix_inv(self, mass_matrix_inv):
-        self._mass_matrix_inv = mass_matrix_inv
 
     @property
     def jacobian(self):
@@ -885,15 +875,18 @@ class BaseModel:
         M = [2I 0
              0 0]
         """
-        if self.mass_matrix is None or self.mass_matrix_inv is None:
+        if self.mass_matrix is None:
             return False
-        # Check that the mass matrix inverse is an identity matrix
-        mass_matrix_inv = self.mass_matrix_inv.entries
-        if scipy.sparse.issparse(mass_matrix_inv):
-            identity = scipy.sparse.identity(mass_matrix_inv.shape[0])
-            return (mass_matrix_inv - identity).nnz == 0
+        n_rhs = self.len_rhs
+        if n_rhs == 0:
+            return False
+        mass = self.mass_matrix.entries
+        M_ode = mass[:n_rhs, :n_rhs]
+        if scipy.sparse.issparse(M_ode):
+            identity = scipy.sparse.identity(n_rhs, format="csr")
+            return (M_ode - identity).nnz == 0
         else:
-            return np.allclose(mass_matrix_inv, np.eye(mass_matrix_inv.shape[0]))
+            return np.allclose(M_ode, np.eye(n_rhs))
 
     def _format_table_row(
         self, param_name, param_type, max_name_length, max_type_length
@@ -1427,6 +1420,86 @@ class BaseModel:
             return model
         elif return_type == "ics":
             return initial_conditions, concatenated_initial_conditions
+
+    def build_initial_state_mapper(self, from_model):
+        """
+        Build a mapper that maps a final state vector from a discretised model to
+        this model's discretised initial conditions.
+
+        Parameters
+        ----------
+        from_model : :class:`pybamm.BaseModel`
+            The discretised model that provides the final state vector.
+        """
+        if not self.is_discretised or not from_model.is_discretised:
+            raise pybamm.ModelError(
+                "Both models must be discretised to build an initial state mapper."
+            )
+        if self.y_slices is None or from_model.y_slices is None:
+            raise pybamm.ModelError(
+                "Both models must define y_slices to build an initial state mapper."
+            )
+
+        from_vars_by_id = {var.id: var for var in from_model.y_slices}
+        from_vars_by_name = {var.name: var for var in from_model.y_slices}
+
+        def _resolve_from_var(target_var):
+            from_var = from_vars_by_id.get(target_var.id)
+            if from_var is None:
+                from_var = from_vars_by_name.get(target_var.name)
+            return from_var
+
+        entries = []
+        for var in self.initial_conditions:
+            if var in self.y_slices:
+                target_slice = self.y_slices[var][0]
+            elif isinstance(var, pybamm.Concatenation):
+                # Fallback for concatenations that don't have an explicit key in y_slices
+                target_slice = slice(
+                    self.y_slices[var.children[0]][0].start,
+                    self.y_slices[var.children[-1]][0].stop,
+                )
+            else:
+                raise pybamm.ModelError(
+                    "Could not find a y-slice for an initial condition variable."
+                )
+
+            from_var = _resolve_from_var(var)
+            from_slice = None
+            if from_var is not None:
+                from_slice = from_model.y_slices[from_var][0]
+                target_len = target_slice.stop - target_slice.start
+                from_len = from_slice.stop - from_slice.start
+                if from_len != target_len:
+                    raise pybamm.ModelError(
+                        "Mapped variable slice length mismatch between models: "
+                        f"'{var.name}' has source length {from_len} and target length {target_len}."
+                    )
+
+            entries.append((target_slice, var, from_var, from_slice))
+        # sort entries according to target slices
+        entries.sort(key=lambda x: x[0].start)
+
+        # create a pybamm expression tree that maps from the final state vector of the from_model to the initial conditions of this model
+        equations = []
+        for _target_slice, target_var, from_var, from_slice in entries:
+            if from_var is None:
+                # Keep the target-model initial condition for unmapped variables
+                physical = (
+                    target_var.reference
+                    + target_var.scale * self.initial_conditions[target_var]
+                )
+            else:
+                physical = from_var.reference + from_var.scale * pybamm.StateVector(
+                    from_slice
+                )
+
+            mapped = (physical - target_var.reference) / target_var.scale
+            equations.append(mapped)
+
+        mapper = pybamm.NumpyConcatenation(*equations)
+
+        return mapper
 
     def check_and_combine_dict(self, dict1, dict2):
         # check that the key ids are distinct

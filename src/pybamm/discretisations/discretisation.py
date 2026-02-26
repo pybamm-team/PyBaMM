@@ -5,8 +5,7 @@ import itertools
 from collections import OrderedDict, defaultdict
 
 import numpy as np
-from scipy.sparse import block_diag, csc_matrix, csr_matrix
-from scipy.sparse.linalg import inv
+from scipy.sparse import block_diag, csr_matrix
 
 import pybamm
 from pybamm.models.base_model import ModelSolutionObservability
@@ -266,9 +265,7 @@ class Discretisation:
 
         # Create mass matrix
         pybamm.logger.verbose(f"Create mass matrix for {model.name}")
-        model_disc.mass_matrix, model_disc.mass_matrix_inv = self.create_mass_matrix(
-            model_disc
-        )
+        model_disc.mass_matrix = self.create_mass_matrix(model_disc)
 
         # Save geometry
         pybamm.logger.verbose(f"Save geometry for {model.name}")
@@ -709,14 +706,8 @@ class Discretisation:
         -------
         :class:`pybamm.Matrix`
             The mass matrix
-        :class:`pybamm.Matrix`
-            The inverse of the ode part of the mass matrix (required by solvers
-            which only accept the ODEs in explicit form)
         """
-        # Create list of mass matrices for each equation to be put into block
-        # diagonal mass matrix for the model
         mass_list = []
-        mass_inv_list = []
 
         # get a list of model rhs variables that are sorted according to
         # where they are in the state vector
@@ -731,29 +722,14 @@ class Discretisation:
         # Process mass matrices for the differential equations
         for var in sorted_model_variables:
             if var.domain == []:
-                # If variable domain empty then mass matrix is just 1
                 mass = 1.0
-                mass_inv = 1.0
             else:
                 mass = (
                     self.spatial_methods[var.domain[0]]
                     .mass_matrix(var, self.bcs)
                     .entries
                 )
-                if isinstance(
-                    self.spatial_methods[var.domain[0]],
-                    pybamm.ZeroDimensionalSpatialMethod | pybamm.FiniteVolume,
-                ):
-                    # for 0D methods the mass matrix is just a scalar 1 and for
-                    # finite volumes the mass matrix is identity, so no need to
-                    # compute the inverse
-                    mass_inv = mass
-                else:
-                    # inverse is more efficient in csc format
-                    mass_inv = inv(csc_matrix(mass))
-
             mass_list.append(mass)
-            mass_inv_list.append(mass_inv)
 
         # Create lumped mass matrix (of zeros) of the correct shape for the
         # discretised algebraic equations
@@ -763,24 +739,15 @@ class Discretisation:
             mass_list.append(mass_algebraic)
 
         # Create block diagonal (sparse) mass matrix (if model is not empty)
-        # and inverse (if model has odes)
         N_rhs = len(model.rhs)
         N_alg = len(model.algebraic)
 
-        has_mass_matrix = N_rhs > 0 or N_alg > 0
-        has_mass_matrix_inv = N_rhs > 0
-
-        if has_mass_matrix:
+        if N_rhs > 0 or N_alg > 0:
             mass_matrix = pybamm.Matrix(block_diag(mass_list, format="csr"))
         else:
             mass_matrix = None
 
-        if has_mass_matrix_inv:
-            mass_matrix_inv = pybamm.Matrix(block_diag(mass_inv_list, format="csr"))
-        else:
-            mass_matrix_inv = None
-
-        return mass_matrix, mass_matrix_inv
+        return mass_matrix
 
     def _pre_process_variables(
         self,
