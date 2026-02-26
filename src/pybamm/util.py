@@ -373,15 +373,35 @@ def _parse_version(version_str, length=3):
     return parsed + (0,) * (length - len(parsed))
 
 
-def has_jax():
-    """
-    Check if jax and jaxlib are installed with the correct versions and on a supported platform.
+def _is_version_in_range(version_tuple, min_version, max_version):
+    """Check if version is within the supported range [min_version, max_version).
+
+    Parameters
+    ----------
+    version_tuple : tuple of int
+        The version to check, parsed as a tuple of integers.
+    min_version : tuple of int
+        The minimum supported version, inclusive, parsed as a tuple of integers.
+    max_version : tuple of int
+        The maximum supported version, exclusive, parsed as a tuple of integers.
 
     Returns
     -------
     bool
-        True if jax and jaxlib are installed with the correct versions and on a supported platform,
-        False if otherwise
+        True if version_tuple is >= min_version and < max_version, False otherwise.
+    """
+    return version_tuple >= min_version and version_tuple < max_version
+
+
+def has_jax():
+    """
+    Check if jax and jaxlib are installed with correct versions on a supported platform.
+
+    Returns
+    -------
+    bool
+        True if jax and jaxlib are installed with supported versions on a supported platform
+        (Linux, Windows, or macOS with Apple Silicon), False otherwise.
 
     Notes
     -----
@@ -392,9 +412,7 @@ def has_jax():
     rather than raising a hard error.
     """
     # Check if modules are available
-    if (importlib.util.find_spec("jax") is None) or (
-        importlib.util.find_spec("jaxlib") is None
-    ):
+    if any(importlib.util.find_spec(pkg) is None for pkg in ("jax", "jaxlib")):
         return False
 
     # Check platform: JAX is not supported on macOS x86_64 (Intel)
@@ -421,12 +439,9 @@ def has_jax():
         jaxlib_parsed = _parse_version(jaxlib_version)
 
         # Check if both jax and jaxlib are within supported version range
-        if (
-            jax_parsed >= MIN_VERSION
-            and jax_parsed < MAX_VERSION
-            and jaxlib_parsed >= MIN_VERSION
-            and jaxlib_parsed < MAX_VERSION
-        ):
+        if _is_version_in_range(
+            jax_parsed, MIN_VERSION, MAX_VERSION
+        ) and _is_version_in_range(jaxlib_parsed, MIN_VERSION, MAX_VERSION):
             return True
 
         warn(
@@ -439,10 +454,10 @@ def has_jax():
         )
         return False
 
-    except Exception:
-        # If there's any error checking versions, treat JAX as unavailable
+    except importlib.metadata.PackageNotFoundError:
+        # If package metadata cannot be found, treat JAX as unavailable
         warn(
-            "JAX is installed but cannot be used due to an error checking its version. "
+            "JAX version information could not be retrieved. "
             "JAX features will be unavailable.",
             UserWarning,
             stacklevel=2,
