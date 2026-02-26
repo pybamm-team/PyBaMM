@@ -348,7 +348,7 @@ def get_parameters_filepath(path):
         return os.path.join(pybamm.__path__[0], path)
 
 
-def _parse_version(version_str):
+def _parse_version(version_str, length=3):
     """Parse version string into tuple of integers for comparison,
     ignoring suffix (e.g., "0.7.0rc1" -> (0, 7, 0)).
 
@@ -356,17 +356,21 @@ def _parse_version(version_str):
     ----------
     version_str : str
         The version string to parse.
+    length : int, optional
+        The desired length of the output tuple, defaults to 3.
 
     Returns
     -------
     tuple of int
-        The parsed version as a tuple of integers.
+        The parsed version as a tuple of integers, padded with zeros to the specified length.
     """
-    return tuple(
+    parsed = tuple(
         int(re.match(r"\d+", part).group())
         for part in version_str.split(".")
         if re.match(r"\d+", part)
     )
+
+    return parsed + (0,) * (length - len(parsed))
 
 
 def has_jax():
