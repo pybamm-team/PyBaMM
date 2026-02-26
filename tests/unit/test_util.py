@@ -6,6 +6,7 @@ from io import StringIO
 import pytest
 
 import pybamm
+from pybamm.util import _is_version_in_range
 from tests import (
     get_optional_distribution_deps,
     get_present_optional_import_deps,
@@ -179,6 +180,29 @@ class TestUtil:
     )
     def test_parse_version(self, input_str, expected):
         assert pybamm.util._parse_version(input_str) == expected
+
+    @pytest.mark.parametrize(
+        "version,min_ver,max_ver,expected",
+        [
+            # Version within range
+            ((0, 7, 5), (0, 7, 0), (0, 9, 0), True),
+            ((0, 8, 0), (0, 7, 0), (0, 9, 0), True),
+            # Version equal to min (inclusive)
+            ((0, 7, 0), (0, 7, 0), (0, 9, 0), True),
+            # Version equal to max (exclusive)
+            ((0, 9, 0), (0, 7, 0), (0, 9, 0), False),
+            # Version below min
+            ((0, 6, 9), (0, 7, 0), (0, 9, 0), False),
+            # Version above max
+            ((0, 9, 1), (0, 7, 0), (0, 9, 0), False),
+            ((1, 0, 0), (0, 7, 0), (0, 9, 0), False),
+            # Edge cases
+            ((0, 7, 0), (0, 7, 0), (0, 7, 1), True),
+            ((0, 7, 1), (0, 7, 0), (0, 7, 1), False),
+        ],
+    )
+    def test_is_version_in_range(self, version, min_ver, max_ver, expected):
+        assert _is_version_in_range(version, min_ver, max_ver) == expected
 
 
 class TestSearch:
