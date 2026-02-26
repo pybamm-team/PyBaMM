@@ -166,6 +166,20 @@ class TestUtil:
             "or list them as required."
         )
 
+    @pytest.mark.parametrize(
+        "input_str,expected",
+        [
+            ("0.7.0", (0, 7, 0)),
+            ("0.7", (0, 7, 0)),
+            ("1.2.3rc1", (1, 2, 3)),
+            ("2.0", (2, 0, 0)),
+            ("10.4.5.dev0", (10, 4, 5)),
+            ("0.8.0-beta", (0, 8, 0)),
+        ],
+    )
+    def test_parse_version(self, input_str, expected):
+        assert pybamm.util._parse_version(input_str) == expected
+
 
 class TestSearch:
     def test_url_gets_to_stdout(self, mocker):
