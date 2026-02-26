@@ -16,6 +16,7 @@ from scipy.sparse import csr_matrix, issparse, kron
 
 import pybamm
 from pybamm.expression_tree.symbol import simplify_if_constant
+from pybamm.expression_tree.tracing import is_tracing
 
 # create type alias(s)
 from pybamm.type_definitions import ChildSymbol, ChildValue, Numeric
@@ -1111,24 +1112,25 @@ def simplified_power(
     if pybamm.is_scalar_one(right):
         return left
 
-    if isinstance(left, Multiplication):
-        # Simplify (a * b) ** c to (a ** c) * (b ** c)
-        # if (a ** c) is constant or (b ** c) is constant
-        if left.left.is_constant() or left.right.is_constant():
-            l_left, l_right = left.orphans
-            new_left = l_left**right
-            new_right = l_right**right
-            if new_left.is_constant() or new_right.is_constant():
-                return new_left * new_right
-    elif isinstance(left, Division):
-        # Simplify (a / b) ** c to (a ** c) / (b ** c)
-        # if (a ** c) is constant or (b ** c) is constant
-        if left.left.is_constant() or left.right.is_constant():
-            l_left, l_right = left.orphans
-            new_left = l_left**right
-            new_right = l_right**right
-            if new_left.is_constant() or new_right.is_constant():
-                return new_left / new_right
+    if not is_tracing():
+        if isinstance(left, Multiplication):
+            # Simplify (a * b) ** c to (a ** c) * (b ** c)
+            # if (a ** c) is constant or (b ** c) is constant
+            if left.left.is_constant() or left.right.is_constant():
+                l_left, l_right = left.orphans
+                new_left = l_left**right
+                new_right = l_right**right
+                if new_left.is_constant() or new_right.is_constant():
+                    return new_left * new_right
+        elif isinstance(left, Division):
+            # Simplify (a / b) ** c to (a ** c) / (b ** c)
+            # if (a ** c) is constant or (b ** c) is constant
+            if left.left.is_constant() or left.right.is_constant():
+                l_left, l_right = left.orphans
+                new_left = l_left**right
+                new_right = l_right**right
+                if new_left.is_constant() or new_right.is_constant():
+                    return new_left / new_right
 
     return pybamm.simplify_if_constant(pybamm.Power(left, right))
 
@@ -1202,7 +1204,7 @@ def add(left: ChildSymbol, right: ChildSymbol):
     if isinstance(left, pybamm.Negate) and not left.is_constant():
         return right - left.orphans[0]
 
-    if left.is_constant():
+    if left.is_constant() and not is_tracing():
         if isinstance(right, Addition | Subtraction) and right.left.is_constant():
             # Simplify a + (b +- c) to (a + b) +- c if (a + b) is constant
             r_left, r_right = right.orphans
@@ -1236,7 +1238,7 @@ def subtract(
 
     # Move constant to always be on the left
     # For a subtraction, this means (var - constant) becomes (-constant + var)
-    if right.is_constant() and not left.is_constant():
+    if right.is_constant() and not left.is_constant() and not is_tracing():
         return -right + left
 
     # Check for Concatenations and Broadcasts
@@ -1277,7 +1279,7 @@ def subtract(
     if isinstance(right, pybamm.Negate):
         return left + right.orphans[0]
 
-    if left.is_constant():
+    if left.is_constant() and not is_tracing():
         if isinstance(right, Addition | Subtraction) and right.left.is_constant():
             # Simplify a - (b +- c) to (a - b) -+ c if (a - b) is constant
             r_left, r_right = right.orphans
@@ -1378,7 +1380,7 @@ def multiply(
             new_mul.copy_domains(right)
             return new_mul
 
-        else:
+        elif not is_tracing():
             if isinstance(right, Multiplication):
                 # Simplify a * (b * c) to (a * b) * c if (a * b) is constant
                 if right.left.is_constant():
@@ -1450,7 +1452,7 @@ def divide(
 
     # Move constant to always be on the left
     # For a division, this means (var / constant) becomes (1/constant * var)
-    if right.is_constant() and not left.is_constant():
+    if right.is_constant() and not left.is_constant() and not is_tracing():
         return (1 / right) * left
 
     # Check for Concatenations and Broadcasts

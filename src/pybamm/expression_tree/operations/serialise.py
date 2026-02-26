@@ -16,6 +16,7 @@ import black
 import numpy as np
 
 import pybamm
+from pybamm.expression_tree.tracing import tracing
 
 SUPPORTED_SCHEMA_VERSION = "1.1"
 
@@ -1646,7 +1647,8 @@ def convert_function_to_symbolic_expression(func, name=None):
             func_to_eval = func
 
     sym_inputs = [pybamm.Parameter(arg) for arg in func_args]
-    sym_output = func_to_eval(*sym_inputs)
+    with tracing():
+        sym_output = func_to_eval(*sym_inputs)
 
     # Wrap the symbolic expression in an ExpressionFunctionParameter to allow access
     # to the function name and arguments

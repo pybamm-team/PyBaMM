@@ -599,10 +599,9 @@ class TestRoundtripNestedStructures:
         ).solve(inputs)
 
         for key in sol_orig:
-            np.testing.assert_allclose(
+            np.testing.assert_array_equal(
                 sol_rt[key],
                 sol_orig[key],
-                rtol=1e-14,
                 err_msg=f"SOH mismatch for '{key}'",
             )
 
@@ -775,4 +774,43 @@ class TestStressRoundtripAllParameterSets:
                 orig_result,
                 deser_result,
                 err_msg=f"[{param_set}] callable '{key}' not bit-exact after roundtrip",
+            )
+
+
+class TestSimulationPickleRoundtrip:
+    """Verify that pickling a Simulation and re-solving produces
+    bit-exact identical raw solver output (sol.t, sol.y, sol.yp)."""
+
+    @pytest.mark.parametrize("param_set", ["Chen2020", "Ai2020", "Marquis2019"])
+    @pytest.mark.parametrize("initial_soc", [None, 0.5, "3.5 V"])
+    @pytest.mark.parametrize(
+        "experiment",
+        [None, "Discharge at C/2 until 3.2 V"],
+        ids=["no_experiment", "with_experiment"],
+    )
+    def test_pickle_roundtrip_exact(self, tmp_path, param_set, initial_soc, experiment):
+        model = pybamm.lithium_ion.DFN()
+        pv = pybamm.ParameterValues(param_set)
+        exp = pybamm.Experiment([experiment]) if experiment else None
+        sim = pybamm.Simulation(model, parameter_values=pv, experiment=exp)
+
+        t_eval = None if exp else [0, 3600]
+        sol_orig = sim.solve(t_eval=t_eval, initial_soc=initial_soc)
+
+        filepath = str(tmp_path / "sim.pkl")
+        sim.save(filepath)
+        sim_loaded = pybamm.load_sim(filepath)
+
+        sol_loaded = sim_loaded.solve(t_eval=t_eval, initial_soc=initial_soc)
+
+        tag = f"[{param_set}, soc={initial_soc}, exp={experiment is not None}]"
+        np.testing.assert_array_equal(
+            sol_orig.t, sol_loaded.t, err_msg=f"{tag} sol.t mismatch"
+        )
+        np.testing.assert_array_equal(
+            sol_orig.y, sol_loaded.y, err_msg=f"{tag} sol.y mismatch"
+        )
+        if sol_orig.yp is not None:
+            np.testing.assert_array_equal(
+                sol_orig.yp, sol_loaded.yp, err_msg=f"{tag} sol.yp mismatch"
             )
