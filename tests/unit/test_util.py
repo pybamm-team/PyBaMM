@@ -6,7 +6,6 @@ from io import StringIO
 import pytest
 
 import pybamm
-from pybamm.util import _is_version_in_range
 from tests import (
     get_optional_distribution_deps,
     get_present_optional_import_deps,
@@ -202,7 +201,53 @@ class TestUtil:
         ],
     )
     def test_is_version_in_range(self, version, min_ver, max_ver, expected):
-        assert _is_version_in_range(version, min_ver, max_ver) == expected
+        assert pybamm.util._is_version_in_range(version, min_ver, max_ver) == expected
+
+    def test_has_jax_not_installed(self, monkeypatch):
+        # Simulate jax not installed
+        monkeypatch.setattr("importlib.util.find_spec", lambda name: None)
+        assert pybamm.util.has_jax() is False
+
+    def test_has_jax_macos_intel(self, monkeypatch):
+        # Simulate jax installed but macOS Intel
+        monkeypatch.setattr("importlib.util.find_spec", lambda name: True)
+        monkeypatch.setattr("pybamm.util.is_macos_intel", lambda: True)
+        with pytest.warns(UserWarning):
+            assert pybamm.util.has_jax() is False
+
+    def test_has_jax_version_supported(self, monkeypatch):
+        # Simulate jax installed on supported platform with correct versions
+        monkeypatch.setattr("importlib.util.find_spec", lambda name: True)
+        monkeypatch.setattr("pybamm.util.is_macos_intel", lambda: False)
+        monkeypatch.setattr(
+            "importlib.metadata.version",
+            lambda name: "0.8.0",  # valid version
+        )
+        assert pybamm.util.has_jax() is True
+
+    def test_has_jax_version_unsupported(self, monkeypatch):
+        # Simulate jax installed with unsupported version
+        monkeypatch.setattr("importlib.util.find_spec", lambda name: True)
+        monkeypatch.setattr("pybamm.util.is_macos_intel", lambda: False)
+        monkeypatch.setattr(
+            "importlib.metadata.version",
+            lambda name: "0.9.0",  # too high
+        )
+        with pytest.warns(UserWarning):
+            assert pybamm.util.has_jax() is False
+
+    def test_has_jax_version_error(self, monkeypatch):
+        # Simulate error reading version (PackageNotFoundError)
+        import importlib.metadata
+
+        def mock_version(name):
+            raise importlib.metadata.PackageNotFoundError(name)
+
+        monkeypatch.setattr("importlib.util.find_spec", lambda name: True)
+        monkeypatch.setattr("pybamm.util.is_macos_intel", lambda: False)
+        monkeypatch.setattr("importlib.metadata.version", mock_version)
+        with pytest.warns(UserWarning):
+            assert pybamm.util.has_jax() is False
 
 
 class TestSearch:
