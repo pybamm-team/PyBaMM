@@ -188,7 +188,6 @@ class Serialise:
             ),
             "events": [self._SymbolEncoder().default(event) for event in model.events],
             "mass_matrix": self._SymbolEncoder().default(model.mass_matrix),
-            "mass_matrix_inv": self._SymbolEncoder().default(model.mass_matrix_inv),
             "_solution_observable": model._solution_observable.name,
         }
 
@@ -296,9 +295,6 @@ class Serialise:
                 for event in model_data["events"]
             ],
             "mass_matrix": self._reconstruct_expression_tree(model_data["mass_matrix"]),
-            "mass_matrix_inv": self._reconstruct_expression_tree(
-                model_data["mass_matrix_inv"]
-            ),
         }
 
         recon_model_dict["geometry"] = (
