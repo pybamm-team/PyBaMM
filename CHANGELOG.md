@@ -11,7 +11,7 @@ as initial conditions. ([#5311](https://github.com/pybamm-team/PyBaMM/pull/5311)
 - Optimize state mapper for multi-step experiments by pre-calculating mapper during setup. ([#5380](https://github.com/pybamm-team/PyBaMM/pull/5380))
 
 ## Bug fixes
-- Update has_jax() to safely check for JAX and JAXLIB installation, supported versions (>=0.7.0, <0.9.0), and compatible platforms (Linux, Windows, macOS Apple Silicon). Emits a warning and returns False instead of raising an exception when JAX is unavailable or unsupported. ([#5398](https://github.com/pybamm-team/PyBaMM/pull/5398))
+- PyBaMM no longer crashes on import if an incompatible version of JAX is installed (e.g., installed for other packages or numeric computations). This ensures JAX is truly an optional dependency: users who do not intend to use JAX can safely import PyBaMM, with a warning shown if JAX-dependent features are disabled. ([#5398](https://github.com/pybamm-team/PyBaMM/pull/5398))
 
 ## Breaking changes
 
