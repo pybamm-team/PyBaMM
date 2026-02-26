@@ -1646,8 +1646,6 @@ def convert_function_to_symbolic_expression(func, name=None):
             func_to_eval = func
 
     sym_inputs = [pybamm.Parameter(arg) for arg in func_args]
-
-    # Evaluate the function with symbolic inputs to get symbolic expression
     sym_output = func_to_eval(*sym_inputs)
 
     # Wrap the symbolic expression in an ExpressionFunctionParameter to allow access
@@ -1687,6 +1685,8 @@ def convert_symbol_from_json(json_data):
         return pybamm.Parameter(json_data["name"])
     elif json_data["type"] == "InputParameter":
         return pybamm.InputParameter(json_data["name"])
+    elif json_data["type"] == "Constant":
+        return pybamm.Constant(json_data["value"], json_data["name"])
     elif json_data["type"] == "Scalar":
         # Convert stored numerical values back to PyBaMM Scalar objects
         return pybamm.Scalar(json_data["value"])
@@ -1806,6 +1806,8 @@ def convert_symbol_to_json(symbol):
     elif isinstance(symbol, pybamm.Parameter):
         # Parameters are stored with their type and name
         return {"type": "Parameter", "name": symbol.name}
+    elif isinstance(symbol, pybamm.Constant):
+        return {"type": "Constant", "value": symbol.value, "name": symbol.name}
     elif isinstance(symbol, pybamm.Scalar):
         # Scalar values are stored with their numerical value
         return {"type": "Scalar", "value": symbol.value}
