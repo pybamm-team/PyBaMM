@@ -1247,6 +1247,8 @@ def subtract(
     # anything added by a scalar zero returns the other child
     if pybamm.is_scalar_zero(left):
         return -right
+    if pybamm.is_scalar_zero(right):
+        return left
     # Check matrices after checking scalars
     if pybamm.is_matrix_zero(left):
         if right.evaluates_to_number():
@@ -1376,42 +1378,44 @@ def multiply(
             new_mul.copy_domains(right)
             return new_mul
 
-        elif isinstance(right, Multiplication):
-            # Simplify a * (b * c) to (a * b) * c if (a * b) is constant
-            if right.left.is_constant():
-                r_left, r_right = right.orphans
-                return (left * r_left) * r_right
-        elif isinstance(right, Division):
-            # Simplify a * (b / c) to (a * b) / c if (a * c) is constant
-            if right.left.is_constant():
-                r_left, r_right = right.orphans
-                return (left * r_left) / r_right
+        else:
+            if isinstance(right, Multiplication):
+                # Simplify a * (b * c) to (a * b) * c if (a * b) is constant
+                if right.left.is_constant():
+                    r_left, r_right = right.orphans
+                    return (left * r_left) * r_right
+            elif isinstance(right, Division):
+                # Simplify a * (b / c) to (a * b) / c if (a * c) is constant
+                if right.left.is_constant():
+                    r_left, r_right = right.orphans
+                    return (left * r_left) / r_right
 
-        # Simplify a * (b + c) to (a * b) + (a * c) if (a * b) is constant
-        # This is a common construction that appears from discretisation of spatial
-        # operators
-        # Also do this for cases like a * (b @ c + d) where (a * b) is constant
-        elif isinstance(right, Addition | Subtraction):
-            mul_classes = (Multiplication, MatrixMultiplication)
-            if (
-                right.left.is_constant()
-                or (
-                    isinstance(right.left, mul_classes)
-                    and right.left.left.is_constant()
-                )
-                or (
-                    isinstance(right.right, mul_classes)
-                    and right.right.left.is_constant()
-                )
-            ):
-                r_left, r_right = right.orphans
-                if (r_left.domain == right.domain or r_left.domain == []) and (
-                    r_right.domain == right.domain or r_right.domain == []
+            # Simplify a * (b + c) to (a * b) + (a * c) if (a * b) is constant
+            # This is a common construction that appears from discretisation of
+            # spatial operators
+            # Also do this for cases like a * (b @ c + d) where (a * b) is
+            # constant
+            elif isinstance(right, Addition | Subtraction):
+                mul_classes = (Multiplication, MatrixMultiplication)
+                if (
+                    right.left.is_constant()
+                    or (
+                        isinstance(right.left, mul_classes)
+                        and right.left.left.is_constant()
+                    )
+                    or (
+                        isinstance(right.right, mul_classes)
+                        and right.right.left.is_constant()
+                    )
                 ):
-                    if isinstance(right, Addition):
-                        return (left * r_left) + (left * r_right)
-                    elif isinstance(right, Subtraction):
-                        return (left * r_left) - (left * r_right)
+                    r_left, r_right = right.orphans
+                    if (r_left.domain == right.domain or r_left.domain == []) and (
+                        r_right.domain == right.domain or r_right.domain == []
+                    ):
+                        if isinstance(right, Addition):
+                            return (left * r_left) + (left * r_right)
+                        elif isinstance(right, Subtraction):
+                            return (left * r_left) - (left * r_right)
 
     # Cancelling out common terms
     if isinstance(left, Division):
