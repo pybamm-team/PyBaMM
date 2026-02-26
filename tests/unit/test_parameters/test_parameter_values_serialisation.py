@@ -9,6 +9,7 @@ import pytest
 
 import pybamm
 from pybamm.expression_tree.operations.serialise import (
+    convert_symbol_from_json,
     convert_symbol_to_json,
 )
 from pybamm.parameters.parameter_values import (
@@ -45,18 +46,6 @@ def _assert_evaluate_equal_array(pv_original, pv_loaded, name, inputs, y):
     loaded = pv_loaded.process_symbol(fp).evaluate(y=y)
     assert not np.any(np.isnan(orig)), f"'{name}' original has NaN"
     np.testing.assert_array_equal(orig, loaded)
-
-
-def _assert_evaluate_close(pv_original, pv_loaded, name, inputs, y):
-    """Like _assert_evaluate_equal_array but allows machine-epsilon
-    differences.  Use for real parameter sets where the original
-    callable and the reconstructed ExpressionFunctionParameter may
-    follow slightly different floating-point evaluation orders."""
-    fp = pybamm.FunctionParameter(name, inputs)
-    orig = pv_original.process_symbol(fp).evaluate(y=y)
-    loaded = pv_loaded.process_symbol(fp).evaluate(y=y)
-    assert not np.any(np.isnan(orig)), f"'{name}' original has NaN"
-    np.testing.assert_allclose(orig, loaded, rtol=1e-14)
 
 
 # ------------------------------------------------------------------ #
@@ -313,6 +302,39 @@ class TestRoundtripValueTypes:
         expected = np.sin(1) + np.cos(1) + np.abs(1)
         assert pv2.evaluate(pv2["expr"]) == expected
 
+    def test_constant_roundtrip(self):
+        """Constant nodes must roundtrip as Constant (not Scalar) to
+        preserve expression tree simplification behaviour."""
+        for const, name in [
+            (pybamm.constants.R, "R"),
+            (pybamm.constants.F, "F"),
+            (pybamm.constants.k_b, "k_b"),
+            (pybamm.constants.q_e, "q_e"),
+        ]:
+            json_data = convert_symbol_to_json(const)
+            assert json_data["type"] == "Constant"
+            restored = convert_symbol_from_json(json_data)
+            assert type(restored) is pybamm.Constant
+            assert restored.is_constant() is False
+            assert restored.value == const.value
+            assert restored.name == name
+
+    def test_callable_using_pybamm_constants(self):
+        """Callable using pybamm.constants.R must evaluate identically
+        after roundtrip (the Constant nodes must not collapse to Scalar)."""
+
+        def arrhenius_rate(T):
+            E_a = 5000.0
+            T_ref = 298.15
+            return pybamm.exp(E_a / pybamm.constants.R * (1 / T_ref - 1 / T))
+
+        pv = pybamm.ParameterValues({"rate": arrhenius_rate})
+        pv2 = _roundtrip(pv)
+
+        _assert_evaluate_equal(pv, pv2, "rate", {"T": pybamm.Scalar(300)})
+        y = np.linspace(280, 320, 5).reshape(-1, 1)
+        _assert_evaluate_equal_array(pv, pv2, "rate", {"T": _sv(0)}, y)
+
     def test_double_roundtrip(self):
         def my_func(x):
             return 2 * x + pybamm.Parameter("b")
@@ -501,7 +523,7 @@ class TestRoundtripNestedStructures:
             "Negative electrode OCP [V]",
             "Positive electrode OCP [V]",
         ]:
-            _assert_evaluate_close(pv, pv2, ocp_name, {"sto": _sv(0, n)}, y_sto)
+            _assert_evaluate_equal_array(pv, pv2, ocp_name, {"sto": _sv(0, n)}, y_sto)
 
         # 2-arg diffusivities (sto, T)
         y_sto_T = np.vstack([sto_vals, T_vals])
@@ -509,7 +531,7 @@ class TestRoundtripNestedStructures:
             "Negative electrode diffusivity [m2.s-1]",
             "Positive electrode diffusivity [m2.s-1]",
         ]:
-            _assert_evaluate_close(
+            _assert_evaluate_equal_array(
                 pv,
                 pv2,
                 diff_name,
@@ -528,7 +550,7 @@ class TestRoundtripNestedStructures:
                 T_vals,
             ]
         )
-        _assert_evaluate_close(
+        _assert_evaluate_equal_array(
             pv,
             pv2,
             "Negative electrode exchange-current density [A.m-2]",
@@ -547,7 +569,7 @@ class TestRoundtripNestedStructures:
             "Electrolyte diffusivity [m2.s-1]",
             "Electrolyte conductivity [S.m-1]",
         ]:
-            _assert_evaluate_close(
+            _assert_evaluate_equal_array(
                 pv,
                 pv2,
                 elyte_name,
@@ -557,7 +579,8 @@ class TestRoundtripNestedStructures:
 
     def test_full_parameter_set_roundtrip_chen2020_soh(self):
         """Chen2020 roundtrip verified through ElectrodeSOHSolver.
-        Compares solver outputs before and after serialisation."""
+        Compares solver outputs before and after serialisation.
+        """
         pv = pybamm.ParameterValues("Chen2020")
         param = pybamm.LithiumIonParameters()
 
@@ -576,10 +599,9 @@ class TestRoundtripNestedStructures:
         ).solve(inputs)
 
         for key in sol_orig:
-            np.testing.assert_allclose(
+            np.testing.assert_array_equal(
                 sol_rt[key],
                 sol_orig[key],
-                rtol=1e-14,
                 err_msg=f"SOH mismatch for '{key}'",
             )
 
@@ -680,3 +702,70 @@ class TestConvertParameterValuesToJson:
             data = json.load(f)
         assert "p1" in data
         assert "p2" in data
+
+
+# ------------------------------------------------------------------ #
+# Stress tests: every callable across every parameter set
+# ------------------------------------------------------------------ #
+class TestStressRoundtripAllParameterSets:
+    """Roundtrip every built-in parameter set and verify that all
+    callable parameters evaluate to bit-exact results when called
+    with symbolic (StateVector) inputs."""
+
+    @pytest.mark.parametrize(
+        "param_set",
+        list(pybamm.parameter_sets.keys()),
+    )
+    def test_all_parameters_exact(self, param_set):
+        import inspect
+
+        pv = pybamm.ParameterValues(param_set)
+        pv2 = _roundtrip(pv)
+
+        assert set(pv.keys()) == set(pv2.keys())
+
+        c_s_max = 51555.0
+        c_e_max = 3000.0
+        n = 5
+
+        for key in pv.keys():
+            if key == "citations":
+                continue
+
+            orig = pv[key]
+            loaded = pv2[key]
+
+            if not callable(orig):
+                assert loaded == orig, f"Mismatch for '{key}'"
+                continue
+
+            sig = inspect.signature(orig)
+            nargs = len([p for p in sig.parameters.values() if p.default == p.empty])
+
+            svs = [_sv(i * n, n) for i in range(nargs)]
+            names = [p.name for p in sig.parameters.values() if p.default == p.empty]
+            inputs = dict(zip(names, svs, strict=False))
+
+            y_parts = []
+            for name in names:
+                if "T" == name or "T_" in name:
+                    y_parts.append(np.linspace(290, 310, n).reshape(-1, 1))
+                elif "c_e" in name:
+                    y_parts.append(np.linspace(0, c_e_max, n).reshape(-1, 1))
+                elif "c_s_max" in name:
+                    y_parts.append(np.full((n, 1), c_s_max))
+                elif "c_s" in name:
+                    y_parts.append(np.linspace(0, c_s_max, n).reshape(-1, 1))
+                else:
+                    y_parts.append(np.linspace(0.2, 0.8, n).reshape(-1, 1))
+            y = np.vstack(y_parts)
+
+            fp = pybamm.FunctionParameter(key, inputs)
+            orig_result = pv.process_symbol(fp).evaluate(y=y)
+            deser_result = pv2.process_symbol(fp).evaluate(y=y)
+
+            np.testing.assert_array_equal(
+                orig_result,
+                deser_result,
+                err_msg=f"[{param_set}] callable '{key}' not bit-exact after roundtrip",
+            )
