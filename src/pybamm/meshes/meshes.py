@@ -465,26 +465,69 @@ class Mesh(dict):
 def _combine_unstructured_submeshes(submeshes):
     """
     Create a lightweight combined mesh from a list of
-    :class:`UnstructuredSubMesh` objects.  The combined mesh merges
-    nodes and elements (re-indexed) and sums ``npts``.
+    :class:`UnstructuredSubMesh` objects.  Coincident boundary nodes
+    at domain interfaces are merged so that face-connectivity spans
+    across domains.
     """
-    all_nodes = []
-    all_elements = []
-    node_offset = 0
-    total_npts = 0
+    tol = 1e-12
+    all_nodes = list(submeshes[0].nodes)
+    global_maps = [{i: i for i in range(submeshes[0].nodes.shape[0])}]
+    next_id = len(all_nodes)
 
-    for sm in submeshes:
-        all_nodes.append(sm.nodes)
-        all_elements.append(sm.elements + node_offset)
-        node_offset += sm.nodes.shape[0]
-        total_npts += sm.npts
+    for k in range(1, len(submeshes)):
+        prev = submeshes[k - 1]
+        curr = submeshes[k]
+        prev_map = global_maps[k - 1]
 
-    combined_nodes = np.concatenate(all_nodes, axis=0)
+        right_global = {}
+        if "right" in prev.boundary_faces:
+            right_node_ids = set()
+            for fi in prev.boundary_faces["right"]:
+                right_node_ids.update(prev.faces[fi].tolist())
+            for nid in right_node_ids:
+                right_global[prev_map[nid]] = prev.nodes[nid]
+
+        left_local = set()
+        if "left" in curr.boundary_faces:
+            for fi in curr.boundary_faces["left"]:
+                left_local.update(curr.faces[fi].tolist())
+
+        local_to_global = {}
+        for nid in range(curr.nodes.shape[0]):
+            if nid in left_local and right_global:
+                pos = curr.nodes[nid]
+                matched = False
+                for gid, rpos in right_global.items():
+                    if np.linalg.norm(pos - rpos) < tol:
+                        local_to_global[nid] = gid
+                        matched = True
+                        break
+                if not matched:
+                    local_to_global[nid] = next_id
+                    all_nodes.append(curr.nodes[nid])
+                    next_id += 1
+            else:
+                local_to_global[nid] = next_id
+                all_nodes.append(curr.nodes[nid])
+                next_id += 1
+        global_maps.append(local_to_global)
+
+    all_elements = [submeshes[0].elements.copy()]
+    for k in range(1, len(submeshes)):
+        gm = global_maps[k]
+        remapped = np.array(
+            [[gm[v] for v in row] for row in submeshes[k].elements],
+            dtype=int,
+        )
+        all_elements.append(remapped)
+
+    combined_nodes = np.array(all_nodes)
     combined_elements = np.concatenate(all_elements, axis=0)
-    combined = pybamm.UnstructuredSubMesh(
-        combined_nodes, combined_elements, coord_sys=submeshes[0].coord_sys
+    return pybamm.UnstructuredSubMesh(
+        combined_nodes,
+        combined_elements,
+        coord_sys=submeshes[0].coord_sys,
     )
-    return combined
 
 
 class SubMesh:

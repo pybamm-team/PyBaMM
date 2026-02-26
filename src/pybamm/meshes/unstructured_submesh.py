@@ -60,6 +60,8 @@ class UnstructuredSubMesh(SubMesh):
             self._identify_boundary_faces()
 
         self.npts = len(self.elements)
+        self.npts_lr = self.npts
+        self.npts_tb = 1
         self.internal_boundaries = []
         self.interface_data = {}
 

@@ -1044,6 +1044,26 @@ class Discretisation:
                 return child_spatial_method.gradient(child, disc_child, self.bcs)
 
             elif isinstance(symbol, pybamm.Divergence):
+                if isinstance(
+                    child_spatial_method, pybamm.FiniteVolumeUnstructured
+                ) and isinstance(child, pybamm.Multiplication):
+                    left_c, right_c = child.children
+                    grad_sym = None
+                    coeff_sym = None
+                    if isinstance(right_c, pybamm.Gradient):
+                        grad_sym, coeff_sym = right_c, left_c
+                    elif isinstance(left_c, pybamm.Gradient):
+                        grad_sym, coeff_sym = left_c, right_c
+                    if grad_sym is not None:
+                        disc_coeff = self.process_symbol(coeff_sym)
+                        disc_u = self.process_symbol(grad_sym.child)
+                        return child_spatial_method.div_D_grad(
+                            symbol,
+                            grad_sym.child,
+                            disc_coeff,
+                            disc_u,
+                            self.bcs,
+                        )
                 return child_spatial_method.divergence(child, disc_child, self.bcs)
 
             elif isinstance(symbol, pybamm.Laplacian):

@@ -52,3 +52,30 @@ class TestBasicDFNHalfCell(BaseBasicModelTest):
     def setup(self):
         options = {"working electrode": "positive"}
         self.model = pybamm.lithium_ion.BasicDFNHalfCell(options)
+
+
+class TestBasicDFN2DUnstructured:
+    def test_solves_and_matches_structured(self):
+        import numpy as np
+
+        z_2d = pybamm.SpatialVariable(
+            "z_2d",
+            domain=["negative electrode", "separator", "positive electrode"],
+            coord_sys="cartesian",
+            direction="tb",
+        )
+        var_pts = {"x_n": 5, "x_s": 5, "x_p": 5, "r_p": 10, "r_n": 10, z_2d: 3}
+        t_eval = np.linspace(0, 3600, 20)
+
+        model_s = pybamm.lithium_ion.BasicDFN2D()
+        sim_s = pybamm.Simulation(model_s, var_pts=var_pts)
+        sol_s = sim_s.solve(t_eval)
+
+        model_u = pybamm.lithium_ion.BasicDFN2DUnstructured(element_type="quad")
+        sim_u = pybamm.Simulation(model_u, var_pts=var_pts)
+        sol_u = sim_u.solve(t_eval)
+
+        V_s = sol_s["Voltage [V]"](t=t_eval)
+        V_u = sol_u["Voltage [V]"](t=t_eval)
+
+        np.testing.assert_allclose(V_u, V_s, atol=5e-3)

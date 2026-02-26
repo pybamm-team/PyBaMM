@@ -24,6 +24,7 @@ from .dfn import DFN
 from .newman_tobias import NewmanTobias
 from .basic_dfn import BasicDFN
 from .basic_dfn_2d import BasicDFN2D
+from .basic_dfn_2d_unstructured import BasicDFN2DUnstructured
 from .basic_spm import BasicSPM
 from .basic_spm_with_3d_thermal import Basic3DThermalSPM
 from .basic_dfn_half_cell import BasicDFNHalfCell

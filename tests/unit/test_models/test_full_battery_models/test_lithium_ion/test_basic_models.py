@@ -25,3 +25,7 @@ class TestBasicModels:
     def test_dfn_2d(self):
         model = pybamm.lithium_ion.BasicDFN2D()
         model.check_well_posedness()
+
+    def test_dfn_2d_unstructured(self):
+        model = pybamm.lithium_ion.BasicDFN2DUnstructured(element_type="quad")
+        model.check_well_posedness()

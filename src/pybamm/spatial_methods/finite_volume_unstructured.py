@@ -41,6 +41,26 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         for dom in mesh.keys():
             mesh[dom].npts_for_broadcast_to_nodes = mesh[dom].npts
 
+    @staticmethod
+    def _bc_contribution(n, n_bnd, owners, coeffs, bc_value):
+        """Build a symbolic BC contribution vector.
+
+        For scalar ``bc_value``: returns ``Vector(accumulated_coeffs) * bc_value``.
+        For vector ``bc_value`` (length ``n_bnd``):
+        returns ``Matrix(n, n_bnd) @ bc_value``.
+        """
+        is_scalar = isinstance(bc_value, pybamm.Scalar) or (
+            hasattr(bc_value, "shape_for_testing")
+            and bc_value.shape_for_testing == (1, 1)
+        )
+        if is_scalar:
+            row = np.zeros(n)
+            np.add.at(row, owners, coeffs)
+            return pybamm.Vector(row) * bc_value
+        else:
+            M = csr_matrix((coeffs, (owners, np.arange(n_bnd))), shape=(n, n_bnd))
+            return pybamm.Matrix(M) @ bc_value
+
     # ------------------------------------------------------------------
     # spatial_variable
     # ------------------------------------------------------------------
@@ -114,18 +134,13 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
 
         L = self._tpfa_matrix(submesh)
 
-        # Boundary conditions
-        bc_rhs = np.zeros(n)
+        bc_rhs = pybamm.Vector(np.zeros(n))
         if symbol in boundary_conditions:
             bcs = boundary_conditions[symbol]
             L, bc_rhs = self._apply_bcs_to_laplacian(submesh, L, bc_rhs, bcs)
 
         L_full = csr_matrix(kron(eye(repeats, dtype=np.float64), L))
-        result = pybamm.Matrix(L_full) @ discretised_symbol
-
-        if np.any(bc_rhs != 0):
-            bc_rhs_full = np.tile(bc_rhs, repeats)
-            result = result + pybamm.Vector(bc_rhs_full)
+        result = pybamm.Matrix(L_full) @ discretised_symbol + bc_rhs
 
         return result
 
@@ -173,8 +188,137 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
 
         return csr_matrix(coo_matrix((data, (rows, cols)), shape=(n, n)))
 
+    def div_D_grad(self, div_symbol, grad_child, disc_D, disc_u, boundary_conditions):
+        """Discretise ``div(D * grad(u))`` as a single TPFA operation.
+
+        Fully symbolic — works for both constant and state-dependent ``D``.
+        Internal-face fluxes use arithmetic-mean interpolation of ``D`` to
+        faces and a standard two-point difference for ``grad(u)``.
+        """
+        domain = div_symbol.domain
+        submesh = self.mesh[domain]
+        n = submesh.npts
+        n_int = submesh.n_internal_faces
+        repeats = self._get_auxiliary_domain_repeats(div_symbol.domains)
+        vol = submesh.cell_volumes
+
+        owner = submesh.face_owner[:n_int]
+        neighbor = submesh.face_neighbor[:n_int]
+
+        c_o = submesh.cell_centroids[owner]
+        c_n = submesh.cell_centroids[neighbor]
+        delta = c_n - c_o
+        dist = np.linalg.norm(delta, axis=1)
+        e_ij = delta / dist[:, np.newaxis]
+        cos_theta = np.abs(np.sum(submesh.face_normals[:n_int] * e_ij, axis=1))
+        geo = submesh.face_areas[:n_int] * cos_theta / dist
+
+        # G (n_int x n): u_neighbor - u_owner per face
+        G = csr_matrix(
+            (
+                np.concatenate([-np.ones(n_int), np.ones(n_int)]),
+                (np.tile(np.arange(n_int), 2), np.concatenate([owner, neighbor])),
+            ),
+            shape=(n_int, n),
+        )
+
+        # W (n_int x n): arithmetic-mean D to faces
+        W = csr_matrix(
+            (
+                np.full(2 * n_int, 0.5),
+                (np.tile(np.arange(n_int), 2), np.concatenate([owner, neighbor])),
+            ),
+            shape=(n_int, n),
+        )
+
+        # S (n x n_int): face flux -> cell divergence (+owner, -neighbor, /V)
+        S = csr_matrix(
+            (
+                np.concatenate([1.0 / vol[owner], -1.0 / vol[neighbor]]),
+                (np.concatenate([owner, neighbor]), np.tile(np.arange(n_int), 2)),
+            ),
+            shape=(n, n_int),
+        )
+
+        G_f = csr_matrix(kron(eye(repeats, dtype=np.float64), G))
+        W_f = csr_matrix(kron(eye(repeats, dtype=np.float64), W))
+        S_f = csr_matrix(kron(eye(repeats, dtype=np.float64), S))
+        geo_f = np.tile(geo, repeats)
+
+        u_diff = pybamm.Matrix(G_f) @ disc_u
+        is_scalar_D = isinstance(disc_D, pybamm.Scalar) or (
+            hasattr(disc_D, "shape_for_testing") and disc_D.shape_for_testing == (1, 1)
+        )
+        if is_scalar_D:
+            flux = disc_D * u_diff * pybamm.Vector(geo_f)
+        else:
+            D_face = pybamm.Matrix(W_f) @ disc_D
+            flux = D_face * u_diff * pybamm.Vector(geo_f)
+        result = pybamm.Matrix(S_f) @ flux
+
+        # Boundary conditions
+        bc_rhs = pybamm.Vector(np.zeros(n * repeats))
+        if grad_child in boundary_conditions:
+            bcs = boundary_conditions[grad_child]
+            for side, (bc_value, bc_type) in bcs.items():
+                face_tag = self._side_to_boundary_tag(side)
+                if face_tag not in submesh.boundary_faces:
+                    continue
+                fi_arr = submesh.boundary_faces[face_tag]
+                n_bnd = len(fi_arr)
+                bnd_own = submesh.face_owner[fi_arr]
+
+                E = csr_matrix(
+                    (np.ones(n_bnd), (np.arange(n_bnd), bnd_own)),
+                    shape=(n_bnd, n),
+                )
+                E_f = csr_matrix(kron(eye(repeats, dtype=np.float64), E))
+                P = csr_matrix(
+                    (np.ones(n_bnd), (bnd_own, np.arange(n_bnd))),
+                    shape=(n, n_bnd),
+                )
+                P_f = csr_matrix(kron(eye(repeats, dtype=np.float64), P))
+                D_bnd = disc_D if is_scalar_D else pybamm.Matrix(E_f) @ disc_D
+
+                if bc_type == "Dirichlet":
+                    geo_bnd = np.array(
+                        [
+                            submesh.face_areas[fi]
+                            / np.linalg.norm(
+                                submesh.face_centroids[fi]
+                                - submesh.cell_centroids[bnd_own[j]]
+                            )
+                            / vol[bnd_own[j]]
+                            for j, fi in enumerate(fi_arr)
+                        ]
+                    )
+                    geo_bnd_f = np.tile(geo_bnd, repeats)
+
+                    u_bnd = pybamm.Matrix(E_f) @ disc_u
+                    bc_rhs = bc_rhs + pybamm.Matrix(P_f) @ (
+                        D_bnd * (bc_value - u_bnd) * pybamm.Vector(geo_bnd_f)
+                    )
+
+                elif bc_type == "Neumann" and bc_value != pybamm.Scalar(0):
+                    a_over_v = np.array(
+                        [
+                            submesh.face_areas[fi] / vol[bnd_own[j]]
+                            for j, fi in enumerate(fi_arr)
+                        ]
+                    )
+                    a_over_v_f = np.tile(a_over_v, repeats)
+                    bc_rhs = bc_rhs + pybamm.Matrix(P_f) @ (
+                        D_bnd * bc_value * pybamm.Vector(a_over_v_f)
+                    )
+
+        return result + bc_rhs
+
     def _apply_bcs_to_laplacian(self, submesh, L, bc_rhs, bcs):
-        """Modify the Laplacian matrix and RHS for boundary conditions."""
+        """Modify the Laplacian matrix and RHS for boundary conditions.
+
+        ``bc_rhs`` is a pybamm expression (symbolic vector).
+        """
+        n = submesh.npts
         L = L.tolil()
 
         for side, (bc_value, bc_type) in bcs.items():
@@ -183,25 +327,35 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
                 continue
 
             face_indices = submesh.boundary_faces[face_tag]
+            n_bnd = len(face_indices)
+            owners = submesh.face_owner[face_indices]
 
-            for fi in face_indices:
-                cell = submesh.face_owner[fi]
-                area = submesh.face_areas[fi]
-                vol = submesh.cell_volumes[cell]
-
-                face_centroid = submesh.face_centroids[fi]
-                cell_centroid = submesh.cell_centroids[cell]
-                d = np.linalg.norm(face_centroid - cell_centroid)
-
-                coeff = area / d
-
-                if bc_type == "Dirichlet":
-                    bc_val = float(bc_value.evaluate())
+            if bc_type == "Dirichlet":
+                coeffs = np.empty(n_bnd)
+                for j, fi in enumerate(face_indices):
+                    cell = owners[j]
+                    area = submesh.face_areas[fi]
+                    vol = submesh.cell_volumes[cell]
+                    d_perp = np.linalg.norm(
+                        submesh.face_centroids[fi] - submesh.cell_centroids[cell]
+                    )
+                    coeff = area / d_perp
                     L[cell, cell] -= coeff / vol
-                    bc_rhs[cell] += coeff * bc_val / vol
-                elif bc_type == "Neumann":
-                    bc_val = float(bc_value.evaluate())
-                    bc_rhs[cell] += bc_val * area / vol
+                    coeffs[j] = coeff / vol
+                bc_rhs = bc_rhs + self._bc_contribution(
+                    n, n_bnd, owners, coeffs, bc_value
+                )
+
+            elif bc_type == "Neumann":
+                coeffs = np.array(
+                    [
+                        submesh.face_areas[fi] / submesh.cell_volumes[owners[j]]
+                        for j, fi in enumerate(face_indices)
+                    ]
+                )
+                bc_rhs = bc_rhs + self._bc_contribution(
+                    n, n_bnd, owners, coeffs, bc_value
+                )
 
         return csr_matrix(L), bc_rhs
 
@@ -229,7 +383,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
 
         G_components = self._green_gauss_matrices(submesh)
 
-        bc_vecs = [np.zeros(n) for _ in range(d)]
+        bc_vecs = [pybamm.Vector(np.zeros(n)) for _ in range(d)]
         if symbol in boundary_conditions:
             bcs = boundary_conditions[symbol]
             G_components, bc_vecs = self._apply_bcs_to_gradient(
@@ -239,10 +393,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         components = []
         for k in range(d):
             Gk = csr_matrix(kron(eye(repeats, dtype=np.float64), G_components[k]))
-            comp = pybamm.Matrix(Gk) @ discretised_symbol
-            if np.any(bc_vecs[k] != 0):
-                bc_full = np.tile(bc_vecs[k], repeats)
-                comp = comp + pybamm.Vector(bc_full)
+            comp = pybamm.Matrix(Gk) @ discretised_symbol + bc_vecs[k]
             components.append(comp)
 
         vf = pybamm.VectorField(*components)
@@ -324,7 +475,11 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         return G
 
     def _apply_bcs_to_gradient(self, submesh, G_components, bc_vecs, bcs):
-        """Apply Dirichlet/Neumann BCs to gradient matrices."""
+        """Apply Dirichlet/Neumann BCs to gradient matrices.
+
+        ``bc_vecs`` is a list of pybamm expressions (one per spatial dimension).
+        """
+        n = submesh.npts
         d = submesh.dimension
         vol = submesh.cell_volumes
 
@@ -334,61 +489,52 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
                 continue
 
             face_indices = submesh.boundary_faces[face_tag]
+            n_bnd = len(face_indices)
+            owners = submesh.face_owner[face_indices]
 
             if bc_type == "Dirichlet":
-                bc_val = float(bc_value.evaluate())
-                for fi in face_indices:
-                    cell = submesh.face_owner[fi]
-                    area = submesh.face_areas[fi]
+                for j, fi in enumerate(face_indices):
+                    cell = owners[j]
                     normal = submesh.face_normals[fi]
-                    face_c = submesh.face_centroids[fi]
-                    cell_c = submesh.cell_centroids[cell]
-                    dist = np.linalg.norm(face_c - cell_c)
-
-                    # Replace zeroth-order boundary term u_owner * n * A / V
-                    # with ghost-cell interpolation:
-                    # u_f = (u_owner + u_ghost) / 2 where u_ghost = 2*bc_val - u_owner
-                    # So u_f = bc_val, meaning:
-                    #   remove existing contribution (u_owner * n * A / V)
-                    #   add bc_val * n * A / V to RHS
-                    # But the Green-Gauss matrix already has u_owner terms from
-                    # _green_gauss_matrices. We need to zero out the boundary
-                    # contribution and replace with the BC value.
-                    # Simpler: the boundary face contribution to cell i is
-                    #   G_k[cell, cell] gets n_k * A / V (from boundary term)
-                    # For Dirichlet: u_f = bc_val, so contribution is
-                    #   bc_val * n_k * A / V  (pure RHS, no matrix term)
-                    # We need to subtract the existing matrix term and add RHS.
+                    area = submesh.face_areas[fi]
                     for k in range(d):
                         nk_A = normal[k] * area
-                        # Remove the u_owner boundary term from the matrix
                         G_components[k] = G_components[k].tolil()
                         G_components[k][cell, cell] -= nk_A / vol[cell]
                         G_components[k] = csr_matrix(G_components[k])
-                        # Add bc_val * n_k * A / V to the RHS
-                        bc_vecs[k][cell] += bc_val * nk_A / vol[cell]
+
+                for k in range(d):
+                    coeffs = np.array(
+                        [
+                            submesh.face_normals[fi, k]
+                            * submesh.face_areas[fi]
+                            / vol[owners[j]]
+                            for j, fi in enumerate(face_indices)
+                        ]
+                    )
+                    bc_vecs[k] = bc_vecs[k] + self._bc_contribution(
+                        n, n_bnd, owners, coeffs, bc_value
+                    )
 
             elif bc_type == "Neumann":
-                bc_val = float(bc_value.evaluate())
-                for fi in face_indices:
-                    cell = submesh.face_owner[fi]
-                    area = submesh.face_areas[fi]
-                    normal = submesh.face_normals[fi]
-                    # Neumann: flux = bc_val at the face (in normal direction)
-                    # The gradient's boundary contribution becomes:
-                    #   (bc_val * dx + u_owner) * n_k * A / V
-                    # For simplicity in the gradient, we keep the zeroth-order
-                    # owner term and add the correction.
-                    # Actually for Neumann BC on gradient, the face value is:
-                    #   u_f = u_owner + bc_val * dist_to_face
-                    # The extra contribution to the gradient is:
-                    #   bc_val * dist * n_k * A / V
-                    dist = np.linalg.norm(
-                        submesh.face_centroids[fi] - submesh.cell_centroids[cell]
+                dists = np.linalg.norm(
+                    submesh.face_centroids[face_indices]
+                    - submesh.cell_centroids[owners],
+                    axis=1,
+                )
+                for k in range(d):
+                    coeffs = np.array(
+                        [
+                            dists[j]
+                            * submesh.face_normals[fi, k]
+                            * submesh.face_areas[fi]
+                            / vol[owners[j]]
+                            for j, fi in enumerate(face_indices)
+                        ]
                     )
-                    for k in range(d):
-                        nk_A = normal[k] * area
-                        bc_vecs[k][cell] += bc_val * dist * nk_A / vol[cell]
+                    bc_vecs[k] = bc_vecs[k] + self._bc_contribution(
+                        n, n_bnd, owners, coeffs, bc_value
+                    )
 
         return G_components, bc_vecs
 
@@ -420,22 +566,6 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
             Dk = csr_matrix(kron(eye(repeats, dtype=np.float64), D_components[k]))
             result = result + pybamm.Matrix(Dk) @ comps[k]
 
-        disc_sv = getattr(discretised_symbol, "_disc_state_vector", None)
-        if disc_sv is not None:
-            L_bc, bc_rhs, D_bnd = self._div_boundary_correction(
-                submesh, boundary_conditions, domain=domain
-            )
-            if D_bnd is not None:
-                for k in range(d):
-                    Dk_bnd = csr_matrix(kron(eye(repeats, dtype=np.float64), D_bnd[k]))
-                    result = result - pybamm.Matrix(Dk_bnd) @ comps[k]
-            if L_bc is not None:
-                L_bc_full = csr_matrix(kron(eye(repeats, dtype=np.float64), L_bc))
-                result = result + pybamm.Matrix(L_bc_full) @ disc_sv
-            if np.any(bc_rhs != 0):
-                bc_rhs_full = np.tile(bc_rhs, repeats)
-                result = result + pybamm.Vector(bc_rhs_full)
-
         return result
 
     def _div_boundary_correction(self, submesh, boundary_conditions, domain=None):
@@ -446,7 +576,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         This method returns:
 
         * ``L_bc`` – sparse matrix for TPFA Dirichlet correction on state vector
-        * ``bc_rhs`` – constant vector for Dirichlet/Neumann RHS
+        * ``bc_rhs`` – symbolic pybamm expression for Dirichlet/Neumann RHS
         * ``D_bnd`` – list of sparse matrices (boundary-only divergence terms
           to subtract from the cell-centered approximation)
 
@@ -457,7 +587,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         n = submesh.npts
         d = submesh.dimension
         L_bc = None
-        bc_rhs = np.zeros(n)
+        bc_rhs = pybamm.Vector(np.zeros(n))
         D_bnd = None
 
         for var, bcs in boundary_conditions.items():
@@ -470,31 +600,45 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
                 if face_tag not in submesh.boundary_faces:
                     continue
                 face_indices = submesh.boundary_faces[face_tag]
-                bc_val = float(bc_value.evaluate())
+                n_bnd = len(face_indices)
+                owners = submesh.face_owner[face_indices]
+                areas = submesh.face_areas[face_indices]
+                vols = submesh.cell_volumes[owners]
 
-                for fi in face_indices:
-                    cell = submesh.face_owner[fi]
-                    area = submesh.face_areas[fi]
-                    vol = submesh.cell_volumes[cell]
+                if D_bnd is None:
+                    D_bnd = [csr_matrix((n, n)).tolil() for _ in range(d)]
+                for j, fi in enumerate(face_indices):
+                    cell = owners[j]
                     normal = submesh.face_normals[fi]
-
-                    if D_bnd is None:
-                        D_bnd = [csr_matrix((n, n)).tolil() for _ in range(d)]
                     for k in range(d):
-                        D_bnd[k][cell, cell] += normal[k] * area / vol
+                        D_bnd[k][cell, cell] += normal[k] * areas[j] / vols[j]
 
-                    if bc_type == "Dirichlet":
+                if bc_type == "Dirichlet":
+                    for j, fi in enumerate(face_indices):
+                        cell = owners[j]
                         face_c = submesh.face_centroids[fi]
                         cell_c = submesh.cell_centroids[cell]
                         d_perp = np.linalg.norm(face_c - cell_c)
-                        coeff = area / d_perp
-
+                        coeff = areas[j] / d_perp
                         if L_bc is None:
                             L_bc = csr_matrix((n, n)).tolil()
-                        L_bc[cell, cell] -= coeff / vol
-                        bc_rhs[cell] += coeff * bc_val / vol
-                    elif bc_type == "Neumann":
-                        bc_rhs[cell] += bc_val * area / vol
+                        L_bc[cell, cell] -= coeff / vols[j]
+
+                    coeffs = np.empty(n_bnd)
+                    for j, fi in enumerate(face_indices):
+                        face_c = submesh.face_centroids[fi]
+                        cell_c = submesh.cell_centroids[owners[j]]
+                        d_perp = np.linalg.norm(face_c - cell_c)
+                        coeffs[j] = (areas[j] / d_perp) / vols[j]
+                    bc_rhs = bc_rhs + self._bc_contribution(
+                        n, n_bnd, owners, coeffs, bc_value
+                    )
+
+                elif bc_type == "Neumann":
+                    coeffs = areas / vols
+                    bc_rhs = bc_rhs + self._bc_contribution(
+                        n, n_bnd, owners, coeffs, bc_value
+                    )
 
         if L_bc is not None:
             L_bc = csr_matrix(L_bc)
@@ -662,12 +806,25 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
     # boundary_value_or_flux
     # ------------------------------------------------------------------
 
+    _CORNER_SIDES = {
+        "top-right": ("top", "right"),
+        "top-left": ("top", "left"),
+        "bottom-right": ("bottom", "right"),
+        "bottom-left": ("bottom", "left"),
+    }
+
     def boundary_value_or_flux(self, symbol, discretised_child, bcs=None):
         submesh = self.mesh[discretised_child.domain]
         n = submesh.npts
         repeats = self._get_auxiliary_domain_repeats(discretised_child.domains)
 
         side = symbol.side
+
+        if side in self._CORNER_SIDES:
+            return self._corner_boundary_value(
+                submesh, n, repeats, side, discretised_child
+            )
+
         face_tag = self._side_to_boundary_tag(side)
 
         if face_tag not in submesh.boundary_faces:
@@ -679,25 +836,43 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         n_bnd = len(face_indices)
         owners = submesh.face_owner[face_indices]
 
-        if isinstance(symbol, pybamm.BoundaryGradient):
-            # For boundary gradient, extrapolate gradient from cell center to face
-            # using nearest cell value (zeroth-order) — improved when BCs available
-            sub_matrix = csr_matrix(
-                (np.ones(n_bnd), (np.arange(n_bnd), owners)),
-                shape=(n_bnd, n),
-            )
-        else:
-            # BoundaryValue: linear extrapolation from cell center to face
-            # For unstructured meshes, use constant extrapolation (cell value)
-            sub_matrix = csr_matrix(
-                (np.ones(n_bnd), (np.arange(n_bnd), owners)),
-                shape=(n_bnd, n),
-            )
+        sub_matrix = csr_matrix(
+            (np.ones(n_bnd), (np.arange(n_bnd), owners)),
+            shape=(n_bnd, n),
+        )
 
         mat = csr_matrix(kron(eye(repeats, dtype=np.float64), sub_matrix))
         bv_vector = pybamm.Matrix(mat)
 
         out = bv_vector @ discretised_child
+        out.clear_domains()
+        return out
+
+    def _corner_boundary_value(self, submesh, n, repeats, side, discretised_child):
+        """Extract value from the cell closest to a corner of the domain."""
+        tb_side, lr_side = self._CORNER_SIDES[side]
+        centroids = submesh.cell_centroids
+        x_coords = centroids[:, 0]
+        z_coords = centroids[:, -1]
+
+        if lr_side == "right":
+            target_x = x_coords.max()
+        else:
+            target_x = x_coords.min()
+        if tb_side == "top":
+            target_z = z_coords.max()
+        else:
+            target_z = z_coords.min()
+
+        dists = (x_coords - target_x) ** 2 + (z_coords - target_z) ** 2
+        cell_idx = int(np.argmin(dists))
+
+        sub_matrix = csr_matrix(
+            (np.ones(1), (np.zeros(1, dtype=int), [cell_idx])),
+            shape=(1, n),
+        )
+        mat = csr_matrix(kron(eye(repeats, dtype=np.float64), sub_matrix))
+        out = pybamm.Matrix(mat) @ discretised_child
         out.clear_domains()
         return out
 
