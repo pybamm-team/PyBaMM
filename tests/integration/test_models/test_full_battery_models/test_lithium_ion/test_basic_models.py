@@ -79,3 +79,23 @@ class TestBasicDFN2DUnstructured:
         V_u = sol_u["Voltage [V]"](t=t_eval)
 
         np.testing.assert_allclose(V_u, V_s, atol=5e-3)
+
+
+class TestBasicDFN3DUnstructured:
+    def test_solves_and_matches_2d(self):
+        import numpy as np
+
+        t_eval = np.linspace(0, 3600, 20)
+
+        model_2d = pybamm.lithium_ion.BasicDFN2DUnstructured(element_type="quad")
+        sim_2d = pybamm.Simulation(model_2d)
+        sol_2d = sim_2d.solve(t_eval)
+
+        model_3d = pybamm.lithium_ion.BasicDFN3DUnstructured()
+        sim_3d = pybamm.Simulation(model_3d)
+        sol_3d = sim_3d.solve(t_eval)
+
+        V_2d = sol_2d["Voltage [V]"](t=t_eval)
+        V_3d = sol_3d["Voltage [V]"](t=t_eval)
+
+        np.testing.assert_allclose(V_3d, V_2d, atol=5e-3)

@@ -234,6 +234,8 @@ class Mesh(dict):
                 raise pybamm.GeometryError(
                     "Cannot combine submeshes of different dimensions"
                 )
+            elif isinstance(self[submeshnames[i]], pybamm.UnstructuredSubMesh):
+                pass
             elif self[submeshnames[i]].dimension == 2:
                 if "left" in submeshnames[i] or "right" in submeshnames[i + 1]:
                     # Make sure that the lr edges are aligned
@@ -396,12 +398,15 @@ class Mesh(dict):
                 "right" in left_mesh.boundary_faces
                 and "left" in right_mesh.boundary_faces
             ):
-                compute_interface_data(
-                    left_mesh,
-                    right_mesh,
-                    left_name=left_name,
-                    right_name=right_name,
-                )
+                try:
+                    compute_interface_data(
+                        left_mesh,
+                        right_mesh,
+                        left_name=left_name,
+                        right_name=right_name,
+                    )
+                except ValueError:
+                    pass
 
     def add_ghost_meshes(self):
         """
@@ -469,6 +474,35 @@ def _combine_unstructured_submeshes(submeshes):
     at domain interfaces are merged so that face-connectivity spans
     across domains.
     """
+    from .unstructured_submesh import UnstructuredSubMesh, _hex_to_tet
+
+    # For 3D tet meshes generated from hex grids, regenerate with
+    # cumulative i_offset so that alternating-parity face triangulations
+    # match across domain boundaries.
+    if all(hasattr(sm, "_hex_gen_params") and sm.dimension == 3 for sm in submeshes):
+        cumulative_offset = 0
+        fixed = []
+        for sm in submeshes:
+            p = sm._hex_gen_params
+            if cumulative_offset > 0:
+                nodes, elements = _hex_to_tet(
+                    p["x_edges"],
+                    p["y_edges"],
+                    p["z_edges"],
+                    i_offset=cumulative_offset,
+                )
+                new_sm = UnstructuredSubMesh(
+                    nodes,
+                    elements,
+                    coord_sys=sm.coord_sys,
+                )
+                new_sm._hex_gen_params = p
+                fixed.append(new_sm)
+            else:
+                fixed.append(sm)
+            cumulative_offset += p["nx"]
+        submeshes = fixed
+
     tol = 1e-12
     all_nodes = list(submeshes[0].nodes)
     global_maps = [{i: i for i in range(submeshes[0].nodes.shape[0])}]

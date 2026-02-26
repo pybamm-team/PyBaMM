@@ -12,7 +12,7 @@ class UnstructuredSubMesh(SubMesh):
     Supported element types:
 
     * **2D**: triangles (3 vertices) or quadrilaterals (4 vertices)
-    * **3D**: tetrahedra (4 vertices)
+    * **3D**: tetrahedra (4 vertices) or hexahedra (8 vertices)
 
     All operators are dimension-agnostic: the same code path handles
     both 2D and 3D, with dimension inferred from ``nodes.shape[1]``.
@@ -23,7 +23,7 @@ class UnstructuredSubMesh(SubMesh):
         Vertex coordinates (d = 2 or 3).
     elements : numpy.ndarray, shape (n_cells, n_verts_per_cell)
         Element vertex indices.  For 2D: 3 (triangles) or 4 (quads).
-        For 3D: 4 (tetrahedra).
+        For 3D: 4 (tetrahedra) or 8 (hexahedra).
     coord_sys : str, optional
         Coordinate system, default ``"cartesian"``.
     boundary_faces : dict[str, numpy.ndarray] or None, optional
@@ -45,6 +45,8 @@ class UnstructuredSubMesh(SubMesh):
             self.element_type = "triangle"
         elif self.dimension == 3 and verts_per_cell == 4:
             self.element_type = "tetrahedron"
+        elif self.dimension == 3 and verts_per_cell == 8:
+            self.element_type = "hexahedron"
         else:
             raise ValueError(
                 f"Unsupported: {verts_per_cell} vertices per cell in {self.dimension}D"
@@ -99,6 +101,28 @@ class UnstructuredSubMesh(SubMesh):
                 + d1[:, 2] * (d2[:, 0] * d3[:, 1] - d2[:, 1] * d3[:, 0])
             )
             self.cell_volumes = np.abs(det) / 6.0
+        elif self.element_type == "hexahedron":
+            # Volume via divergence theorem: V = (1/3) sum_faces (centroid . normal * area)
+            # For axis-aligned hexes this simplifies, but we use the general approach
+            # by splitting each hex into 5 tets for volume computation only.
+            self.cell_volumes = np.zeros(len(self.elements))
+            for i, cell in enumerate(self.elements):
+                cv = self.nodes[cell]
+                vol = 0.0
+                # Split hex into 5 tets using pattern A
+                for tet_local in [
+                    (0, 1, 2, 5),
+                    (0, 2, 3, 7),
+                    (0, 5, 7, 4),
+                    (2, 5, 7, 6),
+                    (0, 2, 5, 7),
+                ]:
+                    t = cv[list(tet_local)]
+                    d1 = t[1] - t[0]
+                    d2 = t[2] - t[0]
+                    d3 = t[3] - t[0]
+                    vol += abs(np.dot(d1, np.cross(d2, d3))) / 6.0
+                self.cell_volumes[i] = vol
 
     # ------------------------------------------------------------------
     # Face-cell connectivity
@@ -106,10 +130,12 @@ class UnstructuredSubMesh(SubMesh):
 
     def _build_face_connectivity(self):
         """Extract faces, identify internal / boundary, record owner-neighbor."""
-        d = self.dimension
-        n_verts_per_face = d  # edges (2 verts) in 2D, triangles (3 verts) in 3D
+        if self.element_type == "hexahedron":
+            n_verts_per_face = 4
+        else:
+            n_verts_per_face = self.dimension
 
-        face_dict = {}  # canonical key -> owner_cell
+        face_dict = {}  # canonical key -> (owner_cell, original_verts)
 
         internal_owner = []
         internal_neighbor = []
@@ -120,19 +146,19 @@ class UnstructuredSubMesh(SubMesh):
                 key = tuple(sorted(face_verts))
 
                 if key in face_dict:
-                    other_cell = face_dict.pop(key)
+                    other_cell, orig_verts = face_dict.pop(key)
                     internal_owner.append(other_cell)
                     internal_neighbor.append(cell_idx)
-                    internal_face_verts.append(key)
+                    internal_face_verts.append(orig_verts)
                 else:
-                    face_dict[key] = cell_idx
+                    face_dict[key] = (cell_idx, tuple(face_verts))
 
         # Remaining entries are boundary faces
         boundary_owner_list = []
         boundary_face_verts = []
-        for key, cell_idx in face_dict.items():
+        for _key, (cell_idx, orig_verts) in face_dict.items():
             boundary_owner_list.append(cell_idx)
-            boundary_face_verts.append(key)
+            boundary_face_verts.append(orig_verts)
 
         n_internal = len(internal_owner)
         n_boundary = len(boundary_owner_list)
@@ -147,13 +173,27 @@ class UnstructuredSubMesh(SubMesh):
         self._n_boundary_faces = n_boundary
         self._boundary_face_start = n_internal
 
+    # Standard hex vertex ordering:
+    #   0=(i,j,k)   1=(i+1,j,k)   2=(i+1,j+1,k)   3=(i,j+1,k)
+    #   4=(i,j,k+1) 5=(i+1,j,k+1) 6=(i+1,j+1,k+1) 7=(i,j+1,k+1)
+    _HEX_FACES = [
+        (0, 3, 7, 4),  # x- (left)
+        (1, 2, 6, 5),  # x+ (right)
+        (0, 1, 5, 4),  # y- (front)
+        (3, 2, 6, 7),  # y+ (back)
+        (0, 1, 2, 3),  # z- (bottom)
+        (4, 5, 6, 7),  # z+ (top)
+    ]
+
     def _cell_faces(self, cell_verts):
         """Yield face vertex tuples for a single cell."""
         n = len(cell_verts)
         if self.element_type == "quad":
-            # 4 edges: (v0,v1), (v1,v2), (v2,v3), (v3,v0)
             for i in range(n):
                 yield (cell_verts[i], cell_verts[(i + 1) % n])
+        elif self.element_type == "hexahedron":
+            for local_face in self._HEX_FACES:
+                yield tuple(cell_verts[v] for v in local_face)
         else:
             # Simplex: d+1 faces, face i omits vertex i
             for skip in range(n):
@@ -164,23 +204,32 @@ class UnstructuredSubMesh(SubMesh):
     # ------------------------------------------------------------------
 
     def _compute_face_geometry(self):
-        face_verts = self.nodes[self.faces]  # (n_faces, d, d)
+        face_verts = self.nodes[self.faces]
 
         self.face_centroids = face_verts.mean(axis=1)
 
         if self.dimension == 2:
-            # Face = edge: 2 vertices
             v0, v1 = face_verts[:, 0], face_verts[:, 1]
             edge = v1 - v0
             self.face_areas = np.linalg.norm(edge, axis=1)
-            # Outward normal: perpendicular to edge (rotate 90 degrees)
             normals = np.column_stack([edge[:, 1], -edge[:, 0]])
+        elif self.element_type == "hexahedron":
+            # Face = quad: 4 vertices. Area via cross product of diagonals.
+            v0 = face_verts[:, 0]
+            v1 = face_verts[:, 1]
+            v2 = face_verts[:, 2]
+            v3 = face_verts[:, 3]
+            diag1 = v2 - v0
+            diag2 = v3 - v1
+            cross = np.cross(diag1, diag2)
+            self.face_areas = 0.5 * np.linalg.norm(cross, axis=1)
+            normals = cross
         else:
             # Face = triangle: 3 vertices
             v0, v1, v2 = face_verts[:, 0], face_verts[:, 1], face_verts[:, 2]
             cross = np.cross(v1 - v0, v2 - v0)
             self.face_areas = 0.5 * np.linalg.norm(cross, axis=1)
-            normals = cross  # will be normalized below
+            normals = cross
 
         # Normalize
         norms = np.linalg.norm(normals, axis=1, keepdims=True)
@@ -335,7 +384,7 @@ class UnstructuredMeshGenerator(MeshGenerator):
         y_edges = np.linspace(lim_y["min"], lim_y["max"], ny + 1)
         z_edges = np.linspace(lim_z["min"], lim_z["max"], nz + 1)
 
-        nodes, elements = _hex_to_tet(x_edges, y_edges, z_edges)
+        nodes, elements = _hex_grid(x_edges, y_edges, z_edges)
         return UnstructuredSubMesh(nodes, elements, coord_sys=self.coord_sys)
 
 
@@ -611,7 +660,56 @@ def _quad_to_tri(x_edges, z_edges):
     return nodes, np.array(elements, dtype=int)
 
 
-def _hex_to_tet(x_edges, y_edges, z_edges):
+def _hex_grid(x_edges, y_edges, z_edges):
+    """
+    Create a hexahedral grid from edge arrays.
+
+    Returns nodes and 8-vertex hex elements suitable for
+    :class:`UnstructuredSubMesh` with ``element_type="hexahedron"``.
+
+    Vertex ordering per hex matches :attr:`UnstructuredSubMesh._HEX_FACES`:
+
+    ::
+
+        0=(i,j,k)   1=(i+1,j,k)   2=(i+1,j+1,k)   3=(i,j+1,k)
+        4=(i,j,k+1) 5=(i+1,j,k+1) 6=(i+1,j+1,k+1) 7=(i,j+1,k+1)
+
+    Returns
+    -------
+    nodes : (n_nodes, 3)
+    elements : (n_cells, 8)
+    """
+    nx = len(x_edges) - 1
+    ny = len(y_edges) - 1
+    nz = len(z_edges) - 1
+
+    xx, yy, zz = np.meshgrid(x_edges, y_edges, z_edges, indexing="ij")
+    nodes = np.column_stack([xx.ravel(), yy.ravel(), zz.ravel()])
+
+    def node_id(i, j, k):
+        return i * (ny + 1) * (nz + 1) + j * (nz + 1) + k
+
+    elements = []
+    for i in range(nx):
+        for j in range(ny):
+            for k in range(nz):
+                elements.append(
+                    [
+                        node_id(i, j, k),
+                        node_id(i + 1, j, k),
+                        node_id(i + 1, j + 1, k),
+                        node_id(i, j + 1, k),
+                        node_id(i, j, k + 1),
+                        node_id(i + 1, j, k + 1),
+                        node_id(i + 1, j + 1, k + 1),
+                        node_id(i, j + 1, k + 1),
+                    ]
+                )
+
+    return nodes, np.array(elements, dtype=int)
+
+
+def _hex_to_tet(x_edges, y_edges, z_edges, i_offset=0):
     """
     Tetrahedralise a rectangular prism defined by edge arrays.
 
@@ -620,8 +718,10 @@ def _hex_to_tet(x_edges, y_edges, z_edges):
     axis-aligned planes (required for interface conformity).
 
     The decomposition alternates orientation based on the parity of
-    (i + j + k) so that shared faces between adjacent hexes are
-    triangulated identically.
+    (i + i_offset + j + k) so that shared faces between adjacent hexes
+    are triangulated identically, including across domain boundaries
+    when ``i_offset`` equals the cumulative hex count from preceding
+    domains.
 
     Returns
     -------
@@ -677,7 +777,7 @@ def _hex_to_tet(x_edges, y_edges, z_edges):
                     node_id(i + 1, j + 1, k + 1),
                     node_id(i, j + 1, k + 1),
                 ]
-                pattern = pattern_a if (i + j + k) % 2 == 0 else pattern_b
+                pattern = pattern_a if (i + i_offset + j + k) % 2 == 0 else pattern_b
                 for tet in pattern:
                     elements.append([hex_verts[v] for v in tet])
 

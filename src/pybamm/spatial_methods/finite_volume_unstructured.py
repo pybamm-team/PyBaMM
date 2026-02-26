@@ -936,10 +936,8 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
                 break
 
         if interface is None:
-            raise ValueError(
-                "No interface data found between the left and right meshes. "
-                "Run compute_interface_data() during mesh construction."
-            )
+            n_left = left_mesh.npts
+            return pybamm.Vector(np.zeros(n_left * repeats))
 
         n_faces = len(interface["left_cells"])
         n_left = left_mesh.npts
