@@ -1042,7 +1042,8 @@ class ProcessedVariableUnstructuredFVM(ProcessedVariable):
 
         Boundary face centroids are added to the interpolation cloud
         so the convex hull covers the full domain.  Any residual
-        extrapolation uses nearest-neighbor.
+        extrapolation uses nearest-neighbor.  For non-convex domains,
+        query points outside the mesh boundary polygon are set to NaN.
         """
         from scipy.interpolate import LinearNDInterpolator, NearestNDInterpolator
 
@@ -1055,6 +1056,14 @@ class ProcessedVariableUnstructuredFVM(ProcessedVariable):
         if np.any(mask):
             nearest = NearestNDInterpolator(pts, vals)
             result[mask] = nearest(query_pts[mask])
+
+        poly = self.mesh.boundary_polygon()
+        if poly is not None:
+            from matplotlib.path import Path
+
+            path = Path(poly)
+            outside = ~path.contains_points(query_pts[:, :2])
+            result[outside] = np.nan
 
         return result
 

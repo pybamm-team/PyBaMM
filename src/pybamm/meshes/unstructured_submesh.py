@@ -284,6 +284,45 @@ class UnstructuredSubMesh(SubMesh):
             if len(indices) > 0:
                 self.boundary_faces[name] = indices
 
+    def boundary_polygon(self):
+        """Return ordered boundary vertices as an (M, 2) array (2D only).
+
+        Walks the boundary edges to produce a closed polygon suitable for
+        point-in-domain tests with ``matplotlib.path.Path``.
+        """
+        if self.dimension != 2:
+            return None
+
+        bnd_start = self._boundary_face_start
+        bnd_edges = self.faces[bnd_start:]
+        if len(bnd_edges) == 0:
+            return None
+
+        adj: dict[int, list[tuple[int, int]]] = {}
+        for i, edge in enumerate(bnd_edges):
+            v0, v1 = int(edge[0]), int(edge[1])
+            adj.setdefault(v0, []).append((i, v1))
+            adj.setdefault(v1, []).append((i, v0))
+
+        visited: set[int] = set()
+        polygon_verts = []
+        current = int(bnd_edges[0][0])
+        polygon_verts.append(current)
+
+        while True:
+            found = False
+            for edge_idx, next_v in adj[current]:
+                if edge_idx not in visited:
+                    visited.add(edge_idx)
+                    polygon_verts.append(next_v)
+                    current = next_v
+                    found = True
+                    break
+            if not found:
+                break
+
+        return self.nodes[polygon_verts]
+
 
 # ======================================================================
 # Mesh generators
