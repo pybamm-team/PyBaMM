@@ -716,7 +716,7 @@ class TestStressRoundtripAllParameterSets:
         "param_set",
         list(pybamm.parameter_sets.keys()),
     )
-    def test_all_callables_exact(self, param_set):
+    def test_all_parameters_exact(self, param_set):
         import inspect
 
         pv = pybamm.ParameterValues(param_set)
@@ -725,26 +725,23 @@ class TestStressRoundtripAllParameterSets:
         assert set(pv.keys()) == set(pv2.keys())
 
         c_s_max = 51555.0
-        c_e_max = 3_000_000.0
+        c_e_max = 3000.0
+        n = 5
 
         for key in pv.keys():
+            if key == "citations":
+                continue
+
             orig = pv[key]
             loaded = pv2[key]
-            if isinstance(orig, int | float):
-                assert loaded == orig, f"Numeric mismatch for '{key}'"
-                continue
-            if not callable(orig) or isinstance(orig, pybamm.Symbol):
+
+            if not callable(orig):
+                assert loaded == orig, f"Mismatch for '{key}'"
                 continue
 
-            try:
-                sig = inspect.signature(orig)
-                nargs = len(
-                    [p for p in sig.parameters.values() if p.default == p.empty]
-                )
-            except (ValueError, TypeError):
-                continue
+            sig = inspect.signature(orig)
+            nargs = len([p for p in sig.parameters.values() if p.default == p.empty])
 
-            n = 5
             svs = [_sv(i * n, n) for i in range(nargs)]
             names = [p.name for p in sig.parameters.values() if p.default == p.empty]
             inputs = dict(zip(names, svs, strict=False))
@@ -764,11 +761,8 @@ class TestStressRoundtripAllParameterSets:
             y = np.vstack(y_parts)
 
             fp = pybamm.FunctionParameter(key, inputs)
-            try:
-                orig_result = pv.process_symbol(fp).evaluate(y=y)
-                deser_result = pv2.process_symbol(fp).evaluate(y=y)
-            except Exception:
-                continue
+            orig_result = pv.process_symbol(fp).evaluate(y=y)
+            deser_result = pv2.process_symbol(fp).evaluate(y=y)
 
             np.testing.assert_array_equal(
                 orig_result,
