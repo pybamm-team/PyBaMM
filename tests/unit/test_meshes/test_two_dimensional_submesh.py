@@ -86,7 +86,7 @@ class TestSubMesh2D:
         lims_strings = {"x": {"min": 0.0, "max": 1.0}, "y": {"min": 0.0, "max": 2.0}}
 
         lims_copy = lims_strings.copy()
-        spatial_var_lr, spatial_lims_lr, spatial_var_tb, spatial_lims_tb, tabs = (
+        spatial_var_lr, _spatial_lims_lr, spatial_var_tb, _spatial_lims_tb, tabs = (
             submesh.read_lims(lims_copy)
         )
 
@@ -141,7 +141,7 @@ class TestSubMesh2D:
         # Test with wrong number of variables (too few)
         lims_too_few = {"x": {"min": 0.0, "max": 1.0}}
         with pytest.raises(
-            pybamm.GeometryError, match="lims should only contain two variables"
+            pybamm.GeometryError, match=r"lims should only contain two variables"
         ):
             submesh.read_lims(lims_too_few)
 
@@ -152,7 +152,7 @@ class TestSubMesh2D:
             "z": {"min": 0.0, "max": 1.0},
         }
         with pytest.raises(
-            pybamm.GeometryError, match="lims should only contain two variables"
+            pybamm.GeometryError, match=r"lims should only contain two variables"
         ):
             submesh.read_lims(lims_too_many)
 
@@ -172,7 +172,7 @@ class TestSubMesh2D:
         }
 
         lims_copy = lims_mixed.copy()
-        spatial_var_lr, spatial_lims_lr, spatial_var_tb, spatial_lims_tb, tabs = (
+        spatial_var_lr, _spatial_lims_lr, spatial_var_tb, _spatial_lims_tb, _tabs = (
             submesh.read_lims(lims_copy)
         )
 
@@ -249,8 +249,8 @@ class TestUniform2DSubMesh:
         expected_dx = 2.0 / 10  # (max - min) / npts
         expected_dy = 4.0 / 15  # (max - min) / npts
 
-        np.testing.assert_array_almost_equal(submesh.d_edges_lr, expected_dx)
-        np.testing.assert_array_almost_equal(submesh.d_edges_tb, expected_dy)
+        np.testing.assert_allclose(submesh.d_edges_lr, expected_dx)
+        np.testing.assert_allclose(submesh.d_edges_tb, expected_dy)
 
         # Test that nodes are at cell centers
         expected_nodes_lr = np.linspace(
@@ -260,15 +260,15 @@ class TestUniform2DSubMesh:
             -1.0 + expected_dy / 2, 3.0 - expected_dy / 2, 15
         )
 
-        np.testing.assert_array_almost_equal(submesh.nodes_lr, expected_nodes_lr)
-        np.testing.assert_array_almost_equal(submesh.nodes_tb, expected_nodes_tb)
+        np.testing.assert_allclose(submesh.nodes_lr, expected_nodes_lr)
+        np.testing.assert_allclose(submesh.nodes_tb, expected_nodes_tb)
 
         # Test d_nodes (spacing between node centers)
         expected_d_nodes_lr = np.full(9, expected_dx)  # npts - 1
         expected_d_nodes_tb = np.full(14, expected_dy)  # npts - 1
 
-        np.testing.assert_array_almost_equal(submesh.d_nodes_lr, expected_d_nodes_lr)
-        np.testing.assert_array_almost_equal(submesh.d_nodes_tb, expected_d_nodes_tb)
+        np.testing.assert_allclose(submesh.d_nodes_lr, expected_d_nodes_lr)
+        np.testing.assert_allclose(submesh.d_nodes_tb, expected_d_nodes_tb)
 
     def test_uniform_2d_submesh_with_tabs(self, x, y):
         """
@@ -383,7 +383,7 @@ class TestUniform2DSubMesh:
         )  # Ghost cell connects to original
 
         # Test invalid side
-        with pytest.raises(ValueError, match="Invalid side"):
+        with pytest.raises(ValueError, match=r"Invalid side"):
             submesh.create_ghost_cell("invalid")
 
     def test_uniform_2d_submesh_json_serialization(self, x, y):
@@ -408,8 +408,8 @@ class TestUniform2DSubMesh:
         assert "tabs" in json_dict
 
         # Test that edges are correctly serialized
-        np.testing.assert_array_almost_equal(json_dict["edges_lr"], submesh.edges_lr)
-        np.testing.assert_array_almost_equal(json_dict["edges_tb"], submesh.edges_tb)
+        np.testing.assert_allclose(json_dict["edges_lr"], submesh.edges_lr)
+        np.testing.assert_allclose(json_dict["edges_tb"], submesh.edges_tb)
 
         # Test that coordinate system is correct
         assert json_dict["coord_sys"] == "cartesian"

@@ -149,7 +149,7 @@ class TestFiniteVolumeIntegration:
         finite_volume.build(mesh)
         with pytest.raises(
             NotImplementedError,
-            match="Integral in secondary vector only implemented in 'row' form",
+            match=r"Integral in secondary vector only implemented in 'row' form",
         ):
             finite_volume.definite_integral_matrix(var, "column", "secondary")
 
@@ -171,9 +171,7 @@ class TestFiniteVolumeIntegration:
         spatial_methods = {"cylindrical domain": pybamm.FiniteVolume()}
         disc = pybamm.Discretisation(mesh, spatial_methods)
         var = pybamm.Variable("var", domain="cylindrical domain")
-        r = pybamm.SpatialVariable(
-            "r", "cylindrical domain", coord_sys="cylindrical polar"
-        )
+        r = pybamm.SpatialVariable("r", "cylindrical domain")
         integral_eqn = pybamm.Integral(var, r)
         disc.set_variable_slices([var])
         integral_eqn_disc = disc.process_symbol(integral_eqn)
@@ -716,7 +714,7 @@ class TestFiniteVolumeIntegration:
         disc.set_variable_slices([c])
         with pytest.raises(
             NotImplementedError,
-            match="Indefinite integral on a spherical polar domain is not implemented",
+            match=r"Indefinite integral on a spherical polar domain is not implemented",
         ):
             disc.process_symbol(int_c)
 

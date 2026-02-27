@@ -151,7 +151,7 @@ class TestSerialiseModels:
         t = np.linspace(0, 1, 100)
         solution = solver.solve(model, t)
 
-        model.save_model("heat_equation", variables=model._variables, mesh=mesh)
+        model.save_model("heat_equation", mesh=mesh)
         new_model = pybamm.load_model("heat_equation.json")
 
         new_solver = pybamm.ScipySolver()
@@ -303,6 +303,7 @@ class TestSerialise:
                     "children": [],
                 },
                 "x": {"min": 0.0, "max": 2.0},
+                "coord_sys": "cartesian",
             }
         }
 
@@ -429,7 +430,7 @@ class TestSerialise:
 
         # reconstructed meshes are only used for plotting, geometry not reconstructed.
         with pytest.raises(
-            AttributeError, match="'Mesh' object has no attribute '_geometry'"
+            AttributeError, match=r"'Mesh' object has no attribute '_geometry'"
         ):
             assert new_mesh.geometry == mesh.geometry
 
@@ -454,6 +455,7 @@ class TestSerialise:
                     "children": [],
                 },
                 "x": {"min": 0.0, "max": 2.0},
+                "coord_sys": "cartesian",
             }
         }
 
@@ -482,7 +484,10 @@ class TestSerialise:
 
         assert Serialise()._convert_options(options_dict) == options_result
 
-    def test_save_load_model(self):
+    def test_save_load_model(self, mocker, tmp_path, request):
+        os.chdir(tmp_path)
+        request.addfinalizer(lambda: os.chdir(os.getcwd()))
+
         model = pybamm.lithium_ion.SPM(name="test_spm")
         geometry = model.default_geometry
         param = model.default_parameter_values
@@ -493,7 +498,7 @@ class TestSerialise:
         # test error if not discretised
         with pytest.raises(
             NotImplementedError,
-            match="PyBaMM can only serialise a discretised, ready-to-solve model",
+            match=r"PyBaMM can only serialise a discretised, ready-to-solve model",
         ):
             Serialise().save_model(model, filename="test_model")
 
@@ -505,8 +510,11 @@ class TestSerialise:
         assert os.path.exists("test_model.json")
 
         # default save where filename isn't provided
+        fixed_dt = datetime(2025, 12, 25, 0, 0, 0)
+        mocked_dt = mocker.patch("pybamm.expression_tree.operations.serialise.datetime")
+        mocked_dt.now.return_value = fixed_dt
         Serialise().save_model(model)
-        filename = "test_spm_" + datetime.now().strftime("%Y_%m_%d-%p%I_%M") + ".json"
+        filename = "test_spm_" + fixed_dt.strftime("%Y_%m_%d-%p%I_%M") + ".json"
         assert os.path.exists(filename)
         os.remove(filename)
 
@@ -518,10 +526,7 @@ class TestSerialise:
         new_solution = new_solver.solve(new_model, [0, 3600])
 
         # check an error is raised when plotting the solution
-        with pytest.raises(
-            AttributeError,
-            match="No variables to plot",
-        ):
+        with pytest.raises(AttributeError):
             new_solution.plot()
 
         # load when specifying the battery model to use
@@ -568,14 +573,21 @@ class TestSerialise:
         # setup and discretise
         _ = pybamm.ScipySolver().solve(model, np.linspace(0, 1))
 
+        assert set(model.get_processed_variables_dict().keys()) == set(
+            model.variables.keys()
+        )
+
         Serialise().save_model(
             model,
-            variables=model.variables,
             filename="test_base_model",
         )
 
         new_model = Serialise().load_model("test_base_model.json")
         os.remove("test_base_model.json")
+
+        assert set(new_model.get_processed_variables_dict().keys()) == set(
+            model.variables.keys()
+        )
 
         new_solution = pybamm.ScipySolver().solve(new_model, np.linspace(0, 1))
 
@@ -594,7 +606,6 @@ class TestSerialise:
 
         Serialise().save_model(
             model,
-            variables=model.variables,
             mesh=mesh,
             filename="test_plotting_model",
         )
@@ -622,6 +633,14 @@ class TestSerialise:
         j = convert_symbol_to_json(t)
         t2 = convert_symbol_from_json(j)
         assert isinstance(t2, pybamm.Time)
+
+    def test_serialise_input_parameter(self):
+        """Test InputParameter serialization and deserialization."""
+        ip = pybamm.InputParameter("test_param")
+        j = convert_symbol_to_json(ip)
+        ip_restored = convert_symbol_from_json(j)
+        assert isinstance(ip_restored, pybamm.InputParameter)
+        assert ip_restored.name == "test_param"
 
     def test_convert_symbol_to_json_with_number_and_list(self):
         for val in (0, 3.14, -7, True):
@@ -674,7 +693,7 @@ class TestSerialise:
         class Dummy:
             pass
 
-        with pytest.raises(TypeError, match="is not JSON serializable"):
+        with pytest.raises(TypeError, match=r"is not JSON serializable"):
             Serialise._json_encoder(Dummy())
 
     def test_create_symbol_key(self):
@@ -729,6 +748,32 @@ class TestSerialise:
         assert var2.domains["primary"] == ["separator"]
         assert var2.bounds[0].value == -float("inf")
         assert var2.bounds[1].value == float("inf")
+
+    def test_coupled_variable_serialisation(self):
+        # Test basic CoupledVariable serialisation
+        cv = pybamm.CoupledVariable("Voltage [V]")
+        json_dict = convert_symbol_to_json(cv)
+        cv2 = convert_symbol_from_json(json_dict)
+
+        assert isinstance(cv2, pybamm.CoupledVariable)
+        assert cv2.name == "Voltage [V]"
+
+    def test_coupled_variable_in_expression_serialisation(self):
+        # Test CoupledVariable used in an expression
+        cv = pybamm.CoupledVariable("Voltage [V]")
+        expr = cv * 2
+        json_dict = convert_symbol_to_json(expr)
+        expr2 = convert_symbol_from_json(json_dict)
+
+        assert isinstance(expr2, pybamm.Multiplication)
+        # Find the CoupledVariable in the expression
+        coupled_vars = [
+            node
+            for node in expr2.pre_order()
+            if isinstance(node, pybamm.CoupledVariable)
+        ]
+        assert len(coupled_vars) == 1
+        assert coupled_vars[0].name == "Voltage [V]"
 
     def test_concatenation_variable_serialisation(self):
         var1 = pybamm.Variable("a", domain="negative electrode")
@@ -805,7 +850,7 @@ class TestSerialise:
 
         symbol = pybamm.SpecificFunction(dummy_func, pybamm.Scalar(1))
         with pytest.raises(
-            NotImplementedError, match="SpecificFunction is not supported directly"
+            NotImplementedError, match=r"SpecificFunction is not supported directly"
         ):
             convert_symbol_to_json(symbol)
 
@@ -851,7 +896,7 @@ class TestSerialise:
     def test_import_base_class_non_builtin_object(self, tmp_path):
         # Minimal model JSON with a non-existent base class
         model_json = {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "pybamm_version": pybamm.__version__,
             "model": {
                 "base_class": "nonexistent_module.DummyModel",
@@ -981,7 +1026,7 @@ class TestSerialise:
 
             with pytest.raises(
                 ValueError,
-                match="Failed to save custom model: Failed to write model JSON to file",
+                match=r"Failed to save custom model: Failed to write model JSON to file",
             ):
                 Serialise.save_custom_model(model, "readonly_test.json")
 
@@ -995,7 +1040,7 @@ class TestSerialise:
             side_effect=Exception("conversion failed"),
         ):
             with pytest.raises(
-                ValueError, match="Failed to save custom model: conversion failed"
+                ValueError, match=r"Failed to save custom model: conversion failed"
             ):
                 Serialise.save_custom_model(model, "conversion_fail")
 
@@ -1020,11 +1065,14 @@ class TestSerialise:
         with pytest.raises(ValueError, match=r"Unsupported schema version: 9\.9"):
             Serialise.load_custom_model(file_path)
 
-    def test_model_has_correct_schema_version(self, tmp_path):
+    @pytest.mark.parametrize(
+        "compress", [False, True], ids=["uncompressed", "compressed"]
+    )
+    def test_model_has_correct_schema_version(self, tmp_path, compress):
         model = BasicDFN()
         file_path = tmp_path / "test_schema_version.json"
 
-        Serialise.save_custom_model(model, filename=str(file_path))
+        Serialise.save_custom_model(model, filename=str(file_path), compress=compress)
 
         loaded_model = Serialise.load_custom_model(str(file_path))
 
@@ -1051,7 +1099,7 @@ class TestSerialise:
         rhs_expr = {"type": "Scalar", "value": 1.0}
 
         model_json = {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "pybamm_version": pybamm.__version__,
             "model": {
                 "base_class": "",
@@ -1081,6 +1129,7 @@ class TestSerialise:
             def __init__(self):
                 self.rhs = {}
                 self.algebraic = {}
+                self.is_processed = False
 
         m = DummyModelMissing()
         with pytest.raises(AttributeError) as e:
@@ -1091,9 +1140,19 @@ class TestSerialise:
             section in msg for section in ["initial_conditions", "events", "variables"]
         )
 
+    def test_save_raises_for_being_processed(self):
+        class DummyModelMissing:
+            # e.g. only has rhs and algebraic
+            def __init__(self):
+                self.is_processed = True
+
+        m = DummyModelMissing()
+        with pytest.raises(ValueError, match=r"Cannot serialise a built model."):
+            Serialise.save_custom_model(m, filename="irrelevant")
+
     def test_model_with_missing_json_sections(self, tmp_path):
         model_json = {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "pybamm_version": pybamm.__version__,
             "model": {
                 "name": "BadModel",
@@ -1122,7 +1181,7 @@ class TestSerialise:
         bad_rhs = {"this_will_fail": True}
 
         model_json = {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "pybamm_version": pybamm.__version__,
             "model": {
                 "base_class": "",
@@ -1158,7 +1217,7 @@ class TestSerialise:
 
         # 2) Build JSON with all required keys
         model_json = {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "pybamm_version": pybamm.__version__,
             "model": {
                 "base_class": "",
@@ -1194,7 +1253,7 @@ class TestSerialise:
 
         # 2) Build JSON with all required keys
         model_json = {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "pybamm_version": pybamm.__version__,
             "model": {
                 "base_class": "",
@@ -1234,7 +1293,7 @@ class TestSerialise:
         }
 
         model_json = {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "pybamm_version": pybamm.__version__,
             "model": {
                 "base_class": "",
@@ -1272,7 +1331,7 @@ class TestSerialise:
         condition_dict = {"left": (invalid_expression_json, "Dirichlet")}
 
         model_data = {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "pybamm_version": pybamm.__version__,
             "model": {
                 "base_class": "",
@@ -1299,7 +1358,7 @@ class TestSerialise:
 
     def test_event_conversion_failure(self, tmp_path):
         model_data = {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "pybamm_version": pybamm.__version__,
             "model": {
                 "base_class": "",
@@ -1331,7 +1390,7 @@ class TestSerialise:
 
     def test_variable_conversion_failure(self, tmp_path):
         model_data = {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "pybamm_version": pybamm.__version__,
             "model": {
                 "base_class": "",
@@ -1342,6 +1401,7 @@ class TestSerialise:
                 "boundary_conditions": [],
                 "events": [],
                 "variables": {"Bad Variable": {"bad": "structure"}},
+                "fixed_input_parameters": {},
             },
         }
 
@@ -1355,7 +1415,10 @@ class TestSerialise:
         ):
             Serialise.load_custom_model(str(file))
 
-    def test_save_and_load_custom_model(self, tmp_path, monkeypatch):
+    @pytest.mark.parametrize(
+        "compress", [False, True], ids=["uncompressed", "compressed"]
+    )
+    def test_save_and_load_custom_model(self, tmp_path, monkeypatch, compress):
         model = pybamm.BaseModel(name="test_model")
         a = pybamm.Variable("a", domain="electrode")
         b = pybamm.Variable("b", domain="electrode")
@@ -1368,13 +1431,13 @@ class TestSerialise:
 
         # Save model to specified filename
         file_path = tmp_path / "test_model.json"
-        Serialise.save_custom_model(model, filename=str(file_path))
+        Serialise.save_custom_model(model, filename=str(file_path), compress=compress)
         assert file_path.exists()
 
         # Save using default filename logic
         with monkeypatch.context() as m:
             m.chdir(tmp_path)
-            Serialise().save_custom_model(model)
+            Serialise().save_custom_model(model, compress=compress)
             pattern = r"test_model_\d{4}_\d{2}_\d{2}_\d{2}_\d{2}_\d{2}\.json"
             matched = [f for f in os.listdir(tmp_path) if re.fullmatch(pattern, f)]
             assert matched
@@ -1387,6 +1450,9 @@ class TestSerialise:
         assert next(iter(loaded_model.rhs.values())).name == "b"
 
     @pytest.mark.parametrize(
+        "compress", [False, True], ids=["uncompressed", "compressed"]
+    )
+    @pytest.mark.parametrize(
         "model, filename",
         [
             (BasicSPM(), "basic_spm.json"),
@@ -1396,9 +1462,9 @@ class TestSerialise:
         ],
         ids=["basic_spm", "basic_dfn", "spm", "dfn"],
     )
-    def test_plotting_serialised_models(self, model, filename, tmp_path):
+    def test_plotting_serialised_models(self, model, filename, tmp_path, compress):
         path = tmp_path / filename
-        Serialise.save_custom_model(model, filename=str(path))
+        Serialise.save_custom_model(model, filename=str(path), compress=compress)
         loaded_model = Serialise.load_custom_model(str(path))
         sim = pybamm.Simulation(loaded_model)
         sim.solve([0, 3600])
@@ -1619,7 +1685,7 @@ class TestSpatialMethodsSerialization:
         """Test error handling for invalid spatial method class."""
         # Create invalid spatial methods data
         invalid_data = {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "pybamm_version": pybamm.__version__,
             "spatial_methods": {
                 "macroscale": {
@@ -1805,7 +1871,7 @@ class TestSubmeshTypesSerialization:
         """Test error handling for invalid submesh type class."""
         # Create invalid submesh types data
         invalid_data = {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "pybamm_version": pybamm.__version__,
             "submesh_types": {
                 "negative electrode": {
@@ -1837,37 +1903,37 @@ class TestSerializationErrorHandling:
             "geometry": {},
         }
 
-        with pytest.raises(ValueError, match="Unsupported schema version"):
+        with pytest.raises(ValueError, match=r"Unsupported schema version"):
             Serialise.load_custom_geometry(invalid_data)
 
     def test_missing_geometry_section(self):
         """Test error when geometry section is missing."""
         invalid_data = {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "pybamm_version": pybamm.__version__,
         }
 
-        with pytest.raises(KeyError, match="Missing 'geometry' section"):
+        with pytest.raises(KeyError, match=r"Missing 'geometry' section"):
             Serialise.load_custom_geometry(invalid_data)
 
     def test_missing_spatial_methods_section(self):
         """Test error when spatial_methods section is missing."""
         invalid_data = {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "pybamm_version": pybamm.__version__,
         }
 
-        with pytest.raises(KeyError, match="Missing 'spatial_methods' section"):
+        with pytest.raises(KeyError, match=r"Missing 'spatial_methods' section"):
             Serialise.load_spatial_methods(invalid_data)
 
     def test_missing_var_pts_section(self):
         """Test error when var_pts section is missing."""
         invalid_data = {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "pybamm_version": pybamm.__version__,
         }
 
-        with pytest.raises(KeyError, match="Missing 'var_pts' section"):
+        with pytest.raises(KeyError, match=r"Missing 'var_pts' section"):
             Serialise.load_var_pts(invalid_data)
 
     def test_file_not_found_geometry(self):
@@ -1888,11 +1954,11 @@ class TestSerializationErrorHandling:
     def test_missing_submesh_types_section(self):
         """Test error when submesh_types section is missing."""
         invalid_data = {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "pybamm_version": pybamm.__version__,
         }
 
-        with pytest.raises(KeyError, match="Missing 'submesh_types' section"):
+        with pytest.raises(KeyError, match=r"Missing 'submesh_types' section"):
             Serialise.load_submesh_types(invalid_data)
 
     def test_file_not_found_submesh_types(self):
@@ -1973,7 +2039,7 @@ class TestSerializationEdgeCases:
 
         monkeypatch.setattr("builtins.open", mock_open_error)
 
-        with pytest.raises(ValueError, match="Failed to save custom geometry"):
+        with pytest.raises(ValueError, match=r"Failed to save custom geometry"):
             Serialise.save_custom_geometry(geometry, filename="test.json")
 
     def test_geometry_invalid_json(self):
@@ -1985,7 +2051,7 @@ class TestSerializationEdgeCases:
             with open(filepath, "w") as f:
                 f.write("{invalid json content")
 
-            with pytest.raises(ValueError, match="contains invalid JSON"):
+            with pytest.raises(ValueError, match=r"contains invalid JSON"):
                 Serialise.load_custom_geometry(str(filepath))
 
     def test_spatial_methods_invalid_filename_extension(self):
@@ -2005,7 +2071,7 @@ class TestSerializationEdgeCases:
 
         monkeypatch.setattr("builtins.open", mock_open_error)
 
-        with pytest.raises(ValueError, match="Failed to save spatial methods"):
+        with pytest.raises(ValueError, match=r"Failed to save spatial methods"):
             Serialise.save_spatial_methods(spatial_methods, filename="test.json")
 
     def test_spatial_methods_general_error(self, monkeypatch):
@@ -2021,7 +2087,7 @@ class TestSerializationEdgeCases:
             mock_serialise_error,
         )
 
-        with pytest.raises(ValueError, match="Failed to save spatial methods"):
+        with pytest.raises(ValueError, match=r"Failed to save spatial methods"):
             Serialise.save_spatial_methods(spatial_methods)
 
     def test_var_pts_invalid_filename_extension(self):
@@ -2041,7 +2107,7 @@ class TestSerializationEdgeCases:
 
         monkeypatch.setattr("builtins.open", mock_open_error)
 
-        with pytest.raises(ValueError, match="Failed to save var_pts"):
+        with pytest.raises(ValueError, match=r"Failed to save var_pts"):
             Serialise.save_var_pts(var_pts, filename="test.json")
 
     def test_var_pts_general_error(self, monkeypatch):
@@ -2057,7 +2123,7 @@ class TestSerializationEdgeCases:
             mock_serialise_error,
         )
 
-        with pytest.raises(ValueError, match="Failed to save var_pts"):
+        with pytest.raises(ValueError, match=r"Failed to save var_pts"):
             Serialise.save_var_pts(var_pts)
 
     def test_submesh_types_file_write_error(self, monkeypatch):
@@ -2072,7 +2138,7 @@ class TestSerializationEdgeCases:
 
         monkeypatch.setattr("builtins.open", mock_open_error)
 
-        with pytest.raises(ValueError, match="Failed to save submesh types"):
+        with pytest.raises(ValueError, match=r"Failed to save submesh types"):
             Serialise.save_submesh_types(submesh_types, filename="test.json")
 
     def test_submesh_types_general_error(self, monkeypatch):
@@ -2090,7 +2156,7 @@ class TestSerializationEdgeCases:
             mock_serialise_error,
         )
 
-        with pytest.raises(ValueError, match="Failed to save submesh types"):
+        with pytest.raises(ValueError, match=r"Failed to save submesh types"):
             Serialise.save_submesh_types(submesh_types)
 
     def test_geometry_general_error(self, monkeypatch):
@@ -2106,7 +2172,7 @@ class TestSerializationEdgeCases:
             mock_serialise_error,
         )
 
-        with pytest.raises(ValueError, match="Failed to save custom geometry"):
+        with pytest.raises(ValueError, match=r"Failed to save custom geometry"):
             Serialise.save_custom_geometry(geometry)
 
     def test_spatial_methods_default_filename(self, monkeypatch):
@@ -2184,7 +2250,7 @@ class TestSerializationEdgeCases:
             with open(filepath, "w") as f:
                 f.write("{invalid json for spatial methods")
 
-            with pytest.raises(ValueError, match="contains invalid JSON"):
+            with pytest.raises(ValueError, match=r"contains invalid JSON"):
                 Serialise.load_spatial_methods(str(filepath))
 
     def test_spatial_methods_unsupported_schema(self):
@@ -2195,13 +2261,13 @@ class TestSerializationEdgeCases:
             "spatial_methods": {},
         }
 
-        with pytest.raises(ValueError, match="Unsupported schema version"):
+        with pytest.raises(ValueError, match=r"Unsupported schema version"):
             Serialise.load_spatial_methods(invalid_data)
 
     def test_spatial_methods_import_error(self):
         """Test import error handling in spatial methods loading."""
         invalid_data = {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "pybamm_version": pybamm.__version__,
             "spatial_methods": {
                 "domain": {
@@ -2212,7 +2278,7 @@ class TestSerializationEdgeCases:
             },
         }
 
-        with pytest.raises(ImportError, match="Could not import spatial method"):
+        with pytest.raises(ImportError, match=r"Could not import spatial method"):
             Serialise.load_spatial_methods(invalid_data)
 
     def test_var_pts_invalid_json(self):
@@ -2224,7 +2290,7 @@ class TestSerializationEdgeCases:
             with open(filepath, "w") as f:
                 f.write("{invalid json for var_pts")
 
-            with pytest.raises(ValueError, match="contains invalid JSON"):
+            with pytest.raises(ValueError, match=r"contains invalid JSON"):
                 Serialise.load_var_pts(str(filepath))
 
     def test_var_pts_unsupported_schema(self):
@@ -2235,7 +2301,7 @@ class TestSerializationEdgeCases:
             "var_pts": {},
         }
 
-        with pytest.raises(ValueError, match="Unsupported schema version"):
+        with pytest.raises(ValueError, match=r"Unsupported schema version"):
             Serialise.load_var_pts(invalid_data)
 
     def test_var_pts_unexpected_key_type(self):
@@ -2243,7 +2309,7 @@ class TestSerializationEdgeCases:
         # Create var_pts with an unexpected key type
         var_pts = {123: 20}  # integer key instead of string or SpatialVariable
 
-        with pytest.raises(ValueError, match="Unexpected key type in var_pts"):
+        with pytest.raises(ValueError, match=r"Unexpected key type in var_pts"):
             Serialise.serialise_var_pts(var_pts)
 
     def test_submesh_types_without_mesh_generator(self):
@@ -2270,7 +2336,7 @@ class TestSerializationEdgeCases:
             with open(filepath, "w") as f:
                 f.write("{invalid json for submesh types")
 
-            with pytest.raises(ValueError, match="contains invalid JSON"):
+            with pytest.raises(ValueError, match=r"contains invalid JSON"):
                 Serialise.load_submesh_types(str(filepath))
 
     def test_submesh_types_unsupported_schema(self):
@@ -2281,10 +2347,13 @@ class TestSerializationEdgeCases:
             "submesh_types": {},
         }
 
-        with pytest.raises(ValueError, match="Unsupported schema version"):
+        with pytest.raises(ValueError, match=r"Unsupported schema version"):
             Serialise.load_submesh_types(invalid_data)
 
-    def test_load_custom_model_from_dict(self):
+    @pytest.mark.parametrize(
+        "compress", [False, True], ids=["uncompressed", "compressed"]
+    )
+    def test_load_custom_model_from_dict(self, compress):
         """Test loading a custom model directly from a dictionary."""
         # Create and save a custom model
         model = pybamm.BaseModel(name="test_dict_model")
@@ -2297,7 +2366,7 @@ class TestSerializationEdgeCases:
         model.events = [pybamm.Event("terminal", pybamm.Scalar(1) - b, "TERMINATION")]
         model.variables = {"a": a, "b": b}
 
-        model_json = Serialise.serialise_custom_model(model)
+        model_json = Serialise.serialise_custom_model(model, compress=compress)
 
         # Load from dict directly
         loaded_model = Serialise.load_custom_model(model_json)
@@ -2370,7 +2439,7 @@ class TestSerializationEdgeCases:
     def test_load_spatial_methods_general_exception(self):
         """Test general exception handling in load_spatial_methods."""
         invalid_data = {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "pybamm_version": pybamm.__version__,
             "spatial_methods": {
                 "domain": {
@@ -2382,13 +2451,13 @@ class TestSerializationEdgeCases:
         }
 
         # This should raise ImportError because AttributeError is caught and converted
-        with pytest.raises(ImportError, match="Could not import spatial method"):
+        with pytest.raises(ImportError, match=r"Could not import spatial method"):
             Serialise.load_spatial_methods(invalid_data)
 
     def test_load_submesh_types_general_exception(self):
         """Test general exception handling in load_submesh_types."""
         invalid_data = {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "pybamm_version": pybamm.__version__,
             "submesh_types": {
                 "domain": {
@@ -2398,13 +2467,13 @@ class TestSerializationEdgeCases:
             },
         }
 
-        with pytest.raises(ValueError, match="Failed to reconstruct submesh type"):
+        with pytest.raises(ValueError, match=r"Failed to reconstruct submesh type"):
             Serialise.load_submesh_types(invalid_data)
 
     def test_load_custom_model_missing_model_section(self, tmp_path):
         """Test that missing 'model' section raises KeyError."""
         model_json = {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "pybamm_version": pybamm.__version__,
             # Missing 'model' key
         }
@@ -2413,13 +2482,13 @@ class TestSerializationEdgeCases:
         with open(file_path, "w") as f:
             json.dump(model_json, f)
 
-        with pytest.raises(KeyError, match="Missing 'model' section"):
+        with pytest.raises(KeyError, match=r"Missing 'model' section"):
             Serialise.load_custom_model(str(file_path))
 
     def test_load_custom_model_empty_base_class(self, tmp_path):
         """Test loading custom model with empty base class (should use pybamm.BaseModel)."""
         model_json = {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "pybamm_version": pybamm.__version__,
             "model": {
                 "name": "TestModel",
@@ -2483,5 +2552,123 @@ class TestSerializationEdgeCases:
         with open(file_path, "w") as f:
             json.dump(params, f)
 
-        with pytest.raises(ValueError, match="Unsupported parameter format"):
+        with pytest.raises(ValueError, match=r"Unsupported parameter format"):
             Serialise.load_parameters(str(file_path))
+
+    def test_load_compressed_model_with_corrupted_data(self, tmp_path):
+        """Test that corrupted compressed data raises ValueError."""
+        # Create a file with corrupted compressed data
+        corrupted_data = {
+            "compressed": True,
+            "data": "this_is_not_valid_base64_zlib_data!!!",
+        }
+
+        file_path = tmp_path / "corrupted_compressed.json"
+        with open(file_path, "w") as f:
+            json.dump(corrupted_data, f)
+
+        with pytest.raises(ValueError, match=r"Failed to decompress model data"):
+            Serialise.load_custom_model(str(file_path))
+
+    def test_compression_reduces_size(self):
+        """Test that compression actually reduces the serialized size."""
+        model = BasicDFN()
+
+        uncompressed = Serialise.serialise_custom_model(model, compress=False)
+        compressed = Serialise.serialise_custom_model(model, compress=True)
+
+        # Convert to JSON strings to compare sizes
+        uncompressed_str = json.dumps(uncompressed, default=Serialise._json_encoder)
+        compressed_str = json.dumps(compressed)
+
+        # Compressed version should be smaller
+        assert len(compressed_str) < len(uncompressed_str)
+
+        # Compressed version should have the marker
+        assert compressed.get("compressed") is True
+        assert "data" in compressed
+
+    def test_compressed_format_structure(self):
+        """Test that compressed output has the expected structure."""
+        model = pybamm.BaseModel(name="test")
+        a = pybamm.Variable("a")
+        model.rhs = {a: pybamm.Scalar(1)}
+        model.initial_conditions = {a: pybamm.Scalar(0)}
+        model.algebraic = {}
+        model.boundary_conditions = {}
+        model.events = []
+        model.variables = {"a": a}
+
+        compressed = Serialise.serialise_custom_model(model, compress=True)
+
+        # Check structure
+        assert set(compressed.keys()) == {"compressed", "data"}
+        assert compressed["compressed"] is True
+        assert isinstance(compressed["data"], str)
+
+        # Verify the data can be decompressed
+        loaded = Serialise.load_custom_model(compressed)
+        assert loaded.name == "test"
+
+
+class TestRegularisationSerialisation:
+    """Tests for serialisation of regularisation-related symbols."""
+
+    def test_regpower_serialisation(self):
+        """Test round-trip serialisation of RegPower with scale."""
+        x = pybamm.Variable("x")
+        scale = pybamm.Scalar(10.0)
+        rp = pybamm.RegPower(x, 0.5, scale=scale)
+
+        # Convert to JSON and back
+        json_dict = convert_symbol_to_json(rp)
+        assert json_dict["type"] == "RegPower"
+        # Scale is serialized as the third child
+        assert len(json_dict["children"]) == 3
+
+        # Reconstruct from JSON
+        reconstructed = convert_symbol_from_json(json_dict)
+        assert isinstance(reconstructed, pybamm.RegPower)
+        # Scale is the third child
+        assert reconstructed.children[2] == scale
+
+    def test_regpower_serialisation_no_scale(self):
+        """Test round-trip serialisation of RegPower without scale."""
+        x = pybamm.Variable("x")
+        rp = pybamm.RegPower(x, 0.5)
+
+        json_dict = convert_symbol_to_json(rp)
+        assert json_dict["type"] == "RegPower"
+
+        reconstructed = convert_symbol_from_json(json_dict)
+        assert isinstance(reconstructed, pybamm.RegPower)
+        # scale defaults to Scalar(1)
+        assert reconstructed.children[2] == pybamm.Scalar(1)
+
+    def test_hypot_serialisation(self):
+        """Test round-trip serialisation of Hypot."""
+        a = pybamm.Variable("a")
+        b = pybamm.Variable("b")
+        h = pybamm.Hypot(a, b)
+
+        json_dict = convert_symbol_to_json(h)
+        reconstructed = convert_symbol_from_json(json_dict)
+
+        assert isinstance(reconstructed, pybamm.Hypot)
+        assert reconstructed.name == "hypot"
+
+    def test_arcsinh2_serialisation(self):
+        """Test round-trip serialisation of Arcsinh2."""
+        a = pybamm.Variable("a")
+        b = pybamm.Variable("b")
+        eps = 1e-10
+        f = pybamm.Arcsinh2(a, b, eps=eps)
+
+        json_dict = f.to_json()
+        assert json_dict["function"] == "arcsinh2"
+        assert json_dict["eps"] == eps
+
+        # Test _from_json
+        reconstructed = pybamm.Arcsinh2._from_json({"children": [a, b], "eps": eps})
+        assert isinstance(reconstructed, pybamm.Arcsinh2)
+        assert reconstructed.eps == eps

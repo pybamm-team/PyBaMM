@@ -200,15 +200,6 @@ class SpatialVariableEdge(SpatialVariable):
         deprecated.
     """
 
-    def __init__(
-        self,
-        name: str,
-        domain: DomainType = None,
-        auxiliary_domains: AuxiliaryDomainType = None,
-        domains: DomainsType = None,
-    ) -> None:
-        super().__init__(name, domain, auxiliary_domains, domains)
-
     def _evaluates_on_edges(self, dimension):
         return True
 

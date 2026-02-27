@@ -78,7 +78,7 @@ class TestScikitFiniteElement2DSubMesh:
         # there are parameters in the variables that need to be processed
         with pytest.raises(
             pybamm.DiscretisationError,
-            match="Parameter values have not yet been set for geometry",
+            match=r"Parameter values have not yet been set for geometry",
         ):
             pybamm.Mesh(geometry, submesh_types, var_pts)
 
@@ -92,19 +92,6 @@ class TestScikitFiniteElement2DSubMesh:
         }
         with pytest.raises(pybamm.DomainError):
             pybamm.ScikitUniform2DSubMesh(lims, None, "cartesian")
-
-        lims = {
-            "y": {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
-            "z": {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
-        }
-        npts = {"y": 10, "z": 10}
-        z = pybamm.SpatialVariable("z", domain="not cartesian")
-        lims = {
-            "y": {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
-            z: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
-        }
-        with pytest.raises(pybamm.DomainError):
-            pybamm.ScikitUniform2DSubMesh(lims, npts, "cartesian")
 
     def test_tab_error(self):
         # set variables and submesh types
@@ -399,7 +386,7 @@ class TestScikitExponential2DSubMesh:
 
         # side not top
         with pytest.raises(pybamm.GeometryError):
-            pybamm.ScikitExponential2DSubMesh(None, None, side="bottom")
+            pybamm.ScikitExponential2DSubMesh(None, None, "cartesian", side="bottom")
 
 
 class TestScikitUser2DSubMesh:
@@ -450,37 +437,37 @@ class TestScikitUser2DSubMesh:
         mesh = pybamm.MeshGenerator(pybamm.UserSupplied2DSubMesh, submesh_params)
         # test not enough lims
         with pytest.raises(pybamm.GeometryError):
-            mesh(lims, None)
+            mesh(lims, None, "cartesian")
         lims = {"y": {"min": 0, "max": 1}, "z": {"min": 0, "max": 1}}
 
         # error if len(edges) != npts
         npts = {"y": 10, "z": 3}
         with pytest.raises(pybamm.GeometryError):
-            mesh(lims, npts)
+            mesh(lims, npts, "cartesian")
 
         # error if lims[0] not equal to edges[0]
         lims = {"y": {"min": 0.1, "max": 1}, "z": {"min": 0, "max": 1}}
         npts = {"y": 3, "z": 3}
         with pytest.raises(pybamm.GeometryError):
-            mesh(lims, npts)
+            mesh(lims, npts, "cartesian")
 
         # error if lims[-1] not equal to edges[-1]
         lims = {"y": {"min": 0, "max": 1}, "z": {"min": 0, "max": 1.3}}
         npts = {"y": 3, "z": 3}
         with pytest.raises(pybamm.GeometryError):
-            mesh(lims, npts)
+            mesh(lims, npts, "cartesian")
 
-        # error if different coordinate system
+        # error if variable is not y or z
         lims = {"y": {"min": 0, "max": 1}, "r_n": {"min": 0, "max": 1}}
         npts = {"y": 3, "r_n": 3}
-        with pytest.raises(pybamm.DomainError):
-            mesh(lims, npts)
+        with pytest.raises(KeyError):
+            mesh(lims, npts, "cartesian")
 
         mesh = pybamm.MeshGenerator(pybamm.UserSupplied2DSubMesh)
-        with pytest.raises(pybamm.GeometryError, match="User mesh requires"):
-            mesh(None, None)
+        with pytest.raises(pybamm.GeometryError, match=r"User mesh requires"):
+            mesh(None, None, "cartesian")
 
         submesh_params = {"y_edges": np.array([0, 0.3, 1])}
         mesh = pybamm.MeshGenerator(pybamm.UserSupplied2DSubMesh, submesh_params)
-        with pytest.raises(pybamm.GeometryError, match="User mesh requires"):
-            mesh(None, None)
+        with pytest.raises(pybamm.GeometryError, match=r"User mesh requires"):
+            mesh(None, None, "cartesian")

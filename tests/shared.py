@@ -120,104 +120,6 @@ def get_mesh_for_testing(
     return pybamm.Mesh(geometry, submesh_types, var_pts)
 
 
-def get_mesh_for_testing_2d(
-    xpts=None,
-    rpts=10,
-    Rpts=10,
-    ypts=15,
-    zpts=15,
-):
-    param = pybamm.ParameterValues(
-        values={
-            "Electrode height [m]": 1,
-            "Negative electrode thickness [m]": 0.3333333333333333,
-            "Separator thickness [m]": 0.3333333333333333,
-            "Positive electrode thickness [m]": 0.3333333333333334,
-            "Negative particle radius [m]": 0.5,
-            "Positive particle radius [m]": 0.5,
-        }
-    )
-
-    x = pybamm.SpatialVariable(
-        "x", ["negative electrode", "separator", "positive electrode"], direction="lr"
-    )
-    z = pybamm.SpatialVariable(
-        "z", ["negative electrode", "separator", "positive electrode"], direction="tb"
-    )
-    r_n = pybamm.SpatialVariable("r_n", ["negative particle"])
-    r_p = pybamm.SpatialVariable("r_p", ["positive particle"])
-
-    geometry = {
-        "negative electrode": {
-            x: {
-                "min": pybamm.Scalar(0),
-                "max": pybamm.Parameter("Negative electrode thickness [m]"),
-            },
-            z: {
-                "min": pybamm.Scalar(0),
-                "max": pybamm.Parameter("Electrode height [m]"),
-            },
-        },
-        "separator": {
-            x: {
-                "min": pybamm.Parameter("Negative electrode thickness [m]"),
-                "max": pybamm.Parameter("Separator thickness [m]")
-                + pybamm.Parameter("Negative electrode thickness [m]"),
-            },
-            z: {
-                "min": pybamm.Scalar(0),
-                "max": pybamm.Parameter("Electrode height [m]"),
-            },
-        },
-        "positive electrode": {
-            x: {
-                "min": pybamm.Parameter("Separator thickness [m]")
-                + pybamm.Parameter("Negative electrode thickness [m]"),
-                "max": pybamm.Parameter("Positive electrode thickness [m]")
-                + pybamm.Parameter("Separator thickness [m]")
-                + pybamm.Parameter("Negative electrode thickness [m]"),
-            },
-            z: {
-                "min": pybamm.Scalar(0),
-                "max": pybamm.Parameter("Electrode height [m]"),
-            },
-        },
-        "negative particle": {
-            r_n: {
-                "min": pybamm.Scalar(0),
-                "max": pybamm.Scalar(1),
-            },
-        },
-        "positive particle": {
-            r_p: {
-                "min": pybamm.Scalar(0),
-                "max": pybamm.Scalar(1),
-            },
-        },
-    }
-    param.process_geometry(geometry)
-
-    submesh_types = {
-        "negative electrode": pybamm.Uniform2DSubMesh,
-        "separator": pybamm.Uniform2DSubMesh,
-        "positive electrode": pybamm.Uniform2DSubMesh,
-        "negative particle": pybamm.Uniform1DSubMesh,
-        "positive particle": pybamm.Uniform1DSubMesh,
-    }
-
-    if xpts is None:
-        xn_pts = 40
-    else:
-        xn_pts = xpts
-    var_pts = {
-        x: xn_pts,
-        z: zpts,
-        r_n: rpts,
-        r_p: rpts,
-    }
-    return pybamm.Mesh(geometry, submesh_types, var_pts)
-
-
 def get_unit_3d_mesh_for_testing(geom_type="pouch", **geom_params):
     if geom_type == "pouch":
         x = pybamm.SpatialVariable("x", ["current collector"])
@@ -235,12 +137,8 @@ def get_unit_3d_mesh_for_testing(geom_type="pouch", **geom_params):
         }
         var_pts = {x: 5, y: 5, z: 5}
     elif geom_type == "cylinder":
-        r = pybamm.SpatialVariable(
-            "r", ["current collector"], coord_sys="cylindrical polar"
-        )
-        z = pybamm.SpatialVariable(
-            "z", ["current collector"], coord_sys="cylindrical polar"
-        )
+        r = pybamm.SpatialVariable("r", ["current collector"])
+        z = pybamm.SpatialVariable("z", ["current collector"])
         radius = geom_params.get("radius", 1.0)
         height = geom_params.get("height", 1.0)
         r_inner = geom_params.get("r_inner", 0.0)
@@ -248,6 +146,7 @@ def get_unit_3d_mesh_for_testing(geom_type="pouch", **geom_params):
             "current collector": {
                 r: {"min": pybamm.Scalar(r_inner), "max": pybamm.Scalar(radius)},
                 z: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(height)},
+                "coord_sys": "cylindrical polar",
             }
         }
         var_pts = {r: 5, z: 5}
