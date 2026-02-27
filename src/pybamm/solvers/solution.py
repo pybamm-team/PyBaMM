@@ -494,16 +494,30 @@ class Solution:
                     "solve. Please re-run the solve with `output_variables` set to "
                     "include this variable."
                 )
-            var_casadi, var_pybamm, time_integral = self._update_model_variable(
-                model,
-                _var_pybamm,
-                inputs=inputs,
-                ys_shape=ys.shape,
-                time_integral=time_integral,
-                cache_key=name,
-            )
-            vars_pybamm[i] = var_pybamm
-            vars_casadi[i] = var_casadi
+            if isinstance(_var_pybamm, pybamm.VectorField):
+                comp_casadi = []
+                for k, comp in enumerate(_var_pybamm._components):
+                    cc, _, _ = self._update_model_variable(
+                        model,
+                        comp,
+                        inputs=inputs,
+                        ys_shape=ys.shape,
+                        time_integral=None,
+                        cache_key=f"{name}[{k}]",
+                    )
+                    comp_casadi.append(cc)
+                vars_casadi[i] = comp_casadi
+            else:
+                var_casadi, var_pybamm, time_integral = self._update_model_variable(
+                    model,
+                    _var_pybamm,
+                    inputs=inputs,
+                    ys_shape=ys.shape,
+                    time_integral=time_integral,
+                    cache_key=name,
+                )
+                vars_pybamm[i] = var_pybamm
+                vars_casadi[i] = var_casadi
         var = pybamm.process_variable(
             name, vars_pybamm, vars_casadi, self, time_integral=time_integral
         )

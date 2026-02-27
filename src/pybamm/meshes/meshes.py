@@ -172,6 +172,9 @@ class Mesh(dict):
             self[domain] = submesh_types[domain](geometry[domain], submesh_pts[domain])
             self.base_domains.append(domain)
 
+        # compute interface data for unstructured meshes
+        self._compute_unstructured_interfaces()
+
         # add ghost meshes
         self.add_ghost_meshes()
 
@@ -231,6 +234,8 @@ class Mesh(dict):
                 raise pybamm.GeometryError(
                     "Cannot combine submeshes of different dimensions"
                 )
+            elif isinstance(self[submeshnames[i]], pybamm.UnstructuredSubMesh):
+                pass
             elif self[submeshnames[i]].dimension == 2:
                 if "left" in submeshnames[i] or "right" in submeshnames[i + 1]:
                     # Make sure that the lr edges are aligned
@@ -282,7 +287,12 @@ class Mesh(dict):
                 )
 
         coord_sys = self[submeshnames[0]].coord_sys
-        if self[submeshnames[0]].dimension == 1:
+        if isinstance(self[submeshnames[0]], pybamm.UnstructuredSubMesh):
+            submesh = _combine_unstructured_submeshes(
+                [self[name] for name in submeshnames]
+            )
+            return submesh
+        elif self[submeshnames[0]].dimension == 1:
             combined_submesh_edges = np.concatenate(
                 [self[submeshnames[0]].edges]
                 + [self[submeshname].edges[1:] for submeshname in submeshnames[1:]]
@@ -367,6 +377,37 @@ class Mesh(dict):
                 submesh.internal_boundaries.append(self[submeshname].edges_lr[0] + min)
         return submesh
 
+    def _compute_unstructured_interfaces(self):
+        """
+        For adjacent domains backed by :class:`UnstructuredSubMesh`, compute
+        and store interface coupling data.
+        """
+        from .unstructured_submesh import compute_interface_data
+
+        unstructured_domains = [
+            d
+            for d in self.base_domains
+            if isinstance(self[d], pybamm.UnstructuredSubMesh)
+        ]
+        for i in range(len(unstructured_domains) - 1):
+            left_name = unstructured_domains[i]
+            right_name = unstructured_domains[i + 1]
+            left_mesh = self[left_name]
+            right_mesh = self[right_name]
+            if (
+                "right" in left_mesh.boundary_faces
+                and "left" in right_mesh.boundary_faces
+            ):
+                try:
+                    compute_interface_data(
+                        left_mesh,
+                        right_mesh,
+                        left_name=left_name,
+                        right_name=right_name,
+                    )
+                except ValueError:
+                    pass
+
     def add_ghost_meshes(self):
         """
         Create meshes for potential ghost nodes on either side of each submesh, using
@@ -383,7 +424,8 @@ class Mesh(dict):
                     submesh,
                     pybamm.SubMesh0D
                     | pybamm.ScikitSubMesh2D
-                    | pybamm.ScikitFemSubMesh3D,
+                    | pybamm.ScikitFemSubMesh3D
+                    | pybamm.UnstructuredSubMesh,
                 )
             )
         ]
@@ -423,6 +465,103 @@ class Mesh(dict):
         }
 
         return json_dict
+
+
+def _combine_unstructured_submeshes(submeshes):
+    """
+    Create a lightweight combined mesh from a list of
+    :class:`UnstructuredSubMesh` objects.  Coincident boundary nodes
+    at domain interfaces are merged so that face-connectivity spans
+    across domains.
+    """
+    from .unstructured_submesh import UnstructuredSubMesh, _hex_to_tet
+
+    # For 3D tet meshes generated from hex grids, regenerate with
+    # cumulative i_offset so that alternating-parity face triangulations
+    # match across domain boundaries.
+    if all(hasattr(sm, "_hex_gen_params") and sm.dimension == 3 for sm in submeshes):
+        cumulative_offset = 0
+        fixed = []
+        for sm in submeshes:
+            p = sm._hex_gen_params
+            if cumulative_offset > 0:
+                nodes, elements = _hex_to_tet(
+                    p["x_edges"],
+                    p["y_edges"],
+                    p["z_edges"],
+                    i_offset=cumulative_offset,
+                )
+                new_sm = UnstructuredSubMesh(
+                    nodes,
+                    elements,
+                    coord_sys=sm.coord_sys,
+                )
+                new_sm._hex_gen_params = p
+                fixed.append(new_sm)
+            else:
+                fixed.append(sm)
+            cumulative_offset += p["nx"]
+        submeshes = fixed
+
+    tol = 1e-12
+    all_nodes = list(submeshes[0].nodes)
+    global_maps = [{i: i for i in range(submeshes[0].nodes.shape[0])}]
+    next_id = len(all_nodes)
+
+    for k in range(1, len(submeshes)):
+        prev = submeshes[k - 1]
+        curr = submeshes[k]
+        prev_map = global_maps[k - 1]
+
+        right_global = {}
+        if "right" in prev.boundary_faces:
+            right_node_ids = set()
+            for fi in prev.boundary_faces["right"]:
+                right_node_ids.update(prev.faces[fi].tolist())
+            for nid in right_node_ids:
+                right_global[prev_map[nid]] = prev.nodes[nid]
+
+        left_local = set()
+        if "left" in curr.boundary_faces:
+            for fi in curr.boundary_faces["left"]:
+                left_local.update(curr.faces[fi].tolist())
+
+        local_to_global = {}
+        for nid in range(curr.nodes.shape[0]):
+            if nid in left_local and right_global:
+                pos = curr.nodes[nid]
+                matched = False
+                for gid, rpos in right_global.items():
+                    if np.linalg.norm(pos - rpos) < tol:
+                        local_to_global[nid] = gid
+                        matched = True
+                        break
+                if not matched:
+                    local_to_global[nid] = next_id
+                    all_nodes.append(curr.nodes[nid])
+                    next_id += 1
+            else:
+                local_to_global[nid] = next_id
+                all_nodes.append(curr.nodes[nid])
+                next_id += 1
+        global_maps.append(local_to_global)
+
+    all_elements = [submeshes[0].elements.copy()]
+    for k in range(1, len(submeshes)):
+        gm = global_maps[k]
+        remapped = np.array(
+            [[gm[v] for v in row] for row in submeshes[k].elements],
+            dtype=int,
+        )
+        all_elements.append(remapped)
+
+    combined_nodes = np.array(all_nodes)
+    combined_elements = np.concatenate(all_elements, axis=0)
+    return pybamm.UnstructuredSubMesh(
+        combined_nodes,
+        combined_elements,
+        coord_sys=submeshes[0].coord_sys,
+    )
 
 
 class SubMesh:
