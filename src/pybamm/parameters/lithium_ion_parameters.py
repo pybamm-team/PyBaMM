@@ -261,6 +261,12 @@ class DomainLithiumIonParameters(BaseParameters):
         z = pybamm.PrimaryBroadcast(
             pybamm.standard_spatial_vars.z, f"{domain} electrode"
         )
+        y = pybamm.PrimaryBroadcast(
+            pybamm.standard_spatial_vars.y, f"{domain} electrode"
+        )
+        z = pybamm.PrimaryBroadcast(
+            pybamm.standard_spatial_vars.z, f"{domain} electrode"
+        )
 
         # Macroscale geometry
         self.L_cc = self.geo.L_cc
@@ -434,6 +440,12 @@ class ParticleLithiumIonParameters(BaseParameters):
             f"x_{domain[0]}",
             domain=[f"{domain} electrode"],
             auxiliary_domains={"secondary": "current collector"},
+        )
+        y = pybamm.PrimaryBroadcast(
+            pybamm.standard_spatial_vars.y, f"{domain} electrode"
+        )
+        z = pybamm.PrimaryBroadcast(
+            pybamm.standard_spatial_vars.z, f"{domain} electrode"
         )
         y = pybamm.PrimaryBroadcast(
             pybamm.standard_spatial_vars.y, f"{domain} electrode"

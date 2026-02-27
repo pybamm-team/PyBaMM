@@ -1,6 +1,5 @@
 import numpy as np
 import pytest
-from scipy.sparse import eye
 
 import pybamm
 from tests import get_discretisation_for_testing, get_mesh_for_testing
@@ -513,11 +512,6 @@ class TestCasadiSolver:
         # zeros
         mass_matrix = 10 * model.mass_matrix.entries
         model.mass_matrix = pybamm.Matrix(mass_matrix)
-
-        # Note that mass_matrix_inv is just the inverse of the ode block of the
-        # mass matrix
-        mass_matrix_inv = 0.1 * eye(int(mass_matrix.shape[0] / 2))
-        model.mass_matrix_inv = pybamm.Matrix(mass_matrix_inv)
 
         assert not model.is_standard_form_dae
 

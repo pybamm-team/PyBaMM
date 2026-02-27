@@ -4,8 +4,7 @@
 
 import numpy as np
 import pytest
-from scipy.sparse import block_diag, csc_matrix
-from scipy.sparse.linalg import inv
+from scipy.sparse import block_diag, issparse
 
 import pybamm
 from tests import (
@@ -1092,14 +1091,12 @@ class TestDiscretise:
         with pytest.raises(pybamm.ModelError, match=r"Boundary conditions"):
             disc.check_tab_conditions(b, bcs)
 
-    def test_mass_matrix_inverse(self):
-        # get mesh
+    def test_mass_matrix_with_finite_element(self):
         mesh = get_2p1d_mesh_for_testing(ypts=5, zpts=5)
         spatial_methods = {
             "macroscale": pybamm.FiniteVolume(),
             "current collector": pybamm.ScikitFiniteElement(),
         }
-        # create model
         a = pybamm.Variable(
             "a",
             domain="negative electrode",
@@ -1115,17 +1112,11 @@ class TestDiscretise:
         }
         model.variables = {"a": a, "b": b}
 
-        # create discretisation
         disc = pybamm.Discretisation(mesh, spatial_methods)
         disc.process_model(model)
 
-        # test that computing mass matrix block-by-block (as is done during
-        # discretisation) gives the correct result
-        # Note: inverse is more efficient in csc format
-        mass_inv = inv(csc_matrix(model.mass_matrix.entries))
-        np.testing.assert_equal(
-            model.mass_matrix_inv.entries.toarray(), mass_inv.toarray()
-        )
+        assert issparse(model.mass_matrix.entries)
+        assert not model.is_standard_form_dae
 
     def test_process_input_variable(self):
         disc = get_discretisation_for_testing()

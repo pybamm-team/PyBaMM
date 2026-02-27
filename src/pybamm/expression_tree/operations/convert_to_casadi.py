@@ -8,6 +8,7 @@ from dataclasses import dataclass
 import casadi
 import numpy as np
 from scipy import interpolate, special
+from scipy.sparse import issparse
 
 import pybamm
 
@@ -346,10 +347,12 @@ def try_repeated_row_matmul(
     if m < 2:
         return None
 
-    # Convert to dense array for comparison
-    dense = entries.toarray() if hasattr(entries, "toarray") else np.asarray(entries)
+    if issparse(entries):
+        opt = _check_identical_rows_sparse(entries.tocsr())
+    else:
+        opt = _check_identical_rows_dense(np.asarray(entries))
 
-    opt = check_identical_rows(dense)
+
     if opt:
         return opt.apply(converted_right)
 
@@ -388,23 +391,78 @@ class MatMulBoundaryDiffers:
         return casadi.vertcat(first_result, interior_result, last_result)
 
 
-def check_identical_rows(
+def _csr_rows_equal(indptr, indices, data, i, j):
+    """Check if rows i and j of a CSR matrix are identical."""
+    si, ei = indptr[i], indptr[i + 1]
+    sj, ej = indptr[j], indptr[j + 1]
+    if ei - si != ej - sj:
+        return False
+    return np.array_equal(indices[si:ei], indices[sj:ej]) and np.array_equal(
+        data[si:ei], data[sj:ej]
+    )
+
+
+def _csr_row_to_dense(csr, i, n):
+    """Extract a single row from CSR as a dense 1D array."""
+    row = np.zeros(n)
+    s, e = csr.indptr[i], csr.indptr[i + 1]
+    row[csr.indices[s:e]] = csr.data[s:e]
+    return row
+
+
+def _check_identical_rows_sparse(
+    csr,
+) -> MatMulIdenticalRows | MatMulBoundaryDiffers | None:
+    """Check if interior rows are identical, operating directly on CSR data."""
+    m, n = csr.shape
+    indptr, indices, data = csr.indptr, csr.indices, csr.data
+
+    row_nnz = np.diff(indptr)
+    interior_nnz = row_nnz[1]
+
+    # All interior rows must have the same nnz to be candidates
+    if not (row_nnz[1:-1] == interior_nnz).all():
+        return None
+
+    if m == 2:
+        if _csr_rows_equal(indptr, indices, data, 0, 1):
+            return MatMulIdenticalRows(row=_csr_row_to_dense(csr, 0, n), m=m)
+        return None
+
+    for i in range(2, m - 1):
+        if not _csr_rows_equal(indptr, indices, data, 1, i):
+            return None
+
+    first_same = _csr_rows_equal(indptr, indices, data, 0, 1)
+    last_same = _csr_rows_equal(indptr, indices, data, m - 1, 1)
+
+    interior_row = _csr_row_to_dense(csr, 1, n)
+    if first_same and last_same:
+        return MatMulIdenticalRows(row=interior_row, m=m)
+    else:
+        return MatMulBoundaryDiffers(
+            interior_row=interior_row,
+            first_row=None if first_same else _csr_row_to_dense(csr, 0, n),
+            last_row=None if last_same else _csr_row_to_dense(csr, m - 1, n),
+            m=m,
+        )
+
+
+def _check_identical_rows_dense(
     dense: np.ndarray,
 ) -> MatMulIdenticalRows | MatMulBoundaryDiffers | None:
     """Check if interior rows are identical, with optional boundary differences."""
     first_row = dense[0, :]
     m = dense.shape[0]
 
-    # For m=2: just check if both rows are identical
     if m == 2:
         if np.array_equal(dense[1, :], first_row):
             return MatMulIdenticalRows(row=first_row, m=m)
         return None
 
-    # For m >= 3: check interior rows, then boundaries
     interior_row = dense[1, :]
 
-    # Check interior rows are all identical (start at row 2 since row 1 is the template)
+
     if not (dense[2:-1] == interior_row).all():
         return None
 
