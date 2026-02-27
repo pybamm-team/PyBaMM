@@ -44,6 +44,7 @@ PYBIND11_MODULE(idaklu, m)
     py::arg("y0"),
     py::arg("yp0"),
     py::arg("inputs"),
+    py::arg("logger") = py::none(),
     py::return_value_policy::take_ownership);
 
   m.def("create_casadi_solver_group", &create_idaklu_solver_group<CasadiFunctions>,

@@ -11,6 +11,7 @@ using std::vector;
 #include "NoProgressGuard.hpp"
 #include "Solution.hpp"
 #include "IDAKLUStats.hpp"
+#include "SolverLog.hpp"
 
 /**
  * @brief Abstract solver class based on OpenMP vectors
@@ -83,6 +84,7 @@ public:
   SetupOptions const setup_opts;
   SolverOptions const solver_opts;
   IDAKLUStats accumulated_stats;  // Accumulated stats across reinitializations
+  SolverLog log_;
 
 #if SUNDIALS_VERSION_MAJOR >= 6
   SUNContext sunctx;
@@ -121,7 +123,8 @@ public:
     const sunrealtype *yp0,
     const sunrealtype *inputs,
     bool save_adaptive_steps,
-    bool save_interp_steps
+    bool save_interp_steps,
+    py::object logger = py::none()
   ) override;
 
 

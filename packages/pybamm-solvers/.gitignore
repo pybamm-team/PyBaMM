@@ -11,6 +11,7 @@ __pycache__
 setup.log
 build_sundials
 .idaklu
+*.so
 build
 
 # Extra directories for local work

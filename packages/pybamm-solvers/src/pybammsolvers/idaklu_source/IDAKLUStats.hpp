@@ -20,6 +20,11 @@ struct IDAKLUStats
   long nniters = 0;  // Number of nonlinear iterations
   long nncfails = 0; // Number of nonlinear convergence failures
 
+  // Linear solver stats
+  long njevals = 0;  // Number of Jacobian evaluations
+  long nliters = 0;  // Number of linear iterations
+  long nlcfails = 0; // Number of linear convergence failures
+
   // Preconditioner stats (BBD)
   long ngevalsBBDP = 0; // Number of g evaluations for BBD preconditioner
 
@@ -34,6 +39,9 @@ struct IDAKLUStats
     netfails = 0;
     nniters = 0;
     nncfails = 0;
+    njevals = 0;
+    nliters = 0;
+    nlcfails = 0;
     ngevalsBBDP = 0;
   }
 
@@ -48,6 +56,9 @@ struct IDAKLUStats
     netfails += other.netfails;
     nniters += other.nniters;
     nncfails += other.nncfails;
+    njevals += other.njevals;
+    nliters += other.nliters;
+    nlcfails += other.nlcfails;
     ngevalsBBDP += other.ngevalsBBDP;
     return *this;
   }

@@ -34,7 +34,8 @@ public:
     const sunrealtype *yp0,
     const sunrealtype *inputs,
     bool save_adaptive_steps,
-    bool save_interp_steps
+    bool save_interp_steps,
+    py::object logger = py::none()
   ) = 0;
 
   /**

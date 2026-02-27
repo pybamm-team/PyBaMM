@@ -7,7 +7,8 @@ std::vector<Solution> IDAKLUSolverGroup::solve(
     np_array t_interp_np,
     np_array y0_np,
     np_array yp0_np,
-    np_array inputs) {
+    np_array inputs,
+    py::object logger) {
   DEBUG("IDAKLUSolverGroup::solve");
 
   // If t_interp is empty, save all adaptive steps
@@ -114,7 +115,7 @@ std::vector<Solution> IDAKLUSolverGroup::solve(
         const sunrealtype *y = y0 + index * y0_np.shape(1);
         const sunrealtype *yp = yp0 + index * yp0_np.shape(1);
         const sunrealtype *input = inputs_data + index * inputs.shape(1);
-        results[index] = m_solvers[i]->solve(t_eval, t_interp, y, yp, input, save_adaptive_steps, save_interp_steps);
+        results[index] = m_solvers[i]->solve(t_eval, t_interp, y, yp, input, save_adaptive_steps, save_interp_steps, logger);
       }
     } catch (std::exception &e) {
       // If an exception is thrown, we need to catch it and rethrow it outside the parallel region
@@ -135,7 +136,7 @@ std::vector<Solution> IDAKLUSolverGroup::solve(
     const sunrealtype *y = y0 + index * y0_np.shape(1);
     const sunrealtype *yp = yp0 + index * yp0_np.shape(1);
     const sunrealtype *input = inputs_data + index * inputs.shape(1);
-    results[index] = m_solvers[i]->solve(t_eval, t_interp, y, yp, input, save_adaptive_steps, save_interp_steps);
+    results[index] = m_solvers[i]->solve(t_eval, t_interp, y, yp, input, save_adaptive_steps, save_interp_steps, logger);
   }
 
   // create solutions (needs to be serial as we're using the Python GIL)

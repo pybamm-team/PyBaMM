@@ -36,7 +36,8 @@ public:
     np_array t_interp_np,
     np_array y0_np,
     np_array yp0_np,
-    np_array inputs);
+    np_array inputs,
+    py::object logger = py::none());
 
 
   private:

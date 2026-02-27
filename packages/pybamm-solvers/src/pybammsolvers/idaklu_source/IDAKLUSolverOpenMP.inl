@@ -377,10 +377,14 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
   const sunrealtype *yp0,
   const sunrealtype *inputs,
   bool save_adaptive_steps,
-  bool save_interp_steps
+  bool save_interp_steps,
+  py::object logger
 )
 {
   DEBUG("IDAKLUSolver::solve");
+
+  log_ = SolverLog(std::move(logger));
+
   const int number_of_evals = t_eval.size();
   const int number_of_interps = t_interp.size();
 
@@ -457,14 +461,19 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
   int const init_type = solver_opts.init_all_y_ic ? IDA_Y_INIT : IDA_YA_YDP_INIT;
   if (solver_opts.calc_ic) {
     ConsistentInitialization(t0, t_eval_next, init_type);
+    log_.log_consistent_init(t0);
   }
 
   // Set the initial stop time
   IDASetStopTime(ida_mem, t_eval_next);
 
+  log_.log_start(t_eval.front(), t_eval.back());
+
   // Progress one step. This must be done before the while loop to ensure
   // that we can run IDAGetDky at t0 for dky = 1
+  int n_steps = 0;
   int retval = IDASolve(ida_mem, tf_perturbed, &t_val, yy, yyp, IDA_ONE_STEP);
+  log_.log_step(++n_steps, t_val);
   // If the solver cannot make the first step, throw an error
   CheckErrors(retval, "IDASolve at t0");
   dt = t_val - t_prev;
@@ -539,6 +548,7 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
       // Successful simulation. Exit the while loop
       break;
     } else if (hit_teval) {
+      log_.log_breakpoint(t_val);
       // Set the next stop time
       i_eval++;
       t_eval_next = t_eval[i_eval];
@@ -550,6 +560,7 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
       // Reinitialize the solver to deal with the discontinuity at t = t_val.
       ReinitializeIntegrator(t_val);
       ConsistentInitialization(t_val, t_eval_next, IDA_YA_YDP_INIT);
+      log_.log_consistent_init(t_val);
       // Reset the no-progress guard
       no_progression.Initialize();
     }
@@ -558,10 +569,13 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
 
     // Progress one step
     retval = IDASolve(ida_mem, tf_perturbed, &t_val, yy, yyp, IDA_ONE_STEP);
+    log_.log_step(++n_steps, t_val);
 
     dt = t_val - t_prev;
     no_progression.AddDt(dt);
   }
+
+  log_.log_integration_complete(n_steps, t_val);
 
   // Allocate and populate final state slice if needed
   int const length_of_final_sv_slice = save_outputs_only ? number_of_states : 0;
@@ -1062,7 +1076,10 @@ IDAKLUStats IDAKLUSolverOpenMP<ExprSet>::GetStats() {
 
   CheckErrors(IDAGetNonlinSolvStats(ida_mem, &stats.nniters, &stats.nncfails), "IDAGetNonlinSolvStats");
 
+  CheckErrors(IDAGetNumJacEvals(ida_mem, &stats.njevals), "IDAGetNumJacEvals");
   if (setup_opts.using_iterative_solver) {
+    CheckErrors(IDAGetNumLinIters(ida_mem, &stats.nliters), "IDAGetNumLinIters");
+    CheckErrors(IDAGetNumLinConvFails(ida_mem, &stats.nlcfails), "IDAGetNumLinConvFails");
     CheckErrors(IDABBDPrecGetNumGfnEvals(ida_mem, &stats.ngevalsBBDP), "IDABBDPrecGetNumGfnEvals");
   }
 
@@ -1110,4 +1127,9 @@ void IDAKLUSolverOpenMP<ExprSet>::PrintStats(const IDAKLUStats& stats) {
   py::print("\tCurrent internal time reached =", tcur);
   py::print("\tNumber of nonlinear iterations performed =", stats.nniters);
   py::print("\tNumber of nonlinear convergence failures =", stats.nncfails);
+  py::print("\tNumber of Jacobian evaluations =", stats.njevals);
+  if (setup_opts.using_iterative_solver) {
+    py::print("\tNumber of linear iterations =", stats.nliters);
+    py::print("\tNumber of linear convergence failures =", stats.nlcfails);
+  }
 }
