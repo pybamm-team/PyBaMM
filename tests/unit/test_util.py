@@ -114,6 +114,7 @@ class TestUtil:
         for import_pkg in present_optional_import_deps:
             sys.modules[import_pkg] = modules[import_pkg]
 
+    @pytest.mark.forked
     def test_pybamm_import(self):
         optional_distribution_deps = get_optional_distribution_deps("pybamm")
         present_optional_import_deps = get_present_optional_import_deps(
