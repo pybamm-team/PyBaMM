@@ -27,7 +27,7 @@ classifiers = [
     "Topic :: Scientific/Engineering",
 ]
 dependencies = [
-    "pybammsolvers>=0.3.3,<0.5.0",
+    "pybammsolvers>=0.5.0,<0.6.0",
     "black",
     "numpy",
     "scipy>=1.11.4",
