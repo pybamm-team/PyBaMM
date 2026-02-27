@@ -24,7 +24,8 @@ comsol_results_path = pybamm.get_parameters_filepath(
     f"{data_loader.get_data(f'comsol_{C_rate}C.json')}"
 )
 
-comsol_variables = json.load(open(comsol_results_path))
+with open(comsol_results_path) as f:
+    comsol_variables = json.load(f)
 
 "-----------------------------------------------------------------------------"
 "Create and solve pybamm model"
@@ -112,12 +113,13 @@ comsol_model.variables = {
     "Negative particle surface concentration [mol.m-3]": comsol_c_n_surf,
     "Electrolyte concentration [mol.m-3]": comsol_c_e,
     "Positive particle surface concentration [mol.m-3]": comsol_c_p_surf,
-    "Current [A]": pybamm_model.variables["Current [A]"],
+    "Current [A]": pybamm_model.get_processed_variable("Current [A]"),
     "Negative electrode potential [V]": comsol_phi_n,
     "Electrolyte potential [V]": comsol_phi_e,
     "Positive electrode potential [V]": comsol_phi_p,
     "Voltage [V]": comsol_voltage,
 }
+comsol_model.update_processed_variables(comsol_model.variables)
 
 # Make new solution with same t and y
 # Update solution scales to match the pybamm model

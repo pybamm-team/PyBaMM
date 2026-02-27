@@ -1,4 +1,4 @@
-FROM python:3.12-slim-bullseye
+FROM python:3.14-slim-bookworm
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 
 WORKDIR /
@@ -28,6 +28,7 @@ RUN uv venv $VIRTUAL_ENV
 RUN #!/bin/bash && source /home/pybamm/venv/bin/activate;
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
-RUN uv pip install -e ".[all,dev,docs,jax]";
+RUN uv pip install -e ".[all,jax]";
+RUN uv pip install --group dev --group docs;
 
 ENTRYPOINT ["/bin/bash"]

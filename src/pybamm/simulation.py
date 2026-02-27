@@ -11,6 +11,8 @@ import numpy as np
 import pybamm
 import pybamm.telemetry
 from pybamm.expression_tree.operations.serialise import Serialise
+from pybamm.models.base_model import ModelSolutionObservability
+from pybamm.solvers.base_solver import process
 from pybamm.util import import_optional_dependency
 
 
@@ -113,6 +115,7 @@ class Simulation:
             # Save the experiment
             self.experiment = experiment.copy()
 
+        model = model.new_copy()
         self._unprocessed_model = model
         self._model = model
 
@@ -124,12 +127,20 @@ class Simulation:
         self._output_variables = output_variables
         self._discretisation_kwargs = discretisation_kwargs or {}
 
+        if bool(getattr(self._solver, "output_variables", [])):
+            model.disable_solution_observability(
+                ModelSolutionObservability.SOLVER_OUTPUT_VARIABLES
+            )
+
         # Initialize empty built states
         self._model_with_set_params = None
         self._built_model = None
         self._built_initial_soc = None
+        self._built_nominal_capacity = None
         self.steps_to_built_models = None
         self.steps_to_built_solvers = None
+        self.model_state_mappers = {}
+        self._compiled_model_state_mappers = {}
         self._mesh = None
         self._disc = None
         self._solution = None
@@ -149,6 +160,8 @@ class Simulation:
         """
         result = self.__dict__.copy()
         result["get_esoh_solver"] = None  # Exclude LRU cache
+        result["model_state_mappers"] = {}
+        result["_compiled_model_state_mappers"] = {}
         return result
 
     def __setstate__(self, state):
@@ -157,11 +170,56 @@ class Simulation:
         """
         self.__dict__ = state
         self.get_esoh_solver = lru_cache()(self._get_esoh_solver)
+        if "model_state_mappers" not in self.__dict__:
+            self.model_state_mappers = {}
+        if "_compiled_model_state_mappers" not in self.__dict__:
+            self._compiled_model_state_mappers = {}
 
     def set_up_and_parameterise_experiment(self, solve_kwargs=None):
         msg = "pybamm.simulation.set_up_and_parameterise_experiment is deprecated and not meant to be accessed by users."
         warnings.warn(msg, DeprecationWarning, stacklevel=2)
         self._set_up_and_parameterise_experiment(solve_kwargs=solve_kwargs)
+
+    def _update_experiment_models_for_capacity(self, inputs, solve_kwargs=None):
+        """
+        Check if the nominal capacity has changed and update the experiment models
+        if needed. This re-processes the models without rebuilding the mesh and
+        discretisation.
+        """
+        current_capacity = self._parameter_values.get(
+            "Nominal cell capacity [A.h]", None
+        )
+
+        if self._built_nominal_capacity == current_capacity:
+            return
+
+        # Capacity has changed, need to re-process the models
+        pybamm.logger.info(
+            f"Nominal capacity changed from {self._built_nominal_capacity} to "
+            f"{current_capacity}. Re-processing experiment models."
+        )
+
+        # Re-parameterise the experiment with the new capacity
+        self._set_up_and_parameterise_experiment(solve_kwargs)
+
+        # Re-discretise the models
+        self.steps_to_built_models = {}
+        self.steps_to_built_solvers = {}
+        for (
+            step,
+            model_with_set_params,
+        ) in self.experiment_unique_steps_to_model.items():
+            built_model = self._disc.process_model(
+                model_with_set_params,
+                inplace=True,
+                delayed_variable_processing=True,
+            )
+            solver = self._solver.copy()
+            self.steps_to_built_solvers[step] = solver
+            self.steps_to_built_models[step] = built_model
+
+        self._build_experiment_state_mappers(inputs)
+        self._built_nominal_capacity = current_capacity
 
     def _set_up_and_parameterise_experiment(self, solve_kwargs=None):
         """
@@ -224,10 +282,12 @@ class Simulation:
         # Process each step
         self.experiment_unique_steps_to_model = {}
         for step in self.experiment.unique_steps:
-            parameterised_model = step.process_model(self._model, parameter_values)
-            self.experiment_unique_steps_to_model[step.basic_repr()] = (
-                parameterised_model
+            new_model = step.process_model(
+                self._model,
+                parameter_values,
+                delayed_variable_processing=True,
             )
+            self.experiment_unique_steps_to_model[step.basic_repr()] = new_model
 
         # Set up rest model if experiment has start times
         if self.experiment.initial_start_time:
@@ -236,10 +296,12 @@ class Simulation:
             # Change ambient temperature to be an input, which will be changed at
             # solve time
             parameter_values["Ambient temperature [K]"] = "[input]"
-            parameterised_model = rest_step.process_model(self._model, parameter_values)
-            self.experiment_unique_steps_to_model["Rest for padding"] = (
-                parameterised_model
+            new_model = rest_step.process_model(
+                self._model,
+                parameter_values,
+                delayed_variable_processing=True,
             )
+            self.experiment_unique_steps_to_model["Rest for padding"] = new_model
 
     def set_parameters(self):
         msg = (
@@ -256,7 +318,9 @@ class Simulation:
             return
 
         self._model_with_set_params = self._parameter_values.process_model(
-            self._unprocessed_model, inplace=False
+            self._unprocessed_model,
+            inplace=False,
+            delayed_variable_processing=True,
         )
         self._parameter_values.process_geometry(self._geometry)
         self._model = self._model_with_set_params
@@ -266,6 +330,7 @@ class Simulation:
             # reset
             self._model_with_set_params = None
             self._built_model = None
+            self._built_nominal_capacity = None
             self.steps_to_built_models = None
             self.steps_to_built_solvers = None
 
@@ -312,7 +377,7 @@ class Simulation:
 
         if self._built_model:
             return
-        elif self._model.is_discretised:
+        if self._model.is_discretised:
             self._model_with_set_params = self._model
             self._built_model = self._model
         else:
@@ -322,7 +387,9 @@ class Simulation:
                 self._mesh, self._spatial_methods, **self._discretisation_kwargs
             )
             self._built_model = self._disc.process_model(
-                self._model_with_set_params, inplace=False
+                self._model_with_set_params,
+                inplace=False,
+                delayed_variable_processing=True,
             )
             # rebuilt model so clear solver setup
             self._solver._model_set_up = {}
@@ -338,6 +405,8 @@ class Simulation:
             self.set_initial_state(initial_soc, direction=direction, inputs=inputs)
 
         if self.steps_to_built_models:
+            # Check if we need to update the models due to capacity change
+            self._update_experiment_models_for_capacity(inputs, solve_kwargs)
             return
         else:
             self._set_up_and_parameterise_experiment(solve_kwargs)
@@ -360,11 +429,83 @@ class Simulation:
                 # It's ok to modify the model with set parameters in place as it's
                 # not returned anywhere
                 built_model = self._disc.process_model(
-                    model_with_set_params, inplace=True
+                    model_with_set_params,
+                    inplace=True,
+                    delayed_variable_processing=True,
                 )
                 solver = self._solver.copy()
                 self.steps_to_built_solvers[step] = solver
                 self.steps_to_built_models[step] = built_model
+
+            if inputs is None:
+                inputs = {}
+            self._build_experiment_state_mappers(inputs)
+            self._built_nominal_capacity = self._parameter_values.get(
+                "Nominal cell capacity [A.h]", None
+            )
+
+    def _build_experiment_state_mappers(self, inputs: dict):
+        self.model_state_mappers = {}
+        self._compiled_model_state_mappers = {}
+        if not self.experiment or not self.steps_to_built_models:
+            return
+
+        ordered_steps = self.experiment.steps
+        previous_model = None
+        for step in ordered_steps:
+            model = self.steps_to_built_models[step.basic_repr()]
+            if previous_model is not None and previous_model is not model:
+                key = (previous_model, model)
+                if key not in self.model_state_mappers:
+                    self.model_state_mappers[key] = model.build_initial_state_mapper(
+                        previous_model
+                    )
+            previous_model = model
+
+        rest_model = self.steps_to_built_models.get("Rest for padding")
+        if rest_model is not None:
+            unique_models = set(self.steps_to_built_models.values())
+            for model in unique_models:
+                if model is rest_model:
+                    continue
+                to_rest_key = (model, rest_model)
+                if to_rest_key not in self.model_state_mappers:
+                    self.model_state_mappers[to_rest_key] = (
+                        rest_model.build_initial_state_mapper(model)
+                    )
+                from_rest_key = (rest_model, model)
+                if from_rest_key not in self.model_state_mappers:
+                    self.model_state_mappers[from_rest_key] = (
+                        model.build_initial_state_mapper(rest_model)
+                    )
+
+        # compile all the mappers
+        for (previous_model, next_model), mapper in self.model_state_mappers.items():
+            vars_for_processing = pybamm.BaseSolver._get_vars_for_processing(
+                previous_model, inputs
+            )
+            if not hasattr(previous_model, "calculate_sensitivities"):
+                previous_model.calculate_sensitivities = []
+            f, jac, jacp, _jac_action = process(mapper, "mapper", vars_for_processing)
+            # Store both the compiled mapper and the input keys used
+            # we don't need jac and jacp yet, but should use them for sensitivity calculations in the future
+            self._compiled_model_state_mappers[(previous_model, next_model)] = (
+                f,
+                jac,
+                jacp,
+            )
+
+    def _get_state_mapper_for_solution(self, solution, model):
+        if not self._compiled_model_state_mappers or isinstance(
+            solution, pybamm.EmptySolution
+        ):
+            return None
+        if not solution.all_models:
+            return None
+        from_model = solution.all_models[-1]
+        if from_model is model:
+            return None
+        return self._compiled_model_state_mappers.get((from_model, model))
 
     def solve(
         self,
@@ -379,7 +520,6 @@ class Simulation:
         showprogress=False,
         inputs=None,
         t_interp=None,
-        initial_conditions=None,
         **kwargs,
     ):
         """
@@ -542,11 +682,16 @@ class Simulation:
                 inputs=inputs,
                 t_interp=t_interp,
                 **kwargs,
-                initial_conditions=initial_conditions,
             )
 
         elif self.operating_mode == "with experiment":
             callbacks.on_experiment_start(logs)
+
+            if isinstance(inputs, list):
+                raise pybamm.SolverError(
+                    "Solving with a list of input sets is not supported with experiments."
+                )
+
             self.build_for_experiment(
                 initial_soc=initial_soc,
                 direction=direction,
@@ -752,6 +897,10 @@ class Simulation:
                         solver, dt, t_interp
                     )
 
+                    state_mapper = self._get_state_mapper_for_solution(
+                        current_solution, model
+                    )
+
                     try:
                         step_solution = solver.step(
                             current_solution,
@@ -761,6 +910,7 @@ class Simulation:
                             t_interp=t_interp_processed,
                             save=False,
                             inputs=inputs,
+                            state_mapper=state_mapper,
                             **kwargs,
                         )
                     except pybamm.SolverError as error:
@@ -778,7 +928,7 @@ class Simulation:
                             feasible = False
                             # If none of the cycles worked, raise an error
                             if cycle_num == 1 and step_num == 1:
-                                raise error
+                                raise error from error
                             # Otherwise, just stop this cycle
                             break
 
@@ -982,6 +1132,7 @@ class Simulation:
     def run_padding_rest(self, kwargs, rest_time, step_solution, inputs):
         model = self.steps_to_built_models["Rest for padding"]
         solver = self.steps_to_built_solvers["Rest for padding"]
+        state_mapper = self._get_state_mapper_for_solution(step_solution, model)
 
         # Make sure we take at least 2 timesteps. The period is hardcoded to 10
         # minutes,the user can always override it by adding a rest step
@@ -994,6 +1145,7 @@ class Simulation:
             t_eval=np.linspace(0, rest_time, npts),
             save=False,
             inputs=inputs,
+            state_mapper=state_mapper,
             **kwargs,
         )
 
@@ -1270,6 +1422,9 @@ class Simulation:
         split_by_electrode : bool, optional
             Whether to show the overpotentials for the negative and positive electrodes
             separately. Default is False.
+        electrode_phases : (str, str), optional
+            The phases for which to plot the anode and cathode overpotentials, respectively.
+            Default is `("primary", "primary")`.
         show_plot : bool, optional
             Whether to show the plots. Default is True. Set to False if you want to
             only display the plot after plt.show() has been called.
@@ -1285,7 +1440,7 @@ class Simulation:
             ax=ax,
             show_legend=show_legend,
             split_by_electrode=split_by_electrode,
-            electrode_phases=("primary", "primary"),
+            electrode_phases=electrode_phases,
             show_plot=show_plot,
             **kwargs_fill,
         )

@@ -9,6 +9,39 @@ import numpy as np
 import pybamm
 
 
+def compute_var_pts_from_thicknesses(electrode_thicknesses, grid_size):
+    """
+    Compute a ``var_pts`` dictionary using electrode thicknesses and a target cell size (dx).
+
+    Added as per maintainer feedback in issue #<your-issue-number> to make mesh generation
+    explicit — ``grid_size`` now represents the mesh cell size in metres.
+
+    Parameters
+    ----------
+    electrode_thicknesses : dict
+        Domain thicknesses in metres.
+    grid_size : float
+        Desired uniform mesh cell size (m).
+
+    Returns
+    -------
+    dict
+        Mapping of each domain to its computed grid points.
+    """
+    if not isinstance(electrode_thicknesses, dict):
+        raise TypeError("electrode_thicknesses must be a dictionary")
+
+    if not isinstance(grid_size, (int | float)) or grid_size <= 0:
+        raise ValueError("grid_size must be a positive number")
+
+    var_pts = {}
+    for domain, thickness in electrode_thicknesses.items():
+        npts = max(round(thickness / grid_size), 2)
+        var_pts[domain] = {f"x_{domain[0]}": npts}
+
+    return var_pts
+
+
 class Mesh(dict):
     """
     Mesh contains a list of submeshes on each subdomain.

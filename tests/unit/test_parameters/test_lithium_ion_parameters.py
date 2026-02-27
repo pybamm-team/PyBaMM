@@ -3,8 +3,13 @@
 #
 
 import numpy as np
+import pytest
 
 import pybamm
+from pybamm.parameters.lithium_ion_parameters import (
+    U_asymptote_approaching_zero,
+    U_asymptotes,
+)
 
 
 class TestLithiumIonParameterValues:
@@ -117,8 +122,7 @@ class TestLithiumIonParameterValues:
                 "Top face heat transfer coefficient [W.m-2.K-1]": 5.0,
                 "Inner radius heat transfer coefficient [W.m-2.K-1]": 5.0,
                 "Outer radius heat transfer coefficient [W.m-2.K-1]": 5.0,
-            },
-            check_already_exists=False,
+            }
         )
         param = pybamm.LithiumIonParameters()
         T = param.T_ref
@@ -158,3 +162,57 @@ class TestLithiumIonParameterValues:
         c_e_test = 1000
         values.evaluate(param.D_e(c_e_test, T_test))
         values.evaluate(param.kappa_e(c_e_test, T_test))
+
+
+class TestUAsymptotes:
+    """Tests for the OCP asymptote functions."""
+
+    def test_U_asymptote_approaching_zero_values(self):
+        """Test that U_asymptote_approaching_zero returns expected values."""
+        # Test at sto = 0: should be ~1000 mV (1 V)
+        val_at_zero = U_asymptote_approaching_zero(0.0).evaluate()
+        assert val_at_zero == pytest.approx(1.0, rel=1e-3)
+
+        # Test at sto = 0.001: should be ~1 mV
+        val_at_001 = U_asymptote_approaching_zero(0.001).evaluate()
+        assert val_at_001 == pytest.approx(0.001, rel=1e-2)
+
+        # Test at sto = 1: should be essentially 0
+        val_at_one = U_asymptote_approaching_zero(1.0).evaluate()
+        assert val_at_one < 1e-10
+
+    def test_U_asymptotes_antisymmetry(self):
+        """Test that U_asymptotes is antisymmetric: U(sto) = -U(1-sto)."""
+        test_points = [0.001, 0.01, 0.1, 0.3, 0.5, 0.7, 0.9, 0.99, 0.999]
+
+        for sto in test_points:
+            u_sto = U_asymptotes(sto).evaluate()
+            u_1_minus_sto = U_asymptotes(1 - sto).evaluate()
+            # U(sto) + U(1-sto) should equal 0 (antisymmetry)
+            assert u_sto + u_1_minus_sto == pytest.approx(0.0, abs=1e-12)
+
+    def test_U_asymptotes_boundary_values(self):
+        """Test U_asymptotes at boundary values."""
+
+        # At sto = 0: should be positive (~1 V)
+        assert U_asymptotes(0.0).evaluate() > 0
+        assert U_asymptotes(0.0).evaluate() == pytest.approx(1.0, rel=1e-3)
+
+        # At sto = 1: should be negative (~-1 V)
+        assert U_asymptotes(1.0).evaluate() < 0
+        assert U_asymptotes(1.0).evaluate() == pytest.approx(-1.0, rel=1e-3)
+
+        # At sto = 0.5: should be 0
+        assert U_asymptotes(0.5).evaluate() == pytest.approx(0.0, abs=1e-10)
+
+    def test_U_asymptote_numerical_stability(self):
+        """Test that U_asymptote_approaching_zero doesn't overflow for extreme values."""
+        # For very negative stoichiometries, should return finite large values
+        # This tests the logaddexp fix: np.log(1 + exp(7000)) would overflow
+        val_neg = U_asymptote_approaching_zero(-1.0).evaluate()
+        assert np.isfinite(val_neg)
+        assert val_neg > 0  # Should be a large positive barrier
+
+        val_very_neg = U_asymptote_approaching_zero(-10.0).evaluate()
+        assert np.isfinite(val_very_neg)
+        assert val_very_neg > val_neg  # More negative sto = larger barrier

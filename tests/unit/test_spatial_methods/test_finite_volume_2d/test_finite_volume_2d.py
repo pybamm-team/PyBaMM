@@ -2,13 +2,13 @@ import numpy as np
 import pytest
 
 import pybamm
-from tests import get_mesh_for_testing, get_mesh_for_testing_2d
+from tests import get_mesh_for_testing
 
 
 class TestFiniteVolume2D:
-    def test_node_to_edge_to_node(self):
+    def test_node_to_edge_to_node(self, mesh_2d):
         # Create discretisation
-        mesh = get_mesh_for_testing_2d()
+        mesh = mesh_2d
         fin_vol = pybamm.FiniteVolume2D()
         fin_vol.build(mesh)
         n_lr = mesh[("negative electrode", "separator", "positive electrode")].npts_lr
@@ -54,14 +54,14 @@ class TestFiniteVolume2D:
         )
 
         # bad shift key
-        with pytest.raises(ValueError, match="shift key"):
+        with pytest.raises(ValueError, match=r"shift key"):
             fin_vol.shift(c, "bad shift key", "arithmetic")
 
-        with pytest.raises(ValueError, match="shift key"):
+        with pytest.raises(ValueError, match=r"shift key"):
             fin_vol.shift(c, "bad shift key", "harmonic")
 
         # bad method
-        with pytest.raises(ValueError, match="method"):
+        with pytest.raises(ValueError, match=r"method"):
             fin_vol.shift(c, "shift key", "bad method")
 
         # Edge to node
@@ -88,16 +88,16 @@ class TestFiniteVolume2D:
         right_grad = fin_vol.edge_to_node(
             disc_symbol.tb_field, method="arithmetic", direction="tb"
         )
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             left_grad.evaluate(None, lr).flatten(), np.ones(n_lr * n_tb)
         )
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             right_grad.evaluate(None, tb).flatten(), np.ones(n_lr * n_tb)
         )
 
-    def test_discretise_spatial_variable(self):
+    def test_discretise_spatial_variable(self, mesh_2d):
         # Create discretisation
-        mesh = get_mesh_for_testing_2d()
+        mesh = mesh_2d
         spatial_methods = {
             "macroscale": pybamm.FiniteVolume2D(),
         }
@@ -131,29 +131,41 @@ class TestFiniteVolume2D:
         np.testing.assert_array_equal(x4_disc.evaluate().flatten(), TB.flatten())
 
         # test invalid direction
-        with pytest.raises(ValueError, match="Direction asdf not supported"):
+        with pytest.raises(ValueError, match=r"Direction asdf not supported"):
             disc.process_symbol(
                 pybamm.SpatialVariable("q", ["negative electrode"], direction="asdf")
             )
 
-        x_edges = pybamm.SpatialVariable(
+        # Test SpatialVariableEdge with direction="lr" - edges in lr, nodes in tb
+        x_edges_lr = pybamm.SpatialVariableEdge(
             "x_edges", ["negative electrode", "separator"], direction="lr"
         )
-        x_edges._evaluates_on_edges = lambda _: True
-        x_edges_disc = disc.process_symbol(x_edges)
-        LR, TB = np.meshgrid(submesh.edges_lr, submesh.edges_tb)
-        np.testing.assert_array_equal(x_edges_disc.evaluate().flatten(), LR.flatten())
+        x_edges_lr_disc = disc.process_symbol(x_edges_lr)
+        LR_edges, _ = np.meshgrid(submesh.edges_lr, submesh.nodes_tb)
+        np.testing.assert_array_equal(
+            x_edges_lr_disc.evaluate().flatten(), LR_edges.flatten()
+        )
 
-        mesh_1d = get_mesh_for_testing()
+        # Test SpatialVariableEdge with direction="tb" - nodes in lr, edges in tb
+        z_edges_tb = pybamm.SpatialVariableEdge(
+            "z_edges", ["negative electrode", "separator"], direction="tb"
+        )
+        z_edges_tb_disc = disc.process_symbol(z_edges_tb)
+        _, TB_edges = np.meshgrid(submesh.nodes_lr, submesh.edges_tb)
+        np.testing.assert_array_equal(
+            z_edges_tb_disc.evaluate().flatten(), TB_edges.flatten()
+        )
+
+        mesh_1d = get_mesh_for_testing(xpts=10)
         spatial_methods_1d = {"macroscale": pybamm.FiniteVolume2D()}
         disc_1d = pybamm.Discretisation(mesh_1d, spatial_methods_1d)
         x_1d = pybamm.SpatialVariable("x_1d", ["negative electrode"], direction="lr")
-        with pytest.raises(ValueError, match="Spatial variable x_1d is not in 2D"):
+        with pytest.raises(ValueError, match=r"Spatial variable x_1d is not in 2D"):
             disc_1d.process_symbol(x_1d)
 
-    def test_process_binary_operators(self):
+    def test_process_binary_operators(self, mesh_2d):
         # Setup mesh and discretisation
-        mesh = get_mesh_for_testing_2d()
+        mesh = mesh_2d
         spatial_methods = {"macroscale": pybamm.FiniteVolume2D()}
         disc = pybamm.Discretisation(mesh, spatial_methods)
         whole_cell = ["negative electrode", "separator", "positive electrode"]
@@ -303,12 +315,12 @@ class TestFiniteVolume2D:
             eqn_disc.evaluate(None, LR.flatten())
             eqn_disc.evaluate(None, TB.flatten())
 
-    def test_upwind_downwind_2d(self):
+    def test_upwind_downwind_2d(self, mesh_2d):
         """
         Test upwind and downwind operators in 2D finite volume method
         """
         # Create discretisation
-        mesh = get_mesh_for_testing_2d()
+        mesh = mesh_2d
         spatial_methods = {
             "negative electrode": pybamm.FiniteVolume2D(),
         }
@@ -361,7 +373,7 @@ class TestFiniteVolume2D:
         expected_tb_size = submesh.npts_lr * (submesh.npts_tb + 1)
 
         # Create test values
-        LR, TB = np.meshgrid(submesh.nodes_lr, submesh.nodes_tb)
+        LR, _TB = np.meshgrid(submesh.nodes_lr, submesh.nodes_tb)
         test_values = LR.flatten()
 
         lr_result = result_none.lr_field.evaluate(None, test_values)
@@ -374,8 +386,8 @@ class TestFiniteVolume2D:
         lr_direct = node_to_edge_lr.evaluate(None, test_values)
         tb_direct = node_to_edge_tb.evaluate(None, test_values)
 
-        np.testing.assert_array_almost_equal(lr_result.flatten(), lr_direct.flatten())
-        np.testing.assert_array_almost_equal(tb_result.flatten(), tb_direct.flatten())
+        np.testing.assert_allclose(lr_result.flatten(), lr_direct.flatten())
+        np.testing.assert_allclose(tb_result.flatten(), tb_direct.flatten())
 
         # Test 1b: Test with only lr_direction=None (tb_direction should be ignored when None)
         result_lr_none = spatial_method.upwind_or_downwind(
@@ -386,8 +398,8 @@ class TestFiniteVolume2D:
         lr_result_b = result_lr_none.lr_field.evaluate(None, test_values)
         tb_result_b = result_lr_none.tb_field.evaluate(None, test_values)
 
-        np.testing.assert_array_almost_equal(lr_result_b.flatten(), lr_direct.flatten())
-        np.testing.assert_array_almost_equal(tb_result_b.flatten(), tb_direct.flatten())
+        np.testing.assert_allclose(lr_result_b.flatten(), lr_direct.flatten())
+        np.testing.assert_allclose(tb_result_b.flatten(), tb_direct.flatten())
 
         # Test 1c: Test with only tb_direction=None (lr_direction should be ignored when None)
         result_tb_none = spatial_method.upwind_or_downwind(
@@ -398,13 +410,13 @@ class TestFiniteVolume2D:
         lr_result_c = result_tb_none.lr_field.evaluate(None, test_values)
         tb_result_c = result_tb_none.tb_field.evaluate(None, test_values)
 
-        np.testing.assert_array_almost_equal(lr_result_c.flatten(), lr_direct.flatten())
-        np.testing.assert_array_almost_equal(tb_result_c.flatten(), tb_direct.flatten())
+        np.testing.assert_allclose(lr_result_c.flatten(), lr_direct.flatten())
+        np.testing.assert_allclose(tb_result_c.flatten(), tb_direct.flatten())
 
         # Test 2: Error cases - missing boundary conditions for upwind
         # Should raise error when upwinding without left Dirichlet BC
         with pytest.raises(
-            pybamm.ModelError, match="Dirichlet boundary conditions must be provided"
+            pybamm.ModelError, match=r"Dirichlet boundary conditions must be provided"
         ):
             spatial_method.upwind_or_downwind(
                 var, var_disc, boundary_conditions, "downwind", None
@@ -412,7 +424,7 @@ class TestFiniteVolume2D:
 
         # Should raise error when downwinding without right Dirichlet BC
         with pytest.raises(
-            pybamm.ModelError, match="Dirichlet boundary conditions must be provided"
+            pybamm.ModelError, match=r"Dirichlet boundary conditions must be provided"
         ):
             spatial_method.upwind_or_downwind(
                 var, var_disc, boundary_conditions, "upwind", None
@@ -420,7 +432,7 @@ class TestFiniteVolume2D:
 
         # Should raise error when upwinding in tb without top Dirichlet BC
         with pytest.raises(
-            pybamm.ModelError, match="Dirichlet boundary conditions must be provided"
+            pybamm.ModelError, match=r"Dirichlet boundary conditions must be provided"
         ):
             spatial_method.upwind_or_downwind(
                 var, var_disc, boundary_conditions, None, "downwind"
@@ -428,7 +440,7 @@ class TestFiniteVolume2D:
 
         # Should raise error when downwinding in tb without bottom Dirichlet BC
         with pytest.raises(
-            pybamm.ModelError, match="Dirichlet boundary conditions must be provided"
+            pybamm.ModelError, match=r"Dirichlet boundary conditions must be provided"
         ):
             spatial_method.upwind_or_downwind(
                 var, var_disc, boundary_conditions, None, "upwind"
@@ -436,17 +448,17 @@ class TestFiniteVolume2D:
 
         # Test 3: Error case - no boundary conditions at all
         with pytest.raises(
-            pybamm.ModelError, match="Boundary conditions must be provided"
+            pybamm.ModelError, match=r"Boundary conditions must be provided"
         ):
             spatial_method.upwind_or_downwind(var, var_disc, {}, "upwind", None)
 
         # Test 4: Error case - invalid direction
-        with pytest.raises(ValueError, match="direction 'invalid' not recognised"):
+        with pytest.raises(ValueError, match=r"direction 'invalid' not recognised"):
             spatial_method.upwind_or_downwind(
                 var, var_disc, boundary_conditions, "invalid", None
             )
 
-        with pytest.raises(ValueError, match="direction 'invalid' not recognised"):
+        with pytest.raises(ValueError, match=r"direction 'invalid' not recognised"):
             spatial_method.upwind_or_downwind(
                 var, var_disc, boundary_conditions, None, "invalid"
             )
@@ -465,7 +477,7 @@ class TestFiniteVolume2D:
 
         # Test that upwind requires left Dirichlet BC
         with pytest.raises(
-            pybamm.ModelError, match="Dirichlet boundary conditions must be provided"
+            pybamm.ModelError, match=r"Dirichlet boundary conditions must be provided"
         ):
             spatial_method.upwind_or_downwind(
                 var, var_disc, boundary_conditions_no_left_dirichlet, "downwind", None
@@ -473,7 +485,7 @@ class TestFiniteVolume2D:
 
         # Test that downwind requires right Dirichlet BC
         with pytest.raises(
-            pybamm.ModelError, match="Dirichlet boundary conditions must be provided"
+            pybamm.ModelError, match=r"Dirichlet boundary conditions must be provided"
         ):
             spatial_method.upwind_or_downwind(
                 var, var_disc, boundary_conditions_no_left_dirichlet, "upwind", None
@@ -481,7 +493,7 @@ class TestFiniteVolume2D:
 
         # Test that upwind in tb requires top Dirichlet BC
         with pytest.raises(
-            pybamm.ModelError, match="Dirichlet boundary conditions must be provided"
+            pybamm.ModelError, match=r"Dirichlet boundary conditions must be provided"
         ):
             spatial_method.upwind_or_downwind(
                 var, var_disc, boundary_conditions_no_left_dirichlet, None, "downwind"
@@ -489,7 +501,7 @@ class TestFiniteVolume2D:
 
         # Test that downwind in tb requires bottom Dirichlet BC
         with pytest.raises(
-            pybamm.ModelError, match="Dirichlet boundary conditions must be provided"
+            pybamm.ModelError, match=r"Dirichlet boundary conditions must be provided"
         ):
             spatial_method.upwind_or_downwind(
                 var, var_disc, boundary_conditions_no_left_dirichlet, None, "upwind"
@@ -508,7 +520,7 @@ class TestFiniteVolume2D:
 
         # Downwind should fail even with left Dirichlet (needs right Dirichlet)
         with pytest.raises(
-            pybamm.ModelError, match="Dirichlet boundary conditions must be provided"
+            pybamm.ModelError, match=r"Dirichlet boundary conditions must be provided"
         ):
             spatial_method.upwind_or_downwind(
                 var, var_disc, boundary_conditions_left_dirichlet_only, "downwind", None
@@ -526,7 +538,7 @@ class TestFiniteVolume2D:
 
         # Upwind should fail even with right Dirichlet (needs left Dirichlet)
         with pytest.raises(
-            pybamm.ModelError, match="Dirichlet boundary conditions must be provided"
+            pybamm.ModelError, match=r"Dirichlet boundary conditions must be provided"
         ):
             spatial_method.upwind_or_downwind(
                 var, var_disc, boundary_conditions_right_dirichlet_only, "upwind", None
@@ -545,7 +557,7 @@ class TestFiniteVolume2D:
 
         # Downwind in tb should fail even with top Dirichlet (needs bottom Dirichlet)
         with pytest.raises(
-            pybamm.ModelError, match="Dirichlet boundary conditions must be provided"
+            pybamm.ModelError, match=r"Dirichlet boundary conditions must be provided"
         ):
             spatial_method.upwind_or_downwind(
                 var, var_disc, boundary_conditions_top_dirichlet_only, None, "upwind"
@@ -563,7 +575,7 @@ class TestFiniteVolume2D:
 
         # Upwind in tb should fail even with bottom Dirichlet (needs top Dirichlet)
         with pytest.raises(
-            pybamm.ModelError, match="Dirichlet boundary conditions must be provided"
+            pybamm.ModelError, match=r"Dirichlet boundary conditions must be provided"
         ):
             spatial_method.upwind_or_downwind(
                 var,
@@ -626,9 +638,9 @@ class TestFiniteVolume2D:
         # Verify it's a VectorField
         assert isinstance(result_both_ghost, pybamm.VectorField)
 
-    def test_2d_concatenations(self):
+    def test_2d_concatenations(self, mesh_2d):
         # Create discretisation
-        mesh = get_mesh_for_testing_2d()
+        mesh = mesh_2d
         spatial_methods = {
             "macroscale": pybamm.FiniteVolume2D(),
         }
@@ -716,14 +728,42 @@ class TestFiniteVolume2D:
         total_add = concat_var + source_concat
         neg_add_disc = disc.process_symbol(neg_add)
 
-    def test_vector_boundary_conditions(self):
+        # test functions that vary in X and Z
+        z_neg = pybamm.SpatialVariable(
+            "z_neg",
+            domain="negative electrode",
+            direction="tb",
+        )
+        z_sep = pybamm.SpatialVariable(
+            "z_sep",
+            domain="separator",
+            direction="tb",
+        )
+        z_pos = pybamm.SpatialVariable(
+            "z_pos",
+            domain="positive electrode",
+            direction="tb",
+        )
+        z_concat = pybamm.concatenation(z_neg, z_sep, z_pos)
+        z_concat_disc = disc.process_symbol(z_concat)
+        z_concat_result = z_concat_disc.evaluate(None, None).flatten()
+        z = pybamm.SpatialVariable(
+            "z",
+            ["negative electrode", "separator", "positive electrode"],
+            direction="tb",
+        )
+        z_disc = disc.process_symbol(z)
+        z_result = z_disc.evaluate(None, None).flatten()
+        np.testing.assert_array_equal(z_concat_result, z_result)
+
+    def test_vector_boundary_conditions(self, mesh_2d):
         """
         Test using vector quantities as boundary conditions, such as spatial variables
         with BoundaryGradient. This tests the case where boundary conditions are
         functions of spatial coordinates rather than scalar constants.
         """
         # Create discretisation with 2D mesh
-        mesh = get_mesh_for_testing_2d()
+        mesh = mesh_2d
         spatial_methods = {"macroscale": pybamm.FiniteVolume2D()}
         disc = pybamm.Discretisation(mesh, spatial_methods)
 
@@ -789,7 +829,7 @@ class TestFiniteVolume2D:
 
         # Verify the equation can be evaluated with vector boundary conditions
         submesh = mesh[("negative electrode", "separator", "positive electrode")]
-        LR, TB = np.meshgrid(submesh.nodes_lr, submesh.nodes_tb)
+        LR, _TB = np.meshgrid(submesh.nodes_lr, submesh.nodes_tb)
         test_y = LR.flatten()  # Use x-coordinate values as test data
 
         # This should not raise an error
@@ -1014,9 +1054,9 @@ class TestFiniteVolume2D:
         assert result_complex_neumann is not None
         assert result_complex_neumann.shape[0] == submesh.npts
 
-    def test_delta_function(self):
+    def test_delta_function(self, mesh_2d):
         # Create discretisation
-        mesh = get_mesh_for_testing_2d()
+        mesh = mesh_2d
         spatial_methods = {"macroscale": pybamm.FiniteVolume2D()}
         disc = pybamm.Discretisation(mesh, spatial_methods)
         var = pybamm.Variable(
