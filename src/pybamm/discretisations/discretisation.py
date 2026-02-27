@@ -1003,24 +1003,22 @@ class Discretisation:
         elif isinstance(symbol, pybamm.UnaryOperator):
             child = symbol.child
 
-            disc_child = self.process_symbol(child)
-            if child.domain != []:
+            # Intercept div(grad(u)) and div(D*grad(u)) before processing
+            # children, to avoid the expensive Green-Gauss gradient assembly.
+            if isinstance(symbol, pybamm.Divergence) and child.domain != []:
                 child_spatial_method = self.spatial_methods[child.domain[0]]
-
-            if isinstance(symbol, pybamm.Gradient):
-                return child_spatial_method.gradient(child, disc_child, self.bcs)
-
-            elif isinstance(symbol, pybamm.Divergence):
-                if isinstance(
-                    child_spatial_method, pybamm.FiniteVolumeUnstructured
-                ) and isinstance(child, pybamm.Multiplication):
-                    left_c, right_c = child.children
+                if isinstance(child_spatial_method, pybamm.FiniteVolumeUnstructured):
                     grad_sym = None
                     coeff_sym = None
-                    if isinstance(right_c, pybamm.Gradient):
-                        grad_sym, coeff_sym = right_c, left_c
-                    elif isinstance(left_c, pybamm.Gradient):
-                        grad_sym, coeff_sym = left_c, right_c
+                    if isinstance(child, pybamm.Gradient):
+                        grad_sym = child
+                        coeff_sym = pybamm.Scalar(1)
+                    elif isinstance(child, pybamm.Multiplication):
+                        left_c, right_c = child.children
+                        if isinstance(right_c, pybamm.Gradient):
+                            grad_sym, coeff_sym = right_c, left_c
+                        elif isinstance(left_c, pybamm.Gradient):
+                            grad_sym, coeff_sym = left_c, right_c
                     if grad_sym is not None:
                         disc_coeff = self.process_symbol(coeff_sym)
                         disc_u = self.process_symbol(grad_sym.child)
@@ -1031,6 +1029,15 @@ class Discretisation:
                             disc_u,
                             self.bcs,
                         )
+
+            disc_child = self.process_symbol(child)
+            if child.domain != []:
+                child_spatial_method = self.spatial_methods[child.domain[0]]
+
+            if isinstance(symbol, pybamm.Gradient):
+                return child_spatial_method.gradient(child, disc_child, self.bcs)
+
+            elif isinstance(symbol, pybamm.Divergence):
                 return child_spatial_method.divergence(child, disc_child, self.bcs)
 
             elif isinstance(symbol, pybamm.Laplacian):

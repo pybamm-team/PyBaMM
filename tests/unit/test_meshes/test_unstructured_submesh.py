@@ -276,7 +276,7 @@ class TestUnstructuredMeshGenerator:
 
         assert isinstance(mesh, UnstructuredSubMesh)
         assert mesh.dimension == 3
-        assert mesh.npts == 2 * 2 * 2 * 5  # 8 hexes, 5 tets each
+        assert mesh.npts == 2 * 2 * 2  # 8 hex cells
         np.testing.assert_allclose(mesh.cell_volumes.sum(), 1.0, atol=1e-14)
 
     def test_3d_generator_mesh_integration(self):
@@ -306,7 +306,7 @@ class TestUnstructuredMeshGenerator:
         submesh = mesh["negative electrode"]
         assert isinstance(submesh, UnstructuredSubMesh)
         assert submesh.dimension == 3
-        assert submesh.npts == 2 * 2 * 2 * 5
+        assert submesh.npts == 2 * 2 * 2  # 8 hex cells
 
     def test_interface_conformity_2d(self):
         """Adjacent domains with the same z grid produce matching interface faces."""

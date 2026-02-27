@@ -957,7 +957,8 @@ class ProcessedVariableUnstructuredFVM(ProcessedVariable):
     created so that ``solution.plot()`` works out of the box.
     """
 
-    N_VIS = 50
+    N_VIS = 200
+    N_VIS_3D = 80
 
     def __init__(
         self,
@@ -982,19 +983,21 @@ class ProcessedVariableUnstructuredFVM(ProcessedVariable):
         nodes = mesh.nodes
         x_min, x_max = nodes[:, 0].min(), nodes[:, 0].max()
 
+        n_vis = self.N_VIS_3D if mesh.dimension == 3 else self.N_VIS
         self.first_dimension = "x"
-        self.first_dim_pts = np.linspace(x_min, x_max, self.N_VIS)
-        self.first_dim_size = self.N_VIS
+        self.first_dim_pts = np.linspace(x_min, x_max, n_vis)
+        self.first_dim_size = n_vis
 
         if mesh.dimension == 3:
+            n3 = self.N_VIS_3D
             y_min, y_max = nodes[:, 1].min(), nodes[:, 1].max()
             z_min, z_max = nodes[:, 2].min(), nodes[:, 2].max()
             self.second_dimension = "y"
-            self.second_dim_pts = np.linspace(y_min, y_max, self.N_VIS)
-            self.second_dim_size = self.N_VIS
+            self.second_dim_pts = np.linspace(y_min, y_max, n3)
+            self.second_dim_size = n3
             self.third_dimension = "z"
-            self.third_dim_pts = np.linspace(z_min, z_max, self.N_VIS)
-            self.third_dim_size = self.N_VIS
+            self.third_dim_pts = np.linspace(z_min, z_max, n3)
+            self.third_dim_size = n3
             self._slice_positions = {
                 "y": 0.5 * (y_min + y_max),
                 "z": 0.5 * (z_min + z_max),
@@ -1025,31 +1028,65 @@ class ProcessedVariableUnstructuredFVM(ProcessedVariable):
             fill_value="extrapolate",
         )
 
-    def _augmented_points_and_values(self, values):
-        """Append boundary face centroids (with owning-cell values) to the
-        cell centroid cloud so that LinearNDInterpolator's convex hull
-        reaches the true mesh boundary."""
-        mesh = self.mesh
-        bnd_start = mesh._boundary_face_start
-        bnd_centroids = mesh.face_centroids[bnd_start:]
-        bnd_owners = mesh.face_owner[bnd_start:]
-        pts = np.concatenate([mesh.cell_centroids, bnd_centroids], axis=0)
-        vals = np.concatenate([values, values[bnd_owners]])
-        return pts, vals
+    def _augmented_points(self):
+        """Return the interpolation point cloud (cell centroids + boundary
+        face centroids) and the index array for mapping cell values to
+        boundary face values.  Cached after first call."""
+        if not hasattr(self, "_aug_pts"):
+            mesh = self.mesh
+            bnd_start = mesh._boundary_face_start
+            bnd_centroids = mesh.face_centroids[bnd_start:]
+            self._aug_pts = np.concatenate([mesh.cell_centroids, bnd_centroids], axis=0)
+            self._aug_bnd_owners = mesh.face_owner[bnd_start:]
+        return self._aug_pts, self._aug_bnd_owners
+
+    def _get_triangulation(self):
+        """Return a cached Delaunay triangulation of the augmented point cloud."""
+        if not hasattr(self, "_cached_tri"):
+            from scipy.spatial import Delaunay
+
+            pts, _ = self._augmented_points()
+            self._cached_tri = Delaunay(pts)
+        return self._cached_tri
+
+    def _get_boundary_mask(self, query_pts):
+        """Return a boolean mask of query points outside the domain.
+
+        * **2D** — uses ``boundary_loops()`` (cached).
+        * **3D** — uses the generalized winding number via
+          ``contains_points_3d`` (not cached because different slices
+          have different query points).
+        """
+        if self.mesh.dimension == 3:
+            inside = self.mesh.contains_points_3d(query_pts)
+            return ~inside
+
+        if not hasattr(self, "_cached_outside_mask"):
+            loops = self.mesh.boundary_loops()
+            if loops is not None and len(loops) > 0:
+                pts2d = query_pts[:, :2]
+                inside_outer = loops[0].contains_points(pts2d)
+                outside = ~inside_outer
+                for hole_path in loops[1:]:
+                    outside |= hole_path.contains_points(pts2d)
+                self._cached_outside_mask = outside
+            else:
+                self._cached_outside_mask = None
+        return self._cached_outside_mask
 
     def _interpolate_spatial(self, values, query_pts):
         """Interpolate cell-centered data to query points.
 
-        Boundary face centroids are added to the interpolation cloud
-        so the convex hull covers the full domain.  Any residual
-        extrapolation uses nearest-neighbor.  For non-convex domains,
-        query points outside the mesh boundary polygon are set to NaN.
+        The Delaunay triangulation and boundary mask are computed once
+        and cached.  Only the interpolated values change per call.
         """
         from scipy.interpolate import LinearNDInterpolator, NearestNDInterpolator
 
-        pts, vals = self._augmented_points_and_values(values)
+        pts, bnd_owners = self._augmented_points()
+        vals = np.concatenate([values, values[bnd_owners]])
 
-        linear = LinearNDInterpolator(pts, vals)
+        tri = self._get_triangulation()
+        linear = LinearNDInterpolator(tri, vals)
         result = linear(query_pts)
 
         mask = np.isnan(result)
@@ -1057,12 +1094,8 @@ class ProcessedVariableUnstructuredFVM(ProcessedVariable):
             nearest = NearestNDInterpolator(pts, vals)
             result[mask] = nearest(query_pts[mask])
 
-        poly = self.mesh.boundary_polygon()
-        if poly is not None:
-            from matplotlib.path import Path
-
-            path = Path(poly)
-            outside = ~path.contains_points(query_pts[:, :2])
+        outside = self._get_boundary_mask(query_pts)
+        if outside is not None:
             result[outside] = np.nan
 
         return result

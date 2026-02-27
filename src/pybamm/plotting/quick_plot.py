@@ -679,20 +679,26 @@ class QuickPlot:
                 vmin, vmax = self.variable_limits[key]
                 # store the plot and the var data (for testing) as cant access
                 # z data from QuadMesh or QuadContourSet object
-                if self.is_y_z[key] is True:
-                    self.plots[key][0][0] = ax.pcolormesh(
-                        x,
-                        y,
-                        var,
-                        vmin=vmin,
-                        vmax=vmax,
-                        shading=self.shading,
-                    )
+                is_unstructured = isinstance(
+                    variable, pybamm.ProcessedVariableUnstructuredFVM
+                )
+                if self.is_y_z[key] is True or is_unstructured:
+                    kw = dict(vmin=vmin, vmax=vmax, shading=self.shading)
+                    if is_unstructured:
+                        import matplotlib
+
+                        cmap_copy = matplotlib.colormaps["viridis"].copy()
+                        cmap_copy.set_bad("white")
+                        kw["cmap"] = cmap_copy
+                    self.plots[key][0][0] = ax.pcolormesh(x, y, var, **kw)
                 else:
                     self.plots[key][0][0] = ax.contourf(
                         x, y, var, levels=100, vmin=vmin, vmax=vmax
                     )
                 self.plots[key][0][1] = var
+                if is_unstructured:
+                    self._overlay_mesh_wireframe(ax, variable)
+                    ax.set_aspect("equal")
                 if vmin is None and vmax is None:
                     vmin = ax_min(var)
                     vmax = ax_max(var)
@@ -708,29 +714,31 @@ class QuickPlot:
                 if vmax is None:
                     vmax = ax_max(variable(t_in_seconds))
                 norm = colors.Normalize(vmin=vmin, vmax=vmax)
-                cmap = plt.cm.viridis
+                import matplotlib.pyplot as _plt
+
+                cmap = _plt.cm.viridis
                 s1, xx1, yy1, zz1, s2, xx2, yy2, zz2 = variable.get_3d_slices(
                     t_in_seconds
                 )
+                fc1 = self._slice_facecolors(s1, cmap, norm)
+                fc2 = self._slice_facecolors(s2, cmap, norm)
                 ax.plot_surface(
                     xx1,
                     yy1,
                     zz1,
-                    facecolors=cmap(norm(s1)),
+                    facecolors=fc1,
                     rstride=1,
                     cstride=1,
                     shade=False,
-                    alpha=0.85,
                 )
                 ax.plot_surface(
                     xx2,
                     yy2,
                     zz2,
-                    facecolors=cmap(norm(s2)),
+                    facecolors=fc2,
                     rstride=1,
                     cstride=1,
                     shade=False,
-                    alpha=0.85,
                 )
                 ax.set_xlabel("$x$")
                 ax.set_ylabel("$y$")
@@ -782,6 +790,30 @@ class QuickPlot:
             slider_top = 0
         bottom = max(legend_top, slider_top)
         self.gridspec.tight_layout(self.fig, rect=[0, bottom, 1, 1])
+
+    @staticmethod
+    def _slice_facecolors(data, cmap, norm, base_alpha=0.85):
+        """Compute RGBA facecolors for ``plot_surface``, with NaN faces
+        rendered fully transparent so that cavities appear as holes."""
+        import numpy as np
+
+        nan_mask = np.isnan(data)
+        fc = cmap(norm(np.where(nan_mask, 0.0, data)))
+        fc[..., 3] = np.where(nan_mask, 0.0, base_alpha)
+        return fc
+
+    def _overlay_mesh_wireframe(self, ax, variable):
+        """Draw mesh element edges as a light wireframe on a 2D axis."""
+        from matplotlib.collections import PolyCollection
+
+        mesh = variable.mesh
+        if mesh.dimension != 2:
+            return
+        verts = mesh.nodes[mesh.elements] * self.spatial_factor
+        poly = PolyCollection(
+            verts, facecolors="none", edgecolors=(0, 0, 0, 0.12), linewidths=0.3
+        )
+        ax.add_collection(poly)
 
     def _plot_3d_quiver(self, ax, variable, t, key, cm, colors):
         """Render quiver arrows on two orthogonal 3D slice planes."""
@@ -999,20 +1031,26 @@ class QuickPlot:
                     var = variable(time_in_seconds, **spatial_vars).T
                 # store the plot and the var data (for testing) as cant access
                 # z data from QuadMesh or QuadContourSet object
-                if self.is_y_z[key] is True:
-                    self.plots[key][0][0] = ax.pcolormesh(
-                        x,
-                        y,
-                        var,
-                        vmin=vmin,
-                        vmax=vmax,
-                        shading=self.shading,
-                    )
+                is_unstructured = isinstance(
+                    variable, pybamm.ProcessedVariableUnstructuredFVM
+                )
+                if self.is_y_z[key] is True or is_unstructured:
+                    kw = dict(vmin=vmin, vmax=vmax, shading=self.shading)
+                    if is_unstructured:
+                        import matplotlib
+
+                        cmap_copy = matplotlib.colormaps["viridis"].copy()
+                        cmap_copy.set_bad("white")
+                        kw["cmap"] = cmap_copy
+                    self.plots[key][0][0] = ax.pcolormesh(x, y, var, **kw)
                 else:
                     self.plots[key][0][0] = ax.contourf(
                         x, y, var, levels=100, vmin=vmin, vmax=vmax
                     )
                 self.plots[key][0][1] = var
+                if is_unstructured:
+                    self._overlay_mesh_wireframe(ax, variable)
+                    ax.set_aspect("equal")
                 if (vmin, vmax) == (None, None):
                     vmin = ax_min(var)
                     vmax = ax_max(var)
@@ -1035,25 +1073,25 @@ class QuickPlot:
                 s1, xx1, yy1, zz1, s2, xx2, yy2, zz2 = variable.get_3d_slices(
                     time_in_seconds
                 )
+                fc1 = self._slice_facecolors(s1, cmap, norm)
+                fc2 = self._slice_facecolors(s2, cmap, norm)
                 ax.plot_surface(
                     xx1,
                     yy1,
                     zz1,
-                    facecolors=cmap(norm(s1)),
+                    facecolors=fc1,
                     rstride=1,
                     cstride=1,
                     shade=False,
-                    alpha=0.85,
                 )
                 ax.plot_surface(
                     xx2,
                     yy2,
                     zz2,
-                    facecolors=cmap(norm(s2)),
+                    facecolors=fc2,
                     rstride=1,
                     cstride=1,
                     shade=False,
-                    alpha=0.85,
                 )
                 ax.set_xlabel("$x$")
                 ax.set_ylabel("$y$")

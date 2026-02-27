@@ -135,40 +135,62 @@ class UnstructuredSubMesh(SubMesh):
         else:
             n_verts_per_face = self.dimension
 
-        face_dict = {}  # canonical key -> (owner_cell, original_verts)
+        elems = self.elements
+        n_cells = len(elems)
 
-        internal_owner = []
-        internal_neighbor = []
-        internal_face_verts = []
+        # Build all faces at once using local face definitions
+        if self.element_type == "quad":
+            n_fpc = 4  # faces per cell
+            idx = np.arange(4)
+            local = np.stack([idx, (idx + 1) % 4], axis=1)  # (4, 2)
+        elif self.element_type == "triangle":
+            local = np.array([[1, 2], [0, 2], [0, 1]])  # skip vertex 0, 1, 2
+        elif self.element_type == "tetrahedron":
+            local = np.array([[1, 2, 3], [0, 2, 3], [0, 1, 3], [0, 1, 2]])
+        elif self.element_type == "hexahedron":
+            local = np.array(self._HEX_FACES)
+        n_fpc = len(local)
 
-        for cell_idx, cell_verts in enumerate(self.elements):
-            for face_verts in self._cell_faces(cell_verts):
-                key = tuple(sorted(face_verts))
+        all_faces = elems[:, local].reshape(-1, n_verts_per_face)
+        cell_ids = np.repeat(np.arange(n_cells), n_fpc)
 
-                if key in face_dict:
-                    other_cell, orig_verts = face_dict.pop(key)
-                    internal_owner.append(other_cell)
-                    internal_neighbor.append(cell_idx)
-                    internal_face_verts.append(orig_verts)
-                else:
-                    face_dict[key] = (cell_idx, tuple(face_verts))
+        # Canonical keys: sort vertex indices within each face
+        sorted_faces = np.sort(all_faces, axis=1)
 
-        # Remaining entries are boundary faces
-        boundary_owner_list = []
-        boundary_face_verts = []
-        for _key, (cell_idx, orig_verts) in face_dict.items():
-            boundary_owner_list.append(cell_idx)
-            boundary_face_verts.append(orig_verts)
+        # Find unique faces and which are shared (internal) vs single (boundary)
+        _, inverse, counts = np.unique(
+            sorted_faces, axis=0, return_inverse=True, return_counts=True
+        )
+
+        is_internal = counts[inverse] == 2
+        is_boundary = counts[inverse] == 1
+
+        # For internal faces, we need owner/neighbor pairs.
+        # Group by unique face index; first occurrence is owner, second is neighbor.
+        internal_mask = is_internal
+        int_inv = inverse[internal_mask]
+        int_cells = cell_ids[internal_mask]
+        int_faces_raw = all_faces[internal_mask]
+
+        # Sort by unique-face-id to pair them up: [owner0, neighbor0, owner1, neighbor1, ...]
+        order = np.argsort(int_inv, kind="stable")
+        int_cells_sorted = int_cells[order]
+        int_faces_sorted = int_faces_raw[order]
+
+        internal_owner = int_cells_sorted[0::2]
+        internal_neighbor = int_cells_sorted[1::2]
+        internal_face_verts = int_faces_sorted[0::2]
+
+        # Boundary faces
+        bnd_face_verts = all_faces[is_boundary]
+        bnd_owners = cell_ids[is_boundary]
 
         n_internal = len(internal_owner)
-        n_boundary = len(boundary_owner_list)
+        n_boundary = len(bnd_owners)
 
-        all_face_verts = internal_face_verts + boundary_face_verts
-        all_owner = internal_owner + boundary_owner_list
-
-        self.faces = np.array(all_face_verts, dtype=int).reshape(-1, n_verts_per_face)
-        self.face_owner = np.array(all_owner, dtype=int)
-        self.face_neighbor = np.array(internal_neighbor, dtype=int)
+        self.faces = np.concatenate([internal_face_verts, bnd_face_verts], axis=0)
+        self.face_owner = np.concatenate([internal_owner, bnd_owners])
+        self.face_neighbor = internal_neighbor
         self.n_internal_faces = n_internal
         self._n_boundary_faces = n_boundary
         self._boundary_face_start = n_internal
@@ -284,14 +306,18 @@ class UnstructuredSubMesh(SubMesh):
             if len(indices) > 0:
                 self.boundary_faces[name] = indices
 
-    def boundary_polygon(self):
-        """Return ordered boundary vertices as an (M, 2) array (2D only).
+    def boundary_loops(self):
+        """Return boundary loops as a list of ``matplotlib.path.Path`` (2D only).
 
-        Walks the boundary edges to produce a closed polygon suitable for
-        point-in-domain tests with ``matplotlib.path.Path``.
+        Walks boundary edges to extract one or more closed loops.  The first
+        path is the outer boundary (largest area); subsequent paths are holes.
+        Use this to test containment: a point is in the domain if it is inside
+        the outer loop and outside all hole loops.
         """
         if self.dimension != 2:
             return None
+
+        from matplotlib.path import Path
 
         bnd_start = self._boundary_face_start
         bnd_edges = self.faces[bnd_start:]
@@ -305,23 +331,109 @@ class UnstructuredSubMesh(SubMesh):
             adj.setdefault(v1, []).append((i, v0))
 
         visited: set[int] = set()
-        polygon_verts = []
-        current = int(bnd_edges[0][0])
-        polygon_verts.append(current)
+        loops: list[list[int]] = []
 
-        while True:
-            found = False
-            for edge_idx, next_v in adj[current]:
-                if edge_idx not in visited:
-                    visited.add(edge_idx)
-                    polygon_verts.append(next_v)
-                    current = next_v
-                    found = True
+        for start_edge_idx in range(len(bnd_edges)):
+            if start_edge_idx in visited:
+                continue
+            start_v = int(bnd_edges[start_edge_idx][0])
+            loop = [start_v]
+            current = start_v
+            while True:
+                found = False
+                for edge_idx, next_v in adj[current]:
+                    if edge_idx not in visited:
+                        visited.add(edge_idx)
+                        loop.append(next_v)
+                        current = next_v
+                        found = True
+                        break
+                if not found:
                     break
-            if not found:
-                break
+            loops.append(loop)
 
-        return self.nodes[polygon_verts]
+        def signed_area(pts):
+            x, y = pts[:, 0], pts[:, 1]
+            return 0.5 * np.sum(x[:-1] * y[1:] - x[1:] * y[:-1])
+
+        loop_data = []
+        for loop in loops:
+            pts = self.nodes[loop]
+            sa = signed_area(pts)
+            loop_data.append((abs(sa), pts))
+
+        loop_data.sort(key=lambda t: t[0], reverse=True)
+
+        paths = []
+        for pts in (ld[1] for ld in loop_data):
+            codes = [Path.LINETO] * len(pts)
+            codes[0] = Path.MOVETO
+            codes[-1] = Path.CLOSEPOLY
+            paths.append(Path(pts, codes))
+        return paths
+
+    def contains_points_3d(self, query_pts):
+        """Test whether 3D points lie inside the mesh domain.
+
+        Uses the generalized winding number (Van Oosterom--Strackee signed
+        solid angle sum over all boundary triangles).  Points inside the
+        domain return ``True``; points outside or inside internal cavities
+        return ``False``.
+        """
+        query_pts = np.asarray(query_pts, dtype=np.float64)
+        bnd_start = self._boundary_face_start
+        bnd_fv = self.faces[bnd_start:]
+        bnd_normals = self.face_normals[bnd_start:]
+        n_vpf = bnd_fv.shape[1]
+
+        if n_vpf == 3:
+            tri_idx = bnd_fv
+            tri_normals = bnd_normals
+        elif n_vpf == 4:
+            tri_idx = np.concatenate(
+                [bnd_fv[:, [0, 1, 2]], bnd_fv[:, [0, 2, 3]]], axis=0
+            )
+            tri_normals = np.concatenate([bnd_normals, bnd_normals], axis=0)
+        else:
+            raise ValueError(
+                f"contains_points_3d: unsupported face with {n_vpf} vertices"
+            )
+
+        v0 = self.nodes[tri_idx[:, 0]]
+        v1 = self.nodes[tri_idx[:, 1]]
+        v2 = self.nodes[tri_idx[:, 2]]
+
+        # Ensure consistent CCW orientation from outside (matching outward normals)
+        cross = np.cross(v1 - v0, v2 - v0)
+        flip = np.sum(cross * tri_normals, axis=1) < 0
+        v1_fixed = v1.copy()
+        v2_fixed = v2.copy()
+        v1_fixed[flip] = v2[flip]
+        v2_fixed[flip] = v1[flip]
+
+        n_query = len(query_pts)
+        winding = np.zeros(n_query)
+
+        for i in range(len(tri_idx)):
+            a = v0[i] - query_pts
+            b = v1_fixed[i] - query_pts
+            c = v2_fixed[i] - query_pts
+
+            an = np.linalg.norm(a, axis=1)
+            bn = np.linalg.norm(b, axis=1)
+            cn = np.linalg.norm(c, axis=1)
+
+            num = np.einsum("ij,ij->i", a, np.cross(b, c))
+            den = (
+                an * bn * cn
+                + np.einsum("ij,ij->i", a, b) * cn
+                + np.einsum("ij,ij->i", a, c) * bn
+                + np.einsum("ij,ij->i", b, c) * an
+            )
+
+            winding += 2.0 * np.arctan2(num, den)
+
+        return winding > 2.0 * np.pi
 
 
 # ======================================================================
