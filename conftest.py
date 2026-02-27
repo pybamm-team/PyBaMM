@@ -26,6 +26,9 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "scripts: mark test as an example script")
     config.addinivalue_line("markers", "unit: mark test as a unit test")
     config.addinivalue_line("markers", "integration: mark test as an integration test")
+    config.addinivalue_line(
+        "markers", "mpl_image_compare: mark test as an image comparison test"
+    )
 
 
 def pytest_collection_modifyitems(items):
