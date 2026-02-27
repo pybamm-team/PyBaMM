@@ -41,7 +41,29 @@ class ExpressionFunctionParameter(pybamm.UnaryOperator):
         # copy to avoid modifying the original expression.
         expression = self.child.create_copy()
         for child in expression.pre_order():
-            if isinstance(child, pybamm.FunctionParameter):
+            if isinstance(child, pybamm.Interpolant):
+                # Replace Interpolant with a constructor call that preserves all data
+                # This works for 1D, 2D, and 3D interpolants
+                # Format x arrays (list of arrays, one per dimension)
+                x_arrays = ", ".join(f"np.array({x.tolist()})" for x in child.x)
+                # Format y array (can be 1D, 2D, or 3D)
+                y_array = f"np.array({child.y.tolist()})"
+                # Get the input variable names from children (one per dimension)
+                if len(child.children) == 1:
+                    # Single child - pass directly without brackets
+                    input_vars = child.children[0].name
+                else:
+                    # Multiple children - pass as list
+                    input_vars = "[" + ", ".join(c.name for c in child.children) + "]"
+                # Build the full Interpolant constructor call
+                # Set _print_name directly to bypass prettify_print_name which
+                # mangles the output for LaTeX display
+                child._print_name = (
+                    f"pybamm.Interpolant([{x_arrays}], {y_array}, {input_vars}, "
+                    f'name="{child.name}", interpolator="{child.interpolator}", '
+                    f"extrapolate={child.extrapolate})"
+                )
+            elif isinstance(child, pybamm.FunctionParameter):
                 # Replace FunctionParameter with a constructor call
                 # Build the inputs dict string mapping input names to actual parameter
                 # names
