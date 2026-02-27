@@ -352,7 +352,6 @@ def try_repeated_row_matmul(
     else:
         opt = _check_identical_rows_dense(np.asarray(entries))
 
-
     if opt:
         return opt.apply(converted_right)
 
@@ -461,7 +460,6 @@ def _check_identical_rows_dense(
         return None
 
     interior_row = dense[1, :]
-
 
     if not (dense[2:-1] == interior_row).all():
         return None
