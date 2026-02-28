@@ -1,4 +1,7 @@
 import gc
+import os
+# Force CPU to avoid Metal/JAX instability
+os.environ["JAX_PLATFORM_NAME"] = "cpu"
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -145,12 +148,17 @@ def run_rest_step(
     t_rest = rest_sim.solution["Time [h]"].entries
     t_rest = t_rest - t_rest[0]  # Normalize time
     v_rest = rest_sim.solution["Terminal voltage [V]"].entries
+    
+    # Extract Cathode Spatial Distribution (at start of rest)
+    c_s_surf_p = rest_sim.solution["Positive particle surface concentration [mol.m-3]"].entries[:, 0]
+    x_p = rest_sim.solution["x_p [m]"].entries[:, 0]
 
     rest_data = {
         "cycle": cycle_num,
         "before": sei_before,
         "after": sei_after,
         "voltage_trace": {"cycle": cycle_num, "time": t_rest, "voltage": v_rest},
+        "spatial_dist": {"x_p": x_p, "c_s_surf_p": c_s_surf_p},
     }
 
     final_sol = rest_sim.solution
@@ -177,7 +185,7 @@ def run_chunked_simulation(name, options):
     }
 
     starting_solution = None
-    var_pts = {"x_n": 10, "x_s": 10, "x_p": 10, "r_n": 20, "r_p": 20}
+    var_pts = {"x_n": 30, "x_s": 30, "x_p": 30, "r_n": 30, "r_p": 30}
     parameter_values = pybamm.ParameterValues("OKane2022")
     solver = pybamm.IDAKLUSolver(atol=1e-8, rtol=1e-8)
 
@@ -394,6 +402,30 @@ def plot_results(results):
         print("Rest plot saved as .png and .svg")
 
     plt.close(rest_fig)
+
+    # Cathode Spatial Distribution Plot
+    spatial_fig = plt.figure(figsize=(10, 6))
+    has_spatial_data = False
+    for name, d in results.items():
+        if d["rest_data"]:
+            has_spatial_data = True
+            dist = d["rest_data"][0]["spatial_dist"]
+            # Normalize x to 0-1 if possible, or just plot vs m
+            # x_p is usually near 1 for cathode in normalized coords, or actual meters.
+            # Let's plot vs index or x directly.
+            plt.plot(dist["x_p"], dist["c_s_surf_p"], label=name, marker='.')
+
+    if has_spatial_data:
+        plt.xlabel("Position in Cathode [m]")
+        plt.ylabel("Surface Concentration [mol.m-3]")
+        plt.title("Cathode Surface Concentration Distribution (Start of Rest, Cycle 50)")
+        plt.legend()
+        plt.grid(True)
+        spatial_fig.savefig("cathode_spatial_dist.png")
+        spatial_fig.savefig("cathode_spatial_dist.svg")
+        print("Spatial distribution plot saved as .png and .svg")
+    
+    plt.close(spatial_fig)
 
 
 def save_csv(results):

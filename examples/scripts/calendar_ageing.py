@@ -41,7 +41,7 @@ def run_simulation(args):
 
 if __name__ == "__main__":
     socs_to_test = [0.3, 0.9]
-    day_range = list(range(2, 31))
+    day_range = list(range(2, 81))
     
     # Create an array of argument tuples for parallel execution
     simulation_args = []

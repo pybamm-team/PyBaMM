@@ -213,8 +213,8 @@ if __name__ == "__main__":
             tol = 1e-8
         elif config_type == "refined":
             # Increased mesh size as per user request (Chunking enabled)
-            pts = {"x_n": 30, "x_s": 30, "x_p": 30, "r_n": 50, "r_p": 50}
-            tol = 1e-9
+            pts = {"x_n": 20, "x_s": 20, "x_p": 20, "r_n": 35, "r_p": 35}
+            tol = 1e-8
 
         data = run_investigation(config_type, pts, tol)
         if data:

@@ -41,6 +41,11 @@ dependencies = [
     "pyyaml",
     "platformdirs",
     "mlx>=0.30.1",
+    "matplotlib>=3.10.8",
+    "scikit-learn>=1.7.2",
+    "torch>=2.10.0",
+    "torchvision>=0.25.0",
+    "torchaudio>=2.10.0",
 ]
 
 [project.urls]
@@ -111,6 +116,7 @@ dev = [
     "importlib-metadata; python_version < '3.10'",
     # For property based testing
     "hypothesis",
+    "pybamm",
 ]
 
 [project.entry-points."pybamm_parameter_sets"]
@@ -256,3 +262,11 @@ module = [
     "pybamm.models.full_battery_models.base_battery_model.*",
 ]
 disable_error_code = "attr-defined"
+
+[tool.uv.workspace]
+members = [
+    ".",
+]
+
+[tool.uv.sources]
+pybamm = { workspace = true }
