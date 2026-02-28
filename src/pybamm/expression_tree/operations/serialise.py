@@ -19,7 +19,13 @@ import pybamm
 from pybamm.expression_tree.tracing import tracing
 
 SUPPORTED_SCHEMA_VERSION = "1.2"
-LEGACY_SCHEMA_VERSIONS = {"1.1"}  # versions we can still read
+
+
+def _is_legacy_schema(version: str) -> bool:
+    """Return True for any schema version older than 1.2 (i.e. pre-coord_sys-in-geometry)."""
+    from packaging.version import Version
+
+    return Version(version) < Version(SUPPORTED_SCHEMA_VERSION)
 
 
 class ExpressionFunctionParameter(pybamm.UnaryOperator):
@@ -689,11 +695,13 @@ class Serialise:
                 ) from e
 
         # Validate schema version
-        schema_version = data.get("schema_version", SUPPORTED_SCHEMA_VERSION)
-        if schema_version not in {SUPPORTED_SCHEMA_VERSION} | LEGACY_SCHEMA_VERSIONS:
+        schema_version = data.get("schema_version", "1.1")
+        if schema_version != SUPPORTED_SCHEMA_VERSION and not _is_legacy_schema(
+            schema_version
+        ):
             raise ValueError(
                 f"Unsupported schema version: {schema_version}. "
-                f"Supported: {sorted({SUPPORTED_SCHEMA_VERSION} | LEGACY_SCHEMA_VERSIONS)}"
+                f"Current: {SUPPORTED_SCHEMA_VERSION}"
             )
 
         # Extract geometry data
@@ -752,13 +760,12 @@ class Serialise:
                     else:
                         reconstructed_geometry[domain][key] = value
 
-            # Backward compatibility for schema 1.1: coord_sys was stored on the
+            # Backward compatibility for schema < 1.2: coord_sys was stored on the
             # SpatialVariable object rather than as a geometry dict key. Inject it
             # into the geometry dict so Mesh.__init__ gets the correct value instead
-            # of defaulting to "cartesian". This check is intentionally pinned to
-            # "1.1" — future schema versions should handle coord_sys explicitly.
+            # of defaulting to "cartesian".
             if (
-                schema_version == "1.1"
+                _is_legacy_schema(schema_version)
                 and "coord_sys" not in reconstructed_geometry[domain]
                 and symbol_coord_sys
             ):
@@ -880,11 +887,13 @@ class Serialise:
                 ) from e
 
         # Validate schema version
-        schema_version = data.get("schema_version", SUPPORTED_SCHEMA_VERSION)
-        if schema_version not in {SUPPORTED_SCHEMA_VERSION} | LEGACY_SCHEMA_VERSIONS:
+        schema_version = data.get("schema_version", "1.1")
+        if schema_version != SUPPORTED_SCHEMA_VERSION and not _is_legacy_schema(
+            schema_version
+        ):
             raise ValueError(
                 f"Unsupported schema version: {schema_version}. "
-                f"Supported: {sorted({SUPPORTED_SCHEMA_VERSION} | LEGACY_SCHEMA_VERSIONS)}"
+                f"Current: {SUPPORTED_SCHEMA_VERSION}"
             )
 
         # Extract spatial methods data
@@ -1029,11 +1038,13 @@ class Serialise:
                 ) from e
 
         # Validate schema version
-        schema_version = data.get("schema_version", SUPPORTED_SCHEMA_VERSION)
-        if schema_version not in {SUPPORTED_SCHEMA_VERSION} | LEGACY_SCHEMA_VERSIONS:
+        schema_version = data.get("schema_version", "1.1")
+        if schema_version != SUPPORTED_SCHEMA_VERSION and not _is_legacy_schema(
+            schema_version
+        ):
             raise ValueError(
                 f"Unsupported schema version: {schema_version}. "
-                f"Supported: {sorted({SUPPORTED_SCHEMA_VERSION} | LEGACY_SCHEMA_VERSIONS)}"
+                f"Current: {SUPPORTED_SCHEMA_VERSION}"
             )
 
         # Extract var_pts data
@@ -1157,11 +1168,13 @@ class Serialise:
                 ) from e
 
         # Validate schema version
-        schema_version = data.get("schema_version", SUPPORTED_SCHEMA_VERSION)
-        if schema_version not in {SUPPORTED_SCHEMA_VERSION} | LEGACY_SCHEMA_VERSIONS:
+        schema_version = data.get("schema_version", "1.1")
+        if schema_version != SUPPORTED_SCHEMA_VERSION and not _is_legacy_schema(
+            schema_version
+        ):
             raise ValueError(
                 f"Unsupported schema version: {schema_version}. "
-                f"Supported: {sorted({SUPPORTED_SCHEMA_VERSION} | LEGACY_SCHEMA_VERSIONS)}"
+                f"Current: {SUPPORTED_SCHEMA_VERSION}"
             )
 
         # Extract submesh types data
@@ -1260,11 +1273,13 @@ class Serialise:
                 raise ValueError(f"Failed to decompress model data: {e}") from e
 
         # Validate outer structure
-        schema_version = data.get("schema_version", SUPPORTED_SCHEMA_VERSION)
-        if schema_version not in {SUPPORTED_SCHEMA_VERSION} | LEGACY_SCHEMA_VERSIONS:
+        schema_version = data.get("schema_version", "1.1")
+        if schema_version != SUPPORTED_SCHEMA_VERSION and not _is_legacy_schema(
+            schema_version
+        ):
             raise ValueError(
                 f"Unsupported schema version: {schema_version}. "
-                f"Supported: {sorted({SUPPORTED_SCHEMA_VERSION} | LEGACY_SCHEMA_VERSIONS)}"
+                f"Current: {SUPPORTED_SCHEMA_VERSION}"
             )
 
         model_data = data.get("model")

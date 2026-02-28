@@ -1604,53 +1604,65 @@ class TestGeometrySerialization:
             Serialise.save_custom_geometry(geometry, filename="test.txt")
 
     def test_old_format_coord_sys_backward_compatibility(self):
-        """Schema 1.1 models stored coord_sys on SpatialVariable.
-        Ensure these are correctly recovered into the geometry dict on load."""
-        old_format = {
-            "schema_version": "1.1",  # legacy format
-            "geometry": {
-                "negative particle": {
-                    "symbol_r_n": {
-                        "type": "SpatialVariable",
-                        "name": "r_n",
-                        "coord_sys": "spherical polar",
-                        "domains": {"primary": ["negative particle"]},
-                    },
-                    "r_n": {
-                        "min": {"type": "Scalar", "value": 0.0},
-                        "max": {"type": "Scalar", "value": 1.0},
-                    },
+        """Schema 1.1 (and pre-1.1 files with no schema_version key) stored coord_sys
+        on SpatialVariable. Ensure these are correctly recovered into the geometry dict
+        on load so non-cartesian domains are not silently reset to cartesian."""
+        geometry_data = {
+            "negative particle": {
+                "symbol_r_n": {
+                    "type": "SpatialVariable",
+                    "name": "r_n",
+                    "coord_sys": "spherical polar",
+                    "domains": {"primary": ["negative particle"]},
                 },
-                "positive particle": {
-                    "symbol_r_p": {
-                        "type": "SpatialVariable",
-                        "name": "r_p",
-                        "coord_sys": "spherical polar",
-                        "domains": {"primary": ["positive particle"]},
-                    },
-                    "r_p": {
-                        "min": {"type": "Scalar", "value": 0.0},
-                        "max": {"type": "Scalar", "value": 1.0},
-                    },
+                "r_n": {
+                    "min": {"type": "Scalar", "value": 0.0},
+                    "max": {"type": "Scalar", "value": 1.0},
                 },
-                "current collector": {
-                    "symbol_r_macro": {
-                        "type": "SpatialVariable",
-                        "name": "r_macro",
-                        "coord_sys": "cylindrical polar",
-                        "domains": {"primary": ["current collector"]},
-                    },
-                    "r_macro": {
-                        "min": {"type": "Scalar", "value": 0.0},
-                        "max": {"type": "Scalar", "value": 1.0},
-                    },
+            },
+            "positive particle": {
+                "symbol_r_p": {
+                    "type": "SpatialVariable",
+                    "name": "r_p",
+                    "coord_sys": "spherical polar",
+                    "domains": {"primary": ["positive particle"]},
+                },
+                "r_p": {
+                    "min": {"type": "Scalar", "value": 0.0},
+                    "max": {"type": "Scalar", "value": 1.0},
+                },
+            },
+            "current collector": {
+                "symbol_r_macro": {
+                    "type": "SpatialVariable",
+                    "name": "r_macro",
+                    "coord_sys": "cylindrical polar",
+                    "domains": {"primary": ["current collector"]},
+                },
+                "r_macro": {
+                    "min": {"type": "Scalar", "value": 0.0},
+                    "max": {"type": "Scalar", "value": 1.0},
                 },
             },
         }
-        geo = Serialise.load_custom_geometry(old_format)
+
+        # Schema 1.1 (explicit version)
+        geo = Serialise.load_custom_geometry(
+            {"schema_version": "1.1", "geometry": geometry_data}
+        )
         assert geo["negative particle"]["coord_sys"] == "spherical polar"
         assert geo["positive particle"]["coord_sys"] == "spherical polar"
         assert geo["current collector"]["coord_sys"] == "cylindrical polar"
+
+        # Any version < 1.2 (including no key, treated as "1.1") also gets the shim
+        for version in [None, "1.0", "1.1"]:
+            data = {"geometry": geometry_data}
+            if version is not None:
+                data["schema_version"] = version
+            geo_legacy = Serialise.load_custom_geometry(data)
+            assert geo_legacy["negative particle"]["coord_sys"] == "spherical polar"
+            assert geo_legacy["positive particle"]["coord_sys"] == "spherical polar"
+            assert geo_legacy["current collector"]["coord_sys"] == "cylindrical polar"
 
 
 class TestSpatialMethodsSerialization:
