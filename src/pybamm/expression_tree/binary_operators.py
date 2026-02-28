@@ -16,6 +16,7 @@ from scipy.sparse import csr_matrix, issparse, kron
 
 import pybamm
 from pybamm.expression_tree.symbol import simplify_if_constant
+from pybamm.expression_tree.tracing import is_tracing
 
 # create type alias(s)
 from pybamm.type_definitions import ChildSymbol, ChildValue, Numeric
@@ -1111,24 +1112,25 @@ def simplified_power(
     if pybamm.is_scalar_one(right):
         return left
 
-    if isinstance(left, Multiplication):
-        # Simplify (a * b) ** c to (a ** c) * (b ** c)
-        # if (a ** c) is constant or (b ** c) is constant
-        if left.left.is_constant() or left.right.is_constant():
-            l_left, l_right = left.orphans
-            new_left = l_left**right
-            new_right = l_right**right
-            if new_left.is_constant() or new_right.is_constant():
-                return new_left * new_right
-    elif isinstance(left, Division):
-        # Simplify (a / b) ** c to (a ** c) / (b ** c)
-        # if (a ** c) is constant or (b ** c) is constant
-        if left.left.is_constant() or left.right.is_constant():
-            l_left, l_right = left.orphans
-            new_left = l_left**right
-            new_right = l_right**right
-            if new_left.is_constant() or new_right.is_constant():
-                return new_left / new_right
+    if not is_tracing():
+        if isinstance(left, Multiplication):
+            # Simplify (a * b) ** c to (a ** c) * (b ** c)
+            # if (a ** c) is constant or (b ** c) is constant
+            if left.left.is_constant() or left.right.is_constant():
+                l_left, l_right = left.orphans
+                new_left = l_left**right
+                new_right = l_right**right
+                if new_left.is_constant() or new_right.is_constant():
+                    return new_left * new_right
+        elif isinstance(left, Division):
+            # Simplify (a / b) ** c to (a ** c) / (b ** c)
+            # if (a ** c) is constant or (b ** c) is constant
+            if left.left.is_constant() or left.right.is_constant():
+                l_left, l_right = left.orphans
+                new_left = l_left**right
+                new_right = l_right**right
+                if new_left.is_constant() or new_right.is_constant():
+                    return new_left / new_right
 
     return pybamm.simplify_if_constant(pybamm.Power(left, right))
 
@@ -1202,7 +1204,7 @@ def add(left: ChildSymbol, right: ChildSymbol):
     if isinstance(left, pybamm.Negate) and not left.is_constant():
         return right - left.orphans[0]
 
-    if left.is_constant():
+    if left.is_constant() and not is_tracing():
         if isinstance(right, Addition | Subtraction) and right.left.is_constant():
             # Simplify a + (b +- c) to (a + b) +- c if (a + b) is constant
             r_left, r_right = right.orphans
@@ -1236,7 +1238,7 @@ def subtract(
 
     # Move constant to always be on the left
     # For a subtraction, this means (var - constant) becomes (-constant + var)
-    if right.is_constant() and not left.is_constant():
+    if right.is_constant() and not left.is_constant() and not is_tracing():
         return -right + left
 
     # Check for Concatenations and Broadcasts
@@ -1247,6 +1249,8 @@ def subtract(
     # anything added by a scalar zero returns the other child
     if pybamm.is_scalar_zero(left):
         return -right
+    if pybamm.is_scalar_zero(right):
+        return left
     # Check matrices after checking scalars
     if pybamm.is_matrix_zero(left):
         if right.evaluates_to_number():
@@ -1275,7 +1279,7 @@ def subtract(
     if isinstance(right, pybamm.Negate):
         return left + right.orphans[0]
 
-    if left.is_constant():
+    if left.is_constant() and not is_tracing():
         if isinstance(right, Addition | Subtraction) and right.left.is_constant():
             # Simplify a - (b +- c) to (a - b) -+ c if (a - b) is constant
             r_left, r_right = right.orphans
@@ -1376,42 +1380,44 @@ def multiply(
             new_mul.copy_domains(right)
             return new_mul
 
-        elif isinstance(right, Multiplication):
-            # Simplify a * (b * c) to (a * b) * c if (a * b) is constant
-            if right.left.is_constant():
-                r_left, r_right = right.orphans
-                return (left * r_left) * r_right
-        elif isinstance(right, Division):
-            # Simplify a * (b / c) to (a * b) / c if (a * c) is constant
-            if right.left.is_constant():
-                r_left, r_right = right.orphans
-                return (left * r_left) / r_right
+        elif not is_tracing():
+            if isinstance(right, Multiplication):
+                # Simplify a * (b * c) to (a * b) * c if (a * b) is constant
+                if right.left.is_constant():
+                    r_left, r_right = right.orphans
+                    return (left * r_left) * r_right
+            elif isinstance(right, Division):
+                # Simplify a * (b / c) to (a * b) / c if (a * c) is constant
+                if right.left.is_constant():
+                    r_left, r_right = right.orphans
+                    return (left * r_left) / r_right
 
-        # Simplify a * (b + c) to (a * b) + (a * c) if (a * b) is constant
-        # This is a common construction that appears from discretisation of spatial
-        # operators
-        # Also do this for cases like a * (b @ c + d) where (a * b) is constant
-        elif isinstance(right, Addition | Subtraction):
-            mul_classes = (Multiplication, MatrixMultiplication)
-            if (
-                right.left.is_constant()
-                or (
-                    isinstance(right.left, mul_classes)
-                    and right.left.left.is_constant()
-                )
-                or (
-                    isinstance(right.right, mul_classes)
-                    and right.right.left.is_constant()
-                )
-            ):
-                r_left, r_right = right.orphans
-                if (r_left.domain == right.domain or r_left.domain == []) and (
-                    r_right.domain == right.domain or r_right.domain == []
+            # Simplify a * (b + c) to (a * b) + (a * c) if (a * b) is constant
+            # This is a common construction that appears from discretisation of
+            # spatial operators
+            # Also do this for cases like a * (b @ c + d) where (a * b) is
+            # constant
+            elif isinstance(right, Addition | Subtraction):
+                mul_classes = (Multiplication, MatrixMultiplication)
+                if (
+                    right.left.is_constant()
+                    or (
+                        isinstance(right.left, mul_classes)
+                        and right.left.left.is_constant()
+                    )
+                    or (
+                        isinstance(right.right, mul_classes)
+                        and right.right.left.is_constant()
+                    )
                 ):
-                    if isinstance(right, Addition):
-                        return (left * r_left) + (left * r_right)
-                    elif isinstance(right, Subtraction):
-                        return (left * r_left) - (left * r_right)
+                    r_left, r_right = right.orphans
+                    if (r_left.domain == right.domain or r_left.domain == []) and (
+                        r_right.domain == right.domain or r_right.domain == []
+                    ):
+                        if isinstance(right, Addition):
+                            return (left * r_left) + (left * r_right)
+                        elif isinstance(right, Subtraction):
+                            return (left * r_left) - (left * r_right)
 
     # Cancelling out common terms
     if isinstance(left, Division):
@@ -1446,7 +1452,7 @@ def divide(
 
     # Move constant to always be on the left
     # For a division, this means (var / constant) becomes (1/constant * var)
-    if right.is_constant() and not left.is_constant():
+    if right.is_constant() and not left.is_constant() and not is_tracing():
         return (1 / right) * left
 
     # Check for Concatenations and Broadcasts
