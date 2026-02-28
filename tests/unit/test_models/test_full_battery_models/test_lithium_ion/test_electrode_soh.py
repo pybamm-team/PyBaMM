@@ -767,31 +767,45 @@ class TestElectrodeSOHHalfCell:
         assert V_calc_min_1 == pytest.approx(V_min, abs=1e-5)  # Within 1e-5V of target
         assert V_calc_min_2 == pytest.approx(V_min, abs=1e-5)  # Within 1e-5V of target
 
-    def test_composite_half_cell_error_handling(self):
+    def test_composite_half_cell_error_warning_handling(self):
         """Test error handling for composite half-cell"""
         params, options = self._get_params_and_options_composite_half_cell()
         param = pybamm.LithiumIonParameters(options)
 
         # Test invalid SOC
-        with pytest.raises(ValueError, match=r"Initial SOC should be between 0 and 1"):
-            pybamm.lithium_ion.get_initial_stoichiometry_half_cell(
-                1.5, params, param=param, options=options
-            )
+        with pytest.warns(UserWarning, match=r"is greater than 1"):
+            # try/except to ignore the likely solver error at the extreme initial value
+            try:
+                pybamm.lithium_ion.get_initial_stoichiometry_half_cell(
+                    1.5, params, param=param, options=options
+                )
+            except Exception as ex:
+                assert isinstance(ex, pybamm.SolverError)
+        with pytest.warns(UserWarning, match=r"is less than 0"):
+            try:
+                pybamm.lithium_ion.get_initial_stoichiometry_half_cell(
+                    -0.1, params, param=param, options=options
+                )
+            except Exception as ex:
+                assert isinstance(ex, pybamm.SolverError)
 
         # Test invalid voltage (too low)
-        with pytest.raises(ValueError, match=r"outside the voltage limits"):
-            pybamm.lithium_ion.get_initial_stoichiometry_half_cell(
-                "0.000001 V", params, param=param, options=options
-            )
+        with pytest.warns(UserWarning, match=r"outside the voltage limits"):
+            try:
+                pybamm.lithium_ion.get_initial_stoichiometry_half_cell(
+                    "0.000001 V", params, param=param, options=options
+                )
+            except Exception as ex:
+                assert isinstance(ex, pybamm.SolverError)
 
         # Test invalid voltage (too high)
-        with pytest.raises(ValueError, match=r"outside the voltage limits"):
+        with pytest.warns(UserWarning, match=r"outside the voltage limits"):
             pybamm.lithium_ion.get_initial_stoichiometry_half_cell(
                 "5.0 V", params, param=param, options=options
             )
 
         # Test invalid voltage format
-        with pytest.raises(ValueError, match=r"must be a float"):
+        with pytest.raises(ValueError, match=r"Invalid initial value"):
             pybamm.lithium_ion.get_initial_stoichiometry_half_cell(
                 "invalid", params, param=param, options=options
             )
@@ -886,36 +900,36 @@ class TestGetInitialSOC:
         V = parameter_values.evaluate(param.p.prim.U(y100, T) - param.n.prim.U(x100, T))
         assert V == pytest.approx(4.2)
 
-    def test_error(self):
+    def test_error_warning(self):
         parameter_values = pybamm.ParameterValues("Chen2020")
         parameter_values_half_cell = pybamm.lithium_ion.DFN(
             {"working electrode": "positive"}
         ).default_parameter_values
 
-        with pytest.raises(ValueError, match=r"Initial SOC should be between 0 and 1"):
+        with pytest.warns(UserWarning, match=r"is greater than 1"):
             pybamm.lithium_ion.get_initial_stoichiometries(2, parameter_values, None)
 
-        with pytest.raises(ValueError, match=r"outside the voltage limits"):
+        with pytest.warns(UserWarning, match=r"outside the voltage limits"):
             pybamm.lithium_ion.get_initial_stoichiometries(
                 "1 V", parameter_values, direction=None
             )
 
-        with pytest.raises(ValueError, match=r"must be a float"):
+        with pytest.raises(ValueError, match=r"Invalid initial value."):
             pybamm.lithium_ion.get_initial_stoichiometries(
                 "5 A", parameter_values, direction=None
             )
 
-        with pytest.raises(ValueError, match=r"outside the voltage limits"):
+        with pytest.warns(UserWarning, match=r"outside the voltage limits"):
             pybamm.lithium_ion.get_initial_stoichiometry_half_cell(
                 "1 V", parameter_values_half_cell
             )
 
-        with pytest.raises(ValueError, match=r"must be a float"):
+        with pytest.raises(ValueError, match=r"Invalid initial value."):
             pybamm.lithium_ion.get_initial_stoichiometry_half_cell(
                 "5 A", parameter_values_half_cell
             )
 
-        with pytest.raises(ValueError, match=r"Initial SOC should be between 0 and 1"):
+        with pytest.warns(UserWarning, match=r"is greater than 1"):
             pybamm.lithium_ion.get_initial_stoichiometry_half_cell(
                 2, parameter_values_half_cell
             )
