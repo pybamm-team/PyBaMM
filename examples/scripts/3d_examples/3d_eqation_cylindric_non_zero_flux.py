@@ -23,11 +23,9 @@ heat_flux_bottom = -300.0
 
 model = BaseModel()
 
-r = pybamm.SpatialVariable("r", ["current collector"], coord_sys="cylindrical polar")
-theta = pybamm.SpatialVariable(
-    "theta", ["current collector"], coord_sys="cylindrical polar"
-)
-z = pybamm.SpatialVariable("z", ["current collector"], coord_sys="cylindrical polar")
+r = pybamm.SpatialVariable("r", ["current collector"])
+theta = pybamm.SpatialVariable("theta", ["current collector"])
+z = pybamm.SpatialVariable("z", ["current collector"])
 T = pybamm.Variable("T", domain="current collector")
 
 source_term = pybamm.source(heat_generation, T)
@@ -48,6 +46,7 @@ geometry = {
     "current collector": {
         r: {"min": pybamm.Scalar(R_inner), "max": pybamm.Scalar(R_outer)},
         z: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(H)},
+        "coord_sys": "cylindrical polar",
     }
 }
 

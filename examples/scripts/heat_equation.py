@@ -15,7 +15,7 @@ model = pybamm.BaseModel()
 # Define the variables and parameters
 # Note: we need to define the spatial variable x here too, so we can use it
 # to write down the source term
-x = pybamm.SpatialVariable("x", domain="rod", coord_sys="cartesian")
+x = pybamm.SpatialVariable("x", domain="rod")
 T = pybamm.Variable("Temperature", domain="rod")
 k = pybamm.Parameter("Thermal diffusivity")
 
@@ -39,7 +39,7 @@ model.variables = {"Temperature": T, "Heat flux": N, "Heat source": Q}
 
 
 # Define geometry
-geometry = {"rod": {x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(2)}}}
+geometry = {"rod": {x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(2)}, "coord_sys": "cartesian"}}
 
 # Set parameter values
 param = pybamm.ParameterValues({"Thermal diffusivity": 0.75})
