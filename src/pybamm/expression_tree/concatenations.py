@@ -174,7 +174,7 @@ class Concatenation(pybamm.Symbol):
 
     def _sympy_operator(self, *children):
         """Apply appropriate SymPy operators."""
-        self.concat_latex = tuple(map(sympy.latex, children))
+        self.concat_latex = tuple(sympy.latex(sympy.nsimplify(c)) for c in children)
 
         if self.print_name is not None:
             return sympy.Symbol(self.print_name)

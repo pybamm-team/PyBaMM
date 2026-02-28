@@ -1166,8 +1166,14 @@ class BoundaryValue(BoundaryOperator):
             return child
 
         else:
-            latex_child = sympy.latex(child) + r"^{" + sympy.latex(self.side) + r"}"
-            return sympy.Symbol(latex_child)
+            # Use evaluation-bar notation  f|_{side}  so that a superscript
+            # is never appended to an expression that may already contain one
+            # (which would produce invalid "double superscript" LaTeX).
+            latex_child = sympy.latex(child)
+            side_str = str(self.side)
+            return sympy.Symbol(
+                r"\left." + latex_child + r"\right|_{\text{" + side_str + r"}}"
+            )
 
 
 class BoundaryMeshSize(BoundaryOperator):

@@ -14,10 +14,14 @@ from pybamm.expression_tree.printing.sympy_overrides import custom_print_func
 
 
 def get_rng_min_max_name(rng, min_or_max):
-    if getattr(rng[min_or_max], "print_name", None) is None:
-        return rng[min_or_max]
-    else:
-        return rng[min_or_max].print_name
+    val = rng[min_or_max]
+    if getattr(val, "print_name", None) is not None:
+        return val.print_name
+    # Convert numeric values to clean LaTeX (e.g. 0.0 -> 0)
+    try:
+        return sympy.latex(sympy.nsimplify(val.to_equation()))
+    except Exception:
+        return val
 
 
 class Latexify:
@@ -113,7 +117,7 @@ class Latexify:
 
             for side, rng in [("left", rng_min), ("right", rng_max)]:
                 bc_value, bc_type = bcs[side]
-                bcs_side = sympy.latex(bc_value.to_equation())
+                bcs_side = sympy.latex(sympy.nsimplify(bc_value.to_equation()))
                 bcs_side_latex = bcs_side + f"\\quad  \\text{{at }} {var_name} = {rng}"
                 if bc_type == "Dirichlet":
                     lhs = sympy.Symbol(var.print_name)
@@ -143,7 +147,7 @@ class Latexify:
                 if re.search(r"(^[0-9a-zA-Z-\s.-\[\]()]*$)", str(node_copy_eqn)):
                     node_copy_latex = r"\text{" + str(node_copy_eqn) + "}"
                 else:
-                    node_copy_latex = sympy.latex(node_copy_eqn)
+                    node_copy_latex = sympy.latex(sympy.nsimplify(node_copy_eqn))
 
                 # lhs = rhs
                 node_latex = sympy.Eq(
@@ -188,8 +192,10 @@ class Latexify:
             for var, eqn in getattr(self.model, eqn_type).items():
                 var_symbol = sympy.Symbol(var.print_name)
 
-                # Add equation name to the list
-                eqn_list.append(sympy.Symbol(r"\\ \textbf{" + str(var) + "}"))
+                # Add equation name to the list (use var.name rather than
+                # str(var) so that Concatenation headers don't include
+                # the full list of children names in parentheses).
+                eqn_list.append(sympy.Symbol(r"\\ \textbf{" + var.name + "}"))
 
                 # Set lhs derivative
                 ddt = sympy.Derivative(var_symbol, "t")
@@ -222,7 +228,9 @@ class Latexify:
                 # Initial conditions equations
                 if not eqn_type == "algebraic":
                     init = self.model.initial_conditions.get(var, None)
-                    init_eqn = sympy.Eq(var_symbol, init.to_equation(), evaluate=False)
+                    init_eqn = sympy.Eq(
+                        var_symbol, sympy.nsimplify(init.to_equation()), evaluate=False
+                    )
                     init_eqn = sympy.Symbol(
                         sympy.latex(init_eqn) + r"\quad \text{at}\; t=0"
                     )
@@ -255,11 +263,20 @@ class Latexify:
 
         # Add output variables to the list
         for var_name in output_variables:
-            var = self.model.variables[var_name].to_equation()
+            var_pybamm = self.model.variables[var_name]
+            var = sympy.nsimplify(var_pybamm.to_equation())
             var_eqn = sympy.Eq(sympy.Symbol("V"), var, evaluate=False)
-            # Add var to the list
-            eqn_list.append(sympy.Symbol(r"\\ \textbf{" + var_name + "}"))
+            # Use a clean header name (strip internal qualifiers like
+            # "(decomposed)")
+            display_name = var_name.replace(" (decomposed)", "")
+            eqn_list.append(sympy.Symbol(r"\\ \textbf{" + display_name + "}"))
             eqn_list.extend([var_eqn])
+            # Walk the output variable's expression tree so that any
+            # intermediate nodes with print_name get their definitions
+            # added to the Parameters and Variables section.
+            list1, list2 = self._get_param_var(var_pybamm)
+            param_list.extend(list1)
+            var_list.extend(list2)
 
         # Remove duplicates from the list whilst preserving order
         param_list = list(dict.fromkeys(param_list))
