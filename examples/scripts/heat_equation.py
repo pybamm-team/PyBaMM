@@ -39,7 +39,12 @@ model.variables = {"Temperature": T, "Heat flux": N, "Heat source": Q}
 
 
 # Define geometry
-geometry = {"rod": {x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(2)}, "coord_sys": "cartesian"}}
+geometry = {
+    "rod": {
+        x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(2)},
+        "coord_sys": "cartesian",
+    }
+}
 
 # Set parameter values
 param = pybamm.ParameterValues({"Thermal diffusivity": 0.75})
