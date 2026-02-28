@@ -89,15 +89,16 @@ EXPERIMENT_CHUNK = pybamm.Experiment([EXPERIMENT_STEP] * CYCLES_PER_CHUNK)
 
 
 def get_submesh_types(model_class):
-    """Returns the submesh types with exponential meshing for particles."""
+    """Returns the submesh types (Uniform default)."""
     model = model_class()  # Instantiate to get default submesh
     submesh_types = model.default_submesh_types.copy()
-    submesh_types["negative particle"] = pybamm.MeshGenerator(
-        pybamm.Exponential1DSubMesh, submesh_params={"side": "right"}
-    )
-    submesh_types["positive particle"] = pybamm.MeshGenerator(
-        pybamm.Exponential1DSubMesh, submesh_params={"side": "right"}
-    )
+    # Using Uniform Mesh to avoid solver instability with Exponential mesh
+    # submesh_types["negative particle"] = pybamm.MeshGenerator(
+    #     pybamm.Exponential1DSubMesh, submesh_params={"side": "right"}
+    # )
+    # submesh_types["positive particle"] = pybamm.MeshGenerator(
+    #     pybamm.Exponential1DSubMesh, submesh_params={"side": "right"}
+    # )
     return submesh_types
 
 
@@ -185,7 +186,8 @@ def run_chunked_simulation(name, options):
     }
 
     starting_solution = None
-    var_pts = {"x_n": 30, "x_s": 30, "x_p": 30, "r_n": 30, "r_p": 30}
+    # Optimized mesh configuration identified for stability
+    var_pts = {"x_n": 30, "x_s": 30, "x_p": 30, "r_n": 50, "r_p": 50}
     parameter_values = pybamm.ParameterValues("OKane2022")
     solver = pybamm.IDAKLUSolver(atol=1e-8, rtol=1e-8)
 
