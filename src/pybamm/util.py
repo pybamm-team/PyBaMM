@@ -7,6 +7,7 @@ import numbers
 import os
 import pathlib
 import pickle
+import re
 import timeit
 from warnings import warn
 
@@ -347,19 +348,121 @@ def get_parameters_filepath(path):
         return os.path.join(pybamm.__path__[0], path)
 
 
-def has_jax():
+def _parse_version(version_str, length=3):
+    """Parse version string into tuple of integers for comparison,
+    ignoring suffix (e.g., "0.7.0rc1" -> (0, 7, 0)).
+
+    Parameters
+    ----------
+    version_str : str
+        The version string to parse.
+    length : int, optional
+        The desired length of the output tuple, defaults to 3.
+
+    Returns
+    -------
+    tuple of int
+        The parsed version as a tuple of integers, padded with zeros to the specified length.
     """
-    Check if jax and jaxlib are installed with the correct versions
+    parsed = tuple(
+        int(re.match(r"\d+", part).group())
+        for part in version_str.split(".")
+        if re.match(r"\d+", part)
+    )
+
+    return parsed + (0,) * (length - len(parsed))
+
+
+def _is_version_in_range(version_tuple, min_version, max_version):
+    """Check if version is within the supported range [min_version, max_version).
+
+    Parameters
+    ----------
+    version_tuple : tuple of int
+        The version to check, parsed as a tuple of integers.
+    min_version : tuple of int
+        The minimum supported version, inclusive, parsed as a tuple of integers.
+    max_version : tuple of int
+        The maximum supported version, exclusive, parsed as a tuple of integers.
 
     Returns
     -------
     bool
-        True if jax and jaxlib are installed with the correct versions, False if otherwise
-
+        True if version_tuple is >= min_version and < max_version, False otherwise.
     """
-    return (importlib.util.find_spec("jax") is not None) and (
-        importlib.util.find_spec("jaxlib") is not None
-    )
+    return version_tuple >= min_version and version_tuple < max_version
+
+
+def has_jax():
+    """
+    Check if jax and jaxlib are installed with correct versions on a supported platform.
+
+    Returns
+    -------
+    bool
+        True if jax and jaxlib are installed with supported versions on a supported platform
+        (Linux, Windows, or macOS with Apple Silicon), False otherwise.
+
+    Notes
+    -----
+    This function checks that jax and jaxlib are installed with versions >= 0.7.0 and < 0.9.0,
+    and the platform is not macOS intel x86_64. These constraints should be kept in sync with
+    the jax optional dependency constraint in pyproject.toml. If versions or platform are
+    unsupported, a warning is emitted and False is returned to treat JAX as unavailable,
+    rather than raising a hard error.
+    """
+    # Check if modules are available
+    if any(importlib.util.find_spec(pkg) is None for pkg in ("jax", "jaxlib")):
+        return False
+
+    # Check platform: JAX is not supported on macOS x86_64 (Intel)
+    # see https://docs.jax.dev/en/latest/changelog.html#jax-0-5-0-jan-17-2025
+    if is_macos_intel():
+        warn(
+            "JAX is not supported on macOS with Intel (x86_64) processors. "
+            "JAX dropped macOS x86_64 support in version 0.5.0. "
+            "To use JAX with PyBaMM, you need macOS with Apple Silicon (M-series), Linux, or Windows.",
+            UserWarning,
+            stacklevel=2,
+        )
+        return False
+
+    try:
+        jax_version = importlib.metadata.version("jax")
+        jaxlib_version = importlib.metadata.version("jaxlib")
+
+        # When updating these version constraints, also update the jax dependency in pyproject.toml
+        MIN_VERSION = (0, 7, 0)
+        MAX_VERSION = (0, 9, 0)  # exclusive
+
+        jax_parsed = _parse_version(jax_version)
+        jaxlib_parsed = _parse_version(jaxlib_version)
+
+        # Check if both jax and jaxlib are within supported version range
+        if _is_version_in_range(
+            jax_parsed, MIN_VERSION, MAX_VERSION
+        ) and _is_version_in_range(jaxlib_parsed, MIN_VERSION, MAX_VERSION):
+            return True
+
+        warn(
+            f"JAX version {jax_version} and/or jaxlib version {jaxlib_version} are not supported. "
+            f"Supported versions are >= {'.'.join(map(str, MIN_VERSION))}, < {'.'.join(map(str, MAX_VERSION))}. "
+            f"JAX features will be unavailable. To use JAX with PyBaMM, install compatible versions "
+            f"via: pip install 'pybamm[jax]'",
+            UserWarning,
+            stacklevel=2,
+        )
+        return False
+
+    except importlib.metadata.PackageNotFoundError:
+        # If package metadata cannot be found, treat JAX as unavailable
+        warn(
+            "JAX version information could not be retrieved. "
+            "JAX features will be unavailable.",
+            UserWarning,
+            stacklevel=2,
+        )
+        return False
 
 
 def is_macos_intel():
