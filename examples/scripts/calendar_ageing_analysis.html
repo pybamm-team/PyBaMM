@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Calendar Ageing Analysis</title>
+<style>
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; max-width: 1000px; margin: 0 auto; padding: 20px; color: #333; }
+h1, h2, h3 { color: #2c3e50; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+table { border-collapse: collapse; width: 100%; margin: 20px 0; }
+th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+th { background-color: #f8f9fa; font-weight: bold; }
+tr:nth-child(even) { background-color: #fbfbfb; }
+img { max-width: 100%; height: auto; box-shadow: 0 4px 8px rgba(0,0,0,0.1); border-radius: 4px; margin: 20px 0; }
+blockquote { border-left: 4px solid #007bff; background: #f8f9fa; margin: 0; padding: 10px 20px; }
+code { background: #f4f4f4; padding: 2px 5px; border-radius: 3px; font-family: monospace; }
+</style>
+</head>
+<body>
+<h1>PyBaMM Ageing Modes Comparative Analysis</h1>
+<p>Successfully refactored and ran <code>calendar_ageing.py</code> testing the four major SEI growth models inside of PyBaMM over an 80-day rest.</p>
+<h3>Metrics Across Models (80 Days)</h3>
+<p>The following tables summarize the physical state of the cell after 80 days of calendar ageing for both 30% and 90% Intial State of Charge (SOC).</p>
+<h4>30% Initial SOC</h4>
+<table>
+<thead>
+<tr>
+<th>SEI Model</th>
+<th>$\Delta V$ Loss (mV)</th>
+<th>SEI Thickness (nm)</th>
+<th>Loss of Lithium Cap. (%)</th>
+<th>Kinetic Rate (m/s)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Reaction Limited</strong></td>
+<td>~0.276 mV</td>
+<td>24.39 nm</td>
+<td>0.266 %</td>
+<td><code>1.0e-12</code></td>
+</tr>
+<tr>
+<td><strong>Solvent-Diffusion</strong></td>
+<td>~0.235 mV</td>
+<td>21.48 nm</td>
+<td>0.226 %</td>
+<td><code>0.0</code> (N/A)</td>
+</tr>
+<tr>
+<td><strong>Electron-Migration</strong></td>
+<td>~0.098 mV</td>
+<td>11.82 nm</td>
+<td>0.094 %</td>
+<td><code>0.0</code> (N/A)</td>
+</tr>
+<tr>
+<td><strong>Interstitial-Diffusion</strong></td>
+<td>~0.000 mV</td>
+<td>5.00 nm</td>
+<td>0.000 %</td>
+<td><code>0.0</code> (N/A)</td>
+</tr>
+</tbody>
+</table>
+<h4>90% Initial SOC</h4>
+<table>
+<thead>
+<tr>
+<th>SEI Model</th>
+<th>$\Delta V$ Loss (mV)</th>
+<th>SEI Thickness (nm)</th>
+<th>Loss of Lithium Cap. (%)</th>
+<th>Kinetic Rate (m/s)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Reaction Limited</strong></td>
+<td>~4.567 mV</td>
+<td>54.05 nm</td>
+<td>0.673 %</td>
+<td><code>1.0e-12</code></td>
+</tr>
+<tr>
+<td><strong>Solvent-Diffusion</strong></td>
+<td>~1.861 mV</td>
+<td>21.48 nm</td>
+<td>0.226 %</td>
+<td><code>0.0</code> (N/A)</td>
+</tr>
+<tr>
+<td><strong>Electron-Migration</strong></td>
+<td>~0.961 mV</td>
+<td>13.04 nm</td>
+<td>0.110 %</td>
+<td><code>0.0</code> (N/A)</td>
+</tr>
+<tr>
+<td><strong>Interstitial-Diffusion</strong></td>
+<td>~0.002 mV</td>
+<td>5.01 nm</td>
+<td>0.000 %</td>
+<td><code>0.0</code> (N/A)</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>[!NOTE] 
+The <code>SEI kinetic rate constant [m.s-1]</code> is exclusively defined for the <em>reaction limited</em> mechanisms in the default PyBaMM model, hence returning <code>0.0</code> for the diffusion/migration variants.</p>
+</blockquote>
+<h3>Voltage Drop Plots</h3>
+<p>Here is the graphed view of the voltage drop for both states of charge over the simulation durations comparing the models side-by-side:</p>
+<p><img alt="Voltage Drop Over Time vs SOC" src="/Users/mohitmehta/.gemini/antigravity/brain/c378463e-d987-4c97-aae2-43184ce5f053/calendar_ageing_models_plot.png" /></p>
+<hr />
+<h2>2. Sensitivity Analysis (90% SOC)</h2>
+<p>I successfully created and executed <code>calendar_ageing_sensitivity.py</code> to examine how altering the specific governing parameter of each respective SEI model impacts calendar ageing metrics. The analysis maps multipliers (0.1x, 1.0x, 10.0x) against 80 days of rest at 90% SOC natively.</p>
+<h3>Final 80-Day Metrics under Multipliers</h3>
+<table>
+<thead>
+<tr>
+<th>SEI Model</th>
+<th>Tested Governing Parameter</th>
+<th>Multiplier</th>
+<th>$\Delta V$ Loss (mV)</th>
+<th>Li Inventory Loss (%)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Reaction Limited</strong></td>
+<td><code>SEI kinetic rate constant</code></td>
+<td><strong>0.1x</strong></td>
+<td>~0.444 mV</td>
+<td>0.066 %</td>
+</tr>
+<tr>
+<td><strong>Reaction Limited</strong></td>
+<td><code>SEI kinetic rate constant</code></td>
+<td><strong>1.0x</strong></td>
+<td>~4.567 mV</td>
+<td>0.673 %</td>
+</tr>
+<tr>
+<td><strong>Reaction Limited</strong></td>
+<td><code>SEI kinetic rate constant</code></td>
+<td><strong>10.0x</strong></td>
+<td>~44.179 mV</td>
+<td>6.471 %</td>
+</tr>
+<tr>
+<td><strong>Solvent-Diffusion</strong></td>
+<td><code>SEI solvent diffusivity</code></td>
+<td><strong>0.1x</strong></td>
+<td>~0.590 mV</td>
+<td>0.071 %</td>
+</tr>
+<tr>
+<td><strong>Solvent-Diffusion</strong></td>
+<td><code>SEI solvent diffusivity</code></td>
+<td><strong>1.0x</strong></td>
+<td>~1.861 mV</td>
+<td>0.226 %</td>
+</tr>
+<tr>
+<td><strong>Solvent-Diffusion</strong></td>
+<td><code>SEI solvent diffusivity</code></td>
+<td><strong>10.0x</strong></td>
+<td>~5.839 mV</td>
+<td>0.716 %</td>
+</tr>
+<tr>
+<td><strong>Electron-Migration</strong></td>
+<td><code>SEI electron conductivity</code></td>
+<td><strong>0.1x</strong></td>
+<td>~0.306 mV</td>
+<td>0.035 %</td>
+</tr>
+<tr>
+<td><strong>Electron-Migration</strong></td>
+<td><code>SEI electron conductivity</code></td>
+<td><strong>1.0x</strong></td>
+<td>~0.961 mV</td>
+<td>0.110 %</td>
+</tr>
+<tr>
+<td><strong>Electron-Migration</strong></td>
+<td><code>SEI electron conductivity</code></td>
+<td><strong>10.0x</strong></td>
+<td>~3.003 mV</td>
+<td>0.347 %</td>
+</tr>
+<tr>
+<td><strong>Interstitial-Diffusion</strong></td>
+<td><code>SEI lithium interstitial diffusivity</code></td>
+<td><strong>0.1x</strong></td>
+<td>~0.000 mV</td>
+<td>0.000 %</td>
+</tr>
+<tr>
+<td><strong>Interstitial-Diffusion</strong></td>
+<td><code>SEI lithium interstitial diffusivity</code></td>
+<td><strong>1.0x</strong></td>
+<td>~0.002 mV</td>
+<td>0.000 %</td>
+</tr>
+<tr>
+<td><strong>Interstitial-Diffusion</strong></td>
+<td><code>SEI lithium interstitial diffusivity</code></td>
+<td><strong>10.0x</strong></td>
+<td>~0.019 mV</td>
+<td>0.002 %</td>
+</tr>
+</tbody>
+</table>
+<h3>Sensitivity Graphed Findings</h3>
+<p>A 2x2 comparison detailing exactly how tweaking these parameters influences voltage decay trajectories over calendar rest.</p>
+<p><img alt="Sensitivity Model Comparative Voltage Loss" src="/Users/mohitmehta/.gemini/antigravity/brain/c378463e-d987-4c97-aae2-43184ce5f053/calendar_ageing_sensitivity_plot.png" /></p>
+<p><em>All script modifications and generated outputs have been committed and pushed to the <code>aging-analysis</code> branch under the single commit <code>Add parameter sensitivity script...</code></em></p>
+</body>
+</html>
