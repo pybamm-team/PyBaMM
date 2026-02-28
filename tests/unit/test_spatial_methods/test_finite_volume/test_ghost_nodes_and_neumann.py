@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 
 import pybamm
-from tests import get_mesh_for_testing, get_p2d_mesh_for_testing
+from tests import get_mesh_for_testing
 
 
 class TestGhostNodes:
@@ -102,9 +102,9 @@ class TestGhostNodes:
             + symbol_plus_ghost_both.evaluate(None, y_test)[-1]
         ) / 2 == 3
 
-    def test_p2d_add_ghost_nodes(self):
+    def test_p2d_add_ghost_nodes(self, p2d_mesh):
         # create discretisation
-        mesh = get_p2d_mesh_for_testing()
+        mesh = p2d_mesh
         spatial_methods = {
             "macroscale": pybamm.FiniteVolume(),
             "negative particle": pybamm.FiniteVolume(),
