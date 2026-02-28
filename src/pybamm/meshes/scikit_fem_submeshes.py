@@ -90,12 +90,6 @@ class ScikitSubMesh2D(SubMesh):
             if isinstance(var, str):
                 spatial_vars[i] = getattr(pybamm.standard_spatial_vars, var)
 
-        # check coordinate system agrees
-        if spatial_vars[0].coord_sys != spatial_vars[1].coord_sys:
-            raise pybamm.DomainError(
-                "spatial variables should have the same coordinate system, "
-                f"but have coordinate systems {spatial_vars[0].coord_sys} and {spatial_vars[1].coord_sys}"
-            )
         return spatial_vars, tabs
 
     def on_boundary(self, y, z, tab):
@@ -175,9 +169,8 @@ class ScikitUniform2DSubMesh(ScikitSubMesh2D):
         spatial variable
     """
 
-    def __init__(self, lims, npts):
+    def __init__(self, lims, npts, coord_sys):
         spatial_vars, tabs = self.read_lims(lims)
-        coord_sys = spatial_vars[0].coord_sys
 
         # compute edges
         edges = {}
@@ -239,7 +232,7 @@ class ScikitExponential2DSubMesh(ScikitSubMesh2D):
         The factor (alpha) which appears in the exponential. Default is 2.3.
     """
 
-    def __init__(self, lims, npts, side="top", stretch=2.3):
+    def __init__(self, lims, npts, coord_sys, side="top", stretch=2.3):
         # check side is top
         if side != "top":
             raise pybamm.GeometryError(
@@ -247,7 +240,6 @@ class ScikitExponential2DSubMesh(ScikitSubMesh2D):
             )
 
         spatial_vars, tabs = self.read_lims(lims)
-        coord_sys = spatial_vars[0].coord_sys
 
         # compute edges
         edges = {}
@@ -299,9 +291,8 @@ class ScikitChebyshev2DSubMesh(ScikitSubMesh2D):
         spatial variable
     """
 
-    def __init__(self, lims, npts):
+    def __init__(self, lims, npts, coord_sys):
         spatial_vars, tabs = self.read_lims(lims)
-        coord_sys = spatial_vars[0].coord_sys
 
         # compute edges
         edges = {}
@@ -349,7 +340,7 @@ class UserSupplied2DSubMesh(ScikitSubMesh2D):
         of the mesh.
     """
 
-    def __init__(self, lims, npts, y_edges=None, z_edges=None):
+    def __init__(self, lims, npts, coord_sys, y_edges=None, z_edges=None):
         # raise error if no edges passed
         if y_edges is None:
             raise pybamm.GeometryError("User mesh requires parameter 'y_edges'")
@@ -357,7 +348,6 @@ class UserSupplied2DSubMesh(ScikitSubMesh2D):
             raise pybamm.GeometryError("User mesh requires parameter 'z_edges'")
 
         spatial_vars, tabs = self.read_lims(lims)
-        coord_sys = spatial_vars[0].coord_sys
 
         # check and store edges
         edges = {"y": y_edges, "z": z_edges}

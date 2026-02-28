@@ -181,7 +181,7 @@ class ScikitFemGenerator3D(pybamm.MeshGenerator):
 
         return mesh.with_boundaries(boundaries)
 
-    def __call__(self, lims, npts):
+    def __call__(self, lims, npts, coord_sys):
         """
         Main entry point called by PyBaMM's Discretisation.
 
@@ -191,6 +191,8 @@ class ScikitFemGenerator3D(pybamm.MeshGenerator):
             Dictionary of domain limits
         npts : dict
             Dictionary of target number of points
+        coord_sys : str
+            The coordinate system of the submesh
 
         Returns
         -------
@@ -210,7 +212,6 @@ class ScikitFemGenerator3D(pybamm.MeshGenerator):
             x_lim = lims_dict["x"]
             y_lim = lims_dict["y"]
             z_lim = lims_dict["z"]
-            coord_sys = "cartesian"
             mesh = self._make_pouch_mesh(x_lim, y_lim, z_lim, h)
 
         elif self.geom_type == "cylinder":
@@ -220,7 +221,6 @@ class ScikitFemGenerator3D(pybamm.MeshGenerator):
                 r_lim = lims_dict["r_macro"]
 
             z_lim = lims_dict["z"]
-            coord_sys = "cylindrical polar"
             mesh = self._make_cylindrical_mesh(r_lim, z_lim, h)
         else:
             raise ValueError(f"Unknown geom_type: {self.geom_type}")  # pragma: no cover
@@ -304,7 +304,7 @@ class UserSuppliedSubmesh3D(pybamm.MeshGenerator):
             else:
                 self.coord_sys = "cartesian"
 
-    def __call__(self, lims, npts):
+    def __call__(self, lims, npts, coord_sys):
         skfem_mesh = ScikitFemSubMesh3D.load_mesh_from_file(
             self.file_path,
             self.boundary_mapping,
@@ -314,7 +314,10 @@ class UserSuppliedSubmesh3D(pybamm.MeshGenerator):
         )
         nodes = skfem_mesh.p.T
         elements = skfem_mesh.t.T
-        return self.submesh_type(skfem_mesh, nodes, elements, self.coord_sys)
+        # Use coord_sys from parameter (geometry) if provided, otherwise use
+        # self.coord_sys (from __init__) for backward compatibility
+        coord_sys_to_use = coord_sys if coord_sys else self.coord_sys
+        return self.submesh_type(skfem_mesh, nodes, elements, coord_sys_to_use)
 
 
 class ScikitFemSubMesh3D(pybamm.SubMesh):

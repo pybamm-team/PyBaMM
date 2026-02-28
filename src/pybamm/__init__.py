@@ -110,7 +110,6 @@ from .models.submodels.interface import open_circuit_potential
 from .geometry.geometry import Geometry
 from .geometry.battery_geometry import battery_geometry
 
-from .expression_tree.independent_variable import KNOWN_COORD_SYS
 from .geometry import standard_spatial_vars
 
 # Parameter classes and methods

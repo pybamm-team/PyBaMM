@@ -53,11 +53,13 @@ class Geometry(dict):
             for v in d.values():
                 if isinstance(v, dict):
                     yield from NestedDictValues(v)
+                elif isinstance(v, str):
+                    # Skip string values like coord_sys
+                    continue
+                elif isinstance(v, numbers.Number):
+                    yield pybamm.Scalar(v)
                 else:
-                    if isinstance(v, numbers.Number):
-                        yield pybamm.Scalar(v)
-                    else:
-                        yield v
+                    yield v
 
         all_parameters = unpacker.unpack_list_of_symbols(list(NestedDictValues(self)))
         return list(all_parameters)

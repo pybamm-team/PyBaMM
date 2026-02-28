@@ -56,7 +56,6 @@ class XAveragedPolynomialProfile(PolynomialProfile):
                 f"R_{domain[0]}",
                 domain=[f"{domain} particle size"],
                 auxiliary_domains={"secondary": "current collector"},
-                coord_sys="cartesian",
             )
             variables = self._get_distribution_variables(R)
 
@@ -155,7 +154,6 @@ class XAveragedPolynomialProfile(PolynomialProfile):
             f"r_{domain[0]}",
             domain=[f"{domain} particle"],
             auxiliary_domains={"secondary": "current collector"},
-            coord_sys="spherical polar",
         )
         if self.name == "uniform profile":
             # The concentration is uniform

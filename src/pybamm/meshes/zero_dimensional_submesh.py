@@ -21,9 +21,12 @@ class SubMesh0D(SubMesh):
     npts : dict, optional
         Number of points to be used. Included for compatibility with other meshes,
         but ignored by this mesh class
+    coord_sys : str, optional
+        The coordinate system of the submesh. Included for compatibility with other
+        meshes, but ignored by this mesh class
     """
 
-    def __init__(self, position, npts=None):
+    def __init__(self, position, npts=1, coord_sys=None):
         # Remove tabs
         position.pop("tabs", None)
 

@@ -18,7 +18,14 @@ import numpy as np
 import pybamm
 from pybamm.expression_tree.tracing import tracing
 
-SUPPORTED_SCHEMA_VERSION = "1.1"
+SUPPORTED_SCHEMA_VERSION = "1.2"
+
+
+def _is_legacy_schema(version: str) -> bool:
+    """Return True for any schema version older than 1.2 (i.e. pre-coord_sys-in-geometry)."""
+    from packaging.version import Version
+
+    return Version(version) < Version(SUPPORTED_SCHEMA_VERSION)
 
 
 class ExpressionFunctionParameter(pybamm.UnaryOperator):
@@ -461,7 +468,7 @@ class Serialise:
             },
         }
 
-        SCHEMA_VERSION = "1.1"
+        SCHEMA_VERSION = SUPPORTED_SCHEMA_VERSION
         model_json = {
             "schema_version": SCHEMA_VERSION,
             "pybamm_version": pybamm.__version__,
@@ -602,7 +609,7 @@ class Serialise:
                     else:
                         geometry_dict_serialized[domain][key] = value
 
-        SCHEMA_VERSION = "1.1"
+        SCHEMA_VERSION = SUPPORTED_SCHEMA_VERSION
         geometry_json = {
             "schema_version": SCHEMA_VERSION,
             "pybamm_version": pybamm.__version__,
@@ -688,11 +695,13 @@ class Serialise:
                 ) from e
 
         # Validate schema version
-        schema_version = data.get("schema_version", SUPPORTED_SCHEMA_VERSION)
-        if schema_version != SUPPORTED_SCHEMA_VERSION:
+        schema_version = data.get("schema_version", "1.1")
+        if schema_version != SUPPORTED_SCHEMA_VERSION and not _is_legacy_schema(
+            schema_version
+        ):
             raise ValueError(
                 f"Unsupported schema version: {schema_version}. "
-                f"Expected: {SUPPORTED_SCHEMA_VERSION}"
+                f"Current: {SUPPORTED_SCHEMA_VERSION}"
             )
 
         # Extract geometry data
@@ -708,10 +717,16 @@ class Serialise:
 
             # Find symbol keys and reconstruct SpatialVariables
             symbol_keys = {}
+            symbol_coord_sys = {}  # coord_sys extracted from old-format SpatialVariable JSON
             for key in domain_geom.keys():
                 if key.startswith("symbol_"):
                     var_name = key[7:]  # Remove "symbol_" prefix
                     symbol_keys[var_name] = convert_symbol_from_json(domain_geom[key])
+                    # Extract coord_sys from old-format SpatialVariable JSON
+                    # (in old format, coord_sys was stored on the SpatialVariable object)
+                    old_coord_sys = domain_geom[key].get("coord_sys")
+                    if old_coord_sys is not None:
+                        symbol_coord_sys[var_name] = old_coord_sys
 
             # Now reconstruct the domain geometry with proper keys
             for key, value in domain_geom.items():
@@ -730,8 +745,11 @@ class Serialise:
                             reconstructed_value[k] = v
                     reconstructed_geometry[domain][spatial_var] = reconstructed_value
                 else:
-                    # String key (like 'tabs')
-                    if isinstance(value, dict):
+                    # String key (like 'tabs' or 'coord_sys')
+                    # Preserve coord_sys for backward compatibility
+                    if key == "coord_sys":
+                        reconstructed_geometry[domain][key] = value
+                    elif isinstance(value, dict):
                         reconstructed_value = {}
                         for k, v in value.items():
                             if isinstance(v, dict) and "type" in v:
@@ -741,6 +759,19 @@ class Serialise:
                         reconstructed_geometry[domain][key] = reconstructed_value
                     else:
                         reconstructed_geometry[domain][key] = value
+
+            # Backward compatibility for schema < 1.2: coord_sys was stored on the
+            # SpatialVariable object rather than as a geometry dict key. Inject it
+            # into the geometry dict so Mesh.__init__ gets the correct value instead
+            # of defaulting to "cartesian".
+            if (
+                _is_legacy_schema(schema_version)
+                and "coord_sys" not in reconstructed_geometry[domain]
+                and symbol_coord_sys
+            ):
+                reconstructed_geometry[domain]["coord_sys"] = next(
+                    iter(symbol_coord_sys.values())
+                )
 
         return pybamm.Geometry(reconstructed_geometry)
 
@@ -767,7 +798,7 @@ class Serialise:
                 "options": method.options if hasattr(method, "options") else {},
             }
 
-        SCHEMA_VERSION = "1.1"
+        SCHEMA_VERSION = SUPPORTED_SCHEMA_VERSION
         spatial_methods_json = {
             "schema_version": SCHEMA_VERSION,
             "pybamm_version": pybamm.__version__,
@@ -856,11 +887,13 @@ class Serialise:
                 ) from e
 
         # Validate schema version
-        schema_version = data.get("schema_version", SUPPORTED_SCHEMA_VERSION)
-        if schema_version != SUPPORTED_SCHEMA_VERSION:
+        schema_version = data.get("schema_version", "1.1")
+        if schema_version != SUPPORTED_SCHEMA_VERSION and not _is_legacy_schema(
+            schema_version
+        ):
             raise ValueError(
                 f"Unsupported schema version: {schema_version}. "
-                f"Expected: {SUPPORTED_SCHEMA_VERSION}"
+                f"Current: {SUPPORTED_SCHEMA_VERSION}"
             )
 
         # Extract spatial methods data
@@ -921,7 +954,7 @@ class Serialise:
             else:
                 raise ValueError(f"Unexpected key type in var_pts: {type(key)}")
 
-        SCHEMA_VERSION = "1.1"
+        SCHEMA_VERSION = SUPPORTED_SCHEMA_VERSION
         var_pts_json = {
             "schema_version": SCHEMA_VERSION,
             "pybamm_version": pybamm.__version__,
@@ -1005,11 +1038,13 @@ class Serialise:
                 ) from e
 
         # Validate schema version
-        schema_version = data.get("schema_version", SUPPORTED_SCHEMA_VERSION)
-        if schema_version != SUPPORTED_SCHEMA_VERSION:
+        schema_version = data.get("schema_version", "1.1")
+        if schema_version != SUPPORTED_SCHEMA_VERSION and not _is_legacy_schema(
+            schema_version
+        ):
             raise ValueError(
                 f"Unsupported schema version: {schema_version}. "
-                f"Expected: {SUPPORTED_SCHEMA_VERSION}"
+                f"Current: {SUPPORTED_SCHEMA_VERSION}"
             )
 
         # Extract var_pts data
@@ -1047,7 +1082,7 @@ class Serialise:
                 "module": submesh_class.__module__,
             }
 
-        SCHEMA_VERSION = "1.1"
+        SCHEMA_VERSION = SUPPORTED_SCHEMA_VERSION
         submesh_types_json = {
             "schema_version": SCHEMA_VERSION,
             "pybamm_version": pybamm.__version__,
@@ -1133,11 +1168,13 @@ class Serialise:
                 ) from e
 
         # Validate schema version
-        schema_version = data.get("schema_version", SUPPORTED_SCHEMA_VERSION)
-        if schema_version != SUPPORTED_SCHEMA_VERSION:
+        schema_version = data.get("schema_version", "1.1")
+        if schema_version != SUPPORTED_SCHEMA_VERSION and not _is_legacy_schema(
+            schema_version
+        ):
             raise ValueError(
                 f"Unsupported schema version: {schema_version}. "
-                f"Expected: {SUPPORTED_SCHEMA_VERSION}"
+                f"Current: {SUPPORTED_SCHEMA_VERSION}"
             )
 
         # Extract submesh types data
@@ -1236,11 +1273,13 @@ class Serialise:
                 raise ValueError(f"Failed to decompress model data: {e}") from e
 
         # Validate outer structure
-        schema_version = data.get("schema_version", SUPPORTED_SCHEMA_VERSION)
-        if schema_version != SUPPORTED_SCHEMA_VERSION:
+        schema_version = data.get("schema_version", "1.1")
+        if schema_version != SUPPORTED_SCHEMA_VERSION and not _is_legacy_schema(
+            schema_version
+        ):
             raise ValueError(
                 f"Unsupported schema version: {schema_version}. "
-                f"Expected: {SUPPORTED_SCHEMA_VERSION}"
+                f"Current: {SUPPORTED_SCHEMA_VERSION}"
             )
 
         model_data = data.get("model")
@@ -1756,9 +1795,11 @@ def convert_symbol_from_json(json_data):
             )
         return pybamm.IndefiniteIntegral(child, [integration_variable])
     elif json_data["type"] == "SpatialVariable":
+        # Note: coord_sys is ignored for backward compatibility with old serialized
+        # models. In the new format, coord_sys is stored in the geometry dictionary
+        # rather than on the SpatialVariable object.
         return pybamm.SpatialVariable(
             json_data["name"],
-            coord_sys=json_data.get("coord_sys", "cartesian"),
             domains=json_data.get("domains"),
         )
     elif json_data["type"] == "Time":

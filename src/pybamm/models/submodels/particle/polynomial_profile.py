@@ -57,7 +57,6 @@ class PolynomialProfile(BaseParticle):
                     "secondary": f"{domain} electrode",
                     "tertiary": "current collector",
                 },
-                coord_sys="spherical polar",
             )
             R = self.phase_param.R
         else:
@@ -79,7 +78,6 @@ class PolynomialProfile(BaseParticle):
                     "tertiary": f"{domain} electrode",
                     "quaternary": "current collector",
                 },
-                coord_sys="spherical polar",
             )
             R = pybamm.SpatialVariable(
                 f"R_{domain[0]}",
@@ -88,7 +86,6 @@ class PolynomialProfile(BaseParticle):
                     "secondary": f"{domain} electrode",
                     "tertiary": "current collector",
                 },
-                coord_sys="cartesian",
             )
 
             variables = self._get_distribution_variables(R)
@@ -203,7 +200,6 @@ class PolynomialProfile(BaseParticle):
                     "secondary": f"{domain} electrode",
                     "tertiary": "current collector",
                 },
-                coord_sys="spherical polar",
             )
             R = variables[f"{Domain} particle radius [m]"]
             variables.update(self._get_standard_diffusivity_variables(D_eff))

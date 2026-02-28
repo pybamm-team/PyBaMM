@@ -39,86 +39,77 @@ def battery_geometry(
 
     # Set up electrode/separator/electrode geometry
     geometry = {
-        "negative electrode": {"x_n": {"min": 0, "max": L_n}},
-        "separator": {"x_s": {"min": L_n, "max": L_n_L_s}},
-        "positive electrode": {"x_p": {"min": L_n_L_s, "max": geo.L_x}},
+        "negative electrode": {"x_n": {"min": 0, "max": L_n}, "coord_sys": "cartesian"},
+        "separator": {"x_s": {"min": L_n, "max": L_n_L_s}, "coord_sys": "cartesian"},
+        "positive electrode": {
+            "x_p": {"min": L_n_L_s, "max": geo.L_x},
+            "coord_sys": "cartesian",
+        },
     }
 
     # Add particle domains
     if include_particles is True:
         for domain in ["negative", "positive"]:
+            domain_options = getattr(options, domain)
             if options.electrode_types[domain] == "porous":
+                particle_coord_sys = domain_options["particle shape"] + " polar"
                 geo_domain = geo.domain_params[domain]
                 d = domain[0]
                 geometry.update(
                     {
                         f"{domain} particle": {
-                            f"r_{d}": {"min": 0, "max": geo_domain.prim.R_typ}
+                            f"r_{d}": {"min": 0, "max": geo_domain.prim.R_typ},
+                            "coord_sys": particle_coord_sys,
                         },
                     }
                 )
-                phases = int(getattr(options, domain)["particle phases"])
+                phases = int(domain_options["particle phases"])
                 if phases >= 2:
                     geometry.update(
                         {
                             f"{domain} primary particle": {
-                                f"r_{d}_prim": {"min": 0, "max": geo_domain.prim.R_typ}
+                                f"r_{d}_prim": {"min": 0, "max": geo_domain.prim.R_typ},
+                                "coord_sys": particle_coord_sys,
                             },
                             f"{domain} secondary particle": {
-                                f"r_{d}_sec": {"min": 0, "max": geo_domain.sec.R_typ}
+                                f"r_{d}_sec": {"min": 0, "max": geo_domain.sec.R_typ},
+                                "coord_sys": particle_coord_sys,
                             },
                         }
                     )
 
-    # Add particle size domains
-    if (
-        options is not None
-        and options.negative["particle size"] == "distribution"
-        and options.electrode_types["negative"] == "porous"
-    ):
-        R_min_n = geo.n.prim.R_min
-        R_max_n = geo.n.prim.R_max
-        geometry.update(
-            {
-                "negative particle size": {"R_n": {"min": R_min_n, "max": R_max_n}},
-            }
-        )
-        phases = int(options.negative["particle phases"])
-        if phases >= 2:
-            geometry.update(
-                {
-                    "negative primary particle size": {
-                        "R_n_prim": {"min": R_min_n, "max": R_max_n}
-                    },
-                    "negative secondary particle size": {
-                        "R_n_sec": {"min": R_min_n, "max": R_max_n}
-                    },
-                }
-            )
-    if (
-        options is not None
-        and options.positive["particle size"] == "distribution"
-        and options.electrode_types["positive"] == "porous"
-    ):
-        R_min_p = geo.p.prim.R_min
-        R_max_p = geo.p.prim.R_max
-        geometry.update(
-            {
-                "positive particle size": {"R_p": {"min": R_min_p, "max": R_max_p}},
-            }
-        )
-        phases = int(options.positive["particle phases"])
-        if phases >= 2:
-            geometry.update(
-                {
-                    "positive primary particle size": {
-                        "R_p_prim": {"min": R_min_p, "max": R_max_p}
-                    },
-                    "positive secondary particle size": {
-                        "R_p_sec": {"min": R_min_p, "max": R_max_p}
-                    },
-                }
-            )
+                if domain_options["particle size"] == "distribution":
+                    if phases == 1:
+                        geometry.update(
+                            {
+                                f"{domain} particle size": {
+                                    f"R_{d}": {
+                                        "min": geo_domain.prim.R_min,
+                                        "max": geo_domain.prim.R_max,
+                                    },
+                                    "coord_sys": "cartesian",
+                                },
+                            }
+                        )
+                    elif phases == 2:
+                        geometry.update(
+                            {
+                                f"{domain} primary particle size": {
+                                    f"R_{d}_prim": {
+                                        "min": geo_domain.prim.R_min,
+                                        "max": geo_domain.prim.R_max,
+                                    },
+                                    "coord_sys": "cartesian",
+                                },
+                                f"{domain} secondary particle size": {
+                                    f"R_{d}_sec": {
+                                        "min": geo_domain.sec.R_min,
+                                        "max": geo_domain.sec.R_max,
+                                    },
+                                    "coord_sys": "cartesian",
+                                },
+                            }
+                        )
 
     # Add current collector domains
     current_collector_dimension = options["dimensionality"]
@@ -128,6 +119,7 @@ def battery_geometry(
         elif current_collector_dimension == 1:
             geometry["current collector"] = {
                 "z": {"min": 0, "max": geo.L_z},
+                "coord_sys": "cartesian",
                 "tabs": {
                     "negative": {"z_centre": geo.n.centre_z_tab},
                     "positive": {"z_centre": geo.p.centre_z_tab},
@@ -137,6 +129,7 @@ def battery_geometry(
             geometry["current collector"] = {
                 "y": {"min": 0, "max": geo.L_y},
                 "z": {"min": 0, "max": geo.L_z},
+                "coord_sys": "cartesian",
                 "tabs": {
                     "negative": {
                         "y_centre": geo.n.centre_y_tab,
@@ -156,6 +149,7 @@ def battery_geometry(
                 "x": {"min": 0, "max": geo.L_x},
                 "y": {"min": 0, "max": geo.L_y},
                 "z": {"min": 0, "max": geo.L_z},
+                "coord_sys": "cartesian",
             }
 
     elif form_factor == "cylindrical":
@@ -164,12 +158,14 @@ def battery_geometry(
         elif current_collector_dimension == 1:
             geometry["current collector"] = {
                 "r_macro": {"min": geo.r_inner, "max": 1},
+                "coord_sys": "cylindrical polar",
             }
         elif current_collector_dimension == 3:
             geometry["current collector"] = {"z": {"position": 1}}
             geometry["cell"] = {
                 "r_macro": {"min": geo.r_inner, "max": geo.r_outer},
                 "z": {"min": 0, "max": geo.L_z},
+                "coord_sys": "cylindrical polar",
             }
         else:
             raise pybamm.GeometryError(

@@ -254,7 +254,12 @@ class DomainLithiumIonParameters(BaseParameters):
             f"x_{domain[0]}",
             domain=[f"{domain} electrode"],
             auxiliary_domains={"secondary": "current collector"},
-            coord_sys="cartesian",
+        )
+        y = pybamm.PrimaryBroadcast(
+            pybamm.standard_spatial_vars.y, f"{domain} electrode"
+        )
+        z = pybamm.PrimaryBroadcast(
+            pybamm.standard_spatial_vars.z, f"{domain} electrode"
         )
         y = pybamm.PrimaryBroadcast(
             pybamm.standard_spatial_vars.y, f"{domain} electrode"
@@ -435,7 +440,12 @@ class ParticleLithiumIonParameters(BaseParameters):
             f"x_{domain[0]}",
             domain=[f"{domain} electrode"],
             auxiliary_domains={"secondary": "current collector"},
-            coord_sys="cartesian",
+        )
+        y = pybamm.PrimaryBroadcast(
+            pybamm.standard_spatial_vars.y, f"{domain} electrode"
+        )
+        z = pybamm.PrimaryBroadcast(
+            pybamm.standard_spatial_vars.z, f"{domain} electrode"
         )
         y = pybamm.PrimaryBroadcast(
             pybamm.standard_spatial_vars.y, f"{domain} electrode"
@@ -450,7 +460,6 @@ class ParticleLithiumIonParameters(BaseParameters):
                 "secondary": f"{domain} electrode",
                 "tertiary": "current collector",
             },
-            coord_sys="spherical polar",
         )
 
         # Microscale geometry

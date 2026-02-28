@@ -34,12 +34,13 @@ class TestMesh:
         return submesh_types
 
     def test_mesh_creation_no_parameters(self):
-        r = pybamm.SpatialVariable(
-            "r", domain=["negative particle"], coord_sys="spherical polar"
-        )
+        r = pybamm.SpatialVariable("r", domain=["negative particle"])
 
         geometry = {
-            "negative particle": {r: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
+            "negative particle": {
+                r: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+                "coord_sys": "spherical polar",
+            }
         }
 
         submesh_types = {"negative particle": pybamm.Uniform1DSubMesh}
@@ -194,8 +195,14 @@ class TestMesh:
 
         # test errors
         geometry = {
-            "negative electrode": {"x_n": {"min": 0, "max": 0.5}},
-            "negative particle": {"r_n": {"min": 0.5, "max": 1}},
+            "negative electrode": {
+                "x_n": {"min": 0, "max": 0.5},
+                "coord_sys": "cartesian",
+            },
+            "negative particle": {
+                "r_n": {"min": 0.5, "max": 1},
+                "coord_sys": "spherical polar",
+            },
         }
         param.process_geometry(geometry)
 
@@ -474,7 +481,11 @@ class TestMesh:
 
         for submesh in mesh.values():
             if not isinstance(submesh, pybamm.SubMesh0D):
-                assert submesh.coord_sys in pybamm.KNOWN_COORD_SYS
+                assert submesh.coord_sys in [
+                    "cartesian",
+                    "cylindrical polar",
+                    "spherical polar",
+                ]
 
     def test_unimplemented_meshes(self):
         var_pts = {"x_n": 10, "y": 10}
@@ -561,12 +572,13 @@ class TestMesh:
         assert mesh["current collector"].tabs["positive tab"] == "left"
 
     def test_to_json(self):
-        r = pybamm.SpatialVariable(
-            "r", domain=["negative particle"], coord_sys="spherical polar"
-        )
+        r = pybamm.SpatialVariable("r", domain=["negative particle"])
 
         geometry = {
-            "negative particle": {r: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
+            "negative particle": {
+                r: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+                "coord_sys": "spherical polar",
+            }
         }
 
         submesh_types = {"negative particle": pybamm.Uniform1DSubMesh}

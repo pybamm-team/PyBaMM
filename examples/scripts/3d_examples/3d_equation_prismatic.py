@@ -17,9 +17,9 @@ t_max = 0.2
 
 model = BaseModel()
 
-x = SpatialVariable("x", ["current collector"], coord_sys="cartesian")
-y = SpatialVariable("y", ["current collector"], coord_sys="cartesian")
-z = SpatialVariable("z", ["current collector"], coord_sys="cartesian")
+x = SpatialVariable("x", ["current collector"])
+y = SpatialVariable("y", ["current collector"])
+z = SpatialVariable("z", ["current collector"])
 
 T = pybamm.Variable("T", domain="current collector")
 model.variables = {"T": T}
@@ -44,6 +44,7 @@ geometry = {
         x: {"min": Scalar(0), "max": Scalar(Lx)},
         y: {"min": Scalar(0), "max": Scalar(Ly)},
         z: {"min": Scalar(0), "max": Scalar(Lz)},
+        "coord_sys": "cartesian",
     }
 }
 

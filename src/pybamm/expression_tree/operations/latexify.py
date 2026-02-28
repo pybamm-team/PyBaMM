@@ -72,6 +72,8 @@ class Latexify:
 
         # Take range minimum from the first domain
         for var_name, rng in self.model.default_geometry[var.domain[0]].items():
+            if not isinstance(rng, dict) or "min" not in rng:
+                continue
             # Trim name (r_n --> r)
             name = re.findall(r"(.)_*.*", str(var_name))[0]
             if "min" in rng:
@@ -81,10 +83,9 @@ class Latexify:
 
         # Take range maximum from the last domain
         for _, rng in self.model.default_geometry[var.domain[-1]].items():
-            if "max" in rng:
-                rng_max = get_rng_min_max_name(rng, "max")
-            else:
+            if not isinstance(rng, dict) or "max" not in rng:
                 continue
+            rng_max = get_rng_min_max_name(rng, "max")
 
         geo_latex = rf"\quad {rng_min} < {name} < {rng_max}"
         geo.append(geo_latex)

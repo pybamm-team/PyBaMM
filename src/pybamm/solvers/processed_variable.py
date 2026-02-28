@@ -200,7 +200,7 @@ class ProcessedVariable(BaseProcessedVariable):
         raw_names = []
         for var in spatial_variable:
             # Ignore tabs in domain names
-            if var == "tabs":
+            if var in ["tabs", "coord_sys"]:
                 continue
             if isinstance(var, str):
                 raw_names.append(var)
