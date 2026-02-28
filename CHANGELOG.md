@@ -210,6 +210,7 @@ as initial conditions. ([#5311](https://github.com/pybamm-team/PyBaMM/pull/5311)
 
 ## Features
 
+- Added functionality to set `Discharge capacity` as the x-axis in `QuickPlot`.([#4775](https://github.com/pybamm-team/PyBaMM/pull/4775))
 - Revision of the hysteresis notebook to include the method implemented in the module `axen_ocp`. ([#4880](https://github.com/pybamm-team/PyBaMM/pull/4880))
 - Added `axen_ocp` module within submodel `interface.open_circuit_potential` to handle an OCP with hysteresis. ([#4816](https://github.com/pybamm-team/PyBaMM/pull/4816))
 - Creates a 'calc_esoh' property in battery models ([#4825](https://github.com/pybamm-team/PyBaMM/pull/4825))
