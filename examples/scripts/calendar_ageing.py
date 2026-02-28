@@ -16,10 +16,11 @@ import csv
 import logging
 import time
 from pathlib import Path
-from typing import List, Tuple, Optional, Any
+from typing import Any
 
 import matplotlib.pyplot as plt
 import numpy as np
+
 import pybamm as pb
 
 
@@ -36,7 +37,20 @@ def setup_logger(verbose: bool) -> logging.Logger:
     return logging.getLogger(__name__)
 
 
-def run_simulation(args: Tuple[str, int, float]) -> Tuple[str, float, int, Optional[float], Optional[float], Optional[float], Optional[float], Optional[float], Optional[float], Optional[str]]:
+def run_simulation(
+    args: tuple[str, int, float],
+) -> tuple[
+    str,
+    float,
+    int,
+    float | None,
+    float | None,
+    float | None,
+    float | None,
+    float | None,
+    float | None,
+    str | None,
+]:
     """
     Run a single calendar ageing simulation for a given SEI model, duration, and SOC.
 
@@ -71,28 +85,125 @@ def run_simulation(args: Tuple[str, int, float]) -> Tuple[str, float, int, Optio
         voltage_before = float(voltage[0])
         voltage_after = float(voltage[-1])
         delta_v = voltage_before - voltage_after
-        
+
         sei_thickness = float(sol["X-averaged negative SEI thickness [m]"].entries[-1])
         lli = float(sol["Loss of lithium inventory [%]"].entries[-1])
-        
+
         if sei_model == "reaction limited":
-            sei_rxn_rate = parameter_values["SEI kinetic rate constant [m.s-1]"]
+            sei_rxn_rate = float(parameter_values["SEI kinetic rate constant [m.s-1]"])
         else:
             sei_rxn_rate = 0.0
 
-        return sei_model, initial_soc, days, voltage_before, voltage_after, delta_v, sei_thickness, lli, sei_rxn_rate, None
+        return (
+            sei_model,
+            initial_soc,
+            days,
+            voltage_before,
+            voltage_after,
+            delta_v,
+            sei_thickness,
+            lli,
+            sei_rxn_rate,
+            None,
+        )
     except Exception as e:
         return sei_model, initial_soc, days, None, None, None, None, None, None, str(e)
 
 
-def main() -> None:
-    """Main execution function."""
-    parser = argparse.ArgumentParser(description="Run calendar ageing simulations in PyBaMM.")
+def save_to_csv(
+    csv_filename: Path, csv_rows: list[list[Any]], logger: logging.Logger
+) -> None:
+    """Save simulation results to a CSV file."""
+    try:
+        with open(csv_filename, mode="w", newline="", encoding="utf-8") as file:
+            writer = csv.writer(file)
+            writer.writerow(
+                [
+                    "SEI Model",
+                    "Initial SOC",
+                    "Days",
+                    "Voltage Before (V)",
+                    "Voltage After (V)",
+                    "Delta V (V)",
+                    "SEI Thickness (m)",
+                    "Loss of Lithium Inventory (%)",
+                    "SEI rxn rate",
+                ]
+            )
+            writer.writerows(csv_rows)
+        logger.info(f"Results successfully saved to: {csv_filename}")
+    except OSError as e:
+        logger.error(f"Failed to write CSV file to {csv_filename}: {e}")
+
+
+def plot_results(
+    plot_filename: Path,
+    results_dict: dict[str, dict[float, dict[str, list[Any]]]],
+    models_to_test: list[str],
+    socs_to_test: list[float],
+    logger: logging.Logger,
+) -> None:
+    """Generate and save comparative plots of the results."""
+    _fig, axes = plt.subplots(1, max(1, len(socs_to_test)), figsize=(15, 6))
+
+    # Ensure axes is iterable even for 1 subplot
+    if len(socs_to_test) == 1:
+        axes = [axes]
+
+    for idx, soc in enumerate(socs_to_test):
+        ax = axes[idx]
+        plotted_any = False
+        for model in models_to_test:
+            if not results_dict[model][soc]["days"]:
+                logger.warning(
+                    f"No successful simulations to plot for {model} at SOC {soc:.0%}"
+                )
+                continue
+
+            # Convert delta_v to millivolts for better readability
+            delta_v_mv = [dv * 1000 for dv in results_dict[model][soc]["delta_v"]]
+            ax.plot(
+                results_dict[model][soc]["days"],
+                delta_v_mv,
+                marker="o",
+                linestyle="-",
+                label=f"{model}",
+            )
+            plotted_any = True
+
+        ax.set_title(f"Voltage Loss vs Rest Duration for {soc * 100:.0f}% SOC")
+        ax.set_xlabel("Rest Duration (Days)")
+        ax.set_ylabel("Voltage Loss (mV)")
+        ax.grid(True, linestyle="--", alpha=0.7)
+        if plotted_any:
+            ax.legend()
+
+    plt.tight_layout()
+
+    try:
+        plt.savefig(plot_filename, dpi=300, bbox_inches="tight")
+        logger.info(f"Plot successfully saved to: {plot_filename}")
+    except OSError as e:
+        logger.error(f"Failed to save plot to {plot_filename}: {e}")
+    finally:
+        plt.close()
+
+
+def parse_args() -> argparse.Namespace:
+    """Parse command line arguments."""
+    parser = argparse.ArgumentParser(
+        description="Run calendar ageing simulations in PyBaMM."
+    )
     parser.add_argument(
         "--models",
         nargs="+",
         type=str,
-        default=["reaction limited", "solvent-diffusion limited", "electron-migration limited", "interstitial-diffusion limited"],
+        default=[
+            "reaction limited",
+            "solvent-diffusion limited",
+            "electron-migration limited",
+            "interstitial-diffusion limited",
+        ],
         help="List of SEI models to test",
     )
     parser.add_argument(
@@ -126,18 +237,30 @@ def main() -> None:
         action="store_true",
         help="Enable verbose logging",
     )
-    args = parser.parse_args()
+    return parser.parse_args()
 
+
+def main() -> None:
+    """Main execution function."""
+    args = parse_args()
     logger = setup_logger(args.verbose)
 
-    models_to_test: List[str] = args.models
-    socs_to_test: List[float] = args.socs
-    day_range: List[int] = list(range(args.min_days, args.max_days + 1))
-    output_dir = Path(__file__).parent if args.output_dir == "." else Path(args.output_dir)
+    models_to_test: list[str] = args.models
+    socs_to_test: list[float] = args.socs
+    day_range: list[int] = list(range(args.min_days, args.max_days + 1))
+
+    output_dir = (
+        Path(__file__).parent if args.output_dir == "." else Path(args.output_dir)
+    )
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # Create an array of argument tuples for parallel execution
-    simulation_args = [(model, days, soc) for model in models_to_test for soc in socs_to_test for days in day_range]
+    simulation_args = [
+        (model, days, soc)
+        for model in models_to_test
+        for soc in socs_to_test
+        for days in day_range
+    ]
 
     logger.info(
         f"Starting simulations for {len(models_to_test)} models, SOCs {socs_to_test} across {len(day_range)} "
@@ -145,10 +268,11 @@ def main() -> None:
     )
     start_time = time.time()
 
-    results_dict: dict[str, dict[float, dict[str, List[Any]]]] = {
-        model: {soc: {"days": [], "delta_v": []} for soc in socs_to_test} for model in models_to_test
+    results_dict: dict[str, dict[float, dict[str, list[Any]]]] = {
+        model: {soc: {"days": [], "delta_v": []} for soc in socs_to_test}
+        for model in models_to_test
     }
-    csv_rows: List[List[Any]] = []
+    csv_rows: list[list[Any]] = []
 
     # Process all combinations in parallel
     with concurrent.futures.ProcessPoolExecutor() as executor:
@@ -159,64 +283,38 @@ def main() -> None:
 
     # Process results locally and populate data structures for CSV and Plotting
     for res in results:
-        model, soc, days, v_before, v_after, d_v, sei_thickness, lli, sei_rxn_rate, error = res
+        (
+            model,
+            soc,
+            days,
+            v_before,
+            v_after,
+            d_v,
+            sei_thickness,
+            lli,
+            sei_rxn_rate,
+            error,
+        ) = res
         if error or v_before is None or v_after is None or d_v is None:
-            logger.error(f"Error for Model {model} SOC {soc:.0%} at {days} days: {error}")
+            logger.error(
+                f"Error for Model {model} SOC {soc:.0%} at {days} days: {error}"
+            )
             continue
 
         results_dict[model][soc]["days"].append(days)
         results_dict[model][soc]["delta_v"].append(d_v)
-        csv_rows.append([model, soc, days, v_before, v_after, d_v, sei_thickness, lli, sei_rxn_rate])
+        csv_rows.append(
+            [model, soc, days, v_before, v_after, d_v, sei_thickness, lli, sei_rxn_rate]
+        )
 
-    # 1. Write to CSV
-    csv_filename = output_dir / "calendar_ageing_results_models.csv"
-    try:
-        with open(csv_filename, mode="w", newline="", encoding="utf-8") as file:
-            writer = csv.writer(file)
-            writer.writerow(
-                ["SEI Model", "Initial SOC", "Days", "Voltage Before (V)", "Voltage After (V)", "Delta V (V)", "SEI Thickness (m)", "Loss of Lithium Inventory (%)", "SEI rxn rate"]
-            )
-            writer.writerows(csv_rows)
-        logger.info(f"Results successfully saved to: {csv_filename}")
-    except IOError as e:
-        logger.error(f"Failed to write CSV file to {csv_filename}: {e}")
-
-    # 2. Plotting the results
-    fig, axes = plt.subplots(1, 2, figsize=(15, 6))
-
-    for idx, soc in enumerate(socs_to_test):
-        ax = axes[idx]
-        for model in models_to_test:
-            if not results_dict[model][soc]["days"]:
-                logger.warning(f"No successful simulations to plot for {model} at SOC {soc:.0%}")
-                continue
-
-            # Convert delta_v to millivolts for better readability
-            delta_v_mv = [dv * 1000 for dv in results_dict[model][soc]["delta_v"]]
-            ax.plot(
-                results_dict[model][soc]["days"],
-                delta_v_mv,
-                marker="o",
-                linestyle="-",
-                label=f"{model}",
-            )
-
-        ax.set_title(f"Voltage Loss vs Rest Duration for {soc * 100:.0f}% SOC")
-        ax.set_xlabel("Rest Duration (Days)")
-        ax.set_ylabel("Voltage Loss (mV)")
-        ax.grid(True, linestyle="--", alpha=0.7)
-        ax.legend()
-
-    plt.tight_layout()
-
-    plot_filename = output_dir / "calendar_ageing_models_plot.png"
-    try:
-        plt.savefig(plot_filename, dpi=300, bbox_inches="tight")
-        logger.info(f"Plot successfully saved to: {plot_filename}")
-    except IOError as e:
-        logger.error(f"Failed to save plot to {plot_filename}: {e}")
-    finally:
-        plt.close()
+    save_to_csv(output_dir / "calendar_ageing_results_models.csv", csv_rows, logger)
+    plot_results(
+        output_dir / "calendar_ageing_models_plot.png",
+        results_dict,
+        models_to_test,
+        socs_to_test,
+        logger,
+    )
 
 
 if __name__ == "__main__":
