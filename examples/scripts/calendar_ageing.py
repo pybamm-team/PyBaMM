@@ -2,10 +2,14 @@ import numpy as np
 import pybamm as pb
 import concurrent.futures
 import time
+import csv
+import matplotlib.pyplot as plt
+from pathlib import Path
 
 pb.set_logging_level("WARNING")
 
-def run_simulation(days):
+def run_simulation(args):
+    days, initial_soc = args
     try:
         # Create a new DFN model with reaction limited SEI for calendar ageing
         model = pb.lithium_ion.DFN({"SEI": "reaction limited"})
@@ -22,8 +26,8 @@ def run_simulation(days):
         seconds = days * 24 * 60 * 60
         t_eval = np.linspace(0, seconds, 100)
         
-        # Solve with 30% initial SOC
-        sol = sim.solve(t_eval=t_eval, solver=solver, initial_soc=0.3)
+        # Solve with specific initial SOC
+        sol = sim.solve(t_eval=t_eval, solver=solver, initial_soc=initial_soc)
         
         # Extract voltage data
         voltage = sol["Voltage [V]"].entries
@@ -31,30 +35,67 @@ def run_simulation(days):
         voltage_after = voltage[-1]
         delta_v = voltage_before - voltage_after
         
-        return days, voltage_before, voltage_after, delta_v
+        return initial_soc, days, voltage_before, voltage_after, delta_v
     except Exception as e:
-        return days, None, None, str(e)
+        return initial_soc, days, None, None, str(e)
 
 if __name__ == "__main__":
-    # From 2 to 30 days
+    socs_to_test = [0.3, 0.9]
     day_range = list(range(2, 31))
+    
+    # Create an array of argument tuples for parallel execution
+    simulation_args = []
+    for soc in socs_to_test:
+        for days in day_range:
+            simulation_args.append((days, soc))
     
     start_time = time.time()
     
-    print(f"{'Days':<5} | {'V_before (V)':<15} | {'V_after (V)':<15} | {'Delta V (V)':<15}")
-    print("-" * 57)
+    print(f"Starting simulations for SOCs {socs_to_test} across {len(day_range)} durations...")
     
-    # Optimize for parallelism using ProcessPoolExecutor
+    # Process all combinations in parallel
+    results_dict = {soc: {"days": [], "delta_v": []} for soc in socs_to_test}
+    csv_rows = []
+    
     with concurrent.futures.ProcessPoolExecutor() as executor:
-        # Map ensures the results are returned in the exact order of day_range
-        results = list(executor.map(run_simulation, day_range))
+        # Map ensures the results are returned in the exact order of simulation_args
+        results = list(executor.map(run_simulation, simulation_args))
         
-    # Print results summary
+    print(f"\nTotal simulation execution time: {time.time() - start_time:.2f} seconds\n")
+    
+    # Process results locally and populate data structures for CSV and Plotting
     for res in results:
-        if res[1] is None:
-            print(f"{res[0]:<5} | Error: {res[3]}")
+        soc, days, v_before, v_after, d_v = res
+        if v_before is None:
+            print(f"Error for SOC {soc:.0%} at {days} days: {d_v}")
         else:
-            days, v_before, v_after, d_v = res
-            print(f"{days:<5} | {v_before:<15.6f} | {v_after:<15.6f} | {d_v:<15.6f}")
+            results_dict[soc]["days"].append(days)
+            results_dict[soc]["delta_v"].append(d_v)
+            csv_rows.append([soc, days, v_before, v_after, d_v])
 
-    print(f"\nTotal execution time: {time.time() - start_time:.2f} seconds")
+    # 1. Write to CSV
+    csv_filename = Path(__file__).parent / "calendar_ageing_results.csv"
+    with open(csv_filename, mode='w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(["Initial SOC", "Days", "Voltage Before (V)", "Voltage After (V)", "Delta V (V)"])
+        writer.writerows(csv_rows)
+    print(f"Results successfully saved to: {csv_filename}")
+    
+    # 2. Plotting the results
+    plt.figure(figsize=(10, 6))
+    
+    for soc in socs_to_test:
+        # Need to put delta_v into millivolts for better readability
+        delta_v_mv = [dv * 1000 for dv in results_dict[soc]["delta_v"]]
+        plt.plot(results_dict[soc]["days"], delta_v_mv, marker='o', label=f"{soc * 100:.0f}% SOC")
+        
+    plt.title("Voltage Loss ($\Delta$V) vs Rest Duration for Calendar Ageing")
+    plt.xlabel("Rest Duration (Days)")
+    plt.ylabel("Voltage Loss (mV)")
+    plt.grid(True, linestyle='--', alpha=0.7)
+    plt.legend()
+    
+    plot_filename = Path(__file__).parent / "calendar_ageing_plot.png"
+    plt.savefig(plot_filename, dpi=300, bbox_inches='tight')
+    print(f"Plot successfully saved to: {plot_filename}")
+
