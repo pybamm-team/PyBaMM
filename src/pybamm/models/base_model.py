@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import copy
+import json
 import numbers
 import warnings
 from collections import OrderedDict
 from enum import Enum
 from itertools import chain
+from pathlib import Path
 
 import casadi
 import numpy as np
@@ -1961,6 +1963,150 @@ class BaseModel:
             )
 
         Serialise().save_model(self, filename=filename, mesh=mesh, variables=variables)
+
+    def to_json(
+        self, filename: str | Path | None = None, compress: bool = False
+    ) -> dict:
+        """
+        Convert the model to a JSON-serialisable dictionary (raw format).
+
+        Optionally saves to a file. Works for custom (non-discretised) models
+        that are subclasses of BaseModel. Use :meth:`save_model` for discretised
+        models. For a wrapped config format (``type`` + ``model``), use
+        :meth:`to_config` instead.
+
+        Parameters
+        ----------
+        filename : str or pathlib.Path, optional
+            The filename to save the JSON file to. If not provided, the
+            dictionary is not saved. Must end with ``.json`` if provided.
+        compress : bool, optional
+            If True, the model data will be compressed (zlib + base64) in the
+            returned dict and in the file if filename is set. Default is False.
+
+        Returns
+        -------
+        dict
+            The JSON-serialisable dictionary (optionally compressed).
+
+        Examples
+        --------
+        >>> model = pybamm.lithium_ion.SPM()
+        >>> param_dict = model.to_json()  # Get dictionary only
+        >>> isinstance(param_dict, dict)
+        True
+        >>> model.to_json("model.json")  # Save and return dict
+        {'schema_version': '1.1', ...}
+        """
+        model_json = Serialise.serialise_custom_model(self, compress=compress)
+        if filename is not None:
+            self._write_json_to_file(model_json, filename, label="model JSON")
+        return model_json
+
+    @staticmethod
+    def _write_json_to_file(data: dict, filename: str | Path, label: str) -> None:
+        """Write *data* to *filename* as JSON, raising clear errors on failure."""
+        filename = Path(filename)
+        if not filename.name.endswith(".json"):
+            raise ValueError(f"Filename '{filename}' must end with '.json' extension.")
+        try:
+            with open(filename, "w") as f:
+                json.dump(data, f, indent=2, default=Serialise._json_encoder)
+        except OSError as file_err:
+            raise OSError(
+                f"Failed to write {label} to file '{filename}': {file_err}"
+            ) from file_err
+
+    def to_config(
+        self,
+        filename: str | Path | None = None,
+        compress: bool = False,
+    ) -> dict:
+        """
+        Convert the model to a config dictionary with wrapped structure.
+
+        Returns a dict with ``"type": "custom"`` and ``"model"`` (the
+        serialised model), suitable for embedding in larger configs. Use
+        :meth:`to_json` for the raw model dictionary.
+
+        Parameters
+        ----------
+        filename : str or pathlib.Path, optional
+            If provided, save the config dict to this file. Must end with
+            ``.json``.
+        compress : bool, optional
+            If True, the inner model data is compressed (zlib + base64).
+            Default is False.
+
+        Returns
+        -------
+        dict
+            Config dict with keys ``"type"`` (``"custom"``) and ``"model"``.
+        """
+        model_config = {
+            "type": "custom",
+            "model": Serialise.serialise_custom_model(self, compress=compress),
+        }
+        if filename is not None:
+            self._write_json_to_file(model_config, filename, label="model config")
+        return model_config
+
+    @staticmethod
+    def from_json(filename: str | dict) -> BaseModel:
+        """
+        Load a custom (symbolic) model from a JSON file or dictionary.
+
+        Use this for models saved with :meth:`to_json`. For discretised models
+        saved with :meth:`save_model`, use :func:`pybamm.load_model` instead.
+        For the wrapped config format (from :meth:`to_config`), use
+        :meth:`from_config` instead.
+
+        Parameters
+        ----------
+        filename : str or dict
+            Path to a JSON file containing the saved model, or a dictionary
+            (e.g. from :meth:`to_json`).
+
+        Returns
+        -------
+        :class:`pybamm.BaseModel` or subclass
+            The reconstructed symbolic model.
+
+        Examples
+        --------
+        >>> model = pybamm.lithium_ion.SPM()
+        >>> loaded = pybamm.BaseModel.from_json(model.to_json())
+        >>> loaded = pybamm.BaseModel.from_json("model.json")  # doctest: +SKIP
+        """
+        return Serialise.load_custom_model(filename)
+
+    @staticmethod
+    def from_config(filename: str | dict) -> BaseModel:
+        """
+        Load a model from a config dict, raw model dict, or file path.
+
+        Accepts (1) the wrapped config from :meth:`to_config` (dict with
+        ``"type": "custom"`` and ``"model"``), (2) the raw model dict from
+        :meth:`to_json`, or (3) a path to a JSON file in either format.
+
+        Parameters
+        ----------
+        filename : str or dict
+            Config or model dictionary, or path to a JSON file.
+
+        Returns
+        -------
+        :class:`pybamm.BaseModel` or subclass
+            The reconstructed symbolic model.
+        """
+        if isinstance(filename, dict):
+            data = filename
+        else:
+            with open(filename) as f:
+                data = json.load(f)
+        if data.get("type") == "custom" and "model" in data:
+            return Serialise.load_custom_model(data["model"])
+        return Serialise.load_custom_model(data)
 
 
 def load_model(filename, battery_model: BaseModel | None = None):

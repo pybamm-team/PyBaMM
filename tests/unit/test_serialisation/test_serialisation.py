@@ -741,6 +741,34 @@ class TestSerialise:
         assert var2.bounds[0].value == -float("inf")
         assert var2.bounds[1].value == float("inf")
 
+    def test_variable_default_bounds_serialise_as_null_no_infinity(self):
+        """Variable with default bounds serialises as bounds: null (valid JSON)."""
+        var = pybamm.Variable("x", domain="electrode")
+        json_dict = convert_symbol_to_json(var)
+        assert json_dict.get("bounds") is None
+        json_str = json.dumps(json_dict)
+        assert "Infinity" not in json_str and "inf" not in json_str.lower()
+
+    def test_variable_default_bounds_round_trip(self):
+        """Variable with default bounds round-trips; loaded has default bounds."""
+        var = pybamm.Variable("x", domain="electrode")
+        json_dict = convert_symbol_to_json(var)
+        var2 = convert_symbol_from_json(json_dict)
+        assert isinstance(var2.bounds[0], pybamm.Scalar)
+        assert isinstance(var2.bounds[1], pybamm.Scalar)
+        assert var2.bounds[0].value == -float("inf")
+        assert var2.bounds[1].value == float("inf")
+
+    def test_variable_explicit_bounds_round_trip(self):
+        """Variable with explicit finite bounds serialises and round-trips."""
+        var = pybamm.Variable("x", domain="electrode", bounds=(0, 1))
+        json_dict = convert_symbol_to_json(var)
+        assert json_dict["bounds"] is not None
+        assert len(json_dict["bounds"]) == 2
+        var2 = convert_symbol_from_json(json_dict)
+        assert var2.bounds[0].value == 0
+        assert var2.bounds[1].value == 1
+
     def test_coupled_variable_serialisation(self):
         # Test basic CoupledVariable serialisation
         cv = pybamm.CoupledVariable("Voltage [V]")
@@ -2656,3 +2684,166 @@ class TestRegularisationSerialisation:
         reconstructed = pybamm.Arcsinh2._from_json({"children": [a, b], "eps": eps})
         assert isinstance(reconstructed, pybamm.Arcsinh2)
         assert reconstructed.eps == eps
+
+
+def _steps_equal(s1, s2):
+    """Helper: check two pybamm steps are equivalent."""
+    assert type(s1) is type(s2)
+    assert s1.duration == s2.duration
+    if hasattr(s1, "value") and not (
+        isinstance(s1.value, pybamm.Symbol) or isinstance(s2.value, pybamm.Symbol)
+    ):
+        assert s1.value == s2.value
+    assert len(s1.termination) == len(s2.termination)
+    for t1, t2 in zip(s1.termination, s2.termination, strict=True):
+        assert type(t1) is type(t2)
+        assert t1.value == t2.value
+        assert t1.operator == t2.operator
+
+
+class TestExperimentSerialization:
+    """Tests for pybamm.Experiment.to_config() / from_config() round-trips."""
+
+    def test_current_step_round_trip(self):
+        term = pybamm.step.VoltageTermination(2.5, operator="<")
+        exp = pybamm.Experiment(
+            [pybamm.step.current(1.0, duration=3600, termination=[term])]
+        )
+        config = exp.to_config()
+        assert config["cycles"][0][0]["type"] == "current"
+        assert config["cycles"][0][0]["value"] == 1.0
+        exp2 = pybamm.Experiment.from_config(config)
+        _steps_equal(exp.steps[0], exp2.steps[0])
+
+    def test_voltage_step_round_trip(self):
+        term = pybamm.step.CurrentTermination(0.1, operator="<")
+        exp = pybamm.Experiment(
+            [pybamm.step.voltage(4.2, duration=3600, termination=[term])]
+        )
+        config = exp.to_config()
+        assert config["cycles"][0][0]["type"] == "voltage"
+        exp2 = pybamm.Experiment.from_config(config)
+        _steps_equal(exp.steps[0], exp2.steps[0])
+
+    def test_power_step_round_trip(self):
+        term = pybamm.step.VoltageTermination(3.0, operator="<")
+        exp = pybamm.Experiment(
+            [pybamm.step.power(5.0, duration=7200, termination=[term])]
+        )
+        config = exp.to_config()
+        assert config["cycles"][0][0]["type"] == "power"
+        exp2 = pybamm.Experiment.from_config(config)
+        _steps_equal(exp.steps[0], exp2.steps[0])
+
+    def test_crate_step_round_trip(self):
+        term = pybamm.step.VoltageTermination(2.5, operator="<")
+        exp = pybamm.Experiment(
+            [pybamm.step.c_rate(1.0, duration=3600, termination=[term])]
+        )
+        config = exp.to_config()
+        assert config["cycles"][0][0]["type"] == "c-rate"
+        exp2 = pybamm.Experiment.from_config(config)
+        _steps_equal(exp.steps[0], exp2.steps[0])
+
+    def test_rest_step_round_trip(self):
+        exp = pybamm.Experiment([pybamm.step.rest(1800)])
+        config = exp.to_config()
+        assert config["cycles"][0][0]["type"] == "rest"
+        assert "value" not in config["cycles"][0][0]
+        exp2 = pybamm.Experiment.from_config(config)
+        assert exp2.steps[0].duration == 1800
+
+    def test_multi_cycle_round_trip(self):
+        steps = [
+            pybamm.step.current(
+                1.0,
+                duration=3600,
+                termination=[pybamm.step.VoltageTermination(2.5, operator="<")],
+            ),
+            pybamm.step.rest(600),
+        ]
+        exp = pybamm.Experiment([(steps[0], steps[1]), (steps[0], steps[1])])
+        config = exp.to_config()
+        assert len(config["cycles"]) == 2
+        assert len(config["cycles"][0]) == 2
+        exp2 = pybamm.Experiment.from_config(config)
+        assert exp2.cycle_lengths == exp.cycle_lengths
+        assert len(exp2.steps) == len(exp.steps)
+
+    def test_input_parameter_value_round_trip(self):
+        exp = pybamm.Experiment(
+            [pybamm.step.c_rate(pybamm.InputParameter("1C"), duration=3600)]
+        )
+        config = exp.to_config()
+        assert config["cycles"][0][0]["value"] == "1C"
+        exp2 = pybamm.Experiment.from_config(config)
+        assert isinstance(exp2.steps[0].value, pybamm.InputParameter)
+
+    def test_legacy_steps_format(self):
+        """from_config also accepts flat {'steps': [...]} format."""
+        config = {
+            "steps": [
+                {"type": "current", "value": 1.0, "duration": 3600},
+                {"type": "rest", "duration": 600},
+            ]
+        }
+        exp = pybamm.Experiment.from_config(config)
+        assert len(exp.steps) == 2
+        assert exp.steps[0].duration == 3600
+        assert exp.steps[1].duration == 600
+
+    def test_c_rate_termination_round_trip(self):
+        term = pybamm.step.CrateTermination(0.05, operator="<")
+        exp = pybamm.Experiment(
+            [pybamm.step.current(1.0, duration=3600, termination=[term])]
+        )
+        config = exp.to_config()
+        assert config["cycles"][0][0]["terminations"][0]["type"] == "c-rate"
+        exp2 = pybamm.Experiment.from_config(config)
+        assert isinstance(exp2.steps[0].termination[0], pybamm.step.CrateTermination)
+
+
+class TestSolverSerialization:
+    """Tests for pybamm.BaseSolver.to_config() / from_config() round-trips."""
+
+    def test_scipy_solver_round_trip(self):
+        solver = pybamm.ScipySolver(rtol=1e-5, atol=1e-7)
+        config = solver.to_config()
+        assert config["type"] == "ScipySolver"
+        assert config["rtol"] == pytest.approx(1e-5)
+        assert config["atol"] == pytest.approx(1e-7)
+        solver2 = pybamm.BaseSolver.from_config(config)
+        assert isinstance(solver2, pybamm.ScipySolver)
+        assert solver2.rtol == pytest.approx(1e-5)
+        assert solver2.atol == pytest.approx(1e-7)
+
+    def test_casadi_solver_round_trip(self):
+        solver = pybamm.CasadiSolver(rtol=1e-4, atol=1e-5, mode="fast")
+        config = solver.to_config()
+        assert config["type"] == "CasadiSolver"
+        assert config["mode"] == "fast"
+        assert config["rtol"] == pytest.approx(1e-4)
+        solver2 = pybamm.BaseSolver.from_config(config)
+        assert isinstance(solver2, pybamm.CasadiSolver)
+        assert solver2.rtol == pytest.approx(1e-4)
+        assert solver2.mode == "fast"
+
+    def test_composite_solver_round_trip(self):
+        sub1 = pybamm.ScipySolver(rtol=1e-5)
+        sub2 = pybamm.CasadiSolver(rtol=1e-4, mode="fast")
+        cs = pybamm.CompositeSolver([sub1, sub2])
+        config = cs.to_config()
+        assert config["type"] == "CompositeSolver"
+        assert len(config["sub_solvers"]) == 2
+        assert config["sub_solvers"][0]["type"] == "ScipySolver"
+        assert config["sub_solvers"][1]["type"] == "CasadiSolver"
+        cs2 = pybamm.BaseSolver.from_config(config)
+        assert isinstance(cs2, pybamm.CompositeSolver)
+        assert isinstance(cs2.sub_solvers[0], pybamm.ScipySolver)
+        assert isinstance(cs2.sub_solvers[1], pybamm.CasadiSolver)
+        assert cs2.sub_solvers[0].rtol == pytest.approx(1e-5)
+        assert cs2.sub_solvers[1].mode == "fast"
+
+    def test_unknown_solver_type_raises(self):
+        with pytest.raises(ValueError, match="Unknown solver type"):
+            pybamm.BaseSolver.from_config({"type": "NonExistentSolver"})
