@@ -11,6 +11,33 @@ from scipy.sparse import coo_matrix, csr_matrix
 
 import pybamm
 from pybamm.expression_tree.binary_operators import _Heaviside
+from pybamm.expression_tree.symbol import domain_size
+
+
+class TestDomainSize:
+    def test_empty_domain(self):
+        assert domain_size([]) == 1
+        assert domain_size(None) == 1
+
+    def test_fixed_domains(self):
+        assert domain_size(["negative electrode"]) == 11
+        assert domain_size(["separator"]) == 13
+        assert domain_size(["positive electrode"]) == 17
+
+    def test_fixed_domains_are_additive(self):
+        assert domain_size(["negative electrode", "separator"]) == 11 + 13
+        assert (
+            domain_size(["negative electrode", "separator", "positive electrode"])
+            == 11 + 13 + 17
+        )
+
+    def test_custom_domains_are_additive(self):
+        size_a = domain_size(["domain_a"])
+        size_b = domain_size(["domain_b"])
+        assert domain_size(["domain_a", "domain_b"]) == size_a + size_b
+
+    def test_custom_domain_size_at_least_2(self):
+        assert domain_size(["any_custom_domain"]) >= 2
 
 
 class TestSymbol:
