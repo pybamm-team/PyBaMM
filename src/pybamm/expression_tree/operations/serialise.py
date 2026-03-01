@@ -1924,6 +1924,11 @@ class Serialise:
             try:
                 json.dumps(value)
             except (TypeError, ValueError):
+                warnings.warn(
+                    f"Solver parameter '{param_name}' is not JSON-serializable and "
+                    f"will be omitted from the config.",
+                    stacklevel=2,
+                )
                 continue
 
             config[param_name] = value
@@ -1946,7 +1951,9 @@ class Serialise:
         :class:`pybamm.BaseSolver`
         """
         data = dict(data)
-        solver_type = data.pop("type")
+        solver_type = data.pop("type", None)
+        if solver_type is None:
+            raise ValueError("Solver config must include a 'type' key.")
         solver_class = getattr(pybamm, solver_type, None)
         if solver_class is None:
             raise ValueError(

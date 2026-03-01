@@ -2081,7 +2081,7 @@ class BaseModel:
         return Serialise.load_custom_model(filename)
 
     @staticmethod
-    def from_config(filename: str | dict) -> BaseModel:
+    def from_config(config: str | dict) -> BaseModel:
         """
         Load a model from a config dict, raw model dict, or file path.
 
@@ -2091,7 +2091,7 @@ class BaseModel:
 
         Parameters
         ----------
-        filename : str or dict
+        config : str or dict
             Config or model dictionary, or path to a JSON file.
 
         Returns
@@ -2099,11 +2099,20 @@ class BaseModel:
         :class:`pybamm.BaseModel` or subclass
             The reconstructed symbolic model.
         """
-        if isinstance(filename, dict):
-            data = filename
+        if isinstance(config, dict):
+            data = config
         else:
-            with open(filename) as f:
-                data = json.load(f)
+            try:
+                with open(config) as f:
+                    data = json.load(f)
+            except FileNotFoundError:
+                raise FileNotFoundError(
+                    f"Model config file not found: {config}"
+                ) from None
+            except json.JSONDecodeError as e:
+                raise ValueError(
+                    f"Invalid JSON in model config file '{config}': {e}"
+                ) from e
         if data.get("type") == "custom" and "model" in data:
             return Serialise.load_custom_model(data["model"])
         return Serialise.load_custom_model(data)
