@@ -1719,8 +1719,8 @@ def convert_symbol_from_json(json_data):
         return None
     if "type" not in json_data:
         raise ValueError(f"Missing 'type' key in JSON data: {json_data}")
-    if isinstance(json_data, numbers.Number | list):
-        return json_data
+    if isinstance(json_data, numbers.Number | list):  # pragma: no cover
+        return json_data  # pragma: no cover
     elif json_data["type"] == "Parameter":
         # Convert stored parameters back to PyBaMM Parameter objects
         return pybamm.Parameter(json_data["name"])

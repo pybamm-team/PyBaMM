@@ -2733,3 +2733,119 @@ class TestRegularisationSerialisation:
         reconstructed = pybamm.Arcsinh2._from_json({"children": [a, b], "eps": eps})
         assert isinstance(reconstructed, pybamm.Arcsinh2)
         assert reconstructed.eps == eps
+
+
+class TestCoverageGaps:
+    """Tests targeting specific uncovered lines in serialise.py."""
+
+    def test_serialise_model_variables_deprecation_warning(self):
+        """Line 173: passing a non-None variables= to serialise_model emits DeprecationWarning."""
+        model = pybamm.BaseModel()
+        c = pybamm.Variable("c")
+        model.rhs = {c: -c}
+        model.initial_conditions = {c: pybamm.Scalar(1)}
+        model.variables["c"] = c
+        pybamm.ScipySolver().solve(model, np.linspace(0, 1))
+
+        with pytest.warns(DeprecationWarning, match="variables.*deprecated"):
+            Serialise().serialise_model(model, variables={})
+
+    def test_load_spatial_methods_general_exception_branch(self):
+        """Lines 923-924: a non-Import/AttributeError during spatial method
+        reconstruction raises ValueError via the bare except Exception branch."""
+        data = {
+            "schema_version": SUPPORTED_SCHEMA_VERSION,
+            "spatial_methods": {
+                "negative particle": {
+                    "module": "pybamm.spatial_methods.finite_volume",
+                    "class": "FiniteVolume",
+                }
+            },
+        }
+        import importlib as _importlib
+
+        real_import = _importlib.import_module
+
+        def _patched_import(name, *args, **kwargs):
+            mod = real_import(name, *args, **kwargs)
+            if name == "pybamm.spatial_methods.finite_volume":
+                # Make instantiation raise a plain RuntimeError
+                class _BadFiniteVolume(pybamm.FiniteVolume):
+                    def __init__(self, *a, **kw):
+                        raise RuntimeError("forced failure")
+
+                mod.FiniteVolume = _BadFiniteVolume
+            return mod
+
+        with patch("importlib.import_module", side_effect=_patched_import):
+            with pytest.raises(
+                ValueError, match="Failed to reconstruct spatial method"
+            ):
+                Serialise.load_spatial_methods(data)
+
+    def test_load_custom_model_builtins_object_base_class(self):
+        """Line 1313: when 'builtins.object' triggers ModuleNotFoundError (simulated),
+        the fallback silently uses pybamm.BaseModel."""
+        import importlib as _importlib
+
+        real_import = _importlib.import_module
+
+        model = pybamm.lithium_ion.BasicDFN()
+        model_dict = Serialise.serialise_custom_model(model)
+        model_dict["model"]["base_class"] = "builtins.object"
+
+        def _patched_import(name, *args, **kwargs):
+            if name == "builtins":
+                raise ModuleNotFoundError(f"simulated: no module {name!r}")
+            return real_import(name, *args, **kwargs)
+
+        with patch(
+            "pybamm.expression_tree.operations.serialise.importlib.import_module",
+            side_effect=_patched_import,
+        ):
+            loaded = Serialise.load_custom_model(model_dict)
+        assert isinstance(loaded, pybamm.BaseModel)
+
+    def test_convert_function_to_symbolic_expression_with_expression_function_parameter(
+        self,
+    ):
+        """Lines 1673-1676: passing an ExpressionFunctionParameter (which has
+        get_name/get_args/func) uses the first branch."""
+        from pybamm.expression_tree.operations.serialise import (
+            ExpressionFunctionParameter,
+            convert_function_to_symbolic_expression,
+        )
+
+        def my_func(x):
+            return 2 * pybamm.Parameter("x")
+
+        x_sym = pybamm.Parameter("x")
+        child = 2 * x_sym
+        efp = ExpressionFunctionParameter("my_func", child, "my_func", ["x"])
+        # Give it get_name / get_args / func as the code expects
+        efp.get_name = lambda: "my_func"
+        efp.get_args = lambda: ["x"]
+        efp.func = my_func
+
+        result = convert_function_to_symbolic_expression(efp)
+        assert isinstance(result, ExpressionFunctionParameter)
+        assert result.func_name == "my_func"
+
+    def test_convert_function_to_symbolic_expression_with_partial(self):
+        """Lines 1682-1686: a functools.partial without __name__ uses the
+        second AttributeError fallback."""
+        import functools
+
+        from pybamm.expression_tree.operations.serialise import (
+            ExpressionFunctionParameter,
+            convert_function_to_symbolic_expression,
+        )
+
+        def _base(x):
+            return 2 * pybamm.Parameter("x")
+
+        partial_func = functools.partial(_base)
+        # functools.partial has no __name__, triggering the fallback branch
+        result = convert_function_to_symbolic_expression(partial_func)
+        assert isinstance(result, ExpressionFunctionParameter)
+        assert result.func_name == "_base"
