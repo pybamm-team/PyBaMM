@@ -41,6 +41,14 @@ class ModelSolutionObservability(str, Enum):
         return bool(self == ModelSolutionObservability.ENABLED)
 
 
+_BUILTIN_MODULE_NAMES = (
+    "lithium_ion",
+    "lead_acid",
+    "equivalent_circuit",
+    "sodium_ion",
+)
+
+
 class BaseModel:
     """
     Base model class for other models to extend.
@@ -2017,17 +2025,38 @@ class BaseModel:
                 f"Failed to write {label} to file '{filename}': {file_err}"
             ) from file_err
 
+    @staticmethod
+    def _find_builtin_module(cls):
+        """Return the pybamm sub-module name if *cls* is a built-in model
+        class, else ``None``.
+
+        A class is "built-in" when ``getattr(pybamm.<mod>, cls.__name__)``
+        returns the exact same class object (identity check).
+        """
+        for mod_name in _BUILTIN_MODULE_NAMES:
+            mod = getattr(pybamm, mod_name, None)
+            if mod is not None:
+                candidate = getattr(mod, cls.__name__, None)
+                if candidate is cls:
+                    return mod_name
+        return None
+
     def to_config(
         self,
         filename: str | Path | None = None,
         compress: bool = False,
     ) -> dict:
         """
-        Convert the model to a config dictionary with wrapped structure.
+        Convert the model to a config dictionary.
 
-        Returns a dict with ``"type": "custom"`` and ``"model"`` (the
-        serialised model), suitable for embedding in larger configs. Use
-        :meth:`to_json` for the raw model dictionary.
+        Built-in models (those found in ``pybamm.lithium_ion``,
+        ``pybamm.lead_acid``, etc.) produce a compact format::
+
+            {"type": "SPM", "module": "lithium_ion", "options": {...}}
+
+        Custom or user-defined models produce the full serialised format::
+
+            {"type": "custom", "model": ..., "geometry": ..., ...}
 
         Parameters
         ----------
@@ -2041,12 +2070,56 @@ class BaseModel:
         Returns
         -------
         dict
-            Config dict with keys ``"type"`` (``"custom"``) and ``"model"``.
+            Config dictionary.
         """
-        model_config = {
-            "type": "custom",
-            "model": Serialise.serialise_custom_model(self, compress=compress),
-        }
+        mod_name = self._find_builtin_module(type(self))
+
+        if mod_name is not None:
+            # Built-in model — compact format
+            model_config: dict = {
+                "type": type(self).__name__,
+                "module": mod_name,
+            }
+            if hasattr(self, "options"):
+                model_config["options"] = dict(self.options)
+        else:
+            # Custom / user-defined model — full serialised format
+            model_config = {
+                "type": "custom",
+                "model": Serialise.serialise_custom_model(self, compress=compress),
+            }
+            # Attach defaults when available
+            if hasattr(self, "default_geometry"):
+                try:
+                    model_config["geometry"] = Serialise.serialise_custom_geometry(
+                        self.default_geometry
+                    )
+                except Exception:
+                    pass
+            if hasattr(self, "default_var_pts"):
+                try:
+                    model_config["var_pts"] = Serialise.serialise_var_pts(
+                        self.default_var_pts
+                    )
+                except Exception:
+                    pass
+            if hasattr(self, "default_spatial_methods"):
+                try:
+                    model_config["spatial_methods"] = (
+                        Serialise.serialise_spatial_methods(
+                            self.default_spatial_methods
+                        )
+                    )
+                except Exception:
+                    pass
+            if hasattr(self, "default_submesh_types"):
+                try:
+                    model_config["submesh_types"] = Serialise.serialise_submesh_types(
+                        self.default_submesh_types
+                    )
+                except Exception:
+                    pass
+
         if filename is not None:
             self._write_json_to_file(model_config, filename, label="model config")
         return model_config
@@ -2085,9 +2158,12 @@ class BaseModel:
         """
         Load a model from a config dict, raw model dict, or file path.
 
-        Accepts (1) the wrapped config from :meth:`to_config` (dict with
-        ``"type": "custom"`` and ``"model"``), (2) the raw model dict from
-        :meth:`to_json`, or (3) a path to a JSON file in either format.
+        Accepts:
+
+        1. Built-in config: ``{"type": "SPM", "module": "lithium_ion"}``
+        2. Custom config: ``{"type": "custom", "model": ...}``
+        3. Raw model dict from :meth:`to_json`
+        4. A path to a JSON file in any of the above formats
 
         Parameters
         ----------
@@ -2113,8 +2189,32 @@ class BaseModel:
                 raise ValueError(
                     f"Invalid JSON in model config file '{config}': {e}"
                 ) from e
-        if data.get("type") == "custom" and "model" in data:
+
+        type_name = data.get("type")
+
+        # Custom / full serialised model
+        if type_name == "custom" and "model" in data:
             return Serialise.load_custom_model(data["model"])
+
+        # Built-in model (e.g. {"type": "SPM", "module": "lithium_ion"})
+        if type_name is not None and type_name != "custom":
+            mod_name = data.get("module", "lithium_ion")
+            mod = getattr(pybamm, mod_name, None)
+            if mod is None:
+                raise ValueError(f"Unknown pybamm module: {mod_name}")
+            model_cls = getattr(mod, type_name, None)
+            if model_cls is None:
+                raise ValueError(f"Model '{type_name}' not found in pybamm.{mod_name}")
+            options = data.get("options", {})
+            # JSON has no tuples; convert lists back to tuples
+            if options:
+                options = {
+                    k: tuple(v) if isinstance(v, list) else v
+                    for k, v in options.items()
+                }
+            return model_cls(options=options) if options else model_cls()
+
+        # Fallback: raw to_json dict (no "type" key)
         return Serialise.load_custom_model(data)
 
 

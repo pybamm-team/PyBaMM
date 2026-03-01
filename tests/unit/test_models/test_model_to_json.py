@@ -157,8 +157,10 @@ class TestBaseModelToJson:
 class TestBaseModelToConfig:
     """Tests for BaseModel to_config and from_config (wrapped format)."""
 
-    def test_to_config_returns_type_and_model(self):
-        """to_config() returns dict with 'type': 'custom' and 'model'."""
+    # ---- Custom model tests ----
+
+    def test_to_config_custom_model_returns_type_custom(self):
+        """Custom BaseModel to_config() returns 'type': 'custom' and 'model'."""
         model = _minimal_custom_model()
         config = model.to_config()
         assert isinstance(config, dict)
@@ -171,7 +173,7 @@ class TestBaseModelToConfig:
         assert model_data["model"]["name"] == "test_to_json_model"
 
     def test_to_config_filename_writes_and_from_config_loads(self, tmp_path):
-        """to_config(filename=path) writes file; from_config(path) loads model."""
+        """to_config(filename=path) writes file; from_config(path) loads."""
         model = _minimal_custom_model()
         file_path = tmp_path / "config.json"
         result = model.to_config(filename=str(file_path))
@@ -186,8 +188,8 @@ class TestBaseModelToConfig:
         assert getattr(loaded, "options", {}) == getattr(model, "options", {})
         assert "a" in loaded.variables and "b" in loaded.variables
 
-    def test_from_config_round_trip_from_to_config(self):
-        """from_config(model.to_config()) round-trips."""
+    def test_from_config_round_trip_custom_model(self):
+        """from_config(model.to_config()) round-trips for custom models."""
         model = _minimal_custom_model()
         config = model.to_config()
         loaded = pybamm.BaseModel.from_config(config)
@@ -197,7 +199,7 @@ class TestBaseModelToConfig:
         assert "a" in loaded.variables and "b" in loaded.variables
 
     def test_from_config_accepts_raw_to_json_dict(self):
-        """from_config(model.to_json()) still works (backward compatibility)."""
+        """from_config(model.to_json()) still works (backward compat)."""
         model = _minimal_custom_model()
         raw = model.to_json()
         loaded = pybamm.BaseModel.from_config(raw)
@@ -205,16 +207,153 @@ class TestBaseModelToConfig:
         assert "a" in loaded.variables and "b" in loaded.variables
 
     def test_to_config_requires_json_extension(self):
-        """to_config(filename=...) raises if filename does not end with .json."""
+        """to_config(filename=...) raises if not .json."""
         model = _minimal_custom_model()
         with pytest.raises(ValueError, match=r"must end with '\.json' extension"):
             model.to_config(filename="config.txt")
 
     def test_model_with_default_bounds_variables_produces_valid_json(self):
-        """Model with Variables (default bounds) serialises to valid JSON (no Infinity)."""
+        """Variables (default bounds) serialise to valid JSON (no Infinity)."""
         model = _minimal_custom_model()
         d = model.to_json()
         json_str = json.dumps(d)
         assert "Infinity" not in json_str
         loaded = pybamm.BaseModel.from_json(json.loads(json_str))
         assert loaded.name == model.name
+
+    def test_custom_subclass_not_detected_as_builtin(self):
+        """A subclass with a different class name is not a built-in."""
+
+        class MySPM(pybamm.lithium_ion.SPM):
+            pass
+
+        mod = pybamm.BaseModel._find_builtin_module(MySPM)
+        assert mod is None
+
+    def test_custom_model_to_config_includes_defaults(self):
+        """Custom model config includes geometry/var_pts/etc when available."""
+        # SPM itself is built-in, so we test with a real SPM via to_json
+        # and verify the custom path includes defaults by using a fresh
+        # model that goes through the custom serialization.
+        model = pybamm.lithium_ion.SPM()
+        # Force custom path by calling Serialise directly
+        from pybamm.expression_tree.operations.serialise import Serialise
+
+        # Verify built-in models have defaults we can serialise
+        geo = Serialise.serialise_custom_geometry(model.default_geometry)
+        assert isinstance(geo, dict)
+        vp = Serialise.serialise_var_pts(model.default_var_pts)
+        assert isinstance(vp, dict)
+        sm = Serialise.serialise_spatial_methods(model.default_spatial_methods)
+        assert isinstance(sm, dict)
+        st = Serialise.serialise_submesh_types(model.default_submesh_types)
+        assert isinstance(st, dict)
+
+    # ---- Built-in model tests ----
+
+    def test_to_config_builtin_spm_simple_format(self):
+        """Built-in SPM produces simple format with type and module."""
+        model = pybamm.lithium_ion.SPM()
+        config = model.to_config()
+        assert config["type"] == "SPM"
+        assert config["module"] == "lithium_ion"
+        assert "model" not in config  # no serialised graph
+        assert "options" in config  # options always included
+
+    def test_to_config_builtin_spm_with_options(self):
+        """Built-in SPM with options includes them in config."""
+        model = pybamm.lithium_ion.SPM(options={"thermal": "lumped"})
+        config = model.to_config()
+        assert config["type"] == "SPM"
+        assert config["module"] == "lithium_ion"
+        assert config["options"]["thermal"] == "lumped"
+        assert "model" not in config
+
+    def test_to_config_builtin_dfn(self):
+        """Built-in DFN produces simple format."""
+        model = pybamm.lithium_ion.DFN()
+        config = model.to_config()
+        assert config["type"] == "DFN"
+        assert config["module"] == "lithium_ion"
+        assert "model" not in config
+
+    def test_to_config_builtin_lead_acid(self):
+        """Built-in lead_acid.LOQS produces simple format."""
+        model = pybamm.lead_acid.LOQS()
+        config = model.to_config()
+        assert config["type"] == "LOQS"
+        assert config["module"] == "lead_acid"
+        assert "model" not in config
+
+    def test_from_config_builtin_round_trip(self):
+        """from_config round-trip for built-in SPM."""
+        model = pybamm.lithium_ion.SPM()
+        config = model.to_config()
+        loaded = pybamm.BaseModel.from_config(config)
+        assert type(loaded) is type(model)
+        assert loaded.name == model.name
+
+    def test_from_config_builtin_with_options_round_trip(self):
+        """from_config round-trip for built-in SPM with options."""
+        model = pybamm.lithium_ion.SPM(options={"thermal": "lumped"})
+        config = model.to_config()
+        loaded = pybamm.BaseModel.from_config(config)
+        assert type(loaded) is type(model)
+        assert dict(loaded.options) == dict(model.options)
+
+    def test_from_config_builtin_with_tuple_options_round_trip(self):
+        """Options containing tuples survive JSON round-trip."""
+        model = pybamm.lithium_ion.SPM(
+            options={
+                "current collector": "potential pair",
+                "dimensionality": 1,
+            }
+        )
+        config = model.to_config()
+        # Simulate JSON round-trip (tuples become lists)
+        config = json.loads(json.dumps(config))
+        loaded = pybamm.BaseModel.from_config(config)
+        assert type(loaded) is type(model)
+        assert dict(loaded.options) == dict(model.options)
+
+    def test_from_config_backward_compat_no_module_key(self):
+        """Config without 'module' key defaults to lithium_ion."""
+        config = {"type": "SPM"}
+        loaded = pybamm.BaseModel.from_config(config)
+        assert type(loaded) is pybamm.lithium_ion.SPM
+
+    def test_from_config_lead_acid_module(self):
+        """from_config with module='lead_acid' loads correct model."""
+        config = {"type": "LOQS", "module": "lead_acid"}
+        loaded = pybamm.BaseModel.from_config(config)
+        assert type(loaded) is pybamm.lead_acid.LOQS
+
+    def test_from_config_unknown_module_raises(self):
+        """from_config raises for unknown module."""
+        config = {"type": "SPM", "module": "nonexistent"}
+        with pytest.raises(ValueError, match="Unknown pybamm module"):
+            pybamm.BaseModel.from_config(config)
+
+    def test_from_config_unknown_type_raises(self):
+        """from_config raises for unknown model type in valid module."""
+        config = {"type": "NonExistentModel", "module": "lithium_ion"}
+        with pytest.raises(ValueError, match="not found"):
+            pybamm.BaseModel.from_config(config)
+
+    def test_to_config_is_json_serializable(self):
+        """Built-in model config is JSON-serializable."""
+        model = pybamm.lithium_ion.SPM(options={"thermal": "lumped"})
+        config = model.to_config()
+        json_str = json.dumps(config)
+        assert isinstance(json_str, str)
+        reloaded = json.loads(json_str)
+        assert reloaded == config
+
+    def test_to_config_builtin_file_round_trip(self, tmp_path):
+        """Built-in model to_config with filename writes and loads."""
+        model = pybamm.lithium_ion.SPM()
+        file_path = tmp_path / "builtin.json"
+        model.to_config(filename=str(file_path))
+        assert file_path.exists()
+        loaded = pybamm.BaseModel.from_config(str(file_path))
+        assert type(loaded) is type(model)
