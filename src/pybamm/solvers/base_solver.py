@@ -267,10 +267,14 @@ class BaseSolver:
                 t_casadi = vars_for_processing["t_casadi"]
                 y_casadi = vars_for_processing["y_casadi"]
                 p_casadi_stacked = vars_for_processing["p_casadi_stacked"]
-                mass_matrix_inv = casadi.MX(model.mass_matrix_inv.entries)
-                explicit_rhs = mass_matrix_inv @ rhs(
-                    t_casadi, y_casadi, p_casadi_stacked
-                )
+                rhs_eval = rhs(t_casadi, y_casadi, p_casadi_stacked)
+                if model.is_standard_form_dae:
+                    explicit_rhs = rhs_eval
+                else:
+                    M_ode = casadi.DM(
+                        model.mass_matrix.entries[: model.len_rhs, : model.len_rhs]
+                    )
+                    explicit_rhs = casadi.solve(M_ode, rhs_eval)
                 model.casadi_rhs = casadi.Function(
                     "rhs", [t_casadi, y_casadi, p_casadi_stacked], [explicit_rhs]
                 )
@@ -475,19 +479,12 @@ class BaseSolver:
         """
         Set up model attributes related to sensitivities.
         """
-        has_mass_matrix = model.mass_matrix is not None
-        has_mass_matrix_inv = model.mass_matrix_inv is not None
-
-        if not has_mass_matrix:
+        if model.mass_matrix is None:
             return
 
         model.mass_matrix = pybamm.Matrix(
             model.mass_matrix.entries[: model.len_rhs_and_alg, : model.len_rhs_and_alg]
         )
-        if has_mass_matrix_inv:
-            model.mass_matrix_inv = pybamm.Matrix(
-                model.mass_matrix_inv.entries[: model.len_rhs, : model.len_rhs]
-            )
 
     def _set_up_events(self, model, t_eval, inputs: list[dict], vars_for_processing):
         # Check for heaviside and modulo functions in rhs and algebraic and add
@@ -1224,6 +1221,7 @@ class BaseSolver:
         save=True,
         calculate_sensitivities=False,
         t_interp=None,
+        state_mapper=None,
     ):
         """
         Step the solution of the model forward by a given time increment. The
@@ -1259,6 +1257,11 @@ class BaseSolver:
         t_interp : None, list or ndarray, optional
             The times (in seconds) at which to interpolate the solution. Defaults to None.
             Only valid for solvers that support intra-solve interpolation (`IDAKLUSolver`).
+        state_mapper : tuple of (function, jacobian_y, jacobian_p), optional
+            A tuple containing a function and its Jacobians to map the state from the old solution to the new solution.
+            `function`, `jacobian_y` and `jacobian_p` are casadi/jax/python functions that have been processed using `BaseSolver.process`.
+            If not provided, then `BaseModel.set_initial_conditions_from` is used to map the state from the old solution to the new solution
+
         Raises
         ------
         :class:`pybamm.ModelError`
@@ -1380,14 +1383,28 @@ class BaseSolver:
                 ]
 
         else:
-            _, concatenated_initial_conditions = model.set_initial_conditions_from(
-                old_solution,
-                inputs=model_inputs,
-                return_type="ics",
-            )
-            model.y0_list = [
-                concatenated_initial_conditions.evaluate(0, inputs=model_inputs)
-            ]
+            if state_mapper is not None:
+                last_state = old_solution.last_state
+                y_from = last_state.all_ys[0]
+                mapper_func, _mapper_jac, _mapper_jacp = state_mapper
+                p_casadi_stacked = casadi.vertcat(*[p for p in model_inputs.values()])
+
+                model.y0_list = [
+                    mapper_func(
+                        t_start_shifted,
+                        y_from,
+                        p_casadi_stacked,
+                    )
+                ]
+            else:
+                _, concatenated_initial_conditions = model.set_initial_conditions_from(
+                    old_solution,
+                    inputs=model_inputs,
+                    return_type="ics",
+                )
+                model.y0_list = [
+                    concatenated_initial_conditions.evaluate(0, inputs=model_inputs)
+                ]
 
             if using_sensitivities:
                 model.y0S_list = [

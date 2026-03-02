@@ -22,6 +22,7 @@ from . import config
 # Classes for the Expression Tree
 from .expression_tree.symbol import *
 from .expression_tree.binary_operators import *
+from .expression_tree.tracing import is_tracing, tracing
 from .expression_tree.concatenations import *
 from .expression_tree.array import Array, linspace, meshgrid
 from .expression_tree.matrix import Matrix
