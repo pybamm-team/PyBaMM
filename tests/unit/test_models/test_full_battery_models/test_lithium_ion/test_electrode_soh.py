@@ -905,9 +905,18 @@ class TestGetInitialSOC:
         parameter_values_half_cell = pybamm.lithium_ion.DFN(
             {"working electrode": "positive"}
         ).default_parameter_values
+        parameter_values_composite = pybamm.ParameterValues("Chen2020_composite")
+        options_composite = {"particle phases": ("2", "1")}
 
         with pytest.warns(UserWarning, match=r"is greater than 1"):
-            pybamm.lithium_ion.get_initial_stoichiometries(2, parameter_values, None)
+            pybamm.lithium_ion.get_initial_stoichiometries(
+                1.5, parameter_values, direction=None
+            )
+
+        with pytest.warns(UserWarning, match=r"is less than 0"):
+            pybamm.lithium_ion.get_initial_stoichiometries(
+                -0.1, parameter_values, direction=None
+            )
 
         with pytest.warns(UserWarning, match=r"outside the voltage limits"):
             pybamm.lithium_ion.get_initial_stoichiometries(
@@ -931,7 +940,27 @@ class TestGetInitialSOC:
 
         with pytest.warns(UserWarning, match=r"is greater than 1"):
             pybamm.lithium_ion.get_initial_stoichiometry_half_cell(
-                2, parameter_values_half_cell
+                1.5, parameter_values_half_cell
+            )
+        
+        with pytest.warns(UserWarning, match=r"is less than 0"):
+            pybamm.lithium_ion.get_initial_stoichiometry_half_cell(
+                -0.1, parameter_values_half_cell
+            )
+
+        with pytest.raises(ValueError, match=r"Invalid initial value."):
+            pybamm.lithium_ion.get_initial_stoichiometries_composite(
+                "5 A", parameter_values_composite, options=options_composite
+            )
+
+        with pytest.warns(UserWarning, match=r"is greater than 1"):
+            pybamm.lithium_ion.get_initial_stoichiometries_composite(
+                1.5, parameter_values_composite, options=options_composite
+            )
+        
+        with pytest.warns(UserWarning, match=r"is less than 0"):
+            pybamm.lithium_ion.get_initial_stoichiometries_composite(
+                -0.1, parameter_values_composite, options=options_composite
             )
 
         with pytest.raises(
