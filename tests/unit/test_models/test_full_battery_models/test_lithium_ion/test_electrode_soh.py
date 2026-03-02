@@ -942,7 +942,7 @@ class TestGetInitialSOC:
             pybamm.lithium_ion.get_initial_stoichiometry_half_cell(
                 1.5, parameter_values_half_cell
             )
-        
+
         with pytest.warns(UserWarning, match=r"is less than 0"):
             pybamm.lithium_ion.get_initial_stoichiometry_half_cell(
                 -0.1, parameter_values_half_cell
@@ -957,7 +957,7 @@ class TestGetInitialSOC:
             pybamm.lithium_ion.get_initial_stoichiometries_composite(
                 1.5, parameter_values_composite, options=options_composite
             )
-        
+
         with pytest.warns(UserWarning, match=r"is less than 0"):
             pybamm.lithium_ion.get_initial_stoichiometries_composite(
                 -0.1, parameter_values_composite, options=options_composite
