@@ -7,7 +7,6 @@ import pandas as pd
 import pytest
 from scipy.integrate import quad_vec
 from scipy.interpolate import CubicHermiteSpline
-from scipy.sparse import eye
 
 import pybamm
 from tests import get_discretisation_for_testing, no_internet_connection
