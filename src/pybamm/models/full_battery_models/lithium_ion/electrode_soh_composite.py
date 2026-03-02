@@ -832,8 +832,20 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
         if isinstance(initial_value, str) and initial_value.endswith("V"):
             V_init = float(initial_value[:-1])
             initialization_method = "voltage"
-        elif isinstance(initial_value, float) and 0 <= initial_value <= 1:
+        elif isinstance(initial_value, float):
             initialization_method = "SOC"
+            if initial_value > 1:
+                warnings.warn(
+                    message=f"Initial SoC {initial_value} is greater than 1",
+                    category=UserWarning,
+                    stacklevel=2,
+                )
+            elif initial_value < 0:
+                warnings.warn(
+                    message=f"Initial SoC {initial_value} is less than 0",
+                    category=UserWarning,
+                    stacklevel=2,
+                )
         else:
             raise ValueError(
                 "Invalid initial value. Expected a float between 0 and 1 "
