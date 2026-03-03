@@ -1,4 +1,5 @@
 import io
+import itertools
 import warnings
 from contextlib import redirect_stdout
 
@@ -631,8 +632,8 @@ class TestIDAKLUSolver:
         disc = pybamm.Discretisation()
         disc.process_model(model)
 
-        t_eval = [0, 1]
-        t_interp = np.linspace(t_eval[0], t_eval[-1], 100)
+        t_eval = np.linspace(0, 1, 3)
+        t_interp = t_eval
         solver = pybamm.IDAKLUSolver()
         soln_base = solver.solve(model, t_eval, t_interp=t_interp)
 
@@ -651,59 +652,62 @@ class TestIDAKLUSolver:
         s = f.getvalue()
         assert len(s) == 0
 
-        # test everything else
-        for jacobian in ["none", "dense", "sparse", "matrix-free", "garbage"]:
-            for linear_solver in [
-                "SUNLinSol_SPBCGS",
-                "SUNLinSol_Dense",
-                "SUNLinSol_KLU",
-                "SUNLinSol_SPFGMR",
-                "SUNLinSol_SPGMR",
-                "SUNLinSol_SPTFQMR",
-                "garbage",
-            ]:
-                for precon in ["none", "BBDP"]:
-                    options = {
-                        "jacobian": jacobian,
-                        "linear_solver": linear_solver,
-                        "preconditioner": precon,
-                        "max_num_steps": 10000,
-                    }
-                    solver = pybamm.IDAKLUSolver(
-                        atol=1e-8,
-                        rtol=1e-8,
-                        options=options,
-                    )
-                    works = (
-                        (jacobian == "none" and (linear_solver == "SUNLinSol_Dense"))
-                        or (
-                            jacobian == "dense" and (linear_solver == "SUNLinSol_Dense")
-                        )
-                        or (
-                            jacobian == "sparse"
-                            and (
-                                linear_solver != "SUNLinSol_Dense"
-                                and linear_solver != "garbage"
-                            )
-                        )
-                        or (
-                            jacobian == "matrix-free"
-                            and (
-                                linear_solver != "SUNLinSol_KLU"
-                                and linear_solver != "SUNLinSol_Dense"
-                                and linear_solver != "garbage"
-                            )
-                        )
-                    )
+        jacobians = ["none", "dense", "sparse", "matrix-free", "garbage"]
+        linear_solvers = [
+            "SUNLinSol_SPBCGS",
+            "SUNLinSol_Dense",
+            "SUNLinSol_KLU",
+            "SUNLinSol_SPFGMR",
+            "SUNLinSol_SPGMR",
+            "SUNLinSol_SPTFQMR",
+            "garbage",
+        ]
+        preconditions = ["none", "BBDP"]
+        newton_modes = ["full", "algebraic"]
 
-                    if works:
-                        soln = solver.solve(model, t_eval, t_interp=t_interp)
-                        np.testing.assert_allclose(
-                            soln.y, soln_base.y, rtol=1e-5, atol=1e-4
-                        )
-                    else:
-                        with pytest.raises(ValueError):
-                            soln = solver.solve(model, t_eval, t_interp=t_interp)
+        # test everything else
+        for jacobian, linear_solver, precon, newton_mode in itertools.product(jacobians, linear_solvers, preconditions, newton_modes):
+            options = {
+                "jacobian": jacobian,
+                "linear_solver": linear_solver,
+                "preconditioner": precon,
+                "newton_mode": newton_mode,
+            }
+            solver = pybamm.IDAKLUSolver(
+                atol=1e-8,
+                rtol=1e-8,
+                options=options,
+            )
+            works = (
+                (jacobian == "none" and (linear_solver == "SUNLinSol_Dense"))
+                or (
+                    jacobian == "dense" and (linear_solver == "SUNLinSol_Dense")
+                )
+                or (
+                    jacobian == "sparse"
+                    and (
+                        linear_solver != "SUNLinSol_Dense"
+                        and linear_solver != "garbage"
+                    )
+                )
+                or (
+                    jacobian == "matrix-free"
+                    and (
+                        linear_solver != "SUNLinSol_KLU"
+                        and linear_solver != "SUNLinSol_Dense"
+                        and linear_solver != "garbage"
+                    )
+                )
+            )
+
+            if works:
+                soln = solver.solve(model, t_eval, t_interp=t_interp)
+                np.testing.assert_allclose(
+                    soln.y, soln_base.y, rtol=1e-5, atol=1e-4
+                )
+            else:
+                with pytest.raises(ValueError):
+                    _ = solver.solve(model, t_eval, t_interp=t_interp)
 
     def test_solver_options(self):
         model = pybamm.BaseModel()

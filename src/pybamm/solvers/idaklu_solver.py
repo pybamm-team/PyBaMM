@@ -565,6 +565,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
             "mass_action",
             "sensfn",
             "rootfn",
+            "alg_res",
+            "alg_jac",
         ]:
             self._setup[key] = idaklu.generate_function(self._setup[key + "_pkl"])
 
@@ -576,15 +578,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
             self._setup[key] = [
                 idaklu.generate_function(f) for f in self._setup[key + "_pkl"]
             ]
-
-        for key in ["alg_res", "alg_jac"]:
-            pkl = self._setup.get(key + "_pkl")
-            if pkl is not None:
-                self._setup[key] = idaklu.generate_function(pkl)
-            else:
-                self._setup[key] = idaklu.generate_function(
-                    casadi.Function(f"empty_{key}", [], []).serialize()
-                )
 
         self._setup["solver_function"] = idaklu.create_casadi_solver_group
 
@@ -687,11 +680,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
             return
         return super()._check_events_with_initialization(*args, **kwargs)
 
-    def _check_events_with_initialization_post_solve(self, t_eval, model, y0, inputs_dict):
-        if not self.calc_initial_conditions_in_cpp:
-            return
-        return super()._check_events_with_initialization(t_eval, model, y0, inputs_dict)
-
     def _post_process_solution(self, sol, model, integration_time, inputs_dict):
         number_of_sensitivity_parameters = self._setup[
             "number_of_sensitivity_parameters"
@@ -708,8 +696,18 @@ class IDAKLUSolver(pybamm.BaseSolver):
             y_out = sol.y.reshape((number_of_timesteps, number_of_states))
             y_event = y_out[-1]
 
-        if number_of_timesteps == 1 and sol.flag == 2:
-            self._check_events_with_initialization_post_solve(sol.t, model, y_event, inputs_dict)
+        if number_of_timesteps == 1 and np.any(sol.events_triggered):
+            termination_events = [
+                x
+                for x in model.events
+                if x.event_type == pybamm.EventType.TERMINATION
+            ]
+            idxs = np.where(sol.events_triggered)[0]
+            event_names = [termination_events[idx].name for idx in idxs]
+            raise pybamm.SolverError(
+                f"Events {event_names} are non-positive at initial conditions "
+                f"with inputs {inputs_dict}"
+            )
 
         # return sensitivity solution, we need to flatten yS to
         # (#timesteps * #states (where t is changing the quickest),)
@@ -865,7 +863,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         # calculate the time derivatives of the differential equations
         # for semi-explicit DAEs
-        if model.len_rhs > 0 and self.root_method is not None:
+        if model.len_rhs > 0:
             ydot0_list = [
                 self._rhs_dot_consistent_initialization(y0, model, time, inputs_dict)
                 for y0, inputs_dict in zip(y0_list, inputs_list, strict=True)
