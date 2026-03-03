@@ -292,7 +292,7 @@ class TestElectrodeSOHComposite:
         pvals, options = self._get_params_and_options(composite_electrode)
         # Use composite ESOH helper to compute initial stoichiometries at a voltage
         param = pybamm.LithiumIonParameters(options=options)
-        results = pybamm.lithium_ion.get_initial_stoichiometries_composite(
+        results = pybamm.lithium_ion.ElectrodeSOHComposite.solve_full(
             "4.0 V", pvals, direction=None, param=param, options=options
         )
         # Ensure keys exist and values are equal for both phases (this is not how the equation is set, but should be true)
@@ -954,13 +954,22 @@ class TestGetInitialSOC:
             )
 
         with pytest.warns(UserWarning, match=r"is greater than 1"):
-            pybamm.lithium_ion.get_initial_stoichiometries_composite(
-                1.5, parameter_values_composite, options=options_composite
+            pybamm.lithium_ion.ElectrodeSOHComposite.solve_full(
+                1.001, parameter_values_composite, options=options_composite
             )
 
         with pytest.warns(UserWarning, match=r"is less than 0"):
-            pybamm.lithium_ion.get_initial_stoichiometries_composite(
-                -0.1, parameter_values_composite, options=options_composite
+            pybamm.lithium_ion.ElectrodeSOHComposite.solve_full(
+                -0.001, parameter_values_composite, options=options_composite
+            )
+        with pytest.warns(UserWarning, match=r"is greater than 1"):
+            pybamm.lithium_ion.ElectrodeSOHComposite.solve_split(
+                1.001, parameter_values_composite, options=options_composite
+            )
+        
+        with pytest.warns(UserWarning, match=r"is less than 0"):
+            pybamm.lithium_ion.ElectrodeSOHComposite.solve_split(
+                -0.001, parameter_values_composite, options=options_composite
             )
 
         with pytest.raises(
