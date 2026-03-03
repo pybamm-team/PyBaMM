@@ -173,9 +173,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
         on_failure=None,
         options=None,
     ):
-        self._options = self._check_and_combine_options(options)
-
         self.output_variables = [] if output_variables is None else output_variables
+
+        self._options = self._combine_options(options)
 
         super().__init__(
             method="ida",
@@ -195,9 +195,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         pybamm.citations.register("Hindmarsh2000")
         pybamm.citations.register("Hindmarsh2005")
 
-        # set default options,
-
-    def _check_and_combine_options(self, user_options: dict | None) -> dict:
+    def _combine_options(self, user_options: dict | None) -> dict:
         num_solvers = user_options.get("num_threads", 1) if user_options else 1
         default_options = {
             "print_stats": False,
@@ -239,7 +237,29 @@ class IDAKLUSolver(pybamm.BaseSolver):
         if not user_options:
             return default_options
 
-        return default_options | user_options
+        options = default_options | user_options
+
+        self._check_options(options)
+
+        return options
+
+    def _check_options(self, options: dict):
+        hermite_reduction_factor = options["hermite_reduction_factor"]
+        if hermite_reduction_factor > 1.0:
+            if self.output_variables:
+                raise pybamm.SolverError(
+                    "hermite_reduction_factor cannot be used with "
+                    "output_variables. Both are memory-saving options "
+                    "that are mutually exclusive."
+                )
+            if not options["hermite_interpolation"]:
+                raise pybamm.SolverError(
+                    "hermite_reduction_factor requires "
+                    "hermite_interpolation to be enabled."
+                )
+        else:
+            if hermite_reduction_factor < 1.0:
+                raise pybamm.SolverError("hermite_reduction_factor must be >= 1.0.")
 
     def _check_atol_type(self, atol, model):
         if isinstance(atol, float):
@@ -356,7 +376,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
         alg_ids = np.zeros(len(y0) - len(rhs_ids))
         ids = np.concatenate((rhs_ids, alg_ids))
 
-        number_of_sensitivity_parameters = 0
         if model.jacp_rhs_algebraic_eval is not None:
             sensitivity_names = model.calculate_sensitivities
             if model.convert_to_format == "casadi":
@@ -364,6 +383,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             else:
                 number_of_sensitivity_parameters = len(sensitivity_names)
         else:
+            number_of_sensitivity_parameters = 0
             sensitivity_names = []
 
         # for the casadi solver we just give it dFdp_i
@@ -419,6 +439,18 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 self.dvar_dp_idaklu_fcns.append(
                     idaklu.generate_function(self.dvar_dp_idaklu_fcns_pkl[-1])
                 )
+
+        if (
+            self._options["hermite_reduction_factor"] > 1.0
+            and number_of_sensitivity_parameters > 0
+        ):
+            warnings.warn(
+                "Setting hermite_reduction_factor > 1.0 is not currently supported "
+                "with sensitivities. The hermite_reduction_factor option will be "
+                "ignored.",
+                pybamm.SolverWarning,
+                stacklevel=2,
+            )
 
         self._setup = {
             "number_of_states": len(y0),
@@ -582,7 +614,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
         Overloads the _integrate method from BaseSolver to use the IDAKLU solver
         """
         if model.convert_to_format != "casadi":  # pragma: no cover
-            # Shouldn't ever reach this point
             raise pybamm.SolverError("Unsupported IDAKLU solver configuration.")
 
         inputs_list = inputs_list or [{}]

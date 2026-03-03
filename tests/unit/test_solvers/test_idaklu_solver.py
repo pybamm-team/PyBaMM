@@ -822,11 +822,14 @@ class TestIDAKLUSolver:
         for option in options_success:
             options = {option: options_success[option]}
             solver = pybamm.IDAKLUSolver(rtol=1e-6, atol=1e-6, options=options)
-            soln = solver.solve(model, t_eval, t_interp=t_interp)
+            soln = solver.solve(model, t_eval)
+            # Hermite upsample y
+            itp = CubicHermiteSpline(soln.t, soln.y, soln.yp, axis=1)
+            y_upsampled = itp(t_interp)
 
             # Asserts
             assert all(v == solver.options[k] for k, v in options.items())
-            np.testing.assert_allclose(soln.y, soln_base.y, rtol=1e-5, atol=1e-4)
+            np.testing.assert_allclose(y_upsampled, soln_base.y, rtol=1e-5, atol=1e-4)
 
         options_fail = {
             "max_order_bdf": -1,
@@ -842,9 +845,8 @@ class TestIDAKLUSolver:
         # test that the solver throws a warning
         for option in options_fail:
             options = {option: options_fail[option]}
-            solver = pybamm.IDAKLUSolver(options=options)
-
-            with pytest.raises((pybamm.SolverError, ValueError)):
+            with pytest.raises(pybamm.SolverError):
+                solver = pybamm.IDAKLUSolver(options=options)
                 solver.solve(model, t_eval)
 
     def test_with_output_variables(self):
@@ -1561,6 +1563,33 @@ class TestIDAKLUSolver:
         )
         with pytest.raises(pybamm.SolverError, match=r"hermite_reduction_factor = 1.0"):
             solver_active.reduce_solution(sol)
+
+    def test_hermite_reduction_factor_incompatible(self):
+        """Test errors/warnings when hermite_reduction_factor conflicts with other options."""
+        # Error at construction: hermite_reduction_factor + output_variables
+        with pytest.raises(pybamm.SolverError, match="output_variables"):
+            pybamm.IDAKLUSolver(
+                options={"hermite_reduction_factor": 2.0},
+                output_variables=["Voltage [V]"],
+            )
+
+        # Error at construction: hermite_reduction_factor + hermite_interpolation disabled
+        with pytest.raises(pybamm.SolverError, match="hermite_interpolation"):
+            pybamm.IDAKLUSolver(
+                options={
+                    "hermite_reduction_factor": 2.0,
+                    "hermite_interpolation": False,
+                },
+            )
+
+        # Warning at solve: hermite_reduction_factor + sensitivities
+        model_sens = pybamm.lithium_ion.SPM()
+        param = model_sens.default_parameter_values
+        param["Current function [A]"] = pybamm.InputParameter("I")
+        solver = pybamm.IDAKLUSolver(options={"hermite_reduction_factor": 2.0})
+        sim = pybamm.Simulation(model_sens, parameter_values=param, solver=solver)
+        with pytest.warns(pybamm.SolverWarning, match="not currently supported"):
+            sim.solve([0, 1], inputs={"I": 1.0}, calculate_sensitivities=True)
 
     def test_reduce_solution_basic(self):
         """Test basic post-hoc reduce_solution: fewer points, finite yps, bounded error."""
