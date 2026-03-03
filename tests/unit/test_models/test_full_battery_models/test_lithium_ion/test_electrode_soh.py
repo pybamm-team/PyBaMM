@@ -966,7 +966,7 @@ class TestGetInitialSOC:
             pybamm.lithium_ion.ElectrodeSOHComposite.solve_split(
                 1.001, parameter_values_composite, options=options_composite
             )
-        
+
         with pytest.warns(UserWarning, match=r"is less than 0"):
             pybamm.lithium_ion.ElectrodeSOHComposite.solve_split(
                 -0.001, parameter_values_composite, options=options_composite
