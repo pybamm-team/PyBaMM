@@ -115,7 +115,7 @@ class TestUtil:
             sys.modules[import_pkg] = modules[import_pkg]
 
     @pytest.mark.skip(
-        reason="Temporarily skipped to check if this test is causing CI flakiness"
+        reason="Skipped until refactor to prevent CI flakiness (see issue #5402)"
     )
     def test_pybamm_import(self):
         optional_distribution_deps = get_optional_distribution_deps("pybamm")
