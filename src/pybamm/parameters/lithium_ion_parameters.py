@@ -856,9 +856,9 @@ class ParticleLithiumIonParameters(BaseParameters):
         # approaches X_j
         j0_j = (
             j0_ref_j
-            * pybamm.reg_power(xj, wj)
+            * xj**wj
             * pybamm.exp(f * (1 - aj) * (U - self.U0_j(T, index)))
-            * pybamm.reg_power(c_e / c_e_ref, 1 - aj)
+            * (c_e / c_e_ref) ** (1 - aj)
         )
         return j0_j
 
