@@ -1024,9 +1024,11 @@ class BaseSolver:
             )
 
         # Raise error if solutions[0] only contains one timestep (except for algebraic
-        # solvers, where we may only expect one time in the solution)
+        # solvers, where we may only expect one time in the solution, or failure
+        # solutions where we may only have the initial state)
         if (
             self._algebraic_solver is False
+            and solutions[0].termination != "failure"
             and len(solutions[0].all_ts) == 1
             and len(solutions[0].all_ts[0]) == 1
         ):

@@ -157,7 +157,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         self,
         rtol=1e-4,
         atol=1e-6,
-        root_method="casadi",
+        root_method=None,
         root_tol=1e-6,
         extrap_tol=None,
         on_extrapolation=None,
@@ -202,6 +202,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             "calc_ic": True,
             "num_steps_no_progress": 0,
             "t_no_progress": 0.0,
+            "newton_mode": "algebraic",
         }
         if options is None:
             options = default_options
@@ -259,6 +260,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
         return atol
 
     def set_up(self, model, inputs=None, t_eval=None, ics_only=False):
+        if model.convert_to_format != "casadi":
+            model.convert_to_format = "casadi"
         base_set_up_return = super().set_up(model, inputs, t_eval, ics_only)
 
         if isinstance(inputs, list):
@@ -382,6 +385,10 @@ class IDAKLUSolver(pybamm.BaseSolver):
         atol = getattr(model, "atol", self.atol)
         atol = self._check_atol_type(atol, model)
 
+        # Build algebraic-only residual and Jacobian for Newton sub-block mode
+        alg_res_fn = getattr(model, "algebraic_eval", None)
+        jac_alg_fn = getattr(model, "jac_algebraic_eval", None)
+
         # Serialize casadi functions
         idaklu_solver_fcn = idaklu.create_casadi_solver_group
         rhs_algebraic_pkl = rhs_algebraic.serialize()
@@ -398,6 +405,22 @@ class IDAKLUSolver(pybamm.BaseSolver):
         mass_action = idaklu.generate_function(mass_action_pkl)
         sensfn_pkl = sensfn.serialize()
         sensfn = idaklu.generate_function(sensfn_pkl)
+
+        if alg_res_fn is not None and callable(getattr(alg_res_fn, "serialize", None)):
+            alg_res_pkl = alg_res_fn.serialize()
+            alg_res_idaklu = idaklu.generate_function(alg_res_pkl)
+        else:
+            empty_fn = casadi.Function("empty_alg_res", [], [])
+            alg_res_pkl = empty_fn.serialize()
+            alg_res_idaklu = idaklu.generate_function(alg_res_pkl)
+
+        if jac_alg_fn is not None and callable(getattr(jac_alg_fn, "serialize", None)):
+            jac_alg_pkl = jac_alg_fn.serialize()
+            jac_alg_idaklu = idaklu.generate_function(jac_alg_pkl)
+        else:
+            empty_fn = casadi.Function("empty_alg_jac", [], [])
+            jac_alg_pkl = empty_fn.serialize()
+            jac_alg_idaklu = idaklu.generate_function(jac_alg_pkl)
 
         # if output_variables specified then convert 'variable' casadi
         # function expressions to idaklu-compatible functions
@@ -462,6 +485,10 @@ class IDAKLUSolver(pybamm.BaseSolver):
             "dvar_dy_idaklu_fcns_pkl": self.dvar_dy_idaklu_fcns_pkl,
             "dvar_dp_idaklu_fcns": self.dvar_dp_idaklu_fcns,
             "dvar_dp_idaklu_fcns_pkl": self.dvar_dp_idaklu_fcns_pkl,
+            "alg_res": alg_res_idaklu,
+            "alg_res_pkl": alg_res_pkl,
+            "alg_jac": jac_alg_idaklu,
+            "alg_jac_pkl": jac_alg_pkl,
         }
 
         solver = self._setup["solver_function"](
@@ -487,6 +514,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
             dvar_dy_fcns=self._setup["dvar_dy_idaklu_fcns"],
             dvar_dp_fcns=self._setup["dvar_dp_idaklu_fcns"],
             options=self._options,
+            alg_res=self._setup["alg_res"],
+            alg_jac=self._setup["alg_jac"],
         )
 
         self._setup["solver"] = solver
@@ -512,6 +541,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
             "var_idaklu_fcns",
             "dvar_dy_idaklu_fcns",
             "dvar_dp_idaklu_fcns",
+            "alg_res",
+            "alg_jac",
         ]:
             self._setup.pop(key, None)
         return self.__dict__
@@ -546,6 +577,15 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 idaklu.generate_function(f) for f in self._setup[key + "_pkl"]
             ]
 
+        for key in ["alg_res", "alg_jac"]:
+            pkl = self._setup.get(key + "_pkl")
+            if pkl is not None:
+                self._setup[key] = idaklu.generate_function(pkl)
+            else:
+                self._setup[key] = idaklu.generate_function(
+                    casadi.Function(f"empty_{key}", [], []).serialize()
+                )
+
         self._setup["solver_function"] = idaklu.create_casadi_solver_group
 
         self._setup["solver"] = self._setup["solver_function"](
@@ -571,11 +611,17 @@ class IDAKLUSolver(pybamm.BaseSolver):
             dvar_dy_fcns=self._setup["dvar_dy_idaklu_fcns"],
             dvar_dp_fcns=self._setup["dvar_dp_idaklu_fcns"],
             options=self._options,
+            alg_res=self._setup["alg_res"],
+            alg_jac=self._setup["alg_jac"],
         )
 
     @property
     def options(self):
         return self._options
+
+    @property
+    def calc_initial_conditions_in_cpp(self):
+        return self._root_method is None
 
     def _integrate(
         self,
@@ -636,6 +682,16 @@ class IDAKLUSolver(pybamm.BaseSolver):
             for soln, inputs_dict in zip(solns, inputs_list, strict=False)
         ]
 
+    def _check_events_with_initialization(self, *args, **kwargs):
+        if self.calc_initial_conditions_in_cpp:
+            return
+        return super()._check_events_with_initialization(*args, **kwargs)
+
+    def _check_events_with_initialization_post_solve(self, t_eval, model, y0, inputs_dict):
+        if not self.calc_initial_conditions_in_cpp:
+            return
+        return super()._check_events_with_initialization(t_eval, model, y0, inputs_dict)
+
     def _post_process_solution(self, sol, model, integration_time, inputs_dict):
         number_of_sensitivity_parameters = self._setup[
             "number_of_sensitivity_parameters"
@@ -651,6 +707,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
         else:
             y_out = sol.y.reshape((number_of_timesteps, number_of_states))
             y_event = y_out[-1]
+
+        if number_of_timesteps == 1 and sol.flag == 2:
+            self._check_events_with_initialization_post_solve(sol.t, model, y_event, inputs_dict)
 
         # return sensitivity solution, we need to flatten yS to
         # (#timesteps * #states (where t is changing the quickest),)
@@ -806,7 +865,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         # calculate the time derivatives of the differential equations
         # for semi-explicit DAEs
-        if model.len_rhs > 0:
+        if model.len_rhs > 0 and self.root_method is not None:
             ydot0_list = [
                 self._rhs_dot_consistent_initialization(y0, model, time, inputs_dict)
                 for y0, inputs_dict in zip(y0_list, inputs_list, strict=True)

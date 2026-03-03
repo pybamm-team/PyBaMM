@@ -410,23 +410,15 @@ class TestIDAKLUSolver:
 
         solver = pybamm.IDAKLUSolver()
 
-        # Set up and  model consistently initialize the model
-        solver.set_up(model)
-        t0 = 0.0
-        solver._set_consistent_initialization(model, t0, inputs_list=[{}])
+        # Solve a short interval -- consistent IC is computed in C++
+        # by the Newton solver and IDACalcIC during solve()
+        t_eval = np.linspace(0, 1, 10)
+        sol = solver.solve(model, t_eval)
 
-        # u(t0) = 0, v(t0) = 1
+        # u(t0) = 0, v(t0) = 1 (corrected from v=2 by Newton IC solver)
         np.testing.assert_allclose(
-            model.y0full[0],
+            sol.y[:, 0],
             [0, 1],
-            rtol=1e-7,
-            atol=1e-6,
-        )
-        # u'(t0) = 0.1 * v(t0) = 0.1
-        # Since v is algebraic, the initial derivative is set to 0
-        np.testing.assert_allclose(
-            model.ydot0full[0],
-            [0.1, 0],
             rtol=1e-7,
             atol=1e-6,
         )
@@ -1093,7 +1085,7 @@ class TestIDAKLUSolver:
             atol=atol,
         )
 
-    def test_python_idaklu_deprecation_errors(self):
+    def test_idaklu_forces_casadi_format(self):
         model = pybamm.BaseModel()
         model.convert_to_format = "python"
         u = pybamm.Variable("u")
@@ -1106,21 +1098,9 @@ class TestIDAKLUSolver:
         disc = pybamm.Discretisation()
         disc.process_model(model)
 
-        t_eval = [0, 3]
-
-        solver = pybamm.IDAKLUSolver(
-            root_method="lm",
-        )
-
-        with pytest.raises(
-            pybamm.SolverError,
-            match=r"Unsupported option for convert_to_format=python",
-        ):
-            with pytest.raises(
-                DeprecationWarning,
-                match=r"The python-idaklu solver has been deprecated.",
-            ):
-                _ = solver.solve(model, t_eval)
+        solver = pybamm.IDAKLUSolver()
+        solver.set_up(model)
+        assert model.convert_to_format == "casadi"
 
     def test_extrapolation_events_with_output_variables(self):
         # Make sure the extrapolation checks work with output variables
