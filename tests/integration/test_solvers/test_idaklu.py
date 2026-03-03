@@ -1,3 +1,5 @@
+import logging
+
 import numpy as np
 
 import pybamm
@@ -16,6 +18,32 @@ class TestIDAKLUSolver:
         t_eval = np.linspace(0, 3600, 100)
         solution = pybamm.IDAKLUSolver().solve(model, t_eval)
         np.testing.assert_array_less(1, solution.t.size)
+
+    def test_debug_logs_during_solve(self, caplog):
+        model = pybamm.lithium_ion.SPM()
+        geometry = model.default_geometry
+        param = model.default_parameter_values
+        param.process_model(model)
+        param.process_geometry(geometry)
+        mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
+        disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+        disc.process_model(model)
+
+        # Length 3 so solver hits an interior breakpoint and logs "reinitializing"
+        t_eval = np.array([0.0, 0.5, 1.0])
+        with caplog.at_level(logging.DEBUG, logger="pybamm.logger"):
+            pybamm.IDAKLUSolver().solve(model, t_eval)
+
+        requirements = [
+            "Integrating from",
+            "t =",
+            "reinitializing",
+            "Integration complete",
+        ]
+        for requirement in requirements:
+            assert requirement in caplog.text, (
+                f"Requirement {requirement} not found in log"
+            )
 
     def test_on_spme_sensitivities(self):
         param_name = "Current function [A]"
