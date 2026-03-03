@@ -15,6 +15,7 @@
 #include "idaklu_source/common.hpp"
 #include "idaklu_source/Expressions/Casadi/CasadiFunctions.hpp"
 #include "idaklu_source/sundials_error_handler.hpp"
+#include "idaklu_source/reduce.hpp"
 
 
 casadi::Function generate_casadi_function(const std::string &data)
@@ -146,6 +147,13 @@ PYBIND11_MODULE(idaklu, m)
     "registrations",
     &Registrations
   );
+
+  m.def("reduce_knots", &reduce_knots,
+    "Streaming knot reduction on multi-segment solution data",
+    py::arg("ts"), py::arg("ys"), py::arg("yps"),
+    py::arg("atols"), py::arg("t_evals"),
+    py::arg("rtol"),
+    py::arg("hermite_reduction_factor"));
 
   py::class_<casadi::Function>(m, "Function");
 

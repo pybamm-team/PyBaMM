@@ -1,100 +1,102 @@
 #ifndef PYBAMM_IDAKLU_SOLUTION_DATA_HPP
 #define PYBAMM_IDAKLU_SOLUTION_DATA_HPP
 
-#include <memory>
+#include <vector>
 #include "common.hpp"
 #include "Solution.hpp"
 
+namespace {
+// Helper: wrap a vector as a numpy array (zero-copy via capsule)
+// MUST be called with GIL held!
+inline np_array vector_to_numpy(std::vector<sunrealtype>&& vec) {
+    auto* holder = new std::vector<sunrealtype>(std::move(vec));
+    py::capsule capsule(holder, [](void* v) {
+        delete reinterpret_cast<std::vector<sunrealtype>*>(v);
+    });
+    return np_array(holder->size(), holder->data(), capsule);
+}
+
+// Helper: wrap a vector as a 3D numpy array (zero-copy via capsule)
+// MUST be called with GIL held!
+inline np_array vector_to_numpy_3d(std::vector<sunrealtype>&& vec, 
+                                    ptrdiff_t d0, ptrdiff_t d1, ptrdiff_t d2) {
+    auto* holder = new std::vector<sunrealtype>(std::move(vec));
+    py::capsule capsule(holder, [](void* v) {
+        delete reinterpret_cast<std::vector<sunrealtype>*>(v);
+    });
+    return np_array(std::vector<ptrdiff_t>{d0, d1, d2}, holder->data(), capsule);
+}
+} // anonymous namespace
+
 /**
- * @brief SolutionData class. Contains all the data needed to create a Solution
+ * @brief SolutionData class - holds raw C++ vectors from solve().
+ * Numpy arrays are created only in generate_solution() when GIL is held.
  */
 class SolutionData
 {
   public:
-    /**
-     * @brief Default constructor
-     */
     SolutionData() = default;
-
-    /**
-     * @brief Constructor using fields
-     */
+    
     SolutionData(
       int flag,
-      int number_of_timesteps,
-      int length_of_return_vector,
-      int arg_sens0,
-      int arg_sens1,
-      int arg_sens2,
-      int length_of_final_sv_slice,
-      bool save_hermite,
-      std::unique_ptr<sunrealtype[]> t_return,
-      std::unique_ptr<sunrealtype[]> y_return,
-      std::unique_ptr<sunrealtype[]> yp_return,
-      std::unique_ptr<sunrealtype[]> yS_return,
-      std::unique_ptr<sunrealtype[]> ypS_return,
-      std::unique_ptr<sunrealtype[]> yterm_return)
+      std::vector<sunrealtype>&& t,
+      std::vector<sunrealtype>&& y,
+      std::vector<sunrealtype>&& yp,
+      std::vector<sunrealtype>&& yS,
+      std::vector<sunrealtype>&& ypS,
+      std::vector<sunrealtype>&& yterm,
+      ptrdiff_t arg_sens0,
+      ptrdiff_t arg_sens1,
+      ptrdiff_t arg_sens2,
+      bool save_hermite)
       : flag(flag),
-        number_of_timesteps(number_of_timesteps),
-        length_of_return_vector(length_of_return_vector),
+        t_vec(std::move(t)),
+        y_vec(std::move(y)),
+        yp_vec(std::move(yp)),
+        yS_vec(std::move(yS)),
+        ypS_vec(std::move(ypS)),
+        yterm_vec(std::move(yterm)),
         arg_sens0(arg_sens0),
         arg_sens1(arg_sens1),
         arg_sens2(arg_sens2),
-        length_of_final_sv_slice(length_of_final_sv_slice),
-        save_hermite(save_hermite),
-        t_return(std::move(t_return)),
-        y_return(std::move(y_return)),
-        yp_return(std::move(yp_return)),
-        yS_return(std::move(yS_return)),
-        ypS_return(std::move(ypS_return)),
-        yterm_return(std::move(yterm_return))
+        save_hermite(save_hermite)
     {}
 
-    /**
-     * @brief Destructor - unique_ptr handles cleanup automatically
-     */
     ~SolutionData() = default;
+    SolutionData(const SolutionData&) = delete;
+    SolutionData& operator=(const SolutionData&) = delete;
+    SolutionData(SolutionData&&) noexcept = default;
+    SolutionData& operator=(SolutionData&&) noexcept = default;
 
     /**
-     * @brief Deleted copy constructor
+     * @brief Convert raw vectors to numpy arrays and create Solution.
+     * MUST be called with GIL held (i.e., in serial section).
      */
-    SolutionData(const SolutionData &solution_data) = delete;
-
-    /**
-     * @brief Deleted copy assignment
-     */
-    SolutionData& operator=(const SolutionData &solution_data) = delete;
-
-    /**
-     * @brief Move constructor - unique_ptr handles transfer automatically
-     */
-    SolutionData(SolutionData &&solution_data) noexcept = default;
-
-    /**
-     * @brief Move assignment - unique_ptr handles transfer automatically
-     */
-    SolutionData& operator=(SolutionData &&solution_data) noexcept = default;
-
-    /**
-     * @brief Create a solution object from this data
-     */
-    Solution generate_solution();
+    Solution generate_solution() {
+      return Solution(
+        flag,
+        vector_to_numpy(std::move(t_vec)),
+        vector_to_numpy(std::move(y_vec)),
+        vector_to_numpy(std::move(yp_vec)),
+        vector_to_numpy_3d(std::move(yS_vec), arg_sens0, arg_sens1, arg_sens2),
+        vector_to_numpy_3d(std::move(ypS_vec), 
+                           save_hermite ? arg_sens0 : 0, arg_sens1, arg_sens2),
+        vector_to_numpy(std::move(yterm_vec))
+      );
+    }
 
 private:
     int flag = 0;
-    int number_of_timesteps = 0;
-    int length_of_return_vector = 0;
-    int arg_sens0 = 0;
-    int arg_sens1 = 0;
-    int arg_sens2 = 0;
-    int length_of_final_sv_slice = 0;
+    std::vector<sunrealtype> t_vec;
+    std::vector<sunrealtype> y_vec;
+    std::vector<sunrealtype> yp_vec;
+    std::vector<sunrealtype> yS_vec;
+    std::vector<sunrealtype> ypS_vec;
+    std::vector<sunrealtype> yterm_vec;
+    ptrdiff_t arg_sens0 = 0;
+    ptrdiff_t arg_sens1 = 0;
+    ptrdiff_t arg_sens2 = 0;
     bool save_hermite = false;
-    std::unique_ptr<sunrealtype[]> t_return;
-    std::unique_ptr<sunrealtype[]> y_return;
-    std::unique_ptr<sunrealtype[]> yp_return;
-    std::unique_ptr<sunrealtype[]> yS_return;
-    std::unique_ptr<sunrealtype[]> ypS_return;
-    std::unique_ptr<sunrealtype[]> yterm_return;
 };
 
 #endif // PYBAMM_IDAKLU_SOLUTION_DATA_HPP

@@ -72,7 +72,6 @@ pybind11_add_module(idaklu
         src/pybammsolvers/idaklu_source/common.cpp
         src/pybammsolvers/idaklu_source/Solution.cpp
         src/pybammsolvers/idaklu_source/Solution.hpp
-        src/pybammsolvers/idaklu_source/SolutionData.cpp
         src/pybammsolvers/idaklu_source/SolutionData.hpp
         src/pybammsolvers/idaklu_source/observe.cpp
         src/pybammsolvers/idaklu_source/observe.hpp
@@ -194,6 +193,16 @@ else ()
     endif()
 endif ()
 
+# Math flags for the IDAKLU target.
+# -fno-math-errno: allows inlining fabs/fmax/sqrt without errno-setting overhead.
+# -fno-trapping-math: allows reordering around potential FP exceptions.
+if (NOT MSVC)
+    target_compile_options(idaklu PRIVATE
+        -fno-math-errno
+        -fno-trapping-math
+    )
+endif()
+
 # openmp
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     execute_process(
@@ -205,6 +214,9 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     else ()
         set(OpenMP_ROOT "${HOMEBREW_PREFIX}/opt/libomp")
     endif ()
+endif ()
+if (MSVC)
+    set(OpenMP_CXX_FLAGS "/openmp:experimental")
 endif ()
 find_package(OpenMP)
 if (OpenMP_CXX_FOUND)

@@ -17,7 +17,7 @@ public:
   /**
    * @brief Constructor
    */
-  Solution(int &retval, np_array &t_np, np_array &y_np, np_array &yp_np, np_array &yS_np, np_array &ypS_np, np_array &y_term_np)
+  Solution(int retval, np_array t_np, np_array y_np, np_array yp_np, np_array yS_np, np_array ypS_np, np_array y_term_np)
       : flag(retval), t(t_np), y(y_np), yp(yp_np), yS(yS_np), ypS(ypS_np), y_term(y_term_np)
   {
   }

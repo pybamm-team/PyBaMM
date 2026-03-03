@@ -219,6 +219,8 @@ def exponential_decay_solver(idaklu_module, exponential_decay_model):
         "linear_solution_scaling": True,
         "epsilon_linear_tolerance": 0.05,
         "increment_factor": 1.0,
+        "num_steps_no_progress": 100,
+        "t_no_progress": 0.0,
     }
 
     # Bandwidths (for banded solvers, not used with KLU)

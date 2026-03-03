@@ -12,6 +12,7 @@ using std::vector;
 #include "Solution.hpp"
 #include "IDAKLUStats.hpp"
 #include "SolverLog.hpp"
+#include "HermiteKnotReducer.hpp"
 
 /**
  * @brief Abstract solver class based on OpenMP vectors
@@ -76,15 +77,34 @@ public:
   bool save_hermite;  // cppcheck-suppress unusedStructMember
   bool is_ODE;  // cppcheck-suppress unusedStructMember
   int length_of_return_vector;  // cppcheck-suppress unusedStructMember
-  vector<sunrealtype> t;  // cppcheck-suppress unusedStructMember
-  vector<vector<sunrealtype>> y;  // cppcheck-suppress unusedStructMember
-  vector<vector<sunrealtype>> yp;  // cppcheck-suppress unusedStructMember
-  vector<vector<vector<sunrealtype>>> yS;  // cppcheck-suppress unusedStructMember
-  vector<vector<vector<sunrealtype>>> ypS;  // cppcheck-suppress unusedStructMember
+  
+  // Arrays are stored flat (contiguous) for cache efficiency and zero-copy
+  // to numpy. Indexing uses strides:
+  //   t[i]           -> t[i]
+  //   y[i][j]        -> y[i * stride_y + j]      where stride_y = length_of_return_vector
+  //   yp[i][j]       -> yp[i * stride_yp + j]    where stride_yp = number_of_states
+  //   yS[i][p][j]    -> yS[(i * n_params + p) * stride_y + j]
+  //   ypS[i][p][j]   -> ypS[(i * n_params + p) * stride_yp + j]
+  vector<sunrealtype> t;   // [n_timesteps]
+  vector<sunrealtype> y;   // [n_timesteps * length_of_return_vector]  (flat)
+  vector<sunrealtype> yp;  // [n_timesteps * number_of_states]         (flat)
+  vector<sunrealtype> yS;  // [n_timesteps * n_params * length_of_return_vector] (flat)
+  vector<sunrealtype> ypS; // [n_timesteps * n_params * number_of_states]        (flat)
   SetupOptions const setup_opts;
   SolverOptions const solver_opts;
   IDAKLUStats accumulated_stats;  // Accumulated stats across reinitializations
   SolverLog log_;
+  std::unique_ptr<HermiteKnotReducer> knot_reducer;  // Hermite knot reduction (nullptr if inactive)
+
+  // ── Solve-duration state (valid only during solve()) ──
+  bool use_knot_reduction_ = false;
+  bool save_adaptive_steps_ = false;
+  bool save_interp_steps_ = false;
+  int i_save_ = 0;
+  sunrealtype *y_val_ = nullptr;
+  sunrealtype *yp_val_ = nullptr;
+  vector<sunrealtype *> yS_val_;
+  vector<sunrealtype *> ypS_val_;
 
 #if SUNDIALS_VERSION_MAJOR >= 6
   SUNContext sunctx;
@@ -147,16 +167,6 @@ public:
    * @brief Get the length of the return vector
    */
   int ReturnVectorLength();
-
-  /**
-   * @brief Initialize the storage for the solution
-   */
-  void InitializeStorage(int const N);
-
-  /**
-   * @brief Initialize the storage for Hermite interpolation
-   */
-  void InitializeHermiteStorage(int const N);
 
   /**
    * @brief Apply user-configurable IDA options
@@ -223,98 +233,100 @@ public:
   void ExtendAdaptiveArrays();
 
   /**
-   * @brief Extend the Hermite interpolation info by 1
+   * @brief Initialize storage for the solve
    */
-  void ExtendHermiteArrays();
+  void InitializeSolveStorage(int n_evals, int n_interps);
 
   /**
-   * @brief Set the step values
+   * @brief Copy initial values into SUNDIALS vectors and configure solver
    */
-  void SetStep(
-    sunrealtype &tval,
-    sunrealtype *y_val,
-    sunrealtype *yp_val,
-    vector<sunrealtype *> const &yS_val,
-    vector<sunrealtype *> const &ypS_val,
-    int &i_save
+  void SetupInitialState(
+    const std::vector<sunrealtype> &t_eval,
+    const sunrealtype *y0,
+    const sunrealtype *yp0,
+    const sunrealtype *inputs
   );
 
   /**
-   * @brief Save the interpolated step values
+   * @brief Store the initial point (t0) after consistent initialization
    */
-  void SetStepInterp(
+  void StoreInitialPoint(sunrealtype t0);
+
+  /**
+   * @brief Save a solution point (delegates to Hermite knot reduction or direct save path)
+   */
+  void SavePoint(sunrealtype t_val, bool extend_arrays, bool is_breakpoint);
+
+  /**
+   * @brief Handle a breakpoint at t_eval: finalize interval, reinitialize
+   */
+  void HandleBreakpoint(
+    sunrealtype t_val,
+    const std::vector<sunrealtype> &t_eval,
+    int &i_eval,
+    sunrealtype &t_eval_next,
+    NoProgressGuard &no_progression
+  );
+
+  /**
+   * @brief Finalize output arrays and construct SolutionData
+   */
+  SolutionData BuildSolutionData(int retval);
+
+  /**
+   * @brief Reorder sensitivity arrays from solve layout to numpy layout
+   */
+  void ReorderSensitivities(
+    std::vector<sunrealtype> &yS_out,
+    std::vector<sunrealtype> &ypS_out
+  );
+
+  /**
+   * @brief Set the step values (uses member state y_val_, yp_val_, yS_val_, ypS_val_, i_save_)
+   */
+  void SetStep(sunrealtype &tval);
+
+  /**
+   * @brief Save interpolated step values (uses member state for y/yp/yS/ypS/i_save)
+   */
+  void SaveInterpPoints(
     int &i_interp,
     sunrealtype &t_interp_next,
-    vector<sunrealtype> const &t_interp,
-    sunrealtype &t_val,
-    sunrealtype &t_prev,
-    sunrealtype const &t_next,
-    sunrealtype *y_val,
-    sunrealtype *yp_val,
-    vector<sunrealtype *> const &yS_val,
-    vector<sunrealtype *> const &ypS_val,
-    int &i_save
+    const std::vector<sunrealtype> &t_interp,
+    sunrealtype t_val,
+    sunrealtype t_prev,
+    sunrealtype t_eval_next
   );
 
   /**
    * @brief Save y and yS at the current time
    */
-  void SetStepFull(
-    sunrealtype &t_val,
-    sunrealtype *y_val,
-    vector<sunrealtype *> const &yS_val,
-    int &i_save
-  );
+  void SetStepFull(sunrealtype &tval);
 
   /**
    * @brief Save yS at the current time
    */
-  void SetStepFullSensitivities(
-    sunrealtype &t_val,
-    sunrealtype *y_val,
-    vector<sunrealtype *> const &yS_val,
-    int &i_save
-  );
+  void SetStepFullSensitivities(sunrealtype &tval);
 
   /**
    * @brief Save the output function results at the requested time
    */
-  void SetStepOutput(
-    sunrealtype &t_val,
-    sunrealtype *y_val,
-    const vector<sunrealtype*> &yS_val,
-    int &i_save
-  );
+  void SetStepOutput(sunrealtype &tval);
 
   /**
    * @brief Save the output function sensitivities at the requested time
    */
-  void SetStepOutputSensitivities(
-    sunrealtype &t_val,
-    sunrealtype *y_val,
-    const vector<sunrealtype*> &yS_val,
-    int &i_save
-  );
+  void SetStepOutputSensitivities(sunrealtype &tval);
 
   /**
-   * @brief Save the output function results at the requested time
+   * @brief Save Hermite interpolation derivatives at the requested time
    */
-  void SetStepHermite(
-    sunrealtype &t_val,
-    sunrealtype *yp_val,
-    const vector<sunrealtype*> &ypS_val,
-    int &i_save
-  );
+  void SetStepHermite(sunrealtype &tval);
 
   /**
-   * @brief Save the output function sensitivities at the requested time
+   * @brief Save Hermite interpolation sensitivity derivatives at the requested time
    */
-  void SetStepHermiteSensitivities(
-    sunrealtype &t_val,
-    sunrealtype *yp_val,
-    const vector<sunrealtype*> &ypS_val,
-    int &i_save
-  );
+  void SetStepHermiteSensitivities(sunrealtype &tval);
 
 };
 

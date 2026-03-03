@@ -285,7 +285,6 @@ ext_modules = [
             "src/pybammsolvers/idaklu_source/common.cpp",
             "src/pybammsolvers/idaklu_source/Solution.cpp",
             "src/pybammsolvers/idaklu_source/Solution.hpp",
-            "src/pybammsolvers/idaklu_source/SolutionData.cpp",
             "src/pybammsolvers/idaklu_source/SolutionData.hpp",
             "src/pybammsolvers/idaklu_source/observe.cpp",
             "src/pybammsolvers/idaklu_source/observe.hpp",

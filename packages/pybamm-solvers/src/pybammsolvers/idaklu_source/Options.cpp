@@ -138,7 +138,6 @@ SetupOptions::SetupOptions(py::dict &py_opts)
 
 SolverOptions::SolverOptions(py::dict &py_opts)
     : print_stats(py_opts["print_stats"].cast<bool>()),
-      silence_sundials_errors(false),
       // IDA main solver
       max_order_bdf(py_opts["max_order_bdf"].cast<int>()),
       max_num_steps(py_opts["max_num_steps"].cast<int>()),
@@ -165,19 +164,32 @@ SolverOptions::SolverOptions(py::dict &py_opts)
       epsilon_linear_tolerance(SUN_RCONST(py_opts["epsilon_linear_tolerance"].cast<double>())),
       increment_factor(SUN_RCONST(py_opts["increment_factor"].cast<double>()))
 {
-    // Early termination. Key checks enable backward compatibility with previous versions
-    // of pybamm.
+    // For backwards compatibility, set defaults for options that may not
+    // be present in older PyBaMM versions
+
     num_steps_no_progress = 0;
-    t_no_progress = SUN_RCONST(0.0);
     if (py_opts.contains("num_steps_no_progress")) {
         num_steps_no_progress = py_opts["num_steps_no_progress"].cast<size_t>();
     }
+
+    t_no_progress = SUN_RCONST(0.0);
     if (py_opts.contains("t_no_progress")) {
         t_no_progress = SUN_RCONST(py_opts["t_no_progress"].cast<sunrealtype>());
     }
 
-    // Silence Sundials warnings w/ key checks for previous pybamm versions
+    silence_sundials_errors = false;
     if (py_opts.contains("silence_sundials_errors")) {
         silence_sundials_errors = py_opts["silence_sundials_errors"].cast<bool>();
+    }
+
+    // Knot reduction multiplier (1.0 = no reduction, >1.0 = active)
+    hermite_reduction_factor = 1.0;
+    if (py_opts.contains("hermite_reduction_factor")) {
+        hermite_reduction_factor = py_opts["hermite_reduction_factor"].cast<double>();
+        if (hermite_reduction_factor < 1.0) {
+            throw std::domain_error(
+                "hermite_reduction_factor must be >= 1.0. Got " + std::to_string(hermite_reduction_factor)
+            );
+        }
     }
 }

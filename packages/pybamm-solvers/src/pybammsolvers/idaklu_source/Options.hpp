@@ -56,6 +56,8 @@ struct SolverOptions {
   // Early termination
   size_t num_steps_no_progress;
   sunrealtype t_no_progress;
+  // Knot reduction (streaming spline compression)
+  double hermite_reduction_factor;  // >= 1.0; total error budget is M * solver_tol (threshold = N*(M-1)^2)
   explicit SolverOptions(py::dict &py_opts);
 };
 
