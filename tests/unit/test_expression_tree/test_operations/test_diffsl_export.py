@@ -155,3 +155,24 @@ class TestDiffSLExport:
             model.to_diffeq(outputs=["Heat flux", "Temperature"]),
             "diffsl_export_heat_equation.snapshot",
         )
+
+    def test_reg_power_and_arcsinh2_export(self):
+        model = pybamm.BaseModel()
+
+        x = pybamm.Variable("x")
+        y = pybamm.Variable("y")
+        special = pybamm.reg_power(x, 2, scale=3) + pybamm.arcsinh2(x, y, eps=1e-4)
+
+        model.rhs = {x: special, y: x - y}
+        model.initial_conditions = {x: pybamm.Scalar(1), y: pybamm.Scalar(2)}
+        model.variables = {"special": special}
+
+        disc = pybamm.Discretisation()
+        model = disc.process_model(model)
+
+        export = pybamm.DiffSLExport(model).to_diffeq(outputs=["special"])
+
+        # reg_power branch in diffsl export includes the scale^a factor
+        assert "* pow(3, 2)" in export
+        # arcsinh2 branch in diffsl export uses regularised denominator form
+        assert "copysign(sqrt(pow(" in export
