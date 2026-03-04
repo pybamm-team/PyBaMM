@@ -362,7 +362,8 @@ def _parse_version(version_str, length=3):
     Returns
     -------
     tuple of int
-        The parsed version as a tuple of integers, padded with zeros to the specified length.
+        The parsed version as a tuple of integers normalized to the specified length.
+        Missing components are padded with zeros and extra components are truncated.
     """
     parsed = tuple(
         int(re.match(r"\d+", part).group())
@@ -370,7 +371,7 @@ def _parse_version(version_str, length=3):
         if re.match(r"\d+", part)
     )
 
-    return parsed + (0,) * (length - len(parsed))
+    return (parsed + (0,) * length)[:length]
 
 
 def _is_version_in_range(version_tuple, min_version, max_version):

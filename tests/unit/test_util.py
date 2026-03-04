@@ -178,6 +178,8 @@ class TestUtil:
             ("2.0", (2, 0, 0)),
             ("10.4.5.dev0", (10, 4, 5)),
             ("0.8.0-beta", (0, 8, 0)),
+            ("0.9.0.1", (0, 9, 0)),
+            ("0.8.1.7", (0, 8, 1)),
         ],
     )
     def test_parse_version(self, input_str, expected):
@@ -235,6 +237,17 @@ class TestUtil:
         monkeypatch.setattr(
             "importlib.metadata.version",
             lambda name: "0.9.0",  # too high
+        )
+        with pytest.warns(UserWarning):
+            assert pybamm.util.has_jax() is False
+
+    def test_has_jax_version_unsupported_four_part(self, monkeypatch):
+        # Simulate jax installed with unsupported four-part version
+        monkeypatch.setattr("importlib.util.find_spec", lambda name: True)
+        monkeypatch.setattr("pybamm.util.is_macos_intel", lambda: False)
+        monkeypatch.setattr(
+            "importlib.metadata.version",
+            lambda name: "0.9.0.1",  # normalizes to 0.9.0 (too high)
         )
         with pytest.warns(UserWarning):
             assert pybamm.util.has_jax() is False
