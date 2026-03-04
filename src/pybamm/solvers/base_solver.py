@@ -267,10 +267,14 @@ class BaseSolver:
                 t_casadi = vars_for_processing["t_casadi"]
                 y_casadi = vars_for_processing["y_casadi"]
                 p_casadi_stacked = vars_for_processing["p_casadi_stacked"]
-                mass_matrix_inv = casadi.MX(model.mass_matrix_inv.entries)
-                explicit_rhs = mass_matrix_inv @ rhs(
-                    t_casadi, y_casadi, p_casadi_stacked
-                )
+                rhs_eval = rhs(t_casadi, y_casadi, p_casadi_stacked)
+                if model.is_standard_form_dae:
+                    explicit_rhs = rhs_eval
+                else:
+                    M_ode = casadi.DM(
+                        model.mass_matrix.entries[: model.len_rhs, : model.len_rhs]
+                    )
+                    explicit_rhs = casadi.solve(M_ode, rhs_eval)
                 model.casadi_rhs = casadi.Function(
                     "rhs", [t_casadi, y_casadi, p_casadi_stacked], [explicit_rhs]
                 )
@@ -475,19 +479,12 @@ class BaseSolver:
         """
         Set up model attributes related to sensitivities.
         """
-        has_mass_matrix = model.mass_matrix is not None
-        has_mass_matrix_inv = model.mass_matrix_inv is not None
-
-        if not has_mass_matrix:
+        if model.mass_matrix is None:
             return
 
         model.mass_matrix = pybamm.Matrix(
             model.mass_matrix.entries[: model.len_rhs_and_alg, : model.len_rhs_and_alg]
         )
-        if has_mass_matrix_inv:
-            model.mass_matrix_inv = pybamm.Matrix(
-                model.mass_matrix_inv.entries[: model.len_rhs, : model.len_rhs]
-            )
 
     def _set_up_events(self, model, t_eval, inputs: list[dict], vars_for_processing):
         # Check for heaviside and modulo functions in rhs and algebraic and add

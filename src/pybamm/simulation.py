@@ -162,6 +162,9 @@ class Simulation:
         result["get_esoh_solver"] = None  # Exclude LRU cache
         result["model_state_mappers"] = {}
         result["_compiled_model_state_mappers"] = {}
+        result["steps_to_built_models"] = None
+        result["steps_to_built_solvers"] = None
+        result["experiment_unique_steps_to_model"] = None
         return result
 
     def __setstate__(self, state):
@@ -174,6 +177,8 @@ class Simulation:
             self.model_state_mappers = {}
         if "_compiled_model_state_mappers" not in self.__dict__:
             self._compiled_model_state_mappers = {}
+        if "experiment_unique_steps_to_model" not in self.__dict__:
+            self.experiment_unique_steps_to_model = None
 
     def set_up_and_parameterise_experiment(self, solve_kwargs=None):
         msg = "pybamm.simulation.set_up_and_parameterise_experiment is deprecated and not meant to be accessed by users."

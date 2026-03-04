@@ -1,4 +1,5 @@
 # mypy: ignore-errors
+import logging
 import math
 import numbers
 import warnings
@@ -6,6 +7,7 @@ import warnings
 import casadi
 import numpy as np
 import pybammsolvers.idaklu as idaklu
+from scipy.sparse.linalg import spsolve
 
 import pybamm
 
@@ -610,6 +612,10 @@ class IDAKLUSolver(pybamm.BaseSolver):
         atol = getattr(model, "atol", self.atol)
         atol = self._check_atol_type(atol, model)
 
+        logger = (
+            pybamm.logger.debug if pybamm.logger.isEnabledFor(logging.DEBUG) else None
+        )
+
         timer = pybamm.Timer()
         try:
             solns = self._setup["solver"].solve(
@@ -618,6 +624,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 y0full,
                 ydot0full,
                 inputs,
+                logger=logger,
             )
         except ValueError as e:
             # Return from None to replace the C++ runtime error
@@ -870,7 +877,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
             ydot0[: model.len_rhs] = rhs0
         else:
             # M^-1 is not the identity matrix, so we need to use the mass matrix
-            ydot0[: model.len_rhs] = model.mass_matrix_inv.entries @ rhs0
+            M_ode = model.mass_matrix.entries[: model.len_rhs, : model.len_rhs]
+            ydot0[: model.len_rhs] = spsolve(M_ode, rhs0)
 
         return ydot0
 

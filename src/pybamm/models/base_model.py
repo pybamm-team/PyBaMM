@@ -149,7 +149,6 @@ class BaseModel:
         instance.bounds = properties["bounds"]
         instance.events = properties["events"]
         instance.mass_matrix = properties["mass_matrix"]
-        instance.mass_matrix_inv = properties["mass_matrix_inv"]
         instance._variables_processed = dict(properties.get("_variables_processed", {}))
 
         def assign_meshes_to_variables(variables_dict, mesh):
@@ -497,15 +496,6 @@ class BaseModel:
     @mass_matrix.setter
     def mass_matrix(self, mass_matrix):
         self._mass_matrix = mass_matrix
-
-    @property
-    def mass_matrix_inv(self):
-        """Returns the inverse of the mass matrix for the differential equations after discretisation."""
-        return self._mass_matrix_inv
-
-    @mass_matrix_inv.setter
-    def mass_matrix_inv(self, mass_matrix_inv):
-        self._mass_matrix_inv = mass_matrix_inv
 
     @property
     def jacobian(self):
@@ -885,15 +875,18 @@ class BaseModel:
         M = [2I 0
              0 0]
         """
-        if self.mass_matrix is None or self.mass_matrix_inv is None:
+        if self.mass_matrix is None:
             return False
-        # Check that the mass matrix inverse is an identity matrix
-        mass_matrix_inv = self.mass_matrix_inv.entries
-        if scipy.sparse.issparse(mass_matrix_inv):
-            identity = scipy.sparse.identity(mass_matrix_inv.shape[0])
-            return (mass_matrix_inv - identity).nnz == 0
+        n_rhs = self.len_rhs
+        if n_rhs == 0:
+            return False
+        mass = self.mass_matrix.entries
+        M_ode = mass[:n_rhs, :n_rhs]
+        if scipy.sparse.issparse(M_ode):
+            identity = scipy.sparse.identity(n_rhs, format="csr")
+            return (M_ode - identity).nnz == 0
         else:
-            return np.allclose(mass_matrix_inv, np.eye(mass_matrix_inv.shape[0]))
+            return np.allclose(M_ode, np.eye(n_rhs))
 
     def _format_table_row(
         self, param_name, param_type, max_name_length, max_type_length
