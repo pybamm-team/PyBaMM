@@ -46,7 +46,7 @@ class BaseSolver:
         Default is "warn".
     on_failure : str, optional
         What to do if a solver error flag occurs. Options are "warn", "error", or "ignore".
-        Default is "raise".
+        Default is "error".
     """
 
     def __init__(
@@ -68,8 +68,8 @@ class BaseSolver:
         self.root_method = root_method
         self.extrap_tol = extrap_tol or -1e-10
         self.output_variables = [] if output_variables is None else output_variables
-        self._on_extrapolation = on_extrapolation or "warn"
-        self._on_failure = on_failure or "raise"
+        self.on_extrapolation = on_extrapolation or "warn"
+        self.on_failure = on_failure or "error"
         self._model_set_up = {}
 
         # Defaults, can be overwritten by specific solver
@@ -104,7 +104,7 @@ class BaseSolver:
     @on_extrapolation.setter
     def on_extrapolation(self, value):
         if value not in ["warn", "error", "ignore"]:
-            raise ValueError("on_extrapolation must be 'warn', 'raise', or 'ignore'")
+            raise ValueError("on_extrapolation must be 'warn', 'error', or 'ignore'")
         self._on_extrapolation = value
 
     @property
@@ -114,7 +114,7 @@ class BaseSolver:
     @on_failure.setter
     def on_failure(self, value):
         if value not in ["warn", "error", "ignore"]:
-            raise ValueError("on_failure must be 'warn', 'raise', or 'ignore'")
+            raise ValueError("on_failure must be 'warn', 'error', or 'ignore'")
         self._on_failure = value
 
     @property
