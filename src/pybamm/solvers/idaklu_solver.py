@@ -1075,7 +1075,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             new_ys.append(np.asarray(red_ys[i]).reshape(K, N).T)
             new_yps.append(np.asarray(red_yps[i]).reshape(K, N).T)
 
-        return pybamm.Solution(
+        new_sol = pybamm.Solution(
             all_ts=new_ts,
             all_ys=new_ys,
             all_yps=new_yps,
@@ -1088,3 +1088,13 @@ class IDAKLUSolver(pybamm.BaseSolver):
             all_t_evals=solution.all_t_evals,
             variables_returned=solution.variables_returned,
         )
+
+        # Propagate metadata from the original solution
+        new_sol._all_inputs_casadi = solution.all_inputs_casadi
+        new_sol.closest_event_idx = solution.closest_event_idx
+
+        new_sol.solve_time = solution.solve_time
+        new_sol.integration_time = solution.integration_time
+        new_sol.set_up_time = solution.set_up_time
+
+        return new_sol
