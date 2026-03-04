@@ -316,6 +316,18 @@ class TestBaseModelToConfig:
         assert type(loaded) is type(model)
         assert dict(loaded.options) == dict(model.options)
 
+    def test_from_config_builtin_with_actual_tuple_valued_options_round_trip(self):
+        """Tuple-valued options (e.g. particle phases) survive JSON round-trip."""
+        model = pybamm.lithium_ion.DFN(options={"particle phases": ("2", "1")})
+        config = model.to_config()
+        # Simulate JSON round-trip (tuples become lists)
+        config = json.loads(json.dumps(config))
+        loaded = pybamm.BaseModel.from_config(config)
+        assert type(loaded) is type(model)
+        # Tuple options should be restored
+        assert dict(loaded.options) == dict(model.options)
+        assert isinstance(loaded.options["particle phases"], tuple)
+
     def test_from_config_backward_compat_no_module_key(self):
         """Config without 'module' key defaults to lithium_ion."""
         config = {"type": "SPM"}

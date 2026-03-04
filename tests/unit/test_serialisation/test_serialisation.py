@@ -2847,3 +2847,45 @@ class TestSolverSerialization:
     def test_unknown_solver_type_raises(self):
         with pytest.raises(ValueError, match="Unknown solver type"):
             pybamm.BaseSolver.from_config({"type": "NonExistentSolver"})
+
+    def test_serialise_scalar_inf_round_trip(self):
+        """Scalar(inf) and Scalar(-inf) survive round-trip."""
+        for val in [np.inf, -np.inf]:
+            s = pybamm.Scalar(val)
+            json_dict = convert_symbol_to_json(s)
+            s2 = convert_symbol_from_json(json_dict)
+            assert isinstance(s2, pybamm.Scalar)
+            assert s2.value == val
+
+    def test_serialise_scalar_inf_json_safe(self):
+        """Scalar(inf) produces valid JSON (no bare Infinity token)."""
+        for val in [np.inf, -np.inf, np.nan]:
+            s = pybamm.Scalar(val)
+            json_dict = convert_symbol_to_json(s)
+            json_str = json.dumps(json_dict, default=Serialise._json_encoder)
+            # Verify it's valid JSON by round-tripping through json.loads
+            reloaded = json.loads(json_str)
+            assert reloaded["type"] == "Scalar"
+
+    def test_serialise_scalar_nan_round_trip(self):
+        """Scalar(nan) survives round-trip."""
+        s = pybamm.Scalar(np.nan)
+        json_dict = convert_symbol_to_json(s)
+        s2 = convert_symbol_from_json(json_dict)
+        assert isinstance(s2, pybamm.Scalar)
+        assert np.isnan(s2.value)
+
+    def test_drive_cycle_step_roundtrip(self):
+        """Drive cycle experiment steps survive serialise/deserialise."""
+        drive_cycle = np.column_stack(
+            [np.linspace(0, 100, 10), np.linspace(1, 0.5, 10)]
+        )
+        exp = pybamm.Experiment([pybamm.step.current(drive_cycle, duration=100)])
+        data = Serialise.serialise_experiment(exp)
+        # Verify it's valid JSON
+        json_str = json.dumps(data)
+        data2 = json.loads(json_str)
+        exp2 = Serialise.deserialise_experiment(data2)
+        assert len(exp2.steps) == len(exp.steps)
+        # The deserialized step should be a drive cycle
+        assert exp2.steps[0].is_drive_cycle

@@ -1754,16 +1754,19 @@ class Serialise:
             step_config = {"type": step_type, "duration": step.duration}
 
             if step_type != "rest":
-                value = step.value
-                if isinstance(value, pybamm.InputParameter):
-                    param_name = value.name
-                    step_config["value"] = (
-                        param_name if isinstance(param_name, str) else str(value)
-                    )
-                elif isinstance(value, (int, float, str)):
-                    step_config["value"] = value
+                if step.is_drive_cycle:
+                    step_config["value"] = step.input_value.tolist()
                 else:
-                    step_config["value"] = str(value)
+                    value = step.value
+                    if isinstance(value, pybamm.InputParameter):
+                        param_name = value.name
+                        step_config["value"] = (
+                            param_name if isinstance(param_name, str) else str(value)
+                        )
+                    elif isinstance(value, (int, float, str)):
+                        step_config["value"] = value
+                    else:
+                        step_config["value"] = str(value)
 
             if step.termination:
                 terminations = []
@@ -1843,13 +1846,16 @@ class Serialise:
                 value = 0.0
             elif "value" in step_dict and step_dict["value"] is not None:
                 raw = step_dict["value"]
-                try:
-                    value = float(raw)
-                except (ValueError, TypeError):
-                    if isinstance(raw, str):
-                        value = pybamm.InputParameter(raw)
-                    else:
-                        raise
+                if isinstance(raw, list):
+                    value = np.array(raw)
+                else:
+                    try:
+                        value = float(raw)
+                    except (ValueError, TypeError):
+                        if isinstance(raw, str):
+                            value = pybamm.InputParameter(raw)
+                        else:
+                            raise
             else:
                 raise ValueError(f"Value is required for {step_type!r} steps.")
 
@@ -2053,7 +2059,12 @@ def convert_symbol_from_json(json_data):
         return pybamm.Constant(json_data["value"], json_data["name"])
     elif json_data["type"] == "Scalar":
         # Convert stored numerical values back to PyBaMM Scalar objects
-        return pybamm.Scalar(json_data["value"])
+        # Restore inf/nan from string sentinels
+        val = json_data["value"]
+        _sentinel_map = {"Infinity": np.inf, "-Infinity": -np.inf, "NaN": np.nan}
+        if isinstance(val, str) and val in _sentinel_map:
+            val = _sentinel_map[val]
+        return pybamm.Scalar(val)
     elif json_data["type"] == "Interpolant":
         return pybamm.Interpolant(
             [np.array(x) for x in json_data["x"]],
@@ -2178,7 +2189,16 @@ def convert_symbol_to_json(symbol):
         return {"type": "Constant", "value": symbol.value, "name": symbol.name}
     elif isinstance(symbol, pybamm.Scalar):
         # Scalar values are stored with their numerical value
-        return {"type": "Scalar", "value": symbol.value}
+        # Sanitize inf/nan to JSON-safe string sentinels
+        val = symbol.value
+        if isinstance(val, float) or isinstance(val, np.floating):
+            if np.isposinf(val):
+                val = "Infinity"
+            elif np.isneginf(val):
+                val = "-Infinity"
+            elif np.isnan(val):
+                val = "NaN"
+        return {"type": "Scalar", "value": val}
     elif isinstance(symbol, pybamm.SpecificFunction):
         if symbol.__class__ == pybamm.SpecificFunction:
             raise NotImplementedError("SpecificFunction is not supported directly")
