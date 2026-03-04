@@ -560,7 +560,7 @@ class DiffSLExport:
         for key in out:
             all_lines += [diffeq[key]]
 
-        return "\n".join(all_lines)
+        return "\n".join(all_lines) + "\n"
 
 
 def _equation_to_diffeq(

@@ -63,7 +63,7 @@ class TestDiffSLExport:
         model.events = [pybamm.Event("event1", x - B @ x)]
         return model
 
-    def test_model(self, model):
+    def test_model(self, model, snapshot):
         export = pybamm.DiffSLExport(model, float_precision=6).to_diffeq(outputs=["x"])
         assert "u_i" in export
         assert "event" in export
@@ -77,6 +77,7 @@ class TestDiffSLExport:
         assert "cos" in export
         assert "max" in export
         assert "min" in export
+        snapshot.assert_match(export, "diffsl_export.snapshot")
 
     def test_float_precision(self, model):
         export = pybamm.DiffSLExport(model, float_precision=6).to_diffeq(outputs=["x"])
@@ -95,7 +96,7 @@ class TestDiffSLExport:
         with pytest.raises(ValueError):
             pybamm.DiffSLExport(model).to_diffeq(outputs=[])
 
-    def test_ode(self):
+    def test_ode(self, snapshot):
         model = pybamm.BaseModel()
 
         x = pybamm.Variable("x")
@@ -112,10 +113,11 @@ class TestDiffSLExport:
         model = disc.process_model(model)
 
         model = pybamm.DiffSLExport(model)
-        correct_export = "constant0_i {\n  (0:1): 1,\n}\nconstant1_i {\n  (0:1): 2,\n}\nu_i {\n  x = constant0_i,\n  y = constant1_i,\n}\nF_i {\n  ((4 * x_i) - (2 * y_i)),\n  ((3 * x_i) - y_i),\n}\nout_i {\n  x_i,\n  y_i,\n  (x_i + (4 * y_i)),\n}"
-        assert correct_export == model.to_diffeq(outputs=["x", "y", "z"])
+        snapshot.assert_match(
+            model.to_diffeq(outputs=["x", "y", "z"]), "diffsl_export_ode.snapshot"
+        )
 
-    def test_heat_equation(self):
+    def test_heat_equation(self, snapshot):
         model = pybamm.BaseModel()
 
         x = pybamm.SpatialVariable("x", domain="rod", coord_sys="cartesian")
@@ -149,11 +151,7 @@ class TestDiffSLExport:
         disc.process_model(model)
 
         model = pybamm.DiffSLExport(model)
-
-        # The order of the matrix entries is not deterministic, so we need to check both possible options
-        correct_export_option_1 = "constant0_ij {\n  (0,0): 2,\n  (1,0): -1,\n  (1,1): 1,\n  (2,1): -1,\n  (2,2): 1,\n  (3,2): -1,\n  (3,3): 1,\n  (4,3): -1,\n  (4,4): 1,\n  (5,4): -1,\n  (5,5): 1,\n  (6,5): -1,\n  (6,6): 1,\n  (7,6): -1,\n  (7,7): 1,\n  (8,7): -1,\n  (8,8): 1,\n  (9,8): -1,\n  (9,9): 1,\n  (10,9): -2,\n}\nconstant1_ij {\n  (0,0): -3,\n  (0,1): 1,\n  (1,1): -2,\n  (1,0): 1,\n  (1,2): 1,\n  (2,2): -2,\n  (2,1): 1,\n  (2,3): 1,\n  (3,3): -2,\n  (3,2): 1,\n  (3,4): 1,\n  (4,4): -2,\n  (4,3): 1,\n  (4,5): 1,\n  (5,5): -2,\n  (5,4): 1,\n  (5,6): 1,\n  (6,6): -2,\n  (6,5): 1,\n  (6,7): 1,\n  (7,7): -2,\n  (7,6): 1,\n  (7,8): 1,\n  (8,8): -2,\n  (8,7): 1,\n  (8,9): 1,\n  (9,9): -3,\n  (9,8): 1,\n}\nconstant2_i {\n  (0:1): 0.5,\n  (1:2): 1.5,\n  (2:3): 2.5,\n  (3:4): 3.5,\n  (4:5): 4.5,\n  (5:6): 5.5,\n  (6:7): 6.5,\n  (7:8): 7.5,\n  (8:9): 8.5,\n  (9:10): 9.5,\n}\nu_i {\n  temperature = constant2_i,\n}\nF_i {\n  (constant1_ij * temperature_j),\n}\nvariable3_i {\n  (constant0_ij * temperature_j),\n}\nout_i {\n  -(variable3_i),\n  temperature_i,\n}"
-        correct_export_option_2 = "constant0_ij {\n  (0,0): -3,\n  (0,1): 1,\n  (1,1): -2,\n  (1,0): 1,\n  (1,2): 1,\n  (2,2): -2,\n  (2,1): 1,\n  (2,3): 1,\n  (3,3): -2,\n  (3,2): 1,\n  (3,4): 1,\n  (4,4): -2,\n  (4,3): 1,\n  (4,5): 1,\n  (5,5): -2,\n  (5,4): 1,\n  (5,6): 1,\n  (6,6): -2,\n  (6,5): 1,\n  (6,7): 1,\n  (7,7): -2,\n  (7,6): 1,\n  (7,8): 1,\n  (8,8): -2,\n  (8,7): 1,\n  (8,9): 1,\n  (9,9): -3,\n  (9,8): 1,\n}\nconstant1_ij {\n  (0,0): 2,\n  (1,0): -1,\n  (1,1): 1,\n  (2,1): -1,\n  (2,2): 1,\n  (3,2): -1,\n  (3,3): 1,\n  (4,3): -1,\n  (4,4): 1,\n  (5,4): -1,\n  (5,5): 1,\n  (6,5): -1,\n  (6,6): 1,\n  (7,6): -1,\n  (7,7): 1,\n  (8,7): -1,\n  (8,8): 1,\n  (9,8): -1,\n  (9,9): 1,\n  (10,9): -2,\n}\nconstant2_i {\n  (0:1): 0.5,\n  (1:2): 1.5,\n  (2:3): 2.5,\n  (3:4): 3.5,\n  (4:5): 4.5,\n  (5:6): 5.5,\n  (6:7): 6.5,\n  (7:8): 7.5,\n  (8:9): 8.5,\n  (9:10): 9.5,\n}\nu_i {\n  temperature = constant2_i,\n}\nF_i {\n  (constant0_ij * temperature_j),\n}\nvariable3_i {\n  (constant1_ij * temperature_j),\n}\nout_i {\n  -(variable3_i),\n  temperature_i,\n}"
-        model_output = model.to_diffeq(outputs=["Heat flux", "Temperature"])
-        assert correct_export_option_1 == str(
-            model_output
-        ) or correct_export_option_2 == str(model_output)
+        snapshot.assert_match(
+            model.to_diffeq(outputs=["Heat flux", "Temperature"]),
+            "diffsl_export_heat_equation.snapshot",
+        )
