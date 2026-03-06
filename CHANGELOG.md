@@ -3,6 +3,7 @@
 ## Features
 
 - Eliminated the mass matrix inverse and temporary dense matrix objects when building the simulation. ([#5391](https://github.com/pybamm-team/PyBaMM/pull/5391))
+- Added the `hermite_reduction_factor` option to the `IDAKLUSolver`, which dynamically compresses solution size by removing redundant points in the Hermite interpolant. ([#5390](https://github.com/pybamm-team/PyBaMM/pull/5390))
 - Added support for Python 3.14. ([#5374](https://github.com/pybamm-team/PyBaMM/pull/5374))
 - Added regularisation to the kinetics and OCPs so they are more numerically stable. ([#5371](https://github.com/pybamm-team/PyBaMM/pull/5371))
 - Improve the performance of matrix multiplication with CasADi expressions. ([#5351](https://github.com/pybamm-team/PyBaMM/pull/5351))
@@ -12,6 +13,7 @@ as initial conditions. ([#5311](https://github.com/pybamm-team/PyBaMM/pull/5311)
 
 ## Bug fixes
 - PyBaMM no longer crashes on import if an incompatible version of JAX is installed (e.g., installed for other packages or numeric computations). This ensures JAX is truly an optional dependency: users who do not intend to use JAX can safely import PyBaMM, with a warning shown if JAX-dependent features are disabled. ([#5398](https://github.com/pybamm-team/PyBaMM/pull/5398))
+- Fixed a bug in the exchange current density calculation for MSMR models. ([#5404](https://github.com/pybamm-team/PyBaMM/pull/5404))
 
 ## Breaking changes
 
