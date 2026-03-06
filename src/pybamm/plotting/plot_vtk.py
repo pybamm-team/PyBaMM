@@ -217,7 +217,12 @@ class VTKQuickPlot:
         scalar_data = {}
         for name, pv in zip(self.scalar_names, self.scalar_vars, strict=True):
             pv.initialise()
-            vals = np.array([float(pv(t).ravel()[0]) for t in self.t_pts])
+            if isinstance(pv, pybamm.ProcessedVariableUnstructuredFVM):
+                vals = np.array(
+                    [float(pv._data_at_time(t).ravel()[0]) for t in self.t_pts]
+                )
+            else:
+                vals = np.array([float(pv(t).ravel()[0]) for t in self.t_pts])
             scalar_data[name] = vals
 
         # --- Layout ---
@@ -683,3 +688,59 @@ class VTKQuickPlot:
         self._window = window
         self._interactor = interactor
         self._slider = slider
+
+    def save_gif(self, filename, fps=10, n_frames=100, width=1800, height=900):
+        """Render an animation to a GIF file.
+
+        Parameters
+        ----------
+        filename : str
+            Output path (e.g. ``"anim.gif"``).
+        fps : int
+            Frames per second.
+        n_frames : int
+            Number of frames (evenly spaced in time).
+        width, height : int
+            Pixel dimensions of each frame.
+        """
+        import vtk
+        from PIL import Image
+
+        if not hasattr(self, "_window"):
+            self.dynamic_plot(show_plot=False)
+
+        win = self._window
+        win.SetOffScreenRendering(1)
+        win.SetSize(width, height)
+
+        t_min = float(self.t_pts[0])
+        t_max = float(self.t_pts[-1])
+        frame_times = np.linspace(t_min, t_max, n_frames)
+
+        frames = []
+        for t in frame_times:
+            self._slider.GetRepresentation().SetValue(t)
+            self._slider.InvokeEvent("InteractionEvent")
+            win.Render()
+
+            w2i = vtk.vtkWindowToImageFilter()
+            w2i.SetInput(win)
+            w2i.Update()
+            img_data = w2i.GetOutput()
+
+            w_px, h_px, _ = img_data.GetDimensions()
+            n_comp = img_data.GetNumberOfScalarComponents()
+            raw = np.frombuffer(
+                memoryview(img_data.GetPointData().GetScalars()),
+                dtype=np.uint8,
+            ).reshape(h_px, w_px, n_comp)
+            frames.append(Image.fromarray(raw[::-1]))
+
+        frames[0].save(
+            filename,
+            save_all=True,
+            append_images=frames[1:],
+            duration=int(1000 / fps),
+            loop=0,
+        )
+        print(f"Saved {len(frames)}-frame GIF to {filename}")
