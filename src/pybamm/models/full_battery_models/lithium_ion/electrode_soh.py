@@ -488,6 +488,7 @@ class ElectrodeSOHSolver:
             energy_inputs = {**sol_dict, **inputs}
             energy = self.theoretical_energy_integral(energy_inputs)
             sol_dict.update({"Maximum theoretical energy [W.h]": energy})
+
         return sol_dict
 
     def _set_up_solve(self, inputs, direction):

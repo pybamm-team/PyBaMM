@@ -80,6 +80,7 @@ class Simulation:
         output_variables=None,
         C_rate=None,
         discretisation_kwargs=None,
+        cache_esoh=False,
     ):
         self._parameter_values = parameter_values or model.default_parameter_values
         self._unprocessed_parameter_values = self._parameter_values
@@ -138,6 +139,8 @@ class Simulation:
         self._built_nominal_capacity = None
         self.steps_to_built_models = None
         self.steps_to_built_solvers = None
+        self._cache_esoh = cache_esoh
+        self._esoh_fingerprint = None
         self._mesh = None
         self._disc = None
         self._solution = None
@@ -315,7 +318,60 @@ class Simulation:
         self._parameter_values.process_geometry(self._geometry)
         self._model = self._model_with_set_params
 
+    @staticmethod
+    def _pv_fingerprint(pv):
+        """Hash all parameter values to detect any in-place modifications."""
+        parts = []
+        for k in sorted(pv.keys()):
+            v = pv[k]
+            if isinstance(v, int | float):
+                parts.append((k, v))
+            else:
+                parts.append((k, id(v)))
+        return tuple(parts)
+
+    @staticmethod
+    def _normalize_inputs(inputs):
+        """Convert input values to hashable, comparison-safe types."""
+        items = []
+        for k in sorted(inputs.keys()):
+            v = inputs[k]
+            if isinstance(v, np.ndarray):
+                items.append((k, v.tobytes()))
+            elif isinstance(v, (int, float)):
+                items.append((k, float(v)))
+            else:
+                items.append((k, id(v)))
+        return tuple(items)
+
+    def _compute_esoh_fingerprint(self, initial_soc, direction, inputs):
+        """Compute a fingerprint of all eSOH-relevant state to detect changes.
+
+        Delegates to the model-specific fingerprint function in
+        ``pybamm.lithium_ion.compute_esoh_fingerprint``, which evaluates the
+        exact quantities that determine the eSOH result for this model type.
+        Falls back to raw inputs if the model-specific evaluation fails.
+        """
+        pv = self._unprocessed_parameter_values
+        pv_fp = self._pv_fingerprint(pv)
+
+        try:
+            evals = pybamm.lithium_ion.compute_esoh_fingerprint(
+                pv, self._model.param, self._model.options, inputs
+            )
+        except Exception:
+            evals = self._normalize_inputs(inputs) if inputs else ()
+
+        return (initial_soc, direction, pv_fp, evals)
+
     def set_initial_state(self, initial_soc, direction=None, inputs=None):
+        if self._cache_esoh:
+            fingerprint = self._compute_esoh_fingerprint(initial_soc, direction, inputs)
+            if fingerprint == self._esoh_fingerprint:
+                return
+        else:
+            fingerprint = None
+
         if self._built_initial_soc != initial_soc:
             # reset
             self._model_with_set_params = None
@@ -337,6 +393,7 @@ class Simulation:
 
         # Save solved initial SOC in case we need to re-build the model
         self._built_initial_soc = initial_soc
+        self._esoh_fingerprint = fingerprint
 
     def set_initial_soc(self, initial_soc, direction, inputs=None):
         msg = "pybamm.simulation.set_initial_soc is deprecated, please use set_initial_state."
