@@ -61,6 +61,39 @@ class TestSimulationExperiment:
         sim.build_for_experiment()
         assert len(sim.experiment.steps) == 2
 
+    def test_experiment_state_mappers_built(self):
+        model = pybamm.lithium_ion.SPM()
+        experiment = pybamm.Experiment(
+            ["Discharge at C/20 for 1 hour", "Rest for 10 minutes"]
+        )
+        sim = pybamm.Simulation(model, experiment=experiment)
+        sim.build_for_experiment()
+
+        steps = sim.experiment.steps
+        model_0 = sim.steps_to_built_models[steps[0].basic_repr()]
+        model_1 = sim.steps_to_built_models[steps[1].basic_repr()]
+
+        key = (model_0, model_1)
+        assert key in sim.model_state_mappers
+
+    def test_experiment_state_mapper_has_full_state_size_for_2d_current_collector(self):
+        model = pybamm.lithium_ion.DFN(
+            {"current collector": "potential pair", "dimensionality": 2}
+        )
+        experiment = pybamm.Experiment(
+            ["Discharge at C/20 for 1 hour", "Rest for 10 minutes"]
+        )
+        var_pts = {"x_n": 6, "x_s": 6, "x_p": 6, "r_n": 6, "r_p": 6, "y": 6, "z": 6}
+        sim = pybamm.Simulation(model, experiment=experiment, var_pts=var_pts)
+        sim.build_for_experiment()
+
+        steps = sim.experiment.steps
+        model_0 = sim.steps_to_built_models[steps[0].basic_repr()]
+        model_1 = sim.steps_to_built_models[steps[1].basic_repr()]
+        mapper = sim.model_state_mappers[(model_0, model_1)]
+
+        assert mapper.shape[0] == model_1.len_rhs_and_alg
+
     def test_run_experiment(self):
         s = pybamm.step.string
         experiment = pybamm.Experiment(

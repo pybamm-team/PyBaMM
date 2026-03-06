@@ -2,17 +2,22 @@
 
 ## Features
 
+- Eliminated the mass matrix inverse and temporary dense matrix objects when building the simulation. ([#5391](https://github.com/pybamm-team/PyBaMM/pull/5391))
+- Added the `hermite_reduction_factor` option to the `IDAKLUSolver`, which dynamically compresses solution size by removing redundant points in the Hermite interpolant. ([#5390](https://github.com/pybamm-team/PyBaMM/pull/5390))
 - Added support for Python 3.14. ([#5374](https://github.com/pybamm-team/PyBaMM/pull/5374))
 - Added regularisation to the kinetics and OCPs so they are more numerically stable. ([#5371](https://github.com/pybamm-team/PyBaMM/pull/5371))
 - Improve the performance of matrix multiplication with CasADi expressions. ([#5351](https://github.com/pybamm-team/PyBaMM/pull/5351))
 - Adds option for lists of inputs to `solve` to include input parameters which are used
 as initial conditions. ([#5311](https://github.com/pybamm-team/PyBaMM/pull/5311))
+- Optimize state mapper for multi-step experiments by pre-calculating mapper during setup. ([#5380](https://github.com/pybamm-team/PyBaMM/pull/5380))
 
 ## Bug fixes
 
+- Fixed a bug in the exchange current density calculation for MSMR models. ([#5404](https://github.com/pybamm-team/PyBaMM/pull/5404))
 
 ## Breaking changes
 
+- The mass matrix inverse is no longer computed during discretisation. Solvers instead use sparse linear solves. ([#5391](https://github.com/pybamm-team/PyBaMM/pull/5391))
 - Dropped JAX support on macOS with Intel (x86_64) processors. JAX dropped macOS Intel wheels in version 0.5.0, and the minimum JAX version has been bumped to >=0.7.0 for Python 3.14 compatibility. macOS users require Apple Silicon (M-series) for JAX features. ([#5374](https://github.com/pybamm-team/PyBaMM/pull/5374))
 - Added a small regularisation term to the exchange current density which slightly modifies the functional form of the kinetics as stoichiometry approaches 0 or 1. ([#5371](https://github.com/pybamm-team/PyBaMM/pull/5371))
 - The default OCP barrier as stoichiometry approaches 0 or 1 is now smooth instead of asymptotically approaching infinity. This may change the behavior of ESOH solvers in extreme stoichiometry limits. ([#5371](https://github.com/pybamm-team/PyBaMM/pull/5371))
