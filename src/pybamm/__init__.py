@@ -82,6 +82,7 @@ from .models.full_battery_models import sodium_ion
 
 # Submodel classes
 from .models.submodels.base_submodel import BaseSubModel
+from .models.submodels.base_battery_submodel import BaseBatterySubModel
 
 from .models.submodels import (
     active_material,
