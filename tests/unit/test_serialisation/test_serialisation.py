@@ -1518,6 +1518,69 @@ class TestExpressionFunctionParameter:
         assert 'Parameter("a")' in src
         assert "(z + 2" in src  # allows 2 or 2.0
 
+    def test_interpolant_1d(self):
+        """Test that 1D Interpolant is properly serialized with data arrays."""
+        x_data = np.array([0.0, 0.5, 1.0])
+        y_data = np.array([1.0, 2.0, 3.0])
+        sto = pybamm.Parameter("sto")
+        interp = pybamm.Interpolant([x_data], y_data, sto, name="D_interp")
+        scale = pybamm.Parameter("scale")
+        expr = scale * interp
+
+        efp = ExpressionFunctionParameter("D_func", expr, "D_func", ["sto"])
+        src = efp.to_source()
+
+        assert "def D_func(sto):" in src
+        assert "pybamm.Interpolant" in src
+        assert "np.array([0.0, 0.5, 1.0])" in src
+        assert "np.array([1.0, 2.0, 3.0])" in src
+        assert 'name="D_interp"' in src
+        assert 'interpolator="linear"' in src
+        assert 'Parameter("scale")' in src
+
+    def test_interpolant_2d(self):
+        """Test that 2D Interpolant is properly serialized with data arrays."""
+        x1_data = np.array([0.0, 0.5, 1.0])
+        x2_data = np.array([300.0, 310.0])
+        y_data = np.array([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]])
+        sto = pybamm.Parameter("sto")
+        T = pybamm.Parameter("T")
+        interp = pybamm.Interpolant([x1_data, x2_data], y_data, [sto, T], name="D_2d")
+
+        efp = ExpressionFunctionParameter("D_func", interp, "D_func", ["sto", "T"])
+        src = efp.to_source()
+
+        assert "def D_func(sto, T):" in src
+        assert "pybamm.Interpolant" in src
+        assert "np.array([0.0, 0.5, 1.0])" in src
+        assert "np.array([300.0, 310.0])" in src
+        assert "[sto, T]" in src
+        assert 'name="D_2d"' in src
+
+    def test_interpolant_3d(self):
+        """Test that 3D Interpolant is properly serialized with data arrays."""
+        x1_data = np.array([0.0, 1.0])
+        x2_data = np.array([300.0, 310.0])
+        x3_data = np.array([0.1, 0.2])
+        y_data = np.ones((2, 2, 2))
+        sto = pybamm.Parameter("sto")
+        T = pybamm.Parameter("T")
+        c = pybamm.Parameter("c")
+        interp = pybamm.Interpolant(
+            [x1_data, x2_data, x3_data], y_data, [sto, T, c], name="D_3d"
+        )
+
+        efp = ExpressionFunctionParameter("D_func", interp, "D_func", ["sto", "T", "c"])
+        src = efp.to_source()
+
+        assert "def D_func(sto, T, c):" in src
+        assert "pybamm.Interpolant" in src
+        assert "np.array([0.0, 1.0])" in src
+        assert "np.array([300.0, 310.0])" in src
+        assert "np.array([0.1, 0.2])" in src
+        assert "[sto, T, c]" in src
+        assert 'name="D_3d"' in src
+
 
 class TestGeometrySerialization:
     def test_serialise_and_load_geometry(self):
