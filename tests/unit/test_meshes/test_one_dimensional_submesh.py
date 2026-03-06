@@ -6,23 +6,22 @@ import pybamm
 
 @pytest.fixture()
 def r():
-    r = pybamm.SpatialVariable(
-        "r", domain=["negative particle"], coord_sys="spherical polar"
-    )
+    r = pybamm.SpatialVariable("r", domain=["negative particle"])
     return r
 
 
 @pytest.fixture()
 def x():
-    return pybamm.SpatialVariable(
-        "x", domain=["negative electrode"], coord_sys="cartesian"
-    )
+    return pybamm.SpatialVariable("x", domain=["negative electrode"])
 
 
 @pytest.fixture()
 def geometry(r):
     geometry = {
-        "negative particle": {r: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
+        "negative particle": {
+            r: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+            "coord_sys": "spherical polar",
+        }
     }
     return geometry
 
@@ -83,7 +82,7 @@ class TestUniform1DSubMesh:
     def test_exceptions(self):
         lims = {"a": 1, "b": 2}
         with pytest.raises(pybamm.GeometryError):
-            pybamm.Uniform1DSubMesh(lims, None)
+            pybamm.Uniform1DSubMesh(lims, None, "cartesian")
 
     def test_symmetric_mesh_creation_no_parameters(self, r, geometry):
         submesh_types = {"negative particle": pybamm.Uniform1DSubMesh}
@@ -108,20 +107,21 @@ class TestSymbolicUniform1DSubMesh:
     def test_exceptions(self, r):
         lims = {"a": 1, "b": 2}
         with pytest.raises(pybamm.GeometryError):
-            pybamm.SymbolicUniform1DSubMesh(lims, None)
+            pybamm.SymbolicUniform1DSubMesh(lims, None, "cartesian")
         lims = {"x_n": {"min": 0, "max": 1}}
         npts = {"x_n": 10}
         tabs = {"negative": {"z_centre": 0}, "positive": {"z_centre": 1}}
         lims["tabs"] = tabs
 
         with pytest.raises(NotImplementedError):
-            pybamm.SymbolicUniform1DSubMesh(lims, npts, tabs=tabs)
+            pybamm.SymbolicUniform1DSubMesh(lims, npts, "cartesian", tabs=tabs)
 
         submesh_types = {"negative particle": pybamm.SymbolicUniform1DSubMesh}
         var_pts = {r: 20}
         geometry = {
             "negative particle": {
-                r: {"min": pybamm.InputParameter("min"), "max": pybamm.Scalar(2)}
+                r: {"min": pybamm.InputParameter("min"), "max": pybamm.Scalar(2)},
+                "coord_sys": "spherical polar",
             }
         }
         with pytest.raises(pybamm.GeometryError):
@@ -131,7 +131,10 @@ class TestSymbolicUniform1DSubMesh:
         submesh_types = {"negative particle": pybamm.SymbolicUniform1DSubMesh}
         var_pts = {r: 20}
         geometry = {
-            "negative particle": {r: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(2)}}
+            "negative particle": {
+                r: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(2)},
+                "coord_sys": "spherical polar",
+            }
         }
 
         # create mesh
@@ -157,7 +160,8 @@ class TestSymbolicUniform1DSubMesh:
         var_pts = {x: 20}
         geometry = {
             "negative electrode": {
-                x: {"min": pybamm.InputParameter("min"), "max": pybamm.Scalar(2)}
+                x: {"min": pybamm.InputParameter("min"), "max": pybamm.Scalar(2)},
+                "coord_sys": "cartesian",
             }
         }
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
@@ -227,7 +231,10 @@ class TestExponential1DSubMesh:
     @pytest.mark.parametrize("side", ["left", "right", "symmetric"])
     def test_mesh_creation_non_zero_min(self, r, side):
         geometry = {
-            "negative particle": {r: {"min": pybamm.Scalar(1), "max": pybamm.Scalar(2)}}
+            "negative particle": {
+                r: {"min": pybamm.Scalar(1), "max": pybamm.Scalar(2)},
+                "coord_sys": "spherical polar",
+            }
         }
         submesh_types = {
             "negative particle": pybamm.MeshGenerator(
@@ -280,24 +287,24 @@ class TestUser1DSubMesh:
         lims = {"x_n": {"min": 0, "max": 1}}
         npts = {"x_n": 10}
         with pytest.raises(pybamm.GeometryError):
-            mesh(lims, npts)
+            mesh(lims, npts, "cartesian")
 
         # error if lims[0] not equal to edges[0]
         lims = {"x_n": {"min": 0.1, "max": 1}}
         npts = {"x_n": len(edges) - 1}
         with pytest.raises(pybamm.GeometryError):
-            mesh(lims, npts)
+            mesh(lims, npts, "cartesian")
 
         # error if lims[-1] not equal to edges[-1]
         lims = {"x_n": {"min": 0, "max": 10}}
         npts = {"x_n": len(edges) - 1}
         with pytest.raises(pybamm.GeometryError):
-            mesh(lims, npts)
+            mesh(lims, npts, "cartesian")
 
         # no user points
         mesh = pybamm.MeshGenerator(pybamm.UserSupplied1DSubMesh)
         with pytest.raises(pybamm.GeometryError, match=r"User mesh requires"):
-            mesh(None, None)
+            mesh(None, None, "cartesian")
 
     def test_mesh_creation_no_parameters(self, r, geometry):
         edges = np.array([0, 0.3, 1])
@@ -334,19 +341,19 @@ class TestSpectralVolume1DSubMesh:
         lims = {"x_n": {"min": 0, "max": 1}}
         npts = {"x_n": 10}
         with pytest.raises(pybamm.GeometryError):
-            mesh(lims, npts)
+            mesh(lims, npts, "cartesian")
 
         # error if lims[0] not equal to edges[0]
         lims = {"x_n": {"min": 0.1, "max": 1}}
         npts = {"x_n": len(edges) - 1}
         with pytest.raises(pybamm.GeometryError):
-            mesh(lims, npts)
+            mesh(lims, npts, "cartesian")
 
         # error if lims[-1] not equal to edges[-1]
         lims = {"x_n": {"min": 0, "max": 10}}
         npts = {"x_n": len(edges) - 1}
         with pytest.raises(pybamm.GeometryError):
-            mesh(lims, npts)
+            mesh(lims, npts, "cartesian")
 
     def test_mesh_creation_no_parameters(self, r, geometry):
         edges = np.array([0, 0.3, 1])

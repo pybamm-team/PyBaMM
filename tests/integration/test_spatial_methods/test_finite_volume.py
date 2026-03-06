@@ -294,7 +294,7 @@ class TestFiniteVolumeConvergence:
 
 def solve_laplace_equation(coord_sys="cartesian"):
     model = pybamm.BaseModel()
-    r = pybamm.SpatialVariable("r", domain="domain", coord_sys=coord_sys)
+    r = pybamm.SpatialVariable("r", domain="domain")
     u = pybamm.Variable("u", domain="domain")
     del_u = pybamm.div(pybamm.grad(u))
     model.boundary_conditions = {
@@ -306,7 +306,12 @@ def solve_laplace_equation(coord_sys="cartesian"):
     model.algebraic = {u: del_u}
     model.initial_conditions = {u: pybamm.Scalar(0)}
     model.variables = {"u": u, "r": r}
-    geometry = {"domain": {r: {"min": pybamm.Scalar(1), "max": pybamm.Scalar(2)}}}
+    geometry = {
+        "domain": {
+            r: {"min": pybamm.Scalar(1), "max": pybamm.Scalar(2)},
+            "coord_sys": coord_sys,
+        }
+    }
     submesh_types = {"domain": pybamm.Uniform1DSubMesh}
     var_pts = {r: 500}
     mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
@@ -348,7 +353,7 @@ class TestFiniteVolumeLaplacian:
 
 def solve_advection_equation(direction="upwind", source=1, bc=0):
     model = pybamm.BaseModel()
-    x = pybamm.SpatialVariable("x", domain="domain", coord_sys="cartesian")
+    x = pybamm.SpatialVariable("x", domain="domain")
     u = pybamm.Variable("u", domain="domain")
     if direction == "upwind":
         bc_side = "left"
@@ -370,7 +375,12 @@ def solve_advection_equation(direction="upwind", source=1, bc=0):
     model.rhs = {u: rhs}
     model.initial_conditions = {u: pybamm.Scalar(0)}
     model.variables = {"u": u, "x": x, "analytical": u_an}
-    geometry = {"domain": {x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}}
+    geometry = {
+        "domain": {
+            x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+            "coord_sys": "cartesian",
+        }
+    }
     submesh_types = {"domain": pybamm.Uniform1DSubMesh}
     var_pts = {x: 1000}
     mesh = pybamm.Mesh(geometry, submesh_types, var_pts)

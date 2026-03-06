@@ -33,7 +33,7 @@ def D(cc):
 
 
 # variables
-x = pybamm.SpatialVariable("x", domain="SEI layer", coord_sys="cartesian")
+x = pybamm.SpatialVariable("x", domain="SEI layer")
 c = pybamm.Variable("Solvent concentration", domain="SEI layer")
 L = pybamm.Variable("SEI thickness")
 
@@ -76,7 +76,12 @@ model.variables = {
 "Using the model"
 
 # define geometry
-geometry = {"SEI layer": {x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}}
+geometry = {
+    "SEI layer": {
+        x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+        "coord_sys": "cartesian",
+    }
+}
 
 
 # diffusivity function

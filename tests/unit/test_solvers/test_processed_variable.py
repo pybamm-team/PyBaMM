@@ -323,9 +323,14 @@ class TestProcessedVariable:
 
     @pytest.mark.parametrize("hermite_interp", _hermite_args)
     def test_processed_variable_1D_unknown_domain(self, hermite_interp):
-        x = pybamm.SpatialVariable("x", domain="SEI layer", coord_sys="cartesian")
+        x = pybamm.SpatialVariable("x", domain="SEI layer")
         geometry = pybamm.Geometry(
-            {"SEI layer": {x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}}
+            {
+                "SEI layer": {
+                    x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+                    "coord_sys": "cartesian",
+                }
+            }
         )
 
         submesh_types = {"SEI layer": pybamm.Uniform1DSubMesh}
@@ -1730,21 +1735,16 @@ class TestProcessedVariable:
     def test_processed_variable_unstructured_3d_pouch(self):
         from pybamm.meshes.scikit_fem_submeshes_3d import ScikitFemGenerator3D
 
-        x = pybamm.SpatialVariable(
-            "x", domain=["current collector"], coord_sys="cartesian"
-        )
-        y = pybamm.SpatialVariable(
-            "y", domain=["current collector"], coord_sys="cartesian"
-        )
-        z = pybamm.SpatialVariable(
-            "z", domain=["current collector"], coord_sys="cartesian"
-        )
+        x = pybamm.SpatialVariable("x", domain=["current collector"])
+        y = pybamm.SpatialVariable("y", domain=["current collector"])
+        z = pybamm.SpatialVariable("z", domain=["current collector"])
 
         geometry = {
             "current collector": {
                 x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
                 y: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
                 z: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+                "coord_sys": "cartesian",
             }
         }
 
@@ -1798,21 +1798,16 @@ class TestProcessedVariable:
     def test_processed_variable_unstructured_scalar_vs_vector_time(self):
         from pybamm.meshes.scikit_fem_submeshes_3d import ScikitFemGenerator3D
 
-        x = pybamm.SpatialVariable(
-            "x", domain=["current collector"], coord_sys="cartesian"
-        )
-        y = pybamm.SpatialVariable(
-            "y", domain=["current collector"], coord_sys="cartesian"
-        )
-        z = pybamm.SpatialVariable(
-            "z", domain=["current collector"], coord_sys="cartesian"
-        )
+        x = pybamm.SpatialVariable("x", domain=["current collector"])
+        y = pybamm.SpatialVariable("y", domain=["current collector"])
+        z = pybamm.SpatialVariable("z", domain=["current collector"])
 
         geometry = {
             "current collector": {
                 x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
                 y: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
                 z: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+                "coord_sys": "cartesian",
             }
         }
 
@@ -1863,21 +1858,16 @@ class TestProcessedVariable:
     def test_processed_variable_unstructured_fill_value(self):
         from pybamm.meshes.scikit_fem_submeshes_3d import ScikitFemGenerator3D
 
-        x = pybamm.SpatialVariable(
-            "x", domain=["current collector"], coord_sys="cartesian"
-        )
-        y = pybamm.SpatialVariable(
-            "y", domain=["current collector"], coord_sys="cartesian"
-        )
-        z = pybamm.SpatialVariable(
-            "z", domain=["current collector"], coord_sys="cartesian"
-        )
+        x = pybamm.SpatialVariable("x", domain=["current collector"])
+        y = pybamm.SpatialVariable("y", domain=["current collector"])
+        z = pybamm.SpatialVariable("z", domain=["current collector"])
 
         geometry = {
             "current collector": {
                 x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
                 y: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
                 z: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+                "coord_sys": "cartesian",
             }
         }
 
@@ -1922,21 +1912,16 @@ class TestProcessedVariable:
     def test_processed_variable_unstructured_shape_method(self):
         from pybamm.meshes.scikit_fem_submeshes_3d import ScikitFemGenerator3D
 
-        x = pybamm.SpatialVariable(
-            "x", domain=["current collector"], coord_sys="cartesian"
-        )
-        y = pybamm.SpatialVariable(
-            "y", domain=["current collector"], coord_sys="cartesian"
-        )
-        z = pybamm.SpatialVariable(
-            "z", domain=["current collector"], coord_sys="cartesian"
-        )
+        x = pybamm.SpatialVariable("x", domain=["current collector"])
+        y = pybamm.SpatialVariable("y", domain=["current collector"])
+        z = pybamm.SpatialVariable("z", domain=["current collector"])
 
         geometry = {
             "current collector": {
                 x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
                 y: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
                 z: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+                "coord_sys": "cartesian",
             }
         }
 
@@ -1972,21 +1957,16 @@ class TestProcessedVariable:
     def test_processed_variable_unstructured_time_integral(self):
         from pybamm.meshes.scikit_fem_submeshes_3d import ScikitFemGenerator3D
 
-        x = pybamm.SpatialVariable(
-            "x", domain=["current collector"], coord_sys="cartesian"
-        )
-        y = pybamm.SpatialVariable(
-            "y", domain=["current collector"], coord_sys="cartesian"
-        )
-        z = pybamm.SpatialVariable(
-            "z", domain=["current collector"], coord_sys="cartesian"
-        )
+        x = pybamm.SpatialVariable("x", domain=["current collector"])
+        y = pybamm.SpatialVariable("y", domain=["current collector"])
+        z = pybamm.SpatialVariable("z", domain=["current collector"])
 
         geometry = {
             "current collector": {
                 x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
                 y: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
                 z: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+                "coord_sys": "cartesian",
             }
         }
 
@@ -2055,21 +2035,16 @@ class TestProcessedVariable:
     def test_process_variable_unstructured_detection(self):
         from pybamm.meshes.scikit_fem_submeshes_3d import ScikitFemGenerator3D
 
-        x = pybamm.SpatialVariable(
-            "x", domain=["current collector"], coord_sys="cartesian"
-        )
-        y = pybamm.SpatialVariable(
-            "y", domain=["current collector"], coord_sys="cartesian"
-        )
-        z = pybamm.SpatialVariable(
-            "z", domain=["current collector"], coord_sys="cartesian"
-        )
+        x = pybamm.SpatialVariable("x", domain=["current collector"])
+        y = pybamm.SpatialVariable("y", domain=["current collector"])
+        z = pybamm.SpatialVariable("z", domain=["current collector"])
 
         geometry = {
             "current collector": {
                 x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
                 y: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
                 z: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+                "coord_sys": "cartesian",
             }
         }
 
