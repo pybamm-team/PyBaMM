@@ -306,6 +306,47 @@ class UnstructuredSubMesh(SubMesh):
             if len(indices) > 0:
                 self.boundary_faces[name] = indices
 
+    def optimize_ordering(self):
+        """Reorder cells using Reverse Cuthill-McKee to reduce Jacobian bandwidth.
+
+        Permutes all cell-indexed arrays (elements, centroids, volumes,
+        face_owner, face_neighbor, interface_data) so that adjacent cells
+        have nearby indices, minimising the bandwidth of the FVM
+        connectivity matrix.
+        """
+        from scipy.sparse import csr_matrix
+        from scipy.sparse.csgraph import reverse_cuthill_mckee
+
+        n = self.npts
+        if n <= 1:
+            return
+
+        n_int = self._boundary_face_start
+        owners = self.face_owner[:n_int]
+        neighbors = self.face_neighbor
+
+        rows = np.concatenate([owners, neighbors])
+        cols = np.concatenate([neighbors, owners])
+        data = np.ones(len(rows), dtype=np.float64)
+        adj = csr_matrix((data, (rows, cols)), shape=(n, n))
+
+        perm = reverse_cuthill_mckee(adj)
+        inv_perm = np.empty(n, dtype=int)
+        inv_perm[perm] = np.arange(n)
+
+        self.elements = self.elements[perm]
+        self.cell_centroids = self.cell_centroids[perm]
+        self.cell_volumes = self.cell_volumes[perm]
+
+        self.face_owner = inv_perm[self.face_owner]
+        self.face_neighbor = inv_perm[self.face_neighbor]
+
+        for _key, data_dict in self.interface_data.items():
+            if "left_cells" in data_dict:
+                data_dict["left_cells"] = inv_perm[data_dict["left_cells"]]
+            if "right_cells" in data_dict:
+                data_dict["right_cells"] = inv_perm[data_dict["right_cells"]]
+
     def boundary_loops(self):
         """Return boundary loops as a list of ``matplotlib.path.Path`` (2D only).
 
@@ -840,10 +881,17 @@ def _hex_grid(x_edges, y_edges, z_edges):
     def node_id(i, j, k):
         return i * (ny + 1) * (nz + 1) + j * (nz + 1) + k
 
+    # Loop order determines cell numbering and hence Jacobian bandwidth.
+    # Bandwidth = product of the two fastest-varying dimension sizes.
+    # Minimise by putting the largest dimension outermost (slowest).
+    dims = sorted([(nx, "x"), (ny, "y"), (nz, "z")], key=lambda d: d[0], reverse=True)
+
     elements = []
-    for i in range(nx):
-        for j in range(ny):
-            for k in range(nz):
+    for a in range(dims[0][0]):
+        for b in range(dims[1][0]):
+            for c in range(dims[2][0]):
+                idx = {dims[0][1]: a, dims[1][1]: b, dims[2][1]: c}
+                i, j, k = idx["x"], idx["y"], idx["z"]
                 elements.append(
                     [
                         node_id(i, j, k),

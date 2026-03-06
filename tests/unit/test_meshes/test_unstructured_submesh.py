@@ -4,6 +4,7 @@ import pybamm
 from pybamm.meshes.unstructured_submesh import (
     UnstructuredMeshGenerator,
     UnstructuredSubMesh,
+    _hex_grid,
     _hex_to_tet,
     _quad_to_tri,
     compute_interface_data,
@@ -591,3 +592,80 @@ class TestMeshIntegration:
         assert "separator" in neg_mesh.interface_data
         assert "negative electrode" in sep_mesh.interface_data
         assert len(neg_mesh.interface_data["separator"]["left_cells"]) > 0
+
+
+class TestBandwidthOptimization:
+    """Tests for _hex_grid loop ordering and optimize_ordering (RCM)."""
+
+    @staticmethod
+    def _bandwidth(submesh):
+        n_int = submesh._boundary_face_start
+        owners = submesh.face_owner[:n_int]
+        neighbors = submesh.face_neighbor
+        return int(np.max(np.abs(owners.astype(int) - neighbors.astype(int))))
+
+    def test_hex_grid_optimal_loop_order(self):
+        """_hex_grid should order cells so bandwidth = product of two smallest dims."""
+        for nx, ny, nz in [(3, 10, 5), (2, 4, 20), (7, 3, 3), (5, 5, 5)]:
+            nodes, elems = _hex_grid(
+                np.linspace(0, 1, nx + 1),
+                np.linspace(0, 1, ny + 1),
+                np.linspace(0, 1, nz + 1),
+            )
+            mesh = UnstructuredSubMesh(nodes, elems, coord_sys="cartesian")
+            bw = self._bandwidth(mesh)
+            dims = sorted([nx, ny, nz])
+            expected = dims[0] * dims[1]
+            assert bw == expected, (
+                f"nx={nx} ny={ny} nz={nz}: bw={bw}, expected={expected}"
+            )
+
+    def test_optimize_ordering_reduces_bandwidth(self):
+        """optimize_ordering (RCM) should not increase bandwidth."""
+        nodes, elems = _hex_grid(
+            np.linspace(0, 1, 4),
+            np.linspace(0, 1, 11),
+            np.linspace(0, 1, 6),
+        )
+        mesh = UnstructuredSubMesh(nodes, elems, coord_sys="cartesian")
+        bw_before = self._bandwidth(mesh)
+        mesh.optimize_ordering()
+        bw_after = self._bandwidth(mesh)
+        assert bw_after <= bw_before
+
+    def test_optimize_ordering_preserves_geometry(self):
+        """Cell volumes and centroids must be the same set after reordering."""
+        nodes, elems = _hex_grid(
+            np.linspace(0, 1, 4),
+            np.linspace(0, 1, 6),
+            np.linspace(0, 1, 4),
+        )
+        mesh = UnstructuredSubMesh(nodes, elems, coord_sys="cartesian")
+        vols_before = np.sort(mesh.cell_volumes)
+        cents_before = mesh.cell_centroids[np.lexsort(mesh.cell_centroids.T)]
+
+        mesh.optimize_ordering()
+
+        vols_after = np.sort(mesh.cell_volumes)
+        cents_after = mesh.cell_centroids[np.lexsort(mesh.cell_centroids.T)]
+        np.testing.assert_allclose(vols_before, vols_after)
+        np.testing.assert_allclose(cents_before, cents_after)
+
+    def test_optimize_ordering_preserves_interface_data(self):
+        """Interface cell centroids should point to the same physical cells."""
+        ye = np.linspace(0, 1, 6)
+        ze = np.linspace(0, 1, 4)
+        nodes_l, elems_l = _hex_grid(np.linspace(0, 1, 4), ye, ze)
+        mesh_l = UnstructuredSubMesh(nodes_l, elems_l, coord_sys="cartesian")
+        nodes_r, elems_r = _hex_grid(np.linspace(1, 2, 4), ye, ze)
+        mesh_r = UnstructuredSubMesh(nodes_r, elems_r, coord_sys="cartesian")
+        compute_interface_data(mesh_l, mesh_r, "left", "right")
+
+        iface = mesh_l.interface_data["right"]
+        centroids_pre = mesh_l.cell_centroids[iface["left_cells"]].copy()
+
+        mesh_l.optimize_ordering()
+
+        iface = mesh_l.interface_data["right"]
+        centroids_post = mesh_l.cell_centroids[iface["left_cells"]]
+        np.testing.assert_allclose(centroids_pre, centroids_post)
