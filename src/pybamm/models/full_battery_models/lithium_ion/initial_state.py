@@ -40,6 +40,7 @@ def set_initial_state(
     options=None,
     inputs=None,
     tol=1e-6,
+    esoh_solver=None,
 ):
     """
     Set the values of the parameters representing the initial model states.
@@ -101,6 +102,7 @@ def set_initial_state(
             options=options,
             tol=tol,
             inputs=inputs,
+            esoh_solver=esoh_solver,
         )
         parameter_values.update(
             {
@@ -121,6 +123,7 @@ def set_initial_state(
             tol=tol,
             inputs=inputs,
             direction=direction,
+            esoh_solver=esoh_solver,
         )
         _set_concentration_from_stoich(
             parameter_values,
@@ -158,6 +161,7 @@ def set_initial_state(
             tol=tol,
             inputs=inputs,
             known_value=known_value,
+            esoh_solver=esoh_solver,
         )
         _set_concentration_from_stoich(
             parameter_values,
@@ -211,6 +215,7 @@ def set_initial_state(
             options=options,
             tol=tol,
             inputs=inputs,
+            esoh_solver=esoh_solver,
         )
         _set_concentration_from_stoich(
             parameter_values, param, "negative", "primary", x, inputs, options

@@ -144,6 +144,7 @@ class Simulation:
         self._esoh_fingerprint = None
         self.model_state_mappers = {}
         self._compiled_model_state_mappers = {}
+        self._initial_soc_solver = None
         self._mesh = None
         self._disc = None
         self._solution = None
@@ -379,6 +380,46 @@ class Simulation:
 
         return (initial_soc, direction, pv_fp, evals)
 
+    def _create_esoh_solver(self, direction):
+        """Create the appropriate eSOH solver/sim for this model type."""
+        options = self._model.options
+        pv = self._unprocessed_parameter_values
+        param = self._model.param
+
+        if options.get("open-circuit potential") == "MSMR" or (
+            options.get("working electrode") != "positive"
+            and not pybamm.lithium_ion.check_if_composite(options, "positive")
+            and not pybamm.lithium_ion.check_if_composite(options, "negative")
+        ):
+            return pybamm.lithium_ion.ElectrodeSOHSolver(
+                pv,
+                direction=direction,
+                param=param,
+                options=options,
+            )
+        elif options.get("working electrode") == "positive":
+            model = pybamm.lithium_ion.ElectrodeSOHHalfCell(
+                "ElectrodeSOH",
+                direction=direction,
+                options=options,
+            )
+            return pybamm.Simulation(model, parameter_values=pv)
+        else:
+            model = pybamm.lithium_ion.ElectrodeSOHComposite(
+                options,
+                direction,
+                initialization_method="SOC",
+            )
+            from .models.full_battery_models.lithium_ion.electrode_soh import (
+                get_esoh_default_solver,
+            )
+
+            return pybamm.Simulation(
+                model,
+                parameter_values=pv,
+                solver=get_esoh_default_solver(),
+            )
+
     def set_initial_state(self, initial_soc, direction=None, inputs=None):
         if self._cache_esoh:
             fingerprint = self._compute_esoh_fingerprint(initial_soc, direction, inputs)
@@ -397,14 +438,31 @@ class Simulation:
 
         param = self._model.param
         options = self._model.options
-        self._parameter_values = self._unprocessed_parameter_values.set_initial_state(
-            initial_soc,
-            direction=direction,
-            param=param,
-            inplace=False,
-            options=options,
-            inputs=inputs,
-        )
+
+        if self._cache_esoh:
+            if self._initial_soc_solver is None:
+                self._initial_soc_solver = self._create_esoh_solver(direction)
+            self._parameter_values = pybamm.lithium_ion.set_initial_state(
+                initial_soc,
+                self._unprocessed_parameter_values,
+                direction=direction,
+                param=param,
+                inplace=False,
+                options=options,
+                inputs=inputs,
+                esoh_solver=self._initial_soc_solver,
+            )
+        else:
+            self._parameter_values = (
+                self._unprocessed_parameter_values.set_initial_state(
+                    initial_soc,
+                    direction=direction,
+                    param=param,
+                    inplace=False,
+                    options=options,
+                    inputs=inputs,
+                )
+            )
 
         # Save solved initial SOC in case we need to re-build the model
         self._built_initial_soc = initial_soc

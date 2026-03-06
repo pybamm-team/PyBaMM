@@ -761,6 +761,7 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
         tol: float = 1e-6,
         inputs: dict | None = None,
         initial_conditions: dict[str, float] | None = None,
+        esoh_solver: pybamm.Simulation | None = None,
     ) -> dict[str, float]:
         """
         Full solve approach: solve all stoichiometries simultaneously.
@@ -833,23 +834,24 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
         else:
             all_inputs["SOC_init"] = initial_value
 
-        model = ElectrodeSOHComposite(
-            options, direction, initialization_method=initialization_method
-        )
-        sim = pybamm.Simulation(
-            model,
-            parameter_values=parameter_values,
-            solver=get_esoh_default_solver(tol),
-        )
+        if esoh_solver is None:
+            model = ElectrodeSOHComposite(
+                options, direction, initialization_method=initialization_method
+            )
+            esoh_solver = pybamm.Simulation(
+                model,
+                parameter_values=parameter_values,
+                solver=get_esoh_default_solver(tol),
+            )
 
         if initial_conditions is not None:
-            sim.build()
-            sim.built_model.set_initial_conditions_from(
+            esoh_solver.build()
+            esoh_solver.built_model.set_initial_conditions_from(
                 initial_conditions, inputs=all_inputs
             )
-        sol = sim.solve([0], inputs=all_inputs)
+        sol = esoh_solver.solve([0], inputs=all_inputs)
 
-        return {var: sol[var].entries[0] for var in model.variables.keys()}
+        return {var: sol[var].entries[0] for var in sol.all_models[0].variables.keys()}
 
 
 def get_initial_stoichiometries_composite(
@@ -862,6 +864,7 @@ def get_initial_stoichiometries_composite(
     inputs: dict | None = None,
     known_value: str = "cyclable lithium capacity",
     try_split_solve: bool = True,
+    esoh_solver: pybamm.Simulation | None = None,
     **kwargs: Any,
 ) -> dict[str, float]:
     """
@@ -932,6 +935,7 @@ def get_initial_stoichiometries_composite(
             options=options,
             tol=tol,
             inputs=inputs,
+            esoh_solver=esoh_solver,
         )
     except (pybamm.SolverError, ValueError) as first_error:
         if try_split_solve:
