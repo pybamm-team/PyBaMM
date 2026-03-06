@@ -24,6 +24,7 @@ class RCElement(pybamm.BaseSubModel):
 
     def get_fundamental_variables(self):
         vrc = pybamm.Variable(f"Element-{self.element_number} overpotential [V]")
+        vrc.print_name = "eta"
         variables = {f"Element-{self.element_number} overpotential [V]": vrc}
         return variables
 
@@ -35,7 +36,11 @@ class RCElement(pybamm.BaseSubModel):
         r = self.param.rcr_element(
             f"R{self.element_number} [Ohm]", T_cell, current, soc
         )
-        c = self.param.rcr_element(f"C{self.element_number} [F]", T_cell, current, soc)
+        r.print_name = "R_1"
+        c = self.param.rcr_element(
+            "Capacitance of RC network [F]", T_cell, current, soc
+        )
+        c.print_name = "C_1"
         tau = r * c
 
         vrc = variables[f"Element-{self.element_number} overpotential [V]"]
