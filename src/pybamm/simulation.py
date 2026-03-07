@@ -81,7 +81,7 @@ class Simulation:
         output_variables=None,
         C_rate=None,
         discretisation_kwargs=None,
-        cache_esoh=False,
+        cache_esoh=True,
     ):
         self._parameter_values = parameter_values or model.default_parameter_values
         self._unprocessed_parameter_values = self._parameter_values
