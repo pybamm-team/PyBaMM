@@ -17,7 +17,7 @@ from .electrode_soh_composite import (
     ElectrodeSOHComposite,
     get_initial_stoichiometries_composite,
 )
-from .initial_state import set_initial_state
+from .initial_state import compute_esoh_fingerprint, set_initial_state
 from .spm import SPM
 from .spme import SPMe
 from .dfn import DFN
