@@ -1702,8 +1702,6 @@ def process(
         dictionary of variables for processing
     use_jacobian: bool, optional
         whether to return Jacobian functions
-    return_jacp_stacked: bool, optional
-        returns Jacobian function wrt stacked parameters instead of jacp
 
     Returns
     -------
@@ -1712,28 +1710,18 @@ def process(
             :class:`casadi.Function`
         evaluator for the function $f(y, t, p)$ given by `symbol`
 
-    jac: :class:`pybamm.EvaluatorPython` or
-            :class:`pybamm.EvaluatorJaxJacobian` or
-            :class:`casadi.Function`
+    jac: same type as func
         evaluator for the Jacobian $\\frac{\\partial f}{\\partial y}$
-        of the function given by `symbol`
 
-    jacp: :class:`pybamm.EvaluatorPython` or
-            :class:`pybamm.EvaluatorJaxSensitivities` or
-            :class:`casadi.Function`
-        evaluator for the parameter sensitivities
-        $\frac{\\partial f}{\\partial p}$
-        of the function given by `symbol`
+    jacp: same type as func
+        evaluator for parameter sensitivities
+        $\\frac{\\partial f}{\\partial p}$ (always stacked)
 
-    jac_action: :class:`pybamm.EvaluatorPython` or
-            :class:`pybamm.EvaluatorJax` or
-            :class:`casadi.Function`
-        evaluator for product of the Jacobian with a vector $v$,
-        i.e. $\\frac{\\partial f}{\\partial y} * v$
+    jac_action: same type as func
+        evaluator for Jacobian-vector product $\\frac{\\partial f}{\\partial y} * v$
     """
 
     def report(string):
-        # don't log event conversion
         if "event" not in string:
             pybamm.logger.verbose(string)
 
@@ -1752,41 +1740,25 @@ def process(
                 f"to parameters {model.calculate_sensitivities} using jax"
             )
             jacp = func.get_sensitivities()
-        if use_jacobian:
-            report(f"Calculating jacobian for {name} using jax")
-            jac = func.get_jacobian()
-            jac_action = func.get_jacobian_action()
-        else:
-            jac = None
-            jac_action = None
+        jac = func.get_jacobian() if use_jacobian else None
+        jac_action = func.get_jacobian_action() if use_jacobian else None
 
     elif model.convert_to_format != "casadi":
         y = vars_for_processing["y"]
         jacobian = vars_for_processing["jacobian"]
 
         if model.calculate_sensitivities:
-            raise pybamm.SolverError(  # pragma: no cover
+            raise pybamm.SolverError(
                 "Sensitivies are no longer supported for the python "
                 "evaluator. Please use `convert_to_format = 'casadi'`, or `jax` "
                 "to calculate sensitivities."
             )
-
-        else:
-            jacp = None
-
-        if use_jacobian:
-            report(f"Calculating jacobian for {name}")
-            jac = jacobian.jac(symbol, y)
-            report(f"Converting jacobian for {name} to python")
-            jac = pybamm.EvaluatorPython(jac)
-            # cannot do jacobian action efficiently for now
-            jac_action = None
-        else:
-            jac = None
-            jac_action = None
-
-        report(f"Converting {name} to python")
+        jacp = None
+        jac = jacobian.jac(symbol, y) if use_jacobian else None
+        jac = pybamm.EvaluatorPython(jac) if jac else None
+        jac_action = None
         func = pybamm.EvaluatorPython(symbol)
+        report(f"Converting {name} to python")
 
     else:
         t_casadi = vars_for_processing["t_casadi"]
@@ -1794,61 +1766,29 @@ def process(
         p_casadi = vars_for_processing["p_casadi"]
         p_casadi_stacked = vars_for_processing["p_casadi_stacked"]
 
-        # Process with CasADi
         report(f"Converting {name} to CasADi")
         casadi_expression = symbol.to_casadi(t_casadi, y_casadi, inputs=p_casadi)
-        # Add sensitivity vectors to the rhs and algebraic equations
         jacp = None
 
         if model.calculate_sensitivities:
-            report(
-                f"Calculating sensitivities for {name} with respect "
-                f"to parameters {model.calculate_sensitivities} using "
-                "CasADi"
+            report(f"Calculating sensitivities for {name} using CasADi")
+            jacp = casadi.Function(
+                f"d{name}_dp",
+                [t_casadi, y_casadi, p_casadi_stacked],
+                [casadi.jacobian(casadi_expression, p_casadi_stacked)],
             )
-            # Compute derivate wrt p-stacked (can be passed to solver to
-            # compute sensitivities online)
-            if return_jacp_stacked:
-                jacp = casadi.Function(
-                    f"d{name}_dp",
-                    [t_casadi, y_casadi, p_casadi_stacked],
-                    [casadi.jacobian(casadi_expression, p_casadi_stacked)],
-                )
-            else:
-                # WARNING, jacp for convert_to_format=casadi does not return a dict
-                # instead it returns multiple return values, one for each param
-                # TODO: would it be faster to do the jacobian wrt pS_casadi_stacked?
-                jacp = casadi.Function(
-                    name + "_jacp",
-                    [t_casadi, y_casadi, p_casadi_stacked],
-                    [
-                        casadi.densify(
-                            casadi.jacobian(casadi_expression, p_casadi[pname])
-                        )
-                        for pname in model.calculate_sensitivities
-                    ],
-                )
 
         if use_jacobian:
             report(f"Calculating jacobian for {name} using CasADi")
             jac_casadi = casadi.jacobian(casadi_expression, y_casadi)
             jac = casadi.Function(
-                name + "_jac",
-                [t_casadi, y_casadi, p_casadi_stacked],
-                [jac_casadi],
+                f"{name}_jac", [t_casadi, y_casadi, p_casadi_stacked], [jac_casadi]
             )
-
-            v = casadi.MX.sym(
-                "v",
-                model.len_rhs_and_alg,
-            )
-            jac_action_casadi = casadi.densify(
-                casadi.jtimes(casadi_expression, y_casadi, v)
-            )
+            v = casadi.MX.sym("v", model.len_rhs_and_alg)
             jac_action = casadi.Function(
-                name + "_jac_action",
+                f"{name}_jac_action",
                 [t_casadi, y_casadi, p_casadi_stacked, v],
-                [jac_action_casadi],
+                [casadi.densify(casadi.jtimes(casadi_expression, y_casadi, v))],
             )
         else:
             jac = None
