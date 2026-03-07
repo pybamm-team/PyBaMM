@@ -123,7 +123,7 @@ def set_initial_state(
             tol=tol,
             inputs=inputs,
             direction=direction,
-            esoh_solver=esoh_solver,
+            esoh_sim=esoh_solver,
         )
         _set_concentration_from_stoich(
             parameter_values,
@@ -161,7 +161,7 @@ def set_initial_state(
             tol=tol,
             inputs=inputs,
             known_value=known_value,
-            esoh_solver=esoh_solver,
+            esoh_sim=esoh_solver,
         )
         _set_concentration_from_stoich(
             parameter_values,

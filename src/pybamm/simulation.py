@@ -369,6 +369,10 @@ class Simulation:
         Falls back to raw inputs if the model-specific evaluation fails.
         """
         pv = self._unprocessed_parameter_values
+        # Hash the full parameter store as a safety net: the model-specific
+        # fingerprint only evaluates a handful of scalar quantities, so it
+        # cannot detect changes to non-numeric parameters such as OCP
+        # functions that also affect the eSOH result.
         pv_fp = self._pv_fingerprint(pv)
 
         try:

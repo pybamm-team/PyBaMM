@@ -945,7 +945,7 @@ class TestSimulation:
         sim.solve([0, 1], initial_soc=0.8, inputs={"Current function [A]": 0.02})
         fp2 = sim._esoh_fingerprint
         # Current doesn't affect half-cell eSOH, fingerprint shouldn't change
-        assert fp1 == fp2
+        assert fp1 is fp2
 
     def test_cache_esoh_msmr(self):
         options = {
@@ -963,7 +963,7 @@ class TestSimulation:
         fp1 = sim._esoh_fingerprint
         sim.solve([0, 1], initial_soc=0.5, inputs={"Current function [A]": 2.0})
         fp2 = sim._esoh_fingerprint
-        assert fp1 == fp2
+        assert fp1 is fp2
 
     def test_cache_esoh_composite(self):
         options = {"particle phases": ("2", "1")}
@@ -982,7 +982,7 @@ class TestSimulation:
         fp1 = sim._esoh_fingerprint
         sim.solve([0, 1], initial_soc=0.8, inputs={"Current function [A]": 2.0})
         fp2 = sim._esoh_fingerprint
-        assert fp1 == fp2
+        assert fp1 is fp2
 
     def test_cache_esoh_with_hysteresis(self):
         options = {
@@ -1014,7 +1014,7 @@ class TestSimulation:
             inputs={"Current function [A]": 2.0},
         )
         fp2 = sim._esoh_fingerprint
-        assert fp1 == fp2
+        assert fp1 is fp2
 
         # Changing direction should invalidate the cache
         sim.solve(
@@ -1068,7 +1068,7 @@ class TestSimulation:
         )
         fp2 = sim._esoh_fingerprint
         # Should not crash and fingerprints should match
-        assert fp1 == fp2
+        assert fp1 is fp2
 
     def test_cache_esoh_numpy_array_fallback(self):
         model = pybamm.lithium_ion.SPM()
@@ -1094,6 +1094,6 @@ class TestSimulation:
         )
         fp2 = sim._esoh_fingerprint
         # Must not crash (the original numpy bug) and fingerprints should match
-        assert fp1 == fp2
+        assert fp1 is fp2
 
         sim._model.param = original_param
