@@ -489,6 +489,7 @@ class ElectrodeSOHSolver:
             energy_inputs = {**sol_dict, **inputs}
             energy = self.theoretical_energy_integral(energy_inputs)
             sol_dict.update({"Maximum theoretical energy [W.h]": energy})
+
         return sol_dict
 
     def _set_up_solve(self, inputs, direction):
@@ -1043,6 +1044,7 @@ def get_initial_stoichiometries(
     options=None,
     tol=1e-6,
     inputs=None,
+    esoh_solver=None,
 ):
     """
     Calculate initial stoichiometries to start off the simulation at a particular
@@ -1075,19 +1077,22 @@ def get_initial_stoichiometries(
         Default is 1e-6.
     inputs : dict, optional
         A dictionary of input parameters passed to the model.
+    esoh_solver : :class:`ElectrodeSOHSolver`, optional
+        A pre-built solver to reuse. If not provided, a new one is created.
 
     Returns
     -------
     x, y
         The initial stoichiometries that give the desired initial state of charge
     """
-    esoh_solver = ElectrodeSOHSolver(
-        parameter_values,
-        direction=direction,
-        param=param,
-        known_value=known_value,
-        options=options,
-    )
+    if esoh_solver is None:
+        esoh_solver = ElectrodeSOHSolver(
+            parameter_values,
+            direction=direction,
+            param=param,
+            known_value=known_value,
+            options=options,
+        )
     return esoh_solver.get_initial_stoichiometries(
         initial_value, tol=tol, inputs=inputs, direction=direction
     )
@@ -1149,6 +1154,7 @@ def get_initial_ocps(
     options=None,
     tol=1e-6,
     inputs=None,
+    esoh_solver=None,
 ):
     """
     Calculate initial open-circuit potentials to start off the simulation at a
@@ -1180,19 +1186,22 @@ def get_initial_ocps(
         Tolerance for the solver used in calculating initial open-circuit potentials.
     inputs : dict, optional
         A dictionary of input parameters passed to the model.
+    esoh_solver : :class:`ElectrodeSOHSolver`, optional
+        A pre-built solver to reuse. If not provided, a new one is created.
 
     Returns
     -------
     Un, Up
         The initial electrode OCPs that give the desired initial state of charge
     """
-    esoh_solver = ElectrodeSOHSolver(
-        parameter_values,
-        direction=direction,
-        param=param,
-        known_value=known_value,
-        options=options,
-    )
+    if esoh_solver is None:
+        esoh_solver = ElectrodeSOHSolver(
+            parameter_values,
+            direction=direction,
+            param=param,
+            known_value=known_value,
+            options=options,
+        )
     return esoh_solver.get_initial_ocps(
         initial_value, direction=direction, tol=tol, inputs=inputs
     )
