@@ -6,6 +6,7 @@ import casadi
 import numpy as np
 import pytest
 from scipy import special
+from scipy.sparse import csr_matrix
 
 import pybamm
 from pybamm.expression_tree.operations.convert_to_casadi import try_repeated_row_matmul
@@ -584,4 +585,96 @@ class TestRepeatedRowMatmulOptimization:
         scalar = pybamm.Scalar(5)
 
         result = try_repeated_row_matmul(scalar, y)
+        assert result is None
+
+    def test_sparse_identical_rows(self):
+        """Test optimization with sparse matrix where all rows are identical."""
+
+        rng = np.random.default_rng(0)
+        n, m = 100, 50
+        row = rng.random(n)
+        M = csr_matrix(np.tile(row, (m, 1)))
+
+        mat = pybamm.Matrix(M)
+        y = casadi.MX.sym("y", n)
+
+        result = try_repeated_row_matmul(mat, y)
+        assert result is not None
+
+        x = rng.random(n)
+        f = casadi.Function("f", [y], [result])
+        expected = M @ x
+        actual = np.array(f(x)).flatten()
+        np.testing.assert_allclose(actual, expected, rtol=1e-14)
+
+    def test_sparse_boundary_differs(self):
+        """Test optimization with sparse matrix where boundaries differ."""
+
+        rng = np.random.default_rng(0)
+        n, m = 100, 50
+        interior_row = rng.random(n)
+        first_row = rng.random(n) * 0.5
+        last_row = rng.random(n) * 2
+
+        M_dense = np.tile(interior_row, (m, 1))
+        M_dense[0, :] = first_row
+        M_dense[-1, :] = last_row
+        M = csr_matrix(M_dense)
+
+        mat = pybamm.Matrix(M)
+        y = casadi.MX.sym("y", n)
+
+        result = try_repeated_row_matmul(mat, y)
+        assert result is not None
+
+        x = rng.random(n)
+        f = casadi.Function("f", [y], [result])
+        expected = M @ x
+        actual = np.array(f(x)).flatten()
+        np.testing.assert_allclose(actual, expected, rtol=1e-14)
+
+    def test_sparse_no_match(self):
+        """Test that sparse matrices with non-identical rows return None."""
+
+        rng = np.random.default_rng(0)
+        n, m = 100, 50
+        M = csr_matrix(rng.random((m, n)))
+
+        mat = pybamm.Matrix(M)
+        y = casadi.MX.sym("y", n)
+
+        result = try_repeated_row_matmul(mat, y)
+        assert result is None
+
+    def test_sparse_two_rows_identical(self):
+        """Test m=2 sparse with identical rows."""
+
+        rng = np.random.default_rng(0)
+        n = 100
+        row = rng.random(n)
+        M = csr_matrix(np.vstack([row, row]))
+
+        mat = pybamm.Matrix(M)
+        y = casadi.MX.sym("y", n)
+
+        result = try_repeated_row_matmul(mat, y)
+        assert result is not None
+
+        x = rng.random(n)
+        f = casadi.Function("f", [y], [result])
+        expected = M @ x
+        actual = np.array(f(x)).flatten()
+        np.testing.assert_allclose(actual, expected, rtol=1e-14)
+
+    def test_sparse_two_rows_different(self):
+        """Test m=2 sparse with different rows returns None."""
+
+        rng = np.random.default_rng(0)
+        n = 100
+        M = csr_matrix(rng.random((2, n)))
+
+        mat = pybamm.Matrix(M)
+        y = casadi.MX.sym("y", n)
+
+        result = try_repeated_row_matmul(mat, y)
         assert result is None

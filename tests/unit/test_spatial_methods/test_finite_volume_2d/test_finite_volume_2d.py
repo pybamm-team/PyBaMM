@@ -756,6 +756,48 @@ class TestFiniteVolume2D:
         z_result = z_disc.evaluate(None, None).flatten()
         np.testing.assert_array_equal(z_concat_result, z_result)
 
+    def test_2d_concatenation_multi_domain_children(self, mesh_2d):
+        """Regression test: concatenation must handle children spanning multiple domains.
+
+        Previously, child.domain[0] was used for mesh lookup, which only returned
+        the first domain's mesh instead of the combined mesh for multi-domain children.
+        """
+        mesh = mesh_2d
+        spatial_methods = {"macroscale": pybamm.FiniteVolume2D()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        var_n = pybamm.Variable("var_n", domain=["negative electrode"])
+        var_s = pybamm.Variable("var_s", domain=["separator"])
+        var_p = pybamm.Variable("var_p", domain=["positive electrode"])
+
+        flat_concat = pybamm.concatenation(var_n, var_s, var_p)
+        disc.set_variable_slices([flat_concat])
+
+        source_n = pybamm.PrimaryBroadcast(pybamm.Scalar(1.0), ["negative electrode"])
+        source_s = pybamm.PrimaryBroadcast(pybamm.Scalar(2.0), ["separator"])
+        source_p = pybamm.PrimaryBroadcast(pybamm.Scalar(3.0), ["positive electrode"])
+
+        # Nested concatenation: inner concat produces a multi-domain non-StateVector
+        # child, which is then concatenated with a single-domain child
+        inner = pybamm.concatenation(var_n + source_n, var_s + source_s)
+        nested = pybamm.concatenation(inner, var_p + source_p)
+
+        # Flat concatenation (all single-domain children) as reference
+        flat = pybamm.concatenation(
+            var_n + source_n, var_s + source_s, var_p + source_p
+        )
+
+        nested_disc = disc.process_symbol(nested)
+        flat_disc = disc.process_symbol(flat)
+
+        submesh_total = mesh[("negative electrode", "separator", "positive electrode")]
+        y = np.ones(submesh_total.npts)
+
+        nested_result = nested_disc.evaluate(None, y).flatten()
+        flat_result = flat_disc.evaluate(None, y).flatten()
+
+        np.testing.assert_array_almost_equal(nested_result, flat_result)
+
     def test_vector_boundary_conditions(self, mesh_2d):
         """
         Test using vector quantities as boundary conditions, such as spatial variables
