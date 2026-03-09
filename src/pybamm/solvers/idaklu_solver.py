@@ -157,7 +157,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         self,
         rtol=1e-4,
         atol=1e-6,
-        root_method=None,
+        root_method="internal",
         root_tol=1e-6,
         extrap_tol=None,
         on_extrapolation=None,
@@ -202,7 +202,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
             "calc_ic": True,
             "num_steps_no_progress": 0,
             "t_no_progress": 0.0,
-            "newton_mode": "algebraic",
+            "newton_mode": None,
+            "newton_step_tol": 1e-6,
         }
         if options is None:
             options = default_options
@@ -212,7 +213,12 @@ class IDAKLUSolver(pybamm.BaseSolver):
             for key, value in default_options.items():
                 if key not in options:
                     options[key] = value
+        if options["newton_mode"] is None:
+            options["newton_mode"] = "algebraic" if root_method == "internal" else "disabled"
         self._options = options
+
+        if root_method == "internal":
+            root_method = None
 
         self.output_variables = [] if output_variables is None else output_variables
 
