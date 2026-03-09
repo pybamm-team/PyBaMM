@@ -2059,12 +2059,7 @@ def convert_symbol_from_json(json_data):
         return pybamm.Constant(json_data["value"], json_data["name"])
     elif json_data["type"] == "Scalar":
         # Convert stored numerical values back to PyBaMM Scalar objects
-        # Restore inf/nan from string sentinels
-        val = json_data["value"]
-        _sentinel_map = {"Infinity": np.inf, "-Infinity": -np.inf, "NaN": np.nan}
-        if isinstance(val, str) and val in _sentinel_map:
-            val = _sentinel_map[val]
-        return pybamm.Scalar(val)
+        return pybamm.Scalar(json_data["value"])
     elif json_data["type"] == "Interpolant":
         return pybamm.Interpolant(
             [np.array(x) for x in json_data["x"]],
