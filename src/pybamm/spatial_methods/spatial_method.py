@@ -2,6 +2,7 @@ import numpy as np
 from scipy.sparse import coo_matrix, csr_matrix, eye, kron, vstack
 
 import pybamm
+from pybamm.expression_tree.operations.serialise import Serialise
 
 
 class SpatialMethod:
@@ -475,3 +476,12 @@ class SpatialMethod:
             Concatenation of the discretised children
         """
         return pybamm.domain_concatenation(disc_children, self.mesh)
+
+    def to_config(self) -> dict:
+        """Serialise this spatial method to a JSON-serialisable dict."""
+        return Serialise.serialise_spatial_method_item(self)
+
+    @staticmethod
+    def from_config(data: dict):
+        """Deserialise a spatial method from a dict."""
+        return Serialise.deserialise_spatial_method_item(data)

@@ -270,6 +270,7 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
             model,
             inputs_dict,
             termination="final time",
+            all_t_evals=[t_eval],
         )
         sol.integration_time = integration_time
         return sol
