@@ -580,8 +580,9 @@ class Discretisation:
                             f"Neumann condition for {self.mesh[subdomain].coord_sys} coordinates"
                         )
 
-            # Handle any boundary conditions applied on the tabs
-            if any("tab" in side for side in list(bcs.keys())):
+            # Handle legacy tab boundary conditions ("negative tab", etc.)
+            legacy_tab_sides = {"negative tab", "positive tab", "no tab"}
+            if legacy_tab_sides & set(bcs.keys()):
                 bcs = self.check_tab_conditions(key, bcs)
 
             # Process boundary conditions

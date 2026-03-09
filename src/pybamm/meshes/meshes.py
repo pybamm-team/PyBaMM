@@ -558,11 +558,41 @@ def _combine_unstructured_submeshes(submeshes):
 
     combined_nodes = np.array(all_nodes)
     combined_elements = np.concatenate(all_elements, axis=0)
-    return pybamm.UnstructuredSubMesh(
+    combined = pybamm.UnstructuredSubMesh(
         combined_nodes,
         combined_elements,
         coord_sys=submeshes[0].coord_sys,
     )
+
+    # Propagate custom boundary tags from component submeshes.
+    # The combined mesh auto-detects only standard tags (left/right/top/bottom/
+    # front/back). Custom tags like "tab_top" are lost. Recover them by
+    # matching boundary face centroids.
+    standard_tags = {"left", "right", "top", "bottom", "front", "back"}
+    custom_centroids = {}  # tag -> list of centroid arrays
+    for sm in submeshes:
+        for tag, face_indices in sm.boundary_faces.items():
+            if tag not in standard_tags:
+                custom_centroids.setdefault(tag, []).append(
+                    sm.face_centroids[face_indices]
+                )
+
+    if custom_centroids:
+        from scipy.spatial import cKDTree
+
+        bnd_start = combined._boundary_face_start
+        bnd_centroids = combined.face_centroids[bnd_start:]
+        if len(bnd_centroids) > 0:
+            tree = cKDTree(bnd_centroids)
+            match_tol = 1e-10 * max(np.ptp(combined_nodes, axis=0).max(), 1.0)
+            for tag, centroid_list in custom_centroids.items():
+                all_src = np.concatenate(centroid_list, axis=0)
+                dists, idxs = tree.query(all_src)
+                matched = idxs[dists < match_tol]
+                if len(matched) > 0:
+                    combined.boundary_faces[tag] = np.unique(matched) + bnd_start
+
+    return combined
 
 
 class SubMesh:
