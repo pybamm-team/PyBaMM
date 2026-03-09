@@ -104,6 +104,7 @@ dev = [
     "pytest>=9.0",
     "pytest-xdist",
     "pytest-mock",
+    "pytest-snapshot",
     # For testing Jupyter notebooks
     "nbmake",
     # To access the metadata for python packages
