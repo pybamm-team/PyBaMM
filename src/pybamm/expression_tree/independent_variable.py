@@ -10,8 +10,6 @@ import sympy
 import pybamm
 from pybamm.type_definitions import AuxiliaryDomainType, DomainsType, DomainType
 
-KNOWN_COORD_SYS = ["cartesian", "cylindrical polar", "spherical polar"]
-
 
 class IndependentVariable(pybamm.Symbol):
     """
@@ -143,10 +141,8 @@ class SpatialVariable(IndependentVariable):
         domain: DomainType = None,
         auxiliary_domains: AuxiliaryDomainType = None,
         domains: DomainsType = None,
-        coord_sys=None,
         direction=None,
     ) -> None:
-        self.coord_sys = coord_sys
         super().__init__(
             name, domain=domain, auxiliary_domains=auxiliary_domains, domains=domains
         )
@@ -180,7 +176,7 @@ class SpatialVariable(IndependentVariable):
         perform_simplifications=True,
     ):
         """See :meth:`pybamm.Symbol.new_copy()`."""
-        return self.__class__(self.name, domains=self.domains, coord_sys=self.coord_sys)
+        return self.__class__(self.name, domains=self.domains)
 
 
 class SpatialVariableEdge(SpatialVariable):
