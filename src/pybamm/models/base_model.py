@@ -2111,9 +2111,7 @@ class BaseModel:
             model_config["events"] = [
                 {
                     "name": event.name,
-                    "expression": convert_symbol_to_json(
-                        event.expression
-                    ),
+                    "expression": convert_symbol_to_json(event.expression),
                     "event_type": event.event_type,
                 }
                 for event in self.events
@@ -2329,9 +2327,7 @@ class BaseModel:
         extra = data.get("extra_variables")
         if extra:
             for name, expr_json in extra.items():
-                model.variables[name] = convert_symbol_from_json(
-                    expr_json
-                )
+                model.variables[name] = convert_symbol_from_json(expr_json)
 
         # --- Removed variables ---
         removed = data.get("removed_variables")

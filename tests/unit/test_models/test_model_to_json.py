@@ -384,9 +384,7 @@ class TestBaseModelToConfig:
     def test_to_config_builtin_with_extra_variable_round_trip(self):
         """Added variable survives to_config / from_config round-trip."""
         model = pybamm.lithium_ion.SPM()
-        model.variables["My variable"] = (
-            2 * model.variables["Voltage [V]"]
-        )
+        model.variables["My variable"] = 2 * model.variables["Voltage [V]"]
         config = model.to_config()
 
         # Still compact format with override
@@ -453,9 +451,7 @@ class TestBaseModelToConfig:
         """Matches example.py: add variable + clear events, round-trip."""
         model = pybamm.lithium_ion.SPM()
         model.events = []
-        model.variables["My variable"] = (
-            2 * model.variables["Voltage [V]"]
-        )
+        model.variables["My variable"] = 2 * model.variables["Voltage [V]"]
         config = model.to_config()
 
         assert config["type"] == "SPM"
@@ -472,9 +468,7 @@ class TestBaseModelToConfig:
         """Config with overrides survives JSON round-trip."""
         model = pybamm.lithium_ion.SPM()
         model.events = []
-        model.variables["My variable"] = (
-            2 * model.variables["Voltage [V]"]
-        )
+        model.variables["My variable"] = 2 * model.variables["Voltage [V]"]
         config = model.to_config()
 
         json_str = json.dumps(config)
