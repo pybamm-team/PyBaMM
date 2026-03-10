@@ -2041,6 +2041,84 @@ class BaseModel:
                     return mod_name
         return None
 
+    def serialise_builtin_overrides(self, model_config: dict) -> None:
+        """Detect and serialise user modifications to a built-in model.
+
+        Compares the current model's ``variables`` keys and ``events``
+        against a freshly-constructed reference model (same class and
+        options).  Any differences are written into *model_config* using
+        the following optional keys:
+
+        ``extra_variables``
+            ``dict[str, json]`` – variables the user *added* (keys not
+            present in the reference model).  Each value is the symbolic
+            expression serialised via
+            :func:`convert_symbol_to_json`.
+        ``removed_variables``
+            ``list[str]`` – variable names that exist in the reference
+            model but have been deleted by the user.
+        ``events``
+            ``list[dict]`` – full serialised events list, included
+            **only** when the events differ from the reference model
+            (by count or by name set).
+
+        If the model is unmodified, no extra keys are added and the
+        config stays identical to the previous compact format.
+
+        .. note::
+
+           Only added/removed variable *keys* are tracked.  Overwriting
+           an existing variable's expression with a new one is **not**
+           detected in this version.
+
+        Parameters
+        ----------
+        model_config : dict
+            The compact config dict (mutated in-place).
+        """
+        from pybamm.expression_tree.operations.serialise import (
+            convert_symbol_to_json,
+        )
+
+        # Build a pristine reference with the same options.
+        model_cls = type(self)
+        options = model_config.get("options", {})
+        ref = model_cls(options=options) if options else model_cls()
+
+        # --- Variables diff (added / removed keys only) ---
+        current_keys = set(self.variables.keys())
+        ref_keys = set(ref.variables.keys())
+
+        added = current_keys - ref_keys
+        removed = ref_keys - current_keys
+
+        if added:
+            model_config["extra_variables"] = {
+                name: convert_symbol_to_json(self.variables[name])
+                for name in sorted(added)
+            }
+        if removed:
+            model_config["removed_variables"] = sorted(removed)
+
+        # --- Events diff (full replacement when different) ---
+        current_event_names = {e.name for e in self.events}
+        ref_event_names = {e.name for e in ref.events}
+
+        if (
+            len(self.events) != len(ref.events)
+            or current_event_names != ref_event_names
+        ):
+            model_config["events"] = [
+                {
+                    "name": event.name,
+                    "expression": convert_symbol_to_json(
+                        event.expression
+                    ),
+                    "event_type": event.event_type,
+                }
+                for event in self.events
+            ]
+
     def to_config(
         self,
         filename: str | Path | None = None,
@@ -2082,6 +2160,13 @@ class BaseModel:
             }
             if hasattr(self, "options"):
                 model_config["options"] = dict(self.options)
+
+            # Detect user modifications to variables and events.
+            # A fresh reference model is instantiated with the same options
+            # so we can diff against it. Only added/removed variable *keys*
+            # are tracked; overwriting an existing variable's expression is
+            # NOT detected (out of scope for v1).
+            self.serialise_builtin_overrides(model_config)
         else:
             # Custom / user-defined model — full serialised format
             model_config = {
@@ -2212,10 +2297,59 @@ class BaseModel:
                     k: tuple(v) if isinstance(v, list) else v
                     for k, v in options.items()
                 }
-            return model_cls(options=options) if options else model_cls()
+            model = model_cls(options=options) if options else model_cls()
+            BaseModel.apply_builtin_overrides(model, data)
+            return model
 
         # Fallback: raw to_json dict (no "type" key)
         return Serialise.load_custom_model(data)
+
+    @staticmethod
+    def apply_builtin_overrides(model: BaseModel, data: dict) -> None:
+        """Apply variable and event overrides from a built-in config.
+
+        This is the inverse of
+        :meth:`serialise_builtin_overrides`.  It mutates *model*
+        in-place.
+
+        Parameters
+        ----------
+        model : BaseModel
+            A freshly-constructed built-in model.
+        data : dict
+            The config dictionary, which may contain
+            ``extra_variables``, ``removed_variables``, and/or
+            ``events``.
+        """
+        from pybamm.expression_tree.operations.serialise import (
+            convert_symbol_from_json,
+        )
+
+        # --- Extra variables ---
+        extra = data.get("extra_variables")
+        if extra:
+            for name, expr_json in extra.items():
+                model.variables[name] = convert_symbol_from_json(
+                    expr_json
+                )
+
+        # --- Removed variables ---
+        removed = data.get("removed_variables")
+        if removed:
+            for name in removed:
+                model.variables.pop(name, None)
+
+        # --- Events override ---
+        events_data = data.get("events")
+        if events_data is not None:
+            model.events = [
+                pybamm.Event(
+                    e["name"],
+                    convert_symbol_from_json(e["expression"]),
+                    e["event_type"],
+                )
+                for e in events_data
+            ]
 
 
 def load_model(filename, battery_model: BaseModel | None = None):
