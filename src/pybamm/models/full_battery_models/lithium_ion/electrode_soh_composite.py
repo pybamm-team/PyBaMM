@@ -3,6 +3,7 @@
 #
 from __future__ import annotations
 
+import warnings
 from typing import Any
 
 import pybamm
@@ -600,12 +601,25 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
         if isinstance(initial_value, str) and initial_value.endswith("V"):
             V_init = float(initial_value[:-1])
             initialization_method = "voltage"
-        elif isinstance(initial_value, float) and 0 <= initial_value <= 1:
+        elif isinstance(initial_value, float):
             initialization_method = "SOC"
+            if initial_value > 1:
+                warnings.warn(
+                    message=f"Initial SoC {initial_value} is greater than 1",
+                    category=UserWarning,
+                    stacklevel=2,
+                )
+            elif initial_value < 0:
+                warnings.warn(
+                    message=f"Initial SoC {initial_value} is less than 0",
+                    category=UserWarning,
+                    stacklevel=2,
+                )
+
         else:
             raise ValueError(
-                "Invalid initial value. Expected a float between 0 and 1 "
-                "(for SOC) or a string ending in 'V' (for voltage), got "
+                "Invalid initial value. Expected a float (for SoC, "
+                "1.0 for 100%) or a string ending in 'V' (for voltage), got "
                 f"{initial_value!r} of type {type(initial_value).__name__}"
             )
 
@@ -761,6 +775,7 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
         tol: float = 1e-6,
         inputs: dict | None = None,
         initial_conditions: dict[str, float] | None = None,
+        esoh_sim: pybamm.Simulation | None = None,
     ) -> dict[str, float]:
         """
         Full solve approach: solve all stoichiometries simultaneously.
@@ -791,6 +806,9 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
             Additional inputs
         initial_conditions : dict, optional
             Dictionary of initial conditions for variables (e.g., from split solve)
+        esoh_sim : :class:`pybamm.Simulation`, optional
+            A pre-built simulation wrapping an :class:`ElectrodeSOHComposite` model
+            to reuse across calls. If not provided, a new one is created.
 
         Returns
         -------
@@ -818,8 +836,20 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
         if isinstance(initial_value, str) and initial_value.endswith("V"):
             V_init = float(initial_value[:-1])
             initialization_method = "voltage"
-        elif isinstance(initial_value, float) and 0 <= initial_value <= 1:
+        elif isinstance(initial_value, float):
             initialization_method = "SOC"
+            if initial_value > 1:
+                warnings.warn(
+                    message=f"Initial SoC {initial_value} is greater than 1",
+                    category=UserWarning,
+                    stacklevel=2,
+                )
+            elif initial_value < 0:
+                warnings.warn(
+                    message=f"Initial SoC {initial_value} is less than 0",
+                    category=UserWarning,
+                    stacklevel=2,
+                )
         else:
             raise ValueError(
                 "Invalid initial value. Expected a float between 0 and 1 "
@@ -833,23 +863,24 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
         else:
             all_inputs["SOC_init"] = initial_value
 
-        model = ElectrodeSOHComposite(
-            options, direction, initialization_method=initialization_method
-        )
-        sim = pybamm.Simulation(
-            model,
-            parameter_values=parameter_values,
-            solver=get_esoh_default_solver(tol),
-        )
+        if esoh_sim is None:
+            model = ElectrodeSOHComposite(
+                options, direction, initialization_method=initialization_method
+            )
+            esoh_sim = pybamm.Simulation(
+                model,
+                parameter_values=parameter_values,
+                solver=get_esoh_default_solver(tol),
+            )
 
         if initial_conditions is not None:
-            sim.build()
-            sim.built_model.set_initial_conditions_from(
+            esoh_sim.build()
+            esoh_sim.built_model.set_initial_conditions_from(
                 initial_conditions, inputs=all_inputs
             )
-        sol = sim.solve([0], inputs=all_inputs)
+        sol = esoh_sim.solve([0], inputs=all_inputs)
 
-        return {var: sol[var].entries[0] for var in model.variables.keys()}
+        return {var: sol[var].entries[0] for var in sol.all_models[0].variables.keys()}
 
 
 def get_initial_stoichiometries_composite(
@@ -862,6 +893,7 @@ def get_initial_stoichiometries_composite(
     inputs: dict | None = None,
     known_value: str = "cyclable lithium capacity",
     try_split_solve: bool = True,
+    esoh_sim: pybamm.Simulation | None = None,
     **kwargs: Any,
 ) -> dict[str, float]:
     """
@@ -932,6 +964,7 @@ def get_initial_stoichiometries_composite(
             options=options,
             tol=tol,
             inputs=inputs,
+            esoh_sim=esoh_sim,
         )
     except (pybamm.SolverError, ValueError) as first_error:
         if try_split_solve:

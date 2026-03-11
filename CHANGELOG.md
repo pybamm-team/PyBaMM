@@ -2,6 +2,8 @@
 
 ## Features
 
+- Allow out of bounds initial state of charge to enable initialising a simulation at a voltage outside the voltage limits. ([#5386](https://github.com/pybamm-team/PyBaMM/pull/5386))
+- Added `cache_esoh` option to `Simulation` that caches the electrode SOH computation across repeated `solve` calls, avoiding redundant recalculation when eSOH-relevant parameters have not changed. The cached eSOH solver/simulation object is also reused on cache misses to skip expensive model rebuilding. ([#5408](https://github.com/pybamm-team/PyBaMM/pull/5408))
 - Eliminated the mass matrix inverse and temporary dense matrix objects when building the simulation. ([#5391](https://github.com/pybamm-team/PyBaMM/pull/5391))
 - Added the `hermite_reduction_factor` option to the `IDAKLUSolver`, which dynamically compresses solution size by removing redundant points in the Hermite interpolant. ([#5390](https://github.com/pybamm-team/PyBaMM/pull/5390))
 - Added support for Python 3.14. ([#5374](https://github.com/pybamm-team/PyBaMM/pull/5374))
@@ -9,11 +11,13 @@
 - Improve the performance of matrix multiplication with CasADi expressions. ([#5351](https://github.com/pybamm-team/PyBaMM/pull/5351))
 - Adds option for lists of inputs to `solve` to include input parameters which are used
 as initial conditions. ([#5311](https://github.com/pybamm-team/PyBaMM/pull/5311))
+- DiffSL export for discretised PyBaMM models. ([#5370](https://github.com/pybamm-team/PyBaMM/pull/5370))
 - Optimize state mapper for multi-step experiments by pre-calculating mapper during setup. ([#5380](https://github.com/pybamm-team/PyBaMM/pull/5380))
 
 ## Bug fixes
 - PyBaMM no longer crashes on import if an incompatible version of JAX is installed (e.g., installed for other packages or numeric computations). This ensures JAX is truly an optional dependency: users who do not intend to use JAX can safely import PyBaMM, with a warning shown if JAX-dependent features are disabled. ([#5398](https://github.com/pybamm-team/PyBaMM/pull/5398))
 - Fixed a bug in the exchange current density calculation for MSMR models. ([#5404](https://github.com/pybamm-team/PyBaMM/pull/5404))
+- Fixed a bug where when converting `ExpressionFunctionParameter` to source code, `Interpolant` objects were being reduced to just their input variable names (e.g., sto) instead of preserving the full constructor call with data arrays. ([#5393](https://github.com/pybamm-team/PyBaMM/pull/5393))
 
 ## Breaking changes
 

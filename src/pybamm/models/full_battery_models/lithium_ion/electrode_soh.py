@@ -3,6 +3,7 @@
 #
 from __future__ import annotations
 
+import warnings
 from functools import lru_cache
 
 import numpy as np
@@ -488,6 +489,7 @@ class ElectrodeSOHSolver:
             energy_inputs = {**sol_dict, **inputs}
             energy = self.theoretical_energy_integral(energy_inputs)
             sol_dict.update({"Maximum theoretical energy [W.h]": energy})
+
         return sol_dict
 
     def _set_up_solve(self, inputs, direction):
@@ -790,9 +792,11 @@ class ElectrodeSOHSolver:
             V_max = parameter_values.evaluate(self.param.ocp_soc_100, inputs=inputs)
 
             if not V_min - tol <= V_init <= V_max + tol:
-                raise ValueError(
-                    f"Initial voltage {V_init}V is outside the voltage limits "
-                    f"({V_min}, {V_max})"
+                warnings.warn(
+                    message=f"Initial voltage {V_init}V is outside the voltage limits "
+                    f"({V_min}, {V_max})",
+                    category=UserWarning,
+                    stacklevel=2,
                 )
 
             # Solve simple model for initial soc based on target voltage
@@ -843,13 +847,24 @@ class ElectrodeSOHSolver:
             )
         elif isinstance(initial_value, int | float):
             initial_soc = initial_value
-            if not 0 <= initial_soc <= 1:
-                raise ValueError("Initial SOC should be between 0 and 1")
+            if initial_soc > 1:
+                warnings.warn(
+                    message=f"Initial SoC {initial_soc} is greater than 1",
+                    category=UserWarning,
+                    stacklevel=2,
+                )
+            elif initial_soc < 0:
+                warnings.warn(
+                    message=f"Initial SoC {initial_soc} is less than 0",
+                    category=UserWarning,
+                    stacklevel=2,
+                )
 
         else:
             raise ValueError(
-                "Initial value must be a float between 0 and 1, "
-                "or a string ending in 'V'"
+                "Invalid initial value. Expected a float (for SoC, "
+                "1.0 for 100%) or a string ending in 'V' (for voltage), got "
+                f"{initial_value!r} of type {type(initial_value).__name__}"
             )
 
         x = x_0 + initial_soc * (x_100 - x_0)
@@ -1029,6 +1044,7 @@ def get_initial_stoichiometries(
     options=None,
     tol=1e-6,
     inputs=None,
+    esoh_solver=None,
 ):
     """
     Calculate initial stoichiometries to start off the simulation at a particular
@@ -1061,19 +1077,22 @@ def get_initial_stoichiometries(
         Default is 1e-6.
     inputs : dict, optional
         A dictionary of input parameters passed to the model.
+    esoh_solver : :class:`ElectrodeSOHSolver`, optional
+        A pre-built solver to reuse. If not provided, a new one is created.
 
     Returns
     -------
     x, y
         The initial stoichiometries that give the desired initial state of charge
     """
-    esoh_solver = ElectrodeSOHSolver(
-        parameter_values,
-        direction=direction,
-        param=param,
-        known_value=known_value,
-        options=options,
-    )
+    if esoh_solver is None:
+        esoh_solver = ElectrodeSOHSolver(
+            parameter_values,
+            direction=direction,
+            param=param,
+            known_value=known_value,
+            options=options,
+        )
     return esoh_solver.get_initial_stoichiometries(
         initial_value, tol=tol, inputs=inputs, direction=direction
     )
@@ -1135,6 +1154,7 @@ def get_initial_ocps(
     options=None,
     tol=1e-6,
     inputs=None,
+    esoh_solver=None,
 ):
     """
     Calculate initial open-circuit potentials to start off the simulation at a
@@ -1166,19 +1186,22 @@ def get_initial_ocps(
         Tolerance for the solver used in calculating initial open-circuit potentials.
     inputs : dict, optional
         A dictionary of input parameters passed to the model.
+    esoh_solver : :class:`ElectrodeSOHSolver`, optional
+        A pre-built solver to reuse. If not provided, a new one is created.
 
     Returns
     -------
     Un, Up
         The initial electrode OCPs that give the desired initial state of charge
     """
-    esoh_solver = ElectrodeSOHSolver(
-        parameter_values,
-        direction=direction,
-        param=param,
-        known_value=known_value,
-        options=options,
-    )
+    if esoh_solver is None:
+        esoh_solver = ElectrodeSOHSolver(
+            parameter_values,
+            direction=direction,
+            param=param,
+            known_value=known_value,
+            options=options,
+        )
     return esoh_solver.get_initial_ocps(
         initial_value, direction=direction, tol=tol, inputs=inputs
     )
