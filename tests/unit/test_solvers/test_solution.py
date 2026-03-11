@@ -280,6 +280,10 @@ class TestSolution:
             sol_sum.y, np.concatenate([y1, y2[:, 1:]], axis=1)
         )
         np.testing.assert_array_equal(sol_sum.all_inputs, [{"a": 1}, {"a": 2}])
+        assert sol_sum.all_inputs_stacked[0] is sol1.all_inputs_stacked[0]
+        assert sol_sum.all_inputs_stacked[1] is sol2.all_inputs_stacked[0]
+        assert sol_sum.all_inputs_casadi[0] is sol1.all_inputs_casadi[0]
+        assert sol_sum.all_inputs_casadi[1] is sol2.all_inputs_casadi[0]
 
         # Test sub-solutions
         assert len(sol_sum.sub_solutions) == 2
@@ -402,7 +406,8 @@ class TestSolution:
         for ys_copy, ys1 in zip(sol_copy.all_ys, sol1.all_ys, strict=False):
             np.testing.assert_array_equal(ys_copy, ys1)
         assert sol_copy.all_inputs == sol1.all_inputs
-        assert sol_copy.all_inputs_stacked == sol1.all_inputs_stacked
+        assert sol_copy.all_inputs_stacked is sol1.all_inputs_stacked
+        assert sol_copy.all_inputs_casadi is sol1.all_inputs_casadi
         assert sol_copy.set_up_time == sol1.set_up_time
         assert sol_copy.solve_time == sol1.solve_time
         assert sol_copy.integration_time == sol1.integration_time
@@ -468,6 +473,7 @@ class TestSolution:
         np.testing.assert_array_equal(sol_last_state.all_ys[0], 2)
         assert sol_last_state.all_inputs == sol1.all_inputs[-1:]
         assert sol_last_state.all_inputs_stacked == sol1.all_inputs_stacked[-1:]
+        assert sol_last_state.all_inputs_casadi == sol1.all_inputs_casadi[-1:]
         assert sol_last_state.all_models == sol1.all_models[-1:]
         assert sol_last_state.set_up_time == 0
         assert sol_last_state.solve_time == 0

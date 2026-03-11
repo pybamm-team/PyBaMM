@@ -1091,6 +1091,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         # Propagate metadata from the original solution
         new_sol._all_inputs_stacked = solution.all_inputs_stacked
+        new_sol._all_inputs_casadi = solution.all_inputs_casadi
         new_sol.closest_event_idx = solution.closest_event_idx
 
         new_sol.solve_time = solution.solve_time

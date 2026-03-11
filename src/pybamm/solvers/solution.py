@@ -155,6 +155,9 @@ class Solution:
         self.solve_time = None
         self.integration_time = None
 
+        self._all_inputs_stacked = None
+        self._all_inputs_casadi = None
+
         # initialize empty variable cache and data
         self._variables = {}
         self._data = pybamm.FuzzyDict()
@@ -337,13 +340,21 @@ class Solution:
         """Model(s) used for solution"""
         return self._all_models
 
-    @cached_property
+    @property
     def all_inputs_stacked(self) -> list[np.ndarray]:
-        return [np.asarray(list(inp.values())).reshape(-1) for inp in self.all_inputs]
+        if self._all_inputs_stacked is None:
+            self._all_inputs_stacked = [
+                np.asarray(list(inp.values())).reshape(-1) for inp in self.all_inputs
+            ]
+        return self._all_inputs_stacked
 
-    @cached_property
-    def all_inputs_casadi(self) -> list[casadi.MX]:
-        return [casadi.vertcat(inp) for inp in self.all_inputs_stacked]
+    @property
+    def all_inputs_casadi(self) -> list[casadi.DM]:
+        if self._all_inputs_casadi is None:
+            self._all_inputs_casadi = [
+                casadi.vertcat(inp) for inp in self.all_inputs_stacked
+            ]
+        return self._all_inputs_casadi
 
     @property
     def all_yps(self) -> list[np.ndarray | casadi.DM | casadi.MX] | None:
@@ -426,6 +437,7 @@ class Solution:
             all_yps=all_yps,
         )
         new_sol._all_inputs_stacked = self.all_inputs_stacked[:1]
+        new_sol._all_inputs_casadi = self.all_inputs_casadi[:1]
         new_sol._sub_solutions = self.sub_solutions[:1]
 
         new_sol.solve_time = 0
@@ -469,6 +481,7 @@ class Solution:
             all_yps=all_yps,
         )
         new_sol._all_inputs_stacked = self.all_inputs_stacked[-1:]
+        new_sol._all_inputs_casadi = self.all_inputs_casadi[-1:]
         new_sol._sub_solutions = self.sub_solutions[-1:]
         new_sol.solve_time = 0
         new_sol.integration_time = 0
@@ -948,6 +961,7 @@ class Solution:
 
         new_sol.closest_event_idx = other.closest_event_idx
         new_sol._all_inputs_stacked = self.all_inputs_stacked + other.all_inputs_stacked
+        new_sol._all_inputs_casadi = self.all_inputs_casadi + other.all_inputs_casadi
 
         # Add timers (if available)
         for attr in ["solve_time", "integration_time", "set_up_time"]:
@@ -986,6 +1000,7 @@ class Solution:
             variables_returned=self.variables_returned,
         )
         new_sol._all_inputs_stacked = self.all_inputs_stacked
+        new_sol._all_inputs_casadi = self.all_inputs_casadi
         new_sol._sub_solutions = self.sub_solutions
         new_sol.closest_event_idx = self.closest_event_idx
 
@@ -1113,6 +1128,7 @@ def make_cycle_solution(
         cycle_solution._variables = sum_sols._variables
 
     cycle_solution._all_inputs_stacked = sum_sols.all_inputs_stacked
+    cycle_solution._all_inputs_casadi = sum_sols.all_inputs_casadi
     cycle_solution._sub_solutions = sum_sols.sub_solutions
 
     cycle_solution.solve_time = sum_sols.solve_time
