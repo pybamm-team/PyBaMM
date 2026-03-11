@@ -432,6 +432,26 @@ class TestSolution:
         )
         assert sol2.variables_returned is True
 
+    def test_all_inputs(self):
+        t = [np.linspace(0, 1, 10), np.linspace(1, 2, 10)]
+        t[1][0] = np.nextafter(t[1][0], np.inf)
+        y = [np.tile(t[0], (5, 1)), np.tile(t[1], (5, 1))]
+        inputs = [{"a": 1.0, "b": 2.0, "c": 3.0}, {"a": 4.0, "b": 5.0, "c": 6.0}]
+        sol = pybamm.Solution(t, y, pybamm.BaseModel(), inputs)
+
+        stacked = sol.all_inputs_stacked
+        assert len(stacked) == 2
+        for s, inp in zip(stacked, inputs, strict=True):
+            assert isinstance(s, np.ndarray)
+            # check that it's a vector
+            assert s.shape == (len(inp),)
+            np.testing.assert_array_equal(s, np.array(list(inp.values())))
+
+        casadi_inputs = sol.all_inputs_casadi
+        assert len(casadi_inputs) == 2
+        for c, s in zip(casadi_inputs, stacked, strict=True):
+            np.testing.assert_array_equal(np.array(c).flatten(), s)
+
     def test_last_state(self):
         # Set up first solution
         t1 = [np.linspace(0, 1), np.linspace(1, 2, 5)]

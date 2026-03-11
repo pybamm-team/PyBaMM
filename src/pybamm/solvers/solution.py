@@ -343,7 +343,7 @@ class Solution:
 
     @cached_property
     def all_inputs_casadi(self) -> list[casadi.MX]:
-        return [casadi.vertcat(inp) for inp in self.all_inputs.values()]
+        return [casadi.vertcat(inp) for inp in self.all_inputs_stacked]
 
     @property
     def all_yps(self) -> list[np.ndarray | casadi.DM | casadi.MX] | None:
