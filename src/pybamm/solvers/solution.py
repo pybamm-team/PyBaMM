@@ -341,6 +341,10 @@ class Solution:
     def all_inputs_stacked(self) -> list[np.ndarray]:
         return [np.asarray(list(inp.values())).reshape(-1) for inp in self.all_inputs]
 
+    @cached_property
+    def all_inputs_casadi(self) -> list[casadi.MX]:
+        return [casadi.vertcat(inp) for inp in self.all_inputs.values()]
+
     @property
     def all_yps(self) -> list[np.ndarray | casadi.DM | casadi.MX] | None:
         return self._all_yps
