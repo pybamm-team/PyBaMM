@@ -63,7 +63,7 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         self.all_ts = solution.all_ts
         self.all_ys = solution.all_ys
         self.all_inputs = solution.all_inputs
-        self.all_inputs_casadi = solution.all_inputs_casadi
+        self.all_inputs_stacked = solution.all_inputs_stacked
 
         self.mesh = base_variables[0].mesh
         self.domain = base_variables[0].domain
