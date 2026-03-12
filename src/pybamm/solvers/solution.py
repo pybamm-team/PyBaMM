@@ -155,6 +155,9 @@ class Solution:
         self.solve_time = None
         self.integration_time = None
 
+        self._all_inputs_stacked = None
+        self._all_inputs_casadi = None
+
         # initialize empty variable cache and data
         self._variables = {}
         self._data = pybamm.FuzzyDict()
@@ -337,9 +340,21 @@ class Solution:
         """Model(s) used for solution"""
         return self._all_models
 
-    @cached_property
-    def all_inputs_casadi(self):
-        return [casadi.vertcat(*inp.values()) for inp in self.all_inputs]
+    @property
+    def all_inputs_stacked(self) -> list[np.ndarray]:
+        if self._all_inputs_stacked is None:
+            self._all_inputs_stacked = [
+                np.asarray(list(inp.values())).reshape(-1) for inp in self.all_inputs
+            ]
+        return self._all_inputs_stacked
+
+    @property
+    def all_inputs_casadi(self) -> list[casadi.DM]:
+        if self._all_inputs_casadi is None:
+            self._all_inputs_casadi = [
+                casadi.vertcat(inp) for inp in self.all_inputs_stacked
+            ]
+        return self._all_inputs_casadi
 
     @property
     def all_yps(self) -> list[np.ndarray | casadi.DM | casadi.MX] | None:
@@ -421,6 +436,7 @@ class Solution:
             all_sensitivities=sensitivities,
             all_yps=all_yps,
         )
+        new_sol._all_inputs_stacked = self.all_inputs_stacked[:1]
         new_sol._all_inputs_casadi = self.all_inputs_casadi[:1]
         new_sol._sub_solutions = self.sub_solutions[:1]
 
@@ -464,6 +480,7 @@ class Solution:
             all_sensitivities=sensitivities,
             all_yps=all_yps,
         )
+        new_sol._all_inputs_stacked = self.all_inputs_stacked[-1:]
         new_sol._all_inputs_casadi = self.all_inputs_casadi[-1:]
         new_sol._sub_solutions = self.sub_solutions[-1:]
         new_sol.solve_time = 0
@@ -621,20 +638,23 @@ class Solution:
     def process_casadi_var(self, var_pybamm, inputs, ys_shape):
         t_MX = casadi.MX.sym("t")
         y_MX = casadi.MX.sym("y", ys_shape[0])
-        inputs_MX_dict = {
-            key: casadi.MX.sym("input", value.shape[0]) for key, value in inputs.items()
-        }
-        inputs_MX = casadi.vertcat(*[p for p in inputs_MX_dict.values()])
+        total_input_size = sum(v.size for v in inputs.values())
+        inputs_MX = casadi.MX.sym("p", total_input_size)
+        inputs_MX_dict = {}
+        offset = 0
+        for key, value in inputs.items():
+            n = value.size
+            inputs_MX_dict[key] = inputs_MX[offset : offset + n]
+            offset += n
         var_sym = var_pybamm.to_casadi(t_MX, y_MX, inputs=inputs_MX_dict)
 
         opts = {
             "cse": True,
             "inputs_check": False,
-            "is_diff_in": [False, False, False],
-            "is_diff_out": [False],
+            "is_diff_in": [False, True, False],
+            "is_diff_out": [True],
             "regularity_check": False,
             "error_on_fail": False,
-            "enable_jacobian": False,
         }
 
         # Casadi has a bug where it does not correctly handle arrays with
@@ -940,6 +960,7 @@ class Solution:
         )
 
         new_sol.closest_event_idx = other.closest_event_idx
+        new_sol._all_inputs_stacked = self.all_inputs_stacked + other.all_inputs_stacked
         new_sol._all_inputs_casadi = self.all_inputs_casadi + other.all_inputs_casadi
 
         # Add timers (if available)
@@ -978,6 +999,7 @@ class Solution:
             all_t_evals=self._all_t_evals,
             variables_returned=self.variables_returned,
         )
+        new_sol._all_inputs_stacked = self.all_inputs_stacked
         new_sol._all_inputs_casadi = self.all_inputs_casadi
         new_sol._sub_solutions = self.sub_solutions
         new_sol.closest_event_idx = self.closest_event_idx
@@ -1105,6 +1127,7 @@ def make_cycle_solution(
     if sum_sols.variables_returned:
         cycle_solution._variables = sum_sols._variables
 
+    cycle_solution._all_inputs_stacked = sum_sols.all_inputs_stacked
     cycle_solution._all_inputs_casadi = sum_sols.all_inputs_casadi
     cycle_solution._sub_solutions = sum_sols.sub_solutions
 

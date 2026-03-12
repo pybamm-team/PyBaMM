@@ -52,7 +52,7 @@ class ProcessedVariable(BaseProcessedVariable):
         self.all_ys = solution.all_ys
         self.all_yps = solution.all_yps
         self.all_inputs = solution.all_inputs
-        self.all_inputs_casadi = solution.all_inputs_casadi
+        self.all_inputs_stacked = solution.all_inputs_stacked
 
         self.mesh = base_variables[0].mesh
         self.domain = base_variables[0].domain
@@ -127,7 +127,7 @@ class ProcessedVariable(BaseProcessedVariable):
         ts = self.all_ts
         ys = self.all_ys
         yps = self.all_yps
-        inputs = self.all_inputs_casadi
+        inputs = self.all_inputs_stacked
 
         # Remove all empty ts
         idxs = np.where([ti.size > 0 for ti in ts])[0]
@@ -143,7 +143,7 @@ class ProcessedVariable(BaseProcessedVariable):
         ys = [ys[idx] for idx in idxs]
         if self.hermite_interpolation:
             yps = [yps[idx] for idx in idxs]
-        inputs = [self.all_inputs_casadi[idx] for idx in idxs]
+        inputs = [inputs[idx] for idx in idxs]
 
         is_f_contiguous = _is_f_contiguous(ys)
 
@@ -422,7 +422,7 @@ class ProcessedVariable(BaseProcessedVariable):
         for ts, ys, inputs_stacked, inputs, base_variable, dy_dp in zip(
             self.all_ts,
             self.all_ys,
-            self.all_inputs_casadi,
+            self.all_inputs_stacked,
             self.all_inputs,
             self.base_variables,
             self.all_solution_sensitivities["all"],
@@ -508,11 +508,13 @@ class ProcessedVariable(BaseProcessedVariable):
             """
 
             class StubSolution:
-                def __init__(self, ts, ys, inputs, inputs_casadi, sensitivities, t_pts):
+                def __init__(
+                    self, ts, ys, inputs, inputs_stacked, sensitivities, t_pts
+                ):
                     self.all_ts = ts
                     self.all_ys = ys
                     self.all_inputs = inputs
-                    self.all_inputs_casadi = inputs_casadi
+                    self.all_inputs_stacked = inputs_stacked
                     self.sensitivities = sensitivities
                     self.t = t_pts
 
@@ -520,7 +522,7 @@ class ProcessedVariable(BaseProcessedVariable):
                 self.all_ts,
                 self.all_ys,
                 self.all_inputs,
-                self.all_inputs_casadi,
+                self.all_inputs_stacked,
                 self.sensitivities,
                 self.t_pts,
             )
@@ -568,7 +570,7 @@ class ProcessedVariable0D(ProcessedVariable):
         if self.time_integral is None:
             return entries
         return self.time_integral.postfix(
-            entries, self.t_pts, self.all_inputs_casadi[0]
+            entries, self.t_pts, self.all_inputs_stacked[0]
         )
 
     def _interp_setup(self, entries, t):
