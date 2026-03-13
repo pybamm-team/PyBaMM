@@ -93,6 +93,10 @@ class QuickPlot:
         - "tight": make axes tight to plot at each time
         - dictionary: fine-grain control for each variable, can be either "fixed" or \
         "tight" or a specific tuple (lower, upper).
+    x_axis : str, optional
+        The variable to use for the x-axis. Options are:
+        - "Time" (default): Use time as the x-axis.
+        - "Discharge capacity [A.h]": Use discharge capacity as the x-axis.
 
     """
 
@@ -110,6 +114,7 @@ class QuickPlot:
         spatial_unit="um",
         variable_limits="fixed",
         n_t_linear=100,
+        x_axis="Time",
     ):
         solutions = self.preprocess_solutions(solutions)
 
@@ -218,6 +223,27 @@ class QuickPlot:
         self.time_scaling_factor = time_scaling_factor
         self.min_t_unscaled = min_t
         self.max_t_unscaled = max_t
+
+        # set x_axis
+        self.x_axis = x_axis
+
+        if x_axis == "Discharge capacity [A.h]":
+            # Use discharge capacity as x-axis
+            discharge_capacities = [
+                solution["Discharge capacity [A.h]"].entries for solution in solutions
+            ]
+            self.x_values = discharge_capacities
+
+            self.x_scaling_factor = 1
+            self.x_label = "Discharge capacity [A.h]"
+
+        elif x_axis == "Time":
+            self.x_values = ts_seconds
+            self.x_scaling_factor = self.time_scaling_factor
+
+        else:
+            msg = "Invalid value for `x_axis`."
+            raise ValueError(msg)
 
         # Prepare dictionary of variables
         # output_variables is a list of strings or lists, e.g.
@@ -443,7 +469,7 @@ class QuickPlot:
 
             # Get min and max variable values
             if self.variable_limits[key] == "fixed":
-                # fixed variable limits: calculate "globlal" min and max
+                # fixed variable limits: calculate "global" min and max
                 spatial_vars = self.spatial_variable_dict[key]
                 var_min = np.min(
                     [
@@ -528,7 +554,11 @@ class QuickPlot:
             # Set labels for the first subplot only (avoid repetition)
             if variable_lists[0][0].dimensions == 0:
                 # 0D plot: plot as a function of time, indicating time t with a line
-                ax.set_xlabel(f"Time [{self.time_unit}]")
+                if self.x_axis == "Time":
+                    ax.set_xlabel(f"Time [{self.time_unit}]")
+                if self.x_axis == "Discharge capacity [A.h]":
+                    ax.set_xlabel(f"{self.x_label}")
+
                 for i, variable_list in enumerate(variable_lists):
                     for j, variable in enumerate(variable_list):
                         if len(variable_list) == 1:
@@ -538,10 +568,10 @@ class QuickPlot:
                             # multiple variables -> use linestyle to differentiate
                             # variables (color differentiates models)
                             linestyle = self.linestyles[j]
-                        full_t = self.ts_seconds[i]
+                        full_val = self.x_values[i]
                         (self.plots[key][i][j],) = ax.plot(
-                            full_t / self.time_scaling_factor,
-                            variable(full_t),
+                            full_val / self.x_scaling_factor,
+                            variable(full_val),
                             color=self.colors[i],
                             linestyle=linestyle,
                         )
@@ -672,13 +702,13 @@ class QuickPlot:
 
     def dynamic_plot(self, show_plot=True, step=None):
         """
-        Generate a dynamic plot with a slider to control the time.
+        Generate a dynamic plot with a slider to control the x-axis.
 
         Parameters
         ----------
         step : float, optional
             For notebook mode, size of steps to allow in the slider. Defaults to 1/100th
-            of the total time.
+            of the total range (time or discharge capacity).
         show_plot : bool, optional
             Whether to show the plots. Default is True. Set to False if you want to
             only display the plot after plt.show() has been called.
@@ -699,17 +729,25 @@ class QuickPlot:
             plt = import_optional_dependency("matplotlib.pyplot")
             Slider = import_optional_dependency("matplotlib.widgets", "Slider")
 
-            # create an initial plot at time self.min_t
+            # Set initial x-axis values and slider
             self.plot(self.min_t, dynamic=True)
+
+            # Set x-axis label correctly
+            if self.x_axis == "Time":
+                ax_label = f"Time [{self.time_unit}]"
+            elif self.x_axis == "Discharge capacity [A.h]":
+                ax_label = "Discharge capacity [A.h]"
+
+            ax_min, ax_max, val_init = self.min_t, self.max_t, self.min_t
 
             axcolor = "lightgoldenrodyellow"
             ax_slider = plt.axes([0.315, 0.02, 0.37, 0.03], facecolor=axcolor)
             self.slider = Slider(
                 ax_slider,
-                f"Time [{self.time_unit}]",
-                self.min_t,
-                self.max_t,
-                valinit=self.min_t,
+                ax_label,
+                ax_min,
+                ax_max,
+                valinit=val_init,
                 color="#1f77b4",
             )
             self.slider.on_changed(self.slider_update)
