@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 
 import pybamm
+from tests.shared import get_mesh_for_testing
 
 
 def pytest_addoption(parser):
@@ -50,3 +51,12 @@ def set_debug_value():
 @pytest.fixture(autouse=True)
 def disable_telemetry():
     pybamm.telemetry.disable()
+
+
+@pytest.fixture
+def p2d_mesh():
+    """
+    Default P2D mesh for unit tests.
+    """
+    geometry = pybamm.battery_geometry()
+    return get_mesh_for_testing(xpts=None, rpts=10, geometry=geometry)
