@@ -15,6 +15,7 @@ import scipy
 
 import pybamm
 from pybamm.expression_tree.operations.serialise import Serialise
+from pybamm.models.event import EventType
 from pybamm.models.symbol_processor import SymbolProcessor
 
 
@@ -2112,7 +2113,7 @@ class BaseModel:
                 {
                     "name": event.name,
                     "expression": convert_symbol_to_json(event.expression),
-                    "event_type": event.event_type,
+                    "event_type": event.event_type.value,
                 }
                 for event in self.events
             ]
@@ -2342,7 +2343,9 @@ class BaseModel:
                 pybamm.Event(
                     e["name"],
                     convert_symbol_from_json(e["expression"]),
-                    e["event_type"],
+                    EventType(e["event_type"])
+                    if isinstance(e["event_type"], int)
+                    else e["event_type"],
                 )
                 for e in events_data
             ]

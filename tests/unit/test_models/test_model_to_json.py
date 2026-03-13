@@ -464,6 +464,27 @@ class TestBaseModelToConfig:
         assert "My variable" in loaded.variables
         assert loaded.events == []
 
+    def test_to_config_builtin_event_type_survives_json_round_trip(self):
+        """Event type enum survives JSON serialisation round-trip."""
+        model = pybamm.lithium_ion.SPM()
+        model.events.append(
+            pybamm.Event(
+                "custom_event",
+                pybamm.Scalar(1),
+                pybamm.EventType.TERMINATION,
+            )
+        )
+        config = model.to_config()
+
+        # JSON round-trip (would fail if event_type is a raw enum)
+        json_str = json.dumps(config)
+        reloaded = json.loads(json_str)
+
+        loaded = pybamm.BaseModel.from_config(reloaded)
+        custom = [e for e in loaded.events if e.name == "custom_event"]
+        assert len(custom) == 1
+        assert custom[0].event_type == pybamm.EventType.TERMINATION
+
     def test_to_config_builtin_overrides_json_serializable(self):
         """Config with overrides survives JSON round-trip."""
         model = pybamm.lithium_ion.SPM()
