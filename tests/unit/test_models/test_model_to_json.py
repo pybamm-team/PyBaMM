@@ -377,7 +377,7 @@ class TestBaseModelToConfig:
         model = pybamm.lithium_ion.SPM()
         config = model.to_config()
         assert config["type"] == "SPM"
-        assert "extra_variables" not in config
+        assert "custom_variables" not in config
         assert "removed_variables" not in config
         assert "events" not in config
 
@@ -389,8 +389,8 @@ class TestBaseModelToConfig:
 
         # Still compact format with override
         assert config["type"] == "SPM"
-        assert "extra_variables" in config
-        assert "My variable" in config["extra_variables"]
+        assert "custom_variables" in config
+        assert "My variable" in config["custom_variables"]
 
         loaded = pybamm.BaseModel.from_config(config)
         assert type(loaded) is type(model)
@@ -455,7 +455,7 @@ class TestBaseModelToConfig:
         config = model.to_config()
 
         assert config["type"] == "SPM"
-        assert "extra_variables" in config
+        assert "custom_variables" in config
         assert "events" in config
         assert config["events"] == []
 

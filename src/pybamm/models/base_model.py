@@ -2050,7 +2050,7 @@ class BaseModel:
         options).  Any differences are written into *model_config* using
         the following optional keys:
 
-        ``extra_variables``
+        ``custom_variables``
             ``dict[str, json]`` – variables the user *added* (keys not
             present in the reference model).  Each value is the symbolic
             expression serialised via
@@ -2094,7 +2094,7 @@ class BaseModel:
         removed = ref_keys - current_keys
 
         if added:
-            model_config["extra_variables"] = {
+            model_config["custom_variables"] = {
                 name: convert_symbol_to_json(self.variables[name])
                 for name in sorted(added)
             }
@@ -2317,15 +2317,15 @@ class BaseModel:
             A freshly-constructed built-in model.
         data : dict
             The config dictionary, which may contain
-            ``extra_variables``, ``removed_variables``, and/or
+            ``custom_variables``, ``removed_variables``, and/or
             ``events``.
         """
         from pybamm.expression_tree.operations.serialise import (
             convert_symbol_from_json,
         )
 
-        # --- Extra variables ---
-        extra = data.get("extra_variables")
+        # --- Custom variables ---
+        extra = data.get("custom_variables")
         if extra:
             for name, expr_json in extra.items():
                 model.variables[name] = convert_symbol_from_json(expr_json)
