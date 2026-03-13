@@ -218,7 +218,7 @@ class TestQuickPlot:
         quick_plot.dynamic_plot(show_plot=False)
         quick_plot.slider_update(0.01)
 
-        with pytest.raises(NotImplementedError, match=r"Cannot plot 2D variables"):
+        with pytest.raises(NotImplementedError, match=r"Cannot plot 2D/3D variables"):
             pybamm.QuickPlot([solution, solution], ["2D variable"])
 
         # Test different variable limits
