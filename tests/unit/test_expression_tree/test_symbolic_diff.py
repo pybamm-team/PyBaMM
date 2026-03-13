@@ -21,7 +21,7 @@ class TestSymbolicDifferentiation:
         assert func.diff(b).evaluate(y=y) == -2 / 9
         #
         func = a * b**a
-        testing.assert_array_almost_equal(
+        testing.assert_allclose(
             func.diff(a).evaluate(y=y)[0], 3**5 * (5 * np.log(3) + 1)
         )
         assert func.diff(b).evaluate(y=y) == 5**2 * 3**4

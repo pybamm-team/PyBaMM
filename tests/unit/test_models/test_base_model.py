@@ -67,7 +67,7 @@ class TestBaseModel:
 
         # Variable in initial conditions should fail
         with pytest.raises(
-            TypeError, match="Initial conditions cannot contain 'Variable' objects"
+            TypeError, match=r"Initial conditions cannot contain 'Variable' objects"
         ):
             model.initial_conditions = {c0: pybamm.Variable("v")}
 
@@ -102,7 +102,7 @@ class TestBaseModel:
 
         # Check bad bc type
         bad_bcs = {c0: {"left": (-2, "bad type"), "right": (4, "bad type")}}
-        with pytest.raises(pybamm.ModelError, match="boundary condition"):
+        with pytest.raises(pybamm.ModelError, match=r"boundary condition"):
             model.boundary_conditions = bad_bcs
 
     def test_variables_set_get(self):
@@ -508,7 +508,7 @@ class TestBaseModel:
         model.rhs = {var: -1}
         var = pybamm.Variable("var")
         model.algebraic = {var: var}
-        with pytest.raises(pybamm.ModelError, match="Multiple equations specified"):
+        with pytest.raises(pybamm.ModelError, match=r"Multiple equations specified"):
             model.check_no_repeated_keys()
 
     def test_check_well_posedness_variables(self):
@@ -533,26 +533,26 @@ class TestBaseModel:
         # Underdetermined model - not enough differential equations
         model.rhs = {c: 5 * pybamm.div(pybamm.grad(d)) - 1}
         model.algebraic = {e: e - c - d}
-        with pytest.raises(pybamm.ModelError, match="underdetermined"):
+        with pytest.raises(pybamm.ModelError, match=r"underdetermined"):
             model.check_well_posedness()
 
         # Underdetermined model - not enough algebraic equations
         model.algebraic = {}
-        with pytest.raises(pybamm.ModelError, match="underdetermined"):
+        with pytest.raises(pybamm.ModelError, match=r"underdetermined"):
             model.check_well_posedness()
 
         # Overdetermined model - repeated keys
         model.algebraic = {c: c - d, d: e + d}
-        with pytest.raises(pybamm.ModelError, match="overdetermined"):
+        with pytest.raises(pybamm.ModelError, match=r"overdetermined"):
             model.check_well_posedness()
         # Overdetermined model - extra keys in algebraic
         model.rhs = {c: 5 * pybamm.div(pybamm.grad(d)) - 1, d: -d}
         model.algebraic = {e: c - d}
-        with pytest.raises(pybamm.ModelError, match="overdetermined"):
+        with pytest.raises(pybamm.ModelError, match=r"overdetermined"):
             model.check_well_posedness()
         model.rhs = {c: 1, d: -1}
         model.algebraic = {e: c - d}
-        with pytest.raises(pybamm.ModelError, match="overdetermined"):
+        with pytest.raises(pybamm.ModelError, match=r"overdetermined"):
             model.check_well_posedness()
 
         # After discretisation, don't check for overdetermined from extra algebraic keys
@@ -561,7 +561,7 @@ class TestBaseModel:
         # passes with post_discretisation=True
         model.check_well_posedness(post_discretisation=True)
         # fails with post_discretisation=False (default)
-        with pytest.raises(pybamm.ModelError, match="extra algebraic keys"):
+        with pytest.raises(pybamm.ModelError, match=r"extra algebraic keys"):
             model.check_well_posedness()
 
         # after discretisation, algebraic equation without a StateVector fails
@@ -572,7 +572,7 @@ class TestBaseModel:
         }
         with pytest.raises(
             pybamm.ModelError,
-            match="each algebraic equation must contain at least one StateVector",
+            match=r"each algebraic equation must contain at least one StateVector",
         ):
             model.check_well_posedness(post_discretisation=True)
 
@@ -581,7 +581,7 @@ class TestBaseModel:
         model.rhs = {c: d.diff(pybamm.t), d: -1}
         model.initial_conditions = {c: 1, d: 1}
         with pytest.raises(
-            pybamm.ModelError, match="time derivative of variable found"
+            pybamm.ModelError, match=r"time derivative of variable found"
         ):
             model.check_well_posedness()
 
@@ -590,7 +590,7 @@ class TestBaseModel:
         model.algebraic = {c: 2 * d - c, d: c * d.diff(pybamm.t) - d}
         model.initial_conditions = {c: 1, d: 1}
         with pytest.raises(
-            pybamm.ModelError, match="time derivative of variable found"
+            pybamm.ModelError, match=r"time derivative of variable found"
         ):
             model.check_well_posedness()
 
@@ -599,7 +599,7 @@ class TestBaseModel:
         model.rhs = {c: d.diff(pybamm.t), d: -1}
         model.initial_conditions = {c: 1, d: 1}
         with pytest.raises(
-            pybamm.ModelError, match="time derivative of variable found"
+            pybamm.ModelError, match=r"time derivative of variable found"
         ):
             model.check_well_posedness()
 
@@ -610,7 +610,7 @@ class TestBaseModel:
             c: 5 * pybamm.StateVectorDot(slice(0, 15)) - 1,
         }
         with pytest.raises(
-            pybamm.ModelError, match="time derivative of state vector found"
+            pybamm.ModelError, match=r"time derivative of state vector found"
         ):
             model.check_well_posedness(post_discretisation=True)
 
@@ -619,7 +619,7 @@ class TestBaseModel:
         model.rhs = {c: 5 * pybamm.StateVectorDot(slice(0, 15)) - 1}
         model.initial_conditions = {c: 1}
         with pytest.raises(
-            pybamm.ModelError, match="time derivative of state vector found"
+            pybamm.ModelError, match=r"time derivative of state vector found"
         ):
             model.check_well_posedness(post_discretisation=True)
 
@@ -644,7 +644,7 @@ class TestBaseModel:
         # Model with bad initial conditions (expect assertion error)
         d = pybamm.Variable("d", domain=whole_cell)
         model.initial_conditions = {d: 3}
-        with pytest.raises(pybamm.ModelError, match="initial condition"):
+        with pytest.raises(pybamm.ModelError, match=r"initial condition"):
             model.check_well_posedness()
 
         # Algebraic well-posed model
@@ -679,14 +679,14 @@ class TestBaseModel:
         model.rhs = {c: -c}
         model.initial_conditions = {c: 1}
         model.variables = {"d": d}
-        with pytest.raises(pybamm.ModelError, match="No key set for variable"):
+        with pytest.raises(pybamm.ModelError, match=r"No key set for variable"):
             model.check_well_posedness()
 
         # check error is raised even if some modified form of d is in model.rhs
         two_d = 2 * d
         model.rhs[two_d] = -d
         model.initial_conditions[two_d] = 1
-        with pytest.raises(pybamm.ModelError, match="No key set for variable"):
+        with pytest.raises(pybamm.ModelError, match=r"No key set for variable"):
             model.check_well_posedness()
 
         # add d to rhs, fine
@@ -758,7 +758,9 @@ class TestBaseModel:
         assert var_fn(6, 3, 2, [2, 7]) == -1
 
         # Test fails if order not specified
-        with pytest.raises(ValueError, match="input_parameter_order must be specified"):
+        with pytest.raises(
+            ValueError, match=r"input_parameter_order must be specified"
+        ):
             model.export_casadi_objects(["a+b"])
 
         # Fine if order is not specified if there is only one input parameter
@@ -783,7 +785,7 @@ class TestBaseModel:
         # Test fails if not discretised
         model = pybamm.lithium_ion.SPMe()
         with pytest.raises(
-            pybamm.DiscretisationError, match="Cannot automatically discretise model"
+            pybamm.DiscretisationError, match=r"Cannot automatically discretise model"
         ):
             model.export_casadi_objects(["Electrolyte concentration [mol.m-3]"])
 
@@ -1189,7 +1191,7 @@ class TestBaseModel:
         var = pybamm.Scalar(1)
         model.rhs = {var: -var}
         model.initial_conditions = {var: 1}
-        with pytest.raises(NotImplementedError, match="Variable must have type"):
+        with pytest.raises(NotImplementedError, match=r"Variable must have type"):
             model.set_initial_conditions_from({})
 
         # Inconsistent model and variable names
@@ -1197,14 +1199,14 @@ class TestBaseModel:
         var = pybamm.Variable("var")
         model.rhs = {var: -var}
         model.initial_conditions = {var: pybamm.Scalar(1)}
-        with pytest.raises(pybamm.ModelError, match="must appear in the solution"):
+        with pytest.raises(pybamm.ModelError, match=r"must appear in the solution"):
             model.set_initial_conditions_from({"wrong var": 2})
         var = pybamm.concatenation(
             pybamm.Variable("var", "test"), pybamm.Variable("var2", "test2")
         )
         model.rhs = {var: -var}
         model.initial_conditions = {var: pybamm.Scalar(1)}
-        with pytest.raises(pybamm.ModelError, match="must appear in the solution"):
+        with pytest.raises(pybamm.ModelError, match=r"must appear in the solution"):
             model.set_initial_conditions_from({"wrong var": 2})
 
     def test_set_initial_conditions_4d_array(self):
@@ -1315,7 +1317,7 @@ class TestBaseModel:
         sol_dict = {"var": var_data_5d}
 
         with pytest.raises(
-            NotImplementedError, match="Variable must be 0D, 1D, 2D, 3D, or 4D"
+            NotImplementedError, match=r"Variable must be 0D, 1D, 2D, 3D, or 4D"
         ):
             model.set_initial_conditions_from(sol_dict)
 
@@ -1489,7 +1491,7 @@ class TestBaseModel:
     def test_set_variables_error(self):
         var = pybamm.Variable("var")
         model = pybamm.BaseModel()
-        with pytest.raises(ValueError, match="not var"):
+        with pytest.raises(ValueError, match=r"not var"):
             model.variables = {"not var": var}
 
     def test_build_submodels(self):
@@ -1624,17 +1626,13 @@ class TestBaseModel:
         # model solutions match
         testing.assert_array_equal(solution.all_ys, new_solution.all_ys)
 
-        # raises warning if variables are saved without mesh
-        with pytest.warns(pybamm.ModelWarning):
-            model_disc.save_model(
-                filename="test_base_model", variables=model_disc.variables
-            )
-
-        model_disc.save_model(
-            filename="test_base_model", variables=model_disc.variables, mesh=mesh
-        )
+        model_disc.save_model(filename="test_base_model", mesh=mesh)
 
         # load with variables & mesh
         new_model = pybamm.load_model("test_base_model.json")
 
         os.remove("test_base_model.json")
+
+    def test_y0_property(self):
+        model = pybamm.BaseModel()
+        assert model.y0 is None

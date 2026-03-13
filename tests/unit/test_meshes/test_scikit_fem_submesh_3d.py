@@ -84,7 +84,7 @@ class TestScikitFemGenerator3D:
         except ImportError:
             pytest.skip("scikit-fem not available")
 
-        with pytest.raises(pybamm.GeometryError, match="geom_type must be one of"):
+        with pytest.raises(pybamm.GeometryError, match=r"geom_type must be one of"):
             ScikitFemGenerator3D("invalid_type", h=0.3)
 
 
@@ -185,7 +185,7 @@ class TestScikitFemSubMesh3D:
         assert restored_submesh.npts == submesh.npts, "Should preserve npts"
 
     def test_invalid_geometry_type(self):
-        with pytest.raises(pybamm.GeometryError, match="geom_type must be one of"):
+        with pytest.raises(pybamm.GeometryError, match=r"geom_type must be one of"):
             pybamm.ScikitFemGenerator3D("invalid_type", h=0.3)
 
 
@@ -218,7 +218,7 @@ class TestUserSuppliedMesh:
         assert len(skfem_mesh.boundaries["z_min"]) > 0
 
     def test_load_file_not_found(self):
-        with pytest.raises(pybamm.GeometryError, match="Could not read mesh file"):
+        with pytest.raises(pybamm.GeometryError, match=r"Could not read mesh file"):
             pybamm.ScikitFemSubMesh3D.load_mesh_from_file(
                 "non_existent_file.msh", {}, {}
             )
@@ -276,13 +276,15 @@ class TestUserSuppliedMesh:
         assert "z_min" in mesh[domain_name]._skfem_mesh.boundaries
 
     def test_load_no_tetrahedra_error(self):
-        with pytest.raises(pybamm.GeometryError, match="No tetrahedral elements found"):
+        with pytest.raises(
+            pybamm.GeometryError, match=r"No tetrahedral elements found"
+        ):
             pybamm.ScikitFemSubMesh3D.load_mesh_from_file(NO_TETRA_MESH_FILE, {}, {})
 
     def test_bad_user_tag_name_error(self):
         with pytest.raises(
             pybamm.GeometryError,
-            match="User-specified domain tag name 'bad_tag' not found",
+            match=r"User-specified domain tag name 'bad_tag' not found",
         ):
             pybamm.ScikitFemSubMesh3D.load_mesh_from_file(
                 VALID_MESH_FILE, {}, {}, domain_tag_name="bad_tag"
@@ -291,7 +293,7 @@ class TestUserSuppliedMesh:
     def test_no_integer_tag_error(self):
         with pytest.raises(
             pybamm.GeometryError,
-            match="Could not automatically detect domain tag array",
+            match=r"Could not automatically detect domain tag array",
         ):
             pybamm.ScikitFemSubMesh3D.load_mesh_from_file(
                 NO_INTEGER_TAGS_MESH_FILE, {}, {"domain": 1}
@@ -303,7 +305,7 @@ class TestUserSuppliedMesh:
 
         monkeypatch.setattr(np, "where", mock_error)
         with pytest.raises(
-            pybamm.GeometryError, match="Failed to extract tetrahedral elements"
+            pybamm.GeometryError, match=r"Failed to extract tetrahedral elements"
         ):
             pybamm.ScikitFemSubMesh3D.load_mesh_from_file(
                 VALID_MESH_FILE, {}, {"domain": 5}

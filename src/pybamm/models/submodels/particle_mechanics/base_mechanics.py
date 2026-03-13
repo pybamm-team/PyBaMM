@@ -394,7 +394,7 @@ class BaseMechanics(pybamm.BaseSubModel):
         Aggregate thickness changes from phases to electrode level and from
         electrodes to cell level.
         """
-        domain, Domain = self.domain_Domain
+        _domain, Domain = self.domain_Domain
 
         # Aggregate primary and secondary phase thickness changes
         self._aggregate_phase_thickness_changes(variables, Domain)

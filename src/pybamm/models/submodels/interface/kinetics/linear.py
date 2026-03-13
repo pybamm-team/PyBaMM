@@ -24,9 +24,6 @@ class Linear(BaseKinetics):
         Phase of the particle (default is "primary")
     """
 
-    def __init__(self, param, domain, reaction, options, phase="primary"):
-        super().__init__(param, domain, reaction, options, phase)
-
     def _get_kinetics(self, j0, ne, eta_r, T, u):
         Feta_RT = self.param.F * eta_r / (self.param.R * T)
         return 2 * u * j0 * (ne * 0.5 * Feta_RT)

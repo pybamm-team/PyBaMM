@@ -47,7 +47,7 @@ class TestThevenin:
         model = pybamm.equivalent_circuit.Thevenin(options=options)
         model.check_well_posedness()
 
-        with pytest.raises(pybamm.OptionError, match="natural numbers"):
+        with pytest.raises(pybamm.OptionError, match=r"natural numbers"):
             options = {"number of rc elements": -1}
             model = pybamm.equivalent_circuit.Thevenin(options=options)
             model.check_well_posedness()
@@ -112,14 +112,14 @@ class TestThevenin:
     def test_raise_option_error(self):
         options = {"not an option": "something"}
         with pytest.raises(
-            pybamm.OptionError, match="Option 'not an option' not recognised"
+            pybamm.OptionError, match=r"Option 'not an option' not recognised"
         ):
             pybamm.equivalent_circuit.Thevenin(options=options)
 
     def test_not_a_valid_option(self):
         options = {"operating mode": "not a valid option"}
         with pytest.raises(
-            pybamm.OptionError, match="Option 'operating mode' must be one of"
+            pybamm.OptionError, match=r"Option 'operating mode' must be one of"
         ):
             pybamm.equivalent_circuit.Thevenin(options=options)
 

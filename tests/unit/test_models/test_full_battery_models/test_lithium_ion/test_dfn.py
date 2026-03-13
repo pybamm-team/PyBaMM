@@ -13,7 +13,7 @@ class TestDFN(BaseUnitTestLithiumIon):
 
     def test_electrolyte_options(self):
         options = {"electrolyte conductivity": "integrated"}
-        with pytest.raises(pybamm.OptionError, match="electrolyte conductivity"):
+        with pytest.raises(pybamm.OptionError, match=r"electrolyte conductivity"):
             pybamm.lithium_ion.DFN(options)
 
     def test_well_posed_size_distribution(self):

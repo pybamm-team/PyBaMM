@@ -97,7 +97,6 @@ class BaseIntegrationTestLithiumIon:
                 "Initial negative electrode interface utilisation": 0.9,
                 "Initial positive electrode interface utilisation": 0.8,
             },
-            check_already_exists=False,
         )
         self.run_basic_processing_test(options, parameter_values=parameter_values)
 
@@ -112,8 +111,7 @@ class BaseIntegrationTestLithiumIon:
                 "[m3.mol-1]": -1e-5,
                 "Positive electrode current-driven interface utilisation factor "
                 "[m3.mol-1]": 1e-5,
-            },
-            check_already_exists=False,
+            }
         )
         self.run_basic_processing_test(options, parameter_values=parameter_values)
 
@@ -134,8 +132,7 @@ class BaseIntegrationTestLithiumIon:
             {
                 "Negative electrode Butler-Volmer transfer coefficient": 0.6,
                 "Positive electrode Butler-Volmer transfer coefficient": 0.6,
-            },
-            check_already_exists=False,
+            }
         )
         self.run_basic_processing_test(
             options, parameter_values=parameter_values, solver=solver
@@ -153,8 +150,7 @@ class BaseIntegrationTestLithiumIon:
                 "Negative electrode reorganization energy [eV]": 0.35,
                 "Positive electrode reorganization energy [eV]": 0.35,
                 "Positive electrode exchange-current density [A.m-2]": 5,
-            },
-            check_already_exists=False,
+            }
         )
         self.run_basic_processing_test(options, parameter_values=parameter_values)
 
@@ -173,10 +169,7 @@ class BaseIntegrationTestLithiumIon:
     def test_sei_asymmetric_reaction_limited(self):
         options = {"SEI": "reaction limited (asymmetric)"}
         parameter_values = pybamm.ParameterValues("Marquis2019")
-        parameter_values.update(
-            {"SEI growth transfer coefficient": 0.2},
-            check_already_exists=False,
-        )
+        parameter_values.update({"SEI growth transfer coefficient": 0.2})
         self.run_basic_processing_test(options, parameter_values=parameter_values)
 
     def test_sei_solvent_diffusion_limited(self):
@@ -205,8 +198,7 @@ class BaseIntegrationTestLithiumIon:
             {
                 "Tunneling distance for electrons [m]": 0,
                 "SEI lithium ion conductivity [S.m-1]": 1.0e-7,
-            },
-            check_already_exists=False,
+            }
         )
         self.run_basic_processing_test(options, parameter_values=parameter_values)
 
@@ -215,10 +207,7 @@ class BaseIntegrationTestLithiumIon:
             "SEI": "tunnelling limited",
         }
         parameter_values = pybamm.ParameterValues("Chen2020")
-        parameter_values.update(
-            {"Tunneling barrier factor [m-1]": 6.0e9},
-            check_already_exists=False,
-        )
+        parameter_values.update({"Tunneling barrier factor [m-1]": 6.0e9})
         self.run_basic_processing_test(options, parameter_values=parameter_values)
 
     def test_sei_asymmetric_ec_reaction_limited(self):
@@ -227,10 +216,7 @@ class BaseIntegrationTestLithiumIon:
             "SEI porosity change": "true",
         }
         parameter_values = pybamm.ParameterValues("Marquis2019")
-        parameter_values.update(
-            {"SEI growth transfer coefficient": 0.2},
-            check_already_exists=False,
-        )
+        parameter_values.update({"SEI growth transfer coefficient": 0.2})
         self.run_basic_processing_test(options, parameter_values=parameter_values)
 
     def test_loss_active_material_stress_positive(self):
@@ -265,8 +251,7 @@ class BaseIntegrationTestLithiumIon:
             return -1e-10 * abs(i)
 
         parameter_values.update(
-            {"Negative electrode current-driven LAM rate": current_LAM},
-            check_already_exists=False,
+            {"Negative electrode current-driven LAM rate": current_LAM}
         )
 
         self.run_basic_processing_test(options, parameter_values=parameter_values)
@@ -279,8 +264,7 @@ class BaseIntegrationTestLithiumIon:
             return -1e-10 * abs(i)
 
         parameter_values.update(
-            {"Positive electrode current-driven LAM rate": current_LAM},
-            check_already_exists=False,
+            {"Positive electrode current-driven LAM rate": current_LAM}
         )
 
         self.run_basic_processing_test(options, parameter_values=parameter_values)
@@ -468,8 +452,7 @@ class BaseIntegrationTestLithiumIon:
                 "Positive electrode LAM constant exponential term": 2.0,
                 "Positive electrode reference concentration for free of deformation [mol.m-3]": 0.0,
                 "Positive electrode volume change": lico2_volume_change_Ai2020,
-            },
-            check_already_exists=False,
+            }
         )
 
         self.run_basic_processing_test(options, parameter_values=parameter_values)
@@ -547,8 +530,7 @@ class BaseIntegrationTestLithiumIon:
                 "Positive electrode LAM constant exponential term": 2.0,
                 "Positive electrode reference concentration for free of deformation [mol.m-3]": 0.0,
                 "Positive electrode volume change": lico2_volume_change_Ai2020,
-            },
-            check_already_exists=False,
+            }
         )
 
         self.run_basic_processing_test(options, parameter_values=parameter_values)

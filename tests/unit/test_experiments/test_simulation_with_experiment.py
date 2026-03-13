@@ -1,3 +1,4 @@
+import logging
 import os
 from datetime import datetime
 
@@ -43,7 +44,7 @@ class TestSimulationExperiment:
         ]
 
         # fails if trying to set up with something that isn't an experiment
-        with pytest.raises(TypeError, match="experiment must be"):
+        with pytest.raises(TypeError, match=r"experiment must be"):
             pybamm.Simulation(model, experiment=0)
 
     def test_setup_experiment_string_or_list(self):
@@ -59,6 +60,39 @@ class TestSimulationExperiment:
         )
         sim.build_for_experiment()
         assert len(sim.experiment.steps) == 2
+
+    def test_experiment_state_mappers_built(self):
+        model = pybamm.lithium_ion.SPM()
+        experiment = pybamm.Experiment(
+            ["Discharge at C/20 for 1 hour", "Rest for 10 minutes"]
+        )
+        sim = pybamm.Simulation(model, experiment=experiment)
+        sim.build_for_experiment()
+
+        steps = sim.experiment.steps
+        model_0 = sim.steps_to_built_models[steps[0].basic_repr()]
+        model_1 = sim.steps_to_built_models[steps[1].basic_repr()]
+
+        key = (model_0, model_1)
+        assert key in sim.model_state_mappers
+
+    def test_experiment_state_mapper_has_full_state_size_for_2d_current_collector(self):
+        model = pybamm.lithium_ion.DFN(
+            {"current collector": "potential pair", "dimensionality": 2}
+        )
+        experiment = pybamm.Experiment(
+            ["Discharge at C/20 for 1 hour", "Rest for 10 minutes"]
+        )
+        var_pts = {"x_n": 6, "x_s": 6, "x_p": 6, "r_n": 6, "r_p": 6, "y": 6, "z": 6}
+        sim = pybamm.Simulation(model, experiment=experiment, var_pts=var_pts)
+        sim.build_for_experiment()
+
+        steps = sim.experiment.steps
+        model_0 = sim.steps_to_built_models[steps[0].basic_repr()]
+        model_1 = sim.steps_to_built_models[steps[1].basic_repr()]
+        mapper = sim.model_state_mappers[(model_0, model_1)]
+
+        assert mapper.shape[0] == model_1.len_rhs_and_alg
 
     def test_run_experiment(self):
         s = pybamm.step.string
@@ -187,7 +221,7 @@ class TestSimulationExperiment:
         ]
         experiment = pybamm.Experiment(steps)
         sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
-        with pytest.raises(pybamm.SolverError, match="skip_ok is True for all steps"):
+        with pytest.raises(pybamm.SolverError, match=r"skip_ok is True for all steps"):
             sim.solve()
 
         # Check termination after a skipped step
@@ -212,7 +246,7 @@ class TestSimulationExperiment:
         sim = pybamm.Simulation(
             model, experiment=experiment, parameter_values=parameter_values
         )
-        with pytest.raises(pybamm.SolverError, match="All steps in the cycle"):
+        with pytest.raises(pybamm.SolverError, match=r"All steps in the cycle"):
             sim.solve()
 
     def test_run_experiment_multiple_times(self):
@@ -896,7 +930,7 @@ class TestSimulationExperiment:
         )
 
         sim = pybamm.Simulation(model, experiment=experiment)
-        with pytest.raises(ValueError, match="experiments with `start_time`"):
+        with pytest.raises(ValueError, match=r"experiments with `start_time`"):
             sim.solve(starting_solution=solution)
 
         # Test starting_solution works well with start_time
@@ -1022,3 +1056,125 @@ class TestSimulationExperiment:
 
         neg_stoich = sol["Negative electrode stoichiometry"].data
         assert neg_stoich[-1] == pytest.approx(0.5, abs=0.0001)
+
+    def test_simulation_changing_capacity_crate_steps(self):
+        """Test that C-rate steps are correctly updated when capacity changes"""
+        model = pybamm.lithium_ion.SPM()
+        experiment = pybamm.Experiment(
+            [
+                (
+                    "Discharge at C/5 for 20 minutes",
+                    "Discharge at C/2 for 20 minutes",
+                    "Discharge at 1C for 20 minutes",
+                )
+            ]
+        )
+        param = pybamm.ParameterValues("Chen2020")
+        sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
+
+        # First solve
+        sol1 = sim.solve(calc_esoh=False)
+        original_capacity = param["Nominal cell capacity [A.h]"]
+
+        # Check that C-rates correspond to expected currents
+        I_C5_1 = np.abs(sol1.cycles[0].steps[0]["Current [A]"].data).mean()
+        I_C2_1 = np.abs(sol1.cycles[0].steps[1]["Current [A]"].data).mean()
+        I_1C_1 = np.abs(sol1.cycles[0].steps[2]["Current [A]"].data).mean()
+
+        np.testing.assert_allclose(I_C5_1, original_capacity / 5, rtol=1e-2)
+        np.testing.assert_allclose(I_C2_1, original_capacity / 2, rtol=1e-2)
+        np.testing.assert_allclose(I_1C_1, original_capacity, rtol=1e-2)
+
+        # Update capacity
+        new_capacity = 0.9 * original_capacity
+        sim._parameter_values.update({"Nominal cell capacity [A.h]": new_capacity})
+
+        # Second solve with updated capacity
+        sol2 = sim.solve(calc_esoh=False)
+
+        # Check that C-rates now correspond to updated currents
+        I_C5_2 = np.abs(sol2.cycles[0].steps[0]["Current [A]"].data).mean()
+        I_C2_2 = np.abs(sol2.cycles[0].steps[1]["Current [A]"].data).mean()
+        I_1C_2 = np.abs(sol2.cycles[0].steps[2]["Current [A]"].data).mean()
+
+        np.testing.assert_allclose(I_C5_2, new_capacity / 5, rtol=1e-2)
+        np.testing.assert_allclose(I_C2_2, new_capacity / 2, rtol=1e-2)
+        np.testing.assert_allclose(I_1C_2, new_capacity, rtol=1e-2)
+
+        # Verify all currents scaled proportionally
+        np.testing.assert_allclose(I_C5_2 / I_C5_1, 0.9, rtol=1e-2)
+        np.testing.assert_allclose(I_C2_2 / I_C2_1, 0.9, rtol=1e-2)
+        np.testing.assert_allclose(I_1C_2 / I_1C_1, 0.9, rtol=1e-2)
+
+    def test_simulation_multiple_cycles_with_capacity_change(self):
+        """Test capacity changes across multiple experiment cycles"""
+        model = pybamm.lithium_ion.SPM()
+        experiment = pybamm.Experiment(
+            [("Discharge at 1C for 5 minutes", "Charge at 1C for 5 minutes")] * 2
+        )
+        param = pybamm.ParameterValues("Chen2020")
+        sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
+
+        # First solve
+        sol1 = sim.solve(calc_esoh=False)
+        original_capacity = param["Nominal cell capacity [A.h]"]
+
+        # Get discharge currents for both cycles
+        I_discharge_cycle1 = np.abs(sol1.cycles[0].steps[0]["Current [A]"].data).mean()
+        I_discharge_cycle2 = np.abs(sol1.cycles[1].steps[0]["Current [A]"].data).mean()
+
+        # Both cycles should use the same capacity initially
+        np.testing.assert_allclose(I_discharge_cycle1, original_capacity, rtol=1e-2)
+        np.testing.assert_allclose(I_discharge_cycle2, original_capacity, rtol=1e-2)
+
+        # Update capacity between cycles
+        new_capacity = 0.85 * original_capacity
+        sim._parameter_values.update({"Nominal cell capacity [A.h]": new_capacity})
+
+        # Solve again
+        sol2 = sim.solve(calc_esoh=False)
+
+        # All cycles in the new solution should use updated capacity
+        I_discharge_cycle1_new = np.abs(
+            sol2.cycles[0].steps[0]["Current [A]"].data
+        ).mean()
+        I_discharge_cycle2_new = np.abs(
+            sol2.cycles[1].steps[0]["Current [A]"].data
+        ).mean()
+
+        np.testing.assert_allclose(I_discharge_cycle1_new, new_capacity, rtol=1e-2)
+        np.testing.assert_allclose(I_discharge_cycle2_new, new_capacity, rtol=1e-2)
+
+    def test_simulation_logging_with_capacity_change(self, caplog):
+        """Test that capacity changes are logged appropriately"""
+        model = pybamm.lithium_ion.SPM()
+        experiment = pybamm.Experiment([("Discharge at 1C for 10 minutes",)])
+        param = pybamm.ParameterValues("Chen2020")
+        sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
+
+        # First solve
+        sim.solve(calc_esoh=False)
+        original_capacity = param["Nominal cell capacity [A.h]"]
+
+        # Update capacity
+        new_capacity = 0.75 * original_capacity
+        sim._parameter_values.update({"Nominal cell capacity [A.h]": new_capacity})
+
+        # Set logging level to capture INFO messages
+        original_log_level = pybamm.logger.level
+        pybamm.set_logging_level("INFO")
+
+        try:
+            # Second solve should log capacity change
+            with caplog.at_level(logging.INFO, logger="pybamm.logger"):
+                sim.solve(calc_esoh=False)
+
+            # Check that a log message about capacity change was recorded
+            log_messages = [record.message for record in caplog.records]
+            capacity_change_logged = any(
+                "Nominal capacity changed" in msg for msg in log_messages
+            )
+            assert capacity_change_logged
+        finally:
+            # Restore original logging level
+            pybamm.logger.setLevel(original_log_level)

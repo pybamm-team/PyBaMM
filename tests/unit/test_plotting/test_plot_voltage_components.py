@@ -61,5 +61,5 @@ def test_plot_without_solution():
     model = pybamm.lithium_ion.SPM()
     sim = pybamm.Simulation(model)
 
-    with pytest.raises(ValueError, match="The simulation has not been solved yet."):
+    with pytest.raises(ValueError, match=r"The simulation has not been solved yet."):
         sim.plot_voltage_components()

@@ -84,7 +84,7 @@ class TestMPM:
             "lithium plating": "reversible",
             "lithium plating porosity change": "true",
         }
-        with pytest.raises(pybamm.OptionError, match="distributions"):
+        with pytest.raises(pybamm.OptionError, match=r"distributions"):
             pybamm.lithium_ion.MPM(options)
 
     def test_msmr(self):

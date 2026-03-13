@@ -3,71 +3,51 @@
 This file contains the workflow required to make a `PyBaMM` release on
 GitHub, PyPI, and conda-forge by the maintainers.
 
-## Creating a release
+## Creating a major release
 
-1. Checkout the latest develop branch, then create a local tag `vYY.MM.0`
-   with the new version. The year and month are taken from the date of the
-   release. The final number represents the bug fix version, which is zero for
-   a new release.
+1. Create and checkout a new release branch (e.g., `release/vYY.MM.0`) from the `main` branch. The year and month are taken from the date of the release. The final number represents the bug fix version, which is zero for a new major release.
 
-2. Run `scripts/update_version.py` to update the following files:
+2. Run `scripts/update_version.py` to update `CITATION.cff` and `CHANGELOG.md`, then create a PR from `release/vYY.MM.0` to `main`.
 
-   - `CITATION.cff`
-   - `CHANGELOG.md`
+3. Ensure CI passes on the PR, then merge it.
 
-   These changes should be pushed to a release branch `vYY.MM.0`
-   and a PR from `vYY.MM.0` to `main` needs to be created.
+4. Create a new GitHub _release_ with the tag `vYY.MM.0` from the `main` branch and a description copied from `CHANGELOG.md`. This will automatically trigger `publish_pypi.yml` and create a _release_ on PyPI.
 
-3. After the release PR has been merged, create a new GitHub _release_ with the
-   tag `vYY.MM.0` from the `vYY.MM` branch and a description copied from
-   `CHANGELOG.md`.
+5. Verify the release installs correctly: `pip install pybamm==YY.MM.0`
 
-4. This release will automatically trigger `publish_pypi.yml` and create a
-   _release_ on PyPI.
+## Creating a patch release
 
-## Bug fix releases
+If a new bugfix release is required after the release of `vYY.MM.{x-1}`:
 
-If a new bugfix release is required after the release of `vYY.MM.{x-1}` -
+1. Ensure all bug fixes are merged to `main` first via normal PRs.
 
-1. Create a new branch for the `vYY.MM.x` release using the `vYY.MM.{x-1}` tag.
+2. Create a new branch `release/vYY.MM.x` from the `vYY.MM.{x-1}` tag.
 
-2. Cherry-pick the bug fixes to `vYY.MM.x` branch once the fix is
-   merged into `develop`. The CHANGELOG entry for such fixes should go under the
-   `YY.MM.x` heading in `CHANGELOG.md`
+3. Cherry-pick the bug fixes to `release/vYY.MM.x` using the `-x` flag to record the original commit hash:
+   ```bash
+   git cherry-pick -x <commit-sha-from-main>
+   ```
 
-3. Run `scripts/update_version.py` manually to update:
+4. Run `scripts/update_version.py` to update `CITATION.cff` and `CHANGELOG.md`, then commit the changes.
 
-   - `CITATION.cff`
-   - `CHANGELOG.md`
+5. Create a new GitHub release with the tag `vYY.MM.x` from the `release/vYY.MM.x` branch (not `main`) and a description copied from `CHANGELOG.md`. This ensures the release contains only the bugfixes, not all changes on `main`. This will automatically trigger `publish_pypi.yml` and create a _release_ on PyPI.
 
-   Commit the changes to your release branch.
+6. Verify the release installs correctly: `pip install pybamm==YY.MM.x`
 
-4. Create a PR for the release and configure it to merge into the `main` branch.
+7. Update the changelog on `main` separately. **Do not merge the release branch back to `main`** as this creates duplicate commits with different hashes. Instead:
+   ```bash
+   git checkout main
+   git checkout -b update-changelog-vYY.MM.x
+   ```
+   Edit `CHANGELOG.md` to add the `vYY.MM.x` release section (moving entries from Unreleased) and update `CITATION.cff` with the new version. Create a PR to `main` with these changes.
 
-5. Create a new GitHub release with the same tag (`YY.MM.x`) from the `main`
-   branch and a description copied from `CHANGELOG.md`. This release will
-   automatically trigger `publish_pypi.yml` and create a _release_ on PyPI.
+8. The release branch can be deleted after tagging since it is no longer needed.
 
-## Other checks
+## Conda-forge
 
-Some other essential things to check throughout the release process -
-
-- Update jax and jaxlib to the latest version in `pybamm.util` and
-  `pyproject.toml`, fixing any bugs that arise.
-- If changes are made to the API, console scripts, entry points, new optional
-  dependencies are added, support for major Python versions is dropped or
-  added, or core project information and metadata are modified at the time
-  of the release, make sure to update the `meta.yaml` file in the `recipe/`
-  folder of the [pybamm-feedstock][PYBAMM_FEED] repository accordingly by
-  following the instructions in the [conda-forge documentation][FEED_GUIDE] and
-  re-rendering the recipe.
-- The conda-forge release workflow will automatically be triggered following
-  a stable PyPI release, and the aforementioned updates should be carried
-  out directly in the main repository by pushing changes to the automated PR
-  created by the conda-forge-bot. A manual PR can also be created if the
-  updates are not included in the automated PR for some reason. This manual
-  PR **must** bump the build number in `meta.yaml` and **must** be from a
-  personal fork of the repository.
+- The conda-forge release workflow will automatically be triggered following a stable PyPI release.
+- If changes are made to the API, console scripts, entry points, optional dependencies, supported Python versions, or core project metadata, update the `meta.yaml` file in the [pybamm-feedstock][PYBAMM_FEED] repository by following the [conda-forge documentation][FEED_GUIDE] and re-rendering the recipe.
+- Updates should be carried out directly by pushing changes to the automated PR created by the conda-forge-bot. A manual PR can also be created if needed. Manual PRs **must** bump the build number in `meta.yaml` and **must** be from a personal fork of the repository.
 
 [PYBAMM_FEED]: https://github.com/conda-forge/pybamm-feedstock
 [FEED_GUIDE]: https://conda-forge.org/docs/maintainer/updating_pkgs.html#updating-the-feedstock-repository

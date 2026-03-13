@@ -25,8 +25,7 @@ class TestLumpedThermalModel:
         param_lumped.update(
             {
                 "Cell heat capacity [J.K-1.m-3]": heat_capacity_standard,
-            },
-            check_already_exists=False,
+            }
         )
 
         sim_lumped = pybamm.Simulation(model_lumped, parameter_values=param_lumped)

@@ -1,13 +1,16 @@
 #
 # A model to calculate electrode-specific SOH
 #
+from __future__ import annotations
+
+import warnings
 from functools import lru_cache
 
 import numpy as np
 
 import pybamm
 
-from .util import _get_lithiation_delithiation
+from .util import get_equilibrium_direction, get_lithiation_delithiation
 
 
 class _BaseElectrodeSOH(pybamm.BaseModel):
@@ -75,8 +78,7 @@ class _BaseElectrodeSOH(pybamm.BaseModel):
 
     @property
     def default_solver(self):
-        # Use AlgebraicSolver as CasadiAlgebraicSolver gives unnecessary warnings
-        return pybamm.AlgebraicSolver()
+        return get_esoh_default_solver()
 
 
 class _ElectrodeSOH(_BaseElectrodeSOH):
@@ -95,6 +97,13 @@ class _ElectrodeSOH(_BaseElectrodeSOH):
         x_0 = x_{100} - \\frac{Q}{Q_n},
     .. math::
         y_0 = y_{100} + \\frac{Q}{Q_p}.
+
+    Stoichiometry limits (x_0, x_100, y_0, y_100) are evaluated in a
+    temperature-independent manner (at the reference temperature, ignoring entropy
+    effects), so that the SOC range is not temperature-dependent. In the presence of
+    a hysteresis model, equilibration in the charging direction is assumed for 100%
+    SOC (charging OCP branch), and equilibration in the discharging direction is
+    assumed for 0% SOC (discharging OCP branch).
 
     """
 
@@ -147,10 +156,22 @@ class _ElectrodeSOH(_BaseElectrodeSOH):
             x_100 = pybamm.InputParameter("x_100")
             y_100 = pybamm.InputParameter("y_100")
         Un_100 = Un(
-            x_100, T_ref, _get_lithiation_delithiation(direction, "negative", options)
+            x_100,
+            T_ref,
+            get_lithiation_delithiation(
+                get_equilibrium_direction("100", "negative", options),
+                "negative",
+                options,
+            ),
         )
         Up_100 = Up(
-            y_100, T_ref, _get_lithiation_delithiation(direction, "positive", options)
+            y_100,
+            T_ref,
+            get_lithiation_delithiation(
+                get_equilibrium_direction("100", "positive", options),
+                "positive",
+                options,
+            ),
         )
 
         # Define equations for 100% state of charge
@@ -178,10 +199,22 @@ class _ElectrodeSOH(_BaseElectrodeSOH):
                 var = y_100
             y_0 = y_100 + Q / Q_p
             Un_0 = Un(
-                x_0, T_ref, _get_lithiation_delithiation(direction, "negative", options)
+                x_0,
+                T_ref,
+                get_lithiation_delithiation(
+                    get_equilibrium_direction("0", "negative", options),
+                    "negative",
+                    options,
+                ),
             )
             Up_0 = Up(
-                y_0, T_ref, _get_lithiation_delithiation(direction, "positive", options)
+                y_0,
+                T_ref,
+                get_lithiation_delithiation(
+                    get_equilibrium_direction("0", "positive", options),
+                    "positive",
+                    options,
+                ),
             )
             self.algebraic[var] = Up_0 - Un_0 - V_min
             self.initial_conditions[var] = pybamm.Scalar(0.1)
@@ -224,8 +257,8 @@ class _ElectrodeSOHMSMR(_BaseElectrodeSOH):
         x_p = param.p.prim.x
 
         T = param.T_ref
-        V_max = param.voltage_high_cut
-        V_min = param.voltage_low_cut
+        V_max = param.ocp_soc_100
+        V_min = param.ocp_soc_0
         Q_n = pybamm.InputParameter("Q_n")
         Q_p = pybamm.InputParameter("Q_p")
 
@@ -456,6 +489,7 @@ class ElectrodeSOHSolver:
             energy_inputs = {**sol_dict, **inputs}
             energy = self.theoretical_energy_integral(energy_inputs)
             sol_dict.update({"Maximum theoretical energy [W.h]": energy})
+
         return sol_dict
 
     def _set_up_solve(self, inputs, direction):
@@ -538,10 +572,11 @@ class ElectrodeSOHSolver:
             msmr_pot_model = _get_msmr_potential_model(
                 self.parameter_values, self.param
             )
-            sol0 = pybamm.AlgebraicSolver().solve(
+            solver = get_esoh_default_solver()
+            sol0 = solver.solve(
                 msmr_pot_model, inputs={**inputs, "x": x0_init, "y": y0_init}
             )
-            sol100 = pybamm.AlgebraicSolver().solve(
+            sol100 = solver.solve(
                 msmr_pot_model, inputs={**inputs, "x": x100_init, "y": y100_init}
             )
             return {
@@ -561,14 +596,14 @@ class ElectrodeSOHSolver:
     def _solve_full(self, inputs, ics, direction):
         sim = self._get_electrode_soh_sims_full(direction)
         sim.build()
-        sim.built_model.set_initial_conditions_from(ics)
+        sim.built_model.set_initial_conditions_from(ics, inputs=inputs)
         sol = sim.solve([0], inputs=inputs)
         return sol
 
     def _solve_split(self, inputs, ics, direction):
         x100_sim, x0_sim = self._get_electrode_soh_sims_split(direction)
         x100_sim.build()
-        x100_sim.built_model.set_initial_conditions_from(ics)
+        x100_sim.built_model.set_initial_conditions_from(ics, inputs=inputs)
         x100_sol = x100_sim.solve([0], inputs=inputs)
         if self.options["open-circuit potential"] == "MSMR":
             inputs["Un(x_100)"] = x100_sol["Un(x_100)"].data[0]
@@ -577,7 +612,7 @@ class ElectrodeSOHSolver:
             inputs["x_100"] = x100_sol["x_100"].data[0]
             inputs["y_100"] = x100_sol["y_100"].data[0]
         x0_sim.build()
-        x0_sim.built_model.set_initial_conditions_from(ics)
+        x0_sim.built_model.set_initial_conditions_from(ics, inputs=inputs)
         x0_sol = x0_sim.solve([0], inputs=inputs)
 
         return x0_sol
@@ -658,14 +693,14 @@ class ElectrodeSOHSolver:
                     self.param.p.prim.U(
                         y,
                         T,
-                        _get_lithiation_delithiation(
+                        get_lithiation_delithiation(
                             direction, "positive", self.options
                         ),
                     )
                     - self.param.n.prim.U(
                         x,
                         T,
-                        _get_lithiation_delithiation(
+                        get_lithiation_delithiation(
                             direction, "negative", self.options
                         ),
                     )
@@ -676,10 +711,11 @@ class ElectrodeSOHSolver:
             msmr_pot_model = _get_msmr_potential_model(
                 self.parameter_values, self.param
             )
-            sol0 = pybamm.AlgebraicSolver(tol=1e-4).solve(
+            solver = get_esoh_default_solver(tol=1e-4)
+            sol0 = solver.solve(
                 msmr_pot_model, inputs={**inputs, "x": x0_min, "y": y0_max}
             )
-            sol100 = pybamm.AlgebraicSolver(tol=1e-4).solve(
+            sol100 = solver.solve(
                 msmr_pot_model, inputs={**inputs, "x": x100_max, "y": y100_min}
             )
             Up0 = sol0["Up"].data[0]
@@ -756,9 +792,11 @@ class ElectrodeSOHSolver:
             V_max = parameter_values.evaluate(self.param.ocp_soc_100, inputs=inputs)
 
             if not V_min - tol <= V_init <= V_max + tol:
-                raise ValueError(
-                    f"Initial voltage {V_init}V is outside the voltage limits "
-                    f"({V_min}, {V_max})"
+                warnings.warn(
+                    message=f"Initial voltage {V_init}V is outside the voltage limits "
+                    f"({V_min}, {V_max})",
+                    category=UserWarning,
+                    stacklevel=2,
                 )
 
             # Solve simple model for initial soc based on target voltage
@@ -784,14 +822,14 @@ class ElectrodeSOHSolver:
                     Up(
                         y,
                         T_init,
-                        _get_lithiation_delithiation(
+                        get_lithiation_delithiation(
                             direction, "positive", self.options
                         ),
                     )
                     - Un(
                         x,
                         T_init,
-                        _get_lithiation_delithiation(
+                        get_lithiation_delithiation(
                             direction, "negative", self.options
                         ),
                     )
@@ -809,13 +847,24 @@ class ElectrodeSOHSolver:
             )
         elif isinstance(initial_value, int | float):
             initial_soc = initial_value
-            if not 0 <= initial_soc <= 1:
-                raise ValueError("Initial SOC should be between 0 and 1")
+            if initial_soc > 1:
+                warnings.warn(
+                    message=f"Initial SoC {initial_soc} is greater than 1",
+                    category=UserWarning,
+                    stacklevel=2,
+                )
+            elif initial_soc < 0:
+                warnings.warn(
+                    message=f"Initial SoC {initial_soc} is less than 0",
+                    category=UserWarning,
+                    stacklevel=2,
+                )
 
         else:
             raise ValueError(
-                "Initial value must be a float between 0 and 1, "
-                "or a string ending in 'V'"
+                "Invalid initial value. Expected a float (for SoC, "
+                "1.0 for 100%) or a string ending in 'V' (for voltage), got "
+                f"{initial_value!r} of type {type(initial_value).__name__}"
             )
 
         x = x_0 + initial_soc * (x_100 - x_0)
@@ -902,7 +951,7 @@ class ElectrodeSOHSolver:
                 self.param.n.prim.U(
                     x,
                     T_init,
-                    _get_lithiation_delithiation(direction, "negative", self.options),
+                    get_lithiation_delithiation(direction, "negative", self.options),
                 ),
                 inputs=inputs,
             )
@@ -910,7 +959,7 @@ class ElectrodeSOHSolver:
                 self.param.p.prim.U(
                     y,
                     T_init,
-                    _get_lithiation_delithiation(direction, "positive", self.options),
+                    get_lithiation_delithiation(direction, "positive", self.options),
                 ),
                 inputs=inputs,
             )
@@ -963,12 +1012,12 @@ class ElectrodeSOHSolver:
             self.param.p.prim.U(
                 y_vals,
                 T,
-                _get_lithiation_delithiation(direction, "positive", self.options),
+                get_lithiation_delithiation(direction, "positive", self.options),
             )
             - self.param.n.prim.U(
                 x_vals,
                 T,
-                _get_lithiation_delithiation(direction, "negative", self.options),
+                get_lithiation_delithiation(direction, "negative", self.options),
             ),
             inputs=inputs,
         ).flatten()
@@ -976,7 +1025,13 @@ class ElectrodeSOHSolver:
         Q = Q_p * (y_0 - y_100)
         dQ = Q / (points - 1)
         # Integrate and convert to W-h
-        E = np.trapz(Vs, dx=dQ)
+        # Use trapezoid for newer NumPy, trapz for older NumPy (backwards
+        # compatible)
+        if hasattr(np, "trapezoid"):
+            E = np.trapezoid(Vs, dx=dQ)
+        else:
+            # Fallback to trapz for older NumPy versions
+            E = np.trapz(Vs, dx=dQ)
         return E
 
 
@@ -989,6 +1044,7 @@ def get_initial_stoichiometries(
     options=None,
     tol=1e-6,
     inputs=None,
+    esoh_solver=None,
 ):
     """
     Calculate initial stoichiometries to start off the simulation at a particular
@@ -1021,19 +1077,22 @@ def get_initial_stoichiometries(
         Default is 1e-6.
     inputs : dict, optional
         A dictionary of input parameters passed to the model.
+    esoh_solver : :class:`ElectrodeSOHSolver`, optional
+        A pre-built solver to reuse. If not provided, a new one is created.
 
     Returns
     -------
     x, y
         The initial stoichiometries that give the desired initial state of charge
     """
-    esoh_solver = ElectrodeSOHSolver(
-        parameter_values,
-        direction=direction,
-        param=param,
-        known_value=known_value,
-        options=options,
-    )
+    if esoh_solver is None:
+        esoh_solver = ElectrodeSOHSolver(
+            parameter_values,
+            direction=direction,
+            param=param,
+            known_value=known_value,
+            options=options,
+        )
     return esoh_solver.get_initial_stoichiometries(
         initial_value, tol=tol, inputs=inputs, direction=direction
     )
@@ -1095,6 +1154,7 @@ def get_initial_ocps(
     options=None,
     tol=1e-6,
     inputs=None,
+    esoh_solver=None,
 ):
     """
     Calculate initial open-circuit potentials to start off the simulation at a
@@ -1126,19 +1186,22 @@ def get_initial_ocps(
         Tolerance for the solver used in calculating initial open-circuit potentials.
     inputs : dict, optional
         A dictionary of input parameters passed to the model.
+    esoh_solver : :class:`ElectrodeSOHSolver`, optional
+        A pre-built solver to reuse. If not provided, a new one is created.
 
     Returns
     -------
     Un, Up
         The initial electrode OCPs that give the desired initial state of charge
     """
-    esoh_solver = ElectrodeSOHSolver(
-        parameter_values,
-        direction=direction,
-        param=param,
-        known_value=known_value,
-        options=options,
-    )
+    if esoh_solver is None:
+        esoh_solver = ElectrodeSOHSolver(
+            parameter_values,
+            direction=direction,
+            param=param,
+            known_value=known_value,
+            options=options,
+        )
     return esoh_solver.get_initial_ocps(
         initial_value, direction=direction, tol=tol, inputs=inputs
     )
@@ -1261,8 +1324,8 @@ def calculate_theoretical_energy(
 
 
 def _get_msmr_potential_model(parameter_values, param):
-    V_max = param.voltage_high_cut
-    V_min = param.voltage_low_cut
+    V_max = param.ocp_soc_100
+    V_min = param.ocp_soc_0
     x_n = param.n.prim.x
     x_p = param.p.prim.x
     T = param.T_ref
@@ -1285,3 +1348,14 @@ def _get_msmr_potential_model(parameter_values, param):
     }
     parameter_values.process_model(model)
     return model
+
+
+def get_esoh_default_solver(tol: float = 1e-6) -> pybamm.CompositeSolver:
+    return pybamm.CompositeSolver(
+        [
+            pybamm.CasadiAlgebraicSolver(tol=tol, step_tol=0),
+            pybamm.AlgebraicSolver(tol=tol),
+            pybamm.AlgebraicSolver(method="lsq", tol=tol),
+            pybamm.AlgebraicSolver(method="minimize", tol=tol),
+        ]
+    )

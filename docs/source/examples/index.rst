@@ -15,6 +15,7 @@ The notebooks are organised into subfolders, and can be viewed in the galleries 
     notebooks/getting_started/tutorial-2-compare-models.ipynb
     notebooks/getting_started/tutorial-3-basic-plotting.ipynb
     notebooks/getting_started/tutorial-4-setting-parameter-values.ipynb
+    notebooks/getting_started/tutorial-4b-parameter-introspection.ipynb
     notebooks/getting_started/tutorial-5-run-experiments.ipynb
     notebooks/getting_started/tutorial-6-managing-simulation-outputs.ipynb
     notebooks/getting_started/tutorial-7-model-options.ipynb
@@ -56,6 +57,7 @@ The notebooks are organised into subfolders, and can be viewed in the galleries 
     :caption: Models
     :glob:
 
+    notebooks/models/basic-DFN-2d.ipynb
     notebooks/models/compare-comsol-discharge-curve.ipynb
     notebooks/models/compare-ecker-data.ipynb
     notebooks/models/compare-lithium-ion.ipynb

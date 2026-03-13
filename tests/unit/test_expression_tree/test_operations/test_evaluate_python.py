@@ -275,7 +275,7 @@ class TestEvaluate:
 
         # test a * b
         expr = a + b
-        constant_str, variable_str = pybamm.to_python(expr)
+        _constant_str, variable_str = pybamm.to_python(expr)
         expected_str = (
             r"var_[0-9m]+ = y\[0:1\].*\n"
             r"var_[0-9m]+ = y\[1:2\].*\n"
@@ -445,6 +445,29 @@ class TestEvaluate:
         for t, y in zip(t_tests, y_tests, strict=False):
             result = evaluator(t=t, y=y)
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
+
+        # test RegPower without scale
+        x = pybamm.StateVector(slice(0, 1))
+        rp = pybamm.RegPower(x, 0.5)
+        evaluator = pybamm.EvaluatorPython(rp)
+        for y in [np.array([[4.0]]), np.array([[9.0]]), np.array([[0.0]])]:
+            result = evaluator(y=y)
+            np.testing.assert_allclose(result, rp.evaluate(y=y))
+
+        # test RegPower with constant scale
+        rp_scaled = pybamm.RegPower(x, 0.5, scale=10.0)
+        evaluator_scaled = pybamm.EvaluatorPython(rp_scaled)
+        for y in [np.array([[4.0]]), np.array([[100.0]])]:
+            result = evaluator_scaled(y=y)
+            np.testing.assert_allclose(result, rp_scaled.evaluate(y=y))
+
+        # test RegPower with non-constant scale (StateVector)
+        scale_sv = pybamm.StateVector(slice(1, 2))
+        rp_var_scale = pybamm.RegPower(x, 0.5, scale=scale_sv)
+        evaluator_var_scale = pybamm.EvaluatorPython(rp_var_scale)
+        for y in [np.array([[4.0], [10.0]]), np.array([[100.0], [50.0]])]:
+            result = evaluator_var_scale(y=y)
+            np.testing.assert_allclose(result, rp_var_scale.evaluate(y=y))
 
     @pytest.mark.skipif(not pybamm.has_jax(), reason="jax or jaxlib is not installed")
     def test_find_symbols_jax(self):

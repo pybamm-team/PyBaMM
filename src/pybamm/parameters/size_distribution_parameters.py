@@ -115,8 +115,7 @@ def get_size_distribution_parameters(
                     * R_n_av_sec,
                     "Secondary: Negative area-weighted "
                     + "particle-size distribution [m-1]": f_a_dist_n_sec,
-                },
-                check_already_exists=False,
+                }
             )
         else:
             R_n_typ = param["Negative particle radius [m]"]
@@ -138,8 +137,7 @@ def get_size_distribution_parameters(
                     "Negative maximum particle radius [m]": R_max_n * R_n_av,
                     "Negative area-weighted "
                     + "particle-size distribution [m-1]": f_a_dist_n,
-                },
-                check_already_exists=False,
+                }
             )
 
     if composite == "positive" or composite == "both":
@@ -177,8 +175,7 @@ def get_size_distribution_parameters(
                 * R_p_av_sec,
                 "Secondary: Positive area-weighted "
                 + "particle-size distribution [m-1]": f_a_dist_p_sec,
-            },
-            check_already_exists=False,
+            }
         )
     else:
         # Radii from given parameter set
@@ -203,8 +200,7 @@ def get_size_distribution_parameters(
                 "Positive maximum particle radius [m]": R_max_p * R_p_av,
                 "Positive area-weighted "
                 + "particle-size distribution [m-1]": f_a_dist_p,
-            },
-            check_already_exists=False,
+            }
         )
     return param
 

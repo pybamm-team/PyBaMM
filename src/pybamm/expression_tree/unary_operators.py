@@ -531,6 +531,9 @@ class Gradient(SpatialOperator):
 class Divergence(SpatialOperator):
     """
     A node in the expression tree representing a div operator.
+
+    For vector fields (rank-1 tensors), returns a scalar.
+    For tensor fields (rank-2 tensors), returns a vector field.
     """
 
     def __init__(self, child):
@@ -540,7 +543,9 @@ class Divergence(SpatialOperator):
                 + "Try broadcasting the object first, e.g.\n\n"
                 "\tpybamm.div(pybamm.PrimaryBroadcast(symbol, 'domain'))"
             )
-        if child.evaluates_on_edges("primary") is False:
+        # Allow TensorField of rank >= 1, or symbols that evaluate on edges
+        is_tensor = isinstance(child, pybamm.TensorField) and child.rank >= 1
+        if not is_tensor and child.evaluates_on_edges("primary") is False:
             raise TypeError(
                 f"Cannot take divergence of '{child}' since it does not "
                 + "evaluate on edges. Usually, a gradient should be taken before the "
@@ -1333,6 +1338,45 @@ class UpwindDownwind2D(UpwindDownwind):
     def _unary_new_copy(self, child, perform_simplifications=True):
         """See :meth:`UnaryOperator._unary_new_copy()`."""
         return self.__class__(child, self.lr_direction, self.tb_direction)
+
+
+class NodeToEdge2D(SpatialOperator):
+    """
+    A node in the expression tree representing a node-to-edge conversion in 2D.
+    Marks a symbol as evaluating on edges in a specific direction.
+
+    Parameters
+    ----------
+    child : :class:`pybamm.Symbol`
+        The symbol to convert from nodes to edges
+    direction : str
+        The direction for the edges: "lr" (left-right) or "tb" (top-bottom)
+    """
+
+    def __init__(self, child, direction):
+        if direction not in ("lr", "tb"):
+            raise ValueError(f"direction must be 'lr' or 'tb', got '{direction}'")
+        if child.domain == []:
+            raise pybamm.DomainError(
+                f"Cannot convert '{child}' to edges since its domain is empty."
+            )
+        if child.evaluates_on_edges("primary") is True:
+            raise TypeError(
+                f"Cannot convert '{child}' to edges since it already evaluates on edges"
+            )
+        super().__init__(f"node_to_edge_{direction}", child)
+        self.direction = direction
+
+    def _evaluates_on_edges(self, dimension: str) -> bool:
+        """
+        Return True to indicate that this symbol evaluates on edges in the
+        specified direction, regardless of the given dimension.
+        """
+        return True
+
+    def _unary_new_copy(self, child, perform_simplifications=True):
+        """See :meth:`UnaryOperator._unary_new_copy()`."""
+        return self.__class__(child, self.direction)
 
 
 class Magnitude(UnaryOperator):

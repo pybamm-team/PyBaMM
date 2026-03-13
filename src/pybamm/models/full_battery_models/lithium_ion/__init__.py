@@ -17,7 +17,7 @@ from .electrode_soh_composite import (
     ElectrodeSOHComposite,
     get_initial_stoichiometries_composite,
 )
-from .initial_state import set_initial_state
+from .initial_state import compute_esoh_fingerprint, set_initial_state
 from .spm import SPM
 from .spme import SPMe
 from .dfn import DFN
@@ -32,7 +32,11 @@ from .Yang2017 import Yang2017
 from .mpm import MPM
 from .msmr import MSMR
 from .basic_splitOCVR import SplitOCVR
-from .util import check_if_composite
+from .util import (
+    check_if_composite,
+    get_equilibrium_direction,
+    get_lithiation_delithiation,
+)
 
 __all__ = ['Yang2017', 'base_lithium_ion_model', 'basic_dfn',
            'basic_dfn_composite', 'basic_dfn_half_cell', 'basic_spm', 'dfn',

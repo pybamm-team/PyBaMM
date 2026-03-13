@@ -39,6 +39,6 @@ class TestVector:
 
     def test_wrong_size_entries(self):
         with pytest.raises(
-            ValueError, match="Entries must have 1 dimension or be column vector"
+            ValueError, match=r"Entries must have 1 dimension or be column vector"
         ):
             pybamm.Vector(np.ones((4, 5)))
