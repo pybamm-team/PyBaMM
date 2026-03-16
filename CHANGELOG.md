@@ -20,6 +20,7 @@ as initial conditions. ([#5311](https://github.com/pybamm-team/PyBaMM/pull/5311)
 
 - Fixed a bug in the exchange current density calculation for MSMR models. ([#5404](https://github.com/pybamm-team/PyBaMM/pull/5404))
 - Fixed a bug where when converting `ExpressionFunctionParameter` to source code, `Interpolant` objects were being reduced to just their input variable names (e.g., sto) instead of preserving the full constructor call with data arrays. ([#5393](https://github.com/pybamm-team/PyBaMM/pull/5393))
+- - Fixed a bug when using 2 phases with particle size distribution the bounds of the particle size distribution were always taken from the primary phase. ([#5411](https://github.com/pybamm-team/PyBaMM/pull/5411))
 
 ## Breaking changes
 
