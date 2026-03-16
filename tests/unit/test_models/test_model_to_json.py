@@ -369,3 +369,133 @@ class TestBaseModelToConfig:
         assert file_path.exists()
         loaded = pybamm.BaseModel.from_config(str(file_path))
         assert type(loaded) is type(model)
+
+    # ---- Built-in model override tests ----
+
+    def test_to_config_builtin_unmodified_has_no_overrides(self):
+        """Unmodified built-in model config has no override keys."""
+        model = pybamm.lithium_ion.SPM()
+        config = model.to_config()
+        assert config["type"] == "SPM"
+        assert "custom_variables" not in config
+        assert "removed_variables" not in config
+        assert "events" not in config
+
+    def test_to_config_builtin_with_extra_variable_round_trip(self):
+        """Added variable survives to_config / from_config round-trip."""
+        model = pybamm.lithium_ion.SPM()
+        model.variables["My variable"] = 2 * model.variables["Voltage [V]"]
+        config = model.to_config()
+
+        # Still compact format with override
+        assert config["type"] == "SPM"
+        assert "custom_variables" in config
+        assert "My variable" in config["custom_variables"]
+
+        loaded = pybamm.BaseModel.from_config(config)
+        assert type(loaded) is type(model)
+        assert "My variable" in loaded.variables
+
+    def test_to_config_builtin_with_cleared_events_round_trip(self):
+        """Clearing events survives to_config / from_config round-trip."""
+        model = pybamm.lithium_ion.SPM()
+        model.events = []
+        config = model.to_config()
+
+        assert config["type"] == "SPM"
+        assert "events" in config
+        assert config["events"] == []
+
+        loaded = pybamm.BaseModel.from_config(config)
+        assert type(loaded) is type(model)
+        assert loaded.events == []
+
+    def test_to_config_builtin_with_removed_variable_round_trip(self):
+        """Removed variable is absent after from_config round-trip."""
+        model = pybamm.lithium_ion.SPM()
+        assert "Voltage [V]" in model.variables
+        del model.variables["Voltage [V]"]
+        config = model.to_config()
+
+        assert config["type"] == "SPM"
+        assert "removed_variables" in config
+        assert "Voltage [V]" in config["removed_variables"]
+
+        loaded = pybamm.BaseModel.from_config(config)
+        assert type(loaded) is type(model)
+        assert "Voltage [V]" not in loaded.variables
+
+    def test_to_config_builtin_with_added_event_round_trip(self):
+        """Custom event added to built-in model survives round-trip."""
+        model = pybamm.lithium_ion.SPM()
+        original_count = len(model.events)
+        model.events.append(
+            pybamm.Event(
+                "my_custom_event",
+                pybamm.Scalar(1),
+                pybamm.EventType.TERMINATION,
+            )
+        )
+        config = model.to_config()
+
+        assert config["type"] == "SPM"
+        assert "events" in config
+        assert len(config["events"]) == original_count + 1
+
+        loaded = pybamm.BaseModel.from_config(config)
+        assert type(loaded) is type(model)
+        event_names = {e.name for e in loaded.events}
+        assert "my_custom_event" in event_names
+
+    def test_to_config_builtin_combined_variable_and_event_changes(self):
+        """Matches example.py: add variable + clear events, round-trip."""
+        model = pybamm.lithium_ion.SPM()
+        model.events = []
+        model.variables["My variable"] = 2 * model.variables["Voltage [V]"]
+        config = model.to_config()
+
+        assert config["type"] == "SPM"
+        assert "custom_variables" in config
+        assert "events" in config
+        assert config["events"] == []
+
+        loaded = pybamm.BaseModel.from_config(config)
+        assert type(loaded) is type(model)
+        assert "My variable" in loaded.variables
+        assert loaded.events == []
+
+    def test_to_config_builtin_event_type_survives_json_round_trip(self):
+        """Event type enum survives JSON serialisation round-trip."""
+        model = pybamm.lithium_ion.SPM()
+        model.events.append(
+            pybamm.Event(
+                "custom_event",
+                pybamm.Scalar(1),
+                pybamm.EventType.TERMINATION,
+            )
+        )
+        config = model.to_config()
+
+        # JSON round-trip (would fail if event_type is a raw enum)
+        json_str = json.dumps(config)
+        reloaded = json.loads(json_str)
+
+        loaded = pybamm.BaseModel.from_config(reloaded)
+        custom = [e for e in loaded.events if e.name == "custom_event"]
+        assert len(custom) == 1
+        assert custom[0].event_type == pybamm.EventType.TERMINATION
+
+    def test_to_config_builtin_overrides_json_serializable(self):
+        """Config with overrides survives JSON round-trip."""
+        model = pybamm.lithium_ion.SPM()
+        model.events = []
+        model.variables["My variable"] = 2 * model.variables["Voltage [V]"]
+        config = model.to_config()
+
+        json_str = json.dumps(config)
+        assert isinstance(json_str, str)
+        reloaded = json.loads(json_str)
+
+        loaded = pybamm.BaseModel.from_config(reloaded)
+        assert "My variable" in loaded.variables
+        assert loaded.events == []
