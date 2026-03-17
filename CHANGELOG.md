@@ -2,6 +2,7 @@
 
 ## Features
 
+- Porosity change now works for particle size distributions ([#5417](https://github.com/pybamm-team/PyBaMM/pull/5417))
 - Improved the performance of processed variables by replacing `casadi.vertcat` input stacking with numpy vectors. ([#5413](https://github.com/pybamm-team/PyBaMM/pull/5413))
 - Preserve custom variables and events in built-in model to_config ([#5411](https://github.com/pybamm-team/PyBaMM/pull/5411))
 - Allow out of bounds initial state of charge to enable initialising a simulation at a voltage outside the voltage limits. ([#5386](https://github.com/pybamm-team/PyBaMM/pull/5386))
@@ -18,12 +19,14 @@ as initial conditions. ([#5311](https://github.com/pybamm-team/PyBaMM/pull/5311)
 
 ## Bug fixes
 
+- SEI concentration is always a size-averaged quantity if particle size distribution present ([#5417](https://github.com/pybamm-team/PyBaMM/pull/5417))
 - Fixed a bug in the exchange current density calculation for MSMR models. ([#5404](https://github.com/pybamm-team/PyBaMM/pull/5404))
 - Fixed a bug where when converting `ExpressionFunctionParameter` to source code, `Interpolant` objects were being reduced to just their input variable names (e.g., sto) instead of preserving the full constructor call with data arrays. ([#5393](https://github.com/pybamm-team/PyBaMM/pull/5393))
 - Fixed a bug when using 2 phases with particle size distribution the bounds of the particle size distribution were always taken from the primary phase. ([#5415](https://github.com/pybamm-team/PyBaMM/pull/5415))
 
 ## Breaking changes
 
+- Porosity change no longer excludes initial SEI thickness, i.e. the initial SEI now takes up space. ([#5417](https://github.com/pybamm-team/PyBaMM/pull/5417))
 - The mass matrix inverse is no longer computed during discretisation. Solvers instead use sparse linear solves. ([#5391](https://github.com/pybamm-team/PyBaMM/pull/5391))
 - Dropped JAX support on macOS with Intel (x86_64) processors. JAX dropped macOS Intel wheels in version 0.5.0, and the minimum JAX version has been bumped to >=0.7.0 for Python 3.14 compatibility. macOS users require Apple Silicon (M-series) for JAX features. ([#5374](https://github.com/pybamm-team/PyBaMM/pull/5374))
 - Added a small regularisation term to the exchange current density which slightly modifies the functional form of the kinetics as stoichiometry approaches 0 or 1. ([#5371](https://github.com/pybamm-team/PyBaMM/pull/5371))
