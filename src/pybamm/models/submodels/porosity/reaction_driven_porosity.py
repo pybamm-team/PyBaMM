@@ -31,6 +31,7 @@ class ReactionDriven(BaseModel):
                 dom = domain.split()[0]
                 Domain = dom.capitalize()
                 SEI_option = getattr(self.options, dom)["SEI"]
+                plating_option = getattr(self.options, dom)["lithium plating"]
                 phases_option = getattr(self.options, dom)["particle phases"]
                 phases = self.options.phases[dom]
                 for phase in phases:
@@ -42,40 +43,34 @@ class ReactionDriven(BaseModel):
                         # `domain` has more than one phase
                         phase_name = phase + " "
                         pref = phase.capitalize() + ": "
-                    a_k = variables[
-                        f"{Domain} electrode {phase_name}"
-                        "surface area to volume ratio [m-1]"
-                    ]
                     if SEI_option == "none":
-                        L_sei_0 = pybamm.Scalar(0)
+                        V_bar_sei = pybamm.Scalar(0)
                     else:
-                        L_sei_0 = pybamm.Parameter(f"{pref}Initial SEI thickness [m]")
-                    L_sei_k = variables[f"{Domain} {phase_name}SEI thickness [m]"]
-                    L_pl_k = variables[
-                        f"{Domain} {phase_name}lithium plating thickness [m]"
+                        V_bar_sei = pybamm.Parameter(
+                            f"{pref}SEI partial molar volume [m3.mol-1]"
+                        )
+                    if plating_option == "none":
+                        V_bar_Li = pybamm.Scalar(0)
+                    else:
+                        V_bar_Li = pybamm.Parameter(
+                            "Lithium metal partial molar volume [m3.mol-1]"
+                        )
+                    c_sei_k = variables[
+                        f"{Domain} {phase_name}SEI concentration [mol.m-3]"
                     ]
-                    L_dead_k = variables[
-                        f"{Domain} {phase_name}dead lithium thickness [m]"
+                    c_sei_cr_k = variables[
+                        f"{Domain} {phase_name}SEI on cracks concentration [mol.m-3]"
                     ]
-                    L_sei_cr_k = variables[
-                        f"{Domain} {phase_name}SEI on cracks thickness [m]"
+                    c_sei_tot_k = c_sei_k + c_sei_cr_k
+                    c_pl_k = variables[
+                        f"{Domain} {phase_name}lithium plating concentration [mol.m-3]"
                     ]
-                    roughness_k = variables[
-                        f"{Domain} {phase_name}electrode roughness ratio"
+                    c_dead_k = variables[
+                        f"{Domain} {phase_name}dead lithium concentration [mol.m-3]"
                     ]
+                    c_pl_tot_k = c_pl_k + c_dead_k
 
-                    L_tot = (
-                        (L_sei_k - L_sei_0)
-                        + L_pl_k
-                        + L_dead_k
-                        + L_sei_cr_k * (roughness_k - 1)
-                    )
-
-                    # This assumes a thin film so curvature effects are neglected.
-                    # They could be included (e.g. for a sphere it is
-                    # a_n * (L_tot + L_tot ** 2 / R_n + L_tot ** # 3 / (3 * R_n ** 2)))
-                    # but it is not clear if it is relevant or not.
-                    delta_eps_k += -a_k * L_tot
+                    delta_eps_k += (V_bar_sei * c_sei_tot_k + V_bar_Li * c_pl_tot_k)
 
             domain_param = self.param.domain_params[domain.split()[0]]
             eps_k = domain_param.epsilon_init + delta_eps_k
