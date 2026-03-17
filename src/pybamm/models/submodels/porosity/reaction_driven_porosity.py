@@ -70,7 +70,7 @@ class ReactionDriven(BaseModel):
                     ]
                     c_pl_tot_k = c_pl_k + c_dead_k
 
-                    delta_eps_k += (V_bar_sei * c_sei_tot_k + V_bar_Li * c_pl_tot_k)
+                    delta_eps_k += V_bar_sei * c_sei_tot_k + V_bar_Li * c_pl_tot_k
 
             domain_param = self.param.domain_params[domain.split()[0]]
             eps_k = domain_param.epsilon_init + delta_eps_k
