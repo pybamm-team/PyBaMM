@@ -149,6 +149,7 @@ class Simulation:
         self._disc = None
         self._solution = None
         self.quick_plot = None
+        self._needs_ic_rebuild = False
 
         # ignore runtime warnings in notebooks
         if is_notebook():  # pragma: no cover
@@ -384,7 +385,7 @@ class Simulation:
 
         return (initial_soc, direction, pv_fp, evals)
 
-    def _create_esoh_solver(self, direction):
+    def _create_esoh_solver(self, direction, initial_soc):
         """Create the appropriate eSOH solver/sim for this model type."""
         options = self._model.options
         pv = self._unprocessed_parameter_values
@@ -409,10 +410,14 @@ class Simulation:
             )
             return pybamm.Simulation(model, parameter_values=pv)
         else:
+            if isinstance(initial_soc, str) and initial_soc.strip().endswith("V"):
+                initialization_method = "voltage"
+            else:
+                initialization_method = "SOC"
             model = pybamm.lithium_ion.ElectrodeSOHComposite(
                 options,
                 direction,
-                initialization_method="SOC",
+                initialization_method=initialization_method,
             )
             from .models.full_battery_models.lithium_ion.electrode_soh import (
                 get_esoh_default_solver,
@@ -430,22 +435,21 @@ class Simulation:
             if fingerprint == self._esoh_fingerprint:
                 return
         else:
-            fingerprint = None
+            normalized = self._normalize_inputs(inputs) if inputs else ()
+            fingerprint = (initial_soc, direction, normalized)
+            if fingerprint == self._esoh_fingerprint:
+                return
 
-        if self._built_initial_soc != initial_soc:
-            # reset
-            self._model_with_set_params = None
-            self._built_model = None
-            self._built_nominal_capacity = None
-            self.steps_to_built_models = None
-            self.steps_to_built_solvers = None
+        self._needs_ic_rebuild = True
 
         param = self._model.param
         options = self._model.options
 
         if self._cache_esoh:
             if self._initial_soc_solver is None:
-                self._initial_soc_solver = self._create_esoh_solver(direction)
+                self._initial_soc_solver = self._create_esoh_solver(
+                    direction, initial_soc
+                )
             self._parameter_values = pybamm.lithium_ion.set_initial_state(
                 initial_soc,
                 self._unprocessed_parameter_values,
@@ -479,6 +483,42 @@ class Simulation:
             initial_soc=initial_soc, direction=direction, inputs=inputs
         )
 
+    def _recompute_initial_conditions(self):
+        """Recompute initial conditions on built model(s) without full rebuild."""
+        unprocessed_by_name = {
+            var.name: expr
+            for var, expr in self._unprocessed_model.initial_conditions.items()
+        }
+
+        models = []
+        if self._built_model is not None:
+            models.append(self._built_model)
+        if self.steps_to_built_models is not None:
+            models.extend(self.steps_to_built_models.values())
+
+        for built_model in models:
+            new_param_ics = {}
+            for var, existing in built_model.initial_conditions.items():
+                if var.name in unprocessed_by_name:
+                    new_param_ics[var] = self._parameter_values.process_symbol(
+                        unprocessed_by_name[var.name]
+                    )
+                else:
+                    new_param_ics[var] = existing
+
+            processed_ics = self._disc.process_dict(new_param_ics, ics=True)
+            slices = [built_model.y_slices[var][0] for var in processed_ics]
+            sorted_eqs = [
+                eq for _, eq in sorted(zip(slices, processed_ics.values(), strict=True))
+            ]
+            concat_ics = pybamm.numpy_concatenation(*sorted_eqs)
+
+            built_model.initial_conditions = processed_ics
+            built_model.concatenated_initial_conditions = concat_ics
+
+        self._solver._model_set_up = {}
+        self._needs_ic_rebuild = False
+
     def build(self, initial_soc=None, direction=None, inputs=None):
         """
         A method to build the model into a system of matrices and vectors suitable for
@@ -500,6 +540,8 @@ class Simulation:
             self.set_initial_state(initial_soc, direction=direction, inputs=inputs)
 
         if self._built_model:
+            if self._needs_ic_rebuild:
+                self._recompute_initial_conditions()
             return
         if self._model.is_discretised:
             self._model_with_set_params = self._model
@@ -517,6 +559,7 @@ class Simulation:
             )
             # rebuilt model so clear solver setup
             self._solver._model_set_up = {}
+        self._needs_ic_rebuild = False
 
     def build_for_experiment(
         self, initial_soc=None, direction=None, inputs=None, solve_kwargs=None
@@ -529,6 +572,8 @@ class Simulation:
             self.set_initial_state(initial_soc, direction=direction, inputs=inputs)
 
         if self.steps_to_built_models:
+            if self._needs_ic_rebuild:
+                self._recompute_initial_conditions()
             # Check if we need to update the models due to capacity change
             self._update_experiment_models_for_capacity(inputs, solve_kwargs)
             return
@@ -567,6 +612,7 @@ class Simulation:
             self._built_nominal_capacity = self._parameter_values.get(
                 "Nominal cell capacity [A.h]", None
             )
+            self._needs_ic_rebuild = False
 
     def _build_experiment_state_mappers(self, inputs: dict):
         self.model_state_mappers = {}
