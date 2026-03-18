@@ -1185,22 +1185,14 @@ class TestSimulationExperiment:
         param["Negative electrode active material volume fraction"] = (
             pybamm.InputParameter("eps_s_n")
         )
-        experiment = pybamm.Experiment(
-            ["Rest for 10 minutes", "Rest for 10 minutes"]
-        )
-        sim = pybamm.Simulation(
-            model, parameter_values=param, experiment=experiment
-        )
+        experiment = pybamm.Experiment(["Rest for 10 minutes", "Rest for 10 minutes"])
+        sim = pybamm.Simulation(model, parameter_values=param, experiment=experiment)
 
         sol1 = sim.solve(inputs={"eps_s_n": 0.6}, initial_soc=0.5)
-        ic1 = sol1[
-            "X-averaged negative particle surface concentration"
-        ].data[0]
+        ic1 = sol1["X-averaged negative particle surface concentration"].data[0]
 
         sol2 = sim.solve(inputs={"eps_s_n": 0.9}, initial_soc=0.5)
-        ic2 = sol2[
-            "X-averaged negative particle surface concentration"
-        ].data[0]
+        ic2 = sol2["X-averaged negative particle surface concentration"].data[0]
 
         # ICs must differ when inputs change at same SOC
         assert ic1 != ic2

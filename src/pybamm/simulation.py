@@ -494,9 +494,7 @@ class Simulation:
         # Map unprocessed IC expressions by variable name
         unprocessed_ics = {
             var.name: expr
-            for var, expr in (
-                self._unprocessed_model.initial_conditions.items()
-            )
+            for var, expr in (self._unprocessed_model.initial_conditions.items())
         }
 
         # Re-parameterise ICs using the built model's Variable objects.
@@ -506,10 +504,8 @@ class Simulation:
         new_param_ics = {}
         for var, existing_expr in built_model.initial_conditions.items():
             if var.name in unprocessed_ics:
-                new_param_ics[var] = (
-                    self._parameter_values.process_symbol(
-                        unprocessed_ics[var.name]
-                    )
+                new_param_ics[var] = self._parameter_values.process_symbol(
+                    unprocessed_ics[var.name]
                 )
             else:
                 new_param_ics[var] = existing_expr
@@ -518,9 +514,7 @@ class Simulation:
         saved_y_slices = self._disc.y_slices
         self._disc.y_slices = dict(built_model.y_slices)
         try:
-            processed_ics = self._disc.process_dict(
-                new_param_ics, ics=True
-            )
+            processed_ics = self._disc.process_dict(new_param_ics, ics=True)
             concat_ics = self._disc._concatenate_in_order(
                 processed_ics, check_complete=True
             )
