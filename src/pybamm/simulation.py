@@ -385,7 +385,7 @@ class Simulation:
 
         return (initial_soc, direction, pv_fp, evals)
 
-    def _create_esoh_solver(self, direction):
+    def _create_esoh_solver(self, direction, initial_soc):
         """Create the appropriate eSOH solver/sim for this model type."""
         options = self._model.options
         pv = self._unprocessed_parameter_values
@@ -410,10 +410,14 @@ class Simulation:
             )
             return pybamm.Simulation(model, parameter_values=pv)
         else:
+            if isinstance(initial_soc, str) and initial_soc.strip().endswith("V"):
+                initialization_method = "voltage"
+            else:
+                initialization_method = "SOC"
             model = pybamm.lithium_ion.ElectrodeSOHComposite(
                 options,
                 direction,
-                initialization_method="SOC",
+                initialization_method=initialization_method,
             )
             from .models.full_battery_models.lithium_ion.electrode_soh import (
                 get_esoh_default_solver,
@@ -436,15 +440,16 @@ class Simulation:
             if fingerprint == self._esoh_fingerprint:
                 return
 
-        if fingerprint != self._esoh_fingerprint:
-            self._needs_ic_rebuild = True
+        self._needs_ic_rebuild = True
 
         param = self._model.param
         options = self._model.options
 
         if self._cache_esoh:
             if self._initial_soc_solver is None:
-                self._initial_soc_solver = self._create_esoh_solver(direction)
+                self._initial_soc_solver = self._create_esoh_solver(
+                    direction, initial_soc
+                )
             self._parameter_values = pybamm.lithium_ion.set_initial_state(
                 initial_soc,
                 self._unprocessed_parameter_values,
@@ -480,49 +485,39 @@ class Simulation:
 
     def _recompute_initial_conditions(self):
         """Recompute initial conditions on built model(s) without full rebuild."""
-        if self._built_model is not None:
-            self._update_model_ics(self._built_model)
-        if self.steps_to_built_models is not None:
-            for built_model in self.steps_to_built_models.values():
-                self._update_model_ics(built_model)
-        # Clear solver setup so it re-processes the new ICs
-        self._solver._model_set_up = {}
-        self._needs_ic_rebuild = False
-
-    def _update_model_ics(self, built_model):
-        """Update initial conditions on a single built model."""
-        # Map unprocessed IC expressions by variable name
-        unprocessed_ics = {
+        unprocessed_by_name = {
             var.name: expr
-            for var, expr in (self._unprocessed_model.initial_conditions.items())
+            for var, expr in self._unprocessed_model.initial_conditions.items()
         }
 
-        # Re-parameterise ICs using the built model's Variable objects.
-        # Only update ICs that exist in the unprocessed model; experiment
-        # models may add extra variables (e.g. "Current variable [A]")
-        # that should be left unchanged.
-        new_param_ics = {}
-        for var, existing_expr in built_model.initial_conditions.items():
-            if var.name in unprocessed_ics:
-                new_param_ics[var] = self._parameter_values.process_symbol(
-                    unprocessed_ics[var.name]
-                )
-            else:
-                new_param_ics[var] = existing_expr
+        models = []
+        if self._built_model is not None:
+            models.append(self._built_model)
+        if self.steps_to_built_models is not None:
+            models.extend(self.steps_to_built_models.values())
 
-        # Temporarily set disc y_slices to match this model's
-        saved_y_slices = self._disc.y_slices
-        self._disc.y_slices = dict(built_model.y_slices)
-        try:
+        for built_model in models:
+            new_param_ics = {}
+            for var, existing in built_model.initial_conditions.items():
+                if var.name in unprocessed_by_name:
+                    new_param_ics[var] = self._parameter_values.process_symbol(
+                        unprocessed_by_name[var.name]
+                    )
+                else:
+                    new_param_ics[var] = existing
+
             processed_ics = self._disc.process_dict(new_param_ics, ics=True)
-            concat_ics = self._disc._concatenate_in_order(
-                processed_ics, check_complete=True
-            )
-        finally:
-            self._disc.y_slices = saved_y_slices
+            slices = [built_model.y_slices[var][0] for var in processed_ics]
+            sorted_eqs = [
+                eq for _, eq in sorted(zip(slices, processed_ics.values(), strict=True))
+            ]
+            concat_ics = pybamm.numpy_concatenation(*sorted_eqs)
 
-        built_model.initial_conditions = processed_ics
-        built_model.concatenated_initial_conditions = concat_ics
+            built_model.initial_conditions = processed_ics
+            built_model.concatenated_initial_conditions = concat_ics
+
+        self._solver._model_set_up = {}
+        self._needs_ic_rebuild = False
 
     def build(self, initial_soc=None, direction=None, inputs=None):
         """

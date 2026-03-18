@@ -1098,6 +1098,56 @@ class TestSimulation:
 
         sim._model.param = original_param
 
+    def test_initial_soc_regular_model(self):
+        model = pybamm.lithium_ion.SPM()
+        param = model.default_parameter_values
+        param["Current function [A]"] = 0.0
+
+        sim = pybamm.Simulation(model, parameter_values=param)
+        sol = sim.solve([0, 1], initial_soc=0.5)
+        assert sim._built_initial_soc == 0.5
+
+        sim = pybamm.Simulation(model, parameter_values=param)
+        sol = sim.solve([0, 1], initial_soc="4.0 V")
+        voltage = sol["Terminal voltage [V]"].entries
+        assert voltage[0] == pytest.approx(4.0, abs=1e-3)
+
+    def test_initial_soc_composite_model(self):
+        options = {"particle phases": ("2", "1")}
+        model = pybamm.lithium_ion.SPM(options=options)
+        param = pybamm.ParameterValues("Chen2020_composite")
+        param.update(
+            {
+                "Secondary: Initial concentration in negative electrode "
+                "[mol.m-3]": 2.3512e05
+            }
+        )
+        param["Current function [A]"] = 0.0
+
+        sim = pybamm.Simulation(model, parameter_values=param)
+        sol = sim.solve([0, 1], initial_soc=0.5)
+        assert sim._built_initial_soc == 0.5
+
+        sim = pybamm.Simulation(model, parameter_values=param)
+        sol = sim.solve([0, 1], initial_soc="3.8 V")
+        voltage = sol["Terminal voltage [V]"].entries
+        assert voltage[0] == pytest.approx(3.8, abs=1e-3)
+
+    def test_initial_soc_half_cell_model(self):
+        options = {"working electrode": "positive"}
+        model = pybamm.lithium_ion.SPM(options)
+        param = model.default_parameter_values
+        param["Current function [A]"] = 0.0
+
+        sim = pybamm.Simulation(model, parameter_values=param)
+        sol = sim.solve([0, 1], initial_soc=0.5)
+        assert sim._built_initial_soc == 0.5
+
+        sim = pybamm.Simulation(model, parameter_values=param)
+        sol = sim.solve([0, 1], initial_soc="4.0 V")
+        voltage = sol["Terminal voltage [V]"].entries
+        assert voltage[0] == pytest.approx(4.0, abs=1e-3)
+
     def test_initial_conditions_update_with_changed_inputs(self):
         model = pybamm.lithium_ion.SPM()
         param = pybamm.ParameterValues("Chen2020")
