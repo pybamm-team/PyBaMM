@@ -149,6 +149,7 @@ class Simulation:
         self._disc = None
         self._solution = None
         self.quick_plot = None
+        self._needs_ic_rebuild = False
 
         # ignore runtime warnings in notebooks
         if is_notebook():  # pragma: no cover
@@ -430,15 +431,13 @@ class Simulation:
             if fingerprint == self._esoh_fingerprint:
                 return
         else:
-            fingerprint = None
+            normalized = self._normalize_inputs(inputs) if inputs else ()
+            fingerprint = (initial_soc, direction, normalized)
+            if fingerprint == self._esoh_fingerprint:
+                return
 
-        if self._built_initial_soc != initial_soc:
-            # reset
-            self._model_with_set_params = None
-            self._built_model = None
-            self._built_nominal_capacity = None
-            self.steps_to_built_models = None
-            self.steps_to_built_solvers = None
+        if fingerprint != self._esoh_fingerprint:
+            self._needs_ic_rebuild = True
 
         param = self._model.param
         options = self._model.options
@@ -479,6 +478,58 @@ class Simulation:
             initial_soc=initial_soc, direction=direction, inputs=inputs
         )
 
+    def _recompute_initial_conditions(self):
+        """Recompute initial conditions on built model(s) without full rebuild."""
+        if self._built_model is not None:
+            self._update_model_ics(self._built_model)
+        if self.steps_to_built_models is not None:
+            for built_model in self.steps_to_built_models.values():
+                self._update_model_ics(built_model)
+        # Clear solver setup so it re-processes the new ICs
+        self._solver._model_set_up = {}
+        self._needs_ic_rebuild = False
+
+    def _update_model_ics(self, built_model):
+        """Update initial conditions on a single built model."""
+        # Map unprocessed IC expressions by variable name
+        unprocessed_ics = {
+            var.name: expr
+            for var, expr in (
+                self._unprocessed_model.initial_conditions.items()
+            )
+        }
+
+        # Re-parameterise ICs using the built model's Variable objects.
+        # Only update ICs that exist in the unprocessed model; experiment
+        # models may add extra variables (e.g. "Current variable [A]")
+        # that should be left unchanged.
+        new_param_ics = {}
+        for var, existing_expr in built_model.initial_conditions.items():
+            if var.name in unprocessed_ics:
+                new_param_ics[var] = (
+                    self._parameter_values.process_symbol(
+                        unprocessed_ics[var.name]
+                    )
+                )
+            else:
+                new_param_ics[var] = existing_expr
+
+        # Temporarily set disc y_slices to match this model's
+        saved_y_slices = self._disc.y_slices
+        self._disc.y_slices = dict(built_model.y_slices)
+        try:
+            processed_ics = self._disc.process_dict(
+                new_param_ics, ics=True
+            )
+            concat_ics = self._disc._concatenate_in_order(
+                processed_ics, check_complete=True
+            )
+        finally:
+            self._disc.y_slices = saved_y_slices
+
+        built_model.initial_conditions = processed_ics
+        built_model.concatenated_initial_conditions = concat_ics
+
     def build(self, initial_soc=None, direction=None, inputs=None):
         """
         A method to build the model into a system of matrices and vectors suitable for
@@ -500,6 +551,8 @@ class Simulation:
             self.set_initial_state(initial_soc, direction=direction, inputs=inputs)
 
         if self._built_model:
+            if self._needs_ic_rebuild:
+                self._recompute_initial_conditions()
             return
         if self._model.is_discretised:
             self._model_with_set_params = self._model
@@ -517,6 +570,7 @@ class Simulation:
             )
             # rebuilt model so clear solver setup
             self._solver._model_set_up = {}
+        self._needs_ic_rebuild = False
 
     def build_for_experiment(
         self, initial_soc=None, direction=None, inputs=None, solve_kwargs=None
@@ -529,6 +583,8 @@ class Simulation:
             self.set_initial_state(initial_soc, direction=direction, inputs=inputs)
 
         if self.steps_to_built_models:
+            if self._needs_ic_rebuild:
+                self._recompute_initial_conditions()
             # Check if we need to update the models due to capacity change
             self._update_experiment_models_for_capacity(inputs, solve_kwargs)
             return
@@ -567,6 +623,7 @@ class Simulation:
             self._built_nominal_capacity = self._parameter_values.get(
                 "Nominal cell capacity [A.h]", None
             )
+            self._needs_ic_rebuild = False
 
     def _build_experiment_state_mappers(self, inputs: dict):
         self.model_state_mappers = {}

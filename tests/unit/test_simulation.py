@@ -1097,3 +1097,60 @@ class TestSimulation:
         assert fp1 is fp2
 
         sim._model.param = original_param
+
+    def test_initial_conditions_update_with_changed_inputs(self):
+        model = pybamm.lithium_ion.SPM()
+        param = pybamm.ParameterValues("Chen2020")
+        param["Negative electrode active material volume fraction"] = (
+            pybamm.InputParameter("eps_s_n")
+        )
+        experiment = pybamm.Experiment(["Rest for 1 hour"])
+        sim = pybamm.Simulation(
+            model, parameter_values=param, experiment=experiment
+        )
+
+        sol1 = sim.solve(inputs={"eps_s_n": 0.6}, initial_soc=0.5)
+        ic1 = sol1[
+            "X-averaged negative particle surface concentration"
+        ].data[0]
+
+        sol2 = sim.solve(inputs={"eps_s_n": 0.9}, initial_soc=0.5)
+        ic2 = sol2[
+            "X-averaged negative particle surface concentration"
+        ].data[0]
+
+        # ICs must differ when inputs differ, even at the same SOC
+        assert ic1 != ic2
+
+        # Verify against reference: override parameter directly
+        param_ref = pybamm.ParameterValues("Chen2020")
+        param_ref[
+            "Negative electrode active material volume fraction"
+        ] = 0.6
+        sim_ref = pybamm.Simulation(
+            model, parameter_values=param_ref, experiment=experiment
+        )
+        sol_ref = sim_ref.solve(initial_soc=0.5)
+        ic_ref = sol_ref[
+            "X-averaged negative particle surface concentration"
+        ].data[0]
+        np.testing.assert_allclose(ic1, ic_ref, rtol=1e-10)
+
+    def test_initial_conditions_update_same_soc_same_inputs(self):
+        model = pybamm.lithium_ion.SPM()
+        param = pybamm.ParameterValues("Chen2020")
+        param["Negative electrode active material volume fraction"] = (
+            pybamm.InputParameter("eps_s_n")
+        )
+        experiment = pybamm.Experiment(["Rest for 1 hour"])
+        sim = pybamm.Simulation(
+            model, parameter_values=param, experiment=experiment
+        )
+
+        sim.solve(inputs={"eps_s_n": 0.6}, initial_soc=0.5)
+        # After first solve, IC rebuild flag should be cleared
+        assert sim._needs_ic_rebuild is False
+
+        # Solving again with same inputs+SOC should not trigger rebuild
+        sim.solve(inputs={"eps_s_n": 0.6}, initial_soc=0.5)
+        assert sim._needs_ic_rebuild is False
