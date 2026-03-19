@@ -813,7 +813,7 @@ class TestElectrodeSOHHalfCell:
 
 class TestCalculateTheoreticalEnergy:
     def test_efficiency(self, options):
-        model = pybamm.lithium_ion.DFN(options={"calculate discharge energy": "true"})
+        model = pybamm.lithium_ion.DFN()
         parameter_values = pybamm.ParameterValues("Chen2020")
         sim = pybamm.Simulation(model, parameter_values=parameter_values)
         sol = sim.solve([0, 3600], initial_soc=1.0)

@@ -110,13 +110,16 @@ class TestLeadAcidLOQSExternalCircuits:
         [
             {"operating mode": "voltage"},
             {"operating mode": "power"},
-            {"calculate discharge energy": "true"},
         ],
-        ids=["voltage", "power", "discharge_energy"],
+        ids=["voltage", "power"],
     )
     def test_well_posed(self, options):
         model = pybamm.lead_acid.LOQS(options)
         model.check_well_posedness()
+
+    def test_calculate_discharge_energy_deprecated(self):
+        with pytest.warns(DeprecationWarning, match="has been removed"):
+            pybamm.lead_acid.LOQS({"calculate discharge energy": "true"})
 
     def test_well_posed_function(self):
         def external_circuit_function(variables):

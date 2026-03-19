@@ -18,7 +18,6 @@ OPTIONS_DICT = {
 }
 
 PRINT_OPTIONS_OUTPUT = """\
-'calculate discharge energy': 'false' (possible: ['false', 'true'])
 'calculate heat source for isothermal models': 'false' (possible: ['false', 'true'])
 'cell geometry': 'pouch' (possible: ['arbitrary', 'pouch', 'cylindrical'])
 'contact resistance': 'false' (possible: ['false', 'true'])
@@ -608,3 +607,7 @@ class TestOptions:
             )
             == ocp_option[1]
         )
+
+    def test_calculate_discharge_energy_deprecated(self):
+        with pytest.warns(DeprecationWarning, match="has been removed"):
+            BatteryModelOptions({"calculate discharge energy": "true"})

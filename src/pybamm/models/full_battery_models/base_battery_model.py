@@ -2,6 +2,7 @@
 # Base battery model class
 #
 
+import warnings
 from functools import cached_property
 
 import pybamm
@@ -92,11 +93,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         where a 2-tuple of strings can be provided instead to indicate a different
         option for the negative and positive electrodes.
 
-            * "calculate discharge energy": str
-                Whether to calculate the discharge energy, throughput energy and
-                throughput capacity in addition to discharge capacity. Must be one of
-                "true" or "false". "false" is the default, since calculating discharge
-                energy can be computationally expensive for simple models like SPM.
             * "cell geometry" : str
                 Sets the geometry of the cell. Can be "arbitrary" (default) or
                 "pouch". The arbitrary geometry option solves a 1D electrochemical
@@ -293,7 +289,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
 
     def __init__(self, extra_options):
         self.possible_options = {
-            "calculate discharge energy": ["false", "true"],
             "calculate heat source for isothermal models": ["false", "true"],
             "cell geometry": ["arbitrary", "pouch", "cylindrical"],
             "contact resistance": ["false", "true"],
@@ -550,6 +545,16 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         else:
             default_options["SEI"] = "none"
         # The "SEI" option will still be overridden by extra_options if provided
+
+        # Handle removed option with deprecation warning
+        if "calculate discharge energy" in extra_options:
+            extra_options.pop("calculate discharge energy")
+            warnings.warn(
+                "The 'calculate discharge energy' option has been removed. "
+                "Discharge energy is now always calculated.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
 
         options = pybamm.FuzzyDict(default_options)
         # any extra options overwrite the default options

@@ -57,10 +57,11 @@ class TestThevenin:
         model = pybamm.equivalent_circuit.Thevenin(options=options)
         model.check_well_posedness(post_discretisation=True)
 
-    def test_calculate_discharge_energy(self):
-        options = {"calculate discharge energy": "true"}
-        model = pybamm.equivalent_circuit.Thevenin(options=options)
-        model.check_well_posedness()
+    def test_calculate_discharge_energy_deprecated(self):
+        with pytest.warns(DeprecationWarning, match="has been removed"):
+            pybamm.equivalent_circuit.Thevenin(
+                options={"calculate discharge energy": "true"}
+            )
 
     def test_well_posed_external_circuit_voltage(self):
         options = {"operating mode": "voltage"}

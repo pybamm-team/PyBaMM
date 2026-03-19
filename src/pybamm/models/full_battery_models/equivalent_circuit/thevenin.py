@@ -1,3 +1,5 @@
+import warnings
+
 import pybamm
 
 from .ecm_model_options import NaturalNumberOption, OperatingModes
@@ -25,11 +27,6 @@ class Thevenin(pybamm.BaseModel):
 
             * "number of rc elements" : str
                 The number of RC elements to be added to the model. The default is 1.
-            * "calculate discharge energy": str
-                Whether to calculate the discharge energy, throughput energy and
-                throughput capacity in addition to discharge capacity. Must be one of
-                "true" or "false". "false" is the default, since calculating discharge
-                energy can be computationally expensive for simple models like SPM.
             * "diffusion element" : str
                 Whether to include the diffusion element to the model. Must be one of
                 "true" or "false". "false" is the default.
@@ -75,7 +72,6 @@ class Thevenin(pybamm.BaseModel):
 
     def set_options(self, extra_options=None):
         possible_options = {
-            "calculate discharge energy": ["false", "true"],
             "diffusion element": ["false", "true"],
             "operating mode": OperatingModes("current"),
             "number of rc elements": NaturalNumberOption(1),
@@ -86,6 +82,16 @@ class Thevenin(pybamm.BaseModel):
         }
 
         extra_options = extra_options or {}
+
+        # Handle removed option with deprecation warning
+        if "calculate discharge energy" in extra_options:
+            extra_options.pop("calculate discharge energy")
+            warnings.warn(
+                "The 'calculate discharge energy' option has been removed. "
+                "Discharge energy is now always calculated.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
 
         options = pybamm.FuzzyDict(default_options)
         for name, opt in extra_options.items():
