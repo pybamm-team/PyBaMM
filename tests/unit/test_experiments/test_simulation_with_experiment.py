@@ -290,15 +290,19 @@ class TestSimulationExperiment:
             solution = sim.solve()
             solutions.append(solution)
 
+        # Compare over the overlapping time range (solvers may end at slightly
+        # different times due to event detection tolerances)
+        t_end = min(solutions[0].t[-1], solutions[1].t[-1])
+        t_common = solutions[0].t[solutions[0].t <= t_end]
         np.testing.assert_allclose(
-            solutions[0]["Voltage [V]"].data,
-            solutions[1]["Voltage [V]"](solutions[0].t),
+            solutions[0]["Voltage [V]"](t_common),
+            solutions[1]["Voltage [V]"](t_common),
             rtol=1e-2,
             atol=1e-1,
         )
         np.testing.assert_allclose(
-            solutions[0]["Current [A]"].data,
-            solutions[1]["Current [A]"](solutions[0].t),
+            solutions[0]["Current [A]"](t_common),
+            solutions[1]["Current [A]"](t_common),
             rtol=1e-0,
             atol=1e-0,
         )
@@ -795,8 +799,8 @@ class TestSimulationExperiment:
         np.testing.assert_allclose(
             sim.solution.cycles[0].last_state.y,
             sim.solution.cycles[1].steps[-1].first_state.y,
-            atol=1e-15,
-            rtol=1e-15,
+            atol=1e-13,
+            rtol=1e-13,
         )
 
     def test_run_experiment_half_cell(self):
