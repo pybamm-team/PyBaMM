@@ -440,9 +440,7 @@ class BaseUnitTestLithiumIon:
 
     def test_well_posed_discharge_energy_deprecated(self):
         with pytest.warns(DeprecationWarning, match="has been removed"):
-            self.check_well_posedness(
-                {"calculate discharge energy": "true"}
-            )
+            self.check_well_posedness({"calculate discharge energy": "true"})
 
     def test_well_posed_external_circuit_voltage(self):
         options = {"operating mode": "voltage"}
