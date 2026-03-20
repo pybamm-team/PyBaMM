@@ -446,6 +446,15 @@ class TestEvaluate:
             result = evaluator(t=t, y=y)
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
+        # test Arcsinh2 (two-argument arcsinh with regularisation)
+        a = pybamm.StateVector(slice(0, 1))
+        b = pybamm.StateVector(slice(1, 2))
+        expr = pybamm.Arcsinh2(a, b)
+        evaluator = pybamm.EvaluatorPython(expr)
+        for y in y_tests:
+            result = evaluator(t=None, y=y)
+            np.testing.assert_allclose(result, expr.evaluate(t=None, y=y))
+
         # test RegPower without scale
         x = pybamm.StateVector(slice(0, 1))
         rp = pybamm.RegPower(x, 0.5)
@@ -569,6 +578,15 @@ class TestEvaluate:
         for t, y in zip(t_tests, y_tests, strict=False):
             result = evaluator(t=t, y=y)
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
+
+        # test Arcsinh2 (two-argument arcsinh with regularisation)
+        expr = pybamm.Arcsinh2(a, b)
+        evaluator = pybamm.EvaluatorJax(expr)
+        for y in y_tests:
+            result = evaluator(t=None, y=y)
+            np.testing.assert_allclose(
+                result, expr.evaluate(t=None, y=y), rtol=1e-6
+            )
 
         # test something with an index
         expr = pybamm.Index(A @ pybamm.StateVector(slice(0, 2)), 0)
