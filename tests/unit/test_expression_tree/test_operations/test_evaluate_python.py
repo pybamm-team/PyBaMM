@@ -584,9 +584,7 @@ class TestEvaluate:
         evaluator = pybamm.EvaluatorJax(expr)
         for y in y_tests:
             result = evaluator(t=None, y=y)
-            np.testing.assert_allclose(
-                result, expr.evaluate(t=None, y=y), rtol=1e-6
-            )
+            np.testing.assert_allclose(result, expr.evaluate(t=None, y=y), rtol=1e-6)
 
         # test something with an index
         expr = pybamm.Index(A @ pybamm.StateVector(slice(0, 2)), 0)
