@@ -305,6 +305,10 @@ class TestIDAKLUSolver:
         new_sol1 = sim2.solve(starting_solution=solution.copy())
         new_sol2 = sim2.solve(starting_solution=solution.copy().last_state)
 
+        # new_sol1 includes the starting solution entries followed by the new solve;
+        # new_sol2 only has the new solve. Compare the overlapping portion.
+        n_new = len(new_sol2["Voltage [V]"].entries)
         np.testing.assert_array_equal(
-            new_sol1["Voltage [V]"].entries[63:], new_sol2["Voltage [V]"].entries
+            new_sol1["Voltage [V]"].entries[-n_new:],
+            new_sol2["Voltage [V]"].entries,
         )

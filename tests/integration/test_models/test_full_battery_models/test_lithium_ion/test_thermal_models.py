@@ -172,9 +172,10 @@ class TestThermal:
             sim.solve([0, 3600])
             sols.append(sim.solution)
 
-        # get the average temperature from each model
-        avg_cell_temp = sols[0]["X-averaged cell temperature [K]"].entries
-        avg_cell_temp_cr = sols[1]["X-averaged cell temperature [K]"].entries
+        # compare at common timepoints (solvers may use different adaptive steps)
+        t_common = np.linspace(0, 3600, 100)
+        avg_cell_temp = sols[0]["X-averaged cell temperature [K]"](t_common)
+        avg_cell_temp_cr = sols[1]["X-averaged cell temperature [K]"](t_common)
 
         # check that the cell temperature of the lumped thermal model
         # with contact resistance is higher than without contact resistance

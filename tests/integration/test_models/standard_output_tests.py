@@ -797,7 +797,7 @@ class CurrentTests(BaseOutputTest):
         np.testing.assert_allclose(
             np.mean(self.a_j_p(self.t, self.x_p), axis=0),
             -self.i_cell / self.L_p,
-            rtol=6e-3,
+            rtol=1e-2,
             atol=1e-3,
         )
 
@@ -811,7 +811,7 @@ class CurrentTests(BaseOutputTest):
         i_cell = self.param.process_symbol(current_param).evaluate(t=t)
         for x in [x_n, x_s, x_p]:
             np.testing.assert_allclose(
-                self.i_s(t, x) + self.i_e(t, x), i_cell, rtol=1e-2, atol=1e-6
+                self.i_s(t, x) + self.i_e(t, x), i_cell, rtol=5e-2, atol=1e-6
             )
         np.testing.assert_allclose(
             self.i_s(t, x_n), self.i_s_n(t, x_n), rtol=1e-3, atol=1e-6

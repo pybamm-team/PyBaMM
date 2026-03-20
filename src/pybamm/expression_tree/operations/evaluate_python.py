@@ -291,7 +291,13 @@ def find_symbols(
                 children_str = child_var
             else:
                 children_str += ", " + child_var
-        if isinstance(symbol.function, np.ufunc):
+        if isinstance(symbol, pybamm.Arcsinh2):
+            # Arcsinh2._arcsinh2_evaluate takes (a, b, eps) but only (a, b)
+            # are children, so we need to call _function_evaluate instead
+            constant_symbols[symbol.id] = symbol._function_evaluate
+            funct_var = id_to_python_variable(symbol.id, True)
+            symbol_str = f"{funct_var}([{children_str}])"
+        elif isinstance(symbol.function, np.ufunc):
             # write any numpy functions directly
             symbol_str = f"np.{symbol.function.__name__}({children_str})"
         else:
