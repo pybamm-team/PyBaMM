@@ -1420,8 +1420,22 @@ class BaseSolver:
             if state_mapper is not None:
                 last_state = old_solution.last_state
                 y_from = last_state.all_ys[0]
-                mapper_func, _mapper_jac, _mapper_jacp = state_mapper
-                p_casadi_stacked = casadi.vertcat(*[p for p in model_inputs.values()])
+                if len(state_mapper) == 4:
+                    mapper_func, _mapper_jac, _mapper_jacp, mapper_input_names = (
+                        state_mapper
+                    )
+                    mapper_inputs = [
+                        old_solution.all_inputs[-1].get(
+                            name, DUMMY_INPUT_PARAMETER_VALUE
+                        )
+                        for name in mapper_input_names
+                    ]
+                    p_casadi_stacked = casadi.vertcat(*mapper_inputs)
+                else:
+                    mapper_func, _mapper_jac, _mapper_jacp = state_mapper
+                    p_casadi_stacked = casadi.vertcat(
+                        *[p for p in model_inputs.values()]
+                    )
 
                 model.y0_list = [
                     mapper_func(

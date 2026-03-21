@@ -970,16 +970,9 @@ class TestSimulationExperiment:
         )
         sim = pybamm.Simulation(model, experiment=experiment)
         sim.build_for_experiment()
-        assert "Rest for padding" in sim.experiment_unique_steps_to_model.keys()
-        # Check at least there is an input parameter (temperature)
-        assert (
-            len(sim.experiment_unique_steps_to_model["Rest for padding"].parameters) > 0
-        )
-        # Check the model is the same
-        assert isinstance(
-            sim.experiment_unique_steps_to_model["Rest for padding"],
-            pybamm.lithium_ion.SPM,
-        )
+        assert sim._experiment_uses_unified_model
+        assert "Rest for padding" not in sim.experiment_unique_steps_to_model.keys()
+        assert sim._experiment_includes_padding_rest
 
     def test_run_start_time_experiment(self):
         model = pybamm.lithium_ion.SPM()
@@ -998,6 +991,7 @@ class TestSimulationExperiment:
         )
         sim = pybamm.Simulation(model, experiment=experiment)
         sol = sim.solve(calc_esoh=False)
+        assert sim._experiment_uses_unified_model
         assert sol["Time [s]"].entries[-1] == 5400
 
         # Test padding rest is added if time stamp is late
@@ -1014,6 +1008,33 @@ class TestSimulationExperiment:
         )
         sim = pybamm.Simulation(model, experiment=experiment)
         sol = sim.solve(calc_esoh=False)
+        assert sim._experiment_uses_unified_model
+        assert sol["Time [s]"].entries[-1] == 10800
+
+    def test_run_start_time_experiment_forced_unified(self):
+        model = pybamm.lithium_ion.SPM()
+        experiment = pybamm.Experiment(
+            [
+                pybamm.step.string(
+                    "Discharge at 0.5C for 1 hour",
+                    start_time=datetime(2023, 1, 1, 8, 0, 0),
+                ),
+                pybamm.step.string(
+                    "Rest for 1 hour", start_time=datetime(2023, 1, 1, 10, 0, 0)
+                ),
+            ]
+        )
+
+        sim = pybamm.Simulation(
+            model,
+            experiment=experiment,
+            experiment_model_mode="unified",
+        )
+        sol = sim.solve(calc_esoh=False)
+
+        assert sim._experiment_uses_unified_model
+        assert "Rest for padding" not in sim.steps_to_built_models
+        assert sim._experiment_includes_padding_rest
         assert sol["Time [s]"].entries[-1] == 10800
 
     def test_starting_solution(self):
@@ -1134,8 +1155,13 @@ class TestSimulationExperiment:
         # Check that there are only 2 unique steps
         assert len(sim.experiment.unique_steps) == 2
 
-        # Check that there are only 3 built models (unique steps + padding rest)
-        assert len(sim.steps_to_built_models) == 3
+        if sim._experiment_uses_unified_model:
+            assert len(sim.steps_to_built_models) == 2
+            assert len(set(sim.steps_to_built_models.values())) == 1
+            assert "Rest for padding" not in sim.steps_to_built_models
+        else:
+            # Check that there are only 3 built models (unique steps + padding rest)
+            assert len(sim.steps_to_built_models) == 3
 
     def test_experiment_custom_steps(self, subtests):
         model = pybamm.lithium_ion.SPM()
