@@ -414,9 +414,13 @@ class BaseStep:
         if not events:
             return pybamm.Scalar(1)
 
-        expression = pybamm.Scalar(1)
-        for event in events:
-            expression *= event.expression
+        # A step terminates when any of its termination expressions crosses zero, so the
+        # step-local aggregate should become non-positive as soon as the first child
+        # event does. Using a nested minimum also preserves infeasible-initial-condition
+        # detection when more than one termination is already violated.
+        expression = events[0].expression
+        for event in events[1:]:
+            expression = pybamm.minimum(expression, event.expression)
         return expression
 
     @staticmethod

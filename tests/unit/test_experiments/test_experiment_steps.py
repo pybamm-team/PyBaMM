@@ -378,7 +378,15 @@ class TestExperimentSteps:
         ]
         np.testing.assert_allclose(
             step.get_combined_termination_expression(variables).evaluate(),
-            (3.0 - 2.5) * (0.2 - 0.05),
+            min(3.0 - 2.5, 0.2 - 0.05),
+        )
+
+        no_termination_step = pybamm.step.current(1, duration=3600)
+        np.testing.assert_allclose(
+            no_termination_step.get_combined_termination_expression(
+                variables
+            ).evaluate(),
+            1,
         )
 
     def test_symbolic_control_residual_helpers(self):

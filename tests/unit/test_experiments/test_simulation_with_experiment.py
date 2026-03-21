@@ -333,6 +333,35 @@ class TestSimulationExperiment:
         sol = sim.solve()
         assert sol.termination == "Event exceeded in initial conditions"
 
+    def test_skip_ok_with_multiple_infeasible_terminations_in_unified_model(self):
+        model = pybamm.lithium_ion.SPM()
+        experiment = pybamm.Experiment(
+            [
+                pybamm.step.Current(
+                    -5,
+                    termination=[(">", "current", -6), ("<", "current", -4)],
+                    skip_ok=True,
+                ),
+                pybamm.step.Voltage(4.2, termination="0.01 A", skip_ok=False),
+            ]
+        )
+        sim = pybamm.Simulation(
+            model,
+            experiment=experiment,
+            solver=pybamm.CasadiSolver(),
+            experiment_model_mode="unified",
+        )
+
+        sol = sim.solve(calc_esoh=False)
+
+        assert sim._experiment_uses_unified_model
+        assert len(sol.cycles) == 1
+        assert len(sol.cycles[0].steps) == 1
+        assert (
+            sol.cycles[0].steps[0].termination
+            == "event: abs(Current [A]) < 0.01 [A] [experiment]"
+        )
+
     def test_all_empty_solution_errors(self):
         model = pybamm.lithium_ion.SPM()
         parameter_values = pybamm.ParameterValues("Chen2020")
