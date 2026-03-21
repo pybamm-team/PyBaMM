@@ -418,6 +418,45 @@ class Simulation:
             inputs[weight_name] = 1 if i == step_index else 0
         return inputs
 
+    @staticmethod
+    def _coerce_termination_value(value):
+        if isinstance(value, np.ndarray):
+            value = value.reshape(-1)[0]
+        elif hasattr(value, "full"):
+            value = value.full().reshape(-1)[0]
+        elif hasattr(value, "item") and not np.isscalar(value):
+            value = value.item()
+
+        if isinstance(value, np.ndarray):
+            value = value.item()
+
+        return float(value)
+
+    def _evaluate_step_termination_expression_from_solution(
+        self, term, step_solution, step
+    ):
+        # Some custom terminations reference symbols that are not directly evaluable
+        # from the raw event expression, but are available as processed solution
+        # variables. Rebuild a minimal variables dict from the solved step state and
+        # re-run the termination expression against that view of the solution.
+        if step_solution.t_event is not None:
+            t = float(np.asarray(step_solution.t_event).reshape(-1)[0])
+        else:
+            t = float(step_solution.t[-1])
+
+        class SolutionVariables(dict):
+            def __missing__(self, key):
+                value = step_solution[key](t)
+                self[key] = value
+                return value
+
+        try:
+            value = term.get_event_expression(SolutionVariables(), step)
+        except (KeyError, NotImplementedError):  # pragma: no cover
+            return None
+
+        return self._coerce_termination_value(value)
+
     def _decode_combined_step_termination(self, step_solution, step, model, inputs):
         if (
             step_solution.termination
@@ -432,23 +471,32 @@ class Simulation:
                 continue
 
             value = None
-            if isinstance(term, pybamm.step.CurrentTermination):
-                current = step_solution["Current [A]"].data[-1]
-                if term.operator == ">":
-                    value = term.value - current
-                elif term.operator == "<":
-                    value = current - term.value
-                else:
-                    value = abs(current) - term.value
-            elif isinstance(term, pybamm.step.CRateTermination):
-                crate = step_solution["C-rate"].data[-1]
-                value = abs(crate) - term.value
-            elif isinstance(term, pybamm.step.VoltageTermination):
-                operator = term._get_operator(step)
-                if operator is not None:
-                    voltage = step_solution["Battery voltage [V]"].data[-1]
-                    sign = -1 if operator == ">" else 1
-                    value = sign * (voltage - term.value)
+            # First try the exact symbolic event expression that the unified model used.
+            # This is the closest match to what the solver just triggered.
+            t = (
+                step_solution.t_event
+                if step_solution.t_event is not None
+                else step_solution.t[-1]
+            )
+            y = (
+                step_solution.y_event
+                if step_solution.y_event is not None
+                else step_solution.y[:, -1]
+            )
+            try:
+                value = self._coerce_termination_value(
+                    event.expression.evaluate(t=t, y=y, inputs=inputs)
+                )
+            except NotImplementedError:  # pragma: no cover
+                value = None
+
+            # If the raw expression still contains unevaluated symbols, fall back to
+            # the processed variables on the solved step. This is slower, but it works
+            # for custom terminations built from model outputs.
+            if value is None:
+                value = self._evaluate_step_termination_expression_from_solution(
+                    term, step_solution, step
+                )
 
             if value is not None:
                 final_event_values[event.name] = value

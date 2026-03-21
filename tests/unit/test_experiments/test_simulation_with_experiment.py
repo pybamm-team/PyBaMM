@@ -1183,8 +1183,13 @@ class TestSimulationExperiment:
         experiment = pybamm.Experiment(
             [pybamm.step.c_rate(1, termination=neg_stoich_termination)]
         )
-        sim = pybamm.Simulation(model, experiment=experiment)
+        sim = pybamm.Simulation(
+            model,
+            experiment=experiment,
+            experiment_model_mode="unified",
+        )
         sol = sim.solve(calc_esoh=False)
+        assert sim._experiment_uses_unified_model
         assert (
             sol.cycles[0].steps[0].termination
             == "event: Negative stoichiometry cut-off [experiment]"
