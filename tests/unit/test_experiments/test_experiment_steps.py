@@ -364,6 +364,21 @@ class TestExperimentSteps:
         assert termination_gt_4_1_oo == termination_gt_4_1
 
     def test_symbolic_termination_expression_helpers(self):
+        single_termination_step = pybamm.step.current(
+            1, duration=3600, termination="2.5V"
+        )
+        single_termination_variables = {
+            "Battery voltage [V]": 3.0,
+            "Current [A]": 0.2,
+            "C-rate": 0.1,
+        }
+        np.testing.assert_allclose(
+            single_termination_step.get_combined_termination_expression(
+                single_termination_variables
+            ),
+            3.0 - 2.5,
+        )
+
         step = pybamm.step.current(1, duration=3600, termination=["2.5V", "0.05A"])
         variables = {
             "Battery voltage [V]": 3.0,
