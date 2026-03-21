@@ -1178,3 +1178,21 @@ class TestSimulationExperiment:
         finally:
             # Restore original logging level
             pybamm.logger.setLevel(original_log_level)
+
+    def test_inputs_with_initial_soc(self):
+        model = pybamm.lithium_ion.SPM()
+        param = pybamm.ParameterValues("Chen2020")
+        param["Negative electrode active material volume fraction"] = (
+            pybamm.InputParameter("eps_s_n")
+        )
+        experiment = pybamm.Experiment(["Rest for 10 minutes", "Rest for 10 minutes"])
+        sim = pybamm.Simulation(model, parameter_values=param, experiment=experiment)
+
+        sol1 = sim.solve(inputs={"eps_s_n": 0.6}, initial_soc=0.5)
+        ic1 = sol1["X-averaged negative particle surface concentration"].data[0]
+
+        sol2 = sim.solve(inputs={"eps_s_n": 0.9}, initial_soc=0.5)
+        ic2 = sol2["X-averaged negative particle surface concentration"].data[0]
+
+        # ICs must differ when inputs change at same SOC
+        assert ic1 != ic2

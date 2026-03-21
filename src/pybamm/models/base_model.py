@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import copy
+import json
 import numbers
 import warnings
 from collections import OrderedDict
 from enum import Enum
 from itertools import chain
+from pathlib import Path
 
 import casadi
 import numpy as np
@@ -13,6 +15,7 @@ import scipy
 
 import pybamm
 from pybamm.expression_tree.operations.serialise import Serialise
+from pybamm.models.event import EventType
 from pybamm.models.symbol_processor import SymbolProcessor
 
 
@@ -37,6 +40,14 @@ class ModelSolutionObservability(str, Enum):
 
     def __bool__(self) -> bool:
         return bool(self == ModelSolutionObservability.ENABLED)
+
+
+_BUILTIN_MODULE_NAMES = (
+    "lithium_ion",
+    "lead_acid",
+    "equivalent_circuit",
+    "sodium_ion",
+)
 
 
 class BaseModel:
@@ -1961,6 +1972,383 @@ class BaseModel:
             )
 
         Serialise().save_model(self, filename=filename, mesh=mesh, variables=variables)
+
+    def to_json(
+        self, filename: str | Path | None = None, compress: bool = False
+    ) -> dict:
+        """
+        Convert the model to a JSON-serialisable dictionary (raw format).
+
+        Optionally saves to a file. Works for custom (non-discretised) models
+        that are subclasses of BaseModel. Use :meth:`save_model` for discretised
+        models. For a wrapped config format (``type`` + ``model``), use
+        :meth:`to_config` instead.
+
+        Parameters
+        ----------
+        filename : str or pathlib.Path, optional
+            The filename to save the JSON file to. If not provided, the
+            dictionary is not saved. Must end with ``.json`` if provided.
+        compress : bool, optional
+            If True, the model data will be compressed (zlib + base64) in the
+            returned dict and in the file if filename is set. Default is False.
+
+        Returns
+        -------
+        dict
+            The JSON-serialisable dictionary (optionally compressed).
+
+        Examples
+        --------
+        >>> model = pybamm.lithium_ion.SPM()
+        >>> param_dict = model.to_json()  # Get dictionary only
+        >>> isinstance(param_dict, dict)
+        True
+        >>> model.to_json("model.json")  # Save and return dict
+        {'schema_version': '1.1', ...}
+        """
+        model_json = Serialise.serialise_custom_model(self, compress=compress)
+        if filename is not None:
+            self._write_json_to_file(model_json, filename, label="model JSON")
+        return model_json
+
+    @staticmethod
+    def _write_json_to_file(data: dict, filename: str | Path, label: str) -> None:
+        """Write *data* to *filename* as JSON, raising clear errors on failure."""
+        filename = Path(filename)
+        if not filename.name.endswith(".json"):
+            raise ValueError(f"Filename '{filename}' must end with '.json' extension.")
+        try:
+            with open(filename, "w") as f:
+                json.dump(data, f, indent=2, default=Serialise._json_encoder)
+        except OSError as file_err:
+            raise OSError(
+                f"Failed to write {label} to file '{filename}': {file_err}"
+            ) from file_err
+
+    @staticmethod
+    def _find_builtin_module(cls):
+        """Return the pybamm sub-module name if *cls* is a built-in model
+        class, else ``None``.
+
+        A class is "built-in" when ``getattr(pybamm.<mod>, cls.__name__)``
+        returns the exact same class object (identity check).
+        """
+        for mod_name in _BUILTIN_MODULE_NAMES:
+            mod = getattr(pybamm, mod_name, None)
+            if mod is not None:
+                candidate = getattr(mod, cls.__name__, None)
+                if candidate is cls:
+                    return mod_name
+        return None
+
+    def serialise_builtin_overrides(self, model_config: dict) -> None:
+        """Detect and serialise user modifications to a built-in model.
+
+        Compares the current model's ``variables`` keys and ``events``
+        against a freshly-constructed reference model (same class and
+        options).  Any differences are written into *model_config* using
+        the following optional keys:
+
+        ``custom_variables``
+            ``dict[str, json]`` – variables the user *added* (keys not
+            present in the reference model).  Each value is the symbolic
+            expression serialised via
+            :func:`convert_symbol_to_json`.
+        ``removed_variables``
+            ``list[str]`` – variable names that exist in the reference
+            model but have been deleted by the user.
+        ``events``
+            ``list[dict]`` – full serialised events list, included
+            **only** when the events differ from the reference model
+            (by count or by name set).
+
+        If the model is unmodified, no extra keys are added and the
+        config stays identical to the previous compact format.
+
+        .. note::
+
+           Only added/removed variable *keys* are tracked.  Overwriting
+           an existing variable's expression with a new one is **not**
+           detected in this version.
+
+        Parameters
+        ----------
+        model_config : dict
+            The compact config dict (mutated in-place).
+        """
+        from pybamm.expression_tree.operations.serialise import (
+            convert_symbol_to_json,
+        )
+
+        # Build a pristine reference with the same options.
+        model_cls = type(self)
+        options = model_config.get("options", {})
+        ref = model_cls(options=options) if options else model_cls()
+
+        # --- Variables diff (added / removed keys only) ---
+        current_keys = set(self.variables.keys())
+        ref_keys = set(ref.variables.keys())
+
+        added = current_keys - ref_keys
+        removed = ref_keys - current_keys
+
+        if added:
+            model_config["custom_variables"] = {
+                name: convert_symbol_to_json(self.variables[name])
+                for name in sorted(added)
+            }
+        if removed:
+            model_config["removed_variables"] = sorted(removed)
+
+        # --- Events diff (full replacement when different) ---
+        current_event_names = {e.name for e in self.events}
+        ref_event_names = {e.name for e in ref.events}
+
+        if (
+            len(self.events) != len(ref.events)
+            or current_event_names != ref_event_names
+        ):
+            model_config["events"] = [
+                {
+                    "name": event.name,
+                    "expression": convert_symbol_to_json(event.expression),
+                    "event_type": event.event_type.value,
+                }
+                for event in self.events
+            ]
+
+    def to_config(
+        self,
+        filename: str | Path | None = None,
+        compress: bool = False,
+    ) -> dict:
+        """
+        Convert the model to a config dictionary.
+
+        Built-in models (those found in ``pybamm.lithium_ion``,
+        ``pybamm.lead_acid``, etc.) produce a compact format::
+
+            {"type": "SPM", "module": "lithium_ion", "options": {...}}
+
+        Custom or user-defined models produce the full serialised format::
+
+            {"type": "custom", "model": ..., "geometry": ..., ...}
+
+        Parameters
+        ----------
+        filename : str or pathlib.Path, optional
+            If provided, save the config dict to this file. Must end with
+            ``.json``.
+        compress : bool, optional
+            If True, the inner model data is compressed (zlib + base64).
+            Default is False.
+
+        Returns
+        -------
+        dict
+            Config dictionary.
+        """
+        mod_name = self._find_builtin_module(type(self))
+
+        if mod_name is not None:
+            # Built-in model — compact format
+            model_config: dict = {
+                "type": type(self).__name__,
+                "module": mod_name,
+            }
+            if hasattr(self, "options"):
+                model_config["options"] = dict(self.options)
+
+            # Detect user modifications to variables and events.
+            # A fresh reference model is instantiated with the same options
+            # so we can diff against it. Only added/removed variable *keys*
+            # are tracked; overwriting an existing variable's expression is
+            # NOT detected (out of scope for v1).
+            self.serialise_builtin_overrides(model_config)
+        else:
+            # Custom / user-defined model — full serialised format
+            model_config = {
+                "type": "custom",
+                "model": Serialise.serialise_custom_model(self, compress=compress),
+            }
+            # Attach defaults when available
+            if hasattr(self, "default_geometry"):
+                try:
+                    model_config["geometry"] = Serialise.serialise_custom_geometry(
+                        self.default_geometry
+                    )
+                except Exception:
+                    pass
+            if hasattr(self, "default_var_pts"):
+                try:
+                    model_config["var_pts"] = Serialise.serialise_var_pts(
+                        self.default_var_pts
+                    )
+                except Exception:
+                    pass
+            if hasattr(self, "default_spatial_methods"):
+                try:
+                    model_config["spatial_methods"] = (
+                        Serialise.serialise_spatial_methods(
+                            self.default_spatial_methods
+                        )
+                    )
+                except Exception:
+                    pass
+            if hasattr(self, "default_submesh_types"):
+                try:
+                    model_config["submesh_types"] = Serialise.serialise_submesh_types(
+                        self.default_submesh_types
+                    )
+                except Exception:
+                    pass
+
+        if filename is not None:
+            self._write_json_to_file(model_config, filename, label="model config")
+        return model_config
+
+    @staticmethod
+    def from_json(filename: str | dict) -> BaseModel:
+        """
+        Load a custom (symbolic) model from a JSON file or dictionary.
+
+        Use this for models saved with :meth:`to_json`. For discretised models
+        saved with :meth:`save_model`, use :func:`pybamm.load_model` instead.
+        For the wrapped config format (from :meth:`to_config`), use
+        :meth:`from_config` instead.
+
+        Parameters
+        ----------
+        filename : str or dict
+            Path to a JSON file containing the saved model, or a dictionary
+            (e.g. from :meth:`to_json`).
+
+        Returns
+        -------
+        :class:`pybamm.BaseModel` or subclass
+            The reconstructed symbolic model.
+
+        Examples
+        --------
+        >>> model = pybamm.lithium_ion.SPM()
+        >>> loaded = pybamm.BaseModel.from_json(model.to_json())
+        >>> loaded = pybamm.BaseModel.from_json("model.json")  # doctest: +SKIP
+        """
+        return Serialise.load_custom_model(filename)
+
+    @staticmethod
+    def from_config(config: str | dict) -> BaseModel:
+        """
+        Load a model from a config dict, raw model dict, or file path.
+
+        Accepts:
+
+        1. Built-in config: ``{"type": "SPM", "module": "lithium_ion"}``
+        2. Custom config: ``{"type": "custom", "model": ...}``
+        3. Raw model dict from :meth:`to_json`
+        4. A path to a JSON file in any of the above formats
+
+        Parameters
+        ----------
+        config : str or dict
+            Config or model dictionary, or path to a JSON file.
+
+        Returns
+        -------
+        :class:`pybamm.BaseModel` or subclass
+            The reconstructed symbolic model.
+        """
+        if isinstance(config, dict):
+            data = config
+        else:
+            try:
+                with open(config) as f:
+                    data = json.load(f)
+            except FileNotFoundError:
+                raise FileNotFoundError(
+                    f"Model config file not found: {config}"
+                ) from None
+            except json.JSONDecodeError as e:
+                raise ValueError(
+                    f"Invalid JSON in model config file '{config}': {e}"
+                ) from e
+
+        type_name = data.get("type")
+
+        # Custom / full serialised model
+        if type_name == "custom" and "model" in data:
+            return Serialise.load_custom_model(data["model"])
+
+        # Built-in model (e.g. {"type": "SPM", "module": "lithium_ion"})
+        if type_name is not None and type_name != "custom":
+            mod_name = data.get("module", "lithium_ion")
+            mod = getattr(pybamm, mod_name, None)
+            if mod is None:
+                raise ValueError(f"Unknown pybamm module: {mod_name}")
+            model_cls = getattr(mod, type_name, None)
+            if model_cls is None:
+                raise ValueError(f"Model '{type_name}' not found in pybamm.{mod_name}")
+            options = data.get("options", {})
+            # JSON has no tuples; convert lists back to tuples
+            if options:
+                options = {
+                    k: tuple(v) if isinstance(v, list) else v
+                    for k, v in options.items()
+                }
+            model = model_cls(options=options) if options else model_cls()
+            BaseModel.apply_builtin_overrides(model, data)
+            return model
+
+        # Fallback: raw to_json dict (no "type" key)
+        return Serialise.load_custom_model(data)
+
+    @staticmethod
+    def apply_builtin_overrides(model: BaseModel, data: dict) -> None:
+        """Apply variable and event overrides from a built-in config.
+
+        This is the inverse of
+        :meth:`serialise_builtin_overrides`.  It mutates *model*
+        in-place.
+
+        Parameters
+        ----------
+        model : BaseModel
+            A freshly-constructed built-in model.
+        data : dict
+            The config dictionary, which may contain
+            ``custom_variables``, ``removed_variables``, and/or
+            ``events``.
+        """
+        from pybamm.expression_tree.operations.serialise import (
+            convert_symbol_from_json,
+        )
+
+        # --- Custom variables ---
+        extra = data.get("custom_variables")
+        if extra:
+            for name, expr_json in extra.items():
+                model.variables[name] = convert_symbol_from_json(expr_json)
+
+        # --- Removed variables ---
+        removed = data.get("removed_variables")
+        if removed:
+            for name in removed:
+                model.variables.pop(name, None)
+
+        # --- Events override ---
+        events_data = data.get("events")
+        if events_data is not None:
+            model.events = [
+                pybamm.Event(
+                    e["name"],
+                    convert_symbol_from_json(e["expression"]),
+                    EventType(e["event_type"])
+                    if isinstance(e["event_type"], int)
+                    else e["event_type"],
+                )
+                for e in events_data
+            ]
 
 
 def load_model(filename, battery_model: BaseModel | None = None):

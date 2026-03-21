@@ -932,3 +932,263 @@ class TestSimulation:
             match="list of input sets is not supported with experiments",
         ):
             sim.solve(inputs=parameter_loop)
+
+    def test_cache_esoh_half_cell(self):
+        options = {"working electrode": "positive"}
+        model = pybamm.lithium_ion.SPM(options)
+        param = model.default_parameter_values
+        param["Current function [A]"] = "[input]"
+        sim = pybamm.Simulation(model, parameter_values=param, cache_esoh=True)
+
+        sim.solve([0, 1], initial_soc=0.8, inputs={"Current function [A]": 0.01})
+        fp1 = sim._esoh_fingerprint
+        sim.solve([0, 1], initial_soc=0.8, inputs={"Current function [A]": 0.02})
+        fp2 = sim._esoh_fingerprint
+        # Current doesn't affect half-cell eSOH, fingerprint shouldn't change
+        assert fp1 is fp2
+
+    def test_cache_esoh_msmr(self):
+        options = {
+            "open-circuit potential": "MSMR",
+            "particle": "MSMR",
+            "number of MSMR reactions": ("6", "4"),
+            "intercalation kinetics": "MSMR",
+        }
+        model = pybamm.lithium_ion.SPM(options)
+        param = pybamm.ParameterValues("MSMR_Example")
+        param["Current function [A]"] = "[input]"
+        sim = pybamm.Simulation(model, parameter_values=param, cache_esoh=True)
+
+        sim.solve([0, 1], initial_soc=0.5, inputs={"Current function [A]": 1.0})
+        fp1 = sim._esoh_fingerprint
+        sim.solve([0, 1], initial_soc=0.5, inputs={"Current function [A]": 2.0})
+        fp2 = sim._esoh_fingerprint
+        assert fp1 is fp2
+
+    def test_cache_esoh_composite(self):
+        options = {"particle phases": ("2", "1")}
+        model = pybamm.lithium_ion.SPM(options=options)
+        param = pybamm.ParameterValues("Chen2020_composite")
+        param.update(
+            {
+                "Secondary: Initial concentration in negative electrode "
+                "[mol.m-3]": 2.3512e05
+            }
+        )
+        param["Current function [A]"] = "[input]"
+        sim = pybamm.Simulation(model, parameter_values=param, cache_esoh=True)
+
+        sim.solve([0, 1], initial_soc=0.8, inputs={"Current function [A]": 1.0})
+        fp1 = sim._esoh_fingerprint
+        sim.solve([0, 1], initial_soc=0.8, inputs={"Current function [A]": 2.0})
+        fp2 = sim._esoh_fingerprint
+        assert fp1 is fp2
+
+    def test_cache_esoh_with_hysteresis(self):
+        options = {
+            "particle phases": ("2", "1"),
+            "open-circuit potential": (("single", "current sigmoid"), "single"),
+        }
+        model = pybamm.lithium_ion.SPM(options=options)
+        param = pybamm.ParameterValues("Chen2020_composite")
+        param.update(
+            {
+                "Secondary: Initial concentration in negative electrode "
+                "[mol.m-3]": 2.3512e05
+            }
+        )
+        param["Current function [A]"] = "[input]"
+        sim = pybamm.Simulation(model, parameter_values=param, cache_esoh=True)
+
+        sim.solve(
+            [0, 1],
+            initial_soc=0.8,
+            direction="discharge",
+            inputs={"Current function [A]": 1.0},
+        )
+        fp1 = sim._esoh_fingerprint
+        sim.solve(
+            [0, 1],
+            initial_soc=0.8,
+            direction="discharge",
+            inputs={"Current function [A]": 2.0},
+        )
+        fp2 = sim._esoh_fingerprint
+        assert fp1 is fp2
+
+        # Changing direction should invalidate the cache
+        sim.solve(
+            [0, 1],
+            initial_soc=0.8,
+            direction="charge",
+            inputs={"Current function [A]": 2.0},
+        )
+        fp3 = sim._esoh_fingerprint
+        assert fp2 != fp3
+
+    def test_cache_esoh_fallback_path(self):
+        model = pybamm.lithium_ion.SPM()
+        param = model.default_parameter_values
+        param["Current function [A]"] = "[input]"
+        sim = pybamm.Simulation(model, parameter_values=param, cache_esoh=True)
+
+        # Sabotage model.param to force the fingerprint function to raise
+        original_param = sim._model.param
+        sim._model.param = None
+
+        # Should not raise -- falls back to raw inputs
+        sim.solve([0, 1], initial_soc=0.8, inputs={"Current function [A]": 1.0})
+        fp1 = sim._esoh_fingerprint
+        assert fp1 is not None
+
+        # With different input, fallback fingerprint should differ
+        sim.solve([0, 1], initial_soc=0.8, inputs={"Current function [A]": 2.0})
+        fp2 = sim._esoh_fingerprint
+        assert fp1 != fp2
+
+        sim._model.param = original_param
+
+    def test_cache_esoh_numpy_array_inputs(self):
+        model = pybamm.lithium_ion.SPM()
+        param = model.default_parameter_values
+        param["Current function [A]"] = "[input]"
+        sim = pybamm.Simulation(model, parameter_values=param, cache_esoh=True)
+
+        # numpy array values should not crash the fingerprint comparison
+        sim.solve(
+            [0, 1],
+            initial_soc=0.8,
+            inputs={"Current function [A]": np.array([1.0])},
+        )
+        fp1 = sim._esoh_fingerprint
+        sim.solve(
+            [0, 1],
+            initial_soc=0.8,
+            inputs={"Current function [A]": np.array([1.0])},
+        )
+        fp2 = sim._esoh_fingerprint
+        # Should not crash and fingerprints should match
+        assert fp1 is fp2
+
+    def test_cache_esoh_numpy_array_fallback(self):
+        model = pybamm.lithium_ion.SPM()
+        param = model.default_parameter_values
+        param["Current function [A]"] = "[input]"
+        sim = pybamm.Simulation(model, parameter_values=param, cache_esoh=True)
+
+        # Sabotage to force fallback with numpy arrays
+        original_param = sim._model.param
+        sim._model.param = None
+
+        sim.solve(
+            [0, 1],
+            initial_soc=0.8,
+            inputs={"Current function [A]": np.array([1.0])},
+        )
+        fp1 = sim._esoh_fingerprint
+
+        sim.solve(
+            [0, 1],
+            initial_soc=0.8,
+            inputs={"Current function [A]": np.array([1.0])},
+        )
+        fp2 = sim._esoh_fingerprint
+        # Must not crash (the original numpy bug) and fingerprints should match
+        assert fp1 is fp2
+
+        sim._model.param = original_param
+
+    def test_initial_soc_regular_model(self):
+        model = pybamm.lithium_ion.SPM()
+        param = model.default_parameter_values
+        param["Current function [A]"] = 0.0
+
+        sim = pybamm.Simulation(model, parameter_values=param)
+        sol = sim.solve([0, 1], initial_soc=0.5)
+        assert sim._built_initial_soc == 0.5
+
+        sim = pybamm.Simulation(model, parameter_values=param)
+        sol = sim.solve([0, 1], initial_soc="4.0 V")
+        voltage = sol["Terminal voltage [V]"].entries
+        assert voltage[0] == pytest.approx(4.0, abs=1e-3)
+
+    def test_initial_soc_composite_model(self):
+        options = {"particle phases": ("2", "1")}
+        model = pybamm.lithium_ion.SPM(options=options)
+        param = pybamm.ParameterValues("Chen2020_composite")
+        param.update(
+            {
+                "Secondary: Initial concentration in negative electrode "
+                "[mol.m-3]": 2.3512e05
+            }
+        )
+        param["Current function [A]"] = 0.0
+
+        sim = pybamm.Simulation(model, parameter_values=param)
+        sol = sim.solve([0, 1], initial_soc=0.5)
+        assert sim._built_initial_soc == 0.5
+
+        sim = pybamm.Simulation(model, parameter_values=param)
+        sol = sim.solve([0, 1], initial_soc="3.8 V")
+        voltage = sol["Terminal voltage [V]"].entries
+        assert voltage[0] == pytest.approx(3.8, abs=1e-3)
+
+    def test_initial_soc_half_cell_model(self):
+        options = {"working electrode": "positive"}
+        model = pybamm.lithium_ion.SPM(options)
+        param = model.default_parameter_values
+        param["Current function [A]"] = 0.0
+
+        sim = pybamm.Simulation(model, parameter_values=param)
+        sol = sim.solve([0, 1], initial_soc=0.5)
+        assert sim._built_initial_soc == 0.5
+
+        sim = pybamm.Simulation(model, parameter_values=param)
+        sol = sim.solve([0, 1], initial_soc="4.0 V")
+        voltage = sol["Terminal voltage [V]"].entries
+        assert voltage[0] == pytest.approx(4.0, abs=1e-3)
+
+    def test_initial_conditions_update_with_changed_inputs(self):
+        model = pybamm.lithium_ion.SPM()
+        param = pybamm.ParameterValues("Chen2020")
+        param["Negative electrode active material volume fraction"] = (
+            pybamm.InputParameter("eps_s_n")
+        )
+        experiment = pybamm.Experiment(["Rest for 1 hour"])
+        sim = pybamm.Simulation(model, parameter_values=param, experiment=experiment)
+
+        sol1 = sim.solve(inputs={"eps_s_n": 0.6}, initial_soc=0.5)
+        ic1 = sol1["X-averaged negative particle surface concentration"].data[0]
+
+        sol2 = sim.solve(inputs={"eps_s_n": 0.9}, initial_soc=0.5)
+        ic2 = sol2["X-averaged negative particle surface concentration"].data[0]
+
+        # ICs must differ when inputs differ, even at the same SOC
+        assert ic1 != ic2
+
+        # Verify against reference: override parameter directly
+        param_ref = pybamm.ParameterValues("Chen2020")
+        param_ref["Negative electrode active material volume fraction"] = 0.6
+        sim_ref = pybamm.Simulation(
+            model, parameter_values=param_ref, experiment=experiment
+        )
+        sol_ref = sim_ref.solve(initial_soc=0.5)
+        ic_ref = sol_ref["X-averaged negative particle surface concentration"].data[0]
+        np.testing.assert_allclose(ic1, ic_ref, rtol=1e-10)
+
+    def test_initial_conditions_update_same_soc_same_inputs(self):
+        model = pybamm.lithium_ion.SPM()
+        param = pybamm.ParameterValues("Chen2020")
+        param["Negative electrode active material volume fraction"] = (
+            pybamm.InputParameter("eps_s_n")
+        )
+        experiment = pybamm.Experiment(["Rest for 1 hour"])
+        sim = pybamm.Simulation(model, parameter_values=param, experiment=experiment)
+
+        sim.solve(inputs={"eps_s_n": 0.6}, initial_soc=0.5)
+        # After first solve, IC rebuild flag should be cleared
+        assert sim._needs_ic_rebuild is False
+
+        # Solving again with same inputs+SOC should not trigger rebuild
+        sim.solve(inputs={"eps_s_n": 0.6}, initial_soc=0.5)
+        assert sim._needs_ic_rebuild is False

@@ -81,6 +81,7 @@ class Simulation:
         output_variables=None,
         C_rate=None,
         discretisation_kwargs=None,
+        cache_esoh=True,
     ):
         self._parameter_values = parameter_values or model.default_parameter_values
         self._unprocessed_parameter_values = self._parameter_values
@@ -139,12 +140,16 @@ class Simulation:
         self._built_nominal_capacity = None
         self.steps_to_built_models = None
         self.steps_to_built_solvers = None
+        self._cache_esoh = cache_esoh
+        self._esoh_fingerprint = None
         self.model_state_mappers = {}
         self._compiled_model_state_mappers = {}
+        self._initial_soc_solver = None
         self._mesh = None
         self._disc = None
         self._solution = None
         self.quick_plot = None
+        self._needs_ic_rebuild = False
 
         # ignore runtime warnings in notebooks
         if is_notebook():  # pragma: no cover
@@ -330,28 +335,146 @@ class Simulation:
         self._parameter_values.process_geometry(self._geometry)
         self._model = self._model_with_set_params
 
+    @staticmethod
+    def _pv_fingerprint(pv):
+        """Hash all parameter values to detect any in-place modifications."""
+        parts = []
+        for k in sorted(pv.keys()):
+            v = pv[k]
+            if isinstance(v, int | float):
+                parts.append((k, v))
+            else:
+                parts.append((k, id(v)))
+        return tuple(parts)
+
+    @staticmethod
+    def _normalize_inputs(inputs):
+        """Convert input values to hashable, comparison-safe types."""
+        items = []
+        for k in sorted(inputs.keys()):
+            v = inputs[k]
+            if isinstance(v, np.ndarray):
+                items.append((k, v.tobytes()))
+            elif isinstance(v, (int, float)):
+                items.append((k, float(v)))
+            else:
+                items.append((k, id(v)))
+        return tuple(items)
+
+    def _compute_esoh_fingerprint(self, initial_soc, direction, inputs):
+        """Compute a fingerprint of all eSOH-relevant state to detect changes.
+
+        Delegates to the model-specific fingerprint function in
+        ``pybamm.lithium_ion.compute_esoh_fingerprint``, which evaluates the
+        exact quantities that determine the eSOH result for this model type.
+        Falls back to raw inputs if the model-specific evaluation fails.
+        """
+        pv = self._unprocessed_parameter_values
+        # Hash the full parameter store as a safety net: the model-specific
+        # fingerprint only evaluates a handful of scalar quantities, so it
+        # cannot detect changes to non-numeric parameters such as OCP
+        # functions that also affect the eSOH result.
+        pv_fp = self._pv_fingerprint(pv)
+
+        try:
+            evals = pybamm.lithium_ion.compute_esoh_fingerprint(
+                pv, self._model.param, self._model.options, inputs
+            )
+        except Exception:
+            evals = self._normalize_inputs(inputs) if inputs else ()
+
+        return (initial_soc, direction, pv_fp, evals)
+
+    def _create_esoh_solver(self, direction, initial_soc):
+        """Create the appropriate eSOH solver/sim for this model type."""
+        options = self._model.options
+        pv = self._unprocessed_parameter_values
+        param = self._model.param
+
+        if options.get("open-circuit potential") == "MSMR" or (
+            options.get("working electrode") != "positive"
+            and not pybamm.lithium_ion.check_if_composite(options, "positive")
+            and not pybamm.lithium_ion.check_if_composite(options, "negative")
+        ):
+            return pybamm.lithium_ion.ElectrodeSOHSolver(
+                pv,
+                direction=direction,
+                param=param,
+                options=options,
+            )
+        elif options.get("working electrode") == "positive":
+            model = pybamm.lithium_ion.ElectrodeSOHHalfCell(
+                "ElectrodeSOH",
+                direction=direction,
+                options=options,
+            )
+            return pybamm.Simulation(model, parameter_values=pv)
+        else:
+            if isinstance(initial_soc, str) and initial_soc.strip().endswith("V"):
+                initialization_method = "voltage"
+            else:
+                initialization_method = "SOC"
+            model = pybamm.lithium_ion.ElectrodeSOHComposite(
+                options,
+                direction,
+                initialization_method=initialization_method,
+            )
+            from .models.full_battery_models.lithium_ion.electrode_soh import (
+                get_esoh_default_solver,
+            )
+
+            return pybamm.Simulation(
+                model,
+                parameter_values=pv,
+                solver=get_esoh_default_solver(),
+            )
+
     def set_initial_state(self, initial_soc, direction=None, inputs=None):
-        if self._built_initial_soc != initial_soc:
-            # reset
-            self._model_with_set_params = None
-            self._built_model = None
-            self._built_nominal_capacity = None
-            self.steps_to_built_models = None
-            self.steps_to_built_solvers = None
+        if self._cache_esoh:
+            fingerprint = self._compute_esoh_fingerprint(initial_soc, direction, inputs)
+            if fingerprint == self._esoh_fingerprint:
+                return
+        else:
+            normalized = self._normalize_inputs(inputs) if inputs else ()
+            fingerprint = (initial_soc, direction, normalized)
+            if fingerprint == self._esoh_fingerprint:
+                return
+
+        self._needs_ic_rebuild = True
 
         param = self._model.param
         options = self._model.options
-        self._parameter_values = self._unprocessed_parameter_values.set_initial_state(
-            initial_soc,
-            direction=direction,
-            param=param,
-            inplace=False,
-            options=options,
-            inputs=inputs,
-        )
+
+        if self._cache_esoh:
+            if self._initial_soc_solver is None:
+                self._initial_soc_solver = self._create_esoh_solver(
+                    direction, initial_soc
+                )
+            self._parameter_values = pybamm.lithium_ion.set_initial_state(
+                initial_soc,
+                self._unprocessed_parameter_values,
+                direction=direction,
+                param=param,
+                inplace=False,
+                options=options,
+                inputs=inputs,
+                esoh_solver=self._initial_soc_solver,
+            )
+        else:
+            self._parameter_values = (
+                self._unprocessed_parameter_values.set_initial_state(
+                    initial_soc,
+                    direction=direction,
+                    param=param,
+                    inplace=False,
+                    options=options,
+                    inputs=inputs,
+                )
+            )
 
         # Save solved initial SOC in case we need to re-build the model
         self._built_initial_soc = initial_soc
+        self._esoh_fingerprint = fingerprint
 
     def set_initial_soc(self, initial_soc, direction, inputs=None):
         msg = "pybamm.simulation.set_initial_soc is deprecated, please use set_initial_state."
@@ -359,6 +482,42 @@ class Simulation:
         return self.set_initial_state(
             initial_soc=initial_soc, direction=direction, inputs=inputs
         )
+
+    def _recompute_initial_conditions(self):
+        """Recompute initial conditions on built model(s) without full rebuild."""
+        unprocessed_by_name = {
+            var.name: expr
+            for var, expr in self._unprocessed_model.initial_conditions.items()
+        }
+
+        models = []
+        if self._built_model is not None:
+            models.append(self._built_model)
+        if self.steps_to_built_models is not None:
+            models.extend(self.steps_to_built_models.values())
+
+        for built_model in models:
+            new_param_ics = {}
+            for var, existing in built_model.initial_conditions.items():
+                if var.name in unprocessed_by_name:
+                    new_param_ics[var] = self._parameter_values.process_symbol(
+                        unprocessed_by_name[var.name]
+                    )
+                else:
+                    new_param_ics[var] = existing
+
+            processed_ics = self._disc.process_dict(new_param_ics, ics=True)
+            slices = [built_model.y_slices[var][0] for var in processed_ics]
+            sorted_eqs = [
+                eq for _, eq in sorted(zip(slices, processed_ics.values(), strict=True))
+            ]
+            concat_ics = pybamm.numpy_concatenation(*sorted_eqs)
+
+            built_model.initial_conditions = processed_ics
+            built_model.concatenated_initial_conditions = concat_ics
+
+        self._solver._model_set_up = {}
+        self._needs_ic_rebuild = False
 
     def build(self, initial_soc=None, direction=None, inputs=None):
         """
@@ -381,6 +540,8 @@ class Simulation:
             self.set_initial_state(initial_soc, direction=direction, inputs=inputs)
 
         if self._built_model:
+            if self._needs_ic_rebuild:
+                self._recompute_initial_conditions()
             return
         if self._model.is_discretised:
             self._model_with_set_params = self._model
@@ -398,6 +559,7 @@ class Simulation:
             )
             # rebuilt model so clear solver setup
             self._solver._model_set_up = {}
+        self._needs_ic_rebuild = False
 
     def build_for_experiment(
         self, initial_soc=None, direction=None, inputs=None, solve_kwargs=None
@@ -410,6 +572,8 @@ class Simulation:
             self.set_initial_state(initial_soc, direction=direction, inputs=inputs)
 
         if self.steps_to_built_models:
+            if self._needs_ic_rebuild:
+                self._recompute_initial_conditions()
             # Check if we need to update the models due to capacity change
             self._update_experiment_models_for_capacity(inputs, solve_kwargs)
             return
@@ -448,6 +612,7 @@ class Simulation:
             self._built_nominal_capacity = self._parameter_values.get(
                 "Nominal cell capacity [A.h]", None
             )
+            self._needs_ic_rebuild = False
 
     def _build_experiment_state_mappers(self, inputs: dict):
         self.model_state_mappers = {}

@@ -85,13 +85,15 @@ def battery_geometry(
         )
         phases = int(options.negative["particle phases"])
         if phases >= 2:
+            R_min_n_sec = geo.n.sec.R_min
+            R_max_n_sec = geo.n.sec.R_max
             geometry.update(
                 {
                     "negative primary particle size": {
                         "R_n_prim": {"min": R_min_n, "max": R_max_n}
                     },
                     "negative secondary particle size": {
-                        "R_n_sec": {"min": R_min_n, "max": R_max_n}
+                        "R_n_sec": {"min": R_min_n_sec, "max": R_max_n_sec}
                     },
                 }
             )
@@ -109,13 +111,15 @@ def battery_geometry(
         )
         phases = int(options.positive["particle phases"])
         if phases >= 2:
+            R_min_p_sec = geo.p.sec.R_min
+            R_max_p_sec = geo.p.sec.R_max
             geometry.update(
                 {
                     "positive primary particle size": {
                         "R_p_prim": {"min": R_min_p, "max": R_max_p}
                     },
                     "positive secondary particle size": {
-                        "R_p_sec": {"min": R_min_p, "max": R_max_p}
+                        "R_p_sec": {"min": R_min_p_sec, "max": R_max_p_sec}
                     },
                 }
             )
