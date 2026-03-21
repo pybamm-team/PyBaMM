@@ -72,6 +72,94 @@ class TestSimulationExperiment:
         sim.build_for_experiment()
         assert len(sim.experiment.steps) == 2
 
+    def test_set_up_all_explicit_uses_unified_model_with_dae_solver(self):
+        experiment = pybamm.Experiment(
+            [
+                "Discharge at C/20 for 1 hour",
+                "Rest for 10 minutes",
+                "Charge at 1 A for 20 minutes",
+            ]
+        )
+        model = pybamm.lithium_ion.SPM()
+        sim = pybamm.Simulation(
+            model,
+            experiment=experiment,
+            solver=pybamm.CasadiSolver(),
+        )
+        sim.build_for_experiment()
+
+        assert sim._experiment_uses_unified_model
+        assert len(set(sim.steps_to_built_models.values())) == 1
+
+        unified_model = sim.experiment_unique_steps_to_model[
+            sim._experiment_unified_model_key
+        ]
+        assert "Current variable [A]" in unified_model.variables
+
+    def test_set_up_all_explicit_falls_back_for_ode_solver(self):
+        experiment = pybamm.Experiment(
+            [
+                "Discharge at C/20 for 1 hour",
+                "Rest for 10 minutes",
+                "Charge at 1 A for 20 minutes",
+            ]
+        )
+        model = pybamm.lithium_ion.SPM()
+        sim = pybamm.Simulation(
+            model,
+            experiment=experiment,
+            solver=pybamm.ScipySolver(),
+        )
+        sim.build_for_experiment()
+
+        assert not sim._experiment_uses_unified_model
+        assert len(set(sim.steps_to_built_models.values())) == len(
+            sim.experiment.unique_steps
+        )
+
+    def test_set_up_can_force_legacy_experiment_models(self):
+        experiment = pybamm.Experiment(
+            [
+                "Discharge at C/20 for 1 hour",
+                "Charge at 1 A until 4.1 V",
+                "Hold at 4.1 V until 50 mA",
+            ]
+        )
+        model = pybamm.lithium_ion.SPM()
+        sim = pybamm.Simulation(
+            model,
+            experiment=experiment,
+            solver=pybamm.CasadiSolver(),
+            experiment_model_mode="legacy",
+        )
+        sim.build_for_experiment()
+
+        assert not sim._experiment_uses_unified_model
+        model_I = sim.experiment_unique_steps_to_model[
+            sim.experiment.steps[1].basic_repr()
+        ]
+        assert "Voltage > 4.1 [V] [experiment]" in [
+            event.name for event in model_I.events
+        ]
+
+    def test_set_up_unified_mode_rejects_all_explicit_ode_solver(self):
+        experiment = pybamm.Experiment(
+            [
+                "Discharge at C/20 for 1 hour",
+                "Rest for 10 minutes",
+            ]
+        )
+        model = pybamm.lithium_ion.SPM()
+        sim = pybamm.Simulation(
+            model,
+            experiment=experiment,
+            solver=pybamm.ScipySolver(),
+            experiment_model_mode="unified",
+        )
+
+        with pytest.raises(pybamm.ModelError, match="DAE-capable solver"):
+            sim.build_for_experiment()
+
     def test_experiment_state_mappers_built(self):
         model = pybamm.lithium_ion.SPM()
         experiment = pybamm.Experiment(

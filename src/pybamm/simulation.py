@@ -66,6 +66,13 @@ class Simulation:
     discretisation_kwargs: dict (optional)
         Any keyword arguments to pass to the Discretisation class.
         See :class:`pybamm.Discretisation` for details.
+    experiment_model_mode : str, optional
+        How to construct experiment models. Options are:
+        ``"auto"`` (default), which uses the unified experiment model when
+        compatible and otherwise falls back to one model per step;
+        ``"unified"``, which requires the shared experiment model path; and
+        ``"legacy"``, which always uses one model per step. ``"per-step"`` is
+        accepted as an alias for ``"legacy"``.
     """
 
     def __init__(
@@ -82,6 +89,7 @@ class Simulation:
         C_rate=None,
         discretisation_kwargs=None,
         cache_esoh=True,
+        experiment_model_mode="auto",
     ):
         self._parameter_values = parameter_values or model.default_parameter_values
         self._unprocessed_parameter_values = self._parameter_values
@@ -150,6 +158,9 @@ class Simulation:
         self._solution = None
         self.quick_plot = None
         self._needs_ic_rebuild = False
+        self._experiment_model_mode = self._normalise_experiment_model_mode(
+            experiment_model_mode
+        )
         self._experiment_uses_unified_model = False
         self._experiment_unified_model_key = "Unified experiment"
         self._experiment_step_weight_input_names = []
@@ -198,6 +209,8 @@ class Simulation:
             self._combined_step_termination_event_name = (
                 "Combined termination [experiment]"
             )
+        if "_experiment_model_mode" not in self.__dict__:
+            self._experiment_model_mode = "auto"
 
     def set_up_and_parameterise_experiment(self, solve_kwargs=None):
         msg = "pybamm.simulation.set_up_and_parameterise_experiment is deprecated and not meant to be accessed by users."
@@ -262,27 +275,54 @@ class Simulation:
     def _experiment_step_weight_input_name(self, step_index):
         return f"Experiment step weight {step_index}"
 
-    def _experiment_can_use_unified_model(self):
-        if self.experiment is None or self.experiment.initial_start_time:
-            return False
+    @staticmethod
+    def _normalise_experiment_model_mode(mode):
+        aliases = {
+            "auto": "auto",
+            "unified": "unified",
+            "legacy": "legacy",
+            "per-step": "legacy",
+        }
+        try:
+            return aliases[mode]
+        except KeyError as err:
+            raise ValueError(
+                "experiment_model_mode must be one of 'auto', 'unified', "
+                "'legacy', or 'per-step'"
+            ) from err
+
+    def _get_unified_experiment_model_blockers(self):
+        if self.experiment is None:
+            return ["no experiment is attached to the simulation"]
+        if self.experiment.initial_start_time:
+            return ["experiments with start-time padding still use per-step models"]
 
         has_implicit_step = False
         for step in self.experiment.steps:
             if getattr(step, "is_drive_cycle", False):
-                return False
+                return ["drive-cycle experiment steps are not yet supported"]
             if (
                 isinstance(step, pybamm.step.CustomStepImplicit)
                 and step.control != "algebraic"
             ):
-                return False
+                return ["CustomStepImplicit with differential control is not supported"]
             if issubclass(step.__class__, pybamm.experiment.step.BaseStepImplicit):
                 has_implicit_step = True
             elif not issubclass(
                 step.__class__, pybamm.experiment.step.BaseStepExplicit
             ):
-                return False
+                return [f"unsupported experiment step type '{step.__class__.__name__}'"]
 
-        return has_implicit_step
+        if not has_implicit_step and getattr(self._solver, "ode_solver", False):
+            return [
+                "all-explicit experiments require a DAE-capable solver when using "
+                "the unified experiment model"
+            ]
+
+        return []
+
+    def _experiment_can_use_unified_model(self):
+        return not self._get_unified_experiment_model_blockers()
 
     def _set_up_unified_experiment_model(self, parameter_values):
         self._experiment_uses_unified_model = True
@@ -466,9 +506,24 @@ class Simulation:
         if init_temp is not None:
             parameter_values["Initial temperature [K]"] = init_temp
 
-        if self._experiment_can_use_unified_model():
+        blockers = self._get_unified_experiment_model_blockers()
+        if self._experiment_model_mode == "unified":
+            if blockers:
+                raise pybamm.ModelError(
+                    "Cannot build a unified experiment model: "
+                    + "; ".join(blockers)
+                    + ". Use 'legacy'/'per-step' mode or a compatible solver/experiment."
+                )
             self._set_up_unified_experiment_model(parameter_values)
             return
+        if self._experiment_model_mode == "auto" and not blockers:
+            self._set_up_unified_experiment_model(parameter_values)
+            return
+        if self._experiment_model_mode == "auto" and blockers:
+            pybamm.logger.debug(
+                "Falling back to per-step experiment models: %s",
+                "; ".join(blockers),
+            )
 
         self._experiment_uses_unified_model = False
         self._experiment_step_weight_input_names = []
