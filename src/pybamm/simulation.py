@@ -146,6 +146,8 @@ class Simulation:
         self._built_model = None
         self._built_initial_soc = None
         self._built_nominal_capacity = None
+        self._built_experiment_model = None
+        self._built_experiment_solver = None
         self.steps_to_built_models = None
         self.steps_to_built_solvers = None
         self._cache_esoh = cache_esoh
@@ -183,6 +185,8 @@ class Simulation:
         result["get_esoh_solver"] = None  # Exclude LRU cache
         result["model_state_mappers"] = {}
         result["_compiled_model_state_mappers"] = {}
+        result["_built_experiment_model"] = None
+        result["_built_experiment_solver"] = None
         result["steps_to_built_models"] = None
         result["steps_to_built_solvers"] = None
         result["experiment_unique_steps_to_model"] = None
@@ -198,6 +202,10 @@ class Simulation:
             self.model_state_mappers = {}
         if "_compiled_model_state_mappers" not in self.__dict__:
             self._compiled_model_state_mappers = {}
+        if "_built_experiment_model" not in self.__dict__:
+            self._built_experiment_model = None
+        if "_built_experiment_solver" not in self.__dict__:
+            self._built_experiment_solver = None
         if "experiment_unique_steps_to_model" not in self.__dict__:
             self.experiment_unique_steps_to_model = None
         if "_experiment_uses_unified_model" not in self.__dict__:
@@ -243,6 +251,8 @@ class Simulation:
         self._set_up_and_parameterise_experiment(solve_kwargs)
 
         # Re-discretise the models
+        self._built_experiment_model = None
+        self._built_experiment_solver = None
         self.steps_to_built_models = {}
         self.steps_to_built_solvers = {}
         if self._experiment_uses_unified_model:
@@ -255,6 +265,8 @@ class Simulation:
                 delayed_variable_processing=True,
             )
             solver = self._solver.copy()
+            self._built_experiment_model = built_model
+            self._built_experiment_solver = solver
             for step in self.experiment.unique_steps:
                 self.steps_to_built_models[step.basic_repr()] = built_model
                 self.steps_to_built_solvers[step.basic_repr()] = solver
@@ -455,6 +467,20 @@ class Simulation:
 
         return float(value)
 
+    def _get_built_experiment_model(self, step_or_key):
+        if self._experiment_uses_unified_model:
+            return self._built_experiment_model
+        if isinstance(step_or_key, str):
+            return self.steps_to_built_models[step_or_key]
+        return self.steps_to_built_models[step_or_key.basic_repr()]
+
+    def _get_built_experiment_solver(self, step_or_key):
+        if self._experiment_uses_unified_model:
+            return self._built_experiment_solver
+        if isinstance(step_or_key, str):
+            return self.steps_to_built_solvers[step_or_key]
+        return self.steps_to_built_solvers[step_or_key.basic_repr()]
+
     def _evaluate_step_termination_expression_from_solution(
         self, term, step_solution, step
     ):
@@ -609,6 +635,8 @@ class Simulation:
             )
 
         self._experiment_uses_unified_model = False
+        self._built_experiment_model = None
+        self._built_experiment_solver = None
         self._experiment_step_weight_input_names = []
         self._experiment_includes_padding_rest = False
 
@@ -816,7 +844,9 @@ class Simulation:
         models = []
         if self._built_model is not None:
             models.append(self._built_model)
-        if self.steps_to_built_models is not None:
+        if self._built_experiment_model is not None:
+            models.append(self._built_experiment_model)
+        elif self.steps_to_built_models is not None:
             models.extend(self.steps_to_built_models.values())
 
         for built_model in models:
@@ -894,7 +924,7 @@ class Simulation:
         if initial_soc is not None:
             self.set_initial_state(initial_soc, direction=direction, inputs=inputs)
 
-        if self.steps_to_built_models:
+        if self._built_experiment_model is not None or self.steps_to_built_models:
             if self._needs_ic_rebuild:
                 self._recompute_initial_conditions()
             # Check if we need to update the models due to capacity change
@@ -912,6 +942,8 @@ class Simulation:
                 self._mesh, self._spatial_methods, **self._discretisation_kwargs
             )
             # Process all the different models
+            self._built_experiment_model = None
+            self._built_experiment_solver = None
             self.steps_to_built_models = {}
             self.steps_to_built_solvers = {}
             if self._experiment_uses_unified_model:
@@ -924,6 +956,8 @@ class Simulation:
                     delayed_variable_processing=True,
                 )
                 solver = self._solver.copy()
+                self._built_experiment_model = built_model
+                self._built_experiment_solver = solver
                 for step in self.experiment.unique_steps:
                     self.steps_to_built_models[step.basic_repr()] = built_model
                     self.steps_to_built_solvers[step.basic_repr()] = solver
@@ -1404,8 +1438,8 @@ class Simulation:
                             break
 
                     step_str = str(step)
-                    model = self.steps_to_built_models[step.basic_repr()]
-                    solver = self.steps_to_built_solvers[step.basic_repr()]
+                    model = self._get_built_experiment_model(step)
+                    solver = self._get_built_experiment_solver(step)
 
                     logs["step number"] = (step_num, cycle_length)
                     logs["step operating conditions"] = step_str
@@ -1700,13 +1734,8 @@ class Simulation:
         return self._solution
 
     def run_padding_rest(self, kwargs, rest_time, step_solution, inputs):
-        if self._experiment_uses_unified_model:
-            first_step = self.experiment.steps[0]
-            model = self.steps_to_built_models[first_step.basic_repr()]
-            solver = self.steps_to_built_solvers[first_step.basic_repr()]
-        else:
-            model = self.steps_to_built_models["Rest for padding"]
-            solver = self.steps_to_built_solvers["Rest for padding"]
+        model = self._get_built_experiment_model("Rest for padding")
+        solver = self._get_built_experiment_solver("Rest for padding")
         state_mapper = self._get_state_mapper_for_solution(step_solution, model)
 
         # Make sure we take at least 2 timesteps. The period is hardcoded to 10
@@ -1928,6 +1957,11 @@ class Simulation:
                     and solver.integrator_specs != {}
                 ):
                     solver.integrator_specs = {}
+        if (
+            isinstance(self._built_experiment_solver, pybamm.CasadiSolver)
+            and self._built_experiment_solver.integrator_specs != {}
+        ):
+            self._built_experiment_solver.integrator_specs = {}
 
         with open(filename, "wb") as f:
             pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)

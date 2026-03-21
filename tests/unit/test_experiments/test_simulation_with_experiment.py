@@ -56,6 +56,8 @@ class TestSimulationExperiment:
             steps = sim.experiment.steps
 
             if experiment_model_mode == "legacy":
+                assert sim._built_experiment_model is None
+                assert sim._built_experiment_solver is None
                 model_I = sim.experiment_unique_steps_to_model[
                     steps[1].basic_repr()
                 ]  # CC charge
@@ -69,6 +71,8 @@ class TestSimulationExperiment:
                     event.name for event in model_I.events
                 ]
             else:
+                assert sim._built_experiment_model is not None
+                assert sim._built_experiment_solver is not None
                 unified_model = sim.experiment_unique_steps_to_model[
                     sim._experiment_unified_model_key
                 ]
