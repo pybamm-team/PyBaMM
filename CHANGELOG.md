@@ -2,6 +2,7 @@
 
 ## Features
 
+- Added a unified experiment-model path that reuses a single built model and solver across compatible experiment steps, with automatic fallback to the legacy per-step build for unsupported cases. ([#5422](https://github.com/pybamm-team/PyBaMM/pull/5422))
 - Improved the performance of processed variables by replacing `casadi.vertcat` input stacking with numpy vectors. ([#5413](https://github.com/pybamm-team/PyBaMM/pull/5413))
 - Preserve custom variables and events in built-in model to_config ([#5411](https://github.com/pybamm-team/PyBaMM/pull/5411))
 - Allow out of bounds initial state of charge to enable initialising a simulation at a voltage outside the voltage limits. ([#5386](https://github.com/pybamm-team/PyBaMM/pull/5386))
