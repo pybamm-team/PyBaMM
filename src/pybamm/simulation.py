@@ -956,6 +956,8 @@ class Simulation:
         self._compiled_model_state_mappers = {}
         if not self.experiment or not self.steps_to_built_models:
             return
+        if self._experiment_uses_unified_model:
+            return
 
         ordered_steps = self.experiment.steps
         previous_model = None
@@ -988,23 +990,16 @@ class Simulation:
 
         # compile all the mappers
         for (previous_model, next_model), mapper in self.model_state_mappers.items():
-            input_names = tuple(ip.name for ip in previous_model.input_parameters)
-            mapper_inputs = {
-                name: inputs.get(name, np.array([np.nan])) for name in input_names
-            }
             vars_for_processing = pybamm.BaseSolver._get_vars_for_processing(
-                previous_model, mapper_inputs
+                previous_model, inputs
             )
             if not hasattr(previous_model, "calculate_sensitivities"):
                 previous_model.calculate_sensitivities = []
             f, jac, jacp, _jac_action = process(mapper, "mapper", vars_for_processing)
-            # Store both the compiled mapper and the input keys used
-            # we don't need jac and jacp yet, but should use them for sensitivity calculations in the future
             self._compiled_model_state_mappers[(previous_model, next_model)] = (
                 f,
                 jac,
                 jacp,
-                input_names,
             )
 
     def _get_state_mapper_for_solution(self, solution, model):
