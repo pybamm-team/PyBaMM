@@ -276,6 +276,18 @@ class Simulation:
         return f"Experiment step weight {step_index}"
 
     @staticmethod
+    def _experiment_time_stop_termination():
+        return "experiment time limit reached"
+
+    @staticmethod
+    def _experiment_voltage_stop_termination():
+        return "experiment voltage limit reached"
+
+    @staticmethod
+    def _experiment_capacity_stop_termination():
+        return "experiment capacity limit reached"
+
+    @staticmethod
     def _normalise_experiment_model_mode(mode):
         aliases = {
             "auto": "auto",
@@ -1190,6 +1202,8 @@ class Simulation:
             idx = 0
             num_cycles = len(self.experiment.cycle_lengths)
             feasible = True  # simulation will stop if experiment is infeasible
+            stop_experiment = False
+            experiment_termination = None
 
             # Add initial padding rest if current time is earlier than first start time
             # This could be the case when using a starting solution
@@ -1301,6 +1315,12 @@ class Simulation:
                     # if dt + starttime is larger than time_stop, set dt to time_stop - starttime
                     if time_stop is not None:
                         dt = min(dt, time_stop - start_time)
+                        if dt <= 0:
+                            experiment_termination = (
+                                self._experiment_time_stop_termination()
+                            )
+                            stop_experiment = True
+                            break
 
                     step_str = str(step)
                     model = self.steps_to_built_models[step.basic_repr()]
@@ -1439,13 +1459,19 @@ class Simulation:
 
                     elif time_stop is not None and logs["experiment time"] >= time_stop:
                         # reached the time limit of the experiment
+                        experiment_termination = (
+                            self._experiment_time_stop_termination()
+                        )
+                        stop_experiment = True
                         break
 
                     else:
                         # Increment index for next iteration, then continue
                         idx += 1
 
-                if save_this_cycle or feasible is False:
+                if cycle_solution is not None and (
+                    save_this_cycle or feasible is False or stop_experiment
+                ):
                     self._solution = self._solution + cycle_solution
 
                 # At the final step of the inner loop we save the cycle
@@ -1541,19 +1567,33 @@ class Simulation:
                 if capacity_stop is not None:
                     capacity_now = cycle_sum_vars["Capacity [A.h]"]
                     if not np.isnan(capacity_now) and capacity_now <= capacity_stop:
+                        experiment_termination = (
+                            self._experiment_capacity_stop_termination()
+                        )
+                        stop_experiment = True
                         break
 
                 if voltage_stop is not None:
                     if min_voltage <= voltage_stop[0]:
+                        experiment_termination = (
+                            self._experiment_voltage_stop_termination()
+                        )
+                        stop_experiment = True
                         break
 
                 if not feasible:
+                    break
+
+                if stop_experiment:
                     break
 
             if self._solution is not None and len(all_cycle_solutions) > 0:
                 self._solution.cycles = all_cycle_solutions
                 self._solution.update_summary_variables(all_summary_variables)
                 self._solution.all_first_states = all_first_states
+
+            if self._solution is not None and experiment_termination is not None:
+                self._solution.termination = experiment_termination
 
             callbacks.on_experiment_end(logs)
 

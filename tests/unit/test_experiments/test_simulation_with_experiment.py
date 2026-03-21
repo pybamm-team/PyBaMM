@@ -632,6 +632,7 @@ class TestSimulationExperiment:
         param["SEI kinetic rate constant [m.s-1]"] = 1e-14
         sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
         sol = sim.solve()
+        assert sol.termination == "experiment capacity limit reached"
         C = sol.summary_variables["Capacity [A.h]"]
         np.testing.assert_array_less(np.diff(C), 0)
         # all but the last value should be above the termination condition
@@ -654,6 +655,7 @@ class TestSimulationExperiment:
         param["SEI kinetic rate constant [m.s-1]"] = 1e-14
         sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
         sol = sim.solve()
+        assert sol.termination == "experiment capacity limit reached"
         C = sol.summary_variables["Capacity [A.h]"]
         # all but the last value should be above the termination condition
         np.testing.assert_array_less(5.04, C[:-1])
@@ -687,12 +689,13 @@ class TestSimulationExperiment:
         sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
         # Test with calc_esoh=False here
         sol = sim.solve(calc_esoh=False)
+        assert sol.termination == "experiment voltage limit reached"
         # Only two cycles should be completed, only 2nd cycle should go below 4V
         np.testing.assert_array_less(4, np.min(sol.cycles[0]["Voltage [V]"].data))
         np.testing.assert_array_less(np.min(sol.cycles[1]["Voltage [V]"].data), 4)
         assert len(sol.cycles) == 2
 
-    def test_run_experiment_termination_time_min(self):
+    def test_run_experiment_termination_time_min(self, caplog):
         experiment = pybamm.Experiment(
             [
                 ("Discharge at 0.5C for 10 minutes", "Rest for 10 minutes"),
@@ -704,7 +707,10 @@ class TestSimulationExperiment:
         param = pybamm.ParameterValues("Chen2020")
         sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
         # Test with calc_esoh=False here
-        sol = sim.solve(calc_esoh=False)
+        with caplog.at_level(logging.ERROR, logger="pybamm.logger"):
+            sol = sim.solve(calc_esoh=False)
+        assert sol.termination == "experiment time limit reached"
+        assert "Step time must be >0" not in caplog.text
         # Only two cycles should be completed, only 2nd cycle should go below 4V
         np.testing.assert_array_less(np.max(sol.cycles[0]["Time [s]"].data), 1500)
         np.testing.assert_array_equal(np.max(sol.cycles[1]["Time [s]"].data), 1500)
@@ -723,6 +729,7 @@ class TestSimulationExperiment:
         sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
         # Test with calc_esoh=False here
         sol = sim.solve(calc_esoh=False)
+        assert sol.termination == "experiment time limit reached"
         # Only two cycles should be completed, only 2nd cycle should go below 4V
         np.testing.assert_array_less(np.max(sol.cycles[0]["Time [s]"].data), 1500)
         np.testing.assert_array_equal(np.max(sol.cycles[1]["Time [s]"].data), 1500)
@@ -741,6 +748,7 @@ class TestSimulationExperiment:
         sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
         # Test with calc_esoh=False here
         sol = sim.solve(calc_esoh=False)
+        assert sol.termination == "experiment time limit reached"
         # Only two cycles should be completed, only 2nd cycle should go below 4V
         np.testing.assert_array_less(np.max(sol.cycles[0]["Time [s]"].data), 1800)
         np.testing.assert_array_equal(np.max(sol.cycles[1]["Time [s]"].data), 1800)
