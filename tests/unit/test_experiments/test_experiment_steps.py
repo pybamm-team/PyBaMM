@@ -410,7 +410,9 @@ class TestExperimentSteps:
 
         resistance_step = pybamm.step.resistance(4, duration=10)
         np.testing.assert_allclose(
-            resistance_step.get_control_residual({"Resistance [Ohm]": 4.3}),
+            resistance_step.get_control_residual(
+                {"Voltage [V]": 4.3, "Current [A]": 1}
+            ),
             0.3,
         )
 

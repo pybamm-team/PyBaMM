@@ -250,7 +250,7 @@ class Resistance(BaseStepImplicit):
         return {"Resistance function [Ohm]": self.value}
 
     def get_control_residual(self, variables):
-        return variables["Resistance [Ohm]"] - self.value
+        return variables["Voltage [V]"] - self.value * variables["Current [A]"]
 
     def get_submodel(self, model):
         return pybamm.external_circuit.ResistanceFunctionControl(

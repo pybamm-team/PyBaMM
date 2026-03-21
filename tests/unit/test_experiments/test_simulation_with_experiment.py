@@ -76,6 +76,29 @@ class TestSimulationExperiment:
         with pytest.raises(TypeError, match=r"experiment must be"):
             pybamm.Simulation(model, experiment=0)
 
+    def test_set_up_unified_preserves_voltage_safety_events(self):
+        experiment = pybamm.Experiment(
+            [
+                "Discharge at C/20 for 1 hour",
+                "Charge at 1 A until 4.1 V",
+            ]
+        )
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            experiment=experiment,
+            solver=pybamm.IDAKLUSolver(),
+            experiment_model_mode="unified",
+        )
+        sim.build_for_experiment()
+
+        unified_model = sim.experiment_unique_steps_to_model[
+            sim._experiment_unified_model_key
+        ]
+        event_names = [event.name for event in unified_model.events]
+
+        assert "Minimum voltage [V]" in event_names
+        assert "Maximum voltage [V]" in event_names
+
     def test_setup_experiment_string_or_list(self):
         model = pybamm.lithium_ion.SPM()
 
@@ -499,6 +522,27 @@ class TestSimulationExperiment:
 
         np.testing.assert_allclose(
             legacy_sol.t[-1], unified_sol.t[-1], rtol=5e-5, atol=5e-4
+        )
+
+    def test_run_unified_resistance_branch_is_safe_when_inactive_at_zero_current(self):
+        experiment = pybamm.Experiment(
+            [("Rest for 5 minutes", "Discharge at 4 Ohm for 5 minutes")]
+        )
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            experiment=experiment,
+            solver=pybamm.IDAKLUSolver(),
+            experiment_model_mode="unified",
+        )
+
+        sol = sim.solve(calc_esoh=False)
+
+        assert sim._experiment_uses_unified_model
+        np.testing.assert_allclose(
+            sol.cycles[0].steps[0]["Current [A]"].data, 0, atol=1e-10
+        )
+        np.testing.assert_allclose(
+            sol.cycles[0].steps[1]["Resistance [Ohm]"].data, 4, rtol=2e-4, atol=6e-4
         )
 
     def test_skip_ok(self):

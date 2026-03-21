@@ -129,16 +129,15 @@ class ResistanceFunctionControl(FunctionControl):
     def constant_resistance(self, variables):
         I = variables["Current [A]"]
         V = variables["Voltage [V]"]
-        R = V / I
         R_applied = pybamm.FunctionParameter(
             "Resistance function [Ohm]", {"Time [s]": pybamm.t}
         )
         if self.control == "algebraic":
-            return R - R_applied
+            return V - R_applied * I
         else:
             # Multiply by the time scale so that the overshoot only lasts a few seconds
             K_R = 0.01
-            return -K_R * (R - R_applied)
+            return -K_R * (V - R_applied * I)
 
 
 class ExperimentFunctionControl(FunctionControl):
