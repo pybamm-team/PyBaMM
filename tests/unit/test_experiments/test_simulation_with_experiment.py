@@ -281,6 +281,37 @@ class TestSimulationExperiment:
         assert len(sol3.cycles) == 2
         os.remove("test_experiment.sav")
 
+    def test_run_experiment_temperature_switching_unified(self):
+        s = pybamm.step.string
+        experiment = pybamm.Experiment(
+            [
+                (
+                    s("Discharge at C/20 for 10 minutes", temperature="30.5oC"),
+                    s("Charge at 1 A for 5 minutes", temperature="24oC"),
+                    "Rest for 5 minutes",
+                )
+            ],
+            temperature="-14oC",
+        )
+        model = pybamm.lithium_ion.SPM()
+        sim = pybamm.Simulation(
+            model,
+            experiment=experiment,
+            solver=pybamm.IDAKLUSolver(atol=1e-8, rtol=1e-8),
+        )
+        sol = sim.solve(calc_esoh=False)
+
+        assert sim._experiment_uses_unified_model
+        np.testing.assert_array_equal(
+            sol.cycles[0].steps[0]["Ambient temperature [C]"].data[0], 30.5
+        )
+        np.testing.assert_array_equal(
+            sol.cycles[0].steps[1]["Ambient temperature [C]"].data[0], 24
+        )
+        np.testing.assert_array_equal(
+            sol.cycles[0].steps[2]["Ambient temperature [C]"].data[0], -14
+        )
+
     def test_skip_ok(self):
         model = pybamm.lithium_ion.SPMe()
         cc_charge_skip_ok = pybamm.step.Current(-5, termination="4.2 V")
