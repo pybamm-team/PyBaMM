@@ -401,12 +401,26 @@ class BaseStep:
             delayed_variable_processing=delayed_variable_processing,
         )
 
-    def update_model_events(self, new_model):
+    def get_termination_events(self, variables):
+        events = []
         for term in self.termination:
-            event = term.get_event(new_model.variables, self)
+            event = term.get_event(variables, self)
             if event is not None:
-                new_model.events.append(event)
+                events.append(event)
+        return events
 
+    def get_combined_termination_expression(self, variables):
+        events = self.get_termination_events(variables)
+        if not events:
+            return pybamm.Scalar(1)
+
+        expression = pybamm.Scalar(1)
+        for event in events:
+            expression *= event.expression
+        return expression
+
+    @staticmethod
+    def update_voltage_safety_events(new_model):
         # Keep the min and max voltages as safeguards but add some tolerances
         # so that they are not triggered before the voltage limits in the
         # experiment
@@ -415,6 +429,10 @@ class BaseStep:
                 new_model.events[i] = pybamm.Event(
                     event.name, event.expression + 1, event.event_type
                 )
+
+    def update_model_events(self, new_model):
+        new_model.events.extend(self.get_termination_events(new_model.variables))
+        self.update_voltage_safety_events(new_model)
 
     def value_based_charge_or_discharge(self):
         """
@@ -478,6 +496,9 @@ class BaseStepExplicit(BaseStep):
     def current_value(self, variables):
         raise NotImplementedError
 
+    def get_control_residual(self, variables):
+        return variables["Current [A]"] - self.current_value(variables)
+
     def set_up(self, new_model, new_parameter_values):
         new_parameter_values["Current function [A]"] = self.current_value(
             new_model.variables
@@ -495,15 +516,11 @@ class BaseStepImplicit(BaseStep):
     def get_submodel(self, model):
         raise NotImplementedError
 
-    def set_up(self, new_model, new_parameter_values):
-        # Create a new model where the current density is now a variable
-        # To do so, we replace all instances of the current density in the
-        # model with a current density variable, which is obtained from the
-        # FunctionControl submodel
-        # check which kind of external circuit model we need (differential
-        # or algebraic)
-        # Build the new submodel and update the model with it
-        submodel = self.get_submodel(new_model)
+    def get_control_residual(self, variables):
+        raise NotImplementedError
+
+    @staticmethod
+    def add_control_submodel(new_model, submodel, new_parameter_values=None):
         variables = new_model.variables
         submodel.variables = submodel.get_fundamental_variables()
         variables.update(submodel.variables)
@@ -516,13 +533,23 @@ class BaseStepImplicit(BaseStep):
         new_model.algebraic.update(submodel.algebraic)
         new_model.initial_conditions.update(submodel.initial_conditions)
 
-        # Set the "current function" to be the variable defined in the submodel
-        new_parameter_values["Current function [A]"] = submodel.variables["Current [A]"]
-        # Update any other parameters as necessary
-        new_parameter_values.update(
-            self.get_parameter_values(variables),
-        )
+        if new_parameter_values is not None:
+            new_parameter_values["Current function [A]"] = submodel.variables[
+                "Current [A]"
+            ]
 
+        return new_model, variables
+
+    def set_up(self, new_model, new_parameter_values):
+        # Create a new model where the current density is now a variable
+        # To do so, we replace all instances of the current density in the
+        # model with a current density variable, which is obtained from the
+        # FunctionControl submodel
+        submodel = self.get_submodel(new_model)
+        new_model, variables = self.add_control_submodel(
+            new_model, submodel, new_parameter_values
+        )
+        new_parameter_values.update(self.get_parameter_values(variables))
         return new_model, new_parameter_values
 
 

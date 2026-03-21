@@ -179,6 +179,9 @@ class Voltage(BaseStepImplicit):
     def get_parameter_values(self, variables):
         return {"Voltage function [V]": self.value}
 
+    def get_control_residual(self, variables):
+        return variables["Voltage [V]"] - self.value
+
     def get_submodel(self, model):
         return pybamm.external_circuit.VoltageFunctionControl(
             model.param, model.options
@@ -212,6 +215,9 @@ class Power(BaseStepImplicit):
     def get_parameter_values(self, variables):
         return {"Power function [W]": self.value}
 
+    def get_control_residual(self, variables):
+        return variables["Power [W]"] - self.value
+
     def get_submodel(self, model):
         return pybamm.external_circuit.PowerFunctionControl(model.param, model.options)
 
@@ -242,6 +248,9 @@ class Resistance(BaseStepImplicit):
 
     def get_parameter_values(self, variables):
         return {"Resistance function [Ohm]": self.value}
+
+    def get_control_residual(self, variables):
+        return variables["Resistance [Ohm]"] - self.value
 
     def get_submodel(self, model):
         return pybamm.external_circuit.ResistanceFunctionControl(
@@ -409,6 +418,13 @@ class CustomStepImplicit(BaseStepImplicit):
             raise ValueError("control must be either 'algebraic' or 'differential'")
         self.control = control
         self.kwargs = kwargs
+
+    def get_control_residual(self, variables):
+        if self.control != "algebraic":
+            raise NotImplementedError(
+                "Unified experiment control only supports algebraic implicit custom steps"
+            )
+        return self.current_rhs_function(variables)
 
     def get_submodel(self, model):
         return pybamm.external_circuit.FunctionControl(

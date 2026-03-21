@@ -32,16 +32,27 @@ class TestSimulationExperiment:
         assert sim.experiment.args == experiment.args
         steps = sim.experiment.steps
 
-        model_I = sim.experiment_unique_steps_to_model[
-            steps[1].basic_repr()
-        ]  # CC charge
-        model_V = sim.experiment_unique_steps_to_model[steps[2].basic_repr()]  # CV hold
-        assert "abs(Current [A]) < 0.05 [A] [experiment]" in [
-            event.name for event in model_V.events
-        ]
-        assert "Voltage > 4.1 [V] [experiment]" in [
-            event.name for event in model_I.events
-        ]
+        if sim._experiment_uses_unified_model:
+            unified_model = sim.experiment_unique_steps_to_model[
+                sim._experiment_unified_model_key
+            ]
+            assert sim._combined_step_termination_event_name in [
+                event.name for event in unified_model.events
+            ]
+            assert len(set(sim.steps_to_built_models.values())) == 1
+        else:
+            model_I = sim.experiment_unique_steps_to_model[
+                steps[1].basic_repr()
+            ]  # CC charge
+            model_V = sim.experiment_unique_steps_to_model[
+                steps[2].basic_repr()
+            ]  # CV hold
+            assert "abs(Current [A]) < 0.05 [A] [experiment]" in [
+                event.name for event in model_V.events
+            ]
+            assert "Voltage > 4.1 [V] [experiment]" in [
+                event.name for event in model_I.events
+            ]
 
         # fails if trying to set up with something that isn't an experiment
         with pytest.raises(TypeError, match=r"experiment must be"):

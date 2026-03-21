@@ -141,6 +141,25 @@ class ResistanceFunctionControl(FunctionControl):
             return -K_R * (R - R_applied)
 
 
+class ExperimentFunctionControl(FunctionControl):
+    """External circuit with one weighted control residual shared across steps."""
+
+    def __init__(self, param, options, step_control_builders):
+        self.step_control_builders = step_control_builders
+        super().__init__(
+            param,
+            self.weighted_control_residual,
+            options,
+            control="algebraic",
+        )
+
+    def weighted_control_residual(self, variables):
+        expression = pybamm.Scalar(0)
+        for weight_name, builder in self.step_control_builders:
+            expression += pybamm.InputParameter(weight_name) * builder(variables)
+        return expression
+
+
 class CCCVFunctionControl(FunctionControl):
     """
     External circuit with constant-current constant-voltage control, as implemented in
