@@ -16,6 +16,24 @@ class ShortDurationCRate(pybamm.step.CRate):
 
 
 class TestSimulationExperiment:
+    @staticmethod
+    def _make_differential_custom_step_simulation(**simulation_kwargs):
+        def custom_step_voltage(variables):
+            return 100 * (variables["Voltage [V]"] - 4.2)
+
+        experiment = pybamm.Experiment(
+            [
+                pybamm.step.CustomStepImplicit(
+                    custom_step_voltage, control="differential", duration=100, period=10
+                )
+            ]
+        )
+        return pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            experiment=experiment,
+            **simulation_kwargs,
+        )
+
     def test_set_up(self):
         experiment = pybamm.Experiment(
             [
@@ -158,6 +176,25 @@ class TestSimulationExperiment:
         )
 
         with pytest.raises(pybamm.ModelError, match="DAE-capable solver"):
+            sim.build_for_experiment()
+
+    def test_set_up_differential_custom_step_falls_back_to_legacy(self):
+        sim = self._make_differential_custom_step_simulation(
+            solver=pybamm.IDAKLUSolver()
+        )
+        sim.build_for_experiment()
+
+        assert not sim._experiment_uses_unified_model
+
+    def test_set_up_unified_mode_rejects_differential_custom_step(self):
+        sim = self._make_differential_custom_step_simulation(
+            solver=pybamm.IDAKLUSolver(),
+            experiment_model_mode="unified",
+        )
+
+        with pytest.raises(
+            pybamm.ModelError, match="differential control is not supported"
+        ):
             sim.build_for_experiment()
 
     def test_experiment_state_mappers_built(self):
@@ -310,6 +347,158 @@ class TestSimulationExperiment:
         )
         np.testing.assert_array_equal(
             sol.cycles[0].steps[2]["Ambient temperature [C]"].data[0], -14
+        )
+
+    def test_run_mixed_control_experiment_unified_single_model(self):
+        s = pybamm.step.string
+        experiment = pybamm.Experiment(
+            [
+                (
+                    s("Discharge at C/20 for 20 minutes"),
+                    s("Charge at 1 A for 10 minutes"),
+                    s("Hold at 4.1 V for 10 minutes"),
+                    "Discharge at 2 W for 10 minutes",
+                    "Discharge at 4 Ohm for 10 minutes",
+                )
+            ]
+        )
+        model = pybamm.lithium_ion.SPM()
+        sim = pybamm.Simulation(
+            model,
+            experiment=experiment,
+            solver=pybamm.IDAKLUSolver(atol=1e-8, rtol=1e-8),
+            experiment_model_mode="unified",
+        )
+
+        sim.build_for_experiment()
+        assert sim._experiment_uses_unified_model
+        assert len(set(sim.steps_to_built_models.values())) == 1
+
+        sol = sim.solve(calc_esoh=False)
+
+        np.testing.assert_allclose(
+            sol.cycles[0].steps[0]["C-rate"].data, 1 / 20, rtol=1e-7, atol=1e-6
+        )
+        np.testing.assert_allclose(
+            sol.cycles[0].steps[1]["Current [A]"].data, -1, rtol=1e-7, atol=1e-6
+        )
+        np.testing.assert_allclose(
+            sol.cycles[0].steps[2]["Voltage [V]"].data, 4.1, rtol=1e-6, atol=1e-5
+        )
+        np.testing.assert_allclose(
+            sol.cycles[0].steps[3]["Power [W]"].data, 2, rtol=3e-4, atol=3e-4
+        )
+        np.testing.assert_allclose(
+            sol.cycles[0].steps[4]["Resistance [Ohm]"].data, 4, rtol=2e-4, atol=6e-4
+        )
+
+    def test_run_mixed_control_experiment_unified_matches_legacy(self):
+        s = pybamm.step.string
+        experiment = pybamm.Experiment(
+            [
+                (
+                    s("Discharge at C/20 for 20 minutes"),
+                    s("Charge at 1 A for 10 minutes"),
+                    s("Hold at 4.1 V for 10 minutes"),
+                    "Discharge at 2 W for 10 minutes",
+                    "Discharge at 4 Ohm for 10 minutes",
+                )
+            ]
+        )
+
+        legacy_sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            experiment=experiment,
+            solver=pybamm.IDAKLUSolver(),
+            experiment_model_mode="legacy",
+        )
+        unified_sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            experiment=experiment,
+            solver=pybamm.IDAKLUSolver(),
+            experiment_model_mode="unified",
+        )
+
+        legacy_sol = legacy_sim.solve(calc_esoh=False)
+        unified_sol = unified_sim.solve(calc_esoh=False)
+
+        assert not legacy_sim._experiment_uses_unified_model
+        assert unified_sim._experiment_uses_unified_model
+
+        legacy_steps = legacy_sol.cycles[0].steps
+        unified_steps = unified_sol.cycles[0].steps
+        assert len(legacy_steps) == len(unified_steps)
+
+        for legacy_step, unified_step in zip(legacy_steps, unified_steps, strict=True):
+            assert legacy_step.termination == unified_step.termination
+            np.testing.assert_allclose(
+                legacy_step.t[-1], unified_step.t[-1], rtol=1e-8, atol=1e-8
+            )
+            np.testing.assert_allclose(
+                legacy_step["Voltage [V]"].data[-1],
+                unified_step["Voltage [V]"].data[-1],
+                rtol=5e-5,
+                atol=5e-5,
+            )
+            np.testing.assert_allclose(
+                legacy_step["Current [A]"].data[-1],
+                unified_step["Current [A]"].data[-1],
+                rtol=5e-5,
+                atol=5e-5,
+            )
+
+        np.testing.assert_allclose(
+            legacy_sol["Discharge capacity [A.h]"].data[-1],
+            unified_sol["Discharge capacity [A.h]"].data[-1],
+            rtol=5e-5,
+            atol=5e-5,
+        )
+
+    def test_run_event_driven_experiment_unified_matches_legacy(self):
+        experiment = pybamm.Experiment(
+            [("Charge at C/3 until 4.1 V", "Hold at 4.1 V until C/20")]
+        )
+
+        legacy_sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            experiment=experiment,
+            solver=pybamm.IDAKLUSolver(),
+            experiment_model_mode="legacy",
+        )
+        unified_sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            experiment=experiment,
+            solver=pybamm.IDAKLUSolver(),
+            experiment_model_mode="unified",
+        )
+
+        legacy_sol = legacy_sim.solve(calc_esoh=False, initial_soc=0.2)
+        unified_sol = unified_sim.solve(calc_esoh=False, initial_soc=0.2)
+
+        legacy_steps = legacy_sol.cycles[0].steps
+        unified_steps = unified_sol.cycles[0].steps
+        assert len(legacy_steps) == len(unified_steps) == 2
+
+        for legacy_step, unified_step in zip(legacy_steps, unified_steps, strict=True):
+            assert legacy_step.termination == unified_step.termination
+            np.testing.assert_allclose(
+                legacy_step.t[-1], unified_step.t[-1], rtol=5e-5, atol=5e-4
+            )
+            np.testing.assert_allclose(
+                legacy_step["Voltage [V]"].data[-1],
+                unified_step["Voltage [V]"].data[-1],
+                rtol=5e-5,
+                atol=5e-5,
+            )
+            np.testing.assert_allclose(
+                legacy_step["Current [A]"].data[-1],
+                unified_step["Current [A]"].data[-1],
+                rtol=5e-5,
+                atol=5e-5,
+            )
+
+        np.testing.assert_allclose(
+            legacy_sol.t[-1], unified_sol.t[-1], rtol=5e-5, atol=5e-4
         )
 
     def test_skip_ok(self):
