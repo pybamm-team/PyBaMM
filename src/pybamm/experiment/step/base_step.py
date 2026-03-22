@@ -427,11 +427,22 @@ class BaseStep:
     def update_voltage_safety_events(new_model):
         # Keep the min and max voltages as safeguards but add some tolerances
         # so that they are not triggered before the voltage limits in the
-        # experiment
+        # experiment. For the CasADi "fast with events" DAE path we also move
+        # the voltage switch events away from the experiment cutoffs, otherwise
+        # the switch can freeze the dynamics before the experiment termination
+        # event itself crosses zero.
         for i, event in enumerate(new_model.events):
             if event.name in ["Minimum voltage [V]", "Maximum voltage [V]"]:
                 new_model.events[i] = pybamm.Event(
                     event.name, event.expression + 1, event.event_type
+                )
+            elif event.name == "Minimum voltage switch [V]":
+                new_model.events[i] = pybamm.Event(
+                    event.name, event.expression + 1, event.event_type
+                )
+            elif event.name == "Maximum voltage switch [V]":
+                new_model.events[i] = pybamm.Event(
+                    event.name, event.expression - 1, event.event_type
                 )
 
     def update_model_events(self, new_model):
