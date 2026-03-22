@@ -499,6 +499,9 @@ class ProcessedVariable(BaseProcessedVariable):
         use together, e.g. when using a last state solution with a new simulation running
         with output variables in the solver.
         """
+        sensitivities = self._sensitivities
+        if sensitivities is None and self.all_solution_sensitivities:
+            sensitivities = self.sensitivities
 
         def _stub_solution(self):
             """
@@ -523,7 +526,7 @@ class ProcessedVariable(BaseProcessedVariable):
                 self.all_ys,
                 self.all_inputs,
                 self.all_inputs_stacked,
-                self.sensitivities,
+                sensitivities or {},
                 self.t_pts,
             )
 
@@ -541,9 +544,9 @@ class ProcessedVariable(BaseProcessedVariable):
         )
 
         # add sensitivities if they exist
-        if self.sensitivities:
+        if sensitivities:
             # TODO: test once #5058 is fixed
-            cpv._sensitivities = self.sensitivities  # pragma: no cover
+            cpv._sensitivities = sensitivities  # pragma: no cover
 
         return cpv
 

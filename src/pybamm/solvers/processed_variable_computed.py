@@ -721,9 +721,12 @@ class ProcessedVariableComputed(BaseProcessedVariable):
 
         new_var = self.__class__(bv, bvc, bvd, new_sol)
 
-        new_var._sensitivities = {
-            k: np.concatenate((self.sensitivities[k], other.sensitivities[k]))
-            for k in self.sensitivities.keys()
-        }
+        self_sensitivities = self.sensitivities or {}
+        other_sensitivities = other.sensitivities or {}
+        if self_sensitivities or other_sensitivities:
+            new_var._sensitivities = {
+                k: np.concatenate((self_sensitivities[k], other_sensitivities[k]))
+                for k in self_sensitivities.keys()
+            }
 
         return new_var
