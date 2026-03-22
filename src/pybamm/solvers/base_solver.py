@@ -1409,7 +1409,19 @@ class BaseSolver:
                 self.set_up(model, model_inputs, ics_only=True)
         elif old_solution.all_models[-1] == model:
             last_state = old_solution.last_state
-            model.y0_list = [last_state.all_ys[0]]
+            if state_mapper is not None:
+                y_from = last_state.all_ys[0]
+                mapper_func, _mapper_jac, _mapper_jacp = state_mapper
+                p_casadi_stacked = casadi.vertcat(*[p for p in model_inputs.values()])
+                model.y0_list = [
+                    mapper_func(
+                        t_start_shifted,
+                        y_from,
+                        p_casadi_stacked,
+                    )
+                ]
+            else:
+                model.y0_list = [last_state.all_ys[0]]
             if using_sensitivities:
                 full_sens = last_state._all_sensitivities["all"][0]
                 model.y0S_list = [

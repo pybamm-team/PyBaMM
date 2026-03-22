@@ -436,6 +436,67 @@ class Simulation:
         for step in self.experiment.unique_steps:
             self.experiment_unique_steps_to_model[step.basic_repr()] = processed_model
 
+    def _build_unified_experiment_state_mapper(self, built_model):
+        """
+        Build the symbolic self-mapper used between unified experiment steps.
+
+        The unified experiment path reuses one built model for every compatible step,
+        so step-to-step reinitialisation is a same-model state mapping. This mapper
+        leaves the full state vector unchanged except for the scalar
+        ``"Current variable [A]"`` entry, which is replaced by a one-hot-selected
+        initial guess for the newly active step. Explicit controlled steps contribute
+        their prescribed current, while implicit steps keep the incoming current state.
+        """
+        current_variable = next(
+            (
+                variable
+                for variable in built_model.y_slices
+                if variable.name == "Current variable [A]"
+            ),
+            None,
+        )
+        if current_variable is None:
+            return built_model.build_initial_state_mapper(built_model)
+        current_slice = built_model.y_slices[current_variable][0]
+        if current_slice.stop - current_slice.start != 1:
+            raise pybamm.ModelError(
+                "Unified experiment self-mapper expects a scalar current-control state."
+            )
+
+        current_guess = pybamm.Scalar(0)
+        current_state = built_model.process_symbol(built_model.variables["Current [A]"])
+        for weight_name, step in zip(
+            self._experiment_step_weight_input_names,
+            self.experiment.steps,
+            strict=True,
+        ):
+            if isinstance(step, pybamm.step.BaseStepExplicit):
+                step_guess = built_model.process_symbol(
+                    step.current_value(built_model.variables)
+                )
+            else:
+                step_guess = current_state
+            current_guess += pybamm.InputParameter(weight_name) * step_guess
+
+        if self._experiment_includes_padding_rest:
+            current_guess += pybamm.InputParameter(
+                self._experiment_padding_rest_weight_name()
+            ) * pybamm.Scalar(0)
+
+        equations = []
+        if current_slice.start > 0:
+            equations.append(pybamm.StateVector(slice(0, current_slice.start)))
+        equations.append(
+            (current_guess - current_variable.reference) / current_variable.scale
+        )
+        if current_slice.stop < built_model.len_rhs_and_alg:
+            equations.append(
+                pybamm.StateVector(
+                    slice(current_slice.stop, built_model.len_rhs_and_alg)
+                )
+            )
+        return pybamm.NumpyConcatenation(*equations)
+
     def _build_unified_experiment_inputs(
         self, user_inputs, active_weight_name, start_time, temperature
     ):
@@ -991,41 +1052,48 @@ class Simulation:
         if not self.experiment or not self.steps_to_built_models:
             return
         if self._experiment_uses_unified_model:
-            return
+            built_model = self._built_experiment_model
+            if built_model is not None:
+                self.model_state_mappers[(built_model, built_model)] = (
+                    self._build_unified_experiment_state_mapper(built_model)
+                )
+        else:
+            ordered_steps = self.experiment.steps
+            previous_model = None
+            for step in ordered_steps:
+                model = self.steps_to_built_models[step.basic_repr()]
+                if previous_model is not None and previous_model is not model:
+                    key = (previous_model, model)
+                    if key not in self.model_state_mappers:
+                        self.model_state_mappers[key] = (
+                            model.build_initial_state_mapper(previous_model)
+                        )
+                previous_model = model
 
-        ordered_steps = self.experiment.steps
-        previous_model = None
-        for step in ordered_steps:
-            model = self.steps_to_built_models[step.basic_repr()]
-            if previous_model is not None and previous_model is not model:
-                key = (previous_model, model)
-                if key not in self.model_state_mappers:
-                    self.model_state_mappers[key] = model.build_initial_state_mapper(
-                        previous_model
-                    )
-            previous_model = model
+            rest_model = self.steps_to_built_models.get("Rest for padding")
+            if rest_model is not None:
+                unique_models = set(self.steps_to_built_models.values())
+                for model in unique_models:
+                    if model is rest_model:
+                        continue
+                    to_rest_key = (model, rest_model)
+                    if to_rest_key not in self.model_state_mappers:
+                        self.model_state_mappers[to_rest_key] = (
+                            rest_model.build_initial_state_mapper(model)
+                        )
+                    from_rest_key = (rest_model, model)
+                    if from_rest_key not in self.model_state_mappers:
+                        self.model_state_mappers[from_rest_key] = (
+                            model.build_initial_state_mapper(rest_model)
+                        )
 
-        rest_model = self.steps_to_built_models.get("Rest for padding")
-        if rest_model is not None:
-            unique_models = set(self.steps_to_built_models.values())
-            for model in unique_models:
-                if model is rest_model:
-                    continue
-                to_rest_key = (model, rest_model)
-                if to_rest_key not in self.model_state_mappers:
-                    self.model_state_mappers[to_rest_key] = (
-                        rest_model.build_initial_state_mapper(model)
-                    )
-                from_rest_key = (rest_model, model)
-                if from_rest_key not in self.model_state_mappers:
-                    self.model_state_mappers[from_rest_key] = (
-                        model.build_initial_state_mapper(rest_model)
-                    )
-
-        # compile all the mappers
         for (previous_model, next_model), mapper in self.model_state_mappers.items():
+            ordered_compile_inputs = {
+                name: inputs.get(name, 0)
+                for name in sorted(ip.name for ip in previous_model.input_parameters)
+            }
             vars_for_processing = pybamm.BaseSolver._get_vars_for_processing(
-                previous_model, inputs
+                previous_model, ordered_compile_inputs
             )
             if not hasattr(previous_model, "calculate_sensitivities"):
                 previous_model.calculate_sensitivities = []
@@ -1044,9 +1112,12 @@ class Simulation:
         if not solution.all_models:
             return None
         from_model = solution.all_models[-1]
+        mapper = self._compiled_model_state_mappers.get((from_model, model))
+        if mapper is not None:
+            return mapper
         if from_model is model:
             return None
-        return self._compiled_model_state_mappers.get((from_model, model))
+        return None
 
     def solve(
         self,
