@@ -509,7 +509,7 @@ class BaseStepExplicit(BaseStep):
         super().__init__(*args, **kwargs)
 
     def current_value(self, variables):
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover
 
     def get_control_residual(self, variables):
         return variables["Current [A]"] - self.current_value(variables)
@@ -529,10 +529,10 @@ class BaseStepImplicit(BaseStep):
         return {}
 
     def get_submodel(self, model):
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover
 
     def get_control_residual(self, variables):
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover
 
     @staticmethod
     def add_control_submodel(new_model, submodel, new_parameter_values=None):

@@ -2,6 +2,8 @@
 # Test the experiment step termination classes
 #
 
+from types import SimpleNamespace
+
 import pytest
 
 import pybamm
@@ -29,3 +31,12 @@ class TestExperimentStepTermination:
                 term.get_event(variables, None).evaluate()
                 == term_old.get_event(variables, None).evaluate()
             )
+
+    def test_voltage_termination_returns_none_without_charge_or_discharge(self):
+        term = pybamm.step.VoltageTermination(4.2)
+        step = SimpleNamespace(direction="rest")
+        variables = {"Battery voltage [V]": pybamm.Scalar(4.2)}
+
+        assert term.get_event_name(step) is None
+        assert term.get_event_expression(variables, step) is None
+        assert term.get_event(variables, step) is None

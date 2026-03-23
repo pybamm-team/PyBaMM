@@ -118,6 +118,89 @@ class TestSimulation:
         sim.solve([0, 600])
         sim.set_parameters()
 
+    def test_setstate_restores_unified_experiment_defaults(self):
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            experiment=pybamm.Experiment(["Discharge at 1C for 10 seconds"]),
+        )
+        state = sim.__dict__.copy()
+        for key in [
+            "model_state_mappers",
+            "_compiled_model_state_mappers",
+            "_built_experiment_model",
+            "_built_experiment_solver",
+            "experiment_unique_steps_to_model",
+            "_experiment_uses_unified_model",
+            "_experiment_unified_model_key",
+            "_experiment_step_weight_input_names",
+            "_experiment_includes_padding_rest",
+            "_combined_step_termination_event_name",
+            "_experiment_model_mode",
+        ]:
+            state.pop(key, None)
+
+        restored = pybamm.Simulation.__new__(pybamm.Simulation)
+        restored.__setstate__(state)
+
+        assert callable(restored.get_esoh_solver)
+        assert restored.model_state_mappers == {}
+        assert restored._compiled_model_state_mappers == {}
+        assert restored._built_experiment_model is None
+        assert restored._built_experiment_solver is None
+        assert restored.experiment_unique_steps_to_model is None
+        assert restored._experiment_uses_unified_model is False
+        assert restored._experiment_unified_model_key == "Unified experiment"
+        assert restored._experiment_step_weight_input_names == []
+        assert restored._experiment_includes_padding_rest is False
+        assert (
+            restored._combined_step_termination_event_name
+            == "Combined termination [experiment]"
+        )
+        assert restored._experiment_model_mode == "auto"
+
+    def test_build_unified_experiment_state_mapper_edge_cases(self):
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            experiment=pybamm.Experiment(["Discharge at 1C for 10 seconds"]),
+        )
+
+        scalar_model = pybamm.BaseModel()
+        scalar_variable = pybamm.Variable("y")
+        scalar_model.rhs = {scalar_variable: scalar_variable}
+        scalar_model.initial_conditions = {scalar_variable: 1}
+        scalar_built_model = pybamm.Discretisation().process_model(
+            scalar_model, inplace=False
+        )
+
+        expected_mapper = scalar_built_model.build_initial_state_mapper(
+            scalar_built_model
+        )
+        actual_mapper = sim._build_unified_experiment_state_mapper(scalar_built_model)
+        np.testing.assert_allclose(
+            actual_mapper.evaluate(y=np.array([3.0])),
+            expected_mapper.evaluate(y=np.array([3.0])),
+        )
+
+        vector_model = pybamm.BaseModel()
+        current_variable = pybamm.Variable(
+            "Current variable [A]", domain="negative electrode"
+        )
+        vector_model.rhs = {current_variable: current_variable}
+        vector_model.initial_conditions = {current_variable: 1}
+        vector_built_model = pybamm.Discretisation(
+            pybamm.Mesh(
+                {"negative electrode": {"x_n": {"min": 0, "max": 1}}},
+                {"negative electrode": pybamm.Uniform1DSubMesh},
+                {"x_n": 2},
+            ),
+            {"negative electrode": pybamm.FiniteVolume()},
+        ).process_model(vector_model, inplace=False)
+
+        with pytest.raises(
+            pybamm.ModelError, match="expects a scalar current-control state"
+        ):
+            sim._build_unified_experiment_state_mapper(vector_built_model)
+
     def test_set_crate(self):
         model = pybamm.lithium_ion.SPM()
         current_1C = model.default_parameter_values["Current function [A]"]
@@ -773,6 +856,29 @@ class TestSimulation:
             while abs(sim.solution.t[i] - t) < 1e-6:
                 i += 1
                 assert i < len(sim.solution.t)
+
+    def test_drive_cycle_t_eval_warnings_for_missing_points_and_resolution(self):
+        model = pybamm.lithium_ion.SPM()
+        param = model.default_parameter_values
+        drive_cycle = np.array([[0.0, 0.0], [1.0, 0.5], [2.0, -0.5]])
+        param["Current function [A]"] = pybamm.Interpolant(
+            drive_cycle[:, 0], drive_cycle[:, 1], pybamm.t
+        )
+        sim = pybamm.Simulation(
+            model, parameter_values=param, solver=pybamm.ScipySolver()
+        )
+
+        with pytest.warns(pybamm.SolverWarning) as warnings_record:
+            sim.solve(t_eval=np.array([0.0, 2.0]))
+
+        warning_messages = [str(warning.message) for warning in warnings_record]
+        assert any(
+            "t_eval does not contain all of the time points in the data" in message
+            for message in warning_messages
+        )
+        assert any(
+            "largest timestep in t_eval" in message for message in warning_messages
+        )
 
     # Test with an ODE and DAE model
     @pytest.mark.parametrize(

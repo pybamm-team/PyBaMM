@@ -23,7 +23,7 @@ class BaseTermination:
         self.operator = operator
 
     def get_event_name(self, step):
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover
 
     def get_event_expression(self, variables, step):
         """
@@ -38,7 +38,7 @@ class BaseTermination:
             Step for which this is a termination event, to be used in some
             cases to determine the sign of the event.
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover
 
     def get_event(self, variables, step):
         expression = self.get_event_expression(variables, step)

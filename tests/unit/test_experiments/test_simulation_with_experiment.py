@@ -183,6 +183,30 @@ class TestSimulationExperiment:
         with pytest.raises(TypeError, match=r"experiment must be"):
             pybamm.Simulation(pybamm.lithium_ion.SPM(), experiment=0)
 
+    def test_unified_model_mode_validation_and_blockers(self):
+        with pytest.raises(ValueError, match="experiment_model_mode must be one of"):
+            pybamm.Simulation(
+                pybamm.lithium_ion.SPM(),
+                experiment_model_mode="invalid",
+            )
+
+        sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
+        sim.experiment = None
+        assert sim._get_unified_experiment_model_blockers() == [
+            "no experiment is attached to the simulation"
+        ]
+        assert sim._experiment_can_use_unified_model() is False
+
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            experiment=pybamm.Experiment([pybamm.step.BaseStep(1, duration=1)]),
+            solver=pybamm.IDAKLUSolver(),
+        )
+        assert sim._get_unified_experiment_model_blockers() == [
+            "unsupported experiment step type 'BaseStep'"
+        ]
+        assert sim._experiment_can_use_unified_model() is False
+
     def test_set_up_unified_preserves_voltage_safety_events(self):
         experiment = pybamm.Experiment(
             [
@@ -1329,6 +1353,20 @@ class TestSimulationExperiment:
         np.testing.assert_array_less(np.max(sol.cycles[0]["Time [s]"].data), 1800)
         np.testing.assert_array_equal(np.max(sol.cycles[1]["Time [s]"].data), 1800)
         assert len(sol.cycles) == 2
+
+    def test_run_experiment_termination_time_with_starting_solution_at_limit(self):
+        experiment = pybamm.Experiment(
+            [pybamm.step.string("Discharge at 0.5C for 10 seconds")],
+            termination="10 s",
+        )
+        sim = pybamm.Simulation(pybamm.lithium_ion.SPM(), experiment=experiment)
+
+        solution = sim.solve(calc_esoh=False)
+        resumed_solution = sim.solve(calc_esoh=False, starting_solution=solution.copy())
+
+        assert solution.termination == "experiment time limit reached"
+        assert resumed_solution.termination == "experiment time limit reached"
+        assert resumed_solution["Time [s]"].entries[-1] == pytest.approx(10)
 
     def test_save_at_cycles(self):
         experiment = pybamm.Experiment(
