@@ -1,6 +1,7 @@
 import logging
 import os
 from datetime import datetime
+from types import SimpleNamespace
 
 import casadi
 import numpy as np
@@ -1684,6 +1685,124 @@ class TestSimulationExperiment:
         assert "Rest for padding" not in sim.steps_to_built_models
         assert sim._experiment_includes_padding_rest
         assert sol["Time [s]"].entries[-1] == 10800
+
+    def test_run_start_time_experiment_legacy_builds_padding_rest_mappers(self):
+        experiment = pybamm.Experiment(
+            [
+                pybamm.step.string(
+                    "Discharge at 0.5C for 1 hour",
+                    start_time=datetime(2023, 1, 1, 8, 0, 0),
+                ),
+                pybamm.step.string(
+                    "Rest for 1 hour", start_time=datetime(2023, 1, 1, 10, 0, 0)
+                ),
+            ]
+        )
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            experiment=experiment,
+            solver=pybamm.IDAKLUSolver(),
+            experiment_model_mode="legacy",
+        )
+
+        sol = sim.solve(calc_esoh=False)
+
+        assert not sim._experiment_uses_unified_model
+        assert "Rest for padding" in sim.steps_to_built_models
+        assert sim._experiment_includes_padding_rest is False
+        assert sim.solution is sol
+        assert sol["Time [s]"].entries[-1] == 10800
+        assert sim.model_state_mappers
+        assert sim._compiled_model_state_mappers
+        rest_model = sim.steps_to_built_models["Rest for padding"]
+        step_models = [
+            sim.steps_to_built_models[step.basic_repr()]
+            for step in sim.experiment.steps
+        ]
+        assert any(
+            previous is rest_model or next_model is rest_model
+            for previous, next_model in sim.model_state_mappers
+        )
+        assert any(
+            (step_model, rest_model) in sim._compiled_model_state_mappers
+            or (rest_model, step_model) in sim._compiled_model_state_mappers
+            for step_model in step_models
+        )
+
+    def test_decode_combined_step_termination_handles_none_events_and_missing_t_event(
+        self,
+    ):
+        def neg_stoich_cutoff(variables):
+            return variables["Negative electrode stoichiometry"] - 0.5
+
+        custom_termination = pybamm.step.CustomTermination(
+            name="Negative stoichiometry cut-off", event_function=neg_stoich_cutoff
+        )
+        experiment = pybamm.Experiment(
+            [pybamm.step.c_rate(1, termination=custom_termination)]
+        )
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            experiment=experiment,
+            experiment_model_mode="unified",
+        )
+        sol = sim.solve(calc_esoh=False)
+
+        actual_step_solution = sol.cycles[0].steps[0]
+
+        class StepSolutionProxy:
+            def __init__(self, source):
+                self.source = source
+                self.termination = f"event: {sim._combined_step_termination_event_name}"
+                self.t_event = None
+                self.y_event = None
+                self.t = source.t
+                self.y = source.y
+                self.all_inputs = source.all_inputs
+
+            def __getitem__(self, key):
+                return self.source[key]
+
+        step_solution = StepSolutionProxy(actual_step_solution)
+
+        step = SimpleNamespace(
+            direction="rest",
+            termination=[pybamm.step.VoltageTermination(4.2), custom_termination],
+        )
+        decoded = sim._decode_combined_step_termination(
+            step_solution,
+            step,
+            sim._built_experiment_model,
+            step_solution.all_inputs[0],
+        )
+
+        assert decoded == "event: Negative stoichiometry cut-off [experiment]"
+
+    def test_decode_combined_step_termination_returns_original_when_no_events_match(
+        self,
+    ):
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            experiment=pybamm.Experiment(["Rest for 10 seconds"]),
+            experiment_model_mode="unified",
+        )
+        sim.build_for_experiment()
+        step_solution = pybamm.EmptySolution()
+        step_solution.termination = (
+            f"event: {sim._combined_step_termination_event_name}"
+        )
+        step = SimpleNamespace(
+            direction="rest", termination=[pybamm.step.VoltageTermination(4.2)]
+        )
+
+        decoded = sim._decode_combined_step_termination(
+            step_solution,
+            step,
+            sim._built_experiment_model,
+            {},
+        )
+
+        assert decoded == step_solution.termination
 
     def test_starting_solution(self):
         model = pybamm.lithium_ion.SPM()
