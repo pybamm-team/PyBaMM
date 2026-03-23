@@ -327,6 +327,14 @@ class Simulation:
         for step in self.experiment.steps:
             if step.is_drive_cycle:
                 return ["drive-cycle experiment steps are not yet supported"]
+            if isinstance(step, pybamm.step.BaseStep) and not isinstance(
+                step,
+                (
+                    pybamm.step.BaseStepExplicit,
+                    pybamm.step.BaseStepImplicit,
+                ),
+            ):
+                return [f"unsupported experiment step type '{type(step).__name__}'"]
             if (
                 isinstance(step, pybamm.step.CustomStepImplicit)
                 and step.control != "algebraic"
@@ -490,6 +498,32 @@ class Simulation:
                 )
             )
         return pybamm.NumpyConcatenation(*equations)
+
+    def _build_experiment_step_inputs(
+        self,
+        user_inputs,
+        step,
+        start_time,
+        active_weight_name=None,
+        include_temperature=True,
+    ):
+        temperature = (
+            step.temperature or self._parameter_values["Ambient temperature [K]"]
+        )
+        if self._experiment_uses_unified_model:
+            return self._build_unified_experiment_inputs(
+                user_inputs,
+                active_weight_name,
+                start_time,
+                temperature,
+            )
+        inputs = {
+            **user_inputs,
+            "start time": start_time,
+        }
+        if include_temperature:
+            inputs["Ambient temperature [K]"] = temperature
+        return inputs
 
     def _build_unified_experiment_inputs(
         self, user_inputs, active_weight_name, start_time, temperature
@@ -1392,23 +1426,13 @@ class Simulation:
                         # logs["step operating conditions"] = "Initial rest for padding"
                         # callbacks.on_step_start(logs)
 
-                        temperature = (
-                            step.temperature
-                            or self._parameter_values["Ambient temperature [K]"]
+                        inputs = self._build_experiment_step_inputs(
+                            user_inputs,
+                            step,
+                            current_solution.t[-1],
+                            pybamm.step.Rest.padding_weight_input_name(),
                         )
-                        if self._experiment_uses_unified_model:
-                            inputs = self._build_unified_experiment_inputs(
-                                user_inputs,
-                                pybamm.step.Rest.padding_weight_input_name(),
-                                current_solution.t[-1],
-                                temperature,
-                            )
-                        else:
-                            inputs = {
-                                **user_inputs,
-                                "Ambient temperature [K]": temperature,
-                                "start time": current_solution.t[-1],
-                            }
+
                         steps = current_solution.cycles[-1].steps
                         step_solution = current_solution.cycles[-1].steps[-1]
 
@@ -1511,22 +1535,19 @@ class Simulation:
                     logs["step duration"] = step.duration
                     callbacks.on_step_start(logs)
 
+                    active_weight_name = None
                     if self._experiment_uses_unified_model:
-                        temperature = (
-                            step.temperature
-                            or self._parameter_values["Ambient temperature [K]"]
-                        )
-                        inputs = self._build_unified_experiment_inputs(
-                            user_inputs,
-                            self._experiment_step_weight_input_names[idx],
-                            start_time,
-                            temperature,
-                        )
-                    else:
-                        inputs = {
-                            **user_inputs,
-                            "start time": start_time,
-                        }
+                        active_weight_name = self._experiment_step_weight_input_names[
+                            idx
+                        ]
+                    inputs = self._build_experiment_step_inputs(
+                        user_inputs,
+                        step,
+                        start_time,
+                        active_weight_name,
+                        include_temperature=self._experiment_uses_unified_model,
+                    )
+
                     # Make sure we take at least 2 timesteps
                     t_eval, t_interp_processed = step.setup_timestepping(
                         solver, dt, t_interp
@@ -1588,23 +1609,12 @@ class Simulation:
                             logs["step operating conditions"] = "Rest for padding"
                             callbacks.on_step_start(logs)
 
-                            temperature = (
-                                step.temperature
-                                or self._parameter_values["Ambient temperature [K]"]
+                            inputs = self._build_experiment_step_inputs(
+                                user_inputs,
+                                step,
+                                step_solution.t[-1],
+                                pybamm.step.Rest.padding_weight_input_name(),
                             )
-                            if self._experiment_uses_unified_model:
-                                inputs = self._build_unified_experiment_inputs(
-                                    user_inputs,
-                                    pybamm.step.Rest.padding_weight_input_name(),
-                                    step_solution.t[-1],
-                                    temperature,
-                                )
-                            else:
-                                inputs = {
-                                    **user_inputs,
-                                    "Ambient temperature [K]": temperature,
-                                    "start time": step_solution.t[-1],
-                                }
 
                             step_solution_with_rest = self.run_padding_rest(
                                 kwargs, rest_time, step_solution, inputs=inputs
