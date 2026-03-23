@@ -362,6 +362,38 @@ class TestSimulationExperiment:
             event.name for event in model_I.events
         ]
 
+    def test_build_for_experiment_legacy_processes_each_unique_step(self):
+        experiment = pybamm.Experiment(
+            [
+                "Discharge at C/20 for 1 hour",
+                "Charge at 1 A for 10 seconds",
+                "Discharge at C/20 for 1 hour",
+            ]
+        )
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            experiment=experiment,
+            solver=pybamm.IDAKLUSolver(),
+            experiment_model_mode="legacy",
+        )
+
+        sim.build_for_experiment()
+
+        assert not sim._experiment_uses_unified_model
+        assert set(sim.steps_to_built_models) == set(
+            sim.experiment_unique_steps_to_model
+        )
+        assert set(sim.steps_to_built_solvers) == set(
+            sim.experiment_unique_steps_to_model
+        )
+        assert all(model.is_discretised for model in sim.steps_to_built_models.values())
+        assert all(
+            solver is not sim.solver for solver in sim.steps_to_built_solvers.values()
+        )
+        assert len(
+            {id(solver) for solver in sim.steps_to_built_solvers.values()}
+        ) == len(sim.steps_to_built_solvers)
+
     def test_set_up_unified_mode_rejects_all_explicit_ode_solver(self):
         experiment = pybamm.Experiment(
             [
