@@ -323,7 +323,6 @@ class Simulation:
         if self.experiment is None:
             return ["no experiment is attached to the simulation"]
 
-        has_implicit_step = False
         for step in self.experiment.steps:
             if step.is_drive_cycle:
                 return ["drive-cycle experiment steps are not yet supported"]
@@ -341,14 +340,8 @@ class Simulation:
             ):
                 return ["CustomStepImplicit with differential control is not supported"]
 
-            if step.is_implicit():
-                has_implicit_step = True
-
-        if not has_implicit_step and self._solver.ode_solver:
-            return [
-                "all-explicit experiments require a DAE-capable solver when using "
-                "the unified experiment model"
-            ]
+        if self._solver.ode_solver:
+            return ["unified experiment model requires a DAE-capable solver"]
 
         return []
 
@@ -427,7 +420,7 @@ class Simulation:
 
         processed_model = new_parameter_values.process_model(
             new_model,
-            inplace=False,
+            inplace=True,
             delayed_variable_processing=True,
         )
         self.experiment_unique_steps_to_model = {
@@ -659,9 +652,9 @@ class Simulation:
         # input parameters
         restrict_list = {"Initial temperature [K]", "Ambient temperature [K]"}
         for step in self.experiment.steps:
-            if issubclass(step.__class__, pybamm.experiment.step.BaseStepImplicit):
+            if step.is_implicit():
                 restrict_list.update(step.get_parameter_values([]).keys())
-            elif issubclass(step.__class__, pybamm.experiment.step.BaseStepExplicit):
+            else:
                 restrict_list.update(["Current function [A]"])
         for key in restrict_list:
             if key in parameter_values.keys() and isinstance(
@@ -705,19 +698,25 @@ class Simulation:
             parameter_values["Initial temperature [K]"] = init_temp
 
         blockers = self._get_unified_experiment_model_blockers()
-        if self._experiment_model_mode == "unified":
-            if blockers:
-                raise pybamm.ModelError(
-                    "Cannot build a unified experiment model: "
-                    + "; ".join(blockers)
-                    + ". Use 'legacy'/'per-step' mode or a compatible solver/experiment."
-                )
+        raise_model_error = blockers and self._experiment_model_mode == "unified"
+        use_unified = not blockers and self._experiment_model_mode in {
+            "auto",
+            "unified",
+        }
+        fallback_to_per_step = blockers and self._experiment_model_mode == "auto"
+
+        if raise_model_error:
+            raise pybamm.ModelError(
+                "Cannot build a unified experiment model: "
+                + "; ".join(blockers)
+                + ". Use 'legacy'/'per-step' mode or a compatible solver/experiment."
+            )
+
+        if use_unified:
             self._set_up_unified_experiment_model(parameter_values)
             return
-        if self._experiment_model_mode == "auto" and not blockers:
-            self._set_up_unified_experiment_model(parameter_values)
-            return
-        if self._experiment_model_mode == "auto" and blockers:
+
+        if fallback_to_per_step:
             pybamm.logger.debug(
                 "Falling back to per-step experiment models: %s",
                 "; ".join(blockers),
