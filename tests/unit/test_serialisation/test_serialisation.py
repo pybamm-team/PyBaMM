@@ -2814,6 +2814,7 @@ class TestExperimentSerialization:
         assert config["cycles"][0][0]["type"] == "rest"
         assert "value" not in config["cycles"][0][0]
         exp2 = pybamm.Experiment.from_config(config)
+        assert isinstance(exp2.steps[0], pybamm.step.Rest)
         assert exp2.steps[0].duration == 1800
 
     def test_multi_cycle_round_trip(self):

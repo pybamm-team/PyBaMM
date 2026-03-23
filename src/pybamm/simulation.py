@@ -292,10 +292,6 @@ class Simulation:
         return f"Experiment step weight {step_index}"
 
     @staticmethod
-    def _experiment_padding_rest_weight_name():
-        return "Experiment step weight padding rest"
-
-    @staticmethod
     def _experiment_time_stop_termination():
         return "experiment time limit reached"
 
@@ -329,21 +325,18 @@ class Simulation:
 
         has_implicit_step = False
         for step in self.experiment.steps:
-            if getattr(step, "is_drive_cycle", False):
+            if step.is_drive_cycle:
                 return ["drive-cycle experiment steps are not yet supported"]
             if (
                 isinstance(step, pybamm.step.CustomStepImplicit)
                 and step.control != "algebraic"
             ):
                 return ["CustomStepImplicit with differential control is not supported"]
-            if issubclass(step.__class__, pybamm.experiment.step.BaseStepImplicit):
-                has_implicit_step = True
-            elif not issubclass(
-                step.__class__, pybamm.experiment.step.BaseStepExplicit
-            ):
-                return [f"unsupported experiment step type '{step.__class__.__name__}'"]
 
-        if not has_implicit_step and getattr(self._solver, "ode_solver", False):
+            if step.is_implicit():
+                has_implicit_step = True
+
+        if not has_implicit_step and self._solver.ode_solver:
             return [
                 "all-explicit experiments require a DAE-capable solver when using "
                 "the unified experiment model"
@@ -381,10 +374,11 @@ class Simulation:
             )
         ]
         if self._experiment_includes_padding_rest:
+            padding_rest_step = pybamm.step.Rest(duration=1)
             step_control_builders.append(
                 (
-                    self._experiment_padding_rest_weight_name(),
-                    lambda variables: variables["Current [A]"],
+                    pybamm.step.Rest.padding_weight_input_name(),
+                    padding_rest_step.get_control_residual,
                 )
             )
         submodel = pybamm.external_circuit.ExperimentFunctionControl(
@@ -413,7 +407,7 @@ class Simulation:
             ) * step.get_combined_termination_expression(variables)
         if self._experiment_includes_padding_rest:
             combined_termination_expression += pybamm.InputParameter(
-                self._experiment_padding_rest_weight_name()
+                pybamm.step.Rest.padding_weight_input_name()
             )
         new_model.events.append(
             pybamm.Event(
@@ -480,7 +474,7 @@ class Simulation:
 
         if self._experiment_includes_padding_rest:
             current_guess += pybamm.InputParameter(
-                self._experiment_padding_rest_weight_name()
+                pybamm.step.Rest.padding_weight_input_name()
             ) * pybamm.Scalar(0)
 
         equations = []
@@ -508,7 +502,7 @@ class Simulation:
         for weight_name in self._experiment_step_weight_input_names:
             inputs[weight_name] = 1 if weight_name == active_weight_name else 0
         if self._experiment_includes_padding_rest:
-            padding_weight_name = self._experiment_padding_rest_weight_name()
+            padding_weight_name = pybamm.step.Rest.padding_weight_input_name()
             inputs[padding_weight_name] = (
                 1 if padding_weight_name == active_weight_name else 0
             )
@@ -714,7 +708,7 @@ class Simulation:
         # Set up rest model if experiment has start times
         if self.experiment.initial_start_time:
             # duration doesn't matter, we just need the model
-            rest_step = pybamm.step.rest(duration=1)
+            rest_step = pybamm.step.Rest(duration=1)
             # Change ambient temperature to be an input, which will be changed at
             # solve time
             parameter_values["Ambient temperature [K]"] = "[input]"
@@ -1405,7 +1399,7 @@ class Simulation:
                         if self._experiment_uses_unified_model:
                             inputs = self._build_unified_experiment_inputs(
                                 user_inputs,
-                                self._experiment_padding_rest_weight_name(),
+                                pybamm.step.Rest.padding_weight_input_name(),
                                 current_solution.t[-1],
                                 temperature,
                             )
@@ -1601,7 +1595,7 @@ class Simulation:
                             if self._experiment_uses_unified_model:
                                 inputs = self._build_unified_experiment_inputs(
                                     user_inputs,
-                                    self._experiment_padding_rest_weight_name(),
+                                    pybamm.step.Rest.padding_weight_input_name(),
                                     step_solution.t[-1],
                                     temperature,
                                 )

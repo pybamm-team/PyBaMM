@@ -65,7 +65,7 @@ class TestExperimentSteps:
         assert voltage.value == 1
 
         rest = pybamm.step.rest()
-        assert isinstance(rest, pybamm.step.Current)
+        assert isinstance(rest, pybamm.step.Rest)
         assert rest.value == 0
 
         power = pybamm.step.power(1)
@@ -139,7 +139,7 @@ class TestExperimentSteps:
             },
             {
                 "value": 0,
-                "type": "Current",
+                "type": "Rest",
                 "duration": 600.0,
                 "termination": [],
             },

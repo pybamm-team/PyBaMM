@@ -266,17 +266,17 @@ class TestSimulationExperiment:
         assert step_inputs["start time"] == 123.0
         assert step_inputs["Experiment step weight 0"] == 0
         assert step_inputs["Experiment step weight 1"] == 1
-        assert step_inputs[sim._experiment_padding_rest_weight_name()] == 0
+        assert step_inputs[pybamm.step.Rest.padding_weight_input_name()] == 0
 
         padding_inputs = sim._build_unified_experiment_inputs(
             {},
-            sim._experiment_padding_rest_weight_name(),
+            pybamm.step.Rest.padding_weight_input_name(),
             start_time=0.0,
             temperature=300.0,
         )
         assert padding_inputs["Experiment step weight 0"] == 0
         assert padding_inputs["Experiment step weight 1"] == 0
-        assert padding_inputs[sim._experiment_padding_rest_weight_name()] == 1
+        assert padding_inputs[pybamm.step.Rest.padding_weight_input_name()] == 1
 
     def test_setup_experiment_string_or_list(self):
         model = pybamm.lithium_ion.SPM()

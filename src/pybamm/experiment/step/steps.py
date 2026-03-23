@@ -77,7 +77,7 @@ def string(text, **kwargs):
 
     # read remaining instruction
     if text.startswith("Rest"):
-        step_class = Current
+        step_class = Rest
         value = 0
     elif text.startswith("Run"):
         raise ValueError(
@@ -142,6 +142,21 @@ def current(value, **kwargs):
     Current-controlled step, see :class:`pybamm.step.Current`.
     """
     return Current(value, **kwargs)
+
+
+class Rest(Current):
+    """
+    Rest step, implemented as a zero-current explicit step.
+    """
+
+    def __init__(self, value=0, **kwargs):
+        if value != 0:
+            raise ValueError("Rest steps must have a current value of 0")
+        super().__init__(0, **kwargs)
+
+    @staticmethod
+    def padding_weight_input_name():
+        return "Experiment step weight padding rest"
 
 
 class CRate(BaseStepExplicit):
@@ -267,10 +282,9 @@ def resistance(value, **kwargs):
 
 def rest(duration=None, **kwargs):
     """
-    Create a rest step, equivalent to a constant current step with value 0
-    (see :meth:`pybamm.step.current`).
+    Create a rest step (see :class:`pybamm.step.Rest`).
     """
-    return Current(0, duration=duration, **kwargs)
+    return Rest(duration=duration, **kwargs)
 
 
 class CustomStepExplicit(BaseStepExplicit):

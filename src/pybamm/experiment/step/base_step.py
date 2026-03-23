@@ -206,6 +206,10 @@ class BaseStep:
         self.next_start_time = None
         self.end_time = None
 
+    @staticmethod
+    def is_implicit() -> bool:
+        return False
+
     def copy(self):
         """
         Return a copy of the step.
@@ -524,6 +528,10 @@ class BaseStepExplicit(BaseStep):
 class BaseStepImplicit(BaseStep):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+    @staticmethod
+    def is_implicit():
+        return True
 
     def get_parameter_values(self, variables):
         return {}
