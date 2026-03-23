@@ -7,7 +7,7 @@ GitHub, PyPI, and conda-forge by the maintainers.
 
 1. Create and checkout a new release branch (e.g., `release/vYY.MM.0`) from the `main` branch. The year and month are taken from the date of the release. The final number represents the bug fix version, which is zero for a new major release.
 
-2. Run `scripts/update_version.py` to update `CITATION.cff` and `CHANGELOG.md`, then create a PR from `release/vYY.MM.0` to `main`.
+2. Run `python scripts/update_version.py YY.MM.0` to update `CITATION.cff` and `CHANGELOG.md`, then create a PR from `release/vYY.MM.0` to `main`.
 
 3. Ensure CI passes on the PR, then merge it.
 
@@ -28,7 +28,7 @@ If a new bugfix release is required after the release of `vYY.MM.{x-1}`:
    git cherry-pick -x <commit-sha-from-main>
    ```
 
-4. Run `scripts/update_version.py` to update `CITATION.cff` and `CHANGELOG.md`, then commit the changes.
+4. Run `python scripts/update_version.py YY.MM.x` to update `CITATION.cff` and `CHANGELOG.md`, then commit the changes.
 
 5. Create a new GitHub release with the tag `vYY.MM.x` from the `release/vYY.MM.x` branch (not `main`) and a description copied from `CHANGELOG.md`. This ensures the release contains only the bugfixes, not all changes on `main`. This will automatically trigger `publish_pypi.yml` and create a _release_ on PyPI.
 
