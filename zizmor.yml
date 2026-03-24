@@ -1,4 +1,6 @@
 rules:
+  # These workflows use repo-level secrets without GitHub Environments.
+  # Environments add unnecessary friction for these non-deployment workflows.
   secrets-outside-env:
     ignore:
       - docker.yml
