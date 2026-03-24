@@ -132,7 +132,8 @@ class TestSimulation:
             "experiment_unique_steps_to_model",
             "_experiment_uses_unified_model",
             "_experiment_unified_model_key",
-            "_experiment_step_weight_input_names",
+            "_experiment_step_indices",
+            "_experiment_padding_rest_index",
             "_experiment_includes_padding_rest",
             "_combined_step_termination_event_name",
             "_experiment_model_mode",
@@ -150,7 +151,9 @@ class TestSimulation:
         assert restored.experiment_unique_steps_to_model is None
         assert restored._experiment_uses_unified_model is False
         assert restored._experiment_unified_model_key == "Unified experiment"
-        assert restored._experiment_step_weight_input_names == []
+        assert restored._experiment_step_index_input_name() == "Experiment step index"
+        assert restored._experiment_step_indices == []
+        assert restored._experiment_padding_rest_index is None
         assert restored._experiment_includes_padding_rest is False
         assert (
             restored._combined_step_termination_event_name

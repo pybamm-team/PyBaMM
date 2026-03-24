@@ -231,7 +231,7 @@ class TestSimulationExperiment:
         assert "Minimum voltage [V]" in event_names
         assert "Maximum voltage [V]" in event_names
 
-    def test_build_unified_experiment_inputs_uses_expected_one_hot_names(self):
+    def test_build_unified_experiment_inputs_uses_expected_step_index(self):
         start = datetime(2024, 1, 1, 12)
         experiment = pybamm.Experiment(
             [
@@ -249,34 +249,29 @@ class TestSimulationExperiment:
         )
         sim.build_for_experiment()
 
-        assert sim._experiment_step_weight_input_names == [
-            "Experiment step weight 0",
-            "Experiment step weight 1",
-        ]
+        assert sim._experiment_step_index_input_name() == "Experiment step index"
+        assert sim._experiment_step_indices == [1, 2]
+        assert sim._experiment_padding_rest_index == 3
         assert sim._experiment_includes_padding_rest
 
         step_inputs = sim._build_unified_experiment_inputs(
             {"user input": 7},
-            "Experiment step weight 1",
+            2,
             start_time=123.0,
             temperature=298.15,
         )
         assert step_inputs["user input"] == 7
         assert step_inputs["Ambient temperature [K]"] == 298.15
         assert step_inputs["start time"] == 123.0
-        assert step_inputs["Experiment step weight 0"] == 0
-        assert step_inputs["Experiment step weight 1"] == 1
-        assert step_inputs[pybamm.step.Rest.padding_weight_input_name()] == 0
+        assert step_inputs["Experiment step index"] == 2
 
         padding_inputs = sim._build_unified_experiment_inputs(
             {},
-            pybamm.step.Rest.padding_weight_input_name(),
+            sim._experiment_padding_rest_index,
             start_time=0.0,
             temperature=300.0,
         )
-        assert padding_inputs["Experiment step weight 0"] == 0
-        assert padding_inputs["Experiment step weight 1"] == 0
-        assert padding_inputs[pybamm.step.Rest.padding_weight_input_name()] == 1
+        assert padding_inputs["Experiment step index"] == 3
 
     def test_setup_experiment_string_or_list(self):
         model = pybamm.lithium_ion.SPM()
@@ -519,7 +514,7 @@ class TestSimulationExperiment:
                 mapper = sim.model_state_mappers[(model_0, model_1)]
             assert mapper.shape[0] == model_1.len_rhs_and_alg
 
-    def test_unified_state_mapper_selects_control_initial_guess_with_one_hot_weights(
+    def test_unified_state_mapper_selects_control_initial_guess_with_step_index(
         self,
     ):
         experiment = pybamm.Experiment(
@@ -550,10 +545,10 @@ class TestSimulationExperiment:
         y_from = np.zeros(built_model.len_rhs_and_alg)
         y_from[current_slice] = (0.3 - current_reference) / current_scale
 
-        def mapped_current(active_weight_name):
+        def mapped_current(active_step_index):
             inputs = sim._build_unified_experiment_inputs(
                 {},
-                active_weight_name,
+                active_step_index,
                 start_time=0.0,
                 temperature=sim._parameter_values["Ambient temperature [K]"],
             )
@@ -563,15 +558,57 @@ class TestSimulationExperiment:
             mapped_state = float(mapped[current_slice].full().reshape(-1)[0])
             return current_reference + current_scale * mapped_state
 
+        np.testing.assert_allclose(mapped_current(sim._experiment_step_indices[0]), 1.0)
+        np.testing.assert_allclose(mapped_current(sim._experiment_step_indices[1]), 0.3)
         np.testing.assert_allclose(
-            mapped_current(sim._experiment_step_weight_input_names[0]), 1.0
+            mapped_current(sim._experiment_step_indices[2]), -2.0
         )
-        np.testing.assert_allclose(
-            mapped_current(sim._experiment_step_weight_input_names[1]), 0.3
+        assert sim._experiment_padding_rest_index is None
+
+    def test_unified_state_mapper_uses_zero_current_for_padding_rest(self):
+        start = datetime(2024, 1, 1, 12)
+        experiment = pybamm.Experiment(
+            [
+                (
+                    pybamm.step.current(1.0, duration=600, start_time=start),
+                    pybamm.step.voltage(4.1, duration=600),
+                )
+            ]
         )
-        np.testing.assert_allclose(
-            mapped_current(sim._experiment_step_weight_input_names[2]), -2.0
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            experiment=experiment,
+            solver=pybamm.CasadiSolver(),
+            experiment_model_mode="unified",
         )
+        sim.build_for_experiment()
+
+        built_model = sim._built_experiment_model
+        mapper = sim._compiled_model_state_mappers[(built_model, built_model)][0]
+        current_variable = next(
+            variable
+            for variable in built_model.y_slices
+            if variable.name == "Current variable [A]"
+        )
+        current_slice = built_model.y_slices[current_variable][0]
+        current_scale = float(current_variable.scale.evaluate())
+        current_reference = float(current_variable.reference.evaluate())
+        y_from = np.zeros(built_model.len_rhs_and_alg)
+        y_from[current_slice] = (0.3 - current_reference) / current_scale
+
+        inputs = sim._build_unified_experiment_inputs(
+            {},
+            sim._experiment_padding_rest_index,
+            start_time=0.0,
+            temperature=sim._parameter_values["Ambient temperature [K]"],
+        )
+        ordered_inputs = pybamm.BaseSolver._set_up_model_inputs(built_model, inputs)
+        p_stacked = casadi.vertcat(*ordered_inputs.values())
+        mapped = mapper(0.0, y_from, p_stacked)
+        mapped_state = float(mapped[current_slice].full().reshape(-1)[0])
+        mapped_current = current_reference + current_scale * mapped_state
+
+        np.testing.assert_allclose(mapped_current, 0.0)
 
     def test_run_experiment(self):
         s = pybamm.step.string

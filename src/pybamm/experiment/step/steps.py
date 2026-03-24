@@ -154,10 +154,6 @@ class Rest(Current):
             raise ValueError("Rest steps must have a current value of 0")
         super().__init__(0, **kwargs)
 
-    @staticmethod
-    def padding_weight_input_name():
-        return "Experiment step weight padding rest"
-
 
 class CRate(BaseStepExplicit):
     """

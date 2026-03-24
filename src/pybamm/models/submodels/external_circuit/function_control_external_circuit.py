@@ -141,22 +141,24 @@ class ResistanceFunctionControl(FunctionControl):
 
 
 class ExperimentFunctionControl(FunctionControl):
-    """External circuit with one weighted control residual shared across steps."""
+    """External circuit with one conditional control residual shared across steps."""
 
-    def __init__(self, param, options, step_control_builders):
+    def __init__(self, param, options, step_index_input_name, step_control_builders):
+        self.step_index_input_name = step_index_input_name
         self.step_control_builders = step_control_builders
         super().__init__(
             param,
-            self.weighted_control_residual,
+            self.conditional_control_residual,
             options,
             control="algebraic",
         )
 
-    def weighted_control_residual(self, variables):
-        expression = pybamm.Scalar(0)
-        for weight_name, builder in self.step_control_builders:
-            expression += pybamm.InputParameter(weight_name) * builder(variables)
-        return expression
+    def conditional_control_residual(self, variables):
+        selector = pybamm.InputParameter(self.step_index_input_name)
+        return pybamm.Conditional(
+            selector,
+            *[builder(variables) for builder in self.step_control_builders],
+        )
 
 
 class CCCVFunctionControl(FunctionControl):
