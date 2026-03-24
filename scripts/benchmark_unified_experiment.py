@@ -23,6 +23,7 @@ class Scenario:
     description: str
     experiment_factory: callable
     solve_kwargs: dict
+    solve_inputs_list: tuple[dict, ...] = ({}, {}, {})
 
 
 def make_event_driven_cccv_experiment():
@@ -62,6 +63,24 @@ def make_start_time_padding_experiment():
     )
 
 
+def make_input_parameter_repeat_experiment():
+    s = pybamm.step.string
+    return pybamm.Experiment(
+        [
+            (
+                pybamm.step.current(
+                    pybamm.InputParameter("I_app"),
+                    duration=20 * 60,
+                ),
+                s("Charge at 1 A for 10 minutes"),
+                s("Hold at 4.1 V for 10 minutes"),
+                "Discharge at 2 W for 10 minutes",
+                "Discharge at 4 Ohm for 10 minutes",
+            )
+        ]
+    )
+
+
 SCENARIOS = [
     Scenario(
         name="event_driven_cccv",
@@ -81,10 +100,25 @@ SCENARIOS = [
         experiment_factory=make_start_time_padding_experiment,
         solve_kwargs={"calc_esoh": False},
     ),
+    Scenario(
+        name="input_parameter_repeated_solves",
+        description=(
+            "Mixed-control cycle repeated on one built simulation with varying "
+            "input current in the first step"
+        ),
+        experiment_factory=make_input_parameter_repeat_experiment,
+        solve_kwargs={"calc_esoh": False},
+        solve_inputs_list=(
+            {"I_app": 0.5},
+            {"I_app": 1.0},
+            {"I_app": 1.5},
+        ),
+    ),
 ]
 
 MODEL_FACTORIES = {
     "SPM": pybamm.lithium_ion.SPM,
+    "SPMe": pybamm.lithium_ion.SPMe,
     "DFN": pybamm.lithium_ion.DFN,
 }
 
@@ -167,16 +201,27 @@ def run_case(model_name, scenario, mode):
     t0 = time.perf_counter()
     sim.build_for_experiment()
     t1 = time.perf_counter()
-    solution = sim.solve(**scenario.solve_kwargs)
+    solutions = []
+    solve_step_s = []
+    for solve_inputs in scenario.solve_inputs_list:
+        solve_kwargs = dict(scenario.solve_kwargs)
+        if solve_inputs:
+            solve_kwargs["inputs"] = solve_inputs
+        solve_t0 = time.perf_counter()
+        solutions.append(sim.solve(**solve_kwargs))
+        solve_step_s.append(time.perf_counter() - solve_t0)
     t2 = time.perf_counter()
+    solution = solutions[-1]
 
     return {
         "build_s": t1 - t0,
-        "solve_s": t2 - t1,
+        "solve_s": sum(solve_step_s),
+        "solve_step_s": solve_step_s,
         "total_s": t2 - t0,
+        "solve_count": len(solutions),
         "termination": solution.termination,
         "uses_unified_model": getattr(sim, "_experiment_uses_unified_model", False),
-        "solution": solution,
+        "solutions": solutions,
         "status": "ok",
     }
 
@@ -254,7 +299,15 @@ def assert_solutions_match(legacy_solution, unified_solution):
 def verify_scenario_pair(model_name, scenario):
     legacy_result = run_case(model_name, scenario, "legacy")
     unified_result = run_case(model_name, scenario, "unified")
-    assert_solutions_match(legacy_result["solution"], unified_result["solution"])
+    if len(legacy_result["solutions"]) != len(unified_result["solutions"]):
+        _raise_mismatch(
+            "number of repeated solves differs: "
+            f"{len(legacy_result['solutions'])} != {len(unified_result['solutions'])}"
+        )
+    for legacy_solution, unified_solution in zip(
+        legacy_result["solutions"], unified_result["solutions"], strict=True
+    ):
+        assert_solutions_match(legacy_solution, unified_solution)
     gc.collect()
 
 
@@ -266,7 +319,9 @@ def unsupported_result(model_name, scenario, mode, reason):
         "mode": mode,
         "build_s": None,
         "solve_s": None,
+        "solve_step_s": [None] * len(scenario.solve_inputs_list),
         "total_s": None,
+        "solve_count": len(scenario.solve_inputs_list),
         "termination": "n/a",
         "uses_unified_model": False,
         "status": reason,
@@ -278,6 +333,7 @@ def main():
     scenarios = [scenario for scenario in SCENARIOS if scenario.name in args.scenarios]
     results = []
     supported_modes = [mode for mode in MODES if mode_is_supported(mode)]
+    max_solve_count = max(len(scenario.solve_inputs_list) for scenario in scenarios)
 
     print(
         f"Running {len(scenarios)} scenario(s) across {len(args.models)} model(s), "
@@ -320,7 +376,17 @@ def main():
                         "mode": mode,
                         "build_s": median([sample["build_s"] for sample in samples]),
                         "solve_s": median([sample["solve_s"] for sample in samples]),
+                        "solve_step_s": [
+                            median(
+                                [
+                                    sample["solve_step_s"][solve_index]
+                                    for sample in samples
+                                ]
+                            )
+                            for solve_index in range(samples[-1]["solve_count"])
+                        ],
                         "total_s": median([sample["total_s"] for sample in samples]),
+                        "solve_count": samples[-1]["solve_count"],
                         "termination": samples[-1]["termination"],
                         "uses_unified_model": samples[-1]["uses_unified_model"],
                         "status": "ok",
@@ -332,15 +398,35 @@ def main():
             json.dump(results, handle, indent=2)
 
     print("\n## Raw Results")
-    print(
-        "| Model | Scenario | Mode | Build (s) | Solve (s) | Total (s) | Termination |"
+    solve_headers = " | ".join(
+        f"Solve {solve_index} (s)" for solve_index in range(1, max_solve_count + 1)
     )
-    print("| --- | --- | --- | ---: | ---: | ---: | --- |")
+    print(
+        "| Model | Scenario | Mode | Solves | Build (s) | "
+        f"{solve_headers} | Solve Total (s) | Total (s) | Termination |"
+    )
+    print(
+        "| --- | --- | --- | ---: | ---: | "
+        + " | ".join(["---:"] * max_solve_count)
+        + " | ---: | ---: | --- |"
+    )
     for row in results:
+        solve_step_displays = [
+            (
+                format_seconds(row["solve_step_s"][solve_index])
+                if solve_index < len(row["solve_step_s"])
+                and row["solve_step_s"][solve_index] is not None
+                else "n/a"
+            )
+            for solve_index in range(max_solve_count)
+        ]
         print(
             "| "
             f"{row['model']} | {row['scenario']} | {row['mode']} | "
+            f"{row['solve_count']} | "
             f"{format_seconds(row['build_s']) if row['build_s'] is not None else 'n/a'} | "
+            + " | ".join(solve_step_displays)
+            + " | "
             f"{format_seconds(row['solve_s']) if row['solve_s'] is not None else 'n/a'} | "
             f"{format_seconds(row['total_s']) if row['total_s'] is not None else 'n/a'} | "
             f"{row['termination'] if row['status'] == 'ok' else row['status']} |"
