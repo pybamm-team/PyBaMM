@@ -67,6 +67,7 @@ jobs:
     name: Push and publish results
     needs: benchmarks
     runs-on: ubuntu-latest
+    environment: benchmarks
     permissions:
       contents: write
     steps:

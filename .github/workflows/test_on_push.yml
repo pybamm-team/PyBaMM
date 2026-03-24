@@ -42,6 +42,7 @@ jobs:
 
   run_unit_tests:
     runs-on: ${{ matrix.os }}
+    environment: codecov
     permissions:
       contents: read
 

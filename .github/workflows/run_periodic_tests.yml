@@ -24,6 +24,7 @@ concurrency:
 jobs:
   run_unit_integration_and_coverage_tests:
     runs-on: ${{ matrix.os }}
+    environment: codecov
     permissions:
       contents: read
 
