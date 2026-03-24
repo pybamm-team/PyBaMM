@@ -2024,7 +2024,8 @@ class TestSimulationExperiment:
         neg_stoich = sol["Negative electrode stoichiometry"].data
         assert neg_stoich[-1] == pytest.approx(0.5, abs=0.0001)
 
-    def test_simulation_changing_capacity_crate_steps(self):
+    @pytest.mark.parametrize("experiment_model_mode", ["legacy", "unified"])
+    def test_simulation_changing_capacity_crate_steps(self, experiment_model_mode):
         """Test that C-rate steps are correctly updated when capacity changes"""
         model = pybamm.lithium_ion.SPM()
         experiment = pybamm.Experiment(
@@ -2037,7 +2038,12 @@ class TestSimulationExperiment:
             ]
         )
         param = pybamm.ParameterValues("Chen2020")
-        sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
+        sim = pybamm.Simulation(
+            model,
+            experiment=experiment,
+            parameter_values=param,
+            experiment_model_mode=experiment_model_mode,
+        )
 
         # First solve
         sol1 = sim.solve(calc_esoh=False)
@@ -2073,14 +2079,22 @@ class TestSimulationExperiment:
         np.testing.assert_allclose(I_C2_2 / I_C2_1, 0.9, rtol=1e-2)
         np.testing.assert_allclose(I_1C_2 / I_1C_1, 0.9, rtol=1e-2)
 
-    def test_simulation_multiple_cycles_with_capacity_change(self):
+    @pytest.mark.parametrize("experiment_model_mode", ["legacy", "unified"])
+    def test_simulation_multiple_cycles_with_capacity_change(
+        self, experiment_model_mode
+    ):
         """Test capacity changes across multiple experiment cycles"""
         model = pybamm.lithium_ion.SPM()
         experiment = pybamm.Experiment(
             [("Discharge at 1C for 5 minutes", "Charge at 1C for 5 minutes")] * 2
         )
         param = pybamm.ParameterValues("Chen2020")
-        sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
+        sim = pybamm.Simulation(
+            model,
+            experiment=experiment,
+            parameter_values=param,
+            experiment_model_mode=experiment_model_mode,
+        )
 
         # First solve
         sol1 = sim.solve(calc_esoh=False)
@@ -2112,12 +2126,20 @@ class TestSimulationExperiment:
         np.testing.assert_allclose(I_discharge_cycle1_new, new_capacity, rtol=1e-2)
         np.testing.assert_allclose(I_discharge_cycle2_new, new_capacity, rtol=1e-2)
 
-    def test_simulation_logging_with_capacity_change(self, caplog):
+    @pytest.mark.parametrize("experiment_model_mode", ["legacy", "unified"])
+    def test_simulation_logging_with_capacity_change(
+        self, caplog, experiment_model_mode
+    ):
         """Test that capacity changes are logged appropriately"""
         model = pybamm.lithium_ion.SPM()
         experiment = pybamm.Experiment([("Discharge at 1C for 10 minutes",)])
         param = pybamm.ParameterValues("Chen2020")
-        sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
+        sim = pybamm.Simulation(
+            model,
+            experiment=experiment,
+            parameter_values=param,
+            experiment_model_mode=experiment_model_mode,
+        )
 
         # First solve
         sim.solve(calc_esoh=False)
