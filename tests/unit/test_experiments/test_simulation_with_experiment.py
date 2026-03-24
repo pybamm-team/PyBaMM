@@ -1168,6 +1168,12 @@ class TestSimulationExperiment:
             rtol=5e-2,
             equal_nan=True,
         )
+        sensitivity_keys = set(solutions[1]["Voltage [V]"].sensitivities)
+        assert input_param_name in sensitivity_keys
+        assert (
+            pybamm.Simulation._experiment_step_index_input_name()
+            not in sensitivity_keys
+        )
 
         # use finite difference to check sensitivities
         t = solutions[0].t

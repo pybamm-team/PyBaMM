@@ -53,6 +53,9 @@ class ProcessedVariable(BaseProcessedVariable):
         self.all_yps = solution.all_yps
         self.all_inputs = solution.all_inputs
         self.all_inputs_stacked = solution.all_inputs_stacked
+        self.sensitivity_names = [
+            name for name in solution._all_sensitivities.keys() if name != "all"
+        ]
 
         self.mesh = base_variables[0].mesh
         self.domain = base_variables[0].domain
@@ -419,21 +422,27 @@ class ProcessedVariable(BaseProcessedVariable):
         "Set up the sensitivity dictionary"
 
         all_S_var = []
-        for ts, ys, inputs_stacked, inputs, base_variable, dy_dp in zip(
+        for ts, ys, inputs, base_variable, dy_dp in zip(
             self.all_ts,
             self.all_ys,
-            self.all_inputs_stacked,
             self.all_inputs,
             self.base_variables,
             self.all_solution_sensitivities["all"],
             strict=True,
         ):
+            sensitivity_inputs = {
+                name: inputs[name] for name in self.sensitivity_names if name in inputs
+            }
+            sensitivity_inputs_stacked = casadi.vertcat(
+                *[sensitivity_inputs[name] for name in self.sensitivity_names]
+            )
+
             # Set up symbolic variables
             t_casadi = casadi.MX.sym("t")
             y_casadi = casadi.MX.sym("y", ys.shape[0])
             p_casadi = {
                 name: casadi.MX.sym(name, value.shape[0])
-                for name, value in inputs.items()
+                for name, value in sensitivity_inputs.items()
             }
 
             p_casadi_stacked = casadi.vertcat(*[p for p in p_casadi.values()])
@@ -452,13 +461,13 @@ class ProcessedVariable(BaseProcessedVariable):
             )
             dvar_dy_eval = casadi.diagcat(
                 *[
-                    dvar_dy_func(t, ys[:, idx], inputs_stacked)
+                    dvar_dy_func(t, ys[:, idx], sensitivity_inputs_stacked)
                     for idx, t in enumerate(ts)
                 ]
             )
             dvar_dp_eval = casadi.vertcat(
                 *[
-                    dvar_dp_func(t, ys[:, idx], inputs_stacked)
+                    dvar_dp_func(t, ys[:, idx], sensitivity_inputs_stacked)
                     for idx, t in enumerate(ts)
                 ]
             )
@@ -477,7 +486,7 @@ class ProcessedVariable(BaseProcessedVariable):
         sensitivities = {"all": S_var}
 
         # Add the individual sensitivity
-        for i, name in enumerate(self.all_inputs[0].keys()):
+        for i, name in enumerate(self.sensitivity_names):
             sensitivities[name] = S_var[:, i : i + 1].reshape(-1)
 
         # Save attribute
