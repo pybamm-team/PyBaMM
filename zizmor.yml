@@ -1,0 +1,9 @@
+rules:
+  secrets-outside-env:
+    ignore:
+      - docker.yml
+      - periodic_benchmarks.yml
+      - run_benchmarks_over_history.yml
+      - run_periodic_tests.yml
+      - test_on_push.yml
+      - validation_benchmarks.yml
