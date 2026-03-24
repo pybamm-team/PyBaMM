@@ -1,5 +1,5 @@
 #
-# Class for reaction driven porosity changes as a multiple of SEI/plating thicknesses
+# Class for reaction driven porosity changes as a multiple of SEI/plating concentrations
 #
 import pybamm
 
@@ -7,7 +7,7 @@ from .base_porosity import BaseModel
 
 
 class ReactionDriven(BaseModel):
-    """Reaction-driven porosity changes as a multiple of SEI/plating thicknesses
+    """Reaction-driven porosity changes as a multiple of SEI/plating concentrations
 
     Parameters
     ----------
@@ -52,9 +52,7 @@ class ReactionDriven(BaseModel):
                     if plating_option == "none":
                         V_bar_Li = pybamm.Scalar(0)
                     else:
-                        V_bar_Li = pybamm.Parameter(
-                            "Lithium metal partial molar volume [m3.mol-1]"
-                        )
+                        V_bar_Li = self.param.V_bar_Li
                     c_sei_k = variables[
                         f"{Domain} {phase_name}SEI concentration [mol.m-3]"
                     ]
@@ -73,7 +71,7 @@ class ReactionDriven(BaseModel):
                     delta_eps_k += V_bar_sei * c_sei_tot_k + V_bar_Li * c_pl_tot_k
 
             domain_param = self.param.domain_params[domain.split()[0]]
-            eps_k = domain_param.epsilon_init + delta_eps_k
+            eps_k = domain_param.epsilon_init - delta_eps_k
             eps_dict[domain] = eps_k
 
         variables = self._get_standard_porosity_variables(eps_dict)
