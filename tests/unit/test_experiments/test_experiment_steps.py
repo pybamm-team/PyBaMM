@@ -76,6 +76,12 @@ class TestExperimentSteps:
         assert isinstance(resistance, pybamm.step.Resistance)
         assert resistance.value == 1
 
+    def test_rest_step_requires_zero_current(self):
+        with pytest.raises(
+            ValueError, match=r"Rest steps must have a current value of 0"
+        ):
+            pybamm.step.Rest(1)
+
     def test_step_string(self):
         steps = [
             "Discharge at 1C for 0.5 hours",
