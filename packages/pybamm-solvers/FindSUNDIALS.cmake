@@ -67,7 +67,8 @@ foreach(LIB ${SUNDIALS_WANT_COMPONENTS})
     elseif(WIN32)
         # On Windows, try both libsundials_* and sundials_* naming conventions
         # CMake's find_library will automatically add .lib extension
-        set(THIS_LIBRARY_SEARCH lib${LIB} ${LIB})
+        # SUNDIALS 7.x appends _static to library names on MSVC static builds
+        set(THIS_LIBRARY_SEARCH lib${LIB}_static ${LIB}_static lib${LIB} ${LIB})
     else()
         set(THIS_LIBRARY_SEARCH ${LIB})
     endif()

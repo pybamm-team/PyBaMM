@@ -52,6 +52,13 @@ jobs:
           CIBW_TEST_EXTRAS: "dev"
           CIBW_TEST_COMMAND: |
             python -m pytest {project}/tests
+      - name: Upload vcpkg build logs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: vcpkg-logs-windows
+          path: C:\vcpkg\buildtrees\sundials\*.log
+          if-no-files-found: ignore
       - name: Upload Windows wheels
         uses: actions/upload-artifact@v7
         with:
