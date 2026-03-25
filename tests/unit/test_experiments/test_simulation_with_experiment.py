@@ -35,160 +35,21 @@ class TestSimulationExperiment:
             **simulation_kwargs,
         )
 
-    @staticmethod
-    def _make_composite_plating_parameter_values():
-        parameter_values = pybamm.ParameterValues("Chen2020_composite")
-
-        def graphite_plating_exchange_current_density(c_e, c_Li, T):
-            del c_Li, T
-            k_plating = pybamm.Parameter(
-                "Primary: Lithium plating kinetic rate constant [m.s-1]"
-            )
-            return pybamm.constants.F * k_plating * c_e
-
-        def graphite_stripping_exchange_current_density(c_e, c_Li, T):
-            del c_e, T
-            k_plating = pybamm.Parameter(
-                "Primary: Lithium plating kinetic rate constant [m.s-1]"
-            )
-            return pybamm.constants.F * k_plating * c_Li
-
-        def graphite_sei_limited_dead_lithium(L_sei):
-            gamma_0 = pybamm.Parameter("Primary: Dead lithium decay constant [s-1]")
-            L_inner_0 = pybamm.Parameter("Primary: Initial inner SEI thickness [m]")
-            L_outer_0 = pybamm.Parameter("Primary: Initial outer SEI thickness [m]")
-            return gamma_0 * (L_inner_0 + L_outer_0) / L_sei
-
-        def silicon_plating_exchange_current_density(c_e, c_Li, T):
-            del c_Li, T
-            k_plating = pybamm.Parameter(
-                "Secondary: Lithium plating kinetic rate constant [m.s-1]"
-            )
-            return pybamm.constants.F * k_plating * c_e
-
-        def silicon_stripping_exchange_current_density(c_e, c_Li, T):
-            del c_e, T
-            k_plating = pybamm.Parameter(
-                "Secondary: Lithium plating kinetic rate constant [m.s-1]"
-            )
-            return pybamm.constants.F * k_plating * c_Li
-
-        def silicon_sei_limited_dead_lithium(L_sei):
-            gamma_0 = pybamm.Parameter("Secondary: Dead lithium decay constant [s-1]")
-            L_inner_0 = pybamm.Parameter("Secondary: Initial inner SEI thickness [m]")
-            L_outer_0 = pybamm.Parameter("Secondary: Initial outer SEI thickness [m]")
-            return gamma_0 * (L_inner_0 + L_outer_0) / L_sei
-
-        parameter_values.update(
-            {
-                "Lithium metal partial molar volume [m3.mol-1]": 1.3e-05,
-                "Primary: Lithium plating kinetic rate constant [m.s-1]": 1e-09,
-                "Primary: Exchange-current density for plating [A.m-2]": (
-                    graphite_plating_exchange_current_density
-                ),
-                "Primary: Exchange-current density for stripping [A.m-2]": (
-                    graphite_stripping_exchange_current_density
-                ),
-                "Primary: Initial plated lithium concentration [mol.m-3]": 0.0,
-                "Primary: Typical plated lithium concentration [mol.m-3]": 1000.0,
-                "Primary: Lithium plating transfer coefficient": 0.65,
-                "Primary: Dead lithium decay constant [s-1]": 1e-06,
-                "Primary: Dead lithium decay rate [s-1]": (
-                    graphite_sei_limited_dead_lithium
-                ),
-                "Secondary: Lithium plating kinetic rate constant [m.s-1]": 1e-09,
-                "Secondary: Exchange-current density for plating [A.m-2]": (
-                    silicon_plating_exchange_current_density
-                ),
-                "Secondary: Exchange-current density for stripping [A.m-2]": (
-                    silicon_stripping_exchange_current_density
-                ),
-                "Secondary: Initial plated lithium concentration [mol.m-3]": 0.0,
-                "Secondary: Typical plated lithium concentration [mol.m-3]": 1000.0,
-                "Secondary: Lithium plating transfer coefficient": 0.65,
-                "Secondary: Dead lithium decay constant [s-1]": 1e-06,
-                "Secondary: Dead lithium decay rate [s-1]": (
-                    silicon_sei_limited_dead_lithium
-                ),
-                "Ambient temperature [K]": 268.15,
-                "Upper voltage cut-off [V]": 4.21,
-                "Lithium plating transfer coefficient": 0.5,
-                "Dead lithium decay constant [s-1]": 1e-4,
-                "Primary: Initial inner SEI thickness [m]": 5e-09,
-                "Primary: Initial outer SEI thickness [m]": 5e-09,
-                "Secondary: Initial inner SEI thickness [m]": 5e-09,
-                "Secondary: Initial outer SEI thickness [m]": 5e-09,
-            }
-        )
-        return parameter_values
-
-    @staticmethod
-    def _make_composite_plating_model():
-        return pybamm.lithium_ion.DFN(
-            {
-                "particle phases": ("2", "1"),
-                "open-circuit potential": (("single", "current sigmoid"), "single"),
-                "lithium plating": "reversible",
-            },
-            name="reversible",
-        )
-
-    def test_set_up(self):
-        experiment = pybamm.Experiment(
-            [
-                "Discharge at C/20 for 1 hour",
-                "Charge at 1 A until 4.1 V",
-                "Hold at 4.1 V until 50 mA",
-                "Discharge at 2 W until 3.5 V",
-            ]
-        )
-        for experiment_model_mode in ["legacy", "unified"]:
-            sim = pybamm.Simulation(
-                pybamm.lithium_ion.SPM(),
-                experiment=experiment,
-                solver=pybamm.IDAKLUSolver(),
-                experiment_model_mode=experiment_model_mode,
-            )
-            sim.build_for_experiment()
-
-            assert sim.experiment.args == experiment.args
-            steps = sim.experiment.steps
-
-            if experiment_model_mode == "legacy":
-                assert sim._built_experiment_model is None
-                assert sim._built_experiment_solver is None
-                model_I = sim.experiment_unique_steps_to_model[
-                    steps[1].basic_repr()
-                ]  # CC charge
-                model_V = sim.experiment_unique_steps_to_model[
-                    steps[2].basic_repr()
-                ]  # CV hold
-                assert "abs(Current [A]) < 0.05 [A] [experiment]" in [
-                    event.name for event in model_V.events
-                ]
-                assert "Voltage > 4.1 [V] [experiment]" in [
-                    event.name for event in model_I.events
-                ]
-            else:
-                assert sim._built_experiment_model is not None
-                assert sim._built_experiment_solver is not None
-                unified_model = sim.experiment_unique_steps_to_model[
-                    sim._experiment_unified_model_key
-                ]
-                assert sim._combined_step_termination_event_name in [
-                    event.name for event in unified_model.events
-                ]
-                assert len(set(sim.steps_to_built_models.values())) == 1
-
-        # fails if trying to set up with something that isn't an experiment
-        with pytest.raises(TypeError, match=r"experiment must be"):
-            pybamm.Simulation(pybamm.lithium_ion.SPM(), experiment=0)
-
     def test_unified_model_mode_validation_and_blockers(self):
         with pytest.raises(ValueError, match="experiment_model_mode must be one of"):
             pybamm.Simulation(
                 pybamm.lithium_ion.SPM(),
                 experiment_model_mode="invalid",
+            )
+        with pytest.raises(ValueError, match="experiment_model_mode must be one of"):
+            pybamm.Simulation(
+                pybamm.lithium_ion.SPM(),
+                experiment_model_mode="auto",
+            )
+        with pytest.raises(ValueError, match="experiment_model_mode must be one of"):
+            pybamm.Simulation(
+                pybamm.lithium_ion.SPM(),
+                experiment_model_mode="per-step",
             )
 
         sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
@@ -300,6 +161,7 @@ class TestSimulationExperiment:
             model,
             experiment=experiment,
             solver=pybamm.CasadiSolver(),
+            experiment_model_mode="unified",
         )
         sim.build_for_experiment()
 
@@ -311,7 +173,7 @@ class TestSimulationExperiment:
         ]
         assert "Current variable [A]" in unified_model.variables
 
-    def test_set_up_all_explicit_falls_back_for_ode_solver(self):
+    def test_set_up_all_explicit_defaults_to_legacy_model(self):
         experiment = pybamm.Experiment(
             [
                 "Discharge at C/20 for 1 hour",
@@ -323,7 +185,7 @@ class TestSimulationExperiment:
         sim = pybamm.Simulation(
             model,
             experiment=experiment,
-            solver=pybamm.ScipySolver(),
+            solver=pybamm.CasadiSolver(),
         )
         sim.build_for_experiment()
 
@@ -426,44 +288,6 @@ class TestSimulationExperiment:
         ):
             sim.build_for_experiment()
 
-    def test_run_composite_plating_experiment_unified_keeps_rest_step(self):
-        parameter_values = self._make_composite_plating_parameter_values()
-        model = self._make_composite_plating_model()
-        discharge_experiment = pybamm.Experiment(
-            [("Discharge at C/20 until 2.5 V", "Rest for 1 hour")]
-        )
-        sim_discharge = pybamm.Simulation(
-            model,
-            parameter_values=parameter_values,
-            experiment=discharge_experiment,
-            solver=pybamm.IDAKLUSolver(),
-            experiment_model_mode="unified",
-        )
-        sol_discharge = sim_discharge.solve(calc_esoh=False)
-        model.set_initial_conditions_from(sol_discharge, inplace=True)
-
-        experiment = pybamm.Experiment(
-            [
-                (
-                    "Charge at 1C until 4.2 V",
-                    "Hold at 4.2 V until C/20",
-                    "Rest for 1 hour",
-                )
-            ]
-        )
-        sim = pybamm.Simulation(
-            model,
-            parameter_values=parameter_values,
-            experiment=experiment,
-            solver=pybamm.IDAKLUSolver(),
-            experiment_model_mode="unified",
-        )
-        sol = sim.solve(calc_esoh=False)
-
-        assert sim._experiment_uses_unified_model
-        assert len(sol.cycles[0].steps) == 3
-        assert sol.cycles[0].steps[-1].termination == "final time"
-
     def test_experiment_state_mappers_built(self):
         experiment = pybamm.Experiment(
             ["Discharge at C/20 for 1 hour", "Rest for 10 minutes"]
@@ -484,15 +308,14 @@ class TestSimulationExperiment:
             if experiment_model_mode == "legacy":
                 assert (model_0, model_1) in sim.model_state_mappers
             else:
-                assert model_0 is model_1
-                assert (model_0, model_1) in sim.model_state_mappers
+                assert len(sim.model_state_mappers.values()) == 0
 
     def test_experiment_state_mapper_has_full_state_size_for_2d_current_collector(self):
         experiment = pybamm.Experiment(
             ["Discharge at C/20 for 1 hour", "Rest for 10 minutes"]
         )
         var_pts = {"x_n": 6, "x_s": 6, "x_p": 6, "r_n": 6, "r_p": 6, "y": 6, "z": 6}
-        for experiment_model_mode in ["legacy", "unified"]:
+        for experiment_model_mode in ["legacy"]:
             sim = pybamm.Simulation(
                 pybamm.lithium_ion.DFN(
                     {"current collector": "potential pair", "dimensionality": 2}
@@ -513,102 +336,6 @@ class TestSimulationExperiment:
                 assert model_0 is model_1
                 mapper = sim.model_state_mappers[(model_0, model_1)]
             assert mapper.shape[0] == model_1.len_rhs_and_alg
-
-    def test_unified_state_mapper_selects_control_initial_guess_with_step_index(
-        self,
-    ):
-        experiment = pybamm.Experiment(
-            [
-                pybamm.step.current(1.0, duration=600),
-                pybamm.step.voltage(4.1, duration=600),
-                pybamm.step.current(-2.0, duration=600),
-            ]
-        )
-        sim = pybamm.Simulation(
-            pybamm.lithium_ion.SPM(),
-            experiment=experiment,
-            solver=pybamm.CasadiSolver(),
-            experiment_model_mode="unified",
-        )
-        sim.build_for_experiment()
-
-        built_model = sim._built_experiment_model
-        mapper = sim._compiled_model_state_mappers[(built_model, built_model)][0]
-        current_variable = next(
-            variable
-            for variable in built_model.y_slices
-            if variable.name == "Current variable [A]"
-        )
-        current_slice = built_model.y_slices[current_variable][0]
-        current_scale = float(current_variable.scale.evaluate())
-        current_reference = float(current_variable.reference.evaluate())
-        y_from = np.zeros(built_model.len_rhs_and_alg)
-        y_from[current_slice] = (0.3 - current_reference) / current_scale
-
-        def mapped_current(active_step_index):
-            inputs = sim._build_unified_experiment_inputs(
-                {},
-                active_step_index,
-                start_time=0.0,
-                temperature=sim._parameter_values["Ambient temperature [K]"],
-            )
-            ordered_inputs = pybamm.BaseSolver._set_up_model_inputs(built_model, inputs)
-            p_stacked = casadi.vertcat(*ordered_inputs.values())
-            mapped = mapper(0.0, y_from, p_stacked)
-            mapped_state = float(mapped[current_slice].full().reshape(-1)[0])
-            return current_reference + current_scale * mapped_state
-
-        np.testing.assert_allclose(mapped_current(sim._experiment_step_indices[0]), 1.0)
-        np.testing.assert_allclose(mapped_current(sim._experiment_step_indices[1]), 0.3)
-        np.testing.assert_allclose(
-            mapped_current(sim._experiment_step_indices[2]), -2.0
-        )
-        assert sim._experiment_padding_rest_index is None
-
-    def test_unified_state_mapper_uses_zero_current_for_padding_rest(self):
-        start = datetime(2024, 1, 1, 12)
-        experiment = pybamm.Experiment(
-            [
-                (
-                    pybamm.step.current(1.0, duration=600, start_time=start),
-                    pybamm.step.voltage(4.1, duration=600),
-                )
-            ]
-        )
-        sim = pybamm.Simulation(
-            pybamm.lithium_ion.SPM(),
-            experiment=experiment,
-            solver=pybamm.CasadiSolver(),
-            experiment_model_mode="unified",
-        )
-        sim.build_for_experiment()
-
-        built_model = sim._built_experiment_model
-        mapper = sim._compiled_model_state_mappers[(built_model, built_model)][0]
-        current_variable = next(
-            variable
-            for variable in built_model.y_slices
-            if variable.name == "Current variable [A]"
-        )
-        current_slice = built_model.y_slices[current_variable][0]
-        current_scale = float(current_variable.scale.evaluate())
-        current_reference = float(current_variable.reference.evaluate())
-        y_from = np.zeros(built_model.len_rhs_and_alg)
-        y_from[current_slice] = (0.3 - current_reference) / current_scale
-
-        inputs = sim._build_unified_experiment_inputs(
-            {},
-            sim._experiment_padding_rest_index,
-            start_time=0.0,
-            temperature=sim._parameter_values["Ambient temperature [K]"],
-        )
-        ordered_inputs = pybamm.BaseSolver._set_up_model_inputs(built_model, inputs)
-        p_stacked = casadi.vertcat(*ordered_inputs.values())
-        mapped = mapper(0.0, y_from, p_stacked)
-        mapped_state = float(mapped[current_slice].full().reshape(-1)[0])
-        mapped_current = current_reference + current_scale * mapped_state
-
-        np.testing.assert_allclose(mapped_current, 0.0)
 
     def test_run_experiment(self):
         s = pybamm.step.string
@@ -715,6 +442,7 @@ class TestSimulationExperiment:
             model,
             experiment=experiment,
             solver=pybamm.IDAKLUSolver(atol=1e-8, rtol=1e-8),
+            experiment_model_mode="unified",
         )
         sol = sim.solve(calc_esoh=False)
 
@@ -1694,9 +1422,9 @@ class TestSimulationExperiment:
         )
         sim = pybamm.Simulation(model, experiment=experiment)
         sim.build_for_experiment()
-        assert sim._experiment_uses_unified_model
-        assert "Rest for padding" not in sim.experiment_unique_steps_to_model.keys()
-        assert sim._experiment_includes_padding_rest
+        assert not sim._experiment_uses_unified_model
+        assert "Rest for padding" in sim.experiment_unique_steps_to_model.keys()
+        assert not sim._experiment_includes_padding_rest
 
     def test_run_start_time_experiment(self):
         model = pybamm.lithium_ion.SPM()
@@ -1715,7 +1443,7 @@ class TestSimulationExperiment:
         )
         sim = pybamm.Simulation(model, experiment=experiment)
         sol = sim.solve(calc_esoh=False)
-        assert sim._experiment_uses_unified_model
+        assert not sim._experiment_uses_unified_model
         assert sol["Time [s]"].entries[-1] == 5400
 
         # Test padding rest is added if time stamp is late
@@ -1732,7 +1460,7 @@ class TestSimulationExperiment:
         )
         sim = pybamm.Simulation(model, experiment=experiment)
         sol = sim.solve(calc_esoh=False)
-        assert sim._experiment_uses_unified_model
+        assert not sim._experiment_uses_unified_model
         assert sol["Time [s]"].entries[-1] == 10800
 
     def test_run_start_time_experiment_forced_unified(self):

@@ -159,50 +159,7 @@ class TestSimulation:
             restored._combined_step_termination_event_name
             == "Combined termination [experiment]"
         )
-        assert restored._experiment_model_mode == "auto"
-
-    def test_build_unified_experiment_state_mapper_edge_cases(self):
-        sim = pybamm.Simulation(
-            pybamm.lithium_ion.SPM(),
-            experiment=pybamm.Experiment(["Discharge at 1C for 10 seconds"]),
-        )
-
-        scalar_model = pybamm.BaseModel()
-        scalar_variable = pybamm.Variable("y")
-        scalar_model.rhs = {scalar_variable: scalar_variable}
-        scalar_model.initial_conditions = {scalar_variable: 1}
-        scalar_built_model = pybamm.Discretisation().process_model(
-            scalar_model, inplace=False
-        )
-
-        expected_mapper = scalar_built_model.build_initial_state_mapper(
-            scalar_built_model
-        )
-        actual_mapper = sim._build_unified_experiment_state_mapper(scalar_built_model)
-        np.testing.assert_allclose(
-            actual_mapper.evaluate(y=np.array([3.0])),
-            expected_mapper.evaluate(y=np.array([3.0])),
-        )
-
-        vector_model = pybamm.BaseModel()
-        current_variable = pybamm.Variable(
-            "Current variable [A]", domain="negative electrode"
-        )
-        vector_model.rhs = {current_variable: current_variable}
-        vector_model.initial_conditions = {current_variable: 1}
-        vector_built_model = pybamm.Discretisation(
-            pybamm.Mesh(
-                {"negative electrode": {"x_n": {"min": 0, "max": 1}}},
-                {"negative electrode": pybamm.Uniform1DSubMesh},
-                {"x_n": 2},
-            ),
-            {"negative electrode": pybamm.FiniteVolume()},
-        ).process_model(vector_model, inplace=False)
-
-        with pytest.raises(
-            pybamm.ModelError, match="expects a scalar current-control state"
-        ):
-            sim._build_unified_experiment_state_mapper(vector_built_model)
+        assert restored._experiment_model_mode == "legacy"
 
     def test_set_crate(self):
         model = pybamm.lithium_ion.SPM()

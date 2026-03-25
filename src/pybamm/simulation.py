@@ -68,11 +68,8 @@ class Simulation:
         See :class:`pybamm.Discretisation` for details.
     experiment_model_mode : str, optional
         How to construct experiment models. Options are:
-        ``"auto"`` (default), which uses the unified experiment model when
-        compatible and otherwise falls back to one model per step;
-        ``"unified"``, which requires the shared experiment model path; and
-        ``"legacy"``, which always uses one model per step. ``"per-step"`` is
-        accepted as an alias for ``"legacy"``.
+        ``"legacy"`` (default), which always uses one model per step; and
+        ``"unified"``, which requires the shared experiment model path.
     """
 
     def __init__(
@@ -89,7 +86,7 @@ class Simulation:
         C_rate=None,
         discretisation_kwargs=None,
         cache_esoh=True,
-        experiment_model_mode="auto",
+        experiment_model_mode="legacy",
     ):
         self._parameter_values = parameter_values or model.default_parameter_values
         self._unprocessed_parameter_values = self._parameter_values
@@ -223,8 +220,9 @@ class Simulation:
             self._combined_step_termination_event_name = (
                 "Combined termination [experiment]"
             )
-        if "_experiment_model_mode" not in self.__dict__:
-            self._experiment_model_mode = "auto"
+        self._experiment_model_mode = self._normalise_experiment_model_mode(
+            self.__dict__.get("_experiment_model_mode", "legacy")
+        )
 
     def set_up_and_parameterise_experiment(self, solve_kwargs=None):
         msg = "pybamm.simulation.set_up_and_parameterise_experiment is deprecated and not meant to be accessed by users."
@@ -309,17 +307,14 @@ class Simulation:
     @staticmethod
     def _normalise_experiment_model_mode(mode):
         aliases = {
-            "auto": "auto",
             "unified": "unified",
             "legacy": "legacy",
-            "per-step": "legacy",
         }
         try:
             return aliases[mode]
         except KeyError as err:
             raise ValueError(
-                "experiment_model_mode must be one of 'auto', 'unified', "
-                "'legacy', or 'per-step'"
+                "experiment_model_mode must be one of 'unified' or 'legacy'"
             ) from err
 
     def _get_unified_experiment_model_blockers(self):
@@ -423,66 +418,6 @@ class Simulation:
         # processed model instance.
         for step in self.experiment.unique_steps:
             self.experiment_unique_steps_to_model[step.basic_repr()] = processed_model
-
-    def _build_unified_experiment_state_mapper(self, built_model):
-        """
-        Build the symbolic self-mapper used between unified experiment steps.
-
-        The unified experiment path reuses one built model for every compatible step,
-        so step-to-step reinitialisation is a same-model state mapping. This mapper
-        leaves the full state vector unchanged except for the scalar
-        ``"Current variable [A]"`` entry, which is replaced by a step-index-selected
-        initial guess for the newly active step. Explicit controlled steps contribute
-        their prescribed current, while implicit steps keep the incoming current state.
-        """
-        current_variable = next(
-            (
-                variable
-                for variable in built_model.y_slices
-                if variable.name == "Current variable [A]"
-            ),
-            None,
-        )
-        if current_variable is None:
-            return built_model.build_initial_state_mapper(built_model)
-        current_slice = built_model.y_slices[current_variable][0]
-        if current_slice.stop - current_slice.start != 1:
-            raise pybamm.ModelError(
-                "Unified experiment self-mapper expects a scalar current-control state."
-            )
-
-        current_guess_branches = []
-        current_state = built_model.process_symbol(built_model.variables["Current [A]"])
-        for step in self.experiment.steps:
-            if isinstance(step, pybamm.step.BaseStepExplicit):
-                step_guess = built_model.process_symbol(
-                    step.current_value(built_model.variables)
-                )
-            else:
-                step_guess = current_state
-            current_guess_branches.append(step_guess)
-
-        if self._experiment_includes_padding_rest:
-            current_guess_branches.append(pybamm.Scalar(0))
-
-        current_guess = pybamm.Conditional(
-            pybamm.InputParameter(self._experiment_step_index_input_name()),
-            *current_guess_branches,
-        )
-
-        equations = []
-        if current_slice.start > 0:
-            equations.append(pybamm.StateVector(slice(0, current_slice.start)))
-        equations.append(
-            (current_guess - current_variable.reference) / current_variable.scale
-        )
-        if current_slice.stop < built_model.len_rhs_and_alg:
-            equations.append(
-                pybamm.StateVector(
-                    slice(current_slice.stop, built_model.len_rhs_and_alg)
-                )
-            )
-        return pybamm.NumpyConcatenation(*equations)
 
     def _build_experiment_step_inputs(
         self,
@@ -684,29 +619,15 @@ class Simulation:
             parameter_values["Initial temperature [K]"] = init_temp
 
         blockers = self._get_unified_experiment_model_blockers()
-        raise_model_error = blockers and self._experiment_model_mode == "unified"
-        use_unified = not blockers and self._experiment_model_mode in {
-            "auto",
-            "unified",
-        }
-        fallback_to_per_step = blockers and self._experiment_model_mode == "auto"
-
-        if raise_model_error:
-            raise pybamm.ModelError(
-                "Cannot build a unified experiment model: "
-                + "; ".join(blockers)
-                + ". Use 'legacy'/'per-step' mode or a compatible solver/experiment."
-            )
-
-        if use_unified:
+        if self._experiment_model_mode == "unified":
+            if blockers:
+                raise pybamm.ModelError(
+                    "Cannot build a unified experiment model: "
+                    + "; ".join(blockers)
+                    + ". Use 'legacy' mode or a compatible solver/experiment."
+                )
             self._set_up_unified_experiment_model(parameter_values)
             return
-
-        if fallback_to_per_step:
-            pybamm.logger.debug(
-                "Falling back to per-step experiment models: %s",
-                "; ".join(blockers),
-            )
 
         self._experiment_uses_unified_model = False
         self._built_experiment_model = None
@@ -1063,15 +984,11 @@ class Simulation:
     def _build_experiment_state_mappers(self, inputs: dict):
         self.model_state_mappers = {}
         self._compiled_model_state_mappers = {}
+
         if not self.experiment or not self.steps_to_built_models:
             return
-        if self._experiment_uses_unified_model:
-            built_model = self._built_experiment_model
-            if built_model is not None:
-                self.model_state_mappers[(built_model, built_model)] = (
-                    self._build_unified_experiment_state_mapper(built_model)
-                )
-        else:
+
+        if not self._experiment_uses_unified_model:
             ordered_steps = self.experiment.steps
             previous_model = None
             for step in ordered_steps:
