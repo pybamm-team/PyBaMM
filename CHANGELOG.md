@@ -2,9 +2,15 @@
 
 ## Features
 
+- Porosity change now works for particle size distributions ([#5417](https://github.com/pybamm-team/PyBaMM/pull/5417))
+
 ## Bug fixes
 
+- SEI concentration is always a size-averaged quantity if particle size distribution present ([#5417](https://github.com/pybamm-team/PyBaMM/pull/5417))
+
 ## Breaking changes
+
+- Porosity change no longer excludes initial SEI thickness, i.e. the initial SEI now takes up space. ([#5417](https://github.com/pybamm-team/PyBaMM/pull/5417))
 
 # [v26.3.0](https://github.com/pybamm-team/PyBaMM/tree/v26.3.0) - 2026-03-23
 

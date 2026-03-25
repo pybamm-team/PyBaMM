@@ -84,11 +84,9 @@ class BaseModel(BaseInterface):
             }
         else:
             # c_sei is a bulk quantity [mol.m-3]
-            if self.size_distribution:
-                c_sei_sav = pybamm.size_average(c_sei)
-                c_sei_xav = pybamm.x_average(c_sei_sav)
-            else:
-                c_sei_xav = pybamm.x_average(c_sei)
+            if self.size_distribution is True:
+                c_sei = pybamm.size_average(c_sei)
+            c_sei_xav = pybamm.x_average(c_sei)
             c_sei_av = pybamm.yz_average(c_sei_xav)
             variables = {
                 f"{Domain} {self.reaction_name}concentration [mol.m-3]": c_sei,
