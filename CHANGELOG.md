@@ -2,7 +2,7 @@
 
 ## Features
 
-- Added a unified experiment-model path that reuses a single built model and solver across compatible experiment steps, with automatic fallback to the legacy per-step build for unsupported cases. ([#5422](https://github.com/pybamm-team/PyBaMM/pull/5422))
+- Added a unified experiment-model path that reuses a single built model and solver across compatible experiment steps. ([#5422](https://github.com/pybamm-team/PyBaMM/pull/5422))
 
 ## Bug fixes
 
