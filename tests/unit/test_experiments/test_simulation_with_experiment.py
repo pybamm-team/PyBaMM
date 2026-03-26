@@ -920,6 +920,48 @@ class TestSimulationExperiment:
             atol=2e-3,
         )
 
+    def test_solve_with_sensitivity_list_ignores_internal_experiment_input(self):
+        experiment = pybamm.Experiment(
+            [
+                "Discharge at C/20 for 10 seconds",
+                "Charge at 1 A for 10 seconds",
+            ]
+        )
+        input_param_name = "Negative electrode active material volume fraction"
+        model = pybamm.lithium_ion.SPM()
+        input_param_value = model.default_parameter_values[input_param_name]
+
+        def make_sim():
+            model = pybamm.lithium_ion.SPM()
+            param = model.default_parameter_values
+            param.update({input_param_name: "[input]"})
+            return pybamm.Simulation(
+                model,
+                experiment=experiment,
+                solver=pybamm.IDAKLUSolver(),
+                parameter_values=param,
+                experiment_model_mode="unified",
+            )
+
+        baseline = make_sim().solve(inputs={input_param_name: input_param_value})
+
+        internal_keys = set(baseline.all_inputs[0]) - {
+            input_param_name,
+            "Ambient temperature [K]",
+            "start time",
+        }
+        assert len(internal_keys) == 1
+        experiment_input_name = internal_keys.pop()
+
+        sol = make_sim().solve(
+            inputs={input_param_name: input_param_value},
+            calculate_sensitivities=[input_param_name, experiment_input_name],
+        )
+
+        sensitivity_keys = set(sol.sensitivities)
+        assert input_param_name in sensitivity_keys
+        assert experiment_input_name not in sensitivity_keys
+
     def test_run_experiment_drive_cycle(self):
         drive_cycle = np.array([np.arange(10), np.arange(10)]).T
         experiment = pybamm.Experiment(

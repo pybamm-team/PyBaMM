@@ -456,20 +456,6 @@ class Simulation:
         }
         return inputs
 
-    @staticmethod
-    def _coerce_termination_value(value):
-        if isinstance(value, np.ndarray):
-            value = value.reshape(-1)[0]
-        elif hasattr(value, "full"):
-            value = value.full().reshape(-1)[0]
-        elif hasattr(value, "item") and not np.isscalar(value):
-            value = value.item()
-
-        if isinstance(value, np.ndarray):
-            value = value.item()
-
-        return float(value)
-
     def _get_built_experiment_model(self, step_or_key):
         if self._experiment_uses_unified_model:
             return self._built_experiment_model
@@ -507,7 +493,7 @@ class Simulation:
         except (KeyError, NotImplementedError):  # pragma: no cover
             return None
 
-        return self._coerce_termination_value(value)
+        return value
 
     def _decode_combined_step_termination(self, step_solution, step, model, inputs):
         if (
@@ -536,9 +522,7 @@ class Simulation:
                 else step_solution.y[:, -1]
             )
             try:
-                value = self._coerce_termination_value(
-                    event.expression.evaluate(t=t, y=y, inputs=inputs)
-                )
+                value = event.expression.evaluate(t=t, y=y, inputs=inputs)
             except NotImplementedError:  # pragma: no cover
                 value = None
 
