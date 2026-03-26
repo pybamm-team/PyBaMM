@@ -1,6 +1,7 @@
 import casadi
 import numpy as np
 import pytest
+import scipy.sparse
 
 import pybamm
 from pybamm.expression_tree.operations.serialise import (
@@ -101,6 +102,61 @@ class TestConditional:
         rebuilt = convert_symbol_from_json(json_data)
         assert isinstance(rebuilt, pybamm.Conditional)
         assert rebuilt.evaluate(inputs={"selector": 2}) == 2
+
+    def test_from_json_and_str(self):
+        selector = pybamm.InputParameter("selector")
+        expr = pybamm.Conditional._from_json(
+            {"children": [selector, pybamm.Scalar(1), pybamm.Scalar(2)]}
+        )
+
+        assert isinstance(expr, pybamm.Conditional)
+        assert str(expr) == "conditional(selector, 1.0, 2.0)"
+
+    def test_create_copy_validation_and_selector_must_be_scalar(self):
+        expr = pybamm.Conditional(
+            pybamm.InputParameter("selector"),
+            pybamm.Scalar(3),
+            pybamm.Scalar(4),
+        )
+
+        with pytest.raises(
+            ValueError, match="Conditional must have a selector and at least one branch"
+        ):
+            expr.create_copy([pybamm.Scalar(1)])
+
+        with pytest.raises(
+            ValueError, match="Conditional selector must evaluate to a scalar"
+        ):
+            expr._coerce_selector_value(np.array([1, 2]))
+
+    def test_zero_like_numeric_and_sparse_branch_shape(self):
+        assert pybamm.Conditional._zero_like(5) == 0
+
+        selector = pybamm.InputParameter("selector")
+        sparse_branch = pybamm.Matrix(scipy.sparse.csr_matrix([[1, 0], [0, 1]]))
+        expr = pybamm.Conditional(selector, sparse_branch)
+
+        shape = expr.evaluate_for_shape()
+        assert scipy.sparse.issparse(shape)
+        assert shape.shape == (2, 2)
+
+        out = expr.evaluate(inputs={"selector": 0})
+        assert scipy.sparse.issparse(out)
+        assert out.shape == (2, 2)
+        assert out.nnz == 0
+
+    def test_evaluates_on_edges(self):
+        expr_on_edges = pybamm.Conditional(
+            pybamm.Scalar(1),
+            pybamm.PrimaryBroadcastToEdges(pybamm.Scalar(1), ["negative electrode"]),
+        )
+        assert expr_on_edges.evaluates_on_edges("primary")
+
+        expr_not_on_edges = pybamm.Conditional(
+            pybamm.Scalar(1),
+            pybamm.PrimaryBroadcast(pybamm.Scalar(1), ["negative electrode"]),
+        )
+        assert not expr_not_on_edges.evaluates_on_edges("primary")
 
     def test_evaluator_python(self):
         selector = pybamm.InputParameter("selector")
