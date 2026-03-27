@@ -94,6 +94,7 @@ linkcheck_ignore = [
     "https://books.google.co.uk/books",
     "https://docs.scipy.org/doc/scipy",  # SciPy docs timeout intermittently
     "https://chemrxiv.org",  # ChemRxiv blocks automated link checking
+    "https://pubs.acs.org",  # ACS blocks automated link checking
 ]
 
 

@@ -456,12 +456,12 @@ class TestBaseSolver:
 
         # Test invalid value
         with pytest.raises(
-            ValueError, match=r"on_extrapolation must be 'warn', 'raise', or 'ignore'"
+            ValueError, match=r"on_extrapolation must be 'warn', 'error', or 'ignore'"
         ):
             base_solver.on_extrapolation = "invalid"
 
         with pytest.raises(
-            ValueError, match=r"on_failure must be 'warn', 'raise', or 'ignore'"
+            ValueError, match=r"on_failure must be 'warn', 'error', or 'ignore'"
         ):
             base_solver.on_failure = "invalid"
 

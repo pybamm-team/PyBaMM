@@ -46,7 +46,7 @@ class BaseSolver:
         Default is "warn".
     on_failure : str, optional
         What to do if a solver error flag occurs. Options are "warn", "error", or "ignore".
-        Default is "raise".
+        Default is "error".
     """
 
     def __init__(
@@ -68,8 +68,8 @@ class BaseSolver:
         self.root_method = root_method
         self.extrap_tol = extrap_tol or -1e-10
         self.output_variables = [] if output_variables is None else output_variables
-        self._on_extrapolation = on_extrapolation or "warn"
-        self._on_failure = on_failure or "raise"
+        self.on_extrapolation = on_extrapolation or "warn"
+        self.on_failure = on_failure or "error"
         self._model_set_up = {}
 
         # Defaults, can be overwritten by specific solver
@@ -80,6 +80,40 @@ class BaseSolver:
         self._supports_t_eval_discontinuities = False
         self.computed_var_fcns = {}
         self._mp_context = self.get_platform_context(platform.system())
+
+    def to_config(self) -> dict:
+        """Convert this solver to a JSON-serialisable config dict.
+
+        Returns a dict with a ``"type"`` key (the solver class name) and one
+        key per serialisable ``__init__`` parameter.  ``CompositeSolver``
+        instances include a ``"sub_solvers"`` key with nested config dicts.
+
+        Returns
+        -------
+        dict
+            Config dict suitable for passing back to :meth:`from_config`.
+        """
+        from pybamm.expression_tree.operations.serialise import Serialise
+
+        return Serialise.serialise_solver(self)
+
+    @staticmethod
+    def from_config(data: dict) -> "BaseSolver":
+        """Create a solver from a config dict.
+
+        Parameters
+        ----------
+        data : dict
+            Config dict as produced by :meth:`to_config`, with a ``"type"``
+            key and solver-specific keyword arguments.
+
+        Returns
+        -------
+        :class:`BaseSolver`
+        """
+        from pybamm.expression_tree.operations.serialise import Serialise
+
+        return Serialise.deserialise_solver(data)
 
     @property
     def ode_solver(self):
@@ -104,7 +138,7 @@ class BaseSolver:
     @on_extrapolation.setter
     def on_extrapolation(self, value):
         if value not in ["warn", "error", "ignore"]:
-            raise ValueError("on_extrapolation must be 'warn', 'raise', or 'ignore'")
+            raise ValueError("on_extrapolation must be 'warn', 'error', or 'ignore'")
         self._on_extrapolation = value
 
     @property
@@ -114,7 +148,7 @@ class BaseSolver:
     @on_failure.setter
     def on_failure(self, value):
         if value not in ["warn", "error", "ignore"]:
-            raise ValueError("on_failure must be 'warn', 'raise', or 'ignore'")
+            raise ValueError("on_failure must be 'warn', 'error', or 'ignore'")
         self._on_failure = value
 
     @property
@@ -858,7 +892,7 @@ class BaseSolver:
         t_interp = self.process_t_interp(t_interp)
 
         # Set up inputs
-        if isinstance(inputs, dict):
+        if isinstance(inputs, (dict, pybamm.ParameterValues)):
             inputs_list = [inputs]
         else:
             inputs_list = inputs or [{}]
