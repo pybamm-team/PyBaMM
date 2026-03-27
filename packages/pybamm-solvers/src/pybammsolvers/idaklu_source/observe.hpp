@@ -5,13 +5,21 @@
 #include <string>
 #include "common.hpp"
 #include <casadi/core/function.hpp>
+#include <casadi/core/sparsity.hpp>
 #include <vector>
+#include <algorithm>
+#include <numeric>
 using std::vector;
 
 #if defined(_MSC_VER)
     #include <BaseTsd.h>
     typedef SSIZE_T ssize_t;
 #endif
+
+struct CasadiFuncData {
+    std::shared_ptr<const casadi::Function> func;
+    vector<casadi_int> active_y;
+};
 
 /**
  * @brief Observe and Hermite interpolate ND variables
@@ -39,7 +47,7 @@ const np_array_realtype observe(
     const vector<int>& shape
 );
 
-const vector<std::shared_ptr<const casadi::Function>> setup_casadi_funcs(const vector<std::string>& strings);
+const vector<CasadiFuncData> setup_casadi_funcs(const vector<std::string>& strings);
 
 int _setup_len_spatial(const vector<int>& shape);
 
