@@ -204,7 +204,17 @@ def find_symbols(
         else:
             children_vars.append(id_to_python_variable(child.id, False))
 
-    if isinstance(symbol, pybamm.BinaryOperator):
+    if isinstance(symbol, pybamm.Conditional):
+        selector_var = children_vars[0]
+        symbol_str = "0"
+        for branch_index, branch_var in reversed(
+            list(enumerate(children_vars[1:], start=1))
+        ):
+            lower = branch_index - 0.5
+            upper = branch_index + 0.5
+            symbol_str = f"({branch_var} if ({lower} < {selector_var} < {upper}) else {symbol_str})"
+
+    elif isinstance(symbol, pybamm.BinaryOperator):
         # Multiplication and Division need special handling for scipy sparse matrices
         # TODO: we can pass through a dummy y and t to get the type and then hardcode
         # the right line, avoiding these checks

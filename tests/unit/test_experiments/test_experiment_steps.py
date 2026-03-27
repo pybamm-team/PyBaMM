@@ -65,7 +65,7 @@ class TestExperimentSteps:
         assert voltage.value == 1
 
         rest = pybamm.step.rest()
-        assert isinstance(rest, pybamm.step.Current)
+        assert isinstance(rest, pybamm.step.Rest)
         assert rest.value == 0
 
         power = pybamm.step.power(1)
@@ -75,6 +75,12 @@ class TestExperimentSteps:
         resistance = pybamm.step.resistance(1)
         assert isinstance(resistance, pybamm.step.Resistance)
         assert resistance.value == 1
+
+    def test_rest_step_requires_zero_current(self):
+        with pytest.raises(
+            ValueError, match=r"Rest steps must have a current value of 0"
+        ):
+            pybamm.step.Rest(1)
 
     def test_step_string(self):
         steps = [
@@ -139,7 +145,7 @@ class TestExperimentSteps:
             },
             {
                 "value": 0,
-                "type": "Current",
+                "type": "Rest",
                 "duration": 600.0,
                 "termination": [],
             },
@@ -362,3 +368,96 @@ class TestExperimentSteps:
         termination_gt_4_1_oo = pybamm.step.step_termination.Voltage() > 4.1
         assert termination_lt_4_1_oo == termination_gt_4_1
         assert termination_gt_4_1_oo == termination_gt_4_1
+
+    def test_symbolic_termination_expression_helpers(self):
+        single_termination_step = pybamm.step.current(
+            1, duration=3600, termination="2.5V"
+        )
+        single_termination_variables = {
+            "Battery voltage [V]": 3.0,
+            "Current [A]": 0.2,
+            "C-rate": 0.1,
+        }
+        np.testing.assert_allclose(
+            single_termination_step.get_combined_termination_expression(
+                single_termination_variables
+            ),
+            3.0 - 2.5,
+        )
+
+        step = pybamm.step.current(1, duration=3600, termination=["2.5V", "0.05A"])
+        variables = {
+            "Battery voltage [V]": 3.0,
+            "Current [A]": 0.2,
+            "C-rate": 0.1,
+        }
+
+        events = step.get_termination_events(variables)
+        assert [event.name for event in events] == [
+            "Voltage < 2.5 [V] [experiment]",
+            "abs(Current [A]) < 0.05 [A] [experiment]",
+        ]
+        np.testing.assert_allclose(
+            step.get_combined_termination_expression(variables).evaluate(),
+            min(3.0 - 2.5, 0.2 - 0.05),
+        )
+
+        no_termination_step = pybamm.step.current(1, duration=3600)
+        np.testing.assert_allclose(
+            no_termination_step.get_combined_termination_expression(
+                variables
+            ).evaluate(),
+            1,
+        )
+
+    def test_symbolic_control_residual_helpers(self):
+        current_step = pybamm.step.current(1, duration=10)
+        np.testing.assert_allclose(
+            current_step.get_control_residual({"Current [A]": 1.2}),
+            0.2,
+        )
+
+        voltage_step = pybamm.step.voltage(4.1, duration=10)
+        np.testing.assert_allclose(
+            voltage_step.get_control_residual({"Voltage [V]": 4.2}),
+            0.1,
+        )
+
+        power_step = pybamm.step.power(2, duration=10)
+        np.testing.assert_allclose(
+            power_step.get_control_residual({"Power [W]": 2.4}),
+            0.4,
+        )
+
+        resistance_step = pybamm.step.resistance(4, duration=10)
+        np.testing.assert_allclose(
+            resistance_step.get_control_residual(
+                {"Voltage [V]": 4.3, "Current [A]": 1}
+            ),
+            0.3,
+        )
+
+        custom_explicit = pybamm.step.CustomStepExplicit(
+            lambda variables: 0.5, duration=1
+        )
+        np.testing.assert_allclose(
+            custom_explicit.get_control_residual({"Current [A]": 0.7}),
+            0.2,
+        )
+
+        custom_algebraic = pybamm.step.CustomStepImplicit(
+            lambda variables: variables["Voltage [V]"] - 4.2,
+            duration=1,
+        )
+        np.testing.assert_allclose(
+            custom_algebraic.get_control_residual({"Voltage [V]": 4.3}),
+            0.1,
+        )
+
+        custom_differential = pybamm.step.CustomStepImplicit(
+            lambda variables: variables["Voltage [V]"] - 4.2,
+            control="differential",
+            duration=1,
+        )
+        with pytest.raises(NotImplementedError):
+            custom_differential.get_control_residual({"Voltage [V]": 4.3})

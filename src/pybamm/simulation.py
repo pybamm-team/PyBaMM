@@ -66,6 +66,10 @@ class Simulation:
     discretisation_kwargs: dict (optional)
         Any keyword arguments to pass to the Discretisation class.
         See :class:`pybamm.Discretisation` for details.
+    experiment_model_mode : str, optional
+        How to construct experiment models. Options are:
+        ``"legacy"`` (default), which always uses one model per step; and
+        ``"unified"``, which requires the shared experiment model path.
     """
 
     def __init__(
@@ -82,6 +86,7 @@ class Simulation:
         C_rate=None,
         discretisation_kwargs=None,
         cache_esoh=True,
+        experiment_model_mode="legacy",
     ):
         self._parameter_values = parameter_values or model.default_parameter_values
         self._unprocessed_parameter_values = self._parameter_values
@@ -138,6 +143,8 @@ class Simulation:
         self._built_model = None
         self._built_initial_soc = None
         self._built_nominal_capacity = None
+        self._built_experiment_model = None
+        self._built_experiment_solver = None
         self.steps_to_built_models = None
         self.steps_to_built_solvers = None
         self._cache_esoh = cache_esoh
@@ -150,6 +157,15 @@ class Simulation:
         self._solution = None
         self.quick_plot = None
         self._needs_ic_rebuild = False
+        self._experiment_model_mode = self._normalise_experiment_model_mode(
+            experiment_model_mode
+        )
+        self._experiment_uses_unified_model = False
+        self._experiment_unified_model_key = "Unified experiment"
+        self._experiment_step_indices = []
+        self._experiment_padding_rest_index = None
+        self._experiment_includes_padding_rest = False
+        self._combined_step_termination_event_name = "Combined termination [experiment]"
 
         # ignore runtime warnings in notebooks
         if is_notebook():  # pragma: no cover
@@ -167,6 +183,8 @@ class Simulation:
         result["get_esoh_solver"] = None  # Exclude LRU cache
         result["model_state_mappers"] = {}
         result["_compiled_model_state_mappers"] = {}
+        result["_built_experiment_model"] = None
+        result["_built_experiment_solver"] = None
         result["steps_to_built_models"] = None
         result["steps_to_built_solvers"] = None
         result["experiment_unique_steps_to_model"] = None
@@ -182,8 +200,29 @@ class Simulation:
             self.model_state_mappers = {}
         if "_compiled_model_state_mappers" not in self.__dict__:
             self._compiled_model_state_mappers = {}
+        if "_built_experiment_model" not in self.__dict__:
+            self._built_experiment_model = None
+        if "_built_experiment_solver" not in self.__dict__:
+            self._built_experiment_solver = None
         if "experiment_unique_steps_to_model" not in self.__dict__:
             self.experiment_unique_steps_to_model = None
+        if "_experiment_uses_unified_model" not in self.__dict__:
+            self._experiment_uses_unified_model = False
+        if "_experiment_unified_model_key" not in self.__dict__:
+            self._experiment_unified_model_key = "Unified experiment"
+        if "_experiment_step_indices" not in self.__dict__:
+            self._experiment_step_indices = []
+        if "_experiment_padding_rest_index" not in self.__dict__:
+            self._experiment_padding_rest_index = None
+        if "_experiment_includes_padding_rest" not in self.__dict__:
+            self._experiment_includes_padding_rest = False
+        if "_combined_step_termination_event_name" not in self.__dict__:
+            self._combined_step_termination_event_name = (
+                "Combined termination [experiment]"
+            )
+        self._experiment_model_mode = self._normalise_experiment_model_mode(
+            self.__dict__.get("_experiment_model_mode", "legacy")
+        )
 
     def set_up_and_parameterise_experiment(self, solve_kwargs=None):
         msg = "pybamm.simulation.set_up_and_parameterise_experiment is deprecated and not meant to be accessed by users."
@@ -213,23 +252,297 @@ class Simulation:
         self._set_up_and_parameterise_experiment(solve_kwargs)
 
         # Re-discretise the models
+        self._built_experiment_model = None
+        self._built_experiment_solver = None
         self.steps_to_built_models = {}
         self.steps_to_built_solvers = {}
-        for (
-            step,
-            model_with_set_params,
-        ) in self.experiment_unique_steps_to_model.items():
+        if self._experiment_uses_unified_model:
+            model_with_set_params = self.experiment_unique_steps_to_model[
+                self._experiment_unified_model_key
+            ]
             built_model = self._disc.process_model(
                 model_with_set_params,
                 inplace=True,
                 delayed_variable_processing=True,
             )
             solver = self._solver.copy()
-            self.steps_to_built_solvers[step] = solver
-            self.steps_to_built_models[step] = built_model
+            self._built_experiment_model = built_model
+            self._built_experiment_solver = solver
+            for step in self.experiment.unique_steps:
+                self.steps_to_built_models[step.basic_repr()] = built_model
+                self.steps_to_built_solvers[step.basic_repr()] = solver
+        else:
+            for (
+                step,
+                model_with_set_params,
+            ) in self.experiment_unique_steps_to_model.items():
+                built_model = self._disc.process_model(
+                    model_with_set_params,
+                    inplace=True,
+                    delayed_variable_processing=True,
+                )
+                solver = self._solver.copy()
+                self.steps_to_built_solvers[step] = solver
+                self.steps_to_built_models[step] = built_model
 
         self._build_experiment_state_mappers(inputs)
         self._built_nominal_capacity = current_capacity
+
+    @staticmethod
+    def _experiment_step_index_input_name():
+        return "Experiment step index"
+
+    @staticmethod
+    def _experiment_time_stop_termination():
+        return "experiment time limit reached"
+
+    @staticmethod
+    def _experiment_voltage_stop_termination():
+        return "experiment voltage limit reached"
+
+    @staticmethod
+    def _experiment_capacity_stop_termination():
+        return "experiment capacity limit reached"
+
+    @staticmethod
+    def _normalise_experiment_model_mode(mode):
+        aliases = {
+            "unified": "unified",
+            "legacy": "legacy",
+        }
+        try:
+            return aliases[mode]
+        except KeyError as err:
+            raise ValueError(
+                "experiment_model_mode must be one of 'unified' or 'legacy'"
+            ) from err
+
+    def _get_unified_experiment_model_blockers(self):
+        if self.experiment is None:
+            return ["no experiment is attached to the simulation"]
+
+        for step in self.experiment.steps:
+            if step.is_drive_cycle:
+                return ["drive-cycle experiment steps are not yet supported"]
+            if isinstance(step, pybamm.step.BaseStep) and not isinstance(
+                step,
+                (
+                    pybamm.step.BaseStepExplicit,
+                    pybamm.step.BaseStepImplicit,
+                ),
+            ):
+                return [f"unsupported experiment step type '{type(step).__name__}'"]
+            if (
+                isinstance(step, pybamm.step.CustomStepImplicit)
+                and step.control != "algebraic"
+            ):
+                return ["CustomStepImplicit with differential control is not supported"]
+
+        if self._solver.ode_solver:
+            return ["unified experiment model requires a DAE-capable solver"]
+
+        return []
+
+    def _experiment_can_use_unified_model(self):
+        return not self._get_unified_experiment_model_blockers()
+
+    def _set_up_unified_experiment_model(self, parameter_values):
+        self._experiment_uses_unified_model = True
+        self._experiment_step_indices = list(range(1, len(self.experiment.steps) + 1))
+        self._experiment_includes_padding_rest = bool(
+            self.experiment.initial_start_time
+        )
+        self._experiment_padding_rest_index = (
+            len(self.experiment.steps) + 1
+            if self._experiment_includes_padding_rest
+            else None
+        )
+
+        new_model = self._model.new_copy()
+        new_parameter_values = parameter_values.copy()
+        # Temperatures may change between steps, so the unified model must read the
+        # ambient temperature from step-level inputs instead of baking in one value.
+        new_parameter_values["Ambient temperature [K]"] = "[input]"
+
+        # Build one conditional control residual that selects the active step's
+        # control law via the experiment step index input.
+        step_control_builders = [
+            step.get_control_residual for step in self.experiment.steps
+        ]
+        if self._experiment_includes_padding_rest:
+            padding_rest_step = pybamm.step.Rest(duration=1)
+            step_control_builders.append(padding_rest_step.get_control_residual)
+        submodel = pybamm.external_circuit.ExperimentFunctionControl(
+            new_model.param,
+            new_model.options,
+            self._experiment_step_index_input_name(),
+            step_control_builders,
+        )
+        # Reuse the implicit-step wiring so the experiment-wide controller owns the
+        # current variable in the same way as voltage/power/resistance steps do today.
+        new_model, variables = pybamm.step.BaseStepImplicit.add_control_submodel(
+            new_model,
+            submodel,
+            new_parameter_values,
+        )
+
+        # Combine each step's local termination expression into one experiment event,
+        # selecting the active branch with the step index input.
+        termination_branches = [
+            step.get_combined_termination_expression(variables)
+            for step in self.experiment.steps
+        ]
+        if self._experiment_includes_padding_rest:
+            termination_branches.append(pybamm.Scalar(1))
+        combined_termination_expression = pybamm.Conditional(
+            pybamm.InputParameter(self._experiment_step_index_input_name()),
+            *termination_branches,
+        )
+        new_model.events.append(
+            pybamm.Event(
+                self._combined_step_termination_event_name,
+                combined_termination_expression,
+            )
+        )
+        pybamm.step.BaseStep.update_voltage_safety_events(new_model)
+
+        processed_model = new_parameter_values.process_model(
+            new_model,
+            inplace=True,
+            delayed_variable_processing=True,
+        )
+        self.experiment_unique_steps_to_model = {
+            self._experiment_unified_model_key: processed_model,
+        }
+        # Keep the legacy lookup keys alive even though compatible steps now share one
+        # processed model instance.
+        for step in self.experiment.unique_steps:
+            self.experiment_unique_steps_to_model[step.basic_repr()] = processed_model
+
+    def _build_experiment_step_inputs(
+        self,
+        user_inputs,
+        step,
+        start_time,
+        active_step_index=None,
+        include_temperature=True,
+    ):
+        temperature = (
+            step.temperature or self._parameter_values["Ambient temperature [K]"]
+        )
+        if self._experiment_uses_unified_model:
+            return self._build_unified_experiment_inputs(
+                user_inputs,
+                active_step_index,
+                start_time,
+                temperature,
+            )
+        inputs = {
+            **user_inputs,
+            "start time": start_time,
+        }
+        if include_temperature:
+            inputs["Ambient temperature [K]"] = temperature
+        return inputs
+
+    def _build_unified_experiment_inputs(
+        self, user_inputs, active_step_index, start_time, temperature
+    ):
+        inputs = {
+            **user_inputs,
+            "Ambient temperature [K]": temperature,
+            "start time": start_time,
+            self._experiment_step_index_input_name(): active_step_index,
+        }
+        return inputs
+
+    def _get_built_experiment_model(self, step_or_key):
+        if self._experiment_uses_unified_model:
+            return self._built_experiment_model
+        if isinstance(step_or_key, str):
+            return self.steps_to_built_models[step_or_key]
+        return self.steps_to_built_models[step_or_key.basic_repr()]
+
+    def _get_built_experiment_solver(self, step_or_key):
+        if self._experiment_uses_unified_model:
+            return self._built_experiment_solver
+        if isinstance(step_or_key, str):
+            return self.steps_to_built_solvers[step_or_key]
+        return self.steps_to_built_solvers[step_or_key.basic_repr()]
+
+    def _evaluate_step_termination_expression_from_solution(
+        self, term, step_solution, step
+    ):
+        # Some custom terminations reference symbols that are not directly evaluable
+        # from the raw event expression, but are available as processed solution
+        # variables. Rebuild a minimal variables dict from the solved step state and
+        # re-run the termination expression against that view of the solution.
+        if step_solution.t_event is not None:
+            t = float(np.asarray(step_solution.t_event).reshape(-1)[0])
+        else:
+            t = float(step_solution.t[-1])
+
+        class SolutionVariables(dict):
+            def __missing__(self, key):
+                value = step_solution[key](t)
+                self[key] = value
+                return value
+
+        try:
+            value = term.get_event_expression(SolutionVariables(), step)
+        except (KeyError, NotImplementedError):  # pragma: no cover
+            return None
+
+        return value
+
+    def _decode_combined_step_termination(self, step_solution, step, model, inputs):
+        if (
+            step_solution.termination
+            != f"event: {self._combined_step_termination_event_name}"
+        ):
+            return step_solution.termination
+
+        final_event_values = {}
+        for term in step.termination:
+            event = term.get_event(model.variables, step)
+            if event is None:
+                continue
+
+            value = None
+            # First try the exact symbolic event expression that the unified model used.
+            # This is the closest match to what the solver just triggered.
+            t = (
+                step_solution.t_event
+                if step_solution.t_event is not None
+                else step_solution.t[-1]
+            )
+            y = (
+                step_solution.y_event
+                if step_solution.y_event is not None
+                else step_solution.y[:, -1]
+            )
+            try:
+                value = event.expression.evaluate(t=t, y=y, inputs=inputs)
+            except NotImplementedError:  # pragma: no cover
+                value = None
+
+            # If the raw expression still contains unevaluated symbols, fall back to
+            # the processed variables on the solved step. This is slower, but it works
+            # for custom terminations built from model outputs.
+            if value is None:
+                value = self._evaluate_step_termination_expression_from_solution(
+                    term, step_solution, step
+                )
+
+            if value is not None:
+                final_event_values[event.name] = value
+
+        if not final_event_values:
+            return step_solution.termination
+
+        termination_event = min(final_event_values, key=final_event_values.get)
+        step_solution.termination = f"event: {termination_event}"
+        return step_solution.termination
 
     def _set_up_and_parameterise_experiment(self, solve_kwargs=None):
         """
@@ -244,9 +557,9 @@ class Simulation:
         # input parameters
         restrict_list = {"Initial temperature [K]", "Ambient temperature [K]"}
         for step in self.experiment.steps:
-            if issubclass(step.__class__, pybamm.experiment.step.BaseStepImplicit):
+            if step.is_implicit():
                 restrict_list.update(step.get_parameter_values([]).keys())
-            elif issubclass(step.__class__, pybamm.experiment.step.BaseStepExplicit):
+            else:
                 restrict_list.update(["Current function [A]"])
         for key in restrict_list:
             if key in parameter_values.keys() and isinstance(
@@ -289,6 +602,24 @@ class Simulation:
         if init_temp is not None:
             parameter_values["Initial temperature [K]"] = init_temp
 
+        blockers = self._get_unified_experiment_model_blockers()
+        if self._experiment_model_mode == "unified":
+            if blockers:
+                raise pybamm.ModelError(
+                    "Cannot build a unified experiment model: "
+                    + "; ".join(blockers)
+                    + ". Use 'legacy' mode or a compatible solver/experiment."
+                )
+            self._set_up_unified_experiment_model(parameter_values)
+            return
+
+        self._experiment_uses_unified_model = False
+        self._built_experiment_model = None
+        self._built_experiment_solver = None
+        self._experiment_step_indices = []
+        self._experiment_padding_rest_index = None
+        self._experiment_includes_padding_rest = False
+
         # Process each step
         self.experiment_unique_steps_to_model = {}
         for step in self.experiment.unique_steps:
@@ -302,7 +633,7 @@ class Simulation:
         # Set up rest model if experiment has start times
         if self.experiment.initial_start_time:
             # duration doesn't matter, we just need the model
-            rest_step = pybamm.step.rest(duration=1)
+            rest_step = pybamm.step.Rest(duration=1)
             # Change ambient temperature to be an input, which will be changed at
             # solve time
             parameter_values["Ambient temperature [K]"] = "[input]"
@@ -493,7 +824,9 @@ class Simulation:
         models = []
         if self._built_model is not None:
             models.append(self._built_model)
-        if self.steps_to_built_models is not None:
+        if self._built_experiment_model is not None:
+            models.append(self._built_experiment_model)
+        elif self.steps_to_built_models is not None:
             models.extend(self.steps_to_built_models.values())
 
         for built_model in models:
@@ -571,7 +904,7 @@ class Simulation:
         if initial_soc is not None:
             self.set_initial_state(initial_soc, direction=direction, inputs=inputs)
 
-        if self.steps_to_built_models:
+        if self._built_experiment_model is not None or self.steps_to_built_models:
             if self._needs_ic_rebuild:
                 self._recompute_initial_conditions()
             # Check if we need to update the models due to capacity change
@@ -589,22 +922,40 @@ class Simulation:
                 self._mesh, self._spatial_methods, **self._discretisation_kwargs
             )
             # Process all the different models
+            self._built_experiment_model = None
+            self._built_experiment_solver = None
             self.steps_to_built_models = {}
             self.steps_to_built_solvers = {}
-            for (
-                step,
-                model_with_set_params,
-            ) in self.experiment_unique_steps_to_model.items():
-                # It's ok to modify the model with set parameters in place as it's
-                # not returned anywhere
+            if self._experiment_uses_unified_model:
+                model_with_set_params = self.experiment_unique_steps_to_model[
+                    self._experiment_unified_model_key
+                ]
                 built_model = self._disc.process_model(
                     model_with_set_params,
                     inplace=True,
                     delayed_variable_processing=True,
                 )
                 solver = self._solver.copy()
-                self.steps_to_built_solvers[step] = solver
-                self.steps_to_built_models[step] = built_model
+                self._built_experiment_model = built_model
+                self._built_experiment_solver = solver
+                for step in self.experiment.unique_steps:
+                    self.steps_to_built_models[step.basic_repr()] = built_model
+                    self.steps_to_built_solvers[step.basic_repr()] = solver
+            else:
+                for (
+                    step,
+                    model_with_set_params,
+                ) in self.experiment_unique_steps_to_model.items():
+                    # It's ok to modify the model with set parameters in place as it's
+                    # not returned anywhere
+                    built_model = self._disc.process_model(
+                        model_with_set_params,
+                        inplace=True,
+                        delayed_variable_processing=True,
+                    )
+                    solver = self._solver.copy()
+                    self.steps_to_built_solvers[step] = solver
+                    self.steps_to_built_models[step] = built_model
 
             if inputs is None:
                 inputs = {}
@@ -617,48 +968,51 @@ class Simulation:
     def _build_experiment_state_mappers(self, inputs: dict):
         self.model_state_mappers = {}
         self._compiled_model_state_mappers = {}
+
         if not self.experiment or not self.steps_to_built_models:
             return
 
-        ordered_steps = self.experiment.steps
-        previous_model = None
-        for step in ordered_steps:
-            model = self.steps_to_built_models[step.basic_repr()]
-            if previous_model is not None and previous_model is not model:
-                key = (previous_model, model)
-                if key not in self.model_state_mappers:
-                    self.model_state_mappers[key] = model.build_initial_state_mapper(
-                        previous_model
-                    )
-            previous_model = model
+        if not self._experiment_uses_unified_model:
+            ordered_steps = self.experiment.steps
+            previous_model = None
+            for step in ordered_steps:
+                model = self.steps_to_built_models[step.basic_repr()]
+                if previous_model is not None and previous_model is not model:
+                    key = (previous_model, model)
+                    if key not in self.model_state_mappers:
+                        self.model_state_mappers[key] = (
+                            model.build_initial_state_mapper(previous_model)
+                        )
+                previous_model = model
 
-        rest_model = self.steps_to_built_models.get("Rest for padding")
-        if rest_model is not None:
-            unique_models = set(self.steps_to_built_models.values())
-            for model in unique_models:
-                if model is rest_model:
-                    continue
-                to_rest_key = (model, rest_model)
-                if to_rest_key not in self.model_state_mappers:
-                    self.model_state_mappers[to_rest_key] = (
-                        rest_model.build_initial_state_mapper(model)
-                    )
-                from_rest_key = (rest_model, model)
-                if from_rest_key not in self.model_state_mappers:
-                    self.model_state_mappers[from_rest_key] = (
-                        model.build_initial_state_mapper(rest_model)
-                    )
+            rest_model = self.steps_to_built_models.get("Rest for padding")
+            if rest_model is not None:
+                unique_models = set(self.steps_to_built_models.values())
+                for model in unique_models:
+                    if model is rest_model:
+                        continue
+                    to_rest_key = (model, rest_model)
+                    if to_rest_key not in self.model_state_mappers:
+                        self.model_state_mappers[to_rest_key] = (
+                            rest_model.build_initial_state_mapper(model)
+                        )
+                    from_rest_key = (rest_model, model)
+                    if from_rest_key not in self.model_state_mappers:
+                        self.model_state_mappers[from_rest_key] = (
+                            model.build_initial_state_mapper(rest_model)
+                        )
 
-        # compile all the mappers
         for (previous_model, next_model), mapper in self.model_state_mappers.items():
+            ordered_compile_inputs = {
+                name: inputs.get(name, 0)
+                for name in sorted(ip.name for ip in previous_model.input_parameters)
+            }
             vars_for_processing = pybamm.BaseSolver._get_vars_for_processing(
-                previous_model, inputs
+                previous_model, ordered_compile_inputs
             )
             if not hasattr(previous_model, "calculate_sensitivities"):
                 previous_model.calculate_sensitivities = []
             f, jac, jacp, _jac_action = process(mapper, "mapper", vars_for_processing)
-            # Store both the compiled mapper and the input keys used
-            # we don't need jac and jacp yet, but should use them for sensitivity calculations in the future
             self._compiled_model_state_mappers[(previous_model, next_model)] = (
                 f,
                 jac,
@@ -673,9 +1027,12 @@ class Simulation:
         if not solution.all_models:
             return None
         from_model = solution.all_models[-1]
+        mapper = self._compiled_model_state_mappers.get((from_model, model))
+        if mapper is not None:
+            return mapper
         if from_model is model:
             return None
-        return self._compiled_model_state_mappers.get((from_model, model))
+        return None
 
     def solve(
         self,
@@ -937,6 +1294,8 @@ class Simulation:
             idx = 0
             num_cycles = len(self.experiment.cycle_lengths)
             feasible = True  # simulation will stop if experiment is infeasible
+            stop_experiment = False
+            experiment_termination = None
 
             # Add initial padding rest if current time is earlier than first start time
             # This could be the case when using a starting solution
@@ -954,14 +1313,13 @@ class Simulation:
                         # logs["step operating conditions"] = "Initial rest for padding"
                         # callbacks.on_step_start(logs)
 
-                        inputs = {
-                            **user_inputs,
-                            "Ambient temperature [K]": (
-                                step.temperature
-                                or self._parameter_values["Ambient temperature [K]"]
-                            ),
-                            "start time": current_solution.t[-1],
-                        }
+                        inputs = self._build_experiment_step_inputs(
+                            user_inputs,
+                            step,
+                            current_solution.t[-1],
+                            self._experiment_padding_rest_index,
+                        )
+
                         steps = current_solution.cycles[-1].steps
                         step_solution = current_solution.cycles[-1].steps[-1]
 
@@ -1048,20 +1406,33 @@ class Simulation:
                     # if dt + starttime is larger than time_stop, set dt to time_stop - starttime
                     if time_stop is not None:
                         dt = min(dt, time_stop - start_time)
+                        if dt <= 0:
+                            experiment_termination = (
+                                self._experiment_time_stop_termination()
+                            )
+                            stop_experiment = True
+                            break
 
                     step_str = str(step)
-                    model = self.steps_to_built_models[step.basic_repr()]
-                    solver = self.steps_to_built_solvers[step.basic_repr()]
+                    model = self._get_built_experiment_model(step)
+                    solver = self._get_built_experiment_solver(step)
 
                     logs["step number"] = (step_num, cycle_length)
                     logs["step operating conditions"] = step_str
                     logs["step duration"] = step.duration
                     callbacks.on_step_start(logs)
 
-                    inputs = {
-                        **user_inputs,
-                        "start time": start_time,
-                    }
+                    active_step_index = None
+                    if self._experiment_uses_unified_model:
+                        active_step_index = self._experiment_step_indices[idx]
+                    inputs = self._build_experiment_step_inputs(
+                        user_inputs,
+                        step,
+                        start_time,
+                        active_step_index,
+                        include_temperature=self._experiment_uses_unified_model,
+                    )
+
                     # Make sure we take at least 2 timesteps
                     t_eval, t_interp_processed = step.setup_timestepping(
                         solver, dt, t_interp
@@ -1102,7 +1473,12 @@ class Simulation:
                             # Otherwise, just stop this cycle
                             break
 
-                    step_termination = step_solution.termination
+                    if self._experiment_uses_unified_model:
+                        step_termination = self._decode_combined_step_termination(
+                            step_solution, step, model, inputs
+                        )
+                    else:
+                        step_termination = step_solution.termination
 
                     # Add a padding rest step if necessary
                     if step.next_start_time is not None:
@@ -1118,14 +1494,12 @@ class Simulation:
                             logs["step operating conditions"] = "Rest for padding"
                             callbacks.on_step_start(logs)
 
-                            inputs = {
-                                **user_inputs,
-                                "Ambient temperature [K]": (
-                                    step.temperature
-                                    or self._parameter_values["Ambient temperature [K]"]
-                                ),
-                                "start time": step_solution.t[-1],
-                            }
+                            inputs = self._build_experiment_step_inputs(
+                                user_inputs,
+                                step,
+                                step_solution.t[-1],
+                                self._experiment_padding_rest_index,
+                            )
 
                             step_solution_with_rest = self.run_padding_rest(
                                 kwargs, rest_time, step_solution, inputs=inputs
@@ -1176,13 +1550,19 @@ class Simulation:
 
                     elif time_stop is not None and logs["experiment time"] >= time_stop:
                         # reached the time limit of the experiment
+                        experiment_termination = (
+                            self._experiment_time_stop_termination()
+                        )
+                        stop_experiment = True
                         break
 
                     else:
                         # Increment index for next iteration, then continue
                         idx += 1
 
-                if save_this_cycle or feasible is False:
+                if cycle_solution is not None and (
+                    save_this_cycle or feasible is False or stop_experiment
+                ):
                     self._solution = self._solution + cycle_solution
 
                 # At the final step of the inner loop we save the cycle
@@ -1278,19 +1658,33 @@ class Simulation:
                 if capacity_stop is not None:
                     capacity_now = cycle_sum_vars["Capacity [A.h]"]
                     if not np.isnan(capacity_now) and capacity_now <= capacity_stop:
+                        experiment_termination = (
+                            self._experiment_capacity_stop_termination()
+                        )
+                        stop_experiment = True
                         break
 
                 if voltage_stop is not None:
                     if min_voltage <= voltage_stop[0]:
+                        experiment_termination = (
+                            self._experiment_voltage_stop_termination()
+                        )
+                        stop_experiment = True
                         break
 
                 if not feasible:
+                    break
+
+                if stop_experiment:
                     break
 
             if self._solution is not None and len(all_cycle_solutions) > 0:
                 self._solution.cycles = all_cycle_solutions
                 self._solution.update_summary_variables(all_summary_variables)
                 self._solution.all_first_states = all_first_states
+
+            if self._solution is not None and experiment_termination is not None:
+                self._solution.termination = experiment_termination
 
             callbacks.on_experiment_end(logs)
 
@@ -1300,8 +1694,8 @@ class Simulation:
         return self._solution
 
     def run_padding_rest(self, kwargs, rest_time, step_solution, inputs):
-        model = self.steps_to_built_models["Rest for padding"]
-        solver = self.steps_to_built_solvers["Rest for padding"]
+        model = self._get_built_experiment_model("Rest for padding")
+        solver = self._get_built_experiment_solver("Rest for padding")
         state_mapper = self._get_state_mapper_for_solution(step_solution, model)
 
         # Make sure we take at least 2 timesteps. The period is hardcoded to 10
@@ -1523,6 +1917,11 @@ class Simulation:
                     and solver.integrator_specs != {}
                 ):
                     solver.integrator_specs = {}
+        if (
+            isinstance(self._built_experiment_solver, pybamm.CasadiSolver)
+            and self._built_experiment_solver.integrator_specs != {}
+        ):
+            self._built_experiment_solver.integrator_specs = {}
 
         with open(filename, "wb") as f:
             pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
