@@ -3,6 +3,12 @@ on:
   release:
     types: [ published ]
   workflow_dispatch:
+    inputs:
+      save_vcpkg_logs:
+        description: "Upload vcpkg build logs for Windows (useful for debugging CI failures)"
+        default: false
+        required: false
+        type: boolean
   pull_request:
     branches:
       - "main"
@@ -53,7 +59,7 @@ jobs:
           CIBW_TEST_COMMAND: |
             python -m pytest {project}/tests
       - name: Upload vcpkg build logs
-        if: always()
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.save_vcpkg_logs && always()}}
         uses: actions/upload-artifact@v7
         with:
           name: vcpkg-logs-windows
