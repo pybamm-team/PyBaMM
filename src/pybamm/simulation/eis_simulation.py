@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import numpy as np
 from scipy.sparse import csc_matrix
-from scipy.sparse.linalg import splu
+from scipy.sparse.linalg import spsolve
 
 import pybamm
 
@@ -96,7 +96,19 @@ class EISSimulation(BaseSimulation):
         -------
         new_model : :class:`pybamm.BaseModel`
             Modified model copy.
+
+        Raises
+        ------
+        ValueError
+            If the model is missing required variables.
         """
+        required_vars = ["Voltage [V]", "Current [A]"]
+        for var in required_vars:
+            if var not in model.variables:
+                raise ValueError(
+                    f"Model must contain variable '{var}' for EIS simulation"
+                )
+
         new_model = model.new_copy()
 
         # Add voltage as an algebraic state variable
@@ -152,18 +164,19 @@ class EISSimulation(BaseSimulation):
         model = self._built_model
         inputs_dict = inputs_dict or {}
 
+        # Convert inputs to casadi format for Jacobian evaluation
         if model.convert_to_format == "casadi":
             from casadi import vertcat
 
-            inputs = vertcat(*inputs_dict.values())
+            casadi_inputs = vertcat(*inputs_dict.values()) if inputs_dict else []
         else:
-            inputs = inputs_dict
+            casadi_inputs = inputs_dict
 
         solver = pybamm.BaseSolver()
         solver.set_up(model, inputs=inputs_dict)
 
         y0 = model.concatenated_initial_conditions.evaluate(0, inputs=inputs_dict)
-        J_sparse = model.jac_rhs_algebraic_eval(0, y0, inputs).sparse()
+        J_sparse = model.jac_rhs_algebraic_eval(0, y0, casadi_inputs).sparse()
 
         M = csc_matrix(model.mass_matrix.entries)
         neg_J = -J_sparse if isinstance(J_sparse, csc_matrix) else -csc_matrix(J_sparse)
@@ -171,16 +184,41 @@ class EISSimulation(BaseSimulation):
         # Forcing: unit perturbation on the current variable (last entry by
         # construction in _set_up_model_for_eis, where voltage is added before
         # current to the algebraic equations)
-        b = np.zeros_like(y0)
+        b = np.zeros(y0.shape[0])
         b[-1] = -1
 
         return M, neg_J, b
+
+    def calculate_impedance(self, frequency, M, neg_J, b):
+        """Calculate impedance at a single frequency.
+
+        Parameters
+        ----------
+        frequency : float
+            Frequency in Hz.
+        M : scipy.sparse.csc_matrix
+            Mass matrix.
+        neg_J : scipy.sparse.csc_matrix
+            Negated Jacobian.
+        b : np.ndarray
+            Forcing vector.
+
+        Returns
+        -------
+        z : complex
+            Complex impedance value (unscaled).
+        """
+        A = 1.0j * 2 * np.pi * frequency * M + neg_J
+        x = spsolve(A, b)
+        # Voltage is penultimate, current is last (by construction in
+        # _set_up_model_for_eis)
+        return -x[-2] / x[-1]
 
     def solve(self, frequencies, inputs=None, initial_soc=None):
         """Compute impedance at the given frequencies.
 
         Solves the linear system ``(i*omega*M - J) x = b`` at each frequency
-        using direct sparse LU factorisation.
+        using a direct sparse solver.
 
         Parameters
         ----------
@@ -208,15 +246,7 @@ class EISSimulation(BaseSimulation):
 
         M, neg_J, b = self._build_matrix_problem(inputs_dict=inputs)
 
-        zs = []
-        for frequency in frequencies:
-            A = 1.0j * 2 * np.pi * frequency * M + neg_J
-            lu = splu(A)
-            x = lu.solve(b)
-            # Voltage is penultimate, current is last (by construction in
-            # _set_up_model_for_eis)
-            zs.append(-x[-2][0] / x[-1][0])
-
+        zs = [self.calculate_impedance(f, M, neg_J, b) for f in frequencies]
         self._eis_solution = np.array(zs) * self._z_scale
 
         self.solve_time = timer.time()
