@@ -1306,9 +1306,7 @@ class TestSimulationCoverageGaps:
         model = pybamm.lithium_ion.SPM()
         exp = pybamm.Experiment(["Discharge at 1C for 10 seconds"])
         # ScipySolver is an ODE solver, which blocks unified model
-        sim = pybamm.Simulation(
-            model, experiment=exp, solver=pybamm.ScipySolver()
-        )
+        sim = pybamm.Simulation(model, experiment=exp, solver=pybamm.ScipySolver())
         assert sim._experiment_can_use_unified_model() is False
         blockers = sim._get_unified_experiment_model_blockers()
         assert any("DAE-capable" in b for b in blockers)
