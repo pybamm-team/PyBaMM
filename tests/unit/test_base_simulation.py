@@ -337,7 +337,7 @@ class TestBaseSimulationPrepareSolve:
     def test_prepare_solve_defaults(self):
         model = pybamm.lithium_ion.SPM()
         sim = pybamm.BaseSimulation(model)
-        t_eval, solver, calc_esoh, callbacks, inputs = sim._prepare_solve(
+        t_eval, solver, _calc_esoh, _callbacks, inputs = sim._prepare_solve(
             [0, 100], None, None, None, None
         )
         assert t_eval == [0, 100]
@@ -348,7 +348,7 @@ class TestBaseSimulationPrepareSolve:
         model = pybamm.lithium_ion.SPM()
         sim = pybamm.BaseSimulation(model)
         custom_solver = pybamm.CasadiSolver()
-        t_eval, solver, calc_esoh, callbacks, inputs = sim._prepare_solve(
+        _t_eval, solver, _calc_esoh, _callbacks, _inputs = sim._prepare_solve(
             [0, 100], custom_solver, None, None, None
         )
         assert solver is custom_solver
