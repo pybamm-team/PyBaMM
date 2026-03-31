@@ -211,9 +211,10 @@ from .plotting.plot_summary_variables import plot_summary_variables
 from .plotting.dynamic_plot import dynamic_plot
 from .plotting.plot_3d_cross_section import plot_3d_cross_section
 from .plotting.plot_3d_heatmap import plot_3d_heatmap
+from .plotting.nyquist_plot import nyquist_plot
 
 # Simulation
-from .simulation import BaseSimulation, Simulation, load_sim, is_notebook
+from .simulation import BaseSimulation, Simulation, EISSimulation, load_sim, is_notebook
 
 # Batch Study
 from .batch_study import BatchStudy
