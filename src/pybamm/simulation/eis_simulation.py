@@ -1,10 +1,3 @@
-"""EIS (Electrochemical Impedance Spectroscopy) simulation.
-
-Computes impedance spectra in the frequency domain by solving
-``(i*omega*M - J) x = b`` at each frequency, where *M* is the mass matrix,
-*J* the Jacobian, and *b* a unit current forcing vector.
-"""
-
 from __future__ import annotations
 
 import numpy as np
@@ -172,8 +165,11 @@ class EISSimulation(BaseSimulation):
         else:
             casadi_inputs = inputs_dict
 
-        solver = pybamm.BaseSolver()
-        solver.set_up(model, inputs=inputs_dict)
+        # Only compile Jacobian/model functions on first call; the compiled
+        # functions persist on the model and work with any inputs/y0 values.
+        if getattr(model, "jac_rhs_algebraic_eval", None) is None:
+            solver = pybamm.BaseSolver()
+            solver.set_up(model, inputs=inputs_dict)
 
         y0 = model.concatenated_initial_conditions.evaluate(0, inputs=inputs_dict)
         J_sparse = model.jac_rhs_algebraic_eval(0, y0, casadi_inputs).sparse()
