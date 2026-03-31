@@ -1630,9 +1630,7 @@ class TestSimulationExperiment:
         )
         sim.build_for_experiment()
         step_solution = pybamm.EmptySolution()
-        step_solution.termination = (
-            f"event: {sim._COMBINED_TERMINATION_EVENT}"
-        )
+        step_solution.termination = f"event: {sim._COMBINED_TERMINATION_EVENT}"
         step = SimpleNamespace(
             direction="rest", termination=[pybamm.step.VoltageTermination(4.2)]
         )

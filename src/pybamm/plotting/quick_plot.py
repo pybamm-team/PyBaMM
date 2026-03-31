@@ -271,7 +271,9 @@ class QuickPlot:
 
     @staticmethod
     def check_input_validity(input_solutions):
-        if not isinstance(input_solutions, pybamm.Solution | pybamm.BaseSimulation | list):
+        if not isinstance(
+            input_solutions, pybamm.Solution | pybamm.BaseSimulation | list
+        ):
             raise TypeError(
                 "Solutions must be 'pybamm.Solution' or 'pybamm.Simulation' or list"
             )

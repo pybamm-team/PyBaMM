@@ -1,5 +1,3 @@
-import pickle
-
 import numpy as np
 import pytest
 
@@ -96,9 +94,7 @@ class TestBaseSimulationSolveBuild:
         model = pybamm.lithium_ion.SPM()
         param = model.default_parameter_values
 
-        drive_cycle = np.column_stack(
-            [np.linspace(0, 100, 10), np.ones(10)]
-        )
+        drive_cycle = np.column_stack([np.linspace(0, 100, 10), np.ones(10)])
         current_interpolant = pybamm.Interpolant(
             drive_cycle[:, 0], drive_cycle[:, 1], pybamm.t
         )

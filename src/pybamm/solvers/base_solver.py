@@ -713,9 +713,7 @@ class BaseSolver:
     def _solve_process_calculate_sensitivities_arg(
         inputs: dict, model: pybamm.BaseModel, calculate_sensitivities: list[str] | bool
     ):
-        excluded_sensitivity_inputs = {
-            pybamm.Simulation._STEP_INDEX_INPUT
-        }
+        excluded_sensitivity_inputs = {pybamm.Simulation._STEP_INDEX_INPUT}
 
         # get a list-only version of calculate_sensitivities
         if isinstance(calculate_sensitivities, bool):

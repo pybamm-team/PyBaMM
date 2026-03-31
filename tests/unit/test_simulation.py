@@ -156,8 +156,7 @@ class TestSimulation:
         assert restored._experiment_padding_rest_index is None
         assert restored._experiment_includes_padding_rest is False
         assert (
-            restored._COMBINED_TERMINATION_EVENT
-            == "Combined termination [experiment]"
+            restored._COMBINED_TERMINATION_EVENT == "Combined termination [experiment]"
         )
         assert restored._experiment_model_mode == "legacy"
 
