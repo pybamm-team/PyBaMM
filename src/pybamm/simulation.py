@@ -10,7 +10,6 @@ import numpy as np
 
 import pybamm
 import pybamm.telemetry
-from pybamm.expression_tree.operations.serialise import Serialise
 from pybamm.models.base_model import ModelSolutionObservability
 from pybamm.solvers.base_solver import process
 from pybamm.util import import_optional_dependency
@@ -763,6 +762,8 @@ class BaseSimulation:
         variables = self._built_model.variables if variables else None
 
         if self._built_model:
+            from pybamm.expression_tree.operations.serialise import Serialise
+
             Serialise().save_model(
                 self._built_model, filename=filename, mesh=mesh, variables=variables
             )
@@ -838,6 +839,13 @@ class Simulation(BaseSimulation):
     """
 
     _PADDING_REST_KEY = "Rest for padding"
+    _STEP_INDEX_INPUT = "Experiment step index"
+    _TERMINATION_TIME = "experiment time limit reached"
+    _TERMINATION_VOLTAGE = "experiment voltage limit reached"
+    _TERMINATION_CAPACITY = "experiment capacity limit reached"
+    _TERMINATION_FINAL_TIME = "final time"
+    _TERMINATION_EXPERIMENT_TAG = "[experiment]"
+    _COMBINED_TERMINATION_EVENT = "Combined termination [experiment]"
 
     def __init__(
         self,
@@ -898,7 +906,6 @@ class Simulation(BaseSimulation):
         self._experiment_step_indices = []
         self._experiment_padding_rest_index = None
         self._experiment_includes_padding_rest = False
-        self._combined_step_termination_event_name = "Combined termination [experiment]"
 
     def __getstate__(self):
         """
@@ -926,7 +933,6 @@ class Simulation(BaseSimulation):
         "_experiment_step_indices": list,
         "_experiment_padding_rest_index": None,
         "_experiment_includes_padding_rest": False,
-        "_combined_step_termination_event_name": "Combined termination [experiment]",
     }
 
     def __setstate__(self, state):
@@ -960,16 +966,12 @@ class Simulation(BaseSimulation):
         if self._built_nominal_capacity == current_capacity:
             return
 
-        # Capacity has changed, need to re-process the models
         pybamm.logger.info(
             f"Nominal capacity changed from {self._built_nominal_capacity} to "
             f"{current_capacity}. Re-processing experiment models."
         )
 
-        # Re-parameterise the experiment with the new capacity
         self._set_up_and_parameterise_experiment(solve_kwargs)
-
-        # Re-discretise the models
         self._discretise_experiment_models()
         self._build_experiment_state_mappers(inputs)
         self._built_nominal_capacity = current_capacity
@@ -1011,19 +1013,13 @@ class Simulation(BaseSimulation):
 
     @staticmethod
     def _experiment_step_index_input_name():
-        return "Experiment step index"
-
-    @staticmethod
-    def _experiment_time_stop_termination():
-        return "experiment time limit reached"
-
-    @staticmethod
-    def _experiment_voltage_stop_termination():
-        return "experiment voltage limit reached"
-
-    @staticmethod
-    def _experiment_capacity_stop_termination():
-        return "experiment capacity limit reached"
+        warnings.warn(
+            "Simulation._experiment_step_index_input_name() is deprecated, "
+            "use Simulation._STEP_INDEX_INPUT instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return Simulation._STEP_INDEX_INPUT
 
     @staticmethod
     def _normalise_experiment_model_mode(mode):
@@ -1091,7 +1087,7 @@ class Simulation(BaseSimulation):
         submodel = pybamm.external_circuit.ExperimentFunctionControl(
             new_model.param,
             new_model.options,
-            self._experiment_step_index_input_name(),
+            self._STEP_INDEX_INPUT,
             step_control_builders,
         )
         # Reuse the implicit-step wiring so the experiment-wide controller owns the
@@ -1111,12 +1107,12 @@ class Simulation(BaseSimulation):
         if self._experiment_includes_padding_rest:
             termination_branches.append(pybamm.Scalar(1))
         combined_termination_expression = pybamm.Conditional(
-            pybamm.InputParameter(self._experiment_step_index_input_name()),
+            pybamm.InputParameter(self._STEP_INDEX_INPUT),
             *termination_branches,
         )
         new_model.events.append(
             pybamm.Event(
-                self._combined_step_termination_event_name,
+                self._COMBINED_TERMINATION_EVENT,
                 combined_termination_expression,
             )
         )
@@ -1168,7 +1164,7 @@ class Simulation(BaseSimulation):
             **user_inputs,
             "Ambient temperature [K]": temperature,
             "start time": start_time,
-            self._experiment_step_index_input_name(): active_step_index,
+            self._STEP_INDEX_INPUT: active_step_index,
         }
         return inputs
 
@@ -1214,7 +1210,7 @@ class Simulation(BaseSimulation):
     def _decode_combined_step_termination(self, step_solution, step, model, inputs):
         if (
             step_solution.termination
-            != f"event: {self._combined_step_termination_event_name}"
+            != f"event: {self._COMBINED_TERMINATION_EVENT}"
         ):
             return step_solution.termination
 
@@ -1334,7 +1330,6 @@ class Simulation(BaseSimulation):
         self._experiment_padding_rest_index = None
         self._experiment_includes_padding_rest = False
 
-        # Process each step
         self.experiment_unique_steps_to_model = {}
         for step in self.experiment.unique_steps:
             new_model = step.process_model(
@@ -1442,6 +1437,60 @@ class Simulation(BaseSimulation):
             return None
         from_model = solution.all_models[-1]
         return self._compiled_model_state_mappers.get((from_model, model))
+
+    @staticmethod
+    def _should_save_cycle(
+        cycle_num, num_cycles, cycle_offset, save_at_cycles
+    ):
+        """Determine whether to persist full solution data for this cycle."""
+        return (
+            cycle_num == 1
+            or cycle_num == num_cycles
+            or save_at_cycles is None
+            or (
+                isinstance(save_at_cycles, list)
+                and cycle_num + cycle_offset in save_at_cycles
+            )
+            or (
+                isinstance(save_at_cycles, int)
+                and (cycle_num + cycle_offset) % save_at_cycles == 0
+            )
+        )
+
+    def _check_infeasible_steps(self, steps, step, step_str, cycle_num):
+        """Raise or skip when all steps in a cycle produced EmptySolution."""
+        if len(steps) == 1:
+            if step.skip_ok:
+                pybamm.logger.warning(
+                    f"Step '{step_str}' is infeasible at initial conditions, "
+                    "but skip_ok is True. Skipping step."
+                )
+                self._solution.termination = steps[0].termination
+                return True  # signal: continue to next cycle
+            raise pybamm.SolverError(
+                f"Step '{step_str}' is infeasible "
+                "due to exceeded bounds at initial conditions. "
+                "If this step is part of a longer cycle, "
+                "round brackets should be used to indicate this, "
+                "e.g.:\n pybamm.Experiment([(\n"
+                "\tDischarge at C/5 for 10 hours or until 3.3 V,\n"
+                "\tCharge at 1 A until 4.1 V,\n"
+                "\tHold at 4.1 V until 10 mA\n"
+                ")])\n"
+                "Otherwise, set skip_ok=True when instantiating the step "
+                "to skip this step."
+            )
+
+        this_cycle = self.experiment.cycles[cycle_num - 1]
+        all_steps_skipped = all(
+            this_step.skip_ok
+            for this_step in this_cycle
+            if isinstance(this_step, pybamm.step.BaseStep)
+        )
+        msg = f"All steps in the cycle {this_cycle} are infeasible due to exceeded bounds at initial conditions."
+        if all_steps_skipped:
+            msg += " skip_ok is True for all steps. Please recheck the experiment."
+        raise pybamm.SolverError(msg)
 
     def build_for_experiment(
         self, initial_soc=None, direction=None, inputs=None, solve_kwargs=None
@@ -1556,7 +1605,6 @@ class Simulation(BaseSimulation):
         # Re-initialize solution, e.g. for solving multiple times with different
         # inputs without having to build the simulation again
         self._solution = starting_solution
-        # Step through all experimental conditions
         user_inputs = inputs
         timer = pybamm.Timer()
 
@@ -1590,11 +1638,11 @@ class Simulation(BaseSimulation):
                 starting_solution.all_first_states.copy()
             )
 
-        # set simulation initial_start_time
-        if starting_solution is None:
-            initial_start_time = self.experiment.initial_start_time
-        else:
-            initial_start_time = starting_solution.initial_start_time
+        initial_start_time = (
+            self.experiment.initial_start_time
+            if starting_solution is None
+            else starting_solution.initial_start_time
+        )
 
         if (
             initial_start_time is None
@@ -1657,10 +1705,12 @@ class Simulation(BaseSimulation):
                     current_solution += step_solution_with_rest
                     current_solution.cycles = old_cycles
 
-                    # Update _solution
                     self._solution = current_solution
 
-        # check if a user has tqdm installed
+        experiment_steps = self.experiment.steps
+        uses_unified = self._experiment_uses_unified_model
+        step_indices = self._experiment_step_indices
+
         if showprogress:
             tqdm = import_optional_dependency("tqdm")
             cycle_lengths = tqdm.tqdm(
@@ -1683,54 +1733,25 @@ class Simulation(BaseSimulation):
 
             steps = []
             cycle_solution = None
-
-            # Decide whether we should save this cycle
-            save_this_cycle = (
-                # always save cycle 1
-                cycle_num == 1
-                # always save last cycle
-                or cycle_num == num_cycles
-                # None: save all cycles
-                or save_at_cycles is None
-                # list: save all cycles in the list
-                or (
-                    isinstance(save_at_cycles, list)
-                    and cycle_num + cycle_offset in save_at_cycles
-                )
-                # int: save all multiples
-                or (
-                    isinstance(save_at_cycles, int)
-                    and (cycle_num + cycle_offset) % save_at_cycles == 0
-                )
+            save_this_cycle = self._should_save_cycle(
+                cycle_num, num_cycles, cycle_offset, save_at_cycles
             )
             for step_num in range(1, cycle_length + 1):
-                # Use 1-indexing for printing cycle number as it is more
-                # human-intuitive
-                step = self.experiment.steps[idx]
+                step = experiment_steps[idx]
                 start_time = current_solution.t[-1]
 
-                # If step has an end time, dt must take that into account
+                dt = step.duration
                 if step.end_time is not None:
-                    dt = min(
-                        step.duration,
-                        (
-                            step.end_time
-                            - (
-                                initial_start_time
-                                + timedelta(seconds=float(start_time))
-                            )
-                        ).total_seconds(),
-                    )
-                else:
-                    dt = step.duration
+                    remaining = (
+                        step.end_time
+                        - (initial_start_time + timedelta(seconds=float(start_time)))
+                    ).total_seconds()
+                    dt = min(dt, remaining)
 
-                # if dt + starttime is larger than time_stop, set dt to time_stop - starttime
                 if time_stop is not None:
                     dt = min(dt, time_stop - start_time)
                     if dt <= 0:
-                        experiment_termination = (
-                            self._experiment_time_stop_termination()
-                        )
+                        experiment_termination = self._TERMINATION_TIME
                         stop_experiment = True
                         break
 
@@ -1743,18 +1764,15 @@ class Simulation(BaseSimulation):
                 logs["step duration"] = step.duration
                 callbacks.on_step_start(logs)
 
-                active_step_index = None
-                if self._experiment_uses_unified_model:
-                    active_step_index = self._experiment_step_indices[idx]
+                active_step_index = step_indices[idx] if uses_unified else None
                 inputs = self._build_experiment_step_inputs(
                     user_inputs,
                     step,
                     start_time,
                     active_step_index,
-                    include_temperature=self._experiment_uses_unified_model,
+                    include_temperature=uses_unified,
                 )
 
-                # Make sure we take at least 2 timesteps
                 t_eval, t_interp_processed = step.setup_timestepping(
                     solver, dt, t_interp
                 )
@@ -1794,7 +1812,7 @@ class Simulation(BaseSimulation):
                         # Otherwise, just stop this cycle
                         break
 
-                if self._experiment_uses_unified_model:
+                if uses_unified:
                     step_termination = self._decode_combined_step_termination(
                         step_solution, step, model, inputs
                     )
@@ -1851,7 +1869,7 @@ class Simulation(BaseSimulation):
                 logs["termination"] = step_solution.termination
 
                 # Check for some cases that would make the experiment end early
-                if step_termination == "final time" and step.uses_default_duration:
+                if step_termination == self._TERMINATION_FINAL_TIME and step.uses_default_duration:
                     # reached the default duration of a step (typically we should
                     # reach an event before the default duration)
                     callbacks.on_experiment_infeasible_time(logs)
@@ -1860,8 +1878,8 @@ class Simulation(BaseSimulation):
 
                 elif not (
                     isinstance(step_solution, pybamm.EmptySolution)
-                    or step_termination == "final time"
-                    or "[experiment]" in step_termination
+                    or step_termination == self._TERMINATION_FINAL_TIME
+                    or self._TERMINATION_EXPERIMENT_TAG in step_termination
                 ):
                     # Step has reached an event that is not specified in the
                     # experiment
@@ -1870,15 +1888,11 @@ class Simulation(BaseSimulation):
                     break
 
                 elif time_stop is not None and logs["experiment time"] >= time_stop:
-                    # reached the time limit of the experiment
-                    experiment_termination = (
-                        self._experiment_time_stop_termination()
-                    )
+                    experiment_termination = self._TERMINATION_TIME
                     stop_experiment = True
                     break
 
                 else:
-                    # Increment index for next iteration, then continue
                     idx += 1
 
             if cycle_solution is not None and (
@@ -1886,53 +1900,14 @@ class Simulation(BaseSimulation):
             ):
                 self._solution = self._solution + cycle_solution
 
-            # At the final step of the inner loop we save the cycle
-            if len(steps) > 0:
-                # Check for EmptySolution
+            if steps:
                 if all(
-                    isinstance(step_solution, pybamm.EmptySolution)
-                    for step_solution in steps
+                    isinstance(s, pybamm.EmptySolution) for s in steps
                 ):
-                    if len(steps) == 1:
-                        if step.skip_ok:
-                            pybamm.logger.warning(
-                                f"Step '{step_str}' is infeasible at initial conditions, but skip_ok is True. Skipping step."
-                            )
-
-                            # Update the termination and continue
-                            self._solution.termination = step_solution.termination
-                            continue
-                        else:
-                            raise pybamm.SolverError(
-                                f"Step '{step_str}' is infeasible "
-                                "due to exceeded bounds at initial conditions. "
-                                "If this step is part of a longer cycle, "
-                                "round brackets should be used to indicate this, "
-                                "e.g.:\n pybamm.Experiment([(\n"
-                                "\tDischarge at C/5 for 10 hours or until 3.3 V,\n"
-                                "\tCharge at 1 A until 4.1 V,\n"
-                                "\tHold at 4.1 V until 10 mA\n"
-                                ")])\n"
-                                "Otherwise, set skip_ok=True when instantiating the step to skip this step."
-                            )
-                    else:
-                        this_cycle = self.experiment.cycles[cycle_num - 1]
-                        all_steps_skipped = all(
-                            this_step.skip_ok
-                            for this_step in this_cycle
-                            if isinstance(this_step, pybamm.step.BaseStep)
-                        )
-                        if all_steps_skipped:
-                            raise pybamm.SolverError(
-                                f"All steps in the cycle {this_cycle} are infeasible "
-                                "due to exceeded bounds at initial conditions, though "
-                                "skip_ok is True for all steps. Please recheck the experiment."
-                            )
-                        else:
-                            raise pybamm.SolverError(
-                                f"All steps in the cycle {this_cycle} are infeasible "
-                                "due to exceeded bounds at initial conditions."
-                            )
+                    if self._check_infeasible_steps(
+                        steps, step, step_str, cycle_num
+                    ):
+                        continue
                 cycle_sol = pybamm.make_cycle_solution(
                     steps,
                     esoh_solver=esoh_solver,
@@ -1979,19 +1954,14 @@ class Simulation(BaseSimulation):
             if capacity_stop is not None:
                 capacity_now = cycle_sum_vars["Capacity [A.h]"]
                 if not np.isnan(capacity_now) and capacity_now <= capacity_stop:
-                    experiment_termination = (
-                        self._experiment_capacity_stop_termination()
-                    )
+                    experiment_termination = self._TERMINATION_CAPACITY
                     stop_experiment = True
                     break
 
-            if voltage_stop is not None:
-                if min_voltage <= voltage_stop[0]:
-                    experiment_termination = (
-                        self._experiment_voltage_stop_termination()
-                    )
-                    stop_experiment = True
-                    break
+            if voltage_stop is not None and min_voltage <= voltage_stop[0]:
+                experiment_termination = self._TERMINATION_VOLTAGE
+                stop_experiment = True
+                break
 
             if not feasible:
                 break

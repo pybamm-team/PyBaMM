@@ -714,7 +714,7 @@ class BaseSolver:
         inputs: dict, model: pybamm.BaseModel, calculate_sensitivities: list[str] | bool
     ):
         excluded_sensitivity_inputs = {
-            pybamm.Simulation._experiment_step_index_input_name()
+            pybamm.Simulation._STEP_INDEX_INPUT
         }
 
         # get a list-only version of calculate_sensitivities
