@@ -213,7 +213,7 @@ from .plotting.plot_3d_cross_section import plot_3d_cross_section
 from .plotting.plot_3d_heatmap import plot_3d_heatmap
 
 # Simulation
-from .simulation import Simulation, load_sim, is_notebook
+from .simulation import BaseSimulation, Simulation, load_sim, is_notebook
 
 # Batch Study
 from .batch_study import BatchStudy

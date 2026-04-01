@@ -135,7 +135,7 @@ class TestSimulation:
             "_experiment_step_indices",
             "_experiment_padding_rest_index",
             "_experiment_includes_padding_rest",
-            "_combined_step_termination_event_name",
+            "_COMBINED_TERMINATION_EVENT",
             "_experiment_model_mode",
         ]:
             state.pop(key, None)
@@ -151,13 +151,12 @@ class TestSimulation:
         assert restored.experiment_unique_steps_to_model is None
         assert restored._experiment_uses_unified_model is False
         assert restored._experiment_unified_model_key == "Unified experiment"
-        assert restored._experiment_step_index_input_name() == "Experiment step index"
+        assert restored._STEP_INDEX_INPUT == "Experiment step index"
         assert restored._experiment_step_indices == []
         assert restored._experiment_padding_rest_index is None
         assert restored._experiment_includes_padding_rest is False
         assert (
-            restored._combined_step_termination_event_name
-            == "Combined termination [experiment]"
+            restored._COMBINED_TERMINATION_EVENT == "Combined termination [experiment]"
         )
         assert restored._experiment_model_mode == "legacy"
 
@@ -1258,3 +1257,215 @@ class TestSimulation:
         # Solving again with same inputs+SOC should not trigger rebuild
         sim.solve(inputs={"eps_s_n": 0.6}, initial_soc=0.5)
         assert sim._needs_ic_rebuild is False
+
+    def test_should_save_cycle_first_and_last(self):
+        # First and last cycle always saved
+        assert pybamm.Simulation._should_save_cycle(1, 10, 0, 5) is True
+        assert pybamm.Simulation._should_save_cycle(10, 10, 0, 5) is True
+
+    def test_should_save_cycle_none_saves_all(self):
+        assert pybamm.Simulation._should_save_cycle(5, 10, 0, None) is True
+
+    def test_should_save_cycle_list(self):
+        assert pybamm.Simulation._should_save_cycle(3, 10, 0, [3, 6, 9]) is True
+        assert pybamm.Simulation._should_save_cycle(4, 10, 0, [3, 6, 9]) is False
+
+    def test_should_save_cycle_list_with_offset(self):
+        # cycle_num=2, offset=1 -> effective cycle 3
+        assert pybamm.Simulation._should_save_cycle(2, 10, 1, [3, 6]) is True
+        assert pybamm.Simulation._should_save_cycle(2, 10, 0, [3, 6]) is False
+
+    def test_should_save_cycle_int_modulo(self):
+        assert pybamm.Simulation._should_save_cycle(4, 10, 0, 2) is True  # 4%2==0
+        assert pybamm.Simulation._should_save_cycle(3, 10, 0, 2) is False  # 3%2==1
+
+    def test_should_save_cycle_int_with_offset(self):
+        # cycle_num=3, offset=1 -> effective 4, 4%2==0
+        assert pybamm.Simulation._should_save_cycle(3, 10, 1, 2) is True
+
+    def test_normalise_experiment_model_mode_invalid(self):
+        with pytest.raises(ValueError, match="experiment_model_mode"):
+            pybamm.Simulation._normalise_experiment_model_mode("invalid")
+
+    def test_normalise_experiment_model_mode_valid(self):
+        assert pybamm.Simulation._normalise_experiment_model_mode("legacy") == "legacy"
+        assert (
+            pybamm.Simulation._normalise_experiment_model_mode("unified") == "unified"
+        )
+
+    def test_experiment_step_index_input_name_deprecation(self):
+        with pytest.warns(DeprecationWarning, match="deprecated"):
+            name = pybamm.Simulation._experiment_step_index_input_name()
+        assert name == "Experiment step index"
+
+    def test_experiment_can_use_unified_model_ode_solver(self):
+        model = pybamm.lithium_ion.SPM()
+        exp = pybamm.Experiment(["Discharge at 1C for 10 seconds"])
+        # ScipySolver is an ODE solver, which blocks unified model
+        sim = pybamm.Simulation(model, experiment=exp, solver=pybamm.ScipySolver())
+        assert sim._experiment_can_use_unified_model() is False
+        blockers = sim._get_unified_experiment_model_blockers()
+        assert any("DAE-capable" in b for b in blockers)
+
+    def test_get_built_experiment_model_unified(self):
+        model = pybamm.lithium_ion.SPM()
+        exp = pybamm.Experiment(["Discharge at 1C for 10 seconds"])
+        sim = pybamm.Simulation(model, experiment=exp)
+        # Manually set up unified mode state
+        sentinel = object()
+        sim._experiment_uses_unified_model = True
+        sim._built_experiment_model = sentinel
+        assert sim._get_built_experiment_model("any_key") is sentinel
+
+    def test_get_built_experiment_solver_unified(self):
+        model = pybamm.lithium_ion.SPM()
+        exp = pybamm.Experiment(["Discharge at 1C for 10 seconds"])
+        sim = pybamm.Simulation(model, experiment=exp)
+        sentinel = object()
+        sim._experiment_uses_unified_model = True
+        sim._built_experiment_solver = sentinel
+        assert sim._get_built_experiment_solver("any_key") is sentinel
+
+    def test_get_state_mapper_for_empty_solution(self):
+        model = pybamm.lithium_ion.SPM()
+        exp = pybamm.Experiment(["Discharge at 1C for 10 seconds"])
+        sim = pybamm.Simulation(model, experiment=exp)
+        empty = pybamm.EmptySolution()
+        result = sim._get_state_mapper_for_solution(empty, model)
+        assert result is None
+
+    def test_get_state_mapper_no_compiled_mappers(self):
+        model = pybamm.lithium_ion.SPM()
+        exp = pybamm.Experiment(["Discharge at 1C for 10 seconds"])
+        sim = pybamm.Simulation(model, experiment=exp)
+        sim._compiled_model_state_mappers = {}
+        sol = pybamm.EmptySolution()
+        result = sim._get_state_mapper_for_solution(sol, model)
+        assert result is None
+
+    def test_build_experiment_step_inputs_legacy(self):
+        model = pybamm.lithium_ion.SPM()
+        exp = pybamm.Experiment(["Discharge at 1C for 10 seconds"])
+        sim = pybamm.Simulation(model, experiment=exp)
+        sim._experiment_uses_unified_model = False
+        step = exp.steps[0]
+        inputs = sim._build_experiment_step_inputs(
+            {"user_key": 1.0}, step, 0.0, active_step_index=None
+        )
+        assert "start time" in inputs
+        assert "user_key" in inputs
+        assert "Ambient temperature [K]" in inputs
+
+    def test_build_experiment_step_inputs_unified(self):
+        model = pybamm.lithium_ion.SPM()
+        exp = pybamm.Experiment(["Discharge at 1C for 10 seconds"])
+        sim = pybamm.Simulation(model, experiment=exp)
+        sim._experiment_uses_unified_model = True
+        step = exp.steps[0]
+        inputs = sim._build_experiment_step_inputs(
+            {"user_key": 1.0}, step, 0.0, active_step_index=1
+        )
+        assert inputs[sim._STEP_INDEX_INPUT] == 1
+        assert "Ambient temperature [K]" in inputs
+        assert "start time" in inputs
+        assert "user_key" in inputs
+
+    def test_check_infeasible_steps_single_skip_ok(self):
+        model = pybamm.lithium_ion.SPM()
+        exp = pybamm.Experiment(
+            ["Discharge at 1C for 10 seconds"],
+        )
+        sim = pybamm.Simulation(model, experiment=exp)
+        sim._solution = pybamm.EmptySolution()
+
+        step = exp.steps[0]
+        step.skip_ok = True
+        empty = pybamm.EmptySolution("Event exceeded")
+        result = sim._check_infeasible_steps([empty], step, str(step), 1)
+        assert result is True
+
+    def test_check_infeasible_steps_single_no_skip_raises(self):
+        model = pybamm.lithium_ion.SPM()
+        exp = pybamm.Experiment(["Discharge at 1C for 10 seconds"])
+        sim = pybamm.Simulation(model, experiment=exp)
+
+        step = exp.steps[0]
+        step.skip_ok = False
+        empty = pybamm.EmptySolution("Event exceeded")
+        with pytest.raises(pybamm.SolverError, match="infeasible"):
+            sim._check_infeasible_steps([empty], step, str(step), 1)
+
+    def test_set_up_and_parameterise_experiment_deprecation(self):
+        model = pybamm.lithium_ion.SPM()
+        exp = pybamm.Experiment(["Discharge at 1C for 10 seconds"])
+        sim = pybamm.Simulation(model, experiment=exp)
+        with pytest.warns(DeprecationWarning, match="deprecated"):
+            sim.set_up_and_parameterise_experiment()
+
+    def test_experiment_model_mode_invalid_raises(self):
+        model = pybamm.lithium_ion.SPM()
+        with pytest.raises(ValueError, match="experiment_model_mode"):
+            pybamm.Simulation(model, experiment_model_mode="bad")
+
+    def test_simulation_experiment_string_coercion(self):
+        model = pybamm.lithium_ion.SPM()
+        sim = pybamm.Simulation(model, experiment="Discharge at 1C for 10 seconds")
+        assert sim.operating_mode == pybamm.Simulation.MODE_WITH_EXPERIMENT
+        assert isinstance(sim.experiment, pybamm.Experiment)
+
+    def test_simulation_experiment_list_coercion(self):
+        model = pybamm.lithium_ion.SPM()
+        sim = pybamm.Simulation(
+            model,
+            experiment=["Discharge at 1C for 10 seconds", "Rest for 5 seconds"],
+        )
+        assert sim.operating_mode == pybamm.Simulation.MODE_WITH_EXPERIMENT
+        assert len(sim.experiment.steps) == 2
+
+    def test_simulation_experiment_invalid_type_raises(self):
+        model = pybamm.lithium_ion.SPM()
+        with pytest.raises(TypeError, match="experiment must be"):
+            pybamm.Simulation(model, experiment=42)
+
+    def test_simulation_solve_with_list_inputs_raises(self):
+        model = pybamm.lithium_ion.SPM()
+        exp = pybamm.Experiment(["Discharge at 1C for 10 seconds"])
+        sim = pybamm.Simulation(model, experiment=exp)
+        with pytest.raises(pybamm.SolverError, match="list of input"):
+            sim.solve(inputs=[{"a": 1}, {"a": 2}])
+
+    def test_get_built_models_with_experiment(self):
+        model = pybamm.lithium_ion.SPM()
+        exp = pybamm.Experiment(["Discharge at 1C for 10 seconds"])
+        sim = pybamm.Simulation(model, experiment=exp)
+        # Before build, should return empty
+        assert sim._get_built_models() == []
+        # After build
+        sim.build_for_experiment()
+        models = sim._get_built_models()
+        assert len(models) > 0
+
+    def test_build_experiment_state_mappers_no_built_models(self):
+        model = pybamm.lithium_ion.SPM()
+        exp = pybamm.Experiment(["Discharge at 1C for 10 seconds"])
+        sim = pybamm.Simulation(model, experiment=exp)
+        sim.steps_to_built_models = None
+        sim._build_experiment_state_mappers({})
+        assert sim.model_state_mappers == {}
+
+    def test_build_experiment_state_mappers_unified_noop(self):
+        model = pybamm.lithium_ion.SPM()
+        exp = pybamm.Experiment(["Discharge at 1C for 10 seconds"])
+        sim = pybamm.Simulation(model, experiment=exp)
+        sim._experiment_uses_unified_model = True
+        sim.steps_to_built_models = {"key": object()}
+        sim._build_experiment_state_mappers({})
+        assert sim.model_state_mappers == {}
+
+    def test_save_model_with_experiment_raises(self):
+        model = pybamm.lithium_ion.SPM()
+        exp = pybamm.Experiment(["Discharge at 1C for 10 seconds"])
+        sim = pybamm.Simulation(model, experiment=exp)
+        sim.solve()
+        with pytest.raises(NotImplementedError, match="experiment"):
+            sim.save_model("test.json")

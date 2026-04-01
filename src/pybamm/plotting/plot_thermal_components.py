@@ -4,7 +4,7 @@
 
 from scipy.integrate import cumulative_trapezoid
 
-from pybamm.simulation import Simulation
+from pybamm.simulation import BaseSimulation
 from pybamm.solvers.solution import Solution
 from pybamm.util import import_optional_dependency
 
@@ -36,7 +36,7 @@ def plot_thermal_components(
 
     """
     # Check if the input is a Simulation and extract Solution
-    if isinstance(input_data, Simulation):
+    if isinstance(input_data, BaseSimulation):
         solution = input_data.solution
     elif isinstance(input_data, Solution):
         solution = input_data
