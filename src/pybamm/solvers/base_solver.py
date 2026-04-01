@@ -971,7 +971,7 @@ class BaseSolver:
 
         # Check initial conditions don't violate events
         for y0, inpts in zip(model.y0_list, model_inputs_list, strict=True):
-            self._check_events_with_initialization(t_eval, model, y0, inpts)
+            self._check_event_violation_on_initialization(t_eval, model, y0, inpts)
 
         # Process discontinuities
         t_eval_info = [
@@ -1158,8 +1158,13 @@ class BaseSolver:
 
         return start_indices, end_indices, t_eval
 
-    @staticmethod
-    def _check_events_with_initialization(t_eval, model, y0, inputs_dict):
+    def _check_event_violation_on_initialization(self, *args, **kwargs):
+        self._check_event_violation(*args, **kwargs)
+
+    def _check_event_violation_post_solve(self, *args, **kwargs):
+        self._check_event_violation(*args, **kwargs)
+
+    def _check_event_violation(self, t_eval, model, y0, inputs_dict):
         num_terminate_events = len(model.terminate_events_eval)
         if num_terminate_events == 0:
             return
@@ -1464,7 +1469,7 @@ class BaseSolver:
         self._set_consistent_initialization(model, t_start_shifted, [model_inputs])
 
         # Check consistent initialization doesn't violate events
-        self._check_events_with_initialization(t_eval, model, model.y0, model_inputs)
+        self._check_event_violation(t_eval, model, model.y0, model_inputs)
 
         # Step
         pybamm.logger.verbose(f"Stepping for {t_start_shifted:.0f} < t < {t_end:.0f}")

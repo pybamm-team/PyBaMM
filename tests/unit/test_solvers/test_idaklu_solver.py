@@ -1171,8 +1171,8 @@ class TestIDAKLUSolver:
         disc.process_model(model)
 
         solver = pybamm.IDAKLUSolver()
-        solver.set_up(model)
-        assert model.convert_to_format == "casadi"
+        with pytest.raises(ValueError, match="requires model.convert_to_format='casadi'"):
+            solver.set_up(model)
 
     def test_extrapolation_events_with_output_variables(self):
         # Make sure the extrapolation checks work with output variables
@@ -1224,7 +1224,7 @@ class TestIDAKLUSolver:
 
     def test_multiple_initial_conditions_single_variable(self):
         model = pybamm.BaseModel()
-        model.convert_to_format = None
+        model.convert_to_format = "casadi"
         u = pybamm.Variable("u")
         u0 = pybamm.InputParameter("u0")
         model.rhs = {u: -u}

@@ -8,6 +8,9 @@
 
 ## Breaking changes
 
+- `IDAKLUSolver` `root_method=None` (the default) now uses a custom C++ Newton solver for consistent initial conditions instead of `IDACalcIC`. The C++ solver falls back to `IDACalcIC` on failure. Set `root_method="casadi"` to use the old CasADi-based rootfinding.
+- Removed `events_triggered` from the C++ `Solution` object. Initial-condition event detection is now handled on the Python side using `sol.flag == 2` and event function evaluation.
+
 # [v26.3.0](https://github.com/pybamm-team/PyBaMM/tree/v26.3.0) - 2026-03-23
 
 ## Features
