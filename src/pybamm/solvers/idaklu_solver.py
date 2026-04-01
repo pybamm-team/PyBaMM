@@ -13,9 +13,6 @@ import pybamm
 
 from enum import IntEnum
 
-class StateID(IntEnum):
-    ALGEBRAIC = 0
-    DIFFERENTIAL = 1
 
 class IDAKLUSolver(pybamm.BaseSolver):
     """
@@ -172,6 +169,10 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
     """
 
+    class StateID(IntEnum):
+        ALGEBRAIC = 0
+        DIFFERENTIAL = 1
+
     def __init__(
         self,
         rtol=1e-4,
@@ -236,18 +237,27 @@ class IDAKLUSolver(pybamm.BaseSolver):
             "suppress_algebraic_error": False,
             "hermite_interpolation": True,
             "hermite_reduction_factor": 1.0,
-            # IC solver parameters (also control custom Newton solver)
-            "nonlinear_convergence_coefficient_ic": 0.0033,  # SUNDIALS default
-            "max_num_steps_ic": 50,  # hic scaling retries for coupled systems
+            # ── Initial-condition solver parameters ──
+            # These options configure both the custom C++ Newton IC solver
+            # (used first) and the IDACalcIC fallback. When the custom solver
+            # is active:
+            #   max_num_iterations_ic  -> Newton iteration limit per attempt
+            #   max_num_steps_ic       -> hic scaling retry count (coupled only)
+            #   max_linesearch_backtracks_ic -> Armijo backtracks per iteration
+            #   nonlinear_convergence_coefficient_ic -> WRMS convergence tol
+            #   newton_step_tol        -> step-norm convergence tolerance
+            # When falling back to IDACalcIC, these same values are forwarded
+            # to SUNDIALS via IDASet*IC calls.
+            "nonlinear_convergence_coefficient_ic": 0.0033,
+            "max_num_steps_ic": 50,
             "max_num_jacobians_ic": 40,
             "max_num_iterations_ic": 100,
-            "max_linesearch_backtracks_ic": 5,  # reduced from IDA's 100 to fail fast
+            "max_linesearch_backtracks_ic": 5,
             "linesearch_off_ic": False,
             "init_all_y_ic": False,
             "calc_ic": True,
             "num_steps_no_progress": 0,
             "t_no_progress": 0.0,
-            # Custom Newton IC solver tolerance for step norm convergence
             "newton_step_tol": 1e-4,
             # "auto": use sub-block solver if alg_res/alg_jac available;
             # "full": force full-system IDA linear solver for IC
@@ -292,10 +302,10 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
     def set_up(self, model, inputs=None, t_eval=None, ics_only=False):
         if model.convert_to_format != "casadi":
-            raise ValueError(
-                f"IDAKLUSolver requires model.convert_to_format='casadi', "
-                f"got '{model.convert_to_format}'"
+            pybamm.logger.warning(
+                f"Converting {model.name} to CasADi for solving with IDAKLUSolver"
             )
+            model.convert_to_format = "casadi"
         base_set_up_return = super().set_up(model, inputs, t_eval, ics_only)
 
         if isinstance(inputs, list):
@@ -410,8 +420,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         # get ids of rhs and algebraic variables
         ids = np.concatenate((
-            np.full(model.len_rhs, StateID.DIFFERENTIAL, dtype=np.int64),
-            np.full(model.len_alg, StateID.ALGEBRAIC, dtype=np.int64),
+            np.full(model.len_rhs, self.StateID.DIFFERENTIAL, dtype=np.int64),
+            np.full(model.len_alg, self.StateID.ALGEBRAIC, dtype=np.int64),
         ))
 
         if model.jacp_rhs_algebraic_eval is not None:
@@ -769,8 +779,10 @@ class IDAKLUSolver(pybamm.BaseSolver):
             y_out = sol.y.reshape((number_of_timesteps, number_of_states))
             y_event = y_out[-1]
 
-        # If there is only one step and an event was found, then
-        # the only explanation is that the event was triggered by at t0
+        # If there is only one step and an event was found, the event was
+        # triggered at t0 after consistent initialization. y_event is the
+        # post-IC state: sol.y_term (outputs-only) or y_out[-1] (full),
+        # both stored after IC. This check identifies *which* event fired.
         if number_of_timesteps == 1 and sol.flag == 2:
             self._check_event_violation_post_solve(t_eval, model, y_event, inputs_dict)
 

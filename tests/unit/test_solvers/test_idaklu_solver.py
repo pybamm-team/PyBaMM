@@ -1171,8 +1171,9 @@ class TestIDAKLUSolver:
         disc.process_model(model)
 
         solver = pybamm.IDAKLUSolver()
-        with pytest.raises(ValueError, match="requires model.convert_to_format='casadi'"):
-            solver.set_up(model)
+        assert model.convert_to_format == "python"
+        solver.set_up(model)
+        assert model.convert_to_format == "casadi"
 
     def test_extrapolation_events_with_output_variables(self):
         # Make sure the extrapolation checks work with output variables
