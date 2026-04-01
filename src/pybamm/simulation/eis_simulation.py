@@ -137,6 +137,11 @@ class EISSimulation(BaseSimulation):
     def _build_matrix_problem(self, inputs_dict=None):
         """Build the mass matrix, Jacobian, and forcing vector.
 
+        The mass matrix ``M`` and forcing vector ``b`` are cached after the
+        first call because they do not depend on the operating point.  Only
+        the Jacobian is re-evaluated when initial conditions change (e.g.
+        different SOC).
+
         Parameters
         ----------
         inputs_dict : dict, optional
@@ -170,17 +175,15 @@ class EISSimulation(BaseSimulation):
 
         y0 = model.concatenated_initial_conditions.evaluate(0, inputs=inputs_dict)
         J_sparse = model.jac_rhs_algebraic_eval(0, y0, casadi_inputs).sparse()
-
-        M = csc_matrix(model.mass_matrix.entries)
         neg_J = -J_sparse if isinstance(J_sparse, csc_matrix) else -csc_matrix(J_sparse)
 
-        # Forcing: unit perturbation on the current variable (last entry by
-        # construction in _set_up_model_for_eis, where voltage is added before
-        # current to the algebraic equations)
-        b = np.zeros(y0.shape[0])
-        b[-1] = -1
+        # M and b are independent of operating point
+        if not hasattr(self, "_cached_M"):
+            self._cached_M = csc_matrix(model.mass_matrix.entries)
+            self._cached_b = np.zeros(y0.shape[0])
+            self._cached_b[-1] = -1
 
-        return M, neg_J, b
+        return self._cached_M, neg_J, self._cached_b
 
     def calculate_impedance(self, frequency, M, neg_J, b):
         """Calculate impedance at a single frequency.
