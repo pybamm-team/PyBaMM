@@ -13,12 +13,111 @@ class TestEISSimulationClassHierarchy:
         eis_sim = pybamm.EISSimulation(model)
         assert isinstance(eis_sim, pybamm.BaseSimulation)
         assert isinstance(eis_sim, pybamm.EISSimulation)
-        assert eis_sim.eis_solution is None
+        assert eis_sim.solution is None
 
     def test_eis_not_simulation(self):
         model = pybamm.lithium_ion.SPM(options={"surface form": "differential"})
         eis_sim = pybamm.EISSimulation(model)
         assert not isinstance(eis_sim, pybamm.Simulation)
+
+
+class TestEISSolution:
+    """Tests for the EISSolution class."""
+
+    def test_eis_solution_construction(self):
+        freqs = np.logspace(-2, 2, 10)
+        z = np.random.randn(10) + 1j * np.random.randn(10)
+        sol = pybamm.EISSolution(freqs, z)
+
+        np.testing.assert_array_equal(sol.frequencies, freqs)
+        np.testing.assert_array_equal(sol.impedance, z)
+        assert sol.impedance.dtype == complex
+
+    def test_eis_solution_isinstance(self):
+        sol = pybamm.EISSolution(np.array([1.0]), np.array([1 + 1j]))
+        assert isinstance(sol, pybamm.SolutionBase)
+        assert isinstance(sol, pybamm.EISSolution)
+        assert not isinstance(sol, pybamm.Solution)
+
+    def test_time_series_solution_isinstance(self):
+        t = np.linspace(0, 1)
+        y = np.tile(t, (20, 1))
+        sol = pybamm.Solution(t, y, pybamm.BaseModel(), {})
+        assert isinstance(sol, pybamm.SolutionBase)
+        assert isinstance(sol, pybamm.Solution)
+        assert not isinstance(sol, pybamm.EISSolution)
+
+    def test_eis_solution_timing(self):
+        sol = pybamm.EISSolution(np.array([1.0]), np.array([1 + 1j]))
+        sol.set_up_time = 0.5
+        sol.solve_time = 1.5
+        assert sol.total_time == 2.0
+
+    def test_eis_solution_get_data_dict(self):
+        freqs = np.array([1.0, 10.0, 100.0])
+        z = np.array([1 + 0.5j, 2 + 1j, 3 + 1.5j])
+        sol = pybamm.EISSolution(freqs, z)
+        data = sol.get_data_dict()
+
+        np.testing.assert_array_equal(data["Frequency [Hz]"], freqs)
+        np.testing.assert_array_equal(data["Z_re [Ohm]"], z.real)
+        np.testing.assert_array_equal(data["Z_im [Ohm]"], z.imag)
+
+    def test_eis_solution_save_data_csv(self, tmp_path):
+        freqs = np.array([1.0, 10.0])
+        z = np.array([1 + 0.5j, 2 + 1j])
+        sol = pybamm.EISSolution(freqs, z)
+        filepath = tmp_path / "eis_data.csv"
+        sol.save_data(str(filepath), to_format="csv")
+        assert filepath.exists()
+
+    def test_eis_solution_save_data_json(self, tmp_path):
+        import json
+
+        freqs = np.array([1.0, 10.0])
+        z = np.array([1 + 0.5j, 2 + 1j])
+        sol = pybamm.EISSolution(freqs, z)
+        filepath = tmp_path / "eis_data.json"
+        sol.save_data(str(filepath), to_format="json")
+        assert filepath.exists()
+        with open(filepath) as f:
+            data = json.load(f)
+        assert "Frequency [Hz]" in data
+
+    def test_eis_solution_save_pickle(self, tmp_path):
+        freqs = np.array([1.0, 10.0])
+        z = np.array([1 + 0.5j, 2 + 1j])
+        sol = pybamm.EISSolution(freqs, z)
+        filepath = tmp_path / "eis_sol.pkl"
+        sol.save(str(filepath))
+        assert filepath.exists()
+        loaded = pybamm.load(str(filepath))
+        np.testing.assert_array_equal(loaded.impedance, z)
+
+    def test_eis_solution_save_data_invalid_format(self, tmp_path):
+        sol = pybamm.EISSolution(np.array([1.0]), np.array([1 + 1j]))
+        with pytest.raises(ValueError, match="Unrecognised format"):
+            sol.save_data(str(tmp_path / "bad.xyz"), to_format="xyz")
+
+    def test_eis_solution_getitem(self):
+        freqs = np.array([1.0, 10.0, 100.0])
+        z = np.array([1 + 0.5j, 2 + 1j, 3 + 1.5j])
+        sol = pybamm.EISSolution(freqs, z)
+
+        np.testing.assert_array_equal(sol["Frequency [Hz]"], freqs)
+        np.testing.assert_array_equal(sol["Impedance [Ohm]"], z)
+        np.testing.assert_array_equal(sol["Z_re [Ohm]"], z.real)
+        np.testing.assert_array_equal(sol["Z_im [Ohm]"], z.imag)
+
+    def test_eis_solution_data_property(self):
+        freqs = np.array([1.0, 10.0])
+        z = np.array([1 + 0.5j, 2 + 1j])
+        sol = pybamm.EISSolution(freqs, z)
+        data = sol.data
+        assert "Frequency [Hz]" in data
+        assert "Impedance [Ohm]" in data
+        assert "Z_re [Ohm]" in data
+        assert "Z_im [Ohm]" in data
 
 
 class TestEISSimulationSolve:
@@ -30,11 +129,14 @@ class TestEISSimulationSolve:
         )
         eis_sim = pybamm.EISSimulation(model)
         frequencies = np.logspace(-2, 2, 10)
-        impedance = eis_sim.solve(frequencies)
+        result = eis_sim.solve(frequencies)
 
-        assert impedance.shape == (10,)
-        assert np.iscomplex(impedance).all() or impedance.dtype == complex
-        assert eis_sim.eis_solution is not None
+        assert isinstance(result, pybamm.EISSolution)
+        assert isinstance(result, pybamm.SolutionBase)
+        assert result.impedance.shape == (10,)
+        assert result.frequencies.shape == (10,)
+        assert np.iscomplexobj(result.impedance)
+        assert eis_sim.solution is not None
         assert eis_sim.solve_time is not None
 
     def test_solve_with_inputs(self):
@@ -51,8 +153,8 @@ class TestEISSimulationSolve:
         )
         eis_sim = pybamm.EISSimulation(model, parameter_values=parameter_values)
         frequencies = np.logspace(-2, 2, 10)
-        impedance = eis_sim.solve(frequencies, inputs={"C_dl": 0.1})
-        assert impedance.shape == (10,)
+        result = eis_sim.solve(frequencies, inputs={"C_dl": 0.1})
+        assert result.impedance.shape == (10,)
 
     def test_solve_with_initial_soc(self):
         model = pybamm.lithium_ion.SPM(options={"surface form": "differential"})
@@ -63,8 +165,8 @@ class TestEISSimulationSolve:
         z_05 = eis_sim.solve(frequencies, initial_soc=0.5)
         z_09 = eis_sim.solve(frequencies, initial_soc=0.9)
 
-        assert z_05.shape == (10,)
-        assert not np.allclose(z_05, z_09)
+        assert z_05.impedance.shape == (10,)
+        assert not np.allclose(z_05.impedance, z_09.impedance)
 
     def test_initial_soc_via_build_matches_solve(self):
         model = pybamm.lithium_ion.SPM(options={"surface form": "differential"})
@@ -78,7 +180,7 @@ class TestEISSimulationSolve:
         eis_sim2 = pybamm.EISSimulation(model, parameter_values=parameter_values)
         z2 = eis_sim2.solve(frequencies, initial_soc=0.5)
 
-        np.testing.assert_allclose(z1, z2)
+        np.testing.assert_allclose(z1.impedance, z2.impedance)
 
     def test_initial_soc_voltage_string(self):
         model = pybamm.lithium_ion.SPM(options={"surface form": "differential"})
@@ -86,8 +188,8 @@ class TestEISSimulationSolve:
         eis_sim = pybamm.EISSimulation(model, parameter_values=parameter_values)
         frequencies = np.logspace(-2, 2, 10)
 
-        z = eis_sim.solve(frequencies, initial_soc="3.8 V")
-        assert z.shape == (10,)
+        result = eis_sim.solve(frequencies, initial_soc="3.8 V")
+        assert result.impedance.shape == (10,)
 
 
 class TestNyquistPlot:
@@ -206,6 +308,6 @@ class TestSymbolReplacer:
         assert isinstance(model.initial_conditions[var1], pybamm.Scalar)
         assert model.initial_conditions[var1].value == 2
 
-        bc_value = list(model.boundary_conditions.values())[0]
+        bc_value = next(iter(model.boundary_conditions.values()))
         assert bc_value["left"][0].value == 3
         assert bc_value["right"][0].value == 42

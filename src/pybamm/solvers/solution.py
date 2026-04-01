@@ -31,7 +31,145 @@ class NumpyEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, obj)  # pragma: no cover
 
 
-class Solution:
+class SolutionBase:
+    """Base class for all PyBaMM solution types (time-series and EIS).
+
+    Subclasses populate ``self._data`` (a :class:`~pybamm.FuzzyDict`) with
+    named data arrays so that ``solution["Variable name"]`` works uniformly
+    across solution types.
+    """
+
+    def __init__(self):
+        self.set_up_time = None
+        self.solve_time = None
+        self._data = pybamm.FuzzyDict()
+
+    def __getitem__(self, key):
+        """Access a variable by name."""
+        return self._data[key]
+
+    @property
+    def data(self):
+        """Dict-like view of all computed variable data."""
+        return self._data
+
+    @property
+    def total_time(self):
+        return self.set_up_time + self.solve_time
+
+    def save(self, filename):
+        """Save the entire solution using pickle."""
+        with open(filename, "wb") as f:
+            pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
+
+    def get_data_dict(self):
+        """Return solution data as a plain ``dict``.
+
+        Returns
+        -------
+        dict
+            Mapping of variable names to NumPy arrays.
+        """
+        return dict(self._data)
+
+    def save_data(self, filename, to_format="csv", short_names=None):
+        """Save solution data to a file.
+
+        Parameters
+        ----------
+        filename : str
+            The file path to save to.
+        to_format : str, optional
+            Output format: ``"csv"`` (default), ``"json"``, ``"pickle"``
+            or ``"matlab"``.
+        short_names : dict, optional
+            Dictionary of shortened names to use when saving.
+        """
+        data = self.get_data_dict()
+        if short_names:
+            data = {short_names.get(k, k): v for k, v in data.items()}
+
+        if to_format == "csv":
+            pd.DataFrame(data).to_csv(filename, index=False)
+        elif to_format == "json":
+            with open(filename, "w") as f:
+                json.dump(data, f, cls=NumpyEncoder)
+        elif to_format == "pickle":
+            with open(filename, "wb") as f:
+                pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
+        elif to_format == "matlab":
+            savemat(filename, data)
+        else:
+            raise ValueError(
+                f"Unrecognised format '{to_format}'. "
+                "Must be 'csv', 'json', 'pickle', or 'matlab'."
+            )
+
+
+class EISSolution(SolutionBase):
+    """Solution for frequency-domain EIS simulations.
+
+    Variables are accessible via dict-style access, e.g.
+    ``solution["Impedance [Ohm]"]``, ``solution["Frequency [Hz]"]``.
+
+    Parameters
+    ----------
+    frequencies : np.ndarray
+        Frequencies in Hz at which impedance was computed.
+    impedance : np.ndarray
+        Complex impedance values at each frequency.
+    """
+
+    def __init__(self, frequencies, impedance):
+        super().__init__()
+        impedance = np.asarray(impedance, dtype=complex)
+        self._data["Frequency [Hz]"] = np.asarray(frequencies)
+        self._data["Impedance [Ohm]"] = impedance
+        self._data["Z_re [Ohm]"] = impedance.real
+        self._data["Z_im [Ohm]"] = impedance.imag
+
+    @property
+    def frequencies(self):
+        """Frequencies in Hz."""
+        return self._data["Frequency [Hz]"]
+
+    @property
+    def impedance(self):
+        """Complex impedance values."""
+        return self._data["Impedance [Ohm]"]
+
+    def get_data_dict(self):
+        """Return EIS data as a plain ``dict`` suitable for export.
+
+        Returns real-valued columns only (frequencies, real and imaginary
+        parts of impedance).  Use ``solution["Impedance [Ohm]"]`` for the
+        complex-valued array.
+        """
+        return {
+            "Frequency [Hz]": self.frequencies,
+            "Z_re [Ohm]": self._data["Z_re [Ohm]"],
+            "Z_im [Ohm]": self._data["Z_im [Ohm]"],
+        }
+
+    def nyquist_plot(self, **kwargs):
+        """Generate a Nyquist plot from the impedance data.
+
+        Parameters
+        ----------
+        **kwargs
+            Keyword arguments forwarded to :func:`pybamm.nyquist_plot`.
+
+        Returns
+        -------
+        fig : matplotlib.figure.Figure or None
+        ax : matplotlib.axes.Axes
+        """
+        from pybamm.plotting.nyquist_plot import nyquist_plot
+
+        return nyquist_plot(self.impedance, **kwargs)
+
+
+class Solution(SolutionBase):
     """
     Class containing the solution of, and various attributes associated with, a PyBaMM
     model.
@@ -150,17 +288,13 @@ class Solution:
         self._termination = termination
         self.closest_event_idx = None
 
-        # Initialize times
-        self.set_up_time = None
-        self.solve_time = None
+        super().__init__()
         self.integration_time = None
 
         self._all_inputs_stacked = None
         self._all_inputs_casadi = None
 
-        # initialize empty variable cache and data
         self._variables = {}
-        self._data = pybamm.FuzzyDict()
 
         # Add self as sub-solution for compatibility with ProcessedVariable
         self._sub_solutions = [self]
@@ -490,10 +624,6 @@ class Solution:
         return new_sol
 
     @property
-    def total_time(self):
-        return self.set_up_time + self.solve_time
-
-    @property
     def cycles(self):
         return self._cycles
 
@@ -720,14 +850,6 @@ class Solution:
             For a list of all possible keyword arguments see :class:`pybamm.QuickPlot`.
         """
         return pybamm.dynamic_plot(self, output_variables=output_variables, **kwargs)
-
-    def save(self, filename):
-        """Save the whole solution using pickle"""
-        # No warning here if len(self.data)==0 as solution can be loaded
-        # and used to process new variables
-
-        with open(filename, "wb") as f:
-            pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
 
     def get_data_dict(self, variables=None, short_names=None, cycles_and_steps=True):
         """
@@ -1055,14 +1177,9 @@ class Solution:
 
 
 class EmptySolution:
-    def __init__(self, termination=None, t=None):
+    def __init__(self, termination=None, t=0):
         self.termination = termination
-        if t is None:
-            t = np.array([0])
-        elif isinstance(t, numbers.Number):
-            t = np.array([t])
-
-        self.t = t
+        self.t = np.atleast_1d(np.asarray(t))
 
     def __add__(self, other):
         if isinstance(other, EmptySolution | Solution):

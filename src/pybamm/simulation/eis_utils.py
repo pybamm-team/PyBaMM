@@ -63,9 +63,7 @@ class SymbolReplacer:
             )
         model.initial_conditions = new_ics
 
-        model.boundary_conditions = self._process_boundary_conditions(
-            unprocessed_model
-        )
+        model.boundary_conditions = self._process_boundary_conditions(unprocessed_model)
 
         model.variables = {
             name: self.process_symbol(eq)

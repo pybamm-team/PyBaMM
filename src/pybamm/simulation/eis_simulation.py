@@ -62,15 +62,12 @@ class EISSimulation(BaseSimulation):
             spatial_methods=spatial_methods,
         )
 
-        self._eis_solution = None
-        self.set_up_time = None
-        self.solve_time = None
-
         self.set_up_time = timer.time()
         pybamm.logger.info(
             f"Finished setting up {model_name} for EIS "
             f"(set-up time: {self.set_up_time})"
         )
+        pybamm.citations.register("Hallemans2025")
 
     @staticmethod
     def _set_up_model_for_eis(model):
@@ -228,8 +225,8 @@ class EISSimulation(BaseSimulation):
 
         Returns
         -------
-        impedance : np.ndarray
-            Complex impedance values at each frequency.
+        :class:`pybamm.EISSolution`
+            Solution containing frequencies and complex impedance values.
         """
         model_name = self._model.name
         pybamm.logger.info(f"Start calculating impedance for {model_name}")
@@ -243,20 +240,18 @@ class EISSimulation(BaseSimulation):
         M, neg_J, b = self._build_matrix_problem(inputs_dict=inputs)
 
         zs = [self.calculate_impedance(f, M, neg_J, b) for f in frequencies]
-        self._eis_solution = np.array(zs) * self._z_scale
+        impedance = np.array(zs) * self._z_scale
+        self._solution = pybamm.EISSolution(frequencies, impedance)
+        self._solution.set_up_time = self.set_up_time
 
         self.solve_time = timer.time()
+        self._solution.solve_time = self.solve_time
         pybamm.logger.info(
             f"Finished calculating impedance for {model_name} "
             f"(solve time: {self.solve_time})"
         )
 
-        return self._eis_solution
-
-    @property
-    def eis_solution(self):
-        """The most recent impedance solution, or ``None``."""
-        return self._eis_solution
+        return self._solution
 
     def nyquist_plot(self, **kwargs):
         """Generate a Nyquist plot from the most recent solution.
@@ -271,11 +266,8 @@ class EISSimulation(BaseSimulation):
         fig : matplotlib.figure.Figure or None
         ax : matplotlib.axes.Axes
         """
-        if self._eis_solution is None:
+        if self._solution is None:
             raise ValueError(
-                "EIS simulation has not been solved yet. "
-                "Call solve() before plotting."
+                "EIS simulation has not been solved yet. Call solve() before plotting."
             )
-        from pybamm.plotting.nyquist_plot import nyquist_plot
-
-        return nyquist_plot(self._eis_solution, **kwargs)
+        return self._solution.nyquist_plot(**kwargs)
