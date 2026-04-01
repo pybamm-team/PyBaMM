@@ -11,6 +11,11 @@ from scipy.sparse.linalg import spsolve
 
 import pybamm
 
+from enum import IntEnum
+
+class StateID(IntEnum):
+    ALGEBRAIC = 0
+    DIFFERENTIAL = 1
 
 class IDAKLUSolver(pybamm.BaseSolver):
     """
@@ -196,9 +201,10 @@ class IDAKLUSolver(pybamm.BaseSolver):
         pybamm.citations.register("Hindmarsh2005")
 
     def _combine_options(self, user_options: dict | None, root_method: str | None) -> dict:
-        num_solvers = user_options.get("num_threads", 1) if user_options else 1
+        user_options = user_options or {}
+        num_solvers = user_options.get("num_threads", 1)
         newton_mode = user_options.get("newton_mode", None)
-        if newton_mode is not None:
+        if newton_mode is None:
             newton_mode = "algebraic" if root_method is None else "disabled"
 
         default_options = {
@@ -310,10 +316,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 f"Unsupported option for convert_to_format={model.convert_to_format}"
             )
 
-        if self._options["jacobian"] == "dense":
-            mass_matrix = casadi.DM(model.mass_matrix.entries.toarray())
-        else:
-            mass_matrix = casadi.DM(model.mass_matrix.entries)
+        mass_matrix = model.mass_matrix.entries
 
         # construct residuals function by binding inputs
         # TODO: do we need densify here?
@@ -334,12 +337,18 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 p_casadi[name] = casadi.MX.sym(name, value.shape[0])
         p_casadi_stacked = casadi.vertcat(*[p for p in p_casadi.values()])
 
+        jac_times_cjmass_expression = (
+            model.jac_rhs_algebraic_eval(t_casadi, y_casadi, p_casadi_stacked)
+            - cj_casadi * mass_matrix
+        )
+        if self._options["jacobian"] == "dense":
+            jac_times_cjmass_expression = casadi.densify(jac_times_cjmass_expression)
+
         jac_times_cjmass = casadi.Function(
             "jac_times_cjmass",
             [t_casadi, y_casadi, p_casadi_stacked, cj_casadi],
             [
-                model.jac_rhs_algebraic_eval(t_casadi, y_casadi, p_casadi_stacked)
-                - cj_casadi * mass_matrix
+                jac_times_cjmass_expression
             ],
         )
 
@@ -358,9 +367,19 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         jac_rhs_algebraic_action = model.jac_rhs_algebraic_action_eval
 
+        if model.is_standard_form_dae:
+            # index v_casadi at the first model.len_rhs entries
+            # concatenate it with zeros at the end
+            mass_action_expression = casadi.vertcat(
+                v_casadi[:model.len_rhs],
+                np.zeros(model.len_alg),
+            )
+        else:
+            mass_action_expression = casadi.densify(mass_matrix @ v_casadi)
+
         # also need the action of the mass matrix on a vector
         mass_action = casadi.Function(
-            "mass_action", [v_casadi], [casadi.densify(mass_matrix @ v_casadi)]
+            "mass_action", [v_casadi], [mass_action_expression]
         )
 
         num_of_events = len(model.terminate_events_eval)
@@ -380,9 +399,10 @@ class IDAKLUSolver(pybamm.BaseSolver):
         )
 
         # get ids of rhs and algebraic variables
-        rhs_ids = np.ones(model.rhs_eval(0, y0, stacked_inputs).shape[0])
-        alg_ids = np.zeros(len(y0) - len(rhs_ids))
-        ids = np.concatenate((rhs_ids, alg_ids))
+        ids = np.concatenate((
+            np.full(model.len_rhs, StateID.DIFFERENTIAL, dtype=np.int64),
+            np.full(model.len_alg, StateID.ALGEBRAIC, dtype=np.int64),
+        ))
 
         if model.jacp_rhs_algebraic_eval is not None:
             sensitivity_names = model.calculate_sensitivities

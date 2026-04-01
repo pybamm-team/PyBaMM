@@ -187,6 +187,8 @@ from .solvers.dummy_solver import DummySolver
 from .solvers.algebraic_solver import AlgebraicSolver
 from .solvers.casadi_solver import CasadiSolver
 from .solvers.casadi_algebraic_solver import CasadiAlgebraicSolver
+from .solvers.linear_solver import LinearSolver
+from .solvers.nonlinear_solver import NonlinearSolver
 from .solvers.scipy_solver import ScipySolver
 from .solvers.composite_solver import CompositeSolver
 
