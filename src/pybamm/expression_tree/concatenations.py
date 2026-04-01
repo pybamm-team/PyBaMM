@@ -376,7 +376,7 @@ class DomainConcatenation(Concatenation):
 
         # loop through domains of children writing subvectors to final vector
         for child_vector, slices in zip(
-            children_eval, self._children_slices, strict=False
+            children_eval, self._children_slices, strict=True
         ):
             for child_dom, child_slice in slices.items():
                 for i, _slice in enumerate(child_slice):
@@ -391,7 +391,7 @@ class DomainConcatenation(Concatenation):
         jacs = []
         for i in range(self.secondary_dimensions_npts):
             for child_jac, slices in zip(
-                children_jacs, self._children_slices, strict=False
+                children_jacs, self._children_slices, strict=True
             ):
                 if len(slices) > 1:
                     raise NotImplementedError(

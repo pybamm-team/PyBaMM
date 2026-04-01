@@ -40,7 +40,7 @@ class TestEffectiveResistance:
         assert isinstance(model.default_solver, pybamm.CasadiAlgebraicSolver)
 
     def test_bad_option(self):
-        with pytest.raises(pybamm.OptionError, match="Dimension of"):
+        with pytest.raises(pybamm.OptionError, match=r"Dimension of"):
             pybamm.current_collector.EffectiveResistance({"dimensionality": 10})
 
 

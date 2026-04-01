@@ -12,7 +12,7 @@ class SymmetricButlerVolmer(BaseKinetics):
     Submodel which implements the symmetric forward Butler-Volmer equation:
 
     .. math::
-        j = 2 * j_0(c) * \\sinh(ne * F * \\eta_r(c) / RT)
+        j = 2 * j_0(c) * \\sinh(ne * F * \\eta_r(c) / 2RT)
 
     Parameters
     ----------
@@ -28,9 +28,6 @@ class SymmetricButlerVolmer(BaseKinetics):
     phase : str, optional
         Phase of the particle (default is "primary")
     """
-
-    def __init__(self, param, domain, reaction, options, phase="primary"):
-        super().__init__(param, domain, reaction, options, phase)
 
     def _get_kinetics(self, j0, ne, eta_r, T, u):
         Feta_RT = self.param.F * eta_r / (self.param.R * T)
@@ -55,9 +52,6 @@ class AsymmetricButlerVolmer(BaseKinetics):
     phase : str, optional
         Phase of the particle (default is "primary")
     """
-
-    def __init__(self, param, domain, reaction, options, phase="primary"):
-        super().__init__(param, domain, reaction, options, phase)
 
     def _get_kinetics(self, j0, ne, eta_r, T, u):
         alpha = self.phase_param.alpha_bv

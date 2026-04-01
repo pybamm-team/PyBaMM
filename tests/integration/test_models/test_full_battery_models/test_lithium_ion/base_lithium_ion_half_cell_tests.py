@@ -23,8 +23,7 @@ class BaseIntegrationTestLithiumIonHalfCell:
             {
                 "Negative electrode Butler-Volmer transfer coefficient": 0.6,
                 "Positive electrode Butler-Volmer transfer coefficient": 0.6,
-            },
-            check_already_exists=False,
+            }
         )
         self.run_basic_processing_test(options, parameter_values=parameter_values)
 
@@ -40,8 +39,7 @@ class BaseIntegrationTestLithiumIonHalfCell:
                 "Negative electrode reorganization energy [eV]": 0.35,
                 "Positive electrode reorganization energy [eV]": 0.35,
                 "Positive electrode exchange-current density [A.m-2]": 5,
-            },
-            check_already_exists=False,
+            }
         )
         self.run_basic_processing_test(options, parameter_values=parameter_values)
 
@@ -66,8 +64,7 @@ class BaseIntegrationTestLithiumIonHalfCell:
         options = {"SEI": "reaction limited (asymmetric)"}
         parameter_values = pybamm.ParameterValues("Ecker2015_graphite_halfcell")
         parameter_values.update(
-            {"SEI growth transfer coefficient": 0.2, "Current function [A]": -0.07826},
-            check_already_exists=False,
+            {"SEI growth transfer coefficient": 0.2, "Current function [A]": -0.07826}
         )
         self.run_basic_processing_test(options, parameter_values=parameter_values)
 
@@ -91,8 +88,7 @@ class BaseIntegrationTestLithiumIonHalfCell:
         options = {"SEI": "ec reaction limited (asymmetric)"}
         parameter_values = pybamm.ParameterValues("Ecker2015_graphite_halfcell")
         parameter_values.update(
-            {"SEI growth transfer coefficient": 0.2, "Current function [A]": -0.07826},
-            check_already_exists=False,
+            {"SEI growth transfer coefficient": 0.2, "Current function [A]": -0.07826}
         )
         self.run_basic_processing_test(options, parameter_values=parameter_values)
 
@@ -109,8 +105,7 @@ class BaseIntegrationTestLithiumIonHalfCell:
             {
                 "Initial negative electrode interface utilisation": 0.9,
                 "Initial positive electrode interface utilisation": 0.8,
-            },
-            check_already_exists=False,
+            }
         )
         self.run_basic_processing_test(options, parameter_values=parameter_values)
 
@@ -125,8 +120,7 @@ class BaseIntegrationTestLithiumIonHalfCell:
                 "[m3.mol-1]": -1,
                 "Positive electrode current-driven interface utilisation factor "
                 "[m3.mol-1]": 1e-5,
-            },
-            check_already_exists=False,
+            }
         )
         self.run_basic_processing_test(options, parameter_values=parameter_values)
 

@@ -34,11 +34,11 @@ sim.solve()
 sim.plot()
 ```
 
-However, much greater customisation is available. It is possible to change the physics, parameter values, geometry, submesh type, number of submesh points, methods for spatial discretisation and solver for integration (see DFN [script](https://github.com/pybamm-team/PyBaMM/blob/develop/examples/scripts/DFN.py) or [notebook](https://github.com/pybamm-team/PyBaMM/blob/develop/docs/source/examples/notebooks/models/DFN.ipynb)).
+However, much greater customisation is available. It is possible to change the physics, parameter values, geometry, submesh type, number of submesh points, methods for spatial discretisation and solver for integration (see DFN [script](https://github.com/pybamm-team/PyBaMM/blob/main/examples/scripts/DFN.py) or [notebook](https://github.com/pybamm-team/PyBaMM/blob/main/docs/source/examples/notebooks/models/DFN.ipynb)).
 
-For new users we recommend the [Getting Started](https://github.com/pybamm-team/PyBaMM/tree/develop/docs/source/examples/notebooks/getting_started/) guides. These are intended to be very simple step-by-step guides to show the basic functionality of PyBaMM, and can either be downloaded and used locally, or used online through [Google Colab](https://colab.research.google.com/github/pybamm-team/PyBaMM/blob/main/).
+For new users we recommend the [Getting Started](https://github.com/pybamm-team/PyBaMM/tree/main/docs/source/examples/notebooks/getting_started/) guides. These are intended to be very simple step-by-step guides to show the basic functionality of PyBaMM, and can either be downloaded and used locally, or used online through [Google Colab](https://colab.research.google.com/github/pybamm-team/PyBaMM/blob/main/).
 
-Further details can be found in a number of [detailed examples](https://github.com/pybamm-team/PyBaMM/blob/develop/docs/source/examples/index.rst), hosted on
+Further details can be found in a number of [detailed examples](https://github.com/pybamm-team/PyBaMM/blob/main/docs/source/examples/index.rst), hosted on
 GitHub. In addition, full details of classes and methods can be found in the [](api_docs).
 Additional supporting material can be found
 [here](https://github.com/pybamm-team/pybamm-supporting-material/).

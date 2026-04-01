@@ -20,7 +20,7 @@ class TestStateVector:
         y2 = np.ones(5)
         with pytest.raises(
             ValueError,
-            match="y is too short, so value with slice is smaller than expected",
+            match=r"y is too short, so value with slice is smaller than expected",
         ):
             sv.evaluate(y=y2)
 
@@ -64,7 +64,7 @@ class TestStateVector:
         pybamm.settings.debug_mode = original_debug_mode
 
     def test_failure(self):
-        with pytest.raises(TypeError, match="all y_slices must be slice objects"):
+        with pytest.raises(TypeError, match=r"all y_slices must be slice objects"):
             pybamm.StateVector(slice(0, 10), 1)
 
     def test_to_from_json(self, mocker):
@@ -113,14 +113,14 @@ class TestStateVectorDot:
         y_dot2 = np.ones(5)
         with pytest.raises(
             ValueError,
-            match="y_dot is too short, so value with slice is smaller than expected",
+            match=r"y_dot is too short, so value with slice is smaller than expected",
         ):
             sv.evaluate(y_dot=y_dot2)
 
         # Try evaluating with y_dot=None
         with pytest.raises(
             TypeError,
-            match="StateVectorDot cannot evaluate input 'y_dot=None'",
+            match=r"StateVectorDot cannot evaluate input 'y_dot=None'",
         ):
             sv.evaluate(y_dot=None)
 

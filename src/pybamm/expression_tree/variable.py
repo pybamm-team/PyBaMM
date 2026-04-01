@@ -62,62 +62,70 @@ class VariableBase(pybamm.Symbol):
         domain: DomainType = None,
         auxiliary_domains: AuxiliaryDomainType = None,
         domains: DomainsType = None,
-        bounds: tuple[pybamm.Symbol] | None = None,
+        bounds: tuple[Numeric, Numeric] | None = None,
         print_name: str | None = None,
-        scale: float | pybamm.Symbol | None = 1,
-        reference: float | pybamm.Symbol | None = 0,
+        scale: Numeric | None = None,
+        reference: Numeric | None = None,
     ):
-        if isinstance(scale, numbers.Number):
-            scale = pybamm.Scalar(scale)
-        if isinstance(reference, numbers.Number):
-            reference = pybamm.Scalar(reference)
-        self._scale = scale
-        self._reference = reference
+        if scale is None:
+            scale = 1
+        if reference is None:
+            reference = 0
+        self._scale = pybamm.convert_to_symbol(scale)
+        self._reference = pybamm.convert_to_symbol(reference)
+        self._bounds = self._process_bounds(bounds)
         super().__init__(
             name,
             domain=domain,
             auxiliary_domains=auxiliary_domains,
             domains=domains,
         )
-        self.bounds = bounds
 
         if print_name is None:
             print_name = name  # use name by default
         self.print_name = print_name
 
+    def _process_bounds(
+        self, values: tuple[Numeric, Numeric] | None
+    ) -> tuple[pybamm.Symbol, pybamm.Symbol]:
+        if values is None:
+            values = (-np.inf, np.inf)
+
+        if (
+            all(isinstance(b, numbers.Number) for b in values)
+            and values[0] >= values[1]
+        ):
+            raise ValueError(
+                f"Invalid bounds {values}. "
+                + "Lower bound should be strictly less than upper bound."
+            )
+
+        if len(values) != 2:
+            raise ValueError(f"Invalid bounds {values}. Must be a tuple of length 2.")
+        lb, ub = values
+
+        return (pybamm.convert_to_symbol(lb), pybamm.convert_to_symbol(ub))
+
     @property
-    def bounds(self):
+    def bounds(self) -> tuple[pybamm.Symbol, pybamm.Symbol]:
         """Physical bounds on the variable."""
         return self._bounds
 
     @bounds.setter
     def bounds(self, values: tuple[Numeric, Numeric]):
-        if values is None:
-            values = (-np.inf, np.inf)
-        else:
-            if (
-                all(isinstance(b, numbers.Number) for b in values)
-                and values[0] >= values[1]
-            ):
-                raise ValueError(
-                    f"Invalid bounds {values}. "
-                    + "Lower bound should be strictly less than upper bound."
-                )
-
-        values = list(values)
-        for idx, bound in enumerate(values):
-            if isinstance(bound, numbers.Number):
-                values[idx] = pybamm.Scalar(bound)
-        self._bounds = tuple(values)
+        self._bounds = self._process_bounds(values)
+        self.set_id()
 
     def set_id(self):
+        domains_tuple = tuple((k, tuple(v)) for k, v in self.domains.items() if v != [])
         self._id = hash(
             (
                 self.__class__,
-                self.name,
-                self.scale,
-                self.reference,
-                *tuple([(k, tuple(v)) for k, v in self.domains.items() if v != []]),
+                self._name,
+                self._scale,
+                self._reference,
+                self._bounds,
+                domains_tuple,
             )
         )
 

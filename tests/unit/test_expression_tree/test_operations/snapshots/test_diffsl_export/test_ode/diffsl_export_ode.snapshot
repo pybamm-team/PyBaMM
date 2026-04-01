@@ -1,0 +1,19 @@
+constant0_i {
+  (0:1): 1,
+}
+constant1_i {
+  (0:1): 2,
+}
+u_i {
+  x = constant0_i,
+  y = constant1_i,
+}
+F_i {
+  ((4 * x_i) - (2 * y_i)),
+  ((3 * x_i) - y_i),
+}
+out_i {
+  x_i,
+  y_i,
+  (x_i + (4 * y_i)),
+}

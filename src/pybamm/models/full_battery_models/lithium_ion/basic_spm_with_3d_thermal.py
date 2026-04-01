@@ -48,14 +48,14 @@ class Basic3DThermalSPM(BaseModel):
         T = pybamm.Variable("Cell temperature [K]", domain="cell")
 
         if self.options.get("cell geometry") == "pouch":
-            x = pybamm.SpatialVariable("x", domain="cell")
-            y = pybamm.SpatialVariable("y", domain="cell")
-            z = pybamm.SpatialVariable("z", domain="cell")
-            integration_vars = [x, y, z]
+            self.x_cell = pybamm.SpatialVariable("x", domain="cell")
+            self.y_cell = pybamm.SpatialVariable("y", domain="cell")
+            self.z_cell = pybamm.SpatialVariable("z", domain="cell")
+            integration_vars = [self.x_cell, self.y_cell, self.z_cell]
         elif self.options.get("cell geometry") == "cylindrical":
-            r = pybamm.SpatialVariable("r_macro", domain="cell")
-            z = pybamm.SpatialVariable("z", domain="cell")
-            integration_vars = [r, z]
+            self.r_cell = pybamm.SpatialVariable("r_macro", domain="cell")
+            self.z_cell = pybamm.SpatialVariable("z", domain="cell")
+            integration_vars = [self.r_cell, self.z_cell]
         else:
             raise ValueError(
                 f"Geometry type '{self.options.get('cell geometry')}' is not supported. "
@@ -261,9 +261,8 @@ class Basic3DThermalSPM(BaseModel):
     def set_thermal_bcs(self, T):
         geometry_type = self.options.get("cell geometry", "pouch")
         if geometry_type == "pouch":
-            y = pybamm.SpatialVariable("y", "cell")
-            z = pybamm.SpatialVariable("z", "cell")
-            T_amb = self.param.T_amb(y, z, pybamm.t)
+            # Reuse the spatial variables created in __init__
+            T_amb = self.param.T_amb(self.y_cell, self.z_cell, pybamm.t)
             face_params = {
                 "x_min": self.param.h_edge_x_min,
                 "x_max": self.param.h_edge_x_max,
@@ -273,9 +272,8 @@ class Basic3DThermalSPM(BaseModel):
                 "z_max": self.param.h_edge_z_max,
             }
         elif geometry_type == "cylindrical":
-            r = pybamm.SpatialVariable("r_macro", "cell")
-            z = pybamm.SpatialVariable("z", "cell")
-            T_amb = self.param.T_amb(r, z, pybamm.t)
+            # Reuse the spatial variables created in __init__
+            T_amb = self.param.T_amb(self.r_cell, self.z_cell, pybamm.t)
             face_params = {
                 "r_min": self.param.h_edge_radial_min,
                 "r_max": self.param.h_edge_radial_max,
@@ -289,8 +287,14 @@ class Basic3DThermalSPM(BaseModel):
             )  # pragma: no cover
 
         self.boundary_conditions[T] = {}
-        lambda_eff = self.param.lambda_eff(T)
 
         for face, h_coeff in face_params.items():
-            q_face = -h_coeff * (T - T_amb)
-            self.boundary_conditions[T][face] = (q_face / lambda_eff, "Neumann")
+            # Evaluate T and lambda_eff at the boundary
+            T_boundary = pybamm.boundary_value(T, face)
+            lambda_eff_boundary = pybamm.boundary_value(self.param.lambda_eff(T), face)
+            # T_amb is already evaluated at the boundary coordinates
+            q_face = -h_coeff * (T_boundary - T_amb)
+            self.boundary_conditions[T][face] = (
+                q_face / lambda_eff_boundary,
+                "Neumann",
+            )

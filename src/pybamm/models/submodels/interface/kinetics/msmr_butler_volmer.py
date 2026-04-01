@@ -28,9 +28,6 @@ class MSMRButlerVolmer(BaseKinetics):
         Phase of the particle (default is "primary")
     """
 
-    def __init__(self, param, domain, reaction, options, phase="primary"):
-        super().__init__(param, domain, reaction, options, phase)
-
     def _get_exchange_current_density_by_reaction(self, variables, index):
         """ "
         A private function to obtain the exchange current density for each reaction

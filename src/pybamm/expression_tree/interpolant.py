@@ -314,7 +314,7 @@ class Interpolant(pybamm.Function):
             if np.any(nans):
                 nan_children = []
                 for child, interp_range in zip(
-                    new_evaluated_children, self.function.grid, strict=False
+                    new_evaluated_children, self.function.grid, strict=True
                 ):
                     nan_children.append(np.ones_like(child) * interp_range.mean())
                 nan_eval = self.function(np.transpose(nan_children))

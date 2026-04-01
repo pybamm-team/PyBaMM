@@ -25,7 +25,7 @@ class TestBaseSubModel:
         submodel = pybamm.BaseSubModel(None, None)
         assert submodel.phase is None
 
-        with pytest.raises(ValueError, match="Phase must be None"):
+        with pytest.raises(ValueError, match=r"Phase must be None"):
             pybamm.BaseSubModel(None, None, phase="primary")
 
         # With domain
@@ -39,13 +39,13 @@ class TestBaseSubModel:
         assert submodel.phase == "secondary"
         assert submodel.phase_name == "secondary "
 
-        with pytest.raises(ValueError, match="Phase must be 'primary'"):
+        with pytest.raises(ValueError, match=r"Phase must be 'primary'"):
             pybamm.BaseSubModel(None, "negative", phase="secondary")
-        with pytest.raises(ValueError, match="Phase must be either 'primary'"):
+        with pytest.raises(ValueError, match=r"Phase must be either 'primary'"):
             pybamm.BaseSubModel(
                 None, "negative", options={"particle phases": "2"}, phase="tertiary"
             )
-        with pytest.raises(ValueError, match="Phase must be 'primary'"):
+        with pytest.raises(ValueError, match=r"Phase must be 'primary'"):
             # 2 phases in the negative but only 1 in the positive
             pybamm.BaseSubModel(
                 None,

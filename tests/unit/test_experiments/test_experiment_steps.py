@@ -42,10 +42,10 @@ class TestExperimentSteps:
         step = pybamm.step.current(1, temperature="298K")
         assert step.temperature == 298
 
-        with pytest.raises(ValueError, match="temperature units"):
+        with pytest.raises(ValueError, match=r"temperature units"):
             step = pybamm.step.current(1, temperature="298T")
 
-        with pytest.raises(ValueError, match="time must be positive"):
+        with pytest.raises(ValueError, match=r"time must be positive"):
             pybamm.step.current(1, duration=0)
 
     def test_specific_steps(self):
@@ -65,7 +65,7 @@ class TestExperimentSteps:
         assert voltage.value == 1
 
         rest = pybamm.step.rest()
-        assert isinstance(rest, pybamm.step.Current)
+        assert isinstance(rest, pybamm.step.Rest)
         assert rest.value == 0
 
         power = pybamm.step.power(1)
@@ -75,6 +75,12 @@ class TestExperimentSteps:
         resistance = pybamm.step.resistance(1)
         assert isinstance(resistance, pybamm.step.Resistance)
         assert resistance.value == 1
+
+    def test_rest_step_requires_zero_current(self):
+        with pytest.raises(
+            ValueError, match=r"Rest steps must have a current value of 0"
+        ):
+            pybamm.step.Rest(1)
 
     def test_step_string(self):
         steps = [
@@ -139,7 +145,7 @@ class TestExperimentSteps:
             },
             {
                 "value": 0,
-                "type": "Current",
+                "type": "Rest",
                 "duration": 600.0,
                 "termination": [],
             },
@@ -181,12 +187,12 @@ class TestExperimentSteps:
                 # useful form for debugging
                 assert [k, expected[k]] == [k, actual[k]]
 
-        with pytest.raises(ValueError, match="Period cannot be"):
+        with pytest.raises(ValueError, match=r"Period cannot be"):
             pybamm.step.string(
                 "Discharge at 1C for 1 hour (1 minute period)", period=60
             )
 
-        with pytest.raises(ValueError, match="Temperature must be"):
+        with pytest.raises(ValueError, match=r"Temperature must be"):
             pybamm.step.string("Discharge at 1C for 1 hour at 298.15oC")
 
     def test_drive_cycle(self):
@@ -201,7 +207,7 @@ class TestExperimentSteps:
         assert drive_cycle_step.temperature == 273.15 - 5
 
         bad_drive_cycle = np.ones((10, 3))
-        with pytest.raises(ValueError, match="Drive cycle must be a 2-column array"):
+        with pytest.raises(ValueError, match=r"Drive cycle must be a 2-column array"):
             pybamm.step.current(bad_drive_cycle)
 
     def test_drive_cycle_duration(self):
@@ -243,23 +249,23 @@ class TestExperimentSteps:
         assert drive_cycle_step_no_period.period is None
 
     def test_bad_strings(self):
-        with pytest.raises(TypeError, match="Input to step.string"):
+        with pytest.raises(TypeError, match=r"Input to step.string"):
             pybamm.step.string(1)
-        with pytest.raises(TypeError, match="Input to step.string"):
+        with pytest.raises(TypeError, match=r"Input to step.string"):
             pybamm.step.string((1, 2, 3))
-        with pytest.raises(ValueError, match="Operating conditions must"):
+        with pytest.raises(ValueError, match=r"Operating conditions must"):
             pybamm.step.string("Discharge at 1 A at 2 hours")
-        with pytest.raises(ValueError, match="drive cycles"):
+        with pytest.raises(ValueError, match=r"drive cycles"):
             pybamm.step.string("Run at 1 A for 2 hours")
-        with pytest.raises(ValueError, match="Instruction must be"):
+        with pytest.raises(ValueError, match=r"Instruction must be"):
             pybamm.step.string("Play at 1 A for 2 hours")
-        with pytest.raises(ValueError, match="Operating conditions must"):
+        with pytest.raises(ValueError, match=r"Operating conditions must"):
             pybamm.step.string("Do at 1 A")
-        with pytest.raises(ValueError, match="Instruction"):
+        with pytest.raises(ValueError, match=r"Instruction"):
             pybamm.step.string("Cell Charge at 1 A for 2 hours")
-        with pytest.raises(ValueError, match="units must be"):
+        with pytest.raises(ValueError, match=r"units must be"):
             pybamm.step.string("Discharge at 1 B for 2 hours")
-        with pytest.raises(ValueError, match="time units must be"):
+        with pytest.raises(ValueError, match=r"time units must be"):
             pybamm.step.string("Discharge at 1 A for 2 years")
 
     def test_start_times(self):
@@ -270,7 +276,7 @@ class TestExperimentSteps:
         assert step.start_time == datetime(2020, 1, 1, 0, 0, 0)
 
         # Test bad start_times
-        with pytest.raises(TypeError, match="`start_time` should be"):
+        with pytest.raises(TypeError, match=r"`start_time` should be"):
             pybamm.step.current(1, duration=3600, start_time="bad start_time")
 
     def test_custom_termination(self):
@@ -289,7 +295,7 @@ class TestExperimentSteps:
         # An example where start_time t>0
         t = np.array([[1, 1], [2, 2], [3, 3]])
 
-        with pytest.raises(ValueError, match="Drive cycle must start at t=0"):
+        with pytest.raises(ValueError, match=r"Drive cycle must start at t=0"):
             pybamm.step.current(t)
 
     def test_base_custom_steps(self):
@@ -321,11 +327,11 @@ class TestExperimentSteps:
         )
         assert custom_step_diff.control == "differential"
 
-        with pytest.raises(ValueError, match="control must be"):
+        with pytest.raises(ValueError, match=r"control must be"):
             pybamm.step.CustomStepImplicit(custom_step_voltage, control="bla")
 
     def test_bad_direction(self):
-        with pytest.raises(ValueError, match="Invalid direction"):
+        with pytest.raises(ValueError, match=r"Invalid direction"):
             pybamm.step.Voltage(4.1, direction="foo")
 
     def test_steps_with_operators(self):
@@ -350,7 +356,7 @@ class TestExperimentSteps:
         np.testing.assert_allclose(event_gt_0_05.expression, 0.05 - 0.06)
 
         # error
-        with pytest.raises(ValueError, match="Invalid operator"):
+        with pytest.raises(ValueError, match=r"Invalid operator"):
             pybamm.step.CurrentTermination(0.05, operator="=")
 
         # operator overloading
@@ -362,3 +368,96 @@ class TestExperimentSteps:
         termination_gt_4_1_oo = pybamm.step.step_termination.Voltage() > 4.1
         assert termination_lt_4_1_oo == termination_gt_4_1
         assert termination_gt_4_1_oo == termination_gt_4_1
+
+    def test_symbolic_termination_expression_helpers(self):
+        single_termination_step = pybamm.step.current(
+            1, duration=3600, termination="2.5V"
+        )
+        single_termination_variables = {
+            "Battery voltage [V]": 3.0,
+            "Current [A]": 0.2,
+            "C-rate": 0.1,
+        }
+        np.testing.assert_allclose(
+            single_termination_step.get_combined_termination_expression(
+                single_termination_variables
+            ),
+            3.0 - 2.5,
+        )
+
+        step = pybamm.step.current(1, duration=3600, termination=["2.5V", "0.05A"])
+        variables = {
+            "Battery voltage [V]": 3.0,
+            "Current [A]": 0.2,
+            "C-rate": 0.1,
+        }
+
+        events = step.get_termination_events(variables)
+        assert [event.name for event in events] == [
+            "Voltage < 2.5 [V] [experiment]",
+            "abs(Current [A]) < 0.05 [A] [experiment]",
+        ]
+        np.testing.assert_allclose(
+            step.get_combined_termination_expression(variables).evaluate(),
+            min(3.0 - 2.5, 0.2 - 0.05),
+        )
+
+        no_termination_step = pybamm.step.current(1, duration=3600)
+        np.testing.assert_allclose(
+            no_termination_step.get_combined_termination_expression(
+                variables
+            ).evaluate(),
+            1,
+        )
+
+    def test_symbolic_control_residual_helpers(self):
+        current_step = pybamm.step.current(1, duration=10)
+        np.testing.assert_allclose(
+            current_step.get_control_residual({"Current [A]": 1.2}),
+            0.2,
+        )
+
+        voltage_step = pybamm.step.voltage(4.1, duration=10)
+        np.testing.assert_allclose(
+            voltage_step.get_control_residual({"Voltage [V]": 4.2}),
+            0.1,
+        )
+
+        power_step = pybamm.step.power(2, duration=10)
+        np.testing.assert_allclose(
+            power_step.get_control_residual({"Power [W]": 2.4}),
+            0.4,
+        )
+
+        resistance_step = pybamm.step.resistance(4, duration=10)
+        np.testing.assert_allclose(
+            resistance_step.get_control_residual(
+                {"Voltage [V]": 4.3, "Current [A]": 1}
+            ),
+            0.3,
+        )
+
+        custom_explicit = pybamm.step.CustomStepExplicit(
+            lambda variables: 0.5, duration=1
+        )
+        np.testing.assert_allclose(
+            custom_explicit.get_control_residual({"Current [A]": 0.7}),
+            0.2,
+        )
+
+        custom_algebraic = pybamm.step.CustomStepImplicit(
+            lambda variables: variables["Voltage [V]"] - 4.2,
+            duration=1,
+        )
+        np.testing.assert_allclose(
+            custom_algebraic.get_control_residual({"Voltage [V]": 4.3}),
+            0.1,
+        )
+
+        custom_differential = pybamm.step.CustomStepImplicit(
+            lambda variables: variables["Voltage [V]"] - 4.2,
+            control="differential",
+            duration=1,
+        )
+        with pytest.raises(NotImplementedError):
+            custom_differential.get_control_residual({"Voltage [V]": 4.3})

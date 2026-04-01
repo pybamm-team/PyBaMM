@@ -25,8 +25,7 @@ class TestPlot3DCrossSection:
                 "Back face heat transfer coefficient [W.m-2.K-1]": 10,
                 "Bottom face heat transfer coefficient [W.m-2.K-1]": 10,
                 "Top face heat transfer coefficient [W.m-2.K-1]": 10,
-            },
-            check_already_exists=False,
+            }
         )
 
         var_pts = {
@@ -57,8 +56,7 @@ class TestPlot3DCrossSection:
                 "Outer radius heat transfer coefficient [W.m-2.K-1]": 10,
                 "Bottom face heat transfer coefficient [W.m-2.K-1]": 10,
                 "Top face heat transfer coefficient [W.m-2.K-1]": 10,
-            },
-            check_already_exists=False,
+            }
         )
 
         var_pts = {
@@ -200,7 +198,7 @@ class TestPlot3DCrossSection:
         assert ax is not None
 
     def test_plot_3d_cross_section_custom_ax(self, box_3d_solution):
-        fig, ax = plt.subplots(figsize=(6, 4))
+        _, ax = plt.subplots(figsize=(6, 4))
         ax_out = pybamm.plot_3d_cross_section(
             box_3d_solution,
             ax=ax,
@@ -211,7 +209,7 @@ class TestPlot3DCrossSection:
         assert ax_out == ax
 
     def test_plot_3d_cross_section_custom_ax_polar(self, cylindrical_3d_solution):
-        fig, ax = plt.subplots(subplot_kw={"projection": "polar"})
+        _, ax = plt.subplots(subplot_kw={"projection": "polar"})
         ax_out = pybamm.plot_3d_cross_section(
             cylindrical_3d_solution,
             plane="xy",
@@ -241,7 +239,7 @@ class TestPlot3DCrossSection:
 
     def test_plot_3d_cross_section_non_3d_model_error(self, non_3d_solution):
         with pytest.raises(
-            TypeError, match="This function requires a 3D model solution"
+            TypeError, match=r"This function requires a 3D model solution"
         ):
             pybamm.plot_3d_cross_section(
                 non_3d_solution,
@@ -251,7 +249,7 @@ class TestPlot3DCrossSection:
             )
 
     def test_plot_3d_cross_section_invalid_plane_error(self, box_3d_solution):
-        with pytest.raises(ValueError, match="Plane 'invalid' invalid"):
+        with pytest.raises(ValueError, match=r"Plane 'invalid' invalid"):
             pybamm.plot_3d_cross_section(
                 box_3d_solution,
                 plane="invalid",
@@ -454,7 +452,7 @@ class TestPlot3DCrossSection:
         self, cylindrical_3d_solution
     ):
         with pytest.raises(
-            ValueError, match="Plane 'yz' invalid for cylindrical geometry"
+            ValueError, match=r"Plane 'yz' invalid for cylindrical geometry"
         ):
             pybamm.plot_3d_cross_section(
                 cylindrical_3d_solution,
@@ -468,7 +466,7 @@ class TestPlot3DCrossSection:
         self, cylindrical_3d_solution
     ):
         with pytest.raises(
-            ValueError, match="Plane 'xz' invalid for cylindrical geometry"
+            ValueError, match=r"Plane 'xz' invalid for cylindrical geometry"
         ):
             pybamm.plot_3d_cross_section(
                 cylindrical_3d_solution,

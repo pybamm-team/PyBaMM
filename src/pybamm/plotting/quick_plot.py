@@ -144,7 +144,10 @@ class QuickPlot:
                 )
 
         # check variables have been provided after any serialisation
-        if any(len(m.variables) == 0 for m in models):
+        if any(
+            len(m.variables) == 0 and len(m.get_processed_variables_dict()) == 0
+            for m in models
+        ):
             raise AttributeError("No variables to plot")
 
         self.n_rows = n_rows or int(

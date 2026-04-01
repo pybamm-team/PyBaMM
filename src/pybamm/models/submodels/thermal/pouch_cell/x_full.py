@@ -179,4 +179,8 @@ class OneDimensionalX(BaseThermal):
         T_cn = variables["Negative current collector temperature [K]"]
         T_cp = variables["Positive current collector temperature [K]"]
         T_init = self.param.T_init
-        self.initial_conditions = {T_cn: T_init, T: T_init, T_cp: T_init}
+        self.initial_conditions = {
+            T_cn: pybamm.boundary_value(T_init, "left"),
+            T: T_init,
+            T_cp: pybamm.boundary_value(T_init, "right"),
+        }
