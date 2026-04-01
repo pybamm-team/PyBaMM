@@ -1,6 +1,8 @@
 #
 # Test dispatching mechanism in entry points
 #
+import re
+
 import pytest
 
 import pybamm
@@ -52,13 +54,15 @@ class TestDispatch:
 
         # Neither model nor url provided
         with pytest.raises(
-            ValueError, match="You must provide exactly one of `model` or `url`."
+            ValueError,
+            match=re.escape("You must provide exactly one of `model` or `url`."),
         ):
             pybamm.Model()
 
         # Both model and url provided
         with pytest.raises(
-            ValueError, match="You must provide exactly one of `model` or `url`."
+            ValueError,
+            match=re.escape("You must provide exactly one of `model` or `url`."),
         ):
             pybamm.Model(model="SPM", url="http://example.com/dfn.py")
 

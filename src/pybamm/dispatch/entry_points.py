@@ -49,8 +49,7 @@ class EntryPoint(Mapping):
         Parameters for the Enertech cell (Ai2020), from the papers :footcite:t:`Ai2019`...
 
         >>> print(pybamm.dispatch.models.get_docstring("SPM"))  # doctest: +ELLIPSIS
-        <BLANKLINE>
-        Single Particle Model (SPM) of a lithium-ion battery...
+        Single Particle Model (SPM) model of a lithium-ion battery...
     """
 
     _instances = 0
