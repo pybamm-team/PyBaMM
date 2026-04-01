@@ -153,3 +153,33 @@ class TestDispatch:
         captured = capsys.readouterr()
         assert "Using cached model at:" in captured.out
         assert hasattr(model2, "name")
+
+    def test_entry_point_iter(self):
+        entries = list(pybamm.parameter_sets)
+        assert len(entries) > 0
+        assert all(isinstance(name, str) for name in entries)
+
+    def test_entry_point_len(self):
+        assert len(pybamm.parameter_sets) > 0
+        assert len(pybamm.dispatch.models) > 0
+
+    def test_get_docstring_parameter_sets(self):
+        doc = pybamm.parameter_sets.get_docstring("Ai2020")
+        assert isinstance(doc, str)
+        assert len(doc) > 0
+
+    def test_force_download_evicts_existing_cache(self, capsys):
+        cache_path = get_cache_path(MODEL_URL)
+
+        if not cache_path.exists():
+            pybamm.Model(url=MODEL_URL)
+            capsys.readouterr()
+
+        assert cache_path.exists(), "Pre-condition: cached file must exist"
+
+        model = pybamm.Model(url=MODEL_URL, force_download=True)
+        captured = capsys.readouterr()
+
+        assert cache_path.exists()
+        assert "Model cached at:" in captured.out
+        assert hasattr(model, "name")
