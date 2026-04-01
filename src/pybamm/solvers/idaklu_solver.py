@@ -141,7 +141,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 "max_num_iterations_ic": 100,
                 # Maximum number of linesearch backtracks allowed in any Newton iteration,
                 # when solving the initial conditions calculation problem
-                "max_linesearch_backtracks_ic": 100,
+                "max_linesearch_backtracks_ic": 5,
                 # Turn off linesearch
                 "linesearch_off_ic": False,
                 # How to calculate the initial conditions.
@@ -150,6 +150,12 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 "init_all_y_ic": False,
                 # Calculate consistent initial conditions
                 "calc_ic": True,
+                ## Newton IC solver
+                # "auto": use dedicated sub-block solver when possible
+                #         (smaller system, but requires direct linear solver)
+                # "full": always use IDA's full-system linear solve
+                #         (supports any linear solver including iterative)
+                "newton_mode": "auto",
                 ## Early termination
                 # Maximum number of consecutive steps allowed without advancing
                 # the solution time by at least `t_no_progress` seconds.
@@ -203,9 +209,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
     def _combine_options(self, user_options: dict | None, root_method: str | None) -> dict:
         user_options = user_options or {}
         num_solvers = user_options.get("num_threads", 1)
-        newton_mode = user_options.get("newton_mode", None)
-        if newton_mode is None:
-            newton_mode = "algebraic" if root_method is None else "disabled"
 
         default_options = {
             "print_stats": False,
@@ -237,14 +240,14 @@ class IDAKLUSolver(pybamm.BaseSolver):
             "max_num_steps_ic": 50,
             "max_num_jacobians_ic": 40,
             "max_num_iterations_ic": 100,
-            "max_linesearch_backtracks_ic": 100,
+            "max_linesearch_backtracks_ic": 5,
             "linesearch_off_ic": False,
             "init_all_y_ic": False,
             "calc_ic": True,
             "num_steps_no_progress": 0,
             "t_no_progress": 0.0,
-            "newton_mode": newton_mode,
             "newton_step_tol": 1e-4,
+            "newton_mode": "auto",
         }
         if not user_options:
             return default_options
@@ -375,7 +378,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 np.zeros(model.len_alg),
             )
         else:
-            mass_action_expression = casadi.densify(mass_matrix @ v_casadi)
+            mass_action_expression = casadi.densify(casadi.DM(mass_matrix) @ v_casadi)
 
         # also need the action of the mass matrix on a vector
         mass_action = casadi.Function(
@@ -423,9 +426,16 @@ class IDAKLUSolver(pybamm.BaseSolver):
         atol = getattr(model, "atol", self.atol)
         atol = self._check_atol_type(atol, model)
 
-        # Build algebraic-only residual and Jacobian for Newton sub-block mode
-        alg_res_fn = getattr(model, "algebraic_eval", None)
-        jac_alg_fn = getattr(model, "jac_algebraic_eval", None)
+        # Build algebraic-only residual and Jacobian for Newton sub-block mode.
+        # When newton_mode="full", skip these so the C++ solver uses the
+        # full-system IDA linear solve (DECOUPLED_FULL or COUPLED_FULL),
+        # which supports any linear solver including iterative ones.
+        if self._options.get("newton_mode", "auto") == "auto":
+            alg_res_fn = getattr(model, "algebraic_eval", None)
+            jac_alg_fn = getattr(model, "jac_algebraic_eval", None)
+        else:
+            alg_res_fn = None
+            jac_alg_fn = None
 
         # Serialize casadi functions
         idaklu_solver_fcn = idaklu.create_casadi_solver_group
@@ -727,7 +737,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         ]
 
     def _check_events_with_initialization(self, *args, **kwargs):
-        if self._options["newton_mode"] != "disabled":
+        if self._options["calc_ic"]:
             return
         return super()._check_events_with_initialization(*args, **kwargs)
 

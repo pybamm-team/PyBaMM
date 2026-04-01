@@ -159,10 +159,6 @@ class BaseSolver:
     def root_method(self, method):
         if method == "casadi":
             method = pybamm.CasadiAlgebraicSolver(self.root_tol)
-        elif method == "newton":
-            method = pybamm.NonlinearSolver(
-                rtol=self.root_tol, atol=self.root_tol, step_tol=self.root_tol
-            )
         elif isinstance(method, str):
             method = pybamm.AlgebraicSolver(method, self.root_tol)
         elif not (
@@ -298,10 +294,10 @@ class BaseSolver:
         # Save CasADi functions for solvers that use CasADi
         # Note: when we pass to casadi the ode part of the problem must be in
         if isinstance(
-            self.root_method, pybamm.CasadiAlgebraicSolver | pybamm.NonlinearSolver
+            self.root_method, pybamm.CasadiAlgebraicSolver
         ) or isinstance(
             self,
-            pybamm.CasadiSolver | pybamm.CasadiAlgebraicSolver | pybamm.NonlinearSolver,
+            pybamm.CasadiSolver | pybamm.CasadiAlgebraicSolver,
         ):
             # can use DAE solver to solve model with algebraic equations only
             if len(model.rhs) > 0:

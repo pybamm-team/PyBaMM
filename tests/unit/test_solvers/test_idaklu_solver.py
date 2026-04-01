@@ -773,18 +773,6 @@ class TestIDAKLUSolver:
                 with pytest.raises(ValueError):
                     _ = solver.solve(model, t_eval, t_interp=t_interp)
 
-        # Test newton_mode separately (only affects IC solve, not main integration)
-        for newton_mode in ["full", "algebraic"]:
-            solver = pybamm.IDAKLUSolver(
-                atol=1e-8,
-                rtol=1e-8,
-                options={"newton_mode": newton_mode},
-            )
-            soln = solver.solve(model, t_eval, t_interp=t_interp)
-            np.testing.assert_allclose(
-                soln.y, soln_base.y, rtol=1e-5, atol=1e-4
-            )
-
     def test_solver_options(self):
         model = pybamm.BaseModel()
         u = pybamm.Variable("u")
