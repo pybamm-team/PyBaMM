@@ -1595,6 +1595,30 @@ class TestProcessedVariable:
 
         np.testing.assert_array_equal(computed_var.entries, t_sol * y_sol[0])
 
+    def test_as_computed_with_sensitivities(self):
+        model = pybamm.BaseModel()
+        y = pybamm.Variable("y")
+        a = pybamm.InputParameter("a")
+        model.rhs = {y: 0 * y}
+        model.initial_conditions = {y: 1}
+        model.variables = {"a times y": a * y}
+
+        solution = pybamm.IDAKLUSolver().solve(
+            model,
+            [0, 1],
+            inputs={"a": 2.0},
+            calculate_sensitivities=True,
+            t_interp=np.array([0, 1]),
+        )
+        processed_var = solution["a times y"]
+
+        computed_var = processed_var.as_computed()
+
+        np.testing.assert_array_equal(computed_var.entries, np.array([2.0, 2.0]))
+        np.testing.assert_array_equal(
+            computed_var.sensitivities["a"], np.array([1.0, 1.0])
+        )
+
     def test_as_computed_1D(self):
         var = pybamm.Variable("var", domain=["negative electrode", "separator"])
         x = pybamm.SpatialVariable("x", domain=["negative electrode", "separator"])

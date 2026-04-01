@@ -713,14 +713,22 @@ class BaseSolver:
     def _solve_process_calculate_sensitivities_arg(
         inputs: dict, model: pybamm.BaseModel, calculate_sensitivities: list[str] | bool
     ):
+        excluded_sensitivity_inputs = {pybamm.Simulation._STEP_INDEX_INPUT}
+
         # get a list-only version of calculate_sensitivities
         if isinstance(calculate_sensitivities, bool):
             if calculate_sensitivities:
-                calculate_sensitivities_list = [p for p in inputs.keys()]
+                calculate_sensitivities_list = [
+                    p for p in inputs.keys() if p not in excluded_sensitivity_inputs
+                ]
             else:
                 calculate_sensitivities_list = []
         else:
-            calculate_sensitivities_list = calculate_sensitivities
+            calculate_sensitivities_list = [
+                p
+                for p in calculate_sensitivities
+                if p not in excluded_sensitivity_inputs
+            ]
 
         calculate_sensitivities_list.sort()
         if not hasattr(model, "calculate_sensitivities"):
