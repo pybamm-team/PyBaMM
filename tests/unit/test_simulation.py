@@ -1258,10 +1258,6 @@ class TestSimulation:
         sim.solve(inputs={"eps_s_n": 0.6}, initial_soc=0.5)
         assert sim._needs_ic_rebuild is False
 
-
-class TestSimulationCoverageGaps:
-    """Tests for Simulation methods that lack coverage."""
-
     def test_should_save_cycle_first_and_last(self):
         # First and last cycle always saved
         assert pybamm.Simulation._should_save_cycle(1, 10, 0, 5) is True

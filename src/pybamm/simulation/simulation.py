@@ -284,7 +284,7 @@ class Simulation(BaseSimulation):
             step_control_builders,
         )
         # Reuse the implicit-step wiring so the experiment-wide controller owns the
-        # current variable in the same way as voltage/power/resistance steps do today.
+        # current variable in the same way as voltage/power/resistance steps.
         new_model, variables = pybamm.step.BaseStepImplicit.add_control_submodel(
             new_model,
             submodel,
@@ -410,7 +410,6 @@ class Simulation(BaseSimulation):
             if event is None:
                 continue
 
-            value = None
             # First try the exact symbolic event expression that the unified model used.
             # This is the closest match to what the solver just triggered.
             t = (
@@ -423,15 +422,13 @@ class Simulation(BaseSimulation):
                 if step_solution.y_event is not None
                 else step_solution.y[:, -1]
             )
+
             try:
                 value = event.expression.evaluate(t=t, y=y, inputs=inputs)
             except NotImplementedError:  # pragma: no cover
-                value = None
-
-            # If the raw expression still contains unevaluated symbols, fall back to
-            # the processed variables on the solved step. This is slower, but it works
-            # for custom terminations built from model outputs.
-            if value is None:
+                # If the raw expression still contains unevaluated symbols, fall back to
+                # the processed variables on the solved step. This is slower, but it works
+                # for custom terminations built from model outputs.
                 value = self._evaluate_step_termination_expression_from_solution(
                     term, step_solution, step
                 )
@@ -455,8 +452,8 @@ class Simulation(BaseSimulation):
         """
         parameter_values = self._parameter_values.copy()
 
-        # some parameters are used to control the experiment, and should not be
-        # input parameters
+        # some parameters are used to control the experiment,
+        # and should not be input parameters
         restrict_list = {"Initial temperature [K]", "Ambient temperature [K]"}
         for step in self.experiment.steps:
             if step.is_implicit():
@@ -533,8 +530,8 @@ class Simulation(BaseSimulation):
         if self.experiment.initial_start_time:
             # duration doesn't matter, we just need the model
             rest_step = pybamm.step.Rest(duration=1)
-            # Change ambient temperature to be an input, which will be changed at
-            # solve time
+            # Change ambient temperature to be an input,
+            # which will be changed at solve time
             parameter_values["Ambient temperature [K]"] = "[input]"
             new_model = rest_step.process_model(
                 self._model,
@@ -767,7 +764,7 @@ class Simulation(BaseSimulation):
                 **kwargs,
             )
 
-        # --- Experiment solve path ---
+        # Experiment solve path
         t_eval, solver, calc_esoh, callbacks, inputs = self._prepare_solve(
             t_eval, solver, calc_esoh, callbacks, inputs
         )
@@ -1108,8 +1105,6 @@ class Simulation(BaseSimulation):
 
             # Calculate capacity_start using the first cycle
             if cycle_num == 1:
-                # Note capacity_start could be defined as
-                # self._parameter_values["Nominal cell capacity [A.h]"] instead
                 if "capacity" in self.experiment.termination:
                     capacity_start = all_summary_variables[0]["Capacity [A.h]"]
                     logs["start capacity"] = capacity_start
