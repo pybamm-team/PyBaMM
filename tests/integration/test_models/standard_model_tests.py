@@ -154,9 +154,7 @@ class StandardModelTest:
     def test_serialisation(self, solver=None, t_eval=None):
         temp = tempfile.NamedTemporaryFile(prefix="test_model")
         file_name = temp.name
-        self.model.save_model(
-            file_name, variables=self.model.variables, mesh=self.disc.mesh
-        )
+        self.model.save_model(file_name, mesh=self.disc.mesh)
 
         new_model = pybamm.load_model(file_name + ".json")
 

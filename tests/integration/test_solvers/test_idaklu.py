@@ -1,3 +1,5 @@
+import logging
+
 import numpy as np
 
 import pybamm
@@ -16,6 +18,32 @@ class TestIDAKLUSolver:
         t_eval = np.linspace(0, 3600, 100)
         solution = pybamm.IDAKLUSolver().solve(model, t_eval)
         np.testing.assert_array_less(1, solution.t.size)
+
+    def test_debug_logs_during_solve(self, caplog):
+        model = pybamm.lithium_ion.SPM()
+        geometry = model.default_geometry
+        param = model.default_parameter_values
+        param.process_model(model)
+        param.process_geometry(geometry)
+        mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
+        disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+        disc.process_model(model)
+
+        # Length 3 so solver hits an interior breakpoint and logs "reinitializing"
+        t_eval = np.array([0.0, 0.5, 1.0])
+        with caplog.at_level(logging.DEBUG, logger="pybamm.logger"):
+            pybamm.IDAKLUSolver().solve(model, t_eval)
+
+        requirements = [
+            "Integrating from",
+            "t =",
+            "reinitializing",
+            "Integration complete",
+        ]
+        for requirement in requirements:
+            assert requirement in caplog.text, (
+                f"Requirement {requirement} not found in log"
+            )
 
     def test_on_spme_sensitivities(self):
         param_name = "Current function [A]"
@@ -209,6 +237,44 @@ class TestIDAKLUSolver:
             sols[0].cycles[-1]["Current [A]"].data,
             sols[1].cycles[-1]["Current [A]"].data,
         )
+
+    def test_multiple_initial_conditions_against_independent_solves(self):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        v = pybamm.Variable("v")
+        u0 = pybamm.InputParameter("u0")
+        v0 = pybamm.InputParameter("v0")
+        model.rhs = {u: -u, v: -2 * v}
+        model.initial_conditions = {u: u0, v: v0}
+        model.variables = {"u": u, "v": v}
+
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        t_eval = np.array([0, 1])
+        solver = pybamm.IDAKLUSolver()
+
+        inputs = [{"u0": 3, "v0": 4}, {"u0": 5, "v0": 6}]
+
+        multi_sols = solver.solve(
+            model,
+            t_eval,
+            inputs=inputs,
+        )
+        assert isinstance(multi_sols, list) and len(multi_sols) == 2
+        np.testing.assert_equal([sol["u"](0) for sol in multi_sols], [3, 5])
+
+        indep_sols = []
+        for ic in inputs:
+            sol_indep = solver.solve(model, t_eval, inputs=ic)
+            indep_sols.append(sol_indep)
+
+        for idx in (0, 1):
+            sol_vec = multi_sols[idx]
+            sol_ind = indep_sols[idx]
+
+            np.testing.assert_allclose(sol_vec.t, sol_ind.t)
+            np.testing.assert_allclose(sol_vec.y, sol_ind.y)
 
     def test_outvars_with_experiments_multi_simulation(self):
         model = pybamm.lithium_ion.SPM()

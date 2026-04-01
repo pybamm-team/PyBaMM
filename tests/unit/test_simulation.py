@@ -6,6 +6,7 @@ import pytest
 from scipy.integrate import trapezoid
 
 import pybamm
+from pybamm.solvers.base_solver import BaseSolver
 from tests import no_internet_connection
 
 
@@ -18,45 +19,6 @@ class TestSimulation:
         sim = pybamm.Simulation(model)
         sol = sim.solve([0, 1])
         np.testing.assert_allclose(sol.y[0], np.exp(-sol.t), rtol=1e-4, atol=1e-4)
-
-    def test_basic_ops(self):
-        model = pybamm.lithium_ion.SPM()
-        sim = pybamm.Simulation(model)
-
-        # check that the model is unprocessed
-        assert sim._mesh is None
-        assert sim._disc is None
-        V = sim.model.variables["Voltage [V]"]
-        assert V.has_symbol_of_classes(pybamm.Parameter)
-        assert not V.has_symbol_of_classes(pybamm.Matrix)
-
-        sim.set_parameters()
-        assert sim._mesh is None
-        assert sim._disc is None
-        V = sim.model_with_set_params.variables["Voltage [V]"]
-        assert not V.has_symbol_of_classes(pybamm.Parameter)
-        assert not V.has_symbol_of_classes(pybamm.Matrix)
-        # Make sure model is unchanged
-        assert sim.model != model
-        V = model.variables["Voltage [V]"]
-        assert V.has_symbol_of_classes(pybamm.Parameter)
-        assert not V.has_symbol_of_classes(pybamm.Matrix)
-
-        assert sim.submesh_types == model.default_submesh_types
-        assert sim.var_pts == model.default_var_pts
-        assert sim.mesh is None
-        for key in sim.spatial_methods.keys():
-            assert (
-                sim.spatial_methods[key].__class__
-                == model.default_spatial_methods[key].__class__
-            )
-
-        sim.build()
-        assert sim._mesh is not None
-        assert sim._disc is not None
-        V = sim.built_model.variables["Voltage [V]"]
-        assert not V.has_symbol_of_classes(pybamm.Parameter)
-        assert V.has_symbol_of_classes(pybamm.Matrix)
 
     def test_solve(self):
         sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
@@ -80,9 +42,9 @@ class TestSimulation:
                 assert val.has_symbol_of_classes(pybamm.Matrix)
 
         # Test options that are only available when simulating an experiment
-        with pytest.raises(ValueError, match="save_at_cycles"):
+        with pytest.raises(ValueError, match=r"save_at_cycles"):
             sim.solve(save_at_cycles=2)
-        with pytest.raises(ValueError, match="starting_solution"):
+        with pytest.raises(ValueError, match=r"starting_solution"):
             sim.solve(starting_solution=sol)
 
     def test_solve_remove_independent_variables_from_rhs(self):
@@ -135,6 +97,11 @@ class TestSimulation:
         sim = pybamm.Simulation(model)
         sim.solve([0, 600])
 
+        # The model is still observable because it has not yet been processed by
+        # the parameter_values or discretisation
+        assert sim.solution.observable is True
+        assert all(model.solution_observable for model in sim.solution.all_models)
+
     def test_reuse_commands(self):
         sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
 
@@ -150,6 +117,49 @@ class TestSimulation:
         sim.build()
         sim.solve([0, 600])
         sim.set_parameters()
+
+    def test_setstate_restores_unified_experiment_defaults(self):
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            experiment=pybamm.Experiment(["Discharge at 1C for 10 seconds"]),
+        )
+        state = sim.__dict__.copy()
+        for key in [
+            "model_state_mappers",
+            "_compiled_model_state_mappers",
+            "_built_experiment_model",
+            "_built_experiment_solver",
+            "experiment_unique_steps_to_model",
+            "_experiment_uses_unified_model",
+            "_experiment_unified_model_key",
+            "_experiment_step_indices",
+            "_experiment_padding_rest_index",
+            "_experiment_includes_padding_rest",
+            "_combined_step_termination_event_name",
+            "_experiment_model_mode",
+        ]:
+            state.pop(key, None)
+
+        restored = pybamm.Simulation.__new__(pybamm.Simulation)
+        restored.__setstate__(state)
+
+        assert callable(restored.get_esoh_solver)
+        assert restored.model_state_mappers == {}
+        assert restored._compiled_model_state_mappers == {}
+        assert restored._built_experiment_model is None
+        assert restored._built_experiment_solver is None
+        assert restored.experiment_unique_steps_to_model is None
+        assert restored._experiment_uses_unified_model is False
+        assert restored._experiment_unified_model_key == "Unified experiment"
+        assert restored._experiment_step_index_input_name() == "Experiment step index"
+        assert restored._experiment_step_indices == []
+        assert restored._experiment_padding_rest_index is None
+        assert restored._experiment_includes_padding_rest is False
+        assert (
+            restored._combined_step_termination_event_name
+            == "Combined termination [experiment]"
+        )
+        assert restored._experiment_model_mode == "legacy"
 
     def test_set_crate(self):
         model = pybamm.lithium_ion.SPM()
@@ -264,7 +274,7 @@ class TestSimulation:
                 "Positive electrode OCP [V]": ocv_with_parameter,
             }
         )
-        parameter_values.update({"a": "[input]"}, check_already_exists=False)
+        parameter_values.update({"a": "[input]"})
         experiment = pybamm.Experiment(["Discharge at 1C until 2.5 V"])
         sim = pybamm.Simulation(
             model, parameter_values=parameter_values, experiment=experiment
@@ -393,8 +403,7 @@ class TestSimulation:
                 "Secondary: Positive electrode OCP entropic change [V.K-1]": (
                     param["Secondary: Negative electrode OCP entropic change [V.K-1]"]
                 ),
-            },
-            check_already_exists=False,
+            }
         )
 
         # Set voltage cutoffs to match the graphite/silicon OCP range
@@ -449,8 +458,7 @@ class TestSimulation:
                 "Lithium metal partial molar volume [m3.mol-1]": 1.3e-05,  # From Xu2019 parameter set
                 "Lithium metal interface surface potential difference [V]": 0.0,
                 "Current function [A]": 0.0,
-            },
-            check_already_exists=False,
+            }
         )
 
         sim = pybamm.Simulation(model, parameter_values=param)
@@ -468,7 +476,7 @@ class TestSimulation:
         )  # More relaxed tolerance for composite electrode initialization
 
         with pytest.warns(DeprecationWarning):
-            sim.set_initial_soc(0.5)
+            sim.set_initial_soc(0.5, None)
 
     def test_solve_with_initial_soc_with_input_param_in_ocv(self):
         # test having an input parameter in the ocv function
@@ -485,7 +493,7 @@ class TestSimulation:
                 "Positive electrode OCP [V]": ocv_with_parameter,
             }
         )
-        parameter_values.update({"a": "[input]"}, check_already_exists=False)
+        parameter_values.update({"a": "[input]"})
         experiment = pybamm.Experiment(["Discharge at 1C until 2.5 V"])
         sim = pybamm.Simulation(
             model, parameter_values=parameter_values, experiment=experiment
@@ -501,7 +509,7 @@ class TestSimulation:
         sim = pybamm.Simulation(
             model, parameter_values=parameter_values, experiment=experiment
         )
-        with pytest.raises(pybamm.ModelError, match="Initial temperature"):
+        with pytest.raises(pybamm.ModelError, match=r"Initial temperature"):
             sim.solve([0, 3600])
 
     def test_esoh_with_input_param(self):
@@ -666,7 +674,7 @@ class TestSimulation:
         sim.solve([0, 600])
         with pytest.raises(
             NotImplementedError,
-            match="Cannot save simulation if model format is python",
+            match=r"Cannot save simulation if model format is python",
         ):
             sim.save(test_name)
 
@@ -735,6 +743,16 @@ class TestSimulation:
 
         os.remove("sim_save.json")
 
+    def test_save_load_outvars(self, tmp_path):
+        filename = str(tmp_path / "test.pkl")
+        model = pybamm.lithium_ion.SPM()
+        solver = pybamm.IDAKLUSolver(output_variables=["Voltage [V]"])
+        sim = pybamm.Simulation(model, solver=solver)
+        sim.solve([0, 600])
+        sim.save(filename)
+        pkl_obj = pybamm.load_sim(filename)
+        assert list(pkl_obj.solver.output_variables) == ["Voltage [V]"]
+
     def test_plot(self):
         sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
 
@@ -749,7 +767,9 @@ class TestSimulation:
 
     def test_create_gif(self, tmp_path):
         sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
-        with pytest.raises(ValueError, match="The simulation has not been solved yet."):
+        with pytest.raises(
+            ValueError, match=r"The simulation has not been solved yet."
+        ):
             sim.create_gif()
         sim.solve(t_eval=[0, 10])
 
@@ -797,38 +817,150 @@ class TestSimulation:
                 i += 1
                 assert i < len(sim.solution.t)
 
-    def test_discontinuous_current(self):
+    def test_drive_cycle_t_eval_warnings_for_missing_points_and_resolution(self):
+        model = pybamm.lithium_ion.SPM()
+        param = model.default_parameter_values
+        drive_cycle = np.array([[0.0, 0.0], [1.0, 0.5], [2.0, -0.5]])
+        param["Current function [A]"] = pybamm.Interpolant(
+            drive_cycle[:, 0], drive_cycle[:, 1], pybamm.t
+        )
+        sim = pybamm.Simulation(
+            model, parameter_values=param, solver=pybamm.ScipySolver()
+        )
+
+        with pytest.warns(pybamm.SolverWarning) as warnings_record:
+            sim.solve(t_eval=np.array([0.0, 2.0]))
+
+        warning_messages = [str(warning.message) for warning in warnings_record]
+        assert any(
+            "t_eval does not contain all of the time points in the data" in message
+            for message in warning_messages
+        )
+        assert any(
+            "largest timestep in t_eval" in message for message in warning_messages
+        )
+
+    # Test with an ODE and DAE model
+    @pytest.mark.parametrize(
+        "model", [pybamm.lithium_ion.SPM(), pybamm.lithium_ion.DFN()]
+    )
+    def test_heaviside_current(self, model):
         def car_current(t):
             current = (
-                1 * (t >= 0) * (t <= 1000)
-                - 0.5 * (1000 < t) * (t <= 2000)
+                1 * (t <= 1000)
+                - 0.5 * (1000 < t) * (t < 1500)
                 + 0.5 * (2000 < t)
+                + 5 * (t >= 3601)
             )
             return current
 
-        model = pybamm.lithium_ion.DFN()
+        def prevfloat(t):
+            return np.nextafter(np.float64(t), -np.inf)
+
+        def nextfloat(t):
+            return np.nextafter(np.float64(t), np.inf)
+
+        t_eval = [0.0, 3600.0]
+
+        t_nodes = np.array(
+            [
+                0.0,  # t_eval[0]
+                1000.0,  # t <= 1000
+                nextfloat(1000.0),  # t <= 1000
+                prevfloat(1500.0),  # t < 1500
+                1500.0,  # t < 1500
+                2000.0,  # 2000 < t
+                nextfloat(2000.0),  # 2000 < t
+                3600.0,  # t_eval[-1]
+            ]
+        )
+
         param = model.default_parameter_values
         param["Current function [A]"] = car_current
 
-        sim = pybamm.Simulation(
-            model, parameter_values=param, solver=pybamm.CasadiSolver(mode="fast")
-        )
-        sim.solve([0, 3600])
+        sim = pybamm.Simulation(model, parameter_values=param)
+
+        # Set t_interp to t_eval to only return the breakpoints
+        sol = sim.solve(t_eval, t_interp=t_eval)
+
+        np.testing.assert_array_equal(sol.t, t_nodes)
+        # Make sure t_eval is not modified
+        assert t_eval == [0.0, 3600.0]
+
         current = sim.solution["Current [A]"]
-        assert current(0) == 1
-        assert current(1500) == -0.5
-        assert current(3000) == 0.5
+
+        for t_node in t_nodes:
+            assert current(t_node) == pytest.approx(car_current(t_node))
+
+    # Test with an ODE and DAE model
+    @pytest.mark.parametrize(
+        "model", [pybamm.lithium_ion.SPM(), pybamm.lithium_ion.DFN()]
+    )
+    def test_modulo_current(self, model):
+        dt = 1.0
+
+        def sawtooth_current(t):
+            return t % dt
+
+        def prevfloat(t):
+            return np.nextafter(np.float64(t), -np.inf)
+
+        t_eval = [0.0, 10.5]
+
+        t_nodes = np.arange(0.0, 10.5 + dt, dt)
+        t_nodes = np.concatenate(
+            [
+                t_nodes,
+                prevfloat(t_nodes),
+                t_eval,
+            ]
+        )
+
+        # Filter out all points not within t_eval
+        t_nodes = t_nodes[(t_nodes >= t_eval[0]) & (t_nodes <= t_eval[1])]
+
+        t_nodes = np.sort(np.unique(t_nodes))
+
+        param = model.default_parameter_values
+        param["Current function [A]"] = sawtooth_current
+
+        sim = pybamm.Simulation(model, parameter_values=param)
+
+        # Set t_interp to t_eval to only return the breakpoints
+        sol = sim.solve(t_eval, t_interp=t_eval)
+
+        np.testing.assert_array_equal(sol.t, t_nodes)
+        # Make sure t_eval is not modified
+        assert t_eval == [0.0, 10.5]
+
+        current = sim.solution["Current [A]"]
+
+        for t_node in t_nodes:
+            assert current(t_node) == pytest.approx(sawtooth_current(t_node))
+
+    def test_filter_discontinuities_simple(self):
+        t_eval = [0.0, 3.0, 10.0]
+        t_discon = [-5.0, 0.0, 1.0, 3.0, 3.0, 5.0, 10.0, 12.0]
+
+        result = BaseSolver.filter_discontinuities(t_discon, t_eval)
+        expected = np.array([1.0, 3.0, 5.0])
+
+        # Exclusive of endpoints
+        t_eval_endpoints = [t_eval[0], t_eval[-1]]
+        assert all(t not in result for t in t_eval_endpoints)
+
+        np.testing.assert_array_equal(result, expected)
 
     def test_t_eval(self):
         model = pybamm.lithium_ion.SPM()
         sim = pybamm.Simulation(model)
 
         # test no t_eval
-        with pytest.raises(pybamm.SolverError, match="'t_eval' must be provided"):
+        with pytest.raises(pybamm.SolverError, match=r"'t_eval' must be provided"):
             sim.solve()
 
         # test t_eval list of length != 2
-        with pytest.raises(pybamm.SolverError, match="'t_eval' can be provided"):
+        with pytest.raises(pybamm.SolverError, match=r"'t_eval' can be provided"):
             sim.solve(t_eval=[0, 1, 2])
 
     def test_battery_model_with_input_height(self):
@@ -849,6 +981,280 @@ class TestSimulation:
         sim = pybamm.Simulation(model)
 
         with pytest.warns(
-            UserWarning, match="Model is not suitable for calculating eSOH"
+            UserWarning, match=r"Model is not suitable for calculating eSOH"
         ):
             sim.solve([0, 1], calc_esoh=True)
+
+    def test_error_solve_with_multiple_inputs_and_experiment(self):
+        experiment = pybamm.Experiment([("Charge at 1C for 1 hour")])
+        model = pybamm.lithium_ion.SPM()
+        sim = pybamm.Simulation(model, experiment=experiment)
+        parameter_loop = [
+            {"Current function [A]": 2},
+            {"Current function [A]": 4},
+        ]
+        with pytest.raises(
+            pybamm.SolverError,
+            match="list of input sets is not supported with experiments",
+        ):
+            sim.solve(inputs=parameter_loop)
+
+    def test_cache_esoh_half_cell(self):
+        options = {"working electrode": "positive"}
+        model = pybamm.lithium_ion.SPM(options)
+        param = model.default_parameter_values
+        param["Current function [A]"] = "[input]"
+        sim = pybamm.Simulation(model, parameter_values=param, cache_esoh=True)
+
+        sim.solve([0, 1], initial_soc=0.8, inputs={"Current function [A]": 0.01})
+        fp1 = sim._esoh_fingerprint
+        sim.solve([0, 1], initial_soc=0.8, inputs={"Current function [A]": 0.02})
+        fp2 = sim._esoh_fingerprint
+        # Current doesn't affect half-cell eSOH, fingerprint shouldn't change
+        assert fp1 is fp2
+
+    def test_cache_esoh_msmr(self):
+        options = {
+            "open-circuit potential": "MSMR",
+            "particle": "MSMR",
+            "number of MSMR reactions": ("6", "4"),
+            "intercalation kinetics": "MSMR",
+        }
+        model = pybamm.lithium_ion.SPM(options)
+        param = pybamm.ParameterValues("MSMR_Example")
+        param["Current function [A]"] = "[input]"
+        sim = pybamm.Simulation(model, parameter_values=param, cache_esoh=True)
+
+        sim.solve([0, 1], initial_soc=0.5, inputs={"Current function [A]": 1.0})
+        fp1 = sim._esoh_fingerprint
+        sim.solve([0, 1], initial_soc=0.5, inputs={"Current function [A]": 2.0})
+        fp2 = sim._esoh_fingerprint
+        assert fp1 is fp2
+
+    def test_cache_esoh_composite(self):
+        options = {"particle phases": ("2", "1")}
+        model = pybamm.lithium_ion.SPM(options=options)
+        param = pybamm.ParameterValues("Chen2020_composite")
+        param.update(
+            {
+                "Secondary: Initial concentration in negative electrode "
+                "[mol.m-3]": 2.3512e05
+            }
+        )
+        param["Current function [A]"] = "[input]"
+        sim = pybamm.Simulation(model, parameter_values=param, cache_esoh=True)
+
+        sim.solve([0, 1], initial_soc=0.8, inputs={"Current function [A]": 1.0})
+        fp1 = sim._esoh_fingerprint
+        sim.solve([0, 1], initial_soc=0.8, inputs={"Current function [A]": 2.0})
+        fp2 = sim._esoh_fingerprint
+        assert fp1 is fp2
+
+    def test_cache_esoh_with_hysteresis(self):
+        options = {
+            "particle phases": ("2", "1"),
+            "open-circuit potential": (("single", "current sigmoid"), "single"),
+        }
+        model = pybamm.lithium_ion.SPM(options=options)
+        param = pybamm.ParameterValues("Chen2020_composite")
+        param.update(
+            {
+                "Secondary: Initial concentration in negative electrode "
+                "[mol.m-3]": 2.3512e05
+            }
+        )
+        param["Current function [A]"] = "[input]"
+        sim = pybamm.Simulation(model, parameter_values=param, cache_esoh=True)
+
+        sim.solve(
+            [0, 1],
+            initial_soc=0.8,
+            direction="discharge",
+            inputs={"Current function [A]": 1.0},
+        )
+        fp1 = sim._esoh_fingerprint
+        sim.solve(
+            [0, 1],
+            initial_soc=0.8,
+            direction="discharge",
+            inputs={"Current function [A]": 2.0},
+        )
+        fp2 = sim._esoh_fingerprint
+        assert fp1 is fp2
+
+        # Changing direction should invalidate the cache
+        sim.solve(
+            [0, 1],
+            initial_soc=0.8,
+            direction="charge",
+            inputs={"Current function [A]": 2.0},
+        )
+        fp3 = sim._esoh_fingerprint
+        assert fp2 != fp3
+
+    def test_cache_esoh_fallback_path(self):
+        model = pybamm.lithium_ion.SPM()
+        param = model.default_parameter_values
+        param["Current function [A]"] = "[input]"
+        sim = pybamm.Simulation(model, parameter_values=param, cache_esoh=True)
+
+        # Sabotage model.param to force the fingerprint function to raise
+        original_param = sim._model.param
+        sim._model.param = None
+
+        # Should not raise -- falls back to raw inputs
+        sim.solve([0, 1], initial_soc=0.8, inputs={"Current function [A]": 1.0})
+        fp1 = sim._esoh_fingerprint
+        assert fp1 is not None
+
+        # With different input, fallback fingerprint should differ
+        sim.solve([0, 1], initial_soc=0.8, inputs={"Current function [A]": 2.0})
+        fp2 = sim._esoh_fingerprint
+        assert fp1 != fp2
+
+        sim._model.param = original_param
+
+    def test_cache_esoh_numpy_array_inputs(self):
+        model = pybamm.lithium_ion.SPM()
+        param = model.default_parameter_values
+        param["Current function [A]"] = "[input]"
+        sim = pybamm.Simulation(model, parameter_values=param, cache_esoh=True)
+
+        # numpy array values should not crash the fingerprint comparison
+        sim.solve(
+            [0, 1],
+            initial_soc=0.8,
+            inputs={"Current function [A]": np.array([1.0])},
+        )
+        fp1 = sim._esoh_fingerprint
+        sim.solve(
+            [0, 1],
+            initial_soc=0.8,
+            inputs={"Current function [A]": np.array([1.0])},
+        )
+        fp2 = sim._esoh_fingerprint
+        # Should not crash and fingerprints should match
+        assert fp1 is fp2
+
+    def test_cache_esoh_numpy_array_fallback(self):
+        model = pybamm.lithium_ion.SPM()
+        param = model.default_parameter_values
+        param["Current function [A]"] = "[input]"
+        sim = pybamm.Simulation(model, parameter_values=param, cache_esoh=True)
+
+        # Sabotage to force fallback with numpy arrays
+        original_param = sim._model.param
+        sim._model.param = None
+
+        sim.solve(
+            [0, 1],
+            initial_soc=0.8,
+            inputs={"Current function [A]": np.array([1.0])},
+        )
+        fp1 = sim._esoh_fingerprint
+
+        sim.solve(
+            [0, 1],
+            initial_soc=0.8,
+            inputs={"Current function [A]": np.array([1.0])},
+        )
+        fp2 = sim._esoh_fingerprint
+        # Must not crash (the original numpy bug) and fingerprints should match
+        assert fp1 is fp2
+
+        sim._model.param = original_param
+
+    def test_initial_soc_regular_model(self):
+        model = pybamm.lithium_ion.SPM()
+        param = model.default_parameter_values
+        param["Current function [A]"] = 0.0
+
+        sim = pybamm.Simulation(model, parameter_values=param)
+        sol = sim.solve([0, 1], initial_soc=0.5)
+        assert sim._built_initial_soc == 0.5
+
+        sim = pybamm.Simulation(model, parameter_values=param)
+        sol = sim.solve([0, 1], initial_soc="4.0 V")
+        voltage = sol["Terminal voltage [V]"].entries
+        assert voltage[0] == pytest.approx(4.0, abs=1e-3)
+
+    def test_initial_soc_composite_model(self):
+        options = {"particle phases": ("2", "1")}
+        model = pybamm.lithium_ion.SPM(options=options)
+        param = pybamm.ParameterValues("Chen2020_composite")
+        param.update(
+            {
+                "Secondary: Initial concentration in negative electrode "
+                "[mol.m-3]": 2.3512e05
+            }
+        )
+        param["Current function [A]"] = 0.0
+
+        sim = pybamm.Simulation(model, parameter_values=param)
+        sol = sim.solve([0, 1], initial_soc=0.5)
+        assert sim._built_initial_soc == 0.5
+
+        sim = pybamm.Simulation(model, parameter_values=param)
+        sol = sim.solve([0, 1], initial_soc="3.8 V")
+        voltage = sol["Terminal voltage [V]"].entries
+        assert voltage[0] == pytest.approx(3.8, abs=1e-3)
+
+    def test_initial_soc_half_cell_model(self):
+        options = {"working electrode": "positive"}
+        model = pybamm.lithium_ion.SPM(options)
+        param = model.default_parameter_values
+        param["Current function [A]"] = 0.0
+
+        sim = pybamm.Simulation(model, parameter_values=param)
+        sol = sim.solve([0, 1], initial_soc=0.5)
+        assert sim._built_initial_soc == 0.5
+
+        sim = pybamm.Simulation(model, parameter_values=param)
+        sol = sim.solve([0, 1], initial_soc="4.0 V")
+        voltage = sol["Terminal voltage [V]"].entries
+        assert voltage[0] == pytest.approx(4.0, abs=1e-3)
+
+    def test_initial_conditions_update_with_changed_inputs(self):
+        model = pybamm.lithium_ion.SPM()
+        param = pybamm.ParameterValues("Chen2020")
+        param["Negative electrode active material volume fraction"] = (
+            pybamm.InputParameter("eps_s_n")
+        )
+        experiment = pybamm.Experiment(["Rest for 1 hour"])
+        sim = pybamm.Simulation(model, parameter_values=param, experiment=experiment)
+
+        sol1 = sim.solve(inputs={"eps_s_n": 0.6}, initial_soc=0.5)
+        ic1 = sol1["X-averaged negative particle surface concentration"].data[0]
+
+        sol2 = sim.solve(inputs={"eps_s_n": 0.9}, initial_soc=0.5)
+        ic2 = sol2["X-averaged negative particle surface concentration"].data[0]
+
+        # ICs must differ when inputs differ, even at the same SOC
+        assert ic1 != ic2
+
+        # Verify against reference: override parameter directly
+        param_ref = pybamm.ParameterValues("Chen2020")
+        param_ref["Negative electrode active material volume fraction"] = 0.6
+        sim_ref = pybamm.Simulation(
+            model, parameter_values=param_ref, experiment=experiment
+        )
+        sol_ref = sim_ref.solve(initial_soc=0.5)
+        ic_ref = sol_ref["X-averaged negative particle surface concentration"].data[0]
+        np.testing.assert_allclose(ic1, ic_ref, rtol=1e-10)
+
+    def test_initial_conditions_update_same_soc_same_inputs(self):
+        model = pybamm.lithium_ion.SPM()
+        param = pybamm.ParameterValues("Chen2020")
+        param["Negative electrode active material volume fraction"] = (
+            pybamm.InputParameter("eps_s_n")
+        )
+        experiment = pybamm.Experiment(["Rest for 1 hour"])
+        sim = pybamm.Simulation(model, parameter_values=param, experiment=experiment)
+
+        sim.solve(inputs={"eps_s_n": 0.6}, initial_soc=0.5)
+        # After first solve, IC rebuild flag should be cleared
+        assert sim._needs_ic_rebuild is False
+
+        # Solving again with same inputs+SOC should not trigger rebuild
+        sim.solve(inputs={"eps_s_n": 0.6}, initial_soc=0.5)
+        assert sim._needs_ic_rebuild is False

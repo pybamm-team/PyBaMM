@@ -24,7 +24,7 @@ class TestInputParameter:
 
         with pytest.raises(
             ValueError,
-            match="Input parameter 'a' was given an object of size '1' but was expecting an "
+            match=r"Input parameter 'a' was given an object of size '1' but was expecting an "
             "object of size '10'",
         ):
             a.evaluate(inputs={"a": 5})

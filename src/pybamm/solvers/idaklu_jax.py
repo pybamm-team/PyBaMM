@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import numbers
+import threading
 import warnings
 from functools import lru_cache
 
@@ -16,11 +17,21 @@ logger = logging.getLogger("pybamm.solvers.idaklu_jax")
 if pybamm.has_jax():
     import jax
     from jax import lax
+
+    try:
+        from jax import ffi
+    except ImportError:
+        from jax.extend import ffi
     from jax import numpy as jnp
+    from jax._src.interpreters.mlir import custom_call
     from jax.interpreters import ad, batching, mlir
-    from jax.interpreters.mlir import custom_call
-    from jax.lib import xla_client
     from jax.tree_util import tree_flatten
+
+    # Handle JAX version compatibility for Primitive location
+    try:
+        from jax.core import Primitive
+    except ImportError:
+        from jax.extend.core import Primitive
 
 
 class IDAKLUJax:
@@ -47,9 +58,7 @@ class IDAKLUJax:
         t_interp=None,
     ):
         if not pybamm.has_jax():
-            raise ModuleNotFoundError(
-                "Jax or jaxlib is not installed, please see https://docs.pybamm.org/en/latest/source/user_guide/installation/gnu-linux-mac.html#optional-jaxsolver"
-            )  # pragma: no cover
+            pybamm.raise_jax_not_found()  # pragma: no cover
         self.jaxpr = (
             None  # JAX expression representing the IDAKLU-wrapped solver object
         )
@@ -331,9 +340,21 @@ class IDAKLUJax:
             return hash(tuple(sorted(self.items())))
 
     @lru_cache(maxsize=1)  # noqa: B019
-    def _cached_solve(self, model, t_hashable, *args, **kwargs):
-        """Cache the last solve for reuse"""
-        return self.solve(model, t_hashable, *args, **kwargs)
+    def _cached_solve(solver, model, t_hashable, *args, **kwargs):
+        """Cache the last solve for reuse
+
+        Uses a threading lock to prevent concurrent access to the solver,
+        which is not thread-safe during setup and solve operations.
+
+        Note: This is a static method cached at the class level, where
+        'solver' is the IDAKLUSolver instance.
+        """
+        # Get or create a lock for this solver instance
+        if not hasattr(solver, "_idaklu_jax_lock"):
+            solver._idaklu_jax_lock = threading.Lock()
+
+        with solver._idaklu_jax_lock:
+            return solver.solve(model, t_hashable, *args, **kwargs)
 
     def _jaxify_solve(self, t, invar, *inputs_values):
         """Solve the model using the IDAKLU solver
@@ -468,10 +489,10 @@ class IDAKLUJax:
         t = primals[0]
         inputs = primals[1:]
 
-        if isinstance(invar, float):
-            invar = round(invar)
-        if isinstance(t, float):
-            t = np.array(t)
+        if not isinstance(invar, (int, str)):
+            invar = int(invar)
+        if not isinstance(t, (np.ndarray, jnp.ndarray)):
+            t = np.asarray(t)
 
         if t.ndim == 0 or (t.ndim == 1 and t.shape[0] == 1):
             # scalar time input
@@ -600,15 +621,14 @@ class IDAKLUJax:
         self._register_callbacks()  # Register python methods as callbacks in IDAKLU-JAX
 
         for _name, _value in idaklu.registrations().items():
-            # todo: This has been removed from jax v0.6.0
-            xla_client.register_custom_call_target(
-                f"{_name}_{self._unique_name()}", _value, platform="cpu"
+            ffi.register_ffi_target(
+                f"{_name}_{self._unique_name()}", _value, platform="cpu", api_version=0
             )
 
         # --- JAX PRIMITIVE DEFINITION ------------------------------------------------
 
         logger.debug(f"Creating new primitive: {self._unique_name()}")
-        f_p = jax.core.Primitive(f"f_{self._unique_name()}")
+        f_p = Primitive(f"f_{self._unique_name()}")
         f_p.multiple_results = False  # Returns a single multi-dimensional array
 
         def f(t, inputs=None):
@@ -623,7 +643,7 @@ class IDAKLUJax:
                          {'Current function [A]': 0.222, 'Separator porosity': 0.3}
             """
             logger.info("f")
-            flatargs, treedef = tree_flatten((t, inputs))
+            flatargs, _treedef = tree_flatten((t, inputs))
             self.jax_inputs = inputs
             out = f_p.bind(*flatargs)
             return out
@@ -705,11 +725,13 @@ class IDAKLUJax:
                 # The inputs
                 operands=[
                     mlir.ir_constant(
-                        self.idaklu_jax_obj.get_index()
+                        np.int64(self.idaklu_jax_obj.get_index())
                     ),  # solver index reference
                     mlir.ir_constant(size_t),  # 'size' argument
-                    mlir.ir_constant(len(self.jax_output_variables)),  # 'vars' argument
-                    mlir.ir_constant(len(inputs)),  # 'vars' argument
+                    mlir.ir_constant(
+                        np.int64(len(self.jax_output_variables))
+                    ),  # 'vars' argument
+                    mlir.ir_constant(np.int64(len(inputs))),  # 'vars' argument
                     t,
                     *inputs,
                 ],
@@ -759,7 +781,7 @@ class IDAKLUJax:
 
         ad.primitive_jvps[f_p] = f_jvp
 
-        f_jvp_p = jax.core.Primitive(f"f_jvp_{self._unique_name()}")
+        f_jvp_p = Primitive(f"f_jvp_{self._unique_name()}")
 
         @f_jvp_p.def_impl
         def f_jvp_eval(*args):
@@ -908,11 +930,13 @@ class IDAKLUJax:
                 # The inputs
                 operands=[
                     mlir.ir_constant(
-                        self.idaklu_jax_obj.get_index()
+                        np.int64(self.idaklu_jax_obj.get_index())
                     ),  # solver index reference
                     mlir.ir_constant(size_t),  # 'size' argument
-                    mlir.ir_constant(len(self.jax_output_variables)),  # 'vars' argument
-                    mlir.ir_constant(len(inputs_primals)),  # 'vars' argument
+                    mlir.ir_constant(
+                        np.int64(len(self.jax_output_variables))
+                    ),  # 'vars' argument
+                    mlir.ir_constant(np.int64(len(inputs_primals))),  # 'vars' argument
                     t_primal,  # 't'
                     *inputs_primals,  # inputs
                     t_tangent,  # 't'
@@ -941,7 +965,7 @@ class IDAKLUJax:
 
         # --- JAX PRIMITIVE VJP DEFINITION --------------------------------------------
 
-        f_vjp_p = jax.core.Primitive(f"f_vjp_{self._unique_name()}")
+        f_vjp_p = Primitive(f"f_vjp_{self._unique_name()}")
 
         def f_vjp(y_bar, invar, *primals):
             """Main wrapper for the VJP function"""
@@ -1041,13 +1065,17 @@ class IDAKLUJax:
                 # The inputs
                 operands=[
                     mlir.ir_constant(
-                        self.idaklu_jax_obj.get_index()
+                        np.int64(self.idaklu_jax_obj.get_index())
                     ),  # solver index reference
                     mlir.ir_constant(size_t),  # 'size' argument
-                    mlir.ir_constant(len(self.jax_inputs)),  # number of inputs
-                    mlir.ir_constant(dims_y_bar[0]),  # 'y_bar' shape[0]
-                    mlir.ir_constant(  # 'y_bar' shape[1]
-                        dims_y_bar[1] if len(dims_y_bar) > 1 else -1
+                    mlir.ir_constant(
+                        np.int64(len(self.jax_inputs))
+                    ),  # number of inputs
+                    mlir.ir_constant(np.int64(dims_y_bar[0])),  # 'y_bar' shape[0]
+                    mlir.ir_constant(
+                        np.int64(  # 'y_bar' shape[1]
+                            dims_y_bar[1] if len(dims_y_bar) > 1 else -1
+                        )
                     ),  # 'y_bar' argument
                     y_bar,  # 'y_bar'
                     invar,  # 'invar'

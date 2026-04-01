@@ -11,6 +11,7 @@ from .util import (
 from .util import (
     get_parameters_filepath,
     has_jax,
+    raise_jax_not_found,
     import_optional_dependency,
 )
 from .logger import logger, set_logging_level, get_new_logger
@@ -21,6 +22,7 @@ from . import config
 # Classes for the Expression Tree
 from .expression_tree.symbol import *
 from .expression_tree.binary_operators import *
+from .expression_tree.tracing import is_tracing, tracing
 from .expression_tree.concatenations import *
 from .expression_tree.array import Array, linspace, meshgrid
 from .expression_tree.matrix import Matrix
@@ -29,6 +31,7 @@ from .expression_tree.averages import *
 from .expression_tree.averages import _BaseAverage
 from .expression_tree.broadcasts import *
 from .expression_tree.functions import *
+from .expression_tree.conditional import Conditional
 from .expression_tree.interpolant import Interpolant
 from .expression_tree.discrete_time_sum import *
 from .expression_tree.input_parameter import InputParameter
@@ -39,6 +42,7 @@ from .expression_tree.coupled_variable import *
 from .expression_tree.independent_variable import *
 from .expression_tree.independent_variable import t
 from .expression_tree.vector import Vector
+from .expression_tree.tensor_field import TensorField
 from .expression_tree.vector_field import VectorField
 from .expression_tree.state_vector import StateVectorBase, StateVector, StateVectorDot
 
@@ -58,12 +62,17 @@ from .expression_tree.operations.evaluate_python import JaxCooMatrix
 from .expression_tree.operations.jacobian import Jacobian
 from .expression_tree.operations.convert_to_casadi import CasadiConverter
 from .expression_tree.operations.unpack_symbols import SymbolUnpacker
-from .expression_tree.operations.serialise import Serialise
+from .expression_tree.operations.serialise import Serialise,ExpressionFunctionParameter
+from .expression_tree.operations.regularise import RegulariseSqrtAndPower
 
 # Model classes
-from .models.base_model import BaseModel
+from .models.base_model import BaseModel, ModelSolutionObservability
+from .models.symbol_processor import SymbolProcessor
 from .models.event import Event
 from .models.event import EventType
+
+# DiffSL export
+from .expression_tree.operations.diffsl import DiffSLExport
 
 # Battery models
 from .models.full_battery_models.base_battery_model import (
@@ -109,7 +118,7 @@ from .expression_tree.independent_variable import KNOWN_COORD_SYS
 from .geometry import standard_spatial_vars
 
 # Parameter classes and methods
-from .parameters.parameter_values import ParameterValues
+from .parameters.parameter_values import ParameterValues, scalarize_dict, arrayize_dict
 from .parameters import constants
 from .parameters.geometric_parameters import geometric_parameters, GeometricParameters
 from .parameters.electrical_parameters import (
@@ -179,6 +188,7 @@ from .solvers.algebraic_solver import AlgebraicSolver
 from .solvers.casadi_solver import CasadiSolver
 from .solvers.casadi_algebraic_solver import CasadiAlgebraicSolver
 from .solvers.scipy_solver import ScipySolver
+from .solvers.composite_solver import CompositeSolver
 
 from .solvers.jax_solver import JaxSolver
 from .solvers.jax_bdf_solver import jax_bdf_integrate
@@ -229,7 +239,6 @@ __all__ = [
     "citations",
     "config",
     "discretisations",
-    "doc_utils",
     "experiment",
     "expression_tree",
     "geometry",

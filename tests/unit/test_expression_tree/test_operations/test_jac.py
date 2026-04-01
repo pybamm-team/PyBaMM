@@ -15,7 +15,7 @@ class TestJacobian:
         a = pybamm.Symbol("a")
         with pytest.raises(
             TypeError,
-            match="Jacobian can only be taken with respect to a 'StateVector'",
+            match=r"Jacobian can only be taken with respect to a 'StateVector'",
         ):
             a.jac(a)
 
@@ -457,6 +457,6 @@ class TestJacobian:
         conc = pybamm.DomainConcatenation([a, b], mesh)
         with pytest.raises(
             NotImplementedError,
-            match="jacobian only implemented for when each child has",
+            match=r"jacobian only implemented for when each child has",
         ):
             conc.jac(y)

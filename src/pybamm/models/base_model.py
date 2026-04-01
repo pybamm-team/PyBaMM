@@ -1,9 +1,13 @@
 from __future__ import annotations
 
 import copy
+import json
 import numbers
 import warnings
 from collections import OrderedDict
+from enum import Enum
+from itertools import chain
+from pathlib import Path
 
 import casadi
 import numpy as np
@@ -11,9 +15,39 @@ import scipy
 
 import pybamm
 from pybamm.expression_tree.operations.serialise import Serialise
+from pybamm.models.event import EventType
+from pybamm.models.symbol_processor import SymbolProcessor
 
-# Only throw the default solver warning once
-warnings.filterwarnings("once", message="The default solver changed to IDAKLUSolver*")
+
+class ModelSolutionObservability(str, Enum):
+    """
+    Enum to specify the observability states for a PyBaMM model's solution.
+
+    This enum tracks why a solution may or may not be observable via
+    ``solution.observe(symbol)``.
+    """
+
+    ENABLED = "solution is observable"
+    DISABLED = "`disable_solution_observability()` was called on the model"
+    SOLVER_OUTPUT_VARIABLES = "the solver includes `output_variables`"
+    MISSING_INPUT_PARAMETERS = "some input parameters were not provided to the solver"
+    REPARAMETERISED_MODEL = (
+        "the model was re-parameterised with `ParameterValues.process_model()`"
+    )
+    REDISCRETISED_MODEL = (
+        "the model was re-discretised with `Discretisation.process_model()`"
+    )
+
+    def __bool__(self) -> bool:
+        return bool(self == ModelSolutionObservability.ENABLED)
+
+
+_BUILTIN_MODULE_NAMES = (
+    "lithium_ion",
+    "lead_acid",
+    "equivalent_circuit",
+    "sodium_ion",
+)
 
 
 class BaseModel:
@@ -60,9 +94,11 @@ class BaseModel:
         self._boundary_conditions = {}
         self._variables_by_submodel = {}
         self._variables = pybamm.FuzzyDict({})
+        self._variables_processed = {}
         self._coupled_variables = {}
         self._summary_variables = []
         self._events = []
+        self._events_dict = None
         self._concatenated_rhs = None
         self._concatenated_algebraic = None
         self._concatenated_initial_conditions = None
@@ -72,17 +108,22 @@ class BaseModel:
         self._jacobian_algebraic = None
         self._parameters = None
         self._input_parameters = None
+        self._required_input_parameters = None
+        self._fixed_input_parameters = {}
         self._parameter_info = None
         self._is_standard_form_dae = None
         self._variables_casadi = {}
         self._geometry = pybamm.Geometry({})
+        self._symbol_processor = SymbolProcessor()
+        self._solution_observable = ModelSolutionObservability.ENABLED
 
         # Default behaviour is to use the jacobian
         self.use_jacobian = True
         self.convert_to_format = "casadi"
 
-        # Model is not initially discretised
+        # Model is not initially discretised or parameterised
         self.is_discretised = False
+        self.is_parameterised = False
         self.y_slices = None
         self.len_rhs_and_alg = None
 
@@ -119,33 +160,45 @@ class BaseModel:
         instance.bounds = properties["bounds"]
         instance.events = properties["events"]
         instance.mass_matrix = properties["mass_matrix"]
-        instance.mass_matrix_inv = properties["mass_matrix_inv"]
-        # add optional properties not required for model to solve
-        if properties["variables"]:
-            instance._variables = pybamm.FuzzyDict(properties["variables"])
+        instance._variables_processed = dict(properties.get("_variables_processed", {}))
 
-            # assign meshes to each variable
-            for var in instance._variables.values():
+        def assign_meshes_to_variables(variables_dict, mesh):
+            if not mesh:
+                return
+            for var in variables_dict.values():
                 if var.domain != []:
-                    var.mesh = properties["mesh"][var.domain]
+                    var.mesh = mesh[var.domain]
 
                 if var.domains["secondary"] != []:
-                    var.secondary_mesh = properties["mesh"][var.domains["secondary"]]
+                    var.secondary_mesh = mesh[var.domains["secondary"]]
                 else:
                     var.secondary_mesh = None
 
                 if var.domains["tertiary"] != []:
-                    var.tertiary_mesh = properties["mesh"][var.domains["tertiary"]]
+                    var.tertiary_mesh = mesh[var.domains["tertiary"]]
                 else:
                     var.tertiary_mesh = None
 
-            if properties["geometry"]:
-                instance._geometry = pybamm.Geometry(properties["geometry"])
-        else:
-            # Delete the default variables which have not been discretised
-            instance._variables = pybamm.FuzzyDict({})
-        # Model has already been discretised
+        # add optional properties not required for model to solve
+        _variables = properties.get("variables") or {}
+        instance._variables = pybamm.FuzzyDict(_variables)
+        assign_meshes_to_variables(instance._variables, properties.get("mesh"))
+
+        if properties["geometry"]:
+            instance._geometry = pybamm.Geometry(properties["geometry"])
+
+        # Also assign meshes to _variables_processed
+        assign_meshes_to_variables(
+            instance._variables_processed, properties.get("mesh")
+        )
+        # Model has already been discretised and parameterised
         instance.is_discretised = True
+        instance.is_parameterised = True
+        instance._solution_observable = ModelSolutionObservability[
+            properties.get(
+                "_solution_observable", ModelSolutionObservability.DISABLED.value
+            )
+        ]
         return instance
 
     @property
@@ -243,6 +296,141 @@ class BaseModel:
                 )
         self._variables = pybamm.FuzzyDict(variables)
 
+    def get_processed_variables_dict(self) -> dict[str, pybamm.Symbol]:
+        """
+        Get a dictionary of processed variables.
+        """
+        return dict(self._variables_processed)
+
+    def get_processed_variable(self, name: str) -> pybamm.Symbol:
+        """
+        Get a processed variable by name.
+
+        Parameters
+        ----------
+        name : str
+            The name of the variable to get.
+
+        Returns
+        -------
+        pybamm.Symbol
+            The processed variable.
+
+        Raises
+        ------
+        KeyError
+            If the variable is not found.
+        """
+        value = self._variables_processed.get(name)
+        if value is not None:
+            return value
+
+        value = self._variables[name]
+        self.process_and_register_variable(name, value)
+        return self._variables_processed[name]
+
+    def get_processed_variable_or_event(self, name: str) -> pybamm.Symbol:
+        """
+        Get a processed variable or event by name.
+
+        Parameters
+        ----------
+        name : str
+            The name of the variable or event to get.
+
+        Returns
+        -------
+        pybamm.Symbol
+            The processed variable or event expression.
+
+        Raises
+        ------
+        KeyError
+            If the variable or event is not found.
+        """
+        value = self._variables_processed.get(name)
+        if value is not None:
+            return value
+
+        value = self._variables.get(name)
+        if value is not None:
+            self.process_and_register_variable(name, value)
+            return self._variables_processed[name]
+
+        value = self.events_dict.get(name)
+        if value is not None:
+            return value
+
+        # Raise a more helpful error message from the fuzzy dict
+        return self.variables_and_events[name]
+
+    def process_and_register_variable(self, name: str, symbol: pybamm.Symbol):
+        """
+        Process a variable and store it in _variables_processed.
+
+        This method does NOT modify self.variables - the original variable
+        expression is preserved. The processed variable is stored separately
+        in _variables_processed.
+
+        CoupledVariables in the symbol are resolved by recursively getting
+        the processed version of the referenced variable.
+
+        Parameters
+        ----------
+        name : str
+            The name of the variable.
+        symbol : pybamm.Symbol
+            The unprocessed variable symbol.
+        """
+        if name in self._variables_processed:
+            return
+        pybamm.logger.info(f"Processing variable '{name}' for model '{self.name}'")
+
+        if not self.symbol_processor:
+            raise ValueError(
+                f"Cannot process variable '{name}' without a `symbol_processor`."
+            )
+
+        symbol = self._resolve_coupled_variables(symbol)
+        value = self.symbol_processor(name=name, symbol=symbol)
+        self._variables_processed[name] = value
+
+    def _resolve_coupled_variables(self, symbol: pybamm.Symbol) -> pybamm.Symbol:
+        """Resolve CoupledVariables by looking up their targets in self._variables."""
+        if isinstance(symbol, pybamm.CoupledVariable):
+            if symbol.name not in self._variables:
+                raise ValueError(
+                    f"CoupledVariable '{symbol.name}' not found in model.variables"
+                )
+            return self._resolve_coupled_variables(self._variables[symbol.name])
+        elif hasattr(symbol, "children") and symbol.children:
+            new_children = []
+            changed = False
+            for child in symbol.children:
+                new_child = self._resolve_coupled_variables(child)
+                new_children.append(new_child)
+                if new_child is not child:
+                    changed = True
+            if changed:
+                return symbol.create_copy(new_children=new_children)
+        return symbol
+
+    def update_processed_variables(self, processed_vars: dict[str, pybamm.Symbol]):
+        """
+        Update the _variables_processed dict with new processed variables.
+
+        Parameters
+        ----------
+        processed_vars : dict or list
+            Either a dictionary of {name: processed_symbol} pairs, or a list of
+            names (for backward compatibility, where the processed symbol is
+            taken from self.variables).
+        """
+        if not processed_vars:
+            return
+
+        self._variables_processed.update(processed_vars)
+
     def variable_names(self):
         return list(self._variables.keys())
 
@@ -253,10 +441,12 @@ class BaseModel:
             return self._variables_and_events
         except AttributeError:
             self._variables_and_events = self.variables.copy()
-            self._variables_and_events.update(
-                {f"Event: {event.name}": event.expression for event in self.events}
-            )
+            self._variables_and_events.update(self.events_dict)
             return self._variables_and_events
+
+    @property
+    def symbol_processor(self) -> SymbolProcessor:
+        return self._symbol_processor
 
     @property
     def events(self):
@@ -267,6 +457,14 @@ class BaseModel:
     @events.setter
     def events(self, events):
         self._events = events
+
+    @property
+    def events_dict(self) -> dict[str, pybamm.Symbol]:
+        if self._events_dict is None:
+            self._events_dict = {
+                f"Event: {event.name}": event.expression for event in self.events
+            }
+        return self._events_dict
 
     @property
     def concatenated_rhs(self):
@@ -309,15 +507,6 @@ class BaseModel:
     @mass_matrix.setter
     def mass_matrix(self, mass_matrix):
         self._mass_matrix = mass_matrix
-
-    @property
-    def mass_matrix_inv(self):
-        """Returns the inverse of the mass matrix for the differential equations after discretisation."""
-        return self._mass_matrix_inv
-
-    @mass_matrix_inv.setter
-    def mass_matrix_inv(self, mass_matrix_inv):
-        self._mass_matrix_inv = mass_matrix_inv
 
     @property
     def jacobian(self):
@@ -421,11 +610,6 @@ class BaseModel:
         if len(self.rhs) == 0 and len(self.algebraic) != 0:
             return pybamm.CasadiAlgebraicSolver()
         else:
-            warnings.warn(
-                "The default solver changed to IDAKLUSolver after the v25.4.0. release. "
-                "You can swap back to the previous default by using `pybamm.CasadiSolver()` instead.",
-                stacklevel=2,
-            )
             return pybamm.IDAKLUSolver()
 
     @property
@@ -437,6 +621,15 @@ class BaseModel:
     def default_parameter_values(self):
         """Returns the default parameter values for the model (an empty set of parameters by default)."""
         return pybamm.ParameterValues({})
+
+    @property
+    def fixed_input_parameters(self) -> set[pybamm.Symbol]:
+        """Returns a set of all fixed input parameter symbols used in the parameter values."""
+        return self._fixed_input_parameters
+
+    @fixed_input_parameters.setter
+    def fixed_input_parameters(self, fixed_input_parameters: set[pybamm.Symbol]):
+        self._fixed_input_parameters = fixed_input_parameters
 
     @property
     def parameters(self):
@@ -454,7 +647,16 @@ class BaseModel:
         return self._input_parameters
 
     @property
-    def is_standard_form_dae(self):
+    def required_input_parameters(self):
+        """Returns a list of all input parameter symbols used in the model."""
+        if self._required_input_parameters is None:
+            self._required_input_parameters = self._find_symbols(
+                pybamm.InputParameter, fixed_input_parameters={}
+            )
+        return self._required_input_parameters
+
+    @property
+    def is_standard_form_dae(self) -> bool:
         """
         Check if the model is a DAE in standard form with a mass matrix that is all
         zeros except for along the diagonal, which is either ones or zeros.
@@ -462,6 +664,70 @@ class BaseModel:
         if self._is_standard_form_dae is None:
             self._is_standard_form_dae = self._check_standard_form_dae()
         return self._is_standard_form_dae
+
+    @property
+    def is_processed(self) -> bool:
+        """
+        Returns True if the model is processed by `Discretisation.process_model` or `ParameterValues.process_model`.
+        """
+        return self._variables_processed or self.is_discretised or self.is_parameterised
+
+    def disable_symbol_processing(self, reason: ModelSolutionObservability):
+        """
+        Disable custom symbol processing by the model.
+
+        Parameters
+        ----------
+        reason : ModelSolutionObservability, optional
+            The reason why symbol processing is being disabled.
+            Defaults to ModelSolutionObservability.DISABLED.
+        """
+        self.disable_solution_observability(reason)
+        self.symbol_processor.disable()
+
+    @property
+    def can_process_symbols(self) -> bool:
+        """
+        Returns ``True`` if the model has a symbol processor that is
+        capable of processing symbols.
+        """
+        return bool(self.symbol_processor.can_process_symbols)
+
+    @property
+    def solution_observable(self) -> bool:
+        """
+        Returns the observability state for ``solution.observe(symbol)``.
+
+        Returns ``ModelSolutionObservability.ENABLED`` if observable, otherwise
+        returns a reason why the solution is not observable.
+        """
+        return self.can_process_symbols and bool(self._solution_observable)
+
+    @property
+    def solution_observable_status(self) -> ModelSolutionObservability:
+        """
+        Returns the status of the solution observability as a string.
+        """
+        return self._solution_observable
+
+    def disable_solution_observability(self, reason: ModelSolutionObservability):
+        """
+        Disable observing the solution with ``solution.observe(symbol)``.
+
+        Parameters
+        ----------
+        reason : ModelSolutionObservability
+            The reason why the solution is or is not observable.
+        """
+        if not isinstance(reason, ModelSolutionObservability):
+            raise ValueError(
+                f"Invalid reason: {reason}. Must be a ModelSolutionObservability enum value."
+            )
+        if reason:
+            raise ValueError(
+                "Cannot re-enable solution observability after it has been disabled."
+            )
+        self._solution_observable = reason
 
     @property
     def calc_esoh(self):
@@ -475,6 +741,17 @@ class BaseModel:
     @algebraic_root_solver.setter
     def algebraic_root_solver(self, algebraic_root_solver):
         self._algebraic_root_solver = algebraic_root_solver
+
+    @property
+    def y0(self):
+        if not hasattr(self, "y0_list") or self.y0_list is None:
+            return None
+        elif len(self.y0_list) == 1:
+            return self.y0_list[0]
+        else:
+            raise ValueError(
+                "Model contains multiple initial states. Access using y0_list instead."
+            )
 
     def get_parameter_info(self, by_submodel=False):
         """
@@ -609,15 +886,18 @@ class BaseModel:
         M = [2I 0
              0 0]
         """
-        if self.mass_matrix is None or self.mass_matrix_inv is None:
+        if self.mass_matrix is None:
             return False
-        # Check that the mass matrix inverse is an identity matrix
-        mass_matrix_inv = self.mass_matrix_inv.entries
-        if scipy.sparse.issparse(mass_matrix_inv):
-            identity = scipy.sparse.identity(mass_matrix_inv.shape[0])
-            return (mass_matrix_inv - identity).nnz == 0
+        n_rhs = self.len_rhs
+        if n_rhs == 0:
+            return False
+        mass = self.mass_matrix.entries
+        M_ode = mass[:n_rhs, :n_rhs]
+        if scipy.sparse.issparse(M_ode):
+            identity = scipy.sparse.identity(n_rhs, format="csr")
+            return (M_ode - identity).nnz == 0
         else:
-            return np.allclose(mass_matrix_inv, np.eye(mass_matrix_inv.shape[0]))
+            return np.allclose(M_ode, np.eye(n_rhs))
 
     def _format_table_row(
         self, param_name, param_type, max_name_length, max_type_length
@@ -731,38 +1011,48 @@ class BaseModel:
             table.encode("utf-8")
             print(table)
 
-    def _find_symbols(self, typ):
+    def _find_symbols(self, typ, fixed_input_parameters=None) -> list[pybamm.Symbol]:
         """Find all the instances of `typ` in the model"""
+        if fixed_input_parameters is None:
+            fixed_input_parameters = self.fixed_input_parameters
         unpacker = pybamm.SymbolUnpacker(typ)
-        all_input_parameters = unpacker.unpack_list_of_symbols(
-            list(self.rhs.values())
-            + list(self.algebraic.values())
-            + list(self.initial_conditions.values())
-            + [
+        all_items = chain(
+            self.rhs.values(),
+            self.algebraic.values(),
+            self.initial_conditions.values(),
+            (
                 x[side][0]
                 for x in self.boundary_conditions.values()
                 for side in x.keys()
-            ]
-            + list(self.variables.values())
-            + [event.expression for event in self.events]
+            ),
+            self.variables.values(),
+            fixed_input_parameters,
+            (event.expression for event in self.events),
         )
+        all_input_parameters = unpacker.unpack_list_of_symbols(list(all_items))
         return list(all_input_parameters)
 
-    def _find_symbols_by_submodel(self, typ, submodel):
+    def _find_symbols_by_submodel(
+        self, typ, submodel, fixed_input_parameters=None
+    ) -> list[pybamm.Symbol]:
         """Find all the instances of `typ` in the submodel"""
+        if fixed_input_parameters is None:
+            fixed_input_parameters = self.submodels[submodel].fixed_input_parameters
         unpacker = pybamm.SymbolUnpacker(typ)
-        all_input_parameters = unpacker.unpack_list_of_symbols(
-            list(self.submodels[submodel].rhs.values())
-            + list(self.submodels[submodel].algebraic.values())
-            + list(self.submodels[submodel].initial_conditions.values())
-            + [
+        all_items = chain(
+            self.submodels[submodel].rhs.values(),
+            self.submodels[submodel].algebraic.values(),
+            self.submodels[submodel].initial_conditions.values(),
+            (
                 x[side][0]
                 for x in self.submodels[submodel].boundary_conditions.values()
                 for side in x.keys()
-            ]
-            + list(self._variables_by_submodel[submodel].values())
-            + [event.expression for event in self.submodels[submodel].events]
+            ),
+            self._variables_by_submodel[submodel].values(),
+            fixed_input_parameters,
+            (event.expression for event in self.submodels[submodel].events),
         )
+        all_input_parameters = unpacker.unpack_list_of_symbols(list(all_items))
         return list(all_input_parameters)
 
     def new_copy(self):
@@ -776,8 +1066,11 @@ class BaseModel:
         new_model._initial_conditions = self.initial_conditions.copy()
         new_model._boundary_conditions = self.boundary_conditions.copy()
         new_model._variables = self.variables.copy()
+        new_model._variables_processed = self._variables_processed.copy()
         new_model._events = self.events.copy()
         new_model._variables_casadi = self._variables_casadi.copy()
+        new_model._symbol_processor = self.symbol_processor.copy()
+        new_model._solution_observable = self._solution_observable
         return new_model
 
     def update(self, *submodels):
@@ -914,7 +1207,12 @@ class BaseModel:
         self.build_model_equations()
 
     def set_initial_conditions_from(
-        self, solution, inplace=True, return_type="model", mesh=None
+        self,
+        solution,
+        inputs=None,
+        inplace=True,
+        return_type="model",
+        mesh=None,
     ):
         """
         Update initial conditions with the final states from a Solution object or from
@@ -926,6 +1224,8 @@ class BaseModel:
         ----------
         solution : :class:`pybamm.Solution`, or dict
             The solution to use to initialize the model
+        inputs : dict
+            The dictionary of model input parameters.
         inplace : bool, optional
             Whether to modify the model inplace or create a new model (default True)
         return_type : str, optional
@@ -935,29 +1235,121 @@ class BaseModel:
         """
         mesh = mesh or {}
         initial_conditions = {}
+        is_dict_input = isinstance(solution, dict)
         if isinstance(solution, pybamm.Solution):
             solution = solution.last_state
 
+        def _find_matching_variable(var, solution_model):
+            if not (
+                solution_model.is_discretised and solution_model.y_slices is not None
+            ):
+                return None
+            var_id = var.id
+            for sol_var in solution_model.y_slices.keys():
+                if sol_var.id == var_id:
+                    return sol_var
+            return None
+
+        def _extract_from_y_slices(var, solution_var, solution_model, solution):
+            solution_y_slice = solution_model.y_slices[solution_var][0]
+            y_last = solution.y[:, -1] if solution.y.ndim > 1 else solution.y
+
+            # Validate slice bounds
+            slice_stop = (
+                solution_y_slice.stop
+                if solution_y_slice.stop is not None
+                else len(y_last)
+            )
+            slice_start = (
+                solution_y_slice.start if solution_y_slice.start is not None else 0
+            )
+            if slice_start < 0 or slice_stop > len(y_last):
+                return None
+
+            # Extract scaled state vector values
+            y_scaled = np.array(y_last[solution_y_slice])
+
+            # Convert from scaled state vector to physical values
+            # physical = reference + scale * y_scaled
+            try:
+                solution_scale = np.asarray(
+                    solution_var.scale.evaluate()
+                ) * np.ones_like(y_scaled)
+                solution_reference = np.asarray(
+                    solution_var.reference.evaluate()
+                ) * np.ones_like(y_scaled)
+                return solution_reference + solution_scale * y_scaled
+            except (TypeError, ValueError, AttributeError):
+                # Fall back to dict lookup
+                return None
+
+        def _extract_final_time_step(var_data):
+            var_data = np.array(var_data)
+            if var_data.ndim == 0:
+                return var_data
+            elif var_data.ndim == 1:
+                return np.array(var_data[-1:])
+            elif var_data.ndim == 2:
+                return np.array(var_data[:, -1])
+            elif var_data.ndim == 3:
+                return var_data[:, :, -1].flatten(order="F")
+            elif var_data.ndim == 4:
+                return var_data[:, :, :, -1].flatten(order="F")
+            else:
+                raise NotImplementedError("Variable must be 0D, 1D, 2D, 3D, or 4D")
+
         def get_final_state_eval(final_state):
-            if isinstance(solution, pybamm.Solution):
+            # If it's a ProcessedVariable, extract .data first
+            if isinstance(solution, pybamm.Solution) and hasattr(final_state, "data"):
                 final_state = final_state.data
 
+            final_state = np.array(final_state)
+
+            # Extract final state from time series
             if final_state.ndim == 0:
                 return np.array([final_state])
             elif final_state.ndim == 1:
-                return final_state[-1:]
+                # 1D arrays are already final state (from y_slices or processed from dict)
+                return np.array(final_state)
             elif final_state.ndim == 2:
-                return final_state[:, -1]
+                return np.array(final_state[:, -1])
             elif final_state.ndim == 3:
                 return final_state[:, :, -1].flatten(order="F")
             elif final_state.ndim == 4:
                 return final_state[:, :, :, -1].flatten(order="F")
             else:
-                raise NotImplementedError("Variable must be 0D, 1D, 2D, or 3D")
+                raise NotImplementedError("Variable must be 0D, 1D, 2D, 3D, or 4D")
 
-        def get_variable_state(var_name):
+        def get_variable_state(var):
+            var_name = var.name
+
+            # Try y_slices for discretised models
+            if (
+                self.is_discretised
+                and var in self.y_slices
+                and isinstance(solution, pybamm.Solution)
+                and len(solution.all_models) > 0
+            ):
+                try:
+                    solution_model = solution.all_models[-1]
+                    solution_var = _find_matching_variable(var, solution_model)
+                    if solution_var is not None:
+                        final_state = _extract_from_y_slices(
+                            var, solution_var, solution_model, solution
+                        )
+                        if final_state is not None:
+                            return final_state
+                except (KeyError, AttributeError, IndexError, TypeError):
+                    pass
+
+            # Fall back to solution[var_name] lookup
             try:
-                return solution[var_name]
+                var_data = solution[var_name]
+                # For dict inputs, extract final time step here
+                if is_dict_input:
+                    return _extract_final_time_step(var_data)
+                else:
+                    return var_data
             except KeyError as e:
                 raise pybamm.ModelError(
                     "To update a model from a solution, each variable in "
@@ -971,13 +1363,13 @@ class BaseModel:
                 var, pybamm.Concatenation
             ):
                 try:
-                    final_state = get_variable_state(var.name)
+                    final_state = get_variable_state(var)
                     final_state_eval = get_final_state_eval(final_state)
                 except pybamm.ModelError as e:
                     if isinstance(var, pybamm.Concatenation):
                         children = []
                         for child in var.orphans:
-                            final_state = get_variable_state(child.name)
+                            final_state = get_variable_state(child)
                             final_state_eval = get_final_state_eval(final_state)
                             children.append(final_state_eval)
                         final_state_eval = np.concatenate(children)
@@ -994,10 +1386,10 @@ class BaseModel:
             if self.is_discretised:
                 scale, reference = var.scale, var.reference
             else:
-                scale, reference = 1, 0
+                scale, reference = pybamm.Scalar(1), pybamm.Scalar(0)
             initial_conditions[var] = (
                 pybamm.Vector(final_state_eval) - reference
-            ) / scale
+            ) / scale.evaluate(inputs=inputs)
 
         # Also update the concatenated initial conditions if the model is already
         # discretised
@@ -1039,6 +1431,86 @@ class BaseModel:
             return model
         elif return_type == "ics":
             return initial_conditions, concatenated_initial_conditions
+
+    def build_initial_state_mapper(self, from_model):
+        """
+        Build a mapper that maps a final state vector from a discretised model to
+        this model's discretised initial conditions.
+
+        Parameters
+        ----------
+        from_model : :class:`pybamm.BaseModel`
+            The discretised model that provides the final state vector.
+        """
+        if not self.is_discretised or not from_model.is_discretised:
+            raise pybamm.ModelError(
+                "Both models must be discretised to build an initial state mapper."
+            )
+        if self.y_slices is None or from_model.y_slices is None:
+            raise pybamm.ModelError(
+                "Both models must define y_slices to build an initial state mapper."
+            )
+
+        from_vars_by_id = {var.id: var for var in from_model.y_slices}
+        from_vars_by_name = {var.name: var for var in from_model.y_slices}
+
+        def _resolve_from_var(target_var):
+            from_var = from_vars_by_id.get(target_var.id)
+            if from_var is None:
+                from_var = from_vars_by_name.get(target_var.name)
+            return from_var
+
+        entries = []
+        for var in self.initial_conditions:
+            if var in self.y_slices:
+                target_slice = self.y_slices[var][0]
+            elif isinstance(var, pybamm.Concatenation):
+                # Fallback for concatenations that don't have an explicit key in y_slices
+                target_slice = slice(
+                    self.y_slices[var.children[0]][0].start,
+                    self.y_slices[var.children[-1]][0].stop,
+                )
+            else:
+                raise pybamm.ModelError(
+                    "Could not find a y-slice for an initial condition variable."
+                )
+
+            from_var = _resolve_from_var(var)
+            from_slice = None
+            if from_var is not None:
+                from_slice = from_model.y_slices[from_var][0]
+                target_len = target_slice.stop - target_slice.start
+                from_len = from_slice.stop - from_slice.start
+                if from_len != target_len:
+                    raise pybamm.ModelError(
+                        "Mapped variable slice length mismatch between models: "
+                        f"'{var.name}' has source length {from_len} and target length {target_len}."
+                    )
+
+            entries.append((target_slice, var, from_var, from_slice))
+        # sort entries according to target slices
+        entries.sort(key=lambda x: x[0].start)
+
+        # create a pybamm expression tree that maps from the final state vector of the from_model to the initial conditions of this model
+        equations = []
+        for _target_slice, target_var, from_var, from_slice in entries:
+            if from_var is None:
+                # Keep the target-model initial condition for unmapped variables
+                physical = (
+                    target_var.reference
+                    + target_var.scale * self.initial_conditions[target_var]
+                )
+            else:
+                physical = from_var.reference + from_var.scale * pybamm.StateVector(
+                    from_slice
+                )
+
+            mapped = (physical - target_var.reference) / target_var.scale
+            equations.append(mapped)
+
+        mapper = pybamm.NumpyConcatenation(*equations)
+
+        return mapper
 
     def check_and_combine_dict(self, dict1, dict2):
         # check that the key ids are distinct
@@ -1202,19 +1674,24 @@ class BaseModel:
         unpacker = pybamm.SymbolUnpacker(pybamm.Variable)
         all_vars = unpacker.unpack_list_of_symbols(self.variables.values())
 
-        vars_in_keys = set()
+        # Build a set of names for keys to allow matching by name
+        # instead of by object identity (handles cases where Variables may have different
+        # _id values due to scale/reference processing)
+        var_names_in_keys = set()
 
         model_keys = list(self.rhs.keys()) + list(self.algebraic.keys())
 
         for var in model_keys:
             if isinstance(var, pybamm.Variable):
-                vars_in_keys.add(var)
+                var_names_in_keys.add(var.name)
             # Key can be a concatenation
             elif isinstance(var, pybamm.Concatenation):
-                vars_in_keys.update(var.children)
+                for child in var.children:
+                    if isinstance(child, pybamm.Variable):
+                        var_names_in_keys.add(child.name)
 
         for var in all_vars:
-            if var not in vars_in_keys:
+            if var.name not in var_names_in_keys:
                 raise pybamm.ModelError(
                     f"No key set for variable '{var}'. Make sure it is included in either "
                     "model.rhs or model.algebraic, in an unmodified form "
@@ -1339,7 +1816,7 @@ class BaseModel:
         # For specified variables, convert to casadi
         variables = OrderedDict()
         for name in variable_names:
-            var = self.variables[name]
+            var = self.get_processed_variable(name)
             variables[name] = var.to_casadi(t_casadi, y_casadi, inputs=inputs)
 
         casadi_dict = {
@@ -1449,52 +1926,30 @@ class BaseModel:
             output_variables=output_variables
         )
 
+    def process_symbol(self, symbol: pybamm.Symbol):
+        if not self.can_process_symbols:
+            raise ValueError(
+                "Cannot use `process_symbol`. This may be because the model has been "
+                "re-processed with `ParameterValues.process_model`, or the "
+                "`parameter_values` or `discretisation` in `model.symbol_processor` "
+                "have been reset."
+            )
+        symbol = pybamm.convert_to_symbol(symbol)
+        return self.symbol_processor(name=str(symbol.id), symbol=symbol)
+
     def process_parameters_and_discretise(self, symbol, parameter_values, disc):
         """
-        Process parameters and discretise a symbol using supplied parameter values
-        and discretisation. Note: care should be taken if using spatial operators
-        on dimensional symbols. Operators in pybamm are written in non-dimensional
-        form, so may need to be scaled by the appropriate length scale. It is
-        recommended to use this method on non-dimensional symbols.
+        Process parameters and discretise a symbol.
 
-        Parameters
-        ----------
-        symbol : :class:`pybamm.Symbol`
-            Symbol to be processed
-        parameter_values : :class:`pybamm.ParameterValues`
-            The parameter values to use during processing
-        disc : :class:`pybamm.Discretisation`
-            The discrisation to use
-
-        Returns
-        -------
-        :class:`pybamm.Symbol`
-            Processed symbol
+        This method is deprecated. Please process the model first with
+        :meth:`ParameterValues.process_model` and :meth:`Discretisation.process_model`,
+        then call :meth:`model.process_symbol(symbol)`.
         """
-        # Set y slices
-        if disc.y_slices == {}:
-            variables = list(self.rhs.keys()) + list(self.algebraic.keys())
-            for variable in variables:
-                variable.bounds = tuple(
-                    [
-                        parameter_values.process_symbol(bound)
-                        for bound in variable.bounds
-                    ]
-                )
-            disc.set_variable_slices(variables)
-
-        # Set boundary conditions (also requires setting parameter values)
-        if disc.bcs == {}:
-            self.boundary_conditions = parameter_values.process_boundary_conditions(
-                self
-            )
-            disc.bcs = disc.process_boundary_conditions(self)
-
-        # Process
-        param_symbol = parameter_values.process_symbol(symbol)
-        disc_symbol = disc.process_symbol(param_symbol)
-
-        return disc_symbol
+        raise NotImplementedError(
+            "process_parameters_and_discretise is deprecated.\n"
+            "Please first process the model with `ParameterValues.process_model` "
+            "and `Discretisation.process_model`, then run `model.observe(symbol)`."
+        )
 
     def save_model(self, filename=None, mesh=None, variables=None):
         """
@@ -1517,6 +1972,383 @@ class BaseModel:
             )
 
         Serialise().save_model(self, filename=filename, mesh=mesh, variables=variables)
+
+    def to_json(
+        self, filename: str | Path | None = None, compress: bool = False
+    ) -> dict:
+        """
+        Convert the model to a JSON-serialisable dictionary (raw format).
+
+        Optionally saves to a file. Works for custom (non-discretised) models
+        that are subclasses of BaseModel. Use :meth:`save_model` for discretised
+        models. For a wrapped config format (``type`` + ``model``), use
+        :meth:`to_config` instead.
+
+        Parameters
+        ----------
+        filename : str or pathlib.Path, optional
+            The filename to save the JSON file to. If not provided, the
+            dictionary is not saved. Must end with ``.json`` if provided.
+        compress : bool, optional
+            If True, the model data will be compressed (zlib + base64) in the
+            returned dict and in the file if filename is set. Default is False.
+
+        Returns
+        -------
+        dict
+            The JSON-serialisable dictionary (optionally compressed).
+
+        Examples
+        --------
+        >>> model = pybamm.lithium_ion.SPM()
+        >>> param_dict = model.to_json()  # Get dictionary only
+        >>> isinstance(param_dict, dict)
+        True
+        >>> model.to_json("model.json")  # Save and return dict
+        {'schema_version': '1.1', ...}
+        """
+        model_json = Serialise.serialise_custom_model(self, compress=compress)
+        if filename is not None:
+            self._write_json_to_file(model_json, filename, label="model JSON")
+        return model_json
+
+    @staticmethod
+    def _write_json_to_file(data: dict, filename: str | Path, label: str) -> None:
+        """Write *data* to *filename* as JSON, raising clear errors on failure."""
+        filename = Path(filename)
+        if not filename.name.endswith(".json"):
+            raise ValueError(f"Filename '{filename}' must end with '.json' extension.")
+        try:
+            with open(filename, "w") as f:
+                json.dump(data, f, indent=2, default=Serialise._json_encoder)
+        except OSError as file_err:
+            raise OSError(
+                f"Failed to write {label} to file '{filename}': {file_err}"
+            ) from file_err
+
+    @staticmethod
+    def _find_builtin_module(cls):
+        """Return the pybamm sub-module name if *cls* is a built-in model
+        class, else ``None``.
+
+        A class is "built-in" when ``getattr(pybamm.<mod>, cls.__name__)``
+        returns the exact same class object (identity check).
+        """
+        for mod_name in _BUILTIN_MODULE_NAMES:
+            mod = getattr(pybamm, mod_name, None)
+            if mod is not None:
+                candidate = getattr(mod, cls.__name__, None)
+                if candidate is cls:
+                    return mod_name
+        return None
+
+    def serialise_builtin_overrides(self, model_config: dict) -> None:
+        """Detect and serialise user modifications to a built-in model.
+
+        Compares the current model's ``variables`` keys and ``events``
+        against a freshly-constructed reference model (same class and
+        options).  Any differences are written into *model_config* using
+        the following optional keys:
+
+        ``custom_variables``
+            ``dict[str, json]`` – variables the user *added* (keys not
+            present in the reference model).  Each value is the symbolic
+            expression serialised via
+            :func:`convert_symbol_to_json`.
+        ``removed_variables``
+            ``list[str]`` – variable names that exist in the reference
+            model but have been deleted by the user.
+        ``events``
+            ``list[dict]`` – full serialised events list, included
+            **only** when the events differ from the reference model
+            (by count or by name set).
+
+        If the model is unmodified, no extra keys are added and the
+        config stays identical to the previous compact format.
+
+        .. note::
+
+           Only added/removed variable *keys* are tracked.  Overwriting
+           an existing variable's expression with a new one is **not**
+           detected in this version.
+
+        Parameters
+        ----------
+        model_config : dict
+            The compact config dict (mutated in-place).
+        """
+        from pybamm.expression_tree.operations.serialise import (
+            convert_symbol_to_json,
+        )
+
+        # Build a pristine reference with the same options.
+        model_cls = type(self)
+        options = model_config.get("options", {})
+        ref = model_cls(options=options) if options else model_cls()
+
+        # --- Variables diff (added / removed keys only) ---
+        current_keys = set(self.variables.keys())
+        ref_keys = set(ref.variables.keys())
+
+        added = current_keys - ref_keys
+        removed = ref_keys - current_keys
+
+        if added:
+            model_config["custom_variables"] = {
+                name: convert_symbol_to_json(self.variables[name])
+                for name in sorted(added)
+            }
+        if removed:
+            model_config["removed_variables"] = sorted(removed)
+
+        # --- Events diff (full replacement when different) ---
+        current_event_names = {e.name for e in self.events}
+        ref_event_names = {e.name for e in ref.events}
+
+        if (
+            len(self.events) != len(ref.events)
+            or current_event_names != ref_event_names
+        ):
+            model_config["events"] = [
+                {
+                    "name": event.name,
+                    "expression": convert_symbol_to_json(event.expression),
+                    "event_type": event.event_type.value,
+                }
+                for event in self.events
+            ]
+
+    def to_config(
+        self,
+        filename: str | Path | None = None,
+        compress: bool = False,
+    ) -> dict:
+        """
+        Convert the model to a config dictionary.
+
+        Built-in models (those found in ``pybamm.lithium_ion``,
+        ``pybamm.lead_acid``, etc.) produce a compact format::
+
+            {"type": "SPM", "module": "lithium_ion", "options": {...}}
+
+        Custom or user-defined models produce the full serialised format::
+
+            {"type": "custom", "model": ..., "geometry": ..., ...}
+
+        Parameters
+        ----------
+        filename : str or pathlib.Path, optional
+            If provided, save the config dict to this file. Must end with
+            ``.json``.
+        compress : bool, optional
+            If True, the inner model data is compressed (zlib + base64).
+            Default is False.
+
+        Returns
+        -------
+        dict
+            Config dictionary.
+        """
+        mod_name = self._find_builtin_module(type(self))
+
+        if mod_name is not None:
+            # Built-in model — compact format
+            model_config: dict = {
+                "type": type(self).__name__,
+                "module": mod_name,
+            }
+            if hasattr(self, "options"):
+                model_config["options"] = dict(self.options)
+
+            # Detect user modifications to variables and events.
+            # A fresh reference model is instantiated with the same options
+            # so we can diff against it. Only added/removed variable *keys*
+            # are tracked; overwriting an existing variable's expression is
+            # NOT detected (out of scope for v1).
+            self.serialise_builtin_overrides(model_config)
+        else:
+            # Custom / user-defined model — full serialised format
+            model_config = {
+                "type": "custom",
+                "model": Serialise.serialise_custom_model(self, compress=compress),
+            }
+            # Attach defaults when available
+            if hasattr(self, "default_geometry"):
+                try:
+                    model_config["geometry"] = Serialise.serialise_custom_geometry(
+                        self.default_geometry
+                    )
+                except Exception:
+                    pass
+            if hasattr(self, "default_var_pts"):
+                try:
+                    model_config["var_pts"] = Serialise.serialise_var_pts(
+                        self.default_var_pts
+                    )
+                except Exception:
+                    pass
+            if hasattr(self, "default_spatial_methods"):
+                try:
+                    model_config["spatial_methods"] = (
+                        Serialise.serialise_spatial_methods(
+                            self.default_spatial_methods
+                        )
+                    )
+                except Exception:
+                    pass
+            if hasattr(self, "default_submesh_types"):
+                try:
+                    model_config["submesh_types"] = Serialise.serialise_submesh_types(
+                        self.default_submesh_types
+                    )
+                except Exception:
+                    pass
+
+        if filename is not None:
+            self._write_json_to_file(model_config, filename, label="model config")
+        return model_config
+
+    @staticmethod
+    def from_json(filename: str | dict) -> BaseModel:
+        """
+        Load a custom (symbolic) model from a JSON file or dictionary.
+
+        Use this for models saved with :meth:`to_json`. For discretised models
+        saved with :meth:`save_model`, use :func:`pybamm.load_model` instead.
+        For the wrapped config format (from :meth:`to_config`), use
+        :meth:`from_config` instead.
+
+        Parameters
+        ----------
+        filename : str or dict
+            Path to a JSON file containing the saved model, or a dictionary
+            (e.g. from :meth:`to_json`).
+
+        Returns
+        -------
+        :class:`pybamm.BaseModel` or subclass
+            The reconstructed symbolic model.
+
+        Examples
+        --------
+        >>> model = pybamm.lithium_ion.SPM()
+        >>> loaded = pybamm.BaseModel.from_json(model.to_json())
+        >>> loaded = pybamm.BaseModel.from_json("model.json")  # doctest: +SKIP
+        """
+        return Serialise.load_custom_model(filename)
+
+    @staticmethod
+    def from_config(config: str | dict) -> BaseModel:
+        """
+        Load a model from a config dict, raw model dict, or file path.
+
+        Accepts:
+
+        1. Built-in config: ``{"type": "SPM", "module": "lithium_ion"}``
+        2. Custom config: ``{"type": "custom", "model": ...}``
+        3. Raw model dict from :meth:`to_json`
+        4. A path to a JSON file in any of the above formats
+
+        Parameters
+        ----------
+        config : str or dict
+            Config or model dictionary, or path to a JSON file.
+
+        Returns
+        -------
+        :class:`pybamm.BaseModel` or subclass
+            The reconstructed symbolic model.
+        """
+        if isinstance(config, dict):
+            data = config
+        else:
+            try:
+                with open(config) as f:
+                    data = json.load(f)
+            except FileNotFoundError:
+                raise FileNotFoundError(
+                    f"Model config file not found: {config}"
+                ) from None
+            except json.JSONDecodeError as e:
+                raise ValueError(
+                    f"Invalid JSON in model config file '{config}': {e}"
+                ) from e
+
+        type_name = data.get("type")
+
+        # Custom / full serialised model
+        if type_name == "custom" and "model" in data:
+            return Serialise.load_custom_model(data["model"])
+
+        # Built-in model (e.g. {"type": "SPM", "module": "lithium_ion"})
+        if type_name is not None and type_name != "custom":
+            mod_name = data.get("module", "lithium_ion")
+            mod = getattr(pybamm, mod_name, None)
+            if mod is None:
+                raise ValueError(f"Unknown pybamm module: {mod_name}")
+            model_cls = getattr(mod, type_name, None)
+            if model_cls is None:
+                raise ValueError(f"Model '{type_name}' not found in pybamm.{mod_name}")
+            options = data.get("options", {})
+            # JSON has no tuples; convert lists back to tuples
+            if options:
+                options = {
+                    k: tuple(v) if isinstance(v, list) else v
+                    for k, v in options.items()
+                }
+            model = model_cls(options=options) if options else model_cls()
+            BaseModel.apply_builtin_overrides(model, data)
+            return model
+
+        # Fallback: raw to_json dict (no "type" key)
+        return Serialise.load_custom_model(data)
+
+    @staticmethod
+    def apply_builtin_overrides(model: BaseModel, data: dict) -> None:
+        """Apply variable and event overrides from a built-in config.
+
+        This is the inverse of
+        :meth:`serialise_builtin_overrides`.  It mutates *model*
+        in-place.
+
+        Parameters
+        ----------
+        model : BaseModel
+            A freshly-constructed built-in model.
+        data : dict
+            The config dictionary, which may contain
+            ``custom_variables``, ``removed_variables``, and/or
+            ``events``.
+        """
+        from pybamm.expression_tree.operations.serialise import (
+            convert_symbol_from_json,
+        )
+
+        # --- Custom variables ---
+        extra = data.get("custom_variables")
+        if extra:
+            for name, expr_json in extra.items():
+                model.variables[name] = convert_symbol_from_json(expr_json)
+
+        # --- Removed variables ---
+        removed = data.get("removed_variables")
+        if removed:
+            for name in removed:
+                model.variables.pop(name, None)
+
+        # --- Events override ---
+        events_data = data.get("events")
+        if events_data is not None:
+            model.events = [
+                pybamm.Event(
+                    e["name"],
+                    convert_symbol_from_json(e["expression"]),
+                    EventType(e["event_type"])
+                    if isinstance(e["event_type"], int)
+                    else e["event_type"],
+                )
+                for e in events_data
+            ]
 
 
 def load_model(filename, battery_model: BaseModel | None = None):

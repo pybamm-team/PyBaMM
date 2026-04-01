@@ -77,7 +77,7 @@ def string(text, **kwargs):
 
     # read remaining instruction
     if text.startswith("Rest"):
-        step_class = Current
+        step_class = Rest
         value = 0
     elif text.startswith("Run"):
         raise ValueError(
@@ -144,6 +144,17 @@ def current(value, **kwargs):
     return Current(value, **kwargs)
 
 
+class Rest(Current):
+    """
+    Rest step, implemented as a zero-current explicit step.
+    """
+
+    def __init__(self, value=0, **kwargs):
+        if value != 0:
+            raise ValueError("Rest steps must have a current value of 0")
+        super().__init__(0, **kwargs)
+
+
 class CRate(BaseStepExplicit):
     """
     C-rate-controlled step, see :class:`pybamm.step.BaseStep` for arguments.
@@ -179,6 +190,9 @@ class Voltage(BaseStepImplicit):
     def get_parameter_values(self, variables):
         return {"Voltage function [V]": self.value}
 
+    def get_control_residual(self, variables):
+        return variables["Voltage [V]"] - self.value
+
     def get_submodel(self, model):
         return pybamm.external_circuit.VoltageFunctionControl(
             model.param, model.options
@@ -212,6 +226,9 @@ class Power(BaseStepImplicit):
     def get_parameter_values(self, variables):
         return {"Power function [W]": self.value}
 
+    def get_control_residual(self, variables):
+        return variables["Power [W]"] - self.value
+
     def get_submodel(self, model):
         return pybamm.external_circuit.PowerFunctionControl(model.param, model.options)
 
@@ -243,6 +260,9 @@ class Resistance(BaseStepImplicit):
     def get_parameter_values(self, variables):
         return {"Resistance function [Ohm]": self.value}
 
+    def get_control_residual(self, variables):
+        return variables["Voltage [V]"] - self.value * variables["Current [A]"]
+
     def get_submodel(self, model):
         return pybamm.external_circuit.ResistanceFunctionControl(
             model.param, model.options
@@ -258,10 +278,9 @@ def resistance(value, **kwargs):
 
 def rest(duration=None, **kwargs):
     """
-    Create a rest step, equivalent to a constant current step with value 0
-    (see :meth:`pybamm.step.current`).
+    Create a rest step (see :class:`pybamm.step.Rest`).
     """
-    return Current(0, duration=duration, **kwargs)
+    return Rest(duration=duration, **kwargs)
 
 
 class CustomStepExplicit(BaseStepExplicit):
@@ -409,6 +428,13 @@ class CustomStepImplicit(BaseStepImplicit):
             raise ValueError("control must be either 'algebraic' or 'differential'")
         self.control = control
         self.kwargs = kwargs
+
+    def get_control_residual(self, variables):
+        if self.control != "algebraic":
+            raise NotImplementedError(
+                "Unified experiment control only supports algebraic implicit custom steps"
+            )
+        return self.current_rhs_function(variables)
 
     def get_submodel(self, model):
         return pybamm.external_circuit.FunctionControl(

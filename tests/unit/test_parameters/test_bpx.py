@@ -1,5 +1,6 @@
 import copy
 import json
+import math
 from typing import Any
 
 import numpy as np
@@ -29,8 +30,7 @@ class TestBPX:
                     "Thermal conductivity [W.m-1.K-1]": 2,
                     "Density [kg.m-3]": 1847,
                     "Electrode area [m2]": 0.016808,
-                    "Number of electrode pairs connected "
-                    "in parallel to make a cell": 34,
+                    "Number of electrode pairs connected in parallel to make a cell": 34,
                     "External surface area [m2]": 3.79e-2,
                     "Volume [m3]": 1.28e-4,
                 },
@@ -240,7 +240,7 @@ class TestBPX:
 
     def test_bpx_soc_error(self):
         bpx_obj = copy.deepcopy(self.base)
-        with pytest.raises(ValueError, match="Target SOC"):
+        with pytest.raises(ValueError, match=r"Target SOC"):
             pybamm.ParameterValues.create_from_bpx_obj(bpx_obj, target_soc=10)
 
     def test_bpx_arrhenius(self, tmp_path):
@@ -346,8 +346,7 @@ class TestBPX:
                 "Initial concentration in negative electrode [mol.m-3]": 22000,
                 "Primary: Initial concentration in positive electrode [mol.m-3]": 19404,
                 "Secondary: Initial concentration in positive electrode [mol.m-3]": 19404,
-            },
-            check_already_exists=False,
+            }
         )
         model = pybamm.lithium_ion.SPM({"particle phases": ("1", "2")})
         experiment = pybamm.Experiment(
@@ -410,7 +409,7 @@ class TestBPX:
 
         temp_file = tmp_path / "tmp.json"
         temp_file.write_text(json.dumps(bpx_obj))
-        with pytest.raises(NotImplementedError, match="PyBaMM does not support"):
+        with pytest.raises(NotImplementedError, match=r"PyBaMM does not support"):
             pybamm.ParameterValues.create_from_bpx(temp_file)
 
     def test_bpx_user_defined(self, tmp_path):
@@ -453,3 +452,31 @@ class TestBPX:
         bpx_obj = copy.deepcopy(self.base)
         param = pybamm.ParameterValues.create_from_bpx_obj(bpx_obj)
         assert isinstance(param, pybamm.ParameterValues)
+
+    def test_bruggeman_coefficient_calculation(self):
+        bpx_obj = copy.deepcopy(self.base)
+        domains = {
+            "Negative electrode": {"Porosity": 0.42, "Transport efficiency": 0.75},
+            "Separator": {"Porosity": 0.50, "Transport efficiency": 0.80},
+            "Positive electrode": {"Porosity": 0.38, "Transport efficiency": 0.70},
+        }
+        for domain, values in domains.items():
+            bpx_obj["Parameterisation"][domain].update(values)
+
+        param = pybamm.ParameterValues.create_from_bpx_obj(bpx_obj)
+        pre_names = ["Negative electrode ", "Separator ", "Positive electrode "]
+        for pre_name, domain in zip(pre_names, domains.values(), strict=True):
+            expected = math.log(domain["Transport efficiency"]) / math.log(
+                domain["Porosity"]
+            )
+            calculated = param[pre_name + "Bruggeman coefficient (electrolyte)"]
+            np.testing.assert_allclose(calculated, expected, atol=1e-6)
+
+    def test_bruggeman_invalid_values_raise(self):
+        bpx_obj = copy.deepcopy(self.base)
+        bpx_obj["Parameterisation"]["Negative electrode"]["Porosity"] = 0  # Invalid
+
+        with pytest.raises(
+            ValueError, match=r"math domain error|expected a positive input"
+        ):  # Matches log(0) error (message changed in Python 3.14)
+            pybamm.ParameterValues.create_from_bpx_obj(bpx_obj)

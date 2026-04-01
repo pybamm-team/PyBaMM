@@ -14,8 +14,9 @@ import pybamm
 
 if pybamm.has_jax():
     import jax
+    import jax.extend
 
-    platform = jax.lib.xla_bridge.get_backend().platform.casefold()
+    platform = jax.extend.backend.get_backend().platform.casefold()
     if platform != "metal":
         jax.config.update("jax_enable_x64", True)
 
@@ -203,7 +204,17 @@ def find_symbols(
         else:
             children_vars.append(id_to_python_variable(child.id, False))
 
-    if isinstance(symbol, pybamm.BinaryOperator):
+    if isinstance(symbol, pybamm.Conditional):
+        selector_var = children_vars[0]
+        symbol_str = "0"
+        for branch_index, branch_var in reversed(
+            list(enumerate(children_vars[1:], start=1))
+        ):
+            lower = branch_index - 0.5
+            upper = branch_index + 0.5
+            symbol_str = f"({branch_var} if ({lower} < {selector_var} < {upper}) else {symbol_str})"
+
+    elif isinstance(symbol, pybamm.BinaryOperator):
         # Multiplication and Division need special handling for scipy sparse matrices
         # TODO: we can pass through a dummy y and t to get the type and then hardcode
         # the right line, avoiding these checks
@@ -290,7 +301,13 @@ def find_symbols(
                 children_str = child_var
             else:
                 children_str += ", " + child_var
-        if isinstance(symbol.function, np.ufunc):
+        if isinstance(symbol, pybamm.Arcsinh2):
+            # Arcsinh2._arcsinh2_evaluate takes (a, b, eps) but only (a, b)
+            # are children, so we need to call _function_evaluate instead
+            constant_symbols[symbol.id] = symbol._function_evaluate
+            funct_var = id_to_python_variable(symbol.id, True)
+            symbol_str = f"{funct_var}([{children_str}])"
+        elif isinstance(symbol.function, np.ufunc):
             # write any numpy functions directly
             symbol_str = f"np.{symbol.function.__name__}({children_str})"
         else:

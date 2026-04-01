@@ -29,8 +29,7 @@ parameter_values.update(
     {
         "Casing heat capacity [J.K-1]": 30,
         "Environment thermal resistance [K.W-1]": 10,
-    },
-    check_already_exists=False,
+    }
 )
 
 # create and run simulations

@@ -82,7 +82,7 @@ def silicon_ocp_lithiation_Mark2016(sto):
         + p6 * sto**2
         + p7 * sto
         + p8
-    )
+    ) + 1e-4 * (1 / sto + 1 / (sto - 1))
     return U_lithiation
 
 
@@ -205,7 +205,7 @@ def nmc_LGM50_ocp_Chen2020(sto):
         - 0.0428 * np.tanh(18.5138 * (sto - 0.5542))
         - 17.7326 * np.tanh(15.7890 * (sto - 0.3117))
         + 17.5842 * np.tanh(15.9308 * (sto - 0.3120))
-    )
+    ) + 1e-4 * (1 / sto + 1 / (sto - 1))
 
     return u_eq
 

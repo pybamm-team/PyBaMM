@@ -10,7 +10,7 @@ First of all, you'll need `asv` installed:
 pip install asv
 ```
 
-To run the benchmarks for the latest commit on the `develop` branch, simply enter the following command:
+To run the benchmarks for the latest commit on the `main` branch, simply enter the following command:
 
 ```shell
 asv run
@@ -24,15 +24,15 @@ Running the benchmarks can take a while, as all benchmarks are repeated several 
 asv run --quick
 ```
 
-Benchmarks can also be run over a range of commits. For instance, the following command runs the benchmark suite over every commit between version `0.3` and the tip of the `develop` branch:
+Benchmarks can also be run over a range of commits. For instance, the following command runs the benchmark suite over every commit between version `0.3` and the tip of the `main` branch:
 
 ```shell
-asv run v0.3..develop
+asv run v0.3..main
 ```
 
 Further information on how to run benchmarks with `asv` can be found in the documentation at [Using airspeed velocity](https://asv.readthedocs.io/en/stable/using.html).
 
-`asv` is configured using a file `asv.conf.json` located at the root of the PyBaMM repository. See the [asv reference](https://asv.readthedocs.io/en/stable/reference.html) for details on available settings and options.
+`asv` is configured using a file `asv.conf.json` located at the root of the PyBaMM repository. See the [asv reference](https://asv.readthedocs.io/en/stable/user_reference.html) for details on available settings and options.
 
 Benchmark results are stored in a directory `results/` at the location of the configuration file. There is one result file per commit, per machine.
 

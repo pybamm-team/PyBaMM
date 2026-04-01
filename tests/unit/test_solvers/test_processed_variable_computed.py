@@ -287,6 +287,43 @@ class TestProcessedVariableComputed:
         )
         np.testing.assert_array_equal(comb_var.entries, comb_var.data)
 
+    def test_processed_variable_0D_update_sensitivities(self):
+        def solve_processed_var(t_eval, calculate_sensitivities):
+            model = pybamm.BaseModel()
+            y = pybamm.Variable("y")
+            a = pybamm.InputParameter("a")
+            model.rhs = {y: 0 * y}
+            model.initial_conditions = {y: 1}
+            model.variables = {"a times y": a * y}
+
+            solver = pybamm.IDAKLUSolver(output_variables=["a times y"])
+            sol = solver.solve(
+                model,
+                t_eval,
+                inputs={"a": 2.0},
+                calculate_sensitivities=calculate_sensitivities,
+                t_interp=np.array(t_eval),
+            )
+            return sol, sol["a times y"]
+
+        _, processed_var_no_sens = solve_processed_var([0, 1], False)
+        assert processed_var_no_sens.sensitivities == {}
+
+        sol1, processed_var1 = solve_processed_var([0, 1], True)
+        sol2, processed_var2 = solve_processed_var([2, 3], True)
+
+        combined_sol = sol1 + sol2
+        combined_var = processed_var1.update(processed_var2, combined_sol)
+
+        np.testing.assert_array_equal(
+            combined_var.entries,
+            np.array([2.0, 2.0, 2.0, 2.0]),
+        )
+        np.testing.assert_array_equal(
+            combined_var.sensitivities["a"],
+            np.array([1.0, 1.0, 1.0, 1.0]),
+        )
+
     def test_processed_variable_2D_x_r(self):
         var = pybamm.Variable(
             "var",

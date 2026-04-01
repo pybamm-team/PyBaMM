@@ -53,26 +53,27 @@ class TestBroadcasts:
 
         a = pybamm.Symbol("a", domain="current collector")
         with pytest.raises(
-            pybamm.DomainError, match="Cannot Broadcast an object into empty domain"
+            pybamm.DomainError, match=r"Cannot Broadcast an object into empty domain"
         ):
             pybamm.PrimaryBroadcast(a, [])
         with pytest.raises(
-            pybamm.DomainError, match="Primary broadcast from current collector"
+            pybamm.DomainError, match=r"Primary broadcast from current collector"
         ):
             pybamm.PrimaryBroadcast(a, "bad domain")
         a = pybamm.Symbol("a", domain="negative electrode")
         with pytest.raises(
-            pybamm.DomainError, match="Primary broadcast from electrode"
+            pybamm.DomainError, match=r"Primary broadcast from electrode"
         ):
             pybamm.PrimaryBroadcast(a, "current collector")
         a = pybamm.Symbol("a", domain="negative particle size")
         with pytest.raises(
-            pybamm.DomainError, match="Primary broadcast from particle size"
+            pybamm.DomainError, match=r"Primary broadcast from particle size"
         ):
             pybamm.PrimaryBroadcast(a, "negative electrode")
         a = pybamm.Symbol("a", domain="negative particle")
         with pytest.raises(
-            pybamm.DomainError, match="Cannot do primary broadcast from particle domain"
+            pybamm.DomainError,
+            match=r"Cannot do primary broadcast from particle domain",
         ):
             pybamm.PrimaryBroadcast(a, "current collector")
 
@@ -106,26 +107,26 @@ class TestBroadcasts:
         assert broad_a.reduce_one_dimension() == a
 
         a = pybamm.Symbol("a")
-        with pytest.raises(TypeError, match="empty domain"):
+        with pytest.raises(TypeError, match=r"empty domain"):
             pybamm.SecondaryBroadcast(a, "current collector")
         a = pybamm.Symbol("a", domain="negative particle")
         with pytest.raises(
-            pybamm.DomainError, match="Secondary broadcast from particle"
+            pybamm.DomainError, match=r"Secondary broadcast from particle"
         ):
             pybamm.SecondaryBroadcast(a, "negative particle")
         a = pybamm.Symbol("a", domain="negative particle size")
         with pytest.raises(
-            pybamm.DomainError, match="Secondary broadcast from particle size"
+            pybamm.DomainError, match=r"Secondary broadcast from particle size"
         ):
             pybamm.SecondaryBroadcast(a, "negative particle")
         a = pybamm.Symbol("a", domain="negative electrode")
         with pytest.raises(
-            pybamm.DomainError, match="Secondary broadcast from electrode"
+            pybamm.DomainError, match=r"Secondary broadcast from electrode"
         ):
             pybamm.SecondaryBroadcast(a, "negative particle")
 
         a = pybamm.Symbol("a", domain="current collector")
-        with pytest.raises(pybamm.DomainError, match="Cannot do secondary broadcast"):
+        with pytest.raises(pybamm.DomainError, match=r"Cannot do secondary broadcast"):
             pybamm.SecondaryBroadcast(a, "electrode")
 
     def test_tertiary_broadcast(self):
@@ -153,10 +154,10 @@ class TestBroadcasts:
             broad_a.reduce_one_dimension()
 
         a_no_secondary = pybamm.Symbol("a", domain="negative particle")
-        with pytest.raises(TypeError, match="without a secondary"):
+        with pytest.raises(TypeError, match=r"without a secondary"):
             pybamm.TertiaryBroadcast(a_no_secondary, "negative electrode")
         with pytest.raises(
-            pybamm.DomainError, match="Tertiary broadcast from a symbol with particle"
+            pybamm.DomainError, match=r"Tertiary broadcast from a symbol with particle"
         ):
             pybamm.TertiaryBroadcast(a, "negative particle")
         a = pybamm.Symbol(
@@ -166,7 +167,7 @@ class TestBroadcasts:
         )
         with pytest.raises(
             pybamm.DomainError,
-            match="Tertiary broadcast from a symbol with an electrode",
+            match=r"Tertiary broadcast from a symbol with an electrode",
         ):
             pybamm.TertiaryBroadcast(a, "negative particle size")
         a = pybamm.Symbol(
@@ -174,7 +175,7 @@ class TestBroadcasts:
             domain=["negative particle"],
             auxiliary_domains={"secondary": "current collector"},
         )
-        with pytest.raises(pybamm.DomainError, match="Cannot do tertiary broadcast"):
+        with pytest.raises(pybamm.DomainError, match=r"Cannot do tertiary broadcast"):
             pybamm.TertiaryBroadcast(a, "negative electrode")
 
     def test_full_broadcast(self):
@@ -210,7 +211,7 @@ class TestBroadcasts:
 
         with pytest.raises(
             pybamm.DomainError,
-            match="Cannot do full broadcast to an empty primary domain",
+            match=r"Cannot do full broadcast to an empty primary domain",
         ):
             pybamm.FullBroadcast(a, [])
 
@@ -222,7 +223,7 @@ class TestBroadcasts:
         assert broad_a.domain == ["negative electrode"]
 
         a = pybamm.Symbol("a", domain="current collector")
-        with pytest.raises(pybamm.DomainError, match="Cannot do full broadcast"):
+        with pytest.raises(pybamm.DomainError, match=r"Cannot do full broadcast"):
             pybamm.FullBroadcast(a, "electrode", None)
 
     def test_ones_like(self):

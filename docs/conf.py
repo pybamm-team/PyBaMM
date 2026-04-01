@@ -27,7 +27,7 @@ sys.path.append(os.path.abspath("./sphinxext/"))
 # -- Project information -----------------------------------------------------
 
 project = "PyBaMM"
-copyright = "2018-2025, The PyBaMM Team"
+copyright = "2018, The PyBaMM Team"
 author = "The PyBaMM Team"
 
 # The short X.Y version
@@ -92,6 +92,9 @@ linkcheck_ignore = [
     "https://doi.org/10.1137/20M1336898",  # DOI link to ignore
     "https://en.wikipedia.org/wiki/",  # Wikipedia link to ignore
     "https://books.google.co.uk/books",
+    "https://docs.scipy.org/doc/scipy",  # SciPy docs timeout intermittently
+    "https://chemrxiv.org",  # ChemRxiv blocks automated link checking
+    "https://pubs.acs.org",  # ACS blocks automated link checking
 ]
 
 
@@ -160,8 +163,8 @@ html_theme_options = {
         "plausible_analytics_domain": "docs.pybamm.org",
         "plausible_analytics_url": "https://plausible.io/js/script.js",
     },
-    "pygment_light_style": "xcode",
-    "pygment_dark_style": "monokai",
+    "pygments_light_style": "xcode",
+    "pygments_dark_style": "monokai",
     "footer_start": [
         "copyright",
         "sphinx-version",
@@ -190,7 +193,7 @@ html_context.update(
     {
         "github_user": "pybamm-team",
         "github_repo": "pybamm",
-        "github_version": "develop",
+        "github_version": "main",
         "doc_path": "docs/",
     }
 )
@@ -314,8 +317,8 @@ nbsphinx_requirejs_path = ""
 # For notebook downloads (23.5 onwards), we get the version from the environment
 # variable READTHEDOCS_VERSION and set it accordingly.
 
-# If the version is set to "latest", then we are on the develop branch, and we
-# point to the notebook in the develop blob
+# If the version is set to "latest", then we are on the main branch, and we
+# point to the notebook in the main blob
 # If we are on "stable", we point to the notebook in the relevant release tree
 # for the PyBaMM version
 # On a PR build, we use READTHEDOCS_GIT_COMMIT_HASH which will always point to changes
@@ -328,7 +331,7 @@ append_to_url = f"blob/v{notebooks_version}"
 if (os.environ.get("READTHEDOCS_VERSION") == "latest") or (
     os.environ.get("READTHEDOCS_VERSION") is None
 ):
-    notebooks_version = "develop"
+    notebooks_version = "main"
     append_to_url = f"blob/{notebooks_version}"
 
 if os.environ.get("READTHEDOCS_VERSION") == "stable":
@@ -353,7 +356,7 @@ html_context.update(
 nbsphinx_prolog = r"""
 
 {% set github_docname =
-'github/pybamm-team/pybamm/blob/develop/docs/' +
+'github/pybamm-team/pybamm/blob/main/docs/' +
 env.doc2path(env.docname, base=None) | string() %}
 
 {% set notebooks_version = env.config.html_context.notebooks_version %}

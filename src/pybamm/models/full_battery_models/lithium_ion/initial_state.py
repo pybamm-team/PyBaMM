@@ -1,17 +1,46 @@
 import pybamm
 
-from .util import check_if_composite
+from .util import _has_hysteresis, check_if_composite
+
+
+def _set_hysteresis_branch(parameter_values, electrode, direction, options, phase=None):
+    phase = phase or ""
+    if phase != "":
+        phase_prefactor = phase.capitalize() + ": "
+    else:
+        phase_prefactor = ""
+    if direction is None:
+        initial_hysteresis_branch = 0
+    else:
+        if (direction == "discharge" and electrode == "negative") or (
+            direction == "charge" and electrode == "positive"
+        ):
+            initial_hysteresis_branch = 1
+        elif (direction == "charge" and electrode == "negative") or (
+            direction == "discharge" and electrode == "positive"
+        ):
+            initial_hysteresis_branch = -1
+        else:
+            raise ValueError(f"Invalid direction: {direction}")
+    parameter_values.update(
+        {
+            f"{phase_prefactor}Initial hysteresis state in {electrode} electrode": initial_hysteresis_branch,
+        }
+    )
+    return parameter_values
 
 
 def set_initial_state(
     initial_value,
     parameter_values,
+    direction=None,
     param=None,
     known_value="cyclable lithium capacity",
     inplace=True,
     options=None,
     inputs=None,
     tol=1e-6,
+    esoh_solver=None,
 ):
     """
     Set the values of the parameters representing the initial model states.
@@ -43,8 +72,22 @@ def set_initial_state(
         A lower value results in higher precision but may increase computation time.
         Default is 1e-6.
     """
+    options = options or {}
     parameter_values = parameter_values if inplace else parameter_values.copy()
     param = param or pybamm.LithiumIonParameters(options)
+
+    for electrode in ["negative", "positive"]:
+        if check_if_composite(options, electrode):
+            for phase in ["primary", "secondary"]:
+                if _has_hysteresis(electrode, options, phase):
+                    parameter_values = _set_hysteresis_branch(
+                        parameter_values, electrode, direction, options, phase
+                    )
+        else:
+            if _has_hysteresis(electrode, options):
+                parameter_values = _set_hysteresis_branch(
+                    parameter_values, electrode, direction, options
+                )
 
     if options is not None and options.get("open-circuit potential", None) == "MSMR":
         """
@@ -53,10 +96,13 @@ def set_initial_state(
         Un, Up = pybamm.lithium_ion.get_initial_ocps(
             initial_value,
             parameter_values,
+            direction=direction,
             param=param,
             known_value=known_value,
             options=options,
+            tol=tol,
             inputs=inputs,
+            esoh_solver=esoh_solver,
         )
         parameter_values.update(
             {
@@ -73,9 +119,11 @@ def set_initial_state(
             initial_value,
             parameter_values,
             param=param,
-            known_value=known_value,
             options=options,
+            tol=tol,
             inputs=inputs,
+            direction=direction,
+            esoh_sim=esoh_solver,
         )
         _set_concentration_from_stoich(
             parameter_values,
@@ -107,10 +155,13 @@ def set_initial_state(
         initial_stoichs = pybamm.lithium_ion.get_initial_stoichiometries_composite(
             initial_value,
             parameter_values,
+            direction=direction,
             param=param,
-            known_value=known_value,
             options=options,
+            tol=tol,
             inputs=inputs,
+            known_value=known_value,
+            esoh_sim=esoh_solver,
         )
         _set_concentration_from_stoich(
             parameter_values,
@@ -158,11 +209,13 @@ def set_initial_state(
         x, y = pybamm.lithium_ion.get_initial_stoichiometries(
             initial_value,
             parameter_values,
+            direction=direction,
             param=param,
             known_value=known_value,
             options=options,
             tol=tol,
             inputs=inputs,
+            esoh_solver=esoh_solver,
         )
         _set_concentration_from_stoich(
             parameter_values, param, "negative", "primary", x, inputs, options
@@ -197,3 +250,79 @@ def _set_concentration_from_stoich(
             * parameter_values.evaluate(phase_param.c_max, inputs=inputs)
         }
     )
+
+
+def _fingerprint_standard(pv, param, inputs):
+    return (
+        "standard",
+        float(pv.evaluate(param.n.Q_init, inputs=inputs)),
+        float(pv.evaluate(param.p.Q_init, inputs=inputs)),
+        float(pv.evaluate(param.Q_Li_particles_init, inputs=inputs)),
+        float(pv.evaluate(param.ocp_soc_100, inputs=inputs)),
+        float(pv.evaluate(param.ocp_soc_0, inputs=inputs)),
+    )
+
+
+def _fingerprint_half_cell(pv, param, options, inputs):
+    parts = [
+        "half_cell",
+        float(pv.evaluate(param.p.prim.Q_init, inputs=inputs)),
+        float(pv.evaluate(param.ocp_soc_100, inputs=inputs)),
+        float(pv.evaluate(param.ocp_soc_0, inputs=inputs)),
+    ]
+    if check_if_composite(options, "positive"):
+        parts.append(float(pv.evaluate(param.p.sec.Q_init, inputs=inputs)))
+    return tuple(parts)
+
+
+def _fingerprint_composite(pv, param, options, inputs):
+    parts = [
+        "composite",
+        float(pv.evaluate(param.n.prim.Q_init, inputs=inputs)),
+        float(pv.evaluate(param.p.prim.Q_init, inputs=inputs)),
+        float(pv.evaluate(param.Q_Li_particles_init, inputs=inputs)),
+        float(pv.evaluate(param.ocp_soc_100, inputs=inputs)),
+        float(pv.evaluate(param.ocp_soc_0, inputs=inputs)),
+    ]
+    if check_if_composite(options, "negative"):
+        parts.append(float(pv.evaluate(param.n.sec.Q_init, inputs=inputs)))
+    if check_if_composite(options, "positive"):
+        parts.append(float(pv.evaluate(param.p.sec.Q_init, inputs=inputs)))
+    return tuple(parts)
+
+
+def compute_esoh_fingerprint(parameter_values, param, options, inputs):
+    """Evaluate the quantities that determine the eSOH result for this model type.
+
+    Routes to a model-specific helper based on the model options, mirroring
+    the branching in :func:`set_initial_state`.
+
+    Parameters
+    ----------
+    parameter_values : :class:`pybamm.ParameterValues`
+        The (unprocessed) parameter values.
+    param : :class:`pybamm.LithiumIonParameters`
+        The symbolic parameter set from the model.
+    options : dict-like
+        Model options (e.g. from ``model.options``).
+    inputs : dict or None
+        Runtime input parameters.
+
+    Returns
+    -------
+    tuple
+        Hashable tuple of evaluated scalar quantities.
+    """
+    options = options or {}
+    inputs = inputs or {}
+
+    if options.get("open-circuit potential") == "MSMR":
+        return _fingerprint_standard(parameter_values, param, inputs)
+    elif options.get("working electrode") == "positive":
+        return _fingerprint_half_cell(parameter_values, param, options, inputs)
+    elif check_if_composite(options, "positive") or check_if_composite(
+        options, "negative"
+    ):
+        return _fingerprint_composite(parameter_values, param, options, inputs)
+    else:
+        return _fingerprint_standard(parameter_values, param, inputs)

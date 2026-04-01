@@ -217,7 +217,15 @@ class FuzzyDict(dict):
                     print(f"No matches found for '{original_key}'")
 
     def copy(self):
-        return FuzzyDict(super().copy())
+        """
+        Return a shallow copy of the FuzzyDict.
+
+        Returns
+        -------
+        FuzzyDict
+            A new FuzzyDict object with the same keys and values as the original.
+        """
+        return FuzzyDict(self)
 
 
 class Timer:
@@ -351,6 +359,28 @@ def has_jax():
     """
     return (importlib.util.find_spec("jax") is not None) and (
         importlib.util.find_spec("jaxlib") is not None
+    )
+
+
+def is_macos_intel():
+    """Check if running on macOS with an Intel (x86_64) processor."""
+    import platform
+    import sys
+
+    return sys.platform == "darwin" and platform.machine() == "x86_64"
+
+
+def raise_jax_not_found():
+    """Raise an appropriate error when JAX is not available."""
+    if is_macos_intel():
+        raise ModuleNotFoundError(
+            "JAX is not available on macOS with Intel processors. "
+            "JAX dropped macOS x86_64 support in version 0.5.0. "
+            "JAX features require macOS with Apple Silicon (M-series), Linux, or Windows."
+        )
+    raise ModuleNotFoundError(
+        "Jax or jaxlib is not installed, please see "
+        "https://docs.pybamm.org/en/latest/source/user_guide/installation/gnu-linux-mac.html#optional-jaxsolver"
     )
 
 

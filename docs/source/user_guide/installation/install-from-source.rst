@@ -16,7 +16,7 @@ Prerequisites
 ---------------
 
 The following instructions are valid for both GNU/Linux distributions and MacOS.
-If you are running Windows, consider using the `Windows Subsystem for Linux (WSL) <https://docs.microsoft.com/en-us/windows/wsl/install-win10>`_.
+If you are running Windows, consider using the `Windows Subsystem for Linux (WSL) <https://learn.microsoft.com/en-us/windows/wsl/install-win10>`_.
 
 To obtain the PyBaMM source code, clone the GitHub repository
 
@@ -28,7 +28,7 @@ or download the source archive on the repository's homepage.
 
 To install PyBaMM, you will need:
 
-- Python 3 (PyBaMM supports versions 3.9, 3.10, 3.11, and 3.12)
+- Python 3 (PyBaMM supports versions 3.10 — 3.14)
 - The Python headers file for your current Python version.
 - A BLAS library (for instance `openblas <https://www.openblas.net/>`_).
 - A C compiler (ex: ``gcc``).
@@ -123,16 +123,16 @@ tools for development and documentation:
 
 .. code:: bash
 
-	  pip install -e .[all,dev,docs]
+	  pip install -e .[all] --group dev --group docs
 
 If you are using ``zsh`` or ``tcsh``, you would need to use different pattern matching:
 
 .. code:: bash
 
-	  pip install -e '.[all,dev,docs]'
+	  pip install -e '.[all]' --group dev --group docs
 
 Before you start contributing to PyBaMM, please read the `contributing
-guidelines <https://github.com/pybamm-team/PyBaMM/blob/develop/CONTRIBUTING.md>`__.
+guidelines <https://github.com/pybamm-team/PyBaMM/blob/main/CONTRIBUTING.md>`__.
 
 Running the tests
 -----------------

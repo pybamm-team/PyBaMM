@@ -28,6 +28,21 @@ class TestSolution:
         assert sol.all_inputs == [{}]
         assert isinstance(sol.all_models[0], pybamm.BaseModel)
 
+    def test_yp(self):
+        t = np.linspace(0, 1)
+        y = np.tile(t, (20, 1))
+        yp = np.tile(t, (20, 1)) * 2  # time derivatives
+
+        # Without yps, yp should be None
+        sol_no_yp = pybamm.Solution(t, y, pybamm.BaseModel(), {})
+        assert sol_no_yp.hermite_interpolation is False
+        assert sol_no_yp.yp is None
+
+        # With yps, yp should return the concatenated time derivatives
+        sol_with_yp = pybamm.Solution(t, y, pybamm.BaseModel(), {}, all_yps=yp)
+        assert sol_with_yp.hermite_interpolation is True
+        np.testing.assert_array_equal(sol_with_yp.yp, yp)
+
     def test_sensitivities(self):
         t = np.linspace(0, 1)
         y = np.tile(t, (20, 1))
@@ -35,21 +50,36 @@ class TestSolution:
             pybamm.Solution(t, y, pybamm.BaseModel(), {}, sensitivities=1.0)
 
     def test_errors(self):
-        bad_ts = [np.array([1, 2, 3]), np.array([3, 4, 5])]
-        sol = pybamm.Solution(
-            bad_ts, [np.ones((1, 3)), np.ones((1, 3))], pybamm.BaseModel(), {}
-        )
+        bad_ts_single_segment = [np.array([1, 2, 3, -1])]
         with pytest.raises(
-            ValueError, match="Solution time vector must be strictly increasing"
+            ValueError, match=r"must be unique and sorted in increasing order"
         ):
-            sol.set_t()
+            _ = pybamm.Solution(
+                bad_ts_single_segment, [np.ones((1, 3))], pybamm.BaseModel(), {}
+            )
 
-        ts = [np.array([1, 2, 3])]
-        bad_ys = [(pybamm.settings.max_y_value + 1) * np.ones((1, 3))]
-        model = pybamm.BaseModel()
-        var = pybamm.StateVector(slice(0, 1))
-        model.rhs = {var: 0}
-        model.variables = {var.name: var}
+        bad_ts_multiple_segments = [np.array([1, 2, 3]), np.array([2, 3, 4])]
+        with pytest.raises(
+            ValueError,
+            match=r"must be strictly increasing across all segments of the sub-solutions",
+        ):
+            _ = pybamm.Solution(
+                bad_ts_multiple_segments,
+                [np.ones((1, 3)), np.ones((1, 3))],
+                pybamm.BaseModel(),
+                {},
+            )
+
+        # Create a mock solution with an SPM
+        model = pybamm.lithium_ion.SPM()
+        sim = pybamm.Simulation(model)
+        t = [0, 1]
+        sol = sim.solve(t, t_interp=t)
+
+        ts = sol.all_ts[0]
+        bad_ys = np.full_like(sol.all_ys[0], pybamm.settings.max_y_value + 1)
+        model = sol.all_models[0]
+
         log_capture = io.StringIO()
         handler = logging.StreamHandler(log_capture)
         handler.setLevel(logging.ERROR)
@@ -60,10 +90,169 @@ class TestSolution:
         assert "exceeds the maximum" in log_output
         logger.removeHandler(handler)
 
-        with pytest.raises(TypeError, match="sensitivities arg needs to be a dict"):
+        with pytest.raises(TypeError, match=r"sensitivities arg needs to be a dict"):
             pybamm.Solution(ts, bad_ys, model, {}, all_sensitivities="bad")
 
         sol = pybamm.Solution(ts, bad_ys, model, {}, all_sensitivities={})
+
+    def test_all_t_evals_default(self):
+        """When all_t_evals is None, it defaults to all_ts."""
+        t = np.linspace(0, 1, 10)
+        y = np.tile(t, (5, 1))
+        sol = pybamm.Solution(t, y, pybamm.BaseModel(), {})
+        assert sol.all_t_evals is sol._all_ts
+
+    def test_all_t_evals_explicit(self):
+        """Explicit all_t_evals (non-list ndarray) is wrapped in a list."""
+        t = np.linspace(0, 1, 20)
+        y = np.tile(t, (5, 1))
+        t_eval = np.array([0.0, 0.5, 1.0])
+        sol = pybamm.Solution(t, y, pybamm.BaseModel(), {}, all_t_evals=t_eval)
+        assert isinstance(sol.all_t_evals, list)
+        assert len(sol.all_t_evals) == 1
+        np.testing.assert_array_equal(sol.all_t_evals[0], t_eval)
+
+    def test_all_t_evals_as_list(self):
+        """Explicit all_t_evals provided as a list of arrays."""
+        t = np.linspace(0, 1, 20)
+        y = np.tile(t, (5, 1))
+        t_eval = [np.array([0.0, 0.5, 1.0])]
+        sol = pybamm.Solution(t, y, pybamm.BaseModel(), {}, all_t_evals=t_eval)
+        assert len(sol.all_t_evals) == 1
+        np.testing.assert_array_equal(sol.all_t_evals[0], t_eval[0])
+
+    def test_t_eval_property(self):
+        """t_eval property concatenates all_t_evals."""
+        t1 = np.linspace(0, 1, 10)
+        t2_start = np.nextafter(1.0, np.inf)
+        t2 = np.linspace(t2_start, 2, 10)
+        y1 = np.tile(t1, (5, 1))
+        y2 = np.tile(t2, (5, 1))
+        te1 = np.array([0.0, 0.5, 1.0])
+        te2 = np.array([t2_start, 1.5, 2.0])
+        sol = pybamm.Solution(
+            [t1, t2],
+            [y1, y2],
+            pybamm.BaseModel(),
+            [{}, {}],
+            all_t_evals=[te1, te2],
+        )
+        expected = np.concatenate([te1, te2])
+        np.testing.assert_array_equal(sol.t_eval, expected)
+
+    def test_ensure_t_evals_mismatched_length(self):
+        """Mismatched segment count raises ValueError."""
+        t = np.linspace(0, 1, 10)
+        y = np.tile(t, (5, 1))
+        bad_t_evals = [np.array([0.0, 1.0]), np.array([1.0, 2.0])]
+        with pytest.raises(ValueError, match=r"must match the length"):
+            pybamm.Solution(t, y, pybamm.BaseModel(), {}, all_t_evals=bad_t_evals)
+
+    def test_ensure_t_evals_unsorted(self):
+        """Unsorted t_evals raises ValueError."""
+        t = np.linspace(0, 1, 10)
+        y = np.tile(t, (5, 1))
+        bad_t_evals = [np.array([1.0, 0.5, 0.0])]
+        with pytest.raises(ValueError, match=r"sorted in increasing order"):
+            pybamm.Solution(t, y, pybamm.BaseModel(), {}, all_t_evals=bad_t_evals)
+
+    def test_ensure_t_evals_out_of_range(self):
+        """t_eval values outside all_ts range raise ValueError."""
+        t = np.linspace(0, 1, 10)
+        y = np.tile(t, (5, 1))
+        # t_eval starts before t
+        with pytest.raises(ValueError, match=r"within the same interval"):
+            pybamm.Solution(
+                t,
+                y,
+                pybamm.BaseModel(),
+                {},
+                all_t_evals=[np.array([-0.1, 0.5, 1.0])],
+            )
+        # t_eval ends after t
+        with pytest.raises(ValueError, match=r"within the same interval"):
+            pybamm.Solution(
+                t,
+                y,
+                pybamm.BaseModel(),
+                {},
+                all_t_evals=[np.array([0.0, 0.5, 1.1])],
+            )
+
+    def test_all_t_evals_copy(self):
+        """all_t_evals is preserved through copy."""
+        t = np.linspace(0, 1, 10)
+        y = np.tile(t, (5, 1))
+        t_eval = [np.array([0.0, 0.5, 1.0])]
+        sol = pybamm.Solution(t, y, pybamm.BaseModel(), {}, all_t_evals=t_eval)
+        sol_copy = sol.copy()
+        np.testing.assert_array_equal(sol_copy.all_t_evals[0], t_eval[0])
+
+    def test_all_t_evals_add_overlapping(self):
+        """all_t_evals propagation when adding solutions with overlapping first time."""
+        t1 = np.linspace(0, 1, 10)
+        y1 = np.tile(t1, (5, 1))
+        te1 = np.array([0.0, 0.5, 1.0])
+        sol1 = pybamm.Solution(t1, y1, pybamm.BaseModel(), {"a": 1}, all_t_evals=te1)
+        sol1.solve_time = 1.0
+        sol1.integration_time = 0.1
+
+        t2 = np.linspace(1, 2, 10)
+        y2 = np.tile(t2, (5, 1))
+        te2 = np.array([1.0, 1.5, 2.0])
+        sol2 = pybamm.Solution(t2, y2, pybamm.BaseModel(), {"a": 2}, all_t_evals=te2)
+        sol2.solve_time = 1.0
+        sol2.integration_time = 0.1
+
+        sol_sum = sol1 + sol2
+        # First time overlaps: te2[0] == te1[-1], so te2[1:] is used
+        assert len(sol_sum.all_t_evals) == 2
+        np.testing.assert_array_equal(sol_sum.all_t_evals[0], te1)
+        np.testing.assert_array_equal(sol_sum.all_t_evals[1], te2[1:])
+
+    def test_all_t_evals_add_non_overlapping(self):
+        """all_t_evals propagation when adding solutions without overlapping first time."""
+        t1 = np.linspace(0, 1, 10)
+        y1 = np.tile(t1, (5, 1))
+        te1 = np.array([0.0, 0.5, 1.0])
+        sol1 = pybamm.Solution(t1, y1, pybamm.BaseModel(), {"a": 1}, all_t_evals=te1)
+        sol1.solve_time = 1.0
+        sol1.integration_time = 0.1
+
+        t2 = np.linspace(1.5, 2.5, 10)
+        y2 = np.tile(t2, (5, 1))
+        te2 = np.array([1.5, 2.0, 2.5])
+        sol2 = pybamm.Solution(t2, y2, pybamm.BaseModel(), {"a": 2}, all_t_evals=te2)
+        sol2.solve_time = 1.0
+        sol2.integration_time = 0.1
+
+        sol_sum = sol1 + sol2
+        assert len(sol_sum.all_t_evals) == 2
+        np.testing.assert_array_equal(sol_sum.all_t_evals[0], te1)
+        np.testing.assert_array_equal(sol_sum.all_t_evals[1], te2)
+
+    def test_all_t_evals_add_none_fallback(self):
+        """When one solution has no all_t_evals, result falls back to None then all_ts."""
+        t1 = np.linspace(0, 1, 10)
+        y1 = np.tile(t1, (5, 1))
+        te1 = np.array([0.0, 0.5, 1.0])
+        sol1 = pybamm.Solution(t1, y1, pybamm.BaseModel(), {"a": 1}, all_t_evals=te1)
+        sol1.solve_time = 1.0
+        sol1.integration_time = 0.1
+
+        t2 = np.linspace(1.5, 2.5, 10)
+        y2 = np.tile(t2, (5, 1))
+        sol2 = pybamm.Solution(t2, y2, pybamm.BaseModel(), {"a": 2})
+        sol2.solve_time = 1.0
+        sol2.integration_time = 0.1
+        # Manually set _all_t_evals to None to simulate missing t_evals
+        sol2._all_t_evals = None
+
+        sol_sum = sol1 + sol2
+        # When one is None, result should have all_t_evals == None,
+        # which means the constructor will set it to all_ts
+        # But in __add__, all_t_evals=None is passed, so in constructor it becomes all_ts
+        assert sol_sum._all_t_evals is sol_sum._all_ts
 
     def test_add_solutions(self):
         # Set up first solution
@@ -91,6 +280,10 @@ class TestSolution:
             sol_sum.y, np.concatenate([y1, y2[:, 1:]], axis=1)
         )
         np.testing.assert_array_equal(sol_sum.all_inputs, [{"a": 1}, {"a": 2}])
+        assert sol_sum.all_inputs_stacked[0] is sol1.all_inputs_stacked[0]
+        assert sol_sum.all_inputs_stacked[1] is sol2.all_inputs_stacked[0]
+        assert sol_sum.all_inputs_casadi[0] is sol1.all_inputs_casadi[0]
+        assert sol_sum.all_inputs_casadi[1] is sol2.all_inputs_casadi[0]
 
         # Test sub-solutions
         assert len(sol_sum.sub_solutions) == 2
@@ -119,12 +312,12 @@ class TestSolution:
         # radd failure
         with pytest.raises(
             pybamm.SolverError,
-            match="Only a Solution or None can be added to a Solution",
+            match=r"Only a Solution or None can be added to a Solution",
         ):
             sol3 + 2
         with pytest.raises(
             pybamm.SolverError,
-            match="Only a Solution or None can be added to a Solution",
+            match=r"Only a Solution or None can be added to a Solution",
         ):
             2 + sol3
 
@@ -159,7 +352,7 @@ class TestSolution:
         # Test
         np.testing.assert_array_equal(sol_sum.t, np.concatenate([t1, t2[1:]]))
         with pytest.raises(
-            pybamm.SolverError, match="The solution is made up from different models"
+            pybamm.SolverError, match=r"The solution is made up from different models"
         ):
             sol_sum.y
 
@@ -198,6 +391,9 @@ class TestSolution:
     def test_copy(self):
         # Set up first solution
         t1 = [np.linspace(0, 1), np.linspace(1, 2, 5)]
+        # make sure the second solution is not exactly the same as the first
+        t1[1][0] = np.nextafter(t1[1][0], np.inf)
+
         y1 = [np.tile(t1[0], (20, 1)), np.tile(t1[1], (20, 1))]
         sol1 = pybamm.Solution(t1, y1, pybamm.BaseModel(), [{"a": 1}, {"a": 2}])
 
@@ -210,7 +406,8 @@ class TestSolution:
         for ys_copy, ys1 in zip(sol_copy.all_ys, sol1.all_ys, strict=False):
             np.testing.assert_array_equal(ys_copy, ys1)
         assert sol_copy.all_inputs == sol1.all_inputs
-        assert sol_copy.all_inputs_casadi == sol1.all_inputs_casadi
+        assert sol_copy.all_inputs_stacked is sol1.all_inputs_stacked
+        assert sol_copy.all_inputs_casadi is sol1.all_inputs_casadi
         assert sol_copy.set_up_time == sol1.set_up_time
         assert sol_copy.solve_time == sol1.solve_time
         assert sol_copy.integration_time == sol1.integration_time
@@ -240,9 +437,30 @@ class TestSolution:
         )
         assert sol2.variables_returned is True
 
+    def test_all_inputs(self):
+        t = [np.linspace(0, 1, 10), np.linspace(1, 2, 10)]
+        t[1][0] = np.nextafter(t[1][0], np.inf)
+        y = [np.tile(t[0], (5, 1)), np.tile(t[1], (5, 1))]
+        inputs = [{"a": 1.0, "b": 2.0, "c": 3.0}, {"a": 4.0, "b": 5.0, "c": 6.0}]
+        sol = pybamm.Solution(t, y, pybamm.BaseModel(), inputs)
+
+        stacked = sol.all_inputs_stacked
+        assert len(stacked) == 2
+        for s, inp in zip(stacked, inputs, strict=True):
+            assert isinstance(s, np.ndarray)
+            # check that it's a vector
+            assert s.shape == (len(inp),)
+            np.testing.assert_array_equal(s, np.array(list(inp.values())))
+
+        casadi_inputs = sol.all_inputs_casadi
+        assert len(casadi_inputs) == 2
+        for c, s in zip(casadi_inputs, stacked, strict=True):
+            np.testing.assert_array_equal(np.array(c).flatten(), s)
+
     def test_last_state(self):
         # Set up first solution
         t1 = [np.linspace(0, 1), np.linspace(1, 2, 5)]
+        t1[1][0] = np.nextafter(t1[1][0], np.inf)
         y1 = [np.tile(t1[0], (20, 1)), np.tile(t1[1], (20, 1))]
         sol1 = pybamm.Solution(t1, y1, pybamm.BaseModel(), [{"a": 1}, {"a": 2}])
 
@@ -254,6 +472,7 @@ class TestSolution:
         assert sol_last_state.all_ts[0] == 2
         np.testing.assert_array_equal(sol_last_state.all_ys[0], 2)
         assert sol_last_state.all_inputs == sol1.all_inputs[-1:]
+        assert sol_last_state.all_inputs_stacked == sol1.all_inputs_stacked[-1:]
         assert sol_last_state.all_inputs_casadi == sol1.all_inputs_casadi[-1:]
         assert sol_last_state.all_models == sol1.all_models[-1:]
         assert sol_last_state.set_up_time == 0
@@ -372,7 +591,7 @@ class TestSolution:
 
         # set variables first then save
         solution.update(["c", "d"])
-        with pytest.raises(ValueError, match="pickle"):
+        with pytest.raises(ValueError, match=r"pickle"):
             solution.save_data(to_format="pickle")
         solution.save_data(f"{test_stub}.pickle")
 
@@ -386,12 +605,12 @@ class TestSolution:
         np.testing.assert_array_equal(solution.data["c"], data_load["c"].flatten())
         np.testing.assert_array_equal(solution.data["d"], data_load["d"])
 
-        with pytest.raises(ValueError, match="matlab"):
+        with pytest.raises(ValueError, match=r"matlab"):
             solution.save_data(to_format="matlab")
 
         # to matlab with bad variables name fails
         solution.update(["c + d"])
-        with pytest.raises(ValueError, match="Invalid character"):
+        with pytest.raises(ValueError, match=r"Invalid character"):
             solution.save_data(f"{test_stub}.mat", to_format="matlab")
         # Works if providing alternative name
         solution.save_data(
@@ -403,7 +622,7 @@ class TestSolution:
         np.testing.assert_array_equal(solution.data["c + d"], data_load["c_plus_d"])
 
         # to csv
-        with pytest.raises(ValueError, match="only 0D variables can be saved to csv"):
+        with pytest.raises(ValueError, match=r"only 0D variables can be saved to csv"):
             solution.save_data(f"{test_stub}.csv", to_format="csv")
         # only save "c" and "2c"
         solution.save_data(f"{test_stub}.csv", ["c", "2c"], to_format="csv")
@@ -438,7 +657,7 @@ class TestSolution:
         )
 
         # raise error if format is unknown
-        with pytest.raises(ValueError, match="format 'wrong_format' not recognised"):
+        with pytest.raises(ValueError, match=r"format 'wrong_format' not recognised"):
             solution.save_data(f"{test_stub}.csv", to_format="wrong_format")
 
         # test save whole solution
@@ -474,8 +693,6 @@ class TestSolution:
         geometry = model.default_geometry
         param = model.default_parameter_values
         param.update({"Negative electrode conductivity [S.m-1]": "[input]"})
-        param.process_model(model)
-        param.process_geometry(geometry)
         var_pts = {"x_n": 5, "x_s": 5, "x_p": 5, "r_n": 10, "r_p": 10}
         spatial_methods = model.default_spatial_methods
         solver = model.default_solver
@@ -506,7 +723,7 @@ class TestSolution:
         solver = pybamm.IDAKLUSolver()
         with pytest.raises(
             ValueError,
-            match="time or state vector nodes should only appear within the time integral node",
+            match=r"time or state vector nodes should only appear within the time integral node",
         ):
             solver.solve(model, t_eval=[0, 0.1])["dts"]
 
@@ -518,7 +735,7 @@ class TestSolution:
         solver = pybamm.IDAKLUSolver()
         with pytest.raises(
             ValueError,
-            match="More than one time integral node found",
+            match=r"More than one time integral node found",
         ):
             solver.solve(model, t_eval=[0, 0.1])["dts"]
 
@@ -639,7 +856,7 @@ class TestSolution:
                 # should raise error if t_interp is not equal to data_times
                 with pytest.raises(
                     pybamm.SolverError,
-                    match="solution times and discrete times of the time integral are not equal",
+                    match=r"solution times and discrete times of the time integral are not equal",
                 ):
                     solver.solve(
                         model,
@@ -731,3 +948,159 @@ class TestSolution:
                     atol=1e-2,
                 )
                 assert isinstance(sol["integral"].sensitivities["a"], np.ndarray)
+
+    def test_observe(self):
+        """Test the observe method with pybamm symbols, comparing with model variables."""
+        # Set up a simple model
+        model = pybamm.lithium_ion.SPM()
+        parameter_values = pybamm.ParameterValues("Chen2020")
+
+        # Solve the model
+        sim = pybamm.Simulation(model, parameter_values=parameter_values)
+        sol = sim.solve([0, 3600])
+
+        # Test observing "Voltage [V]" symbol - should match exactly with model variable
+        voltage_symbol = model.variables["Voltage [V]"]
+        observed_voltage = sol.observe(voltage_symbol)
+
+        # Compare with the actual variable from solution
+        actual_voltage = sol["Voltage [V]"]
+
+        # They should match exactly
+        np.testing.assert_array_equal(observed_voltage.data, actual_voltage.data)
+        np.testing.assert_array_equal(observed_voltage.entries, actual_voltage.entries)
+
+        # Test with "Current [A]" - another model variable
+        current_symbol = model.variables["Current [A]"]
+        observed_current = sol.observe(current_symbol)
+        actual_current = sol["Current [A]"]
+        np.testing.assert_array_equal(observed_current.data, actual_current.data)
+        np.testing.assert_array_equal(observed_current.entries, actual_current.entries)
+
+        # Test that observe returns a ProcessedVariable
+        assert isinstance(observed_voltage, pybamm.ProcessedVariable)
+        assert isinstance(observed_current, pybamm.ProcessedVariable)
+
+        # Test that we can call observe multiple times and get the same result
+        observed_voltage2 = sol.observe(voltage_symbol)
+        np.testing.assert_array_equal(observed_voltage2.data, observed_voltage.data)
+
+        # Test that the cache works - verify it's the same object (not just equal)
+        observed_voltage3 = sol.observe(voltage_symbol)
+        assert observed_voltage3 is observed_voltage  # Should be the same cached object
+
+    def test_observe_with_numeric_inputs(self):
+        """Test that observe works with numeric inputs like 0, which get converted to symbols."""
+        # Set up a simple model
+        model = pybamm.lithium_ion.SPM()
+        sim = pybamm.Simulation(model)
+
+        sol = sim.solve([0, 1])
+
+        # Test observing a scalar value (0) - should convert to pybamm.Scalar(0)
+        observed_zero = sol.observe(0)
+        assert isinstance(observed_zero, pybamm.ProcessedVariable)
+        # Should be a constant array of zeros
+        np.testing.assert_array_equal(observed_zero.data, np.zeros(len(sol.t)))
+
+        # Test that numeric inputs are cached correctly
+        observed_zero2 = sol.observe(0)
+        assert observed_zero2 is observed_zero  # cached
+
+    def test_observe_failure(self):
+        """Test that observe raises an error if the solver includes `output_variables`."""
+        # 1. Input is invalid
+        t_eval = [0, 1]
+        model = pybamm.lithium_ion.SPM()
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        sim = pybamm.Simulation(model, parameter_values=parameter_values)
+        sol = sim.solve(t_eval)
+
+        with pytest.raises(ValueError, match=r"Input cannot be converted"):
+            sol.observe(None)
+
+        # 2. Trying to observe a symbol which is not part of the parameter_values or model
+        symbol = pybamm.Parameter("_not_in_model")
+        with pytest.raises(KeyError, match=r"not found"):
+            sol.observe(symbol)
+
+        # 3. Solver includes `output_variables` - solution not observable but models
+        # can still process symbols
+        solver = pybamm.IDAKLUSolver(output_variables=["Voltage [V]"])
+        sim = pybamm.Simulation(model, parameter_values=parameter_values, solver=solver)
+        sol = sim.solve(t_eval)
+        assert sol.observable is False
+        # Models can still process symbols (delayed variable processing is enabled)
+        assert all(model.can_process_symbols for model in sol.all_models)
+
+        with pytest.raises(ValueError, match=r"solver includes `output_variables`"):
+            sol.observe(model.variables["Current [A]"])
+
+        # 4. `disable_solution_observability` is called on the model - solution not
+        # observable but models can still process symbols
+        model = pybamm.lithium_ion.SPM()
+        model.disable_solution_observability(pybamm.ModelSolutionObservability.DISABLED)
+        sim = pybamm.Simulation(model)
+        sol = sim.solve(t_eval)
+        assert sol.observable is False
+        assert all(model.can_process_symbols for model in sol.all_models)
+
+        with pytest.raises(ValueError, match=r"disable_solution_observability"):
+            sol.observe(model.variables["Current [A]"])
+
+        # 5. Missing non-strictly required input parameters - solution unobservable
+        # but models can still process symbols
+        model = pybamm.lithium_ion.SPM()
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        input_names = sorted(
+            ["dummy", "Positive electrode active material volume fraction"]
+        )
+        parameter_values.update({k: "[input]" for k in input_names})
+        sim = pybamm.Simulation(model, parameter_values=parameter_values)
+
+        # purposefully missing the dummy input
+        inputs = {name: 0.5 for name in input_names if name != "dummy"}
+
+        # check that BaseSolver raises a warning about missing inputs,
+        # and is unobservable, but it is still solvable
+        log_capture = io.StringIO()
+        handler = logging.StreamHandler(log_capture)
+        handler.setLevel(logging.WARNING)
+        logger = logging.getLogger("pybamm.logger")
+        logger.addHandler(handler)
+
+        sol = sim.solve(t_eval, inputs=inputs)
+
+        log_output = log_capture.getvalue()
+        assert "No value provided for input" in log_output
+        assert "dummy" in log_output
+        assert "can no longer be observed" in log_output
+        logger.removeHandler(handler)
+
+        assert sol.observable is False
+        assert all(not model.solution_observable for model in sol.all_models)
+
+        model = sol.all_models[0]
+        assert set(ip.name for ip in model.input_parameters) == set(input_names)
+        assert set(ip.name for ip in model.required_input_parameters) == set(
+            inputs.keys()
+        )
+        # check that missing input is set to DUMMY_INPUT_PARAMETER_VALUE (np.nan)
+        assert np.isnan(sol.all_inputs[0]["dummy"])
+
+        with pytest.raises(ValueError, match=r"input parameters were not provided"):
+            sol.observe(model.variables["Current [A]"])
+
+        # 6. Model is partially processed before simulation is built - models cannot
+        # process symbols at all
+        model = pybamm.lithium_ion.SPM()
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        parameter_values.process_model(model)
+        sim = pybamm.Simulation(model, parameter_values=parameter_values)
+        sol = sim.solve(t_eval)
+        assert sol.observable is False
+        assert all(not model.can_process_symbols for model in sol.all_models)
+        model = sol.all_models[0]
+
+        with pytest.raises(ValueError, match=r"re-parameterised"):
+            sol.observe(model.variables["Current [A]"])
