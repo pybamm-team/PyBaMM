@@ -38,61 +38,20 @@ CSV_FILENAME = "ageing_and_cycling_analysis.csv"
 DATA_FILENAME = "ageing_and_cycling_data.pkl"
 
 # --- Variants Definition ---
+BASE_OPTIONS = {
+    "SEI": "solvent-diffusion limited",
+    "SEI porosity change": "true",
+    "lithium plating": "partially reversible",
+    "lithium plating porosity change": "true",
+    "particle mechanics": ("swelling and cracking", "swelling only"),
+    "SEI on cracks": "true",
+    "loss of active material": "stress-driven",
+}
+
 VARIANTS = {
-    "Baseline": {
-        "SEI": "solvent-diffusion limited",
-        "SEI porosity change": "true",
-        "lithium plating": "partially reversible",
-        "lithium plating porosity change": "true",
-        "particle mechanics": ("swelling and cracking", "swelling only"),
-        "SEI on cracks": "true",
-        "loss of active material": "stress-driven",
-    },
-    "No LAM": {
-        "SEI": "solvent-diffusion limited",
-        "SEI porosity change": "true",
-        "lithium plating": "partially reversible",
-        "lithium plating porosity change": "true",
-        "particle mechanics": ("swelling and cracking", "swelling only"),
-        "SEI on cracks": "true",
-        "loss of active material": "none",
-    },
-    "No Plating": {
-        "SEI": "solvent-diffusion limited",
-        "SEI porosity change": "true",
-        "lithium plating": "none",
-        "lithium plating porosity change": "false",
-        "particle mechanics": ("swelling and cracking", "swelling only"),
-        "SEI on cracks": "true",
-        "loss of active material": "none",
-    },
-    "No Cracking": {
-        "SEI": "solvent-diffusion limited",
-        "SEI porosity change": "true",
-        "lithium plating": "partially reversible",
-        "lithium plating porosity change": "true",
-        "particle mechanics": "none",
-        "SEI on cracks": "false",
-        "loss of active material": "none",
-    },
-    "Only SEI": {
-        "SEI": "solvent-diffusion limited",
-        "SEI porosity change": "true",
-        "lithium plating": "none",
-        "lithium plating porosity change": "false",
-        "particle mechanics": "none",
-        "SEI on cracks": "false",
-        "loss of active material": "none",
-    },
-    "Electron Migration SEI": {
-        "SEI": "electron-migration limited",
-        "SEI porosity change": "true",
-        "lithium plating": "none",
-        "lithium plating porosity change": "false",
-        "particle mechanics": "none",
-        "SEI on cracks": "false",
-        "loss of active material": "none",
-    },
+    "Scale 0.1": (BASE_OPTIONS, 0.1),
+    "Scale 1.0": (BASE_OPTIONS, 1.0),
+    "Scale 10.0": (BASE_OPTIONS, 10.0),
 }
 
 # --- Experiment Definition ---
@@ -122,6 +81,20 @@ def setup_logger(verbose: bool) -> logging.Logger:
     return logging.getLogger(__name__)
 
 
+def get_parameter_values(scale_factor):
+    parameter_values = pybamm.ParameterValues("OKane2022")
+    if scale_factor != 1.0:
+        base_D_n = parameter_values["Negative particle diffusivity [m2.s-1]"]
+        base_D_p = parameter_values["Positive particle diffusivity [m2.s-1]"]
+        def D_n_scaled(sto, T, sf=scale_factor, base_fn=base_D_n):
+            return sf * base_fn(sto, T)
+        def D_p_scaled(sto, T, sf=scale_factor, base_fn=base_D_p):
+            return sf * base_fn(sto, T)
+        parameter_values["Negative particle diffusivity [m2.s-1]"] = D_n_scaled
+        parameter_values["Positive particle diffusivity [m2.s-1]"] = D_p_scaled
+    return parameter_values
+
+
 def get_submesh_types(model_class):
     """Returns the submesh types (Uniform default)."""
     model = model_class()
@@ -129,11 +102,11 @@ def get_submesh_types(model_class):
     return submesh_types
 
 
-def run_ageing_phase(options, storage_days, initial_soc, logger):
+def run_ageing_phase(options, scale_factor, storage_days, initial_soc, logger):
     """Runs the initial calendar ageing (storage) phase."""
     logger.info(f"    Running initial {storage_days}-day storage ageing phase...")
     model = pybamm.lithium_ion.DFN(options)
-    parameter_values = pybamm.ParameterValues("OKane2022")
+    parameter_values = get_parameter_values(scale_factor)
 
     parameter_values["Current function [A]"] = 0
 
@@ -180,7 +153,7 @@ def run_ageing_phase(options, storage_days, initial_soc, logger):
 
 
 def run_cycling_phase(
-    name, options, starting_solution, total_cycles, cycles_per_chunk, logger
+    name, options, scale_factor, starting_solution, total_cycles, cycles_per_chunk, logger
 ):
     """Runs the chunked cycling phase using the aged solution as the starting point."""
     logger.info(f"    Starting cycling phase ({total_cycles} cycles)...")
@@ -200,7 +173,7 @@ def run_cycling_phase(
     }
 
     var_pts = {"x_n": 30, "x_s": 30, "x_p": 30, "r_n": 50, "r_p": 50}
-    parameter_values = pybamm.ParameterValues("OKane2022")
+    parameter_values = get_parameter_values(scale_factor)
     solver = pybamm.IDAKLUSolver(atol=1e-8, rtol=1e-8)
 
     current_solution = starting_solution
@@ -304,17 +277,17 @@ def run_simulations(storage_days, initial_soc, total_cycles, chunk_size, logger)
     """Run all variant simulations and return serializable results."""
     results = {}
 
-    for name, options in VARIANTS.items():
+    for name, (options, scale_factor) in VARIANTS.items():
         logger.info(f"--- Processing Variant: {name} ---")
 
         # 1. Ageing Phase
         aged_solution, storage_trace = run_ageing_phase(
-            options, storage_days, initial_soc, logger
+            options, scale_factor, storage_days, initial_soc, logger
         )
 
         # 2. Cycling Phase
         cycling_data = run_cycling_phase(
-            name, options, aged_solution, total_cycles, chunk_size, logger
+            name, options, scale_factor, aged_solution, total_cycles, chunk_size, logger
         )
         if cycling_data["cycles"]:
             cycling_data["storage_trace"] = storage_trace
