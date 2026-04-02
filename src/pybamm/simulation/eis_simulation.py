@@ -43,6 +43,9 @@ class EISSimulation(BaseSimulation):
 
         parameter_values = parameter_values or model.default_parameter_values
 
+        # Validate required variables and surface form before any processing
+        self._validate_model_for_eis(model)
+
         # Compute impedance scale factor before model transformation
         V_scale = getattr(model.variables["Voltage [V]"], "scale", 1)
         I_scale = getattr(model.variables["Current [A]"], "scale", 1)
@@ -70,6 +73,31 @@ class EISSimulation(BaseSimulation):
         pybamm.citations.register("Hallemans2025")
 
     @staticmethod
+    def _validate_model_for_eis(model):
+        """Validate that a model is suitable for frequency-domain EIS.
+
+        Raises
+        ------
+        ValueError
+            If the model is missing required variables or options.
+        """
+        required_vars = ["Voltage [V]", "Current [A]"]
+        for var in required_vars:
+            if var not in model.variables:
+                raise ValueError(
+                    f"Model must contain variable '{var}' for EIS simulation"
+                )
+
+        surface_form = model.options.get("surface form", "false")
+        if surface_form not in ("differential", "algebraic"):
+            raise ValueError(
+                f"EIS simulation requires 'surface form' model option to be "
+                f"'differential' or 'algebraic', got '{surface_form}'. "
+                f"Use e.g. pybamm.lithium_ion.SPM("
+                f"options={{\"surface form\": \"differential\"}})"
+            )
+
+    @staticmethod
     def _set_up_model_for_eis(model):
         """Prepare a model for frequency-domain EIS.
 
@@ -86,18 +114,7 @@ class EISSimulation(BaseSimulation):
         -------
         new_model : :class:`pybamm.BaseModel`
             Modified model copy.
-
-        Raises
-        ------
-        ValueError
-            If the model is missing required variables.
         """
-        required_vars = ["Voltage [V]", "Current [A]"]
-        for var in required_vars:
-            if var not in model.variables:
-                raise ValueError(
-                    f"Model must contain variable '{var}' for EIS simulation"
-                )
 
         new_model = model.new_copy()
 
@@ -177,15 +194,18 @@ class EISSimulation(BaseSimulation):
         J_sparse = model.jac_rhs_algebraic_eval(0, y0, casadi_inputs).sparse()
         neg_J = -J_sparse if isinstance(J_sparse, csc_matrix) else -csc_matrix(J_sparse)
 
-        # M and b are independent of operating point
-        if not hasattr(self, "_cached_M"):
+        # M and b are independent of operating point and cached after first call,
+        # but we have a defensive guard to invalidate it if the state vector size changes
+        n = y0.shape[0]
+        if not hasattr(self, "_cached_M") or self._cached_b.shape[0] != n:
             self._cached_M = csc_matrix(model.mass_matrix.entries)
-            self._cached_b = np.zeros(y0.shape[0])
+            self._cached_b = np.zeros(n)
             self._cached_b[-1] = -1
 
         return self._cached_M, neg_J, self._cached_b
 
-    def calculate_impedance(self, frequency, M, neg_J, b):
+    @staticmethod
+    def _calculate_impedance(frequency, M, neg_J, b):
         """Calculate impedance at a single frequency.
 
         Parameters
@@ -242,7 +262,7 @@ class EISSimulation(BaseSimulation):
 
         M, neg_J, b = self._build_matrix_problem(inputs_dict=inputs)
 
-        zs = [self.calculate_impedance(f, M, neg_J, b) for f in frequencies]
+        zs = [self._calculate_impedance(f, M, neg_J, b) for f in frequencies]
         impedance = np.array(zs) * self._z_scale
         self._solution = pybamm.EISSolution(frequencies, impedance)
         self._solution.set_up_time = self.set_up_time

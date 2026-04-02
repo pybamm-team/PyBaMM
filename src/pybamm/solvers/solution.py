@@ -55,6 +55,8 @@ class SolutionBase:
 
     @property
     def total_time(self):
+        if self.set_up_time is None or self.solve_time is None:
+            return None
         return self.set_up_time + self.solve_time
 
     def save(self, filename):
@@ -90,7 +92,9 @@ class SolutionBase:
             data = {short_names.get(k, k): v for k, v in data.items()}
 
         if to_format == "csv":
-            pd.DataFrame(data).to_csv(filename, index=False)
+            import pandas as _pd
+
+            _pd.DataFrame(data).to_csv(filename, index=False)
         elif to_format == "json":
             with open(filename, "w") as f:
                 json.dump(data, f, cls=NumpyEncoder)
@@ -98,7 +102,9 @@ class SolutionBase:
             with open(filename, "wb") as f:
                 pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
         elif to_format == "matlab":
-            savemat(filename, data)
+            from scipy.io import savemat as _savemat
+
+            _savemat(filename, data)
         else:
             raise ValueError(
                 f"Unrecognised format '{to_format}'. "
@@ -1177,9 +1183,13 @@ class Solution(SolutionBase):
 
 
 class EmptySolution:
-    def __init__(self, termination=None, t=0):
+    def __init__(self, termination=None, t=None):
         self.termination = termination
-        self.t = np.atleast_1d(np.asarray(t))
+        if t is None:
+            t = np.array([0])
+        elif isinstance(t, numbers.Number):
+            t = np.array([t])
+        self.t = t
 
     def __add__(self, other):
         if isinstance(other, EmptySolution | Solution):

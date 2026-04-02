@@ -2,6 +2,11 @@
 
 This module contains the SymbolReplacer class used to prepare models for
 frequency-domain EIS calculations.
+
+Note: SymbolReplacer performs arbitrary symbol-to-symbol replacement in
+expression trees, which differs from ParameterSubstitutor (replaces
+Parameter nodes with values from a ParameterStore). The two follow the
+same tree-walking pattern but serve different purposes.
 """
 
 import pybamm
