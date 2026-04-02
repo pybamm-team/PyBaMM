@@ -94,7 +94,7 @@ class EISSimulation(BaseSimulation):
                 f"EIS simulation requires 'surface form' model option to be "
                 f"'differential' or 'algebraic', got '{surface_form}'. "
                 f"Use e.g. pybamm.lithium_ion.SPM("
-                f"options={{\"surface form\": \"differential\"}})"
+                f'options={{"surface form": "differential"}})'
             )
 
     @staticmethod
