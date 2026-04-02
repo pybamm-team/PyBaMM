@@ -15,6 +15,7 @@ from pybamm.dispatch.entry_points import (
 MODEL_URL = "https://raw.githubusercontent.com/pybamm-team/pybamm-reservoir-example/refs/heads/main/dfn.py"
 
 
+@pytest.mark.xdist_group(name="dispatch_cache_group")
 class TestDispatch:
     def setup_method(self):
         """Clear cache before each test"""
