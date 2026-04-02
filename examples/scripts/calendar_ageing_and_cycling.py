@@ -269,11 +269,14 @@ def run_cycling_phase(
     return data
 
 
-def run_simulations(storage_days, initial_soc, total_cycles, chunk_size, logger):
+def run_simulations(storage_days, initial_soc, total_cycles, chunk_size, logger, only_variant=None):
     """Run all variant simulations and return serializable results."""
     results = {}
 
     for name, (options, scale_factor) in VARIANTS.items():
+        if only_variant and name != only_variant:
+            continue
+            
         logger.info(f"--- Processing Variant: {name} ---")
 
         # 1. Ageing Phase
@@ -295,23 +298,38 @@ def run_simulations(storage_days, initial_soc, total_cycles, chunk_size, logger)
     return results
 
 
-def save_data(results, output_dir, logger):
+def save_data(results, output_dir, logger, only_variant=None):
     """Serialize results to a pickle file."""
-    data_path = output_dir / DATA_FILENAME
+    if only_variant:
+        safe_name = only_variant.replace(" ", "_").replace(".", "_")
+        data_path = output_dir / f"ageing_and_cycling_data_{safe_name}.pkl"
+    else:
+        data_path = output_dir / DATA_FILENAME
+        
     with open(data_path, "wb") as f:
         pickle.dump(results, f)
     logger.info(f"Data saved to {data_path}")
 
 
 def load_data(output_dir, logger):
-    """Load results from a previously saved pickle file."""
-    data_path = output_dir / DATA_FILENAME
-    if not data_path.exists():
-        logger.error(f"No saved data found at {data_path}. Run simulation first.")
-        raise FileNotFoundError(f"No saved data at {data_path}")
-    with open(data_path, "rb") as f:
-        results = pickle.load(f)
-    logger.info(f"Loaded data from {data_path} ({len(results)} variants)")
+    """Load results from previously saved pickle file(s)."""
+    results = {}
+    pkl_files = list(output_dir.glob("ageing_and_cycling_data_*.pkl"))
+    
+    if pkl_files and not (output_dir / DATA_FILENAME).exists():
+        for pkl in pkl_files:
+            with open(pkl, "rb") as f:
+                res = pickle.load(f)
+                results.update(res)
+    else:
+        data_path = output_dir / DATA_FILENAME
+        if not data_path.exists():
+            logger.error(f"No saved data found at {data_path}. Run simulation first.")
+            raise FileNotFoundError(f"No saved data at {data_path}")
+        with open(data_path, "rb") as f:
+            results = pickle.load(f)
+            
+    logger.info(f"Loaded data ({len(results)} variants)")
     return results
 
 
@@ -488,6 +506,12 @@ def parse_args():
         help="Cycles per chunk (for memory management)",
     )
     parser.add_argument(
+        "--only-variant",
+        type=str,
+        default=None,
+        help="Run only a specific variant by name (e.g. 'Scale 1.0')",
+    )
+    parser.add_argument(
         "--output-dir", type=str, default=".", help="Directory to save outputs"
     )
     parser.add_argument(
@@ -531,7 +555,7 @@ def main():
 
         start_time = time.time()
         results = run_simulations(
-            storage_days, args.soc, total_cycles, chunk_size, logger
+            storage_days, args.soc, total_cycles, chunk_size, logger, args.only_variant
         )
         execution_time = time.time() - start_time
         logger.info(f"Total simulation time: {execution_time:.2f} seconds")
@@ -541,7 +565,7 @@ def main():
             return
 
         # Save data for future --plot-only runs
-        save_data(results, output_dir, logger)
+        save_data(results, output_dir, logger, args.only_variant)
 
     # ---- Generate outputs (both modes) ----
     plot_results(results, output_dir, logger)
