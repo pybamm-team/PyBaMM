@@ -84,14 +84,10 @@ def setup_logger(verbose: bool) -> logging.Logger:
 def get_parameter_values(scale_factor):
     parameter_values = pybamm.ParameterValues("OKane2022")
     if scale_factor != 1.0:
-        base_D_n = parameter_values["Negative particle diffusivity [m2.s-1]"]
-        base_D_p = parameter_values["Positive particle diffusivity [m2.s-1]"]
-        def D_n_scaled(sto, T, sf=scale_factor, base_fn=base_D_n):
-            return sf * base_fn(sto, T)
-        def D_p_scaled(sto, T, sf=scale_factor, base_fn=base_D_p):
-            return sf * base_fn(sto, T)
-        parameter_values["Negative particle diffusivity [m2.s-1]"] = D_n_scaled
-        parameter_values["Positive particle diffusivity [m2.s-1]"] = D_p_scaled
+        base_j0_n = parameter_values["Negative electrode exchange-current density [A.m-2]"]
+        def j0_n_scaled(c_e, c_s_surf, c_s_max, T, sf=scale_factor, base_fn=base_j0_n):
+            return sf * base_fn(c_e, c_s_surf, c_s_max, T)
+        parameter_values["Negative electrode exchange-current density [A.m-2]"] = j0_n_scaled
     return parameter_values
 
 
