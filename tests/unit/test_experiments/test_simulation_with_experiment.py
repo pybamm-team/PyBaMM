@@ -110,7 +110,7 @@ class TestSimulationExperiment:
         )
         sim.build_for_experiment()
 
-        assert sim._experiment_step_index_input_name() == "Experiment step index"
+        assert sim._STEP_INDEX_INPUT == "Experiment step index"
         assert sim._experiment_step_indices == [1, 2]
         assert sim._experiment_padding_rest_index == 3
         assert sim._experiment_includes_padding_rest
@@ -898,10 +898,7 @@ class TestSimulationExperiment:
         )
         sensitivity_keys = set(solutions[1]["Voltage [V]"].sensitivities)
         assert input_param_name in sensitivity_keys
-        assert (
-            pybamm.Simulation._experiment_step_index_input_name()
-            not in sensitivity_keys
-        )
+        assert pybamm.Simulation._STEP_INDEX_INPUT not in sensitivity_keys
 
         # use finite difference to check sensitivities
         t = solutions[0].t
@@ -1598,7 +1595,7 @@ class TestSimulationExperiment:
         class StepSolutionProxy:
             def __init__(self, source):
                 self.source = source
-                self.termination = f"event: {sim._combined_step_termination_event_name}"
+                self.termination = f"event: {sim._COMBINED_TERMINATION_EVENT}"
                 self.t_event = None
                 self.y_event = None
                 self.t = source.t
@@ -1633,9 +1630,7 @@ class TestSimulationExperiment:
         )
         sim.build_for_experiment()
         step_solution = pybamm.EmptySolution()
-        step_solution.termination = (
-            f"event: {sim._combined_step_termination_event_name}"
-        )
+        step_solution.termination = f"event: {sim._COMBINED_TERMINATION_EVENT}"
         step = SimpleNamespace(
             direction="rest", termination=[pybamm.step.VoltageTermination(4.2)]
         )
