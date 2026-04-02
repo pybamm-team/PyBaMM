@@ -1062,7 +1062,7 @@ class ParameterValues:
         >>> isinstance(evaluated, dict)
         True
         >>> param.print_parameters(params_dict, "output.txt")
-        defaultdict(<class 'list'>, {'param1': np.float64(5.0)})
+        defaultdict(<class 'list'>, {'param1': 5.0})
         """
         # Set list of attributes to ignore
         ignore = [
