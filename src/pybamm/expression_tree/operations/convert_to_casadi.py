@@ -77,6 +77,24 @@ class CasadiConverter:
                 raise ValueError("Must provide a 'y_dot' for converting state vectors")
             return casadi.vertcat(*[y_dot[y_slice] for y_slice in symbol.y_slices])
 
+        elif isinstance(symbol, pybamm.Conditional):
+            converted_selector = self.convert(symbol.selector, t, y, y_dot, inputs)
+            first_branch = self.convert(symbol.branches[0], t, y, y_dot, inputs)
+            result = casadi.MX.zeros(*first_branch.shape)
+            for branch_index in range(len(symbol.branches), 0, -1):
+                if branch_index == 1:
+                    converted_branch = first_branch
+                else:
+                    converted_branch = self.convert(
+                        symbol.branches[branch_index - 1], t, y, y_dot, inputs
+                    )
+                condition = casadi.logic_and(
+                    converted_selector > (branch_index - 0.5),
+                    converted_selector < (branch_index + 0.5),
+                )
+                result = casadi.if_else(condition, converted_branch, result)
+            return result
+
         elif isinstance(symbol, pybamm.BinaryOperator):
             left, right = symbol.children
             # process children

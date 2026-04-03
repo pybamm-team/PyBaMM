@@ -14,6 +14,7 @@ jobs:
     if: github.repository == 'pybamm-team/PyBaMM'
     name: Dispatch to `pybamm-validation`
     runs-on: ubuntu-latest
+    environment: benchmarks
     permissions:
       contents: read
     steps:

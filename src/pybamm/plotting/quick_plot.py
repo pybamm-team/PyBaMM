@@ -261,7 +261,7 @@ class QuickPlot:
         input_solutions = QuickPlot.check_input_validity(solutions)
         processed_solutions = []
         for sim_or_sol in input_solutions:
-            if isinstance(sim_or_sol, pybamm.Simulation):
+            if isinstance(sim_or_sol, pybamm.BaseSimulation):
                 # 'sim_or_sol' is actually a 'Simulation' object here, so it has a
                 # 'Solution' attribute
                 processed_solutions.append(sim_or_sol.solution)
@@ -271,7 +271,9 @@ class QuickPlot:
 
     @staticmethod
     def check_input_validity(input_solutions):
-        if not isinstance(input_solutions, pybamm.Solution | pybamm.Simulation | list):
+        if not isinstance(
+            input_solutions, pybamm.Solution | pybamm.BaseSimulation | list
+        ):
             raise TypeError(
                 "Solutions must be 'pybamm.Solution' or 'pybamm.Simulation' or list"
             )

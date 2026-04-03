@@ -366,12 +366,22 @@ class Arcsinh2(Function):
 
     @staticmethod
     def _arcsinh2_evaluate(a, b, eps):
-        """Evaluate arcsinh2 using numpy.
+        """Evaluate arcsinh2.
 
         Computes arcsinh(a/b) with regularization to avoid division by zero.
         Uses arcsinh(a / b_eff) where b_eff = sign(b) * hypot(b, eps).
         This formula has the correct derivative 1/b_eff at a=0.
+
+        Works with both numpy arrays and JAX traced arrays.
         """
+        # Use jax.numpy when tracing JAX arrays, otherwise numpy
+        if pybamm.has_jax():
+            import jax.numpy as jnp
+
+            if isinstance(a, jnp.ndarray) or isinstance(b, jnp.ndarray):
+                sign_b = jnp.where(b >= 0, 1.0, -1.0)
+                b_eff = sign_b * jnp.sqrt(b**2 + eps**2)
+                return jnp.arcsinh(a / b_eff)
         # sign(b) but treat sign(0) as non-zero
         sign_b = np.where(b >= 0, 1.0, -1.0)
         b_eff = sign_b * np.hypot(b, eps)

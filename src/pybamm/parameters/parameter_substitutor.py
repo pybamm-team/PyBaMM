@@ -251,6 +251,7 @@ class ParameterSubstitutor:
             isinstance(symbol, pybamm.Function)
             or isinstance(symbol, pybamm.Concatenation)
             or isinstance(symbol, pybamm.BinaryOperator)
+            or isinstance(symbol, pybamm.Conditional)
         ):
             new_children = [self.process_symbol(child) for child in symbol.children]
             return symbol.create_copy(new_children)

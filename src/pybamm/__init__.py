@@ -31,6 +31,7 @@ from .expression_tree.averages import *
 from .expression_tree.averages import _BaseAverage
 from .expression_tree.broadcasts import *
 from .expression_tree.functions import *
+from .expression_tree.conditional import Conditional
 from .expression_tree.interpolant import Interpolant
 from .expression_tree.discrete_time_sum import *
 from .expression_tree.input_parameter import InputParameter
@@ -221,7 +222,7 @@ from .plotting.plot_3d_heatmap import plot_3d_heatmap
 from .plotting.plot_vtk import VTKQuickPlot
 
 # Simulation
-from .simulation import Simulation, load_sim, is_notebook
+from .simulation import BaseSimulation, Simulation, load_sim, is_notebook
 
 # Batch Study
 from .batch_study import BatchStudy

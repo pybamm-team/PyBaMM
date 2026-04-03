@@ -748,7 +748,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         number_of_samples = sol.y.shape[0] // number_of_timesteps
         sol.y = sol.y.reshape((number_of_timesteps, number_of_samples))
         sensitivity_params = (
-            list(inputs_dict.keys()) if model.calculate_sensitivities else []
+            model.calculate_sensitivities if model.calculate_sensitivities else []
         )
 
         start_idx = 0
@@ -1090,6 +1090,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         )
 
         # Propagate metadata from the original solution
+        new_sol._all_inputs_stacked = solution.all_inputs_stacked
         new_sol._all_inputs_casadi = solution.all_inputs_casadi
         new_sol.closest_event_idx = solution.closest_event_idx
 

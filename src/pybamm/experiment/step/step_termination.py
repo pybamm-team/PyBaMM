@@ -6,8 +6,8 @@ import pybamm
 class BaseTermination:
     """
     Base class for a termination event for an experiment step. To create a custom
-    termination, a class must implement `get_event` to return a :class:`pybamm.Event`
-    corresponding to the desired termination. In most cases the class
+    termination, a class must implement `get_event_expression` to return the symbolic
+    expression for the event. In most cases the class
     :class:`pybamm.step.CustomTermination` can be used to assist with this.
 
     Parameters
@@ -22,9 +22,12 @@ class BaseTermination:
             raise ValueError(f"Invalid operator: {operator}")
         self.operator = operator
 
-    def get_event(self, variables, step):
+    def get_event_name(self, step):
+        raise NotImplementedError  # pragma: no cover
+
+    def get_event_expression(self, variables, step):
         """
-        Return a :class:`pybamm.Event` object corresponding to the termination event
+        Return the symbolic expression corresponding to the termination event.
 
         Parameters
         ----------
@@ -35,7 +38,13 @@ class BaseTermination:
             Step for which this is a termination event, to be used in some
             cases to determine the sign of the event.
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover
+
+    def get_event(self, variables, step):
+        expression = self.get_event_expression(variables, step)
+        if expression is None:
+            return None
+        return pybamm.Event(self.get_event_name(step), expression)
 
     def __eq__(self, other):
         # objects are equal if they have the same type and value
@@ -51,15 +60,11 @@ class CRateTermination(BaseTermination):
     (e.g. "C/10") is provided
     """
 
-    def get_event(self, variables, step):
-        """
-        See :meth:`BaseTermination.get_event`
-        """
-        event = pybamm.Event(
-            "C-rate cut-off [experiment]",
-            abs(variables["C-rate"]) - self.value,
-        )
-        return event
+    def get_event_name(self, step):
+        return "C-rate cut-off [experiment]"
+
+    def get_event_expression(self, variables, step):
+        return abs(variables["C-rate"]) - self.value
 
 
 class CrateTermination(CRateTermination):
@@ -82,25 +87,23 @@ class CurrentTermination(BaseTermination):
     (e.g. "1A") is provided
     """
 
-    def get_event(self, variables, step):
-        """
-        See :meth:`BaseTermination.get_event`
-        """
+    def get_event_name(self, step):
         operator = self.operator
         if operator == ">":
-            expr = self.value - variables["Current [A]"]
-            event_string = f"Current [A] > {self.value} [A] [experiment]"
+            return f"Current [A] > {self.value} [A] [experiment]"
         elif operator == "<":
-            expr = variables["Current [A]"] - self.value
-            event_string = f"Current [A] < {self.value} [A] [experiment]"
+            return f"Current [A] < {self.value} [A] [experiment]"
         else:
-            expr = abs(variables["Current [A]"]) - self.value
-            event_string = f"abs(Current [A]) < {self.value} [A] [experiment]"
-        event = pybamm.Event(
-            event_string,
-            expr,
-        )
-        return event
+            return f"abs(Current [A]) < {self.value} [A] [experiment]"
+
+    def get_event_expression(self, variables, step):
+        operator = self.operator
+        if operator == ">":
+            return self.value - variables["Current [A]"]
+        elif operator == "<":
+            return variables["Current [A]"] - self.value
+        else:
+            return abs(variables["Current [A]"]) - self.value
 
 
 class VoltageTermination(BaseTermination):
@@ -109,15 +112,7 @@ class VoltageTermination(BaseTermination):
     (e.g. "4.2V") is provided
     """
 
-    def get_event(self, variables, step):
-        """
-        See :meth:`BaseTermination.get_event`
-        """
-        # The voltage event should be positive at the start of charge/
-        # discharge. We use the sign of the current or power input to
-        # figure out whether the voltage event is greater than the starting
-        # voltage (charge) or less (discharge) and set the sign of the
-        # event accordingly
+    def _get_operator(self, step):
         operator = self.operator
         if operator is None:
             direction = step.direction
@@ -126,22 +121,31 @@ class VoltageTermination(BaseTermination):
             elif direction == "discharge":
                 operator = "<"
             else:
-                # No event for rest steps
                 return None
+        return operator
+
+    def get_event_name(self, step):
+        operator = self._get_operator(step)
+        if operator is None:
+            return None
+        return f"Voltage {operator} {self.value} [V] [experiment]"
+
+    def get_event_expression(self, variables, step):
+        # The voltage event should be positive at the start of charge/
+        # discharge. We use the sign of the current or power input to
+        # figure out whether the voltage event is greater than the starting
+        # voltage (charge) or less (discharge) and set the sign of the
+        # event accordingly
+        operator = self._get_operator(step)
+        if operator is None:
+            return None
 
         if operator == ">":
             sign = -1
         else:
-            # operator can only be "<" or ">"
             sign = 1
 
-        # Event should be positive at initial conditions for both
-        # charge and discharge
-        event = pybamm.Event(
-            f"Voltage {operator} {self.value} [V] [experiment]",
-            sign * (variables["Battery voltage [V]"] - self.value),
-        )
-        return event
+        return sign * (variables["Battery voltage [V]"] - self.value)
 
 
 class Voltage:
@@ -193,11 +197,11 @@ class CustomTermination(BaseTermination):
         self.name = name
         self.event_function = event_function
 
-    def get_event(self, variables, step):
-        """
-        See :meth:`BaseTermination.get_event`
-        """
-        return pybamm.Event(self.name, self.event_function(variables))
+    def get_event_name(self, step):
+        return self.name
+
+    def get_event_expression(self, variables, step):
+        return self.event_function(variables)
 
 
 def _read_termination(termination, operator=None):

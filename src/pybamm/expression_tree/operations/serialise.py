@@ -1754,6 +1754,7 @@ class Serialise:
         """
         step_type_map = {
             "Current": "current",
+            "Rest": "rest",
             "Voltage": "voltage",
             "Power": "power",
             "CRate": "c-rate",
@@ -1836,7 +1837,7 @@ class Serialise:
             "voltage": pybamm.step.voltage,
             "power": pybamm.step.power,
             "c-rate": pybamm.step.c_rate,
-            "rest": pybamm.step.current,
+            "rest": pybamm.step.rest,
         }
         term_class_map = {
             "voltage": pybamm.step.VoltageTermination,
@@ -1888,6 +1889,8 @@ class Serialise:
                     _parse_termination(t) for t in step_dict["terminations"]
                 ]
 
+            if step_type == "rest":
+                return step_func(duration=duration, termination=terminations)
             return step_func(value, duration=duration, termination=terminations)
 
         if "cycles" in data and data["cycles"] is not None:
