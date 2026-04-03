@@ -1,4 +1,4 @@
-"""Integration tests for Newton IC solver modes (SUBBLOCK vs DECOUPLED_FULL).
+"""Integration tests for Newton IC solver modes (SUBBLOCK vs FULL).
 
 Constant-voltage operation forces the solver to compute consistent algebraic
 initial conditions at each breakpoint, exercising the Newton IC machinery.
