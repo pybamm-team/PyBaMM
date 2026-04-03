@@ -51,7 +51,7 @@ BASE_OPTIONS = {
 VARIANTS = {
     "Scale 0.1": (BASE_OPTIONS, 0.1),
     "Scale 1.0": (BASE_OPTIONS, 1.0),
-    "Scale 10.0": (BASE_OPTIONS, 10.0),
+    "Scale 2.0": (BASE_OPTIONS, 2.0),
 }
 
 # --- Experiment Definition ---
