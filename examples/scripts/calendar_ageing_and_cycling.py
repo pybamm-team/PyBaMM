@@ -106,7 +106,7 @@ def run_ageing_phase(options, scale_factor, storage_days, initial_soc, logger):
 
     parameter_values["Current function [A]"] = 0
 
-    solver = pybamm.IDAKLUSolver(atol=1e-8, rtol=1e-8)
+    solver = pybamm.IDAKLUSolver(atol=1e-6, rtol=1e-6)
     var_pts = {"x_n": 30, "x_s": 30, "x_p": 30, "r_n": 50, "r_p": 50}
 
     seconds = storage_days * 24 * 60 * 60
@@ -170,7 +170,7 @@ def run_cycling_phase(
 
     var_pts = {"x_n": 30, "x_s": 30, "x_p": 30, "r_n": 50, "r_p": 50}
     parameter_values = get_parameter_values(scale_factor)
-    solver = pybamm.IDAKLUSolver(atol=1e-8, rtol=1e-8)
+    solver = pybamm.IDAKLUSolver(atol=1e-6, rtol=1e-6)
 
     current_solution = starting_solution
 
