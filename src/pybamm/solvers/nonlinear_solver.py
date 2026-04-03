@@ -66,12 +66,7 @@ class NonlinearSolver(pybamm.BaseSolver):
         self._step_tol = value
 
     def set_up_root_solver(self, model, inputs_dict, t_eval):
-        """Build CasADi functions and construct the C++ solver.
-
-        Uses model.algebraic_eval (set by BaseSolver.set_up) which has signature
-        (t, y_full, p_stacked) -> F_alg.  We rebuild a residual and Jacobian
-        that take (t, y_alg, params) where params = [y_diff; inputs].
-        """
+        """Build CasADi functions and construct the C++ solver."""
         pybamm.logger.info(f"Start building {self.name}")
 
         y0 = model.y0_list[0]
@@ -97,18 +92,18 @@ class NonlinearSolver(pybamm.BaseSolver):
         y_diff_sym = casadi.MX.sym("y_diff", len_rhs)
         inputs_sym = casadi.MX.sym("inputs", inputs_len)
         y_full = casadi.vertcat(y_diff_sym, y_alg_sym)
-        p_for_fn = casadi.vertcat(y_diff_sym, inputs_sym)
-        p_stacked = inputs_sym
+        # The parameter vector stacks the differential states and inputs
+        p_stacked = casadi.vertcat(y_diff_sym, inputs_sym)
 
         alg_expr = alg_eval(t_sym, y_full, p_stacked)
 
         res_fn = casadi.Function(
-            "newton_res", [t_sym, y_alg_sym, p_for_fn], [alg_expr]
+            "newton_res", [t_sym, y_alg_sym, p_stacked], [alg_expr]
         )
 
         jac_expr = casadi.jacobian(alg_expr, y_alg_sym)
         jac_fn = casadi.Function(
-            "newton_jac", [t_sym, y_alg_sym, p_for_fn], [jac_expr]
+            "newton_jac", [t_sym, y_alg_sym, p_stacked], [jac_expr]
         )
 
         atol = [float(self.tol)] * len_alg
@@ -144,26 +139,18 @@ class NonlinearSolver(pybamm.BaseSolver):
 
         y0_np = np.asarray(y0).ravel()
         y0_diff = y0_np[:len_rhs]
-        y0_alg = y0_np[len_rhs:]
-        p_vec = np.concatenate([y0_diff, inputs_flat])
+        y0_alg = np.ascontiguousarray(y0_np[len_rhs:], dtype=np.float64)
+        p_vec = np.ascontiguousarray(
+            np.concatenate([y0_diff, inputs_flat]), dtype=np.float64
+        )
+        t_eval_np = np.ascontiguousarray(t_eval, dtype=np.float64)
 
-        y_alg_solutions = [None] * len(t_eval)
         timer = pybamm.Timer()
-        integration_time = 0.0
+        success, y_alg_mat = root_solver.solve_batch(t_eval_np, y0_alg, p_vec)
+        integration_time = timer.time()
 
-        p_vec = np.ascontiguousarray(p_vec, dtype=np.float64)
-        y_alg_guess = np.ascontiguousarray(y0_alg, dtype=np.float64)
-        for i, t in enumerate(t_eval):
-            timer.reset()
-            success, y_alg_arr = root_solver.solve(float(t), y_alg_guess, p_vec)
-            integration_time += timer.time()
+        _check_success(success, y_alg_mat)
 
-            _check_success(success, y_alg_arr)
-
-            y_alg_solutions[i] = y_alg_arr
-            y_alg_guess = y_alg_arr
-
-        y_alg_mat = np.column_stack(y_alg_solutions)
         y_diff_mat = np.tile(y0_diff.reshape(-1, 1), (1, len(t_eval)))
         y_sol = np.vstack([y_diff_mat, y_alg_mat])
 
@@ -178,15 +165,14 @@ class NonlinearSolver(pybamm.BaseSolver):
         sol.integration_time = integration_time
         return sol
 
-
-def _check_success(success, y_alg_arr):
+def _check_success(success: bool, y_alg_mat: np.ndarray):
+    if not np.isfinite(np.linalg.norm(y_alg_mat, ord=np.inf)):
+        raise pybamm.SolverError(
+            "Could not find acceptable solution: "
+            "solver returned NaNs or Infs"
+        )
     if not success:
         raise pybamm.SolverError(
             "Could not find acceptable solution: "
             "Newton solver did not converge"
-        )
-    if not np.isfinite(np.linalg.norm(y_alg_arr, ord=np.inf)):
-        raise pybamm.SolverError(
-            "Could not find acceptable solution: "
-            "solver returned NaNs or Infs"
         )

@@ -108,34 +108,11 @@ class TestNonlinearSolver:
 
         solver = pybamm.NonlinearSolver()
         solver.solve(model, [0])
-        assert id(model) in solver._solver_cache
+        assert hasattr(model, "algebraic_root_solver")
 
-        cached_data = solver._solver_cache[id(model)][1]
+        cached_solver = model.algebraic_root_solver
         solver.solve(model, [0])
-        assert solver._solver_cache[id(model)][1] is cached_data
-
-    def test_solver_cache_weakref(self):
-        var = pybamm.Variable("var")
-        model = pybamm.BaseModel()
-        model.algebraic = {var: var + 2}
-        model.initial_conditions = {var: 2}
-
-        disc = pybamm.Discretisation()
-        disc.process_model(model)
-
-        solver = pybamm.NonlinearSolver()
-        solver.solve(model, [0])
-        model_id = id(model)
-        assert model_id in solver._solver_cache
-
-        model_ref = weakref.ref(model)
-        del model
-        gc.collect()
-
-        if model_ref() is None:
-            assert model_id not in solver._solver_cache
-        else:
-            pytest.skip("Model not collected (extra refs held by test runner)")
+        assert model.algebraic_root_solver is cached_solver
 
     def test_sparse_and_dense_modes(self):
         model_sparse = pybamm.BaseModel()
