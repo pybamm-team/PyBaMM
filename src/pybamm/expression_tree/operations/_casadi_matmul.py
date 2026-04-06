@@ -7,7 +7,9 @@ import numpy as np
 from scipy.sparse import issparse
 
 
-def try_repeated_row_matmul(left_symbol, converted_right: casadi.MX) -> casadi.MX | None:
+def try_repeated_row_matmul(
+    left_symbol, converted_right: casadi.MX
+) -> casadi.MX | None:
     """
     Optimize M @ x when M has repeated rows.
 
