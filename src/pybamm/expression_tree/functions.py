@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Sequence
 
+import casadi
 import numpy as np
 import numpy.typing as npt
 import sympy
@@ -151,6 +152,56 @@ class Function(pybamm.Symbol):
 
     def _function_evaluate(self, evaluated_children):
         return self.function(*evaluated_children)
+
+    def _to_casadi(self, t, y, y_dot, inputs, casadi_symbols):
+        """See :meth:`pybamm.Symbol._to_casadi()`."""
+        converted_children = super()._children_to_casadi(
+            t, y, y_dot, inputs, casadi_symbols
+        )
+
+        if self.function == np.min:
+            return casadi.mmin(*converted_children)
+        elif self.function == np.max:
+            return casadi.mmax(*converted_children)
+        elif self.function == np.abs:
+            return casadi.fabs(*converted_children)
+        elif self.function == np.sqrt:
+            return casadi.sqrt(*converted_children)
+        elif self.function == np.sin:
+            return casadi.sin(*converted_children)
+        elif self.function == np.arcsinh:
+            return casadi.arcsinh(*converted_children)
+        elif self.function == np.arccosh:
+            return casadi.arccosh(*converted_children)
+        elif self.function == np.tanh:
+            return casadi.tanh(*converted_children)
+        elif self.function == np.cosh:
+            return casadi.cosh(*converted_children)
+        elif self.function == np.sinh:
+            return casadi.sinh(*converted_children)
+        elif self.function == np.cos:
+            return casadi.cos(*converted_children)
+        elif self.function == np.exp:
+            return casadi.exp(*converted_children)
+        elif self.function == np.log:
+            return casadi.log(*converted_children)
+        elif self.function == np.sign:
+            return casadi.sign(*converted_children)
+        elif self.function == special.erf:
+            return casadi.erf(*converted_children)
+        elif self.function.__name__.startswith("elementwise_grad_of_"):
+            differentiating_child_idx = int(self.function.__name__[-1])
+            dummy_vars = [
+                casadi.MX.sym("y_" + str(i)) for i in range(len(converted_children))
+            ]
+            func_diff = casadi.gradient(
+                self.differentiated_function(*dummy_vars),
+                dummy_vars[differentiating_child_idx],
+            )
+            casadi_func_diff = casadi.Function("func_diff", dummy_vars, [func_diff])
+            return casadi_func_diff(*converted_children)
+        else:
+            return self._function_evaluate(converted_children)
 
     def create_copy(
         self,
@@ -423,6 +474,14 @@ class Arcsinh2(Function):
     def _function_new_copy(self, children):
         """See :meth:`pybamm.Function._function_new_copy()`"""
         return Arcsinh2(*children, eps=self.eps)
+
+    def _to_casadi(self, t, y, y_dot, inputs, casadi_symbols):
+        """See :meth:`pybamm.Symbol._to_casadi()`."""
+        a, b = super()._children_to_casadi(t, y, y_dot, inputs, casadi_symbols)
+        eps = self.eps
+        sign_b = casadi.if_else(b >= 0, 1.0, -1.0)
+        b_eff = sign_b * casadi.hypot(b, eps)
+        return casadi.arcsinh(a / b_eff)
 
     def _sympy_operator(self, a, b):
         """Convert to SymPy expression."""
@@ -942,6 +1001,16 @@ class RegPower(Function):
         return pybamm.simplify_if_constant(
             RegPower(base, exponent, scale=scale, delta=self.delta)
         )
+
+    def _to_casadi(self, t, y, y_dot, inputs, casadi_symbols):
+        """See :meth:`pybamm.Symbol._to_casadi()`."""
+        base, exponent, scale = super()._children_to_casadi(
+            t, y, y_dot, inputs, casadi_symbols
+        )
+        delta = self.delta
+        x = base / scale
+        x2_d2 = x**2 + delta**2
+        return x * (x2_d2 ** ((exponent - 1) / 2)) * (scale**exponent)
 
     def _sympy_operator(self, base, exponent, scale):
         """Convert to SymPy expression."""

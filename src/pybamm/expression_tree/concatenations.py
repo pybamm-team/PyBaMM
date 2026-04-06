@@ -8,6 +8,7 @@ from collections import defaultdict
 from collections.abc import Sequence
 from typing import Any
 
+import casadi
 import numpy as np
 import numpy.typing as npt
 import sympy
@@ -232,6 +233,13 @@ class NumpyConcatenation(Concatenation):
 
         return instance
 
+    def _to_casadi(self, t, y, y_dot, inputs, casadi_symbols):
+        """See :meth:`pybamm.Symbol._to_casadi()`."""
+        converted_children = self._children_to_casadi(
+            t, y, y_dot, inputs, casadi_symbols
+        )
+        return casadi.vertcat(*converted_children)
+
     def _concatenation_jac(self, children_jacs):
         """See :meth:`pybamm.Concatenation.concatenation_jac()`."""
         children = self.children
@@ -384,6 +392,28 @@ class DomainConcatenation(Concatenation):
 
         return vector
 
+    def _to_casadi(self, t, y, y_dot, inputs, casadi_symbols):
+        """See :meth:`pybamm.Symbol._to_casadi()`."""
+        converted_children = self._children_to_casadi(
+            t, y, y_dot, inputs, casadi_symbols
+        )
+        slice_starts = []
+        all_child_vectors = []
+        for i in range(self.secondary_dimensions_npts):
+            child_vectors = []
+            for child_var, slices in zip(
+                converted_children, self._children_slices, strict=True
+            ):
+                for child_dom, child_slice in slices.items():
+                    slice_starts.append(self._slices[child_dom][i].start)
+                    child_vectors.append(
+                        child_var[child_slice[i].start : child_slice[i].stop]
+                    )
+            all_child_vectors.extend(
+                [v for _, v in sorted(zip(slice_starts, child_vectors, strict=False))]
+            )
+        return casadi.vertcat(*all_child_vectors)
+
     def _concatenation_jac(self, children_jacs):
         """See :meth:`pybamm.Concatenation.concatenation_jac()`."""
         # note that this assumes that the children are in the right order and only have
@@ -466,6 +496,13 @@ class SparseStack(Concatenation):
             check_domain=False,
             concat_fun=concatenation_function,
         )
+
+    def _to_casadi(self, t, y, y_dot, inputs, casadi_symbols):
+        """See :meth:`pybamm.Symbol._to_casadi()`."""
+        converted_children = self._children_to_casadi(
+            t, y, y_dot, inputs, casadi_symbols
+        )
+        return casadi.vertcat(*converted_children)
 
     def _concatenation_new_copy(self, children, perform_simplifications=True):
         """See :meth:`pybamm.Concatenation._concatenation_new_copy()`."""

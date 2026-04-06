@@ -3,6 +3,7 @@
 #
 from __future__ import annotations
 
+import casadi
 import numpy as np
 import numpy.typing as npt
 import sympy
@@ -91,6 +92,13 @@ class UnaryOperator(pybamm.Symbol):
         raise NotImplementedError(
             f"{self.__class__} does not implement _unary_evaluate."
         )
+
+    def _to_casadi(self, t, y, y_dot, inputs, casadi_symbols):
+        """See :meth:`pybamm.Symbol._to_casadi()`."""
+        converted_child = self._children_to_casadi(t, y, y_dot, inputs, casadi_symbols)[
+            0
+        ]
+        return self._unary_evaluate(converted_child)
 
     def evaluate(
         self,
@@ -190,6 +198,13 @@ class AbsoluteValue(UnaryOperator):
         """See :meth:`UnaryOperator._unary_evaluate()`."""
         return np.abs(child)
 
+    def _to_casadi(self, t, y, y_dot, inputs, casadi_symbols):
+        """See :meth:`pybamm.Symbol._to_casadi()`."""
+        converted_child = self._children_to_casadi(t, y, y_dot, inputs, casadi_symbols)[
+            0
+        ]
+        return casadi.fabs(converted_child)
+
     def _unary_new_copy(self, child, perform_simplifications: bool = True):
         """
         Creates a new copy of the operator with the child `child`.
@@ -215,6 +230,13 @@ class Transpose(UnaryOperator):
     def _unary_evaluate(self, child):
         """See :meth:`UnaryOperator._unary_evaluate()`."""
         return child.T
+
+    def _to_casadi(self, t, y, y_dot, inputs, casadi_symbols):
+        """See :meth:`pybamm.Symbol._to_casadi()`."""
+        converted_child = self._children_to_casadi(t, y, y_dot, inputs, casadi_symbols)[
+            0
+        ]
+        return converted_child.T
 
     def _evaluate_for_shape(self):
         """See :meth:`pybamm.Symbol._evaluate_for_shape()`."""
@@ -285,6 +307,13 @@ class Floor(UnaryOperator):
         """See :meth:`UnaryOperator._unary_evaluate()`."""
         return np.floor(child)
 
+    def _to_casadi(self, t, y, y_dot, inputs, casadi_symbols):
+        """See :meth:`pybamm.Symbol._to_casadi()`."""
+        converted_child = self._children_to_casadi(t, y, y_dot, inputs, casadi_symbols)[
+            0
+        ]
+        return casadi.floor(converted_child)
+
 
 class Ceiling(UnaryOperator):
     """
@@ -306,6 +335,13 @@ class Ceiling(UnaryOperator):
     def _unary_evaluate(self, child):
         """See :meth:`UnaryOperator._unary_evaluate()`."""
         return np.ceil(child)
+
+    def _to_casadi(self, t, y, y_dot, inputs, casadi_symbols):
+        """See :meth:`pybamm.Symbol._to_casadi()`."""
+        converted_child = self._children_to_casadi(t, y, y_dot, inputs, casadi_symbols)[
+            0
+        ]
+        return casadi.ceil(converted_child)
 
 
 class Index(UnaryOperator):

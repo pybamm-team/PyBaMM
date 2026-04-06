@@ -980,13 +980,74 @@ class Symbol:
         y: casadi.MX | None = None,
         y_dot: casadi.MX | None = None,
         inputs: dict | None = None,
-        casadi_symbols: Symbol | None = None,
-    ):
+        casadi_symbols: dict | None = None,
+    ) -> casadi.MX:
         """
         Convert the expression tree to a CasADi expression tree.
-        See :class:`pybamm.CasadiConverter`.
+
+        Parameters
+        ----------
+        t : :class:`casadi.MX`, optional
+            A casadi symbol representing time
+        y : :class:`casadi.MX`, optional
+            A casadi symbol representing state vectors
+        y_dot : :class:`casadi.MX`, optional
+            A casadi symbol representing time derivatives of state vectors
+        inputs : dict, optional
+            A dictionary of casadi symbols representing parameters
+        casadi_symbols : dict, optional
+            An optional shared cache mapping Symbol objects to their already-converted
+            casadi expressions. When converting multiple related expressions over the
+            same (t, y, y_dot, inputs), pass a single ``{}`` created by the caller so
+            that shared subgraph nodes are only converted once. The cache is never
+            stored on the symbol itself — its lifetime is controlled by the caller.
+
+        Returns
+        -------
+        :class:`casadi.MX`
         """
-        return pybamm.CasadiConverter(casadi_symbols).convert(self, t, y, y_dot, inputs)
+        pybamm.citations.register("Andersson2019")
+        if casadi_symbols is None:
+            casadi_symbols = {}
+        inputs = inputs or {}
+        _value = casadi_symbols.get(self, None)
+        if _value is not None:
+            return _value
+        result = self._to_casadi(t, y, y_dot, inputs, casadi_symbols)
+        casadi_symbols[self] = result
+        return result
+
+    def _to_casadi(
+        self,
+        t,
+        y,
+        y_dot,
+        inputs,
+        casadi_symbols: dict,
+    ):
+        """
+        Internal conversion hook. Override in subclasses to implement CasADi
+        conversion. Called by :meth:`to_casadi` after cache lookup.
+        """
+        raise TypeError(
+            f"Cannot convert symbol of type '{type(self)}' to CasADi. Symbols must all be "
+            "'linear algebra' at this stage."
+        )
+
+    def _children_to_casadi(
+        self, t, y, y_dot, inputs, casadi_symbols: dict
+    ) -> list[casadi.MX]:
+        """
+        Convert all children to CasADi by calling :meth:`to_casadi` on each,
+        threading the shared ``casadi_symbols`` cache through every recursive call.
+
+        Subclasses can call ``super()._children_to_casadi(...)`` to obtain the
+        list of converted children before applying additional logic.
+        """
+        return [
+            child.to_casadi(t, y, y_dot, inputs, casadi_symbols)
+            for child in self.children
+        ]
 
     def _children_for_copying(self, children: list[Symbol] | None = None) -> Symbol:
         """

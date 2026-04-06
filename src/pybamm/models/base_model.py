@@ -1798,18 +1798,24 @@ class BaseModel:
         # Set up inputs
         inputs_stacked = casadi.vertcat(*[p for p in inputs.values()])
 
+        # Shared cache so that subgraph nodes (state vectors, time, inputs) that
+        # appear in multiple expressions are only converted once.
+        casadi_cache = {}
+
         # Convert initial conditions to casadi form
         y0 = self.concatenated_initial_conditions.to_casadi(
-            t_casadi, y_casadi, inputs=inputs
+            t_casadi, y_casadi, inputs=inputs, casadi_symbols=casadi_cache
         )
         x0 = y0[: self.concatenated_rhs.size]
         z0 = y0[self.concatenated_rhs.size :]
 
         # Convert rhs and algebraic to casadi form and calculate jacobians
-        rhs = self.concatenated_rhs.to_casadi(t_casadi, y_casadi, inputs=inputs)
+        rhs = self.concatenated_rhs.to_casadi(
+            t_casadi, y_casadi, inputs=inputs, casadi_symbols=casadi_cache
+        )
         jac_rhs = casadi.jacobian(rhs, y_casadi)
         algebraic = self.concatenated_algebraic.to_casadi(
-            t_casadi, y_casadi, inputs=inputs
+            t_casadi, y_casadi, inputs=inputs, casadi_symbols=casadi_cache
         )
         jac_algebraic = casadi.jacobian(algebraic, y_casadi)
 
@@ -1817,7 +1823,9 @@ class BaseModel:
         variables = OrderedDict()
         for name in variable_names:
             var = self.get_processed_variable(name)
-            variables[name] = var.to_casadi(t_casadi, y_casadi, inputs=inputs)
+            variables[name] = var.to_casadi(
+                t_casadi, y_casadi, inputs=inputs, casadi_symbols=casadi_cache
+            )
 
         casadi_dict = {
             "t": t_casadi,

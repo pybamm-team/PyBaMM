@@ -7,6 +7,7 @@ import numbers
 from collections.abc import Sequence
 from typing import Any
 
+import casadi
 import numpy as np
 import numpy.typing as npt
 from scipy import interpolate
@@ -325,6 +326,97 @@ class Interpolant(pybamm.Function):
 
         else:  # pragma: no cover
             raise ValueError(f"Invalid dimension: {self.dimension}")
+
+    def _to_casadi(self, t, y, y_dot, inputs, casadi_symbols):
+        """See :meth:`pybamm.Symbol._to_casadi()`."""
+        converted_children = super()._children_to_casadi(
+            t, y, y_dot, inputs, casadi_symbols
+        )
+
+        if self.interpolator == "linear":
+            solver = "linear"
+        elif self.interpolator == "cubic":
+            solver = "bspline"
+        elif self.interpolator == "pchip":
+            x_np = np.array(self.x[0])
+            y_np = np.array(self.y)
+            pchip_interp = interpolate.PchipInterpolator(x_np, y_np)
+            d_np = pchip_interp.derivative()(x_np)
+            x = converted_children[0]
+
+            def hermite_poly(i):
+                x0 = x_np[i]
+                x1 = x_np[i + 1]
+                h_val = x1 - x0
+                h_val_mx = casadi.MX(h_val)
+                y0 = casadi.MX(y_np[i])
+                y1 = casadi.MX(y_np[i + 1])
+                d0 = casadi.MX(d_np[i])
+                d1 = casadi.MX(d_np[i + 1])
+                xn = (x - x0) / h_val_mx
+                h00 = 2 * xn**3 - 3 * xn**2 + 1
+                h10 = xn**3 - 2 * xn**2 + xn
+                h01 = -2 * xn**3 + 3 * xn**2
+                h11 = xn**3 - xn**2
+                return h00 * y0 + h10 * h_val_mx * d0 + h01 * y1 + h11 * h_val_mx * d1
+
+            inside = casadi.MX.zeros(x.shape)
+            for i in range(len(x_np) - 1):
+                cond = casadi.logic_and(x >= x_np[i], x <= x_np[i + 1])
+                inside = casadi.if_else(cond, hermite_poly(i), inside)
+
+            left = hermite_poly(0)
+            right = hermite_poly(len(x_np) - 2)
+            return casadi.if_else(
+                x < x_np[0], left, casadi.if_else(x > x_np[-1], right, inside)
+            )
+        else:  # pragma: no cover
+            raise NotImplementedError(f"Unknown interpolator: {self.interpolator}")
+
+        if len(converted_children) == 1:
+            if solver == "linear":
+                test = casadi.MX.interpn_linear(
+                    self.x, self.y.flatten(), converted_children
+                )
+                if test.shape[0] == 1 and test.shape[1] > 1:
+                    test = test.T
+                return test
+            elif solver == "bspline":
+                bspline = interpolate.make_interp_spline(self.x[0], self.y, k=3)
+                knots = [bspline.t]
+                coeffs = bspline.c.flatten()
+                degree = [bspline.k]
+                m = len(coeffs) // len(self.x[0])
+                f = casadi.Function.bspline(self.name, knots, coeffs, degree, m)
+                return f(converted_children[0])
+            else:
+                return casadi.interpolant("LUT", solver, self.x, self.y.flatten())(
+                    *converted_children
+                )
+        elif len(converted_children) in [2, 3]:
+            if solver == "linear":
+                return casadi.MX.interpn_linear(
+                    self.x,
+                    self.y.ravel(order="F"),
+                    converted_children,
+                )
+            elif solver == "bspline" and len(converted_children) == 2:
+                bspline = interpolate.RectBivariateSpline(self.x[0], self.x[1], self.y)
+                [tx, ty, c] = bspline.tck
+                [kx, ky] = bspline.degrees
+                knots = [tx, ty]
+                coeffs = c
+                degree = [kx, ky]
+                m = 1
+                f = casadi.Function.bspline(self.name, knots, coeffs, degree, m)
+                return f(casadi.hcat(converted_children).T).T
+            else:
+                LUT = casadi.interpolant("LUT", solver, self.x, self.y.ravel(order="F"))
+                return LUT(casadi.hcat(converted_children).T).T
+        else:
+            raise ValueError(
+                f"Invalid converted_children count: {len(converted_children)}"
+            )  # pragma: no cover
 
     def _function_diff(self, children: Sequence[pybamm.Symbol], idx: float):
         """

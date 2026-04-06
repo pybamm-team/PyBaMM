@@ -107,7 +107,7 @@ class TestCitations:
         citations = pybamm.citations
         citations._reset()
         assert "Andersson2019" not in citations._papers_to_cite
-        pybamm.CasadiConverter()
+        pybamm.Scalar(1).to_casadi()
         assert "Andersson2019" in citations._papers_to_cite
 
     def test_marquis_2019(self):

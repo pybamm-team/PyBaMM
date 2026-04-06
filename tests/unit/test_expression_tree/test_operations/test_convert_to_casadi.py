@@ -9,7 +9,7 @@ from scipy import special
 from scipy.sparse import csr_matrix
 
 import pybamm
-from pybamm.expression_tree.operations.convert_to_casadi import try_repeated_row_matmul
+from pybamm.expression_tree.operations._casadi_matmul import try_repeated_row_matmul
 from tests import get_1p1d_discretisation_for_testing, get_mesh_for_testing
 
 
