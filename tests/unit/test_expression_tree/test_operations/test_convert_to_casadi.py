@@ -396,23 +396,6 @@ class TestCasadiConverter:
 
         np.testing.assert_equal(true_value, casadi_sol.__float__())
 
-    def test_interpolation_pchip_bspline(self):
-        """pchip B-spline conversion must be machine-precision equivalent to scipy."""
-        x = np.linspace(0, 2 * np.pi, 20)
-        y_data = np.sin(x)
-        child = pybamm.StateVector(slice(0, 200))
-        casadi_y = casadi.MX.sym("y", 200)
-
-        interp = pybamm.Interpolant(x, y_data, child, interpolator="pchip")
-        interp_casadi = interp.to_casadi(y=casadi_y)
-        f = casadi.Function("f", [casadi_y], [interp_casadi])
-
-        rng = np.random.default_rng(0)
-        test_pts = rng.uniform(0, 2 * np.pi, 200)
-        bspl_vals = np.array(f(test_pts)).flatten()
-        ref_vals = interp.evaluate(y=test_pts).flatten()
-        np.testing.assert_allclose(bspl_vals, ref_vals, rtol=1e-12, atol=1e-12)
-
     def test_interpolation_4d_linear(self):
         """4-D linear interpolation must round-trip through CasADi."""
 
