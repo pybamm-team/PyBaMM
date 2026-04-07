@@ -5,7 +5,7 @@ ci:
 
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: "v0.15.8"
+    rev: "v0.15.9"
     hooks:
       - id: ruff-check
         args: [--fix, --show-fixes]
@@ -40,7 +40,7 @@ repos:
         - id: rst-inline-touching-normal
 
   - repo: https://github.com/scientific-python/cookie
-    rev: 2026.03.02
+    rev: 2026.04.04
     hooks:
         - id: sp-repo-review
 
