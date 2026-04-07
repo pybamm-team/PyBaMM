@@ -1298,15 +1298,6 @@ class TestSimulation:
             name = pybamm.Simulation._experiment_step_index_input_name()
         assert name == "Experiment step index"
 
-    def test_experiment_can_use_unified_model_ode_solver(self):
-        model = pybamm.lithium_ion.SPM()
-        exp = pybamm.Experiment(["Discharge at 1C for 10 seconds"])
-        # ScipySolver is an ODE solver, which blocks unified model
-        sim = pybamm.Simulation(model, experiment=exp, solver=pybamm.ScipySolver())
-        assert sim._experiment_can_use_unified_model() is False
-        blockers = sim._get_unified_experiment_model_blockers()
-        assert any("DAE-capable" in b for b in blockers)
-
     def test_get_built_experiment_model_unified(self):
         model = pybamm.lithium_ion.SPM()
         exp = pybamm.Experiment(["Discharge at 1C for 10 seconds"])

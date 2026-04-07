@@ -15,6 +15,11 @@ from scipy import interpolate
 import pybamm
 
 
+def _is_uniform_grid(x: npt.NDArray[np.float64]) -> bool:
+    # Try seeing if the grid was computed using np.linspace
+    return bool(np.array_equal(x, np.linspace(x[0], x[-1], len(x))))
+
+
 class Interpolant(pybamm.Function):
     """
     Interpolate data in 1D, 2D, or 3D. Interpolation in 3D requires the input data to be
@@ -61,83 +66,60 @@ class Interpolant(pybamm.Function):
         if interpolator not in ["linear", "cubic", "pchip"]:
             raise ValueError(f"interpolator '{interpolator}' not recognised")
 
-        # Perform some checks on the data
-        if isinstance(x, tuple | list) and len(x) == 2:
-            x1, x2 = x
-            if y.ndim != 2:
-                raise ValueError("y should be two-dimensional if len(x)=2")
-            if x1.shape[0] != y.shape[0]:
-                raise ValueError(
-                    "len(x1) should equal y=shape[1], "
-                    f"but x1.shape={x1.shape} and y.shape={y.shape}"
-                )
-            if x2 is not None and x2.shape[0] != y.shape[1]:
-                raise ValueError(
-                    "len(x2) should equal y=shape[0], "
-                    f"but x2.shape={x2.shape} and y.shape={y.shape}"
-                )
-        elif isinstance(x, tuple | list) and len(x) == 3:
-            x1, x2, x3 = x
-            if y.ndim != 3:
-                raise ValueError("y should be three-dimensional if len(x)=3")
+        # Normalise x to a list of arrays
+        if not isinstance(x, tuple | list):
+            x = [x]
 
+        # Perform some checks on the data
+        ndim = len(x)
+        if ndim == 1:
+            x1 = x[0]
             if x1.shape[0] != y.shape[0]:
                 raise ValueError(
                     "len(x1) should equal y=shape[0], "
                     f"but x1.shape={x1.shape} and y.shape={y.shape}"
                 )
-            if x2 is not None and x2.shape[0] != y.shape[1]:
-                raise ValueError(
-                    "len(x2) should equal y=shape[1], "
-                    f"but x2.shape={x2.shape} and y.shape={y.shape}"
-                )
-            if x3 is not None and x3.shape[0] != y.shape[2]:
-                raise ValueError(
-                    "len(x3) should equal y=shape[2], "
-                    f"but x3.shape={x3.shape} and y.shape={y.shape}"
-                )
-        else:
-            if isinstance(x, tuple | list):
-                x1 = x[0]
-            else:
-                x1 = x
-                x: list[npt.NDArray[np.float64]] = [x]  # type: ignore[no-redef]
-            x2 = None
-            if x1.shape[0] != y.shape[0]:
-                raise ValueError(
-                    "len(x1) should equal y=shape[0], "
-                    f"but x1.shape={x1.shape} and y.shape={y.shape}"
-                )
-            # if 1d then x should be monotonically increasing
             if np.any(x1[:-1] > x1[1:]):
                 raise ValueError("x should be monotonically increasing")
+        else:
+            if y.ndim != ndim:
+                raise ValueError(
+                    f"y should be {ndim}-dimensional if len(x)={ndim}, "
+                    f"but y.ndim={y.ndim}"
+                )
+            for i, xi in enumerate(x):
+                if xi.shape[0] != y.shape[i]:
+                    raise ValueError(
+                        f"len(x{i + 1}) should equal y.shape[{i}], "
+                        f"but x{i + 1}.shape={xi.shape} and y.shape={y.shape}"
+                    )
+            if interpolator == "pchip":
+                raise ValueError(
+                    "interpolator should be 'linear' or 'cubic' "
+                    f"if x is {ndim}-dimensional"
+                )
+
         # children should be a list not a symbol or a number
         if isinstance(children, pybamm.Symbol | numbers.Number):
             children = [children]
-        # Either a single x is provided and there is one child
-        # or x is a 2-tuple and there are two children
         if len(x) != len(children):
             raise ValueError("len(x) should equal len(children)")
-        # if there is only one x, y can be 2-dimensional but the child must have
-        # length 1
-        if len(x) == 1 and y.ndim == 2 and children[0].size != 1:
+        if ndim == 1 and y.ndim == 2 and children[0].size != 1:
             raise ValueError(
                 "child should have size 1 if y is two-dimensional and len(x)==1"
             )
 
         # Create interpolating function
-        if len(x) == 1:
-            self.dimension = 1
+        self.dimension = ndim
+        if ndim == 1:
+            x1 = x[0]
             if interpolator == "linear":
-                if extrapolate is False:
-                    fill_value_1: float | str = np.nan
-                elif extrapolate is True:
-                    fill_value_1 = "extrapolate"
+                fill_value: float | str = "extrapolate" if extrapolate else np.nan
                 interpolating_function = interpolate.interp1d(
                     x1,
                     y,
                     bounds_error=False,
-                    fill_value=fill_value_1,
+                    fill_value=fill_value,
                     axis=0,
                 )
             elif interpolator == "cubic":
@@ -148,49 +130,15 @@ class Interpolant(pybamm.Function):
                 interpolating_function = interpolate.PchipInterpolator(
                     x1, y, extrapolate=extrapolate
                 )
-        elif len(x) == 2:
-            self.dimension = 2
-            if interpolator == "pchip":
-                raise ValueError(
-                    "interpolator should be 'linear' or 'cubic' if x is two-dimensional"
-                )
-            else:
-                if extrapolate:
-                    fill_value = None
-                else:
-                    fill_value = np.nan
-                interpolating_function = interpolate.RegularGridInterpolator(
-                    (x1, x2),
-                    y,
-                    method=interpolator,
-                    bounds_error=False,
-                    fill_value=fill_value,
-                )
-
-        elif len(x) == 3:
-            self.dimension = 3
-
-            if extrapolate:
-                fill_value = None
-            else:
-                fill_value = np.nan
-
-            possible_interpolators = ["linear", "cubic"]
-            if interpolator not in possible_interpolators:
-                raise ValueError(
-                    """interpolator should be 'linear' or 'cubic'
-                    for 3D interpolation"""
-                )
-            else:
-                interpolating_function = interpolate.RegularGridInterpolator(
-                    (x1, x2, x3),
-                    y,
-                    method=interpolator,
-                    bounds_error=False,
-                    fill_value=fill_value,
-                )
         else:
-            raise ValueError(f"Invalid dimension of x: {len(x)}")
+            fill_value = None if extrapolate else np.nan
+            interpolating_function = interpolate.RegularGridInterpolator(
+                tuple(x),
+                y,
+                method=interpolator,
+                bounds_error=False,
+                fill_value=fill_value,
+            )
 
         # Set name
         if name is None:
@@ -283,26 +231,19 @@ class Interpolant(pybamm.Function):
                 children_eval_flat.append(child)
         if self.dimension == 1:
             return self.function(*children_eval_flat).flatten()[:, np.newaxis]
-        elif self.dimension in [2, 3]:
-            # If the children are scalars, we need to add a dimension
-            shapes = []
+        else:
+            shapes = set()
             for child in evaluated_children:
                 if isinstance(child, float | int):
-                    shapes.append(())
-                else:
-                    shapes.append(child.shape)
-            shapes = set(shapes)
-            shapes.discard(())
+                    continue
+                shapes.add(child.shape)
 
             if len(shapes) > 1:
                 raise ValueError(
-                    "All children must have the same shape for 3D interpolation"
+                    "All children must have the same shape for N-D interpolation"
                 )
 
-            if len(shapes) == 0:
-                shape = (1,)
-            else:
-                shape = shapes.pop()
+            shape = shapes.pop() if shapes else (1,)
             new_evaluated_children = []
             for child in evaluated_children:
                 if hasattr(child, "shape") and child.shape == shape:
@@ -310,7 +251,6 @@ class Interpolant(pybamm.Function):
                 else:
                     new_evaluated_children.append(np.reshape(child, shape).flatten())
 
-            # return nans if there are any within the children
             nans = np.isnan(new_evaluated_children)
             if np.any(nans):
                 nan_children = []
@@ -324,9 +264,6 @@ class Interpolant(pybamm.Function):
                 res = self.function(np.transpose(new_evaluated_children))
                 return np.reshape(res, shape)
 
-        else:  # pragma: no cover
-            raise ValueError(f"Invalid dimension: {self.dimension}")
-
     def _to_casadi(self, t, y, y_dot, inputs, casadi_symbols):
         """See :meth:`pybamm.Symbol._to_casadi()`."""
         converted_children = super()._children_to_casadi(
@@ -334,89 +271,81 @@ class Interpolant(pybamm.Function):
         )
 
         if self.interpolator == "linear":
-            solver = "linear"
-        elif self.interpolator == "cubic":
-            solver = "bspline"
+            return self._linear_to_casadi(converted_children)
         elif self.interpolator == "pchip":
-            x_np = np.array(self.x[0])
-            y_np = np.array(self.y)
-            pchip_interp = interpolate.PchipInterpolator(x_np, y_np)
-            d_np = pchip_interp.derivative()(x_np)
-            x = converted_children[0]
-
-            def hermite_poly(i):
-                x0 = x_np[i]
-                x1 = x_np[i + 1]
-                h_val = x1 - x0
-                h_val_mx = casadi.MX(h_val)
-                y0 = casadi.MX(y_np[i])
-                y1 = casadi.MX(y_np[i + 1])
-                d0 = casadi.MX(d_np[i])
-                d1 = casadi.MX(d_np[i + 1])
-                xn = (x - x0) / h_val_mx
-                h00 = 2 * xn**3 - 3 * xn**2 + 1
-                h10 = xn**3 - 2 * xn**2 + xn
-                h01 = -2 * xn**3 + 3 * xn**2
-                h11 = xn**3 - xn**2
-                return h00 * y0 + h10 * h_val_mx * d0 + h01 * y1 + h11 * h_val_mx * d1
-
-            inside = casadi.MX.zeros(x.shape)
-            for i in range(len(x_np) - 1):
-                cond = casadi.logic_and(x >= x_np[i], x <= x_np[i + 1])
-                inside = casadi.if_else(cond, hermite_poly(i), inside)
-
-            left = hermite_poly(0)
-            right = hermite_poly(len(x_np) - 2)
-            return casadi.if_else(
-                x < x_np[0], left, casadi.if_else(x > x_np[-1], right, inside)
-            )
-        else:  # pragma: no cover
-            raise NotImplementedError(f"Unknown interpolator: {self.interpolator}")
-
-        if len(converted_children) == 1:
-            if solver == "linear":
-                test = casadi.MX.interpn_linear(
-                    self.x, self.y.flatten(), converted_children
-                )
-                if test.shape[0] == 1 and test.shape[1] > 1:
-                    test = test.T
-                return test
-            elif solver == "bspline":
-                bspline = interpolate.make_interp_spline(self.x[0], self.y, k=3)
-                knots = [bspline.t]
-                coeffs = bspline.c.flatten()
-                degree = [bspline.k]
-                m = len(coeffs) // len(self.x[0])
-                f = casadi.Function.bspline(self.name, knots, coeffs, degree, m)
-                return f(converted_children[0])
-            else:
-                return casadi.interpolant("LUT", solver, self.x, self.y.flatten())(
-                    *converted_children
-                )
-        elif len(converted_children) in [2, 3]:
-            if solver == "linear":
-                return casadi.MX.interpn_linear(
-                    self.x,
-                    self.y.ravel(order="F"),
-                    converted_children,
-                )
-            elif solver == "bspline" and len(converted_children) == 2:
-                bspline = interpolate.RectBivariateSpline(self.x[0], self.x[1], self.y)
-                [tx, ty, c] = bspline.tck
-                [kx, ky] = bspline.degrees
-                knots = [tx, ty]
-                coeffs = c
-                degree = [kx, ky]
-                m = 1
-                f = casadi.Function.bspline(self.name, knots, coeffs, degree, m)
-                return f(casadi.hcat(converted_children).T).T
-            else:
-                LUT = casadi.interpolant("LUT", solver, self.x, self.y.ravel(order="F"))
-                return LUT(casadi.hcat(converted_children).T).T
+            return self._pchip_to_casadi(converted_children)
+        elif self.interpolator == "cubic":
+            return self._cubic_to_casadi(converted_children)
         else:
-            raise ValueError(
-                f"Invalid converted_children count: {len(converted_children)}"
-            )  # pragma: no cover
+            raise NotImplementedError(  # pragma: no cover
+                f"Unknown interpolator: {self.interpolator}"
+            )
+
+    def _linear_to_casadi(self, converted_children):
+        if self.dimension == 1:
+            v = self.y.flatten()
+        else:
+            v = self.y.ravel(order="F")
+        lookup_modes = ["exact" if _is_uniform_grid(xi) else "binary" for xi in self.x]
+        result = casadi.MX.interpn_linear(
+            self.x, v, converted_children, {"lookup_mode": lookup_modes}
+        )
+        if result.shape[0] == 1 and result.shape[1] > 1:
+            result = result.T
+        return result
+
+    def _cubic_to_casadi(self, converted_children):
+        if self.dimension == 1:
+            bspline = interpolate.make_interp_spline(self.x[0], self.y, k=3)
+            c_flat = bspline.c.flatten()
+            n_basis = len(bspline.t) - bspline.k - 1
+            m = c_flat.size // n_basis
+            f = casadi.Function.bspline(
+                self.name, [bspline.t], c_flat.tolist(), [bspline.k], m
+            )
+            return f(converted_children[0])
+        elif self.dimension == 2:
+            bspline = interpolate.RectBivariateSpline(self.x[0], self.x[1], self.y)
+            [tx, ty, c] = bspline.tck
+            [kx, ky] = bspline.degrees
+            f = casadi.Function.bspline(self.name, [tx, ty], c.tolist(), [kx, ky], 1)
+            return f(casadi.hcat(converted_children).T).T
+        else:
+            LUT = casadi.interpolant("LUT", "bspline", self.x, self.y.ravel(order="F"))
+            return LUT(casadi.hcat(converted_children).T).T
+
+    def _pchip_to_casadi(self, converted_children):
+        x_np = np.array(self.x[0])
+        y_np = np.array(self.y)
+        d_np = interpolate.PchipInterpolator(x_np, y_np).derivative()(x_np)
+        x = converted_children[0]
+
+        def hermite_poly(i):
+            x0 = x_np[i]
+            x1 = x_np[i + 1]
+            h_val = x1 - x0
+            h_val_mx = casadi.MX(h_val)
+            y0 = casadi.MX(y_np[i])
+            y1 = casadi.MX(y_np[i + 1])
+            d0 = casadi.MX(d_np[i])
+            d1 = casadi.MX(d_np[i + 1])
+            xn = (x - x0) / h_val_mx
+            h00 = 2 * xn**3 - 3 * xn**2 + 1
+            h10 = xn**3 - 2 * xn**2 + xn
+            h01 = -2 * xn**3 + 3 * xn**2
+            h11 = xn**3 - xn**2
+            return h00 * y0 + h10 * h_val_mx * d0 + h01 * y1 + h11 * h_val_mx * d1
+
+        inside = casadi.MX.zeros(x.shape)
+        for i in range(len(x_np) - 1):
+            cond = casadi.logic_and(x >= x_np[i], x <= x_np[i + 1])
+            inside = casadi.if_else(cond, hermite_poly(i), inside)
+
+        left = hermite_poly(0)
+        right = hermite_poly(len(x_np) - 2)
+        return casadi.if_else(
+            x < x_np[0], left, casadi.if_else(x > x_np[-1], right, inside)
+        )
 
     def _function_diff(self, children: Sequence[pybamm.Symbol], idx: float):
         """

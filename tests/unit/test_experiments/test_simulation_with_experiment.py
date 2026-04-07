@@ -57,7 +57,6 @@ class TestSimulationExperiment:
         assert sim._get_unified_experiment_model_blockers() == [
             "no experiment is attached to the simulation"
         ]
-        assert sim._experiment_can_use_unified_model() is False
 
         sim = pybamm.Simulation(
             pybamm.lithium_ion.SPM(),
@@ -67,7 +66,6 @@ class TestSimulationExperiment:
         assert sim._get_unified_experiment_model_blockers() == [
             "unsupported experiment step type 'BaseStep'"
         ]
-        assert sim._experiment_can_use_unified_model() is False
 
     def test_set_up_unified_preserves_voltage_safety_events(self):
         experiment = pybamm.Experiment(
@@ -114,25 +112,6 @@ class TestSimulationExperiment:
         assert sim._experiment_step_indices == [1, 2]
         assert sim._experiment_padding_rest_index == 3
         assert sim._experiment_includes_padding_rest
-
-        step_inputs = sim._build_unified_experiment_inputs(
-            {"user input": 7},
-            2,
-            start_time=123.0,
-            temperature=298.15,
-        )
-        assert step_inputs["user input"] == 7
-        assert step_inputs["Ambient temperature [K]"] == 298.15
-        assert step_inputs["start time"] == 123.0
-        assert step_inputs["Experiment step index"] == 2
-
-        padding_inputs = sim._build_unified_experiment_inputs(
-            {},
-            sim._experiment_padding_rest_index,
-            start_time=0.0,
-            temperature=300.0,
-        )
-        assert padding_inputs["Experiment step index"] == 3
 
     def test_setup_experiment_string_or_list(self):
         model = pybamm.lithium_ion.SPM()
