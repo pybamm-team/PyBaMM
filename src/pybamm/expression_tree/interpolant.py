@@ -335,7 +335,7 @@ class Interpolant(pybamm.Function):
         if not uniform:
             stride += 1
         coeffs = np.empty((n, stride, m))
-        
+
         y0 = y_2d[:-1]  # (n, m)
         y1 = y_2d[1:]
         inv_h = (1.0 / h)[:, np.newaxis]  # (n, 1) for broadcasting
