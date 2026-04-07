@@ -315,37 +315,65 @@ class Interpolant(pybamm.Function):
             return LUT(casadi.hcat(converted_children).T).T
 
     def _pchip_to_casadi(self, converted_children):
-        x_np = np.array(self.x[0])
-        y_np = np.array(self.y)
+        x_np = np.asarray(self.x[0], dtype=np.float64)
+        y_np = np.asarray(self.y, dtype=np.float64)
         d_np = interpolate.PchipInterpolator(x_np, y_np).derivative()(x_np)
+
+        n = len(x_np) - 1
+        h = np.diff(x_np)
+        uniform = _is_uniform_grid(x_np)
+        is_vector_valued = y_np.ndim > 1
+        y_2d = y_np if is_vector_valued else y_np[:, np.newaxis]
+        d_2d = d_np if d_np.ndim > 1 else d_np[:, np.newaxis]
+        m = y_2d.shape[1]
+
+        # Precompute Hermite cubic coefficients per interval, pre-divided by h^k.
+        # p(dx) = c0 + c1*dx + c2*dx² + c3*dx³,  dx = x - x_lo
+        # For non-uniform grids x_lo is stored as a 5th table entry;
+        # for uniform grids x_lo is computed from the index via scalar arithmetic.
+        stride = 4
+        if not uniform:
+            stride += 1
+        coeffs = np.empty((n, stride, m))
+        
+        y0 = y_2d[:-1]  # (n, m)
+        y1 = y_2d[1:]
+        inv_h = (1.0 / h)[:, np.newaxis]  # (n, 1) for broadcasting
+        hd0 = h[:, np.newaxis] * d_2d[:-1]
+        hd1 = h[:, np.newaxis] * d_2d[1:]
+
+        coeffs[:, 0] = y0
+        coeffs[:, 1] = hd0 * inv_h
+        coeffs[:, 2] = (-3 * y0 - 2 * hd0 + 3 * y1 - hd1) * inv_h**2
+        coeffs[:, 3] = (2 * y0 + hd0 - 2 * y1 + hd1) * inv_h**3
+        if not uniform:
+            coeffs[:, 4, :] = x_np[:-1, np.newaxis]
+
+        coeffs_flat = casadi.MX(coeffs.reshape(n * stride, m))
+
+        # 1. Single interval index lookup (clamp handles extrapolation)
         x = converted_children[0]
+        lookup_mode = "exact" if uniform else "binary"
+        idx = casadi.low(casadi.MX(x_np), x, {"lookup_mode": lookup_mode})
+        idx = casadi.fmin(casadi.fmax(idx, 0), n - 1)
+        base = idx * stride
 
-        def hermite_poly(i):
-            x0 = x_np[i]
-            x1 = x_np[i + 1]
-            h_val = x1 - x0
-            h_val_mx = casadi.MX(h_val)
-            y0 = casadi.MX(y_np[i])
-            y1 = casadi.MX(y_np[i + 1])
-            d0 = casadi.MX(d_np[i])
-            d1 = casadi.MX(d_np[i + 1])
-            xn = (x - x0) / h_val_mx
-            h00 = 2 * xn**3 - 3 * xn**2 + 1
-            h10 = xn**3 - 2 * xn**2 + xn
-            h01 = -2 * xn**3 + 3 * xn**2
-            h11 = xn**3 - xn**2
-            return h00 * y0 + h10 * h_val_mx * d0 + h01 * y1 + h11 * h_val_mx * d1
+        # 2. Compute dx = x - x_lo
+        if uniform:
+            dx = x - (x_np[0] + idx * h[0])
+        else:
+            dx = x - coeffs_flat[base + 4, 0]
 
-        inside = casadi.MX.zeros(x.shape)
-        for i in range(len(x_np) - 1):
-            cond = casadi.logic_and(x >= x_np[i], x <= x_np[i + 1])
-            inside = casadi.if_else(cond, hermite_poly(i), inside)
+        # 3. Coefficient lookup and Horner evaluation
+        c0 = coeffs_flat[base, :]
+        c1 = coeffs_flat[base + 1, :]
+        c2 = coeffs_flat[base + 2, :]
+        c3 = coeffs_flat[base + 3, :]
+        result = c0 + (c1 + (c2 + c3 * dx) * dx) * dx
 
-        left = hermite_poly(0)
-        right = hermite_poly(len(x_np) - 2)
-        return casadi.if_else(
-            x < x_np[0], left, casadi.if_else(x > x_np[-1], right, inside)
-        )
+        if is_vector_valued:
+            result = result.T
+        return result
 
     def _function_diff(self, children: Sequence[pybamm.Symbol], idx: float):
         """
