@@ -15,6 +15,9 @@ import sympy
 from scipy.sparse import csr_matrix, issparse, kron
 
 import pybamm
+from pybamm.expression_tree.operations._casadi_matmul import (
+    try_repeated_row_matmul,
+)
 from pybamm.expression_tree.symbol import simplify_if_constant
 from pybamm.expression_tree.tracing import is_tracing
 
@@ -530,10 +533,6 @@ class MatrixMultiplication(BinaryOperator):
 
     def _casadi_evaluate(self, left, right):
         """See :meth:`pybamm.BinaryOperator._casadi_evaluate()`."""
-        from pybamm.expression_tree.operations._casadi_matmul import (
-            try_repeated_row_matmul,
-        )
-
         result = try_repeated_row_matmul(self.children[0], right)
         return result if result is not None else self._binary_evaluate(left, right)
 
