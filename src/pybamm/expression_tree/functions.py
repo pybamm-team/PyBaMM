@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Sequence
 
+import casadi
 import numpy as np
 import numpy.typing as npt
 import sympy
@@ -152,6 +153,18 @@ class Function(pybamm.Symbol):
     def _function_evaluate(self, evaluated_children):
         return self.function(*evaluated_children)
 
+    def _casadi_evaluate(self, *converted_children):
+        """CasADi analog of :meth:`_function_evaluate`. Override in subclasses where the
+        CasADi function differs from the numpy one."""
+        return self._function_evaluate(converted_children)
+
+    def _to_casadi(self, t, y, y_dot, inputs, casadi_symbols):
+        """See :meth:`pybamm.Symbol._to_casadi()`."""
+        converted_children = super()._children_to_casadi(
+            t, y, y_dot, inputs, casadi_symbols
+        )
+        return self._casadi_evaluate(*converted_children)
+
     def create_copy(
         self,
         new_children: list[pybamm.Symbol] | None = None,
@@ -269,6 +282,12 @@ class SpecificFunction(Function):
         sympy_function = getattr(sympy, class_name)
         return sympy_function(child)
 
+    def _casadi_evaluate(self, child):
+        """See :meth:`pybamm.Function._casadi_evaluate()`. Subclasses must override."""
+        raise NotImplementedError(
+            f"{self.__class__} does not implement _casadi_evaluate."
+        )
+
     def to_json(self):
         """
         Method to serialise a SpecificFunction object into JSON.
@@ -314,6 +333,10 @@ class Arcsinh(SpecificFunction):
         snippet["function"] = np.arcsinh
         instance = super()._from_json(snippet)
         return instance
+
+    def _casadi_evaluate(self, child):
+        """See :meth:`pybamm.SpecificFunction._casadi_evaluate()`."""
+        return casadi.arcsinh(child)
 
     def _function_diff(self, children, idx):
         """See :meth:`pybamm.Symbol._function_diff()`."""
@@ -424,6 +447,12 @@ class Arcsinh2(Function):
         """See :meth:`pybamm.Function._function_new_copy()`"""
         return Arcsinh2(*children, eps=self.eps)
 
+    def _casadi_evaluate(self, a, b):
+        """See :meth:`pybamm.Function._casadi_evaluate()`."""
+        sign_b = casadi.if_else(b >= 0, 1.0, -1.0)
+        b_eff = sign_b * casadi.hypot(b, self.eps)
+        return casadi.arcsinh(a / b_eff)
+
     def _sympy_operator(self, a, b):
         """Convert to SymPy expression."""
         # sign(b) but treat sign(0) as non-zero
@@ -499,6 +528,10 @@ class Arctan(SpecificFunction):
         instance = super()._from_json(snippet)
         return instance
 
+    def _casadi_evaluate(self, child):
+        """See :meth:`pybamm.SpecificFunction._casadi_evaluate()`."""
+        return casadi.arctan(child)
+
     def _function_diff(self, children, idx):
         """See :meth:`pybamm.Function._function_diff()`."""
         return 1 / (children[0] ** 2 + 1)
@@ -526,6 +559,10 @@ class Cos(SpecificFunction):
         instance = super()._from_json(snippet)
         return instance
 
+    def _casadi_evaluate(self, child):
+        """See :meth:`pybamm.SpecificFunction._casadi_evaluate()`."""
+        return casadi.cos(child)
+
     def _function_diff(self, children, idx):
         """See :meth:`pybamm.Symbol._function_diff()`."""
         return -sin(children[0])
@@ -549,6 +586,10 @@ class Cosh(SpecificFunction):
         instance = super()._from_json(snippet)
         return instance
 
+    def _casadi_evaluate(self, child):
+        """See :meth:`pybamm.SpecificFunction._casadi_evaluate()`."""
+        return casadi.cosh(child)
+
     def _function_diff(self, children, idx):
         """See :meth:`pybamm.Function._function_diff()`."""
         return sinh(children[0])
@@ -571,6 +612,10 @@ class Erf(SpecificFunction):
         snippet["function"] = special.erf
         instance = super()._from_json(snippet)
         return instance
+
+    def _casadi_evaluate(self, child):
+        """See :meth:`pybamm.SpecificFunction._casadi_evaluate()`."""
+        return casadi.erf(child)
 
     def _function_diff(self, children, idx):
         """See :meth:`pybamm.Function._function_diff()`."""
@@ -600,6 +645,10 @@ class Exp(SpecificFunction):
         instance = super()._from_json(snippet)
         return instance
 
+    def _casadi_evaluate(self, child):
+        """See :meth:`pybamm.SpecificFunction._casadi_evaluate()`."""
+        return casadi.exp(child)
+
     def _function_diff(self, children, idx):
         """See :meth:`pybamm.Function._function_diff()`."""
         return exp(children[0])
@@ -622,6 +671,10 @@ class Log(SpecificFunction):
         snippet["function"] = np.log
         instance = super()._from_json(snippet)
         return instance
+
+    def _casadi_evaluate(self, child):
+        """See :meth:`pybamm.SpecificFunction._casadi_evaluate()`."""
+        return casadi.log(child)
 
     def _function_evaluate(self, evaluated_children):
         # don't raise RuntimeWarning for NaNs
@@ -660,6 +713,10 @@ class Max(SpecificFunction):
         instance = super()._from_json(snippet)
         return instance
 
+    def _casadi_evaluate(self, child):
+        """See :meth:`pybamm.SpecificFunction._casadi_evaluate()`."""
+        return casadi.mmax(child)
+
     def _evaluate_for_shape(self):
         """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""
         # Max will always return a scalar
@@ -686,6 +743,10 @@ class Min(SpecificFunction):
         snippet["function"] = np.min
         instance = super()._from_json(snippet)
         return instance
+
+    def _casadi_evaluate(self, child):
+        """See :meth:`pybamm.SpecificFunction._casadi_evaluate()`."""
+        return casadi.mmin(child)
 
     def _evaluate_for_shape(self):
         """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""
@@ -719,6 +780,10 @@ class Sin(SpecificFunction):
         instance = super()._from_json(snippet)
         return instance
 
+    def _casadi_evaluate(self, child):
+        """See :meth:`pybamm.SpecificFunction._casadi_evaluate()`."""
+        return casadi.sin(child)
+
     def _function_diff(self, children, idx):
         """See :meth:`pybamm.Function._function_diff()`."""
         return cos(children[0])
@@ -742,6 +807,10 @@ class Sinh(SpecificFunction):
         instance = super()._from_json(snippet)
         return instance
 
+    def _casadi_evaluate(self, child):
+        """See :meth:`pybamm.SpecificFunction._casadi_evaluate()`."""
+        return casadi.sinh(child)
+
     def _function_diff(self, children, idx):
         """See :meth:`pybamm.Function._function_diff()`."""
         return cosh(children[0])
@@ -764,6 +833,10 @@ class Sqrt(SpecificFunction):
         snippet["function"] = np.sqrt
         instance = super()._from_json(snippet)
         return instance
+
+    def _casadi_evaluate(self, child):
+        """See :meth:`pybamm.SpecificFunction._casadi_evaluate()`."""
+        return casadi.sqrt(child)
 
     def _function_evaluate(self, evaluated_children):
         # don't raise RuntimeWarning for NaNs
@@ -943,6 +1016,12 @@ class RegPower(Function):
             RegPower(base, exponent, scale=scale, delta=self.delta)
         )
 
+    def _casadi_evaluate(self, base, exponent, scale):
+        """See :meth:`pybamm.Function._casadi_evaluate()`."""
+        x = base / scale
+        x2_d2 = x**2 + self.delta**2
+        return x * (x2_d2 ** ((exponent - 1) / 2)) * (scale**exponent)
+
     def _sympy_operator(self, base, exponent, scale):
         """Convert to SymPy expression."""
         x = base / scale
@@ -1019,6 +1098,10 @@ class Tanh(SpecificFunction):
         snippet["function"] = np.tanh
         instance = super()._from_json(snippet)
         return instance
+
+    def _casadi_evaluate(self, child):
+        """See :meth:`pybamm.SpecificFunction._casadi_evaluate()`."""
+        return casadi.tanh(child)
 
     def _function_diff(self, children, idx):
         """See :meth:`pybamm.Function._function_diff()`."""

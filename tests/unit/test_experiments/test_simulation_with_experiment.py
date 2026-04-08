@@ -57,7 +57,6 @@ class TestSimulationExperiment:
         assert sim._get_unified_experiment_model_blockers() == [
             "no experiment is attached to the simulation"
         ]
-        assert sim._experiment_can_use_unified_model() is False
 
         sim = pybamm.Simulation(
             pybamm.lithium_ion.SPM(),
@@ -67,7 +66,6 @@ class TestSimulationExperiment:
         assert sim._get_unified_experiment_model_blockers() == [
             "unsupported experiment step type 'BaseStep'"
         ]
-        assert sim._experiment_can_use_unified_model() is False
 
     def test_set_up_unified_preserves_voltage_safety_events(self):
         experiment = pybamm.Experiment(
@@ -92,7 +90,7 @@ class TestSimulationExperiment:
         assert "Minimum voltage [V]" in event_names
         assert "Maximum voltage [V]" in event_names
 
-    def test_build_unified_experiment_inputs_uses_expected_step_index(self):
+    def test_build_experiment_step_inputs_uses_expected_step_index(self):
         start = datetime(2024, 1, 1, 12)
         experiment = pybamm.Experiment(
             [
@@ -115,24 +113,25 @@ class TestSimulationExperiment:
         assert sim._experiment_padding_rest_index == 3
         assert sim._experiment_includes_padding_rest
 
-        step_inputs = sim._build_unified_experiment_inputs(
+        step = experiment.steps[1]
+        step_inputs = sim._build_experiment_step_inputs(
             {"user input": 7},
-            2,
+            step,
             start_time=123.0,
-            temperature=298.15,
+            active_step_index=2,
         )
         assert step_inputs["user input"] == 7
-        assert step_inputs["Ambient temperature [K]"] == 298.15
+        assert step_inputs["Ambient temperature [K]"] is not None
         assert step_inputs["start time"] == 123.0
         assert step_inputs["Experiment step index"] == 2
 
-        padding_inputs = sim._build_unified_experiment_inputs(
+        step_inputs = sim._build_experiment_step_inputs(
             {},
-            sim._experiment_padding_rest_index,
+            experiment.steps[0],
             start_time=0.0,
-            temperature=300.0,
+            active_step_index=sim._experiment_padding_rest_index,
         )
-        assert padding_inputs["Experiment step index"] == 3
+        assert step_inputs["Experiment step index"] == 3
 
     def test_setup_experiment_string_or_list(self):
         model = pybamm.lithium_ion.SPM()

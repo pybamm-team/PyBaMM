@@ -15,6 +15,9 @@ import sympy
 from scipy.sparse import csr_matrix, issparse, kron
 
 import pybamm
+from pybamm.expression_tree.operations._casadi_matmul import (
+    try_repeated_row_matmul,
+)
 from pybamm.expression_tree.symbol import simplify_if_constant
 from pybamm.expression_tree.tracing import is_tracing
 
@@ -181,6 +184,18 @@ class BinaryOperator(pybamm.Symbol):
         raise NotImplementedError(
             f"{self.__class__} does not implement _binary_evaluate."
         )
+
+    def _casadi_evaluate(self, left, right):
+        """CasADi analog of :meth:`_binary_evaluate`. Override in subclasses where the
+        CasADi function differs from the numpy one."""
+        return self._binary_evaluate(left, right)
+
+    def _to_casadi(self, t, y, y_dot, inputs, casadi_symbols):
+        """See :meth:`pybamm.Symbol._to_casadi()`."""
+        converted_left, converted_right = self._children_to_casadi(
+            t, y, y_dot, inputs, casadi_symbols
+        )
+        return self._casadi_evaluate(converted_left, converted_right)
 
     def _evaluates_on_edges(self, dimension: str) -> bool:
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
@@ -396,6 +411,10 @@ class KroneckerProduct(BinaryOperator):
         else:
             return np.kron(left, right)
 
+    def _casadi_evaluate(self, left, right):
+        """See :meth:`pybamm.BinaryOperator._casadi_evaluate()`."""
+        return casadi.kron(left, right)
+
     def _sympy_operator(self, left, right):
         """Override :meth:`pybamm.BinaryOperator._sympy_operator`"""
         raise NotImplementedError
@@ -511,6 +530,11 @@ class MatrixMultiplication(BinaryOperator):
     def _binary_evaluate(self, left, right):
         """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
         return left @ right
+
+    def _casadi_evaluate(self, left, right):
+        """See :meth:`pybamm.BinaryOperator._casadi_evaluate()`."""
+        result = try_repeated_row_matmul(self.children[0], right)
+        return result if result is not None else self._binary_evaluate(left, right)
 
     def _sympy_operator(self, left, right):
         """Override :meth:`pybamm.BinaryOperator._sympy_operator`"""
@@ -857,6 +881,10 @@ class Modulo(BinaryOperator):
         """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
         return left % right
 
+    def _casadi_evaluate(self, left, right):
+        """See :meth:`pybamm.BinaryOperator._casadi_evaluate()`."""
+        return casadi.fmod(left, right)
+
     def _t_discon(self, expr, y0, inputs, num_events):
         value = expr.evaluate(0, y0, inputs=inputs)
         t_discon = []
@@ -899,6 +927,10 @@ class Minimum(BinaryOperator):
         """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
         # don't raise RuntimeWarning for NaNs
         return np.minimum(left, right)
+
+    def _casadi_evaluate(self, left, right):
+        """See :meth:`pybamm.BinaryOperator._casadi_evaluate()`."""
+        return casadi.fmin(left, right)
 
     def _binary_new_copy(
         self,
@@ -944,6 +976,10 @@ class Maximum(BinaryOperator):
         # don't raise RuntimeWarning for NaNs
         return np.maximum(left, right)
 
+    def _casadi_evaluate(self, left, right):
+        """See :meth:`pybamm.BinaryOperator._casadi_evaluate()`."""
+        return casadi.fmax(left, right)
+
     def _binary_new_copy(
         self,
         left: ChildSymbol,
@@ -986,6 +1022,10 @@ class Hypot(BinaryOperator):
     def _binary_evaluate(self, left, right):
         """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
         return np.hypot(left, right)
+
+    def _casadi_evaluate(self, left, right):
+        """See :meth:`pybamm.BinaryOperator._casadi_evaluate()`."""
+        return casadi.hypot(left, right)
 
     def _binary_new_copy(
         self,
