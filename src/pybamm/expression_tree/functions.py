@@ -156,19 +156,7 @@ class Function(pybamm.Symbol):
     def _casadi_evaluate(self, *converted_children):
         """CasADi analog of :meth:`_function_evaluate`. Override in subclasses where the
         CasADi function differs from the numpy one."""
-        if self.function.__name__.startswith("elementwise_grad_of_"):
-            differentiating_child_idx = int(self.function.__name__[-1])
-            dummy_vars = [
-                casadi.MX.sym("y_" + str(i)) for i in range(len(converted_children))
-            ]
-            func_diff = casadi.gradient(
-                self.differentiated_function(*dummy_vars),
-                dummy_vars[differentiating_child_idx],
-            )
-            return casadi.Function("func_diff", dummy_vars, [func_diff])(
-                *converted_children
-            )
-        return self._function_evaluate(list(converted_children))
+        return self._function_evaluate(converted_children)
 
     def _to_casadi(self, t, y, y_dot, inputs, casadi_symbols):
         """See :meth:`pybamm.Symbol._to_casadi()`."""
