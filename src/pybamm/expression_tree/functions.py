@@ -647,8 +647,21 @@ def log10(child: pybamm.Symbol):
     return log(child, base=10)
 
 
-class Max(SpecificFunction):
-    """Max function."""
+class Reduction(SpecificFunction):
+    """Base class for reduction operations that collapse a spatial
+    field to a scalar (e.g. max, min).  Automatically clears domains
+    and returns scalar shape."""
+
+    def __init__(self, function: Callable, child: pybamm.Symbol):
+        super().__init__(function, child)
+        self.clear_domains()
+
+    def _evaluate_for_shape(self):
+        return np.nan * np.ones((1, 1))
+
+
+class Max(Reduction):
+    """Max function (reduction to scalar)."""
 
     def __init__(self, child):
         super().__init__(np.max, child)
@@ -660,11 +673,6 @@ class Max(SpecificFunction):
         instance = super()._from_json(snippet)
         return instance
 
-    def _evaluate_for_shape(self):
-        """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""
-        # Max will always return a scalar
-        return np.nan * np.ones((1, 1))
-
 
 def max(child: pybamm.Symbol):
     """
@@ -674,8 +682,8 @@ def max(child: pybamm.Symbol):
     return pybamm.simplify_if_constant(Max(child))
 
 
-class Min(SpecificFunction):
-    """Min function."""
+class Min(Reduction):
+    """Min function (reduction to scalar)."""
 
     def __init__(self, child):
         super().__init__(np.min, child)
@@ -686,11 +694,6 @@ class Min(SpecificFunction):
         snippet["function"] = np.min
         instance = super()._from_json(snippet)
         return instance
-
-    def _evaluate_for_shape(self):
-        """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""
-        # Min will always return a scalar
-        return np.nan * np.ones((1, 1))
 
 
 def min(child: pybamm.Symbol):
