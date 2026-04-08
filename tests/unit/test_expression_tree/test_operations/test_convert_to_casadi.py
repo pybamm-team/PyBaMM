@@ -501,6 +501,24 @@ class TestCasadiConverter:
         with pytest.raises(TypeError, match=r"Cannot convert symbol of type"):
             var.to_casadi()
 
+    def test_citation_registered_once(self, mocker):
+        spy = mocker.spy(pybamm.citations, "register")
+
+        expr = pybamm.Scalar(1) + pybamm.Scalar(2)
+        expr.to_casadi()
+
+        andersson_calls = [
+            c for c in spy.call_args_list if c.args == ("Andersson2019",)
+        ]
+        assert len(andersson_calls) == 1
+
+    def test_to_casadi_rejects_bad_types(self):
+        s = pybamm.Scalar(1)
+        with pytest.raises(TypeError, match="casadi_symbols must be a dict"):
+            s.to_casadi(casadi_symbols="not a dict")
+        with pytest.raises(TypeError, match="inputs must be a dict"):
+            s.to_casadi(inputs="not a dict")
+
 
 class TestRepeatedRowMatmulOptimization:
     """Tests for try_repeated_row_matmul optimization."""

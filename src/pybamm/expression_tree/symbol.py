@@ -1006,10 +1006,25 @@ class Symbol:
         -------
         :class:`casadi.MX`
         """
-        pybamm.citations.register("Andersson2019")
         if casadi_symbols is None:
+            pybamm.citations.register("Andersson2019")
             casadi_symbols = {}
-        inputs = inputs or {}
+        elif not isinstance(casadi_symbols, dict):
+            raise TypeError(
+                f"casadi_symbols must be a dict, got {type(casadi_symbols)}"
+            )
+
+        if inputs is None:
+            inputs = {}
+        elif not isinstance(inputs, dict):
+            raise TypeError(f"inputs must be a dict, got {type(inputs)}")
+
+        return self._to_casadi_inner(t, y, y_dot, inputs, casadi_symbols)
+
+    def _to_casadi_inner(self, t, y, y_dot, inputs: dict, casadi_symbols: dict):
+        """
+        Wrapper around _to_casadi with fixed types for inputs and casadi_symbols.
+        """
         _value = casadi_symbols.get(self, None)
         if _value is not None:
             return _value
@@ -1022,7 +1037,7 @@ class Symbol:
         t,
         y,
         y_dot,
-        inputs,
+        inputs: dict,
         casadi_symbols: dict,
     ):
         """
@@ -1045,7 +1060,7 @@ class Symbol:
         list of converted children before applying additional logic.
         """
         return [
-            child.to_casadi(t, y, y_dot, inputs, casadi_symbols)
+            child._to_casadi_inner(t, y, y_dot, inputs, casadi_symbols)
             for child in self.children
         ]
 
