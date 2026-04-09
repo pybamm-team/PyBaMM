@@ -25,6 +25,24 @@ class Composite(BaseElectrolyteConductivity):
     def __init__(self, param, domain=None, options=None):
         super().__init__(param, domain, options=options)
 
+    @property
+    def use_algebraic_macinnes_function(self) -> bool:
+        return (
+            self.options["surface form"] != "false"
+            and self.options.electrode_types["negative"] == "porous"
+            and self.domain in (None, "negative")
+        )
+
+    def get_fundamental_variables(self):
+        variables = {}
+        if self.use_algebraic_macinnes_function:
+            macinnes = pybamm.Variable(
+                "X-averaged negative MacInnes function",
+                domain="current collector",
+            )
+            variables["X-averaged negative MacInnes function"] = macinnes
+        return variables
+
     def _higher_order_macinnes_function(self, x):
         "Function to differentiate between composite and first-order models"
         tol = pybamm.settings.tolerances["macinnes__c_e"]
@@ -100,16 +118,17 @@ class Composite(BaseElectrolyteConductivity):
                 + (i_boundary_cc / kappa_s_av) * L_n
             )
         else:
+            if self.use_algebraic_macinnes_function:
+                macinnes_c_e_n = variables["X-averaged negative MacInnes function"]
+            else:
+                macinnes_c_e_n = pybamm.x_average(
+                    self._higher_order_macinnes_function(c_e_n / c_e_av)
+                )
+
             phi_e_const = (
                 -delta_phi_n_av
                 + phi_s_n_av
-                - (
-                    chi_av
-                    * RT_F_av
-                    * pybamm.x_average(
-                        self._higher_order_macinnes_function(c_e_n / c_e_av)
-                    )
-                )
+                - (chi_av * RT_F_av * macinnes_c_e_n)
                 - ((i_boundary_cc * L_n) * (1 / (3 * kappa_n_av) - 1 / kappa_s_av))
             )
 
@@ -155,10 +174,10 @@ class Composite(BaseElectrolyteConductivity):
         macinnes_c_e_p = pybamm.x_average(
             self._higher_order_macinnes_function(c_e_p / c_e_av)
         )
-        macinnes_c_e_n = pybamm.x_average(
-            self._higher_order_macinnes_function(c_e_n / c_e_av)
-        )
         if self.options.electrode_types["negative"] == "planar":
+            macinnes_c_e_n = pybamm.x_average(
+                self._higher_order_macinnes_function(c_e_n / c_e_av)
+            )
             ohmic_n = 0
         else:
             ohmic_n = L_n / (3 * kappa_n_av)
@@ -178,3 +197,18 @@ class Composite(BaseElectrolyteConductivity):
         i_e.print_name = "i_e"
 
         return variables
+
+    def set_algebraic(self, variables):
+        if not self.use_algebraic_macinnes_function:
+            return
+        macinnes = variables["X-averaged negative MacInnes function"]
+        c_e_av = variables["X-averaged electrolyte concentration [mol.m-3]"]
+        c_e_n = variables["Negative electrolyte concentration [mol.m-3]"]
+        macinnes_actual = pybamm.x_average(self._higher_order_macinnes_function(c_e_n / c_e_av))
+        self.algebraic[macinnes] = macinnes - macinnes_actual
+
+    def set_initial_conditions(self, variables):
+        if not self.use_algebraic_macinnes_function:
+            return
+        macinnes = variables["X-averaged negative MacInnes function"]
+        self.initial_conditions[macinnes] = pybamm.Scalar(0)
