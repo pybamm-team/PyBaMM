@@ -25,16 +25,12 @@ class TestSPMe(BaseUnitTestLithiumIon):
             model = pybamm.lithium_ion.SPMe(
                 {"particle phases": ("2", "1"), "surface form": surf}
             )
-            c_e_av = model.variables[
-                "X-averaged electrolyte concentration [mol.m-3]"
-            ]
+            c_e_av = model.variables["X-averaged electrolyte concentration [mol.m-3]"]
             assert isinstance(c_e_av, pybamm.Variable)
 
     def test_no_surface_form_c_e_av_is_expression(self):
         model = pybamm.lithium_ion.SPMe()
-        c_e_av = model.variables[
-            "X-averaged electrolyte concentration [mol.m-3]"
-        ]
+        c_e_av = model.variables["X-averaged electrolyte concentration [mol.m-3]"]
         assert not isinstance(c_e_av, pybamm.Variable)
 
     def test_surface_form_macinnes_variable(self):

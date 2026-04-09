@@ -1119,7 +1119,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         data = np.ones(nnz)
         return csc_matrix((data, indices, indptr), shape=(n, n))
 
-    def spy(self, ax=None, *, show_plot=True, **kwargs):
+    def spy(self, ax=None, *, show_plot=None, **kwargs):
         """Plot the sparsity pattern of the Jacobian, delineating differential
         and algebraic states.
 
@@ -1129,6 +1129,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
         ----------
         ax : :class:`matplotlib.axes.Axes`, optional
             Axes to plot on. If ``None``, a new figure is created.
+        show_plot : bool, optional
+            Whether to show the plot. Default is True.
         **kwargs
             Forwarded to :meth:`matplotlib.axes.Axes.spy`.
 
@@ -1138,12 +1140,14 @@ class IDAKLUSolver(pybamm.BaseSolver):
         """
         try:
             import matplotlib.pyplot as plt
-            from matplotlib.lines import Line2D
         except ImportError as e:
             raise ImportError(
                 "matplotlib is required for plot_jacobian_sparsity. "
                 "Install it with: pip install matplotlib"
             ) from e
+
+        if show_plot is None:
+            show_plot = True
 
         J = self.get_jacobian_sparsity()
 
@@ -1151,33 +1155,19 @@ class IDAKLUSolver(pybamm.BaseSolver):
         nnz = J.nnz
         n_rhs = int(self._setup["ids"].sum())
         n_alg = n - n_rhs
-        density = 100.0 * nnz / (n * n) if n > 0 else 0.0
+        sparsity = 100.0 * (1 - nnz / (n * n) if n > 0 else 0.0)
         if ax is None:
-            _, ax = plt.subplots(1, 1, figsize=(6, 6))
+            fig, ax = plt.subplots(1, 1)
 
-        kwargs.setdefault("markersize", max(1, min(4, 800 // n)))
-        kwargs.setdefault("color", "C0")
         ax.spy(J, **kwargs)
-
-        if n_alg > 0:
-            boundary = n_rhs - 0.5
-            ax.axhline(boundary, color="C3", linewidth=1.2, linestyle="--")
-            ax.axvline(boundary, color="C3", linewidth=1.2, linestyle="--")
 
         ax.set_xlabel("State index")
         ax.set_ylabel("Equation index")
 
-        info = f"n = {n}  |  nnz = {nnz}  |  density = {density:.2f}%"
-        if n_alg > 0:
-            info += f"\ndifferential = {n_rhs}  |  algebraic = {n_alg}"
+        info = f"{nnz} nnz, {sparsity:.2f}% sparse"
+        info += f"\n{n} states: {n_rhs} differential and {n_alg} algebraic"
         ax.set_title(info, fontsize=10)
-
-        if n_alg > 0:
-            legend_elements = [
-                Line2D([0], [0], color="C3", linestyle="--", linewidth=1.2,
-                       label="differential / algebraic boundary"),
-            ]
-            ax.legend(handles=legend_elements, loc="upper right", fontsize=8)
+        fig.tight_layout()
 
         if show_plot:
             plt.show()

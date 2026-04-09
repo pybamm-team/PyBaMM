@@ -40,11 +40,11 @@ class Composite(BaseElectrolyteConductivity):
                 "X-averaged negative MacInnes function",
                 domain="current collector",
             )
-            variables[
-                "X-averaged positive electrolyte potential [V]"
-            ] = pybamm.Variable(
-                "X-averaged positive electrolyte potential [V]",
-                domain="current collector",
+            variables["X-averaged positive electrolyte potential [V]"] = (
+                pybamm.Variable(
+                    "X-averaged positive electrolyte potential [V]",
+                    domain="current collector",
+                )
             )
         return variables
 
