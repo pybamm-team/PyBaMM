@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import numbers
 
+import casadi
 import numpy as np
 import numpy.typing as npt
 import scipy.sparse
@@ -144,6 +145,29 @@ class Conditional(pybamm.Symbol):
             self.selector,
             *[branch.jac(variable) for branch in self.branches],
         )
+
+    def _to_casadi(self, t, y, y_dot, inputs, casadi_symbols):
+        """See :meth:`pybamm.Symbol._to_casadi()`."""
+        converted_selector = self.selector._to_casadi_inner(
+            t, y, y_dot, inputs, casadi_symbols
+        )
+        first_branch = self.branches[0]._to_casadi_inner(
+            t, y, y_dot, inputs, casadi_symbols
+        )
+        result = casadi.MX.zeros(*first_branch.shape)
+        for branch_index in range(len(self.branches), 0, -1):
+            if branch_index == 1:
+                converted_branch = first_branch
+            else:
+                converted_branch = self.branches[branch_index - 1]._to_casadi_inner(
+                    t, y, y_dot, inputs, casadi_symbols
+                )
+            condition = casadi.logic_and(
+                converted_selector > (branch_index - 0.5),
+                converted_selector < (branch_index + 0.5),
+            )
+            result = casadi.if_else(condition, converted_branch, result)
+        return result
 
     def to_equation(self):
         if self.print_name is not None:
