@@ -2,6 +2,8 @@
 
 ## Features
 
+- Adds EIS support via `EISSimulation` class with a restructure to the `Solution` class to support `EISSolution`. Includes examples and citation, with a ~5x solve improvement over pybamm-eis. ([#5433](https://github.com/pybamm-team/PyBaMM/pull/5433))
+- Refactors `Simulation` class into an inherited class from a `BaseSimulation`. `BaseSimulation` is used for all non-experiment based simulations, with the `Simulation` class adding experiment support. Includes a small code cleanup. ([#5430](https://github.com/pybamm-team/PyBaMM/pull/5430))
 - Improved pchip interpolation performance. ([#5436](https://github.com/pybamm-team/PyBaMM/pull/5436))
 - Refactored CasADi codegen conversion to use OOP dispatch. ([#5436](https://github.com/pybamm-team/PyBaMM/pull/5436))
 - Added a unified experiment-model path that reuses a single built model and solver across compatible experiment steps. ([#5422](https://github.com/pybamm-team/PyBaMM/pull/5422))
