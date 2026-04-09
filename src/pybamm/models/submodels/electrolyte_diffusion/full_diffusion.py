@@ -29,8 +29,7 @@ class Full(BaseElectrolyteDiffusion):
             return super()._get_standard_whole_cell_concentration_variables(c_e)
 
         c_e.print_name = "c_e"
-        c_e_av = pybamm.x_average(c_e)
-        c_e_av_var = pybamm.Variable(
+        c_e_av = pybamm.Variable(
             "X-averaged electrolyte concentration [mol.m-3]",
             domain="current collector",
             bounds=(0, np.inf),
@@ -38,15 +37,13 @@ class Full(BaseElectrolyteDiffusion):
         )
         variables = {
             "Electrolyte concentration [mol.m-3]": c_e,
-            "X-averaged electrolyte concentration [mol.m-3]": c_e_av_var,
-            "X-averaged electrolyte concentration expression [mol.m-3]": c_e_av,
+            "X-averaged electrolyte concentration [mol.m-3]": c_e_av,
         }
-        variables_nondim = {
-            k: v for k, v in variables.items() if "expression" not in k
+        nondim = {
+            name.replace("[mol.m-3]", "[Molar]"): var / 1000
+            for name, var in variables.items()
         }
-        for name, var in variables_nondim.items():
-            name = name.replace("[mol.m-3]", "[Molar]")
-            variables[name] = var / 1000
+        variables.update(nondim)
 
         return variables
 
@@ -128,9 +125,8 @@ class Full(BaseElectrolyteDiffusion):
         if self.options["surface form"] == "false":
             return
         c_e_av = variables["X-averaged electrolyte concentration [mol.m-3]"]
-        c_e_av_expr = variables[
-            "X-averaged electrolyte concentration expression [mol.m-3]"
-        ]
+        c_e = variables["Electrolyte concentration [mol.m-3]"]
+        c_e_av_expr = pybamm.x_average(c_e)
         self.algebraic = {c_e_av: (c_e_av - c_e_av_expr) / self.param.c_e_init_av}
 
     def set_initial_conditions(self, variables):

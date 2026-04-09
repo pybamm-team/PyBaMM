@@ -5,9 +5,7 @@ import pytest
 
 import pybamm
 from tests import BaseUnitTestLithiumIon
-import casadi
 
-    
 
 class TestSPMe(BaseUnitTestLithiumIon):
     def setup_method(self):
@@ -48,18 +46,50 @@ class TestSPMe(BaseUnitTestLithiumIon):
             macinnes = model.variables["X-averaged negative MacInnes function"]
             assert isinstance(macinnes, pybamm.Variable)
 
-    def test_surface_form_sparsity_improvement(self):
-        model = pybamm.lithium_ion.SPMe({"particle phases": ("2", "1")})
-        pv = pybamm.ParameterValues("Chen2020_composite")
-        sim = pybamm.Simulation(
-            model, parameter_values=pv, solver=pybamm.IDAKLUSolver()
+    def test_surface_form_phi_e_p_av_is_variable(self):
+        for surf in ["algebraic", "differential"]:
+            model = pybamm.lithium_ion.SPMe(
+                {"particle phases": ("2", "1"), "surface form": surf}
+            )
+            key = "X-averaged positive electrolyte potential [V]"
+            assert key in model.variables
+            assert isinstance(model.variables[key], pybamm.Variable)
+
+    def test_no_surface_form_phi_e_p_av_is_expression(self):
+        model = pybamm.lithium_ion.SPMe()
+        key = "X-averaged positive electrolyte potential [V]"
+        assert key in model.variables
+        assert not isinstance(model.variables[key], pybamm.Variable)
+
+    def test_surface_form_sparsity_fixes_property(self):
+        from pybamm.models.submodels.electrolyte_conductivity.composite_conductivity import (
+            Composite,
         )
-        sim.solve([0, 100])
-        dm = sim.built_model
-        n = dm.len_rhs + dm.len_alg
-        w = casadi.MX.sym("w", n)
-        rhs = dm.concatenated_rhs.to_casadi(casadi.MX.sym("t"), w, inputs={})
-        alg = dm.concatenated_algebraic.to_casadi(casadi.MX.sym("t"), w, inputs={})
-        J = casadi.Function("J", [w], [casadi.jacobian(casadi.vertcat(rhs, alg), w)])
-        nnz = J.sparsity_out(0).nnz()
-        assert nnz < 1500, f"Jacobian nnz={nnz} should be < 1500 (was 3127 before fix)"
+
+        param = pybamm.LithiumIonParameters()
+        opts_surface = pybamm.BatteryModelOptions({"surface form": "algebraic"})
+        opts_no_surface = pybamm.BatteryModelOptions({})
+
+        sub = Composite(param, domain="negative", options=opts_surface)
+        assert sub._use_surface_form_sparsity_fixes is True
+
+        sub = Composite(param, domain="positive", options=opts_surface)
+        assert sub._use_surface_form_sparsity_fixes is False
+
+        sub = Composite(param, domain="negative", options=opts_no_surface)
+        assert sub._use_surface_form_sparsity_fixes is False
+
+        sub = Composite(param, domain=None, options=opts_surface)
+        assert sub._use_surface_form_sparsity_fixes is True
+
+    def test_surface_form_jacobian_sparsity(self):
+        model = pybamm.lithium_ion.SPMe({"particle phases": ("2", "1")})
+        sim = pybamm.Simulation(
+            model,
+            parameter_values=pybamm.ParameterValues("Chen2020_composite"),
+            solver=pybamm.IDAKLUSolver(),
+        )
+        sim.build()
+        sim._solver.set_up(sim._built_model)
+        J = sim._solver.get_jacobian_sparsity()
+        assert J.nnz < 900, f"Jacobian nnz={J.nnz} should be < 900 (was 3127)"
