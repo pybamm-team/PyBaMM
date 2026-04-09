@@ -947,6 +947,45 @@ class TestSerialise:
         assert len(loaded_model.rhs) == 1
         assert next(iter(loaded_model.rhs.keys())).name == "a"
 
+    def test_custom_model_roundtrip_preserves_lithium_ion_base(self, tmp_path):
+        # Custom models authored as subclasses of li-ion BaseModel (or
+        # reparented to it before serialising) should round-trip with their
+        # base class and options intact, so that the loaded model's
+        # default_geometry / default_spatial_methods cover the particle
+        # domains without the caller passing them explicitly.
+        from pybamm.models.full_battery_models.lithium_ion.base_lithium_ion_model import (
+            BaseModel as LiIonBaseModel,
+        )
+
+        model = LiIonBaseModel(options={"working electrode": "positive"})
+        model.name = "HalfCellGITTLike"
+        c = pybamm.Variable(
+            "X-averaged positive particle concentration [mol.m-3]",
+            domain="positive particle",
+            bounds=(0, 1),
+        )
+        model.rhs = {c: -pybamm.div(-pybamm.grad(c))}
+        model.initial_conditions = {c: pybamm.Scalar(0.5)}
+        model.boundary_conditions = {
+            c: {
+                "left": (pybamm.Scalar(0), "Neumann"),
+                "right": (pybamm.Scalar(0), "Neumann"),
+            }
+        }
+        model.variables = {c.name: c}
+
+        file_path = tmp_path / "halfcell.json"
+        Serialise.save_custom_model(model, filename=str(file_path))
+        loaded = Serialise.load_custom_model(str(file_path))
+
+        # Base class is re-imported, not the BaseModel fallback.
+        assert isinstance(loaded, LiIonBaseModel)
+        assert loaded.options["working electrode"] == "positive"
+        # The li-ion defaults driven by the options are available on load,
+        # so Simulation can discretise without any extra dicts.
+        assert "positive particle" in loaded.default_geometry
+        assert "positive particle" in loaded.default_spatial_methods
+
     def test_function_parameter_with_diff_variable_serialisation(self):
         x = pybamm.Variable("x")
         diff_var = pybamm.Variable("r")
