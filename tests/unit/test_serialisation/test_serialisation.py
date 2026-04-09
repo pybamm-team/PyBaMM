@@ -915,32 +915,37 @@ class TestSerialise:
         }
 
     def test_import_base_class_non_builtin_object(self, tmp_path):
-        # Minimal model JSON with a non-existent base class
-        model_json = {
-            "schema_version": "1.1",
-            "pybamm_version": pybamm.__version__,
-            "model": {
-                "base_class": "nonexistent_module.DummyModel",
-                "name": "DummyModel",
-                "rhs": [],
-                "algebraic": [],
-                "initial_conditions": [],
-                "boundary_conditions": [],
-                "events": [],
-                "variables": {},
-            },
-        }
+        # When the recorded base class lives in a package that isn't installed
+        # in the loading environment, load_custom_model should fall back to
+        # pybamm.BaseModel (with a warning) rather than raising ImportError,
+        # since the model is stored fully symbolically.
+        model = pybamm.BaseModel(name="DummyModel")
+        a = pybamm.Variable("a")
+        model.rhs = {a: a}
+        model.initial_conditions = {a: pybamm.Scalar(1)}
+        model.variables = {"a": a}
 
         file_path = tmp_path / "model.json"
+        Serialise.save_custom_model(model, filename=str(file_path))
 
+        # Rewrite the saved base_class to a module that can't be imported.
+        with open(file_path) as f:
+            data = json.load(f)
+        data["model"]["base_class"] = "nonexistent_module.DummyModel"
         with open(file_path, "w") as f:
-            json.dump(model_json, f)
+            json.dump(data, f)
 
-        with pytest.raises(
-            ImportError,
-            match=r"(?i)Could not import base class 'nonexistent_module\.DummyModel'",
+        with pytest.warns(
+            UserWarning,
+            match=r"Could not import base class 'nonexistent_module\.DummyModel'",
         ):
-            Serialise.load_custom_model(str(file_path))
+            loaded_model = Serialise.load_custom_model(str(file_path))
+
+        # Falls back to plain BaseModel but preserves symbolic content
+        assert type(loaded_model) is pybamm.BaseModel
+        assert loaded_model.name == "DummyModel"
+        assert len(loaded_model.rhs) == 1
+        assert next(iter(loaded_model.rhs.keys())).name == "a"
 
     def test_function_parameter_with_diff_variable_serialisation(self):
         x = pybamm.Variable("x")

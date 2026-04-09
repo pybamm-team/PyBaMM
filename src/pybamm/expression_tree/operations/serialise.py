@@ -1362,21 +1362,29 @@ class Serialise:
         if missing:
             raise KeyError(f"Missing required model sections: {missing}")
 
-        battery_model = model_data.get("base_class")
-        if not battery_model or battery_model.strip() == "pybamm.BaseModel":
+        battery_model = (model_data.get("base_class") or "").strip()
+        # Sentinels meaning "no specific subclass" — treat as BaseModel directly.
+        if battery_model in ("", "pybamm.BaseModel", "builtins.object"):
             base_cls = pybamm.BaseModel
         else:
+            # Opportunistically re-import the original class so subclass-specific
+            # Python behaviour survives a round-trip when the defining package is
+            # available. If it isn't (e.g. a third-party package isn't installed
+            # in the loading environment), fall back to BaseModel: the model is
+            # stored fully symbolically, so BaseModel is a sufficient container.
             module_name, class_name = battery_model.rsplit(".", 1)
             try:
                 module = importlib.import_module(module_name)
                 base_cls = getattr(module, class_name)
             except (ModuleNotFoundError, AttributeError) as e:
-                if battery_model == "builtins.object":
-                    base_cls = pybamm.BaseModel
-                else:
-                    raise ImportError(
-                        f"Could not import base class '{battery_model}': {e}"
-                    ) from e
+                warnings.warn(
+                    f"Could not import base class '{battery_model}': {e}. "
+                    "Falling back to pybamm.BaseModel; the loaded model will "
+                    "contain the symbolic equations but not any subclass-specific "
+                    "Python behaviour.",
+                    stacklevel=2,
+                )
+                base_cls = pybamm.BaseModel
 
         model = base_cls()
         model.name = model_data["name"]
