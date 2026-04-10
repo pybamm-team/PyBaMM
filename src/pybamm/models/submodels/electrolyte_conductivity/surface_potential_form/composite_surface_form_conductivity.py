@@ -30,14 +30,18 @@ class BaseModel(Composite):
         if self.domain == "separator":
             return {}
 
+        variables = super().get_fundamental_variables()
+
         delta_phi_av = pybamm.Variable(
             f"X-averaged {self.domain} electrode surface potential difference [V]",
             domain="current collector",
             reference=self.domain_param.prim.U_init,
         )
 
-        variables = self._get_standard_average_surface_potential_difference_variables(
-            delta_phi_av
+        variables.update(
+            self._get_standard_average_surface_potential_difference_variables(
+                delta_phi_av
+            )
         )
         return variables
 
@@ -56,14 +60,15 @@ class BaseModel(Composite):
         return variables
 
     def set_initial_conditions(self, variables):
-        domain = self.domain
+        super().set_initial_conditions(variables)
 
+        domain = self.domain
         delta_phi = variables[
             f"X-averaged {domain} electrode surface potential difference [V]"
         ]
         delta_phi_init = self.domain_param.prim.U_init
 
-        self.initial_conditions = {delta_phi: delta_phi_init}
+        self.initial_conditions[delta_phi] = delta_phi_init
 
     def set_boundary_conditions(self, variables):
         if self.domain == "negative":
@@ -142,6 +147,8 @@ class CompositeAlgebraic(BaseModel):
         super().__init__(param, domain, options)
 
     def set_algebraic(self, variables):
+        super().set_algebraic(variables)
+
         domain = self.domain
 
         sum_a_j = variables[

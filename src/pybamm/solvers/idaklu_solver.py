@@ -7,6 +7,7 @@ import warnings
 import casadi
 import numpy as np
 import pybammsolvers.idaklu as idaklu
+from scipy.sparse import csc_matrix
 from scipy.sparse.linalg import spsolve
 
 import pybamm
@@ -1099,3 +1100,76 @@ class IDAKLUSolver(pybamm.BaseSolver):
         new_sol.set_up_time = solution.set_up_time
 
         return new_sol
+
+    def get_jacobian_sparsity(self) -> csc_matrix:
+        """Get the sparsity pattern of the Jacobian matrix.
+
+        Returns
+        -------
+        :class:`scipy.sparse.csc_matrix`
+            The sparsity pattern of the Jacobian matrix.
+        """
+        setup = getattr(self, "_setup", None)
+        if setup is None:
+            raise pybamm.SolverError("Solver not set up. Call set_up() first.")
+        indptr = setup["jac_times_cjmass_colptrs"]
+        indices = setup["jac_times_cjmass_rowvals"]
+        nnz = setup["jac_times_cjmass_nnz"]
+        n = setup["number_of_states"]
+        data = np.ones(nnz)
+        return csc_matrix((data, indices, indptr), shape=(n, n))
+
+    def spy(self, ax=None, *, show_plot=None, **kwargs):
+        """Plot the sparsity pattern of the Jacobian, delineating differential
+        and algebraic states.
+
+        Requires matplotlib (imported on call).
+
+        Parameters
+        ----------
+        ax : :class:`matplotlib.axes.Axes`, optional
+            Axes to plot on. If ``None``, a new figure is created.
+        show_plot : bool, optional
+            Whether to show the plot. Default is True.
+        **kwargs
+            Forwarded to :meth:`matplotlib.axes.Axes.spy`.
+
+        Returns
+        -------
+        ax : :class:`matplotlib.axes.Axes`
+        """
+        try:
+            import matplotlib.pyplot as plt
+        except ImportError as e:
+            raise ImportError(
+                "matplotlib is required for plot_jacobian_sparsity. "
+                "Install it with: pip install matplotlib"
+            ) from e
+
+        if show_plot is None:
+            show_plot = True
+
+        J = self.get_jacobian_sparsity()
+
+        n = J.shape[0]
+        nnz = J.nnz
+        n_rhs = int(self._setup["ids"].sum())
+        n_alg = n - n_rhs
+        sparsity = 100.0 * (1 - nnz / (n * n) if n > 0 else 0.0)
+        if ax is None:
+            fig, ax = plt.subplots(1, 1)
+
+        ax.spy(J, **kwargs)
+
+        ax.set_xlabel("State index")
+        ax.set_ylabel("Equation index")
+
+        info = f"{nnz} nnz, {sparsity:.2f}% sparse"
+        info += f"\n{n} states: {n_rhs} differential and {n_alg} algebraic"
+        ax.set_title(info, fontsize=10)
+        fig.tight_layout()
+
+        if show_plot:
+            plt.show()
+
+        return ax

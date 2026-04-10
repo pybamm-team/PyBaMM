@@ -7,6 +7,7 @@ import pandas as pd
 import pytest
 from scipy.integrate import quad_vec
 from scipy.interpolate import CubicHermiteSpline
+from scipy.sparse import csc_matrix
 
 import pybamm
 from tests import get_discretisation_for_testing, no_internet_connection
@@ -1640,6 +1641,51 @@ class TestIDAKLUSolver:
         assert len(reduced.all_t_evals) == len(sol.all_t_evals)
         for rte, ste in zip(reduced.all_t_evals, sol.all_t_evals, strict=True):
             np.testing.assert_array_equal(rte, ste)
+
+    def test_get_jacobian_sparsity(self):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        v = pybamm.Variable("v")
+        model.rhs = {u: 0.1 * v}
+        model.algebraic = {v: 1 - v}
+        model.initial_conditions = {u: 0, v: 1}
+
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        solver = pybamm.IDAKLUSolver()
+        solver.set_up(model)
+        J = solver.get_jacobian_sparsity()
+
+        assert J.shape == (2, 2)
+        assert J.nnz > 0
+        assert isinstance(J, csc_matrix)
+
+    def test_get_jacobian_sparsity_not_set_up(self):
+        solver = pybamm.IDAKLUSolver()
+        with pytest.raises(pybamm.SolverError, match="Solver not set up"):
+            solver.get_jacobian_sparsity()
+
+    def test_spy(self):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        v = pybamm.Variable("v")
+        model.rhs = {u: 0.1 * v}
+        model.algebraic = {v: 1 - v}
+        model.initial_conditions = {u: 0, v: 1}
+
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        solver = pybamm.IDAKLUSolver()
+        solver.set_up(model)
+
+        import matplotlib
+
+        matplotlib.use("Agg")
+        ax = solver.spy(show_plot=False)
+        assert ax is not None
+        assert "nnz" in ax.get_title()
 
     def test_reduce_solution_vs_online(self):
         """Compare post-hoc reduce_solution with online knot reduction on a drive cycle.
