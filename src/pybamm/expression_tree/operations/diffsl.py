@@ -382,18 +382,23 @@ class DiffSLExport:
     def to_diffeq(self, outputs: list[str]) -> str:
         """Convert a pybamm model to a diffeq model"""
         model = self._resolve_export_model().new_copy()
-        all_vars = model.get_processed_variables_dict()
-        if len(all_vars) == 0 and len(model.variables) > 0:
-            all_vars = model.variables
         if not isinstance(outputs, list) or any(
             not isinstance(o, str) for o in outputs
         ):
             raise TypeError("outputs must be a list of str")
         if len(outputs) == 0:
             raise ValueError("outputs must be a non-empty list of str")
+        all_vars = model.get_processed_variables_dict()
+        if len(model.variables) > 0:
+            all_vars = model.variables.copy() | all_vars
         for out in outputs:
             if out not in all_vars:
                 raise ValueError(f"output {out} not in model")
+            if out not in model.get_processed_variables_dict():
+                try:
+                    all_vars[out] = model.get_processed_variable(out)
+                except KeyError:  # pragma: no cover
+                    pass
         has_events = len(model.events) > 0
         is_ode = len(model.algebraic) == 0
 
