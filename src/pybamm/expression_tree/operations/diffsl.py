@@ -36,7 +36,8 @@ class DiffSLExport:
             raise TypeError("model must be a pybamm.BaseModel or pybamm.Simulation")
         self._source = model
         self.model = None
-        self._use_model_index = False
+        self._has_experiment = False
+        self._model_index_terminal_states = 0
         if not isinstance(float_precision, int) or float_precision <= 0:
             raise ValueError("float_precision must be a positive integer")
         self.float_precision = float_precision
@@ -46,7 +47,7 @@ class DiffSLExport:
             return self.model
 
         source = self._source
-        self._use_model_index = False
+        self._has_experiment = False
 
         if isinstance(source, pybamm.Simulation):
             if getattr(source, "experiment", None) is None:
@@ -63,7 +64,7 @@ class DiffSLExport:
                         "experiment_model_mode='unified'"
                     )
                 model = source._built_experiment_model
-                self._use_model_index = True
+                self._has_experiment = True
         else:
             model = source
 
@@ -245,7 +246,7 @@ class DiffSLExport:
             y_slice_to_label,
             symbol_to_tensor_name,
             float_precision=self.float_precision,
-            use_model_index=self._use_model_index,
+            use_model_index=self._has_experiment,
         )
         diffeq[tensor_name] = self._tensor_block(tensor_name, [eqn_str])
         symbol_to_tensor_name[symbol] = tensor_name
@@ -272,20 +273,79 @@ class DiffSLExport:
         if symbol.size_for_testing != 1:
             raise NotImplementedError("DiffSL export only supports scalar Conditionals")
 
-        entries = ["0.0"]
-        entries.extend(
+        entries = []
+        branch_entries = [
             equation_to_diffeq(
                 branch,
                 y_slice_to_label,
                 symbol_to_tensor_name,
                 float_precision=self.float_precision,
-                use_model_index=self._use_model_index,
+                use_model_index=self._has_experiment,
             )
             for branch in symbol.branches
-        )
+        ]
+        entries.extend(branch_entries)
+        entries.append(branch_entries[-1])
+        entries.extend(["0.0"] * self._model_index_terminal_states)
         diffeq[tensor_name] = self._tensor_block(tensor_name, entries)
         symbol_to_tensor_name[symbol] = tensor_name
         return tensor_index
+
+    def _get_stop_expressions(
+        self, model: pybamm.BaseModel
+    ) -> tuple[list[pybamm.Symbol], list[pybamm.Symbol]]:
+        general_stops = [
+            event.expression
+            for event in model.events
+            if event.event_type == pybamm.EventType.TERMINATION
+            and event.name != pybamm.Simulation._COMBINED_TERMINATION_EVENT
+        ]
+
+        if not (self._has_experiment and isinstance(self._source, pybamm.Simulation)):
+            return general_stops, general_stops
+
+        sim = self._source
+        if sim._experiment_includes_padding_rest:
+            raise NotImplementedError(
+                "DiffSL export does not yet support unified experiments with padding rests"
+            )
+
+        combined_event = next(
+            (
+                event
+                for event in model.events
+                if event.event_type == pybamm.EventType.TERMINATION
+                and event.name == pybamm.Simulation._COMBINED_TERMINATION_EVENT
+            ),
+            None,
+        )
+        if combined_event is None or not isinstance(
+            combined_event.expression, pybamm.Conditional
+        ):
+            raise ValueError(
+                "Unified experiment DiffSL export requires a combined step termination "
+                "conditional"
+            )
+
+        step_branches = list(combined_event.expression.branches)
+        if len(step_branches) != len(sim.experiment.steps):
+            raise ValueError(
+                "Unified experiment DiffSL export expected one termination branch per step"
+            )
+
+        step_stops = [pybamm.Scalar(1)]
+        elapsed_time = 0.0
+        for step, branch in zip(sim.experiment.steps, step_branches, strict=False):
+            elapsed_time += step.duration
+            duration_stop = pybamm.Scalar(elapsed_time) - pybamm.t
+            if isinstance(branch, pybamm.Scalar) and branch.value == 1:
+                stop_expr = duration_stop
+            else:
+                stop_expr = pybamm.minimum(duration_stop, branch)
+            step_stops.append(stop_expr)
+
+        self._model_index_terminal_states = len(general_stops)
+        return step_stops + general_stops, general_stops
 
     def extract_pre_calculated_tensors(
         self,
@@ -368,7 +428,7 @@ class DiffSLExport:
                             y_slice_to_label,
                             symbol_to_tensor_name,
                             float_precision=self.float_precision,
-                            use_model_index=self._use_model_index,
+                            use_model_index=self._has_experiment,
                         )
                         for child_dom, child_slice in slices.items():
                             for i, _slice in enumerate(child_slice):
@@ -382,24 +442,27 @@ class DiffSLExport:
     def to_diffeq(self, outputs: list[str]) -> str:
         """Convert a pybamm model to a diffeq model"""
         model = self._resolve_export_model().new_copy()
+        self._model_index_terminal_states = 0
         if not isinstance(outputs, list) or any(
             not isinstance(o, str) for o in outputs
         ):
             raise TypeError("outputs must be a list of str")
         if len(outputs) == 0:
             raise ValueError("outputs must be a non-empty list of str")
-        all_vars = model.get_processed_variables_dict()
+        processed_vars = model.get_processed_variables_dict()
+        all_vars = processed_vars.copy()
         if len(model.variables) > 0:
             all_vars = model.variables.copy() | all_vars
         for out in outputs:
             if out not in all_vars:
                 raise ValueError(f"output {out} not in model")
-            if out not in model.get_processed_variables_dict():
+            if out not in processed_vars and model.symbol_processor:
                 try:
                     all_vars[out] = model.get_processed_variable(out)
                 except KeyError:  # pragma: no cover
                     pass
-        has_events = len(model.events) > 0
+        stop_expressions, _ = self._get_stop_expressions(model)
+        has_events = len(stop_expressions) > 0
         is_ode = len(model.algebraic) == 0
 
         states = list(chain(model.rhs.keys(), model.algebraic.keys()))
@@ -419,7 +482,7 @@ class DiffSLExport:
             for symbol in eqn.pre_order():
                 if isinstance(symbol, pybamm.InputParameter):
                     if (
-                        self._use_model_index
+                        self._has_experiment
                         and symbol.name == pybamm.Simulation._STEP_INDEX_INPUT
                     ):
                         continue
@@ -437,11 +500,7 @@ class DiffSLExport:
         symbol_to_tensor_name = {}
         vectors = {}
         matrices = {}
-        termination_events = [
-            e.expression
-            for e in model.events
-            if e.event_type == pybamm.EventType.TERMINATION
-        ]
+        termination_events = stop_expressions
         for eqn in chain(
             model.rhs.values(),
             model.algebraic.values(),
@@ -519,7 +578,7 @@ class DiffSLExport:
                     {},
                     symbol_to_tensor_name,
                     float_precision=self.float_precision,
-                    use_model_index=self._use_model_index,
+                    use_model_index=self._has_experiment,
                 )
                 lines += [f"  {indices}{label} = {eqn},"]
                 start_index += ic.size
@@ -597,14 +656,27 @@ class DiffSLExport:
 
         # F
         lines = ["F_i {"]
+        model_index_gate = None
+        if self._has_experiment:
+            active_steps = len(self._source.experiment.steps) + 1
+            terminal_states = self._model_index_terminal_states
+            gate_tensor_name = f"constant{tensor_index}"
+            tensor_index += 1
+            gate_entries = ["1.0"] * active_steps + ["0.0"] * terminal_states
+            diffeq[gate_tensor_name] = self._tensor_block(
+                gate_tensor_name, gate_entries
+            )
+            model_index_gate = f"{gate_tensor_name}_i[N]"
         for rhs in model.rhs.values():
             eqn = equation_to_diffeq(
                 rhs,
                 y_slice_to_label,
                 symbol_to_tensor_name,
                 float_precision=self.float_precision,
-                use_model_index=self._use_model_index,
+                use_model_index=self._has_experiment,
             )
+            if model_index_gate is not None:
+                eqn = f"({model_index_gate} * {eqn})"
             lines += [f"  {eqn},"]
             start_index += rhs.size
         for algebraic in model.algebraic.values():
@@ -613,8 +685,10 @@ class DiffSLExport:
                 y_slice_to_label,
                 symbol_to_tensor_name,
                 float_precision=self.float_precision,
-                use_model_index=self._use_model_index,
+                use_model_index=self._has_experiment,
             )
+            if model_index_gate is not None:
+                eqn = f"({model_index_gate} * {eqn})"
             lines += [f"  {eqn},"]
             start_index += algebraic.size
         diffeq["F"] = new_line.join(lines) + new_line + "}"
@@ -627,7 +701,7 @@ class DiffSLExport:
                 y_slice_to_label,
                 symbol_to_tensor_name,
                 float_precision=self.float_precision,
-                use_model_index=self._use_model_index,
+                use_model_index=self._has_experiment,
             )
             lines += [f"  {eqn},"]
         diffeq["out"] = new_line.join(lines) + new_line + "}"
@@ -635,16 +709,15 @@ class DiffSLExport:
         # events
         if has_events:
             lines = ["stop_i {"]
-            for event in model.events:
-                if event.event_type == pybamm.EventType.TERMINATION:
-                    eqn = equation_to_diffeq(
-                        event.expression,
-                        y_slice_to_label,
-                        symbol_to_tensor_name,
-                        float_precision=self.float_precision,
-                        use_model_index=self._use_model_index,
-                    )
-                    lines += [f"  {eqn},"]
+            for stop_expression in stop_expressions:
+                eqn = equation_to_diffeq(
+                    stop_expression,
+                    y_slice_to_label,
+                    symbol_to_tensor_name,
+                    float_precision=self.float_precision,
+                    use_model_index=self._has_experiment,
+                )
+                lines += [f"  {eqn},"]
             diffeq["stop"] = new_line.join(lines) + new_line + "}"
 
         all_lines = []
