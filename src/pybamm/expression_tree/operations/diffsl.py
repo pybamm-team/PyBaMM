@@ -37,6 +37,7 @@ class DiffSLExport:
         self._source = model
         self.model = None
         self._has_experiment = False
+        self._model_index_branch_order = None
         self._model_index_terminal_states = 0
         if not isinstance(float_precision, int) or float_precision <= 0:
             raise ValueError("float_precision must be a positive integer")
@@ -273,23 +274,94 @@ class DiffSLExport:
         if symbol.size_for_testing != 1:
             raise NotImplementedError("DiffSL export only supports scalar Conditionals")
 
-        entries = []
-        branch_entries = [
+        if self._model_index_branch_order is None:
+            branch_order = list(range(len(symbol.branches)))
+            branch_order.append(branch_order[-1])
+        else:
+            branch_order = self._model_index_branch_order
+
+        entries = [
             equation_to_diffeq(
-                branch,
+                symbol.branches[branch_index],
                 y_slice_to_label,
                 symbol_to_tensor_name,
                 float_precision=self.float_precision,
                 use_model_index=self._has_experiment,
             )
-            for branch in symbol.branches
+            for branch_index in branch_order
         ]
-        entries.extend(branch_entries)
-        entries.append(branch_entries[-1])
         entries.extend(["0.0"] * self._model_index_terminal_states)
         diffeq[tensor_name] = self._tensor_block(tensor_name, entries)
         symbol_to_tensor_name[symbol] = tensor_name
         return tensor_index
+
+    def _get_unified_experiment_schedule_states(
+        self,
+        sim: pybamm.Simulation,
+        step_branches: list[pybamm.Symbol],
+    ) -> tuple[list[int], list[pybamm.Symbol]]:
+        padding_branch_index = None
+        if sim._experiment_includes_padding_rest:
+            padding_branch_index = len(sim.experiment.steps)
+            if len(step_branches) != len(sim.experiment.steps) + 1:
+                raise ValueError(
+                    "Unified experiment DiffSL export expected one padding-rest branch"
+                )
+        elif len(step_branches) != len(sim.experiment.steps):
+            raise ValueError(
+                "Unified experiment DiffSL export expected one termination branch per step"
+            )
+
+        branch_order = []
+        stop_expressions = [pybamm.Scalar(1)]
+        initial_start_time = sim.experiment.initial_start_time
+        current_time = 0.0
+
+        for step_index, (step, branch) in enumerate(
+            zip(
+                sim.experiment.steps,
+                step_branches[: len(sim.experiment.steps)],
+                strict=False,
+            )
+        ):
+            branch_order.append(step_index)
+
+            step_end_time = current_time + step.duration
+            if step.end_time is not None and initial_start_time is not None:
+                scheduled_end_time = (
+                    step.end_time - initial_start_time
+                ).total_seconds()
+                step_end_time = min(step_end_time, scheduled_end_time)
+
+            duration_stop = pybamm.Scalar(step_end_time) - pybamm.t
+            if isinstance(branch, pybamm.Scalar) and branch.value == 1:
+                stop_expr = duration_stop
+            else:
+                stop_expr = pybamm.minimum(duration_stop, branch)
+            stop_expressions.append(stop_expr)
+
+            if step.next_start_time is not None:
+                if initial_start_time is None:  # pragma: no cover
+                    raise ValueError(
+                        "Unified experiment DiffSL export expected an initial start time "
+                        "when step next_start_time is set"
+                    )
+                next_start_time = (
+                    step.next_start_time - initial_start_time
+                ).total_seconds()
+                if next_start_time > step_end_time:
+                    if padding_branch_index is None:  # pragma: no cover
+                        raise ValueError(
+                            "Unified experiment DiffSL export expected a padding-rest branch"
+                        )
+                    branch_order.append(padding_branch_index)
+                    stop_expressions.append(pybamm.Scalar(next_start_time) - pybamm.t)
+                current_time = next_start_time
+            else:
+                current_time = step_end_time
+
+        branch_order.append(branch_order[-1])
+        return branch_order, stop_expressions
 
     def _get_stop_expressions(
         self, model: pybamm.BaseModel
@@ -305,11 +377,6 @@ class DiffSLExport:
             return general_stops, general_stops
 
         sim = self._source
-        if sim._experiment_includes_padding_rest:
-            raise NotImplementedError(
-                "DiffSL export does not yet support unified experiments with padding rests"
-            )
-
         combined_event = next(
             (
                 event
@@ -328,22 +395,10 @@ class DiffSLExport:
             )
 
         step_branches = list(combined_event.expression.branches)
-        if len(step_branches) != len(sim.experiment.steps):
-            raise ValueError(
-                "Unified experiment DiffSL export expected one termination branch per step"
-            )
-
-        step_stops = [pybamm.Scalar(1)]
-        elapsed_time = 0.0
-        for step, branch in zip(sim.experiment.steps, step_branches, strict=False):
-            elapsed_time += step.duration
-            duration_stop = pybamm.Scalar(elapsed_time) - pybamm.t
-            if isinstance(branch, pybamm.Scalar) and branch.value == 1:
-                stop_expr = duration_stop
-            else:
-                stop_expr = pybamm.minimum(duration_stop, branch)
-            step_stops.append(stop_expr)
-
+        branch_order, step_stops = self._get_unified_experiment_schedule_states(
+            sim, step_branches
+        )
+        self._model_index_branch_order = branch_order
         self._model_index_terminal_states = len(general_stops)
         return step_stops + general_stops, general_stops
 
@@ -442,6 +497,7 @@ class DiffSLExport:
     def to_diffeq(self, outputs: list[str]) -> str:
         """Convert a pybamm model to a diffeq model"""
         model = self._resolve_export_model().new_copy()
+        self._model_index_branch_order = None
         self._model_index_terminal_states = 0
         if not isinstance(outputs, list) or any(
             not isinstance(o, str) for o in outputs
@@ -658,7 +714,10 @@ class DiffSLExport:
         lines = ["F_i {"]
         model_index_gate = None
         if self._has_experiment:
-            active_steps = len(self._source.experiment.steps) + 1
+            if self._model_index_branch_order is not None:
+                active_steps = len(self._model_index_branch_order)
+            else:
+                active_steps = len(self._source.experiment.steps) + 1
             terminal_states = self._model_index_terminal_states
             gate_tensor_name = f"constant{tensor_index}"
             tensor_index += 1

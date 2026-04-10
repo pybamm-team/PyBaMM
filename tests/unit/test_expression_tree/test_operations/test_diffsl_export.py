@@ -1,6 +1,8 @@
 #
 # Tests for DiffSLExport class
 #
+from datetime import datetime
+
 import numpy as np
 import pytest
 import scipy.sparse
@@ -247,6 +249,49 @@ class TestDiffSLExport:
         assert stop_block.index("3600 - t") < stop_block.index("4200 - t")
         assert stop_block.index("4200 - t") < stop_block.index("4.099")
         assert stop_block.index("4.099") < stop_block.index("5.099")
+
+    def test_simulation_with_unified_experiment_padding_rests_use_model_index(self):
+        experiment = pybamm.Experiment(
+            [
+                pybamm.step.string(
+                    "Discharge at 0.5C for 1 hour",
+                    start_time=datetime(2023, 1, 1, 8, 0, 0),
+                ),
+                pybamm.step.string(
+                    "Rest for 30 minutes",
+                    start_time=datetime(2023, 1, 1, 10, 0, 0),
+                ),
+                pybamm.step.string(
+                    "Charge at 0.5C for 1 hour",
+                    start_time=datetime(2023, 1, 1, 12, 0, 0),
+                ),
+            ]
+        )
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            experiment=experiment,
+            solver=pybamm.CasadiSolver(),
+            experiment_model_mode="unified",
+        )
+        sim.build_for_experiment()
+
+        assert sim._experiment_includes_padding_rest is True
+
+        output_name = next(iter(sim._built_experiment_model.variables))
+        export = pybamm.DiffSLExport(sim).to_diffeq(outputs=[output_name])
+
+        assert sim._built_experiment_model is not None
+        assert "experimentstepindex" not in export
+        assert "[N]" in export
+        stop_block = export.split("stop_i {", 1)[1].split("}\nout_i {", 1)[0]
+        assert "[N]" not in stop_block
+        for stop_time in ["3600 - t", "7200 - t", "9000 - t", "14400 - t", "18000 - t"]:
+            assert stop_time in stop_block
+        assert stop_block.index("3600 - t") < stop_block.index("7200 - t")
+        assert stop_block.index("7200 - t") < stop_block.index("9000 - t")
+        assert stop_block.index("9000 - t") < stop_block.index("14400 - t")
+        assert stop_block.index("14400 - t") < stop_block.index("18000 - t")
+        assert "1.0,\n  1.0,\n  1.0,\n  1.0,\n  1.0,\n  1.0,\n  0.0,\n  0.0," in export
 
     def test_conditional_scalar_export_uses_branch_vector(self):
         model = pybamm.BaseModel()
