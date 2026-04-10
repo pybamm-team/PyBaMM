@@ -1,10 +1,9 @@
-# [Unreleased](https://github.com/pybamm-team/PyBaMM/)
-
-## Features
+# [v26.3.1](https://github.com/pybamm-team/PyBaMM/tree/v26.3.1) - 2026-04-10
 
 ## Bug fixes
 
-## Breaking changes
+- Fixed `load_custom_model` raising `ImportError` when the saved base class lives in a package not installed in the loading environment. The loader now falls back to `pybamm.BaseModel` with a warning. ([#5441](https://github.com/pybamm-team/PyBaMM/pull/5441))
+- Fixed serialisation bug in 2D finite volume discretisation. ([#5434](https://github.com/pybamm-team/PyBaMM/pull/5434))
 
 # [v26.3.0](https://github.com/pybamm-team/PyBaMM/tree/v26.3.0) - 2026-03-23
 
