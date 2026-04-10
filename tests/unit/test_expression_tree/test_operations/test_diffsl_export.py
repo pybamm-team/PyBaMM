@@ -204,6 +204,7 @@ class TestDiffSLExport:
             [
                 "Discharge at C/20 for 1 hour",
                 "Rest for 10 minutes",
+                "Charge at C/20 until 4.1 V",
             ]
         )
         sim = pybamm.Simulation(
@@ -221,6 +222,7 @@ class TestDiffSLExport:
             [
                 "Discharge at C/20 for 1 hour",
                 "Rest for 10 minutes",
+                "Charge at C/20 until 4.1 V",
             ]
         )
         sim = pybamm.Simulation(
@@ -237,6 +239,14 @@ class TestDiffSLExport:
         assert sim._built_experiment_model is not None
         assert "experimentstepindex" not in export
         assert "[N]" in export
+        stop_block = export.split("stop_i {", 1)[1].split("}\nout_i {", 1)[0]
+        assert "[N]" not in stop_block
+        assert "3600 - t" in stop_block
+        assert "4200 - t" in stop_block
+        assert "4.099" in stop_block
+        assert stop_block.index("3600 - t") < stop_block.index("4200 - t")
+        assert stop_block.index("4200 - t") < stop_block.index("4.099")
+        assert stop_block.index("4.099") < stop_block.index("5.099")
 
     def test_conditional_scalar_export_uses_branch_vector(self):
         model = pybamm.BaseModel()
@@ -254,8 +264,8 @@ class TestDiffSLExport:
 
         export = pybamm.DiffSLExport(model).to_diffeq(outputs=["special"])
 
-        assert "0.0," in export
         assert "[N]" in export
+        assert "(2 + x_i)" in export
 
     def test_conditional_vector_export_not_implemented(self):
         model = pybamm.BaseModel()
