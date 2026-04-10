@@ -915,32 +915,62 @@ class TestSerialise:
         }
 
     def test_import_base_class_non_builtin_object(self, tmp_path):
-        # Minimal model JSON with a non-existent base class
-        model_json = {
-            "schema_version": "1.1",
-            "pybamm_version": pybamm.__version__,
-            "model": {
-                "base_class": "nonexistent_module.DummyModel",
-                "name": "DummyModel",
-                "rhs": [],
-                "algebraic": [],
-                "initial_conditions": [],
-                "boundary_conditions": [],
-                "events": [],
-                "variables": {},
-            },
-        }
+        model = pybamm.BaseModel(name="DummyModel")
+        a = pybamm.Variable("a")
+        model.rhs = {a: a}
+        model.initial_conditions = {a: pybamm.Scalar(1)}
+        model.variables = {"a": a}
 
         file_path = tmp_path / "model.json"
+        Serialise.save_custom_model(model, filename=str(file_path))
 
+        with open(file_path) as f:
+            data = json.load(f)
+        data["model"]["base_class"] = "nonexistent_module.DummyModel"
         with open(file_path, "w") as f:
-            json.dump(model_json, f)
+            json.dump(data, f)
 
-        with pytest.raises(
-            ImportError,
-            match=r"(?i)Could not import base class 'nonexistent_module\.DummyModel'",
+        with pytest.warns(
+            UserWarning,
+            match=r"Could not import base class 'nonexistent_module\.DummyModel'",
         ):
-            Serialise.load_custom_model(str(file_path))
+            loaded_model = Serialise.load_custom_model(str(file_path))
+
+        assert type(loaded_model) is pybamm.BaseModel
+        assert loaded_model.name == "DummyModel"
+        assert len(loaded_model.rhs) == 1
+        assert next(iter(loaded_model.rhs.keys())).name == "a"
+
+    def test_custom_model_roundtrip_preserves_lithium_ion_base(self, tmp_path):
+        from pybamm.models.full_battery_models.lithium_ion.base_lithium_ion_model import (
+            BaseModel as LiIonBaseModel,
+        )
+
+        model = LiIonBaseModel(options={"working electrode": "positive"})
+        model.name = "HalfCellGITTLike"
+        c = pybamm.Variable(
+            "X-averaged positive particle concentration [mol.m-3]",
+            domain="positive particle",
+            bounds=(0, 1),
+        )
+        model.rhs = {c: -pybamm.div(-pybamm.grad(c))}
+        model.initial_conditions = {c: pybamm.Scalar(0.5)}
+        model.boundary_conditions = {
+            c: {
+                "left": (pybamm.Scalar(0), "Neumann"),
+                "right": (pybamm.Scalar(0), "Neumann"),
+            }
+        }
+        model.variables = {c.name: c}
+
+        file_path = tmp_path / "halfcell.json"
+        Serialise.save_custom_model(model, filename=str(file_path))
+        loaded = Serialise.load_custom_model(str(file_path))
+
+        assert isinstance(loaded, LiIonBaseModel)
+        assert loaded.options["working electrode"] == "positive"
+        assert "positive particle" in loaded.default_geometry
+        assert "positive particle" in loaded.default_spatial_methods
 
     def test_function_parameter_with_diff_variable_serialisation(self):
         x = pybamm.Variable("x")
