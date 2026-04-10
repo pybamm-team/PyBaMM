@@ -176,3 +176,103 @@ class TestDiffSLExport:
         assert "* pow(3, 2)" in export
         # arcsinh2 branch in diffsl export uses regularised denominator form
         assert "copysign(sqrt(pow(" in export
+
+    def test_simulation_auto_build_export_matches_built_model(self):
+        model = pybamm.BaseModel()
+
+        x = pybamm.Variable("x")
+        y = pybamm.Variable("y")
+
+        model.rhs = {x: 4 * x - 2 * y, y: 3 * x - y}
+        model.initial_conditions = {x: pybamm.Scalar(1), y: pybamm.Scalar(2)}
+        model.variables = {"x": x, "y": y}
+
+        sim = pybamm.Simulation(model)
+
+        export_from_sim = pybamm.DiffSLExport(sim).to_diffeq(outputs=["x"])
+
+        assert sim.built_model is not None
+
+        export_from_model = pybamm.DiffSLExport(sim.built_model).to_diffeq(
+            outputs=["x"]
+        )
+
+        assert export_from_sim == export_from_model
+
+    def test_simulation_with_legacy_experiment_errors(self):
+        experiment = pybamm.Experiment(
+            [
+                "Discharge at C/20 for 1 hour",
+                "Rest for 10 minutes",
+            ]
+        )
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            experiment=experiment,
+            solver=pybamm.CasadiSolver(),
+            experiment_model_mode="legacy",
+        )
+
+        with pytest.raises(ValueError, match="experiment_model_mode='unified'"):
+            pybamm.DiffSLExport(sim).to_diffeq(outputs=["Voltage [V]"])
+
+    def test_simulation_with_unified_experiment_uses_model_index(self):
+        experiment = pybamm.Experiment(
+            [
+                "Discharge at C/20 for 1 hour",
+                "Rest for 10 minutes",
+            ]
+        )
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            experiment=experiment,
+            solver=pybamm.CasadiSolver(),
+            experiment_model_mode="unified",
+        )
+        sim.build_for_experiment()
+
+        output_name = next(iter(sim._built_experiment_model.variables))
+        export = pybamm.DiffSLExport(sim).to_diffeq(outputs=[output_name])
+
+        assert sim._built_experiment_model is not None
+        assert "experimentstepindex" not in export
+        assert "[N]" in export
+
+    def test_conditional_scalar_export_uses_branch_vector(self):
+        model = pybamm.BaseModel()
+
+        x = pybamm.Variable("x")
+        selector = pybamm.InputParameter(pybamm.Simulation._STEP_INDEX_INPUT)
+        special = pybamm.Conditional(selector, x + 1, x + 2)
+
+        model.rhs = {x: special}
+        model.initial_conditions = {x: pybamm.Scalar(1)}
+        model.variables = {"special": special}
+
+        disc = pybamm.Discretisation()
+        model = disc.process_model(model)
+
+        export = pybamm.DiffSLExport(model).to_diffeq(outputs=["special"])
+
+        assert "0.0," in export
+        assert "[N]" in export
+
+    def test_conditional_vector_export_not_implemented(self):
+        model = pybamm.BaseModel()
+
+        u = pybamm.StateVector(slice(0, 2))
+        selector = pybamm.InputParameter(pybamm.Simulation._STEP_INDEX_INPUT)
+        special = pybamm.Conditional(
+            selector,
+            pybamm.Vector(np.array([1, 2])),
+            pybamm.Vector(np.array([3, 4])),
+        )
+
+        model.rhs = {u: special}
+        model.initial_conditions = {u: pybamm.Vector(np.array([0, 0]))}
+        model.variables = {"special": special}
+
+        with pytest.raises(
+            NotImplementedError, match="only supports scalar Conditionals"
+        ):
+            pybamm.DiffSLExport(model).to_diffeq(outputs=["special"])
