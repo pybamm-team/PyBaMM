@@ -11,7 +11,6 @@ from tests import (
     get_1p1d_mesh_for_testing,
     get_mesh_for_testing,
     get_mesh_for_testing_symbolic,
-    get_p2d_mesh_for_testing,
 )
 
 
@@ -254,7 +253,7 @@ class TestFiniteVolume:
         mass = np.eye(submesh.npts)
         np.testing.assert_array_equal(mass, model.mass_matrix.entries.toarray())
 
-    def test_p2d_mass_matrix_shape(self):
+    def test_p2d_mass_matrix_shape(self, p2d_mesh):
         # Create model
         c = pybamm.Variable(
             "c",
@@ -271,7 +270,7 @@ class TestFiniteVolume:
         model.variables = {"c": c, "N": N}
 
         # Create discretisation
-        mesh = get_p2d_mesh_for_testing()
+        mesh = p2d_mesh
         spatial_methods = {"negative particle": pybamm.FiniteVolume()}
         disc = pybamm.Discretisation(mesh, spatial_methods)
         disc.process_model(model)
@@ -355,8 +354,8 @@ class TestFiniteVolume:
         eqn_jac = eqn_disc.jac(y)
         eqn_jac.evaluate(y=y_test)
 
-    def test_boundary_value_domain(self):
-        mesh = get_p2d_mesh_for_testing()
+    def test_boundary_value_domain(self, p2d_mesh):
+        mesh = p2d_mesh
         spatial_methods = {
             "macroscale": pybamm.FiniteVolume(),
             "negative particle": pybamm.FiniteVolume(),
@@ -645,8 +644,8 @@ class TestFiniteVolume:
         disc = pybamm.Discretisation(mesh, spatial_methods)
         disc.process_model(model)
 
-    def test_evaluate_at(self):
-        mesh = get_p2d_mesh_for_testing()
+    def test_evaluate_at(self, p2d_mesh):
+        mesh = p2d_mesh
         spatial_methods = {
             "macroscale": pybamm.FiniteVolume(),
             "negative particle": pybamm.FiniteVolume(),
