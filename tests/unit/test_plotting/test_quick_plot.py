@@ -281,6 +281,47 @@ class TestQuickPlot:
 
         pybamm.close_plots()
 
+    def test_invalid_x_axis(self):
+        model = pybamm.lithium_ion.SPM()
+        sim = pybamm.Simulation(model)
+        solution = sim.solve([0, 3600])
+
+        with pytest.raises(ValueError, match="Invalid value for `x_axis`."):
+            pybamm.QuickPlot([solution], x_axis="Invalid axis")
+
+    def test_plot_with_discharge_capacity(self):
+        model = pybamm.lithium_ion.BaseModel(name="Simple ODE Model")
+        a = pybamm.Variable("a", domain=[])
+        model.rhs = {a: pybamm.Scalar(0.2)}
+        model.initial_conditions = {a: pybamm.Scalar(0)}
+        model.variables = {"a": a, "Discharge capacity [A.h]": a * 2}
+
+        t_eval = np.linspace(0, 2, 100)
+        solution = pybamm.CasadiSolver().solve(model, t_eval)
+
+        quick_plot = pybamm.QuickPlot(
+            solution,
+            ["a"],
+            x_axis="Discharge capacity [A.h]",
+        )
+        quick_plot.plot(0)
+
+        # Test discharge capacity values
+        np.testing.assert_allclose(
+            quick_plot.plots[("a",)][0][0].get_xdata(),
+            solution["Discharge capacity [A.h]"].data,
+        )
+
+        # Test x-axis label
+        x_label = quick_plot.fig.axes[0].get_xlabel()
+        assert x_label == "Discharge capacity [A.h]", (
+            f"Expected 'Discharge capacity [A.h]', got '{x_label}'"
+        )
+
+        # check dynamic plot loads
+        quick_plot.dynamic_plot(show_plot=False)
+        quick_plot.slider_update(0.01)
+
     def test_plot_with_different_models(self):
         model = pybamm.BaseModel()
         a = pybamm.Variable("a")
