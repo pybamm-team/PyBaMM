@@ -915,10 +915,6 @@ class TestSerialise:
         }
 
     def test_import_base_class_non_builtin_object(self, tmp_path):
-        # When the recorded base class lives in a package that isn't installed
-        # in the loading environment, load_custom_model should fall back to
-        # pybamm.BaseModel (with a warning) rather than raising ImportError,
-        # since the model is stored fully symbolically.
         model = pybamm.BaseModel(name="DummyModel")
         a = pybamm.Variable("a")
         model.rhs = {a: a}
@@ -928,7 +924,6 @@ class TestSerialise:
         file_path = tmp_path / "model.json"
         Serialise.save_custom_model(model, filename=str(file_path))
 
-        # Rewrite the saved base_class to a module that can't be imported.
         with open(file_path) as f:
             data = json.load(f)
         data["model"]["base_class"] = "nonexistent_module.DummyModel"
@@ -941,18 +936,12 @@ class TestSerialise:
         ):
             loaded_model = Serialise.load_custom_model(str(file_path))
 
-        # Falls back to plain BaseModel but preserves symbolic content
         assert type(loaded_model) is pybamm.BaseModel
         assert loaded_model.name == "DummyModel"
         assert len(loaded_model.rhs) == 1
         assert next(iter(loaded_model.rhs.keys())).name == "a"
 
     def test_custom_model_roundtrip_preserves_lithium_ion_base(self, tmp_path):
-        # Custom models authored as subclasses of li-ion BaseModel (or
-        # reparented to it before serialising) should round-trip with their
-        # base class and options intact, so that the loaded model's
-        # default_geometry / default_spatial_methods cover the particle
-        # domains without the caller passing them explicitly.
         from pybamm.models.full_battery_models.lithium_ion.base_lithium_ion_model import (
             BaseModel as LiIonBaseModel,
         )
@@ -978,11 +967,8 @@ class TestSerialise:
         Serialise.save_custom_model(model, filename=str(file_path))
         loaded = Serialise.load_custom_model(str(file_path))
 
-        # Base class is re-imported, not the BaseModel fallback.
         assert isinstance(loaded, LiIonBaseModel)
         assert loaded.options["working electrode"] == "positive"
-        # The li-ion defaults driven by the options are available on load,
-        # so Simulation can discretise without any extra dicts.
         assert "positive particle" in loaded.default_geometry
         assert "positive particle" in loaded.default_spatial_methods
 

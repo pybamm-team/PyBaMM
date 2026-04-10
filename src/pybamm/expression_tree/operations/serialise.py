@@ -1363,15 +1363,9 @@ class Serialise:
             raise KeyError(f"Missing required model sections: {missing}")
 
         battery_model = (model_data.get("base_class") or "").strip()
-        # Sentinels meaning "no specific subclass" — treat as BaseModel directly.
         if battery_model in ("", "pybamm.BaseModel", "builtins.object"):
             base_cls = pybamm.BaseModel
         else:
-            # Opportunistically re-import the original class so subclass-specific
-            # Python behaviour survives a round-trip when the defining package is
-            # available. If it isn't (e.g. a third-party package isn't installed
-            # in the loading environment), fall back to BaseModel: the model is
-            # stored fully symbolically, so BaseModel is a sufficient container.
             module_name, class_name = battery_model.rsplit(".", 1)
             try:
                 module = importlib.import_module(module_name)
