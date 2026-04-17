@@ -248,6 +248,10 @@ class Power(BinaryOperator):
         """See :meth:`pybamm.BinaryOperator.__init__()`."""
         super().__init__("**", left, right)
 
+    def _casadi_evaluate(self, left, right):
+        """See :meth:`pybamm.BinaryOperator._casadi_evaluate()`."""
+        return casadi.power(left, right)
+
     def _diff(self, variable: pybamm.Symbol):
         """See :meth:`pybamm.Symbol._diff()`."""
         # apply chain rule and power rule

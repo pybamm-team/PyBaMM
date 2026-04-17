@@ -15,6 +15,19 @@ from typing_extensions import TypeVar
 import pybamm
 
 
+def _is_constant_value(x, value: float) -> bool:
+    # True iff ``x`` is a scalar constant equal to ``value``. Conservative on
+    # symbolic or multi-element inputs.
+    if isinstance(x, casadi.MX) and np.prod(x.size(), initial=1) > 2:
+        return False
+    if isinstance(x, np.ndarray):
+        return bool(np.all(x == value))
+    try:
+        return bool(x == value)
+    except (TypeError, ValueError, RuntimeError):
+        return False
+
+
 class Function(pybamm.Symbol):
     """
     A node in the expression tree representing an arbitrary function.
@@ -449,7 +462,7 @@ class Arcsinh2(Function):
 
     def _casadi_evaluate(self, a, b):
         """See :meth:`pybamm.Function._casadi_evaluate()`."""
-        sign_b = casadi.if_else(b >= 0, 1.0, -1.0)
+        sign_b = 2 * (b >= 0) - 1
         b_eff = sign_b * casadi.hypot(b, self.eps)
         return casadi.arcsinh(a / b_eff)
 
@@ -1017,10 +1030,29 @@ class RegPower(Function):
         )
 
     def _casadi_evaluate(self, base, exponent, scale):
-        """See :meth:`pybamm.Function._casadi_evaluate()`."""
+        """See :meth:`pybamm.Function._casadi_evaluate()`.
+
+        Evaluates ``y = x * r^(a-1) * scale^a`` with ``x = base / scale`` and
+        ``r = hypot(x, delta)``. The ``a == 0.5`` case (hot for Butler-Volmer)
+        is specialised to avoid a general ``power`` call.
+        """
+        delta = self.delta
+        if delta == 0:
+            return pybamm.Power._casadi_evaluate(base, exponent)
+
         x = base / scale
-        x2_d2 = x**2 + self.delta**2
-        return x * (x2_d2 ** ((exponent - 1) / 2)) * (scale**exponent)
+        r = casadi.hypot(x, delta)
+
+        if _is_constant_value(exponent, 0.5):
+            # ``exponent**0`` acts as a ``ones_like(exponent)`` that works
+            # across casadi.MX / numpy / float.
+            scale_factor = casadi.sqrt(scale) * exponent**0
+            inner_factor = 1 / casadi.sqrt(r)
+        else:
+            scale_factor = casadi.power(scale, exponent)
+            inner_factor = casadi.power(r, exponent - 1)
+
+        return x * inner_factor * scale_factor
 
     def _sympy_operator(self, base, exponent, scale):
         """Convert to SymPy expression."""

@@ -7,6 +7,8 @@ from collections.abc import Callable
 
 import pybamm
 
+X_DOMAINS = ("negative electrode", "separator", "positive electrode")
+
 
 class _BaseAverage(pybamm.Integral):
     """
@@ -165,11 +167,7 @@ def x_average(symbol: pybamm.Symbol) -> pybamm.Symbol:
         raise ValueError("Can't take the x-average of a symbol that evaluates on edges")
     # If symbol doesn't have an electrode domain, its x-averaged value is itself
     if not any(
-        any(
-            dom in ["negative electrode", "separator", "positive electrode"]
-            for dom in domain
-        )
-        for domain in symbol.domains.values()
+        any(dom in X_DOMAINS for dom in domain) for domain in symbol.domains.values()
     ):
         return symbol
     # If symbol is a broadcast, reduce by one dimension
@@ -177,18 +175,14 @@ def x_average(symbol: pybamm.Symbol) -> pybamm.Symbol:
         symbol,
         pybamm.PrimaryBroadcast | pybamm.SecondaryBroadcast | pybamm.FullBroadcast,
     ):
-        if all(
-            dom in ["negative electrode", "separator", "positive electrode"]
-            for dom in symbol.broadcast_domain
-        ):
+        if all(dom in X_DOMAINS for dom in symbol.broadcast_domain):
             return symbol.reduce_one_dimension()
         elif isinstance(symbol, pybamm.PrimaryBroadcast):
             return pybamm.PrimaryBroadcast(
                 x_average(symbol.orphans[0]), symbol.broadcast_domain
             )
         elif isinstance(symbol, pybamm.FullBroadcast) and all(
-            dom in ["negative electrode", "separator", "positive electrode"]
-            for dom in symbol.secondary_domain
+            dom in X_DOMAINS for dom in symbol.secondary_domain
         ):
             domains = {
                 "primary": symbol.domains["primary"],
@@ -197,8 +191,7 @@ def x_average(symbol: pybamm.Symbol) -> pybamm.Symbol:
             }
             return pybamm.FullBroadcast(symbol.orphans[0], broadcast_domains=domains)
         elif isinstance(symbol, pybamm.FullBroadcast) and all(
-            dom in ["negative electrode", "separator", "positive electrode"]
-            for dom in symbol.tertiary_domain
+            dom in X_DOMAINS for dom in symbol.tertiary_domain
         ):
             domains = {
                 "primary": symbol.domains["primary"],
@@ -227,10 +220,27 @@ def x_average(symbol: pybamm.Symbol) -> pybamm.Symbol:
         return out
     # Average of a sum is sum of averages
     elif isinstance(symbol, pybamm.Addition | pybamm.Subtraction):
-        return _sum_of_averages(symbol, x_average)
+        return _separable_averages(symbol, x_average)
+    # Pull any x-constant factor out of the average so codegen evaluates it
+    # once as a scalar rather than at every x-node.
+    elif isinstance(symbol, pybamm.Multiplication | pybamm.Division):
+        left, right = symbol.orphans
+        if _is_x_constant(left) or _is_x_constant(right):
+            return _separable_averages(symbol, x_average)
     # Otherwise, use Integral to calculate average value
-    else:
-        return XAverage(symbol)
+    return XAverage(symbol)
+
+
+def _is_x_constant(symbol: pybamm.Symbol) -> bool:
+    # True if no Variable/SpatialVariable leaf carries an electrode primary
+    # domain. Classifies ``PrimaryBroadcast(c, electrode)`` with x-independent
+    # ``c`` as x-constant even though the broadcast has an electrode domain.
+    for node in symbol.pre_order():
+        if isinstance(node, pybamm.Variable | pybamm.SpatialVariable) and any(
+            dom in X_DOMAINS for dom in node.domain
+        ):
+            return False
+    return True
 
 
 def z_average(symbol: pybamm.Symbol) -> pybamm.Symbol:
@@ -264,7 +274,7 @@ def z_average(symbol: pybamm.Symbol) -> pybamm.Symbol:
         return symbol.reduce_one_dimension()
     # Average of a sum is sum of averages
     elif isinstance(symbol, pybamm.Addition | pybamm.Subtraction):
-        return _sum_of_averages(symbol, z_average)
+        return _separable_averages(symbol, z_average)
     # Otherwise, define a ZAverage
     else:
         return ZAverage(symbol)
@@ -298,7 +308,7 @@ def yz_average(symbol: pybamm.Symbol) -> pybamm.Symbol:
         return symbol.reduce_one_dimension()
     # Average of a sum is sum of averages
     elif isinstance(symbol, pybamm.Addition | pybamm.Subtraction):
-        return _sum_of_averages(symbol, yz_average)
+        return _separable_averages(symbol, yz_average)
     # Otherwise, define a YZAverage
     else:
         return YZAverage(symbol)
@@ -350,7 +360,7 @@ def r_average(symbol: pybamm.Symbol) -> pybamm.Symbol:
         return symbol.reduce_one_dimension()
     # Average of a sum is sum of averages
     elif isinstance(symbol, pybamm.Addition | pybamm.Subtraction):
-        return _sum_of_averages(symbol, r_average)
+        return _separable_averages(symbol, r_average)
     else:
         return RAverage(symbol)
 
@@ -435,11 +445,13 @@ def size_average(
         return SizeAverage(symbol, f_a_dist)
 
 
-def _sum_of_averages(
-    symbol: pybamm.Addition | pybamm.Subtraction,
+def _separable_averages(
+    symbol: pybamm.Addition
+    | pybamm.Subtraction
+    | pybamm.Multiplication
+    | pybamm.Division,
     average_function: Callable[[pybamm.Symbol], pybamm.Symbol],
 ):
-    if isinstance(symbol, pybamm.Addition):
-        return average_function(symbol.left) + average_function(symbol.right)
-    elif isinstance(symbol, pybamm.Subtraction):
-        return average_function(symbol.left) - average_function(symbol.right)
+    operator = type(symbol)
+    left, right = symbol.orphans
+    return operator(average_function(left), average_function(right))

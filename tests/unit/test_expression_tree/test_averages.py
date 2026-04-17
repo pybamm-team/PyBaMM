@@ -7,6 +7,7 @@ from hypothesis import given
 from hypothesis import strategies as st
 
 import pybamm
+from pybamm.expression_tree.averages import _is_x_constant
 from tests import assert_domain_equal
 
 
@@ -177,6 +178,78 @@ class TestUnaryOperators:
         b = pybamm.Variable("b", domain="domain")
         assert pybamm.x_average(a + b) == pybamm.x_average(a) + pybamm.x_average(b)
         assert pybamm.x_average(a - b) == pybamm.x_average(a) - pybamm.x_average(b)
+
+    def test_x_average_factors_out_x_constant_multiplications(self):
+        f = pybamm.Variable("f", domain="negative electrode")
+
+        assert pybamm.x_average(2 * f) == 2 * pybamm.XAverage(f)
+        assert pybamm.x_average(f * 2) == pybamm.XAverage(f) * 2
+        assert pybamm.x_average(2 / f) == 2 / pybamm.XAverage(f)
+        assert pybamm.x_average(f / 2) == pybamm.XAverage(f) / 2
+
+        assert pybamm.x_average(pybamm.t * f) == pybamm.t * pybamm.XAverage(f)
+        assert pybamm.x_average(f / pybamm.t) == pybamm.XAverage(f) / pybamm.t
+
+        g = pybamm.Variable("g", domain="current collector")
+        broad_g = pybamm.PrimaryBroadcast(g, "negative electrode")
+        assert _is_x_constant(broad_g)
+
+        out = pybamm.x_average(broad_g * f)
+        assert out == g * pybamm.XAverage(f)
+        assert out.domain == ["current collector"]
+
+        out_div = pybamm.x_average(broad_g / f)
+        assert out_div == g / pybamm.XAverage(f)
+        assert out_div.domain == ["current collector"]
+
+    def test_x_average_does_not_split_when_both_sides_x_dependent(self):
+        f1 = pybamm.Variable("f1", domain="negative electrode")
+        f2 = pybamm.Variable("f2", domain="negative electrode")
+
+        prod = pybamm.x_average(f1 * f2)
+        assert isinstance(prod, pybamm.XAverage)
+        xavg_nodes = [n for n in prod.pre_order() if isinstance(n, pybamm.XAverage)]
+        assert len(xavg_nodes) == 1
+
+        quot = pybamm.x_average(f1 / f2)
+        assert isinstance(quot, pybamm.XAverage)
+        xavg_nodes = [n for n in quot.pre_order() if isinstance(n, pybamm.XAverage)]
+        assert len(xavg_nodes) == 1
+
+    def test_x_average_factors_out_compound_x_constant(self):
+        f = pybamm.Variable("f", domain="negative electrode")
+        out = pybamm.x_average(2 * pybamm.t * f)
+        assert out == 2 * pybamm.t * pybamm.XAverage(f)
+        xavg_nodes = [n for n in out.pre_order() if isinstance(n, pybamm.XAverage)]
+        assert len(xavg_nodes) == 1
+        assert xavg_nodes[0].orphans[0] == f
+
+    def test_is_x_constant_helper(self):
+        assert _is_x_constant(pybamm.Scalar(2.0))
+        assert _is_x_constant(pybamm.t)
+
+        v_part = pybamm.Variable("v_part", domain="negative particle")
+        r = pybamm.SpatialVariable("r", domain="negative particle")
+        v_cc = pybamm.Variable("v_cc", domain="current collector")
+        assert _is_x_constant(v_part)
+        assert _is_x_constant(r)
+        assert _is_x_constant(v_cc)
+
+        v_n = pybamm.Variable("v_n", domain="negative electrode")
+        v_s = pybamm.Variable("v_s", domain="separator")
+        v_p = pybamm.Variable("v_p", domain="positive electrode")
+        assert not _is_x_constant(v_n)
+        assert not _is_x_constant(v_s)
+        assert not _is_x_constant(v_p)
+        assert not _is_x_constant(pybamm.standard_spatial_vars.x_n)
+
+        broadcast = pybamm.PrimaryBroadcast(v_cc, "negative electrode")
+        assert broadcast.domain == ["negative electrode"]
+        assert _is_x_constant(broadcast)
+
+        assert _is_x_constant(2 * pybamm.t * v_part + pybamm.Scalar(3))
+        assert not _is_x_constant(2 * pybamm.t + v_n)
+        assert not _is_x_constant(broadcast * v_n)
 
     @given(st.integers(min_value=-(2**63), max_value=2**63 - 1))
     def test_size_average(self, random_integer):
