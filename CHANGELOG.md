@@ -2,6 +2,7 @@
 
 ## Features
 
+- Added ahead-of-time CasADi compilation to `IDAKLUSolver` via the `compilation: "aot"` option. ([#5448](https://github.com/pybamm-team/PyBaMM/pull/5448))
 - Adds EIS support via `EISSimulation` class with a restructure to the `Solution` class to support `EISSolution`. Includes examples and citation, with a ~5x solve improvement over pybamm-eis. ([#5433](https://github.com/pybamm-team/PyBaMM/pull/5433))
 - Refactors `Simulation` class into an inherited class from a `BaseSimulation`. `BaseSimulation` is used for all non-experiment based simulations, with the `Simulation` class adding experiment support. Includes a small code cleanup. ([#5430](https://github.com/pybamm-team/PyBaMM/pull/5430))
 - Improved pchip interpolation performance. ([#5436](https://github.com/pybamm-team/PyBaMM/pull/5436))
