@@ -1714,3 +1714,44 @@ class TestIDAKLUSolver:
                 assert wrms < 1.0, (
                     f"{label} segment {seg} integral L2 WRMS too large: {wrms:.4e}"
                 )
+
+    def test_solution_user_options_forwarded(self):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        v = pybamm.Variable("v")
+        model.rhs = {u: 0.1 * v}
+        model.algebraic = {v: 1 - v}
+        model.initial_conditions = {u: 0, v: 1}
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+        t_eval = [0, 1]
+
+        sol_default = pybamm.IDAKLUSolver().solve(model, t_eval)
+        assert sol_default.user_options == {"compilation": "vm"}
+        assert sol_default.options["compilation"] == "vm"
+
+        sol_vm = pybamm.IDAKLUSolver(
+            options={"compilation": "vm", "num_threads": 2}
+        ).solve(model, t_eval)
+        assert sol_vm.user_options == {"compilation": "vm"}
+        assert "num_threads" not in sol_vm.user_options
+
+    def test_solution_user_options_survive_pickle(self, tmp_path):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        model.rhs = {u: -u}
+        model.initial_conditions = {u: 1}
+        model.variables = {"u": u, "2u": 2 * u}
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        sol = pybamm.IDAKLUSolver().solve(model, [0, 1])
+        path = tmp_path / "idaklu_sol.pickle"
+        sol.save(path)
+        loaded = pybamm.load(path)
+
+        assert loaded.user_options == sol.user_options
+        assert loaded.options == sol.options
+        np.testing.assert_allclose(
+            loaded["2u"].entries, sol["2u"].entries, rtol=1e-12, atol=1e-12
+        )

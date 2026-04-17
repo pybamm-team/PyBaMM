@@ -10,6 +10,7 @@ import pybammsolvers.idaklu as idaklu
 from scipy.sparse.linalg import spsolve
 
 import pybamm
+from pybamm.codegen.compilation import aot_compile
 
 
 class IDAKLUSolver(pybamm.BaseSolver):
@@ -50,6 +51,10 @@ class IDAKLUSolver(pybamm.BaseSolver):
             options = {
                 # Print statistics of the solver after every solve
                 "print_stats": False,
+                # Casadi function backend: "vm" (default, in-process virtual
+                # machine) or "aot" (compile to a shared library via the
+                # system C compiler; see :mod:`pybamm.codegen.compilation`).
+                "compilation": "vm",
                 # Number of threads available for OpenMP (must be greater than or equal to `num_solvers`)
                 "num_threads": 1,
                 # Number of solvers to use in parallel (for solving multiple sets of input parameters in parallel)
@@ -199,6 +204,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         num_solvers = user_options.get("num_threads", 1) if user_options else 1
         default_options = {
             "print_stats": False,
+            "compilation": "vm",
             "jacobian": "sparse",
             "preconditioner": "BBDP",
             "precon_half_bandwidth": 5,
@@ -243,6 +249,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         return options
 
+    _COMPILATION_METHODS = ["vm", "aot"]
+
     def _check_options(self, options: dict):
         hermite_reduction_factor = options["hermite_reduction_factor"]
         if hermite_reduction_factor > 1.0:
@@ -260,6 +268,11 @@ class IDAKLUSolver(pybamm.BaseSolver):
         else:
             if hermite_reduction_factor < 1.0:
                 raise pybamm.SolverError("hermite_reduction_factor must be >= 1.0.")
+
+        if options["compilation"] not in self._COMPILATION_METHODS:
+            raise pybamm.SolverError(
+                f"compilation must be one of {self._COMPILATION_METHODS}"
+            )
 
     def _check_atol_type(self, atol, model):
         if isinstance(atol, float):
@@ -395,22 +408,26 @@ class IDAKLUSolver(pybamm.BaseSolver):
         atol = getattr(model, "atol", self.atol)
         atol = self._check_atol_type(atol, model)
 
-        # Serialize casadi functions
-        idaklu_solver_fcn = idaklu.create_casadi_solver_group
-        rhs_algebraic_pkl = rhs_algebraic.serialize()
-        rhs_algebraic = idaklu.generate_function(rhs_algebraic_pkl)
-        jac_times_cjmass_pkl = jac_times_cjmass.serialize()
-        jac_times_cjmass = idaklu.generate_function(jac_times_cjmass_pkl)
-        jac_rhs_algebraic_action_pkl = jac_rhs_algebraic_action.serialize()
-        jac_rhs_algebraic_action = idaklu.generate_function(
-            jac_rhs_algebraic_action_pkl
+        # Serialise each casadi function for the idaklu C++ wrapper. With
+        # ``compilation == "aot"`` the function is first lowered to a
+        # ``casadi.external`` so the serialised form points at a precompiled
+        # shared library.
+        def generate_functions(fn):
+            if self._options["compilation"] == "aot":
+                fn = aot_compile(fn)
+            fn_pkl = fn.serialize()
+            return idaklu.generate_function(fn_pkl), fn_pkl
+
+        rhs_algebraic, rhs_algebraic_pkl = generate_functions(rhs_algebraic)
+        jac_times_cjmass, jac_times_cjmass_pkl = generate_functions(jac_times_cjmass)
+        jac_rhs_algebraic_action, jac_rhs_algebraic_action_pkl = generate_functions(
+            jac_rhs_algebraic_action
         )
-        rootfn_pkl = rootfn.serialize()
-        rootfn = idaklu.generate_function(rootfn_pkl)
-        mass_action_pkl = mass_action.serialize()
-        mass_action = idaklu.generate_function(mass_action_pkl)
-        sensfn_pkl = sensfn.serialize()
-        sensfn = idaklu.generate_function(sensfn_pkl)
+        mass_action, mass_action_pkl = generate_functions(mass_action)
+        sensfn, sensfn_pkl = generate_functions(sensfn)
+        rootfn, rootfn_pkl = generate_functions(rootfn)
+
+        idaklu_solver_fcn = idaklu.create_casadi_solver_group
 
         # if output_variables specified then convert 'variable' casadi
         # function expressions to idaklu-compatible functions
@@ -726,6 +743,10 @@ class IDAKLUSolver(pybamm.BaseSolver):
             # manually set it to the true final time
             t_eval[-1] = t[-1]
 
+        # Forward the compilation backend so post-solve observation uses the
+        # same vm/aot path as the integration.
+        solution_options = {"compilation": self._options["compilation"]}
+
         newsol = pybamm.Solution(
             t,
             np.transpose(y_out),
@@ -738,6 +759,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             all_yps=yp,
             all_t_evals=t_eval,
             variables_returned=bool(save_outputs_only),
+            options=solution_options,
         )
 
         newsol.integration_time = integration_time
@@ -1087,6 +1109,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             all_sensitivities=solution._all_sensitivities,
             all_t_evals=solution.all_t_evals,
             variables_returned=solution.variables_returned,
+            options=solution.user_options,
         )
 
         # Propagate metadata from the original solution

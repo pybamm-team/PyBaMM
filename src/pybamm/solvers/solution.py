@@ -15,6 +15,7 @@ import pandas as pd
 from scipy.io import savemat
 
 import pybamm
+from pybamm.codegen.compilation import aot_compile
 
 
 class NumpyEncoder(json.JSONEncoder):
@@ -175,6 +176,17 @@ class EISSolution(SolutionBase):
         return nyquist_plot(self.impedance, **kwargs)
 
 
+_DEFAULT_SOLUTION_OPTIONS = {
+    "compilation": "vm",
+    "cse": True,
+    "inputs_check": False,
+    "is_diff_in": [False, True, False],
+    "is_diff_out": [True],
+    "regularity_check": False,
+    "error_on_fail": False,
+}
+
+
 class Solution(SolutionBase):
     """
     Class containing the solution of, and various attributes associated with, a PyBaMM
@@ -218,6 +230,14 @@ class Solution(SolutionBase):
         Bool to indicate if `all_ys` contains the full state vector, or is empty because
         only requested variables have been returned. True if `output_variables` is used
         with a solver, otherwise False.
+    check_solution: bool
+        Bool to indicate if the solution should be checked for large y values.
+    options: dict, optional
+        Overrides for :meth:`process_casadi_var`. Unspecified keys fall back
+        to ``_DEFAULT_SOLUTION_OPTIONS`` -- the casadi ``Function`` flags and
+        the ``compilation`` backend (``"vm"`` or ``"aot"``). Solvers should
+        forward the user's selection so observed variables use the same
+        backend as the integration.
 
     """
 
@@ -235,6 +255,7 @@ class Solution(SolutionBase):
         all_t_evals=None,
         variables_returned=False,
         check_solution=True,
+        options=None,
     ):
         if not isinstance(all_ts, list):
             all_ts = [all_ts]
@@ -259,7 +280,8 @@ class Solution(SolutionBase):
                 all_t_evals = [all_t_evals]
             self._ensure_t_evals(all_ts=all_ts, all_t_evals=all_t_evals)
         self._all_t_evals = all_t_evals
-
+        self._user_options = options or {}
+        self._options = _DEFAULT_SOLUTION_OPTIONS | self._user_options
         self.variables_returned = variables_returned
         self._observable = self._all_models and all(
             model.solution_observable for model in self._all_models
@@ -542,6 +564,14 @@ class Solution(SolutionBase):
             reasons_str = ", ".join(sorted(unique_reasons))
             raise ValueError(f"Solution is not observable: {reasons_str}")
 
+    @property
+    def user_options(self) -> dict:
+        return self._user_options
+
+    @property
+    def options(self) -> dict:
+        return self._options
+
     @cached_property
     def first_state(self):
         """
@@ -575,6 +605,7 @@ class Solution(SolutionBase):
             "final time",
             all_sensitivities=sensitivities,
             all_yps=all_yps,
+            options=self.user_options,
         )
         new_sol._all_inputs_stacked = self.all_inputs_stacked[:1]
         new_sol._all_inputs_casadi = self.all_inputs_casadi[:1]
@@ -619,6 +650,7 @@ class Solution(SolutionBase):
             self.termination,
             all_sensitivities=sensitivities,
             all_yps=all_yps,
+            options=self.user_options,
         )
         new_sol._all_inputs_stacked = self.all_inputs_stacked[-1:]
         new_sol._all_inputs_casadi = self.all_inputs_casadi[-1:]
@@ -771,6 +803,15 @@ class Solution(SolutionBase):
         )
         return var_casadi, var_pybamm, time_integral
 
+    _CASADI_FUNCTION_OPTIONS = [
+        "cse",
+        "inputs_check",
+        "is_diff_in",
+        "is_diff_out",
+        "regularity_check",
+        "error_on_fail",
+    ]
+
     def process_casadi_var(self, var_pybamm, inputs, ys_shape):
         t_MX = casadi.MX.sym("t")
         y_MX = casadi.MX.sym("y", ys_shape[0])
@@ -784,14 +825,7 @@ class Solution(SolutionBase):
             offset += n
         var_sym = var_pybamm.to_casadi(t_MX, y_MX, inputs=inputs_MX_dict)
 
-        opts = {
-            "cse": True,
-            "inputs_check": False,
-            "is_diff_in": [False, True, False],
-            "is_diff_out": [True],
-            "regularity_check": False,
-            "error_on_fail": False,
-        }
+        opts = {opt: self.options[opt] for opt in self._CASADI_FUNCTION_OPTIONS}
 
         # Casadi has a bug where it does not correctly handle arrays with
         # zeros padded at the beginning or end. To avoid this, we add and
@@ -806,6 +840,12 @@ class Solution(SolutionBase):
             [var_sym],
             opts,
         )
+
+        # Skip the SX expansion on the aot path: it only exists to give the
+        # vm interpreter a faster bytecode form, and compiled code doesn't
+        # need it.
+        if self._options["compilation"] == "aot":
+            return aot_compile(var_casadi)
 
         # Some variables, like interpolants, cannot be expanded
         try:
@@ -1073,6 +1113,8 @@ class Solution(SolutionBase):
                 all_sensitivities[key] + other._all_sensitivities[key]
             )
 
+        options = self.user_options | other.user_options
+
         new_sol = Solution(
             all_ts,
             all_ys,
@@ -1085,6 +1127,7 @@ class Solution(SolutionBase):
             all_yps=all_yps,
             all_t_evals=all_t_evals,
             variables_returned=other.variables_returned,
+            options=options,
         )
 
         new_sol.closest_event_idx = other.closest_event_idx
@@ -1126,6 +1169,7 @@ class Solution(SolutionBase):
             all_yps=self.all_yps,
             all_t_evals=self._all_t_evals,
             variables_returned=self.variables_returned,
+            options=self.user_options,
         )
         new_sol._all_inputs_stacked = self.all_inputs_stacked
         new_sol._all_inputs_casadi = self.all_inputs_casadi
@@ -1249,6 +1293,7 @@ def make_cycle_solution(
         all_yps=sum_sols.all_yps,
         all_t_evals=sum_sols._all_t_evals,
         variables_returned=sum_sols.variables_returned,
+        options=sum_sols.user_options,
     )
 
     if sum_sols.variables_returned:

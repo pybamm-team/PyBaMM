@@ -23,6 +23,7 @@ For a high-level introduction to PyBaMM, see the :ref:`user guide <user_guide>` 
    meshes/index
    spatial_methods/index
    solvers/index
+   codegen/index
    experiment/index
    simulation
    plotting/index

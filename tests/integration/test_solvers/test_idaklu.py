@@ -1,8 +1,11 @@
 import logging
+import shutil
 
 import numpy as np
+import pytest
 
 import pybamm
+from pybamm.codegen.compilation import _CACHE
 
 
 class TestIDAKLUSolver:
@@ -308,3 +311,66 @@ class TestIDAKLUSolver:
         np.testing.assert_array_equal(
             new_sol1["Voltage [V]"].entries[63:], new_sol2["Voltage [V]"].entries
         )
+
+
+@pytest.mark.skipif(
+    not (shutil.which("gcc") or shutil.which("cc")),
+    reason="No C compiler available for AOT compilation",
+)
+class TestIDAKLUSolverAOTCompilation:
+    @staticmethod
+    def _build_model():
+        model = pybamm.lithium_ion.SPMe()
+        geometry = model.default_geometry
+        param = model.default_parameter_values
+        param.process_model(model)
+        param.process_geometry(geometry)
+        mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
+        disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+        disc.process_model(model)
+        return model
+
+    def test_spme_solve_and_observe_voltage_matches_vm(self):
+        t_eval = np.linspace(0, 3600, 100)
+
+        model_int = self._build_model()
+        sol_int = pybamm.IDAKLUSolver().solve(model_int, t_eval)
+
+        model_aot = self._build_model()
+        sol_aot = pybamm.IDAKLUSolver(options={"compilation": "aot"}).solve(
+            model_aot, t_eval
+        )
+
+        np.testing.assert_array_less(1, sol_aot.t.size)
+        t = np.union1d(sol_int.t, sol_aot.t)
+        t = t[(t >= sol_aot.t[0]) & (t <= sol_aot.t[-1])]
+
+        v_int = sol_int["Voltage [V]"](t)
+        v_aot = sol_aot["Voltage [V]"](t)
+        np.testing.assert_allclose(v_aot, v_int, rtol=1e-5, atol=1e-5)
+
+        assert sol_aot.options["compilation"] == "aot"
+        assert sol_int.options["compilation"] == "vm"
+
+    def test_spme_observe_uses_aot_external(self):
+        snapshot = dict(_CACHE)
+        _CACHE.clear()
+        try:
+            model = self._build_model()
+            t_eval = np.linspace(0, 3600, 50)
+            sol = pybamm.IDAKLUSolver(options={"compilation": "aot"}).solve(
+                model, t_eval
+            )
+
+            v = sol["Voltage [V]"](t_eval)
+            assert v.shape == t_eval.shape
+
+            assert len(_CACHE) >= 2
+            assert all(fn.class_name() == "External" for fn in _CACHE.values())
+        finally:
+            _CACHE.clear()
+            _CACHE.update(snapshot)
+
+    def test_invalid_compilation_raises(self):
+        with pytest.raises(pybamm.SolverError, match="compilation must be"):
+            pybamm.IDAKLUSolver(options={"compilation": "garbage"})
