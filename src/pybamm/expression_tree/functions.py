@@ -1038,7 +1038,7 @@ class RegPower(Function):
         """
         delta = self.delta
         if delta == 0:
-            return pybamm.Power._casadi_evaluate(base, exponent)
+            return casadi.power(base, exponent)
 
         x = base / scale
         r = casadi.hypot(x, delta)
