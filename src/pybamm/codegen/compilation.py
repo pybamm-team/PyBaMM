@@ -111,7 +111,7 @@ def _aot_compile(
         return result
 
     # Cache key: ordered hash of each fn's name + serialized form.
-    hasher = hashlib.sha1()
+    hasher = hashlib.sha1(usedforsecurity=False)
     for idx in indices_to_compile:
         fn = fns[idx]
         hasher.update(fn.name().encode())
