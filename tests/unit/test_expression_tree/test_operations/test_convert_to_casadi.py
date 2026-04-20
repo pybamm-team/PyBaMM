@@ -251,6 +251,30 @@ class TestCasadiConverter:
             pybamm_result = rp_scaled.evaluate(inputs={"x": x_val})
             np.testing.assert_allclose(casadi_result, pybamm_result, rtol=1e-10)
 
+    def test_reg_power_casadi_general_exponent(self):
+        x = pybamm.InputParameter("x")
+        casadi_inputs = {"x": casadi.MX.sym("x")}
+
+        for exponent, scale in [
+            (0.5, 1.0),
+            (0.5, 10.0),
+            (0.7, 1.0),
+            (1.0, 2.0),
+            (2.0, 1.0),
+            (-0.3, 0.5),
+        ]:
+            rp = pybamm.reg_power(x, exponent, scale=scale)
+            f = casadi.Function(
+                "f", [casadi_inputs["x"]], [rp.to_casadi(inputs=casadi_inputs)]
+            )
+            for x_val in [100.0, 10.0, 1.0, 0.1, -0.1, -1.0, -10.0]:
+                np.testing.assert_allclose(
+                    float(f(x_val)),
+                    rp.evaluate(inputs={"x": x_val}),
+                    rtol=1e-10,
+                    err_msg=f"exponent={exponent}, scale={scale}, x={x_val}",
+                )
+
     def test_kronecker_product(self):
         a = np.array([1.0, 2.0, 3.0])
         b = np.array([[1, 2, 3], [4, 5, 6]])
