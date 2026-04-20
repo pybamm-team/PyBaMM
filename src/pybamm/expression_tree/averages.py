@@ -4,8 +4,25 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import ClassVar
 
 import pybamm
+
+
+def _is_independent_of(
+    symbol: pybamm.Symbol, domain_matches: Callable[[str], bool]
+) -> bool:
+    """True if no Variable/SpatialVariable leaf has a primary domain that
+    ``domain_matches`` matches. Broadcasts from a non-matching domain are
+    therefore treated as independent even if the broadcast itself carries a
+    matching domain.
+    """
+    for node in symbol.pre_order():
+        if isinstance(node, pybamm.Variable | pybamm.SpatialVariable) and any(
+            domain_matches(dom) for dom in node.domain
+        ):
+            return False
+    return True
 
 
 class _BaseAverage(pybamm.Integral):
@@ -29,8 +46,53 @@ class _BaseAverage(pybamm.Integral):
         super().__init__(child, integration_variable)
         self.name = name
 
+    @classmethod
+    def domain_matches(cls, d: str) -> bool:
+        """Return True if domain string ``d`` is relevant for this average type."""
+        raise NotImplementedError  # pragma: no cover
+
+    @classmethod
+    def symbol_is_constant(cls, symbol: pybamm.Symbol) -> bool:
+        """Return True if ``symbol`` is independent of this average's domain."""
+        return _is_independent_of(symbol, cls.domain_matches)
+
+    @classmethod
+    def _try_separable(
+        cls,
+        symbol: pybamm.Symbol,
+        average_fn,
+    ) -> pybamm.Symbol | None:
+        """Rewrite ``avg(symbol)`` using linearity and constant-factor pull-out.
+
+        * ``Addition`` / ``Subtraction`` always split: ``avg(a±b) = avg(a) ± avg(b)``.
+        * ``Multiplication`` / ``Division`` split when at least one operand is
+          constant under this average.
+
+        Returns ``None`` when no rule applies.
+        """
+        operator = type(symbol)
+        if isinstance(symbol, pybamm.Addition | pybamm.Subtraction):
+            left, right = symbol.orphans
+            return operator(average_fn(left), average_fn(right))
+        if isinstance(symbol, pybamm.Multiplication | pybamm.Division):
+            left, right = symbol.orphans
+            if cls.symbol_is_constant(left) or cls.symbol_is_constant(right):
+                return operator(average_fn(left), average_fn(right))
+        return None
+
+    @classmethod
+    def from_symbol(cls, symbol: pybamm.Symbol) -> pybamm.Symbol:
+        """Create average from symbol with simplifications."""
+        raise NotImplementedError  # pragma: no cover
+
 
 class XAverage(_BaseAverage):
+    DOMAINS: ClassVar[tuple[str, ...]] = (
+        "negative electrode",
+        "separator",
+        "positive electrode",
+    )
+
     def __init__(self, child: pybamm.Symbol) -> None:
         if all(n in child.domain[0] for n in ["negative", "particle"]):
             x = pybamm.standard_spatial_vars.x_n
@@ -38,47 +100,100 @@ class XAverage(_BaseAverage):
             x = pybamm.standard_spatial_vars.x_p
         else:
             x = pybamm.SpatialVariable("x", domain=child.domain)
-        integration_variable = x
-        super().__init__(child, "x-average", integration_variable)
+        super().__init__(child, "x-average", x)
 
     def _unary_new_copy(
         self, child: pybamm.Symbol, perform_simplifications: bool = True
     ):
-        """
-        Creates a new copy of the operator with the child `child`.
-
-        Uses the convenience function :meth:`x_average` to perform checks before
-        creating an XAverage object.
-        """
         if perform_simplifications:
-            return x_average(child)
-        else:
-            return XAverage(child)
+            return self.from_symbol(child)
+        return XAverage(child)
 
+    @classmethod
+    def domain_matches(cls, d: str) -> bool:
+        return d in cls.DOMAINS
 
-class YZAverage(_BaseAverage):
-    def __init__(self, child: pybamm.Symbol) -> None:
-        y = pybamm.standard_spatial_vars.y
-        z = pybamm.standard_spatial_vars.z
-        integration_variable: list[pybamm.IndependentVariable] = [y, z]
-        super().__init__(child, "yz-average", integration_variable)
+    @classmethod
+    def from_symbol(cls, symbol: pybamm.Symbol) -> pybamm.Symbol:
+        """Create x-average with simplifications."""
+        # Can't take average if symbol evaluates on edges (unless broadcasted)
+        if symbol.evaluates_on_edges("primary") and not isinstance(
+            symbol, pybamm.Broadcast
+        ):
+            raise ValueError(
+                "Can't take the x-average of a symbol that evaluates on edges"
+            )
 
-    def _unary_new_copy(
-        self, child: pybamm.Symbol, perform_simplifications: bool = True
-    ):
-        """
-        Creates a new copy of the operator with the child `child`.
+        # If symbol doesn't have an electrode domain, return unchanged
+        if not any(
+            any(dom in cls.DOMAINS for dom in domain)
+            for domain in symbol.domains.values()
+        ):
+            return symbol
 
-        Uses the convenience function :meth:`yz_average` to perform checks before
-        creating an YZAverage object.
-        """
-        if perform_simplifications:
-            return yz_average(child)
-        else:
-            return YZAverage(child)
+        # If symbol is a broadcast, reduce by one dimension
+        if isinstance(
+            symbol,
+            pybamm.PrimaryBroadcast | pybamm.SecondaryBroadcast | pybamm.FullBroadcast,
+        ):
+            if all(dom in cls.DOMAINS for dom in symbol.broadcast_domain):
+                return symbol.reduce_one_dimension()
+            elif isinstance(symbol, pybamm.PrimaryBroadcast):
+                return pybamm.PrimaryBroadcast(
+                    cls.from_symbol(symbol.orphans[0]), symbol.broadcast_domain
+                )
+            elif isinstance(symbol, pybamm.FullBroadcast) and all(
+                dom in cls.DOMAINS for dom in symbol.secondary_domain
+            ):
+                domains = {
+                    "primary": symbol.domains["primary"],
+                    "secondary": symbol.domains["tertiary"],
+                    "tertiary": symbol.domains["quaternary"],
+                }
+                return pybamm.FullBroadcast(
+                    symbol.orphans[0], broadcast_domains=domains
+                )
+            elif isinstance(symbol, pybamm.FullBroadcast) and all(
+                dom in cls.DOMAINS for dom in symbol.tertiary_domain
+            ):
+                domains = {
+                    "primary": symbol.domains["primary"],
+                    "secondary": symbol.domains["secondary"],
+                    "tertiary": symbol.domains["quaternary"],
+                }
+                return pybamm.FullBroadcast(
+                    symbol.orphans[0], broadcast_domains=domains
+                )
+            else:  # pragma: no cover
+                raise NotImplementedError
+
+        # Concatenation: thickness-weighted average of children
+        if isinstance(symbol, pybamm.Concatenation) and not isinstance(
+            symbol, pybamm.ConcatenationVariable
+        ):
+            geo = pybamm.geometric_parameters
+            ls = {
+                ("negative electrode",): geo.n.L,
+                ("separator",): geo.s.L,
+                ("positive electrode",): geo.p.L,
+                ("separator", "positive electrode"): geo.s.L + geo.p.L,
+            }
+            out = sum(
+                ls[tuple(orp.domain)] * cls.from_symbol(orp) for orp in symbol.orphans
+            ) / sum(ls[tuple(orp.domain)] for orp in symbol.orphans)
+            return out
+
+        # Linearity + constant-factor pull-out
+        simplified = cls._try_separable(symbol, cls.from_symbol)
+        if simplified is not None:
+            return simplified
+
+        return cls(symbol)
 
 
 class ZAverage(_BaseAverage):
+    DOMAINS: ClassVar[tuple[str, ...]] = ("current collector",)
+
     def __init__(self, child: pybamm.Symbol) -> None:
         integration_variable: list[pybamm.IndependentVariable] = [
             pybamm.standard_spatial_vars.z
@@ -88,16 +203,81 @@ class ZAverage(_BaseAverage):
     def _unary_new_copy(
         self, child: pybamm.Symbol, perform_simplifications: bool = True
     ):
-        """
-        Creates a new copy of the operator with the child `child`.
-
-        Uses the convenience function :meth:`z_average` to perform checks before
-        creating an ZAverage object.
-        """
         if perform_simplifications:
-            return z_average(child)
-        else:
-            return ZAverage(child)
+            return self.from_symbol(child)
+        return ZAverage(child)
+
+    @classmethod
+    def domain_matches(cls, d: str) -> bool:
+        return d in cls.DOMAINS
+
+    @classmethod
+    def from_symbol(cls, symbol: pybamm.Symbol) -> pybamm.Symbol:
+        """Create z-average with simplifications."""
+        if symbol.evaluates_on_edges("primary"):
+            raise ValueError(
+                "Can't take the z-average of a symbol that evaluates on edges"
+            )
+
+        if symbol.domain not in [[], ["current collector"]]:
+            raise pybamm.DomainError(
+                "z-average only implemented in the 'current collector' domain, "
+                f"but symbol has domains {symbol.domain}"
+            )
+
+        if symbol.domain == []:
+            return symbol
+
+        if isinstance(symbol, pybamm.Broadcast):
+            return symbol.reduce_one_dimension()
+
+        simplified = cls._try_separable(symbol, cls.from_symbol)
+        if simplified is not None:
+            return simplified
+
+        return cls(symbol)
+
+
+class YZAverage(_BaseAverage):
+    DOMAINS: ClassVar[tuple[str, ...]] = ("current collector",)
+
+    def __init__(self, child: pybamm.Symbol) -> None:
+        y = pybamm.standard_spatial_vars.y
+        z = pybamm.standard_spatial_vars.z
+        integration_variable: list[pybamm.IndependentVariable] = [y, z]
+        super().__init__(child, "yz-average", integration_variable)
+
+    def _unary_new_copy(
+        self, child: pybamm.Symbol, perform_simplifications: bool = True
+    ):
+        if perform_simplifications:
+            return self.from_symbol(child)
+        return YZAverage(child)
+
+    @classmethod
+    def domain_matches(cls, d: str) -> bool:
+        return d in cls.DOMAINS
+
+    @classmethod
+    def from_symbol(cls, symbol: pybamm.Symbol) -> pybamm.Symbol:
+        """Create yz-average with simplifications."""
+        if symbol.domain not in [[], ["current collector"]]:
+            raise pybamm.DomainError(
+                "y-z-average only implemented in the 'current collector' domain, "
+                f"but symbol has domains {symbol.domain}"
+            )
+
+        if symbol.domain == []:
+            return symbol
+
+        if isinstance(symbol, pybamm.Broadcast):
+            return symbol.reduce_one_dimension()
+
+        simplified = cls._try_separable(symbol, cls.from_symbol)
+        if simplified is not None:
+            return simplified
+
+        return cls(symbol)
 
 
 class RAverage(_BaseAverage):
@@ -110,19 +290,66 @@ class RAverage(_BaseAverage):
     def _unary_new_copy(
         self, child: pybamm.Symbol, perform_simplifications: bool = True
     ):
-        """
-        Creates a new copy of the operator with the child `child`.
-
-        Uses the convenience function :meth:`r_average` to perform checks before
-        creating an RAverage object.
-        """
         if perform_simplifications:
-            return r_average(child)
-        else:
-            return RAverage(child)
+            return self.from_symbol(child)
+        return RAverage(child)
+
+    @classmethod
+    def domain_matches(cls, d: str) -> bool:
+        return d.endswith("particle") and not d.endswith("particle size")
+
+    @classmethod
+    def from_symbol(cls, symbol: pybamm.Symbol) -> pybamm.Symbol:
+        """Create r-average with simplifications."""
+        has_particle_domain = symbol.domain != [] and symbol.domain[0].endswith(
+            "particle"
+        )
+
+        if symbol.evaluates_on_edges("primary"):
+            raise ValueError(
+                "Can't take the r-average of a symbol that evaluates on edges"
+            )
+
+        if not has_particle_domain:
+            return symbol
+
+        # SecondaryBroadcast onto electrode: r-average child then broadcast back
+        if isinstance(symbol, pybamm.SecondaryBroadcast) and symbol.domains[
+            "secondary"
+        ] in [["positive electrode"], ["negative electrode"]]:
+            child = symbol.orphans[0]
+            child_av = cls.from_symbol(child)
+            return pybamm.PrimaryBroadcast(child_av, symbol.domains["secondary"])
+
+        # PrimaryBroadcast/FullBroadcast onto particle domain: reduce
+        if (
+            isinstance(symbol, pybamm.PrimaryBroadcast | pybamm.FullBroadcast)
+            and has_particle_domain
+        ):
+            return symbol.reduce_one_dimension()
+
+        simplified = cls._try_separable(symbol, cls.from_symbol)
+        if simplified is not None:
+            return simplified
+
+        return cls(symbol)
 
 
 class SizeAverage(_BaseAverage):
+    """Size average uses weighted distribution. Does NOT support separable rewrite
+    because the weight (f_a_dist) depends on the symbol's domain and cannot be
+    meaningfully reassigned to sub-expressions.
+    """
+
+    DOMAINS: ClassVar[tuple[list[str], ...]] = (
+        ["negative particle size"],
+        ["positive particle size"],
+        ["negative primary particle size"],
+        ["positive primary particle size"],
+        ["negative secondary particle size"],
+        ["positive secondary particle size"],
+    )
+
     def __init__(self, child: pybamm.Symbol, f_a_dist) -> None:
         R = pybamm.SpatialVariable("R", domains=child.domains, coord_sys="cartesian")
         integration_variable: list[pybamm.IndependentVariable] = [R]
@@ -132,18 +359,92 @@ class SizeAverage(_BaseAverage):
     def _unary_new_copy(
         self, child: pybamm.Symbol, perform_simplifications: bool = True
     ):
-        """
-        Creates a new copy of the operator with the child `child`.
-
-        Uses the convenience function :meth:`size_average` to perform checks before
-        creating an SizeAverage object.
-        """
         if perform_simplifications:
-            return size_average(child, f_a_dist=self.f_a_dist)
-        else:
-            return SizeAverage(child, f_a_dist=self.f_a_dist)
+            return self.from_symbol(child, f_a_dist=self.f_a_dist)
+        return SizeAverage(child, f_a_dist=self.f_a_dist)
+
+    @classmethod
+    def domain_matches(cls, d: str) -> bool:
+        return d.endswith("particle size")
+
+    @classmethod
+    def _has_size_domain(cls, symbol: pybamm.Symbol) -> bool:
+        """Check if symbol has any particle size domain."""
+        return any(
+            list(domain) in list(cls.DOMAINS) for domain in symbol.domains.values()
+        )
+
+    @classmethod
+    def _get_f_a_dist(cls, symbol: pybamm.Symbol) -> pybamm.Symbol | None:
+        """Compute area-weighted distribution for the symbol's domain."""
+        geo = pybamm.geometric_parameters
+        name = "R"
+        if "negative" in symbol.domain[0]:
+            name += "_n"
+        elif "positive" in symbol.domain[0]:
+            name += "_p"
+        if "primary" in symbol.domain[0]:
+            name += "_prim"
+        elif "secondary" in symbol.domain[0]:
+            name += "_sec"
+
+        R = pybamm.SpatialVariable(name, domains=symbol.domains, coord_sys="cartesian")
+
+        domains = symbol.domains
+        if ["negative particle size"] in domains.values() or [
+            "negative primary particle size"
+        ] in domains.values():
+            return geo.n.prim.f_a_dist(R)
+        if ["negative secondary particle size"] in domains.values():
+            return geo.n.sec.f_a_dist(R)
+        if ["positive particle size"] in domains.values() or [
+            "positive primary particle size"
+        ] in domains.values():
+            return geo.p.prim.f_a_dist(R)
+        if ["positive secondary particle size"] in domains.values():
+            return geo.p.sec.f_a_dist(R)
+        return None  # pragma: no cover
+
+    @classmethod
+    def from_symbol(
+        cls, symbol: pybamm.Symbol, f_a_dist: pybamm.Symbol | None = None
+    ) -> pybamm.Symbol:
+        """Create size-average with simplifications.
+
+        Note: Does NOT use separable rewrite because the weighted average
+        with distribution-dependent weight cannot be naively split without
+        breaking conservation.
+        """
+        if symbol.evaluates_on_edges("primary"):
+            raise ValueError(
+                "Can't take the size-average of a symbol that evaluates on edges"
+            )
+
+        # If no size domain, return unchanged
+        if symbol.domain == [] or not cls._has_size_domain(symbol):
+            return symbol
+
+        # PrimaryBroadcast to particle size: return orphan
+        if isinstance(symbol, pybamm.PrimaryBroadcast) and symbol.domain in [
+            ["negative particle size"],
+            ["positive particle size"],
+        ]:
+            return symbol.orphans[0]
+
+        # SecondaryBroadcast to particle size: return orphan
+        if isinstance(symbol, pybamm.SecondaryBroadcast) and symbol.domains[
+            "secondary"
+        ] in [["negative particle size"], ["positive particle size"]]:
+            return symbol.orphans[0]
+
+        # Compute f_a_dist if not provided
+        if f_a_dist is None:
+            f_a_dist = cls._get_f_a_dist(symbol)
+
+        return cls(symbol, f_a_dist)
 
 
+# Convenience functions (thin wrappers)
 def x_average(symbol: pybamm.Symbol) -> pybamm.Symbol:
     """
     Convenience function for creating an average in the x-direction.
@@ -158,79 +459,7 @@ def x_average(symbol: pybamm.Symbol) -> pybamm.Symbol:
     :class:`Symbol`
         the new averaged symbol
     """
-    # Can't take average if the symbol evaluates on edges (unless it's broadcasted)
-    if symbol.evaluates_on_edges("primary") and not isinstance(
-        symbol, pybamm.Broadcast
-    ):
-        raise ValueError("Can't take the x-average of a symbol that evaluates on edges")
-    # If symbol doesn't have an electrode domain, its x-averaged value is itself
-    if not any(
-        any(
-            dom in ["negative electrode", "separator", "positive electrode"]
-            for dom in domain
-        )
-        for domain in symbol.domains.values()
-    ):
-        return symbol
-    # If symbol is a broadcast, reduce by one dimension
-    if isinstance(
-        symbol,
-        pybamm.PrimaryBroadcast | pybamm.SecondaryBroadcast | pybamm.FullBroadcast,
-    ):
-        if all(
-            dom in ["negative electrode", "separator", "positive electrode"]
-            for dom in symbol.broadcast_domain
-        ):
-            return symbol.reduce_one_dimension()
-        elif isinstance(symbol, pybamm.PrimaryBroadcast):
-            return pybamm.PrimaryBroadcast(
-                x_average(symbol.orphans[0]), symbol.broadcast_domain
-            )
-        elif isinstance(symbol, pybamm.FullBroadcast) and all(
-            dom in ["negative electrode", "separator", "positive electrode"]
-            for dom in symbol.secondary_domain
-        ):
-            domains = {
-                "primary": symbol.domains["primary"],
-                "secondary": symbol.domains["tertiary"],
-                "tertiary": symbol.domains["quaternary"],
-            }
-            return pybamm.FullBroadcast(symbol.orphans[0], broadcast_domains=domains)
-        elif isinstance(symbol, pybamm.FullBroadcast) and all(
-            dom in ["negative electrode", "separator", "positive electrode"]
-            for dom in symbol.tertiary_domain
-        ):
-            domains = {
-                "primary": symbol.domains["primary"],
-                "secondary": symbol.domains["secondary"],
-                "tertiary": symbol.domains["quaternary"],
-            }
-            return pybamm.FullBroadcast(symbol.orphans[0], broadcast_domains=domains)
-        else:  # pragma: no cover
-            # It should be impossible to get here
-            raise NotImplementedError
-    # If symbol is a concatenation, its average value is the
-    # thickness-weighted average of the average of its children
-    elif isinstance(symbol, pybamm.Concatenation) and not isinstance(
-        symbol, pybamm.ConcatenationVariable
-    ):
-        geo = pybamm.geometric_parameters
-        ls = {
-            ("negative electrode",): geo.n.L,
-            ("separator",): geo.s.L,
-            ("positive electrode",): geo.p.L,
-            ("separator", "positive electrode"): geo.s.L + geo.p.L,
-        }
-        out = sum(
-            ls[tuple(orp.domain)] * x_average(orp) for orp in symbol.orphans
-        ) / sum(ls[tuple(orp.domain)] for orp in symbol.orphans)
-        return out
-    # Average of a sum is sum of averages
-    elif isinstance(symbol, pybamm.Addition | pybamm.Subtraction):
-        return _sum_of_averages(symbol, x_average)
-    # Otherwise, use Integral to calculate average value
-    else:
-        return XAverage(symbol)
+    return XAverage.from_symbol(symbol)
 
 
 def z_average(symbol: pybamm.Symbol) -> pybamm.Symbol:
@@ -247,27 +476,7 @@ def z_average(symbol: pybamm.Symbol) -> pybamm.Symbol:
     :class:`Symbol`
         the new averaged symbol
     """
-    # Can't take average if the symbol evaluates on edges
-    if symbol.evaluates_on_edges("primary"):
-        raise ValueError("Can't take the z-average of a symbol that evaluates on edges")
-    # Symbol must have domain [] or ["current collector"]
-    if symbol.domain not in [[], ["current collector"]]:
-        raise pybamm.DomainError(
-            "z-average only implemented in the 'current collector' domain, "
-            f"but symbol has domains {symbol.domain}"
-        )
-    # If symbol doesn't have a domain, its average value is itself
-    if symbol.domain == []:
-        return symbol
-    # If symbol is a Broadcast, its average value is its child
-    elif isinstance(symbol, pybamm.Broadcast):
-        return symbol.reduce_one_dimension()
-    # Average of a sum is sum of averages
-    elif isinstance(symbol, pybamm.Addition | pybamm.Subtraction):
-        return _sum_of_averages(symbol, z_average)
-    # Otherwise, define a ZAverage
-    else:
-        return ZAverage(symbol)
+    return ZAverage.from_symbol(symbol)
 
 
 def yz_average(symbol: pybamm.Symbol) -> pybamm.Symbol:
@@ -284,32 +493,11 @@ def yz_average(symbol: pybamm.Symbol) -> pybamm.Symbol:
     :class:`Symbol`
         the new averaged symbol
     """
-    # Symbol must have domain [] or ["current collector"]
-    if symbol.domain not in [[], ["current collector"]]:
-        raise pybamm.DomainError(
-            "y-z-average only implemented in the 'current collector' domain, "
-            f"but symbol has domains {symbol.domain}"
-        )
-    # If symbol doesn't have a domain, its average value is itself
-    if symbol.domain == []:
-        return symbol
-    # If symbol is a Broadcast, its average value is its child
-    elif isinstance(symbol, pybamm.Broadcast):
-        return symbol.reduce_one_dimension()
-    # Average of a sum is sum of averages
-    elif isinstance(symbol, pybamm.Addition | pybamm.Subtraction):
-        return _sum_of_averages(symbol, yz_average)
-    # Otherwise, define a YZAverage
-    else:
-        return YZAverage(symbol)
+    return YZAverage.from_symbol(symbol)
 
 
 def xyz_average(symbol: pybamm.Symbol) -> pybamm.Symbol:
-    return yz_average(x_average(symbol))
-
-
-def xyzs_average(symbol: pybamm.Symbol) -> pybamm.Symbol:
-    return xyz_average(size_average(symbol))
+    return YZAverage.from_symbol(XAverage.from_symbol(symbol))
 
 
 def r_average(symbol: pybamm.Symbol) -> pybamm.Symbol:
@@ -326,33 +514,7 @@ def r_average(symbol: pybamm.Symbol) -> pybamm.Symbol:
     :class:`Symbol`
         the new averaged symbol
     """
-    has_particle_domain = symbol.domain != [] and symbol.domain[0].endswith("particle")
-    # Can't take average if the symbol evaluates on edges
-    if symbol.evaluates_on_edges("primary"):
-        raise ValueError("Can't take the r-average of a symbol that evaluates on edges")
-    # Otherwise, if symbol doesn't have a particle domain,
-    # its r-averaged value is itself
-    elif not has_particle_domain:
-        return symbol
-    # If symbol is a secondary broadcast onto "negative electrode" or
-    # "positive electrode", take the r-average of the child then broadcast back
-    elif isinstance(symbol, pybamm.SecondaryBroadcast) and symbol.domains[
-        "secondary"
-    ] in [["positive electrode"], ["negative electrode"]]:
-        child = symbol.orphans[0]
-        child_av = pybamm.r_average(child)
-        return pybamm.PrimaryBroadcast(child_av, symbol.domains["secondary"])
-    # If symbol is a Broadcast onto a particle domain, its average value is its child
-    elif (
-        isinstance(symbol, pybamm.PrimaryBroadcast | pybamm.FullBroadcast)
-        and has_particle_domain
-    ):
-        return symbol.reduce_one_dimension()
-    # Average of a sum is sum of averages
-    elif isinstance(symbol, pybamm.Addition | pybamm.Subtraction):
-        return _sum_of_averages(symbol, r_average)
-    else:
-        return RAverage(symbol)
+    return RAverage.from_symbol(symbol)
 
 
 def size_average(
@@ -370,76 +532,8 @@ def size_average(
     :class:`Symbol`
         the new averaged symbol
     """
-    # Can't take average if the symbol evaluates on edges
-    if symbol.evaluates_on_edges("primary"):
-        raise ValueError(
-            """Can't take the size-average of a symbol that evaluates on edges"""
-        )
-
-    # If symbol doesn't have a domain, or doesn't have "negative particle size"
-    #  or "positive particle size" as a domain, it's average value is itself
-    if symbol.domain == [] or not any(
-        domain
-        in [
-            ["negative particle size"],
-            ["positive particle size"],
-            ["negative primary particle size"],
-            ["positive primary particle size"],
-            ["negative secondary particle size"],
-            ["positive secondary particle size"],
-        ]
-        for domain in list(symbol.domains.values())
-    ):
-        return symbol
-
-    # If symbol is a primary broadcast to "particle size", take the orphan
-    elif isinstance(symbol, pybamm.PrimaryBroadcast) and symbol.domain in [
-        ["negative particle size"],
-        ["positive particle size"],
-    ]:
-        return symbol.orphans[0]
-    # If symbol is a secondary broadcast to "particle size" from "particle",
-    # take the orphan
-    elif isinstance(symbol, pybamm.SecondaryBroadcast) and symbol.domains[
-        "secondary"
-    ] in [["negative particle size"], ["positive particle size"]]:
-        return symbol.orphans[0]
-    # Otherwise, define a SizeAverage
-    else:
-        if f_a_dist is None:
-            geo = pybamm.geometric_parameters
-            name = "R"
-            if "negative" in symbol.domain[0]:
-                name += "_n"
-            elif "positive" in symbol.domain[0]:
-                name += "_p"
-            if "primary" in symbol.domain[0]:
-                name += "_prim"
-            elif "secondary" in symbol.domain[0]:
-                name += "_sec"
-            R = pybamm.SpatialVariable(
-                name, domains=symbol.domains, coord_sys="cartesian"
-            )
-            if ["negative particle size"] in symbol.domains.values() or [
-                "negative primary particle size"
-            ] in symbol.domains.values():
-                f_a_dist = geo.n.prim.f_a_dist(R)
-            elif ["negative secondary particle size"] in symbol.domains.values():
-                f_a_dist = geo.n.sec.f_a_dist(R)
-            elif ["positive particle size"] in symbol.domains.values() or [
-                "positive primary particle size"
-            ] in symbol.domains.values():
-                f_a_dist = geo.p.prim.f_a_dist(R)
-            elif ["positive secondary particle size"] in symbol.domains.values():
-                f_a_dist = geo.p.sec.f_a_dist(R)
-        return SizeAverage(symbol, f_a_dist)
+    return SizeAverage.from_symbol(symbol, f_a_dist)
 
 
-def _sum_of_averages(
-    symbol: pybamm.Addition | pybamm.Subtraction,
-    average_function: Callable[[pybamm.Symbol], pybamm.Symbol],
-):
-    if isinstance(symbol, pybamm.Addition):
-        return average_function(symbol.left) + average_function(symbol.right)
-    elif isinstance(symbol, pybamm.Subtraction):
-        return average_function(symbol.left) - average_function(symbol.right)
+def xyzs_average(symbol: pybamm.Symbol) -> pybamm.Symbol:
+    return xyz_average(size_average(symbol))

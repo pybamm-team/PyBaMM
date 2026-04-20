@@ -4,12 +4,14 @@
 
 import itertools
 
+import casadi
 import numpy as np
 import pytest
 import sympy
 from scipy import special
 
 import pybamm
+from pybamm.expression_tree.functions import _is_constant_value
 from tests import (
     function_test,
     multi_var_function_test,
@@ -667,3 +669,26 @@ class TestNonObjectFunctions:
         assert fun.evaluate(inputs={"x": -1, "mu": 0, "sigma": 1}) < fun.evaluate(
             inputs={"x": -1, "mu": 0, "sigma": 2}
         )
+
+
+class TestIsConstantValue:
+    def test_all_branches(self):
+
+        # casadi.MX with size > 2 -> False
+        large_mx = casadi.MX.sym("x", 10)
+        assert not _is_constant_value(large_mx, 0)
+
+        # numpy array
+        assert _is_constant_value(np.array([1.0, 1.0]), 1.0)
+        assert not _is_constant_value(np.array([1.0, 2.0]), 1.0)
+
+        # scalar
+        assert _is_constant_value(0.5, 0.5)
+        assert not _is_constant_value(0.5, 1.0)
+
+        # exception branch - use object that raises on comparison
+        class BadCompare:
+            def __eq__(self, other):
+                raise TypeError("can't compare")
+
+        assert not _is_constant_value(BadCompare(), 0)
