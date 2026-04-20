@@ -855,6 +855,7 @@ def get_parameter_values():
         "Secondary: Negative electrode density [kg.m-3]": 2650.0,
         "Secondary: Negative electrode OCP entropic change [V.K-1]": 0.0,
         #cracking
+        "Primary: Initial SEI on cracks thickness [m]": 5e-13,
         "Primary: Negative electrode Poisson's ratio": 0.3,
         "Primary: Negative electrode Young's modulus [Pa]": 15000000000.0,
         "Primary: Negative electrode reference concentration for free of deformation [mol.m-3]"
@@ -871,6 +872,7 @@ def get_parameter_values():
         "Primary: Negative electrode LAM constant proportional term [s-1]": 2.7778e-07,
         "Primary: Negative electrode LAM constant exponential term": 2.0,
         "Primary: Negative electrode critical stress [Pa]": 60000000.0,
+        "Secondary: Initial SEI on cracks thickness [m]": 5e-13,
         "Secondary: Negative electrode Poisson's ratio": 0.3,
         "Secondary: Negative electrode Young's modulus [Pa]": 15000000000.0,
         "Secondary: Negative electrode reference concentration for free of deformation [mol.m-3]"
