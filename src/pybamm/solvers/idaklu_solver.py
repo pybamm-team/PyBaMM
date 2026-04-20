@@ -51,10 +51,11 @@ class IDAKLUSolver(pybamm.BaseSolver):
             options = {
                 # Print statistics of the solver after every solve
                 "print_stats": False,
-                # Casadi function backend: "vm" (default, in-process virtual
-                # machine) or "aot" (compile to a shared library via the
-                # system C compiler; see :mod:`pybamm.codegen.compilation`).
-                "compilation": "vm",
+                # If ``True``, ahead-of-time compile each casadi ``Function``
+                # to a shared library via the system C compiler (see
+                # :mod:`pybamm.codegen.compilation`). If ``False`` (default)
+                # the casadi in-process virtual machine is used.
+                "compile": False,
                 # Number of threads available for OpenMP (must be greater than or equal to `num_solvers`)
                 "num_threads": 1,
                 # Number of solvers to use in parallel (for solving multiple sets of input parameters in parallel)
@@ -204,7 +205,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         num_solvers = user_options.get("num_threads", 1) if user_options else 1
         default_options = {
             "print_stats": False,
-            "compilation": "vm",
+            "compile": False,
             "jacobian": "sparse",
             "preconditioner": "BBDP",
             "precon_half_bandwidth": 5,
@@ -249,8 +250,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         return options
 
-    _COMPILATION_METHODS = ["vm", "aot"]
-
     def _check_options(self, options: dict):
         hermite_reduction_factor = options["hermite_reduction_factor"]
         if hermite_reduction_factor > 1.0:
@@ -269,10 +268,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
             if hermite_reduction_factor < 1.0:
                 raise pybamm.SolverError("hermite_reduction_factor must be >= 1.0.")
 
-        if options["compilation"] not in self._COMPILATION_METHODS:
-            raise pybamm.SolverError(
-                f"compilation must be one of {self._COMPILATION_METHODS}"
-            )
+        if not isinstance(options["compile"], bool):
+            raise pybamm.SolverError("compile must be a bool")
 
     def _check_atol_type(self, atol, model):
         if isinstance(atol, float):
@@ -409,12 +406,29 @@ class IDAKLUSolver(pybamm.BaseSolver):
         atol = self._check_atol_type(atol, model)
 
         # Serialise each casadi function for the idaklu C++ wrapper. With
-        # ``compilation == "aot"`` the function is first lowered to a
-        # ``casadi.external`` so the serialised form points at a precompiled
-        # shared library.
+        # ``compile=True`` all top-level Functions are bundled into a single
+        # shared library via one ``gcc`` invocation; each serialised Function
+        # then points at its entry point in that library.
+        fns = [
+            rhs_algebraic,
+            jac_times_cjmass,
+            jac_rhs_algebraic_action,
+            mass_action,
+            sensfn,
+            rootfn,
+        ]
+        if self._options["compile"]:
+            fns = aot_compile(fns)
+        (
+            rhs_algebraic,
+            jac_times_cjmass,
+            jac_rhs_algebraic_action,
+            mass_action,
+            sensfn,
+            rootfn,
+        ) = fns
+
         def generate_functions(fn):
-            if self._options["compilation"] == "aot":
-                fn = aot_compile(fn)
             fn_pkl = fn.serialize()
             return idaklu.generate_function(fn_pkl), fn_pkl
 
@@ -743,9 +757,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
             # manually set it to the true final time
             t_eval[-1] = t[-1]
 
-        # Forward the compilation backend so post-solve observation uses the
-        # same vm/aot path as the integration.
-        solution_options = {"compilation": self._options["compilation"]}
+        # Forward the compile flag so post-solve observation uses the same
+        # backend as the integration.
+        solution_options = {"compile": self._options["compile"]}
 
         newsol = pybamm.Solution(
             t,

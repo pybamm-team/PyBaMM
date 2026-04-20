@@ -163,9 +163,7 @@ class TestAotCompile:
         assert g is f
         assert not any(p.endswith(_shared_ext()) for p in os.listdir(cache_dir))
         assert len(_CACHE) == 0
-        assert any(
-            "Failed to compile function" in r.getMessage() for r in caplog.records
-        )
+        assert any("Failed to compile" in r.getMessage() for r in caplog.records)
 
     def test_atomic_install_no_partial_dylib_on_failure(self, cache_dir):
         f = _make_simple_fn("test_aot_atomic_install")
@@ -202,6 +200,81 @@ class TestAotCompile:
         g2 = aot_compile(f2, cache_dir=cache_dir)
         assert g1 is not g2
         assert len(_CACHE) == 2
+
+    def test_bundle_compiles_to_single_dylib(self, cache_dir):
+        x = casadi.MX.sym("x", 3)
+        y = casadi.MX.sym("y")
+        f1 = casadi.Function("test_bundle_f1", [x, y], [casadi.sin(x) + y])
+        f2 = casadi.Function("test_bundle_f2", [x, y], [casadi.cos(x) * y])
+
+        g1, g2 = aot_compile([f1, f2], cache_dir=cache_dir)
+
+        assert g1.class_name() == "External"
+        assert g2.class_name() == "External"
+        produced = [p for p in os.listdir(cache_dir) if p.endswith(_shared_ext())]
+        assert len(produced) == 1
+        assert "bundle_" in produced[0]
+
+        rng = np.random.default_rng(0)
+        for _ in range(3):
+            xv = rng.standard_normal(3)
+            yv = float(rng.standard_normal())
+            np.testing.assert_allclose(
+                np.array(g1(xv, yv)).flatten(),
+                np.array(f1(xv, yv)).flatten(),
+                rtol=1e-12,
+                atol=1e-12,
+            )
+            np.testing.assert_allclose(
+                np.array(g2(xv, yv)).flatten(),
+                np.array(f2(xv, yv)).flatten(),
+                rtol=1e-12,
+                atol=1e-12,
+            )
+
+    def test_bundle_inlines_cross_fn_calls(self, cache_dir):
+        # When one bundled fn calls another, CodeGenerator defines both in the
+        # same TU so the linker never sees an unresolved extern.
+        x = casadi.MX.sym("x")
+        inner = casadi.Function("test_bundle_inner", [x], [x * x])
+        outer = casadi.Function("test_bundle_outer", [x], [inner(x) + 1.0])
+
+        _, g_outer = aot_compile([inner, outer], cache_dir=cache_dir)
+        np.testing.assert_allclose(float(g_outer(3.0)), 10.0)
+
+    def test_bundle_passthrough_externals(self, cache_dir):
+        # Already-External inputs must be returned unchanged; only remaining
+        # Functions get compiled.
+        x = casadi.MX.sym("x")
+        f = casadi.Function("test_bundle_pt_f", [x], [x + 1.0])
+        ext_f = aot_compile(f, cache_dir=cache_dir)
+
+        g = casadi.Function("test_bundle_pt_g", [x], [x * 2.0])
+        out_ext_f, out_g = aot_compile([ext_f, g], cache_dir=cache_dir)
+        assert out_ext_f is ext_f
+        assert out_g.class_name() == "External"
+
+    def test_composite_of_external_raises(self, cache_dir, caplog):
+        # Building a Function on top of an already-AOT'd sub produces ``extern``
+        # decls in the generated C that the linker can't resolve. aot_compile
+        # is a boundary tool: it must refuse to compile this shape, and the
+        # caller keeps intermediates as MX/SX.
+        x = casadi.MX.sym("x")
+        leaf = casadi.Function("test_aot_boundary_leaf", [x], [x * x])
+        ext_leaf = aot_compile(leaf, cache_dir=cache_dir)
+        assert ext_leaf.class_name() == "External"
+
+        composite = casadi.Function(
+            "test_aot_boundary_composite", [x], [ext_leaf(x) + 1.0]
+        )
+        with caplog.at_level(logging.WARNING, logger="pybamm"):
+            result = aot_compile(composite, cache_dir=cache_dir)
+        # aot_compile logs + returns the original fn on failure.
+        assert result is composite
+        assert any(
+            "only be called on top-level Functions" in rec.message
+            for rec in caplog.records
+        )
 
 
 class TestAotCleanup:

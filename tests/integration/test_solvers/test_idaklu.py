@@ -337,7 +337,7 @@ class TestIDAKLUSolverAOTCompilation:
         sol_int = pybamm.IDAKLUSolver().solve(model_int, t_eval)
 
         model_aot = self._build_model()
-        sol_aot = pybamm.IDAKLUSolver(options={"compilation": "aot"}).solve(
+        sol_aot = pybamm.IDAKLUSolver(options={"compile": True}).solve(
             model_aot, t_eval
         )
 
@@ -349,8 +349,8 @@ class TestIDAKLUSolverAOTCompilation:
         v_aot = sol_aot["Voltage [V]"](t)
         np.testing.assert_allclose(v_aot, v_int, rtol=1e-5, atol=1e-5)
 
-        assert sol_aot.options["compilation"] == "aot"
-        assert sol_int.options["compilation"] == "vm"
+        assert sol_aot.options["compile"] is True
+        assert sol_int.options["compile"] is False
 
     def test_spme_observe_uses_aot_external(self):
         snapshot = dict(_CACHE)
@@ -358,19 +358,21 @@ class TestIDAKLUSolverAOTCompilation:
         try:
             model = self._build_model()
             t_eval = np.linspace(0, 3600, 50)
-            sol = pybamm.IDAKLUSolver(options={"compilation": "aot"}).solve(
-                model, t_eval
-            )
+            sol = pybamm.IDAKLUSolver(options={"compile": True}).solve(model, t_eval)
 
             v = sol["Voltage [V]"](t_eval)
             assert v.shape == t_eval.shape
 
             assert len(_CACHE) >= 2
-            assert all(fn.class_name() == "External" for fn in _CACHE.values())
+            assert all(
+                fn.class_name() == "External"
+                for fn_list in _CACHE.values()
+                for fn in fn_list
+            )
         finally:
             _CACHE.clear()
             _CACHE.update(snapshot)
 
-    def test_invalid_compilation_raises(self):
-        with pytest.raises(pybamm.SolverError, match="compilation must be"):
-            pybamm.IDAKLUSolver(options={"compilation": "garbage"})
+    def test_invalid_compile_raises(self):
+        with pytest.raises(pybamm.SolverError, match="compile must be a bool"):
+            pybamm.IDAKLUSolver(options={"compile": "garbage"})

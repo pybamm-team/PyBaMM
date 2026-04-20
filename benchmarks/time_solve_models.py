@@ -143,21 +143,21 @@ class TimeSolveSPMe:
 
 
 class TimeRepeatedSolveAndObserveVoltage:
-    param_names = ["model", "compilation"]
+    param_names = ["model", "compile"]
     params = (
         [pybamm.lithium_ion.SPM, pybamm.lithium_ion.SPMe, pybamm.lithium_ion.DFN],
-        ["vm", "aot"],
+        [False, True],
     )
     sim: pybamm.Simulation
     sol: pybamm.Solution
     t_eval: list[float]
     t_interp: npt.NDArray[np.float64]
 
-    def setup(self, model_class, compilation):
+    def setup(self, model_class, compile):
         set_random_seed()
         self.sim = pybamm.Simulation(
             model_class(),
-            solver=pybamm.IDAKLUSolver(options={"compilation": compilation}),
+            solver=pybamm.IDAKLUSolver(options={"compile": compile}),
         )
         self.t_eval = [0.0, 3600.0]
         self.t_interp = np.linspace(self.t_eval[0], self.t_eval[-1], 10000)
@@ -165,10 +165,10 @@ class TimeRepeatedSolveAndObserveVoltage:
         self.sol = self.sim.solve(self.t_eval, t_interp=self.t_interp)
         _ = self.sol["Voltage [V]"].data
 
-    def time_repeated_solve(self, _model_class, _compilation):
+    def time_repeated_solve(self, _model_class, _compile):
         self.sim.solve(self.t_eval, t_interp=self.t_interp)
 
-    def time_voltage_observe(self, _model_class, _compilation):
+    def time_voltage_observe(self, _model_class, _compile):
         self.sol._variables.clear()
         _ = self.sol["Voltage [V]"].data
 

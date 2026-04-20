@@ -1727,13 +1727,13 @@ class TestIDAKLUSolver:
         t_eval = [0, 1]
 
         sol_default = pybamm.IDAKLUSolver().solve(model, t_eval)
-        assert sol_default.user_options == {"compilation": "vm"}
-        assert sol_default.options["compilation"] == "vm"
+        assert sol_default.user_options == {"compile": False}
+        assert sol_default.options["compile"] is False
 
         sol_vm = pybamm.IDAKLUSolver(
-            options={"compilation": "vm", "num_threads": 2}
+            options={"compile": False, "num_threads": 2}
         ).solve(model, t_eval)
-        assert sol_vm.user_options == {"compilation": "vm"}
+        assert sol_vm.user_options == {"compile": False}
         assert "num_threads" not in sol_vm.user_options
 
     def test_solution_user_options_survive_pickle(self, tmp_path):

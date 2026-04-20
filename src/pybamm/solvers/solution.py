@@ -177,7 +177,7 @@ class EISSolution(SolutionBase):
 
 
 _DEFAULT_SOLUTION_OPTIONS = {
-    "compilation": "vm",
+    "compile": False,
     "cse": True,
     "inputs_check": False,
     "is_diff_in": [False, True, False],
@@ -235,9 +235,9 @@ class Solution(SolutionBase):
     options: dict, optional
         Overrides for :meth:`process_casadi_var`. Unspecified keys fall back
         to ``_DEFAULT_SOLUTION_OPTIONS`` -- the casadi ``Function`` flags and
-        the ``compilation`` backend (``"vm"`` or ``"aot"``). Solvers should
-        forward the user's selection so observed variables use the same
-        backend as the integration.
+        the ``compile`` flag (``True`` = AOT, ``False`` = in-process VM).
+        Solvers should forward the user's selection so observed variables use
+        the same backend as the integration.
 
     """
 
@@ -844,7 +844,7 @@ class Solution(SolutionBase):
         # Skip the SX expansion on the aot path: it only exists to give the
         # vm interpreter a faster bytecode form, and compiled code doesn't
         # need it.
-        if self._options["compilation"] == "aot":
+        if self._options["compile"]:
             return aot_compile(var_casadi)
 
         # Some variables, like interpolants, cannot be expanded

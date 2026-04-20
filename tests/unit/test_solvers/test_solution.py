@@ -1118,36 +1118,36 @@ class TestSolution:
         sol = self._make_trivial_solution()
         assert sol.user_options == {}
         assert sol.options == _DEFAULT_SOLUTION_OPTIONS
-        assert sol.options["compilation"] == "vm"
+        assert sol.options["compile"] is False
         assert sol.options is not _DEFAULT_SOLUTION_OPTIONS
 
     def test_options_custom_merged(self):
-        user = {"compilation": "aot", "cse": False}
+        user = {"compile": True, "cse": False}
         sol = self._make_trivial_solution(options=user)
 
         assert sol.user_options == user
-        assert sol.options["compilation"] == "aot"
+        assert sol.options["compile"] is True
         assert sol.options["cse"] is False
         for key, default in _DEFAULT_SOLUTION_OPTIONS.items():
             if key not in user:
                 assert sol.options[key] == default
 
     def test_options_copy(self):
-        sol = self._make_trivial_solution(options={"compilation": "aot"})
+        sol = self._make_trivial_solution(options={"compile": True})
         sol_copy = sol.copy()
         assert sol_copy.user_options == sol.user_options
         assert sol_copy.options == sol.options
-        assert sol_copy.options["compilation"] == "aot"
+        assert sol_copy.options["compile"] is True
 
     def test_options_first_last_state(self):
-        sol = self._make_trivial_solution(options={"compilation": "aot"})
+        sol = self._make_trivial_solution(options={"compile": True})
         assert sol.first_state.user_options == sol.user_options
-        assert sol.first_state.options["compilation"] == "aot"
+        assert sol.first_state.options["compile"] is True
         assert sol.last_state.user_options == sol.user_options
-        assert sol.last_state.options["compilation"] == "aot"
+        assert sol.last_state.options["compile"] is True
 
     def test_options_add_merges_user_options(self):
-        sol_left = self._make_trivial_solution(options={"compilation": "aot"})
+        sol_left = self._make_trivial_solution(options={"compile": True})
 
         t2 = [np.linspace(2, 3)]
         y2 = [np.tile(t2[0], (20, 1))]
@@ -1156,25 +1156,25 @@ class TestSolution:
         )
 
         summed = sol_left + sol_right
-        assert summed.user_options == {"compilation": "aot", "cse": False}
-        assert summed.options["compilation"] == "aot"
+        assert summed.user_options == {"compile": True, "cse": False}
+        assert summed.options["compile"] is True
         assert summed.options["cse"] is False
 
     def test_options_add_right_hand_wins_on_conflict(self):
-        sol_left = self._make_trivial_solution(options={"compilation": "aot"})
+        sol_left = self._make_trivial_solution(options={"compile": True})
 
         t2 = [np.linspace(2, 3)]
         y2 = [np.tile(t2[0], (20, 1))]
         sol_right = pybamm.Solution(
-            t2, y2, pybamm.BaseModel(), [{"a": 3}], options={"compilation": "vm"}
+            t2, y2, pybamm.BaseModel(), [{"a": 3}], options={"compile": False}
         )
 
         summed = sol_left + sol_right
-        assert summed.user_options == {"compilation": "vm"}
-        assert summed.options["compilation"] == "vm"
+        assert summed.user_options == {"compile": False}
+        assert summed.options["compile"] is False
 
     def test_options_add_empty_solution(self):
-        sol = self._make_trivial_solution(options={"compilation": "aot"})
+        sol = self._make_trivial_solution(options={"compile": True})
         empty = pybamm.EmptySolution(termination="event", t=0.0)
         assert (sol + empty).user_options == sol.user_options
         assert (empty + sol).user_options == sol.user_options
@@ -1191,18 +1191,18 @@ class TestSolution:
             y1,
             _DummyModel(),
             [{"a": 1}, {"a": 2}],
-            options={"compilation": "aot"},
+            options={"compile": True},
         )
 
         t2 = [np.linspace(2, 3)]
         y2 = [np.tile(t2[0], (20, 1))]
         sol_b = pybamm.Solution(
-            t2, y2, _DummyModel(), [{"a": 3}], options={"compilation": "aot"}
+            t2, y2, _DummyModel(), [{"a": 3}], options={"compile": True}
         )
 
         cycle_sol, _, _ = make_cycle_solution([sol_a, sol_b], save_this_cycle=True)
-        assert cycle_sol.user_options == {"compilation": "aot"}
-        assert cycle_sol.options["compilation"] == "aot"
+        assert cycle_sol.user_options == {"compile": True}
+        assert cycle_sol.options["compile"] is True
 
     def test_options_pickle_roundtrip(self, tmp_path):
         model = pybamm.BaseModel()
@@ -1214,7 +1214,7 @@ class TestSolution:
         disc = get_discretisation_for_testing()
         disc.process_model(model)
 
-        user = {"compilation": "aot", "cse": False}
+        user = {"compile": True, "cse": False}
         solution = pybamm.ScipySolver().solve(model, np.linspace(0, 1))
         solution._user_options = dict(user)
         solution._options = _DEFAULT_SOLUTION_OPTIONS | solution._user_options
@@ -1225,7 +1225,7 @@ class TestSolution:
 
         assert solution_load.user_options == user
         assert solution_load.options == solution.options
-        assert solution_load.options["compilation"] == "aot"
+        assert solution_load.options["compile"] is True
 
     def test_options_affect_casadi_function_opts(self):
         model = pybamm.BaseModel()

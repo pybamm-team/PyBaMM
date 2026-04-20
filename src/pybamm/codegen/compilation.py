@@ -11,7 +11,10 @@ import casadi
 
 from pybamm import logger
 
-_CACHE: dict[str, casadi.Function] = {}
+# Cache of bundle-hash -> list of ``casadi.external`` wrappers, one per
+# non-External input to that bundle. A single-Function call is a bundle of
+# size one; no separate code path.
+_CACHE: dict[str, list[casadi.Function]] = {}
 
 # Only remove build artifacts older than this to avoid racing with another
 # process's in-flight compile.
@@ -22,6 +25,15 @@ _STALE_TMP_AGE_S = 3600
 _PER_ATTEMPT_TOKEN = re.compile(r"\.\d+\.[0-9a-f]{32}(?:\.|$)")
 
 _TMP_FILE_PREFIX = "pybamm_"
+
+# ``int NAME(const casadi_real** arg, ...);`` at the top level of the
+# generated C marks an External sub-Function named ``NAME``. Decls for names
+# defined in the same TU are fine; decls for anything else mean the caller
+# wrapped an inner Function as an External before feeding it to a composite.
+_EXTERN_DECL = re.compile(
+    r"^\s*int\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(\s*const\s+casadi_real\s*\*\*",
+    re.MULTILINE,
+)
 
 _swept_dirs: set[str] = set()
 
@@ -44,70 +56,109 @@ def _shared_ext() -> str:
     return ".so"
 
 
-def aot_compile(fn: casadi.Function, **kwargs) -> casadi.Function:
-    """Ahead-of-time compile a casadi ``Function`` to a shared library and
-    return a ``casadi.external`` wrapper.
+def aot_compile(fn_or_fns, **kwargs):
+    """Ahead-of-time compile one or more casadi ``Function`` objects to a
+    single shared library and return ``casadi.external`` wrappers.
 
-    Results are cached in-process (by a hash of the serialised form) and on
+    Accepts either a single ``casadi.Function`` (returns a Function) or a
+    list/tuple of Functions (returns a list, one per input, in order). In
+    either case everything is lowered in one ``CodeGenerator`` / ``gcc``
+    invocation -- a single fn is a bundle of size one.
+
+    Intended for the *outermost* Functions a solver hands off (e.g.
+    ``rhs_algebraic``, ``jac_times_cjmass``, ``rootfn``, output-variable
+    evaluators). Intermediate Functions should stay as MX/SX so
+    ``casadi.CodeGenerator`` can inline them into one translation unit.
+    Wrapping inner Functions as Externals forces cross-dylib dispatch and
+    produces unresolvable ``extern`` declarations.
+
+    Results are cached in-process (by a hash of the serialised forms) and on
     disk under ``$PYBAMM_CASADI_AOT_CACHE`` (default
-    ``$TMPDIR/pybamm_casadi_aot``). ``casadi.external`` inputs are returned
-    unchanged. Any failure is logged and the original ``fn`` returned.
+    ``$TMPDIR/pybamm_casadi_aot``). Inputs already of class ``External`` are
+    returned unchanged. On any failure, the original Function(s) are returned
+    and a warning is logged.
 
     Parameters
     ----------
-    fn : casadi.Function
-        The function to compile.
+    fn_or_fns : casadi.Function or list of casadi.Function
     **kwargs
-        ``cache_dir``, ``compiler`` and ``flags`` overrides forwarded to
-        :func:`_aot_compile`.
-
-    Returns
-    -------
-    casadi.Function
+        ``cache_dir``, ``compiler`` and ``flags`` overrides.
     """
+    is_single = isinstance(fn_or_fns, casadi.Function)
+    fns = [fn_or_fns] if is_single else list(fn_or_fns)
     try:
-        return _aot_compile(fn, **kwargs)
+        out = _aot_compile(fns, **kwargs)
     except Exception as e:
-        logger.warning(f"Failed to compile function {fn.name()} with error: {e}")
-        return fn
+        names = ", ".join(fn.name() for fn in fns)
+        logger.warning(f"Failed to compile [{names}] with error: {e}")
+        out = list(fns)
+    return out[0] if is_single else out
 
 
 def _aot_compile(
-    fn: casadi.Function,
+    fns: list[casadi.Function],
     *,
     cache_dir: str | None = None,
     compiler: str | None = None,
     flags: tuple[str, ...] | None = None,
-) -> casadi.Function:
-    # Already an External: don't recompile. ``fn.is_a("External")`` is
-    # unreliable, so check the class name directly.
-    if fn.class_name() == "External":
-        return fn
+) -> list[casadi.Function]:
+    # Pass-through Externals; compile the rest together in one TU.
+    result: list[casadi.Function] = list(fns)
+    indices_to_compile = [
+        i for i, fn in enumerate(fns) if fn.class_name() != "External"
+    ]
+    if not indices_to_compile:
+        return result
+
+    # Cache key: ordered hash of each fn's name + serialized form.
+    hasher = hashlib.sha1()
+    for idx in indices_to_compile:
+        fn = fns[idx]
+        hasher.update(fn.name().encode())
+        hasher.update(b"\0")
+        hasher.update(fn.serialize().encode())
+        hasher.update(b"\0")
+    key = hasher.hexdigest()[:16]
+
+    cached = _CACHE.get(key)
+    if cached is not None:
+        for idx, ext_fn in zip(indices_to_compile, cached, strict=True):
+            result[idx] = ext_fn
+        return result
 
     if compiler is None:
         compiler = "gcc"
-
     if flags is None:
         flags = ("-O3", "-march=native", "-fPIC")
-
-    key = hashlib.sha1(fn.serialize().encode()).hexdigest()[:16]
-    cached = _CACHE.get(key)
-    if cached is not None:
-        return cached
 
     cdir = cache_dir or _default_cache_dir()
     _maybe_sweep_stale(cdir)
 
-    stem = f"pybamm_{fn.name()}_{key}"
+    # Single-fn bundles get named after the fn for readability; multi-fn
+    # bundles are hash-only since the member list isn't knowable from the
+    # filename anyway.
+    fns_to_compile = [fns[idx] for idx in indices_to_compile]
+    label = fns_to_compile[0].name() if len(fns_to_compile) == 1 else "bundle"
+    stem = f"{_TMP_FILE_PREFIX}{label}_{key}"
     ext = _shared_ext()
     sofile = os.path.join(cdir, stem + ext)
 
     if not os.path.exists(sofile):
         gen = casadi.CodeGenerator(stem, {"with_header": False})
-        gen.add(fn)
+        for fn in fns_to_compile:
+            gen.add(fn)
         c_source = gen.dump()
 
-        # Per-attempt temp paths so concurrent compiles of the same function
+        bundled = {fn.name() for fn in fns_to_compile}
+        externs = set(_EXTERN_DECL.findall(c_source)) - bundled
+        if externs:
+            raise RuntimeError(
+                f"References to External sub-Function(s) {sorted(externs)} "
+                "cannot be linked. aot_compile should only be called on "
+                "top-level Functions; keep intermediate Functions as MX/SX."
+            )
+
+        # Per-attempt temp paths so concurrent compiles of the same bundle
         # can't clobber each other, and so an interrupted build can be
         # detected and cleaned up later.
         suffix = f".{os.getpid()}.{uuid.uuid4().hex}"
@@ -130,9 +181,13 @@ def _aot_compile(
                 except OSError:
                     pass
 
-    ext_fn = casadi.external(fn.name(), sofile)
-    _CACHE[key] = ext_fn
-    return ext_fn
+    ext_fns: list[casadi.Function] = []
+    for idx, fn in zip(indices_to_compile, fns_to_compile, strict=True):
+        ext_fn = casadi.external(fn.name(), sofile)
+        result[idx] = ext_fn
+        ext_fns.append(ext_fn)
+    _CACHE[key] = ext_fns
+    return result
 
 
 def _maybe_sweep_stale(cdir: str) -> None:
