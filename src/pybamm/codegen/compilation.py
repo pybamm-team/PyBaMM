@@ -37,6 +37,8 @@ _EXTERN_DECL = re.compile(
 
 _swept_dirs: set[str] = set()
 
+_ALLOWED_COMPILERS = frozenset({"gcc", "clang", "cc", "g++", "clang++"})
+
 
 def _default_cache_dir() -> str:
     d = os.environ.get("PYBAMM_CASADI_AOT_CACHE")
@@ -128,6 +130,10 @@ def _aot_compile(
 
     if compiler is None:
         compiler = "gcc"
+    if os.path.basename(compiler) not in _ALLOWED_COMPILERS:
+        raise ValueError(
+            f"Compiler '{compiler}' not in allowed list: {sorted(_ALLOWED_COMPILERS)}"
+        )
     if flags is None:
         flags = ("-O3", "-march=native", "-fPIC")
 
@@ -167,7 +173,7 @@ def _aot_compile(
         try:
             with open(tmp_cfile, "w") as f:
                 f.write(c_source)
-            subprocess.run(
+            subprocess.run(  # nosec B603 B607 - compiler validated against allowlist
                 [compiler, *flags, "-shared", tmp_cfile, "-o", tmp_sofile],
                 check=True,
             )
