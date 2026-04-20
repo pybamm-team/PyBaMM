@@ -1,7 +1,7 @@
 import hashlib
 import os
 import re
-import subprocess
+import subprocess  # nosec B404 - compiler validated against _ALLOWED_COMPILERS
 import sys
 import tempfile
 import time
