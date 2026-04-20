@@ -478,6 +478,12 @@ class TestEvaluate:
             result = evaluator_var_scale(y=y)
             np.testing.assert_allclose(result, rp_var_scale.evaluate(y=y))
 
+        # test RegPower with delta=0 (fallback to power)
+        x = pybamm.InputParameter("x")
+        reg = pybamm.RegPower(x, 0.5, delta=0)
+        result = reg.evaluate(inputs={"x": 4.0})
+        assert float(result) == pytest.approx(2.0)
+
     @pytest.mark.skipif(not pybamm.has_jax(), reason="jax or jaxlib is not installed")
     def test_find_symbols_jax(self):
         # test sparse conversion

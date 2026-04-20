@@ -7,7 +7,13 @@ from hypothesis import given
 from hypothesis import strategies as st
 
 import pybamm
-from pybamm.expression_tree.averages import RAverage, XAverage, ZAverage
+from pybamm.expression_tree.averages import (
+    RAverage,
+    SizeAverage,
+    XAverage,
+    YZAverage,
+    ZAverage,
+)
 from tests import assert_domain_equal
 
 
@@ -528,3 +534,36 @@ class TestUnaryOperators:
         vs1 = pybamm.Variable("vs1", domain="negative particle size")
         vs2 = pybamm.Variable("vs2", domain="negative particle size")
         assert isinstance(pybamm.size_average(vs1 / vs2), pybamm.SizeAverage)
+
+    def test_unary_new_copy_without_simplifications(self):
+        def _check_copy(value, average_value):
+            cls = type(average_value)
+            copy = average_value._unary_new_copy(value, perform_simplifications=False)
+            assert isinstance(copy, cls)
+
+        # XAverage
+        v_x = pybamm.Variable("v", domain="negative electrode")
+        _check_copy(v_x, XAverage(v_x))
+
+        # ZAverage
+        v_z = pybamm.Variable("v", domain="current collector")
+        _check_copy(v_z, ZAverage(v_z))
+
+        # YZAverage
+        _check_copy(v_z, YZAverage(v_z))
+
+        # RAverage
+        v_r = pybamm.Variable("v", domain="negative particle")
+        _check_copy(v_r, RAverage(v_r))
+
+        # SizeAverage
+        v_size = pybamm.Variable("v", domain="negative particle size")
+        f_a_dist = pybamm.Scalar(1.0)
+        _check_copy(v_size, SizeAverage(v_size, f_a_dist))
+
+    def test_size_average_domain_matches(self):
+        assert SizeAverage.domain_matches("negative particle size")
+        assert SizeAverage.domain_matches("positive particle size")
+        assert SizeAverage.domain_matches("negative secondary particle size")
+        assert not SizeAverage.domain_matches("negative electrode")
+        assert not SizeAverage.domain_matches("negative particle")
