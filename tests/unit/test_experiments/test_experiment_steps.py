@@ -362,11 +362,11 @@ class TestExperimentSteps:
         # operator overloading
         termination_lt_0_05_oo = pybamm.step.step_termination.Current() < 0.05
         termination_gt_0_05_oo = pybamm.step.step_termination.Current() > 0.05
-        assert termination_lt_0_05_oo == termination_gt_0_05
+        assert termination_lt_0_05_oo == termination_lt_0_05
         assert termination_gt_0_05_oo == termination_gt_0_05
         termination_lt_4_1_oo = pybamm.step.step_termination.Voltage() < 4.1
         termination_gt_4_1_oo = pybamm.step.step_termination.Voltage() > 4.1
-        assert termination_lt_4_1_oo == termination_gt_4_1
+        assert termination_lt_4_1_oo == termination_lt_4_1
         assert termination_gt_4_1_oo == termination_gt_4_1
 
     def test_symbolic_termination_expression_helpers(self):
