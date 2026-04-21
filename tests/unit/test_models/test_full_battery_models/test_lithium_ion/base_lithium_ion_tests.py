@@ -617,9 +617,7 @@ class BaseUnitTestLithiumIon:
         }
         model = self.model(options)
         model.check_well_posedness()
-        v = model.variables[
-            "Positive electrode equilibrium open-circuit potential [V]"
-        ]
+        v = model.variables["Positive electrode equilibrium open-circuit potential [V]"]
         assert v.domains["primary"] == ["positive electrode"]
 
     def test_well_posed_psd_msmr_thermal(self):

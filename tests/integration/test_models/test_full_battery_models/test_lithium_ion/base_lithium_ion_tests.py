@@ -385,7 +385,6 @@ class BaseIntegrationTestLithiumIon:
         modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
         modeltest.test_all(skip_output_tests=True)
 
-
     def test_basic_processing_temperature_interpolant(self):
         times = np.arange(0, 4000, 10)
         tmax = max(times)
