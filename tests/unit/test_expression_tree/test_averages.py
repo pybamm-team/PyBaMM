@@ -7,6 +7,13 @@ from hypothesis import given
 from hypothesis import strategies as st
 
 import pybamm
+from pybamm.expression_tree.averages import (
+    RAverage,
+    SizeAverage,
+    XAverage,
+    YZAverage,
+    ZAverage,
+)
 from tests import assert_domain_equal
 
 
@@ -178,6 +185,78 @@ class TestUnaryOperators:
         assert pybamm.x_average(a + b) == pybamm.x_average(a) + pybamm.x_average(b)
         assert pybamm.x_average(a - b) == pybamm.x_average(a) - pybamm.x_average(b)
 
+    def test_x_average_factors_out_x_constant_multiplications(self):
+        f = pybamm.Variable("f", domain="negative electrode")
+
+        assert pybamm.x_average(2 * f) == 2 * pybamm.XAverage(f)
+        assert pybamm.x_average(f * 2) == pybamm.XAverage(f) * 2
+        assert pybamm.x_average(2 / f) == 2 / pybamm.XAverage(f)
+        assert pybamm.x_average(f / 2) == pybamm.XAverage(f) / 2
+
+        assert pybamm.x_average(pybamm.t * f) == pybamm.t * pybamm.XAverage(f)
+        assert pybamm.x_average(f / pybamm.t) == pybamm.XAverage(f) / pybamm.t
+
+        g = pybamm.Variable("g", domain="current collector")
+        broad_g = pybamm.PrimaryBroadcast(g, "negative electrode")
+        assert XAverage.symbol_is_constant(broad_g)
+
+        out = pybamm.x_average(broad_g * f)
+        assert out == g * pybamm.XAverage(f)
+        assert out.domain == ["current collector"]
+
+        out_div = pybamm.x_average(broad_g / f)
+        assert out_div == g / pybamm.XAverage(f)
+        assert out_div.domain == ["current collector"]
+
+    def test_x_average_does_not_split_when_both_sides_x_dependent(self):
+        f1 = pybamm.Variable("f1", domain="negative electrode")
+        f2 = pybamm.Variable("f2", domain="negative electrode")
+
+        prod = pybamm.x_average(f1 * f2)
+        assert isinstance(prod, pybamm.XAverage)
+        xavg_nodes = [n for n in prod.pre_order() if isinstance(n, pybamm.XAverage)]
+        assert len(xavg_nodes) == 1
+
+        quot = pybamm.x_average(f1 / f2)
+        assert isinstance(quot, pybamm.XAverage)
+        xavg_nodes = [n for n in quot.pre_order() if isinstance(n, pybamm.XAverage)]
+        assert len(xavg_nodes) == 1
+
+    def test_x_average_factors_out_compound_x_constant(self):
+        f = pybamm.Variable("f", domain="negative electrode")
+        out = pybamm.x_average(2 * pybamm.t * f)
+        assert out == 2 * pybamm.t * pybamm.XAverage(f)
+        xavg_nodes = [n for n in out.pre_order() if isinstance(n, pybamm.XAverage)]
+        assert len(xavg_nodes) == 1
+        assert xavg_nodes[0].orphans[0] == f
+
+    def test_is_x_constant_helper(self):
+        assert XAverage.symbol_is_constant(pybamm.Scalar(2.0))
+        assert XAverage.symbol_is_constant(pybamm.t)
+
+        v_part = pybamm.Variable("v_part", domain="negative particle")
+        r = pybamm.SpatialVariable("r", domain="negative particle")
+        v_cc = pybamm.Variable("v_cc", domain="current collector")
+        assert XAverage.symbol_is_constant(v_part)
+        assert XAverage.symbol_is_constant(r)
+        assert XAverage.symbol_is_constant(v_cc)
+
+        v_n = pybamm.Variable("v_n", domain="negative electrode")
+        v_s = pybamm.Variable("v_s", domain="separator")
+        v_p = pybamm.Variable("v_p", domain="positive electrode")
+        assert not XAverage.symbol_is_constant(v_n)
+        assert not XAverage.symbol_is_constant(v_s)
+        assert not XAverage.symbol_is_constant(v_p)
+        assert not XAverage.symbol_is_constant(pybamm.standard_spatial_vars.x_n)
+
+        broadcast = pybamm.PrimaryBroadcast(v_cc, "negative electrode")
+        assert broadcast.domain == ["negative electrode"]
+        assert XAverage.symbol_is_constant(broadcast)
+
+        assert XAverage.symbol_is_constant(2 * pybamm.t * v_part + pybamm.Scalar(3))
+        assert not XAverage.symbol_is_constant(2 * pybamm.t + v_n)
+        assert not XAverage.symbol_is_constant(broadcast * v_n)
+
     @given(st.integers(min_value=-(2**63), max_value=2**63 - 1))
     def test_size_average(self, random_integer):
         # no domain
@@ -325,3 +404,166 @@ class TestUnaryOperators:
         assert pybamm.yz_average(a - b) == pybamm.yz_average(a) - pybamm.yz_average(b)
         assert pybamm.z_average(a + b) == pybamm.z_average(a) + pybamm.z_average(b)
         assert pybamm.z_average(a - b) == pybamm.z_average(a) - pybamm.z_average(b)
+
+    # --- Generalised constant-factor pull-out -------------------------------
+    #
+    # ``_separable_average`` pulls factors that are constant under the
+    # integration out of every averaging operator (x, yz, z, r, size). The
+    # intent is that codegen evaluates the constant side once as a scalar
+    # rather than re-evaluating it at every integration node.
+
+    def test_is_constant_predicates(self):
+        # cc / r predicates pick up the right leaf domains.
+        v_cc = pybamm.Variable("v_cc", domain="current collector")
+        v_rn = pybamm.Variable("v_rn", domain="negative particle")
+        v_rp = pybamm.Variable("v_rp", domain="positive particle")
+        v_R = pybamm.Variable("v_R", domain="negative particle size")
+        v_n = pybamm.Variable("v_n", domain="negative electrode")
+        scalar = pybamm.Scalar(2.5)
+
+        # cc-constant (ZAverage.symbol_is_constant uses same domain as YZAverage)
+        assert ZAverage.symbol_is_constant(scalar)
+        assert ZAverage.symbol_is_constant(v_n)
+        assert ZAverage.symbol_is_constant(v_rn)
+        assert ZAverage.symbol_is_constant(v_R)
+        assert not ZAverage.symbol_is_constant(v_cc)
+        assert not ZAverage.symbol_is_constant(pybamm.standard_spatial_vars.z)
+
+        # r-constant: no "particle" leaf (but "particle size" is NOT "particle")
+        assert RAverage.symbol_is_constant(scalar)
+        assert RAverage.symbol_is_constant(v_cc)
+        assert RAverage.symbol_is_constant(v_n)
+        assert RAverage.symbol_is_constant(v_R)
+        assert not RAverage.symbol_is_constant(v_rn)
+        assert not RAverage.symbol_is_constant(v_rp)
+        assert not RAverage.symbol_is_constant(
+            pybamm.SpatialVariable("r", "negative particle")
+        )
+
+    def test_z_average_factors_out_cc_constant(self):
+        v_cc = pybamm.Variable("v_cc", domain="current collector")
+
+        # scalar factor
+        assert pybamm.z_average(2 * v_cc) == 2 * pybamm.ZAverage(v_cc)
+        assert pybamm.z_average(v_cc * 2) == pybamm.ZAverage(v_cc) * 2
+        assert pybamm.z_average(v_cc / 2) == pybamm.ZAverage(v_cc) / 2
+        assert pybamm.z_average(2 / v_cc) == 2 / pybamm.ZAverage(v_cc)
+
+        # time factor
+        assert pybamm.z_average(pybamm.t * v_cc) == pybamm.t * pybamm.ZAverage(v_cc)
+
+        # two cc-dependent factors: NO split
+        v2 = pybamm.Variable("v2", domain="current collector")
+        out = pybamm.z_average(v_cc * v2)
+        assert isinstance(out, pybamm.ZAverage)
+
+    def test_yz_average_factors_out_cc_constant(self):
+        v_cc = pybamm.Variable("v_cc", domain="current collector")
+
+        assert pybamm.yz_average(2 * v_cc) == 2 * pybamm.YZAverage(v_cc)
+        assert pybamm.yz_average(v_cc / 2) == pybamm.YZAverage(v_cc) / 2
+        assert pybamm.yz_average(pybamm.t * v_cc) == pybamm.t * pybamm.YZAverage(v_cc)
+
+        v2 = pybamm.Variable("v2", domain="current collector")
+        assert isinstance(pybamm.yz_average(v_cc * v2), pybamm.YZAverage)
+
+    def test_r_average_factors_out_r_constant(self):
+        v_part = pybamm.Variable("v_part", domain="negative particle")
+
+        # scalar and time are r-constant
+        assert pybamm.r_average(2 * v_part) == 2 * pybamm.RAverage(v_part)
+        assert pybamm.r_average(v_part * 2) == pybamm.RAverage(v_part) * 2
+        assert pybamm.r_average(v_part / 2) == pybamm.RAverage(v_part) / 2
+        assert pybamm.r_average(pybamm.t * v_part) == pybamm.t * pybamm.RAverage(v_part)
+
+        # cc-domain variable broadcast onto the particle domain is r-constant.
+        # The broadcast is also r-averaged (reducing the particle dimension),
+        # so the pulled-out factor collapses back to ``v_cc``.
+        v_cc = pybamm.Variable("v_cc", domain="current collector")
+        broad_cc = pybamm.PrimaryBroadcast(v_cc, "negative particle")
+        out = pybamm.r_average(broad_cc * v_part)
+        assert out == v_cc * pybamm.RAverage(v_part)
+        assert out.domain == ["current collector"]
+
+        # two particle-dependent factors: NO split
+        v2 = pybamm.Variable("v2", domain="negative particle")
+        out = pybamm.r_average(v_part * v2)
+        assert isinstance(out, pybamm.RAverage)
+        ravg_nodes = [n for n in out.pre_order() if isinstance(n, pybamm.RAverage)]
+        assert len(ravg_nodes) == 1
+
+    def test_size_average_does_not_factor_constants(self):
+        # size_average is a weighted average with distribution-dependent weight
+        # (f_a_dist). Factoring out constants would require regenerating f_a_dist
+        # for each sub-expression, which can differ by domain and break conservation.
+        # Therefore, size_average does NOT factor out size-constant operands.
+        v_size = pybamm.Variable("v_size", domain="negative particle size")
+
+        # All of these should remain as a single SizeAverage, not split
+        assert isinstance(pybamm.size_average(2 * v_size), pybamm.SizeAverage)
+        assert isinstance(pybamm.size_average(v_size * 2), pybamm.SizeAverage)
+        assert isinstance(pybamm.size_average(v_size / 2), pybamm.SizeAverage)
+        assert isinstance(pybamm.size_average(pybamm.t * v_size), pybamm.SizeAverage)
+
+        # two size-dependent factors: also NO split
+        v2 = pybamm.Variable("v2", domain="negative particle size")
+        out = pybamm.size_average(v_size * v2)
+        assert isinstance(out, pybamm.SizeAverage)
+
+    def test_size_average_preserves_user_f_a_dist(self):
+        # When the user supplies their own f_a_dist, the symbol must not be
+        # split (the weight is tied to the parent symbol).
+        v_size = pybamm.Variable("v_size", domain="negative particle size")
+        R = pybamm.SpatialVariable("R", domains=v_size.domains, coord_sys="cartesian")
+        custom_weight = pybamm.Scalar(3.0) * R
+        out = pybamm.size_average(2 * v_size, f_a_dist=custom_weight)
+        assert isinstance(out, pybamm.SizeAverage)
+        assert out.f_a_dist == custom_weight
+
+    def test_average_does_not_split_when_both_sides_depend_on_axis(self):
+        """Sanity across all averages: with neither side constant, no split."""
+        vcc1 = pybamm.Variable("a", domain="current collector")
+        vcc2 = pybamm.Variable("b", domain="current collector")
+        assert isinstance(pybamm.z_average(vcc1 / vcc2), pybamm.ZAverage)
+        assert isinstance(pybamm.yz_average(vcc1 / vcc2), pybamm.YZAverage)
+
+        vr1 = pybamm.Variable("vr1", domain="negative particle")
+        vr2 = pybamm.Variable("vr2", domain="negative particle")
+        assert isinstance(pybamm.r_average(vr1 / vr2), pybamm.RAverage)
+
+        vs1 = pybamm.Variable("vs1", domain="negative particle size")
+        vs2 = pybamm.Variable("vs2", domain="negative particle size")
+        assert isinstance(pybamm.size_average(vs1 / vs2), pybamm.SizeAverage)
+
+    def test_unary_new_copy_without_simplifications(self):
+        def _check_copy(value, average_value):
+            cls = type(average_value)
+            copy = average_value._unary_new_copy(value, perform_simplifications=False)
+            assert isinstance(copy, cls)
+
+        # XAverage
+        v_x = pybamm.Variable("v", domain="negative electrode")
+        _check_copy(v_x, XAverage(v_x))
+
+        # ZAverage
+        v_z = pybamm.Variable("v", domain="current collector")
+        _check_copy(v_z, ZAverage(v_z))
+
+        # YZAverage
+        _check_copy(v_z, YZAverage(v_z))
+
+        # RAverage
+        v_r = pybamm.Variable("v", domain="negative particle")
+        _check_copy(v_r, RAverage(v_r))
+
+        # SizeAverage
+        v_size = pybamm.Variable("v", domain="negative particle size")
+        f_a_dist = pybamm.Scalar(1.0)
+        _check_copy(v_size, SizeAverage(v_size, f_a_dist))
+
+    def test_size_average_domain_matches(self):
+        assert SizeAverage.domain_matches("negative particle size")
+        assert SizeAverage.domain_matches("positive particle size")
+        assert SizeAverage.domain_matches("negative secondary particle size")
+        assert not SizeAverage.domain_matches("negative electrode")
+        assert not SizeAverage.domain_matches("negative particle")

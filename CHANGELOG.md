@@ -2,6 +2,8 @@
 
 ## Features
 
+- Improved the codegen performance of averaging over spatial domains. ([#5448](https://github.com/pybamm-team/PyBaMM/pull/5448))
+- Added ahead-of-time CasADi compilation to `IDAKLUSolver` via the `"compile": True` option. ([#5448](https://github.com/pybamm-team/PyBaMM/pull/5448))
 - Adds EIS support via `EISSimulation` class with a restructure to the `Solution` class to support `EISSolution`. Includes examples and citation, with a ~5x solve improvement over pybamm-eis. ([#5433](https://github.com/pybamm-team/PyBaMM/pull/5433))
 - Refactors `Simulation` class into an inherited class from a `BaseSimulation`. `BaseSimulation` is used for all non-experiment based simulations, with the `Simulation` class adding experiment support. Includes a small code cleanup. ([#5430](https://github.com/pybamm-team/PyBaMM/pull/5430))
 - Improved pchip interpolation performance. ([#5436](https://github.com/pybamm-team/PyBaMM/pull/5436))
@@ -11,6 +13,7 @@
 ## Bug fixes
 
 - Fixed `DomainError` when combining hysteresis, MSMR, or single open-circuit potential submodels with `"particle size": "distribution"` and a non-isothermal `thermal` option. The `equilibrium open-circuit potential [V]` and `OCP hysteresis [V]` variables are now correctly placed on the electrode domain (with parallel `... distribution [V]` variables for the size-resolved versions). ([#5451](https://github.com/pybamm-team/PyBaMM/pull/5451))
+- Fixed a regression causing inaccurate initial guesses at experiment step transitions. ([#5452](https://github.com/pybamm-team/PyBaMM/pull/5452))
 
 ## Breaking changes
 

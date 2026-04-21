@@ -12,6 +12,7 @@ import scipy
 from scipy.io import loadmat
 
 import pybamm
+from pybamm.solvers.solution import _DEFAULT_SOLUTION_OPTIONS, make_cycle_solution
 from tests import get_discretisation_for_testing
 
 
@@ -1104,3 +1105,145 @@ class TestSolution:
 
         with pytest.raises(ValueError, match=r"re-parameterised"):
             sol.observe(model.variables["Current [A]"])
+
+    def _make_trivial_solution(self, options=None):
+        t = [np.linspace(0, 1), np.linspace(1, 2, 5)]
+        t[1][0] = np.nextafter(t[1][0], np.inf)
+        y = [np.tile(t[0], (20, 1)), np.tile(t[1], (20, 1))]
+        return pybamm.Solution(
+            t, y, pybamm.BaseModel(), [{"a": 1}, {"a": 2}], options=options
+        )
+
+    def test_options_default(self):
+        sol = self._make_trivial_solution()
+        assert sol.user_options == {}
+        assert sol.options == _DEFAULT_SOLUTION_OPTIONS
+        assert sol.options["compile"] is False
+        assert sol.options is not _DEFAULT_SOLUTION_OPTIONS
+
+    def test_options_custom_merged(self):
+        user = {"compile": True, "cse": False}
+        sol = self._make_trivial_solution(options=user)
+
+        assert sol.user_options == user
+        assert sol.options["compile"] is True
+        assert sol.options["cse"] is False
+        for key, default in _DEFAULT_SOLUTION_OPTIONS.items():
+            if key not in user:
+                assert sol.options[key] == default
+
+    def test_options_copy(self):
+        sol = self._make_trivial_solution(options={"compile": True})
+        sol_copy = sol.copy()
+        assert sol_copy.user_options == sol.user_options
+        assert sol_copy.options == sol.options
+        assert sol_copy.options["compile"] is True
+
+    def test_options_first_last_state(self):
+        sol = self._make_trivial_solution(options={"compile": True})
+        assert sol.first_state.user_options == sol.user_options
+        assert sol.first_state.options["compile"] is True
+        assert sol.last_state.user_options == sol.user_options
+        assert sol.last_state.options["compile"] is True
+
+    def test_options_add_merges_user_options(self):
+        sol_left = self._make_trivial_solution(options={"compile": True})
+
+        t2 = [np.linspace(2, 3)]
+        y2 = [np.tile(t2[0], (20, 1))]
+        sol_right = pybamm.Solution(
+            t2, y2, pybamm.BaseModel(), [{"a": 3}], options={"cse": False}
+        )
+
+        summed = sol_left + sol_right
+        assert summed.user_options == {"compile": True, "cse": False}
+        assert summed.options["compile"] is True
+        assert summed.options["cse"] is False
+
+    def test_options_add_right_hand_wins_on_conflict(self):
+        sol_left = self._make_trivial_solution(options={"compile": True})
+
+        t2 = [np.linspace(2, 3)]
+        y2 = [np.tile(t2[0], (20, 1))]
+        sol_right = pybamm.Solution(
+            t2, y2, pybamm.BaseModel(), [{"a": 3}], options={"compile": False}
+        )
+
+        summed = sol_left + sol_right
+        assert summed.user_options == {"compile": False}
+        assert summed.options["compile"] is False
+
+    def test_options_add_empty_solution(self):
+        sol = self._make_trivial_solution(options={"compile": True})
+        empty = pybamm.EmptySolution(termination="event", t=0.0)
+        assert (sol + empty).user_options == sol.user_options
+        assert (empty + sol).user_options == sol.user_options
+
+    def test_options_make_cycle_solution(self):
+        class _DummyModel(pybamm.BaseModel):
+            summary_variables = []
+
+        t1 = [np.linspace(0, 1), np.linspace(1, 2, 5)]
+        t1[1][0] = np.nextafter(t1[1][0], np.inf)
+        y1 = [np.tile(t1[0], (20, 1)), np.tile(t1[1], (20, 1))]
+        sol_a = pybamm.Solution(
+            t1,
+            y1,
+            _DummyModel(),
+            [{"a": 1}, {"a": 2}],
+            options={"compile": True},
+        )
+
+        t2 = [np.linspace(2, 3)]
+        y2 = [np.tile(t2[0], (20, 1))]
+        sol_b = pybamm.Solution(
+            t2, y2, _DummyModel(), [{"a": 3}], options={"compile": True}
+        )
+
+        cycle_sol, _, _ = make_cycle_solution([sol_a, sol_b], save_this_cycle=True)
+        assert cycle_sol.user_options == {"compile": True}
+        assert cycle_sol.options["compile"] is True
+
+    def test_options_pickle_roundtrip(self, tmp_path):
+        model = pybamm.BaseModel()
+        c = pybamm.Variable("c")
+        model.rhs = {c: -c}
+        model.initial_conditions = {c: 1}
+        model.variables = {"c": c}
+
+        disc = get_discretisation_for_testing()
+        disc.process_model(model)
+
+        user = {"compile": True, "cse": False}
+        solution = pybamm.ScipySolver().solve(model, np.linspace(0, 1))
+        solution._user_options = dict(user)
+        solution._options = _DEFAULT_SOLUTION_OPTIONS | solution._user_options
+
+        test_stub = tmp_path / "sol_options"
+        solution.save(f"{test_stub}.pickle")
+        solution_load = pybamm.load(f"{test_stub}.pickle")
+
+        assert solution_load.user_options == user
+        assert solution_load.options == solution.options
+        assert solution_load.options["compile"] is True
+
+    def test_options_affect_casadi_function_opts(self):
+        model = pybamm.BaseModel()
+        c = pybamm.Variable("c")
+        model.rhs = {c: -c}
+        model.initial_conditions = {c: 1}
+        model.variables = {"c": c, "2c": 2 * c}
+
+        disc = get_discretisation_for_testing()
+        disc.process_model(model)
+
+        t_eval = np.linspace(0, 1, 10)
+        base = pybamm.ScipySolver().solve(model, t_eval)
+
+        flipped = base.copy()
+        flipped._user_options = {"cse": False}
+        flipped._options = {**base.options, "cse": False}
+
+        np.testing.assert_allclose(
+            base["2c"].entries, flipped["2c"].entries, rtol=1e-12, atol=1e-12
+        )
