@@ -1495,11 +1495,16 @@ class BaseModel:
         equations = []
         for _target_slice, target_var, from_var, from_slice in entries:
             if from_var is None:
-                # Keep the target-model initial condition for unmapped variables
-                physical = (
-                    target_var.reference
-                    + target_var.scale * self.initial_conditions[target_var]
-                )
+                # If the variable is not a state variable of the previous model,
+                # query it by name. See #5449 for more details
+                try:
+                    physical = from_model.get_processed_variable(target_var.name)
+                except KeyError as e:
+                    raise pybamm.ModelError(
+                        f"Cannot build initial state mapper: variable "
+                        f"'{target_var.name}' is not a state in the previous "
+                        f"model and has no matching named variable to reuse."
+                    ) from e
             else:
                 physical = from_var.reference + from_var.scale * pybamm.StateVector(
                     from_slice
