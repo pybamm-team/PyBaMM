@@ -12,6 +12,8 @@
 
 ## Bug fixes
 
+- Fixed a regression causing inaccurate initial guesses at experiment step transitions. ([#5452](https://github.com/pybamm-team/PyBaMM/pull/5452))
+
 ## Breaking changes
 
 # [v26.3.1](https://github.com/pybamm-team/PyBaMM/tree/v26.3.1) - 2026-04-10
