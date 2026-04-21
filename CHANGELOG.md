@@ -10,6 +10,8 @@
 
 ## Bug fixes
 
+- Fixed `DomainError` when combining hysteresis, MSMR, or single open-circuit potential submodels with `"particle size": "distribution"` and a non-isothermal `thermal` option. The `equilibrium open-circuit potential [V]` and `OCP hysteresis [V]` variables are now correctly placed on the electrode domain (with parallel `... distribution [V]` variables for the size-resolved versions). ([#5451](https://github.com/pybamm-team/PyBaMM/pull/5451))
+
 ## Breaking changes
 
 # [v26.3.1](https://github.com/pybamm-team/PyBaMM/tree/v26.3.1) - 2026-04-10
