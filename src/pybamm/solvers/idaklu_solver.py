@@ -10,6 +10,7 @@ import pybammsolvers.idaklu as idaklu
 from scipy.sparse.linalg import spsolve
 
 import pybamm
+from pybamm.codegen.compilation import aot_compile
 
 from enum import IntEnum
 
@@ -52,6 +53,11 @@ class IDAKLUSolver(pybamm.BaseSolver):
             options = {
                 # Print statistics of the solver after every solve
                 "print_stats": False,
+                # If ``True``, ahead-of-time compile each casadi ``Function``
+                # to a shared library via the system C compiler (see
+                # :mod:`pybamm.codegen.compilation`). If ``False`` (default)
+                # the casadi in-process virtual machine is used.
+                "compile": False,
                 # Number of threads available for OpenMP (must be greater than or equal to `num_solvers`)
                 "num_threads": 1,
                 # Number of solvers to use in parallel (for solving multiple sets of input parameters in parallel)
@@ -213,6 +219,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         default_options = {
             "print_stats": False,
+            "compile": False,
             "jacobian": "sparse",
             "preconditioner": "BBDP",
             "precon_half_bandwidth": 5,
@@ -289,6 +296,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
         else:
             if hermite_reduction_factor < 1.0:
                 raise pybamm.SolverError("hermite_reduction_factor must be >= 1.0.")
+
+        if not isinstance(options["compile"], bool):
+            raise pybamm.SolverError("compile must be a bool")
 
     def _check_atol_type(self, atol, model):
         if isinstance(atol, float):
@@ -454,66 +464,10 @@ class IDAKLUSolver(pybamm.BaseSolver):
             alg_res_fn = None
             jac_alg_fn = None
 
-        # Serialize casadi functions
-        idaklu_solver_fcn = idaklu.create_casadi_solver_group
-        rhs_algebraic_pkl = rhs_algebraic.serialize()
-        rhs_algebraic = idaklu.generate_function(rhs_algebraic_pkl)
-        jac_times_cjmass_pkl = jac_times_cjmass.serialize()
-        jac_times_cjmass = idaklu.generate_function(jac_times_cjmass_pkl)
-        jac_rhs_algebraic_action_pkl = jac_rhs_algebraic_action.serialize()
-        jac_rhs_algebraic_action = idaklu.generate_function(
-            jac_rhs_algebraic_action_pkl
-        )
-        rootfn_pkl = rootfn.serialize()
-        rootfn = idaklu.generate_function(rootfn_pkl)
-        mass_action_pkl = mass_action.serialize()
-        mass_action = idaklu.generate_function(mass_action_pkl)
-        sensfn_pkl = sensfn.serialize()
-        sensfn = idaklu.generate_function(sensfn_pkl)
-
-        if alg_res_fn is not None and callable(getattr(alg_res_fn, "serialize", None)):
-            alg_res_pkl = alg_res_fn.serialize()
-            alg_res_idaklu = idaklu.generate_function(alg_res_pkl)
-        else:
-            empty_fn = casadi.Function("empty_alg_res", [], [])
-            alg_res_pkl = empty_fn.serialize()
-            alg_res_idaklu = idaklu.generate_function(alg_res_pkl)
-
-        if jac_alg_fn is not None and callable(getattr(jac_alg_fn, "serialize", None)):
-            jac_alg_pkl = jac_alg_fn.serialize()
-            jac_alg_idaklu = idaklu.generate_function(jac_alg_pkl)
-        else:
-            empty_fn = casadi.Function("empty_alg_jac", [], [])
-            jac_alg_pkl = empty_fn.serialize()
-            jac_alg_idaklu = idaklu.generate_function(jac_alg_pkl)
-
-        # if output_variables specified then convert 'variable' casadi
-        # function expressions to idaklu-compatible functions
-        self.var_idaklu_fcns = []
-        self.var_idaklu_fcns_pkl = []
-        self.dvar_dy_idaklu_fcns = []
-        self.dvar_dy_idaklu_fcns_pkl = []
-        self.dvar_dp_idaklu_fcns = []
-        self.dvar_dp_idaklu_fcns_pkl = []
-        for key in self.output_variables:
-            self.var_idaklu_fcns_pkl.append(self.computed_var_fcns[key].serialize())
-            self.var_idaklu_fcns.append(
-                idaklu.generate_function(self.var_idaklu_fcns_pkl[-1])
-            )
-            # Convert derivative functions for sensitivities
-            if (len(stacked_inputs) > 0) and (model.calculate_sensitivities):
-                self.dvar_dy_idaklu_fcns_pkl.append(
-                    self.computed_dvar_dy_fcns[key].serialize()
-                )
-                self.dvar_dy_idaklu_fcns.append(
-                    idaklu.generate_function(self.dvar_dy_idaklu_fcns_pkl[-1])
-                )
-                self.dvar_dp_idaklu_fcns_pkl.append(
-                    self.computed_dvar_dp_fcns[key].serialize()
-                )
-                self.dvar_dp_idaklu_fcns.append(
-                    idaklu.generate_function(self.dvar_dp_idaklu_fcns_pkl[-1])
-                )
+        if alg_res_fn is None or not callable(getattr(alg_res_fn, "serialize", None)):
+            alg_res_fn = casadi.Function("empty_alg_res", [], [])
+        if jac_alg_fn is None or not callable(getattr(jac_alg_fn, "serialize", None)):
+            jac_alg_fn = casadi.Function("empty_alg_jac", [], [])
 
         if (
             self._options["hermite_reduction_factor"] > 1.0
@@ -527,48 +481,92 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 stacklevel=2,
             )
 
+        # Collect all casadi functions for AOT compilation. With compile=True,
+        # all functions are bundled into a single shared library via one gcc
+        # invocation; each serialized Function then points at its entry point.
+        has_sens = (len(stacked_inputs) > 0) and model.calculate_sensitivities
+        solver_fn_names = [
+            "rhs_algebraic",
+            "jac_times_cjmass",
+            "jac_rhs_algebraic_action",
+            "mass_action",
+            "sensfn",
+            "rootfn",
+            "alg_res",
+            "alg_jac",
+        ]
+        fns = {
+            "rhs_algebraic": rhs_algebraic,
+            "jac_times_cjmass": jac_times_cjmass,
+            "jac_rhs_algebraic_action": jac_rhs_algebraic_action,
+            "mass_action": mass_action,
+            "sensfn": sensfn,
+            "rootfn": rootfn,
+            "alg_res": alg_res_fn,
+            "alg_jac": jac_alg_fn,
+        }
+        for key in self.output_variables:
+            fns[f"var:{key}"] = self.computed_var_fcns[key]
+            if has_sens:
+                fns[f"dvar_dy:{key}"] = self.computed_dvar_dy_fcns[key]
+                fns[f"dvar_dp:{key}"] = self.computed_dvar_dp_fcns[key]
+
+        if self._options["compile"]:
+            compiled = aot_compile(list(fns.values()))
+            fns = dict(zip(fns.keys(), compiled, strict=True))
+
+        # Build _setup dict with serialized functions for idaklu C++ wrapper
+        def to_idaklu(fn):
+            pkl = fn.serialize()
+            return idaklu.generate_function(pkl), pkl
+
         self._setup = {
             "number_of_states": len(y0),
             "inputs": len(stacked_inputs),
-            "solver_function": idaklu_solver_fcn,  # callable
-            "jac_bandwidth_upper": jac_bw_upper,  # int
-            "jac_bandwidth_lower": jac_bw_lower,  # int
+            "jac_bandwidth_upper": jac_bw_upper,
+            "jac_bandwidth_lower": jac_bw_lower,
+            "jac_times_cjmass_colptrs": jac_times_cjmass_colptrs,
+            "jac_times_cjmass_rowvals": jac_times_cjmass_rowvals,
+            "jac_times_cjmass_nnz": jac_times_cjmass_nnz,
+            "num_of_events": num_of_events,
+            "ids": ids,
             "atol": atol,
-            "rhs_algebraic": rhs_algebraic,  # function
-            "rhs_algebraic_pkl": rhs_algebraic_pkl,
-            "jac_times_cjmass": jac_times_cjmass,  # function
-            "jac_times_cjmass_pkl": jac_times_cjmass_pkl,
-            "jac_times_cjmass_colptrs": jac_times_cjmass_colptrs,  # array
-            "jac_times_cjmass_rowvals": jac_times_cjmass_rowvals,  # array
-            "jac_times_cjmass_nnz": jac_times_cjmass_nnz,  # int
-            "jac_rhs_algebraic_action": jac_rhs_algebraic_action,  # function
-            "jac_rhs_algebraic_action_pkl": jac_rhs_algebraic_action_pkl,
-            "mass_action": mass_action,  # function
-            "mass_action_pkl": mass_action_pkl,
-            "sensfn": sensfn,  # function
-            "sensfn_pkl": sensfn_pkl,
-            "rootfn": rootfn,  # function
-            "rootfn_pkl": rootfn_pkl,
-            "num_of_events": num_of_events,  # int
-            "ids": ids,  # array
             "sensitivity_names": sensitivity_names,
             "number_of_sensitivity_parameters": number_of_sensitivity_parameters,
-            "standard_form_dae": model.is_standard_form_dae,  # bool
+            "standard_form_dae": model.is_standard_form_dae,
             "output_variables": self.output_variables,
             "var_fcns": self.computed_var_fcns,
-            "var_idaklu_fcns": self.var_idaklu_fcns,
-            "var_idaklu_fcns_pkl": self.var_idaklu_fcns_pkl,
-            "dvar_dy_idaklu_fcns": self.dvar_dy_idaklu_fcns,
-            "dvar_dy_idaklu_fcns_pkl": self.dvar_dy_idaklu_fcns_pkl,
-            "dvar_dp_idaklu_fcns": self.dvar_dp_idaklu_fcns,
-            "dvar_dp_idaklu_fcns_pkl": self.dvar_dp_idaklu_fcns_pkl,
-            "alg_res": alg_res_idaklu,
-            "alg_res_pkl": alg_res_pkl,
-            "alg_jac": jac_alg_idaklu,
-            "alg_jac_pkl": jac_alg_pkl,
+            "var_idaklu_fcns": [],
+            "var_idaklu_fcns_pkl": [],
+            "dvar_dy_idaklu_fcns": [],
+            "dvar_dy_idaklu_fcns_pkl": [],
+            "dvar_dp_idaklu_fcns": [],
+            "dvar_dp_idaklu_fcns_pkl": [],
         }
 
-        solver = self._setup["solver_function"](
+        for name in solver_fn_names:
+            fn, pkl = to_idaklu(fns[name])
+            self._setup[name] = fn
+            self._setup[f"{name}_pkl"] = pkl
+
+        for key in self.output_variables:
+            fn, pkl = to_idaklu(fns[f"var:{key}"])
+            self._setup["var_idaklu_fcns"].append(fn)
+            self._setup["var_idaklu_fcns_pkl"].append(pkl)
+            if has_sens:
+                fn, pkl = to_idaklu(fns[f"dvar_dy:{key}"])
+                self._setup["dvar_dy_idaklu_fcns"].append(fn)
+                self._setup["dvar_dy_idaklu_fcns_pkl"].append(pkl)
+                fn, pkl = to_idaklu(fns[f"dvar_dp:{key}"])
+                self._setup["dvar_dp_idaklu_fcns"].append(fn)
+                self._setup["dvar_dp_idaklu_fcns_pkl"].append(pkl)
+
+        self._create_solver()
+        return base_set_up_return
+
+    def _create_solver(self):
+        """Create the idaklu solver group from _setup. Used by set_up and __setstate__."""
+        self._setup["solver"] = idaklu.create_casadi_solver_group(
             number_of_states=self._setup["number_of_states"],
             number_of_parameters=self._setup["number_of_sensitivity_parameters"],
             rhs_alg=self._setup["rhs_algebraic"],
@@ -595,20 +593,13 @@ class IDAKLUSolver(pybamm.BaseSolver):
             alg_jac=self._setup["alg_jac"],
         )
 
-        self._setup["solver"] = solver
-
-        return base_set_up_return
-
     def __getstate__(self):
         # if _setup is not defined then we haven't called set_up yet
         if not hasattr(self, "_setup"):
             return self.__dict__
 
-        self.var_idaklu_fcns = []
-
         for key in [
             "solver",
-            "solver_function",
             "rhs_algebraic",
             "jac_times_cjmass",
             "jac_rhs_algebraic_action",
@@ -631,10 +622,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
         if not hasattr(self, "_setup"):
             return
 
-        self.var_idaklu_fcns = [
-            idaklu.generate_function(f) for f in self.var_idaklu_fcns_pkl
-        ]
-
         for key in [
             "rhs_algebraic",
             "jac_times_cjmass",
@@ -645,45 +632,14 @@ class IDAKLUSolver(pybamm.BaseSolver):
             "alg_res",
             "alg_jac",
         ]:
-            self._setup[key] = idaklu.generate_function(self._setup[key + "_pkl"])
+            self._setup[key] = idaklu.generate_function(self._setup[f"{key}_pkl"])
 
-        for key in [
-            "var_idaklu_fcns",
-            "dvar_dy_idaklu_fcns",
-            "dvar_dp_idaklu_fcns",
-        ]:
+        for key in ["var_idaklu_fcns", "dvar_dy_idaklu_fcns", "dvar_dp_idaklu_fcns"]:
             self._setup[key] = [
-                idaklu.generate_function(f) for f in self._setup[key + "_pkl"]
+                idaklu.generate_function(f) for f in self._setup[f"{key}_pkl"]
             ]
 
-        self._setup["solver_function"] = idaklu.create_casadi_solver_group
-
-        self._setup["solver"] = self._setup["solver_function"](
-            number_of_states=self._setup["number_of_states"],
-            number_of_parameters=self._setup["number_of_sensitivity_parameters"],
-            rhs_alg=self._setup["rhs_algebraic"],
-            jac_times_cjmass=self._setup["jac_times_cjmass"],
-            jac_times_cjmass_colptrs=self._setup["jac_times_cjmass_colptrs"],
-            jac_times_cjmass_rowvals=self._setup["jac_times_cjmass_rowvals"],
-            jac_times_cjmass_nnz=self._setup["jac_times_cjmass_nnz"],
-            jac_bandwidth_lower=self._setup["jac_bandwidth_lower"],
-            jac_bandwidth_upper=self._setup["jac_bandwidth_upper"],
-            jac_action=self._setup["jac_rhs_algebraic_action"],
-            mass_action=self._setup["mass_action"],
-            sens=self._setup["sensfn"],
-            events=self._setup["rootfn"],
-            number_of_events=self._setup["num_of_events"],
-            rhs_alg_id=self._setup["ids"],
-            atol=self._setup["atol"],
-            rtol=self.rtol,
-            inputs=self._setup["inputs"],
-            var_fcns=self._setup["var_idaklu_fcns"],
-            dvar_dy_fcns=self._setup["dvar_dy_idaklu_fcns"],
-            dvar_dp_fcns=self._setup["dvar_dp_idaklu_fcns"],
-            options=self._options,
-            alg_res=self._setup["alg_res"],
-            alg_jac=self._setup["alg_jac"],
-        )
+        self._create_solver()
 
     @property
     def options(self):
@@ -834,6 +790,10 @@ class IDAKLUSolver(pybamm.BaseSolver):
             # manually set it to the true final time
             t_eval[-1] = t[-1]
 
+        # Forward the compile flag so post-solve observation uses the same
+        # backend as the integration.
+        solution_options = {"compile": self._options["compile"]}
+
         newsol = pybamm.Solution(
             t,
             np.transpose(y_out),
@@ -846,6 +806,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             all_yps=yp,
             all_t_evals=t_eval,
             variables_returned=bool(save_outputs_only),
+            options=solution_options,
         )
 
         newsol.integration_time = integration_time
@@ -1195,6 +1156,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             all_sensitivities=solution._all_sensitivities,
             all_t_evals=solution.all_t_evals,
             variables_returned=solution.variables_returned,
+            options=solution.user_options,
         )
 
         # Propagate metadata from the original solution

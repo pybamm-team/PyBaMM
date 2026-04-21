@@ -1573,6 +1573,7 @@ class BaseSolver:
                 solution.y_event,
                 solution.termination,
                 variables_returned=solution.variables_returned,
+                options=solution.user_options,
             )
             event_sol.solve_time = 0
             event_sol.integration_time = 0

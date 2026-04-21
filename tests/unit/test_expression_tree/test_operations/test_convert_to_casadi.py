@@ -9,7 +9,7 @@ from scipy import special
 from scipy.sparse import csr_matrix
 
 import pybamm
-from pybamm.expression_tree.operations.convert_to_casadi import try_repeated_row_matmul
+from pybamm.expression_tree.operations._casadi_matmul import try_repeated_row_matmul
 from tests import get_1p1d_discretisation_for_testing, get_mesh_for_testing
 
 
@@ -114,12 +114,8 @@ class TestCasadiConverter:
         self.assert_casadi_equal(pybamm.min(a).to_casadi(), casadi.MX(1), evalf=True)
         b = pybamm.Array(np.array([-2]))
         c = pybamm.Array(np.array([3]))
-        self.assert_casadi_equal(
-            pybamm.Function(np.abs, b).to_casadi(), casadi.MX(2), evalf=True
-        )
-        self.assert_casadi_equal(
-            pybamm.Function(np.abs, c).to_casadi(), casadi.MX(3), evalf=True
-        )
+        self.assert_casadi_equal(np.abs(b).to_casadi(), casadi.MX(2), evalf=True)
+        self.assert_casadi_equal(np.abs(c).to_casadi(), casadi.MX(3), evalf=True)
 
         # test functions with assert_casadi_equal
         for np_fun in [
@@ -255,6 +251,30 @@ class TestCasadiConverter:
             pybamm_result = rp_scaled.evaluate(inputs={"x": x_val})
             np.testing.assert_allclose(casadi_result, pybamm_result, rtol=1e-10)
 
+    def test_reg_power_casadi_general_exponent(self):
+        x = pybamm.InputParameter("x")
+        casadi_inputs = {"x": casadi.MX.sym("x")}
+
+        for exponent, scale in [
+            (0.5, 1.0),
+            (0.5, 10.0),
+            (0.7, 1.0),
+            (1.0, 2.0),
+            (2.0, 1.0),
+            (-0.3, 0.5),
+        ]:
+            rp = pybamm.reg_power(x, exponent, scale=scale)
+            f = casadi.Function(
+                "f", [casadi_inputs["x"]], [rp.to_casadi(inputs=casadi_inputs)]
+            )
+            for x_val in [100.0, 10.0, 1.0, 0.1, -0.1, -1.0, -10.0]:
+                np.testing.assert_allclose(
+                    float(f(x_val)),
+                    rp.evaluate(inputs={"x": x_val}),
+                    rtol=1e-10,
+                    err_msg=f"exponent={exponent}, scale={scale}, x={x_val}",
+                )
+
     def test_kronecker_product(self):
         a = np.array([1.0, 2.0, 3.0])
         b = np.array([[1, 2, 3], [4, 5, 6]])
@@ -311,19 +331,18 @@ class TestCasadiConverter:
             interp = pybamm.Interpolant(x, data, y, interpolator="idonotexist")
             interp_casadi = interp.to_casadi(y=casadi_y)
 
-        # error for converted children count
+        # 4D linear interpolation now works; wrong y shape gives a clear error
         y4 = (
             pybamm.StateVector(slice(0, 1)),
             pybamm.StateVector(slice(0, 1)),
             pybamm.StateVector(slice(0, 1)),
             pybamm.StateVector(slice(0, 1)),
         )
-        x4_ = [np.linspace(0, 1) for _ in range(4)]
-        x4 = np.column_stack(x4_)
-        data4 = 2 * x4  # np.tile(2 * x3, (10, 1)).T
-        with pytest.raises(ValueError, match=r"Invalid dimension of x"):
-            interp = pybamm.Interpolant(x4_, data4, y4, interpolator="linear")
-            interp_casadi = interp.to_casadi(y=casadi_y)
+        x4_ = [np.linspace(0, 1, 5) for _ in range(4)]
+        # Wrong shape: y must be 4-D for a 4-D grid
+        data4_bad = np.zeros((5, 5))
+        with pytest.raises(ValueError, match=r"y should be 4-dimensional"):
+            pybamm.Interpolant(x4_, data4_bad, y4, interpolator="linear")
 
     def test_interpolation_2d(self):
         x_ = [np.linspace(0, 1), np.linspace(0, 1)]
@@ -400,6 +419,31 @@ class TestCasadiConverter:
         assert isinstance(casadi_sol, casadi.DM)
 
         np.testing.assert_equal(true_value, casadi_sol.__float__())
+
+    def test_interpolation_4d_linear(self):
+        """4-D linear interpolation must round-trip through CasADi."""
+
+        def f4(x1, x2, x3, x4):
+            return x1 + 2 * x2 + 3 * x3 + 4 * x4
+
+        n = 8
+        grids = [np.linspace(0, 1, n) for _ in range(4)]
+        g1, g2, g3, g4 = np.meshgrid(*grids, indexing="ij", sparse=True)
+        data = f4(g1, g2, g3, g4)
+
+        vars_ = tuple(pybamm.StateVector(slice(i, i + 1)) for i in range(4))
+        interp = pybamm.Interpolant(grids, data, vars_, interpolator="linear")
+
+        casadi_y = casadi.MX.sym("y", 4)
+        interp_casadi = interp.to_casadi(y=casadi_y)
+        casadi_f = casadi.Function("f4d", [casadi_y], [interp_casadi])
+
+        test_pts = np.array([0.5, 0.25, 0.75, 0.1])
+        np.testing.assert_allclose(
+            float(casadi_f(test_pts)),
+            f4(*test_pts),
+            rtol=1e-12,
+        )
 
     def test_concatenations(self):
         y = np.linspace(0, 1, 10)[:, np.newaxis]
@@ -480,6 +524,24 @@ class TestCasadiConverter:
         var = pybamm.Variable("var")
         with pytest.raises(TypeError, match=r"Cannot convert symbol of type"):
             var.to_casadi()
+
+    def test_citation_registered_once(self, mocker):
+        spy = mocker.spy(pybamm.citations, "register")
+
+        expr = pybamm.Scalar(1) + pybamm.Scalar(2)
+        expr.to_casadi()
+
+        andersson_calls = [
+            c for c in spy.call_args_list if c.args == ("Andersson2019",)
+        ]
+        assert len(andersson_calls) == 1
+
+    def test_to_casadi_rejects_bad_types(self):
+        s = pybamm.Scalar(1)
+        with pytest.raises(TypeError, match="casadi_symbols must be a dict"):
+            s.to_casadi(casadi_symbols="not a dict")
+        with pytest.raises(TypeError, match="inputs must be a dict"):
+            s.to_casadi(inputs="not a dict")
 
 
 class TestRepeatedRowMatmulOptimization:

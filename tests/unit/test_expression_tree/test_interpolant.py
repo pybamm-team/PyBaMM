@@ -152,7 +152,7 @@ class TestInterpolant:
 
         # Test raising error if data is not 2D
         data_3d = np.zeros((11, 22, 33))
-        with pytest.raises(ValueError, match=r"y should be two-dimensional"):
+        with pytest.raises(ValueError, match=r"y should be 2-dimensional"):
             interp = pybamm.Interpolant(
                 x_in, data_3d, (var1, var2), interpolator="linear"
             )
@@ -250,7 +250,7 @@ class TestInterpolant:
 
         # Test raising error if data is not 3D
         data_4d = np.zeros((11, 22, 33, 5))
-        with pytest.raises(ValueError, match=r"y should be three-dimensional"):
+        with pytest.raises(ValueError, match=r"y should be 3-dimensional"):
             interp = pybamm.Interpolant(
                 x_in, data_4d, (var1, var2, var3), interpolator="linear"
             )
