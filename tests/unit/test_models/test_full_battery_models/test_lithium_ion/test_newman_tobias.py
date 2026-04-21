@@ -59,3 +59,10 @@ class TestNewmanTobias(BaseUnitTestLithiumIon):
     @pytest.mark.skip(reason="Test currently not implemented")
     def test_well_posed_composite_algebraic_surface_form(self):
         pass  # skip this test
+
+    @pytest.mark.skip(
+        reason="Newman-Tobias + MSMR + particle size distribution is not "
+        "supported (pre-existing DomainError in MSMR Butler-Volmer kinetics)"
+    )
+    def test_well_posed_psd_msmr_thermal(self):
+        pass

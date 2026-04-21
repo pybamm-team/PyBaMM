@@ -9,6 +9,7 @@ from . import BaseOpenCircuitPotential
 class SingleOpenCircuitPotential(BaseOpenCircuitPotential):
     def get_coupled_variables(self, variables):
         domain, Domain = self.domain_Domain
+        domain_options = getattr(self.options, domain)
         phase_name = self.phase_name
 
         if self.reaction == "lithium-ion main":
@@ -20,15 +21,6 @@ class SingleOpenCircuitPotential(BaseOpenCircuitPotential):
             ocp_bulk = self.phase_param.U(sto_bulk, T_bulk)
 
             dUdT = self.phase_param.dUdT(sto_surf)
-
-            variables.update(
-                {
-                    f"{Domain} electrode {phase_name}equilibrium open-circuit potential [V]": ocp_surf,
-                    f"X-averaged {domain} electrode {phase_name}equilibrium open-circuit potential [V]": pybamm.x_average(
-                        ocp_surf
-                    ),
-                }
-            )
 
         elif self.reaction == "lithium metal plating":
             T = variables[f"{Domain} electrode temperature [K]"]
@@ -52,4 +44,32 @@ class SingleOpenCircuitPotential(BaseOpenCircuitPotential):
             dUdT = pybamm.Scalar(0)
 
         variables.update(self._get_standard_ocp_variables(ocp_surf, ocp_bulk, dUdT))
+
+        if self.reaction == "lithium-ion main":
+            # For "single" OCP the equilibrium OCP equals the OCP. Reuse the
+            # already-shaped variables published by _get_standard_ocp_variables
+            # so the equilibrium variable has the same domain regardless of
+            # particle-size distribution (it is consumed by the thermal
+            # hysteresis-heating term).
+            variables.update(
+                {
+                    f"{Domain} electrode {phase_name}equilibrium open-circuit potential [V]": variables[
+                        f"{Domain} electrode {phase_name}open-circuit potential [V]"
+                    ],
+                    f"X-averaged {domain} electrode {phase_name}equilibrium open-circuit potential [V]": variables[
+                        f"X-averaged {domain} electrode {phase_name}open-circuit potential [V]"
+                    ],
+                }
+            )
+            if domain_options["particle size"] == "distribution":
+                variables.update(
+                    {
+                        f"{Domain} electrode {phase_name}equilibrium open-circuit potential distribution [V]": variables[
+                            f"{Domain} electrode {phase_name}open-circuit potential distribution [V]"
+                        ],
+                        f"X-averaged {domain} electrode {phase_name}equilibrium open-circuit potential distribution [V]": variables[
+                            f"X-averaged {domain} electrode {phase_name}open-circuit potential distribution [V]"
+                        ],
+                    }
+                )
         return variables
