@@ -206,3 +206,39 @@ jobs:
 
       - name: Run example scripts tests for GNU/Linux with Python 3.13
         run: nox -s scripts
+
+  run_memory_tests:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+    name: Memory tests (ubuntu-latest / Python 3.13)
+
+    steps:
+      - name: Check out PyBaMM repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Install Linux system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install gfortran gcc graphviz
+          sudo apt-get install libopenblas-dev
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: 3.13
+
+      - uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57 # v8.0.0
+        with:
+          version: "latest"
+          enable-cache: true
+
+      - name: Install nox
+        run: uv tool install nox
+
+      - name: Run memory tests for GNU/Linux with Python 3.13
+        run: nox -s memory
