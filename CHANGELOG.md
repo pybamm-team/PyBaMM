@@ -12,6 +12,8 @@
 
 ## Bug fixes
 
+- Fixed a regression causing inaccurate initial guesses at experiment step transitions. ([#5452](https://github.com/pybamm-team/PyBaMM/pull/5452))
+
 ## Breaking changes
 
 - `IDAKLUSolver` `root_method=None` (the default) now uses a custom C++ Newton solver for consistent initial conditions instead of `IDACalcIC`. The C++ solver falls back to `IDACalcIC` on failure. Set `root_method="casadi"` to use the old CasADi-based rootfinding.
