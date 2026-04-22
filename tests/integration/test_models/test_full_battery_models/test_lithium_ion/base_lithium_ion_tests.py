@@ -316,6 +316,35 @@ class BaseIntegrationTestLithiumIon:
         parameter_values = pybamm.ParameterValues("Ai2020")
         self.run_basic_processing_test(options, parameter_values=parameter_values)
 
+    def test_psd_hysteresis_thermal(self):
+        # Regression test: hysteresis OCP + particle size distribution + a
+        # non-isothermal thermal submodel previously raised a DomainError when
+        # the thermal submodel built the hysteresis heating term.
+        options = {
+            "open-circuit potential": ("one-state hysteresis", "single"),
+            "particle size": "distribution",
+            "surface form": "algebraic",
+            "thermal": "lumped",
+        }
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        parameter_values = pybamm.get_size_distribution_parameters(parameter_values)
+        parameter_values.update(
+            {
+                "Negative electrode lithiation OCP [V]": lambda sto: (
+                    parameter_values["Negative electrode OCP [V]"](sto) - 0.1
+                ),
+                "Negative electrode delithiation OCP [V]": lambda sto: (
+                    parameter_values["Negative electrode OCP [V]"](sto) + 0.1
+                ),
+                "Negative particle lithiation hysteresis decay rate": 10,
+                "Negative particle delithiation hysteresis decay rate": 10,
+                "Initial hysteresis state in negative electrode": 0.0,
+            }
+        )
+        model = self.model(options)
+        modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
+        modeltest.test_all(skip_output_tests=True)
+
     def test_composite_graphite_silicon(self):
         options = {
             "particle phases": ("2", "1"),

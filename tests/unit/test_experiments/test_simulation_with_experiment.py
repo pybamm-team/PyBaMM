@@ -1,3 +1,4 @@
+import copy
 import logging
 import os
 from datetime import datetime
@@ -308,6 +309,70 @@ class TestSimulationExperiment:
                 assert (model_0, model_1) in sim.model_state_mappers
             else:
                 assert len(sim.model_state_mappers.values()) == 0
+
+    def test_built_models_and_state_mappers_independent_of_cycle_count(self):
+        cycle_template = [
+            {
+                "type": "c-rate",
+                "value": 1.0,
+                "duration": 3600.0,
+                "terminations": [{"type": "voltage", "value": 2.5}],
+            },
+            {
+                "type": "c-rate",
+                "value": -0.3,
+                "duration": 24000.0,
+                "terminations": [{"type": "voltage", "value": 4.2}],
+            },
+            {
+                "type": "voltage",
+                "value": 4.2,
+                "duration": 86400.0,
+                "terminations": [{"type": "c-rate", "value": 0.01}],
+            },
+        ]
+
+        n_unique = len(cycle_template)
+        # n_cycles >= 2 so the cycle-wrap transition (last->first) is realized
+        # and mapper count plateaus.
+        counts = []
+        for n_cycles in (2, 4, 8):
+            config = {
+                "cycles": [copy.deepcopy(cycle_template) for _ in range(n_cycles)]
+            }
+            experiment = pybamm.Experiment.from_config(config)
+            sim = pybamm.Simulation(
+                pybamm.lithium_ion.SPM(),
+                experiment=experiment,
+                solver=pybamm.IDAKLUSolver(),
+                experiment_model_mode="legacy",
+            )
+            sim.build_for_experiment()
+
+            counts.append(
+                (
+                    n_cycles,
+                    len(sim.steps_to_built_models),
+                    len(set(sim.steps_to_built_models.values())),
+                    len(sim.steps_to_built_solvers),
+                    len(sim.model_state_mappers),
+                )
+            )
+
+        for n_cycles, n_step_models, n_unique_models, n_solvers, n_mappers in counts:
+            assert n_step_models == n_unique
+            assert n_unique_models == n_unique
+            assert n_solvers == n_unique
+            assert n_mappers <= n_unique * n_unique, (
+                f"model_state_mappers={n_mappers} for n_cycles={n_cycles}, "
+                f"must be bounded by template transitions, not cycles"
+            )
+
+        first = counts[0][1:]
+        for c in counts[1:]:
+            assert c[1:] == first, (
+                f"build counts grow with n_cycles instead of staying flat: {counts}"
+            )
 
     def test_experiment_state_mapper_has_full_state_size_for_2d_current_collector(self):
         experiment = pybamm.Experiment(
