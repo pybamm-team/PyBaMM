@@ -174,16 +174,7 @@ class TestExperimentMemory:
     """Tests for experiment-specific memory behavior."""
 
     def test_cycle_count_memory_scaling(self):
-        """
-        Memory should NOT scale linearly with cycle count.
-
-        This catches regressions like #5453 where broken termination hashing
-        caused each cycle's steps to be treated as unique, building N models
-        instead of K (where K is the unique step count in one cycle).
-
-        With proper hashing, doubling cycles should roughly double solution
-        data storage, not model/solver memory.
-        """
+        """Memory should NOT scale linearly with cycle count."""
         cycle = [
             "Discharge at C/5 for 30 minutes or until 3.0 V",
             "Rest for 5 minutes",
@@ -243,8 +234,7 @@ class TestExperimentMemory:
 
         peak_mb = peak / 1024 / 1024
         assert peak_mb < 6, (
-            f"Peak memory {peak_mb:.1f} MB during 40-step experiment is excessive. "
-            f"Expected <10 MB."
+            f"Peak memory {peak_mb:.1f} MB during 40-step experiment is excessive."
         )
 
     def test_cccv_memory(self):
