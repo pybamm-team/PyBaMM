@@ -32,6 +32,38 @@ class BaseOpenCircuitPotential(BaseInterface):
         super().__init__(param, domain, reaction, options=options, phase=phase)
         self.x_average = x_average
 
+    def _alias_ocp_as_equilibrium(self, variables):
+        """Publish the "equilibrium open-circuit potential [V]" variables as
+        aliases of the main OCP variables. For OCP models without hysteresis
+        (single OCP, MSMR) the equilibrium OCP equals the OCP, and the shapes
+        are already handled by :meth:`_get_standard_ocp_variables`.
+        """
+        domain, Domain = self.domain_Domain
+        domain_options = getattr(self.options, domain)
+        phase_name = self.phase_name
+
+        variables.update(
+            {
+                f"{Domain} electrode {phase_name}equilibrium open-circuit potential [V]": variables[
+                    f"{Domain} electrode {phase_name}open-circuit potential [V]"
+                ],
+                f"X-averaged {domain} electrode {phase_name}equilibrium open-circuit potential [V]": variables[
+                    f"X-averaged {domain} electrode {phase_name}open-circuit potential [V]"
+                ],
+            }
+        )
+        if domain_options["particle size"] == "distribution":
+            variables.update(
+                {
+                    f"{Domain} electrode {phase_name}equilibrium open-circuit potential distribution [V]": variables[
+                        f"{Domain} electrode {phase_name}open-circuit potential distribution [V]"
+                    ],
+                    f"X-averaged {domain} electrode {phase_name}equilibrium open-circuit potential distribution [V]": variables[
+                        f"X-averaged {domain} electrode {phase_name}open-circuit potential distribution [V]"
+                    ],
+                }
+            )
+
     def _get_standard_ocp_variables(self, ocp_surf, ocp_bulk, dUdT):
         domain, Domain = self.domain_Domain
         reaction_name = self.reaction_name
