@@ -105,8 +105,6 @@ dev = [
     "pytest-xdist",
     "pytest-mock",
     "pytest-snapshot",
-    # For memory leak detection (Linux/macOS only)
-    "pytest-memray; sys_platform != 'win32'",
     # For testing Jupyter notebooks
     "nbmake",
     # To access the metadata for python packages
