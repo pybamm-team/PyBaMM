@@ -34,7 +34,7 @@ class CasadiSolver(pybamm.BaseSolver):
         The absolute tolerance for the solver (default is 1e-6).
     root_method : str or pybamm algebraic solver class, optional
         The method to use to find initial conditions (for DAE solvers).
-        Default is "nonlinear_solver", which uses the C++ Newton solver for consistent
+        Default is "nonlinear_solver", which uses a custom Newton solver for consistent
         initial conditions (recommended). If "casadi", the solver uses
         casadi's Newton rootfinding algorithm as a fallback.
         Otherwise, the solver uses 'scipy.optimize.root' with method

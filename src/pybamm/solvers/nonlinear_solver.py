@@ -1,5 +1,6 @@
 import casadi
 import numpy as np
+import warnings
 from pybammsolvers import idaklu
 
 import pybamm
@@ -21,16 +22,25 @@ class NonlinearSolver(pybamm.BaseSolver):
 
     Parameters
     ----------
-    tol : float, optional
-        Absolute tolerance for the residual (default 1e-6).
+    atol : float, optional
+        Absolute tolerance for the algebraic variables (default 1e-6).
+    rtol : float, optional
+        Relative tolerance for the algebraic variables (default 1e-4).
     step_tol : float, optional
         Tolerance on the Newton step norm (default 1e-4).
     max_iter : int, optional
         Maximum Newton iterations (default 100).
     max_backtracks : int, optional
         Maximum Armijo linesearch backtracks per iteration (default 5).
+    eps_newt : float, optional
+        WRMS convergence coefficient (default 0.33).
     use_sparse : bool, optional
         Use KLU sparse factorisation (True, default) or dense LAPACK (False).
+    on_failure : str, optional
+        Behaviour on convergence failure (default "error").
+    options : dict, optional
+        Solver options. Currently supports ``compile`` (bool, default False)
+        for ahead-of-time compilation of CasADi residual/Jacobian.
     """
 
     def __init__(
@@ -42,6 +52,7 @@ class NonlinearSolver(pybamm.BaseSolver):
         max_backtracks=5,
         eps_newt=0.33,
         use_sparse=True,
+        on_failure=None,
         options=None,
     ):
         super().__init__()
@@ -52,7 +63,8 @@ class NonlinearSolver(pybamm.BaseSolver):
         self.max_backtracks = max_backtracks
         self.eps_newt = eps_newt
         self.use_sparse = use_sparse
-        self.name = "Newton algebraic solver"
+        self.name = "Nonlinear solver"
+        self.on_failure = on_failure or "error"
         self._algebraic_solver = True
         self._user_options = options or {}
         self._options = _DEFAULT_OPTIONS | self._user_options
@@ -98,6 +110,7 @@ class NonlinearSolver(pybamm.BaseSolver):
             # straight from the cached serialized CasADi bytes instead of
             # re-running CasADi construction in ``set_up_root_solver``.
             self._root_solver = self._build_newton_solver()
+            return
 
         pybamm.logger.info(f"Start building {self.name}")
 
@@ -199,7 +212,7 @@ class NonlinearSolver(pybamm.BaseSolver):
         success, y_alg_mat = root_solver.solve_batch(t_eval_np, y0_alg, p_vec)
         integration_time = timer.time()
 
-        _check_success(success, y_alg_mat)
+        self._check_success(success, y_alg_mat)
 
         y_diff_mat = np.tile(y0_diff.reshape(-1, 1), (1, len(t_eval)))
         y_sol = np.vstack([y_diff_mat, y_alg_mat])
@@ -217,12 +230,21 @@ class NonlinearSolver(pybamm.BaseSolver):
         return sol
 
 
-def _check_success(success: bool, y_alg_mat: np.ndarray):
-    if not np.isfinite(np.linalg.norm(y_alg_mat, ord=np.inf)):
-        raise pybamm.SolverError(
-            "Could not find acceptable solution: solver returned NaNs or Infs"
-        )
-    if not success:
-        raise pybamm.SolverError(
-            "Could not find acceptable solution: Newton solver did not converge"
-        )
+    def _check_success(self, success: bool, y_alg_mat: np.ndarray):
+        if self.on_failure == "ignore":
+            return
+        
+        messages = []
+        if not np.isfinite(np.linalg.norm(y_alg_mat, ord=np.inf)):
+            messages.append("Solver returned NaNs or Infs")
+        if not success:
+            messages.append("Newton solver did not converge")
+        
+        if not messages:
+            return
+        
+        message = "Could not find acceptable solution:" + "\n".join(messages)
+        if self.on_failure == "warn":
+            warnings.warn(message, pybamm.SolverWarning, stacklevel=2)
+        else:
+            raise pybamm.SolverError(message)

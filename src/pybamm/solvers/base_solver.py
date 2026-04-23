@@ -65,11 +65,13 @@ class BaseSolver:
         self.rtol = rtol
         self.atol = atol
         self.root_tol = root_tol
+        # Set ``on_failure`` before ``root_method`` so the setter can propagate
+        # the parent's failure policy down to the constructed root solver.
+        self.on_failure = on_failure or "error"
         self.root_method = root_method
         self.extrap_tol = extrap_tol or -1e-10
         self.output_variables = [] if output_variables is None else output_variables
         self.on_extrapolation = on_extrapolation or "warn"
-        self.on_failure = on_failure or "error"
         self._model_set_up = {}
 
         # Defaults, can be overwritten by specific solver
@@ -150,6 +152,10 @@ class BaseSolver:
         if value not in ["warn", "error", "ignore"]:
             raise ValueError("on_failure must be 'warn', 'error', or 'ignore'")
         self._on_failure = value
+        # Keep root solver's failure policy in sync with the parent's
+        root = getattr(self, "_root_method", None)
+        if isinstance(root, pybamm.BaseSolver) and hasattr(root, "on_failure"):
+            root.on_failure = value
 
     @property
     def root_method(self):
@@ -158,8 +164,14 @@ class BaseSolver:
     @root_method.setter
     def root_method(self, method):
         if method == "nonlinear_solver":
-            atol=min(self.root_tol, self.atol)
-            method = pybamm.NonlinearSolver(atol=atol, rtol=self.rtol)
+            # Match CasadiAlgebraicSolver behaviour: pure absolute tolerance on
+            # the residual. ``self.atol`` is the integrator atol (often looser
+            # than ``self.root_tol``); take the tighter of the two. Propagate
+            # ``on_failure`` so the IC solver respects the parent's policy.
+            atol = min(self.root_tol, self.atol)
+            method = pybamm.NonlinearSolver(
+                atol=atol, rtol=0, on_failure=self.on_failure
+            )
         elif method == "casadi":
             method = pybamm.CasadiAlgebraicSolver(self.root_tol)
         elif isinstance(method, str):

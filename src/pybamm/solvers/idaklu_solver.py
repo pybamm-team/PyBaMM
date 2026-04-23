@@ -15,6 +15,11 @@ from pybamm.codegen.compilation import aot_compile
 
 _UNSET = object()
 
+# Mirrors SUNDIALS ``IDA_ROOT_RETURN`` in ``sundials/include/ida/ida.h``.
+# Returned by ``IDASolve`` (and surfaced via ``Solution.flag``) when the
+# integrator has located one or more root function zeros.
+_IDA_ROOT_RETURN = 2
+
 
 class IDAKLUSolver(pybamm.BaseSolver):
     """
@@ -155,10 +160,13 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 # Internally calculate consistent initial conditions
                 "calc_ic": True,
                 ## Newton IC solver
-                # "auto": use dedicated sub-block solver when possible
-                #         (smaller system, but requires direct linear solver)
-                # "full": always use IDA's full-system linear solve
-                #         (supports any linear solver including iterative)
+                # "auto": use dedicated sub-block solver when possible.
+                #         This can result in a potentially smaller system of only the
+                #         algebraic variables. Requires a direct linear solver and
+                #         a standard form DAE.
+                # "full": always use IDA's full-system linear solve. This uses the full
+                #         system of equationd and can handle non-standard form DAEs and
+                #         all classes of linear solvers/
                 "newton_mode": "auto",
                 ## Early termination
                 # Maximum number of consecutive steps allowed without advancing
@@ -259,10 +267,10 @@ class IDAKLUSolver(pybamm.BaseSolver):
             "linesearch_off_ic": False,
             "init_all_y_ic": False,
             "calc_ic": True,
-            "num_steps_no_progress": 0,
-            "t_no_progress": 0.0,
             "newton_step_tol": 1e-4,
             "newton_mode": "auto",
+            "num_steps_no_progress": 0,
+            "t_no_progress": 0.0,
         }
         if not user_options:
             return default_options
@@ -733,7 +741,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         # triggered at t0 after consistent initialization. y_event is the
         # post-IC state: sol.y_term (outputs-only) or y_out[-1] (full),
         # both stored after IC. This check identifies *which* event fired.
-        if number_of_timesteps == 1 and sol.flag == 2:
+        if number_of_timesteps == 1 and sol.flag == _IDA_ROOT_RETURN:
             self._check_event_violation_post_solve(t_eval, model, y_event, inputs_dict)
 
         # return sensitivity solution, we need to flatten yS to
@@ -750,10 +758,10 @@ class IDAKLUSolver(pybamm.BaseSolver):
         else:
             yS_out = {}
 
-        # 0 = solved for all t_eval
-        # 2 = found root(s)
+        # IDA_SUCCESS (0) = solved for all t_eval
+        # IDA_ROOT_RETURN (2) = found root(s)
         # < 0 = solver failure
-        if sol.flag == 2:
+        if sol.flag == _IDA_ROOT_RETURN:
             termination = "event"
         elif sol.flag >= 0:
             termination = "final time"
