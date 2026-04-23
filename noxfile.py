@@ -86,6 +86,25 @@ def run_unit(session):
     session.run("python", "-m", "pytest", "-m", "unit")
 
 
+@nox.session(name="memory", default=False)
+def run_memory(session):
+    """Run memory leak tests using pytest-memray (Linux/macOS only)."""
+    if sys.platform == "win32":
+        session.skip("memray is not supported on Windows")
+    set_environment_variables(PYBAMM_ENV, session=session)
+    session.install("-e", ".", silent=False)
+    session.install("--group", "dev", silent=False)
+    session.run(
+        "python",
+        "-m",
+        "pytest",
+        "tests/memory/",
+        "-v",
+        "-o",
+        "addopts=",
+    )
+
+
 @nox.session(name="examples", default=False)
 def run_examples(session):
     """Run the examples tests for Jupyter notebooks."""
