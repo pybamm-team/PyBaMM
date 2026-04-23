@@ -1,11 +1,13 @@
-import numbers
-import weakref
-
 import casadi
 import numpy as np
+from pybammsolvers import idaklu
 
 import pybamm
-from pybammsolvers import idaklu
+from pybamm.codegen.compilation import aot_compile
+
+_DEFAULT_OPTIONS = {
+    "compile": False,
+}
 
 
 class NonlinearSolver(pybamm.BaseSolver):
@@ -33,29 +35,52 @@ class NonlinearSolver(pybamm.BaseSolver):
 
     def __init__(
         self,
-        tol=1e-6,
+        atol=1e-6,
+        rtol=1e-4,
         step_tol=1e-4,
         max_iter=100,
         max_backtracks=5,
+        eps_newt=0.33,
         use_sparse=True,
+        options=None,
     ):
         super().__init__()
-        self.tol = tol
+        self.atol = atol
+        self.rtol = rtol
         self.step_tol = step_tol
         self.max_iter = max_iter
         self.max_backtracks = max_backtracks
+        self.eps_newt = eps_newt
         self.use_sparse = use_sparse
         self.name = "Newton algebraic solver"
         self._algebraic_solver = True
-        self._solver_cache = {}
+        self._user_options = options or {}
+        self._options = _DEFAULT_OPTIONS | self._user_options
+        self._setup = None
+        self._root_solver = None
+
+    @staticmethod
+    def _check_tolerance(value):
+        if value < 0:
+            raise ValueError("Tolerance must be non-negative")
 
     @property
-    def tol(self):
-        return self._tol
+    def atol(self):
+        return self._atol
 
-    @tol.setter
-    def tol(self, value):
-        self._tol = value
+    @atol.setter
+    def atol(self, value):
+        self._check_tolerance(value)
+        self._atol = value
+
+    @property
+    def rtol(self):
+        return self._rtol
+
+    @rtol.setter
+    def rtol(self, value):
+        self._check_tolerance(value)
+        self._rtol = value
 
     @property
     def step_tol(self):
@@ -63,10 +88,17 @@ class NonlinearSolver(pybamm.BaseSolver):
 
     @step_tol.setter
     def step_tol(self, value):
+        self._check_tolerance(value)
         self._step_tol = value
 
     def set_up_root_solver(self, model, inputs_dict, t_eval):
         """Build CasADi functions and construct the C++ solver."""
+        if self._setup is not None:
+            # Fast path after a pickle round-trip: rebuild the C++ solver
+            # straight from the cached serialized CasADi bytes instead of
+            # re-running CasADi construction in ``set_up_root_solver``.
+            self._root_solver = self._build_newton_solver()
+
         pybamm.logger.info(f"Start building {self.name}")
 
         y0 = model.y0_list[0]
@@ -84,10 +116,9 @@ class NonlinearSolver(pybamm.BaseSolver):
         t_sym = casadi.MX.sym("t")
         y_alg_sym = casadi.MX.sym("y_alg", len_alg)
 
-        inputs_len = sum(
-            1 if isinstance(v, numbers.Number) else np.asarray(v).size
-            for v in inputs_dict.values()
-        ) if inputs_dict else 0
+        inputs_len = (
+            sum(np.asarray(v).size for v in inputs_dict.values()) if inputs_dict else 0
+        )
 
         y_diff_sym = casadi.MX.sym("y_diff", len_rhs)
         inputs_sym = casadi.MX.sym("inputs", inputs_len)
@@ -95,7 +126,7 @@ class NonlinearSolver(pybamm.BaseSolver):
         # The parameter vector stacks the differential states and inputs
         p_stacked = casadi.vertcat(y_diff_sym, inputs_sym)
 
-        alg_expr = alg_eval(t_sym, y_full, p_stacked)
+        alg_expr = alg_eval(t_sym, y_full, inputs_sym)
 
         res_fn = casadi.Function(
             "newton_res", [t_sym, y_alg_sym, p_stacked], [alg_expr]
@@ -106,36 +137,55 @@ class NonlinearSolver(pybamm.BaseSolver):
             "newton_jac", [t_sym, y_alg_sym, p_stacked], [jac_expr]
         )
 
-        atol = [float(self.tol)] * len_alg
-        rtol = float(self.tol)
-        eps_newt = 0.33
+        if self._options["compile"]:
+            res_fn, jac_fn = aot_compile([res_fn, jac_fn])
 
-        root_solver = idaklu.StandaloneNewtonSolver(
-            idaklu.generate_function(res_fn.serialize()),
-            idaklu.generate_function(jac_fn.serialize()),
-            atol,
-            rtol,
-            float(self.step_tol),
-            self.max_iter,
-            self.max_backtracks,
-            eps_newt,
-            self.use_sparse,
-        )
+        self._setup = {
+            "residual": res_fn.serialize(),
+            "jacobian": jac_fn.serialize(),
+            "number_of_algebraic_states": len_alg,
+        }
 
-        model.algebraic_root_solver = root_solver
+        self._root_solver = self._build_newton_solver()
+
+    def _build_newton_solver(self):
+        if self._setup is None:
+            raise ValueError("Newton solver not set up")
+
+        setup_new = self._setup.copy()
+        len_alg = setup_new.pop("number_of_algebraic_states")
+        for k,v in setup_new.items():
+            setup_new[k] = idaklu.generate_function(v)
+
+        setup_new.update({
+            "atol": np.full(len_alg, self.atol).tolist(),
+            "rtol": self.rtol,
+            "step_tol": float(self.step_tol),
+            "max_iter": self.max_iter,
+            "max_backtracks": self.max_backtracks,
+            "eps_newt": self.eps_newt,
+            "use_sparse": self.use_sparse,
+        })
+        return idaklu.StandaloneNewtonSolver(**setup_new)
+
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        state["_root_solver"] = None
+        return state
 
     def _integrate_single(self, model, t_eval, inputs_dict, y0):
         inputs_dict = inputs_dict or {}
 
-        root_solver = getattr(model, "algebraic_root_solver", None)
-        if root_solver is None:
+        if self._root_solver is None:
             self.set_up_root_solver(model, inputs_dict, t_eval)
-            root_solver = model.algebraic_root_solver
+        root_solver = self._root_solver
         len_rhs = model.len_rhs
 
-        inputs_flat = np.concatenate(
-            [np.atleast_1d(v).ravel() for v in inputs_dict.values()]
-        ) if inputs_dict else np.array([], dtype=np.float64)
+        inputs_flat = (
+            np.concatenate([np.atleast_1d(v).ravel() for v in inputs_dict.values()])
+            if inputs_dict
+            else np.empty(0)
+        )
 
         y0_np = np.asarray(y0).ravel()
         y0_diff = y0_np[:len_rhs]
@@ -161,18 +211,18 @@ class NonlinearSolver(pybamm.BaseSolver):
             inputs_dict,
             termination="final time",
             all_t_evals=[t_eval],
+            options=self._options,
         )
         sol.integration_time = integration_time
         return sol
 
+
 def _check_success(success: bool, y_alg_mat: np.ndarray):
     if not np.isfinite(np.linalg.norm(y_alg_mat, ord=np.inf)):
         raise pybamm.SolverError(
-            "Could not find acceptable solution: "
-            "solver returned NaNs or Infs"
+            "Could not find acceptable solution: solver returned NaNs or Infs"
         )
     if not success:
         raise pybamm.SolverError(
-            "Could not find acceptable solution: "
-            "Newton solver did not converge"
+            "Could not find acceptable solution: Newton solver did not converge"
         )

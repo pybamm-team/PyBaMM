@@ -29,10 +29,10 @@ class BaseSolver:
         The absolute tolerance for the solver (default is 1e-6).
     root_method : str or pybamm algebraic solver class, optional
         The method to use to find initial conditions (for DAE solvers).
-        If a solver class, must be an algebraic solver class.
-        If "casadi",
-        the solver uses casadi's Newton rootfinding algorithm to find initial
-        conditions. Otherwise, the solver uses 'scipy.optimize.root' with method
+        Default is "nonlinear_solver", which uses a custom Newton solver for consistent
+        initial conditions (recommended). If "casadi", the solver uses
+        casadi's Newton rootfinding algorithm as a fallback.
+        Otherwise, the solver uses 'scipy.optimize.root' with method
         specified by 'root_method' (e.g. "lm", "hybr", ...)
     root_tol : float, optional
         The tolerance for the initial-condition solver (default is 1e-6).
@@ -157,7 +157,10 @@ class BaseSolver:
 
     @root_method.setter
     def root_method(self, method):
-        if method == "casadi":
+        if method == "nonlinear_solver":
+            atol=min(self.root_tol, self.atol)
+            method = pybamm.NonlinearSolver(atol=atol, rtol=self.rtol)
+        elif method == "casadi":
             method = pybamm.CasadiAlgebraicSolver(self.root_tol)
         elif isinstance(method, str):
             method = pybamm.AlgebraicSolver(method, self.root_tol)
@@ -293,9 +296,7 @@ class BaseSolver:
         # Save CasADi functions for the CasADi solver
         # Save CasADi functions for solvers that use CasADi
         # Note: when we pass to casadi the ode part of the problem must be in
-        if isinstance(
-            self.root_method, pybamm.CasadiAlgebraicSolver
-        ) or isinstance(
+        if isinstance(self.root_method, pybamm.CasadiAlgebraicSolver) or isinstance(
             self,
             pybamm.CasadiSolver | pybamm.CasadiAlgebraicSolver,
         ):
@@ -971,7 +972,7 @@ class BaseSolver:
 
         # Check initial conditions don't violate events
         for y0, inpts in zip(model.y0_list, model_inputs_list, strict=True):
-            self._check_event_violation_on_initialization(t_eval, model, y0, inpts)
+            self._check_event_violation_on_initialisation(t_eval, model, y0, inpts)
 
         # Process discontinuities
         t_eval_info = [
@@ -1158,7 +1159,7 @@ class BaseSolver:
 
         return start_indices, end_indices, t_eval
 
-    def _check_event_violation_on_initialization(self, *args, **kwargs):
+    def _check_event_violation_on_initialisation(self, *args, **kwargs):
         self._check_event_violation(*args, **kwargs)
 
     def _check_event_violation_post_solve(self, *args, **kwargs):

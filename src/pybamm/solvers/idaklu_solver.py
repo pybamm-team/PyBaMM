@@ -3,6 +3,7 @@ import logging
 import math
 import numbers
 import warnings
+from enum import IntEnum
 
 import casadi
 import numpy as np
@@ -12,7 +13,7 @@ from scipy.sparse.linalg import spsolve
 import pybamm
 from pybamm.codegen.compilation import aot_compile
 
-from enum import IntEnum
+_UNSET = object()
 
 
 class IDAKLUSolver(pybamm.BaseSolver):
@@ -27,7 +28,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         The absolute tolerance for the solver (default is 1e-6).
     root_method : str or pybamm algebraic solver class, optional
         The method to use to find initial conditions (for DAE solvers).
-        Default is None, which uses the C++ Newton solver for consistent
+        Default is None, which uses a custom Newton solver for consistent
         initial conditions (recommended). If "casadi", the solver uses
         casadi's Newton rootfinding algorithm as a fallback.
         Otherwise, the solver uses 'scipy.optimize.root' with method
@@ -151,7 +152,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 # "True": calculate all y0 given ydot0
                 # "False": calculate y_alg0 and ydot_diff0 given y_diff0
                 "init_all_y_ic": False,
-                # Calculate consistent initial conditions
+                # Internally calculate consistent initial conditions
                 "calc_ic": True,
                 ## Newton IC solver
                 # "auto": use dedicated sub-block solver when possible
@@ -183,7 +184,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         self,
         rtol=1e-4,
         atol=1e-6,
-        root_method=None,
+        root_method=_UNSET,
         root_tol=1e-6,
         extrap_tol=None,
         on_extrapolation=None,
@@ -194,6 +195,12 @@ class IDAKLUSolver(pybamm.BaseSolver):
         self.output_variables = [] if output_variables is None else output_variables
 
         self._options = self._combine_options(options)
+
+        # By default, we use an internal nonlinear solver within pybammsolvers
+        # to compute the initial conditions. As a fallback, we use python bindings
+        # for the same solver
+        if root_method is _UNSET:
+            root_method = None if self._internal_initialisation else "nonlinear_solver"
 
         super().__init__(
             method="ida",
@@ -244,17 +251,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
             "suppress_algebraic_error": False,
             "hermite_interpolation": True,
             "hermite_reduction_factor": 1.0,
-            # ── Initial-condition solver parameters ──
-            # These options configure both the custom C++ Newton IC solver
-            # (used first) and the IDACalcIC fallback. When the custom solver
-            # is active:
-            #   max_num_iterations_ic  -> Newton iteration limit per attempt
-            #   max_num_steps_ic       -> hic scaling retry count (coupled only)
-            #   max_linesearch_backtracks_ic -> Armijo backtracks per iteration
-            #   nonlinear_convergence_coefficient_ic -> WRMS convergence tol
-            #   newton_step_tol        -> step-norm convergence tolerance
-            # When falling back to IDACalcIC, these same values are forwarded
-            # to SUNDIALS via IDASet*IC calls.
             "nonlinear_convergence_coefficient_ic": 0.0033,
             "max_num_steps_ic": 50,
             "max_num_jacobians_ic": 40,
@@ -266,8 +262,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
             "num_steps_no_progress": 0,
             "t_no_progress": 0.0,
             "newton_step_tol": 1e-4,
-            # "auto": use sub-block solver if alg_res/alg_jac available;
-            # "full": force full-system IDA linear solver for IC
             "newton_mode": "auto",
         }
         if not user_options:
@@ -377,9 +371,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         jac_times_cjmass = casadi.Function(
             "jac_times_cjmass",
             [t_casadi, y_casadi, p_casadi_stacked, cj_casadi],
-            [
-                jac_times_cjmass_expression
-            ],
+            [jac_times_cjmass_expression],
         )
 
         jac_times_cjmass_sparsity = jac_times_cjmass.sparsity_out(0)
@@ -401,7 +393,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             # index v_casadi at the first model.len_rhs entries
             # concatenate it with zeros at the end
             mass_action_expression = casadi.vertcat(
-                v_casadi[:model.len_rhs],
+                v_casadi[: model.len_rhs],
                 np.zeros(model.len_alg),
             )
         else:
@@ -429,10 +421,12 @@ class IDAKLUSolver(pybamm.BaseSolver):
         )
 
         # get ids of rhs and algebraic variables
-        ids = np.concatenate((
-            np.full(model.len_rhs, self.StateID.DIFFERENTIAL, dtype=np.int64),
-            np.full(model.len_alg, self.StateID.ALGEBRAIC, dtype=np.int64),
-        ))
+        ids = np.concatenate(
+            (
+                np.full(model.len_rhs, self.StateID.DIFFERENTIAL, dtype=np.int64),
+                np.full(model.len_alg, self.StateID.ALGEBRAIC, dtype=np.int64),
+            )
+        )
 
         if model.jacp_rhs_algebraic_eval is not None:
             sensitivity_names = model.calculate_sensitivities
@@ -645,10 +639,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
     def options(self):
         return self._options
 
-    @property
-    def calc_initial_conditions_in_cpp(self):
-        return self._root_method is None
-
     def _integrate(
         self,
         model,
@@ -709,13 +699,17 @@ class IDAKLUSolver(pybamm.BaseSolver):
             for soln, inputs_dict in zip(solns, inputs_list, strict=False)
         ]
 
-    def _check_event_violation_on_initialization(self, *args, **kwargs):
-        if self._options["calc_ic"]:
+    @property
+    def _internal_initialisation(self) -> bool:
+        return bool(self._options["calc_ic"])
+
+    def _check_event_violation_on_initialisation(self, *args, **kwargs):
+        if self._internal_initialisation:
             return
         return self._check_event_violation(*args, **kwargs)
 
     def _check_event_violation_post_solve(self, *args, **kwargs):
-        if not self._options["calc_ic"]:
+        if not self._internal_initialisation:
             return
         return self._check_event_violation(*args, **kwargs)
 

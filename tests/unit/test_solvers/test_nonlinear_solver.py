@@ -1,7 +1,6 @@
 """Tests for pybamm.NonlinearSolver (C++ Newton algebraic solver wrapper)."""
 
-import gc
-import weakref
+import pickle
 
 import numpy as np
 import pytest
@@ -12,10 +11,15 @@ import pybamm
 class TestNonlinearSolver:
     def test_nonlinear_solver_init(self):
         solver = pybamm.NonlinearSolver(
-            tol=1e-8, step_tol=1e-5, max_iter=200, max_backtracks=10,
+            atol=1e-8,
+            rtol=1e-6,
+            step_tol=1e-5,
+            max_iter=200,
+            max_backtracks=10,
             use_sparse=False,
         )
-        assert solver.tol == 1e-8
+        assert solver.atol == 1e-8
+        assert solver.rtol == 1e-6
         assert solver.step_tol == 1e-5
         assert solver.max_iter == 200
         assert solver.max_backtracks == 10
@@ -51,7 +55,9 @@ class TestNonlinearSolver:
 
         solver = pybamm.NonlinearSolver()
         solution = solver.solve(
-            model, np.linspace(0, 1, 10), inputs={"param": 7},
+            model,
+            np.linspace(0, 1, 10),
+            inputs={"param": 7},
         )
         np.testing.assert_array_almost_equal(solution.y, -7, decimal=8)
 
@@ -73,10 +79,16 @@ class TestNonlinearSolver:
         sol = np.vstack((3 * t_eval, 6 * t_eval))
         np.testing.assert_allclose(solution.y, sol, rtol=1e-7, atol=1e-6)
         np.testing.assert_allclose(
-            solution["var1"].data.flatten(), sol[0, :], rtol=1e-7, atol=1e-6,
+            solution["var1"].data.flatten(),
+            sol[0, :],
+            rtol=1e-7,
+            atol=1e-6,
         )
         np.testing.assert_allclose(
-            solution["var2"].data.flatten(), sol[1, :], rtol=1e-7, atol=1e-6,
+            solution["var2"].data.flatten(),
+            sol[1, :],
+            rtol=1e-7,
+            atol=1e-6,
         )
 
     def test_model_solver_with_time_not_changing(self):
@@ -108,11 +120,41 @@ class TestNonlinearSolver:
 
         solver = pybamm.NonlinearSolver()
         solver.solve(model, [0])
-        assert hasattr(model, "algebraic_root_solver")
+        cached_solver = solver._root_solver
+        assert cached_solver is not None
 
-        cached_solver = model.algebraic_root_solver
         solver.solve(model, [0])
-        assert model.algebraic_root_solver is cached_solver
+        assert solver._root_solver is cached_solver
+
+    def test_pickle_round_trip(self):
+        var = pybamm.Variable("var")
+        model = pybamm.BaseModel()
+        model.algebraic = {var: var + 3}
+        model.initial_conditions = {var: 0}
+
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        solver = pybamm.NonlinearSolver()
+        sol_pre = solver.solve(model, [0])
+        np.testing.assert_array_almost_equal(sol_pre.y, -3, decimal=8)
+        # Sanity: live C++ solver was built and setup was cached.
+        assert solver._root_solver is not None
+        assert solver._setup is not None
+
+        # Pickle the model alongside the solver: BaseSolver caches the
+        # model object identity in ``_model_set_up``, so reusing the same
+        # solver requires the same (unpickled) model instance.
+        restored_solver, restored_model = pickle.loads(pickle.dumps((solver, model)))
+        # Setup survives the round-trip; live C++ solver does not.
+        assert restored_solver._root_solver is None
+        assert restored_solver._setup is not None
+
+        sol_post = restored_solver.solve(restored_model, [0])
+        np.testing.assert_array_almost_equal(sol_post.y, -3, decimal=8)
+        # After solving, the C++ solver was rebuilt from the cached setup
+        # without re-running CasADi construction.
+        assert restored_solver._root_solver is not None
 
     def test_sparse_and_dense_modes(self):
         model_sparse = pybamm.BaseModel()
@@ -149,14 +191,18 @@ class TestNonlinearSolver:
         Q_Li = parameter_values.evaluate(li_param.Q_Li_particles_init)
         inputs = {"Q_Li": Q_Li, "Q_n": Q_n, "Q_p": Q_p}
 
-        sol_newton = pybamm.NonlinearSolver(tol=1e-10, step_tol=0).solve(
-            esoh_model, [0], inputs=inputs,
+        sol_newton = pybamm.NonlinearSolver(atol=1e-10, step_tol=0).solve(
+            esoh_model,
+            [0],
+            inputs=inputs,
         )
 
         model2 = _ElectrodeSOH(param=li_param)
         parameter_values.process_model(model2)
         sol_casadi = pybamm.CasadiAlgebraicSolver(tol=1e-10).solve(
-            model2, [0], inputs=inputs,
+            model2,
+            [0],
+            inputs=inputs,
         )
 
         np.testing.assert_allclose(sol_newton.y, sol_casadi.y, rtol=1e-3, atol=1e-5)
@@ -171,17 +217,19 @@ class TestNonlinearSolver:
         disc = pybamm.Discretisation()
         disc.process_model(model)
 
-        composite = pybamm.CompositeSolver([
-            pybamm.NonlinearSolver(),
-            pybamm.CasadiAlgebraicSolver(),
-        ])
+        composite = pybamm.CompositeSolver(
+            [
+                pybamm.NonlinearSolver(),
+                pybamm.CasadiAlgebraicSolver(),
+            ]
+        )
         solution = composite.solve(model)
         np.testing.assert_allclose(solution.y, 7, rtol=1e-6)
 
     def test_convergence_failure_raises(self):
         var = pybamm.Variable("var")
         model = pybamm.BaseModel()
-        model.algebraic = {var: var ** 2 + 1}
+        model.algebraic = {var: var**2 + 1}
         model.initial_conditions = {var: 2}
 
         disc = pybamm.Discretisation()

@@ -5,7 +5,6 @@ initial conditions at each breakpoint, exercising the Newton IC machinery.
 """
 
 import numpy as np
-import pytest
 
 import pybamm
 
@@ -29,7 +28,9 @@ class TestNewtonModes:
         assert sol is not None
         assert len(sol.t) > 1
         np.testing.assert_allclose(
-            sol["Voltage [V]"].entries[-1], 4.0, atol=0.01,
+            sol["Voltage [V]"].entries[-1],
+            4.0,
+            atol=0.01,
         )
 
     def test_spm_newton_full(self):
@@ -37,7 +38,9 @@ class TestNewtonModes:
         assert sol is not None
         assert len(sol.t) > 1
         np.testing.assert_allclose(
-            sol["Voltage [V]"].entries[-1], 4.0, atol=0.01,
+            sol["Voltage [V]"].entries[-1],
+            4.0,
+            atol=0.01,
         )
 
     def test_spm_modes_agree(self):
@@ -54,7 +57,9 @@ class TestNewtonModes:
         assert sol is not None
         assert len(sol.t) > 1
         np.testing.assert_allclose(
-            sol["Voltage [V]"].entries[-1], 4.0, atol=0.01,
+            sol["Voltage [V]"].entries[-1],
+            4.0,
+            atol=0.01,
         )
 
     def test_dfn_newton_full(self):
@@ -62,7 +67,9 @@ class TestNewtonModes:
         assert sol is not None
         assert len(sol.t) > 1
         np.testing.assert_allclose(
-            sol["Voltage [V]"].entries[-1], 4.0, atol=0.01,
+            sol["Voltage [V]"].entries[-1],
+            4.0,
+            atol=0.01,
         )
 
     def test_dfn_modes_agree(self):

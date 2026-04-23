@@ -34,10 +34,10 @@ class CasadiSolver(pybamm.BaseSolver):
         The absolute tolerance for the solver (default is 1e-6).
     root_method : str or pybamm algebraic solver class, optional
         The method to use to find initial conditions (for DAE solvers).
-        If a solver class, must be an algebraic solver class.
-        If "casadi",
-        the solver uses casadi's Newton rootfinding algorithm to find initial
-        conditions. Otherwise, the solver uses 'scipy.optimize.root' with method
+        Default is "nonlinear_solver", which uses the C++ Newton solver for consistent
+        initial conditions (recommended). If "casadi", the solver uses
+        casadi's Newton rootfinding algorithm as a fallback.
+        Otherwise, the solver uses 'scipy.optimize.root' with method
         specified by 'root_method' (e.g. "lm", "hybr", ...)
     root_tol : float, optional
         The tolerance for root-finding. Default is 1e-6.
@@ -82,7 +82,7 @@ class CasadiSolver(pybamm.BaseSolver):
         mode="safe",
         rtol=1e-6,
         atol=1e-6,
-        root_method="casadi",
+        root_method="nonlinear_solver",
         root_tol=1e-6,
         max_step_decrease_count=5,
         dt_max=None,
@@ -206,10 +206,14 @@ class CasadiSolver(pybamm.BaseSolver):
                 # create integrator once, without grid,
                 # to avoid having to create several times
                 self.create_integrator(model, y0, inputs)
-                # Initialize solution
+                # Initialize solution. Coerce y0 to a CasADi DM so that when
+                # subsequent CasADi integration segments are appended, the
+                # concatenated ``solution.y`` stays a CasADi type. When the
+                # root method is NonlinearSolver, y0 arrives as an ndarray.
+                y0_init = y0 if isinstance(y0, casadi.DM | casadi.MX) else casadi.DM(y0)
                 solution = pybamm.Solution(
                     np.array([t]),
-                    y0,
+                    y0_init,
                     model,
                     inputs_dict,
                 )

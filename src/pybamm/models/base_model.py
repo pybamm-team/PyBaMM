@@ -608,7 +608,7 @@ class BaseModel:
     def default_solver(self):
         """Returns the default solver for the model, based on whether it is an ODE/DAE or algebraic model."""
         if len(self.rhs) == 0 and len(self.algebraic) != 0:
-            return pybamm.CasadiAlgebraicSolver()
+            return pybamm.NonlinearSolver()
         else:
             return pybamm.IDAKLUSolver()
 
