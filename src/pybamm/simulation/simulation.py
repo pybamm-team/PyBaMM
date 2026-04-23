@@ -549,15 +549,6 @@ class Simulation(BaseSimulation):
             models.extend(self.steps_to_built_models.values())
         return models
 
-    def _recompute_initial_conditions(self):
-        super()._recompute_initial_conditions()
-        # Also clear per-step solver caches so they re-process the updated models
-        if self.steps_to_built_solvers is not None:
-            for solver in self.steps_to_built_solvers.values():
-                solver._model_set_up = {}
-        if self._built_experiment_solver is not None:
-            self._built_experiment_solver._model_set_up = {}
-
     def _build_experiment_state_mappers(self, inputs: dict):
         self.model_state_mappers = {}
         self._compiled_model_state_mappers = {}

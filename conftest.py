@@ -26,6 +26,7 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "scripts: mark test as an example script")
     config.addinivalue_line("markers", "unit: mark test as a unit test")
     config.addinivalue_line("markers", "integration: mark test as an integration test")
+    config.addinivalue_line("markers", "memory: mark test as a memory stress test")
 
 
 def pytest_collection_modifyitems(items):
@@ -34,6 +35,8 @@ def pytest_collection_modifyitems(items):
             item.add_marker(pytest.mark.unit)
         elif "integration" in item.nodeid:
             item.add_marker(pytest.mark.integration)
+        elif "memory" in item.nodeid:
+            item.add_marker(pytest.mark.memory)
 
 
 @pytest.fixture(autouse=True)

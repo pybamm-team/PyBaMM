@@ -2062,3 +2062,23 @@ class TestSimulationExperiment:
 
         # ICs must differ when inputs change at same SOC
         assert ic1 != ic2
+
+    @pytest.mark.parametrize("experiment_model_mode", ["legacy", "unified"])
+    def test_repeated_solves_refresh_initial_soc(self, experiment_model_mode):
+        model = pybamm.lithium_ion.SPM()
+        experiment = pybamm.Experiment(["Rest for 10 minutes", "Rest for 10 minutes"])
+        sim = pybamm.Simulation(
+            model,
+            parameter_values=pybamm.ParameterValues("Chen2020"),
+            experiment=experiment,
+            experiment_model_mode=experiment_model_mode,
+        )
+
+        sol1 = sim.solve(calc_esoh=False, initial_soc=0.2)
+        ic1 = sol1["X-averaged negative particle surface concentration"].data[0]
+
+        sol2 = sim.solve(calc_esoh=False, initial_soc=0.8)
+        ic2 = sol2["X-averaged negative particle surface concentration"].data[0]
+
+        # Reusing the same Simulation must refresh experiment ICs when SOC changes.
+        assert ic1 != ic2
