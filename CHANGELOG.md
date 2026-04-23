@@ -12,6 +12,9 @@
 
 ## Bug fixes
 
+- Retry `CasadiAlgebraicSolver` when it terminates early due to `step_tol`. ([#5457](https://github.com/pybamm-team/PyBaMM/pull/5457))
+- Fixed `DomainError` when combining hysteresis, MSMR, or single open-circuit potential submodels with `"particle size": "distribution"` and a non-isothermal `thermal` option. The `equilibrium open-circuit potential [V]` and `OCP hysteresis [V]` variables are now correctly placed on the electrode domain (with parallel `... distribution [V]` variables for the size-resolved versions). ([#5451](https://github.com/pybamm-team/PyBaMM/pull/5451))
+- Fixed termination hashes causing duplicate experiment steps to be built. ([#5453](https://github.com/pybamm-team/PyBaMM/pull/5453))
 - Fixed a regression causing inaccurate initial guesses at experiment step transitions. ([#5452](https://github.com/pybamm-team/PyBaMM/pull/5452))
 
 ## Breaking changes
