@@ -16,6 +16,10 @@ Before you commit any code, please perform the following checks:
 `PyBaMM` uses a set of `pre-commit` hooks and the `pre-commit` bot to format and prettify the codebase. The hooks can be installed locally using -
 
 ```bash
+# Using uv
+uvx pre-commit install
+
+# Or using pip
 pip install pre-commit
 pre-commit install
 ```
@@ -71,7 +75,11 @@ PyBaMM follows the [PEP8 recommendations](https://www.python.org/dev/peps/pep-00
 We use [ruff](https://github.com/astral-sh/ruff) to check our PEP8 adherence. To try this on your system, navigate to the PyBaMM directory in a console and type
 
 ```bash
-python -m pip install pre-commit
+# Using uv
+uvx pre-commit run ruff
+
+# Or using pip
+pip install pre-commit
 pre-commit run ruff
 ```
 
@@ -157,13 +165,17 @@ We use following plugins for various needs:
 
 [pytest-xdist](https://pypi.org/project/pytest-xdist/) : plugins to run tests in parallel.
 
-If you have `nox` installed, to run unit tests, type
+To run unit tests using `nox`:
 
 ```bash
+# Using uv
+uv run nox -s unit
+
+# Or with nox installed directly
 nox -s unit
 ```
 
-else, type
+Alternatively, you can run tests directly with `pytest`:
 
 ```bash
 pytest -m unit
@@ -425,11 +437,14 @@ wherever code is called that uses that citation (for example, in functions or in
 
 ### Installation
 
-Installation of PyBaMM and its dependencies is handled via [pip](https://pip.pypa.io/en/stable/)
+Installation of PyBaMM and its dependencies is handled via [uv](https://docs.astral.sh/uv/) or [pip](https://pip.pypa.io/en/stable/).
+A `uv.lock` lockfile is maintained in version control to ensure reproducible environments.
+Dependabot keeps the locked dependencies up to date via weekly PRs.
 
 Configuration files:
 ```
 pyproject.toml
+uv.lock
 ```
 
 ### Continuous Integration using GitHub Actions
