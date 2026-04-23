@@ -1,6 +1,7 @@
+import warnings
+
 import casadi
 import numpy as np
-import warnings
 from pybammsolvers import idaklu
 
 import pybamm
@@ -167,18 +168,20 @@ class NonlinearSolver(pybamm.BaseSolver):
 
         setup_new = self._setup.copy()
         len_alg = setup_new.pop("number_of_algebraic_states")
-        for k,v in setup_new.items():
+        for k, v in setup_new.items():
             setup_new[k] = idaklu.generate_function(v)
 
-        setup_new.update({
-            "atol": np.full(len_alg, self.atol).tolist(),
-            "rtol": self.rtol,
-            "step_tol": float(self.step_tol),
-            "max_iter": self.max_iter,
-            "max_backtracks": self.max_backtracks,
-            "eps_newt": self.eps_newt,
-            "use_sparse": self.use_sparse,
-        })
+        setup_new.update(
+            {
+                "atol": np.full(len_alg, self.atol).tolist(),
+                "rtol": self.rtol,
+                "step_tol": float(self.step_tol),
+                "max_iter": self.max_iter,
+                "max_backtracks": self.max_backtracks,
+                "eps_newt": self.eps_newt,
+                "use_sparse": self.use_sparse,
+            }
+        )
         return idaklu.StandaloneNewtonSolver(**setup_new)
 
     def __getstate__(self):
@@ -229,20 +232,19 @@ class NonlinearSolver(pybamm.BaseSolver):
         sol.integration_time = integration_time
         return sol
 
-
     def _check_success(self, success: bool, y_alg_mat: np.ndarray):
         if self.on_failure == "ignore":
             return
-        
+
         messages = []
         if not np.isfinite(np.linalg.norm(y_alg_mat, ord=np.inf)):
             messages.append("Solver returned NaNs or Infs")
         if not success:
             messages.append("Newton solver did not converge")
-        
+
         if not messages:
             return
-        
+
         message = "Could not find acceptable solution:" + "\n".join(messages)
         if self.on_failure == "warn":
             warnings.warn(message, pybamm.SolverWarning, stacklevel=2)
