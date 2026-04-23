@@ -71,6 +71,28 @@ def exponential_decay_model():
 
 @pytest.fixture(scope="function")
 def exponential_decay_solver(idaklu_module, exponential_decay_model):
+    return make_exponential_decay_solver(
+        idaklu_module,
+        exponential_decay_model,
+        num_threads=1,
+        num_solvers=1,
+        decay_constants=[exponential_decay_model["k"]],
+    )
+
+
+@pytest.fixture(scope="session")
+def exponential_decay_solver_factory():
+    return make_exponential_decay_solver
+
+
+def make_exponential_decay_solver(
+    idaklu_module,
+    exponential_decay_model,
+    *,
+    num_threads,
+    num_solvers,
+    decay_constants,
+):
     """
     Fixture providing a configured solver for exponential decay model.
 
@@ -84,7 +106,7 @@ def exponential_decay_solver(idaklu_module, exponential_decay_model):
     casadi = pytest.importorskip("casadi")
 
     # Model parameters
-    k = exponential_decay_model["k"]
+    decay_constants = np.asarray(decay_constants, dtype=np.float64)
     y0 = exponential_decay_model["y0"]
 
     # Problem dimensions
@@ -190,8 +212,8 @@ def exponential_decay_solver(idaklu_module, exponential_decay_model):
         "preconditioner": "none",
         "precon_half_bandwidth": 5,
         "precon_half_bandwidth_keep": 5,
-        "num_threads": 1,
-        "num_solvers": 1,
+        "num_threads": num_threads,
+        "num_solvers": num_solvers,
         "linear_solver": "SUNLinSol_KLU",
         "linsol_max_iterations": 5,
         # SolverOptions
@@ -258,18 +280,19 @@ def exponential_decay_solver(idaklu_module, exponential_decay_model):
     # When n_sensitivity_params = 0: n_coeffs = n_states
     # When n_sensitivity_params > 0: [state_0, d(state_0)/dp_0, d(state_0)/dp_1, ...]
     n_coeffs = n_states * (1 + n_sensitivity_params)
-    y0_2d = np.zeros((1, n_coeffs), dtype=np.float64)
-    y0_2d[0, 0] = y0  # state value
+    y0_2d = np.zeros((len(decay_constants), n_coeffs), dtype=np.float64)
+    y0_2d[:, 0] = y0  # state value
 
-    yp0_2d = np.zeros((1, n_coeffs), dtype=np.float64)
-    yp0_2d[0, 0] = -k * y0  # state derivative
+    yp0_2d = np.zeros((len(decay_constants), n_coeffs), dtype=np.float64)
+    yp0_2d[:, 0] = -decay_constants * y0  # state derivative
 
-    inputs_2d = np.array([[k]], dtype=np.float64)
+    inputs_2d = decay_constants[:, np.newaxis]
 
     return {
         "solver": solver,
         "y0": y0_2d,
         "yp0": yp0_2d,
         "inputs": inputs_2d,
+        "decay_constants": decay_constants,
         "model": exponential_decay_model,
     }

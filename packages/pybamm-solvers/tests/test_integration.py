@@ -199,3 +199,36 @@ class TestExponentialDecaySolver:
         n_times = len(sol.t)
         assert len(sol.y) == n_times
         assert len(sol.yp) == 0  # hermite_interpolation == False
+
+    def test_parallel_solver_group_uses_multiple_solvers(
+        self, idaklu_module, exponential_decay_model, exponential_decay_solver_factory
+    ):
+        """
+        Verify the multi-solver OpenMP path returns stable, per-group solutions.
+
+        This forces num_solvers > 1 so CasADi functions are deep-copied in the
+        same parallel configuration that previously shared internal state.
+        """
+        decay_constants = np.array([0.5, 1.0], dtype=np.float64)
+        solver_data = exponential_decay_solver_factory(
+            idaklu_module,
+            exponential_decay_model,
+            num_threads=2,
+            num_solvers=2,
+            decay_constants=decay_constants,
+        )
+
+        solver = solver_data["solver"]
+        y0 = solver_data["y0"]
+        yp0 = solver_data["yp0"]
+        inputs = solver_data["inputs"]
+        t_eval = solver_data["model"]["t_eval"]
+        model_y0 = solver_data["model"]["y0"]
+
+        for _ in range(3):
+            solutions = solver.solve(t_eval, t_eval, y0, yp0, inputs)
+            assert len(solutions) == len(decay_constants)
+
+            for idx, sol in enumerate(solutions):
+                expected = model_y0 * np.exp(-decay_constants[idx] * sol.t)
+                np.testing.assert_allclose(sol.y, expected, rtol=1e-5, atol=1e-8)

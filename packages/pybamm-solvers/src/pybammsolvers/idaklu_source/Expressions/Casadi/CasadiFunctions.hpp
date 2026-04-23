@@ -5,6 +5,32 @@
 #include "../Expressions.hpp"
 #include <casadi/casadi.hpp>
 #include <casadi/core/function.hpp>
+#include <stdexcept>
+#include <string>
+
+struct SerializedCasadiFunctions {
+  std::string rhs_alg;
+  std::string jac_times_cjmass;
+  std::string jac_action;
+  std::string mass_action;
+  std::string sens;
+  std::string events;
+  std::vector<std::string> var_fcns;
+  std::vector<std::string> dvar_dy_fcns;
+  std::vector<std::string> dvar_dp_fcns;
+};
+
+SerializedCasadiFunctions serialize_casadi_functions(
+  const casadi::Function &rhs_alg,
+  const casadi::Function &jac_times_cjmass,
+  const casadi::Function &jac_action,
+  const casadi::Function &mass_action,
+  const casadi::Function &sens,
+  const casadi::Function &events,
+  const std::vector<casadi::Function*>& var_fcns,
+  const std::vector<casadi::Function*>& dvar_dy_fcns,
+  const std::vector<casadi::Function*>& dvar_dp_fcns
+);
 
 /**
  * @brief Class for handling individual casadi functions
@@ -17,8 +43,15 @@ public:
 
   /**
    * @brief Constructor
+   * @param f The CasADi function to wrap
+   * @param deep_copy If true, creates an independent copy via serialize/deserialize
+   *                  to avoid thread-unsafe shared state in parallel execution
    */
-  explicit CasadiFunction(const BaseFunctionType &f);
+  explicit CasadiFunction(
+    const BaseFunctionType &f,
+    bool deep_copy = false,
+    const std::string *serialized = nullptr
+  );
 
   // Method overrides
   void operator()() override;
@@ -74,14 +107,33 @@ public:
     const std::vector<BaseFunctionType*>& var_fcns,
     const std::vector<BaseFunctionType*>& dvar_dy_fcns,
     const std::vector<BaseFunctionType*>& dvar_dp_fcns,
-    const SetupOptions& setup_opts
+    const SetupOptions& setup_opts,
+    const SerializedCasadiFunctions *serialized_fcns = nullptr
   ) :
-    rhs_alg_casadi(rhs_alg),
-    jac_times_cjmass_casadi(jac_times_cjmass),
-    jac_action_casadi(jac_action),
-    mass_action_casadi(mass_action),
-    sens_casadi(sens),
-    events_casadi(events),
+    rhs_alg_casadi(
+      rhs_alg,
+      setup_opts.num_solvers > 1,
+      serialized_fcns != nullptr ? &serialized_fcns->rhs_alg : nullptr),
+    jac_times_cjmass_casadi(
+      jac_times_cjmass,
+      setup_opts.num_solvers > 1,
+      serialized_fcns != nullptr ? &serialized_fcns->jac_times_cjmass : nullptr),
+    jac_action_casadi(
+      jac_action,
+      setup_opts.num_solvers > 1,
+      serialized_fcns != nullptr ? &serialized_fcns->jac_action : nullptr),
+    mass_action_casadi(
+      mass_action,
+      setup_opts.num_solvers > 1,
+      serialized_fcns != nullptr ? &serialized_fcns->mass_action : nullptr),
+    sens_casadi(
+      sens,
+      setup_opts.num_solvers > 1,
+      serialized_fcns != nullptr ? &serialized_fcns->sens : nullptr),
+    events_casadi(
+      events,
+      setup_opts.num_solvers > 1,
+      serialized_fcns != nullptr ? &serialized_fcns->events : nullptr),
     ExpressionSet<CasadiFunction>(
       static_cast<Expression*>(&rhs_alg_casadi),
       static_cast<Expression*>(&jac_times_cjmass_casadi),
@@ -100,18 +152,40 @@ public:
   {
     // convert BaseFunctionType list to CasadiFunction list
     // NOTE: You must allocate ALL std::vector elements before taking references
-    for (auto& var : var_fcns)
-      var_fcns_casadi.push_back(CasadiFunction(*var));
+    const bool deep_copy = setup_opts.num_solvers > 1;
+    if (serialized_fcns != nullptr) {
+      if (serialized_fcns->var_fcns.size() != var_fcns.size()
+          || serialized_fcns->dvar_dy_fcns.size() != dvar_dy_fcns.size()
+          || serialized_fcns->dvar_dp_fcns.size() != dvar_dp_fcns.size()) {
+        throw std::invalid_argument("Serialized CasADi function cache has mismatched sizes");
+      }
+    }
+
+    var_fcns_casadi.reserve(var_fcns.size());
+    dvar_dy_fcns_casadi.reserve(dvar_dy_fcns.size());
+    dvar_dp_fcns_casadi.reserve(dvar_dp_fcns.size());
+
+    for (size_t k = 0; k < var_fcns.size(); k++) {
+      const std::string *serialized =
+        serialized_fcns != nullptr ? &serialized_fcns->var_fcns[k] : nullptr;
+      var_fcns_casadi.push_back(CasadiFunction(*var_fcns[k], deep_copy, serialized));
+    }
     for (int k = 0; k < var_fcns_casadi.size(); k++)
       ExpressionSet::var_fcns.push_back(&this->var_fcns_casadi[k]);
 
-    for (auto& var : dvar_dy_fcns)
-      dvar_dy_fcns_casadi.push_back(CasadiFunction(*var));
+    for (size_t k = 0; k < dvar_dy_fcns.size(); k++) {
+      const std::string *serialized =
+        serialized_fcns != nullptr ? &serialized_fcns->dvar_dy_fcns[k] : nullptr;
+      dvar_dy_fcns_casadi.push_back(CasadiFunction(*dvar_dy_fcns[k], deep_copy, serialized));
+    }
     for (int k = 0; k < dvar_dy_fcns_casadi.size(); k++)
       this->dvar_dy_fcns.push_back(&this->dvar_dy_fcns_casadi[k]);
 
-    for (auto& var : dvar_dp_fcns)
-      dvar_dp_fcns_casadi.push_back(CasadiFunction(*var));
+    for (size_t k = 0; k < dvar_dp_fcns.size(); k++) {
+      const std::string *serialized =
+        serialized_fcns != nullptr ? &serialized_fcns->dvar_dp_fcns[k] : nullptr;
+      dvar_dp_fcns_casadi.push_back(CasadiFunction(*dvar_dp_fcns[k], deep_copy, serialized));
+    }
     for (int k = 0; k < dvar_dp_fcns_casadi.size(); k++)
       this->dvar_dp_fcns.push_back(&this->dvar_dp_fcns_casadi[k]);
 

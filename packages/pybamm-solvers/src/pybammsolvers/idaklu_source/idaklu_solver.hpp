@@ -189,7 +189,6 @@ IDAKLUSolverGroup *create_idaklu_solver_group(
   auto setup_opts = SetupOptions(py_opts);
   auto solver_opts = SolverOptions(py_opts);
 
-
   std::vector<std::unique_ptr<IDAKLUSolver>> solvers;
   for (int i = 0; i < setup_opts.num_solvers; i++) {
     // Note: we can't copy an ExprSet as it contains raw pointers to the functions
