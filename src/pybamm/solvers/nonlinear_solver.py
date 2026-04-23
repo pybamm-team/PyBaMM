@@ -69,8 +69,6 @@ class NonlinearSolver(pybamm.BaseSolver):
         self._algebraic_solver = True
         self._user_options = options or {}
         self._options = _DEFAULT_OPTIONS | self._user_options
-        self._setup = None
-        self._root_solver = None
 
     @staticmethod
     def _check_tolerance(value):
@@ -105,14 +103,14 @@ class NonlinearSolver(pybamm.BaseSolver):
         self._step_tol = value
 
     def set_up_root_solver(self, model, inputs_dict, t_eval):
-        """Build CasADi functions and construct the C++ solver."""
-        if self._setup is not None:
-            # Fast path after a pickle round-trip: rebuild the C++ solver
-            # straight from the cached serialized CasADi bytes instead of
-            # re-running CasADi construction in ``set_up_root_solver``.
-            self._root_solver = self._build_newton_solver()
-            return
+        """Build CasADi functions and construct the C++ solver.
 
+        The resulting ``StandaloneNewtonSolver`` is attached to the model as
+        ``model.algebraic_root_solver``. This mirrors the layout used by
+        :class:`CasadiAlgebraicSolver` so different models in the same
+        experiment (e.g. each unique step model) get independently sized
+        Newton solvers without one stomping on another's cache.
+        """
         pybamm.logger.info(f"Start building {self.name}")
 
         y0 = model.y0_list[0]
@@ -154,47 +152,27 @@ class NonlinearSolver(pybamm.BaseSolver):
         if self._options["compile"]:
             res_fn, jac_fn = aot_compile([res_fn, jac_fn])
 
-        self._setup = {
-            "residual": res_fn.serialize(),
-            "jacobian": jac_fn.serialize(),
-            "number_of_algebraic_states": len_alg,
-        }
+        model.algebraic_root_solver = self._build_newton_solver(res_fn, jac_fn, len_alg)
 
-        self._root_solver = self._build_newton_solver()
-
-    def _build_newton_solver(self):
-        if self._setup is None:
-            raise ValueError("Newton solver not set up")
-
-        setup_new = self._setup.copy()
-        len_alg = setup_new.pop("number_of_algebraic_states")
-        for k, v in setup_new.items():
-            setup_new[k] = idaklu.generate_function(v)
-
-        setup_new.update(
-            {
-                "atol": np.full(len_alg, self.atol).tolist(),
-                "rtol": self.rtol,
-                "step_tol": float(self.step_tol),
-                "max_iter": self.max_iter,
-                "max_backtracks": self.max_backtracks,
-                "eps_newt": self.eps_newt,
-                "use_sparse": self.use_sparse,
-            }
+    def _build_newton_solver(self, res_fn, jac_fn, len_alg):
+        return idaklu.StandaloneNewtonSolver(
+            residual=idaklu.generate_function(res_fn.serialize()),
+            jacobian=idaklu.generate_function(jac_fn.serialize()),
+            atol=np.full(len_alg, float(self.atol)).tolist(),
+            rtol=float(self.rtol),
+            step_tol=float(self.step_tol),
+            max_iter=int(self.max_iter),
+            max_backtracks=int(self.max_backtracks),
+            eps_newt=float(self.eps_newt),
+            use_sparse=bool(self.use_sparse),
         )
-        return idaklu.StandaloneNewtonSolver(**setup_new)
-
-    def __getstate__(self):
-        state = self.__dict__.copy()
-        state["_root_solver"] = None
-        return state
 
     def _integrate_single(self, model, t_eval, inputs_dict, y0):
         inputs_dict = inputs_dict or {}
 
-        if self._root_solver is None:
+        if getattr(model, "algebraic_root_solver", None) is None:
             self.set_up_root_solver(model, inputs_dict, t_eval)
-        root_solver = self._root_solver
+        root_solver = model.algebraic_root_solver
         len_rhs = model.len_rhs
 
         inputs_flat = (

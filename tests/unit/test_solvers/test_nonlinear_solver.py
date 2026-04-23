@@ -120,11 +120,11 @@ class TestNonlinearSolver:
 
         solver = pybamm.NonlinearSolver()
         solver.solve(model, [0])
-        cached_solver = solver._root_solver
+        cached_solver = model.algebraic_root_solver
         assert cached_solver is not None
 
         solver.solve(model, [0])
-        assert solver._root_solver is cached_solver
+        assert model.algebraic_root_solver is cached_solver
 
     def test_pickle_round_trip(self):
         var = pybamm.Variable("var")
@@ -138,23 +138,20 @@ class TestNonlinearSolver:
         solver = pybamm.NonlinearSolver()
         sol_pre = solver.solve(model, [0])
         np.testing.assert_array_almost_equal(sol_pre.y, -3, decimal=8)
-        # Sanity: live C++ solver was built and setup was cached.
-        assert solver._root_solver is not None
-        assert solver._setup is not None
+        # Sanity: live C++ solver was built and attached to the model.
+        assert model.algebraic_root_solver is not None
 
         # Pickle the model alongside the solver: BaseSolver caches the
         # model object identity in ``_model_set_up``, so reusing the same
-        # solver requires the same (unpickled) model instance.
+        # solver requires the same (unpickled) model instance. The native
+        # Newton solver attached to the model is dropped on pickle and
+        # rebuilt lazily on the next solve.
         restored_solver, restored_model = pickle.loads(pickle.dumps((solver, model)))
-        # Setup survives the round-trip; live C++ solver does not.
-        assert restored_solver._root_solver is None
-        assert restored_solver._setup is not None
+        assert restored_model.algebraic_root_solver is None
 
         sol_post = restored_solver.solve(restored_model, [0])
         np.testing.assert_array_almost_equal(sol_post.y, -3, decimal=8)
-        # After solving, the C++ solver was rebuilt from the cached setup
-        # without re-running CasADi construction.
-        assert restored_solver._root_solver is not None
+        assert restored_model.algebraic_root_solver is not None
 
     def test_sparse_and_dense_modes(self):
         model_sparse = pybamm.BaseModel()

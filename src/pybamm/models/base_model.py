@@ -133,6 +133,22 @@ class BaseModel:
         # Root solver
         self._algebraic_root_solver = None
 
+    def __getstate__(self):
+        """Return picklable state.
+
+        The cached ``_algebraic_root_solver`` (a casadi rootfinder or a
+        pybammsolvers ``StandaloneNewtonSolver``) wraps native objects that do
+        not survive a pickle round-trip, so we drop it here and let the next
+        consistent-initialisation rebuild it on demand.
+        """
+        state = self.__dict__.copy()
+        state["_algebraic_root_solver"] = None
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self._algebraic_root_solver = None
+
     @classmethod
     def deserialise(cls, properties: dict):
         """
