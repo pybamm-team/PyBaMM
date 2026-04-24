@@ -126,6 +126,46 @@ class TestTensorField:
         t = TensorField([[a, b], [c, d]])
         assert t.evaluates_on_edges("primary") is False
 
+    def test_components_property(self):
+        """Accessing the components property returns nested structure."""
+        a, b = pybamm.Scalar(1), pybamm.Scalar(2)
+        t = TensorField([a, b])
+        assert t.components == [a, b]
+
+    def test_rank1_tuple_index(self):
+        """Rank-1 tensor accepts single-element tuple index."""
+        a, b = pybamm.Scalar(1), pybamm.Scalar(2)
+        t = TensorField([a, b])
+        assert t[(0,)] == a
+
+    def test_rank1_too_many_indices_raises(self):
+        """Rank-1 tensor raises for multi-element tuple index."""
+        a, b = pybamm.Scalar(1), pybamm.Scalar(2)
+        t = TensorField([a, b])
+        with pytest.raises(IndexError, match="Too many indices for rank-1"):
+            t[(0, 1)]
+
+    def test_rank2_single_element_tuple_returns_row(self):
+        """Rank-2 tensor with single-element tuple returns row."""
+        a, b, c, d = [pybamm.Scalar(i) for i in range(4)]
+        t = TensorField([[a, b], [c, d]])
+        assert t[(0,)] == [a, b]
+
+    def test_rank2_too_many_indices_raises(self):
+        """Rank-2 tensor raises for 3+ element tuple index."""
+        a, b, c, d = [pybamm.Scalar(i) for i in range(4)]
+        t = TensorField([[a, b], [c, d]])
+        with pytest.raises(IndexError, match="Too many indices for rank-2"):
+            t[(0, 1, 2)]
+
+    def test_rank2_evaluates_on_edges_all_true(self):
+        """Rank-2 evaluates_on_edges returns True when all components are on edges."""
+        a, b, c, d = [pybamm.Scalar(i) for i in range(4)]
+        t = TensorField([[a, b], [c, d]])
+        for child in t.children:
+            child._evaluates_on_edges = lambda _: True
+        assert t.evaluates_on_edges("primary") is True
+
 
 class TestVectorFieldInheritance:
     """Tests for VectorField inheriting from TensorField."""
@@ -155,6 +195,43 @@ class TestVectorFieldInheritance:
 
         with pytest.raises(ValueError, match="same domain"):
             pybamm.VectorField(a, b)
+
+    def test_vectorfield_requires_two_components(self):
+        """VectorField with fewer than 2 components raises."""
+        with pytest.raises(ValueError, match="requires at least 2 components"):
+            pybamm.VectorField(pybamm.Scalar(1))
+
+    def test_vectorfield_fb_field_three_components(self):
+        """fb_field returns 3rd component for 3-component VectorField."""
+        a, b, c = pybamm.Scalar(1), pybamm.Scalar(2), pybamm.Scalar(3)
+        vf = pybamm.VectorField(a, b, c)
+        assert vf.fb_field == c
+        assert vf.n_components == 3
+
+    def test_vectorfield_fb_field_raises_when_missing(self):
+        """fb_field on 2-component VectorField raises AttributeError."""
+        vf = pybamm.VectorField(pybamm.Scalar(1), pybamm.Scalar(2))
+        with pytest.raises(AttributeError, match="fb_field requires at least 3"):
+            _ = vf.fb_field
+
+    def test_vectorfield_evaluates_on_edges_all_true(self):
+        """VectorField evaluates_on_edges returns True when all on edges."""
+        vf = pybamm.VectorField(pybamm.Scalar(1), pybamm.Scalar(2))
+        vf.lr_field._evaluates_on_edges = lambda _: True
+        vf.tb_field._evaluates_on_edges = lambda _: True
+        assert vf.evaluates_on_edges("primary") is True
+
+    def test_vectorfield_to_casadi(self):
+        """VectorField _to_casadi concatenates components via vertcat."""
+        import casadi
+
+        a, b = pybamm.Scalar(1.0), pybamm.Scalar(2.0)
+        vf = pybamm.VectorField(a, b)
+        mx = vf.to_casadi()
+        assert isinstance(mx, casadi.MX)
+        f = casadi.Function("f", [], [mx])
+        out = f.call([])
+        np.testing.assert_array_equal(np.array(out[0]).flatten(), [1.0, 2.0])
 
 
 class TestTensorProduct:

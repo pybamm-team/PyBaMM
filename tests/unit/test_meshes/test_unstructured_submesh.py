@@ -199,6 +199,174 @@ class TestUnstructuredSubMesh:
         assert "my_boundary" in mesh.boundary_faces
         np.testing.assert_array_equal(mesh.boundary_faces["my_boundary"], [3, 4])
 
+    def test_unsupported_element_raises(self):
+        """2D cell with 5 verts, or 3D cell with 5 verts, should raise."""
+        nodes = np.array([[0, 0], [1, 0], [1, 1], [0, 1], [0.5, 0.5]], dtype=float)
+        elements = np.array([[0, 1, 2, 3, 4]], dtype=int)
+        import pytest
+
+        with pytest.raises(ValueError, match="Unsupported"):
+            UnstructuredSubMesh(nodes, elements)
+
+    def test_2d_quad_mesh_basic(self):
+        """Quadrilateral element type: geometry and connectivity."""
+        nodes = np.array([[0, 0], [1, 0], [1, 1], [0, 1]], dtype=float)
+        elements = np.array([[0, 1, 2, 3]], dtype=int)
+        mesh = UnstructuredSubMesh(nodes, elements)
+
+        assert mesh.element_type == "quad"
+        np.testing.assert_allclose(mesh.cell_volumes, [1.0])
+        # 4 boundary edges, no internal faces
+        assert mesh.n_internal_faces == 0
+        assert mesh._n_boundary_faces == 4
+        # Standard boundary tags should be present
+        assert "left" in mesh.boundary_faces
+        assert "right" in mesh.boundary_faces
+        assert "top" in mesh.boundary_faces
+        assert "bottom" in mesh.boundary_faces
+
+    def test_2d_quad_grid_two_cells(self):
+        """Two adjacent quads share 1 internal face."""
+        nodes = np.array([[0, 0], [1, 0], [2, 0], [0, 1], [1, 1], [2, 1]], dtype=float)
+        elements = np.array([[0, 1, 4, 3], [1, 2, 5, 4]], dtype=int)
+        mesh = UnstructuredSubMesh(nodes, elements)
+
+        assert mesh.element_type == "quad"
+        assert mesh.n_internal_faces == 1
+        np.testing.assert_allclose(mesh.cell_volumes, [1.0, 1.0])
+
+    def test_3d_hex_mesh_basic(self):
+        """Hexahedron element type: unit-cube volume and 6 boundary faces."""
+        nodes = np.array(
+            [
+                [0, 0, 0],
+                [1, 0, 0],
+                [1, 1, 0],
+                [0, 1, 0],
+                [0, 0, 1],
+                [1, 0, 1],
+                [1, 1, 1],
+                [0, 1, 1],
+            ],
+            dtype=float,
+        )
+        elements = np.array([[0, 1, 2, 3, 4, 5, 6, 7]], dtype=int)
+        mesh = UnstructuredSubMesh(nodes, elements)
+
+        assert mesh.element_type == "hexahedron"
+        np.testing.assert_allclose(mesh.cell_volumes, [1.0])
+        assert mesh.n_internal_faces == 0
+        assert mesh._n_boundary_faces == 6
+        np.testing.assert_allclose(mesh.face_areas, np.ones(6))
+
+    def test_2d_boundary_loops(self):
+        """boundary_loops returns a matplotlib Path around the outer edge."""
+        nodes, elements = _unit_square_two_triangles()
+        mesh = UnstructuredSubMesh(nodes, elements)
+
+        paths = mesh.boundary_loops()
+        assert paths is not None
+        assert len(paths) >= 1
+        # Outer loop should contain the centre of the unit square
+        assert paths[0].contains_point((0.5, 0.5))
+        assert not paths[0].contains_point((-0.5, 0.5))
+
+    def test_3d_boundary_loops_returns_none(self):
+        """boundary_loops is 2D-only; 3D mesh returns None."""
+        nodes, elements = _unit_cube_five_tets()
+        mesh = UnstructuredSubMesh(nodes, elements)
+        assert mesh.boundary_loops() is None
+
+    def test_contains_points_3d_unit_cube(self):
+        nodes, elements = _unit_cube_five_tets()
+        mesh = UnstructuredSubMesh(nodes, elements)
+
+        inside = np.array([[0.5, 0.5, 0.5]])
+        outside = np.array([[2.0, 2.0, 2.0]])
+        assert mesh.contains_points_3d(inside)[0]
+        assert not mesh.contains_points_3d(outside)[0]
+
+    def test_contains_points_3d_hex_mesh(self):
+        """contains_points_3d on a hex mesh exercises the quad-face branch."""
+        nodes = np.array(
+            [
+                [0, 0, 0],
+                [1, 0, 0],
+                [1, 1, 0],
+                [0, 1, 0],
+                [0, 0, 1],
+                [1, 0, 1],
+                [1, 1, 1],
+                [0, 1, 1],
+            ],
+            dtype=float,
+        )
+        elements = np.array([[0, 1, 2, 3, 4, 5, 6, 7]], dtype=int)
+        mesh = UnstructuredSubMesh(nodes, elements)
+
+        assert mesh.contains_points_3d(np.array([[0.5, 0.5, 0.5]]))[0]
+        assert not mesh.contains_points_3d(np.array([[2.0, 2.0, 2.0]]))[0]
+
+    def test_optimize_ordering_single_cell_noop(self):
+        """optimize_ordering with 1 cell returns without permuting."""
+        nodes = np.array([[0, 0], [1, 0], [0, 1]], dtype=float)
+        elements = np.array([[0, 1, 2]], dtype=int)
+        mesh = UnstructuredSubMesh(nodes, elements)
+        mesh.optimize_ordering()
+        assert mesh.npts == 1
+
+    def test_generator_wrong_dimension_raises(self):
+        """UnstructuredMeshGenerator rejects non-2D/3D lims."""
+        import pytest
+
+        gen = UnstructuredMeshGenerator()
+        x = pybamm.SpatialVariable("x_n", domain=["negative electrode"])
+        lims = {x: {"min": 0.0, "max": 1.0}}
+        with pytest.raises(ValueError, match="supports 2D and 3D"):
+            gen(lims, {"x_n": 3})
+
+    def test_generator_unknown_element_type_raises(self):
+        """UnstructuredMeshGenerator rejects bogus element_type."""
+        import pytest
+
+        gen = UnstructuredMeshGenerator(element_type="pentagon")
+        x = pybamm.SpatialVariable("x_n", domain=["negative electrode"])
+        z = pybamm.SpatialVariable(
+            "z_2d",
+            domain=["negative electrode"],
+            direction="tb",
+        )
+        lims = {x: {"min": 0.0, "max": 1.0}, z: {"min": 0.0, "max": 1.0}}
+        with pytest.raises(ValueError, match="Unsupported 2D element_type"):
+            gen(lims, {"x_n": 2, "z_2d": 2})
+
+    def test_generator_quad_element_type(self):
+        """Generator with element_type='quad' produces quad submesh."""
+        gen = UnstructuredMeshGenerator(element_type="quad")
+        x = pybamm.SpatialVariable("x_n", domain=["negative electrode"])
+        z = pybamm.SpatialVariable(
+            "z_2d",
+            domain=["negative electrode"],
+            direction="tb",
+        )
+        lims = {x: {"min": 0.0, "max": 1.0}, z: {"min": 0.0, "max": 1.0}}
+        sub = gen(lims, {"x_n": 2, "z_2d": 2})
+        assert sub.element_type == "quad"
+        assert sub.npts == 4
+
+    def test_generator_parse_lims_with_string_var(self):
+        """_parse_lims accepts string variable names and skips 'tabs'."""
+        gen = UnstructuredMeshGenerator()
+        spatial_vars, spatial_lims = gen._parse_lims(
+            {
+                "r_n": {"min": 0.0, "max": 1.0},
+                "r_p": {"min": 0.0, "max": 1.0},
+                "tabs": {},
+            }
+        )
+        assert len(spatial_vars) == 2
+        assert len(spatial_lims) == 2
+
 
 # ======================================================================
 # TestUnstructuredMeshGenerator
