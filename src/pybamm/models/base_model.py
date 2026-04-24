@@ -1495,11 +1495,16 @@ class BaseModel:
         equations = []
         for _target_slice, target_var, from_var, from_slice in entries:
             if from_var is None:
-                # Keep the target-model initial condition for unmapped variables
-                physical = (
-                    target_var.reference
-                    + target_var.scale * self.initial_conditions[target_var]
-                )
+                # If the variable is not a state variable of the previous model,
+                # query it by name. See #5449 for more details
+                try:
+                    physical = from_model.get_processed_variable(target_var.name)
+                except KeyError as e:
+                    raise pybamm.ModelError(
+                        f"Cannot build initial state mapper: variable "
+                        f"'{target_var.name}' is not a state in the previous "
+                        f"model and has no matching named variable to reuse."
+                    ) from e
             else:
                 physical = from_var.reference + from_var.scale * pybamm.StateVector(
                     from_slice
@@ -1798,18 +1803,24 @@ class BaseModel:
         # Set up inputs
         inputs_stacked = casadi.vertcat(*[p for p in inputs.values()])
 
+        # Shared cache so that subgraph nodes (state vectors, time, inputs) that
+        # appear in multiple expressions are only converted once.
+        casadi_cache = {}
+
         # Convert initial conditions to casadi form
         y0 = self.concatenated_initial_conditions.to_casadi(
-            t_casadi, y_casadi, inputs=inputs
+            t_casadi, y_casadi, inputs=inputs, casadi_symbols=casadi_cache
         )
         x0 = y0[: self.concatenated_rhs.size]
         z0 = y0[self.concatenated_rhs.size :]
 
         # Convert rhs and algebraic to casadi form and calculate jacobians
-        rhs = self.concatenated_rhs.to_casadi(t_casadi, y_casadi, inputs=inputs)
+        rhs = self.concatenated_rhs.to_casadi(
+            t_casadi, y_casadi, inputs=inputs, casadi_symbols=casadi_cache
+        )
         jac_rhs = casadi.jacobian(rhs, y_casadi)
         algebraic = self.concatenated_algebraic.to_casadi(
-            t_casadi, y_casadi, inputs=inputs
+            t_casadi, y_casadi, inputs=inputs, casadi_symbols=casadi_cache
         )
         jac_algebraic = casadi.jacobian(algebraic, y_casadi)
 
@@ -1817,7 +1828,9 @@ class BaseModel:
         variables = OrderedDict()
         for name in variable_names:
             var = self.get_processed_variable(name)
-            variables[name] = var.to_casadi(t_casadi, y_casadi, inputs=inputs)
+            variables[name] = var.to_casadi(
+                t_casadi, y_casadi, inputs=inputs, casadi_symbols=casadi_cache
+            )
 
         casadi_dict = {
             "t": t_casadi,

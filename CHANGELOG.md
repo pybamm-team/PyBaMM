@@ -1,12 +1,36 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+# [v26.4.1](https://github.com/pybamm-team/PyBaMM/tree/v26.4.1) - 2026-04-24
+
+## Bug fixes
+
+- Fixed overly-aggressive removal of solver step caches. ([#5458](https://github.com/pybamm-team/PyBaMM/pull/5458))
+
+# [v26.4.0](https://github.com/pybamm-team/PyBaMM/tree/v26.4.0) - 2026-04-22
+
 ## Features
 
+- Improved the codegen performance of averaging over spatial domains. ([#5448](https://github.com/pybamm-team/PyBaMM/pull/5448))
+- Added ahead-of-time CasADi compilation to `IDAKLUSolver` via the `"compile": True` option. ([#5448](https://github.com/pybamm-team/PyBaMM/pull/5448))
+- Adds EIS support via `EISSimulation` class with a restructure to the `Solution` class to support `EISSolution`. Includes examples and citation, with a ~5x solve improvement over pybamm-eis. ([#5433](https://github.com/pybamm-team/PyBaMM/pull/5433))
+- Refactors `Simulation` class into an inherited class from a `BaseSimulation`. `BaseSimulation` is used for all non-experiment based simulations, with the `Simulation` class adding experiment support. Includes a small code cleanup. ([#5430](https://github.com/pybamm-team/PyBaMM/pull/5430))
+- Improved pchip interpolation performance. ([#5436](https://github.com/pybamm-team/PyBaMM/pull/5436))
+- Refactored CasADi codegen conversion to use OOP dispatch. ([#5436](https://github.com/pybamm-team/PyBaMM/pull/5436))
 - Added a unified experiment-model path that reuses a single built model and solver across compatible experiment steps. ([#5422](https://github.com/pybamm-team/PyBaMM/pull/5422))
 
 ## Bug fixes
 
-## Breaking changes
+- Retry `CasadiAlgebraicSolver` when it terminates early due to `step_tol`. ([#5457](https://github.com/pybamm-team/PyBaMM/pull/5457))
+- Fixed `DomainError` when combining hysteresis, MSMR, or single open-circuit potential submodels with `"particle size": "distribution"` and a non-isothermal `thermal` option. The `equilibrium open-circuit potential [V]` and `OCP hysteresis [V]` variables are now correctly placed on the electrode domain (with parallel `... distribution [V]` variables for the size-resolved versions). ([#5451](https://github.com/pybamm-team/PyBaMM/pull/5451))
+- Fixed termination hashes causing duplicate experiment steps to be built. ([#5453](https://github.com/pybamm-team/PyBaMM/pull/5453))
+- Fixed a regression causing inaccurate initial guesses at experiment step transitions. ([#5452](https://github.com/pybamm-team/PyBaMM/pull/5452))
+
+# [v26.3.1](https://github.com/pybamm-team/PyBaMM/tree/v26.3.1) - 2026-04-10
+
+## Bug fixes
+
+- Fixed `load_custom_model` raising `ImportError` when the saved base class lives in a package not installed in the loading environment. The loader now falls back to `pybamm.BaseModel` with a warning. ([#5441](https://github.com/pybamm-team/PyBaMM/pull/5441))
+- Fixed serialisation bug in 2D finite volume discretisation. ([#5434](https://github.com/pybamm-team/PyBaMM/pull/5434))
 
 # [v26.3.0](https://github.com/pybamm-team/PyBaMM/tree/v26.3.0) - 2026-03-23
 

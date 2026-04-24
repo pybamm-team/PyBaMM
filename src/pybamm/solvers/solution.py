@@ -15,6 +15,7 @@ import pandas as pd
 from scipy.io import savemat
 
 import pybamm
+from pybamm.codegen.compilation import aot_compile
 
 
 class NumpyEncoder(json.JSONEncoder):
@@ -31,7 +32,162 @@ class NumpyEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, obj)  # pragma: no cover
 
 
-class Solution:
+class SolutionBase:
+    """Base class for all PyBaMM solution types (time-series and EIS).
+
+    Subclasses populate ``self._data`` (a :class:`~pybamm.FuzzyDict`) with
+    named data arrays so that ``solution["Variable name"]`` works uniformly
+    across solution types.
+    """
+
+    def __init__(self):
+        self.set_up_time = None
+        self.solve_time = None
+        self._data = pybamm.FuzzyDict()
+
+    def __getitem__(self, key):
+        """Access a variable by name."""
+        return self._data[key]
+
+    @property
+    def data(self):
+        """Dict-like view of all computed variable data."""
+        return self._data
+
+    @property
+    def total_time(self):
+        if self.set_up_time is None or self.solve_time is None:
+            return None
+        return self.set_up_time + self.solve_time
+
+    def save(self, filename):
+        """Save the entire solution using pickle."""
+        with open(filename, "wb") as f:
+            pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
+
+    def get_data_dict(self):
+        """Return solution data as a plain ``dict``.
+
+        Returns
+        -------
+        dict
+            Mapping of variable names to NumPy arrays.
+        """
+        return dict(self._data)
+
+    def save_data(self, filename, to_format="csv", short_names=None):
+        """Save solution data to a file.
+
+        Parameters
+        ----------
+        filename : str
+            The file path to save to.
+        to_format : str, optional
+            Output format: ``"csv"`` (default), ``"json"``, ``"pickle"``
+            or ``"matlab"``.
+        short_names : dict, optional
+            Dictionary of shortened names to use when saving.
+        """
+        data = self.get_data_dict()
+        if short_names:
+            data = {short_names.get(k, k): v for k, v in data.items()}
+
+        if to_format == "csv":
+            import pandas as _pd
+
+            _pd.DataFrame(data).to_csv(filename, index=False)
+        elif to_format == "json":
+            with open(filename, "w") as f:
+                json.dump(data, f, cls=NumpyEncoder)
+        elif to_format == "pickle":
+            with open(filename, "wb") as f:
+                pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
+        elif to_format == "matlab":
+            from scipy.io import savemat as _savemat
+
+            _savemat(filename, data)
+        else:
+            raise ValueError(
+                f"Unrecognised format '{to_format}'. "
+                "Must be 'csv', 'json', 'pickle', or 'matlab'."
+            )
+
+
+class EISSolution(SolutionBase):
+    """Solution for frequency-domain EIS simulations.
+
+    Variables are accessible via dict-style access, e.g.
+    ``solution["Impedance [Ohm]"]``, ``solution["Frequency [Hz]"]``.
+
+    Parameters
+    ----------
+    frequencies : np.ndarray
+        Frequencies in Hz at which impedance was computed.
+    impedance : np.ndarray
+        Complex impedance values at each frequency.
+    """
+
+    def __init__(self, frequencies, impedance):
+        super().__init__()
+        impedance = np.asarray(impedance, dtype=complex)
+        self._data["Frequency [Hz]"] = np.asarray(frequencies)
+        self._data["Impedance [Ohm]"] = impedance
+        self._data["Z_re [Ohm]"] = impedance.real
+        self._data["Z_im [Ohm]"] = impedance.imag
+
+    @property
+    def frequencies(self):
+        """Frequencies in Hz."""
+        return self._data["Frequency [Hz]"]
+
+    @property
+    def impedance(self):
+        """Complex impedance values."""
+        return self._data["Impedance [Ohm]"]
+
+    def get_data_dict(self):
+        """Return EIS data as a plain ``dict`` suitable for export.
+
+        Returns real-valued columns only (frequencies, real and imaginary
+        parts of impedance).  Use ``solution["Impedance [Ohm]"]`` for the
+        complex-valued array.
+        """
+        return {
+            "Frequency [Hz]": self.frequencies,
+            "Z_re [Ohm]": self._data["Z_re [Ohm]"],
+            "Z_im [Ohm]": self._data["Z_im [Ohm]"],
+        }
+
+    def nyquist_plot(self, **kwargs):
+        """Generate a Nyquist plot from the impedance data.
+
+        Parameters
+        ----------
+        **kwargs
+            Keyword arguments forwarded to :func:`pybamm.nyquist_plot`.
+
+        Returns
+        -------
+        fig : matplotlib.figure.Figure or None
+        ax : matplotlib.axes.Axes
+        """
+        from pybamm.plotting.nyquist_plot import nyquist_plot
+
+        return nyquist_plot(self.impedance, **kwargs)
+
+
+_DEFAULT_SOLUTION_OPTIONS = {
+    "compile": False,
+    "cse": True,
+    "inputs_check": False,
+    "is_diff_in": [False, True, False],
+    "is_diff_out": [True],
+    "regularity_check": False,
+    "error_on_fail": False,
+}
+
+
+class Solution(SolutionBase):
     """
     Class containing the solution of, and various attributes associated with, a PyBaMM
     model.
@@ -74,6 +230,14 @@ class Solution:
         Bool to indicate if `all_ys` contains the full state vector, or is empty because
         only requested variables have been returned. True if `output_variables` is used
         with a solver, otherwise False.
+    check_solution: bool
+        Bool to indicate if the solution should be checked for large y values.
+    options: dict, optional
+        Overrides for :meth:`process_casadi_var`. Unspecified keys fall back
+        to ``_DEFAULT_SOLUTION_OPTIONS`` -- the casadi ``Function`` flags and
+        the ``compile`` flag (``True`` = AOT, ``False`` = in-process VM).
+        Solvers should forward the user's selection so observed variables use
+        the same backend as the integration.
 
     """
 
@@ -91,6 +255,7 @@ class Solution:
         all_t_evals=None,
         variables_returned=False,
         check_solution=True,
+        options=None,
     ):
         if not isinstance(all_ts, list):
             all_ts = [all_ts]
@@ -115,7 +280,8 @@ class Solution:
                 all_t_evals = [all_t_evals]
             self._ensure_t_evals(all_ts=all_ts, all_t_evals=all_t_evals)
         self._all_t_evals = all_t_evals
-
+        self._user_options = options or {}
+        self._options = _DEFAULT_SOLUTION_OPTIONS | self._user_options
         self.variables_returned = variables_returned
         self._observable = self._all_models and all(
             model.solution_observable for model in self._all_models
@@ -150,17 +316,13 @@ class Solution:
         self._termination = termination
         self.closest_event_idx = None
 
-        # Initialize times
-        self.set_up_time = None
-        self.solve_time = None
+        super().__init__()
         self.integration_time = None
 
         self._all_inputs_stacked = None
         self._all_inputs_casadi = None
 
-        # initialize empty variable cache and data
         self._variables = {}
-        self._data = pybamm.FuzzyDict()
 
         # Add self as sub-solution for compatibility with ProcessedVariable
         self._sub_solutions = [self]
@@ -402,6 +564,14 @@ class Solution:
             reasons_str = ", ".join(sorted(unique_reasons))
             raise ValueError(f"Solution is not observable: {reasons_str}")
 
+    @property
+    def user_options(self) -> dict:
+        return self._user_options
+
+    @property
+    def options(self) -> dict:
+        return self._options
+
     @cached_property
     def first_state(self):
         """
@@ -435,6 +605,7 @@ class Solution:
             "final time",
             all_sensitivities=sensitivities,
             all_yps=all_yps,
+            options=self.user_options,
         )
         new_sol._all_inputs_stacked = self.all_inputs_stacked[:1]
         new_sol._all_inputs_casadi = self.all_inputs_casadi[:1]
@@ -479,6 +650,7 @@ class Solution:
             self.termination,
             all_sensitivities=sensitivities,
             all_yps=all_yps,
+            options=self.user_options,
         )
         new_sol._all_inputs_stacked = self.all_inputs_stacked[-1:]
         new_sol._all_inputs_casadi = self.all_inputs_casadi[-1:]
@@ -488,10 +660,6 @@ class Solution:
         new_sol.set_up_time = 0
 
         return new_sol
-
-    @property
-    def total_time(self):
-        return self.set_up_time + self.solve_time
 
     @property
     def cycles(self):
@@ -649,6 +817,15 @@ class Solution:
         )
         return var_casadi, var_pybamm, time_integral
 
+    _CASADI_FUNCTION_OPTIONS = [
+        "cse",
+        "inputs_check",
+        "is_diff_in",
+        "is_diff_out",
+        "regularity_check",
+        "error_on_fail",
+    ]
+
     def process_casadi_var(self, var_pybamm, inputs, ys_shape):
         t_MX = casadi.MX.sym("t")
         y_MX = casadi.MX.sym("y", ys_shape[0])
@@ -662,14 +839,7 @@ class Solution:
             offset += n
         var_sym = var_pybamm.to_casadi(t_MX, y_MX, inputs=inputs_MX_dict)
 
-        opts = {
-            "cse": True,
-            "inputs_check": False,
-            "is_diff_in": [False, True, False],
-            "is_diff_out": [True],
-            "regularity_check": False,
-            "error_on_fail": False,
-        }
+        opts = {opt: self.options[opt] for opt in self._CASADI_FUNCTION_OPTIONS}
 
         # Casadi has a bug where it does not correctly handle arrays with
         # zeros padded at the beginning or end. To avoid this, we add and
@@ -684,6 +854,12 @@ class Solution:
             [var_sym],
             opts,
         )
+
+        # Skip the SX expansion on the aot path: it only exists to give the
+        # vm interpreter a faster bytecode form, and compiled code doesn't
+        # need it.
+        if self._options["compile"]:
+            return aot_compile(var_casadi)
 
         # Some variables, like interpolants, cannot be expanded
         try:
@@ -734,14 +910,6 @@ class Solution:
             For a list of all possible keyword arguments see :class:`pybamm.QuickPlot`.
         """
         return pybamm.dynamic_plot(self, output_variables=output_variables, **kwargs)
-
-    def save(self, filename):
-        """Save the whole solution using pickle"""
-        # No warning here if len(self.data)==0 as solution can be loaded
-        # and used to process new variables
-
-        with open(filename, "wb") as f:
-            pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
 
     def get_data_dict(self, variables=None, short_names=None, cycles_and_steps=True):
         """
@@ -959,6 +1127,8 @@ class Solution:
                 all_sensitivities[key] + other._all_sensitivities[key]
             )
 
+        options = self.user_options | other.user_options
+
         new_sol = Solution(
             all_ts,
             all_ys,
@@ -971,6 +1141,7 @@ class Solution:
             all_yps=all_yps,
             all_t_evals=all_t_evals,
             variables_returned=other.variables_returned,
+            options=options,
         )
 
         new_sol.closest_event_idx = other.closest_event_idx
@@ -1012,6 +1183,7 @@ class Solution:
             all_yps=self.all_yps,
             all_t_evals=self._all_t_evals,
             variables_returned=self.variables_returned,
+            options=self.user_options,
         )
         new_sol._all_inputs_stacked = self.all_inputs_stacked
         new_sol._all_inputs_casadi = self.all_inputs_casadi
@@ -1075,7 +1247,6 @@ class EmptySolution:
             t = np.array([0])
         elif isinstance(t, numbers.Number):
             t = np.array([t])
-
         self.t = t
 
     def __add__(self, other):
@@ -1136,6 +1307,7 @@ def make_cycle_solution(
         all_yps=sum_sols.all_yps,
         all_t_evals=sum_sols._all_t_evals,
         variables_returned=sum_sols.variables_returned,
+        options=sum_sols.user_options,
     )
 
     if sum_sols.variables_returned:

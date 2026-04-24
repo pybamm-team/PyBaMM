@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import warnings
 from datetime import timedelta
+from numbers import Number
 
 import numpy as np
 
@@ -31,6 +32,9 @@ class Simulation(BaseSimulation):
         ``"unified"``, which requires the shared experiment model path.
     """
 
+    _START_TIME_INPUT = "start time"
+    _INITIAL_TEMPERATURE_INPUT = "Initial temperature [K]"
+    _AMBIENT_TEMPERATURE_INPUT = "Ambient temperature [K]"
     _PADDING_REST_KEY = "Rest for padding"
     _STEP_INDEX_INPUT = "Experiment step index"
     _TERMINATION_TIME = "experiment time limit reached"
@@ -248,9 +252,6 @@ class Simulation(BaseSimulation):
 
         return []
 
-    def _experiment_can_use_unified_model(self):
-        return not self._get_unified_experiment_model_blockers()
-
     def _set_up_unified_experiment_model(self, parameter_values):
         self._experiment_uses_unified_model = True
         self._experiment_step_indices = list(range(1, len(self.experiment.steps) + 1))
@@ -267,7 +268,7 @@ class Simulation(BaseSimulation):
         new_parameter_values = parameter_values.copy()
         # Temperatures may change between steps, so the unified model must read the
         # ambient temperature from step-level inputs instead of baking in one value.
-        new_parameter_values["Ambient temperature [K]"] = "[input]"
+        new_parameter_values[self._AMBIENT_TEMPERATURE_INPUT] = "[input]"
 
         # Build one conditional control residual that selects the active step's
         # control law via the experiment step index input.
@@ -326,39 +327,23 @@ class Simulation(BaseSimulation):
 
     def _build_experiment_step_inputs(
         self,
-        user_inputs,
-        step,
-        start_time,
-        active_step_index=None,
-        include_temperature=True,
+        user_inputs: dict[str, Number],
+        step: pybamm.step.BaseStep,
+        start_time: float,
+        active_step_index: int | None = None,
+        include_temperature: bool = True,
     ):
-        temperature = (
-            step.temperature or self._parameter_values["Ambient temperature [K]"]
-        )
-        if self._experiment_uses_unified_model:
-            return self._build_unified_experiment_inputs(
-                user_inputs,
-                active_step_index,
-                start_time,
-                temperature,
-            )
-        inputs = {
-            **user_inputs,
-            "start time": start_time,
-        }
-        if include_temperature:
-            inputs["Ambient temperature [K]"] = temperature
-        return inputs
+        inputs = user_inputs.copy()
 
-    def _build_unified_experiment_inputs(
-        self, user_inputs, active_step_index, start_time, temperature
-    ):
-        inputs = {
-            **user_inputs,
-            "Ambient temperature [K]": temperature,
-            "start time": start_time,
-            self._STEP_INDEX_INPUT: active_step_index,
-        }
+        inputs[self._START_TIME_INPUT] = start_time
+        if include_temperature:
+            inputs[self._AMBIENT_TEMPERATURE_INPUT] = (
+                step.temperature
+                or self._parameter_values[self._AMBIENT_TEMPERATURE_INPUT]
+            )
+
+        if self._experiment_uses_unified_model:
+            inputs[self._STEP_INDEX_INPUT] = active_step_index
         return inputs
 
     def _get_built_experiment_model(self, step_or_key):
@@ -443,6 +428,37 @@ class Simulation(BaseSimulation):
         step_solution.termination = f"event: {termination_event}"
         return step_solution.termination
 
+    def _check_experiment_input_parameters(
+        self, parameter_values: pybamm.ParameterValues
+    ) -> None:
+        # some parameters are used to control the experiment,
+        # and should not be input parameters
+        symbol_unpacker = pybamm.SymbolUnpacker(pybamm.InputParameter)
+        pv_input_parameters = {
+            ip.name for ip in symbol_unpacker.unpack_parameter_values(parameter_values)
+        }
+        if not pv_input_parameters:
+            return
+
+        check_keys = set(
+            [self._INITIAL_TEMPERATURE_INPUT, self._AMBIENT_TEMPERATURE_INPUT]
+        )
+        for step in self.experiment.steps:
+            if step.is_implicit():
+                check_keys.update(step.get_parameter_values([]).keys())
+            else:
+                check_keys.add("Current function [A]")
+
+        restricted = pv_input_parameters.intersection(check_keys)
+        if restricted:
+            restricted_str = ", ".join(list(restricted))
+            check_keys_str = ", ".join(list(check_keys))
+            raise pybamm.ModelError(
+                f"Cannot use '{restricted_str}' as an input parameter in this experiment. "
+                f"This experiment is controlled via the following parameters: {check_keys_str}. "
+                f"None of these parameters are able to be input parameters."
+            )
+
     def _set_up_and_parameterise_experiment(self, solve_kwargs=None):
         """
         Create and parameterise the models for each step in the experiment.
@@ -452,23 +468,7 @@ class Simulation(BaseSimulation):
         """
         parameter_values = self._parameter_values.copy()
 
-        # some parameters are used to control the experiment,
-        # and should not be input parameters
-        restrict_list = {"Initial temperature [K]", "Ambient temperature [K]"}
-        for step in self.experiment.steps:
-            if step.is_implicit():
-                restrict_list.update(step.get_parameter_values([]).keys())
-            else:
-                restrict_list.update(["Current function [A]"])
-        for key in restrict_list:
-            if key in parameter_values.keys() and isinstance(
-                parameter_values[key], pybamm.InputParameter
-            ):
-                raise pybamm.ModelError(
-                    f"Cannot use '{key}' as an input parameter in this experiment. "
-                    f"This experiment is controlled via the following parameters: {restrict_list}. "
-                    f"None of these parameters are able to be input parameters."
-                )
+        self._check_experiment_input_parameters(parameter_values)
 
         if (
             solve_kwargs is not None
@@ -497,10 +497,10 @@ class Simulation(BaseSimulation):
         # the first.
         init_temp = self.experiment.steps[0].temperature
         if init_temp is not None:
-            parameter_values["Initial temperature [K]"] = init_temp
+            parameter_values[self._INITIAL_TEMPERATURE_INPUT] = init_temp
 
-        blockers = self._get_unified_experiment_model_blockers()
         if self._experiment_model_mode == "unified":
+            blockers = self._get_unified_experiment_model_blockers()
             if blockers:
                 raise pybamm.ModelError(
                     "Cannot build a unified experiment model: "
@@ -532,7 +532,7 @@ class Simulation(BaseSimulation):
             rest_step = pybamm.step.Rest(duration=1)
             # Change ambient temperature to be an input,
             # which will be changed at solve time
-            parameter_values["Ambient temperature [K]"] = "[input]"
+            parameter_values[self._AMBIENT_TEMPERATURE_INPUT] = "[input]"
             new_model = rest_step.process_model(
                 self._model,
                 parameter_values,
@@ -548,15 +548,6 @@ class Simulation(BaseSimulation):
         elif self.steps_to_built_models is not None:
             models.extend(self.steps_to_built_models.values())
         return models
-
-    def _recompute_initial_conditions(self):
-        super()._recompute_initial_conditions()
-        # Also clear per-step solver caches so they re-process the updated models
-        if self.steps_to_built_solvers is not None:
-            for solver in self.steps_to_built_solvers.values():
-                solver._model_set_up = {}
-        if self._built_experiment_solver is not None:
-            self._built_experiment_solver._model_set_up = {}
 
     def _build_experiment_state_mappers(self, inputs: dict):
         self.model_state_mappers = {}

@@ -4,6 +4,8 @@ VectorField class - a rank-1 tensor field with N components.
 
 from __future__ import annotations
 
+import casadi
+
 import pybamm
 from pybamm.expression_tree.tensor_field import TensorField
 
@@ -76,6 +78,15 @@ class VectorField(TensorField):
                 for c in self._components
             ]
         return VectorField(*new_children)
+
+    def _to_casadi(self, t, y, y_dot, inputs, casadi_symbols):
+        """See :meth:`pybamm.Symbol._to_casadi()`."""
+        return casadi.vertcat(
+            *[
+                c._to_casadi_inner(t, y, y_dot, inputs, casadi_symbols)
+                for c in self._components
+            ]
+        )
 
     def evaluates_on_edges(self, dimension: str) -> bool:
         statuses = [c.evaluates_on_edges(dimension) for c in self._components]

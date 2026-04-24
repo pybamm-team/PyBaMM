@@ -1,3 +1,4 @@
+import casadi
 import numpy as np
 import pytest
 
@@ -52,3 +53,60 @@ class TestSimulationPickleRoundtrip:
                 np.testing.assert_array_equal(
                     sol_orig.yp, sol_loaded.yp, err_msg=f"{tag} sol.yp mismatch"
                 )
+
+
+class TestSimulationConsistentState:
+    def test_cv_initial_guess_uses_previous_current(self):
+        charge_current = 15.0
+        experiment = pybamm.Experiment(
+            [
+                (
+                    f"Charge at {charge_current}A until 4.2 V",
+                    "Hold at 4.2 V for 2 seconds",
+                )
+            ]
+        )
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.DFN(),
+            parameter_values=pybamm.ParameterValues("Chen2020"),
+            experiment=experiment,
+        )
+        sol = sim.solve(initial_soc=0.05)
+
+        # The mapper only runs when the two steps build distinct models.
+        cc_step, cv_step = sim.experiment.steps
+        cc_model = sim.steps_to_built_models[cc_step.basic_repr()]
+        cv_model = sim.steps_to_built_models[cv_step.basic_repr()]
+        assert cc_model is not cv_model
+
+        cc_solution = sol.cycles[0].steps[0]
+
+        # Replay BaseSolver.step's mapper invocation exactly: pull the
+        # compiled (func, jac_y, jac_p) tuple, build the CV step's input
+        # vector through the same code path, and call the func on the CC
+        # step's last raw state vector.
+        mapper_func, _, _ = sim._compiled_model_state_mappers[(cc_model, cv_model)]
+        cv_inputs_dict = sim._build_experiment_step_inputs(
+            {},
+            cv_step,
+            float(cc_solution.t[-1]),
+            None,
+            include_temperature=False,
+        )
+        cv_solver = sim._get_built_experiment_solver(cv_step)
+        model_inputs = cv_solver._set_up_model_inputs(cv_model, cv_inputs_dict)
+        p_vec = casadi.vertcat(*model_inputs.values())
+        y_from = cc_solution.last_state.all_ys[0]
+        seed = np.asarray(mapper_func(float(cc_solution.t[-1]), y_from, p_vec)).ravel()
+
+        # Decode the CV model's "Current variable [A]" entry from the seed.
+        current_var = next(
+            v for v in cv_model.y_slices if v.name == "Current variable [A]"
+        )
+        current_slice = cv_model.y_slices[current_var][0]
+        seed_current_scaled = float(seed[current_slice][0])
+        seed_current_phys = float(current_var.reference.evaluate()) + (
+            float(current_var.scale.evaluate()) * seed_current_scaled
+        )
+
+        assert seed_current_phys == pytest.approx(-charge_current, rel=1e-9)

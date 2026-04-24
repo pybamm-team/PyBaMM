@@ -60,7 +60,6 @@ from .expression_tree.operations.evaluate_python import EvaluatorJax
 from .expression_tree.operations.evaluate_python import JaxCooMatrix
 
 from .expression_tree.operations.jacobian import Jacobian
-from .expression_tree.operations.convert_to_casadi import CasadiConverter
 from .expression_tree.operations.unpack_symbols import SymbolUnpacker
 from .expression_tree.operations.serialise import Serialise,ExpressionFunctionParameter
 from .expression_tree.operations.regularise import RegulariseSqrtAndPower
@@ -184,7 +183,13 @@ from .spatial_methods.scikit_finite_element_3d import ScikitFiniteElement3D
 from .spatial_methods.finite_volume_unstructured import FiniteVolumeUnstructured
 
 # Solver classes
-from .solvers.solution import Solution, EmptySolution, make_cycle_solution
+from .solvers.solution import (
+    SolutionBase,
+    Solution,
+    EISSolution,
+    EmptySolution,
+    make_cycle_solution,
+)
 from .solvers.processed_variable_time_integral import ProcessedVariableTimeIntegral
 from .solvers.processed_variable import ProcessedVariable, ProcessedVariable2DFVM, ProcessedVariableUnstructuredFVM, ProcessedVariableVectorFieldUnstructuredFVM, process_variable
 from .solvers.processed_variable_computed import ProcessedVariableComputed
@@ -220,9 +225,10 @@ from .plotting.dynamic_plot import dynamic_plot
 from .plotting.plot_3d_cross_section import plot_3d_cross_section
 from .plotting.plot_3d_heatmap import plot_3d_heatmap
 from .plotting.plot_vtk import VTKQuickPlot
+from .plotting.nyquist_plot import nyquist_plot
 
 # Simulation
-from .simulation import BaseSimulation, Simulation, load_sim, is_notebook
+from .simulation import BaseSimulation, Simulation, EISSimulation, load_sim, is_notebook
 
 # Batch Study
 from .batch_study import BatchStudy

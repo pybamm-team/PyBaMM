@@ -1,3 +1,5 @@
+import pickle
+
 import numpy as np
 import pytest
 
@@ -1095,6 +1097,30 @@ class TestFiniteVolume2D:
         result_complex_neumann = eqn_disc_complex_neumann.evaluate(None, test_y)
         assert result_complex_neumann is not None
         assert result_complex_neumann.shape[0] == submesh.npts
+
+    def test_discretised_grad_is_picklable(self, mesh_2d):
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        mesh = mesh_2d
+        disc = pybamm.Discretisation(mesh, {"macroscale": pybamm.FiniteVolume2D()})
+        submesh = mesh[whole_cell]
+
+        var = pybamm.Variable("var", domain=whole_cell)
+        disc.set_variable_slices([var])
+        disc.bcs = {
+            var: {
+                "left": (pybamm.Scalar(0), "Dirichlet"),
+                "right": (pybamm.Scalar(1), "Dirichlet"),
+                "top": (pybamm.Scalar(0), "Neumann"),
+                "bottom": (pybamm.Scalar(0), "Neumann"),
+            }
+        }
+        grad_disc = disc.process_symbol(pybamm.grad(var))
+
+        y = np.ones(submesh.npts)
+        expected = grad_disc.lr_field.evaluate(None, y)
+
+        roundtripped = pickle.loads(pickle.dumps(grad_disc))
+        np.testing.assert_array_equal(roundtripped.lr_field.evaluate(None, y), expected)
 
     def test_delta_function(self, mesh_2d):
         # Create discretisation
