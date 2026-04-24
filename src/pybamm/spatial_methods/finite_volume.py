@@ -241,6 +241,54 @@ class FiniteVolume(pybamm.SpatialMethod):
         )
         return matrix
 
+    def gradient_squared(self, symbol, discretised_symbol, boundary_conditions):
+        """
+        Computes the square of the gradient of a symbol.
+
+        Parameters
+        ----------
+        symbol : :class:`pybamm.Symbol`
+            The symbol to compute the square of the gradient for.
+        discretised_symbol : :class:`pybamm.Vector`
+            The discretised variable to compute the square of the gradient for.
+        boundary_conditions : dict
+            Boundary conditions for the symbol.
+
+        Returns
+        -------
+        float
+            The gradient squared of the symbol.
+        """
+        domain = symbol.domain
+
+        if symbol in boundary_conditions:
+            bcs = boundary_conditions[symbol]
+            if any(bc[1] == "Dirichlet" for bc in bcs.values()):
+                discretised_symbol, domain = self.add_ghost_nodes(
+                    symbol, discretised_symbol, bcs
+                )
+            elif any(bc[1] == "Neumann" for bc in bcs.values()):
+                # Neumann boundary conditions will be applied after computing the gradient squared
+                pass
+
+        gradient_matrix = self.gradient_matrix(domain, symbol.domains)
+
+        # Compute gradient squared matrix: (∇u)^2 = u^T (L^T L) u
+        gradient_squared_matrix = gradient_matrix.T @ gradient_matrix
+        gradient_squared_result = (
+            discretised_symbol.T @ gradient_squared_matrix @ discretised_symbol
+        )
+
+        # Add Neumann boundary conditions if defined
+        if symbol in boundary_conditions and any(
+            bc[1] == "Neumann" for bc in bcs.values()
+        ):
+            gradient_squared_result = self.add_neumann_values(
+                symbol, gradient_squared_result, bcs, domain
+            )
+
+        return gradient_squared_result.item()
+
     def divergence(self, symbol, discretised_symbol, boundary_conditions):
         """Matrix-vector multiplication to implement the divergence operator.
         See :meth:`pybamm.SpatialMethod.divergence`
