@@ -18,6 +18,8 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    exclude-paths:
+      - "LICENSE.txt"
     groups:
       python-dependencies:
         patterns:
