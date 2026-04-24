@@ -25,7 +25,7 @@ For a high-level introduction to PyBaMM, see the :ref:`user guide <user_guide>` 
    solvers/index
    codegen/index
    experiment/index
-   simulation
+   simulation/index
    plotting/index
    util
    callbacks
