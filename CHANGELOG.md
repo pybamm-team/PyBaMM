@@ -4,6 +4,8 @@
 
 ## Features
 
+- Improved performance of composite particle models. ([#5439](https://github.com/pybamm-team/PyBaMM/pull/5439))
+- Added `get_jacobian_sparsity()` and `spy()` methods to `IDAKLUSolver` for inspecting Jacobian structure. ([#5439](https://github.com/pybamm-team/PyBaMM/pull/5439))
 - Improved the codegen performance of averaging over spatial domains. ([#5448](https://github.com/pybamm-team/PyBaMM/pull/5448))
 - Added ahead-of-time CasADi compilation to `IDAKLUSolver` via the `"compile": True` option. ([#5448](https://github.com/pybamm-team/PyBaMM/pull/5448))
 - Adds EIS support via `EISSimulation` class with a restructure to the `Solution` class to support `EISSolution`. Includes examples and citation, with a ~5x solve improvement over pybamm-eis. ([#5433](https://github.com/pybamm-team/PyBaMM/pull/5433))
