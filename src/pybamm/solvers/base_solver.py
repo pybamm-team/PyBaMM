@@ -29,10 +29,10 @@ class BaseSolver:
         The absolute tolerance for the solver (default is 1e-6).
     root_method : str or pybamm algebraic solver class, optional
         The method to use to find initial conditions (for DAE solvers).
-        If a solver class, must be an algebraic solver class.
-        If "casadi",
-        the solver uses casadi's Newton rootfinding algorithm to find initial
-        conditions. Otherwise, the solver uses 'scipy.optimize.root' with method
+        Default is "nonlinear_solver", which uses a custom Newton solver for consistent
+        initial conditions (recommended). If "casadi", the solver uses
+        casadi's Newton rootfinding algorithm as a fallback.
+        Otherwise, the solver uses 'scipy.optimize.root' with method
         specified by 'root_method' (e.g. "lm", "hybr", ...)
     root_tol : float, optional
         The tolerance for the initial-condition solver (default is 1e-6).
@@ -65,11 +65,13 @@ class BaseSolver:
         self.rtol = rtol
         self.atol = atol
         self.root_tol = root_tol
+        # Set ``on_failure`` before ``root_method`` so the setter can propagate
+        # the parent's failure policy down to the constructed root solver.
+        self.on_failure = on_failure or "error"
         self.root_method = root_method
         self.extrap_tol = extrap_tol or -1e-10
         self.output_variables = [] if output_variables is None else output_variables
         self.on_extrapolation = on_extrapolation or "warn"
-        self.on_failure = on_failure or "error"
         self._model_set_up = {}
 
         # Defaults, can be overwritten by specific solver
@@ -150,6 +152,10 @@ class BaseSolver:
         if value not in ["warn", "error", "ignore"]:
             raise ValueError("on_failure must be 'warn', 'error', or 'ignore'")
         self._on_failure = value
+        # Keep root solver's failure policy in sync with the parent's
+        root = getattr(self, "_root_method", None)
+        if isinstance(root, pybamm.BaseSolver) and hasattr(root, "on_failure"):
+            root.on_failure = value
 
     @property
     def root_method(self):
@@ -157,7 +163,16 @@ class BaseSolver:
 
     @root_method.setter
     def root_method(self, method):
-        if method == "casadi":
+        if method == "nonlinear_solver":
+            # Match CasadiAlgebraicSolver behaviour: pure absolute tolerance on
+            # the residual. ``self.atol`` is the integrator atol (often looser
+            # than ``self.root_tol``); take the tighter of the two. Propagate
+            # ``on_failure`` so the IC solver respects the parent's policy.
+            atol = min(self.root_tol, self.atol)
+            method = pybamm.NonlinearSolver(
+                atol=atol, rtol=0, on_failure=self.on_failure
+            )
+        elif method == "casadi":
             method = pybamm.CasadiAlgebraicSolver(self.root_tol)
         elif isinstance(method, str):
             method = pybamm.AlgebraicSolver(method, self.root_tol)
@@ -294,7 +309,8 @@ class BaseSolver:
         # Save CasADi functions for solvers that use CasADi
         # Note: when we pass to casadi the ode part of the problem must be in
         if isinstance(self.root_method, pybamm.CasadiAlgebraicSolver) or isinstance(
-            self, pybamm.CasadiSolver | pybamm.CasadiAlgebraicSolver
+            self,
+            pybamm.CasadiSolver | pybamm.CasadiAlgebraicSolver,
         ):
             # can use DAE solver to solve model with algebraic equations only
             if len(model.rhs) > 0:
@@ -968,7 +984,7 @@ class BaseSolver:
 
         # Check initial conditions don't violate events
         for y0, inpts in zip(model.y0_list, model_inputs_list, strict=True):
-            self._check_events_with_initialization(t_eval, model, y0, inpts)
+            self._check_event_violation_on_initialisation(t_eval, model, y0, inpts)
 
         # Process discontinuities
         t_eval_info = [
@@ -1066,9 +1082,11 @@ class BaseSolver:
             )
 
         # Raise error if solutions[0] only contains one timestep (except for algebraic
-        # solvers, where we may only expect one time in the solution)
+        # solvers, where we may only expect one time in the solution, or failure
+        # solutions where we may only have the initial state)
         if (
             self._algebraic_solver is False
+            and solutions[0].termination != "failure"
             and len(solutions[0].all_ts) == 1
             and len(solutions[0].all_ts[0]) == 1
         ):
@@ -1153,8 +1171,13 @@ class BaseSolver:
 
         return start_indices, end_indices, t_eval
 
-    @staticmethod
-    def _check_events_with_initialization(t_eval, model, y0, inputs_dict):
+    def _check_event_violation_on_initialisation(self, *args, **kwargs):
+        self._check_event_violation(*args, **kwargs)
+
+    def _check_event_violation_post_solve(self, *args, **kwargs):
+        self._check_event_violation(*args, **kwargs)
+
+    def _check_event_violation(self, t_eval, model, y0, inputs_dict):
         num_terminate_events = len(model.terminate_events_eval)
         if num_terminate_events == 0:
             return
@@ -1459,7 +1482,7 @@ class BaseSolver:
         self._set_consistent_initialization(model, t_start_shifted, [model_inputs])
 
         # Check consistent initialization doesn't violate events
-        self._check_events_with_initialization(t_eval, model, model.y0, model_inputs)
+        self._check_event_violation(t_eval, model, model.y0, model_inputs)
 
         # Step
         pybamm.logger.verbose(f"Stepping for {t_start_shifted:.0f} < t < {t_end:.0f}")

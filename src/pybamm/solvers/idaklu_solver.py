@@ -3,6 +3,7 @@ import logging
 import math
 import numbers
 import warnings
+from enum import IntEnum
 
 import casadi
 import numpy as np
@@ -11,6 +12,13 @@ from scipy.sparse.linalg import spsolve
 
 import pybamm
 from pybamm.codegen.compilation import aot_compile
+
+_UNSET = object()
+
+# Mirrors SUNDIALS ``IDA_ROOT_RETURN`` in ``sundials/include/ida/ida.h``.
+# Returned by ``IDASolve`` (and surfaced via ``Solution.flag``) when the
+# integrator has located one or more root function zeros.
+_IDA_ROOT_RETURN = 2
 
 
 class IDAKLUSolver(pybamm.BaseSolver):
@@ -25,10 +33,10 @@ class IDAKLUSolver(pybamm.BaseSolver):
         The absolute tolerance for the solver (default is 1e-6).
     root_method : str or pybamm algebraic solver class, optional
         The method to use to find initial conditions (for DAE solvers).
-        If a solver class, must be an algebraic solver class.
-        If "casadi",
-        the solver uses casadi's Newton rootfinding algorithm to find initial
-        conditions. Otherwise, the solver uses 'scipy.optimize.root' with method
+        Default is None, which uses a custom Newton solver for consistent
+        initial conditions (recommended). If "casadi", the solver uses
+        casadi's Newton rootfinding algorithm as a fallback.
+        Otherwise, the solver uses 'scipy.optimize.root' with method
         specified by 'root_method' (e.g. "lm", "hybr", ...)
     root_tol : float, optional
         The tolerance for the initial-condition solver (default is 1e-6).
@@ -142,15 +150,24 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 "max_num_iterations_ic": 100,
                 # Maximum number of linesearch backtracks allowed in any Newton iteration,
                 # when solving the initial conditions calculation problem
-                "max_linesearch_backtracks_ic": 100,
+                "max_linesearch_backtracks_ic": 5,
                 # Turn off linesearch
                 "linesearch_off_ic": False,
                 # How to calculate the initial conditions.
                 # "True": calculate all y0 given ydot0
                 # "False": calculate y_alg0 and ydot_diff0 given y_diff0
                 "init_all_y_ic": False,
-                # Calculate consistent initial conditions
+                # Internally calculate consistent initial conditions
                 "calc_ic": True,
+                ## Newton IC solver
+                # "auto": use dedicated sub-block solver when possible.
+                #         This can result in a potentially smaller system of only the
+                #         algebraic variables. Requires a direct linear solver and
+                #         a standard form DAE.
+                # "full": always use IDA's full-system linear solve. This uses the full
+                #         system of equationd and can handle non-standard form DAEs and
+                #         all classes of linear solvers/
+                "newton_mode": "auto",
                 ## Early termination
                 # Maximum number of consecutive steps allowed without advancing
                 # the solution time by at least `t_no_progress` seconds.
@@ -167,11 +184,15 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
     """
 
+    class StateID(IntEnum):
+        ALGEBRAIC = 0
+        DIFFERENTIAL = 1
+
     def __init__(
         self,
         rtol=1e-4,
         atol=1e-6,
-        root_method="casadi",
+        root_method=_UNSET,
         root_tol=1e-6,
         extrap_tol=None,
         on_extrapolation=None,
@@ -182,6 +203,12 @@ class IDAKLUSolver(pybamm.BaseSolver):
         self.output_variables = [] if output_variables is None else output_variables
 
         self._options = self._combine_options(options)
+
+        # By default, we use an internal nonlinear solver within pybammsolvers
+        # to compute the initial conditions. As a fallback, we use python bindings
+        # for the same solver
+        if root_method is _UNSET:
+            root_method = None if self._internal_initialisation else "nonlinear_solver"
 
         super().__init__(
             method="ida",
@@ -202,7 +229,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
         pybamm.citations.register("Hindmarsh2005")
 
     def _combine_options(self, user_options: dict | None) -> dict:
-        num_solvers = user_options.get("num_threads", 1) if user_options else 1
+        user_options = user_options or {}
+        num_solvers = user_options.get("num_threads", 1)
+
         default_options = {
             "print_stats": False,
             "compile": False,
@@ -234,10 +263,12 @@ class IDAKLUSolver(pybamm.BaseSolver):
             "max_num_steps_ic": 50,
             "max_num_jacobians_ic": 40,
             "max_num_iterations_ic": 100,
-            "max_linesearch_backtracks_ic": 100,
+            "max_linesearch_backtracks_ic": 5,
             "linesearch_off_ic": False,
             "init_all_y_ic": False,
             "calc_ic": True,
+            "newton_step_tol": 1e-4,
+            "newton_mode": "auto",
             "num_steps_no_progress": 0,
             "t_no_progress": 0.0,
         }
@@ -282,6 +313,11 @@ class IDAKLUSolver(pybamm.BaseSolver):
             )
 
     def set_up(self, model, inputs=None, t_eval=None, ics_only=False):
+        if model.convert_to_format != "casadi":
+            pybamm.logger.warning(
+                f"Converting {model.name} to CasADi for solving with IDAKLUSolver"
+            )
+            model.convert_to_format = "casadi"
         base_set_up_return = super().set_up(model, inputs, t_eval, ics_only)
 
         if isinstance(inputs, list):
@@ -312,10 +348,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 f"Unsupported option for convert_to_format={model.convert_to_format}"
             )
 
-        if self._options["jacobian"] == "dense":
-            mass_matrix = casadi.DM(model.mass_matrix.entries.toarray())
-        else:
-            mass_matrix = casadi.DM(model.mass_matrix.entries)
+        mass_matrix = model.mass_matrix.entries
 
         # construct residuals function by binding inputs
         # TODO: do we need densify here?
@@ -336,13 +369,17 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 p_casadi[name] = casadi.MX.sym(name, value.shape[0])
         p_casadi_stacked = casadi.vertcat(*[p for p in p_casadi.values()])
 
+        jac_times_cjmass_expression = (
+            model.jac_rhs_algebraic_eval(t_casadi, y_casadi, p_casadi_stacked)
+            - cj_casadi * mass_matrix
+        )
+        if self._options["jacobian"] == "dense":
+            jac_times_cjmass_expression = casadi.densify(jac_times_cjmass_expression)
+
         jac_times_cjmass = casadi.Function(
             "jac_times_cjmass",
             [t_casadi, y_casadi, p_casadi_stacked, cj_casadi],
-            [
-                model.jac_rhs_algebraic_eval(t_casadi, y_casadi, p_casadi_stacked)
-                - cj_casadi * mass_matrix
-            ],
+            [jac_times_cjmass_expression],
         )
 
         jac_times_cjmass_sparsity = jac_times_cjmass.sparsity_out(0)
@@ -360,9 +397,19 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         jac_rhs_algebraic_action = model.jac_rhs_algebraic_action_eval
 
+        if model.is_standard_form_dae:
+            # index v_casadi at the first model.len_rhs entries
+            # concatenate it with zeros at the end
+            mass_action_expression = casadi.vertcat(
+                v_casadi[: model.len_rhs],
+                np.zeros(model.len_alg),
+            )
+        else:
+            mass_action_expression = casadi.densify(casadi.DM(mass_matrix) @ v_casadi)
+
         # also need the action of the mass matrix on a vector
         mass_action = casadi.Function(
-            "mass_action", [v_casadi], [casadi.densify(mass_matrix @ v_casadi)]
+            "mass_action", [v_casadi], [mass_action_expression]
         )
 
         num_of_events = len(model.terminate_events_eval)
@@ -382,9 +429,12 @@ class IDAKLUSolver(pybamm.BaseSolver):
         )
 
         # get ids of rhs and algebraic variables
-        rhs_ids = np.ones(model.rhs_eval(0, y0, stacked_inputs).shape[0])
-        alg_ids = np.zeros(len(y0) - len(rhs_ids))
-        ids = np.concatenate((rhs_ids, alg_ids))
+        ids = np.concatenate(
+            (
+                np.full(model.len_rhs, self.StateID.DIFFERENTIAL, dtype=np.int64),
+                np.full(model.len_alg, self.StateID.ALGEBRAIC, dtype=np.int64),
+            )
+        )
 
         if model.jacp_rhs_algebraic_eval is not None:
             sensitivity_names = model.calculate_sensitivities
@@ -404,6 +454,22 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         atol = getattr(model, "atol", self.atol)
         atol = self._check_atol_type(atol, model)
+
+        # Build algebraic-only residual and Jacobian for Newton sub-block mode.
+        # When newton_mode="full", skip these so the C++ solver uses the
+        # full-system IDA linear solve (DECOUPLED_FULL or COUPLED_FULL),
+        # which supports any linear solver including iterative ones.
+        if self._options.get("newton_mode", "auto") == "auto":
+            alg_res_fn = getattr(model, "algebraic_eval", None)
+            jac_alg_fn = getattr(model, "jac_algebraic_eval", None)
+        else:
+            alg_res_fn = None
+            jac_alg_fn = None
+
+        if alg_res_fn is None or not callable(getattr(alg_res_fn, "serialize", None)):
+            alg_res_fn = casadi.Function("empty_alg_res", [], [])
+        if jac_alg_fn is None or not callable(getattr(jac_alg_fn, "serialize", None)):
+            jac_alg_fn = casadi.Function("empty_alg_jac", [], [])
 
         if (
             self._options["hermite_reduction_factor"] > 1.0
@@ -428,6 +494,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
             "mass_action",
             "sensfn",
             "rootfn",
+            "alg_res",
+            "alg_jac",
         ]
         fns = {
             "rhs_algebraic": rhs_algebraic,
@@ -436,6 +504,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
             "mass_action": mass_action,
             "sensfn": sensfn,
             "rootfn": rootfn,
+            "alg_res": alg_res_fn,
+            "alg_jac": jac_alg_fn,
         }
         for key in self.output_variables:
             fns[f"var:{key}"] = self.computed_var_fcns[key]
@@ -521,6 +591,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
             dvar_dy_fcns=self._setup["dvar_dy_idaklu_fcns"],
             dvar_dp_fcns=self._setup["dvar_dp_idaklu_fcns"],
             options=self._options,
+            alg_res=self._setup["alg_res"],
+            alg_jac=self._setup["alg_jac"],
         )
 
     def __getstate__(self):
@@ -539,6 +611,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
             "var_idaklu_fcns",
             "dvar_dy_idaklu_fcns",
             "dvar_dp_idaklu_fcns",
+            "alg_res",
+            "alg_jac",
         ]:
             self._setup.pop(key, None)
         return self.__dict__
@@ -557,6 +631,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
             "mass_action",
             "sensfn",
             "rootfn",
+            "alg_res",
+            "alg_jac",
         ]:
             self._setup[key] = idaklu.generate_function(self._setup[f"{key}_pkl"])
 
@@ -631,6 +707,20 @@ class IDAKLUSolver(pybamm.BaseSolver):
             for soln, inputs_dict in zip(solns, inputs_list, strict=False)
         ]
 
+    @property
+    def _internal_initialisation(self) -> bool:
+        return bool(self._options["calc_ic"])
+
+    def _check_event_violation_on_initialisation(self, *args, **kwargs):
+        if self._internal_initialisation:
+            return
+        return self._check_event_violation(*args, **kwargs)
+
+    def _check_event_violation_post_solve(self, *args, **kwargs):
+        if not self._internal_initialisation:
+            return
+        return self._check_event_violation(*args, **kwargs)
+
     def _post_process_solution(self, sol, model, integration_time, inputs_dict, t_eval):
         number_of_sensitivity_parameters = self._setup[
             "number_of_sensitivity_parameters"
@@ -647,6 +737,13 @@ class IDAKLUSolver(pybamm.BaseSolver):
             y_out = sol.y.reshape((number_of_timesteps, number_of_states))
             y_event = y_out[-1]
 
+        # If there is only one step and an event was found, the event was
+        # triggered at t0 after consistent initialization. y_event is the
+        # post-IC state: sol.y_term (outputs-only) or y_out[-1] (full),
+        # both stored after IC. This check identifies *which* event fired.
+        if number_of_timesteps == 1 and sol.flag == _IDA_ROOT_RETURN:
+            self._check_event_violation_post_solve(t_eval, model, y_event, inputs_dict)
+
         # return sensitivity solution, we need to flatten yS to
         # (#timesteps * #states (where t is changing the quickest),)
         # to match format used by Solution
@@ -661,10 +758,10 @@ class IDAKLUSolver(pybamm.BaseSolver):
         else:
             yS_out = {}
 
-        # 0 = solved for all t_eval
-        # 2 = found root(s)
+        # IDA_SUCCESS (0) = solved for all t_eval
+        # IDA_ROOT_RETURN (2) = found root(s)
         # < 0 = solver failure
-        if sol.flag == 2:
+        if sol.flag == _IDA_ROOT_RETURN:
             termination = "event"
         elif sol.flag >= 0:
             termination = "final time"

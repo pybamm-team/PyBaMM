@@ -25,6 +25,9 @@ class TestBaseSolver:
         assert solver.rtol == 1e-7
 
     def test_root_method_init(self):
+        solver = pybamm.BaseSolver(root_method="nonlinear_solver")
+        assert isinstance(solver.root_method, pybamm.NonlinearSolver)
+
         solver = pybamm.BaseSolver(root_method="casadi")
         assert isinstance(solver.root_method, pybamm.CasadiAlgebraicSolver)
 

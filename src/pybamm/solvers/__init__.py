@@ -8,6 +8,7 @@ __all__ = [
     "dummy_solver",
     "idaklu_jax",
     "idaklu_solver",
+    "nonlinear_solver",
     "jax_bdf_solver",
     "jax_solver",
     "lrudict",

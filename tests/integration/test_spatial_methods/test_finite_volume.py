@@ -313,7 +313,7 @@ def solve_laplace_equation(coord_sys="cartesian"):
     spatial_methods = {"domain": pybamm.FiniteVolume()}
     disc = pybamm.Discretisation(mesh, spatial_methods)
     disc.process_model(model)
-    solver = pybamm.CasadiAlgebraicSolver()
+    solver = pybamm.NonlinearSolver()
     return solver.solve(model)
 
 

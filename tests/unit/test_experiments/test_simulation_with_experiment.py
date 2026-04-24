@@ -864,33 +864,38 @@ class TestSimulationExperiment:
         experiment_2step = pybamm.Experiment(
             [
                 (
-                    "Discharge at C/20 for 1 hour",
-                    "Charge at 1 A until 4.1 V",
-                    "Hold at 4.1 V until C/2",
-                    "Discharge at 2 W for 1 hour",
+                    "Discharge at C/10 for 1 hour",
+                    "Charge at C/20 for 1 hour",
+                    "Hold at 3.7 V for 1 hour",
                 ),
             ]
             * 2,
         )
+        rtol = 1e-6
+        atol = 1e-15
 
         solutions = []
-        for solver in [pybamm.CasadiSolver(), pybamm.IDAKLUSolver()]:
+        for solver in [
+            pybamm.CasadiSolver(atol=atol, rtol=rtol),
+            pybamm.IDAKLUSolver(atol=atol, rtol=rtol),
+        ]:
             model = pybamm.lithium_ion.SPM()
             sim = pybamm.Simulation(model, experiment=experiment_2step, solver=solver)
             solution = sim.solve()
+            assert solution.t[-1] == pytest.approx(3600 * len(experiment_2step.steps))
             solutions.append(solution)
 
         np.testing.assert_allclose(
             solutions[0]["Voltage [V]"].data,
             solutions[1]["Voltage [V]"](solutions[0].t),
-            rtol=1e-2,
-            atol=1e-1,
+            rtol=rtol * 100,
+            atol=atol * 100,
         )
         np.testing.assert_allclose(
             solutions[0]["Current [A]"].data,
             solutions[1]["Current [A]"](solutions[0].t),
-            rtol=1e-0,
-            atol=1e-0,
+            rtol=rtol * 100,
+            atol=atol * 100,
         )
         assert solutions[1].termination == "final time"
 
