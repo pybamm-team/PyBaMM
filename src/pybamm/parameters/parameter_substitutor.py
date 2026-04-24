@@ -543,42 +543,15 @@ class ParameterSubstitutor:
         new_boundary_conditions: dict[
             pybamm.Symbol, dict[str, tuple[pybamm.Symbol, str]]
         ] = {}
-        sides = [
-            "left",
-            "right",
-            "negative tab",
-            "positive tab",
-            "no tab",
-            "top",
-            "bottom",
-            "x_min",
-            "x_max",
-            "y_min",
-            "y_max",
-            "z_min",
-            "z_max",
-            "r_min",
-            "r_max",
-        ]
         for variable, bcs in model.boundary_conditions.items():
             processed_variable = self.process_symbol(variable)
             new_boundary_conditions[processed_variable] = {}
-            for side in sides:
-                try:
-                    bc, typ = bcs[side]
-                    pybamm.logger.verbose(
-                        f"Processing parameters for {variable!r} ({side} bc)"
-                    )
-                    processed_bc = (self.process_symbol(bc), typ)
-                    new_boundary_conditions[processed_variable][side] = processed_bc
-                except KeyError as err:
-                    # don't raise error if the key error comes from the side not being
-                    # found
-                    if err.args[0] in side:
-                        pass
-                    # do raise error otherwise (e.g. can't process symbol)
-                    else:
-                        raise err
+            for side, (bc, typ) in bcs.items():
+                pybamm.logger.verbose(
+                    f"Processing parameters for {variable!r} ({side} bc)"
+                )
+                processed_bc = (self.process_symbol(bc), typ)
+                new_boundary_conditions[processed_variable][side] = processed_bc
 
         return new_boundary_conditions
 
