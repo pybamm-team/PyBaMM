@@ -117,6 +117,11 @@ inline sunrealtype perturb_time(const sunrealtype t, bool increasing) {
   return (SUN_RCONST(1.0) + delta) * t + delta * sign;
 }
 
+// IDA uses id values of 1.0 for differential and 0.0 for algebraic,
+// but numerical errors can make these not exactly 0 or 1
+inline bool is_differential(sunrealtype id) { return id > 0.5; }
+inline bool is_algebraic(sunrealtype id) { return !(is_differential(id)); }
+
 #ifdef NDEBUG
 #define DEBUG_VECTOR(vector)
 #define DEBUG_VECTORn(vector, N)

@@ -29,7 +29,9 @@ public:
     const int n_s,
     const int n_e,
     const int n_p,
-    const SetupOptions& options)
+    const SetupOptions& options,
+    Expression* alg_res = nullptr,
+    Expression* alg_jac = nullptr)
       : number_of_states(n_s),
         number_of_events(n_e),
         number_of_parameters(n_p),
@@ -42,6 +44,8 @@ public:
         mass_action(mass_action),
         sens(sens),
         events(events),
+        alg_res(alg_res),
+        alg_jac(alg_jac),
         tmp_state_vector(number_of_states),
         tmp_sparse_jacobian_data(jac_times_cjmass_nnz),
         setup_opts(options)
@@ -60,6 +64,8 @@ public:
   Expression *mass_action = nullptr;
   Expression *sens = nullptr;
   Expression *events = nullptr;
+  Expression *alg_res = nullptr;
+  Expression *alg_jac = nullptr;
 
   // `cppcheck-suppress unusedStructMember` is used because codacy reports
   // these members as unused, but they are inherited through variadics

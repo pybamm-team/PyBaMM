@@ -47,6 +47,7 @@ class TestPackageStructure:
 
         # Solver classes
         assert hasattr(idaklu_module, "IDAKLUSolverGroup")
+        assert hasattr(idaklu_module, "StandaloneNewtonSolver")
 
         # Core functions
         assert hasattr(idaklu_module, "create_casadi_solver_group")
@@ -65,6 +66,7 @@ class TestPackageStructure:
         assert callable(idaklu_module.VectorSolution)
         assert callable(idaklu_module.VectorRealtypeNdArray)
         assert callable(idaklu_module.IDAKLUSolverGroup)
+        assert callable(idaklu_module.StandaloneNewtonSolver)
         assert callable(idaklu_module.create_casadi_solver_group)
         assert callable(idaklu_module.generate_function)
         assert callable(idaklu_module.create_idaklu_jax)

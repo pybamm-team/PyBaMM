@@ -1,5 +1,6 @@
 #include "CasadiFunctions.hpp"
 #include <casadi/core/sparsity.hpp>
+#include <stdexcept>
 
 namespace {
 
@@ -63,6 +64,10 @@ CasadiFunction::CasadiFunction(
     : Expression(),
       m_func(clone_casadi_function(f, deep_copy, serialized))
 {
+  if (m_func.is_null()) {
+    return;
+  }
+
   DEBUG("CasadiFunction constructor" << (deep_copy ? " (deep copy)" : "") << ": " << m_func.name());
 
   size_t sz_arg;
@@ -87,9 +92,12 @@ CasadiFunction::CasadiFunction(
   }
 }
 
-// only call this once m_arg and m_res have been set appropriately
+// Contract: nnz_out() == 0 means "no function provided; do not call operator()"
 void CasadiFunction::operator()()
 {
+  if (m_func.is_null()) {
+    throw std::runtime_error("Cannot call operator() on a null CasadiFunction");
+  }
   DEBUG("CasadiFunction operator(): " << m_func.name());
   int mem = m_func.checkout();
   m_func(m_arg.data(), m_res.data(), m_iw.data(), m_w.data(), mem);
@@ -97,16 +105,19 @@ void CasadiFunction::operator()()
 }
 
 expr_int CasadiFunction::out_shape(int k) {
+  if (m_func.is_null()) return 0;
   DEBUG("CasadiFunctions out_shape(): " << m_func.name() << " " << m_func.nnz_out());
   return static_cast<expr_int>(m_func.nnz_out());
 }
 
 expr_int CasadiFunction::nnz() {
+  if (m_func.is_null()) return 0;
   DEBUG("CasadiFunction nnz(): " << m_func.name() << " " << static_cast<expr_int>(m_func.nnz_out()));
   return static_cast<expr_int>(m_func.nnz_out());
 }
 
 expr_int CasadiFunction::nnz_out() {
+  if (m_func.is_null()) return 0;
   DEBUG("CasadiFunction nnz_out(): " << m_func.name() << " " << static_cast<expr_int>(m_func.nnz_out()));
   return static_cast<expr_int>(m_func.nnz_out());
 }
@@ -124,6 +135,9 @@ const std::vector<expr_int>& CasadiFunction::get_col() {
 void CasadiFunction::operator()(const std::vector<sunrealtype*>& inputs,
                                 const std::vector<sunrealtype*>& results)
 {
+  if (m_func.is_null()) {
+    throw std::runtime_error("Cannot call operator() on a null CasadiFunction");
+  }
   DEBUG("CasadiFunction operator() with inputs and results: " << m_func.name());
 
   // Set-up input arguments, provide result vector, then execute function

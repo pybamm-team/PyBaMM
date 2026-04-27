@@ -108,7 +108,9 @@ public:
     const std::vector<BaseFunctionType*>& dvar_dy_fcns,
     const std::vector<BaseFunctionType*>& dvar_dp_fcns,
     const SetupOptions& setup_opts,
-    const SerializedCasadiFunctions *serialized_fcns = nullptr
+    const SerializedCasadiFunctions *serialized_fcns = nullptr,
+    const BaseFunctionType &alg_res_fn = BaseFunctionType(),
+    const BaseFunctionType &alg_jac_fn = BaseFunctionType()
   ) :
     rhs_alg_casadi(
       rhs_alg,
@@ -134,6 +136,8 @@ public:
       events,
       setup_opts.num_solvers > 1,
       serialized_fcns != nullptr ? &serialized_fcns->events : nullptr),
+    alg_res_casadi_(alg_res_fn),
+    alg_jac_casadi_(alg_jac_fn),
     ExpressionSet<CasadiFunction>(
       static_cast<Expression*>(&rhs_alg_casadi),
       static_cast<Expression*>(&jac_times_cjmass_casadi),
@@ -148,9 +152,12 @@ public:
       static_cast<Expression*>(&sens_casadi),
       static_cast<Expression*>(&events_casadi),
       n_s, n_e, n_p,
-      setup_opts)
+      setup_opts,
+      nullptr,
+      nullptr)
   {
-    // convert BaseFunctionType list to CasadiFunction list
+    this->alg_res = static_cast<Expression*>(&alg_res_casadi_);
+    this->alg_jac = static_cast<Expression*>(&alg_jac_casadi_);
     // NOTE: You must allocate ALL std::vector elements before taking references
     const bool deep_copy = setup_opts.num_solvers > 1;
     if (serialized_fcns != nullptr) {
@@ -213,6 +220,8 @@ public:
   CasadiFunction mass_action_casadi;
   CasadiFunction sens_casadi;
   CasadiFunction events_casadi;
+  CasadiFunction alg_res_casadi_;
+  CasadiFunction alg_jac_casadi_;
 
   std::vector<CasadiFunction> var_fcns_casadi;
   std::vector<CasadiFunction> dvar_dy_fcns_casadi;

@@ -17,6 +17,7 @@
 #include "idaklu_source/Expressions/Casadi/CasadiFunctions.hpp"
 #include "idaklu_source/sundials_error_handler.hpp"
 #include "idaklu_source/reduce.hpp"
+#include "idaklu_source/StandaloneNewtonSolver.hpp"
 
 
 casadi::Function generate_casadi_function(const std::string &data)
@@ -48,7 +49,9 @@ IDAKLUSolverGroup *create_casadi_solver_group(
   const std::vector<CasadiFunctions::BaseFunctionType*>& var_fcns,
   const std::vector<CasadiFunctions::BaseFunctionType*>& dvar_dy_fcns,
   const std::vector<CasadiFunctions::BaseFunctionType*>& dvar_dp_fcns,
-  py::dict py_opts)
+  py::dict py_opts,
+  const CasadiFunctions::BaseFunctionType &alg_res,
+  const CasadiFunctions::BaseFunctionType &alg_jac)
 {
   auto setup_opts = SetupOptions(py_opts);
   auto solver_opts = SolverOptions(py_opts);
@@ -90,7 +93,9 @@ IDAKLUSolverGroup *create_casadi_solver_group(
       dvar_dy_fcns,
       dvar_dp_fcns,
       setup_opts,
-      serialized_fcns ? &*serialized_fcns : nullptr
+      serialized_fcns ? &*serialized_fcns : nullptr,
+      alg_res,
+      alg_jac
     );
     solvers.emplace_back(
       std::unique_ptr<IDAKLUSolver>(
@@ -165,6 +170,8 @@ PYBIND11_MODULE(idaklu, m)
     py::arg("dvar_dy_fcns"),
     py::arg("dvar_dp_fcns"),
     py::arg("options"),
+    py::arg("alg_res"),
+    py::arg("alg_jac"),
     py::return_value_policy::take_ownership);
 
   m.def("observe", &observe,
@@ -248,6 +255,21 @@ PYBIND11_MODULE(idaklu, m)
     py::arg("rtol"),
     py::arg("hermite_reduction_factor"));
 
+  py::class_<StandaloneNewtonSolver>(m, "StandaloneNewtonSolver")
+    .def(py::init<casadi::Function, casadi::Function,
+                  std::vector<sunrealtype>, sunrealtype, sunrealtype,
+                  int, int, sunrealtype, bool>(),
+         py::arg("residual"), py::arg("jacobian"),
+         py::arg("atol"), py::arg("rtol"), py::arg("step_tol"),
+         py::arg("max_iter"), py::arg("max_backtracks"),
+         py::arg("eps_newt"), py::arg("use_sparse"))
+    .def("solve", &StandaloneNewtonSolver::solve,
+         py::arg("t"), py::arg("y0"), py::arg("inputs"),
+         py::return_value_policy::move)
+    .def("solve_batch", &StandaloneNewtonSolver::solve_batch,
+         py::arg("t_eval"), py::arg("y0_alg"), py::arg("inputs"),
+         py::return_value_policy::move);
+
   py::class_<casadi::Function>(m, "Function");
 
   py::class_<Solution>(m, "solution")
@@ -258,4 +280,5 @@ PYBIND11_MODULE(idaklu, m)
     .def_readwrite("ypS", &Solution::ypS)
     .def_readwrite("y_term", &Solution::y_term)
     .def_readwrite("flag", &Solution::flag);
+
 }

@@ -13,6 +13,14 @@ using std::vector;
 #include "IDAKLUStats.hpp"
 #include "SolverLog.hpp"
 #include "HermiteKnotReducer.hpp"
+#include "NonlinearSolver.hpp"
+#include "IDAInternals.hpp"
+#include <sunlinsol/sunlinsol_dense.h>
+#include <sunlinsol/sunlinsol_band.h>
+#include <sunlinsol/sunlinsol_klu.h>
+#include <sunmatrix/sunmatrix_sparse.h>
+#include <sunmatrix/sunmatrix_dense.h>
+#include <sunmatrix/sunmatrix_band.h>
 
 /**
  * @brief Abstract solver class based on OpenMP vectors
@@ -96,6 +104,60 @@ public:
   SolverLog log_;
   std::unique_ptr<HermiteKnotReducer> knot_reducer;  // Hermite knot reduction (nullptr if inactive)
 
+  struct SubBlockResources {
+    SUNContext sunctx = nullptr;
+    SUNLinearSolver LS = nullptr;
+    SUNMatrix J = nullptr;
+    N_Vector res_nvec = nullptr;
+    N_Vector delta_nvec = nullptr;
+    int nnz = 0;
+    std::vector<sunindextype> colptrs;
+    std::vector<sunindextype> rowvals;
+    std::vector<int> data_indices;
+    std::vector<sunrealtype> full_jac_buf;
+
+    ~SubBlockResources() {
+      if (res_nvec) N_VDestroy(res_nvec);
+      if (delta_nvec) N_VDestroy(delta_nvec);
+      if (LS) SUNLinSolFree(LS);
+      if (J) SUNMatDestroy(J);
+      if (sunctx) SUNContext_Free(&sunctx);
+    }
+  };
+
+  struct FullSystemResources {
+    N_Vector res_nvec = nullptr;
+    N_Vector delta_nvec = nullptr;
+
+    ~FullSystemResources() {
+      if (res_nvec) N_VDestroy(res_nvec);
+      if (delta_nvec) N_VDestroy(delta_nvec);
+    }
+  };
+
+  struct AlgSolverState {
+    enum class Mode { SUBBLOCK, FULL };
+    Mode mode = Mode::FULL;
+    std::unique_ptr<NonlinearSystem> system;
+    std::unique_ptr<NonlinearSolver> solver;
+    std::vector<int> alg_idx;
+    std::vector<int> diff_idx;
+
+    // Reusable backup buffers for NonlinearSolverInitialConditions (allocated once, reused per call)
+    std::vector<sunrealtype> y_backup;
+    std::vector<sunrealtype> yp_backup;
+
+    // Mode-specific resources (only one is allocated)
+    std::unique_ptr<SubBlockResources> sub;
+    std::unique_ptr<FullSystemResources> full;
+  };
+  std::unique_ptr<AlgSolverState> alg_state_;
+
+  int len_rhs_;
+  int len_alg_;
+  std::vector<sunrealtype> event_values_;
+  std::vector<int> rootsfound_;
+
   // ── Solve-duration state (valid only during solve()) ──
   bool use_knot_reduction_ = false;
   bool save_adaptive_steps_ = false;
@@ -106,9 +168,7 @@ public:
   vector<sunrealtype *> yS_val_;
   vector<sunrealtype *> ypS_val_;
 
-#if SUNDIALS_VERSION_MAJOR >= 6
   SUNContext sunctx;
-#endif
 
 public:
   /**
@@ -207,7 +267,7 @@ public:
   void ReinitializeIntegrator(const sunrealtype& t_val);
 
   /**
-   * @brief Set a consistent initialization for the system of equations
+   * @brief Set a consistent initialization for the system of equations.
    */
   void ConsistentInitialization(
     const sunrealtype& t_val,
@@ -215,7 +275,7 @@ public:
     const int& icopt);
 
   /**
-   * @brief Set a consistent initialization for DAEs
+   * @brief Set a consistent initialization for DAEs.
    */
   void ConsistentInitializationDAE(
     const sunrealtype& t_val,
@@ -223,9 +283,38 @@ public:
     const int& icopt);
 
   /**
+   * @brief Use the custom Newton IC solver; returns true on success.
+   */
+  bool NonlinearSolverInitialConditions(const sunrealtype& t_val);
+
+  /**
    * @brief Set a consistent initialization for ODEs
    */
   void ConsistentInitializationODE(const sunrealtype& t_val);
+
+  /**
+   * @brief Recover yp after a successful Newton IC solve.
+   * Calls ConsistentInitializationODE then zeros algebraic yp components.
+   */
+  void RecoverYp(const sunrealtype& t_val);
+
+  /**
+   * @brief Build the algebraic Newton solver for consistent initial conditions.
+   * Only built when mass matrix has zeros in algebraic rows (standard-form).
+   */
+  void BuildAlgebraicSolver(const sunrealtype* id_val);
+
+  bool CheckMassMatrixAlignment(const sunrealtype* id_val);
+  void PrecomputeSubBlockSparsity();
+
+  /**
+   * @brief Linear-solve helper for FULL mode.
+   * Copies y_in into yy, then wraps ida_lsetup/ida_lsolve via IDAInternals.
+   */
+  int SolveViaIDALinearSolver(
+    N_Vector yy_ptr, N_Vector yyp_ptr,
+    const sunrealtype* y_in, sunrealtype* res, sunrealtype* delta,
+    sunrealtype cj);
 
   /**
    * @brief Extend the adaptive arrays by 1
@@ -246,6 +335,24 @@ public:
     const sunrealtype *yp0,
     const sunrealtype *inputs
   );
+
+  /**
+   * @brief Retrieve solution from IDA at time t.
+   * @param t The time at which to retrieve the solution.
+   */
+  void GetSolutionFull(sunrealtype t);
+
+  /**
+   * @brief Retrieve states y from IDA at time t (dky=0).
+   * @param t The time at which to retrieve the solution.
+   */
+  void GetSolutionStates(sunrealtype t);
+
+  /**
+   * @brief Retrieve derivatives yp from IDA at time t (dky=1).
+   * @param t The time at which to retrieve the solution.
+   */
+  void GetSolutionDerivatives(sunrealtype t);
 
   /**
    * @brief Store the initial point (t0) after consistent initialization

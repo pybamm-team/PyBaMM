@@ -61,6 +61,38 @@ public:
     );
   }
 
+  void log_newton_start(double t, int n_alg) {
+    if (!enabled_) return;
+    logger_(
+      py::str("Newton solve at t = %.17e, n_alg = %d")
+        .attr("__mod__")(py::make_tuple(t, n_alg))
+    );
+  }
+
+  void log_newton_iteration(int iter, double res_norm, double step_norm) {
+    if (!enabled_) return;
+    logger_(
+      py::str(" Newton iter %3d: ||g|| = %.4e, ||dy|| = %.4e")
+        .attr("__mod__")(py::make_tuple(iter, res_norm, step_norm))
+    );
+  }
+
+  void log_newton_converged(int iters, const char* reason) {
+    if (!enabled_) return;
+    logger_(
+      py::str(" Newton converged in %d iterations (%s)")
+        .attr("__mod__")(py::make_tuple(iters, reason))
+    );
+  }
+
+  void log_newton_failed(int iters, double res_norm, const char* reason) {
+    if (!enabled_) return;
+    logger_(
+      py::str(" Newton FAILED after %d iterations, ||g|| = %.4e (%s)")
+        .attr("__mod__")(py::make_tuple(iters, res_norm, reason))
+    );
+  }
+
 private:
   py::object logger_;
   bool enabled_;

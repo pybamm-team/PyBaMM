@@ -192,4 +192,15 @@ SolverOptions::SolverOptions(py::dict &py_opts)
             );
         }
     }
+
+    // Newton solver for algebraic initial conditions
+    newton_step_tol = 1e-4;
+    if (py_opts.contains("newton_step_tol")) {
+        newton_step_tol = py_opts["newton_step_tol"].cast<double>();
+    }
+
+    newton_mode = "auto";
+    if (py_opts.contains("newton_mode")) {
+        newton_mode = py_opts["newton_mode"].cast<std::string>();
+    }
 }
