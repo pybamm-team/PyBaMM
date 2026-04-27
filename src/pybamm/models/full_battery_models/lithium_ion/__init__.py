@@ -20,6 +20,7 @@ from .electrode_soh_composite import (
 from .initial_state import compute_esoh_fingerprint, set_initial_state
 from .spm import SPM
 from .spme import SPMe
+from .spme_3d_thermal_unstructured import SPMe3DThermalUnstructured
 from .dfn import DFN
 from .newman_tobias import NewmanTobias
 from .basic_dfn import BasicDFN
@@ -43,4 +44,4 @@ from .util import (
 __all__ = ['Yang2017', 'base_lithium_ion_model', 'basic_dfn',
            'basic_dfn_composite', 'basic_dfn_half_cell', 'basic_spm', 'dfn',
            'electrode_soh', 'electrode_soh_half_cell', 'electrode_soh_composite', 'mpm', 'msmr',
-           'newman_tobias', 'spm', 'spme', 'basic_splitOCVR', 'basic_spm_with_3d_thermal']
+           'newman_tobias', 'spm', 'spme', 'spme_3d_thermal_unstructured', 'basic_splitOCVR', 'basic_spm_with_3d_thermal']
