@@ -44,29 +44,45 @@ User install
 We recommend to install PyBaMM within a virtual environment, in order
 not to alter any distribution Python files.
 First, make sure you are using Python 3.10, 3.11, 3.12, 3.13, or 3.14.
-To create a virtual environment ``env`` within your current directory type:
+To create a virtual environment within your current directory type:
 
-.. code:: bash
+.. tab:: uv
 
-   virtualenv env
+   .. code:: bash
 
-or use any of your preferred environment management tools. You can then “activate”
-the environment using:
+      uv venv
 
-.. code:: bash
+   This creates a ``.venv`` directory. You can then “activate” the environment using:
 
-   source env/bin/activate
+   .. code:: bash
 
-Now all the calls to pip described below will install PyBaMM and its
-dependencies into the environment ``env``. When you are ready to exit
-the environment and go back to your original system, just type:
+      source .venv/bin/activate
+
+.. tab:: pip
+
+   .. code:: bash
+
+      virtualenv env
+
+   You can then “activate” the environment using:
+
+   .. code:: bash
+
+      source env/bin/activate
+
+When you are ready to exit the environment and go back to your original system, just type:
 
 .. code:: bash
 
    deactivate
 
-PyBaMM can be installed via ``pip`` or ``conda``.
-library beforehand.
+PyBaMM can be installed via ``uv``, ``pip``, or ``conda``.
+
+.. tab:: uv
+
+   .. code:: bash
+
+      uv pip install pybamm
 
 .. tab:: pip
 
@@ -95,11 +111,19 @@ Optional - JaxSolver
 
 Users can install ``jax`` and ``jaxlib`` to use the Jax solver.
 
-.. code:: bash
+.. tab:: uv
 
-	  pip install "pybamm[jax]"
+   .. code:: bash
 
-The ``pip install "pybamm[jax]"`` command automatically downloads and installs ``pybamm`` and the compatible versions of ``jax`` and ``jaxlib`` on your system.
+      uv pip install "pybamm[jax]"
+
+.. tab:: pip
+
+   .. code:: bash
+
+      pip install "pybamm[jax]"
+
+This command automatically downloads and installs ``pybamm`` and the compatible versions of ``jax`` and ``jaxlib`` on your system.
 
 PyBaMM's full `conda-forge distribution <index.rst#installation>`_ (``pybamm``) includes ``jax`` and ``jaxlib`` by default.
 

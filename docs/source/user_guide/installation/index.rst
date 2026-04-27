@@ -3,7 +3,15 @@ Installation
 
 
 PyBaMM is available on GNU/Linux, MacOS and Windows.
-It can be installed using ``pip`` or ``conda``, or from source.
+It can be installed using ``uv``, ``pip``, or ``conda``, or from source.
+
+.. tab:: uv
+
+   PyBaMM can be installed via `uv <https://docs.astral.sh/uv/>`__ from `PyPI <https://pypi.org/project/pybamm>`__.
+
+   .. code:: bash
+
+      uv pip install pybamm
 
 .. tab:: pip
 

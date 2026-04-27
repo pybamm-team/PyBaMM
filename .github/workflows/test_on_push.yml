@@ -40,6 +40,9 @@ jobs:
       - name: Check style
         run: uvx pre-commit run -a
 
+      - name: Check uv.lock is up to date
+        run: uv lock --check
+
   run_unit_tests:
     runs-on: ${{ matrix.os }}
     permissions:
@@ -263,8 +266,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    strategy:
-      fail-fast: false
     name: Memory tests (ubuntu-latest / Python 3.13)
 
     steps:

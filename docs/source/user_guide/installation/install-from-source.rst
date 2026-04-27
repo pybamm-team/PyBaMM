@@ -8,7 +8,7 @@ Install from source (GNU Linux and macOS)
 
 This page describes the build and installation of PyBaMM from the source code, available on GitHub. Note that this is **not the recommended approach for most users** and should be reserved to people wanting to participate in the development of PyBaMM, or people who really need to use bleeding-edge feature(s) not yet available in the latest released version. If you do not fall in the two previous categories, you would be better off installing PyBaMM using pip or conda.
 
-Lastly, familiarity with the Python ecosystem is recommended (pip, virtualenvs).
+Lastly, familiarity with the Python ecosystem is recommended (pip or uv, virtualenvs).
 Here is a gentle introduction/refresher: `Python Virtual Environments: A Primer <https://realpython.com/python-virtual-environments-a-primer/>`_.
 
 
@@ -58,12 +58,20 @@ You can install the above with
 
     On Windows, you can install ``graphviz`` using the `Chocolatey <https://chocolatey.org/>`_ package manager, or follow the instructions on the `graphviz website <https://graphviz.org/download/>`_.
 
-Finally, we recommend using `Nox <https://nox.thea.codes/en/stable/>`_.
-You can install it to your local user account (make sure you are not within a virtual environment) with
+Finally, we recommend using `Nox <https://nox.thea.codes/en/stable/>`_ for running tests.
+You can install it with
 
-.. code:: bash
+.. tab:: uv
 
-	  python3.X -m pip install --user nox
+   .. code:: bash
+
+      uv tool install nox
+
+.. tab:: pip
+
+   .. code:: bash
+
+      python3.X -m pip install --user nox
 
 Note that running ``nox`` will create new virtual environments for you to use, so you do not need to create one yourself.
 
@@ -78,8 +86,38 @@ Installing PyBaMM
 
 You should now have everything ready to build and install PyBaMM successfully.
 
-Using ``Nox`` (recommended)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Using ``uv`` (recommended)
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+`uv <https://docs.astral.sh/uv/>`_ is a fast Python package manager that supports lockfile-based installs.
+PyBaMM includes a ``uv.lock`` file to ensure reproducible environments.
+
+.. code:: bash
+
+	# in the PyBaMM/ directory
+	uv sync --extra all --group dev --group docs
+
+This creates a virtual environment ``.venv/`` inside the ``PyBaMM/`` directory with
+PyBaMM installed in editable mode, all optional dependencies, and development tools.
+
+You can now activate the environment with
+
+.. tab:: GNU/Linux and MacOS (bash)
+
+	.. code:: bash
+
+		source .venv/bin/activate
+
+.. tab:: Windows
+
+	.. code:: bash
+
+		.venv\Scripts\activate.bat
+
+and run the tests to check your installation.
+
+Using ``Nox``
+~~~~~~~~~~~~~
 
 .. code:: bash
 
@@ -108,8 +146,8 @@ You can now activate the environment with
 
 and run the tests to check your installation.
 
-Manual install
-~~~~~~~~~~~~~~
+Manual install (pip)
+~~~~~~~~~~~~~~~~~~~~
 
 From the ``PyBaMM/`` directory, you can install PyBaMM using
 
@@ -235,6 +273,7 @@ Troubleshooting
 **Problem:** I have made edits to source files in PyBaMM, but these are
 not being used when I run my Python script.
 
-**Solution:** Make sure you have installed PyBaMM using the ``-e`` flag,
-i.e. ``pip install -e .``. This sets the installed location of the
-source files to your current directory.
+**Solution:** Make sure you have installed PyBaMM in editable mode.
+If using ``uv``, run ``uv sync`` (editable by default). If using ``pip``,
+use the ``-e`` flag: ``pip install -e .``. This sets the installed location
+of the source files to your current directory.
