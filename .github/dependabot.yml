@@ -24,5 +24,9 @@ updates:
       python-dependencies:
         patterns:
           - "*"
+      python-security-updates:
+        applies-to: security-updates
+        patterns:
+          - "*"
     cooldown:
       default-days: 7
