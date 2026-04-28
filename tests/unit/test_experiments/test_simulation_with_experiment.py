@@ -1,4 +1,5 @@
 import copy
+import itertools
 import logging
 import os
 from datetime import datetime
@@ -870,34 +871,47 @@ class TestSimulationExperiment:
                 ),
             ]
             * 2,
+            period="100 hours",  # only capture the first and final values
         )
         rtol = 1e-6
         atol = 1e-15
 
-        solutions = []
-        for solver in [
-            pybamm.CasadiSolver(atol=atol, rtol=rtol),
-            pybamm.IDAKLUSolver(atol=atol, rtol=rtol),
-        ]:
+        solvers = {
+            "casadi": pybamm.CasadiSolver(atol=atol, rtol=rtol),
+            "idaklu": pybamm.IDAKLUSolver(atol=atol, rtol=rtol),
+        }
+
+        solutions = {}
+        for name, solver in solvers.items():
             model = pybamm.lithium_ion.SPM()
             sim = pybamm.Simulation(model, experiment=experiment_2step, solver=solver)
             solution = sim.solve()
             assert solution.t[-1] == pytest.approx(3600 * len(experiment_2step.steps))
-            solutions.append(solution)
+            solutions[name] = solution
 
-        np.testing.assert_allclose(
-            solutions[0]["Voltage [V]"].data,
-            solutions[1]["Voltage [V]"](solutions[0].t),
-            rtol=rtol * 100,
-            atol=atol * 100,
-        )
-        np.testing.assert_allclose(
-            solutions[0]["Current [A]"].data,
-            solutions[1]["Current [A]"](solutions[0].t),
-            rtol=rtol * 100,
-            atol=atol * 100,
-        )
-        assert solutions[1].termination == "final time"
+        num_sub_solutions = len(solutions["casadi"].sub_solutions)
+        assert len(solutions["idaklu"].sub_solutions) == num_sub_solutions
+
+        def get_sub_solution(name, idx_sol, idx_time):
+            y = solutions[name].sub_solutions[idx_sol].all_ys[0][:, idx_time]
+            if isinstance(y, casadi.DM):
+                y = y.full().flatten()
+            return y
+
+        for idx_sol, idx_time in itertools.product(range(num_sub_solutions), [0, -1]):
+            t = solutions["casadi"].sub_solutions[idx_sol].t[idx_time]
+            casadi_sol = get_sub_solution("casadi", idx_sol, idx_time)
+            idaklu_sol = get_sub_solution("idaklu", idx_sol, idx_time)
+
+            err_msg = f"Failed to match solution y values at {t} seconds"
+            np.testing.assert_allclose(
+                casadi_sol,
+                idaklu_sol,
+                rtol=rtol * 100,
+                atol=atol * 100,
+                err_msg=err_msg,
+            )
+        assert solutions["casadi"].termination == "final time"
 
     @pytest.mark.parametrize(
         "solver_cls",
