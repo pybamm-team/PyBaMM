@@ -139,7 +139,7 @@ class TestNonlinearSolver:
         sol_pre = solver.solve(model, [0])
         np.testing.assert_array_almost_equal(sol_pre.y, -3, decimal=8)
         # Sanity: live C++ solver was built and attached to the model.
-        assert model.algebraic_root_solver is not None
+        assert model.algebraic_root_solver
 
         # Pickle the model alongside the solver: BaseSolver caches the
         # model object identity in ``_model_set_up``, so reusing the same
@@ -147,11 +147,11 @@ class TestNonlinearSolver:
         # Newton solver attached to the model is dropped on pickle and
         # rebuilt lazily on the next solve.
         restored_solver, restored_model = pickle.loads(pickle.dumps((solver, model)))
-        assert restored_model.algebraic_root_solver is None
+        assert not restored_model.algebraic_root_solver
 
         sol_post = restored_solver.solve(restored_model, [0])
         np.testing.assert_array_almost_equal(sol_post.y, -3, decimal=8)
-        assert restored_model.algebraic_root_solver is not None
+        assert restored_model.algebraic_root_solver
 
     def test_sparse_and_dense_modes(self):
         model_sparse = pybamm.BaseModel()

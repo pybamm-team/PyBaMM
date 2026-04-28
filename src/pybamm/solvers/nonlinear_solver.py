@@ -12,6 +12,27 @@ _DEFAULT_OPTIONS = {
 }
 
 
+class _NonlinearSolverSetup:
+    """Pickle-safe wrapper around StandaloneNewtonSolver"""
+
+    __slots__ = ["_setup"]
+
+    def __init__(self, setup: idaklu.StandaloneNewtonSolver):
+        self._setup = setup
+
+    def __bool__(self):
+        return self._setup is not None
+
+    def __getstate__(self):
+        return {"_setup": None}
+
+    def __setstate__(self, state):
+        self._setup = None
+
+    def solve_batch(self, *args, **kwargs):
+        return self._setup.solve_batch(*args, **kwargs)
+
+
 class NonlinearSolver(pybamm.BaseSolver):
     """Solve a discretised model containing only (time independent) algebraic
     equations using the C++ Newton solver backed by SUNDIALS KLU/Dense.
@@ -102,7 +123,7 @@ class NonlinearSolver(pybamm.BaseSolver):
         self._check_tolerance(value)
         self._step_tol = value
 
-    def set_up_root_solver(self, model, inputs_dict, t_eval):
+    def _set_up_root_solver(self, model, inputs_dict, t_eval):
         """Build CasADi functions and construct the C++ solver.
 
         The resulting ``StandaloneNewtonSolver`` is attached to the model as
@@ -152,10 +173,10 @@ class NonlinearSolver(pybamm.BaseSolver):
         if self._options["compile"]:
             res_fn, jac_fn = aot_compile([res_fn, jac_fn])
 
-        model.algebraic_root_solver = self._build_newton_solver(res_fn, jac_fn, len_alg)
+        return self._build_newton_solver(res_fn, jac_fn, len_alg)
 
     def _build_newton_solver(self, res_fn, jac_fn, len_alg):
-        return idaklu.StandaloneNewtonSolver(
+        _setup = idaklu.StandaloneNewtonSolver(
             residual=idaklu.generate_function(res_fn.serialize()),
             jacobian=idaklu.generate_function(jac_fn.serialize()),
             atol=np.full(len_alg, float(self.atol)).tolist(),
@@ -166,13 +187,12 @@ class NonlinearSolver(pybamm.BaseSolver):
             eps_newt=float(self.eps_newt),
             use_sparse=bool(self.use_sparse),
         )
+        return _NonlinearSolverSetup(_setup)
 
     def _integrate_single(self, model, t_eval, inputs_dict, y0):
         inputs_dict = inputs_dict or {}
 
-        if getattr(model, "algebraic_root_solver", None) is None:
-            self.set_up_root_solver(model, inputs_dict, t_eval)
-        root_solver = model.algebraic_root_solver
+        root_solver = self.get_root_solver(model, inputs_dict, t_eval)
         len_rhs = model.len_rhs
 
         inputs_flat = (

@@ -68,7 +68,7 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
     def step_tol(self, value):
         self._step_tol = value
 
-    def set_up_root_solver(self, model, inputs_dict, t_eval):
+    def _set_up_root_solver(self, model, inputs_dict, t_eval):
         """Create and return a CasADi rootfinder object. The parameter argument to the
         rootfinder is the concatenated time, differential states, and flattened inputs.
 
@@ -83,7 +83,7 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
 
         Returns
         -------
-        None
+        :class:`casadi.rootfinder`
             The rootfinder function is stored in the model as `algebraic_root_solver`.
         """
         pybamm.logger.info(f"Start building {self.name}")
@@ -137,7 +137,7 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
         constraints[model_alg_ub <= 0] = -1
 
         # Set up rootfinder
-        model.algebraic_root_solver = casadi.rootfinder(
+        out = casadi.rootfinder(
             "roots",
             "newton",
             dict(x=y_alg_sym, p=p_sym, g=alg),
@@ -150,6 +150,7 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
         )
 
         pybamm.logger.info(f"Finish building {self.name}")
+        return out
 
     def _integrate_single(self, model, t_eval, inputs_dict, y0):
         """
@@ -202,9 +203,7 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
         # Set the inputs portion of the parameter vector
         p[1 + len_rhs :] = np.asarray(inputs).ravel()
 
-        if getattr(model, "algebraic_root_solver", None) is None:
-            self.set_up_root_solver(model, inputs_dict, t_eval)
-        roots = model.algebraic_root_solver
+        roots = self.get_root_solver(model, inputs_dict, t_eval)
 
         timer = pybamm.Timer()
         integration_time = 0

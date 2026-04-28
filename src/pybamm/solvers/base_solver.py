@@ -334,9 +334,6 @@ class BaseSolver:
             model.casadi_sensitivities_rhs = jacp_rhs
             model.casadi_sensitivities_algebraic = jacp_algebraic
 
-        if getattr(self.root_method, "algebraic_solver", False):
-            self.root_method.set_up_root_solver(model, inputs[0], t_eval)
-
         # if output_variables specified then convert functions to casadi
         # expressions for evaluation within the respective solver
         self.computed_var_fcns = {}
@@ -1125,6 +1122,16 @@ class BaseSolver:
         idx_start = np.searchsorted(t_discon_unique, t_eval[0], side="right")
         idx_end = np.searchsorted(t_discon_unique, t_eval[-1], side="left")
         return t_discon_unique[idx_start:idx_end]
+
+    def get_root_solver(self, model, inputs_dict, t_eval):
+        if not model.algebraic_root_solver:
+            model.algebraic_root_solver = self._set_up_root_solver(
+                model, inputs_dict, t_eval
+            )
+        return model.algebraic_root_solver
+
+    def _set_up_root_solver(self, model, inputs_dict, t_eval):
+        raise NotImplementedError
 
     def _get_discontinuity_start_end_indices(self, model, y0, inputs, t_eval):
         if self.supports_t_eval_discontinuities and model.t_discon_constant_symbols:

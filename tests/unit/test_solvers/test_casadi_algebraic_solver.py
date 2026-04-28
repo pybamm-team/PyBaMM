@@ -77,6 +77,7 @@ class TestCasadiAlgebraicSolver:
             casadi_algebraic = casadi.Function("alg", [t, y, p], [y**2 + 1])
             bounds = (np.array([-np.inf]), np.array([np.inf]))
             interpolant_extrapolation_events_eval = []
+            algebraic_root_solver = None
 
             def algebraic_eval(self, t, y, inputs):
                 # algebraic equation has no real root
@@ -108,6 +109,7 @@ class TestCasadiAlgebraicSolver:
             casadi_algebraic = casadi.Function("alg", [t, y, p], [y**0.5])
             bounds = (np.array([-np.inf]), np.array([np.inf]))
             interpolant_extrapolation_events_eval = []
+            algebraic_root_solver = None
 
             def algebraic_eval(self, t, y, inputs):
                 # algebraic equation has no real root
