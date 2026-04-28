@@ -152,10 +152,11 @@ class BaseSolver:
         if value not in ["warn", "error", "ignore"]:
             raise ValueError("on_failure must be 'warn', 'error', or 'ignore'")
         self._on_failure = value
+
         # Keep root solver's failure policy in sync with the parent's
-        root = getattr(self, "_root_method", None)
-        if isinstance(root, pybamm.BaseSolver) and hasattr(root, "on_failure"):
-            root.on_failure = value
+        root_method = getattr(self, "_root_method", None)
+        if isinstance(root_method, pybamm.BaseSolver):
+            root_method.on_failure = value
 
     @property
     def root_method(self):
@@ -164,13 +165,10 @@ class BaseSolver:
     @root_method.setter
     def root_method(self, method):
         if method == "nonlinear_solver":
-            # Match CasadiAlgebraicSolver behaviour: pure absolute tolerance on
-            # the residual. ``self.atol`` is the integrator atol (often looser
-            # than ``self.root_tol``); take the tighter of the two. Propagate
-            # ``on_failure`` so the IC solver respects the parent's policy.
+            # use the tighter of the two tolerances
             atol = min(self.root_tol, self.atol)
             method = pybamm.NonlinearSolver(
-                atol=atol, rtol=0, on_failure=self.on_failure
+                atol=atol, rtol=self.rtol, on_failure=self.on_failure
             )
         elif method == "casadi":
             method = pybamm.CasadiAlgebraicSolver(self.root_tol)
@@ -1489,7 +1487,9 @@ class BaseSolver:
         self._set_consistent_initialization(model, t_start_shifted, [model_inputs])
 
         # Check consistent initialization doesn't violate events
-        self._check_event_violation(t_eval, model, model.y0, model_inputs)
+        self._check_event_violation_on_initialisation(
+            t_eval, model, model.y0, model_inputs
+        )
 
         # Step
         pybamm.logger.verbose(f"Stepping for {t_start_shifted:.0f} < t < {t_end:.0f}")
