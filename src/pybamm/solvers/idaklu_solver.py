@@ -460,15 +460,10 @@ class IDAKLUSolver(pybamm.BaseSolver):
         # full-system IDA linear solve (DECOUPLED_FULL or COUPLED_FULL),
         # which supports any linear solver including iterative ones.
         if self._options.get("newton_mode", "auto") == "auto":
-            alg_res_fn = getattr(model, "algebraic_eval", None)
-            jac_alg_fn = getattr(model, "jac_algebraic_eval", None)
+            alg_res_fn = model.algebraic_eval
+            jac_alg_fn = model.jac_algebraic_eval
         else:
-            alg_res_fn = None
-            jac_alg_fn = None
-
-        if alg_res_fn is None or not callable(getattr(alg_res_fn, "serialize", None)):
             alg_res_fn = casadi.Function("empty_alg_res", [], [])
-        if jac_alg_fn is None or not callable(getattr(jac_alg_fn, "serialize", None)):
             jac_alg_fn = casadi.Function("empty_alg_jac", [], [])
 
         if (
