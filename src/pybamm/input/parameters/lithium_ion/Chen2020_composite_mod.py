@@ -439,7 +439,7 @@ def nmc_ocp_lorenz(sto):
     - 0.0428 * np.tanh(18.5138 * (sto - 0.5542))
     - 17.7326 * np.tanh(15.7890 * (sto - 0.3117))
     + 17.5842 * np.tanh(15.9308 * (sto - 0.3120))
-    - 0.8 * np.exp(-40 * (1 - sto))    # <-- steep drop at sto=1
+    - 1.65 * np.exp(-40 * (1 - sto))    # <-- steep drop at sto=1
     )
     return u_eq
 
