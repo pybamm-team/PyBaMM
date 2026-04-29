@@ -794,13 +794,6 @@ bool IDAKLUSolverOpenMP<ExprSet>::NonlinearSolverInitialConditions(
   sunrealtype* y_val = N_VGetArrayPointer(yy);
   sunrealtype* yp_val = N_VGetArrayPointer(yyp);
 
-  if (as.mode != AlgSolverState::Mode::SUBBLOCK) {
-    IDAInternals ida(ida_mem);
-    int ier = ida.EnsureSetup();
-    if (ier != IDA_SUCCESS) return false;
-    ida.SetEpsNewt();
-  }
-
   std::memcpy(as.y_backup.data(), y_val, number_of_states * sizeof(sunrealtype));
   std::memcpy(as.yp_backup.data(), yp_val, number_of_states * sizeof(sunrealtype));
 

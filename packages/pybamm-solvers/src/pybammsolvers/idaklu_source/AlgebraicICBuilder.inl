@@ -6,34 +6,44 @@
 #include "Expressions/Expressions.hpp"
 #include "sundials_functions.hpp"
 
-// ────────────────────── IDA linear-solve helper ──────────────────────
+// ────────────────────── Newton-IC linear-solve helper ──────────────────────
 
 template <class ExprSet>
-int IDAKLUSolverOpenMP<ExprSet>::SolveViaIDALinearSolver(
+int IDAKLUSolverOpenMP<ExprSet>::SolveICLinearSystem(
     N_Vector yy_ptr, N_Vector yyp_ptr,
-    const sunrealtype* y_in, sunrealtype* res, sunrealtype* delta,
-    sunrealtype cj) {
+    const sunrealtype* y_in, sunrealtype* res, sunrealtype* delta) {
 
-  IDAInternals ida(this->ida_mem);
+  // Reuses IDA's J and LS — no extra full-size matrix or solver allocation.
+  // Direct LS (J != nullptr): refill J at cj=1, then SUNLinSolSetup/Solve.
+  // Iterative LS (J == nullptr): SUNLinSolSetup runs the registered
+  // preconditioner setup; SUNLinSolSolve uses IDA's installed ATimes/PSolve.
   auto& fs = *this->alg_state_->full;
 
   sunrealtype* yy_data = NV_DATA(yy_ptr);
   std::memcpy(yy_data, y_in, number_of_states * sizeof(sunrealtype));
 
-  ida.SetCj(cj);
-
   sunrealtype* res_data = N_VGetArrayPointer(fs.res_nvec);
   sunrealtype* delta_data = N_VGetArrayPointer(fs.delta_nvec);
   std::memcpy(res_data, res, number_of_states * sizeof(sunrealtype));
 
-  int flag = ida.LinearSetup(yy_ptr, yyp_ptr, fs.res_nvec);
-  if (flag != 0) return 1;
+  if (J != nullptr) {
+    // jacobian_eval ignores tempv1/2/3 in the casadi path; pass y_cache
+    // since the signature requires valid N_Vectors.
+    int flag = jacobian_eval<ExprSet>(
+      SUN_RCONST(0.0), SUN_RCONST(1.0), yy_ptr, yyp_ptr, fs.res_nvec, J,
+      functions.get(), y_cache, y_cache, y_cache);
+    if (flag != 0) return 1;
+  }
 
+  int flag = SUNLinSolSetup(LS, J);
   std::memcpy(delta_data, res, number_of_states * sizeof(sunrealtype));
-  flag = ida.LinearSolve(fs.delta_nvec, yy_ptr, yyp_ptr, fs.res_nvec);
+  if (flag == 0) {
+    flag = SUNLinSolSolve(LS, J, fs.delta_nvec, fs.res_nvec, SUN_RCONST(0.0));
+  }
 
+  if (flag != 0) return 1;
   std::memcpy(delta, delta_data, number_of_states * sizeof(sunrealtype));
-  return flag;
+  return 0;
 }
 
 // ────────────────────── NonlinearSystem implementations ──────────────────────
@@ -128,8 +138,7 @@ public:
 
   int solve_linear(sunrealtype t, const sunrealtype* y,
                    sunrealtype* res, sunrealtype* delta) override {
-    return solver_.SolveViaIDALinearSolver(
-      yy_, yyp_, y, res, delta, SUN_RCONST(1.0));
+    return solver_.SolveICLinearSystem(yy_, yyp_, y, res, delta);
   }
 
 private:

@@ -14,7 +14,6 @@ using std::vector;
 #include "SolverLog.hpp"
 #include "HermiteKnotReducer.hpp"
 #include "NonlinearSolver.hpp"
-#include "IDAInternals.hpp"
 #include <sunlinsol/sunlinsol_dense.h>
 #include <sunlinsol/sunlinsol_band.h>
 #include <sunlinsol/sunlinsol_klu.h>
@@ -308,13 +307,15 @@ public:
   void PrecomputeSubBlockSparsity();
 
   /**
-   * @brief Linear-solve helper for FULL mode.
-   * Copies y_in into yy, then wraps ida_lsetup/ida_lsolve via IDAInternals.
+   * @brief Linear-solve helper for FULL-mode Newton IC.
+   * Refills the IDA-owned Jacobian J at cj=1 via jacobian_eval, then runs
+   * SUNLinSolSetup / SUNLinSolSolve on the IDA-owned LS. No extra storage.
+   * Safe because IC is always followed by IDAReInit, which forces IDA to
+   * re-run its own lsetup on the next step.
    */
-  int SolveViaIDALinearSolver(
+  int SolveICLinearSystem(
     N_Vector yy_ptr, N_Vector yyp_ptr,
-    const sunrealtype* y_in, sunrealtype* res, sunrealtype* delta,
-    sunrealtype cj);
+    const sunrealtype* y_in, sunrealtype* res, sunrealtype* delta);
 
   /**
    * @brief Extend the adaptive arrays by 1
