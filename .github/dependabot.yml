@@ -18,8 +18,14 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    exclude-paths:
+      - "LICENSE.txt"
     groups:
       python-dependencies:
+        patterns:
+          - "*"
+      python-security-updates:
+        applies-to: security-updates
         patterns:
           - "*"
     cooldown:
