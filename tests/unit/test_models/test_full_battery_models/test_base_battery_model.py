@@ -471,7 +471,7 @@ class TestBaseBatteryModel:
         # check that adding algebraic variables gives algebraic solver
         a = pybamm.Variable("a")
         model.algebraic = {a: a - 1}
-        assert isinstance(model.default_solver, pybamm.CasadiAlgebraicSolver)
+        assert isinstance(model.default_solver, pybamm.NonlinearSolver)
 
     def test_option_type(self):
         # no entry gets default options

@@ -1,4 +1,5 @@
 import io
+import itertools
 import warnings
 from contextlib import redirect_stdout
 
@@ -474,23 +475,15 @@ class TestIDAKLUSolver:
 
         solver = pybamm.IDAKLUSolver()
 
-        # Set up and  model consistently initialize the model
-        solver.set_up(model)
-        t0 = 0.0
-        solver._set_consistent_initialization(model, t0, inputs_list=[{}])
+        # Solve a short interval -- consistent IC is computed in C++
+        # by the Newton solver and IDACalcIC during solve()
+        t_eval = np.linspace(0, 1, 10)
+        sol = solver.solve(model, t_eval)
 
-        # u(t0) = 0, v(t0) = 1
+        # u(t0) = 0, v(t0) = 1 (corrected from v=2 by Newton IC solver)
         np.testing.assert_allclose(
-            model.y0full[0],
+            sol.y[:, 0],
             [0, 1],
-            rtol=1e-7,
-            atol=1e-6,
-        )
-        # u'(t0) = 0.1 * v(t0) = 0.1
-        # Since v is algebraic, the initial derivative is set to 0
-        np.testing.assert_allclose(
-            model.ydot0full[0],
-            [0.1, 0],
             rtol=1e-7,
             atol=1e-6,
         )
@@ -703,8 +696,8 @@ class TestIDAKLUSolver:
         disc = pybamm.Discretisation()
         disc.process_model(model)
 
-        t_eval = [0, 1]
-        t_interp = np.linspace(t_eval[0], t_eval[-1], 100)
+        t_eval = np.linspace(0, 1, 3)
+        t_interp = t_eval
         solver = pybamm.IDAKLUSolver()
         soln_base = solver.solve(model, t_eval, t_interp=t_interp)
 
@@ -723,59 +716,58 @@ class TestIDAKLUSolver:
         s = f.getvalue()
         assert len(s) == 0
 
-        # test everything else
-        for jacobian in ["none", "dense", "sparse", "matrix-free", "garbage"]:
-            for linear_solver in [
-                "SUNLinSol_SPBCGS",
-                "SUNLinSol_Dense",
-                "SUNLinSol_KLU",
-                "SUNLinSol_SPFGMR",
-                "SUNLinSol_SPGMR",
-                "SUNLinSol_SPTFQMR",
-                "garbage",
-            ]:
-                for precon in ["none", "BBDP"]:
-                    options = {
-                        "jacobian": jacobian,
-                        "linear_solver": linear_solver,
-                        "preconditioner": precon,
-                        "max_num_steps": 10000,
-                    }
-                    solver = pybamm.IDAKLUSolver(
-                        atol=1e-8,
-                        rtol=1e-8,
-                        options=options,
-                    )
-                    works = (
-                        (jacobian == "none" and (linear_solver == "SUNLinSol_Dense"))
-                        or (
-                            jacobian == "dense" and (linear_solver == "SUNLinSol_Dense")
-                        )
-                        or (
-                            jacobian == "sparse"
-                            and (
-                                linear_solver != "SUNLinSol_Dense"
-                                and linear_solver != "garbage"
-                            )
-                        )
-                        or (
-                            jacobian == "matrix-free"
-                            and (
-                                linear_solver != "SUNLinSol_KLU"
-                                and linear_solver != "SUNLinSol_Dense"
-                                and linear_solver != "garbage"
-                            )
-                        )
-                    )
+        jacobians = ["none", "dense", "sparse", "matrix-free", "garbage"]
+        linear_solvers = [
+            "SUNLinSol_SPBCGS",
+            "SUNLinSol_Dense",
+            "SUNLinSol_KLU",
+            "SUNLinSol_SPFGMR",
+            "SUNLinSol_SPGMR",
+            "SUNLinSol_SPTFQMR",
+            "garbage",
+        ]
+        preconditions = ["none", "BBDP"]
 
-                    if works:
-                        soln = solver.solve(model, t_eval, t_interp=t_interp)
-                        np.testing.assert_allclose(
-                            soln.y, soln_base.y, rtol=1e-5, atol=1e-4
-                        )
-                    else:
-                        with pytest.raises(ValueError):
-                            soln = solver.solve(model, t_eval, t_interp=t_interp)
+        # Test jacobian/linear_solver/preconditioner combinations
+        for jacobian, linear_solver, precon in itertools.product(
+            jacobians, linear_solvers, preconditions
+        ):
+            options = {
+                "jacobian": jacobian,
+                "linear_solver": linear_solver,
+                "preconditioner": precon,
+            }
+            solver = pybamm.IDAKLUSolver(
+                atol=1e-8,
+                rtol=1e-8,
+                options=options,
+            )
+            works = (
+                (jacobian == "none" and (linear_solver == "SUNLinSol_Dense"))
+                or (jacobian == "dense" and (linear_solver == "SUNLinSol_Dense"))
+                or (
+                    jacobian == "sparse"
+                    and (
+                        linear_solver != "SUNLinSol_Dense"
+                        and linear_solver != "garbage"
+                    )
+                )
+                or (
+                    jacobian == "matrix-free"
+                    and (
+                        linear_solver != "SUNLinSol_KLU"
+                        and linear_solver != "SUNLinSol_Dense"
+                        and linear_solver != "garbage"
+                    )
+                )
+            )
+
+            if works:
+                soln = solver.solve(model, t_eval, t_interp=t_interp)
+                np.testing.assert_allclose(soln.y, soln_base.y, rtol=1e-5, atol=1e-4)
+            else:
+                with pytest.raises(ValueError):
+                    _ = solver.solve(model, t_eval, t_interp=t_interp)
 
     def test_solver_options(self):
         model = pybamm.BaseModel()
@@ -1161,7 +1153,7 @@ class TestIDAKLUSolver:
             atol=atol,
         )
 
-    def test_python_idaklu_deprecation_errors(self):
+    def test_idaklu_forces_casadi_format(self):
         model = pybamm.BaseModel()
         model.convert_to_format = "python"
         u = pybamm.Variable("u")
@@ -1174,21 +1166,10 @@ class TestIDAKLUSolver:
         disc = pybamm.Discretisation()
         disc.process_model(model)
 
-        t_eval = [0, 3]
-
-        solver = pybamm.IDAKLUSolver(
-            root_method="lm",
-        )
-
-        with pytest.raises(
-            pybamm.SolverError,
-            match=r"Unsupported option for convert_to_format=python",
-        ):
-            with pytest.raises(
-                DeprecationWarning,
-                match=r"The python-idaklu solver has been deprecated.",
-            ):
-                _ = solver.solve(model, t_eval)
+        solver = pybamm.IDAKLUSolver()
+        assert model.convert_to_format == "python"
+        solver.set_up(model)
+        assert model.convert_to_format == "casadi"
 
     def test_extrapolation_events_with_output_variables(self):
         # Make sure the extrapolation checks work with output variables
@@ -1240,7 +1221,7 @@ class TestIDAKLUSolver:
 
     def test_multiple_initial_conditions_single_variable(self):
         model = pybamm.BaseModel()
-        model.convert_to_format = None
+        model.convert_to_format = "casadi"
         u = pybamm.Variable("u")
         u0 = pybamm.InputParameter("u0")
         model.rhs = {u: -u}

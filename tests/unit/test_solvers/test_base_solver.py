@@ -25,6 +25,9 @@ class TestBaseSolver:
         assert solver.rtol == 1e-7
 
     def test_root_method_init(self):
+        solver = pybamm.BaseSolver(root_method="nonlinear_solver")
+        assert isinstance(solver.root_method, pybamm.NonlinearSolver)
+
         solver = pybamm.BaseSolver(root_method="casadi")
         assert isinstance(solver.root_method, pybamm.CasadiAlgebraicSolver)
 
@@ -159,6 +162,7 @@ class TestBaseSolver:
                 self.len_rhs_and_alg = 1
                 self.events = []
                 self.solution_observable = ModelSolutionObservability.DISABLED
+                self.algebraic_root_solver = None
 
             def rhs_eval(self, t, y, inputs):
                 return np.array([])
@@ -198,6 +202,7 @@ class TestBaseSolver:
                 self.len_rhs_and_alg = 4
                 self.events = []
                 self.solution_observable = ModelSolutionObservability.DISABLED
+                self.algebraic_root_solver = None
 
             def rhs_eval(self, t, y, inputs):
                 return y[0:1]
@@ -234,7 +239,7 @@ class TestBaseSolver:
         np.testing.assert_allclose(init_states.flatten(), vec, rtol=1e-7, atol=1e-6)
 
     def test_fail_consistent_initialization(self):
-        class Model:
+        class Model(pybamm.BaseModel):
             def __init__(self):
                 self.y0_list = [np.array([2])]
                 self.y0S_list = None
@@ -248,6 +253,7 @@ class TestBaseSolver:
                 )
                 self.convert_to_format = "casadi"
                 self.bounds = (np.array([-np.inf]), np.array([np.inf]))
+                self.algebraic_root_solver = None
 
             def rhs_eval(self, t, y, inputs):
                 return np.array([])
