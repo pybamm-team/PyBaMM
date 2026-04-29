@@ -81,7 +81,7 @@ class DataLoader:
         """
         Create a pooch registry with the following data files available upstream at https://github.com/pybamm-team/pybamm-data/
         """
-        self.version = "v1.0.1"  # Version of pybamm-data release
+        self.version = "v1.0.2"  # Version of pybamm-data release
         self.path = pooch.os_cache("pybamm")
         self.files = {
             # COMSOL results
@@ -114,7 +114,7 @@ class DataLoader:
             "WLTC.csv": "sha256:bb2f95018a44ac1425cb9c787c34721192af502c7385f1358f28e4f75df11fd8",
             "car_current.csv": "sha256:4305b91b9df073cb048c25dd3fae725e06a94fe200e322e5c08db290d6799e36",
             # BPX files
-            "nmc_pouch_cell_BPX.json": "sha256:27261e2a7012725ed16c0c8b799b870388bd6c77f86bbf1949353286569c7d0d",
+            "nmc_pouch_cell_BPX.json": "sha256:cea07ea4fff9d667c2ad3fc430e699bb962a941051004dce52fddcd2d44ace3f",
         }
         self.registry = pooch.create(
             path=self.path,
