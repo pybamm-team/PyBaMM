@@ -2984,8 +2984,8 @@ docs = [
 requires-dist = [
     { name = "anytree", specifier = ">=2.8.0" },
     { name = "black" },
-    { name = "bpx", marker = "extra == 'all'", specifier = ">=0.5.0,<1.2.0" },
-    { name = "bpx", marker = "extra == 'bpx'", specifier = ">=0.5.0,<1.2.0" },
+    { name = "bpx", marker = "extra == 'all'", specifier = ">=1.1.0,<1.2.0" },
+    { name = "bpx", marker = "extra == 'bpx'", specifier = ">=1.1.0,<1.2.0" },
     { name = "jax", marker = "(python_full_version >= '3.11' and platform_machine != 'x86_64' and extra == 'jax') or (python_full_version >= '3.11' and sys_platform != 'darwin' and extra == 'jax')", specifier = ">=0.7.0,<0.9.0" },
     { name = "jupyter", marker = "extra == 'all'" },
     { name = "jupyter", marker = "extra == 'examples'" },

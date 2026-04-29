@@ -138,6 +138,21 @@ def bpx_to_param_dict(bpx: BPX) -> dict:
         bpx.parameterisation.separator, pybamm_dict, experiment
     )
 
+    # Extract parameters from BPX State section (BPX 1.1.0+)
+    if bpx.state is not None:
+        # Initial conditions
+        ic = bpx.state.initial_conditions
+        pybamm_dict["Initial concentration in electrolyte [mol.m-3]"] = (
+            ic.initial_electrolyte_concentration
+        )
+        pybamm_dict["Initial temperature [K]"] = ic.initial_temperature
+        # Thermal environment
+        te = bpx.state.thermal_environment
+        pybamm_dict["Ambient temperature [K]"] = te.ambient_temperature
+        pybamm_dict["Total heat transfer coefficient [W.m-2.K-1]"] = (
+            te.heat_transfer_coefficient
+        )
+
     # set a default current function and typical current based on the nominal capacity
     # i.e. a default C-rate of 1
     pybamm_dict["Current function [A]"] = pybamm_dict["Nominal cell capacity [A.h]"]
