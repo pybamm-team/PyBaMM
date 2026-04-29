@@ -431,6 +431,17 @@ def nmc_LGM50_ocp_Chen2020(sto):
 
     return u_eq
 
+def nmc_ocp_lorenz(sto):
+    """Contains sharp decrease of potential at high stochionetry"""
+    u_eq = (
+    -0.8090 * sto
+    + 4.4875
+    - 0.0428 * np.tanh(18.5138 * (sto - 0.5542))
+    - 17.7326 * np.tanh(15.7890 * (sto - 0.3117))
+    + 17.5842 * np.tanh(15.9308 * (sto - 0.3120))
+    - 0.8 * np.exp(-40 * (1 - sto))    # <-- steep drop at sto=1
+    )
+    return u_eq
 
 def nmc_LGM50_electrolyte_exchange_current_density_Chen2020(c_e, c_s_surf, c_s_max, T):
     """
@@ -928,7 +939,7 @@ def get_parameter_values():
         "Positive particle diffusivity [m2.s-1]": nmc_LGM50_diffusivity_Chen2020,
         "Positive particle diffusivity constant [m2.s-1]": 4e-15,
         "Positive particle diffusivity activation energy [J.mol-1]": 25000.0,
-        "Positive electrode OCP [V]": nmc_LGM50_ocp_Chen2020,
+        "Positive electrode OCP [V]": nmc_ocp_lorenz,
         "Positive electrode porosity": 0.335,
         "Positive electrode active material volume fraction": 0.665,
         "Positive particle radius [m]": 5.22e-06,
