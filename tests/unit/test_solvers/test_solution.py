@@ -4,6 +4,8 @@
 import io
 import json
 import logging
+import subprocess
+import sys
 
 import numpy as np
 import pandas as pd
@@ -698,9 +700,6 @@ class TestSolution:
         # the current process's hash, breaking Discretisation.y_slices
         # lookups for any variable not already cached in
         # model._variables_processed.
-        import subprocess
-        import sys
-
         pkl = tmp_path / "sol.pkl"
         save_code = (
             "import pybamm\n"
