@@ -107,7 +107,19 @@ def graphite_cracking_rate_Ai2020(T_dim):
         cracking rate, [m/(Pa.m0.5)^m_cr]
         where m_cr is another Paris' law constant
     """
-    k_cr = pybamm.Parameter("Negative electrode cracking rate constant [m/(Pa.m0.5)^m_cr]")
+    k_cr = pybamm.Parameter("Primary: Negative electrode cracking rate constant [m/(Pa.m0.5)^m_cr]")
+    Eac_cr = 0  # to be implemented
+    arrhenius = np.exp(Eac_cr / pybamm.constants.R * (1 / T_dim - 1 / 298.15))
+    return k_cr * arrhenius
+
+
+def silicon_cracking_rate_Ai2020(T_dim):
+    """
+    Silicon particle cracking rate as a function of temperature.
+    Uses the secondary-phase-prefixed parameter so it can be set independently
+    from the graphite (primary) cracking rate constant.
+    """
+    k_cr = pybamm.Parameter("Secondary: Negative electrode cracking rate constant [m/(Pa.m0.5)^m_cr]")
     Eac_cr = 0  # to be implemented
     arrhenius = np.exp(Eac_cr / pybamm.constants.R * (1 / T_dim - 1 / 298.15))
     return k_cr * arrhenius
@@ -895,7 +907,7 @@ def get_parameter_values():
         "Secondary: Negative electrode number of cracks per unit area [m-2]": 3180000000000000.0,
         "Secondary: Negative electrode Paris' law constant b": 1.12,
         "Secondary: Negative electrode Paris' law constant m": 2.2,
-        "Secondary: Negative electrode cracking rate": graphite_cracking_rate_Ai2020,
+        "Secondary: Negative electrode cracking rate": silicon_cracking_rate_Ai2020,
         "Secondary: Negative electrode cracking rate constant [m/(Pa.m0.5)^m_cr]": 3.9e-20,
         "Secondary: Negative electrode LAM constant proportional term [s-1]": 2.7778e-07,
         "Secondary: Negative electrode LAM constant exponential term": 2.0,
