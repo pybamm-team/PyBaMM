@@ -138,10 +138,16 @@ class CurrentForInverseButlerVolmer(BaseInterface):
             f"X-averaged {domain} electrode total interfacial current density [A.m-2]"
         ]
         j_sei = variables[f"{Domain} electrode SEI interfacial current density [A.m-2]"]
+        j_sei_cr = variables[
+            f"{Domain} electrode SEI on cracks interfacial current density [A.m-2]"
+        ]
         j_stripping = variables[
             f"{Domain} electrode lithium plating interfacial current density [A.m-2]"
         ]
-        j = j_tot - j_sei - j_stripping
+        # SEI on cracks reacts on crack surfaces (area = a*(roughness-1)), not primary
+        # surface (area = a), so its contribution is scaled by (roughness - 1)
+        roughness = variables[f"X-averaged {domain} electrode roughness ratio"]
+        j = j_tot - j_sei - j_stripping - (roughness - 1) * j_sei_cr
 
         variables.update(self._get_standard_interfacial_current_variables(j))
         variables.update(
