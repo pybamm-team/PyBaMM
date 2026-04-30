@@ -1,5 +1,10 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+### Documentation
+- Improved `QuickPlot` docstring to document nested list behavior in
+  `output_variables`, fix `variable_limits` description placement, and
+  add `Notes` and `Examples` sections. ([#5481](https://github.com/pybamm-team/PyBaMM/issues/5481))
+
 ## Features
 
 - Added `NonlinearSolver` as the default nonlinear solver, which replaces `CasadiAlgebraicSolver`. `IDAKLUSolver` now computes the initial conditions in C++ by default. ([#5459](https://github.com/pybamm-team/PyBaMM/pull/5459))
