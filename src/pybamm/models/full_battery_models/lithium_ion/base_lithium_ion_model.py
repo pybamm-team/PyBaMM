@@ -391,7 +391,7 @@ class BaseModel(pybamm.BaseBatteryModel):
                 domain = domain.split()[0].lower()
                 phases = self.options.phases[domain]
                 for phase in phases:
-                    crack = getattr(self.options, domain)["particle mechanics"]
+                    crack = getattr(getattr(self.options, domain), phase)["particle mechanics"]
                     if crack == "none":
                         self.submodels[f"{domain} {phase}particle mechanics"] = (
                             pybamm.particle_mechanics.NoMechanics(
