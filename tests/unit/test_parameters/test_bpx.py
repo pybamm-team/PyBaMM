@@ -20,14 +20,11 @@ class TestBPX:
             },
             "Parameterisation": {
                 "Cell": {
-                    "Ambient temperature [K]": 298.15,
-                    "Initial temperature [K]": 298.15,
                     "Reference temperature [K]": 298.15,
                     "Lower voltage cut-off [V]": 2.8,
                     "Upper voltage cut-off [V]": 4.2,
                     "Nominal cell capacity [A.h]": 12.5,
                     "Specific heat capacity [J.K-1.kg-1]": 913,
-                    "Thermal conductivity [W.m-1.K-1]": 2,
                     "Density [kg.m-3]": 1847,
                     "Electrode area [m2]": 0.016808,
                     "Number of electrode pairs connected in parallel to make a cell": 34,
@@ -35,7 +32,6 @@ class TestBPX:
                     "Volume [m3]": 1.28e-4,
                 },
                 "Electrolyte": {
-                    "Initial concentration [mol.m-3]": 1000,
                     "Cation transference number": 0.259,
                     "Conductivity [S.m-1]": (
                         "0.1297 * (x / 1000) ** 3 "
@@ -100,6 +96,19 @@ class TestBPX:
                     "Thickness [m]": 2e-5,
                     "Porosity": 0.47,
                     "Transport efficiency": 0.3222,
+                },
+            },
+            "State": {
+                "Initial conditions": {
+                    "Initial state-of-charge": 1.0,
+                    "Initial temperature [K]": 298.15,
+                    "Initial electrolyte concentration [mol.m-3]": 1000,
+                    "Initial hysteresis state: Positive electrode": 0.0,
+                    "Initial hysteresis state: Negative electrode": 0.0,
+                },
+                "Thermal environment": {
+                    "Ambient temperature [K]": 298.15,
+                    "Heat transfer coefficient [W.m-2.K-1]": 10.0,
                 },
             },
         }
@@ -334,6 +343,10 @@ class TestBPX:
                 },
             },
         }
+        # Update hysteresis states for blended electrode
+        bpx_obj["State"]["Initial conditions"][
+            "Initial hysteresis state: Positive electrode"
+        ] = {"Large Particles": 0.0, "Small Particles": 0.0}
 
         temp_file = tmp_path / "tmp.json"
         temp_file.write_text(json.dumps(bpx_obj))
@@ -406,6 +419,10 @@ class TestBPX:
                 },
             },
         }
+        # Update hysteresis states for blended electrode with 3 phases
+        bpx_obj["State"]["Initial conditions"][
+            "Initial hysteresis state: Positive electrode"
+        ] = {"Large Particles": 0.0, "Medium Particles": 0.0, "Small Particles": 0.0}
 
         temp_file = tmp_path / "tmp.json"
         temp_file.write_text(json.dumps(bpx_obj))
