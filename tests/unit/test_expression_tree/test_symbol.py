@@ -536,6 +536,25 @@ class TestSymbol:
         x = pybamm.Symbol("x")
         assert np.exp(x) == pybamm.exp(x)
 
+    def test_setstate_refreshes_id(self):
+        # Regression test for #5444: Python's hash() of strings is randomised
+        # per process (PYTHONHASHSEED), so a Symbol's cached _id from another
+        # process is invalid here. Symbol.__setstate__ must call set_id() so
+        # that dicts keyed on Symbols (e.g. Discretisation.y_slices) end up
+        # rebuilt with hashes consistent with the unpickling process.
+        import pickle
+
+        var = pybamm.Variable("test_var")
+        expected_id = var._id
+
+        # Simulate a stale _id pickled from a different process.
+        var._id = 12345
+        pickled = pickle.dumps(var)
+
+        loaded = pickle.loads(pickled)
+        assert loaded._id == expected_id
+        assert hash(loaded) == hash(pybamm.Variable("test_var"))
+
     def test_to_from_json(self, mocker):
         symc1 = pybamm.Symbol("child1", domain=["domain_1"])
         symc2 = pybamm.Symbol("child2", domain=["domain_2"])

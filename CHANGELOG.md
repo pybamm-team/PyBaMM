@@ -4,6 +4,10 @@
 
 - Added `NonlinearSolver` as the default nonlinear solver, which replaces `CasadiAlgebraicSolver`. `IDAKLUSolver` now computes the initial conditions in C++ by default. ([#5459](https://github.com/pybamm-team/PyBaMM/pull/5459))
 
+## Bug fixes
+
+- Fixed cross-process pickle round-trip for `Solution`: accessing variables in `all_first_states` (or any not-yet-cached variable) on a `Solution` loaded in a different Python process previously failed with a `ModelError` from `Discretisation.y_slices`. `Symbol._id` is computed via `hash()` of strings, which is randomised per process; `Symbol.__setstate__` now refreshes `_id` so dicts keyed on Symbols are rebuilt with hashes consistent with the unpickling process. ([#5444](https://github.com/pybamm-team/PyBaMM/issues/5444))
+
 # [v26.4.1](https://github.com/pybamm-team/PyBaMM/tree/v26.4.1) - 2026-04-24
 
 ## Bug fixes

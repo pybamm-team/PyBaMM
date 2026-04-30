@@ -689,6 +689,45 @@ class TestSolution:
             data["Step"], np.concatenate([np.zeros(50), np.ones(50)])
         )
 
+    def test_pickle_first_states_across_processes(self, tmp_path):
+        # Regression test for #5444: a Solution pickled in one process and
+        # unpickled in another (different PYTHONHASHSEED) must still allow
+        # access to variables in `all_first_states`. The bug was that
+        # Symbol._id is computed via hash() of strings, which is randomised
+        # per process; after unpickle the cached _id was inconsistent with
+        # the current process's hash, breaking Discretisation.y_slices
+        # lookups for any variable not already cached in
+        # model._variables_processed.
+        import subprocess
+        import sys
+
+        pkl = tmp_path / "sol.pkl"
+        save_code = (
+            "import pybamm\n"
+            "sim = pybamm.Simulation(\n"
+            "    pybamm.lithium_ion.SPM(),\n"
+            "    experiment=pybamm.Experiment(\n"
+            '        ["Discharge at 1C for 1 minute", "Rest for 1 minute"]\n'
+            "    ),\n"
+            ")\n"
+            "sim.solve()\n"
+            f'sim.solution.save("{pkl}")\n'
+        )
+        load_code = (
+            "import pybamm\n"
+            f'sol = pybamm.load("{pkl}")\n'
+            'v = sol.all_first_states[0]["Discharge capacity [A.h]"]\n'
+            'print("OK", v.data.shape)\n'
+        )
+        subprocess.run([sys.executable, "-c", save_code], check=True)
+        result = subprocess.run(
+            [sys.executable, "-c", load_code],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        assert "OK" in result.stdout
+
     def test_solution_evals_with_inputs(self):
         model = pybamm.lithium_ion.SPM()
         geometry = model.default_geometry
