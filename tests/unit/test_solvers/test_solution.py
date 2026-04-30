@@ -689,6 +689,35 @@ class TestSolution:
             data["Step"], np.concatenate([np.zeros(50), np.ones(50)])
         )
 
+    def test_get_data_cycles_steps_skips_empty_step(self):
+        # Regression test for #4990: a step that returns an EmptySolution (e.g.
+        # because an event triggered at the cycle's initial conditions when
+        # resuming from a starting solution) carries a placeholder timestamp
+        # that is not present in cycle.t. It must be skipped in get_data_dict
+        # so that "Step" stays the same length as "Time [s]" and "Cycle".
+        model = pybamm.BaseModel()
+        c = pybamm.Variable("c")
+        model.rhs = {c: -c}
+        model.initial_conditions = {c: 1}
+        model.variables["c"] = c
+
+        # Use disjoint time arrays so Solution.__add__ does not deduplicate
+        # the boundary; this isolates the bug to the EmptySolution placeholder.
+        solver = pybamm.ScipySolver()
+        sol1 = solver.solve(model, np.array([0.0, 0.5, 1.0]))
+        sol2 = solver.solve(model, np.array([2.0, 3.0, 4.0]))
+        empty = pybamm.EmptySolution(termination="event", t=99.0)
+
+        cycle = sol1 + sol2
+        cycle.cycles = [cycle]
+        cycle.cycles[0].steps = [empty, sol1, sol2]
+
+        data = cycle.get_data_dict("c")
+        assert len(data["Step"]) == len(data["Cycle"]) == len(data["c"])
+        np.testing.assert_array_equal(
+            data["Step"], np.concatenate([np.ones(3), 2 * np.ones(3)])
+        )
+
     def test_solution_evals_with_inputs(self):
         model = pybamm.lithium_ion.SPM()
         geometry = model.default_geometry

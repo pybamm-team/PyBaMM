@@ -956,6 +956,12 @@ class Solution(SolutionBase):
                     [data_short_names["Cycle"], i * np.ones_like(cycle.t)]
                 )
                 for j, step in enumerate(cycle.steps):
+                    # EmptySolution steps carry a placeholder timestamp that is
+                    # not present in cycle.t (see Solution.__add__), so they
+                    # would otherwise inflate the Step array length relative to
+                    # cycle.t / Time [s].
+                    if isinstance(step, EmptySolution):
+                        continue
                     data_short_names["Step"] = np.concatenate(
                         [data_short_names["Step"], j * np.ones_like(step.t)]
                     )
