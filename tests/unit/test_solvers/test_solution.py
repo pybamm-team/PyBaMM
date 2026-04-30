@@ -701,6 +701,8 @@ class TestSolution:
         # lookups for any variable not already cached in
         # model._variables_processed.
         pkl = tmp_path / "sol.pkl"
+        # repr() so Windows backslashes survive being parsed as a Python literal
+        pkl_literal = repr(str(pkl))
         save_code = (
             "import pybamm\n"
             "sim = pybamm.Simulation(\n"
@@ -710,11 +712,11 @@ class TestSolution:
             "    ),\n"
             ")\n"
             "sim.solve()\n"
-            f'sim.solution.save("{pkl}")\n'
+            f"sim.solution.save({pkl_literal})\n"
         )
         load_code = (
             "import pybamm\n"
-            f'sol = pybamm.load("{pkl}")\n'
+            f"sol = pybamm.load({pkl_literal})\n"
             'v = sol.all_first_states[0]["Discharge capacity [A.h]"]\n'
             'print("OK", v.data.shape)\n'
         )
