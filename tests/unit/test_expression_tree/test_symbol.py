@@ -2,7 +2,7 @@
 # Test for the Symbol class
 #
 
-import pickle
+import pickle  # nosec B403 - used in tests with trusted input
 import re
 
 import numpy as np
@@ -552,7 +552,7 @@ class TestSymbol:
         monkeypatch.setattr(var, "_id", 12345)
         pickled = pickle.dumps(var)
 
-        loaded = pickle.loads(pickled)
+        loaded = pickle.loads(pickled)  # nosec B301
         assert hash(loaded) == expected_hash
         assert hash(loaded) == hash(pybamm.Variable("test_var"))
 

@@ -4,7 +4,7 @@
 import io
 import json
 import logging
-import subprocess
+import subprocess  # nosec B404 - used in tests with trusted input
 import sys
 
 import numpy as np
@@ -718,8 +718,9 @@ class TestSolution:
             'v = sol.all_first_states[0]["Discharge capacity [A.h]"]\n'
             'print("OK", v.data.shape)\n'
         )
-        subprocess.run([sys.executable, "-c", save_code], check=True)
-        result = subprocess.run(
+        # nosec B603 - sys.executable + literal code constructed in this test
+        subprocess.run([sys.executable, "-c", save_code], check=True)  # nosec B603
+        result = subprocess.run(  # nosec B603
             [sys.executable, "-c", load_code],
             check=True,
             capture_output=True,
