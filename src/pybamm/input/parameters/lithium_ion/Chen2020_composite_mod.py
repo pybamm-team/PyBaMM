@@ -939,7 +939,7 @@ def get_parameter_values():
         "Positive particle diffusivity [m2.s-1]": nmc_LGM50_diffusivity_Chen2020,
         "Positive particle diffusivity constant [m2.s-1]": 4e-15,
         "Positive particle diffusivity activation energy [J.mol-1]": 25000.0,
-        "Positive electrode OCP [V]": nmc_ocp_lorenz,
+        "Positive electrode OCP [V]": nmc_LGM50_ocp_Chen2020,
         "Positive electrode porosity": 0.335,
         "Positive electrode active material volume fraction": 0.665,
         "Positive particle radius [m]": 5.22e-06,
