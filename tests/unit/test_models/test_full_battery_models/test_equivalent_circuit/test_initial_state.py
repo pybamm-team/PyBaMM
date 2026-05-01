@@ -26,11 +26,11 @@ class TestSetInitialSOC:
     def test_error(self):
         parameter_values = pybamm.ParameterValues("ECM_Example")
 
-        with pytest.raises(ValueError, match="Initial SOC should be between 0 and 1"):
+        with pytest.raises(ValueError, match=r"Initial SOC should be between 0 and 1"):
             parameter_values.set_initial_state(2)
 
-        with pytest.raises(ValueError, match="outside the voltage limits"):
+        with pytest.raises(ValueError, match=r"outside the voltage limits"):
             parameter_values.set_initial_state("1 V")
 
-        with pytest.raises(ValueError, match="must be a float"):
+        with pytest.raises(ValueError, match=r"must be a float"):
             parameter_values.set_initial_state("5 A")

@@ -129,12 +129,12 @@ class TestSpatialMethod:
         mesh = get_mesh_for_testing()
         spatial_method = pybamm.SpatialMethod()
         spatial_method.build(mesh)
-        with pytest.raises(TypeError, match="Cannot process BoundaryGradient"):
+        with pytest.raises(TypeError, match=r"Cannot process BoundaryGradient"):
             spatial_method.boundary_value_or_flux(symbol, child)
 
         # test also symbol "right"
         symbol = pybamm.BoundaryGradient(child, "right")
-        with pytest.raises(TypeError, match="Cannot process BoundaryGradient"):
+        with pytest.raises(TypeError, match=r"Cannot process BoundaryGradient"):
             spatial_method.boundary_value_or_flux(symbol, child)
 
         mesh = get_1p1d_mesh_for_testing()
@@ -146,5 +146,5 @@ class TestSpatialMethod:
             auxiliary_domains={"secondary": "current collector"},
         )
         symbol = pybamm.BoundaryGradient(child, "left")
-        with pytest.raises(NotImplementedError, match="Cannot process 2D symbol"):
+        with pytest.raises(NotImplementedError, match=r"Cannot process 2D symbol"):
             spatial_method.boundary_value_or_flux(symbol, child)

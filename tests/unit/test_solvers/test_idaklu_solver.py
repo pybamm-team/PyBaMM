@@ -1,13 +1,77 @@
 import io
+import itertools
 import warnings
 from contextlib import redirect_stdout
 
 import numpy as np
+import pandas as pd
 import pytest
-from scipy.sparse import eye
+from scipy.integrate import quad_vec
+from scipy.interpolate import CubicHermiteSpline
 
 import pybamm
-from tests import get_discretisation_for_testing
+from tests import get_discretisation_for_testing, no_internet_connection
+
+
+def _hermite_wrms(sol_base, sol_reduced, atol, rtol) -> list[tuple[int, float]]:
+    """
+    Compute the integral L2 WRMS error between two Hermite-interpolated solutions
+    using Gauss quadrature
+
+    Parameters
+    ----------
+    sol_base : pybamm.Solution
+    sol_reduced : pybamm.Solution
+    atol : float
+    rtol : float
+
+    Returns
+    -------
+    list[tuple[int, float]]
+        A list of tuples, each containing the segment index and the WRMS error
+    """
+    n_states = sol_base.all_ys[0].shape[0]
+    atol_vec = np.full(n_states, atol)
+    wrms_values = []
+
+    def cubic_hermite_spline(sol):
+        tb = np.asarray(sol.all_ts[0])
+        yb = np.asarray(sol.all_ys[0])
+        ypb = np.asarray(sol.all_yps[0])
+        return CubicHermiteSpline(tb, yb.T, ypb.T)
+
+    for seg in range(len(sol_base.all_ts)):
+        tb = sol_base.all_ts[seg]
+        tr = sol_reduced.all_ts[seg]
+
+        if len(tb) < 2 or len(tr) < 2:
+            continue
+        sub = sol_base.sub_solutions[seg]
+        itp_base = cubic_hermite_spline(sub)
+        itp_red = cubic_hermite_spline(sol_reduced.sub_solutions[seg])
+
+        t_span = tb[-1] - tb[0]
+
+        def integrand(t, itp_base, itp_red, atol_vec, rtol):
+            y_b = itp_base(t)
+            y_r = itp_red(t)
+            w = 1.0 / (atol_vec + rtol * np.abs(y_b))
+            return (w * (y_b - y_r)) ** 2
+
+        t_evals = np.asarray(sub.all_t_evals[0])
+        points = t_evals[(t_evals > tb[0]) & (t_evals < tb[-1])]
+
+        integral, _ = quad_vec(
+            integrand,
+            tb[0],
+            tb[-1],
+            points=points,
+            args=(itp_base, itp_red, atol_vec, rtol),
+        )
+        wrms = np.sqrt(np.mean(integral) / t_span)
+        wrms_values.append((seg, wrms))
+
+    return wrms_values
 
 
 class TestIDAKLUSolver:
@@ -124,7 +188,7 @@ class TestIDAKLUSolver:
 
         # Check invalid atol type raises an error
         with pytest.raises(pybamm.SolverError):
-            solver._check_atol_type({"key": "value"}, [])
+            solver._check_atol_type({"key": "value"}, model)
 
         # enforce events that won't be triggered
         model.events = [pybamm.Event("an event", var + 1)]
@@ -411,23 +475,15 @@ class TestIDAKLUSolver:
 
         solver = pybamm.IDAKLUSolver()
 
-        # Set up and  model consistently initialize the model
-        solver.set_up(model)
-        t0 = 0.0
-        solver._set_consistent_initialization(model, t0, inputs_dict={})
+        # Solve a short interval -- consistent IC is computed in C++
+        # by the Newton solver and IDACalcIC during solve()
+        t_eval = np.linspace(0, 1, 10)
+        sol = solver.solve(model, t_eval)
 
-        # u(t0) = 0, v(t0) = 1
+        # u(t0) = 0, v(t0) = 1 (corrected from v=2 by Newton IC solver)
         np.testing.assert_allclose(
-            model.y0full,
+            sol.y[:, 0],
             [0, 1],
-            rtol=1e-7,
-            atol=1e-6,
-        )
-        # u'(t0) = 0.1 * v(t0) = 0.1
-        # Since v is algebraic, the initial derivative is set to 0
-        np.testing.assert_allclose(
-            model.ydot0full,
-            [0.1, 0],
             rtol=1e-7,
             atol=1e-6,
         )
@@ -551,7 +607,7 @@ class TestIDAKLUSolver:
         solver = pybamm.IDAKLUSolver()
 
         t_eval = [0, 3]
-        with pytest.raises(pybamm.SolverError, match="KLU requires the Jacobian"):
+        with pytest.raises(pybamm.SolverError, match=r"KLU requires the Jacobian"):
             solver.solve(model, t_eval)
 
         model = pybamm.BaseModel()
@@ -567,7 +623,7 @@ class TestIDAKLUSolver:
         # will give solver error
         t_eval = [0, -3]
         with pytest.raises(
-            pybamm.SolverError, match="t_eval must increase monotonically"
+            pybamm.SolverError, match=r"t_eval must increase monotonically"
         ):
             solver.solve(model, t_eval)
 
@@ -640,8 +696,8 @@ class TestIDAKLUSolver:
         disc = pybamm.Discretisation()
         disc.process_model(model)
 
-        t_eval = [0, 1]
-        t_interp = np.linspace(t_eval[0], t_eval[-1], 100)
+        t_eval = np.linspace(0, 1, 3)
+        t_interp = t_eval
         solver = pybamm.IDAKLUSolver()
         soln_base = solver.solve(model, t_eval, t_interp=t_interp)
 
@@ -660,59 +716,58 @@ class TestIDAKLUSolver:
         s = f.getvalue()
         assert len(s) == 0
 
-        # test everything else
-        for jacobian in ["none", "dense", "sparse", "matrix-free", "garbage"]:
-            for linear_solver in [
-                "SUNLinSol_SPBCGS",
-                "SUNLinSol_Dense",
-                "SUNLinSol_KLU",
-                "SUNLinSol_SPFGMR",
-                "SUNLinSol_SPGMR",
-                "SUNLinSol_SPTFQMR",
-                "garbage",
-            ]:
-                for precon in ["none", "BBDP"]:
-                    options = {
-                        "jacobian": jacobian,
-                        "linear_solver": linear_solver,
-                        "preconditioner": precon,
-                        "max_num_steps": 10000,
-                    }
-                    solver = pybamm.IDAKLUSolver(
-                        atol=1e-8,
-                        rtol=1e-8,
-                        options=options,
-                    )
-                    works = (
-                        (jacobian == "none" and (linear_solver == "SUNLinSol_Dense"))
-                        or (
-                            jacobian == "dense" and (linear_solver == "SUNLinSol_Dense")
-                        )
-                        or (
-                            jacobian == "sparse"
-                            and (
-                                linear_solver != "SUNLinSol_Dense"
-                                and linear_solver != "garbage"
-                            )
-                        )
-                        or (
-                            jacobian == "matrix-free"
-                            and (
-                                linear_solver != "SUNLinSol_KLU"
-                                and linear_solver != "SUNLinSol_Dense"
-                                and linear_solver != "garbage"
-                            )
-                        )
-                    )
+        jacobians = ["none", "dense", "sparse", "matrix-free", "garbage"]
+        linear_solvers = [
+            "SUNLinSol_SPBCGS",
+            "SUNLinSol_Dense",
+            "SUNLinSol_KLU",
+            "SUNLinSol_SPFGMR",
+            "SUNLinSol_SPGMR",
+            "SUNLinSol_SPTFQMR",
+            "garbage",
+        ]
+        preconditions = ["none", "BBDP"]
 
-                    if works:
-                        soln = solver.solve(model, t_eval, t_interp=t_interp)
-                        np.testing.assert_allclose(
-                            soln.y, soln_base.y, rtol=1e-5, atol=1e-4
-                        )
-                    else:
-                        with pytest.raises(ValueError):
-                            soln = solver.solve(model, t_eval, t_interp=t_interp)
+        # Test jacobian/linear_solver/preconditioner combinations
+        for jacobian, linear_solver, precon in itertools.product(
+            jacobians, linear_solvers, preconditions
+        ):
+            options = {
+                "jacobian": jacobian,
+                "linear_solver": linear_solver,
+                "preconditioner": precon,
+            }
+            solver = pybamm.IDAKLUSolver(
+                atol=1e-8,
+                rtol=1e-8,
+                options=options,
+            )
+            works = (
+                (jacobian == "none" and (linear_solver == "SUNLinSol_Dense"))
+                or (jacobian == "dense" and (linear_solver == "SUNLinSol_Dense"))
+                or (
+                    jacobian == "sparse"
+                    and (
+                        linear_solver != "SUNLinSol_Dense"
+                        and linear_solver != "garbage"
+                    )
+                )
+                or (
+                    jacobian == "matrix-free"
+                    and (
+                        linear_solver != "SUNLinSol_KLU"
+                        and linear_solver != "SUNLinSol_Dense"
+                        and linear_solver != "garbage"
+                    )
+                )
+            )
+
+            if works:
+                soln = solver.solve(model, t_eval, t_interp=t_interp)
+                np.testing.assert_allclose(soln.y, soln_base.y, rtol=1e-5, atol=1e-4)
+            else:
+                with pytest.raises(ValueError):
+                    _ = solver.solve(model, t_eval, t_interp=t_interp)
 
     def test_solver_options(self):
         model = pybamm.BaseModel()
@@ -752,17 +807,21 @@ class TestIDAKLUSolver:
             "epsilon_linear_tolerance": 0.06,
             "increment_factor": 0.99,
             "linear_solution_scaling": False,
+            "hermite_reduction_factor": 1.1,
         }
 
         # test everything works
         for option in options_success:
             options = {option: options_success[option]}
             solver = pybamm.IDAKLUSolver(rtol=1e-6, atol=1e-6, options=options)
-            soln = solver.solve(model, t_eval, t_interp=t_interp)
+            soln = solver.solve(model, t_eval)
+            # Hermite upsample y
+            itp = CubicHermiteSpline(soln.t, soln.y, soln.yp, axis=1)
+            y_upsampled = itp(t_interp)
 
             # Asserts
-            assert options == solver.options
-            np.testing.assert_allclose(soln.y, soln_base.y, rtol=1e-5, atol=1e-4)
+            assert all(v == solver.options[k] for k, v in options.items())
+            np.testing.assert_allclose(y_upsampled, soln_base.y, rtol=1e-5, atol=1e-4)
 
         options_fail = {
             "max_order_bdf": -1,
@@ -772,14 +831,14 @@ class TestIDAKLUSolver:
             "max_linesearch_backtracks_ic": -1,
             "epsilon_linear_tolerance": -1.0,
             "increment_factor": -1.0,
+            "hermite_reduction_factor": -1.0,
         }
 
         # test that the solver throws a warning
         for option in options_fail:
             options = {option: options_fail[option]}
-            solver = pybamm.IDAKLUSolver(options=options)
-
             with pytest.raises(pybamm.SolverError):
+                solver = pybamm.IDAKLUSolver(options=options)
                 solver.solve(model, t_eval)
 
     def test_with_output_variables(self):
@@ -907,7 +966,7 @@ class TestIDAKLUSolver:
         sim = pybamm.Simulation(model, solver=solver, parameter_values=params)
         with pytest.raises(
             pybamm.SolverError,
-            match="Sensitivity of sparse variables not supported",
+            match=r"Sensitivity of sparse variables not supported",
         ):
             sim.solve([0, 100], inputs=input_parameters, calculate_sensitivities=True)
 
@@ -1094,7 +1153,7 @@ class TestIDAKLUSolver:
             atol=atol,
         )
 
-    def test_python_idaklu_deprecation_errors(self):
+    def test_idaklu_forces_casadi_format(self):
         model = pybamm.BaseModel()
         model.convert_to_format = "python"
         u = pybamm.Variable("u")
@@ -1107,21 +1166,10 @@ class TestIDAKLUSolver:
         disc = pybamm.Discretisation()
         disc.process_model(model)
 
-        t_eval = [0, 3]
-
-        solver = pybamm.IDAKLUSolver(
-            root_method="lm",
-        )
-
-        with pytest.raises(
-            pybamm.SolverError,
-            match="Unsupported option for convert_to_format=python",
-        ):
-            with pytest.raises(
-                DeprecationWarning,
-                match="The python-idaklu solver has been deprecated.",
-            ):
-                _ = solver.solve(model, t_eval)
+        solver = pybamm.IDAKLUSolver()
+        assert model.convert_to_format == "python"
+        solver.set_up(model)
+        assert model.convert_to_format == "casadi"
 
     def test_extrapolation_events_with_output_variables(self):
         # Make sure the extrapolation checks work with output variables
@@ -1141,7 +1189,7 @@ class TestIDAKLUSolver:
         solver = pybamm.IDAKLUSolver(output_variables=["c"])
         solver.set_up(model)
 
-        with pytest.warns(pybamm.SolverWarning, match="extrapolation occurred for"):
+        with pytest.warns(pybamm.SolverWarning, match=r"extrapolation occurred for"):
             solver.solve(model, t_eval=[0, 1])
 
     def test_model_solver_with_non_identity_mass(self):
@@ -1160,11 +1208,6 @@ class TestIDAKLUSolver:
         mass_matrix = 10 * model.mass_matrix.entries
         model.mass_matrix = pybamm.Matrix(mass_matrix)
 
-        # Note that mass_matrix_inv is just the inverse of the ode block of the
-        # mass matrix
-        mass_matrix_inv = 0.1 * eye(mass_matrix.shape[0] // 2)
-        model.mass_matrix_inv = pybamm.Matrix(mass_matrix_inv)
-
         assert not model.is_standard_form_dae
 
         # Solve
@@ -1176,12 +1219,13 @@ class TestIDAKLUSolver:
         np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
         np.testing.assert_allclose(solution.y[-1], 2 * np.exp(0.1 * solution.t))
 
-    def test_multiple_initial_conditions_dict(self):
+    def test_multiple_initial_conditions_single_variable(self):
         model = pybamm.BaseModel()
-        model.convert_to_format = None
+        model.convert_to_format = "casadi"
         u = pybamm.Variable("u")
+        u0 = pybamm.InputParameter("u0")
         model.rhs = {u: -u}
-        model.initial_conditions = {u: 1}
+        model.initial_conditions = {u: u0}
         model.variables = {"u": u}
 
         disc = pybamm.Discretisation()
@@ -1190,16 +1234,14 @@ class TestIDAKLUSolver:
         solver = pybamm.IDAKLUSolver(options={"num_threads": 1})
 
         n_sims = 3
-        initial_conditions = [{"u": i + 1} for i in range(n_sims)]
-        inputs = [{} for _ in range(n_sims)]
+        initial_condition_inputs = [{"u0": i + 1} for i in range(n_sims)]
         t_eval = np.array([0, 1])
         t_interp = np.linspace(0, 1, 10)
 
         solutions = solver.solve(
             model,
             t_eval,
-            inputs=inputs,
-            initial_conditions=initial_conditions,
+            inputs=initial_condition_inputs,
             t_interp=t_interp,
         )
 
@@ -1214,12 +1256,13 @@ class TestIDAKLUSolver:
                 atol=1e-5,
             )
 
-    def test_single_initial_condition_dict(self):
+    def test_single_initial_condition_single_variable(self):
         model = pybamm.BaseModel()
         model.convert_to_format = "casadi"
         u = pybamm.Variable("u")
+        u0 = pybamm.InputParameter("u0")
         model.rhs = {u: -u}
-        model.initial_conditions = {u: 1}
+        model.initial_conditions = {u: u0}
         model.variables = {"u": u}
 
         disc = pybamm.Discretisation()
@@ -1227,12 +1270,12 @@ class TestIDAKLUSolver:
 
         solver = pybamm.IDAKLUSolver()
 
-        initial_condition = {"u": 5}
+        initial_condition_input = {"u0": 5}
         t_eval = np.array([0, 1])
         t_interp = np.linspace(0, 1, 10)
 
         solution = solver.solve(
-            model, t_eval, initial_conditions=initial_condition, t_interp=t_interp
+            model, t_eval, inputs=initial_condition_input, t_interp=t_interp
         )
 
         np.testing.assert_allclose(solution["u"](0), 5)
@@ -1240,59 +1283,14 @@ class TestIDAKLUSolver:
             solution["u"](t_eval), 5 * np.exp(-t_eval), rtol=1e-3, atol=1e-5
         )
 
-        inputs = [{} for _ in range(3)]
-        solutions = solver.solve(
-            model, t_eval, inputs=inputs, initial_conditions=initial_condition
-        )
-
-        assert len(solutions) == 3
-        for solution in solutions:
-            np.testing.assert_allclose(solution["u"](0), 5)
-            np.testing.assert_allclose(
-                solution["u"](t_eval), 5 * np.exp(-t_eval), rtol=1e-3, atol=1e-5
-            )
-
-    def test_initial_condition_array(self):
-        model = pybamm.BaseModel()
-        u = pybamm.Variable("u")
-        model.rhs = {u: -u}
-        model.initial_conditions = {u: 1}
-        model.variables = {"u": u}
-
-        disc = pybamm.Discretisation()
-        disc.process_model(model)
-
-        solver = pybamm.IDAKLUSolver()
-        t_eval = np.array([0, 1])
-        t_interp = np.linspace(0, 1, 10)
-
-        ics = [np.array([2.0]), np.array([4.0]), np.array([6.0])]
-        inputs = [{} for _ in ics]
-
-        solutions = solver.solve(
-            model,
-            t_eval,
-            t_interp=t_interp,
-            inputs=inputs,
-            initial_conditions=ics,
-        )
-
-        assert len(solutions) == len(ics)
-
-        for ic_array, sol in zip(ics, solutions, strict=False):
-            start = ic_array.item()
-            got0 = sol["u"](0)
-            np.testing.assert_allclose(got0, start, rtol=1e-3, atol=1e-5)
-            got_curve = sol["u"](t_eval)
-            expected_curve = start * np.exp(-t_eval)
-            np.testing.assert_allclose(got_curve, expected_curve, rtol=1e-3, atol=1e-5)
-
-    def test_multiple_variables(self):
+    def test_multiple_initial_conditions_multiple_variables(self):
         model = pybamm.BaseModel()
         u = pybamm.Variable("u")
         v = pybamm.Variable("v")
+        u0 = pybamm.InputParameter("u0")
+        v0 = pybamm.InputParameter("v0")
         model.rhs = {u: -u, v: -2 * v}
-        model.initial_conditions = {u: 1, v: 2}
+        model.initial_conditions = {u: u0, v: v0}
         model.variables = {"u": u, "v": v}
 
         disc = pybamm.Discretisation()
@@ -1301,7 +1299,7 @@ class TestIDAKLUSolver:
         # Use default solver tolerances
         solver = pybamm.IDAKLUSolver()
 
-        initial_conditions = [{"u": 3, "v": 4}, {"u": 5, "v": 6}]
+        initial_conditions = [{"u0": 3, "v0": 4}, {"u0": 5, "v0": 6}]
 
         t_eval = np.array([0, 1])
         t_interp = np.linspace(0, 1, 10)
@@ -1309,8 +1307,7 @@ class TestIDAKLUSolver:
         solutions = solver.solve(
             model,
             t_eval,
-            inputs=[{}, {}],
-            initial_conditions=initial_conditions,
+            inputs=initial_conditions,
             t_interp=t_interp,
         )
 
@@ -1334,73 +1331,6 @@ class TestIDAKLUSolver:
             solutions[1]["v"](t_eval), 6 * np.exp(-2 * t_eval), rtol=1e-3, atol=1e-5
         )
 
-    def test_error_variable_not_found(self):
-        model = pybamm.BaseModel()
-        u = pybamm.Variable("u")
-        model.rhs = {u: -u}
-        model.initial_conditions = {u: 1}
-        model.variables = {"u": u}
-
-        disc = pybamm.Discretisation()
-        disc.process_model(model)
-
-        solver = pybamm.IDAKLUSolver()
-
-        initial_condition = {"nonexistent_variable": 5}
-
-        t_eval = np.linspace(0, 1, 10)
-
-        with pytest.raises(
-            ValueError, match="Variable 'nonexistent_variable' not found in model"
-        ):
-            solver.solve(model, t_eval, initial_conditions=initial_condition)
-
-    def test_error_initial_conditions_type(self):
-        model = pybamm.BaseModel()
-        u = pybamm.Variable("u")
-        model.rhs = {u: -u}
-        model.initial_conditions = {u: 1}
-        model.variables = {"u": u}
-
-        disc = pybamm.Discretisation()
-        disc.process_model(model)
-
-        solver = pybamm.IDAKLUSolver()
-
-        initial_condition = "invalid_type"
-
-        t_eval = np.linspace(0, 1, 10)
-
-        with pytest.raises(
-            TypeError, match="Initial conditions must be dict or numpy array"
-        ):
-            solver.solve(model, t_eval, initial_conditions=initial_condition)
-
-    def test_error_initial_conditions_count_mismatch(self):
-        model = pybamm.BaseModel()
-        u = pybamm.Variable("u")
-        model.rhs = {u: -u}
-        model.initial_conditions = {u: 1}
-        model.variables = {"u": u}
-
-        disc = pybamm.Discretisation()
-        disc.process_model(model)
-
-        solver = pybamm.IDAKLUSolver()
-
-        initial_conditions = [{"u": 2}, {"u": 3}]
-        inputs = [{}, {}, {}]
-
-        t_eval = np.linspace(0, 1, 10)
-
-        with pytest.raises(
-            ValueError,
-            match="Number of initial conditions must match number of input sets",
-        ):
-            solver.solve(
-                model, t_eval, inputs=inputs, initial_conditions=initial_conditions
-            )
-
     def test_interpolant_extrapolate(self):
         x = np.linspace(0, 2)
         var = pybamm.Variable("var")
@@ -1422,7 +1352,7 @@ class TestIDAKLUSolver:
         solver = pybamm.IDAKLUSolver(on_extrapolation="error")
         t_eval = [0, 5]
 
-        with pytest.raises(pybamm.SolverError, match="interpolation bounds"):
+        with pytest.raises(pybamm.SolverError, match=r"interpolation bounds"):
             solver.solve(model, t_eval)
 
         # Test with on_extrapolation="warn"
@@ -1532,3 +1462,277 @@ class TestIDAKLUSolver:
 
         assert len(sol.t) == options_failures["num_steps_no_progress"]
         assert sol.t[-1] < options_failures["t_no_progress"]
+
+    @pytest.mark.skipif(
+        no_internet_connection(),
+        reason="Network not available to download files from registry",
+    )
+    def test_drive_cycle_knot_reduction(self):
+        """Test knot reduction with a drive cycle (many t_eval breakpoints).
+
+        Verifies that:
+          1. The reduced solution has fewer points than the baseline.
+          2. All derivatives are finite (no NaN from LS solve).
+          3. The Hermite spline error (integral L2 WRMS) stays below 1.0.
+        """
+        model = pybamm.lithium_ion.SPM()
+        param = model.default_parameter_values
+        data_loader = pybamm.DataLoader()
+        drive_cycle = pd.read_csv(
+            pybamm.get_parameters_filepath(data_loader.get_data("US06.csv")),
+            comment="#",
+            skip_blank_lines=True,
+            header=None,
+        ).to_numpy()
+        current_interpolant = pybamm.Interpolant(
+            drive_cycle[:, 0], drive_cycle[:, 1], pybamm.t
+        )
+        param["Current function [A]"] = current_interpolant
+
+        rtol = 1e-4
+        atol = 1e-6
+        hermite_reduction_factor = 2.0
+
+        # Baseline: no knot reduction
+        solver_base = pybamm.IDAKLUSolver(rtol=rtol, atol=atol)
+        sim_base = pybamm.Simulation(model, parameter_values=param, solver=solver_base)
+        sol_base = sim_base.solve()
+
+        # Reduced: with knot reduction (and optionally LS refinement)
+        solver_red = pybamm.IDAKLUSolver(
+            rtol=rtol,
+            atol=atol,
+            options={"hermite_reduction_factor": hermite_reduction_factor},
+        )
+        sim_red = pybamm.Simulation(model, parameter_values=param, solver=solver_red)
+        sol_red = sim_red.solve()
+
+        # 1. Fewer points
+        n_base = sum(len(s) for s in sol_base.all_ts)
+        n_red = sum(len(s) for s in sol_red.all_ts)
+        assert n_red < n_base, (
+            f"Knot reduction should reduce points: {n_red} >= {n_base}"
+        )
+
+        # 2. All derivatives must be finite (no NaN from LS)
+        for seg in range(len(sol_red.all_ts)):
+            yp = np.asarray(sol_red.all_yps[seg])
+            assert np.all(np.isfinite(yp)), f"Non-finite derivatives in segment {seg}"
+
+        # 3. Integral L2 WRMS error must be bounded
+        for seg, wrms in _hermite_wrms(sol_base, sol_red, atol, rtol):
+            assert wrms < 1.0, f"Segment {seg} integral L2 WRMS too large: {wrms:.4e}"
+
+    def test_reduce_solution_errors(self):
+        """Test that reduce_solution raises on invalid inputs."""
+        model = pybamm.lithium_ion.SPM()
+        solver_base = pybamm.IDAKLUSolver(rtol=1e-4, atol=1e-6)
+        sim = pybamm.Simulation(model, solver=solver_base)
+        sol = sim.solve([0, 3600])
+
+        # No Hermite data: disable all_yps
+        sol_no_hermite = sol.copy()
+        sol_no_hermite._all_yps = None
+        with pytest.raises(pybamm.SolverError, match="Hermite interpolation data"):
+            solver_base.reduce_solution(sol_no_hermite)
+
+        # Solver had reduction active
+        solver_active = pybamm.IDAKLUSolver(
+            rtol=1e-4,
+            atol=1e-6,
+            options={"hermite_reduction_factor": 2.0},
+        )
+        with pytest.raises(pybamm.SolverError, match=r"hermite_reduction_factor = 1.0"):
+            solver_active.reduce_solution(sol)
+
+    def test_hermite_reduction_factor_incompatible(self):
+        """Test errors/warnings when hermite_reduction_factor conflicts with other options."""
+        # Error at construction: hermite_reduction_factor + output_variables
+        with pytest.raises(pybamm.SolverError, match="output_variables"):
+            pybamm.IDAKLUSolver(
+                options={"hermite_reduction_factor": 2.0},
+                output_variables=["Voltage [V]"],
+            )
+
+        # Error at construction: hermite_reduction_factor + hermite_interpolation disabled
+        with pytest.raises(pybamm.SolverError, match="hermite_interpolation"):
+            pybamm.IDAKLUSolver(
+                options={
+                    "hermite_reduction_factor": 2.0,
+                    "hermite_interpolation": False,
+                },
+            )
+
+        # Warning at solve: hermite_reduction_factor + sensitivities
+        model_sens = pybamm.lithium_ion.SPM()
+        param = model_sens.default_parameter_values
+        param["Current function [A]"] = pybamm.InputParameter("I")
+        solver = pybamm.IDAKLUSolver(options={"hermite_reduction_factor": 2.0})
+        sim = pybamm.Simulation(model_sens, parameter_values=param, solver=solver)
+        with pytest.warns(pybamm.SolverWarning, match="not currently supported"):
+            sim.solve([0, 1], inputs={"I": 1.0}, calculate_sensitivities=True)
+
+    def test_reduce_solution_basic(self):
+        """Test basic post-hoc reduce_solution: fewer points, finite yps, bounded error."""
+        model = pybamm.lithium_ion.SPM()
+        rtol = 1e-4
+        atol = 1e-6
+        solver = pybamm.IDAKLUSolver(rtol=rtol, atol=atol)
+        sim = pybamm.Simulation(model, solver=solver)
+        sol = sim.solve([0, 3600])
+
+        reduced = solver.reduce_solution(sol, hermite_reduction_factor=2.0)
+
+        # 1. Fewer points
+        n_orig = sum(len(s) for s in sol.all_ts)
+        n_red = sum(len(s) for s in reduced.all_ts)
+        assert n_red < n_orig, (
+            f"reduce_solution should reduce points: {n_red} >= {n_orig}"
+        )
+
+        # 2. All derivatives finite
+        for seg in range(len(reduced.all_ts)):
+            yp = np.asarray(reduced.all_yps[seg])
+            assert np.all(np.isfinite(yp)), f"Non-finite derivatives in segment {seg}"
+
+        # 3. Bounded WRMS error
+        for seg, wrms in _hermite_wrms(sol, reduced, atol, rtol):
+            assert wrms < 1.0, f"Segment {seg} integral L2 WRMS too large: {wrms:.4e}"
+
+    def test_reduce_solution_metadata(self):
+        """Test that reduce_solution preserves metadata from the original solution."""
+        model = pybamm.lithium_ion.SPM()
+        solver = pybamm.IDAKLUSolver(rtol=1e-4, atol=1e-6)
+        sim = pybamm.Simulation(model, solver=solver)
+        sol = sim.solve([0, 3600])
+
+        reduced = solver.reduce_solution(sol, hermite_reduction_factor=2.0)
+
+        assert reduced.termination == sol.termination
+        assert reduced.all_inputs == sol.all_inputs
+        assert len(reduced.all_models) == len(sol.all_models)
+        for rm, sm in zip(reduced.all_models, sol.all_models, strict=True):
+            assert rm is sm
+        if sol.t_event is not None:
+            np.testing.assert_array_equal(reduced.t_event, sol.t_event)
+        if sol.y_event is not None:
+            np.testing.assert_array_equal(reduced.y_event, sol.y_event)
+        # all_t_evals preserved
+        assert len(reduced.all_t_evals) == len(sol.all_t_evals)
+        for rte, ste in zip(reduced.all_t_evals, sol.all_t_evals, strict=True):
+            np.testing.assert_array_equal(rte, ste)
+
+    def test_reduce_solution_vs_online(self):
+        """Compare post-hoc reduce_solution with online knot reduction on a drive cycle.
+
+        Verifies that:
+          1. Post-hoc reduction produces similar point counts to online reduction.
+          2. Both have finite derivatives.
+          3. Both have bounded WRMS error vs the uncompressed baseline.
+        """
+        model = pybamm.lithium_ion.SPM()
+        param = model.default_parameter_values
+
+        time = np.arange(100)
+        np.random.seed(0)
+        current = 1 + 0.1 * np.random.rand(time.size)
+        current_interpolant = pybamm.Interpolant(time, current, pybamm.t)
+        param["Current function [A]"] = current_interpolant
+
+        rtol = 1e-4
+        atol = 1e-6
+        hermite_reduction_factor = 2.0
+
+        # Baseline: no reduction
+        solver_base = pybamm.IDAKLUSolver(rtol=rtol, atol=atol)
+        sim_base = pybamm.Simulation(model, parameter_values=param, solver=solver_base)
+        sol_base = sim_base.solve()
+
+        # Online reduction
+        solver_online = pybamm.IDAKLUSolver(
+            rtol=rtol,
+            atol=atol,
+            options={"hermite_reduction_factor": hermite_reduction_factor},
+        )
+        sim_online = pybamm.Simulation(
+            model, parameter_values=param, solver=solver_online
+        )
+        sol_online = sim_online.solve()
+
+        # Post-hoc reduction
+        sol_posthoc = solver_base.reduce_solution(
+            sol_base, hermite_reduction_factor=hermite_reduction_factor
+        )
+
+        n_base = sum(len(s) for s in sol_base.all_ts)
+        n_online = sum(len(s) for s in sol_online.all_ts)
+        n_posthoc = sum(len(s) for s in sol_posthoc.all_ts)
+
+        # Point counts should be equal
+        assert n_posthoc == n_online
+
+        # Time arrays should be equal
+        np.testing.assert_array_equal(sol_posthoc.t, sol_online.t)
+
+        # Both should reduce points
+        assert n_online < n_base
+
+        sols = {
+            "online": sol_online,
+            "posthoc": sol_posthoc,
+        }
+
+        for label, sol_r in sols.items():
+            # Both must have finite derivatives
+            for seg in range(len(sol_r.all_ts)):
+                yp = np.asarray(sol_r.all_yps[seg])
+                assert np.all(np.isfinite(yp)), (
+                    f"{label}: non-finite derivatives in segment {seg}"
+                )
+
+            # WRMS error bounded for both
+            for seg, wrms in _hermite_wrms(sol_base, sol_r, atol, rtol):
+                assert wrms < 1.0, (
+                    f"{label} segment {seg} integral L2 WRMS too large: {wrms:.4e}"
+                )
+
+    def test_solution_user_options_forwarded(self):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        v = pybamm.Variable("v")
+        model.rhs = {u: 0.1 * v}
+        model.algebraic = {v: 1 - v}
+        model.initial_conditions = {u: 0, v: 1}
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+        t_eval = [0, 1]
+
+        sol_default = pybamm.IDAKLUSolver().solve(model, t_eval)
+        assert sol_default.user_options == {"compile": False}
+        assert sol_default.options["compile"] is False
+
+        sol_vm = pybamm.IDAKLUSolver(
+            options={"compile": False, "num_threads": 2}
+        ).solve(model, t_eval)
+        assert sol_vm.user_options == {"compile": False}
+        assert "num_threads" not in sol_vm.user_options
+
+    def test_solution_user_options_survive_pickle(self, tmp_path):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        model.rhs = {u: -u}
+        model.initial_conditions = {u: 1}
+        model.variables = {"u": u, "2u": 2 * u}
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        sol = pybamm.IDAKLUSolver().solve(model, [0, 1])
+        path = tmp_path / "idaklu_sol.pickle"
+        sol.save(path)
+        loaded = pybamm.load(path)
+
+        assert loaded.user_options == sol.user_options
+        assert loaded.options == sol.options
+        np.testing.assert_allclose(
+            loaded["2u"].entries, sol["2u"].entries, rtol=1e-12, atol=1e-12
+        )

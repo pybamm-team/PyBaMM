@@ -6,7 +6,7 @@ Fixes # (issue)
 
 ## Type of change
 
-Please add a line in the relevant section of [CHANGELOG.md](https://github.com/pybamm-team/PyBaMM/blob/develop/CHANGELOG.md) to document the change (include PR #)
+Please add a line in the relevant section of [CHANGELOG.md](https://github.com/pybamm-team/PyBaMM/blob/main/CHANGELOG.md) to document the change (include PR #)
 
 # Important checks:
 

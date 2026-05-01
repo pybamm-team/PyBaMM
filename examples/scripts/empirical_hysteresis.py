@@ -126,8 +126,7 @@ parameter_values.update(
         "Negative particle diffusivity [m2.s-1]": 3.3e-14,
         "Negative particle lithiation diffusivity [m2.s-1]": 4e-14,
         "Negative particle delithiation diffusivity [m2.s-1]": 2.6e-14,
-    },
-    check_already_exists=False,
+    }
 )
 
 # Create experiment and run simulation

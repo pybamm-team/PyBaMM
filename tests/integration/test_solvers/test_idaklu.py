@@ -1,7 +1,11 @@
+import logging
+import shutil
+
 import numpy as np
 import pytest
 
 import pybamm
+from pybamm.codegen.compilation import _CACHE
 
 
 class TestIDAKLUSolver:
@@ -17,6 +21,32 @@ class TestIDAKLUSolver:
         t_eval = np.linspace(0, 3600, 100)
         solution = pybamm.IDAKLUSolver().solve(model, t_eval)
         np.testing.assert_array_less(1, solution.t.size)
+
+    def test_debug_logs_during_solve(self, caplog):
+        model = pybamm.lithium_ion.SPM()
+        geometry = model.default_geometry
+        param = model.default_parameter_values
+        param.process_model(model)
+        param.process_geometry(geometry)
+        mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
+        disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+        disc.process_model(model)
+
+        # Length 3 so solver hits an interior breakpoint and logs "reinitializing"
+        t_eval = np.array([0.0, 0.5, 1.0])
+        with caplog.at_level(logging.DEBUG, logger="pybamm.logger"):
+            pybamm.IDAKLUSolver().solve(model, t_eval)
+
+        requirements = [
+            "Integrating from",
+            "t =",
+            "reinitializing",
+            "Integration complete",
+        ]
+        for requirement in requirements:
+            assert requirement in caplog.text, (
+                f"Requirement {requirement} not found in log"
+            )
 
     def test_on_spme_sensitivities(self):
         param_name = "Current function [A]"
@@ -211,70 +241,43 @@ class TestIDAKLUSolver:
             sols[1].cycles[-1]["Current [A]"].data,
         )
 
-    @pytest.mark.parametrize(
-        "model_cls, make_ics",
-        [
-            (pybamm.lithium_ion.SPM, lambda y0: [y0, 2 * y0]),
-            (
-                pybamm.lithium_ion.DFN,
-                lambda y0: [y0, y0 * (1 + 0.01 * np.ones_like(y0))],
-            ),
-        ],
-    )
-    def test_multiple_initial_conditions_against_independent_solves(
-        self, model_cls, make_ics
-    ):
-        model = model_cls()
-        geom = model.default_geometry
-        pv = model.default_parameter_values
-        pv.process_model(model)
-        pv.process_geometry(geom)
-        mesh = pybamm.Mesh(geom, model.default_submesh_types, model.default_var_pts)
-        disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+    def test_multiple_initial_conditions_against_independent_solves(self):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        v = pybamm.Variable("v")
+        u0 = pybamm.InputParameter("u0")
+        v0 = pybamm.InputParameter("v0")
+        model.rhs = {u: -u, v: -2 * v}
+        model.initial_conditions = {u: u0, v: v0}
+        model.variables = {"u": u, "v": v}
+
+        disc = pybamm.Discretisation()
         disc.process_model(model)
 
         t_eval = np.array([0, 1])
         solver = pybamm.IDAKLUSolver()
 
-        base_sol = solver.solve(model, t_eval)
-        y0_base = base_sol.y[:, 0]
-
-        ics = make_ics(y0_base)
-        inputs = [{}] * len(ics)
+        inputs = [{"u0": 3, "v0": 4}, {"u0": 5, "v0": 6}]
 
         multi_sols = solver.solve(
             model,
             t_eval,
             inputs=inputs,
-            initial_conditions=ics,
         )
         assert isinstance(multi_sols, list) and len(multi_sols) == 2
+        np.testing.assert_equal([sol["u"](0) for sol in multi_sols], [3, 5])
 
         indep_sols = []
-        for ic in ics:
-            sol_indep = solver.solve(
-                model, t_eval, inputs=[{}], initial_conditions=[ic]
-            )
-            if isinstance(sol_indep, list):
-                sol_indep = sol_indep[0]
+        for ic in inputs:
+            sol_indep = solver.solve(model, t_eval, inputs=ic)
             indep_sols.append(sol_indep)
-
-        if model_cls is pybamm.lithium_ion.SPM:
-            rtol, atol = 1e-8, 1e-10
-        else:
-            rtol, atol = 1e-6, 1e-8
 
         for idx in (0, 1):
             sol_vec = multi_sols[idx]
             sol_ind = indep_sols[idx]
 
-            np.testing.assert_allclose(sol_vec.t, sol_ind.t, rtol=1e-12, atol=0)
-            np.testing.assert_allclose(sol_vec.y, sol_ind.y, rtol=rtol, atol=atol)
-
-            if model_cls is pybamm.lithium_ion.SPM:
-                np.testing.assert_allclose(
-                    sol_vec.y[:, 0], ics[idx], rtol=1e-8, atol=1e-10
-                )
+            np.testing.assert_allclose(sol_vec.t, sol_ind.t)
+            np.testing.assert_allclose(sol_vec.y, sol_ind.y)
 
     def test_outvars_with_experiments_multi_simulation(self):
         model = pybamm.lithium_ion.SPM()
@@ -308,3 +311,68 @@ class TestIDAKLUSolver:
         np.testing.assert_array_equal(
             new_sol1["Voltage [V]"].entries[63:], new_sol2["Voltage [V]"].entries
         )
+
+
+@pytest.mark.skipif(
+    not (shutil.which("gcc") or shutil.which("cc")),
+    reason="No C compiler available for AOT compilation",
+)
+class TestIDAKLUSolverAOTCompilation:
+    @staticmethod
+    def _build_model():
+        model = pybamm.lithium_ion.SPMe()
+        geometry = model.default_geometry
+        param = model.default_parameter_values
+        param.process_model(model)
+        param.process_geometry(geometry)
+        mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
+        disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+        disc.process_model(model)
+        return model
+
+    def test_spme_solve_and_observe_voltage_matches_vm(self):
+        t_eval = np.linspace(0, 3600, 100)
+
+        model_int = self._build_model()
+        sol_int = pybamm.IDAKLUSolver().solve(model_int, t_eval)
+
+        model_aot = self._build_model()
+        sol_aot = pybamm.IDAKLUSolver(options={"compile": True}).solve(
+            model_aot, t_eval
+        )
+
+        np.testing.assert_array_less(1, sol_aot.t.size)
+        t = np.union1d(sol_int.t, sol_aot.t)
+        t = t[(t >= sol_aot.t[0]) & (t <= sol_aot.t[-1])]
+
+        v_int = sol_int["Voltage [V]"](t)
+        v_aot = sol_aot["Voltage [V]"](t)
+        np.testing.assert_allclose(v_aot, v_int, rtol=1e-5, atol=1e-5)
+
+        assert sol_aot.options["compile"] is True
+        assert sol_int.options["compile"] is False
+
+    def test_spme_observe_uses_aot_external(self):
+        snapshot = dict(_CACHE)
+        _CACHE.clear()
+        try:
+            model = self._build_model()
+            t_eval = np.linspace(0, 3600, 50)
+            sol = pybamm.IDAKLUSolver(options={"compile": True}).solve(model, t_eval)
+
+            v = sol["Voltage [V]"](t_eval)
+            assert v.shape == t_eval.shape
+
+            assert len(_CACHE) >= 2
+            assert all(
+                fn.class_name() == "External"
+                for fn_list in _CACHE.values()
+                for fn in fn_list
+            )
+        finally:
+            _CACHE.clear()
+            _CACHE.update(snapshot)
+
+    def test_invalid_compile_raises(self):
+        with pytest.raises(pybamm.SolverError, match="compile must be a bool"):
+            pybamm.IDAKLUSolver(options={"compile": "garbage"})

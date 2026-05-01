@@ -16,6 +16,10 @@ Before you commit any code, please perform the following checks:
 `PyBaMM` uses a set of `pre-commit` hooks and the `pre-commit` bot to format and prettify the codebase. The hooks can be installed locally using -
 
 ```bash
+# Using uv
+uvx pre-commit install
+
+# Or using pip
 pip install pre-commit
 pre-commit install
 ```
@@ -71,7 +75,11 @@ PyBaMM follows the [PEP8 recommendations](https://www.python.org/dev/peps/pep-00
 We use [ruff](https://github.com/astral-sh/ruff) to check our PEP8 adherence. To try this on your system, navigate to the PyBaMM directory in a console and type
 
 ```bash
-python -m pip install pre-commit
+# Using uv
+uvx pre-commit run ruff
+
+# Or using pip
+pip install pre-commit
 pre-commit run ruff
 ```
 
@@ -157,13 +165,17 @@ We use following plugins for various needs:
 
 [pytest-xdist](https://pypi.org/project/pytest-xdist/) : plugins to run tests in parallel.
 
-If you have `nox` installed, to run unit tests, type
+To run unit tests using `nox`:
 
 ```bash
+# Using uv
+uv run nox -s unit
+
+# Or with nox installed directly
 nox -s unit
 ```
 
-else, type
+Alternatively, you can run tests directly with `pytest`:
 
 ```bash
 pytest -m unit
@@ -315,7 +327,7 @@ This also means that, if you can't fix the bug yourself, it will be much easier 
       ```
 
       Then you can use a try-except block, as in a., but with, for example, `RuntimeWarning` instead of `ValueError`.
-   3. Stepping through the expression tree. Most calls in PyBaMM are operations on [expression trees](https://github.com/pybamm-team/PyBaMM/blob/develop/docs/source/examples/notebooks/expression_tree/expression-tree.ipynb). To view an expression tree in ipython, you can use the `render` command:
+   3. Stepping through the expression tree. Most calls in PyBaMM are operations on [expression trees](https://github.com/pybamm-team/PyBaMM/blob/main/docs/source/examples/notebooks/expression_tree/expression-tree.ipynb). To view an expression tree in ipython, you can use the `render` command:
 
       ```python
       expression_tree.render()
@@ -329,7 +341,7 @@ This also means that, if you can't fix the bug yourself, it will be much easier 
    ```python3
    pybamm.set_logging_level("DEBUG")
    ```
-6. In models that inherit from `pybamm.BaseBatteryModel` (i.e. any battery model), you can use `self.process_parameters_and_discretise` to process a symbol and see what it will look like.
+6. In models that inherit from `pybamm.BaseBatteryModel` (i.e. any battery model), you can use `self.process_symbol` to process a symbol with a fully built model to see what it will look like.
 
 ### Profiling
 
@@ -395,9 +407,9 @@ And then visit the webpage served at `http://127.0.0.1:8000`. Each time a change
 
 ### Example notebooks
 
-Major PyBaMM features are showcased in [Jupyter notebooks](https://jupyter.org/) stored in the [docs/source/examples directory](https://github.com/pybamm-team/PyBaMM/tree/develop/docs/source/examples). Which features are "major" is of course wholly subjective, so please discuss on GitHub first!
+Major PyBaMM features are showcased in [Jupyter notebooks](https://jupyter.org/) stored in the [docs/source/examples directory](https://github.com/pybamm-team/PyBaMM/tree/main/docs/source/examples). Which features are "major" is of course wholly subjective, so please discuss on GitHub first!
 
-All example notebooks should be listed in [docs/source/examples/index.rst](https://github.com/pybamm-team/PyBaMM/blob/develop/docs/source/examples/index.rst). Please follow the (naming and writing) style of existing notebooks where possible.
+All example notebooks should be listed in [docs/source/examples/index.rst](https://github.com/pybamm-team/PyBaMM/blob/main/docs/source/examples/index.rst). Please follow the (naming and writing) style of existing notebooks where possible.
 
 All the notebooks are tested daily.
 
@@ -413,7 +425,7 @@ pybamm.print_citations()
 
 to the end of a script will print all citations that were used by that script. This will print BibTeX information to the terminal; passing a filename to `print_citations` will print the BibTeX information to the specified file instead.
 
-When you contribute code to PyBaMM, you can add your own papers that you would like to be cited if that code is used. First, add the BibTeX for your paper to [CITATIONS.bib](https://github.com/pybamm-team/PyBaMM/blob/develop/src/pybamm/CITATIONS.bib). Then, add the line
+When you contribute code to PyBaMM, you can add your own papers that you would like to be cited if that code is used. First, add the BibTeX for your paper to [CITATIONS.bib](https://github.com/pybamm-team/PyBaMM/blob/main/src/pybamm/CITATIONS.bib). Then, add the line
 
 ```python3
 pybamm.citations.register("your_paper_bibtex_identifier")
@@ -425,11 +437,14 @@ wherever code is called that uses that citation (for example, in functions or in
 
 ### Installation
 
-Installation of PyBaMM and its dependencies is handled via [pip](https://pip.pypa.io/en/stable/)
+Installation of PyBaMM and its dependencies is handled via [uv](https://docs.astral.sh/uv/) or [pip](https://pip.pypa.io/en/stable/).
+A `uv.lock` lockfile is maintained in version control to ensure reproducible environments.
+Dependabot keeps the locked dependencies up to date via weekly PRs.
 
 Configuration files:
 ```
 pyproject.toml
+uv.lock
 ```
 
 ### Continuous Integration using GitHub Actions
@@ -438,7 +453,7 @@ Each change pushed to the PyBaMM GitHub repository will trigger the test and ben
 
 Tests are run for different operating systems, and for all Python versions officially supported by PyBaMM. If you opened a Pull Request, feedback is directly available on the corresponding page. If all tests pass, a green tick will be displayed next to the corresponding test run. If one or more test(s) fail, a red cross will be displayed instead.
 
-Similarly, the benchmark suite is automatically run for the most recently pushed commit. Benchmark results are compared to the results available for the latest commit on the `develop` branch. Should any significant performance regression be found, a red cross will be displayed next to the benchmark run.
+Similarly, the benchmark suite is automatically run for the most recently pushed commit. Benchmark results are compared to the results available for the latest commit on the `main` branch. Should any significant performance regression be found, a red cross will be displayed next to the benchmark run.
 
 In all cases, more details can be obtained by clicking on a specific run.
 
@@ -466,9 +481,9 @@ Editable notebooks are made available using [Google Colab](https://colab.researc
 
 GitHub does some magic with particular filenames. In particular:
 
-- The first page people see when they go to [our GitHub page](https://github.com/pybamm-team/PyBaMM) displays the contents of [README.md](https://github.com/pybamm-team/PyBaMM/blob/develop/README.md), which is written in the [Markdown](https://github.com/adam-p/markdown-here/wiki/Markdown-Cheatsheet) format. Some guidelines can be found [here](https://docs.github.com/articles/about-readmes/).
-- The license for using PyBaMM is stored in [LICENSE](https://github.com/pybamm-team/PyBaMM/blob/develop/LICENSE.txt), and [automatically](https://docs.github.com/articles/adding-a-license-to-a-repository/) linked to by GitHub.
-- This file, [CONTRIBUTING.md](https://github.com/pybamm-team/PyBaMM/blob/develop/CONTRIBUTING.md) is recognised as the contribution guidelines and a link is [automatically](https://github.com/blog/1184-contributing-guidelines) displayed when new issues or pull requests are created.
+- The first page people see when they go to [our GitHub page](https://github.com/pybamm-team/PyBaMM) displays the contents of [README.md](https://github.com/pybamm-team/PyBaMM/blob/main/README.md), which is written in the [Markdown](https://github.com/adam-p/markdown-here/wiki/Markdown-Cheatsheet) format. Some guidelines can be found [here](https://docs.github.com/articles/about-readmes/).
+- The license for using PyBaMM is stored in [LICENSE](https://github.com/pybamm-team/PyBaMM/blob/main/LICENSE.txt), and [automatically](https://docs.github.com/articles/adding-a-license-to-a-repository/) linked to by GitHub.
+- This file, [CONTRIBUTING.md](https://github.com/pybamm-team/PyBaMM/blob/main/CONTRIBUTING.md) is recognised as the contribution guidelines and a link is [automatically](https://github.com/blog/1184-contributing-guidelines) displayed when new issues or pull requests are created.
 
 ## Acknowledgements
 

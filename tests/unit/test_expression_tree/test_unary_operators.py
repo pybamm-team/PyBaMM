@@ -236,13 +236,13 @@ class TestUnaryOperators:
         a = pybamm.Symbol("a")
         with pytest.raises(
             pybamm.DomainError,
-            match="Cannot take gradient of 'a' since its domain is empty",
+            match=r"Cannot take gradient of 'a' since its domain is empty",
         ):
             pybamm.Gradient(a)
 
         # gradient of variable evaluating on edges should fail
         a = pybamm.PrimaryBroadcastToEdges(pybamm.Scalar(random_value), "test")
-        with pytest.raises(TypeError, match="evaluates on edges"):
+        with pytest.raises(TypeError, match=r"evaluates on edges"):
             pybamm.Gradient(a)
 
         # gradient of broadcast should return broadcasted zero
@@ -268,13 +268,13 @@ class TestUnaryOperators:
         a = pybamm.Symbol("a")
         with pytest.raises(
             pybamm.DomainError,
-            match="Cannot take divergence of 'a' since its domain is empty",
+            match=r"Cannot take divergence of 'a' since its domain is empty",
         ):
             pybamm.Divergence(a)
 
         # divergence of variable evaluating on edges should fail
         a = pybamm.PrimaryBroadcast(pybamm.Scalar(random_value), "test")
-        with pytest.raises(TypeError, match="evaluate on edges"):
+        with pytest.raises(TypeError, match=r"evaluate on edges"):
             pybamm.Divergence(a)
 
         # divergence of broadcast should return broadcasted zero
@@ -443,11 +443,11 @@ class TestUnaryOperators:
         z = pybamm.SpatialVariable("z", ["negative electrode"])
         with pytest.raises(pybamm.DomainError):
             pybamm.Integral(a, x)
-        with pytest.raises(TypeError, match="integration_variable must be"):
+        with pytest.raises(TypeError, match=r"integration_variable must be"):
             pybamm.Integral(a, y)
         with pytest.raises(
             NotImplementedError,
-            match="Indefinite integral only implemented w.r.t. one variable",
+            match=r"Indefinite integral only implemented w.r.t. one variable",
         ):
             pybamm.IndefiniteIntegral(a, [x, y])
 
@@ -477,11 +477,11 @@ class TestUnaryOperators:
         np.testing.assert_array_equal(ind.evaluate(y=y_test), np.array([[1], [2], [3]]))
 
         # errors
-        with pytest.raises(TypeError, match="index must be integer or slice"):
+        with pytest.raises(TypeError, match=r"index must be integer or slice"):
             pybamm.Index(vec, 0.0)
         debug_mode = pybamm.settings.debug_mode
         pybamm.settings.debug_mode = True
-        with pytest.raises(ValueError, match="slice size exceeds child size"):
+        with pytest.raises(ValueError, match=r"slice size exceeds child size"):
             pybamm.Index(vec, 5)
         pybamm.settings.debug_mode = debug_mode
 
@@ -494,13 +494,13 @@ class TestUnaryOperators:
         # upwind of scalar symbol should fail
         a = pybamm.Symbol("a")
         with pytest.raises(
-            pybamm.DomainError, match="Cannot upwind 'a' since its domain is empty"
+            pybamm.DomainError, match=r"Cannot upwind 'a' since its domain is empty"
         ):
             pybamm.Upwind(a)
 
         # upwind of variable evaluating on edges should fail
         a = pybamm.PrimaryBroadcastToEdges(pybamm.Scalar(1), "test")
-        with pytest.raises(TypeError, match="evaluate on nodes"):
+        with pytest.raises(TypeError, match=r"evaluate on nodes"):
             pybamm.Upwind(a)
 
         # otherwise upwind should work
@@ -589,7 +589,7 @@ class TestUnaryOperators:
         )
 
         with pytest.raises(
-            pybamm.DomainError, match="Delta function domain cannot be None"
+            pybamm.DomainError, match=r"Delta function domain cannot be None"
         ):
             delta_a = pybamm.DeltaFunction(a, "right", None)
 
@@ -665,7 +665,7 @@ class TestUnaryOperators:
 
         # error if boundary value on tabs and domain is not "current collector"
         var = pybamm.Variable("var", domain=["negative electrode"])
-        with pytest.raises(pybamm.ModelError, match="Can only take boundary"):
+        with pytest.raises(pybamm.ModelError, match=r"Can only take boundary"):
             pybamm.boundary_value(var, "negative tab")
             pybamm.boundary_value(var, "positive tab")
 
@@ -673,7 +673,7 @@ class TestUnaryOperators:
         symbol_on_edges = pybamm.PrimaryBroadcastToEdges(1, "domain")
         with pytest.raises(
             ValueError,
-            match="Can't take the boundary value of a symbol that evaluates on edges",
+            match=r"Can't take the boundary value of a symbol that evaluates on edges",
         ):
             pybamm.boundary_value(symbol_on_edges, "right")
 
@@ -776,12 +776,12 @@ class TestUnaryOperators:
         y = pybamm.StateVector(slice(0, 1))
 
         # check that raises error if data is not present
-        with pytest.raises(pybamm.ModelError, match="must contain a DiscreteTimeData"):
+        with pytest.raises(pybamm.ModelError, match=r"must contain a DiscreteTimeData"):
             pybamm.DiscreteTimeSum(2 * y)
 
         # check that raises error if two data are present
         data2 = pybamm.DiscreteTimeData(times, values, "test2")
-        with pytest.raises(pybamm.ModelError, match="only have one DiscreteTimeData"):
+        with pytest.raises(pybamm.ModelError, match=r"only have one DiscreteTimeData"):
             pybamm.DiscreteTimeSum(data + data2)
 
         sum = pybamm.DiscreteTimeSum(2 * data - y)

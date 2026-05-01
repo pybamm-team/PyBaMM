@@ -35,6 +35,31 @@ class TestDFN(BaseIntegrationTestLithiumIon):
         param["Current function [A]"] = 0.5 * param["Nominal cell capacity [A.h]"]
         self.run_basic_processing_test({}, parameter_values=param)
 
+    def test_cycling_extreme_conditions(self):
+        # test cycling with difficult conditions: full discharge and very low
+        # current cutoff. This exercises the regularised expressions (RegPower,
+        # Arcsinh2) and OCP asymptotes at extreme stoichiometries.
+        model = pybamm.lithium_ion.DFN()
+        param = pybamm.ParameterValues("Chen2020")
+        experiment = pybamm.Experiment(
+            [
+                "Discharge at 1C for 100 hours or until 2.5 V",
+                "Rest for 1 hour",
+                # extreme C-rate charge and low C-rate cutoff
+                "Hold at 4.2 V until C/10000",
+                "Rest for 1 hour",
+            ]
+            * 2
+        )
+        sim = pybamm.Simulation(
+            model,
+            experiment=experiment,
+            parameter_values=param,
+        )
+        sol = sim.solve()
+
+        assert sol.termination == "final time"
+
 
 class TestDFNWithSizeDistribution:
     @pytest.fixture(autouse=True)

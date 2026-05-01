@@ -24,9 +24,6 @@ class BaseKinetics(BaseInterface):
         Phase of the particle (default is "primary")
     """
 
-    def __init__(self, param, domain, reaction, options, phase="primary"):
-        super().__init__(param, domain, reaction, options=options, phase=phase)
-
     def get_fundamental_variables(self):
         domain = self.domain
         phase_name = self.phase_name

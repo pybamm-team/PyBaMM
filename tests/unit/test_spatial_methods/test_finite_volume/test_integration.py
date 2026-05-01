@@ -149,7 +149,7 @@ class TestFiniteVolumeIntegration:
         finite_volume.build(mesh)
         with pytest.raises(
             NotImplementedError,
-            match="Integral in secondary vector only implemented in 'row' form",
+            match=r"Integral in secondary vector only implemented in 'row' form",
         ):
             finite_volume.definite_integral_matrix(var, "column", "secondary")
 
@@ -716,7 +716,7 @@ class TestFiniteVolumeIntegration:
         disc.set_variable_slices([c])
         with pytest.raises(
             NotImplementedError,
-            match="Indefinite integral on a spherical polar domain is not implemented",
+            match=r"Indefinite integral on a spherical polar domain is not implemented",
         ):
             disc.process_symbol(int_c)
 

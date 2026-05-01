@@ -1,0 +1,8 @@
+rules:
+  # These workflows use repo-level secrets without GitHub Environments.
+  # Environments add unnecessary noise for these high-frequency workflows.
+  secrets-outside-env:
+    ignore:
+      - periodic_benchmarks.yml
+      - run_periodic_tests.yml
+      - test_on_push.yml

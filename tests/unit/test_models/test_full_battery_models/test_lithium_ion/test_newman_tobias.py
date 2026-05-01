@@ -13,7 +13,7 @@ class TestNewmanTobias(BaseUnitTestLithiumIon):
 
     def test_electrolyte_options(self):
         options = {"electrolyte conductivity": "integrated"}
-        with pytest.raises(pybamm.OptionError, match="electrolyte conductivity"):
+        with pytest.raises(pybamm.OptionError, match=r"electrolyte conductivity"):
             pybamm.lithium_ion.NewmanTobias(options)
 
     @pytest.mark.skip(reason="Test currently not implemented")
@@ -59,3 +59,10 @@ class TestNewmanTobias(BaseUnitTestLithiumIon):
     @pytest.mark.skip(reason="Test currently not implemented")
     def test_well_posed_composite_algebraic_surface_form(self):
         pass  # skip this test
+
+    @pytest.mark.skip(
+        reason="Newman-Tobias + MSMR + particle size distribution is not "
+        "supported (pre-existing DomainError in MSMR Butler-Volmer kinetics)"
+    )
+    def test_well_posed_psd_msmr_thermal(self):
+        pass

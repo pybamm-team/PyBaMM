@@ -39,7 +39,7 @@ class TestMSMRParameterNames:
         for name in invalid_names:
             assert is_deprecated_msmr_name(name) is False
 
-            with pytest.raises(ValueError, match="Invalid MSMR name"):
+            with pytest.raises(ValueError, match=r"Invalid MSMR name"):
                 replace_deprecated_msmr_name(name)
 
     def test_replace_deprecated_msmr_name(self):

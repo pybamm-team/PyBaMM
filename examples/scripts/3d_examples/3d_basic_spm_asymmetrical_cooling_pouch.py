@@ -21,8 +21,7 @@ parameter_values.update(
         "Back face heat transfer coefficient [W.m-2.K-1]": h_insulation,
         "Bottom face heat transfer coefficient [W.m-2.K-1]": h_insulation,
         "Top face heat transfer coefficient [W.m-2.K-1]": h_insulation,
-    },
-    check_already_exists=False,
+    }
 )
 
 # Use a high discharge rate to generate significant heat

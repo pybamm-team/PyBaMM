@@ -2,15 +2,25 @@
 # Full model of electrode employing Ohm's law
 #
 import pybamm
-from pybamm.doc_utils import copy_parameter_doc_from_parent, doc_extend_parent
 
 from .base_ohm import BaseModel
 
 
-@copy_parameter_doc_from_parent
-@doc_extend_parent
 class Full(BaseModel):
-    """Full model of electrode employing Ohm's law."""
+    """This submodel implements Ohm's law for electrodes, accounting for full resistance effects.
+
+    The model solves for the electrode potential distribution using the effective conductivity,
+    which is the product of the material conductivity and the transport efficiency.
+
+    .. math::
+        \\nabla \\cdot (\\sigma_{\text{eff}} \\nabla \\phi_s) = -a_j
+
+    where:
+        - :math:`\\sigma_{\text{eff}} = \\sigma \\cdot \\tau_{\text{or}}` is the effective conductivity
+        - :math:`\\phi_s` is the electrode potential
+        - :math:`a_j` is the volumetric interfacial current density
+
+    """
 
     def __init__(self, param, domain, options=None):
         super().__init__(param, domain, options=options)

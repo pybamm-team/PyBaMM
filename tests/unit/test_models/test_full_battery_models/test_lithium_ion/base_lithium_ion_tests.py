@@ -65,7 +65,7 @@ class BaseUnitTestLithiumIon:
         options = {"thermal": "x-full", "use lumped thermal capacity": "true"}
         with pytest.raises(
             pybamm.OptionError,
-            match="Lumped thermal capacity model only compatible with lumped thermal models",
+            match=r"Lumped thermal capacity model only compatible with lumped thermal models",
         ):
             self.check_well_posedness(options)
 
@@ -202,12 +202,40 @@ class BaseUnitTestLithiumIon:
         options = {"loss of active material": "stress-driven"}
         self.check_well_posedness(options)
 
+    def test_well_posed_loss_active_material_stress_asymmetric_negative(self):
+        options = {"loss of active material": ("asymmetric stress-driven", "none")}
+        self.check_well_posedness(options)
+
+    def test_well_posed_loss_active_material_stress_asymmetric_positive(self):
+        options = {"loss of active material": ("none", "asymmetric stress-driven")}
+        self.check_well_posedness(options)
+
+    def test_well_posed_loss_active_material_stress_asymmetric_both(self):
+        options = {"loss of active material": "asymmetric stress-driven"}
+        self.check_well_posedness(options)
+
     def test_well_posed_loss_active_material_reaction(self):
         options = {"loss of active material": "reaction-driven"}
         self.check_well_posedness(options)
 
     def test_well_posed_loss_active_material_stress_reaction(self):
         options = {"loss of active material": "stress and reaction-driven"}
+        self.check_well_posedness(options)
+
+    def test_well_posed_loss_active_material_stress_reaction_asymmetric_negative(self):
+        options = {
+            "loss of active material": ("asymmetric stress and reaction-driven", "none")
+        }
+        self.check_well_posedness(options)
+
+    def test_well_posed_loss_active_material_stress_reaction_asymmetric_positive(self):
+        options = {
+            "loss of active material": ("none", "asymmetric stress and reaction-driven")
+        }
+        self.check_well_posedness(options)
+
+    def test_well_posed_loss_active_material_stress_reaction_asymmetric_both(self):
+        options = {"loss of active material": "asymmetric stress and reaction-driven"}
         self.check_well_posedness(options)
 
     def test_well_posed_loss_active_material_current_negative(self):
@@ -558,6 +586,52 @@ class BaseUnitTestLithiumIon:
             "particle size": "distribution",
             "particle mechanics": "swelling only",
             "surface form": "algebraic",
+        }
+        self.check_well_posedness(options)
+
+    def test_well_posed_psd_hysteresis_thermal(self):
+        # Regression test: hysteresis OCP + particle size distribution + a
+        # non-isothermal thermal submodel previously raised a DomainError in
+        # the thermal hysteresis-heating term because the "equilibrium
+        # open-circuit potential [V]" variable was left on the particle-size
+        # domain while "open-circuit potential [V]" was size-averaged.
+        options = {
+            "open-circuit potential": "one-state hysteresis",
+            "particle size": "distribution",
+            "surface form": "algebraic",
+            "thermal": "lumped",
+        }
+        self.check_well_posedness(options)
+
+    def test_well_posed_psd_single_ocp_thermal(self):
+        # Regression test: for "single" OCP + particle size distribution, the
+        # "equilibrium open-circuit potential [V]" variable used to be
+        # published on the particle-size domain. The thermal submodel skips
+        # the hysteresis branch for "single" so this did not raise today, but
+        # the variable itself was on the wrong domain; this test pins the
+        # corrected electrode-domain shape.
+        options = {
+            "particle size": "distribution",
+            "surface form": "algebraic",
+            "thermal": "lumped",
+        }
+        model = self.model(options)
+        model.check_well_posedness()
+        v = model.variables["Positive electrode equilibrium open-circuit potential [V]"]
+        assert v.domains["primary"] == ["positive electrode"]
+
+    def test_well_posed_psd_msmr_thermal(self):
+        # Regression test: MSMR + particle size distribution + thermal
+        # previously failed building Q_hys because "equilibrium open-circuit
+        # potential [V]" was on the particle-size domain.
+        options = {
+            "open-circuit potential": "MSMR",
+            "particle": "MSMR",
+            "intercalation kinetics": "MSMR",
+            "number of MSMR reactions": ("6", "4"),
+            "particle size": "distribution",
+            "surface form": "differential",
+            "thermal": "lumped",
         }
         self.check_well_posedness(options)
 

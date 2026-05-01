@@ -35,7 +35,7 @@ class TestProcessParameterData:
         assert processed[0] == name
 
     def test_processed_structure(self, parameter_data):
-        name, processed = parameter_data
+        _name, processed = parameter_data
         assert isinstance(processed[1], tuple)
         assert isinstance(processed[1][0][0], np.ndarray)
         assert isinstance(processed[1][1], np.ndarray)
@@ -48,5 +48,5 @@ class TestProcessParameterData:
             assert isinstance(processed[1][0][2], np.ndarray)
 
     def test_error(self):
-        with pytest.raises(FileNotFoundError, match="Could not find file"):
+        with pytest.raises(FileNotFoundError, match=r"Could not find file"):
             pybamm.parameters.process_1D_data("not_a_real_file", "not_a_real_path")

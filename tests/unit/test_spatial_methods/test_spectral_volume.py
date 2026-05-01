@@ -105,14 +105,14 @@ class TestSpectralVolume:
         sp_meth.build(mesh)
 
         bcs = {"left": (pybamm.Scalar(0), "x"), "right": (pybamm.Scalar(3), "Neumann")}
-        with pytest.raises(ValueError, match="boundary condition must be"):
+        with pytest.raises(ValueError, match=r"boundary condition must be"):
             sp_meth.replace_dirichlet_values(var, discretised_symbol, bcs)
-        with pytest.raises(ValueError, match="boundary condition must be"):
+        with pytest.raises(ValueError, match=r"boundary condition must be"):
             sp_meth.replace_neumann_values(var, discretised_symbol, bcs)
         bcs = {"left": (pybamm.Scalar(0), "Neumann"), "right": (pybamm.Scalar(3), "x")}
-        with pytest.raises(ValueError, match="boundary condition must be"):
+        with pytest.raises(ValueError, match=r"boundary condition must be"):
             sp_meth.replace_dirichlet_values(var, discretised_symbol, bcs)
-        with pytest.raises(ValueError, match="boundary condition must be"):
+        with pytest.raises(ValueError, match=r"boundary condition must be"):
             sp_meth.replace_neumann_values(var, discretised_symbol, bcs)
 
     def test_grad_div_shapes_Dirichlet_bcs(self):

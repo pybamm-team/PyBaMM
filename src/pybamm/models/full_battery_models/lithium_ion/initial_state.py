@@ -40,6 +40,7 @@ def set_initial_state(
     options=None,
     inputs=None,
     tol=1e-6,
+    esoh_solver=None,
 ):
     """
     Set the values of the parameters representing the initial model states.
@@ -101,6 +102,7 @@ def set_initial_state(
             options=options,
             tol=tol,
             inputs=inputs,
+            esoh_solver=esoh_solver,
         )
         parameter_values.update(
             {
@@ -121,6 +123,7 @@ def set_initial_state(
             tol=tol,
             inputs=inputs,
             direction=direction,
+            esoh_sim=esoh_solver,
         )
         _set_concentration_from_stoich(
             parameter_values,
@@ -158,6 +161,7 @@ def set_initial_state(
             tol=tol,
             inputs=inputs,
             known_value=known_value,
+            esoh_sim=esoh_solver,
         )
         _set_concentration_from_stoich(
             parameter_values,
@@ -211,6 +215,7 @@ def set_initial_state(
             options=options,
             tol=tol,
             inputs=inputs,
+            esoh_solver=esoh_solver,
         )
         _set_concentration_from_stoich(
             parameter_values, param, "negative", "primary", x, inputs, options
@@ -245,3 +250,79 @@ def _set_concentration_from_stoich(
             * parameter_values.evaluate(phase_param.c_max, inputs=inputs)
         }
     )
+
+
+def _fingerprint_standard(pv, param, inputs):
+    return (
+        "standard",
+        float(pv.evaluate(param.n.Q_init, inputs=inputs)),
+        float(pv.evaluate(param.p.Q_init, inputs=inputs)),
+        float(pv.evaluate(param.Q_Li_particles_init, inputs=inputs)),
+        float(pv.evaluate(param.ocp_soc_100, inputs=inputs)),
+        float(pv.evaluate(param.ocp_soc_0, inputs=inputs)),
+    )
+
+
+def _fingerprint_half_cell(pv, param, options, inputs):
+    parts = [
+        "half_cell",
+        float(pv.evaluate(param.p.prim.Q_init, inputs=inputs)),
+        float(pv.evaluate(param.ocp_soc_100, inputs=inputs)),
+        float(pv.evaluate(param.ocp_soc_0, inputs=inputs)),
+    ]
+    if check_if_composite(options, "positive"):
+        parts.append(float(pv.evaluate(param.p.sec.Q_init, inputs=inputs)))
+    return tuple(parts)
+
+
+def _fingerprint_composite(pv, param, options, inputs):
+    parts = [
+        "composite",
+        float(pv.evaluate(param.n.prim.Q_init, inputs=inputs)),
+        float(pv.evaluate(param.p.prim.Q_init, inputs=inputs)),
+        float(pv.evaluate(param.Q_Li_particles_init, inputs=inputs)),
+        float(pv.evaluate(param.ocp_soc_100, inputs=inputs)),
+        float(pv.evaluate(param.ocp_soc_0, inputs=inputs)),
+    ]
+    if check_if_composite(options, "negative"):
+        parts.append(float(pv.evaluate(param.n.sec.Q_init, inputs=inputs)))
+    if check_if_composite(options, "positive"):
+        parts.append(float(pv.evaluate(param.p.sec.Q_init, inputs=inputs)))
+    return tuple(parts)
+
+
+def compute_esoh_fingerprint(parameter_values, param, options, inputs):
+    """Evaluate the quantities that determine the eSOH result for this model type.
+
+    Routes to a model-specific helper based on the model options, mirroring
+    the branching in :func:`set_initial_state`.
+
+    Parameters
+    ----------
+    parameter_values : :class:`pybamm.ParameterValues`
+        The (unprocessed) parameter values.
+    param : :class:`pybamm.LithiumIonParameters`
+        The symbolic parameter set from the model.
+    options : dict-like
+        Model options (e.g. from ``model.options``).
+    inputs : dict or None
+        Runtime input parameters.
+
+    Returns
+    -------
+    tuple
+        Hashable tuple of evaluated scalar quantities.
+    """
+    options = options or {}
+    inputs = inputs or {}
+
+    if options.get("open-circuit potential") == "MSMR":
+        return _fingerprint_standard(parameter_values, param, inputs)
+    elif options.get("working electrode") == "positive":
+        return _fingerprint_half_cell(parameter_values, param, options, inputs)
+    elif check_if_composite(options, "positive") or check_if_composite(
+        options, "negative"
+    ):
+        return _fingerprint_composite(parameter_values, param, options, inputs)
+    else:
+        return _fingerprint_standard(parameter_values, param, inputs)

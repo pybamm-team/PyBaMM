@@ -10,7 +10,7 @@ import pybamm
 
 class TestBaseLithiumIonModel:
     def test_incompatible_options(self):
-        with pytest.raises(pybamm.OptionError, match="convection not implemented"):
+        with pytest.raises(pybamm.OptionError, match=r"convection not implemented"):
             pybamm.lithium_ion.BaseModel({"convection": "uniform transverse"})
 
     def test_default_parameters(self):
@@ -41,7 +41,7 @@ class TestBaseLithiumIonModel:
 
         model = pybamm.lithium_ion.SPM({"dimensionality": 2})
         with pytest.raises(
-            NotImplementedError, match="Reference electrode can only be"
+            NotImplementedError, match=r"Reference electrode can only be"
         ):
             model.insert_reference_electrode()
 
@@ -50,5 +50,5 @@ class TestBaseLithiumIonModel:
         model.calc_esoh = False
         assert model.calc_esoh is False
 
-        with pytest.raises(TypeError, match="`calc_esoh` arg needs to be a bool"):
+        with pytest.raises(TypeError, match=r"`calc_esoh` arg needs to be a bool"):
             model.calc_esoh = "Yes"

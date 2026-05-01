@@ -5,7 +5,6 @@ from scipy.interpolate import CubicHermiteSpline
 
 import pybamm
 import tests
-from tests.shared import get_mesh_for_testing_2d
 
 _hermite_args = [True, False]
 
@@ -240,7 +239,7 @@ class TestProcessedVariable:
         )
 
         # test no sensitivity raises error
-        with pytest.raises(ValueError, match="Cannot compute sensitivities"):
+        with pytest.raises(ValueError, match=r"Cannot compute sensitivities"):
             print(processed_var.sensitivities)
 
     @pytest.mark.parametrize("hermite_interp", _hermite_args)
@@ -374,9 +373,9 @@ class TestProcessedVariable:
             var, r, x, disc=disc, hermite_interp=hermite_interp
         )
 
-    def test_processed_variable_2D_fvm(self):
+    def test_processed_variable_2D_fvm(self, mesh_2d):
         var = pybamm.Variable("var", domain=["negative electrode"])
-        mesh = get_mesh_for_testing_2d()
+        mesh = mesh_2d
         fin_vol = pybamm.FiniteVolume2D()
         disc = pybamm.Discretisation(mesh, {"negative electrode": fin_vol})
         disc.set_variable_slices([var])
@@ -908,7 +907,7 @@ class TestProcessedVariable:
                 "domain B": {b: {"min": 0, "max": 1}},
             }
         )
-        with pytest.raises(NotImplementedError, match="Spatial variable name"):
+        with pytest.raises(NotImplementedError, match=r"Spatial variable name"):
             pybamm.process_variable(
                 "test",
                 [var_sol],
@@ -1472,7 +1471,7 @@ class TestProcessedVariable:
         assert processed_var._process_spatial_variable_names(["R_a", "R_b"]) == "R"
 
         # Test error raised if spatial variable name not recognised
-        with pytest.raises(NotImplementedError, match="Spatial variable name"):
+        with pytest.raises(NotImplementedError, match=r"Spatial variable name"):
             processed_var._process_spatial_variable_names(["var1", "var2"])
 
     def test_hermite_interpolator(self):
@@ -1532,7 +1531,7 @@ class TestProcessedVariable:
         # Test extrapolation before the first solution time
         t_left_extrap = t0 - 1
         with pytest.raises(
-            ValueError, match="interpolation points must be greater than"
+            ValueError, match=r"interpolation points must be greater than"
         ):
             processed_var(t_left_extrap)
 
@@ -1595,6 +1594,30 @@ class TestProcessedVariable:
         computed_var = processed_var.as_computed()
 
         np.testing.assert_array_equal(computed_var.entries, t_sol * y_sol[0])
+
+    def test_as_computed_with_sensitivities(self):
+        model = pybamm.BaseModel()
+        y = pybamm.Variable("y")
+        a = pybamm.InputParameter("a")
+        model.rhs = {y: 0 * y}
+        model.initial_conditions = {y: 1}
+        model.variables = {"a times y": a * y}
+
+        solution = pybamm.IDAKLUSolver().solve(
+            model,
+            [0, 1],
+            inputs={"a": 2.0},
+            calculate_sensitivities=True,
+            t_interp=np.array([0, 1]),
+        )
+        processed_var = solution["a times y"]
+
+        computed_var = processed_var.as_computed()
+
+        np.testing.assert_array_equal(computed_var.entries, np.array([2.0, 2.0]))
+        np.testing.assert_array_equal(
+            computed_var.sensitivities["a"], np.array([1.0, 1.0])
+        )
 
     def test_as_computed_1D(self):
         var = pybamm.Variable("var", domain=["negative electrode", "separator"])

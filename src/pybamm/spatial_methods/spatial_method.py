@@ -2,6 +2,7 @@ import numpy as np
 from scipy.sparse import coo_matrix, csr_matrix, eye, kron, vstack
 
 import pybamm
+from pybamm.expression_tree.operations.serialise import Serialise
 
 
 class SpatialMethod:
@@ -12,6 +13,8 @@ class SpatialMethod:
     that they contain a method for broadcasting variables onto a mesh,
     a gradient operator, and a divergence operator.
     """
+
+    __slots__ = ["_mesh", "options"]
 
     def __init__(self, options=None):
         self.options = {
@@ -363,11 +366,11 @@ class SpatialMethod:
             # (row[i], col[i]) for each index of data. Here we just want a single point
             # with value 1 at (0,0).
             # Convert to a csr_matrix to allow indexing and other functionality
-            left_vector = csr_matrix(coo_matrix(([1], ([0], [0])), shape=(1, n)))
+            left_vector = csr_matrix(coo_matrix(([1.0], ([0], [0])), shape=(1, n)))
             bv_vector = pybamm.Matrix(left_vector)
         elif symbol.side == "right":
             # as above, but now we want a single point with value 1 at (0, n-1)
-            right_vector = csr_matrix(coo_matrix(([1], ([0], [n - 1])), shape=(1, n)))
+            right_vector = csr_matrix(coo_matrix(([1.0], ([0], [n - 1])), shape=(1, n)))
             bv_vector = pybamm.Matrix(right_vector)
 
         out = bv_vector @ discretised_child
@@ -424,13 +427,13 @@ class SpatialMethod:
         n = submesh.npts
 
         # Create mass matrix for primary dimension
-        prim_mass = eye(n)
+        prim_mass = eye(n, dtype=np.float64)
 
         # Get number of points in secondary dimension
         second_dim_repeats = self._get_auxiliary_domain_repeats(symbol.domains)
 
         # Convert to csr_matrix as required by some solvers
-        mass = csr_matrix(kron(eye(second_dim_repeats), prim_mass))
+        mass = csr_matrix(kron(eye(second_dim_repeats, dtype=np.float64), prim_mass))
         return pybamm.Matrix(mass)
 
     def process_binary_operators(self, bin_op, left, right, disc_left, disc_right):
@@ -473,3 +476,12 @@ class SpatialMethod:
             Concatenation of the discretised children
         """
         return pybamm.domain_concatenation(disc_children, self.mesh)
+
+    def to_config(self) -> dict:
+        """Serialise this spatial method to a JSON-serialisable dict."""
+        return Serialise.serialise_spatial_method_item(self)
+
+    @staticmethod
+    def from_config(data: dict):
+        """Deserialise a spatial method from a dict."""
+        return Serialise.deserialise_spatial_method_item(data)

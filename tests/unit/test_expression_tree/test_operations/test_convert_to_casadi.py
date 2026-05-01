@@ -6,8 +6,10 @@ import casadi
 import numpy as np
 import pytest
 from scipy import special
+from scipy.sparse import csr_matrix
 
 import pybamm
+from pybamm.expression_tree.operations._casadi_matmul import try_repeated_row_matmul
 from tests import get_1p1d_discretisation_for_testing, get_mesh_for_testing
 
 
@@ -77,6 +79,9 @@ class TestCasadiConverter:
         assert pybamm.Minimum(a, b).to_casadi() == casadi.MX(0)
         assert pybamm.Maximum(a, b).to_casadi() == casadi.MX(1)
 
+        # hypot
+        assert pybamm.Hypot(e, d).to_casadi() == casadi.MX(np.hypot(3, 2))
+
     def test_convert_array_symbols(self):
         # Arrays
         a = np.array([1, 2, 3, 4, 5])
@@ -109,12 +114,8 @@ class TestCasadiConverter:
         self.assert_casadi_equal(pybamm.min(a).to_casadi(), casadi.MX(1), evalf=True)
         b = pybamm.Array(np.array([-2]))
         c = pybamm.Array(np.array([3]))
-        self.assert_casadi_equal(
-            pybamm.Function(np.abs, b).to_casadi(), casadi.MX(2), evalf=True
-        )
-        self.assert_casadi_equal(
-            pybamm.Function(np.abs, c).to_casadi(), casadi.MX(3), evalf=True
-        )
+        self.assert_casadi_equal(np.abs(b).to_casadi(), casadi.MX(2), evalf=True)
+        self.assert_casadi_equal(np.abs(c).to_casadi(), casadi.MX(3), evalf=True)
 
         # test functions with assert_casadi_equal
         for np_fun in [
@@ -154,6 +155,125 @@ class TestCasadiConverter:
                 decimal=15,
                 evalf=True,
             )
+
+    def test_arcsinh2_casadi(self):
+        """Test CasADi conversion of arcsinh2."""
+        a = pybamm.InputParameter("a")
+        b = pybamm.InputParameter("b")
+
+        casadi_inputs = {
+            "a": casadi.MX.sym("a"),
+            "b": casadi.MX.sym("b"),
+        }
+
+        # Test arcsinh2 conversion
+        fun = pybamm.arcsinh2(a, b)
+        casadi_expr = fun.to_casadi(inputs=casadi_inputs)
+
+        # Create a CasADi function to evaluate
+        f = casadi.Function(
+            "f", [casadi_inputs["a"], casadi_inputs["b"]], [casadi_expr]
+        )
+
+        # Test numerical values match
+        test_cases = [
+            (3.0, 1.0),  # arcsinh(3)
+            (1.0, 2.0),  # arcsinh(0.5)
+            (-3.0, 1.0),  # arcsinh(-3)
+            (3.0, -1.0),  # -arcsinh(3)
+            (0.0, 1.0),  # arcsinh(0) = 0
+        ]
+
+        for a_val, b_val in test_cases:
+            casadi_result = float(f(a_val, b_val))
+            pybamm_result = fun.evaluate(inputs={"a": a_val, "b": b_val})
+            np.testing.assert_allclose(casadi_result, pybamm_result, rtol=1e-10)
+
+    def test_hypot_casadi(self):
+        """Test CasADi conversion of hypot."""
+        casadi_y = casadi.MX.sym("y", 2)
+
+        a = pybamm.StateVector(slice(0, 1))
+        b = pybamm.StateVector(slice(1, 2))
+
+        h = pybamm.hypot(a, b)
+        casadi_expr = h.to_casadi(y=casadi_y)
+
+        # Create a CasADi function
+        f = casadi.Function("f", [casadi_y], [casadi_expr])
+
+        # Test 3-4-5 triangle
+        y_test = np.array([3.0, 4.0])
+        casadi_result = float(f(y_test))
+        np.testing.assert_allclose(casadi_result, 5.0, rtol=1e-14)
+
+        # Test other values
+        y_test2 = np.array([5.0, 12.0])
+        casadi_result2 = float(f(y_test2))
+        np.testing.assert_allclose(casadi_result2, 13.0, rtol=1e-14)
+
+    def test_reg_power_casadi(self):
+        """Test CasADi conversion of RegPower."""
+        x = pybamm.InputParameter("x")
+        casadi_inputs = {"x": casadi.MX.sym("x")}
+
+        # Test RegPower without scale
+        rp = pybamm.reg_power(x, 0.5)
+        casadi_expr = rp.to_casadi(inputs=casadi_inputs)
+        f = casadi.Function("f", [casadi_inputs["x"]], [casadi_expr])
+
+        # Test values: should behave like sqrt for large positive values
+        for x_val in [100.0, 10.0, 1.0]:
+            casadi_result = float(f(x_val))
+            pybamm_result = rp.evaluate(inputs={"x": x_val})
+            np.testing.assert_allclose(casadi_result, pybamm_result, rtol=1e-10)
+
+        # Test antisymmetry: reg_power(-x, a) = -reg_power(x, a)
+        for x_val in [10.0, 1.0, 0.1]:
+            pos_result = float(f(x_val))
+            neg_result = float(f(-x_val))
+            np.testing.assert_allclose(neg_result, -pos_result, rtol=1e-12)
+
+    def test_reg_power_casadi_with_scale(self):
+        """Test CasADi conversion of RegPower with scale."""
+        x = pybamm.InputParameter("x")
+        casadi_inputs = {"x": casadi.MX.sym("x")}
+        scale = 10.0
+
+        # Test RegPower with scale
+        rp_scaled = pybamm.reg_power(x, 0.5, scale=scale)
+        casadi_expr_scaled = rp_scaled.to_casadi(inputs=casadi_inputs)
+        f_scaled = casadi.Function("f", [casadi_inputs["x"]], [casadi_expr_scaled])
+
+        # Test values match pybamm evaluation
+        for x_val in [100.0, 10.0, 1.0, -1.0, -10.0]:
+            casadi_result = float(f_scaled(x_val))
+            pybamm_result = rp_scaled.evaluate(inputs={"x": x_val})
+            np.testing.assert_allclose(casadi_result, pybamm_result, rtol=1e-10)
+
+    def test_reg_power_casadi_general_exponent(self):
+        x = pybamm.InputParameter("x")
+        casadi_inputs = {"x": casadi.MX.sym("x")}
+
+        for exponent, scale in [
+            (0.5, 1.0),
+            (0.5, 10.0),
+            (0.7, 1.0),
+            (1.0, 2.0),
+            (2.0, 1.0),
+            (-0.3, 0.5),
+        ]:
+            rp = pybamm.reg_power(x, exponent, scale=scale)
+            f = casadi.Function(
+                "f", [casadi_inputs["x"]], [rp.to_casadi(inputs=casadi_inputs)]
+            )
+            for x_val in [100.0, 10.0, 1.0, 0.1, -0.1, -1.0, -10.0]:
+                np.testing.assert_allclose(
+                    float(f(x_val)),
+                    rp.evaluate(inputs={"x": x_val}),
+                    rtol=1e-10,
+                    err_msg=f"exponent={exponent}, scale={scale}, x={x_val}",
+                )
 
     def test_kronecker_product(self):
         a = np.array([1.0, 2.0, 3.0])
@@ -207,23 +327,22 @@ class TestCasadiConverter:
             )
 
         # error for not recognized interpolator
-        with pytest.raises(ValueError, match="interpolator"):
+        with pytest.raises(ValueError, match=r"interpolator"):
             interp = pybamm.Interpolant(x, data, y, interpolator="idonotexist")
             interp_casadi = interp.to_casadi(y=casadi_y)
 
-        # error for converted children count
+        # 4D linear interpolation now works; wrong y shape gives a clear error
         y4 = (
             pybamm.StateVector(slice(0, 1)),
             pybamm.StateVector(slice(0, 1)),
             pybamm.StateVector(slice(0, 1)),
             pybamm.StateVector(slice(0, 1)),
         )
-        x4_ = [np.linspace(0, 1) for _ in range(4)]
-        x4 = np.column_stack(x4_)
-        data4 = 2 * x4  # np.tile(2 * x3, (10, 1)).T
-        with pytest.raises(ValueError, match="Invalid dimension of x"):
-            interp = pybamm.Interpolant(x4_, data4, y4, interpolator="linear")
-            interp_casadi = interp.to_casadi(y=casadi_y)
+        x4_ = [np.linspace(0, 1, 5) for _ in range(4)]
+        # Wrong shape: y must be 4-D for a 4-D grid
+        data4_bad = np.zeros((5, 5))
+        with pytest.raises(ValueError, match=r"y should be 4-dimensional"):
+            pybamm.Interpolant(x4_, data4_bad, y4, interpolator="linear")
 
     def test_interpolation_2d(self):
         x_ = [np.linspace(0, 1), np.linspace(0, 1)]
@@ -265,7 +384,7 @@ class TestCasadiConverter:
         #     np.testing.assert_allclose(interp.evaluate(y=y_test), f(y_test), rtol=1e-7, atol=1e-6)
 
         # error for pchip interpolator
-        with pytest.raises(ValueError, match="interpolator should be"):
+        with pytest.raises(ValueError, match=r"interpolator should be"):
             interp = pybamm.Interpolant(x_, Y, y, interpolator="pchip")
             interp_casadi = interp.to_casadi(y=casadi_y)
 
@@ -300,6 +419,31 @@ class TestCasadiConverter:
         assert isinstance(casadi_sol, casadi.DM)
 
         np.testing.assert_equal(true_value, casadi_sol.__float__())
+
+    def test_interpolation_4d_linear(self):
+        """4-D linear interpolation must round-trip through CasADi."""
+
+        def f4(x1, x2, x3, x4):
+            return x1 + 2 * x2 + 3 * x3 + 4 * x4
+
+        n = 8
+        grids = [np.linspace(0, 1, n) for _ in range(4)]
+        g1, g2, g3, g4 = np.meshgrid(*grids, indexing="ij", sparse=True)
+        data = f4(g1, g2, g3, g4)
+
+        vars_ = tuple(pybamm.StateVector(slice(i, i + 1)) for i in range(4))
+        interp = pybamm.Interpolant(grids, data, vars_, interpolator="linear")
+
+        casadi_y = casadi.MX.sym("y", 4)
+        interp_casadi = interp.to_casadi(y=casadi_y)
+        casadi_f = casadi.Function("f4d", [casadi_y], [interp_casadi])
+
+        test_pts = np.array([0.5, 0.25, 0.75, 0.1])
+        np.testing.assert_allclose(
+            float(casadi_f(test_pts)),
+            f4(*test_pts),
+            rtol=1e-12,
+        )
 
     def test_concatenations(self):
         y = np.linspace(0, 1, 10)[:, np.newaxis]
@@ -369,14 +513,230 @@ class TestCasadiConverter:
     def test_errors(self):
         y = pybamm.StateVector(slice(0, 10))
         with pytest.raises(
-            ValueError, match="Must provide a 'y' for converting state vectors"
+            ValueError, match=r"Must provide a 'y' for converting state vectors"
         ):
             y.to_casadi()
         y_dot = pybamm.StateVectorDot(slice(0, 10))
         with pytest.raises(
-            ValueError, match="Must provide a 'y_dot' for converting state vectors"
+            ValueError, match=r"Must provide a 'y_dot' for converting state vectors"
         ):
             y_dot.to_casadi()
         var = pybamm.Variable("var")
-        with pytest.raises(TypeError, match="Cannot convert symbol of type"):
+        with pytest.raises(TypeError, match=r"Cannot convert symbol of type"):
             var.to_casadi()
+
+    def test_citation_registered_once(self, mocker):
+        spy = mocker.spy(pybamm.citations, "register")
+
+        expr = pybamm.Scalar(1) + pybamm.Scalar(2)
+        expr.to_casadi()
+
+        andersson_calls = [
+            c for c in spy.call_args_list if c.args == ("Andersson2019",)
+        ]
+        assert len(andersson_calls) == 1
+
+    def test_to_casadi_rejects_bad_types(self):
+        s = pybamm.Scalar(1)
+        with pytest.raises(TypeError, match="casadi_symbols must be a dict"):
+            s.to_casadi(casadi_symbols="not a dict")
+        with pytest.raises(TypeError, match="inputs must be a dict"):
+            s.to_casadi(inputs="not a dict")
+
+
+class TestRepeatedRowMatmulOptimization:
+    """Tests for try_repeated_row_matmul optimization."""
+
+    def test_identical_rows(self):
+        """Test optimization when all rows are identical."""
+
+        rng = np.random.default_rng(0)
+        n, m = 100, 50
+        row = rng.random(n)
+        M = np.tile(row, (m, 1))
+
+        mat = pybamm.Matrix(M)
+        y = casadi.MX.sym("y", n)
+
+        result = try_repeated_row_matmul(mat, y)
+        assert result is not None
+
+        # Evaluate and compare
+        x = rng.random(n)
+        f = casadi.Function("f", [y], [result])
+        expected = M @ x
+        actual = np.array(f(x)).flatten()
+        np.testing.assert_allclose(actual, expected, rtol=1e-14)
+
+    def test_boundary_differs(self):
+        """Test optimization when interior rows identical but boundaries differ."""
+
+        rng = np.random.default_rng(0)
+        n, m = 100, 50
+        interior_row = rng.random(n)
+        first_row = rng.random(n) * 0.5
+        last_row = rng.random(n) * 2
+
+        M = np.tile(interior_row, (m, 1))
+        M[0, :] = first_row
+        M[-1, :] = last_row
+
+        mat = pybamm.Matrix(M)
+        y = casadi.MX.sym("y", n)
+
+        result = try_repeated_row_matmul(mat, y)
+        assert result is not None
+
+        # Evaluate and compare
+        x = rng.random(n)
+        f = casadi.Function("f", [y], [result])
+        expected = M @ x
+        actual = np.array(f(x)).flatten()
+        np.testing.assert_allclose(actual, expected, rtol=1e-14)
+
+    def test_two_rows_identical(self):
+        """Test m=2 with identical rows."""
+
+        rng = np.random.default_rng(0)
+        n = 100
+        row = rng.random(n)
+        M = np.vstack([row, row])
+
+        mat = pybamm.Matrix(M)
+        y = casadi.MX.sym("y", n)
+
+        result = try_repeated_row_matmul(mat, y)
+        assert result is not None
+
+        x = rng.random(n)
+        f = casadi.Function("f", [y], [result])
+        expected = M @ x
+        actual = np.array(f(x)).flatten()
+        np.testing.assert_allclose(actual, expected, rtol=1e-14)
+
+    def test_two_rows_different(self):
+        """Test m=2 with different rows returns None."""
+
+        rng = np.random.default_rng(0)
+        n = 100
+        M = rng.random((2, n))
+
+        mat = pybamm.Matrix(M)
+        y = casadi.MX.sym("y", n)
+
+        result = try_repeated_row_matmul(mat, y)
+        assert result is None
+
+    def test_random_matrix_returns_none(self):
+        """Test that random matrices return None (no optimization)."""
+
+        rng = np.random.default_rng(0)
+        n, m = 100, 50
+        M = rng.random((m, n))
+
+        mat = pybamm.Matrix(M)
+        y = casadi.MX.sym("y", n)
+
+        result = try_repeated_row_matmul(mat, y)
+        assert result is None
+
+    def test_non_array_returns_none(self):
+        """Test that non-Array symbols return None."""
+
+        y = casadi.MX.sym("y", 10)
+        scalar = pybamm.Scalar(5)
+
+        result = try_repeated_row_matmul(scalar, y)
+        assert result is None
+
+    def test_sparse_identical_rows(self):
+        """Test optimization with sparse matrix where all rows are identical."""
+
+        rng = np.random.default_rng(0)
+        n, m = 100, 50
+        row = rng.random(n)
+        M = csr_matrix(np.tile(row, (m, 1)))
+
+        mat = pybamm.Matrix(M)
+        y = casadi.MX.sym("y", n)
+
+        result = try_repeated_row_matmul(mat, y)
+        assert result is not None
+
+        x = rng.random(n)
+        f = casadi.Function("f", [y], [result])
+        expected = M @ x
+        actual = np.array(f(x)).flatten()
+        np.testing.assert_allclose(actual, expected, rtol=1e-14)
+
+    def test_sparse_boundary_differs(self):
+        """Test optimization with sparse matrix where boundaries differ."""
+
+        rng = np.random.default_rng(0)
+        n, m = 100, 50
+        interior_row = rng.random(n)
+        first_row = rng.random(n) * 0.5
+        last_row = rng.random(n) * 2
+
+        M_dense = np.tile(interior_row, (m, 1))
+        M_dense[0, :] = first_row
+        M_dense[-1, :] = last_row
+        M = csr_matrix(M_dense)
+
+        mat = pybamm.Matrix(M)
+        y = casadi.MX.sym("y", n)
+
+        result = try_repeated_row_matmul(mat, y)
+        assert result is not None
+
+        x = rng.random(n)
+        f = casadi.Function("f", [y], [result])
+        expected = M @ x
+        actual = np.array(f(x)).flatten()
+        np.testing.assert_allclose(actual, expected, rtol=1e-14)
+
+    def test_sparse_no_match(self):
+        """Test that sparse matrices with non-identical rows return None."""
+
+        rng = np.random.default_rng(0)
+        n, m = 100, 50
+        M = csr_matrix(rng.random((m, n)))
+
+        mat = pybamm.Matrix(M)
+        y = casadi.MX.sym("y", n)
+
+        result = try_repeated_row_matmul(mat, y)
+        assert result is None
+
+    def test_sparse_two_rows_identical(self):
+        """Test m=2 sparse with identical rows."""
+
+        rng = np.random.default_rng(0)
+        n = 100
+        row = rng.random(n)
+        M = csr_matrix(np.vstack([row, row]))
+
+        mat = pybamm.Matrix(M)
+        y = casadi.MX.sym("y", n)
+
+        result = try_repeated_row_matmul(mat, y)
+        assert result is not None
+
+        x = rng.random(n)
+        f = casadi.Function("f", [y], [result])
+        expected = M @ x
+        actual = np.array(f(x)).flatten()
+        np.testing.assert_allclose(actual, expected, rtol=1e-14)
+
+    def test_sparse_two_rows_different(self):
+        """Test m=2 sparse with different rows returns None."""
+
+        rng = np.random.default_rng(0)
+        n = 100
+        M = csr_matrix(rng.random((2, n)))
+
+        mat = pybamm.Matrix(M)
+        y = casadi.MX.sym("y", n)
+
+        result = try_repeated_row_matmul(mat, y)
+        assert result is None

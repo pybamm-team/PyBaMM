@@ -92,6 +92,11 @@ class FunctionParameter(pybamm.Symbol):
     print_name : str, optional
         The name to show when printing. Default is 'calculate', in which case the name
         is calculated using sys._getframe().
+    post_processor : callable, optional
+        A callable that takes a pybamm.Symbol and returns a pybamm.Symbol. If provided,
+        it will be applied to the function output after the function is evaluated during
+        parameter processing. This can be used to apply regularisation or other
+        transformations. Default is None.
     """
 
     def __init__(
@@ -100,9 +105,11 @@ class FunctionParameter(pybamm.Symbol):
         inputs: dict[str, pybamm.Symbol],
         diff_variable: pybamm.Symbol | None = None,
         print_name="calculate",
+        post_processor=None,
     ) -> None:
         # assign diff variable
         self.diff_variable = diff_variable
+        self.post_processor = post_processor
         children_list = list(inputs.values())
 
         # Turn numbers into scalars
@@ -195,6 +202,7 @@ class FunctionParameter(pybamm.Symbol):
             input_dict,
             diff_variable=variable,
             print_name=self.print_name + "'",
+            post_processor=self.post_processor,
         )
 
     def create_copy(self, new_children=None, perform_simplifications=True):
@@ -210,6 +218,7 @@ class FunctionParameter(pybamm.Symbol):
             input_dict,
             diff_variable=self.diff_variable,
             print_name=self.print_name,
+            post_processor=self.post_processor,
         )
 
     def _evaluate_for_shape(self):

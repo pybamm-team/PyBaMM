@@ -88,11 +88,11 @@ class TestBatteryGeometry:
         assert "positive secondary particle size" in geometry
 
     def test_geometry_error(self):
-        with pytest.raises(pybamm.GeometryError, match="Invalid current"):
+        with pytest.raises(pybamm.GeometryError, match=r"Invalid current"):
             pybamm.battery_geometry(
                 form_factor="cylindrical", options={"dimensionality": 2}
             )
-        with pytest.raises(pybamm.GeometryError, match="Invalid form"):
+        with pytest.raises(pybamm.GeometryError, match=r"Invalid form"):
             pybamm.battery_geometry(form_factor="triangle")
 
 

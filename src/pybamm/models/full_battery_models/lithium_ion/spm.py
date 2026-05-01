@@ -59,15 +59,16 @@ class SPM(BaseModel):
             if electrode_type == "planar":
                 continue
 
-            if self.options["surface form"] == "false":
+            options = getattr(self.options, domain)
+            if options["surface form"] == "false":
                 inverse_intercalation_kinetics = (
-                    self.get_inverse_intercalation_kinetics()
+                    self.get_inverse_intercalation_kinetics(domain)
                 )
                 self.submodels[f"{domain} interface"] = inverse_intercalation_kinetics(
                     self.param, domain, "lithium-ion main", self.options
                 )
                 self.submodels[f"{domain} interface current"] = (
-                    pybamm.kinetics.CurrentForInverseButlerVolmer(
+                    pybamm.kinetics.CurrentForInverseKinetics(
                         self.param, domain, "lithium-ion main", self.options
                     )
                 )

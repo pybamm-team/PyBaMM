@@ -28,8 +28,7 @@ param.update(
         "[m3.mol-1]": -4e-5,
         "Positive electrode current-driven interface utilisation factor "
         "[m3.mol-1]": 4e-5,
-    },
-    check_already_exists=False,
+    }
 )
 
 # set up and solve simulations

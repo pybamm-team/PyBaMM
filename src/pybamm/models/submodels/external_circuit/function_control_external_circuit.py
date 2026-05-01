@@ -129,16 +129,36 @@ class ResistanceFunctionControl(FunctionControl):
     def constant_resistance(self, variables):
         I = variables["Current [A]"]
         V = variables["Voltage [V]"]
-        R = V / I
         R_applied = pybamm.FunctionParameter(
             "Resistance function [Ohm]", {"Time [s]": pybamm.t}
         )
         if self.control == "algebraic":
-            return R - R_applied
+            return V - R_applied * I
         else:
             # Multiply by the time scale so that the overshoot only lasts a few seconds
             K_R = 0.01
-            return -K_R * (R - R_applied)
+            return -K_R * (V - R_applied * I)
+
+
+class ExperimentFunctionControl(FunctionControl):
+    """External circuit with one conditional control residual shared across steps."""
+
+    def __init__(self, param, options, step_index_input_name, step_control_builders):
+        self.step_index_input_name = step_index_input_name
+        self.step_control_builders = step_control_builders
+        super().__init__(
+            param,
+            self.conditional_control_residual,
+            options,
+            control="algebraic",
+        )
+
+    def conditional_control_residual(self, variables):
+        selector = pybamm.InputParameter(self.step_index_input_name)
+        return pybamm.Conditional(
+            selector,
+            *[builder(variables) for builder in self.step_control_builders],
+        )
 
 
 class CCCVFunctionControl(FunctionControl):

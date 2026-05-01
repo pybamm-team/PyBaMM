@@ -93,7 +93,7 @@ class TestBatchStudy:
     def test_create_gif(self, tmp_path):
         bs = pybamm.BatchStudy({"spm": pybamm.lithium_ion.SPM()})
         with pytest.raises(
-            ValueError, match="The simulations have not been solved yet."
+            ValueError, match=r"The simulations have not been solved yet."
         ):
             pybamm.BatchStudy(
                 models={

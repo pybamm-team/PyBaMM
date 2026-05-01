@@ -14,8 +14,6 @@ class TestThevenin:
         )
         parameter_values = model.default_parameter_values
 
-        parameter_values.update(
-            {"Diffusion time constant [s]": 580}, check_already_exists=False
-        )
+        parameter_values.update({"Diffusion time constant [s]": 580})
         modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
         modeltest.test_all()

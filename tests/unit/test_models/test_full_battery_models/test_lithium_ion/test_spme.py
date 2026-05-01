@@ -31,7 +31,7 @@ class TestSPMe(BaseUnitTestLithiumIon):
 
     def test_electrolyte_options(self):
         options = {"electrolyte conductivity": "full"}
-        with pytest.raises(pybamm.OptionError, match="electrolyte conductivity"):
+        with pytest.raises(pybamm.OptionError, match=r"electrolyte conductivity"):
             pybamm.lithium_ion.SPMe(options)
 
     def test_integrated_conductivity(self):

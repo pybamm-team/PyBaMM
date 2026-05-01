@@ -10,6 +10,7 @@ from .function_control_external_circuit import (
     VoltageFunctionControl,
     PowerFunctionControl,
     ResistanceFunctionControl,
+    ExperimentFunctionControl,
     CCCVFunctionControl,
 )
 

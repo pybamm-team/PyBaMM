@@ -126,3 +126,28 @@ class TestFunctionParameter:
 
         with pytest.raises(NotImplementedError):
             pybamm.FunctionParameter._from_json({})
+
+    def test_function_parameter_post_processor(self):
+        """Test that post_processor is stored and propagated correctly."""
+        var = pybamm.Variable("var")
+
+        # Define a simple post processor
+        def my_processor(symbol, processor=None):
+            return symbol * 2
+
+        func = pybamm.FunctionParameter(
+            "func", {"var": var}, post_processor=my_processor
+        )
+        assert func.post_processor is my_processor
+
+        # Test post_processor is preserved in create_copy
+        new_func = func.create_copy()
+        assert new_func.post_processor is my_processor
+
+        # Test post_processor is preserved in diff
+        diff_func = func.diff(var)
+        assert diff_func.post_processor is my_processor
+
+        # Test without post_processor (default)
+        func_no_pp = pybamm.FunctionParameter("func2", {"var": var})
+        assert func_no_pp.post_processor is None

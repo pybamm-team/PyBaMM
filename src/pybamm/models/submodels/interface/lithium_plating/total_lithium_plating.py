@@ -19,9 +19,6 @@ class TotalLithiumPlating(pybamm.BaseSubModel):
         See :class:`pybamm.BaseBatteryModel`
     """
 
-    def __init__(self, param, domain, options):
-        super().__init__(param, domain, options=options)
-
     def get_coupled_variables(self, variables):
         domain, Domain = self.domain_Domain
         phases = self.options.phases[domain]

@@ -47,7 +47,7 @@ class TestIndependentVariable:
         with pytest.raises(NotImplementedError):
             x.evaluate()
 
-        with pytest.raises(ValueError, match="domain must be"):
+        with pytest.raises(ValueError, match=r"domain must be"):
             pybamm.SpatialVariable("x", [])
         with pytest.raises(pybamm.DomainError):
             pybamm.SpatialVariable("r_n", ["positive particle"])

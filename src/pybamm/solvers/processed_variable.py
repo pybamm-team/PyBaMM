@@ -52,7 +52,10 @@ class ProcessedVariable(BaseProcessedVariable):
         self.all_ys = solution.all_ys
         self.all_yps = solution.all_yps
         self.all_inputs = solution.all_inputs
-        self.all_inputs_casadi = solution.all_inputs_casadi
+        self.all_inputs_stacked = solution.all_inputs_stacked
+        self.sensitivity_names = [
+            name for name in solution._all_sensitivities.keys() if name != "all"
+        ]
 
         self.mesh = base_variables[0].mesh
         self.domain = base_variables[0].domain
@@ -127,7 +130,7 @@ class ProcessedVariable(BaseProcessedVariable):
         ts = self.all_ts
         ys = self.all_ys
         yps = self.all_yps
-        inputs = self.all_inputs_casadi
+        inputs = self.all_inputs_stacked
 
         # Remove all empty ts
         idxs = np.where([ti.size > 0 for ti in ts])[0]
@@ -143,7 +146,7 @@ class ProcessedVariable(BaseProcessedVariable):
         ys = [ys[idx] for idx in idxs]
         if self.hermite_interpolation:
             yps = [yps[idx] for idx in idxs]
-        inputs = [self.all_inputs_casadi[idx] for idx in idxs]
+        inputs = [inputs[idx] for idx in idxs]
 
         is_f_contiguous = _is_f_contiguous(ys)
 
@@ -419,21 +422,27 @@ class ProcessedVariable(BaseProcessedVariable):
         "Set up the sensitivity dictionary"
 
         all_S_var = []
-        for ts, ys, inputs_stacked, inputs, base_variable, dy_dp in zip(
+        for ts, ys, inputs, base_variable, dy_dp in zip(
             self.all_ts,
             self.all_ys,
-            self.all_inputs_casadi,
             self.all_inputs,
             self.base_variables,
             self.all_solution_sensitivities["all"],
             strict=True,
         ):
+            sensitivity_inputs = {
+                name: inputs[name] for name in self.sensitivity_names if name in inputs
+            }
+            sensitivity_inputs_stacked = casadi.vertcat(
+                *[sensitivity_inputs[name] for name in self.sensitivity_names]
+            )
+
             # Set up symbolic variables
             t_casadi = casadi.MX.sym("t")
             y_casadi = casadi.MX.sym("y", ys.shape[0])
             p_casadi = {
                 name: casadi.MX.sym(name, value.shape[0])
-                for name, value in inputs.items()
+                for name, value in sensitivity_inputs.items()
             }
 
             p_casadi_stacked = casadi.vertcat(*[p for p in p_casadi.values()])
@@ -452,13 +461,13 @@ class ProcessedVariable(BaseProcessedVariable):
             )
             dvar_dy_eval = casadi.diagcat(
                 *[
-                    dvar_dy_func(t, ys[:, idx], inputs_stacked)
+                    dvar_dy_func(t, ys[:, idx], sensitivity_inputs_stacked)
                     for idx, t in enumerate(ts)
                 ]
             )
             dvar_dp_eval = casadi.vertcat(
                 *[
-                    dvar_dp_func(t, ys[:, idx], inputs_stacked)
+                    dvar_dp_func(t, ys[:, idx], sensitivity_inputs_stacked)
                     for idx, t in enumerate(ts)
                 ]
             )
@@ -477,7 +486,7 @@ class ProcessedVariable(BaseProcessedVariable):
         sensitivities = {"all": S_var}
 
         # Add the individual sensitivity
-        for i, name in enumerate(self.all_inputs[0].keys()):
+        for i, name in enumerate(self.sensitivity_names):
             sensitivities[name] = S_var[:, i : i + 1].reshape(-1)
 
         # Save attribute
@@ -499,6 +508,9 @@ class ProcessedVariable(BaseProcessedVariable):
         use together, e.g. when using a last state solution with a new simulation running
         with output variables in the solver.
         """
+        sensitivities = self._sensitivities
+        if sensitivities is None and self.all_solution_sensitivities:
+            sensitivities = self.sensitivities
 
         def _stub_solution(self):
             """
@@ -508,11 +520,13 @@ class ProcessedVariable(BaseProcessedVariable):
             """
 
             class StubSolution:
-                def __init__(self, ts, ys, inputs, inputs_casadi, sensitivities, t_pts):
+                def __init__(
+                    self, ts, ys, inputs, inputs_stacked, sensitivities, t_pts
+                ):
                     self.all_ts = ts
                     self.all_ys = ys
                     self.all_inputs = inputs
-                    self.all_inputs_casadi = inputs_casadi
+                    self.all_inputs_stacked = inputs_stacked
                     self.sensitivities = sensitivities
                     self.t = t_pts
 
@@ -520,8 +534,8 @@ class ProcessedVariable(BaseProcessedVariable):
                 self.all_ts,
                 self.all_ys,
                 self.all_inputs,
-                self.all_inputs_casadi,
-                self.sensitivities,
+                self.all_inputs_stacked,
+                sensitivities or {},
                 self.t_pts,
             )
 
@@ -539,9 +553,8 @@ class ProcessedVariable(BaseProcessedVariable):
         )
 
         # add sensitivities if they exist
-        if self.sensitivities:
-            # TODO: test once #5058 is fixed
-            cpv._sensitivities = self.sensitivities  # pragma: no cover
+        if sensitivities:
+            cpv._sensitivities = sensitivities
 
         return cpv
 
@@ -568,7 +581,7 @@ class ProcessedVariable0D(ProcessedVariable):
         if self.time_integral is None:
             return entries
         return self.time_integral.postfix(
-            entries, self.t_pts, self.all_inputs_casadi[0]
+            entries, self.t_pts, self.all_inputs_stacked[0]
         )
 
     def _interp_setup(self, entries, t):

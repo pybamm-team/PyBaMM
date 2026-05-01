@@ -84,7 +84,7 @@ class TestMPM:
             "lithium plating": "reversible",
             "lithium plating porosity change": "true",
         }
-        with pytest.raises(pybamm.OptionError, match="distributions"):
+        with pytest.raises(pybamm.OptionError, match=r"distributions"):
             pybamm.lithium_ion.MPM(options)
 
     def test_msmr(self):
@@ -107,6 +107,17 @@ class TestMPM:
     def test_one_state_hysteresis_ocp(self):
         options = {
             "open-circuit potential": "one-state hysteresis",
+        }
+        model = pybamm.lithium_ion.MPM(options)
+        model.check_well_posedness()
+
+    def test_one_state_hysteresis_ocp_lumped_thermal(self):
+        # Regression test: MPM always uses particle size distribution, and
+        # combining hysteresis OCP with a non-isothermal thermal submodel
+        # previously raised a DomainError in the hysteresis heating term.
+        options = {
+            "open-circuit potential": "one-state hysteresis",
+            "thermal": "lumped",
         }
         model = pybamm.lithium_ion.MPM(options)
         model.check_well_posedness()

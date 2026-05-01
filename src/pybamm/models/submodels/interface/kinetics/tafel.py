@@ -28,9 +28,6 @@ class ForwardTafel(BaseKinetics):
         Phase of the particle (default is "primary")
     """
 
-    def __init__(self, param, domain, reaction, options, phase="primary"):
-        super().__init__(param, domain, reaction, options, phase)
-
     def _get_kinetics(self, j0, ne, eta_r, T, u):
         alpha = self.phase_param.alpha_bv
         Feta_RT = self.param.F * eta_r / (self.param.R * T)

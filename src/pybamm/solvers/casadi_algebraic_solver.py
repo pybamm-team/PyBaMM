@@ -68,7 +68,7 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
     def step_tol(self, value):
         self._step_tol = value
 
-    def set_up_root_solver(self, model, inputs_dict, t_eval):
+    def _set_up_root_solver(self, model, inputs_dict, t_eval):
         """Create and return a CasADi rootfinder object. The parameter argument to the
         rootfinder is the concatenated time, differential states, and flattened inputs.
 
@@ -83,11 +83,11 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
 
         Returns
         -------
-        None
+        :class:`casadi.rootfinder`
             The rootfinder function is stored in the model as `algebraic_root_solver`.
         """
         pybamm.logger.info(f"Start building {self.name}")
-        y0 = model.y0
+        y0 = model.y0_list[0]
 
         # The casadi algebraic solver can read rhs equations, but leaves them unchanged
         # i.e. the part of the solution vector that corresponds to the differential
@@ -137,7 +137,7 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
         constraints[model_alg_ub <= 0] = -1
 
         # Set up rootfinder
-        model.algebraic_root_solver = casadi.rootfinder(
+        out = casadi.rootfinder(
             "roots",
             "newton",
             dict(x=y_alg_sym, p=p_sym, g=alg),
@@ -150,8 +150,9 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
         )
 
         pybamm.logger.info(f"Finish building {self.name}")
+        return out
 
-    def _integrate(self, model, t_eval, inputs_dict=None, t_interp=None):
+    def _integrate_single(self, model, t_eval, inputs_dict, y0):
         """
         Calculate the solution of the algebraic equations through root-finding
 
@@ -162,15 +163,21 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
         t_eval : :class:`numpy.array`, size (k,)
             The times at which to compute the solution
         inputs_dict : dict, optional
-            Any input parameters to pass to the model when solving.
+            Any input parameters to pass to the model when solving
+        y0 : array-like
+            The initial conditions for the model
+
+        Returns
+        -------
+        :class:`pybamm.Solution`
+            A Solution object containing the times and values of the solution,
+            as well as various diagnostic messages.
         """
         # Record whether there are any symbolic inputs
         inputs_dict = inputs_dict or {}
 
         # Create casadi objects for the root-finder
         inputs = casadi.vertcat(*[v for v in inputs_dict.values()])
-
-        y0 = model.y0
 
         # The casadi algebraic solver can read rhs equations, but leaves them unchanged
         # i.e. the part of the solution vector that corresponds to the differential
@@ -196,9 +203,7 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
         # Set the inputs portion of the parameter vector
         p[1 + len_rhs :] = np.asarray(inputs).ravel()
 
-        if getattr(model, "algebraic_root_solver", None) is None:
-            self.set_up_root_solver(model, inputs_dict, t_eval)
-        roots = model.algebraic_root_solver
+        roots = self.get_root_solver(model, inputs_dict, t_eval)
 
         timer = pybamm.Timer()
         integration_time = 0
@@ -208,22 +213,33 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
 
             # Solve
             success = False
+            y_alg_sol = y0_alg
             try:
-                timer.reset()
-                y_alg_sol = roots(y0_alg, p)
-                integration_time += timer.time()
-
-                # Check final output
-                y_sol = casadi.vertcat(y0_diff, y_alg_sol)
-                fun = model.casadi_algebraic(t, y_sol, inputs)
                 # Casadi does not give us the value of the final residuals or step
-                # norm, however, if it returns a success flag and there are no NaNs or Infs
-                # in the solution, then it must be successful
-                y_is_finite = np.isfinite(max_abs(y_alg_sol))
-                fun_is_finite = np.isfinite(max_abs(fun))
+                # norm, however, if it returns a success flag and there are no NaNs or
+                # Infs in the solution, then it must be successful. The casadi
+                # rootfinder can sometimes return due to step_tol being reached, so
+                # retry once if the residual is above tolerance.
+                for _ in range(2):
+                    timer.reset()
+                    y_alg_sol = roots(y_alg_sol, p)
+                    integration_time += timer.time()
+                    fun = model.casadi_algebraic(
+                        t, casadi.vertcat(y0_diff, y_alg_sol), inputs
+                    )
+                    y_is_finite = np.isfinite(max_abs(y_alg_sol))
+                    fun_max_abs = max_abs(fun)
+                    if (
+                        not y_is_finite
+                        or not np.isfinite(fun_max_abs)
+                        or fun_max_abs <= self.tol
+                    ):
+                        break
 
                 solver_stats = roots.stats()
-                success = solver_stats["success"] and y_is_finite and fun_is_finite
+                success = (
+                    solver_stats["success"] and y_is_finite and np.isfinite(fun_max_abs)
+                )
             except RuntimeError as err:
                 success = False
                 message = err.args[0]
@@ -264,6 +280,7 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
             model,
             inputs_dict,
             termination="final time",
+            all_t_evals=[t_eval],
         )
         sol.integration_time = integration_time
         return sol

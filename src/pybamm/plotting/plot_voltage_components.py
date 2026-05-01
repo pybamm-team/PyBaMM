@@ -3,7 +3,7 @@
 #
 import numpy as np
 
-from pybamm.simulation import Simulation
+from pybamm.simulation import BaseSimulation
 from pybamm.solvers.solution import Solution
 from pybamm.util import import_optional_dependency
 
@@ -41,7 +41,7 @@ def plot_voltage_components(
         Keyword arguments: :obj:`matplotlib.axes.Axes.fill_between`
     """
     # Check if the input is a Simulation and extract Solution
-    if isinstance(input_data, Simulation):
+    if isinstance(input_data, BaseSimulation):
         solution = input_data.solution
     elif isinstance(input_data, Solution):
         solution = input_data

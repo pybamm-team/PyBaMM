@@ -11,6 +11,7 @@ from .util import (
 from .util import (
     get_parameters_filepath,
     has_jax,
+    raise_jax_not_found,
     import_optional_dependency,
 )
 from .logger import logger, set_logging_level, get_new_logger
@@ -21,6 +22,7 @@ from . import config
 # Classes for the Expression Tree
 from .expression_tree.symbol import *
 from .expression_tree.binary_operators import *
+from .expression_tree.tracing import is_tracing, tracing
 from .expression_tree.concatenations import *
 from .expression_tree.array import Array, linspace, meshgrid
 from .expression_tree.matrix import Matrix
@@ -29,6 +31,7 @@ from .expression_tree.averages import *
 from .expression_tree.averages import _BaseAverage
 from .expression_tree.broadcasts import *
 from .expression_tree.functions import *
+from .expression_tree.conditional import Conditional
 from .expression_tree.interpolant import Interpolant
 from .expression_tree.discrete_time_sum import *
 from .expression_tree.input_parameter import InputParameter
@@ -39,6 +42,7 @@ from .expression_tree.coupled_variable import *
 from .expression_tree.independent_variable import *
 from .expression_tree.independent_variable import t
 from .expression_tree.vector import Vector
+from .expression_tree.tensor_field import TensorField
 from .expression_tree.vector_field import VectorField
 from .expression_tree.state_vector import StateVectorBase, StateVector, StateVectorDot
 
@@ -56,14 +60,18 @@ from .expression_tree.operations.evaluate_python import EvaluatorJax
 from .expression_tree.operations.evaluate_python import JaxCooMatrix
 
 from .expression_tree.operations.jacobian import Jacobian
-from .expression_tree.operations.convert_to_casadi import CasadiConverter
 from .expression_tree.operations.unpack_symbols import SymbolUnpacker
 from .expression_tree.operations.serialise import Serialise,ExpressionFunctionParameter
+from .expression_tree.operations.regularise import RegulariseSqrtAndPower
 
 # Model classes
-from .models.base_model import BaseModel
+from .models.base_model import BaseModel, ModelSolutionObservability
+from .models.symbol_processor import SymbolProcessor
 from .models.event import Event
 from .models.event import EventType
+
+# DiffSL export
+from .expression_tree.operations.diffsl import DiffSLExport
 
 # Battery models
 from .models.full_battery_models.base_battery_model import (
@@ -168,7 +176,13 @@ from .spatial_methods.scikit_finite_element import ScikitFiniteElement
 from .spatial_methods.scikit_finite_element_3d import ScikitFiniteElement3D
 
 # Solver classes
-from .solvers.solution import Solution, EmptySolution, make_cycle_solution
+from .solvers.solution import (
+    SolutionBase,
+    Solution,
+    EISSolution,
+    EmptySolution,
+    make_cycle_solution,
+)
 from .solvers.processed_variable_time_integral import ProcessedVariableTimeIntegral
 from .solvers.processed_variable import ProcessedVariable, ProcessedVariable2DFVM, process_variable
 from .solvers.processed_variable_computed import ProcessedVariableComputed
@@ -180,12 +194,14 @@ from .solvers.algebraic_solver import AlgebraicSolver
 from .solvers.casadi_solver import CasadiSolver
 from .solvers.casadi_algebraic_solver import CasadiAlgebraicSolver
 from .solvers.scipy_solver import ScipySolver
+from .solvers.composite_solver import CompositeSolver
 
 from .solvers.jax_solver import JaxSolver
 from .solvers.jax_bdf_solver import jax_bdf_integrate
 
 from .solvers.idaklu_jax import IDAKLUJax
 from .solvers.idaklu_solver import IDAKLUSolver
+from .solvers.nonlinear_solver import NonlinearSolver
 
 # Experiments
 from .experiment.experiment import Experiment
@@ -202,9 +218,10 @@ from .plotting.plot_summary_variables import plot_summary_variables
 from .plotting.dynamic_plot import dynamic_plot
 from .plotting.plot_3d_cross_section import plot_3d_cross_section
 from .plotting.plot_3d_heatmap import plot_3d_heatmap
+from .plotting.nyquist_plot import nyquist_plot
 
 # Simulation
-from .simulation import Simulation, load_sim, is_notebook
+from .simulation import BaseSimulation, Simulation, EISSimulation, load_sim, is_notebook
 
 # Batch Study
 from .batch_study import BatchStudy
@@ -230,7 +247,6 @@ __all__ = [
     "citations",
     "config",
     "discretisations",
-    "doc_utils",
     "experiment",
     "expression_tree",
     "geometry",

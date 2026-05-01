@@ -2,15 +2,15 @@
 Automatically update version numbers in various files for releases
 """
 
+import argparse
 import os
 import re
 from datetime import date
 
 import pybamm
-from pybamm._version import __version__ as release_version
 
 
-def update_version():
+def update_version(release_version):
     """
     Updates version numbers and release information across project files
     """
@@ -38,4 +38,12 @@ def update_version():
 
 
 if __name__ == "__main__":
-    update_version()
+    parser = argparse.ArgumentParser(
+        description="Update version numbers for a PyBaMM release"
+    )
+    parser.add_argument(
+        "version",
+        help="Release version, e.g. 26.3 or 26.3.1",
+    )
+    args = parser.parse_args()
+    update_version(args.version)

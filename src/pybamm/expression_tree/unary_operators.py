@@ -3,6 +3,7 @@
 #
 from __future__ import annotations
 
+import casadi
 import numpy as np
 import numpy.typing as npt
 import sympy
@@ -91,6 +92,18 @@ class UnaryOperator(pybamm.Symbol):
         raise NotImplementedError(
             f"{self.__class__} does not implement _unary_evaluate."
         )
+
+    def _casadi_evaluate(self, child):
+        """CasADi analog of :meth:`_unary_evaluate`. Override in subclasses where the
+        CasADi function differs from the numpy one."""
+        return self._unary_evaluate(child)
+
+    def _to_casadi(self, t, y, y_dot, inputs, casadi_symbols):
+        """See :meth:`pybamm.Symbol._to_casadi()`."""
+        converted_child = self._children_to_casadi(t, y, y_dot, inputs, casadi_symbols)[
+            0
+        ]
+        return self._casadi_evaluate(converted_child)
 
     def evaluate(
         self,
@@ -190,6 +203,10 @@ class AbsoluteValue(UnaryOperator):
         """See :meth:`UnaryOperator._unary_evaluate()`."""
         return np.abs(child)
 
+    def _casadi_evaluate(self, child):
+        """See :meth:`pybamm.UnaryOperator._casadi_evaluate()`."""
+        return casadi.fabs(child)
+
     def _unary_new_copy(self, child, perform_simplifications: bool = True):
         """
         Creates a new copy of the operator with the child `child`.
@@ -201,6 +218,12 @@ class AbsoluteValue(UnaryOperator):
             return abs(child)
         else:
             return AbsoluteValue(child)
+
+
+def absolute(child: pybamm.Symbol):
+    """Returns the absolute value of a symbol."""
+    # enables performing np.abs(symbol)
+    return AbsoluteValue(child)
 
 
 class Transpose(UnaryOperator):
@@ -285,6 +308,10 @@ class Floor(UnaryOperator):
         """See :meth:`UnaryOperator._unary_evaluate()`."""
         return np.floor(child)
 
+    def _casadi_evaluate(self, child):
+        """See :meth:`pybamm.UnaryOperator._casadi_evaluate()`."""
+        return casadi.floor(child)
+
 
 class Ceiling(UnaryOperator):
     """
@@ -306,6 +333,10 @@ class Ceiling(UnaryOperator):
     def _unary_evaluate(self, child):
         """See :meth:`UnaryOperator._unary_evaluate()`."""
         return np.ceil(child)
+
+    def _casadi_evaluate(self, child):
+        """See :meth:`pybamm.UnaryOperator._casadi_evaluate()`."""
+        return casadi.ceil(child)
 
 
 class Index(UnaryOperator):
@@ -531,6 +562,9 @@ class Gradient(SpatialOperator):
 class Divergence(SpatialOperator):
     """
     A node in the expression tree representing a div operator.
+
+    For vector fields (rank-1 tensors), returns a scalar.
+    For tensor fields (rank-2 tensors), returns a vector field.
     """
 
     def __init__(self, child):
@@ -540,7 +574,9 @@ class Divergence(SpatialOperator):
                 + "Try broadcasting the object first, e.g.\n\n"
                 "\tpybamm.div(pybamm.PrimaryBroadcast(symbol, 'domain'))"
             )
-        if child.evaluates_on_edges("primary") is False:
+        # Allow TensorField of rank >= 1, or symbols that evaluate on edges
+        is_tensor = isinstance(child, pybamm.TensorField) and child.rank >= 1
+        if not is_tensor and child.evaluates_on_edges("primary") is False:
             raise TypeError(
                 f"Cannot take divergence of '{child}' since it does not "
                 + "evaluate on edges. Usually, a gradient should be taken before the "
@@ -1389,6 +1425,45 @@ class UpwindDownwind2D(UpwindDownwind):
     def _unary_new_copy(self, child, perform_simplifications=True):
         """See :meth:`UnaryOperator._unary_new_copy()`."""
         return self.__class__(child, self.lr_direction, self.tb_direction)
+
+
+class NodeToEdge2D(SpatialOperator):
+    """
+    A node in the expression tree representing a node-to-edge conversion in 2D.
+    Marks a symbol as evaluating on edges in a specific direction.
+
+    Parameters
+    ----------
+    child : :class:`pybamm.Symbol`
+        The symbol to convert from nodes to edges
+    direction : str
+        The direction for the edges: "lr" (left-right) or "tb" (top-bottom)
+    """
+
+    def __init__(self, child, direction):
+        if direction not in ("lr", "tb"):
+            raise ValueError(f"direction must be 'lr' or 'tb', got '{direction}'")
+        if child.domain == []:
+            raise pybamm.DomainError(
+                f"Cannot convert '{child}' to edges since its domain is empty."
+            )
+        if child.evaluates_on_edges("primary") is True:
+            raise TypeError(
+                f"Cannot convert '{child}' to edges since it already evaluates on edges"
+            )
+        super().__init__(f"node_to_edge_{direction}", child)
+        self.direction = direction
+
+    def _evaluates_on_edges(self, dimension: str) -> bool:
+        """
+        Return True to indicate that this symbol evaluates on edges in the
+        specified direction, regardless of the given dimension.
+        """
+        return True
+
+    def _unary_new_copy(self, child, perform_simplifications=True):
+        """See :meth:`UnaryOperator._unary_new_copy()`."""
+        return self.__class__(child, self.direction)
 
 
 class Magnitude(UnaryOperator):

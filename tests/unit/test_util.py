@@ -44,25 +44,25 @@ class TestUtil:
             }
         )
         assert d["test"] == 1
-        with pytest.raises(KeyError, match="'test3' not found. Best matches are "):
+        with pytest.raises(KeyError, match=r"'test3' not found. Best matches are "):
             d.__getitem__("test3")
 
-        with pytest.raises(KeyError, match="stoichiometry"):
+        with pytest.raises(KeyError, match=r"stoichiometry"):
             d.__getitem__("Negative electrode SOC")
 
-        with pytest.raises(KeyError, match="dimensional version"):
+        with pytest.raises(KeyError, match=r"dimensional version"):
             d.__getitem__("A dimensional variable")
 
-        with pytest.raises(KeyError, match="composite model"):
+        with pytest.raises(KeyError, match=r"composite model"):
             d.__getitem__("Open circuit voltage [V]")
 
-        with pytest.raises(KeyError, match="open circuit voltage"):
+        with pytest.raises(KeyError, match=r"open circuit voltage"):
             d.__getitem__("Measured open circuit voltage [V]")
 
-        with pytest.raises(KeyError, match="Lower voltage"):
+        with pytest.raises(KeyError, match=r"Lower voltage"):
             d.__getitem__("Open-circuit voltage at 0% SOC [V]")
 
-        with pytest.raises(KeyError, match="Upper voltage"):
+        with pytest.raises(KeyError, match=r"Upper voltage"):
             d.__getitem__("Open-circuit voltage at 100% SOC [V]")
 
         assert (
@@ -232,14 +232,14 @@ class TestSearch:
         # Test for empty string input (raises ValueError)
         with pytest.raises(
             ValueError,
-            match="The search term cannot be an empty or whitespace-only string",
+            match=r"The search term cannot be an empty or whitespace-only string",
         ):
             model.variables.search("", print_values=True)
 
         # Test for list with all empty strings (raises ValueError)
         with pytest.raises(
             ValueError,
-            match="The 'keys' list cannot contain only empty or whitespace strings",
+            match=r"The 'keys' list cannot contain only empty or whitespace strings",
         ):
             model.variables.search(["", "   ", "\t"], print_values=True)
 
@@ -255,7 +255,7 @@ class TestSearch:
         # Test invalid input type
         with pytest.raises(
             TypeError,
-            match="'keys' must be a string or a list of strings, got <class 'int'>",
+            match=r"'keys' must be a string or a list of strings, got <class 'int'>",
         ):
             model.variables.search(123)
 

@@ -56,8 +56,7 @@ for h in h_values:
             "Back face heat transfer coefficient [W.m-2.K-1]": h,
             "Bottom face heat transfer coefficient [W.m-2.K-1]": h,
             "Top face heat transfer coefficient [W.m-2.K-1]": h,
-        },
-        check_already_exists=False,
+        }
     )
 
     solutions = {}

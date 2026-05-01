@@ -60,7 +60,7 @@ class OneStateDifferentialCapacityHysteresisOpenCircuitPotential(
 
         if self.reaction == "lithium-ion main":
             # determine dQ/dU
-            sto_surf, _, T, T_bulk = self._get_stoichiometry_and_temperature(variables)
+            sto_surf, _, _T, T_bulk = self._get_stoichiometry_and_temperature(variables)
             sto_surf = pybamm.size_average(sto_surf)
             if phase_name == "":
                 Q_mag = variables[f"{Domain} electrode capacity [A.h]"]

@@ -31,7 +31,7 @@ sims = []
 for k, p in zip(kinetics, extra_parameters, strict=False):
     model = pybamm.lithium_ion.DFN({"intercalation kinetics": k}, name=k)
     param = model.default_parameter_values
-    param.update(p, check_already_exists=False)
+    param.update(p)
     sim = pybamm.Simulation(model, parameter_values=param)
     sim.solve([0, 3600])
     sims.append(sim)

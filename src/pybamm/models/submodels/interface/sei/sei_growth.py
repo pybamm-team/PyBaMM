@@ -105,7 +105,7 @@ class SEIGrowth(BaseModel):
         # If we can't find the interfacial current density from the main reaction, j,
         # it's ok to fall back on the total interfacial current density, j_tot
         # This should only happen when the interface submodel is "InverseButlerVolmer"
-        # in which case j = j_tot (uniform) anyway
+        # or "InverseLinear" in which case j = j_tot (uniform) anyway
         if f"{Domain} electrode interfacial current density [A.m-2]" in variables:
             j = variables[f"{Domain} electrode interfacial current density [A.m-2]"]
         elif self.reaction_loc == "interface":

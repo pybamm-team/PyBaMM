@@ -3,6 +3,7 @@
 #
 from __future__ import annotations
 
+import casadi
 import numpy as np
 import numpy.typing as npt
 from scipy.sparse import csr_matrix, vstack
@@ -313,6 +314,12 @@ class StateVector(StateVectorBase):
         else:
             return pybamm.Scalar(0)
 
+    def _to_casadi(self, t, y, y_dot, inputs, casadi_symbols):
+        """See :meth:`pybamm.Symbol._to_casadi()`."""
+        if y is None:
+            raise ValueError("Must provide a 'y' for converting state vectors")
+        return casadi.vertcat(*[y[y_slice] for y_slice in self.y_slices])
+
     def _jac(self, variable: pybamm.StateVector | pybamm.StateVectorDot):
         if isinstance(variable, pybamm.StateVector):
             return self._jac_same_vector(variable)
@@ -393,6 +400,12 @@ class StateVectorDot(StateVectorBase):
             )
         else:
             return pybamm.Scalar(0)
+
+    def _to_casadi(self, t, y, y_dot, inputs, casadi_symbols):
+        """See :meth:`pybamm.Symbol._to_casadi()`."""
+        if y_dot is None:
+            raise ValueError("Must provide a 'y_dot' for converting state vectors")
+        return casadi.vertcat(*[y_dot[y_slice] for y_slice in self.y_slices])
 
     def _jac(self, variable: pybamm.StateVector | pybamm.StateVectorDot):
         if isinstance(variable, pybamm.StateVectorDot):

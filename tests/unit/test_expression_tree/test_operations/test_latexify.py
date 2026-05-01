@@ -92,3 +92,8 @@ class TestLatexify:
             filename = f"{uuid.uuid4()}.{ext}"
             model_spme.latexify(filename)
             os.remove(filename)
+
+    def test_latexify_with_lithium_plating(self):
+        model = pybamm.lithium_ion.SPM(options={"lithium plating": "irreversible"})
+        # Should not raise KeyError
+        model.latexify()

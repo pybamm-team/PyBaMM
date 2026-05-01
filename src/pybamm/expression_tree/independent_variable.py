@@ -3,6 +3,7 @@
 #
 from __future__ import annotations
 
+import casadi
 import numpy as np
 import numpy.typing as npt
 import sympy
@@ -112,6 +113,10 @@ class Time(IndependentVariable):
         """
         return 0
 
+    def _to_casadi(self, t, y, y_dot, inputs, casadi_symbols):
+        """See :meth:`pybamm.Symbol._to_casadi()`."""
+        return casadi.MX(self.evaluate(t, y, y_dot, inputs))
+
     def to_equation(self):
         """Convert the node and its subtree into a SymPy equation."""
         return sympy.Symbol("t")
@@ -210,16 +215,6 @@ class SpatialVariableEdge(SpatialVariable):
         (not both). In future, the 'domain' and 'auxiliary_domains' arguments may be
         deprecated.
     """
-
-    def __init__(
-        self,
-        name: str,
-        domain: DomainType = None,
-        auxiliary_domains: AuxiliaryDomainType = None,
-        domains: DomainsType = None,
-        coord_sys=None,
-    ) -> None:
-        super().__init__(name, domain, auxiliary_domains, domains, coord_sys)
 
     def _evaluates_on_edges(self, dimension):
         return True

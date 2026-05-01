@@ -3,11 +3,9 @@
 #
 from __future__ import annotations
 
-from collections.abc import Sequence
-from typing import TYPE_CHECKING
+from collections.abc import Generator, Sequence
 
-if TYPE_CHECKING:  # pragma: no cover
-    import pybamm
+import pybamm
 
 
 class SymbolUnpacker:
@@ -23,16 +21,19 @@ class SymbolUnpacker:
         cached unpacked equations
     """
 
+    __slots__ = ("_unpacked_symbols", "classes_to_find")
+
     def __init__(
         self,
-        classes_to_find: Sequence[pybamm.Symbol] | pybamm.Symbol,
+        classes_to_find: Sequence[pybamm.Symbol] | type[pybamm.Symbol],
         unpacked_symbols: dict | None = None,
     ):
         self.classes_to_find = classes_to_find
         self._unpacked_symbols: dict = unpacked_symbols or {}
 
     def unpack_list_of_symbols(
-        self, list_of_symbols: Sequence[pybamm.Symbol]
+        self,
+        list_of_symbols: Sequence[pybamm.Symbol] | Generator[pybamm.Symbol, None, None],
     ) -> set[pybamm.Symbol]:
         """
         Unpack a list of symbols. See :meth:`SymbolUnpacker.unpack()`
@@ -53,6 +54,16 @@ class SymbolUnpacker:
             all_instances.update(new_instances)
 
         return all_instances
+
+    def unpack_parameter_values(
+        self, parameter_values: pybamm.ParameterValues | dict
+    ) -> set[pybamm.Symbol]:
+        """
+        Unpack a parameter values object.
+        """
+        return self.unpack_list_of_symbols(
+            v for v in parameter_values.values() if isinstance(v, pybamm.Symbol)
+        )
 
     def unpack_symbol(
         self, symbol: Sequence[pybamm.Symbol] | pybamm.Symbol
