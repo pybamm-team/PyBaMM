@@ -258,7 +258,7 @@ class EISSimulation(BaseSimulation):
         timer = pybamm.Timer()
 
         if initial_soc is not None:
-            self.build(initial_soc=initial_soc)
+            self.build(initial_soc=initial_soc, inputs=inputs)
         elif self._built_model is None:
             self.build()
 

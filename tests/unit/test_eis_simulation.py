@@ -191,6 +191,42 @@ class TestEISSimulationSolve:
         result = eis_sim.solve(frequencies, initial_soc="3.8 V")
         assert result.impedance.shape == (10,)
 
+    def test_initial_soc_forwards_inputs(self):
+        """``solve(initial_soc=..., inputs=...)`` must forward ``inputs`` to
+        ``build``. Without it, the ``set_initial_state`` path evaluates
+        symbols (e.g. ``Q_init`` on the half-cell) without inputs and raises
+        ``"symbol must evaluate to a constant scalar or array"`` whenever a
+        parameter value is a symbolic expression that references an
+        :class:`InputParameter`.
+        """
+        model = pybamm.lithium_ion.SPM(
+            options={
+                "working electrode": "positive",
+                "surface form": "differential",
+            }
+        )
+        parameter_values = pybamm.ParameterValues("OKane2022_graphite_SiOx_halfcell")
+        # Active material volume fraction depends on an InputParameter, so
+        # ``Q_init`` (which depends on it) is non-constant and must be
+        # evaluated with the corresponding input supplied.
+        eps = parameter_values["Positive electrode porosity"]
+        parameter_values.update(
+            {
+                "Positive electrode active material volume fraction": (
+                    (1 - eps) * pybamm.InputParameter("vf_solid")
+                ),
+            },
+        )
+        eis_sim = pybamm.EISSimulation(model, parameter_values=parameter_values)
+        frequencies = np.logspace(-2, 2, 5)
+
+        # Both numeric SOC and voltage-string SOC paths must work.
+        z_soc = eis_sim.solve(frequencies, inputs={"vf_solid": 0.94}, initial_soc=0.5)
+        assert z_soc.impedance.shape == (5,)
+
+        z_v = eis_sim.solve(frequencies, inputs={"vf_solid": 0.94}, initial_soc="0.5 V")
+        assert z_v.impedance.shape == (5,)
+
     def test_high_freq_intercept_matches_contact_resistance(self):
         model = pybamm.lithium_ion.SPM(
             options={"surface form": "differential", "contact resistance": "true"}
