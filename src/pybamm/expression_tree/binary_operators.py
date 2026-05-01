@@ -1813,6 +1813,7 @@ def source(
     left = cast(pybamm.Symbol, left)
 
     allowed_domains = [["cell"], ["current collector"]]
+
     # Allow per-layer thermal domains used by MultiLayer3DThermalSPM
     # (e.g. "cell layer 0", "cell layer 1", ...). These share the
     # ScikitFiniteElement3D spatial method and therefore support Mass().

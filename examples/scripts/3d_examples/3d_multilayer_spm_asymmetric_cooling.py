@@ -59,9 +59,7 @@ model.apply_stack_scaling(parameter_values)
 
 # Inter-layer thermal contact resistance (K.m2.W-1). This is a proper
 # pybamm.Parameter, so it can be set/swept here in the parameter values.
-parameter_values.update(
-    {model.CONTACT_RESISTANCE_PARAM: 1e-2}
-)
+parameter_values.update({model.CONTACT_RESISTANCE_PARAM: 1e-2})
 
 # Asymmetric cooling: cold plate on the left, insulated everywhere else.
 h_cold = 50.0  # W.m-2.K-1
@@ -116,9 +114,7 @@ print(
 for i in range(num_layers):
     T_i = float(solution[f"Layer {i} average temperature [K]"].data[-1])
     f_i = float(solution[f"Layer {i} current fraction"].data[-1])
-    I_cell = float(
-        solution[f"Layer {i} per-unit-cell current [A]"].data[-1]
-    )
+    I_cell = float(solution[f"Layer {i} per-unit-cell current [A]"].data[-1])
     print(
         f"  Zone {i}: T_av = {T_i:7.3f} K,  current fraction = {f_i:.4f},  "
         f"per-unit-cell current = {I_cell:+.3f} A"
@@ -127,9 +123,7 @@ for i in range(num_layers):
 T_max = float(solution["Maximum layer-averaged temperature [K]"].data[-1])
 T_min = float(solution["Minimum layer-averaged temperature [K]"].data[-1])
 spread = float(solution["Temperature spread [K]"].data[-1])
-print(
-    f"  Stack spread: T_max - T_min = {T_max:.3f} - {T_min:.3f} = {spread:.3f} K"
-)
+print(f"  Stack spread: T_max - T_min = {T_max:.3f} - {T_min:.3f} = {spread:.3f} K")
 V_end = float(solution["Voltage [V]"].data[-1])
 print(f"  Terminal voltage (end): {V_end:.3f} V")
 
@@ -231,9 +225,7 @@ for i in range(num_layers):
     v_i = solution[f"Layer {i} temperature [K]"]
     nodes_i = v_i.mesh.nodes  # shape (n_nodes_i, 3), absolute coords
     total_nodes += nodes_i.shape[0]
-    T_vals = v_i(
-        t=t_final, x=nodes_i[:, 0], y=nodes_i[:, 1], z=nodes_i[:, 2]
-    )
+    T_vals = v_i(t=t_final, x=nodes_i[:, 0], y=nodes_i[:, 1], z=nodes_i[:, 2])
     all_x.append(nodes_i[:, 0])
     all_y.append(nodes_i[:, 1])
     all_z.append(nodes_i[:, 2])

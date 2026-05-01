@@ -147,8 +147,7 @@ class MultiLayer3DThermalSPM(BaseModel):
         geom_type = self.options.get("cell geometry", "pouch")
         if geom_type != "pouch":
             raise NotImplementedError(
-                "MultiLayer3DThermalSPM currently only supports "
-                "cell geometry 'pouch'."
+                "MultiLayer3DThermalSPM currently only supports cell geometry 'pouch'."
             )
 
         # Build the model in one go, matching the pattern used by
@@ -204,13 +203,11 @@ class MultiLayer3DThermalSPM(BaseModel):
     def _build_spm_layer(self, layer_id):
         """Build the SPM equations for a single layer."""
         c_s_n = pybamm.Variable(
-            f"Layer {layer_id} X-averaged negative particle concentration "
-            "[mol.m-3]",
+            f"Layer {layer_id} X-averaged negative particle concentration [mol.m-3]",
             domain="negative particle",
         )
         c_s_p = pybamm.Variable(
-            f"Layer {layer_id} X-averaged positive particle concentration "
-            "[mol.m-3]",
+            f"Layer {layer_id} X-averaged positive particle concentration [mol.m-3]",
             domain="positive particle",
         )
 
@@ -248,16 +245,14 @@ class MultiLayer3DThermalSPM(BaseModel):
         self.boundary_conditions[c_s_n] = {
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (
-                -j_n
-                / (self.param.F * pybamm.surf(self.param.n.prim.D(c_s_n, T_av))),
+                -j_n / (self.param.F * pybamm.surf(self.param.n.prim.D(c_s_n, T_av))),
                 "Neumann",
             ),
         }
         self.boundary_conditions[c_s_p] = {
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (
-                -j_p
-                / (self.param.F * pybamm.surf(self.param.p.prim.D(c_s_p, T_av))),
+                -j_p / (self.param.F * pybamm.surf(self.param.p.prim.D(c_s_p, T_av))),
                 "Neumann",
             ),
         }
@@ -274,12 +269,8 @@ class MultiLayer3DThermalSPM(BaseModel):
         RT_F = self.param.R * T_av / self.param.F
         j0_n = self.param.n.prim.j0(self.param.c_e_init_av, c_s_surf_n, T_av)
         j0_p = self.param.p.prim.j0(self.param.c_e_init_av, c_s_surf_p, T_av)
-        eta_n = (2 / self.param.n.prim.ne) * RT_F * pybamm.arcsinh(
-            j_n / (2 * j0_n)
-        )
-        eta_p = (2 / self.param.p.prim.ne) * RT_F * pybamm.arcsinh(
-            j_p / (2 * j0_p)
-        )
+        eta_n = (2 / self.param.n.prim.ne) * RT_F * pybamm.arcsinh(j_n / (2 * j0_n))
+        eta_p = (2 / self.param.p.prim.ne) * RT_F * pybamm.arcsinh(j_p / (2 * j0_p))
         phi_s_n = pybamm.Scalar(0)
         phi_e = -eta_n - self.param.n.prim.U(sto_surf_n, T_av)
         phi_s_p = eta_p + phi_e + self.param.p.prim.U(sto_surf_p, T_av)
@@ -350,9 +341,7 @@ class MultiLayer3DThermalSPM(BaseModel):
         self.algebraic[fractions[0]] = sum(fractions) - 1
 
         for i in range(self.num_layers):
-            self.initial_conditions[fractions[i]] = pybamm.Scalar(
-                1.0 / self.num_layers
-            )
+            self.initial_conditions[fractions[i]] = pybamm.Scalar(1.0 / self.num_layers)
 
         self._terminal_voltage = V_ref
 
@@ -374,9 +363,7 @@ class MultiLayer3DThermalSPM(BaseModel):
         self._layer_spatial_vars[layer_id] = (x_i, y_i, z_i)
         integration_vars = [x_i, y_i, z_i]
 
-        volume = pybamm.Integral(
-            pybamm.PrimaryBroadcast(1.0, domain), integration_vars
-        )
+        volume = pybamm.Integral(pybamm.PrimaryBroadcast(1.0, domain), integration_vars)
         T_av_integral = pybamm.Integral(T_i, integration_vars) / volume
 
         # Algebraic link: layer's electrochemical T_av == spatial average of T_i
@@ -530,9 +517,7 @@ class MultiLayer3DThermalSPM(BaseModel):
             # Per-unit-cell current coincides with layer["current"] which has
             # already been divided by layers_per_zone. Exposed under a more
             # explicit name for clarity in zone-coarsened simulations.
-            self.variables[
-                f"Layer {i} per-unit-cell current [A]"
-            ] = layer["current"]
+            self.variables[f"Layer {i} per-unit-cell current [A]"] = layer["current"]
             if layer["current_fraction"] is not None:
                 self.variables[f"Layer {i} current fraction"] = layer[
                     "current_fraction"
@@ -596,8 +581,7 @@ class MultiLayer3DThermalSPM(BaseModel):
                 f"{self.num_physical_layers} unit cells"
             )
             print(
-                "Nominal cell capacity scaled: "
-                f"{Q_single:.3f} Ah -> {Q_stack:.3f} Ah"
+                f"Nominal cell capacity scaled: {Q_single:.3f} Ah -> {Q_stack:.3f} Ah"
             )
             if injected_R_th:
                 print(
