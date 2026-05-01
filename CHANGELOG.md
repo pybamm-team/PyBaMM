@@ -4,6 +4,10 @@
 
 - Added `NonlinearSolver` as the default nonlinear solver, which replaces `CasadiAlgebraicSolver`. `IDAKLUSolver` now computes the initial conditions in C++ by default. ([#5459](https://github.com/pybamm-team/PyBaMM/pull/5459))
 
+## Bug fixes
+
+- `Serialise.load_custom_model` no longer silently drops to `pybamm.BaseModel` when the recorded `base_class` cannot be imported. `serialise_custom_model` now records the full ancestor chain in a new `base_class_mro` field, and the loader walks it to resolve to the closest importable ancestor (typically a pybamm-provided class such as the lithium-ion `BaseModel`). This preserves subclass defaults — including `default_spatial_methods` — so loaded models discretise correctly on machines that do not have the original subclass package installed. Falling back to `pybamm.BaseModel` is still the last resort if no MRO entry can be imported.
+
 # [v26.4.1](https://github.com/pybamm-team/PyBaMM/tree/v26.4.1) - 2026-04-24
 
 ## Bug fixes

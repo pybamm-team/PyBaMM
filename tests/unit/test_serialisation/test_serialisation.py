@@ -972,6 +972,149 @@ class TestSerialise:
         assert "positive particle" in loaded.default_geometry
         assert "positive particle" in loaded.default_spatial_methods
 
+    def test_serialise_records_base_class_mro(self, tmp_path):
+        """``serialise_custom_model`` records the model's MRO (excluding
+        ``object``) so loaders can fall back to an importable ancestor when
+        the user's subclass package is not available."""
+        from pybamm.models.full_battery_models.lithium_ion.base_lithium_ion_model import (
+            BaseModel as LiIonBaseModel,
+        )
+
+        model = LiIonBaseModel(options={"working electrode": "positive"})
+        a = pybamm.Variable("a", domain="positive particle")
+        model.rhs = {a: -a}
+        model.initial_conditions = {a: pybamm.Scalar(1)}
+        model.variables = {"a": a}
+
+        payload = Serialise.serialise_custom_model(model)
+        mro = payload["model"]["base_class_mro"]
+
+        assert payload["model"]["base_class"] == mro[0]
+        assert "pybamm.models.base_model.BaseModel" in mro
+        assert (
+            "pybamm.models.full_battery_models.lithium_ion."
+            "base_lithium_ion_model.BaseModel"
+        ) in mro
+        # ``object`` and other ``builtins`` entries must be filtered out so
+        # they cannot end up shadowing a more useful pybamm ancestor.
+        assert all(not entry.startswith("builtins.") for entry in mro)
+
+    def test_load_falls_back_to_mro_ancestor_when_base_class_unimportable(
+        self, tmp_path
+    ):
+        """When ``base_class`` references a class that the loader's environment
+        cannot import (typical when a user's subclass is defined in a private
+        package that isn't installed on a backend), ``load_custom_model`` must
+        walk the recorded MRO and resolve to the closest importable ancestor —
+        not silently drop to ``pybamm.BaseModel``."""
+        from pybamm.models.full_battery_models.lithium_ion.base_lithium_ion_model import (
+            BaseModel as LiIonBaseModel,
+        )
+
+        model = LiIonBaseModel()
+        a = pybamm.Variable("a", domain="positive particle")
+        model.rhs = {a: -a}
+        model.initial_conditions = {a: pybamm.Scalar(1)}
+        model.variables = {"a": a}
+
+        file_path = tmp_path / "model.json"
+        Serialise.save_custom_model(model, filename=str(file_path))
+
+        # Simulate a payload that originated from a user subclass living in a
+        # package the loader does not have installed. The MRO still contains
+        # the pybamm-provided lithium-ion BaseModel as an ancestor.
+        with open(file_path) as f:
+            data = json.load(f)
+        data["model"]["base_class"] = "user_private_pkg.MyLiIon"
+        data["model"]["base_class_mro"] = [
+            "user_private_pkg.MyLiIon",
+            *data["model"]["base_class_mro"],
+        ]
+        with open(file_path, "w") as f:
+            json.dump(data, f)
+
+        with pytest.warns(
+            UserWarning,
+            match=(
+                r"Could not import base class 'user_private_pkg\.MyLiIon'.*"
+                r"Falling back to ancestor "
+                r"'pybamm\.models\.full_battery_models\.lithium_ion\."
+                r"base_lithium_ion_model\.BaseModel'"
+            ),
+        ):
+            loaded = Serialise.load_custom_model(str(file_path))
+
+        # The loaded model has the lithium-ion defaults — crucially,
+        # ``default_spatial_methods`` includes the ``positive particle`` mesh
+        # so downstream discretisation works. A bare ``pybamm.BaseModel``
+        # would have an empty ``default_spatial_methods``.
+        assert isinstance(loaded, LiIonBaseModel)
+        assert "positive particle" in loaded.default_spatial_methods
+
+    def test_load_falls_back_to_base_model_when_no_mro_entry_importable(
+        self, tmp_path
+    ):
+        """If neither ``base_class`` nor any MRO ancestor can be imported,
+        the loader still falls back to ``pybamm.BaseModel`` (the legacy
+        behaviour) rather than raising."""
+        model = pybamm.BaseModel(name="DummyModel")
+        a = pybamm.Variable("a")
+        model.rhs = {a: a}
+        model.initial_conditions = {a: pybamm.Scalar(1)}
+        model.variables = {"a": a}
+
+        file_path = tmp_path / "model.json"
+        Serialise.save_custom_model(model, filename=str(file_path))
+
+        with open(file_path) as f:
+            data = json.load(f)
+        data["model"]["base_class"] = "nonexistent_module.A"
+        data["model"]["base_class_mro"] = [
+            "nonexistent_module.A",
+            "another_missing_module.B",
+        ]
+        with open(file_path, "w") as f:
+            json.dump(data, f)
+
+        with pytest.warns(
+            UserWarning,
+            match=(
+                r"Could not import base class 'nonexistent_module\.A'.*"
+                r"Falling back to pybamm\.BaseModel"
+            ),
+        ):
+            loaded = Serialise.load_custom_model(str(file_path))
+
+        assert type(loaded) is pybamm.BaseModel
+
+    def test_load_legacy_payload_without_base_class_mro(self, tmp_path):
+        """Payloads written before ``base_class_mro`` was added must still
+        load: missing the field is equivalent to an empty MRO, and the loader
+        falls back to ``pybamm.BaseModel`` when ``base_class`` is unimportable."""
+        model = pybamm.BaseModel(name="DummyModel")
+        a = pybamm.Variable("a")
+        model.rhs = {a: a}
+        model.initial_conditions = {a: pybamm.Scalar(1)}
+        model.variables = {"a": a}
+
+        file_path = tmp_path / "model.json"
+        Serialise.save_custom_model(model, filename=str(file_path))
+
+        with open(file_path) as f:
+            data = json.load(f)
+        data["model"]["base_class"] = "nonexistent_module.A"
+        data["model"].pop("base_class_mro", None)
+        with open(file_path, "w") as f:
+            json.dump(data, f)
+
+        with pytest.warns(
+            UserWarning,
+            match=r"Could not import base class 'nonexistent_module\.A'",
+        ):
+            loaded = Serialise.load_custom_model(str(file_path))
+
+        assert type(loaded) is pybamm.BaseModel
+
     def test_function_parameter_with_diff_variable_serialisation(self):
         x = pybamm.Variable("x")
         diff_var = pybamm.Variable("r")

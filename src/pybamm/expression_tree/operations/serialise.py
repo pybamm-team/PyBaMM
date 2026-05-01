@@ -373,6 +373,92 @@ class Serialise:
             raise TypeError(f"Object of type {type(obj)} is not JSON serializable.")
 
     @staticmethod
+    def _import_dotted_class(dotted_path: str):
+        """Import ``module.ClassName`` and return the class, or raise.
+
+        Parameters
+        ----------
+        dotted_path : str
+            Fully qualified ``module.ClassName`` reference.
+
+        Returns
+        -------
+        type
+            The imported class.
+
+        Raises
+        ------
+        ModuleNotFoundError
+            If the module cannot be imported.
+        AttributeError
+            If the module does not expose the named class.
+        ValueError
+            If ``dotted_path`` does not contain a module separator.
+        """
+        if "." not in dotted_path:
+            raise ValueError(
+                f"Expected 'module.ClassName' but got {dotted_path!r}"
+            )
+        module_name, class_name = dotted_path.rsplit(".", 1)
+        module = importlib.import_module(module_name)
+        return getattr(module, class_name)
+
+    @staticmethod
+    def _resolve_base_class(base_class: str, base_class_mro: list[str]):
+        """Resolve a serialised ``base_class`` to a Python class, walking the MRO.
+
+        When a model is serialised on one machine and loaded on another, the
+        user's subclass package may not be installed on the loader's side.
+        Older payloads recorded only ``base_class`` and silently dropped to
+        ``pybamm.BaseModel`` on import failure, which loses subclass-specific
+        defaults (e.g. ``default_spatial_methods`` on lithium-ion models) and
+        produces models that fail mysteriously at discretisation time.
+
+        This resolver tries the recorded ``base_class`` first, then walks
+        ``base_class_mro`` to find the closest ancestor that *is* importable,
+        and only falls back to ``pybamm.BaseModel`` if nothing in the MRO is
+        importable.
+
+        Parameters
+        ----------
+        base_class : str
+            Fully qualified ``module.ClassName`` of the original model class.
+        base_class_mro : list of str
+            Fully qualified ancestor chain (including ``base_class`` at index
+            0) recorded at serialise time. May be empty for older payloads.
+
+        Returns
+        -------
+        type
+            A class to instantiate as the loaded model.
+        """
+        try:
+            return Serialise._import_dotted_class(base_class)
+        except (ModuleNotFoundError, AttributeError, ValueError) as primary_err:
+            for ancestor in base_class_mro:
+                if ancestor == base_class:
+                    continue
+                try:
+                    resolved = Serialise._import_dotted_class(ancestor)
+                except (ModuleNotFoundError, AttributeError, ValueError):
+                    continue
+                warnings.warn(
+                    f"Could not import base class '{base_class}': "
+                    f"{primary_err}. Falling back to ancestor "
+                    f"'{ancestor}' from the recorded MRO.",
+                    stacklevel=3,
+                )
+                return resolved
+            warnings.warn(
+                f"Could not import base class '{base_class}': "
+                f"{primary_err}. Falling back to pybamm.BaseModel; the loaded "
+                "model will contain the symbolic equations but not any "
+                "subclass-specific Python behaviour.",
+                stacklevel=3,
+            )
+            return pybamm.BaseModel
+
+    @staticmethod
     def serialise_custom_model(model: pybamm.BaseModel, compress: bool = False) -> dict:
         """
         Converts a custom (non-discretised) PyBaMM model to a JSON-serialisable dictionary.
@@ -425,9 +511,22 @@ class Serialise:
         else:
             base_cls_str = f"{base_cls.__module__}.{base_cls.__name__}"
 
+        # Record the full ancestor chain so a loader running in an environment
+        # without the user's subclass package can fall back to the closest
+        # ancestor it can import (typically a pybamm-provided class) rather
+        # than silently dropping all the way to ``pybamm.BaseModel``. ``object``
+        # and other ``builtins`` entries are excluded as they are not useful
+        # fallbacks.
+        base_class_mro = [
+            f"{ancestor.__module__}.{ancestor.__name__}"
+            for ancestor in base_cls.__mro__
+            if ancestor is not object and ancestor.__module__ != "builtins"
+        ]
+
         model_content = {
             "name": getattr(model, "name", "unnamed_model"),
             "base_class": base_cls_str,
+            "base_class_mro": base_class_mro,
             "options": getattr(model, "options", {}),
             "rhs": [
                 (
@@ -1366,19 +1465,10 @@ class Serialise:
         if battery_model in ("", "pybamm.BaseModel", "builtins.object"):
             base_cls = pybamm.BaseModel
         else:
-            module_name, class_name = battery_model.rsplit(".", 1)
-            try:
-                module = importlib.import_module(module_name)
-                base_cls = getattr(module, class_name)
-            except (ModuleNotFoundError, AttributeError) as e:
-                warnings.warn(
-                    f"Could not import base class '{battery_model}': {e}. "
-                    "Falling back to pybamm.BaseModel; the loaded model will "
-                    "contain the symbolic equations but not any subclass-specific "
-                    "Python behaviour.",
-                    stacklevel=2,
-                )
-                base_cls = pybamm.BaseModel
+            base_cls = Serialise._resolve_base_class(
+                battery_model,
+                model_data.get("base_class_mro") or [],
+            )
 
         model = base_cls()
         model.name = model_data["name"]
