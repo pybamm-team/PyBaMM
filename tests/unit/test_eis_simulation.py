@@ -191,6 +191,21 @@ class TestEISSimulationSolve:
         result = eis_sim.solve(frequencies, initial_soc="3.8 V")
         assert result.impedance.shape == (10,)
 
+    def test_high_freq_intercept_matches_contact_resistance(self):
+        model = pybamm.lithium_ion.SPM(
+            options={"surface form": "differential", "contact resistance": "true"}
+        )
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        parameter_values.update({"Contact resistance [Ohm]": 1.0})
+
+        eis_sim = pybamm.EISSimulation(model, parameter_values=parameter_values)
+        frequencies = np.logspace(-4, 4, 30)
+        result = eis_sim.solve(frequencies)
+
+        high_freq_z = result.impedance[-1]
+        assert high_freq_z.real == pytest.approx(1.0, abs=1e-3)
+        assert abs(high_freq_z.imag) < 1e-3
+
 
 class TestNyquistPlot:
     """Tests for Nyquist plotting."""
