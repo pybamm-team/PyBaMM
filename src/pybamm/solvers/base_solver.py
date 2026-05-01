@@ -1466,17 +1466,13 @@ class BaseSolver:
                 # as an input parameter; match compile-time defaults from
                 # Simulation._build_experiment_state_mappers (inputs.get(name, 0)).
                 mapper_p_inputs = dict(inputs)
-                for name in sorted(
-                    ip.name for ip in previous_model.input_parameters
-                ):
+                for name in sorted(ip.name for ip in previous_model.input_parameters):
                     if name not in mapper_p_inputs or mapper_p_inputs[name] is None:
                         mapper_p_inputs[name] = inputs.get(name, 0)
                 mapper_inputs = BaseSolver._set_up_model_inputs(
                     previous_model, mapper_p_inputs
                 )
-                p_casadi_stacked = casadi.vertcat(
-                    *[p for p in mapper_inputs.values()]
-                )
+                p_casadi_stacked = casadi.vertcat(*[p for p in mapper_inputs.values()])
 
                 model.y0_list = [
                     mapper_func(
