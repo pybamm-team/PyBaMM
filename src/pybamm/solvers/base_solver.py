@@ -1462,9 +1462,7 @@ class BaseSolver:
                 # layout, not the next model's model_inputs.
                 previous_model = old_solution.all_models[-1]
                 mapper_inputs = BaseSolver._set_up_model_inputs(previous_model, inputs)
-                p_casadi_stacked = casadi.vertcat(
-                    *[p for p in mapper_inputs.values()]
-                )
+                p_casadi_stacked = casadi.vertcat(*[p for p in mapper_inputs.values()])
 
                 model.y0_list = [
                     mapper_func(
