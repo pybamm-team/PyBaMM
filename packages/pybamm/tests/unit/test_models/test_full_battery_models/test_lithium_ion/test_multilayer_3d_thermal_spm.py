@@ -21,9 +21,7 @@ class TestMultiLayer3DThermalSPM:
             )
         with pytest.raises(ValueError, match="connection"):
             pybamm.lithium_ion.MultiLayer3DThermalSPM(connection="weird")
-        with pytest.raises(
-            (NotImplementedError, pybamm.OptionError)
-        ):
+        with pytest.raises((NotImplementedError, pybamm.OptionError)):
             pybamm.lithium_ion.MultiLayer3DThermalSPM(
                 options={"cell geometry": "cylindrical", "dimensionality": 3}
             )
@@ -99,9 +97,7 @@ class TestMultiLayer3DThermalSPM:
 
     def test_invalid_contact_resistance(self):
         with pytest.raises(ValueError, match="thermal_contact_resistance"):
-            pybamm.lithium_ion.MultiLayer3DThermalSPM(
-                thermal_contact_resistance=0.0
-            )
+            pybamm.lithium_ion.MultiLayer3DThermalSPM(thermal_contact_resistance=0.0)
 
     def test_invalid_mesh_h(self):
         with pytest.raises(ValueError, match="mesh_h"):
@@ -144,9 +140,7 @@ class TestMultiLayer3DThermalSPM:
             "Bottom face",
             "Top face",
         ]:
-            param.update(
-                {f"{k} heat transfer coefficient [W.m-2.K-1]": 10}
-            )
+            param.update({f"{k} heat transfer coefficient [W.m-2.K-1]": 10})
         var_pts = {
             "x_n": 10,
             "x_s": 10,
@@ -176,9 +170,7 @@ class TestMultiLayer3DThermalSPM:
     # ------------------------------------------------------------------ #
     def test_contact_resistance_is_a_parameter(self):
         """R_th should be a proper pybamm.Parameter overridable via PV."""
-        key = (
-            pybamm.lithium_ion.MultiLayer3DThermalSPM.CONTACT_RESISTANCE_PARAM
-        )
+        key = pybamm.lithium_ion.MultiLayer3DThermalSPM.CONTACT_RESISTANCE_PARAM
         # default_parameter_values picks up the kwarg default.
         m = pybamm.lithium_ion.MultiLayer3DThermalSPM(
             num_layers=2, thermal_contact_resistance=5e-3
@@ -199,19 +191,13 @@ class TestMultiLayer3DThermalSPM:
     def test_invalid_layers_per_zone(self):
         # Legacy kwarg path: layers_per_zone=0 -> num_physical_layers=0.
         with pytest.raises(ValueError, match="num_physical_layers"):
-            pybamm.lithium_ion.MultiLayer3DThermalSPM(
-                num_layers=3, layers_per_zone=0
-            )
+            pybamm.lithium_ion.MultiLayer3DThermalSPM(num_layers=3, layers_per_zone=0)
         with pytest.raises(ValueError, match="num_physical_layers"):
-            pybamm.lithium_ion.MultiLayer3DThermalSPM(
-                num_layers=3, layers_per_zone=-2
-            )
+            pybamm.lithium_ion.MultiLayer3DThermalSPM(num_layers=3, layers_per_zone=-2)
 
     def test_layers_per_zone_attributes(self):
         # Legacy kwargs still populate the attributes correctly.
-        m = pybamm.lithium_ion.MultiLayer3DThermalSPM(
-            num_layers=4, layers_per_zone=6
-        )
+        m = pybamm.lithium_ion.MultiLayer3DThermalSPM(num_layers=4, layers_per_zone=6)
         assert m.layers_per_zone == 6
         assert m.num_physical_layers == 24
         assert m.num_subdivisions == 4
@@ -245,6 +231,7 @@ class TestMultiLayer3DThermalSPM:
         x_last = geom[_layer_domain(num_layers - 1)]["x"]
         # Symbolic evaluation against GeometricParameters
         import pybamm as _pb
+
         geo_p = _pb.GeometricParameters(m.options)
         # Materialise with the default parameter set
         pv = _pb.ParameterValues("Marquis2019")
@@ -252,6 +239,7 @@ class TestMultiLayer3DThermalSPM:
         x0_max_val = pv.process_symbol(x0["max"]).evaluate()
         x_last_max_val = pv.process_symbol(x_last["max"]).evaluate()
         import numpy as np
+
         assert np.isclose(x0_max_val, n * L_x_val)
         assert np.isclose(x_last_max_val, num_layers * n * L_x_val)
 
@@ -271,9 +259,7 @@ class TestMultiLayer3DThermalSPM:
             )
 
     def test_apply_stack_scaling(self):
-        m = pybamm.lithium_ion.MultiLayer3DThermalSPM(
-            num_layers=5, layers_per_zone=4
-        )
+        m = pybamm.lithium_ion.MultiLayer3DThermalSPM(num_layers=5, layers_per_zone=4)
         pv = pybamm.ParameterValues("Marquis2019")
         Q0 = pv["Nominal cell capacity [A.h]"]
         m.apply_stack_scaling(pv, verbose=False)
@@ -302,9 +288,7 @@ class TestMultiLayer3DThermalSPM:
                 "Bottom face",
                 "Top face",
             ]:
-                param.update(
-                    {f"{k} heat transfer coefficient [W.m-2.K-1]": 10}
-                )
+                param.update({f"{k} heat transfer coefficient [W.m-2.K-1]": 10})
             model.apply_stack_scaling(param, verbose=False)
             var_pts = {
                 "x_n": 10,
