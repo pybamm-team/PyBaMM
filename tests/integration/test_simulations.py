@@ -81,10 +81,9 @@ class TestSimulationConsistentState:
 
         cc_solution = sol.cycles[0].steps[0]
 
-        # Replay BaseSolver.step's mapper invocation exactly: pull the
-        # compiled (func, jac_y, jac_p) tuple, build the CV step's input
-        # vector through the same code path, and call the func on the CC
-        # step's last raw state vector.
+        # Compiled state mappers use the *previous* model's input layout; match
+        # BaseSolver.step by stacking p via that model and the upcoming step's
+        # inputs dict (see Simulation.solve / _build_experiment_step_inputs).
         mapper_func, _, _ = sim._compiled_model_state_mappers[(cc_model, cv_model)]
         cv_inputs_dict = sim._build_experiment_step_inputs(
             {},
@@ -93,9 +92,9 @@ class TestSimulationConsistentState:
             None,
             include_temperature=False,
         )
-        cv_solver = sim._get_built_experiment_solver(cv_step)
-        model_inputs = cv_solver._set_up_model_inputs(cv_model, cv_inputs_dict)
-        p_vec = casadi.vertcat(*model_inputs.values())
+        cc_solver = sim._get_built_experiment_solver(cc_step)
+        mapper_p = cc_solver._set_up_model_inputs(cc_model, cv_inputs_dict)
+        p_vec = casadi.vertcat(*mapper_p.values())
         y_from = cc_solution.last_state.all_ys[0]
         seed = np.asarray(mapper_func(float(cc_solution.t[-1]), y_from, p_vec)).ravel()
 
@@ -110,3 +109,34 @@ class TestSimulationConsistentState:
         )
 
         assert seed_current_phys == pytest.approx(-charge_current, rel=1e-9)
+
+    def test_state_mapper_previous_step_input_layout_scalar_then_array_current(self):
+        """Regression: experiment mapper CasADi `p` must match *previous* model inputs.
+
+        Array (piecewise) `Current` steps add a `start time` input; scalar
+        `Current` steps do not. Stacking `p` from the *next* model caused a
+        CasADi shape error at the step transition when another input parameter
+        (e.g. SEI diffusivity) was present on both models.
+        """
+        t = np.linspace(0.0, 30.0, 5)
+        current = np.full_like(t, -0.5)
+        arr = np.column_stack((t, current))
+        experiment = pybamm.Experiment(
+            [
+                pybamm.step.Current(0.2, duration=60.0),
+                pybamm.step.Current(arr, duration=float(t[-1])),
+            ]
+        )
+        model = pybamm.lithium_ion.SPM({"SEI": "solvent-diffusion limited"})
+        model.events = []
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        parameter_values["SEI solvent diffusivity [m2.s-1]"] = "[input]"
+        sim = pybamm.Simulation(
+            model,
+            experiment=experiment,
+            parameter_values=parameter_values,
+            solver=pybamm.ScipySolver(),
+        )
+        sol = sim.solve(inputs={"SEI solvent diffusivity [m2.s-1]": 1e-19})
+        assert sol is not None
+        assert sol.t[-1] > 0

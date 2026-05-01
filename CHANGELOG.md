@@ -1,5 +1,9 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Bug fixes
+
+- Fixed legacy experiment stepping: the precalculated state mapper is evaluated with the *previous* step model's input layout, not the next model's. Fixes CasADi mapper shape errors when transitioning from a scalar `Current` step to a piecewise (array) `Current` step with additional `InputParameter`s. ([#5484](https://github.com/pybamm-team/PyBaMM/pull/5484))
+
 # [v26.4.1](https://github.com/pybamm-team/PyBaMM/tree/v26.4.1) - 2026-04-24
 
 ## Bug fixes
