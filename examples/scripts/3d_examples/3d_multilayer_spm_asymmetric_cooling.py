@@ -1,55 +1,66 @@
 """
 Multilayer 3D-thermal SPM: asymmetric-cooling demonstration.
 
-Runs a 3-layer pouch cell in parallel connection. The left face is cooled
-aggressively while the right face is insulated, so the layer closest to the
-cold plate (layer 0) stays cooler than the layer closest to the insulated
-face (layer 2). This illustrates the through-stack temperature gradient that
-``MultiLayer3DThermalSPM`` resolves, which ``Basic3DThermalSPM`` cannot
-capture.
+Runs a large pouch cell in parallel connection. The left face is cooled
+aggressively while the other faces are insulated, so the zone closest to the
+cold plate (zone 0) stays cooler than the zone closest to the insulated
+face (zone num_layers - 1). This illustrates the through-stack temperature
+gradient that ``MultiLayer3DThermalSPM`` resolves, which ``Basic3DThermalSPM``
+cannot capture.
+
+The physical stack has ``num_layers * layers_per_zone`` unit cells, but we
+model only ``num_layers`` SPM zones (each representing ``layers_per_zone``
+adjacent unit cells lumped into one thermal zone). See
+``MultiLayer3DThermalSPM.layers_per_zone`` for the semantics: electrode
+thicknesses and per-unit-cell current/overpotentials are preserved, only the
+zone thermal x-extent and the stack capacity are rescaled.
 """
 
 import numpy as np
 
 import pybamm
 
-print("Building 3-layer 3D-thermal SPM (parallel connection)...")
+print("Building multi-layer 3D-thermal SPM (parallel connection)...")
 # A larger thermal contact resistance (1e-2 K.m^2/W, e.g. an adhesive/air gap
 # between layers) gives the stack enough thermal impedance for a visible
 # through-stack gradient under asymmetric cooling. Reduce towards 1e-4 to
 # approximate perfect thermal contact.
 #
-# ``mesh_h`` controls the 3D FEM mesh density per layer. The default 0.1
-# produces only ~24 nodes per layer, which is too sparse for meaningful
-# spatial visualisation; 0.03 gives ~96 nodes per layer (1 C layer ~~ 96 ,
-# 50 layers ~~ 4800). Smaller h => finer mesh, slower solve.
+# ``mesh_h`` controls the 3D FEM mesh density per zone. Smaller h => finer
+# mesh, slower solve. ``0.03`` yields ~96 nodes per zone (~1920 total for
+# 20 zones) and solves in a few seconds; ``0.02`` triggers a steep jump in
+# solve time because the 3D meshes become large enough to dominate the
+# DAE, so stay at 0.03 unless you need finer visualisation and are willing
+# to wait.
+#
+# ``num_physical_layers`` is the total number of unit cells in the real
+# stack (physically meaningful); ``num_subdivisions`` chooses how many SPM
+# zones we solve, each lumping ``num_physical_layers / num_subdivisions``
+# adjacent unit cells into one thermal zone. Electrode parameters and
+# per-unit-cell overpotentials are preserved; only the zone thermal extent
+# and the stack capacity are rescaled. Here we represent a 120-unit-cell
+# stack with 20 zones (i.e. 6 physical layers/zone).
 model = pybamm.lithium_ion.MultiLayer3DThermalSPM(
-    num_layers=50,
+    num_physical_layers=120,
+    num_subdivisions=20,
     connection="parallel",
-    thermal_contact_resistance=1e-2,
-    mesh_h=0.01,
+    mesh_h=0.03,
 )
 
 parameter_values = pybamm.ParameterValues("Marquis2019")
 
 # ----------------------------------------------------------------- #
-# Scale capacity to the full stack so the C-rate in the Experiment
-# refers to the *stack* and not a single layer.
-#
-# In PyBaMM, ``Discharge at NC`` resolves to a current
-#     I_app = N * Q_nominal
-# where Q_nominal is the ``Nominal cell capacity [A.h]`` in the
-# parameter set. Marquis2019 ships with Q_nominal ~= 0.68 A.h, which
-# is a *single-layer* capacity. With N parallel layers the per-layer
-# current is I_app / N, so without this scaling "3C" is really ~C/N
-# per layer and barely heats the cell.
+# Scale capacity to the full physical stack so the C-rate in the
+# Experiment refers to the full physical stack (``num_physical_layers``)
+# and not a single unit cell. apply_stack_scaling handles this in one
+# step and prints the resolved scaling.
 # ----------------------------------------------------------------- #
-Q_single = parameter_values["Nominal cell capacity [A.h]"]
-parameter_values["Nominal cell capacity [A.h]"] = Q_single * model.num_layers
-print(
-    f"  Per-layer nominal capacity: {Q_single:.3f} A.h  -> "
-    f"stack capacity (x{model.num_layers}): "
-    f"{parameter_values['Nominal cell capacity [A.h]']:.3f} A.h"
+model.apply_stack_scaling(parameter_values)
+
+# Inter-layer thermal contact resistance (K.m2.W-1). This is a proper
+# pybamm.Parameter, so it can be set/swept here in the parameter values.
+parameter_values.update(
+    {model.CONTACT_RESISTANCE_PARAM: 1e-2}
 )
 
 # Asymmetric cooling: cold plate on the left, insulated everywhere else.
@@ -71,11 +82,11 @@ parameter_values.update(
 experiment = pybamm.Experiment([("Discharge at 3C until 2.8V",)])
 
 var_pts = {
-    "x_n": 15,
-    "x_s": 15,
-    "x_p": 15,
-    "r_n": 20,
-    "r_p": 20,
+    "x_n": 10,
+    "x_s": 10,
+    "x_p": 10,
+    "r_n": 15,
+    "r_p": 15,
     "x": None,
     "y": None,
     "z": None,
@@ -88,7 +99,7 @@ sim = pybamm.Simulation(
     experiment=experiment,
 )
 
-print("Solving... (this may take a minute)")
+print("Solving...")
 solution = sim.solve()
 print(f"Solve complete. Final t = {solution.t[-1]:.1f} s")
 
@@ -97,10 +108,21 @@ print(f"Solve complete. Final t = {solution.t[-1]:.1f} s")
 # --------------------------------------------------------------- #
 print("\n--- End-of-discharge summary ---")
 num_layers = model.num_layers
+num_physical_layers = model.num_physical_layers
+print(
+    f"  {model.num_subdivisions} SPM zones x {model.layers_per_zone} "
+    f"physical layers/zone = {num_physical_layers} physical unit cells"
+)
 for i in range(num_layers):
     T_i = float(solution[f"Layer {i} average temperature [K]"].data[-1])
     f_i = float(solution[f"Layer {i} current fraction"].data[-1])
-    print(f"  Layer {i}: T_av = {T_i:7.3f} K,  current fraction = {f_i:.4f}")
+    I_cell = float(
+        solution[f"Layer {i} per-unit-cell current [A]"].data[-1]
+    )
+    print(
+        f"  Zone {i}: T_av = {T_i:7.3f} K,  current fraction = {f_i:.4f},  "
+        f"per-unit-cell current = {I_cell:+.3f} A"
+    )
 
 T_max = float(solution["Maximum layer-averaged temperature [K]"].data[-1])
 T_min = float(solution["Minimum layer-averaged temperature [K]"].data[-1])
@@ -148,7 +170,7 @@ axes[0, 1].set_ylabel("Layer-averaged temperature [K]")
 axes[0, 1].set_title("Per-layer temperature")
 axes[0, 1].grid(True, alpha=0.3)
 cbar_T = fig.colorbar(sm, ax=axes[0, 1], pad=0.02)
-cbar_T.set_label("Layer index (0 = cooled side)")
+cbar_T.set_label("Zone index (0 = cooled side)")
 
 # (c) Per-layer current fraction overlaid, coloured by layer index
 for i in range(num_layers):
@@ -163,7 +185,7 @@ axes[1, 0].set_title("Per-layer current fraction")
 axes[1, 0].legend(loc="best")
 axes[1, 0].grid(True, alpha=0.3)
 cbar_f = fig.colorbar(sm, ax=axes[1, 0], pad=0.02)
-cbar_f.set_label("Layer index (0 = cooled side)")
+cbar_f.set_label("Zone index (0 = cooled side)")
 
 # (d) Through-stack profile at initial, middle, and final time
 idx_snapshots = [0, len(t_s) // 2, -1]
@@ -175,15 +197,16 @@ for j in idx_snapshots:
     axes[1, 1].plot(
         np.arange(num_layers), T_profile, marker="o", label=f"t = {t_min[j]:.1f} min"
     )
-axes[1, 1].set_xlabel("Layer index (0 = cooled side)")
+axes[1, 1].set_xlabel("Zone index (0 = cooled side)")
 axes[1, 1].set_ylabel("Layer-averaged temperature [K]")
 axes[1, 1].set_title("Through-stack temperature profile")
 axes[1, 1].legend(loc="best")
 axes[1, 1].grid(True, alpha=0.3)
 
 fig.suptitle(
-    f"MultiLayer3DThermalSPM — {num_layers} layers, "
-    f"{model.connection} connection, asymmetric cooling",
+    f"MultiLayer3DThermalSPM — {model.num_subdivisions} zones x "
+    f"{model.layers_per_zone} layers/zone = {num_physical_layers} "
+    f"physical layers, {model.connection}, asymmetric cooling",
     fontsize=12,
 )
 plt.show()
@@ -217,8 +240,8 @@ for i in range(num_layers):
     all_T.append(np.asarray(T_vals).ravel())
 
 print(
-    f"  Total FEM nodes across {num_layers} layers: {total_nodes} "
-    f"(~{total_nodes // num_layers} per layer)"
+    f"  Total FEM nodes across {num_layers} zones: {total_nodes} "
+    f"(~{total_nodes // num_layers} per zone)"
 )
 
 x_stack = np.concatenate(all_x)

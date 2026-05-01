@@ -21,37 +21,100 @@ class MultiLayer3DThermalSPM(BaseModel):
 
     Parameters
     ----------
-    num_layers : int, optional
-        Number of electrochemical layers in the stack (default 3, minimum 2).
+    num_physical_layers : int, optional
+        Total number of physical unit cells in the real stack (default 3,
+        minimum 2). This is the physically meaningful stack height used for
+        geometry and capacity scaling.
+    num_subdivisions : int, optional
+        Number of thermal/electrochemical zones used to resolve the stack
+        (default equal to ``num_physical_layers``, minimum 2). Each zone is
+        one SPM with its own 3D temperature field, and lumps
+        ``num_physical_layers / num_subdivisions`` adjacent physical unit
+        cells. ``num_physical_layers`` must be divisible by
+        ``num_subdivisions``. The alias attribute ``layers_per_zone`` equals
+        ``num_physical_layers // num_subdivisions``.
     connection : str, optional
-        Electrical connection between layers: ``"parallel"`` (default) or
+        Electrical connection between zones: ``"parallel"`` (default) or
         ``"series"``.
     thermal_contact_resistance : float, optional
-        Thermal contact resistance ``R_th`` [K.m^2/W] between adjacent
-        layers, used in the Neumann flux interface coupling. Smaller values
-        approximate perfect thermal contact (default ``1e-4``).
+        Default value for the inter-layer thermal contact resistance
+        ``R_th`` [K.m^2/W], injected into the model's
+        ``default_parameter_values`` under the name
+        ``"Inter-layer thermal contact resistance [K.m2.W-1]"``. Smaller
+        values approximate perfect thermal contact (default ``1e-4``). The
+        resistance is a proper ``pybamm.Parameter`` at model-construction
+        time, so callers can override it per simulation via
+        ``parameter_values.update({...})`` or sweep it in a study. Use
+        ``apply_stack_scaling`` to inject the default into a user-supplied
+        ``ParameterValues``.
     mesh_h : float or str, optional
-        Target characteristic length for the per-layer 3D FEM mesh, passed
+        Target characteristic length for the per-zone 3D FEM mesh, passed
         through to ``ScikitFemGenerator3D(h=...)``. Smaller values produce
-        finer meshes and more visualisation points per layer at the cost of
+        finer meshes and more visualisation points per zone at the cost of
         a slower solve. Default ``0.1``.
     options : dict, optional
         Model options dictionary. ``"cell geometry"`` must be ``"pouch"``.
     name : str, optional
         Model name.
+
+    Notes
+    -----
+    The legacy kwargs ``num_layers`` / ``layers_per_zone`` remain accepted
+    for backward compatibility and are mapped to
+    ``num_subdivisions = num_layers`` and
+    ``num_physical_layers = num_layers * layers_per_zone``. Specifying both
+    legacy and new kwargs simultaneously raises ``ValueError``.
     """
+
+    #: Name under which the inter-layer thermal contact resistance is
+    #: registered as a :class:`pybamm.Parameter`.
+    CONTACT_RESISTANCE_PARAM = "Inter-layer thermal contact resistance [K.m2.W-1]"
 
     def __init__(
         self,
-        num_layers=3,
+        num_physical_layers=None,
+        num_subdivisions=None,
         connection="parallel",
         thermal_contact_resistance=1e-4,
         mesh_h=0.1,
         options=None,
         name="Multi-Layer 3D Thermal SPM",
+        *,
+        num_layers=None,
+        layers_per_zone=None,
     ):
-        if num_layers is None or int(num_layers) < 2:
-            raise ValueError("num_layers must be an integer >= 2")
+        # Resolve legacy kwargs first.
+        _legacy = num_layers is not None or layers_per_zone is not None
+        _new = num_physical_layers is not None or num_subdivisions is not None
+        if _legacy and _new:
+            raise ValueError(
+                "Specify either (num_physical_layers, num_subdivisions) or "
+                "the legacy (num_layers, layers_per_zone) kwargs, not both."
+            )
+        if _legacy:
+            _num_layers = 3 if num_layers is None else int(num_layers)
+            _lpz = 1 if layers_per_zone is None else int(layers_per_zone)
+            num_subdivisions = _num_layers
+            num_physical_layers = _num_layers * _lpz
+        else:
+            num_physical_layers = (
+                3 if num_physical_layers is None else int(num_physical_layers)
+            )
+            num_subdivisions = (
+                num_physical_layers
+                if num_subdivisions is None
+                else int(num_subdivisions)
+            )
+
+        if num_physical_layers < 2:
+            raise ValueError("num_physical_layers must be an integer >= 2")
+        if num_subdivisions < 2:
+            raise ValueError("num_subdivisions must be an integer >= 2")
+        if num_physical_layers % num_subdivisions != 0:
+            raise ValueError(
+                "num_physical_layers must be divisible by num_subdivisions "
+                f"(got {num_physical_layers} and {num_subdivisions})"
+            )
         if connection not in ("parallel", "series"):
             raise ValueError(
                 f"connection must be 'parallel' or 'series', got '{connection}'"
@@ -69,7 +132,12 @@ class MultiLayer3DThermalSPM(BaseModel):
         super().__init__(options, name)
         pybamm.citations.register("Marquis2019")
 
-        self.num_layers = int(num_layers)
+        # Internal loops iterate over zones; keep ``num_layers`` as the alias
+        # for that count so existing code and output names are unchanged.
+        self.num_layers = num_subdivisions
+        self.num_subdivisions = num_subdivisions
+        self.num_physical_layers = num_physical_layers
+        self.layers_per_zone = num_physical_layers // num_subdivisions
         self.connection = connection
         self.thermal_contact_resistance = float(thermal_contact_resistance)
         # ScikitFemGenerator3D accepts either a float or a string for h; we
@@ -149,17 +217,21 @@ class MultiLayer3DThermalSPM(BaseModel):
         # Algebraic variable linked to layer's volume-averaged temperature
         T_av = pybamm.Variable(f"Layer {layer_id} average temperature [K]")
 
-        # Layer current
+        # Layer current. When layers_per_zone = n, each modelled zone
+        # represents n physical unit cells that share the zone's applied
+        # current, so the SPM (which represents one unit cell) sees the
+        # zone-level current divided by n.
+        n = self.layers_per_zone
         I_app = self.param.current_with_time
         i_cell_app = self.param.current_density_with_time
         if self.connection == "parallel":
             f_i = pybamm.Variable(f"Layer {layer_id} current fraction")
-            I_layer = f_i * I_app
-            i_cell = f_i * i_cell_app
+            I_layer = f_i * I_app / n
+            i_cell = f_i * i_cell_app / n
         else:  # series
             f_i = None
-            I_layer = I_app
-            i_cell = i_cell_app
+            I_layer = I_app / n
+            i_cell = i_cell_app / n
 
         # Interfacial reactions
         a_n = 3 * self.param.n.prim.epsilon_s_av / self.param.n.prim.R_typ
@@ -336,13 +408,17 @@ class MultiLayer3DThermalSPM(BaseModel):
         Each internal interface uses matching Neumann fluxes on both sides,
         with the flux driven by the temperature difference across the
         interface and the thermal contact resistance ``R_th`` (K.m^2/W).
+        ``R_th`` is a :class:`pybamm.Parameter` (see
+        ``CONTACT_RESISTANCE_PARAM``); its default value comes from the
+        ``thermal_contact_resistance`` constructor kwarg and can be
+        overridden in ``ParameterValues``.
 
         Using a small ``R_th`` (default ``1e-4``) approximates perfect
         thermal contact while keeping the FEM problem well posed — a
         pure Dirichlet-both-sides coupling on independent meshes tends to
         over-constrain the system.
         """
-        R_th = self.thermal_contact_resistance
+        R_th = pybamm.Parameter(self.CONTACT_RESISTANCE_PARAM)
         for i in range(self.num_layers - 1):
             T_left = self.thermal_variables[i]
             T_right = self.thermal_variables[i + 1]
@@ -451,6 +527,12 @@ class MultiLayer3DThermalSPM(BaseModel):
             self.variables[f"Layer {i} heat generation [W.m-3]"] = layer["Q_vol"]
             self.variables[f"Layer {i} voltage [V]"] = layer["voltage"]
             self.variables[f"Layer {i} current [A]"] = layer["current"]
+            # Per-unit-cell current coincides with layer["current"] which has
+            # already been divided by layers_per_zone. Exposed under a more
+            # explicit name for clarity in zone-coarsened simulations.
+            self.variables[
+                f"Layer {i} per-unit-cell current [A]"
+            ] = layer["current"]
             if layer["current_fraction"] is not None:
                 self.variables[f"Layer {i} current fraction"] = layer[
                     "current_fraction"
@@ -470,6 +552,68 @@ class MultiLayer3DThermalSPM(BaseModel):
         self.variables["Temperature spread [K]"] = T_max - T_min
 
     # ------------------------------------------------------------------ #
+    # Helpers for stack scaling
+    # ------------------------------------------------------------------ #
+    def apply_stack_scaling(self, parameter_values, verbose=True):
+        """Prepare ``parameter_values`` for this model.
+
+        Does two things:
+
+        1. Multiplies ``"Nominal cell capacity [A.h]"`` by
+           ``num_physical_layers`` so a C-rate specified via ``"C-rate"``
+           maps to the correct total applied current for the entire stack.
+        2. Injects the default inter-layer thermal contact resistance
+           under the key ``CONTACT_RESISTANCE_PARAM`` if the caller has
+           not already set a value. The injected default is whatever was
+           passed as ``thermal_contact_resistance`` at model construction
+           time.
+
+        Parameters
+        ----------
+        parameter_values : pybamm.ParameterValues
+            Parameter set to mutate in place.
+        verbose : bool, optional
+            If True (default), print the resolved scaling for sanity.
+
+        Returns
+        -------
+        pybamm.ParameterValues
+            The same ``parameter_values`` instance, scaled.
+        """
+        Q_single = parameter_values["Nominal cell capacity [A.h]"]
+        Q_stack = Q_single * self.num_physical_layers
+        parameter_values["Nominal cell capacity [A.h]"] = Q_stack
+        injected_R_th = False
+        if self.CONTACT_RESISTANCE_PARAM not in parameter_values.keys():
+            parameter_values.update(
+                {self.CONTACT_RESISTANCE_PARAM: self.thermal_contact_resistance}
+            )
+            injected_R_th = True
+        if verbose:
+            print(
+                f"Physical stack: {self.num_layers} zones x "
+                f"{self.layers_per_zone} layers/zone = "
+                f"{self.num_physical_layers} unit cells"
+            )
+            print(
+                "Nominal cell capacity scaled: "
+                f"{Q_single:.3f} Ah -> {Q_stack:.3f} Ah"
+            )
+            if injected_R_th:
+                print(
+                    "Injected inter-layer thermal contact resistance: "
+                    f"{self.thermal_contact_resistance:g} K.m2.W-1"
+                )
+        return parameter_values
+
+    @property
+    def default_parameter_values(self):
+        """Base defaults plus the inter-layer thermal contact resistance."""
+        pv = super().default_parameter_values
+        pv.update({self.CONTACT_RESISTANCE_PARAM: self.thermal_contact_resistance})
+        return pv
+
+    # ------------------------------------------------------------------ #
     # Geometry / mesh / spatial method overrides
     # ------------------------------------------------------------------ #
     @property
@@ -481,9 +625,13 @@ class MultiLayer3DThermalSPM(BaseModel):
         L_y = geo.L_y
         L_z = geo.L_z
 
+        # Each zone's x-extent is scaled by layers_per_zone so the total
+        # stack thickness matches the physical stack (num_physical_layers
+        # unit cells).
+        n = self.layers_per_zone
         for i in range(self.num_layers):
             geometry[self._layer_domain(i)] = {
-                "x": {"min": i * L_x, "max": (i + 1) * L_x},
+                "x": {"min": i * n * L_x, "max": (i + 1) * n * L_x},
                 "y": {"min": 0, "max": L_y},
                 "z": {"min": 0, "max": L_z},
             }
