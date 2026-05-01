@@ -77,13 +77,20 @@ class PotentialPair1plus1D(BasePotentialPair):
         phi_s_cp = variables["Positive current collector potential [V]"]
 
         applied_current_density = variables["Total current density [A.m-2]"]
-        total_current = applied_current_density * self.param.A_cc
+        # The 1+1D model represents a single electrode pair, so the current entering
+        # the modelled stack is the total cell current divided by the number of
+        # electrodes connected in parallel.
+        current_per_electrode_pair = (
+            applied_current_density * self.param.A_cc / self.param.n_electrodes_parallel
+        )
 
         # In the 1+1D model, the behaviour is averaged over the y-direction, so the
         # effective tab area is the cell width multiplied by the current collector
         # thickness
         positive_tab_area = self.param.L_y * self.param.p.L_cc
-        pos_tab_bc = -total_current / (self.param.p.sigma_cc * positive_tab_area)
+        pos_tab_bc = -current_per_electrode_pair / (
+            self.param.p.sigma_cc * positive_tab_area
+        )
 
         # Boundary condition needs to be on the variables that go into the Laplacian,
         # even though phi_s_cp isn't a pybamm.Variable object
@@ -110,7 +117,12 @@ class PotentialPair2plus1D(BasePotentialPair):
         phi_s_cp = variables["Positive current collector potential [V]"]
 
         applied_current_density = variables["Total current density [A.m-2]"]
-        total_current = applied_current_density * self.param.A_cc
+        # The 2+1D model represents a single electrode pair, so the current entering
+        # the modelled stack is the total cell current divided by the number of
+        # electrodes connected in parallel.
+        current_per_electrode_pair = (
+            applied_current_density * self.param.A_cc / self.param.n_electrodes_parallel
+        )
 
         # Note: we divide by the *numerical* tab area so that the correct total
         # current is applied. That is, numerically integrating the current density
@@ -121,7 +133,9 @@ class PotentialPair2plus1D(BasePotentialPair):
         )
 
         # cc_area appears here due to choice of non-dimensionalisation
-        pos_tab_bc = -total_current / (self.param.p.sigma_cc * positive_tab_area)
+        pos_tab_bc = -current_per_electrode_pair / (
+            self.param.p.sigma_cc * positive_tab_area
+        )
 
         # Boundary condition needs to be on the variables that go into the Laplacian,
         # even though phi_s_cp isn't a pybamm.Variable object

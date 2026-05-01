@@ -60,6 +60,53 @@ class TestDFN(BaseIntegrationTestLithiumIon):
 
         assert sol.termination == "final time"
 
+    def test_potential_pair_1plus1D_parallel_electrodes(self):
+        # Regression test for #5467: the 1+1D potential-pair current collector
+        # model represents a single electrode pair, so its boundary condition
+        # must use the per-electrode current. With multiple parallel electrodes,
+        # the cell discharge capacity should match that of a single wide electrode
+        # with the same total current-collector area.
+        model = pybamm.lithium_ion.DFN(
+            options={"current collector": "potential pair", "dimensionality": 1}
+        )
+        params = model.default_parameter_values
+        L_z = params["Electrode height [m]"]
+        L_y = params["Electrode width [m]"]
+        Q = params["Nominal cell capacity [A.h]"]
+
+        params_wide = params.copy()
+        params_wide.update(
+            {
+                "Electrode width [m]": L_y * 2,
+                "Number of electrodes connected in parallel to make a cell": 1,
+                "Nominal cell capacity [A.h]": Q * 2,
+                "Negative tab centre z-coordinate [m]": 0,
+                "Positive tab centre z-coordinate [m]": L_z,
+            }
+        )
+        params_parallel = params.copy()
+        params_parallel.update(
+            {
+                "Electrode width [m]": L_y,
+                "Number of electrodes connected in parallel to make a cell": 2,
+                "Nominal cell capacity [A.h]": Q * 2,
+                "Negative tab centre z-coordinate [m]": 0,
+                "Positive tab centre z-coordinate [m]": L_z,
+            }
+        )
+
+        capacities = []
+        for p in (params_wide, params_parallel):
+            sim = pybamm.Simulation(
+                model,
+                parameter_values=p,
+                experiment=pybamm.Experiment(["Discharge at 0.1C until 3.0 V"]),
+            )
+            sim.solve()
+            capacities.append(sim.solution["Discharge capacity [A.h]"].entries[-1])
+
+        np.testing.assert_allclose(capacities[0], capacities[1], rtol=1e-3)
+
 
 class TestDFNWithSizeDistribution:
     @pytest.fixture(autouse=True)

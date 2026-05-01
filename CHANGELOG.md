@@ -4,6 +4,10 @@
 
 - Added `NonlinearSolver` as the default nonlinear solver, which replaces `CasadiAlgebraicSolver`. `IDAKLUSolver` now computes the initial conditions in C++ by default. ([#5459](https://github.com/pybamm-team/PyBaMM/pull/5459))
 
+## Bug fixes
+
+- Fixed `PotentialPair1plus1D` and `PotentialPair2plus1D` current collector models so that the positive-tab Neumann boundary condition uses the per-electrode current rather than the total cell current. Previously, configurations with `"Number of electrodes connected in parallel to make a cell"` greater than 1 hit voltage cutoffs prematurely and reported reduced discharge capacity. ([#5467](https://github.com/pybamm-team/PyBaMM/issues/5467))
+
 # [v26.4.1](https://github.com/pybamm-team/PyBaMM/tree/v26.4.1) - 2026-04-24
 
 ## Bug fixes
