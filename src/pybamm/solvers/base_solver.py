@@ -1457,7 +1457,14 @@ class BaseSolver:
                 last_state = old_solution.last_state
                 y_from = last_state.all_ys[0]
                 mapper_func, _mapper_jac, _mapper_jacp = state_mapper
-                p_casadi_stacked = casadi.vertcat(*[p for p in model_inputs.values()])
+                # Mapper CasADi graph is compiled using previous_model.input_parameters
+                # (see Simulation._build_experiment_state_mappers); stack p in that
+                # layout, not the next model's model_inputs.
+                previous_model = old_solution.all_models[-1]
+                mapper_inputs = BaseSolver._set_up_model_inputs(previous_model, inputs)
+                p_casadi_stacked = casadi.vertcat(
+                    *[p for p in mapper_inputs.values()]
+                )
 
                 model.y0_list = [
                     mapper_func(
