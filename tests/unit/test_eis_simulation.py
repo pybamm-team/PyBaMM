@@ -205,9 +205,7 @@ class TestEISSimulationSolve:
                 "surface form": "differential",
             }
         )
-        parameter_values = pybamm.ParameterValues(
-            "OKane2022_graphite_SiOx_halfcell"
-        )
+        parameter_values = pybamm.ParameterValues("OKane2022_graphite_SiOx_halfcell")
         # Active material volume fraction depends on an InputParameter, so
         # ``Q_init`` (which depends on it) is non-constant and must be
         # evaluated with the corresponding input supplied.
@@ -223,14 +221,10 @@ class TestEISSimulationSolve:
         frequencies = np.logspace(-2, 2, 5)
 
         # Both numeric SOC and voltage-string SOC paths must work.
-        z_soc = eis_sim.solve(
-            frequencies, inputs={"vf_solid": 0.94}, initial_soc=0.5
-        )
+        z_soc = eis_sim.solve(frequencies, inputs={"vf_solid": 0.94}, initial_soc=0.5)
         assert z_soc.impedance.shape == (5,)
 
-        z_v = eis_sim.solve(
-            frequencies, inputs={"vf_solid": 0.94}, initial_soc="0.5 V"
-        )
+        z_v = eis_sim.solve(frequencies, inputs={"vf_solid": 0.94}, initial_soc="0.5 V")
         assert z_v.impedance.shape == (5,)
 
     def test_high_freq_intercept_matches_contact_resistance(self):
