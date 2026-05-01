@@ -4,6 +4,10 @@
 
 - Added `NonlinearSolver` as the default nonlinear solver, which replaces `CasadiAlgebraicSolver`. `IDAKLUSolver` now computes the initial conditions in C++ by default. ([#5459](https://github.com/pybamm-team/PyBaMM/pull/5459))
 
+## Bug fixes
+
+- Fixed legacy experiment stepping: the precalculated state mapper is evaluated with the *previous* step model's input layout, not the next model's. Fixes CasADi mapper shape errors when transitioning from a scalar `Current` step to a piecewise (array) `Current` step with additional `InputParameter`s.
+
 # [v26.4.1](https://github.com/pybamm-team/PyBaMM/tree/v26.4.1) - 2026-04-24
 
 ## Bug fixes
