@@ -4,6 +4,10 @@
 
 - Added `NonlinearSolver` as the default nonlinear solver, which replaces `CasadiAlgebraicSolver`. `IDAKLUSolver` now computes the initial conditions in C++ by default. ([#5459](https://github.com/pybamm-team/PyBaMM/pull/5459))
 
+## Bug fixes
+
+- Fixed `Solution.get_data_dict` returning a `"Step"` array one element longer than `"Cycle"` and `"Time [s]"` after solving with a `starting_solution`. The mismatch came from `EmptySolution` placeholder steps (created when an event triggers at the cycle's initial conditions) whose phantom timestamp is absent from `cycle.t`; they are now skipped when building `"Step"`. ([#4990](https://github.com/pybamm-team/PyBaMM/issues/4990))
+
 # [v26.4.1](https://github.com/pybamm-team/PyBaMM/tree/v26.4.1) - 2026-04-24
 
 ## Bug fixes
