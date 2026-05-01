@@ -396,9 +396,7 @@ class Serialise:
             If ``dotted_path`` does not contain a module separator.
         """
         if "." not in dotted_path:
-            raise ValueError(
-                f"Expected 'module.ClassName' but got {dotted_path!r}"
-            )
+            raise ValueError(f"Expected 'module.ClassName' but got {dotted_path!r}")
         module_name, class_name = dotted_path.rsplit(".", 1)
         module = importlib.import_module(module_name)
         return getattr(module, class_name)

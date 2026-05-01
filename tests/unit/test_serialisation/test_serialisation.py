@@ -1051,9 +1051,7 @@ class TestSerialise:
         assert isinstance(loaded, LiIonBaseModel)
         assert "positive particle" in loaded.default_spatial_methods
 
-    def test_load_falls_back_to_base_model_when_no_mro_entry_importable(
-        self, tmp_path
-    ):
+    def test_load_falls_back_to_base_model_when_no_mro_entry_importable(self, tmp_path):
         """If neither ``base_class`` nor any MRO ancestor can be imported,
         the loader still falls back to ``pybamm.BaseModel`` (the legacy
         behaviour) rather than raising."""
