@@ -36,17 +36,6 @@ class MultiLayer3DThermalSPM(BaseModel):
     connection : str, optional
         Electrical connection between zones: ``"parallel"`` (default) or
         ``"series"``.
-    thermal_contact_resistance : float, optional
-        Default value for the inter-layer thermal contact resistance
-        ``R_th`` [K.m^2/W], injected into the model's
-        ``default_parameter_values`` under the name
-        ``"Inter-layer thermal contact resistance [K.m2.W-1]"``. Smaller
-        values approximate perfect thermal contact (default ``1e-4``). The
-        resistance is a proper ``pybamm.Parameter`` at model-construction
-        time, so callers can override it per simulation via
-        ``parameter_values.update({...})`` or sweep it in a study. Use
-        ``apply_stack_scaling`` to inject the default into a user-supplied
-        ``ParameterValues``.
     mesh_h : float or str, optional
         Target characteristic length for the per-zone 3D FEM mesh, passed
         through to ``ScikitFemGenerator3D(h=...)``. Smaller values produce
@@ -59,6 +48,14 @@ class MultiLayer3DThermalSPM(BaseModel):
 
     Notes
     -----
+    The inter-layer thermal contact resistance is a
+    :class:`pybamm.Parameter` registered under
+    :attr:`CONTACT_RESISTANCE_PARAM`. Set or sweep it on the caller's
+    :class:`pybamm.ParameterValues` (e.g.
+    ``parameter_values.update({model.CONTACT_RESISTANCE_PARAM: 1e-3})``);
+    :meth:`default_parameter_values` and :meth:`apply_stack_scaling`
+    inject :attr:`DEFAULT_CONTACT_RESISTANCE` if not already present.
+
     The legacy kwargs ``num_layers`` / ``layers_per_zone`` remain accepted
     for backward compatibility and are mapped to
     ``num_subdivisions = num_layers`` and
@@ -70,12 +67,18 @@ class MultiLayer3DThermalSPM(BaseModel):
     #: registered as a :class:`pybamm.Parameter`.
     CONTACT_RESISTANCE_PARAM = "Inter-layer thermal contact resistance [K.m2.W-1]"
 
+    #: Default value injected into :class:`pybamm.ParameterValues` for
+    #: :attr:`CONTACT_RESISTANCE_PARAM` when not already set. A small value
+    #: approximates perfect thermal contact while keeping the Neumann-flux
+    #: FEM coupling well posed. Override in the caller's ``ParameterValues``
+    #: to sweep or tune.
+    DEFAULT_CONTACT_RESISTANCE = 1e-4
+
     def __init__(
         self,
         num_physical_layers=None,
         num_subdivisions=None,
         connection="parallel",
-        thermal_contact_resistance=1e-4,
         mesh_h=0.1,
         options=None,
         name="Multi-Layer 3D Thermal SPM",
@@ -119,8 +122,6 @@ class MultiLayer3DThermalSPM(BaseModel):
             raise ValueError(
                 f"connection must be 'parallel' or 'series', got '{connection}'"
             )
-        if thermal_contact_resistance <= 0:
-            raise ValueError("thermal_contact_resistance must be positive")
         if float(mesh_h) <= 0:
             raise ValueError("mesh_h must be positive")
 
@@ -139,7 +140,6 @@ class MultiLayer3DThermalSPM(BaseModel):
         self.num_physical_layers = num_physical_layers
         self.layers_per_zone = num_physical_layers // num_subdivisions
         self.connection = connection
-        self.thermal_contact_resistance = float(thermal_contact_resistance)
         # ScikitFemGenerator3D accepts either a float or a string for h; we
         # normalise to a string for stable downstream hashing/equality.
         self.mesh_h = str(mesh_h)
@@ -396,9 +396,9 @@ class MultiLayer3DThermalSPM(BaseModel):
         with the flux driven by the temperature difference across the
         interface and the thermal contact resistance ``R_th`` (K.m^2/W).
         ``R_th`` is a :class:`pybamm.Parameter` (see
-        ``CONTACT_RESISTANCE_PARAM``); its default value comes from the
-        ``thermal_contact_resistance`` constructor kwarg and can be
-        overridden in ``ParameterValues``.
+        :attr:`CONTACT_RESISTANCE_PARAM`); set it on the caller's
+        ``ParameterValues`` to override the default
+        :attr:`DEFAULT_CONTACT_RESISTANCE`.
 
         Using a small ``R_th`` (default ``1e-4``) approximates perfect
         thermal contact while keeping the FEM problem well posed — a
@@ -548,10 +548,9 @@ class MultiLayer3DThermalSPM(BaseModel):
            ``num_physical_layers`` so a C-rate specified via ``"C-rate"``
            maps to the correct total applied current for the entire stack.
         2. Injects the default inter-layer thermal contact resistance
-           under the key ``CONTACT_RESISTANCE_PARAM`` if the caller has
-           not already set a value. The injected default is whatever was
-           passed as ``thermal_contact_resistance`` at model construction
-           time.
+           under the key :attr:`CONTACT_RESISTANCE_PARAM` if the caller
+           has not already set a value. The injected default is
+           :attr:`DEFAULT_CONTACT_RESISTANCE`.
 
         Parameters
         ----------
@@ -571,7 +570,7 @@ class MultiLayer3DThermalSPM(BaseModel):
         injected_R_th = False
         if self.CONTACT_RESISTANCE_PARAM not in parameter_values.keys():
             parameter_values.update(
-                {self.CONTACT_RESISTANCE_PARAM: self.thermal_contact_resistance}
+                {self.CONTACT_RESISTANCE_PARAM: self.DEFAULT_CONTACT_RESISTANCE}
             )
             injected_R_th = True
         if verbose:
@@ -586,7 +585,7 @@ class MultiLayer3DThermalSPM(BaseModel):
             if injected_R_th:
                 print(
                     "Injected inter-layer thermal contact resistance: "
-                    f"{self.thermal_contact_resistance:g} K.m2.W-1"
+                    f"{self.DEFAULT_CONTACT_RESISTANCE:g} K.m2.W-1"
                 )
         return parameter_values
 
@@ -594,7 +593,9 @@ class MultiLayer3DThermalSPM(BaseModel):
     def default_parameter_values(self):
         """Base defaults plus the inter-layer thermal contact resistance."""
         pv = super().default_parameter_values
-        pv.update({self.CONTACT_RESISTANCE_PARAM: self.thermal_contact_resistance})
+        pv.update(
+            {self.CONTACT_RESISTANCE_PARAM: self.DEFAULT_CONTACT_RESISTANCE}
+        )
         return pv
 
     # ------------------------------------------------------------------ #
