@@ -6,7 +6,7 @@
 
 ## Bug fixes
 
-- `Serialise.load_custom_model` no longer silently drops to `pybamm.BaseModel` when the recorded `base_class` cannot be imported. `serialise_custom_model` now records the full ancestor chain in a new `base_class_mro` field, and the loader walks it to resolve to the closest importable ancestor (typically a pybamm-provided class such as the lithium-ion `BaseModel`). This preserves subclass defaults — including `default_spatial_methods` — so loaded models discretise correctly on machines that do not have the original subclass package installed. Falling back to `pybamm.BaseModel` is still the last resort if no MRO entry can be imported.
+- Fixed `Serialise.load_custom_model` silently dropping to `pybamm.BaseModel` when the recorded base class cannot be imported. The loader now walks the recorded MRO to resolve to the closest importable ancestor, preserving subclass defaults such as `default_spatial_methods`. ([#5485](https://github.com/pybamm-team/PyBaMM/pull/5485))
 
 # [v26.4.1](https://github.com/pybamm-team/PyBaMM/tree/v26.4.1) - 2026-04-24
 
