@@ -373,6 +373,53 @@ class Serialise:
             raise TypeError(f"Object of type {type(obj)} is not JSON serializable.")
 
     @staticmethod
+    def _import_dotted_class(dotted_path: str):
+        """Import ``module.ClassName`` and return the class."""
+        if "." not in dotted_path:
+            raise ValueError(f"Expected 'module.ClassName' but got {dotted_path!r}")
+        module_name, class_name = dotted_path.rsplit(".", 1)
+        module = importlib.import_module(module_name)
+        return getattr(module, class_name)
+
+    @staticmethod
+    def _resolve_base_class(base_class: str, base_class_mro: list[str]):
+        """Resolve a serialised ``base_class`` to a Python class.
+
+        Tries ``base_class`` first, then each entry in ``base_class_mro`` (the
+        ancestor chain recorded at serialise time). Falls back to
+        ``pybamm.BaseModel`` only if nothing in the MRO is importable, so a
+        custom subclass loaded in an environment without its defining package
+        is still reconstructed against the closest pybamm-provided ancestor.
+        """
+        try:
+            return Serialise._import_dotted_class(base_class)
+        except (ModuleNotFoundError, AttributeError, ValueError) as primary_err:
+            for ancestor in base_class_mro:
+                if ancestor == base_class:
+                    continue
+                try:
+                    resolved = Serialise._import_dotted_class(ancestor)
+                except (ModuleNotFoundError, AttributeError):
+                    # ValueError is left to propagate: MRO entries are produced
+                    # by ``serialise_custom_model`` and are always well-formed.
+                    continue
+                warnings.warn(
+                    f"Could not import base class '{base_class}': "
+                    f"{primary_err}. Falling back to ancestor "
+                    f"'{ancestor}' from the recorded MRO.",
+                    stacklevel=3,
+                )
+                return resolved
+            warnings.warn(
+                f"Could not import base class '{base_class}': "
+                f"{primary_err}. Falling back to pybamm.BaseModel; the loaded "
+                "model will contain the symbolic equations but not any "
+                "subclass-specific Python behaviour.",
+                stacklevel=3,
+            )
+            return pybamm.BaseModel
+
+    @staticmethod
     def serialise_custom_model(model: pybamm.BaseModel, compress: bool = False) -> dict:
         """
         Converts a custom (non-discretised) PyBaMM model to a JSON-serialisable dictionary.
@@ -425,9 +472,16 @@ class Serialise:
         else:
             base_cls_str = f"{base_cls.__module__}.{base_cls.__name__}"
 
+        base_class_mro = [
+            f"{ancestor.__module__}.{ancestor.__name__}"
+            for ancestor in base_cls.__mro__
+            if ancestor is not object and ancestor.__module__ != "builtins"
+        ]
+
         model_content = {
             "name": getattr(model, "name", "unnamed_model"),
             "base_class": base_cls_str,
+            "base_class_mro": base_class_mro,
             "options": getattr(model, "options", {}),
             "rhs": [
                 (
@@ -1366,19 +1420,10 @@ class Serialise:
         if battery_model in ("", "pybamm.BaseModel", "builtins.object"):
             base_cls = pybamm.BaseModel
         else:
-            module_name, class_name = battery_model.rsplit(".", 1)
-            try:
-                module = importlib.import_module(module_name)
-                base_cls = getattr(module, class_name)
-            except (ModuleNotFoundError, AttributeError) as e:
-                warnings.warn(
-                    f"Could not import base class '{battery_model}': {e}. "
-                    "Falling back to pybamm.BaseModel; the loaded model will "
-                    "contain the symbolic equations but not any subclass-specific "
-                    "Python behaviour.",
-                    stacklevel=2,
-                )
-                base_cls = pybamm.BaseModel
+            base_cls = Serialise._resolve_base_class(
+                battery_model,
+                model_data.get("base_class_mro") or [],
+            )
 
         model = base_cls()
         model.name = model_data["name"]
