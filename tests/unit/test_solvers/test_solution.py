@@ -703,6 +703,10 @@ class TestSolution:
         pkl = tmp_path / "sol.pkl"
         # repr() so Windows backslashes survive being parsed as a Python literal
         pkl_literal = repr(str(pkl))
+        observe = (
+            'v = src.all_first_states[0]["Discharge capacity [A.h]"]\n'
+            'print("DATA", repr(v.data.tolist()))\n'
+        )
         save_code = (
             "import pybamm\n"
             "sim = pybamm.Simulation(\n"
@@ -713,22 +717,26 @@ class TestSolution:
             ")\n"
             "sim.solve()\n"
             f"sim.solution.save({pkl_literal})\n"
+            "src = sim.solution\n" + observe
         )
-        load_code = (
-            "import pybamm\n"
-            f"sol = pybamm.load({pkl_literal})\n"
-            'v = sol.all_first_states[0]["Discharge capacity [A.h]"]\n'
-            'print("OK", v.data.shape)\n'
-        )
+        load_code = f"import pybamm\nsrc = pybamm.load({pkl_literal})\n" + observe
         # nosec B603 - sys.executable + literal code constructed in this test
-        subprocess.run([sys.executable, "-c", save_code], check=True)  # nosec B603
-        result = subprocess.run(  # nosec B603
+        save_result = subprocess.run(  # nosec B603
+            [sys.executable, "-c", save_code],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        load_result = subprocess.run(  # nosec B603
             [sys.executable, "-c", load_code],
             check=True,
             capture_output=True,
             text=True,
         )
-        assert "OK" in result.stdout
+        # The variable resolves identically in the saving process and in a
+        # fresh process loading the pickle.
+        assert "DATA" in save_result.stdout
+        assert save_result.stdout == load_result.stdout
 
     def test_solution_evals_with_inputs(self):
         model = pybamm.lithium_ion.SPM()
