@@ -1,6 +1,8 @@
 #
 # Base integration tests for lithium-ion half-cell battery models.
 #
+import numpy as np
+
 import pybamm
 import tests
 
@@ -11,10 +13,32 @@ class BaseIntegrationTestLithiumIonHalfCell:
         model = self.model(options)
         modeltest = tests.StandardModelTest(model, **kwargs)
         modeltest.test_all(skip_output_tests=True)
+        return modeltest.solution
 
     def test_basic_processing(self):
         options = {}
         self.run_basic_processing_test(options)
+
+    def test_half_cell_voltage_contributions(self):
+        # Guard: electrolyte potential must use interface value (PR #5139)
+        options = {}
+        parameter_values = pybamm.ParameterValues("Xu2019")
+        sol = self.run_basic_processing_test(options, parameter_values=parameter_values)
+        phi_e_interface = sol["Lithium metal interface electrolyte potential [V]"].data
+        assert not np.allclose(phi_e_interface, 0, atol=1e-6)
+        # Guard: electrolyte ohmic losses must be nonzero
+        eta_e = sol["X-averaged electrolyte ohmic losses [V]"].data
+        mid_idx = len(eta_e) // 2
+        assert np.abs(eta_e[mid_idx]) > 1e-6
+
+    def test_half_cell_bulk_ocp_scalar(self):
+        # Guard: lithium metal bulk OCP must be scalar-valued (0d02d1f63)
+        options = {}
+        parameter_values = pybamm.ParameterValues("Xu2019")
+        sol = self.run_basic_processing_test(options, parameter_values=parameter_values)
+        ocp_n_bulk = sol["Negative electrode bulk open-circuit potential [V]"].data
+        assert np.allclose(ocp_n_bulk, 0.0, atol=1e-10)
+        assert np.std(ocp_n_bulk) < 1e-15
 
     def test_kinetics_asymmetric_butler_volmer(self):
         options = {"intercalation kinetics": "asymmetric Butler-Volmer"}

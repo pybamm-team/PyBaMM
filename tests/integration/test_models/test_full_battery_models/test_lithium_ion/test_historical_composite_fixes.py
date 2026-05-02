@@ -193,69 +193,6 @@ class TestCompositeSwellingFixes:
         assert not np.any(np.isnan(strain_secondary))
 
 
-class TestCompositeThermalFixes:
-    """Guards for composite electrode thermal model fixes."""
-
-    @staticmethod
-    def _get_thermal_composite_params():
-        """Get Chen2020_composite with thermal parameters."""
-        param = pybamm.ParameterValues("Chen2020_composite")
-        chen = pybamm.ParameterValues("Chen2020")
-        marquis = pybamm.ParameterValues("Marquis2019")
-
-        param.update(
-            {
-                "Negative electrode density [kg.m-3]": chen[
-                    "Negative electrode density [kg.m-3]"
-                ],
-                "Negative electrode specific heat capacity [J.kg-1.K-1]": chen[
-                    "Negative electrode specific heat capacity [J.kg-1.K-1]"
-                ],
-                "Negative electrode thermal conductivity [W.m-1.K-1]": chen[
-                    "Negative electrode thermal conductivity [W.m-1.K-1]"
-                ],
-                "Primary: Negative electrode OCP entropic change [V.K-1]": marquis[
-                    "Negative electrode OCP entropic change [V.K-1]"
-                ],
-                "Secondary: Negative electrode OCP entropic change [V.K-1]": marquis[
-                    "Negative electrode OCP entropic change [V.K-1]"
-                ],
-                "Positive electrode OCP entropic change [V.K-1]": marquis[
-                    "Positive electrode OCP entropic change [V.K-1]"
-                ],
-            }
-        )
-        return param
-
-    def test_thermal_with_composite_two_phases(self):
-        """
-        Guards against: PR #3586 - Fix Issue 3543 - Thermal model not working
-        for a composite electrode particle model with two (or more) phases
-
-        The bug was that heating terms weren't being summed over the phases.
-        Also verifies reversible heating is computed for composite electrodes.
-        """
-        model = pybamm.lithium_ion.DFN(
-            {"particle phases": ("2", "1"), "thermal": "lumped"}
-        )
-        param = self._get_thermal_composite_params()
-        sim = pybamm.Simulation(model, parameter_values=param)
-        sol = sim.solve([0, 1800])
-
-        T = sol["Volume-averaged cell temperature [K]"].data
-        assert not np.any(np.isnan(T))
-        assert T[-1] > T[0]
-
-        Q_irrev = sol[
-            "Volume-averaged irreversible electrochemical heating [W.m-3]"
-        ].data
-        assert not np.any(np.isnan(Q_irrev))
-
-        Q_rev = sol["Volume-averaged reversible heating [W.m-3]"].data
-        assert not np.any(np.isnan(Q_rev))
-        assert not np.allclose(Q_rev, 0, atol=1e-10)
-
-
 class TestCompositeSurfaceFormFixes:
     """Guards for composite surface form conductivity fixes."""
 

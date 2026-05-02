@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 
 import pybamm
 import tests
@@ -9,6 +10,7 @@ class BaseIntegrationTestLithiumIon:
         model = self.model(options)
         modeltest = tests.StandardModelTest(model, **kwargs)
         modeltest.test_all()
+        return modeltest.solution
 
     def test_basic_processing(self):
         options = {}
@@ -71,11 +73,25 @@ class BaseIntegrationTestLithiumIon:
 
     def test_lumped_thermal(self):
         options = {"thermal": "lumped"}
-        self.run_basic_processing_test(options)
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        T_init = 310.0
+        parameter_values.update({"Initial temperature [K]": T_init})
+        sol = self.run_basic_processing_test(options, parameter_values=parameter_values)
+        # Guard: temperature initialization must be correct (PR #5248)
+        T_initial = sol["Volume-averaged cell temperature [K]"].data[0]
+        assert T_initial == pytest.approx(T_init, rel=1e-5)
 
     def test_full_thermal(self):
         options = {"thermal": "x-full"}
-        self.run_basic_processing_test(options)
+        parameter_values = pybamm.ParameterValues("Marquis2019")
+        T_init = 305.0
+        parameter_values.update({"Initial temperature [K]": T_init})
+        sol = self.run_basic_processing_test(options, parameter_values=parameter_values)
+        # Guard: current collector temps must match boundaries (PR #5248)
+        T_cn_init = sol["Negative current collector temperature [K]"].data[0]
+        T_cp_init = sol["Positive current collector temperature [K]"].data[0]
+        assert T_cn_init == pytest.approx(T_init, rel=1e-4)
+        assert T_cp_init == pytest.approx(T_init, rel=1e-4)
 
     def test_particle_uniform(self):
         options = {"particle": "uniform profile"}
@@ -372,6 +388,94 @@ class BaseIntegrationTestLithiumIon:
             {f"Primary: {name}": (1 - x) * 0.75, f"Secondary: {name}": x * 0.75}
         )
         self.run_basic_processing_test(options, parameter_values=parameter_values)
+
+    def test_composite_thermal(self):
+        # Guard: thermal + composite must sum heating over phases (PR #3586)
+        options = {
+            "particle phases": ("2", "1"),
+            "open-circuit potential": (("single", "current sigmoid"), "single"),
+            "thermal": "lumped",
+        }
+        parameter_values = pybamm.ParameterValues("Chen2020_composite")
+        chen = pybamm.ParameterValues("Chen2020")
+        marquis = pybamm.ParameterValues("Marquis2019")
+        # Non-prefixed thermal params for lumped model (averages across phases)
+        parameter_values.update(
+            {
+                "Negative electrode density [kg.m-3]": chen[
+                    "Negative electrode density [kg.m-3]"
+                ],
+                "Negative electrode specific heat capacity [J.kg-1.K-1]": chen[
+                    "Negative electrode specific heat capacity [J.kg-1.K-1]"
+                ],
+                "Negative electrode thermal conductivity [W.m-1.K-1]": chen[
+                    "Negative electrode thermal conductivity [W.m-1.K-1]"
+                ],
+                "Primary: Negative electrode OCP entropic change [V.K-1]": marquis[
+                    "Negative electrode OCP entropic change [V.K-1]"
+                ],
+                "Secondary: Negative electrode OCP entropic change [V.K-1]": marquis[
+                    "Negative electrode OCP entropic change [V.K-1]"
+                ],
+                "Positive electrode OCP entropic change [V.K-1]": marquis[
+                    "Positive electrode OCP entropic change [V.K-1]"
+                ],
+            }
+        )
+        sol = self.run_basic_processing_test(options, parameter_values=parameter_values)
+        T = sol["Volume-averaged cell temperature [K]"].data
+        assert not np.any(np.isnan(T))
+        Q_rev = sol["Volume-averaged reversible heating [W.m-3]"].data
+        assert not np.any(np.isnan(Q_rev))
+        assert not np.allclose(Q_rev, 0, atol=1e-10)
+
+    def test_composite_lithium_plating(self):
+        # Guard: plating must work with composite electrodes (PR #4153)
+        options = {
+            "particle phases": ("2", "1"),
+            "open-circuit potential": (("single", "current sigmoid"), "single"),
+            "lithium plating": "irreversible",
+        }
+        parameter_values = pybamm.ParameterValues("Chen2020_composite")
+
+        def graphite_plating_exchange_current_density(c_e, c_Li, T):
+            k_plating = pybamm.Parameter(
+                "Primary: Lithium plating kinetic rate constant [m.s-1]"
+            )
+            return pybamm.constants.F * k_plating * c_e
+
+        def silicon_plating_exchange_current_density(c_e, c_Li, T):
+            k_plating = pybamm.Parameter(
+                "Secondary: Lithium plating kinetic rate constant [m.s-1]"
+            )
+            return pybamm.constants.F * k_plating * c_e
+
+        parameter_values.update(
+            {
+                "Lithium metal partial molar volume [m3.mol-1]": 1.3e-05,
+                "Primary: Lithium plating kinetic rate constant [m.s-1]": 1e-09,
+                "Primary: Exchange-current density for plating [A.m-2]": graphite_plating_exchange_current_density,
+                "Primary: Initial plated lithium concentration [mol.m-3]": 0.0,
+                "Primary: Typical plated lithium concentration [mol.m-3]": 1000.0,
+                "Primary: Lithium plating transfer coefficient": 0.65,
+                "Secondary: Lithium plating kinetic rate constant [m.s-1]": 1e-09,
+                "Secondary: Exchange-current density for plating [A.m-2]": silicon_plating_exchange_current_density,
+                "Secondary: Initial plated lithium concentration [mol.m-3]": 0.0,
+                "Secondary: Typical plated lithium concentration [mol.m-3]": 1000.0,
+                "Secondary: Lithium plating transfer coefficient": 0.65,
+                "Ambient temperature [K]": 268.15,
+                "Initial temperature [K]": 268.15,
+            }
+        )
+        sol = self.run_basic_processing_test(options, parameter_values=parameter_values)
+        L_primary = sol[
+            "X-averaged negative primary lithium plating thickness [m]"
+        ].data
+        L_secondary = sol[
+            "X-averaged negative secondary lithium plating thickness [m]"
+        ].data
+        assert not np.any(np.isnan(L_primary))
+        assert not np.any(np.isnan(L_secondary))
 
     def test_basic_processing_msmr(self):
         options = {

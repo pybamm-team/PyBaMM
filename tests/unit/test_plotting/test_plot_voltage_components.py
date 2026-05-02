@@ -63,3 +63,42 @@ def test_plot_without_solution():
 
     with pytest.raises(ValueError, match=r"The simulation has not been solved yet."):
         sim.plot_voltage_components()
+
+
+def test_half_cell_voltage_components():
+    # Guard: half-cell models must work with plot_voltage_components (7e4c5ffdf)
+    model = pybamm.lithium_ion.SPM({"working electrode": "positive"})
+    sim = pybamm.Simulation(model)
+    sol = sim.solve([0, 3600])
+
+    _fig, ax = sol.plot_voltage_components(show_plot=False)
+
+    assert ax is not None
+    assert len(ax.get_lines()) > 0
+
+    pybamm.close_plots()
+
+
+def test_time_not_starting_at_zero_with_experiment():
+    # Guard: time not starting at 0 with experiments (4bad8f38f)
+    model = pybamm.lithium_ion.SPM()
+    experiment = pybamm.Experiment(
+        [
+            "Discharge at 1C for 5 minutes",
+            "Rest for 1 minute",
+            "Discharge at 0.5C for 5 minutes",
+        ]
+    )
+    sim = pybamm.Simulation(model, experiment=experiment)
+    sol = sim.solve()
+
+    _fig, ax = sol.plot_voltage_components(show_plot=False)
+
+    assert ax is not None
+    assert len(ax.get_lines()) > 0
+
+    line_data = ax.get_lines()[0].get_data()
+    time_hours = line_data[0]
+    assert time_hours[0] >= 0
+
+    pybamm.close_plots()

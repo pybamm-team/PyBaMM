@@ -294,6 +294,19 @@ class TestSimulation:
         sim.build(initial_soc=0.9)
         assert sim._built_initial_soc == 0.9
 
+        # Guard: initial_soc with drive cycle for half-cell (PR #3467)
+        model = pybamm.lithium_ion.SPM({"working electrode": "positive"})
+        param = pybamm.ParameterValues("Xu2019")
+        t_data = np.linspace(0, 3600, 100)
+        I_data = np.sin(t_data / 600) * 0.5 + 0.5
+        param.update(
+            {"Current function [A]": pybamm.Interpolant(t_data, I_data, pybamm.t)}
+        )
+        sim = pybamm.Simulation(model, parameter_values=param)
+        sol = sim.solve([0, 600], initial_soc=0.8)
+        assert len(sol.t) > 0
+        assert sim._built_initial_soc == 0.8
+
         # Test whether initial_soc works with half cell when it is a voltage
         model = pybamm.lithium_ion.SPM({"working electrode": "positive"})
         parameter_values = model.default_parameter_values
@@ -522,6 +535,72 @@ class TestSimulation:
         sim = pybamm.Simulation(model, parameter_values=param)
         sim.solve(t_eval=[0, 1], initial_soc=0.8, inputs={"eps_p": original_eps_p})
         assert sim._built_initial_soc == 0.8
+
+    def test_starting_solution(self):
+        # Guard: starting_solution and last_state must work (PR #2822)
+        model = pybamm.lithium_ion.SPM()
+        param = pybamm.ParameterValues("Chen2020")
+
+        exp1 = pybamm.Experiment(["Discharge at C/2 for 20 minutes"])
+        sim1 = pybamm.Simulation(model, parameter_values=param, experiment=exp1)
+        sol1 = sim1.solve(calc_esoh=False)
+
+        assert sol1.last_state is not None
+        assert sol1.last_state.t[-1] == pytest.approx(1200, rel=1e-3)
+
+        exp2 = pybamm.Experiment(["Discharge at C/2 for 10 minutes"])
+        sim2 = pybamm.Simulation(model, parameter_values=param, experiment=exp2)
+        sol2 = sim2.solve(calc_esoh=False, starting_solution=sol1)
+
+        assert sol2["Time [s]"].entries[-1] == pytest.approx(1800, rel=1e-3)
+
+        Q_end_sol1 = sol1["Discharge capacity [A.h]"].data[-1]
+        Q_end_sol2 = sol2["Discharge capacity [A.h]"].data[-1]
+        assert Q_end_sol2 > Q_end_sol1
+
+        # Test starting_solution with multi-step experiment
+        exp3 = pybamm.Experiment(
+            ["Rest for 10 minutes", "Discharge at 0.5C for 30 minutes"]
+        )
+        sim3 = pybamm.Simulation(model, parameter_values=param, experiment=exp3)
+        sol3 = sim3.solve(starting_solution=sol1)
+        assert len(sol3.t) > 0
+
+    def test_inputs_propagate_to_initial_conditions(self):
+        # Guard: inputs must propagate to IC scale evaluation (PR #5285)
+        model = pybamm.lithium_ion.SPM()
+        param = pybamm.ParameterValues("Chen2020")
+
+        c_n_max = param["Maximum concentration in negative electrode [mol.m-3]"]
+        param.update(
+            {"Maximum concentration in negative electrode [mol.m-3]": "[input]"}
+        )
+
+        sim = pybamm.Simulation(model, parameter_values=param)
+        sol1 = sim.solve(
+            [0, 300],
+            inputs={"Maximum concentration in negative electrode [mol.m-3]": c_n_max},
+            initial_soc=0.8,
+        )
+
+        model2 = pybamm.lithium_ion.SPM()
+        sim2 = pybamm.Simulation(model2, parameter_values=param)
+        sim2.build()
+
+        sim2.built_model.set_initial_conditions_from(
+            sol1,
+            inputs={"Maximum concentration in negative electrode [mol.m-3]": c_n_max},
+        )
+
+        sol2 = sim2.solve(
+            [0, 300],
+            inputs={"Maximum concentration in negative electrode [mol.m-3]": c_n_max},
+        )
+
+        assert len(sol2.t) > 0
+        c_n = sol2["X-averaged negative particle concentration [mol.m-3]"].data
+        assert np.all(c_n > 0)
+        assert np.all(c_n < c_n_max)
 
     def test_solve_with_inputs(self):
         model = pybamm.lithium_ion.SPM()
