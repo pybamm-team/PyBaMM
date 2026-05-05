@@ -21,9 +21,12 @@ class BaseIntegrationTestLithiumIonHalfCell:
 
     def test_half_cell_voltage_contributions(self):
         # Guard: electrolyte potential must use interface value (PR #5139)
-        options = {}
+        options = {"working electrode": "positive"}
         parameter_values = pybamm.ParameterValues("Xu2019")
-        sol = self.run_basic_processing_test(options, parameter_values=parameter_values)
+        model = pybamm.lithium_ion.SPMe(options)
+        modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
+        modeltest.test_all(skip_output_tests=True)
+        sol = modeltest.solution
         phi_e_interface = sol["Lithium metal interface electrolyte potential [V]"].data
         assert not np.allclose(phi_e_interface, 0, atol=1e-6)
         # Guard: electrolyte ohmic losses must be nonzero

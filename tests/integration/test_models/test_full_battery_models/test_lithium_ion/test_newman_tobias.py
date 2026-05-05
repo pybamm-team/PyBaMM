@@ -37,6 +37,12 @@ class TestNewmanTobias(BaseIntegrationTestLithiumIon):
     def test_composite_stress_driven_LAM(self):
         pass  # skip this test
 
+    def test_composite_thermal(self):
+        pass  # skip this test
+
+    def test_composite_lithium_plating(self):
+        pass  # skip this test
+
     def test_sei_VonKolzenberg2020(self):
         pass  # skip this test
 
