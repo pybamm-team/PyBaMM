@@ -1,10 +1,13 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+# [v26.4.2](https://github.com/pybamm-team/PyBaMM/tree/v26.4.2) - 2026-05-05
+
 ## Bug fixes
 
+- Fixed `EISSimulation.solve(initial_soc=..., inputs=...)` not forwarding `inputs` to `build`. ([#5487](https://github.com/pybamm-team/PyBaMM/pull/5487))
+- Fix a bug with EIS impedance calculation being incorrectly scaled by the nominal cell capacity. ([#5486](https://github.com/pybamm-team/PyBaMM/pull/5486))
 - Fixed `Serialise.load_custom_model` silently dropping to `pybamm.BaseModel` when the recorded base class cannot be imported. The loader now walks the recorded MRO to resolve to the closest importable ancestor, preserving subclass defaults such as `default_spatial_methods`. ([#5485](https://github.com/pybamm-team/PyBaMM/pull/5485))
 - Fixed legacy experiment stepping: the precalculated state mapper is evaluated with the *previous* step model's input layout, not the next model's. Fixes CasADi mapper shape errors when transitioning from a scalar `Current` step to a piecewise (array) `Current` step with additional `InputParameter`s. ([#5484](https://github.com/pybamm-team/PyBaMM/pull/5484))
-- Fixed `EISSimulation.solve(initial_soc=..., inputs=...)` not forwarding `inputs` to `build`. ([#5487](https://github.com/pybamm-team/PyBaMM/pull/5487))
 
 # [v26.4.1](https://github.com/pybamm-team/PyBaMM/tree/v26.4.1) - 2026-04-24
 
