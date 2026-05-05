@@ -123,9 +123,10 @@ def plot_voltage_components(
     # Plot
     # Initialise
     time = solution["Time [h]"].entries
+    t_start = solution.t[0]  # Time in seconds for interpolation
     if split_by_electrode is False:
         ocv = solution["Battery open-circuit voltage [V]"]
-        initial_ocv = ocv(time[0])
+        initial_ocv = ocv(t_start)
         ocv = ocv.entries
         ax.fill_between(
             time, ocv, initial_ocv, **kwargs_fill, label="Open-circuit voltage"
@@ -137,8 +138,8 @@ def plot_voltage_components(
         ocp_p = solution[
             f"Positive electrode {electrode_phases[1]}bulk open-circuit potential [V]"
         ]
-        initial_ocp_n = ocp_n(time[0]) * num_cells
-        initial_ocp_p = ocp_p(time[0]) * num_cells
+        initial_ocp_n = ocp_n(t_start) * num_cells
+        initial_ocp_p = ocp_p(t_start) * num_cells
         initial_ocv = initial_ocp_p - initial_ocp_n
         delta_ocp_n = ocp_n.entries * num_cells - initial_ocp_n
         delta_ocp_p = ocp_p.entries * num_cells - initial_ocp_p

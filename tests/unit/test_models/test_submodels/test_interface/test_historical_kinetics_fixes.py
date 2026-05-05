@@ -8,6 +8,12 @@ did not have regression tests added at the time of the fix.
 import pybamm
 
 
+def _walk_symbols(symbol):
+    yield symbol
+    for child in getattr(symbol, "children", []):
+        yield from _walk_symbols(child)
+
+
 class TestHalfCellKineticsOCPBroadcastFixes:
     """Guards for half-cell kinetics OCP broadcast domain mismatch fixes."""
 
@@ -42,47 +48,16 @@ class TestHalfCellKineticsOCPBroadcastFixes:
         eta_li = model.variables["Lithium metal interface reaction overpotential [V]"]
         assert eta_li is not None
 
-        assert not isinstance(eta_li, pybamm.Broadcast), (
-            "Lithium metal overpotential should not be a Broadcast - "
-            "OCP orphan should have been extracted"
-        )
-
-        def collect_types(expr, types=None):
-            if types is None:
-                types = set()
-            types.add(type(expr).__name__)
-            if hasattr(expr, "children"):
-                for child in expr.children:
-                    collect_types(child, types)
-            return types
-
-        expr_types = collect_types(eta_li)
-        assert "Broadcast" not in expr_types or "Subtraction" in expr_types, (
-            "If Broadcast appears in overpotential expression, it should be "
-            "as part of a subtraction (delta_phi - ocp), not as the raw OCP"
-        )
-
-    def test_half_cell_ocp_variable_is_scalar_after_processing(self):
-        """
-        Additional guard for PR #3211.
-
-        Verifies that the lithium metal OCP used in kinetics calculations
-        has been properly unwrapped from any Broadcast. In half-cell models,
-        the lithium metal OCP should be a scalar (0V reference) not broadcast.
-        """
-        model = pybamm.lithium_ion.SPM({"working electrode": "positive"})
-
-        li_ocp_var = model.variables.get(
-            "Lithium metal interface open-circuit potential [V]"
-        )
-
-        if li_ocp_var is not None:
-            is_scalar_like = isinstance(li_ocp_var, pybamm.Scalar) or (
-                hasattr(li_ocp_var, "domain") and li_ocp_var.domain == []
+        broadcasted_ocp_terms = [
+            node
+            for node in _walk_symbols(eta_li)
+            if isinstance(node, pybamm.Broadcast)
+            and any(
+                "open-circuit potential" in child.name.lower()
+                for child in _walk_symbols(node)
             )
-            assert is_scalar_like or not isinstance(li_ocp_var, pybamm.Broadcast), (
-                "Lithium metal OCP should be scalar or non-Broadcast after processing"
-            )
+        ]
+        assert broadcasted_ocp_terms == []
 
 
 class TestInverseButlerVolmerHalfCellFixes:
@@ -114,11 +89,10 @@ class TestInverseButlerVolmerHalfCellFixes:
         assert i_boundary is not None, "Model should have boundary current density"
 
         j_li_str = str(j_li)
-        i_boundary_str = str(i_boundary)
 
-        assert j_li_str == i_boundary_str or "boundary" in j_li_str.lower(), (
+        assert j_li == i_boundary, (
             f"Li metal interfacial current should equal or derive from boundary "
-            f"current. Got j_li={j_li_str}, i_boundary={i_boundary_str}"
+            f"current. Got j_li={j_li_str}, i_boundary={i_boundary}"
         )
 
     def test_inverse_kinetics_uses_boundary_current_for_half_cell(self):
@@ -141,10 +115,11 @@ class TestInverseButlerVolmerHalfCellFixes:
 
         assert j_li is not None, "Half-cell model should have Li metal current density"
 
-        j_li_str = str(j_li)
-        uses_applied_current = "Current function" in j_li_str
+        applied_current_terms = [
+            node for node in _walk_symbols(j_li) if node.name == "Current function [A]"
+        ]
 
-        assert uses_applied_current, (
+        assert len(applied_current_terms) == 1, (
             f"Li metal interfacial current should derive from 'Current function' "
-            f"(the applied current), not from computed average. Got: {j_li_str}"
+            f"(the applied current), not from computed average. Got: {j_li}"
         )

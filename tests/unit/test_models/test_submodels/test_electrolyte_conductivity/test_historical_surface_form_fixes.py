@@ -1,15 +1,20 @@
-"""
-Regression tests for historical surface form electrolyte conductivity bug fixes.
-
-These tests guard against the reintroduction of bugs that were fixed but
-did not have regression tests added at the time of the fix.
-"""
+"""Regression tests for historical surface-form electrolyte conductivity fixes."""
 
 import pybamm
 
 
 class TestLeadingSurfaceFormFixes:
     """Guards for leading-order surface form conductivity fixes."""
+
+    @staticmethod
+    def _walk_symbols(symbol):
+        yield symbol
+        for child in getattr(symbol, "children", []):
+            yield from TestLeadingSurfaceFormFixes._walk_symbols(child)
+
+    @classmethod
+    def _contains_name(cls, symbol, name):
+        return any(name in node.name for node in cls._walk_symbols(symbol))
 
     def test_leading_surface_form_rhs_divides_by_surface_area(self):
         """
@@ -25,92 +30,37 @@ class TestLeadingSurfaceFormFixes:
             a = variables[f"X-averaged {domain} electrode surface area to volume ratio [m-1]"]
             self.rhs[delta_phi] = 1 / (a * C_dl) * (sum_a_j_av - sum_a_j)
 
-        This test directly inspects the model equation structure to verify
-        that the surface area variable is present in the RHS denominator.
+        This test directly inspects the model equation structure to verify the
+        surface area expression is in the denominator with C_dl for each electrode.
         """
         model = pybamm.lithium_ion.SPM(options={"surface form": "differential"})
 
-        rhs_keys = list(model.rhs.keys())
-        surface_potential_diff_vars = [
-            k for k in rhs_keys if "surface potential difference" in k.name.lower()
-        ]
-
-        assert len(surface_potential_diff_vars) >= 2, (
-            "SPM with surface form differential should have RHS equations "
-            "for both negative and positive surface potential difference"
-        )
-
-        def collect_symbols(expr, symbols):
-            if hasattr(expr, "name"):
-                symbols.add(expr.name)
-            if hasattr(expr, "children"):
-                for child in expr.children:
-                    collect_symbols(child, symbols)
-
-        for var in surface_potential_diff_vars:
+        for domain in ["negative", "positive"]:
+            var = next(
+                key
+                for key in model.rhs
+                if key.name
+                == f"X-averaged {domain} electrode surface potential difference [V]"
+            )
             rhs_expr = model.rhs[var]
 
-            rhs_symbols = set()
-            collect_symbols(rhs_expr, rhs_symbols)
+            matching_divisions = [
+                node
+                for node in self._walk_symbols(rhs_expr)
+                if isinstance(node, pybamm.Division)
+                and isinstance(node.left, pybamm.Scalar)
+                and node.left.value == 1
+                and self._contains_name(
+                    node.right,
+                    f"{domain.capitalize()} electrode active material volume fraction",
+                )
+                and self._contains_name(
+                    node.right, f"{domain.capitalize()} particle radius"
+                )
+                and self._contains_name(
+                    node.right,
+                    f"{domain.capitalize()} electrode double-layer capacity",
+                )
+            ]
 
-            has_active_material_fraction = any(
-                "active material volume fraction" in sym.lower() for sym in rhs_symbols
-            )
-            has_particle_radius = any(
-                "particle radius" in sym.lower() for sym in rhs_symbols
-            )
-
-            assert has_active_material_fraction and has_particle_radius, (
-                f"RHS for {var.name} should include surface area components "
-                f"(active material volume fraction and particle radius). "
-                f"The surface area 'a' is computed as 3 * eps_s / R, so both "
-                f"terms must appear. Missing the 'a' factor was the bug in #4139."
-            )
-
-    def test_leading_surface_form_rhs_structure_has_division(self):
-        """
-        Additional guard for PR #4139.
-
-        The fix divides by 'a * C_dl' rather than just 'C_dl'. This verifies
-        that the RHS expression has a Division operation with surface area
-        components in the divisor.
-        """
-        model = pybamm.lithium_ion.SPM(options={"surface form": "differential"})
-
-        neg_delta_phi_var = None
-        for key in model.rhs.keys():
-            if (
-                "negative" in key.name.lower()
-                and "surface potential difference" in key.name.lower()
-            ):
-                neg_delta_phi_var = key
-                break
-
-        assert neg_delta_phi_var is not None
-
-        rhs_expr = model.rhs[neg_delta_phi_var]
-
-        def has_division_with_surface_area(expr):
-            if isinstance(expr, pybamm.Division):
-                divisor_str = str(expr.right)
-                if "active material volume fraction" in divisor_str.lower():
-                    return True
-                if "particle radius" in divisor_str.lower():
-                    return True
-            if hasattr(expr, "children"):
-                for child in expr.children:
-                    if has_division_with_surface_area(child):
-                        return True
-            return False
-
-        def rhs_contains_surface_area_in_calculation(expr):
-            expr_str = str(expr)
-            return (
-                "active material volume fraction" in expr_str.lower()
-                or "particle radius" in expr_str.lower()
-            )
-
-        assert rhs_contains_surface_area_in_calculation(rhs_expr), (
-            "RHS expression should contain surface area components "
-            "(active material volume fraction or particle radius)"
-        )
+            assert len(matching_divisions) == 1

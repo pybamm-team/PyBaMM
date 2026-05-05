@@ -422,7 +422,27 @@ class BaseIntegrationTestLithiumIon:
                 ],
             }
         )
-        sol = self.run_basic_processing_test(options, parameter_values=parameter_values)
+        model = self.model(options)
+
+        def symbol_names(symbol):
+            names = {symbol.name}
+            for child in getattr(symbol, "children", []):
+                names.update(symbol_names(child))
+            return names
+
+        Q_rev_names = symbol_names(model.variables["Reversible heating [W.m-3]"])
+        assert any(
+            name == "Primary: Negative electrode OCP entropic change [V.K-1]"
+            for name in Q_rev_names
+        )
+        assert any(
+            name == "Secondary: Negative electrode OCP entropic change [V.K-1]"
+            for name in Q_rev_names
+        )
+
+        modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
+        modeltest.test_all()
+        sol = modeltest.solution
         T = sol["Volume-averaged cell temperature [K]"].data
         assert not np.any(np.isnan(T))
         Q_rev = sol["Volume-averaged reversible heating [W.m-3]"].data
@@ -474,8 +494,16 @@ class BaseIntegrationTestLithiumIon:
         L_secondary = sol[
             "X-averaged negative secondary lithium plating thickness [m]"
         ].data
+        j_primary = sol[
+            "X-averaged negative electrode primary lithium plating interfacial current density [A.m-2]"
+        ].data
+        j_secondary = sol[
+            "X-averaged negative electrode secondary lithium plating interfacial current density [A.m-2]"
+        ].data
         assert not np.any(np.isnan(L_primary))
         assert not np.any(np.isnan(L_secondary))
+        assert np.max(np.abs(j_primary)) > 0
+        assert np.max(np.abs(j_secondary)) > 0
 
     def test_basic_processing_msmr(self):
         options = {

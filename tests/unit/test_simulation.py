@@ -598,7 +598,9 @@ class TestSimulation:
         )
 
         assert len(sol2.t) > 0
+        c_n_sol1 = sol1["X-averaged negative particle concentration [mol.m-3]"].data
         c_n = sol2["X-averaged negative particle concentration [mol.m-3]"].data
+        np.testing.assert_allclose(c_n[..., 0], c_n_sol1[..., -1], rtol=1e-8, atol=1e-8)
         assert np.all(c_n > 0)
         assert np.all(c_n < c_n_max)
 

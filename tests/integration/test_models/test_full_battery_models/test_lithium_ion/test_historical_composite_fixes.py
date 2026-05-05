@@ -196,6 +196,13 @@ class TestCompositeSwellingFixes:
 class TestCompositeSurfaceFormFixes:
     """Guards for composite surface form conductivity fixes."""
 
+    @staticmethod
+    def _symbol_names(symbol):
+        names = {symbol.name}
+        for child in getattr(symbol, "children", []):
+            names.update(TestCompositeSurfaceFormFixes._symbol_names(child))
+        return names
+
     def test_composite_surface_form_conductivity(self):
         """
         Guards against: 7661ed966 - fix bug in composite surface form model
@@ -206,6 +213,21 @@ class TestCompositeSurfaceFormFixes:
         model = pybamm.lithium_ion.DFN(
             {"particle phases": ("2", "1"), "surface form": "differential"}
         )
+        negative_delta_phi = next(
+            key
+            for key in model.rhs
+            if key.name == "Negative electrode surface potential difference [V]"
+        )
+        rhs_names = self._symbol_names(model.rhs[negative_delta_phi])
+        assert (
+            "Primary: Negative electrode active material volume fraction" in rhs_names
+        )
+        assert (
+            "Secondary: Negative electrode active material volume fraction" in rhs_names
+        )
+        assert "Primary: Negative particle radius [m]" in rhs_names
+        assert "Secondary: Negative particle radius [m]" in rhs_names
+
         param = pybamm.ParameterValues("Chen2020_composite")
         sim = pybamm.Simulation(model, parameter_values=param)
         sol = sim.solve([0, 600])

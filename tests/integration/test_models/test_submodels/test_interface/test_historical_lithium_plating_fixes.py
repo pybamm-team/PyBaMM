@@ -50,14 +50,11 @@ class TestLithiumPlatingSPMDomainFixes:
         - c_plated_Li_av = pybamm.x_average(c_plated_Li)
         + c_plated_Li_xav = pybamm.x_average(c_plated_Li)
         + c_plated_Li_av = pybamm.yz_average(c_plated_Li_xav)
-
-        Also verifies plating increases during charging at low temp.
         """
         model = pybamm.lithium_ion.SPM({"lithium plating": "irreversible"})
         param = self._get_plating_params()
 
         sim = pybamm.Simulation(model, parameter_values=param)
-
         sol = sim.solve([0, 600])
 
         assert len(sol.t) > 0

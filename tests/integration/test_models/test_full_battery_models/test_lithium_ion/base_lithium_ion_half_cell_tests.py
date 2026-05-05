@@ -23,25 +23,55 @@ class BaseIntegrationTestLithiumIonHalfCell:
         # Guard: electrolyte potential must use interface value (PR #5139)
         options = {"working electrode": "positive"}
         parameter_values = pybamm.ParameterValues("Xu2019")
-        model = pybamm.lithium_ion.SPMe(options)
+        model = self.model(options)
         modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
         modeltest.test_all(skip_output_tests=True)
         sol = modeltest.solution
         phi_e_interface = sol["Lithium metal interface electrolyte potential [V]"].data
         assert not np.allclose(phi_e_interface, 0, atol=1e-6)
-        # Guard: electrolyte ohmic losses must be nonzero
+        # Guard: electrolyte ohmic losses must be nonzero for models that include them
+        # SPM uses leading order approximation so ohmic losses are zero by design
         eta_e = sol["X-averaged electrolyte ohmic losses [V]"].data
         mid_idx = len(eta_e) // 2
-        assert np.abs(eta_e[mid_idx]) > 1e-6
+        is_spm = self.model.__name__ == "SPM"
+        if is_spm:
+            assert np.allclose(eta_e, 0, atol=1e-10), (
+                "SPM should have zero ohmic losses"
+            )
+        else:
+            assert np.abs(eta_e[mid_idx]) > 1e-6, (
+                "SPMe/DFN should have nonzero ohmic losses"
+            )
 
     def test_half_cell_bulk_ocp_scalar(self):
         # Guard: lithium metal bulk OCP must be scalar-valued (0d02d1f63)
+        # The bug was using "0 * T" which gave array-valued OCP with current collector domain
+        # The fix changed to scalar 0 for lithium metal OCP
         options = {}
         parameter_values = pybamm.ParameterValues("Xu2019")
         sol = self.run_basic_processing_test(options, parameter_values=parameter_values)
-        ocp_n_bulk = sol["Negative electrode bulk open-circuit potential [V]"].data
-        assert np.allclose(ocp_n_bulk, 0.0, atol=1e-10)
-        assert np.std(ocp_n_bulk) < 1e-15
+
+        # Get the OCP variable from the model to check its domain
+        model = self.model({"working electrode": "positive"})
+        ocp_var = model.variables.get(
+            "Negative electrode bulk open-circuit potential [V]"
+        )
+        assert ocp_var is not None
+
+        # The OCP should be scalar (no domain), not array-valued with current collector domain
+        # The bug was "0 * T" which broadcasts to current collector domain
+        assert ocp_var.domain == [], (
+            f"Lithium metal bulk OCP should be scalar (domain=[]), got domain={ocp_var.domain}. "
+            "The bug was using '0 * T' which gave current collector domain."
+        )
+
+        # Also verify the evaluated values are scalar-shaped or broadcastable
+        ocp_n_bulk = sol["Negative electrode bulk open-circuit potential [V]"]
+        t_mid = sol.t[len(sol.t) // 2]
+        ocp_at_t = ocp_n_bulk(t_mid)
+        assert np.isscalar(ocp_at_t) or ocp_at_t.ndim == 0 or ocp_at_t.size == 1, (
+            f"Evaluated OCP should be scalar, got shape {np.shape(ocp_at_t)}"
+        )
 
     def test_kinetics_asymmetric_butler_volmer(self):
         options = {"intercalation kinetics": "asymmetric Butler-Volmer"}
