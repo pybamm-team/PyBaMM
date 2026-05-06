@@ -1768,14 +1768,14 @@ class Serialise:
 
         Handles numpy scalars, arrays, booleans, and nested dicts/lists.
         """
+        if isinstance(value, (np.bool_, bool)):
+            return bool(value)
         if isinstance(value, (np.floating, float)):
             return float(value)
         if isinstance(value, (np.integer, int)):
             return int(value)
         if isinstance(value, np.ndarray):
             return value.tolist()
-        if isinstance(value, np.bool_):
-            return bool(value)
         if isinstance(value, dict):
             return {k: Serialise._to_json_safe(v) for k, v in value.items()}
         if isinstance(value, list):
@@ -1850,6 +1850,9 @@ class Serialise:
                         term_config["operator"] = term.operator
                     terminations.append(term_config)
                 step_config["terminations"] = terminations
+
+            if getattr(step, "temperature", None) is not None:
+                step_config["temperature"] = step.temperature
 
             return step_config
 
@@ -1936,9 +1939,17 @@ class Serialise:
                     _parse_termination(t) for t in step_dict["terminations"]
                 ]
 
+            extra_kwargs = {}
+            if step_dict.get("temperature") is not None:
+                extra_kwargs["temperature"] = step_dict["temperature"]
+
             if step_type == "rest":
-                return step_func(duration=duration, termination=terminations)
-            return step_func(value, duration=duration, termination=terminations)
+                return step_func(
+                    duration=duration, termination=terminations, **extra_kwargs
+                )
+            return step_func(
+                value, duration=duration, termination=terminations, **extra_kwargs
+            )
 
         if "cycles" in data and data["cycles"] is not None:
             processed_cycles = []

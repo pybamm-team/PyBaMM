@@ -3058,6 +3058,52 @@ class TestSolverSerialization:
         with pytest.raises(ValueError, match="Unknown solver type"):
             pybamm.BaseSolver.from_config({"type": "NonExistentSolver"})
 
+    def test_to_json_safe_preserves_bool(self):
+        # bool is a subclass of int; the int branch must not match first.
+        assert Serialise._to_json_safe(True) is True
+        assert Serialise._to_json_safe(False) is False
+        assert Serialise._to_json_safe(np.bool_(True)) is True
+        assert Serialise._to_json_safe(np.bool_(False)) is False
+        # Plain ints are still ints.
+        assert Serialise._to_json_safe(1) == 1
+        assert isinstance(Serialise._to_json_safe(1), int)
+        assert not isinstance(Serialise._to_json_safe(1), bool)
+
+    def test_idaklu_solver_bool_options_round_trip(self):
+        solver = pybamm.IDAKLUSolver(
+            options={
+                "print_stats": True,
+                "compile": False,
+                "silence_sundials_errors": True,
+            }
+        )
+        config = solver.to_config()
+        opts = config["options"]
+        for key in ("print_stats", "compile", "silence_sundials_errors"):
+            assert isinstance(opts[key], bool), (
+                f"option {key!r} serialised as {type(opts[key]).__name__}, "
+                f"expected bool"
+            )
+        assert opts["print_stats"] is True
+        assert opts["compile"] is False
+        assert opts["silence_sundials_errors"] is True
+
+        solver2 = pybamm.BaseSolver.from_config(config)
+        assert isinstance(solver2, pybamm.IDAKLUSolver)
+        assert solver2.options["print_stats"] is True
+        assert solver2.options["compile"] is False
+        assert solver2.options["silence_sundials_errors"] is True
+
+    def test_idaklu_solver_config_json_emits_bool_tokens(self):
+        solver = pybamm.IDAKLUSolver(options={"print_stats": True, "compile": False})
+        config = solver.to_config()
+        json_str = json.dumps(config)
+        # Wire format must use JSON bool tokens, not 0/1.
+        assert '"print_stats": true' in json_str
+        assert '"compile": false' in json_str
+        assert '"print_stats": 1' not in json_str
+        assert '"compile": 0' not in json_str
+
     def test_serialise_scalar_inf_round_trip(self):
         """Scalar(inf) and Scalar(-inf) survive round-trip."""
         for val in [np.inf, -np.inf]:
@@ -3099,3 +3145,20 @@ class TestSolverSerialization:
         assert len(exp2.steps) == len(exp.steps)
         # The deserialized step should be a drive cycle
         assert exp2.steps[0].is_drive_cycle
+
+    def test_step_temperature_roundtrip(self):
+        """Per-step temperature override survives serialise/deserialise."""
+        exp = pybamm.Experiment(
+            [
+                pybamm.step.current(1.0, duration=100, temperature=298.15),
+                pybamm.step.rest(duration=60, temperature=313.15),
+                pybamm.step.voltage(4.2, duration=200),
+            ]
+        )
+        data = Serialise.serialise_experiment(exp)
+        json_str = json.dumps(data)
+        exp2 = Serialise.deserialise_experiment(json.loads(json_str))
+
+        assert exp2.steps[0].temperature == pytest.approx(298.15)
+        assert exp2.steps[1].temperature == pytest.approx(313.15)
+        assert exp2.steps[2].temperature is None
