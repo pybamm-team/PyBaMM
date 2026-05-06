@@ -4,6 +4,10 @@
 
 - Added `NonlinearSolver` as the default nonlinear solver, which replaces `CasadiAlgebraicSolver`. `IDAKLUSolver` now computes the initial conditions in C++ by default. ([#5459](https://github.com/pybamm-team/PyBaMM/pull/5459))
 
+## Bug fixes
+
+- Fixed `Serialise.serialise_experiment` silently dropping per-step `temperature` overrides. The JSON-config round-trip via `Experiment.to_config()` / `Experiment.from_config()` now preserves `temperature` for current, voltage, power, c-rate, and rest steps. ([#5496](https://github.com/pybamm-team/PyBaMM/pull/5496))
+
 # [v26.4.2](https://github.com/pybamm-team/PyBaMM/tree/v26.4.2) - 2026-05-05
 
 ## Bug fixes
