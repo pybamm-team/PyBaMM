@@ -1851,6 +1851,9 @@ class Serialise:
                     terminations.append(term_config)
                 step_config["terminations"] = terminations
 
+            if getattr(step, "temperature", None) is not None:
+                step_config["temperature"] = step.temperature
+
             return step_config
 
         steps_config = [_serialise_step(step) for step in experiment.steps]
@@ -1936,9 +1939,17 @@ class Serialise:
                     _parse_termination(t) for t in step_dict["terminations"]
                 ]
 
+            extra_kwargs = {}
+            if step_dict.get("temperature") is not None:
+                extra_kwargs["temperature"] = step_dict["temperature"]
+
             if step_type == "rest":
-                return step_func(duration=duration, termination=terminations)
-            return step_func(value, duration=duration, termination=terminations)
+                return step_func(
+                    duration=duration, termination=terminations, **extra_kwargs
+                )
+            return step_func(
+                value, duration=duration, termination=terminations, **extra_kwargs
+            )
 
         if "cycles" in data and data["cycles"] is not None:
             processed_cycles = []
