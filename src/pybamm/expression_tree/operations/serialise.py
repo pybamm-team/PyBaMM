@@ -1508,7 +1508,11 @@ class Serialise:
             try:
                 name = event_data["name"]
                 expr = convert_symbol_from_json(event_data["expression"])
+                # ``_json_encoder`` writes Enum values out as their ``.name``
+                # string, so bring it back to the EventType member here.
                 event_type = event_data["event_type"]
+                if isinstance(event_type, str):
+                    event_type = pybamm.EventType[event_type]
                 model.events.append(pybamm.Event(name, expr, event_type))
             except Exception as e:
                 raise ValueError(

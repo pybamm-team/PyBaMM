@@ -6,8 +6,7 @@ fixture exercising it; if the dumper or loader drops it, the test fails.
 
 Validated to catch the regression shape behind #5495 (bool->int coercion),
 #5496 (dropped per-step ``temperature``) and #5497 (dropped nested
-``root_method``). ``BaseModel`` and symbol-level (``convert_symbol_*``)
-round-trips are out of scope and warrant dedicated coverage.
+``root_method``).
 """
 
 from __future__ import annotations
@@ -20,6 +19,11 @@ import numpy as np
 import pytest
 
 import pybamm
+from pybamm.expression_tree.operations.serialise import (
+    Serialise,
+    convert_symbol_from_json,
+    convert_symbol_to_json,
+)
 
 _MISSING = object()
 
@@ -269,3 +273,136 @@ def test_submesh_class_round_trip(submesh_class):
     config = json.loads(json.dumps(submesh_class.to_config()))
     restored = submesh_class.from_config(config)
     assert restored is submesh_class
+
+
+BUILTIN_MODEL_FIXTURES = [
+    pybamm.lithium_ion.SPM(),
+    pybamm.lithium_ion.SPM(options={"thermal": "lumped"}),
+    pybamm.lithium_ion.DFN(),
+]
+
+
+@pytest.mark.parametrize(
+    "model",
+    BUILTIN_MODEL_FIXTURES,
+    ids=lambda m: f"{type(m).__name__}-{m.options.get('thermal', 'default')}",
+)
+def test_builtin_model_round_trip_preserves_options(model):
+    """Built-in model class identity and options dict must survive round-trip."""
+    config = json.loads(json.dumps(model.to_config()))
+    restored = pybamm.BaseModel.from_config(config)
+    assert type(restored) is type(model)
+    assert dict(restored.options) == dict(model.options)
+
+
+def _custom_model_with_rhs():
+    m = pybamm.BaseModel("custom_rhs")
+    c = pybamm.Variable("c", domain="negative particle")
+    m.rhs = {c: -c}
+    m.initial_conditions = {c: pybamm.Scalar(1)}
+    return m
+
+
+def _custom_model_with_events():
+    m = pybamm.BaseModel("custom_events")
+    c = pybamm.Variable("c")
+    m.rhs = {c: -c}
+    m.initial_conditions = {c: pybamm.Scalar(1)}
+    m.events = [pybamm.Event("c hits zero", c, pybamm.EventType.TERMINATION)]
+    return m
+
+
+CUSTOM_MODEL_FIXTURES = [
+    _custom_model_with_rhs(),
+    _custom_model_with_events(),
+]
+
+
+@pytest.mark.parametrize(
+    "model",
+    CUSTOM_MODEL_FIXTURES,
+    ids=lambda m: m.name,
+)
+def test_custom_model_round_trip_preserves_rhs_and_events(model):
+    """Custom model rhs / initial_conditions / events must survive round-trip.
+
+    Uses ``Serialise._json_encoder`` because the dict returned by
+    ``BaseModel.to_json`` carries values (``EventType``, numpy scalars) that
+    only encode through the project's custom encoder.
+    """
+    data = json.loads(
+        json.dumps(model.to_json(), default=Serialise._json_encoder)
+    )
+    restored = pybamm.BaseModel.from_json(data)
+
+    assert restored.name == model.name
+
+    def _id_set(d):
+        return {k.id for k in d}
+
+    assert _id_set(restored.rhs) == _id_set(model.rhs)
+    assert _id_set(restored.initial_conditions) == _id_set(model.initial_conditions)
+    assert len(restored.events) == len(model.events)
+    for orig_ev, new_ev in zip(model.events, restored.events):
+        assert orig_ev.name == new_ev.name
+        assert orig_ev.event_type == new_ev.event_type
+
+
+def _symbol_fixtures():
+    a = pybamm.Variable("a")
+    b = pybamm.Parameter("b")
+    return [
+        pybamm.Scalar(3.14),
+        pybamm.Scalar(np.inf),
+        pybamm.Scalar(-np.inf),
+        pybamm.Scalar(np.nan),
+        pybamm.Parameter("Cell capacity [A.h]"),
+        pybamm.InputParameter("Current"),
+        pybamm.Variable("c"),
+        pybamm.Time(),
+        pybamm.SpatialVariable("x", domain=["negative electrode"]),
+        a + b,
+        a * b - pybamm.Scalar(2),
+        -a,
+        pybamm.PrimaryBroadcast(pybamm.Scalar(1), "negative electrode"),
+        pybamm.FullBroadcast(
+            pybamm.Scalar(1),
+            "negative electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        ),
+        pybamm.Interpolant(
+            np.array([0.0, 1.0, 2.0]), np.array([0.0, 1.0, 4.0]), a
+        ),
+        pybamm.FunctionParameter("f", {"a": a}),
+    ]
+
+
+@pytest.mark.parametrize(
+    "symbol",
+    _symbol_fixtures(),
+    ids=lambda s: type(s).__name__,
+)
+def test_symbol_round_trip_preserves_structure(symbol):
+    """Every Symbol type must round-trip with the same class and structural id.
+
+    NaN is treated specially (NaN != NaN), but a Scalar(NaN) still has a
+    well-defined ``.id`` after round-trip if reconstruction preserves it.
+    """
+    json_dict = convert_symbol_to_json(symbol)
+    restored = convert_symbol_from_json(json.loads(json.dumps(json_dict)))
+
+    assert type(restored) is type(symbol), (
+        f"{type(symbol).__name__} round-tripped as {type(restored).__name__}"
+    )
+    if isinstance(symbol, pybamm.Scalar) and (
+        np.isnan(symbol.value) or np.isinf(symbol.value)
+    ):
+        if np.isnan(symbol.value):
+            assert np.isnan(restored.value)
+        else:
+            assert restored.value == symbol.value
+        return
+    assert restored.id == symbol.id, (
+        f"{type(symbol).__name__} structural id changed across round-trip: "
+        f"{symbol!r} -> {restored!r}"
+    )
