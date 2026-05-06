@@ -100,9 +100,7 @@ SOLVER_FIXTURES = [
 ]
 
 
-@pytest.mark.parametrize(
-    "solver", SOLVER_FIXTURES, ids=lambda s: f"{type(s).__name__}"
-)
+@pytest.mark.parametrize("solver", SOLVER_FIXTURES, ids=lambda s: f"{type(s).__name__}")
 def test_solver_round_trip_preserves_init_args(solver):
     """Every constructor-arg-derived attribute must survive JSON round-trip.
 
@@ -157,13 +155,10 @@ EXPERIMENT_FIXTURES = [
         ]
     ),
     # Termination conditions on a step.
-    pybamm.Experiment(
-        [pybamm.step.current(1.0, duration=3600, termination="3.0 V")]
-    ),
+    pybamm.Experiment([pybamm.step.current(1.0, duration=3600, termination="3.0 V")]),
     # Multi-cycle experiment.
     pybamm.Experiment(
-        [(pybamm.step.current(1.0, duration=100), pybamm.step.rest(duration=60))]
-        * 3
+        [(pybamm.step.current(1.0, duration=100), pybamm.step.rest(duration=60))] * 3
     ),
 ]
 
