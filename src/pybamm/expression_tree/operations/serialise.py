@@ -2070,9 +2070,8 @@ class Serialise:
         for k, v in list(data.items()):
             if isinstance(v, dict) and isinstance(v.get("type"), str):
                 nested_cls = getattr(pybamm, v["type"], None)
-                if (
-                    isinstance(nested_cls, type)
-                    and issubclass(nested_cls, pybamm.BaseSolver)
+                if isinstance(nested_cls, type) and issubclass(
+                    nested_cls, pybamm.BaseSolver
                 ):
                     data[k] = Serialise.deserialise_solver(v)
 
