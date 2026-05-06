@@ -3,7 +3,7 @@
 ## Features
 
 - Added `NonlinearSolver` as the default nonlinear solver, which replaces `CasadiAlgebraicSolver`. `IDAKLUSolver` now computes the initial conditions in C++ by default. ([#5459](https://github.com/pybamm-team/PyBaMM/pull/5459))
-- Added a positive-electrode phase-transition (core-shell) degradation submodel for high-nickel cathodes, based on Zhuo et al. 2023. New option `"PE degradation": "phase transition"` is supported on SPM and DFN. Includes the `Zhuo2023` parameter set. ([#3771](https://github.com/pybamm-team/PyBaMM/pull/3771))
+- Added a positive-electrode phase-transition (core-shell) degradation submodel for high-nickel cathodes, based on Zhuo et al. 2023. New option `"PE degradation": "phase transition"` is supported on SPM and DFN. Includes the `Zhuo2023` parameter set, new `"positive core"` / `"positive shell"` domains, and two new finite-volume operators (`pybamm.BoundaryCellValue`, `pybamm.BoundaryCellLength`) for Robin-style boundary conditions at the moving phase boundary. ([#3771](https://github.com/pybamm-team/PyBaMM/pull/3771))
 
 ## Bug fixes
 
