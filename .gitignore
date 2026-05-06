@@ -103,7 +103,7 @@ test.json
 # nox
 .nox/
 
-# spider
+# Spyder
 .spyproject/
 
 # benchmarks

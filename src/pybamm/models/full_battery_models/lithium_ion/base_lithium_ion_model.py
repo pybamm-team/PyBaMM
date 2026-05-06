@@ -328,7 +328,9 @@ class BaseModel(pybamm.BaseBatteryModel):
                 elif not isinstance(
                     self.submodels[par_submod], pybamm.particle.FickianDiffusion
                 ):
-                    raise pybamm.TypeError("The particle submodel is not fickian type.")
+                    raise pybamm.ModelError(
+                        "The particle submodel is not fickian type."
+                    )
                 else:
                     self.submodels[par_submod] = pybamm.pe_degradation.PhaseTransition(
                         self.param,
