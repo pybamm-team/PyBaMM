@@ -64,7 +64,7 @@ def _values_equal(a, b):
         return (
             isinstance(b, type(a))
             and len(a) == len(b)
-            and all(_values_equal(x, y) for x, y in zip(a, b))
+            and all(_values_equal(x, y) for x, y in zip(a, b, strict=False))
         )
     return a == b
 
@@ -131,7 +131,7 @@ _STEP_ATTRS = ("duration", "value", "temperature", "termination")
 def _experiment_steps_equal(a, b):
     if len(a.steps) != len(b.steps):
         return False
-    for orig, new in zip(a.steps, b.steps):
+    for orig, new in zip(a.steps, b.steps, strict=True):
         if type(orig) is not type(new):
             return False
         for attr in _STEP_ATTRS:
@@ -341,7 +341,7 @@ def test_custom_model_round_trip_preserves_rhs_and_events(model):
     assert _id_set(restored.rhs) == _id_set(model.rhs)
     assert _id_set(restored.initial_conditions) == _id_set(model.initial_conditions)
     assert len(restored.events) == len(model.events)
-    for orig_ev, new_ev in zip(model.events, restored.events):
+    for orig_ev, new_ev in zip(model.events, restored.events, strict=True):
         assert orig_ev.name == new_ev.name
         assert orig_ev.event_type == new_ev.event_type
 
