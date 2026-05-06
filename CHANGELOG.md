@@ -6,7 +6,7 @@
 
 ## Bug fixes
 
-- Fixed `Serialise._to_json_safe` coercing Python `bool` values to `0`/`1` ints because `bool` is a subclass of `int`. `IDAKLUSolver.to_config()` now emits its bool options (`compile`, `print_stats`, `silence_sundials_errors`, etc.) as JSON `true`/`false` so they round-trip through strict-bool deserialisers.
+- Fixed `Serialise._to_json_safe` coercing Python `bool` values to `0`/`1` ints because `bool` is a subclass of `int`. `IDAKLUSolver.to_config()` now emits its bool options (`compile`, `print_stats`, `silence_sundials_errors`, etc.) as JSON `true`/`false` so they round-trip through strict-bool deserialisers. ([#5495](https://github.com/pybamm-team/PyBaMM/pull/5495))
 
 # [v26.4.2](https://github.com/pybamm-team/PyBaMM/tree/v26.4.2) - 2026-05-05
 
