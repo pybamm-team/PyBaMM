@@ -203,25 +203,43 @@ class BasePhaseTransition(pybamm.BaseSubModel):
         return variables
 
     def _r_average_core(self, symbol):
-        if symbol.domain != [] and symbol.domain[0].endswith("core"):
-            r_co = pybamm.SpatialVariable("r_co", symbol.domain)
-            # v = pybamm.FullBroadcast(
-            #     pybamm.Scalar(1), broadcast_domains = symbol.domains,
-            # )
-            v = pybamm.ones_like(symbol)
-            # cartesian coordinate
-            # coeff = 4 * np.pi * r_co**2 * (R_nd * s_nd)**3
-            # return pybamm.Integral(coeff * symbol, r_co) /
-            #        pybamm.Integral(coeff * v, r_co)
-            # spherical polar
-            # this is no different from normal pybamm.r_average, except for
-            # a coefficient s_nd^3, which is cancelled out after divided by
-            # the core volume
+        """Reference (unused) implementation of the volume-weighted r-average
+        over the spherical core, kept here for didactic purposes.
+
+        By definition, for a quantity ``phi`` defined on a spherical core of
+        physical radius R_core = R_nd * s_nd::
+
+            <phi>_core = (1 / V_core) * integral_0^R_core phi(r) * 4*pi*r^2 dr
+                       where V_core = (4/3) * pi * R_core^3
+
+        Re-parameterising to the dimensionless coordinate r_co = r / R_core
+        in [0, 1]::
+
+            <phi>_core = (integral_0^1 phi * r_co^2 dr_co)
+                       / (integral_0^1 r_co^2 dr_co)
+
+        The factors of 4*pi and R_core^3 cancel between numerator and
+        denominator, leaving an integral that depends only on r_co. PyBaMM's
+        ``Integral`` over a SpatialVariable with coord_sys="spherical polar"
+        applies the r^2 Jacobian automatically, so the r-average over the
+        core can be written as
+
             return pybamm.Integral(symbol, r_co) / pybamm.Integral(v, r_co)
-        else:
-            raise pybamm.DomainError(
-                "Domain must include 'core' for the core-shell model."
-            )
+
+        which is exactly what ``pybamm.r_average`` does for any spherical
+        particle domain. The standard flow therefore uses
+        ``pybamm.r_average(symbol)`` and this method is never invoked.
+        """
+        # Equivalent by-definition implementation, retained as commentary:
+        #
+        # if symbol.domain != [] and symbol.domain[0].endswith("core"):
+        #     r_co = pybamm.SpatialVariable("r_co", symbol.domain)
+        #     v = pybamm.ones_like(symbol)
+        #     return pybamm.Integral(symbol, r_co) / pybamm.Integral(v, r_co)
+        # else:
+        #     raise pybamm.DomainError(
+        #         "Domain must include 'core' for the core-shell model."
+        #     )
 
     def _r_average_shell(self, symbol, s_nd):
         if symbol.domain != [] and symbol.domain[0].endswith("shell"):

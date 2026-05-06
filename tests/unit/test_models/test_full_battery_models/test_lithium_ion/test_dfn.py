@@ -20,6 +20,12 @@ class TestDFN(BaseUnitTestLithiumIon):
         options = {"particle size": "distribution"}
         self.check_well_posedness(options)
 
+    def test_well_posed_pe_phase_transition(self):
+        # PE degradation = "phase transition" replaces the positive Fickian
+        # particle submodel with the core-shell phase-transition submodel and
+        # exercises the PE shell branch in the forward Butler-Volmer kinetics.
+        self.check_well_posedness({"PE degradation": "phase transition"})
+
     def test_well_posed_size_distribution_uniform_profile(self):
         options = {"particle size": "distribution", "particle": "uniform profile"}
         self.check_well_posedness(options)

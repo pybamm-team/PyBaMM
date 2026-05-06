@@ -41,6 +41,7 @@ class TestParameterValuesWithModel:
             "Prada2013": pybamm.lithium_ion.DFN(),
             "Ramadass2004": pybamm.lithium_ion.DFN(),
             "Xu2019": pybamm.lithium_ion.DFN({"working electrode": "positive"}),
+            "Zhuo2023": pybamm.lithium_ion.SPM({"PE degradation": "phase transition"}),
         }
 
         # Loop over each parameter set, testing that parameters can be set
