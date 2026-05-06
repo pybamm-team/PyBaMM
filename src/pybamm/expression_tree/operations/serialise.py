@@ -2009,6 +2009,12 @@ class Serialise:
             if not found:
                 continue
 
+            # ``root_method`` strings are resolved into ``BaseSolver`` instances
+            # by ``BaseSolver.__init__``; recurse so they survive JSON.
+            if isinstance(value, pybamm.BaseSolver):
+                config[param_name] = Serialise.serialise_solver(value)
+                continue
+
             value = Serialise._to_json_safe(value)
             try:
                 json.dumps(value)
@@ -2058,6 +2064,17 @@ class Serialise:
                 )
             sub_solvers = [Serialise.deserialise_solver(c) for c in sub_solvers_config]
             return solver_class(sub_solvers)
+
+        # Rebuild any nested solver dicts (mirror of the recursion in
+        # ``serialise_solver``) before passing them to the constructor.
+        for k, v in list(data.items()):
+            if isinstance(v, dict) and isinstance(v.get("type"), str):
+                nested_cls = getattr(pybamm, v["type"], None)
+                if (
+                    isinstance(nested_cls, type)
+                    and issubclass(nested_cls, pybamm.BaseSolver)
+                ):
+                    data[k] = Serialise.deserialise_solver(v)
 
         return solver_class(**data)
 
