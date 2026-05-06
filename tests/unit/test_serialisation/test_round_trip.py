@@ -330,9 +330,7 @@ def test_custom_model_round_trip_preserves_rhs_and_events(model):
     ``BaseModel.to_json`` carries values (``EventType``, numpy scalars) that
     only encode through the project's custom encoder.
     """
-    data = json.loads(
-        json.dumps(model.to_json(), default=Serialise._json_encoder)
-    )
+    data = json.loads(json.dumps(model.to_json(), default=Serialise._json_encoder))
     restored = pybamm.BaseModel.from_json(data)
 
     assert restored.name == model.name
@@ -370,9 +368,7 @@ def _symbol_fixtures():
             "negative electrode",
             auxiliary_domains={"secondary": "current collector"},
         ),
-        pybamm.Interpolant(
-            np.array([0.0, 1.0, 2.0]), np.array([0.0, 1.0, 4.0]), a
-        ),
+        pybamm.Interpolant(np.array([0.0, 1.0, 2.0]), np.array([0.0, 1.0, 4.0]), a),
         pybamm.FunctionParameter("f", {"a": a}),
     ]
 
