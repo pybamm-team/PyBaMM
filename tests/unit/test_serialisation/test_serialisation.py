@@ -3099,3 +3099,20 @@ class TestSolverSerialization:
         assert len(exp2.steps) == len(exp.steps)
         # The deserialized step should be a drive cycle
         assert exp2.steps[0].is_drive_cycle
+
+    def test_step_temperature_roundtrip(self):
+        """Per-step temperature override survives serialise/deserialise."""
+        exp = pybamm.Experiment(
+            [
+                pybamm.step.current(1.0, duration=100, temperature=298.15),
+                pybamm.step.rest(duration=60, temperature=313.15),
+                pybamm.step.voltage(4.2, duration=200),
+            ]
+        )
+        data = Serialise.serialise_experiment(exp)
+        json_str = json.dumps(data)
+        exp2 = Serialise.deserialise_experiment(json.loads(json_str))
+
+        assert exp2.steps[0].temperature == pytest.approx(298.15)
+        assert exp2.steps[1].temperature == pytest.approx(313.15)
+        assert exp2.steps[2].temperature is None
