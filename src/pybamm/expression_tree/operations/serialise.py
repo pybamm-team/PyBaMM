@@ -1809,6 +1809,7 @@ class Serialise:
             "Voltage": "voltage",
             "Power": "power",
             "CRate": "c-rate",
+            "Resistance": "resistance",
         }
         termination_type_map = {
             "VoltageTermination": "voltage",
@@ -1857,6 +1858,20 @@ class Serialise:
 
             if getattr(step, "temperature", None) is not None:
                 step_config["temperature"] = step.temperature
+            if getattr(step, "period", None) is not None:
+                step_config["period"] = step.period
+            if getattr(step, "tags", None):
+                step_config["tags"] = list(step.tags)
+            if getattr(step, "description", None) is not None:
+                step_config["description"] = step.description
+            if getattr(step, "direction", None) is not None:
+                step_config["direction"] = step.direction
+            start_time = getattr(step, "start_time", None)
+            if isinstance(start_time, datetime):
+                step_config["start_time"] = start_time.isoformat()
+            # ``skip_ok`` defaults to True; only record explicit overrides.
+            if getattr(step, "skip_ok", True) is False:
+                step_config["skip_ok"] = False
 
             return step_config
 
@@ -1868,7 +1883,17 @@ class Serialise:
             cycles_config.append(steps_config[step_idx : step_idx + cycle_length])
             step_idx += cycle_length
 
-        return {"cycles": cycles_config}
+        config: dict = {"cycles": cycles_config}
+        if getattr(experiment, "period", None) is not None:
+            config["period"] = experiment.period
+        if getattr(experiment, "temperature", None) is not None:
+            config["temperature"] = experiment.temperature
+        # Use the original termination strings rather than the parsed dict so
+        # ``Experiment.__init__`` can re-run ``read_termination`` on the round-trip.
+        termination = getattr(experiment, "termination_string", None)
+        if termination:
+            config["termination"] = list(termination)
+        return config
 
     @staticmethod
     def deserialise_experiment(data: dict):
@@ -1892,6 +1917,7 @@ class Serialise:
             "power": pybamm.step.power,
             "c-rate": pybamm.step.c_rate,
             "rest": pybamm.step.rest,
+            "resistance": pybamm.step.resistance,
         }
         term_class_map = {
             "voltage": pybamm.step.VoltageTermination,
@@ -1946,6 +1972,20 @@ class Serialise:
             extra_kwargs = {}
             if step_dict.get("temperature") is not None:
                 extra_kwargs["temperature"] = step_dict["temperature"]
+            if step_dict.get("period") is not None:
+                extra_kwargs["period"] = step_dict["period"]
+            if step_dict.get("tags"):
+                extra_kwargs["tags"] = list(step_dict["tags"])
+            if step_dict.get("description") is not None:
+                extra_kwargs["description"] = step_dict["description"]
+            if step_dict.get("direction") is not None:
+                extra_kwargs["direction"] = step_dict["direction"]
+            if step_dict.get("start_time") is not None:
+                extra_kwargs["start_time"] = datetime.fromisoformat(
+                    step_dict["start_time"]
+                )
+            if "skip_ok" in step_dict:
+                extra_kwargs["skip_ok"] = bool(step_dict["skip_ok"])
 
             if step_type == "rest":
                 return step_func(
@@ -1955,15 +1995,23 @@ class Serialise:
                 value, duration=duration, termination=terminations, **extra_kwargs
             )
 
+        experiment_kwargs = {}
+        if data.get("period") is not None:
+            experiment_kwargs["period"] = data["period"]
+        if data.get("temperature") is not None:
+            experiment_kwargs["temperature"] = data["temperature"]
+        if data.get("termination"):
+            experiment_kwargs["termination"] = list(data["termination"])
+
         if "cycles" in data and data["cycles"] is not None:
             processed_cycles = []
             for cycle_steps in data["cycles"]:
                 processed_cycle = tuple(_parse_step(s) for s in cycle_steps)
                 processed_cycles.append(processed_cycle)
-            return pybamm.Experiment(processed_cycles)
+            return pybamm.Experiment(processed_cycles, **experiment_kwargs)
         elif "steps" in data and data["steps"] is not None:
             processed_steps = [_parse_step(s) for s in data["steps"]]
-            return pybamm.Experiment(processed_steps)
+            return pybamm.Experiment(processed_steps, **experiment_kwargs)
         else:
             raise ValueError("Experiment config must have 'steps' or 'cycles'.")
 
