@@ -52,38 +52,9 @@ class TestSPM(BaseUnitTestLithiumIon):
         # PE degradation = "phase transition" replaces the positive Fickian
         # particle submodel with the core-shell phase-transition submodel and
         # routes the inverse Butler-Volmer kinetics through the PE shell hook.
+        # (Option-conflict and default-meshing tests are model-class-agnostic
+        # and live in test_base_battery_model.py.)
         self.check_well_posedness({"PE degradation": "phase transition"})
-
-    def test_pe_phase_transition_default_meshing(self):
-        # default_var_pts and default_submesh_types must include the new
-        # core/shell domains when PE degradation is on; this exercises the
-        # PE-degradation branches of those properties on the base model.
-        model = pybamm.lithium_ion.SPM({"PE degradation": "phase transition"})
-        var_pts = model.default_var_pts
-        assert "r_co" in var_pts and var_pts["r_co"] == 20
-        assert "r_sh" in var_pts and var_pts["r_sh"] == 20
-        submeshes = model.default_submesh_types
-        assert "positive core" in submeshes
-        assert "positive shell" in submeshes
-
-    def test_pe_phase_transition_option_conflicts(self):
-        # The PE phase-transition option is incompatible with two other options.
-        # Exercises the cross-option compatibility checks in BatteryModelOptions.
-        with pytest.raises(pybamm.OptionError, match=r"total interfacial current"):
-            pybamm.lithium_ion.SPM(
-                {
-                    "PE degradation": "phase transition",
-                    "total interfacial current density as a state": "false",
-                }
-            )
-        with pytest.raises(pybamm.OptionError, match=r"single size"):
-            pybamm.lithium_ion.SPM(
-                {
-                    "PE degradation": "phase transition",
-                    "surface form": "algebraic",
-                    "particle size": "distribution",
-                }
-            )
 
     def test_new_model(self):
         model = pybamm.lithium_ion.SPM({"thermal": "x-full"})

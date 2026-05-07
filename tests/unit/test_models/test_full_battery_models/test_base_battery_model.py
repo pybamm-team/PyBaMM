@@ -446,6 +446,62 @@ class TestBaseBatteryModel:
                 }
             )
 
+    def test_pe_phase_transition_option_conflicts(self):
+        # Cross-option compatibility checks for the PE phase-transition option,
+        # implemented in BatteryModelOptions.__init__. Tested via
+        # pybamm.BaseBatteryModel since the checks are model-class-agnostic.
+        with pytest.raises(pybamm.OptionError, match=r"total interfacial current"):
+            pybamm.BaseBatteryModel(
+                {
+                    "PE degradation": "phase transition",
+                    "total interfacial current density as a state": "false",
+                }
+            )
+        with pytest.raises(pybamm.OptionError, match=r"single size"):
+            pybamm.BaseBatteryModel(
+                {
+                    "PE degradation": "phase transition",
+                    "particle size": "distribution",
+                }
+            )
+        # Two phases on the positive electrode is not yet supported. Both the
+        # global "2" form and the per-electrode tuple "(neg, pos) = (_, 2)"
+        # form must be rejected.
+        with pytest.raises(pybamm.OptionError, match=r"single-phase positive"):
+            pybamm.BaseBatteryModel(
+                {
+                    "PE degradation": "phase transition",
+                    "particle phases": "2",
+                    "open-circuit potential": (
+                        ("single", "current sigmoid"),
+                        ("single", "current sigmoid"),
+                    ),
+                }
+            )
+        with pytest.raises(pybamm.OptionError, match=r"single-phase positive"):
+            pybamm.BaseBatteryModel(
+                {
+                    "PE degradation": "phase transition",
+                    "particle phases": ("1", "2"),
+                    "open-circuit potential": (
+                        "single",
+                        ("single", "current sigmoid"),
+                    ),
+                }
+            )
+
+    def test_pe_phase_transition_default_meshing(self):
+        # default_var_pts and default_submesh_types must include the new
+        # core/shell domains when PE degradation is on; this exercises the
+        # PE-degradation branches of those properties on BaseBatteryModel.
+        model = pybamm.BaseBatteryModel({"PE degradation": "phase transition"})
+        var_pts = model.default_var_pts
+        assert "r_co" in var_pts and var_pts["r_co"] == 20
+        assert "r_sh" in var_pts and var_pts["r_sh"] == 20
+        submeshes = model.default_submesh_types
+        assert "positive core" in submeshes
+        assert "positive shell" in submeshes
+
     def test_build_twice(self):
         model = pybamm.lithium_ion.SPM()  # need to pick a model to set vars and build
         with pytest.raises(pybamm.ModelError, match=r"Model already built"):
