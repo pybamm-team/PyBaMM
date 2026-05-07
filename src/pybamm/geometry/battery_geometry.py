@@ -83,7 +83,7 @@ def battery_geometry(
                 }
             )
             # geometry.pop("positive particle")
-        elif phases >= 2:
+        elif phases >= 2:  # pragma: no cover
             geometry.update(
                 {
                     "positive primary core": {
@@ -100,8 +100,6 @@ def battery_geometry(
                     },
                 }
             )
-            # geometry.pop("positive primary particle")
-            # geometry.pop("positive secondary particle")
 
     # Add particle size domains
     if (

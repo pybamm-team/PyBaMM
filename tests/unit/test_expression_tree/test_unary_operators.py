@@ -694,11 +694,19 @@ class TestUnaryOperators:
             assert cl.side == side
             assert cl.child == a
 
-        # _unary_new_copy round-trips through the convenience function
+        # _unary_new_copy round-trips through the convenience function with
+        # both perform_simplifications=True (default, via convenience helper)
+        # and perform_simplifications=False (direct constructor).
         cv = pybamm.boundary_cell_value(a, "right")
         cv_copy = cv._unary_new_copy(a)
         assert isinstance(cv_copy, pybamm.BoundaryCellValue)
         assert cv_copy.side == "right"
+        cv_copy_direct = cv._unary_new_copy(a, perform_simplifications=False)
+        assert isinstance(cv_copy_direct, pybamm.BoundaryCellValue)
+
+        cl = pybamm.boundary_cell_length(a, "left")
+        cl_copy_direct = cl._unary_new_copy(a, perform_simplifications=False)
+        assert isinstance(cl_copy_direct, pybamm.BoundaryCellLength)
 
     def test_boundary_gradient(self):
         var = pybamm.Variable("var", domain=["negative electrode"])

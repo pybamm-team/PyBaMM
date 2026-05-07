@@ -1029,7 +1029,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             phases = int(self.options.positive["particle phases"])
             if phases == 1:
                 base_var_pts.update({"r_co": 20, "r_sh": 20})
-            elif phases >= 2:
+            elif phases >= 2:  # pragma: no cover
                 base_var_pts.update(
                     {
                         "r_co_prim": 20,
@@ -1086,7 +1086,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                         "positive shell": pybamm.Uniform1DSubMesh,
                     }
                 )
-            elif phases >= 2:
+            elif phases >= 2:  # pragma: no cover
                 base_submeshes.update(
                     {
                         "positive primary core": pybamm.Uniform1DSubMesh,

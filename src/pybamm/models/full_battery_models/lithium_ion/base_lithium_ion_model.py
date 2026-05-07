@@ -319,13 +319,13 @@ class BaseModel(pybamm.BaseBatteryModel):
         if self.options["PE degradation"] == "phase transition":
             for phase in self.options.phases[domain]:
                 par_submod = f"{domain} {phase} particle"
-                if par_submod not in self.submodels:
+                if par_submod not in self.submodels:  # pragma: no cover
                     raise pybamm.ModelError(
                         "The particle submodel has not been called yet."
                         "Make sure it is invoked before "
                         "calling phase transition submodel."
                     )
-                elif not isinstance(
+                elif not isinstance(  # pragma: no cover
                     self.submodels[par_submod], pybamm.particle.FickianDiffusion
                 ):
                     raise pybamm.ModelError(

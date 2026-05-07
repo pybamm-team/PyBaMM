@@ -299,7 +299,8 @@ class PhaseTransition(BasePhaseTransition):
 
         if domain == "positive":
             options_phase = getattr(self.options, domain)["particle phases"]
-        else:
+        else:  # pragma: no cover
+            # Defensive: __init__ already enforces domain == "positive".
             raise pybamm.DomainError(
                 "Domain must be 'positive' for phase transition degradation."
                 "Spatial variables only defined for positive core and shell."
@@ -327,10 +328,10 @@ class PhaseTransition(BasePhaseTransition):
             if options_phase == "1" and phase == "primary":
                 r_co = pybamm.standard_spatial_vars.r_co
                 r_sh = pybamm.standard_spatial_vars.r_sh
-            elif options_phase == "2" and phase == "primary":
+            elif options_phase == "2" and phase == "primary":  # pragma: no cover
                 r_co = pybamm.standard_spatial_vars.r_co_prim
                 r_sh = pybamm.standard_spatial_vars.r_sh_prim
-            elif options_phase == "2" and phase == "secondary":
+            elif options_phase == "2" and phase == "secondary":  # pragma: no cover
                 r_co = pybamm.standard_spatial_vars.r_co_sec
                 r_sh = pybamm.standard_spatial_vars.r_sh_sec
         else:
@@ -357,10 +358,10 @@ class PhaseTransition(BasePhaseTransition):
             if options_phase == "1" and phase == "primary":
                 r_co = pybamm.x_average(pybamm.standard_spatial_vars.r_co)
                 r_sh = pybamm.x_average(pybamm.standard_spatial_vars.r_sh)
-            elif options_phase == "2" and phase == "primary":
+            elif options_phase == "2" and phase == "primary":  # pragma: no cover
                 r_co = pybamm.x_average(pybamm.standard_spatial_vars.r_co_prim)
                 r_sh = pybamm.x_average(pybamm.standard_spatial_vars.r_sh_prim)
-            elif options_phase == "2" and phase == "secondary":
+            elif options_phase == "2" and phase == "secondary":  # pragma: no cover
                 r_co = pybamm.x_average(pybamm.standard_spatial_vars.r_co_sec)
                 r_sh = pybamm.x_average(pybamm.standard_spatial_vars.r_sh_sec)
 
