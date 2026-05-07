@@ -1508,8 +1508,7 @@ class Serialise:
             try:
                 name = event_data["name"]
                 expr = convert_symbol_from_json(event_data["expression"])
-                # ``_json_encoder`` writes Enum values out as their ``.name``
-                # string, so bring it back to the EventType member here.
+                # ``_json_encoder`` writes Enum values out as their ``.name``.
                 event_type = event_data["event_type"]
                 if isinstance(event_type, str):
                     event_type = pybamm.EventType[event_type]
@@ -1856,20 +1855,15 @@ class Serialise:
                     terminations.append(term_config)
                 step_config["terminations"] = terminations
 
-            if getattr(step, "temperature", None) is not None:
-                step_config["temperature"] = step.temperature
-            if getattr(step, "period", None) is not None:
-                step_config["period"] = step.period
-            if getattr(step, "tags", None):
-                step_config["tags"] = list(step.tags)
-            if getattr(step, "description", None) is not None:
-                step_config["description"] = step.description
-            if getattr(step, "direction", None) is not None:
-                step_config["direction"] = step.direction
+            for field in ("temperature", "period", "tags", "description", "direction"):
+                value = getattr(step, field, None)
+                if value is not None:
+                    step_config[field] = value
             start_time = getattr(step, "start_time", None)
             if isinstance(start_time, datetime):
                 step_config["start_time"] = start_time.isoformat()
-            # ``skip_ok`` defaults to True; only record explicit overrides.
+            # ``skip_ok`` defaults to True; only record explicit overrides
+            # so the JSON stays minimal for the common case.
             if getattr(step, "skip_ok", True) is False:
                 step_config["skip_ok"] = False
 
@@ -1884,15 +1878,16 @@ class Serialise:
             step_idx += cycle_length
 
         config: dict = {"cycles": cycles_config}
-        if getattr(experiment, "period", None) is not None:
-            config["period"] = experiment.period
-        if getattr(experiment, "temperature", None) is not None:
-            config["temperature"] = experiment.temperature
-        # Use the original termination strings rather than the parsed dict so
-        # ``Experiment.__init__`` can re-run ``read_termination`` on the round-trip.
+        for field in ("period", "temperature"):
+            value = getattr(experiment, field, None)
+            if value is not None:
+                config[field] = value
+        # ``Experiment`` accepts ``termination`` as either a string or a list of
+        # strings; store the raw input so ``read_termination`` can parse it on
+        # the round-trip without us ever splitting a single string into chars.
         termination = getattr(experiment, "termination_string", None)
-        if termination:
-            config["termination"] = list(termination)
+        if termination is not None:
+            config["termination"] = termination
         return config
 
     @staticmethod
@@ -1970,16 +1965,15 @@ class Serialise:
                 ]
 
             extra_kwargs = {}
-            if step_dict.get("temperature") is not None:
-                extra_kwargs["temperature"] = step_dict["temperature"]
-            if step_dict.get("period") is not None:
-                extra_kwargs["period"] = step_dict["period"]
-            if step_dict.get("tags"):
-                extra_kwargs["tags"] = list(step_dict["tags"])
-            if step_dict.get("description") is not None:
-                extra_kwargs["description"] = step_dict["description"]
-            if step_dict.get("direction") is not None:
-                extra_kwargs["direction"] = step_dict["direction"]
+            for field in (
+                "temperature",
+                "period",
+                "tags",
+                "description",
+                "direction",
+            ):
+                if step_dict.get(field) is not None:
+                    extra_kwargs[field] = step_dict[field]
             if step_dict.get("start_time") is not None:
                 extra_kwargs["start_time"] = datetime.fromisoformat(
                     step_dict["start_time"]
@@ -1996,12 +1990,9 @@ class Serialise:
             )
 
         experiment_kwargs = {}
-        if data.get("period") is not None:
-            experiment_kwargs["period"] = data["period"]
-        if data.get("temperature") is not None:
-            experiment_kwargs["temperature"] = data["temperature"]
-        if data.get("termination"):
-            experiment_kwargs["termination"] = list(data["termination"])
+        for field in ("period", "temperature", "termination"):
+            if data.get(field) is not None:
+                experiment_kwargs[field] = data[field]
 
         if "cycles" in data and data["cycles"] is not None:
             processed_cycles = []

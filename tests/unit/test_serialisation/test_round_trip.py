@@ -31,8 +31,9 @@ from pybamm.expression_tree.operations.serialise import (
 # ---------------------------------------------------------------------------
 _MISSING = object()
 
-# Per-step attributes that must round-trip. ``value`` is read on subclasses
-# that have it (Current/Voltage/Power/CRate); Rest is treated separately.
+# Per-step attributes that must round-trip. ``_experiments_equal`` skips
+# attrs missing on both sides, so ``value`` is fine for the Rest case
+# (which has no ``value``).
 _STEP_ATTRS = (
     "duration",
     "value",
@@ -221,6 +222,12 @@ EXPERIMENT_FIXTURES = [
         period="30 seconds",
         temperature="25 oC",
         termination=["80% capacity", "2.5 V"],
+    ),
+    # Top-level termination as a single string — guards against ``list("2.5 V")``
+    # exploding the input into individual chars during the round-trip.
+    pybamm.Experiment(
+        [pybamm.step.current(1.0, duration=100)],
+        termination="2.5 V",
     ),
     # Per-step ``period`` override and other user-settable BaseStep fields:
     # ``tags``, ``description``, ``start_time``, ``skip_ok``.
