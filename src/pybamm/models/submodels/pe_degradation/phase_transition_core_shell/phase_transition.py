@@ -297,14 +297,8 @@ class PhaseTransition(BasePhaseTransition):
 
         R_typ = phase_param.R_typ
 
-        if domain == "positive":
-            options_phase = getattr(self.options, domain)["particle phases"]
-        else:  # pragma: no cover
-            # Defensive: __init__ already enforces domain == "positive".
-            raise pybamm.DomainError(
-                "Domain must be 'positive' for phase transition degradation."
-                "Spatial variables only defined for positive core and shell."
-            )
+        # __init__ enforces domain == "positive", so this lookup is safe.
+        options_phase = getattr(self.options, domain)["particle phases"]
 
         if self.x_average is False:
             c_c = variables[
