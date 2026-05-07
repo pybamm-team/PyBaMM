@@ -310,40 +310,28 @@ class BaseModel(pybamm.BaseBatteryModel):
                 )
 
     def set_pe_degradation_submodel(self):
-        # specify the degradation domain
-        domain = "positive"
+        # set_particle_submodel skips the positive electrode when this option
+        # is on, so we register the PE phase-transition submodels directly
+        # (no replacement needed).
+        if self.options["PE degradation"] != "phase transition":
+            return
 
-        # replace the fickian particle submodel
-        # make sure set_pe_degradation_submodel comes after
-        # set_particle_submodel
-        if self.options["PE degradation"] == "phase transition":
-            for phase in self.options.phases[domain]:
-                par_submod = f"{domain} {phase} particle"
-                if par_submod not in self.submodels:  # pragma: no cover
-                    raise pybamm.ModelError(
-                        "The particle submodel has not been called yet."
-                        "Make sure it is invoked before "
-                        "calling phase transition submodel."
-                    )
-                elif not isinstance(  # pragma: no cover
-                    self.submodels[par_submod], pybamm.particle.FickianDiffusion
-                ):
-                    raise pybamm.ModelError(
-                        "The particle submodel is not fickian type."
-                    )
-                else:
-                    self.submodels[par_submod] = pybamm.pe_degradation.PhaseTransition(
-                        self.param,
-                        domain,
-                        self.options,
-                        phase=phase,
-                        x_average=self.x_average,
-                    )
-                    self.submodels[f"{domain} {phase} total particle concentration"] = (
-                        pybamm.pe_degradation.TotalConcentration(
-                            self.param, domain, self.options, phase
-                        )
-                    )
+        domain = "positive"
+        for phase in self.options.phases[domain]:
+            self.submodels[f"{domain} {phase} particle"] = (
+                pybamm.pe_degradation.PhaseTransition(
+                    self.param,
+                    domain,
+                    self.options,
+                    phase=phase,
+                    x_average=self.x_average,
+                )
+            )
+            self.submodels[f"{domain} {phase} total particle concentration"] = (
+                pybamm.pe_degradation.TotalConcentration(
+                    self.param, domain, self.options, phase
+                )
+            )
 
     def set_sei_submodel(self):
         for domain in ["negative", "positive"]:

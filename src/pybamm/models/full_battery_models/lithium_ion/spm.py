@@ -91,6 +91,13 @@ class SPM(BaseModel):
         for domain in ["negative", "positive"]:
             if self.options.electrode_types[domain] == "planar":
                 continue
+            # PE phase-transition replaces the positive particle submodel; let
+            # set_pe_degradation_submodel handle that domain directly.
+            if (
+                domain == "positive"
+                and self.options["PE degradation"] == "phase transition"
+            ):
+                continue
 
             particle = getattr(self.options, domain)["particle"]
             for phase in self.options.phases[domain]:

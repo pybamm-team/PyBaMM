@@ -36,6 +36,13 @@ class NewmanTobias(DFN):
 
     def set_particle_submodel(self):
         for domain in ["negative", "positive"]:
+            # PE phase-transition replaces the positive particle submodel; let
+            # set_pe_degradation_submodel handle that domain directly.
+            if (
+                domain == "positive"
+                and self.options["PE degradation"] == "phase transition"
+            ):
+                continue
             particle = getattr(self.options, domain)["particle"]
             for phase in self.options.phases[domain]:
                 if particle == "Fickian diffusion":
