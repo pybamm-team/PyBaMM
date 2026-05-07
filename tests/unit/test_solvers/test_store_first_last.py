@@ -2,6 +2,7 @@
 # Tests for the `store_first_last` solver kwarg.
 #
 import json
+import warnings
 
 import numpy as np
 import pytest
@@ -121,6 +122,22 @@ class TestStoreFirstLast:
 
         # CasadiSolver stops at every t_eval point; flag is a no-op.
         np.testing.assert_allclose(sol.t, t_eval)
+
+    def test_non_idaklu_warning_fires_once_per_instance(self):
+        model = _build_simple_dae_model()
+        solver = pybamm.CasadiSolver(store_first_last=True)
+        t_eval = np.linspace(0, 1, 5)
+
+        with warnings.catch_warnings(record=True) as captured:
+            warnings.simplefilter("always", pybamm.SolverWarning)
+            solver.solve(model, t_eval)
+            solver.solve(model, t_eval)
+            solver.solve(model, t_eval)
+
+        no_op_warnings = [
+            w for w in captured if "store_first_last has no effect" in str(w.message)
+        ]
+        assert len(no_op_warnings) == 1
 
     def test_round_trip_serialisation_idaklu(self):
         solver = pybamm.IDAKLUSolver(store_first_last=True, rtol=1e-5)
