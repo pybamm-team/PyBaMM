@@ -1,5 +1,3 @@
-"""Regression tests for historical MSMR parameter bug fixes."""
-
 import pytest
 
 import pybamm

@@ -1,9 +1,4 @@
-"""
-Regression tests for historical solver bug fixes.
-
-These tests guard against the reintroduction of bugs that were fixed but
-did not have regression tests added at the time of the fix.
-"""
+from unittest.mock import Mock
 
 import numpy as np
 import pytest
@@ -21,15 +16,18 @@ class TestInitialConditionEventFixes:
 
         The bug was that the check for event violation used `< 0` instead
         of `<= 0`. This meant if an event was exactly 0 at initial conditions
-        (i.e., exactly at the threshold), it wouldn't be caught.
+        (right at the boundary), it wasn't caught as a violation.
 
-        The fix changed:
-        - if any(events_eval < 0):
-        + if events_eval.min() <= 0:
+        The fix changed the check in base_solver.py from:
+            if any(events_eval < 0):
+        to:
+            if events_eval.min() <= 0:
+
+        This test creates an event `-time` which evaluates to exactly 0 at
+        t=0, triggering the boundary condition that the old code missed.
         """
+        model = pybamm.lithium_ion.SPM()
         param = pybamm.ParameterValues("Chen2020")
-
-        model_custom = pybamm.lithium_ion.SPM()
 
         time = pybamm.Time()
         zero_event = pybamm.Event(
@@ -37,43 +35,61 @@ class TestInitialConditionEventFixes:
             -time,
             pybamm.EventType.TERMINATION,
         )
-        model_custom.events.append(zero_event)
+        model.events.append(zero_event)
 
-        sim_custom = pybamm.Simulation(model_custom, parameter_values=param)
+        sim = pybamm.Simulation(model, parameter_values=param)
 
         with pytest.raises(pybamm.SolverError, match="non-positive at initial"):
-            sim_custom.solve([0, 100])
+            sim.solve([0, 100])
 
 
 class TestTimeIntegralFixes:
     """Guards for time integral / processed variable fixes."""
 
-    def test_time_integral_with_input_parameter(self):
+    def test_post_sum_node_evaluate_argument_order(self):
         """
         Guards against: PR #5120 - fix: misaligned args for post_sum_node
         evaluate
 
-        The bug was that the evaluate method call was missing the `None`
-        argument for the `u` parameter:
-        - self.post_sum_node.evaluate(0.0, the_integral, inputs)
-        + self.post_sum_node.evaluate(0.0, the_integral, None, inputs)
+        The bug was in ProcessedVariableTimeIntegral.postfix() where
+        post_sum_node.evaluate() was called with wrong argument order:
+            self.post_sum_node.evaluate(0.0, the_integral, inputs)
+        instead of:
+            self.post_sum_node.evaluate(0.0, the_integral, None, inputs)
+
+        The evaluate signature is (t, y, u, inputs), so passing `inputs`
+        as the 3rd arg caused it to be treated as `u` (state vector).
+
+        This test directly verifies the argument order by mocking
+        post_sum_node and checking how evaluate() is called.
         """
-        model = pybamm.lithium_ion.SPM()
-        param = pybamm.ParameterValues("Chen2020")
 
-        param.update({"Current function [A]": "[input]"})
+        class MockPostSumNode:
+            def __init__(self):
+                self.call_args = None
 
-        sim = pybamm.Simulation(model, parameter_values=param)
+            def evaluate(self, t, y, u, inputs):
+                self.call_args = (t, y, u, inputs)
+                return np.array([y * 2])
 
-        sol = sim.solve(
-            [0, 600],
-            inputs={"Current function [A]": 5.0},
+        mock_node = MockPostSumNode()
+        time_integral = pybamm.ProcessedVariableTimeIntegral(
+            method="continuous",
+            sum_node=Mock(),
+            initial_condition=0.0,
+            discrete_times=None,
+            post_sum_node=mock_node,
+            post_sum=None,
         )
 
-        Q = sol["Discharge capacity [A.h]"].data
-        assert not np.any(np.isnan(Q))
-        assert Q[-1] > Q[0]
+        entries = np.array([1.0, 2.0, 3.0])
+        t_pts = np.array([0.0, 1.0, 2.0])
+        inputs = {"Current function [A]": 5.0}
 
-        throughput = sol["Throughput capacity [A.h]"].data
-        assert not np.any(np.isnan(throughput))
-        assert throughput[-1] > throughput[0]
+        time_integral.postfix(entries, t_pts, inputs)
+
+        assert mock_node.call_args is not None
+        t, _y, u, inp = mock_node.call_args
+        assert t == 0.0
+        assert u is None, "u argument should be None"
+        assert inp == inputs, "inputs should be passed as 4th argument"

@@ -1,10 +1,3 @@
-"""
-Regression tests for historical OCP and hysteresis model bug fixes.
-
-These tests guard against the reintroduction of bugs that were fixed but
-did not have regression tests added at the time of the fix.
-"""
-
 import numpy as np
 import pytest
 

@@ -1,5 +1,3 @@
-"""Regression tests for historical surface-form electrolyte conductivity fixes."""
-
 import pybamm
 
 
