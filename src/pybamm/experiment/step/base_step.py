@@ -355,8 +355,7 @@ class BaseStep:
         else:
             t_eval = np.array([0, tf])
 
-        # `store_first_last` overrides per-step `period` and any caller-provided
-        # t_interp: store only the step endpoints.
+        # `getattr` because some test/duck-typed solvers don't subclass BaseSolver.
         if getattr(solver, "store_first_last", False):
             return t_eval, np.array([0.0, tf])
 

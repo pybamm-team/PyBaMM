@@ -87,6 +87,7 @@ class BaseSolver:
         if not isinstance(store_first_last, bool):
             raise TypeError("store_first_last must be a bool")
         self.store_first_last = store_first_last
+        self._warned_store_first_last_no_op = False
         self.on_extrapolation = on_extrapolation or "warn"
         self._model_set_up = {}
 
@@ -924,10 +925,12 @@ class BaseSolver:
         if (np.diff(t_eval) < 0).any():
             raise pybamm.SolverError("t_eval must increase monotonically")
 
-        # Collapse t_eval to its endpoints when storing only first/last;
-        # the integrator still steps adaptively, only output cardinality drops.
-        if self.store_first_last and self.supports_interp and len(t_eval) >= 2:
-            t_eval = np.array([t_eval[0], t_eval[-1]], dtype=float)
+        # The integrator stops at every t_eval point, so collapsing it is what
+        # actually reduces the stored output count in plain solve() (step() is
+        # already a 2-point window).
+        endpoints = self._store_first_last_endpoints(t_eval)
+        if endpoints is not None:
+            t_eval = endpoints
 
         t_interp = self.process_t_interp(t_interp, t_eval=t_eval)
 
@@ -1284,19 +1287,27 @@ class BaseSolver:
         ]
         return concatenated_initial_conditions
 
-    def process_t_interp(self, t_interp, t_eval=None):
-        if self.store_first_last:
-            if not self.supports_interp:
+    def _store_first_last_endpoints(self, t_eval):
+        if not self.store_first_last:
+            return None
+        if not self.supports_interp:
+            if not self._warned_store_first_last_no_op:
                 warnings.warn(
                     f"store_first_last has no effect on {self.name} "
                     "(no support for intra-solve interpolation); ignoring.",
                     pybamm.SolverWarning,
-                    stacklevel=2,
+                    stacklevel=3,
                 )
-            elif t_eval is not None and len(t_eval) >= 2:
-                # Override: store only the endpoints of the integration window.
-                # Beats both per-step `period` and any caller-provided t_interp.
-                return np.array([t_eval[0], t_eval[-1]], dtype=float)
+                self._warned_store_first_last_no_op = True
+            return None
+        if t_eval is None or len(t_eval) < 2:
+            return None
+        return np.array([t_eval[0], t_eval[-1]], dtype=float)
+
+    def process_t_interp(self, t_interp, t_eval=None):
+        endpoints = self._store_first_last_endpoints(t_eval)
+        if endpoints is not None:
+            return endpoints
 
         # set a variable for this
         no_interp = (not self.supports_interp) and (
