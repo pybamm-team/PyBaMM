@@ -627,6 +627,21 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     "Positive Electrode phase transition submodel only implemented for "
                     "particles of single size, i.e, no distribution."
                 )
+            # Two-phase positive electrode is not yet supported. Tuple form for
+            # 'particle phases' is (negative, positive), so we reject anything
+            # whose positive entry is not "1".
+            particle_phases = options["particle phases"]
+            positive_phases = (
+                particle_phases
+                if isinstance(particle_phases, str)
+                else particle_phases[1]
+            )
+            if positive_phases != "1":
+                raise pybamm.OptionError(
+                    "Positive Electrode phase transition submodel is currently "
+                    "only implemented for a single-phase positive electrode "
+                    "('particle phases' must be '1' for the positive electrode)."
+                )
 
         # If "SEI film resistance" is not "none" and there are multiple phases
         # then "total interfacial current density as a state" must be "true"
@@ -1026,18 +1041,9 @@ class BaseBatteryModel(pybamm.BaseModel):
         if self.options["dimensionality"] == 2:
             base_var_pts.update({"x_n": 10, "x_s": 10, "x_p": 10})
         if self.options["PE degradation"] == "phase transition":
-            phases = int(self.options.positive["particle phases"])
-            if phases == 1:
-                base_var_pts.update({"r_co": 20, "r_sh": 20})
-            elif phases >= 2:  # pragma: no cover
-                base_var_pts.update(
-                    {
-                        "r_co_prim": 20,
-                        "r_sh_prim": 20,
-                        "r_co_sec": 20,
-                        "r_sh_sec": 20,
-                    }
-                )
+            # Single-phase positive is enforced by the option-compatibility guard
+            # in BatteryModelOptions.__init__.
+            base_var_pts.update({"r_co": 20, "r_sh": 20})
         return base_var_pts
 
     @property
@@ -1078,23 +1084,14 @@ class BaseBatteryModel(pybamm.BaseModel):
                 )
 
         if self.options["PE degradation"] == "phase transition":
-            phases = int(self.options.positive["particle phases"])
-            if phases == 1:
-                base_submeshes.update(
-                    {
-                        "positive core": pybamm.Uniform1DSubMesh,
-                        "positive shell": pybamm.Uniform1DSubMesh,
-                    }
-                )
-            elif phases >= 2:  # pragma: no cover
-                base_submeshes.update(
-                    {
-                        "positive primary core": pybamm.Uniform1DSubMesh,
-                        "positive primary shell": pybamm.Uniform1DSubMesh,
-                        "positive secondary core": pybamm.Uniform1DSubMesh,
-                        "positive secondary shell": pybamm.Uniform1DSubMesh,
-                    }
-                )
+            # Single-phase positive is enforced by the option-compatibility guard
+            # in BatteryModelOptions.__init__.
+            base_submeshes.update(
+                {
+                    "positive core": pybamm.Uniform1DSubMesh,
+                    "positive shell": pybamm.Uniform1DSubMesh,
+                }
+            )
         return base_submeshes
 
     @property

@@ -190,10 +190,10 @@ class PhaseTransition(BasePhaseTransition):
             T_c = pybamm.PrimaryBroadcast(T, [f"{domain} {phase_name}core"])
             T_o = pybamm.PrimaryBroadcast(T, [f"{domain} {phase_name}shell"])
 
-            # we use averaged particle radius to represent all particles here
-            # R_nd = 1 assumes the typical radius (R value at electrode middle point)
-            # represent all particles, as adopted in particle ficikan model SPM
-            R_nd = variables[f"X-averaged {domain} {phase_name}particle radius"]
+            # R_nd = 1 assumes the typical particle radius (R value at electrode middle point)
+            # represents all particles, as adopted in particle.FickianDiffusion
+            # submodel for x_average=True (SPM mode).
+            R_nd = 1
 
             j = variables[
                 f"X-averaged {domain} electrode {phase_name}"
@@ -290,15 +290,14 @@ class PhaseTransition(BasePhaseTransition):
         return variables
 
     def set_rhs(self, variables):
+        # Single-phase positive electrode is enforced by the option-compatibility
+        # guard in BatteryModelOptions.__init__, so we can use the single-phase
+        # spatial variables (r_co, r_sh) directly.
         domain, Domain = self.domain_Domain
         phase_name = self.phase_name
         phase_param = self.phase_param
-        phase = self.phase
 
         R_typ = phase_param.R_typ
-
-        # __init__ enforces domain == "positive", so this lookup is safe.
-        options_phase = getattr(self.options, domain)["particle phases"]
 
         if self.x_average is False:
             c_c = variables[
@@ -319,15 +318,8 @@ class PhaseTransition(BasePhaseTransition):
                 f"Time derivative of {domain} {phase_name}particle "
                 "moving phase boundary location [s-1]"
             ]
-            if options_phase == "1" and phase == "primary":
-                r_co = pybamm.standard_spatial_vars.r_co
-                r_sh = pybamm.standard_spatial_vars.r_sh
-            elif options_phase == "2" and phase == "primary":  # pragma: no cover
-                r_co = pybamm.standard_spatial_vars.r_co_prim
-                r_sh = pybamm.standard_spatial_vars.r_sh_prim
-            elif options_phase == "2" and phase == "secondary":  # pragma: no cover
-                r_co = pybamm.standard_spatial_vars.r_co_sec
-                r_sh = pybamm.standard_spatial_vars.r_sh_sec
+            r_co = pybamm.standard_spatial_vars.r_co
+            r_sh = pybamm.standard_spatial_vars.r_sh
         else:
             c_c = variables[
                 f"X-averaged {domain} {phase_name}core lithium concentration [mol.m-3]"
@@ -343,21 +335,16 @@ class PhaseTransition(BasePhaseTransition):
             T = variables[f"X-averaged {domain} electrode temperature [K]"]
             T_c = pybamm.PrimaryBroadcast(T, [f"{domain} {phase_name}core"])
             T_o = pybamm.PrimaryBroadcast(T, [f"{domain} {phase_name}shell"])
-            # R_nd = variables[f"X-averaged {domain} {phase_name}particle radius"]
+
+            # R_nd = 1 assumes the typical particle radius (R value at electrode middle point)
+            # represents all particles, as adopted in fickian submodel for SPM
             R_nd = 1
             s_nd_dot = variables[
                 f"X-averaged time derivative of {domain} {phase_name}particle "
                 "moving phase boundary location [s-1]"
             ]
-            if options_phase == "1" and phase == "primary":
-                r_co = pybamm.x_average(pybamm.standard_spatial_vars.r_co)
-                r_sh = pybamm.x_average(pybamm.standard_spatial_vars.r_sh)
-            elif options_phase == "2" and phase == "primary":  # pragma: no cover
-                r_co = pybamm.x_average(pybamm.standard_spatial_vars.r_co_prim)
-                r_sh = pybamm.x_average(pybamm.standard_spatial_vars.r_sh_prim)
-            elif options_phase == "2" and phase == "secondary":  # pragma: no cover
-                r_co = pybamm.x_average(pybamm.standard_spatial_vars.r_co_sec)
-                r_sh = pybamm.x_average(pybamm.standard_spatial_vars.r_sh_sec)
+            r_co = pybamm.x_average(pybamm.standard_spatial_vars.r_co)
+            r_sh = pybamm.x_average(pybamm.standard_spatial_vars.r_sh)
 
         D_c = phase_param.D(c_c, T_c)
         D_o = phase_param.D_o(c_o, T_o)

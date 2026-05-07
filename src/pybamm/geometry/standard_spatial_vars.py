@@ -247,39 +247,3 @@ r_sh = pybamm.SpatialVariable(
     # thus the rhs of eqs residing in the core and shell differs
     coord_sys="cartesian",
 )
-r_co_prim = pybamm.SpatialVariable(
-    "r_co_prim",
-    domain=["positive primary core"],
-    auxiliary_domains={
-        "secondary": "positive electrode",
-        "tertiary": "current collector",
-    },
-    coord_sys="spherical polar",
-)
-r_sh_prim = pybamm.SpatialVariable(
-    "r_sh_prim",
-    domain=["positive primary shell"],
-    auxiliary_domains={
-        "secondary": "positive electrode",
-        "tertiary": "current collector",
-    },
-    coord_sys="cartesian",
-)
-r_co_sec = pybamm.SpatialVariable(
-    "r_co_sec",
-    domain=["positive secondary core"],
-    auxiliary_domains={
-        "secondary": "positive electrode",
-        "tertiary": "current collector",
-    },
-    coord_sys="spherical polar",
-)
-r_sh_sec = pybamm.SpatialVariable(
-    "r_sh_sec",
-    domain=["positive secondary shell"],
-    auxiliary_domains={
-        "secondary": "positive electrode",
-        "tertiary": "current collector",
-    },
-    coord_sys="cartesian",
-)
