@@ -35,18 +35,14 @@ class DiffSLExport:
         if not isinstance(model, (pybamm.BaseModel, pybamm.Simulation)):
             raise TypeError("model must be a pybamm.BaseModel or pybamm.Simulation")
         self._source = model
-        self.model = None
-        self._has_experiment = False
         self._model_index_branch_order = None
         self._model_index_terminal_states = 0
         if not isinstance(float_precision, int) or float_precision <= 0:
             raise ValueError("float_precision must be a positive integer")
         self.float_precision = float_precision
+        self._preprocess_model()
 
-    def _resolve_export_model(self) -> pybamm.BaseModel:
-        if self.model is not None:
-            return self.model
-
+    def _preprocess_model(self) -> None:
         source = self._source
         self._has_experiment = False
 
@@ -73,7 +69,54 @@ class DiffSLExport:
             raise ValueError("Unable to resolve a built model for DiffSL export")
 
         self.model = model
-        return model
+
+        # Cache the base all_vars dict (output-independent portion)
+        processed_vars = model.get_processed_variables_dict()
+        self._all_vars = processed_vars.copy()
+        if len(model.variables) > 0:
+            self._all_vars = model.variables.copy() | self._all_vars
+
+        # Cache input names from output-independent equation sources
+        self._base_input_names = []
+        for eqn in chain(
+            model.rhs.values(),
+            model.algebraic.values(),
+            [e.expression for e in model.events],
+        ):
+            for symbol in eqn.pre_order():
+                if isinstance(symbol, pybamm.InputParameter):
+                    if (
+                        self._has_experiment
+                        and symbol.name == pybamm.Simulation._STEP_INDEX_INPUT
+                    ):
+                        continue
+                    variable_name = to_variable_name(symbol.name)
+                    if variable_name not in [vn for _, vn in self._base_input_names]:
+                        self._base_input_names.append((symbol.name, variable_name))
+
+    def _collect_input_names(
+        self, all_vars: dict, outputs: list[str]
+    ) -> list[tuple[str, str]]:
+        """Return ordered (original_name, variable_name) pairs for all InputParameters.
+
+        Starts from the cached output-independent names and appends any additional
+        names found only in the given output expressions.
+        """
+        result = list(self._base_input_names)
+        existing_vnames = {vn for _, vn in result}
+        for output in outputs:
+            for symbol in all_vars[output].pre_order():
+                if isinstance(symbol, pybamm.InputParameter):
+                    if (
+                        self._has_experiment
+                        and symbol.name == pybamm.Simulation._STEP_INDEX_INPUT
+                    ):
+                        continue
+                    variable_name = to_variable_name(symbol.name)
+                    if variable_name not in existing_vnames:
+                        result.append((symbol.name, variable_name))
+                        existing_vnames.add(variable_name)
+        return result
 
     @staticmethod
     def _name_tensor(
@@ -496,7 +539,7 @@ class DiffSLExport:
 
     def to_diffeq(self, outputs: list[str]) -> str:
         """Convert a pybamm model to a diffeq model"""
-        model = self._resolve_export_model().new_copy()
+        model = self.model.new_copy()
         self._model_index_branch_order = None
         self._model_index_terminal_states = 0
         if not isinstance(outputs, list) or any(
@@ -505,14 +548,11 @@ class DiffSLExport:
             raise TypeError("outputs must be a list of str")
         if len(outputs) == 0:
             raise ValueError("outputs must be a non-empty list of str")
-        processed_vars = model.get_processed_variables_dict()
-        all_vars = processed_vars.copy()
-        if len(model.variables) > 0:
-            all_vars = model.variables.copy() | all_vars
+        all_vars = self._all_vars.copy()
         for out in outputs:
             if out not in all_vars:
                 raise ValueError(f"output {out} not in model")
-            if out not in processed_vars and model.symbol_processor:
+            if model.symbol_processor:
                 try:
                     all_vars[out] = model.get_processed_variable(out)
                 except KeyError:  # pragma: no cover
@@ -528,23 +568,7 @@ class DiffSLExport:
         new_line = "\n"
 
         # inputs, find all pybamm.InputParameters in the model
-        inputs = []
-        for eqn in chain(
-            model.rhs.values(),
-            model.algebraic.values(),
-            [all_vars[output] for output in outputs],
-            [e.expression for e in model.events],
-        ):
-            for symbol in eqn.pre_order():
-                if isinstance(symbol, pybamm.InputParameter):
-                    if (
-                        self._has_experiment
-                        and symbol.name == pybamm.Simulation._STEP_INDEX_INPUT
-                    ):
-                        continue
-                    input_name = to_variable_name(symbol.name)
-                    if input_name not in inputs:
-                        inputs.append(input_name)
+        inputs = [vn for _, vn in self._collect_input_names(all_vars, outputs)]
 
         if len(inputs) > 0:
             lines = ["in_i {"]
@@ -818,6 +842,71 @@ class DiffSLExport:
             all_lines += [diffeq[key]]
 
         return "\n".join(all_lines) + "\n"
+
+    def map_inputs(self, inputs: dict, outputs: list[str] | None = None) -> np.ndarray:
+        """
+        Map a PyBaMM inputs dict to the ordered array expected by the DiffSL model.
+
+        The ordering matches the ``in_i {}`` block produced by :meth:`to_diffeq`.
+        Each key in ``inputs`` may be either the original PyBaMM parameter name
+        (e.g. ``"Lower voltage cut-off [V]"``) or its DiffSL-transformed form
+        (e.g. ``"lowervoltagecutoffv"``).
+
+        Parameters
+        ----------
+        inputs : dict
+            PyBaMM-style parameter dict mapping parameter names to scalar values.
+        outputs : list[str] or None, optional
+            Output variable names, used to scan for ``InputParameter`` nodes that
+            appear only inside output expressions.  Defaults to an empty list.
+
+        Returns
+        -------
+        np.ndarray
+            1-D float array ordered to match the ``in_i {}`` block of the exported
+            DiffSL model.  Returns an empty array when the model has no input
+            parameters.
+
+        Raises
+        ------
+        KeyError
+            If a required input parameter is not present in *inputs*.
+        """
+        if outputs is None:
+            outputs = []
+
+        model = self.model
+
+        # Build all_vars for the output expressions (same logic as to_diffeq)
+        all_vars = self._all_vars.copy()
+        for out in outputs:
+            if out not in all_vars:
+                raise ValueError(f"output {out} not in model")
+            if model.symbol_processor:
+                try:
+                    all_vars[out] = model.get_processed_variable(out)
+                except KeyError:  # pragma: no cover
+                    pass
+
+        # Reconstruct the ordered input list the same way to_diffeq does
+        ordered_names = self._collect_input_names(all_vars, outputs)
+
+        if not ordered_names:
+            return np.array([], dtype=float)
+
+        values = []
+        for original_name, variable_name in ordered_names:
+            if original_name in inputs:
+                values.append(float(inputs[original_name]))
+            elif variable_name in inputs:
+                values.append(float(inputs[variable_name]))
+            else:
+                raise KeyError(
+                    f"Input parameter '{original_name}' (DiffSL name: "
+                    f"'{variable_name}') not found in inputs dict. "
+                    f"Available keys: {list(inputs.keys())}"
+                )
+        return np.array(values, dtype=float)
 
 
 def _equation_to_diffeq(

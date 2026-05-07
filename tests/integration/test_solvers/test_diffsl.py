@@ -44,10 +44,13 @@ class TestDiffSLExport:
 
         pv = model.default_parameter_values.copy()
         pv_inputs = {}
-        ds_inputs = []
         for input_name in inputs:
-            pv_inputs[input_name] = 0.9 * pv[input_name]
-            ds_inputs.append(0.9 * pv[input_name])
+            input_value = (
+                1.1 * pv[input_name]
+                if "Upper voltage" in input_name
+                else 0.9 * pv[input_name]
+            )
+            pv_inputs[input_name] = input_value
             pv[input_name] = "[input]"
         output_variable = "Voltage [V]"
 
@@ -67,9 +70,9 @@ class TestDiffSLExport:
         )
 
         t0 = time.perf_counter()
-        diffsl_code = pybamm.DiffSLExport(model_disc).to_diffeq(
-            outputs=[output_variable]
-        )
+        exporter = pybamm.DiffSLExport(model_disc)
+        diffsl_code = exporter.to_diffeq(outputs=[output_variable])
+        ds_inputs = exporter.map_inputs(pv_inputs, outputs=[output_variable])
         logger.info(f"DiffSL export time: {time.perf_counter() - t0:.5f} seconds")
 
         t0 = time.perf_counter()
@@ -78,7 +81,7 @@ class TestDiffSLExport:
             matrix_type=ds.faer_sparse,
             scalar_type=ds.f64,
             linear_solver=ds.lu,
-            method=ds.tr_bdf2,
+            ode_solver=ds.tr_bdf2,
         )
         logger.info(
             f"DiffSL Ode compilation time: {time.perf_counter() - t0:.5f} seconds"
@@ -106,12 +109,10 @@ class TestDiffSLExport:
         v = np.ones(n)
         for i in range(soln_pybamm.shape[1]):
             y = soln_pybamm[:, i]
-            pybamm_jac = model_disc.jac_rhs_algebraic_action_eval(
-                0, y, np.array(ds_inputs), v
-            )
-            pybamm_dydt = model_disc.rhs_algebraic_eval(0, y, np.array(ds_inputs))
-            diffsol_dydt = ode.rhs(np.array(ds_inputs), 0, y.flatten())
-            diffsol_jac = ode.rhs_jac_mul(np.array(ds_inputs), 0, y.flatten(), v)
+            pybamm_jac = model_disc.jac_rhs_algebraic_action_eval(0, y, ds_inputs, v)
+            pybamm_dydt = model_disc.rhs_algebraic_eval(0, y, ds_inputs)
+            diffsol_dydt = ode.rhs(ds_inputs, 0, y.flatten())
+            diffsol_jac = ode.rhs_jac_mul(ds_inputs, 0, y.flatten(), v)
             np.testing.assert_allclose(
                 pybamm_dydt.full().flatten(), diffsol_dydt, rtol=1e-5, atol=1e-8
             )
@@ -119,9 +120,9 @@ class TestDiffSLExport:
                 pybamm_jac.full().flatten(), diffsol_jac, rtol=1e-5, atol=1e-8
             )
 
-        ds_inputs = np.array(ds_inputs)
         t0 = time.perf_counter()
-        voltage_diffsol = ode.solve_dense(np.array(ds_inputs), t_interp)
+        diffsol_solution = ode.solve_dense(ds_inputs, t_interp)
+        voltage_diffsol = diffsol_solution.ys
         logger.info(f"DiffSL solve time: {time.perf_counter() - t0:.5f} seconds")
         if voltage_diffsol.shape[0] == 1:
             voltage_diffsol = voltage_diffsol.flatten()
@@ -152,26 +153,41 @@ class TestDiffSLExport:
     def test_simulations(self, model, inputs, experiment):
         import pydiffsol as ds
 
-        if experiment is not None:
-            pytest.skip("pydiffsol does not yet support DiffSL model-index N")
-
         pv = model.default_parameter_values.copy()
         pv_inputs = {}
-        ds_inputs = []
         for input_name in inputs:
-            pv_inputs[input_name] = 0.9 * pv[input_name]
-            ds_inputs.append(0.9 * pv[input_name])
+            input_value = (
+                1.1 * pv[input_name]
+                if "Upper voltage" in input_name
+                else 0.9 * pv[input_name]
+            )
+            pv_inputs[input_name] = input_value
             pv[input_name] = "[input]"
         output_variable = "Voltage [V]"
+        experiment = self._simple_experiment() if experiment == "simple" else None
 
-        sim = pybamm.Simulation(model, parameter_values=pv)
+        sim = pybamm.Simulation(
+            model,
+            parameter_values=pv,
+            experiment=experiment,
+            experiment_model_mode="unified",
+        )
 
         t0 = time.perf_counter()
-        diffsl_code = pybamm.DiffSLExport(sim).to_diffeq(outputs=[output_variable])
+        exporter = pybamm.DiffSLExport(sim)
+        diffsl_code = exporter.to_diffeq(outputs=[output_variable])
+        # For experiment simulations, ambient temperature is injected as an
+        # InputParameter; supply its default value so map_inputs can resolve it.
+        map_inputs_dict = dict(pv_inputs)
+        if experiment is not None:
+            map_inputs_dict["Ambient temperature [K]"] = pv["Ambient temperature [K]"]
+        ds_inputs = exporter.map_inputs(map_inputs_dict, outputs=[output_variable])
         logger = logging.getLogger()
         logger.info(f"DiffSL export time: {time.perf_counter() - t0:.5f} seconds")
 
-        model_disc = sim.built_model
+        model_disc = (
+            sim.built_model if experiment is None else sim._built_experiment_model
+        )
         assert model_disc is not None
 
         t0 = time.perf_counter()
@@ -180,7 +196,7 @@ class TestDiffSLExport:
             matrix_type=ds.faer_sparse,
             scalar_type=ds.f64,
             linear_solver=ds.lu,
-            method=ds.tr_bdf2,
+            ode_solver=ds.tr_bdf2,
         )
         logger.info(
             f"DiffSL Ode compilation time: {time.perf_counter() - t0:.5f} seconds"
@@ -192,35 +208,43 @@ class TestDiffSLExport:
 
         t_eval = [0, 3600]
         t_interp = np.linspace(t_eval[0], t_eval[1], 100)
-
-        solution = sim.solve(t_eval, t_interp=t_interp, inputs=pv_inputs)
+        if experiment is None:
+            solution = sim.solve(t_eval, t_interp=t_interp, inputs=pv_inputs)
+        else:
+            solution = sim.solve(inputs=pv_inputs)
+            t_interp = solution.t
         soln_pybamm = solution.y
 
         t0 = time.perf_counter()
         voltage_pybamm = solution[output_variable].data
         logger.info(f"Pybamm solve time: {time.perf_counter() - t0:.5f} seconds")
 
-        n = model_disc.y0.shape[0]
-        v = np.ones(n)
-        for i in range(soln_pybamm.shape[1]):
-            y = soln_pybamm[:, i]
-            pybamm_jac = model_disc.jac_rhs_algebraic_action_eval(
-                0, y, np.array(ds_inputs), v
-            )
-            pybamm_dydt = model_disc.rhs_algebraic_eval(0, y, np.array(ds_inputs))
-            diffsol_dydt = ode.rhs(np.array(ds_inputs), 0, y.flatten())
-            diffsol_jac = ode.rhs_jac_mul(np.array(ds_inputs), 0, y.flatten(), v)
-            np.testing.assert_allclose(
-                pybamm_dydt.full().flatten(), diffsol_dydt, rtol=1e-5, atol=1e-8
-            )
-            np.testing.assert_allclose(
-                pybamm_jac.full().flatten(), diffsol_jac, rtol=1e-5, atol=1e-8
-            )
+        if experiment is None:
+            n = model_disc.y0.shape[0]
+            v = np.ones(n)
+            for i in range(soln_pybamm.shape[1]):
+                y = soln_pybamm[:, i]
+                pybamm_jac = model_disc.jac_rhs_algebraic_action_eval(
+                    0, y, ds_inputs, v
+                )
+                pybamm_dydt = model_disc.rhs_algebraic_eval(0, y, ds_inputs)
+                diffsol_dydt = ode.rhs(ds_inputs, 0, y.flatten())
+                diffsol_jac = ode.rhs_jac_mul(ds_inputs, 0, y.flatten(), v)
+                np.testing.assert_allclose(
+                    pybamm_dydt.full().flatten(), diffsol_dydt, rtol=1e-5, atol=1e-8
+                )
+                np.testing.assert_allclose(
+                    pybamm_jac.full().flatten(), diffsol_jac, rtol=1e-5, atol=1e-8
+                )
 
-        ds_inputs = np.array(ds_inputs)
         t0 = time.perf_counter()
-        voltage_diffsol = ode.solve_dense(np.array(ds_inputs), t_interp)
+        diffsol_solution = ode.solve_dense(ds_inputs, t_interp)
+        voltage_diffsol = diffsol_solution.ys
         logger.info(f"DiffSL solve time: {time.perf_counter() - t0:.5f} seconds")
         if voltage_diffsol.shape[0] == 1:
             voltage_diffsol = voltage_diffsol.flatten()
-        np.testing.assert_allclose(voltage_pybamm, voltage_diffsol, rtol=3e-4)
+        if experiment is not None:
+            voltage_pybamm = np.interp(diffsol_solution.ts, solution.t, voltage_pybamm)
+            np.testing.assert_allclose(voltage_pybamm, voltage_diffsol, rtol=1e-3)
+        else:
+            np.testing.assert_allclose(voltage_pybamm, voltage_diffsol, rtol=3e-4)
