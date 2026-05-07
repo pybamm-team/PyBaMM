@@ -61,6 +61,7 @@ class JaxSolver(pybamm.BaseSolver):
         extrap_tol=None,
         on_extrapolation=None,
         extra_options=None,
+        store_first_last=False,
     ):
         if not pybamm.has_jax():
             pybamm.raise_jax_not_found()
@@ -74,6 +75,7 @@ class JaxSolver(pybamm.BaseSolver):
             root_method=root_method,
             extrap_tol=extrap_tol,
             on_extrapolation=on_extrapolation,
+            store_first_last=store_first_last,
         )
         method_options = ["RK45", "BDF"]
         if method not in method_options:

@@ -47,6 +47,18 @@ class BaseSolver:
     on_failure : str, optional
         What to do if a solver error flag occurs. Options are "warn", "error", or "ignore".
         Default is "error".
+    store_first_last : bool, optional
+        If True, only the first and last sample of each integration window are
+        stored (one experiment step in :meth:`pybamm.Simulation.solve`, or the
+        full ``[t_eval[0], t_eval[-1]]`` window in :meth:`solve`). Composes with
+        ``output_variables`` for maximum memory savings on long experiments
+        whose post-processing only reads per-step first/last values. Only has
+        effect on solvers that support intra-solve interpolation
+        (e.g. :class:`pybamm.IDAKLUSolver`); a warning is issued otherwise.
+        Note: when this flag is on, intra-step interpolation falls back to
+        linear across the whole step, so it is **not** appropriate when
+        post-processing queries a non-endpoint time within a step.
+        Default is False.
     """
 
     def __init__(
@@ -60,6 +72,7 @@ class BaseSolver:
         on_extrapolation=None,
         on_failure=None,
         output_variables=None,
+        store_first_last=False,
     ):
         self.method = method
         self.rtol = rtol
@@ -71,6 +84,9 @@ class BaseSolver:
         self.root_method = root_method
         self.extrap_tol = extrap_tol or -1e-10
         self.output_variables = [] if output_variables is None else output_variables
+        if not isinstance(store_first_last, bool):
+            raise TypeError("store_first_last must be a bool")
+        self.store_first_last = store_first_last
         self.on_extrapolation = on_extrapolation or "warn"
         self._model_set_up = {}
 
@@ -908,7 +924,12 @@ class BaseSolver:
         if (np.diff(t_eval) < 0).any():
             raise pybamm.SolverError("t_eval must increase monotonically")
 
-        t_interp = self.process_t_interp(t_interp)
+        # Collapse t_eval to its endpoints when storing only first/last;
+        # the integrator still steps adaptively, only output cardinality drops.
+        if self.store_first_last and self.supports_interp and len(t_eval) >= 2:
+            t_eval = np.array([t_eval[0], t_eval[-1]], dtype=float)
+
+        t_interp = self.process_t_interp(t_interp, t_eval=t_eval)
 
         # Set up inputs
         if isinstance(inputs, (dict, pybamm.ParameterValues)):
@@ -1263,7 +1284,20 @@ class BaseSolver:
         ]
         return concatenated_initial_conditions
 
-    def process_t_interp(self, t_interp):
+    def process_t_interp(self, t_interp, t_eval=None):
+        if self.store_first_last:
+            if not self.supports_interp:
+                warnings.warn(
+                    f"store_first_last has no effect on {self.name} "
+                    "(no support for intra-solve interpolation); ignoring.",
+                    pybamm.SolverWarning,
+                    stacklevel=2,
+                )
+            elif t_eval is not None and len(t_eval) >= 2:
+                # Override: store only the endpoints of the integration window.
+                # Beats both per-step `period` and any caller-provided t_interp.
+                return np.array([t_eval[0], t_eval[-1]], dtype=float)
+
         # set a variable for this
         no_interp = (not self.supports_interp) and (
             t_interp is not None and len(t_interp) != 0
@@ -1385,7 +1419,7 @@ class BaseSolver:
         else:
             pass
 
-        t_interp = self.process_t_interp(t_interp)
+        t_interp = self.process_t_interp(t_interp, t_eval=t_eval)
 
         t_start = old_solution.t[-1]
         t_eval = t_start + t_eval

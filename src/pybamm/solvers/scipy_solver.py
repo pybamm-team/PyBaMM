@@ -39,6 +39,7 @@ class ScipySolver(pybamm.BaseSolver):
         extrap_tol=None,
         on_extrapolation=None,
         extra_options=None,
+        store_first_last=False,
     ):
         super().__init__(
             method=method,
@@ -46,6 +47,7 @@ class ScipySolver(pybamm.BaseSolver):
             atol=atol,
             extrap_tol=extrap_tol,
             on_extrapolation=on_extrapolation,
+            store_first_last=store_first_last,
         )
         self._ode_solver = True
         self.extra_options = extra_options or {}

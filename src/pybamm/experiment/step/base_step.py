@@ -355,6 +355,11 @@ class BaseStep:
         else:
             t_eval = np.array([0, tf])
 
+        # `store_first_last` overrides per-step `period` and any caller-provided
+        # t_interp: store only the step endpoints.
+        if getattr(solver, "store_first_last", False):
+            return t_eval, np.array([0.0, tf])
+
         if t_interp is None:
             if self.period is not None:
                 t_interp = self.default_time_vector(solver, tf)

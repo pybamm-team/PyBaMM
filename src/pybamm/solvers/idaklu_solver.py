@@ -51,6 +51,18 @@ class IDAKLUSolver(pybamm.BaseSolver):
     output_variables : list[str], optional
         List of variables to calculate and return. If none are specified then
         the complete state vector is returned (can be very large) (default is [])
+    store_first_last : bool, optional
+        If True, only the first and last sample of each integration window are
+        stored (one experiment step in :meth:`pybamm.Simulation.solve`, or the
+        full ``[t_eval[0], t_eval[-1]]`` window in :meth:`solve`). Composes
+        with ``output_variables`` for maximum memory savings on long
+        experiments whose post-processing only reads per-step first/last
+        values. Note: with this flag on, IDAKLU's Hermite interpolation is
+        disabled (see :attr:`options["hermite_interpolation"]`) and any query
+        at a non-endpoint time within a step falls back to linear
+        interpolation across the whole step, so this flag is **not**
+        appropriate when post-processing queries an intra-step time.
+        Default is False.
     options: dict, optional
         Addititional options to pass to the solver, by default:
 
@@ -199,6 +211,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         output_variables=None,
         on_failure=None,
         options=None,
+        store_first_last=False,
     ):
         self.output_variables = [] if output_variables is None else output_variables
 
@@ -220,6 +233,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             output_variables=output_variables,
             on_extrapolation=on_extrapolation,
             on_failure=on_failure,
+            store_first_last=store_first_last,
         )
         self.name = "IDA KLU solver"
         self._supports_interp = True
