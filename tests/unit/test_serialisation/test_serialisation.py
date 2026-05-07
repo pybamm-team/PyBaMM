@@ -6,6 +6,7 @@ import json
 import os
 import re
 import tempfile
+import warnings
 from datetime import datetime
 from pathlib import Path
 from unittest.mock import mock_open, patch
@@ -3057,6 +3058,40 @@ class TestSolverSerialization:
     def test_unknown_solver_type_raises(self):
         with pytest.raises(ValueError, match="Unknown solver type"):
             pybamm.BaseSolver.from_config({"type": "NonExistentSolver"})
+
+    @pytest.mark.parametrize(
+        "root_method,expected_cls",
+        [
+            ("casadi", pybamm.CasadiAlgebraicSolver),
+            ("nonlinear_solver", pybamm.NonlinearSolver),
+            ("lm", pybamm.AlgebraicSolver),
+            ("hybr", pybamm.AlgebraicSolver),
+        ],
+    )
+    def test_idaklu_root_method_round_trip(self, root_method, expected_cls):
+        """Nested ``root_method`` solver survives to_config/from_config."""
+        solver = pybamm.IDAKLUSolver(root_method=root_method)
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            config = solver.to_config()
+
+        json_str = json.dumps(config)
+        restored = pybamm.BaseSolver.from_config(json.loads(json_str))
+
+        assert isinstance(restored, pybamm.IDAKLUSolver)
+        assert isinstance(restored.root_method, expected_cls), (
+            f"root_method={root_method!r} round-tripped as "
+            f"{type(restored.root_method).__name__}, expected "
+            f"{expected_cls.__name__}"
+        )
+
+    def test_idaklu_root_method_preserves_nested_tolerance(self):
+        """Tolerances on the nested root-method solver round-trip too."""
+        solver = pybamm.IDAKLUSolver(root_method="casadi", root_tol=1e-9)
+        config = json.loads(json.dumps(solver.to_config()))
+        restored = pybamm.BaseSolver.from_config(config)
+        assert isinstance(restored.root_method, pybamm.CasadiAlgebraicSolver)
+        assert restored.root_tol == pytest.approx(1e-9)
 
     def test_to_json_safe_preserves_bool(self):
         # bool is a subclass of int; the int branch must not match first.
