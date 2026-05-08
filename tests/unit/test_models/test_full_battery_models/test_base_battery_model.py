@@ -491,9 +491,8 @@ class TestBaseBatteryModel:
             )
 
     def test_pe_phase_transition_default_meshing(self):
-        # default_var_pts and default_submesh_types must include the new
-        # core/shell domains when PE degradation is on; this exercises the
-        # PE-degradation branches of those properties on BaseBatteryModel.
+        # default_var_pts, default_submesh_types and default_spatial_methods
+        # must include the new core/shell domains when PE degradation is on.
         model = pybamm.BaseBatteryModel({"PE degradation": "phase transition"})
         var_pts = model.default_var_pts
         assert "r_co" in var_pts and var_pts["r_co"] == 20
@@ -501,6 +500,11 @@ class TestBaseBatteryModel:
         submeshes = model.default_submesh_types
         assert "positive core" in submeshes
         assert "positive shell" in submeshes
+        spatial_methods = model.default_spatial_methods
+        assert "positive core" in spatial_methods
+        assert "positive shell" in spatial_methods
+        assert isinstance(spatial_methods["positive core"], pybamm.FiniteVolume)
+        assert isinstance(spatial_methods["positive shell"], pybamm.FiniteVolume)
 
     def test_build_twice(self):
         model = pybamm.lithium_ion.SPM()  # need to pick a model to set vars and build

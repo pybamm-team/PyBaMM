@@ -1127,23 +1127,14 @@ class BaseBatteryModel(pybamm.BaseModel):
             base_spatial_methods["cell"] = pybamm.ScikitFiniteElement3D()
 
         if self.options["PE degradation"] == "phase transition":
-            phases = int(self.options.positive["particle phases"])
-            if phases == 1:
-                base_spatial_methods.update(
-                    {
-                        "positive core": pybamm.FiniteVolume(),
-                        "positive shell": pybamm.FiniteVolume(),
-                    }
-                )
-            elif phases >= 2:
-                base_spatial_methods.update(
-                    {
-                        "positive primary core": pybamm.FiniteVolume(),
-                        "positive primary shell": pybamm.FiniteVolume(),
-                        "positive secondary core": pybamm.FiniteVolume(),
-                        "positive secondary shell": pybamm.FiniteVolume(),
-                    }
-                )
+            # Single-phase positive is enforced by the option-compatibility guard
+            # in BatteryModelOptions.__init__.
+            base_spatial_methods.update(
+                {
+                    "positive core": pybamm.FiniteVolume(),
+                    "positive shell": pybamm.FiniteVolume(),
+                }
+            )
 
         return base_spatial_methods
 
