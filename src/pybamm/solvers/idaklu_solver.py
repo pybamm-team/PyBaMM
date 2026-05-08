@@ -554,10 +554,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
             self._setup[name] = fn
             self._setup[f"{name}_pkl"] = pkl
 
-        # Keep a Python-callable handle on the combined-events root function so
-        # `_post_process_solution` can identify the triggered event in one call,
-        # instead of letting BaseSolver.get_termination_reason re-walk every
-        # event's symbolic expression on the Python side.
+        # Used in _post_process_solution to set closest_event_idx without
+        # going via BaseSolver.get_termination_reason's per-event re-walk.
         self._setup["rootfn_casadi"] = fns["rootfn"]
 
         for key in self.output_variables:
@@ -646,8 +644,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
         ]:
             self._setup[key] = idaklu.generate_function(self._setup[f"{key}_pkl"])
 
-        # Restore the Python-callable rootfn from the same pickle the C++
-        # wrapper uses, so closest_event_idx works after a round-trip.
         self._setup["rootfn_casadi"] = casadi.Function.deserialize(
             self._setup["rootfn_pkl"]
         )
@@ -822,11 +818,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
             options=solution_options,
         )
 
-        # On a root return, evaluate the combined event function once to record
-        # which TERMINATION event fired. Without this, BaseSolver.get_termination_reason
-        # falls into a slow path that re-evaluates every event's symbolic expression
-        # on every step, which dominates Python-side allocations on long ageing
-        # experiments.
+        # Set closest_event_idx so BaseSolver.get_termination_reason doesn't
+        # re-walk every event's symbolic expression on the Python side.
         if sol.flag == _IDA_ROOT_RETURN and self._setup["num_of_events"] > 0:
             event_values = np.asarray(
                 self._setup["rootfn_casadi"](
