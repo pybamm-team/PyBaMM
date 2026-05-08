@@ -310,3 +310,56 @@ class TestExperimentMemory:
             f"solve. ProcessedVariableComputed.initialise_* must defer to first "
             f"data read so PVCs in discarded cycles don't run heavy work."
         )
+
+    def test_idaklu_event_termination_no_python_event_reeval(self):
+        """
+        IDAKLUSolver with output_variables on a long event-terminated experiment
+        must not re-walk every TERMINATION event's symbolic expression on the
+        Python side after each step. That path goes through
+        StateVector._base_evaluate (per-leaf numpy fancy-indexing) and dominated
+        per-step allocation churn before the closest_event_idx fix.
+
+        Allocations are transient (immediately freed each step), so peak-RSS /
+        tracemalloc snapshots can't see them. Count direct calls to
+        _base_evaluate instead — deterministic across runs.
+        """
+        original = pybamm.StateVector._base_evaluate
+        call_count = 0
+
+        def counting(self, *args, **kwargs):
+            nonlocal call_count
+            call_count += 1
+            return original(self, *args, **kwargs)
+
+        pybamm.StateVector._base_evaluate = counting
+        try:
+            experiment = pybamm.Experiment(
+                [
+                    (
+                        "Discharge at 1C until 3.0 V",
+                        "Charge at 1C until 4.2 V",
+                        "Hold at 4.2 V until C/50",
+                    )
+                ]
+                * 5,
+                period=300,
+            )
+            sim = pybamm.Simulation(
+                pybamm.lithium_ion.SPM(),
+                experiment=experiment,
+                solver=pybamm.IDAKLUSolver(output_variables=["Voltage [V]"]),
+            )
+            sim.solve()
+        finally:
+            pybamm.StateVector._base_evaluate = original
+
+        # Solve-time setup paths legitimately call _base_evaluate (initial
+        # conditions, event setup) — those scale with the model, not the
+        # cycle count. Per-step re-evaluation pushes the count past 1000 on
+        # a 5-cycle SPM run; the fix keeps it under 200.
+        assert call_count < 300, (
+            f"StateVector._base_evaluate was called {call_count} times during "
+            f"a 5-cycle solve. IDAKLUSolver should set closest_event_idx so "
+            f"BaseSolver.get_termination_reason short-circuits instead of "
+            f"re-walking event expressions on every step."
+        )
