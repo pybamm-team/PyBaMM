@@ -20,9 +20,8 @@ def _flatten_inputs(inputs_dict):
     """Flatten ``{name: value}`` into a 1-D float array in dict-key order."""
     if not inputs_dict:
         return np.zeros(0)
-    return np.concatenate(
-        [np.asarray(v).reshape(-1) for v in inputs_dict.values()]
-    )
+    return np.concatenate([np.asarray(v).reshape(-1) for v in inputs_dict.values()])
+
 
 # Mirrors SUNDIALS ``IDA_ROOT_RETURN`` in ``sundials/include/ida/ida.h``.
 # Returned by ``IDASolve`` (and surfaced via ``Solution.flag``) when the
