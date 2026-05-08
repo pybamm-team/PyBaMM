@@ -1096,6 +1096,83 @@ class TestIDAKLUSolver:
         sol3 = sim3.solve(np.linspace(0, 3600, 2))
         assert sol3.termination == "event: Minimum voltage [V]"
 
+    def test_closest_event_idx_set_after_root_return(self):
+        # IDAKLU must populate Solution.closest_event_idx after a root return so
+        # BaseSolver.get_termination_reason short-circuits instead of re-walking
+        # every TERMINATION event's symbolic expression on the Python side. That
+        # slow path generated tens of thousands of small numpy allocations per
+        # long event-terminated cycling run.
+        cycle = (
+            "Discharge at 1C until 3.0 V",
+            "Charge at 1C until 4.2 V",
+            "Hold at 4.2 V until C/50",
+        )
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            experiment=pybamm.Experiment([cycle] * 2, period=300),
+            solver=pybamm.IDAKLUSolver(output_variables=["Voltage [V]"]),
+        )
+        sim.solve()
+
+        event_steps = [
+            step
+            for cycle_sol in sim.solution.cycles
+            for step in cycle_sol.steps
+            if step.termination.startswith("event:")
+        ]
+        assert event_steps, "expected at least one event-terminated step"
+        # The index must also resolve to the same event name the slow path in
+        # BaseSolver.get_termination_reason would have picked.
+        for step in event_steps:
+            assert step.closest_event_idx is not None, (
+                f"event-terminated step {step.termination!r} has "
+                f"closest_event_idx=None — BaseSolver will fall back to "
+                f"per-step Python event re-evaluation"
+            )
+            terminate_events = [
+                e
+                for e in step.all_models[-1].events
+                if e.event_type == pybamm.EventType.TERMINATION
+            ]
+            picked = terminate_events[step.closest_event_idx].name
+            assert step.termination == f"event: {picked}", (
+                f"closest_event_idx={step.closest_event_idx} resolves to "
+                f"{picked!r}, but step.termination is {step.termination!r}"
+            )
+
+    def test_pickle_roundtrip_preserves_closest_event_idx(self):
+        # rootfn_casadi is dropped from the pickle and rebuilt from rootfn_pkl
+        # in __setstate__; confirm a round-tripped solver still records
+        # closest_event_idx after a root-return termination.
+        import pickle
+
+        solver = pybamm.IDAKLUSolver(output_variables=["Voltage [V]"])
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            experiment=pybamm.Experiment(
+                [("Discharge at 1C until 3.0 V", "Charge at 1C until 4.2 V")]
+            ),
+            solver=solver,
+        )
+        sim.solve()
+
+        roundtripped = pickle.loads(pickle.dumps(solver))
+        sim2 = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            experiment=pybamm.Experiment(
+                [("Discharge at 1C until 3.0 V", "Charge at 1C until 4.2 V")]
+            ),
+            solver=roundtripped,
+        )
+        sim2.solve()
+
+        for step in sim2.solution.cycles[0].steps:
+            if step.termination.startswith("event:"):
+                assert step.closest_event_idx is not None, (
+                    "round-tripped IDAKLUSolver must still set "
+                    "closest_event_idx after a root return"
+                )
+
     def test_simulation_period(self):
         model = pybamm.lithium_ion.DFN()
         parameter_values = pybamm.ParameterValues("Chen2020")
