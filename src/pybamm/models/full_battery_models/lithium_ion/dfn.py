@@ -54,11 +54,15 @@ class DFN(BaseModel):
                 continue
             # PE phase-transition replaces the positive particle submodel; let
             # set_pe_degradation_submodel handle that domain directly.
+            # Note: the following skipping can be deliberately disabled for DFN to preserve
+            # in-place overwrite (vs. fresh insert) and avoid IDA convergence issue
+            # on long DFN simulations.
             if (
                 domain == "positive"
                 and self.options["PE degradation"] == "phase transition"
             ):
                 continue
+
             particle = getattr(self.options, domain)["particle"]
             for phase in self.options.phases[domain]:
                 if particle == "Fickian diffusion":
