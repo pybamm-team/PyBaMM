@@ -26,14 +26,10 @@ from pybamm.expression_tree.operations.serialise import (
     convert_symbol_to_json,
 )
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
 _MISSING = object()
 
 # Per-step attributes that must round-trip. ``_experiments_equal`` skips
-# attrs missing on both sides, so ``value`` is fine for the Rest case
-# (which has no ``value``).
+# attrs missing on both sides, so ``value`` is fine for the Rest case.
 _STEP_ATTRS = (
     "duration",
     "input_duration",
@@ -67,8 +63,7 @@ def _values_equal(a, b):
     """
     if isinstance(a, pybamm.BaseSolver) or isinstance(b, pybamm.BaseSolver):
         return _solver_init_args_equal(a, b)
-    # bool must match bool exactly (catches #5495-shaped regressions where
-    # True silently round-trips as 1).
+    # bool must match bool exactly so True doesn't round-trip as 1 (#5495).
     if isinstance(a, bool) or isinstance(b, bool):
         return type(a) is type(b) and a == b
     if isinstance(a, float) or isinstance(b, float):
@@ -177,9 +172,6 @@ def _build_symbol_fixtures():
     ]
 
 
-# ---------------------------------------------------------------------------
-# Fixtures (test data)
-# ---------------------------------------------------------------------------
 SOLVER_FIXTURES = [
     pybamm.ScipySolver(rtol=1e-5, atol=1e-7),
     pybamm.CasadiSolver(rtol=1e-4, mode="fast", root_method="casadi"),
@@ -199,15 +191,12 @@ SOLVER_FIXTURES = [
 
 
 EXPERIMENT_FIXTURES = [
-    # Every concrete step type with a non-default value, exercising the
-    # ``serialise_experiment`` step dispatch.
+    # Every concrete step type, covering ``serialise_experiment`` dispatch.
     pybamm.Experiment([pybamm.step.current(1.0, duration=100)]),
     pybamm.Experiment([pybamm.step.voltage(4.2, duration=200)]),
     pybamm.Experiment([pybamm.step.power(10.0, duration=50)]),
     pybamm.Experiment([pybamm.step.c_rate(0.5, duration=300)]),
     pybamm.Experiment([pybamm.step.rest(duration=60)]),
-    # Resistance step type (regression for missing entry in
-    # ``serialise_experiment`` step_func_map).
     pybamm.Experiment([pybamm.step.resistance(0.1, duration=100)]),
     # Per-step temperature override (regression for #5496).
     pybamm.Experiment(
@@ -217,31 +206,25 @@ EXPERIMENT_FIXTURES = [
             pybamm.step.voltage(4.2, duration=200),
         ]
     ),
-    # Termination conditions on a step.
     pybamm.Experiment([pybamm.step.current(1.0, duration=3600, termination="3.0 V")]),
-    # Omitted ``duration`` — must round-trip so ``uses_default_duration`` stays
-    # ``True`` (used by ``Simulation`` infeasibility handling).
+    # Omitted ``duration`` must round-trip so ``uses_default_duration`` stays True.
     pybamm.Experiment([pybamm.step.current(1.0, termination="3.0 V")]),
-    # Multi-cycle experiment.
     pybamm.Experiment(
         [(pybamm.step.current(1.0, duration=100), pybamm.step.rest(duration=60))] * 3
     ),
-    # Top-level experiment kwargs (period / temperature / termination) — guards
-    # against the experiment-level fields being dropped during ``to_config``.
+    # Top-level experiment kwargs.
     pybamm.Experiment(
         [pybamm.step.current(1.0, duration=100)],
         period="30 seconds",
         temperature="25 oC",
         termination=["80% capacity", "2.5 V"],
     ),
-    # Top-level termination as a single string — guards against ``list("2.5 V")``
-    # exploding the input into individual chars during the round-trip.
+    # Single-string termination guards against ``list("2.5 V")`` splitting chars.
     pybamm.Experiment(
         [pybamm.step.current(1.0, duration=100)],
         termination="2.5 V",
     ),
-    # Per-step ``period`` override and other user-settable BaseStep fields:
-    # ``tags``, ``description``, ``start_time``, ``skip_ok``.
+    # Per-step ``period``/``tags``/``description``/``start_time``/``skip_ok``.
     pybamm.Experiment(
         [
             pybamm.step.current(
@@ -260,12 +243,10 @@ EXPERIMENT_FIXTURES = [
 
 
 PARAMETER_VALUES_FIXTURES = [
-    # Plain scalars (most common case).
     pybamm.ParameterValues(
         {"Temperature [K]": 298.15, "Negative electrode thickness [m]": 1e-4}
     ),
-    # Bool-bearing entry — guards against #5495-shaped coercion in the
-    # ParameterValues serialisation path.
+    # Bool-bearing entry guards against #5495-shaped coercion.
     pybamm.ParameterValues(
         {"Temperature [K]": 298.15, "Some flag": True, "Other flag": False}
     ),
@@ -306,9 +287,6 @@ CUSTOM_MODEL_FIXTURES = [
 SYMBOL_FIXTURES = _build_symbol_fixtures()
 
 
-# ---------------------------------------------------------------------------
-# Tests
-# ---------------------------------------------------------------------------
 class TestSolverRoundTrip:
     @pytest.mark.parametrize(
         "solver", SOLVER_FIXTURES, ids=lambda s: f"{type(s).__name__}"

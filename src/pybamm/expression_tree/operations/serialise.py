@@ -1508,8 +1508,8 @@ class Serialise:
             try:
                 name = event_data["name"]
                 expr = convert_symbol_from_json(event_data["expression"])
-                # ``_json_encoder`` writes Enum values out as their ``.name``.
                 event_type = event_data["event_type"]
+                # ``_json_encoder`` stores Enums as their ``.name``.
                 if isinstance(event_type, str):
                     event_type = pybamm.EventType[event_type]
                 model.events.append(pybamm.Event(name, expr, event_type))
@@ -1805,11 +1805,9 @@ class Serialise:
         Raises
         ------
         NotImplementedError
-            If a step uses :class:`pybamm.step.CustomTermination`, or is a
-            :class:`pybamm.step.CustomStepExplicit` /
-            :class:`pybamm.step.CustomStepImplicit`. Both carry Python
-            callables that cannot be JSON-encoded; serialising them would
-            silently lose the user-supplied function.
+            If a step uses a custom callable (``CustomTermination``,
+            ``CustomStepExplicit``, ``CustomStepImplicit``); these have no
+            JSON representation.
         """
         step_type_map = {
             "Current": "current",
@@ -1826,19 +1824,12 @@ class Serialise:
             "CRateTermination": "c-rate",
         }
 
-        # Top-level defaults that ``Experiment.process_steps`` broadcasts onto
-        # any step that didn't set them. We diff per-step state against these
-        # so the serialised JSON stays canonical: an experiment-level default
-        # appears once at the top, not duplicated onto every step.
+        # Top-level defaults; per-step values are emitted only when they differ.
         experiment_period = getattr(experiment, "period", None)
         experiment_temperature = getattr(experiment, "temperature", None)
 
         def _serialise_step(step):
             step_class_name = step.__class__.__name__
-            # Custom step types carry a user-supplied callable that cannot be
-            # JSON-encoded — refuse instead of crashing later inside
-            # ``input_value.tolist()`` or producing a config the loader would
-            # silently mangle.
             if step_class_name in ("CustomStepExplicit", "CustomStepImplicit"):
                 raise NotImplementedError(
                     f"{step_class_name} cannot be serialised: it carries a "
@@ -1859,10 +1850,7 @@ class Serialise:
                 step_type = "rest"
 
             step_config: dict = {"type": step_type}
-            # Preserve the *original* duration argument so that
-            # ``uses_default_duration`` round-trips: a step constructed with
-            # ``duration=None`` must come back with ``duration=None``, not the
-            # processed ``step.duration`` (which would be a numeric default).
+            # Use ``input_duration`` so ``uses_default_duration`` round-trips.
             if step.input_duration is not None:
                 step_config["duration"] = step.input_duration
 
@@ -1885,9 +1873,6 @@ class Serialise:
                 terminations = []
                 for term in step.termination:
                     term_class_name = term.__class__.__name__
-                    # CustomTermination carries an event_function callable and
-                    # has no ``.value`` — surface a clear error instead of
-                    # crashing on ``term.value`` below.
                     if term_class_name == "CustomTermination":
                         raise NotImplementedError(
                             "CustomTermination cannot be serialised: it "
@@ -1910,9 +1895,6 @@ class Serialise:
                     terminations.append(term_config)
                 step_config["terminations"] = terminations
 
-            # ``temperature`` and ``period`` are broadcast from the experiment
-            # level when the user didn't override them per step — only emit
-            # per-step values that actually differ from the top-level default.
             field_defaults = {
                 "temperature": experiment_temperature,
                 "period": experiment_period,
@@ -1921,18 +1903,13 @@ class Serialise:
                 value = getattr(step, field, None)
                 if value is not None and value != default:
                     step_config[field] = value
-            # ``tags`` always lands as ``[]`` when the user didn't pass one;
-            # skip the empty default to keep the JSON small. ``direction`` is
-            # recomputed by the loader for step types that derive it from the
-            # value sign (``calculate_charge_or_discharge``); only persist it
-            # when the user supplied it (Voltage steps with explicit charge/
-            # discharge).
             tags = getattr(step, "tags", None)
             if tags:
                 step_config["tags"] = tags
             description = getattr(step, "description", None)
             if description is not None:
                 step_config["description"] = description
+            # Skip ``direction`` when the loader will recompute it from the value sign.
             direction = getattr(step, "direction", None)
             if direction is not None and not getattr(
                 step, "calculate_charge_or_discharge", False
@@ -1941,8 +1918,6 @@ class Serialise:
             start_time = getattr(step, "start_time", None)
             if isinstance(start_time, datetime):
                 step_config["start_time"] = start_time.isoformat()
-            # ``skip_ok`` defaults to True; only record explicit overrides
-            # so the JSON stays minimal for the common case.
             if getattr(step, "skip_ok", True) is False:
                 step_config["skip_ok"] = False
 
@@ -1961,9 +1936,7 @@ class Serialise:
             value = getattr(experiment, field, None)
             if value is not None:
                 config[field] = value
-        # ``Experiment`` accepts ``termination`` as either a string or a list of
-        # strings; store the raw input so ``read_termination`` can parse it on
-        # the round-trip without us ever splitting a single string into chars.
+        # Store the raw input so a single string isn't split into chars on reload.
         termination = getattr(experiment, "termination_string", None)
         if termination is not None:
             config["termination"] = termination
@@ -2036,11 +2009,8 @@ class Serialise:
             else:
                 raise ValueError(f"Value is required for {step_type!r} steps.")
 
-            # Only forward ``duration`` when the dict explicitly carried it —
-            # missing means the original step was constructed with
-            # ``duration=None``, and we must reproduce that so the loaded step
-            # has ``uses_default_duration=True`` (used by simulation
-            # infeasibility handling).
+            # Missing ``duration`` round-trips as ``None`` to preserve
+            # ``uses_default_duration`` (used by infeasibility handling).
             duration_kwargs = {}
             if "duration" in step_dict and step_dict["duration"] is not None:
                 duration_kwargs["duration"] = step_dict["duration"]
@@ -2065,9 +2035,7 @@ class Serialise:
                     step_dict["start_time"]
                 )
             if "skip_ok" in step_dict:
-                # ``from_config`` is public and accepts user-built dicts, so
-                # we refuse to coerce non-bool values: ``bool("False")`` is
-                # ``True``, which would silently flip the skip behaviour.
+                # ``bool("False")`` is ``True``; reject non-bool input.
                 skip_ok_value = step_dict["skip_ok"]
                 if not isinstance(skip_ok_value, bool):
                     raise TypeError(
