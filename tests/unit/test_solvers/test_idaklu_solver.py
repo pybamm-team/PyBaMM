@@ -1140,6 +1140,39 @@ class TestIDAKLUSolver:
                 f"{picked!r}, but step.termination is {step.termination!r}"
             )
 
+    def test_pickle_roundtrip_preserves_closest_event_idx(self):
+        # rootfn_casadi is dropped from the pickle and rebuilt from rootfn_pkl
+        # in __setstate__; confirm a round-tripped solver still records
+        # closest_event_idx after a root-return termination.
+        import pickle
+
+        solver = pybamm.IDAKLUSolver(output_variables=["Voltage [V]"])
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            experiment=pybamm.Experiment(
+                [("Discharge at 1C until 3.0 V", "Charge at 1C until 4.2 V")]
+            ),
+            solver=solver,
+        )
+        sim.solve()
+
+        roundtripped = pickle.loads(pickle.dumps(solver))
+        sim2 = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            experiment=pybamm.Experiment(
+                [("Discharge at 1C until 3.0 V", "Charge at 1C until 4.2 V")]
+            ),
+            solver=roundtripped,
+        )
+        sim2.solve()
+
+        for step in sim2.solution.cycles[0].steps:
+            if step.termination.startswith("event:"):
+                assert step.closest_event_idx is not None, (
+                    "round-tripped IDAKLUSolver must still set "
+                    "closest_event_idx after a root return"
+                )
+
     def test_simulation_period(self):
         model = pybamm.lithium_ion.DFN()
         parameter_values = pybamm.ParameterValues("Chen2020")
