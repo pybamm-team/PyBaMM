@@ -154,7 +154,9 @@ class MultiLayer3DThermalSPM(BaseModel):
         # Basic3DThermalSPM.
         self._layer_spatial_vars = {}  # layer_id -> [x_i, y_i, z_i]
         self._create_thermal_variables()
-        self.layers = [self._build_spm_layer(i) for i in range(self.num_layers)]
+        self.layers = [
+            self._build_electrochemistry_layer(i) for i in range(self.num_layers)
+        ]
 
         if self.connection == "parallel":
             self._connect_parallel()
@@ -200,7 +202,7 @@ class MultiLayer3DThermalSPM(BaseModel):
     # ------------------------------------------------------------------ #
     # Per-layer SPM
     # ------------------------------------------------------------------ #
-    def _build_spm_layer(self, layer_id):
+    def _build_electrochemistry_layer(self, layer_id):
         """Build the SPM equations for a single layer."""
         c_s_n = pybamm.Variable(
             f"Layer {layer_id} X-averaged negative particle concentration [mol.m-3]",
@@ -593,9 +595,7 @@ class MultiLayer3DThermalSPM(BaseModel):
     def default_parameter_values(self):
         """Base defaults plus the inter-layer thermal contact resistance."""
         pv = super().default_parameter_values
-        pv.update(
-            {self.CONTACT_RESISTANCE_PARAM: self.DEFAULT_CONTACT_RESISTANCE}
-        )
+        pv.update({self.CONTACT_RESISTANCE_PARAM: self.DEFAULT_CONTACT_RESISTANCE})
         return pv
 
     # ------------------------------------------------------------------ #

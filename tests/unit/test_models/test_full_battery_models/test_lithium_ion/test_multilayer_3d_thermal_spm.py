@@ -1,3 +1,4 @@
+import numpy as np
 import pytest
 
 import pybamm
@@ -238,7 +239,6 @@ class TestMultiLayer3DThermalSPM:
         L_x_val = pv.process_symbol(geo_p.L_x).evaluate()
         x0_max_val = pv.process_symbol(x0["max"]).evaluate()
         x_last_max_val = pv.process_symbol(x_last["max"]).evaluate()
-        import numpy as np
 
         assert np.isclose(x0_max_val, n * L_x_val)
         assert np.isclose(x_last_max_val, num_layers * n * L_x_val)
@@ -269,7 +269,6 @@ class TestMultiLayer3DThermalSPM:
         """(num_layers=2, n=3) vs (num_layers=6, n=1) should give matching
         terminal voltage and stack average temperature for a short solve
         under symmetric cooling."""
-        import numpy as np
 
         def build_and_solve(num_layers, n):
             model = pybamm.lithium_ion.MultiLayer3DThermalSPM(
@@ -316,3 +315,215 @@ class TestMultiLayer3DThermalSPM:
         T_a = float(sol_a["Stack-averaged temperature [K]"].data[-1])
         T_b = float(sol_b["Stack-averaged temperature [K]"].data[-1])
         assert np.isclose(T_a, T_b, atol=0.2)
+
+
+class TestMultiLayer3DThermalModelTypes:
+    """Tests for SPMe and DFN model type support in the multilayer thermal framework."""
+
+    def _apply_h_coeffs(self, param, h=10.0):
+        for face in [
+            "Total",
+            "Left face",
+            "Right face",
+            "Front face",
+            "Back face",
+            "Bottom face",
+            "Top face",
+        ]:
+            param.update({f"{face} heat transfer coefficient [W.m-2.K-1]": h})
+        return param
+
+    def _var_pts(self):
+        return {
+            "x_n": 10,
+            "x_s": 10,
+            "x_p": 10,
+            "r_n": 15,
+            "r_p": 15,
+            "x": None,
+            "y": None,
+            "z": None,
+        }
+
+    # ------------------------------------------------------------------ #
+    # SPM baseline (should pass)
+    # ------------------------------------------------------------------ #
+    def test_spm_builds_successfully(self):
+        """Baseline: SPM model builds without error."""
+        model = pybamm.lithium_ion.MultiLayer3DThermalSPM(num_layers=2)
+        assert len(model.rhs) == 3 * 2  # c_s_n, c_s_p, T per layer
+        assert "Voltage [V]" in model.variables
+
+    def test_spm_short_discharge(self):
+        """Baseline: SPM model solves a short discharge."""
+        model = pybamm.lithium_ion.MultiLayer3DThermalSPM(
+            num_layers=2, connection="parallel"
+        )
+        param = self._apply_h_coeffs(pybamm.ParameterValues("Marquis2019"))
+        model.apply_stack_scaling(param, verbose=False)
+        exp = pybamm.Experiment(["Discharge at 1C for 30 seconds"])
+        sim = pybamm.Simulation(
+            model, parameter_values=param, var_pts=self._var_pts(), experiment=exp
+        )
+        sol = sim.solve()
+        V = float(sol["Voltage [V]"].data[-1])
+        assert 2.5 < V < 4.2  # physically reasonable voltage
+
+    # ------------------------------------------------------------------ #
+    # SPMe tests
+    # ------------------------------------------------------------------ #
+    def test_spme_model_class_exists(self):
+        """MultiLayer3DThermalSPMe class should exist and build."""
+        model = pybamm.lithium_ion.MultiLayer3DThermalSPMe(num_layers=2)
+        assert "Voltage [V]" in model.variables
+
+    def test_spme_has_electrolyte_variables(self):
+        """SPMe multilayer should expose electrolyte concentration variables."""
+        model = pybamm.lithium_ion.MultiLayer3DThermalSPMe(num_layers=2)
+        assert any("electrolyte" in k.lower() for k in model.variables), (
+            "SPMe model should include electrolyte variables"
+        )
+
+    def test_spme_parallel_short_discharge(self):
+        """SPMe multilayer parallel should produce physically reasonable discharge."""
+        model = pybamm.lithium_ion.MultiLayer3DThermalSPMe(
+            num_layers=2, connection="parallel"
+        )
+        param = self._apply_h_coeffs(pybamm.ParameterValues("Marquis2019"))
+        model.apply_stack_scaling(param, verbose=False)
+        exp = pybamm.Experiment(["Discharge at 1C for 30 seconds"])
+        sim = pybamm.Simulation(
+            model, parameter_values=param, var_pts=self._var_pts(), experiment=exp
+        )
+        sol = sim.solve()
+        V = float(sol["Voltage [V]"].data[-1])
+        assert 2.5 < V < 4.2
+
+        # Symmetric parallel: current fractions should be ~0.5
+        f0 = float(sol["Layer 0 current fraction"].data[-1])
+        f1 = float(sol["Layer 1 current fraction"].data[-1])
+        assert abs(f0 - 0.5) < 1e-4
+        assert abs(f1 - 0.5) < 1e-4
+
+    def test_spme_series_connection(self):
+        """SPMe multilayer with series connection should sum voltages."""
+        model = pybamm.lithium_ion.MultiLayer3DThermalSPMe(
+            num_layers=2, connection="series"
+        )
+        param = self._apply_h_coeffs(pybamm.ParameterValues("Marquis2019"))
+        model.apply_stack_scaling(param, verbose=False)
+        exp = pybamm.Experiment(["Discharge at 0.5C for 30 seconds"])
+        sim = pybamm.Simulation(
+            model, parameter_values=param, var_pts=self._var_pts(), experiment=exp
+        )
+        sol = sim.solve()
+        V = float(sol["Voltage [V]"].data[-1])
+        V0 = float(sol["Layer 0 voltage [V]"].data[-1])
+        V1 = float(sol["Layer 1 voltage [V]"].data[-1])
+        assert abs(V - (V0 + V1)) < 1e-6
+
+    def test_spme_voltage_lower_than_spm(self):
+        """SPMe voltage should be lower than SPM due to electrolyte losses."""
+        model_spm = pybamm.lithium_ion.MultiLayer3DThermalSPM(
+            num_layers=2, connection="parallel"
+        )
+        model_spme = pybamm.lithium_ion.MultiLayer3DThermalSPMe(
+            num_layers=2, connection="parallel"
+        )
+        param_spm = self._apply_h_coeffs(pybamm.ParameterValues("Marquis2019"))
+        param_spme = self._apply_h_coeffs(pybamm.ParameterValues("Marquis2019"))
+        model_spm.apply_stack_scaling(param_spm, verbose=False)
+        model_spme.apply_stack_scaling(param_spme, verbose=False)
+        exp = pybamm.Experiment(["Discharge at 1C for 30 seconds"])
+
+        sol_spm = pybamm.Simulation(
+            model_spm,
+            parameter_values=param_spm,
+            var_pts=self._var_pts(),
+            experiment=exp,
+        ).solve()
+        sol_spme = pybamm.Simulation(
+            model_spme,
+            parameter_values=param_spme,
+            var_pts=self._var_pts(),
+            experiment=exp,
+        ).solve()
+
+        V_spm = float(sol_spm["Voltage [V]"].data[-1])
+        V_spme = float(sol_spme["Voltage [V]"].data[-1])
+        # SPMe should differ from SPM (electrolyte effects lower the voltage
+        # under load), but not drastically.
+        assert abs(V_spm - V_spme) < 0.2
+        assert V_spme < V_spm  # electrolyte resistance lowers voltage
+
+    # ------------------------------------------------------------------ #
+    # DFN tests
+    # ------------------------------------------------------------------ #
+    def test_dfn_model_class_exists(self):
+        """MultiLayer3DThermalDFN class should exist and build."""
+        model = pybamm.lithium_ion.MultiLayer3DThermalDFN(num_layers=2)
+        assert "Voltage [V]" in model.variables
+
+    def test_dfn_has_spatial_electrolyte_variables(self):
+        """DFN multilayer should expose spatially-resolved electrolyte variables."""
+        model = pybamm.lithium_ion.MultiLayer3DThermalDFN(num_layers=2)
+        assert any("electrolyte concentration" in k.lower() for k in model.variables)
+
+    def test_dfn_parallel_short_discharge(self):
+        """DFN multilayer parallel should produce physically reasonable discharge."""
+        model = pybamm.lithium_ion.MultiLayer3DThermalDFN(
+            num_layers=2, connection="parallel"
+        )
+        param = self._apply_h_coeffs(pybamm.ParameterValues("Marquis2019"))
+        model.apply_stack_scaling(param, verbose=False)
+        exp = pybamm.Experiment(["Discharge at 1C for 30 seconds"])
+        sim = pybamm.Simulation(
+            model, parameter_values=param, var_pts=self._var_pts(), experiment=exp
+        )
+        sol = sim.solve()
+        V = float(sol["Voltage [V]"].data[-1])
+        assert 2.5 < V < 4.2
+
+        # Symmetric parallel: current fractions should be ~0.5
+        f0 = float(sol["Layer 0 current fraction"].data[-1])
+        f1 = float(sol["Layer 1 current fraction"].data[-1])
+        assert abs(f0 - 0.5) < 1e-4
+        assert abs(f1 - 0.5) < 1e-4
+
+    def test_dfn_series_connection(self):
+        """DFN multilayer with series connection should sum voltages."""
+        model = pybamm.lithium_ion.MultiLayer3DThermalDFN(
+            num_layers=2, connection="series"
+        )
+        param = self._apply_h_coeffs(pybamm.ParameterValues("Marquis2019"))
+        model.apply_stack_scaling(param, verbose=False)
+        exp = pybamm.Experiment(["Discharge at 0.5C for 30 seconds"])
+        sim = pybamm.Simulation(
+            model, parameter_values=param, var_pts=self._var_pts(), experiment=exp
+        )
+        sol = sim.solve()
+        V = float(sol["Voltage [V]"].data[-1])
+        V0 = float(sol["Layer 0 voltage [V]"].data[-1])
+        V1 = float(sol["Layer 1 voltage [V]"].data[-1])
+        assert abs(V - (V0 + V1)) < 1e-6
+
+    def test_dfn_equation_count_higher_than_spm(self):
+        """DFN multilayer should have more equations per layer than SPM."""
+        model_spm = pybamm.lithium_ion.MultiLayer3DThermalSPM(num_layers=2)
+        model_dfn = pybamm.lithium_ion.MultiLayer3DThermalDFN(num_layers=2)
+        # DFN has more state variables (spatially resolved electrolyte + particles)
+        total_eqs_spm = len(model_spm.rhs) + len(model_spm.algebraic)
+        total_eqs_dfn = len(model_dfn.rhs) + len(model_dfn.algebraic)
+        assert total_eqs_dfn > total_eqs_spm
+
+    def test_dfn_layers_per_zone(self):
+        """DFN multilayer with layers_per_zone should scale geometry correctly."""
+        model = pybamm.lithium_ion.MultiLayer3DThermalDFN(
+            num_layers=3, layers_per_zone=2
+        )
+        assert model.num_physical_layers == 6
+        assert model.layers_per_zone == 2
+        geom = model.default_geometry
+        # Each zone should span 2*L_x
+        assert _layer_domain(0) in geom
+        assert _layer_domain(2) in geom
