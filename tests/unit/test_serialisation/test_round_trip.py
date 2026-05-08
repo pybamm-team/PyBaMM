@@ -36,6 +36,8 @@ _MISSING = object()
 # (which has no ``value``).
 _STEP_ATTRS = (
     "duration",
+    "input_duration",
+    "uses_default_duration",
     "value",
     "temperature",
     "termination",
@@ -128,8 +130,10 @@ def _experiments_equal(a, b):
 def _custom_model_with_rhs():
     m = pybamm.BaseModel("custom_rhs")
     c = pybamm.Variable("c", domain="negative particle")
-    m.rhs = {c: -c}
-    m.initial_conditions = {c: pybamm.Scalar(1)}
+    # Multi-term RHS so a loader-side expression mutation actually changes
+    # the structural id (a single ``-c`` could mask sign flips).
+    m.rhs = {c: -c * c + pybamm.Scalar(0.5)}
+    m.initial_conditions = {c: pybamm.Scalar(0.8)}
     return m
 
 
@@ -138,7 +142,11 @@ def _custom_model_with_events():
     c = pybamm.Variable("c")
     m.rhs = {c: -c}
     m.initial_conditions = {c: pybamm.Scalar(1)}
-    m.events = [pybamm.Event("c hits zero", c, pybamm.EventType.TERMINATION)]
+    m.events = [
+        pybamm.Event(
+            "c hits half", c - pybamm.Scalar(0.5), pybamm.EventType.TERMINATION
+        )
+    ]
     return m
 
 
@@ -211,6 +219,9 @@ EXPERIMENT_FIXTURES = [
     ),
     # Termination conditions on a step.
     pybamm.Experiment([pybamm.step.current(1.0, duration=3600, termination="3.0 V")]),
+    # Omitted ``duration`` — must round-trip so ``uses_default_duration`` stays
+    # ``True`` (used by ``Simulation`` infeasibility handling).
+    pybamm.Experiment([pybamm.step.current(1.0, termination="3.0 V")]),
     # Multi-cycle experiment.
     pybamm.Experiment(
         [(pybamm.step.current(1.0, duration=100), pybamm.step.rest(duration=60))] * 3
@@ -340,6 +351,123 @@ class TestExperimentRoundTrip:
         )
 
 
+class TestExperimentSerialiseCanonical:
+    """``serialise_experiment`` must not duplicate experiment-level defaults
+    onto every step. The top-level ``period`` / ``temperature`` (broadcast by
+    ``Experiment.process_steps``), processed empty ``tags``, and computed
+    ``direction`` should all stay out of per-step dicts so the JSON keeps
+    ``default vs explicit`` distinguishable.
+    """
+
+    def test_experiment_level_defaults_not_per_step(self):
+        experiment = pybamm.Experiment(
+            [pybamm.step.current(1.0, duration=100)],
+            period="30 seconds",
+            temperature="25 oC",
+        )
+        config = experiment.to_config()
+        for step_dict in config["cycles"][0]:
+            assert "period" not in step_dict
+            assert "temperature" not in step_dict
+            assert "tags" not in step_dict
+            assert "direction" not in step_dict
+        # Top-level defaults must still be present so the round-trip works.
+        assert "period" in config
+        assert "temperature" in config
+
+    def test_per_step_period_overriding_default_is_kept(self):
+        experiment = pybamm.Experiment(
+            [
+                (
+                    pybamm.step.current(1.0, duration=100, period="10 seconds"),
+                    pybamm.step.current(0.5, duration=200),
+                )
+            ],
+            period="30 seconds",
+        )
+        config = experiment.to_config()
+        # First step overrode the experiment default → key kept.
+        assert "period" in config["cycles"][0][0]
+        # Second step inherited → key dropped.
+        assert "period" not in config["cycles"][0][1]
+
+
+class TestExperimentSerialiseUnsupported:
+    """Custom callables can't survive a JSON round-trip — fail fast.
+
+    Both ``CustomTermination`` and ``CustomStepExplicit``/``CustomStepImplicit``
+    hold user-supplied Python callables (event functions, current-value
+    functions). Serialising them would silently lose the callable, so the
+    serialiser must refuse with a clear error.
+    """
+
+    def test_custom_termination_raises(self):
+        def stoich_cutoff(variables):
+            return variables["Negative electrode stoichiometry"] - 0.1
+
+        custom_term = pybamm.step.CustomTermination(
+            name="Negative stoichiometry cut-off",
+            event_function=stoich_cutoff,
+        )
+        experiment = pybamm.Experiment(
+            [pybamm.step.current(1.0, duration=3600, termination=custom_term)]
+        )
+        with pytest.raises(NotImplementedError, match="CustomTermination"):
+            experiment.to_config()
+
+    def test_custom_step_explicit_raises(self):
+        def current_function(variables):
+            return 1.0
+
+        experiment = pybamm.Experiment(
+            [pybamm.step.CustomStepExplicit(current_function, duration=100)]
+        )
+        with pytest.raises(NotImplementedError, match="CustomStepExplicit"):
+            experiment.to_config()
+
+
+class TestExperimentFromConfigValidation:
+    """Reject malformed inputs cleanly — ``from_config`` is public.
+
+    A user-built dict may contain stringly-typed values (e.g. from YAML or a
+    hand-rolled JSON file). Past loaders silently coerced them via
+    ``bool(...)``, which flips ``"False"`` to ``True``.
+    """
+
+    def test_skip_ok_string_is_rejected(self):
+        config = {
+            "cycles": [
+                [
+                    {
+                        "type": "current",
+                        "value": 1.0,
+                        "duration": 100,
+                        "skip_ok": "False",
+                    }
+                ]
+            ]
+        }
+        with pytest.raises(TypeError, match="skip_ok must be a bool"):
+            pybamm.Experiment.from_config(config)
+
+    @pytest.mark.parametrize("skip_ok", [True, False])
+    def test_json_bool_skip_ok_round_trips(self, skip_ok):
+        config = {
+            "cycles": [
+                [
+                    {
+                        "type": "current",
+                        "value": 1.0,
+                        "duration": 100,
+                        "skip_ok": skip_ok,
+                    }
+                ]
+            ]
+        }
+        restored = pybamm.Experiment.from_config(json.loads(json.dumps(config)))
+        assert restored.steps[0].skip_ok is skip_ok
+
+
 class TestParameterValuesRoundTrip:
     @pytest.mark.parametrize(
         "parameter_values",
@@ -427,6 +555,9 @@ class TestCustomModelRoundTrip:
     def test_preserves_rhs_and_events(self, model):
         """Custom model rhs / initial_conditions / events must survive round-trip.
 
+        Compares structural ids of *both* keys and values, so a loader that
+        flips a sign or replaces an initial condition would fail this test.
+
         Uses ``Serialise._json_encoder`` because the dict returned by
         ``BaseModel.to_json`` carries values (``EventType``, numpy scalars) that
         only encode through the project's custom encoder.
@@ -436,15 +567,20 @@ class TestCustomModelRoundTrip:
 
         assert restored.name == model.name
 
-        def _id_set(d):
-            return {k.id for k in d}
+        def _id_dict(d):
+            return {k.id: v.id for k, v in d.items()}
 
-        assert _id_set(restored.rhs) == _id_set(model.rhs)
-        assert _id_set(restored.initial_conditions) == _id_set(model.initial_conditions)
+        assert _id_dict(restored.rhs) == _id_dict(model.rhs)
+        assert _id_dict(restored.initial_conditions) == _id_dict(
+            model.initial_conditions
+        )
         assert len(restored.events) == len(model.events)
-        for orig_ev, new_ev in zip(model.events, restored.events, strict=True):
-            assert orig_ev.name == new_ev.name
+        events_by_name = {ev.name: ev for ev in restored.events}
+        for orig_ev in model.events:
+            assert orig_ev.name in events_by_name
+            new_ev = events_by_name[orig_ev.name]
             assert orig_ev.event_type == new_ev.event_type
+            assert orig_ev.expression.id == new_ev.expression.id
 
 
 class TestSymbolRoundTrip:
