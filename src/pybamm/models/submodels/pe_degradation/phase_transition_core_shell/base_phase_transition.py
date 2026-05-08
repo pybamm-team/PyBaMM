@@ -240,6 +240,10 @@ class BasePhaseTransition(pybamm.BaseSubModel):
         #     raise pybamm.DomainError(
         #         "Domain must include 'core' for the core-shell model."
         #     )
+        raise NotImplementedError(  # pragma: no cover
+            "_r_average_core is a reference (unused) implementation kept for "
+            "didactic purposes. Use pybamm.r_average(symbol) instead."
+        )
 
     def _r_average_shell(self, symbol, s_nd):
         if symbol.domain != [] and symbol.domain[0].endswith("shell"):
