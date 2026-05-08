@@ -15,6 +15,14 @@ from pybamm.codegen.compilation import aot_compile
 
 _UNSET = object()
 
+
+def _flatten_inputs(inputs_dict):
+    """Flatten ``{name: value}`` into a 1-D float array in dict-key order."""
+    if not inputs_dict:
+        return np.zeros(0)
+    return np.concatenate([np.asarray(v).reshape(-1) for v in inputs_dict.values()])
+
+
 # Mirrors SUNDIALS ``IDA_ROOT_RETURN`` in ``sundials/include/ida/ida.h``.
 # Returned by ``IDASolve`` (and surfaced via ``Solution.flag``) when the
 # integrator has located one or more root function zeros.
@@ -560,6 +568,10 @@ class IDAKLUSolver(pybamm.BaseSolver):
             self._setup[name] = fn
             self._setup[f"{name}_pkl"] = pkl
 
+        # Used in _post_process_solution to set closest_event_idx without
+        # going via BaseSolver.get_termination_reason's per-event re-walk.
+        self._setup["rootfn_casadi"] = fns["rootfn"]
+
         for key in self.output_variables:
             fn, pkl = to_idaklu(fns[f"var:{key}"])
             self._setup["var_idaklu_fcns"].append(fn)
@@ -617,6 +629,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             "mass_action",
             "sensfn",
             "rootfn",
+            "rootfn_casadi",
             "var_idaklu_fcns",
             "dvar_dy_idaklu_fcns",
             "dvar_dp_idaklu_fcns",
@@ -644,6 +657,10 @@ class IDAKLUSolver(pybamm.BaseSolver):
             "alg_jac",
         ]:
             self._setup[key] = idaklu.generate_function(self._setup[f"{key}_pkl"])
+
+        self._setup["rootfn_casadi"] = casadi.Function.deserialize(
+            self._setup["rootfn_pkl"]
+        )
 
         for key in ["var_idaklu_fcns", "dvar_dy_idaklu_fcns", "dvar_dp_idaklu_fcns"]:
             self._setup[key] = [
@@ -674,12 +691,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         # stack inputs so that they are a 2D array of shape (number_of_inputs, number_of_parameters)
         if inputs_list and inputs_list[0]:
-            inputs = np.vstack(
-                [
-                    np.hstack([np.array(x).reshape(-1) for x in inputs_dict.values()])
-                    for inputs_dict in inputs_list
-                ]
-            )
+            inputs = np.vstack([_flatten_inputs(d) for d in inputs_list])
         else:
             inputs = np.array([[]] * len(inputs_list))
 
@@ -819,6 +831,18 @@ class IDAKLUSolver(pybamm.BaseSolver):
             variables_returned=bool(save_outputs_only),
             options=solution_options,
         )
+
+        # Set closest_event_idx so BaseSolver.get_termination_reason doesn't
+        # re-walk every event's symbolic expression on the Python side.
+        if sol.flag == _IDA_ROOT_RETURN and self._setup["num_of_events"] > 0:
+            event_values = np.asarray(
+                self._setup["rootfn_casadi"](
+                    float(sol.t[-1]),
+                    np.asarray(y_event).reshape(-1),
+                    _flatten_inputs(inputs_dict),
+                )
+            ).reshape(-1)
+            newsol.closest_event_idx = int(np.nanargmin(np.abs(event_values)))
 
         newsol.integration_time = integration_time
         if not save_outputs_only:
