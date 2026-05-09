@@ -16,7 +16,10 @@ thicknesses and per-unit-cell current/overpotentials are preserved, only the
 zone thermal x-extent and the stack capacity are rescaled.
 """
 
+import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib import cm
+from matplotlib.colors import Normalize
 
 import pybamm
 
@@ -131,10 +134,6 @@ print(f"  Terminal voltage (end): {V_end:.3f} V")
 # Plots
 # --------------------------------------------------------------- #
 print("\nGenerating plots...")
-
-import matplotlib.pyplot as plt
-from matplotlib import cm
-from matplotlib.colors import Normalize
 
 t_s = solution["Time [s]"].data
 t_min = t_s / 60.0
