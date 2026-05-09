@@ -94,20 +94,20 @@ print(f"  Solve complete. Final t = {sol_full.t[-1]:.1f} s")
 L_n = float(param_full["Negative electrode thickness [m]"])
 L_s = float(param_full["Separator thickness [m]"])
 L_p = float(param_full["Positive electrode thickness [m]"])
-L_cc_n = float(param_full["Negative current collector thickness [m]"])
-L_cc_p = float(param_full["Positive current collector thickness [m]"])
-L_cell = L_cc_n + L_n + L_s + L_p + L_cc_p  # Single unit cell thickness
+# The 3D FEM geometry uses L_x = L_n + L_s + L_p (electrode sandwich only,
+# without current collectors) as the x-extent for each layer zone.
+L_x_cell = L_n + L_s + L_p  # Layer x-extent in the FEM mesh
 L_y_val = float(param_full["Electrode width [m]"])
 L_z_val = float(param_full["Electrode height [m]"])
 
-print(f"  Unit cell thickness: {L_cell * 1e3:.4f} mm")
-print(f"  Total stack thickness: {NUM_LAYERS_FULL * L_cell * 1e3:.2f} mm")
+print(f"  Layer x-extent (electrode sandwich): {L_x_cell * 1e3:.4f} mm")
+print(f"  Total stack thickness: {NUM_LAYERS_FULL * L_x_cell * 1e3:.2f} mm")
 
 # --------------------------------------------------------------- #
 # Build spatial T(x) profile at the midplane for selected times
 # --------------------------------------------------------------- #
 # For each layer, the 3D temperature variable lives on a FEM mesh
-# spanning x in [i*L_cell, (i+1)*L_cell]. We evaluate it along a
+# spanning x in [i*L_x_cell, (i+1)*L_x_cell]. We evaluate it along a
 # line at y = L_y/2, z = L_z/2 to get the through-thickness profile.
 print("\n  Extracting spatial T(x) profile at midplane...")
 
@@ -139,12 +139,12 @@ for t_snap in t_snapshots:
 
     for i in range(NUM_LAYERS_FULL):
         # x-range for this layer
-        x_min_layer = i * L_cell
-        x_max_layer = (i + 1) * L_cell
+        x_min_layer = i * L_x_cell
+        x_max_layer = (i + 1) * L_x_cell
         # Sample points (avoid exact boundaries to stay within the mesh)
         x_pts = np.linspace(
-            x_min_layer + 0.05 * L_cell,
-            x_max_layer - 0.05 * L_cell,
+            x_min_layer + 0.05 * L_x_cell,
+            x_max_layer - 0.05 * L_x_cell,
             nx_per_layer,
         )
         y_pts = np.full_like(x_pts, y_mid)
@@ -188,7 +188,7 @@ fig_tx.colorbar(sm_time, ax=ax_tx, label="Time [s]")
 
 # Add layer boundary markers (faint vertical lines)
 for i in range(1, NUM_LAYERS_FULL):
-    ax_tx.axvline(i * L_cell * 1e3, color="gray", alpha=0.15, lw=0.5)
+    ax_tx.axvline(i * L_x_cell * 1e3, color="gray", alpha=0.15, lw=0.5)
 
 # Voltage vs time in the side panel
 t_full = sol_full["Time [s]"].data
@@ -231,11 +231,11 @@ for frame_t in t_frames_tx:
     x_frame = []
     T_frame = []
     for i in range(NUM_LAYERS_FULL):
-        x_min_layer = i * L_cell
-        x_max_layer = (i + 1) * L_cell
+        x_min_layer = i * L_x_cell
+        x_max_layer = (i + 1) * L_x_cell
         x_pts = np.linspace(
-            x_min_layer + 0.05 * L_cell,
-            x_max_layer - 0.05 * L_cell,
+            x_min_layer + 0.05 * L_x_cell,
+            x_max_layer - 0.05 * L_x_cell,
             nx_per_layer,
         )
         y_pts = np.full_like(x_pts, y_mid)
@@ -261,7 +261,7 @@ T_pad = max((T_max_all - T_min_all) * 0.05, 0.1)
 
 # Set up initial plot
 (line_tx,) = ax_gif_tx.plot([], [], "C0-", lw=1.8)
-ax_gif_tx.set_xlim(0, NUM_LAYERS_FULL * L_cell * 1e3)
+ax_gif_tx.set_xlim(0, NUM_LAYERS_FULL * L_x_cell * 1e3)
 ax_gif_tx.set_ylim(T_min_all - T_pad, T_max_all + T_pad)
 ax_gif_tx.set_xlabel("Position through stack [mm]")
 ax_gif_tx.set_ylabel("Temperature [\u00b0C]")
@@ -271,7 +271,7 @@ ax_gif_tx.set_title(
 ax_gif_tx.grid(True, alpha=0.3)
 # Layer boundaries
 for i in range(1, NUM_LAYERS_FULL):
-    ax_gif_tx.axvline(i * L_cell * 1e3, color="gray", alpha=0.15, lw=0.5)
+    ax_gif_tx.axvline(i * L_x_cell * 1e3, color="gray", alpha=0.15, lw=0.5)
 
 # Voltage panel
 ax_gif_v.plot(t_full, V_full, "k-", lw=1.2, alpha=0.5)
