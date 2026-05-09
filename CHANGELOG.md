@@ -2,6 +2,7 @@
 
 ## Features
 
+- Added `MultiLayer3DThermalSPMe` and `MultiLayer3DThermalDFN` model classes extending the multilayer 3D thermal framework to SPMe and DFN electrochemistry fidelity levels. Each layer can now resolve spatially-varying electrolyte concentration, potential, and solid-phase charge conservation, enabling higher-fidelity through-stack thermal predictions. ([#5505](https://github.com/pybamm-team/PyBaMM/pull/5505))
 - Added `NonlinearSolver` as the default nonlinear solver, which replaces `CasadiAlgebraicSolver`. `IDAKLUSolver` now computes the initial conditions in C++ by default. ([#5459](https://github.com/pybamm-team/PyBaMM/pull/5459))
 
 ## Bug fixes

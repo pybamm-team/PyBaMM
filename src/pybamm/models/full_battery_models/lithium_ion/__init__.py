@@ -26,6 +26,9 @@ from .basic_dfn import BasicDFN
 from .basic_dfn_2d import BasicDFN2D
 from .basic_spm import BasicSPM
 from .basic_spm_with_3d_thermal import Basic3DThermalSPM
+from .multilayer_3d_thermal_spm import MultiLayer3DThermalSPM
+from .multilayer_3d_thermal_spme import MultiLayer3DThermalSPMe
+from .multilayer_3d_thermal_dfn import MultiLayer3DThermalDFN
 from .basic_dfn_half_cell import BasicDFNHalfCell
 from .basic_dfn_composite import BasicDFNComposite
 from .Yang2017 import Yang2017
@@ -41,4 +44,6 @@ from .util import (
 __all__ = ['Yang2017', 'base_lithium_ion_model', 'basic_dfn',
            'basic_dfn_composite', 'basic_dfn_half_cell', 'basic_spm', 'dfn',
            'electrode_soh', 'electrode_soh_half_cell', 'electrode_soh_composite', 'mpm', 'msmr',
-           'newman_tobias', 'spm', 'spme', 'basic_splitOCVR', 'basic_spm_with_3d_thermal']
+           'newman_tobias', 'spm', 'spme', 'basic_splitOCVR', 'basic_spm_with_3d_thermal',
+           'multilayer_3d_thermal_spm', 'multilayer_3d_thermal_spme',
+           'multilayer_3d_thermal_dfn']
