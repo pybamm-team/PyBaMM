@@ -468,13 +468,13 @@ class DiffSLExport:
                     is_event=is_event,
                 )
                 continue
-            # extract any binary operators that occur more than twice and dont involve scalars
+            # extract any binary operators that occur more than two times and dont involve scalars
             if (
                 isinstance(
                     symbol,
                     pybamm.BinaryOperator | pybamm.UnaryOperator | pybamm.Function,
                 )
-                and symbol_counts.get(symbol, 0) > 1
+                and symbol_counts.get(symbol, 0) > 2
             ):
                 has_scalar = any(
                     isinstance(child, pybamm.Scalar) for child in symbol.children
@@ -735,7 +735,6 @@ class DiffSLExport:
             diffeq["M"] = new_line.join(lines) + new_line + "}"
 
         # F
-        lines = ["F_i {"]
         model_index_gate = None
         if self._has_experiment:
             if self._model_index_branch_order is not None:
@@ -750,6 +749,9 @@ class DiffSLExport:
                 gate_tensor_name, gate_entries
             )
             model_index_gate = f"{gate_tensor_name}_i[N]"
+            lines = ["Fraw_i {"]
+        else:
+            lines = ["F_i {"]
         for rhs in model.rhs.values():
             eqn = equation_to_diffeq(
                 rhs,
@@ -758,8 +760,6 @@ class DiffSLExport:
                 float_precision=self.float_precision,
                 use_model_index=self._has_experiment,
             )
-            if model_index_gate is not None:
-                eqn = f"({model_index_gate} * {eqn})"
             lines += [f"  {eqn},"]
             start_index += rhs.size
         for algebraic in model.algebraic.values():
@@ -770,11 +770,21 @@ class DiffSLExport:
                 float_precision=self.float_precision,
                 use_model_index=self._has_experiment,
             )
-            if model_index_gate is not None:
-                eqn = f"({model_index_gate} * {eqn})"
             lines += [f"  {eqn},"]
             start_index += algebraic.size
-        diffeq["F"] = new_line.join(lines) + new_line + "}"
+        if self._has_experiment and model_index_gate is not None:
+            diffeq["F"] = (
+                new_line.join(lines)
+                + new_line
+                + "}"
+                + new_line
+                + "F_i { "
+                + model_index_gate
+                + " * Fraw_i }"
+                + new_line
+            )
+        else:
+            diffeq["F"] = new_line.join(lines) + new_line + "}"
 
         # out
         lines = ["out_i {"]
@@ -1002,11 +1012,18 @@ def _equation_to_diffeq(
             delta = equation.delta
             x = args[0]
             a = args[1]
+            # Pre-compute the inner exponent (a-1)/2 at code-gen time when possible,
+            a_child = equation.children[1]
+            if isinstance(a_child, pybamm.Scalar):
+                a_val = float(a_child.evaluate())
+                inner_exp = f"{(a_val - 1) / 2:.{float_precision}g}"
+            else:
+                inner_exp = f"({a} - 1) / 2"
             if len(equation.children) == 3:
                 x = f"({x} / {args[2]})"
-                return f"({x} * pow((pow({x}, 2) + {delta**2:.{float_precision}g}), ({a} - 1) / 2)) * pow({args[2]}, {a})"
+                return f"({x} * pow((pow({x}, 2) + {delta**2:.{float_precision}g}), {inner_exp})) * pow({args[2]}, {a})"
             else:
-                return f"({x} * pow((pow({x}, 2) + {delta**2:.{float_precision}g}), ({a} - 1) / 2))"
+                return f"({x} * pow((pow({x}, 2) + {delta**2:.{float_precision}g}), {inner_exp}))"
         elif name == "_arcsinh2_evaluate":
             # Two-argument arcsinh function for arcsinh(a/b) that avoids division by zero
             # by adding a small regularisation term to the denominator.

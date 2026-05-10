@@ -12,6 +12,7 @@ import pytest
 import pybamm
 
 has_pydiffsol = importlib.util.find_spec("pydiffsol") is not None
+logging.getLogger("diffsl").setLevel(logging.WARNING)
 
 
 class TestDiffSLExport:
@@ -90,6 +91,7 @@ class TestDiffSLExport:
         ode.atol = 1e-6
         if isinstance(model, pybamm.lithium_ion.DFN):
             ode.ic_options.armijo_constant = 1e-1
+            ode.options.max_nonlinear_solver_iterations = 100
 
         t_eval = [0, 3600]
         t_interp = np.linspace(t_eval[0], t_eval[1], 100)
@@ -205,6 +207,7 @@ class TestDiffSLExport:
         ode.atol = 1e-6
         if isinstance(model, pybamm.lithium_ion.DFN):
             ode.ic_options.armijo_constant = 1e-1
+            ode.options.max_nonlinear_solver_iterations = 100
 
         t_eval = [0, 3600]
         t_interp = np.linspace(t_eval[0], t_eval[1], 100)
@@ -213,29 +216,42 @@ class TestDiffSLExport:
         else:
             solution = sim.solve(inputs=pv_inputs)
             t_interp = solution.t
-        soln_pybamm = solution.y
 
         t0 = time.perf_counter()
         voltage_pybamm = solution[output_variable].data
         logger.info(f"Pybamm solve time: {time.perf_counter() - t0:.5f} seconds")
 
-        if experiment is None:
-            n = model_disc.y0.shape[0]
-            v = np.ones(n)
-            for i in range(soln_pybamm.shape[1]):
-                y = soln_pybamm[:, i]
-                pybamm_jac = model_disc.jac_rhs_algebraic_action_eval(
-                    0, y, ds_inputs, v
-                )
-                pybamm_dydt = model_disc.rhs_algebraic_eval(0, y, ds_inputs)
-                diffsol_dydt = ode.rhs(ds_inputs, 0, y.flatten())
-                diffsol_jac = ode.rhs_jac_mul(ds_inputs, 0, y.flatten(), v)
-                np.testing.assert_allclose(
-                    pybamm_dydt.full().flatten(), diffsol_dydt, rtol=1e-5, atol=1e-8
-                )
-                np.testing.assert_allclose(
-                    pybamm_jac.full().flatten(), diffsol_jac, rtol=1e-5, atol=1e-8
-                )
+        if experiment is not None:
+            # need to add step index to pybamm inputs
+            pybamm_inputs_dict = dict(map_inputs_dict)
+            pybamm_inputs_dict["Experiment step index"] = 1
+            solver = pybamm.IDAKLUSolver()
+            pybamm_inputs_dict = solver._set_up_model_inputs(
+                model_disc, pybamm_inputs_dict
+            )
+            pybamm_inputs = np.array([v for v in pybamm_inputs_dict.values()])
+            # Only compare against the first step (DiffSL N == 0).
+            first_step_solution = solution.sub_solutions[0]
+        else:
+            pybamm_inputs = ds_inputs
+            first_step_solution = solution
+
+        n = model_disc.y0.shape[0]
+        v = np.ones(n)
+        for i in range(first_step_solution.y.shape[1]):
+            y = first_step_solution.y[:, i]
+            pybamm_jac = model_disc.jac_rhs_algebraic_action_eval(
+                0, y, pybamm_inputs, v
+            )
+            pybamm_dydt = model_disc.rhs_algebraic_eval(0, y, pybamm_inputs)
+            diffsol_dydt = ode.rhs(ds_inputs, 0, y.flatten())
+            diffsol_jac = ode.rhs_jac_mul(ds_inputs, 0, y.flatten(), v)
+            np.testing.assert_allclose(
+                pybamm_dydt.full().flatten(), diffsol_dydt, rtol=1e-5, atol=1e-8
+            )
+            np.testing.assert_allclose(
+                pybamm_jac.full().flatten(), diffsol_jac, rtol=1e-5, atol=1e-8
+            )
 
         t0 = time.perf_counter()
         diffsol_solution = ode.solve_dense(ds_inputs, t_interp)
