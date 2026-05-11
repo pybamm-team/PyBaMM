@@ -121,7 +121,7 @@ class ParameterValues:
     # Factory methods
     @classmethod
     def create_from_bpx(
-        cls, filename: str | Path, target_soc: float = 1.0
+        cls, filename: str | Path, target_soc: float | None = None
     ) -> ParameterValues:
         """
         Create ParameterValues from a BPX file.
@@ -131,7 +131,10 @@ class ParameterValues:
         filename : str or Path
             The filename of the `BPX <https://bpxstandard.com/>`_ file.
         target_soc : float, optional
-            Target state of charge. Must be between 0 and 1. Default is 1.
+            Target state of charge. Must be between 0 and 1. If ``None`` (the
+            default), the BPX file's ``Initial state-of-charge`` value from
+            its ``State`` section is used; if the BPX file has no ``State``
+            section, ``target_soc`` falls back to 1.
 
         Returns
         -------
@@ -150,7 +153,7 @@ class ParameterValues:
 
     @classmethod
     def create_from_bpx_obj(
-        cls, bpx_obj: dict, target_soc: float = 1.0
+        cls, bpx_obj: dict, target_soc: float | None = None
     ) -> ParameterValues:
         """
         Create ParameterValues from a BPX dictionary object.
@@ -161,7 +164,10 @@ class ParameterValues:
             A dictionary containing the parameters in the
             `BPX <https://bpxstandard.com/>`_ format.
         target_soc : float, optional
-            Target state of charge. Must be between 0 and 1. Default is 1.
+            Target state of charge. Must be between 0 and 1. If ``None`` (the
+            default), the BPX object's ``Initial state-of-charge`` value from
+            its ``State`` section is used; if the object has no ``State``
+            section, ``target_soc`` falls back to 1.
 
         Returns
         -------
@@ -181,13 +187,19 @@ class ParameterValues:
         return cls._create_from_bpx(bpx, target_soc)
 
     @classmethod
-    def _create_from_bpx(cls, bpx, target_soc: float) -> ParameterValues:
+    def _create_from_bpx(cls, bpx, target_soc: float | None) -> ParameterValues:
         """Internal method to create ParameterValues from a parsed BPX object."""
         from bpx import get_electrode_concentrations
         from bpx.schema import ElectrodeBlended, ElectrodeBlendedSPM
 
         from .bpx import bpx_to_param_dict
 
+        if target_soc is None:
+            target_soc = (
+                bpx.state.initial_conditions.initial_soc
+                if bpx.state is not None
+                else 1.0
+            )
         if target_soc < 0 or target_soc > 1:
             raise ValueError("Target SOC should be between 0 and 1")
 
