@@ -71,9 +71,9 @@ def run(label, build_model, build_params, solver):
 normal_options = {
     "SEI": "solvent-diffusion limited",
     "SEI film resistance": "average",
-    "SEI on cracks": "true",
-    "loss of active material": "stress-driven",
-    "particle mechanics": "swelling and cracking",
+    "SEI on cracks": ("true","false"),
+    "loss of active material": ("stress-driven","none"),
+    "particle mechanics": ("swelling and cracking","none"),
     "lithium plating": "irreversible",
     "lithium plating porosity change": "false",
 }
@@ -81,7 +81,7 @@ normal_options = {
 result_normal = run(
     "Standard SPM — single-phase aging",
     lambda: pybamm.lithium_ion.SPM(options=normal_options),
-    lambda: pybamm.ParameterValues("Chen2020"),
+    lambda: pybamm.ParameterValues("Prada2013"),
     idaklu_solver,
 )
 
@@ -95,7 +95,7 @@ composite_options = {
     "SEI on cracks": (("true", "false"), "false"),
     "loss of active material": (("stress-driven", "stress-driven"), "none"),
     "particle mechanics": (("swelling and cracking", "swelling only"), "none"),
-    "lithium plating": (("irreversible", "none"), "none"),
+    "lithium plating": (("irreversible", "irreversible"), "none"),
     "lithium plating porosity change": "false",
     "particle phases": ("2", "1"),
     "open-circuit potential": (("single", "current sigmoid"), "single"),
