@@ -275,6 +275,43 @@ class TestExperimentMemory:
         peak_mb = peak / 1024 / 1024
         assert peak_mb < 6, f"Peak memory {peak_mb:.1f} MB for GITT is excessive."
 
+    def test_processed_variable_computed_initialise_is_lazy(self):
+        # initialise_* (np.concatenate / flatten / xr.DataArray build) must
+        # defer until the data is actually read, otherwise per-step
+        # ProcessedVariableComputed instances in discarded cycles do work nobody
+        # ever reads.
+        unroll_calls = 0
+        original = pybamm.ProcessedVariableComputed.unroll_0D
+
+        def counting(self, realdata=None):
+            nonlocal unroll_calls
+            unroll_calls += 1
+            return original(self, realdata=realdata)
+
+        pybamm.ProcessedVariableComputed.unroll_0D = counting
+        try:
+            num_cycles = 50
+            cycle = (
+                "Discharge at 1C until 3.0 V",
+                "Charge at 1C until 4.2 V",
+            )
+            sim = pybamm.Simulation(
+                pybamm.lithium_ion.SPM(),
+                experiment=pybamm.Experiment([cycle] * num_cycles, period=300),
+                solver=pybamm.IDAKLUSolver(output_variables=["Voltage [V]"]),
+            )
+            sim.solve(save_at_cycles=num_cycles)
+        finally:
+            pybamm.ProcessedVariableComputed.unroll_0D = original
+
+        # Eager init: hundreds of calls (grows with N_cycles via _concat).
+        # Lazy init: only instances actually read (cycle summary boundaries).
+        assert unroll_calls < num_cycles, (
+            f"unroll_0D called {unroll_calls} times during a {num_cycles}-cycle "
+            f"solve. ProcessedVariableComputed.initialise_* must defer to first "
+            f"data read so instances in discarded cycles don't run heavy work."
+        )
+
     def test_idaklu_event_termination_no_python_event_reeval(self):
         """
         IDAKLUSolver with output_variables on a long event-terminated experiment
