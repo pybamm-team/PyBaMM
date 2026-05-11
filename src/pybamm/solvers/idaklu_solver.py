@@ -62,12 +62,11 @@ class IDAKLUSolver(pybamm.BaseSolver):
     store_first_last : bool, optional
         If True, only the first and last sample of each integration window are
         stored (one experiment step in :meth:`pybamm.Simulation.solve`, or the
-        full ``[t_eval[0], t_eval[-1]]`` window in :meth:`solve`). Composes
-        with ``output_variables`` for maximum memory savings on long
-        experiments whose post-processing only reads per-step first/last
-        values. Note: with this flag on, IDAKLU's Hermite interpolation is
-        disabled (see :attr:`options["hermite_interpolation"]`) and any query
-        at a non-endpoint time within a step falls back to linear
+        full ``[t_eval[0], t_eval[-1]]`` window in :meth:`solve`). Intended for
+        memory-light long experiments whose post-processing only reads per-step
+        first/last values. Note: with this flag on, IDAKLU's Hermite
+        interpolation is disabled (see :attr:`options["hermite_interpolation"]`)
+        and any query at a non-endpoint time within a step falls back to linear
         interpolation across the whole step, so this flag is **not**
         appropriate when post-processing queries an intra-step time.
         Default is False.

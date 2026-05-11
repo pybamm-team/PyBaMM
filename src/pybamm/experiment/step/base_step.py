@@ -355,8 +355,7 @@ class BaseStep:
         else:
             t_eval = np.array([0, tf])
 
-        # `getattr` because some test/duck-typed solvers don't subclass BaseSolver.
-        if getattr(solver, "store_first_last", False):
+        if solver.store_first_last:
             return t_eval, np.array([0.0, tf])
 
         if t_interp is None:

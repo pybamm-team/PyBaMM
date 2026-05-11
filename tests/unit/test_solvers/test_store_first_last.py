@@ -11,7 +11,7 @@ import pybamm
 
 
 def _build_simple_dae_model():
-    """Tiny DAE used by base-solver-level tests (avoids battery-model overhead)."""
+    """Tiny DAE used by base-solver-level tests."""
     model = pybamm.BaseModel()
     u = pybamm.Variable("u")
     v = pybamm.Variable("v")
@@ -61,8 +61,8 @@ class TestStoreFirstLast:
         for sub in sol.sub_solutions:
             assert sub.t.size == 2
 
-        # End-of-step values should still match a reference solve at a
-        # loose tolerance (Hermite is disabled here so this is approximate).
+        # Both runs stop the integrator at the same step endpoints, so the
+        # end-of-step values should match to solver precision.
         ref_solver = pybamm.IDAKLUSolver()
         ref_sim = pybamm.Simulation(model, experiment=experiment, solver=ref_solver)
         ref_sol = ref_sim.solve()
@@ -70,8 +70,8 @@ class TestStoreFirstLast:
             np.testing.assert_allclose(
                 sub["Voltage [V]"].data[-1],
                 ref_sub["Voltage [V]"].data[-1],
-                rtol=1e-3,
-                atol=1e-3,
+                rtol=1e-6,
+                atol=1e-6,
             )
 
     def test_overrides_per_step_period(self):

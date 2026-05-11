@@ -50,13 +50,12 @@ class BaseSolver:
     store_first_last : bool, optional
         If True, only the first and last sample of each integration window are
         stored (one experiment step in :meth:`pybamm.Simulation.solve`, or the
-        full ``[t_eval[0], t_eval[-1]]`` window in :meth:`solve`). Composes with
-        ``output_variables`` for maximum memory savings on long experiments
-        whose post-processing only reads per-step first/last values. Only has
-        effect on solvers that support intra-solve interpolation
-        (e.g. :class:`pybamm.IDAKLUSolver`); a warning is issued otherwise.
-        Note: when this flag is on, intra-step interpolation falls back to
-        linear across the whole step, so it is **not** appropriate when
+        full ``[t_eval[0], t_eval[-1]]`` window in :meth:`solve`). Intended for
+        memory-light long experiments whose post-processing only reads per-step
+        first/last values. Only has effect on solvers that support intra-solve
+        interpolation (e.g. :class:`pybamm.IDAKLUSolver`); a warning is issued
+        otherwise. Note: when this flag is on, intra-step interpolation falls
+        back to linear across the whole step, so it is **not** appropriate when
         post-processing queries a non-endpoint time within a step.
         Default is False.
     """
@@ -925,9 +924,6 @@ class BaseSolver:
         if (np.diff(t_eval) < 0).any():
             raise pybamm.SolverError("t_eval must increase monotonically")
 
-        # The integrator stops at every t_eval point, so collapsing it is what
-        # actually reduces the stored output count in plain solve() (step() is
-        # already a 2-point window).
         endpoints = self._store_first_last_endpoints(t_eval)
         if endpoints is not None:
             t_eval = endpoints
