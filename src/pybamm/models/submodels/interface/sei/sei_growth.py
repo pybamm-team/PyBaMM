@@ -238,11 +238,11 @@ class SEIGrowth(BaseModel):
         # For SEI on initial surface (as opposed to cracks), it is zero.
         if self.reaction == "SEI on cracks":
             if self.reaction_loc == "x-average":
-                l_cr = variables[f"X-averaged {domain} {self.phase} particle crack length [m]"]
-                dl_cr = variables[f"X-averaged {domain} {self.phase} particle cracking rate [m.s-1]"]
+                l_cr = variables[f"X-averaged {domain} {self.phase_name}particle crack length [m]"]
+                dl_cr = variables[f"X-averaged {domain} {self.phase_name}particle cracking rate [m.s-1]"]
             else:
-                l_cr = variables[f"{Domain} {self.phase} particle crack length [m]"]
-                dl_cr = variables[f"{Domain} {self.phase} particle cracking rate [m.s-1]"]
+                l_cr = variables[f"{Domain} {self.phase_name}particle crack length [m]"]
+                dl_cr = variables[f"{Domain} {self.phase_name}particle cracking rate [m.s-1]"]
             spreading = dl_cr / l_cr * (self.phase_param.L_sei_crack_0 - L_sei)
         else:
             spreading = 0

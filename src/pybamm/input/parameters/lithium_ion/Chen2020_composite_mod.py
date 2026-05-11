@@ -793,6 +793,7 @@ def get_parameter_values():
         # Plating parameters referred from OKane2022
         "Lithium metal partial molar volume [m3.mol-1]": 1.3e-05,
         "Primary: Lithium plating kinetic rate constant [m.s-1]": 1e-09,
+        "Primary: Lithium plating potential sharpness": 100,
         "Primary: Exchange-current density for plating [A.m-2]"
         "": graphite_plating_exchange_current_density_OKane2020,
         "Primary: Exchange-current density for stripping [A.m-2]"
@@ -804,6 +805,7 @@ def get_parameter_values():
         "Primary: Dead lithium decay rate [s-1]"
         "": graphite_SEI_limited_dead_lithium_OKane2022,
         "Secondary: Lithium plating kinetic rate constant [m.s-1]": 1e-09,
+        "Secondary: Lithium plating potential sharpness": 100,
         "Secondary: Exchange-current density for plating [A.m-2]"
         "": silicon_plating_exchange_current_density_OKane2020,
         "Secondary: Exchange-current density for stripping [A.m-2]"

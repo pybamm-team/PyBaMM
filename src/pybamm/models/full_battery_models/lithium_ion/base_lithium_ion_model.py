@@ -320,10 +320,12 @@ class BaseModel(pybamm.BaseBatteryModel):
         for domain in self.options.whole_cell_domains:
             if domain != "separator":
                 domain = domain.split()[0].lower()
-                sei_option = getattr(self.options, domain)["SEI"]
-                sei_on_cracks_option = getattr(self.options, domain)["SEI on cracks"]
                 phases = self.options.phases[domain]
                 for phase in phases:
+                    sei_option = getattr(getattr(self.options, domain), phase)["SEI"]
+                    sei_on_cracks_option = getattr(getattr(self.options, domain), phase)[
+                        "SEI on cracks"
+                    ]
                     if (
                         sei_option in ["none", "constant"]
                         or sei_on_cracks_option == "false"
@@ -418,9 +420,11 @@ class BaseModel(pybamm.BaseBatteryModel):
     def set_active_material_submodel(self):
         for domain in ["negative", "positive"]:
             if self.options.electrode_types[domain] == "porous":
-                lam = getattr(self.options, domain)["loss of active material"]
                 phases = self.options.phases[domain]
                 for phase in phases:
+                    lam = getattr(getattr(self.options, domain), phase)[
+                        "loss of active material"
+                    ]
                     if lam == "none":
                         submod = pybamm.active_material.Constant(
                             self.param, domain, self.options, phase
