@@ -135,7 +135,7 @@ class ProcessedVariableComputed(BaseProcessedVariable):
 
     def _materialise(self):
         # Not thread-safe: concurrent first reads may run initialise twice.
-        # PVCs are constructed and read on the same thread in the standard
+        # Instances are constructed and read on the same thread in the standard
         # solve flow, so callers parallelising reads must serialise them.
         if not self._initialised:
             self._initialise_method()
@@ -146,18 +146,10 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         self._materialise()
         return self._entries
 
-    @entries.setter
-    def entries(self, value):
-        self._entries = value
-
     @property
     def _xr_data_array(self):
         self._materialise()
         return self._xr_data_array_cache
-
-    @_xr_data_array.setter
-    def _xr_data_array(self, value):
-        self._xr_data_array_cache = value
 
     def as_computed(self) -> ProcessedVariableComputed:
         return self
@@ -264,8 +256,8 @@ class ProcessedVariableComputed(BaseProcessedVariable):
             raise NotImplementedError(f"Unsupported data dimension: {self.dimensions}")
 
     def initialise_time_independent(self):
-        self.entries = self.unroll_0D()
-        self._xr_data_array = None
+        self._entries = self.unroll_0D()
+        self._xr_data_array_cache = None
 
     def initialise_0D(self):
         entries = self.unroll_0D()
@@ -276,9 +268,9 @@ class ProcessedVariableComputed(BaseProcessedVariable):
             )
 
         # set up interpolation
-        self._xr_data_array = xr.DataArray(entries, coords=[("t", self.t_pts)])
+        self._xr_data_array_cache = xr.DataArray(entries, coords=[("t", self.t_pts)])
 
-        self.entries = entries
+        self._entries = entries
 
     def initialise_1D(self):
         entries = self.unroll_1D()
@@ -302,7 +294,7 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         )
 
         # assign attributes for reference (either x_sol or r_sol)
-        self.entries = entries
+        self._entries = entries
         if self.domain[0].endswith("particle"):
             self.first_dimension = "r"
             self.r_sol = space
@@ -331,7 +323,7 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         self.first_dim_pts = edges
 
         # set up interpolation
-        self._xr_data_array = xr.DataArray(
+        self._xr_data_array_cache = xr.DataArray(
             entries_for_interp,
             coords=[(self.first_dimension, pts_for_interp), ("t", self.t_pts)],
         )
@@ -451,7 +443,7 @@ class ProcessedVariableComputed(BaseProcessedVariable):
             )
 
         # assign attributes for reference
-        self.entries = entries
+        self._entries = entries
         first_dim_pts_for_interp = first_dim_pts
         second_dim_pts_for_interp = second_dim_pts
 
@@ -460,7 +452,7 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         self.second_dim_pts = second_dim_edges
 
         # set up interpolation
-        self._xr_data_array = xr.DataArray(
+        self._xr_data_array_cache = xr.DataArray(
             entries_for_interp,
             coords={
                 self.first_dimension: first_dim_pts_for_interp,
@@ -482,7 +474,7 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         )
 
         # assign attributes for reference
-        self.entries = entries
+        self._entries = entries
         self.y_sol = y_sol
         self.z_sol = z_sol
         self.first_dimension = "y"
@@ -491,7 +483,7 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         self.second_dim_pts = z_sol
 
         # set up interpolation
-        self._xr_data_array = xr.DataArray(
+        self._xr_data_array_cache = xr.DataArray(
             entries,
             coords={"y": y_sol, "z": z_sol, "t": self.t_pts},
         )
@@ -625,7 +617,7 @@ class ProcessedVariableComputed(BaseProcessedVariable):
             )
 
         # assign attributes for reference
-        self.entries = entries
+        self._entries = entries
         first_dim_pts_for_interp = first_dim_pts
         second_dim_pts_for_interp = second_dim_pts
         third_dim_pts_for_interp = third_dim_pts
@@ -636,7 +628,7 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         self.third_dim_pts = third_dim_edges
 
         # set up interpolation
-        self._xr_data_array = xr.DataArray(
+        self._xr_data_array_cache = xr.DataArray(
             entries_for_interp,
             coords={
                 self.first_dimension: first_dim_pts_for_interp,
@@ -668,7 +660,7 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         )
 
         # assign attributes for reference
-        self.entries = entries
+        self._entries = entries
         self.x_sol = x_sol
         self.y_sol = y_sol
         self.z_sol = z_sol
@@ -680,7 +672,7 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         self.third_dim_pts = z_sol
 
         # set up interpolation
-        self._xr_data_array = xr.DataArray(
+        self._xr_data_array_cache = xr.DataArray(
             entries,
             coords={"x": x_sol, "y": y_sol, "z": z_sol, "t": self.t_pts},
         )

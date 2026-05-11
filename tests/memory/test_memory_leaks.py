@@ -277,8 +277,9 @@ class TestExperimentMemory:
 
     def test_processed_variable_computed_initialise_is_lazy(self):
         # initialise_* (np.concatenate / flatten / xr.DataArray build) must
-        # defer until the data is actually read, otherwise per-step PVCs in
-        # discarded cycles do work nobody ever reads.
+        # defer until the data is actually read, otherwise per-step
+        # ProcessedVariableComputed instances in discarded cycles do work nobody
+        # ever reads.
         unroll_calls = 0
         original = pybamm.ProcessedVariableComputed.unroll_0D
 
@@ -304,11 +305,11 @@ class TestExperimentMemory:
             pybamm.ProcessedVariableComputed.unroll_0D = original
 
         # Eager init: hundreds of calls (grows with N_cycles via _concat).
-        # Lazy init: only PVCs actually read (cycle summary boundaries).
+        # Lazy init: only instances actually read (cycle summary boundaries).
         assert unroll_calls < num_cycles, (
             f"unroll_0D called {unroll_calls} times during a {num_cycles}-cycle "
             f"solve. ProcessedVariableComputed.initialise_* must defer to first "
-            f"data read so PVCs in discarded cycles don't run heavy work."
+            f"data read so instances in discarded cycles don't run heavy work."
         )
 
     def test_idaklu_event_termination_no_python_event_reeval(self):
