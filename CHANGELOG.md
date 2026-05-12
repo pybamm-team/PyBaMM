@@ -1,5 +1,7 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+# [v26.4.3](https://github.com/pybamm-team/PyBaMM/tree/v26.4.3) - 2026-05-12
+
 ## Bug fixes
 
 - `ProcessedVariableComputed.__init__` now defers the heavy `initialise_*` work (numpy concatenate/flatten, xarray `DataArray` build) until `entries` or `_xr_data_array` is actually read. On a 500-cycle SPM with `output_variables` set and `save_at_cycles=N`, solve wall time dropped from ~30 s to ~2.5 s (~12×); per-step `__init__` cost dropped from 47% of solve to 1.7%.
