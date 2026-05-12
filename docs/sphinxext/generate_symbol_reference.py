@@ -48,6 +48,7 @@ def _prettify_floats(text: str) -> str:
 
     return _FLOAT_RE.sub(_sub, text)
 
+
 # Roots to introspect. Each entry is (label, root, factory) where ``factory``
 # returns a freshly constructed instance and ``root`` is the suggested
 # variable name users would bind it to.
@@ -79,6 +80,7 @@ SKIP_ATTRS = {
     "elec",
 }
 
+
 def _call_method(method):
     """Call ``method`` with placeholder arguments to discover what it returns.
 
@@ -104,8 +106,7 @@ def _call_method(method):
     if result is not None:
         return result
     fallback = [
-        p.default if p.default is not inspect.Parameter.empty else 0
-        for _, p in params
+        p.default if p.default is not inspect.Parameter.empty else 0 for _, p in params
     ]
     return _try(fallback)
 
@@ -283,11 +284,11 @@ def _build_page() -> str:
     parts.append("")
     parts.append(
         "The underlying parameter string depends on the model options. For "
-        "the **default single-phase** electrode (``\"particle phases\": "
+        'the **default single-phase** electrode (``"particle phases": '
         '"1"``), the ``Primary:`` / ``Secondary:`` prefix is dropped — so '
         "``param.n.prim.D(c_s, T)`` is the string "
         '``"Negative particle diffusivity [m2.s-1]"``. For a **composite '
-        "electrode** (``\"particle phases\": \"2\"``), the same shorthand "
+        'electrode** (``"particle phases": "2"``), the same shorthand '
         'becomes ``"Primary: Negative particle diffusivity [m2.s-1]"`` and '
         "``param.n.sec.D(c_s, T)`` becomes "
         '``"Secondary: Negative particle diffusivity [m2.s-1]"``. The tables '
