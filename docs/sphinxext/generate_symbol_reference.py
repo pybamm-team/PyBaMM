@@ -14,11 +14,39 @@ automatically updates the reference page.
 from __future__ import annotations
 
 import inspect
+import re
 from collections.abc import Iterable
 from pathlib import Path
 
 import pybamm
 from pybamm.parameters.base_parameters import BaseParameters
+
+_FLOAT_RE = re.compile(r"\d+\.\d+(?:[eE][+-]?\d+)?")
+
+
+def _prettify_floats(text: str) -> str:
+    """Rewrite float literals that are exact reciprocals of small integers
+    (e.g. ``0.0002777777777777778`` → ``(1/3600)``).
+
+    PyBaMM simplifies expressions like ``F / 3600`` into ``0.000277… * F`` at
+    construction time, which is ugly in docs. Most of the offenders are
+    unit-conversion factors (``1/60``, ``1/3600``, ``1/86400``), which are
+    well-handled by this pass.
+    """
+
+    def _sub(match: re.Match[str]) -> str:
+        try:
+            f = float(match.group(0))
+        except ValueError:
+            return match.group(0)
+        if not (0 < f < 1):
+            return match.group(0)
+        n = round(1 / f)
+        if n > 1 and abs(1 / n - f) / f < 1e-12:
+            return f"(1/{n})"
+        return match.group(0)
+
+    return _FLOAT_RE.sub(_sub, text)
 
 # Roots to introspect. Each entry is (label, root, factory) where ``factory``
 # returns a freshly constructed instance and ``root`` is the suggested
@@ -51,79 +79,61 @@ SKIP_ATTRS = {
     "elec",
 }
 
-# Placeholders for method parameters when we need to call a method to discover
-# its underlying FunctionParameter name. Anything we don't have a placeholder
-# for (and which has no default) is skipped.
-PLACEHOLDERS = {
-    "c_e": pybamm.Variable("c_e"),
-    "c_s": pybamm.Variable("c_s"),
-    "c_s_surf": pybamm.Variable("c_s_surf"),
-    "c_Li": pybamm.Variable("c_Li"),
-    "c_ox": pybamm.Variable("c_ox"),
-    "c_hy": pybamm.Variable("c_hy"),
-    "T": pybamm.Variable("T"),
-    "T_cell": pybamm.Variable("T_cell"),
-    "y": pybamm.Variable("y"),
-    "z": pybamm.Variable("z"),
-    "t": pybamm.Variable("t"),
-    "R": pybamm.Variable("R"),
-    "sto": pybamm.Variable("sto"),
-    "soc": pybamm.Variable("soc"),
-    "U": pybamm.Variable("U"),
-    "ocv": pybamm.Variable("ocv"),
-    "L_sei": pybamm.Variable("L_sei"),
-    "i": pybamm.Variable("i"),
-    "current": pybamm.Variable("current"),
-    "index": 0,
-    "element_number": 0,
-    "lithiation": None,
-    "direction": None,
-    "name": "Element-0 resistance [Ohm]",
-}
-
-
 def _call_method(method):
+    """Call ``method`` with placeholder arguments to discover what it returns.
+
+    First tries ``pybamm.Variable(arg_name)`` for every positional parameter
+    (works for almost everything, since methods on parameter classes accept
+    pybamm expressions). If that fails — e.g. the method indexes by an integer
+    or treats an arg as a string — retries with each argument's default value
+    where available, or ``0`` for the rest.
+    """
     try:
         sig = inspect.signature(method)
     except (TypeError, ValueError):
         return None
-    args = []
-    for name, p in sig.parameters.items():
-        if name == "self":
-            continue
-        if name in PLACEHOLDERS:
-            args.append(PLACEHOLDERS[name])
-        elif p.default is not inspect.Parameter.empty:
-            args.append(p.default)
-        else:
+    params = [(n, p) for n, p in sig.parameters.items() if n != "self"]
+
+    def _try(args):
+        try:
+            return method(*args)
+        except Exception:
             return None
-    try:
-        return method(*args)
-    except Exception:
-        return None
+
+    result = _try([pybamm.Variable(n) for n, _ in params])
+    if result is not None:
+        return result
+    fallback = [
+        p.default if p.default is not inspect.Parameter.empty else 0
+        for _, p in params
+    ]
+    return _try(fallback)
 
 
-def _collect_param_names(expr):
+def _classify(expr):
+    """Return ``(kind, detail)`` for a pybamm expression discovered on a
+    parameter class.
+
+    - ``("Parameter", name)`` for a bare :class:`pybamm.Parameter`.
+    - ``("FunctionParameter", name)`` for a bare :class:`pybamm.FunctionParameter`.
+    - ``("derived", str(expr))`` for any composite expression.
+    - ``None`` if it's a non-Symbol or carries no parameters worth listing.
+    """
     if isinstance(expr, pybamm.FunctionParameter):
-        return [("FunctionParameter", expr.name)]
+        return ("FunctionParameter", expr.name)
     if isinstance(expr, pybamm.Parameter):
-        return [("Parameter", expr.name)]
+        return ("Parameter", expr.name)
     if not isinstance(expr, pybamm.Symbol):
-        return []
-    seen = set()
-    out = []
-    for sub in expr.pre_order():
-        if isinstance(sub, pybamm.FunctionParameter):
-            key = ("FunctionParameter", sub.name)
-        elif isinstance(sub, pybamm.Parameter):
-            key = ("Parameter", sub.name)
-        else:
-            continue
-        if key in seen:
-            continue
-        seen.add(key)
-        out.append(key)
-    return out
+        return None
+    # Composite expression — only worth showing if it actually contains a
+    # parameter somewhere in the tree (otherwise it's a numerical constant).
+    has_param = any(
+        isinstance(sub, (pybamm.Parameter, pybamm.FunctionParameter))
+        for sub in expr.pre_order()
+    )
+    if not has_param:
+        return None
+    return ("derived", _prettify_floats(str(expr)))
 
 
 def _walk(obj, path, results, seen):
@@ -143,25 +153,23 @@ def _walk(obj, path, results, seen):
             continue
         full = f"{path}.{name}"
 
-        if isinstance(v, pybamm.FunctionParameter):
-            results.append((path, full, "FunctionParameter", v.name))
-            continue
-        if isinstance(v, pybamm.Parameter):
-            results.append((path, full, "Parameter", v.name))
-            continue
-        if isinstance(v, pybamm.Symbol):
-            for kind, pname in _collect_param_names(v):
-                results.append((path, full, f"derived ({kind})", pname))
-            continue
         if isinstance(v, BaseParameters):
             _walk(v, full, results, seen)
             continue
+
+        if isinstance(v, pybamm.Symbol):
+            classified = _classify(v)
+            if classified is not None:
+                kind, detail = classified
+                results.append((path, full, kind, detail))
+            continue
+
         if inspect.ismethod(v) or (callable(v) and not inspect.isclass(v)):
             result = _call_method(v)
             if result is None:
                 continue
-            param_names = _collect_param_names(result)
-            if not param_names:
+            classified = _classify(result)
+            if classified is None:
                 continue
             try:
                 sig = inspect.signature(v)
@@ -169,47 +177,43 @@ def _walk(obj, path, results, seen):
                 call = f"{full}({', '.join(arg_names)})"
             except (TypeError, ValueError):
                 call = f"{full}(...)"
-            for _, pname in param_names:
-                results.append((path, call, "FunctionParameter", pname))
+            kind, detail = classified
+            results.append((path, call, kind, detail))
 
 
 def _emit_table(rows: Iterable[tuple[str, str, str]]) -> str:
     out = [
         ".. list-table::",
         "   :header-rows: 1",
-        "   :widths: 35 25 40",
+        "   :widths: 30 20 50",
         "",
         "   * - Shorthand",
         "     - Kind",
-        "     - Parameter string",
+        "     - Parameter string / expression",
     ]
-    for shorthand, kind, pname_cell in rows:
+    for shorthand, kind, detail in rows:
         out.append(f"   * - ``{shorthand}``")
         out.append(f"     - {kind}")
-        out.append(f"     - {pname_cell}")
+        # Wrap the detail in inline code so the parameter strings (which
+        # contain spaces, brackets and units) render cleanly. Replace any
+        # backticks in the expression to avoid breaking inline-code parsing.
+        safe = detail.replace("``", "'")
+        out.append(f"     - ``{safe}``")
     out.append("")
     return "\n".join(out)
 
 
 def _render_class(label: str, root: str, results) -> str:
-    # Bucket rows by their group (i.e. the access path of the closest
-    # enclosing container). Within a group, collapse multiple constituent
-    # parameter strings for a single derived shorthand into one row so the
-    # tables don't get repetitive.
-    grouped: dict[str, dict[tuple[str, str], list[str]]] = {}
-    for group, shorthand, kind, pname in results:
-        bucket = grouped.setdefault(group, {})
-        key = (shorthand, kind)
-        if pname not in bucket.setdefault(key, []):
-            bucket[key].append(pname)
-
-    collapsed: dict[str, list[tuple[str, str, str]]] = {}
-    for group, bucket in grouped.items():
-        rows = []
-        for (shorthand, kind), pnames in bucket.items():
-            rows.append((shorthand, kind, ", ".join(f"``{p}``" for p in pnames)))
-        collapsed[group] = sorted(rows, key=lambda r: r[0])
-    grouped = collapsed
+    # Bucket rows by their group (the access path of the closest enclosing
+    # container) and dedupe.
+    grouped: dict[str, list[tuple[str, str, str]]] = {}
+    for group, shorthand, kind, detail in results:
+        rows = grouped.setdefault(group, [])
+        row = (shorthand, kind, detail)
+        if row not in rows:
+            rows.append(row)
+    for g in grouped:
+        grouped[g] = sorted(grouped[g], key=lambda r: r[0])
 
     out: list[str] = []
     out.append(label)
@@ -251,18 +255,45 @@ def _build_page() -> str:
         "This page maps each Python-side parameter shorthand (e.g. "
         "``param.kappa_e``) onto the string used in "
         ":class:`pybamm.ParameterValues` and in parameter-set files "
-        '(e.g. ``"Electrolyte conductivity [S.m-1]"``). It is regenerated '
-        "from the parameter classes in ``src/pybamm/parameters/`` on every "
-        "documentation build."
+        '(e.g. ``"Electrolyte conductivity [S.m-1]"``).'
     )
     parts.append("")
     parts.append(
         "``Kind`` is ``Parameter`` for scalars set directly via the parameter "
         "values dictionary, ``FunctionParameter`` for entries that may be set "
         "to a Python callable (e.g. a function of concentration and "
-        "temperature), and ``derived (...)`` for shorthands defined as "
-        "expressions over other parameters (only their constituent parameter "
-        "strings are listed)."
+        "temperature), and ``derived`` for shorthands defined as expressions "
+        "over other parameters — the third column then shows the full "
+        "expression."
+    )
+    parts.append("")
+    parts.append("Domain and phase sub-objects")
+    parts.append("----------------------------")
+    parts.append("")
+    parts.append(
+        "Each electrochemical parameter class exposes domain sub-objects "
+        "``.n`` (negative electrode), ``.s`` (separator) and ``.p`` "
+        "(positive electrode). The electrode domains additionally carry "
+        "particle-phase sub-objects ``.prim`` (primary phase) and ``.sec`` "
+        "(secondary phase). So ``param.n.prim.D(c_s, T)`` is the primary-"
+        "phase particle diffusivity in the negative electrode, and "
+        "``param.p.sec.U(sto, T)`` is the secondary-phase open-circuit "
+        "potential in the positive electrode."
+    )
+    parts.append("")
+    parts.append(
+        "The underlying parameter string depends on the model options. For "
+        "the **default single-phase** electrode (``\"particle phases\": "
+        '"1"``), the ``Primary:`` / ``Secondary:`` prefix is dropped — so '
+        "``param.n.prim.D(c_s, T)`` is the string "
+        '``"Negative particle diffusivity [m2.s-1]"``. For a **composite '
+        "electrode** (``\"particle phases\": \"2\"``), the same shorthand "
+        'becomes ``"Primary: Negative particle diffusivity [m2.s-1]"`` and '
+        "``param.n.sec.D(c_s, T)`` becomes "
+        '``"Secondary: Negative particle diffusivity [m2.s-1]"``. The tables '
+        "below are generated with default options, so they show the "
+        "unprefixed strings; mentally prepend ``Primary:`` / ``Secondary:`` "
+        "when working with a composite electrode."
     )
     parts.append("")
 
