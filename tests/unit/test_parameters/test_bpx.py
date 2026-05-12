@@ -672,7 +672,9 @@ class TestBPX:
         )
         sol = sim.solve()
         v_final = float(sol["Voltage [V]"].entries[-1])
-        assert pv["Lower voltage cut-off [V]"] < v_final < pv["Upper voltage cut-off [V]"]
+        assert (
+            pv["Lower voltage cut-off [V]"] < v_final < pv["Upper voltage cut-off [V]"]
+        )
 
     def test_bpx_target_soc_defaults_to_bpx_initial_soc(self):
         bpx_obj = copy.deepcopy(self.base)

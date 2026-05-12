@@ -473,7 +473,9 @@ def _get_pybamm_name(pybamm_name, domain):
         return [domain.pre_name + _BPX_OCP_HYSTERESIS_RENAMES[pybamm_name]]
     if pybamm_name == "OCP hysteresis decay constant":
         particle = (
-            negative_particle if domain.name == "negative electrode" else positive_particle
+            negative_particle
+            if domain.name == "negative electrode"
+            else positive_particle
         )
         return [
             particle.pre_name + "lithiation hysteresis decay rate",
