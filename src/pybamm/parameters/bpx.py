@@ -162,7 +162,7 @@ def bpx_to_param_dict(bpx: BPX) -> dict:
             if not isinstance(bpx_value, dict):
                 pybamm_dict[target] = bpx_value
                 continue
-            phase_prefixes = _get_phase_names(bpx_electrode)
+            phase_prefixes = domain_phases[f"{domain_str} electrode"]
             if phase_prefixes == [""]:
                 continue
             for bpx_phase, pybamm_prefix in zip(
@@ -469,12 +469,12 @@ def _get_pybamm_name(pybamm_name, domain):
         ]
     if pybamm_name.startswith("Particle radius"):
         return [domain.short_pre_name + pybamm_name_lower]
-    if pybamm_name == "OCP (lithiation) [V]":
-        return [domain.pre_name + "lithiation OCP [V]"]
-    if pybamm_name == "OCP (delithiation) [V]":
-        return [domain.pre_name + "delithiation OCP [V]"]
+    if pybamm_name in _BPX_OCP_HYSTERESIS_RENAMES:
+        return [domain.pre_name + _BPX_OCP_HYSTERESIS_RENAMES[pybamm_name]]
     if pybamm_name == "OCP hysteresis decay constant":
-        particle = negative_particle if domain is negative_electrode else positive_particle
+        particle = (
+            negative_particle if domain.name == "negative electrode" else positive_particle
+        )
         return [
             particle.pre_name + "lithiation hysteresis decay rate",
             particle.pre_name + "delithiation hysteresis decay rate",
@@ -493,6 +493,10 @@ def _get_pybamm_name(pybamm_name, domain):
     return [pybamm_name]
 
 
+_BPX_OCP_HYSTERESIS_RENAMES = {
+    "OCP (lithiation) [V]": "lithiation OCP [V]",
+    "OCP (delithiation) [V]": "delithiation OCP [V]",
+}
 _OPTIONAL_HYSTERESIS_FIELDS = {"ocp_lith", "ocp_delith", "gamma_hys"}
 
 
