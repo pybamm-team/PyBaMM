@@ -83,57 +83,73 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         self.base_eval_size = self.base_variables[0].size
         self.unroll_params = {}
 
-        # handle 2D or 3D (in space) finite element variables differently
+        # initialise_* runs lazily on first read of `entries` / `_xr_data_array`.
+        self._initialised = False
+        self._initialise_method, self.dimensions = self._resolve_initialise_method()
+
+    def _resolve_initialise_method(self):
+        """Return (initialise_* method, dimensions) for this variable's shape."""
+        base_var = self.base_variables[0]
         if (
             self.mesh
             and "current collector" in self.domain
             and isinstance(self.mesh, pybamm.ScikitSubMesh2D)
         ):
-            self.initialise_2D_scikit_fem()
-            return
-        if hasattr(base_variables[0], "secondary_mesh"):
-            if "current collector" in base_variables[0].domains[
-                "secondary"
-            ] and isinstance(base_variables[0].secondary_mesh, pybamm.ScikitSubMesh2D):
-                self.initialise_3D_scikit_fem()
-                return
+            return self.initialise_2D_scikit_fem, 2
+        if hasattr(base_var, "secondary_mesh") and (
+            "current collector" in base_var.domains["secondary"]
+            and isinstance(base_var.secondary_mesh, pybamm.ScikitSubMesh2D)
+        ):
+            return self.initialise_3D_scikit_fem, 3
 
-        # check variable shape
         if len(self.base_eval_shape) == 0 or self.base_eval_shape[0] == 1:
-            if self.time_indep:
-                self.initialise_time_independent()
-            else:
-                self.initialise_0D()
-            return
+            method = (
+                self.initialise_time_independent
+                if self.time_indep
+                else self.initialise_0D
+            )
+            return method, 0
 
         n = self.mesh.npts
         base_shape = self.base_eval_shape[0]
-        # Try some shapes that could make the variable a 1D variable
         if base_shape in [n, n + 1]:
-            self.initialise_1D()
-            return
+            return self.initialise_1D, 1
 
-        # Try some shapes that could make the variable a 2D variable
         first_dim_nodes = self.mesh.nodes
         first_dim_edges = self.mesh.edges
-        second_dim_pts = self.base_variables[0].secondary_mesh.nodes
+        second_dim_pts = base_var.secondary_mesh.nodes
         if self.base_eval_size // len(second_dim_pts) in [
             len(first_dim_nodes),
             len(first_dim_edges),
         ]:
-            self.initialise_2D()
-            return
+            return self.initialise_2D, 2
 
-        # Try some shapes that could make the variable a 3D variable
-        tertiary_pts = self.base_variables[0].tertiary_mesh.nodes
+        tertiary_pts = base_var.tertiary_mesh.nodes
         if self.base_eval_size // (len(second_dim_pts) * len(tertiary_pts)) in [
             len(first_dim_nodes),
             len(first_dim_edges),
         ]:
-            self.initialise_3D()
-            return
+            return self.initialise_3D, 3
 
-        raise NotImplementedError(f"Shape not recognized for {base_variables[0]}")
+        raise NotImplementedError(f"Shape not recognized for {base_var}")
+
+    def _materialise(self):
+        # Not thread-safe: concurrent first reads may run initialise twice.
+        # Instances are constructed and read on the same thread in the standard
+        # solve flow, so callers parallelising reads must serialise them.
+        if not self._initialised:
+            self._initialise_method()
+            self._initialised = True
+
+    @property
+    def entries(self):
+        self._materialise()
+        return self._entries
+
+    @property
+    def _xr_data_array(self):
+        self._materialise()
+        return self._xr_data_array_cache
 
     def as_computed(self) -> ProcessedVariableComputed:
         return self
@@ -240,9 +256,8 @@ class ProcessedVariableComputed(BaseProcessedVariable):
             raise NotImplementedError(f"Unsupported data dimension: {self.dimensions}")
 
     def initialise_time_independent(self):
-        self.entries = self.unroll_0D()
-        self._xr_data_array = None
-        self.dimensions = 0
+        self._entries = self.unroll_0D()
+        self._xr_data_array_cache = None
 
     def initialise_0D(self):
         entries = self.unroll_0D()
@@ -253,10 +268,9 @@ class ProcessedVariableComputed(BaseProcessedVariable):
             )
 
         # set up interpolation
-        self._xr_data_array = xr.DataArray(entries, coords=[("t", self.t_pts)])
+        self._xr_data_array_cache = xr.DataArray(entries, coords=[("t", self.t_pts)])
 
-        self.entries = entries
-        self.dimensions = 0
+        self._entries = entries
 
     def initialise_1D(self):
         entries = self.unroll_1D()
@@ -280,8 +294,7 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         )
 
         # assign attributes for reference (either x_sol or r_sol)
-        self.entries = entries
-        self.dimensions = 1
+        self._entries = entries
         if self.domain[0].endswith("particle"):
             self.first_dimension = "r"
             self.r_sol = space
@@ -310,7 +323,7 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         self.first_dim_pts = edges
 
         # set up interpolation
-        self._xr_data_array = xr.DataArray(
+        self._xr_data_array_cache = xr.DataArray(
             entries_for_interp,
             coords=[(self.first_dimension, pts_for_interp), ("t", self.t_pts)],
         )
@@ -430,8 +443,7 @@ class ProcessedVariableComputed(BaseProcessedVariable):
             )
 
         # assign attributes for reference
-        self.entries = entries
-        self.dimensions = 2
+        self._entries = entries
         first_dim_pts_for_interp = first_dim_pts
         second_dim_pts_for_interp = second_dim_pts
 
@@ -440,7 +452,7 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         self.second_dim_pts = second_dim_edges
 
         # set up interpolation
-        self._xr_data_array = xr.DataArray(
+        self._xr_data_array_cache = xr.DataArray(
             entries_for_interp,
             coords={
                 self.first_dimension: first_dim_pts_for_interp,
@@ -462,8 +474,7 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         )
 
         # assign attributes for reference
-        self.entries = entries
-        self.dimensions = 2
+        self._entries = entries
         self.y_sol = y_sol
         self.z_sol = z_sol
         self.first_dimension = "y"
@@ -472,7 +483,7 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         self.second_dim_pts = z_sol
 
         # set up interpolation
-        self._xr_data_array = xr.DataArray(
+        self._xr_data_array_cache = xr.DataArray(
             entries,
             coords={"y": y_sol, "z": z_sol, "t": self.t_pts},
         )
@@ -606,8 +617,7 @@ class ProcessedVariableComputed(BaseProcessedVariable):
             )
 
         # assign attributes for reference
-        self.entries = entries
-        self.dimensions = 3
+        self._entries = entries
         first_dim_pts_for_interp = first_dim_pts
         second_dim_pts_for_interp = second_dim_pts
         third_dim_pts_for_interp = third_dim_pts
@@ -618,7 +628,7 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         self.third_dim_pts = third_dim_edges
 
         # set up interpolation
-        self._xr_data_array = xr.DataArray(
+        self._xr_data_array_cache = xr.DataArray(
             entries_for_interp,
             coords={
                 self.first_dimension: first_dim_pts_for_interp,
@@ -650,8 +660,7 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         )
 
         # assign attributes for reference
-        self.entries = entries
-        self.dimensions = 3
+        self._entries = entries
         self.x_sol = x_sol
         self.y_sol = y_sol
         self.z_sol = z_sol
@@ -663,7 +672,7 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         self.third_dim_pts = z_sol
 
         # set up interpolation
-        self._xr_data_array = xr.DataArray(
+        self._xr_data_array_cache = xr.DataArray(
             entries,
             coords={"x": x_sol, "y": y_sol, "z": z_sol, "t": self.t_pts},
         )

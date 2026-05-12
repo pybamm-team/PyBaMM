@@ -112,6 +112,12 @@ class TestParameterValues:
         del param["a"]
         assert "a" not in param.keys()
 
+    def test_deprecated_parameter_raises_error(self):
+        # Guard: deprecated parameter detection must work (388d1366f)
+        param = pybamm.ParameterValues("Chen2020")
+        with pytest.raises(ValueError):
+            param.update({"1 + dlnf/dlnc": 1.5})
+
     def test_set_initial_stoichiometries(self):
         param = pybamm.ParameterValues("Chen2020")
         param.set_initial_state(0.4)
