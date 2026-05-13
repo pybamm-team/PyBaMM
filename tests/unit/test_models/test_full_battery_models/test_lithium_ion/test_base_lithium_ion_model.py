@@ -79,6 +79,5 @@ class TestBaseLithiumIonModel:
             in model.summary_variables
         )
         assert (
-            "Negative electrode primary phase capacity [A.h]"
-            in model.summary_variables
+            "Negative electrode primary phase capacity [A.h]" in model.summary_variables
         )

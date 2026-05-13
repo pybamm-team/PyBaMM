@@ -150,9 +150,7 @@ class BaseModel(pybamm.BaseBatteryModel):
             phases = self.options.phases[domain.split()[0]]
             if len(phases) > 1:
                 for phase in phases:
-                    Q_k_phase = self.variables[
-                        f"{Domain} {phase} phase capacity [A.h]"
-                    ]
+                    Q_k_phase = self.variables[f"{Domain} {phase} phase capacity [A.h]"]
                     Q_k_phase_init = domain_param.phase_params[phase].Q_init
                     LAM_k_phase = (1 - Q_k_phase / Q_k_phase_init) * 100
                     self.variables[
