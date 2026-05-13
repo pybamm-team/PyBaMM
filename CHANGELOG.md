@@ -5,6 +5,8 @@
 - Added a `store_first_last` kwarg to solvers. When `True`, only the first and last sample of each integration window (one experiment step in `Simulation.solve`, or the full `[t_eval[0], t_eval[-1]]` window in `solve`) are stored. Composes with `output_variables` for memory-light ageing simulations whose post-processing only reads per-step first/last values. Has effect on solvers that support intra-solve interpolation (`IDAKLUSolver`); other solvers warn and no-op. Note: with this flag set, intra-step interpolation falls back to linear across the whole step, so it is not appropriate when post-processing queries an intra-step time. ([#5499](https://github.com/pybamm-team/PyBaMM/pull/5499))
 - Added `NonlinearSolver` as the default nonlinear solver, which replaces `CasadiAlgebraicSolver`. `IDAKLUSolver` now computes the initial conditions in C++ by default. ([#5459](https://github.com/pybamm-team/PyBaMM/pull/5459))
 
+# [v26.4.3](https://github.com/pybamm-team/PyBaMM/tree/v26.4.3) - 2026-05-12
+
 ## Bug fixes
 
 - `ProcessedVariableComputed.__init__` now defers the heavy `initialise_*` work (numpy concatenate/flatten, xarray `DataArray` build) until `entries` or `_xr_data_array` is actually read. On a 500-cycle SPM with `output_variables` set and `save_at_cycles=N`, solve wall time dropped from ~30 s to ~2.5 s (~12×); per-step `__init__` cost dropped from 47% of solve to 1.7%.
