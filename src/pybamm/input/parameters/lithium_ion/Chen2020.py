@@ -1,97 +1,12 @@
-import numpy as np
-
 import pybamm
+import numpy as np
+import os
 
-def graphite_LGM50_diffusivity_Chen2020(sto, T):
-    """
-    LG M50 Graphite diffusivity as a function of stoichiometry, in this case the
-    diffusivity is taken to be a constant. The value is taken from [1].
-
-    References
-    ----------
-    .. [1] Chang-Hui Chen, Ferran Brosa Planella, Kieran O’Regan, Dominika Gastol, W.
-    Dhammika Widanage, and Emma Kendrick. "Development of Experimental Techniques for
-    Parameterization of Multi-scale Lithium-ion Battery Models." Journal of the
-    Electrochemical Society 167 (2020): 080534.
-
-    Parameters
-    ----------
-    sto: :class:`pybamm.Symbol`
-       Electrode stoichiometry
-    T: :class:`pybamm.Symbol`
-       Dimensional temperature
-
-    Returns
-    -------
-    :class:`pybamm.Symbol`
-       Solid diffusivity
-    """
-
-    D_ref = pybamm.Parameter("Negative particle diffusivity constant [m2.s-1]")
-    E_D_s = pybamm.Parameter("Negative particle diffusivity activation energy [J.mol-1]")
-    # E_D_s not given by Chen et al (2020), so taken from Ecker et al. (2015) instead
-    arrhenius = np.exp(E_D_s / pybamm.constants.R * (1 / 298.15 - 1 / T))
-
-    return D_ref * arrhenius
-
-def nmc_LGM50_diffusivity_Chen2020(sto, T):
-    """
-     NMC diffusivity as a function of stoichiometry, in this case the
-     diffusivity is taken to be a constant. The value is taken from [1].
-
-     References
-     ----------
-    .. [1] Chang-Hui Chen, Ferran Brosa Planella, Kieran O’Regan, Dominika Gastol, W.
-    Dhammika Widanage, and Emma Kendrick. "Development of Experimental Techniques for
-    Parameterization of Multi-scale Lithium-ion Battery Models." Journal of the
-    Electrochemical Society 167 (2020): 080534.
-
-     Parameters
-     ----------
-     sto: :class:`pybamm.Symbol`
-       Electrode stoichiometry
-     T: :class:`pybamm.Symbol`
-        Dimensional temperature
-
-     Returns
-     -------
-     :class:`pybamm.Symbol`
-        Solid diffusivity
-    """
-
-    D_ref = pybamm.Parameter("Positive particle diffusivity constant [m2.s-1]")
-    E_D_s = pybamm.Parameter("Positive particle diffusivity activation energy [J.mol-1]")
-    arrhenius = np.exp(E_D_s / pybamm.constants.R * (1 / 298.15 - 1 / T))
-
-    return D_ref * arrhenius
-
-
-def graphite_plating_exchange_current_density_OKane2020(c_e, c_Li, T):
-    """
-    Exchange-current density for Li plating reaction [A.m-2].
-    References
-    ----------
-    .. [1] O’Kane, Simon EJ, Ian D. Campbell, Mohamed WJ Marzook, Gregory J. Offer, and
-    Monica Marinescu. "Physical origin of the differential voltage minimum associated
-    with lithium plating in Li-ion batteries." Journal of The Electrochemical Society
-    167, no. 9 (2020): 090540.
-    Parameters
-    ----------
-    c_e : :class:`pybamm.Symbol`
-        Electrolyte concentration [mol.m-3]
-    c_Li : :class:`pybamm.Symbol`
-        Plated lithium concentration [mol.m-3]
-    T : :class:`pybamm.Symbol`
-        Temperature [K]
-    Returns
-    -------
-    :class:`pybamm.Symbol`
-        Exchange-current density [A.m-2]
-    """
-
-    k_plating = pybamm.Parameter("Lithium plating kinetic rate constant [m.s-1]")
-
-    return pybamm.constants.F * k_plating * c_e
+# Load data in the appropriate format
+path, _ = os.path.split(os.path.abspath(__file__))
+graphite_ocp_Enertech_Ai2020_data = pybamm.parameters.process_1D_data(
+    "graphite_ocp_Enertech_Ai2020.csv", path=path
+)
 
 def graphite_stripping_exchange_current_density_OKane2020(c_e, c_Li, T):
     """
@@ -100,7 +15,7 @@ def graphite_stripping_exchange_current_density_OKane2020(c_e, c_Li, T):
     References
     ----------
 
-    .. [1] O’Kane, Simon EJ, Ian D. Campbell, Mohamed WJ Marzook, Gregory J. Offer, and
+    .. [1] O'Kane, Simon EJ, Ian D. Campbell, Mohamed WJ Marzook, Gregory J. Offer, and
     Monica Marinescu. "Physical origin of the differential voltage minimum associated
     with lithium plating in Li-ion batteries." Journal of The Electrochemical Society
     167, no. 9 (2020): 090540.
@@ -151,6 +66,65 @@ def graphite_SEI_limited_dead_lithium_OKane2022(L_sei):
     gamma = gamma_0 * L_sei_0 / L_sei
 
     return gamma
+
+def graphite_plating_exchange_current_density_OKane2020(c_e, c_Li, T):
+    """
+    Exchange-current density for Li plating reaction [A.m-2].
+    References
+    ----------
+    .. [1] O'Kane, Simon EJ, Ian D. Campbell, Mohamed WJ Marzook, Gregory J. Offer, and
+    Monica Marinescu. "Physical origin of the differential voltage minimum associated
+    with lithium plating in Li-ion batteries." Journal of The Electrochemical Society
+    167, no. 9 (2020): 090540.
+    Parameters
+    ----------
+    c_e : :class:`pybamm.Symbol`
+        Electrolyte concentration [mol.m-3]
+    c_Li : :class:`pybamm.Symbol`
+        Plated lithium concentration [mol.m-3]
+    T : :class:`pybamm.Symbol`
+        Temperature [K]
+    Returns
+    -------
+    :class:`pybamm.Symbol`
+        Exchange-current density [A.m-2]
+    """
+
+    k_plating = pybamm.Parameter("Lithium plating kinetic rate constant [m.s-1]")
+
+    return pybamm.constants.F * k_plating * c_e
+
+def graphite_LGM50_diffusivity_Chen2020(sto, T):
+    """
+    LG M50 Graphite diffusivity as a function of stoichiometry, in this case the
+    diffusivity is taken to be a constant. The value is taken from [1].
+
+    References
+    ----------
+    .. [1] Chang-Hui Chen, Ferran Brosa Planella, Kieran O'Regan, Dominika Gastol, W.
+    Dhammika Widanage, and Emma Kendrick. "Development of Experimental Techniques for
+    Parameterization of Multi-scale Lithium-ion Battery Models." Journal of the
+    Electrochemical Society 167 (2020): 080534.
+
+    Parameters
+    ----------
+    sto: :class:`pybamm.Symbol`
+       Electrode stoichiometry
+    T: :class:`pybamm.Symbol`
+       Dimensional temperature
+
+    Returns
+    -------
+    :class:`pybamm.Symbol`
+       Solid diffusivity
+    """
+
+    D_ref = pybamm.Parameter("Negative particle diffusivity constant [m2.s-1]")
+    E_D_s = pybamm.Parameter("Negative particle diffusivity activation energy [J.mol-1]")
+    # E_D_s not given by Chen et al (2020), so taken from Ecker et al. (2015) instead
+    arrhenius = np.exp(E_D_s / pybamm.constants.R * (1 / 298.15 - 1 / T))
+
+    return D_ref * arrhenius
 
 def graphite_volume_change_Ai2020(sto):
     """
@@ -284,11 +258,41 @@ def cracking_rate_Ai2020(T_dim):
         cracking rate, [m/(Pa.m0.5)^m_cr]
         where m_cr is another Paris' law constant
     """
-    k_cr = 3.9e-20
     k_cr = pybamm.Parameter("Positive electrode cracking rate constant [m/(Pa.m0.5)^m_cr]")
     Eac_cr = 0  # to be implemented
     arrhenius = np.exp(Eac_cr / pybamm.constants.R * (1 / T_dim - 1 / 298.15))
     return k_cr * arrhenius
+
+def nmc_LGM50_diffusivity_Chen2020(sto, T):
+    """
+     NMC diffusivity as a function of stoichiometry, in this case the
+     diffusivity is taken to be a constant. The value is taken from [1].
+
+     References
+     ----------
+    .. [1] Chang-Hui Chen, Ferran Brosa Planella, Kieran O'Regan, Dominika Gastol, W.
+    Dhammika Widanage, and Emma Kendrick. "Development of Experimental Techniques for
+    Parameterization of Multi-scale Lithium-ion Battery Models." Journal of the
+    Electrochemical Society 167 (2020): 080534.
+
+     Parameters
+     ----------
+     sto: :class:`pybamm.Symbol`
+       Electrode stoichiometry
+     T: :class:`pybamm.Symbol`
+        Dimensional temperature
+
+     Returns
+     -------
+     :class:`pybamm.Symbol`
+        Solid diffusivity
+    """
+
+    D_ref = pybamm.Parameter("Positive particle diffusivity constant [m2.s-1]")
+    E_D_s = pybamm.Parameter("Positive particle diffusivity activation energy [J.mol-1]")
+    arrhenius = np.exp(E_D_s / pybamm.constants.R * (1 / 298.15 - 1 / T))
+
+    return D_ref * arrhenius
 
 def graphite_LGM50_ocp_Chen2020(sto):
     """
@@ -297,7 +301,7 @@ def graphite_LGM50_ocp_Chen2020(sto):
 
     References
     ----------
-    .. [1] Chang-Hui Chen, Ferran Brosa Planella, Kieran O’Regan, Dominika Gastol, W.
+    .. [1] Chang-Hui Chen, Ferran Brosa Planella, Kieran O'Regan, Dominika Gastol, W.
     Dhammika Widanage, and Emma Kendrick. "Development of Experimental Techniques for
     Parameterization of Multi-scale Lithium-ion Battery Models." Journal of the
     Electrochemical Society 167 (2020): 080534.
@@ -333,7 +337,7 @@ def graphite_LGM50_electrolyte_exchange_current_density_Chen2020(
 
     References
     ----------
-    .. [1] Chang-Hui Chen, Ferran Brosa Planella, Kieran O’Regan, Dominika Gastol, W.
+    .. [1] Chang-Hui Chen, Ferran Brosa Planella, Kieran O'Regan, Dominika Gastol, W.
     Dhammika Widanage, and Emma Kendrick. "Development of Experimental Techniques for
     Parameterization of Multi-scale Lithium-ion Battery Models." Journal of the
     Electrochemical Society 167 (2020): 080534.
@@ -354,8 +358,8 @@ def graphite_LGM50_electrolyte_exchange_current_density_Chen2020(
     :class:`pybamm.Symbol`
         Exchange-current density [A.m-2]
     """
-    m_ref = 6.48e-7  # (A/m2)(m3/mol)**1.5 - includes ref concentrations
-    E_r = 35000
+    m_ref = pybamm.Parameter("Negative electrode kinetic rate constant [A.m-2]")
+    E_r = pybamm.Parameter("Negative electrode exchange-current density activation energy [J.mol-1]")
     arrhenius = np.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
     return m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
@@ -368,7 +372,7 @@ def nmc_LGM50_ocp_Chen2020(sto):
 
     References
     ----------
-    .. [1] Chang-Hui Chen, Ferran Brosa Planella, Kieran O’Regan, Dominika Gastol, W.
+    .. [1] Chang-Hui Chen, Ferran Brosa Planella, Kieran O'Regan, Dominika Gastol, W.
     Dhammika Widanage, and Emma Kendrick. "Development of Experimental Techniques for
     Parameterization of Multi-scale Lithium-ion Battery Models." Journal of the
     Electrochemical Society 167 (2020): 080534.
@@ -402,7 +406,7 @@ def nmc_LGM50_electrolyte_exchange_current_density_Chen2020(c_e, c_s_surf, c_s_m
 
     References
     ----------
-    .. [1] Chang-Hui Chen, Ferran Brosa Planella, Kieran O’Regan, Dominika Gastol, W.
+    .. [1] Chang-Hui Chen, Ferran Brosa Planella, Kieran O'Regan, Dominika Gastol, W.
     Dhammika Widanage, and Emma Kendrick. "Development of Experimental Techniques for
     Parameterization of Multi-scale Lithium-ion Battery Models." Journal of the
     Electrochemical Society 167 (2020): 080534.
@@ -423,8 +427,8 @@ def nmc_LGM50_electrolyte_exchange_current_density_Chen2020(c_e, c_s_surf, c_s_m
     :class:`pybamm.Symbol`
         Exchange-current density [A.m-2]
     """
-    m_ref = 3.42e-6  # (A/m2)(m3/mol)**1.5 - includes ref concentrations
-    E_r = 17800
+    m_ref = pybamm.Parameter("Positive electrode kinetic rate constant [A.m-2]")
+    E_r = pybamm.Parameter("Positive electrode exchange-current density activation energy [J.mol-1]")
     arrhenius = np.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
     return m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
@@ -512,13 +516,12 @@ def get_parameter_values():
     """
 
     return {
-        "chemistry": "lithium_ion",
-        #Exchangecurrent densities form Okane2020
+        # exchange current densities from OKane2020
         "Negative electrode exchange-current density activation energy [J.mol-1]": 35000.0,
         "Negative electrode kinetic rate constant [A.m-2]": 6.48e-7,
         "Positive electrode exchange-current density activation energy [J.mol-1]": 17800,
         "Positive electrode kinetic rate constant [A.m-2]": 3.42e-6,
-        #lithium plating
+        # lithium plating
         "Lithium plating potential sharpness": 100,
         "Lithium metal partial molar volume [m3.mol-1]": 1.3e-05,
         "Lithium plating kinetic rate constant [m.s-1]": 1e-09,
@@ -529,7 +532,7 @@ def get_parameter_values():
         "Lithium plating transfer coefficient": 0.65,
         "Dead lithium decay constant [s-1]": 1e-06,
         "Dead lithium decay rate [s-1]": graphite_SEI_limited_dead_lithium_OKane2022,
-        #negative electrode cracking
+        # negative electrode cracking
         "Negative electrode volume change": graphite_volume_change_Ai2020,
         "Negative electrode initial crack length [m]": 2e-08,
         "Negative electrode initial crack width [m]": 1.5e-08,
@@ -548,8 +551,7 @@ def get_parameter_values():
         # positive electrode cracking
         "Positive electrode Poisson's ratio": 0.2,
         "Positive electrode Young's modulus [Pa]": 375000000000.0,
-        "Positive electrode reference concentration for free of deformation [mol.m-3]"
-        "": 0.0,
+        "Positive electrode reference concentration for free of deformation [mol.m-3]": 0.0,
         "Positive electrode partial molar volume [m3.mol-1]": 1.25e-05,
         "Positive electrode volume change": volume_change_Ai2020,
         "Positive electrode initial crack length [m]": 2e-08,
@@ -562,6 +564,12 @@ def get_parameter_values():
         "Positive electrode LAM constant proportional term [s-1]": 2.7778e-07,
         "Positive electrode LAM constant exponential term": 2.0,
         "Positive electrode critical stress [Pa]": 375000000.0,
+        # general
+        "chemistry": "lithium_ion",
+        "Negative particle diffusivity constant [m2.s-1]": 3.3e-14,
+        "Negative particle diffusivity activation energy [J.mol-1]": 30300.0,
+        "Positive particle diffusivity constant [m2.s-1]": 4e-15,
+        "Positive particle diffusivity activation energy [J.mol-1]": 25000.0,
         # sei
         "Ratio of lithium moles to SEI moles": 2.0,
         "SEI partial molar volume [m3.mol-1]": 9.585e-05,
@@ -569,19 +577,18 @@ def get_parameter_values():
         "SEI resistivity [Ohm.m]": 200000.0,
         "SEI solvent diffusivity [m2.s-1]": 2.5e-22,
         "Bulk solvent concentration [mol.m-3]": 2636.0,
-        "SEI open-circuit potential [V]": 0.5,
+        "SEI open-circuit potential [V]": 0.4,
         "SEI electron conductivity [S.m-1]": 8.95e-14,
         "SEI lithium interstitial diffusivity [m2.s-1]": 1e-20,
         "Lithium interstitial reference concentration [mol.m-3]": 15.0,
         "Initial SEI thickness [m]": 5e-09,
         "EC initial concentration in electrolyte [mol.m-3]": 4541.0,
         "EC diffusivity [m2.s-1]": 2e-18,
-        "SEI kinetic rate constant [m.s-1]": 5e-9,
-        "SEI growth activation energy [J.mol-1]": 38000.0,
+        "SEI kinetic rate constant [m.s-1]": 1e-12,
+        "SEI growth activation energy [J.mol-1]": 0.0,
         "Negative electrode reaction-driven LAM factor [m3.mol-1]": 0.0,
         "Positive electrode reaction-driven LAM factor [m3.mol-1]": 0.0,
         "Initial SEI on cracks thickness [m]": 5e-13,  # avoid division by zero
-        "Lithium interstitial molar volume [m3.mol-1]": 1.3e-05,
         # cell
         "Negative current collector thickness [m]": 1.2e-05,
         "Negative electrode thickness [m]": 8.52e-05,
@@ -607,7 +614,7 @@ def get_parameter_values():
         # negative electrode
         "Negative electrode conductivity [S.m-1]": 215.0,
         "Maximum concentration in negative electrode [mol.m-3]": 33133.0,
-        "Negative particle diffusivity [m2.s-1]": 3.3e-14,
+        "Negative particle diffusivity [m2.s-1]": graphite_LGM50_diffusivity_Chen2020,
         "Negative electrode OCP [V]": graphite_LGM50_ocp_Chen2020,
         "Negative electrode porosity": 0.25,
         "Negative electrode active material volume fraction": 0.75,
@@ -625,7 +632,7 @@ def get_parameter_values():
         # positive electrode
         "Positive electrode conductivity [S.m-1]": 0.18,
         "Maximum concentration in positive electrode [mol.m-3]": 63104.0,
-        "Positive particle diffusivity [m2.s-1]": 4e-15,
+        "Positive particle diffusivity [m2.s-1]": nmc_LGM50_diffusivity_Chen2020,
         "Positive electrode OCP [V]": nmc_LGM50_ocp_Chen2020,
         "Positive electrode porosity": 0.335,
         "Positive electrode active material volume fraction": 0.665,
