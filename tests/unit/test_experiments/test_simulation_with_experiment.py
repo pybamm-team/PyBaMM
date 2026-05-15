@@ -1042,6 +1042,30 @@ class TestSimulationExperiment:
         assert input_param_name in sensitivity_keys
         assert experiment_input_name not in sensitivity_keys
 
+    def test_processed_variable_sensitivities_ignore_experiment_input(self):
+        # Regression test for #5517.
+        model = pybamm.lithium_ion.SPM()
+        param = model.default_parameter_values
+        diffusivity_name = "Positive particle diffusivity [m2.s-1]"
+        param.update({diffusivity_name: "[input]"})
+
+        experiment = pybamm.Experiment(
+            [pybamm.step.Current(pybamm.InputParameter("current"), duration=10)]
+        )
+        sim = pybamm.Simulation(
+            model, experiment=experiment, parameter_values=param
+        )
+        sol = sim.solve(
+            inputs={"current": 0.1, diffusivity_name: 1e-14},
+            calculate_sensitivities=[diffusivity_name],
+        )
+
+        sensitivities = sol["Voltage [V]"].sensitivities
+        assert set(sensitivities) == {"all", diffusivity_name}
+        sens = np.asarray(sensitivities[diffusivity_name])
+        assert np.all(np.isfinite(sens))
+        assert np.any(sens != 0)
+
     def test_run_experiment_drive_cycle(self):
         drive_cycle = np.array([np.arange(10), np.arange(10)]).T
         experiment = pybamm.Experiment(
