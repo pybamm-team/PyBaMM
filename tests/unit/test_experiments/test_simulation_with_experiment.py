@@ -1052,9 +1052,7 @@ class TestSimulationExperiment:
         experiment = pybamm.Experiment(
             [pybamm.step.Current(pybamm.InputParameter("current"), duration=10)]
         )
-        sim = pybamm.Simulation(
-            model, experiment=experiment, parameter_values=param
-        )
+        sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
         sol = sim.solve(
             inputs={"current": 0.1, diffusivity_name: 1e-14},
             calculate_sensitivities=[diffusivity_name],
