@@ -1,5 +1,9 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Bug fixes
+
+- Fixed `ProcessedVariable.sensitivities` raising `KeyError` when `calculate_sensitivities` was passed a subset of inputs and a non-target input parameter (e.g. a `pybamm.InputParameter` used in an experiment step) appeared in the variable's expression tree. ([#5518](https://github.com/pybamm-team/PyBaMM/pull/5518))
+
 ## Features
 
 - Default `summary_variables` now include per-phase LAM%, capacity, total lithium, SEI loss, SEI-on-cracks loss, and lithium plating loss for composite electrodes; aggregate per-electrode entries are unchanged. ([#5516](https://github.com/pybamm-team/PyBaMM/pull/5516))
