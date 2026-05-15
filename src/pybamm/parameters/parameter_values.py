@@ -149,7 +149,7 @@ class ParameterValues:
         Examples
         --------
         >>> param = pybamm.ParameterValues.create_from_bpx("battery_params.json")  # doctest: +SKIP
-        >>> param.set_initial_state({"Initial SOC": 0.5})  # doctest: +SKIP
+        >>> param.set_initial_state(0.5)  # doctest: +SKIP
         """
         from bpx import parse_bpx_file
 
@@ -185,7 +185,7 @@ class ParameterValues:
         --------
         >>> bpx_dict = {"Header": {...}, "Cell": {...}, "Parameterisation": {...}}  # doctest: +SKIP
         >>> param = pybamm.ParameterValues.create_from_bpx_obj(bpx_dict)  # doctest: +SKIP
-        >>> param.set_initial_state({"Initial SOC": 0.5})  # doctest: +SKIP
+        >>> param.set_initial_state(0.5)  # doctest: +SKIP
         """
         from bpx import parse_bpx_obj
 
