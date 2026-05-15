@@ -131,14 +131,15 @@ class ParameterValues:
         filename : str or Path
             The filename of the `BPX <https://bpxstandard.com/>`_ file.
         target_soc : float, optional
-            .. deprecated::
-                Pass ``target_soc`` is deprecated. The returned ``ParameterValues``
-                now always has initial concentrations set to those at 100% SOC
-                (negative phases at their maximum stoichiometry, positive phases
-                at their minimum stoichiometry). Use
-                :meth:`ParameterValues.set_initial_state` after creation to set
-                a different initial SOC. If ``target_soc`` is passed, the
-                previous behaviour is preserved.
+            .. deprecated:: 26.5
+                Passing ``target_soc`` is deprecated. The returned
+                ``ParameterValues`` always has initial concentrations set at
+                100% SOC (negative phases at their maximum stoichiometry,
+                positive phases at their minimum stoichiometry). Use
+                :meth:`ParameterValues.set_initial_state` after creation to
+                set a different initial SOC. If ``target_soc`` is passed, the
+                previous behaviour is preserved for non-blended electrodes;
+                blended electrodes raise ``NotImplementedError``.
 
         Returns
         -------
@@ -170,7 +171,7 @@ class ParameterValues:
             A dictionary containing the parameters in the
             `BPX <https://bpxstandard.com/>`_ format.
         target_soc : float, optional
-            .. deprecated::
+            .. deprecated:: 26.5
                 See :meth:`ParameterValues.create_from_bpx`. Pass nothing
                 (the default) and use :meth:`ParameterValues.set_initial_state`
                 to set a non-100%-SOC initial state.
@@ -211,7 +212,12 @@ class ParameterValues:
         from bpx import get_electrode_concentrations
         from bpx.schema import ElectrodeBlended, ElectrodeBlendedSPM
 
-        from .bpx import _get_phase_names, bpx_to_param_dict
+        from .bpx import (
+            _get_phase_names,
+            bpx_to_param_dict,
+            negative_electrode,
+            positive_electrode,
+        )
 
         pybamm_dict = bpx_to_param_dict(bpx)
 
@@ -235,27 +241,20 @@ class ParameterValues:
             )
 
         if target_soc is None:
-            # Set initial concentrations at 100% SOC: negative phases at theta_max,
-            # positive phases at theta_min. Works for both blended and non-blended
-            # electrodes via the per-phase pybamm_dict keys.
-            for electrode_lower, electrode_cap, sto_bound in (
-                ("negative", "Negative", "maximum"),
-                ("positive", "Positive", "minimum"),
+            # Full charge: negative phases at theta_max, positive at theta_min.
+            for bpx_electrode, domain, sto_bound in (
+                (bpx.parameterisation.negative_electrode, negative_electrode, "maximum"),
+                (bpx.parameterisation.positive_electrode, positive_electrode, "minimum"),
             ):
-                bpx_electrode = getattr(
-                    bpx.parameterisation, f"{electrode_lower}_electrode"
-                )
                 for phase in _get_phase_names(bpx_electrode):
                     sto = pybamm_dict[
-                        f"{phase}{electrode_cap} electrode {sto_bound} stoichiometry"
+                        f"{phase}{domain.pre_name}{sto_bound} stoichiometry"
                     ]
                     c_max = pybamm_dict[
-                        f"{phase}Maximum concentration in {electrode_lower} "
-                        f"electrode [mol.m-3]"
+                        f"{phase}Maximum concentration in {domain.name} [mol.m-3]"
                     ]
                     pybamm_dict[
-                        f"{phase}Initial concentration in {electrode_lower} "
-                        f"electrode [mol.m-3]"
+                        f"{phase}Initial concentration in {domain.name} [mol.m-3]"
                     ] = sto * c_max
         else:
             if target_soc < 0 or target_soc > 1:
