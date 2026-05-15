@@ -249,7 +249,10 @@ class TestBPX:
 
     def test_bpx_soc_error(self):
         bpx_obj = copy.deepcopy(self.base)
-        with pytest.raises(ValueError, match=r"Target SOC"):
+        with (
+            pytest.warns(DeprecationWarning, match="target_soc"),
+            pytest.raises(ValueError, match=r"Target SOC"),
+        ):
             pybamm.ParameterValues.create_from_bpx_obj(bpx_obj, target_soc=10)
 
     def test_bpx_arrhenius(self, tmp_path):
@@ -676,19 +679,137 @@ class TestBPX:
             pv["Lower voltage cut-off [V]"] < v_final < pv["Upper voltage cut-off [V]"]
         )
 
-    def test_bpx_target_soc_defaults_to_bpx_initial_soc(self):
+    def test_bpx_default_initial_concentrations_at_full_charge(self):
         bpx_obj = copy.deepcopy(self.base)
+        # Set a non-1 initial SOC in the BPX file to confirm it's not auto-applied.
         bpx_obj["State"]["Initial conditions"]["Initial state-of-charge"] = 0.25
+        neg = bpx_obj["Parameterisation"]["Negative electrode"]
+        pos = bpx_obj["Parameterisation"]["Positive electrode"]
+        expected_neg = neg["Maximum stoichiometry"] * neg["Maximum concentration [mol.m-3]"]
+        expected_pos = pos["Minimum stoichiometry"] * pos["Maximum concentration [mol.m-3]"]
 
-        param_default = pybamm.ParameterValues.create_from_bpx_obj(bpx_obj)
-        param_explicit = pybamm.ParameterValues.create_from_bpx_obj(
-            bpx_obj, target_soc=0.25
+        param = pybamm.ParameterValues.create_from_bpx_obj(bpx_obj)
+
+        assert param["Initial concentration in negative electrode [mol.m-3]"] == (
+            expected_neg
         )
-        param_full = pybamm.ParameterValues.create_from_bpx_obj(bpx_obj, target_soc=1.0)
+        assert param["Initial concentration in positive electrode [mol.m-3]"] == (
+            expected_pos
+        )
+
+    def test_bpx_target_soc_is_deprecated_but_preserves_behaviour(self):
+        bpx_obj = copy.deepcopy(self.base)
+
+        with pytest.warns(DeprecationWarning, match="target_soc"):
+            param_explicit = pybamm.ParameterValues.create_from_bpx_obj(
+                copy.deepcopy(bpx_obj), target_soc=0.25
+            )
+        with pytest.warns(DeprecationWarning, match="target_soc"):
+            param_full = pybamm.ParameterValues.create_from_bpx_obj(
+                copy.deepcopy(bpx_obj), target_soc=1.0
+            )
 
         for key in (
             "Initial concentration in negative electrode [mol.m-3]",
             "Initial concentration in positive electrode [mol.m-3]",
         ):
-            assert param_default[key] == param_explicit[key]
-            assert param_default[key] != param_full[key]
+            assert param_explicit[key] != param_full[key]
+
+    def test_bpx_blended_default_sets_per_phase_initial_concentrations(self):
+        bpx_obj = copy.deepcopy(self.base)
+        bpx_obj["Parameterisation"]["Positive electrode"] = {
+            "Thickness [m]": 5.23e-05,
+            "Conductivity [S.m-1]": 0.789,
+            "Porosity": 0.277493,
+            "Transport efficiency": 0.1462,
+            "Particle": {
+                "Large Particles": {
+                    "Diffusivity [m2.s-1]": 3.2e-14,
+                    "Particle radius [m]": 8e-06,
+                    "OCP [V]": "4.0 - 0.5 * x",
+                    "Entropic change coefficient [V.K-1]": -1e-4,
+                    "Surface area per unit volume [m-1]": 186331,
+                    "Reaction rate constant [mol.m-2.s-1]": 2.305e-05,
+                    "Minimum stoichiometry": 0.42424,
+                    "Maximum stoichiometry": 0.96210,
+                    "Maximum concentration [mol.m-3]": 46200,
+                    "Diffusivity activation energy [J.mol-1]": 15000,
+                    "Reaction rate constant activation energy [J.mol-1]": 3500,
+                },
+                "Small Particles": {
+                    "Diffusivity [m2.s-1]": 3.2e-14,
+                    "Particle radius [m]": 1e-06,
+                    "OCP [V]": "4.0 - 0.5 * x",
+                    "Entropic change coefficient [V.K-1]": -1e-4,
+                    "Surface area per unit volume [m-1]": 496883,
+                    "Reaction rate constant [mol.m-2.s-1]": 2.305e-05,
+                    "Minimum stoichiometry": 0.3,
+                    "Maximum stoichiometry": 0.9,
+                    "Maximum concentration [mol.m-3]": 30000,
+                    "Diffusivity activation energy [J.mol-1]": 15000,
+                    "Reaction rate constant activation energy [J.mol-1]": 3500,
+                },
+            },
+        }
+        bpx_obj["State"]["Initial conditions"][
+            "Initial hysteresis state: Positive electrode"
+        ] = {"Large Particles": 0.0, "Small Particles": 0.0}
+
+        param = pybamm.ParameterValues.create_from_bpx_obj(bpx_obj)
+
+        neg = self.base["Parameterisation"]["Negative electrode"]
+        assert param["Initial concentration in negative electrode [mol.m-3]"] == (
+            neg["Maximum stoichiometry"] * neg["Maximum concentration [mol.m-3]"]
+        )
+        assert param[
+            "Primary: Initial concentration in positive electrode [mol.m-3]"
+        ] == pytest.approx(0.42424 * 46200)
+        assert param[
+            "Secondary: Initial concentration in positive electrode [mol.m-3]"
+        ] == pytest.approx(0.3 * 30000)
+
+    def test_bpx_blended_with_target_soc_raises(self):
+        bpx_obj = copy.deepcopy(self.base)
+        bpx_obj["Parameterisation"]["Positive electrode"] = {
+            "Thickness [m]": 5.23e-05,
+            "Conductivity [S.m-1]": 0.789,
+            "Porosity": 0.277493,
+            "Transport efficiency": 0.1462,
+            "Particle": {
+                "Large Particles": {
+                    "Diffusivity [m2.s-1]": 3.2e-14,
+                    "Particle radius [m]": 8e-06,
+                    "OCP [V]": "4.0 - 0.5 * x",
+                    "Entropic change coefficient [V.K-1]": -1e-4,
+                    "Surface area per unit volume [m-1]": 186331,
+                    "Reaction rate constant [mol.m-2.s-1]": 2.305e-05,
+                    "Minimum stoichiometry": 0.42424,
+                    "Maximum stoichiometry": 0.96210,
+                    "Maximum concentration [mol.m-3]": 46200,
+                    "Diffusivity activation energy [J.mol-1]": 15000,
+                    "Reaction rate constant activation energy [J.mol-1]": 3500,
+                },
+                "Small Particles": {
+                    "Diffusivity [m2.s-1]": 3.2e-14,
+                    "Particle radius [m]": 1e-06,
+                    "OCP [V]": "4.0 - 0.5 * x",
+                    "Entropic change coefficient [V.K-1]": -1e-4,
+                    "Surface area per unit volume [m-1]": 496883,
+                    "Reaction rate constant [mol.m-2.s-1]": 2.305e-05,
+                    "Minimum stoichiometry": 0.42424,
+                    "Maximum stoichiometry": 0.96210,
+                    "Maximum concentration [mol.m-3]": 46200,
+                    "Diffusivity activation energy [J.mol-1]": 15000,
+                    "Reaction rate constant activation energy [J.mol-1]": 3500,
+                },
+            },
+        }
+        bpx_obj["State"]["Initial conditions"][
+            "Initial hysteresis state: Positive electrode"
+        ] = {"Large Particles": 0.0, "Small Particles": 0.0}
+
+        with (
+            pytest.warns(DeprecationWarning, match="target_soc"),
+            pytest.raises(NotImplementedError, match="blended electrodes"),
+        ):
+            pybamm.ParameterValues.create_from_bpx_obj(bpx_obj, target_soc=0.5)
