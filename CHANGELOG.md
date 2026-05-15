@@ -1,5 +1,9 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Bug fixes
+
+- Fixed `ProcessedVariable.sensitivities` raising `KeyError` when `calculate_sensitivities` was passed a subset of inputs and a non-target input parameter (e.g. a `pybamm.InputParameter` used in an experiment step) appeared in the variable's expression tree. ([#5518](https://github.com/pybamm-team/PyBaMM/pull/5518))
+
 # [v26.4.3](https://github.com/pybamm-team/PyBaMM/tree/v26.4.3) - 2026-05-12
 
 ## Bug fixes
