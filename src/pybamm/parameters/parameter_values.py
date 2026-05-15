@@ -243,8 +243,16 @@ class ParameterValues:
         if target_soc is None:
             # Full charge: negative phases at theta_max, positive at theta_min.
             for bpx_electrode, domain, sto_bound in (
-                (bpx.parameterisation.negative_electrode, negative_electrode, "maximum"),
-                (bpx.parameterisation.positive_electrode, positive_electrode, "minimum"),
+                (
+                    bpx.parameterisation.negative_electrode,
+                    negative_electrode,
+                    "maximum",
+                ),
+                (
+                    bpx.parameterisation.positive_electrode,
+                    positive_electrode,
+                    "minimum",
+                ),
             ):
                 for phase in _get_phase_names(bpx_electrode):
                     sto = pybamm_dict[
