@@ -685,8 +685,12 @@ class TestBPX:
         bpx_obj["State"]["Initial conditions"]["Initial state-of-charge"] = 0.25
         neg = bpx_obj["Parameterisation"]["Negative electrode"]
         pos = bpx_obj["Parameterisation"]["Positive electrode"]
-        expected_neg = neg["Maximum stoichiometry"] * neg["Maximum concentration [mol.m-3]"]
-        expected_pos = pos["Minimum stoichiometry"] * pos["Maximum concentration [mol.m-3]"]
+        expected_neg = (
+            neg["Maximum stoichiometry"] * neg["Maximum concentration [mol.m-3]"]
+        )
+        expected_pos = (
+            pos["Minimum stoichiometry"] * pos["Maximum concentration [mol.m-3]"]
+        )
 
         param = pybamm.ParameterValues.create_from_bpx_obj(bpx_obj)
 

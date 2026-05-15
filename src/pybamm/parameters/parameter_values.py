@@ -272,12 +272,12 @@ class ParameterValues:
                     "param.set_initial_state(...) to set the initial SOC."
                 )
             c_n_init, c_p_init = get_electrode_concentrations(target_soc, bpx)
-            pybamm_dict[
-                "Initial concentration in negative electrode [mol.m-3]"
-            ] = c_n_init
-            pybamm_dict[
-                "Initial concentration in positive electrode [mol.m-3]"
-            ] = c_p_init
+            pybamm_dict["Initial concentration in negative electrode [mol.m-3]"] = (
+                c_n_init
+            )
+            pybamm_dict["Initial concentration in positive electrode [mol.m-3]"] = (
+                c_p_init
+            )
 
         return cls(pybamm_dict)
 
