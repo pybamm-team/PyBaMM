@@ -53,7 +53,7 @@ PRINT_OPTIONS_OUTPUT = """\
 'thermal': 'x-full' (possible: ['isothermal', 'lumped', 'x-lumped', 'x-full'])
 'total interfacial current density as a state': 'false' (possible: ['false', 'true'])
 'transport efficiency': 'Bruggeman' (possible: ['Bruggeman', 'ordered packing', 'hyperbola of revolution', 'overlapping spheres', 'tortuosity factor', 'random overlapping cylinders', 'heterogeneous catalyst', 'cation-exchange membrane'])
-'voltage as a state': 'false' (possible: ['false', 'true'])
+'voltage as a state': 'true' (possible: ['true', 'false'])
 'working electrode': 'both' (possible: ['both', 'positive'])
 'x-average side reactions': 'false' (possible: ['false', 'true'])
 'use lumped thermal capacity': 'false' (possible: ['false', 'true'])
@@ -507,6 +507,11 @@ class TestBaseBatteryModel:
             )
         finally:
             os.remove("test_base_battery_model.json")
+
+    def test_voltage_as_state_default_is_true(self):
+        """Voltage as a state should default to true for performance."""
+        options = pybamm.BatteryModelOptions({})
+        assert options["voltage as a state"] == "true"
 
     def test_voltage_as_state(self):
         model = pybamm.lithium_ion.SPM({"voltage as a state": "true"})

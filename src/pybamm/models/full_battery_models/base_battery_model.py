@@ -275,7 +275,9 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "true".
             * "voltage as a state" : str
                 Whether to make a state for the voltage and solve an algebraic equation
-                for it. Default is "false".
+                for it. Default is "true". This improves observation performance by
+                making voltage a direct state lookup instead of re-evaluating the
+                voltage expression.
             * "working electrode" : str
                 Can be "both" (default) for a standard battery or "positive" for a
                 half-cell where the negative electrode is replaced with a lithium metal
@@ -401,7 +403,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "heterogeneous catalyst",
                 "cation-exchange membrane",
             ],
-            "voltage as a state": ["false", "true"],
+            "voltage as a state": ["true", "false"],
             "working electrode": ["both", "positive"],
             "x-average side reactions": ["false", "true"],
             "use lumped thermal capacity": ["false", "true"],
