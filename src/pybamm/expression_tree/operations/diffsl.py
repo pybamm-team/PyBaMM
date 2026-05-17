@@ -813,6 +813,10 @@ class DiffSLExport:
                 lines += [f"  {eqn},"]
             diffeq["stop"] = new_line.join(lines) + new_line + "}"
 
+        # reset - just a simple passthru
+        if self._has_experiment:
+            diffeq["reset"] = "reset_i {\n  u_i,\n}"
+
         all_lines = []
 
         if is_ode:
@@ -845,6 +849,8 @@ class DiffSLExport:
                 all_lines += [diffeq[key]]
         for key in stop:
             all_lines += [diffeq[key]]
+        if "reset" in diffeq:
+            all_lines += [diffeq["reset"]]
         for key in diffeq.keys():
             if key.startswith("variable"):
                 all_lines += [diffeq[key]]
