@@ -11,7 +11,7 @@ from tests import get_mesh_for_testing
 
 class TestScipySolver:
     def test_no_sensitivities_error(self):
-        model = pybamm.lithium_ion.SPM()
+        model = pybamm.lithium_ion.SPM(options={"voltage as a state": "false"})
         parameters = model.default_parameter_values
         parameters["Current function [A]"] = "[input]"
         sim = pybamm.Simulation(
