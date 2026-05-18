@@ -146,6 +146,17 @@ class BaseModel(pybamm.BaseBatteryModel):
                 }
             )
 
+            # Per-phase LAM (only registered for composite electrodes)
+            phases = self.options.phases[domain.split()[0]]
+            if len(phases) > 1:
+                for phase in phases:
+                    Q_k_phase = self.variables[f"{Domain} {phase} phase capacity [A.h]"]
+                    Q_k_phase_init = domain_param.phase_params[phase].Q_init
+                    LAM_k_phase = (1 - Q_k_phase / Q_k_phase_init) * 100
+                    self.variables[
+                        f"Loss of active material in {phase} phase in {domain} [%]"
+                    ] = LAM_k_phase
+
         # LLI
         n_Li_e = self.variables["Total lithium in electrolyte [mol]"]
         n_Li_particles = sum(
@@ -233,26 +244,32 @@ class BaseModel(pybamm.BaseBatteryModel):
             "Local ECM resistance [Ohm]",
         ]
 
-        if self.options.electrode_types["negative"] == "porous":
+        for domain in [d for d in self.options.whole_cell_domains if d != "separator"]:
+            Domain = domain.capitalize()
+            dom = domain.split()[0]
             summary_variables += [
-                "Negative electrode capacity [A.h]",
-                "Loss of active material in negative electrode [%]",
-                "Total lithium in negative electrode [mol]",
-                "Loss of lithium to negative lithium plating [mol]",
-                "Loss of capacity to negative lithium plating [A.h]",
-                "Loss of lithium to negative SEI on cracks [mol]",
-                "Loss of capacity to negative SEI on cracks [A.h]",
+                f"{Domain} capacity [A.h]",
+                f"Loss of active material in {domain} [%]",
+                f"Total lithium in {domain} [mol]",
+                f"Loss of lithium to {dom} lithium plating [mol]",
+                f"Loss of capacity to {dom} lithium plating [A.h]",
+                f"Loss of lithium to {dom} SEI on cracks [mol]",
+                f"Loss of capacity to {dom} SEI on cracks [A.h]",
             ]
-        if self.options.electrode_types["positive"] == "porous":
-            summary_variables += [
-                "Positive electrode capacity [A.h]",
-                "Loss of active material in positive electrode [%]",
-                "Total lithium in positive electrode [mol]",
-                "Loss of lithium to positive lithium plating [mol]",
-                "Loss of capacity to positive lithium plating [A.h]",
-                "Loss of lithium to positive SEI on cracks [mol]",
-                "Loss of capacity to positive SEI on cracks [A.h]",
-            ]
+            phases = self.options.phases[dom]
+            if len(phases) > 1:
+                for phase in phases:
+                    summary_variables += [
+                        f"{Domain} {phase} phase capacity [A.h]",
+                        f"Loss of active material in {phase} phase in {domain} [%]",
+                        f"Total lithium in {phase} phase in {domain} [mol]",
+                        f"Loss of lithium to {dom} {phase} SEI [mol]",
+                        f"Loss of capacity to {dom} {phase} SEI [A.h]",
+                        f"Loss of lithium to {dom} {phase} SEI on cracks [mol]",
+                        f"Loss of capacity to {dom} {phase} SEI on cracks [A.h]",
+                        f"Loss of lithium to {dom} {phase} lithium plating [mol]",
+                        f"Loss of capacity to {dom} {phase} lithium plating [A.h]",
+                    ]
 
         self.summary_variables = summary_variables
 

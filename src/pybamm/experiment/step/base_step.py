@@ -355,6 +355,9 @@ class BaseStep:
         else:
             t_eval = np.array([0, tf])
 
+        if solver.store_first_last:
+            return t_eval, np.array([0.0, tf])
+
         if t_interp is None:
             if self.period is not None:
                 t_interp = self.default_time_vector(solver, tf)

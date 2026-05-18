@@ -447,8 +447,14 @@ class ProcessedVariable(BaseProcessedVariable):
 
             p_casadi_stacked = casadi.vertcat(*[p for p in p_casadi.values()])
 
-            # Convert variable to casadi format for differentiating
-            var_casadi = base_variable.to_casadi(t_casadi, y_casadi, inputs=p_casadi)
+            # Symbolic for sensitivity targets, concrete for the rest. Non-target
+            # inputs may still appear in the expression tree (e.g. from
+            # experiment steps) so they must be present for casadi conversion.
+            inputs_for_casadi = {**inputs, **p_casadi}
+
+            var_casadi = base_variable.to_casadi(
+                t_casadi, y_casadi, inputs=inputs_for_casadi
+            )
             dvar_dy = casadi.jacobian(var_casadi, y_casadi)
             dvar_dp = casadi.jacobian(var_casadi, p_casadi_stacked)
 
