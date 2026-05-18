@@ -800,23 +800,33 @@ class BaseSolver:
 
         inputs_list = inputs_list or [{}]
 
-        with mp.get_context(self._mp_context).Pool(processes=nproc) as p:
-            model_list = [model] * len(inputs_list)
-            t_eval_list = [t_eval] * len(inputs_list)
-            y0_list = model.y0_list
-            async_solutions = p.starmap_async(
-                self._integrate_single,
-                zip(
-                    model_list,
-                    t_eval_list,
-                    inputs_list,
-                    y0_list,
-                    strict=True,
-                ),
+        ninputs = len(inputs_list)
+        if ninputs == 1 and self.timeout is None:
+            new_solution = self._integrate_single(
+                model,
+                t_eval,
+                inputs_list[0],
+                model.y0_list[0],
             )
-            new_solutions = async_solutions.get(timeout=self.timeout)
-            p.terminate()
-            p.join()
+            new_solutions = [new_solution]
+        else:
+            with mp.get_context(self._mp_context).Pool(processes=nproc) as p:
+                model_list = [model] * ninputs
+                t_eval_list = [t_eval] * ninputs
+                y0_list = model.y0_list
+                async_solutions = p.starmap_async(
+                    self._integrate_single,
+                    zip(
+                        model_list,
+                        t_eval_list,
+                        inputs_list,
+                        y0_list,
+                        strict=True,
+                    ),
+                )
+                new_solutions = async_solutions.get(timeout=self.timeout)
+                p.terminate()
+                p.join()
 
         return new_solutions
 
