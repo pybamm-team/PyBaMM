@@ -569,6 +569,8 @@ class ParameterSubstitutor:
                     pybamm.logger.verbose(
                         f"Processing parameters for {variable!r} ({side} bc)"
                     )
+                    if pybamm.is_flux_boundary_condition(typ):
+                        typ = (typ[0], self.process_symbol(typ[1]))
                     processed_bc = (self.process_symbol(bc), typ)
                     new_boundary_conditions[processed_variable][side] = processed_bc
                 except KeyError as err:

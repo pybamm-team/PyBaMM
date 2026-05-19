@@ -167,6 +167,9 @@ def simplify_if_constant(symbol: pybamm.Symbol):
     Utility function to simplify an expression tree if it evaluates to a constant
     scalar, vector or matrix. Also handles TensorField by simplifying each component.
     """
+    if symbol.do_not_simplify:
+        return symbol
+
     # Handle TensorField by simplifying each component
     if isinstance(symbol, pybamm.TensorField):
         simplified_children = [simplify_if_constant(child) for child in symbol.children]
@@ -263,6 +266,8 @@ class Symbol:
             isinstance(x, (Symbol | pybamm.BinaryOperator)) for x in self.pre_order()
         ):
             self.test_shape()
+
+        self._do_not_simplify = False
 
     @classmethod
     def _from_json(cls, snippet: dict):
@@ -444,6 +449,13 @@ class Symbol:
                     "Only one of 'auxiliary_domains' or 'domains' should be provided"
                 )
         return domains
+
+    @property
+    def do_not_simplify(self):
+        return self._do_not_simplify
+
+    def set_do_not_simplify(self):
+        self._do_not_simplify = True
 
     @property
     def id(self):
