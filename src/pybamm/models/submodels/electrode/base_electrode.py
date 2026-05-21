@@ -132,8 +132,6 @@ class BaseElectrode(pybamm.BaseSubModel):
             "Terminal voltage [V]": V - delta_phi_contact,
             "Contact overpotential [V]": delta_phi_contact,
         }
-        if self.options["voltage as a state"] == "false":
-            variables.update({"Voltage [V]": V - delta_phi_contact})
 
         return variables
 

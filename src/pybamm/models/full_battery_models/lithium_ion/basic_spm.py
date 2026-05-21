@@ -174,6 +174,7 @@ class BasicSPM(BaseModel):
                 phi_s_p, "positive electrode"
             ),
             "Voltage [V]": V,
+            "Voltage expression [V]": V,
             "Battery voltage [V]": V * num_cells,
         }
         # Events specify points at which a solution should terminate

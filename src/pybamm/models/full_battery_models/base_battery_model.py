@@ -274,10 +274,10 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 resistance" is distributed in which case it is automatically set to
                 "true".
             * "voltage as a state" : str
-                Whether to make a state for the voltage and solve an algebraic equation
-                for it. Default is "true". This improves observation performance by
-                making voltage a direct state lookup instead of re-evaluating the
-                voltage expression.
+                .. deprecated::
+                    This option is deprecated and will be removed in a future release.
+                    Standard (non-basic) models now always promote voltage to an
+                    algebraic state.
             * "working electrode" : str
                 Can be "both" (default) for a standard battery or "positive" for a
                 half-cell where the negative electrode is replaced with a lithium metal
@@ -413,6 +413,17 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             name: options[0] for name, options in self.possible_options.items()
         }
         extra_options = extra_options or {}
+
+        if "voltage as a state" in extra_options:
+            import warnings
+
+            warnings.warn(
+                "The 'voltage as a state' option is deprecated and will be "
+                "removed in a future release. Standard (non-basic) models "
+                "now always promote voltage to an algebraic state.",
+                DeprecationWarning,
+                stacklevel=4,
+            )
 
         # Handle OCP option renaming
         _rename_option(
@@ -1192,6 +1203,30 @@ class BaseBatteryModel(pybamm.BaseModel):
             self.update(submodel)
             self.check_no_repeated_keys()
 
+    def _build_model(self):
+        if self._built:
+            raise pybamm.ModelError(
+                """Model already built. If you are adding a new submodel, try using
+                `model.update` instead."""
+            )
+
+        pybamm.logger.info(f"Start building {self.name}")
+
+        if self._built_fundamental is False:
+            self.build_fundamental()
+
+        # Register the voltage state Variable before coupled variables,
+        # so submodels that need V in get_coupled_variables can find it.
+        self._register_voltage_variable()
+
+        self.build_coupled_variables()
+
+        # Now that the expression is available, add the algebraic constraint
+        # and overwrite the variable entry before equations are built.
+        self._constrain_voltage_to_expression()
+
+        self.build_model_equations()
+
     def build_model(self):
         # Build model variables and equations
         self._build_model()
@@ -1463,6 +1498,18 @@ class BaseBatteryModel(pybamm.BaseModel):
                     self.param, domain, self.options, reaction_loc
                 )
             self.submodels[f"{Domain} interface utilisation"] = submodel
+
+    def _register_voltage_variable(self):
+        V = pybamm.Variable("Voltage [V]")
+        self.variables["Voltage [V]"] = V
+        self.initial_conditions[V] = self.param.ocv_init
+
+    def _constrain_voltage_to_expression(self):
+        V = self.variables["Voltage [V]"]
+        V_expr = self.variables.get("Voltage expression [V]")
+        if V_expr is None:
+            return
+        self.algebraic[V] = V - V_expr
 
     def set_voltage_variables(self):
         if self.options.negative["particle phases"] == "1":

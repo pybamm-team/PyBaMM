@@ -508,21 +508,18 @@ class TestBaseBatteryModel:
         finally:
             os.remove("test_base_battery_model.json")
 
-    def test_voltage_as_state_default_is_true(self):
-        """Voltage as a state should default to true for performance."""
-        options = pybamm.BatteryModelOptions({})
-        assert options["voltage as a state"] == "true"
-
-    def test_voltage_as_state(self):
-        model = pybamm.lithium_ion.SPM({"voltage as a state": "true"})
-        assert model.options["voltage as a state"] == "true"
+    def test_voltage_as_state_always_on(self):
+        """Voltage is always promoted to a state variable."""
+        model = pybamm.lithium_ion.SPM()
         assert isinstance(model.variables["Voltage [V]"], pybamm.Variable)
+        assert "Voltage [V]" in [v.name for v in model.algebraic.keys()]
 
-        model = pybamm.lithium_ion.SPM(
-            {"voltage as a state": "true", "operating mode": "voltage"}
-        )
-        assert model.options["voltage as a state"] == "true"
-        assert isinstance(model.variables["Voltage [V]"], pybamm.Variable)
+    def test_voltage_as_state_option_deprecated(self):
+        """Passing the option should emit a DeprecationWarning."""
+        with pytest.warns(DeprecationWarning, match="deprecated"):
+            pybamm.lithium_ion.SPM({"voltage as a state": "true"})
+        with pytest.warns(DeprecationWarning, match="deprecated"):
+            pybamm.lithium_ion.SPM({"voltage as a state": "false"})
 
 
 class TestOptions:

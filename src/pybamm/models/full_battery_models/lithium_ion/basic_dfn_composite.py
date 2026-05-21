@@ -377,6 +377,7 @@ class BasicDFNComposite(BaseModel):
             "Discharge capacity [A.h]": Q,
             "Time [s]": pybamm.t,
             "Voltage [V]": voltage,
+            "Voltage expression [V]": voltage,
             "Battery voltage [V]": voltage * num_cells,
             "Negative electrode primary open-circuit potential [V]": ocp_n_p1,
             "Negative electrode secondary open-circuit potential [V]": ocp_n_p2,

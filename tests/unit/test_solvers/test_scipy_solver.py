@@ -11,19 +11,17 @@ from tests import get_mesh_for_testing
 
 class TestScipySolver:
     def test_no_sensitivities_error(self):
-        model = pybamm.lithium_ion.SPM(options={"voltage as a state": "false"})
-        parameters = model.default_parameter_values
-        parameters["Current function [A]"] = "[input]"
-        sim = pybamm.Simulation(
-            model, solver=pybamm.ScipySolver(), parameter_values=parameters
-        )
+        model = pybamm.BaseModel()
+        var = pybamm.Variable("var")
+        p = pybamm.InputParameter("p")
+        model.rhs = {var: -p * var}
+        model.initial_conditions = {var: 1}
+        solver = pybamm.ScipySolver()
         with pytest.raises(
             NotImplementedError,
             match=r"Sensitivity analysis is not implemented",
         ):
-            sim.solve(
-                [0, 1], inputs={"Current function [A]": 1}, calculate_sensitivities=True
-            )
+            solver.solve(model, [0, 1], inputs={"p": 1}, calculate_sensitivities=True)
 
     def test_model_solver_python_and_jax(self):
         if pybamm.has_jax():

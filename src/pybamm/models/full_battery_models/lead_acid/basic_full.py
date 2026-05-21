@@ -242,6 +242,7 @@ class BasicFull(BaseModel):
             "Electrolyte potential [V]": phi_e,
             "Positive electrode potential [V]": phi_s_p,
             "Voltage [V]": voltage,
+            "Voltage expression [V]": voltage,
             "Porosity": eps,
         }
         self.events.extend(

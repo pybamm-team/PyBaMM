@@ -20,44 +20,12 @@ class ExplicitCurrentControl(BaseModel):
             "Current [A]": I,
             "C-rate": I / self.param.Q,
         }
-        if self.options.get("voltage as a state") == "true":
-            V = pybamm.Variable("Voltage [V]")
-            variables.update({"Voltage [V]": V})
 
         return variables
-
-    def set_initial_conditions(self, variables):
-        if self.options.get("voltage as a state") == "true":
-            V = variables["Voltage [V]"]
-            self.initial_conditions[V] = self.param.ocv_init
-
-    def set_algebraic(self, variables):
-        if self.options.get("voltage as a state") == "true":
-            V = variables["Voltage [V]"]
-            V_expression = variables["Voltage expression [V]"]
-            self.algebraic[V] = V - V_expression
 
 
 class ExplicitPowerControl(BaseModel):
     """External circuit with current set explicitly to hit target power."""
-
-    def get_fundamental_variables(self):
-        variables = {}
-        if self.options.get("voltage as a state") == "true":
-            V = pybamm.Variable("Voltage [V]")
-            variables.update({"Voltage [V]": V})
-        return variables
-
-    def set_initial_conditions(self, variables):
-        if self.options.get("voltage as a state") == "true":
-            V = variables["Voltage [V]"]
-            self.initial_conditions[V] = self.param.ocv_init
-
-    def set_algebraic(self, variables):
-        if self.options.get("voltage as a state") == "true":
-            V = variables["Voltage [V]"]
-            V_expression = variables["Voltage expression [V]"]
-            self.algebraic[V] = V - V_expression
 
     def get_coupled_variables(self, variables):
         # Current is given as applied power divided by voltage
@@ -79,24 +47,6 @@ class ExplicitPowerControl(BaseModel):
 
 class ExplicitResistanceControl(BaseModel):
     """External circuit with current set explicitly to hit target resistance."""
-
-    def get_fundamental_variables(self):
-        variables = {}
-        if self.options.get("voltage as a state") == "true":
-            V = pybamm.Variable("Voltage [V]")
-            variables.update({"Voltage [V]": V})
-        return variables
-
-    def set_initial_conditions(self, variables):
-        if self.options.get("voltage as a state") == "true":
-            V = variables["Voltage [V]"]
-            self.initial_conditions[V] = self.param.ocv_init
-
-    def set_algebraic(self, variables):
-        if self.options.get("voltage as a state") == "true":
-            V = variables["Voltage [V]"]
-            V_expression = variables["Voltage expression [V]"]
-            self.algebraic[V] = V - V_expression
 
     def get_coupled_variables(self, variables):
         # Current is given as applied voltage divided by resistance
