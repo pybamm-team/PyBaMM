@@ -8,6 +8,7 @@ import warnings
 
 import casadi
 import numpy as np
+from pebble import ProcessPool
 
 import pybamm
 from pybamm import ParameterValues
@@ -810,23 +811,35 @@ class BaseSolver:
             )
             new_solutions = [new_solution]
         else:
-            with mp.get_context(self._mp_context).Pool(processes=nproc) as p:
+            with ProcessPool(
+                context=mp.get_context(self._mp_context), max_workers=nproc
+            ) as p:
                 model_list = [model] * ninputs
                 t_eval_list = [t_eval] * ninputs
                 y0_list = model.y0_list
-                async_solutions = p.starmap_async(
+
+                futures = p.map(
                     self._integrate_single,
-                    zip(
-                        model_list,
-                        t_eval_list,
-                        inputs_list,
-                        y0_list,
-                        strict=True,
-                    ),
+                    model_list,
+                    t_eval_list,
+                    inputs_list,
+                    y0_list,
+                    timeout=self.timeout,
                 )
-                new_solutions = async_solutions.get(timeout=self.timeout)
-                p.terminate()
-                p.join()
+                iterator = futures.result()
+
+                new_solutions = []
+                while True:
+                    try:
+                        new_solutions.append(next(iterator))
+                    except StopIteration:
+                        break
+                    except TimeoutError as e:
+                        raise pybamm.SolverError(
+                            f"Timeout after {e.args[1]:d} seconds."
+                        ) from e
+                    except Exception as e:
+                        raise pybamm.SolverError(str(e)) from None
 
         return new_solutions
 
