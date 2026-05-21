@@ -31,6 +31,39 @@ class TestSolution:
         assert sol.all_inputs == [{}]
         assert isinstance(sol.all_models[0], pybamm.BaseModel)
 
+    def test_sub_solutions_no_self_ref_cycle(self):
+        # A fresh Solution must not appear in its own _sub_solutions list,
+        # otherwise the resulting refcount cycle would keep large solutions
+        # alive past their last strong reference.
+        import weakref
+
+        sol = pybamm.Solution(
+            np.linspace(0, 1),
+            np.tile(np.linspace(0, 1), (2, 1)),
+            pybamm.BaseModel(),
+            {},
+        )
+        assert sol._sub_solutions == []
+        # Property still exposes [self] so downstream consumers see the
+        # current solution as its own single sub-solution.
+        assert sol.sub_solutions == [sol]
+
+        # Refcount alone (no gc) must reap the solution.
+        ref = weakref.ref(sol)
+        del sol
+        assert ref() is None
+
+    def test_sub_solutions_concat_after_add(self):
+        # __add__ must record both operands as sub-solutions (the
+        # property's empty-list fallback to [self] is what makes this work
+        # even though neither operand stored itself).
+        t = np.linspace(0, 1)
+        y = np.tile(t, (2, 1))
+        a = pybamm.Solution(t, y, pybamm.BaseModel(), {})
+        b = pybamm.Solution(t + 1, y, pybamm.BaseModel(), {})
+        c = a + b
+        assert c.sub_solutions == [a, b]
+
     def test_yp(self):
         t = np.linspace(0, 1)
         y = np.tile(t, (20, 1))

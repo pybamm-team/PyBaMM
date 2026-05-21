@@ -324,8 +324,10 @@ class Solution(SolutionBase):
 
         self._variables = {}
 
-        # Add self as sub-solution for compatibility with ProcessedVariable
-        self._sub_solutions = [self]
+        # Sub-solutions concatenated into this one. Empty list means "just
+        # self"; storing self here would create a refcount cycle that the
+        # cyclic GC would have to reap, delaying release of large solutions.
+        self._sub_solutions = []
 
         # initialize empty cycles
         self._cycles = []
@@ -1050,7 +1052,7 @@ class Solution(SolutionBase):
         """List of sub solutions that have been
         concatenated to form the full solution"""
 
-        return self._sub_solutions
+        return self._sub_solutions or [self]
 
     def __add__(self, other):
         """Adds two solutions together, e.g. when stepping"""
