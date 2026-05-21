@@ -1271,6 +1271,13 @@ class BoundaryGradient(BoundaryOperator):
         super().__init__("boundary flux", child, side)
         self.order = order
 
+    def _sympy_operator(self, child):
+        """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
+        latex_child = (
+            r"\nabla " + sympy.latex(child) + r"^{" + sympy.latex(self.side) + r"}"
+        )
+        return sympy.Symbol(latex_child)
+
 
 class EvaluateAt(SpatialOperator):
     """

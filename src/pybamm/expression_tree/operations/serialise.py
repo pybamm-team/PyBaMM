@@ -2303,7 +2303,8 @@ def convert_symbol_from_json(json_data):
     elif json_data["type"] == "FullBroadcast":
         child = convert_symbol_from_json(json_data["children"][0])
         domains = json_data["domains"]
-        return pybamm.FullBroadcast(child, broadcast_domains=domains)
+        name = json_data.get("name")
+        return pybamm.FullBroadcast(child, broadcast_domains=domains, name=name)
     elif json_data["type"] == "SecondaryBroadcast":
         child = convert_symbol_from_json(json_data["children"][0])
         domain = json_data["broadcast_domain"]
@@ -2312,6 +2313,10 @@ def convert_symbol_from_json(json_data):
         child = convert_symbol_from_json(json_data["children"][0])
         side = json_data["side"]
         return pybamm.BoundaryValue(child, side)
+    elif json_data["type"] == "BoundaryGradient":
+        child = convert_symbol_from_json(json_data["children"][0])
+        side = json_data["side"]
+        return pybamm.BoundaryGradient(child, side)
     elif json_data["type"] == "Variable":
         bounds_data = json_data.get("bounds")
         if bounds_data is None:
@@ -2321,10 +2326,20 @@ def convert_symbol_from_json(json_data):
             )
         else:
             bounds = tuple(convert_symbol_from_json(b) for b in bounds_data)
+        scale_data = json_data.get("scale")
+        scale = convert_symbol_from_json(scale_data) if scale_data is not None else None
+        reference_data = json_data.get("reference")
+        reference = (
+            convert_symbol_from_json(reference_data)
+            if reference_data is not None
+            else None
+        )
         return pybamm.Variable(
             json_data["name"],
             domains=json_data["domains"],
             bounds=bounds,
+            scale=scale,
+            reference=reference,
         )
     elif json_data["type"] == "IndefiniteIntegral":
         child = convert_symbol_from_json(json_data["children"][0])
@@ -2431,6 +2446,13 @@ def convert_symbol_to_json(symbol):
             "integration_variable": convert_symbol_to_json(integration_var),
         }
         return json_dict
+    elif isinstance(symbol, pybamm.BoundaryGradient):
+        json_dict = {
+            "type": "BoundaryGradient",
+            "side": symbol.side,
+            "children": [convert_symbol_to_json(symbol.orphans[0])],
+        }
+        return json_dict
     elif isinstance(symbol, pybamm.BoundaryValue):
         json_dict = {
             "type": "BoundaryValue",
@@ -2450,6 +2472,7 @@ def convert_symbol_to_json(symbol):
             "type": "FullBroadcast",
             "children": [convert_symbol_to_json(symbol.child)],
             "domains": symbol.domains,
+            "name": symbol.name,
         }
         return json_dict
     elif isinstance(symbol, pybamm.Interpolant):
@@ -2478,11 +2501,21 @@ def convert_symbol_to_json(symbol):
                 convert_symbol_to_json(lb),
                 convert_symbol_to_json(ub),
             ]
+        scale_json = None
+        if not (isinstance(symbol.scale, pybamm.Scalar) and symbol.scale.value == 1):
+            scale_json = convert_symbol_to_json(symbol.scale)
+        reference_json = None
+        if not (
+            isinstance(symbol.reference, pybamm.Scalar) and symbol.reference.value == 0
+        ):
+            reference_json = convert_symbol_to_json(symbol.reference)
         json_dict = {
             "type": "Variable",
             "name": symbol.name,
             "domains": symbol.domains,
             "bounds": bounds_json,
+            "scale": scale_json,
+            "reference": reference_json,
         }
         return json_dict
     elif isinstance(symbol, pybamm.ConcatenationVariable):
