@@ -181,10 +181,8 @@ class BaseSolver:
     @root_method.setter
     def root_method(self, method):
         if method == "nonlinear_solver":
-            # use the tighter of the two tolerances
-            atol = min(self.root_tol, self.atol)
             method = pybamm.NonlinearSolver(
-                atol=atol, rtol=self.rtol, on_failure=self.on_failure
+                atol=self.root_tol, rtol=self.root_tol, on_failure=self.on_failure
             )
         elif method == "casadi":
             method = pybamm.CasadiAlgebraicSolver(self.root_tol)

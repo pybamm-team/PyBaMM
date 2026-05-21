@@ -224,11 +224,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         self._options = self._combine_options(options)
 
-        # By default, we use an internal nonlinear solver within pybammsolvers
-        # to compute the initial conditions. As a fallback, we use python bindings
-        # for the same solver
         if root_method is _UNSET:
-            root_method = None if self._internal_initialisation else "nonlinear_solver"
+            root_method = "nonlinear_solver"
 
         super().__init__(
             method="ida",
