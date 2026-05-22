@@ -1,5 +1,7 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+# [v26.4.4](https://github.com/pybamm-team/PyBaMM/tree/v26.4.4) - 2026-05-22
+
 ## Bug fixes
 
 - Fixed `BaseStep` hashing collapsing different control types (e.g. `CRate(4.2)` and `Voltage(4.2)`) with same value. ([#5529](https://github.com/pybamm-team/PyBaMM/pull/5529))
