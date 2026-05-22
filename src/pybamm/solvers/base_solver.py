@@ -812,7 +812,8 @@ class BaseSolver:
             new_solutions = [new_solution]
         else:
             with ProcessPool(
-                context=mp.get_context(self._mp_context), max_workers=nproc
+                context=mp.get_context(self._mp_context),
+                max_workers=nproc or mp.cpu_count(),
             ) as p:
                 model_list = [model] * ninputs
                 t_eval_list = [t_eval] * ninputs
