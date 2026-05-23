@@ -164,6 +164,16 @@ class CasadiSolver(pybamm.BaseSolver):
             as well as various diagnostic messages.
         """
 
+        # Warn when solving a DAE without algebraic IC perturbation
+        if len(model.algebraic) > 0 and not self.perturb_algebraic_initial_conditions:
+            warnings.warn(
+                "Solving a DAE model without algebraic initial condition "
+                "perturbation. This may cause convergence failures. "
+                "Consider using CasadiSolver(mode='safe') for DAE models.",
+                UserWarning,
+                stacklevel=2,
+            )
+
         # casadi solver does not support sensitivity analysis
         if model.calculate_sensitivities:
             raise NotImplementedError(

@@ -187,8 +187,11 @@ class TestCasadiSolver:
             solver=pybamm.CasadiSolver(mode="fast"),
         )
 
-        with pytest.raises(pybamm.SolverError, match=r"IDA_CONV_FAIL"):
-            sim.solve()
+        with pytest.warns(
+            UserWarning, match="algebraic initial condition perturbation"
+        ):
+            with pytest.raises(pybamm.SolverError, match=r"IDA_CONV_FAIL"):
+                sim.solve()
 
     def test_model_solver_events(self):
         # Create model
@@ -654,6 +657,17 @@ class TestCasadiSolver:
         ):
             solver.solve(model, t_eval, t_interp=t_interp)
 
+    def test_casadi_fast_warns_on_dae_without_perturbation(self):
+        """CasadiSolver(mode='fast') should warn when solving a DAE without
+        algebraic IC perturbation, since it may fail to converge."""
+        model = pybamm.lithium_ion.SPM()
+        sim = pybamm.Simulation(model, solver=pybamm.CasadiSolver(mode="fast"))
+        with pytest.warns(
+            UserWarning,
+            match="algebraic initial condition perturbation",
+        ):
+            sim.solve([0, 3600])
+
     def test_discontinuous_current(self):
         def car_current(t):
             current = (
@@ -670,7 +684,11 @@ class TestCasadiSolver:
         sim = pybamm.Simulation(
             model, parameter_values=param, solver=pybamm.CasadiSolver(mode="fast")
         )
-        sim.solve([0, 3600])
+        import warnings as _warnings
+
+        with _warnings.catch_warnings():
+            _warnings.simplefilter("ignore", UserWarning)
+            sim.solve([0, 3600])
         current = sim.solution["Current [A]"]
         assert current(0) == 1
         assert current(1500) == -0.5
