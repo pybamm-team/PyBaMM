@@ -1245,13 +1245,15 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         # Register the voltage state Variable before coupled variables,
         # so submodels that need V in get_coupled_variables can find it.
-        self._register_voltage_variable()
+        if self.options["voltage as a state"] == "true":
+            self._register_voltage_variable()
 
         self.build_coupled_variables()
 
         # Now that the expression is available, add the algebraic constraint
         # and overwrite the variable entry before equations are built.
-        self._constrain_voltage_to_expression()
+        if self.options["voltage as a state"] == "true":
+            self._constrain_voltage_to_expression()
 
         self.build_model_equations()
 

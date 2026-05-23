@@ -52,6 +52,19 @@ class TestVoltageAlwaysAState:
         v_expr = sol["Voltage expression [V]"].entries
         np.testing.assert_allclose(v, v_expr, rtol=1e-3, atol=1e-3)
 
+    @pytest.mark.parametrize(
+        "model_cls",
+        [pybamm.lithium_ion.SPM, pybamm.lithium_ion.SPMe, pybamm.lithium_ion.DFN],
+    )
+    def test_voltage_false_excludes_algebraic_voltage(self, model_cls):
+        """When voltage-as-a-state is false, Voltage [V] is not an algebraic variable."""
+        model = model_cls(
+            options={"voltage as a state": "false", "surface form": "false"}
+        )
+        algebraic_var_names = [var.name for var in model.algebraic.keys()]
+        assert "Voltage [V]" not in algebraic_var_names
+        assert not isinstance(model.variables["Voltage [V]"], pybamm.Variable)
+
 
 class TestBasicModelsVoltageExpression:
     """Basic models expose voltage as an expression, not a state."""
