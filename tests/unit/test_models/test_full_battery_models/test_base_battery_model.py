@@ -514,13 +514,6 @@ class TestBaseBatteryModel:
         assert isinstance(model.variables["Voltage [V]"], pybamm.Variable)
         assert "Voltage [V]" in [v.name for v in model.algebraic.keys()]
 
-    def test_voltage_as_state_option_deprecated(self):
-        """Passing the option should emit a DeprecationWarning."""
-        with pytest.warns(DeprecationWarning, match="deprecated"):
-            pybamm.lithium_ion.SPM({"voltage as a state": "true"})
-        with pytest.warns(DeprecationWarning, match="deprecated"):
-            pybamm.lithium_ion.SPM({"voltage as a state": "false"})
-
 
 class TestOptions:
     def test_print_options(self):

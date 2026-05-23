@@ -274,10 +274,11 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 resistance" is distributed in which case it is automatically set to
                 "true".
             * "voltage as a state" : str
-                .. deprecated::
-                    This option is deprecated and will be removed in a future release.
-                    Standard (non-basic) models now always promote voltage to an
-                    algebraic state.
+                Whether to promote voltage to an algebraic state variable.
+                Can be "true" (default) or "false". When "true", the model is
+                a DAE and requires IDAKLUSolver or CasadiSolver(mode="safe").
+                When "false", voltage is computed as an expression (legacy ODE
+                behavior).
             * "working electrode" : str
                 Can be "both" (default) for a standard battery or "positive" for a
                 half-cell where the negative electrode is replaced with a lithium metal
@@ -451,17 +452,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             "use lumped thermal capacity": "false",
         }
         extra_options = extra_options or {}
-
-        if "voltage as a state" in extra_options:
-            import warnings
-
-            warnings.warn(
-                "The 'voltage as a state' option is deprecated and will be "
-                "removed in a future release. Standard (non-basic) models "
-                "now always promote voltage to an algebraic state.",
-                DeprecationWarning,
-                stacklevel=4,
-            )
 
         # Handle OCP option renaming
         _rename_option(

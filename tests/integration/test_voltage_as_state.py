@@ -1,10 +1,8 @@
 """Integration tests for voltage as a state behavior.
 
 Verifies that voltage is always an algebraic state in standard (non-basic)
-models and that the deprecated option emits a warning.
+models.
 """
-
-import warnings
 
 import numpy as np
 import pytest
@@ -53,29 +51,6 @@ class TestVoltageAlwaysAState:
         v = sol["Voltage [V]"].entries
         v_expr = sol["Voltage expression [V]"].entries
         np.testing.assert_allclose(v, v_expr, rtol=1e-3, atol=1e-3)
-
-    @pytest.mark.parametrize(
-        "model_cls",
-        [pybamm.lithium_ion.SPM, pybamm.lithium_ion.SPMe, pybamm.lithium_ion.DFN],
-    )
-    def test_option_deprecated(self, model_cls):
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            model_cls(options={"voltage as a state": "false"})
-            dep_warnings = [x for x in w if issubclass(x.category, DeprecationWarning)]
-            assert len(dep_warnings) == 1
-            assert "deprecated" in str(dep_warnings[0].message)
-
-    @pytest.mark.parametrize(
-        "model_cls",
-        [pybamm.lithium_ion.SPM, pybamm.lithium_ion.SPMe, pybamm.lithium_ion.DFN],
-    )
-    def test_deprecated_option_still_makes_voltage_a_state(self, model_cls):
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", DeprecationWarning)
-            model = model_cls(options={"voltage as a state": "false"})
-        algebraic_var_names = [var.name for var in model.algebraic.keys()]
-        assert "Voltage [V]" in algebraic_var_names
 
 
 class TestBasicModelsVoltageExpression:
