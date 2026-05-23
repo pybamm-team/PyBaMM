@@ -610,3 +610,18 @@ class TestOptions:
             )
             == ocp_option[1]
         )
+
+    def test_default_options_independent_of_possible_options_order(self):
+        """Defaults should be set explicitly, not derived from possible_options[0]."""
+        options = pybamm.BatteryModelOptions({})
+        # voltage as a state: possible_options lists both, but the default
+        # should be explicitly "true" regardless of list order
+        assert options["voltage as a state"] == "true"
+        # surface form: possible_options lists "false" first, default is "false"
+        assert options["surface form"] == "false"
+
+    def test_default_options_cover_all_possible_options(self):
+        """Every key in possible_options must have an explicit default."""
+        options = pybamm.BatteryModelOptions({})
+        for key in options.possible_options:
+            assert key in options, f"Missing default for option '{key}'"
