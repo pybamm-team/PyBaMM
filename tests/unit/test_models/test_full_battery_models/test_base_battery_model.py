@@ -618,3 +618,28 @@ class TestOptions:
         options = pybamm.BatteryModelOptions({})
         for key in options.possible_options:
             assert key in options, f"Missing default for option '{key}'"
+
+
+class TestVaasNormalization:
+    """Test the centralized VAAS + surface form policy."""
+
+    def test_vaas_true_with_surface_form_false_is_valid(self):
+        """VAAS can be true even with surface_form=false (DFN case)."""
+        options = pybamm.BatteryModelOptions(
+            {"voltage as a state": "true", "surface form": "false"}
+        )
+        assert options["voltage as a state"] == "true"
+        assert options["surface form"] == "false"
+
+    def test_vaas_false_with_surface_form_algebraic_is_valid(self):
+        """surface form algebraic without voltage-as-state is valid."""
+        options = pybamm.BatteryModelOptions(
+            {"voltage as a state": "false", "surface form": "algebraic"}
+        )
+        assert options["voltage as a state"] == "false"
+        assert options["surface form"] == "algebraic"
+
+    def test_vaas_false_defaults_surface_form_false(self):
+        """When VAAS is false and surface form not set, surface form stays false."""
+        options = pybamm.BatteryModelOptions({"voltage as a state": "false"})
+        assert options["surface form"] == "false"
