@@ -718,6 +718,14 @@ class ParticleLithiumIonParameters(BaseParameters):
         Domain = self.domain.capitalize()
         tol = pybamm.settings.tolerances["U__c_s"]
         sto_clipped = pybamm.maximum(pybamm.minimum(sto, 1 - tol), tol)
+        # Assign a LaTeX name to the clipped stoichiometry so that
+        # equations display it as a single symbol rather than the full
+        # max(min(...)) expression.
+        if self.domain == "negative":
+            sto_clipped.print_name = r"\hat{x}_{\mathrm{n}}"
+        elif self.domain == "positive":
+            sto_clipped.print_name = r"\hat{x}_{\mathrm{p}}"
+
         if lithiation is None:
             lithiation = ""
         else:
@@ -730,11 +738,16 @@ class ParticleLithiumIonParameters(BaseParameters):
         dudt_func = self.dUdT(sto_clipped)
         u_ref = u_ref + (T - self.main_param.T_ref) * dudt_func
 
-        # Add a term to the OCPs to ensure they approach a large positive value
-        # as sto -> 0 and a large negative value as sto -> 1. This will not affect
-        # the OCP for most values of sto.
-        # see #1435 and #5371 for discussion on OCP asymptotes.
-        out = u_ref + U_asymptotes(sto)
+        # add a term to ensure that the OCP goes to infinity at 0 and -infinity at 1
+        # this will not affect the OCP for most values of sto
+        # see #1435
+        barrier = U_asymptotes(sto)
+        if self.domain == "negative":
+            barrier.print_name = r"\psi_{\mathrm{n}}"
+        elif self.domain == "positive":
+            barrier.print_name = r"\psi_{\mathrm{p}}"
+
+        out = u_ref + barrier
 
         if self.domain == "negative":
             out.print_name = r"U_\mathrm{n}(c^\mathrm{surf}_\mathrm{s,n}, T)"

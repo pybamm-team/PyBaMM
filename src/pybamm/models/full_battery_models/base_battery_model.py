@@ -1538,6 +1538,19 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         # TODO: add current collector losses to the voltage in 3D
 
+        # ----------------------------------------------------------
+        # Assign LaTeX print_name to voltage-decomposition variables
+        # so that latexify can render them as named symbols.
+        # ----------------------------------------------------------
+        ocv_bulk.print_name = r"U_{\mathrm{OCV}}"
+        eta_r_n_av.print_name = r"\bar{\eta}_{\mathrm{r,n}}"
+        eta_r_p_av.print_name = r"\bar{\eta}_{\mathrm{r,p}}"
+        eta_r_av.print_name = r"\bar{\eta}_{\mathrm{r}}"
+        # Note: individual solid-phase ohmic losses (delta_phi_s_n_av,
+        # delta_phi_s_p_av) are deliberately NOT named because their
+        # to_equation() in the SPMe expands to the full voltage expression.
+        delta_phi_s_av.print_name = r"\Delta\bar{\phi}_{\mathrm{s}}"
+
         self.variables.update(
             {
                 "Surface open-circuit voltage [V]": ocv_surf,
@@ -1553,6 +1566,16 @@ class BaseBatteryModel(pybamm.BaseModel):
         V = self.variables["Voltage [V]"]
         eta_e_av = self.variables["X-averaged electrolyte ohmic losses [V]"]
         eta_c_av = self.variables["X-averaged concentration overpotential [V]"]
+
+        # Assign print_name to electrolyte components
+        eta_e_av.print_name = r"\Delta\bar{\phi}_{\mathrm{e}}"
+        eta_c_av.print_name = r"\Delta\bar{\phi}_{\mathrm{c}}"
+
+        # Build a decomposed voltage expression from named sub-variables.
+        # This is mathematically equivalent to V for the SPMe but expressed
+        # as a sum of identifiable overpotential contributions.
+        V_decomp = ocv_bulk + eta_r_av + delta_phi_s_av + eta_e_av + eta_c_av
+        self.variables["Voltage (decomposed) [V]"] = V_decomp
         num_cells = pybamm.Parameter(
             "Number of cells connected in series to make a battery"
         )
