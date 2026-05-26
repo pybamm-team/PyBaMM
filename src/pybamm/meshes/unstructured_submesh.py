@@ -790,9 +790,7 @@ class TaggedSubMeshGenerator(MeshGenerator):
         node_map = np.full(m.points.shape[0], -1, dtype=np.int64)
         node_map[unique_nodes] = np.arange(len(unique_nodes))
         nodes = m.points[unique_nodes] * self._scale
-        return UnstructuredSubMesh(
-            nodes, node_map[elements], coord_sys=self.coord_sys
-        )
+        return UnstructuredSubMesh(nodes, node_map[elements], coord_sys=self.coord_sys)
 
 
 # ======================================================================
