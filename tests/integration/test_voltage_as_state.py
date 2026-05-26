@@ -65,6 +65,43 @@ class TestVoltageAlwaysAState:
         assert "Voltage [V]" not in algebraic_var_names
         assert not isinstance(model.variables["Voltage [V]"], pybamm.Variable)
 
+    def test_dfn_vaas_false_still_has_algebraic_states(self):
+        """DFN with vaas=false + surface_form=false still has algebraic states
+        (electrode/electrolyte potentials), so it is NOT a pure ODE model."""
+        model = pybamm.lithium_ion.DFN(
+            options={"voltage as a state": "false", "surface form": "false"}
+        )
+        assert len(model.algebraic) > 0
+        algebraic_var_names = [var.name for var in model.algebraic.keys()]
+        assert "Voltage [V]" not in algebraic_var_names
+
+    def test_dfn_vaas_false_rejects_scipy(self):
+        """DFN with vaas=false still has algebraic states and cannot use ScipySolver."""
+        model = pybamm.lithium_ion.DFN(
+            options={"voltage as a state": "false", "surface form": "false"}
+        )
+        sim = pybamm.Simulation(model, solver=pybamm.ScipySolver())
+        with pytest.raises(pybamm.SolverError, match="Cannot use ODE solver"):
+            sim.solve([0, 3600])
+
+    @pytest.mark.parametrize(
+        "operating_mode",
+        ["explicit power", "explicit resistance"],
+    )
+    def test_vaas_false_rejects_explicit_power_resistance(self, operating_mode):
+        """Explicit power/resistance modes require voltage as a state."""
+        with pytest.raises(
+            pybamm.OptionError,
+            match=r"Cannot use.*operating mode.*'voltage as a state'.*'false'",
+        ):
+            pybamm.lithium_ion.SPM(
+                options={
+                    "voltage as a state": "false",
+                    "surface form": "false",
+                    "operating mode": operating_mode,
+                }
+            )
+
 
 class TestBasicModelsVoltageExpression:
     """Basic models expose voltage as an expression, not a state."""

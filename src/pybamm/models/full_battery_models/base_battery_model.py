@@ -277,8 +277,11 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 Whether to promote voltage to an algebraic state variable.
                 Can be "true" (default) or "false". When "true", the model is
                 a DAE and requires IDAKLUSolver or CasadiSolver(mode="safe").
-                When "false", voltage is computed as an expression (legacy ODE
-                behavior).
+                When "false", voltage is computed as an expression. Note that
+                setting this to "false" only removes the voltage algebraic
+                equation; SPM/SPMe with ``surface form="false"`` become pure
+                ODE models, but DFN retains other algebraic states
+                (electrode/electrolyte potentials) regardless of this option.
             * "working electrode" : str
                 Can be "both" (default) for a standard battery or "positive" for a
                 half-cell where the negative electrode is replaced with a lithium metal
@@ -669,6 +672,19 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 raise NotImplementedError(
                     "Contact resistance not yet supported for explicit resistance."
                 )
+
+        # Explicit power/resistance need voltage as a state variable because
+        # I = P/V (or I = V/R) creates a circular dependency when V is an
+        # expression that itself depends on I.
+        if options["voltage as a state"] == "false" and options["operating mode"] in (
+            "explicit power",
+            "explicit resistance",
+        ):
+            raise pybamm.OptionError(
+                f"Cannot use '{options['operating mode']}' operating mode with "
+                "'voltage as a state' set to 'false'. Explicit power and "
+                "resistance control require voltage as an algebraic state."
+            )
 
         # Options not yet compatible with particle-size distributions
         if options["particle size"] == "distribution":

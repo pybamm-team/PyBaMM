@@ -139,6 +139,7 @@ class CasadiSolver(pybamm.BaseSolver):
         self.integrators = LRUDict(maxsize=self.integrators_maxcount)
         self.integrator_specs = LRUDict(maxsize=self.integrators_maxcount)
         self.y_sols = {}
+        self._dae_ic_warned = False
 
         pybamm.citations.register("Andersson2019")
 
@@ -164,13 +165,19 @@ class CasadiSolver(pybamm.BaseSolver):
             as well as various diagnostic messages.
         """
 
-        # Warn when solving a DAE without algebraic IC perturbation
-        if len(model.algebraic) > 0 and not self.perturb_algebraic_initial_conditions:
+        # Warn once per solver instance when solving a DAE without algebraic
+        # IC perturbation
+        if (
+            len(model.algebraic) > 0
+            and not self.perturb_algebraic_initial_conditions
+            and not self._dae_ic_warned
+        ):
+            self._dae_ic_warned = True
             warnings.warn(
                 "Solving a DAE model without algebraic initial condition "
                 "perturbation. This may cause convergence failures. "
                 "Consider using CasadiSolver(mode='safe') for DAE models.",
-                UserWarning,
+                pybamm.SolverWarning,
                 stacklevel=2,
             )
 

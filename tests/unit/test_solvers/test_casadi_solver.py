@@ -188,7 +188,7 @@ class TestCasadiSolver:
         )
 
         with pytest.warns(
-            UserWarning, match="algebraic initial condition perturbation"
+            pybamm.SolverWarning, match="algebraic initial condition perturbation"
         ):
             with pytest.raises(pybamm.SolverError, match=r"IDA_CONV_FAIL"):
                 sim.solve()
@@ -663,7 +663,7 @@ class TestCasadiSolver:
         model = pybamm.lithium_ion.SPM()
         sim = pybamm.Simulation(model, solver=pybamm.CasadiSolver(mode="fast"))
         with pytest.warns(
-            UserWarning,
+            pybamm.SolverWarning,
             match="algebraic initial condition perturbation",
         ):
             sim.solve([0, 3600])
