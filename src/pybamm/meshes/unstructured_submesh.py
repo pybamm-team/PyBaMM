@@ -793,6 +793,7 @@ def compute_interface_data(left_mesh, right_mesh, left_name=None, right_name=Non
         "right_cells": right_cells,
         "face_areas": face_areas,
         "cell_distances": cell_distances,
+        "other_mesh": right_mesh,
     }
 
     if right_name is not None:
@@ -803,6 +804,7 @@ def compute_interface_data(left_mesh, right_mesh, left_name=None, right_name=Non
             "right_cells": left_cells,
             "face_areas": face_areas,
             "cell_distances": cell_distances,
+            "other_mesh": left_mesh,
         }
 
     return result

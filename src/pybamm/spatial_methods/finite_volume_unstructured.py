@@ -6,11 +6,13 @@ dimension inferred from the mesh.  All operators are assembled from
 face-cell connectivity as sparse matrices.
 """
 
+import itertools
 import logging
 import time
 
 import numpy as np
 from scipy.sparse import coo_matrix, csr_matrix, diags, eye, kron
+from scipy.spatial import cKDTree
 
 import pybamm
 
@@ -45,6 +47,210 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         super().build(mesh)
         for dom in mesh.keys():
             mesh[dom].npts_for_broadcast_to_nodes = mesh[dom].npts
+        # Auto-discover all sharing pairs across unstructured submeshes,
+        # populate ``interface_data`` and add ``iface_<other>`` boundary-face
+        # buckets so internal BCs work for arbitrary topology (star, tree,
+        # graph), not just 1D-stack adjacency.
+        self._auto_compute_all_interfaces(mesh)
+
+    # ------------------------------------------------------------------
+    # interface auto-discovery (graph topology support)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _interface_face_match(a_mesh, b_mesh, tol_factor=1e-6):
+        """Return matched boundary-face index pairs between two submeshes.
+
+        Boundary faces in ``a_mesh`` and ``b_mesh`` whose centroids coincide
+        within ``tol_factor`` (relative to mesh extent) are paired.  Returns
+        ``(a_idx, b_idx, matched)`` where ``matched`` is True iff at least
+        one pair was found.
+        """
+        a_idx = (
+            np.concatenate(list(a_mesh.boundary_faces.values()))
+            if a_mesh.boundary_faces
+            else np.array([], dtype=int)
+        )
+        b_idx = (
+            np.concatenate(list(b_mesh.boundary_faces.values()))
+            if b_mesh.boundary_faces
+            else np.array([], dtype=int)
+        )
+        if len(a_idx) == 0 or len(b_idx) == 0:
+            return np.array([], dtype=int), np.array([], dtype=int), False
+        a_c = a_mesh.face_centroids[a_idx]
+        b_c = b_mesh.face_centroids[b_idx]
+        scale = max(
+            np.ptp(np.vstack([a_c, b_c]), axis=0).max(),
+            1.0,
+        )
+        tol = tol_factor * scale
+        tree = cKDTree(b_c)
+        d, j = tree.query(a_c, distance_upper_bound=tol)
+        keep = np.isfinite(d)
+        return a_idx[keep], b_idx[j[keep]], bool(keep.any())
+
+    def _compute_pair_interface(self, a_mesh, b_mesh, a_name, b_name):
+        """Populate ``interface_data`` and ``iface_<other>`` face buckets for
+        a pair of submeshes that share a non-empty conformal interface.
+
+        If either mesh already has an interface entry for the other (e.g. set
+        up by 1D-stack auto-pairing in :class:`pybamm.Mesh` or by a manual
+        ``compute_interface_data`` call), this method is a no-op so existing
+        models keep their original face-tag scheme.
+        """
+        if b_name in a_mesh.interface_data or a_name in b_mesh.interface_data:
+            return False
+        a_match, b_match, ok = self._interface_face_match(a_mesh, b_mesh)
+        if not ok:
+            return False
+
+        a_cells = a_mesh.face_owner[a_match]
+        b_cells = b_mesh.face_owner[b_match]
+        face_areas = a_mesh.face_areas[a_match]
+        cell_distances = np.linalg.norm(
+            b_mesh.cell_centroids[b_cells] - a_mesh.cell_centroids[a_cells],
+            axis=1,
+        )
+
+        a_mesh.interface_data[b_name] = {
+            "left_cells": a_cells,
+            "right_cells": b_cells,
+            "face_areas": face_areas,
+            "cell_distances": cell_distances,
+            "other_mesh": b_mesh,
+        }
+        b_mesh.interface_data[a_name] = {
+            "left_cells": b_cells,
+            "right_cells": a_cells,
+            "face_areas": face_areas,
+            "cell_distances": cell_distances,
+            "other_mesh": a_mesh,
+        }
+
+        # Add new face-tag buckets for these interfaces.  Order matches
+        # across both meshes so per-face BCs line up element-wise.
+        a_iface_tag = f"iface_{b_name}"
+        b_iface_tag = f"iface_{a_name}"
+        a_mesh.boundary_faces[a_iface_tag] = a_match
+        b_mesh.boundary_faces[b_iface_tag] = b_match
+
+        # Remove these face indices from any pre-existing axis-aligned
+        # buckets ("left", "right", "top", "bottom", "front", "back") so
+        # external Robin BCs don't double-count interface faces.
+        a_match_set = set(int(i) for i in a_match)
+        b_match_set = set(int(i) for i in b_match)
+        for tag in list(a_mesh.boundary_faces.keys()):
+            if tag.startswith("iface_"):
+                continue
+            keep = np.array(
+                [int(i) not in a_match_set for i in a_mesh.boundary_faces[tag]],
+                dtype=bool,
+            )
+            if keep.any():
+                a_mesh.boundary_faces[tag] = a_mesh.boundary_faces[tag][keep]
+            else:
+                del a_mesh.boundary_faces[tag]
+        for tag in list(b_mesh.boundary_faces.keys()):
+            if tag.startswith("iface_"):
+                continue
+            keep = np.array(
+                [int(i) not in b_match_set for i in b_mesh.boundary_faces[tag]],
+                dtype=bool,
+            )
+            if keep.any():
+                b_mesh.boundary_faces[tag] = b_mesh.boundary_faces[tag][keep]
+            else:
+                del b_mesh.boundary_faces[tag]
+        return True
+
+    def _auto_compute_all_interfaces(self, mesh):
+        """Walk every pair of unstructured submeshes; pair faces where they
+        coincide.  Replaces the 1D-stack adjacency assumption with arbitrary
+        topology (star, tree, graph)."""
+        from pybamm.meshes.unstructured_submesh import UnstructuredSubMesh
+
+        domains = []
+        for raw in mesh.keys():
+            name = raw[0] if isinstance(raw, tuple) else raw
+            sm = mesh[raw]
+            if isinstance(sm, UnstructuredSubMesh):
+                domains.append((name, sm))
+        seen = set()
+        for (a, ma), (b, mb) in itertools.combinations(domains, 2):
+            if ma is mb or (a, b) in seen or (b, a) in seen:
+                continue
+            seen.add((a, b))
+            try:
+                self._compute_pair_interface(ma, mb, a, b)
+            except Exception:
+                # Pair couldn't be matched — not actually adjacent.
+                pass
+
+    # ------------------------------------------------------------------
+    # internal BC assembly for arbitrary-topology Concatenation
+    # ------------------------------------------------------------------
+
+    def set_internal_bcs_for_concat(self, disc, var, children, outer_bcs):
+        """Build internal BC dict for each ``Concatenation`` child by walking
+        its mesh's ``interface_data`` graph instead of assuming consecutive
+        1D-stack pairs.
+
+        Returns ``None`` when no ``iface_<other>`` face buckets exist in any
+        child mesh — that means there's no graph-discovered topology, so
+        the caller should fall through to the legacy 1D-stack pairwise
+        routine.
+
+        For each child ``T_a`` on submesh ``mesh_a`` (graph case):
+          - Pass through any user-supplied ``outer_bcs`` whose tag matches an
+            external boundary tag present in ``mesh_a.boundary_faces``.
+          - For each interface ``mesh_a ↔ mesh_b`` (one entry per neighbor
+            in ``mesh_a.interface_data``), set ``iface_<b>`` to the
+            discretised internal Neumann gradient between ``T_a`` and the
+            matching child ``T_b``.
+        """
+        from pybamm.meshes.unstructured_submesh import UnstructuredSubMesh
+
+        # Skip if no graph-discovered interfaces — caller falls back to the
+        # default 1D-stack pairwise logic.
+        has_iface = False
+        for c in children:
+            primary = c.domain[0]
+            sm = self.mesh[primary]
+            if isinstance(sm, UnstructuredSubMesh) and any(
+                k.startswith("iface_") for k in sm.boundary_faces
+            ):
+                has_iface = True
+                break
+        if not has_iface:
+            return None
+
+        bcs_out = {}
+        name_to_child = {c.domain[0]: c for c in children}
+        for child in children:
+            primary = child.domain[0]
+            child_mesh = self.mesh[primary]
+            if not isinstance(child_mesh, UnstructuredSubMesh):
+                continue  # leave default handling for non-unstructured children
+            bcs = {}
+            for tag, bc_value in outer_bcs.items():
+                if tag in child_mesh.boundary_faces:
+                    bcs[tag] = bc_value
+            for neighbor_name, _data in child_mesh.interface_data.items():
+                neighbor_child = name_to_child.get(neighbor_name)
+                if neighbor_child is None:
+                    continue
+                left_disc = disc.process_symbol(child)
+                right_disc = disc.process_symbol(neighbor_child)
+                grad = self.internal_neumann_condition(
+                    left_disc,
+                    right_disc,
+                    child_mesh,
+                    self.mesh[neighbor_name],
+                )
+                bcs[f"iface_{neighbor_name}"] = (grad, "Neumann")
+            bcs_out[child] = bcs
+        return bcs_out
 
     @staticmethod
     def _bc_contribution(n, n_bnd, owners, coeffs, bc_value):
@@ -922,23 +1128,34 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         right_mesh,
         repeats,
     ):
-        # Find the interface data between these two meshes.
-        # The left_mesh should have interface_data keyed by
-        # the right mesh's domain name (or vice versa).
-        interface = None
-        for data in left_mesh.interface_data.values():
-            interface = data
-            break
+        # Find the interface_data entry that pairs left_mesh with right_mesh.
+        # Each entry stores ``other_mesh`` so multi-neighbor topologies pick
+        # the correct partner instead of grabbing the first dict value.
+        interface = next(
+            (
+                data
+                for data in left_mesh.interface_data.values()
+                if data.get("other_mesh") is right_mesh
+            ),
+            None,
+        )
 
         if interface is None:
-            for data in right_mesh.interface_data.values():
+            rev = next(
+                (
+                    data
+                    for data in right_mesh.interface_data.values()
+                    if data.get("other_mesh") is left_mesh
+                ),
+                None,
+            )
+            if rev is not None:
                 interface = {
-                    "left_cells": data["right_cells"],
-                    "right_cells": data["left_cells"],
-                    "face_areas": data["face_areas"],
-                    "cell_distances": data["cell_distances"],
+                    "left_cells": rev["right_cells"],
+                    "right_cells": rev["left_cells"],
+                    "face_areas": rev["face_areas"],
+                    "cell_distances": rev["cell_distances"],
                 }
-                break
 
         if interface is None:
             n_left = left_mesh.npts

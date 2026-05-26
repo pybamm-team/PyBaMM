@@ -78,10 +78,14 @@ def domain_size(domain: list[str] | str):
     }
     if domain in [[], None]:
         return 1
-    if all(dom in _REGISTERED_DOMAIN_SIZES for dom in domain):
-        return sum(_REGISTERED_DOMAIN_SIZES[dom] for dom in domain)
+    # Fixed battery-domain sentinels take priority — they are stable, hash-like
+    # values used purely for symbolic shape checks across pybamm tests/models.
     if all(dom in fixed_domain_sizes for dom in domain):
         return sum(fixed_domain_sizes[dom] for dom in domain)
+    # Mesh-registered actual sizes — applies to user domains like "cell" that
+    # carry real per-cell data.
+    if all(dom in _REGISTERED_DOMAIN_SIZES for dom in domain):
+        return sum(_REGISTERED_DOMAIN_SIZES[dom] for dom in domain)
     # Add 2 per domain to ensure size is always >= 2 and is additive
     return sum(2 + hash(dom) % 100 for dom in domain)
 

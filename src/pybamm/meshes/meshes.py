@@ -173,6 +173,20 @@ class Mesh(dict):
             self[domain] = submesh_types[domain](geometry[domain], submesh_pts[domain])
             self.base_domains.append(domain)
 
+        # Register actual mesh sizes so symbolic shape checks
+        # (``pybamm.evaluate_for_shape_using_domain``) match the discretised
+        # vector lengths.  Lets ``pybamm.Vector(arr, domain=name)`` shape-match
+        # ``Variable(domain=name)`` without bespoke subclasses.
+        for domain, submesh in self.items():
+            if isinstance(domain, tuple) and len(domain) == 1:
+                domain_name = domain[0]
+            elif isinstance(domain, str):
+                domain_name = domain
+            else:
+                continue
+            if hasattr(submesh, "npts"):
+                pybamm.register_domain_size(domain_name, submesh.npts)
+
         # compute interface data for unstructured meshes
         self._compute_unstructured_interfaces()
 
@@ -504,43 +518,27 @@ def _combine_unstructured_submeshes(submeshes):
             cumulative_offset += p["nx"]
         submeshes = fixed
 
-    tol = 1e-12
+    # Weld coincident nodes across submeshes regardless of which face tag
+    # they belong to.  This generalises the original 1D-stack
+    # ``"right"↔"left"`` welding to arbitrary topology (star, tree, graph)
+    # so that body↔tab interfaces produced by ``FiniteVolumeUnstructured``'s
+    # auto-pairing become internal faces in the combined mesh and TPFA
+    # handles cross-region flux without internal Neumann book-keeping.
+    from scipy.spatial import cKDTree
+
+    tol = 1e-9
     all_nodes = list(submeshes[0].nodes)
     global_maps = [{i: i for i in range(submeshes[0].nodes.shape[0])}]
     next_id = len(all_nodes)
 
     for k in range(1, len(submeshes)):
-        prev = submeshes[k - 1]
         curr = submeshes[k]
-        prev_map = global_maps[k - 1]
-
-        right_global = {}
-        if "right" in prev.boundary_faces:
-            right_node_ids = set()
-            for fi in prev.boundary_faces["right"]:
-                right_node_ids.update(prev.faces[fi].tolist())
-            for nid in right_node_ids:
-                right_global[prev_map[nid]] = prev.nodes[nid]
-
-        left_local = set()
-        if "left" in curr.boundary_faces:
-            for fi in curr.boundary_faces["left"]:
-                left_local.update(curr.faces[fi].tolist())
-
+        tree = cKDTree(np.asarray(all_nodes))
+        d, j = tree.query(curr.nodes)
         local_to_global = {}
         for nid in range(curr.nodes.shape[0]):
-            if nid in left_local and right_global:
-                pos = curr.nodes[nid]
-                matched = False
-                for gid, rpos in right_global.items():
-                    if np.linalg.norm(pos - rpos) < tol:
-                        local_to_global[nid] = gid
-                        matched = True
-                        break
-                if not matched:
-                    local_to_global[nid] = next_id
-                    all_nodes.append(curr.nodes[nid])
-                    next_id += 1
+            if d[nid] < tol:
+                local_to_global[nid] = int(j[nid])
             else:
                 local_to_global[nid] = next_id
                 all_nodes.append(curr.nodes[nid])
