@@ -1,8 +1,0 @@
-include CMakeLists.txt
-include FindSuiteSparse.cmake
-include FindSUNDIALS.cmake
-include src/pybammsolvers/idaklu_source/NoProgressGuard.hpp
-include src/pybammsolvers/idaklu_source/sundials_error_handler.hpp
-include src/pybammsolvers/idaklu_source/IDAKLUStats.hpp
-include src/pybammsolvers/idaklu_source/HermiteKnotReducer.hpp
-include src/pybammsolvers/idaklu_source/reduce.hpp

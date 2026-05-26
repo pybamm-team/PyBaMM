@@ -17,7 +17,20 @@ if (DEFINED ENV{VCPKG_DEFAULT_TRIPLET} AND NOT DEFINED VCPKG_TARGET_TRIPLET)
             CACHE STRING "Vcpkg target triplet")
 endif ()
 
+# Require vcpkg on Windows unless building via conda (which sets CONDA_BUILD=1)
+if(WIN32 AND NOT DEFINED VCPKG_ROOT_DIR AND NOT DEFINED ENV{VCPKG_ROOT_DIR} AND NOT DEFINED ENV{CONDA_BUILD})
+    message(FATAL_ERROR "Windows builds require VCPKG_ROOT_DIR (CMake variable or environment variable) to be set.")
+endif()
+
 project(idaklu)
+
+# Default to .idaklu (install_KLU_Sundials.py output).
+if(NOT WIN32 AND NOT DEFINED SuiteSparse_ROOT)
+    set(SuiteSparse_ROOT "${CMAKE_SOURCE_DIR}/.idaklu")
+endif()
+if(NOT WIN32 AND NOT DEFINED SUNDIALS_ROOT)
+    set(SUNDIALS_ROOT "${CMAKE_SOURCE_DIR}/.idaklu")
+endif()
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -34,23 +47,12 @@ add_compile_definitions(_GLIBCXX_USE_CXX11_ABI=0)
 
 find_package(pybind11 CONFIG REQUIRED)
 
-# Check Casadi build flag
-if (NOT DEFINED PYBAMM_IDAKLU_EXPR_CASADI)
-    set(PYBAMM_IDAKLU_EXPR_CASADI ON)
-endif ()
-message("PYBAMM_IDAKLU_EXPR_CASADI: ${PYBAMM_IDAKLU_EXPR_CASADI}")
-
 # Casadi PyBaMM source files
-set(IDAKLU_EXPR_CASADI_SOURCE_FILES "")
-if (${PYBAMM_IDAKLU_EXPR_CASADI} STREQUAL "ON")
-    add_compile_definitions(CASADI_ENABLE)
-    set(IDAKLU_EXPR_CASADI_SOURCE_FILES
-            src/pybammsolvers/idaklu_source/Expressions/Casadi/CasadiFunctions.cpp
-            src/pybammsolvers/idaklu_source/Expressions/Casadi/CasadiFunctions.hpp
-    )
-endif ()
+set(IDAKLU_EXPR_CASADI_SOURCE_FILES
+        src/pybammsolvers/idaklu_source/Expressions/Casadi/CasadiFunctions.cpp
+        src/pybammsolvers/idaklu_source/Expressions/Casadi/CasadiFunctions.hpp
+)
 
-# The complete (all dependencies) sources list should be mirrored in setup.py
 pybind11_add_module(idaklu
         # pybind11 interface
         src/pybammsolvers/idaklu.cpp
@@ -89,7 +91,12 @@ pybind11_add_module(idaklu
 )
 
 if (NOT DEFINED USE_PYTHON_CASADI)
-    set(USE_PYTHON_CASADI TRUE)
+    # Windows uses vcpkg for CasADi (no pip wheel exists); Linux/macOS use pip.
+    if (WIN32)
+        set(USE_PYTHON_CASADI FALSE)
+    else()
+        set(USE_PYTHON_CASADI TRUE)
+    endif()
 endif ()
 
 if (${USE_PYTHON_CASADI})
@@ -138,44 +145,32 @@ if (${USE_PYTHON_CASADI})
         message("Found Python CasADi library directory: ${CASADI_LIB_DIR}")
         target_link_directories(idaklu PRIVATE ${CASADI_LIB_DIR})
 
-        # Set RPATH to find libraries relative to the module location
-        # This allows finding casadi in the same Python environment at runtime
-        # Module is at: site-packages/pybammsolvers/idaklu.so
-        # CasADi is at: site-packages/casadi/libcasadi.dylib
-        # SuiteSparse/SUNDIALS are found via DYLD_LIBRARY_PATH/LD_LIBRARY_PATH
-        # (set by noxfile or user environment) pointing to .idaklu/lib
-        # Note: Windows uses vcpkg with static linking, no RPATH needed
-        
-        # For CI wheel builds, use BUILD_WITH_INSTALL_RPATH=FALSE so that
-        # wheel repair tools (delocate/auditwheel) can properly analyze dependencies.
-        # For local development, use BUILD_WITH_INSTALL_RPATH=TRUE so the module
-        # works immediately after pip install without wheel repair.
-        if(DEFINED ENV{CIBUILDWHEEL})
-            set(USE_INSTALL_RPATH_AT_BUILD FALSE)
-        else()
-            set(USE_INSTALL_RPATH_AT_BUILD TRUE)
-        endif()
-        
+        # RPATH entries for `pybammsolvers/idaklu.<abi>.so`:
+        #   @loader_path/../casadi / $ORIGIN/../casadi: finds libcasadi at
+        #     runtime.  .idaklu/{lib,lib64}: vendored SUNDIALS/SuiteSparse
+        #     (used at runtime and by auditwheel/delocate at repair time).
+        #     Windows uses vcpkg static linking; no RPATH needed.
         if (APPLE)
-            set_target_properties(
-                    idaklu PROPERTIES
-                    BUILD_RPATH "${CASADI_LIB_DIR}"
-                    BUILD_RPATH_USE_LINK_PATH FALSE
-                    INSTALL_RPATH "@loader_path/../casadi"
-                    BUILD_WITH_INSTALL_RPATH ${USE_INSTALL_RPATH_AT_BUILD}
+            set(IDAKLU_INSTALL_RPATH
+                "@loader_path/../casadi"
+                "${SUNDIALS_ROOT}/lib"
+                "${SuiteSparse_ROOT}/lib"
             )
         else()
-            set_target_properties(
-                    idaklu PROPERTIES
-                    BUILD_RPATH "${CASADI_LIB_DIR}"
-                    BUILD_RPATH_USE_LINK_PATH FALSE
-                    INSTALL_RPATH "$ORIGIN/../casadi"
-                    BUILD_WITH_INSTALL_RPATH ${USE_INSTALL_RPATH_AT_BUILD}
+            set(IDAKLU_INSTALL_RPATH
+                "$ORIGIN/../casadi"
+                "${SUNDIALS_ROOT}/lib"
+                "${SUNDIALS_ROOT}/lib64"
+                "${SuiteSparse_ROOT}/lib"
+                "${SuiteSparse_ROOT}/lib64"
             )
         endif()
-        # Link against casadi by name, not absolute path, to avoid issues with
-        # pip's isolated build environments changing paths between configure and build
-        # casadi 3.7+ exports the target as casadi::casadi instead of casadi
+        set_target_properties(idaklu PROPERTIES
+            INSTALL_RPATH "${IDAKLU_INSTALL_RPATH}"
+            BUILD_WITH_INSTALL_RPATH TRUE
+        )
+        # casadi 3.7+ exports casadi::casadi; link by name to avoid stale
+        # paths from pip's isolated build environments.
         if(TARGET casadi::casadi)
             target_link_libraries(idaklu PRIVATE casadi::casadi)
         else()
@@ -243,3 +238,5 @@ else ()
 endif ()
 include_directories(${SuiteSparse_INCLUDE_DIRS})
 target_link_libraries(idaklu PRIVATE ${SuiteSparse_LIBRARIES})
+
+install(TARGETS idaklu LIBRARY DESTINATION ${SKBUILD_PROJECT_NAME})

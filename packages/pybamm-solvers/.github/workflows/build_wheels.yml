@@ -15,7 +15,6 @@ on:
 
 env:
   CIBW_BUILD_VERBOSITY: 2
-  CIBW_BUILD_FRONTEND: "pip; args: --no-build-isolation"
   # Skip PyPy, MUSL, and free-threaded Python builds (CasADi lacks cp314t wheels)
   CIBW_SKIP: "pp* *musllinux* cp314t*"
   FORCE_COLOR: 3
@@ -42,18 +41,30 @@ jobs:
           cd vcpkg
           .\bootstrap-vcpkg.bat
 
+      # Propagate GitHub Actions cache env vars so vcpkg's `x-gha` binary
+      # source can read/write cached binaries. Disabled on release events to
+      # prevent cache poisoning attacks.
+      - name: Export GitHub Actions cache env
+        if: ${{ github.event_name != 'release' }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
+            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+
       - name: Build wheels on Windows
         run: pipx run cibuildwheel --output-dir wheelhouse
         env:
           CIBW_ENVIRONMENT: >
-            PYBAMMSOLVERS_USE_VCPKG=ON
             VCPKG_ROOT_DIR=C:\vcpkg
             VCPKG_DEFAULT_TRIPLET=x64-windows-static-md
             VCPKG_FEATURE_FLAGS=manifests,registries
+            VCPKG_BINARY_SOURCES="clear;x-gha,readwrite"
             CMAKE_GENERATOR="Visual Studio 17 2022"
             CMAKE_GENERATOR_PLATFORM=x64
+          CIBW_ENVIRONMENT_PASS_WINDOWS: "ACTIONS_CACHE_URL ACTIONS_RUNTIME_TOKEN"
           CIBW_ARCHS: AMD64
-          CIBW_BEFORE_BUILD: python -m pip install setuptools delvewheel pybind11 # skip CasADi and CMake
+          CIBW_BEFORE_BUILD: python -m pip install delvewheel
           CIBW_REPAIR_WHEEL_COMMAND: delvewheel repair --add-path C:/Windows/System32 -w {dest_dir} {wheel}
           CIBW_TEST_EXTRAS: "dev"
           CIBW_TEST_COMMAND: |
@@ -91,8 +102,8 @@ jobs:
           CIBW_BEFORE_ALL_LINUX: >
             yum -y install openblas-devel lapack-devel &&
             python install_KLU_Sundials.py
-          CIBW_BEFORE_BUILD_LINUX: python -m pip install cmake casadi==3.7.2 setuptools wheel pybind11
-          CIBW_REPAIR_WHEEL_COMMAND_LINUX: auditwheel repair -w {dest_dir} {wheel}
+          # libcasadi ships as a pip dep (resolved at runtime via $ORIGIN/../casadi).
+          CIBW_REPAIR_WHEEL_COMMAND_LINUX: auditwheel repair --exclude libcasadi.so.3.7 -w {dest_dir} {wheel}
           CIBW_TEST_EXTRAS: "dev"
           CIBW_TEST_COMMAND: |
             set -e -x
@@ -167,12 +178,15 @@ jobs:
 
             export CC=/usr/bin/clang
             export CXX=/usr/bin/clang++
+            # Link conda libomp (not Homebrew's — too-high MACOSX_DEPLOYMENT_TARGET).
+            # One libomp source ensures delocate bundles a single copy.
             export CPPFLAGS="$CPPFLAGS -Xpreprocessor -fopenmp"
             export CFLAGS="$CFLAGS -I$PREFIX/include"
             export CXXFLAGS="$CXXFLAGS -I$PREFIX/include"
             export LDFLAGS="$LDFLAGS -L$PREFIX/lib -lomp"
 
-            # cibuildwheel not recognising its environment variable, so set manually
+            # install_KLU_Sundials.py checks CIBUILDWHEEL to decide whether to
+            # inject Homebrew OpenMP overrides; set it so it uses conda libomp.
             export CIBUILDWHEEL="1"
 
             python install_KLU_Sundials.py
@@ -181,13 +195,16 @@ jobs:
           # 10.13 for Intel (macos-15-intel), 11.0 for Apple Silicon (macos-latest)
           MACOSX_DEPLOYMENT_TARGET: ${{ matrix.os == 'macos-latest' && '11.0' || '10.13' }}
           CIBW_ARCHS_MACOS: auto
-          CIBW_BEFORE_BUILD: python -m pip install cmake casadi==3.7.2 setuptools delocate pybind11
+          CIBW_BEFORE_BUILD: python -m pip install delocate
+          # libcasadi ships as a pip dep (resolved at runtime via
+          # @loader_path/../casadi); delocate can't locate it at repair time
+          # since it lives in the build venv — hence --exclude + --ignore-missing-dependencies.
           CIBW_REPAIR_WHEEL_COMMAND: |
             if [[ $(uname -m) == "x86_64" ]]; then
-              delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel}
+              delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel} --exclude libcasadi --ignore-missing-dependencies
             elif [[ $(uname -m) == "arm64" ]]; then
               # Use higher macOS target for now since casadi/libc++.1.0.dylib is still not fixed
-              delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel} --require-target-macos-version 11.1
+              delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel} --exclude libcasadi --ignore-missing-dependencies --require-target-macos-version 11.1
               for file in {dest_dir}/*.whl; do mv "$file" "${file//macosx_11_1/macosx_11_0}"; done
             fi
           CIBW_TEST_EXTRAS: "dev"

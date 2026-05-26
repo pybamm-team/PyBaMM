@@ -1,5 +1,4 @@
 import nox
-import os
 import sys
 from pathlib import Path
 
@@ -17,8 +16,6 @@ PYBAMM_ENV = {
     "DYLD_LIBRARY_PATH": f"{homedir}/.idaklu/lib",
     "PYTHONIOENCODING": "utf-8",
     "MPLBACKEND": "Agg",
-    # Expression evaluators (...EXPR_CASADI cannot be fully disabled at this time)
-    "PYBAMM_IDAKLU_EXPR_CASADI": os.getenv("PYBAMM_IDAKLU_EXPR_CASADI", "ON"),
 }
 VENV_DIR = Path("./venv").resolve()
 
@@ -39,6 +36,30 @@ def set_environment_variables(env_dict, session):
         session.env[key] = value
 
 
+# Load [build-system].requires from pyproject.toml and add cmake/ninja which
+# scikit-build-core provides during isolated builds but we need explicitly for
+# --no-build-isolation editable installs.
+_pyproject = nox.project.load_toml("pyproject.toml")
+BUILD_DEPS = (*_pyproject["build-system"]["requires"], "cmake>=3.13", "ninja")
+
+
+def editable_install(session, *extras, no_deps=False):
+    """Install pybammsolvers in editable mode without build isolation.
+
+    Pre-installing BUILD_DEPS into the session venv and passing
+    --no-build-isolation prevents scikit-build-core's editable.rebuild
+    shim from baking dangled paths (cmake/ninja in pip's ephemeral build
+    env) into CMakeCache.txt. `uv sync` users get the same behaviour
+    automatically via [tool.uv].no-build-isolation-package.
+    """
+    session.install(*BUILD_DEPS, silent=False)
+    target = "." if not extras else f".[{','.join(extras)}]"
+    install_args = ["-e", target, "--no-build-isolation"]
+    if no_deps:
+        install_args.append("--no-deps")
+    session.install(*install_args, silent=False)
+
+
 @nox.session(name="idaklu-requires")
 def run_pybamm_requires(session):
     """Download, compile, and install the build-time requirements for Linux and macOS.
@@ -54,8 +75,7 @@ def run_pybamm_requires(session):
 def run_unit(session):
     """Run the full test suite."""
     set_environment_variables(PYBAMM_ENV, session=session)
-    session.install("setuptools", silent=False)
-    session.install(".[dev]", silent=False)
+    editable_install(session, "dev")
     session.run("pytest", "tests", "-m", "unit", *session.posargs)
 
 
@@ -63,8 +83,7 @@ def run_unit(session):
 def run_coverage(session):
     """Run tests with coverage reporting."""
     set_environment_variables(PYBAMM_ENV, session=session)
-    session.install("setuptools", silent=False)
-    session.install(".[dev]", silent=False)
+    editable_install(session, "dev")
     session.install("pytest-cov", silent=False)
     session.run(
         "pytest",
@@ -85,15 +104,11 @@ def run_integration(session):
     if sys.platform != "win32":
         session.run("python", "install_KLU_Sundials.py")
 
-    session.install("setuptools", silent=False)
-    session.install(".[dev]", silent=False)
-
-    # Install PyBaMM
+    editable_install(session, "dev")
     session.install("pybamm", silent=False)
 
-    # Force PyBaMM to use our local pybammsolvers
-    session.run("uv", "pip", "uninstall", "pybammsolvers", silent=True)
-    session.install("-e", ".", "--no-deps", silent=False)
+    # Reinstall local pybammsolvers since pybamm pulls it from PyPI
+    editable_install(session, no_deps=True)
 
     # Run integration tests
     session.run("pytest", "tests", "-m", "integration", *session.posargs)
@@ -115,11 +130,13 @@ def run_benchmarks(session):
     if sys.platform != "win32":
         session.run("python", "install_KLU_Sundials.py")
 
-    session.install("setuptools", silent=False)
-    session.install(".[dev]", silent=False)
+    editable_install(session, "dev")
 
     # Install PyBaMM
     session.install("pybamm", silent=False)
+
+    # Reinstall local pybammsolvers since pybamm pulls it from PyPI
+    editable_install(session, no_deps=True)
 
     # Run the benchmark orchestrator script
     session.run("python", "tests/pybamm_benchmarks/run_benchmarks.py", *session.posargs)
@@ -226,17 +243,16 @@ def run_pybamm_tests(session):
     else:
         session.warn("Skipping install_KLU_Sundials.py on Windows")
 
-    # Install local pybammsolvers
-    # Use --force-reinstall to ensure uv uses the local source and doesn't fetch from PyPI
-    session.install(".", "--force-reinstall", silent=False)
-
     # Install PyBaMM with all dependencies
-    # pybammsolvers is already installed locally, so it won't fetch from PyPI
     session.log("Installing PyBaMM with all dependencies...")
     session.cd(str(pybamm_dir))
     # Install PyBaMM extras and dev dependency group (PEP 735)
     session.install("-e", ".[all,jax]", silent=False)
     session.install("--group", "dev", silent=False)
+
+    # Reinstall local pybammsolvers since pybamm pulls it from PyPI
+    session.cd(str(Path(__file__).parent))
+    editable_install(session, no_deps=True)
 
     # Run PyBaMM tests
     session.cd(str(pybamm_dir))
@@ -252,3 +268,24 @@ def run_pybamm_tests(session):
         session.run("pytest", "tests/unit", *pytest_args)
         session.log("Running PyBaMM integration tests...")
         session.run("pytest", "tests/integration", *pytest_args)
+
+
+@nox.session(name="dev-rebuild", venv_backend="none")
+def run_dev_rebuild(session):
+    """Rebuild the C++ extension in-place against the active venv.
+
+    Escape hatch when scikit-build-core's editable.rebuild auto-rebuild
+    is bypassed. Requires build deps in the active venv
+    (`uv sync --extra dev`).
+    """
+    set_environment_variables(PYBAMM_ENV, session=session)
+    session.run(
+        "uv",
+        "pip",
+        "install",
+        "-e",
+        ".",
+        "--no-deps",
+        "--no-build-isolation",
+        external=True,
+    )

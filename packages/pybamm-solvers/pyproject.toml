@@ -1,22 +1,23 @@
 [build-system]
 requires = [
-    "setuptools",
-    # On Windows, use the CasADi vcpkg registry and CMake bundled from MSVC
+    "scikit-build-core>=0.10",
+    "pybind11>=3.0.1",
+    # CasADi is pip-installable from PyPI on Windows, but finding the libcasadi.so path is
+    # finicky, so we prefer the vcpkg registry for Windows builds.
     "casadi==3.7.2; platform_system!='Windows'",
     # Note: the version of CasADi as a build-time dependency should be matched
     # cross platforms, so updates to its minimum version here should be accompanied
     # by a version bump in https://github.com/pybamm-team/casadi-vcpkg-registry.
-    "cmake; platform_system!='Windows'",
-    "pybind11[global]>=3.0.1",
 ]
-build-backend = "setuptools.build_meta"
+build-backend = "scikit_build_core.build"
 
 [project]
 name = "pybammsolvers"
 description = "Python interface for the IDAKLU solver"
 requires-python = ">=3.10,<3.15"
 license-files = ["LICENSE"]
-dynamic = ["version", "readme"]
+readme = "README.md"
+dynamic = ["version"]
 dependencies = [
     "casadi==3.7.2",
     "numpy",
@@ -28,14 +29,44 @@ dev = [
     "pytest",
     "pytest-cov",
     "psutil>=7.1.0",
-    "setuptools",
     "wheel",
+    # Duplicated from [build-system].requires so editable.auto-rebuild has
+    # build tools available in the venv.
+    "scikit-build-core>=0.10",
+    "pybind11>=3.0.1",
+    "cmake>=3.13",
+    "ninja",
 ]
 
-[tool.setuptools.packages.find]
-where = ["src"]
-include = ["pybammsolvers"]
+[tool.scikit-build]
+cmake.version = ">=3.13"
+build-dir = "build/{wheel_tag}"
+wheel.packages = ["src/pybammsolvers"]
+# C++ sources are compiled into the .so; they don't need to ship in the wheel.
+wheel.exclude = ["pybammsolvers/idaklu.cpp", "pybammsolvers/idaklu_source/**"]
+editable.mode = "redirect"
+editable.rebuild = true
+metadata.version.provider = "scikit_build_core.metadata.regex"
+metadata.version.input = "src/pybammsolvers/version.py"
+metadata.version.regex = '''__version__\s*=\s*["'](?P<value>[^"']+)["']'''
 
-[tool.setuptools.dynamic]
-version = {attr = "pybammsolvers.version.__version__"}
-readme = {file = ["README.md"], content-type = "text/markdown"}
+# SUNDIALS/SuiteSparse are NOT vendored (would add ~400MB); source installs
+# need either system packages or `git submodule update --init`.
+[tool.scikit-build.sdist]
+include = [
+    "CMakeLists.txt",
+    "FindSuiteSparse.cmake",
+    "FindSUNDIALS.cmake",
+    "src/pybammsolvers/idaklu_source/**/*.hpp",
+    "src/pybammsolvers/idaklu_source/**/*.cpp",
+    "src/pybammsolvers/idaklu_source/**/*.inl",
+    "src/pybammsolvers/idaklu.cpp",
+    "install_KLU_Sundials.py",
+    "vcpkg.json",
+    "vcpkg-configuration.json",
+]
+
+# Prevent uv's ephemeral build venv from being torn down between CMake configure
+# and auto-rebuild (which bakes absolute paths into CMakeCache.txt).
+[tool.uv]
+no-build-isolation-package = ["pybammsolvers"]

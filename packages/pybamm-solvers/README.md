@@ -28,6 +28,9 @@ The following solvers are available:
 ### Local builds
 
 For testing new solvers and unsupported architectures, local builds are possible.
+The build backend is [scikit-build-core](https://scikit-build-core.readthedocs.io/);
+build-time dependencies (`scikit-build-core`, `pybind11`, `cmake`, `ninja`) are
+resolved automatically via PEP 517 isolation when running `pip install`.
 
 #### Nox (Recommended)
 
@@ -59,10 +62,31 @@ be performed with the following commands:
 
 ```bash
 sudo apt-get install libopenblas-dev gcc gfortran make g++ build-essential
-git submodules update --init --recursive
-pip install cmake casadi setuptools wheel "pybind11[global]"
+git submodule update --init --recursive
 python install_KLU_Sundials.py
 pip install .
+```
+
+#### Custom SUNDIALS / SuiteSparse paths
+
+If SUNDIALS and SuiteSparse are installed somewhere other than `./.idaklu`,
+pass paths through pip's `--config-settings`:
+
+```bash
+pip install . \
+    --config-settings=cmake.define.SUNDIALS_ROOT=/path/to/sundials \
+    --config-settings=cmake.define.SuiteSparse_ROOT=/path/to/suitesparse
+```
+
+#### Editable installs and rebuilding the C++ extension
+
+`pip install -e .[dev]` installs in editable mode with auto-rebuild on import:
+edits to C++ sources trigger a rebuild the next time `pybammsolvers` is
+imported. To force a rebuild manually (e.g. when auto-rebuild is bypassed in
+CI):
+
+```bash
+nox -s dev-rebuild
 ```
 
 ### Testing
