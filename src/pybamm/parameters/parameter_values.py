@@ -121,7 +121,7 @@ class ParameterValues:
     # Factory methods
     @classmethod
     def create_from_bpx(
-        cls, filename: str | Path, target_soc: float = 1.0
+        cls, filename: str | Path, target_soc: float | None = None
     ) -> ParameterValues:
         """
         Create ParameterValues from a BPX file.
@@ -131,7 +131,15 @@ class ParameterValues:
         filename : str or Path
             The filename of the `BPX <https://bpxstandard.com/>`_ file.
         target_soc : float, optional
-            Target state of charge. Must be between 0 and 1. Default is 1.
+            .. deprecated:: 26.5
+                Passing ``target_soc`` is deprecated. The returned
+                ``ParameterValues`` always has initial concentrations set at
+                100% SOC (negative phases at their maximum stoichiometry,
+                positive phases at their minimum stoichiometry). Use
+                :meth:`ParameterValues.set_initial_state` after creation to
+                set a different initial SOC. If ``target_soc`` is passed, the
+                previous behaviour is preserved for non-blended electrodes;
+                blended electrodes raise ``NotImplementedError``.
 
         Returns
         -------
@@ -141,16 +149,18 @@ class ParameterValues:
         Examples
         --------
         >>> param = pybamm.ParameterValues.create_from_bpx("battery_params.json")  # doctest: +SKIP
-        >>> param = pybamm.ParameterValues.create_from_bpx("battery_params.json", target_soc=0.5)  # doctest: +SKIP
+        >>> param.set_initial_state(0.5)  # doctest: +SKIP
         """
         from bpx import parse_bpx_file
 
+        if target_soc is not None:
+            cls._warn_target_soc_deprecation()
         bpx = parse_bpx_file(str(filename))
         return cls._create_from_bpx(bpx, target_soc)
 
     @classmethod
     def create_from_bpx_obj(
-        cls, bpx_obj: dict, target_soc: float = 1.0
+        cls, bpx_obj: dict, target_soc: float | None = None
     ) -> ParameterValues:
         """
         Create ParameterValues from a BPX dictionary object.
@@ -161,7 +171,10 @@ class ParameterValues:
             A dictionary containing the parameters in the
             `BPX <https://bpxstandard.com/>`_ format.
         target_soc : float, optional
-            Target state of charge. Must be between 0 and 1. Default is 1.
+            .. deprecated:: 26.5
+                See :meth:`ParameterValues.create_from_bpx`. Pass nothing
+                (the default) and use :meth:`ParameterValues.set_initial_state`
+                to set a non-100%-SOC initial state.
 
         Returns
         -------
@@ -172,24 +185,39 @@ class ParameterValues:
         --------
         >>> bpx_dict = {"Header": {...}, "Cell": {...}, "Parameterisation": {...}}  # doctest: +SKIP
         >>> param = pybamm.ParameterValues.create_from_bpx_obj(bpx_dict)  # doctest: +SKIP
-        >>> param = pybamm.ParameterValues.create_from_bpx_obj(bpx_dict, target_soc=0.8)  # doctest: +SKIP
-
+        >>> param.set_initial_state(0.5)  # doctest: +SKIP
         """
         from bpx import parse_bpx_obj
 
+        if target_soc is not None:
+            cls._warn_target_soc_deprecation()
         bpx = parse_bpx_obj(bpx_obj)
         return cls._create_from_bpx(bpx, target_soc)
 
+    @staticmethod
+    def _warn_target_soc_deprecation() -> None:
+        warn(
+            "Passing 'target_soc' to ParameterValues.create_from_bpx / "
+            "create_from_bpx_obj is deprecated. The returned ParameterValues "
+            "now has initial concentrations set at 100% SOC by default; call "
+            "param.set_initial_state(...) afterwards to set a different "
+            "initial SOC.",
+            DeprecationWarning,
+            stacklevel=3,
+        )
+
     @classmethod
-    def _create_from_bpx(cls, bpx, target_soc: float) -> ParameterValues:
+    def _create_from_bpx(cls, bpx, target_soc: float | None) -> ParameterValues:
         """Internal method to create ParameterValues from a parsed BPX object."""
         from bpx import get_electrode_concentrations
         from bpx.schema import ElectrodeBlended, ElectrodeBlendedSPM
 
-        from .bpx import bpx_to_param_dict
-
-        if target_soc < 0 or target_soc > 1:
-            raise ValueError("Target SOC should be between 0 and 1")
+        from .bpx import (
+            _get_phase_names,
+            bpx_to_param_dict,
+            negative_electrode,
+            positive_electrode,
+        )
 
         pybamm_dict = bpx_to_param_dict(bpx)
 
@@ -212,17 +240,44 @@ class ParameterValues:
                 stacklevel=2,
             )
 
-        # Get initial concentrations based on SOC
-        bpx_neg = bpx.parameterisation.negative_electrode
-        bpx_pos = bpx.parameterisation.positive_electrode
-        if isinstance(bpx_neg, ElectrodeBlended | ElectrodeBlendedSPM) or isinstance(
-            bpx_pos, ElectrodeBlended | ElectrodeBlendedSPM
-        ):
-            pybamm.logger.warning(
-                "Initial concentrations cannot be set using stoichiometry limits for "
-                "blend electrodes. Please set the initial concentrations manually."
-            )
+        if target_soc is None:
+            # Full charge: negative phases at theta_max, positive at theta_min.
+            for bpx_electrode, domain, sto_bound in (
+                (
+                    bpx.parameterisation.negative_electrode,
+                    negative_electrode,
+                    "maximum",
+                ),
+                (
+                    bpx.parameterisation.positive_electrode,
+                    positive_electrode,
+                    "minimum",
+                ),
+            ):
+                for phase in _get_phase_names(bpx_electrode):
+                    sto = pybamm_dict[
+                        f"{phase}{domain.pre_name}{sto_bound} stoichiometry"
+                    ]
+                    c_max = pybamm_dict[
+                        f"{phase}Maximum concentration in {domain.name} [mol.m-3]"
+                    ]
+                    pybamm_dict[
+                        f"{phase}Initial concentration in {domain.name} [mol.m-3]"
+                    ] = sto * c_max
         else:
+            if target_soc < 0 or target_soc > 1:
+                raise ValueError("Target SOC should be between 0 and 1")
+            bpx_neg = bpx.parameterisation.negative_electrode
+            bpx_pos = bpx.parameterisation.positive_electrode
+            if isinstance(
+                bpx_neg, ElectrodeBlended | ElectrodeBlendedSPM
+            ) or isinstance(bpx_pos, ElectrodeBlended | ElectrodeBlendedSPM):
+                raise NotImplementedError(
+                    "Setting 'target_soc' is not supported for BPX files with "
+                    "blended electrodes. Call create_from_bpx / "
+                    "create_from_bpx_obj without 'target_soc', then use "
+                    "param.set_initial_state(...) to set the initial SOC."
+                )
             c_n_init, c_p_init = get_electrode_concentrations(target_soc, bpx)
             pybamm_dict["Initial concentration in negative electrode [mol.m-3]"] = (
                 c_n_init
