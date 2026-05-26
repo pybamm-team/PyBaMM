@@ -167,6 +167,7 @@ from .meshes.unstructured_submesh import (
     UnstructuredSubMesh,
     UnstructuredMeshGenerator,
     UserSuppliedUnstructuredMesh,
+    TaggedSubMeshGenerator,
     compute_interface_data,
 )
 

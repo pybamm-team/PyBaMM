@@ -719,6 +719,83 @@ class UserSuppliedUnstructuredMesh(MeshGenerator):
 
 
 # ======================================================================
+# Tagged-region mesh generator
+# ======================================================================
+
+
+class TaggedSubMeshGenerator(MeshGenerator):
+    """
+    Build an :class:`UnstructuredSubMesh` from cells of a single Gmsh
+    physical group in a ``.msh`` file.
+
+    Use one instance per region in a multi-domain pybamm model — the
+    region name doubles as the pybamm domain name. Compare to
+    :class:`UserSuppliedUnstructuredMesh`, which routes multiple regions
+    through one generator by introspecting ``lims``; ``TaggedSubMeshGenerator``
+    is simpler when the model already supplies one mesh generator per
+    domain.
+
+    Parameters
+    ----------
+    region : str
+        Gmsh physical-group name (key in ``meshio.read(...).field_data``).
+    mesh_path : str or pathlib.Path
+        Path to the ``.msh`` file.
+    scale : float, optional
+        Multiplier applied to mesh node coordinates (e.g. ``1e-3`` to
+        convert mm to m). Default ``1.0``.
+    coord_sys : str, optional
+        Coordinate system label, default ``"cartesian"``.
+    """
+
+    _mesh_cache: dict = {}
+
+    def __init__(self, region, mesh_path, scale=1.0, coord_sys="cartesian"):
+        self.submesh_type = UnstructuredSubMesh
+        self.submesh_params = {}
+        self._mesh_path = mesh_path
+        self._region = region
+        self._scale = float(scale)
+        self.coord_sys = coord_sys
+
+    @classmethod
+    def _read(cls, path):
+        if path not in cls._mesh_cache:
+            import meshio
+
+            cls._mesh_cache[path] = meshio.read(str(path))
+        return cls._mesh_cache[path]
+
+    def __call__(self, lims, npts):
+        m = self._read(self._mesh_path)
+        if self._region not in m.field_data:
+            raise KeyError(
+                f"region {self._region!r} not in mesh field_data; "
+                f"available: {list(m.field_data)}"
+            )
+        tag_id = int(m.field_data[self._region][0])
+
+        tet_blocks = []
+        for block, tags in zip(m.cells, m.cell_data.get("gmsh:physical", [])):
+            if block.type != "tetra":
+                continue
+            mask = np.asarray(tags, dtype=np.int32) == tag_id
+            if mask.any():
+                tet_blocks.append(block.data[mask])
+        if not tet_blocks:
+            raise RuntimeError(f"no tets for region {self._region!r}")
+
+        elements = np.concatenate(tet_blocks, axis=0)
+        unique_nodes = np.unique(elements)
+        node_map = np.full(m.points.shape[0], -1, dtype=np.int64)
+        node_map[unique_nodes] = np.arange(len(unique_nodes))
+        nodes = m.points[unique_nodes] * self._scale
+        return UnstructuredSubMesh(
+            nodes, node_map[elements], coord_sys=self.coord_sys
+        )
+
+
+# ======================================================================
 # Interface data
 # ======================================================================
 
