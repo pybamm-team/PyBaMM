@@ -2,7 +2,8 @@
 VTK-based interactive visualization for unstructured mesh solutions.
 
 Provides :class:`VTKQuickPlot`, a drop-in alternative to the matplotlib-based
-:class:`QuickPlot` for 2D and 3D cell-centered FVM data on unstructured meshes.
+:class:`QuickPlot` for 2D and 3D unstructured mesh data (cell-centered FVM
+and node-centered FEM).
 
 Also supports 0D (time-series) variables rendered as VTK line charts.
 """
@@ -22,7 +23,7 @@ _AXIS_INDEX = {"x": 0, "y": 1, "z": 2}
 
 
 def _build_vtk_grid(mesh, scale=None):
-    """Build a ``vtkUnstructuredGrid`` from an ``UnstructuredSubMesh``."""
+    """Build a ``vtkUnstructuredGrid`` from an unstructured mesh."""
     import vtk
 
     nodes = mesh.nodes
@@ -40,7 +41,23 @@ def _build_vtk_grid(mesh, scale=None):
     grid = vtk.vtkUnstructuredGrid()
     grid.SetPoints(pts)
 
-    cell_type = _VTK_CELL_TYPE[mesh.element_type]
+    if hasattr(mesh, "element_type"):
+        element_key = mesh.element_type
+    else:
+        nverts = mesh.elements.shape[1]
+        if nverts == 4:
+            element_key = "tetrahedron"
+        elif nverts == 8:
+            element_key = "hexahedron"
+        elif nverts == 3:
+            element_key = "triangle"
+        else:
+            raise ValueError(
+                "Unable to infer VTK cell type from mesh connectivity with "
+                f"{nverts} vertices per element"
+            )
+
+    cell_type = _VTK_CELL_TYPE[element_key]
     for cell in mesh.elements:
         id_list = vtk.vtkIdList()
         for v in cell:
@@ -88,6 +105,39 @@ def _set_cell_scalars(grid, name, values):
     grid.Modified()
 
 
+def _set_point_scalars(grid, name, values):
+    """Set (or update) a point scalar array on a VTK grid."""
+    import vtk
+
+    arr = grid.GetPointData().GetArray(name)
+    if arr is None:
+        arr = vtk.vtkFloatArray()
+        arr.SetName(name)
+        arr.SetNumberOfTuples(len(values))
+        grid.GetPointData().AddArray(arr)
+        grid.GetPointData().SetActiveScalars(name)
+    for i, v in enumerate(values):
+        arr.SetValue(i, float(v))
+    arr.Modified()
+    grid.Modified()
+
+
+def _is_unstructured_spatial_variable(pv):
+    return isinstance(
+        pv,
+        (
+            pybamm.ProcessedVariableUnstructuredFVM,
+            pybamm.ProcessedVariableUnstructured,
+        ),
+    )
+
+
+def _data_at_time(pv, t):
+    if hasattr(pv, "_data_at_time"):
+        return pv._data_at_time(t)
+    return pv(t)
+
+
 def _viridis_lut(vmin, vmax, n=256):
     """Build a VTK lookup table using the matplotlib viridis colormap."""
     import vtk
@@ -112,7 +162,7 @@ def _viridis_lut(vmin, vmax, n=256):
 
 
 class VTKQuickPlot:
-    """Interactive VTK visualization for unstructured FVM solutions.
+    """Interactive VTK visualization for unstructured mesh solutions.
 
     Supports spatial (unstructured 2D/3D) and 0D (time-series) variables.
 
@@ -159,6 +209,7 @@ class VTKQuickPlot:
 
         self.spatial_names = []
         self.spatial_vars = []
+        self.spatial_is_cell_data = []
         self.scalar_names = []
         self.scalar_vars = []
 
@@ -167,6 +218,11 @@ class VTKQuickPlot:
             if isinstance(pv, pybamm.ProcessedVariableUnstructuredFVM):
                 self.spatial_names.append(name)
                 self.spatial_vars.append(pv)
+                self.spatial_is_cell_data.append(True)
+            elif isinstance(pv, pybamm.ProcessedVariableUnstructured):
+                self.spatial_names.append(name)
+                self.spatial_vars.append(pv)
+                self.spatial_is_cell_data.append(False)
             else:
                 self.scalar_names.append(name)
                 self.scalar_vars.append(pv)
@@ -208,7 +264,7 @@ class VTKQuickPlot:
         spatial_maxs = {}
         for name, pv in zip(self.spatial_names, self.spatial_vars, strict=True):
             pv.initialise()
-            data = np.column_stack([pv._data_at_time(t).ravel() for t in self.t_pts])
+            data = np.column_stack([_data_at_time(pv, t).ravel() for t in self.t_pts])
             spatial_data[name] = data
             spatial_mins[name] = float(data.min())
             spatial_maxs[name] = float(data.max())
@@ -217,9 +273,9 @@ class VTKQuickPlot:
         scalar_data = {}
         for name, pv in zip(self.scalar_names, self.scalar_vars, strict=True):
             pv.initialise()
-            if isinstance(pv, pybamm.ProcessedVariableUnstructuredFVM):
+            if _is_unstructured_spatial_variable(pv):
                 vals = np.array(
-                    [float(pv._data_at_time(t).ravel()[0]) for t in self.t_pts]
+                    [float(_data_at_time(pv, t).ravel()[0]) for t in self.t_pts]
                 )
             else:
                 vals = np.array([float(pv(t).ravel()[0]) for t in self.t_pts])
@@ -251,22 +307,35 @@ class VTKQuickPlot:
         first_3d_cam = None
         spatial_renderers = []
         panel_names = []
+        is_cell_data_by_name = {
+            name: is_cell
+            for name, is_cell in zip(
+                self.spatial_names, self.spatial_is_cell_data, strict=True
+            )
+        }
 
         for name, opts in self.spatial_panels:
             plot_type = opts.get("plot_type", "3d")
             var_scale = _resolve_scale(opts.get("scale", "auto"), self.mesh)
+            is_cell_data = is_cell_data_by_name[name]
             panel_names.append(name)
 
             g = _build_vtk_grid(self.mesh, scale=var_scale)
-            _set_cell_scalars(g, name, spatial_data[name][:, 0])
+            if is_cell_data:
+                _set_cell_scalars(g, name, spatial_data[name][:, 0])
+            else:
+                _set_point_scalars(g, name, spatial_data[name][:, 0])
             spatial_grids.append(g)
 
-            c2p = vtk.vtkCellDataToPointData()
-            c2p.SetInputData(g)
-            c2p.Update()
+            c2p = None
+            if is_cell_data:
+                c2p = vtk.vtkCellDataToPointData()
+                c2p.SetInputData(g)
+                c2p.Update()
             c2p_filters.append(c2p)
 
-            # Determine pipeline source: cutter for slices, c2p for 3d
+            # Determine pipeline source: cutter for slices, direct/converted for 3d
+            pipeline_source = c2p.GetOutputPort() if c2p is not None else g
             cutter = None
             if plot_type == "slice":
                 axis_key = None
@@ -301,19 +370,28 @@ class VTKQuickPlot:
 
                 cutter = vtk.vtkCutter()
                 cutter.SetCutFunction(plane)
-                cutter.SetInputConnection(c2p.GetOutputPort())
+                if c2p is not None:
+                    cutter.SetInputConnection(pipeline_source)
+                else:
+                    cutter.SetInputData(pipeline_source)
                 cutter.Update()
 
                 mapper_source = cutter.GetOutputPort()
             else:
-                mapper_source = c2p.GetOutputPort()
+                if c2p is not None:
+                    mapper_source = pipeline_source
+                else:
+                    mapper_source = None
 
             cutters.append(cutter)
 
             lut = _viridis_lut(spatial_mins[name], spatial_maxs[name])
 
             mapper = vtk.vtkDataSetMapper()
-            mapper.SetInputConnection(mapper_source)
+            if mapper_source is not None:
+                mapper.SetInputConnection(mapper_source)
+            else:
+                mapper.SetInputData(g)
             mapper.SetScalarRange(spatial_mins[name], spatial_maxs[name])
             mapper.SetScalarModeToUsePointData()
             mapper.SelectColorArray(name)
@@ -643,10 +721,14 @@ class VTKQuickPlot:
                     cutters,
                     strict=True,
                 ):
-                    vals = _spatial_vars[sname]._data_at_time(t_now).ravel()
-                    _set_cell_scalars(g, sname, vals)
-                    c2p.Modified()
-                    c2p.Update()
+                    vals = _data_at_time(_spatial_vars[sname], t_now).ravel()
+                    if is_cell_data_by_name[sname]:
+                        _set_cell_scalars(g, sname, vals)
+                    else:
+                        _set_point_scalars(g, sname, vals)
+                    if c2p is not None:
+                        c2p.Modified()
+                        c2p.Update()
                     if cut is not None:
                         cut.Update()
             else:
@@ -659,9 +741,13 @@ class VTKQuickPlot:
                     cutters,
                     strict=True,
                 ):
-                    _set_cell_scalars(g, sname, spatial_data[sname][:, t_idx])
-                    c2p.Modified()
-                    c2p.Update()
+                    if is_cell_data_by_name[sname]:
+                        _set_cell_scalars(g, sname, spatial_data[sname][:, t_idx])
+                    else:
+                        _set_point_scalars(g, sname, spatial_data[sname][:, t_idx])
+                    if c2p is not None:
+                        c2p.Modified()
+                        c2p.Update()
                     if cut is not None:
                         cut.Update()
 

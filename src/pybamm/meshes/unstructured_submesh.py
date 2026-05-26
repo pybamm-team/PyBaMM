@@ -280,25 +280,29 @@ class UnstructuredSubMesh(SubMesh):
             self.boundary_faces = {}
             return
 
-        tol = 1e-10
-        x_min, x_max = bnd_centroids[:, 0].min(), bnd_centroids[:, 0].max()
+        # Classify every external face by its outward normal direction so all
+        # protrusions (e.g., tabs) get assigned a BC bucket.
+        bnd_normals = self.face_normals[bnd_start:]
+        dominant_axis = np.argmax(np.abs(bnd_normals), axis=1)
 
         tag_map = {
-            "left": np.abs(bnd_centroids[:, 0] - x_min) < tol,
-            "right": np.abs(bnd_centroids[:, 0] - x_max) < tol,
+            "left": np.zeros(len(bnd_centroids), dtype=bool),
+            "right": np.zeros(len(bnd_centroids), dtype=bool),
+            "bottom": np.zeros(len(bnd_centroids), dtype=bool),
+            "top": np.zeros(len(bnd_centroids), dtype=bool),
         }
-
-        if self.dimension >= 2:
-            z_col = 1 if self.dimension == 2 else 2
-            z_min = bnd_centroids[:, z_col].min()
-            z_max = bnd_centroids[:, z_col].max()
-            tag_map["bottom"] = np.abs(bnd_centroids[:, z_col] - z_min) < tol
-            tag_map["top"] = np.abs(bnd_centroids[:, z_col] - z_max) < tol
-
         if self.dimension == 3:
-            y_min, y_max = bnd_centroids[:, 1].min(), bnd_centroids[:, 1].max()
-            tag_map["front"] = np.abs(bnd_centroids[:, 1] - y_min) < tol
-            tag_map["back"] = np.abs(bnd_centroids[:, 1] - y_max) < tol
+            tag_map["front"] = np.zeros(len(bnd_centroids), dtype=bool)
+            tag_map["back"] = np.zeros(len(bnd_centroids), dtype=bool)
+
+        for i, axis in enumerate(dominant_axis):
+            sign = bnd_normals[i, axis]
+            if axis == 0:
+                tag_map["left" if sign < 0 else "right"][i] = True
+            elif self.dimension == 3 and axis == 1:
+                tag_map["front" if sign < 0 else "back"][i] = True
+            else:
+                tag_map["bottom" if sign < 0 else "top"][i] = True
 
         self.boundary_faces = {}
         for name, mask in tag_map.items():
@@ -582,7 +586,7 @@ class UnstructuredMeshGenerator(MeshGenerator):
 
 class UserSuppliedUnstructuredMesh(MeshGenerator):
     """
-    Load a simplex mesh from an external file via *meshio*.
+    Load an unstructured mesh from an external file via *meshio*.
 
     Parameters
     ----------
@@ -602,6 +606,7 @@ class UserSuppliedUnstructuredMesh(MeshGenerator):
         subdomain_mapping=None,
         boundary_mapping=None,
         coord_sys="cartesian",
+        merge_tolerance=1e-12,
     ):
         self.submesh_type = UnstructuredSubMesh
         self.submesh_params = {}
@@ -609,6 +614,7 @@ class UserSuppliedUnstructuredMesh(MeshGenerator):
         self.subdomain_mapping = subdomain_mapping or {}
         self.boundary_mapping = boundary_mapping or {}
         self.coord_sys = coord_sys
+        self.merge_tolerance = merge_tolerance
         self._cached_mesh = None
 
     def __call__(self, lims, npts):
@@ -623,15 +629,26 @@ class UserSuppliedUnstructuredMesh(MeshGenerator):
         # Determine which domain is being requested from the lims keys
         domain_name = self._domain_name_from_lims(lims)
 
-        # Extract simplex cells (triangles or tets)
-        simplex_cells, simplex_type = self._extract_simplex_cells(mesh)
+        # Extract supported cells (triangles/quads or tets/hexes)
+        cells, cell_type = self._extract_supported_cells(mesh)
 
         if domain_name and domain_name in self.subdomain_mapping:
             tag_value = self.subdomain_mapping[domain_name]
-            cell_mask = self._get_cell_mask(mesh, simplex_type, tag_value)
-            elements = simplex_cells[cell_mask]
+            cell_mask = self._get_cell_mask(mesh, cell_type, tag_value)
+            elements = cells[cell_mask]
         else:
-            elements = simplex_cells
+            elements = cells
+
+        # Weld coincident nodes across cell blocks so touching regions
+        # (e.g. body-tab interfaces) are thermally connected.
+        if self.merge_tolerance is not None and self.merge_tolerance > 0:
+            scale = 1.0 / self.merge_tolerance
+            quantized = np.round(nodes * scale).astype(np.int64)
+            _, unique_idx, inverse = np.unique(
+                quantized, axis=0, return_index=True, return_inverse=True
+            )
+            nodes = nodes[unique_idx]
+            elements = inverse[elements]
 
         # Re-index nodes to compact numbering
         unique_nodes = np.unique(elements)
@@ -671,22 +688,110 @@ class UserSuppliedUnstructuredMesh(MeshGenerator):
         return None
 
     @staticmethod
-    def _extract_simplex_cells(mesh):
-        for block in mesh.cells:
-            if block.type == "tetra":
-                return block.data, "tetra"
-            if block.type == "triangle":
-                return block.data, "triangle"
-        raise ValueError("No simplex cells (triangle or tetra) found in mesh file")
+    def _extract_supported_cells(mesh):
+        # Prefer 3D cells when present, otherwise fall back to 2D.
+        for cell_type in ("tetra", "hexahedron", "triangle", "quad"):
+            blocks = [block.data for block in mesh.cells if block.type == cell_type]
+            if blocks:
+                if len(blocks) == 1:
+                    return blocks[0], cell_type
+                return np.concatenate(blocks, axis=0), cell_type
+        raise ValueError(
+            "No supported cells found in mesh file "
+            "(expected tetra/hexahedron/triangle/quad)"
+        )
 
     @staticmethod
     def _get_cell_mask(mesh, cell_type, tag_value):
         for _key, data_list in mesh.cell_data.items():
-            for block, data in zip(mesh.cells, data_list, strict=False):
-                if block.type == cell_type:
-                    return data == tag_value
+            matching = [
+                data
+                for block, data in zip(mesh.cells, data_list, strict=False)
+                if block.type == cell_type
+            ]
+            if matching:
+                if len(matching) == 1:
+                    return matching[0] == tag_value
+                return np.concatenate(matching, axis=0) == tag_value
         raise ValueError(
             f"Could not find cell data tag {tag_value} for cell type '{cell_type}'"
+        )
+
+
+# ======================================================================
+# Tagged-region mesh generator
+# ======================================================================
+
+
+class TaggedSubMeshGenerator(MeshGenerator):
+    """
+    Build an :class:`UnstructuredSubMesh` from cells of a single Gmsh
+    physical group in a ``.msh`` file.
+
+    Use one instance per region in a multi-domain pybamm model — the
+    region name doubles as the pybamm domain name. Compare to
+    :class:`UserSuppliedUnstructuredMesh`, which routes multiple regions
+    through one generator by introspecting ``lims``; ``TaggedSubMeshGenerator``
+    is simpler when the model already supplies one mesh generator per
+    domain.
+
+    Parameters
+    ----------
+    region : str
+        Gmsh physical-group name (key in ``meshio.read(...).field_data``).
+    mesh_path : str or pathlib.Path
+        Path to the ``.msh`` file.
+    scale : float, optional
+        Multiplier applied to mesh node coordinates (e.g. ``1e-3`` to
+        convert mm to m). Default ``1.0``.
+    coord_sys : str, optional
+        Coordinate system label, default ``"cartesian"``.
+    """
+
+    _mesh_cache: dict = {}
+
+    def __init__(self, region, mesh_path, scale=1.0, coord_sys="cartesian"):
+        self.submesh_type = UnstructuredSubMesh
+        self.submesh_params = {}
+        self._mesh_path = mesh_path
+        self._region = region
+        self._scale = float(scale)
+        self.coord_sys = coord_sys
+
+    @classmethod
+    def _read(cls, path):
+        if path not in cls._mesh_cache:
+            import meshio
+
+            cls._mesh_cache[path] = meshio.read(str(path))
+        return cls._mesh_cache[path]
+
+    def __call__(self, lims, npts):
+        m = self._read(self._mesh_path)
+        if self._region not in m.field_data:
+            raise KeyError(
+                f"region {self._region!r} not in mesh field_data; "
+                f"available: {list(m.field_data)}"
+            )
+        tag_id = int(m.field_data[self._region][0])
+
+        tet_blocks = []
+        for block, tags in zip(m.cells, m.cell_data.get("gmsh:physical", [])):
+            if block.type != "tetra":
+                continue
+            mask = np.asarray(tags, dtype=np.int32) == tag_id
+            if mask.any():
+                tet_blocks.append(block.data[mask])
+        if not tet_blocks:
+            raise RuntimeError(f"no tets for region {self._region!r}")
+
+        elements = np.concatenate(tet_blocks, axis=0)
+        unique_nodes = np.unique(elements)
+        node_map = np.full(m.points.shape[0], -1, dtype=np.int64)
+        node_map[unique_nodes] = np.arange(len(unique_nodes))
+        nodes = m.points[unique_nodes] * self._scale
+        return UnstructuredSubMesh(
+            nodes, node_map[elements], coord_sys=self.coord_sys
         )
 
 
@@ -765,6 +870,7 @@ def compute_interface_data(left_mesh, right_mesh, left_name=None, right_name=Non
         "right_cells": right_cells,
         "face_areas": face_areas,
         "cell_distances": cell_distances,
+        "other_mesh": right_mesh,
     }
 
     if right_name is not None:
@@ -775,6 +881,7 @@ def compute_interface_data(left_mesh, right_mesh, left_name=None, right_name=Non
             "right_cells": left_cells,
             "face_areas": face_areas,
             "cell_distances": cell_distances,
+            "other_mesh": left_mesh,
         }
 
     return result

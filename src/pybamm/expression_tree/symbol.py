@@ -33,14 +33,38 @@ DOMAIN_LEVELS = ["primary", "secondary", "tertiary", "quaternary"]
 EMPTY_DOMAINS: dict[str, list] = {k: [] for k in DOMAIN_LEVELS}
 
 
+# Registry of domain → actual mesh size, populated by pybamm.Mesh after the
+# submeshes are built.  When set, ``domain_size`` returns the real size
+# instead of a hash, so a ``pybamm.Vector`` carrying real per-cell values on
+# that domain shape-matches a ``Variable`` on the same domain pre- and
+# post-discretisation.
+_REGISTERED_DOMAIN_SIZES: dict[str, int] = {}
+
+
+def register_domain_size(name: str, size: int) -> None:
+    """Pin ``domain_size(name)`` to ``size``.
+
+    Called by ``pybamm.Mesh`` for every submesh that exposes ``npts``.  Users
+    rarely need to call this directly; it lets ``pybamm.Vector(values,
+    domain=name)`` carry real per-cell entries without bespoke shape hacks.
+    """
+    _REGISTERED_DOMAIN_SIZES[name] = int(size)
+
+
+def unregister_domain_size(name: str) -> None:
+    """Drop a registered domain size (mostly for tests)."""
+    _REGISTERED_DOMAIN_SIZES.pop(name, None)
+
+
 def domain_size(domain: list[str] | str):
     """
     Get the domain size.
 
     Empty domain has size 1.
-    If the domain falls within the list of standard battery domains, the size is read
-    from a dictionary of standard domain sizes. Otherwise, the hash of the domain string
-    is used to generate a `random` domain size.
+    If a domain has been registered via :func:`register_domain_size` (e.g.
+    by :class:`pybamm.Mesh` after building an unstructured submesh), its
+    actual mesh ``npts`` is used.  Otherwise the standard battery-domain
+    table is consulted, falling back to a hash-based pseudo-size.
     """
     fixed_domain_sizes = {
         "current collector": 3,
@@ -53,13 +77,17 @@ def domain_size(domain: list[str] | str):
         "positive particle size": 23,
     }
     if domain in [[], None]:
-        size = 1
-    elif all(dom in fixed_domain_sizes for dom in domain):
-        size = sum(fixed_domain_sizes[dom] for dom in domain)
-    else:
-        # Add 2 per domain to ensure size is always >= 2 and is additive
-        size = sum(2 + hash(dom) % 100 for dom in domain)
-    return size
+        return 1
+    # Fixed battery-domain sentinels take priority — they are stable, hash-like
+    # values used purely for symbolic shape checks across pybamm tests/models.
+    if all(dom in fixed_domain_sizes for dom in domain):
+        return sum(fixed_domain_sizes[dom] for dom in domain)
+    # Mesh-registered actual sizes — applies to user domains like "cell" that
+    # carry real per-cell data.
+    if all(dom in _REGISTERED_DOMAIN_SIZES for dom in domain):
+        return sum(_REGISTERED_DOMAIN_SIZES[dom] for dom in domain)
+    # Add 2 per domain to ensure size is always >= 2 and is additive
+    return sum(2 + hash(dom) % 100 for dom in domain)
 
 
 def create_object_of_size(size: int, typ="vector"):
