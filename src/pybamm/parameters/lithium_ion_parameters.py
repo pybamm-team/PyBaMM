@@ -496,6 +496,15 @@ class ParticleLithiumIonParameters(BaseParameters):
         self.beta_LAM_sei = pybamm.Parameter(
             f"{pref}{Domain} electrode reaction-driven LAM factor [m3.mol-1]"
         )
+        self.beta_LAM_th = pybamm.Parameter(
+            f"{pref}{Domain} electrode LAM thermal pre-exponential factor [s-1]"
+        )
+        self.E_LAM = pybamm.Parameter(
+            f"{pref}{Domain} electrode LAM activation energy [J.mol-1]"
+        )
+        self.n_LAM_th = pybamm.Parameter(
+            f"{pref}{Domain} electrode LAM time exponent"
+        )
 
         # Mechanical parameters
         self.c_0 = pybamm.Parameter(
