@@ -127,6 +127,47 @@ class LossActiveMaterial(BaseModel):
             )
             deps_solid_dt += j_current_LAM
 
+        if "thermal" in lam_option:
+            # Thermal (calendar) LAM with Arrhenius temperature dependence and
+            # time power-law scaling: deps/dt = -beta * t^n * exp(E/R*(1/T_ref - 1/T))
+            # n=0 gives constant rate; n<0 gives decelerating rate (e.g. sqrt(t) loss)
+            if self.x_average is True:
+                T = variables[f"X-averaged {domain} electrode temperature [K]"]
+            else:
+                T = variables[f"{Domain} electrode temperature [K]"]
+
+            beta_LAM_th = self.phase_param.beta_LAM_th
+            E_LAM = self.phase_param.E_LAM
+            n_LAM_th = self.phase_param.n_LAM_th
+
+            arrhenius = pybamm.exp(
+                E_LAM / self.param.R * (1 / self.param.T_ref - 1 / T)
+            )
+            # clamp to 1 s to avoid singularity at t=0 when n_LAM_th < 0
+            t_safe = pybamm.maximum(pybamm.t, 1.0)
+            j_thermal_LAM = -beta_LAM_th * t_safe**n_LAM_th * arrhenius
+            deps_solid_dt += j_thermal_LAM
+
+            if j_thermal_LAM.domain == ["current collector"]:
+                j_thermal_LAM_av = j_thermal_LAM
+                j_thermal_LAM_full = pybamm.PrimaryBroadcast(
+                    j_thermal_LAM_av, f"{domain} electrode"
+                )
+            else:
+                j_thermal_LAM_av = pybamm.x_average(j_thermal_LAM)
+                j_thermal_LAM_full = j_thermal_LAM
+
+            variables.update(
+                {
+                    f"{Domain} electrode {phase_name}thermal LAM rate [s-1]": (
+                        j_thermal_LAM_full
+                    ),
+                    f"X-averaged {domain} electrode {phase_name}thermal LAM rate [s-1]": (
+                        j_thermal_LAM_av
+                    ),
+                }
+            )
+
         variables.update(
             self._get_standard_active_material_change_variables(deps_solid_dt)
         )

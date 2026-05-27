@@ -275,7 +275,11 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "stress-driven",
                 "reaction-driven",
                 "current-driven",
+                "thermal-driven",
                 "stress and reaction-driven",
+                "stress and thermal-driven",
+                "reaction and thermal-driven",
+                "stress, reaction and thermal-driven",
             ],
             "number of MSMR reactions": ["none"],
             "open-circuit potential": [

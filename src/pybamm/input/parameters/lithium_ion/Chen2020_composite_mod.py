@@ -897,6 +897,9 @@ def get_parameter_values():
         "Primary: Negative electrode LAM constant proportional term [s-1]": 2.7778e-07,
         "Primary: Negative electrode LAM constant exponential term": 2.0,
         "Primary: Negative electrode critical stress [Pa]": 60000000.0,
+        "Primary: Negative electrode LAM thermal pre-exponential factor [s-1]": 1.0e-09,
+        "Primary: Negative electrode LAM activation energy [J.mol-1]": 40000.0,
+        "Primary: Negative electrode LAM time exponent": 0.0,
         "Secondary: Initial SEI on cracks thickness [m]": 5e-13,
         "Secondary: Negative electrode Poisson's ratio": 0.3,
         "Secondary: Negative electrode Young's modulus [Pa]": 15000000000.0,
@@ -914,6 +917,9 @@ def get_parameter_values():
         "Secondary: Negative electrode LAM constant proportional term [s-1]": 2.7778e-07,
         "Secondary: Negative electrode LAM constant exponential term": 2.0,
         "Secondary: Negative electrode critical stress [Pa]": 60000000.0,
+        "Secondary: Negative electrode LAM thermal pre-exponential factor [s-1]": 1.0e-09,
+        "Secondary: Negative electrode LAM activation energy [J.mol-1]": 40000.0,
+        "Secondary: Negative electrode LAM time exponent": 0.0,
         "Negative electrode Poisson's ratio": 0.3,
         "Negative electrode Young's modulus [Pa]": 15000000000.0,
         "Negative electrode reference concentration for free of deformation [mol.m-3]"
@@ -930,6 +936,9 @@ def get_parameter_values():
         "Negative electrode LAM constant proportional term [s-1]": 2.7778e-07,
         "Negative electrode LAM constant exponential term": 2.0,
         "Negative electrode critical stress [Pa]": 60000000.0,
+        "Negative electrode LAM thermal pre-exponential factor [s-1]": 1.0e-09,
+        "Negative electrode LAM activation energy [J.mol-1]": 40000.0,
+        "Negative electrode LAM time exponent": 0.0,
         "Positive electrode Poisson's ratio": 0.2,
         "Positive electrode Young's modulus [Pa]": 375000000000.0,
         "Positive electrode reference concentration for free of deformation [mol.m-3]"
@@ -946,7 +955,10 @@ def get_parameter_values():
         "Positive electrode LAM constant proportional term [s-1]": 2.7778e-07,
         "Positive electrode LAM constant exponential term": 2.0,
         "Positive electrode critical stress [Pa]": 375000000.0,
-        
+        "Positive electrode LAM thermal pre-exponential factor [s-1]": 1.0e-09,
+        "Positive electrode LAM activation energy [J.mol-1]": 40000.0,
+        "Positive electrode LAM time exponent": 0.0,
+
         # positive electrode
         "Positive electrode conductivity [S.m-1]": 0.18,
         "Maximum concentration in positive electrode [mol.m-3]": 63104.0,
