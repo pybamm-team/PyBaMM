@@ -178,7 +178,7 @@ def build_docs(session):
         session.run(
             "sphinx-autobuild",
             "-j",
-            "1",
+            "auto",
             "--open-browser",
             "-qT",
             ".",
