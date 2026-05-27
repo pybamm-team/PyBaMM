@@ -47,36 +47,6 @@ class TestSimulation:
         with pytest.raises(ValueError, match=r"starting_solution"):
             sim.solve(starting_solution=sol)
 
-    def test_solve_failure_preserves_prior_solution(self):
-        # A failed re-solve must not discard the previous result: the solver
-        # solution is dropped before the new solve, then restored on error.
-        sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
-        prior = sim.solve([0, 600])
-        assert sim._solution is prior
-
-        def boom(*args, **kwargs):
-            raise pybamm.SolverError("forced failure")
-
-        sim._solver.solve = boom
-        with pytest.raises(pybamm.SolverError, match="forced failure"):
-            sim.solve([0, 600])
-        assert sim._solution is prior
-
-    def test_solve_failure_drops_prior_when_unreferenced(self):
-        # The prior solution is held only weakly during the solve, so if the
-        # caller keeps no reference it is freed (the memory win) and a failed
-        # solve leaves _solution as None rather than resurrecting it.
-        sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
-        sim.solve([0, 600])  # no external reference kept
-
-        def boom(*args, **kwargs):
-            raise pybamm.SolverError("forced failure")
-
-        sim._solver.solve = boom
-        with pytest.raises(pybamm.SolverError, match="forced failure"):
-            sim.solve([0, 600])
-        assert sim._solution is None
-
     def test_solve_remove_independent_variables_from_rhs(self):
         sim = pybamm.Simulation(
             pybamm.lithium_ion.SPM(),

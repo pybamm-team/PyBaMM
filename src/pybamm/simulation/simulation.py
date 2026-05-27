@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import warnings
-import weakref
 from datetime import timedelta
 from numbers import Number
 
@@ -769,27 +768,15 @@ class Simulation(BaseSimulation):
                 "Solving with a list of input sets is not supported with experiments."
             )
 
-        # Drop the prior solution before build/integration so it isn't held
-        # alongside the new one. Hold only a weakref: restore it if the build
-        # raises and it's still alive elsewhere, but don't keep it resident
-        # through the build just for that fallback.
-        prior_solution_ref = (
-            weakref.ref(self._solution) if self._solution is not None else None
-        )
+        # Drop the prior solution before build/integration.
         self._solution = starting_solution
 
-        try:
-            self.build_for_experiment(
-                initial_soc=initial_soc,
-                direction=direction,
-                inputs=inputs,
-                solve_kwargs=kwargs,
-            )
-        except Exception:
-            self._solution = (
-                prior_solution_ref() if prior_solution_ref is not None else None
-            )
-            raise
+        self.build_for_experiment(
+            initial_soc=initial_soc,
+            direction=direction,
+            inputs=inputs,
+            solve_kwargs=kwargs,
+        )
         if t_eval is not None:
             pybamm.logger.warning(
                 "Ignoring t_eval as solution times are specified by the experiment"

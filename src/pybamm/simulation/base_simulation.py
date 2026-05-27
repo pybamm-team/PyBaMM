@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import pickle
 import warnings
-import weakref
 from copy import copy
 from functools import lru_cache
 
@@ -525,27 +524,15 @@ class BaseSimulation:
                         pybamm.SolverWarning,
                         stacklevel=2,
                     )
-        # Drop the prior solution before allocating the new one so they
-        # don't coexist at peak. Hold only a weakref: if the solve raises we
-        # restore the prior result when it's still alive elsewhere, but we
-        # don't keep it resident through the solve just for that fallback.
-        prior_solution_ref = (
-            weakref.ref(self._solution) if self._solution is not None else None
-        )
+        # Drop the prior solution before allocating the new one.
         self._solution = None
-        try:
-            self._solution = solver.solve(
-                self._built_model,
-                t_eval,
-                inputs=inputs,
-                t_interp=t_interp,
-                **kwargs,
-            )
-        except Exception:
-            self._solution = (
-                prior_solution_ref() if prior_solution_ref is not None else None
-            )
-            raise
+        self._solution = solver.solve(
+            self._built_model,
+            t_eval,
+            inputs=inputs,
+            t_interp=t_interp,
+            **kwargs,
+        )
 
         return self._solution
 

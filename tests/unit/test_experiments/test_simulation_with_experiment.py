@@ -425,22 +425,6 @@ class TestSimulationExperiment:
                 mapper = sim.model_state_mappers[(model_0, model_1)]
             assert mapper.shape[0] == model_1.len_rhs_and_alg
 
-    def test_experiment_build_failure_preserves_prior_solution(self):
-        # A failed build on a re-solve must not discard the previous result:
-        # the prior solution is dropped before build, then restored on error.
-        experiment = pybamm.Experiment(["Discharge at C/20 for 1 hour"])
-        sim = pybamm.Simulation(pybamm.lithium_ion.SPM(), experiment=experiment)
-        prior = sim.solve()
-        assert sim._solution is prior
-
-        def boom(*args, **kwargs):
-            raise RuntimeError("forced build failure")
-
-        sim.build_for_experiment = boom
-        with pytest.raises(RuntimeError, match="forced build failure"):
-            sim.solve()
-        assert sim._solution is prior
-
     def test_run_experiment(self):
         s = pybamm.step.string
         experiment = pybamm.Experiment(
