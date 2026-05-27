@@ -5,6 +5,119 @@ Installation
 PyBaMM is available on GNU/Linux, MacOS and Windows.
 It can be installed using ``uv``, ``pip``, or ``conda``, or from source.
 
+Prerequisites
+-------------
+
+To use PyBaMM, you must have Python 3.10 - 3.14 installed.
+
+.. tab:: Debian-based distributions (Debian, Ubuntu)
+
+   To install Python 3 on Debian-based distributions (Debian, Ubuntu), open a terminal and run
+
+   .. code:: bash
+
+      sudo apt-get update
+      sudo apt-get install python3
+
+.. tab:: macOS
+
+   On macOS, you can use the ``homebrew`` package manager. First, `install
+   brew <https://docs.python-guide.org/starting/install3/osx/>`__:
+
+   .. code:: bash
+
+      ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+   then follow instructions in the link on adding ``brew`` to path, and run
+
+   .. code:: bash
+
+      brew install python
+
+.. tab:: Windows
+
+   To install Python 3, download the installation files from `Python's
+   website <https://www.python.org/downloads/windows/>`__. Make sure to
+   tick the box on ``Add Python 3.X to PATH``. For more detailed
+   instructions please see the `official Python on Windows
+   guide <https://docs.python.org/3/using/windows.html>`__.
+
+.. _user-install-label:
+
+Virtual environment
+-------------------
+
+We recommend installing PyBaMM within a virtual environment, in order
+not to alter any distribution Python files.
+
+To create a virtual environment within your current directory:
+
+.. tab:: uv
+
+   .. code:: bash
+
+      uv venv
+
+   This creates a ``.venv`` directory. You can then "activate" the environment using:
+
+   .. tab:: GNU/Linux and macOS
+
+      .. code:: bash
+
+         source .venv/bin/activate
+
+   .. tab:: Windows
+
+      .. code::
+
+         .venv\Scripts\activate.bat
+
+.. tab:: pip
+
+   .. tab:: GNU/Linux and macOS
+
+      .. code:: bash
+
+         virtualenv env
+
+      You can then "activate" the environment using:
+
+      .. code:: bash
+
+         source env/bin/activate
+
+   .. tab:: Windows
+
+      First install ``virtualenv``:
+
+      .. code:: bash
+
+         python -m pip install virtualenv
+
+      Then create a virtual environment:
+
+      .. code:: bash
+
+         python -m virtualenv env
+
+      You can then "activate" the environment using:
+
+      .. code::
+
+         env\Scripts\activate.bat
+
+When you are ready to exit the environment and go back to your original system, just type:
+
+.. code:: bash
+
+   deactivate
+
+For an introduction to virtual environments, see
+(https://realpython.com/python-virtual-environments-a-primer/).
+
+Install PyBaMM
+--------------
+
 .. tab:: uv
 
    PyBaMM can be installed via `uv <https://docs.astral.sh/uv/>`__ from `PyPI <https://pypi.org/project/pybamm>`__.
@@ -25,13 +138,17 @@ It can be installed using ``uv``, ``pip``, or ``conda``, or from source.
 
    PyBaMM is available as a ``conda`` package through the conda-forge channel.
 
-   The ``pybamm-base`` package installs PyBaMM with its `required dependencies <#install-required-dependencies>`_ only:
+   .. warning::
+
+         PyBaMM versions between 24.11.2 and 25.6 (not including these boundary versions) are not available on conda-forge.
+
+   The ``pybamm-base`` package installs PyBaMM with its :ref:`required dependencies <install-required-dependencies>` only:
 
    .. code:: bash
 
       conda install -c conda-forge pybamm-base
 
-   The ``pybamm`` package installs PyBaMM with all `optional dependencies <#install.optional_dependencies>`_ except jax:
+   The ``pybamm`` package installs PyBaMM with all :ref:`optional dependencies <install.optional_dependencies>` except jax:
 
    .. code:: bash
 
@@ -39,16 +156,59 @@ It can be installed using ``uv``, ``pip``, or ``conda``, or from source.
 
    To optionally install jax, see :ref:`optional-jaxsolver`.
 
-.. warning::
+PyBaMM's :ref:`required dependencies <install-required-dependencies>`
+(such as ``numpy``, ``casadi``, etc) will be installed automatically when you
+install ``pybamm`` using ``pip`` or ``pybamm-base`` using ``conda``.
 
-      PyBaMM versions between 24.11.2 and 25.6 (not including these boundary versions) are not available on conda-forge.
+.. _optional-jaxsolver:
 
-Optional solvers
+Optional - JaxSolver
+--------------------
+
+Users can install ``pybamm`` with ``jax`` and ``jaxlib`` to use the Jax solver.
+
+.. tab:: uv
+
+   .. code:: bash
+
+      uv pip install "pybamm[jax]"
+
+.. tab:: pip
+
+   .. code:: bash
+
+      pip install "pybamm[jax]"
+
+.. tab:: conda
+
+   .. code:: bash
+
+      conda install -c conda-forge "jax>=0.7.0,<0.9.0"
+
+Uninstall PyBaMM
 ----------------
 
-The following solver is optionally available:
+PyBaMM can be uninstalled by running
 
-*  `jax <https://jax.readthedocs.io/en/latest/notebooks/quickstart.html>`_ -based solver, see :ref:`optional-jaxsolver` .
+.. tab:: uv
+
+   .. code:: bash
+
+      uv pip uninstall pybamm
+
+.. tab:: pip
+
+   .. code:: bash
+
+      pip uninstall pybamm
+
+.. tab:: conda
+
+   .. code:: bash
+
+      conda remove pybamm
+
+in your virtual environment.
 
 Dependencies
 ------------
@@ -138,7 +298,7 @@ Dependency                                                                      
 `ipykernel <https://pypi.org/project/ipykernel/>`__                                               \-                 docs               Provides the IPython kernel for Jupyter.
 `ipywidgets <https://ipywidgets.readthedocs.io/en/latest/>`__                                     \-                 docs               Interactive HTML widgets for Jupyter notebooks and the IPython kernel.
 `sphinx-gallery <https://pypi.org/project/sphinx-gallery/>`__                                     \-                 docs               Builds an HTML gallery of examples from any set of Python scripts.
-`sphinx-docsearch <https://sphinx-docsearch.readthedocs.io/>`__                                   \-                 docs               To replaces Sphinx’s built-in search with Algolia DocSearch.
+`sphinx-docsearch <https://sphinx-docsearch.readthedocs.io/>`__                                   \-                 docs               To replaces Sphinx's built-in search with Algolia DocSearch.
 ================================================================================================= ================== ================== =======================================================================
 
 .. _install.examples_dependencies:
@@ -230,16 +390,14 @@ Dependency                                                                Minimu
 `JAX <https://jax.readthedocs.io/en/latest/notebooks/quickstart.html>`__  0.7.0              jax                For the JAX solver
 ========================================================================= ================== ================== =======================
 
-Full installation guide
------------------------
+Installing from source
+----------------------
 
-Installing a specific version? Installing from source? Check the advanced installation pages below
+Installing a specific version? Installing from source? Check the advanced installation pages below.
 
 .. toctree::
    :maxdepth: 1
 
-   gnu-linux-mac
-   windows
    windows-wsl
    install-from-source
    install-from-docker

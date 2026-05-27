@@ -6,7 +6,7 @@ GNU/Linux & macOS
 Prerequisites
 -------------
 
-To use PyBaMM, you must have Python 3.10, 3.11, 3.12, 3.13, or 3.14 installed.
+To use PyBaMM, you must have Python 3.10 - 3.14 installed.
 
 .. tab:: Debian-based distributions (Debian, Ubuntu)
 
@@ -43,7 +43,7 @@ User install
 
 We recommend to install PyBaMM within a virtual environment, in order
 not to alter any distribution Python files.
-First, make sure you are using Python 3.10, 3.11, 3.12, 3.13, or 3.14.
+First, make sure you are using Python 3.10 - 3.14.
 To create a virtual environment within your current directory type:
 
 .. tab:: uv
@@ -109,7 +109,7 @@ For an introduction to virtual environments, see
 Optional - JaxSolver
 ~~~~~~~~~~~~~~~~~~~~
 
-Users can install ``jax`` and ``jaxlib`` to use the Jax solver.
+Users can install ``pybamm`` with ``jax`` and ``jaxlib`` to use the Jax solver.
 
 .. tab:: uv
 
@@ -122,8 +122,6 @@ Users can install ``jax`` and ``jaxlib`` to use the Jax solver.
    .. code:: bash
 
       pip install "pybamm[jax]"
-
-This command automatically downloads and installs ``pybamm`` and the compatible versions of ``jax`` and ``jaxlib`` on your system.
 
 .. tab:: conda
 
@@ -147,5 +145,11 @@ PyBaMM can be uninstalled by running
    .. code:: bash
 
       pip uninstall pybamm
+
+.. tab:: conda
+
+   .. code:: bash
+
+      conda remove pybamm
 
 in your virtual environment.
