@@ -1,6 +1,8 @@
 #
 # Tests for the Broadcast class
 #
+import re
+
 import numpy as np
 import pytest
 
@@ -73,9 +75,22 @@ class TestBroadcasts:
         a = pybamm.Symbol("a", domain="negative particle")
         with pytest.raises(
             pybamm.DomainError,
-            match=r"Cannot do primary broadcast from particle domain",
+            match=re.escape(
+                "Cannot do primary broadcast from particle (core or shell) domain"
+            ),
         ):
             pybamm.PrimaryBroadcast(a, "current collector")
+
+        # Test primary broadcast to core and shell domains
+        a = pybamm.Symbol("a", domain="positive electrode")
+        broad_a = pybamm.PrimaryBroadcast(a, ["positive core"])
+        assert broad_a.domain == ["positive core"]
+        assert broad_a.children[0].name == a.name
+
+        a = pybamm.Symbol("a", domain="positive electrode")
+        broad_a = pybamm.PrimaryBroadcast(a, ["positive shell"])
+        assert broad_a.domain == ["positive shell"]
+        assert broad_a.children[0].name == a.name
 
     def test_secondary_broadcast(self):
         a = pybamm.Symbol(
@@ -105,6 +120,17 @@ class TestBroadcasts:
         )
 
         assert broad_a.reduce_one_dimension() == a
+
+        # Test secondary broadcast from core and shell domains
+        a = pybamm.Symbol("a", domain="positive core")
+        broad_a = pybamm.SecondaryBroadcast(a, ["positive electrode"])
+        assert broad_a.domains["primary"] == ["positive core"]
+        assert broad_a.domains["secondary"] == ["positive electrode"]
+
+        a = pybamm.Symbol("a", domain="positive shell")
+        broad_a = pybamm.SecondaryBroadcast(a, ["positive electrode"])
+        assert broad_a.domains["primary"] == ["positive shell"]
+        assert broad_a.domains["secondary"] == ["positive electrode"]
 
         a = pybamm.Symbol("a")
         with pytest.raises(TypeError, match=r"empty domain"):

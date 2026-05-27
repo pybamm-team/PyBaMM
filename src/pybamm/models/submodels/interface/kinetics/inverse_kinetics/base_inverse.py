@@ -76,7 +76,11 @@ class BaseInverseKinetics(BaseInterface):
             eta_sei = pybamm.Scalar(0)
         variables.update(self._get_standard_sei_film_overpotential_variables(eta_sei))
 
-        delta_phi = eta_r + ocp - eta_sei  # = phi_s - phi_e
+        # Hook for subclasses to add the PE phase-transition shell-layer
+        # potential drop. May also update ``variables`` in place.
+        eta_shell = self._get_pe_shell_potential_drop(j_tot, variables)
+
+        delta_phi = eta_r + ocp - eta_sei - eta_shell  # = phi_s - phi_e
 
         variables.update(self._get_standard_exchange_current_variables(j0))
         variables.update(self._get_standard_overpotential_variables(eta_r))
@@ -94,6 +98,13 @@ class BaseInverseKinetics(BaseInterface):
         return (2 * (self.param.R * T) / self.param.F / ne) * pybamm.arcsinh2(
             j, 2 * j0 * u
         )
+
+    def _get_pe_shell_potential_drop(self, j_tot, variables):
+        # Subclasses override this when their model adds a PE shell-layer
+        # potential drop (see InverseButlerVolmer). The default no-op is
+        # never reached in normal flow, but exists so that any future
+        # inverse-kinetics subclass without an override gets a safe zero.
+        return pybamm.Scalar(0)  # pragma: no cover
 
 
 class CurrentForInverseKinetics(BaseInterface):

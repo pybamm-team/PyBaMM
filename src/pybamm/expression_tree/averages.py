@@ -96,7 +96,11 @@ class XAverage(_BaseAverage):
     def __init__(self, child: pybamm.Symbol) -> None:
         if all(n in child.domain[0] for n in ["negative", "particle"]):
             x = pybamm.standard_spatial_vars.x_n
-        elif all(n in child.domain[0] for n in ["positive", "particle"]):
+        elif (
+            all(n in child.domain[0] for n in ["positive", "particle"])
+            or all(n in child.domain[0] for n in ["positive", "core"])
+            or all(n in child.domain[0] for n in ["positive", "shell"])
+        ):
             x = pybamm.standard_spatial_vars.x_p
         else:
             x = pybamm.SpatialVariable("x", domain=child.domain)
@@ -296,13 +300,17 @@ class RAverage(_BaseAverage):
 
     @classmethod
     def domain_matches(cls, d: str) -> bool:
-        return d.endswith("particle") and not d.endswith("particle size")
+        return (d.endswith("particle") and not d.endswith("particle size")) or d in (
+            "positive core",
+            "positive shell",
+        )
 
     @classmethod
     def from_symbol(cls, symbol: pybamm.Symbol) -> pybamm.Symbol:
         """Create r-average with simplifications."""
-        has_particle_domain = symbol.domain != [] and symbol.domain[0].endswith(
-            "particle"
+        has_particle_domain = symbol.domain != [] and (
+            symbol.domain[0].endswith("particle")
+            or symbol.domain[0] in ("positive core", "positive shell")
         )
 
         if symbol.evaluates_on_edges("primary"):

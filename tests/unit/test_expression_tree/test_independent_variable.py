@@ -55,6 +55,12 @@ class TestIndependentVariable:
             pybamm.SpatialVariable("r_p", ["negative particle"])
         with pytest.raises(pybamm.DomainError):
             pybamm.SpatialVariable("x", ["negative particle"])
+        # 'r_co' / 'r_sh' are reserved for the PE phase-transition core/shell
+        # domains; constructing them on a non-positive domain must raise.
+        with pytest.raises(pybamm.DomainError, match=r"positive core and shell"):
+            pybamm.SpatialVariable("r_co", ["negative particle"])
+        with pytest.raises(pybamm.DomainError, match=r"positive core and shell"):
+            pybamm.SpatialVariable("r_sh", ["negative particle"])
 
     def test_spatial_variable_edge(self):
         x = pybamm.SpatialVariableEdge("x", "negative electrode")

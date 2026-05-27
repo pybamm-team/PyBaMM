@@ -59,6 +59,20 @@ class TestUnaryOperators:
         )
         assert average_broad_a == average_broad_a_simp
 
+        # Test x_average with positive core and shell as primary domains.
+        # The symbol must also live on the positive electrode (secondary)
+        # for x-averaging to be meaningful.
+        for primary in [["positive core"], ["positive shell"]]:
+            a = pybamm.Symbol(
+                "a",
+                domain=primary,
+                auxiliary_domains={"secondary": "positive electrode"},
+            )
+            x = pybamm.standard_spatial_vars.x_p
+            av_a = pybamm.x_average(a)
+            assert isinstance(av_a, pybamm.XAverage)
+            assert av_a.integration_variable[0].domain == x.domain
+
         # x-average of concatenation of broadcasts
         conc_broad = pybamm.concatenation(
             pybamm.PrimaryBroadcast(1, ["negative electrode"]),
@@ -350,6 +364,15 @@ class TestUnaryOperators:
         b = pybamm.Variable("b", domain="domain")
         assert pybamm.r_average(a + b) == pybamm.r_average(a) + pybamm.r_average(b)
         assert pybamm.r_average(a - b) == pybamm.r_average(a) - pybamm.r_average(b)
+
+        # Test r_average with core and shell domains
+        for domain in [["positive core"], ["positive shell"]]:
+            a = pybamm.Symbol("a", domain=domain)
+            r = pybamm.SpatialVariable("r", domain)
+            av_a = pybamm.r_average(a)
+            assert isinstance(av_a, pybamm.RAverage)
+            assert av_a.integration_variable[0].domain == r.domain
+            assert av_a.domain == []
 
     @given(st.integers(min_value=-(2**63), max_value=2**63 - 1))
     def test_yz_average(self, random_integer):

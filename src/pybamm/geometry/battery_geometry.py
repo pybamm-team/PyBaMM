@@ -70,6 +70,17 @@ def battery_geometry(
                         }
                     )
 
+    if options is not None and options["PE degradation"] == "phase transition":
+        # Single-phase positive is enforced by the option-compatibility guard
+        # in BatteryModelOptions.__init__.
+        geo_domain = geo.domain_params["positive"]
+        geometry.update(
+            {
+                "positive core": {"r_co": {"min": 0, "max": geo_domain.prim.R_typ}},
+                "positive shell": {"r_sh": {"min": 0, "max": geo_domain.prim.R_typ}},
+            }
+        )
+
     # Add particle size domains
     if (
         options is not None

@@ -87,6 +87,19 @@ class TestBatteryGeometry:
         assert "negative secondary particle size" in geometry
         assert "positive secondary particle size" in geometry
 
+    def test_pe_phase_transition_geometry(self):
+        # PE phase-transition adds "positive core" and "positive shell" domains
+        # to the geometry, each with its own dimensionless radial coordinate.
+        options = pybamm.BatteryModelOptions({"PE degradation": "phase transition"})
+        geo_params = pybamm.GeometricParameters(options=options)
+        geometry = pybamm.battery_geometry(options=options)
+        assert "positive core" in geometry
+        assert "positive shell" in geometry
+        assert geometry["positive core"]["r_co"]["min"] == 0
+        assert geometry["positive core"]["r_co"]["max"] == geo_params.p.prim.R_typ
+        assert geometry["positive shell"]["r_sh"]["min"] == 0
+        assert geometry["positive shell"]["r_sh"]["max"] == geo_params.p.prim.R_typ
+
     def test_geometry_error(self):
         with pytest.raises(pybamm.GeometryError, match=r"Invalid current"):
             pybamm.battery_geometry(

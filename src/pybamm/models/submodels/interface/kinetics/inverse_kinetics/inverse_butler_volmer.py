@@ -31,3 +31,22 @@ class InverseButlerVolmer(BaseInverseKinetics):
         return (2 * (self.param.R * T) / self.param.F / ne) * pybamm.arcsinh2(
             j, 2 * j0 * u
         )
+
+    def _get_pe_shell_potential_drop(self, j_tot, variables):
+        # Phase-transformed shell layer in positive electrode particle
+        domain = self.domain
+        if domain != "positive" or (
+            self.options["PE degradation"] != "phase transition"
+        ):
+            return pybamm.Scalar(0)
+
+        phase_name = self.phase_name
+        R_shell = self.phase_param.R_shell
+        s_nd_av = variables[
+            f"X-averaged {domain} {phase_name}particle moving phase boundary location"
+        ]
+        R_av = variables[f"X-averaged {domain} {phase_name}particle radius [m]"]
+        eta_shell = -j_tot * (pybamm.Scalar(1) - s_nd_av) * R_av * R_shell
+
+        variables.update(self._get_standard_pe_shell_overpotential_variables(eta_shell))
+        return eta_shell
