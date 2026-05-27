@@ -116,7 +116,7 @@ pip install pybamm
 
 PyBaMM is available as a conda package through the conda-forge channel.
 
-> ![Note]
+> [!NOTE]
 > PyBaMM versions between 24.11.2 and 25.6 (not including these boundary versions) are not available on conda-forge.
 
 [![Conda Recipe](https://img.shields.io/badge/recipe-pybamm--base-green.svg)](https://anaconda.org/conda-forge/pybamm-base)
