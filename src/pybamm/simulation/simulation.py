@@ -768,15 +768,24 @@ class Simulation(BaseSimulation):
                 "Solving with a list of input sets is not supported with experiments."
             )
 
-        # Drop the prior solution before build/integration.
+        # Drop the prior solution before build/integration so it isn't held
+        # alongside the new one. Restore it if the build raises; release it
+        # once the build succeeds so the integration loop doesn't keep the
+        # old result resident.
+        prior_solution = self._solution
         self._solution = starting_solution
 
-        self.build_for_experiment(
-            initial_soc=initial_soc,
-            direction=direction,
-            inputs=inputs,
-            solve_kwargs=kwargs,
-        )
+        try:
+            self.build_for_experiment(
+                initial_soc=initial_soc,
+                direction=direction,
+                inputs=inputs,
+                solve_kwargs=kwargs,
+            )
+        except Exception:
+            self._solution = prior_solution
+            raise
+        del prior_solution
         if t_eval is not None:
             pybamm.logger.warning(
                 "Ignoring t_eval as solution times are specified by the experiment"

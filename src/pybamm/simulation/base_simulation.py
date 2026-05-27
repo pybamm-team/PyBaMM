@@ -524,15 +524,22 @@ class BaseSimulation:
                         pybamm.SolverWarning,
                         stacklevel=2,
                     )
-        # Drop the prior solution before allocating the new one.
+        # Drop the prior solution before allocating the new one so they
+        # don't coexist in memory. Restore it if the solve raises, so a
+        # transient solver failure doesn't discard the previous result.
+        prior_solution = self._solution
         self._solution = None
-        self._solution = solver.solve(
-            self._built_model,
-            t_eval,
-            inputs=inputs,
-            t_interp=t_interp,
-            **kwargs,
-        )
+        try:
+            self._solution = solver.solve(
+                self._built_model,
+                t_eval,
+                inputs=inputs,
+                t_interp=t_interp,
+                **kwargs,
+            )
+        except Exception:
+            self._solution = prior_solution
+            raise
 
         return self._solution
 

@@ -46,6 +46,18 @@ _SETUP_FCN_LIST_KEYS = (
     "dvar_dp_idaklu_fcns",
 )
 
+# Attributes holding casadi.Function graphs (or the C++ solver) that are
+# rebuilt from the model on the next solve(). Dropped in __getstate__ so a
+# pickled solver doesn't carry these heavy, non-portable objects.
+_REBUILDABLE_STATE_KEYS = (
+    "_setup",
+    "_model_set_up",
+    "computed_var_fcns",
+    "computed_dvar_dy_fcns",
+    "computed_dvar_dp_fcns",
+    "_time_integral_vars",
+)
+
 
 class IDAKLUSolver(pybamm.BaseSolver):
     """
@@ -620,19 +632,31 @@ class IDAKLUSolver(pybamm.BaseSolver):
         for key in (*_SETUP_FCN_KEYS, *_SETUP_FCN_LIST_KEYS):
             self._setup.pop(key, None)
 
+        # Release the public casadi.Function caches now that the C++ group
+        # owns the functions. _setup["var_fcns"] keeps the references that
+        # _post_process_solution still needs; the dvar caches are unused
+        # after setup, so dropping them frees that memory immediately.
+        self.computed_var_fcns = {}
+        self.computed_dvar_dy_fcns = {}
+        self.computed_dvar_dp_fcns = {}
+
         return base_set_up_return
 
     def __getstate__(self):
-        # Drop _setup and _model_set_up so the next solve() rebuilds from
-        # the model rather than shipping serialised casadi.Functions.
+        # Drop the rebuildable state (C++ solver + casadi.Function graphs)
+        # so the next solve() rebuilds from the model rather than shipping
+        # serialised functions in the pickle.
         state = self.__dict__.copy()
-        state.pop("_setup", None)
-        state.pop("_model_set_up", None)
+        for key in _REBUILDABLE_STATE_KEYS:
+            state.pop(key, None)
         return state
 
     def __setstate__(self, d):
         self.__dict__.update(d)
+        # Restore the empty defaults BaseSolver.__init__ would set, so the
+        # solver reads as "not yet set up" until the next solve().
         self._model_set_up = {}
+        self.computed_var_fcns = {}
 
     @property
     def options(self):
