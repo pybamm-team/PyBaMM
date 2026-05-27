@@ -125,15 +125,27 @@ Users can install ``jax`` and ``jaxlib`` to use the Jax solver.
 
 This command automatically downloads and installs ``pybamm`` and the compatible versions of ``jax`` and ``jaxlib`` on your system.
 
-PyBaMM's full `conda-forge distribution <index.rst#installation>`_ (``pybamm``) includes ``jax`` and ``jaxlib`` by default.
+.. tab:: conda
+
+   .. code:: bash
+
+      conda install -c conda-forge "jax>=0.7.0,<0.9.0"
 
 Uninstall PyBaMM
 ----------------
 
 PyBaMM can be uninstalled by running
 
-.. code:: bash
+.. tab:: uv
 
-   pip uninstall pybamm
+   .. code:: bash
+
+      uv pip uninstall pybamm
+
+.. tab:: pip
+
+   .. code:: bash
+
+      pip uninstall pybamm
 
 in your virtual environment.

@@ -116,11 +116,21 @@ pip install pybamm
 
 PyBaMM is available as a conda package through the conda-forge channel.
 
-[![conda_forge](https://img.shields.io/conda/vn/conda-forge/pybamm?color=green)](https://anaconda.org/conda-forge/pybamm)
+> ![Note]
+> PyBaMM versions between 24.11.2 and 25.6 (not including these boundary versions) are not available on conda-forge.
+
+[![Conda Recipe](https://img.shields.io/badge/recipe-pybamm--base-green.svg)](https://anaconda.org/conda-forge/pybamm-base)
+[![downloads](https://img.shields.io/conda/dn/conda-forge/pybamm-base?color=green)](https://anaconda.org/conda-forge/pybamm-base)
+[![Conda Recipe](https://img.shields.io/badge/recipe-pybamm-green.svg)](https://anaconda.org/conda-forge/pybamm)
 [![downloads](https://img.shields.io/conda/dn/conda-forge/pybamm?color=green)](https://anaconda.org/conda-forge/pybamm)
 
 ```bash
+# for no extra dependencies
+conda install -c conda-forge pybamm-base
+# for all extra dependencies except jax
 conda install -c conda-forge pybamm
+# optionally install jax >=0.7.0, <0.9.0 on python >=3.11
+conda install -c conda-forge "jax>=0.7.0,<0.9.0"
 ```
 
 ### Optional solvers
