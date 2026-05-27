@@ -218,13 +218,13 @@ class TestExperimentMemory:
         tracemalloc.stop()
 
         # 4x more cycles should grow memory sub-linearly (linear would be
-        # 4x, indicating each step rebuilds the model). The 2.5x bound is
+        # 4x, indicating each step rebuilds the model). The 1.3x bound is
         # loose enough to tolerate cross-platform allocator noise on the
         # small absolute footprint left after a period=1M endpoint solve.
         ratio = mem_20_cycles / mem_5_cycles
-        assert ratio < 2.5, (
+        assert ratio < 1.3, (
             f"Memory grew {ratio:.1f}x for 4x more cycles. "
-            f"Expected sub-linear growth (<2.5x). "
+            f"Expected sub-linear growth (<1.3x). "
             f"This may indicate termination hashing is broken (see #5453)."
         )
 
