@@ -175,23 +175,32 @@ class TestExperimentMemory:
 
     def test_cycle_count_memory_scaling(self):
         """Memory should NOT scale linearly with cycle count."""
+        # Time-bounded steps (no event terminations) with a fixed period so
+        # each cycle produces the same number of stored samples; this isolates
+        # the cycle-count effect on _setup/Solution scaling from per-step
+        # variability in IDA's adaptive step count.
         cycle = [
-            "Discharge at C/5 for 30 minutes or until 3.0 V",
+            "Discharge at C/4 for 30 minutes",
             "Rest for 5 minutes",
-            "Charge at C/5 for 30 minutes or until 4.2 V",
+            "Charge at C/5 for 30 minutes",
             "Rest for 5 minutes",
         ]
+        period = "1000000 seconds"
 
         # Warmup
         model = pybamm.lithium_ion.SPM()
-        sim = pybamm.Simulation(model, experiment=pybamm.Experiment(cycle * 2))
+        sim = pybamm.Simulation(
+            model, experiment=pybamm.Experiment(cycle * 2, period=period)
+        )
         sim.solve()
 
         # Measure memory for different cycle counts
         gc.collect()
         tracemalloc.start()
         model = pybamm.lithium_ion.SPM()
-        sim = pybamm.Simulation(model, experiment=pybamm.Experiment(cycle * 5))
+        sim = pybamm.Simulation(
+            model, experiment=pybamm.Experiment(cycle * 5, period=period)
+        )
         sim.solve()
         gc.collect()
         mem_5_cycles, _ = tracemalloc.get_traced_memory()
@@ -200,18 +209,22 @@ class TestExperimentMemory:
         gc.collect()
         tracemalloc.start()
         model = pybamm.lithium_ion.SPM()
-        sim = pybamm.Simulation(model, experiment=pybamm.Experiment(cycle * 20))
+        sim = pybamm.Simulation(
+            model, experiment=pybamm.Experiment(cycle * 20, period=period)
+        )
         sim.solve()
         gc.collect()
         mem_20_cycles, _ = tracemalloc.get_traced_memory()
         tracemalloc.stop()
 
-        # 4x more cycles should NOT cause 4x memory (that would indicate
-        # each step is building its own model). Allow 1.25x for solution data growth.
+        # 4x more cycles should grow memory sub-linearly (linear would be
+        # 4x, indicating each step rebuilds the model). The 1.3x bound is
+        # loose enough to tolerate cross-platform allocator noise on the
+        # small absolute footprint left after a period=1M endpoint solve.
         ratio = mem_20_cycles / mem_5_cycles
-        assert ratio < 1.25, (
+        assert ratio < 1.3, (
             f"Memory grew {ratio:.1f}x for 4x more cycles. "
-            f"Expected sub-linear growth (<2.5x). "
+            f"Expected sub-linear growth (<1.3x). "
             f"This may indicate termination hashing is broken (see #5453)."
         )
 

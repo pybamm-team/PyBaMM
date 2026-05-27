@@ -524,6 +524,8 @@ class BaseSimulation:
                         pybamm.SolverWarning,
                         stacklevel=2,
                     )
+        # Drop the prior solution before allocating the new one.
+        self._solution = None
         self._solution = solver.solve(
             self._built_model,
             t_eval,

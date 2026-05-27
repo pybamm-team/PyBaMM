@@ -768,6 +768,9 @@ class Simulation(BaseSimulation):
                 "Solving with a list of input sets is not supported with experiments."
             )
 
+        # Drop the prior solution before build/integration.
+        self._solution = starting_solution
+
         self.build_for_experiment(
             initial_soc=initial_soc,
             direction=direction,
@@ -778,9 +781,6 @@ class Simulation(BaseSimulation):
             pybamm.logger.warning(
                 "Ignoring t_eval as solution times are specified by the experiment"
             )
-        # Re-initialize solution, e.g. for solving multiple times with different
-        # inputs without having to build the simulation again
-        self._solution = starting_solution
         user_inputs = inputs
         timer = pybamm.Timer()
 

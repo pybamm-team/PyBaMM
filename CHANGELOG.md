@@ -1,5 +1,14 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Breaking changes
+
+- `Simulation.solve` now always clears `Simulation.solution` before solving, so a failed solve leaves it as `None` rather than retaining the previous result. ([#5528](https://github.com/pybamm-team/PyBaMM/pull/5528))
+
+## Bug fixes
+
+- Fixed `Simulation.solve` retaining the prior solution alongside the new one during repeated solves. ([#5528](https://github.com/pybamm-team/PyBaMM/pull/5528))
+- `IDAKLUSolver` no longer caches redundant serialised function bytes, reducing memory and pickle size. ([#5528](https://github.com/pybamm-team/PyBaMM/pull/5528))
+
 ## Features
 
 - Default `summary_variables` now include per-phase LAM%, capacity, total lithium, SEI loss, SEI-on-cracks loss, and lithium plating loss for composite electrodes; aggregate per-electrode entries are unchanged. ([#5516](https://github.com/pybamm-team/PyBaMM/pull/5516))
