@@ -1,5 +1,7 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+# [v26.5.0](https://github.com/pybamm-team/PyBaMM/tree/v26.5.0) - 2026-05-27
+
 ## Breaking changes
 
 - `Simulation.solve` now always clears `Simulation.solution` before solving, so a failed solve leaves it as `None` rather than retaining the previous result. ([#5528](https://github.com/pybamm-team/PyBaMM/pull/5528))
