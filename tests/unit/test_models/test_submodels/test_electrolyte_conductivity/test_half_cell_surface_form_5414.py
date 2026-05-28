@@ -35,7 +35,6 @@ import numpy as np
 
 import pybamm
 
-
 _HALF_CELL_EXTRA_PARAMS = {
     # Xu2019 is a half-cell parameter set but is missing thermal /
     # current-collector data; supply just enough to build a lumped-thermal
@@ -132,9 +131,7 @@ class TestHalfCellSurfaceFormLumpedThermal:
                     "thermal": thermal,
                 }
                 model = pybamm.lithium_ion.DFN(opts)
-                sim = pybamm.Simulation(
-                    model, parameter_values=params, C_rate=1.0
-                )
+                sim = pybamm.Simulation(model, parameter_values=params, C_rate=1.0)
                 sol = sim.solve([0, 60])
                 voltage = sol["Voltage [V]"].entries
                 assert np.all(np.isfinite(voltage)), (
