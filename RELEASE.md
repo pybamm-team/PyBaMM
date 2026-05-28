@@ -5,7 +5,7 @@ This document is the source of truth for how PyBaMM is versioned, when releases 
 ## At a glance
 
 - **Versioning:** [CalVer](https://calver.org/) in the form `YY.MM.N.P` — year, month, feature release index within that month, patch level.
-- **Cadence:** We release when there's something worth releasing. No fixed schedule.
+- **Cadence:** We release when there's something worth releasing, with no fixed schedule. Breaking changes target the first feature release of the month (`YY.MM.0.0`).
 - **Breaking changes:** Documented under `## Breaking changes` in [`CHANGELOG.md`](https://github.com/pybamm-team/PyBaMM/blob/main/CHANGELOG.md). Public APIs that are removed or renamed ship a `DeprecationWarning` for at least two prior feature releases first (see the Deprecation policy section for the documented exceptions).
 - **Pre-announcement:** The `# [Unreleased]` section at the top of `CHANGELOG.md` on `main` is the canonical preview of what's about to ship.
 
@@ -33,7 +33,7 @@ PyBaMM versions take the form `YY.MM.N.P`:
 
 - We release when there's a meaningful body of work to ship. No fixed monthly or quarterly schedule.
 - Patch releases are cut from the corresponding feature release branch as fixes warrant.
-- We try to avoid trickling breaking changes across many small releases — batching is preferred where convenient — but this is guidance only. The policy does not depend on hitting a calendar target.
+- Breaking changes target the **first feature release of the month** (`YY.MM.0.0`). Subsequent feature releases in the same month (`YY.MM.1.0`, `YY.MM.2.0`, …) should not contain breaking changes unless absolutely required. Exceptions must be justified in the PR description and in the `## Breaking changes` changelog entry, alongside the standard deprecation note.
 
 ## What counts as a breaking change
 
