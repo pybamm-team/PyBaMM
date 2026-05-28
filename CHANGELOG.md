@@ -2,6 +2,7 @@
 
 ## Bug fixes
 
+- Fixed `pybamm.step.CRate(callable)` crashing in `_default_timespan` with `TypeError: bad operand type for abs(): 'function'`. `CRate` now falls back to the 24-hour base default whenever the value is callable, matching the other `step.*` subclasses. ([#4926](https://github.com/pybamm-team/PyBaMM/issues/4926))
 - `RegulariseSqrtAndPower` no longer regularises state-independent bases, fixing corrupted small rate constants in exchange-current density functions. ([#5600](https://github.com/pybamm-team/PyBaMM/pull/5600))
 
 ## Breaking changes
