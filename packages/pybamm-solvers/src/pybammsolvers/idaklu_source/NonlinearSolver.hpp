@@ -86,6 +86,10 @@ public:
 
   void set_log(SolverLog* log) { log_ = log; }
 
+  // Algebraic residual inf-norm of the guess and final iterate from the last solve.
+  sunrealtype initial_res_norm() const { return initial_res_norm_; }
+  sunrealtype final_res_norm() const { return final_res_norm_; }
+
 private:
   NonlinearResult RunNewtonLoop(sunrealtype t);
 
@@ -123,6 +127,9 @@ private:
 
   std::string last_message_;
   int last_num_iterations_ = 0;
+
+  sunrealtype initial_res_norm_ = std::numeric_limits<sunrealtype>::infinity();
+  sunrealtype final_res_norm_ = std::numeric_limits<sunrealtype>::infinity();
 };
 
 #include "NonlinearSolver.inl"

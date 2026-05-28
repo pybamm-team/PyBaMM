@@ -363,6 +363,23 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
 
   log_.log_start(t0, tf);
 
+  // Check events on `yy` (= phi[0], the integrator's start state) before the
+  // first step; a post-step IDAGetDky(t0) value can flip a boundary event's sign.
+  event_values_.resize(number_of_events);
+  rootsfound_.resize(number_of_events);
+  if (number_of_events > 0) {
+    events_eval<ExprSet>(t0, yy, yyp, event_values_.data(), functions.get());
+    bool init_event_triggered = false;
+    for (int i = 0; i < number_of_events; i++) {
+      init_event_triggered |= (event_values_[i] <= 0.0);
+    }
+    if (init_event_triggered) {
+      StoreInitialPoint(t0);
+      log_.log_integration_complete(0, t0);
+      return BuildSolutionData(IDA_ROOT_RETURN);
+    }
+  }
+
   // first step
   // Progress one step before the loop to ensure IDAGetDky works at t0 for dky = 1
   int n_steps = 0;
@@ -377,22 +394,6 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
   no_progression.AddDt(t_val - t0);
 
   StoreInitialPoint(t0);
-
-  // Check for events at the consistent initial state
-  event_values_.resize(number_of_events);
-  rootsfound_.resize(number_of_events);
-  if (number_of_events > 0) {
-    events_eval<ExprSet>(t0, yy, yyp, event_values_.data(), functions.get());
-    bool init_event_triggered = false;
-    for (int i = 0; i < number_of_events; i++) {
-      init_event_triggered |= (event_values_[i] <= 0.0);
-    }
-    if (init_event_triggered) {
-      retval = IDA_ROOT_RETURN;
-      log_.log_integration_complete(n_steps, t_val);
-      return BuildSolutionData(retval);
-    }
-  }
 
   // Reset the states and sensitivities at t = t_val
   GetSolutionFull(t_val);
@@ -802,7 +803,9 @@ bool IDAKLUSolverOpenMP<ExprSet>::NonlinearSolverInitialConditions(
   NonlinearResult result = as.solver->solve_single(t_val, solve_ptr);
   const bool success = nonlinear_success(result);
 
-  if (success) {
+  // Keep the solved state if it is no worse than the guess: the Newton can
+  // reduce the residual yet still fail the WRMS step-norm test at tiny atol.
+  if (success || as.solver->final_res_norm() <= as.solver->initial_res_norm()) {
     RecoverYp(t_val);
   } else {
     std::memcpy(y_val, as.y_backup.data(), number_of_states * sizeof(sunrealtype));

@@ -106,6 +106,8 @@ inline NonlinearResult NonlinearSolver::RunNewtonLoop(sunrealtype t) {
 
   for (int iter = 0; iter < max_iter_; iter++) {
     sunrealtype res_norm = EvalResidualAndNorm(t);
+    if (iter == 0) initial_res_norm_ = res_norm;
+    final_res_norm_ = res_norm;
     if (log_) log_->log_newton_iteration(iter, res_norm, delnorm);
 
     int lsflag = SetupAndSolveLinearSystem(t);
