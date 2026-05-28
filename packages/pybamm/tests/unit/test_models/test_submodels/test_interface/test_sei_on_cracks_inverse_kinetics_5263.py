@@ -63,9 +63,7 @@ def _run_cracks_experiment(ModCls):
     )
     sol = sim.solve()
     sei = float(sol["Loss of capacity to negative SEI [A.h]"].entries[-1])
-    sei_c = float(
-        sol["Loss of capacity to negative SEI on cracks [A.h]"].entries[-1]
-    )
+    sei_c = float(sol["Loss of capacity to negative SEI on cracks [A.h]"].entries[-1])
     caps = _extract_charge_capacities(sol)
     actual_loss = caps[0] - caps[-2]
     return sei, sei_c, actual_loss
@@ -98,7 +96,9 @@ class TestSEIOnCracksInverseKineticsFix:
             "SEI on cracks current; SEI-on-cracks Li loss is silently dropped."
         )
 
-    @pytest.mark.parametrize("ModCls", [pybamm.lithium_ion.SPM, pybamm.lithium_ion.SPMe])
+    @pytest.mark.parametrize(
+        "ModCls", [pybamm.lithium_ion.SPM, pybamm.lithium_ion.SPMe]
+    )
     def test_capacity_loss_matches_sei_plus_cracks(self, ModCls):
         """
         Time-integrated charge-capacity loss of a 30-cycle ageing
