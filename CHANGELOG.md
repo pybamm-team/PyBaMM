@@ -2,6 +2,7 @@
 
 ## Bug fixes
 
+- Fixed `pybamm.lithium_ion.SPM` / `pybamm.lithium_ion.SPMe` ignoring `SEI on cracks` lithium loss in their lithium budget. The x-averaged inverse-kinetics `CurrentForInverseKinetics` submodel computed the main-reaction current density as `j_tot - j_sei - j_stripping`, omitting `j_sei_on_cracks`, so the reported `Loss of capacity to negative SEI on cracks [A.h]` was not actually reflected in the simulated cell capacity (`Loss of capacity to negative SEI [A.h]` still was). `j_sei_on_cracks` is now subtracted as well, scaled by `(roughness - 1)` so the per-primary-surface-area basis matches `j_tot` / `j_sei`. ([#5263](https://github.com/pybamm-team/PyBaMM/issues/5263))
 - `RegulariseSqrtAndPower` no longer regularises state-independent bases, fixing corrupted small rate constants in exchange-current density functions. ([#5600](https://github.com/pybamm-team/PyBaMM/pull/5600))
 
 ## Breaking changes
