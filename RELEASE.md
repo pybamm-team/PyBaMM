@@ -110,10 +110,42 @@ Use full GitHub URLs (not bare `#1234`) so the rendered markdown on docs.pybamm.
 
 ## Release-manager checklist
 
-When cutting a release:
+The version string in the built distribution is supplied by `hatch-vcs` from the VCS tag (`pyproject.toml` has `dynamic = ["version"]` with `version.source = "vcs"`, writing to `src/pybamm/_version.py`). The `scripts/update_version.py` helper updates `CITATION.cff` and prepends a new dated heading to `CHANGELOG.md`; its version-string handling is format-agnostic and accepts the four-component form unchanged.
 
-1. Confirm `# [Unreleased]` accurately reflects what's about to ship — every breaking change, deprecation, feature, and bug fix has an entry with a PR link.
-2. Run `uv run python scripts/update_version.py <version>` (e.g. `uv run python scripts/update_version.py 27.1.0.0`) to update `CITATION.cff` and add a new dated heading to `CHANGELOG.md`. The script's regex is format-agnostic and accepts the four-component form unchanged.
-3. Verify section ordering inside the new release block is Breaking → Deprecated → Features → Bug fixes.
-4. Tag and push: `git tag v<version> && git push --tags`. The version string is supplied by `hatch-vcs` from the VCS tag (`pyproject.toml` has `dynamic = ["version"]` with `version.source = "vcs"`, writing to `src/pybamm/_version.py`).
-5. Create the GitHub release. Mirror the changelog block into the release notes body.
+### Cutting a feature release
+
+A feature release is `YY.MM.N.0` — the patch component is `0`. The first feature release in a given calendar month uses `N=0`; subsequent feature releases in the same month use `N=1`, `N=2`, etc.
+
+1. Confirm `# [Unreleased]` in `CHANGELOG.md` accurately reflects what's about to ship — every breaking change, deprecation, feature, and bug fix has an entry with a PR link, and entries are grouped under the four sections (`## Breaking changes`, `## Deprecated`, `## Features`, `## Bug fixes`) in that order.
+2. Create and check out a release branch from `main`: `git checkout -b release/vYY.MM.N.0`.
+3. Run `uv run python scripts/update_version.py YY.MM.N.0` to update `CITATION.cff` and prepend a dated heading to `CHANGELOG.md`.
+4. Push the branch and open a PR to `main`. Ensure CI passes, then merge.
+5. From `main` at the merge commit, create a GitHub _release_ with the tag `vYY.MM.N.0`. Copy the relevant `CHANGELOG.md` block into the release description. This triggers `publish_pypi.yml` and creates the PyPI release automatically.
+6. Verify the release installs cleanly: `pip install pybamm==YY.MM.N.0`.
+
+### Cutting a patch release
+
+A patch release is `YY.MM.N.P` where `P >= 1`. Patches are cut from the previous tag in the same feature line so the release contains only the bug fixes, not unrelated changes that have landed on `main` since the feature release.
+
+1. Ensure all bug fixes are merged to `main` first via normal PRs.
+2. Create a new branch from the previous tag in the same feature line: `git checkout -b release/vYY.MM.N.P vYY.MM.N.{P-1}` (e.g. `release/v27.1.0.1` from `v27.1.0.0`).
+3. Cherry-pick the bug fixes onto the new branch, recording the original SHA with `-x`:
+   ```bash
+   git cherry-pick -x <commit-sha-from-main>
+   ```
+4. Run `uv run python scripts/update_version.py YY.MM.N.P` to update `CITATION.cff` and prepend a dated heading to `CHANGELOG.md`. Commit the result on the release branch.
+5. Create a GitHub _release_ with the tag `vYY.MM.N.P` from the `release/vYY.MM.N.P` branch (NOT from `main`). Copy the relevant `CHANGELOG.md` block into the release description. This triggers `publish_pypi.yml`.
+6. Verify the release installs cleanly: `pip install pybamm==YY.MM.N.P`.
+7. Update the changelog on `main` separately. **Do not merge the release branch back to `main`** — that would duplicate commits with new hashes. Instead:
+   ```bash
+   git checkout main
+   git checkout -b update-changelog-vYY.MM.N.P
+   ```
+   Edit `CHANGELOG.md` to add the new dated `vYY.MM.N.P` block (moving the entries out of `# [Unreleased]`), and update `CITATION.cff`. Open a PR to `main`.
+8. Delete the release branch after tagging — it is no longer needed.
+
+### Conda-forge
+
+The conda-forge release flow is triggered automatically after a stable PyPI release: the conda-forge bot opens a PR against [pybamm-feedstock](https://github.com/conda-forge/pybamm-feedstock), which maintainers review and approve.
+
+When a release touches the API, console scripts, entry points, optional dependencies, supported Python versions, or core project metadata, update `meta.yaml` in [pybamm-feedstock](https://github.com/conda-forge/pybamm-feedstock) following [the conda-forge maintainer docs](https://conda-forge.org/docs/maintainer/updating_pkgs.html#updating-the-feedstock-repository) and re-render the recipe. Push updates directly to the bot's automated PR where possible. Manual PRs must bump the `build` number in `meta.yaml` and be opened from a personal fork.
