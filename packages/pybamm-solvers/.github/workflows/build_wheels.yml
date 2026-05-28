@@ -41,28 +41,19 @@ jobs:
           cd vcpkg
           .\bootstrap-vcpkg.bat
 
-      # Propagate GitHub Actions cache env vars so vcpkg's `x-gha` binary
-      # source can read/write cached binaries. Disabled on release events to
-      # prevent cache poisoning attacks.
-      - name: Export GitHub Actions cache env
-        if: ${{ github.event_name != 'release' }}
-        uses: actions/github-script@v7
-        with:
-          script: |
-            core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
-            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
-
       - name: Build wheels on Windows
         run: pipx run cibuildwheel --output-dir wheelhouse
         env:
+          # No VCPKG_BINARY_SOURCES: keep vcpkg's default local cache
+          # (%LOCALAPPDATA%\vcpkg\archives) so the per-wheel CMake configures
+          # within this job share built ports instead of rebuilding from
+          # source for each Python version.
           CIBW_ENVIRONMENT: >
             VCPKG_ROOT_DIR=C:\vcpkg
             VCPKG_DEFAULT_TRIPLET=x64-windows-static-md
             VCPKG_FEATURE_FLAGS=manifests,registries
-            VCPKG_BINARY_SOURCES="clear;x-gha,readwrite"
             CMAKE_GENERATOR="Visual Studio 17 2022"
             CMAKE_GENERATOR_PLATFORM=x64
-          CIBW_ENVIRONMENT_PASS_WINDOWS: "ACTIONS_CACHE_URL ACTIONS_RUNTIME_TOKEN"
           CIBW_ARCHS: AMD64
           CIBW_BEFORE_BUILD: python -m pip install delvewheel
           CIBW_REPAIR_WHEEL_COMMAND: delvewheel repair --add-path C:/Windows/System32 -w {dest_dir} {wheel}
