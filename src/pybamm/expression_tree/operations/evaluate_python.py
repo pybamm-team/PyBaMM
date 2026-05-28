@@ -47,7 +47,7 @@ class JaxCooMatrix:
     ):
         if not pybamm.has_jax():  # pragma: no cover
             raise ModuleNotFoundError(
-                "Jax or jaxlib is not installed, please see https://docs.pybamm.org/en/latest/source/user_guide/installation/gnu-linux-mac.html#optional-jaxsolver"
+                "Jax or jaxlib is not installed, please see https://docs.pybamm.org/en/latest/source/user_guide/installation/index.html#optional-jaxsolver"
             )
 
         self.row = jax.numpy.array(row)
@@ -553,7 +553,7 @@ class EvaluatorJax:
     def __init__(self, symbol: pybamm.Symbol):
         if not pybamm.has_jax():  # pragma: no cover
             raise ModuleNotFoundError(
-                "Jax or jaxlib is not installed, please see https://docs.pybamm.org/en/latest/source/user_guide/installation/gnu-linux-mac.html#optional-jaxsolver"
+                "Jax or jaxlib is not installed, please see https://docs.pybamm.org/en/latest/source/user_guide/installation/index.html#optional-jaxsolver"
             )
 
         constants, python_str = pybamm.to_python(symbol, debug=False, output_jax=True)
