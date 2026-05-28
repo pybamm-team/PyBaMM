@@ -155,9 +155,7 @@ def test_check_input_params_ignores_internal_start_time():
     leaves = step.value.post_order(filter=lambda n: len(n.children) == 0)
     names = {leaf.name for leaf in leaves if isinstance(leaf, pybamm.InputParameter)}
     assert names == {"start time"}
-    assert (
-        pybamm.experiment.step.base_step._check_input_params(step.value) is False
-    )
+    assert pybamm.experiment.step.base_step._check_input_params(step.value) is False
 
 
 def test_check_input_params_still_detects_user_input_parameter():
@@ -169,9 +167,7 @@ def test_check_input_params_still_detects_user_input_parameter():
     # Manually build a tree that contains both leaves to make the
     # mixing explicit.
     value = I_app + (pybamm.t - pybamm.InputParameter("start time"))
-    assert (
-        pybamm.experiment.step.base_step._check_input_params(value) is True
-    )
+    assert pybamm.experiment.step.base_step._check_input_params(value) is True
 
 
 def test_python_function_step_accepts_string_termination_without_operator():
