@@ -95,7 +95,11 @@ Note that the examples on the `main` branch are tested on the latest commit. If 
 
 ## Versioning
 
-PyBaMM makes releases every four months and we use [CalVer](https://calver.org/), which means that the version number is `YY.MM`. The releases happen, approximately, at the end of January, May and September. There is no difference between releases that increment the year and releases that increment the month; in particular, releases that increment the month may introduce breaking changes. Breaking changes for each release are communicated via the [CHANGELOG](CHANGELOG.md), and come with deprecation warnings or errors that are kept for at least one year (3 releases). If you find a breaking change that is not documented, or think it should be undone, please open an issue on [GitHub](https://github.com/pybamm-team/pybamm).
+PyBaMM uses [CalVer](https://calver.org/). Version numbers take the form `YY.MM.N.P`, where `YY.MM` is the year and month of the release, `N` is the feature release within that month (`0` for the first), and `P` is the patch level (`0` for the feature release itself). For example, `27.1.0.1` is the first patch of the first feature release in January 2027.
+
+Releases ship when there's something worth releasing, not on a fixed schedule. Any release may contain breaking changes; when it does, they appear under a `## Breaking changes` section at the top of [`CHANGELOG.md`](CHANGELOG.md). Public APIs that are removed or renamed ship a `DeprecationWarning` for at least two prior feature releases first, where technically possible.
+
+See [`RELEASE.md`](RELEASE.md) for the full release policy, including how we define "public API" and what counts as a breaking change.
 
 ## 🚀 Installing PyBaMM
 
