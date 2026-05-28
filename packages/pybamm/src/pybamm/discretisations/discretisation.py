@@ -848,11 +848,26 @@ class Discretisation:
 
         processed_eqn = self.process_symbol(eqn)
         if ics and (reference := getattr(name, "reference", 0)) != 0:
+            # ``name.reference`` can be a parameter-derived symbolic
+            # expression that still holds undiscretised
+            # :class:`SpatialVariable` / ``Integral`` leaves (e.g. when
+            # ``Initial concentration in negative electrode [mol.m-3]``
+            # is set to a function of ``r`` and ``x``, ``c_init_av``
+            # propagates ``r_n`` / ``x_n`` into the
+            # ``Negative electrolyte potential [V]`` Variable's
+            # ``reference``). Discretise it before subtracting so the
+            # initial-condition vector is purely numeric. See #4930.
+            if isinstance(reference, pybamm.Symbol):
+                reference = self.process_symbol(reference)
             processed_eqn = processed_eqn - reference
 
         # Calculate scale if the key has a scale
         scale = getattr(name, "scale", 1)
         if scale != 1:
+            # As with ``reference`` above, ``name.scale`` may carry
+            # undiscretised leaves; discretise it for the same reason.
+            if isinstance(scale, pybamm.Symbol):
+                scale = self.process_symbol(scale)
             processed_eqn = processed_eqn / scale
 
         return processed_eqn
@@ -1119,7 +1134,9 @@ class Discretisation:
         elif isinstance(symbol, pybamm.VariableDot):
             # Add symbol's reference and multiply by the symbol's scale
             # so that the state vector is of order 1
-            return symbol.reference + symbol.scale * pybamm.StateVectorDot(
+            reference = self.process_symbol(symbol.reference)
+            scale = self.process_symbol(symbol.scale)
+            return reference + scale * pybamm.StateVectorDot(
                 *self.y_slices[symbol.get_variable()],
                 domains=symbol.domains,
             )
@@ -1137,8 +1154,23 @@ class Discretisation:
                     "(e.g. not Broadcasted)"
                 ) from error
             # Add symbol's reference and multiply by the symbol's scale
-            # so that the state vector is of order 1
-            return symbol.reference + symbol.scale * pybamm.StateVector(
+            # so that the state vector is of order 1.
+            #
+            # ``reference`` and ``scale`` can be parameter-derived expressions
+            # that still hold undiscretised :class:`SpatialVariable` /
+            # ``Integral`` leaves (e.g. when ``Initial concentration in
+            # negative electrode [mol.m-3]`` is set to ``f(r, x)``, the
+            # ``c_init_av = xyz_average(r_average(c_init))`` propagation
+            # into ``U_init`` carries ``r_n`` / ``x_n`` into
+            # ``Negative electrolyte potential [V]``'s ``reference``).
+            # Discretising them here folds those averages back into a
+            # numeric scalar / vector and matches how the model's rhs
+            # would have evaluated them. For the common scalar case
+            # ``process_symbol`` short-circuits via its cache, so this
+            # adds no measurable overhead. Fixes #4930.
+            reference = self.process_symbol(symbol.reference)
+            scale = self.process_symbol(symbol.scale)
+            return reference + scale * pybamm.StateVector(
                 *y_slices, domains=symbol.domains
             )
 
@@ -1158,8 +1190,13 @@ class Discretisation:
                 new_children.append(self.process_symbol(child_no_scale))
             self.y_slices = old_y_slices
             new_symbol = spatial_method.concatenation(new_children)
-            # apply scale to the whole concatenation
-            return symbol.reference + symbol.scale * new_symbol
+            # apply scale to the whole concatenation. ``reference`` and
+            # ``scale`` are discretised first to fold any parameter-derived
+            # ``SpatialVariable`` / ``Integral`` leaves (see the
+            # ``Variable`` branch above and #4930).
+            reference = self.process_symbol(symbol.reference)
+            scale = self.process_symbol(symbol.scale)
+            return reference + scale * new_symbol
 
         elif isinstance(symbol, pybamm.Concatenation):
             new_children = [self.process_symbol(child) for child in symbol.children]
