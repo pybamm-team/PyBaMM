@@ -3,6 +3,7 @@
 #
 from __future__ import annotations
 
+import casadi
 import numpy as np
 import numpy.typing as npt
 import sympy
@@ -91,6 +92,18 @@ class UnaryOperator(pybamm.Symbol):
         raise NotImplementedError(
             f"{self.__class__} does not implement _unary_evaluate."
         )
+
+    def _casadi_evaluate(self, child):
+        """CasADi analog of :meth:`_unary_evaluate`. Override in subclasses where the
+        CasADi function differs from the numpy one."""
+        return self._unary_evaluate(child)
+
+    def _to_casadi(self, t, y, y_dot, inputs, casadi_symbols):
+        """See :meth:`pybamm.Symbol._to_casadi()`."""
+        converted_child = self._children_to_casadi(t, y, y_dot, inputs, casadi_symbols)[
+            0
+        ]
+        return self._casadi_evaluate(converted_child)
 
     def evaluate(
         self,
@@ -190,6 +203,10 @@ class AbsoluteValue(UnaryOperator):
         """See :meth:`UnaryOperator._unary_evaluate()`."""
         return np.abs(child)
 
+    def _casadi_evaluate(self, child):
+        """See :meth:`pybamm.UnaryOperator._casadi_evaluate()`."""
+        return casadi.fabs(child)
+
     def _unary_new_copy(self, child, perform_simplifications: bool = True):
         """
         Creates a new copy of the operator with the child `child`.
@@ -201,6 +218,12 @@ class AbsoluteValue(UnaryOperator):
             return abs(child)
         else:
             return AbsoluteValue(child)
+
+
+def absolute(child: pybamm.Symbol):
+    """Returns the absolute value of a symbol."""
+    # enables performing np.abs(symbol)
+    return AbsoluteValue(child)
 
 
 class Transpose(UnaryOperator):
@@ -285,6 +308,10 @@ class Floor(UnaryOperator):
         """See :meth:`UnaryOperator._unary_evaluate()`."""
         return np.floor(child)
 
+    def _casadi_evaluate(self, child):
+        """See :meth:`pybamm.UnaryOperator._casadi_evaluate()`."""
+        return casadi.floor(child)
+
 
 class Ceiling(UnaryOperator):
     """
@@ -306,6 +333,10 @@ class Ceiling(UnaryOperator):
     def _unary_evaluate(self, child):
         """See :meth:`UnaryOperator._unary_evaluate()`."""
         return np.ceil(child)
+
+    def _casadi_evaluate(self, child):
+        """See :meth:`pybamm.UnaryOperator._casadi_evaluate()`."""
+        return casadi.ceil(child)
 
 
 class Index(UnaryOperator):

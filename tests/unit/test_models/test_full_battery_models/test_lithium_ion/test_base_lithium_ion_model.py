@@ -52,3 +52,32 @@ class TestBaseLithiumIonModel:
 
         with pytest.raises(TypeError, match=r"`calc_esoh` arg needs to be a bool"):
             model.calc_esoh = "Yes"
+
+    @pytest.mark.parametrize(
+        "options",
+        [
+            {},
+            {"particle phases": ("2", "1")},
+            {"particle phases": ("1", "2")},
+            {"particle phases": ("2", "2")},
+            {"working electrode": "positive"},
+        ],
+    )
+    def test_summary_variables_resolve(self, options):
+        model = pybamm.lithium_ion.DFN(options=options)
+        for v in model.summary_variables:
+            assert v in model.variables, f"{v} not in model.variables"
+
+    def test_composite_per_phase_summary_variables(self):
+        model = pybamm.lithium_ion.DFN(options={"particle phases": ("2", "1")})
+        assert (
+            "Loss of active material in primary phase in negative electrode [%]"
+            in model.summary_variables
+        )
+        assert (
+            "Loss of active material in secondary phase in negative electrode [%]"
+            in model.summary_variables
+        )
+        assert (
+            "Negative electrode primary phase capacity [A.h]" in model.summary_variables
+        )

@@ -17,19 +17,26 @@ from scipy.sparse import (
 import pybamm
 
 
+class _EvaluatesOnEdgesOverride:
+    __slots__ = ("direction", "fallback")
+
+    def __init__(self, direction, fallback):
+        self.direction = direction
+        self.fallback = fallback
+
+    def __call__(self, dim):
+        if dim == "primary":
+            return self.direction
+        return self.fallback(dim)
+
+
 def _evaluates_on_edges_one_side(symbol, direction):
     if hasattr(symbol, "_evaluates_on_edges_original"):
         return symbol
-    if direction == "lr":
-        symbol._evaluates_on_edges_original = symbol._evaluates_on_edges
-        symbol._evaluates_on_edges = lambda dim: (
-            "lr" if dim == "primary" else symbol._evaluates_on_edges_original(dim)
-        )
-    elif direction == "tb":
-        symbol._evaluates_on_edges_original = symbol._evaluates_on_edges
-        symbol._evaluates_on_edges = lambda dim: (
-            "tb" if dim == "primary" else symbol._evaluates_on_edges_original(dim)
-        )
+    symbol._evaluates_on_edges_original = symbol._evaluates_on_edges
+    symbol._evaluates_on_edges = _EvaluatesOnEdgesOverride(
+        direction, symbol._evaluates_on_edges_original
+    )
     return symbol
 
 

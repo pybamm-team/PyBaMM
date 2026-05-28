@@ -3,6 +3,7 @@
 #
 from __future__ import annotations
 
+import casadi
 import numpy as np
 import numpy.typing as npt
 import sympy
@@ -123,6 +124,10 @@ class Array(pybamm.Symbol):
         self._id = hash(
             (self.__class__, self.name, *self.entries_string, *tuple(self.domain))
         )
+
+    def _to_casadi(self, t, y, y_dot, inputs, casadi_symbols):
+        """See :meth:`pybamm.Symbol._to_casadi()`."""
+        return casadi.MX(self.evaluate(t, y, y_dot, inputs))
 
     def _jac(self, variable) -> pybamm.Matrix:
         """See :meth:`pybamm.Symbol._jac()`."""

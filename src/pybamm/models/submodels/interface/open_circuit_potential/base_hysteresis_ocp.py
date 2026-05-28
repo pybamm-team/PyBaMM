@@ -82,21 +82,44 @@ class BaseHysteresisOpenCircuitPotential(BaseOpenCircuitPotential):
                 variables
             )
             U_eq = self.phase_param.U(sto_surf, T)
-            U_eq_x_av = self.phase_param.U(sto_surf, T)
             U_lith = self.phase_param.U(sto_surf, T, "lithiation")
             U_lith_bulk = self.phase_param.U(sto_bulk, T_bulk, "lithiation")
             U_delith = self.phase_param.U(sto_surf, T, "delithiation")
             U_delith_bulk = self.phase_param.U(sto_bulk, T_bulk, "delithiation")
 
             H = U_lith - U_delith
-            H_x_av = pybamm.x_average(H)
+
+            # Under particle-size distribution the OCPs above live on the
+            # "<domain> particle size" domain. Publish the distribution-named
+            # variables at that shape, and size-average before publishing under
+            # the electrode-level names so they line up with other
+            # electrode-domain variables (e.g. in the thermal submodel).
+            if domain_options["particle size"] == "distribution":
+                variables.update(
+                    {
+                        f"{Domain} electrode {phase_name}OCP hysteresis distribution [V]": H,
+                        f"X-averaged {domain} electrode {phase_name}OCP hysteresis distribution [V]": pybamm.x_average(
+                            H
+                        ),
+                        f"{Domain} electrode {phase_name}equilibrium open-circuit potential distribution [V]": U_eq,
+                        f"X-averaged {domain} electrode {phase_name}equilibrium open-circuit potential distribution [V]": pybamm.x_average(
+                            U_eq
+                        ),
+                    }
+                )
+                U_eq = pybamm.size_average(U_eq)
+                H = pybamm.size_average(H)
 
             variables.update(
                 {
                     f"{Domain} electrode {phase_name}OCP hysteresis [V]": H,
-                    f"X-averaged {domain} electrode {phase_name}OCP hysteresis [V]": H_x_av,
+                    f"X-averaged {domain} electrode {phase_name}OCP hysteresis [V]": pybamm.x_average(
+                        H
+                    ),
                     f"{Domain} electrode {phase_name}equilibrium open-circuit potential [V]": U_eq,
-                    f"X-averaged {domain} electrode {phase_name}equilibrium open-circuit potential [V]": U_eq_x_av,
+                    f"X-averaged {domain} electrode {phase_name}equilibrium open-circuit potential [V]": pybamm.x_average(
+                        U_eq
+                    ),
                 }
             )
 

@@ -33,16 +33,27 @@ def set_environment_variables(env_dict, session):
         session.env[key] = value
 
 
+def install_locked(session, *, extras=None, groups=None):
+    cmd = ["uv", "sync", "--frozen"]
+    for extra in extras or []:
+        cmd.extend(["--extra", extra])
+    for group in groups or []:
+        cmd.extend(["--group", group])
+    session.run(
+        *cmd,
+        env={"UV_PROJECT_ENVIRONMENT": session.virtualenv.location},
+        external=True,
+    )
+
+
 @nox.session(name="coverage", default=False)
 def run_coverage(session):
     """Run the coverage tests and generate an XML report."""
     set_environment_variables(PYBAMM_ENV, session=session)
-    session.install("coverage", silent=False)
+    install_locked(session, extras=["all", "jax"], groups=["dev"])
     # Using plugin here since coverage runs unit tests on linux with latest python version.
     if "CI" in os.environ:
         session.install("pytest-github-actions-annotate-failures")
-    session.install("-e", ".[all,jax]", silent=False)
-    session.install("--group", "dev", silent=False)
     session.run("pytest", "--cov=pybamm", "--cov-report=xml", "tests/unit")
 
 
@@ -50,24 +61,22 @@ def run_coverage(session):
 def run_integration(session):
     """Run the integration tests."""
     set_environment_variables(PYBAMM_ENV, session=session)
+    install_locked(session, extras=["all", "jax"], groups=["dev"])
     if (
         "CI" in os.environ
         and sys.version_info[:2] >= (3, 12)
         and sys.platform == "linux"
     ):
         session.install("pytest-github-actions-annotate-failures")
-    session.install("-e", ".[all,jax]", silent=False)
-    session.install("--group", "dev", silent=False)
     session.run("python", "-m", "pytest", "-m", "integration")
 
 
 @nox.session(name="doctests", default=False)
 def run_doctests(session):
     """Run the doctests and generate the output(s) in the docs/build/ directory."""
+    install_locked(session, extras=["all"], groups=["dev", "docs"])
     # Fix for Python 3.12 CI. This can be removed after pybtex is replaced.
     session.install("setuptools", silent=False)
-    session.install("-e", ".[all]", silent=False)
-    session.install("--group", "dev", "--group", "docs", silent=False)
     session.run(
         "python",
         "-m",
@@ -81,17 +90,33 @@ def run_doctests(session):
 def run_unit(session):
     """Run the unit tests."""
     set_environment_variables(PYBAMM_ENV, session=session)
-    session.install("-e", ".[all,jax]", silent=False)
-    session.install("--group", "dev", silent=False)
+    install_locked(session, extras=["all", "jax"], groups=["dev"])
     session.run("python", "-m", "pytest", "-m", "unit")
+
+
+@nox.session(name="memory", default=False)
+def run_memory(session):
+    """Run memory leak tests using pytest-memray (Linux/macOS only)."""
+    if sys.platform == "win32":
+        session.skip("memray is not supported on Windows")
+    set_environment_variables(PYBAMM_ENV, session=session)
+    install_locked(session, groups=["dev"])
+    session.run(
+        "python",
+        "-m",
+        "pytest",
+        "tests/memory/",
+        "-v",
+        "-o",
+        "addopts=",
+    )
 
 
 @nox.session(name="examples", default=False)
 def run_examples(session):
     """Run the examples tests for Jupyter notebooks."""
     set_environment_variables(PYBAMM_ENV, session=session)
-    session.install("-e", ".[all,jax]", silent=False)
-    session.install("--group", "dev", silent=False)
+    install_locked(session, extras=["all", "jax"], groups=["dev"])
     notebooks_to_test = session.posargs if session.posargs else []
     session.run(
         "pytest", "--nbmake", *notebooks_to_test, "docs/source/examples/", external=True
@@ -102,10 +127,9 @@ def run_examples(session):
 def run_scripts(session):
     """Run the scripts tests for Python scripts."""
     set_environment_variables(PYBAMM_ENV, session=session)
+    install_locked(session, extras=["all", "jax"], groups=["dev"])
     # Fix for Python 3.12 CI. This can be removed after pybtex is replaced.
     session.install("setuptools", silent=False)
-    session.install("-e", ".[all,jax]", silent=False)
-    session.install("--group", "dev", silent=False)
     session.run("python", "-m", "pytest", "-m", "scripts")
 
 
@@ -113,30 +137,17 @@ def run_scripts(session):
 def set_dev(session):
     """Install PyBaMM in editable mode."""
     set_environment_variables(PYBAMM_ENV, session=session)
-    session.install("virtualenv", "cmake")
-    session.run("virtualenv", os.fsdecode(VENV_DIR), silent=True)
-    python = os.fsdecode(VENV_DIR.joinpath("bin/python"))
-    args = []
-    # Fix for Python 3.12 CI. This can be removed after pybtex is replaced.
-    session.run(python, "-m", "pip", "install", "setuptools", external=True)
     session.run(
-        python,
-        "-m",
-        "pip",
-        "install",
-        "-e",
-        ".[all,jax]",
-        *args,
-        external=True,
-    )
-    session.run(
-        python,
-        "-m",
-        "pip",
-        "install",
+        "uv",
+        "sync",
+        "--frozen",
+        "--extra",
+        "all",
+        "--extra",
+        "jax",
         "--group",
         "dev",
-        *args,
+        env={"UV_PROJECT_ENVIRONMENT": os.fsdecode(VENV_DIR)},
         external=True,
     )
 
@@ -145,8 +156,7 @@ def set_dev(session):
 def run_tests(session):
     """Run the unit tests and integration tests sequentially."""
     set_environment_variables(PYBAMM_ENV, session=session)
-    session.install("-e", ".[all,jax]", silent=False)
-    session.install("--group", "dev", silent=False)
+    install_locked(session, extras=["all", "jax"], groups=["dev"])
     session.run(
         "python",
         "-m",
@@ -159,10 +169,9 @@ def run_tests(session):
 def build_docs(session):
     """Build the documentation and load it in a browser tab, rebuilding on changes."""
     envbindir = session.bin
+    install_locked(session, extras=["all"], groups=["docs"])
     # Fix for Python 3.12 CI. This can be removed after pybtex is replaced.
     session.install("setuptools", silent=False)
-    session.install("-e", ".[all]", silent=False)
-    session.install("--group", "docs", silent=False)
     session.chdir("docs")
     # Local development
     if session.interactive:

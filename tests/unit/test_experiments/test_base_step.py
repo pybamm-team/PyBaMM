@@ -6,6 +6,7 @@ import pybamm
 
 class DummySolver:
     supports_interp = True
+    store_first_last = False
 
     @staticmethod
     def process_t_interp(t_interp):
@@ -81,6 +82,7 @@ def test_default_time_vector_uses_drive_cycle_period_only_when_supported():
 
     class SolverWithoutInterp:
         supports_interp = False
+        store_first_last = False
 
     time_vector = step.default_time_vector(SolverWithoutInterp(), tf=5)
 

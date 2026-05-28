@@ -374,7 +374,6 @@ class BaseSimulation:
             built_model.initial_conditions = processed_ics
             built_model.concatenated_initial_conditions = concat_ics
 
-        self._solver._model_set_up = {}
         self._needs_ic_rebuild = False
 
     def build(self, initial_soc=None, direction=None, inputs=None):
@@ -525,6 +524,8 @@ class BaseSimulation:
                         pybamm.SolverWarning,
                         stacklevel=2,
                     )
+        # Drop the prior solution before allocating the new one.
+        self._solution = None
         self._solution = solver.solve(
             self._built_model,
             t_eval,

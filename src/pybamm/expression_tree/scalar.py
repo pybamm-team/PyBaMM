@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from typing import Literal
 
+import casadi
 import numpy as np
 import numpy.typing as npt
 import sympy
@@ -75,6 +76,10 @@ class Scalar(pybamm.Symbol):
     ):
         """See :meth:`pybamm.Symbol._base_evaluate()`."""
         return self._value
+
+    def _to_casadi(self, t, y, y_dot, inputs, casadi_symbols):
+        """See :meth:`pybamm.Symbol._to_casadi()`."""
+        return casadi.MX(self.evaluate(t, y, y_dot, inputs))
 
     def _jac(self, variable: pybamm.Variable) -> pybamm.Scalar:
         """See :meth:`pybamm.Symbol._jac()`."""

@@ -56,8 +56,8 @@ class AlgebraicSolver(pybamm.BaseSolver):
         self._algebraic_solver = True
         pybamm.citations.register("Virtanen2020")
 
-    def set_up_root_solver(self, model, inputs_dict, t_eval):
-        """Create and return a rootfinder object. Not used for `pybamm.AlgebraicSolver`.
+    def get_root_solver(self, model, inputs_dict, t_eval):
+        """Return a rootfinder object. Not used for `pybamm.AlgebraicSolver`.
 
         Parameters
         ----------
@@ -67,8 +67,13 @@ class AlgebraicSolver(pybamm.BaseSolver):
             Dictionary of inputs.
         t_eval : :class:`numpy.array`, size (k,)
             The times at which to compute the solution.
+
+        Returns
+        -------
+        None
+            Not used for `pybamm.AlgebraicSolver`.
         """
-        pass
+        return None
 
     @property
     def tol(self):

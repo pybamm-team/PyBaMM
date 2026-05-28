@@ -1,12 +1,87 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+# [v26.5.0](https://github.com/pybamm-team/PyBaMM/tree/v26.5.0) - 2026-05-27
+
+## Breaking changes
+
+- `Simulation.solve` now always clears `Simulation.solution` before solving, so a failed solve leaves it as `None` rather than retaining the previous result. ([#5528](https://github.com/pybamm-team/PyBaMM/pull/5528))
+
+## Bug fixes
+
+- Fixed `Simulation.solve` retaining the prior solution alongside the new one during repeated solves. ([#5528](https://github.com/pybamm-team/PyBaMM/pull/5528))
+- `IDAKLUSolver` no longer caches redundant serialised function bytes, reducing memory and pickle size. ([#5528](https://github.com/pybamm-team/PyBaMM/pull/5528))
+
 ## Features
 
+- Default `summary_variables` now include per-phase LAM%, capacity, total lithium, SEI loss, SEI-on-cracks loss, and lithium plating loss for composite electrodes; aggregate per-electrode entries are unchanged. ([#5516](https://github.com/pybamm-team/PyBaMM/pull/5516))
+- Added a `store_first_last` kwarg to solvers. When `True`, only the first and last sample of each integration window (one experiment step in `Simulation.solve`, or the full `[t_eval[0], t_eval[-1]]` window in `solve`) are stored. Composes with `output_variables` for memory-light ageing simulations whose post-processing only reads per-step first/last values. Has effect on solvers that support intra-solve interpolation (`IDAKLUSolver`); other solvers warn and no-op. Note: with this flag set, intra-step interpolation falls back to linear across the whole step, so it is not appropriate when post-processing queries an intra-step time. ([#5499](https://github.com/pybamm-team/PyBaMM/pull/5499))
+- Added `NonlinearSolver` as the default nonlinear solver, which replaces `CasadiAlgebraicSolver`. `IDAKLUSolver` now computes the initial conditions in C++ by default. ([#5459](https://github.com/pybamm-team/PyBaMM/pull/5459))
+
+# [v26.4.4](https://github.com/pybamm-team/PyBaMM/tree/v26.4.4) - 2026-05-22
+
+## Bug fixes
+
+- Fixed `BaseStep` hashing collapsing different control types (e.g. `CRate(4.2)` and `Voltage(4.2)`) with same value. ([#5529](https://github.com/pybamm-team/PyBaMM/pull/5529))
+- Fixed `ProcessedVariable.sensitivities` raising `KeyError` when `calculate_sensitivities` was passed a subset of inputs and a non-target input parameter (e.g. a `pybamm.InputParameter` used in an experiment step) appeared in the variable's expression tree. ([#5518](https://github.com/pybamm-team/PyBaMM/pull/5518))
+
+# [v26.4.3](https://github.com/pybamm-team/PyBaMM/tree/v26.4.3) - 2026-05-12
+
+## Bug fixes
+
+- Fixed the BPX 1.1 hysteresis fields being mishandled when importing a BPX file. `OCP (lithiation) [V]` / `OCP (delithiation) [V]` now produce `<Domain> electrode lithiation OCP [V]` / `<Domain> electrode delithiation OCP [V]` instead of being left under the literal BPX alias, and the scalar `OCP hysteresis decay constant` is expanded into both `<Domain> particle lithiation hysteresis decay rate` and `<Domain> particle delithiation hysteresis decay rate` (the two FunctionParameters that PyBaMM's Axen one-state hysteresis OCP submodel evaluates). The BPX `Initial hysteresis state: Positive electrode` / `Initial hysteresis state: Negative electrode` fields — previously dropped entirely — are extracted into the corresponding `[<Phase>: ]Initial hysteresis state in <domain> electrode` PyBaMM parameters, including the per-particle-phase dict form used by blended electrodes. The BPX-supplied `Total heat transfer coefficient [W.m-2.K-1]` is no longer silently clobbered back to `0`.
+
+## Breaking changes
+
+- `target_soc` is deprecated in `ParameterValues.create_from_bpx` and `create_from_bpx_obj`. Passing `target_soc` now emits a `DeprecationWarning`; pairing it with a BPX file that has blended electrodes raises `NotImplementedError` (previously the call silently logged a warning and left initial concentrations unset, which then broke downstream total-Li calculations). When `target_soc` is not passed, `create_from_bpx[_obj]` now always returns parameter values with initial concentrations at 100% SOC (negative phases at θ_max, positive phases at θ_min) for both non-blended and blended electrodes — the BPX file's `State.Initial state-of-charge` field is no longer auto-applied. Call `param.set_initial_state(...)` after creating the ParameterValues to use a different initial SOC.
+- `ProcessedVariableComputed.__init__` now defers the heavy `initialise_*` work (numpy concatenate/flatten, xarray `DataArray` build) until `entries` or `_xr_data_array` is actually read. On a 500-cycle SPM with `output_variables` set and `save_at_cycles=N`, solve wall time dropped from ~30 s to ~2.5 s (~12×); per-step `__init__` cost dropped from 47% of solve to 1.7%.
+- `IDAKLUSolver` now records `Solution.closest_event_idx` after a SUNDIALS root return, so `BaseSolver.get_termination_reason` can short-circuit instead of re-walking every TERMINATION event's symbolic expression on the Python side. On a 1000-cycle SPM with `output_variables` set, cumulative allocations dropped 25% (~445 MB) and wall time 16%; the eliminated path was hot in long event-terminated cycling experiments. ([#5502](https://github.com/pybamm-team/PyBaMM/pull/5502))
+- Fixed `Serialise.serialise_experiment` / `deserialise_experiment` dropping every constructor argument other than per-step `value` / `duration` / `terminations` / `temperature`. The top-level `period`, `temperature`, and `termination` arguments to `pybamm.Experiment` and the per-step `period`, `tags`, `description`, `start_time`, `direction`, and `skip_ok` arguments to `BaseStep` are now written by `to_config()` and parsed back by `from_config()`, so JSON round-tripped experiments preserve user intent. The `Resistance` step type was also missing from the deserialiser's step-type map and now round-trips correctly.
+- Fixed `Serialise.load_custom_model` reconstructing `Event.event_type` as the bare enum name string (e.g. `"TERMINATION"`) instead of the corresponding `EventType` member. The custom JSON encoder writes Enum values as their `.name`, but the loader was passing the string straight through to `pybamm.Event.__init__`, so models round-tripped through `to_json` / `from_json` carried string event types rather than `EventType` enum values. ([#5498](https://github.com/pybamm-team/PyBaMM/pull/5498))
+- Fixed `Serialise.serialise_solver` silently dropping `root_method` (and any other nested `BaseSolver` `__init__` argument). After construction, `root_method` is a `BaseSolver` instance rather than the original string, so it failed `json.dumps` and was omitted from the config — making the deserialised solver fall back to the default. `to_config()` / `from_config()` now recurse into nested solver values, preserving `root_method` and its tolerances across the round-trip. ([#5497](https://github.com/pybamm-team/PyBaMM/pull/5497))
+- Fixed `Serialise.serialise_experiment` silently dropping per-step `temperature` overrides. The JSON-config round-trip via `Experiment.to_config()` / `Experiment.from_config()` now preserves `temperature` for current, voltage, power, c-rate, and rest steps. ([#5496](https://github.com/pybamm-team/PyBaMM/pull/5496))
+- Fixed `Serialise._to_json_safe` coercing Python `bool` values to `0`/`1` ints because `bool` is a subclass of `int`. `IDAKLUSolver.to_config()` now emits its bool options (`compile`, `print_stats`, `silence_sundials_errors`, etc.) as JSON `true`/`false` so they round-trip through strict-bool deserialisers. ([#5495](https://github.com/pybamm-team/PyBaMM/pull/5495))
+
+# [v26.4.2](https://github.com/pybamm-team/PyBaMM/tree/v26.4.2) - 2026-05-05
+
+## Bug fixes
+
+- Fixed `EISSimulation.solve(initial_soc=..., inputs=...)` not forwarding `inputs` to `build`. ([#5487](https://github.com/pybamm-team/PyBaMM/pull/5487))
+- Fix a bug with EIS impedance calculation being incorrectly scaled by the nominal cell capacity. ([#5486](https://github.com/pybamm-team/PyBaMM/pull/5486))
+- Fixed `Serialise.load_custom_model` silently dropping to `pybamm.BaseModel` when the recorded base class cannot be imported. The loader now walks the recorded MRO to resolve to the closest importable ancestor, preserving subclass defaults such as `default_spatial_methods`. ([#5485](https://github.com/pybamm-team/PyBaMM/pull/5485))
+- Fixed legacy experiment stepping: the precalculated state mapper is evaluated with the *previous* step model's input layout, not the next model's. Fixes CasADi mapper shape errors when transitioning from a scalar `Current` step to a piecewise (array) `Current` step with additional `InputParameter`s. ([#5484](https://github.com/pybamm-team/PyBaMM/pull/5484))
+- Fixed cross-process pickle round-trip for `Solution`. ([#5480](https://github.com/pybamm-team/PyBaMM/pull/5480))
+
+# [v26.4.1](https://github.com/pybamm-team/PyBaMM/tree/v26.4.1) - 2026-04-24
+
+## Bug fixes
+
+- Fixed overly-aggressive removal of solver step caches. ([#5458](https://github.com/pybamm-team/PyBaMM/pull/5458))
+
+# [v26.4.0](https://github.com/pybamm-team/PyBaMM/tree/v26.4.0) - 2026-04-22
+
+## Features
+
+- Improved the codegen performance of averaging over spatial domains. ([#5448](https://github.com/pybamm-team/PyBaMM/pull/5448))
+- Added ahead-of-time CasADi compilation to `IDAKLUSolver` via the `"compile": True` option. ([#5448](https://github.com/pybamm-team/PyBaMM/pull/5448))
+- Adds EIS support via `EISSimulation` class with a restructure to the `Solution` class to support `EISSolution`. Includes examples and citation, with a ~5x solve improvement over pybamm-eis. ([#5433](https://github.com/pybamm-team/PyBaMM/pull/5433))
+- Refactors `Simulation` class into an inherited class from a `BaseSimulation`. `BaseSimulation` is used for all non-experiment based simulations, with the `Simulation` class adding experiment support. Includes a small code cleanup. ([#5430](https://github.com/pybamm-team/PyBaMM/pull/5430))
+- Improved pchip interpolation performance. ([#5436](https://github.com/pybamm-team/PyBaMM/pull/5436))
+- Refactored CasADi codegen conversion to use OOP dispatch. ([#5436](https://github.com/pybamm-team/PyBaMM/pull/5436))
 - Added a unified experiment-model path that reuses a single built model and solver across compatible experiment steps. ([#5422](https://github.com/pybamm-team/PyBaMM/pull/5422))
 
 ## Bug fixes
 
-## Breaking changes
+- Retry `CasadiAlgebraicSolver` when it terminates early due to `step_tol`. ([#5457](https://github.com/pybamm-team/PyBaMM/pull/5457))
+- Fixed `DomainError` when combining hysteresis, MSMR, or single open-circuit potential submodels with `"particle size": "distribution"` and a non-isothermal `thermal` option. The `equilibrium open-circuit potential [V]` and `OCP hysteresis [V]` variables are now correctly placed on the electrode domain (with parallel `... distribution [V]` variables for the size-resolved versions). ([#5451](https://github.com/pybamm-team/PyBaMM/pull/5451))
+- Fixed termination hashes causing duplicate experiment steps to be built. ([#5453](https://github.com/pybamm-team/PyBaMM/pull/5453))
+- Fixed a regression causing inaccurate initial guesses at experiment step transitions. ([#5452](https://github.com/pybamm-team/PyBaMM/pull/5452))
+
+# [v26.3.1](https://github.com/pybamm-team/PyBaMM/tree/v26.3.1) - 2026-04-10
+
+## Bug fixes
+
+- Fixed `load_custom_model` raising `ImportError` when the saved base class lives in a package not installed in the loading environment. The loader now falls back to `pybamm.BaseModel` with a warning. ([#5441](https://github.com/pybamm-team/PyBaMM/pull/5441))
+- Fixed serialisation bug in 2D finite volume discretisation. ([#5434](https://github.com/pybamm-team/PyBaMM/pull/5434))
 
 # [v26.3.0](https://github.com/pybamm-team/PyBaMM/tree/v26.3.0) - 2026-03-23
 

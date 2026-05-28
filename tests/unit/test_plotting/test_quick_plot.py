@@ -500,6 +500,71 @@ class TestQuickPlot:
         with pytest.raises(TypeError, match=r"QuickPlot requires at least 1"):
             pybamm.QuickPlot([])
 
+    def test_extrapolation_time_clipping(self):
+        # Guard: time extrapolation should clip to valid range (PR #4991)
+        model = pybamm.lithium_ion.SPMe()
+        sim = pybamm.Simulation(model)
+        sol = sim.solve([0, 100])
+        variable_name = "Electrolyte concentration [mol.m-3]"
+
+        quick_plot = pybamm.QuickPlot(sol, [variable_name])
+
+        quick_plot.plot(200)
+        line = quick_plot.plots[(variable_name,)][0][0]
+        spatial_vars = quick_plot.spatial_variable_dict[(variable_name,)]
+        expected = sol[variable_name](100, **spatial_vars)
+        np.testing.assert_allclose(line.get_ydata(), expected)
+
+        quick_plot.plot(-50)
+        line = quick_plot.plots[(variable_name,)][0][0]
+        expected = sol[variable_name](0, **spatial_vars)
+        np.testing.assert_allclose(line.get_ydata(), expected)
+
+        pybamm.close_plots()
+
+    def test_solution_starting_nonzero_time(self):
+        # Guard: solutions not starting at t=0 must work
+        model = pybamm.lithium_ion.SPMe()
+        sim = pybamm.Simulation(model)
+
+        sol = sim.solve([50, 150])
+        variable_name = "Electrolyte concentration [mol.m-3]"
+
+        quick_plot = pybamm.QuickPlot(sol, [variable_name])
+        quick_plot.plot(0)
+
+        assert quick_plot.min_t_unscaled == 50
+        assert quick_plot.max_t_unscaled == 150
+
+        line = quick_plot.plots[(variable_name,)][0][0]
+        spatial_vars = quick_plot.spatial_variable_dict[(variable_name,)]
+        expected = sol[variable_name](50, **spatial_vars)
+        np.testing.assert_allclose(line.get_ydata(), expected)
+
+        pybamm.close_plots()
+
+    def test_spatial_variable_interpolation_no_nan(self):
+        # Guard: spatial variables must interpolate without NaN (PR #4841)
+        model = pybamm.lithium_ion.SPMe()
+        sim = pybamm.Simulation(model)
+        sol = sim.solve([0, 100])
+        variable_name = "Electrolyte concentration [mol.m-3]"
+
+        quick_plot = pybamm.QuickPlot(sol, [variable_name])
+        quick_plot.plot(50)
+
+        plot_data = quick_plot.plots[(variable_name,)][0][0]
+        ydata = plot_data.get_ydata()
+        expected = sol[variable_name](
+            50, **quick_plot.spatial_variable_dict[(variable_name,)]
+        )
+
+        np.testing.assert_allclose(ydata, expected)
+        assert not np.any(np.isnan(ydata))
+        assert not np.any(np.isinf(ydata))
+
+        pybamm.close_plots()
+
     def test_model_with_inputs(self):
         parameter_values = pybamm.ParameterValues("Chen2020")
         model = pybamm.lithium_ion.SPMe()

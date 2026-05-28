@@ -29,10 +29,10 @@ class BaseSolver:
         The absolute tolerance for the solver (default is 1e-6).
     root_method : str or pybamm algebraic solver class, optional
         The method to use to find initial conditions (for DAE solvers).
-        If a solver class, must be an algebraic solver class.
-        If "casadi",
-        the solver uses casadi's Newton rootfinding algorithm to find initial
-        conditions. Otherwise, the solver uses 'scipy.optimize.root' with method
+        Default is "nonlinear_solver", which uses a custom Newton solver for consistent
+        initial conditions (recommended). If "casadi", the solver uses
+        casadi's Newton rootfinding algorithm as a fallback.
+        Otherwise, the solver uses 'scipy.optimize.root' with method
         specified by 'root_method' (e.g. "lm", "hybr", ...)
     root_tol : float, optional
         The tolerance for the initial-condition solver (default is 1e-6).
@@ -47,6 +47,17 @@ class BaseSolver:
     on_failure : str, optional
         What to do if a solver error flag occurs. Options are "warn", "error", or "ignore".
         Default is "error".
+    store_first_last : bool, optional
+        If True, only the first and last sample of each integration window are
+        stored (one experiment step in :meth:`pybamm.Simulation.solve`, or the
+        full ``[t_eval[0], t_eval[-1]]`` window in :meth:`solve`). Intended for
+        memory-light long experiments whose post-processing only reads per-step
+        first/last values. Only has effect on solvers that support intra-solve
+        interpolation (e.g. :class:`pybamm.IDAKLUSolver`); a warning is issued
+        otherwise. Note: when this flag is on, intra-step interpolation falls
+        back to linear across the whole step, so it is **not** appropriate when
+        post-processing queries a non-endpoint time within a step.
+        Default is False.
     """
 
     def __init__(
@@ -60,16 +71,23 @@ class BaseSolver:
         on_extrapolation=None,
         on_failure=None,
         output_variables=None,
+        store_first_last=False,
     ):
         self.method = method
         self.rtol = rtol
         self.atol = atol
         self.root_tol = root_tol
+        # Set ``on_failure`` before ``root_method`` so the setter can propagate
+        # the parent's failure policy down to the constructed root solver.
+        self.on_failure = on_failure or "error"
         self.root_method = root_method
         self.extrap_tol = extrap_tol or -1e-10
         self.output_variables = [] if output_variables is None else output_variables
+        if not isinstance(store_first_last, bool):
+            raise TypeError("store_first_last must be a bool")
+        self.store_first_last = store_first_last
+        self._warned_store_first_last_no_op = False
         self.on_extrapolation = on_extrapolation or "warn"
-        self.on_failure = on_failure or "error"
         self._model_set_up = {}
 
         # Defaults, can be overwritten by specific solver
@@ -151,13 +169,24 @@ class BaseSolver:
             raise ValueError("on_failure must be 'warn', 'error', or 'ignore'")
         self._on_failure = value
 
+        # Keep root solver's failure policy in sync with the parent's
+        root_method = getattr(self, "_root_method", None)
+        if isinstance(root_method, pybamm.BaseSolver):
+            root_method.on_failure = value
+
     @property
     def root_method(self):
         return self._root_method
 
     @root_method.setter
     def root_method(self, method):
-        if method == "casadi":
+        if method == "nonlinear_solver":
+            # use the tighter of the two tolerances
+            atol = min(self.root_tol, self.atol)
+            method = pybamm.NonlinearSolver(
+                atol=atol, rtol=self.rtol, on_failure=self.on_failure
+            )
+        elif method == "casadi":
             method = pybamm.CasadiAlgebraicSolver(self.root_tol)
         elif isinstance(method, str):
             method = pybamm.AlgebraicSolver(method, self.root_tol)
@@ -294,7 +323,8 @@ class BaseSolver:
         # Save CasADi functions for solvers that use CasADi
         # Note: when we pass to casadi the ode part of the problem must be in
         if isinstance(self.root_method, pybamm.CasadiAlgebraicSolver) or isinstance(
-            self, pybamm.CasadiSolver | pybamm.CasadiAlgebraicSolver
+            self,
+            pybamm.CasadiSolver | pybamm.CasadiAlgebraicSolver,
         ):
             # can use DAE solver to solve model with algebraic equations only
             if len(model.rhs) > 0:
@@ -317,9 +347,6 @@ class BaseSolver:
             model.casadi_sensitivities = jacp_rhs_algebraic
             model.casadi_sensitivities_rhs = jacp_rhs
             model.casadi_sensitivities_algebraic = jacp_algebraic
-
-        if getattr(self.root_method, "algebraic_solver", False):
-            self.root_method.set_up_root_solver(model, inputs[0], t_eval)
 
         # if output_variables specified then convert functions to casadi
         # expressions for evaluation within the respective solver
@@ -897,7 +924,11 @@ class BaseSolver:
         if (np.diff(t_eval) < 0).any():
             raise pybamm.SolverError("t_eval must increase monotonically")
 
-        t_interp = self.process_t_interp(t_interp)
+        endpoints = self._store_first_last_endpoints(t_eval)
+        if endpoints is not None:
+            t_eval = endpoints
+
+        t_interp = self.process_t_interp(t_interp, t_eval=t_eval)
 
         # Set up inputs
         if isinstance(inputs, (dict, pybamm.ParameterValues)):
@@ -968,7 +999,7 @@ class BaseSolver:
 
         # Check initial conditions don't violate events
         for y0, inpts in zip(model.y0_list, model_inputs_list, strict=True):
-            self._check_events_with_initialization(t_eval, model, y0, inpts)
+            self._check_event_violation_on_initialisation(t_eval, model, y0, inpts)
 
         # Process discontinuities
         t_eval_info = [
@@ -1066,9 +1097,11 @@ class BaseSolver:
             )
 
         # Raise error if solutions[0] only contains one timestep (except for algebraic
-        # solvers, where we may only expect one time in the solution)
+        # solvers, where we may only expect one time in the solution, or failure
+        # solutions where we may only have the initial state)
         if (
             self._algebraic_solver is False
+            and solutions[0].termination != "failure"
             and len(solutions[0].all_ts) == 1
             and len(solutions[0].all_ts[0]) == 1
         ):
@@ -1107,6 +1140,16 @@ class BaseSolver:
         idx_start = np.searchsorted(t_discon_unique, t_eval[0], side="right")
         idx_end = np.searchsorted(t_discon_unique, t_eval[-1], side="left")
         return t_discon_unique[idx_start:idx_end]
+
+    def get_root_solver(self, model, inputs_dict, t_eval):
+        if not model.algebraic_root_solver:
+            model.algebraic_root_solver = self._set_up_root_solver(
+                model, inputs_dict, t_eval
+            )
+        return model.algebraic_root_solver
+
+    def _set_up_root_solver(self, model, inputs_dict, t_eval):
+        raise NotImplementedError
 
     def _get_discontinuity_start_end_indices(self, model, y0, inputs, t_eval):
         if self.supports_t_eval_discontinuities and model.t_discon_constant_symbols:
@@ -1153,8 +1196,13 @@ class BaseSolver:
 
         return start_indices, end_indices, t_eval
 
-    @staticmethod
-    def _check_events_with_initialization(t_eval, model, y0, inputs_dict):
+    def _check_event_violation_on_initialisation(self, *args, **kwargs):
+        self._check_event_violation(*args, **kwargs)
+
+    def _check_event_violation_post_solve(self, *args, **kwargs):
+        self._check_event_violation(*args, **kwargs)
+
+    def _check_event_violation(self, t_eval, model, y0, inputs_dict):
         num_terminate_events = len(model.terminate_events_eval)
         if num_terminate_events == 0:
             return
@@ -1235,7 +1283,28 @@ class BaseSolver:
         ]
         return concatenated_initial_conditions
 
-    def process_t_interp(self, t_interp):
+    def _store_first_last_endpoints(self, t_eval):
+        if not self.store_first_last:
+            return None
+        if not self.supports_interp:
+            if not self._warned_store_first_last_no_op:
+                warnings.warn(
+                    f"store_first_last has no effect on {self.name} "
+                    "(no support for intra-solve interpolation); ignoring.",
+                    pybamm.SolverWarning,
+                    stacklevel=3,
+                )
+                self._warned_store_first_last_no_op = True
+            return None
+        if t_eval is None or len(t_eval) < 2:
+            return None
+        return np.array([t_eval[0], t_eval[-1]], dtype=float)
+
+    def process_t_interp(self, t_interp, t_eval=None):
+        endpoints = self._store_first_last_endpoints(t_eval)
+        if endpoints is not None:
+            return endpoints
+
         # set a variable for this
         no_interp = (not self.supports_interp) and (
             t_interp is not None and len(t_interp) != 0
@@ -1357,7 +1426,7 @@ class BaseSolver:
         else:
             pass
 
-        t_interp = self.process_t_interp(t_interp)
+        t_interp = self.process_t_interp(t_interp, t_eval=t_eval)
 
         t_start = old_solution.t[-1]
         t_eval = t_start + t_eval
@@ -1429,7 +1498,22 @@ class BaseSolver:
                 last_state = old_solution.last_state
                 y_from = last_state.all_ys[0]
                 mapper_func, _mapper_jac, _mapper_jacp = state_mapper
-                p_casadi_stacked = casadi.vertcat(*[p for p in model_inputs.values()])
+                # Mapper CasADi graph is compiled using previous_model.input_parameters
+                # (see Simulation._build_experiment_state_mappers); stack p in that
+                # layout, not the next model's model_inputs.
+                previous_model = old_solution.all_models[-1]
+                # Legacy experiment solves often omit temperature in `inputs`
+                # (include_temperature=False). Padding-rest models still list ambient
+                # as an input parameter; match compile-time defaults from
+                # Simulation._build_experiment_state_mappers (inputs.get(name, 0)).
+                mapper_p_inputs = dict(inputs)
+                for name in sorted(ip.name for ip in previous_model.input_parameters):
+                    if name not in mapper_p_inputs or mapper_p_inputs[name] is None:
+                        mapper_p_inputs[name] = inputs.get(name, 0)
+                mapper_inputs = BaseSolver._set_up_model_inputs(
+                    previous_model, mapper_p_inputs
+                )
+                p_casadi_stacked = casadi.vertcat(*[p for p in mapper_inputs.values()])
 
                 model.y0_list = [
                     mapper_func(
@@ -1459,7 +1543,9 @@ class BaseSolver:
         self._set_consistent_initialization(model, t_start_shifted, [model_inputs])
 
         # Check consistent initialization doesn't violate events
-        self._check_events_with_initialization(t_eval, model, model.y0, model_inputs)
+        self._check_event_violation_on_initialisation(
+            t_eval, model, model.y0, model_inputs
+        )
 
         # Step
         pybamm.logger.verbose(f"Stepping for {t_start_shifted:.0f} < t < {t_end:.0f}")
@@ -1563,6 +1649,7 @@ class BaseSolver:
                 solution.y_event,
                 solution.termination,
                 variables_returned=solution.variables_returned,
+                options=solution.user_options,
             )
             event_sol.solve_time = 0
             event_sol.integration_time = 0

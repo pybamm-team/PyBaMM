@@ -81,7 +81,7 @@ class TestThermal:
         t_eval = [0, 3500 / 6]
         t_interp = np.linspace(t_eval[0], t_eval[-1], 100)
         for model_name, model in models.items():
-            solver = pybamm.IDAKLUSolver(rtol=1e-8, atol=1e-12)
+            solver = pybamm.IDAKLUSolver()
             sim = pybamm.Simulation(
                 model,
                 var_pts=var_pts,

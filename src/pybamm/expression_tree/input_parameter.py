@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import numbers
 
+import casadi
 import numpy as np
 import numpy.typing as npt
 import scipy.sparse
@@ -78,6 +79,10 @@ class InputParameter(pybamm.Symbol):
             return np.nan
         else:
             return np.nan * np.ones((self._expected_size, 1))
+
+    def _to_casadi(self, t, y, y_dot, inputs, casadi_symbols):
+        """See :meth:`pybamm.Symbol._to_casadi()`."""
+        return casadi.MX(self.evaluate(t, y, y_dot, inputs))
 
     def _jac(self, variable: pybamm.StateVector) -> pybamm.Matrix:
         """See :meth:`pybamm.Symbol._jac()`."""

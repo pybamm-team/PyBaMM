@@ -373,6 +373,53 @@ class Serialise:
             raise TypeError(f"Object of type {type(obj)} is not JSON serializable.")
 
     @staticmethod
+    def _import_dotted_class(dotted_path: str):
+        """Import ``module.ClassName`` and return the class."""
+        if "." not in dotted_path:
+            raise ValueError(f"Expected 'module.ClassName' but got {dotted_path!r}")
+        module_name, class_name = dotted_path.rsplit(".", 1)
+        module = importlib.import_module(module_name)
+        return getattr(module, class_name)
+
+    @staticmethod
+    def _resolve_base_class(base_class: str, base_class_mro: list[str]):
+        """Resolve a serialised ``base_class`` to a Python class.
+
+        Tries ``base_class`` first, then each entry in ``base_class_mro`` (the
+        ancestor chain recorded at serialise time). Falls back to
+        ``pybamm.BaseModel`` only if nothing in the MRO is importable, so a
+        custom subclass loaded in an environment without its defining package
+        is still reconstructed against the closest pybamm-provided ancestor.
+        """
+        try:
+            return Serialise._import_dotted_class(base_class)
+        except (ModuleNotFoundError, AttributeError, ValueError) as primary_err:
+            for ancestor in base_class_mro:
+                if ancestor == base_class:
+                    continue
+                try:
+                    resolved = Serialise._import_dotted_class(ancestor)
+                except (ModuleNotFoundError, AttributeError):
+                    # ValueError is left to propagate: MRO entries are produced
+                    # by ``serialise_custom_model`` and are always well-formed.
+                    continue
+                warnings.warn(
+                    f"Could not import base class '{base_class}': "
+                    f"{primary_err}. Falling back to ancestor "
+                    f"'{ancestor}' from the recorded MRO.",
+                    stacklevel=3,
+                )
+                return resolved
+            warnings.warn(
+                f"Could not import base class '{base_class}': "
+                f"{primary_err}. Falling back to pybamm.BaseModel; the loaded "
+                "model will contain the symbolic equations but not any "
+                "subclass-specific Python behaviour.",
+                stacklevel=3,
+            )
+            return pybamm.BaseModel
+
+    @staticmethod
     def serialise_custom_model(model: pybamm.BaseModel, compress: bool = False) -> dict:
         """
         Converts a custom (non-discretised) PyBaMM model to a JSON-serialisable dictionary.
@@ -425,9 +472,16 @@ class Serialise:
         else:
             base_cls_str = f"{base_cls.__module__}.{base_cls.__name__}"
 
+        base_class_mro = [
+            f"{ancestor.__module__}.{ancestor.__name__}"
+            for ancestor in base_cls.__mro__
+            if ancestor is not object and ancestor.__module__ != "builtins"
+        ]
+
         model_content = {
             "name": getattr(model, "name", "unnamed_model"),
             "base_class": base_cls_str,
+            "base_class_mro": base_class_mro,
             "options": getattr(model, "options", {}),
             "rhs": [
                 (
@@ -1362,21 +1416,14 @@ class Serialise:
         if missing:
             raise KeyError(f"Missing required model sections: {missing}")
 
-        battery_model = model_data.get("base_class")
-        if not battery_model or battery_model.strip() == "pybamm.BaseModel":
+        battery_model = (model_data.get("base_class") or "").strip()
+        if battery_model in ("", "pybamm.BaseModel", "builtins.object"):
             base_cls = pybamm.BaseModel
         else:
-            module_name, class_name = battery_model.rsplit(".", 1)
-            try:
-                module = importlib.import_module(module_name)
-                base_cls = getattr(module, class_name)
-            except (ModuleNotFoundError, AttributeError) as e:
-                if battery_model == "builtins.object":
-                    base_cls = pybamm.BaseModel
-                else:
-                    raise ImportError(
-                        f"Could not import base class '{battery_model}': {e}"
-                    ) from e
+            base_cls = Serialise._resolve_base_class(
+                battery_model,
+                model_data.get("base_class_mro") or [],
+            )
 
         model = base_cls()
         model.name = model_data["name"]
@@ -1462,6 +1509,9 @@ class Serialise:
                 name = event_data["name"]
                 expr = convert_symbol_from_json(event_data["expression"])
                 event_type = event_data["event_type"]
+                # ``_json_encoder`` stores Enums as their ``.name``.
+                if isinstance(event_type, str):
+                    event_type = pybamm.EventType[event_type]
                 model.events.append(pybamm.Event(name, expr, event_type))
             except Exception as e:
                 raise ValueError(
@@ -1721,14 +1771,14 @@ class Serialise:
 
         Handles numpy scalars, arrays, booleans, and nested dicts/lists.
         """
+        if isinstance(value, (np.bool_, bool)):
+            return bool(value)
         if isinstance(value, (np.floating, float)):
             return float(value)
         if isinstance(value, (np.integer, int)):
             return int(value)
         if isinstance(value, np.ndarray):
             return value.tolist()
-        if isinstance(value, np.bool_):
-            return bool(value)
         if isinstance(value, dict):
             return {k: Serialise._to_json_safe(v) for k, v in value.items()}
         if isinstance(value, list):
@@ -1751,6 +1801,13 @@ class Serialise:
         -------
         dict
             Config dict with key ``"cycles"``.
+
+        Raises
+        ------
+        NotImplementedError
+            If a step uses a custom callable (``CustomTermination``,
+            ``CustomStepExplicit``, ``CustomStepImplicit``); these have no
+            JSON representation.
         """
         step_type_map = {
             "Current": "current",
@@ -1758,6 +1815,7 @@ class Serialise:
             "Voltage": "voltage",
             "Power": "power",
             "CRate": "c-rate",
+            "Resistance": "resistance",
         }
         termination_type_map = {
             "VoltageTermination": "voltage",
@@ -1766,15 +1824,35 @@ class Serialise:
             "CRateTermination": "c-rate",
         }
 
+        # Top-level defaults; per-step values are emitted only when they differ.
+        experiment_period = getattr(experiment, "period", None)
+        experiment_temperature = getattr(experiment, "temperature", None)
+
         def _serialise_step(step):
             step_class_name = step.__class__.__name__
-            step_type = step_type_map.get(step_class_name, step_class_name.lower())
+            if step_class_name in ("CustomStepExplicit", "CustomStepImplicit"):
+                raise NotImplementedError(
+                    f"{step_class_name} cannot be serialised: it carries a "
+                    "user-supplied Python callable that has no JSON "
+                    "representation. Serialisation of custom steps is not "
+                    "supported."
+                )
+            if step_class_name not in step_type_map:
+                raise NotImplementedError(
+                    f"Cannot serialise step of type {step_class_name!r}: only "
+                    f"the built-in step classes "
+                    f"({sorted(step_type_map)!r}) are supported."
+                )
+            step_type = step_type_map[step_class_name]
 
             # Current with value 0 is a rest step
             if step_class_name == "Current" and step.value == 0:
                 step_type = "rest"
 
-            step_config = {"type": step_type, "duration": step.duration}
+            step_config: dict = {"type": step_type}
+            # Use ``input_duration`` so ``uses_default_duration`` round-trips.
+            if step.input_duration is not None:
+                step_config["duration"] = step.input_duration
 
             if step_type != "rest":
                 if step.is_drive_cycle:
@@ -1795,14 +1873,53 @@ class Serialise:
                 terminations = []
                 for term in step.termination:
                     term_class_name = term.__class__.__name__
-                    term_type = termination_type_map.get(
-                        term_class_name, term_class_name.lower()
-                    )
+                    if term_class_name == "CustomTermination":
+                        raise NotImplementedError(
+                            "CustomTermination cannot be serialised: it "
+                            "carries a user-supplied Python callable "
+                            "(``event_function``) that has no JSON "
+                            "representation."
+                        )
+                    if term_class_name not in termination_type_map:
+                        raise NotImplementedError(
+                            f"Cannot serialise termination of type "
+                            f"{term_class_name!r}: only the built-in "
+                            f"termination classes "
+                            f"({sorted(termination_type_map)!r}) are "
+                            f"supported."
+                        )
+                    term_type = termination_type_map[term_class_name]
                     term_config = {"type": term_type, "value": term.value}
                     if hasattr(term, "operator") and term.operator:
                         term_config["operator"] = term.operator
                     terminations.append(term_config)
                 step_config["terminations"] = terminations
+
+            field_defaults = {
+                "temperature": experiment_temperature,
+                "period": experiment_period,
+            }
+            for field, default in field_defaults.items():
+                value = getattr(step, field, None)
+                if value is not None and value != default:
+                    step_config[field] = value
+            tags = getattr(step, "tags", None)
+            if tags:
+                step_config["tags"] = tags
+            description = getattr(step, "description", None)
+            if description is not None:
+                step_config["description"] = description
+            # Skip ``direction`` when the loader will recompute it from the value sign.
+            direction = getattr(step, "direction", None)
+            if direction is not None and not getattr(
+                step, "calculate_charge_or_discharge", False
+            ):
+                step_config["direction"] = direction
+            start_time = getattr(step, "start_time", None)
+            if isinstance(start_time, datetime):
+                step_config["start_time"] = start_time.isoformat()
+            if getattr(step, "skip_ok", True) is False:
+                step_config["skip_ok"] = False
 
             return step_config
 
@@ -1814,7 +1931,16 @@ class Serialise:
             cycles_config.append(steps_config[step_idx : step_idx + cycle_length])
             step_idx += cycle_length
 
-        return {"cycles": cycles_config}
+        config: dict = {"cycles": cycles_config}
+        for field in ("period", "temperature"):
+            value = getattr(experiment, field, None)
+            if value is not None:
+                config[field] = value
+        # Store the raw input so a single string isn't split into chars on reload.
+        termination = getattr(experiment, "termination_string", None)
+        if termination is not None:
+            config["termination"] = termination
+        return config
 
     @staticmethod
     def deserialise_experiment(data: dict):
@@ -1838,6 +1964,7 @@ class Serialise:
             "power": pybamm.step.power,
             "c-rate": pybamm.step.c_rate,
             "rest": pybamm.step.rest,
+            "resistance": pybamm.step.resistance,
         }
         term_class_map = {
             "voltage": pybamm.step.VoltageTermination,
@@ -1882,26 +2009,66 @@ class Serialise:
             else:
                 raise ValueError(f"Value is required for {step_type!r} steps.")
 
-            duration = float(step_dict.get("duration", 86400))
+            # Missing ``duration`` round-trips as ``None`` to preserve
+            # ``uses_default_duration`` (used by infeasibility handling).
+            duration_kwargs = {}
+            if "duration" in step_dict and step_dict["duration"] is not None:
+                duration_kwargs["duration"] = step_dict["duration"]
             terminations = None
             if step_dict.get("terminations"):
                 terminations = [
                     _parse_termination(t) for t in step_dict["terminations"]
                 ]
 
+            extra_kwargs = {}
+            for field in (
+                "temperature",
+                "period",
+                "tags",
+                "description",
+                "direction",
+            ):
+                if step_dict.get(field) is not None:
+                    extra_kwargs[field] = step_dict[field]
+            if step_dict.get("start_time") is not None:
+                extra_kwargs["start_time"] = datetime.fromisoformat(
+                    step_dict["start_time"]
+                )
+            if "skip_ok" in step_dict:
+                # ``bool("False")`` is ``True``; reject non-bool input.
+                skip_ok_value = step_dict["skip_ok"]
+                if not isinstance(skip_ok_value, bool):
+                    raise TypeError(
+                        f"skip_ok must be a bool, got "
+                        f"{type(skip_ok_value).__name__}: {skip_ok_value!r}."
+                    )
+                extra_kwargs["skip_ok"] = skip_ok_value
+
             if step_type == "rest":
-                return step_func(duration=duration, termination=terminations)
-            return step_func(value, duration=duration, termination=terminations)
+                return step_func(
+                    termination=terminations, **duration_kwargs, **extra_kwargs
+                )
+            return step_func(
+                value,
+                termination=terminations,
+                **duration_kwargs,
+                **extra_kwargs,
+            )
+
+        experiment_kwargs = {}
+        for field in ("period", "temperature", "termination"):
+            if data.get(field) is not None:
+                experiment_kwargs[field] = data[field]
 
         if "cycles" in data and data["cycles"] is not None:
             processed_cycles = []
             for cycle_steps in data["cycles"]:
                 processed_cycle = tuple(_parse_step(s) for s in cycle_steps)
                 processed_cycles.append(processed_cycle)
-            return pybamm.Experiment(processed_cycles)
+            return pybamm.Experiment(processed_cycles, **experiment_kwargs)
         elif "steps" in data and data["steps"] is not None:
             processed_steps = [_parse_step(s) for s in data["steps"]]
-            return pybamm.Experiment(processed_steps)
+            return pybamm.Experiment(processed_steps, **experiment_kwargs)
         else:
             raise ValueError("Experiment config must have 'steps' or 'cycles'.")
 
@@ -1949,6 +2116,12 @@ class Serialise:
                     break
 
             if not found:
+                continue
+
+            # ``root_method`` strings are resolved into ``BaseSolver`` instances
+            # by ``BaseSolver.__init__``; recurse so they survive JSON.
+            if isinstance(value, pybamm.BaseSolver):
+                config[param_name] = Serialise.serialise_solver(value)
                 continue
 
             value = Serialise._to_json_safe(value)
@@ -2000,6 +2173,16 @@ class Serialise:
                 )
             sub_solvers = [Serialise.deserialise_solver(c) for c in sub_solvers_config]
             return solver_class(sub_solvers)
+
+        # Rebuild any nested solver dicts (mirror of the recursion in
+        # ``serialise_solver``) before passing them to the constructor.
+        for k, v in list(data.items()):
+            if isinstance(v, dict) and isinstance(v.get("type"), str):
+                nested_cls = getattr(pybamm, v["type"], None)
+                if isinstance(nested_cls, type) and issubclass(
+                    nested_cls, pybamm.BaseSolver
+                ):
+                    data[k] = Serialise.deserialise_solver(v)
 
         return solver_class(**data)
 

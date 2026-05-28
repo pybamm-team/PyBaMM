@@ -138,6 +138,45 @@ def bpx_to_param_dict(bpx: BPX) -> dict:
         bpx.parameterisation.separator, pybamm_dict, experiment
     )
 
+    # Extract parameters from BPX State section (BPX 1.1.0+)
+    if bpx.state is not None:
+        # Initial conditions
+        ic = bpx.state.initial_conditions
+        pybamm_dict["Initial concentration in electrolyte [mol.m-3]"] = (
+            ic.initial_electrolyte_concentration
+        )
+        pybamm_dict["Initial temperature [K]"] = ic.initial_temperature
+        for domain_str, bpx_value, bpx_electrode in (
+            (
+                "negative",
+                ic.initial_hysteresis_state_negative,
+                bpx.parameterisation.negative_electrode,
+            ),
+            (
+                "positive",
+                ic.initial_hysteresis_state_positive,
+                bpx.parameterisation.positive_electrode,
+            ),
+        ):
+            target = f"Initial hysteresis state in {domain_str} electrode"
+            if not isinstance(bpx_value, dict):
+                pybamm_dict[target] = bpx_value
+                continue
+            phase_prefixes = domain_phases[f"{domain_str} electrode"]
+            if phase_prefixes == [""]:
+                continue
+            for bpx_phase, pybamm_prefix in zip(
+                bpx_electrode.particle.keys(), phase_prefixes, strict=True
+            ):
+                if bpx_phase in bpx_value:
+                    pybamm_dict[f"{pybamm_prefix}{target}"] = bpx_value[bpx_phase]
+        # Thermal environment
+        te = bpx.state.thermal_environment
+        pybamm_dict["Ambient temperature [K]"] = te.ambient_temperature
+        pybamm_dict["Total heat transfer coefficient [W.m-2.K-1]"] = (
+            te.heat_transfer_coefficient
+        )
+
     # set a default current function and typical current based on the nominal capacity
     # i.e. a default C-rate of 1
     pybamm_dict["Current function [A]"] = pybamm_dict["Nominal cell capacity [A.h]"]
@@ -208,8 +247,8 @@ def bpx_to_param_dict(bpx: BPX) -> dict:
         pybamm_dict[domain.pre_name + "thickness [m]"] = 0
         pybamm_dict[domain.pre_name + "conductivity [S.m-1]"] = 4e7
 
-    # add a default heat transfer coefficient
-    pybamm_dict.update({"Total heat transfer coefficient [W.m-2.K-1]": 0})
+    # setdefault, not update — preserve any BPX State.thermal_environment value
+    pybamm_dict.setdefault("Total heat transfer coefficient [W.m-2.K-1]", 0)
 
     # transport efficiency
     # Compute Bruggeman coefficient from BPX-specified porosity and transport efficiency
@@ -409,32 +448,58 @@ def bpx_to_param_dict(bpx: BPX) -> dict:
 
 def _get_pybamm_name(pybamm_name, domain):
     """
-    Process pybamm name to include domain name and handle special cases
+    Map a BPX field alias to one or more PyBaMM parameter names.
+
+    Returns a list. Most BPX fields map 1:1; ``"OCP hysteresis decay constant"``
+    is the exception and fans out to two PyBaMM parameters with the same value:
+
+      * ``<Domain> particle lithiation hysteresis decay rate``
+      * ``<Domain> particle delithiation hysteresis decay rate``
     """
     pybamm_name_lower = pybamm_name[:1].lower() + pybamm_name[1:]
     if pybamm_name.startswith("Initial concentration") or pybamm_name.startswith(
         "Maximum concentration"
     ):
         init_len = len("Initial concentration ")
-        pybamm_name = (
+        return [
             pybamm_name[:init_len]
             + "in "
             + domain.pre_name.lower()
             + pybamm_name[init_len:]
+        ]
+    if pybamm_name.startswith("Particle radius"):
+        return [domain.short_pre_name + pybamm_name_lower]
+    if pybamm_name in _BPX_OCP_HYSTERESIS_RENAMES:
+        return [domain.pre_name + _BPX_OCP_HYSTERESIS_RENAMES[pybamm_name]]
+    if pybamm_name == "OCP hysteresis decay constant":
+        particle = (
+            negative_particle
+            if domain.name == "negative electrode"
+            else positive_particle
         )
-    elif pybamm_name.startswith("Particle radius"):
-        pybamm_name = domain.short_pre_name + pybamm_name_lower
-    elif pybamm_name.startswith("OCP"):
-        pybamm_name = domain.pre_name + pybamm_name
-    elif pybamm_name.startswith("Entropic change"):
-        pybamm_name = domain.pre_name + pybamm_name.replace(
-            "Entropic change coefficient", "OCP entropic change"
-        )
-    elif pybamm_name.startswith("Cation transference number"):
-        pybamm_name = pybamm_name
-    elif domain.pre_name != "":
-        pybamm_name = domain.pre_name + pybamm_name_lower
-    return pybamm_name
+        return [
+            particle.pre_name + "lithiation hysteresis decay rate",
+            particle.pre_name + "delithiation hysteresis decay rate",
+        ]
+    if pybamm_name.startswith("OCP"):
+        return [domain.pre_name + pybamm_name]
+    if pybamm_name.startswith("Entropic change"):
+        return [
+            domain.pre_name
+            + pybamm_name.replace("Entropic change coefficient", "OCP entropic change")
+        ]
+    if pybamm_name.startswith("Cation transference number"):
+        return [pybamm_name]
+    if domain.pre_name != "":
+        return [domain.pre_name + pybamm_name_lower]
+    return [pybamm_name]
+
+
+_BPX_OCP_HYSTERESIS_RENAMES = {
+    "OCP (lithiation) [V]": "lithiation OCP [V]",
+    "OCP (delithiation) [V]": "delithiation OCP [V]",
+}
+_OPTIONAL_HYSTERESIS_FIELDS = {"ocp_lith", "ocp_delith", "gamma_hys"}
 
 
 def _bpx_to_domain_param_dict(instance: BPX, pybamm_dict: dict, domain: Domain) -> dict:
@@ -457,14 +522,18 @@ def _bpx_to_domain_param_dict(instance: BPX, pybamm_dict: dict, domain: Domain) 
                 # Loop over fields in phase instance and add to pybamm dictionary
                 for name_to_add, field_to_add in phase_instance.model_fields.items():
                     value = getattr(phase_instance, name_to_add)
-                    pybamm_name = PHASE_NAMES[i] + _get_pybamm_name(
-                        field_to_add.alias, domain
-                    )
+                    if value is None and name_to_add in _OPTIONAL_HYSTERESIS_FIELDS:
+                        continue
+                    pybamm_names = _get_pybamm_name(field_to_add.alias, domain)
                     value = process_float_function_table(value, name_to_add)
-                    pybamm_dict[pybamm_name] = value
+                    for pybamm_name in pybamm_names:
+                        pybamm_dict[PHASE_NAMES[i] + pybamm_name] = value
         # Handle other fields, which correspond directly to parameters
         else:
-            pybamm_name = _get_pybamm_name(field.alias, domain)
+            if value is None and name in _OPTIONAL_HYSTERESIS_FIELDS:
+                continue
+            pybamm_names = _get_pybamm_name(field.alias, domain)
             value = process_float_function_table(value, name)
-            pybamm_dict[pybamm_name] = value
+            for pybamm_name in pybamm_names:
+                pybamm_dict[pybamm_name] = value
     return pybamm_dict

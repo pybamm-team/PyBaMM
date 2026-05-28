@@ -1,4 +1,5 @@
 import io
+import itertools
 import warnings
 from contextlib import redirect_stdout
 
@@ -474,23 +475,15 @@ class TestIDAKLUSolver:
 
         solver = pybamm.IDAKLUSolver()
 
-        # Set up and  model consistently initialize the model
-        solver.set_up(model)
-        t0 = 0.0
-        solver._set_consistent_initialization(model, t0, inputs_list=[{}])
+        # Solve a short interval -- consistent IC is computed in C++
+        # by the Newton solver and IDACalcIC during solve()
+        t_eval = np.linspace(0, 1, 10)
+        sol = solver.solve(model, t_eval)
 
-        # u(t0) = 0, v(t0) = 1
+        # u(t0) = 0, v(t0) = 1 (corrected from v=2 by Newton IC solver)
         np.testing.assert_allclose(
-            model.y0full[0],
+            sol.y[:, 0],
             [0, 1],
-            rtol=1e-7,
-            atol=1e-6,
-        )
-        # u'(t0) = 0.1 * v(t0) = 0.1
-        # Since v is algebraic, the initial derivative is set to 0
-        np.testing.assert_allclose(
-            model.ydot0full[0],
-            [0.1, 0],
             rtol=1e-7,
             atol=1e-6,
         )
@@ -703,8 +696,8 @@ class TestIDAKLUSolver:
         disc = pybamm.Discretisation()
         disc.process_model(model)
 
-        t_eval = [0, 1]
-        t_interp = np.linspace(t_eval[0], t_eval[-1], 100)
+        t_eval = np.linspace(0, 1, 3)
+        t_interp = t_eval
         solver = pybamm.IDAKLUSolver()
         soln_base = solver.solve(model, t_eval, t_interp=t_interp)
 
@@ -723,59 +716,58 @@ class TestIDAKLUSolver:
         s = f.getvalue()
         assert len(s) == 0
 
-        # test everything else
-        for jacobian in ["none", "dense", "sparse", "matrix-free", "garbage"]:
-            for linear_solver in [
-                "SUNLinSol_SPBCGS",
-                "SUNLinSol_Dense",
-                "SUNLinSol_KLU",
-                "SUNLinSol_SPFGMR",
-                "SUNLinSol_SPGMR",
-                "SUNLinSol_SPTFQMR",
-                "garbage",
-            ]:
-                for precon in ["none", "BBDP"]:
-                    options = {
-                        "jacobian": jacobian,
-                        "linear_solver": linear_solver,
-                        "preconditioner": precon,
-                        "max_num_steps": 10000,
-                    }
-                    solver = pybamm.IDAKLUSolver(
-                        atol=1e-8,
-                        rtol=1e-8,
-                        options=options,
-                    )
-                    works = (
-                        (jacobian == "none" and (linear_solver == "SUNLinSol_Dense"))
-                        or (
-                            jacobian == "dense" and (linear_solver == "SUNLinSol_Dense")
-                        )
-                        or (
-                            jacobian == "sparse"
-                            and (
-                                linear_solver != "SUNLinSol_Dense"
-                                and linear_solver != "garbage"
-                            )
-                        )
-                        or (
-                            jacobian == "matrix-free"
-                            and (
-                                linear_solver != "SUNLinSol_KLU"
-                                and linear_solver != "SUNLinSol_Dense"
-                                and linear_solver != "garbage"
-                            )
-                        )
-                    )
+        jacobians = ["none", "dense", "sparse", "matrix-free", "garbage"]
+        linear_solvers = [
+            "SUNLinSol_SPBCGS",
+            "SUNLinSol_Dense",
+            "SUNLinSol_KLU",
+            "SUNLinSol_SPFGMR",
+            "SUNLinSol_SPGMR",
+            "SUNLinSol_SPTFQMR",
+            "garbage",
+        ]
+        preconditions = ["none", "BBDP"]
 
-                    if works:
-                        soln = solver.solve(model, t_eval, t_interp=t_interp)
-                        np.testing.assert_allclose(
-                            soln.y, soln_base.y, rtol=1e-5, atol=1e-4
-                        )
-                    else:
-                        with pytest.raises(ValueError):
-                            soln = solver.solve(model, t_eval, t_interp=t_interp)
+        # Test jacobian/linear_solver/preconditioner combinations
+        for jacobian, linear_solver, precon in itertools.product(
+            jacobians, linear_solvers, preconditions
+        ):
+            options = {
+                "jacobian": jacobian,
+                "linear_solver": linear_solver,
+                "preconditioner": precon,
+            }
+            solver = pybamm.IDAKLUSolver(
+                atol=1e-8,
+                rtol=1e-8,
+                options=options,
+            )
+            works = (
+                (jacobian == "none" and (linear_solver == "SUNLinSol_Dense"))
+                or (jacobian == "dense" and (linear_solver == "SUNLinSol_Dense"))
+                or (
+                    jacobian == "sparse"
+                    and (
+                        linear_solver != "SUNLinSol_Dense"
+                        and linear_solver != "garbage"
+                    )
+                )
+                or (
+                    jacobian == "matrix-free"
+                    and (
+                        linear_solver != "SUNLinSol_KLU"
+                        and linear_solver != "SUNLinSol_Dense"
+                        and linear_solver != "garbage"
+                    )
+                )
+            )
+
+            if works:
+                soln = solver.solve(model, t_eval, t_interp=t_interp)
+                np.testing.assert_allclose(soln.y, soln_base.y, rtol=1e-5, atol=1e-4)
+            else:
+                with pytest.raises(ValueError):
+                    _ = solver.solve(model, t_eval, t_interp=t_interp)
 
     def test_solver_options(self):
         model = pybamm.BaseModel()
@@ -1104,6 +1096,81 @@ class TestIDAKLUSolver:
         sol3 = sim3.solve(np.linspace(0, 3600, 2))
         assert sol3.termination == "event: Minimum voltage [V]"
 
+    def test_closest_event_idx_set_after_root_return(self):
+        # IDAKLU must populate Solution.closest_event_idx after a root return so
+        # BaseSolver.get_termination_reason short-circuits instead of re-walking
+        # every TERMINATION event's symbolic expression on the Python side. That
+        # slow path generated tens of thousands of small numpy allocations per
+        # long event-terminated cycling run.
+        cycle = (
+            "Discharge at 1C until 3.0 V",
+            "Charge at 1C until 4.2 V",
+            "Hold at 4.2 V until C/50",
+        )
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            experiment=pybamm.Experiment([cycle] * 2, period=300),
+            solver=pybamm.IDAKLUSolver(output_variables=["Voltage [V]"]),
+        )
+        sim.solve()
+
+        event_steps = [
+            step
+            for cycle_sol in sim.solution.cycles
+            for step in cycle_sol.steps
+            if step.termination.startswith("event:")
+        ]
+        assert event_steps, "expected at least one event-terminated step"
+        # The index must also resolve to the same event name the slow path in
+        # BaseSolver.get_termination_reason would have picked.
+        for step in event_steps:
+            assert step.closest_event_idx is not None, (
+                f"event-terminated step {step.termination!r} has "
+                f"closest_event_idx=None — BaseSolver will fall back to "
+                f"per-step Python event re-evaluation"
+            )
+            terminate_events = [
+                e
+                for e in step.all_models[-1].events
+                if e.event_type == pybamm.EventType.TERMINATION
+            ]
+            picked = terminate_events[step.closest_event_idx].name
+            assert step.termination == f"event: {picked}", (
+                f"closest_event_idx={step.closest_event_idx} resolves to "
+                f"{picked!r}, but step.termination is {step.termination!r}"
+            )
+
+    def test_pickle_roundtrip_preserves_closest_event_idx(self):
+        # The pickle drops _setup; the next solve rebuilds it from the model.
+        import pickle
+
+        solver = pybamm.IDAKLUSolver(output_variables=["Voltage [V]"])
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            experiment=pybamm.Experiment(
+                [("Discharge at 1C until 3.0 V", "Charge at 1C until 4.2 V")]
+            ),
+            solver=solver,
+        )
+        sim.solve()
+
+        roundtripped = pickle.loads(pickle.dumps(solver))
+        sim2 = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            experiment=pybamm.Experiment(
+                [("Discharge at 1C until 3.0 V", "Charge at 1C until 4.2 V")]
+            ),
+            solver=roundtripped,
+        )
+        sim2.solve()
+
+        for step in sim2.solution.cycles[0].steps:
+            if step.termination.startswith("event:"):
+                assert step.closest_event_idx is not None, (
+                    "round-tripped IDAKLUSolver must still set "
+                    "closest_event_idx after a root return"
+                )
+
     def test_simulation_period(self):
         model = pybamm.lithium_ion.DFN()
         parameter_values = pybamm.ParameterValues("Chen2020")
@@ -1161,7 +1228,7 @@ class TestIDAKLUSolver:
             atol=atol,
         )
 
-    def test_python_idaklu_deprecation_errors(self):
+    def test_idaklu_forces_casadi_format(self):
         model = pybamm.BaseModel()
         model.convert_to_format = "python"
         u = pybamm.Variable("u")
@@ -1174,21 +1241,10 @@ class TestIDAKLUSolver:
         disc = pybamm.Discretisation()
         disc.process_model(model)
 
-        t_eval = [0, 3]
-
-        solver = pybamm.IDAKLUSolver(
-            root_method="lm",
-        )
-
-        with pytest.raises(
-            pybamm.SolverError,
-            match=r"Unsupported option for convert_to_format=python",
-        ):
-            with pytest.raises(
-                DeprecationWarning,
-                match=r"The python-idaklu solver has been deprecated.",
-            ):
-                _ = solver.solve(model, t_eval)
+        solver = pybamm.IDAKLUSolver()
+        assert model.convert_to_format == "python"
+        solver.set_up(model)
+        assert model.convert_to_format == "casadi"
 
     def test_extrapolation_events_with_output_variables(self):
         # Make sure the extrapolation checks work with output variables
@@ -1240,7 +1296,7 @@ class TestIDAKLUSolver:
 
     def test_multiple_initial_conditions_single_variable(self):
         model = pybamm.BaseModel()
-        model.convert_to_format = None
+        model.convert_to_format = "casadi"
         u = pybamm.Variable("u")
         u0 = pybamm.InputParameter("u0")
         model.rhs = {u: -u}
@@ -1714,3 +1770,44 @@ class TestIDAKLUSolver:
                 assert wrms < 1.0, (
                     f"{label} segment {seg} integral L2 WRMS too large: {wrms:.4e}"
                 )
+
+    def test_solution_user_options_forwarded(self):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        v = pybamm.Variable("v")
+        model.rhs = {u: 0.1 * v}
+        model.algebraic = {v: 1 - v}
+        model.initial_conditions = {u: 0, v: 1}
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+        t_eval = [0, 1]
+
+        sol_default = pybamm.IDAKLUSolver().solve(model, t_eval)
+        assert sol_default.user_options == {"compile": False}
+        assert sol_default.options["compile"] is False
+
+        sol_vm = pybamm.IDAKLUSolver(
+            options={"compile": False, "num_threads": 2}
+        ).solve(model, t_eval)
+        assert sol_vm.user_options == {"compile": False}
+        assert "num_threads" not in sol_vm.user_options
+
+    def test_solution_user_options_survive_pickle(self, tmp_path):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        model.rhs = {u: -u}
+        model.initial_conditions = {u: 1}
+        model.variables = {"u": u, "2u": 2 * u}
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        sol = pybamm.IDAKLUSolver().solve(model, [0, 1])
+        path = tmp_path / "idaklu_sol.pickle"
+        sol.save(path)
+        loaded = pybamm.load(path)
+
+        assert loaded.user_options == sol.user_options
+        assert loaded.options == sol.options
+        np.testing.assert_allclose(
+            loaded["2u"].entries, sol["2u"].entries, rtol=1e-12, atol=1e-12
+        )

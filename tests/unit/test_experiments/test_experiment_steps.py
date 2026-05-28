@@ -362,11 +362,11 @@ class TestExperimentSteps:
         # operator overloading
         termination_lt_0_05_oo = pybamm.step.step_termination.Current() < 0.05
         termination_gt_0_05_oo = pybamm.step.step_termination.Current() > 0.05
-        assert termination_lt_0_05_oo == termination_gt_0_05
+        assert termination_lt_0_05_oo == termination_lt_0_05
         assert termination_gt_0_05_oo == termination_gt_0_05
         termination_lt_4_1_oo = pybamm.step.step_termination.Voltage() < 4.1
         termination_gt_4_1_oo = pybamm.step.step_termination.Voltage() > 4.1
-        assert termination_lt_4_1_oo == termination_gt_4_1
+        assert termination_lt_4_1_oo == termination_lt_4_1
         assert termination_gt_4_1_oo == termination_gt_4_1
 
     def test_symbolic_termination_expression_helpers(self):
@@ -461,3 +461,45 @@ class TestExperimentSteps:
         )
         with pytest.raises(NotImplementedError):
             custom_differential.get_control_residual({"Voltage [V]": 4.3})
+
+    def test_basic_repr_includes_class_name(self):
+        # Regression: basic_repr used to hardcode "Step(...)".
+        current = pybamm.step.Current(4.2)
+        voltage = pybamm.step.Voltage(4.2)
+        c_rate = pybamm.step.CRate(4.2)
+
+        assert current.basic_repr() == "Current(4.2)"
+        assert voltage.basic_repr() == "Voltage(4.2)"
+        assert c_rate.basic_repr() == "CRate(4.2)"
+
+        assert repr(current).startswith("Current(")
+        assert repr(voltage).startswith("Voltage(")
+        assert repr(c_rate).startswith("CRate(")
+
+    def test_steps_with_same_value_different_type_not_equal(self):
+        # Regression: __eq__ used to ignore class type.
+        current = pybamm.step.Current(4.2)
+        voltage = pybamm.step.Voltage(4.2)
+        c_rate = pybamm.step.CRate(4.2)
+        power = pybamm.step.Power(4.2)
+
+        assert current != voltage
+        assert current != c_rate
+        assert current != power
+        assert voltage != c_rate
+        assert voltage != power
+        assert c_rate != power
+
+        assert hash(current) != hash(voltage)
+        assert hash(current) != hash(c_rate)
+        assert hash(voltage) != hash(c_rate)
+        assert hash(power) != hash(current)
+
+        assert len({current, voltage, c_rate, power}) == 4
+
+    def test_steps_with_same_value_same_type_equal(self):
+        a = pybamm.step.Current(4.2)
+        b = pybamm.step.Current(4.2)
+        assert a == b
+        assert hash(a) == hash(b)
+        assert len({a, b}) == 1

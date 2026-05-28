@@ -1488,6 +1488,120 @@ class TestBaseModel:
         disc_var2 = next(iter(model2_disc.initial_conditions.keys()))
         assert isinstance(model2_disc.initial_conditions[disc_var2], pybamm.Vector)
 
+    def test_build_initial_state_mapper_reuses_input_value(self):
+        # ``from_model``: only ``s`` is a state. ``current`` is exposed as a
+        # named variable whose value comes from an InputParameter.
+        s_from = pybamm.Variable("s")
+        from_model = pybamm.BaseModel()
+        from_model.rhs = {s_from: -s_from}
+        from_model.initial_conditions = {s_from: pybamm.Scalar(0.5)}
+        from_model.variables = {
+            "s": s_from,
+            "current": pybamm.InputParameter("I_in"),
+        }
+        pybamm.Discretisation().process_model(from_model)
+
+        # ``to_model``: ``current`` is now an algebraic state with a *wrong*
+        # initial-condition guess of 0 (must NOT be used by the mapper).
+        s_to = pybamm.Variable("s")
+        c_to = pybamm.Variable("current")
+        to_model = pybamm.BaseModel()
+        to_model.rhs = {s_to: -s_to}
+        to_model.algebraic = {c_to: c_to - pybamm.Scalar(1.0)}
+        to_model.initial_conditions = {
+            s_to: pybamm.Scalar(0.0),
+            c_to: pybamm.Scalar(0.0),
+        }
+        to_model.variables = {"s": s_to, "current": c_to}
+        pybamm.Discretisation().process_model(to_model)
+
+        mapper = to_model.build_initial_state_mapper(from_model)
+
+        # Evaluate the mapper with a known previous state vector and input.
+        y_from = np.array([[0.7]])
+        result = np.asarray(
+            mapper.evaluate(t=0, y=y_from, inputs={"I_in": 3.0})
+        ).ravel()
+
+        # Map (s, current) onto y_slices ordering of the target model.
+        s_slice = to_model.y_slices[s_to][0]
+        c_slice = to_model.y_slices[c_to][0]
+        assert result[s_slice][0] == pytest.approx(0.7)
+        # Critical: must equal the previous step's input, not the target IC (0).
+        assert result[c_slice][0] == pytest.approx(3.0)
+
+    def test_build_initial_state_mapper_handles_scale_and_reference(self):
+        from_scale_s = pybamm.Scalar(2.0)
+        from_ref_s = pybamm.Scalar(10.0)
+        s_from = pybamm.Variable("s", scale=from_scale_s, reference=from_ref_s)
+        from_model = pybamm.BaseModel()
+        from_model.rhs = {s_from: -s_from}
+        from_model.initial_conditions = {s_from: pybamm.Scalar(0.0)}
+        from_model.variables = {
+            "s": s_from,
+            "current": pybamm.InputParameter("I_in"),
+        }
+        pybamm.Discretisation().process_model(from_model)
+
+        to_scale_s = pybamm.Scalar(4.0)
+        to_ref_s = pybamm.Scalar(-5.0)
+        to_scale_c = pybamm.Scalar(0.5)
+        to_ref_c = pybamm.Scalar(100.0)
+        s_to = pybamm.Variable("s", scale=to_scale_s, reference=to_ref_s)
+        c_to = pybamm.Variable("current", scale=to_scale_c, reference=to_ref_c)
+        to_model = pybamm.BaseModel()
+        to_model.rhs = {s_to: -s_to}
+        to_model.algebraic = {c_to: c_to - pybamm.Scalar(1.0)}
+        to_model.initial_conditions = {
+            s_to: pybamm.Scalar(0.0),
+            c_to: pybamm.Scalar(0.0),
+        }
+        to_model.variables = {"s": s_to, "current": c_to}
+        pybamm.Discretisation().process_model(to_model)
+
+        mapper = to_model.build_initial_state_mapper(from_model)
+
+        # Choose physical values, encode via from_model scaling, decode in mapper.
+        phys_s = 17.0
+        y_s_from = (phys_s - 10.0) / 2.0  # 3.5
+        phys_current = 6.25
+        y_from = np.array([[y_s_from]])
+        result = np.asarray(
+            mapper.evaluate(t=0, y=y_from, inputs={"I_in": phys_current})
+        ).ravel()
+
+        s_slice = to_model.y_slices[s_to][0]
+        c_slice = to_model.y_slices[c_to][0]
+        # s: matched-state branch must round-trip through physical units.
+        # expected = (17 - (-5)) / 4 = 5.5
+        assert result[s_slice][0] == pytest.approx((phys_s - (-5.0)) / 4.0)
+        # current: input-parameter branch.
+        # expected = (6.25 - 100) / 0.5 = -187.5
+        assert result[c_slice][0] == pytest.approx((phys_current - 100.0) / 0.5)
+
+    def test_build_initial_state_mapper_missing_variable_raises(self):
+        s_from = pybamm.Variable("s")
+        from_model = pybamm.BaseModel()
+        from_model.rhs = {s_from: -s_from}
+        from_model.initial_conditions = {s_from: pybamm.Scalar(0.5)}
+        from_model.variables = {"s": s_from}
+        pybamm.Discretisation().process_model(from_model)
+
+        s_to = pybamm.Variable("s")
+        new_var = pybamm.Variable("brand_new")
+        to_model = pybamm.BaseModel()
+        to_model.rhs = {s_to: -s_to}
+        to_model.algebraic = {new_var: new_var - pybamm.Scalar(1.0)}
+        to_model.initial_conditions = {
+            s_to: pybamm.Scalar(0.0),
+            new_var: pybamm.Scalar(0.0),
+        }
+        to_model.variables = {"s": s_to, "brand_new": new_var}
+        pybamm.Discretisation().process_model(to_model)
+
+        with pytest.raises(pybamm.ModelError, match="brand_new"):
+            to_model.build_initial_state_mapper(from_model)
+
     def test_set_variables_error(self):
         var = pybamm.Variable("var")
         model = pybamm.BaseModel()

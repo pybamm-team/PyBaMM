@@ -3,6 +3,7 @@
 #
 from __future__ import annotations
 
+import casadi
 import numpy as np
 import numpy.typing as npt
 import sympy
@@ -111,6 +112,10 @@ class Time(IndependentVariable):
         See :meth:`pybamm.Symbol.evaluate_for_shape()`
         """
         return 0
+
+    def _to_casadi(self, t, y, y_dot, inputs, casadi_symbols):
+        """See :meth:`pybamm.Symbol._to_casadi()`."""
+        return casadi.MX(self.evaluate(t, y, y_dot, inputs))
 
     def to_equation(self):
         """Convert the node and its subtree into a SymPy equation."""

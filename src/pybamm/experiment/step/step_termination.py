@@ -46,12 +46,17 @@ class BaseTermination:
             return None
         return pybamm.Event(self.get_event_name(step), expression)
 
-    def __eq__(self, other):
-        # objects are equal if they have the same type and value
-        if isinstance(other, self.__class__):
-            return self.value == other.value
-        else:
+    def __repr__(self) -> str:
+        op = "" if self.operator is None else f" {self.operator}"
+        return f"{type(self).__name__}({self.value}{op})"
+
+    def __eq__(self, other) -> bool:
+        if type(self) is not type(other):
             return False
+        return self.value == other.value and self.operator == other.operator
+
+    def __hash__(self) -> int:
+        return hash((type(self).__name__, self.value, self.operator))
 
 
 class CRateTermination(BaseTermination):
@@ -202,6 +207,17 @@ class CustomTermination(BaseTermination):
 
     def get_event_expression(self, variables, step):
         return self.event_function(variables)
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}({self.name})"
+
+    def __eq__(self, other) -> bool:
+        if type(self) is not type(other):
+            return False
+        return self.name == other.name and self.event_function is other.event_function
+
+    def __hash__(self) -> int:
+        return hash((type(self).__name__, self.name, id(self.event_function)))
 
 
 def _read_termination(termination, operator=None):

@@ -6,6 +6,7 @@ import json
 import os
 import re
 import tempfile
+import warnings
 from datetime import datetime
 from pathlib import Path
 from unittest.mock import mock_open, patch
@@ -915,32 +916,178 @@ class TestSerialise:
         }
 
     def test_import_base_class_non_builtin_object(self, tmp_path):
-        # Minimal model JSON with a non-existent base class
-        model_json = {
-            "schema_version": "1.1",
-            "pybamm_version": pybamm.__version__,
-            "model": {
-                "base_class": "nonexistent_module.DummyModel",
-                "name": "DummyModel",
-                "rhs": [],
-                "algebraic": [],
-                "initial_conditions": [],
-                "boundary_conditions": [],
-                "events": [],
-                "variables": {},
-            },
-        }
+        model = pybamm.BaseModel(name="DummyModel")
+        a = pybamm.Variable("a")
+        model.rhs = {a: a}
+        model.initial_conditions = {a: pybamm.Scalar(1)}
+        model.variables = {"a": a}
 
         file_path = tmp_path / "model.json"
+        Serialise.save_custom_model(model, filename=str(file_path))
 
+        with open(file_path) as f:
+            data = json.load(f)
+        data["model"]["base_class"] = "nonexistent_module.DummyModel"
         with open(file_path, "w") as f:
-            json.dump(model_json, f)
+            json.dump(data, f)
 
-        with pytest.raises(
-            ImportError,
-            match=r"(?i)Could not import base class 'nonexistent_module\.DummyModel'",
+        with pytest.warns(
+            UserWarning,
+            match=r"Could not import base class 'nonexistent_module\.DummyModel'",
         ):
-            Serialise.load_custom_model(str(file_path))
+            loaded_model = Serialise.load_custom_model(str(file_path))
+
+        assert type(loaded_model) is pybamm.BaseModel
+        assert loaded_model.name == "DummyModel"
+        assert len(loaded_model.rhs) == 1
+        assert next(iter(loaded_model.rhs.keys())).name == "a"
+
+    def test_custom_model_roundtrip_preserves_lithium_ion_base(self, tmp_path):
+        from pybamm.models.full_battery_models.lithium_ion.base_lithium_ion_model import (
+            BaseModel as LiIonBaseModel,
+        )
+
+        model = LiIonBaseModel(options={"working electrode": "positive"})
+        model.name = "HalfCellGITTLike"
+        c = pybamm.Variable(
+            "X-averaged positive particle concentration [mol.m-3]",
+            domain="positive particle",
+            bounds=(0, 1),
+        )
+        model.rhs = {c: -pybamm.div(-pybamm.grad(c))}
+        model.initial_conditions = {c: pybamm.Scalar(0.5)}
+        model.boundary_conditions = {
+            c: {
+                "left": (pybamm.Scalar(0), "Neumann"),
+                "right": (pybamm.Scalar(0), "Neumann"),
+            }
+        }
+        model.variables = {c.name: c}
+
+        file_path = tmp_path / "halfcell.json"
+        Serialise.save_custom_model(model, filename=str(file_path))
+        loaded = Serialise.load_custom_model(str(file_path))
+
+        assert isinstance(loaded, LiIonBaseModel)
+        assert loaded.options["working electrode"] == "positive"
+        assert "positive particle" in loaded.default_geometry
+        assert "positive particle" in loaded.default_spatial_methods
+
+    def test_serialise_records_base_class_mro(self, tmp_path):
+        from pybamm.models.full_battery_models.lithium_ion.base_lithium_ion_model import (
+            BaseModel as LiIonBaseModel,
+        )
+
+        model = LiIonBaseModel(options={"working electrode": "positive"})
+        a = pybamm.Variable("a", domain="positive particle")
+        model.rhs = {a: -a}
+        model.initial_conditions = {a: pybamm.Scalar(1)}
+        model.variables = {"a": a}
+
+        payload = Serialise.serialise_custom_model(model)
+        mro = payload["model"]["base_class_mro"]
+
+        assert payload["model"]["base_class"] == mro[0]
+        assert "pybamm.models.base_model.BaseModel" in mro
+        assert (
+            "pybamm.models.full_battery_models.lithium_ion."
+            "base_lithium_ion_model.BaseModel"
+        ) in mro
+        assert all(not entry.startswith("builtins.") for entry in mro)
+
+    def test_load_falls_back_to_mro_ancestor_when_base_class_unimportable(
+        self, tmp_path
+    ):
+        from pybamm.models.full_battery_models.lithium_ion.base_lithium_ion_model import (
+            BaseModel as LiIonBaseModel,
+        )
+
+        model = LiIonBaseModel()
+        a = pybamm.Variable("a", domain="positive particle")
+        model.rhs = {a: -a}
+        model.initial_conditions = {a: pybamm.Scalar(1)}
+        model.variables = {"a": a}
+
+        file_path = tmp_path / "model.json"
+        Serialise.save_custom_model(model, filename=str(file_path))
+
+        with open(file_path) as f:
+            data = json.load(f)
+        data["model"]["base_class"] = "user_private_pkg.MyLiIon"
+        data["model"]["base_class_mro"] = [
+            "user_private_pkg.MyLiIon",
+            *data["model"]["base_class_mro"],
+        ]
+        with open(file_path, "w") as f:
+            json.dump(data, f)
+
+        with pytest.warns(
+            UserWarning,
+            match=(
+                r"Could not import base class 'user_private_pkg\.MyLiIon'.*"
+                r"Falling back to ancestor '.*base_lithium_ion_model.*'"
+            ),
+        ):
+            loaded = Serialise.load_custom_model(str(file_path))
+
+        assert isinstance(loaded, LiIonBaseModel)
+        assert "positive particle" in loaded.default_spatial_methods
+
+    def test_load_falls_back_to_base_model_when_no_mro_entry_importable(self, tmp_path):
+        model = pybamm.BaseModel(name="DummyModel")
+        a = pybamm.Variable("a")
+        model.rhs = {a: a}
+        model.initial_conditions = {a: pybamm.Scalar(1)}
+        model.variables = {"a": a}
+
+        file_path = tmp_path / "model.json"
+        Serialise.save_custom_model(model, filename=str(file_path))
+
+        with open(file_path) as f:
+            data = json.load(f)
+        data["model"]["base_class"] = "nonexistent_module.A"
+        data["model"]["base_class_mro"] = [
+            "nonexistent_module.A",
+            "another_missing_module.B",
+        ]
+        with open(file_path, "w") as f:
+            json.dump(data, f)
+
+        with pytest.warns(
+            UserWarning,
+            match=(
+                r"Could not import base class 'nonexistent_module\.A'.*"
+                r"Falling back to pybamm\.BaseModel"
+            ),
+        ):
+            loaded = Serialise.load_custom_model(str(file_path))
+
+        assert type(loaded) is pybamm.BaseModel
+
+    def test_load_legacy_payload_without_base_class_mro(self, tmp_path):
+        model = pybamm.BaseModel(name="DummyModel")
+        a = pybamm.Variable("a")
+        model.rhs = {a: a}
+        model.initial_conditions = {a: pybamm.Scalar(1)}
+        model.variables = {"a": a}
+
+        file_path = tmp_path / "model.json"
+        Serialise.save_custom_model(model, filename=str(file_path))
+
+        with open(file_path) as f:
+            data = json.load(f)
+        data["model"]["base_class"] = "nonexistent_module.A"
+        data["model"].pop("base_class_mro", None)
+        with open(file_path, "w") as f:
+            json.dump(data, f)
+
+        with pytest.warns(
+            UserWarning,
+            match=r"Could not import base class 'nonexistent_module\.A'",
+        ):
+            loaded = Serialise.load_custom_model(str(file_path))
+
+        assert type(loaded) is pybamm.BaseModel
 
     def test_function_parameter_with_diff_variable_serialisation(self):
         x = pybamm.Variable("x")
@@ -2912,6 +3059,86 @@ class TestSolverSerialization:
         with pytest.raises(ValueError, match="Unknown solver type"):
             pybamm.BaseSolver.from_config({"type": "NonExistentSolver"})
 
+    @pytest.mark.parametrize(
+        "root_method,expected_cls",
+        [
+            ("casadi", pybamm.CasadiAlgebraicSolver),
+            ("nonlinear_solver", pybamm.NonlinearSolver),
+            ("lm", pybamm.AlgebraicSolver),
+            ("hybr", pybamm.AlgebraicSolver),
+        ],
+    )
+    def test_idaklu_root_method_round_trip(self, root_method, expected_cls):
+        """Nested ``root_method`` solver survives to_config/from_config."""
+        solver = pybamm.IDAKLUSolver(root_method=root_method)
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            config = solver.to_config()
+
+        json_str = json.dumps(config)
+        restored = pybamm.BaseSolver.from_config(json.loads(json_str))
+
+        assert isinstance(restored, pybamm.IDAKLUSolver)
+        assert isinstance(restored.root_method, expected_cls), (
+            f"root_method={root_method!r} round-tripped as "
+            f"{type(restored.root_method).__name__}, expected "
+            f"{expected_cls.__name__}"
+        )
+
+    def test_idaklu_root_method_preserves_nested_tolerance(self):
+        """Tolerances on the nested root-method solver round-trip too."""
+        solver = pybamm.IDAKLUSolver(root_method="casadi", root_tol=1e-9)
+        config = json.loads(json.dumps(solver.to_config()))
+        restored = pybamm.BaseSolver.from_config(config)
+        assert isinstance(restored.root_method, pybamm.CasadiAlgebraicSolver)
+        assert restored.root_tol == pytest.approx(1e-9)
+
+    def test_to_json_safe_preserves_bool(self):
+        # bool is a subclass of int; the int branch must not match first.
+        assert Serialise._to_json_safe(True) is True
+        assert Serialise._to_json_safe(False) is False
+        assert Serialise._to_json_safe(np.bool_(True)) is True
+        assert Serialise._to_json_safe(np.bool_(False)) is False
+        # Plain ints are still ints.
+        assert Serialise._to_json_safe(1) == 1
+        assert isinstance(Serialise._to_json_safe(1), int)
+        assert not isinstance(Serialise._to_json_safe(1), bool)
+
+    def test_idaklu_solver_bool_options_round_trip(self):
+        solver = pybamm.IDAKLUSolver(
+            options={
+                "print_stats": True,
+                "compile": False,
+                "silence_sundials_errors": True,
+            }
+        )
+        config = solver.to_config()
+        opts = config["options"]
+        for key in ("print_stats", "compile", "silence_sundials_errors"):
+            assert isinstance(opts[key], bool), (
+                f"option {key!r} serialised as {type(opts[key]).__name__}, "
+                f"expected bool"
+            )
+        assert opts["print_stats"] is True
+        assert opts["compile"] is False
+        assert opts["silence_sundials_errors"] is True
+
+        solver2 = pybamm.BaseSolver.from_config(config)
+        assert isinstance(solver2, pybamm.IDAKLUSolver)
+        assert solver2.options["print_stats"] is True
+        assert solver2.options["compile"] is False
+        assert solver2.options["silence_sundials_errors"] is True
+
+    def test_idaklu_solver_config_json_emits_bool_tokens(self):
+        solver = pybamm.IDAKLUSolver(options={"print_stats": True, "compile": False})
+        config = solver.to_config()
+        json_str = json.dumps(config)
+        # Wire format must use JSON bool tokens, not 0/1.
+        assert '"print_stats": true' in json_str
+        assert '"compile": false' in json_str
+        assert '"print_stats": 1' not in json_str
+        assert '"compile": 0' not in json_str
+
     def test_serialise_scalar_inf_round_trip(self):
         """Scalar(inf) and Scalar(-inf) survive round-trip."""
         for val in [np.inf, -np.inf]:
@@ -2953,3 +3180,20 @@ class TestSolverSerialization:
         assert len(exp2.steps) == len(exp.steps)
         # The deserialized step should be a drive cycle
         assert exp2.steps[0].is_drive_cycle
+
+    def test_step_temperature_roundtrip(self):
+        """Per-step temperature override survives serialise/deserialise."""
+        exp = pybamm.Experiment(
+            [
+                pybamm.step.current(1.0, duration=100, temperature=298.15),
+                pybamm.step.rest(duration=60, temperature=313.15),
+                pybamm.step.voltage(4.2, duration=200),
+            ]
+        )
+        data = Serialise.serialise_experiment(exp)
+        json_str = json.dumps(data)
+        exp2 = Serialise.deserialise_experiment(json.loads(json_str))
+
+        assert exp2.steps[0].temperature == pytest.approx(298.15)
+        assert exp2.steps[1].temperature == pytest.approx(313.15)
+        assert exp2.steps[2].temperature is None

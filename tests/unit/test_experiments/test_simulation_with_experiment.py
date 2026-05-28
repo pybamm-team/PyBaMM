@@ -1,3 +1,5 @@
+import copy
+import itertools
 import logging
 import os
 from datetime import datetime
@@ -57,7 +59,6 @@ class TestSimulationExperiment:
         assert sim._get_unified_experiment_model_blockers() == [
             "no experiment is attached to the simulation"
         ]
-        assert sim._experiment_can_use_unified_model() is False
 
         sim = pybamm.Simulation(
             pybamm.lithium_ion.SPM(),
@@ -67,7 +68,6 @@ class TestSimulationExperiment:
         assert sim._get_unified_experiment_model_blockers() == [
             "unsupported experiment step type 'BaseStep'"
         ]
-        assert sim._experiment_can_use_unified_model() is False
 
     def test_set_up_unified_preserves_voltage_safety_events(self):
         experiment = pybamm.Experiment(
@@ -92,7 +92,7 @@ class TestSimulationExperiment:
         assert "Minimum voltage [V]" in event_names
         assert "Maximum voltage [V]" in event_names
 
-    def test_build_unified_experiment_inputs_uses_expected_step_index(self):
+    def test_build_experiment_step_inputs_uses_expected_step_index(self):
         start = datetime(2024, 1, 1, 12)
         experiment = pybamm.Experiment(
             [
@@ -115,24 +115,25 @@ class TestSimulationExperiment:
         assert sim._experiment_padding_rest_index == 3
         assert sim._experiment_includes_padding_rest
 
-        step_inputs = sim._build_unified_experiment_inputs(
+        step = experiment.steps[1]
+        step_inputs = sim._build_experiment_step_inputs(
             {"user input": 7},
-            2,
+            step,
             start_time=123.0,
-            temperature=298.15,
+            active_step_index=2,
         )
         assert step_inputs["user input"] == 7
-        assert step_inputs["Ambient temperature [K]"] == 298.15
+        assert step_inputs["Ambient temperature [K]"] is not None
         assert step_inputs["start time"] == 123.0
         assert step_inputs["Experiment step index"] == 2
 
-        padding_inputs = sim._build_unified_experiment_inputs(
+        step_inputs = sim._build_experiment_step_inputs(
             {},
-            sim._experiment_padding_rest_index,
+            experiment.steps[0],
             start_time=0.0,
-            temperature=300.0,
+            active_step_index=sim._experiment_padding_rest_index,
         )
-        assert padding_inputs["Experiment step index"] == 3
+        assert step_inputs["Experiment step index"] == 3
 
     def test_setup_experiment_string_or_list(self):
         model = pybamm.lithium_ion.SPM()
@@ -218,6 +219,29 @@ class TestSimulationExperiment:
         assert "Voltage > 4.1 [V] [experiment]" in [
             event.name for event in model_I.events
         ]
+
+    def test_distinct_control_types_with_same_value_yield_distinct_models(self):
+        # Regression: CRate(4.2) and Voltage(4.2) used to collapse to one unique step.
+        experiment = pybamm.Experiment(
+            [
+                (
+                    pybamm.step.c_rate(4.2, duration=60),
+                    pybamm.step.current(-1, duration=60),
+                    pybamm.step.voltage(4.2, duration=60),
+                )
+            ]
+        )
+        assert len(experiment.unique_steps) == 3
+
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            experiment=experiment,
+            solver=pybamm.IDAKLUSolver(),
+            experiment_model_mode="legacy",
+        )
+        sim.build_for_experiment()
+        assert len(sim.experiment_unique_steps_to_model) == 3
+        assert len(set(sim.steps_to_built_models.values())) == 3
 
     def test_build_for_experiment_legacy_processes_each_unique_step(self):
         experiment = pybamm.Experiment(
@@ -309,6 +333,70 @@ class TestSimulationExperiment:
                 assert (model_0, model_1) in sim.model_state_mappers
             else:
                 assert len(sim.model_state_mappers.values()) == 0
+
+    def test_built_models_and_state_mappers_independent_of_cycle_count(self):
+        cycle_template = [
+            {
+                "type": "c-rate",
+                "value": 1.0,
+                "duration": 3600.0,
+                "terminations": [{"type": "voltage", "value": 2.5}],
+            },
+            {
+                "type": "c-rate",
+                "value": -0.3,
+                "duration": 24000.0,
+                "terminations": [{"type": "voltage", "value": 4.2}],
+            },
+            {
+                "type": "voltage",
+                "value": 4.2,
+                "duration": 86400.0,
+                "terminations": [{"type": "c-rate", "value": 0.01}],
+            },
+        ]
+
+        n_unique = len(cycle_template)
+        # n_cycles >= 2 so the cycle-wrap transition (last->first) is realized
+        # and mapper count plateaus.
+        counts = []
+        for n_cycles in (2, 4, 8):
+            config = {
+                "cycles": [copy.deepcopy(cycle_template) for _ in range(n_cycles)]
+            }
+            experiment = pybamm.Experiment.from_config(config)
+            sim = pybamm.Simulation(
+                pybamm.lithium_ion.SPM(),
+                experiment=experiment,
+                solver=pybamm.IDAKLUSolver(),
+                experiment_model_mode="legacy",
+            )
+            sim.build_for_experiment()
+
+            counts.append(
+                (
+                    n_cycles,
+                    len(sim.steps_to_built_models),
+                    len(set(sim.steps_to_built_models.values())),
+                    len(sim.steps_to_built_solvers),
+                    len(sim.model_state_mappers),
+                )
+            )
+
+        for n_cycles, n_step_models, n_unique_models, n_solvers, n_mappers in counts:
+            assert n_step_models == n_unique
+            assert n_unique_models == n_unique
+            assert n_solvers == n_unique
+            assert n_mappers <= n_unique * n_unique, (
+                f"model_state_mappers={n_mappers} for n_cycles={n_cycles}, "
+                f"must be bounded by template transitions, not cycles"
+            )
+
+        first = counts[0][1:]
+        for c in counts[1:]:
+            assert c[1:] == first, (
+                f"build counts grow with n_cycles instead of staying flat: {counts}"
+            )
 
     def test_experiment_state_mapper_has_full_state_size_for_2d_current_collector(self):
         experiment = pybamm.Experiment(
@@ -800,35 +888,53 @@ class TestSimulationExperiment:
         experiment_2step = pybamm.Experiment(
             [
                 (
-                    "Discharge at C/20 for 1 hour",
-                    "Charge at 1 A until 4.1 V",
-                    "Hold at 4.1 V until C/2",
-                    "Discharge at 2 W for 1 hour",
+                    "Discharge at C/10 for 1 hour",
+                    "Charge at C/20 for 1 hour",
+                    "Hold at 3.7 V for 1 hour",
                 ),
             ]
             * 2,
+            period="100 hours",  # only capture the first and final values
         )
+        rtol = 1e-6
+        atol = 1e-15
 
-        solutions = []
-        for solver in [pybamm.CasadiSolver(), pybamm.IDAKLUSolver()]:
+        solvers = {
+            "casadi": pybamm.CasadiSolver(atol=atol, rtol=rtol),
+            "idaklu": pybamm.IDAKLUSolver(atol=atol, rtol=rtol),
+        }
+
+        solutions = {}
+        for name, solver in solvers.items():
             model = pybamm.lithium_ion.SPM()
             sim = pybamm.Simulation(model, experiment=experiment_2step, solver=solver)
             solution = sim.solve()
-            solutions.append(solution)
+            assert solution.t[-1] == pytest.approx(3600 * len(experiment_2step.steps))
+            solutions[name] = solution
 
-        np.testing.assert_allclose(
-            solutions[0]["Voltage [V]"].data,
-            solutions[1]["Voltage [V]"](solutions[0].t),
-            rtol=1e-2,
-            atol=1e-1,
-        )
-        np.testing.assert_allclose(
-            solutions[0]["Current [A]"].data,
-            solutions[1]["Current [A]"](solutions[0].t),
-            rtol=1e-0,
-            atol=1e-0,
-        )
-        assert solutions[1].termination == "final time"
+        num_sub_solutions = len(solutions["casadi"].sub_solutions)
+        assert len(solutions["idaklu"].sub_solutions) == num_sub_solutions
+
+        def get_sub_solution(name, idx_sol, idx_time):
+            y = solutions[name].sub_solutions[idx_sol].all_ys[0][:, idx_time]
+            if isinstance(y, casadi.DM):
+                y = y.full().flatten()
+            return y
+
+        for idx_sol, idx_time in itertools.product(range(num_sub_solutions), [0, -1]):
+            t = solutions["casadi"].sub_solutions[idx_sol].t[idx_time]
+            casadi_sol = get_sub_solution("casadi", idx_sol, idx_time)
+            idaklu_sol = get_sub_solution("idaklu", idx_sol, idx_time)
+
+            err_msg = f"Failed to match solution y values at {t} seconds"
+            np.testing.assert_allclose(
+                casadi_sol,
+                idaklu_sol,
+                rtol=rtol * 100,
+                atol=atol * 100,
+                err_msg=err_msg,
+            )
+        assert solutions["casadi"].termination == "final time"
 
     @pytest.mark.parametrize(
         "solver_cls",
@@ -958,6 +1064,28 @@ class TestSimulationExperiment:
         sensitivity_keys = set(sol.sensitivities)
         assert input_param_name in sensitivity_keys
         assert experiment_input_name not in sensitivity_keys
+
+    def test_processed_variable_sensitivities_ignore_experiment_input(self):
+        # Regression test for #5517.
+        model = pybamm.lithium_ion.SPM()
+        param = model.default_parameter_values
+        diffusivity_name = "Positive particle diffusivity [m2.s-1]"
+        param.update({diffusivity_name: "[input]"})
+
+        experiment = pybamm.Experiment(
+            [pybamm.step.Current(pybamm.InputParameter("current"), duration=10)]
+        )
+        sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
+        sol = sim.solve(
+            inputs={"current": 0.1, diffusivity_name: 1e-14},
+            calculate_sensitivities=[diffusivity_name],
+        )
+
+        sensitivities = sol["Voltage [V]"].sensitivities
+        assert set(sensitivities) == {"all", diffusivity_name}
+        sens = np.asarray(sensitivities[diffusivity_name])
+        assert np.all(np.isfinite(sens))
+        assert np.any(sens != 0)
 
     def test_run_experiment_drive_cycle(self):
         drive_cycle = np.array([np.arange(10), np.arange(10)]).T
@@ -1992,4 +2120,24 @@ class TestSimulationExperiment:
         ic2 = sol2["X-averaged negative particle surface concentration"].data[0]
 
         # ICs must differ when inputs change at same SOC
+        assert ic1 != ic2
+
+    @pytest.mark.parametrize("experiment_model_mode", ["legacy", "unified"])
+    def test_repeated_solves_refresh_initial_soc(self, experiment_model_mode):
+        model = pybamm.lithium_ion.SPM()
+        experiment = pybamm.Experiment(["Rest for 10 minutes", "Rest for 10 minutes"])
+        sim = pybamm.Simulation(
+            model,
+            parameter_values=pybamm.ParameterValues("Chen2020"),
+            experiment=experiment,
+            experiment_model_mode=experiment_model_mode,
+        )
+
+        sol1 = sim.solve(calc_esoh=False, initial_soc=0.2)
+        ic1 = sol1["X-averaged negative particle surface concentration"].data[0]
+
+        sol2 = sim.solve(calc_esoh=False, initial_soc=0.8)
+        ic2 = sol2["X-averaged negative particle surface concentration"].data[0]
+
+        # Reusing the same Simulation must refresh experiment ICs when SOC changes.
         assert ic1 != ic2

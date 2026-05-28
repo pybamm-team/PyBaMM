@@ -239,7 +239,7 @@ class BaseStep:
             return repr(self)
 
     def __repr__(self):
-        return f"Step({self.repr_args})"
+        return f"{self.__class__.__name__}({self.repr_args})"
 
     def basic_repr(self):
         """
@@ -247,7 +247,7 @@ class BaseStep:
         and temperature, which are the variables involved in processing the model. Also
         used for hashing.
         """
-        return f"Step({self.hash_args})"
+        return f"{self.__class__.__name__}({self.hash_args})"
 
     def to_dict(self):
         """
@@ -271,7 +271,11 @@ class BaseStep:
         }
 
     def __eq__(self, other):
-        return isinstance(other, BaseStep) and self.hash_args == other.hash_args
+        return (
+            isinstance(other, BaseStep)
+            and type(self) is type(other)
+            and self.hash_args == other.hash_args
+        )
 
     def __hash__(self):
         return hash(self.basic_repr())
@@ -354,6 +358,9 @@ class BaseStep:
                 t_eval = np.append(t_eval, tf)
         else:
             t_eval = np.array([0, tf])
+
+        if solver.store_first_last:
+            return t_eval, np.array([0.0, tf])
 
         if t_interp is None:
             if self.period is not None:

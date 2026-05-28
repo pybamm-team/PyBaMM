@@ -20,14 +20,11 @@ class TestBPX:
             },
             "Parameterisation": {
                 "Cell": {
-                    "Ambient temperature [K]": 298.15,
-                    "Initial temperature [K]": 298.15,
                     "Reference temperature [K]": 298.15,
                     "Lower voltage cut-off [V]": 2.8,
                     "Upper voltage cut-off [V]": 4.2,
                     "Nominal cell capacity [A.h]": 12.5,
                     "Specific heat capacity [J.K-1.kg-1]": 913,
-                    "Thermal conductivity [W.m-1.K-1]": 2,
                     "Density [kg.m-3]": 1847,
                     "Electrode area [m2]": 0.016808,
                     "Number of electrode pairs connected in parallel to make a cell": 34,
@@ -35,7 +32,6 @@ class TestBPX:
                     "Volume [m3]": 1.28e-4,
                 },
                 "Electrolyte": {
-                    "Initial concentration [mol.m-3]": 1000,
                     "Cation transference number": 0.259,
                     "Conductivity [S.m-1]": (
                         "0.1297 * (x / 1000) ** 3 "
@@ -100,6 +96,19 @@ class TestBPX:
                     "Thickness [m]": 2e-5,
                     "Porosity": 0.47,
                     "Transport efficiency": 0.3222,
+                },
+            },
+            "State": {
+                "Initial conditions": {
+                    "Initial state-of-charge": 1.0,
+                    "Initial temperature [K]": 298.15,
+                    "Initial electrolyte concentration [mol.m-3]": 1000,
+                    "Initial hysteresis state: Positive electrode": 0.0,
+                    "Initial hysteresis state: Negative electrode": 0.0,
+                },
+                "Thermal environment": {
+                    "Ambient temperature [K]": 298.15,
+                    "Heat transfer coefficient [W.m-2.K-1]": 10.0,
                 },
             },
         }
@@ -240,7 +249,10 @@ class TestBPX:
 
     def test_bpx_soc_error(self):
         bpx_obj = copy.deepcopy(self.base)
-        with pytest.raises(ValueError, match=r"Target SOC"):
+        with (
+            pytest.warns(DeprecationWarning, match="target_soc"),
+            pytest.raises(ValueError, match=r"Target SOC"),
+        ):
             pybamm.ParameterValues.create_from_bpx_obj(bpx_obj, target_soc=10)
 
     def test_bpx_arrhenius(self, tmp_path):
@@ -334,6 +346,10 @@ class TestBPX:
                 },
             },
         }
+        # Update hysteresis states for blended electrode
+        bpx_obj["State"]["Initial conditions"][
+            "Initial hysteresis state: Positive electrode"
+        ] = {"Large Particles": 0.0, "Small Particles": 0.0}
 
         temp_file = tmp_path / "tmp.json"
         temp_file.write_text(json.dumps(bpx_obj))
@@ -406,6 +422,10 @@ class TestBPX:
                 },
             },
         }
+        # Update hysteresis states for blended electrode with 3 phases
+        bpx_obj["State"]["Initial conditions"][
+            "Initial hysteresis state: Positive electrode"
+        ] = {"Large Particles": 0.0, "Medium Particles": 0.0, "Small Particles": 0.0}
 
         temp_file = tmp_path / "tmp.json"
         temp_file.write_text(json.dumps(bpx_obj))
@@ -480,3 +500,272 @@ class TestBPX:
             ValueError, match=r"math domain error|expected a positive input"
         ):  # Matches log(0) error (message changed in Python 3.14)
             pybamm.ParameterValues.create_from_bpx_obj(bpx_obj)
+
+    @staticmethod
+    def _blended_positive_phase(radius, sav, *, with_hysteresis=False, decay=None):
+        phase = {
+            "Diffusivity [m2.s-1]": 3.2e-14,
+            "Particle radius [m]": radius,
+            "OCP [V]": "4.0 - 0.5 * x",
+            "Entropic change coefficient [V.K-1]": -1e-4,
+            "Surface area per unit volume [m-1]": sav,
+            "Reaction rate constant [mol.m-2.s-1]": 2.305e-05,
+            "Minimum stoichiometry": 0.42424,
+            "Maximum stoichiometry": 0.96210,
+            "Maximum concentration [mol.m-3]": 46200,
+            "Diffusivity activation energy [J.mol-1]": 15000,
+            "Reaction rate constant activation energy [J.mol-1]": 3500,
+        }
+        if with_hysteresis:
+            phase.update(
+                {
+                    "OCP (lithiation) [V]": "4.0 - 0.5 * x",
+                    "OCP (delithiation) [V]": "4.05 - 0.5 * x",
+                    "OCP hysteresis decay constant": decay,
+                }
+            )
+        return phase
+
+    def _blended_positive_electrode(self, *, with_hysteresis=False):
+        return {
+            "Thickness [m]": 5.23e-05,
+            "Conductivity [S.m-1]": 0.789,
+            "Porosity": 0.277493,
+            "Transport efficiency": 0.1462,
+            "Particle": {
+                "Large Particles": self._blended_positive_phase(
+                    8e-06, 186331, with_hysteresis=with_hysteresis, decay=0.03
+                ),
+                "Small Particles": self._blended_positive_phase(
+                    1e-06, 496883, with_hysteresis=with_hysteresis, decay=0.04
+                ),
+            },
+        }
+
+    def test_bpx_hysteresis_names(self):
+        bpx_obj = copy.deepcopy(self.base)
+        bpx_obj["Parameterisation"]["Negative electrode"].update(
+            {
+                "OCP (lithiation) [V]": {"x": [0, 1], "y": [0.1, 1.5]},
+                "OCP (delithiation) [V]": {"x": [0, 1], "y": [0.15, 1.55]},
+                "OCP hysteresis decay constant": 0.01,
+            }
+        )
+        bpx_obj["Parameterisation"]["Positive electrode"].update(
+            {
+                "OCP (lithiation) [V]": {"x": [0, 1], "y": [4.2, 3.0]},
+                "OCP (delithiation) [V]": {"x": [0, 1], "y": [4.25, 3.05]},
+                "OCP hysteresis decay constant": 0.02,
+            }
+        )
+
+        param = pybamm.ParameterValues.create_from_bpx_obj(bpx_obj)
+
+        for electrode in ("Negative", "Positive"):
+            assert f"{electrode} electrode lithiation OCP [V]" in param
+            assert f"{electrode} electrode delithiation OCP [V]" in param
+            assert f"{electrode} particle lithiation hysteresis decay rate" in param
+            assert f"{electrode} particle delithiation hysteresis decay rate" in param
+            assert f"{electrode} electrode OCP (lithiation) [V]" not in param
+            assert f"{electrode} electrode OCP (delithiation) [V]" not in param
+            assert f"{electrode} electrode OCP hysteresis decay constant" not in param
+
+        assert param["Negative particle lithiation hysteresis decay rate"] == 0.01
+        assert param["Negative particle delithiation hysteresis decay rate"] == 0.01
+        assert param["Positive particle lithiation hysteresis decay rate"] == 0.02
+        assert param["Positive particle delithiation hysteresis decay rate"] == 0.02
+
+    def test_bpx_hysteresis_missing_fields_skipped(self):
+        bpx_obj = copy.deepcopy(self.base)
+        param = pybamm.ParameterValues.create_from_bpx_obj(bpx_obj)
+
+        for electrode in ("Negative", "Positive"):
+            assert f"{electrode} electrode lithiation OCP [V]" not in param
+            assert f"{electrode} electrode delithiation OCP [V]" not in param
+            assert f"{electrode} particle lithiation hysteresis decay rate" not in param
+            assert (
+                f"{electrode} particle delithiation hysteresis decay rate" not in param
+            )
+
+    def test_bpx_hysteresis_blended(self):
+        bpx_obj = copy.deepcopy(self.base)
+        bpx_obj["Parameterisation"]["Positive electrode"] = (
+            self._blended_positive_electrode(with_hysteresis=True)
+        )
+        bpx_obj["State"]["Initial conditions"][
+            "Initial hysteresis state: Positive electrode"
+        ] = {"Large Particles": 0.0, "Small Particles": 0.0}
+
+        param = pybamm.ParameterValues.create_from_bpx_obj(bpx_obj)
+
+        for phase, value in (("Primary", 0.03), ("Secondary", 0.04)):
+            assert (
+                param[f"{phase}: Positive particle lithiation hysteresis decay rate"]
+                == value
+            )
+            assert (
+                param[f"{phase}: Positive particle delithiation hysteresis decay rate"]
+                == value
+            )
+            assert f"{phase}: Positive electrode lithiation OCP [V]" in param
+            assert f"{phase}: Positive electrode delithiation OCP [V]" in param
+
+    def test_bpx_initial_hysteresis_state_scalar(self):
+        bpx_obj = copy.deepcopy(self.base)
+        bpx_obj["State"]["Initial conditions"][
+            "Initial hysteresis state: Negative electrode"
+        ] = 0.5
+        bpx_obj["State"]["Initial conditions"][
+            "Initial hysteresis state: Positive electrode"
+        ] = -0.25
+
+        param = pybamm.ParameterValues.create_from_bpx_obj(bpx_obj)
+
+        assert param["Initial hysteresis state in negative electrode"] == 0.5
+        assert param["Initial hysteresis state in positive electrode"] == -0.25
+
+    def test_bpx_initial_hysteresis_state_blended(self):
+        bpx_obj = copy.deepcopy(self.base)
+        bpx_obj["Parameterisation"]["Positive electrode"] = (
+            self._blended_positive_electrode()
+        )
+        bpx_obj["State"]["Initial conditions"][
+            "Initial hysteresis state: Positive electrode"
+        ] = {"Large Particles": 0.7, "Small Particles": 0.3}
+        bpx_obj["State"]["Initial conditions"][
+            "Initial hysteresis state: Negative electrode"
+        ] = 1.0
+
+        param = pybamm.ParameterValues.create_from_bpx_obj(bpx_obj)
+
+        assert param["Primary: Initial hysteresis state in positive electrode"] == 0.7
+        assert param["Secondary: Initial hysteresis state in positive electrode"] == 0.3
+        assert param["Initial hysteresis state in negative electrode"] == 1.0
+
+    def test_bpx_heat_transfer_coefficient_preserved(self):
+        bpx_obj = copy.deepcopy(self.base)
+        bpx_obj["State"]["Thermal environment"][
+            "Heat transfer coefficient [W.m-2.K-1]"
+        ] = 42.0
+
+        param = pybamm.ParameterValues.create_from_bpx_obj(bpx_obj)
+
+        assert param["Total heat transfer coefficient [W.m-2.K-1]"] == 42.0
+
+    def test_bpx_axen_hysteresis_end_to_end(self):
+        bpx_obj = copy.deepcopy(self.base)
+        for electrode in ("Negative electrode", "Positive electrode"):
+            ocp = bpx_obj["Parameterisation"][electrode]["OCP [V]"]
+            bpx_obj["Parameterisation"][electrode].update(
+                {
+                    "OCP (lithiation) [V]": ocp,
+                    "OCP (delithiation) [V]": ocp,
+                    "OCP hysteresis decay constant": 0.01,
+                }
+            )
+
+        pv = pybamm.ParameterValues.create_from_bpx_obj(bpx_obj)
+        model = pybamm.lithium_ion.SPM(
+            {"open-circuit potential": "one-state hysteresis"}
+        )
+        sim = pybamm.Simulation(
+            model,
+            parameter_values=pv,
+            experiment=pybamm.Experiment(["Discharge at C/10 for 5 minutes"]),
+        )
+        sol = sim.solve()
+        v_final = float(sol["Voltage [V]"].entries[-1])
+        assert (
+            pv["Lower voltage cut-off [V]"] < v_final < pv["Upper voltage cut-off [V]"]
+        )
+
+    def test_bpx_default_initial_concentrations_at_full_charge(self):
+        bpx_obj = copy.deepcopy(self.base)
+        # Set a non-1 initial SOC in the BPX file to confirm it's not auto-applied.
+        bpx_obj["State"]["Initial conditions"]["Initial state-of-charge"] = 0.25
+        neg = bpx_obj["Parameterisation"]["Negative electrode"]
+        pos = bpx_obj["Parameterisation"]["Positive electrode"]
+        expected_neg = (
+            neg["Maximum stoichiometry"] * neg["Maximum concentration [mol.m-3]"]
+        )
+        expected_pos = (
+            pos["Minimum stoichiometry"] * pos["Maximum concentration [mol.m-3]"]
+        )
+
+        param = pybamm.ParameterValues.create_from_bpx_obj(bpx_obj)
+
+        assert param["Initial concentration in negative electrode [mol.m-3]"] == (
+            expected_neg
+        )
+        assert param["Initial concentration in positive electrode [mol.m-3]"] == (
+            expected_pos
+        )
+
+    def test_bpx_target_soc_is_deprecated_but_preserves_behaviour(self):
+        from bpx import get_electrode_concentrations, parse_bpx_obj
+
+        bpx_obj = copy.deepcopy(self.base)
+        target_soc = 0.25
+        expected_neg, expected_pos = get_electrode_concentrations(
+            target_soc, parse_bpx_obj(copy.deepcopy(bpx_obj))
+        )
+
+        with pytest.warns(DeprecationWarning, match="target_soc"):
+            param = pybamm.ParameterValues.create_from_bpx_obj(
+                bpx_obj, target_soc=target_soc
+            )
+
+        assert (
+            param["Initial concentration in negative electrode [mol.m-3]"]
+            == expected_neg
+        )
+        assert (
+            param["Initial concentration in positive electrode [mol.m-3]"]
+            == expected_pos
+        )
+
+    def _blended_bpx_obj(self):
+        bpx_obj = copy.deepcopy(self.base)
+        bpx_obj["Parameterisation"]["Positive electrode"] = (
+            self._blended_positive_electrode()
+        )
+        bpx_obj["State"]["Initial conditions"][
+            "Initial hysteresis state: Positive electrode"
+        ] = {"Large Particles": 0.0, "Small Particles": 0.0}
+        return bpx_obj
+
+    def test_bpx_blended_default_sets_per_phase_initial_concentrations(self):
+        bpx_obj = self._blended_bpx_obj()
+        pos_large = bpx_obj["Parameterisation"]["Positive electrode"]["Particle"][
+            "Large Particles"
+        ]
+        pos_small = bpx_obj["Parameterisation"]["Positive electrode"]["Particle"][
+            "Small Particles"
+        ]
+
+        param = pybamm.ParameterValues.create_from_bpx_obj(bpx_obj)
+
+        neg = self.base["Parameterisation"]["Negative electrode"]
+        assert param["Initial concentration in negative electrode [mol.m-3]"] == (
+            neg["Maximum stoichiometry"] * neg["Maximum concentration [mol.m-3]"]
+        )
+        assert param[
+            "Primary: Initial concentration in positive electrode [mol.m-3]"
+        ] == pytest.approx(
+            pos_large["Minimum stoichiometry"]
+            * pos_large["Maximum concentration [mol.m-3]"]
+        )
+        assert param[
+            "Secondary: Initial concentration in positive electrode [mol.m-3]"
+        ] == pytest.approx(
+            pos_small["Minimum stoichiometry"]
+            * pos_small["Maximum concentration [mol.m-3]"]
+        )
+
+    def test_bpx_blended_with_target_soc_raises(self):
+        bpx_obj = self._blended_bpx_obj()
+        with (
+            pytest.warns(DeprecationWarning, match="target_soc"),
+            pytest.raises(NotImplementedError, match="blended electrodes"),
+        ):
+            pybamm.ParameterValues.create_from_bpx_obj(bpx_obj, target_soc=0.5)
