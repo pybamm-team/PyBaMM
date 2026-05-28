@@ -542,6 +542,7 @@ def get_parameter_values():
         "Positive electrode reaction-driven LAM factor [m3.mol-1]": 0.0,
         "Initial SEI on cracks thickness [m]": 5e-13,  # avoid division by zero
         "Lithium interstitial molar volume [m3.mol-1]": 1.3e-05,
+        "Cell thermal expansion coefficient [m.K-1]": 1.1e-06,
         # cell
         "Negative electrode thickness [m]": 3.4e-05,
         "Separator thickness [m]": 2.5e-05,

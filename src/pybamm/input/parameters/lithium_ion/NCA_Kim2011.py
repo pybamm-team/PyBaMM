@@ -738,6 +738,7 @@ def get_parameter_values():
         "SEI growth activation energy [J.mol-1]": 0.0,
         "Negative electrode reaction-driven LAM factor [m3.mol-1]": 0.0,
         "Positive electrode reaction-driven LAM factor [m3.mol-1]": 0.0,
+        "Cell thermal expansion coefficient [m.K-1]": 1.1e-06,
         # cell
         "Negative current collector thickness [m]": 1e-05,
         "Negative electrode thickness [m]": 7e-05,
