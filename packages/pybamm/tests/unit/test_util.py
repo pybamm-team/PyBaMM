@@ -1,5 +1,5 @@
 import os
-import subprocess
+import subprocess  # nosec B404 - used in tests with trusted input
 import sys
 import textwrap
 from io import StringIO
@@ -143,7 +143,7 @@ class TestUtil:
         ).format(blocked=sorted(present_optional_import_deps))
 
         # Inherit the parent's PYTHONPATH so the editable install is found.
-        result = subprocess.run(
+        result = subprocess.run(  # nosec B603 - sys.executable + literal code constructed in this test
             [sys.executable, "-c", script],
             capture_output=True,
             text=True,
