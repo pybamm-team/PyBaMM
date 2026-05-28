@@ -13,6 +13,7 @@
 
 - Fixed the `pybammsolvers` source distribution bundling the SUNDIALS/SuiteSparse submodule trees (~291 MB, over PyPI's per-file limit) when built from a checkout with the submodules initialised; the sdist now excludes them. ([#5623](https://github.com/pybamm-team/PyBaMM/pull/5623))
 - Fixed the `pybammsolvers` editable auto-rebuild failing to configure when the SUNDIALS/SuiteSparse submodules are absent even though the libraries were already built in `.idaklu`; the from-source bootstrap (and its submodule requirement) is now skipped once the libraries exist. ([#5623](https://github.com/pybamm-team/PyBaMM/pull/5623))
+- Fixed degradation submodels failing to discretise with `"dimensionality": 1` current collectors. The LAM-LLI accumulator now `yz_average`s its rhs so the scalar variable matches its scalar initial condition, and `CrackPropagation`'s initial condition is `FullBroadcast` over both the electrode and the current collector to match the rhs mesh declared by its `Variable`. 0-D current collectors are unaffected. ([#5296](https://github.com/pybamm-team/PyBaMM/issues/5296))
 
 # [v26.6.2.0](https://github.com/pybamm-team/PyBaMM/tree/v26.6.2.0) - 2026-06-16
 
