@@ -172,7 +172,18 @@ class CrackPropagation(BaseMechanics):
                 l_cr_0 = pybamm.PrimaryBroadcast(l_cr_0, f"{domain} particle size")
             else:
                 l_cr = variables[f"{Domain} {phase_name}particle crack length [m]"]
-                l_cr_0 = pybamm.PrimaryBroadcast(l_cr_0, f"{domain} electrode")
+                # ``l_cr`` is declared with
+                # ``auxiliary_domains={"secondary": "current collector"}``
+                # so its discretised shape is (x_<dom>, n_cc). A plain
+                # ``PrimaryBroadcast`` only fills the electrode (primary)
+                # direction and leaves the current-collector axis at 1,
+                # which mismatches the rhs when
+                # ``"dimensionality" >= 1``. ``FullBroadcast`` is the
+                # identity for a 0-D current collector, so 1-D models
+                # are unaffected.
+                l_cr_0 = pybamm.FullBroadcast(
+                    l_cr_0, f"{domain} electrode", "current collector"
+                )
         self.initial_conditions = {l_cr: l_cr_0}
 
     def add_events_from(self, variables):
