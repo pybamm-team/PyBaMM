@@ -2,6 +2,7 @@
 
 ## Bug fixes
 
+- Fixed `SEI on cracks` failing to build on composite electrodes (`"particle phases": "2"`). `SEIThickness` and `SEIGrowth.set_rhs` now look up the per-phase `"<Domain> <phase> electrode roughness ratio"` registered by the particle mechanics submodel instead of the un-phased key, which never exists when the electrode has more than one phase. ([#5281](https://github.com/pybamm-team/PyBaMM/issues/5281))
 - `RegulariseSqrtAndPower` no longer regularises state-independent bases, fixing corrupted small rate constants in exchange-current density functions. ([#5600](https://github.com/pybamm-team/PyBaMM/pull/5600))
 
 ## Breaking changes
