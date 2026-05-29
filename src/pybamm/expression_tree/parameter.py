@@ -248,3 +248,72 @@ class FunctionParameter(pybamm.Symbol):
             "pybamm.FunctionParameter:"
             "Please use a discretised model when reading in from JSON."
         )
+
+
+class NamedFunctionParameter:
+    """A parameter value that binds to a model input by name rather than position.
+
+    A plain callable supplied for a :class:`FunctionParameter` is bound to the
+    model's inputs *positionally* — the callable's arguments are matched to
+    ``FunctionParameter.input_names`` in order, so the caller must know both how
+    many inputs the consuming model declares and the order it declares them in.
+    Wrapping the callable in a ``NamedFunctionParameter`` and naming the inputs
+    it consumes removes that coupling: binding selects and orders children by
+    matching ``inputs`` against ``FunctionParameter.input_names``, so the
+    declaration order of the model's inputs is irrelevant and unused inputs are
+    dropped.
+
+    Parameters
+    ----------
+    function : callable
+        The function to evaluate. It is called with one positional argument per
+        entry in ``inputs``, in the order ``inputs`` is given — not the order the
+        model declares them.
+    inputs : sequence of str
+        The model input names this function consumes (e.g.
+        ``["Electrolyte concentration [mol.m-3]"]``). Each must match one of the
+        consuming ``FunctionParameter``'s ``input_names``.
+
+    Examples
+    --------
+    .. code-block:: python
+
+        # conductivity depends only on electrolyte concentration; the model calls
+        # the parameter with (c_e, T) but we never need to know that, or its order
+        kappa = pybamm.NamedFunctionParameter(
+            lambda c_e: pybamm.Interpolant(x, y, c_e, name="kappa"),
+            inputs=["Electrolyte concentration [mol.m-3]"],
+        )
+        param = pybamm.ParameterValues({"Electrolyte conductivity [S.m-1]": kappa})
+    """
+
+    def __init__(self, function, inputs):
+        if not callable(function):
+            raise TypeError("NamedFunctionParameter `function` must be callable")
+        self.function = function
+        self.inputs = list(inputs)
+
+    def bind(self, input_names, children):
+        """Select and order ``children`` by matching ``self.inputs`` against the
+        consuming ``FunctionParameter``'s ``input_names``, then evaluate.
+
+        Parameters
+        ----------
+        input_names : list of str
+            The consuming ``FunctionParameter``'s declared input names.
+        children : list of pybamm.Symbol
+            The processed children, in the same order as ``input_names``.
+
+        Returns
+        -------
+        pybamm.Symbol
+            ``self.function`` evaluated on the named subset of children.
+        """
+        name_to_child = dict(zip(input_names, children, strict=False))
+        missing = [name for name in self.inputs if name not in name_to_child]
+        if missing:
+            raise KeyError(
+                f"NamedFunctionParameter inputs {missing} not found among the "
+                f"consuming FunctionParameter's input_names {list(input_names)}"
+            )
+        return self.function(*[name_to_child[name] for name in self.inputs])

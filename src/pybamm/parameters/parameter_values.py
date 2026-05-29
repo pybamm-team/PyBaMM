@@ -1584,7 +1584,13 @@ def convert_parameter_values_to_json(
     parameter_values_dict = {}
 
     for k, v in parameter_values.items():
-        if callable(v):
+        if isinstance(v, pybamm.NamedFunctionParameter):
+            parameter_values_dict[k] = convert_symbol_to_json(
+                convert_function_to_symbolic_expression(
+                    v.function, k, input_names=v.inputs
+                )
+            )
+        elif callable(v):
             parameter_values_dict[k] = convert_symbol_to_json(
                 convert_function_to_symbolic_expression(v, k)
             )

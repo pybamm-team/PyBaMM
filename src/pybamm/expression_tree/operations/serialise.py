@@ -22,10 +22,17 @@ SUPPORTED_SCHEMA_VERSION = "1.1"
 
 
 class ExpressionFunctionParameter(pybamm.UnaryOperator):
-    def __init__(self, name, child, func_name, func_args):
+    def __init__(self, name, child, func_name, func_args, input_names=None):
         super().__init__(name, child)
         self.func_name = func_name
+        # func_args are the function's own argument identifiers (used for codegen
+        # and as the Parameter names inside `child`).
         self.func_args = func_args
+        # input_names, when given, is parallel to func_args and names the model
+        # input each arg binds to. When set, the consuming FunctionParameter binds
+        # by matching these against its own input_names (order-independent) rather
+        # than zipping func_args to children positionally.
+        self.input_names = input_names
 
     def _unary_evaluate(self, child):
         """Evaluate the symbolic expression (the child)"""
@@ -2187,7 +2194,7 @@ class Serialise:
         return solver_class(**data)
 
 
-def convert_function_to_symbolic_expression(func, name=None):
+def convert_function_to_symbolic_expression(func, name=None, input_names=None):
     """
     Converts a Python function to a PyBaMM symbolic expression
 
@@ -2199,6 +2206,11 @@ def convert_function_to_symbolic_expression(func, name=None):
     name : str, optional
         The name of the function to use in the symbolic expression. If not provided,
         the name of the function is used.
+
+    input_names : sequence of str, optional
+        The model input names each argument binds to, parallel to the function's
+        arguments. When given, the resulting ``ExpressionFunctionParameter`` binds
+        to the consuming ``FunctionParameter`` by name rather than by position.
 
     Returns
     -------
@@ -2229,7 +2241,14 @@ def convert_function_to_symbolic_expression(func, name=None):
     # Wrap the symbolic expression in an ExpressionFunctionParameter to allow access
     # to the function name and arguments
     name = name or func_name
-    return ExpressionFunctionParameter(name, sym_output, func_name, func_args)
+    if input_names is not None and len(input_names) != len(func_args):
+        raise ValueError(
+            f"input_names {list(input_names)} length does not match the function's "
+            f"{len(func_args)} argument(s) {func_args}"
+        )
+    return ExpressionFunctionParameter(
+        name, sym_output, func_name, func_args, input_names
+    )
 
 
 def convert_symbol_from_json(json_data):
@@ -2295,6 +2314,7 @@ def convert_symbol_from_json(json_data):
             convert_symbol_from_json(json_data["children"][0]),
             json_data["func_name"],
             json_data["func_args"],
+            json_data.get("input_names"),
         )
     elif json_data["type"] == "PrimaryBroadcast":
         child = convert_symbol_from_json(json_data["children"][0])
@@ -2382,6 +2402,7 @@ def convert_symbol_to_json(symbol):
             "children": [convert_symbol_to_json(symbol.child)],
             "func_name": symbol.func_name,
             "func_args": symbol.func_args,
+            "input_names": symbol.input_names,
         }
     elif isinstance(symbol, numbers.Number | list):
         return symbol

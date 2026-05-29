@@ -185,6 +185,10 @@ class ParameterSubstitutor:
                 # If the "function" is provided is actually a scalar, return a Scalar
                 # object instead of throwing an error.
                 function = pybamm.Scalar(function_name, name=symbol.name)
+            elif isinstance(function_name, pybamm.NamedFunctionParameter):
+                # bind children to the function's declared inputs by name, so the
+                # order/position the model declares its inputs in is irrelevant
+                function = function_name.bind(symbol.input_names, new_children)
             elif callable(function_name):
                 # otherwise evaluate the function to create a new PyBaMM object
                 function = function_name(*new_children)
@@ -304,12 +308,30 @@ class ParameterSubstitutor:
 
             # Get the expression and inputs for the function.
             expression = function_parameter.child
-            inputs = {
-                arg: child
-                for arg, child in zip(
-                    function_parameter.func_args, new_children, strict=False
+            if function_parameter.input_names is not None:
+                # name-bound: map each arg to the child whose model input name it
+                # declares, so the order the model declares inputs in is irrelevant
+                # and unused model inputs are dropped
+                name_to_child = dict(
+                    zip(symbol.input_names, new_children, strict=False)
                 )
-            }
+                inputs = {
+                    arg: name_to_child[input_name]
+                    for arg, input_name in zip(
+                        function_parameter.func_args,
+                        function_parameter.input_names,
+                        strict=False,
+                    )
+                }
+            else:
+                # legacy positional binding: zip the function's args to the model's
+                # children in declaration order
+                inputs = {
+                    arg: child
+                    for arg, child in zip(
+                        function_parameter.func_args, new_children, strict=False
+                    )
+                }
 
             # Set domains for function inputs in post-order traversal
             for node in expression.post_order():
