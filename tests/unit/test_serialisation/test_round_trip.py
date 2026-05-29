@@ -148,6 +148,12 @@ def _custom_model_with_events():
 def _build_symbol_fixtures():
     a = pybamm.Variable("a")
     b = pybamm.Parameter("b")
+    n = pybamm.Variable("u", domains={"primary": ["negative electrode"]})
+    p = pybamm.Variable("v", domains={"primary": ["negative particle"]})
+    pst = pybamm.Variable(
+        "w",
+        domains={"primary": ["negative particle"], "secondary": ["negative electrode"]},
+    )
     return [
         pybamm.Scalar(3.14),
         pybamm.Scalar(np.inf),
@@ -169,6 +175,46 @@ def _build_symbol_fixtures():
         ),
         pybamm.Interpolant(np.array([0.0, 1.0, 2.0]), np.array([0.0, 1.0, 4.0]), a),
         pybamm.FunctionParameter("f", {"a": a}),
+        # Symbols whose constructors take non-Symbol positional args (numpy
+        # entries, a slice/int index, ``y_slices``). These were dropped by the
+        # generic fallback and crashed on load before #5548.
+        pybamm.Array(np.array([[1.0, 2.0], [3.0, 4.0]])),
+        pybamm.Matrix(np.array([[1.0, 2.0], [3.0, 4.0]])),
+        pybamm.Vector(np.array([1.0, 2.0, 3.0])),
+        pybamm.StateVector(slice(0, 3)),
+        pybamm.StateVectorDot(slice(0, 3)),
+        pybamm.Index(pybamm.StateVector(slice(0, 6)), slice(0, 3), check_size=False),
+        pybamm.Index(pybamm.StateVector(slice(0, 6)), 2, check_size=False),
+        # Symbols whose constructor takes a non-Symbol arg (a side/direction/region
+        # string, a numeric position, an integration domain) or a sibling Symbol
+        # that is not a child. The generic fallback dropped these, crashing on load
+        # or silently reconstructing a different object before #5548.
+        pybamm.BoundaryMeshSize(p, "left"),
+        pybamm.DeltaFunction(p, "left", "negative electrode"),
+        pybamm.EvaluateAt(n, 0.5),
+        pybamm.Magnitude(n, "x"),
+        pybamm.NodeToEdge2D(n, "lr"),
+        pybamm.UpwindDownwind2D(n, "x", "y"),
+        pybamm.OneDimensionalIntegral(n, "x", "y"),
+        pybamm.BoundaryIntegral(n, region="negative tab"),
+        pybamm.BackwardIndefiniteIntegral(
+            n, pybamm.SpatialVariable("x", domain=["negative electrode"])
+        ),
+        pybamm.ExplicitTimeIntegral(n, pybamm.Scalar(0.0)),
+        pybamm.SizeAverage(p, pybamm.Scalar(1.0)),
+        pybamm.TensorField([pybamm.Scalar(1.0), pybamm.Scalar(2.0)]),
+        pybamm.VariableDot("vdot"),
+        pybamm.SpatialVariableEdge("x", domain=["negative electrode"]),
+        pybamm.DiscreteTimeData(
+            np.array([0.0, 1.0]), np.array([2.0, 3.0]), "discrete data"
+        ),
+        # Broadcast subclasses whose concrete type was silently rewritten to the
+        # parent class on round-trip (#5548), plus the dropped ``broadcast_domain``.
+        pybamm.PrimaryBroadcastToEdges(pybamm.Scalar(1.0), "negative electrode"),
+        pybamm.SecondaryBroadcastToEdges(p, "negative electrode"),
+        pybamm.FullBroadcastToEdges(pybamm.Scalar(1.0), "negative electrode"),
+        pybamm.TertiaryBroadcast(pst, "current collector"),
+        pybamm.TertiaryBroadcastToEdges(pst, "current collector"),
     ]
 
 

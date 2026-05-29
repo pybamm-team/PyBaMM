@@ -2232,6 +2232,163 @@ def convert_function_to_symbolic_expression(func, name=None):
     return ExpressionFunctionParameter(name, sym_output, func_name, func_args)
 
 
+# Symbols that already implement a complete ``to_json`` / ``_from_json`` round-trip
+# but whose constructors take non-Symbol positional arguments (a numpy array of
+# entries, a slice index, ``y_slices``...). The generic ``convert_symbol_*``
+# fallbacks only serialise ``children``, so these args were silently dropped,
+# causing ``TypeError``/``IndexError`` on load (see #5548). Delegate to the
+# per-class protocol instead. Listing the base classes also covers their
+# subclasses (``Matrix``/``Vector`` <: ``Array``; ``StateVector``/
+# ``StateVectorDot`` <: ``StateVectorBase``), so a single definition keeps the
+# ``to_json`` (class) and ``convert_symbol_from_json`` (type-name) sides in sync.
+def _protocol_classes():
+    return (pybamm.Index, pybamm.Array, pybamm.StateVectorBase)
+
+
+def _symbol_serialises_via_protocol(symbol):
+    return isinstance(symbol, _protocol_classes())
+
+
+def _type_serialises_via_protocol(type_name):
+    cls = getattr(pybamm, type_name, None)
+    return isinstance(cls, type) and issubclass(cls, _protocol_classes())
+
+
+# Symbols whose constructors take non-Symbol positional arguments (a side/direction
+# string, a region, a numeric position, an integration domain...) or a sibling Symbol
+# that is not one of ``symbol.children`` (an initial condition, a distribution). The
+# generic ``convert_symbol_*`` fallbacks only round-trip ``children``/``domains``, so
+# those arguments were silently dropped — raising ``TypeError``/``IndexError`` on load
+# or, worse, reconstructing an equivalent-but-different object (see #5548). This
+# registry records, per class, how to serialise the extra arguments and how to rebuild
+# the instance from its (already-reconstructed) children plus the JSON dict.
+#
+# Keying on the exact class name (rather than ``isinstance``) also fixes the silent
+# subclass-identity loss for the ``*ToEdges`` broadcasts: ``convert_symbol_to_json``'s
+# ``isinstance(symbol, pybamm.PrimaryBroadcast)`` branch used to fire for
+# ``PrimaryBroadcastToEdges`` and write the parent's ``type``, so the value round-tripped
+# back as the parent class. Dispatching these here, before the ``isinstance`` chain,
+# preserves the concrete subclass.
+def _extra_arg_serialisers():
+    return {
+        # --- broadcasts whose extra arg / concrete subclass was dropped ---
+        "PrimaryBroadcastToEdges": (
+            lambda s: {"broadcast_domain": s.broadcast_domain},
+            lambda ch, d: pybamm.PrimaryBroadcastToEdges(ch[0], d["broadcast_domain"]),
+        ),
+        "SecondaryBroadcastToEdges": (
+            lambda s: {"broadcast_domain": s.broadcast_domain},
+            lambda ch, d: pybamm.SecondaryBroadcastToEdges(
+                ch[0], d["broadcast_domain"]
+            ),
+        ),
+        "FullBroadcastToEdges": (
+            lambda s: {},
+            lambda ch, d: pybamm.FullBroadcastToEdges(
+                ch[0], broadcast_domains=d["domains"]
+            ),
+        ),
+        "TertiaryBroadcast": (
+            lambda s: {"broadcast_domain": s.broadcast_domain},
+            lambda ch, d: pybamm.TertiaryBroadcast(ch[0], d["broadcast_domain"]),
+        ),
+        "TertiaryBroadcastToEdges": (
+            lambda s: {"broadcast_domain": s.broadcast_domain},
+            lambda ch, d: pybamm.TertiaryBroadcastToEdges(ch[0], d["broadcast_domain"]),
+        ),
+        # --- unary operators with a dropped string/numeric argument ---
+        "BoundaryMeshSize": (
+            lambda s: {"side": s.side},
+            lambda ch, d: pybamm.BoundaryMeshSize(ch[0], d["side"]),
+        ),
+        "DeltaFunction": (
+            lambda s: {"side": s.side, "delta_domain": s.domain},
+            lambda ch, d: pybamm.DeltaFunction(ch[0], d["side"], d["delta_domain"]),
+        ),
+        "EvaluateAt": (
+            lambda s: {"position": s.position},
+            lambda ch, d: pybamm.EvaluateAt(ch[0], d["position"]),
+        ),
+        "Magnitude": (
+            lambda s: {"direction": s.direction},
+            lambda ch, d: pybamm.Magnitude(ch[0], d["direction"]),
+        ),
+        "NodeToEdge2D": (
+            lambda s: {"direction": s.direction},
+            lambda ch, d: pybamm.NodeToEdge2D(ch[0], d["direction"]),
+        ),
+        "UpwindDownwind2D": (
+            lambda s: {"lr_direction": s.lr_direction, "tb_direction": s.tb_direction},
+            lambda ch, d: pybamm.UpwindDownwind2D(
+                ch[0], d["lr_direction"], d["tb_direction"]
+            ),
+        ),
+        "OneDimensionalIntegral": (
+            lambda s: {
+                "integration_domain": s.integration_domain,
+                "direction": s.direction,
+                "region": s.region,
+            },
+            lambda ch, d: pybamm.OneDimensionalIntegral(
+                ch[0], d["integration_domain"], d["direction"], region=d["region"]
+            ),
+        ),
+        "BoundaryIntegral": (
+            lambda s: {"region": s.region},
+            lambda ch, d: pybamm.BoundaryIntegral(ch[0], region=d["region"]),
+        ),
+        "BackwardIndefiniteIntegral": (
+            lambda s: {
+                "integration_variable": convert_symbol_to_json(
+                    s.integration_variable[0]
+                )
+            },
+            lambda ch, d: pybamm.BackwardIndefiniteIntegral(
+                ch[0], convert_symbol_from_json(d["integration_variable"])
+            ),
+        ),
+        "ExplicitTimeIntegral": (
+            lambda s: {
+                "initial_condition": convert_symbol_to_json(s.initial_condition)
+            },
+            lambda ch, d: pybamm.ExplicitTimeIntegral(
+                ch[0], convert_symbol_from_json(d["initial_condition"])
+            ),
+        ),
+        "SizeAverage": (
+            lambda s: {"f_a_dist": convert_symbol_to_json(s.f_a_dist)},
+            lambda ch, d: pybamm.SizeAverage(
+                ch[0], convert_symbol_from_json(d["f_a_dist"])
+            ),
+        ),
+        "TensorField": (
+            lambda s: {},
+            lambda ch, d: pybamm.TensorField(list(ch)),
+        ),
+        # --- leaf symbols (no children) with a dropped argument ---
+        "VariableDot": (
+            lambda s: {},
+            lambda ch, d: pybamm.VariableDot(d["name"], domains=d["domains"]),
+        ),
+        "SpatialVariableEdge": (
+            lambda s: {"coord_sys": s.coord_sys, "direction": s.direction},
+            lambda ch, d: pybamm.SpatialVariableEdge(
+                d["name"],
+                domains=d["domains"],
+                coord_sys=d["coord_sys"],
+                direction=d["direction"],
+            ),
+        ),
+        # --- Interpolant subclass: rebuild from its stored (x, y) arrays ---
+        "DiscreteTimeData": (
+            lambda s: {"time_points": s.x[0].tolist(), "data": s.y.tolist()},
+            lambda ch, d: pybamm.DiscreteTimeData(
+                np.array(d["time_points"]), np.array(d["data"]), d["name"]
+            ),
+        ),
+    }
+
+
 def convert_symbol_from_json(json_data):
     """
     Recursively converts a JSON dictionary back into PyBaMM symbolic expressions
@@ -2353,6 +2510,25 @@ def convert_symbol_from_json(json_data):
             json_data["name"],
             domains=json_data.get("domains", {}),
         )
+    elif json_data["type"] in _extra_arg_serialisers():
+        # Rebuild via the registered constructor, which supplies the non-Symbol
+        # arguments (side/direction/region strings, a position, a distribution...)
+        # that the generic fallback below would drop (#5548).
+        _, from_json = _extra_arg_serialisers()[json_data["type"]]
+        children = [convert_symbol_from_json(c) for c in json_data.get("children", [])]
+        return from_json(children, json_data)
+    elif _type_serialises_via_protocol(json_data["type"]):
+        # Reconstruct via the class's own ``_from_json``, which knows how to
+        # rebuild the non-Symbol constructor args (slice index, numpy entries,
+        # ``y_slices``) that the generic fallback below would drop (#5548).
+        cls = getattr(pybamm, json_data["type"])
+        snippet = {
+            **json_data,
+            "children": [
+                convert_symbol_from_json(c) for c in json_data.get("children", [])
+            ],
+        }
+        return cls._from_json(snippet)
     elif "children" in json_data:
         return getattr(pybamm, json_data["type"])(
             *[convert_symbol_from_json(c) for c in json_data["children"]]
@@ -2385,6 +2561,22 @@ def convert_symbol_to_json(symbol):
         }
     elif isinstance(symbol, numbers.Number | list):
         return symbol
+    elif symbol.__class__.__name__ in _extra_arg_serialisers():
+        # Capture the non-Symbol constructor arguments (and the concrete subclass
+        # name) that the generic / parent-class branches below would drop (#5548).
+        # Keyed on the exact class so e.g. ``PrimaryBroadcastToEdges`` is handled
+        # here rather than by the ``isinstance(symbol, pybamm.PrimaryBroadcast)``
+        # branch, which would otherwise rewrite it to the parent type.
+        to_json, _ = _extra_arg_serialisers()[symbol.__class__.__name__]
+        json_dict = {
+            "type": symbol.__class__.__name__,
+            "domains": symbol.domains,
+            "children": [convert_symbol_to_json(c) for c in symbol.children],
+        }
+        if hasattr(symbol, "name"):
+            json_dict["name"] = symbol.name
+        json_dict.update(to_json(symbol))
+        return json_dict
     elif isinstance(symbol, pybamm.Parameter):
         # Parameters are stored with their type and name
         return {"type": "Parameter", "name": symbol.name}
@@ -2509,6 +2701,15 @@ def convert_symbol_to_json(symbol):
             "diff_variable": diff_variable,
             "name": symbol.name,
         }
+    elif _symbol_serialises_via_protocol(symbol):
+        # Delegate to the class's own ``to_json``, which captures the non-Symbol
+        # constructor args (slice index, numpy entries, ``y_slices``) that the
+        # generic fallback below would drop (#5548). Children are nested inline,
+        # as elsewhere in this serialiser.
+        json_dict = symbol.to_json()
+        json_dict["type"] = symbol.__class__.__name__
+        json_dict["children"] = [convert_symbol_to_json(c) for c in symbol.children]
+        return json_dict
     elif isinstance(symbol, pybamm.Symbol):
         # Generic fallback for other symbols with children
         json_dict = {
