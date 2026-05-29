@@ -1450,3 +1450,70 @@ class TestSolution:
         np.testing.assert_allclose(
             base["2c"].entries, flipped["2c"].entries, rtol=1e-12, atol=1e-12
         )
+
+    def test_from_sub_solutions_matches_repeated_add(self):
+        # from_sub_solutions must equal a left-fold of __add__.
+        import functools
+        import operator
+
+        sols = []
+        for i in range(4):
+            t = np.linspace(i, i + 1, 10)
+            sols.append(
+                pybamm.Solution(t, np.tile(t, (3, 1)), pybamm.BaseModel(), {"a": i})
+            )
+        batch = pybamm.Solution.from_sub_solutions(sols)
+        folded = functools.reduce(operator.add, [s.copy() for s in sols])
+
+        np.testing.assert_array_equal(batch.t, folded.t)
+        np.testing.assert_array_equal(batch.y, folded.y)
+        assert [len(s) for s in batch.all_ts] == [len(s) for s in folded.all_ts]
+        assert len(batch.sub_solutions) == len(folded.sub_solutions)
+        assert batch.all_inputs == folded.all_inputs
+
+    def test_from_sub_solutions_filters_empty_and_none(self):
+        t = np.linspace(0, 1, 5)
+        a = pybamm.Solution(t, np.tile(t, (2, 1)), pybamm.BaseModel(), {})
+        b = pybamm.Solution(t + 1, np.tile(t, (2, 1)), pybamm.BaseModel(), {})
+        out = pybamm.Solution.from_sub_solutions([None, a, pybamm.EmptySolution(), b])
+        assert len(out.sub_solutions) == 2
+
+    def test_from_sub_solutions_single_returns_copy(self):
+        t = np.linspace(0, 1, 5)
+        a = pybamm.Solution(t, np.tile(t, (2, 1)), pybamm.BaseModel(), {})
+        out = pybamm.Solution.from_sub_solutions([a])
+        assert out is not a
+        np.testing.assert_array_equal(out.t, a.t)
+
+    def test_from_sub_solutions_strips_repeated_boundary(self):
+        # b starts exactly where a ends: the duplicate sample is dropped once.
+        t1 = np.array([0.0, 0.5, 1.0])
+        t2 = np.array([1.0, 1.5, 2.0])
+        a = pybamm.Solution(t1, np.tile(t1, (2, 1)), pybamm.BaseModel(), {})
+        b = pybamm.Solution(t2, np.tile(t2, (2, 1)), pybamm.BaseModel(), {})
+        out = pybamm.Solution.from_sub_solutions([a, b])
+        np.testing.assert_array_equal(out.t, np.array([0.0, 0.5, 1.0, 1.5, 2.0]))
+
+    def test_from_sub_solutions_sums_timers(self):
+        t = np.linspace(0, 1, 5)
+        a = pybamm.Solution(t, np.tile(t, (2, 1)), pybamm.BaseModel(), {})
+        b = pybamm.Solution(t + 1, np.tile(t, (2, 1)), pybamm.BaseModel(), {})
+        a.integration_time, b.integration_time = 0.3, 0.5
+        a.solve_time, b.solve_time = 1.0, 2.0
+        a.set_up_time, b.set_up_time = 0.1, 0.1
+        out = pybamm.Solution.from_sub_solutions([a, b])
+        assert out.integration_time == 0.8
+        assert out.solve_time == 3.0
+        assert out.set_up_time == 0.2
+
+    def test_from_sub_solutions_single_timestep_duplicate(self):
+        # A single-timestep solution duplicating the previous end is dropped,
+        # matching __add__'s special case (no empty segment, no IndexError).
+        ta = np.array([0.0, 0.5, 1.0])
+        a = pybamm.Solution(ta, np.tile(ta, (2, 1)), pybamm.BaseModel(), {})
+        tb = np.array([1.0])
+        b = pybamm.Solution(tb, np.tile(tb, (2, 1)), pybamm.BaseModel(), {})
+        out = pybamm.Solution.from_sub_solutions([a, b])
+        folded = a.copy() + b
+        np.testing.assert_array_equal(out.t, folded.t)
+        np.testing.assert_array_equal(out.t, np.array([0.0, 0.5, 1.0]))

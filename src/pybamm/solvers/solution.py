@@ -1177,6 +1177,121 @@ class Solution(SolutionBase):
     def __radd__(self, other):
         return self.__add__(other)
 
+    @classmethod
+    def from_sub_solutions(cls, sub_solutions):
+        """Fold a list of already-validated solutions into one in a single pass.
+
+        Equivalent to ``functools.reduce(operator.add, sub_solutions)`` but O(N)
+        instead of O(N^2): the segment lists are concatenated once rather than a
+        fresh Solution being rebuilt on every step. Inputs must already be valid
+        (as produced by a solver or a prior fold).
+        """
+        sols = [
+            s
+            for s in sub_solutions
+            if s is not None and not isinstance(s, EmptySolution)
+        ]
+        if not sols:
+            return EmptySolution()
+        if len(sols) == 1:
+            return sols[0].copy()
+
+        hermite = all(s.hermite_interpolation for s in sols)
+        t_evals_present = all(s._all_t_evals is not None for s in sols)
+
+        all_ts, all_ys, all_yps, all_t_evals = [], [], [], []
+        all_models, all_inputs = [], []
+        inputs_stacked, inputs_casadi, sub_sols = [], [], []
+
+        prev_last_t = None
+        for s in sols:
+            repeated = prev_last_t is not None and s.all_ts[0][0] == prev_last_t
+            # Single-timestep solution that exactly duplicates the running boundary:
+            # mirror __add__'s special-case short-circuit (it contributes only its
+            # termination/events, taken from `last` below). Appending it would leave
+            # an empty segment after the boundary strip and crash validation.
+            if repeated and len(s.all_ts) == 1 and len(s.all_ts[0]) == 1:
+                prev_last_t = s.all_ts[-1][-1]
+                continue
+            first = slice(1, None) if repeated else slice(None)
+            # time + state
+            all_ts.append(s.all_ts[0][first])
+            all_ts.extend(s.all_ts[1:])
+            all_ys.append(s.all_ys[0][:, first])
+            all_ys.extend(s.all_ys[1:])
+            if hermite:
+                all_yps.append(s.all_yps[0][:, first])
+                all_yps.extend(s.all_yps[1:])
+            if t_evals_present:
+                all_t_evals.append(s._all_t_evals[0][first])
+                all_t_evals.extend(s._all_t_evals[1:])
+            # bookkeeping lists
+            all_models.extend(s.all_models)
+            all_inputs.extend(s.all_inputs)
+            inputs_stacked.extend(s.all_inputs_stacked)
+            inputs_casadi.extend(s.all_inputs_casadi)
+            sub_sols.extend(s.sub_solutions)
+            prev_last_t = s.all_ts[-1][-1]
+
+        # sensitivities: fresh dict, no aliasing of any input solution's dict
+        all_sensitivities = {}
+        for s in sols:
+            for key, val in s._all_sensitivities.items():
+                all_sensitivities.setdefault(key, []).extend(val)
+
+        options = {}
+        for s in sols:
+            options |= s.user_options
+
+        last = sols[-1]
+        new_sol = cls(
+            all_ts,
+            all_ys,
+            all_models,
+            all_inputs,
+            last.t_event,
+            last.y_event,
+            last.termination,
+            all_sensitivities=all_sensitivities,
+            all_yps=all_yps if hermite else None,
+            all_t_evals=all_t_evals if t_evals_present else None,
+            variables_returned=any(s.variables_returned for s in sols),
+            options=options,
+            _validate_time_structure=False,
+        )
+
+        # validate the joined series once (O(N), not O(N^2))
+        new_sol._ensure_sorted_t(new_sol.all_ts, "all_ts")
+        if new_sol._all_t_evals is not new_sol.all_ts:
+            new_sol._ensure_t_evals(
+                all_ts=new_sol.all_ts, all_t_evals=new_sol._all_t_evals
+            )
+
+        new_sol.closest_event_idx = last.closest_event_idx
+        new_sol._all_inputs_stacked = inputs_stacked
+        new_sol._all_inputs_casadi = inputs_casadi
+        new_sol._sub_solutions = sub_sols
+
+        for attr in ["solve_time", "integration_time", "set_up_time"]:
+            vals = [getattr(s, attr, None) for s in sols]
+            if all(v is not None for v in vals):
+                setattr(new_sol, attr, sum(vals))
+
+        # variables derived at the solver stage (output_variables path): reproduce
+        # __add__'s pairwise left-fold. Correct; cost unchanged.
+        if any(s.variables_returned for s in sols):
+            keys = set().union(*[s._variables.keys() for s in sols])
+            merged = {}
+            for v in keys:
+                acc = sols[0][v]
+                for s in sols[1:]:
+                    acc = acc.update(s[v], new_sol)
+                merged[v] = acc
+            new_sol._variables = merged
+            new_sol.variables_returned = True
+
+        return new_sol
+
     def copy(self):
         new_sol = self.__class__(
             self.all_ts,
