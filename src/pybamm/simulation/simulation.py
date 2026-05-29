@@ -641,7 +641,6 @@ class Simulation(BaseSimulation):
                     f"Step '{step_str}' is infeasible at initial conditions, "
                     "but skip_ok is True. Skipping step."
                 )
-                self._solution.termination = steps[0].termination
                 return True  # signal: continue to next cycle
             raise pybamm.SolverError(
                 f"Step '{step_str}' is infeasible "
@@ -894,6 +893,26 @@ class Simulation(BaseSimulation):
         else:
             cycle_lengths = self.experiment.cycle_lengths
 
+        # Collect per-cycle solutions and fold them once after the loop
+        # (O(N)) instead of self._solution = self._solution + cycle_solution
+        # each cycle (O(N^2)).
+        # Seed with the loop-entry self._solution (the starting_solution /
+        # padding-rest carry-over) so the fold reproduces today's left-fold start.
+        cross_cycle_segments = (
+            []
+            if (
+                self._solution is None
+                or isinstance(self._solution, pybamm.EmptySolution)
+            )
+            else [self._solution]
+        )
+
+        # Termination of the running accumulation as the loop mutates it:
+        # updated by each real appended cycle and by skipped steps (which used
+        # to mutate self._solution.termination directly). Applied to the folded
+        # solution below so the final termination matches the old left-fold.
+        last_termination = None
+
         for cycle_num, cycle_length in enumerate(
             cycle_lengths,
             start=1,
@@ -1075,11 +1094,14 @@ class Simulation(BaseSimulation):
             if cycle_solution is not None and (
                 save_this_cycle or feasible is False or stop_experiment
             ):
-                self._solution = self._solution + cycle_solution
+                cross_cycle_segments.append(cycle_solution)
+                if not isinstance(cycle_solution, pybamm.EmptySolution):
+                    last_termination = cycle_solution.termination
 
             if steps:
                 if all(isinstance(s, pybamm.EmptySolution) for s in steps):
                     if self._check_infeasible_steps(steps, step, step_str, cycle_num):
+                        last_termination = steps[0].termination
                         continue
                 cycle_sol = pybamm.make_cycle_solution(
                     steps,
@@ -1139,6 +1161,11 @@ class Simulation(BaseSimulation):
 
             if stop_experiment:
                 break
+
+        if cross_cycle_segments:
+            self._solution = pybamm.Solution.from_sub_solutions(cross_cycle_segments)
+            if last_termination is not None:
+                self._solution.termination = last_termination
 
         if self._solution is not None and len(all_cycle_solutions) > 0:
             self._solution.cycles = all_cycle_solutions
