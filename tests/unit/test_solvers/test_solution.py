@@ -6,6 +6,7 @@ import json
 import logging
 import subprocess  # nosec B404 - used in tests with trusted input
 import sys
+from unittest import mock
 
 import numpy as np
 import pandas as pd
@@ -368,6 +369,126 @@ class TestSolution:
         sol2 = pybamm.Solution(t3, y3, pybamm.BaseModel(), {}, all_sensitivities={})
         sol3 = sol1 + sol2
         assert not sol3._all_sensitivities
+
+    def test_add_validates_only_boundary(self):
+        # __add__ must validate only the joined region, not re-scan the whole
+        # accumulation (that re-scan was the O(N^2) source).
+        base = None
+        for i in range(5):
+            t = np.array([3.0 * i, 3.0 * i + 1.0])  # non-adjacent, no strip
+            s = pybamm.Solution(t, np.tile(t, (3, 1)), pybamm.BaseModel(), {})
+            base = s if base is None else base + s
+        nseg = len(base.all_ts)
+        assert nseg >= 4
+        t = np.array([3.0 * 5, 3.0 * 5 + 1.0])
+        nxt = pybamm.Solution(t, np.tile(t, (3, 1)), pybamm.BaseModel(), {})
+        with mock.patch.object(
+            pybamm.Solution,
+            "_ensure_sorted_t",
+            wraps=pybamm.Solution._ensure_sorted_t,
+        ) as spy:
+            _ = base + nxt
+        # every validation is on a bounded boundary slice, never the full
+        # nseg+1 segment list (that re-scan was the O(N^2) source)
+        assert spy.call_count >= 1
+        for call in spy.call_args_list:
+            assert len(call[0][0]) < nseg
+
+    def test_add_out_of_order_raises(self):
+        # The boundary re-scan preserves the strictly-increasing invariant the
+        # full re-scan used to enforce.
+        t1 = np.linspace(0, 2)
+        t2 = np.linspace(1, 3)  # starts before sol1 ends
+        sol1 = pybamm.Solution(t1, np.tile(t1, (5, 1)), pybamm.BaseModel(), {})
+        sol2 = pybamm.Solution(t2, np.tile(t2, (5, 1)), pybamm.BaseModel(), {})
+        with pytest.raises(ValueError, match=r"strictly increasing across"):
+            _ = sol1 + sol2
+
+    def test_add_duplicate_junction_raises(self):
+        # A segment like [10, 10, 11] passes per-segment sort (<= allows
+        # equal), so `other` is a valid solution; merging it onto a solution
+        # ending at 10 leaves a non-strictly-increasing junction after the
+        # repeated-boundary strip. The boundary re-scan must catch it.
+        t1 = np.array([0.0, 5.0, 10.0])
+        t2 = np.array([10.0, 10.0, 11.0])
+        sol1 = pybamm.Solution(t1, np.tile(t1, (5, 1)), pybamm.BaseModel(), {})
+        sol2 = pybamm.Solution(t2, np.tile(t2, (5, 1)), pybamm.BaseModel(), {})
+        with pytest.raises(ValueError, match=r"strictly increasing across"):
+            _ = sol1 + sol2
+
+    def test_add_validates_t_evals_only_at_boundary(self):
+        # all_t_evals gets the same bounded boundary re-scan as all_ts: one
+        # call on the joined region, not the whole accumulation.
+        base = None
+        for i in range(5):
+            t = np.array([3.0 * i, 3.0 * i + 1.0])  # non-adjacent, no strip
+            s = pybamm.Solution(
+                t, np.tile(t, (3, 1)), pybamm.BaseModel(), {}, all_t_evals=t
+            )
+            base = s if base is None else base + s
+        nseg = len(base.all_ts)
+        assert nseg >= 4
+        t = np.array([15.0, 16.0])
+        nxt = pybamm.Solution(
+            t, np.tile(t, (3, 1)), pybamm.BaseModel(), {}, all_t_evals=t
+        )
+        with mock.patch.object(
+            pybamm.Solution,
+            "_ensure_t_evals",
+            wraps=pybamm.Solution._ensure_t_evals,
+        ) as spy:
+            _ = base + nxt
+        assert spy.call_count == 1
+        assert len(spy.call_args.kwargs["all_t_evals"]) < nseg
+
+    def test_check_solution_false_still_validates_time(self):
+        # check_solution controls only the large-y scan; time structure is
+        # still validated, so unsorted segments raise regardless.
+        bad_ts = [np.array([1.0, 2.0, 3.0]), np.array([2.0, 3.0, 4.0])]
+        bad_ys = [np.ones((1, 3)), np.ones((1, 3))]
+        with pytest.raises(ValueError, match=r"strictly increasing"):
+            pybamm.Solution(
+                bad_ts, bad_ys, pybamm.BaseModel(), [{}, {}], check_solution=False
+            )
+
+    def test_check_solution_false_skips_only_large_y(self):
+        # check_solution=False skips check_ys_are_not_too_large but not the
+        # time-structure validation.
+        t = np.linspace(0, 1)
+        y = np.tile(t, (5, 1))
+        with (
+            mock.patch.object(pybamm.Solution, "check_ys_are_not_too_large") as large_y,
+            mock.patch.object(pybamm.Solution, "_ensure_sorted_t") as sorted_t,
+        ):
+            pybamm.Solution(t, y, pybamm.BaseModel(), {}, check_solution=False)
+        large_y.assert_not_called()
+        sorted_t.assert_called_once()
+
+    def test_validate_time_structure_false_skips_time_validation(self):
+        # The private fast path used by __add__/copy: unsorted segments are
+        # accepted only when time validation is explicitly disabled.
+        bad_ts = [np.array([1.0, 2.0, 3.0]), np.array([2.0, 3.0, 4.0])]
+        bad_ys = [np.ones((1, 3)), np.ones((1, 3))]
+        sol = pybamm.Solution(
+            bad_ts, bad_ys, pybamm.BaseModel(), [{}, {}], _validate_time_structure=False
+        )
+        assert len(sol.all_ts) == 2
+
+    def test_observable_computed_lazily(self):
+        # `observable` scans all_models; computing it eagerly on every
+        # construction makes accumulation O(N^2). It must be deferred to
+        # first access and then cached.
+        t1 = np.linspace(0, 1)
+        t2 = np.linspace(1, 2)
+        sol1 = pybamm.Solution(t1, np.tile(t1, (5, 1)), pybamm.BaseModel(), {})
+        sol2 = pybamm.Solution(t2, np.tile(t2, (5, 1)), pybamm.BaseModel(), {})
+        sol_sum = sol1 + sol2
+        assert sol_sum._observable is None  # not computed during __add__
+        expected = bool(sol_sum.all_models) and all(
+            m.solution_observable for m in sol_sum.all_models
+        )
+        assert sol_sum.observable == expected  # computed on access
+        assert sol_sum._observable == expected  # and cached
 
     def test_add_solutions_different_models(self):
         # Set up first solution

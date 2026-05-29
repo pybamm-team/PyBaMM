@@ -256,10 +256,12 @@ class Solution(SolutionBase):
         variables_returned=False,
         check_solution=True,
         options=None,
+        _validate_time_structure=True,
     ):
         if not isinstance(all_ts, list):
             all_ts = [all_ts]
-        self._ensure_sorted_t(all_ts, "all_ts")
+        if _validate_time_structure:
+            self._ensure_sorted_t(all_ts, "all_ts")
         if not isinstance(all_ys, list):
             all_ys = [all_ys]
         if not isinstance(all_models, list):
@@ -278,14 +280,14 @@ class Solution(SolutionBase):
         else:
             if not isinstance(all_t_evals, list):
                 all_t_evals = [all_t_evals]
-            self._ensure_t_evals(all_ts=all_ts, all_t_evals=all_t_evals)
+            if _validate_time_structure:
+                self._ensure_t_evals(all_ts=all_ts, all_t_evals=all_t_evals)
         self._all_t_evals = all_t_evals
         self._user_options = options or {}
         self._options = _DEFAULT_SOLUTION_OPTIONS | self._user_options
         self.variables_returned = variables_returned
-        self._observable = self._all_models and all(
-            model.solution_observable for model in self._all_models
-        )
+        # computed lazily on first access; see the `observable` property
+        self._observable = None
 
         # Set up inputs
         if not isinstance(all_inputs, list):
@@ -550,10 +552,14 @@ class Solution(SolutionBase):
 
     @property
     def observable(self) -> bool:
+        if self._observable is None:
+            self._observable = bool(self._all_models) and all(
+                model.solution_observable for model in self._all_models
+            )
         return self._observable
 
     def _check_observable(self):
-        if self._observable:
+        if self.observable:
             return
 
         # Collect unique reasons from all models
@@ -1107,6 +1113,18 @@ class Solution(SolutionBase):
         if not hermite_interpolation:
             all_yps = None
 
+        # Validate only the newly-joined region (self's last segment + other's
+        # contribution), not the whole accumulation. self's earlier segments
+        # were already validated when self was built, so this stays O(size of
+        # other) per add, i.e. O(N) total instead of O(N^2).
+        n = len(self.all_ts)
+        self._ensure_sorted_t([self.all_ts[-1], *all_ts[n:]], "all_ts")
+        if all_t_evals is not None:
+            self._ensure_t_evals(
+                all_ts=[self.all_ts[-1], *all_ts[n:]],
+                all_t_evals=[self._all_t_evals[-1], *all_t_evals[n:]],
+            )
+
         # sensitivities are a dict of {parameter: [sensitivities]}
         # we can assume that the keys are the same for both solutions
         all_sensitivities = self._all_sensitivities
@@ -1130,6 +1148,7 @@ class Solution(SolutionBase):
             all_t_evals=all_t_evals,
             variables_returned=other.variables_returned,
             options=options,
+            _validate_time_structure=False,
         )
 
         new_sol.closest_event_idx = other.closest_event_idx
@@ -1172,6 +1191,7 @@ class Solution(SolutionBase):
             all_t_evals=self._all_t_evals,
             variables_returned=self.variables_returned,
             options=self.user_options,
+            _validate_time_structure=False,
         )
         new_sol._all_inputs_stacked = self.all_inputs_stacked
         new_sol._all_inputs_casadi = self.all_inputs_casadi
