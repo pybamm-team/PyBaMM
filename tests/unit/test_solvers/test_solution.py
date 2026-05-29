@@ -1666,3 +1666,150 @@ class TestSolution:
             np.testing.assert_array_equal(got, exp)
         assert len(a._all_sensitivities["p"]) == 1  # inputs untouched
         assert len(b._all_sensitivities["p"]) == 1
+
+    def test_from_sub_solutions_skipped_duplicate_excluded_from_timers(self):
+        # A skipped single-sample boundary duplicate must not contribute its
+        # timers: __add__ short-circuits it to a copy, so its solve_time etc.
+        # are dropped. The duplicate sits between two real segments.
+        import functools
+        import operator
+
+        a = pybamm.Solution(
+            np.array([0.0, 0.5, 1.0]),
+            np.tile(np.array([0.0, 0.5, 1.0]), (2, 1)),
+            pybamm.BaseModel(),
+            {},
+        )
+        dup = pybamm.Solution(
+            np.array([1.0]), np.tile(np.array([1.0]), (2, 1)), pybamm.BaseModel(), {}
+        )
+        b = pybamm.Solution(
+            np.array([1.0, 1.5, 2.0]),
+            np.tile(np.array([1.0, 1.5, 2.0]), (2, 1)),
+            pybamm.BaseModel(),
+            {},
+        )
+        a.solve_time, dup.solve_time, b.solve_time = 1.0, 10.0, 2.0
+        a.integration_time, dup.integration_time, b.integration_time = 0.5, 5.0, 0.7
+        a.set_up_time, dup.set_up_time, b.set_up_time = 0.1, 9.0, 0.2
+
+        out = pybamm.Solution.from_sub_solutions([a.copy(), dup.copy(), b.copy()])
+        folded = functools.reduce(operator.add, [a.copy(), dup.copy(), b.copy()])
+
+        assert out.solve_time == folded.solve_time
+        assert out.integration_time == folded.integration_time
+        assert out.set_up_time == folded.set_up_time
+
+    def test_from_sub_solutions_skipped_duplicate_excluded_from_sensitivities(self):
+        # A skipped duplicate's sensitivities must not be folded in.
+        import functools
+        import operator
+
+        a = pybamm.Solution(
+            np.array([0.0, 0.5, 1.0]),
+            np.tile(np.array([0.0, 0.5, 1.0]), (2, 1)),
+            pybamm.BaseModel(),
+            {},
+            all_sensitivities={"p": [np.ones((2, 1))]},
+        )
+        dup = pybamm.Solution(
+            np.array([1.0]),
+            np.tile(np.array([1.0]), (2, 1)),
+            pybamm.BaseModel(),
+            {},
+            all_sensitivities={"p": [9 * np.ones((2, 1))]},
+        )
+        b = pybamm.Solution(
+            np.array([1.0, 1.5, 2.0]),
+            np.tile(np.array([1.0, 1.5, 2.0]), (2, 1)),
+            pybamm.BaseModel(),
+            {},
+            all_sensitivities={"p": [2 * np.ones((2, 1))]},
+        )
+
+        out = pybamm.Solution.from_sub_solutions([a.copy(), dup.copy(), b.copy()])
+        folded = functools.reduce(operator.add, [a.copy(), dup.copy(), b.copy()])
+
+        assert len(out._all_sensitivities["p"]) == len(folded._all_sensitivities["p"])
+        for got, exp in zip(
+            out._all_sensitivities["p"], folded._all_sensitivities["p"], strict=True
+        ):
+            np.testing.assert_array_equal(got, exp)
+
+    def test_from_sub_solutions_skipped_duplicate_excluded_from_user_options(self):
+        # A skipped duplicate's user_options must not leak into the merged result.
+        import functools
+        import operator
+
+        a = pybamm.Solution(
+            np.array([0.0, 0.5, 1.0]),
+            np.tile(np.array([0.0, 0.5, 1.0]), (2, 1)),
+            pybamm.BaseModel(),
+            {},
+        )
+        dup = pybamm.Solution(
+            np.array([1.0]), np.tile(np.array([1.0]), (2, 1)), pybamm.BaseModel(), {}
+        )
+        dup._user_options = {"only_in_dup": True}
+
+        out = pybamm.Solution.from_sub_solutions([a.copy(), dup.copy()])
+        folded = functools.reduce(operator.add, [a.copy(), dup.copy()])
+
+        assert out.user_options == folded.user_options
+
+    def test_from_sub_solutions_skipped_duplicate_excluded_from_variables_returned(
+        self,
+    ):
+        # variables_returned must mirror __add__: a skipped duplicate's flag is
+        # ignored because the short-circuit copies the running solution.
+        import functools
+        import operator
+
+        a = pybamm.Solution(
+            np.array([0.0, 0.5, 1.0]),
+            np.tile(np.array([0.0, 0.5, 1.0]), (2, 1)),
+            pybamm.BaseModel(),
+            {},
+        )
+        dup = pybamm.Solution(
+            np.array([1.0]), np.tile(np.array([1.0]), (2, 1)), pybamm.BaseModel(), {}
+        )
+        a.variables_returned = False
+        dup.variables_returned = True
+
+        out = pybamm.Solution.from_sub_solutions([a.copy(), dup.copy()])
+        folded = functools.reduce(operator.add, [a.copy(), dup.copy()])
+
+        assert out.variables_returned == folded.variables_returned
+
+    def test_from_sub_solutions_skipped_duplicate_preserves_hermite(self):
+        # Real segments are hermite; a trailing single-sample duplicate is not.
+        # __add__ short-circuits the duplicate to a copy, so the result stays
+        # hermite. The hermite flag must be derived from included segments only.
+        import functools
+        import operator
+
+        a = pybamm.Solution(
+            np.array([0.0, 0.5, 1.0]),
+            np.tile(np.array([0.0, 0.5, 1.0]), (2, 1)),
+            pybamm.BaseModel(),
+            {},
+            all_yps=np.tile(np.array([0.0, 0.5, 1.0]), (2, 1)),
+        )
+        b = pybamm.Solution(
+            np.array([1.0, 1.5, 2.0]),
+            np.tile(np.array([1.0, 1.5, 2.0]), (2, 1)),
+            pybamm.BaseModel(),
+            {},
+            all_yps=np.tile(np.array([1.0, 1.5, 2.0]), (2, 1)),
+        )
+        dup = pybamm.Solution(
+            np.array([2.0]), np.tile(np.array([2.0]), (2, 1)), pybamm.BaseModel(), {}
+        )
+
+        out = pybamm.Solution.from_sub_solutions([a.copy(), b.copy(), dup.copy()])
+        folded = functools.reduce(operator.add, [a.copy(), b.copy(), dup.copy()])
+
+        assert out.hermite_interpolation == folded.hermite_interpolation
+        assert out.hermite_interpolation is True
+        np.testing.assert_array_equal(out.yp, folded.yp)

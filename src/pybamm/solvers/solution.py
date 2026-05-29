@@ -1196,22 +1196,30 @@ class Solution(SolutionBase):
         if len(sols) == 1:
             return sols[0].copy()
 
-        hermite = all(s.hermite_interpolation for s in sols)
-        t_evals_present = all(s._all_t_evals is not None for s in sols)
+        # Decide once which segments contribute. __add__ short-circuits a
+        # single-sample segment whose only sample duplicates the running
+        # boundary to a copy, so it contributes nothing to the merge: skip it
+        # here and derive every quantity below from the kept segments only.
+        # `repeated` records whether a kept segment's leading sample duplicates
+        # the previous boundary (dropped once on concatenation).
+        kept = []
+        prev_last_t = None
+        for s in sols:
+            repeated = prev_last_t is not None and s.all_ts[0][0] == prev_last_t
+            prev_last_t = s.all_ts[-1][-1]
+            if repeated and len(s.all_ts) == 1 and len(s.all_ts[0]) == 1:
+                continue
+            kept.append((s, repeated))
+        segments = [s for s, _ in kept]
+
+        hermite = all(s.hermite_interpolation for s in segments)
+        t_evals_present = all(s._all_t_evals is not None for s in segments)
 
         all_ts, all_ys, all_yps, all_t_evals = [], [], [], []
         all_models, all_inputs = [], []
         inputs_stacked, inputs_casadi, sub_sols = [], [], []
 
-        prev_last_t = None
-        last_appended = None
-        for s in sols:
-            repeated = prev_last_t is not None and s.all_ts[0][0] == prev_last_t
-            # Skip a single-sample duplicate of the boundary: mirrors __add__'s
-            # short-circuit and avoids an empty segment crashing validation.
-            if repeated and len(s.all_ts) == 1 and len(s.all_ts[0]) == 1:
-                prev_last_t = s.all_ts[-1][-1]
-                continue
+        for s, repeated in kept:
             first = slice(1, None) if repeated else slice(None)
             # time + state
             all_ts.append(s.all_ts[0][first])
@@ -1230,19 +1238,19 @@ class Solution(SolutionBase):
             inputs_stacked.extend(s.all_inputs_stacked)
             inputs_casadi.extend(s.all_inputs_casadi)
             sub_sols.extend(s.sub_solutions)
-            prev_last_t = s.all_ts[-1][-1]
-            last_appended = s
 
         # sensitivities: fresh dict, no aliasing of any input solution's dict
         all_sensitivities = {}
-        for s in sols:
+        for s in segments:
             for key, val in s._all_sensitivities.items():
                 all_sensitivities.setdefault(key, []).extend(val)
 
         options = {}
-        for s in sols:
+        for s in segments:
             options |= s.user_options
 
+        # termination/events come from the last operand even when it is a
+        # skipped duplicate: __add__ copies them through the short-circuit.
         last = sols[-1]
         new_sol = cls(
             all_ts,
@@ -1255,7 +1263,7 @@ class Solution(SolutionBase):
             all_sensitivities=all_sensitivities,
             all_yps=all_yps if hermite else None,
             all_t_evals=all_t_evals if t_evals_present else None,
-            variables_returned=any(s.variables_returned for s in sols),
+            variables_returned=any(s.variables_returned for s in segments),
             options=options,
             _validate_time_structure=False,
         )
@@ -1267,26 +1275,26 @@ class Solution(SolutionBase):
                 all_ts=new_sol.all_ts, all_t_evals=new_sol._all_t_evals
             )
 
-        # from the last appended segment, not sols[-1]: __add__'s single-sample
-        # short-circuit keeps the running closest_event_idx, so a trailing
-        # duplicate must not overwrite it.
-        new_sol.closest_event_idx = last_appended.closest_event_idx
+        # last kept segment, not sols[-1]: __add__'s single-sample short-circuit
+        # keeps the running closest_event_idx, so a trailing duplicate must not
+        # overwrite it.
+        new_sol.closest_event_idx = segments[-1].closest_event_idx
         new_sol._all_inputs_stacked = inputs_stacked
         new_sol._all_inputs_casadi = inputs_casadi
         new_sol._sub_solutions = sub_sols
 
         for attr in ["solve_time", "integration_time", "set_up_time"]:
-            vals = [getattr(s, attr, None) for s in sols]
+            vals = [getattr(s, attr, None) for s in segments]
             if all(v is not None for v in vals):
                 setattr(new_sol, attr, sum(vals))
 
         # output_variables path: reproduce __add__'s pairwise left-fold.
-        if any(s.variables_returned for s in sols):
-            keys = set().union(*[s._variables.keys() for s in sols])
+        if any(s.variables_returned for s in segments):
+            keys = set().union(*[s._variables.keys() for s in segments])
             merged = {}
             for v in keys:
-                acc = sols[0][v]
-                for s in sols[1:]:
+                acc = segments[0][v]
+                for s in segments[1:]:
                     acc = acc.update(s[v], new_sol)
                 merged[v] = acc
             new_sol._variables = merged
