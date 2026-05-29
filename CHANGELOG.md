@@ -1,5 +1,9 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Bug fixes
+
+- Fixed `convert_symbol_to_json` / `convert_symbol_from_json` dropping non-child constructor arguments (numpy entries, slice/int index, `y_slices`, side/direction/region strings, a position, an integration domain, or a sibling `Symbol`), and silently rewriting the `*ToEdges` broadcasts to their parent class, on round-trip. ([#5549](https://github.com/pybamm-team/PyBaMM/pull/5549))
+
 # [v26.5.0](https://github.com/pybamm-team/PyBaMM/tree/v26.5.0) - 2026-05-27
 
 ## Breaking changes
