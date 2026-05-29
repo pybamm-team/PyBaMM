@@ -1539,3 +1539,24 @@ class TestSolution:
         folded = a.copy() + b
         np.testing.assert_array_equal(out.t, folded.t)
         np.testing.assert_array_equal(out.t, np.array([0.0, 0.5, 1.0]))
+
+    def test_make_cycle_solution_matches_legacy(self):
+        # The cycle solution built via from_sub_solutions must match a manual fold.
+        # make_cycle_solution builds SummaryVariables, which reads
+        # `model.summary_variables`; a bare BaseModel only has `_summary_variables`
+        # and raises AttributeError, so use the same _DummyModel shim that the
+        # existing test_options_make_cycle_solution uses.
+        import functools
+        import operator
+
+        class _DummyModel(pybamm.BaseModel):
+            summary_variables = []
+
+        steps = []
+        for i in range(3):
+            t = np.linspace(i, i + 1, 6)
+            steps.append(pybamm.Solution(t, np.tile(t, (2, 1)), _DummyModel(), {}))
+        cycle_sol, _, _ = pybamm.make_cycle_solution(steps, save_this_cycle=True)
+        folded = functools.reduce(operator.add, [s.copy() for s in steps])
+        np.testing.assert_array_equal(cycle_sol.t, folded.t)
+        assert cycle_sol.steps == steps

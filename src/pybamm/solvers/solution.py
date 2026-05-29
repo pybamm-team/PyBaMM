@@ -1415,35 +1415,7 @@ def make_cycle_solution(
         First state of the cycle.
 
     """
-    sum_sols = step_solutions[0].copy()
-    for step_solution in step_solutions[1:]:
-        sum_sols = sum_sols + step_solution
-
-    cycle_solution = Solution(
-        sum_sols.all_ts,
-        sum_sols.all_ys,
-        sum_sols.all_models,
-        sum_sols.all_inputs,
-        sum_sols.t_event,
-        sum_sols.y_event,
-        sum_sols.termination,
-        all_sensitivities=sum_sols._all_sensitivities,
-        all_yps=sum_sols.all_yps,
-        all_t_evals=sum_sols._all_t_evals,
-        variables_returned=sum_sols.variables_returned,
-        options=sum_sols.user_options,
-    )
-
-    if sum_sols.variables_returned:
-        cycle_solution._variables = sum_sols._variables
-
-    cycle_solution._all_inputs_stacked = sum_sols.all_inputs_stacked
-    cycle_solution._all_inputs_casadi = sum_sols.all_inputs_casadi
-    cycle_solution._sub_solutions = sum_sols.sub_solutions
-
-    cycle_solution.solve_time = sum_sols.solve_time
-    cycle_solution.integration_time = sum_sols.integration_time
-    cycle_solution.set_up_time = sum_sols.set_up_time
+    cycle_solution = Solution.from_sub_solutions(step_solutions)
 
     cycle_solution.steps = step_solutions
 
