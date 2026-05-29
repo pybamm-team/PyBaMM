@@ -1126,11 +1126,12 @@ class Solution(SolutionBase):
             )
 
         # sensitivities are a dict of {parameter: [sensitivities]}
-        # we can assume that the keys are the same for both solutions
-        all_sensitivities = self._all_sensitivities
+        all_sensitivities = {
+            key: list(value) for key, value in self._all_sensitivities.items()
+        }
         for key in other._all_sensitivities:
             all_sensitivities[key] = (
-                all_sensitivities[key] + other._all_sensitivities[key]
+                all_sensitivities.get(key, []) + other._all_sensitivities[key]
             )
 
         options = self.user_options | other.user_options

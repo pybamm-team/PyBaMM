@@ -370,6 +370,28 @@ class TestSolution:
         sol3 = sol1 + sol2
         assert not sol3._all_sensitivities
 
+    def test_add_does_not_mutate_operand_sensitivities(self):
+        t1 = np.linspace(0, 1, 5)
+        t2 = np.linspace(1, 2, 5)
+        a = pybamm.Solution(
+            t1,
+            np.tile(t1, (2, 1)),
+            pybamm.BaseModel(),
+            {},
+            all_sensitivities={"p": [np.ones((2, 1))]},
+        )
+        b = pybamm.Solution(
+            t2,
+            np.tile(t2, (2, 1)),
+            pybamm.BaseModel(),
+            {},
+            all_sensitivities={"p": [np.ones((2, 1))]},
+        )
+        before = len(a._all_sensitivities["p"])
+        _ = a + b
+        assert len(a._all_sensitivities["p"]) == before  # a unchanged
+        assert len(b._all_sensitivities["p"]) == 1  # b unchanged
+
     def test_add_validates_only_boundary(self):
         # __add__ must validate only the joined region, not re-scan the whole
         # accumulation (that re-scan was the O(N^2) source).
