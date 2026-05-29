@@ -1180,12 +1180,11 @@ class Solution(SolutionBase):
 
     @classmethod
     def from_sub_solutions(cls, sub_solutions):
-        """Fold a list of already-validated solutions into one in a single pass.
+        """Fold a list of solutions into one in a single pass.
 
         Equivalent to ``functools.reduce(operator.add, sub_solutions)`` but O(N)
-        instead of O(N^2): the segment lists are concatenated once rather than a
-        fresh Solution being rebuilt on every step. Inputs must already be valid
-        (as produced by a solver or a prior fold).
+        instead of O(N^2): segment lists are concatenated once rather than
+        rebuilding a Solution per step. Inputs must already be valid.
         """
         sols = [
             s
@@ -1205,12 +1204,11 @@ class Solution(SolutionBase):
         inputs_stacked, inputs_casadi, sub_sols = [], [], []
 
         prev_last_t = None
+        last_appended = None
         for s in sols:
             repeated = prev_last_t is not None and s.all_ts[0][0] == prev_last_t
-            # Single-timestep solution that exactly duplicates the running boundary:
-            # mirror __add__'s special-case short-circuit (it contributes only its
-            # termination/events, taken from `last` below). Appending it would leave
-            # an empty segment after the boundary strip and crash validation.
+            # Skip a single-sample duplicate of the boundary: mirrors __add__'s
+            # short-circuit and avoids an empty segment crashing validation.
             if repeated and len(s.all_ts) == 1 and len(s.all_ts[0]) == 1:
                 prev_last_t = s.all_ts[-1][-1]
                 continue
@@ -1233,6 +1231,7 @@ class Solution(SolutionBase):
             inputs_casadi.extend(s.all_inputs_casadi)
             sub_sols.extend(s.sub_solutions)
             prev_last_t = s.all_ts[-1][-1]
+            last_appended = s
 
         # sensitivities: fresh dict, no aliasing of any input solution's dict
         all_sensitivities = {}
@@ -1268,7 +1267,10 @@ class Solution(SolutionBase):
                 all_ts=new_sol.all_ts, all_t_evals=new_sol._all_t_evals
             )
 
-        new_sol.closest_event_idx = last.closest_event_idx
+        # from the last appended segment, not sols[-1]: __add__'s single-sample
+        # short-circuit keeps the running closest_event_idx, so a trailing
+        # duplicate must not overwrite it.
+        new_sol.closest_event_idx = last_appended.closest_event_idx
         new_sol._all_inputs_stacked = inputs_stacked
         new_sol._all_inputs_casadi = inputs_casadi
         new_sol._sub_solutions = sub_sols
@@ -1278,8 +1280,7 @@ class Solution(SolutionBase):
             if all(v is not None for v in vals):
                 setattr(new_sol, attr, sum(vals))
 
-        # variables derived at the solver stage (output_variables path): reproduce
-        # __add__'s pairwise left-fold. Correct; cost unchanged.
+        # output_variables path: reproduce __add__'s pairwise left-fold.
         if any(s.variables_returned for s in sols):
             keys = set().union(*[s._variables.keys() for s in sols])
             merged = {}

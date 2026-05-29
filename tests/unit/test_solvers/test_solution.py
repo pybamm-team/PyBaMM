@@ -1560,3 +1560,109 @@ class TestSolution:
         folded = functools.reduce(operator.add, [s.copy() for s in steps])
         np.testing.assert_array_equal(cycle_sol.t, folded.t)
         assert cycle_sol.steps == steps
+
+    def test_from_sub_solutions_trailing_duplicate_keeps_event_idx(self):
+        # __add__'s single-sample short-circuit keeps the running solution's
+        # closest_event_idx (not the duplicate's), so a trailing duplicate must
+        # not overwrite it. termination/events still come from the last segment.
+        import functools
+        import operator
+
+        ta = np.array([0.0, 0.5, 1.0])
+        tb = np.array([1.0, 1.5, 2.0])
+        a = pybamm.Solution(ta, np.tile(ta, (2, 1)), pybamm.BaseModel(), {})
+        b = pybamm.Solution(tb, np.tile(tb, (2, 1)), pybamm.BaseModel(), {})
+        dup = pybamm.Solution(
+            np.array([2.0]),
+            np.tile(np.array([2.0]), (2, 1)),
+            pybamm.BaseModel(),
+            {},
+            termination="event",
+        )
+        a.closest_event_idx, b.closest_event_idx, dup.closest_event_idx = 0, 5, 99
+
+        out = pybamm.Solution.from_sub_solutions([a, b, dup])
+        folded = functools.reduce(operator.add, [a.copy(), b.copy(), dup.copy()])
+
+        assert out.closest_event_idx == folded.closest_event_idx == 5
+        assert out.termination == folded.termination == "event"
+
+    def test_from_sub_solutions_hermite_matches_add(self):
+        # all_yps (hermite) path matches the left-fold and stays hermite.
+        import functools
+        import operator
+
+        sols = []
+        for i in range(3):
+            t = np.linspace(i, i + 1, 5)
+            y = np.tile(t, (2, 1))
+            sols.append(pybamm.Solution(t, y, pybamm.BaseModel(), {}, all_yps=y * 0.1))
+        out = pybamm.Solution.from_sub_solutions(sols)
+        folded = functools.reduce(operator.add, [s.copy() for s in sols])
+
+        assert out.hermite_interpolation
+        np.testing.assert_array_equal(out.yp, folded.yp)
+
+    def test_from_sub_solutions_mixed_hermite_is_not_hermite(self):
+        # If any segment lacks yps, the fold is non-hermite (mirrors __add__'s AND).
+        t1 = np.linspace(0, 1, 5)
+        t2 = np.linspace(1, 2, 5)
+        a = pybamm.Solution(
+            t1, np.tile(t1, (2, 1)), pybamm.BaseModel(), {}, all_yps=np.tile(t1, (2, 1))
+        )
+        b = pybamm.Solution(t2, np.tile(t2, (2, 1)), pybamm.BaseModel(), {})
+        out = pybamm.Solution.from_sub_solutions([a, b])
+        assert out.hermite_interpolation is False
+        assert out.all_yps is None
+
+    def test_from_sub_solutions_t_evals_matches_add(self):
+        # explicit all_t_evals (distinct from all_ts) propagates and is validated.
+        import functools
+        import operator
+
+        t1 = np.linspace(0, 1, 5)
+        t2 = np.linspace(1, 2, 5)
+        a = pybamm.Solution(
+            t1, np.tile(t1, (2, 1)), pybamm.BaseModel(), {}, all_t_evals=t1
+        )
+        b = pybamm.Solution(
+            t2, np.tile(t2, (2, 1)), pybamm.BaseModel(), {}, all_t_evals=t2
+        )
+        out = pybamm.Solution.from_sub_solutions([a, b])
+        folded = functools.reduce(operator.add, [a.copy(), b.copy()])
+
+        assert out.all_t_evals is not out.all_ts  # explicit, not defaulted to all_ts
+        np.testing.assert_array_equal(out.t_eval, folded.t_eval)
+
+    def test_from_sub_solutions_sensitivities_match_add(self):
+        # sensitivities are concatenated per key and the inputs are not mutated.
+        import functools
+        import operator
+
+        t1 = np.linspace(0, 1, 5)
+        t2 = np.linspace(1, 2, 5)
+        a = pybamm.Solution(
+            t1,
+            np.tile(t1, (2, 1)),
+            pybamm.BaseModel(),
+            {},
+            all_sensitivities={"p": [np.ones((2, 1))]},
+        )
+        b = pybamm.Solution(
+            t2,
+            np.tile(t2, (2, 1)),
+            pybamm.BaseModel(),
+            {},
+            all_sensitivities={"p": [2 * np.ones((2, 1))]},
+        )
+        out = pybamm.Solution.from_sub_solutions([a, b])
+        folded = functools.reduce(operator.add, [a.copy(), b.copy()])
+
+        assert list(out._all_sensitivities) == list(folded._all_sensitivities)
+        assert len(out._all_sensitivities["p"]) == 2
+        for got, exp in zip(
+            out._all_sensitivities["p"], folded._all_sensitivities["p"], strict=True
+        ):
+            np.testing.assert_array_equal(got, exp)
+        assert len(a._all_sensitivities["p"]) == 1  # inputs untouched
+        assert len(b._all_sensitivities["p"]) == 1

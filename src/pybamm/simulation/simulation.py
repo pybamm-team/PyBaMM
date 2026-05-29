@@ -893,11 +893,8 @@ class Simulation(BaseSimulation):
         else:
             cycle_lengths = self.experiment.cycle_lengths
 
-        # Collect per-cycle solutions and fold them once after the loop
-        # (O(N)) instead of self._solution = self._solution + cycle_solution
-        # each cycle (O(N^2)).
-        # Seed with the loop-entry self._solution (the starting_solution /
-        # padding-rest carry-over) so the fold reproduces today's left-fold start.
+        # Collect per-cycle solutions and fold once after the loop (O(N), not O(N^2)).
+        # Seed with the loop-entry self._solution to match the old left-fold start.
         cross_cycle_segments = (
             []
             if (
@@ -907,10 +904,8 @@ class Simulation(BaseSimulation):
             else [self._solution]
         )
 
-        # Termination of the running accumulation as the loop mutates it:
-        # updated by each real appended cycle and by skipped steps (which used
-        # to mutate self._solution.termination directly). Applied to the folded
-        # solution below so the final termination matches the old left-fold.
+        # Track running termination (real cycles + skipped steps), applied to the
+        # folded solution below to match the old left-fold's final termination.
         last_termination = None
 
         for cycle_num, cycle_length in enumerate(
