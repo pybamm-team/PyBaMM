@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import inspect
 import numbers
 from typing import TYPE_CHECKING, Any
 
@@ -11,33 +10,6 @@ from pybamm.models.base_model import ModelSolutionObservability
 
 if TYPE_CHECKING:
     from .parameter_store import ParameterStore
-
-
-def _truncate_to_arity(function, children):
-    """
-    Return the subset of ``children`` to pass to ``function``.
-
-    If ``function`` accepts fewer positional arguments than ``len(children)`` (and
-    has no ``*args``), the leading children are dropped so the trailing ones line up
-    with the function's parameters. This is what lets a parameter function written
-    against an older, shorter signature (e.g. ``f(T)``) still be used where the model
-    now supplies extra leading inputs (e.g. ``(stoichiometry, T)``). If the signature
-    can't be introspected, the children are passed through unchanged.
-    """
-    try:
-        params = inspect.signature(function).parameters.values()
-    except (ValueError, TypeError):
-        return children
-    if any(p.kind is inspect.Parameter.VAR_POSITIONAL for p in params):
-        return children
-    n_positional = sum(
-        p.kind
-        in (inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD)
-        for p in params
-    )
-    if 0 < n_positional < len(children):
-        return children[-n_positional:]
-    return children
 
 
 class ParameterSubstitutor:
@@ -214,15 +186,8 @@ class ParameterSubstitutor:
                 # object instead of throwing an error.
                 function = pybamm.Scalar(function_name, name=symbol.name)
             elif callable(function_name):
-                # otherwise evaluate the function to create a new PyBaMM object.
-                # If the function accepts fewer positional arguments than the number
-                # of inputs supplied, drop the leading (optional) inputs. This keeps
-                # backward compatibility for parameters whose dependence was extended
-                # with an extra leading input (e.g. electrode conductivity gaining an
-                # optional stoichiometry argument ahead of temperature): a function
-                # still written as ``f(T)`` is called with just the temperature.
-                call_children = _truncate_to_arity(function_name, new_children)
-                function = function_name(*call_children)
+                # otherwise evaluate the function to create a new PyBaMM object
+                function = function_name(*new_children)
             elif isinstance(
                 function_name, pybamm.Interpolant | pybamm.InputParameter
             ) or (

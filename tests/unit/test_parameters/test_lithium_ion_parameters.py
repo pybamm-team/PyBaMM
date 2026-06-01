@@ -206,23 +206,6 @@ class TestLithiumIonParameterValues:
             3,
         )
 
-    def test_sigma_temperature_only_function(self):
-        # a conductivity supplied as a function of temperature only (the historical
-        # signature) must keep working even though the model now also passes a
-        # stoichiometry input: the leading stoichiometry argument is dropped
-        values = pybamm.lithium_ion.BaseModel().default_parameter_values
-        param = pybamm.LithiumIonParameters()
-        T = param.T_ref
-
-        values.update(
-            {
-                "Negative electrode conductivity [S.m-1]": lambda T: 100 + (T - 298.15),
-            }
-        )
-        np.testing.assert_almost_equal(
-            values.evaluate(param.n.sigma(pybamm.Scalar(0.5), T)), 100, 3
-        )
-
 
 class TestUAsymptotes:
     """Tests for the OCP asymptote functions."""
