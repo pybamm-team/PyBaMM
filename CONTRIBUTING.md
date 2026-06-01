@@ -66,6 +66,21 @@ You now have everything you need to start making changes!
 
 Finally, if you really, really, _really_ love developing PyBaMM, have a look at the current [project infrastructure](#infrastructure).
 
+## Changelog entries
+
+Every PR that ships user-visible behaviour must add an entry to the `# [Unreleased]` section at the top of [`CHANGELOG.md`](https://github.com/pybamm-team/PyBaMM/blob/main/CHANGELOG.md). Pick the section that matches the change:
+
+- `## Breaking changes` — removing or renaming public API, signature/default/return-type changes that existing code would notice, default model/solver changes that move outputs, dropping Python/OS/dependency support, on-disk format changes without a backward-compatible reader. Include a one-line migration note.
+- `## Deprecated` — when you add a `DeprecationWarning` to a public API that will be removed in a later release. Note when removal is planned.
+- `## Features` — new functionality (new optional kwargs, new submodels, new public API, etc.).
+- `## Bug fixes` — corrections to existing behaviour.
+
+If your PR is internal-only (refactor, docs typo, CI tweak, tests), no changelog entry is needed.
+
+Each entry is a single bullet ending in a PR link, e.g. `([#1234](https://github.com/pybamm-team/PyBaMM/pull/1234))`. Use the full URL so the rendered markdown on docs.pybamm.org links correctly.
+
+For the full release policy — what counts as "public API", deprecation horizon, version scheme — see [`RELEASE.md`](https://github.com/pybamm-team/PyBaMM/blob/main/RELEASE.md).
+
 ## Coding style guidelines
 
 PyBaMM follows the [PEP8 recommendations](https://www.python.org/dev/peps/pep-0008/) for coding style. These are very common guidelines, and community tools have been developed to check how well projects implement them. We recommend using pre-commit hooks to check your code before committing it. See [installing and using pre-commit](#installing-and-using-pre-commit) section for more details.
