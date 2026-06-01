@@ -1058,6 +1058,24 @@ class Solution(SolutionBase):
 
         return self._sub_solutions or [self]
 
+    @staticmethod
+    def _segment_series(s, repeated, hermite, t_evals):
+        """Series lists for one segment, dropping the leading sample when
+        ``repeated`` (its first time point duplicates the running boundary).
+        Shared by ``__add__`` and ``from_sub_solutions``."""
+        first = slice(1, None) if repeated else slice(None)
+        ts = [s.all_ts[0][first], *s.all_ts[1:]]
+        ys = [s.all_ys[0][:, first], *s.all_ys[1:]]
+        yps = [s.all_yps[0][:, first], *s.all_yps[1:]] if hermite else None
+        tev = [s._all_t_evals[0][first], *s._all_t_evals[1:]] if t_evals else None
+        return ts, ys, yps, tev
+
+    @staticmethod
+    def _merge_sensitivities(acc, s):
+        """Fold one segment's sensitivities into the running dict ``acc``."""
+        for key, val in s._all_sensitivities.items():
+            acc.setdefault(key, []).extend(val)
+
     def __add__(self, other):
         """Adds two solutions together, e.g. when stepping"""
         if other is None or isinstance(other, EmptySolution):
@@ -1080,36 +1098,22 @@ class Solution(SolutionBase):
             new_sol._y_event = other._y_event
             return new_sol
 
-        # Update list of sub-solutions
+        # Append other onto self (the already-merged left side); only other's
+        # contribution is sliced, keeping accumulation O(N).
         hermite_interpolation = (
             other.hermite_interpolation and self.hermite_interpolation
         )
-        if other.all_ts[0][0] == self.all_ts[-1][-1]:
-            # Skip first time step if it is repeated
-            all_ts = [*self.all_ts, other.all_ts[0][1:], *other.all_ts[1:]]
-            all_ys = [*self.all_ys, other.all_ys[0][:, 1:], *other.all_ys[1:]]
-            if hermite_interpolation:
-                all_yps = [*self.all_yps, other.all_yps[0][:, 1:], *other.all_yps[1:]]
-            if self._all_t_evals is not None and other._all_t_evals is not None:
-                all_t_evals = [
-                    *self._all_t_evals,
-                    other._all_t_evals[0][1:],
-                    *other._all_t_evals[1:],
-                ]
-            else:
-                all_t_evals = None
-        else:
-            all_ts = self.all_ts + other.all_ts
-            all_ys = self.all_ys + other.all_ys
-            if hermite_interpolation:
-                all_yps = self.all_yps + other.all_yps
-            if self._all_t_evals is not None and other._all_t_evals is not None:
-                all_t_evals = self._all_t_evals + other._all_t_evals
-            else:
-                all_t_evals = None
-
-        if not hermite_interpolation:
-            all_yps = None
+        t_evals_present = (
+            self._all_t_evals is not None and other._all_t_evals is not None
+        )
+        repeated = other.all_ts[0][0] == self.all_ts[-1][-1]
+        ts, ys, yps, tev = self._segment_series(
+            other, repeated, hermite_interpolation, t_evals_present
+        )
+        all_ts = self.all_ts + ts
+        all_ys = self.all_ys + ys
+        all_yps = self.all_yps + yps if hermite_interpolation else None
+        all_t_evals = self._all_t_evals + tev if t_evals_present else None
 
         # Validate only the newly-joined region (self's last segment + other's
         # contribution), not the whole accumulation. self's earlier segments
@@ -1123,14 +1127,12 @@ class Solution(SolutionBase):
                 all_t_evals=[self._all_t_evals[-1], *all_t_evals[n:]],
             )
 
-        # sensitivities are a dict of {parameter: [sensitivities]}
+        # sensitivities are a dict of {parameter: [sensitivities]}; start from a
+        # fresh copy of self's lists so the in-place merge never aliases them
         all_sensitivities = {
             key: list(value) for key, value in self._all_sensitivities.items()
         }
-        for key in other._all_sensitivities:
-            all_sensitivities[key] = (
-                all_sensitivities.get(key, []) + other._all_sensitivities[key]
-            )
+        self._merge_sensitivities(all_sensitivities, other)
 
         options = self.user_options | other.user_options
 
@@ -1222,19 +1224,15 @@ class Solution(SolutionBase):
         all_models, all_inputs, sub_sols = [], [], []
 
         for s, repeated in kept:
-            first = slice(1, None) if repeated else slice(None)
-            # time + state
-            all_ts.append(s.all_ts[0][first])
-            all_ts.extend(s.all_ts[1:])
-            all_ys.append(s.all_ys[0][:, first])
-            all_ys.extend(s.all_ys[1:])
+            ts, ys, yps, tev = cls._segment_series(
+                s, repeated, hermite, t_evals_present
+            )
+            all_ts += ts
+            all_ys += ys
             if hermite:
-                all_yps.append(s.all_yps[0][:, first])
-                all_yps.extend(s.all_yps[1:])
+                all_yps += yps
             if t_evals_present:
-                all_t_evals.append(s._all_t_evals[0][first])
-                all_t_evals.extend(s._all_t_evals[1:])
-            # bookkeeping lists
+                all_t_evals += tev
             all_models.extend(s.all_models)
             all_inputs.extend(s.all_inputs)
             sub_sols.extend(s.sub_solutions)
@@ -1242,8 +1240,7 @@ class Solution(SolutionBase):
         # sensitivities: fresh dict, no aliasing of any input solution's dict
         all_sensitivities = {}
         for s in segments:
-            for key, val in s._all_sensitivities.items():
-                all_sensitivities.setdefault(key, []).extend(val)
+            cls._merge_sensitivities(all_sensitivities, s)
 
         options = {}
         for s in segments:
