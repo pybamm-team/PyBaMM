@@ -41,7 +41,7 @@ class Composite(BaseModel):
         T = variables[f"X-averaged {domain} electrode temperature [K]"]
 
         sto = self._get_electrode_stoichiometry(variables, x_averaged=True)
-        sigma_eff = self.domain_param.sigma(T, sto) * tor
+        sigma_eff = self.domain_param.sigma(sto, T) * tor
         if self._domain == "negative":
             phi_s = phi_s_cn + (i_boundary_cc / sigma_eff) * (
                 x_n * (x_n - 2 * L_n) / (2 * L_n)
@@ -88,7 +88,7 @@ class Composite(BaseModel):
         elif self.domain == "positive":
             lbc = (pybamm.Scalar(0), "Neumann")
             sto_p = self._get_electrode_stoichiometry(variables, x_averaged=True)
-            sigma_eff = self.param.p.sigma(T, sto_p) * tor
+            sigma_eff = self.param.p.sigma(sto_p, T) * tor
             rbc = (-i_boundary_cc / sigma_eff, "Neumann")
 
         self.boundary_conditions[phi_s] = {"left": lbc, "right": rbc}

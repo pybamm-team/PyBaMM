@@ -317,11 +317,11 @@ class DomainLithiumIonParameters(BaseParameters):
             f"{Domain} electrode double-layer capacity [F.m-2]", inputs
         )
 
-    def sigma(self, T, sto=None):
+    def sigma(self, sto, T):
         """
         Dimensional electrical conductivity in electrode. Optionally a function of
-        the electrode (surface) stoichiometry in addition to temperature; when ``sto``
-        is None the conductivity is treated as a function of temperature only.
+        the electrode (surface) stoichiometry in addition to temperature; pass
+        ``sto=None`` for a conductivity that is a function of temperature only.
         """
         Domain = self.domain.capitalize()
         inputs = {"Temperature [K]": T}

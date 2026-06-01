@@ -317,7 +317,7 @@ class DomainLeadAcidParameters(BaseParameters):
         # lithium-ion we allow electrode conductivity to be a function of temperature,
         # but not the current collector conductivity, here the latter is evaluated at
         # T_ref.
-        self.sigma_cc = self.sigma(main.T_ref) * (1 - self.eps_max) ** self.b_s
+        self.sigma_cc = self.sigma(None, main.T_ref) * (1 - self.eps_max) ** self.b_s
 
     def C_dl(self, T):
         """Dimensional double-layer capacity [F.m-2]"""
@@ -327,7 +327,7 @@ class DomainLeadAcidParameters(BaseParameters):
             f"{Domain} electrode double-layer capacity [F.m-2]", inputs
         )
 
-    def sigma(self, T, sto=None):
+    def sigma(self, sto, T):
         """
         Dimensional electrical conductivity [S.m-1]. ``sto`` is accepted for a uniform
         call signature with the lithium-ion electrode parameters but is unused here.

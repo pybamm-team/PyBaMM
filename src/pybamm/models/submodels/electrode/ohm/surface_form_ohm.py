@@ -35,7 +35,7 @@ class SurfaceForm(BaseModel):
         T = variables[f"{Domain} electrode temperature [K]"]
 
         sto = self._get_electrode_stoichiometry(variables)
-        conductivity = self.domain_param.sigma(T, sto) * tor
+        conductivity = self.domain_param.sigma(sto, T) * tor
         i_s = i_boundary_cc - i_e
 
         if self.domain == "negative":

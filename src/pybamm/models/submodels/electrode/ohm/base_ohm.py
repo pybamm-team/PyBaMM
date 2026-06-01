@@ -56,7 +56,7 @@ class BaseModel(BaseElectrode):
             T_p = variables["Positive electrode temperature [K]"]
             sto_p = self._get_electrode_stoichiometry(variables)
             sigma_eff = (
-                self.param.p.sigma(T_p, sto_p)
+                self.param.p.sigma(sto_p, T_p)
                 * variables["Positive electrode transport efficiency"]
             )
             rbc = (

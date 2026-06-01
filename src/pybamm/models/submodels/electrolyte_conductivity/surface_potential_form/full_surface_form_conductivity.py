@@ -161,7 +161,7 @@ class BaseModel(BaseElectrolyteConductivity):
             if name in variables:
                 sto = variables[name]
                 break
-        sigma = self.domain_param.sigma(T, sto)
+        sigma = self.domain_param.sigma(sto, T)
 
         kappa_eff = self.param.kappa_e(c_e, T) * tor_e
         sigma_eff = sigma * tor_s

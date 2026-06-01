@@ -52,7 +52,7 @@ class Full(BaseModel):
         T = variables[f"{Domain} electrode temperature [K]"]
 
         sto = self._get_electrode_stoichiometry(variables)
-        sigma = self.domain_param.sigma(T, sto)
+        sigma = self.domain_param.sigma(sto, T)
 
         sigma_eff = sigma * tor
         i_s = -sigma_eff * pybamm.grad(phi_s)
@@ -96,7 +96,7 @@ class Full(BaseModel):
         elif self.domain == "positive":
             lbc = (pybamm.Scalar(0), "Neumann")
             sto_p = self._get_electrode_stoichiometry(variables)
-            sigma_eff = self.param.p.sigma(T, sto_p) * tor
+            sigma_eff = self.param.p.sigma(sto_p, T) * tor
             i_boundary_cc = variables["Current collector current density [A.m-2]"]
             rbc = (
                 i_boundary_cc / pybamm.boundary_value(-sigma_eff, "right"),
