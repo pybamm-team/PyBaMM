@@ -2,7 +2,7 @@
 
 ## Bug fixes
 
-- Fixed unified experiment mode using excessive memory and time for experiments with many cycles.
+- Fixed unified experiment mode using excessive memory and time for experiments with many cycles. ([#5554](https://github.com/pybamm-team/PyBaMM/pull/5554))
 
 ## Optimizations
 
