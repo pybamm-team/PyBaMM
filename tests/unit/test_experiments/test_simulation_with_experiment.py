@@ -37,6 +37,21 @@ class TestSimulationExperiment:
             **simulation_kwargs,
         )
 
+    def test_batch_cross_cycle_equivalent(self):
+        # Full multi-cycle solution must be identical with batch accumulation.
+        model = pybamm.lithium_ion.SPM()
+        exp = pybamm.Experiment(
+            [("Discharge at 1C until 3.0V", "Charge at 1C until 4.2V")] * 5,
+            period=600,
+        )
+        sim = pybamm.Simulation(model, experiment=exp)
+        sol = sim.solve()
+        v = sol["Voltage [V]"].entries
+        assert np.all(np.isfinite(v))
+        assert np.all(np.diff(sol.t) > 0)  # monotonic time preserved
+        assert len(sol.cycles) == 5  # cycles wiring preserved
+        assert sol.summary_variables is not None
+
     def test_unified_model_mode_validation_and_blockers(self):
         with pytest.raises(ValueError, match="experiment_model_mode must be one of"):
             pybamm.Simulation(

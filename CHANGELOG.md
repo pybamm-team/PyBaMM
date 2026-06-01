@@ -3,6 +3,7 @@
 ## Optimizations
 
 - Fixed two O(N²) slowdowns in long experiment/ageing simulations where `Solution.__add__`/`copy` re-did whole-accumulation work on every step append: time-series validation now re-checks only the joined boundary, and `Solution.observable` is computed lazily. ([#5550](https://github.com/pybamm-team/PyBaMM/pull/5550))
+- Experiment/ageing accumulation now folds per-cycle solutions in a single O(N) pass via `Solution.from_sub_solutions`, removing the residual O(N²) list concatenation in repeated `Solution.__add__`, and fixes an aliasing bug where `__add__` mutated the left operand's sensitivities. ([#5551](https://github.com/pybamm-team/PyBaMM/pull/5551))
 
 # [v26.5.0](https://github.com/pybamm-team/PyBaMM/tree/v26.5.0) - 2026-05-27
 
