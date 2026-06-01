@@ -254,14 +254,24 @@ class Simulation(BaseSimulation):
 
     def _set_up_unified_experiment_model(self, parameter_values):
         self._experiment_uses_unified_model = True
-        self._experiment_step_indices = list(range(1, len(self.experiment.steps) + 1))
+
+        # Branch the switching Conditionals over unique steps, not instances: one
+        # branch per instance is O(n_steps) per timestep -> O(n_steps**2) overall.
+        unique_steps = []
+        unique_branch_by_repr = {}
+        for step in self.experiment.steps:
+            key = step.basic_repr()
+            if key not in unique_branch_by_repr:
+                unique_branch_by_repr[key] = len(unique_steps) + 1  # 1-based selector
+                unique_steps.append(step)
+        self._experiment_step_indices = [
+            unique_branch_by_repr[step.basic_repr()] for step in self.experiment.steps
+        ]
         self._experiment_includes_padding_rest = bool(
             self.experiment.initial_start_time
         )
         self._experiment_padding_rest_index = (
-            len(self.experiment.steps) + 1
-            if self._experiment_includes_padding_rest
-            else None
+            len(unique_steps) + 1 if self._experiment_includes_padding_rest else None
         )
 
         new_model = self._model.new_copy()
@@ -272,9 +282,7 @@ class Simulation(BaseSimulation):
 
         # Build one conditional control residual that selects the active step's
         # control law via the experiment step index input.
-        step_control_builders = [
-            step.get_control_residual for step in self.experiment.steps
-        ]
+        step_control_builders = [step.get_control_residual for step in unique_steps]
         if self._experiment_includes_padding_rest:
             padding_rest_step = pybamm.step.Rest(duration=1)
             step_control_builders.append(padding_rest_step.get_control_residual)
@@ -295,8 +303,7 @@ class Simulation(BaseSimulation):
         # Combine each step's local termination expression into one experiment event,
         # selecting the active branch with the step index input.
         termination_branches = [
-            step.get_combined_termination_expression(variables)
-            for step in self.experiment.steps
+            step.get_combined_termination_expression(variables) for step in unique_steps
         ]
         if self._experiment_includes_padding_rest:
             termination_branches.append(pybamm.Scalar(1))
