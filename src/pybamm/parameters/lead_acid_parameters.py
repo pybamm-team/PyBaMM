@@ -327,9 +327,11 @@ class DomainLeadAcidParameters(BaseParameters):
             f"{Domain} electrode double-layer capacity [F.m-2]", inputs
         )
 
-    def sigma(self, T):
-        """Dimensional electrical conductivity [S.m-1]"""
-
+    def sigma(self, T, sto=None):
+        """
+        Dimensional electrical conductivity [S.m-1]. ``sto`` is accepted for a uniform
+        call signature with the lithium-ion electrode parameters but is unused here.
+        """
         inputs = {"Temperature [K]": T}
         Domain = self.domain.capitalize()
         return pybamm.FunctionParameter(

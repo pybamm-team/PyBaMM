@@ -18,6 +18,7 @@ class Settings:
         "chi__c_e": 1e-2,  # dimensionless
         "D__c_s": 1e-10,  # dimensionless
         "U__c_s": 1e-10,  # dimensionless
+        "sigma__c_s": 1e-10,  # dimensionless
         "j0__c_e": 0,  # dimensionless
         "j0__c_s": 0,  # dimensionless
         "j0__c_Li": 0,  # dimensionless

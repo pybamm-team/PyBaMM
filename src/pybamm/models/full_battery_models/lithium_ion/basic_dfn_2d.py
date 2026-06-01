@@ -236,9 +236,9 @@ class BasicDFN2D(BaseModel):
         ######################
         # Current in the solid
         ######################
-        sigma_eff_n = self.param.n.sigma(T) * eps_s_n**self.param.n.b_s
+        sigma_eff_n = self.param.n.sigma(T, sto_surf_n) * eps_s_n**self.param.n.b_s
         i_s_n = pybamm.VectorField(-sigma_eff_n, -sigma_eff_n) * pybamm.grad(phi_s_n)
-        sigma_eff_p = self.param.p.sigma(T) * eps_s_p**self.param.p.b_s
+        sigma_eff_p = self.param.p.sigma(T, sto_surf_p) * eps_s_p**self.param.p.b_s
         i_s_p = pybamm.VectorField(-sigma_eff_p, -sigma_eff_p) * pybamm.grad(phi_s_p)
         # The `algebraic` dictionary contains differential equations, with the key being
         # the main scalar variable of interest in the equation

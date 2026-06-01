@@ -163,6 +163,49 @@ class TestLithiumIonParameterValues:
         values.evaluate(param.D_e(c_e_test, T_test))
         values.evaluate(param.kappa_e(c_e_test, T_test))
 
+    def test_sigma_as_function_of_stoichiometry(self):
+        values = pybamm.lithium_ion.BaseModel().default_parameter_values
+        param = pybamm.LithiumIonParameters()
+        T = param.T_ref
+
+        # a constant conductivity ignores the stoichiometry input, so passing sto
+        # gives the same value as the temperature-only call (backwards compatible)
+        np.testing.assert_almost_equal(
+            values.evaluate(param.n.sigma(T, pybamm.Scalar(0.5))), 100, 3
+        )
+
+        # conductivity supplied as a function of stoichiometry and temperature
+        values.update(
+            {
+                "Negative electrode conductivity [S.m-1]": lambda sto, T: (
+                    100 * (1 + sto)
+                ),
+                "Positive electrode conductivity [S.m-1]": lambda sto, T: (
+                    10 * (1 + sto)
+                ),
+            }
+        )
+        np.testing.assert_almost_equal(
+            values.evaluate(param.n.sigma(T, pybamm.Scalar(0.5))), 150, 3
+        )
+        np.testing.assert_almost_equal(
+            values.evaluate(param.p.sigma(T, pybamm.Scalar(0.2))), 12, 3
+        )
+
+        # stoichiometry is clipped into (tol, 1 - tol) so the function is never
+        # evaluated at exactly 0 or 1
+        tol = pybamm.settings.tolerances["sigma__c_s"]
+        np.testing.assert_almost_equal(
+            values.evaluate(param.n.sigma(T, pybamm.Scalar(5.0))),
+            100 * (1 + (1 - tol)),
+            3,
+        )
+        np.testing.assert_almost_equal(
+            values.evaluate(param.n.sigma(T, pybamm.Scalar(-5.0))),
+            100 * (1 + tol),
+            3,
+        )
+
 
 class TestUAsymptotes:
     """Tests for the OCP asymptote functions."""

@@ -40,7 +40,8 @@ class Composite(BaseModel):
         phi_s_cn = variables["Negative current collector potential [V]"]
         T = variables[f"X-averaged {domain} electrode temperature [K]"]
 
-        sigma_eff = self.domain_param.sigma(T) * tor
+        sto = self._get_electrode_stoichiometry(variables, x_averaged=True)
+        sigma_eff = self.domain_param.sigma(T, sto) * tor
         if self._domain == "negative":
             phi_s = phi_s_cn + (i_boundary_cc / sigma_eff) * (
                 x_n * (x_n - 2 * L_n) / (2 * L_n)
@@ -86,7 +87,8 @@ class Composite(BaseModel):
 
         elif self.domain == "positive":
             lbc = (pybamm.Scalar(0), "Neumann")
-            sigma_eff = self.param.p.sigma(T) * tor
+            sto_p = self._get_electrode_stoichiometry(variables, x_averaged=True)
+            sigma_eff = self.param.p.sigma(T, sto_p) * tor
             rbc = (-i_boundary_cc / sigma_eff, "Neumann")
 
         self.boundary_conditions[phi_s] = {"left": lbc, "right": rbc}

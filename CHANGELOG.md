@@ -1,5 +1,9 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Features
+
+- Electrode electronic conductivity can now be specified as a function of stoichiometry (in addition to temperature) for all lithium-ion and sodium-ion models. ([#5558](https://github.com/pybamm-team/PyBaMM/pull/5558))
+
 ## Bug fixes
 
 - Fixed unified experiment mode using excessive memory and time for experiments with many cycles. ([#5554](https://github.com/pybamm-team/PyBaMM/pull/5554))
