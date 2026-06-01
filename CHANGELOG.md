@@ -1,5 +1,9 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Bug fixes
+
+- Fixed unified experiment mode using excessive memory and time for experiments with many cycles. ([#5554](https://github.com/pybamm-team/PyBaMM/pull/5554))
+
 ## Optimizations
 
 - Fixed two O(N²) slowdowns in long experiment/ageing simulations where `Solution.__add__`/`copy` re-did whole-accumulation work on every step append: time-series validation now re-checks only the joined boundary, and `Solution.observable` is computed lazily. ([#5550](https://github.com/pybamm-team/PyBaMM/pull/5550))
