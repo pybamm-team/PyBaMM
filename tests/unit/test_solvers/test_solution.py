@@ -1500,6 +1500,17 @@ class TestSolution:
         out = pybamm.Solution.from_sub_solutions([None, a, pybamm.EmptySolution(), b])
         assert len(out.sub_solutions) == 2
 
+    def test_from_sub_solutions_all_empty_preserves_termination(self):
+        # An all-empty input folds to the last operand's copy (reduce parity),
+        # so its termination must survive.
+        empties = [
+            pybamm.EmptySolution(termination="early"),
+            pybamm.EmptySolution(termination="event: foo"),
+        ]
+        out = pybamm.Solution.from_sub_solutions(empties)
+        assert isinstance(out, pybamm.EmptySolution)
+        assert out.termination == "event: foo"
+
     def test_from_sub_solutions_single_returns_copy(self):
         t = np.linspace(0, 1, 5)
         a = pybamm.Solution(t, np.tile(t, (2, 1)), pybamm.BaseModel(), {})

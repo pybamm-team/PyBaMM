@@ -615,8 +615,7 @@ class Solution(SolutionBase):
             all_yps=all_yps,
             options=self.user_options,
         )
-        new_sol._all_inputs_stacked = self.all_inputs_stacked[:1]
-        new_sol._all_inputs_casadi = self.all_inputs_casadi[:1]
+        # stacked/casadi stay lazy; built from all_inputs[:1] on first access
         new_sol._sub_solutions = self.sub_solutions[:1]
 
         new_sol.solve_time = 0
@@ -660,8 +659,7 @@ class Solution(SolutionBase):
             all_yps=all_yps,
             options=self.user_options,
         )
-        new_sol._all_inputs_stacked = self.all_inputs_stacked[-1:]
-        new_sol._all_inputs_casadi = self.all_inputs_casadi[-1:]
+        # stacked/casadi stay lazy; built from all_inputs[-1:] on first access
         new_sol._sub_solutions = self.sub_solutions[-1:]
         new_sol.solve_time = 0
         new_sol.integration_time = 0
@@ -1192,7 +1190,12 @@ class Solution(SolutionBase):
             if s is not None and not isinstance(s, EmptySolution)
         ]
         if not sols:
-            return EmptySolution()
+            # all empty: match reduce(operator.add, ...) by copying the last empty
+            last_empty = next(
+                (s for s in reversed(sub_solutions) if isinstance(s, EmptySolution)),
+                None,
+            )
+            return last_empty.copy() if last_empty else EmptySolution()
         if len(sols) == 1:
             return sols[0].copy()
 
@@ -1216,8 +1219,7 @@ class Solution(SolutionBase):
         t_evals_present = all(s._all_t_evals is not None for s in segments)
 
         all_ts, all_ys, all_yps, all_t_evals = [], [], [], []
-        all_models, all_inputs = [], []
-        inputs_stacked, inputs_casadi, sub_sols = [], [], []
+        all_models, all_inputs, sub_sols = [], [], []
 
         for s, repeated in kept:
             first = slice(1, None) if repeated else slice(None)
@@ -1235,8 +1237,6 @@ class Solution(SolutionBase):
             # bookkeeping lists
             all_models.extend(s.all_models)
             all_inputs.extend(s.all_inputs)
-            inputs_stacked.extend(s.all_inputs_stacked)
-            inputs_casadi.extend(s.all_inputs_casadi)
             sub_sols.extend(s.sub_solutions)
 
         # sensitivities: fresh dict, no aliasing of any input solution's dict
@@ -1265,22 +1265,15 @@ class Solution(SolutionBase):
             all_t_evals=all_t_evals if t_evals_present else None,
             variables_returned=any(s.variables_returned for s in segments),
             options=options,
-            _validate_time_structure=False,
+            # validates the joined series once (O(N), not O(N^2))
+            _validate_time_structure=True,
         )
-
-        # validate the joined series once (O(N), not O(N^2))
-        new_sol._ensure_sorted_t(new_sol.all_ts, "all_ts")
-        if new_sol._all_t_evals is not new_sol.all_ts:
-            new_sol._ensure_t_evals(
-                all_ts=new_sol.all_ts, all_t_evals=new_sol._all_t_evals
-            )
 
         # last kept segment, not sols[-1]: __add__'s single-sample short-circuit
         # keeps the running closest_event_idx, so a trailing duplicate must not
         # overwrite it.
         new_sol.closest_event_idx = segments[-1].closest_event_idx
-        new_sol._all_inputs_stacked = inputs_stacked
-        new_sol._all_inputs_casadi = inputs_casadi
+        # leave stacked/casadi unset; built lazily from all_inputs (casadi is costly)
         new_sol._sub_solutions = sub_sols
 
         for attr in ["solve_time", "integration_time", "set_up_time"]:
