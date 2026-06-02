@@ -21,6 +21,18 @@ _POSITIVE_TOL = st.floats(
     min_value=1e-12, max_value=1e-2, allow_nan=False, allow_infinity=False
 )
 
+# Concrete BaseSolver subclasses the solver fuzzer (and the coverage meta-test)
+# draw from -- single source of truth so coverage can't drift from the fuzzer.
+_SOLVER_CLASSES = (
+    pybamm.IDAKLUSolver,
+    pybamm.CasadiSolver,
+    pybamm.ScipySolver,
+    pybamm.AlgebraicSolver,
+    pybamm.CasadiAlgebraicSolver,
+    pybamm.NonlinearSolver,
+    pybamm.CompositeSolver,
+)
+
 
 def _root_method() -> st.SearchStrategy:
     """root_method can be a string, None, or a nested BaseSolver (#5497)."""
@@ -36,25 +48,24 @@ def _root_method() -> st.SearchStrategy:
 
 
 def solver_kwargs() -> st.SearchStrategy[dict]:
-    """Pick a concrete solver class and generate valid kwargs for it."""
+    """Pick a concrete solver class and generate valid kwargs for it.
+
+    Each class branch generates only the kwargs its constructor accepts.
+    CompositeSolver wraps two randomly chosen sub-solvers from the simple
+    (non-composite) subset of _SOLVER_CLASSES.
+    """
+
+    _SIMPLE_SOLVER_CLASSES = [
+        c for c in _SOLVER_CLASSES if c is not pybamm.CompositeSolver
+    ]
 
     @st.composite
     def _strategy(draw):
-        cls = draw(
-            st.sampled_from(
-                [
-                    pybamm.IDAKLUSolver,
-                    pybamm.CasadiSolver,
-                    pybamm.ScipySolver,
-                ]
-            )
-        )
-        kwargs: dict = {
-            "_cls": cls,
-            "rtol": draw(_POSITIVE_TOL),
-            "atol": draw(_POSITIVE_TOL),
-        }
+        cls = draw(st.sampled_from(list(_SOLVER_CLASSES)))
+        kwargs: dict = {"_cls": cls}
         if cls is pybamm.IDAKLUSolver:
+            kwargs["rtol"] = draw(_POSITIVE_TOL)
+            kwargs["atol"] = draw(_POSITIVE_TOL)
             kwargs["root_method"] = draw(_root_method())
             kwargs["options"] = draw(
                 st.fixed_dictionaries(
@@ -64,6 +75,28 @@ def solver_kwargs() -> st.SearchStrategy[dict]:
                     }
                 )
             )
+        elif cls in (pybamm.CasadiSolver, pybamm.ScipySolver):
+            kwargs["rtol"] = draw(_POSITIVE_TOL)
+            kwargs["atol"] = draw(_POSITIVE_TOL)
+        elif cls is pybamm.AlgebraicSolver:
+            kwargs["method"] = draw(st.sampled_from(["lm", "hybr"]))
+            kwargs["tol"] = draw(_POSITIVE_TOL)
+        elif cls is pybamm.CasadiAlgebraicSolver:
+            kwargs["tol"] = draw(_POSITIVE_TOL)
+            kwargs["step_tol"] = draw(_POSITIVE_TOL)
+        elif cls is pybamm.NonlinearSolver:
+            kwargs["rtol"] = draw(_POSITIVE_TOL)
+            kwargs["atol"] = draw(_POSITIVE_TOL)
+        elif cls is pybamm.CompositeSolver:
+            # Draw two simple solver classes (possibly the same) for sub_solvers.
+            sub_cls_a, sub_cls_b = draw(
+                st.lists(
+                    st.sampled_from(_SIMPLE_SOLVER_CLASSES),
+                    min_size=2,
+                    max_size=2,
+                )
+            )
+            kwargs["sub_solvers"] = [sub_cls_a(), sub_cls_b()]
         return kwargs
 
     return _strategy()
