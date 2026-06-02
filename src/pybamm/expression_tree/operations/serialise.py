@@ -2002,6 +2002,11 @@ class Serialise:
         else:
             raise ValueError("Experiment config must have 'steps' or 'cycles'.")
 
+    # Solver __init__ params that are genuinely re-derived on construction or are
+    # non-serialisable transients. Empty today (Task 4.1 audit found no shipped solver
+    # omits anything); anything not listed that fails to serialise raises (safe-or-loud).
+    _SOLVER_DERIVED_PARAMS: frozenset = frozenset()
+
     @staticmethod
     def serialise_solver(solver) -> dict:
         """Convert a :class:`pybamm.BaseSolver` to a JSON-serialisable config dict.
@@ -2022,6 +2027,10 @@ class Serialise:
             Config dict with a ``"type"`` key and one key per serialisable
             init parameter.
         """
+        from pybamm.expression_tree.operations.serialise_kernel import (
+            SerialisationError,
+        )
+
         if solver.__class__.__name__ == "CompositeSolver":
             return {
                 "type": "CompositeSolver",
@@ -2057,13 +2066,16 @@ class Serialise:
             value = Serialise._to_json_safe(value)
             try:
                 json.dumps(value)
-            except (TypeError, ValueError):
-                warnings.warn(
-                    f"Solver parameter '{param_name}' is not JSON-serializable and "
-                    f"will be omitted from the config.",
-                    stacklevel=2,
-                )
-                continue
+            except (TypeError, ValueError) as err:
+                if param_name in Serialise._SOLVER_DERIVED_PARAMS:
+                    continue
+                raise SerialisationError(
+                    f"Solver parameter '{param_name}' on "
+                    f"{solver.__class__.__name__} is not JSON-serialisable. Make it "
+                    f"serialisable (extend _to_json_safe), or -- if it is re-derived on "
+                    f"construction or a non-serialisable transient -- add it to "
+                    f"_SOLVER_DERIVED_PARAMS with a justification."
+                ) from err
 
             config[param_name] = value
 

@@ -2885,3 +2885,23 @@ class TestSolverSerialization:
         assert exp2.steps[0].temperature == pytest.approx(298.15)
         assert exp2.steps[1].temperature == pytest.approx(313.15)
         assert exp2.steps[2].temperature is None
+
+    def test_serialise_solver_raises_on_unserialisable_param(self):
+        solver = pybamm.ScipySolver()
+        # inject a non-serialisable value on a real guarded __init__ param
+        object.__setattr__(
+            solver, "method", object()
+        )  # `method` is a ScipySolver param
+        with pytest.raises(sk.SerialisationError, match="method"):
+            Serialise.serialise_solver(solver)
+
+    def test_serialise_solver_round_trips_all_shipped_solvers(self):
+        for solver in (
+            pybamm.IDAKLUSolver(),
+            pybamm.CasadiSolver(),
+            pybamm.ScipySolver(),
+            pybamm.AlgebraicSolver(),
+        ):
+            config = Serialise.serialise_solver(solver)  # must NOT raise
+            restored = Serialise.deserialise_solver(config)
+            assert type(restored) is type(solver)
