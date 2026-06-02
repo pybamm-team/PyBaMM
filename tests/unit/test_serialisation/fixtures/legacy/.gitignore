@@ -1,0 +1,3 @@
+# Discretised-model fixture is ~19 MB — too large for git.
+# Regenerate locally with: tests/unit/test_serialisation/fixtures/legacy/generate.py
+discretised_model.json
