@@ -136,6 +136,7 @@ class TestDiffSLExport:
         pybamm_solve_time = time.perf_counter() - t0
         logger.info(f"Pybamm solve time: {pybamm_solve_time:.5f} seconds")
 
+        _diffsol_solution = ode.solve_dense(ds_inputs, t_interp)
         t0 = time.perf_counter()
         diffsol_solution = ode.solve_dense(ds_inputs, t_interp)
         voltage_diffsol = diffsol_solution.ys
@@ -263,6 +264,7 @@ class TestDiffSLExport:
                 model_disc, pybamm_inputs_dict
             )
 
+        _diffsol_solution = ode.solve_dense(ds_inputs, t_interp)
         t0 = time.perf_counter()
         diffsol_solution = ode.solve_dense(ds_inputs, t_interp)
         voltage_diffsol = diffsol_solution.ys
