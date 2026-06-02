@@ -2272,6 +2272,44 @@ def convert_function_to_symbolic_expression(func, name=None):
     return ExpressionFunctionParameter(name, sym_output, func_name, func_args)
 
 
+def _relocate_legacy_model_tree(node):
+    """Rewrite the three legacy ``py/object`` nested shapes into the canonical
+    kernel ``children`` shape, in place of the per-class divergences the tag-only
+    ``normalise_legacy`` shim does not touch. Read-only; recursive; applied only to
+    legacy discretised files before ``decode``.
+
+    - ``Event``: ``expression`` sibling -> ``children[0]``.
+    - ``ExplicitTimeIntegral``: ``initial_condition`` sibling -> appended to ``children``.
+    - ``Mesh``: ``sub_meshes`` {domain: node} -> ``children`` + ``sub_mesh_domains``.
+
+    Canonical (``$type``) nodes and non-dicts pass through (their children still
+    recurse). Numpy/leaf nodes have no nested model fields, so they are unaffected.
+    """
+    if isinstance(node, list):
+        return [_relocate_legacy_model_tree(n) for n in node]
+    if not isinstance(node, dict):
+        return node
+
+    out = {k: v for k, v in node.items()}
+    children = [_relocate_legacy_model_tree(c) for c in out.get("children", [])]
+
+    if "sub_meshes" in out:
+        sub = out.pop("sub_meshes")
+        out["sub_mesh_domains"] = list(sub.keys())
+        children = [_relocate_legacy_model_tree(v) for v in sub.values()]
+    if "expression" in out:
+        children = [_relocate_legacy_model_tree(out.pop("expression")), *children]
+    if "initial_condition" in out:
+        children = [
+            *children,
+            _relocate_legacy_model_tree(out.pop("initial_condition")),
+        ]
+
+    if children or "children" in out:
+        out["children"] = children
+    return out
+
+
 def convert_symbol_from_json(json_data):
     """Reconstruct a pybamm.Symbol from kernel/legacy JSON."""
     from pybamm.expression_tree.operations.serialise_kernel import decode

@@ -118,3 +118,81 @@ def test_mesh_round_trip_through_kernel():
     for k, v in mesh.items():
         if len(k) == 1 and "ghost cell" not in k[0]:
             assert np.array_equal(restored[k[0]].edges, v.edges), k
+
+
+def test_relocate_legacy_moves_expression_into_children():
+    from pybamm.expression_tree.operations.serialise import _relocate_legacy_model_tree
+
+    legacy = {
+        "py/object": "pybamm.models.event.Event",
+        "py/id": 1,
+        "name": "e",
+        "event_type": ["EventType.TERMINATION", 0],
+        "expression": {
+            "py/object": "pybamm.Scalar",
+            "py/id": 2,
+            "name": "2.0",
+            "id": 9,
+            "value": 2.0,
+            "children": [],
+        },
+    }
+    out = _relocate_legacy_model_tree(legacy)
+    assert "expression" not in out
+    assert out["children"][0]["name"] == "2.0"
+
+
+def test_relocate_legacy_moves_initial_condition_after_child():
+    from pybamm.expression_tree.operations.serialise import _relocate_legacy_model_tree
+
+    child = {
+        "py/object": "pybamm.Scalar",
+        "py/id": 3,
+        "name": "1.0",
+        "id": 1,
+        "value": 1.0,
+        "children": [],
+    }
+    ic = {
+        "py/object": "pybamm.Scalar",
+        "py/id": 4,
+        "name": "0.0",
+        "id": 2,
+        "value": 0.0,
+        "children": [],
+    }
+    legacy = {
+        "py/object": "pybamm.ExplicitTimeIntegral",
+        "py/id": 5,
+        "name": "x",
+        "id": 7,
+        "domains": {},
+        "children": [child],
+        "initial_condition": ic,
+    }
+    out = _relocate_legacy_model_tree(legacy)
+    assert "initial_condition" not in out
+    assert [c["name"] for c in out["children"]] == ["1.0", "0.0"]
+
+
+def test_relocate_legacy_converts_sub_meshes_dict():
+    from pybamm.expression_tree.operations.serialise import _relocate_legacy_model_tree
+
+    legacy = {
+        "py/object": "pybamm.Mesh",
+        "py/id": 6,
+        "submesh_pts": {},
+        "base_domains": ["negative electrode"],
+        "sub_meshes": {
+            "negative electrode": {
+                "py/object": "pybamm.SubMesh1D",
+                "py/id": 7,
+                "edges": [0.0, 1.0],
+                "coord_sys": "cartesian",
+            }
+        },
+    }
+    out = _relocate_legacy_model_tree(legacy)
+    assert "sub_meshes" not in out
+    assert out["sub_mesh_domains"] == ["negative electrode"]
+    assert out["children"][0]["coord_sys"] == "cartesian"
