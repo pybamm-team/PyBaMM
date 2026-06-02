@@ -331,3 +331,75 @@ class TestDiffSLExport:
             NotImplementedError, match="only supports scalar Conditionals"
         ):
             pybamm.DiffSLExport(model).to_diffeq(outputs=["special"])
+
+    def test_init_rejects_invalid_model(self):
+        with pytest.raises(
+            TypeError, match=r"must be a pybamm\.BaseModel or pybamm\.Simulation"
+        ):
+            pybamm.DiffSLExport(42)
+
+    def test_output_specific_input_parameter(self):
+        model = pybamm.BaseModel()
+        x = pybamm.Variable("x")
+        extra = pybamm.InputParameter("extra_param")
+        model.rhs = {x: x}
+        model.initial_conditions = {x: pybamm.Scalar(1)}
+        model.variables = {"x": x, "special": x + extra}
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+        export = pybamm.DiffSLExport(model).to_diffeq(outputs=["special"])
+        assert "extra_param" in export
+
+    def test_map_inputs_basic(self, model):
+        exporter = pybamm.DiffSLExport(model)
+        result = exporter.map_inputs({"p": 3.14})
+        assert isinstance(result, np.ndarray)
+        assert result.shape == (1,)
+        assert result[0] == 3.14
+
+    def test_map_inputs_no_outputs(self, model):
+        exporter = pybamm.DiffSLExport(model)
+        result = exporter.map_inputs({"p": 1.0}, outputs=None)
+        assert result[0] == 1.0
+
+    def test_map_inputs_empty_model(self):
+        model = pybamm.BaseModel()
+        x = pybamm.Variable("x")
+        model.rhs = {x: x}
+        model.initial_conditions = {x: pybamm.Scalar(1)}
+        model = pybamm.Discretisation().process_model(model)
+        exporter = pybamm.DiffSLExport(model)
+        result = exporter.map_inputs({})
+        assert isinstance(result, np.ndarray)
+        assert result.size == 0
+
+    def test_map_inputs_missing_key_raises(self, model):
+        exporter = pybamm.DiffSLExport(model)
+        with pytest.raises(KeyError, match="not found in inputs dict"):
+            exporter.map_inputs({})
+
+    def test_map_inputs_output_specific(self):
+        model = pybamm.BaseModel()
+        x = pybamm.Variable("x")
+        extra = pybamm.InputParameter("extra_param")
+        model.rhs = {x: x}
+        model.initial_conditions = {x: pybamm.Scalar(1)}
+        model.variables = {"x": x, "extra_out": x + extra}
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+        exporter = pybamm.DiffSLExport(model)
+        result = exporter.map_inputs({"extra_param": 2.0}, outputs=["extra_out"])
+        assert result[0] == 2.0
+
+    def test_reg_power_with_non_scalar_exponent(self):
+        model = pybamm.BaseModel()
+        x = pybamm.Variable("x")
+        a = pybamm.InputParameter("a")
+        rp = pybamm.reg_power(x, a, scale=pybamm.Scalar(2))
+        model.rhs = {x: rp}
+        model.initial_conditions = {x: pybamm.Scalar(1)}
+        model.variables = {"rp": rp}
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+        export = pybamm.DiffSLExport(model).to_diffeq(outputs=["rp"])
+        assert "(a - 1) / 2" in export

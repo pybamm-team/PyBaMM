@@ -737,10 +737,7 @@ class DiffSLExport:
         # F
         model_index_gate = None
         if self._has_experiment:
-            if self._model_index_branch_order is not None:
-                active_steps = len(self._model_index_branch_order)
-            else:
-                active_steps = len(self._source.experiment.steps) + 1
+            active_steps = len(self._model_index_branch_order)
             terminal_states = self._model_index_terminal_states
             gate_tensor_name = f"constant{tensor_index}"
             tensor_index += 1
@@ -935,9 +932,7 @@ def _equation_to_diffeq(
 ) -> str:
     if isinstance(equation, pybamm.Conditional) and equation in symbol_to_tensor_name:
         index = "j" if transpose else "i"
-        if equation.size_for_testing == 1:
-            return f"{symbol_to_tensor_name[equation]}_{index}[N]"
-        return f"{symbol_to_tensor_name[equation]}_{index}"
+        return f"{symbol_to_tensor_name[equation]}_{index}[N]"
     if equation in symbol_to_tensor_name:
         if isinstance(equation, pybamm.Matrix):
             index = "ji" if transpose else "ij"
@@ -1010,11 +1005,8 @@ def _equation_to_diffeq(
             for x in equation.children
         ]
         if name == "_reg_power_evaluate":
-            # three args: x, a, scale (optional)
             # Approximates |x|^a * sign(x) using:
-            #  y = x * (x^2 + delta^2)^((a-1)/2)
-            # When scale is set:
-            #    y = (x/scale) * ((x/scale)^2 + delta^2)^((a-1)/2) * scale^a
+            #  y = (x/scale) * ((x/scale)^2 + delta^2)^((a-1)/2) * scale^a
             delta = equation.delta
             x = args[0]
             a = args[1]
@@ -1025,11 +1017,8 @@ def _equation_to_diffeq(
                 inner_exp = f"{(a_val - 1) / 2:.{float_precision}g}"
             else:
                 inner_exp = f"({a} - 1) / 2"
-            if len(equation.children) == 3:
-                x = f"({x} / {args[2]})"
-                return f"({x} * pow((pow({x}, 2) + {delta**2:.{float_precision}g}), {inner_exp})) * pow({args[2]}, {a})"
-            else:
-                return f"({x} * pow((pow({x}, 2) + {delta**2:.{float_precision}g}), {inner_exp}))"
+            x = f"({x} / {args[2]})"
+            return f"({x} * pow((pow({x}, 2) + {delta**2:.{float_precision}g}), {inner_exp})) * pow({args[2]}, {a})"
         elif name == "_arcsinh2_evaluate":
             # Two-argument arcsinh function for arcsinh(a/b) that avoids division by zero
             # by adding a small regularisation term to the denominator.
@@ -1067,17 +1056,7 @@ def _equation_to_diffeq(
             f"equation {equation} not in slice_to_label"
         )  # pragma: no cover
 
-    elif isinstance(equation, pybamm.Variable):
-        index = "j" if transpose else "i"
-        label = to_variable_name(equation.name)
-        if label in y_slice_to_label.values():
-            return f"{label}_{index}"
-        raise TypeError(
-            f"{type(equation)} not implemented for symbol {equation}"
-        )  # pragma: no cover
     elif isinstance(equation, pybamm.InputParameter):
-        if use_model_index and equation.name == pybamm.Simulation._STEP_INDEX_INPUT:
-            return "N"
         return f"{to_variable_name(equation.name)}"
     elif isinstance(equation, pybamm.Time):
         return "t"
