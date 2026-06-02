@@ -1809,6 +1809,34 @@ class TestSubmeshTypesSerialization:
         with pytest.raises(ValueError, match=r"must end with '\.json' extension"):
             Serialise.save_submesh_types(submesh_types, filename="test.txt")
 
+    def test_submesh_item_emits_kernel_class_reference(self):
+        item = Serialise.serialise_submesh_item(pybamm.Uniform1DSubMesh)
+        assert item["$type"] == "type"
+        assert (
+            item["class"] == "pybamm.meshes.one_dimensional_submeshes.Uniform1DSubMesh"
+        )
+
+    def test_submesh_item_reads_both_shapes(self):
+        legacy = {
+            "class": "Uniform1DSubMesh",
+            "module": "pybamm.meshes.one_dimensional_submeshes",
+        }
+        canonical = {
+            "$type": "type",
+            "class": "pybamm.meshes.one_dimensional_submeshes.Uniform1DSubMesh",
+        }
+        for shape in (legacy, canonical):
+            cls = Serialise.deserialise_submesh_item(shape, return_class_only=True)
+            assert cls is pybamm.Uniform1DSubMesh
+
+    def test_submesh_item_round_trips_meshgenerator_with_params(self):
+        gen = pybamm.MeshGenerator(pybamm.Uniform1DSubMesh, {"npts": 7})
+        item = Serialise.serialise_submesh_item(gen)
+        restored = Serialise.deserialise_submesh_item(item, return_class_only=False)
+        assert isinstance(restored, pybamm.MeshGenerator)
+        assert restored.submesh_type is pybamm.Uniform1DSubMesh
+        assert restored.submesh_params == {"npts": 7}
+
 
 class TestSerializationErrorHandling:
     def test_invalid_schema_version_geometry(self):

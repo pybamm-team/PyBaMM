@@ -819,45 +819,26 @@ class Serialise:
 
     @staticmethod
     def serialise_spatial_method_item(method) -> dict:
-        """
-        Serialise a single spatial method instance.
+        """Serialise a spatial method. The class is encoded via the kernel's
+        class_reference codec; its options ride alongside under "options"."""
+        from pybamm.expression_tree.operations.serialise_kernel import encode
 
-        Parameters
-        ----------
-        method : SpatialMethod
-            A spatial method instance (e.g. FiniteVolume(), ZeroDimensionalSpatialMethod()).
-
-        Returns
-        -------
-        dict
-            JSON-serialisable dict with "class", "module", and "options".
-        """
-        return {
-            "class": type(method).__name__,
-            "module": type(method).__module__,
-            "options": method.options if hasattr(method, "options") else {},
-        }
+        result = encode(type(method))
+        result["options"] = method.options if hasattr(method, "options") else {}
+        return result
 
     @staticmethod
     def deserialise_spatial_method_item(method_info: dict):
-        """
-        Deserialise a single spatial method from a dict (one entry from spatial_methods).
+        """Deserialise a spatial method from either the kernel class_reference shape
+        or the legacy {class, module} shape."""
+        from pybamm.expression_tree.operations.serialise_kernel import (
+            _resolve_class,
+            normalise_legacy,
+        )
 
-        Parameters
-        ----------
-        method_info : dict
-            Dict with "class", "module", and optionally "options".
-
-        Returns
-        -------
-        SpatialMethod
-            A spatial method instance.
-        """
-        module_name = method_info["module"]
-        class_name = method_info["class"]
+        node = normalise_legacy(dict(method_info))
+        method_class = _resolve_class(node["class"])
         options = method_info.get("options") or {}
-        module = importlib.import_module(module_name)
-        method_class = getattr(module, class_name)
         return method_class(options=options)
 
     @staticmethod
@@ -983,17 +964,20 @@ class Serialise:
             raise KeyError("Missing 'spatial_methods' section in JSON data.")
 
         # Reconstruct spatial methods
+        from pybamm.expression_tree.operations.serialise_kernel import (
+            SerialisationError,
+        )
+
         reconstructed_methods = {}
         for domain, method_info in spatial_methods_data.items():
             try:
                 reconstructed_methods[domain] = (
                     Serialise.deserialise_spatial_method_item(method_info)
                 )
-            except (ModuleNotFoundError, AttributeError) as e:
+            except (ModuleNotFoundError, AttributeError, SerialisationError) as e:
                 class_name = method_info.get("class", "?")
-                module_name = method_info.get("module", "?")
                 raise ImportError(
-                    f"Could not import spatial method '{class_name}' from '{module_name}': {e}"
+                    f"Could not import spatial method '{class_name}': {e}"
                 ) from e
             except Exception as e:
                 raise ValueError(
@@ -1129,57 +1113,31 @@ class Serialise:
 
     @staticmethod
     def serialise_submesh_item(submesh_item) -> dict:
-        """
-        Serialise a single submesh type (SubMesh class or MeshGenerator instance).
+        """Serialise a SubMesh class or MeshGenerator. The class is encoded via the
+        kernel's class_reference codec ({"$type": "type", "class": dotted-path}); a
+        MeshGenerator's params ride alongside under "submesh_params"."""
+        from pybamm.expression_tree.operations.serialise_kernel import encode
 
-        Parameters
-        ----------
-        submesh_item : type or MeshGenerator
-            A SubMesh class (e.g. Uniform1DSubMesh) or a MeshGenerator instance.
-
-        Returns
-        -------
-        dict
-            JSON-serialisable dict with "class", "module", and optionally
-            "submesh_params" for MeshGenerator.
-        """
-        if hasattr(submesh_item, "submesh_type"):
-            submesh_class = submesh_item.submesh_type
-            result = {
-                "class": submesh_class.__name__,
-                "module": submesh_class.__module__,
-            }
+        if hasattr(submesh_item, "submesh_type"):  # MeshGenerator instance
+            result = encode(submesh_item.submesh_type)
             if getattr(submesh_item, "submesh_params", None):
                 result["submesh_params"] = dict(submesh_item.submesh_params)
             return result
-        # SubMesh class
-        return {
-            "class": submesh_item.__name__,
-            "module": submesh_item.__module__,
-        }
+        return encode(submesh_item)  # a SubMesh class
 
     @staticmethod
     def deserialise_submesh_item(submesh_info: dict, return_class_only: bool = False):
-        """
-        Deserialise a single submesh type from a dict (one entry from submesh_types).
+        """Deserialise a SubMesh class / MeshGenerator from either the kernel
+        class_reference shape or the legacy {class, module} shape."""
+        from pybamm.expression_tree.operations.serialise_kernel import (
+            _resolve_class,
+            normalise_legacy,
+        )
 
-        Parameters
-        ----------
-        submesh_info : dict
-            Dict with "class", "module", and optionally "submesh_params".
-        return_class_only : bool, optional
-            If True, return the SubMesh class. If False, return a MeshGenerator
-            instance. Default is False.
-
-        Returns
-        -------
-        type or MeshGenerator
-            The SubMesh class or a MeshGenerator instance.
-        """
-        module_name = submesh_info["module"]
-        class_name = submesh_info["class"]
-        module = importlib.import_module(module_name)
-        submesh_class = getattr(module, class_name)
+        node = normalise_legacy(
+            dict(submesh_info)
+        )  # legacy {class,module} -> $type form
+        submesh_class = _resolve_class(node["class"])
         if return_class_only:
             return submesh_class
         params = submesh_info.get("submesh_params") or {}
@@ -1303,6 +1261,10 @@ class Serialise:
             raise KeyError("Missing 'submesh_types' section in JSON data.")
 
         # Reconstruct submesh types
+        from pybamm.expression_tree.operations.serialise_kernel import (
+            SerialisationError,
+        )
+
         reconstructed_submesh_types = {}
         for domain, submesh_info in submesh_types_data.items():
             try:
@@ -1311,11 +1273,10 @@ class Serialise:
                         submesh_info, return_class_only=False
                     )
                 )
-            except (ModuleNotFoundError, AttributeError) as e:
+            except (ModuleNotFoundError, AttributeError, SerialisationError) as e:
                 class_name = submesh_info.get("class", "?")
-                module_name = submesh_info.get("module", "?")
                 raise ImportError(
-                    f"Could not import submesh type '{class_name}' from '{module_name}': {e}"
+                    f"Could not import submesh type '{class_name}': {e}"
                 ) from e
             except Exception as e:
                 raise ValueError(
