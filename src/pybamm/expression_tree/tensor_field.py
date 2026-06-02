@@ -137,6 +137,18 @@ class TensorField(pybamm.Symbol):
 
         return TensorField(new_components, domain=self.domain)
 
+    def to_json(self):
+        return {
+            "name": self.name,
+            "id": self.id,
+            "domains": self.domains,
+            "children": list(self._components),
+        }
+
+    @classmethod
+    def _from_json(cls, snippet):
+        return cls(snippet["children"])
+
     def _evaluate_for_shape(self):
         """Delegate shape evaluation to first component."""
         return self.children[0].evaluate_for_shape()

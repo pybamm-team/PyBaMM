@@ -471,3 +471,16 @@ def test_broadcast_round_trip_preserves_subclass(tree):
     restored = _rt(tree)
     assert type(restored) is type(tree)
     assert restored.id == tree.id
+
+
+def test_tensor_field_round_trip():
+    tree = pybamm.TensorField([pybamm.Scalar(1.0), pybamm.Scalar(2.0)])
+    assert _rt(tree).id == tree.id
+
+
+def test_vector_field_round_trip():
+    leaf = pybamm.Variable("u", domains={"primary": ["negative electrode"]})
+    tree = pybamm.VectorField(leaf, leaf)
+    restored = _rt(tree)
+    assert type(restored) is pybamm.VectorField
+    assert restored.id == tree.id
