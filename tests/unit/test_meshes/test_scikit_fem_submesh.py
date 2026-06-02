@@ -197,22 +197,31 @@ class TestScikitFiniteElement2DSubMesh:
 
         mesh_json = mesh.to_json()
 
-        expected_json = {
-            "submesh_pts": {
-                "negative electrode": {"x_n": 10},
-                "separator": {"x_s": 7},
-                "positive electrode": {"x_p": 12},
-                "current collector": {"y": 16, "z": 24},
-            },
-            "base_domains": [
-                "negative electrode",
-                "separator",
-                "positive electrode",
-                "current collector",
-            ],
+        # Kernel wire shape: sub-meshes travel through children; their domain keys
+        # ride alongside in sub_mesh_domains.
+        assert mesh_json["submesh_pts"] == {
+            "negative electrode": {"x_n": 10},
+            "separator": {"x_s": 7},
+            "positive electrode": {"x_p": 12},
+            "current collector": {"y": 16, "z": 24},
         }
-
-        assert mesh_json == expected_json
+        assert mesh_json["base_domains"] == [
+            "negative electrode",
+            "separator",
+            "positive electrode",
+            "current collector",
+        ]
+        domains = mesh_json["sub_mesh_domains"]
+        assert set(domains) == {
+            "negative electrode",
+            "separator",
+            "positive electrode",
+            "current collector",
+        }
+        assert len(mesh_json["children"]) == len(domains)
+        # the current collector rides through children as the 2D submesh
+        cc = mesh_json["children"][domains.index("current collector")]
+        assert isinstance(cc, pybamm.ScikitUniform2DSubMesh)
 
         # test Uniform2DSubMesh serialisation
 

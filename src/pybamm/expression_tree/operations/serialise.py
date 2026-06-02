@@ -168,6 +168,10 @@ class Serialise:
             node_dict = {"py/object": str(type(node))[8:-2], "py/id": id(node)}
             if isinstance(node, pybamm.Mesh):
                 node_dict.update(node.to_json())
+                # Drop the kernel-only keys; the legacy encoder builds sub_meshes
+                # itself. Removed when _MeshEncoder is retired (later task).
+                node_dict.pop("children", None)
+                node_dict.pop("sub_mesh_domains", None)
 
                 submeshes = {}
                 for k, v in node.items():
@@ -1739,15 +1743,16 @@ class Serialise:
         return obj
 
     def _reconstruct_mesh(self, node: dict):
-        """Reconstructs a Mesh object"""
-        if "sub_meshes" in node:
-            for k, v in node["sub_meshes"].items():
-                sub_mesh = self._reconstruct_symbol(v)
-                node["sub_meshes"][k] = sub_mesh
-
-        new_mesh = self._reconstruct_symbol(node)
-
-        return new_mesh
+        """Reconstruct a Mesh from the legacy py/object shape (a ``sub_meshes``
+        dict). Builds the Mesh directly rather than via the canonical (kernel)
+        ``Mesh._from_json``; retired once load_model decodes through the kernel."""
+        mesh = pybamm.Mesh.__new__(pybamm.Mesh)
+        super(pybamm.Mesh, mesh).__init__()
+        mesh.submesh_pts = node["submesh_pts"]
+        mesh.base_domains = node["base_domains"]
+        for k, v in node.get("sub_meshes", {}).items():
+            mesh[k] = self._reconstruct_symbol(v)
+        return mesh
 
     def _reconstruct_pybamm_dict(self, obj: dict):
         """

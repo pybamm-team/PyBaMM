@@ -101,3 +101,20 @@ def test_concrete_submeshes_round_trip_through_kernel():
             assert np.array_equal(restored.edges, v.edges), k
             checked += 1
     assert checked, "no concrete submesh exercised"
+
+
+def test_mesh_round_trip_through_kernel():
+    model = pybamm.lithium_ion.SPM()
+    sim = pybamm.Simulation(model)
+    sim.build()
+    mesh = sim.mesh
+    restored = sk.decode(json.loads(json.dumps(sk.encode(mesh))))
+    assert isinstance(restored, pybamm.Mesh)
+    assert restored.submesh_pts == mesh.submesh_pts
+    assert set(restored.base_domains) == set(mesh.base_domains)
+    # every non-ghost submesh survived with matching edges
+    import numpy as np
+
+    for k, v in mesh.items():
+        if len(k) == 1 and "ghost cell" not in k[0]:
+            assert np.array_equal(restored[k[0]].edges, v.edges), k

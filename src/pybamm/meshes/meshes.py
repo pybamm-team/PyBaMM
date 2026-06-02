@@ -176,21 +176,6 @@ class Mesh(dict):
         # add ghost meshes
         self.add_ghost_meshes()
 
-    @classmethod
-    def _from_json(cls, snippet: dict):
-        instance = cls.__new__(cls)
-        super(Mesh, instance).__init__()
-
-        instance.submesh_pts = snippet["submesh_pts"]
-        instance.base_domains = snippet["base_domains"]
-
-        for k, v in snippet["sub_meshes"].items():
-            instance[k] = v
-
-        # instance.add_ghost_meshes()
-
-        return instance
-
     def __getitem__(self, domains):
         if isinstance(domains, str):
             domains = (domains,)
@@ -409,6 +394,10 @@ class Mesh(dict):
                     + str(submesh.dimension)
                 )
 
+    # geometry/submesh_types/var_pts are construction inputs; a Mesh reconstructs
+    # from submesh_pts/base_domains/sub-meshes, so the coverage guard waives them.
+    _serialise_derived_params = frozenset({"geometry", "submesh_types", "var_pts"})
+
     @property
     def geometry(self):
         return self._geometry
@@ -418,12 +407,28 @@ class Mesh(dict):
         self._geometry = geometry
 
     def to_json(self):
-        json_dict = {
+        # Non-ghost single-domain sub-meshes travel through children (each is a
+        # kernel-serialisable SubMesh); their domain keys ride alongside so
+        # _from_json can re-key them.
+        domains = [k for k in self if len(k) == 1 and "ghost cell" not in k[0]]
+        return {
             "submesh_pts": self.submesh_pts,
             "base_domains": self.base_domains,
+            "sub_mesh_domains": [k[0] for k in domains],
+            "children": [self[k] for k in domains],
         }
 
-        return json_dict
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        instance = cls.__new__(cls)
+        super(Mesh, instance).__init__()
+        instance.submesh_pts = snippet["submesh_pts"]
+        instance.base_domains = snippet["base_domains"]
+        for domain, submesh in zip(
+            snippet["sub_mesh_domains"], snippet["children"], strict=True
+        ):
+            instance[domain] = submesh
+        return instance
 
 
 class SubMesh:
