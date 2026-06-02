@@ -160,120 +160,6 @@ class TestSerialiseModels:
 
 
 class TestSerialise:
-    # test the symbol encoder
-
-    def test_symbol_encoder_symbol(self, mocker):
-        """test basic symbol encoder with & without children"""
-
-        # without children
-        a, a_dict = scalar_var_dict(mocker)
-
-        a_ser_json = Serialise._SymbolEncoder().default(a)
-
-        assert a_ser_json == a_dict
-
-        # with children
-        add = pybamm.Addition(2, 4)
-        add_json = {
-            "py/id": mocker.ANY,
-            "py/object": "pybamm.expression_tree.binary_operators.Addition",
-            "name": "+",
-            "domains": {
-                "primary": [],
-                "secondary": [],
-                "tertiary": [],
-                "quaternary": [],
-            },
-            "children": [
-                {
-                    "py/id": mocker.ANY,
-                    "py/object": "pybamm.expression_tree.scalar.Scalar",
-                    "name": "2.0",
-                    "value": 2.0,
-                    "children": [],
-                },
-                {
-                    "py/id": mocker.ANY,
-                    "py/object": "pybamm.expression_tree.scalar.Scalar",
-                    "name": "4.0",
-                    "value": 4.0,
-                    "children": [],
-                },
-            ],
-        }
-
-        add_ser_json = Serialise._SymbolEncoder().default(add)
-
-        assert add_ser_json == add_json
-
-    def test_symbol_encoder_explicit_time_integral(self, mocker):
-        """test symbol encoder with initial conditions"""
-        expr = pybamm.ExplicitTimeIntegral(pybamm.Scalar(5), pybamm.Scalar(1))
-
-        expr_json = {
-            "py/object": "pybamm.expression_tree.unary_operators.ExplicitTimeIntegral",
-            "py/id": mocker.ANY,
-            "name": "explicit time integral",
-            "domains": {
-                "primary": [],
-                "secondary": [],
-                "tertiary": [],
-                "quaternary": [],
-            },
-            "children": [
-                {
-                    "py/object": "pybamm.expression_tree.scalar.Scalar",
-                    "py/id": mocker.ANY,
-                    "name": "5.0",
-                    "value": 5.0,
-                    "children": [],
-                }
-            ],
-            "initial_condition": {
-                "py/object": "pybamm.expression_tree.scalar.Scalar",
-                "py/id": mocker.ANY,
-                "name": "1.0",
-                "value": 1.0,
-                "children": [],
-            },
-        }
-
-        expr_ser_json = Serialise._SymbolEncoder().default(expr)
-
-        assert expr_json == expr_ser_json
-
-    def test_symbol_encoder_event(self, mocker):
-        """test symbol encoder with event"""
-
-        expression = pybamm.Scalar(1)
-        event = pybamm.Event("my event", expression)
-
-        event_json = {
-            "py/object": "pybamm.models.event.Event",
-            "py/id": mocker.ANY,
-            "name": "my event",
-            "event_type": ["EventType.TERMINATION", 0],
-            "expression": {
-                "py/object": "pybamm.expression_tree.scalar.Scalar",
-                "py/id": mocker.ANY,
-                "name": "1.0",
-                "value": 1.0,
-                "children": [],
-            },
-        }
-
-        event_ser_json = Serialise._SymbolEncoder().default(event)
-        assert event_ser_json == event_json
-
-    # test the mesh encoder
-    def test_mesh_encoder(self, mocker):
-        mesh, mesh_json = mesh_var_dict(mocker)
-
-        # serialise mesh
-        mesh_ser_json = Serialise._MeshEncoder().default(mesh)
-
-        assert mesh_ser_json == mesh_json
-
     def test_deconstruct_pybamm_dicts(self, mocker):
         """tests serialisation of dictionaries with pybamm classes as keys"""
 
@@ -281,11 +167,12 @@ class TestSerialise:
 
         test_dict = {"rod": {x: {"min": 0.0, "max": 2.0}}}
 
+        # Symbol keys now serialise through the kernel: canonical $type tag, no
+        # py/object / py/id / id, and empty children are omitted.
         ser_dict = {
             "rod": {
                 "symbol_x": {
-                    "py/object": "pybamm.expression_tree.independent_variable.SpatialVariable",
-                    "py/id": mocker.ANY,
+                    "$type": "pybamm.expression_tree.independent_variable.SpatialVariable",
                     "name": "x",
                     "domains": {
                         "primary": ["negative electrode"],
@@ -293,7 +180,6 @@ class TestSerialise:
                         "tertiary": [],
                         "quaternary": [],
                     },
-                    "children": [],
                     "coord_sys": None,
                     "direction": None,
                 },

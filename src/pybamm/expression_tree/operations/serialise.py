@@ -133,62 +133,6 @@ class Serialise:
     def __init__(self):
         pass
 
-    class _SymbolEncoder(json.JSONEncoder):
-        """Converts PyBaMM symbols into a JSON-serialisable format"""
-
-        def default(self, node: dict):
-            node_dict = {"py/object": str(type(node))[8:-2], "py/id": id(node)}
-            if isinstance(node, pybamm.Symbol):
-                node_dict.update(node.to_json())  # this doesn't include children
-                node_dict["children"] = []
-                for c in node.children:
-                    node_dict["children"].append(self.default(c))
-
-                if hasattr(node, "initial_condition"):  # for ExplicitTimeIntegral
-                    node_dict["initial_condition"] = self.default(
-                        node.initial_condition
-                    )
-
-                return node_dict
-
-            if isinstance(node, pybamm.Event):
-                hook = node.to_json()
-                hook.pop("children", None)  # legacy encoder walks expression itself
-                node_dict.update(hook)
-                node_dict["expression"] = self.default(node._expression)
-                return node_dict
-
-            node_dict["json"] = json.JSONEncoder.default(self, node)  # pragma: no cover
-            return node_dict  # pragma: no cover
-
-    class _MeshEncoder(json.JSONEncoder):
-        """Converts PyBaMM meshes into a JSON-serialisable format"""
-
-        def default(self, node: pybamm.Mesh):
-            node_dict = {"py/object": str(type(node))[8:-2], "py/id": id(node)}
-            if isinstance(node, pybamm.Mesh):
-                node_dict.update(node.to_json())
-                # Drop the kernel-only keys; the legacy encoder builds sub_meshes
-                # itself. Removed when _MeshEncoder is retired (later task).
-                node_dict.pop("children", None)
-                node_dict.pop("sub_mesh_domains", None)
-
-                submeshes = {}
-                for k, v in node.items():
-                    if len(k) == 1 and "ghost cell" not in k[0]:
-                        submeshes[k[0]] = self.default(v)
-
-                node_dict["sub_meshes"] = submeshes
-
-                return node_dict
-
-            if isinstance(node, pybamm.SubMesh):
-                node_dict.update(node.to_json())
-                return node_dict
-
-            node_dict["json"] = json.JSONEncoder.default(self, node)  # pragma: no cover
-            return node_dict  # pragma: no cover
-
     class _Empty:
         """A dummy class to aid deserialisation"""
 
@@ -240,35 +184,37 @@ class Serialise:
             model.get_processed_variable(k)
         variables_processed = model.get_processed_variables_dict()
 
+        from pybamm.expression_tree.operations.serialise_kernel import (
+            TAG,
+            _class_path,
+            encode,
+        )
+
         model_json = {
-            "py/object": str(type(model))[8:-2],
-            "py/id": id(model),
+            TAG: _class_path(type(model)),
             "pybamm_version": pybamm.__version__,
             "name": model.name,
             "options": model.options,
             "bounds": [bound.tolist() for bound in model.bounds],  # type: ignore[attr-defined]
-            "concatenated_rhs": self._SymbolEncoder().default(model._concatenated_rhs),
-            "concatenated_algebraic": self._SymbolEncoder().default(
-                model._concatenated_algebraic
-            ),
-            "concatenated_initial_conditions": self._SymbolEncoder().default(
+            "concatenated_rhs": encode(model._concatenated_rhs),
+            "concatenated_algebraic": encode(model._concatenated_algebraic),
+            "concatenated_initial_conditions": encode(
                 model._concatenated_initial_conditions
             ),
-            "events": [self._SymbolEncoder().default(event) for event in model.events],
-            "mass_matrix": self._SymbolEncoder().default(model.mass_matrix),
+            "events": [encode(event) for event in model.events],
+            "mass_matrix": encode(model.mass_matrix),
             "_solution_observable": model._solution_observable.name,
         }
 
         if mesh:
-            model_json["mesh"] = self._MeshEncoder().default(mesh)
+            model_json["mesh"] = encode(mesh)
 
         if variables_processed:
             variables_processed = dict(variables_processed)
             if model._geometry:
                 model_json["geometry"] = self._deconstruct_pybamm_dicts(model._geometry)
             model_json["_variables_processed"] = {
-                k: self._SymbolEncoder().default(v)
-                for k, v in variables_processed.items()
+                k: encode(v) for k, v in variables_processed.items()
             }
 
         return model_json
@@ -1692,13 +1638,14 @@ class Serialise:
 
         Dictionaries which don't contain pybamm symbols are returned unchanged.
         """
+        from pybamm.expression_tree.operations.serialise_kernel import encode
 
         def nested_convert(obj):
             if isinstance(obj, dict):
                 new_dict = {}
                 for k, v in obj.items():
                     if isinstance(k, pybamm.Symbol):
-                        new_k = self._SymbolEncoder().default(k)
+                        new_k = encode(k)
                         new_dict["symbol_" + new_k["name"]] = new_k
                         k = new_k["name"]
                     new_dict[k] = nested_convert(v)

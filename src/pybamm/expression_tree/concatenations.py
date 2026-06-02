@@ -292,6 +292,14 @@ class DomainConcatenation(Concatenation):
         from `copy_this`. `mesh` is not used in this case
     """
 
+    # full_mesh is a construction input used only to derive slices/size; those are
+    # serialised directly and _from_json never re-stores the mesh, so it is not
+    # itself serialised (copy_this is defaulted-and-unstored, covered by the guard
+    # grace).
+    _serialise_derived_params = Concatenation._serialise_derived_params | frozenset(
+        {"full_mesh"}
+    )
+
     def __init__(
         self,
         children: Sequence[pybamm.Symbol],
