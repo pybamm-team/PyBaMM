@@ -357,3 +357,53 @@ def test_trap_hook_codec_inherited_base_drops_scalar_raises_loudly():
 )
 def test_variable_family_round_trip(tree):
     assert _rt(tree).id == tree.id
+
+
+@pytest.mark.parametrize(
+    "tree",
+    [
+        pybamm.BoundaryGradient(
+            pybamm.Variable("u", domains={"primary": ["negative electrode"]}), "left"
+        ),
+        pybamm.BoundaryMeshSize(
+            pybamm.Variable("u", domains={"primary": ["negative electrode"]}), "left"
+        ),
+        pybamm.BoundaryIntegral(
+            pybamm.Variable("u", domains={"primary": ["negative electrode"]}),
+            region="negative tab",
+        ),
+        pybamm.UpwindDownwind2D(
+            pybamm.Variable("u", domains={"primary": ["negative electrode"]}), "x", "y"
+        ),
+        pybamm.NodeToEdge2D(
+            pybamm.Variable("u", domains={"primary": ["negative electrode"]}), "lr"
+        ),
+        pybamm.DeltaFunction(
+            pybamm.Variable("u", domains={"primary": ["negative particle"]}),
+            "left",
+            "negative electrode",
+        ),
+        pybamm.OneDimensionalIntegral(
+            pybamm.Variable("u", domains={"primary": ["negative electrode"]}),
+            ["negative electrode"],
+            "x",
+        ),
+        # currently-green via the switch; MUST keep round-tripping after switch deletion:
+        pybamm.BoundaryValue(
+            pybamm.Variable("u", domains={"primary": ["negative electrode"]}), "left"
+        ),
+        pybamm.DefiniteIntegralVector(
+            pybamm.Variable("u", domains={"primary": ["negative electrode"]})
+        ),
+    ],
+)
+def test_spatial_native_arg_round_trip(tree):
+    assert _rt(tree).id == tree.id
+
+
+def test_size_average_round_trip():
+    child = pybamm.Variable("u", domains={"primary": ["negative particle size"]})
+    assert (
+        _rt(pybamm.SizeAverage(child, pybamm.Scalar(1.0))).id
+        == pybamm.SizeAverage(child, pybamm.Scalar(1.0)).id
+    )

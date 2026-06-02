@@ -832,13 +832,26 @@ class TestUnaryOperators:
         ind_json["children"] = [vec]
         assert pybamm.Index._from_json(ind_json) == ind
 
-        # SpatialOperator
-        spatial_vec = pybamm.SpatialOperator("name", vec)
-        with pytest.raises(NotImplementedError):
-            spatial_vec.to_json()
+        # SpatialOperator now serialises its name and domains (subclasses extend
+        # this via _json_extra_fields); a concrete subclass round-trips via the
+        # generic hook.
+        grad = pybamm.Gradient(pybamm.Variable("u", domain=["negative electrode"]))
 
-        with pytest.raises(NotImplementedError):
-            pybamm.SpatialOperator._from_json({})
+        grad_json = {
+            "name": "grad",
+            "id": mocker.ANY,
+            "domains": {
+                "primary": ["negative electrode"],
+                "secondary": [],
+                "tertiary": [],
+                "quaternary": [],
+            },
+        }
+
+        assert grad.to_json() == grad_json
+
+        grad_json["children"] = [grad.children[0]]
+        assert pybamm.Gradient._from_json(grad_json) == grad
 
         # ExplicitTimeIntegral
         expr = pybamm.ExplicitTimeIntegral(pybamm.Parameter("param"), pybamm.Scalar(1))
