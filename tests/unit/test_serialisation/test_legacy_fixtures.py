@@ -9,6 +9,8 @@ from __future__ import annotations
 import json
 import pathlib
 
+import pytest
+
 import pybamm
 from pybamm.expression_tree.operations.serialise import (
     Serialise,
@@ -34,3 +36,19 @@ def test_legacy_submesh_types_loads():
     restored = Serialise.load_submesh_types(_load("submesh_types.json"))
     assert isinstance(restored, dict) and restored
     assert all(isinstance(v, pybamm.MeshGenerator) for v in restored.values())
+
+
+def test_legacy_discretised_model_loads():
+    """The pre-refactor py/object discretised model must still load through the
+    kernel-based load_model + legacy relocation.
+
+    The fixture is ~20 MB and git-ignored; regenerate from pre-PR2 code (the legacy
+    writer no longer exists). Skipped when the local fixture is absent (e.g. CI).
+    """
+    if not (_FIX / "discretised_model.json").exists():
+        pytest.skip("discretised_model.json fixture absent (git-ignored, local-only)")
+    data = _load("discretised_model.json")
+    model = Serialise().load_model(data, battery_model=pybamm.lithium_ion.SPM())
+    assert isinstance(model, pybamm.lithium_ion.SPM)
+    assert model.concatenated_rhs is not None
+    assert model.concatenated_initial_conditions is not None
