@@ -231,6 +231,38 @@ def test_hook_guard_allows_declared_derived_param():
     sk.encode(_Cached(pybamm.Scalar(1.0)))  # no raise
 
 
+# Module-level (not function-local) so decode can resolve it by import path during
+# the round-trip below; a `<locals>` class is not importable.
+class _OwnChildren(pybamm.Symbol):
+    def __init__(self, child, extra):
+        self.extra = extra
+        super().__init__("own", children=[child])  # extra not a symbol child
+
+    def to_json(self):
+        return {
+            "name": self.name,
+            "domains": self.domains,
+            "children": [self.children[0], self.extra],
+        }
+
+    @classmethod
+    def _from_json(cls, snippet):
+        return cls(snippet["children"][0], snippet["children"][1])
+
+
+def test_hook_codec_encodes_hook_supplied_children():
+    # A hook whose to_json returns its OWN children list (here [child, extra],
+    # where extra is NOT in obj.children) must have THAT list encoded and guarded,
+    # not obj.children. This is the contract SizeAverage/Variable/EvaluateAt rely on.
+    a, b = pybamm.Scalar(1.0), pybamm.Scalar(2.0)
+    obj = _OwnChildren(a, b)
+    node = sk.HookCodec().to_json(obj, sk.encode)
+    # the hook-supplied list (2 items) is encoded, not obj.children (1 item)
+    assert len(node["children"]) == 2
+    restored = sk.decode(sk.encode(obj))
+    assert restored.children[0].id == a.id and restored.extra.id == b.id
+
+
 # ---------------------------------------------------------------------------
 # normalise_legacy (Task 1.6)
 # ---------------------------------------------------------------------------

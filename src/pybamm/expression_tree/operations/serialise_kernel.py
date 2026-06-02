@@ -337,11 +337,16 @@ class HookCodec:
     def to_json(self, obj, encode) -> dict:
         node = dict(obj.to_json())
         node.pop("id", None)  # identity is not part of the round-trip contract
-        # Phase 1 only auto-attaches obj.children; Task 2.1 extends this to
-        # hook-supplied children (and updates raw_children accordingly).
-        raw_children = list(obj.children) if getattr(obj, "children", None) else []
+        if "children" in node:  # hook supplied its own children
+            raw_children = list(node["children"])
+        elif getattr(obj, "children", None):  # else attach the node's children
+            raw_children = list(obj.children)
+        else:
+            raw_children = []
         if raw_children:
             node["children"] = [encode(c) for c in raw_children]
+        # guard against raw_children (pre-encode), so a non-Symbol routed through a
+        # hook-supplied children list is covered by identity.
         _assert_hook_covers_params(obj, node, raw_children)
         return node
 
