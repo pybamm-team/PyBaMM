@@ -59,7 +59,7 @@ plot = [
   "matplotlib>=3.6.0",
 ]
 # For diffsl export integration tests
-pydiffsol = ["pydiffsol>=0.5.1"]
+pydiffsol = ["pydiffsol>=0.5.2"]
 cite = ["pybtex>=0.25.0"]
 # Battery Parameter eXchange format
 bpx = ["bpx>=1.1.0,<1.2.0"]
