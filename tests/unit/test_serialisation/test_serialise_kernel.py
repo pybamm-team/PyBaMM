@@ -432,3 +432,42 @@ def test_size_average_round_trip():
 )
 def test_symbol_valued_spatial_round_trip(tree):
     assert _rt(tree).id == tree.id
+
+
+@pytest.mark.parametrize(
+    "tree",
+    [
+        pybamm.PrimaryBroadcastToEdges(pybamm.Scalar(1.0), "negative electrode"),
+        pybamm.SecondaryBroadcast(
+            pybamm.PrimaryBroadcast(pybamm.Scalar(1.0), "negative particle"),
+            "negative electrode",
+        ),
+        pybamm.TertiaryBroadcast(
+            pybamm.Variable(
+                "v",
+                domains={
+                    "primary": ["negative particle"],
+                    "secondary": ["negative electrode"],
+                },
+            ),
+            "current collector",
+        ),
+        pybamm.FullBroadcast(
+            pybamm.Scalar(1.0),
+            broadcast_domains={"primary": ["negative electrode"]},
+            name="custom",
+        ),
+        pybamm.FullBroadcastToEdges(
+            pybamm.Scalar(1.0),
+            broadcast_domains={"primary": ["negative electrode"]},
+        ),
+        # custom name on a non-Full broadcast -- locks the "restore name on all" decision:
+        pybamm.PrimaryBroadcast(
+            pybamm.Scalar(1.0), "negative electrode", name="custom"
+        ),
+    ],
+)
+def test_broadcast_round_trip_preserves_subclass(tree):
+    restored = _rt(tree)
+    assert type(restored) is type(tree)
+    assert restored.id == tree.id

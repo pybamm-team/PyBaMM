@@ -188,6 +188,20 @@ class PrimaryBroadcast(Broadcast):
         vec = pybamm.evaluate_for_shape_using_domain(self.domains["primary"])
         return np.outer(child_eval, vec).reshape(-1, 1)
 
+    def to_json(self):
+        return {
+            "name": self.name,
+            "id": self.id,
+            "domains": self.domains,
+            "broadcast_domain": self.broadcast_domain,
+        }
+
+    @classmethod
+    def _from_json(cls, snippet):
+        return cls(
+            snippet["children"][0], snippet["broadcast_domain"], name=snippet["name"]
+        )
+
     def reduce_one_dimension(self):
         """Reduce the broadcast by one dimension."""
         return self.orphans[0]
@@ -318,6 +332,20 @@ class SecondaryBroadcast(Broadcast):
         vec = pybamm.evaluate_for_shape_using_domain(self.domains["secondary"])
         return np.outer(vec, child_eval).reshape(-1, 1)
 
+    def to_json(self):
+        return {
+            "name": self.name,
+            "id": self.id,
+            "domains": self.domains,
+            "broadcast_domain": self.broadcast_domain,
+        }
+
+    @classmethod
+    def _from_json(cls, snippet):
+        return cls(
+            snippet["children"][0], snippet["broadcast_domain"], name=snippet["name"]
+        )
+
     def reduce_one_dimension(self):
         """Reduce the broadcast by one dimension."""
         return self.orphans[0]
@@ -435,6 +463,20 @@ class TertiaryBroadcast(Broadcast):
         vec = pybamm.evaluate_for_shape_using_domain(self.domains["tertiary"])
         return np.outer(vec, child_eval).reshape(-1, 1)
 
+    def to_json(self):
+        return {
+            "name": self.name,
+            "id": self.id,
+            "domains": self.domains,
+            "broadcast_domain": self.broadcast_domain,
+        }
+
+    @classmethod
+    def _from_json(cls, snippet):
+        return cls(
+            snippet["children"][0], snippet["broadcast_domain"], name=snippet["name"]
+        )
+
     def reduce_one_dimension(self):
         """Reduce the broadcast by one dimension."""
         raise NotImplementedError
@@ -459,6 +501,10 @@ class TertiaryBroadcastToEdges(TertiaryBroadcast):
 
 class FullBroadcast(Broadcast):
     """A class for full broadcasts."""
+
+    # broadcast_domain and broadcast_domains are reconstructed from the stored
+    # full domains dict; opt them out of the coverage guard.
+    _serialise_derived_params = frozenset({"broadcast_domain", "broadcast_domains"})
 
     def __init__(
         self,
@@ -502,6 +548,17 @@ class FullBroadcast(Broadcast):
     def _unary_new_copy(self, child, perform_simplifications=True):
         """See :meth:`pybamm.UnaryOperator._unary_new_copy()`."""
         return self.__class__(child, broadcast_domains=self.domains)
+
+    def to_json(self):
+        return {"name": self.name, "id": self.id, "domains": self.domains}
+
+    @classmethod
+    def _from_json(cls, snippet):
+        return cls(
+            snippet["children"][0],
+            broadcast_domains=snippet["domains"],
+            name=snippet["name"],
+        )
 
     def _evaluate_for_shape(self):
         """
