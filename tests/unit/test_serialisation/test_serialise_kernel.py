@@ -265,3 +265,42 @@ def test_normalise_legacy_class_module():
 def test_normalise_legacy_passthrough_canonical():
     canonical = {sk.TAG: "pybamm.Scalar", "value": 1.0}
     assert sk.normalise_legacy(canonical) is canonical
+
+
+# ---------------------------------------------------------------------------
+# Anti-reintroduction trap tests (Task 1.7)
+# ---------------------------------------------------------------------------
+
+
+def test_trap_default_codec_unhandleable_required_arg_raises_loudly():
+    """A Symbol subclass with a renamed attribute and no hook (-> DefaultCodec)
+    must RAISE on encode, never silently drop. Red here = DefaultCodec softened
+    back toward silent loss. See spec safe-or-loud invariant.
+    """
+
+    class _Trap(pybamm.Symbol):
+        def __init__(self, child, secret):
+            super().__init__("trap", children=[child])
+            self._hidden = secret  # not secret / _secret -> unresolvable
+
+    with pytest.raises(sk.SerialisationError, match="secret"):
+        sk.encode(_Trap(pybamm.Scalar(1.0), "x"))
+
+
+def test_trap_hook_codec_inherited_base_drops_scalar_raises_loudly():
+    """The inherited-hook leak (#5548's structural cause), locked in. A
+    `UnaryOperator` subclass inherits `Symbol.to_json` (emits name/children/domains,
+    not `knob`) and `UnaryOperator._from_json` (rebuilds via __new__, routes to
+    HookCodec). The extra scalar `knob` is neither emitted, Symbol-valued, nor
+    declared derived -> the HookCodec coverage guard must RAISE. This is exactly the
+    shape `Magnitude.direction` had before its hook. Red here = the guard was
+    weakened and silent field-drop is back.
+    """
+
+    class _TrapUnary(pybamm.UnaryOperator):
+        def __init__(self, child, knob="a"):
+            super().__init__("trap_unary", child)
+            self.knob = knob
+
+    with pytest.raises(sk.SerialisationError, match="knob"):
+        sk.encode(_TrapUnary(pybamm.Scalar(1.0), knob="z"))
