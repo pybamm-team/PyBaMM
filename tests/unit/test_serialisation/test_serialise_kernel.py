@@ -407,3 +407,28 @@ def test_size_average_round_trip():
         _rt(pybamm.SizeAverage(child, pybamm.Scalar(1.0))).id
         == pybamm.SizeAverage(child, pybamm.Scalar(1.0)).id
     )
+
+
+@pytest.mark.parametrize(
+    "tree",
+    [
+        pybamm.EvaluateAt(
+            pybamm.Variable("u", domains={"primary": ["negative electrode"]}), 0.5
+        ),
+        # symbolic position (a Symbol, not a number): must route through children
+        pybamm.EvaluateAt(
+            pybamm.Variable("u", domains={"primary": ["negative electrode"]}),
+            pybamm.Scalar(0.5),
+        ),
+        pybamm.BackwardIndefiniteIntegral(
+            pybamm.Variable("u", domains={"primary": ["negative electrode"]}),
+            pybamm.SpatialVariable("x", domain=["negative electrode"]),
+        ),
+        pybamm.ExplicitTimeIntegral(
+            pybamm.Variable("u", domains={"primary": ["negative electrode"]}),
+            pybamm.Scalar(0.0),
+        ),
+    ],
+)
+def test_symbol_valued_spatial_round_trip(tree):
+    assert _rt(tree).id == tree.id

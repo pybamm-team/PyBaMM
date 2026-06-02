@@ -854,12 +854,17 @@ class TestUnaryOperators:
         assert pybamm.Gradient._from_json(grad_json) == grad
 
         # ExplicitTimeIntegral
-        expr = pybamm.ExplicitTimeIntegral(pybamm.Parameter("param"), pybamm.Scalar(1))
+        param = pybamm.Parameter("param")
+        ic = pybamm.Scalar(1)
+        expr = pybamm.ExplicitTimeIntegral(param, ic)
 
-        expr_json = {"name": "explicit time integral", "id": mocker.ANY}
+        expr_json = {
+            "name": "explicit time integral",
+            "id": mocker.ANY,
+            "domains": expr.domains,
+            "children": [param, ic],
+        }
 
         assert expr.to_json() == expr_json
 
-        expr_json["children"] = [pybamm.Parameter("param")]
-        expr_json["initial_condition"] = [pybamm.Scalar(1)]
         assert pybamm.ExplicitTimeIntegral._from_json(expr_json) == expr

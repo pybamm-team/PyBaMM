@@ -218,6 +218,12 @@ class TestSerialise:
             "py/id": mocker.ANY,
             "name": "explicit time integral",
             "id": mocker.ANY,
+            "domains": {
+                "primary": [],
+                "secondary": [],
+                "tertiary": [],
+                "quaternary": [],
+            },
             "children": [
                 {
                     "py/object": "pybamm.expression_tree.scalar.Scalar",

@@ -820,6 +820,19 @@ class BaseIndefiniteIntegral(Integral):
         # overwrite domains with child domains
         self.copy_domains(child)
 
+    def to_json(self):
+        var = self.integration_variable[0]
+        return {
+            "name": self.name,
+            "id": self.id,
+            "domains": self.domains,
+            "children": [self.children[0], var],
+        }
+
+    @classmethod
+    def _from_json(cls, snippet):
+        return cls(snippet["children"][0], snippet["children"][1])
+
     def _evaluate_for_shape(self):
         return self.children[0].evaluate_for_shape()
 
@@ -1263,9 +1276,22 @@ class ExplicitTimeIntegral(UnaryOperator):
         super().__init__("explicit time integral", children)
         self.initial_condition = initial_condition
 
+    def to_json(self):
+        """Convert ExplicitTimeIntegral to JSON for serialisation.
+
+        Routes ``initial_condition`` through the children list so the kernel
+        encodes/decodes it as a Symbol rather than a bare scalar field.
+        """
+        return {
+            "name": self.name,
+            "id": self.id,
+            "domains": self.domains,
+            "children": [self.children[0], self.initial_condition],
+        }
+
     @classmethod
     def _from_json(cls, snippet: dict):
-        return cls(snippet["children"][0], snippet["initial_condition"])
+        return cls(snippet["children"][0], snippet["children"][1])
 
     def _unary_new_copy(self, child, perform_simplifications=True):
         return self.__class__(child, self.initial_condition)
@@ -1276,20 +1302,6 @@ class ExplicitTimeIntegral(UnaryOperator):
 
     def is_constant(self):
         return False
-
-    def to_json(self):
-        """
-        Convert ExplicitTimeIntegral to json for serialisation.
-
-        Both `children` and `initial_condition` contain Symbols, and are therefore
-        dealt with by `pybamm.Serialise._SymbolEncoder.default()` directly.
-        """
-        json_dict = {
-            "name": self.name,
-            "id": self.id,
-        }
-
-        return json_dict
 
 
 class BoundaryGradient(BoundaryOperator):
@@ -1342,6 +1354,18 @@ class EvaluateAt(SpatialOperator):
         }
 
         super().__init__("evaluate", child, domains)
+
+    def to_json(self):
+        return {
+            "name": self.name,
+            "id": self.id,
+            "domains": self.domains,
+            "children": [self.children[0], self.position],
+        }
+
+    @classmethod
+    def _from_json(cls, snippet):
+        return cls(snippet["children"][0], snippet["children"][1])
 
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`"""
