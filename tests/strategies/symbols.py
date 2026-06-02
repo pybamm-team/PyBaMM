@@ -942,8 +942,8 @@ _STRATEGIES.update(
         pybamm.RAverage: _r_average_branch,
         # vector/tensor fields
         pybamm.VectorField: _vector_field_branch,
-        # spatial unary operators: round-trip via the generic fallback;
-        # all require a non-empty-domain child (DomainError otherwise)
+        # spatial unary operators: child-only, round-trip via the generic spatial
+        # hook; all require a non-empty-domain child (DomainError otherwise)
         pybamm.Gradient: lambda _children: _any_domain_leaves().map(pybamm.Gradient),
         pybamm.Laplacian: lambda _children: _any_domain_leaves().map(pybamm.Laplacian),
         pybamm.GradientSquared: lambda _children: _any_domain_leaves().map(
@@ -958,16 +958,16 @@ _STRATEGIES.update(
             _any_domain_leaves(),
             vector_type=st.sampled_from(["row", "column"]),
         ),
-        # Upwind / Downwind: (self, child) only — round-trip via generic fallback.
+        # Upwind / Downwind: (self, child) only — round-trip via the generic spatial hook.
         # Both require non-empty-domain children.
         pybamm.Upwind: lambda _children: _any_domain_leaves().map(pybamm.Upwind),
         pybamm.Downwind: lambda _children: _any_domain_leaves().map(pybamm.Downwind),
         # Divergence needs an edge-evaluating child, so wrap a domain-bearing
-        # leaf in a Gradient. Round-trips correctly via the generic fallback.
+        # leaf in a Gradient. Round-trips via the generic spatial hook.
         pybamm.Divergence: lambda _children: _any_domain_leaves().map(
             lambda leaf: pybamm.Divergence(pybamm.Gradient(leaf))
         ),
-        # formerly-failing classes (#5548): now round-trip through the kernel
+        # classes with non-children constructor args; serialise losslessly (#5548)
         pybamm.BackwardIndefiniteIntegral: _backward_indefinite_integral_branch,
         pybamm.BoundaryGradient: _boundary_gradient_branch,
         pybamm.BoundaryMeshSize: _boundary_mesh_size_branch,
@@ -1030,12 +1030,10 @@ _NOT_ROUND_TRIPPABLE: frozenset[type[pybamm.Symbol]] = frozenset(
     }
 )
 
-# Concrete classes that should round-trip but currently do not, each because of
-# a defect in convert_symbol_to_json / convert_symbol_from_json (tracked in
-# #5548). When the serialiser is fixed for a class, move it out of this set and
-# into _STRATEGIES so the property test guards it against regressions.
-# The unified kernel (#5548) closed every former defect, so this set is empty:
-# all formerly-failing classes now have a strategy in _STRATEGIES.
+# Concrete classes known not to round-trip, tracked so the coverage meta-test
+# tolerates them. Empty: every concrete Symbol subclass has a strategy in
+# _STRATEGIES and round-trips losslessly (#5548). A class that regresses here
+# should be fixed, not re-added.
 _KNOWN_FAILING: frozenset[type[pybamm.Symbol]] = frozenset()
 
 # Union consumed by the coverage meta-test: every concrete Symbol subclass must

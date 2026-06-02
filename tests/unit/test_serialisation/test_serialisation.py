@@ -664,7 +664,7 @@ class TestSerialise:
 
     def test_convert_symbol_from_json_unexpected_string(self):
         # A bare string is a native JSON leaf; the kernel decoder returns it
-        # unchanged rather than raising (validation relaxed vs the old switch).
+        # unchanged rather than raising (validation relaxed vs the previous serialiser).
         assert convert_symbol_from_json("foo") == "foo"
 
     def test_numpy_array_conversion(self):
@@ -830,7 +830,7 @@ class TestSerialise:
         concat_var2 = convert_symbol_from_json(json_dict)
 
         assert isinstance(concat_var2, pybamm.ConcatenationVariable)
-        # The kernel preserves the custom name (the old switch dropped it, #5548).
+        # The custom name is preserved on round-trip (previously dropped, #5548).
         assert concat_var2.name == "conc_var"
         assert len(concat_var2.children) == 3
         domains = [child.domains["primary"] for child in concat_var2.children]
@@ -1186,7 +1186,7 @@ class TestSerialise:
             convert_symbol_from_json(unhandled_json)
 
         # A dict with no recognised tag is generic JSON; the kernel decoder
-        # returns it unchanged (validation relaxed vs the old switch).
+        # returns it unchanged (validation relaxed vs the previous serialiser).
         unhandled_json2 = {"a": 1, "b": 2}
         assert convert_symbol_from_json(unhandled_json2) == {"a": 1, "b": 2}
 

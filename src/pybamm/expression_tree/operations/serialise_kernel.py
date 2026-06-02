@@ -234,7 +234,7 @@ class DefaultCodec:
         children = [decode(c) for c in node.get("children", [])]
         param_names = set(inspect.signature(cls.__init__).parameters)
         # Forward only real __init__ params; ignore bookkeeping/legacy extras
-        # (e.g. the old switch's "name") rather than passing them as kwargs.
+        # (e.g. the legacy format's always-present "name") rather than as kwargs.
         # "domains" is excluded here and handled separately below.
         kwargs = {
             key: decode(raw)
@@ -323,6 +323,12 @@ class HookCodec:
     codec adds them and decodes them back into the snippet before calling
     _from_json. After building the node it runs the coverage guard, extending
     safe-or-loud to the hook surface.
+
+    Contract: only ``children`` are encoded/decoded by the kernel. Every other
+    field a hook emits must already be JSON-native (scalars, or lists/dicts of
+    them) -- it reaches ``_from_json`` undecoded. Route any Symbol-, ndarray-,
+    slice- or tuple-valued argument through ``children``, or have the hook
+    (de)serialise it itself in ``to_json``/``_from_json``.
     """
 
     def to_json(self, obj, encode) -> dict:

@@ -1,5 +1,7 @@
-"""Pre-refactor JSON must keep loading after the kernel refactor (#5548 spec:
-'existing files must keep loading'). Fixtures generated from main in Task 0.2.
+"""JSON written by the previous serialiser must keep loading (#5548).
+
+Fixtures are pinned bytes captured from the previous on-disk format, so a
+decode regression shows up here.
 """
 
 from __future__ import annotations

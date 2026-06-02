@@ -1,5 +1,5 @@
-"""Round-trip regression test for the #5548 cases (all formerly dropped a
-non-children constructor arg under the old type-switch serialiser).
+"""Round-trip regression test for the #5548 cases (each previously dropped a
+non-children constructor argument on round-trip).
 """
 
 from __future__ import annotations

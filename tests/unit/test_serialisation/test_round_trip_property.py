@@ -168,8 +168,8 @@ def test_model_option_strategy_tracks_canonical():
 
 
 class TestKnownSymbolSerialiserBugs:
-    """Shapes that previously dropped a non-children constructor arg under the old
-    serialiser. Fixed by the unified kernel (tracking issue #5548).
+    """Shapes that previously dropped a non-children constructor argument on
+    round-trip; they now serialise losslessly (#5548).
     """
 
     @pytest.mark.parametrize(

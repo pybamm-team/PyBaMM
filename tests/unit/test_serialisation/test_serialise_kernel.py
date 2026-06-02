@@ -74,6 +74,25 @@ def test_encode_unknown_object_raises():
         sk.encode(Foreign())
 
 
+# Safe-or-loud raise sentinels: low-level resolve/decode branches must fail loudly.
+def test_resolve_non_class_path_raises():
+    # A path resolving to a non-class object (here a builtin function) must raise,
+    # not return the object.
+    with pytest.raises(sk.SerialisationError, match="did not resolve to a class"):
+        sk._resolve_class("builtins.len")
+
+
+def test_decode_unknown_float_sentinel_raises():
+    with pytest.raises(sk.SerialisationError, match="Unknown float sentinel"):
+        sk._decode_leaf({sk.TAG: "builtins.float", "value": "Bogus"})
+
+
+def test_decode_unsupported_type_raises():
+    # A value that is neither a JSON scalar, list, nor dict has no decoding.
+    with pytest.raises(sk.SerialisationError, match="Cannot decode value of type"):
+        sk.decode({1, 2, 3})
+
+
 # Synthetic helper classes for DefaultCodec tests
 class _Clean(pybamm.Symbol):
     def __init__(self, child, mode="a"):
@@ -110,9 +129,9 @@ def test_default_codec_raises_on_unresolvable_required_param():
 
 
 def test_default_codec_from_json_ignores_extra_legacy_keys():
-    # The old switch always wrote a "name" key; a clean class whose __init__ has
-    # no `name` param must still reconstruct (the key is ignored, not forwarded
-    # as an unexpected kwarg). Guards legacy compatibility (#5548 spec).
+    # Legacy JSON always wrote a "name" key; a clean class whose __init__ has no
+    # `name` param must still reconstruct (the key is ignored, not forwarded as
+    # an unexpected kwarg). Guards legacy compatibility (#5548).
     codec = sk.DefaultCodec()
     node = codec.to_json(_Clean(pybamm.Scalar(1.0), mode="q"), sk.encode)
     node[sk.TAG] = sk._class_path(_Clean)
@@ -372,7 +391,7 @@ def test_variable_family_round_trip(tree):
             ["negative electrode"],
             "x",
         ),
-        # currently-green via the switch; MUST keep round-tripping after switch deletion:
+        # carry scalar constructor args (side/order, vector_type) that must survive round-trip:
         pybamm.BoundaryValue(
             pybamm.Variable("u", domains={"primary": ["negative electrode"]}), "left"
         ),
