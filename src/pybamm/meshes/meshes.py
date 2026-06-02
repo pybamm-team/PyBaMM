@@ -433,12 +433,9 @@ class SubMesh:
     (optionally) information about the tab locations.
     """
 
-    # Construction-input params: submeshes are reconstructed from edges/coord_sys
-    # (to_json/_from_json), never from these, so the coverage guard waives them.
-    # `npts` is even stored (self.npts) but never serialised; `lims`/`position` are
-    # processed into edges and not stored. Inherited by all SubMesh subclasses; a
-    # class without a given param is simply never flagged for it. (`tabs` is NOT
-    # here -- it is handled by the missing-defaulted guard grace.)
+    # Construction inputs re-derived from edges/coord_sys on decode, so the coverage
+    # guard waives them. Inherited by all SubMesh subclasses. `tabs` is excluded: it
+    # is handled by the kernel guard's missing-defaulted grace.
     _serialise_derived_params = frozenset({"lims", "npts", "position"})
 
     def __init__(self):

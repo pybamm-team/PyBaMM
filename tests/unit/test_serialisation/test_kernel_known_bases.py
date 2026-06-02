@@ -88,9 +88,8 @@ def test_event_from_json_tolerates_legacy_expression_field():
 def test_concrete_submeshes_round_trip_through_kernel():
     import numpy as np
 
-    # Uniform1DSubMesh.__init__(lims, npts): lims required+unstored, npts stored
-    # (self.npts) but not serialised -> both need the opt-out (the grace does not
-    # cover them). Each reconstructs via its own _from_json from edges/coord_sys.
+    # lims/npts are in _serialise_derived_params; each subclass reconstructs from
+    # edges/coord_sys via its own _from_json.
     model = pybamm.lithium_ion.SPM()
     sim = pybamm.Simulation(model)
     sim.build()
