@@ -168,9 +168,8 @@ def test_model_option_strategy_tracks_canonical():
 
 
 class TestKnownSymbolSerialiserBugs:
-    """Specific shapes where convert_symbol_to_json/from_json drop a non-children
-    constructor arg. Each is xfail(strict=True): the test FAILS the day the fix
-    lands, prompting removal of the entry. All referenced in tracking issue #5548.
+    """Shapes that previously dropped a non-children constructor arg under the old
+    serialiser. Fixed by the unified kernel (tracking issue #5548).
     """
 
     @pytest.mark.parametrize(
@@ -178,18 +177,10 @@ class TestKnownSymbolSerialiserBugs:
         [
             pytest.param(
                 pybamm.Variable("v", scale=pybamm.Scalar(2.0)),
-                marks=pytest.mark.xfail(
-                    strict=True,
-                    reason="tracked in #5548 — Variable.scale dropped by convert_symbol_to_json",
-                ),
                 id="Variable-with-non-default-scale",
             ),
             pytest.param(
                 pybamm.Variable("v", reference=pybamm.Scalar(1.0)),
-                marks=pytest.mark.xfail(
-                    strict=True,
-                    reason="tracked in #5548 — Variable.reference dropped by convert_symbol_to_json",
-                ),
                 id="Variable-with-non-default-reference",
             ),
             pytest.param(
@@ -197,10 +188,6 @@ class TestKnownSymbolSerialiserBugs:
                     pybamm.Scalar(1.0),
                     broadcast_domains={"primary": ["negative electrode"]},
                     name="custom",
-                ),
-                marks=pytest.mark.xfail(
-                    strict=True,
-                    reason="tracked in #5548 — FullBroadcast custom name dropped",
                 ),
                 id="FullBroadcast-with-custom-name",
             ),
