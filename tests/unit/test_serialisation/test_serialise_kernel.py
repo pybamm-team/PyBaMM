@@ -64,3 +64,68 @@ def test_encode_unknown_object_raises():
 
     with pytest.raises(sk.SerialisationError, match="Cannot serialise"):
         sk.encode(Foreign())
+
+
+# ---------------------------------------------------------------------------
+# Synthetic helper classes for DefaultCodec tests
+# ---------------------------------------------------------------------------
+
+
+class _Clean(pybamm.Symbol):
+    def __init__(self, child, mode="a"):
+        super().__init__("clean", children=[child])
+        self.mode = mode
+
+
+class _Renamed(pybamm.Symbol):
+    def __init__(self, child, mode):
+        super().__init__("renamed", children=[child])
+        self._cfg = mode  # stored under a name that is neither mode nor _mode
+
+
+def test_default_codec_captures_clean_param():
+    codec = sk.DefaultCodec()
+    obj = _Clean(pybamm.Scalar(1.0), mode="z")
+    node = codec.to_json(obj, sk.encode)
+    assert node["mode"] == "z"
+    assert "children" in node
+
+
+def test_default_codec_captures_param_with_default_value():
+    # A non-default value of a defaulted param must still be captured (fixes the
+    # BoundaryIntegral region-reset class of bug).
+    codec = sk.DefaultCodec()
+    node = codec.to_json(_Clean(pybamm.Scalar(1.0), mode="a"), sk.encode)
+    assert node["mode"] == "a"
+
+
+def test_default_codec_raises_on_unresolvable_required_param():
+    codec = sk.DefaultCodec()
+    with pytest.raises(sk.SerialisationError, match="mode"):
+        codec.to_json(_Renamed(pybamm.Scalar(1.0), "x"), sk.encode)
+
+
+def test_default_codec_from_json_ignores_extra_legacy_keys():
+    # The old switch always wrote a "name" key; a clean class whose __init__ has
+    # no `name` param must still reconstruct (the key is ignored, not forwarded
+    # as an unexpected kwarg). Guards legacy compatibility (#5548 spec).
+    codec = sk.DefaultCodec()
+    node = codec.to_json(_Clean(pybamm.Scalar(1.0), mode="q"), sk.encode)
+    node[sk.TAG] = sk._class_path(_Clean)
+    node["name"] = "legacy-name"  # spurious key from the old fallback
+    node["entries_string"] = "noise"  # another legacy-only key
+    restored = codec.from_json(node, sk.decode, _Clean)
+    assert restored.mode == "q"
+
+
+def test_default_codec_round_trips_singular_domain_param():
+    # A class whose __init__ takes `domain` (not `domains`) must still recover
+    # its domain: to_json emits the full `domains` dict, from_json maps it onto
+    # the singular `domain` param. Guards the CoupledVariable silent-drop bug --
+    # CoupledVariable is the one concrete Symbol that reaches DefaultCodec.
+    codec = sk.DefaultCodec()
+    cv = pybamm.CoupledVariable("c", domain=["negative electrode"])
+    node = codec.to_json(cv, sk.encode)
+    node[sk.TAG] = sk._class_path(pybamm.CoupledVariable)
+    restored = codec.from_json(node, sk.decode, pybamm.CoupledVariable)
+    assert restored.domain == ["negative electrode"]

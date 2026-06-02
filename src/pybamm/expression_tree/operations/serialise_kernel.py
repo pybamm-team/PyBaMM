@@ -8,6 +8,7 @@ raises :class:`SerialisationError` rather than silently dropping any value.
 from __future__ import annotations
 
 import importlib
+import inspect
 
 import numpy as np
 
@@ -151,9 +152,95 @@ def decode(node):
     raise SerialisationError(f"Cannot decode value of type {type(node)}")
 
 
-def _lookup_codec(cls: type):
-    return None  # replaced in Task 1.5
-
-
 def normalise_legacy(node: dict) -> dict:
     return node  # replaced in Task 1.6
+
+
+# ---------------------------------------------------------------------------
+# DefaultCodec
+# ---------------------------------------------------------------------------
+
+_CHILD_PARAMS = frozenset({"child", "children", "child_input", "left", "right"})
+_SKIP_PARAMS = frozenset({"self", "domain", "domains", "auxiliary_domains"})
+_MISSING = object()
+
+
+def _read_attr(obj, name):
+    for candidate in (name, f"_{name}"):
+        if hasattr(obj, candidate):
+            return getattr(obj, candidate)
+    return _MISSING
+
+
+class DefaultCodec:
+    """Introspection-based codec: derive fields from ``__init__``.
+
+    Captures every resolvable non-child parameter (including defaulted ones);
+    raises if a *required* parameter cannot be read from the instance.
+    """
+
+    def to_json(self, obj, encode) -> dict:
+        node: dict = {}
+        node["domains"] = obj.domains
+        sig = inspect.signature(type(obj).__init__)
+        # Validate and collect non-child params first so that missing-required-param
+        # errors surface before any encoding attempt (fail-fast, predictable order).
+        extra: dict = {}
+        for name, param in sig.parameters.items():
+            if name in _SKIP_PARAMS or name in _CHILD_PARAMS:
+                continue
+            if param.kind in (param.VAR_POSITIONAL, param.VAR_KEYWORD):
+                raise SerialisationError(
+                    f"{type(obj).__name__}.__init__ uses *args/**kwargs ({name}); "
+                    f"add a to_json/_from_json hook."
+                )
+            value = _read_attr(obj, name)
+            if value is _MISSING:
+                if param.default is inspect.Parameter.empty:
+                    raise SerialisationError(
+                        f"{type(obj).__name__}.__init__ requires {name!r}; no "
+                        f"attribute {name}/_{name} found -- add a to_json/_from_json "
+                        f"hook or register a codec."
+                    )
+                continue
+            extra[name] = value
+        # Encode children and collected params only after validation succeeds.
+        if obj.children:
+            node["children"] = [encode(c) for c in obj.children]
+        for name, value in extra.items():
+            node[name] = encode(value)
+        return node
+
+    def from_json(self, node, decode, cls):
+        children = [decode(c) for c in node.get("children", [])]
+        param_names = set(inspect.signature(cls.__init__).parameters)
+        # Forward only real __init__ params; ignore bookkeeping/legacy extras
+        # (e.g. the old switch's "name") rather than passing them as kwargs.
+        # "domains" is excluded here and handled separately below.
+        kwargs = {
+            key: decode(raw)
+            for key, raw in node.items()
+            if key not in (TAG, "children", "domains") and key in param_names
+        }
+        # to_json always writes node["domains"]; map it onto whichever param the
+        # signature accepts -- `domains` (full dict), `domain` (primary list), or
+        # neither (class infers domain from children). Prevents the silent
+        # domain-drop for `domain`-param classes like CoupledVariable.
+        domains = node.get("domains")
+        if domains:
+            if "domains" in param_names:
+                kwargs.setdefault("domains", domains)
+            elif "domain" in param_names:
+                kwargs.setdefault("domain", domains.get("primary") or None)
+        return cls(*children, **kwargs)
+
+
+_default_codec = DefaultCodec()
+
+
+def _lookup_codec(cls: type):
+    import pybamm  # local import to avoid circular dependency at module level
+
+    if issubclass(cls, pybamm.Symbol):
+        return _default_codec
+    return None  # extended in Task 1.5 with hook detection
