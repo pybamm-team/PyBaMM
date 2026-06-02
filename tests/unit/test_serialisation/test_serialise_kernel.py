@@ -484,3 +484,97 @@ def test_vector_field_round_trip():
     restored = _rt(tree)
     assert type(restored) is pybamm.VectorField
     assert restored.id == tree.id
+
+
+# ---------------------------------------------------------------------------
+# Droppers + Scalar/Interpolant/Concatenation (Task 2.6)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "tree",
+    [
+        pybamm.Magnitude(
+            pybamm.Variable("u", domains={"primary": ["negative electrode"]}), "x"
+        ),
+        pybamm.Scalar(float("inf")),
+        pybamm.Scalar(float("-inf")),
+    ],
+)
+def test_dropper_and_scalar_round_trip(tree):
+    assert _rt(tree).id == tree.id
+
+
+def test_magnitude_restores_direction():
+    tree = pybamm.Magnitude(
+        pybamm.Variable("u", domains={"primary": ["negative electrode"]}), "x"
+    )
+    assert _rt(tree).direction == "x"
+
+
+def test_discrete_time_data_round_trip():
+    tree = pybamm.DiscreteTimeData(
+        np.array([0.0, 1.0, 2.0]), np.array([1.0, 2.0, 3.0]), "dtd"
+    )
+    restored = _rt(tree)
+    assert restored.id == tree.id
+    assert np.array_equal(restored.y, tree.y)
+
+
+def test_discrete_time_sum_round_trip():
+    data = pybamm.DiscreteTimeData(np.array([0.0, 1.0]), np.array([1.0, 2.0]), "dtd")
+    tree = pybamm.DiscreteTimeSum(data)
+    restored = _rt(tree)
+    assert restored.id == tree.id
+    assert restored.data is not None  # __init__ ran, self.data re-derived
+
+
+def _neg_sep_vars():
+    return (
+        pybamm.Variable("a", domains={"primary": ["negative electrode"]}),
+        pybamm.Variable("b", domains={"primary": ["separator"]}),
+    )
+
+
+def _neg_sep_nonvars():
+    return (
+        pybamm.FullBroadcast(
+            pybamm.Scalar(1.0), broadcast_domains={"primary": ["negative electrode"]}
+        ),
+        pybamm.FullBroadcast(
+            pybamm.Scalar(2.0), broadcast_domains={"primary": ["separator"]}
+        ),
+    )
+
+
+@pytest.mark.parametrize(
+    "tree",
+    [
+        pybamm.Concatenation(*_neg_sep_nonvars()),
+        pybamm.ConcatenationVariable(*_neg_sep_vars()),
+        pybamm.SparseStack(*_neg_sep_vars()),
+    ],
+)
+def test_concatenation_family_round_trip(tree):
+    assert _rt(tree).id == tree.id
+
+
+def test_concatenation_family_sparse_stack_rederives_concat_fun():
+    tree = pybamm.SparseStack(*_neg_sep_vars())
+    assert _rt(tree).concatenation_function is not None
+
+
+@pytest.mark.parametrize(
+    "tree",
+    [
+        pybamm.Index(pybamm.StateVector(slice(0, 1)), 0, check_size=False),
+        pybamm.Array(np.array([[1.0, 2.0], [3.0, 4.0]])),
+        pybamm.Matrix(np.array([[1.0, 0.0], [0.0, 1.0]])),
+        pybamm.Vector(np.array([1.0, 2.0, 3.0])),
+        pybamm.StateVector(slice(0, 2)),
+        pybamm.StateVectorDot(slice(0, 2)),
+        pybamm.Scalar(1.0) < pybamm.Scalar(2.0),  # EqualHeaviside / NotEqualHeaviside
+    ],
+)
+def test_already_correct_classes_round_trip(tree):
+    assert _rt(tree).id == tree.id

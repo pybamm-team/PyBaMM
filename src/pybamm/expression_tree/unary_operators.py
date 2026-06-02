@@ -1490,6 +1490,18 @@ class Magnitude(UnaryOperator):
         super().__init__("magnitude" + f"({direction})", child)
         self.direction = direction
 
+    def to_json(self):
+        return {
+            "name": self.name,
+            "id": self.id,
+            "domains": self.domains,
+            "direction": self.direction,
+        }
+
+    @classmethod
+    def _from_json(cls, snippet):
+        return cls(snippet["children"][0], snippet["direction"])
+
     def _unary_new_copy(self, child, perform_simplifications=True):
         """See :meth:`UnaryOperator._unary_new_copy()`."""
         return self.__class__(child, self.direction)

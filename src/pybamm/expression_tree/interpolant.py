@@ -51,6 +51,9 @@ class Interpolant(pybamm.Function):
         the higher potential for errors in extrapolation.
     """
 
+    # entries_string is a derived hash cache of x/y, which are emitted by to_json.
+    _serialise_derived_params = frozenset({"entries_string"})
+
     def __init__(
         self,
         x: npt.NDArray[np.float64] | Sequence[npt.NDArray[np.float64]],
@@ -172,9 +175,9 @@ class Interpolant(pybamm.Function):
             np.array(snippet["y"]),
             snippet["children"],
             name=snippet["name"],
-            interpolator=snippet["interpolator"],
-            extrapolate=snippet["extrapolate"],
-            _num_derivatives=snippet["_num_derivatives"],
+            interpolator=snippet.get("interpolator", "linear"),
+            extrapolate=snippet.get("extrapolate", True),
+            _num_derivatives=snippet.get("_num_derivatives", 0),
         )
 
     @property
