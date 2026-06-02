@@ -39,3 +39,28 @@ def test_tuple_round_trips_as_tuple_not_list():
     node = sk.encode((1, 2, 3))
     out = sk.decode(node)
     assert out == (1, 2, 3) and isinstance(out, tuple)
+
+
+def test_encode_native_leaves_pass_through():
+    assert sk.encode(3) == 3
+    assert sk.encode("x") == "x"
+    assert sk.encode(True) is True
+    assert sk.encode(None) is None
+
+
+def test_containers_recurse():
+    assert sk.encode([1, "a", None]) == [1, "a", None]
+    assert sk.decode(sk.encode({"k": [1, 2]})) == {"k": [1, 2]}
+
+
+def test_class_reference_round_trip():
+    node = sk.encode(pybamm.Scalar)  # a class, not an instance
+    assert sk.decode(node) is pybamm.Scalar
+
+
+def test_encode_unknown_object_raises():
+    class Foreign:
+        pass
+
+    with pytest.raises(sk.SerialisationError, match="Cannot serialise"):
+        sk.encode(Foreign())

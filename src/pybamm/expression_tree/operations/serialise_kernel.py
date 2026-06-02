@@ -73,16 +73,87 @@ def _decode_leaf(node):
         return node
     tag = node.get(TAG)
     if tag == "builtins.float":
-        return _FLOAT_SENTINELS_INV[node["value"]]
+        value = node["value"]
+        if value not in _FLOAT_SENTINELS_INV:
+            raise SerialisationError(f"Unknown float sentinel: {value!r}")
+        return _FLOAT_SENTINELS_INV[value]
     if tag == "numpy.ndarray":
         return np.array(node["data"], dtype=node["dtype"])
     if tag == "builtins.slice":
         return slice(node["start"], node["stop"], node["step"])
     if tag == "builtins.tuple":
-        return tuple(decode(x) for x in node["items"])  # noqa: F821 - decode added in Task 1.3
+        return tuple(decode(x) for x in node["items"])
     raise SerialisationError(f"Not a leaf node: {tag!r}")
 
 
 _LEAF_TAGS = frozenset(
     {"builtins.float", "numpy.ndarray", "builtins.slice", "builtins.tuple"}
 )
+
+
+def _encode_class_ref(cls: type) -> dict:
+    return {TAG: "type", "class": _class_path(cls)}
+
+
+def encode(obj):
+    """Encode any serialisable object into a JSON-compatible structure.
+
+    Raises SerialisationError for objects with no codec (safe-or-loud).
+    """
+    if obj is None or isinstance(obj, (bool, int, str)):
+        return obj
+    if isinstance(obj, float):
+        return _encode_float(obj)
+    if isinstance(obj, np.ndarray):
+        return _encode_ndarray(obj)
+    if isinstance(obj, slice):
+        return _encode_slice(obj)
+    if isinstance(obj, tuple):
+        return {TAG: "builtins.tuple", "items": [encode(x) for x in obj]}
+    if isinstance(obj, list):
+        return [encode(x) for x in obj]
+    if isinstance(obj, dict):
+        return {k: encode(v) for k, v in obj.items()}
+    if isinstance(obj, type):
+        return _encode_class_ref(obj)
+
+    codec = _lookup_codec(type(obj))
+    if codec is None:
+        raise SerialisationError(
+            f"Cannot serialise {type(obj).__module__}.{type(obj).__qualname__}: "
+            f"no codec registered. Register the class or add a to_json/_from_json hook."
+        )
+    node = codec.to_json(obj, encode)
+    node[TAG] = _class_path(type(obj))
+    return node
+
+
+def decode(node):
+    """Inverse of :func:`encode`."""
+    if node is None or isinstance(node, (bool, int, str, float)):
+        return node
+    if isinstance(node, list):
+        return [decode(x) for x in node]
+    if isinstance(node, dict):
+        node = normalise_legacy(node)
+        tag = node.get(TAG)
+        if tag in _LEAF_TAGS:
+            return _decode_leaf(node)
+        if tag == "type":
+            return _resolve_class(node["class"])
+        if tag is None:
+            return {k: decode(v) for k, v in node.items()}
+        cls = _resolve_class(tag)
+        codec = _lookup_codec(cls)
+        if codec is None:
+            raise SerialisationError(f"No codec to decode '{tag}'")
+        return codec.from_json(node, decode, cls)
+    raise SerialisationError(f"Cannot decode value of type {type(node)}")
+
+
+def _lookup_codec(cls: type):
+    return None  # replaced in Task 1.5
+
+
+def normalise_legacy(node: dict) -> dict:
+    return node  # replaced in Task 1.6
