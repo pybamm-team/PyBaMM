@@ -7,10 +7,13 @@ raises :class:`SerialisationError` rather than silently dropping any value.
 
 from __future__ import annotations
 
+import functools
 import importlib
 import inspect
 
 import numpy as np
+
+import pybamm  # safe at module top: kernel is imported lazily by serialise.py
 
 TAG = "$type"  # canonical key holding a dotted "module.ClassName" path
 
@@ -238,9 +241,118 @@ class DefaultCodec:
 _default_codec = DefaultCodec()
 
 
-def _lookup_codec(cls: type):
-    import pybamm  # local import to avoid circular dependency at module level
+# ---------------------------------------------------------------------------
+# HookCodec + coverage guard
+# ---------------------------------------------------------------------------
 
-    if issubclass(cls, pybamm.Symbol):
-        return _default_codec
-    return None  # extended in Task 1.5 with hook detection
+
+@functools.cache
+def _guarded_params(cls: type) -> tuple[str, ...]:
+    """Non-child, non-domain __init__ params the HookCodec guard checks.
+
+    Cached per class -- encode walks this for every hooked node.
+    """
+    try:
+        params = inspect.signature(cls.__init__).parameters
+    except (TypeError, ValueError):
+        return ()
+    return tuple(
+        name
+        for name, p in params.items()
+        if name not in _SKIP_PARAMS
+        and name not in _CHILD_PARAMS
+        and name != "name"  # always emitted by to_json / handled by Symbol base
+        and p.kind not in (p.VAR_POSITIONAL, p.VAR_KEYWORD)
+    )
+
+
+def _is_structural(value) -> bool:
+    """True if value is (or contains) a Symbol, so it travels through children
+    and the hook need not emit it as a scalar field."""
+    if isinstance(value, pybamm.Symbol):
+        return True
+    if isinstance(value, (list, tuple)):
+        return any(isinstance(v, pybamm.Symbol) for v in value)
+    if isinstance(value, dict):
+        return any(isinstance(v, pybamm.Symbol) for v in value.values())
+    return False
+
+
+def _assert_hook_covers_params(obj, node: dict, raw_children: list) -> None:
+    """Safe-or-loud guard for HookCodec -- closes the inherited-hook leak.
+
+    Every non-child __init__ param of type(obj) must be emitted as a field,
+    carried in children (by identity or as a Symbol/collection of Symbols), or
+    declared in _serialise_derived_params -- else it is a silent field drop and
+    raises. Keys on coverage, not value, so it fails identically for default and
+    non-default values (the prevention is structural).
+    """
+    cls = type(obj)
+    derived = getattr(cls, "_serialise_derived_params", frozenset())
+    child_ids = {id(c) for c in raw_children}
+    for name in _guarded_params(cls):
+        if name in node or name in derived:
+            continue
+        value = _read_attr(obj, name)
+        if value is not _MISSING and (id(value) in child_ids or _is_structural(value)):
+            continue
+        raise SerialisationError(
+            f"{cls.__module__}.{cls.__qualname__}.to_json drops the __init__ "
+            f"parameter {name!r}: not emitted as a field, not carried in children, "
+            f"and not in _serialise_derived_params. Emit it in the hook, or -- if it "
+            f"is re-derived on construction or a non-serialisable transient -- list it "
+            f"in _serialise_derived_params (a reviewed, in-diff decision)."
+        )
+
+
+class HookCodec:
+    """Codec backed by a class's own to_json/_from_json.
+
+    to_json returns the node's own fields; the kernel attaches children, so this
+    codec adds them and decodes them back into the snippet before calling
+    _from_json. After building the node it runs the coverage guard, extending
+    safe-or-loud to the hook surface.
+    """
+
+    def to_json(self, obj, encode) -> dict:
+        node = dict(obj.to_json())
+        node.pop("id", None)  # identity is not part of the round-trip contract
+        # Phase 1 only auto-attaches obj.children; Task 2.1 extends this to
+        # hook-supplied children (and updates raw_children accordingly).
+        raw_children = list(obj.children) if getattr(obj, "children", None) else []
+        if raw_children:
+            node["children"] = [encode(c) for c in raw_children]
+        _assert_hook_covers_params(obj, node, raw_children)
+        return node
+
+    def from_json(self, node, decode, cls):
+        snippet = dict(node)
+        snippet.pop(TAG, None)
+        snippet["children"] = [decode(c) for c in node.get("children", [])]
+        return cls._from_json(snippet)
+
+
+_hook_codec = HookCodec()
+
+
+# Bases whose concrete subclasses are serialisable.
+_KNOWN_BASES = (pybamm.Symbol,)
+
+
+def _overrides_hooks(cls: type) -> bool:
+    # Asymmetric on purpose: to_json is a regular method, so `cls.to_json` is a
+    # plain function comparable by identity; _from_json is a classmethod, so
+    # `cls._from_json` is bound and we compare the underlying `.__func__`. Do not
+    # "simplify" either branch to match the other.
+    return (
+        cls.to_json is not pybamm.Symbol.to_json
+        or cls._from_json.__func__ is not pybamm.Symbol._from_json.__func__
+    )
+
+
+def _lookup_codec(cls: type):
+    if not issubclass(cls, _KNOWN_BASES):
+        return None
+    if _overrides_hooks(cls):
+        return _hook_codec
+    return _default_codec
