@@ -83,3 +83,22 @@ def test_event_from_json_tolerates_legacy_expression_field():
     }  # decoded expression, legacy shape
     restored = pybamm.Event._from_json(snippet)
     assert restored.expression.id == expr.id
+
+
+def test_concrete_submeshes_round_trip_through_kernel():
+    import numpy as np
+
+    # Uniform1DSubMesh.__init__(lims, npts): lims required+unstored, npts stored
+    # (self.npts) but not serialised -> both need the opt-out (the grace does not
+    # cover them). Each reconstructs via its own _from_json from edges/coord_sys.
+    model = pybamm.lithium_ion.SPM()
+    sim = pybamm.Simulation(model)
+    sim.build()
+    checked = 0
+    for k, v in sim.mesh.items():
+        if len(k) == 1 and "ghost cell" not in k[0]:
+            restored = sk.decode(json.loads(json.dumps(sk.encode(v))))
+            assert type(restored) is type(v), k
+            assert np.array_equal(restored.edges, v.edges), k
+            checked += 1
+    assert checked, "no concrete submesh exercised"

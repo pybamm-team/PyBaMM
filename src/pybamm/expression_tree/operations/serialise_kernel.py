@@ -262,17 +262,16 @@ _default_codec = DefaultCodec()
 
 
 @functools.cache
-def _guarded_params(cls: type) -> tuple[str, ...]:
-    """Non-child, non-domain __init__ params the HookCodec guard checks.
-
-    Cached per class -- encode walks this for every hooked node.
+def _guarded_params(cls: type) -> tuple[tuple[str, bool], ...]:
+    """(name, has_default) for each non-child, non-domain __init__ param the
+    HookCodec guard checks. Cached per class -- encode walks this per hooked node.
     """
     try:
         params = inspect.signature(cls.__init__).parameters
     except (TypeError, ValueError):
         return ()
     return tuple(
-        name
+        (name, p.default is not inspect.Parameter.empty)
         for name, p in params.items()
         if name not in _SKIP_PARAMS
         and name not in _CHILD_PARAMS
@@ -305,11 +304,16 @@ def _assert_hook_covers_params(obj, node: dict, raw_children: list) -> None:
     cls = type(obj)
     derived = getattr(cls, "_serialise_derived_params", frozenset())
     child_ids = {id(c) for c in raw_children}
-    for name in _guarded_params(cls):
+    for name, has_default in _guarded_params(cls):
         if name in node or name in derived:
             continue
         value = _read_attr(obj, name)
-        if value is not _MISSING and (id(value) in child_ids or _is_structural(value)):
+        if value is _MISSING:
+            # Defaulted and never stored: the constructor recreates it on decode
+            # (parity with DefaultCodec). A missing required param falls through.
+            if has_default:
+                continue
+        elif id(value) in child_ids or _is_structural(value):
             continue
         raise SerialisationError(
             f"{cls.__module__}.{cls.__qualname__}.to_json drops the __init__ "
