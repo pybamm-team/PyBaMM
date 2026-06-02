@@ -2938,6 +2938,9 @@ jax = [
 plot = [
     { name = "matplotlib" },
 ]
+pydiffsol = [
+    { name = "pydiffsol" },
+]
 tqdm = [
     { name = "tqdm" },
 ]
@@ -2999,6 +3002,7 @@ requires-dist = [
     { name = "pybammsolvers", specifier = ">=0.8.0,<0.9.0" },
     { name = "pybtex", marker = "extra == 'all'", specifier = ">=0.25.0" },
     { name = "pybtex", marker = "extra == 'cite'", specifier = ">=0.25.0" },
+    { name = "pydiffsol", marker = "extra == 'pydiffsol'", specifier = ">=0.5.2" },
     { name = "pyyaml" },
     { name = "scikit-fem", marker = "extra == 'all'", specifier = ">=8.1.0" },
     { name = "scipy", specifier = ">=1.11.4" },
@@ -3008,7 +3012,7 @@ requires-dist = [
     { name = "typing-extensions", specifier = ">=4.10.0" },
     { name = "xarray", specifier = ">=2022.6.0" },
 ]
-provides-extras = ["all", "bpx", "cite", "examples", "jax", "plot", "tqdm"]
+provides-extras = ["all", "bpx", "cite", "examples", "jax", "plot", "pydiffsol", "tqdm"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -3264,6 +3268,24 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/ce/f7/c74c7100a7f4c0f77b5dcacb7dfdb8fee774fb70e487dd97acba2b930774/pydata_sphinx_theme-0.17.1.tar.gz", hash = "sha256:2cfc1d926c753c77039b7ee53f0ccebcbee5e81f0db61432b01cbb10ad7fd0af", size = 4991415, upload-time = "2026-04-21T13:00:34.263Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e2/bc/2cb8c78300ce1ace4eeac3b3522218cea2c2053bfa6b4e32cc972a477f9a/pydata_sphinx_theme-0.17.1-py3-none-any.whl", hash = "sha256:320b022d7808bdf5920d9a28e573f27aace9b23e1af6ca103eecc752411df492", size = 6823346, upload-time = "2026-04-21T13:00:31.978Z" },
+]
+
+[[package]]
+name = "pydiffsol"
+version = "0.5.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "2.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/90/b2/bd3f30be470bcb5a514e37a02a3cc594fe2ed0d9e69560d17e01156c2b9c/pydiffsol-0.5.2.tar.gz", hash = "sha256:b5affb6b2b6189a74dba8c38d2200d740d61144d17ec8fd08c8e19e89ee377cd", size = 236219, upload-time = "2026-05-20T16:02:41.434Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/70/76/f6d658363ce5a915349b15fa5caa268e06a94d22f9393087a24b3fdbd39f/pydiffsol-0.5.2-cp314-cp314t-macosx_14_0_arm64.whl", hash = "sha256:e6278ff74bba4ae51e930720120a5ff7e00f947d3d1e010474b92ab08de6f459", size = 36875919, upload-time = "2026-05-20T16:02:35.787Z" },
+    { url = "https://files.pythonhosted.org/packages/10/89/1c5f1538d135c0c99808428ecf9ab83a5cbb1285189d289f9ed8f48b4d95/pydiffsol-0.5.2-cp314-cp314t-manylinux_2_28_x86_64.whl", hash = "sha256:2645c2a2e7717e67d4ea793959d13d369d70b97b670736195bc1b5e81eff9cc1", size = 47205400, upload-time = "2026-05-20T16:02:43.936Z" },
+    { url = "https://files.pythonhosted.org/packages/f9/99/5088e1a81f2c1b980698acb28540cb5ebfbf46df07857930a3b9d63d984e/pydiffsol-0.5.2-cp314-cp314t-win_amd64.whl", hash = "sha256:c2c95c821359950bcda22e3caa53deedd4a1641ba9fa1bc6eaa8e1a6faf9e69e", size = 4132015, upload-time = "2026-05-20T16:02:50.312Z" },
+    { url = "https://files.pythonhosted.org/packages/d6/eb/3e63722d89d3cc1040ce3b0e24018bc15d506e251283a2ff634b9b310bc4/pydiffsol-0.5.2-cp39-abi3-macosx_14_0_arm64.whl", hash = "sha256:db6d926df360dc2e107f3a524b5bf139d2f186951406fe238c7dfabe251138c7", size = 36883932, upload-time = "2026-05-20T16:02:38.962Z" },
+    { url = "https://files.pythonhosted.org/packages/e6/ca/901bc57399b5bd47899479ab709368dfd338da59a41c7f1b20a510793258/pydiffsol-0.5.2-cp39-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:66370286565951cdb4a104929a0a4ce05265634a1d95099894542cf436cfc325", size = 47206738, upload-time = "2026-05-20T16:02:47.092Z" },
+    { url = "https://files.pythonhosted.org/packages/26/fd/b5a6c2dc755d495c31d62834750e844ab00d462ae20dd3640cac247c4e2b/pydiffsol-0.5.2-cp39-abi3-win_amd64.whl", hash = "sha256:024ac97b2096f4bab76811cbb97cf6912acc07031685f716d3002faeaf2d352a", size = 4138061, upload-time = "2026-05-20T16:02:51.845Z" },
 ]
 
 [[package]]
