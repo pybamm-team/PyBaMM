@@ -389,6 +389,9 @@ class Arcsinh2(Function):
         The regularised arcsinh(a/b) value
     """
 
+    # a and b are Symbol operands carried via children (Function base); eps is emitted.
+    _serialise_derived_params = frozenset({"a", "b"})
+
     def __init__(
         self,
         a: pybamm.Symbol,
@@ -896,6 +899,9 @@ class RegPower(Function):
     ----------
     .. [1] Modelica.Fluid.Utilities.regPow
     """
+
+    # base, exponent, scale are Symbol operands carried via children; delta is emitted.
+    _serialise_derived_params = frozenset({"base", "exponent", "scale"})
 
     def __init__(
         self,

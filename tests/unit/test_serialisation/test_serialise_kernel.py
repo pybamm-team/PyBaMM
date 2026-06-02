@@ -578,3 +578,22 @@ def test_concatenation_family_sparse_stack_rederives_concat_fun():
 )
 def test_already_correct_classes_round_trip(tree):
     assert _rt(tree).id == tree.id
+
+
+# ---------------------------------------------------------------------------
+# Function operand opt-outs (Task 2.0)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "tree",
+    [
+        pybamm.Arcsinh2(pybamm.Scalar(0.5), pybamm.Scalar(1.0)),
+        pybamm.RegPower(pybamm.Scalar(0.5), pybamm.Scalar(2.0)),
+    ],
+)
+def test_function_operands_carried_via_children_round_trip(tree):
+    # a/b (Arcsinh2) and base/exponent/scale (RegPower) are Symbol operands passed
+    # as children; eps/delta are emitted scalars. The guard must not false-positive
+    # on the operand params (they are carried via children).
+    assert _rt(tree).id == tree.id
