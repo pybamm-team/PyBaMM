@@ -74,11 +74,7 @@ def test_encode_unknown_object_raises():
         sk.encode(Foreign())
 
 
-# ---------------------------------------------------------------------------
 # Synthetic helper classes for DefaultCodec tests
-# ---------------------------------------------------------------------------
-
-
 class _Clean(pybamm.Symbol):
     def __init__(self, child, mode="a"):
         super().__init__("clean", children=[child])
@@ -139,11 +135,7 @@ def test_default_codec_round_trips_singular_domain_param():
     assert restored.domain == ["negative electrode"]
 
 
-# ---------------------------------------------------------------------------
-# HookCodec + codec lookup (Task 1.5)
-# ---------------------------------------------------------------------------
-
-
+# HookCodec + codec lookup
 def test_lookup_returns_hook_codec_for_overriding_class():
     # Index overrides to_json/_from_json -> HookCodec.
     codec = sk._lookup_codec(pybamm.Index)
@@ -271,11 +263,7 @@ def test_hook_codec_encodes_hook_supplied_children():
     assert restored.children[0].id == a.id and restored.extra.id == b.id
 
 
-# ---------------------------------------------------------------------------
-# normalise_legacy (Task 1.6)
-# ---------------------------------------------------------------------------
-
-
+# normalise_legacy
 def test_normalise_legacy_py_object():
     legacy = {"py/object": "pybamm.Scalar", "py/id": 7, "value": 1.0}
     out = sk.normalise_legacy(legacy)
@@ -307,11 +295,7 @@ def test_normalise_legacy_passthrough_canonical():
     assert sk.normalise_legacy(canonical) is canonical
 
 
-# ---------------------------------------------------------------------------
-# Anti-reintroduction trap tests (Task 1.7)
-# ---------------------------------------------------------------------------
-
-
+# Anti-reintroduction trap tests
 def test_trap_default_codec_unhandleable_required_arg_raises_loudly():
     """A Symbol subclass with a renamed attribute and no hook (-> DefaultCodec)
     must RAISE on encode, never silently drop. Red here = DefaultCodec softened
@@ -486,11 +470,7 @@ def test_vector_field_round_trip():
     assert restored.id == tree.id
 
 
-# ---------------------------------------------------------------------------
-# Droppers + Scalar/Interpolant/Concatenation (Task 2.6)
-# ---------------------------------------------------------------------------
-
-
+# Droppers + Scalar/Interpolant/Concatenation
 @pytest.mark.parametrize(
     "tree",
     [
@@ -580,11 +560,7 @@ def test_already_correct_classes_round_trip(tree):
     assert _rt(tree).id == tree.id
 
 
-# ---------------------------------------------------------------------------
-# Function operand opt-outs (Task 2.0)
-# ---------------------------------------------------------------------------
-
-
+# Function operand opt-outs
 @pytest.mark.parametrize(
     "tree",
     [

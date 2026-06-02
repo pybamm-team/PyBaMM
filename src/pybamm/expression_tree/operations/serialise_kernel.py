@@ -179,10 +179,6 @@ def normalise_legacy(node: dict) -> dict:
     return node
 
 
-# ---------------------------------------------------------------------------
-# DefaultCodec
-# ---------------------------------------------------------------------------
-
 _CHILD_PARAMS = frozenset({"child", "children", "child_input", "left", "right"})
 _SKIP_PARAMS = frozenset({"self", "domain", "domains", "auxiliary_domains"})
 _MISSING = object()
@@ -259,11 +255,6 @@ class DefaultCodec:
 
 
 _default_codec = DefaultCodec()
-
-
-# ---------------------------------------------------------------------------
-# HookCodec + coverage guard
-# ---------------------------------------------------------------------------
 
 
 @functools.cache
