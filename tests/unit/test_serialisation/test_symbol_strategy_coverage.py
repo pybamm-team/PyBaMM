@@ -35,9 +35,11 @@ from tests.strategies.symbols import (
 
 
 def _all_concrete_subclasses(root: type) -> set[type]:
-    """Recursively collect concrete subclasses of ``root``.
+    """Recursively collect concrete pybamm subclasses of ``root``.
 
-    A class is concrete if it has no ``__abstractmethods__``.
+    A class is concrete if it has no ``__abstractmethods__``. Synthetic Symbol
+    subclasses defined inside test modules are ignored (only classes shipped in
+    the ``pybamm`` package are subject to the strategy-coverage contract).
     """
     seen: set[type] = set()
     stack = list(root.__subclasses__())
@@ -47,7 +49,12 @@ def _all_concrete_subclasses(root: type) -> set[type]:
             continue
         seen.add(cls)
         stack.extend(cls.__subclasses__())
-    return {c for c in seen if not getattr(c, "__abstractmethods__", None)}
+    return {
+        c
+        for c in seen
+        if not getattr(c, "__abstractmethods__", None)
+        and c.__module__.startswith("pybamm")
+    }
 
 
 def test_every_concrete_symbol_subclass_has_a_strategy():
