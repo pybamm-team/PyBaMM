@@ -198,8 +198,11 @@ class PrimaryBroadcast(Broadcast):
 
     @classmethod
     def _from_json(cls, snippet):
+        # Legacy compact JSON omitted "name"; fall back to the __init__ default.
         return cls(
-            snippet["children"][0], snippet["broadcast_domain"], name=snippet["name"]
+            snippet["children"][0],
+            snippet["broadcast_domain"],
+            name=snippet.get("name"),
         )
 
     def reduce_one_dimension(self):
@@ -342,8 +345,11 @@ class SecondaryBroadcast(Broadcast):
 
     @classmethod
     def _from_json(cls, snippet):
+        # Legacy compact JSON omitted "name"; fall back to the __init__ default.
         return cls(
-            snippet["children"][0], snippet["broadcast_domain"], name=snippet["name"]
+            snippet["children"][0],
+            snippet["broadcast_domain"],
+            name=snippet.get("name"),
         )
 
     def reduce_one_dimension(self):
@@ -473,8 +479,11 @@ class TertiaryBroadcast(Broadcast):
 
     @classmethod
     def _from_json(cls, snippet):
+        # Legacy compact JSON omitted "name"; fall back to the __init__ default.
         return cls(
-            snippet["children"][0], snippet["broadcast_domain"], name=snippet["name"]
+            snippet["children"][0],
+            snippet["broadcast_domain"],
+            name=snippet.get("name"),
         )
 
     def reduce_one_dimension(self):
@@ -554,10 +563,11 @@ class FullBroadcast(Broadcast):
 
     @classmethod
     def _from_json(cls, snippet):
+        # Legacy compact JSON omitted "name"; fall back to the __init__ default.
         return cls(
             snippet["children"][0],
             broadcast_domains=snippet["domains"],
-            name=snippet["name"],
+            name=snippet.get("name"),
         )
 
     def _evaluate_for_shape(self):

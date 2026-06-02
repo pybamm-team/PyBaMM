@@ -305,6 +305,11 @@ class SpecificFunction(Function):
         """
         Method to serialise a SpecificFunction object into JSON.
         """
+        # Concrete subclasses (Sin, Exp, ...) restore their callable in _from_json
+        # via the class itself. The bare base class only stores the function name,
+        # which cannot be turned back into a callable, so refuse to serialise it.
+        if self.__class__ is SpecificFunction:
+            raise NotImplementedError("SpecificFunction is not supported directly")
 
         json_dict = {
             "name": self.name,

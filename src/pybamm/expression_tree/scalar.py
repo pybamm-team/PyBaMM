@@ -42,7 +42,8 @@ class Scalar(pybamm.Symbol):
 
     @classmethod
     def _from_json(cls, snippet: dict):
-        return cls(snippet["value"], name=snippet["name"])
+        # Legacy compact JSON omitted "name"; fall back to the __init__ default.
+        return cls(snippet["value"], name=snippet.get("name"))
 
     def __str__(self):
         return str(self.value)
