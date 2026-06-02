@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import pytest
+
+import pybamm
 from pybamm.expression_tree.operations import serialise_kernel as sk
 
 
@@ -28,3 +31,29 @@ def test_registered_dict_subclass_dispatches_to_codec_not_dict_branch(monkeypatc
 def test_plain_dict_still_recurses():
     assert sk.encode({"a": [1, 2]}) == {"a": [1, 2]}
     assert sk.decode(sk.encode({"a": [1, 2]})) == {"a": [1, 2]}
+
+
+def test_known_bases_resolve_to_hook_codec():
+    # Event/Mesh/SubMesh all define their own to_json/_from_json -> HookCodec.
+    for cls in (pybamm.Event, pybamm.Mesh, pybamm.Uniform1DSubMesh):
+        assert isinstance(sk._lookup_codec(cls), sk.HookCodec), cls
+
+
+def test_unregistered_non_symbol_returns_none():
+    # An unregistered class is not a known base -> no codec (encode then raises
+    # the generic "no codec registered" message elsewhere).
+    class _NoHookBase:
+        pass
+
+    assert sk._lookup_codec(_NoHookBase) is None
+
+
+def test_registered_non_symbol_base_without_hook_raises(monkeypatch):
+    # A registered non-Symbol base with no hook must raise loudly rather than fall
+    # through to the Symbol-only DefaultCodec.
+    class _NoHookBase:
+        pass
+
+    monkeypatch.setattr(sk, "_KNOWN_BASES", (*sk._KNOWN_BASES, _NoHookBase))
+    with pytest.raises(sk.SerialisationError, match="no to_json"):
+        sk._lookup_codec(_NoHookBase)

@@ -361,8 +361,11 @@ class HookCodec:
 _hook_codec = HookCodec()
 
 
-# Bases whose concrete subclasses are serialisable.
-_KNOWN_BASES = (pybamm.Symbol,)
+# Bases whose concrete subclasses are serialisable through the kernel. Symbol is
+# the introspection-default home; Event/Mesh define hooks on the base; SubMesh has
+# none at the base -- its concrete subclasses do, and the no-hook guard in
+# _lookup_codec raises loudly if a hookless subclass is ever encoded.
+_KNOWN_BASES = (pybamm.Symbol, pybamm.Event, pybamm.Mesh, pybamm.SubMesh)
 
 
 def _overrides_hooks(cls: type) -> bool:
@@ -370,10 +373,16 @@ def _overrides_hooks(cls: type) -> bool:
     # plain function comparable by identity; _from_json is a classmethod, so
     # `cls._from_json` is bound and we compare the underlying `.__func__`. Do not
     # "simplify" either branch to match the other.
-    return (
-        cls.to_json is not pybamm.Symbol.to_json
-        or cls._from_json.__func__ is not pybamm.Symbol._from_json.__func__
-    )
+    # Non-Symbol bases may have no hooks at all; treat absence as "not overriding".
+    if not hasattr(cls, "to_json") or not hasattr(cls, "_from_json"):
+        return False
+    if issubclass(cls, pybamm.Symbol):
+        return (
+            cls.to_json is not pybamm.Symbol.to_json
+            or cls._from_json.__func__ is not pybamm.Symbol._from_json.__func__
+        )
+    # Non-Symbol: any hook present means overriding (no Symbol baseline to compare).
+    return True
 
 
 def _lookup_codec(cls: type):
@@ -381,4 +390,11 @@ def _lookup_codec(cls: type):
         return None
     if _overrides_hooks(cls):
         return _hook_codec
+    # DefaultCodec requires a Symbol-shaped __init__ (children/domains); a non-Symbol
+    # known base with no hook is a bug, surfaced loudly rather than mis-introspected.
+    if not issubclass(cls, pybamm.Symbol):
+        raise SerialisationError(
+            f"{cls.__module__}.{cls.__qualname__} is a registered serialisable "
+            f"base but defines no to_json/_from_json hook."
+        )
     return _default_codec
