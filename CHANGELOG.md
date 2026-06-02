@@ -3,6 +3,7 @@
 ## Bug fixes
 
 - Fixed unified experiment mode using excessive memory and time for experiments with many cycles. ([#5554](https://github.com/pybamm-team/PyBaMM/pull/5554))
+- Fixed unified experiment mode inlining every step's equations; switching now dispatches via a `casadi.Function.conditional` switch. ([#5562](https://github.com/pybamm-team/PyBaMM/pull/5562))
 
 ## Optimizations
 
