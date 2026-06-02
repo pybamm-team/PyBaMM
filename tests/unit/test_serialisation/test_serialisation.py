@@ -13,7 +13,6 @@ from unittest.mock import mock_open, patch
 
 import numpy as np
 import pytest
-from numpy import testing
 
 import pybamm
 import pybamm.expression_tree.operations.serialise_kernel as sk
@@ -26,77 +25,6 @@ from pybamm.expression_tree.operations.serialise import (
 )
 from pybamm.models.full_battery_models.lithium_ion.basic_dfn import BasicDFN
 from pybamm.models.full_battery_models.lithium_ion.basic_spm import BasicSPM
-
-
-def scalar_var_dict(mocker):
-    """variable, json pair for a pybamm.Scalar instance"""
-    a = pybamm.Scalar(5)
-    a_dict = {
-        "py/id": mocker.ANY,
-        "py/object": "pybamm.expression_tree.scalar.Scalar",
-        "name": "5.0",
-        "value": 5.0,
-        "children": [],
-    }
-
-    return a, a_dict
-
-
-def mesh_var_dict(mocker):
-    """mesh, json pair for a pybamm.Mesh instance"""
-
-    r = pybamm.SpatialVariable(
-        "r", domain=["negative particle"], coord_sys="spherical polar"
-    )
-
-    geometry = {
-        "negative particle": {r: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
-    }
-
-    submesh_types = {"negative particle": pybamm.Uniform1DSubMesh}
-    var_pts = {r: 20}
-
-    # create mesh
-    mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
-
-    mesh_json = {
-        "py/object": "pybamm.meshes.meshes.Mesh",
-        "py/id": mocker.ANY,
-        "submesh_pts": {"negative particle": {"r": 20}},
-        "base_domains": ["negative particle"],
-        "sub_meshes": {
-            "negative particle": {
-                "py/object": "pybamm.meshes.one_dimensional_submeshes.Uniform1DSubMesh",
-                "py/id": mocker.ANY,
-                "edges": [
-                    0.0,
-                    0.05,
-                    0.1,
-                    0.15000000000000002,
-                    0.2,
-                    0.25,
-                    0.30000000000000004,
-                    0.35000000000000003,
-                    0.4,
-                    0.45,
-                    0.5,
-                    0.55,
-                    0.6000000000000001,
-                    0.65,
-                    0.7000000000000001,
-                    0.75,
-                    0.8,
-                    0.8500000000000001,
-                    0.9,
-                    0.9500000000000001,
-                    1.0,
-                ],
-                "coord_sys": "spherical polar",
-            }
-        },
-    }
-
-    return mesh, mesh_json
 
 
 class TestSerialiseModels:
@@ -188,131 +116,6 @@ class TestSerialise:
         }
 
         assert Serialise()._deconstruct_pybamm_dicts(test_dict) == ser_dict
-
-    def test_get_pybamm_class(self, mocker):
-        # symbol
-        _, scalar_dict = scalar_var_dict(mocker)
-
-        scalar_class = Serialise()._get_pybamm_class(scalar_dict)
-
-        assert isinstance(scalar_class, pybamm.Scalar)
-
-        # mesh
-        _, mesh_dict = mesh_var_dict(mocker)
-
-        mesh_class = Serialise()._get_pybamm_class(mesh_dict)
-
-        assert isinstance(mesh_class, pybamm.Mesh)
-
-        with pytest.raises(AttributeError):
-            unrecognised_symbol = {
-                "py/id": mocker.ANY,
-                "py/object": "pybamm.expression_tree.scalar.Scale",
-                "name": "5.0",
-                "id": mocker.ANY,
-                "value": 5.0,
-                "children": [],
-            }
-            Serialise()._get_pybamm_class(unrecognised_symbol)
-
-    def test_reconstruct_symbol(self, mocker):
-        scalar, scalar_dict = scalar_var_dict(mocker)
-
-        new_scalar = Serialise()._reconstruct_symbol(scalar_dict)
-
-        assert new_scalar == scalar
-
-    def test_reconstruct_expression_tree(self):
-        y = pybamm.StateVector(slice(0, 1))
-        t = pybamm.t
-        equation = 2 * y + t
-
-        equation_json = {
-            "py/object": "pybamm.expression_tree.binary_operators.Addition",
-            "py/id": 139691619709376,
-            "name": "+",
-            "id": -2595875552397011963,
-            "domains": {
-                "primary": [],
-                "secondary": [],
-                "tertiary": [],
-                "quaternary": [],
-            },
-            "children": [
-                {
-                    "py/object": "pybamm.expression_tree.binary_operators.Multiplication",
-                    "py/id": 139691619709232,
-                    "name": "*",
-                    "id": 6094209803352873499,
-                    "domains": {
-                        "primary": [],
-                        "secondary": [],
-                        "tertiary": [],
-                        "quaternary": [],
-                    },
-                    "children": [
-                        {
-                            "py/object": "pybamm.expression_tree.scalar.Scalar",
-                            "py/id": 139691619709040,
-                            "name": "2.0",
-                            "id": 1254626814648295285,
-                            "value": 2.0,
-                            "children": [],
-                        },
-                        {
-                            "py/object": "pybamm.expression_tree.state_vector.StateVector",
-                            "py/id": 139691619589760,
-                            "name": "y[0:1]",
-                            "id": 5063056989669636089,
-                            "domains": {
-                                "primary": [],
-                                "secondary": [],
-                                "tertiary": [],
-                                "quaternary": [],
-                            },
-                            "y_slice": [{"start": 0, "stop": 1, "step": None}],
-                            "evaluation_array": [True],
-                            "children": [],
-                        },
-                    ],
-                },
-                {
-                    "py/object": "pybamm.expression_tree.independent_variable.Time",
-                    "py/id": 139692083289392,
-                    "name": "time",
-                    "id": -3301344124754766351,
-                    "domains": {
-                        "primary": [],
-                        "secondary": [],
-                        "tertiary": [],
-                        "quaternary": [],
-                    },
-                    "children": [],
-                },
-            ],
-        }
-
-        new_equation = Serialise()._reconstruct_expression_tree(equation_json)
-
-        assert new_equation == equation
-
-    def test_reconstruct_mesh(self, mocker):
-        mesh, mesh_dict = mesh_var_dict(mocker)
-
-        new_mesh = Serialise()._reconstruct_mesh(mesh_dict)
-
-        testing.assert_array_equal(
-            new_mesh["negative particle"].edges, mesh["negative particle"].edges
-        )
-        testing.assert_array_equal(
-            new_mesh["negative particle"].nodes, mesh["negative particle"].nodes
-        )
-
-        # reconstructed meshes are only used for plotting, geometry not reconstructed.
-        with pytest.raises(
-            AttributeError, match=r"'Mesh' object has no attribute '_geometry'"
-        ):
-            assert new_mesh.geometry == mesh.geometry
 
     def test_reconstruct_pybamm_dict(self, mocker):
         x = pybamm.SpatialVariable("x", "negative electrode")
@@ -414,7 +217,7 @@ class TestSerialise:
         # Test for error if no model type is provided
         with open("test_model.json") as f:
             model_data = json.load(f)
-            del model_data["py/object"]
+            del model_data["$type"]
 
         with open("test_model.json", "w") as f:
             json.dump(model_data, f)

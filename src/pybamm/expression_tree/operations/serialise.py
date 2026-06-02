@@ -133,16 +133,6 @@ class Serialise:
     def __init__(self):
         pass
 
-    class _Empty:
-        """A dummy class to aid deserialisation"""
-
-        pass
-
-    class _EmptyDict(dict):
-        """A dummy dictionary class to aid deserialisation"""
-
-        pass
-
     def serialise_model(
         self,
         model: pybamm.BaseModel,
@@ -252,6 +242,28 @@ class Serialise:
         with open(filename + ".json", "w") as f:
             json.dump(model_json, f)
 
+    @staticmethod
+    def _is_legacy_node(node) -> bool:
+        """True if any node in the tree uses the legacy py/object tag."""
+        if isinstance(node, dict):
+            if "py/object" in node:
+                return True
+            return any(Serialise._is_legacy_node(v) for v in node.values())
+        if isinstance(node, list):
+            return any(Serialise._is_legacy_node(v) for v in node)
+        return False
+
+    @staticmethod
+    def _decode_model_node(node):
+        """Decode one serialised model field through the kernel, relocating the
+        legacy py/object nested shapes first so old files load through the same
+        single decode path."""
+        from pybamm.expression_tree.operations.serialise_kernel import decode
+
+        if Serialise._is_legacy_node(node):
+            node = _relocate_legacy_model_tree(node)
+        return decode(node)
+
     def load_model(
         self, filename: str | dict, battery_model: pybamm.BaseModel | None = None
     ) -> pybamm.BaseModel:
@@ -295,44 +307,34 @@ class Serialise:
             "name": model_data["name"],
             "options": self._convert_options(model_data["options"]),
             "bounds": tuple(np.array(bound) for bound in model_data["bounds"]),
-            "concatenated_rhs": self._reconstruct_expression_tree(
-                model_data["concatenated_rhs"]
-            ),
-            "concatenated_algebraic": self._reconstruct_expression_tree(
+            "concatenated_rhs": self._decode_model_node(model_data["concatenated_rhs"]),
+            "concatenated_algebraic": self._decode_model_node(
                 model_data["concatenated_algebraic"]
             ),
-            "concatenated_initial_conditions": self._reconstruct_expression_tree(
+            "concatenated_initial_conditions": self._decode_model_node(
                 model_data["concatenated_initial_conditions"]
             ),
-            "events": [
-                self._reconstruct_expression_tree(event)
-                for event in model_data["events"]
-            ],
-            "mass_matrix": self._reconstruct_expression_tree(model_data["mass_matrix"]),
+            "events": [self._decode_model_node(e) for e in model_data["events"]],
+            "mass_matrix": self._decode_model_node(model_data["mass_matrix"]),
         }
 
         recon_model_dict["geometry"] = (
             self._reconstruct_pybamm_dict(model_data["geometry"])
-            if "geometry" in model_data.keys()
+            if "geometry" in model_data
             else None
         )
-
         recon_model_dict["mesh"] = (
-            self._reconstruct_mesh(model_data["mesh"])
-            if "mesh" in model_data.keys()
+            self._decode_model_node(model_data["mesh"])
+            if "mesh" in model_data
             else None
         )
 
         vars_processed_data = model_data.get("_variables_processed") or {}
         recon_model_dict["_variables_processed"] = (
-            {
-                k: self._reconstruct_expression_tree(v)
-                for k, v in vars_processed_data.items()
-            }
+            {k: self._decode_model_node(v) for k, v in vars_processed_data.items()}
             if vars_processed_data
             else {}
         )
-
         recon_model_dict["_solution_observable"] = model_data.get(
             "_solution_observable", False
         )
@@ -340,15 +342,19 @@ class Serialise:
         if battery_model:
             return battery_model.deserialise(recon_model_dict)
 
-        if "py/object" in model_data.keys():
-            model_framework = self._get_pybamm_class(model_data)
+        tag = model_data.get("$type") or model_data.get("py/object")
+        if tag:
+            from pybamm.expression_tree.operations.serialise_kernel import (
+                _resolve_class,
+            )
+
+            model_framework = (
+                _resolve_class(tag) if "." in tag else _resolve_class(f"pybamm.{tag}")
+            )
+            # deserialise is a BaseModel classmethod inherited by every model class.
             return model_framework.deserialise(recon_model_dict)
 
-        raise TypeError(
-            """
-            The PyBaMM battery model to use has not been provided.
-            """
-        )
+        raise TypeError("The PyBaMM battery model to use has not been provided.")
 
     @staticmethod
     def _json_encoder(obj):
@@ -1596,26 +1602,6 @@ class Serialise:
 
     # Helper functions
 
-    def _get_pybamm_class(self, snippet: dict):
-        """Find a pybamm class to initialise from object path"""
-        parts = snippet["py/object"].split(".")
-        module = importlib.import_module(".".join(parts[:-1]))
-
-        class_ = getattr(module, parts[-1])
-
-        try:
-            empty_class = self._Empty()
-            empty_class.__class__ = class_
-
-            return empty_class
-
-        except TypeError:
-            # Mesh objects have a different layouts
-            empty_dict_class = self._EmptyDict()
-            empty_dict_class.__class__ = class_
-
-            return empty_dict_class
-
     def _deconstruct_pybamm_dicts(self, dct: dict):
         """
         Converts dictionaries which contain pybamm classes as keys
@@ -1658,49 +1644,6 @@ class Serialise:
         except TypeError:  # dct must contain pybamm objects
             return nested_convert(dct)
 
-    def _reconstruct_symbol(self, dct: dict):
-        """Reconstruct an individual pybamm Symbol"""
-        symbol_class = self._get_pybamm_class(dct)
-        symbol = symbol_class._from_json(dct)
-        return symbol
-
-    def _reconstruct_expression_tree(self, node: dict):
-        """
-        Loop through an expression tree creating pybamm Symbol classes
-
-        Conducts post-order tree traversal to turn each tree node into a
-        `pybamm.Symbol` class, starting from leaf nodes without children and
-        working upwards.
-
-        Parameters
-        ----------
-        node: dict
-            A node in an expression tree.
-        """
-        if "children" in node:
-            for i, c in enumerate(node["children"]):
-                child_obj = self._reconstruct_expression_tree(c)
-                node["children"][i] = child_obj
-        elif "expression" in node:
-            expression_obj = self._reconstruct_expression_tree(node["expression"])
-            node["expression"] = expression_obj
-
-        obj = self._reconstruct_symbol(node)
-
-        return obj
-
-    def _reconstruct_mesh(self, node: dict):
-        """Reconstruct a Mesh from the legacy py/object shape (a ``sub_meshes``
-        dict). Builds the Mesh directly rather than via the canonical (kernel)
-        ``Mesh._from_json``; retired once load_model decodes through the kernel."""
-        mesh = pybamm.Mesh.__new__(pybamm.Mesh)
-        super(pybamm.Mesh, mesh).__init__()
-        mesh.submesh_pts = node["submesh_pts"]
-        mesh.base_domains = node["base_domains"]
-        for k, v in node.get("sub_meshes", {}).items():
-            mesh[k] = self._reconstruct_symbol(v)
-        return mesh
-
     def _reconstruct_pybamm_dict(self, obj: dict):
         """
         pybamm.Geometry can contain PyBaMM symbols as dictionary keys.
@@ -1726,7 +1669,7 @@ class Serialise:
                 new_dict = {}
                 for k, v in obj.items():
                     if "symbol_" in k:
-                        new_dict[k] = self._reconstruct_symbol(v)
+                        new_dict[k] = self._decode_model_node(v)
                     elif isinstance(v, dict):
                         new_dict[k] = recurse(v)
                     else:
