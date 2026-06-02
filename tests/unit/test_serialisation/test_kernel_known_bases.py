@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 import pytest
 
 import pybamm
@@ -57,3 +59,27 @@ def test_registered_non_symbol_base_without_hook_raises(monkeypatch):
     monkeypatch.setattr(sk, "_KNOWN_BASES", (*sk._KNOWN_BASES, _NoHookBase))
     with pytest.raises(sk.SerialisationError, match="no to_json"):
         sk._lookup_codec(_NoHookBase)
+
+
+def test_event_round_trip_through_kernel():
+    expr = pybamm.Variable(
+        "u", domains={"primary": ["negative electrode"]}
+    ) - pybamm.Scalar(1.0)
+    event = pybamm.Event("my event", expr, pybamm.EventType.TERMINATION)
+    restored = sk.decode(json.loads(json.dumps(sk.encode(event))))
+    assert isinstance(restored, pybamm.Event)
+    assert restored.name == "my event"
+    assert restored.event_type == pybamm.EventType.TERMINATION
+    assert restored.expression.id == expr.id
+
+
+def test_event_from_json_tolerates_legacy_expression_field():
+    # Old discretised files carried "expression" as a sibling, not in children.
+    expr = pybamm.Scalar(2.0)
+    snippet = {
+        "name": "legacy",
+        "event_type": ["EventType.TERMINATION", 0],
+        "expression": expr,
+    }  # decoded expression, legacy shape
+    restored = pybamm.Event._from_json(snippet)
+    assert restored.expression.id == expr.id

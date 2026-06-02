@@ -152,7 +152,9 @@ class Serialise:
                 return node_dict
 
             if isinstance(node, pybamm.Event):
-                node_dict.update(node.to_json())
+                hook = node.to_json()
+                hook.pop("children", None)  # legacy encoder walks expression itself
+                node_dict.update(hook)
                 node_dict["expression"] = self.default(node._expression)
                 return node_dict
 

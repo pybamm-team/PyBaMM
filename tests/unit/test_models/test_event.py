@@ -51,15 +51,15 @@ class TestEvent:
         expression = pybamm.Scalar(1)
         event = pybamm.Event("my event", expression)
 
+        # Kernel wire shape: expression travels through children[0].
         event_json = {
             "name": "my event",
             "event_type": ["EventType.TERMINATION", 0],
+            "children": [expression],
         }
 
         event_ser_json = event.to_json()
         assert event_ser_json == event_json
-
-        event_json["expression"] = expression
 
         new_event = pybamm.Event._from_json(event_json)
 
