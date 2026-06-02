@@ -112,24 +112,28 @@ def encode(obj):
         return _encode_ndarray(obj)
     if isinstance(obj, slice):
         return _encode_slice(obj)
+    if isinstance(obj, type):
+        return _encode_class_ref(obj)
+
+    # Codec dispatch precedes containers: registered types (e.g. Mesh) may subclass
+    # dict/list and must not be walked as a plain container.
+    codec = _lookup_codec(type(obj))
+    if codec is not None:
+        node = codec.to_json(obj, encode)
+        node[TAG] = _class_path(type(obj))
+        return node
+
     if isinstance(obj, tuple):
         return {TAG: "builtins.tuple", "items": [encode(x) for x in obj]}
     if isinstance(obj, list):
         return [encode(x) for x in obj]
     if isinstance(obj, dict):
         return {k: encode(v) for k, v in obj.items()}
-    if isinstance(obj, type):
-        return _encode_class_ref(obj)
 
-    codec = _lookup_codec(type(obj))
-    if codec is None:
-        raise SerialisationError(
-            f"Cannot serialise {type(obj).__module__}.{type(obj).__qualname__}: "
-            f"no codec registered. Register the class or add a to_json/_from_json hook."
-        )
-    node = codec.to_json(obj, encode)
-    node[TAG] = _class_path(type(obj))
-    return node
+    raise SerialisationError(
+        f"Cannot serialise {type(obj).__module__}.{type(obj).__qualname__}: "
+        f"no codec registered. Register the class or add a to_json/_from_json hook."
+    )
 
 
 def decode(node):
