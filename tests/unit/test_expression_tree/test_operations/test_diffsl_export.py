@@ -403,3 +403,97 @@ class TestDiffSLExport:
         disc.process_model(model)
         export = pybamm.DiffSLExport(model).to_diffeq(outputs=["rp"])
         assert "(a - 1) / 2" in export
+
+    def test_map_inputs_invalid_output_raises(self, model):
+        exporter = pybamm.DiffSLExport(model)
+        with pytest.raises(ValueError, match="output nonexistent not in model"):
+            exporter.map_inputs({}, outputs=["nonexistent"])
+
+    def test_map_inputs_processed_variable_path(self, model):
+        exporter = pybamm.DiffSLExport(model)
+        result = exporter.map_inputs({"p": 1.0}, outputs=["x"])
+        assert result[0] == 1.0
+
+    def test_map_inputs_diffsl_transformed_name(self):
+        model = pybamm.BaseModel()
+        x = pybamm.Variable("x")
+        inp = pybamm.InputParameter("Test param")
+        model.rhs = {x: inp * x}
+        model.initial_conditions = {x: pybamm.Scalar(1)}
+        model.variables = {"x": x}
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+        exporter = pybamm.DiffSLExport(model)
+        result = exporter.map_inputs({"testparam": 2.0})
+        assert result[0] == 2.0
+
+    def test_unified_experiment_duplicate_steps(self):
+        experiment = pybamm.Experiment(
+            [
+                "Discharge at C/20 for 1 hour",
+                "Rest for 10 minutes",
+                "Discharge at C/20 for 1 hour",
+            ]
+        )
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            experiment=experiment,
+            solver=pybamm.CasadiSolver(),
+            experiment_model_mode="unified",
+        )
+        exporter = pybamm.DiffSLExport(sim)
+        output_name = next(iter(exporter.model.variables))
+        export = exporter.to_diffeq(outputs=[output_name])
+
+        assert "[N]" in export
+        stop_block = export.split("stop_i {", 1)[1].split("}\nout_i {", 1)[0]
+        for stop_time in ["3600 - t", "4200 - t", "7800 - t"]:
+            assert stop_time in stop_block
+        assert stop_block.index("3600 - t") < stop_block.index("4200 - t")
+        assert stop_block.index("4200 - t") < stop_block.index("7800 - t")
+        assert "1.0,\n  1.0,\n  1.0,\n  1.0,\n  0.0,\n  0.0," in export
+
+    def test_unified_experiment_padding_duplicate_steps(self):
+        experiment = pybamm.Experiment(
+            [
+                pybamm.step.string(
+                    "Discharge at 0.5C for 1 hour",
+                    start_time=datetime(2023, 1, 1, 8, 0, 0),
+                ),
+                pybamm.step.string(
+                    "Rest for 30 minutes",
+                    start_time=datetime(2023, 1, 1, 10, 0, 0),
+                ),
+                pybamm.step.string(
+                    "Discharge at 0.5C for 1 hour",
+                    start_time=datetime(2023, 1, 1, 12, 0, 0),
+                ),
+            ]
+        )
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            experiment=experiment,
+            solver=pybamm.CasadiSolver(),
+            experiment_model_mode="unified",
+        )
+        exporter = pybamm.DiffSLExport(sim)
+        assert sim._experiment_includes_padding_rest is True
+
+        output_name = next(iter(exporter.model.variables))
+        export = exporter.to_diffeq(outputs=[output_name])
+
+        assert "[N]" in export
+        stop_block = export.split("stop_i {", 1)[1].split("}\nout_i {", 1)[0]
+        for stop_time in [
+            "3600 - t",
+            "7200 - t",
+            "9000 - t",
+            "14400 - t",
+            "18000 - t",
+        ]:
+            assert stop_time in stop_block
+        assert stop_block.index("3600 - t") < stop_block.index("7200 - t")
+        assert stop_block.index("7200 - t") < stop_block.index("9000 - t")
+        assert stop_block.index("9000 - t") < stop_block.index("14400 - t")
+        assert stop_block.index("14400 - t") < stop_block.index("18000 - t")
+        assert "1.0,\n  1.0,\n  1.0,\n  1.0,\n  1.0,\n  1.0,\n  0.0,\n  0.0," in export

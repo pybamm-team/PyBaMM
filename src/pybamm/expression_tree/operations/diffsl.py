@@ -343,31 +343,30 @@ class DiffSLExport:
         sim: pybamm.Simulation,
         step_branches: list[pybamm.Symbol],
     ) -> tuple[list[int], list[pybamm.Symbol]]:
+        unique_steps = list(dict.fromkeys(sim.experiment.steps))
+        expected_branches = len(unique_steps)
         padding_branch_index = None
         if sim._experiment_includes_padding_rest:
-            padding_branch_index = len(sim.experiment.steps)
-            if len(step_branches) != len(sim.experiment.steps) + 1:
-                raise ValueError(
-                    "Unified experiment DiffSL export expected one padding-rest branch"
-                )
-        elif len(step_branches) != len(sim.experiment.steps):
+            padding_branch_index = len(unique_steps)
+            expected_branches += 1
+
+        if len(step_branches) != expected_branches:
             raise ValueError(
-                "Unified experiment DiffSL export expected one termination branch per step"
+                f"Unified experiment DiffSL export expected {expected_branches} "
+                f"step/padding branches but got {len(step_branches)}"
             )
+
+        step_to_branch_index = {step: i for i, step in enumerate(unique_steps)}
 
         branch_order = []
         stop_expressions = [pybamm.Scalar(1)]
         initial_start_time = sim.experiment.initial_start_time
         current_time = 0.0
 
-        for step_index, (step, branch) in enumerate(
-            zip(
-                sim.experiment.steps,
-                step_branches[: len(sim.experiment.steps)],
-                strict=False,
-            )
-        ):
-            branch_order.append(step_index)
+        for step in sim.experiment.steps:
+            branch_index = step_to_branch_index[step]
+            branch = step_branches[branch_index]
+            branch_order.append(branch_index)
 
             step_end_time = current_time + step.duration
             if step.end_time is not None and initial_start_time is not None:
