@@ -156,7 +156,27 @@ def decode(node):
 
 
 def normalise_legacy(node: dict) -> dict:
-    return node  # replaced in Task 1.6
+    """Map the three pre-kernel wire shapes onto the canonical tag.
+
+    Read-only compatibility layer. Canonical nodes pass through untouched.
+    """
+    if TAG in node:
+        return node
+    if "py/object" in node:
+        out = {k: v for k, v in node.items() if k != "py/id"}
+        out[TAG] = out.pop("py/object")
+        return out
+    if "class" in node and "module" in node:
+        out = dict(node)
+        out[TAG] = "type"
+        out["class"] = f"{out.pop('module')}.{out.pop('class')}"
+        return out
+    if "type" in node:
+        out = dict(node)
+        type_val = out.pop("type")
+        out[TAG] = type_val if "." in type_val else f"pybamm.{type_val}"
+        return out
+    return node
 
 
 # ---------------------------------------------------------------------------

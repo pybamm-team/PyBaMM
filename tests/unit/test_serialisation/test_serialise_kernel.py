@@ -229,3 +229,39 @@ def test_hook_guard_allows_declared_derived_param():
             return cls(snippet["children"][0])
 
     sk.encode(_Cached(pybamm.Scalar(1.0)))  # no raise
+
+
+# ---------------------------------------------------------------------------
+# normalise_legacy (Task 1.6)
+# ---------------------------------------------------------------------------
+
+
+def test_normalise_legacy_py_object():
+    legacy = {"py/object": "pybamm.Scalar", "py/id": 7, "value": 1.0}
+    out = sk.normalise_legacy(legacy)
+    assert out[sk.TAG] == "pybamm.Scalar"
+    # py/id and py/object are consumed, not carried forward
+    assert "py/id" not in out and "py/object" not in out
+    # read-only: the input node is not mutated
+    assert legacy == {"py/object": "pybamm.Scalar", "py/id": 7, "value": 1.0}
+
+
+def test_normalise_legacy_bare_type_resolves_to_pybamm():
+    legacy = {"type": "Scalar", "value": 1.0}
+    out = sk.normalise_legacy(legacy)
+    assert sk._resolve_class(out[sk.TAG]) is pybamm.Scalar
+
+
+def test_normalise_legacy_class_module():
+    legacy = {
+        "class": "Uniform1DSubMesh",
+        "module": "pybamm.meshes.one_dimensional_submeshes",
+    }
+    out = sk.normalise_legacy(legacy)
+    assert out[sk.TAG] == "type"
+    assert out["class"] == "pybamm.meshes.one_dimensional_submeshes.Uniform1DSubMesh"
+
+
+def test_normalise_legacy_passthrough_canonical():
+    canonical = {sk.TAG: "pybamm.Scalar", "value": 1.0}
+    assert sk.normalise_legacy(canonical) is canonical
