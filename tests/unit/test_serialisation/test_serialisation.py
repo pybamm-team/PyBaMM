@@ -296,6 +296,8 @@ class TestSerialise:
                         "quaternary": [],
                     },
                     "children": [],
+                    "coord_sys": None,
+                    "direction": None,
                 },
                 "x": {"min": 0.0, "max": 2.0},
             }

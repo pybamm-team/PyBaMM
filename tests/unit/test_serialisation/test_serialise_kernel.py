@@ -1,10 +1,18 @@
 from __future__ import annotations
 
+import json
+
 import numpy as np
 import pytest
 
 import pybamm
 from pybamm.expression_tree.operations import serialise_kernel as sk
+
+
+def _rt(tree):
+    # Round-trip through real JSON text (not in-memory) so a hook that leaves a
+    # non-JSON-native value (raw slice/ndarray/Symbol) is caught by json.dumps.
+    return sk.decode(json.loads(json.dumps(sk.encode(tree))))
 
 
 def test_class_path_round_trips_a_pybamm_class():
@@ -336,3 +344,16 @@ def test_trap_hook_codec_inherited_base_drops_scalar_raises_loudly():
 
     with pytest.raises(sk.SerialisationError, match="knob"):
         sk.encode(_TrapUnary(pybamm.Scalar(1.0), knob="z"))
+
+
+@pytest.mark.parametrize(
+    "tree",
+    [
+        pybamm.Variable("v", scale=pybamm.Scalar(2.0)),
+        pybamm.Variable("v", reference=pybamm.Scalar(1.0)),
+        pybamm.VariableDot("v'", domains={"primary": ["negative electrode"]}),
+        pybamm.SpatialVariableEdge("x", domain=["negative electrode"]),
+    ],
+)
+def test_variable_family_round_trip(tree):
+    assert _rt(tree).id == tree.id
