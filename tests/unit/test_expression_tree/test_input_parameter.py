@@ -54,7 +54,6 @@ class TestInputParameter:
 
         json_dict = {
             "name": "a",
-            "id": mocker.ANY,
             "domain": [],
             "expected_size": 1,
         }

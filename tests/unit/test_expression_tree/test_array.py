@@ -43,7 +43,6 @@ class TestArray:
 
         json_dict = {
             "name": "Array of shape (3, 1)",
-            "id": mocker.ANY,
             "domains": {
                 "primary": [],
                 "secondary": [],

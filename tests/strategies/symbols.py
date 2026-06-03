@@ -205,16 +205,6 @@ def _boundary_value_branch(
     )
 
 
-def _boundary_gradient_branch(
-    child_strategy: st.SearchStrategy[pybamm.Symbol],
-) -> st.SearchStrategy[pybamm.BoundaryGradient]:
-    return st.builds(
-        pybamm.BoundaryGradient,
-        child_strategy,
-        st.sampled_from(["left", "right"]),
-    )
-
-
 # Non-empty domains only — FullBroadcast and PrimaryBroadcast both reject [].
 _NONEMPTY_DOMAINS = st.sampled_from(
     [
@@ -257,7 +247,11 @@ def _constant_strategy() -> st.SearchStrategy[pybamm.Constant]:
 
 def _coupled_variable_strategy() -> st.SearchStrategy[pybamm.CoupledVariable]:
     """A variable whose equation is set by another model/submodel."""
-    return st.builds(pybamm.CoupledVariable, _NAMES)
+    return st.builds(
+        pybamm.CoupledVariable,
+        _NAMES,
+        domain=st.sampled_from([[], ["negative electrode"], ["separator"]]),
+    )
 
 
 def _spatial_variable_strategy() -> st.SearchStrategy[pybamm.SpatialVariable]:
@@ -548,6 +542,314 @@ def _vector_field_branch(
     return _FIELD_DOMAINS.flatmap(make_vf)
 
 
+# Sides shared by boundary operators.
+_SIDES = st.sampled_from(["left", "right"])
+
+
+def _backward_indefinite_integral_branch(
+    _child_strategy: st.SearchStrategy[pybamm.Symbol],
+) -> st.SearchStrategy[pybamm.BackwardIndefiniteIntegral]:
+    """BackwardIndefiniteIntegral: integrates a domain-bearing child w.r.t. its spatial var."""
+
+    def make_backward(child: pybamm.Symbol) -> pybamm.BackwardIndefiniteIntegral:
+        x = pybamm.SpatialVariable("x", domain=child.domain)
+        return pybamm.BackwardIndefiniteIntegral(child, x)
+
+    return _electrode_domain_leaves().map(make_backward)
+
+
+def _boundary_gradient_branch(
+    child_strategy: st.SearchStrategy[pybamm.Symbol],
+) -> st.SearchStrategy[pybamm.BoundaryGradient]:
+    """BoundaryGradient(child, side) — child must have a non-empty domain."""
+    return st.builds(pybamm.BoundaryGradient, _any_domain_leaves(), _SIDES)
+
+
+def _boundary_mesh_size_branch(
+    _child_strategy: st.SearchStrategy[pybamm.Symbol],
+) -> st.SearchStrategy[pybamm.BoundaryMeshSize]:
+    """BoundaryMeshSize(child, side) — child must have a non-empty domain."""
+    return st.builds(pybamm.BoundaryMeshSize, _any_domain_leaves(), _SIDES)
+
+
+def _boundary_integral_branch(
+    _child_strategy: st.SearchStrategy[pybamm.Symbol],
+) -> st.SearchStrategy[pybamm.BoundaryIntegral]:
+    """BoundaryIntegral(child, region) — exercises both default and non-default regions."""
+    return st.builds(
+        pybamm.BoundaryIntegral,
+        _any_domain_leaves(),
+        st.sampled_from(["entire", "negative tab", "positive tab"]),
+    )
+
+
+def _explicit_time_integral_branch(
+    _child_strategy: st.SearchStrategy[pybamm.Symbol],
+) -> st.SearchStrategy[pybamm.ExplicitTimeIntegral]:
+    """ExplicitTimeIntegral(child, initial_condition) — initial_condition a Scalar."""
+    return st.builds(
+        pybamm.ExplicitTimeIntegral,
+        _any_domain_leaves(),
+        scalar_strategy(),
+    )
+
+
+def _index_branch(
+    _child_strategy: st.SearchStrategy[pybamm.Symbol],
+) -> st.SearchStrategy[pybamm.Index]:
+    """Index(StateVector, index) — check_size disabled so any index builds cleanly."""
+    return st.builds(
+        pybamm.Index,
+        st.just(pybamm.StateVector(slice(0, 1))),
+        st.just(0),
+        check_size=st.just(False),
+    )
+
+
+def _delta_function_branch(
+    _child_strategy: st.SearchStrategy[pybamm.Symbol],
+) -> st.SearchStrategy[pybamm.DeltaFunction]:
+    """DeltaFunction(child, side, domain) — child domain must differ from the target domain."""
+    return st.builds(
+        pybamm.DeltaFunction,
+        _neg_electrode_leaves(),
+        _SIDES,
+        st.just("separator"),
+    )
+
+
+def _evaluate_at_branch(
+    _child_strategy: st.SearchStrategy[pybamm.Symbol],
+) -> st.SearchStrategy[pybamm.EvaluateAt]:
+    """EvaluateAt(child, position) — numeric position on a domain-bearing child."""
+    return st.builds(pybamm.EvaluateAt, _any_domain_leaves(), _FINITE_FLOATS)
+
+
+def _one_dimensional_integral_branch(
+    _child_strategy: st.SearchStrategy[pybamm.Symbol],
+) -> st.SearchStrategy[pybamm.OneDimensionalIntegral]:
+    """OneDimensionalIntegral(child, integration_domain, direction)."""
+
+    def make_odi(child: pybamm.Symbol) -> pybamm.OneDimensionalIntegral:
+        return pybamm.OneDimensionalIntegral(child, child.domain, "x")
+
+    return _electrode_domain_leaves().map(make_odi)
+
+
+def _upwind_downwind_2d_branch(
+    _child_strategy: st.SearchStrategy[pybamm.Symbol],
+) -> st.SearchStrategy[pybamm.UpwindDownwind2D]:
+    """UpwindDownwind2D(child, lr_direction, tb_direction) — domain-bearing child."""
+    return st.builds(
+        pybamm.UpwindDownwind2D,
+        _any_domain_leaves(),
+        st.sampled_from(["upwind", "downwind"]),
+        st.sampled_from(["upwind", "downwind"]),
+    )
+
+
+def _node_to_edge_2d_branch(
+    _child_strategy: st.SearchStrategy[pybamm.Symbol],
+) -> st.SearchStrategy[pybamm.NodeToEdge2D]:
+    """NodeToEdge2D(child, direction) — domain-bearing node child (not on edges)."""
+    return st.builds(
+        pybamm.NodeToEdge2D,
+        _any_domain_leaves(),
+        st.sampled_from(["lr", "tb"]),
+    )
+
+
+def _magnitude_branch(
+    _child_strategy: st.SearchStrategy[pybamm.Symbol],
+) -> st.SearchStrategy[pybamm.Magnitude]:
+    """Magnitude(child, direction) — domain-bearing child, directional component."""
+    return st.builds(
+        pybamm.Magnitude,
+        _any_domain_leaves(),
+        st.sampled_from(["x", "y", "z"]),
+    )
+
+
+def _discrete_time_sum_branch(
+    _child_strategy: st.SearchStrategy[pybamm.Symbol],
+) -> st.SearchStrategy[pybamm.DiscreteTimeSum]:
+    """DiscreteTimeSum: built around a DiscreteTimeData child."""
+    return st.builds(pybamm.DiscreteTimeSum, _discrete_time_data_branch(None))
+
+
+def _size_average_branch(
+    _child_strategy: st.SearchStrategy[pybamm.Symbol],
+) -> st.SearchStrategy[pybamm.SizeAverage]:
+    """SizeAverage(child, f_a_dist) — child on a particle-size domain."""
+    child = st.builds(
+        pybamm.Variable,
+        _NAMES,
+        domains=st.sampled_from(
+            [
+                {"primary": ["negative particle size"]},
+                {"primary": ["positive particle size"]},
+            ]
+        ),
+    )
+    return st.builds(pybamm.SizeAverage, child, scalar_strategy())
+
+
+def _primary_broadcast_to_edges_branch(
+    _child_strategy: st.SearchStrategy[pybamm.Symbol],
+) -> st.SearchStrategy[pybamm.PrimaryBroadcastToEdges]:
+    """PrimaryBroadcastToEdges — mirror PrimaryBroadcast with a domain-free child."""
+    return st.builds(
+        pybamm.PrimaryBroadcastToEdges,
+        _domain_free_leaves(),
+        _NONEMPTY_DOMAINS,
+    )
+
+
+def _secondary_broadcast_to_edges_branch(
+    _child_strategy: st.SearchStrategy[pybamm.Symbol],
+) -> st.SearchStrategy[pybamm.SecondaryBroadcastToEdges]:
+    """SecondaryBroadcastToEdges — particle child broadcast to an electrode."""
+    return st.builds(
+        pybamm.SecondaryBroadcastToEdges,
+        _neg_particle_leaves(),
+        st.just(["negative electrode"]),
+    )
+
+
+def _tertiary_secondary_leaves() -> st.SearchStrategy[pybamm.Symbol]:
+    """Variable leaves with primary + secondary domains (valid TertiaryBroadcast child)."""
+    return st.builds(
+        pybamm.Variable,
+        _NAMES,
+        domains=st.just(
+            {"primary": ["negative particle"], "secondary": ["negative electrode"]}
+        ),
+    )
+
+
+def _tertiary_broadcast_branch(
+    _child_strategy: st.SearchStrategy[pybamm.Symbol],
+) -> st.SearchStrategy[pybamm.TertiaryBroadcast]:
+    """TertiaryBroadcast — child with primary+secondary domains broadcast to a tertiary."""
+    return st.builds(
+        pybamm.TertiaryBroadcast,
+        _tertiary_secondary_leaves(),
+        st.just(["current collector"]),
+    )
+
+
+def _tertiary_broadcast_to_edges_branch(
+    _child_strategy: st.SearchStrategy[pybamm.Symbol],
+) -> st.SearchStrategy[pybamm.TertiaryBroadcastToEdges]:
+    """TertiaryBroadcastToEdges — as TertiaryBroadcast but to edges."""
+    return st.builds(
+        pybamm.TertiaryBroadcastToEdges,
+        _tertiary_secondary_leaves(),
+        st.just(["current collector"]),
+    )
+
+
+def _full_broadcast_to_edges_branch(
+    child_strategy: st.SearchStrategy[pybamm.Symbol],
+) -> st.SearchStrategy[pybamm.FullBroadcastToEdges]:
+    """FullBroadcastToEdges — mirror FullBroadcast with a non-empty target domain."""
+    return st.builds(
+        pybamm.FullBroadcastToEdges,
+        child_strategy.filter(lambda c: c.domain != ["current collector"]),
+        _NONEMPTY_DOMAINS,
+    )
+
+
+def _heaviside_branch(
+    _child_strategy: st.SearchStrategy[pybamm.Symbol],
+) -> st.SearchStrategy[_HeavisideClass]:
+    """_Heaviside(name, left, right) — semi-private base from two domain-free leaves."""
+    return st.builds(
+        _HeavisideClass,
+        _NAMES,
+        _domain_free_leaves(),
+        _domain_free_leaves(),
+    )
+
+
+def _tensor_field_branch(
+    _child_strategy: st.SearchStrategy[pybamm.Symbol],
+) -> st.SearchStrategy[pybamm.TensorField]:
+    """TensorField of rank 1 (flat list) or rank 2 (list of equal-length rows)."""
+    rank_1 = st.lists(_domain_free_leaves(), min_size=1, max_size=3)
+    rank_2 = st.integers(min_value=1, max_value=3).flatmap(
+        lambda n_cols: st.lists(
+            st.lists(_domain_free_leaves(), min_size=n_cols, max_size=n_cols),
+            min_size=1,
+            max_size=3,
+        )
+    )
+    return st.builds(pybamm.TensorField, st.one_of(rank_1, rank_2))
+
+
+def _state_vector_branch(
+    _child_strategy: st.SearchStrategy[pybamm.Symbol],
+) -> st.SearchStrategy[pybamm.StateVector]:
+    """StateVector with a sampled y-slice."""
+    return st.builds(pybamm.StateVector, st.sampled_from([slice(0, 1), slice(0, 2)]))
+
+
+def _state_vector_dot_branch(
+    _child_strategy: st.SearchStrategy[pybamm.Symbol],
+) -> st.SearchStrategy[pybamm.StateVectorDot]:
+    """StateVectorDot with a sampled y-slice."""
+    return st.builds(pybamm.StateVectorDot, st.sampled_from([slice(0, 1), slice(0, 2)]))
+
+
+def _variable_dot_strategy() -> st.SearchStrategy[pybamm.VariableDot]:
+    """VariableDot — like Variable (a named, optionally domain-bearing leaf)."""
+    return st.builds(
+        pybamm.VariableDot,
+        _NAMES,
+        domain=_DOMAINS,
+    )
+
+
+def _spatial_variable_edge_strategy() -> st.SearchStrategy[pybamm.SpatialVariableEdge]:
+    """SpatialVariableEdge — like SpatialVariable but the Edge subclass."""
+    safe_names = st.sampled_from(["x", "y", "z"])
+    safe_domains = st.sampled_from(
+        [
+            ["negative electrode"],
+            ["positive electrode"],
+            ["separator"],
+            ["current collector"],
+        ]
+    )
+    return st.builds(pybamm.SpatialVariableEdge, safe_names, domain=safe_domains)
+
+
+# Small fixed 2x2 / 2x1 numpy arrays for Array/Matrix/Vector leaves.
+_SMALL_MATRIX = st.just(np.array([[1.0, 2.0], [3.0, 4.0]]))
+_SMALL_VECTOR = st.just(np.array([[1.0], [2.0]]))
+
+
+def _array_branch(
+    _child_strategy: st.SearchStrategy[pybamm.Symbol],
+) -> st.SearchStrategy[pybamm.Array]:
+    """Array leaf from a fixed small numpy array."""
+    return st.builds(pybamm.Array, _SMALL_MATRIX)
+
+
+def _matrix_branch(
+    _child_strategy: st.SearchStrategy[pybamm.Symbol],
+) -> st.SearchStrategy[pybamm.Matrix]:
+    """Matrix leaf from a fixed small numpy array."""
+    return st.builds(pybamm.Matrix, _SMALL_MATRIX)
+
+
+def _vector_branch(
+    _child_strategy: st.SearchStrategy[pybamm.Symbol],
+) -> st.SearchStrategy[pybamm.Vector]:
+    """Vector leaf from a fixed small column numpy array."""
+    return st.builds(pybamm.Vector, _SMALL_VECTOR)
+
+
 # Register branches in the lookup table. Each value is a callable that
 # takes the child strategy and returns a strategy for that node.
 _STRATEGIES.update(
@@ -641,8 +943,8 @@ _STRATEGIES.update(
         pybamm.RAverage: _r_average_branch,
         # vector/tensor fields
         pybamm.VectorField: _vector_field_branch,
-        # spatial unary operators: round-trip via the generic fallback;
-        # all require a non-empty-domain child (DomainError otherwise)
+        # spatial unary operators: child-only, round-trip via the generic spatial
+        # hook; all require a non-empty-domain child (DomainError otherwise)
         pybamm.Gradient: lambda _children: _any_domain_leaves().map(pybamm.Gradient),
         pybamm.Laplacian: lambda _children: _any_domain_leaves().map(pybamm.Laplacian),
         pybamm.GradientSquared: lambda _children: _any_domain_leaves().map(
@@ -652,18 +954,50 @@ _STRATEGIES.update(
         pybamm.BoundaryMass: lambda _children: _any_domain_leaves().map(
             pybamm.BoundaryMass
         ),
-        pybamm.DefiniteIntegralVector: lambda _children: _any_domain_leaves().map(
-            pybamm.DefiniteIntegralVector
+        pybamm.DefiniteIntegralVector: lambda _children: st.builds(
+            pybamm.DefiniteIntegralVector,
+            _any_domain_leaves(),
+            vector_type=st.sampled_from(["row", "column"]),
         ),
-        # Upwind / Downwind: (self, child) only — round-trip via generic fallback.
+        # Upwind / Downwind: (self, child) only — round-trip via the generic spatial hook.
         # Both require non-empty-domain children.
         pybamm.Upwind: lambda _children: _any_domain_leaves().map(pybamm.Upwind),
         pybamm.Downwind: lambda _children: _any_domain_leaves().map(pybamm.Downwind),
         # Divergence needs an edge-evaluating child, so wrap a domain-bearing
-        # leaf in a Gradient. Round-trips correctly via the generic fallback.
+        # leaf in a Gradient. Round-trips via the generic spatial hook.
         pybamm.Divergence: lambda _children: _any_domain_leaves().map(
             lambda leaf: pybamm.Divergence(pybamm.Gradient(leaf))
         ),
+        # classes with non-children constructor args; serialise losslessly (#5548)
+        pybamm.BackwardIndefiniteIntegral: _backward_indefinite_integral_branch,
+        pybamm.BoundaryGradient: _boundary_gradient_branch,
+        pybamm.BoundaryMeshSize: _boundary_mesh_size_branch,
+        pybamm.BoundaryIntegral: _boundary_integral_branch,
+        pybamm.OneDimensionalIntegral: _one_dimensional_integral_branch,
+        pybamm.ExplicitTimeIntegral: _explicit_time_integral_branch,
+        pybamm.Index: _index_branch,
+        pybamm.DeltaFunction: _delta_function_branch,
+        pybamm.EvaluateAt: _evaluate_at_branch,
+        pybamm.UpwindDownwind2D: _upwind_downwind_2d_branch,
+        pybamm.NodeToEdge2D: _node_to_edge_2d_branch,
+        pybamm.Magnitude: _magnitude_branch,
+        pybamm.DiscreteTimeData: _discrete_time_data_branch,
+        pybamm.DiscreteTimeSum: _discrete_time_sum_branch,
+        pybamm.SizeAverage: _size_average_branch,
+        pybamm.PrimaryBroadcastToEdges: _primary_broadcast_to_edges_branch,
+        pybamm.SecondaryBroadcastToEdges: _secondary_broadcast_to_edges_branch,
+        pybamm.TertiaryBroadcast: _tertiary_broadcast_branch,
+        pybamm.TertiaryBroadcastToEdges: _tertiary_broadcast_to_edges_branch,
+        pybamm.FullBroadcastToEdges: _full_broadcast_to_edges_branch,
+        _HeavisideClass: _heaviside_branch,
+        pybamm.TensorField: _tensor_field_branch,
+        pybamm.StateVector: _state_vector_branch,
+        pybamm.StateVectorDot: _state_vector_dot_branch,
+        pybamm.VariableDot: lambda _children: _variable_dot_strategy(),
+        pybamm.SpatialVariableEdge: lambda _children: _spatial_variable_edge_strategy(),
+        pybamm.Array: _array_branch,
+        pybamm.Matrix: _matrix_branch,
+        pybamm.Vector: _vector_branch,
     }
 )
 
@@ -697,45 +1031,11 @@ _NOT_ROUND_TRIPPABLE: frozenset[type[pybamm.Symbol]] = frozenset(
     }
 )
 
-# Concrete classes that should round-trip but currently do not, each because of
-# a defect in convert_symbol_to_json / convert_symbol_from_json (tracked in
-# #5548). When the serialiser is fixed for a class, move it out of this set and
-# into _STRATEGIES so the property test guards it against regressions.
-# (The Variable.scale/reference and FullBroadcast.name shapes additionally have
-# strict xfail tripwires in TestKnownSymbolSerialiserBugs.)
-_KNOWN_FAILING: frozenset[type[pybamm.Symbol]] = frozenset(
-    {
-        pybamm.BackwardIndefiniteIntegral,  # from_json missing case (calls generic fallback, drops integration_variable)
-        pybamm.BoundaryGradient,  # from_json missing case (drops 'side' arg)
-        pybamm.DiscreteTimeData,  # from_json generic fallback drops 'data' and 'name' args
-        pybamm.ExplicitTimeIntegral,  # from_json generic fallback drops initial_condition
-        pybamm.Index,  # from_json generic fallback drops 'index' positional arg
-        pybamm.BoundaryIntegral,  # round-trips for default region, loses non-default region arg
-        pybamm.VariableDot,  # generic fallback loses the 'name' positional arg; convert_symbol_from_json raises TypeError
-        pybamm.StateVector,  # generic fallback writes children=[] and loses y_slices; from_json fails
-        pybamm.StateVectorDot,  # same as StateVector
-        pybamm.Array,  # generic fallback loses 'entries'; dedicated Serialise.to_json exists but not for round-trip func
-        pybamm.Matrix,  # same as Array
-        pybamm.Vector,  # same as Array
-        pybamm.BoundaryMeshSize,  # generic fallback loses 'side' positional arg; from_json fails
-        pybamm.OneDimensionalIntegral,  # complex constructor (integration_domain, direction); no from_json case
-        pybamm.DeltaFunction,  # requires explicit side + domain args not in generic fallback
-        pybamm.EvaluateAt,  # requires position arg; from_json generic fallback loses it
-        pybamm.UpwindDownwind2D,  # requires lr_direction + tb_direction; no from_json case
-        pybamm.NodeToEdge2D,  # requires direction arg and domain-bearing child; no from_json case
-        pybamm.Magnitude,  # requires direction arg; generic fallback loses it
-        pybamm.DiscreteTimeSum,  # requires DiscreteTimeData child; from_json generic fails
-        pybamm.SizeAverage,  # requires f_a_dist arg; from_json generic loses it
-        pybamm.PrimaryBroadcastToEdges,  # serialises as PrimaryBroadcast; loses subclass
-        pybamm.SecondaryBroadcastToEdges,  # serialises as SecondaryBroadcast; loses subclass
-        pybamm.TertiaryBroadcast,  # from_json generic needs broadcast_domain positional arg; fails
-        pybamm.TertiaryBroadcastToEdges,  # same as TertiaryBroadcast
-        pybamm.FullBroadcastToEdges,  # serialises as FullBroadcast; loses subclass
-        pybamm.TensorField,  # from_json does pybamm.TensorField(*children) but ctor needs list
-        pybamm.SpatialVariableEdge,  # convert_symbol_from_json dispatches to SpatialVariable, not Edge
-        _HeavisideClass,  # semi-private; from_json generic loses 'right' kwarg
-    }
-)
+# Concrete classes known not to round-trip, tracked so the coverage meta-test
+# tolerates them. Empty: every concrete Symbol subclass has a strategy in
+# _STRATEGIES and round-trips losslessly (#5548). A class that regresses here
+# should be fixed, not re-added.
+_KNOWN_FAILING: frozenset[type[pybamm.Symbol]] = frozenset()
 
 # Union consumed by the coverage meta-test: every concrete Symbol subclass must
 # be in _STRATEGIES or excluded here.

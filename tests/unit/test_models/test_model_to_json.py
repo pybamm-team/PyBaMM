@@ -213,13 +213,20 @@ class TestBaseModelToConfig:
             model.to_config(filename="config.txt")
 
     def test_model_with_default_bounds_variables_produces_valid_json(self):
-        """Variables (default bounds) serialise to valid JSON (no Infinity)."""
+        """Variables (default bounds) serialise to strictly valid JSON.
+
+        Non-finite floats must be carried as string sentinels, never as the
+        bare ``Infinity``/``NaN`` tokens that strict JSON parsers reject.
+        """
         model = _minimal_custom_model()
         d = model.to_json()
-        json_str = json.dumps(d)
-        assert "Infinity" not in json_str
+        # allow_nan=False raises ValueError on any bare inf/nan float
+        json_str = json.dumps(d, allow_nan=False)
         loaded = pybamm.BaseModel.from_json(json.loads(json_str))
         assert loaded.name == model.name
+        lower, upper = loaded.variables["a"].bounds
+        assert np.isneginf(lower.value)
+        assert np.isposinf(upper.value)
 
     def test_custom_subclass_not_detected_as_builtin(self):
         """A subclass with a different class name is not a built-in."""
@@ -395,6 +402,26 @@ class TestBaseModelToConfig:
         loaded = pybamm.BaseModel.from_config(config)
         assert type(loaded) is type(model)
         assert "My variable" in loaded.variables
+
+    def test_from_config_invalid_custom_variable_raises(self):
+        """Malformed custom_variables JSON is rejected, not loaded as a raw dict."""
+        config = {
+            "type": "SPM",
+            "module": "lithium_ion",
+            "custom_variables": {"bad": {"a": 1}},
+        }
+        with pytest.raises(ValueError, match=r"expected a pybamm\.Symbol"):
+            pybamm.BaseModel.from_config(config)
+
+    def test_from_config_invalid_event_expression_raises(self):
+        """Malformed event expression JSON is rejected, not loaded as a raw string."""
+        config = {
+            "type": "SPM",
+            "module": "lithium_ion",
+            "events": [{"name": "e", "expression": "not a symbol", "event_type": 0}],
+        }
+        with pytest.raises(ValueError, match=r"expected a pybamm\.Symbol"):
+            pybamm.BaseModel.from_config(config)
 
     def test_to_config_builtin_with_cleared_events_round_trip(self):
         """Clearing events survives to_config / from_config round-trip."""

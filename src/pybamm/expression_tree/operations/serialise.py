@@ -53,6 +53,23 @@ class ExpressionFunctionParameter(pybamm.UnaryOperator):
         """Evaluate the symbolic expression (the child)"""
         return child
 
+    def to_json(self):
+        return {
+            "name": self.name,
+            "domains": self.domains,
+            "func_name": self.func_name,
+            "func_args": self.func_args,
+        }
+
+    @classmethod
+    def _from_json(cls, snippet):
+        return cls(
+            snippet["name"],
+            snippet["children"][0],
+            snippet["func_name"],
+            snippet["func_args"],
+        )
+
     def to_source(self):
         """
         Creates python source code for the function.
@@ -821,7 +838,7 @@ class Serialise:
                     spatial_var = symbol_keys[key]
                     reconstructed_value = {}
                     for k, v in value.items():
-                        if isinstance(v, dict) and "type" in v:
+                        if isinstance(v, dict) and ("$type" in v or "type" in v):
                             # Reconstruct PyBaMM Symbol using convert_symbol_from_json
                             reconstructed_value[k] = convert_symbol_from_json(v)
                         else:
@@ -832,7 +849,7 @@ class Serialise:
                     if isinstance(value, dict):
                         reconstructed_value = {}
                         for k, v in value.items():
-                            if isinstance(v, dict) and "type" in v:
+                            if isinstance(v, dict) and ("$type" in v or "type" in v):
                                 reconstructed_value[k] = convert_symbol_from_json(v)
                             else:
                                 reconstructed_value[k] = v
@@ -1465,7 +1482,7 @@ class Serialise:
         symbol_map = {}
         for variable_json in all_variable_keys:
             try:
-                symbol = convert_symbol_from_json(variable_json)
+                symbol = _require_symbol(variable_json)
                 key = Serialise._create_symbol_key(variable_json)
                 symbol_map[key] = symbol
             except Exception as e:
@@ -1513,7 +1530,7 @@ class Serialise:
                 sides = {}
                 for side, (expression_json, boundary_type) in condition_dict.items():
                     try:
-                        expr = convert_symbol_from_json(expression_json)
+                        expr = _require_symbol(expression_json)
                         sides[side] = (expr, boundary_type)
                     except Exception as e:
                         raise ValueError(
@@ -1546,7 +1563,7 @@ class Serialise:
                 key = Serialise._create_symbol_key(expression_json)
                 symbol = symbol_map.get(key)
                 if symbol is None:
-                    symbol = convert_symbol_from_json(expression_json)
+                    symbol = _require_symbol(expression_json)
                 model.variables[variable_name] = symbol
             except Exception as e:
                 raise ValueError(
@@ -1594,7 +1611,8 @@ class Serialise:
         or from a standard pybamm.ParameterValues.save), and return a
         pybamm.ParameterValues object.
 
-        - If a value is a dict with a "type" key, deserialize it as a PyBaMM symbol.
+        - If a value is a dict with a "$type" (kernel) or legacy "type" key,
+          deserialize it as a PyBaMM symbol.
         - Otherwise (float, int, bool, str, list, dict-without-type), leave it as-is.
         """
         with open(filename) as f:
@@ -1602,7 +1620,7 @@ class Serialise:
 
         deserialized = {}
         for key, val in raw_dict.items():
-            if isinstance(val, dict) and "type" in val:
+            if isinstance(val, dict) and ("$type" in val or "type" in val):
                 deserialized[key] = convert_symbol_from_json(val)
 
             elif isinstance(val, list):
@@ -2248,293 +2266,28 @@ def convert_function_to_symbolic_expression(func, name=None):
 
 
 def convert_symbol_from_json(json_data):
+    """Reconstruct a pybamm.Symbol from kernel/legacy JSON."""
+    from pybamm.expression_tree.operations.serialise_kernel import decode
+
+    return decode(json_data)
+
+
+def _require_symbol(raw):
+    """Decode *raw* and reject anything that is not a pybamm.Symbol.
+
+    The kernel decoder returns unrecognised JSON (raw dicts/strings) unchanged
+    rather than raising. Where the caller expects a Symbol, reject the leftover
+    so malformed JSON fails here with a clear error instead of much later as a
+    confusing downstream failure.
     """
-    Recursively converts a JSON dictionary back into PyBaMM symbolic expressions
-
-    Parameters
-    ----------
-    json_data : dict
-        Dictionary containing the serialized PyBaMM expression
-
-    Returns
-    -------
-    pybamm.Symbol
-        The reconstructed PyBaMM symbolic expression
-    """
-    if isinstance(json_data, float | int | bool):
-        return json_data
-
-    if isinstance(json_data, str):
-        raise ValueError(f"Unexpected raw string in JSON: {json_data}")
-
-    if json_data is None:
-        return None
-    if "type" not in json_data:
-        raise ValueError(f"Missing 'type' key in JSON data: {json_data}")
-    if isinstance(json_data, numbers.Number | list):
-        return json_data
-    elif json_data["type"] == "Parameter":
-        # Convert stored parameters back to PyBaMM Parameter objects
-        return pybamm.Parameter(json_data["name"])
-    elif json_data["type"] == "InputParameter":
-        return pybamm.InputParameter(json_data["name"])
-    elif json_data["type"] == "Constant":
-        return pybamm.Constant(json_data["value"], json_data["name"])
-    elif json_data["type"] == "Scalar":
-        # Convert stored numerical values back to PyBaMM Scalar objects
-        return pybamm.Scalar(json_data["value"])
-    elif json_data["type"] == "Interpolant":
-        return pybamm.Interpolant(
-            [np.array(x) for x in json_data["x"]],
-            np.array(json_data["y"]),
-            [convert_symbol_from_json(c) for c in json_data["children"]],
-            name=json_data["name"],
-            interpolator=json_data["interpolator"],
-            entries_string=json_data["entries_string"],
-        )
-    elif json_data["type"] == "FunctionParameter":
-        diff_variable = json_data["diff_variable"]
-        if diff_variable is not None:
-            diff_variable = convert_symbol_from_json(diff_variable)
-        # Use the parameter name as print_name to avoid showing
-        # 'convert_symbol_from_json' in displays
-        return pybamm.FunctionParameter(
-            json_data["name"],
-            {k: convert_symbol_from_json(v) for k, v in json_data["inputs"].items()},
-            diff_variable=diff_variable,
-            print_name=json_data["name"],
-        )
-    elif json_data["type"] == "ExpressionFunctionParameter":
-        return ExpressionFunctionParameter(
-            json_data["name"],
-            convert_symbol_from_json(json_data["children"][0]),
-            json_data["func_name"],
-            json_data["func_args"],
-        )
-    elif json_data["type"] == "PrimaryBroadcast":
-        child = convert_symbol_from_json(json_data["children"][0])
-        domain = json_data["broadcast_domain"]
-        return pybamm.PrimaryBroadcast(child, domain)
-    elif json_data["type"] == "FullBroadcast":
-        child = convert_symbol_from_json(json_data["children"][0])
-        domains = json_data["domains"]
-        return pybamm.FullBroadcast(child, broadcast_domains=domains)
-    elif json_data["type"] == "SecondaryBroadcast":
-        child = convert_symbol_from_json(json_data["children"][0])
-        domain = json_data["broadcast_domain"]
-        return pybamm.SecondaryBroadcast(child, domain)
-    elif json_data["type"] == "BoundaryValue":
-        child = convert_symbol_from_json(json_data["children"][0])
-        side = json_data["side"]
-        return pybamm.BoundaryValue(child, side)
-    elif json_data["type"] == "Variable":
-        bounds_data = json_data.get("bounds")
-        if bounds_data is None:
-            bounds = (
-                pybamm.Scalar(-np.inf),
-                pybamm.Scalar(np.inf),
-            )
-        else:
-            bounds = tuple(convert_symbol_from_json(b) for b in bounds_data)
-        return pybamm.Variable(
-            json_data["name"],
-            domains=json_data["domains"],
-            bounds=bounds,
-        )
-    elif json_data["type"] == "IndefiniteIntegral":
-        child = convert_symbol_from_json(json_data["children"][0])
-        integration_var_json = json_data["integration_variable"]
-        integration_variable = convert_symbol_from_json(integration_var_json)
-        if not isinstance(integration_variable, pybamm.SpatialVariable):
-            raise TypeError(
-                f"Expected SpatialVariable, got {type(integration_variable)}"
-            )
-        return pybamm.IndefiniteIntegral(child, [integration_variable])
-    elif json_data["type"] == "SpatialVariable":
-        return pybamm.SpatialVariable(
-            json_data["name"],
-            coord_sys=json_data.get("coord_sys", "cartesian"),
-            domains=json_data.get("domains"),
-        )
-    elif json_data["type"] == "Time":
-        return pybamm.Time()
-    elif json_data["type"] == "CoupledVariable":
-        return pybamm.CoupledVariable(
-            json_data["name"],
-            domain=json_data.get("domains", {}).get("primary", None),
-        )
-    elif json_data["type"] == "Symbol":
-        return pybamm.Symbol(
-            json_data["name"],
-            domains=json_data.get("domains", {}),
-        )
-    elif "children" in json_data:
-        return getattr(pybamm, json_data["type"])(
-            *[convert_symbol_from_json(c) for c in json_data["children"]]
-        )
-    else:
-        raise ValueError(f"Unknown symbol type: {json_data['type']}")
+    symbol = convert_symbol_from_json(raw)
+    if not isinstance(symbol, pybamm.Symbol):
+        raise ValueError(f"expected a pybamm.Symbol, got {raw!r}")
+    return symbol
 
 
 def convert_symbol_to_json(symbol):
-    """
-    Converts a PyBaMM symbolic expression to a JSON-serializable dictionary
+    """Serialise a pybamm.Symbol to a JSON-compatible dict via the kernel."""
+    from pybamm.expression_tree.operations.serialise_kernel import encode
 
-    Parameters
-    ----------
-    symbol : pybamm.Symbol
-        The PyBaMM symbolic expression to convert
-
-    Returns
-    -------
-    dict
-        The JSON-serializable dictionary
-    """
-    if isinstance(symbol, ExpressionFunctionParameter):
-        return {
-            "type": "ExpressionFunctionParameter",
-            "name": symbol.name,
-            "children": [convert_symbol_to_json(symbol.child)],
-            "func_name": symbol.func_name,
-            "func_args": symbol.func_args,
-        }
-    elif isinstance(symbol, numbers.Number | list):
-        return symbol
-    elif isinstance(symbol, pybamm.Parameter):
-        # Parameters are stored with their type and name
-        return {"type": "Parameter", "name": symbol.name}
-    elif isinstance(symbol, pybamm.Constant):
-        return {"type": "Constant", "value": symbol.value, "name": symbol.name}
-    elif isinstance(symbol, pybamm.Scalar):
-        # Scalar values are stored with their numerical value
-        # Sanitize inf/nan to JSON-safe string sentinels
-        val = symbol.value
-        if isinstance(val, float) or isinstance(val, np.floating):
-            if np.isposinf(val):
-                val = "Infinity"
-            elif np.isneginf(val):
-                val = "-Infinity"
-            elif np.isnan(val):
-                val = "NaN"
-        return {"type": "Scalar", "value": val}
-    elif isinstance(symbol, pybamm.SpecificFunction):
-        if symbol.__class__ == pybamm.SpecificFunction:
-            raise NotImplementedError("SpecificFunction is not supported directly")
-        else:
-            # Subclasses of SpecificFunction (e.g. Exp, Sin, etc.) can be reconstructed
-            # from only the children
-            return {
-                "type": symbol.__class__.__name__,
-                "children": [convert_symbol_to_json(c) for c in symbol.children],
-            }
-    elif isinstance(symbol, pybamm.PrimaryBroadcast):
-        json_dict = {
-            "type": "PrimaryBroadcast",
-            "children": [convert_symbol_to_json(symbol.child)],
-            "broadcast_domain": symbol.broadcast_domain,
-        }
-        return json_dict
-    elif isinstance(symbol, pybamm.IndefiniteIntegral):
-        integration_var = (
-            symbol.integration_variable[0]
-            if isinstance(symbol.integration_variable, list)
-            else symbol.integration_variable
-        )
-        json_dict = {
-            "type": "IndefiniteIntegral",
-            "children": [convert_symbol_to_json(symbol.child)],
-            "integration_variable": convert_symbol_to_json(integration_var),
-        }
-        return json_dict
-    elif isinstance(symbol, pybamm.BoundaryValue):
-        json_dict = {
-            "type": "BoundaryValue",
-            "side": symbol.side,
-            "children": [convert_symbol_to_json(symbol.orphans[0])],
-        }
-        return json_dict
-    elif isinstance(symbol, pybamm.SecondaryBroadcast):
-        json_dict = {
-            "type": "SecondaryBroadcast",
-            "children": [convert_symbol_to_json(symbol.child)],
-            "broadcast_domain": symbol.broadcast_domain,
-        }
-        return json_dict
-    elif isinstance(symbol, pybamm.FullBroadcast):
-        json_dict = {
-            "type": "FullBroadcast",
-            "children": [convert_symbol_to_json(symbol.child)],
-            "domains": symbol.domains,
-        }
-        return json_dict
-    elif isinstance(symbol, pybamm.Interpolant):
-        return {
-            "type": symbol.__class__.__name__,
-            "x": [x.tolist() for x in symbol.x],
-            "y": symbol.y.tolist(),
-            "children": [convert_symbol_to_json(c) for c in symbol.children],
-            "name": symbol.name,
-            "interpolator": symbol.interpolator,
-            "entries_string": symbol.entries_string,
-        }
-    elif isinstance(symbol, pybamm.Variable):
-        lb, ub = symbol.bounds[0], symbol.bounds[1]
-        if (
-            isinstance(lb, pybamm.Scalar)
-            and isinstance(ub, pybamm.Scalar)
-            and np.isinf(lb.value)
-            and np.isinf(ub.value)
-            and lb.value < 0
-            and ub.value > 0
-        ):
-            bounds_json = None
-        else:
-            bounds_json = [
-                convert_symbol_to_json(lb),
-                convert_symbol_to_json(ub),
-            ]
-        json_dict = {
-            "type": "Variable",
-            "name": symbol.name,
-            "domains": symbol.domains,
-            "bounds": bounds_json,
-        }
-        return json_dict
-    elif isinstance(symbol, pybamm.ConcatenationVariable):
-        json_dict = {
-            "type": "ConcatenationVariable",
-            "name": symbol.name,
-            "children": [convert_symbol_to_json(child) for child in symbol.children],
-        }
-        return json_dict
-    elif isinstance(symbol, pybamm.Time):
-        return {"type": "Time"}
-    elif isinstance(symbol, pybamm.FunctionParameter):
-        input_names = symbol.input_names
-        inputs = {
-            input_names[i]: convert_symbol_to_json(symbol.orphans[i])
-            for i in range(len(input_names))
-        }
-        diff_variable = symbol.diff_variable
-        if diff_variable is not None:
-            diff_variable = convert_symbol_to_json(diff_variable)
-        return {
-            "type": symbol.__class__.__name__,
-            "inputs": inputs,
-            "diff_variable": diff_variable,
-            "name": symbol.name,
-        }
-    elif isinstance(symbol, pybamm.Symbol):
-        # Generic fallback for other symbols with children
-        json_dict = {
-            "type": symbol.__class__.__name__,
-            "domains": symbol.domains,
-            "children": [convert_symbol_to_json(c) for c in symbol.children],
-        }
-        if hasattr(symbol, "name"):
-            json_dict["name"] = symbol.name
-        return json_dict
-    else:
-        raise ValueError(
-            f"Error processing '{symbol.name}'. Unknown symbol type: {type(symbol)}"
-        )
+    return encode(symbol)

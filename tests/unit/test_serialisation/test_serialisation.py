@@ -16,6 +16,7 @@ import pytest
 from numpy import testing
 
 import pybamm
+import pybamm.expression_tree.operations.serialise_kernel as sk
 from pybamm.expression_tree.operations.serialise import (
     SUPPORTED_SCHEMA_VERSION,
     ExpressionFunctionParameter,
@@ -34,7 +35,6 @@ def scalar_var_dict(mocker):
         "py/id": mocker.ANY,
         "py/object": "pybamm.expression_tree.scalar.Scalar",
         "name": "5.0",
-        "id": mocker.ANY,
         "value": 5.0,
         "children": [],
     }
@@ -178,7 +178,6 @@ class TestSerialise:
             "py/id": mocker.ANY,
             "py/object": "pybamm.expression_tree.binary_operators.Addition",
             "name": "+",
-            "id": mocker.ANY,
             "domains": {
                 "primary": [],
                 "secondary": [],
@@ -190,7 +189,6 @@ class TestSerialise:
                     "py/id": mocker.ANY,
                     "py/object": "pybamm.expression_tree.scalar.Scalar",
                     "name": "2.0",
-                    "id": mocker.ANY,
                     "value": 2.0,
                     "children": [],
                 },
@@ -198,7 +196,6 @@ class TestSerialise:
                     "py/id": mocker.ANY,
                     "py/object": "pybamm.expression_tree.scalar.Scalar",
                     "name": "4.0",
-                    "id": mocker.ANY,
                     "value": 4.0,
                     "children": [],
                 },
@@ -217,13 +214,17 @@ class TestSerialise:
             "py/object": "pybamm.expression_tree.unary_operators.ExplicitTimeIntegral",
             "py/id": mocker.ANY,
             "name": "explicit time integral",
-            "id": mocker.ANY,
+            "domains": {
+                "primary": [],
+                "secondary": [],
+                "tertiary": [],
+                "quaternary": [],
+            },
             "children": [
                 {
                     "py/object": "pybamm.expression_tree.scalar.Scalar",
                     "py/id": mocker.ANY,
                     "name": "5.0",
-                    "id": mocker.ANY,
                     "value": 5.0,
                     "children": [],
                 }
@@ -232,7 +233,6 @@ class TestSerialise:
                 "py/object": "pybamm.expression_tree.scalar.Scalar",
                 "py/id": mocker.ANY,
                 "name": "1.0",
-                "id": mocker.ANY,
                 "value": 1.0,
                 "children": [],
             },
@@ -257,7 +257,6 @@ class TestSerialise:
                 "py/object": "pybamm.expression_tree.scalar.Scalar",
                 "py/id": mocker.ANY,
                 "name": "1.0",
-                "id": mocker.ANY,
                 "value": 1.0,
                 "children": [],
             },
@@ -288,7 +287,6 @@ class TestSerialise:
                     "py/object": "pybamm.expression_tree.independent_variable.SpatialVariable",
                     "py/id": mocker.ANY,
                     "name": "x",
-                    "id": mocker.ANY,
                     "domains": {
                         "primary": ["negative electrode"],
                         "secondary": [],
@@ -296,6 +294,8 @@ class TestSerialise:
                         "quaternary": [],
                     },
                     "children": [],
+                    "coord_sys": None,
+                    "direction": None,
                 },
                 "x": {"min": 0.0, "max": 2.0},
             }
@@ -640,9 +640,10 @@ class TestSerialise:
             out = convert_symbol_to_json(val)
             assert out is val or out == val
 
+        # The kernel recurses into containers and returns a new, equal list.
         sample = [1, 2, 3, "foo", 4.5]
         out = convert_symbol_to_json(sample)
-        assert out is sample
+        assert out == sample
 
     def test_convert_symbol_from_json_with_primitives(self):
         assert convert_symbol_from_json(3.14) == 3.14
@@ -653,8 +654,9 @@ class TestSerialise:
         assert convert_symbol_from_json(None) is None
 
     def test_convert_symbol_from_json_unexpected_string(self):
-        with pytest.raises(ValueError, match=r"Unexpected raw string in JSON: foo"):
-            convert_symbol_from_json("foo")
+        # A bare string is a native JSON leaf; the kernel decoder returns it
+        # unchanged rather than raising (validation relaxed vs the previous serialiser).
+        assert convert_symbol_from_json("foo") == "foo"
 
     def test_numpy_array_conversion(self):
         arr = np.array([1, 2, 3])
@@ -742,13 +744,25 @@ class TestSerialise:
         assert var2.bounds[0].value == -float("inf")
         assert var2.bounds[1].value == float("inf")
 
-    def test_variable_default_bounds_serialise_as_null_no_infinity(self):
-        """Variable with default bounds serialises as bounds: null (valid JSON)."""
+    def test_variable_default_bounds_serialise_as_strict_json(self):
+        """Variable with default (+/-inf) bounds serialises to strict-valid JSON.
+
+        The kernel carries the inf bounds as Scalar children whose value is the
+        quoted string sentinel "Infinity"/"-Infinity", so the dumped JSON contains
+        no bare Infinity/NaN tokens and parses under a strict (RFC 8259) reader.
+        """
         var = pybamm.Variable("x", domain="electrode")
         json_dict = convert_symbol_to_json(var)
-        assert json_dict.get("bounds") is None
-        json_str = json.dumps(json_dict)
-        assert "Infinity" not in json_str and "inf" not in json_str.lower()
+        json_str = json.dumps(json_dict, default=Serialise._json_encoder)
+        # Strict parse rejecting bare Infinity/-Infinity/NaN tokens must succeed.
+        json.loads(
+            json_str,
+            parse_constant=lambda c: (_ for _ in ()).throw(ValueError(c)),
+        )
+        # And the Variable round-trips with default bounds preserved.
+        var2 = convert_symbol_from_json(json_dict)
+        assert var2.bounds[0].value == -float("inf")
+        assert var2.bounds[1].value == float("inf")
 
     def test_variable_default_bounds_round_trip(self):
         """Variable with default bounds round-trips; loaded has default bounds."""
@@ -761,11 +775,13 @@ class TestSerialise:
         assert var2.bounds[1].value == float("inf")
 
     def test_variable_explicit_bounds_round_trip(self):
-        """Variable with explicit finite bounds serialises and round-trips."""
+        """Variable with explicit finite bounds serialises and round-trips.
+
+        The kernel carries the bounds as Scalar children rather than a top-level
+        "bounds" field, so we assert the round-tripped values, not the wire shape.
+        """
         var = pybamm.Variable("x", domain="electrode", bounds=(0, 1))
         json_dict = convert_symbol_to_json(var)
-        assert json_dict["bounds"] is not None
-        assert len(json_dict["bounds"]) == 2
         var2 = convert_symbol_from_json(json_dict)
         assert var2.bounds[0].value == 0
         assert var2.bounds[1].value == 1
@@ -805,7 +821,8 @@ class TestSerialise:
         concat_var2 = convert_symbol_from_json(json_dict)
 
         assert isinstance(concat_var2, pybamm.ConcatenationVariable)
-        assert concat_var2.name == "a"
+        # The custom name is preserved on round-trip (previously dropped, #5548).
+        assert concat_var2.name == "conc_var"
         assert len(concat_var2.children) == 3
         domains = [child.domains["primary"] for child in concat_var2.children]
         assert domains == [
@@ -1094,11 +1111,10 @@ class TestSerialise:
         diff_var = pybamm.Variable("r")
         func_param = pybamm.FunctionParameter("my_func", {"x": x}, diff_var)
 
+        # The kernel carries diff_variable as a trailing child (flagged by
+        # has_diff_variable), not a top-level "diff_variable" field; assert the
+        # round-trip rather than the wire shape.
         json_dict = convert_symbol_to_json(func_param)
-        assert "diff_variable" in json_dict
-        assert json_dict["diff_variable"]["type"] == "Variable"
-        assert json_dict["diff_variable"]["name"] == "r"
-
         expr2 = convert_symbol_from_json(json_dict)
         assert isinstance(expr2, pybamm.FunctionParameter)
         assert expr2.diff_variable.name == "r"
@@ -1109,38 +1125,21 @@ class TestSerialise:
         x = pybamm.SpatialVariable("x", domain="negative electrode")
         ind_int = pybamm.IndefiniteIntegral(x, x)
 
+        # Canonical kernel form: dotted "$type" tag and a children list (the
+        # integration_variable now travels via children, not a top-level field).
         json_dict = convert_symbol_to_json(ind_int)
-        assert json_dict["type"] == "IndefiniteIntegral"
-
-        assert (
-            isinstance(json_dict["children"], list) and len(json_dict["children"]) == 1
-        )
-        child_json = json_dict["children"][0]
-        assert child_json["type"] == "SpatialVariable"
-        assert child_json["name"] == "x"
-
-        int_var_json = json_dict["integration_variable"]
-        assert int_var_json["type"] == "SpatialVariable"
-        assert int_var_json["name"] == "x"
+        assert json_dict[sk.TAG].endswith("IndefiniteIntegral")
+        assert isinstance(json_dict["children"], list)
 
         expr2 = convert_symbol_from_json(json_dict)
         assert isinstance(expr2, pybamm.IndefiniteIntegral)
+        assert expr2.id == ind_int.id
         assert isinstance(expr2.child, pybamm.SpatialVariable)
         assert expr2.child.name == "x"
         assert isinstance(expr2.integration_variable, list)
         assert len(expr2.integration_variable) == 1
         assert isinstance(expr2.integration_variable[0], pybamm.SpatialVariable)
         assert expr2.integration_variable[0].name == "x"
-
-        bad_json_dict = json_dict.copy()
-        bad_json_dict["integration_variable"] = {
-            "type": "Symbol",  # Something not a SpatialVariable
-            "name": "not spatial",
-            "domains": {},
-        }
-
-        with pytest.raises(TypeError, match=r"Expected SpatialVariable"):
-            convert_symbol_from_json(bad_json_dict)
 
     def test_invalid_filename(self):
         model = pybamm.lithium_ion.DFN()
@@ -1166,24 +1165,21 @@ class TestSerialise:
                 self.name = "not_a_symbol"
 
         dummy = NotSymbol()
-        with pytest.raises(ValueError) as e:
+        # The kernel is safe-or-loud: a value with no codec raises SerialisationError.
+        with pytest.raises(sk.SerialisationError, match=r"Cannot serialise"):
             convert_symbol_to_json(dummy)
 
-        assert "Error processing 'not_a_symbol'. Unknown symbol type:" in str(e.value)
-
     def test_deserialising_unhandled_type(self):
+        # A legacy "type" naming an unknown class normalises to a dotted tag the
+        # kernel cannot resolve, and it raises (safe-or-loud on decode).
         unhandled_json = {"type": "NotARealSymbol", "foo": "bar"}
-        with pytest.raises(
-            ValueError,
-            match=r"Unknown symbol type: NotARealSymbol",
-        ):
+        with pytest.raises(sk.SerialisationError, match=r"Cannot resolve"):
             convert_symbol_from_json(unhandled_json)
 
+        # A dict with no recognised tag is generic JSON; the kernel decoder
+        # returns it unchanged (validation relaxed vs the previous serialiser).
         unhandled_json2 = {"a": 1, "b": 2}
-        with pytest.raises(
-            ValueError, match=r"Missing 'type' key in JSON data: {'a': 1, 'b': 2}"
-        ):
-            convert_symbol_from_json(unhandled_json2)
+        assert convert_symbol_from_json(unhandled_json2) == {"a": 1, "b": 2}
 
     def test_file_write_raises_ioerror(self):
         # testing behaviour when file system is read-only to raise exception
@@ -2844,7 +2840,7 @@ class TestRegularisationSerialisation:
 
         # Convert to JSON and back
         json_dict = convert_symbol_to_json(rp)
-        assert json_dict["type"] == "RegPower"
+        assert json_dict[sk.TAG].endswith("RegPower")
         # Scale is serialized as the third child
         assert len(json_dict["children"]) == 3
 
@@ -2860,7 +2856,7 @@ class TestRegularisationSerialisation:
         rp = pybamm.RegPower(x, 0.5)
 
         json_dict = convert_symbol_to_json(rp)
-        assert json_dict["type"] == "RegPower"
+        assert json_dict[sk.TAG].endswith("RegPower")
 
         reconstructed = convert_symbol_from_json(json_dict)
         assert isinstance(reconstructed, pybamm.RegPower)
@@ -3149,14 +3145,17 @@ class TestSolverSerialization:
             assert s2.value == val
 
     def test_serialise_scalar_inf_json_safe(self):
-        """Scalar(inf) produces valid JSON (no bare Infinity token)."""
+        """Scalar(inf)/Scalar(nan) produces strict-valid JSON (no bare tokens)."""
         for val in [np.inf, -np.inf, np.nan]:
             s = pybamm.Scalar(val)
             json_dict = convert_symbol_to_json(s)
             json_str = json.dumps(json_dict, default=Serialise._json_encoder)
-            # Verify it's valid JSON by round-tripping through json.loads
-            reloaded = json.loads(json_str)
-            assert reloaded["type"] == "Scalar"
+            # Strict parse rejecting bare Infinity/-Infinity/NaN tokens must succeed.
+            reloaded = json.loads(
+                json_str,
+                parse_constant=lambda c: (_ for _ in ()).throw(ValueError(c)),
+            )
+            assert reloaded[sk.TAG].endswith("Scalar")
 
     def test_serialise_scalar_nan_round_trip(self):
         """Scalar(nan) survives round-trip."""

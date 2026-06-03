@@ -141,7 +141,6 @@ class InputParameter(pybamm.Symbol):
 
         json_dict = {
             "name": self.name,
-            "id": self.id,
             "domain": self.domain,
             "expected_size": self._expected_size,
         }

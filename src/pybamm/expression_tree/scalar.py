@@ -42,7 +42,8 @@ class Scalar(pybamm.Symbol):
 
     @classmethod
     def _from_json(cls, snippet: dict):
-        return cls(snippet["value"], name=snippet["name"])
+        # Legacy compact JSON omitted "name"; fall back to the __init__ default.
+        return cls(snippet["value"], name=snippet.get("name"))
 
     def __str__(self):
         return str(self.value)
@@ -114,7 +115,18 @@ class Scalar(pybamm.Symbol):
         Method to serialise a Symbol object into JSON.
         """
 
-        json_dict = {"name": self.name, "id": self.id, "value": self.value}
+        # The kernel does not recurse into hook fields, so the float-sentinel leaf
+        # codec never sees self.value; carry inf/nan as standard-JSON tokens here.
+        value = self.value
+        if isinstance(value, np.floating):
+            if np.isposinf(value):
+                value = "Infinity"
+            elif np.isneginf(value):
+                value = "-Infinity"
+            elif np.isnan(value):
+                value = "NaN"
+
+        json_dict = {"name": self.name, "value": value}
 
         return json_dict
 
