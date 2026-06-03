@@ -11,14 +11,11 @@ from __future__ import annotations
 
 import os
 
-from hypothesis import HealthCheck, settings
+from hypothesis import settings
 
-#: Shared Hypothesis settings for the serialisation property tests. The
-#: round-trips can be slow and generation time varies, so deadlines and the
-#: ``too_slow`` health check are disabled. ``max_examples`` is overridable via
-#: the ``PYBAMM_HYPOTHESIS_EXAMPLES`` environment variable.
+#: Shared Hypothesis settings for the serialisation property tests
+# Increase `max_examples` for a larger amount of randomised draws
 serialisation_settings = settings(
-    max_examples=int(os.environ.get("PYBAMM_HYPOTHESIS_EXAMPLES", "100")),
+    max_examples=500,
     deadline=None,
-    suppress_health_check=[HealthCheck.too_slow],
 )
