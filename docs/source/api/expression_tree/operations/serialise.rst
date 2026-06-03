@@ -10,6 +10,82 @@ drops data. There is one canonical wire format (each node carries a ``$type``
 tag holding its dotted ``module.ClassName`` path), and a read-only compatibility
 layer keeps files written by older PyBaMM versions loading.
 
+Wire format
+-----------
+
+``encode`` produces plain JSON. Native values (``None``, booleans, integers,
+strings, finite floats) pass through unchanged, lists and dicts stay JSON
+arrays/objects, and every other object becomes a tagged node: its class-specific
+fields plus a ``"$type"`` key holding the dotted ``module.ClassName`` path. Child
+symbols (and other serialisable sub-objects) are recursively encoded under
+``"children"``. For example, ``pybamm.Index(pybamm.StateVector(slice(0, 2)), 0)``
+encodes as:
+
+.. code-block:: json
+
+    {
+      "name": "Index[0]",
+      "index": {"start": 0, "stop": 1, "step": null},
+      "check_size": false,
+      "children": [
+        {
+          "name": "y[0:2]",
+          "domains": {"primary": [], "secondary": [], "tertiary": [], "quaternary": []},
+          "y_slice": [{"start": 0, "stop": 2, "step": null}],
+          "evaluation_array": [true, true],
+          "$type": "pybamm.expression_tree.state_vector.StateVector"
+        }
+      ],
+      "$type": "pybamm.expression_tree.unary_operators.Index"
+    }
+
+On decode the ``"$type"`` path is resolved with ``importlib``, so classes defined
+outside the ``pybamm`` package round-trip too. Apart from ``"$type"`` and
+``"children"``, the keys of a node belong to the class (its constructor
+parameters, or whatever its ``to_json`` hook emits).
+
+A few non-class values the kernel encodes itself use reserved ``"$type"`` tags:
+
+.. list-table::
+   :header-rows: 1
+
+   * - Value
+     - Encoding
+   * - ``nan``, ``inf``, ``-inf``
+     - ``{"$type": "builtins.float", "value": "NaN"}`` (or ``"Infinity"`` / ``"-Infinity"``)
+   * - ``numpy.ndarray``
+     - ``{"$type": "numpy.ndarray", "data": [...], "dtype": "float64"}``
+   * - ``slice``
+     - ``{"$type": "builtins.slice", "start": 0, "stop": 1, "step": null}``
+   * - ``tuple``
+     - ``{"$type": "builtins.tuple", "items": [...]}`` (so it does not decode back as a list)
+   * - a class itself (not an instance)
+     - ``{"$type": "type", "class": "module.ClassName"}``
+
+Legacy formats (read-only)
+--------------------------
+
+Files written by older PyBaMM versions used three different shapes. All three
+still load: ``decode`` passes every dict through ``normalise_legacy``, which maps
+them onto the canonical tag. New files are always written in the canonical
+format; the legacy shapes are never written.
+
+.. list-table::
+   :header-rows: 1
+
+   * - Legacy shape
+     - Previously written by
+     - Normalisation
+   * - ``{"py/object": "dotted.path", "py/id": 1, ...}``
+     - discretised-model files
+     - ``py/object`` becomes ``$type``; ``py/id`` is dropped
+   * - ``{"type": "ClassName", ...}``
+     - symbol, parameter-values and experiment files
+     - bare class names resolve as ``pybamm.ClassName``
+   * - ``{"class": "ClassName", "module": "some.module"}``
+     - submesh and spatial-method type references
+     - becomes a ``{"$type": "type"}`` class reference
+
 Making a class serialisable
 ---------------------------
 

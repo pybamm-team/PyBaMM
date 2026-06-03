@@ -28,9 +28,8 @@ _SOLVER_EXEMPT: set[type] = {
 
 # A submesh is round-trippable only if it (or an ancestor below the bare SubMesh
 # base) defines its OWN _from_json. Most SubMesh subclasses inherit to_json but
-# define no _from_json -- they encode but cannot decode, a pre-existing limitation
-# PR2 does not expand. They are NOT silently "covered"; each must be listed here
-# with a reason. POPULATE from the Step-2 failure output, one justified line each.
+# define no _from_json -- they encode but cannot decode, a pre-existing limitation.
+# They are NOT silently "covered"; each must be listed here with a reason.
 _SUBMESH_EXEMPT: set[type] = {
     pybamm.Chebyshev1DSubMesh,  # encode-only: inherits to_json, no _from_json
     pybamm.Exponential1DSubMesh,  # encode-only: inherits to_json, no _from_json

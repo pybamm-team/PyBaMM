@@ -42,8 +42,9 @@ def test_legacy_discretised_model_loads():
     """The pre-refactor py/object discretised model must still load through the
     kernel-based load_model + legacy relocation.
 
-    The fixture is ~20 MB and git-ignored; regenerate from pre-PR2 code (the legacy
-    writer no longer exists). Skipped when the local fixture is absent (e.g. CI).
+    The fixture is ~20 MB and git-ignored; regenerate from a pre-refactor PyBaMM
+    checkout (the legacy writer no longer exists). Skipped when the local fixture
+    is absent (e.g. CI).
     """
     if not (_FIX / "discretised_model.json").exists():
         pytest.skip("discretised_model.json fixture absent (git-ignored, local-only)")

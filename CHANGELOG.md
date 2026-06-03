@@ -3,7 +3,7 @@
 ## Features
 
 - Electrode electronic conductivity can now be specified as a function of stoichiometry (in addition to temperature) for all lithium-ion and sodium-ion models. ([#5556](https://github.com/pybamm-team/PyBaMM/pull/5556))
-- Unified PyBaMM serialisation onto a single safe-or-loud encode/decode kernel. Serialisation now either round-trips or raises `SerialisationError`, never silently dropping a field, across the expression tree, discretised models, meshes, solvers, experiments and parameter values. There is one canonical on-disk format, and files saved by older PyBaMM versions continue to load via backward-compatible readers. ([#5548](https://github.com/pybamm-team/PyBaMM/issues/5548))
+- Unified PyBaMM serialisation onto a single safe-or-loud encode/decode kernel. Serialisation now either round-trips or raises `SerialisationError`, never silently dropping a field, across the expression tree, discretised models, meshes, solvers, experiments and parameter values. There is one canonical on-disk format, and files saved by older PyBaMM versions continue to load via backward-compatible readers. ([#5560](https://github.com/pybamm-team/PyBaMM/pull/5560)) and ([#5561](https://github.com/pybamm-team/PyBaMM/pull/5561))
 
 ## Breaking changes
 

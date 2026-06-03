@@ -1964,8 +1964,8 @@ class Serialise:
             raise ValueError("Experiment config must have 'steps' or 'cycles'.")
 
     # Solver __init__ params that are genuinely re-derived on construction or are
-    # non-serialisable transients. Empty today (Task 4.1 audit found no shipped solver
-    # omits anything); anything not listed that fails to serialise raises (safe-or-loud).
+    # non-serialisable transients. Empty today (no shipped solver omits anything);
+    # anything not listed that fails to serialise raises (safe-or-loud).
     _SOLVER_DERIVED_PARAMS: frozenset = frozenset()
 
     @staticmethod
