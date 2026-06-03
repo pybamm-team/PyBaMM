@@ -250,6 +250,29 @@ def test_hook_guard_allows_declared_derived_param():
     sk.encode(_Cached(pybamm.Scalar(1.0)))  # no raise
 
 
+def test_hook_guard_skips_missing_defaulted_param():
+    # Mirrors SubMesh1D.tabs: a defaulted __init__ param the instance never stores
+    # when it is not supplied. Nothing to serialise -> the constructor recreates the
+    # default on decode -> the guard must NOT raise (parity with DefaultCodec).
+    class _OptionalCfg(pybamm.Symbol):
+        def __init__(self, child, opt=None):
+            super().__init__("optcfg", children=[child])
+            if opt is not None:
+                self.opt = opt  # only stored when supplied
+
+        def to_json(self):
+            node = {"name": self.name, "domains": self.domains}
+            if hasattr(self, "opt"):
+                node["opt"] = self.opt
+            return node
+
+        @classmethod
+        def _from_json(cls, snippet):
+            return cls(snippet["children"][0], snippet.get("opt"))
+
+    sk.encode(_OptionalCfg(pybamm.Scalar(1.0)))  # opt unset+defaulted -> no raise
+
+
 # Module-level (not function-local) so decode can resolve it by import path during
 # the round-trip below; a `<locals>` class is not importable.
 class _OwnChildren(pybamm.Symbol):

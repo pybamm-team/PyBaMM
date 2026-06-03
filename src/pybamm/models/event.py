@@ -57,19 +57,13 @@ class Event:
 
     @classmethod
     def _from_json(cls: type[E], snippet: dict) -> E:
-        """
-        Reconstructs an Event instance during deserialisation of a JSON file.
-
-        Parameters
-        ----------
-        snippet: dict
-            Contains the information needed to reconstruct a specific instance.
-            Should contain "name", "expression" and "event_type".
-        """
-
+        """Reconstruct an Event. Canonical files carry ``expression`` in
+        ``children[0]``; legacy discretised files carried it as a sibling field."""
+        children = snippet.get("children")
+        expression = children[0] if children else snippet["expression"]
         return cls(
             snippet["name"],
-            snippet["expression"],
+            expression,
             event_type=EventType(snippet["event_type"][1]),
         )
 
@@ -101,19 +95,14 @@ class Event:
         return self._event_type
 
     def to_json(self):
+        """Serialise an Event into the kernel wire shape.
+
+        ``expression`` is a Symbol, so it travels through ``children`` (the kernel
+        only recurses ``children``); ``event_type`` is emitted as ``[name, value]``
+        for readability + reconstruction.
         """
-        Method to serialise an Event object into JSON.
-
-        The expression is written out seperately,
-        See :meth:`pybamm.Serialise._SymbolEncoder.default()`
-        """
-
-        # event_type contains string name, for JSON readability,
-        # and value for deserialisation.
-
-        json_dict = {
+        return {
             "name": self._name,
             "event_type": [str(self._event_type), self._event_type.value],
+            "children": [self._expression],
         }
-
-        return json_dict

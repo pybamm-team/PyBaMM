@@ -112,24 +112,28 @@ def encode(obj):
         return _encode_ndarray(obj)
     if isinstance(obj, slice):
         return _encode_slice(obj)
+    if isinstance(obj, type):
+        return _encode_class_ref(obj)
+
+    # Codec dispatch precedes containers: registered types (e.g. Mesh) may subclass
+    # dict/list and must not be walked as a plain container.
+    codec = _lookup_codec(type(obj))
+    if codec is not None:
+        node = codec.to_json(obj, encode)
+        node[TAG] = _class_path(type(obj))
+        return node
+
     if isinstance(obj, tuple):
         return {TAG: "builtins.tuple", "items": [encode(x) for x in obj]}
     if isinstance(obj, list):
         return [encode(x) for x in obj]
     if isinstance(obj, dict):
         return {k: encode(v) for k, v in obj.items()}
-    if isinstance(obj, type):
-        return _encode_class_ref(obj)
 
-    codec = _lookup_codec(type(obj))
-    if codec is None:
-        raise SerialisationError(
-            f"Cannot serialise {type(obj).__module__}.{type(obj).__qualname__}: "
-            f"no codec registered. Register the class or add a to_json/_from_json hook."
-        )
-    node = codec.to_json(obj, encode)
-    node[TAG] = _class_path(type(obj))
-    return node
+    raise SerialisationError(
+        f"Cannot serialise {type(obj).__module__}.{type(obj).__qualname__}: "
+        f"no codec registered. Register the class or add a to_json/_from_json hook."
+    )
 
 
 def decode(node):
@@ -258,17 +262,16 @@ _default_codec = DefaultCodec()
 
 
 @functools.cache
-def _guarded_params(cls: type) -> tuple[str, ...]:
-    """Non-child, non-domain __init__ params the HookCodec guard checks.
-
-    Cached per class -- encode walks this for every hooked node.
+def _guarded_params(cls: type) -> tuple[tuple[str, bool], ...]:
+    """(name, has_default) for each non-child, non-domain __init__ param the
+    HookCodec guard checks. Cached per class -- encode walks this per hooked node.
     """
     try:
         params = inspect.signature(cls.__init__).parameters
     except (TypeError, ValueError):
         return ()
     return tuple(
-        name
+        (name, p.default is not inspect.Parameter.empty)
         for name, p in params.items()
         if name not in _SKIP_PARAMS
         and name not in _CHILD_PARAMS
@@ -301,11 +304,16 @@ def _assert_hook_covers_params(obj, node: dict, raw_children: list) -> None:
     cls = type(obj)
     derived = getattr(cls, "_serialise_derived_params", frozenset())
     child_ids = {id(c) for c in raw_children}
-    for name in _guarded_params(cls):
+    for name, has_default in _guarded_params(cls):
         if name in node or name in derived:
             continue
         value = _read_attr(obj, name)
-        if value is not _MISSING and (id(value) in child_ids or _is_structural(value)):
+        if value is _MISSING:
+            # Defaulted and never stored: the constructor recreates it on decode
+            # (parity with DefaultCodec). A missing required param falls through.
+            if has_default:
+                continue
+        elif id(value) in child_ids or _is_structural(value):
             continue
         raise SerialisationError(
             f"{cls.__module__}.{cls.__qualname__}.to_json drops the __init__ "
@@ -357,8 +365,11 @@ class HookCodec:
 _hook_codec = HookCodec()
 
 
-# Bases whose concrete subclasses are serialisable.
-_KNOWN_BASES = (pybamm.Symbol,)
+# Bases whose concrete subclasses are serialisable through the kernel. Symbol is
+# the introspection-default home; Event/Mesh define hooks on the base; SubMesh has
+# none at the base -- its concrete subclasses do, and the no-hook guard in
+# _lookup_codec raises loudly if a subclass missing a hook is ever encoded.
+_KNOWN_BASES = (pybamm.Symbol, pybamm.Event, pybamm.Mesh, pybamm.SubMesh)
 
 
 def _overrides_hooks(cls: type) -> bool:
@@ -366,10 +377,16 @@ def _overrides_hooks(cls: type) -> bool:
     # plain function comparable by identity; _from_json is a classmethod, so
     # `cls._from_json` is bound and we compare the underlying `.__func__`. Do not
     # "simplify" either branch to match the other.
-    return (
-        cls.to_json is not pybamm.Symbol.to_json
-        or cls._from_json.__func__ is not pybamm.Symbol._from_json.__func__
-    )
+    # Non-Symbol bases may have no hooks at all; treat absence as "not overriding".
+    if not hasattr(cls, "to_json") or not hasattr(cls, "_from_json"):
+        return False
+    if issubclass(cls, pybamm.Symbol):
+        return (
+            cls.to_json is not pybamm.Symbol.to_json
+            or cls._from_json.__func__ is not pybamm.Symbol._from_json.__func__
+        )
+    # Non-Symbol: any hook present means overriding (no Symbol baseline to compare).
+    return True
 
 
 def _lookup_codec(cls: type):
@@ -377,4 +394,15 @@ def _lookup_codec(cls: type):
         return None
     if _overrides_hooks(cls):
         return _hook_codec
+    # DefaultCodec requires a Symbol-shaped __init__ (children/domains); a non-Symbol
+    # known base missing a hook cannot round-trip, surfaced loudly rather than
+    # mis-introspected.
+    if not issubclass(cls, pybamm.Symbol):
+        missing = " and ".join(
+            h for h in ("to_json", "_from_json") if not hasattr(cls, h)
+        )
+        raise SerialisationError(
+            f"{cls.__module__}.{cls.__qualname__} is registered as serialisable "
+            f"but is missing {missing}, so it cannot round-trip."
+        )
     return _default_codec
