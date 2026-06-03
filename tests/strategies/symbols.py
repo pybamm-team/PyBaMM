@@ -775,15 +775,16 @@ def _heaviside_branch(
 def _tensor_field_branch(
     _child_strategy: st.SearchStrategy[pybamm.Symbol],
 ) -> st.SearchStrategy[pybamm.TensorField]:
-    """TensorField from a flat list of domain-free Symbols.
-
-    Rank-1 ONLY: the components are a flat list of Symbols, never a nested
-    list-of-lists. Rank-2 TensorField serialisation is intentionally unsupported.
-    """
-    return st.builds(
-        pybamm.TensorField,
-        st.lists(_domain_free_leaves(), min_size=1, max_size=3),
+    """TensorField of rank 1 (flat list) or rank 2 (list of equal-length rows)."""
+    rank_1 = st.lists(_domain_free_leaves(), min_size=1, max_size=3)
+    rank_2 = st.integers(min_value=1, max_value=3).flatmap(
+        lambda n_cols: st.lists(
+            st.lists(_domain_free_leaves(), min_size=n_cols, max_size=n_cols),
+            min_size=1,
+            max_size=3,
+        )
     )
+    return st.builds(pybamm.TensorField, st.one_of(rank_1, rank_2))
 
 
 def _state_vector_branch(

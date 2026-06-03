@@ -403,6 +403,26 @@ class TestBaseModelToConfig:
         assert type(loaded) is type(model)
         assert "My variable" in loaded.variables
 
+    def test_from_config_invalid_custom_variable_raises(self):
+        """Malformed custom_variables JSON is rejected, not loaded as a raw dict."""
+        config = {
+            "type": "SPM",
+            "module": "lithium_ion",
+            "custom_variables": {"bad": {"a": 1}},
+        }
+        with pytest.raises(ValueError, match=r"expected a pybamm\.Symbol"):
+            pybamm.BaseModel.from_config(config)
+
+    def test_from_config_invalid_event_expression_raises(self):
+        """Malformed event expression JSON is rejected, not loaded as a raw string."""
+        config = {
+            "type": "SPM",
+            "module": "lithium_ion",
+            "events": [{"name": "e", "expression": "not a symbol", "event_type": 0}],
+        }
+        with pytest.raises(ValueError, match=r"expected a pybamm\.Symbol"):
+            pybamm.BaseModel.from_config(config)
+
     def test_to_config_builtin_with_cleared_events_round_trip(self):
         """Clearing events survives to_config / from_config round-trip."""
         model = pybamm.lithium_ion.SPM()

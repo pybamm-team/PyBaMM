@@ -1473,16 +1473,6 @@ class Serialise:
         if opts is not None:
             model.options = dict(opts)
 
-        def _require_symbol(raw):
-            # The kernel decoder returns unrecognised JSON (raw dicts/strings)
-            # unchanged rather than raising. Where the model expects a Symbol,
-            # reject the leftover so malformed JSON fails here with a clear error
-            # instead of much later as a confusing downstream failure.
-            symbol = convert_symbol_from_json(raw)
-            if not isinstance(symbol, pybamm.Symbol):
-                raise ValueError(f"expected a pybamm.Symbol, got {raw!r}")
-            return symbol
-
         all_variable_keys = (
             [lhs_json for lhs_json, _ in model_data["rhs"]]
             + [lhs_json for lhs_json, _ in model_data["initial_conditions"]]
@@ -2281,6 +2271,20 @@ def convert_symbol_from_json(json_data):
     from pybamm.expression_tree.operations.serialise_kernel import decode
 
     return decode(json_data)
+
+
+def _require_symbol(raw):
+    """Decode *raw* and reject anything that is not a pybamm.Symbol.
+
+    The kernel decoder returns unrecognised JSON (raw dicts/strings) unchanged
+    rather than raising. Where the caller expects a Symbol, reject the leftover
+    so malformed JSON fails here with a clear error instead of much later as a
+    confusing downstream failure.
+    """
+    symbol = convert_symbol_from_json(raw)
+    if not isinstance(symbol, pybamm.Symbol):
+        raise ValueError(f"expected a pybamm.Symbol, got {raw!r}")
+    return symbol
 
 
 def convert_symbol_to_json(symbol):

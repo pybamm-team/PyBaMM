@@ -481,6 +481,19 @@ def test_tensor_field_round_trip():
     assert _rt(tree).id == tree.id
 
 
+def test_tensor_field_rank_2_round_trip():
+    tree = pybamm.TensorField(
+        [
+            [pybamm.Scalar(1.0), pybamm.Scalar(2.0)],
+            [pybamm.Scalar(3.0), pybamm.Scalar(4.0)],
+        ]
+    )
+    restored = _rt(tree)
+    assert restored.rank == 2
+    assert restored.shape == (2, 2)
+    assert restored.id == tree.id
+
+
 def test_vector_field_round_trip():
     leaf = pybamm.Variable("u", domains={"primary": ["negative electrode"]})
     tree = pybamm.VectorField(leaf, leaf)

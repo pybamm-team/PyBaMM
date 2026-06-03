@@ -278,14 +278,14 @@ def _guarded_params(cls: type) -> tuple[str, ...]:
 
 
 def _is_structural(value) -> bool:
-    """True if value is (or contains) a Symbol, so it travels through children
-    and the hook need not emit it as a scalar field."""
+    """True if value is (or contains, at any nesting depth) a Symbol, so it
+    travels through children and the hook need not emit it as a scalar field."""
     if isinstance(value, pybamm.Symbol):
         return True
     if isinstance(value, (list, tuple)):
-        return any(isinstance(v, pybamm.Symbol) for v in value)
+        return any(_is_structural(v) for v in value)
     if isinstance(value, dict):
-        return any(isinstance(v, pybamm.Symbol) for v in value.values())
+        return any(_is_structural(v) for v in value.values())
     return False
 
 
