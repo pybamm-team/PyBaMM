@@ -21,6 +21,28 @@ from pybamm.expression_tree.tracing import tracing
 SUPPORTED_SCHEMA_VERSION = "1.1"
 
 
+def _experiment_step_factories() -> dict:
+    """Canonical map of serialised step ``"type"`` string to the
+    :mod:`pybamm.step` factory that reconstructs it.
+
+    Single source of truth shared between :meth:`Serialise.deserialise_experiment`
+    and the Hypothesis step strategy in ``tests/strategies/serialise_values.py``,
+    so the fuzzed step types cannot drift from the set the serialiser supports.
+
+    Defined as a function (not a module-level constant) because the
+    ``pybamm.step`` factories are not yet bound when this module is first
+    imported during ``pybamm`` initialisation.
+    """
+    return {
+        "current": pybamm.step.current,
+        "voltage": pybamm.step.voltage,
+        "power": pybamm.step.power,
+        "c-rate": pybamm.step.c_rate,
+        "rest": pybamm.step.rest,
+        "resistance": pybamm.step.resistance,
+    }
+
+
 class ExpressionFunctionParameter(pybamm.UnaryOperator):
     def __init__(self, name, child, func_name, func_args):
         super().__init__(name, child)
@@ -1958,14 +1980,7 @@ class Serialise:
         -------
         :class:`pybamm.Experiment`
         """
-        step_func_map = {
-            "current": pybamm.step.current,
-            "voltage": pybamm.step.voltage,
-            "power": pybamm.step.power,
-            "c-rate": pybamm.step.c_rate,
-            "rest": pybamm.step.rest,
-            "resistance": pybamm.step.resistance,
-        }
+        step_func_map = _experiment_step_factories()
         term_class_map = {
             "voltage": pybamm.step.VoltageTermination,
             "current": pybamm.step.CurrentTermination,
