@@ -213,13 +213,20 @@ class TestBaseModelToConfig:
             model.to_config(filename="config.txt")
 
     def test_model_with_default_bounds_variables_produces_valid_json(self):
-        """Variables (default bounds) serialise to valid JSON (no Infinity)."""
+        """Variables (default bounds) serialise to strictly valid JSON.
+
+        Non-finite floats must be carried as string sentinels, never as the
+        bare ``Infinity``/``NaN`` tokens that strict JSON parsers reject.
+        """
         model = _minimal_custom_model()
         d = model.to_json()
-        json_str = json.dumps(d)
-        assert "Infinity" not in json_str
+        # allow_nan=False raises ValueError on any bare inf/nan float
+        json_str = json.dumps(d, allow_nan=False)
         loaded = pybamm.BaseModel.from_json(json.loads(json_str))
         assert loaded.name == model.name
+        lower, upper = loaded.variables["a"].bounds
+        assert np.isneginf(lower.value)
+        assert np.isposinf(upper.value)
 
     def test_custom_subclass_not_detected_as_builtin(self):
         """A subclass with a different class name is not a built-in."""

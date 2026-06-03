@@ -778,7 +778,7 @@ def _tensor_field_branch(
     """TensorField from a flat list of domain-free Symbols.
 
     Rank-1 ONLY: the components are a flat list of Symbols, never a nested
-    list-of-lists. Rank-2 TensorField is intentionally unsupported in PR1.
+    list-of-lists. Rank-2 TensorField serialisation is intentionally unsupported.
     """
     return st.builds(
         pybamm.TensorField,

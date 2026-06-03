@@ -318,7 +318,7 @@ def test_normalise_legacy_passthrough_canonical():
 def test_trap_default_codec_unhandleable_required_arg_raises_loudly():
     """A Symbol subclass with a renamed attribute and no hook (-> DefaultCodec)
     must RAISE on encode, never silently drop. Red here = DefaultCodec softened
-    back toward silent loss. See spec safe-or-loud invariant.
+    back toward silent loss, breaking the safe-or-loud invariant.
     """
 
     class _Trap(pybamm.Symbol):
