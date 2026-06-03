@@ -755,7 +755,7 @@ def _full_broadcast_to_edges_branch(
     """FullBroadcastToEdges — mirror FullBroadcast with a non-empty target domain."""
     return st.builds(
         pybamm.FullBroadcastToEdges,
-        child_strategy,
+        child_strategy.filter(lambda c: c.domain != ["current collector"]),
         _NONEMPTY_DOMAINS,
     )
 
