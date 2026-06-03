@@ -1642,9 +1642,9 @@ class Serialise:
                 # rearrange the dictionary to make pybamm objects the dictionary keys
                 if symbol_keys:
                     for k, v in symbol_keys.items():
-                        new_dict[v] = new_dict[k.lstrip("symbol_")]
+                        new_dict[v] = new_dict[k.removeprefix("symbol_")]
                         del new_dict[k]
-                        del new_dict[k.lstrip("symbol_")]
+                        del new_dict[k.removeprefix("symbol_")]
 
                 return new_dict
             return obj

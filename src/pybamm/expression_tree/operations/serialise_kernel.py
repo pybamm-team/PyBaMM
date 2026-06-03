@@ -368,7 +368,7 @@ _hook_codec = HookCodec()
 # Bases whose concrete subclasses are serialisable through the kernel. Symbol is
 # the introspection-default home; Event/Mesh define hooks on the base; SubMesh has
 # none at the base -- its concrete subclasses do, and the no-hook guard in
-# _lookup_codec raises loudly if a hookless subclass is ever encoded.
+# _lookup_codec raises loudly if a subclass missing a hook is ever encoded.
 _KNOWN_BASES = (pybamm.Symbol, pybamm.Event, pybamm.Mesh, pybamm.SubMesh)
 
 
@@ -395,10 +395,14 @@ def _lookup_codec(cls: type):
     if _overrides_hooks(cls):
         return _hook_codec
     # DefaultCodec requires a Symbol-shaped __init__ (children/domains); a non-Symbol
-    # known base with no hook is a bug, surfaced loudly rather than mis-introspected.
+    # known base missing a hook cannot round-trip, surfaced loudly rather than
+    # mis-introspected.
     if not issubclass(cls, pybamm.Symbol):
+        missing = " and ".join(
+            h for h in ("to_json", "_from_json") if not hasattr(cls, h)
+        )
         raise SerialisationError(
-            f"{cls.__module__}.{cls.__qualname__} is a registered serialisable "
-            f"base but defines no to_json/_from_json hook."
+            f"{cls.__module__}.{cls.__qualname__} is registered as serialisable "
+            f"but is missing {missing}, so it cannot round-trip."
         )
     return _default_codec

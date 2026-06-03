@@ -57,8 +57,15 @@ def test_registered_non_symbol_base_without_hook_raises(monkeypatch):
         pass
 
     monkeypatch.setattr(sk, "_KNOWN_BASES", (*sk._KNOWN_BASES, _NoHookBase))
-    with pytest.raises(sk.SerialisationError, match="no to_json"):
+    with pytest.raises(sk.SerialisationError, match="missing to_json and _from_json"):
         sk._lookup_codec(_NoHookBase)
+
+
+def test_submesh_without_from_json_raises_naming_only_missing_hook():
+    # Exponential1DSubMesh inherits to_json from SubMesh1D but has no _from_json;
+    # the message must name only the hook that is actually missing.
+    with pytest.raises(sk.SerialisationError, match="missing _from_json"):
+        sk._lookup_codec(pybamm.Exponential1DSubMesh)
 
 
 def test_event_round_trip_through_kernel():

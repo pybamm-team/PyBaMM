@@ -28,21 +28,22 @@ _SOLVER_EXEMPT: set[type] = {
 
 # A submesh is round-trippable only if it (or an ancestor below the bare SubMesh
 # base) defines its OWN _from_json. Most SubMesh subclasses inherit to_json but
-# define no _from_json -- they encode but cannot decode, a pre-existing limitation.
-# They are NOT silently "covered"; each must be listed here with a reason.
+# define no _from_json -- the kernel refuses to encode them, since they could
+# never be decoded. They are NOT silently "covered"; each must be listed here
+# with a reason.
 _SUBMESH_EXEMPT: set[type] = {
-    pybamm.Chebyshev1DSubMesh,  # encode-only: inherits to_json, no _from_json
-    pybamm.Exponential1DSubMesh,  # encode-only: inherits to_json, no _from_json
-    pybamm.ScikitChebyshev2DSubMesh,  # encode-only: inherits to_json, no _from_json
-    pybamm.ScikitExponential2DSubMesh,  # encode-only: inherits to_json, no _from_json
-    pybamm.ScikitSubMesh2D,  # encode-only: inherits to_json, no _from_json
-    pybamm.SpectralVolume1DSubMesh,  # encode-only: inherits to_json, no _from_json
-    pybamm.SubMesh1D,  # encode-only: inherits to_json, no _from_json
-    pybamm.SubMesh2D,  # encode-only: inherits to_json, no _from_json
-    pybamm.SymbolicUniform1DSubMesh,  # encode-only: inherits to_json, no _from_json
-    pybamm.Uniform2DSubMesh,  # encode-only: inherits to_json, no _from_json
-    pybamm.UserSupplied1DSubMesh,  # encode-only: inherits to_json, no _from_json
-    pybamm.UserSupplied2DSubMesh,  # encode-only: inherits to_json, no _from_json
+    pybamm.Chebyshev1DSubMesh,  # cannot serialise (no _from_json)
+    pybamm.Exponential1DSubMesh,  # cannot serialise (no _from_json)
+    pybamm.ScikitChebyshev2DSubMesh,  # cannot serialise (no _from_json)
+    pybamm.ScikitExponential2DSubMesh,  # cannot serialise (no _from_json)
+    pybamm.ScikitSubMesh2D,  # cannot serialise (no _from_json)
+    pybamm.SpectralVolume1DSubMesh,  # cannot serialise (no _from_json)
+    pybamm.SubMesh1D,  # cannot serialise (no _from_json)
+    pybamm.SubMesh2D,  # cannot serialise (no _from_json)
+    pybamm.SymbolicUniform1DSubMesh,  # cannot serialise (no _from_json)
+    pybamm.Uniform2DSubMesh,  # cannot serialise (no _from_json)
+    pybamm.UserSupplied1DSubMesh,  # cannot serialise (no _from_json)
+    pybamm.UserSupplied2DSubMesh,  # cannot serialise (no _from_json)
 }
 
 
@@ -69,6 +70,6 @@ def test_every_concrete_submesh_subclass_round_trips_or_exempt():
         if not (_defines_own_from_json(c) and "to_json" in dir(c))
     }
     assert not uncovered, (
-        "SubMesh subclasses that are encode-only (no own _from_json) and not in "
-        "_SUBMESH_EXEMPT: " + ", ".join(sorted(c.__name__ for c in uncovered))
+        "SubMesh subclasses that cannot serialise (no own _from_json) and are not "
+        "in _SUBMESH_EXEMPT: " + ", ".join(sorted(c.__name__ for c in uncovered))
     )

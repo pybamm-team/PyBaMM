@@ -151,6 +151,16 @@ class TestSerialise:
 
         assert test_list == new_list
 
+    def test_reconstruct_pybamm_dict_strips_prefix_only(self):
+        # "y" is made entirely of characters in the set {s,y,m,b,o,l,_}, so a
+        # char-set strip of "symbol_y" over-strips to "" instead of "y".
+        y = pybamm.SpatialVariable("y", "current collector")
+
+        test_dict = {"cc": {y: {"min": 0.0, "max": 1.0}}}
+        ser_dict = Serialise()._deconstruct_pybamm_dicts(test_dict)
+
+        assert Serialise()._reconstruct_pybamm_dict(ser_dict) == test_dict
+
     def test_convert_options(self):
         options_dict = {
             "current collector": "uniform",
