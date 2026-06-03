@@ -299,6 +299,10 @@ intersphinx_mapping = {
     "matplotlib": ("https://matplotlib.org/stable/", None),
 }
 
+# If an intersphinx inventory host is unreachable, fail in seconds rather than
+# hanging on the default socket timeout (which can stall the build for minutes).
+intersphinx_timeout = 30
+
 # -- sphinxcontrib-bibtex configuration --------------------------------------
 
 bibtex_bibfiles = ["../src/pybamm/CITATIONS.bib"]
