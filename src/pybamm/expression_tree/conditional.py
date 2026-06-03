@@ -147,27 +147,41 @@ class Conditional(pybamm.Symbol):
         )
 
     def _to_casadi(self, t, y, y_dot, inputs, casadi_symbols):
-        """See :meth:`pybamm.Symbol._to_casadi()`."""
-        converted_selector = self.selector._to_casadi_inner(
-            t, y, y_dot, inputs, casadi_symbols
-        )
-        first_branch = self.branches[0]._to_casadi_inner(
-            t, y, y_dot, inputs, casadi_symbols
-        )
-        result = casadi.MX.zeros(*first_branch.shape)
-        for branch_index in range(len(self.branches), 0, -1):
-            if branch_index == 1:
-                converted_branch = first_branch
-            else:
-                converted_branch = self.branches[branch_index - 1]._to_casadi_inner(
-                    t, y, y_dot, inputs, casadi_symbols
+        """See :meth:`pybamm.Symbol._to_casadi()`.
+
+        Dispatch to per-branch Functions via a Switch (``casadi.Function.conditional``)
+        so only the active branch runs; an inline ``if_else`` folds them into one.
+        """
+        selector = self.selector._to_casadi_inner(t, y, y_dot, inputs, casadi_symbols)
+        shared = [s for s in (t, y, y_dot) if s is not None] + list(inputs.values())
+        branch_functions = []
+        first_branch = None
+        for index, branch in enumerate(self.branches):
+            converted = branch._to_casadi_inner(t, y, y_dot, inputs, casadi_symbols)
+            if first_branch is None:
+                first_branch = converted
+            # Switch needs all branches and the default to share one sparsity.
+            branch_functions.append(
+                casadi.Function(
+                    f"cond_branch_{index}", shared, [casadi.densify(converted)]
                 )
-            condition = casadi.logic_and(
-                converted_selector > (branch_index - 0.5),
-                converted_selector < (branch_index + 0.5),
             )
-            result = casadi.if_else(condition, converted_branch, result)
-        return result
+        # No branch matches -> zeros.
+        default_function = casadi.Function(
+            "cond_default",
+            shared,
+            [casadi.densify(casadi.MX.zeros(*first_branch.shape))],
+        )
+        switch = casadi.Function.conditional(
+            "cond_switch", branch_functions, default_function
+        )
+        # pybamm 1-based round-to-nearest windows -> casadi 0-based truncating Switch:
+        # floor(s+0.5)-1, eq() guard sends half-integer boundaries to -1 (the default).
+        shifted = selector + 0.5
+        floored = casadi.floor(shifted)
+        on_boundary = casadi.eq(floored, shifted)
+        index = casadi.if_else(on_boundary, -1, floored - 1)
+        return switch(index, *shared)
 
     def to_equation(self):
         if self.print_name is not None:
