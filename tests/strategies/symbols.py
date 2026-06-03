@@ -228,9 +228,12 @@ _NONEMPTY_DOMAINS = st.sampled_from(
 def _full_broadcast_branch(
     child_strategy: st.SearchStrategy[pybamm.Symbol],
 ) -> st.SearchStrategy[pybamm.FullBroadcast]:
+    # FullBroadcast rejects children on 'current collector', which the recursive
+    # pool can produce (e.g. Gradient over a cc Variable); mirror the
+    # constructor's check with a narrow filter.
     return st.builds(
         pybamm.FullBroadcast,
-        child_strategy,
+        child_strategy.filter(lambda c: c.domain != ["current collector"]),
         _NONEMPTY_DOMAINS,
     )
 
