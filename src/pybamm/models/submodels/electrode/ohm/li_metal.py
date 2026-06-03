@@ -52,7 +52,7 @@ class LithiumMetalSurfaceForm(LithiumMetalBaseModel):
         i_boundary_cc = variables["Current collector current density [A.m-2]"]
         T = variables[f"{Domain} current collector temperature [K]"]
         L = domain_param.L
-        delta_phi_s = i_boundary_cc * L / domain_param.sigma(T)
+        delta_phi_s = i_boundary_cc * L / domain_param.sigma(None, T)
 
         phi_s_cc = variables[f"{Domain} current collector potential [V]"]
         delta_phi = variables[
@@ -133,7 +133,7 @@ class LithiumMetalExplicit(LithiumMetalBaseModel):
         i_boundary_cc = variables["Current collector current density [A.m-2]"]
         T = variables[f"{Domain} current collector temperature [K]"]
         L = domain_param.L
-        delta_phi_s = i_boundary_cc * L / domain_param.sigma(T)
+        delta_phi_s = i_boundary_cc * L / domain_param.sigma(None, T)
 
         phi_s_cc = variables[f"{Domain} current collector potential [V]"]
         delta_phi = variables[
