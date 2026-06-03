@@ -175,7 +175,8 @@ class Interpolant(pybamm.Function):
             np.array(snippet["y"]),
             snippet["children"],
             name=snippet["name"],
-            interpolator=snippet.get("interpolator", "linear"),
+            interpolator=snippet["interpolator"],
+            # the legacy compact format omits these two; default like its decoder did
             extrapolate=snippet.get("extrapolate", True),
             _num_derivatives=snippet.get("_num_derivatives", 0),
         )
