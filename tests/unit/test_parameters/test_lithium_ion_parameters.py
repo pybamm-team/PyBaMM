@@ -206,6 +206,22 @@ class TestLithiumIonParameterValues:
             3,
         )
 
+    def test_sigma_temperature_only_function_raises(self):
+        # a conductivity supplied as a function of temperature only (the old
+        # signature) must raise a clear error pointing at f(sto, T), rather than
+        # failing later with a cryptic "takes 1 positional argument" TypeError
+        values = pybamm.lithium_ion.BaseModel().default_parameter_values
+        param = pybamm.LithiumIonParameters()
+        T = param.T_ref
+
+        values.update({"Negative electrode conductivity [S.m-1]": lambda T: 100.0})
+        with pytest.raises(TypeError, match=r"\(stoichiometry, temperature\)"):
+            values.process_symbol(param.n.sigma(pybamm.Scalar(0.5), T))
+
+        # a constant (scalar) conductivity is unaffected by the check
+        values.update({"Negative electrode conductivity [S.m-1]": 100.0})
+        values.process_symbol(param.n.sigma(pybamm.Scalar(0.5), T))
+
 
 class TestUAsymptotes:
     """Tests for the OCP asymptote functions."""

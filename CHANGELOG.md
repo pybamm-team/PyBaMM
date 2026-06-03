@@ -6,7 +6,7 @@
 
 ## Breaking changes
 
-- Electrode electronic conductivity supplied as a function must now accept `(stoichiometry, temperature)`. A constant value is unaffected, but a conductivity function previously written as `f(temperature)` must be updated to `f(stoichiometry, temperature)`. ([#5556](https://github.com/pybamm-team/PyBaMM/pull/5556))
+- Electrode electronic conductivity supplied as a function must now accept `(stoichiometry, temperature)`. A constant value is unaffected, but a conductivity function previously written as `f(temperature)` must be updated to `f(stoichiometry, temperature)`; supplying a temperature-only function now raises a clear error pointing at the new signature. ([#5556](https://github.com/pybamm-team/PyBaMM/pull/5556))
 
 ## Bug fixes
 
