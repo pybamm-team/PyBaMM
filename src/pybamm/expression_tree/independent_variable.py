@@ -190,7 +190,6 @@ class SpatialVariable(IndependentVariable):
     def to_json(self):
         return {
             "name": self.name,
-            "id": self.id,
             "domains": self.domains,
             "coord_sys": self.coord_sys,
             "direction": getattr(self, "direction", None),

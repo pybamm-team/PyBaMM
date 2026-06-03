@@ -126,7 +126,7 @@ class Scalar(pybamm.Symbol):
             elif np.isnan(value):
                 value = "NaN"
 
-        json_dict = {"name": self.name, "id": self.id, "value": value}
+        json_dict = {"name": self.name, "value": value}
 
         return json_dict
 

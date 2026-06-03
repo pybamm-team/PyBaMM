@@ -57,7 +57,6 @@ class TestUnaryOperators:
         # Test from_json
         input_json = {
             "name": "-",
-            "id": mocker.ANY,
             "domains": {
                 "primary": [],
                 "secondary": [],
@@ -99,7 +98,6 @@ class TestUnaryOperators:
         # Test from_json
         input_json = {
             "name": "abs",
-            "id": mocker.ANY,
             "domains": {
                 "primary": [],
                 "secondary": [],
@@ -152,7 +150,6 @@ class TestUnaryOperators:
         c = pybamm.Multiplication(pybamm.Variable("a"), pybamm.Scalar(random_value))
         sign_json = {
             "name": "sign",
-            "id": 5341515228900508018,
             "domains": {
                 "primary": [],
                 "secondary": [],
@@ -186,7 +183,6 @@ class TestUnaryOperators:
         # Test from_json
         input_json = {
             "name": "floor",
-            "id": mocker.ANY,
             "domains": {
                 "primary": [],
                 "secondary": [],
@@ -219,7 +215,6 @@ class TestUnaryOperators:
         # Test from_json
         input_json = {
             "name": "ceil",
-            "id": mocker.ANY,
             "domains": {
                 "primary": [],
                 "secondary": [],
@@ -802,7 +797,6 @@ class TestUnaryOperators:
 
         un_json = {
             "name": "unary test",
-            "id": mocker.ANY,
             "domains": {
                 "primary": ["test"],
                 "secondary": [],
@@ -822,7 +816,6 @@ class TestUnaryOperators:
 
         ind_json = {
             "name": "Index[3]",
-            "id": mocker.ANY,
             "index": {"start": 3, "stop": 4, "step": None},
             "check_size": False,
         }
@@ -839,7 +832,6 @@ class TestUnaryOperators:
 
         grad_json = {
             "name": "grad",
-            "id": mocker.ANY,
             "domains": {
                 "primary": ["negative electrode"],
                 "secondary": [],
@@ -860,7 +852,6 @@ class TestUnaryOperators:
 
         expr_json = {
             "name": "explicit time integral",
-            "id": mocker.ANY,
             "domains": expr.domains,
             "children": [param, ic],
         }

@@ -56,7 +56,7 @@ class Parameter(pybamm.Symbol):
             return sympy.Symbol(self.name)
 
     def to_json(self):
-        return {"name": self.name, "id": self.id, "domains": self.domains}
+        return {"name": self.name, "domains": self.domains}
 
     @classmethod
     def _from_json(cls, snippet):
@@ -242,7 +242,6 @@ class FunctionParameter(pybamm.Symbol):
             children = [*children, self.diff_variable]
         return {
             "name": self.name,
-            "id": self.id,
             "domains": self.domains,
             "input_names": list(self.input_names),
             "print_name": self.print_name,

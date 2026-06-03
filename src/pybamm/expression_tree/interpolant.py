@@ -406,7 +406,6 @@ class Interpolant(pybamm.Function):
 
         json_dict = {
             "name": self.name,
-            "id": self.id,
             "x": [x_item.tolist() for x_item in self.x],
             "y": self.y.tolist(),
             "interpolator": self.interpolator,

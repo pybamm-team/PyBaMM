@@ -226,7 +226,7 @@ class BinaryOperator(pybamm.Symbol):
         Method to serialise a BinaryOperator object into JSON.
         """
 
-        json_dict = {"name": self.name, "id": self.id, "domains": self.domains}
+        json_dict = {"name": self.name, "domains": self.domains}
 
         return json_dict
 

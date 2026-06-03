@@ -187,7 +187,6 @@ class Array(pybamm.Symbol):
 
         json_dict = {
             "name": self.name,
-            "id": self.id,
             "domains": self.domains,
             "entries": matrix,
         }

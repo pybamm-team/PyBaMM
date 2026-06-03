@@ -31,7 +31,6 @@ class DiscreteTimeData(pybamm.Interpolant):
     def to_json(self):
         return {
             "name": self.name,
-            "id": self.id,
             "domains": self.domains,
             "time_points": self.x[0].tolist(),
             "data": self.y.tolist(),

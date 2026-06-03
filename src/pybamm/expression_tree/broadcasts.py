@@ -191,7 +191,6 @@ class PrimaryBroadcast(Broadcast):
     def to_json(self):
         return {
             "name": self.name,
-            "id": self.id,
             "domains": self.domains,
             "broadcast_domain": self.broadcast_domain,
         }
@@ -338,7 +337,6 @@ class SecondaryBroadcast(Broadcast):
     def to_json(self):
         return {
             "name": self.name,
-            "id": self.id,
             "domains": self.domains,
             "broadcast_domain": self.broadcast_domain,
         }
@@ -472,7 +470,6 @@ class TertiaryBroadcast(Broadcast):
     def to_json(self):
         return {
             "name": self.name,
-            "id": self.id,
             "domains": self.domains,
             "broadcast_domain": self.broadcast_domain,
         }
@@ -559,7 +556,7 @@ class FullBroadcast(Broadcast):
         return self.__class__(child, broadcast_domains=self.domains)
 
     def to_json(self):
-        return {"name": self.name, "id": self.id, "domains": self.domains}
+        return {"name": self.name, "domains": self.domains}
 
     @classmethod
     def _from_json(cls, snippet):

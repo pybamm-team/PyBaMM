@@ -463,7 +463,6 @@ class DomainConcatenation(Concatenation):
 
         json_dict = {
             "name": self.name,
-            "id": self.id,
             "domains": self.domains,
             "slices": unpack_defaultDict(self._slices),
             "size": self._size,

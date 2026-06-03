@@ -158,7 +158,6 @@ class VariableBase(pybamm.Symbol):
     def to_json(self):
         return {
             "name": self.name,
-            "id": self.id,
             "domains": self.domains,
             "children": [self._scale, self._reference, self.bounds[0], self.bounds[1]],
             "print_name": self._raw_print_name,

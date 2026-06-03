@@ -56,7 +56,6 @@ class ExpressionFunctionParameter(pybamm.UnaryOperator):
     def to_json(self):
         return {
             "name": self.name,
-            "id": self.id,
             "domains": self.domains,
             "func_name": self.func_name,
             "func_args": self.func_args,

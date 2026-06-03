@@ -313,7 +313,6 @@ class SpecificFunction(Function):
 
         json_dict = {
             "name": self.name,
-            "id": self.id,
             "function": self.function.__name__,
         }
 
@@ -485,7 +484,6 @@ class Arcsinh2(Function):
         """Method to serialise a Arcsinh2 object into JSON."""
         return {
             "name": self.name,
-            "id": self.id,
             "function": "arcsinh2",
             "eps": self.eps,
         }
@@ -1080,7 +1078,6 @@ class RegPower(Function):
         """Method to serialise a RegPower object into JSON."""
         return {
             "name": self.name,
-            "id": self.id,
             "function": "reg_power",
             "delta": self.delta,
         }

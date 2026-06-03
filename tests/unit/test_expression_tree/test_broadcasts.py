@@ -351,4 +351,4 @@ class TestBroadcasts:
         node = b.to_json()
         assert node["broadcast_domain"] == ["separator"]
         assert node["name"] == "broadcast"
-        assert "id" in node
+        assert "id" not in node  # identity is not part of the round-trip contract

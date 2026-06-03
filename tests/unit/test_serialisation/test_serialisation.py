@@ -35,7 +35,6 @@ def scalar_var_dict(mocker):
         "py/id": mocker.ANY,
         "py/object": "pybamm.expression_tree.scalar.Scalar",
         "name": "5.0",
-        "id": mocker.ANY,
         "value": 5.0,
         "children": [],
     }
@@ -179,7 +178,6 @@ class TestSerialise:
             "py/id": mocker.ANY,
             "py/object": "pybamm.expression_tree.binary_operators.Addition",
             "name": "+",
-            "id": mocker.ANY,
             "domains": {
                 "primary": [],
                 "secondary": [],
@@ -191,7 +189,6 @@ class TestSerialise:
                     "py/id": mocker.ANY,
                     "py/object": "pybamm.expression_tree.scalar.Scalar",
                     "name": "2.0",
-                    "id": mocker.ANY,
                     "value": 2.0,
                     "children": [],
                 },
@@ -199,7 +196,6 @@ class TestSerialise:
                     "py/id": mocker.ANY,
                     "py/object": "pybamm.expression_tree.scalar.Scalar",
                     "name": "4.0",
-                    "id": mocker.ANY,
                     "value": 4.0,
                     "children": [],
                 },
@@ -218,7 +214,6 @@ class TestSerialise:
             "py/object": "pybamm.expression_tree.unary_operators.ExplicitTimeIntegral",
             "py/id": mocker.ANY,
             "name": "explicit time integral",
-            "id": mocker.ANY,
             "domains": {
                 "primary": [],
                 "secondary": [],
@@ -230,7 +225,6 @@ class TestSerialise:
                     "py/object": "pybamm.expression_tree.scalar.Scalar",
                     "py/id": mocker.ANY,
                     "name": "5.0",
-                    "id": mocker.ANY,
                     "value": 5.0,
                     "children": [],
                 }
@@ -239,7 +233,6 @@ class TestSerialise:
                 "py/object": "pybamm.expression_tree.scalar.Scalar",
                 "py/id": mocker.ANY,
                 "name": "1.0",
-                "id": mocker.ANY,
                 "value": 1.0,
                 "children": [],
             },
@@ -264,7 +257,6 @@ class TestSerialise:
                 "py/object": "pybamm.expression_tree.scalar.Scalar",
                 "py/id": mocker.ANY,
                 "name": "1.0",
-                "id": mocker.ANY,
                 "value": 1.0,
                 "children": [],
             },
@@ -295,7 +287,6 @@ class TestSerialise:
                     "py/object": "pybamm.expression_tree.independent_variable.SpatialVariable",
                     "py/id": mocker.ANY,
                     "name": "x",
-                    "id": mocker.ANY,
                     "domains": {
                         "primary": ["negative electrode"],
                         "secondary": [],

@@ -459,7 +459,6 @@ class Index(UnaryOperator):
 
         json_dict = {
             "name": self.name,
-            "id": self.id,
             "index": {
                 "start": self.slice.start,
                 "stop": self.slice.stop,
@@ -504,7 +503,7 @@ class SpatialOperator(UnaryOperator):
     _json_extra_fields: tuple[str, ...] = ()
 
     def to_json(self):
-        json_dict = {"name": self.name, "id": self.id, "domains": self.domains}
+        json_dict = {"name": self.name, "domains": self.domains}
         for field in self._json_extra_fields:
             json_dict[field] = getattr(self, field)
         return json_dict
@@ -824,7 +823,6 @@ class BaseIndefiniteIntegral(Integral):
         var = self.integration_variable[0]
         return {
             "name": self.name,
-            "id": self.id,
             "domains": self.domains,
             "children": [self.children[0], var],
         }
@@ -1048,7 +1046,6 @@ class OneDimensionalIntegral(BoundaryIntegral):
     def to_json(self):
         return {
             "name": self.name,
-            "id": self.id,
             "domains": self.domains,
             "integration_domain": self.integration_domain,
             "direction": self.direction,
@@ -1104,7 +1101,6 @@ class DeltaFunction(SpatialOperator):
     def to_json(self):
         return {
             "name": self.name,
-            "id": self.id,
             "domains": self.domains,
             "side": self.side,
             "domain": self.domains["primary"],
@@ -1284,7 +1280,6 @@ class ExplicitTimeIntegral(UnaryOperator):
         """
         return {
             "name": self.name,
-            "id": self.id,
             "domains": self.domains,
             "children": [self.children[0], self.initial_condition],
         }
@@ -1358,7 +1353,6 @@ class EvaluateAt(SpatialOperator):
     def to_json(self):
         return {
             "name": self.name,
-            "id": self.id,
             "domains": self.domains,
             "children": [self.children[0], self.position],
         }
@@ -1493,7 +1487,6 @@ class Magnitude(UnaryOperator):
     def to_json(self):
         return {
             "name": self.name,
-            "id": self.id,
             "domains": self.domains,
             "direction": self.direction,
         }
