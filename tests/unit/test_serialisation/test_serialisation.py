@@ -382,6 +382,20 @@ class TestSerialise:
         )
         assert tup == ("mydata", 1.5)
 
+    def test_convert_symbol_from_json_legacy_slim_operator(self):
+        # Constructor-style legacy node (no name/domains): decodes via cls(*children).
+        expr = convert_symbol_from_json(
+            {
+                "type": "Subtraction",
+                "children": [
+                    {"type": "Scalar", "value": 1.0},
+                    {"type": "Parameter", "name": "porosity"},
+                ],
+            }
+        )
+        assert isinstance(expr, pybamm.Subtraction)
+        assert expr.name == "-"
+
     def test_numpy_array_conversion(self):
         arr = np.array([1, 2, 3])
         assert Serialise._json_encoder(arr) == [1, 2, 3]

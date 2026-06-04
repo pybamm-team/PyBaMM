@@ -11,7 +11,7 @@
 
 ## Bug fixes
 
-- `convert_symbol_from_json` is strict again: raw strings, lists, and dicts without a `$type`/`type` tag raise `SerialisationError` (restoring pre-kernel validation) instead of being returned unchanged. Decoding a node missing a key its codec requires (e.g. minimal legacy JSON lacking `name`/`domains`) now raises a descriptive `SerialisationError` instead of a bare `KeyError`, and `SerialisationError` is importable as `pybamm.SerialisationError`. ([#5567](https://github.com/pybamm-team/PyBaMM/pull/5567))
+- `convert_symbol_from_json` is strict again: raw strings, lists, and dicts without a `$type`/`type` tag raise `SerialisationError` (restoring pre-kernel validation) instead of being returned unchanged. Constructor-style legacy nodes (`{"type": ..., "children": [...]}` without `name`/`domains`) keep decoding via the class constructor, as the pre-kernel reader did. Decoding a node missing a key its codec requires now raises a descriptive `SerialisationError` instead of a bare `KeyError`, and `SerialisationError` is importable as `pybamm.SerialisationError`. ([#5567](https://github.com/pybamm-team/PyBaMM/pull/5567))
 - Fixed legacy geometry deserialisation over-stripping the `symbol_` key prefix as a character set, which raised `KeyError` for variable names composed of those characters (e.g. the current-collector variable `y`). ([#5561](https://github.com/pybamm-team/PyBaMM/pull/5561))
 - Fixed unified experiment mode using excessive memory and time for experiments with many cycles. ([#5554](https://github.com/pybamm-team/PyBaMM/pull/5554))
 - Fixed unified experiment mode inlining every step's equations; switching now dispatches via a `casadi.Function.conditional` switch. ([#5562](https://github.com/pybamm-team/PyBaMM/pull/5562))
