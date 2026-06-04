@@ -54,46 +54,102 @@ def close_plots():
 
 class QuickPlot:
     """
-    Generates a quick plot of a subset of key outputs of the model so that the model
-    outputs can be easily assessed.
+    Generates a quick plot of a subset of key outputs of the model so that
+    the model outputs can be easily assessed.
 
     Parameters
     ----------
-    solutions: (iter of) :class:`pybamm.Solution` or :class:`pybamm.Simulation`
+    solutions : (iter of) :class:`pybamm.Solution` or :class:`pybamm.Simulation`
         The numerical solution(s) for the model(s), or the simulation object(s)
         containing the solution(s).
-    output_variables : list of str, optional
-        List of variables to plot
+    output_variables : list, optional
+        List of variables to plot. Each element can be:
+
+        - A string variable name, e.g. ``"Voltage [V]"`` — plotted on its
+        own axis.
+        - A list of strings, e.g. ``["Voltage [V]", "Battery open-circuit
+        voltage [V]"]`` — multiple variables plotted on the same axis.
+
+        If not provided, a default set of variables is plotted.
     labels : list of str, optional
-        Labels for the different models. Defaults to model names
+        Labels for the different models. Defaults to model names.
     colors : list of str, optional
-        The colors to loop over when plotting. Defaults to None, in which case the
-        default color loop defined by matplotlib style sheet or rcParams is used.
+        The colors to loop over when plotting. Defaults to None, in which
+        case the default color loop defined by matplotlib style sheet or
+        rcParams is used.
     linestyles : list of str, optional
-        The linestyles to loop over when plotting. Defaults to ["-", ":", "--", "-."]
+        The linestyles to loop over when plotting. Defaults to
+        ``["-", ":", "--", "-."]``.
     shading : str, optional
-        The shading to use for 2D plots. Defaults to "auto".
-    figsize : tuple of floats, optional
-        The size of the figure to make
+        The shading to use for 2D plots. Defaults to ``"auto"``.
+    figsize : tuple of float, optional
+        The size of the figure to make.
     n_rows : int, optional
-        The number of rows to use. If None (default), floor(n // sqrt(n)) is used where
-        n = len(output_variables) so that the plot is as square as possible
+        The number of rows to use. If None (default),
+        ``floor(n // sqrt(n))`` is used where ``n = len(output_variables)``
+        so that the plot is as square as possible.
     time_unit : str, optional
-        Format for the time output ("hours", "minutes", or "seconds")
+        Format for the time output. One of ``"hours"``, ``"minutes"``,
+        or ``"seconds"``.
     spatial_unit : str, optional
-        Format for the spatial axes ("m", "mm", or "um")
-    variable_limits : str or dict of str, optional
-        How to set the axis limits (for 0D or 1D variables) or colorbar limits (for 2D
-        variables). Options are:
-    n_t_linear: int, optional
-        The number of linearly spaced time points added to the t axis for each sub-solution.
-        Note: this is only used if the solution has hermite interpolation enabled.
+        Format for the spatial axes. One of ``"m"``, ``"mm"``, or ``"um"``.
+    variable_limits : str or dict, optional
+        How to set the axis limits (for 0D or 1D variables) or colorbar
+        limits (for 2D variables). Options are:
 
-        - "fixed" (default): keep all axes fixes so that all data is visible
-        - "tight": make axes tight to plot at each time
-        - dictionary: fine-grain control for each variable, can be either "fixed" or \
-        "tight" or a specific tuple (lower, upper).
+        - ``"fixed"`` (default): keep all axes fixed so that all data
+        is visible.
+        - ``"tight"``: make axes tight to the plot at each time step.
+        - dict: fine-grain control per variable, where each value can
+        be ``"fixed"``, ``"tight"``, or a tuple ``(lower, upper)``.
 
+    n_t_linear : int, optional
+        The number of linearly spaced time points added to the t axis
+        for each sub-solution. Only used if the solution has hermite
+        interpolation enabled.
+
+    Notes
+    -----
+    To see all available variable names that can be passed to
+    ``output_variables``, use::
+
+        print(list(sim.solution.all_models[0].variables.keys()))
+
+    To search for variables containing a specific keyword::
+
+        [k for k in sim.solution.all_models[0].variables.keys()
+        if "voltage" in k.lower()]
+
+    Examples
+    --------
+    Plot default variables after solving:
+
+    .. code-block:: python
+
+        import pybamm
+
+        model = pybamm.lithium_ion.SPM()
+        sim = pybamm.Simulation(model)
+        sim.solve([0, 3600])
+        sim.plot()
+
+    Plot specific variables:
+
+    .. code-block:: python
+
+        sim.plot(["Voltage [V]", "Current [A]"])
+
+    Plot multiple variables on the same axis using a nested list:
+
+    .. code-block:: python
+
+        sim.plot(
+            [
+                ["Voltage [V]", "Battery open-circuit voltage [V]"],
+                "Current [A]",
+                "Discharge capacity [A.h]",
+            ]
+        )
     """
 
     def __init__(

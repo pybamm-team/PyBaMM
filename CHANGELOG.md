@@ -1,5 +1,10 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+### Documentation
+- Improved `QuickPlot` docstring to document nested list behavior in
+  `output_variables`, fix `variable_limits` description placement, and
+  add `Notes` and `Examples` sections. ([#5481](https://github.com/pybamm-team/PyBaMM/issues/5481))
+
 ## Features
 
 - Electrode electronic conductivity can now be specified as a function of stoichiometry (in addition to temperature) for all lithium-ion and sodium-ion models. ([#5556](https://github.com/pybamm-team/PyBaMM/pull/5556))
