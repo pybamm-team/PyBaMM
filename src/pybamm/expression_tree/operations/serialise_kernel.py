@@ -146,7 +146,10 @@ def decode(node):
         node = normalise_legacy(node)
         tag = node.get(TAG)
         if tag in _LEAF_TAGS:
-            return _decode_leaf(node)
+            try:
+                return _decode_leaf(node)
+            except KeyError as err:
+                raise _missing_key_error(tag, err) from err
         if tag == "type":
             return _resolve_class(node["class"])
         if tag is None:
@@ -155,8 +158,18 @@ def decode(node):
         codec = _lookup_codec(cls)
         if codec is None:
             raise SerialisationError(f"No codec to decode '{tag}'")
-        return codec.from_json(node, decode, cls)
+        try:
+            return codec.from_json(node, decode, cls)
+        except KeyError as err:
+            raise _missing_key_error(tag, err) from err
     raise SerialisationError(f"Cannot decode value of type {type(node)}")
+
+
+def _missing_key_error(tag, err: KeyError) -> SerialisationError:
+    """SerialisationError for a node missing a key its codec requires."""
+    return SerialisationError(
+        f"Cannot decode '{tag}': node is missing key {err.args[0]!r}"
+    )
 
 
 def normalise_legacy(node: dict) -> dict:

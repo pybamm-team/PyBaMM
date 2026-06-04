@@ -337,6 +337,31 @@ def test_normalise_legacy_passthrough_canonical():
     assert sk.normalise_legacy(canonical) is canonical
 
 
+# Decode error consistency: a node missing a key its codec requires must raise
+# SerialisationError naming the tag and key, never a bare KeyError.
+def test_decode_hook_missing_key_raises_serialisation_error():
+    # Minimal legacy binary op: no "name"/"domains", which the _from_json shim
+    # requires (authentic <=26.4 files always carried both).
+    node = {
+        "type": "Addition",
+        "children": [
+            {"type": "Scalar", "value": 1.0},
+            {"type": "Scalar", "value": 2.0},
+        ],
+    }
+    with pytest.raises(sk.SerialisationError, match=r"Addition.*'name'"):
+        sk.decode(node)
+
+
+def test_decode_leaf_missing_key_raises_serialisation_error():
+    with pytest.raises(sk.SerialisationError, match=r"numpy\.ndarray.*'data'"):
+        sk.decode({sk.TAG: "numpy.ndarray"})
+
+
+def test_serialisation_error_is_public():
+    assert pybamm.SerialisationError is sk.SerialisationError
+
+
 # Anti-reintroduction trap tests
 def test_trap_default_codec_unhandleable_required_arg_raises_loudly():
     """A Symbol subclass with a renamed attribute and no hook (-> DefaultCodec)

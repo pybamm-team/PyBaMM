@@ -2174,23 +2174,44 @@ def _relocate_legacy_model_tree(node):
 
 
 def convert_symbol_from_json(json_data):
-    """Reconstruct a pybamm.Symbol from kernel/legacy JSON."""
-    from pybamm.expression_tree.operations.serialise_kernel import decode
+    """Reconstruct a pybamm.Symbol (or decoded leaf value) from kernel/legacy JSON.
 
-    return decode(json_data)
+    Strict: raw strings, lists, and dicts without a recognised type tag cannot
+    be symbol nodes and raise :class:`SerialisationError` (as pre-kernel
+    versions did) instead of passing through silently. Numeric scalars and
+    decoded leaf values (tuples, ndarrays) are returned as-is; use the kernel
+    ``decode`` directly for generic, non-symbol JSON.
+    """
+    from pybamm.expression_tree.operations.serialise_kernel import (
+        SerialisationError,
+        decode,
+    )
+
+    decoded = decode(json_data)
+    # decode returns a dict/list/str only when the input was one of those and
+    # carried no type tag, i.e. a silent pass-through rather than a decode.
+    if isinstance(decoded, (dict, list, str)):
+        raise SerialisationError(
+            f"Cannot reconstruct a symbol from {json_data!r}: expected a JSON "
+            f"node with a '$type'/'type' tag or a numeric scalar."
+        )
+    return decoded
 
 
 def _require_symbol(raw):
     """Decode *raw* and reject anything that is not a pybamm.Symbol.
 
-    The kernel decoder returns unrecognised JSON (raw dicts/strings) unchanged
-    rather than raising. Where the caller expects a Symbol, reject the leftover
-    so malformed JSON fails here with a clear error instead of much later as a
-    confusing downstream failure.
+    convert_symbol_from_json also admits numeric scalars and decoded leaf
+    values; where the caller specifically needs a Symbol, reject anything else
+    here with a clear error instead of a confusing downstream failure.
     """
+    from pybamm.expression_tree.operations.serialise_kernel import (
+        SerialisationError,
+    )
+
     symbol = convert_symbol_from_json(raw)
     if not isinstance(symbol, pybamm.Symbol):
-        raise ValueError(f"expected a pybamm.Symbol, got {raw!r}")
+        raise SerialisationError(f"expected a pybamm.Symbol, got {raw!r}")
     return symbol
 
 
