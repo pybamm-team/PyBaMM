@@ -6,6 +6,7 @@ decode regression shows up here.
 
 from __future__ import annotations
 
+import gzip
 import json
 import pathlib
 
@@ -21,7 +22,11 @@ _FIX = pathlib.Path(__file__).parent / "fixtures" / "legacy"
 
 
 def _load(name):
-    return json.loads((_FIX / name).read_text())
+    path = _FIX / name
+    if name.endswith(".gz"):
+        with gzip.open(path, "rt") as f:
+            return json.load(f)
+    return json.loads(path.read_text())
 
 
 def test_legacy_compact_symbols_load():
@@ -38,18 +43,30 @@ def test_legacy_submesh_types_loads():
     assert all(isinstance(v, pybamm.MeshGenerator) for v in restored.values())
 
 
-def test_legacy_discretised_model_loads():
-    """The pre-refactor py/object discretised model must still load through the
-    kernel-based load_model + legacy relocation.
-
-    The fixture is ~20 MB and git-ignored; regenerate from a pre-refactor PyBaMM
-    checkout (the legacy writer no longer exists). Skipped when the local fixture
-    is absent (e.g. CI).
-    """
-    if not (_FIX / "discretised_model.json").exists():
-        pytest.skip("discretised_model.json fixture absent (git-ignored, local-only)")
-    data = _load("discretised_model.json")
+def _assert_legacy_spm_loads(data):
     model = Serialise().load_model(data, battery_model=pybamm.lithium_ion.SPM())
     assert isinstance(model, pybamm.lithium_ion.SPM)
     assert model.concatenated_rhs is not None
     assert model.concatenated_initial_conditions is not None
+
+
+def test_legacy_discretised_model_coarse_loads():
+    """The pre-refactor py/object discretised model must still load through the
+    kernel-based load_model + legacy relocation.
+
+    Coarse-mesh variant, small enough to track in git (gzipped), so this path
+    is always exercised, including CI.
+    """
+    _assert_legacy_spm_loads(_load("discretised_model_coarse.json.gz"))
+
+
+def test_legacy_discretised_model_loads():
+    """Default-mesh variant of the fixture above.
+
+    ~19 MB and git-ignored; regenerate from a pre-refactor PyBaMM checkout (the
+    legacy writer no longer exists -- see generate.py for the recipe). Skipped
+    when the local fixture is absent (e.g. CI).
+    """
+    if not (_FIX / "discretised_model.json").exists():
+        pytest.skip("discretised_model.json fixture absent (git-ignored, local-only)")
+    _assert_legacy_spm_loads(_load("discretised_model.json"))

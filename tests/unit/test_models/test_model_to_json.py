@@ -410,7 +410,9 @@ class TestBaseModelToConfig:
             "module": "lithium_ion",
             "custom_variables": {"bad": {"a": 1}},
         }
-        with pytest.raises(ValueError, match=r"expected a pybamm\.Symbol"):
+        with pytest.raises(
+            pybamm.SerialisationError, match=r"Cannot reconstruct a symbol"
+        ):
             pybamm.BaseModel.from_config(config)
 
     def test_from_config_invalid_event_expression_raises(self):
@@ -420,7 +422,9 @@ class TestBaseModelToConfig:
             "module": "lithium_ion",
             "events": [{"name": "e", "expression": "not a symbol", "event_type": 0}],
         }
-        with pytest.raises(ValueError, match=r"expected a pybamm\.Symbol"):
+        with pytest.raises(
+            pybamm.SerialisationError, match=r"Cannot reconstruct a symbol"
+        ):
             pybamm.BaseModel.from_config(config)
 
     def test_to_config_builtin_with_cleared_events_round_trip(self):

@@ -352,10 +352,49 @@ class TestSerialise:
     def test_convert_symbol_from_json_with_none(self):
         assert convert_symbol_from_json(None) is None
 
-    def test_convert_symbol_from_json_unexpected_string(self):
-        # A bare string is a native JSON leaf; the kernel decoder returns it
-        # unchanged rather than raising (validation relaxed vs the previous serialiser).
-        assert convert_symbol_from_json("foo") == "foo"
+    def test_convert_symbol_from_json_unexpected_string_raises(self):
+        # A bare string cannot be a symbol node; fail loudly (as pre-kernel
+        # versions did) rather than silently passing it through.
+        with pytest.raises(sk.SerialisationError, match="foo"):
+            convert_symbol_from_json("foo")
+
+    def test_convert_symbol_from_json_untyped_dict_raises(self):
+        # A dict without a '$type'/'type' tag is not decodable into a symbol;
+        # fail loudly rather than returning the dict unchanged.
+        with pytest.raises(sk.SerialisationError, match="type"):
+            convert_symbol_from_json({"foo": "bar"})
+
+    def test_convert_symbol_from_json_list_raises(self):
+        with pytest.raises(sk.SerialisationError):
+            convert_symbol_from_json([{"type": "Scalar", "value": 1.0}])
+
+    def test_convert_symbol_from_json_decoded_leaf_values_pass(self):
+        # Tagged leaf nodes decode to non-Symbol values (tuple/ndarray); these
+        # are successful decodes (e.g. ParameterValues data entries), not
+        # pass-throughs, and must not be rejected.
+        arr = convert_symbol_from_json(
+            {"$type": "numpy.ndarray", "data": [1.0, 2.0], "dtype": "float64"}
+        )
+        np.testing.assert_array_equal(arr, np.array([1.0, 2.0]))
+
+        tup = convert_symbol_from_json(
+            {"$type": "builtins.tuple", "items": ["mydata", 1.5]}
+        )
+        assert tup == ("mydata", 1.5)
+
+    def test_convert_symbol_from_json_legacy_slim_operator(self):
+        # Constructor-style legacy node (no name/domains): decodes via cls(*children).
+        expr = convert_symbol_from_json(
+            {
+                "type": "Subtraction",
+                "children": [
+                    {"type": "Scalar", "value": 1.0},
+                    {"type": "Parameter", "name": "porosity"},
+                ],
+            }
+        )
+        assert isinstance(expr, pybamm.Subtraction)
+        assert expr.name == "-"
 
     def test_numpy_array_conversion(self):
         arr = np.array([1, 2, 3])
@@ -875,10 +914,8 @@ class TestSerialise:
         with pytest.raises(sk.SerialisationError, match=r"Cannot resolve"):
             convert_symbol_from_json(unhandled_json)
 
-        # A dict with no recognised tag is generic JSON; the kernel decoder
-        # returns it unchanged (validation relaxed vs the previous serialiser).
-        unhandled_json2 = {"a": 1, "b": 2}
-        assert convert_symbol_from_json(unhandled_json2) == {"a": 1, "b": 2}
+        # An untagged dict also raises; covered in detail by
+        # test_convert_symbol_from_json_untyped_dict_raises.
 
     def test_file_write_raises_ioerror(self):
         # testing behaviour when file system is read-only to raise exception

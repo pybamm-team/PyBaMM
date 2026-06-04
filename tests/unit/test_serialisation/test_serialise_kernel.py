@@ -337,6 +337,62 @@ def test_normalise_legacy_passthrough_canonical():
     assert sk.normalise_legacy(canonical) is canonical
 
 
+# Decode error consistency: a node missing a key its codec requires must raise
+# SerialisationError naming the tag and key, never a bare KeyError.
+def test_decode_hook_missing_key_raises_serialisation_error():
+    # Canonical nodes always carry these keys, so a miss is corruption: no
+    # constructor fallback (that is legacy-shape only, see below).
+    node = {
+        sk.TAG: "pybamm.Addition",
+        "children": [
+            {"type": "Scalar", "value": 1.0},
+            {"type": "Scalar", "value": 2.0},
+        ],
+    }
+    with pytest.raises(sk.SerialisationError, match=r"Addition.*'name'"):
+        sk.decode(node)
+
+
+# Legacy constructor fallback: third-party writers emit constructor-style nodes
+# (type + children, no name/domains); they must keep decoding via cls(*children).
+def test_decode_legacy_slim_binary_operator_constructor_fallback():
+    node = {
+        "type": "Subtraction",
+        "children": [
+            {"type": "Scalar", "value": 1.0},
+            {"type": "Parameter", "name": "porosity"},
+        ],
+    }
+    out = sk.decode(node)
+    assert isinstance(out, pybamm.Subtraction)
+    assert out.name == "-"
+    assert isinstance(out.left, pybamm.Scalar)
+    assert isinstance(out.right, pybamm.Parameter)
+    assert out.right.name == "porosity"
+
+
+def test_decode_legacy_slim_unary_operator_constructor_fallback():
+    node = {"type": "Negate", "children": [{"type": "Parameter", "name": "p"}]}
+    out = sk.decode(node)
+    assert isinstance(out, pybamm.Negate)
+
+
+def test_decode_legacy_slim_node_unbuildable_raises_missing_key():
+    # Fallback also fails (one child): surface the original missing-key error.
+    node = {"type": "Addition", "children": [{"type": "Scalar", "value": 1.0}]}
+    with pytest.raises(sk.SerialisationError, match=r"Addition.*'name'"):
+        sk.decode(node)
+
+
+def test_decode_leaf_missing_key_raises_serialisation_error():
+    with pytest.raises(sk.SerialisationError, match=r"numpy\.ndarray.*'data'"):
+        sk.decode({sk.TAG: "numpy.ndarray"})
+
+
+def test_serialisation_error_is_public():
+    assert pybamm.SerialisationError is sk.SerialisationError
+
+
 # Anti-reintroduction trap tests
 def test_trap_default_codec_unhandleable_required_arg_raises_loudly():
     """A Symbol subclass with a renamed attribute and no hook (-> DefaultCodec)
