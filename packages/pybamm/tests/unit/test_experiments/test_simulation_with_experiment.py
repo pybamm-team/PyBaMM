@@ -89,6 +89,62 @@ class TestSimulationExperiment:
         assert len(sol.cycles) == 5  # cycles wiring preserved
         assert sol.summary_variables is not None
 
+    def test_solve_time_includes_unsaved_cycles(self, monkeypatch):
+        # #2484: solve_time / integration_time must cover every cycle the solver
+        # ran, not just the ones kept by save_at_cycles. Pin the per-step timer
+        # so the totals are deterministic, then check they don't change when
+        # intermediate cycles are dropped.
+        monkeypatch.setattr(pybamm.Timer, "time", lambda self: pybamm.TimerTime(1.0))
+
+        def run(**kwargs):
+            exp = pybamm.Experiment(
+                [("Discharge at 1C until 3.0V", "Charge at 1C until 4.2V")] * 3,
+                period=600,
+            )
+            sim = pybamm.Simulation(pybamm.lithium_ion.SPM(), experiment=exp)
+            sim.solve(**kwargs)
+            return sim.solution
+
+        full = run()
+        saved = run(save_at_cycles=[1])
+
+        # Cycles 2 and 3 are dropped (stored as None) ...
+        assert any(cycle is None for cycle in saved.cycles)
+        assert all(cycle is not None for cycle in full.cycles)
+        # ... but the reported timers still account for all three cycles.
+        assert saved.solve_time.value == full.solve_time.value
+        assert saved.integration_time.value == full.integration_time.value
+        assert full.solve_time.value > 0
+        assert full.integration_time.value > 0
+
+    def test_solve_time_seeded_from_starting_solution(self, monkeypatch):
+        # #2484: resuming from a starting_solution must add the new cycles'
+        # timers on top of the carried-over total, independent of save_at_cycles.
+        monkeypatch.setattr(pybamm.Timer, "time", lambda self: pybamm.TimerTime(1.0))
+
+        def make_sim(n_cycles):
+            exp = pybamm.Experiment(
+                [("Discharge at 1C until 3.0V", "Charge at 1C until 4.2V")] * n_cycles,
+                period=600,
+            )
+            return pybamm.Simulation(pybamm.lithium_ion.SPM(), experiment=exp)
+
+        start = make_sim(2).solve()
+        start_time = start.solve_time.value
+
+        resumed_full = make_sim(3).solve(starting_solution=start)
+        resumed_saved = make_sim(3).solve(starting_solution=start, save_at_cycles=[1])
+
+        # A middle resume cycle is dropped from the saved run ...
+        assert any(cycle is None for cycle in resumed_saved.cycles)
+        # ... the carried-over total is preserved and added to, not dropped ...
+        assert resumed_full.solve_time.value > start_time
+        # ... and dropping cycles from the resume run leaves the total unchanged.
+        assert resumed_saved.solve_time.value == resumed_full.solve_time.value
+        assert resumed_saved.integration_time.value == (
+            resumed_full.integration_time.value
+        )
+
     def test_unified_model_mode_validation_and_blockers(self):
         with pytest.raises(ValueError, match="experiment_model_mode must be one of"):
             pybamm.Simulation(
