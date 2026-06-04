@@ -42,8 +42,9 @@ jobs:
             --cache
             --no-progress
             --max-cache-age 2d
-            --timeout 10
+            --timeout 30
             --max-retries 5
+            --retry-wait-time 2
             --skip-missing
             --exclude-loopback
             --exclude https://twitter.com/pybamm_
