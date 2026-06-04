@@ -16,8 +16,3 @@ file:///home/runner/work/PyBaMM/PyBaMM/docs/source/user_guide/fundamentals/pybam
 
 # Telemetry
 https://us.i.posthog.com
-
-# First-party pybamm.org pages that are valid but intermittently time out
-# from the CI runner (10s lychee timeout)
-https://pybamm.org/governance/
-https://pybamm.org/community/

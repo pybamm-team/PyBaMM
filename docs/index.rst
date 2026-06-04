@@ -21,7 +21,7 @@ PyBaMM documentation
 **Version**: |version|
 
 **Useful links**:
-`Project Home Page <https://www.pybamm.org>`_ |
+`Project Home Page <https://pybamm.org/>`_ |
 `Installation <source/user_guide/installation/index.rst>`_ |
 `Source Repository <https://github.com/pybamm-team/pybamm>`_ |
 `Issue Tracker <https://github.com/pybamm-team/pybamm/issues>`_ |
