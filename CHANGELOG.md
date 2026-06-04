@@ -1,13 +1,15 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
-## Features
-
-- Electrode electronic conductivity can now be specified as a function of stoichiometry (in addition to temperature) for all lithium-ion and sodium-ion models. ([#5556](https://github.com/pybamm-team/PyBaMM/pull/5556))
-- Unified PyBaMM serialisation onto a single safe-or-loud encode/decode kernel. Serialisation now either round-trips or raises `SerialisationError`, never silently dropping a field, across the expression tree, discretised models, meshes, solvers, experiments and parameter values. There is one canonical on-disk format, and files saved by older PyBaMM versions continue to load via backward-compatible readers. Note that `save_model(model, mesh=...)` now raises for meshes containing submeshes that cannot round-trip (those without a `_from_json` hook, e.g. `Exponential1DSubMesh`); previously the save succeeded but the mesh could not be reloaded. Derived caches such as `Array.entries_string` are no longer stored on disk and are recomputed from the stored entries on load, so a stale value in a legacy file is replaced by the recomputed one. ([#5560](https://github.com/pybamm-team/PyBaMM/pull/5560), [#5561](https://github.com/pybamm-team/PyBaMM/pull/5561))
+# [v26.6.0.0](https://github.com/pybamm-team/PyBaMM/tree/v26.6.0.0) - 2026-06-04
 
 ## Breaking changes
 
 - Electrode electronic conductivity supplied as a function must now accept `(stoichiometry, temperature)`. A constant value is unaffected, but a conductivity function previously written as `f(temperature)` must be updated to `f(stoichiometry, temperature)`; supplying a temperature-only function now raises a clear error pointing at the new signature. ([#5556](https://github.com/pybamm-team/PyBaMM/pull/5556))
+
+## Features
+
+- Electrode electronic conductivity can now be specified as a function of stoichiometry (in addition to temperature) for all lithium-ion and sodium-ion models. ([#5556](https://github.com/pybamm-team/PyBaMM/pull/5556))
+- Unified PyBaMM serialisation onto a single safe-or-loud encode/decode kernel. Serialisation now either round-trips or raises `SerialisationError`, never silently dropping a field, across the expression tree, discretised models, meshes, solvers, experiments and parameter values. There is one canonical on-disk format, and files saved by older PyBaMM versions continue to load via backward-compatible readers. Note that `save_model(model, mesh=...)` now raises for meshes containing submeshes that cannot round-trip (those without a `_from_json` hook, e.g. `Exponential1DSubMesh`); previously the save succeeded but the mesh could not be reloaded. Derived caches such as `Array.entries_string` are no longer stored on disk and are recomputed from the stored entries on load, so a stale value in a legacy file is replaced by the recomputed one. ([#5560](https://github.com/pybamm-team/PyBaMM/pull/5560), [#5561](https://github.com/pybamm-team/PyBaMM/pull/5561))
 
 ## Bug fixes
 
