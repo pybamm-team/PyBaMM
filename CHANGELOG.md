@@ -2,6 +2,7 @@
 
 ## Bug fixes
 
+- `Simulation.solve` with `save_at_cycles` no longer under-reports `solve_time` and `integration_time`: the timers now account for every cycle the solver ran, not only the saved ones. ([#5547](https://github.com/pybamm-team/PyBaMM/pull/5547))
 - `RegulariseSqrtAndPower` no longer regularises state-independent bases, fixing corrupted small rate constants in exchange-current density functions. ([#5600](https://github.com/pybamm-team/PyBaMM/pull/5600))
 
 ## Breaking changes
