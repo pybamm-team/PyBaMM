@@ -990,11 +990,9 @@ class Simulation(BaseSimulation):
         # folded solution below to match the old left-fold's final termination.
         last_termination = None
 
-        # Accumulate solve/integration time from every step, not just the saved
-        # cycles. The folded solution only spans saved cycles, so its timers
-        # would exclude cycles dropped by save_at_cycles (#2484); the loop is the
-        # single source of truth instead. Seed with the loop-entry solution so a
-        # starting_solution and any initial padding rest are included.
+        # Track timers across every cycle separately from the folded solution,
+        # which only spans saved cycles (#2484). Seed from the loop-entry
+        # solution so starting_solution + any initial padding rest are counted.
         solve_time = pybamm.TimerTime(0)
         integration_time = pybamm.TimerTime(0)
         if self._solution is not None and not isinstance(
