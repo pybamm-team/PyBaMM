@@ -990,6 +990,21 @@ class Simulation(BaseSimulation):
         # folded solution below to match the old left-fold's final termination.
         last_termination = None
 
+        # Accumulate solve/integration time from every step, not just the saved
+        # cycles. The folded solution only spans saved cycles, so its timers
+        # would exclude cycles dropped by save_at_cycles (#2484); the loop is the
+        # single source of truth instead. Seed with the loop-entry solution so a
+        # starting_solution and any initial padding rest are included.
+        solve_time = pybamm.TimerTime(0)
+        integration_time = pybamm.TimerTime(0)
+        if self._solution is not None and not isinstance(
+            self._solution, pybamm.EmptySolution
+        ):
+            if self._solution.solve_time is not None:
+                solve_time = self._solution.solve_time
+            if self._solution.integration_time is not None:
+                integration_time = self._solution.integration_time
+
         for cycle_num, cycle_length in enumerate(
             cycle_lengths,
             start=1,
@@ -1175,6 +1190,15 @@ class Simulation(BaseSimulation):
                 if not isinstance(cycle_solution, pybamm.EmptySolution):
                     last_termination = cycle_solution.termination
 
+            # Fold in this cycle's timers whether or not the cycle is saved.
+            for step_solution in steps:
+                if isinstance(step_solution, pybamm.EmptySolution):
+                    continue
+                if step_solution.solve_time is not None:
+                    solve_time += step_solution.solve_time
+                if step_solution.integration_time is not None:
+                    integration_time += step_solution.integration_time
+
             if steps:
                 if all(isinstance(s, pybamm.EmptySolution) for s in steps):
                     if self._check_infeasible_steps(steps, step, step_str, cycle_num):
@@ -1243,6 +1267,13 @@ class Simulation(BaseSimulation):
             self._solution = pybamm.Solution.from_sub_solutions(cross_cycle_segments)
             if last_termination is not None:
                 self._solution.termination = last_termination
+
+        # Overwrite the folded timers with the all-cycles accumulator (#2484).
+        if self._solution is not None and not isinstance(
+            self._solution, pybamm.EmptySolution
+        ):
+            self._solution.solve_time = solve_time
+            self._solution.integration_time = integration_time
 
         if self._solution is not None and len(all_cycle_solutions) > 0:
             self._solution.cycles = all_cycle_solutions
