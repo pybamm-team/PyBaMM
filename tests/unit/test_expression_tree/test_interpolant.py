@@ -373,7 +373,6 @@ class TestInterpolant:
 
         expected_json = {
             "name": "interpolating_function",
-            "id": mocker.ANY,
             "x": [
                 [
                     0.0,

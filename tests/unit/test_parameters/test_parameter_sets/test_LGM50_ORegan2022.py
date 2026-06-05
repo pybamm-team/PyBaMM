@@ -29,7 +29,7 @@ class TestORegan2022:
                 2.1939,
             ),
             "Positive electrode OCP [V]": ([0.5], 3.9720),
-            "Positive electrode conductivity [S.m-1]": ([298.15], 0.8473),
+            "Positive electrode conductivity [S.m-1]": ([0.5, 298.15], 0.8473),
             "Positive electrode thermal conductivity [W.m-1.K-1]": ([T], 0.8047),
             # Negative electrode
             "Negative electrode OCP entropic change [V.K-1]": (

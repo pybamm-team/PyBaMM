@@ -45,7 +45,7 @@ class TestScalar:
 
     def test_to_from_json(self, mocker):
         a = pybamm.Scalar(5)
-        json_dict = {"name": "5.0", "id": mocker.ANY, "value": 5.0}
+        json_dict = {"name": "5.0", "value": 5.0}
 
         assert a.to_json() == json_dict
 

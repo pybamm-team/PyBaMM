@@ -27,6 +27,10 @@ class Concatenation(pybamm.Symbol):
         The symbols to concatenate
     """
 
+    # concat_fun is a numpy callable (np.concatenate / vstack), check_domain a
+    # constructor flag -- both re-derived on construction, never serialised.
+    _serialise_derived_params = frozenset({"concat_fun", "check_domain"})
+
     def __init__(
         self,
         *children: pybamm.Symbol,
@@ -60,7 +64,9 @@ class Concatenation(pybamm.Symbol):
         """Creates a new Concatenation instance from a json object"""
         instance = cls.__new__(cls)
 
-        instance.concatenation_function = snippet["concat_fun"]
+        # .get: base Concatenation and ConcatenationVariable default to None; Numpy/Domain
+        # Concatenation still inject a value before calling super(), so unchanged.
+        instance.concatenation_function = snippet.get("concat_fun")
 
         super(Concatenation, instance).__init__(
             snippet["name"], tuple(snippet["children"]), domains=snippet["domains"]
@@ -286,6 +292,14 @@ class DomainConcatenation(Concatenation):
         from `copy_this`. `mesh` is not used in this case
     """
 
+    # full_mesh is a construction input used only to derive slices/size; those are
+    # serialised directly and _from_json never re-stores the mesh, so it is not
+    # itself serialised (copy_this is defaulted-and-unstored, covered by the guard
+    # grace).
+    _serialise_derived_params = Concatenation._serialise_derived_params | frozenset(
+        {"full_mesh"}
+    )
+
     def __init__(
         self,
         children: Sequence[pybamm.Symbol],
@@ -457,7 +471,6 @@ class DomainConcatenation(Concatenation):
 
         json_dict = {
             "name": self.name,
-            "id": self.id,
             "domains": self.domains,
             "slices": unpack_defaultDict(self._slices),
             "size": self._size,
@@ -496,6 +509,12 @@ class SparseStack(Concatenation):
             check_domain=False,
             concat_fun=concatenation_function,
         )
+
+    @classmethod
+    def _from_json(cls, snippet):
+        # Route through __init__ so concatenation_function (np.vstack / scipy vstack)
+        # is re-derived from the children; the tolerant base would set it to None.
+        return cls(*snippet["children"])
 
     def _to_casadi(self, t, y, y_dot, inputs, casadi_symbols):
         """See :meth:`pybamm.Symbol._to_casadi()`."""

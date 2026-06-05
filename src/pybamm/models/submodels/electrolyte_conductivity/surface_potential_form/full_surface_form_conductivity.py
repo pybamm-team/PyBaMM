@@ -155,7 +155,13 @@ class BaseModel(BaseElectrolyteConductivity):
         tor_s = variables[f"{Domain} electrode transport efficiency"]
         c_e = variables[f"{Domain} electrolyte concentration [mol.m-3]"]
         T = variables[f"{Domain} electrode temperature [K]"]
-        sigma = self.domain_param.sigma(T)
+        sto = None
+        for phase in ("", "primary "):
+            name = f"{Domain} {phase}particle surface stoichiometry"
+            if name in variables:
+                sto = variables[name]
+                break
+        sigma = self.domain_param.sigma(sto, T)
 
         kappa_eff = self.param.kappa_e(c_e, T) * tor_e
         sigma_eff = sigma * tor_s

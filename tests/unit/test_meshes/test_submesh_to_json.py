@@ -11,11 +11,13 @@ class TestSubMeshToConfig:
     """Tests for SubMesh class to_config and from_config."""
 
     def test_submesh_to_config_returns_class_and_module(self):
-        """SubMesh subclass to_config() returns dict with 'class' and 'module'."""
+        """SubMesh subclass to_config() returns the kernel class_reference shape."""
         data = pybamm.Uniform1DSubMesh.to_config()
         assert isinstance(data, dict)
-        assert data["class"] == "Uniform1DSubMesh"
-        assert "pybamm.meshes" in data["module"]
+        assert data["$type"] == "type"
+        assert (
+            data["class"] == "pybamm.meshes.one_dimensional_submeshes.Uniform1DSubMesh"
+        )
 
     def test_submesh_from_config_returns_same_class(self):
         """SubMesh.from_config(to_config()) returns the same class."""
@@ -27,7 +29,7 @@ class TestSubMeshToConfig:
     def test_submesh_round_trip_submesh0d(self):
         """SubMesh0D round-trips via to_config/from_config."""
         data = pybamm.SubMesh0D.to_config()
-        assert data["class"] == "SubMesh0D"
+        assert data["class"] == "pybamm.meshes.zero_dimensional_submesh.SubMesh0D"
         assert pybamm.SubMesh.from_config(data) is pybamm.SubMesh0D
 
 
@@ -35,11 +37,13 @@ class TestMeshGeneratorToConfig:
     """Tests for MeshGenerator to_config and from_config."""
 
     def test_mesh_generator_to_config_has_class_module(self):
-        """MeshGenerator.to_config() contains class and module."""
+        """MeshGenerator.to_config() contains the kernel class_reference."""
         gen = pybamm.MeshGenerator(pybamm.Uniform1DSubMesh)
         data = gen.to_config()
-        assert data["class"] == "Uniform1DSubMesh"
-        assert "pybamm.meshes" in data["module"]
+        assert data["$type"] == "type"
+        assert (
+            data["class"] == "pybamm.meshes.one_dimensional_submeshes.Uniform1DSubMesh"
+        )
 
     def test_mesh_generator_to_config_includes_submesh_params_when_non_empty(self):
         """MeshGenerator with submesh_params includes them in to_config()."""

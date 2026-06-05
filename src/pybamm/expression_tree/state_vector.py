@@ -221,7 +221,6 @@ class StateVectorBase(pybamm.Symbol):
 
         json_dict = {
             "name": self.name,
-            "id": self.id,
             "domains": self.domains,
             "y_slice": [
                 {

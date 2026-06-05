@@ -203,7 +203,6 @@ class TestFunction:
 
         input_json = {
             "name": "arcsinh2",
-            "id": mocker.ANY,
             "function": "arcsinh2",
             "children": [a, b],
             "eps": eps,
@@ -307,7 +306,6 @@ class TestSpecificFunctions:
 
         expected_json = {
             "name": "function (cos)",
-            "id": mocker.ANY,
             "function": "cos",
         }
 
@@ -347,7 +345,6 @@ class TestSpecificFunctions:
         # test creation from json
         input_json = {
             "name": "arcsinh",
-            "id": mocker.ANY,
             "function": "arcsinh",
             "children": [a],
         }
@@ -371,7 +368,6 @@ class TestSpecificFunctions:
         # test creation from json
         input_json = {
             "name": "arctan",
-            "id": mocker.ANY,
             "function": "arctan",
             "children": [a],
         }
@@ -396,7 +392,6 @@ class TestSpecificFunctions:
         # test creation from json
         input_json = {
             "name": "cos",
-            "id": mocker.ANY,
             "function": "cos",
             "children": [a],
         }
@@ -421,7 +416,6 @@ class TestSpecificFunctions:
         # test creation from json
         input_json = {
             "name": "cosh",
-            "id": mocker.ANY,
             "function": "cosh",
             "children": [a],
         }
@@ -446,7 +440,6 @@ class TestSpecificFunctions:
         # test creation from json
         input_json = {
             "name": "exp",
-            "id": mocker.ANY,
             "function": "exp",
             "children": [a],
         }
@@ -484,7 +477,6 @@ class TestSpecificFunctions:
         fun = pybamm.log(a)
         input_json = {
             "name": "log",
-            "id": mocker.ANY,
             "function": "log",
             "children": [a],
         }
@@ -523,7 +515,6 @@ class TestSpecificFunctions:
         # test creation from json
         input_json = {
             "name": "sin",
-            "id": mocker.ANY,
             "function": "sin",
             "children": [a],
         }
@@ -548,7 +539,6 @@ class TestSpecificFunctions:
         # test creation from json
         input_json = {
             "name": "sinh",
-            "id": mocker.ANY,
             "function": "sinh",
             "children": [a],
         }
@@ -572,7 +562,6 @@ class TestSpecificFunctions:
         # test creation from json
         input_json = {
             "name": "sqrt",
-            "id": mocker.ANY,
             "function": "sqrt",
             "children": [a],
         }
@@ -609,7 +598,6 @@ class TestSpecificFunctions:
         # test creation from json
         input_json = {
             "name": "erf",
-            "id": mocker.ANY,
             "function": "erf",
             "children": [a],
         }

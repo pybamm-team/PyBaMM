@@ -317,10 +317,18 @@ class DomainLithiumIonParameters(BaseParameters):
             f"{Domain} electrode double-layer capacity [F.m-2]", inputs
         )
 
-    def sigma(self, T):
-        """Dimensional electrical conductivity in electrode"""
-        inputs = {"Temperature [K]": T}
+    def sigma(self, sto, T):
+        """
+        Dimensional electrical conductivity in electrode. Optionally a function of
+        the electrode (surface) stoichiometry in addition to temperature; pass
+        ``sto=None`` for a conductivity that is a function of temperature only.
+        """
         Domain = self.domain.capitalize()
+        inputs = {"Temperature [K]": T}
+        if sto is not None:
+            tol = pybamm.settings.tolerances["sigma__c_s"]
+            sto = pybamm.maximum(pybamm.minimum(sto, 1 - tol), tol)
+            inputs = {f"{Domain} electrode stoichiometry": sto, **inputs}
         return pybamm.FunctionParameter(
             f"{Domain} electrode conductivity [S.m-1]", inputs
         )

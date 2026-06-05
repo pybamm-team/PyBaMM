@@ -2333,15 +2333,13 @@ class BaseModel:
             ``custom_variables``, ``removed_variables``, and/or
             ``events``.
         """
-        from pybamm.expression_tree.operations.serialise import (
-            convert_symbol_from_json,
-        )
+        from pybamm.expression_tree.operations.serialise import _require_symbol
 
         # --- Custom variables ---
         extra = data.get("custom_variables")
         if extra:
             for name, expr_json in extra.items():
-                model.variables[name] = convert_symbol_from_json(expr_json)
+                model.variables[name] = _require_symbol(expr_json)
 
         # --- Removed variables ---
         removed = data.get("removed_variables")
@@ -2355,7 +2353,7 @@ class BaseModel:
             model.events = [
                 pybamm.Event(
                     e["name"],
-                    convert_symbol_from_json(e["expression"]),
+                    _require_symbol(e["expression"]),
                     EventType(e["event_type"])
                     if isinstance(e["event_type"], int)
                     else e["event_type"],

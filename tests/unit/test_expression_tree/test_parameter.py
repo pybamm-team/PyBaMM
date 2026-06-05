@@ -31,14 +31,18 @@ class TestParameter:
         # Test name
         assert func1.to_equation() == sympy.Symbol("test_name")
 
-    def test_to_json_error(self):
+    def test_to_from_json_round_trip(self):
+        from pybamm.expression_tree.operations.serialise import (
+            convert_symbol_from_json,
+            convert_symbol_to_json,
+        )
+
         func = pybamm.Parameter("test_string")
+        reconstructed = convert_symbol_from_json(convert_symbol_to_json(func))
 
-        with pytest.raises(NotImplementedError):
-            func.to_json()
-
-        with pytest.raises(NotImplementedError):
-            pybamm.Parameter._from_json({})
+        assert isinstance(reconstructed, pybamm.Parameter)
+        assert reconstructed.name == func.name
+        assert reconstructed.id == func.id
 
 
 class TestFunctionParameter:
@@ -118,14 +122,19 @@ class TestFunctionParameter:
         func1.print_name = None
         assert func1.to_equation() == sympy.Symbol("func")
 
-    def test_to_json_error(self):
+    def test_to_from_json_round_trip(self):
+        from pybamm.expression_tree.operations.serialise import (
+            convert_symbol_from_json,
+            convert_symbol_to_json,
+        )
+
         func = pybamm.FunctionParameter("test", {"x": pybamm.Scalar(1)})
+        reconstructed = convert_symbol_from_json(convert_symbol_to_json(func))
 
-        with pytest.raises(NotImplementedError):
-            func.to_json()
-
-        with pytest.raises(NotImplementedError):
-            pybamm.FunctionParameter._from_json({})
+        assert isinstance(reconstructed, pybamm.FunctionParameter)
+        assert reconstructed.name == func.name
+        assert reconstructed.input_names == func.input_names
+        assert reconstructed.id == func.id
 
     def test_function_parameter_post_processor(self):
         """Test that post_processor is stored and propagated correctly."""

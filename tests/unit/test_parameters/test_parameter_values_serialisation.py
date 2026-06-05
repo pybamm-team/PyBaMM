@@ -312,7 +312,7 @@ class TestRoundtripValueTypes:
             (pybamm.constants.q_e, "q_e"),
         ]:
             json_data = convert_symbol_to_json(const)
-            assert json_data["type"] == "Constant"
+            assert json_data["$type"].endswith("Constant")
             restored = convert_symbol_from_json(json_data)
             assert type(restored) is pybamm.Constant
             assert restored.is_constant() is False

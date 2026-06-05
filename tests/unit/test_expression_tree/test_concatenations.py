@@ -401,7 +401,6 @@ class TestConcatenations:
 
         json_dict = {
             "name": "domain_concatenation",
-            "id": mocker.ANY,
             "domains": {
                 "primary": ["negative electrode", "separator", "positive electrode"],
                 "secondary": [],
@@ -444,7 +443,6 @@ class TestConcatenations:
 
         np_json = {
             "name": "numpy_concatenation",
-            "id": mocker.ANY,
             "domains": {
                 "primary": [],
                 "secondary": [],

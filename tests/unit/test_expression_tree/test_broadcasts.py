@@ -345,11 +345,10 @@ class TestBroadcasts:
         assert isinstance(d, pybamm.Scalar)
         assert d.evaluate(y=y) == 0
 
-    def test_to_from_json_error(self):
-        a = pybamm.StateVector(slice(0, 1))
-        b = pybamm.PrimaryBroadcast(a, "separator")
-        with pytest.raises(NotImplementedError):
-            b.to_json()
-
-        with pytest.raises(NotImplementedError):
-            pybamm.PrimaryBroadcast._from_json({})
+    def test_to_json_emits_broadcast_domain_and_name(self):
+        # Verify that to_json emits the expected fields (kernel contract).
+        b = pybamm.PrimaryBroadcast(pybamm.Scalar(1.0), "separator")
+        node = b.to_json()
+        assert node["broadcast_domain"] == ["separator"]
+        assert node["name"] == "broadcast"
+        assert "id" not in node  # identity is not part of the round-trip contract

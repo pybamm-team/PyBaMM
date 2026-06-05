@@ -482,7 +482,7 @@ def graphite_LGM50_entropic_change_ORegan2022(sto):
     return dUdT
 
 
-def nmc_LGM50_electronic_conductivity_ORegan2022(T):
+def nmc_LGM50_electronic_conductivity_ORegan2022(sto, T):
     """
     Positive electrode electronic conductivity as a function of the temperature from
     [1].
@@ -495,6 +495,9 @@ def nmc_LGM50_electronic_conductivity_ORegan2022(T):
 
     Parameters
     ----------
+    sto: :class:`pybamm.Symbol`
+       Electrode surface stoichiometry (unused; conductivity depends on temperature
+       only, but the model supplies stoichiometry first)
     T: :class:`pybamm.Symbol`
        Dimensional temperature
 

@@ -31,6 +31,11 @@ class VectorField(TensorField):
         # Override the name to maintain backward compatibility
         self.name = "vector_field"
 
+    @classmethod
+    def _from_json(cls, snippet):
+        # Two positional args, not a single list -- override TensorField._from_json.
+        return cls(snippet["children"][0], snippet["children"][1])
+
     @property
     def lr_field(self):
         """The left-right (x) component of the vector field."""

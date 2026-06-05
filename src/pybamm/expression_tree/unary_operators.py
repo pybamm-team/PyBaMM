@@ -459,7 +459,6 @@ class Index(UnaryOperator):
 
         json_dict = {
             "name": self.name,
-            "id": self.id,
             "index": {
                 "start": self.slice.start,
                 "stop": self.slice.stop,
@@ -500,18 +499,19 @@ class SpatialOperator(UnaryOperator):
     ):
         super().__init__(name, child, domains)
 
+    # Names of __init__ args (besides the child) to serialise; subclasses set this.
+    _json_extra_fields: tuple[str, ...] = ()
+
     def to_json(self):
-        raise NotImplementedError(
-            "pybamm.SpatialOperator:"
-            "Serialisation is only implemented for discretised models."
-        )
+        json_dict = {"name": self.name, "domains": self.domains}
+        for field in self._json_extra_fields:
+            json_dict[field] = getattr(self, field)
+        return json_dict
 
     @classmethod
     def _from_json(cls, snippet):
-        raise NotImplementedError(
-            "pybamm.SpatialOperator:"
-            "Please use a discretised model when reading in from JSON."
-        )
+        kwargs = {f: snippet[f] for f in cls._json_extra_fields}
+        return cls(snippet["children"][0], **kwargs)
 
 
 class Gradient(SpatialOperator):
@@ -819,6 +819,18 @@ class BaseIndefiniteIntegral(Integral):
         # overwrite domains with child domains
         self.copy_domains(child)
 
+    def to_json(self):
+        var = self.integration_variable[0]
+        return {
+            "name": self.name,
+            "domains": self.domains,
+            "children": [self.children[0], var],
+        }
+
+    @classmethod
+    def _from_json(cls, snippet):
+        return cls(snippet["children"][0], snippet["children"][1])
+
     def _evaluate_for_shape(self):
         return self.children[0].evaluate_for_shape()
 
@@ -900,6 +912,8 @@ class DefiniteIntegralVector(SpatialOperator):
         Whether to return a row or column vector (default is row)
     """
 
+    _json_extra_fields = ("vector_type",)
+
     def __init__(self, child, vector_type="row"):
         name = "basis integral"
         self.vector_type = vector_type
@@ -950,6 +964,8 @@ class BoundaryIntegral(SpatialOperator):
         carried out over the appropriate part of the boundary corresponding to
         the tab.
     """
+
+    _json_extra_fields = ("region",)
 
     def __init__(self, child, region="entire"):
         # boundary integral removes domains
@@ -1027,6 +1043,24 @@ class OneDimensionalIntegral(BoundaryIntegral):
         self.name = name
         self.domains = {}
 
+    def to_json(self):
+        return {
+            "name": self.name,
+            "domains": self.domains,
+            "integration_domain": self.integration_domain,
+            "direction": self.direction,
+            "region": self.region,
+        }
+
+    @classmethod
+    def _from_json(cls, snippet):
+        return cls(
+            snippet["children"][0],
+            snippet["integration_domain"],
+            snippet["direction"],
+            region=snippet["region"],
+        )
+
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`"""
         self._id = hash(
@@ -1063,6 +1097,18 @@ class DeltaFunction(SpatialOperator):
         if child.domain != []:
             domains["secondary"] = child.domain
         super().__init__("delta_function", child, domains)
+
+    def to_json(self):
+        return {
+            "name": self.name,
+            "domains": self.domains,
+            "side": self.side,
+            "domain": self.domains["primary"],
+        }
+
+    @classmethod
+    def _from_json(cls, snippet):
+        return cls(snippet["children"][0], snippet["side"], snippet["domain"])
 
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`"""
@@ -1164,6 +1210,8 @@ class BoundaryValue(BoundaryOperator):
         spatial method. Can be "constant", "linear" or "quadratic".
     """
 
+    _json_extra_fields = ("side", "order")
+
     def __init__(self, child, side, order=None):
         super().__init__("boundary value", child, side)
         self.order = order
@@ -1213,6 +1261,8 @@ class BoundaryMeshSize(BoundaryOperator):
         Which side to take the boundary value on ("left" or "right")
     """
 
+    _json_extra_fields = ("side",)
+
     def __init__(self, child, side):
         super().__init__("boundary mesh size", child, side)
 
@@ -1222,9 +1272,21 @@ class ExplicitTimeIntegral(UnaryOperator):
         super().__init__("explicit time integral", children)
         self.initial_condition = initial_condition
 
+    def to_json(self):
+        """Convert ExplicitTimeIntegral to JSON for serialisation.
+
+        Routes ``initial_condition`` through the children list so the kernel
+        encodes/decodes it as a Symbol rather than a bare scalar field.
+        """
+        return {
+            "name": self.name,
+            "domains": self.domains,
+            "children": [self.children[0], self.initial_condition],
+        }
+
     @classmethod
     def _from_json(cls, snippet: dict):
-        return cls(snippet["children"][0], snippet["initial_condition"])
+        return cls(snippet["children"][0], snippet["children"][1])
 
     def _unary_new_copy(self, child, perform_simplifications=True):
         return self.__class__(child, self.initial_condition)
@@ -1235,20 +1297,6 @@ class ExplicitTimeIntegral(UnaryOperator):
 
     def is_constant(self):
         return False
-
-    def to_json(self):
-        """
-        Convert ExplicitTimeIntegral to json for serialisation.
-
-        Both `children` and `initial_condition` contain Symbols, and are therefore
-        dealt with by `pybamm.Serialise._SymbolEncoder.default()` directly.
-        """
-        json_dict = {
-            "name": self.name,
-            "id": self.id,
-        }
-
-        return json_dict
 
 
 class BoundaryGradient(BoundaryOperator):
@@ -1266,6 +1314,8 @@ class BoundaryGradient(BoundaryOperator):
         The order of the boundary gradient. If None, the order is determined by the
         spatial method. Can be "constant", "linear" or "quadratic".
     """
+
+    _json_extra_fields = ("side", "order")
 
     def __init__(self, child, side, order=None):
         super().__init__("boundary flux", child, side)
@@ -1299,6 +1349,17 @@ class EvaluateAt(SpatialOperator):
         }
 
         super().__init__("evaluate", child, domains)
+
+    def to_json(self):
+        return {
+            "name": self.name,
+            "domains": self.domains,
+            "children": [self.children[0], self.position],
+        }
+
+    @classmethod
+    def _from_json(cls, snippet):
+        return cls(snippet["children"][0], snippet["children"][1])
 
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`"""
@@ -1361,6 +1422,8 @@ class UpwindDownwind2D(UpwindDownwind):
     Usually to be used for better stability in convection-dominated equations.
     """
 
+    _json_extra_fields = ("lr_direction", "tb_direction")
+
     def __init__(self, child, lr_direction, tb_direction):
         super().__init__("upwind_downwind_2d", child)
         self.lr_direction = lr_direction
@@ -1383,6 +1446,8 @@ class NodeToEdge2D(SpatialOperator):
     direction : str
         The direction for the edges: "lr" (left-right) or "tb" (top-bottom)
     """
+
+    _json_extra_fields = ("direction",)
 
     def __init__(self, child, direction):
         if direction not in ("lr", "tb"):
@@ -1418,6 +1483,17 @@ class Magnitude(UnaryOperator):
     def __init__(self, child, direction):
         super().__init__("magnitude" + f"({direction})", child)
         self.direction = direction
+
+    def to_json(self):
+        return {
+            "name": self.name,
+            "domains": self.domains,
+            "direction": self.direction,
+        }
+
+    @classmethod
+    def _from_json(cls, snippet):
+        return cls(snippet["children"][0], snippet["direction"])
 
     def _unary_new_copy(self, child, perform_simplifications=True):
         """See :meth:`UnaryOperator._unary_new_copy()`."""

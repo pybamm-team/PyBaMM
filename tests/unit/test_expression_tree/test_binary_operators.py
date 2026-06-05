@@ -855,7 +855,6 @@ class TestBinaryOperators:
         # Test Addition
         add_json = {
             "name": "+",
-            "id": mocker.ANY,
             "domains": EMPTY_DOMAINS,
         }
         add = pybamm.Addition(2, 4)
@@ -868,7 +867,6 @@ class TestBinaryOperators:
         # Test Power
         pow_json = {
             "name": "**",
-            "id": mocker.ANY,
             "domains": EMPTY_DOMAINS,
         }
 
@@ -881,7 +879,6 @@ class TestBinaryOperators:
         # Test Division
         div_json = {
             "name": "/",
-            "id": mocker.ANY,
             "domains": EMPTY_DOMAINS,
         }
 
@@ -894,7 +891,6 @@ class TestBinaryOperators:
         # Test EqualHeaviside
         equal_json = {
             "name": "<=",
-            "id": mocker.ANY,
             "domains": EMPTY_DOMAINS,
         }
 
@@ -907,7 +903,6 @@ class TestBinaryOperators:
         # Test notEqualHeaviside
         not_equal_json = {
             "name": "<",
-            "id": mocker.ANY,
             "domains": EMPTY_DOMAINS,
         }
 

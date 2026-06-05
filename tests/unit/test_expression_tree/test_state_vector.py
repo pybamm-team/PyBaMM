@@ -76,7 +76,6 @@ class TestStateVector:
 
         json_dict = {
             "name": "y[0:10]",
-            "id": mocker.ANY,
             "domains": {
                 "primary": [],
                 "secondary": [],

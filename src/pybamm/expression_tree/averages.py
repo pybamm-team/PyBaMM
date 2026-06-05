@@ -356,6 +356,17 @@ class SizeAverage(_BaseAverage):
         super().__init__(child, "size-average", integration_variable)
         self.f_a_dist = f_a_dist
 
+    def to_json(self):
+        return {
+            "name": self.name,
+            "domains": self.domains,
+            "children": [self.children[0], self.f_a_dist],
+        }
+
+    @classmethod
+    def _from_json(cls, snippet):
+        return cls(snippet["children"][0], snippet["children"][1])
+
     def _unary_new_copy(
         self, child: pybamm.Symbol, perform_simplifications: bool = True
     ):

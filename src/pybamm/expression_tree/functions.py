@@ -305,10 +305,14 @@ class SpecificFunction(Function):
         """
         Method to serialise a SpecificFunction object into JSON.
         """
+        # Concrete subclasses (Sin, Exp, ...) restore their callable in _from_json
+        # via the class itself. The bare base class only stores the function name,
+        # which cannot be turned back into a callable, so refuse to serialise it.
+        if self.__class__ is SpecificFunction:
+            raise NotImplementedError("SpecificFunction is not supported directly")
 
         json_dict = {
             "name": self.name,
-            "id": self.id,
             "function": self.function.__name__,
         }
 
@@ -388,6 +392,9 @@ class Arcsinh2(Function):
     pybamm.Symbol
         The regularised arcsinh(a/b) value
     """
+
+    # a and b are Symbol operands carried via children (Function base); eps is emitted.
+    _serialise_derived_params = frozenset({"a", "b"})
 
     def __init__(
         self,
@@ -477,7 +484,6 @@ class Arcsinh2(Function):
         """Method to serialise a Arcsinh2 object into JSON."""
         return {
             "name": self.name,
-            "id": self.id,
             "function": "arcsinh2",
             "eps": self.eps,
         }
@@ -897,6 +903,9 @@ class RegPower(Function):
     .. [1] Modelica.Fluid.Utilities.regPow
     """
 
+    # base, exponent, scale are Symbol operands carried via children; delta is emitted.
+    _serialise_derived_params = frozenset({"base", "exponent", "scale"})
+
     def __init__(
         self,
         base: pybamm.Symbol | float,
@@ -1069,7 +1078,6 @@ class RegPower(Function):
         """Method to serialise a RegPower object into JSON."""
         return {
             "name": self.name,
-            "id": self.id,
             "function": "reg_power",
             "delta": self.delta,
         }

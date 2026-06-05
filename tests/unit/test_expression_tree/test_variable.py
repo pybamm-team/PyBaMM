@@ -63,10 +63,14 @@ class TestVariable:
         # Test name
         assert pybamm.Variable("name").to_equation() == sympy.Symbol("name")
 
-    def test_to_json_error(self):
-        func = pybamm.Variable("test_string")
-        with pytest.raises(NotImplementedError):
-            func.to_json()
+    def test_to_json(self):
+        func = pybamm.Variable(
+            "test_string", scale=pybamm.Scalar(2.0), reference=pybamm.Scalar(1.0)
+        )
+        rebuilt = pybamm.Variable._from_json(func.to_json())
+        assert rebuilt.id == func.id
+        assert rebuilt.scale == func.scale
+        assert rebuilt.reference == func.reference
 
 
 class TestVariableDot:

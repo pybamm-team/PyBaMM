@@ -2,6 +2,7 @@ import copy
 import itertools
 import logging
 import os
+import re
 from datetime import datetime
 from types import SimpleNamespace
 
@@ -16,6 +17,42 @@ class ShortDurationCRate(pybamm.step.CRate):
     def _default_timespan(self, value):
         # Set a short default duration for testing early stopping due to infeasible time
         return 1
+
+
+def _unified_rhs_jac_n_instructions(unique_step_strings):
+    """rhs_algebraic and jacobian top-function instruction counts for a unified-mode
+    SPM experiment with the given distinct steps."""
+    experiment = pybamm.Experiment([tuple(unique_step_strings)])
+    sim = pybamm.Simulation(
+        pybamm.lithium_ion.SPM(),
+        experiment=experiment,
+        solver=pybamm.IDAKLUSolver(),
+        experiment_model_mode="unified",
+    )
+    sim.solve()
+    assert sim._experiment_uses_unified_model
+    model = sim._built_experiment_model
+    return (
+        model.rhs_algebraic_eval.n_instructions(),
+        model.jac_rhs_algebraic_eval.n_instructions(),
+    )
+
+
+def _largest_generated_fn_lines(fn):
+    """Body-line count of the largest ``casadi_fN`` in ``fn``'s generated C."""
+    gen = casadi.CodeGenerator("probe", {"with_header": False})
+    gen.add(fn)
+    lines = gen.dump().split("\n")
+    largest = 0
+    for i, line in enumerate(lines):
+        if re.match(r"\s*static int casadi_f\d+\(", line):
+            depth = 0
+            for j in range(i, len(lines)):
+                depth += lines[j].count("{") - lines[j].count("}")
+                if depth == 0 and j > i:
+                    largest = max(largest, j - i)
+                    break
+    return largest
 
 
 class TestSimulationExperiment:
@@ -414,10 +451,8 @@ class TestSimulationExperiment:
             )
 
     def test_unified_model_switching_size_independent_of_cycle_count(self):
-        # The unified model's switching Conditional must branch on unique steps, not
-        # step instances, or it is O(n_steps) per timestep -> O(n_steps**2) over the
-        # experiment. Branch count must stay bounded by unique steps and flat in
-        # cycle count.
+        # Switching must branch on unique steps, not instances, else O(n_steps**2) over
+        # the experiment. Branch count stays bounded by unique steps, flat in cycles.
         def max_conditional_branches(model):
             roots = (
                 list(model.rhs.values())
@@ -464,11 +499,90 @@ class TestSimulationExperiment:
         )
         assert max(branch_counts) <= n_unique
 
-        # Duplicate instances collapse onto the same branch index, repeating per cycle.
         for n_cycles, indices in zip((2, 5, 20), step_index_maps, strict=True):
             assert len(indices) == n_unique * n_cycles
             assert set(indices) == set(range(1, n_unique + 1))
             assert indices == [(i % n_unique) + 1 for i in range(len(indices))]
+
+    def test_unified_switch_top_functions_flat_in_unique_steps(self):
+        # Per-branch dispatch keeps the top rhs/jac flat in unique step count.
+        rhs_1, jac_1 = _unified_rhs_jac_n_instructions(
+            [f"Discharge at {0.4 + 0.1 * i:.2f}C for 10 s" for i in range(1)]
+        )
+        rhs_8, jac_8 = _unified_rhs_jac_n_instructions(
+            [f"Discharge at {0.4 + 0.1 * i:.2f}C for 10 s" for i in range(8)]
+        )
+        assert rhs_8 <= rhs_1 + 2, (
+            f"unified rhs top function grows with unique steps: {rhs_1} -> {rhs_8}"
+        )
+        assert jac_8 <= jac_1 + 2, (
+            f"unified jac top function grows with unique steps: {jac_1} -> {jac_8}"
+        )
+
+    def test_unified_active_branch_independent_of_other_modes(self):
+        # Each mode is a separate branch function, so adding modes doesn't grow the top
+        # rhs/jac and inactive modes aren't evaluated during an active step.
+        rhs_cc, jac_cc = _unified_rhs_jac_n_instructions(["Discharge at 1C for 10 s"])
+        rhs_multi, jac_multi = _unified_rhs_jac_n_instructions(
+            [
+                "Discharge at 1C for 10 s",
+                "Charge at 0.5C until 4.2 V",
+                "Hold at 4.2 V until C/50",
+            ]
+        )
+        assert rhs_multi <= rhs_cc + 2, (
+            f"adding modes grew the rhs top function: {rhs_cc} -> {rhs_multi}"
+        )
+        assert jac_multi <= jac_cc + 2, (
+            f"adding modes grew the jac top function: {jac_cc} -> {jac_multi}"
+        )
+
+    def test_unified_switch_matches_legacy_voltage(self):
+        # Switch dispatch must not change results vs legacy.
+        experiment = pybamm.Experiment(
+            [
+                (
+                    "Discharge at 1C until 3.3 V",
+                    "Charge at 1C until 4.0 V",
+                    "Hold at 4.0 V until C/20",
+                )
+            ]
+        )
+
+        def voltage(mode):
+            sim = pybamm.Simulation(
+                pybamm.lithium_ion.SPM(),
+                experiment=experiment,
+                solver=pybamm.IDAKLUSolver(),
+                experiment_model_mode=mode,
+            )
+            sim.solve()
+            return sim.solution["Voltage [V]"].entries[-1]
+
+        assert voltage("unified") == pytest.approx(voltage("legacy"), abs=1e-6)
+
+    def test_unified_aot_compile_bounded_in_unique_steps(self):
+        # -O3 is superlinear in single-function size, so per-branch dispatch must keep
+        # the largest generated jac function flat as unique steps grow. Deterministic.
+        def largest_jac_fn_lines(n):
+            ops = [f"Discharge at {0.4 + 0.1 * i:.2f}C for 10 s" for i in range(n)]
+            sim = pybamm.Simulation(
+                pybamm.lithium_ion.SPMe(),
+                experiment=pybamm.Experiment([tuple(ops)]),
+                solver=pybamm.IDAKLUSolver(),
+                experiment_model_mode="unified",
+            )
+            sim.solve()
+            return _largest_generated_fn_lines(
+                sim._built_experiment_model.jac_rhs_algebraic_eval
+            )
+
+        big_2 = largest_jac_fn_lines(2)
+        big_8 = largest_jac_fn_lines(8)
+        assert big_8 <= big_2 + 50, (
+            "largest unified jac function grew with unique steps: "
+            f"{big_2} -> {big_8} lines (per-branch dispatch should keep it flat)"
+        )
 
     def test_experiment_state_mapper_has_full_state_size_for_2d_current_collector(self):
         experiment = pybamm.Experiment(
