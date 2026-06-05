@@ -241,14 +241,17 @@ class TestDiffSLExport:
         assert sim._built_experiment_model is not None
         assert "experimentstepindex" not in export
         assert "[N]" in export
-        stop_block = export.split("stop_i {", 1)[1].split("}\nout_i {", 1)[0]
-        assert "[N]" not in stop_block
-        assert "3600 - t" in stop_block
-        assert "4200 - t" in stop_block
-        assert "4.099" in stop_block
-        assert stop_block.index("3600 - t") < stop_block.index("4200 - t")
-        assert stop_block.index("4200 - t") < stop_block.index("4.099")
-        assert stop_block.index("4.099") < stop_block.index("5.099")
+        assert "steptime0_i" in export
+        assert "steptime0" in export.split("u_i {", 1)[1].split("}", 1)[0]
+        assert "heaviside" in export
+        assert "(event" in export and "_i * varying" in export
+        assert "3600 - steptime0_i" in export
+        assert "600 - steptime0_i" in export
+        assert "4.099" in export
+
+        reset_parts = export.split("reset_i {\n", 1)
+        assert len(reset_parts) > 1
+        assert "u_i[0:" in reset_parts[1]
 
     def test_simulation_with_unified_experiment_padding_rests_use_model_index(self):
         experiment = pybamm.Experiment(
@@ -283,15 +286,9 @@ class TestDiffSLExport:
         assert sim._built_experiment_model is not None
         assert "experimentstepindex" not in export
         assert "[N]" in export
-        stop_block = export.split("stop_i {", 1)[1].split("}\nout_i {", 1)[0]
-        assert "[N]" not in stop_block
-        for stop_time in ["3600 - t", "7200 - t", "9000 - t", "14400 - t", "18000 - t"]:
-            assert stop_time in stop_block
-        assert stop_block.index("3600 - t") < stop_block.index("7200 - t")
-        assert stop_block.index("7200 - t") < stop_block.index("9000 - t")
-        assert stop_block.index("9000 - t") < stop_block.index("14400 - t")
-        assert stop_block.index("14400 - t") < stop_block.index("18000 - t")
-        assert "1.0,\n  1.0,\n  1.0,\n  1.0,\n  1.0,\n  1.0,\n  0.0,\n  0.0," in export
+        assert "steptime0_i" in export
+        assert "3600 - steptime0_i" in export
+        assert "heaviside" in export
 
     def test_conditional_scalar_export_uses_branch_vector(self):
         model = pybamm.BaseModel()
@@ -446,12 +443,10 @@ class TestDiffSLExport:
         export = exporter.to_diffeq(outputs=[output_name])
 
         assert "[N]" in export
-        stop_block = export.split("stop_i {", 1)[1].split("}\nout_i {", 1)[0]
-        for stop_time in ["3600 - t", "4200 - t", "7800 - t"]:
-            assert stop_time in stop_block
-        assert stop_block.index("3600 - t") < stop_block.index("4200 - t")
-        assert stop_block.index("4200 - t") < stop_block.index("7800 - t")
-        assert "1.0,\n  1.0,\n  1.0,\n  1.0,\n  0.0,\n  0.0," in export
+        assert "steptime0_i" in export
+        assert "3600 - steptime0_i" in export
+        assert "600 - steptime0_i" in export
+        assert "heaviside" in export
 
     def test_unified_experiment_padding_duplicate_steps(self):
         experiment = pybamm.Experiment(
@@ -483,17 +478,44 @@ class TestDiffSLExport:
         export = exporter.to_diffeq(outputs=[output_name])
 
         assert "[N]" in export
-        stop_block = export.split("stop_i {", 1)[1].split("}\nout_i {", 1)[0]
-        for stop_time in [
-            "3600 - t",
-            "7200 - t",
-            "9000 - t",
-            "14400 - t",
-            "18000 - t",
-        ]:
-            assert stop_time in stop_block
-        assert stop_block.index("3600 - t") < stop_block.index("7200 - t")
-        assert stop_block.index("7200 - t") < stop_block.index("9000 - t")
-        assert stop_block.index("9000 - t") < stop_block.index("14400 - t")
-        assert stop_block.index("14400 - t") < stop_block.index("18000 - t")
-        assert "1.0,\n  1.0,\n  1.0,\n  1.0,\n  1.0,\n  1.0,\n  0.0,\n  0.0," in export
+        assert "steptime0_i" in export
+        assert "3600 - steptime0_i" in export
+        assert "heaviside" in export
+
+    def test_unified_experiment_repeating_cycle(self):
+        experiment = pybamm.Experiment(
+            [
+                "Discharge at C/5 for 10 hours or until 3.3 V",
+                "Rest for 1 hour",
+                "Charge at 1 A until 4.1 V",
+                "Hold at 4.1 V until 10 mA",
+                "Rest for 1 hour",
+            ]
+            * 10
+        )
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            experiment=experiment,
+            solver=pybamm.CasadiSolver(),
+            experiment_model_mode="unified",
+        )
+        exporter = pybamm.DiffSLExport(sim)
+        output_name = next(iter(exporter.model.variables))
+        export = exporter.to_diffeq(outputs=[output_name])
+
+        assert len(sim.experiment.steps) == 50
+        assert "[N]" in export
+        assert "steptime0_i" in export
+
+        cycle_length = pybamm.DiffSLExport._compute_experiment_cycle_length(
+            sim._experiment_step_indices
+        )
+        assert cycle_length == 5
+
+        assert export.count("heaviside") >= 1
+        assert "(event" in export and "_i * varying" in export
+        assert "36000 - steptime0_i" in export
+        assert "3.2999" in export
+        assert "86400 - steptime0_i" in export
+        assert "4.099" in export
+        assert "0.010" in export

@@ -338,44 +338,85 @@ class DiffSLExport:
         symbol_to_tensor_name[symbol] = tensor_name
         return tensor_index
 
+    @staticmethod
+    def _compute_experiment_cycle_length(
+        step_indices: list[int],
+    ) -> int:
+        """Determine the shortest repeating cycle in the experiment step indices.
+
+        Computes the LPS (longest proper prefix which is also a suffix) array,
+        also known as the KMP prefix function or failure table, over the
+        sequence of 1-based step indices. If the sequence is composed of
+        repetitions of a shorter pattern, returns the length of that pattern.
+        Otherwise returns the full sequence length.
+
+        Parameters
+        ----------
+        step_indices : list[int]
+            1-based step branch indices for every step in the experiment.
+
+        Returns
+        -------
+        int
+            The length of the shortest repeating cycle, or ``len(step_indices)``
+            if no repeating cycle is found.
+        """
+        n = len(step_indices)
+        if n == 0:
+            return 0
+        indices_0based = [i - 1 for i in step_indices]
+        lps = [0] * n
+        length = 0
+        i = 1
+        while i < n:
+            if indices_0based[i] == indices_0based[length]:
+                length += 1
+                lps[i] = length
+                i += 1
+            elif length != 0:
+                length = lps[length - 1]
+            else:
+                lps[i] = 0
+                i += 1
+        p = lps[-1]
+        if p > 0 and n % (n - p) == 0:
+            return n - p
+        return n
+
     def _get_unified_experiment_schedule_states(
         self,
         sim: pybamm.Simulation,
         step_branches: list[pybamm.Symbol],
+        steptime0_sv: pybamm.StateVector,
     ) -> tuple[list[int], list[pybamm.Symbol]]:
-        unique_steps = list(dict.fromkeys(sim.experiment.steps))
-        expected_branches = len(unique_steps)
-        padding_branch_index = None
-        if sim._experiment_includes_padding_rest:
-            padding_branch_index = len(unique_steps)
-            expected_branches += 1
+        step_indices = sim._experiment_step_indices
+        cycle_length = self._compute_experiment_cycle_length(step_indices)
+        cycle_steps = sim.experiment.steps[:cycle_length]
+        cycle_indices = step_indices[:cycle_length]
 
-        if len(step_branches) != expected_branches:
+        initial_start_time = sim.experiment.initial_start_time
+        if initial_start_time is not None and cycle_length < len(step_indices):
             raise ValueError(
-                f"Unified experiment DiffSL export expected {expected_branches} "
-                f"step/padding branches but got {len(step_branches)}"
+                "Unified experiment DiffSL export does not support scheduled "
+                "start times with repeating cycles. The cycle detection found a "
+                "repeating pattern but the experiment includes datetime scheduling."
             )
 
-        step_to_branch_index = {step: i for i, step in enumerate(unique_steps)}
+        # will be replaced with last branch
+        branch_order = [-1]
+        stop_expressions = [pybamm.Symbol("placeholder stop expression")]
 
-        branch_order = []
-        stop_expressions = [pybamm.Scalar(1)]
-        initial_start_time = sim.experiment.initial_start_time
-        current_time = 0.0
+        for step, branch_index in zip(cycle_steps, cycle_indices, strict=True):
+            branch = step_branches[branch_index - 1]
+            branch_order.append(len(stop_expressions) - 1)
 
-        for step in sim.experiment.steps:
-            branch_index = step_to_branch_index[step]
-            branch = step_branches[branch_index]
-            branch_order.append(branch_index)
-
-            step_end_time = current_time + step.duration
+            effective_duration = step.duration
             if step.end_time is not None and initial_start_time is not None:
-                scheduled_end_time = (
-                    step.end_time - initial_start_time
-                ).total_seconds()
-                step_end_time = min(step_end_time, scheduled_end_time)
+                start_dt = (step.start_time - initial_start_time).total_seconds()
+                end_dt = (step.end_time - initial_start_time).total_seconds()
+                effective_duration = min(effective_duration, end_dt - start_dt)
 
-            duration_stop = pybamm.Scalar(step_end_time) - pybamm.t
+            duration_stop = pybamm.Scalar(effective_duration) - steptime0_sv
             if isinstance(branch, pybamm.Scalar) and branch.value == 1:
                 stop_expr = duration_stop
             else:
@@ -388,26 +429,29 @@ class DiffSLExport:
                         "Unified experiment DiffSL export expected an initial start time "
                         "when step next_start_time is set"
                     )
-                next_start_time = (
+                step_end_rel = (
+                    step.start_time - initial_start_time
+                ).total_seconds() + effective_duration
+                next_start_rel = (
                     step.next_start_time - initial_start_time
                 ).total_seconds()
-                if next_start_time > step_end_time:
-                    if padding_branch_index is None:  # pragma: no cover
-                        raise ValueError(
-                            "Unified experiment DiffSL export expected a padding-rest branch"
-                        )
-                    branch_order.append(padding_branch_index)
-                    stop_expressions.append(pybamm.Scalar(next_start_time) - pybamm.t)
-                current_time = next_start_time
-            else:
-                current_time = step_end_time
+                if next_start_rel > step_end_rel:
+                    padding_duration = next_start_rel - step_end_rel
+                    branch_order.append(len(stop_expressions) - 1)
+                    stop_expressions.append(
+                        pybamm.Scalar(padding_duration) - steptime0_sv
+                    )
 
-        branch_order.append(branch_order[-1])
+        # Last branch is at index 0
+        branch_order[0] = branch_order[-1]
+        stop_expressions[0] = stop_expressions[-1]
+        branch_order.pop()
+        stop_expressions.pop()
         return branch_order, stop_expressions
 
     def _get_stop_expressions(
-        self, model: pybamm.BaseModel
-    ) -> tuple[list[pybamm.Symbol], list[pybamm.Symbol]]:
+        self, model: pybamm.BaseModel, steptime0_sv: pybamm.StateVector | None = None
+    ) -> tuple[list[pybamm.Symbol], list[int]]:
         general_stops = [
             event.expression
             for event in model.events
@@ -416,7 +460,7 @@ class DiffSLExport:
         ]
 
         if not (self._has_experiment and isinstance(self._source, pybamm.Simulation)):
-            return general_stops, general_stops
+            return general_stops, 0
 
         sim = self._source
         combined_event = next(
@@ -436,13 +480,17 @@ class DiffSLExport:
                 "conditional"
             )
 
+        if steptime0_sv is None:
+            raise ValueError(
+                "Unified experiment DiffSL export requires a steptime0 state vector"
+            )
+
         step_branches = list(combined_event.expression.branches)
-        branch_order, step_stops = self._get_unified_experiment_schedule_states(
-            sim, step_branches
+        branch_order, cycle_stop_exprs = self._get_unified_experiment_schedule_states(
+            sim, step_branches, steptime0_sv
         )
-        self._model_index_branch_order = branch_order
         self._model_index_terminal_states = len(general_stops)
-        return step_stops + general_stops, general_stops
+        return cycle_stop_exprs + general_stops, branch_order
 
     def extract_pre_calculated_tensors(
         self,
@@ -556,13 +604,30 @@ class DiffSLExport:
                     all_vars[out] = model.get_processed_variable(out)
                 except KeyError:  # pragma: no cover
                     pass
-        stop_expressions, _ = self._get_stop_expressions(model)
+
+        # for experiments we add a variable steptime0 indicating
+        # the start time of the current step
+        states = list(chain(model.rhs.keys(), model.algebraic.keys()))
+        if self._has_experiment:
+            total_model_state_size = sum(
+                model.initial_conditions[v].size for v in states
+            )
+            steptime0_slice = slice(total_model_state_size, total_model_state_size + 1)
+            steptime0_sv = pybamm.StateVector(steptime0_slice)
+        else:
+            total_model_state_size = 0
+            steptime0_sv = None
+        stop_expressions, stop_branch_order = self._get_stop_expressions(
+            model, steptime0_sv
+        )
         has_events = len(stop_expressions) > 0
         is_ode = len(model.algebraic) == 0
 
-        states = list(chain(model.rhs.keys(), model.algebraic.keys()))
         state_labels = [to_variable_name(v.name) for v in states]
         initial_conditions = [model.initial_conditions[v] for v in states]
+        if self._has_experiment:
+            state_labels.append("steptime0")
+            initial_conditions.append(pybamm.Scalar(0))
         diffeq = {}
         new_line = "\n"
 
@@ -731,12 +796,15 @@ class DiffSLExport:
                     eqn = f"({start_index}:{start_index + n}): 0.0"
                 lines += [f"  {eqn},"]
                 start_index += algebraic.size
+            if self._has_experiment:
+                eqn = f"{state_name_to_dstate_name('steptime0')}_i"
+                lines += [f"  {eqn},"]
             diffeq["M"] = new_line.join(lines) + new_line + "}"
 
         # F
         model_index_gate = None
         if self._has_experiment:
-            active_steps = len(self._model_index_branch_order)
+            active_steps = len(stop_branch_order)
             terminal_states = self._model_index_terminal_states
             gate_tensor_name = f"constant{tensor_index}"
             tensor_index += 1
@@ -769,6 +837,8 @@ class DiffSLExport:
             lines += [f"  {eqn},"]
             start_index += algebraic.size
         if self._has_experiment and model_index_gate is not None:
+            # rhs for steptime0 is 1
+            lines += ["  1.0,"]
             diffeq["F"] = (
                 new_line.join(lines)
                 + new_line
@@ -797,21 +867,77 @@ class DiffSLExport:
 
         # events
         if has_events:
-            lines = ["stop_i {"]
-            for stop_expression in stop_expressions:
-                eqn = equation_to_diffeq(
-                    stop_expression,
-                    y_slice_to_label,
-                    symbol_to_tensor_name,
-                    float_precision=self.float_precision,
-                    use_model_index=self._has_experiment,
-                )
-                lines += [f"  {eqn},"]
-            diffeq["stop"] = new_line.join(lines) + new_line + "}"
+            if self._has_experiment:
+                cycle_count = len(stop_branch_order)
+                cycle_stops = stop_expressions[:cycle_count]
+                general_stops = stop_expressions[cycle_count:]
 
-        # reset - just a simple passthru
+                event_tensor_name = f"event{tensor_index}"
+                tensor_index += 1
+                event_entries = [
+                    equation_to_diffeq(
+                        expr,
+                        y_slice_to_label,
+                        symbol_to_tensor_name,
+                        float_precision=self.float_precision,
+                        use_model_index=self._has_experiment,
+                    )
+                    for expr in cycle_stops
+                ]
+                diffeq[event_tensor_name] = self._tensor_block(
+                    event_tensor_name, event_entries
+                )
+
+                activestep_tensor_name = f"constant{tensor_index}"
+                tensor_index += 1
+                diffeq[activestep_tensor_name] = self._tensor_block(
+                    activestep_tensor_name, stop_branch_order
+                )
+
+                # equality tensor of length equal to the number of steps
+                # in a cycle. with a 1 at the index of the active step
+                # and 0 elsewhere.
+                equality_tensor_name = f"event{tensor_index}"
+                tensor_index += 1
+                a = f"{activestep_tensor_name}_i"
+                equality_expr = f"heaviside({a} - N) - heaviside({a} - (N + 1))"
+                diffeq[equality_tensor_name] = self._tensor_block(
+                    equality_tensor_name, [equality_expr]
+                )
+
+                # gate the stop expressions so that only the active step's
+                # stop expression is active
+                gated_expr = f"({event_tensor_name}_i * {equality_tensor_name}_i + (1 - {equality_tensor_name}_i))"
+
+                lines = ["stop_i {"]
+                lines += [f"  {gated_expr},"]
+                for stop_expr in general_stops:
+                    eqn = equation_to_diffeq(
+                        stop_expr,
+                        y_slice_to_label,
+                        symbol_to_tensor_name,
+                        float_precision=self.float_precision,
+                        use_model_index=self._has_experiment,
+                    )
+                    lines += [f"  {eqn},"]
+                diffeq["stop"] = new_line.join(lines) + new_line + "}"
+            else:
+                lines = ["stop_i {"]
+                for stop_expression in stop_expressions:
+                    eqn = equation_to_diffeq(
+                        stop_expression,
+                        y_slice_to_label,
+                        symbol_to_tensor_name,
+                        float_precision=self.float_precision,
+                        use_model_index=self._has_experiment,
+                    )
+                    lines += [f"  {eqn},"]
+                diffeq["stop"] = new_line.join(lines) + new_line + "}"
+
+        # reset - reset steptime0 to 0 at each step transition
         if self._has_experiment:
-            diffeq["reset"] = "reset_i {\n  u_i,\n}"
+            n = total_model_state_size
+            diffeq["reset"] = f"reset_i {{\n  u_i[0:{n}],\n  0.0,\n}}"
 
         all_lines = []
 

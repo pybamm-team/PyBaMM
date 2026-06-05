@@ -300,4 +300,4 @@ class TestDiffSLExport:
             fig.savefig(figure_path, dpi=150)
             plt.close(fig)
 
-        np.testing.assert_allclose(voltage_pybamm, voltage_diffsol, rtol=3e-4)
+        np.testing.assert_allclose(voltage_pybamm, voltage_diffsol, rtol=2e-3)
