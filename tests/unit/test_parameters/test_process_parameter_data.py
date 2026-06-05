@@ -36,16 +36,11 @@ class TestProcessParameterData:
 
     def test_processed_structure(self, parameter_data):
         _name, processed = parameter_data
+        coordinates, values = processed[1][:2]
+
         assert isinstance(processed[1], tuple)
-        assert isinstance(processed[1][0][0], np.ndarray)
-        assert isinstance(processed[1][1], np.ndarray)
-
-        if len(processed[1][0]) > 1:
-            assert isinstance(processed[1][0][1], np.ndarray)
-
-        elif len(processed[1]) == 3:
-            assert isinstance(processed[1][0][1], np.ndarray)
-            assert isinstance(processed[1][0][2], np.ndarray)
+        assert all(isinstance(coordinate, np.ndarray) for coordinate in coordinates)
+        assert isinstance(values, np.ndarray)
 
     def test_error(self):
         with pytest.raises(FileNotFoundError, match=r"Could not find file"):
