@@ -275,16 +275,20 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "true".
             * "voltage as a state" : str
                 Whether to promote voltage to an algebraic state variable.
-                Can be "false" or "true". Default is "false", unless the
-                operating mode is "explicit power" or "explicit resistance",
-                in which case it is automatically set to "true". When "true",
-                the model is a DAE and requires a DAE-capable solver (e.g. the
-                default IDAKLUSolver). When "false", voltage is computed as an
-                expression. Note that setting this to "false" only removes the
-                voltage algebraic equation; SPM/SPMe with ``surface
-                form="false"`` become pure ODE models, but DFN retains other
-                algebraic states (electrode/electrolyte potentials) regardless
-                of this option.
+                Can be "true" (default) or "false". When "true", the model is
+                a DAE and requires a DAE-capable solver (e.g. the default
+                IDAKLUSolver). When "false", voltage is computed as an
+                expression; the "explicit power" and "explicit resistance"
+                operating modes require "true" and raise an error otherwise.
+                Note that setting this to "false" only removes the voltage
+                algebraic equation; SPM/SPMe with ``surface form="false"``
+                become pure ODE models, but DFN retains other algebraic states
+                (electrode/electrolyte potentials) regardless of this option.
+                Continuous solves of rapidly alternating current profiles
+                (e.g. interpolant drive cycles) can be slower with the
+                additional algebraic state; setting this to "false" (with
+                ``surface form="false"`` for SPM/SPMe) restores the previous
+                behaviour for such workloads.
             * "working electrode" : str
                 Can be "both" (default) for a standard battery or "positive" for a
                 half-cell where the negative electrode is replaced with a lithium metal
@@ -452,7 +456,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             "thermal": "isothermal",
             "total interfacial current density as a state": "false",
             "transport efficiency": "Bruggeman",
-            "voltage as a state": "false",
+            "voltage as a state": "true",
             "working electrode": "both",
             "x-average side reactions": "false",
             "use lumped thermal capacity": "false",
