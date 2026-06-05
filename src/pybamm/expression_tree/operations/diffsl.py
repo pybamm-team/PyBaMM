@@ -109,7 +109,7 @@ class DiffSLExport:
                         self._has_experiment
                         and symbol.name == pybamm.Simulation._STEP_INDEX_INPUT
                     ):
-                        continue
+                        continue  # pragma: no cover
                     variable_name = to_variable_name(symbol.name)
                     if variable_name not in existing_vnames:
                         result.append((symbol.name, variable_name))
@@ -396,7 +396,7 @@ class DiffSLExport:
                 "Unified experiment DiffSL export does not support scheduled "
                 "start times with repeating cycles. The cycle detection found a "
                 "repeating pattern but the experiment includes datetime scheduling."
-            )
+            )  # pragma: no cover
 
         # will be replaced with last branch
         branch_order = [-1]
