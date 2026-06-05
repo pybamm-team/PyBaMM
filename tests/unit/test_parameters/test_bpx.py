@@ -1,6 +1,7 @@
 import copy
 import json
 import math
+import warnings
 from typing import Any
 
 import numpy as np
@@ -769,3 +770,91 @@ class TestBPX:
             pytest.raises(NotImplementedError, match="blended electrodes"),
         ):
             pybamm.ParameterValues.create_from_bpx_obj(bpx_obj, target_soc=0.5)
+
+    # Legacy BPX v0.x backward-compatibility conversion
+    def _make_v0_obj(self, v1_obj=None):
+        """Recast a v1.x BPX dict into the legacy v0.x layout."""
+        obj = copy.deepcopy(v1_obj if v1_obj is not None else self.base)
+        state = obj.pop("State")
+        # v0.x used a numeric version field
+        obj["Header"]["BPX"] = 0.4
+        cell = obj["Parameterisation"]["Cell"]
+        ic = state["Initial conditions"]
+        te = state["Thermal environment"]
+        cell["Initial temperature [K]"] = ic["Initial temperature [K]"]
+        cell["Ambient temperature [K]"] = te["Ambient temperature [K]"]
+        # v0.x described thermal behaviour via a lumped thermal conductivity
+        cell["Thermal conductivity [W.m-1.K-1]"] = 1.5
+        obj["Parameterisation"]["Electrolyte"]["Initial concentration [mol.m-3]"] = ic[
+            "Initial electrolyte concentration [mol.m-3]"
+        ]
+        return obj
+
+    def test_bpx_v0_obj_is_converted_with_warning(self):
+        v0_obj = self._make_v0_obj()
+        with pytest.warns(UserWarning, match="legacy BPX v0"):
+            param = pybamm.ParameterValues.create_from_bpx_obj(v0_obj)
+        # moved fields are preserved
+        assert param["Ambient temperature [K]"] == 298.15
+        assert param["Initial temperature [K]"] == 298.15
+        # heat transfer coefficient is the placeholder (0), not carried from v0.x
+        assert param["Total heat transfer coefficient [W.m-2.K-1]"] == 0
+
+    def test_bpx_v0_file_is_converted_with_warning(self, tmp_path):
+        temp_file = tmp_path / "tmp.json"
+        temp_file.write_text(json.dumps(self._make_v0_obj()))
+        with pytest.warns(UserWarning, match="legacy BPX v0"):
+            param = pybamm.ParameterValues.create_from_bpx(temp_file)
+        assert param["Ambient temperature [K]"] == 298.15
+
+    def test_bpx_v0_missing_initial_temperature_falls_back_to_ambient(self):
+        v0_obj = self._make_v0_obj()
+        del v0_obj["Parameterisation"]["Cell"]["Initial temperature [K]"]
+        with pytest.warns(UserWarning, match="legacy BPX v0"):
+            param = pybamm.ParameterValues.create_from_bpx_obj(v0_obj)
+        assert param["Initial temperature [K]"] == param["Ambient temperature [K]"]
+
+    def test_bpx_v0_blended_is_converted(self):
+        v0_obj = self._make_v0_obj(self._blended_bpx_obj())
+        with pytest.warns(UserWarning, match="legacy BPX v0"):
+            param = pybamm.ParameterValues.create_from_bpx_obj(v0_obj)
+        assert param["Ambient temperature [K]"] == 298.15
+
+    def test_bpx_v1_float_version_not_converted(self):
+        # self.base uses a float version (1.0) but is a v1.x object: it must not
+        # trigger the legacy conversion path.
+        with warnings.catch_warnings(record=True) as records:
+            warnings.simplefilter("always")
+            pybamm.ParameterValues.create_from_bpx_obj(copy.deepcopy(self.base))
+        assert not any("legacy BPX v0" in str(r.message) for r in records)
+
+    def test_bpx_invalid_header_raises(self):
+        with pytest.raises(ValueError, match="Header"):
+            pybamm.ParameterValues.create_from_bpx_obj({"Parameterisation": {}})
+
+    def test_bpx_v0_conversion_does_not_mutate_input(self):
+        from pybamm.parameters._bpx_v0 import convert_v0_to_v1, is_legacy_bpx
+
+        v0_obj = self._make_v0_obj()
+        original = copy.deepcopy(v0_obj)
+        converted = convert_v0_to_v1(v0_obj)
+        # input untouched
+        assert v0_obj == original
+        assert "State" not in v0_obj
+        # output is converted
+        assert is_legacy_bpx(v0_obj)
+        assert not is_legacy_bpx(converted)
+        assert "State" in converted
+        assert (
+            "Thermal conductivity [W.m-1.K-1]"
+            not in converted["Parameterisation"]["Cell"]
+        )
+
+    @pytest.mark.parametrize(
+        "version, is_v0",
+        [(0.4, True), ("0.4.0", True), (1.0, False), ("1.1.0", False), (2, False)],
+    )
+    def test_is_legacy_bpx_version_detection(self, version, is_v0):
+        from pybamm.parameters._bpx_v0 import is_legacy_bpx
+
+        assert is_legacy_bpx({"Header": {"BPX": version}}) is is_v0

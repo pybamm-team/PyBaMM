@@ -150,12 +150,32 @@ class ParameterValues:
         --------
         >>> param = pybamm.ParameterValues.create_from_bpx("battery_params.json")  # doctest: +SKIP
         >>> param.set_initial_state(0.5)  # doctest: +SKIP
+
+        Notes
+        -----
+        PyBaMM officially supports ``bpx>=1``. Legacy BPX v0.x files are detected
+        and converted to the v1.x schema on a best-effort basis (a ``UserWarning``
+        is raised describing the conversion's limitations).
         """
-        from bpx import parse_bpx_file
+        from bpx import parse_bpx_obj
+
+        from ._bpx_v0 import is_legacy_bpx
 
         if target_soc is not None:
             cls._warn_target_soc_deprecation()
-        bpx = parse_bpx_file(str(filename))
+
+        # Load JSON/YAML (as bpx.parse_bpx_file does) to check for v0.x first.
+        with open(filename, encoding="utf-8") as f:
+            if str(filename).endswith((".yml", ".yaml")):
+                import yaml
+
+                bpx_obj = yaml.safe_load(f)
+            else:
+                bpx_obj = json.load(f)
+
+        if is_legacy_bpx(bpx_obj):
+            bpx_obj = cls._convert_legacy_bpx_with_warning(bpx_obj)
+        bpx = parse_bpx_obj(bpx_obj)
         return cls._create_from_bpx(bpx, target_soc)
 
     @classmethod
@@ -186,13 +206,47 @@ class ParameterValues:
         >>> bpx_dict = {"Header": {...}, "Cell": {...}, "Parameterisation": {...}}  # doctest: +SKIP
         >>> param = pybamm.ParameterValues.create_from_bpx_obj(bpx_dict)  # doctest: +SKIP
         >>> param.set_initial_state(0.5)  # doctest: +SKIP
+
+        Notes
+        -----
+        PyBaMM officially supports ``bpx>=1``. Legacy BPX v0.x objects are
+        detected and converted to the v1.x schema on a best-effort basis (a
+        ``UserWarning`` is raised describing the conversion's limitations). The
+        passed ``bpx_obj`` is not mutated.
         """
         from bpx import parse_bpx_obj
 
+        from ._bpx_v0 import is_legacy_bpx
+
         if target_soc is not None:
             cls._warn_target_soc_deprecation()
+
+        if is_legacy_bpx(bpx_obj):
+            bpx_obj = cls._convert_legacy_bpx_with_warning(bpx_obj)
         bpx = parse_bpx_obj(bpx_obj)
         return cls._create_from_bpx(bpx, target_soc)
+
+    @staticmethod
+    def _convert_legacy_bpx_with_warning(bpx_obj: dict) -> dict:
+        """
+        Convert a legacy BPX v0.x object to the v1.x schema, raising a
+        ``UserWarning`` that the conversion is approximate. Does not mutate
+        ``bpx_obj``.
+        """
+        from ._bpx_v0 import convert_v0_to_v1
+
+        warn(
+            "Detected a legacy BPX v0.x file/object; converting to the v1.x "
+            "schema for backward compatibility (PyBaMM officially supports "
+            "bpx>=1). The conversion is approximate: the required 'State' "
+            "fields are synthesised with placeholders (heat transfer "
+            "coefficient and initial hysteresis state set to 0, lumped thermal "
+            "conductivity dropped) and cross-version semantic changes are not "
+            "corrected. Re-export from bpx>=1 to silence this warning.",
+            UserWarning,
+            stacklevel=3,
+        )
+        return convert_v0_to_v1(bpx_obj)
 
     @staticmethod
     def _warn_target_soc_deprecation() -> None:
