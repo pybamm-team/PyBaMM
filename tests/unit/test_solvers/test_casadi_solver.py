@@ -662,9 +662,9 @@ class TestCasadiSolver:
             solver.solve(model, t_eval, t_interp=t_interp)
 
     def test_casadi_fast_solves_dae_without_warning(self):
-        """CasadiSolver(mode='fast') solves a DAE model silently; integrator
-        failures carry an actionable hint instead (see test_solver_error)."""
-        model = pybamm.lithium_ion.SPM({"voltage as a state": "true"})
+        """CasadiSolver(mode='fast') solves the default DAE model silently;
+        integrator failures carry an actionable hint (see test_solver_error)."""
+        model = pybamm.lithium_ion.SPM()
         sim = pybamm.Simulation(model, solver=pybamm.CasadiSolver(mode="fast"))
         with warnings.catch_warnings():
             warnings.simplefilter("error", pybamm.SolverWarning)

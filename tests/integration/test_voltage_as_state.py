@@ -202,6 +202,16 @@ class TestDefaultDaeBehavior:
         sol = sim.solve([0, 3600])
         assert sol.termination == "final time"
 
+    @pytest.mark.skipif(not pybamm.has_jax(), reason="jax or jaxlib is not installed")
+    def test_default_solvable_by_jax_bdf(self):
+        model = pybamm.lithium_ion.SPM()
+        model.convert_to_format = "jax"
+        model.events = []  # JaxSolver does not support terminate events
+        sim = pybamm.Simulation(model, solver=pybamm.JaxSolver(method="BDF"))
+        sol = sim.solve(np.linspace(0, 3600, 100))
+        v = sol["Voltage [V]"].entries
+        assert v[0] > v[-1]  # voltage decreases during discharge
+
     @pytest.mark.parametrize("model_cls", REDUCED_MODELS)
     def test_default_rejects_scipy(self, model_cls):
         model = model_cls()

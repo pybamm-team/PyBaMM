@@ -841,16 +841,20 @@ class TestSimulationExperiment:
             [("Charge at C/3 until 4.1 V", "Hold at 4.1 V until C/20")]
         )
 
+        # Tolerances tight enough that event-crossing times are resolved to
+        # better than the assertion tolerances below; at default tolerances
+        # the shallow dV/dt near the voltage cut-off lets the two modes land
+        # seconds apart while both remain within integration tolerance.
         legacy_sim = pybamm.Simulation(
             pybamm.lithium_ion.SPM(),
             experiment=experiment,
-            solver=pybamm.IDAKLUSolver(),
+            solver=pybamm.IDAKLUSolver(rtol=1e-6, atol=1e-8),
             experiment_model_mode="legacy",
         )
         unified_sim = pybamm.Simulation(
             pybamm.lithium_ion.SPM(),
             experiment=experiment,
-            solver=pybamm.IDAKLUSolver(),
+            solver=pybamm.IDAKLUSolver(rtol=1e-6, atol=1e-8),
             experiment_model_mode="unified",
         )
 
@@ -1707,38 +1711,22 @@ class TestSimulationExperiment:
             previous_state = sim.solution.cycles[0].last_state.y
             next_state = sim.solution.cycles[1].steps[-1].first_state.y
 
-            if experiment_model_mode == "legacy":
-                np.testing.assert_allclose(
-                    previous_state,
-                    next_state,
-                    atol=1e-15,
-                    rtol=1e-15,
-                )
-            else:
-                # The unified path carries control-only algebraic states such as the
-                # current controller variable. Those can change when the active step
-                # changes, so here we only enforce continuity of the physical state.
-                built_model = sim.steps_to_built_models[
-                    sim.experiment.steps[0].basic_repr()
-                ]
-                control_state_indices = []
-                for variable in built_model.algebraic:
-                    if variable.name in {"Current variable [A]", "Voltage [V]"}:
-                        for state_slice in built_model.y_slices[variable]:
-                            control_state_indices.extend(
-                                range(state_slice.start, state_slice.stop)
-                            )
-                keep_indices = [
-                    i
-                    for i in range(previous_state.shape[0])
-                    if i not in control_state_indices
-                ]
-                np.testing.assert_allclose(
-                    previous_state[keep_indices],
-                    next_state[keep_indices],
-                    atol=1e-14,
-                    rtol=1e-14,
-                )
+            built_model = sim.steps_to_built_models[
+                sim.experiment.steps[0].basic_repr()
+            ]
+            algebraic_indices = []
+            for variable in built_model.algebraic:
+                for state_slice in built_model.y_slices[variable]:
+                    algebraic_indices.extend(range(state_slice.start, state_slice.stop))
+            rhs_indices = [
+                i for i in range(previous_state.shape[0]) if i not in algebraic_indices
+            ]
+            np.testing.assert_allclose(
+                previous_state[rhs_indices],
+                next_state[rhs_indices],
+                atol=1e-14,
+                rtol=1e-14,
+            )
 
     def test_run_experiment_half_cell(self):
         experiment = pybamm.Experiment(
