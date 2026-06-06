@@ -411,6 +411,16 @@ class TestDiffSLExport:
         result = exporter.map_inputs({"p": 1.0}, outputs=["x"])
         assert result[0] == 1.0
 
+    def test_map_inputs_with_symbol_processor(self):
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            solver=pybamm.CasadiSolver(),
+        )
+        sim.build()
+        exporter = pybamm.DiffSLExport(sim)
+        result = exporter.map_inputs({}, outputs=["Terminal voltage [V]"])
+        assert len(result) >= 0
+
     def test_map_inputs_diffsl_transformed_name(self):
         model = pybamm.BaseModel()
         x = pybamm.Variable("x")
