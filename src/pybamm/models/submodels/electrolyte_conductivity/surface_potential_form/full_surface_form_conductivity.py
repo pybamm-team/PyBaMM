@@ -272,7 +272,6 @@ class FullDifferential(BaseModel):
         domain, Domain = self.domain_Domain
 
         T = variables[f"{Domain} electrode temperature [K]"]
-        C_dl = self.domain_param.C_dl(T)
 
         delta_phi = variables[f"{Domain} electrode surface potential difference [V]"]
         i_e = variables[f"{Domain} electrolyte current density [A.m-2]"]
@@ -281,6 +280,20 @@ class FullDifferential(BaseModel):
             f"Sum of {domain} electrode volumetric "
             "interfacial current densities [A.m-3]"
         ]
-        a = variables[f"{Domain} electrode surface area to volume ratio [m-1]"]
+        num_phases = int(getattr(self.options, domain)["particle phases"])
+        if num_phases > 1:
+            a_prim = variables[
+                f"{Domain} electrode primary surface area to volume ratio [m-1]"
+            ]
+            a_sec = variables[
+                f"{Domain} electrode secondary surface area to volume ratio [m-1]"
+            ]
+            a_C_dl = (
+                a_prim * self.domain_param.prim.C_dl(T)
+                + a_sec * self.domain_param.sec.C_dl(T)
+            )
+        else:
+            a = variables[f"{Domain} electrode surface area to volume ratio [m-1]"]
+            a_C_dl = a * self.domain_param.C_dl(T)
 
-        self.rhs[delta_phi] = 1 / (a * C_dl) * (pybamm.div(i_e) - sum_a_j)
+        self.rhs[delta_phi] = 1 / a_C_dl * (pybamm.div(i_e) - sum_a_j)

@@ -539,6 +539,14 @@ class ParticleLithiumIonParameters(BaseParameters):
             f"{self.phase_prefactor}{Domain} particle {lithiation}hysteresis decay rate"
         )
 
+    def C_dl(self, T):
+        """Dimensional double-layer capacity [F.m-2]"""
+        Domain = self.domain.capitalize()
+        return pybamm.FunctionParameter(
+            f"{self.phase_prefactor}{Domain} electrode double-layer capacity [F.m-2]",
+            {"Temperature [K]": T},
+        )
+
     def k_cr(self, T):
         """
         Cracking rate for the electrode;
