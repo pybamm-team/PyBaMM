@@ -6,6 +6,7 @@
 
 ## Bug fixes
 
+- Fixed CasADi conversion of a differentiated `Interpolant`, which returned the original function. ([#5583](https://github.com/pybamm-team/PyBaMM/pull/5583))
 - Fixed the "explicit power" and "explicit resistance" operating modes, which failed to build with a `ModelError`. These modes now default "voltage as a state" to "true", which breaks the circular dependency between current and voltage (I = P/V), and raise a clear `OptionError` if it is explicitly disabled. ([#5572](https://github.com/pybamm-team/PyBaMM/pull/5572))
 - Fixed `latexify()` crashing with a `NotImplementedError` for models whose boundary conditions contain `boundary_gradient` nodes (e.g. DFN with `{"surface form": "algebraic"}`). ([#5572](https://github.com/pybamm-team/PyBaMM/pull/5572))
 
