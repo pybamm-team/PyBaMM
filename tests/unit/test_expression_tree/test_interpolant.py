@@ -4,6 +4,7 @@
 
 import re
 
+import casadi
 import numpy as np
 import pytest
 
@@ -358,6 +359,77 @@ class TestInterpolant:
             match=r"differentiation not implemented for functions with more than one child",
         ):
             interp.diff(var1)
+
+    @pytest.fixture
+    def assert_casadi_matches_evaluate(self):
+        def _check(diff_expr, casadi_sym, test_point):
+            f = casadi.Function("f", [casadi_sym], [diff_expr.to_casadi(y=casadi_sym)])
+            np.testing.assert_allclose(
+                np.array(f(test_point)).flatten(),
+                diff_expr.evaluate(y=test_point).flatten(),
+                rtol=1e-6,
+                atol=1e-6,
+            )
+
+        return _check
+
+    @pytest.fixture(params=["uniform", "non_uniform"])
+    def grid(self, request):
+        if request.param == "uniform":
+            return np.linspace(0, 1, 200)
+        return np.sort(
+            np.concatenate([np.linspace(0, 0.5, 50), np.linspace(0.5, 1, 150)[1:]])
+        )
+
+    @pytest.mark.parametrize("interpolator", ["cubic", "pchip"])
+    def test_diff_to_casadi(self, grid, interpolator, assert_casadi_matches_evaluate):
+        # Regression for #5582: the CasADi conversion ignored _num_derivatives
+        # and returned the original, un-differentiated function.
+        y = pybamm.StateVector(slice(0, 2))
+        casadi_y = casadi.MX.sym("y", 2)
+        y_test = np.array([0.4, 0.6])
+        interp = pybamm.Interpolant(grid, grid**2, y, interpolator=interpolator)
+
+        assert_casadi_matches_evaluate(interp.diff(y), casadi_y, y_test)
+        assert_casadi_matches_evaluate(interp.diff(y).diff(y), casadi_y, y_test)
+
+    @pytest.mark.parametrize("interpolator", ["cubic", "pchip"])
+    def test_diff_to_casadi_vector_valued(
+        self, interpolator, assert_casadi_matches_evaluate
+    ):
+        x = np.linspace(0, 1, 200)
+        data = np.column_stack([x**2, x**3])
+        child = pybamm.StateVector(slice(0, 1))
+        casadi_child = casadi.MX.sym("y", 1)
+        interp = pybamm.Interpolant(x, data, child, interpolator=interpolator)
+
+        assert_casadi_matches_evaluate(
+            interp.diff(child), casadi_child, np.array([0.4])
+        )
+
+    def test_diff_to_casadi_pchip_third_derivative(
+        self, assert_casadi_matches_evaluate
+    ):
+        x = np.linspace(0, 1, 50)
+        y = pybamm.StateVector(slice(0, 1))
+        casadi_y = casadi.MX.sym("y", 1)
+        third = pybamm.Interpolant(x, x**3, y, interpolator="pchip")
+        for _ in range(3):
+            third = third.diff(y)
+        assert_casadi_matches_evaluate(third, casadi_y, np.array([0.3673]))
+
+    def test_diff_to_casadi_cubic_degree_zero_raises(self):
+        # Differentiating a cubic interpolant three times yields a degree-0 spline
+        # that CasADi mis-evaluates (returns 0) at the knots, so raise instead of
+        # silently returning wrong values (#5582).
+        x = np.linspace(0, 1, 50)
+        y = pybamm.StateVector(slice(0, 1))
+        casadi_y = casadi.MX.sym("y", 1)
+        third = pybamm.Interpolant(x, x**3, y, interpolator="cubic")
+        for _ in range(3):
+            third = third.diff(y)
+        with pytest.raises(NotImplementedError, match="degree-0"):
+            third.to_casadi(y=casadi_y)
 
     def test_processing(self):
         x = np.linspace(0, 1, 200)

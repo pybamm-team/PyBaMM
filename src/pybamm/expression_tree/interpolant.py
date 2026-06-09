@@ -300,7 +300,19 @@ class Interpolant(pybamm.Function):
 
     def _cubic_to_casadi(self, converted_children):
         if self.dimension == 1:
+            # Each derivative lowers the cubic (degree 3) by one; CasADi cannot
+            # reliably evaluate the resulting degree-0 spline (it returns 0 at the
+            # knots), so refuse rather than return wrong values (#5582).
+            if self._num_derivatives >= 3:
+                raise NotImplementedError(
+                    "CasADi cannot evaluate the degree-0 spline produced by "
+                    "differentiating a 'cubic' interpolant more than twice; use the "
+                    "'pchip' interpolator for third- and higher-order derivatives."
+                )
             bspline = interpolate.make_interp_spline(self.x[0], self.y, k=3)
+            # Honour _num_derivatives so the conversion matches scipy (#5582)
+            for _ in range(self._num_derivatives):
+                bspline = bspline.derivative()
             c_flat = bspline.c.flatten()
             n_basis = len(bspline.t) - bspline.k - 1
             m = c_flat.size // n_basis
@@ -352,6 +364,15 @@ class Interpolant(pybamm.Function):
         coeffs[:, 3] = (2 * y0 + hd0 - 2 * y1 + hd1) * inv_h**3
         if not uniform:
             coeffs[:, 4, :] = x_np[:-1, np.newaxis]
+
+        # Honour _num_derivatives (#5582): since dx = x - x_lo, d/dx == d/d(dx),
+        # so differentiating just shifts/scales the coeffs (x_lo row untouched)
+        for _ in range(self._num_derivatives):
+            poly = coeffs[:, 0:4, :].copy()
+            coeffs[:, 0, :] = poly[:, 1, :]
+            coeffs[:, 1, :] = 2 * poly[:, 2, :]
+            coeffs[:, 2, :] = 3 * poly[:, 3, :]
+            coeffs[:, 3, :] = 0.0
 
         coeffs_flat = casadi.MX(coeffs.reshape(n * stride, m))
 
