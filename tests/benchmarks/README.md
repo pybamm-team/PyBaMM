@@ -22,25 +22,13 @@ To detect regressions between two states of the code:
 
 ```shell
 # Save baseline results on one branch/commit
-pytest tests/benchmarks/ -m "not slow" --override-ini="addopts=" --benchmark-json=baseline.json
+nox -s benchmark-fast -- --benchmark-save=baseline.json
 
 # Switch to another branch/commit, then compare
-pytest tests/benchmarks/ -m "not slow" --override-ini="addopts=" \
-  --benchmark-compare=baseline.json \
-  --benchmark-compare-fail=mean:125%
+nox -s benchmark-fast -- --benchmark-compare=baseline --benchmark-compare-fail=mean:125%
 ```
 
 `--benchmark-compare-fail=mean:125%` exits with an error if any benchmark is more than 25% slower than the baseline.
-
-### Benchmark organisation
-
-| File | What it covers |
-|---|---|
-| `test_unit_ops.py` | Unit-level operations: expression creation, parameterisation, discretisation, solve |
-| `test_solve_models.py` | Full model solve (SPM, SPMe, DFN) across parameter sets and solvers |
-| `test_setup_models.py` | Model and simulation build time across parameter sets |
-| `test_simulations.py` | Full experiment simulations (CCCV, GITT) |
-| `test_model_options.py` | Physics option combinations (SEI, lithium plating, thermal, etc.) |
 
 ### The `slow_bench` marker
 
