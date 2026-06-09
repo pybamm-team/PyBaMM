@@ -105,6 +105,7 @@ dev = [
     "pytest-xdist",
     "pytest-mock",
     "pytest-snapshot",
+    "pytest-benchmark>=5.0",
     # For testing Jupyter notebooks
     "nbmake",
     # To access the metadata for python packages
@@ -219,6 +220,7 @@ minversion = "9.0"
 required_plugins = ["pytest-xdist", "pytest-mock"]
 addopts = ["-nauto", "-vra", "--strict-config", "--strict-markers"]
 testpaths = ["tests"]
+# norecursedirs = ["tests/benchmarks"]
 console_output_style = "progress"
 xfail_strict = true
 filterwarnings = [
