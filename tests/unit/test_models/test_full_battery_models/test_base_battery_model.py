@@ -53,7 +53,7 @@ PRINT_OPTIONS_OUTPUT = """\
 'thermal': 'x-full' (possible: ['isothermal', 'lumped', 'x-lumped', 'x-full'])
 'total interfacial current density as a state': 'false' (possible: ['false', 'true'])
 'transport efficiency': 'Bruggeman' (possible: ['Bruggeman', 'ordered packing', 'hyperbola of revolution', 'overlapping spheres', 'tortuosity factor', 'random overlapping cylinders', 'heterogeneous catalyst', 'cation-exchange membrane'])
-'voltage as a state': 'false' (possible: ['false', 'true'])
+'voltage as a state': 'true' (possible: ['false', 'true'])
 'working electrode': 'both' (possible: ['both', 'positive'])
 'x-average side reactions': 'false' (possible: ['false', 'true'])
 'use lumped thermal capacity': 'false' (possible: ['false', 'true'])
@@ -632,8 +632,9 @@ class TestOptions:
     def test_default_options_independent_of_possible_options_order(self):
         """Defaults should be set explicitly, not derived from possible_options[0]."""
         options = pybamm.BatteryModelOptions({})
-        # defaults are set explicitly, not derived from list order
-        assert options["voltage as a state"] == "false"
+        # voltage as a state defaults to "true" although possible_options
+        # lists "false" first: defaults are explicit, not derived from order
+        assert options["voltage as a state"] == "true"
         # surface form: possible_options lists "false" first, default is "false"
         assert options["surface form"] == "false"
 

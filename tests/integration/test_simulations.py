@@ -135,7 +135,7 @@ class TestSimulationConsistentState:
             model,
             experiment=experiment,
             parameter_values=parameter_values,
-            solver=pybamm.ScipySolver(),
+            solver=pybamm.IDAKLUSolver(),
         )
         sol = sim.solve(inputs={"SEI solvent diffusivity [m2.s-1]": 1e-19})
         assert sol is not None

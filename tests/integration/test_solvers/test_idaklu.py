@@ -308,8 +308,10 @@ class TestIDAKLUSolver:
         new_sol1 = sim2.solve(starting_solution=solution.copy())
         new_sol2 = sim2.solve(starting_solution=solution.copy().last_state)
 
+        n_initial = len(solution.t)
         np.testing.assert_array_equal(
-            new_sol1["Voltage [V]"].entries[63:], new_sol2["Voltage [V]"].entries
+            new_sol1["Voltage [V]"].entries[n_initial - 1 :],
+            new_sol2["Voltage [V]"].entries,
         )
 
 
