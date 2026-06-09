@@ -44,6 +44,16 @@ class Simulation(BaseSimulation):
     _TERMINATION_EXPERIMENT_TAG = "[experiment]"
     _COMBINED_TERMINATION_EVENT = "Combined termination [experiment]"
 
+    # Inputs the experiment injects per step; never user sensitivity targets.
+    _INTERNAL_EXPERIMENT_INPUTS = frozenset(
+        {
+            _START_TIME_INPUT,
+            _AMBIENT_TEMPERATURE_INPUT,
+            _INITIAL_TEMPERATURE_INPUT,
+            _STEP_INDEX_INPUT,
+        }
+    )
+
     def __init__(
         self,
         model,
@@ -344,10 +354,15 @@ class Simulation(BaseSimulation):
 
         inputs[self._START_TIME_INPUT] = start_time
         if include_temperature:
-            inputs[self._AMBIENT_TEMPERATURE_INPUT] = (
+            ambient = (
                 step.temperature
                 or self._parameter_values[self._AMBIENT_TEMPERATURE_INPUT]
             )
+            # The unified model reads ambient temperature as a solver input, so it
+            # must be numeric; the parameter value can be a pybamm.Scalar.
+            if isinstance(ambient, pybamm.Scalar):
+                ambient = ambient.value
+            inputs[self._AMBIENT_TEMPERATURE_INPUT] = ambient
 
         if self._experiment_uses_unified_model:
             inputs[self._STEP_INDEX_INPUT] = active_step_index
@@ -773,6 +788,19 @@ class Simulation(BaseSimulation):
             raise pybamm.SolverError(
                 "Solving with a list of input sets is not supported with experiments."
             )
+
+        # Take sensitivities only w.r.t. user inputs, not the control inputs the
+        # experiment injects per step.
+        if "calculate_sensitivities" in kwargs:
+            requested = kwargs["calculate_sensitivities"]
+            if requested is True:
+                kwargs["calculate_sensitivities"] = list((inputs or {}).keys())
+            elif isinstance(requested, list):
+                kwargs["calculate_sensitivities"] = [
+                    name
+                    for name in requested
+                    if name not in self._INTERNAL_EXPERIMENT_INPUTS
+                ]
 
         # Drop the prior solution before build/integration.
         self._solution = starting_solution
