@@ -313,6 +313,7 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
+          fetch-depth: 0  # full history needed to check out base commit for comparison
 
       - name: Install Linux system dependencies
         uses: awalsh128/cache-apt-pkgs-action@acb598e5ddbc6f68a970c5da0688d2f3a9f04d05 # v1.6.0
@@ -342,7 +343,7 @@ jobs:
       - name: Run fast benchmarks on baseline (main)
         run: |
           git checkout ${{ github.event.pull_request.base.sha }}
-          nox -s benchmark-fast -- --benchmark-save=baseline.json
+          nox -s benchmark-fast -- --benchmark-save=baseline
 
       - name: Run fast benchmarks on PR and compare
         run: |
