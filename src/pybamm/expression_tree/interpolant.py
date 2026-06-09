@@ -365,12 +365,12 @@ class Interpolant(pybamm.Function):
             coeffs[:, 4, :] = x_np[:-1, np.newaxis]
 
         # Honour _num_derivatives (#5582): since dx = x - x_lo, d/dx == d/d(dx),
-        # so differentiating just shifts/scales the coeffs (x_lo row untouched)
+        # so differentiating just shifts/scales the coeffs (x_lo row untouched).
+        # Each row reads the next one up, so this is safe to do in place.
         for _ in range(self._num_derivatives):
-            poly = coeffs[:, 0:4, :].copy()
-            coeffs[:, 0, :] = poly[:, 1, :]
-            coeffs[:, 1, :] = 2 * poly[:, 2, :]
-            coeffs[:, 2, :] = 3 * poly[:, 3, :]
+            coeffs[:, 0, :] = coeffs[:, 1, :]
+            coeffs[:, 1, :] = 2 * coeffs[:, 2, :]
+            coeffs[:, 2, :] = 3 * coeffs[:, 3, :]
             coeffs[:, 3, :] = 0.0
 
         coeffs_flat = casadi.MX(coeffs.reshape(n * stride, m))
