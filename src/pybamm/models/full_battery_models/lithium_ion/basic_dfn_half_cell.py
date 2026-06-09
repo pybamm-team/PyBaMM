@@ -314,6 +314,7 @@ class BasicDFNHalfCell(BaseModel):
             "Negative electrode reaction overpotential [V]": eta_Li,
             "Negative electrode potential drop [V]": delta_phis_Li,
             "Voltage [V]": voltage,
+            "Voltage expression [V]": voltage,
             "Battery voltage [V]": voltage * num_cells,
             "Instantaneous power [W.m-2]": i_cell * voltage,
         }

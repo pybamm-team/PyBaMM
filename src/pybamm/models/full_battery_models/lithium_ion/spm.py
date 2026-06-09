@@ -21,16 +21,19 @@ class SPM(BaseModel):
     """
 
     def __init__(self, options=None, name="Single Particle Model", build=True):
-        # Use 'algebraic' surface form if non-default kinetics are used
-        options = options or {}
-        kinetics = options.get("intercalation kinetics")
-        surface_form = options.get("surface form")
-        if kinetics is not None and surface_form is None:
-            options["surface form"] = "algebraic"
-
         # For degradation models we use the "x-average", note that for side reactions
         # this is set by "x-average side reactions"
         self.x_average = True
+
+        # Use 'algebraic' surface form when the explicit-current closure is
+        # unavailable: non-default kinetics have no inverse form, and
+        # particle-size distributions require a surface formulation.
+        options = options or {}
+        if options.get("surface form") is None and (
+            options.get("intercalation kinetics") is not None
+            or "distribution" in options.get("particle size", "")
+        ):
+            options["surface form"] = "algebraic"
 
         # Set "x-average side reactions" to "true" if the model is SPM
         x_average_side_reactions = options.get("x-average side reactions")

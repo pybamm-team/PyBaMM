@@ -746,6 +746,11 @@ class TestUnaryOperators:
             r"c^{\mathtt{\text{left}}}"
         )
 
+        # Test BoundaryGradient
+        assert pybamm.BoundaryGradient(a, "left").to_equation() == sympy.Symbol(
+            r"\nabla a^{\mathtt{\text{left}}}"
+        )
+
         # Test Integral
         xn = pybamm.SpatialVariable("xn", ["negative electrode"])
         assert pybamm.Integral(d, xn).to_equation() == sympy.Integral(

@@ -41,8 +41,8 @@ class TestSPM(BaseUnitTestLithiumIon):
             pybamm.lithium_ion.SPM(options)
 
     def test_distribution_options(self):
-        with pytest.raises(pybamm.OptionError, match=r"surface form"):
-            pybamm.lithium_ion.SPM({"particle size": "distribution"})
+        options = {"particle size": "distribution"}
+        self.check_well_posedness(options)
 
     def test_particle_size_distribution(self):
         options = {"surface form": "algebraic", "particle size": "distribution"}
