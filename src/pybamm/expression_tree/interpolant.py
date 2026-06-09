@@ -300,17 +300,16 @@ class Interpolant(pybamm.Function):
 
     def _cubic_to_casadi(self, converted_children):
         if self.dimension == 1:
-            # Each derivative lowers the cubic (degree 3) by one; CasADi cannot
-            # reliably evaluate the resulting degree-0 spline (it returns 0 at the
-            # knots), so refuse rather than return wrong values (#5582).
+            # A cubic differentiated three or more times gives a degree-0
+            # (piecewise-constant) spline, which CasADi mis-evaluates at the
+            # knots (returns 0), so refuse rather than return wrong values (#5582).
             if self._num_derivatives >= 3:
                 raise NotImplementedError(
                     "CasADi cannot evaluate the degree-0 spline produced by "
-                    "differentiating a 'cubic' interpolant more than twice; use the "
-                    "'pchip' interpolator for third- and higher-order derivatives."
+                    "differentiating a 'cubic' interpolant three or more times."
                 )
             bspline = interpolate.make_interp_spline(self.x[0], self.y, k=3)
-            # Honour _num_derivatives so the conversion matches scipy (#5582)
+            # Differentiate the spline to match scipy's evaluate (#5582)
             for _ in range(self._num_derivatives):
                 bspline = bspline.derivative()
             c_flat = bspline.c.flatten()

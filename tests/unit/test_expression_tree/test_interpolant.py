@@ -410,6 +410,8 @@ class TestInterpolant:
     def test_diff_to_casadi_pchip_third_derivative(
         self, assert_casadi_matches_evaluate
     ):
+        # pchip uses a Horner polynomial, not a b-spline, so its (nonzero,
+        # piecewise-constant) third derivative converts correctly, unlike cubic.
         x = np.linspace(0, 1, 50)
         y = pybamm.StateVector(slice(0, 1))
         casadi_y = casadi.MX.sym("y", 1)
@@ -419,9 +421,8 @@ class TestInterpolant:
         assert_casadi_matches_evaluate(third, casadi_y, np.array([0.3673]))
 
     def test_diff_to_casadi_cubic_degree_zero_raises(self):
-        # Differentiating a cubic interpolant three times yields a degree-0 spline
-        # that CasADi mis-evaluates (returns 0) at the knots, so raise instead of
-        # silently returning wrong values (#5582).
+        # A cubic differentiated three times is a degree-0 spline that CasADi
+        # mis-evaluates, so it must raise rather than return wrong values (#5582).
         x = np.linspace(0, 1, 50)
         y = pybamm.StateVector(slice(0, 1))
         casadi_y = casadi.MX.sym("y", 1)
