@@ -343,9 +343,19 @@ jobs:
       - name: Run fast benchmarks on baseline (main)
         run: |
           git checkout ${{ github.event.pull_request.base.sha }}
-          nox -s benchmark-fast -- --benchmark-save=baseline
+          if nox -l 2>/dev/null | grep -q 'benchmark-fast'; then
+            nox -s benchmark-fast -- --benchmark-save=baseline
+          else
+            echo "benchmark-fast not present on base commit; skipping baseline"
+          fi
 
       - name: Run fast benchmarks on PR and compare
         run: |
           git checkout ${{ github.event.pull_request.head.sha }}
-          nox -s benchmark-fast -- --benchmark-compare=baseline --benchmark-compare-fail=mean:30%
+          if find .benchmarks -name "*baseline*" 2>/dev/null | grep -q .; then
+            nox -s benchmark-fast -- \
+              --benchmark-compare=baseline \
+              --benchmark-compare-fail=mean:30%
+          else
+            nox -s benchmark-fast
+          fi
