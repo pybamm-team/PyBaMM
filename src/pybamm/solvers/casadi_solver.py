@@ -609,6 +609,18 @@ class CasadiSolver(pybamm.BaseSolver):
 
             return integrator
 
+    def _integrator_error(self, error, len_alg):
+        """Wrap an integrator failure, with a hint for DAE models solved
+        without algebraic IC perturbation (e.g. mode="fast")."""
+        message = error.args[0]
+        if len_alg > 0 and not self.perturb_algebraic_initial_conditions:
+            message += (
+                " The algebraic initial conditions may have failed to "
+                "converge; consider CasadiSolver(mode='safe') or "
+                "perturb_algebraic_initial_conditions=True."
+            )
+        return pybamm.SolverError(message)
+
     def _run_integrator(
         self,
         model,
@@ -678,7 +690,7 @@ class CasadiSolver(pybamm.BaseSolver):
             except RuntimeError as error:
                 # If it doesn't work raise error
                 pybamm.logger.debug(f"Casadi integrator failed with error {error}")
-                raise pybamm.SolverError(error.args[0]) from error
+                raise self._integrator_error(error, len_alg) from error
             pybamm.logger.debug("Finished casadi integrator")
             integration_time = timer.time()
             # Manually add initial conditions and concatenate
@@ -716,7 +728,7 @@ class CasadiSolver(pybamm.BaseSolver):
                 except RuntimeError as error:
                     # If it doesn't work raise error
                     pybamm.logger.debug(f"Casadi integrator failed with error {error}")
-                    raise pybamm.SolverError(error.args[0]) from error
+                    raise self._integrator_error(error, len_alg) from error
                 integration_time = timer.time()
                 x = casadi_sol["xf"]
                 z = casadi_sol["zf"]
