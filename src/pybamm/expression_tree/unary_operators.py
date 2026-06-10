@@ -1612,12 +1612,13 @@ def div(symbol):
             new_child = pybamm.PrimaryBroadcast(0, symbol.child.domain)
         return pybamm.PrimaryBroadcast(new_child, symbol.domain)
     # Divergence commutes with Negate operator
-    if isinstance(symbol, pybamm.Negate):
-        return -div(symbol.orphans[0])
-    elif isinstance(symbol, pybamm.Multiplication | pybamm.Division):
-        left, right = symbol.orphans
-        if isinstance(left, pybamm.Negate):
-            return -div(symbol._binary_new_copy(left.orphans[0], right))
+    if not symbol.do_not_simplify:
+        if isinstance(symbol, pybamm.Negate):
+            return -div(symbol.orphans[0])
+        elif isinstance(symbol, pybamm.Multiplication | pybamm.Division):
+            left, right = symbol.orphans
+            if isinstance(left, pybamm.Negate):
+                return -div(symbol._binary_new_copy(left.orphans[0], right))
 
     # Last resort
     return Divergence(symbol)

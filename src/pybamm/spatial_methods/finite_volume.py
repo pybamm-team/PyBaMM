@@ -245,6 +245,15 @@ class FiniteVolume(pybamm.SpatialMethod):
         """Matrix-vector multiplication to implement the divergence operator.
         See :meth:`pybamm.SpatialMethod.divergence`
         """
+        # Add Flux boundary conditions, if defined
+        if boundary_conditions:
+            key_id = next(iter(boundary_conditions.keys()))
+            for bc in boundary_conditions[key_id].values():
+                if pybamm.is_flux_boundary_condition(bc[1]) and bc[1][1] == symbol:
+                    discretised_symbol = self.add_flux_values(
+                        symbol, discretised_symbol, boundary_conditions[key_id]
+                    )
+
         submesh = self.mesh[symbol.domain]
 
         divergence_matrix = self.divergence_matrix(symbol.domains)
@@ -854,7 +863,9 @@ class FiniteVolume(pybamm.SpatialMethod):
             else:
                 left_ghost_constant = 2 * lbc_value
             lbc_vector = pybamm.Matrix(lbc_matrix) @ left_ghost_constant
-        elif lbc_type in ["Neumann", None]:
+        elif lbc_type in ["Neumann", None] or pybamm.is_flux_boundary_condition(
+            lbc_type
+        ):
             lbc_vector = pybamm.Vector(np.zeros((n + n_bcs) * second_dim_repeats))
         else:
             raise ValueError(
@@ -875,7 +886,9 @@ class FiniteVolume(pybamm.SpatialMethod):
             else:
                 right_ghost_constant = 2 * rbc_value
             rbc_vector = pybamm.Matrix(rbc_matrix) @ right_ghost_constant
-        elif rbc_type in ["Neumann", None]:
+        elif rbc_type in ["Neumann", None] or pybamm.is_flux_boundary_condition(
+            rbc_type
+        ):
             rbc_vector = pybamm.Vector(np.zeros((n + n_bcs) * second_dim_repeats))
         else:
             raise ValueError(
@@ -971,7 +984,11 @@ class FiniteVolume(pybamm.SpatialMethod):
             else:
                 left_bc = lbc_value
             lbc_vector = pybamm.Matrix(lbc_matrix) @ left_bc
-        elif lbc_type == "Dirichlet" or (lbc_type == "Neumann" and lbc_value == 0):
+        elif (
+            lbc_type == "Dirichlet"
+            or (lbc_type == "Neumann" and lbc_value == 0)
+            or pybamm.is_flux_boundary_condition(lbc_type)
+        ):
             lbc_vector = pybamm.Vector(np.zeros((n + n_bcs) * second_dim_repeats))
         else:
             raise ValueError(
@@ -989,7 +1006,11 @@ class FiniteVolume(pybamm.SpatialMethod):
             else:
                 right_bc = rbc_value
             rbc_vector = pybamm.Matrix(rbc_matrix) @ right_bc
-        elif rbc_type == "Dirichlet" or (rbc_type == "Neumann" and rbc_value == 0):
+        elif (
+            rbc_type == "Dirichlet"
+            or (rbc_type == "Neumann" and rbc_value == 0)
+            or pybamm.is_flux_boundary_condition(rbc_type)
+        ):
             rbc_vector = pybamm.Vector(np.zeros((n + n_bcs) * second_dim_repeats))
         else:
             raise ValueError(
@@ -1026,6 +1047,123 @@ class FiniteVolume(pybamm.SpatialMethod):
         new_gradient = pybamm.Matrix(matrix) @ discretised_gradient + bcs_vector
 
         return new_gradient
+
+    def add_flux_values(self, symbol, processed_symbol, bcs):
+        """
+        Add the known values of the flux boundary conditions to
+        the discretised symbol.
+
+        Flux boundary are a variation of Neumann boundary conditions that
+        instead of being directly implemented for the gradient,
+        are given terms of an expression(gradient).
+
+        Dirichlet bcs are implemented using ghost nodes, see
+        :meth:`pybamm.FiniteVolume.add_ghost_nodes`.
+
+        Parameters
+        ----------
+        symbol : :class:`pybamm.Symbol`
+        processed_symbol : :class:`pybamm.Symbol`
+            Contains the discretised symbol without boundary conditions
+        bcs : dict of tuples (:class:`pybamm.Scalar`, str)
+            Dictionary (with keys "left" and "right") of boundary conditions. Each
+            boundary condition consists of a value and a flag indicating its type
+            (e.g. "Dirichlet")
+
+        Returns
+        -------
+        :class:`pybamm.Symbol`
+            `processed_symbol + bcs_vector`.
+
+        """
+        domain = symbol.domain
+        n_bcs = 0
+        neumann_bcs = 0
+        lbc_value, lbc_type = bcs["left"]
+        rbc_value, rbc_type = bcs["right"]
+
+        # Count number of Neumann and flux boundary conditions and adjust domain for dirichlet conditions
+        if pybamm.is_flux_boundary_condition(lbc_type):
+            n_bcs += 1
+        elif lbc_type == "Neumann":
+            neumann_bcs += 1
+        elif lbc_type == "Dirichlet":
+            domain = [domain[0] + "_left ghost cell", *domain]
+
+        if pybamm.is_flux_boundary_condition(rbc_type):
+            n_bcs += 1
+        elif rbc_type == "Neumann":
+            neumann_bcs += 1
+        elif rbc_type == "Dirichlet":
+            domain = [*domain, domain[-1] + "_right ghost cell"]
+
+        # get relevant grid points
+        submesh = self.mesh[domain]
+
+        # Prepare sizes and empty bcs_vector
+        n = submesh.npts - 1 + neumann_bcs
+        second_dim_repeats = self._get_auxiliary_domain_repeats(symbol.domains)
+
+        # Add any values from flux boundary conditions to the bcs vector
+        if pybamm.is_flux_boundary_condition(lbc_type) and lbc_value != 0:
+            lbc_sub_matrix = coo_matrix(([1.0], ([0], [0])), shape=(n + n_bcs, 1))
+            lbc_matrix = csr_matrix(
+                kron(eye(second_dim_repeats, dtype=np.float64), lbc_sub_matrix)
+            )
+            if lbc_value.evaluates_to_number():
+                left_bc = lbc_value * pybamm.Vector(np.ones(second_dim_repeats))
+            else:
+                left_bc = lbc_value
+            lbc_vector = pybamm.Matrix(lbc_matrix) @ left_bc
+        else:
+            lbc_vector = pybamm.Vector(np.zeros((n + n_bcs) * second_dim_repeats))
+
+        if pybamm.is_flux_boundary_condition(rbc_type) and rbc_value != 0:
+            rbc_sub_matrix = coo_matrix(
+                ([1.0], ([n + n_bcs - 1], [0])), shape=(n + n_bcs, 1)
+            )
+            rbc_matrix = csr_matrix(
+                kron(eye(second_dim_repeats, dtype=np.float64), rbc_sub_matrix)
+            )
+            if rbc_value.evaluates_to_number():
+                right_bc = rbc_value * pybamm.Vector(np.ones(second_dim_repeats))
+            else:
+                right_bc = rbc_value
+            rbc_vector = pybamm.Matrix(rbc_matrix) @ right_bc
+        else:
+            rbc_vector = pybamm.Vector(np.zeros((n + n_bcs) * second_dim_repeats))
+
+        bcs_vector = lbc_vector + rbc_vector
+
+        # Need to match the domain. E.g. in the case of the boundary condition
+        # on the particle, the gradient has domain particle but the bcs_vector
+        # has domain electrode, since it is a function of the macroscopic variables
+        bcs_vector.copy_domains(processed_symbol)
+
+        # Make matrix which makes "gaps" in the the discretised gradient into
+        # which the known Neumann values will be added. E.g. in 1D if the left
+        # boundary condition is Dirichlet and the right Neumann, this matrix will
+        # act to append a zero to the end of the discretised gradient
+        if pybamm.is_flux_boundary_condition(lbc_type):
+            left_vector = csr_matrix((1, n))
+        else:
+            left_vector = None
+        if pybamm.is_flux_boundary_condition(rbc_type):
+            right_vector = csr_matrix((1, n))
+        else:
+            right_vector = None
+        sub_matrix = vstack([left_vector, eye(n, dtype=np.float64), right_vector])
+
+        # repeat matrix for secondary dimensions
+        # Convert to csr_matrix so that we can take the index (row-slicing), which is
+        # not supported by the default kron format
+        # Note that this makes column-slicing inefficient, but this should not be an
+        # issue
+        matrix = csr_matrix(kron(eye(second_dim_repeats, dtype=np.float64), sub_matrix))
+
+        new_processed_symbol = pybamm.Matrix(matrix) @ processed_symbol + bcs_vector
+
+        return new_processed_symbol
 
     def _get_boundary_submesh_length(self, side: str, domains: list[str]):
         if side == "left":
