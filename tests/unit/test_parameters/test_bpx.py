@@ -101,7 +101,6 @@ class TestBPX:
             },
             "State": {
                 "Initial conditions": {
-                    "Initial state-of-charge": 1.0,
                     "Initial temperature [K]": 298.15,
                     "Initial electrolyte concentration [mol.m-3]": 1000,
                     "Initial hysteresis state: Positive electrode": 0.0,
@@ -681,9 +680,10 @@ class TestBPX:
         )
 
     def test_bpx_default_initial_concentrations_at_full_charge(self):
+        # self.base gives no initial SOC, so concentrations default to full charge
+        # (theta_max negative / theta_min positive) without invoking
+        # set_initial_state.
         bpx_obj = copy.deepcopy(self.base)
-        # Set a non-1 initial SOC in the BPX file to confirm it's not auto-applied.
-        bpx_obj["State"]["Initial conditions"]["Initial state-of-charge"] = 0.25
         neg = bpx_obj["Parameterisation"]["Negative electrode"]
         pos = bpx_obj["Parameterisation"]["Positive electrode"]
         expected_neg = (
@@ -700,6 +700,31 @@ class TestBPX:
         )
         assert param["Initial concentration in positive electrode [mol.m-3]"] == (
             expected_pos
+        )
+
+    def test_bpx_initial_soc_applied_from_state(self):
+        # A BPX initial state-of-charge other than full charge is applied via
+        # set_initial_state, matching a manual set_initial_state on the same set.
+        bpx_obj = copy.deepcopy(self.base)
+        bpx_obj["State"]["Initial conditions"]["Initial state-of-charge"] = 0.25
+        neg = bpx_obj["Parameterisation"]["Negative electrode"]
+        full_charge_neg = (
+            neg["Maximum stoichiometry"] * neg["Maximum concentration [mol.m-3]"]
+        )
+        param = pybamm.ParameterValues.create_from_bpx_obj(bpx_obj)
+
+        reference = pybamm.ParameterValues.create_from_bpx_obj(copy.deepcopy(self.base))
+        reference.set_initial_state(0.25)
+
+        for key in (
+            "Initial concentration in negative electrode [mol.m-3]",
+            "Initial concentration in positive electrode [mol.m-3]",
+        ):
+            assert param[key] == reference[key]
+        # and it is not the full-charge value
+        assert (
+            param["Initial concentration in negative electrode [mol.m-3]"]
+            != full_charge_neg
         )
 
     def test_bpx_target_soc_is_deprecated_but_preserves_behaviour(self):
@@ -763,6 +788,34 @@ class TestBPX:
             * pos_small["Maximum concentration [mol.m-3]"]
         )
 
+    def test_bpx_initial_soc_out_of_range_raises(self):
+        bpx_obj = copy.deepcopy(self.base)
+        bpx_obj["State"]["Initial conditions"]["Initial state-of-charge"] = 1.5
+        with pytest.raises(ValueError, match="must be between 0 and 1"):
+            pybamm.ParameterValues.create_from_bpx_obj(bpx_obj)
+
+    def test_bpx_blended_initial_soc_applied(self):
+        # a BPX initial SOC on a blended electrode is applied per phase via the
+        # composite electrode SOH path, not left at full charge
+        bpx_obj = self._blended_bpx_obj()
+        bpx_obj["State"]["Initial conditions"]["Initial state-of-charge"] = 0.5
+        particle = bpx_obj["Parameterisation"]["Positive electrode"]["Particle"]
+        full_charge = {
+            phase: particle[phase]["Minimum stoichiometry"]
+            * particle[phase]["Maximum concentration [mol.m-3]"]
+            for phase in ("Large Particles", "Small Particles")
+        }
+
+        param = pybamm.ParameterValues.create_from_bpx_obj(bpx_obj)
+
+        # both phases are initialised below full charge by the composite SOH path
+        assert param[
+            "Primary: Initial concentration in positive electrode [mol.m-3]"
+        ] != pytest.approx(full_charge["Large Particles"])
+        assert param[
+            "Secondary: Initial concentration in positive electrode [mol.m-3]"
+        ] != pytest.approx(full_charge["Small Particles"])
+
     def test_bpx_blended_with_target_soc_raises(self):
         bpx_obj = self._blended_bpx_obj()
         with (
@@ -797,7 +850,7 @@ class TestBPX:
         # moved fields are preserved
         assert param["Ambient temperature [K]"] == 298.15
         assert param["Initial temperature [K]"] == 298.15
-        # heat transfer coefficient is the placeholder (0), not carried from v0.x
+        # v0.x has no heat transfer coefficient; PyBaMM applies its adiabatic default
         assert param["Total heat transfer coefficient [W.m-2.K-1]"] == 0
 
     def test_bpx_v0_file_is_converted_with_warning(self, tmp_path):
@@ -832,29 +885,57 @@ class TestBPX:
         with pytest.raises(ValueError, match="Header"):
             pybamm.ParameterValues.create_from_bpx_obj({"Parameterisation": {}})
 
-    def test_bpx_v0_conversion_does_not_mutate_input(self):
-        from pybamm.parameters._bpx_v0 import convert_v0_to_v1, is_legacy_bpx
+    # Optional BPX State handling (bpx>=1.1.2). All State fields are optional and
+    # the section may be omitted entirely; PyBaMM applies its own defaults.
+    def test_bpx_state_section_can_be_omitted(self):
+        bpx_obj = copy.deepcopy(self.base)
+        del bpx_obj["State"]
+        T_ref = bpx_obj["Parameterisation"]["Cell"]["Reference temperature [K]"]
+        with pytest.warns(UserWarning, match="PyBaMM applied defaults"):
+            param = pybamm.ParameterValues.create_from_bpx_obj(bpx_obj)
+        # temperatures fall back to the reference temperature
+        assert param["Ambient temperature [K]"] == T_ref
+        assert param["Initial temperature [K]"] == T_ref
+        # electrolyte concentration falls back to 1 M
+        assert param["Initial concentration in electrolyte [mol.m-3]"] == 1000
+        # heat transfer coefficient falls back to the adiabatic default
+        assert param["Total heat transfer coefficient [W.m-2.K-1]"] == 0
 
-        v0_obj = self._make_v0_obj()
-        original = copy.deepcopy(v0_obj)
-        converted = convert_v0_to_v1(v0_obj)
-        # input untouched
-        assert v0_obj == original
-        assert "State" not in v0_obj
-        # output is converted
-        assert is_legacy_bpx(v0_obj)
-        assert not is_legacy_bpx(converted)
-        assert "State" in converted
-        assert (
-            "Thermal conductivity [W.m-1.K-1]"
-            not in converted["Parameterisation"]["Cell"]
-        )
+    def test_bpx_state_omitted_temperatures_default_to_reference(self):
+        bpx_obj = copy.deepcopy(self.base)
+        bpx_obj["Parameterisation"]["Cell"]["Reference temperature [K]"] = 300.0
+        del bpx_obj["State"]["Initial conditions"]["Initial temperature [K]"]
+        del bpx_obj["State"]["Thermal environment"]["Ambient temperature [K]"]
+        param = pybamm.ParameterValues.create_from_bpx_obj(bpx_obj)
+        assert param["Ambient temperature [K]"] == 300.0
+        assert param["Initial temperature [K]"] == 300.0
 
-    @pytest.mark.parametrize(
-        "version, is_v0",
-        [(0.4, True), ("0.4.0", True), (1.0, False), ("1.1.0", False), (2, False)],
-    )
-    def test_is_legacy_bpx_version_detection(self, version, is_v0):
-        from pybamm.parameters._bpx_v0 import is_legacy_bpx
+    def test_bpx_state_omitted_electrolyte_concentration_defaults_to_1M(self):
+        # PyBaMM needs c_e0 to normalise the exchange-current density, so an
+        # absent electrolyte concentration defaults to 1000 mol.m-3 (1 M).
+        bpx_obj = copy.deepcopy(self.base)
+        del bpx_obj["State"]["Initial conditions"][
+            "Initial electrolyte concentration [mol.m-3]"
+        ]
+        with pytest.warns(UserWarning, match="Initial concentration in electrolyte"):
+            param = pybamm.ParameterValues.create_from_bpx_obj(bpx_obj)
+        assert param["Initial concentration in electrolyte [mol.m-3]"] == 1000
 
-        assert is_legacy_bpx({"Header": {"BPX": version}}) is is_v0
+    def test_bpx_state_omitted_hysteresis_does_not_warn(self):
+        # hysteresis state is optional and usually absent; omitting it must not warn
+        bpx_obj = copy.deepcopy(self.base)
+        ic = bpx_obj["State"]["Initial conditions"]
+        del ic["Initial hysteresis state: Positive electrode"]
+        del ic["Initial hysteresis state: Negative electrode"]
+        with warnings.catch_warnings(record=True) as records:
+            warnings.simplefilter("always")
+            pybamm.ParameterValues.create_from_bpx_obj(bpx_obj)
+        assert not any("hysteresis" in str(r.message) for r in records)
+
+    def test_bpx_state_omitted_heat_transfer_coefficient_defaults_to_zero(self):
+        bpx_obj = copy.deepcopy(self.base)
+        del bpx_obj["State"]["Thermal environment"][
+            "Heat transfer coefficient [W.m-2.K-1]"
+        ]
+        param = pybamm.ParameterValues.create_from_bpx_obj(bpx_obj)
+        assert param["Total heat transfer coefficient [W.m-2.K-1]"] == 0

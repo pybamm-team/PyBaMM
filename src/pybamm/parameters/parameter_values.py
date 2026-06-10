@@ -132,11 +132,11 @@ class ParameterValues:
             The filename of the `BPX <https://bpxstandard.com/>`_ file.
         target_soc : float, optional
             .. deprecated:: 26.5
-                Passing ``target_soc`` is deprecated. The returned
-                ``ParameterValues`` always has initial concentrations set at
-                100% SOC (negative phases at their maximum stoichiometry,
-                positive phases at their minimum stoichiometry). Use
-                :meth:`ParameterValues.set_initial_state` after creation to
+                Passing ``target_soc`` is deprecated. Initial concentrations are
+                set from the BPX ``State`` initial state-of-charge if provided,
+                otherwise at 100% SOC (negative phases at their maximum
+                stoichiometry, positive phases at their minimum stoichiometry).
+                Use :meth:`ParameterValues.set_initial_state` after creation to
                 set a different initial SOC. If ``target_soc`` is passed, the
                 previous behaviour is preserved for non-blended electrodes;
                 blended electrodes raise ``NotImplementedError``.
@@ -154,28 +154,15 @@ class ParameterValues:
         Notes
         -----
         PyBaMM officially supports ``bpx>=1``. Legacy BPX v0.x files are detected
-        and converted to the v1.x schema on a best-effort basis (a ``UserWarning``
-        is raised describing the conversion's limitations).
+        and converted to the v1.x schema by ``bpx`` itself on a best-effort basis
+        (a ``UserWarning`` is raised describing the conversion's limitations).
         """
-        from bpx import parse_bpx_obj
-
-        from ._bpx_v0 import is_legacy_bpx
+        from bpx import parse_bpx_file
 
         if target_soc is not None:
             cls._warn_target_soc_deprecation()
 
-        # Load JSON/YAML (as bpx.parse_bpx_file does) to check for v0.x first.
-        with open(filename, encoding="utf-8") as f:
-            if str(filename).endswith((".yml", ".yaml")):
-                import yaml
-
-                bpx_obj = yaml.safe_load(f)
-            else:
-                bpx_obj = json.load(f)
-
-        if is_legacy_bpx(bpx_obj):
-            bpx_obj = cls._convert_legacy_bpx_with_warning(bpx_obj)
-        bpx = parse_bpx_obj(bpx_obj)
+        bpx = parse_bpx_file(str(filename))
         return cls._create_from_bpx(bpx, target_soc)
 
     @classmethod
@@ -210,43 +197,17 @@ class ParameterValues:
         Notes
         -----
         PyBaMM officially supports ``bpx>=1``. Legacy BPX v0.x objects are
-        detected and converted to the v1.x schema on a best-effort basis (a
-        ``UserWarning`` is raised describing the conversion's limitations). The
-        passed ``bpx_obj`` is not mutated.
+        detected and converted to the v1.x schema by ``bpx`` itself on a
+        best-effort basis (a ``UserWarning`` is raised describing the
+        conversion's limitations). The passed ``bpx_obj`` is not mutated.
         """
         from bpx import parse_bpx_obj
-
-        from ._bpx_v0 import is_legacy_bpx
 
         if target_soc is not None:
             cls._warn_target_soc_deprecation()
 
-        if is_legacy_bpx(bpx_obj):
-            bpx_obj = cls._convert_legacy_bpx_with_warning(bpx_obj)
         bpx = parse_bpx_obj(bpx_obj)
         return cls._create_from_bpx(bpx, target_soc)
-
-    @staticmethod
-    def _convert_legacy_bpx_with_warning(bpx_obj: dict) -> dict:
-        """
-        Convert a legacy BPX v0.x object to the v1.x schema, raising a
-        ``UserWarning`` that the conversion is approximate. Does not mutate
-        ``bpx_obj``.
-        """
-        from ._bpx_v0 import convert_v0_to_v1
-
-        warn(
-            "Detected a legacy BPX v0.x file/object; converting to the v1.x "
-            "schema for backward compatibility (PyBaMM officially supports "
-            "bpx>=1). The conversion is approximate: the required 'State' "
-            "fields are synthesised with placeholders (heat transfer "
-            "coefficient and initial hysteresis state set to 0, lumped thermal "
-            "conductivity dropped) and cross-version semantic changes are not "
-            "corrected. Re-export from bpx>=1 to silence this warning.",
-            UserWarning,
-            stacklevel=3,
-        )
-        return convert_v0_to_v1(bpx_obj)
 
     @staticmethod
     def _warn_target_soc_deprecation() -> None:
@@ -267,6 +228,7 @@ class ParameterValues:
         from bpx.schema import ElectrodeBlended, ElectrodeBlendedSPM
 
         from .bpx import (
+            _get_particle_phases_option,
             _get_phase_names,
             bpx_to_param_dict,
             negative_electrode,
@@ -295,7 +257,9 @@ class ParameterValues:
             )
 
         if target_soc is None:
-            # Full charge: negative phases at theta_max, positive at theta_min.
+            # Initialise from the stoichiometric limits (full charge: negative
+            # phases at theta_max, positive at theta_min). The result when no
+            # initial SOC is given, and the seed set_initial_state reads below.
             for bpx_electrode, domain, sto_bound in (
                 (
                     bpx.parameterisation.negative_electrode,
@@ -318,6 +282,25 @@ class ParameterValues:
                     pybamm_dict[
                         f"{phase}Initial concentration in {domain.name} [mol.m-3]"
                     ] = sto * c_max
+            param = cls(pybamm_dict)
+
+            # Honor a BPX initial state-of-charge, overriding the full-charge
+            # default. Via set_initial_state (not get_electrode_concentrations) to
+            # support blended electrodes; float() as the composite SOH solver
+            # rejects an int SOC.
+            ic = bpx.state.initial_conditions if bpx.state is not None else None
+            initial_soc = ic.initial_soc if ic is not None else None
+            if initial_soc is not None:
+                if not 0 <= initial_soc <= 1:
+                    raise ValueError(
+                        "BPX 'Initial state-of-charge' must be between 0 and 1, "
+                        f"got {initial_soc}."
+                    )
+                options = pybamm.BatteryModelOptions(
+                    {"particle phases": _get_particle_phases_option(bpx)}
+                )
+                param.set_initial_state(float(initial_soc), options=options)
+            return param
         else:
             if target_soc < 0 or target_soc > 1:
                 raise ValueError("Target SOC should be between 0 and 1")

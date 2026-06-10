@@ -2,7 +2,8 @@
 
 ## Features
 
-- `ParameterValues.create_from_bpx` and `create_from_bpx_obj` now detect legacy BPX v0.x files/objects and convert them to the BPX v1.x schema on a best-effort basis (relocating initial conditions into the required `State` block) instead of raising a `ValidationError`. A `UserWarning` is raised describing the conversion's limitations; PyBaMM officially supports `bpx>=1`. ([#5574](https://github.com/pybamm-team/PyBaMM/pull/5574))
+- Legacy BPX v0.x files/objects now load again: `bpx` itself detects and converts them to the v1.x schema on a best-effort basis (with a `UserWarning`), so `ParameterValues.create_from_bpx`/`create_from_bpx_obj` no longer raise a `ValidationError`. PyBaMM officially supports `bpx>=1`. ([#5574](https://github.com/pybamm-team/PyBaMM/pull/5574))
+- `create_from_bpx`/`create_from_bpx_obj` now support BPX files that omit `State` fields (or the whole `State` section): the ambient/initial temperatures default to the reference temperature and the initial electrolyte concentration to 1000 mol.m-3 (logged), while opt-in fields (initial hysteresis state, heat transfer coefficient) are left for the model to default. A BPX `State` initial state-of-charge, when provided, is now applied (via `set_initial_state`, supporting blended electrodes) instead of being ignored. ([#5574](https://github.com/pybamm-team/PyBaMM/pull/5574))
 
 # [v26.6.0.0](https://github.com/pybamm-team/PyBaMM/tree/v26.6.0.0) - 2026-06-04
 
