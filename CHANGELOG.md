@@ -13,6 +13,8 @@
 - Fixed CasADi conversion of a differentiated `Interpolant`, which returned the original function. ([#5583](https://github.com/pybamm-team/PyBaMM/pull/5583))
 - Fixed the "explicit power" and "explicit resistance" operating modes, which failed to build with a `ModelError`. These modes now default "voltage as a state" to "true", which breaks the circular dependency between current and voltage (I = P/V), and raise a clear `OptionError` if it is explicitly disabled. ([#5572](https://github.com/pybamm-team/PyBaMM/pull/5572))
 - Fixed `latexify()` crashing with a `NotImplementedError` for models whose boundary conditions contain `boundary_gradient` nodes (e.g. DFN with `{"surface form": "algebraic"}`). ([#5572](https://github.com/pybamm-team/PyBaMM/pull/5572))
+- Fixed unified experiment crash when the ambient-temperature parameter value is a `pybamm.Scalar`. ([#5587](https://github.com/pybamm-team/PyBaMM/pull/5587))
+- Unified experiment `calculate_sensitivities` no longer leaks internal control inputs into the parameter Jacobian. ([#5587](https://github.com/pybamm-team/PyBaMM/pull/5587))
 
 # [v26.6.0.0](https://github.com/pybamm-team/PyBaMM/tree/v26.6.0.0) - 2026-06-04
 
