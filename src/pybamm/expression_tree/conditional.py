@@ -150,27 +150,35 @@ class Conditional(pybamm.Symbol):
         """See :meth:`pybamm.Symbol._to_casadi()`.
 
         Dispatch to per-branch Functions via a Switch (``casadi.Function.conditional``)
-        so only the active branch runs; an inline ``if_else`` folds them into one.
+        so only the active branch runs.
+
+        A Switch requires every branch (and the default) to share one output
+        sparsity. We use the *union* of the branch sparsities rather than a dense
+        fill: for a scalar control residual this is identical, but when this node
+        carries matrix-valued branch jacobians (the symbolic-jacobian path,
+        ``Conditional._jac``) the union keeps the jacobian sparse instead of
+        full-bandwidth.
         """
         selector = self.selector._to_casadi_inner(t, y, y_dot, inputs, casadi_symbols)
         shared = [s for s in (t, y, y_dot) if s is not None] + list(inputs.values())
-        branch_functions = []
-        first_branch = None
-        for index, branch in enumerate(self.branches):
-            converted = branch._to_casadi_inner(t, y, y_dot, inputs, casadi_symbols)
-            if first_branch is None:
-                first_branch = converted
-            # Switch needs all branches and the default to share one sparsity.
-            branch_functions.append(
-                casadi.Function(
-                    f"cond_branch_{index}", shared, [casadi.densify(converted)]
-                )
+        converted_branches = [
+            branch._to_casadi_inner(t, y, y_dot, inputs, casadi_symbols)
+            for branch in self.branches
+        ]
+        union = converted_branches[0].sparsity()
+        for converted in converted_branches[1:]:
+            union = union.unite(converted.sparsity())
+        branch_functions = [
+            casadi.Function(
+                f"cond_branch_{index}", shared, [casadi.project(converted, union)]
             )
-        # No branch matches -> zeros.
+            for index, converted in enumerate(converted_branches)
+        ]
+        # No branch matches -> zeros in the shared (union) sparsity.
         default_function = casadi.Function(
             "cond_default",
             shared,
-            [casadi.densify(casadi.MX.zeros(*first_branch.shape))],
+            [casadi.project(casadi.MX.zeros(union.size1(), union.size2()), union)],
         )
         switch = casadi.Function.conditional(
             "cond_switch", branch_functions, default_function

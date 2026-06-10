@@ -47,7 +47,12 @@ class MatMulIdenticalRows:
     m: int
 
     def apply(self, converted_right: casadi.MX) -> casadi.MX:
-        return casadi.DM.ones(self.m, 1) * (casadi.DM(self.row).T @ converted_right)
+        # Broadcast the single computed row to all m rows via an outer product. Use
+        # matmul, not element-wise ``*``: the latter only works when ``converted_right``
+        # is a column vector, but it is a matrix when this runs inside a jacobian.
+        return casadi.mtimes(
+            casadi.DM.ones(self.m, 1), casadi.DM(self.row).T @ converted_right
+        )
 
 
 @dataclass
@@ -64,8 +69,9 @@ class MatMulBoundaryDiffers:
         last = self.last_row if self.last_row is not None else self.interior_row
 
         first_result = casadi.DM(first).T @ converted_right
-        interior_result = casadi.DM.ones(self.m - 2, 1) * (
-            casadi.DM(self.interior_row).T @ converted_right
+        interior_result = casadi.mtimes(
+            casadi.DM.ones(self.m - 2, 1),
+            casadi.DM(self.interior_row).T @ converted_right,
         )
         last_result = casadi.DM(last).T @ converted_right
         return casadi.vertcat(first_result, interior_result, last_result)
