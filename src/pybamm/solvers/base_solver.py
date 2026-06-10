@@ -1960,7 +1960,9 @@ def process(
 
         if use_jacobian:
             report(f"Calculating jacobian for {name} using CasADi")
-            jac_casadi = casadi.jacobian(casadi_expression, y_casadi)
+            # The model owns how its jacobian is built (plain CasADi AD unless the model
+            # has a switching control equation it must differentiate structurally).
+            jac_casadi = model.build_casadi_jacobian(casadi_expression, y_casadi)
             jac = casadi.Function(
                 name + "_jac",
                 [t_casadi, y_casadi, p_casadi_stacked],
