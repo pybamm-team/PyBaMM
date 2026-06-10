@@ -1306,6 +1306,78 @@ class TestSimulationExperiment:
 
         np.testing.assert_allclose(sol["Current [A]"](time), current)
 
+    def test_solve_with_sensitivities_true_excludes_all_internal_inputs(self):
+        # calculate_sensitivities=True must differentiate only w.r.t. user inputs, not
+        # the control inputs the experiment injects per step.
+        input_param_name = "Negative electrode active material volume fraction"
+
+        def make_sim():
+            model = pybamm.lithium_ion.SPM()
+            param = model.default_parameter_values
+            param.update({input_param_name: "[input]"})
+            # A python-function step (current as a function of time) puts "start time"
+            # into the model, so all three internal inputs are present and could leak.
+            experiment = pybamm.Experiment(
+                [
+                    pybamm.step.current(
+                        lambda t: 1.0 + 0.5 * np.sin(t / 100), duration=300
+                    ),
+                    "Charge at 1 A for 10 seconds",
+                ]
+            )
+            return pybamm.Simulation(
+                model,
+                experiment=experiment,
+                solver=pybamm.IDAKLUSolver(),
+                parameter_values=param,
+                experiment_model_mode="unified",
+            )
+
+        input_value = pybamm.ParameterValues("Chen2020")[input_param_name]
+        sol = make_sim().solve(
+            inputs={input_param_name: input_value},
+            calculate_sensitivities=True,
+            calc_esoh=False,
+        )
+
+        internal_inputs = pybamm.Simulation._INTERNAL_EXPERIMENT_INPUTS
+        # "start time" really is one of the model inputs here, so this is a genuine
+        # exclusion, not a vacuous one.
+        assert "start time" in sol.all_inputs[0]
+        sensitivity_keys = set(sol.sensitivities) - {"all"}
+        assert sensitivity_keys == {input_param_name}
+        assert not (sensitivity_keys & internal_inputs)
+
+    def test_unified_ambient_temperature_scalar_value(self):
+        # Unified mode reads ambient temperature as a solver input; a pybamm.Scalar
+        # value (vs a float) must be coerced or it breaks the casadi call.
+        experiment = pybamm.Experiment(
+            ["Discharge at 1C until 3.0 V", "Charge at 1C until 4.2 V"]
+        )
+
+        def solve(ambient_value):
+            pv = pybamm.ParameterValues("Chen2020")
+            pv["Ambient temperature [K]"] = ambient_value
+            sim = pybamm.Simulation(
+                pybamm.lithium_ion.SPM(),
+                parameter_values=pv,
+                experiment=experiment,
+                experiment_model_mode="unified",
+                solver=pybamm.IDAKLUSolver(),
+            )
+            return sim.solve(calc_esoh=False)
+
+        scalar_sol = solve(pybamm.Scalar(298.15))
+        float_sol = solve(298.15)
+
+        np.testing.assert_allclose(scalar_sol.t[-1], float_sol.t[-1], rtol=1e-10)
+        np.testing.assert_allclose(
+            scalar_sol["Voltage [V]"].data[-1],
+            float_sol["Voltage [V]"].data[-1],
+            rtol=1e-8,
+            atol=1e-8,
+        )
+
     def test_run_experiment_breaks_early_infeasible(self):
         experiment = pybamm.Experiment(["Discharge at 2 C for 1 hour"])
         model = pybamm.lithium_ion.SPM()
