@@ -841,16 +841,20 @@ class TestSimulationExperiment:
             [("Charge at C/3 until 4.1 V", "Hold at 4.1 V until C/20")]
         )
 
+        # Tolerances tight enough that event-crossing times are resolved to
+        # better than the assertion tolerances below; at default tolerances
+        # the shallow dV/dt near the voltage cut-off lets the two modes land
+        # seconds apart while both remain within integration tolerance.
         legacy_sim = pybamm.Simulation(
             pybamm.lithium_ion.SPM(),
             experiment=experiment,
-            solver=pybamm.IDAKLUSolver(),
+            solver=pybamm.IDAKLUSolver(rtol=1e-6, atol=1e-8),
             experiment_model_mode="legacy",
         )
         unified_sim = pybamm.Simulation(
             pybamm.lithium_ion.SPM(),
             experiment=experiment,
-            solver=pybamm.IDAKLUSolver(),
+            solver=pybamm.IDAKLUSolver(rtol=1e-6, atol=1e-8),
             experiment_model_mode="unified",
         )
 
@@ -1306,6 +1310,78 @@ class TestSimulationExperiment:
 
         np.testing.assert_allclose(sol["Current [A]"](time), current)
 
+    def test_solve_with_sensitivities_true_excludes_all_internal_inputs(self):
+        # calculate_sensitivities=True must differentiate only w.r.t. user inputs, not
+        # the control inputs the experiment injects per step.
+        input_param_name = "Negative electrode active material volume fraction"
+
+        def make_sim():
+            model = pybamm.lithium_ion.SPM()
+            param = model.default_parameter_values
+            param.update({input_param_name: "[input]"})
+            # A python-function step (current as a function of time) puts "start time"
+            # into the model, so all three internal inputs are present and could leak.
+            experiment = pybamm.Experiment(
+                [
+                    pybamm.step.current(
+                        lambda t: 1.0 + 0.5 * np.sin(t / 100), duration=300
+                    ),
+                    "Charge at 1 A for 10 seconds",
+                ]
+            )
+            return pybamm.Simulation(
+                model,
+                experiment=experiment,
+                solver=pybamm.IDAKLUSolver(),
+                parameter_values=param,
+                experiment_model_mode="unified",
+            )
+
+        input_value = pybamm.ParameterValues("Chen2020")[input_param_name]
+        sol = make_sim().solve(
+            inputs={input_param_name: input_value},
+            calculate_sensitivities=True,
+            calc_esoh=False,
+        )
+
+        internal_inputs = pybamm.Simulation._INTERNAL_EXPERIMENT_INPUTS
+        # "start time" really is one of the model inputs here, so this is a genuine
+        # exclusion, not a vacuous one.
+        assert "start time" in sol.all_inputs[0]
+        sensitivity_keys = set(sol.sensitivities) - {"all"}
+        assert sensitivity_keys == {input_param_name}
+        assert not (sensitivity_keys & internal_inputs)
+
+    def test_unified_ambient_temperature_scalar_value(self):
+        # Unified mode reads ambient temperature as a solver input; a pybamm.Scalar
+        # value (vs a float) must be coerced or it breaks the casadi call.
+        experiment = pybamm.Experiment(
+            ["Discharge at 1C until 3.0 V", "Charge at 1C until 4.2 V"]
+        )
+
+        def solve(ambient_value):
+            pv = pybamm.ParameterValues("Chen2020")
+            pv["Ambient temperature [K]"] = ambient_value
+            sim = pybamm.Simulation(
+                pybamm.lithium_ion.SPM(),
+                parameter_values=pv,
+                experiment=experiment,
+                experiment_model_mode="unified",
+                solver=pybamm.IDAKLUSolver(),
+            )
+            return sim.solve(calc_esoh=False)
+
+        scalar_sol = solve(pybamm.Scalar(298.15))
+        float_sol = solve(298.15)
+
+        np.testing.assert_allclose(scalar_sol.t[-1], float_sol.t[-1], rtol=1e-10)
+        np.testing.assert_allclose(
+            scalar_sol["Voltage [V]"].data[-1],
+            float_sol["Voltage [V]"].data[-1],
+            rtol=1e-8,
+            atol=1e-8,
+        )
+
     def test_run_experiment_breaks_early_infeasible(self):
         experiment = pybamm.Experiment(["Discharge at 2 C for 1 hour"])
         model = pybamm.lithium_ion.SPM()
@@ -1707,38 +1783,22 @@ class TestSimulationExperiment:
             previous_state = sim.solution.cycles[0].last_state.y
             next_state = sim.solution.cycles[1].steps[-1].first_state.y
 
-            if experiment_model_mode == "legacy":
-                np.testing.assert_allclose(
-                    previous_state,
-                    next_state,
-                    atol=1e-15,
-                    rtol=1e-15,
-                )
-            else:
-                # The unified path carries control-only algebraic states such as the
-                # current controller variable. Those can change when the active step
-                # changes, so here we only enforce continuity of the physical state.
-                built_model = sim.steps_to_built_models[
-                    sim.experiment.steps[0].basic_repr()
-                ]
-                control_state_indices = []
-                for variable in built_model.algebraic:
-                    if variable.name in {"Current variable [A]", "Voltage [V]"}:
-                        for state_slice in built_model.y_slices[variable]:
-                            control_state_indices.extend(
-                                range(state_slice.start, state_slice.stop)
-                            )
-                keep_indices = [
-                    i
-                    for i in range(previous_state.shape[0])
-                    if i not in control_state_indices
-                ]
-                np.testing.assert_allclose(
-                    previous_state[keep_indices],
-                    next_state[keep_indices],
-                    atol=1e-14,
-                    rtol=1e-14,
-                )
+            built_model = sim.steps_to_built_models[
+                sim.experiment.steps[0].basic_repr()
+            ]
+            algebraic_indices = []
+            for variable in built_model.algebraic:
+                for state_slice in built_model.y_slices[variable]:
+                    algebraic_indices.extend(range(state_slice.start, state_slice.stop))
+            rhs_indices = [
+                i for i in range(previous_state.shape[0]) if i not in algebraic_indices
+            ]
+            np.testing.assert_allclose(
+                previous_state[rhs_indices],
+                next_state[rhs_indices],
+                atol=1e-14,
+                rtol=1e-14,
+            )
 
     def test_run_experiment_half_cell(self):
         experiment = pybamm.Experiment(

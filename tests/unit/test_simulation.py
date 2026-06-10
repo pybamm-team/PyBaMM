@@ -905,7 +905,7 @@ class TestSimulation:
             drive_cycle[:, 0], drive_cycle[:, 1], pybamm.t
         )
         sim = pybamm.Simulation(
-            model, parameter_values=param, solver=pybamm.ScipySolver()
+            model, parameter_values=param, solver=pybamm.CasadiSolver()
         )
 
         with pytest.warns(pybamm.SolverWarning) as warnings_record:

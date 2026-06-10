@@ -1,9 +1,22 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Breaking changes
+
+- The "voltage as a state" model option now defaults to "true": voltage is solved as an algebraic state, making standard models DAEs. Reading `Voltage [V]` from a solution is now an O(1) state lookup instead of a post-solve expression evaluation (up to 73% faster end-to-end for dense output; 8-24% faster experiment cycling across SPM/SPMe/DFN; up to 48% faster with in-solver `output_variables=["Voltage [V]"]`). The default `IDAKLUSolver`, `CasadiSolver` (all modes), and `JaxSolver(method="BDF")` handle DAEs; ODE-only solvers (`ScipySolver`, `JaxSolver(method="RK45")`) require `{"voltage as a state": "false", "surface form": "false"}` for SPM/SPMe, which remains a supported configuration. Known trade-off: continuous solves of rapidly alternating current profiles (e.g. interpolant drive cycles with more than ~25 current reversals in one solve) can be slower, up to ~2x for SPM in the worst measured case; the legacy configuration above restores previous performance for these workloads. Experiment-driven cycling is unaffected. ([#5573](https://github.com/pybamm-team/PyBaMM/pull/5573))
+
 ## Features
 
+- The "voltage as a state" option is now registered centrally in `BaseBatteryModel` and supports all operating modes. SPM/SPMe promote "surface form" to "algebraic" automatically when a particle-size distribution is used (previously an error) as well as for non-default kinetics. `CasadiSolver` integrator failures on DAE models solved without algebraic initial-condition perturbation now include an actionable hint. ([#5572](https://github.com/pybamm-team/PyBaMM/pull/5572))
 - Legacy BPX v0.x files/objects now load again: `bpx` itself detects and converts them to the v1.x schema on a best-effort basis (with a `UserWarning`), so `ParameterValues.create_from_bpx`/`create_from_bpx_obj` no longer raise a `ValidationError`. PyBaMM officially supports `bpx>=1`. ([#5574](https://github.com/pybamm-team/PyBaMM/pull/5574))
 - `create_from_bpx`/`create_from_bpx_obj` now support BPX files that omit `State` fields (or the whole `State` section): the ambient/initial temperatures default to the reference temperature and the initial electrolyte concentration to 1000 mol.m-3 (logged), while opt-in fields (initial hysteresis state, heat transfer coefficient) are left for the model to default. A BPX `State` initial state-of-charge, when provided, is now applied (via `set_initial_state`, supporting blended electrodes) instead of being ignored. ([#5574](https://github.com/pybamm-team/PyBaMM/pull/5574))
+
+## Bug fixes
+
+- Fixed CasADi conversion of a differentiated `Interpolant`, which returned the original function. ([#5583](https://github.com/pybamm-team/PyBaMM/pull/5583))
+- Fixed the "explicit power" and "explicit resistance" operating modes, which failed to build with a `ModelError`. These modes now default "voltage as a state" to "true", which breaks the circular dependency between current and voltage (I = P/V), and raise a clear `OptionError` if it is explicitly disabled. ([#5572](https://github.com/pybamm-team/PyBaMM/pull/5572))
+- Fixed `latexify()` crashing with a `NotImplementedError` for models whose boundary conditions contain `boundary_gradient` nodes (e.g. DFN with `{"surface form": "algebraic"}`). ([#5572](https://github.com/pybamm-team/PyBaMM/pull/5572))
+- Fixed unified experiment crash when the ambient-temperature parameter value is a `pybamm.Scalar`. ([#5587](https://github.com/pybamm-team/PyBaMM/pull/5587))
+- Unified experiment `calculate_sensitivities` no longer leaks internal control inputs into the parameter Jacobian. ([#5587](https://github.com/pybamm-team/PyBaMM/pull/5587))
 
 # [v26.6.0.0](https://github.com/pybamm-team/PyBaMM/tree/v26.6.0.0) - 2026-06-04
 

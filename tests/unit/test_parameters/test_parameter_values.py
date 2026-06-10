@@ -1063,12 +1063,14 @@ class TestParameterValues:
         new_model = param.process_model(model, inplace=False)
 
         # Original model still has Parameters in variables
-        V = model.variables["Voltage [V]"]
-        assert V.has_symbol_of_classes(pybamm.Parameter)
+        var = model.variables["Total current density [A.m-2]"]
+        assert var.has_symbol_of_classes(pybamm.Parameter)
 
         # Processed model should have Parameters replaced in _variables_processed
-        V_processed = new_model.get_processed_variable("Voltage [V]")
-        assert not V_processed.has_symbol_of_classes(pybamm.Parameter)
+        var_processed = new_model.get_processed_variable(
+            "Total current density [A.m-2]"
+        )
+        assert not var_processed.has_symbol_of_classes(pybamm.Parameter)
 
     def test_process_empty_model(self):
         model = pybamm.BaseModel()
