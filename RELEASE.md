@@ -29,6 +29,24 @@ PyBaMM versions take the form `YY.MM.N.P`:
 
 **Cutover.** The first feature release tagged after the policy lands is the first to use `YY.MM.N.P`. Earlier tags (`v26.x.N`) remain in their original form; we do not retroactively retag.
 
+## Monorepo: independent package releases
+
+PyBaMM and `pybammsolvers` live in one repository (a UV workspace under
+`packages/`) but release **independently to PyPI**, discriminated by tag
+namespace. See `docs/superpowers/specs/2026-06-11-pybamm-monorepo-design.md` for
+the full design.
+
+- Each package's publish workflow fires only for its own tag namespace (the
+  pre-monorepo `github.repository` guard no longer distinguishes them).
+- `pybammsolvers` releases use the `pybamm-solvers-v*` namespace.
+- **Legacy solver tags** (`v0.8.0`, `v0.8.1`, `v0.8.2`) carried over from the
+  standalone `pybammsolvers` repo are **not** part of PyBaMM's release history and
+  must not drive PyBaMM's computed version. They are either dropped or re-tagged
+  under `pybamm-solvers-v*` during the migration.
+- The migration was integrated with a **merge commit (not a squash)** so the full
+  commit history of both packages is preserved; PyBaMM's existing commit SHAs are
+  unchanged (no history rewrite).
+
 ## Release cadence
 
 - We release when there's a meaningful body of work to ship. No fixed monthly or quarterly schedule.
