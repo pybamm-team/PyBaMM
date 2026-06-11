@@ -342,16 +342,25 @@ class ElectrodeSOHSolver:
             OCPp_data = False
             OCPn_data = False
         else:
-            OCPp_data = isinstance(
-                parameter_values["Positive electrode OCP [V]"], tuple
+            # For composite electrodes, the primary phase OCP is the relevant one
+            n_phases = int(getattr(self.options, "negative")["particle phases"])
+            p_phases = int(getattr(self.options, "positive")["particle phases"])
+            neg_ocp_key = (
+                "Primary: Negative electrode OCP [V]"
+                if n_phases > 1
+                else "Negative electrode OCP [V]"
             )
-            OCPn_data = isinstance(
-                parameter_values["Negative electrode OCP [V]"], tuple
+            pos_ocp_key = (
+                "Primary: Positive electrode OCP [V]"
+                if p_phases > 1
+                else "Positive electrode OCP [V]"
             )
+            OCPp_data = isinstance(parameter_values[pos_ocp_key], tuple)
+            OCPn_data = isinstance(parameter_values[neg_ocp_key], tuple)
 
         # Calculate stoich limits for the open-circuit potentials
         if OCPp_data:
-            Up_sto = parameter_values["Positive electrode OCP [V]"][1][0]
+            Up_sto = parameter_values[pos_ocp_key][1][0]
             y100_min = max(np.min(Up_sto), 0) + 1e-6
             y0_max = min(np.max(Up_sto), 1) - 1e-6
         else:
@@ -359,7 +368,7 @@ class ElectrodeSOHSolver:
             y0_max = 1 - 1e-6
 
         if OCPn_data:
-            Un_sto = parameter_values["Negative electrode OCP [V]"][1][0]
+            Un_sto = parameter_values[neg_ocp_key][1][0]
             x0_min = max(np.min(Un_sto), 0) + 1e-6
             x100_max = min(np.max(Un_sto), 1) - 1e-6
         else:

@@ -852,7 +852,8 @@ def get_parameter_values():
         "Negative electrode Bruggeman coefficient (electrolyte)": 1.5,
         "Negative electrode Bruggeman coefficient (electrode)": 0,
         "Negative electrode charge transfer coefficient": 0.5,
-        "Negative electrode double-layer capacity [F.m-2]": 0.2,
+        "Primary: Negative electrode double-layer capacity [F.m-2]": 0.2,
+        "Secondary: Negative electrode double-layer capacity [F.m-2]": 0.2,
         "Primary: Negative electrode exchange-current density [A.m-2]"
         "": graphite_LGM50_electrolyte_exchange_current_density_Chen2020,
         "Primary: Negative electrode kinetic rate constant [A.m-2]": 6.48e-7,
