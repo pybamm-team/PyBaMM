@@ -1,0 +1,67 @@
+#ifndef PYBAMM_OPTIONS_HPP
+#define PYBAMM_OPTIONS_HPP
+
+#include "common.hpp"
+
+/**
+ * @brief SetupOptions passed to the idaklu setup by pybamm
+ */
+struct SetupOptions {
+  bool using_sparse_matrix;
+  bool using_banded_matrix;
+  bool using_iterative_solver;
+  std::string jacobian;
+  std::string preconditioner; // spbcg
+  int precon_half_bandwidth;
+  int precon_half_bandwidth_keep;
+  int num_threads;
+  int num_solvers;
+  // IDALS linear solver interface
+  std::string linear_solver; // klu, lapack, spbcg
+  int linsol_max_iterations;
+  explicit SetupOptions(py::dict &py_opts);
+};
+
+/**
+ * @brief SolverOptions passed to the idaklu solver by pybamm
+ */
+struct SolverOptions {
+  bool print_stats;
+  bool silence_sundials_errors;
+  // IDA main solver
+  int max_order_bdf;
+  int max_num_steps;
+  double dt_init;
+  double dt_min;
+  double dt_max;
+  int max_error_test_failures;
+  int max_nonlinear_iterations;
+  int max_convergence_failures;
+  double nonlinear_convergence_coefficient;
+  double nonlinear_convergence_coefficient_ic;
+  sunbooleantype suppress_algebraic_error;
+  bool hermite_interpolation;
+  // IDA initial conditions calculation
+  bool calc_ic;
+  bool init_all_y_ic;
+  int max_num_steps_ic;
+  int max_num_jacobians_ic;
+  int max_num_iterations_ic;
+  int max_linesearch_backtracks_ic;
+  sunbooleantype linesearch_off_ic;
+  // IDALS linear solver interface
+  sunbooleantype linear_solution_scaling;
+  double epsilon_linear_tolerance;
+  double increment_factor;
+  // Early termination
+  size_t num_steps_no_progress;
+  sunrealtype t_no_progress;
+  // Knot reduction (streaming spline compression)
+  double hermite_reduction_factor;  // >= 1.0; total error budget is M * solver_tol (threshold = N*(M-1)^2)
+  // Newton solver for algebraic initial conditions
+  double newton_step_tol;
+  std::string newton_mode;  // "auto" or "full"
+  explicit SolverOptions(py::dict &py_opts);
+};
+
+#endif // PYBAMM_OPTIONS_HPP

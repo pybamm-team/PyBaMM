@@ -1,0 +1,443 @@
+#ifndef PYBAMM_IDAKLU_SOLVEROPENMP_HPP
+#define PYBAMM_IDAKLU_SOLVEROPENMP_HPP
+
+#include "IDAKLUSolver.hpp"
+#include "common.hpp"
+#include <vector>
+#include <memory>  // For std::make_unique
+using std::vector;
+
+#include "Options.hpp"
+#include "NoProgressGuard.hpp"
+#include "Solution.hpp"
+#include "IDAKLUStats.hpp"
+#include "SolverLog.hpp"
+#include "HermiteKnotReducer.hpp"
+#include "NonlinearSolver.hpp"
+#include <sunlinsol/sunlinsol_dense.h>
+#include <sunlinsol/sunlinsol_band.h>
+#include <sunlinsol/sunlinsol_klu.h>
+#include <sunmatrix/sunmatrix_sparse.h>
+#include <sunmatrix/sunmatrix_dense.h>
+#include <sunmatrix/sunmatrix_band.h>
+
+/**
+ * @brief Abstract solver class based on OpenMP vectors
+ *
+ * An abstract class that implements a solution based on OpenMP
+ * vectors but needs to be provided with a suitable linear solver.
+ *
+ * This class broadly implements the following skeleton workflow:
+ * (https://sundials.readthedocs.io/en/latest/ida/Usage/index.html)
+ *    1. (N/A) Initialize parallel or multi-threaded environment
+ *    2. Create the SUNDIALS context object
+ *    3. Create the vector of initial values
+ *    4. Create matrix object (if appropriate)
+ *    5. Create linear solver object
+ *    6. (N/A) Create nonlinear solver object
+ *    7. Create IDA object
+ *    8. Initialize IDA solver
+ *    9. Specify integration tolerances
+ *   10. Attach the linear solver
+ *   11. Set linear solver optional inputs
+ *   12. (N/A) Attach nonlinear solver module
+ *   13. (N/A) Set nonlinear solver optional inputs
+ *   14. Specify rootfinding problem (optional)
+ *   15. Set optional inputs
+ *   16. Correct initial values (optional)
+ *   17. Advance solution in time
+ *   18. Get optional outputs
+ *   19. Destroy objects
+ *   20. (N/A) Finalize MPI
+ */
+template <class ExprSet>
+class IDAKLUSolverOpenMP : public IDAKLUSolver
+{
+  // NB: cppcheck-suppress unusedStructMember is used because codacy reports
+  //     these members as unused even though they are important in child
+  //     classes, but are passed by variadic arguments (and are therefore unnamed)
+public:
+  void *ida_mem = nullptr;
+  np_array atol_np;
+  np_array rhs_alg_id;
+  int const number_of_states;  // cppcheck-suppress unusedStructMember
+  int const number_of_parameters;  // cppcheck-suppress unusedStructMember
+  int const number_of_events;  // cppcheck-suppress unusedStructMember
+  int number_of_timesteps;
+  int precon_type;  // cppcheck-suppress unusedStructMember
+  N_Vector yy, yyp, y_cache, avtol;  // y, y', y cache vector, and absolute tolerance
+  N_Vector *yyS;  // cppcheck-suppress unusedStructMember
+  N_Vector *yypS;  // cppcheck-suppress unusedStructMember
+  N_Vector id;              // rhs_alg_id
+  sunrealtype rtol;
+  int const jac_times_cjmass_nnz;  // cppcheck-suppress unusedStructMember
+  int const jac_bandwidth_lower;  // cppcheck-suppress unusedStructMember
+  int const jac_bandwidth_upper;  // cppcheck-suppress unusedStructMember
+  SUNMatrix J;
+  SUNLinearSolver LS = nullptr;
+  std::unique_ptr<ExprSet> functions;
+  vector<sunrealtype> res;
+  vector<sunrealtype> res_dvar_dy;
+  vector<sunrealtype> res_dvar_dp;
+  bool const sensitivity;  // cppcheck-suppress unusedStructMember
+  bool const save_outputs_only; // cppcheck-suppress unusedStructMember
+  bool save_hermite;  // cppcheck-suppress unusedStructMember
+  bool is_ODE;  // cppcheck-suppress unusedStructMember
+  int length_of_return_vector;  // cppcheck-suppress unusedStructMember
+  
+  // Arrays are stored flat (contiguous) for cache efficiency and zero-copy
+  // to numpy. Indexing uses strides:
+  //   t[i]           -> t[i]
+  //   y[i][j]        -> y[i * stride_y + j]      where stride_y = length_of_return_vector
+  //   yp[i][j]       -> yp[i * stride_yp + j]    where stride_yp = number_of_states
+  //   yS[i][p][j]    -> yS[(i * n_params + p) * stride_y + j]
+  //   ypS[i][p][j]   -> ypS[(i * n_params + p) * stride_yp + j]
+  vector<sunrealtype> t;   // [n_timesteps]
+  vector<sunrealtype> y;   // [n_timesteps * length_of_return_vector]  (flat)
+  vector<sunrealtype> yp;  // [n_timesteps * number_of_states]         (flat)
+  vector<sunrealtype> yS;  // [n_timesteps * n_params * length_of_return_vector] (flat)
+  vector<sunrealtype> ypS; // [n_timesteps * n_params * number_of_states]        (flat)
+  SetupOptions const setup_opts;
+  SolverOptions const solver_opts;
+  IDAKLUStats accumulated_stats;  // Accumulated stats across reinitializations
+  SolverLog log_;
+  std::unique_ptr<HermiteKnotReducer> knot_reducer;  // Hermite knot reduction (nullptr if inactive)
+
+  struct SubBlockResources {
+    SUNContext sunctx = nullptr;
+    SUNLinearSolver LS = nullptr;
+    SUNMatrix J = nullptr;
+    N_Vector res_nvec = nullptr;
+    N_Vector delta_nvec = nullptr;
+    int nnz = 0;
+    std::vector<sunindextype> colptrs;
+    std::vector<sunindextype> rowvals;
+    std::vector<int> data_indices;
+    std::vector<sunrealtype> full_jac_buf;
+
+    ~SubBlockResources() {
+      if (res_nvec) N_VDestroy(res_nvec);
+      if (delta_nvec) N_VDestroy(delta_nvec);
+      if (LS) SUNLinSolFree(LS);
+      if (J) SUNMatDestroy(J);
+      if (sunctx) SUNContext_Free(&sunctx);
+    }
+  };
+
+  struct FullSystemResources {
+    N_Vector res_nvec = nullptr;
+    N_Vector delta_nvec = nullptr;
+
+    ~FullSystemResources() {
+      if (res_nvec) N_VDestroy(res_nvec);
+      if (delta_nvec) N_VDestroy(delta_nvec);
+    }
+  };
+
+  struct AlgSolverState {
+    enum class Mode { SUBBLOCK, FULL };
+    Mode mode = Mode::FULL;
+    std::unique_ptr<NonlinearSystem> system;
+    std::unique_ptr<NonlinearSolver> solver;
+    std::vector<int> alg_idx;
+    std::vector<int> diff_idx;
+
+    // Reusable backup buffers for NonlinearSolverInitialConditions (allocated once, reused per call)
+    std::vector<sunrealtype> y_backup;
+    std::vector<sunrealtype> yp_backup;
+
+    // Mode-specific resources (only one is allocated)
+    std::unique_ptr<SubBlockResources> sub;
+    std::unique_ptr<FullSystemResources> full;
+  };
+  std::unique_ptr<AlgSolverState> alg_state_;
+
+  int len_rhs_;
+  int len_alg_;
+  std::vector<sunrealtype> event_values_;
+  std::vector<int> rootsfound_;
+
+  // ── Solve-duration state (valid only during solve()) ──
+  bool use_knot_reduction_ = false;
+  bool save_adaptive_steps_ = false;
+  bool save_interp_steps_ = false;
+  int i_save_ = 0;
+  sunrealtype *y_val_ = nullptr;
+  sunrealtype *yp_val_ = nullptr;
+  vector<sunrealtype *> yS_val_;
+  vector<sunrealtype *> ypS_val_;
+
+  SUNContext sunctx;
+
+public:
+  /**
+   * @brief Constructor
+   */
+  IDAKLUSolverOpenMP(
+    np_array atol_np,
+    double rel_tol,
+    np_array rhs_alg_id,
+    int number_of_parameters,
+    int number_of_events,
+    int jac_times_cjmass_nnz,
+    int jac_bandwidth_lower,
+    int jac_bandwidth_upper,
+    std::unique_ptr<ExprSet> functions,
+    const SetupOptions &setup_opts,
+    const SolverOptions &solver_opts
+  );
+
+  /**
+   * @brief Destructor
+   */
+  virtual ~IDAKLUSolverOpenMP();
+
+  /**
+   * @brief The main solve method that solves for each variable and time step
+   */
+  SolutionData solve(
+    const std::vector<sunrealtype> &t_eval,
+    const std::vector<sunrealtype> &t_interp,
+    const sunrealtype *y0,
+    const sunrealtype *yp0,
+    const sunrealtype *inputs,
+    bool save_adaptive_steps,
+    bool save_interp_steps,
+    py::object logger = py::none()
+  ) override;
+
+
+  /**
+   * @brief Concrete implementation of initialization method
+   */
+  void Initialize() override;
+
+  /**
+   * @brief Allocate memory for OpenMP vectors
+   */
+  void AllocateVectors();
+
+  /**
+   * @brief Allocate memory for matrices (noting appropriate matrix format/types)
+   */
+  void SetMatrix();
+
+  /**
+   * @brief Get the length of the return vector
+   */
+  int ReturnVectorLength();
+
+  /**
+   * @brief Apply user-configurable IDA options
+   */
+  void SetSolverOptions();
+
+  /**
+   * @brief Check the return flag for errors
+   */
+  void CheckErrors(int const & flag);
+
+  /**
+   * @brief Check the return flag for errors with context
+   */
+  void CheckErrors(int const & flag, const char* context);
+
+  /**
+   * @brief Print the solver statistics
+   */
+  void PrintStats(IDAKLUStats const& stats);
+
+  /**
+   * @brief Get current statistics from IDA solver
+   */
+  IDAKLUStats GetStats();
+
+  /**
+   * @brief Save current stats to accumulated_stats
+   *
+   * This should be called before ReinitializeIntegrator() to preserve
+   * statistics that would otherwise be lost during reinitialization.
+   */
+  void SaveStats();
+
+  /**
+   * @brief Set a consistent initialization for ODEs
+   */
+  void ReinitializeIntegrator(const sunrealtype& t_val);
+
+  /**
+   * @brief Set a consistent initialization for the system of equations.
+   */
+  void ConsistentInitialization(
+    const sunrealtype& t_val,
+    const sunrealtype& t_next,
+    const int& icopt);
+
+  /**
+   * @brief Set a consistent initialization for DAEs.
+   */
+  void ConsistentInitializationDAE(
+    const sunrealtype& t_val,
+    const sunrealtype& t_next,
+    const int& icopt);
+
+  /**
+   * @brief Use the custom Newton IC solver; returns true on success.
+   */
+  bool NonlinearSolverInitialConditions(const sunrealtype& t_val);
+
+  /**
+   * @brief Set a consistent initialization for ODEs
+   */
+  void ConsistentInitializationODE(const sunrealtype& t_val);
+
+  /**
+   * @brief Recover yp after a successful Newton IC solve.
+   * Calls ConsistentInitializationODE then zeros algebraic yp components.
+   */
+  void RecoverYp(const sunrealtype& t_val);
+
+  /**
+   * @brief Build the algebraic Newton solver for consistent initial conditions.
+   * Only built when mass matrix has zeros in algebraic rows (standard-form).
+   */
+  void BuildAlgebraicSolver(const sunrealtype* id_val);
+
+  bool CheckMassMatrixAlignment(const sunrealtype* id_val);
+  void PrecomputeSubBlockSparsity();
+
+  /**
+   * @brief Linear-solve helper for FULL-mode Newton IC.
+   * Refills the IDA-owned Jacobian J at cj=1 via jacobian_eval, then runs
+   * SUNLinSolSetup / SUNLinSolSolve on the IDA-owned LS. No extra storage.
+   * Safe because IC is always followed by IDAReInit, which forces IDA to
+   * re-run its own lsetup on the next step.
+   */
+  int SolveICLinearSystem(
+    N_Vector yy_ptr, N_Vector yyp_ptr,
+    const sunrealtype* y_in, sunrealtype* res, sunrealtype* delta);
+
+  /**
+   * @brief Extend the adaptive arrays by 1
+   */
+  void ExtendAdaptiveArrays();
+
+  /**
+   * @brief Initialize storage for the solve
+   */
+  void InitializeSolveStorage(int n_evals, int n_interps);
+
+  /**
+   * @brief Copy initial values into SUNDIALS vectors and configure solver
+   */
+  void SetupInitialState(
+    const std::vector<sunrealtype> &t_eval,
+    const sunrealtype *y0,
+    const sunrealtype *yp0,
+    const sunrealtype *inputs
+  );
+
+  /**
+   * @brief Retrieve solution from IDA at time t.
+   * @param t The time at which to retrieve the solution.
+   */
+  void GetSolutionFull(sunrealtype t);
+
+  /**
+   * @brief Retrieve states y from IDA at time t (dky=0).
+   * @param t The time at which to retrieve the solution.
+   */
+  void GetSolutionStates(sunrealtype t);
+
+  /**
+   * @brief Retrieve derivatives yp from IDA at time t (dky=1).
+   * @param t The time at which to retrieve the solution.
+   */
+  void GetSolutionDerivatives(sunrealtype t);
+
+  /**
+   * @brief Store the initial point (t0) after consistent initialization
+   */
+  void StoreInitialPoint(sunrealtype t0);
+
+  /**
+   * @brief Save a solution point (delegates to Hermite knot reduction or direct save path)
+   */
+  void SavePoint(sunrealtype t_val, bool extend_arrays, bool is_breakpoint);
+
+  /**
+   * @brief Handle a breakpoint at t_eval: finalize interval, reinitialize
+   */
+  void HandleBreakpoint(
+    sunrealtype t_val,
+    const std::vector<sunrealtype> &t_eval,
+    int &i_eval,
+    sunrealtype &t_eval_next,
+    NoProgressGuard &no_progression
+  );
+
+  /**
+   * @brief Finalize output arrays and construct SolutionData
+   */
+  SolutionData BuildSolutionData(int retval);
+
+  /**
+   * @brief Reorder sensitivity arrays from solve layout to numpy layout
+   */
+  void ReorderSensitivities(
+    std::vector<sunrealtype> &yS_out,
+    std::vector<sunrealtype> &ypS_out
+  );
+
+  /**
+   * @brief Set the step values (uses member state y_val_, yp_val_, yS_val_, ypS_val_, i_save_)
+   */
+  void SetStep(sunrealtype &tval);
+
+  /**
+   * @brief Save interpolated step values (uses member state for y/yp/yS/ypS/i_save)
+   */
+  void SaveInterpPoints(
+    int &i_interp,
+    sunrealtype &t_interp_next,
+    const std::vector<sunrealtype> &t_interp,
+    sunrealtype t_val,
+    sunrealtype t_prev,
+    sunrealtype t_eval_next
+  );
+
+  /**
+   * @brief Save y and yS at the current time
+   */
+  void SetStepFull(sunrealtype &tval);
+
+  /**
+   * @brief Save yS at the current time
+   */
+  void SetStepFullSensitivities(sunrealtype &tval);
+
+  /**
+   * @brief Save the output function results at the requested time
+   */
+  void SetStepOutput(sunrealtype &tval);
+
+  /**
+   * @brief Save the output function sensitivities at the requested time
+   */
+  void SetStepOutputSensitivities(sunrealtype &tval);
+
+  /**
+   * @brief Save Hermite interpolation derivatives at the requested time
+   */
+  void SetStepHermite(sunrealtype &tval);
+
+  /**
+   * @brief Save Hermite interpolation sensitivity derivatives at the requested time
+   */
+  void SetStepHermiteSensitivities(sunrealtype &tval);
+
+};
+
+#include "IDAKLUSolverOpenMP.inl"
+
+#endif // PYBAMM_IDAKLU_SOLVEROPENMP_HPP
