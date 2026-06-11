@@ -2938,9 +2938,6 @@ bpx = [
 cite = [
     { name = "pybtex" },
 ]
-dev = [
-    { name = "pytest-benchmark" },
-]
 examples = [
     { name = "jupyter" },
 ]
@@ -3012,7 +3009,6 @@ requires-dist = [
     { name = "pybammsolvers", specifier = ">=0.8.0,<0.9.0" },
     { name = "pybtex", marker = "extra == 'all'", specifier = ">=0.25.0" },
     { name = "pybtex", marker = "extra == 'cite'", specifier = ">=0.25.0" },
-    { name = "pytest-benchmark", marker = "extra == 'dev'", specifier = ">=5.2.3" },
     { name = "pyyaml" },
     { name = "scikit-fem", marker = "extra == 'all'", specifier = ">=8.1.0" },
     { name = "scipy", specifier = ">=1.11.4" },
@@ -3022,7 +3018,7 @@ requires-dist = [
     { name = "typing-extensions", specifier = ">=4.10.0" },
     { name = "xarray", specifier = ">=2022.6.0" },
 ]
-provides-extras = ["all", "bpx", "cite", "dev", "examples", "jax", "plot", "tqdm"]
+provides-extras = ["all", "bpx", "cite", "examples", "jax", "plot", "tqdm"]
 
 [package.metadata.requires-dev]
 dev = [
