@@ -2597,6 +2597,25 @@ class TestSerializationEdgeCases:
         assert loaded_model.name == "test_dict_model"
         assert isinstance(loaded_model.rhs, dict)
 
+    def test_custom_model_tuple_options_survive_json_round_trip(self):
+        """Tuple-valued options must survive a serialise -> JSON -> load round trip.
+
+        JSON has no tuple type, so a tuple option such as
+        ``"particle phases": ("2", "1")`` is turned into a list by
+        ``json.dumps``/``json.loads``. pybamm's options validation rejects
+        lists, so ``load_custom_model`` must convert lists back to tuples
+        before assigning ``model.options``.
+        """
+        model = pybamm.lithium_ion.SPM({"particle phases": ("2", "1")}, build=False)
+
+        serialised = Serialise.serialise_custom_model(model)
+        round_tripped = json.loads(json.dumps(serialised))
+
+        loaded = Serialise.load_custom_model(round_tripped)
+
+        assert loaded.options["particle phases"] == ("2", "1")
+        assert isinstance(loaded.options["particle phases"], tuple)
+
     def test_expression_function_parameter_evaluate(self):
         """Test _unary_evaluate method of ExpressionFunctionParameter."""
         x = pybamm.Variable("x")
