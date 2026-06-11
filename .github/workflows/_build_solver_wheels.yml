@@ -55,11 +55,11 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           submodules: 'recursive'
           persist-credentials: false
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: 3.13
 
@@ -72,7 +72,7 @@ jobs:
       - name: Restore cached wheels
         id: cache
         if: inputs.cache_wheels
-        uses: actions/cache@v4
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
           path: packages/pybamm-solvers/wheelhouse
           key: solver-wheels-windows-${{ steps.solverhash.outputs.hash }}
@@ -110,13 +110,13 @@ jobs:
             python -m pytest {project}/tests
       - name: Upload vcpkg build logs
         if: ${{ inputs.save_vcpkg_logs && always() }}
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: vcpkg-logs-windows
           path: C:\vcpkg\buildtrees\sundials\*.log
           if-no-files-found: ignore
       - name: Upload Windows wheels
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: wheels_windows
           path: packages/pybamm-solvers/wheelhouse/*.whl
@@ -128,12 +128,12 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           submodules: 'recursive'
           persist-credentials: false
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: 3.13
 
@@ -146,7 +146,7 @@ jobs:
       - name: Restore cached wheels
         id: cache
         if: inputs.cache_wheels
-        uses: actions/cache@v4
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
           path: packages/pybamm-solvers/wheelhouse
           key: solver-wheels-linux-${{ steps.solverhash.outputs.hash }}
@@ -167,7 +167,7 @@ jobs:
             python -m pytest {project}/tests
 
       - name: Upload wheels for Linux
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: wheels_manylinux
           path: packages/pybamm-solvers/wheelhouse/*.whl
@@ -183,11 +183,11 @@ jobs:
         os: [macos-15-intel, macos-latest]
       fail-fast: false
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           submodules: 'recursive'
           persist-credentials: false
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: 3.13
 
@@ -200,7 +200,7 @@ jobs:
       - name: Restore cached wheels
         id: cache
         if: inputs.cache_wheels
-        uses: actions/cache@v4
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
           path: packages/pybamm-solvers/wheelhouse
           key: solver-wheels-${{ matrix.os }}-${{ steps.solverhash.outputs.hash }}
@@ -290,7 +290,7 @@ jobs:
             python -m pytest {project}/tests
 
       - name: Upload wheels for macOS (amd64, arm64)
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: wheels_${{ matrix.os }}
           path: packages/pybamm-solvers/wheelhouse/*.whl
@@ -304,11 +304,11 @@ jobs:
       contents: read
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           submodules: 'recursive'
           persist-credentials: false
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: 3.13
 
@@ -316,7 +316,7 @@ jobs:
         run: pipx run build --sdist
 
       - name: Upload SDist
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: sdist
           path: packages/pybamm-solvers/dist/*.tar.gz
