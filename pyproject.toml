@@ -11,10 +11,24 @@ members = ["packages/*"]
 [tool.uv.sources]
 pybammsolvers = { workspace = true }
 
+# Prevent uv's ephemeral build venv from being torn down between CMake configure
+# and scikit-build-core's editable auto-rebuild (which otherwise can't find
+# pybind11 and bakes dangling paths into CMakeCache.txt). Build deps must be
+# present in the workspace venv — see the dev group below. This [tool.uv]
+# setting is read from the workspace root, not member packages.
+[tool.uv]
+no-build-isolation-package = ["pybammsolvers"]
+
 [dependency-groups]
 dev = [
     "nox[uv]",
     "pre-commit",
+    # pybammsolvers build toolchain, required in the venv because the solver is
+    # installed with --no-build-isolation (above) and rebuilds itself on import.
+    "scikit-build-core>=0.10",
+    "pybind11>=3.0.1",
+    "cmake>=3.13",
+    "ninja",
 ]
 
 # --- Repo-wide Python lint config (hoisted from packages/pybamm so it governs
