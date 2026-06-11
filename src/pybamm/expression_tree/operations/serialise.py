@@ -1386,10 +1386,13 @@ class Serialise:
         model = base_cls()
         model.name = model_data["name"]
         model.schema_version = schema_version
-        # Restore options so round-trip serialisation produces an equivalent model
+        # Restore options so round-trip serialisation produces an equivalent
+        # model. A JSON round-trip turns tuple-valued options (e.g. "particle
+        # phases": ("2", "1")) into lists, which pybamm's options validation
+        # rejects, so convert lists back to tuples before assigning.
         opts = model_data.get("options", {})
         if opts is not None:
-            model.options = dict(opts)
+            model.options = Serialise._convert_options(opts)
 
         all_variable_keys = (
             [lhs_json for lhs_json, _ in model_data["rhs"]]
@@ -1651,15 +1654,31 @@ class Serialise:
 
         return recurse(obj)
 
-    def _convert_options(self, d):
-        """
-        Converts a dictionary with nested lists to nested tuples,
-        used to convert model options back into correct format
+    @staticmethod
+    def _convert_options(d):
+        """Convert a JSON-deserialised options structure back to pybamm's format.
+
+        A JSON round-trip turns tuple-valued options (e.g. ``"particle phases":
+        ("2", "1")``) into lists, which pybamm's options validation rejects.
+        This recursively converts lists back to tuples (nested lists become
+        nested tuples) so option values are restored to the form pybamm expects.
+
+        Parameters
+        ----------
+        d : dict, list or Any
+            The options dictionary, a nested list, or a scalar option value to
+            be normalised.
+
+        Returns
+        -------
+        dict, tuple or Any
+            The input with every list converted to a tuple, recursing through
+            nested dicts and lists. Scalars are returned unchanged.
         """
         if isinstance(d, dict):
-            return {k: self._convert_options(v) for k, v in d.items()}
+            return {k: Serialise._convert_options(v) for k, v in d.items()}
         elif isinstance(d, list):
-            return tuple(self._convert_options(item) for item in d)
+            return tuple(Serialise._convert_options(item) for item in d)
         else:
             return d
 
