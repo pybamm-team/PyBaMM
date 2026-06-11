@@ -1,4 +1,17 @@
-name: Build wheels
+# Build and publish pybammsolvers wheels + sdist to PyPI.
+#
+# Monorepo notes:
+# - This is the pybammsolvers RELEASE workflow. PR-time solver build/test is
+#   handled by the path-filtered CI workflow (see solvers_tests.yml), not here.
+# - All `run` steps default to the package dir via defaults.run.working-directory
+#   so cibuildwheel / build / install_KLU_Sundials.py operate on the solver
+#   package. `uses:` steps (e.g. upload-artifact) ignore that default, so their
+#   paths are written explicitly as `packages/pybamm-solvers/...`.
+# - Releases are discriminated by tag namespace (`pybamm-solvers-v*`); the old
+#   `github.repository == 'pybamm-team/pybammsolvers'` guard no longer works now
+#   that pybamm and pybammsolvers share a repository.
+name: Build solver wheels
+
 on:
   release:
     types: [ published ]
@@ -9,9 +22,10 @@ on:
         default: false
         required: false
         type: boolean
-  pull_request:
-    branches:
-      - "main"
+
+defaults:
+  run:
+    working-directory: packages/pybamm-solvers
 
 env:
   CIBW_BUILD_VERBOSITY: 2
@@ -22,6 +36,9 @@ env:
 jobs:
   build_windows_wheels:
     name: Wheels (Windows)
+    # On release events, only build for the solver tag namespace. Always build
+    # on workflow_dispatch (manual testing).
+    if: ${{ github.event_name != 'release' || startsWith(github.event.release.tag_name, 'pybamm-solvers-v') }}
     runs-on: windows-2022
     steps:
       - uses: actions/checkout@v6
@@ -71,11 +88,12 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: wheels_windows
-          path: ./wheelhouse/*.whl
+          path: packages/pybamm-solvers/wheelhouse/*.whl
           if-no-files-found: error
 
   build_manylinux_wheels:
     name: Wheels (Linux)
+    if: ${{ github.event_name != 'release' || startsWith(github.event.release.tag_name, 'pybamm-solvers-v') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -104,11 +122,12 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: wheels_manylinux
-          path: ./wheelhouse/*.whl
+          path: packages/pybamm-solvers/wheelhouse/*.whl
           if-no-files-found: error
 
   build_macos_wheels:
     name: Wheels (${{ matrix.os }})
+    if: ${{ github.event_name != 'release' || startsWith(github.event.release.tag_name, 'pybamm-solvers-v') }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -207,11 +226,12 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: wheels_${{ matrix.os }}
-          path: ./wheelhouse/*.whl
+          path: packages/pybamm-solvers/wheelhouse/*.whl
           if-no-files-found: error
 
   build_sdist:
     name: Build SDist
+    if: ${{ github.event_name != 'release' || startsWith(github.event.release.tag_name, 'pybamm-solvers-v') }}
     runs-on: ubuntu-latest
 
     steps:
@@ -227,11 +247,11 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: sdist
-          path: ./dist/*.tar.gz
+          path: packages/pybamm-solvers/dist/*.tar.gz
           if-no-files-found: error
 
   publish_pypi:
-    if: ${{ github.event_name == 'release' && github.repository == 'pybamm-team/pybammsolvers' }}
+    if: ${{ github.event_name == 'release' && startsWith(github.event.release.tag_name, 'pybamm-solvers-v') }}
     name: Upload package to PyPI
     needs: [
       build_manylinux_wheels,
@@ -255,6 +275,7 @@ jobs:
 
       - name: Sanity check downloaded artifacts
         run: ls -lA artifacts/
+        working-directory: ${{ github.workspace }}
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1

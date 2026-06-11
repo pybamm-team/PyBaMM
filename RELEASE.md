@@ -138,7 +138,7 @@ A feature release is `YY.MM.N.0` — the patch component is `0`. The first featu
 2. Create and check out a release branch from `main`: `git checkout -b release/vYY.MM.N.0`.
 3. Run `uv run python scripts/update_version.py YY.MM.N.0` to update `CITATION.cff` and prepend a dated heading to `CHANGELOG.md`.
 4. Push the branch and open a PR to `main`. Ensure CI passes, then merge.
-5. From `main` at the merge commit, create a GitHub _release_ with the tag `vYY.MM.N.0`. Copy the relevant `CHANGELOG.md` block into the release description. This triggers `publish_pypi.yml` and creates the PyPI release automatically.
+5. From `main` at the merge commit, create a GitHub _release_ with the tag `pybamm-vYY.MM.N.0`. Copy the relevant `CHANGELOG.md` block into the release description. This triggers `publish_pypi.yml` and creates the PyPI release automatically. (Monorepo: PyBaMM release tags use the `pybamm-v` prefix so they are distinct from `pybamm-solvers-v*`; see "Monorepo: independent package releases" above.)
 6. Verify the release installs cleanly: `pip install pybamm==YY.MM.N.0`.
 
 ### Cutting a patch release
@@ -146,13 +146,13 @@ A feature release is `YY.MM.N.0` — the patch component is `0`. The first featu
 A patch release is `YY.MM.N.P` where `P >= 1`. Patches are cut from the previous tag in the same feature line so the release contains only the bug fixes, not unrelated changes that have landed on `main` since the feature release.
 
 1. Ensure all bug fixes are merged to `main` first via normal PRs.
-2. Create a new branch from the previous tag in the same feature line: `git checkout -b release/vYY.MM.N.P vYY.MM.N.{P-1}` (e.g. `release/v27.1.0.1` from `v27.1.0.0`).
+2. Create a new branch from the previous tag in the same feature line: `git checkout -b release/vYY.MM.N.P pybamm-vYY.MM.N.{P-1}` (e.g. `release/v27.1.0.1` from `pybamm-v27.1.0.0`).
 3. Cherry-pick the bug fixes onto the new branch, recording the original SHA with `-x`:
    ```bash
    git cherry-pick -x <commit-sha-from-main>
    ```
 4. Run `uv run python scripts/update_version.py YY.MM.N.P` to update `CITATION.cff` and prepend a dated heading to `CHANGELOG.md`. Commit the result on the release branch.
-5. Create a GitHub _release_ with the tag `vYY.MM.N.P` from the `release/vYY.MM.N.P` branch (NOT from `main`). Copy the relevant `CHANGELOG.md` block into the release description. This triggers `publish_pypi.yml`.
+5. Create a GitHub _release_ with the tag `pybamm-vYY.MM.N.P` from the `release/vYY.MM.N.P` branch (NOT from `main`). Copy the relevant `CHANGELOG.md` block into the release description. This triggers `publish_pypi.yml`.
 6. Verify the release installs cleanly: `pip install pybamm==YY.MM.N.P`.
 7. Update the changelog on `main` separately. **Do not merge the release branch back to `main`** — that would duplicate commits with new hashes. Instead:
    ```bash
