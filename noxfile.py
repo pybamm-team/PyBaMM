@@ -34,16 +34,70 @@ def set_environment_variables(env_dict, session):
 
 
 def install_locked(session, *, extras=None, groups=None):
+    """Install pybamm and its dependencies into the session environment.
+
+    Two modes, selected by the ``PYBAMM_SOLVER_WHEELS`` environment variable:
+
+    * **Unset (local dev, solver CI):** ``uv sync --frozen`` over the workspace.
+      ``pybammsolvers`` is built from the in-repo source via the shared lockfile.
+
+    * **Set to a directory of prebuilt solver wheels (the PyBaMM CI matrix):**
+      install the wheel matching this interpreter by explicit path, then install
+      pybamm with ``--no-sources`` so the workspace source routing is ignored.
+      This tests PyBaMM against the *prebuilt in-repo* ``pybammsolvers`` without
+      recompiling it in every matrix cell (and without needing a from-source
+      build on Windows, which only exists via cibuildwheel/vcpkg).
+
+      ``--no-sources`` plus an explicit wheel path is required because the in-repo
+      solver version collides with the PyPI release, so neither ``--find-links``
+      resolution nor the workspace source can be relied on to select the in-repo
+      artifact over the identically-versioned PyPI wheel.
+    """
+    env = {"UV_PROJECT_ENVIRONMENT": session.virtualenv.location}
+
+    wheels = os.getenv("PYBAMM_SOLVER_WHEELS")
+    if wheels:
+        wheels_path = Path(wheels)
+        if wheels_path.is_dir():
+            # The per-OS artifact holds wheels for every Python version; pick the
+            # one whose interpreter tag matches this cell. The trailing dash in
+            # "*-cpXY-*" avoids matching free-threaded "cpXYt-" builds.
+            tag = f"cp{sys.version_info.major}{sys.version_info.minor}"
+            matches = sorted(wheels_path.glob(f"*-{tag}-*.whl"))
+            if not matches:
+                session.error(
+                    f"PYBAMM_SOLVER_WHEELS={wheels} contains no pybammsolvers "
+                    f"wheel for {tag}"
+                )
+            wheel = matches[0].as_posix()
+        else:
+            wheel = wheels_path.as_posix()
+        python_bin = os.path.join(
+            session.bin, "python.exe" if sys.platform == "win32" else "python"
+        )
+        extras_str = f"[{','.join(extras)}]" if extras else ""
+        cmd = [
+            "uv",
+            "pip",
+            "install",
+            "--python",
+            python_bin,
+            "--no-sources",
+            wheel,
+            f"./packages/pybamm{extras_str}",
+        ]
+        for group in groups or []:
+            # Groups (dev, docs) are defined in the pybamm package, not the root.
+            cmd.extend(["--group", f"packages/pybamm/pyproject.toml:{group}"])
+        session.run(*cmd, env=env, external=True)
+        return
+
     cmd = ["uv", "sync", "--frozen"]
     for extra in extras or []:
         cmd.extend(["--extra", extra])
     for group in groups or []:
         cmd.extend(["--group", group])
-    session.run(
-        *cmd,
-        env={"UV_PROJECT_ENVIRONMENT": session.virtualenv.location},
-        external=True,
-    )
+    session.run(*cmd, env=env, external=True)
 
 
 @nox.session(name="coverage", default=False)

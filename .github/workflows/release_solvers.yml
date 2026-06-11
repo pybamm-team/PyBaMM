@@ -1,12 +1,10 @@
 # Build and publish pybammsolvers wheels + sdist to PyPI.
 #
 # Monorepo notes:
-# - This is the pybammsolvers RELEASE workflow. PR-time solver build/test is
-#   handled by the path-filtered CI workflow (see solvers_tests.yml), not here.
-# - All `run` steps default to the package dir via defaults.run.working-directory
-#   so cibuildwheel / build / install_KLU_Sundials.py operate on the solver
-#   package. `uses:` steps (e.g. upload-artifact) ignore that default, so their
-#   paths are written explicitly as `packages/pybamm-solvers/...`.
+# - The wheel/sdist build logic lives in the reusable workflow
+#   `_build_solver_wheels.yml`, shared with PR-time CI (test_on_push.yml). This
+#   workflow only adds the release trigger, the tag-namespace guard, and the
+#   PyPI publish step.
 # - Releases are discriminated by tag namespace (`pybamm-solvers-v*`); the old
 #   `github.repository == 'pybamm-team/pybammsolvers'` guard no longer works now
 #   that pybamm and pybammsolvers share a repository.
@@ -23,242 +21,24 @@ on:
         required: false
         type: boolean
 
-defaults:
-  run:
-    working-directory: packages/pybamm-solvers
-
-env:
-  CIBW_BUILD_VERBOSITY: 2
-  # Skip PyPy, MUSL, and free-threaded Python builds (CasADi lacks cp314t wheels)
-  CIBW_SKIP: "pp* *musllinux* cp314t*"
-  FORCE_COLOR: 3
-
 jobs:
-  build_windows_wheels:
-    name: Wheels (Windows)
+  build:
+    name: Build wheels + sdist
     # On release events, only build for the solver tag namespace. Always build
-    # on workflow_dispatch (manual testing).
+    # on workflow_dispatch (manual testing). A fresh build (no cache) for release.
     if: ${{ github.event_name != 'release' || startsWith(github.event.release.tag_name, 'pybamm-solvers-v') }}
-    runs-on: windows-2022
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          submodules: 'recursive'
-      - uses: actions/setup-python@v6
-        with:
-          python-version: 3.13
-
-      # Pin to 2025.01.13 to avoid issues with finding SuiteSparse in manifest mode
-      # after SuiteSparse was split into subpackages in recent vcpkg releases.
-      - name: Install vcpkg on Windows
-        run: |
-          cd C:\
-          rm -r -fo 'C:\vcpkg'
-          git clone https://github.com/microsoft/vcpkg --branch 2025.01.13
-          cd vcpkg
-          .\bootstrap-vcpkg.bat
-
-      - name: Build wheels on Windows
-        run: pipx run cibuildwheel --output-dir wheelhouse
-        env:
-          # No VCPKG_BINARY_SOURCES: keep vcpkg's default local cache
-          # (%LOCALAPPDATA%\vcpkg\archives) so the per-wheel CMake configures
-          # within this job share built ports instead of rebuilding from
-          # source for each Python version.
-          CIBW_ENVIRONMENT: >
-            VCPKG_ROOT_DIR=C:\vcpkg
-            VCPKG_DEFAULT_TRIPLET=x64-windows-static-md
-            VCPKG_FEATURE_FLAGS=manifests,registries
-            CMAKE_GENERATOR="Visual Studio 17 2022"
-            CMAKE_GENERATOR_PLATFORM=x64
-          CIBW_ARCHS: AMD64
-          CIBW_BEFORE_BUILD: python -m pip install delvewheel
-          CIBW_REPAIR_WHEEL_COMMAND: delvewheel repair --add-path C:/Windows/System32 -w {dest_dir} {wheel}
-          CIBW_TEST_EXTRAS: "dev"
-          CIBW_TEST_COMMAND: |
-            python -m pytest {project}/tests
-      - name: Upload vcpkg build logs
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.save_vcpkg_logs && always()}}
-        uses: actions/upload-artifact@v7
-        with:
-          name: vcpkg-logs-windows
-          path: C:\vcpkg\buildtrees\sundials\*.log
-          if-no-files-found: ignore
-      - name: Upload Windows wheels
-        uses: actions/upload-artifact@v7
-        with:
-          name: wheels_windows
-          path: packages/pybamm-solvers/wheelhouse/*.whl
-          if-no-files-found: error
-
-  build_manylinux_wheels:
-    name: Wheels (Linux)
-    if: ${{ github.event_name != 'release' || startsWith(github.event.release.tag_name, 'pybamm-solvers-v') }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          submodules: 'recursive'
-
-      - uses: actions/setup-python@v6
-        with:
-          python-version: 3.13
-
-      - name: Build wheels on Linux
-        run: pipx run cibuildwheel --output-dir wheelhouse
-        env:
-          CIBW_ARCHS_LINUX: x86_64
-          CIBW_BEFORE_ALL_LINUX: >
-            yum -y install openblas-devel lapack-devel &&
-            python install_KLU_Sundials.py
-          # libcasadi ships as a pip dep (resolved at runtime via $ORIGIN/../casadi).
-          CIBW_REPAIR_WHEEL_COMMAND_LINUX: auditwheel repair --exclude libcasadi.so.3.7 -w {dest_dir} {wheel}
-          CIBW_TEST_EXTRAS: "dev"
-          CIBW_TEST_COMMAND: |
-            set -e -x
-            python -m pytest {project}/tests
-
-      - name: Upload wheels for Linux
-        uses: actions/upload-artifact@v7
-        with:
-          name: wheels_manylinux
-          path: packages/pybamm-solvers/wheelhouse/*.whl
-          if-no-files-found: error
-
-  build_macos_wheels:
-    name: Wheels (${{ matrix.os }})
-    if: ${{ github.event_name != 'release' || startsWith(github.event.release.tag_name, 'pybamm-solvers-v') }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [macos-15-intel, macos-latest]
-      fail-fast: false
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          submodules: 'recursive'
-      - uses: actions/setup-python@v6
-        with:
-          python-version: 3.13
-
-      - name: Install Fortran compiler
-        env:
-          HOMEBREW_NO_INSTALL_CLEANUP: 1
-          HOMEBREW_NO_AUTO_UPDATE: 1
-          HOMEBREW_NO_COLOR: 1
-          NONINTERACTIVE: 1
-        run: |
-          brew analytics off
-          brew install libomp
-          brew reinstall gcc
-
-      - name: Install cibuildwheel
-        run: python -m pip install cibuildwheel
-
-      - name: Build wheels on macOS
-        shell: bash
-        run: |
-            set -e -x
-
-            # Set LLVM-OpenMP URL
-            if [[ $(uname -m) == "x86_64" ]]; then
-              OPENMP_URL="https://anaconda.org/conda-forge/llvm-openmp/11.1.0/download/osx-64/llvm-openmp-11.1.0-hda6cdc1_1.tar.bz2"
-            elif [[ $(uname -m) == "arm64" ]]; then
-              OPENMP_URL="https://anaconda.org/conda-forge/llvm-openmp/11.1.0/download/osx-arm64/llvm-openmp-11.1.0-hf3c4609_1.tar.bz2"
-            fi
-
-            export SDKROOT=${SDKROOT:-$(xcrun --show-sdk-path)}
-            SOLVER_LIB_PATH=$(pwd)/.idaklu/lib
-
-            mkdir -p $SOLVER_LIB_PATH
-
-            # Can't download LLVM-OpenMP directly, use conda and set environment variables
-            brew install miniforge
-            conda create -n pybammsolvers-dev $OPENMP_URL
-            if [[ $(uname -m) == "x86_64" ]]; then
-              PREFIX="/usr/local/Caskroom/miniforge/base/envs/pybammsolvers-dev"
-            elif [[ $(uname -m) == "arm64" ]]; then
-              PREFIX="/opt/homebrew/Caskroom/miniforge/base/envs/pybammsolvers-dev"
-            fi
-
-            # Copy libomp.dylib from PREFIX to $SOLVER_LIB_PATH, needed for wheel repair
-            cp $PREFIX/lib/libomp.dylib $SOLVER_LIB_PATH/.
-            install_name_tool -id $SOLVER_LIB_PATH/libomp.dylib $SOLVER_LIB_PATH/libomp.dylib
-            codesign --force --sign - $SOLVER_LIB_PATH/libomp.dylib
-
-            export CC=/usr/bin/clang
-            export CXX=/usr/bin/clang++
-            # Link conda libomp (not Homebrew's — too-high MACOSX_DEPLOYMENT_TARGET).
-            # One libomp source ensures delocate bundles a single copy.
-            export CPPFLAGS="$CPPFLAGS -Xpreprocessor -fopenmp"
-            export CFLAGS="$CFLAGS -I$PREFIX/include"
-            export CXXFLAGS="$CXXFLAGS -I$PREFIX/include"
-            export LDFLAGS="$LDFLAGS -L$PREFIX/lib -lomp"
-
-            # install_KLU_Sundials.py checks CIBUILDWHEEL to decide whether to
-            # inject Homebrew OpenMP overrides; set it so it uses conda libomp.
-            export CIBUILDWHEEL="1"
-
-            python install_KLU_Sundials.py
-            python -m cibuildwheel --output-dir wheelhouse
-        env:
-          # 10.13 for Intel (macos-15-intel), 11.0 for Apple Silicon (macos-latest)
-          MACOSX_DEPLOYMENT_TARGET: ${{ matrix.os == 'macos-latest' && '11.0' || '10.13' }}
-          CIBW_ARCHS_MACOS: auto
-          CIBW_BEFORE_BUILD: python -m pip install delocate
-          # libcasadi ships as a pip dep (resolved at runtime via
-          # @loader_path/../casadi); delocate can't locate it at repair time
-          # since it lives in the build venv — hence --exclude + --ignore-missing-dependencies.
-          CIBW_REPAIR_WHEEL_COMMAND: |
-            if [[ $(uname -m) == "x86_64" ]]; then
-              delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel} --exclude libcasadi --ignore-missing-dependencies
-            elif [[ $(uname -m) == "arm64" ]]; then
-              # Use higher macOS target for now since casadi/libc++.1.0.dylib is still not fixed
-              delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel} --exclude libcasadi --ignore-missing-dependencies --require-target-macos-version 11.1
-              for file in {dest_dir}/*.whl; do mv "$file" "${file//macosx_11_1/macosx_11_0}"; done
-            fi
-          CIBW_TEST_EXTRAS: "dev"
-          CIBW_TEST_COMMAND: |
-            set -e -x
-            python -m pytest {project}/tests
-
-      - name: Upload wheels for macOS (amd64, arm64)
-        uses: actions/upload-artifact@v7
-        with:
-          name: wheels_${{ matrix.os }}
-          path: packages/pybamm-solvers/wheelhouse/*.whl
-          if-no-files-found: error
-
-  build_sdist:
-    name: Build SDist
-    if: ${{ github.event_name != 'release' || startsWith(github.event.release.tag_name, 'pybamm-solvers-v') }}
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
-        with:
-          python-version: 3.13
-
-      - name: Build SDist
-        run: pipx run build --sdist
-
-      - name: Upload SDist
-        uses: actions/upload-artifact@v7
-        with:
-          name: sdist
-          path: packages/pybamm-solvers/dist/*.tar.gz
-          if-no-files-found: error
+    permissions:
+      contents: read
+    uses: ./.github/workflows/_build_solver_wheels.yml
+    with:
+      cache_wheels: false
+      build_sdist: true
+      save_vcpkg_logs: ${{ github.event_name == 'workflow_dispatch' && inputs.save_vcpkg_logs }}
 
   publish_pypi:
     if: ${{ github.event_name == 'release' && startsWith(github.event.release.tag_name, 'pybamm-solvers-v') }}
     name: Upload package to PyPI
-    needs: [
-      build_manylinux_wheels,
-      build_macos_wheels,
-      build_windows_wheels,
-      build_sdist
-    ]
+    needs: [ build ]
     runs-on: ubuntu-latest
     environment:
       name: pypi

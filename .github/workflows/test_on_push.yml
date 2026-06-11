@@ -2,6 +2,12 @@ name: PyBaMM
 
 on:
   pull_request:
+  # Run on pushes to main as well, primarily to warm the solver-wheel cache
+  # (keyed on the solver source hash) so PyBaMM-only PRs get a cache hit instead
+  # of rebuilding the solver. Also gives a post-merge health signal for main.
+  push:
+    branches:
+      - main
 
 
 permissions: {}
@@ -19,6 +25,39 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Dependency-aware routing. `solver`/`pybamm`/`docs` say which subsystems a PR
+  # touches so we only run (and only build the solver for) what's needed.
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+      contents: read
+    outputs:
+      solver: ${{ steps.filter.outputs.solver }}
+      pybamm: ${{ steps.filter.outputs.pybamm }}
+      docs: ${{ steps.filter.outputs.docs }}
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+      # NOTE: pin dorny/paths-filter to a commit SHA before merge (zizmor).
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            solver:
+              - 'packages/pybamm-solvers/**'
+              - '.github/workflows/_build_solver_wheels.yml'
+            pybamm:
+              - 'packages/pybamm/**'
+              - 'pyproject.toml'
+              - 'uv.lock'
+              - 'noxfile.py'
+              - 'conftest.py'
+              - '.github/workflows/test_on_push.yml'
+            docs:
+              - 'docs/**'
+
   style:
     runs-on: ubuntu-latest
     permissions:
@@ -43,7 +82,28 @@ jobs:
       - name: Check uv.lock is up to date
         run: uv lock --check
 
+  # Build the in-repo solver once per platform (cibuildwheel, incl. Windows via
+  # vcpkg) and cache the wheels on the solver source hash. PyBaMM's matrix below
+  # installs these prebuilt wheels instead of rebuilding the solver per cell.
+  # The reusable workflow's CIBW_TEST_COMMAND also runs the solver's own pytest
+  # on every platform, which (with the PyBaMM matrix) supersedes the solver's
+  # old standalone unit/integration workflows.
+  build_solver:
+    needs: changes
+    if: ${{ github.event_name == 'push' || needs.changes.outputs.solver == 'true' || needs.changes.outputs.pybamm == 'true' || needs.changes.outputs.docs == 'true' }}
+    # Pass contents:read down to the called workflow (this workflow's top-level
+    # permissions are {}, so the reusable workflow's checkout would otherwise
+    # get no token scope).
+    permissions:
+      contents: read
+    uses: ./.github/workflows/_build_solver_wheels.yml
+    with:
+      cache_wheels: true
+      build_sdist: false
+
   run_unit_tests:
+    needs: [changes, build_solver]
+    if: ${{ github.event_name == 'push' || needs.changes.outputs.pybamm == 'true' || needs.changes.outputs.solver == 'true' }}
     runs-on: ${{ matrix.os }}
     permissions:
       contents: read
@@ -54,6 +114,11 @@ jobs:
         os: [ubuntu-latest, macos-15-intel, macos-latest, windows-latest]
         python-version: ["3.11", "3.12", "3.13", "3.14"]
     name: Tests (${{ matrix.os }} / Python ${{ matrix.python-version }})
+
+    env:
+      # noxfile install_locked installs the matching prebuilt solver wheel from
+      # this directory instead of building the solver from source.
+      PYBAMM_SOLVER_WHEELS: ${{ github.workspace }}/solver-wheels
 
     steps:
       - name: Check out PyBaMM repository
@@ -108,6 +173,12 @@ jobs:
       - name: Install nox
         run: uv tool install nox
 
+      - name: Download in-repo solver wheels
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: ${{ matrix.os == 'ubuntu-latest' && 'wheels_manylinux' || matrix.os == 'windows-latest' && 'wheels_windows' || format('wheels_{0}', matrix.os) }}
+          path: solver-wheels
+
       - name: Run unit tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
         if: matrix.os != 'ubuntu-latest' || matrix.python-version != '3.13'
         run: nox -s unit
@@ -126,13 +197,55 @@ jobs:
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13'
         run: nox -s integration
 
+  # Guards the `pip install pybamm` user path: in-repo PyBaMM against the
+  # *released* PyPI solver (--no-sources ignores the workspace source so
+  # pybammsolvers resolves from PyPI). main-to-main testing can't cover this.
+  released_solver_smoke:
+    needs: changes
+    if: ${{ github.event_name == 'push' || needs.changes.outputs.pybamm == 'true' || needs.changes.outputs.solver == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    name: Released-solver smoke (ubuntu-latest / Python 3.13)
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+
+      - name: Install Linux system dependencies
+        uses: awalsh128/cache-apt-pkgs-action@acb598e5ddbc6f68a970c5da0688d2f3a9f04d05 # v1.6.0
+        with:
+          packages: gfortran gcc libopenblas-dev
+          execute_install_scripts: true
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: 3.13
+
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          version: "latest"
+          enable-cache: true
+
+      - name: Install PyBaMM against the released PyPI solver and smoke-test IDAKLU
+        run: |
+          uv venv
+          uv pip install --no-sources "./packages/pybamm[all]" --group "packages/pybamm/pyproject.toml:dev"
+          . .venv/bin/activate
+          python -m pytest packages/pybamm/tests/unit/test_solvers/test_idaklu_solver.py -q
+
   run_doctests:
+    needs: [changes, build_solver]
+    if: ${{ github.event_name == 'push' || needs.changes.outputs.pybamm == 'true' || needs.changes.outputs.solver == 'true' || needs.changes.outputs.docs == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
     strategy:
       fail-fast: false
     name: Doctests (ubuntu-latest / Python 3.13)
+    env:
+      PYBAMM_SOLVER_WHEELS: ${{ github.workspace }}/solver-wheels
 
     steps:
       - name: Check out PyBaMM repository
@@ -168,6 +281,12 @@ jobs:
       - name: Install nox
         run: uv tool install nox
 
+      - name: Download in-repo solver wheels
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: wheels_manylinux
+          path: solver-wheels
+
       - name: Install docs dependencies and run doctests for GNU/Linux
         run: nox -s doctests
 
@@ -175,12 +294,16 @@ jobs:
         run: nox -s docs
 
   run_example_tests:
+    needs: [changes, build_solver]
+    if: ${{ github.event_name == 'push' || needs.changes.outputs.pybamm == 'true' || needs.changes.outputs.solver == 'true' || needs.changes.outputs.docs == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
     strategy:
       fail-fast: false
     name: Example notebooks (ubuntu-latest / Python 3.13)
+    env:
+      PYBAMM_SOLVER_WHEELS: ${{ github.workspace }}/solver-wheels
 
     steps:
       - name: Check out PyBaMM repository
@@ -215,16 +338,26 @@ jobs:
       - name: Install nox
         run: uv tool install nox
 
+      - name: Download in-repo solver wheels
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: wheels_manylinux
+          path: solver-wheels
+
       - name: Run example notebooks tests for GNU/Linux with Python 3.13
         run: nox -s examples
 
   run_scripts_tests:
+    needs: [changes, build_solver]
+    if: ${{ github.event_name == 'push' || needs.changes.outputs.pybamm == 'true' || needs.changes.outputs.solver == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
     strategy:
       fail-fast: false
     name: Example scripts (ubuntu-latest / Python 3.13)
+    env:
+      PYBAMM_SOLVER_WHEELS: ${{ github.workspace }}/solver-wheels
 
     steps:
       - name: Check out PyBaMM repository
@@ -259,14 +392,24 @@ jobs:
       - name: Install nox
         run: uv tool install nox
 
+      - name: Download in-repo solver wheels
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: wheels_manylinux
+          path: solver-wheels
+
       - name: Run example scripts tests for GNU/Linux with Python 3.13
         run: nox -s scripts
 
   run_memory_tests:
+    needs: [changes, build_solver]
+    if: ${{ github.event_name == 'push' || needs.changes.outputs.pybamm == 'true' || needs.changes.outputs.solver == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
     name: Memory tests (ubuntu-latest / Python 3.13)
+    env:
+      PYBAMM_SOLVER_WHEELS: ${{ github.workspace }}/solver-wheels
 
     steps:
       - name: Check out PyBaMM repository
@@ -298,6 +441,12 @@ jobs:
 
       - name: Install nox
         run: uv tool install nox
+
+      - name: Download in-repo solver wheels
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: wheels_manylinux
+          path: solver-wheels
 
       - name: Run memory tests for GNU/Linux with Python 3.13
         run: nox -s memory
