@@ -36,7 +36,7 @@ public:
     if (Disabled()) {
         return;
     }
-    
+
     dt_window_[idx_] = dt;
     idx_ = (idx_ + 1) % window_size_;
   }
@@ -47,7 +47,7 @@ public:
     if (Disabled()) {
         return false;
     }
-    
+
     sunrealtype sum_dt = SUN_RCONST(0.0);
     for (const auto &dt : dt_window_) {
       sum_dt += dt;
@@ -66,5 +66,3 @@ private:
 };
 
 #endif // PYBAMM_IDAKLU_NOPROGRESS_GUARD_HPP
-
-

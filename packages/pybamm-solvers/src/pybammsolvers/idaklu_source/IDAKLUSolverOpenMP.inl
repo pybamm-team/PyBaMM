@@ -385,7 +385,7 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
   int n_steps = 0;
   int retval = IDASolve(ida_mem, tf_perturbed, &t_val, yy, yyp, IDA_ONE_STEP);
   GetSolutionFull(t0);
-  
+
   log_.log_step(++n_steps, t_val);
   CheckErrors(retval, "IDASolve at t0");
 
@@ -952,7 +952,7 @@ void IDAKLUSolverOpenMP<ExprSet>::SetStepOutput(
 ) {
   DEBUG("IDAKLUSolver::SetStepOutput");
   // FLAT STORAGE: Write output variables to y[i_save_ * stride + j]
-  
+
   sunrealtype* y_dest = &y[i_save_ * length_of_return_vector];
   size_t j = 0;
   for (auto& var_fcn : functions->var_fcns) {
@@ -961,7 +961,7 @@ void IDAKLUSolverOpenMP<ExprSet>::SetStepOutput(
       y_dest[j++] = res[jj];
     }
   }
-  
+
   if (sensitivity) {
     SetStepOutputSensitivities(tval);
   }

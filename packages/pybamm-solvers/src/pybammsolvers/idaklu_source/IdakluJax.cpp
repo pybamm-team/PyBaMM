@@ -50,7 +50,7 @@ void IdakluJax::cpu_idaklu_eval(void *out_tuple, const void **in) {
   const std::int64_t n_vars = *reinterpret_cast<const std::int64_t *>(in[k++]);
   const std::int64_t n_inputs = *reinterpret_cast<const std::int64_t *>(in[k++]);
   const auto *t = reinterpret_cast<const sunrealtype *>(in[k++]);
-  
+
   // Use std::vector for automatic memory management (RAII)
   std::vector<sunrealtype> inputs(n_inputs);
   for (int i = 0; i < n_inputs; i++) {

@@ -7,7 +7,7 @@ Standalone repository for the C/C++ solvers used in PyBaMM
 From PyPI:
 
 ```bash
-pip install pybammsolvers 
+pip install pybammsolvers
 ```
 
 And from conda-forge (`>=v0.7.0` only):

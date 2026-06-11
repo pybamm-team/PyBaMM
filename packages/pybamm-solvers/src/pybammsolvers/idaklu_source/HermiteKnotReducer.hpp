@@ -126,10 +126,10 @@ public:
             for (int j = 0; j < n_states; ++j) {
                 idx[j] = j;
             }
-            
+
             std::partial_sort(idx.begin(), idx.begin() + n_sentinels_, idx.end(),
                 [this](int a, int b) { return inv_atol_[a] > inv_atol_[b]; });
-            
+
             for (int s = 0; s < n_sentinels_; ++s) {
                 sentinels_[s] = idx[s];
             }
@@ -173,7 +173,7 @@ public:
             if (!window_t_.empty()) {
                 // trailing span: candidate → breakpoint
                 FlushCandidate();
-                h_span = t - window_t_.back();                
+                h_span = t - window_t_.back();
             } else {
                 // span: anchor → breakpoint (no interior)
                 h_span = t - anchor_t_;
@@ -352,11 +352,11 @@ private:
     void CommitPoint(sunrealtype t, const sunrealtype* y, const sunrealtype* yp) {
         LeastSquaresEnsureArrays();
         ++ls_knot_count_;
-        
+
         out_t_->push_back(t);
         out_y_->insert(out_y_->end(), y, y + n_states_);
         out_yp_->insert(out_yp_->end(), yp, yp + n_states_);
-        
+
         ++out_count_;
     }
 

@@ -67,18 +67,18 @@ inline void throw_sundials_error(int flag, const char* operation_context) {
   // Pre-allocate sufficient buffer for the error message to avoid dynamic allocations
   constexpr size_t buffer_size = 512;
   char buffer[buffer_size];
-  
+
   const char* error_msg = sundials_error_message(flag);
-  
+
   // Format: "Operation context: error message (flag: <code>)"
-  int written = snprintf(buffer, buffer_size, "%s: %s (flag: %d)", 
+  int written = snprintf(buffer, buffer_size, "%s: %s (flag: %d)",
                          operation_context, error_msg, flag);
-  
+
   // Ensure null termination in case of truncation
   if (written >= static_cast<int>(buffer_size)) {
     buffer[buffer_size - 1] = '\0';
   }
-  
+
   throw std::runtime_error(buffer);
 }
 
@@ -90,12 +90,12 @@ inline bool check_size_t_multiply_overflow(size_t a, size_t b, size_t* result) {
     *result = 0;
     return false;
   }
-  
+
   // Check if a * b would overflow size_t
   if (a > SIZE_MAX / b) {
     return true;  // Overflow would occur
   }
-  
+
   *result = a * b;
   return false;
 }
@@ -112,4 +112,3 @@ inline bool check_size_t_multiply_overflow_3(size_t a, size_t b, size_t c, size_
 }
 
 #endif // PYBAMM_SUNDIALS_ERROR_HANDLER_HPP
-

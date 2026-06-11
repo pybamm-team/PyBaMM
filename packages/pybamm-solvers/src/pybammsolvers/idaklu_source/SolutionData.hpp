@@ -18,7 +18,7 @@ inline np_array vector_to_numpy(std::vector<sunrealtype>&& vec) {
 
 // Helper: wrap a vector as a 3D numpy array (zero-copy via capsule)
 // MUST be called with GIL held!
-inline np_array vector_to_numpy_3d(std::vector<sunrealtype>&& vec, 
+inline np_array vector_to_numpy_3d(std::vector<sunrealtype>&& vec,
                                     ptrdiff_t d0, ptrdiff_t d1, ptrdiff_t d2) {
     auto* holder = new std::vector<sunrealtype>(std::move(vec));
     py::capsule capsule(holder, [](void* v) {
@@ -36,7 +36,7 @@ class SolutionData
 {
   public:
     SolutionData() = default;
-    
+
     SolutionData(
       int flag,
       std::vector<sunrealtype>&& t,
@@ -79,7 +79,7 @@ class SolutionData
         vector_to_numpy(std::move(y_vec)),
         vector_to_numpy(std::move(yp_vec)),
         vector_to_numpy_3d(std::move(yS_vec), arg_sens0, arg_sens1, arg_sens2),
-        vector_to_numpy_3d(std::move(ypS_vec), 
+        vector_to_numpy_3d(std::move(ypS_vec),
                            save_hermite ? arg_sens0 : 0, arg_sens1, arg_sens2),
         vector_to_numpy(std::move(yterm_vec))
       );

@@ -36,6 +36,10 @@ dev = [
 # config by walking up from each file, so it must live at the repo root.
 # The C/C++ solver package keeps its own packages/pybamm-solvers/ruff.toml. ---
 [tool.ruff]
+# Match the packages' requires-python floor (>=3.10). On main this was inferred
+# from [project].requires-python; the workspace root has no [project], so set it
+# explicitly (this also satisfies repo-review's RF002).
+target-version = "py310"
 extend-include = ["*.ipynb"]
 extend-exclude = ["__init__.py"]
 
@@ -86,3 +90,34 @@ ignore = [
 "examples/*" = ["T20"]
 "**.ipynb" = ["E402", "E703"]
 "docs/source/examples/notebooks/models/lithium-plating.ipynb" = ["F821"]
+
+# `pybamm` is first-party. On main this was auto-detected from [project].name;
+# the workspace root has no [project], so declare it explicitly — otherwise
+# isort regroups `import pybamm` as third-party across the whole repo.
+# `pybammsolvers` is intentionally NOT listed: it was third-party on main (a
+# PyPI dependency) and the committed import ordering reflects that; the solver's
+# own packages/pybamm-solvers/ruff.toml governs its subtree.
+[tool.ruff.lint.isort]
+known-first-party = ["pybamm"]
+
+# repo-review runs at the repo root. Carry over the ignore list that lived in
+# the package pyproject on main, plus the checks that don't apply to a
+# workspace-orchestration root (no [project]/build-system; pytest config lives
+# in packages/pybamm).
+[tool.repo-review]
+ignore = [
+    "MY",     # all MyPy setting checks (mypy config lives in packages/pybamm)
+    "PP004",  # upper cap on Python requires
+    "PP308",  # explicit pytest summary flag (-ra)
+    "PC140",  # missing type checker in pre-commit
+    "PC160",  # missing spell checker in pre-commit
+    "PC180",  # missing markdown formatter in pre-commit
+    "RF102",  # missing isort selection in Ruff
+    "PP006",  # dev dependency group should be defined
+    "NOX201", # script block with dependencies in noxfile
+    "NOX202", # noxfile shebang line
+    "PP002",  # build-system table — workspace root is not an installable package
+    "PP003",  # wheel as build-dep — N/A without a build-system
+    "PP301",  # pytest config — lives in packages/pybamm
+    "PY005",  # tests folder — lives in packages/pybamm/tests, not at the root
+]

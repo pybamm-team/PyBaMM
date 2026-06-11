@@ -1,8 +1,9 @@
 #
 # Tests for the lead-acid LOQS model
 #
-import pybamm
 import tests
+
+import pybamm
 
 
 class TestLeadAcidLOQSWithSideReactions:

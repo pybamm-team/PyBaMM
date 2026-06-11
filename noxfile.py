@@ -124,9 +124,7 @@ def run_integration(session):
         and sys.platform == "linux"
     ):
         session.install("pytest-github-actions-annotate-failures")
-    session.run(
-        "python", "-m", "pytest", "-m", "integration", "packages/pybamm/tests"
-    )
+    session.run("python", "-m", "pytest", "-m", "integration", "packages/pybamm/tests")
 
 
 @nox.session(name="doctests", default=False)

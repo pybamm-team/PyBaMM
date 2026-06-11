@@ -84,7 +84,7 @@ public:
   bool save_hermite;  // cppcheck-suppress unusedStructMember
   bool is_ODE;  // cppcheck-suppress unusedStructMember
   int length_of_return_vector;  // cppcheck-suppress unusedStructMember
-  
+
   // Arrays are stored flat (contiguous) for cache efficiency and zero-copy
   // to numpy. Indexing uses strides:
   //   t[i]           -> t[i]
