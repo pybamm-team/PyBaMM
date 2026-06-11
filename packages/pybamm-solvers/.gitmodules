@@ -1,6 +1,6 @@
 [submodule "sundials"]
-    path = sundials
+    path = packages/pybamm-solvers/sundials
     url = https://github.com/LLNL/sundials.git
 [submodule "SuiteSparse"]
-    path = SuiteSparse
+    path = packages/pybamm-solvers/SuiteSparse
     url = https://github.com/DrTimothyAldenDavis/SuiteSparse.git
