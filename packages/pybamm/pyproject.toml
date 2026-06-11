@@ -148,6 +148,18 @@ version.fallback-version = "0.0.0"
 build.targets.sdist.include = ["src/pybamm", "CITATION.cff"]
 build.hooks.vcs.version-file = "src/pybamm/_version.py"
 
+# Monorepo tag scoping: PyBaMM releases are tagged `pybamm-v<CalVer>` (e.g.
+# pybamm-v27.1.0.0). Scope git-describe to that namespace so pybammsolvers tags
+# (`pybamm-solvers-v*`) and legacy bare solver tags (`v0.x`) never drive PyBaMM's
+# version. See docs/superpowers/specs/2026-06-11-pybamm-monorepo-design.md.
+[tool.hatch.version.raw-options]
+# The git root is the monorepo root, two levels up from this package's
+# pyproject. Without this, setuptools_scm looks for .git in packages/pybamm/,
+# fails, and falls back to 0.0.0.
+root = "../.."
+git_describe_command = ["git", "describe", "--dirty", "--tags", "--long", "--match", "pybamm-v*"]
+tag_regex = '^pybamm-v(?P<version>[0-9].*)$'
+
 [tool.repo-review]
 ignore = [
     "MY",     # ignore all MyPy setting checks (MY101, MY103, MY104, MY105, MY106)
