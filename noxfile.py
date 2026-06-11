@@ -84,6 +84,7 @@ def install_locked(session, *, extras=None, groups=None):
             python_bin,
             "--no-sources",
             wheel,
+            "-e",
             f"./packages/pybamm{extras_str}",
         ]
         for group in groups or []:
