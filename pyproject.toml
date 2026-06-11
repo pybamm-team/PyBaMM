@@ -1,0 +1,74 @@
+# Root workspace configuration for the PyBaMM monorepo.
+# This file is orchestration-only: it declares the UV workspace and the
+# repo-wide Python lint config. It is NOT an installable package (no [project]).
+# Per-package metadata and build config live in each package's own pyproject.toml:
+#   - packages/pybamm/pyproject.toml          (hatchling)
+#   - packages/pybamm-solvers/pyproject.toml  (scikit-build-core)
+
+[tool.uv.workspace]
+members = ["packages/*"]
+
+[tool.uv.sources]
+pybammsolvers = { workspace = true }
+
+[dependency-groups]
+dev = [
+    "nox[uv]",
+    "pre-commit",
+]
+
+# --- Repo-wide Python lint config (hoisted from packages/pybamm so it governs
+# the whole repo, including root-level docs/ and examples/). Ruff discovers
+# config by walking up from each file, so it must live at the repo root.
+# The C/C++ solver package keeps its own packages/pybamm-solvers/ruff.toml. ---
+[tool.ruff]
+extend-include = ["*.ipynb"]
+extend-exclude = ["__init__.py"]
+
+[tool.ruff.lint]
+extend-select = [
+    "B", # flake8-bugbear
+    "I", # isort
+    # "ARG",         # flake8-unused-arguments
+    # "C4",          # flake8-comprehensions
+    # "ICN",         # flake8-import-conventions
+    # "ISC",         # flake8-implicit-str-concat
+    # "PGH",         # pygrep-hooks
+    # "PIE",         # flake8-pie
+    # "PL",          # pylint
+    # "PT",          # flake8-pytest-style
+    # "PTH",         # flake8-use-pathlib
+    # "RET",         # flake8-return
+    "RUF", # Ruff-specific
+    # "SIM",         # flake8-simplify
+    # "T20",         # flake8-print
+    "UP",     # pyupgrade
+    "YTT",    # flake8-2020
+    "TID252", # relative-imports
+    "S101",   # to identify use of assert statement
+    "PT027",  # remove unittest style assertion
+    "PT009",  # Use pytest.raises instead of unittest-style
+]
+ignore = [
+    "E741",    # Ambiguous variable name
+    "RUF012",  # Mutable class attributes should be annotated with `typing.ClassVar`
+    "SIM108",  # Use ternary operator
+    "ARG001",  # Unused function argument:
+    "ARG002",  # Unused method arguments
+    "PLR2004", # Magic value used in comparison
+    "PLR0915", # Too many statements
+    "PLR0913", # Too many arguments
+    "PLR0912", # Too many branches
+    "RET504",  # Unnecessary assignment
+    "RET505",  # Unnecessary `else`
+    "RET506",  # Unnecessary `elif`
+    "B018",    # Found useless expression
+    "RUF002",  # Docstring contains ambiguous
+]
+
+[tool.ruff.lint.per-file-ignores]
+"packages/pybamm/tests/*" = ["T20", "S101"]
+"docs/*" = ["T20"]
+"examples/*" = ["T20"]
+"**.ipynb" = ["E402", "E703"]
+"docs/source/examples/notebooks/models/lithium-plating.ipynb" = ["F821"]
