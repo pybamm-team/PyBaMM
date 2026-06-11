@@ -1,5 +1,11 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+# [v26.6.1.1](https://github.com/pybamm-team/PyBaMM/tree/v26.6.1.1) - 2026-06-11
+
+## Bug fixes
+
+- Fixed `load_custom_model` dropping tuple-valued options on JSON round-trip. ([#5595](https://github.com/pybamm-team/PyBaMM/pull/5595))
+
 # [v26.6.1.0](https://github.com/pybamm-team/PyBaMM/tree/v26.6.1.0) - 2026-06-11
 
 ## Features
