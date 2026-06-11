@@ -4,6 +4,8 @@
 
 - The "voltage as a state" model option now defaults to "true": voltage is solved as an algebraic state, making standard models DAEs. Reading `Voltage [V]` from a solution is now an O(1) state lookup instead of a post-solve expression evaluation (up to 73% faster end-to-end for dense output; 8-24% faster experiment cycling across SPM/SPMe/DFN; up to 48% faster with in-solver `output_variables=["Voltage [V]"]`). The default `IDAKLUSolver`, `CasadiSolver` (all modes), and `JaxSolver(method="BDF")` handle DAEs; ODE-only solvers (`ScipySolver`, `JaxSolver(method="RK45")`) require `{"voltage as a state": "false", "surface form": "false"}` for SPM/SPMe, which remains a supported configuration. Known trade-off: continuous solves of rapidly alternating current profiles (e.g. interpolant drive cycles with more than ~25 current reversals in one solve) can be slower, up to ~2x for SPM in the worst measured case; the legacy configuration above restores previous performance for these workloads. Experiment-driven cycling is unaffected. ([#5573](https://github.com/pybamm-team/PyBaMM/pull/5573))
 
+# [v26.6.1.0](https://github.com/pybamm-team/PyBaMM/tree/v26.6.1.0) - 2026-06-11
+
 ## Features
 
 - The "voltage as a state" option is now registered centrally in `BaseBatteryModel` and supports all operating modes. SPM/SPMe promote "surface form" to "algebraic" automatically when a particle-size distribution is used (previously an error) as well as for non-default kinetics. `CasadiSolver` integrator failures on DAE models solved without algebraic initial-condition perturbation now include an actionable hint. ([#5572](https://github.com/pybamm-team/PyBaMM/pull/5572))
@@ -15,6 +17,8 @@
 - Fixed `latexify()` crashing with a `NotImplementedError` for models whose boundary conditions contain `boundary_gradient` nodes (e.g. DFN with `{"surface form": "algebraic"}`). ([#5572](https://github.com/pybamm-team/PyBaMM/pull/5572))
 - Fixed unified experiment crash when the ambient-temperature parameter value is a `pybamm.Scalar`. ([#5587](https://github.com/pybamm-team/PyBaMM/pull/5587))
 - Unified experiment `calculate_sensitivities` no longer leaks internal control inputs into the parameter Jacobian. ([#5587](https://github.com/pybamm-team/PyBaMM/pull/5587))
+- Corrected the overflow-clamp threshold in the lithium-ion OCP asymptote helper so the softplus and its linear continuation match exactly. ([#5588](https://github.com/pybamm-team/PyBaMM/pull/5588))
+- Fixed unified experiment building redundant control branches and a dense switching-control Jacobian. ([#5589](https://github.com/pybamm-team/PyBaMM/pull/5589))
 
 # [v26.6.0.0](https://github.com/pybamm-team/PyBaMM/tree/v26.6.0.0) - 2026-06-04
 
