@@ -54,7 +54,9 @@ def run_coverage(session):
     # Using plugin here since coverage runs unit tests on linux with latest python version.
     if "CI" in os.environ:
         session.install("pytest-github-actions-annotate-failures")
-    session.run("pytest", "--cov=pybamm", "--cov-report=xml", "tests/unit")
+    session.run(
+        "pytest", "--cov=pybamm", "--cov-report=xml", "packages/pybamm/tests/unit"
+    )
 
 
 @nox.session(name="integration", default=False)
@@ -68,7 +70,9 @@ def run_integration(session):
         and sys.platform == "linux"
     ):
         session.install("pytest-github-actions-annotate-failures")
-    session.run("python", "-m", "pytest", "-m", "integration")
+    session.run(
+        "python", "-m", "pytest", "-m", "integration", "packages/pybamm/tests"
+    )
 
 
 @nox.session(name="doctests", default=False)
@@ -82,7 +86,7 @@ def run_doctests(session):
         "-m",
         "pytest",
         "--doctest-plus",
-        "src",
+        "packages/pybamm/src",
     )
 
 
@@ -91,7 +95,7 @@ def run_unit(session):
     """Run the unit tests."""
     set_environment_variables(PYBAMM_ENV, session=session)
     install_locked(session, extras=["all", "jax"], groups=["dev"])
-    session.run("python", "-m", "pytest", "-m", "unit")
+    session.run("python", "-m", "pytest", "-m", "unit", "packages/pybamm/tests")
 
 
 @nox.session(name="memory", default=False)
@@ -105,7 +109,7 @@ def run_memory(session):
         "python",
         "-m",
         "pytest",
-        "tests/memory/",
+        "packages/pybamm/tests/memory/",
         "-v",
         "-o",
         "addopts=",
@@ -130,7 +134,7 @@ def run_scripts(session):
     install_locked(session, extras=["all", "jax"], groups=["dev"])
     # Fix for Python 3.12 CI. This can be removed after pybtex is replaced.
     session.install("setuptools", silent=False)
-    session.run("python", "-m", "pytest", "-m", "scripts")
+    session.run("python", "-m", "pytest", "-m", "scripts", "packages/pybamm/tests")
 
 
 @nox.session(name="dev", default=False)
@@ -161,7 +165,11 @@ def run_tests(session):
         "python",
         "-m",
         "pytest",
-        *(session.posargs if session.posargs else ["-m", "unit or integration"]),
+        *(
+            session.posargs
+            if session.posargs
+            else ["-m", "unit or integration", "packages/pybamm/tests"]
+        ),
     )
 
 
