@@ -16,7 +16,7 @@
   // The Python project's subdirectory in your repo.  If missing or
   // the empty string, the project is assumed to be located at the root
   // of the repository.
-  // "repo_subdir": "",
+  "repo_subdir": "packages/pybamm",
 
   // Customizable commands for building, installing, and
   // uninstalling the project. See asv.conf.json documentation.

@@ -1,0 +1,63 @@
+# Build and publish pybammsolvers wheels + sdist to PyPI.
+#
+# Monorepo notes:
+# - The wheel/sdist build logic lives in the reusable workflow
+#   `_build_solver_wheels.yml`, shared with PR-time CI (test_on_push.yml). This
+#   workflow only adds the release trigger, the tag-namespace guard, and the
+#   PyPI publish step.
+# - Releases are discriminated by tag namespace (`pybamm-solvers-v*`); the old
+#   `github.repository == 'pybamm-team/pybammsolvers'` guard no longer works now
+#   that pybamm and pybammsolvers share a repository.
+name: Build solver wheels
+
+on:
+  release:
+    types: [ published ]
+  workflow_dispatch:
+    inputs:
+      save_vcpkg_logs:
+        description: "Upload vcpkg build logs for Windows (useful for debugging CI failures)"
+        default: false
+        required: false
+        type: boolean
+
+jobs:
+  build:
+    name: Build wheels + sdist
+    # On release events, only build for the solver tag namespace. Always build
+    # on workflow_dispatch (manual testing). A fresh build (no cache) for release.
+    if: ${{ github.event_name != 'release' || startsWith(github.event.release.tag_name, 'pybamm-solvers-v') }}
+    permissions:
+      contents: read
+    uses: ./.github/workflows/_build_solver_wheels.yml
+    with:
+      cache_wheels: false
+      build_sdist: true
+      save_vcpkg_logs: ${{ github.event_name == 'workflow_dispatch' && inputs.save_vcpkg_logs }}
+
+  publish_pypi:
+    if: ${{ github.event_name == 'release' && startsWith(github.event.release.tag_name, 'pybamm-solvers-v') }}
+    name: Upload package to PyPI
+    needs: [ build ]
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/pybammsolvers
+    permissions:
+      id-token: write
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Sanity check downloaded artifacts
+        run: ls -lA artifacts/
+        working-directory: ${{ github.workspace }}
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # v1.14.0
+        with:
+          packages-dir: artifacts/
