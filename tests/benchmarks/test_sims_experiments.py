@@ -13,8 +13,17 @@ _EXPERIMENT_DESCRIPTIONS = {
     "GITT": [("Discharge at C/20 for 1 hour", "Rest for 1 hour")] * 10,
 }
 
+_SOLVERS = [
+    pytest.param(pybamm.CasadiSolver, id="casadi"),
+    pytest.param(pybamm.IDAKLUSolver, id="idaklu"),
+]
+_MODELS = [
+    pytest.param(pybamm.lithium_ion.SPM, id="spm"),
+    pytest.param(pybamm.lithium_ion.DFN, id="dfn"),
+]
 
-def _make_sim(experiment, parameters, model_class, solver_class):
+
+def _setup_sim(experiment, parameters, model_class, solver_class):
     param = pybamm.ParameterValues(parameters)
     model = model_class()
     solver = solver_class()
@@ -24,23 +33,8 @@ def _make_sim(experiment, parameters, model_class, solver_class):
     )
 
 
-def _setup_sim(experiment, parameters, model_class, solver_class):
-    _make_sim(experiment, parameters, model_class, solver_class)
-
-
-# ---------------------------------------------------------------------------
-# Simulation setup timing (how long it takes to build the Simulation object)
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.parametrize(
-    "solver_class", [pybamm.CasadiSolver, pybamm.IDAKLUSolver], ids=["casadi", "idaklu"]
-)
-@pytest.mark.parametrize(
-    "model_class",
-    [pybamm.lithium_ion.SPM, pybamm.lithium_ion.DFN],
-    ids=["spm", "dfn"],
-)
+@pytest.mark.parametrize("solver_class", _SOLVERS)
+@pytest.mark.parametrize("model_class", _MODELS)
 @pytest.mark.parametrize("parameters", ["Marquis2019", "Chen2020"])
 @pytest.mark.parametrize("experiment", ["CCCV", "GITT"])
 def test_simulation_setup(benchmark, experiment, parameters, model_class, solver_class):
@@ -54,19 +48,8 @@ def test_simulation_setup(benchmark, experiment, parameters, model_class, solver
     benchmark(_setup_sim, experiment, parameters, model_class, solver_class)
 
 
-# ---------------------------------------------------------------------------
-# Full solve timing
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.parametrize(
-    "solver_class", [pybamm.CasadiSolver, pybamm.IDAKLUSolver], ids=["casadi", "idaklu"]
-)
-@pytest.mark.parametrize(
-    "model_class",
-    [pybamm.lithium_ion.SPM, pybamm.lithium_ion.DFN],
-    ids=["spm", "dfn"],
-)
+@pytest.mark.parametrize("solver_class", _SOLVERS)
+@pytest.mark.parametrize("model_class", _MODELS)
 @pytest.mark.parametrize("parameters", ["Marquis2019", "Chen2020"])
 @pytest.mark.parametrize("experiment", ["CCCV", "GITT"])
 def test_simulation_solve(benchmark, experiment, parameters, model_class, solver_class):
@@ -77,5 +60,5 @@ def test_simulation_solve(benchmark, experiment, parameters, model_class, solver
         pybamm.CasadiSolver,
     ):
         pytest.skip("Known unsupported combination")
-    sim = _make_sim(experiment, parameters, model_class, solver_class)
+    sim = _setup_sim(experiment, parameters, model_class, solver_class)
     benchmark(sim.solve)

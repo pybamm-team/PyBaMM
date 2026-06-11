@@ -21,6 +21,7 @@ def _create_expression():
     model.boundary_conditions = {
         c: {"left": (lbc, "Neumann"), "right": (rbc, "Neumann")}
     }
+
     model.initial_conditions = {c: c0}
     model.variables = {
         "Concentration [mol.m-3]": c,
@@ -40,9 +41,11 @@ def _parameterise(R, model):
             "Initial concentration [mol.m-3]": 2.5e4,
         }
     )
+
     r = pybamm.SpatialVariable(
         "r", domain=["negative particle"], coord_sys="spherical polar"
     )
+
     geometry = {"negative particle": {r: {"min": pybamm.Scalar(0), "max": R}}}
     param.process_model(model)
     param.process_geometry(geometry)
@@ -53,6 +56,7 @@ def _discretise(r, geometry, model):
     submesh_types = {"negative particle": pybamm.Uniform1DSubMesh}
     var_pts = {r: 20}
     mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+
     spatial_methods = {"negative particle": pybamm.FiniteVolume()}
     disc = pybamm.Discretisation(mesh, spatial_methods)
     disc.process_model(model)
@@ -63,24 +67,20 @@ def test_create_expression(benchmark):
 
 
 def test_parameterise(benchmark):
-    R, model = _create_expression()
+    def setup():
+        R, model = _create_expression()
+        return (R, model), {}
 
-    def run():
-        _parameterise(R, model)
-
-    benchmark(run)
+    benchmark.pedantic(_parameterise, setup=setup, rounds=100, iterations=1)
 
 
 def test_discretise(benchmark):
-    # R, model = _create_expression()
-    # r, geometry = _parameterise(R, model)
+    def setup():
+        R, model = _create_expression()
+        r, geometry = _parameterise(R, model)
+        return (r, geometry, model), {}
 
-    def run():
-        R2, model2 = _create_expression()
-        r2, geometry2 = _parameterise(R2, model2)
-        _discretise(r2, geometry2, model2)
-
-    benchmark(run)
+    benchmark.pedantic(_discretise, setup=setup, rounds=100, iterations=1)
 
 
 def test_solve(benchmark):
