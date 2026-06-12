@@ -16,9 +16,9 @@ class TestBaseSubModel:
         submodel = pybamm.BaseSubModel(None, None)
         assert submodel.domain is None
 
-        # bad string
-        with pytest.raises(pybamm.DomainError):
-            pybamm.BaseSubModel(None, "bad string")
+        # bad string — BaseSubModel no longer validates domains
+        submodel = pybamm.BaseSubModel(None, "bad string")
+        assert submodel.domain == "bad string"
 
     def test_phase(self):
         # Without domain
