@@ -2,6 +2,7 @@
 
 ## Bug fixes
 
+- Fixed `pybamm.step.current`/`voltage`/`power`/`resistance` raising `ValueError: Termination must include an operator when using InputParameter.` whenever the step value was a `t`-dependent Python callable and the termination was a plain string like `"4.3 V"`. `BaseStep` injects an internal `InputParameter("start time")` into its symbolic value tree for Python-function and drive-cycle steps, and `_check_input_params` was treating that placeholder as a real user `InputParameter`. The check now excludes it so callable-driven steps once again accept operator-free string terminations, and `value_based_charge_or_discharge` infers direction from the callable's value at `t=0` rather than returning `None`. ([#5018](https://github.com/pybamm-team/PyBaMM/issues/5018))
 - `RegulariseSqrtAndPower` no longer regularises state-independent bases, fixing corrupted small rate constants in exchange-current density functions. ([#5600](https://github.com/pybamm-team/PyBaMM/pull/5600))
 
 ## Breaking changes
