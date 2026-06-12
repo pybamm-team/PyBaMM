@@ -2,6 +2,8 @@
 # Tests for the RegulariseSqrtAndPower class
 #
 
+import pytest
+
 import pybamm
 
 
@@ -40,16 +42,16 @@ class TestRegulariseSqrtAndPower:
         expr = c_e**0.5
         result = regulariser(expr, inputs=inputs)
 
-        # The original c_e**0.5 Power node should be replaced
-        # (result will have different Power nodes from reg_power formula)
-        assert result != expr
+        # Matched base: RegPower with the registered scale
+        assert isinstance(result, pybamm.RegPower)
+        assert result.children[2] == pybamm.Scalar(1000.0)
 
-    def test_scale_default_to_one(self):
-        """Test that unrecognized expressions get scale=None."""
+    def test_state_dependent_base_default_scale(self):
+        """State-dependent base with no registered scale: regularised with
+        the default scale of 1."""
         c_e = pybamm.Variable("c_e")
         c_s = pybamm.Variable("c_s")
 
-        # Only c_e has a scale, c_s should get scale=None
         inputs = {"c_e": c_e, "c_s": c_s}
         regulariser = pybamm.RegulariseSqrtAndPower(
             {c_e: pybamm.Scalar(1000.0)},
@@ -59,13 +61,161 @@ class TestRegulariseSqrtAndPower:
         expr = pybamm.sqrt(c_s)
         result = regulariser(expr, inputs=inputs)
 
-        # Should be replaced with RegPower (no Sqrt)
-        has_sqrt = any(isinstance(n, pybamm.Sqrt) for n in result.pre_order())
-        assert not has_sqrt
-        # Check it's a RegPower with scale=1 (default)
         assert isinstance(result, pybamm.RegPower)
-        # Scale is the third child
         assert result.children[2] == pybamm.Scalar(1)
+
+    def test_normalised_state_dependent_base_still_regularised(self):
+        """Normalised base (ORegan2022-style (c_e / c_e_ref) ** (1 - alpha))
+        matches no scale but is still regularised with the default scale."""
+        c_e = pybamm.Variable("c_e")
+        inputs = {"c_e": c_e}
+        regulariser = pybamm.RegulariseSqrtAndPower(
+            {c_e: pybamm.Scalar(1000.0)},
+            inputs=inputs,
+        )
+
+        c_e_ref = pybamm.Parameter("Reference concentration")
+        expr = (c_e / c_e_ref) ** 0.208
+        result = regulariser(expr, inputs=inputs)
+
+        assert isinstance(result, pybamm.RegPower)
+        assert result.children[2] == pybamm.Scalar(1)
+
+    def test_parameter_power_not_corrupted(self):
+        """State-independent Parameter base is not regularised: RegPower with
+        the default scale would corrupt a small rate constant."""
+        c_e = pybamm.Variable("c_e")
+        inputs = {"c_e": c_e}
+        regulariser = pybamm.RegulariseSqrtAndPower(
+            {c_e: pybamm.Scalar(1000.0)},
+            inputs=inputs,
+        )
+
+        rate_constant = pybamm.Parameter("Rate constant")
+        expr = rate_constant**0.5
+        result = regulariser(expr, inputs=inputs)
+
+        assert isinstance(result, pybamm.Power)
+        assert not any(isinstance(n, pybamm.RegPower) for n in result.pre_order())
+
+        parameter_values = pybamm.ParameterValues({"Rate constant": 5e-9})
+        value = parameter_values.process_symbol(result).evaluate()
+        assert value == pytest.approx(5e-9**0.5, rel=1e-12)
+
+    def test_input_parameter_power_not_corrupted(self):
+        """State-independent InputParameter base is not regularised."""
+        c_e = pybamm.Variable("c_e")
+        inputs = {"c_e": c_e}
+        regulariser = pybamm.RegulariseSqrtAndPower(
+            {c_e: pybamm.Scalar(1000.0)},
+            inputs=inputs,
+        )
+
+        rate_constant = pybamm.InputParameter("Rate constant")
+        expr = rate_constant**0.5
+        result = regulariser(expr, inputs=inputs)
+
+        assert isinstance(result, pybamm.Power)
+        value = result.evaluate(inputs={"Rate constant": 5e-9})
+        assert value == pytest.approx(5e-9**0.5, rel=1e-12)
+
+    def test_constant_base_state_dependent_exponent(self):
+        """Constant base, state-dependent exponent: outer Power kept, sqrt in
+        the exponent regularised."""
+        c_e = pybamm.Variable("c_e")
+        inputs = {"c_e": c_e}
+        regulariser = pybamm.RegulariseSqrtAndPower(
+            {c_e: pybamm.Scalar(1000.0)},
+            inputs=inputs,
+        )
+
+        base = pybamm.Parameter("Rate constant")
+        expr = base ** pybamm.sqrt(c_e)
+        result = regulariser(expr, inputs=inputs)
+
+        assert isinstance(result, pybamm.Power)
+        assert isinstance(result.children[0], pybamm.Parameter)
+        assert any(isinstance(n, pybamm.RegPower) for n in result.pre_order())
+        assert not any(isinstance(n, pybamm.Sqrt) for n in result.pre_order())
+
+    def test_existing_reg_power_preserved(self):
+        """A manual RegPower node (e.g. MSMR j0_j) is a Function, not a
+        Sqrt/Power, so it is left untouched, even when nested."""
+        c_e = pybamm.Variable("c_e")
+        c_e_ref = pybamm.Parameter("c_e_ref")
+        aj = pybamm.Parameter("aj")
+        inputs = {"c_e": c_e}
+        regulariser = pybamm.RegulariseSqrtAndPower(
+            {c_e: pybamm.Scalar(1000.0)},
+            inputs=inputs,
+        )
+
+        expr = pybamm.reg_power(c_e / c_e_ref, 1 - aj)
+        result = regulariser(expr, inputs=inputs)
+        assert result is expr
+
+        # Nested: reg_power preserved, sibling Power regularised
+        nested = pybamm.reg_power(c_e / c_e_ref, 1 - aj) * c_e**0.5
+        result = regulariser(nested, inputs=inputs)
+        n_reg_power = sum(
+            1 for n in result.pre_order() if isinstance(n, pybamm.RegPower)
+        )
+        assert n_reg_power == 2
+        assert not any(isinstance(n, pybamm.Power) for n in result.pre_order())
+        assert not any(isinstance(n, pybamm.Sqrt) for n in result.pre_order())
+
+    @pytest.mark.parametrize("set_name", ["Chen2020", "ORegan2022", "Ecker2015"])
+    def test_j0_pipeline_produces_regpower(self, set_name):
+        """Built-in j0 pipeline regularises all concentration powers,
+        including ORegan2022's unmatched normalised bases."""
+        param = pybamm.LithiumIonParameters()
+        c_e = pybamm.Variable("c_e")
+        c_s_surf = pybamm.Variable("c_s_surf")
+        T = pybamm.Variable("T")
+        j0 = param.n.prim.j0(c_e, c_s_surf, T)
+
+        parameter_values = pybamm.ParameterValues(set_name)
+        processed = parameter_values.process_symbol(j0)
+
+        n_reg_power = sum(
+            1 for n in processed.pre_order() if isinstance(n, pybamm.RegPower)
+        )
+        n_plain_power = sum(
+            1 for n in processed.pre_order() if isinstance(n, pybamm.Power)
+        )
+        assert n_reg_power == 3, f"{set_name}: expected 3 RegPower, got {n_reg_power}"
+        assert n_plain_power == 0, (
+            f"{set_name}: expected no plain Power nodes, got {n_plain_power}"
+        )
+
+    def test_function_parameter_post_processor_small_parameter(self):
+        """Full j0-style path: a FunctionParameter raising a Parameter to a
+        fractional power must evaluate exactly."""
+
+        def exchange_current(c_e):
+            rate_constant = pybamm.Parameter("Rate constant")
+            return rate_constant**0.5 * c_e**0.5
+
+        c_e = pybamm.Variable("c_e")
+        inputs = {"Electrolyte concentration [mol.m-3]": c_e}
+        regulariser = pybamm.RegulariseSqrtAndPower(
+            {c_e: pybamm.Scalar(1000.0)},
+            inputs=inputs,
+        )
+        function_parameter = pybamm.FunctionParameter(
+            "Exchange-current density [A.m-2]",
+            {"Electrolyte concentration [mol.m-3]": pybamm.Scalar(1000.0)},
+            post_processor=regulariser,
+        )
+        parameter_values = pybamm.ParameterValues(
+            {
+                "Exchange-current density [A.m-2]": exchange_current,
+                "Rate constant": 5e-9,
+            }
+        )
+        value = parameter_values.process_symbol(function_parameter).evaluate()
+        expected = 5e-9**0.5 * 1000.0**0.5
+        assert value == pytest.approx(expected, rel=1e-6)
 
     def test_exact_match_only(self):
         """Test that only exact matches are used for scales."""
@@ -85,7 +235,7 @@ class TestRegulariseSqrtAndPower:
         has_sqrt = any(isinstance(n, pybamm.Sqrt) for n in result1.pre_order())
         assert not has_sqrt
 
-        # sqrt(c_s / c_s_max) should also be replaced
+        # sqrt(c_s / c_s_max) should also be replaced (state-dependent base)
         expr2 = pybamm.sqrt(c_s / c_s_max)
         result2 = regulariser(expr2, inputs=inputs)
         has_sqrt = any(isinstance(n, pybamm.Sqrt) for n in result2.pre_order())
