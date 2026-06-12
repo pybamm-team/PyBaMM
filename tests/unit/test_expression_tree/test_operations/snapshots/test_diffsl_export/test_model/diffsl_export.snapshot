@@ -54,53 +54,23 @@ varying10_i {
   (constant1_ij * max(varying9_j, 0)),
 }
 varying11_i {
-  (constant0_i + varying10_i),
-}
-varying12_i {
   (constant2_ij * max(varying9_j, 0)),
 }
-varying13_i {
-  (varying11_i + varying12_i),
-}
-varying14_i {
+varying12_i {
   (constant3_ij * max(varying9_j, 0)),
 }
-varying15_i {
-  (varying13_i + varying14_i),
-}
-varying16_i {
+varying13_i {
   (constant4_ij * y0:4_j[0:2]),
 }
-varying17_i {
-  (varying15_i + varying16_i),
-}
-varying18_i {
+varying14_i {
   (constant1_ij * min(y0:4_j[0:2], 0)),
 }
-varying19_i {
-  (varying17_i + varying18_i),
-}
-varying20_i {
+varying15_i {
   (constant1_ij * y0:4_j[2:4]),
 }
-varying21_i {
-  (y0:4_i[2:4] * y4:5_i),
-}
-varying22_i {
-  (varying20_i + varying21_i),
-}
-varying23_i {
-  cos(pow(p, 2)),
-}
-varying24_i {
-  (varying22_i + varying23_i),
-}
-varying25_i {
-  (varying24_i + t),
-}
-varying26_i {
-  (0:2): varying19_i,
-  (2:4): varying25_i,
+varying16_i {
+  (0:2): (((((constant0_i + varying10_i) + varying11_i) + varying12_i) + varying13_i) + varying14_i),
+  (2:4): (((varying15_i + (y0:4_i[2:4] * y4:5_i)) + cos(pow(p, 2))) + t),
 }
 M_i {
   dy0:4dt_i,
@@ -108,15 +78,15 @@ M_i {
   (5:7): 0.0,
 }
 F_i {
-  ((y0:4_i * varying26_i) + (y0:4_i / varying26_i)),
+  ((y0:4_i * varying16_i) + (y0:4_i / varying16_i)),
   y4:5_i,
   y5:7_i,
 }
-event27_i {
+event17_i {
   (constant5_ij * y0:4_j[0:2]),
 }
 stop_i {
-  (y0:4_i[0:2] - event27_i),
+  (y0:4_i[0:2] - event17_i),
 }
 out_i {
   y0:4_i[0:2],
