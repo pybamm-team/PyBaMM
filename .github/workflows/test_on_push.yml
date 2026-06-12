@@ -301,3 +301,61 @@ jobs:
 
       - name: Run memory tests for GNU/Linux with Python 3.13
         run: nox -s memory
+
+  run_fast_benchmarks:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    name: Fast benchmark subset (ubuntu-latest / Python 3.13)
+
+    steps:
+      - name: Check out PyBaMM repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+          fetch-depth: 0  # full history needed to check out base commit for comparison
+
+      - name: Install Linux system dependencies
+        uses: awalsh128/cache-apt-pkgs-action@acb598e5ddbc6f68a970c5da0688d2f3a9f04d05 # v1.6.0
+        with:
+          packages: gfortran gcc graphviz
+          execute_install_scripts: true
+
+      - name: Install OpenBLAS for Linux
+        run: |
+          sudo apt-get update
+          sudo apt-get install libopenblas-dev
+
+      - name: Set up Python 3.13
+        id: setup-python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: 3.13
+
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          version: "latest"
+          enable-cache: true
+
+      - name: Install nox
+        run: uv tool install nox
+
+      - name: Run fast benchmarks on baseline (main)
+        run: |
+          git checkout ${{ github.event.pull_request.base.sha }}
+          if nox -l 2>/dev/null | grep -q 'benchmark-fast'; then
+            nox -s benchmark-fast -- --benchmark-save=baseline
+          else
+            echo "benchmark-fast not present on base commit; skipping baseline"
+          fi
+
+      - name: Run fast benchmarks on PR and compare
+        run: |
+          git checkout ${{ github.event.pull_request.head.sha }}
+          if find .benchmarks -name "*baseline*" 2>/dev/null | grep -q .; then
+            nox -s benchmark-fast -- \
+              --benchmark-compare=baseline \
+              --benchmark-compare-fail=mean:30%
+          else
+            nox -s benchmark-fast
+          fi
