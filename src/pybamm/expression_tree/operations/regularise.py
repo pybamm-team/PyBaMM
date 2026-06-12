@@ -11,9 +11,15 @@ class RegulariseSqrtAndPower:
     """
     Callable that replaces Sqrt and Power nodes with RegPower nodes.
 
-    All Sqrt and Power nodes are replaced with RegPower. If the base of the
-    operation matches a symbol in the scales map, that scale is used;
-    otherwise the default scale (None) is used.
+    A Sqrt or Power node is replaced with RegPower when the base of the
+    operation matches a symbol in the scales map (using that scale) or when
+    the base is state-dependent, i.e. contains a variable, state vector or
+    time (using the default scale of 1). Bases that are independent of the
+    state (e.g. ``pybamm.Parameter`` or ``pybamm.InputParameter`` rate
+    constants) are left unchanged: they have no derivative to regularise, and
+    RegPower with the default scale of 1 corrupts values smaller than the
+    regularisation tolerance delta (e.g. a rate constant of ~1e-9 raised to
+    the power 0.5 evaluates ~470x too small).
 
     Parameters
     ----------
@@ -100,19 +106,24 @@ class RegulariseSqrtAndPower:
 
         new_children = [self._process(child, resolved_scales) for child in sym.children]
 
-        if isinstance(sym, pybamm.Sqrt):
-            child = new_children[0]
-            scale = self._get_scale(child, resolved_scales)
-            return pybamm.RegPower(child, 0.5, scale=scale)
-
-        if isinstance(sym, pybamm.Power):
-            base, exponent = new_children
+        if isinstance(sym, pybamm.Sqrt | pybamm.Power):
+            base = new_children[0]
+            exponent = 0.5 if isinstance(sym, pybamm.Sqrt) else new_children[1]
             scale = self._get_scale(base, resolved_scales)
-            return pybamm.RegPower(base, exponent, scale=scale)
+            if scale is not None or self._depends_on_state(base):
+                return pybamm.RegPower(base, exponent, scale=scale)
 
         if any(n is not o for n, o in zip(new_children, sym.children, strict=True)):
             return sym.create_copy(new_children=new_children)
         return sym
+
+    @staticmethod
+    def _depends_on_state(expr):
+        """Whether the expression depends on the state (or time)."""
+        return any(
+            isinstance(node, pybamm.VariableBase | pybamm.StateVectorBase | pybamm.Time)
+            for node in expr.pre_order()
+        )
 
     def _get_scale(self, expr, resolved_scales):
         """Get scale for an expression, defaulting to None.
