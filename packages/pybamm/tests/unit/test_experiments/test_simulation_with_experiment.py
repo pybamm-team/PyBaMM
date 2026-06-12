@@ -1143,6 +1143,46 @@ class TestSimulationExperiment:
             atol=5e-5,
         )
 
+    def test_unified_solution_termination_uses_concrete_step_event_name(self):
+        experiment = pybamm.Experiment(
+            [
+                (
+                    "Charge at 1 A until 4.1 V",
+                    pybamm.step.Voltage(4.1, termination=["0.5 A", "0.1 A"]),
+                )
+            ]
+        )
+
+        legacy_sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            experiment=experiment,
+            solver=pybamm.IDAKLUSolver(),
+            experiment_model_mode="legacy",
+        )
+        unified_sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            experiment=experiment,
+            solver=pybamm.IDAKLUSolver(),
+            experiment_model_mode="unified",
+        )
+
+        legacy_sol = legacy_sim.solve(calc_esoh=False, initial_soc=0.2)
+        unified_sol = unified_sim.solve(calc_esoh=False, initial_soc=0.2)
+
+        # Unified mode should project the source step event, not the synthetic
+        # combined event used to drive the shared experiment model.
+        expected = "event: abs(Current [A]) < 0.5 [A] [experiment]"
+        combined = f"event: {unified_sim._COMBINED_TERMINATION_EVENT}"
+        legacy_hold = legacy_sol.cycles[0].steps[1]
+        unified_hold = unified_sol.cycles[0].steps[1]
+
+        assert legacy_sol.termination == expected
+        assert unified_sol.termination == expected
+        assert legacy_hold.termination == expected
+        assert unified_hold.termination == expected
+        assert unified_sol.termination != combined
+        assert unified_hold.termination != combined
+
     def test_run_unified_resistance_branch_is_safe_when_inactive_at_zero_current(self):
         experiment = pybamm.Experiment(
             [("Rest for 5 minutes", "Discharge at 4 Ohm for 5 minutes")]
