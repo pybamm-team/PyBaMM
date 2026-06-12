@@ -18,6 +18,20 @@ def represents_positive_integer(s):
         return val > 0
 
 
+def _is_msmr(value):
+    """True if an option requests MSMR, including inside a per-electrode tuple."""
+    if isinstance(value, (tuple, list)):
+        return "MSMR" in value
+    return value == "MSMR"
+
+
+def _is_positive_integer_count(value):
+    """True if value is a positive integer, or a per-electrode tuple of them."""
+    if isinstance(value, (tuple, list)):
+        return bool(value) and all(_is_positive_integer_count(v) for v in value)
+    return represents_positive_integer(value)
+
+
 def _rename_option(options_dict, option_name, old_name, new_name):
     if option_name not in options_dict:
         return
@@ -625,13 +639,11 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                         f"Option '{name}' not recognised. Best matches are {options.get_best_matches(name)}"
                     )
 
-        # If any of "open-circuit potential", "particle" or "intercalation kinetics" is
-        # "MSMR" then all of them must be "MSMR".
-        # Note: this check is currently performed on full cells, but is loosened for
-        # half-cells where you must pass a tuple of options to only set MSMR models in
-        # the working electrode
+        # All-or-nothing on full cells: if any of OCP/particle/intercalation
+        # kinetics requests MSMR (incl. inside a per-electrode tuple), all must.
+        # Half-cells are loosened -- a tuple sets MSMR in the working electrode.
         msmr_check_list = [
-            options[opt] == "MSMR"
+            _is_msmr(options[opt])
             for opt in ["open-circuit potential", "particle", "intercalation kinetics"]
         ]
         if (
@@ -642,6 +654,17 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             raise pybamm.OptionError(
                 "If any of 'open-circuit potential', 'particle' or "
                 "'intercalation kinetics' is 'MSMR' then all of them must be 'MSMR'"
+            )
+
+        # MSMR needs an explicit positive-integer count; the registry default
+        # "none" otherwise crashes later in parameter construction (int('none')).
+        msmr_count = options["number of MSMR reactions"]
+        if any(msmr_check_list) and not _is_positive_integer_count(msmr_count):
+            raise pybamm.OptionError(
+                "'number of MSMR reactions' must be a positive integer (or a "
+                "per-electrode tuple of positive integers) when "
+                "'open-circuit potential', 'particle' and 'intercalation "
+                f"kinetics' use 'MSMR' (got {msmr_count!r})"
             )
 
         # If "SEI film resistance" is "distributed" then "total interfacial current

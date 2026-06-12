@@ -29,12 +29,17 @@ class BaseModel(pybamm.BaseBatteryModel):
 
     def __init__(self, options=None, name="Unnamed lithium-ion model", build=False):
         super().__init__(options, name)
-        self.param = pybamm.LithiumIonParameters(self.options)
+        self._rebuild_param()
 
         self.set_standard_output_variables()
 
         # Li models should calculate esoh by default
         self._calc_esoh = True
+
+    def _rebuild_param(self):
+        # param is options-derived, so rebuild it whenever options are
+        # (re)assigned: at construction and on deserialisation.
+        self.param = pybamm.LithiumIonParameters(self.options)
 
     def set_submodels(self, build):
         self.set_external_circuit_submodel()

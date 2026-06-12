@@ -641,6 +641,12 @@ class BaseModel:
     def param(self, values):
         self._param = values
 
+    def _rebuild_param(self):
+        """Rebuild ``param`` from ``self.options``; no-op unless ``param`` is
+        options-derived. Call after assigning options post-construction (the
+        setter leaves ``param`` untouched), e.g. when deserialising.
+        """
+
     @property
     def options(self):
         """Returns the model options dictionary that allows customization of the model's behavior."""

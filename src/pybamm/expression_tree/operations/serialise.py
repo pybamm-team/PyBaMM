@@ -1386,13 +1386,12 @@ class Serialise:
         model = base_cls()
         model.name = model_data["name"]
         model.schema_version = schema_version
-        # Restore options so round-trip serialisation produces an equivalent
-        # model. A JSON round-trip turns tuple-valued options (e.g. "particle
-        # phases": ("2", "1")) into lists, which pybamm's options validation
-        # rejects, so convert lists back to tuples before assigning.
+        # JSON turns tuple-valued options into lists (rejected by validation);
+        # convert back, then rebuild param to match the restored options.
         opts = model_data.get("options", {})
         if opts is not None:
             model.options = Serialise._convert_options(opts)
+            model._rebuild_param()
 
         all_variable_keys = (
             [lhs_json for lhs_json, _ in model_data["rhs"]]
