@@ -2,6 +2,8 @@ import os
 
 import numpy as np
 import pytest
+from matplotlib.collections import QuadMesh
+from matplotlib.contour import QuadContourSet
 
 import pybamm
 
@@ -385,18 +387,31 @@ class TestQuickPlot:
                         ["Negative particle concentration [mol.m-3]"],
                         time_unit=unit,
                     )
+                    key = ("Negative particle concentration [mol.m-3]",)
+                    assert quick_plot.x_first_and_y_second[key] is False
+                    assert quick_plot.is_y_z[key] is False
+                    np.testing.assert_allclose(
+                        quick_plot.axis_limits[key],
+                        [
+                            c_n.second_dim_pts[0] * quick_plot.spatial_factor,
+                            c_n.second_dim_pts[-1] * quick_plot.spatial_factor,
+                            c_n.first_dim_pts[0] * quick_plot.spatial_factor,
+                            c_n.first_dim_pts[-1] * quick_plot.spatial_factor,
+                        ],
+                    )
                     quick_plot.plot(0)
-                    qp_data = quick_plot.plots[
-                        ("Negative particle concentration [mol.m-3]",)
-                    ][0][1]
+                    ax = quick_plot.axes.by_variable(key[0])
+                    assert ax.get_xlabel() == f"x [{quick_plot.spatial_unit}]"
+                    assert ax.get_ylabel() == f"r [{quick_plot.spatial_unit}]"
+                    assert isinstance(quick_plot.plots[key][0][0], QuadContourSet)
+                    qp_data = quick_plot.plots[key][0][1]
                     c_n_eval = c_n(
                         t_interp[0], r=c_n.first_dim_pts, x=c_n.second_dim_pts
                     )
                     np.testing.assert_allclose(qp_data, c_n_eval, rtol=1e-7, atol=1e-6)
                     quick_plot.slider_update(t_interp[-1] / scale)
-                    qp_data = quick_plot.plots[
-                        ("Negative particle concentration [mol.m-3]",)
-                    ][0][1]
+                    assert isinstance(quick_plot.plots[key][0][0], QuadContourSet)
+                    qp_data = quick_plot.plots[key][0][1]
                     c_n_eval = c_n(
                         t_interp[-1], r=c_n.first_dim_pts, x=c_n.second_dim_pts
                     )
@@ -429,12 +444,29 @@ class TestQuickPlot:
             quick_plot = pybamm.QuickPlot(
                 solution, ["Electrolyte concentration [mol.m-3]"], time_unit=unit
             )
+            key = ("Electrolyte concentration [mol.m-3]",)
+            assert quick_plot.x_first_and_y_second[key] is True
+            assert quick_plot.is_y_z[key] is False
+            np.testing.assert_allclose(
+                quick_plot.axis_limits[key],
+                [
+                    c_e.first_dim_pts[0] * quick_plot.spatial_factor,
+                    c_e.first_dim_pts[-1] * quick_plot.spatial_factor,
+                    c_e.second_dim_pts[0] * quick_plot.spatial_factor,
+                    c_e.second_dim_pts[-1] * quick_plot.spatial_factor,
+                ],
+            )
             quick_plot.plot(0)
-            qp_data = quick_plot.plots[("Electrolyte concentration [mol.m-3]",)][0][1]
+            ax = quick_plot.axes.by_variable(key[0])
+            assert ax.get_xlabel() == f"x [{quick_plot.spatial_unit}]"
+            assert ax.get_ylabel() == f"z [{quick_plot.spatial_unit}]"
+            assert isinstance(quick_plot.plots[key][0][0], QuadContourSet)
+            qp_data = quick_plot.plots[key][0][1]
             c_e_eval = c_e(t_eval[0], x=c_e.first_dim_pts, z=c_e.second_dim_pts)
             np.testing.assert_allclose(qp_data.T, c_e_eval, rtol=1e-7, atol=1e-6)
             quick_plot.slider_update(t_eval[-1] / scale)
-            qp_data = quick_plot.plots[("Electrolyte concentration [mol.m-3]",)][0][1]
+            assert isinstance(quick_plot.plots[key][0][0], QuadContourSet)
+            qp_data = quick_plot.plots[key][0][1]
             c_e_eval = c_e(t_eval[-1], x=c_e.first_dim_pts, z=c_e.second_dim_pts)
             np.testing.assert_allclose(qp_data.T, c_e_eval, rtol=1e-7, atol=1e-6)
 
@@ -468,7 +500,8 @@ class TestQuickPlot:
 
         # check 2D (y,z space) variables update properly for different time units
         # Note: these should be the transpose of the entries in the processed variable
-        phi_n = solution["Negative current collector potential [V]"].entries
+        phi_n_var = solution["Negative current collector potential [V]"]
+        phi_n = phi_n_var.entries
 
         for unit, scale in zip(
             ["seconds", "minutes", "hours"], [1, 60, 3600], strict=False
@@ -476,15 +509,28 @@ class TestQuickPlot:
             quick_plot = pybamm.QuickPlot(
                 solution, ["Negative current collector potential [V]"], time_unit=unit
             )
+            key = ("Negative current collector potential [V]",)
+            assert quick_plot.x_first_and_y_second[key] is True
+            assert quick_plot.is_y_z[key] is True
+            np.testing.assert_allclose(
+                quick_plot.axis_limits[key],
+                [
+                    phi_n_var.first_dim_pts[0] * quick_plot.spatial_factor,
+                    phi_n_var.first_dim_pts[-1] * quick_plot.spatial_factor,
+                    phi_n_var.second_dim_pts[0] * quick_plot.spatial_factor,
+                    phi_n_var.second_dim_pts[-1] * quick_plot.spatial_factor,
+                ],
+            )
             quick_plot.plot(0)
-            qp_data = quick_plot.plots[("Negative current collector potential [V]",)][
-                0
-            ][1]
+            ax = quick_plot.axes.by_variable(key[0])
+            assert ax.get_xlabel() == f"y [{quick_plot.spatial_unit}]"
+            assert ax.get_ylabel() == f"z [{quick_plot.spatial_unit}]"
+            assert isinstance(quick_plot.plots[key][0][0], QuadMesh)
+            qp_data = quick_plot.plots[key][0][1]
             np.testing.assert_allclose(qp_data.T, phi_n[:, :, 0], rtol=1e-7, atol=1e-6)
             quick_plot.slider_update(t_eval[-1] / scale)
-            qp_data = quick_plot.plots[("Negative current collector potential [V]",)][
-                0
-            ][1]
+            assert isinstance(quick_plot.plots[key][0][0], QuadMesh)
+            qp_data = quick_plot.plots[key][0][1]
             np.testing.assert_allclose(qp_data.T, phi_n[:, :, -1], rtol=1e-7, atol=1e-6)
 
         with pytest.raises(NotImplementedError, match=r"Shape not recognized for"):

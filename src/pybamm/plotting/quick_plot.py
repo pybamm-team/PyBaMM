@@ -2,6 +2,7 @@
 # Class for quick plotting of variables from models
 #
 from collections import defaultdict
+from dataclasses import dataclass
 
 import numpy as np
 
@@ -50,6 +51,76 @@ def close_plots():
     plt = import_optional_dependency("matplotlib.pyplot")
 
     plt.close("all")
+
+
+@dataclass(frozen=True)
+class _QuickPlot2DSpatialPlan:
+    """2D spatial orientation decisions for one QuickPlot variable."""
+
+    x_values: np.ndarray
+    y_values: np.ndarray
+    x_label_name: str
+    y_label_name: str
+    should_transpose_data: bool
+    uses_pcolormesh: bool
+    x_first_and_y_second: bool
+    is_y_z: bool
+
+    @classmethod
+    def from_spatial_variables(
+        cls,
+        first_spatial_var_name,
+        first_spatial_var_value,
+        second_spatial_var_name,
+        second_spatial_var_value,
+    ):
+        is_rx = first_spatial_var_name in ("r", "R") and second_spatial_var_name == "x"
+        is_y_z = first_spatial_var_name == "y" and second_spatial_var_name == "z"
+
+        if is_rx:
+            # Particle r/x variables are evaluated as r-by-x data but plotted with
+            # x on the horizontal axis and r on the vertical axis.
+            x_values = second_spatial_var_value
+            y_values = first_spatial_var_value
+            x_label_name = second_spatial_var_name[0]
+            y_label_name = first_spatial_var_name[0]
+            should_transpose_data = False
+            x_first_and_y_second = False
+        else:
+            # All other 2D variables use the first spatial variable as x and the
+            # second as y; transpose evaluated data to match that plotted layout.
+            x_values = first_spatial_var_value
+            y_values = second_spatial_var_value
+            x_label_name = first_spatial_var_name[0]
+            y_label_name = second_spatial_var_name[0]
+            should_transpose_data = True
+            x_first_and_y_second = True
+
+        return cls(
+            x_values=x_values,
+            y_values=y_values,
+            x_label_name=x_label_name,
+            y_label_name=y_label_name,
+            should_transpose_data=should_transpose_data,
+            # y/z current-collector fields use pcolormesh; other 2D fields use contourf.
+            uses_pcolormesh=is_y_z,
+            x_first_and_y_second=x_first_and_y_second,
+            is_y_z=is_y_z,
+        )
+
+    @property
+    def axis_limits(self):
+        return [
+            self.x_values[0],
+            self.x_values[-1],
+            self.y_values[0],
+            self.y_values[-1],
+        ]
+
+    def orient_data(self, data):
+        if self.should_transpose_data:
+            return data.T
+        return data
 
 
 class QuickPlot:
@@ -290,6 +361,7 @@ class QuickPlot:
         self.spatial_variable_dict = {}
         self.first_spatial_variable = {}
         self.second_spatial_variable = {}
+        self._spatial_2d_plans = {}
         self.x_first_and_y_second = {}
         self.is_y_z = {}
 
@@ -361,28 +433,27 @@ class QuickPlot:
                         first_spatial_var_name: first_spatial_var_value,
                         second_spatial_var_name: second_spatial_var_value,
                     }
-                    self.first_spatial_variable[variable_tuple] = (
+                    first_spatial_variable = (
                         first_spatial_var_value * self.spatial_factor
                     )
-                    self.second_spatial_variable[variable_tuple] = (
+                    second_spatial_variable = (
                         second_spatial_var_value * self.spatial_factor
                     )
-                    # different order based on whether the domains
-                    # are x-r, x-z or y-z, etc
-                    if (
-                        first_spatial_var_name in ("r", "R")
-                        and second_spatial_var_name == "x"
-                    ):
-                        self.x_first_and_y_second[variable_tuple] = False
-                        self.is_y_z[variable_tuple] = False
-                    elif (
-                        first_spatial_var_name == "y" and second_spatial_var_name == "z"
-                    ):
-                        self.x_first_and_y_second[variable_tuple] = True
-                        self.is_y_z[variable_tuple] = True
-                    else:
-                        self.x_first_and_y_second[variable_tuple] = True
-                        self.is_y_z[variable_tuple] = False
+                    self.first_spatial_variable[variable_tuple] = first_spatial_variable
+                    self.second_spatial_variable[variable_tuple] = (
+                        second_spatial_variable
+                    )
+                    plan = _QuickPlot2DSpatialPlan.from_spatial_variables(
+                        first_spatial_var_name,
+                        first_spatial_variable,
+                        second_spatial_var_name,
+                        second_spatial_variable,
+                    )
+                    self._spatial_2d_plans[variable_tuple] = plan
+                    self.x_first_and_y_second[variable_tuple] = (
+                        plan.x_first_and_y_second
+                    )
+                    self.is_y_z[variable_tuple] = plan.is_y_z
 
             # Store variables and subplot position
             self.variables[variable_tuple] = variables
@@ -413,6 +484,20 @@ class QuickPlot:
 
         return spatial_var_name, spatial_var_value
 
+    def _draw_2d_spatial_plot(self, ax, plan, var, vmin, vmax):
+        if plan.uses_pcolormesh:
+            return ax.pcolormesh(
+                plan.x_values,
+                plan.y_values,
+                var,
+                vmin=vmin,
+                vmax=vmax,
+                shading=self.shading,
+            )
+        return ax.contourf(
+            plan.x_values, plan.y_values, var, levels=100, vmin=vmin, vmax=vmax
+        )
+
     def reset_axis(self):
         """
         Reset the axis limits to the default values.
@@ -428,20 +513,8 @@ class QuickPlot:
                 x_min = self.first_spatial_variable[key][0]
                 x_max = self.first_spatial_variable[key][-1]
             elif variable_lists[0][0].dimensions == 2:
-                # different order based on whether the domains are x-r, x-z or y-z, etc
-                if self.x_first_and_y_second[key] is False:
-                    x_min = self.second_spatial_variable[key][0]
-                    x_max = self.second_spatial_variable[key][-1]
-                    y_min = self.first_spatial_variable[key][0]
-                    y_max = self.first_spatial_variable[key][-1]
-                else:
-                    x_min = self.first_spatial_variable[key][0]
-                    x_max = self.first_spatial_variable[key][-1]
-                    y_min = self.second_spatial_variable[key][0]
-                    y_max = self.second_spatial_variable[key][-1]
-
                 # Create axis for contour plot
-                self.axis_limits[key] = [x_min, x_max, y_min, y_max]
+                self.axis_limits[key] = self._spatial_2d_plans[key].axis_limits
 
             # Get min and max variable values
             if self.variable_limits[key] == "fixed":
@@ -592,37 +665,16 @@ class QuickPlot:
                 spatial_vars = self.spatial_variable_dict[key]
                 # there can only be one entry in the variable list
                 variable = variable_lists[0][0]
-                # different order based on whether the domains are x-r, x-z or y-z, etc
-                if self.x_first_and_y_second[key] is False:
-                    x_name = list(spatial_vars.keys())[1][0]
-                    y_name = next(iter(spatial_vars.keys()))[0]
-                    x = self.second_spatial_variable[key]
-                    y = self.first_spatial_variable[key]
-                    var = variable(t_in_seconds, **spatial_vars)
-                else:
-                    x_name = next(iter(spatial_vars.keys()))[0]
-                    y_name = list(spatial_vars.keys())[1][0]
-                    x = self.first_spatial_variable[key]
-                    y = self.second_spatial_variable[key]
-                    var = variable(t_in_seconds, **spatial_vars).T
-                ax.set_xlabel(f"{x_name} [{self.spatial_unit}]")
-                ax.set_ylabel(f"{y_name} [{self.spatial_unit}]")
+                plan = self._spatial_2d_plans[key]
+                var = plan.orient_data(variable(t_in_seconds, **spatial_vars))
+                ax.set_xlabel(f"{plan.x_label_name} [{self.spatial_unit}]")
+                ax.set_ylabel(f"{plan.y_label_name} [{self.spatial_unit}]")
                 vmin, vmax = self.variable_limits[key]
                 # store the plot and the var data (for testing) as cant access
                 # z data from QuadMesh or QuadContourSet object
-                if self.is_y_z[key] is True:
-                    self.plots[key][0][0] = ax.pcolormesh(
-                        x,
-                        y,
-                        var,
-                        vmin=vmin,
-                        vmax=vmax,
-                        shading=self.shading,
-                    )
-                else:
-                    self.plots[key][0][0] = ax.contourf(
-                        x, y, var, levels=100, vmin=vmin, vmax=vmax
-                    )
+                self.plots[key][0][0] = self._draw_2d_spatial_plot(
+                    ax, plan, var, vmin, vmax
+                )
                 self.plots[key][0][1] = var
                 if vmin is None and vmax is None:
                     vmin = ax_min(var)
@@ -755,30 +807,14 @@ class QuickPlot:
                 spatial_vars = self.spatial_variable_dict[key]
                 # there can only be one entry in the variable list
                 variable = self.variables[key][0][0]
+                plan = self._spatial_2d_plans[key]
                 vmin, vmax = self.variable_limits[key]
-                if self.x_first_and_y_second[key] is False:
-                    x = self.second_spatial_variable[key]
-                    y = self.first_spatial_variable[key]
-                    var = variable(time_in_seconds, **spatial_vars)
-                else:
-                    x = self.first_spatial_variable[key]
-                    y = self.second_spatial_variable[key]
-                    var = variable(time_in_seconds, **spatial_vars).T
+                var = plan.orient_data(variable(time_in_seconds, **spatial_vars))
                 # store the plot and the var data (for testing) as cant access
                 # z data from QuadMesh or QuadContourSet object
-                if self.is_y_z[key] is True:
-                    self.plots[key][0][0] = ax.pcolormesh(
-                        x,
-                        y,
-                        var,
-                        vmin=vmin,
-                        vmax=vmax,
-                        shading=self.shading,
-                    )
-                else:
-                    self.plots[key][0][0] = ax.contourf(
-                        x, y, var, levels=100, vmin=vmin, vmax=vmax
-                    )
+                self.plots[key][0][0] = self._draw_2d_spatial_plot(
+                    ax, plan, var, vmin, vmax
+                )
                 self.plots[key][0][1] = var
                 if (vmin, vmax) == (None, None):
                     vmin = ax_min(var)
