@@ -728,6 +728,49 @@ class TestSerialise:
         assert "positive particle" in loaded.default_geometry
         assert "positive particle" in loaded.default_spatial_methods
 
+    def test_custom_composite_model_roundtrip_rebuilds_param(self, tmp_path):
+        """A composite custom model must keep its parameters consistent with the
+        restored options after a round-trip. Regression test: previously the
+        reloaded model kept the single-phase ``param`` built from the default
+        options, so ``param.n.prim.epsilon_s_av`` referenced
+        "Negative electrode active material volume fraction" instead of the
+        phase-prefixed "Primary: ..." name, breaking electrode-SOH based
+        initialisation."""
+        from pybamm.models.full_battery_models.lithium_ion.base_lithium_ion_model import (
+            BaseModel as LiIonBaseModel,
+        )
+
+        model = LiIonBaseModel(options={"particle phases": ("2", "1")})
+        model.name = "CompositeCustom"
+        c = pybamm.Variable(
+            "X-averaged negative primary particle concentration [mol.m-3]",
+            domain="negative primary particle",
+        )
+        model.rhs = {c: -pybamm.div(-pybamm.grad(c))}
+        model.initial_conditions = {c: pybamm.Scalar(0.5)}
+        model.boundary_conditions = {
+            c: {
+                "left": (pybamm.Scalar(0), "Neumann"),
+                "right": (pybamm.Scalar(0), "Neumann"),
+            }
+        }
+        model.variables = {c.name: c}
+
+        # Sanity check: the live model uses the phase-prefixed parameter name.
+        assert "Primary: Negative electrode active material volume fraction" in str(
+            model.param.n.prim.epsilon_s_av
+        )
+
+        file_path = tmp_path / "composite.json"
+        Serialise.save_custom_model(model, filename=str(file_path))
+        loaded = Serialise.load_custom_model(str(file_path))
+
+        assert loaded.options["particle phases"] == ("2", "1")
+        # The reloaded param must match the restored composite options.
+        assert "Primary: Negative electrode active material volume fraction" in str(
+            loaded.param.n.prim.epsilon_s_av
+        )
+
     def test_serialise_records_base_class_mro(self, tmp_path):
         from pybamm.models.full_battery_models.lithium_ion.base_lithium_ion_model import (
             BaseModel as LiIonBaseModel,
