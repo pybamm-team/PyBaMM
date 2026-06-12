@@ -1393,6 +1393,18 @@ class Serialise:
         opts = model_data.get("options", {})
         if opts is not None:
             model.options = Serialise._convert_options(opts)
+            # The options setter only updates the options dict; it does not
+            # rebuild the cached ``param`` object, which ``base_cls()`` built
+            # from the default options. For lithium-ion models this leaves the
+            # parameters inconsistent with the restored options -- e.g. a
+            # composite electrode ("particle phases": ("2", "1")) would keep
+            # the single-phase parameter names ("Negative electrode active
+            # material volume fraction") instead of the phase-prefixed ones
+            # ("Primary: Negative electrode active material volume fraction"),
+            # which breaks downstream electrode-SOH initialisation. Rebuild the
+            # parameter object so it matches the restored options.
+            if isinstance(model, pybamm.lithium_ion.BaseModel):
+                model.param = pybamm.LithiumIonParameters(model.options)
 
         all_variable_keys = (
             [lhs_json for lhs_json, _ in model_data["rhs"]]
