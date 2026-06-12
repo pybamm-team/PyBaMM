@@ -11,12 +11,17 @@ Validated to catch the regression shape behind #5495 (bool->int coercion),
 
 from __future__ import annotations
 
+import ast
+import inspect
 import json
+import textwrap
 import warnings
 from datetime import datetime
 
 import numpy as np
 import pytest
+from hypothesis import given, reject, settings
+from hypothesis import strategies as st
 
 import pybamm
 from pybamm.expression_tree.operations.serialise import (
@@ -24,6 +29,7 @@ from pybamm.expression_tree.operations.serialise import (
     convert_symbol_from_json,
     convert_symbol_to_json,
 )
+from pybamm.models.full_battery_models.base_battery_model import BatteryModelOptions
 from tests.unit.test_serialisation._helpers import (
     _experiments_equal,
     _solver_init_args_equal,
@@ -500,3 +506,331 @@ class TestSymbolRoundTrip:
             f"{type(symbol).__name__} structural id changed across round-trip: "
             f"{symbol!r} -> {restored!r}"
         )
+
+
+# Generative option round-trip fuzzing. JSON has no tuple type, so a tuple option
+# (e.g. "particle phases": ("2", "1")) deserialises as a list, which validation
+# rejects. Fuzzes the build-free to_json/from_json path; the deterministic
+# fixtures below cover to_config/from_config (which builds the model).
+
+# Option registry, sourced from pybamm so the strategy never hardcodes values.
+_POSSIBLE_OPTIONS = BatteryModelOptions({}).possible_options
+
+_STRING_VALUES = {
+    key: [v for v in values if isinstance(v, str)]
+    for key, values in _POSSIBLE_OPTIONS.items()
+}
+
+# Drawable keys. "dimensionality" (the only int option) is excluded: a non-zero
+# value needs companion geometry options the random strategy can't assemble; its
+# int round-trip is covered by test_int_option_survives_json_round_trip_as_int.
+_STRING_OPTION_KEYS = sorted(
+    key for key, values in _STRING_VALUES.items() if key != "dimensionality" and values
+)
+
+# Options accepting a 2-tuple of strings; mirrors the list in BatteryModelOptions
+# (test_tuple_capable_keys_match_validation_source guards drift).
+_TUPLE_CAPABLE_KEYS = frozenset(
+    {
+        "diffusivity",
+        "exchange-current density",
+        "intercalation kinetics",
+        "interface utilisation",
+        "lithium plating",
+        "loss of active material",
+        "number of MSMR reactions",
+        "open-circuit potential",
+        "particle",
+        "particle mechanics",
+        "particle phases",
+        "particle size",
+        "SEI",
+        "SEI on cracks",
+        "stress-induced diffusion",
+    }
+)
+
+# SPM matches the original regression; DFN has a broader option surface.
+_OPTION_MODEL_CLASSES = [pybamm.lithium_ion.SPM, pybamm.lithium_ion.DFN]
+
+
+def _assert_param_matches_options(model):
+    """Assert a loaded lithium-ion model's ``param`` matches its restored options.
+
+    Guards #5598; lead-acid ``param`` is options-independent, so skip it.
+    """
+    if isinstance(model, pybamm.lithium_ion.BaseModel):
+        assert dict(model.param.options) == dict(model.options), (
+            f"param built from {dict(model.param.options)!r} != restored options "
+            f"{dict(model.options)!r}; load_custom_model must rebuild param."
+        )
+
+
+def test_rebuild_param_syncs_param_with_reassigned_options():
+    """The ``_rebuild_param`` hook resyncs ``param`` to ``options``.
+
+    Deserialisation assigns ``options`` after construction; the setter leaves
+    ``param`` untouched, so the model-owned hook must rebuild it.
+    """
+    # A complete, valid two-phase options set (as a load path would restore).
+    full_opts = dict(pybamm.lithium_ion.SPM({"particle phases": ("2", "1")}).options)
+
+    model = pybamm.lithium_ion.SPM(build=False)  # default: single particle phase
+    model.options = full_opts
+    # The setter alone leaves param built from the default (single-phase) options.
+    assert dict(model.param.options) != dict(model.options)
+    model._rebuild_param()
+    assert dict(model.param.options) == dict(model.options)
+
+
+@st.composite
+def valid_option_dicts(draw):
+    """Draw a small registry-valid option dict, biased to exercise tuples."""
+    keys = draw(
+        st.lists(
+            st.sampled_from(_STRING_OPTION_KEYS),
+            min_size=1,
+            max_size=3,
+            unique=True,
+        )
+    )
+    options = {}
+    for key in keys:
+        choices = _STRING_VALUES[key]
+        if key in _TUPLE_CAPABLE_KEYS and draw(st.booleans()):
+            options[key] = (
+                draw(st.sampled_from(choices)),
+                draw(st.sampled_from(choices)),
+            )
+        else:
+            options[key] = draw(st.sampled_from(choices))
+    return options
+
+
+def test_tuple_capable_keys_match_validation_source():
+    """``_TUPLE_CAPABLE_KEYS`` must match the tuple-capable list in
+    BatteryModelOptions -- AST-extracted so it can't silently drift.
+    """
+    tree = ast.parse(textwrap.dedent(inspect.getsource(BatteryModelOptions)))
+    candidates = [
+        {
+            elt.value
+            for elt in node.elts
+            if isinstance(elt, ast.Constant) and isinstance(elt.value, str)
+        }
+        for node in ast.walk(tree)
+        if isinstance(node, ast.List)
+    ]
+    # The tuple-capable list is the one literal containing these marker keys.
+    matches = [c for c in candidates if {"particle phases", "SEI on cracks"} <= c]
+    assert len(matches) == 1, (
+        "Could not uniquely locate the tuple-capable option list in "
+        "BatteryModelOptions source; update the extraction in this test."
+    )
+    assert matches[0] == set(_TUPLE_CAPABLE_KEYS), (
+        "Tuple-capable options in pybamm have changed. Update "
+        "_TUPLE_CAPABLE_KEYS so option fuzzing keeps generating tuple values "
+        f"for every such key. Source: {sorted(matches[0])}, "
+        f"test constant: {sorted(_TUPLE_CAPABLE_KEYS)}."
+    )
+    assert _TUPLE_CAPABLE_KEYS <= set(_POSSIBLE_OPTIONS), (
+        "_TUPLE_CAPABLE_KEYS contains keys absent from the option registry."
+    )
+
+
+class TestModelOptionsRoundTrip:
+    """Any valid option dict must survive a JSON round-trip with exact types."""
+
+    @pytest.mark.parametrize(
+        "model_cls", _OPTION_MODEL_CLASSES, ids=lambda c: c.__name__
+    )
+    @settings(max_examples=100, deadline=None)
+    @given(options=valid_option_dicts())
+    def test_options_survive_json_round_trip(self, model_cls, options):
+        try:
+            # Construction is the precondition, not the SUT; pass a copy
+            # (pybamm mutates the dict).
+            model = model_cls(dict(options), build=False)
+        except (pybamm.OptionError, NotImplementedError):
+            # Invalid/unsupported option set -> discard. Any other exception is a
+            # real bug that must surface (a broad except here once hid an MSMR
+            # int('none') crash).
+            reject()
+
+        expected = dict(model.options)
+
+        via_json = pybamm.BaseModel.from_json(
+            json.loads(json.dumps(model.to_json(), default=Serialise._json_encoder))
+        )
+        assert _values_equal(expected, dict(via_json.options)), (
+            f"{model_cls.__name__} options lost or mutated via "
+            f"to_json/from_json for input {options!r}: "
+            f"{expected!r} -> {dict(via_json.options)!r}"
+        )
+        # Options surviving isn't enough -- the derived param must match too.
+        _assert_param_matches_options(via_json)
+
+
+def test_int_option_survives_json_round_trip_as_int():
+    """``dimensionality`` (the only int option) must round-trip as an int, not be
+    coerced to/from bool (the #5495 shape, ``True == 1``). Bool-like options are
+    strings "true"/"false" (pybamm rejects Python bools), already fuzzed; a
+    non-zero value needs companion geometry options to construct.
+    """
+    options = {
+        "dimensionality": 1,
+        "current collector": "potential pair",
+        "cell geometry": "pouch",
+    }
+    model = pybamm.lithium_ion.DFN(dict(options), build=False)
+
+    via_json = pybamm.BaseModel.from_json(
+        json.loads(json.dumps(model.to_json(), default=Serialise._json_encoder))
+    )
+    restored = via_json.options["dimensionality"]
+    assert restored == 1
+    assert isinstance(restored, int) and not isinstance(restored, bool)
+
+
+# Buildable tuple options that must round-trip through both load paths --
+# deterministic, always-run coverage of the bug shape.
+_TUPLE_OPTION_FIXTURES = [
+    (pybamm.lithium_ion.SPM, "particle phases", ("2", "1")),
+    (pybamm.lithium_ion.SPM, "SEI", ("none", "constant")),
+    (pybamm.lithium_ion.DFN, "particle size", ("single", "distribution")),
+    (pybamm.lithium_ion.DFN, "particle", ("Fickian diffusion", "uniform profile")),
+]
+
+
+class TestTupleOptionRoundTripRegression:
+    @pytest.mark.parametrize(
+        "model_cls,key,value",
+        _TUPLE_OPTION_FIXTURES,
+        ids=["SPM-particle phases", "SPM-SEI", "DFN-particle size", "DFN-particle"],
+    )
+    def test_tuple_option_survives_both_paths(self, model_cls, key, value):
+        model = model_cls({key: value}, build=False)
+
+        via_json = pybamm.BaseModel.from_json(
+            json.loads(json.dumps(model.to_json(), default=Serialise._json_encoder))
+        )
+        assert via_json.options[key] == value
+        assert isinstance(via_json.options[key], tuple)
+        # Composite "particle phases" is the case (param stuck single-phase).
+        _assert_param_matches_options(via_json)
+
+        via_config = pybamm.BaseModel.from_config(
+            json.loads(json.dumps(model.to_config()))
+        )
+        assert via_config.options[key] == value
+        assert isinstance(via_config.options[key], tuple)
+
+
+# Discretised-model round-trip (save_model/load_model): previously only checked
+# "load and solve". These verify structural identity and solution equivalence
+# (mesh transitively: same equations + solution => same mesh).
+
+_DISCRETISED_MODEL_CLASSES = [pybamm.lithium_ion.SPM, pybamm.lithium_ion.DFN]
+
+
+def _discretised_model(model_cls, options=None):
+    """Build, parameterise and discretise a model; return it and its mesh
+    (the mesh is needed by ``serialise_model`` for named variables).
+    """
+    model = model_cls(options)
+    geometry = model.default_geometry
+    param = model.default_parameter_values
+    param.process_model(model)
+    param.process_geometry(geometry)
+    mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
+    disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+    disc.process_model(model)
+    return model, mesh
+
+
+def _round_trip_discretised(model, mesh):
+    """Serialise a discretised model and load it back, via dict (no temp file)."""
+    serialised = Serialise().serialise_model(model, mesh)
+    return Serialise().load_model(json.loads(json.dumps(serialised)))
+
+
+@pytest.mark.parametrize(
+    "model_cls", _DISCRETISED_MODEL_CLASSES, ids=lambda c: c.__name__
+)
+class TestDiscretisedModelRoundTrip:
+    def test_derived_state_matches_original(self, model_cls):
+        """Concatenated equations, mass matrix, bounds and options must match."""
+        model, mesh = _discretised_model(model_cls)
+        loaded = _round_trip_discretised(model, mesh)
+
+        for attr in (
+            "concatenated_rhs",
+            "concatenated_algebraic",
+            "concatenated_initial_conditions",
+            "mass_matrix",
+        ):
+            original = getattr(model, attr)
+            restored = getattr(loaded, attr)
+            assert original.id == restored.id, (
+                f"{model_cls.__name__}.{attr} changed across the discretised "
+                f"round-trip: {original.id} != {restored.id}"
+            )
+
+        assert all(
+            np.array_equal(a, b)
+            for a, b in zip(model.bounds, loaded.bounds, strict=True)
+        ), f"{model_cls.__name__} bounds changed across the discretised round-trip"
+        assert dict(model.options) == dict(loaded.options)
+
+        # Events are serialised too -- verify them structurally rather than
+        # relying on the solution check.
+        assert len(model.events) == len(loaded.events)
+        for original_event, restored_event in zip(
+            model.events, loaded.events, strict=True
+        ):
+            assert original_event.name == restored_event.name
+            assert original_event.event_type == restored_event.event_type
+            assert original_event.expression.id == restored_event.expression.id, (
+                f"{model_cls.__name__} event {original_event.name!r} changed "
+                "across the discretised round-trip"
+            )
+
+    def test_solution_matches_original(self, model_cls):
+        """The reloaded model must solve to the same answer as the original."""
+        model, mesh = _discretised_model(model_cls)
+        # Serialise before solving so any solve-time caching cannot leak in.
+        loaded = _round_trip_discretised(model, mesh)
+
+        t_eval = [0, 3600]
+        original_solution = model.default_solver.solve(model, t_eval)
+        loaded_solution = loaded.default_solver.solve(loaded, t_eval)
+
+        assert np.allclose(
+            original_solution.y, loaded_solution.y, rtol=1e-6, atol=1e-8
+        ), (
+            f"{model_cls.__name__} state trajectory diverged after a "
+            "discretised round-trip"
+        )
+        assert np.allclose(
+            original_solution["Voltage [V]"].entries,
+            loaded_solution["Voltage [V]"].entries,
+            rtol=1e-6,
+            atol=1e-8,
+        ), f"{model_cls.__name__} Voltage [V] diverged after a discretised round-trip"
+
+
+def test_nondefault_tuple_option_survives_discretised_round_trip():
+    """A tuple-valued option must survive the discretised save/load path too.
+
+    The parametrised tests above only use default options; this guards
+    ``load_model``'s list->tuple conversion. ``particle`` is used because it
+    discretises with the default parameter set (composite ``particle phases``
+    would need a phase-prefixed one).
+    """
+    options = {"particle": ("Fickian diffusion", "uniform profile")}
+    model, mesh = _discretised_model(pybamm.lithium_ion.DFN, options)
+    loaded = _round_trip_discretised(model, mesh)
+
+    assert loaded.options["particle"] == ("Fickian diffusion", "uniform profile")
+    assert isinstance(loaded.options["particle"], tuple)
+    _assert_param_matches_options(loaded)

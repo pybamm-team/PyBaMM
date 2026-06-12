@@ -444,6 +444,21 @@ class TestBaseBatteryModel:
                     "number of MSMR reactions": "1.5",
                 }
             )
+        # MSMR inside a per-electrode tuple must be rejected cleanly, not slip
+        # through to crash later as int('none') in parameter construction.
+        with pytest.raises(pybamm.OptionError, match=r"MSMR"):
+            pybamm.BaseBatteryModel({"open-circuit potential": ("MSMR", "single")})
+        with pytest.raises(pybamm.OptionError, match=r"MSMR"):
+            pybamm.BaseBatteryModel({"particle": ("MSMR", "Fickian diffusion")})
+        # MSMR with the default "none" reaction count must also be rejected cleanly.
+        with pytest.raises(pybamm.OptionError, match=r"MSMR"):
+            pybamm.BaseBatteryModel(
+                {
+                    "open-circuit potential": "MSMR",
+                    "particle": "MSMR",
+                    "intercalation kinetics": "MSMR",
+                }
+            )
 
     def test_build_twice(self):
         model = pybamm.lithium_ion.SPM()  # need to pick a model to set vars and build
