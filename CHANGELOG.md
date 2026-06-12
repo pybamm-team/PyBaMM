@@ -2,7 +2,7 @@
 
 ## Bug fixes
 
-- `RegulariseSqrtAndPower` no longer regularises state-independent bases, fixing corrupted small rate constants in exchange-current density functions. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
+- `RegulariseSqrtAndPower` no longer regularises state-independent bases, fixing corrupted small rate constants in exchange-current density functions. ([#5600](https://github.com/pybamm-team/PyBaMM/pull/5600))
 
 ## Breaking changes
 
