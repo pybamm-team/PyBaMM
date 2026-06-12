@@ -2,6 +2,7 @@
 
 ## Bug fixes
 
+- Fixed degradation submodels failing to discretise with `"dimensionality": 1` current collectors. The LAM-LLI accumulator now `yz_average`s its rhs so the scalar variable matches its scalar initial condition, and `CrackPropagation`'s initial condition is `FullBroadcast` over both the electrode and the current collector to match the rhs mesh declared by its `Variable`. 0-D current collectors are unaffected. ([#5296](https://github.com/pybamm-team/PyBaMM/issues/5296))
 - `RegulariseSqrtAndPower` no longer regularises state-independent bases, fixing corrupted small rate constants in exchange-current density functions. ([#5600](https://github.com/pybamm-team/PyBaMM/pull/5600))
 
 ## Breaking changes
