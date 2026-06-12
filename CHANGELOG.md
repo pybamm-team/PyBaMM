@@ -2,6 +2,7 @@
 
 ## Bug fixes
 
+- Fixed `pybamm.lithium_ion.DFN` half-cell models (`"working electrode": "positive"`) failing to build with a `ShapeError` when combined with `"surface form": "algebraic"`/`"differential"` and any non-isothermal thermal option (e.g. `"thermal": "lumped"`). The full surface-form electrolyte conductivity submodel now registers the inter-domain `phi_e` boundary conditions from the always-instantiated separator submodel instead of the negative submodel (which is skipped for planar Li metal), and the base Ohm electrode submodel no longer drops the porous positive electrode's `phi_s_p` BCs when the negative electrode is planar. ([#5414](https://github.com/pybamm-team/PyBaMM/issues/5414))
 - `RegulariseSqrtAndPower` no longer regularises state-independent bases, fixing corrupted small rate constants in exchange-current density functions. ([#5600](https://github.com/pybamm-team/PyBaMM/pull/5600))
 
 ## Breaking changes
