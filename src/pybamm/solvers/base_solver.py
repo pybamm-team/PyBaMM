@@ -8,6 +8,7 @@ import warnings
 
 import casadi
 import numpy as np
+from pebble import ProcessPool
 
 import pybamm
 from pybamm import ParameterValues
@@ -58,6 +59,9 @@ class BaseSolver:
         back to linear across the whole step, so it is **not** appropriate when
         post-processing queries a non-endpoint time within a step.
         Default is False.
+    timeout : float, optional
+        If timeout is a positive number, simulations are terminated after timeout
+        seconds if not completed successfully within this time. Default is None.
     """
 
     def __init__(
@@ -72,6 +76,7 @@ class BaseSolver:
         on_failure=None,
         output_variables=None,
         store_first_last=False,
+        timeout=None,
     ):
         self.method = method
         self.rtol = rtol
@@ -98,6 +103,7 @@ class BaseSolver:
         self._supports_t_eval_discontinuities = False
         self.computed_var_fcns = {}
         self._mp_context = self.get_platform_context(platform.system())
+        self.timeout = timeout
 
     def to_config(self) -> dict:
         """Convert this solver to a JSON-serialisable config dict.
@@ -796,7 +802,7 @@ class BaseSolver:
         inputs_list = inputs_list or [{}]
 
         ninputs = len(inputs_list)
-        if ninputs == 1:
+        if ninputs == 1 and self.timeout is None:
             new_solution = self._integrate_single(
                 model,
                 t_eval,
@@ -805,22 +811,36 @@ class BaseSolver:
             )
             new_solutions = [new_solution]
         else:
-            with mp.get_context(self._mp_context).Pool(processes=nproc) as p:
-                model_list = [model] * len(inputs_list)
-                t_eval_list = [t_eval] * len(inputs_list)
+            with ProcessPool(
+                context=mp.get_context(self._mp_context),
+                max_workers=nproc or mp.cpu_count(),
+            ) as p:
+                model_list = [model] * ninputs
+                t_eval_list = [t_eval] * ninputs
                 y0_list = model.y0_list
-                new_solutions = p.starmap(
+
+                futures = p.map(
                     self._integrate_single,
-                    zip(
-                        model_list,
-                        t_eval_list,
-                        inputs_list,
-                        y0_list,
-                        strict=True,
-                    ),
+                    model_list,
+                    t_eval_list,
+                    inputs_list,
+                    y0_list,
+                    timeout=self.timeout,
                 )
-                p.close()
-                p.join()
+                iterator = futures.result()
+
+                new_solutions = []
+                while True:
+                    try:
+                        new_solutions.append(next(iterator))
+                    except StopIteration:
+                        break
+                    except TimeoutError as e:
+                        raise pybamm.SolverError(
+                            f"Timeout after {e.args[1]:d} seconds."
+                        ) from e
+                    except Exception as e:
+                        raise pybamm.SolverError(str(e)) from None
 
         return new_solutions
 
