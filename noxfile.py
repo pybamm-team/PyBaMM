@@ -129,6 +129,7 @@ def run_benchmark_fast(session):
         "not slow_bench",
         "--benchmark-group-by",
         "func",
+        "--benchmark-disable-gc",
         *session.posargs,
     )
 
@@ -148,6 +149,7 @@ def run_benchmark_all(session):
         "addopts=",
         "--benchmark-group-by",
         "func",
+        "--benchmark-disable-gc",
         *session.posargs,
     )
 

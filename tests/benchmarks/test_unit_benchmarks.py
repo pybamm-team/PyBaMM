@@ -71,7 +71,7 @@ def test_parameterise(benchmark):
         R, model = _create_expression()
         return (R, model), {}
 
-    benchmark.pedantic(_parameterise, setup=setup, rounds=100, iterations=1)
+    benchmark.pedantic(_parameterise, setup=setup, rounds=2000, iterations=1)
 
 
 def test_discretise(benchmark):
@@ -80,7 +80,7 @@ def test_discretise(benchmark):
         r, geometry = _parameterise(R, model)
         return (r, geometry, model), {}
 
-    benchmark.pedantic(_discretise, setup=setup, rounds=100, iterations=1)
+    benchmark.pedantic(_discretise, setup=setup, rounds=2000, iterations=1)
 
 
 def test_solve(benchmark):
