@@ -564,22 +564,28 @@ def _assert_param_matches_options(model):
             f"param built from {dict(model.param.options)!r} != restored options "
             f"{dict(model.options)!r}; load_custom_model must rebuild param."
         )
+        # Symptom-level guard: a two-phase negative electrode names its primary
+        # active-material fraction "Primary: ..."; a param left built from
+        # single-phase options would not.
+        if model.options.negative["particle phases"] == "2":
+            epsilon_s_name = model.param.n.prim.epsilon_s.name
+            assert epsilon_s_name.startswith("Primary:"), (
+                f"negative primary active material fraction is {epsilon_s_name!r}; "
+                "expected a 'Primary:' prefix for a two-phase electrode -- param "
+                "was not rebuilt from the restored composite options."
+            )
 
 
-def test_rebuild_param_syncs_param_with_reassigned_options():
-    """The ``_rebuild_param`` hook resyncs ``param`` to ``options``.
-
-    Deserialisation assigns ``options`` after construction; the setter leaves
-    ``param`` untouched, so the model-owned hook must rebuild it.
+def test_options_setter_rebuilds_param():
+    """Assigning ``options`` post-construction rebuilds the options-derived
+    ``param`` via the setter, keeping it in sync without an explicit hook call.
     """
     # A complete, valid two-phase options set (as a load path would restore).
     full_opts = dict(pybamm.lithium_ion.SPM({"particle phases": ("2", "1")}).options)
 
     model = pybamm.lithium_ion.SPM(build=False)  # default: single particle phase
     model.options = full_opts
-    # The setter alone leaves param built from the default (single-phase) options.
-    assert dict(model.param.options) != dict(model.options)
-    model._rebuild_param()
+    # The setter rebuilds param, so it tracks the reassigned options.
     assert dict(model.param.options) == dict(model.options)
 
 

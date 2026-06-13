@@ -1387,11 +1387,11 @@ class Serialise:
         model.name = model_data["name"]
         model.schema_version = schema_version
         # JSON turns tuple-valued options into lists (rejected by validation);
-        # convert back, then rebuild param to match the restored options.
+        # convert back. Assigning options rebuilds the options-derived param via
+        # the setter, so it matches the restored options.
         opts = model_data.get("options", {})
         if opts is not None:
             model.options = Serialise._convert_options(opts)
-            model._rebuild_param()
 
         all_variable_keys = (
             [lhs_json for lhs_json, _ in model_data["rhs"]]

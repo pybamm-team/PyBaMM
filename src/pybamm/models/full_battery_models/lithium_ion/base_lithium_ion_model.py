@@ -29,7 +29,6 @@ class BaseModel(pybamm.BaseBatteryModel):
 
     def __init__(self, options=None, name="Unnamed lithium-ion model", build=False):
         super().__init__(options, name)
-        self._rebuild_param()
 
         self.set_standard_output_variables()
 

@@ -25,11 +25,15 @@ def _is_msmr(value):
     return value == "MSMR"
 
 
-def _is_positive_integer_count(value):
-    """True if value is a positive integer, or a per-electrode tuple of them."""
+def _per_electrode(value, index):
+    """Resolve a possibly per-electrode option to one electrode.
+
+    Per-electrode tuples are ``(negative, positive)``; a scalar applies to
+    both. ``index`` is 0 for the negative electrode, 1 for the positive.
+    """
     if isinstance(value, (tuple, list)):
-        return bool(value) and all(_is_positive_integer_count(v) for v in value)
-    return represents_positive_integer(value)
+        return value[index]
+    return value
 
 
 def _rename_option(options_dict, option_name, old_name, new_name):
@@ -656,16 +660,24 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "'intercalation kinetics' is 'MSMR' then all of them must be 'MSMR'"
             )
 
-        # MSMR needs an explicit positive-integer count; the registry default
-        # "none" otherwise crashes later in parameter construction (int('none')).
-        msmr_count = options["number of MSMR reactions"]
-        if any(msmr_check_list) and not _is_positive_integer_count(msmr_count):
-            raise pybamm.OptionError(
-                "'number of MSMR reactions' must be a positive integer (or a "
-                "per-electrode tuple of positive integers) when "
-                "'open-circuit potential', 'particle' and 'intercalation "
-                f"kinetics' use 'MSMR' (got {msmr_count!r})"
+        # Validate per electrode so a mixed cell
+        # (MSMR in one electrode, conventional in the other) is accepted.
+        for domain, index in [("negative", 0), ("positive", 1)]:
+            domain_uses_msmr = any(
+                _per_electrode(options[opt], index) == "MSMR"
+                for opt in [
+                    "open-circuit potential",
+                    "particle",
+                    "intercalation kinetics",
+                ]
             )
+            domain_count = _per_electrode(options["number of MSMR reactions"], index)
+            if domain_uses_msmr and not represents_positive_integer(domain_count):
+                raise pybamm.OptionError(
+                    "'number of MSMR reactions' must be a positive integer for "
+                    f"the {domain} electrode when it uses 'MSMR' "
+                    f"(got {domain_count!r})"
+                )
 
         # If "SEI film resistance" is "distributed" then "total interfacial current
         # density as a state" must be "true"
@@ -1236,6 +1248,9 @@ class BaseBatteryModel(pybamm.BaseModel):
                 f"must use surface formulation to solve {self!s} with hydrolysis"
             )
         self._options = options
+        # rebuild whenever options are (re)assigned.
+        # No-op unless the subclass overrides ``_rebuild_param``.
+        self._rebuild_param()
 
     def set_standard_output_variables(self):
         # Time

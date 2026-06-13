@@ -460,6 +460,17 @@ class TestBaseBatteryModel:
                 }
             )
 
+    def test_msmr_mixed_electrode_accepted(self):
+        # Verify non-MSMR electrode's "none" reaction count is legitimate
+        options = {
+            "open-circuit potential": ("MSMR", "single"),
+            "particle": ("MSMR", "Fickian diffusion"),
+            "intercalation kinetics": ("MSMR", "symmetric Butler-Volmer"),
+            "number of MSMR reactions": ("3", "none"),
+        }
+        model = pybamm.BaseBatteryModel(options)
+        assert model.options["number of MSMR reactions"] == ("3", "none")
+
     def test_build_twice(self):
         model = pybamm.lithium_ion.SPM()  # need to pick a model to set vars and build
         with pytest.raises(pybamm.ModelError, match=r"Model already built"):

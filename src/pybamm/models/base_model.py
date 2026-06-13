@@ -643,8 +643,8 @@ class BaseModel:
 
     def _rebuild_param(self):
         """Rebuild ``param`` from ``self.options``; no-op unless ``param`` is
-        options-derived. Call after assigning options post-construction (the
-        setter leaves ``param`` untouched), e.g. when deserialising.
+        options-derived. Called by the ``options`` setter whenever options are
+        (re)assigned, so subclasses keep ``param`` in sync automatically.
         """
 
     @property
