@@ -2236,11 +2236,15 @@ class TestSimulationExperiment:
             direction="rest",
             termination=[pybamm.step.VoltageTermination(4.2), custom_termination],
         )
+        # Invalid branch provenance should fall back to evaluating the step events.
         decoded = sim._decode_combined_step_termination(
             step_solution,
             step,
             sim._built_experiment_model,
-            step_solution.all_inputs[0],
+            {
+                **step_solution.all_inputs[0],
+                sim._STEP_INDEX_INPUT: "not-an-index",
+            },
         )
 
         assert decoded == "event: Negative stoichiometry cut-off [experiment]"
