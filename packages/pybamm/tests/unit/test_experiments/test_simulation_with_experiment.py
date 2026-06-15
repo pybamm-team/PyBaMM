@@ -1169,10 +1169,7 @@ class TestSimulationExperiment:
         legacy_sol = legacy_sim.solve(calc_esoh=False, initial_soc=0.2)
         unified_sol = unified_sim.solve(calc_esoh=False, initial_soc=0.2)
 
-        # Unified mode should project the source step event, not the synthetic
-        # combined event used to drive the shared experiment model.
         expected = "event: abs(Current [A]) < 0.5 [A] [experiment]"
-        combined = f"event: {unified_sim._COMBINED_TERMINATION_EVENT}"
         legacy_hold = legacy_sol.cycles[0].steps[1]
         unified_hold = unified_sol.cycles[0].steps[1]
 
@@ -1180,8 +1177,6 @@ class TestSimulationExperiment:
         assert unified_sol.termination == expected
         assert legacy_hold.termination == expected
         assert unified_hold.termination == expected
-        assert unified_sol.termination != combined
-        assert unified_hold.termination != combined
 
     def test_run_unified_resistance_branch_is_safe_when_inactive_at_zero_current(self):
         experiment = pybamm.Experiment(
@@ -2236,15 +2231,11 @@ class TestSimulationExperiment:
             direction="rest",
             termination=[pybamm.step.VoltageTermination(4.2), custom_termination],
         )
-        # Invalid branch provenance should fall back to evaluating the step events.
         decoded = sim._decode_combined_step_termination(
             step_solution,
             step,
             sim._built_experiment_model,
-            {
-                **step_solution.all_inputs[0],
-                sim._STEP_INDEX_INPUT: "not-an-index",
-            },
+            step_solution.all_inputs[0],
         )
 
         assert decoded == "event: Negative stoichiometry cut-off [experiment]"
@@ -2268,7 +2259,7 @@ class TestSimulationExperiment:
             step_solution,
             step,
             sim._built_experiment_model,
-            {},
+            {sim._STEP_INDEX_INPUT: sim._experiment_step_indices[0]},
         )
 
         assert decoded == step_solution.termination

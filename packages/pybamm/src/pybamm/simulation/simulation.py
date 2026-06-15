@@ -467,15 +467,9 @@ class Simulation(BaseSimulation):
         return value
 
     def _get_unified_termination_event_names(self, inputs):
-        active_step_index = inputs.get(self._STEP_INDEX_INPUT)
-        if active_step_index is None:
-            return None
-
-        try:
-            active_step_index = int(np.asarray(active_step_index).reshape(-1)[0])
-        except (IndexError, TypeError, ValueError):
-            return None
-
+        active_step_index = inputs[self._STEP_INDEX_INPUT]
+        if isinstance(active_step_index, np.ndarray):
+            active_step_index = active_step_index.item()
         return self._experiment_termination_event_names_by_index.get(active_step_index)
 
     def _get_step_termination_event_candidates(self, step, model, inputs):
@@ -484,6 +478,9 @@ class Simulation(BaseSimulation):
             event = term.get_event(model.variables, step)
             if event is not None:
                 candidates.append((event.name, event, term))
+
+        if not self._experiment_uses_unified_model:
+            return candidates
 
         source_event_names = self._get_unified_termination_event_names(inputs)
         if source_event_names is None or len(source_event_names) != len(candidates):
