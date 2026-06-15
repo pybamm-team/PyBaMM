@@ -2,7 +2,7 @@
 
 ## Features
 
-- The parameter `"Contact resistance [Ohm]"` can now be a function of the volume-averaged cell temperature (in addition to a constant), and works with all thermal options. The accompanying documentation now clarifies that this represents a lumped series resistance rather than a true contact resistance ([BPX#130](https://github.com/FaradayInstitution/BPX/issues/130)); the name is retained to avoid a breaking change. ([#5605](https://github.com/pybamm-team/PyBaMM/pull/5605))
+- The parameter `"Contact resistance [Ohm]"` can now be a function of the volume-averaged cell temperature (in addition to a constant), and works with all thermal options. The accompanying documentation now clarifies that this represents a lumped series resistance rather than a true contact resistance ([BPX#130](https://github.com/FaradayInstitution/BPX/issues/130)); the name is retained to avoid a breaking change. ([#5604](https://github.com/pybamm-team/PyBaMM/pull/5604))
 
 ## Bug fixes
 
