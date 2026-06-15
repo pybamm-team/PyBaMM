@@ -1,17 +1,17 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
-## Bug fixes
-
-- `RegulariseSqrtAndPower` no longer regularises state-independent bases, fixing corrupted small rate constants in exchange-current density functions. ([#5600](https://github.com/pybamm-team/PyBaMM/pull/5600))
-
 ## Breaking changes
 
 - The "voltage as a state" model option now defaults to "true": voltage is solved as an algebraic state, making standard models DAEs. Reading `Voltage [V]` from a solution is now an O(1) state lookup instead of a post-solve expression evaluation (up to 73% faster end-to-end for dense output; 8-24% faster experiment cycling across SPM/SPMe/DFN; up to 48% faster with in-solver `output_variables=["Voltage [V]"]`). The default `IDAKLUSolver`, `CasadiSolver` (all modes), and `JaxSolver(method="BDF")` handle DAEs; ODE-only solvers (`ScipySolver`, `JaxSolver(method="RK45")`) require `{"voltage as a state": "false", "surface form": "false"}` for SPM/SPMe, which remains a supported configuration. Known trade-off: continuous solves of rapidly alternating current profiles (e.g. interpolant drive cycles with more than ~25 current reversals in one solve) can be slower, up to ~2x for SPM in the worst measured case; the legacy configuration above restores previous performance for these workloads. Experiment-driven cycling is unaffected. ([#5573](https://github.com/pybamm-team/PyBaMM/pull/5573))
 
+# [v26.6.1.2](https://github.com/pybamm-team/PyBaMM/tree/v26.6.1.2) - 2026-06-15
+
 ## Bug fixes
 
+- `RegulariseSqrtAndPower` no longer regularises state-independent bases, fixing corrupted small rate constants in exchange-current density functions. ([#5600](https://github.com/pybamm-team/PyBaMM/pull/5600))
 - Fixed `Serialise.load_custom_model` leaving a loaded lithium-ion model's cached `param` built from default options instead of the restored ones, so a model loaded with non-default options (e.g. composite `"particle phases"`) had parameters inconsistent with its options. ([#5599](https://github.com/pybamm-team/PyBaMM/pull/5599))
 - Fixed `BatteryModelOptions` letting two invalid MSMR option sets pass validation and then crash during parameter construction with `invalid literal for int() with base 10: 'none'`; both now raise a clear `OptionError`. The all-or-nothing MSMR check now detects MSMR inside a per-electrode tuple (e.g. `"open-circuit potential": ("MSMR", "single")`), and an MSMR model must set `"number of MSMR reactions"` to a positive integer rather than the default `"none"`. ([#5599](https://github.com/pybamm-team/PyBaMM/pull/5599))
+- Fixed `Serialise.serialise_custom_model` not recording a custom model's discretisation recipe (`geometry`, `var_pts`, `submesh_types`, `spatial_methods`), so a custom model reloaded via the `BaseModel` fallback (when its defining package is unavailable) was no longer discretisable. ([#5609](https://github.com/pybamm-team/PyBaMM/pull/5609))
 
 # [v26.6.1.1](https://github.com/pybamm-team/PyBaMM/tree/v26.6.1.1) - 2026-06-11
 
