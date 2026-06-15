@@ -54,12 +54,13 @@ class Lumped(BaseThermal):
         Q_cool_W = -self.param.h_total * (T_vol_av - T_surf) * self.param.A_cooling
         Q_cool_vol_av = Q_cool_W / V
 
-        # Contact resistance heating Q_cr
+        # Contact (series) resistance heating Q_cr
         if self.options["contact resistance"] == "true":
             I = variables["Current [A]"]
-            Q_cr_W = self.calculate_Q_cr_W(I, self.param.R_contact)
+            R_contact = self.param.R_contact(T_vol_av)
+            Q_cr_W = self.calculate_Q_cr_W(I, R_contact)
             V = self.param.V_cell
-            Q_cr_vol_av = self.calculate_Q_cr_vol_av(I, self.param.R_contact, V)
+            Q_cr_vol_av = self.calculate_Q_cr_vol_av(I, R_contact, V)
         else:
             Q_cr_W = pybamm.Scalar(0)
             Q_cr_vol_av = Q_cr_W

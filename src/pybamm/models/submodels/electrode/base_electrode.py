@@ -107,7 +107,7 @@ class BaseElectrode(pybamm.BaseSubModel):
         phi_s_cp : :class:`pybamm.Symbol`
             The potential in the positive current collector.
         delta_phi_contact : :class:`pybamm.Symbol`
-            The potential difference due to the contact resistance, if any.
+            The voltage drop due to the series ("contact") resistance, if any.
 
         Returns
         -------
@@ -173,7 +173,8 @@ class BaseElectrode(pybamm.BaseSubModel):
             phi_s_cp = pybamm.boundary_value(phi_s_p, "right")
             if self.options["contact resistance"] == "true":
                 I = variables["Current [A]"]
-                delta_phi_contact = I * self.param.R_contact
+                T_vol_av = variables["Volume-averaged cell temperature [K]"]
+                delta_phi_contact = I * self.param.R_contact(T_vol_av)
             else:
                 delta_phi_contact = pybamm.Scalar(0)
             variables.update(

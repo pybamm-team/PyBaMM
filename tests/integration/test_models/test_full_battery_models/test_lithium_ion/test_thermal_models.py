@@ -3,6 +3,7 @@
 # thermal response
 #
 import numpy as np
+import pytest
 
 import pybamm
 
@@ -180,3 +181,44 @@ class TestThermal:
         # with contact resistance is higher than without contact resistance
         # skip the first entry because they are the same due to initial conditions
         np.testing.assert_array_less(avg_cell_temp[1:], avg_cell_temp_cr[1:])
+
+    @pytest.mark.parametrize("thermal", ["isothermal", "lumped", "x-full"])
+    def test_temperature_dependent_contact_resistance(self, thermal):
+        # A temperature-dependent "Contact resistance [Ohm]" should work for all
+        # thermal options and match the constant value at the reference temperature.
+
+        R_ref = 0.05
+
+        def R_contact(T):
+            # equal to R_ref at T_ref = 298.15 K, increasing with temperature
+            return R_ref * (1 + 0.01 * (T - 298.15))
+
+        parameter_values = pybamm.ParameterValues("Marquis2019")
+        options = {"thermal": thermal, "contact resistance": "true"}
+
+        # constant value
+        const_params = parameter_values.copy()
+        const_params.update({"Contact resistance [Ohm]": R_ref})
+        sim_const = pybamm.Simulation(
+            pybamm.lithium_ion.SPMe(options), parameter_values=const_params
+        )
+        sol_const = sim_const.solve([0, 3600])
+
+        # temperature-dependent value
+        fn_params = parameter_values.copy()
+        fn_params.update({"Contact resistance [Ohm]": R_contact})
+        sim_fn = pybamm.Simulation(
+            pybamm.lithium_ion.SPMe(options), parameter_values=fn_params
+        )
+        sol_fn = sim_fn.solve([0, 3600])
+
+        dphi_const = sol_const["Contact overpotential [V]"].entries
+        dphi_fn = sol_fn["Contact overpotential [V]"].entries
+
+        if thermal == "isothermal":
+            # temperature is fixed at the reference, so the two agree
+            np.testing.assert_allclose(dphi_const, dphi_fn, rtol=1e-6)
+        else:
+            # cell heats up above the reference, so R (and hence the contact
+            # overpotential magnitude) is larger than the constant case
+            np.testing.assert_array_less(np.abs(dphi_const[1:]), np.abs(dphi_fn[1:]))
