@@ -37,12 +37,12 @@ class ElectricalParameters(BaseParameters):
 
     def R_contact(self, T):
         """
-        Series resistance [Ohm] as a function of cell temperature ``T`` [K].
+        "Contact resistance [Ohm]" as a function of cell temperature ``T`` [K].
 
-        Despite the legacy name "Contact resistance [Ohm]", this is a lumped
-        series resistance added to the terminal voltage
-        (https://github.com/FaradayInstitution/BPX/issues/130); the name is kept
-        to avoid a breaking rename.
+        Despite the name, this represents the total series resistance of the cell
+        (e.g. contact resistances between layers, and tab, weld and lead
+        resistances), added to the terminal voltage, not only the contact
+        resistance.
         """
         return pybamm.FunctionParameter(
             "Contact resistance [Ohm]", {"Temperature [K]": T}

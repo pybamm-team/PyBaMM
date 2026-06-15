@@ -107,7 +107,8 @@ class BaseElectrode(pybamm.BaseSubModel):
         phi_s_cp : :class:`pybamm.Symbol`
             The potential in the positive current collector.
         delta_phi_contact : :class:`pybamm.Symbol`
-            The voltage drop due to the series ("contact") resistance, if any.
+            The voltage drop due to the "Contact resistance [Ohm]" (really the
+            total series resistance of the cell), if any.
 
         Returns
         -------
