@@ -444,6 +444,60 @@ class TestBaseBatteryModel:
                     "number of MSMR reactions": "1.5",
                 }
             )
+        # MSMR inside a per-electrode tuple must be rejected cleanly, not slip
+        # through to crash later as int('none') in parameter construction.
+        with pytest.raises(pybamm.OptionError, match=r"MSMR"):
+            pybamm.BaseBatteryModel({"open-circuit potential": ("MSMR", "single")})
+        with pytest.raises(pybamm.OptionError, match=r"MSMR"):
+            pybamm.BaseBatteryModel({"particle": ("MSMR", "Fickian diffusion")})
+        # MSMR with the default "none" reaction count must also be rejected cleanly.
+        with pytest.raises(pybamm.OptionError, match=r"MSMR"):
+            pybamm.BaseBatteryModel(
+                {
+                    "open-circuit potential": "MSMR",
+                    "particle": "MSMR",
+                    "intercalation kinetics": "MSMR",
+                }
+            )
+
+    def test_msmr_mixed_electrode_accepted(self):
+        # Verify non-MSMR electrode's "none" reaction count is legitimate
+        options = {
+            "open-circuit potential": ("MSMR", "single"),
+            "particle": ("MSMR", "Fickian diffusion"),
+            "intercalation kinetics": ("MSMR", "symmetric Butler-Volmer"),
+            "number of MSMR reactions": ("3", "none"),
+        }
+        model = pybamm.BaseBatteryModel(options)
+        assert model.options["number of MSMR reactions"] == ("3", "none")
+
+    def test_msmr_half_cell_does_not_validate_counter_electrode(self):
+        # On a half cell the negative electrode is lithium metal, not a porous
+        # MSMR electrode, so a scalar "MSMR" option must not force a reaction
+        # count on it.
+        options = {
+            "working electrode": "positive",
+            "open-circuit potential": "MSMR",
+            "particle": "MSMR",
+            "intercalation kinetics": "MSMR",
+            "number of MSMR reactions": ("none", "6"),
+        }
+        model = pybamm.BaseBatteryModel(options)
+        assert model.options["number of MSMR reactions"] == ("none", "6")
+
+    def test_msmr_half_cell_still_validates_working_electrode(self):
+        # The working electrode is still validated: a "none" count
+        # there must be rejected cleanly rather than slipping through.
+        with pytest.raises(pybamm.OptionError, match=r"positive electrode"):
+            pybamm.BaseBatteryModel(
+                {
+                    "working electrode": "positive",
+                    "open-circuit potential": "MSMR",
+                    "particle": "MSMR",
+                    "intercalation kinetics": "MSMR",
+                    "number of MSMR reactions": ("6", "none"),
+                }
+            )
 
     def test_build_twice(self):
         model = pybamm.lithium_ion.SPM()  # need to pick a model to set vars and build
