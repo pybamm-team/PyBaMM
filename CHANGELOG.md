@@ -3,6 +3,8 @@
 ## Bug fixes
 
 - `RegulariseSqrtAndPower` no longer regularises state-independent bases, fixing corrupted small rate constants in exchange-current density functions. ([#5600](https://github.com/pybamm-team/PyBaMM/pull/5600))
+- Fixed `Serialise.load_custom_model` leaving a loaded lithium-ion model's cached `param` built from default options instead of the restored ones, so a model loaded with non-default options (e.g. composite `"particle phases"`) had parameters inconsistent with its options. ([#5599](https://github.com/pybamm-team/PyBaMM/pull/5599))
+- Fixed `BatteryModelOptions` letting two invalid MSMR option sets pass validation and then crash during parameter construction with `invalid literal for int() with base 10: 'none'`; both now raise a clear `OptionError`. The all-or-nothing MSMR check now detects MSMR inside a per-electrode tuple (e.g. `"open-circuit potential": ("MSMR", "single")`), and an MSMR model must set `"number of MSMR reactions"` to a positive integer rather than the default `"none"`. ([#5599](https://github.com/pybamm-team/PyBaMM/pull/5599))
 
 # [v26.6.1.1](https://github.com/pybamm-team/PyBaMM/tree/v26.6.1.1) - 2026-06-11
 
