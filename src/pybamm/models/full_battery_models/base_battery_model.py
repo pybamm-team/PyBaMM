@@ -660,9 +660,13 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "'intercalation kinetics' is 'MSMR' then all of them must be 'MSMR'"
             )
 
-        # Validate per electrode so a mixed cell
-        # (MSMR in one electrode, conventional in the other) is accepted.
-        for domain, index in [("negative", 0), ("positive", 1)]:
+        # Validate per electrode so a mixed full cell (MSMR in one electrode,
+        # conventional in the other) is accepted.
+        if options["working electrode"] == "both":
+            electrode_domains = [("negative", 0), ("positive", 1)]
+        else:
+            electrode_domains = [("positive", 1)]
+        for domain, index in electrode_domains:
             domain_uses_msmr = any(
                 _per_electrode(options[opt], index) == "MSMR"
                 for opt in [
