@@ -470,7 +470,7 @@ class Simulation(BaseSimulation):
         active_step_index = inputs[self._STEP_INDEX_INPUT]
         if isinstance(active_step_index, np.ndarray):
             active_step_index = active_step_index.item()
-        return self._experiment_termination_event_names_by_index.get(active_step_index)
+        return self._experiment_termination_event_names_by_index[active_step_index]
 
     def _get_step_termination_event_candidates(self, step, model, inputs):
         candidates = []
@@ -483,9 +483,6 @@ class Simulation(BaseSimulation):
             return candidates
 
         source_event_names = self._get_unified_termination_event_names(inputs)
-        if source_event_names is None or len(source_event_names) != len(candidates):
-            return candidates
-
         # Prefer the names recorded when the unified branch was built; the events
         # below are reconstructed only to evaluate which source termination crossed.
         return [

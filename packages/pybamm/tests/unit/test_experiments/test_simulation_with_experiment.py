@@ -2240,6 +2240,28 @@ class TestSimulationExperiment:
 
         assert decoded == "event: Negative stoichiometry cut-off [experiment]"
 
+    def test_step_termination_event_candidates_legacy_use_reconstructed_events(self):
+        experiment = pybamm.Experiment(
+            [pybamm.step.current(1, duration=3600, termination=["2.5V", "0.05A"])]
+        )
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            experiment=experiment,
+            experiment_model_mode="legacy",
+        )
+        sim.build_for_experiment()
+        step = sim.experiment.steps[0]
+        model = sim.steps_to_built_models[step.basic_repr()]
+
+        candidates = sim._get_step_termination_event_candidates(step, model, {})
+
+        expected = [
+            "Voltage < 2.5 [V] [experiment]",
+            "abs(Current [A]) < 0.05 [A] [experiment]",
+        ]
+        assert [name for name, _event, _term in candidates] == expected
+        assert [event.name for _name, event, _term in candidates] == expected
+
     def test_decode_combined_step_termination_returns_original_when_no_events_match(
         self,
     ):
