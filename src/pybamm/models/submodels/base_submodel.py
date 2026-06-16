@@ -112,17 +112,13 @@ class BaseSubModel(pybamm.BaseModel):
 
     @domain.setter
     def domain(self, domain):
+        """
+        Sets the domain for the submodel.
+        For general submodels, no restrictions are applied.
+        """
+        self._domain = domain
         if domain is not None:
-            domain = domain.lower()
-        ok_domain_list = ["negative", "separator", "positive", None]
-        if domain in ok_domain_list:
-            self._domain = domain
-            if domain is not None:
-                self._Domain = domain.capitalize()
-        else:
-            raise pybamm.DomainError(
-                f"Domain '{domain}' not recognised (must be one of {ok_domain_list})"
-            )
+            self._Domain = str(domain).capitalize()
 
     @property
     def domain_Domain(self):
