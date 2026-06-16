@@ -18,6 +18,12 @@ def _interpolant_func(var, name, x, y):
     return pybamm.Interpolant(x, y, var, name=name, interpolator="linear")
 
 
+def _table_to_interpolant(value):
+    """Wrap a ``(name, (x, y))`` FloatFunctionTable placeholder in an interpolant."""
+    name, (x, y) = value
+    return partial(_interpolant_func, name=name, x=x, y=y)
+
+
 preamble = "from pybamm import exp, tanh, cosh\n\n"
 
 
@@ -105,6 +111,14 @@ def _get_phase_names(domain):
             "PyBaMM does not support more than two "
             "particle phases in blended electrodes"
         )
+
+
+def _get_particle_phases_option(bpx: BPX) -> tuple[str, str]:
+    """Return the (negative, positive) 'particle phases' model option for a BPX."""
+    return (
+        str(len(_get_phase_names(bpx.parameterisation.negative_electrode))),
+        str(len(_get_phase_names(bpx.parameterisation.positive_electrode))),
+    )
 
 
 def bpx_to_param_dict(bpx: BPX) -> dict:
@@ -308,20 +322,6 @@ def bpx_to_param_dict(bpx: BPX) -> dict:
                 ]
             ) / 3.0
 
-            # ocp
-            U = pybamm_dict[phase_domain_pre_name + "OCP [V]"]
-            if isinstance(U, tuple):
-                pybamm_dict[phase_domain_pre_name + "OCP [V]"] = partial(
-                    _interpolant_func, name=U[0], x=U[1][0], y=U[1][1]
-                )
-
-            # entropic change
-            dUdT = pybamm_dict[phase_domain_pre_name + "OCP entropic change [V.K-1]"]
-            if isinstance(dUdT, tuple):
-                pybamm_dict[phase_domain_pre_name + "OCP entropic change [V.K-1]"] = (
-                    partial(_interpolant_func, name=dUdT[0], x=dUdT[1][0], y=dUdT[1][1])
-                )
-
             # reaction rate
             c_max = pybamm_dict[
                 phase_pre_name
@@ -364,11 +364,7 @@ def bpx_to_param_dict(bpx: BPX) -> dict:
                 )
             elif isinstance(D_ref, tuple):
                 pybamm_dict[phase_domain_pre_name + "diffusivity [m2.s-1]"] = partial(
-                    _diffusivity,
-                    D_ref=partial(
-                        _interpolant_func, name=D_ref[0], x=D_ref[1][0], y=D_ref[1][1]
-                    ),
-                    Ea=Ea_D,
+                    _diffusivity, D_ref=_table_to_interpolant(D_ref), Ea=Ea_D
                 )
             else:
                 pybamm_dict[phase_domain_pre_name + "diffusivity [m2.s-1]"] = partial(
@@ -390,11 +386,7 @@ def bpx_to_param_dict(bpx: BPX) -> dict:
         )
     elif isinstance(D_e_ref, tuple):
         pybamm_dict[electrolyte.pre_name + "diffusivity [m2.s-1]"] = partial(
-            _diffusivity,
-            D_ref=partial(
-                _interpolant_func, name=D_e_ref[0], x=D_e_ref[1][0], y=D_e_ref[1][1]
-            ),
-            Ea=Ea_D_e,
+            _diffusivity, D_ref=_table_to_interpolant(D_e_ref), Ea=Ea_D_e
         )
     else:
         pybamm_dict[electrolyte.pre_name + "diffusivity [m2.s-1]"] = partial(
@@ -416,14 +408,7 @@ def bpx_to_param_dict(bpx: BPX) -> dict:
         )
     elif isinstance(sigma_e_ref, tuple):
         pybamm_dict[electrolyte.pre_name + "conductivity [S.m-1]"] = partial(
-            _conductivity,
-            sigma_ref=partial(
-                _interpolant_func,
-                name=sigma_e_ref[0],
-                x=sigma_e_ref[1][0],
-                y=sigma_e_ref[1][1],
-            ),
-            Ea=Ea_sigma_e,
+            _conductivity, sigma_ref=_table_to_interpolant(sigma_e_ref), Ea=Ea_sigma_e
         )
     else:
         pybamm_dict[electrolyte.pre_name + "conductivity [S.m-1]"] = partial(
@@ -437,12 +422,16 @@ def bpx_to_param_dict(bpx: BPX) -> dict:
             value = process_float_function_table(value, name)
             if callable(value):
                 pybamm_dict[name] = partial(_callable_func, fun=value)
-            elif isinstance(value, tuple):
-                pybamm_dict[name] = partial(
-                    _interpolant_func, name=value[0], x=value[1][0], y=value[1][1]
-                )
             else:
                 pybamm_dict[name] = value
+
+    # The only tuples left in the dict are (name, (x, y)) interpolant placeholders
+    # from process_float_function_table (OCP, entropic change, hysteresis branches);
+    # temperature-dependent params are already wrapped into partials above. Convert
+    # them generically so new 1:1 table params need no hand-maintained list.
+    for key, value in pybamm_dict.items():
+        if isinstance(value, tuple):
+            pybamm_dict[key] = _table_to_interpolant(value)
     return pybamm_dict
 
 

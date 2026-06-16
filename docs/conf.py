@@ -95,6 +95,8 @@ linkcheck_ignore = [
     "https://docs.scipy.org/doc/scipy",  # SciPy docs timeout intermittently
     "https://chemrxiv.org",  # ChemRxiv blocks automated link checking
     "https://pubs.acs.org",  # ACS blocks automated link checking
+    "https://doi.org/10.1021/acsaem.2c02047",  # ACS DOI 403s automated checkers
+    "https://realpython.com",  # Real Python (Cloudflare) blocks automated link checking
 ]
 
 # GitHub prefixes Markdown heading anchors with "user-content-" in the rendered

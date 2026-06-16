@@ -534,6 +534,15 @@ class Serialise:
             },
         }
 
+        # Capture the discretisation recipe (geometry / var_pts / submesh /
+        # spatial methods). These live on subclass ``default_*`` properties and
+        # are otherwise lost when the model is reloaded in an environment where
+        # the defining package can't be imported (the base-class fallback yields
+        # empty defaults), leaving the model undiscretisable.
+        discretisation = Serialise._serialise_discretisation(model)
+        if discretisation:
+            model_content["discretisation"] = discretisation
+
         SCHEMA_VERSION = "1.1"
         model_json = {
             "schema_version": SCHEMA_VERSION,
@@ -629,6 +638,35 @@ class Serialise:
             raise ValueError(f"Failed to save custom model: {e}") from e
 
     @staticmethod
+    def _encode_geometry_value(value):
+        """Recursively convert any :class:`pybamm.Symbol` in a geometry value to
+        its JSON form, descending through nested dicts/lists.
+
+        Geometry limits can nest symbols arbitrarily deep (e.g. current-collector
+        ``tabs -> negative -> z_centre`` is a :class:`pybamm.Parameter`), which a
+        single-level pass leaves as raw, non-JSON-serialisable objects.
+        """
+        if isinstance(value, pybamm.Symbol):
+            return convert_symbol_to_json(value)
+        if isinstance(value, dict):
+            return {k: Serialise._encode_geometry_value(v) for k, v in value.items()}
+        if isinstance(value, (list, tuple)):
+            return [Serialise._encode_geometry_value(v) for v in value]
+        return value
+
+    @staticmethod
+    def _decode_geometry_value(value):
+        """Inverse of :meth:`_encode_geometry_value`: rebuild :class:`pybamm.Symbol`
+        objects from their JSON form at any nesting depth."""
+        if isinstance(value, dict):
+            if "$type" in value or "type" in value:
+                return convert_symbol_from_json(value)
+            return {k: Serialise._decode_geometry_value(v) for k, v in value.items()}
+        if isinstance(value, list):
+            return [Serialise._decode_geometry_value(v) for v in value]
+        return value
+
+    @staticmethod
     def serialise_custom_geometry(geometry: pybamm.Geometry) -> dict:
         """
         Converts a custom PyBaMM geometry to a JSON-serialisable dictionary.
@@ -654,26 +692,15 @@ class Serialise:
                     geometry_dict_serialized[domain]["symbol_" + key_str] = (
                         convert_symbol_to_json(key)
                     )
-                    # Serialize the value dict
-                    serialized_value = {}
-                    for k, v in value.items():
-                        if isinstance(v, pybamm.Symbol):
-                            serialized_value[k] = convert_symbol_to_json(v)
-                        else:
-                            serialized_value[k] = v
-                    geometry_dict_serialized[domain][key_str] = serialized_value
+                    geometry_dict_serialized[domain][key_str] = (
+                        Serialise._encode_geometry_value(value)
+                    )
                 elif isinstance(key, str):
-                    # String keys (like 'tabs') - keep as is
-                    if isinstance(value, dict):
-                        serialized_value = {}
-                        for k, v in value.items():
-                            if isinstance(v, pybamm.Symbol):
-                                serialized_value[k] = convert_symbol_to_json(v)
-                            else:
-                                serialized_value[k] = v
-                        geometry_dict_serialized[domain][key] = serialized_value
-                    else:
-                        geometry_dict_serialized[domain][key] = value
+                    # String keys (like 'tabs'), whose values may nest Symbols
+                    # arbitrarily deep (e.g. tabs -> negative -> z_centre).
+                    geometry_dict_serialized[domain][key] = (
+                        Serialise._encode_geometry_value(value)
+                    )
 
         SCHEMA_VERSION = "1.1"
         geometry_json = {
@@ -794,28 +821,70 @@ class Serialise:
                 if key in symbol_keys:
                     # Use the reconstructed SpatialVariable as key
                     spatial_var = symbol_keys[key]
-                    reconstructed_value = {}
-                    for k, v in value.items():
-                        if isinstance(v, dict) and ("$type" in v or "type" in v):
-                            # Reconstruct PyBaMM Symbol using convert_symbol_from_json
-                            reconstructed_value[k] = convert_symbol_from_json(v)
-                        else:
-                            reconstructed_value[k] = v
-                    reconstructed_geometry[domain][spatial_var] = reconstructed_value
+                    reconstructed_geometry[domain][spatial_var] = (
+                        Serialise._decode_geometry_value(value)
+                    )
                 else:
-                    # String key (like 'tabs')
-                    if isinstance(value, dict):
-                        reconstructed_value = {}
-                        for k, v in value.items():
-                            if isinstance(v, dict) and ("$type" in v or "type" in v):
-                                reconstructed_value[k] = convert_symbol_from_json(v)
-                            else:
-                                reconstructed_value[k] = v
-                        reconstructed_geometry[domain][key] = reconstructed_value
-                    else:
-                        reconstructed_geometry[domain][key] = value
+                    # String key (like 'tabs'), values may nest Symbols deep
+                    reconstructed_geometry[domain][key] = (
+                        Serialise._decode_geometry_value(value)
+                    )
 
         return pybamm.Geometry(reconstructed_geometry)
+
+    @staticmethod
+    def _serialise_discretisation(model) -> dict:
+        """Serialise a model's discretisation recipe (geometry, var_pts, submesh
+        types, spatial methods) into a JSON-serialisable dict.
+
+        Returns an empty dict when the model exposes no discretisation defaults
+        (e.g. a plain ``pybamm.BaseModel``), so models without custom defaults
+        round-trip exactly as before.
+        """
+        out: dict = {}
+        geometry = getattr(model, "default_geometry", None) or {}
+        if geometry:
+            out["geometry"] = Serialise.serialise_custom_geometry(
+                pybamm.Geometry(geometry)
+            )
+        var_pts = getattr(model, "default_var_pts", None) or {}
+        if var_pts:
+            out["var_pts"] = Serialise.serialise_var_pts(var_pts)
+        submesh_types = getattr(model, "default_submesh_types", None) or {}
+        if submesh_types:
+            out["submesh_types"] = Serialise.serialise_submesh_types(submesh_types)
+        spatial_methods = getattr(model, "default_spatial_methods", None) or {}
+        if spatial_methods:
+            out["spatial_methods"] = Serialise.serialise_spatial_methods(
+                spatial_methods
+            )
+        return out
+
+    @staticmethod
+    def _restore_discretisation(model, discretisation: dict | None) -> None:
+        """Restore a discretisation recipe (from :meth:`_serialise_discretisation`)
+        onto ``model``, so its ``default_*`` properties return the saved values
+        even when the defining subclass could not be imported on load.
+
+        No-op when ``discretisation`` is falsy (older payloads or models without
+        custom discretisation defaults).
+        """
+        if not discretisation:
+            return
+        if "geometry" in discretisation:
+            model._default_geometry = dict(
+                Serialise.load_custom_geometry(discretisation["geometry"])
+            )
+        if "var_pts" in discretisation:
+            model._default_var_pts = Serialise.load_var_pts(discretisation["var_pts"])
+        if "submesh_types" in discretisation:
+            model._default_submesh_types = Serialise.load_submesh_types(
+                discretisation["submesh_types"]
+            )
+        if "spatial_methods" in discretisation:
+            model._default_spatial_methods = Serialise.load_spatial_methods(
+                discretisation["spatial_methods"]
+            )
 
     @staticmethod
     def serialise_spatial_method_item(method) -> dict:
@@ -1493,6 +1562,10 @@ class Serialise:
 
         # Restore observable state
         model._solution_observable = False
+
+        # Restore the discretisation recipe onto the (possibly fallback) model so
+        # it stays discretisable even when the defining subclass wasn't importable.
+        Serialise._restore_discretisation(model, model_data.get("discretisation"))
 
         return model
 
