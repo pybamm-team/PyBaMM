@@ -24,6 +24,29 @@ class Full(BaseElectrolyteDiffusion):
     def __init__(self, param, options=None):
         super().__init__(param, options)
 
+    def _get_standard_whole_cell_concentration_variables(self, c_e):
+        if self.options["surface form"] == "false":
+            return super()._get_standard_whole_cell_concentration_variables(c_e)
+
+        c_e.print_name = "c_e"
+        c_e_av = pybamm.Variable(
+            "X-averaged electrolyte concentration [mol.m-3]",
+            domain="current collector",
+            bounds=(0, np.inf),
+            scale=self.param.c_e_init_av,
+        )
+        variables = {
+            "Electrolyte concentration [mol.m-3]": c_e,
+            "X-averaged electrolyte concentration [mol.m-3]": c_e_av,
+        }
+        nondim = {
+            name.replace("[mol.m-3]", "[Molar]"): var / 1000
+            for name, var in variables.items()
+        }
+        variables.update(nondim)
+
+        return variables
+
     def get_fundamental_variables(self):
         eps_c_e_dict = {}
         for domain in self.options.whole_cell_domains:
@@ -98,12 +121,24 @@ class Full(BaseElectrolyteDiffusion):
 
         self.rhs = {eps_c_e: -pybamm.div(N_e) + source_terms - c_e * div_Vbox}
 
+    def set_algebraic(self, variables):
+        if self.options["surface form"] == "false":
+            return
+        c_e_av = variables["X-averaged electrolyte concentration [mol.m-3]"]
+        c_e = variables["Electrolyte concentration [mol.m-3]"]
+        c_e_av_expr = pybamm.x_average(c_e)
+        self.algebraic = {c_e_av: (c_e_av - c_e_av_expr) / self.param.c_e_init_av}
+
     def set_initial_conditions(self, variables):
         eps_c_e = variables["Porosity times concentration [mol.m-3]"]
 
         self.initial_conditions = {
             eps_c_e: self.param.epsilon_init * self.param.c_e_init
         }
+
+        if self.options["surface form"] != "false":
+            c_e_av = variables["X-averaged electrolyte concentration [mol.m-3]"]
+            self.initial_conditions[c_e_av] = self.param.c_e_init
 
     def set_boundary_conditions(self, variables):
         c_e = variables["Electrolyte concentration [mol.m-3]"]
