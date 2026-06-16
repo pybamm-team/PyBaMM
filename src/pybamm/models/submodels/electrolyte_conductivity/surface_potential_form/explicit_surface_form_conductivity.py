@@ -33,6 +33,12 @@ class Explicit(BaseElectrolyteConductivity):
         phi_s = variables[f"{Domain} electrode potential [V]"]
         phi_e = variables[f"{Domain} electrolyte potential [V]"]
         delta_phi = phi_s - phi_e
+
+        pybamm.logger.debug(
+            f"Explicit surface form ({self.domain}): "
+            f"phi_s={phi_s}, phi_e={phi_e}, delta_phi={delta_phi}"
+        )
+
         variables.update(
             self._get_standard_surface_potential_difference_variables(delta_phi)
         )
