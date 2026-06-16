@@ -162,6 +162,54 @@ class TestScikitFiniteElement:
         ans = eqn_disc.evaluate(None, 3 * y**2)
         np.testing.assert_array_less(0, ans)
 
+    def test_gradient_squared(self):
+        mesh = get_unit_2p1D_mesh_for_testing(ypts=32, zpts=32, include_particles=False)
+        spatial_methods = {
+            "macroscale": pybamm.FiniteVolume(),
+            "current collector": pybamm.ScikitFiniteElement(),
+        }
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        var = pybamm.Variable("var", domain="current collector")
+        disc.set_variable_slices([var])
+
+        y = mesh["current collector"].coordinates[0, :]
+        z = mesh["current collector"].coordinates[1, :]
+
+        gradient = pybamm.grad(var)
+        grad_disc = disc.process_symbol(gradient)
+        grad_disc_y, grad_disc_z = grad_disc.children
+
+        gradient_squared = pybamm.grad_squared(var)
+        gradient_squared_disc = disc.process_symbol(gradient_squared)
+
+        inner_product_y = grad_disc_y.evaluate(None, 5 * y + 6 * z)
+        inner_product_z = grad_disc_z.evaluate(None, 5 * y + 6 * z)
+        inner_product = inner_product_y**2 + inner_product_z**2
+
+        grad_squared_result = gradient_squared_disc.evaluate(None, 5 * y + 6 * z)
+        np.testing.assert_array_almost_equal(grad_squared_result, inner_product)
+        np.testing.assert_array_less(0, grad_squared_result)
+
+        gradient_squared_disc_dirichlet = disc.process_symbol(gradient_squared)
+        grad_squared_result_dirichlet = gradient_squared_disc_dirichlet.evaluate(
+            None, 5 * y + 6 * z
+        )
+
+        np.testing.assert_array_almost_equal(
+            grad_squared_result_dirichlet, inner_product
+        )
+        np.testing.assert_array_less(0, grad_squared_result_dirichlet)
+
+        gradient_squared_disc_neumann = disc.process_symbol(gradient_squared)
+        grad_squared_result_neumann = gradient_squared_disc_neumann.evaluate(
+            None, 5 * y + 6 * z
+        )
+
+        np.testing.assert_array_almost_equal(grad_squared_result_neumann, inner_product)
+
+        np.testing.assert_array_less(0, grad_squared_result_neumann)
+
     def test_manufactured_solution(self):
         mesh = get_unit_2p1D_mesh_for_testing(ypts=32, zpts=32, include_particles=False)
         spatial_methods = {
