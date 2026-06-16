@@ -564,6 +564,12 @@ class TestBPX:
         for electrode in ("Negative", "Positive"):
             assert f"{electrode} electrode lithiation OCP [V]" in param
             assert f"{electrode} electrode delithiation OCP [V]" in param
+            # interpolated-table OCP branches must be converted to usable
+            # expression-tree builders, not left as raw (name, (x, y)) tuples
+            for branch in ("lithiation", "delithiation"):
+                U = param[f"{electrode} electrode {branch} OCP [V]"]
+                assert not isinstance(U, tuple)
+                assert callable(U)
             assert f"{electrode} particle lithiation hysteresis decay rate" in param
             assert f"{electrode} particle delithiation hysteresis decay rate" in param
             assert f"{electrode} electrode OCP (lithiation) [V]" not in param
