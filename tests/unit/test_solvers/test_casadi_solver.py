@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 import pytest
 
@@ -187,7 +189,12 @@ class TestCasadiSolver:
             solver=pybamm.CasadiSolver(mode="fast"),
         )
 
-        with pytest.raises(pybamm.SolverError, match=r"IDA_CONV_FAIL"):
+        # the integrator failure message carries a hint for DAE models solved
+        # without algebraic IC perturbation
+        with pytest.raises(
+            pybamm.SolverError,
+            match=r"(?s)IDA_CONV_FAIL.*perturb_algebraic_initial_conditions",
+        ):
             sim.solve()
 
     def test_model_solver_events(self):
@@ -653,6 +660,16 @@ class TestCasadiSolver:
             match=f"Explicit interpolation times not implemented for {solver.name}",
         ):
             solver.solve(model, t_eval, t_interp=t_interp)
+
+    def test_casadi_fast_solves_dae_without_warning(self):
+        """CasadiSolver(mode='fast') solves the default DAE model silently;
+        integrator failures carry an actionable hint (see test_solver_error)."""
+        model = pybamm.lithium_ion.SPM()
+        sim = pybamm.Simulation(model, solver=pybamm.CasadiSolver(mode="fast"))
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", pybamm.SolverWarning)
+            sol = sim.solve([0, 3600])
+        assert sol.termination == "final time"
 
     def test_discontinuous_current(self):
         def car_current(t):

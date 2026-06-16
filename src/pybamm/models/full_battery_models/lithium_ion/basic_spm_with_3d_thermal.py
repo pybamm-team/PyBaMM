@@ -241,6 +241,7 @@ class Basic3DThermalSPM(BaseModel):
                 phi_s_p, "positive electrode"
             ),
             "Voltage [V]": V,
+            "Voltage expression [V]": V,
             "Battery voltage [V]": V * num_cells,
         }
 

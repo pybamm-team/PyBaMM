@@ -147,27 +147,49 @@ class Conditional(pybamm.Symbol):
         )
 
     def _to_casadi(self, t, y, y_dot, inputs, casadi_symbols):
-        """See :meth:`pybamm.Symbol._to_casadi()`."""
-        converted_selector = self.selector._to_casadi_inner(
-            t, y, y_dot, inputs, casadi_symbols
-        )
-        first_branch = self.branches[0]._to_casadi_inner(
-            t, y, y_dot, inputs, casadi_symbols
-        )
-        result = casadi.MX.zeros(*first_branch.shape)
-        for branch_index in range(len(self.branches), 0, -1):
-            if branch_index == 1:
-                converted_branch = first_branch
-            else:
-                converted_branch = self.branches[branch_index - 1]._to_casadi_inner(
-                    t, y, y_dot, inputs, casadi_symbols
-                )
-            condition = casadi.logic_and(
-                converted_selector > (branch_index - 0.5),
-                converted_selector < (branch_index + 0.5),
+        """See :meth:`pybamm.Symbol._to_casadi()`.
+
+        Dispatch to per-branch Functions via a Switch (``casadi.Function.conditional``)
+        so only the active branch runs.
+
+        A Switch requires every branch (and the default) to share one output
+        sparsity. We use the *union* of the branch sparsities rather than a dense
+        fill: for a scalar control residual this is identical, but when this node
+        carries matrix-valued branch jacobians (the symbolic-jacobian path,
+        ``Conditional._jac``) the union keeps the jacobian sparse instead of
+        full-bandwidth.
+        """
+        selector = self.selector._to_casadi_inner(t, y, y_dot, inputs, casadi_symbols)
+        shared = [s for s in (t, y, y_dot) if s is not None] + list(inputs.values())
+        converted_branches = [
+            branch._to_casadi_inner(t, y, y_dot, inputs, casadi_symbols)
+            for branch in self.branches
+        ]
+        union = converted_branches[0].sparsity()
+        for converted in converted_branches[1:]:
+            union = union.unite(converted.sparsity())
+        branch_functions = [
+            casadi.Function(
+                f"cond_branch_{index}", shared, [casadi.project(converted, union)]
             )
-            result = casadi.if_else(condition, converted_branch, result)
-        return result
+            for index, converted in enumerate(converted_branches)
+        ]
+        # No branch matches -> zeros in the shared (union) sparsity.
+        default_function = casadi.Function(
+            "cond_default",
+            shared,
+            [casadi.project(casadi.MX.zeros(union.size1(), union.size2()), union)],
+        )
+        switch = casadi.Function.conditional(
+            "cond_switch", branch_functions, default_function
+        )
+        # pybamm 1-based round-to-nearest windows -> casadi 0-based truncating Switch:
+        # floor(s+0.5)-1, eq() guard sends half-integer boundaries to -1 (the default).
+        shifted = selector + 0.5
+        floored = casadi.floor(shifted)
+        on_boundary = casadi.eq(floored, shifted)
+        index = casadi.if_else(on_boundary, -1, floored - 1)
+        return switch(index, *shared)
 
     def to_equation(self):
         if self.print_name is not None:

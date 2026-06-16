@@ -56,15 +56,11 @@ class Parameter(pybamm.Symbol):
             return sympy.Symbol(self.name)
 
     def to_json(self):
-        raise NotImplementedError(
-            "pybamm.Parameter: Serialisation is only implemented for discretised models"
-        )
+        return {"name": self.name, "domains": self.domains}
 
     @classmethod
     def _from_json(cls, snippet):
-        raise NotImplementedError(
-            "pybamm.Parameter: Please use a discretised model when reading in from JSON"
-        )
+        return cls(snippet["name"])
 
 
 class FunctionParameter(pybamm.Symbol):
@@ -236,15 +232,49 @@ class FunctionParameter(pybamm.Symbol):
         else:
             return sympy.Symbol(self.name)
 
+    # inputs -> children + input_names; diff_variable -> a trailing child (flagged
+    # by has_diff_variable); post_processor is a non-serialisable transient callable.
+    _serialise_derived_params = frozenset({"inputs", "diff_variable", "post_processor"})
+
     def to_json(self):
-        raise NotImplementedError(
-            "pybamm.FunctionParameter:"
-            "Serialisation is only implemented for discretised models."
-        )
+        children = list(self.children)
+        if self.diff_variable is not None:
+            children = [*children, self.diff_variable]
+        return {
+            "name": self.name,
+            "domains": self.domains,
+            "input_names": list(self.input_names),
+            "print_name": self.print_name,
+            "has_diff_variable": self.diff_variable is not None,
+            "children": children,
+        }
 
     @classmethod
     def _from_json(cls, snippet):
-        raise NotImplementedError(
-            "pybamm.FunctionParameter:"
-            "Please use a discretised model when reading in from JSON."
+        if "input_names" in snippet:
+            # Kernel-era shape: inputs carried as children keyed by input_names;
+            # diff_variable is the trailing child when present.
+            names = snippet["input_names"]
+            children = snippet["children"]
+            inputs = {names[i]: children[i] for i in range(len(names))}
+            n = len(names)
+            diff_variable = children[n] if snippet["has_diff_variable"] else None
+            print_name = snippet["print_name"]
+        else:
+            # Legacy compact shape: inputs is a name->node dict and diff_variable a
+            # node (or None), both undecoded since they are not in "children".
+            from pybamm.expression_tree.operations.serialise_kernel import decode
+
+            inputs = {k: decode(v) for k, v in snippet["inputs"].items()}
+            diff_variable = snippet.get("diff_variable")
+            if diff_variable is not None:
+                diff_variable = decode(diff_variable)
+            # Legacy reused the parameter name as print_name to avoid leaking the
+            # serialiser frame name into displays.
+            print_name = snippet["name"]
+        return cls(
+            snippet["name"],
+            inputs,
+            diff_variable=diff_variable,
+            print_name=print_name,
         )

@@ -1,0 +1,127 @@
+{
+  "addition_broadcast_time": {
+    "type": "PrimaryBroadcast",
+    "children": [
+      {
+        "type": "Addition",
+        "domains": {
+          "primary": [],
+          "secondary": [],
+          "tertiary": [],
+          "quaternary": []
+        },
+        "children": [
+          {
+            "type": "Scalar",
+            "value": 2.0
+          },
+          {
+            "type": "Time"
+          }
+        ],
+        "name": "+"
+      }
+    ],
+    "broadcast_domain": [
+      "negative electrode"
+    ]
+  },
+  "negate_generic_fallback": {
+    "type": "Negate",
+    "domains": {
+      "primary": [
+        "negative electrode"
+      ],
+      "secondary": [],
+      "tertiary": [],
+      "quaternary": []
+    },
+    "children": [
+      {
+        "type": "Variable",
+        "name": "u",
+        "domains": {
+          "primary": [
+            "negative electrode"
+          ],
+          "secondary": [],
+          "tertiary": [],
+          "quaternary": []
+        },
+        "bounds": null
+      }
+    ],
+    "name": "-"
+  },
+  "interpolant_entries_string": {
+    "type": "Interpolant",
+    "x": [
+      [
+        0.0,
+        0.3333333333333333,
+        0.6666666666666666,
+        1.0
+      ]
+    ],
+    "y": [
+      0.0,
+      1.0,
+      0.5,
+      0.2
+    ],
+    "children": [
+      {
+        "type": "Variable",
+        "name": "a",
+        "domains": {
+          "primary": [],
+          "secondary": [],
+          "tertiary": [],
+          "quaternary": []
+        },
+        "bounds": null
+      }
+    ],
+    "name": "interpolating_function",
+    "interpolator": "linear",
+    "entries_string": "x0_b'\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00UUUUUU\\xd5?UUUUUU\\xe5?\\x00\\x00\\x00\\x00\\x00\\x00\\xf0?'y_b'\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\xf0?\\x00\\x00\\x00\\x00\\x00\\x00\\xe0?\\x9a\\x99\\x99\\x99\\x99\\x99\\xc9?'"
+  },
+  "variable_with_bounds": {
+    "type": "Variable",
+    "name": "v",
+    "domains": {
+      "primary": [],
+      "secondary": [],
+      "tertiary": [],
+      "quaternary": []
+    },
+    "bounds": [
+      {
+        "type": "Scalar",
+        "value": 0.0
+      },
+      {
+        "type": "Scalar",
+        "value": 5.0
+      }
+    ]
+  },
+  "function_parameter": {
+    "type": "FunctionParameter",
+    "inputs": {
+      "T": {
+        "type": "Variable",
+        "name": "T",
+        "domains": {
+          "primary": [],
+          "secondary": [],
+          "tertiary": [],
+          "quaternary": []
+        },
+        "bounds": null
+      }
+    },
+    "diff_variable": null,
+    "name": "k"
+  }
+}

@@ -39,6 +39,9 @@ class Array(pybamm.Symbol):
         String representing the entries (slow to recalculate when copying)
     """
 
+    # entries_string is a derived hash cache of entries, which to_json emits.
+    _serialise_derived_params = frozenset({"entries_string"})
+
     def __init__(
         self,
         entries: npt.NDArray | list[float] | csr_matrix,
@@ -184,7 +187,6 @@ class Array(pybamm.Symbol):
 
         json_dict = {
             "name": self.name,
-            "id": self.id,
             "domains": self.domains,
             "entries": matrix,
         }

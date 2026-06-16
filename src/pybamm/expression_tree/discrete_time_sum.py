@@ -28,6 +28,22 @@ class DiscreteTimeData(pybamm.Interpolant):
     ):
         super().__init__(time_points, data, pybamm.t, name)
 
+    def to_json(self):
+        return {
+            "name": self.name,
+            "domains": self.domains,
+            "time_points": self.x[0].tolist(),
+            "data": self.y.tolist(),
+        }
+
+    @classmethod
+    def _from_json(cls, snippet):
+        return cls(
+            np.array(snippet["time_points"]),
+            np.array(snippet["data"]),
+            snippet["name"],
+        )
+
     def create_copy(self, new_children=None, perform_simplifications=True):
         """See :meth:`pybamm.Symbol.new_copy()`."""
         return pybamm.DiscreteTimeData(self.x[0], self.y, self.name)
@@ -80,6 +96,12 @@ class DiscreteTimeSum(pybamm.UnaryOperator):
                 "DiscreteTimeSum must contain a DiscreteTimeData node"
             )
         super().__init__("discrete time sum", child)
+
+    @classmethod
+    def _from_json(cls, snippet):
+        # Route through __init__ so self.data is re-derived from the child;
+        # the inherited UnaryOperator._from_json uses __new__ and would skip it.
+        return cls(snippet["children"][0])
 
     @property
     def sum_values(self):

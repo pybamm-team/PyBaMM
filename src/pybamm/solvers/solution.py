@@ -256,10 +256,12 @@ class Solution(SolutionBase):
         variables_returned=False,
         check_solution=True,
         options=None,
+        _validate_time_structure=True,
     ):
         if not isinstance(all_ts, list):
             all_ts = [all_ts]
-        self._ensure_sorted_t(all_ts, "all_ts")
+        if _validate_time_structure:
+            self._ensure_sorted_t(all_ts, "all_ts")
         if not isinstance(all_ys, list):
             all_ys = [all_ys]
         if not isinstance(all_models, list):
@@ -278,14 +280,14 @@ class Solution(SolutionBase):
         else:
             if not isinstance(all_t_evals, list):
                 all_t_evals = [all_t_evals]
-            self._ensure_t_evals(all_ts=all_ts, all_t_evals=all_t_evals)
+            if _validate_time_structure:
+                self._ensure_t_evals(all_ts=all_ts, all_t_evals=all_t_evals)
         self._all_t_evals = all_t_evals
         self._user_options = options or {}
         self._options = _DEFAULT_SOLUTION_OPTIONS | self._user_options
         self.variables_returned = variables_returned
-        self._observable = self._all_models and all(
-            model.solution_observable for model in self._all_models
-        )
+        # computed lazily on first access; see the `observable` property
+        self._observable = None
 
         # Set up inputs
         if not isinstance(all_inputs, list):
@@ -324,8 +326,10 @@ class Solution(SolutionBase):
 
         self._variables = {}
 
-        # Add self as sub-solution for compatibility with ProcessedVariable
-        self._sub_solutions = [self]
+        # Sub-solutions concatenated into this one. Empty list means "just
+        # self"; storing self here would create a refcount cycle that the
+        # cyclic GC would have to reap, delaying release of large solutions.
+        self._sub_solutions = []
 
         # initialize empty cycles
         self._cycles = []
@@ -548,10 +552,14 @@ class Solution(SolutionBase):
 
     @property
     def observable(self) -> bool:
+        if self._observable is None:
+            self._observable = bool(self._all_models) and all(
+                model.solution_observable for model in self._all_models
+            )
         return self._observable
 
     def _check_observable(self):
-        if self._observable:
+        if self.observable:
             return
 
         # Collect unique reasons from all models
@@ -607,8 +615,7 @@ class Solution(SolutionBase):
             all_yps=all_yps,
             options=self.user_options,
         )
-        new_sol._all_inputs_stacked = self.all_inputs_stacked[:1]
-        new_sol._all_inputs_casadi = self.all_inputs_casadi[:1]
+        # stacked/casadi stay lazy; built from all_inputs[:1] on first access
         new_sol._sub_solutions = self.sub_solutions[:1]
 
         new_sol.solve_time = 0
@@ -652,8 +659,7 @@ class Solution(SolutionBase):
             all_yps=all_yps,
             options=self.user_options,
         )
-        new_sol._all_inputs_stacked = self.all_inputs_stacked[-1:]
-        new_sol._all_inputs_casadi = self.all_inputs_casadi[-1:]
+        # stacked/casadi stay lazy; built from all_inputs[-1:] on first access
         new_sol._sub_solutions = self.sub_solutions[-1:]
         new_sol.solve_time = 0
         new_sol.integration_time = 0
@@ -1050,7 +1056,25 @@ class Solution(SolutionBase):
         """List of sub solutions that have been
         concatenated to form the full solution"""
 
-        return self._sub_solutions
+        return self._sub_solutions or [self]
+
+    @staticmethod
+    def _segment_series(s, repeated, hermite, t_evals):
+        """Series lists for one segment, dropping the leading sample when
+        ``repeated`` (its first time point duplicates the running boundary).
+        Shared by ``__add__`` and ``from_sub_solutions``."""
+        first = slice(1, None) if repeated else slice(None)
+        ts = [s.all_ts[0][first], *s.all_ts[1:]]
+        ys = [s.all_ys[0][:, first], *s.all_ys[1:]]
+        yps = [s.all_yps[0][:, first], *s.all_yps[1:]] if hermite else None
+        tev = [s._all_t_evals[0][first], *s._all_t_evals[1:]] if t_evals else None
+        return ts, ys, yps, tev
+
+    @staticmethod
+    def _merge_sensitivities(acc, s):
+        """Fold one segment's sensitivities into the running dict ``acc``."""
+        for key, val in s._all_sensitivities.items():
+            acc.setdefault(key, []).extend(val)
 
     def __add__(self, other):
         """Adds two solutions together, e.g. when stepping"""
@@ -1074,44 +1098,41 @@ class Solution(SolutionBase):
             new_sol._y_event = other._y_event
             return new_sol
 
-        # Update list of sub-solutions
+        # Append other onto self (the already-merged left side); only other's
+        # contribution is sliced, keeping accumulation O(N).
         hermite_interpolation = (
             other.hermite_interpolation and self.hermite_interpolation
         )
-        if other.all_ts[0][0] == self.all_ts[-1][-1]:
-            # Skip first time step if it is repeated
-            all_ts = [*self.all_ts, other.all_ts[0][1:], *other.all_ts[1:]]
-            all_ys = [*self.all_ys, other.all_ys[0][:, 1:], *other.all_ys[1:]]
-            if hermite_interpolation:
-                all_yps = [*self.all_yps, other.all_yps[0][:, 1:], *other.all_yps[1:]]
-            if self._all_t_evals is not None and other._all_t_evals is not None:
-                all_t_evals = [
-                    *self._all_t_evals,
-                    other._all_t_evals[0][1:],
-                    *other._all_t_evals[1:],
-                ]
-            else:
-                all_t_evals = None
-        else:
-            all_ts = self.all_ts + other.all_ts
-            all_ys = self.all_ys + other.all_ys
-            if hermite_interpolation:
-                all_yps = self.all_yps + other.all_yps
-            if self._all_t_evals is not None and other._all_t_evals is not None:
-                all_t_evals = self._all_t_evals + other._all_t_evals
-            else:
-                all_t_evals = None
+        t_evals_present = (
+            self._all_t_evals is not None and other._all_t_evals is not None
+        )
+        repeated = other.all_ts[0][0] == self.all_ts[-1][-1]
+        ts, ys, yps, tev = self._segment_series(
+            other, repeated, hermite_interpolation, t_evals_present
+        )
+        all_ts = self.all_ts + ts
+        all_ys = self.all_ys + ys
+        all_yps = self.all_yps + yps if hermite_interpolation else None
+        all_t_evals = self._all_t_evals + tev if t_evals_present else None
 
-        if not hermite_interpolation:
-            all_yps = None
-
-        # sensitivities are a dict of {parameter: [sensitivities]}
-        # we can assume that the keys are the same for both solutions
-        all_sensitivities = self._all_sensitivities
-        for key in other._all_sensitivities:
-            all_sensitivities[key] = (
-                all_sensitivities[key] + other._all_sensitivities[key]
+        # Validate only the newly-joined region (self's last segment + other's
+        # contribution), not the whole accumulation. self's earlier segments
+        # were already validated when self was built, so this stays O(size of
+        # other) per add, i.e. O(N) total instead of O(N^2).
+        n = len(self.all_ts)
+        self._ensure_sorted_t([self.all_ts[-1], *all_ts[n:]], "all_ts")
+        if all_t_evals is not None:
+            self._ensure_t_evals(
+                all_ts=[self.all_ts[-1], *all_ts[n:]],
+                all_t_evals=[self._all_t_evals[-1], *all_t_evals[n:]],
             )
+
+        # sensitivities are a dict of {parameter: [sensitivities]}; start from a
+        # fresh copy of self's lists so the in-place merge never aliases them
+        all_sensitivities = {
+            key: list(value) for key, value in self._all_sensitivities.items()
+        }
+        self._merge_sensitivities(all_sensitivities, other)
 
         options = self.user_options | other.user_options
 
@@ -1128,6 +1149,7 @@ class Solution(SolutionBase):
             all_t_evals=all_t_evals,
             variables_returned=other.variables_returned,
             options=options,
+            _validate_time_structure=False,
         )
 
         new_sol.closest_event_idx = other.closest_event_idx
@@ -1156,6 +1178,120 @@ class Solution(SolutionBase):
     def __radd__(self, other):
         return self.__add__(other)
 
+    @classmethod
+    def from_sub_solutions(cls, sub_solutions):
+        """Fold a list of solutions into one in a single pass.
+
+        Equivalent to ``functools.reduce(operator.add, sub_solutions)`` but O(N)
+        instead of O(N^2): segment lists are concatenated once rather than
+        rebuilding a Solution per step. Inputs must already be valid.
+        """
+        sols = [
+            s
+            for s in sub_solutions
+            if s is not None and not isinstance(s, EmptySolution)
+        ]
+        if not sols:
+            # all empty: match reduce(operator.add, ...) by copying the last empty
+            last_empty = next(
+                (s for s in reversed(sub_solutions) if isinstance(s, EmptySolution)),
+                None,
+            )
+            return last_empty.copy() if last_empty else EmptySolution()
+        if len(sols) == 1:
+            return sols[0].copy()
+
+        # Decide once which segments contribute. __add__ short-circuits a
+        # single-sample segment whose only sample duplicates the running
+        # boundary to a copy, so it contributes nothing to the merge: skip it
+        # here and derive every quantity below from the kept segments only.
+        # `repeated` records whether a kept segment's leading sample duplicates
+        # the previous boundary (dropped once on concatenation).
+        kept = []
+        prev_last_t = None
+        for s in sols:
+            repeated = prev_last_t is not None and s.all_ts[0][0] == prev_last_t
+            prev_last_t = s.all_ts[-1][-1]
+            if repeated and len(s.all_ts) == 1 and len(s.all_ts[0]) == 1:
+                continue
+            kept.append((s, repeated))
+        segments = [s for s, _ in kept]
+
+        hermite = all(s.hermite_interpolation for s in segments)
+        t_evals_present = all(s._all_t_evals is not None for s in segments)
+
+        all_ts, all_ys, all_yps, all_t_evals = [], [], [], []
+        all_models, all_inputs, sub_sols = [], [], []
+
+        for s, repeated in kept:
+            ts, ys, yps, tev = cls._segment_series(
+                s, repeated, hermite, t_evals_present
+            )
+            all_ts += ts
+            all_ys += ys
+            if hermite:
+                all_yps += yps
+            if t_evals_present:
+                all_t_evals += tev
+            all_models.extend(s.all_models)
+            all_inputs.extend(s.all_inputs)
+            sub_sols.extend(s.sub_solutions)
+
+        # sensitivities: fresh dict, no aliasing of any input solution's dict
+        all_sensitivities = {}
+        for s in segments:
+            cls._merge_sensitivities(all_sensitivities, s)
+
+        options = {}
+        for s in segments:
+            options |= s.user_options
+
+        # termination/events come from the last operand even when it is a
+        # skipped duplicate: __add__ copies them through the short-circuit.
+        last = sols[-1]
+        new_sol = cls(
+            all_ts,
+            all_ys,
+            all_models,
+            all_inputs,
+            last.t_event,
+            last.y_event,
+            last.termination,
+            all_sensitivities=all_sensitivities,
+            all_yps=all_yps if hermite else None,
+            all_t_evals=all_t_evals if t_evals_present else None,
+            variables_returned=any(s.variables_returned for s in segments),
+            options=options,
+            # validates the joined series once (O(N), not O(N^2))
+            _validate_time_structure=True,
+        )
+
+        # last kept segment, not sols[-1]: __add__'s single-sample short-circuit
+        # keeps the running closest_event_idx, so a trailing duplicate must not
+        # overwrite it.
+        new_sol.closest_event_idx = segments[-1].closest_event_idx
+        # leave stacked/casadi unset; built lazily from all_inputs (casadi is costly)
+        new_sol._sub_solutions = sub_sols
+
+        for attr in ["solve_time", "integration_time", "set_up_time"]:
+            vals = [getattr(s, attr, None) for s in segments]
+            if all(v is not None for v in vals):
+                setattr(new_sol, attr, sum(vals))
+
+        # output_variables path: reproduce __add__'s pairwise left-fold.
+        if any(s.variables_returned for s in segments):
+            keys = set().union(*[s._variables.keys() for s in segments])
+            merged = {}
+            for v in keys:
+                acc = segments[0][v]
+                for s in segments[1:]:
+                    acc = acc.update(s[v], new_sol)
+                merged[v] = acc
+            new_sol._variables = merged
+            new_sol.variables_returned = True
+
+        return new_sol
+
     def copy(self):
         new_sol = self.__class__(
             self.all_ts,
@@ -1170,6 +1306,7 @@ class Solution(SolutionBase):
             all_t_evals=self._all_t_evals,
             variables_returned=self.variables_returned,
             options=self.user_options,
+            _validate_time_structure=False,
         )
         new_sol._all_inputs_stacked = self.all_inputs_stacked
         new_sol._all_inputs_casadi = self.all_inputs_casadi
@@ -1277,35 +1414,7 @@ def make_cycle_solution(
         First state of the cycle.
 
     """
-    sum_sols = step_solutions[0].copy()
-    for step_solution in step_solutions[1:]:
-        sum_sols = sum_sols + step_solution
-
-    cycle_solution = Solution(
-        sum_sols.all_ts,
-        sum_sols.all_ys,
-        sum_sols.all_models,
-        sum_sols.all_inputs,
-        sum_sols.t_event,
-        sum_sols.y_event,
-        sum_sols.termination,
-        all_sensitivities=sum_sols._all_sensitivities,
-        all_yps=sum_sols.all_yps,
-        all_t_evals=sum_sols._all_t_evals,
-        variables_returned=sum_sols.variables_returned,
-        options=sum_sols.user_options,
-    )
-
-    if sum_sols.variables_returned:
-        cycle_solution._variables = sum_sols._variables
-
-    cycle_solution._all_inputs_stacked = sum_sols.all_inputs_stacked
-    cycle_solution._all_inputs_casadi = sum_sols.all_inputs_casadi
-    cycle_solution._sub_solutions = sum_sols.sub_solutions
-
-    cycle_solution.solve_time = sum_sols.solve_time
-    cycle_solution.integration_time = sum_sols.integration_time
-    cycle_solution.set_up_time = sum_sols.set_up_time
+    cycle_solution = Solution.from_sub_solutions(step_solutions)
 
     cycle_solution.steps = step_solutions
 

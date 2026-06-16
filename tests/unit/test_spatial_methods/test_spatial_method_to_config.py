@@ -10,15 +10,27 @@ from pybamm.expression_tree.operations.serialise import Serialise
 class TestSpatialMethodToConfig:
     """Tests for SpatialMethod to_config and from_config."""
 
-    def test_spatial_method_to_config_returns_class_module_options(self):
-        """SpatialMethod.to_config() returns dict with 'class', 'module', 'options'."""
+    def test_spatial_method_to_config_returns_class_reference_options(self):
+        """SpatialMethod.to_config() returns a class-reference dict with 'options'."""
         method = pybamm.FiniteVolume()
         data = method.to_config()
         assert isinstance(data, dict)
-        assert data["class"] == "FiniteVolume"
-        assert "pybamm.spatial_methods" in data["module"]
+        assert data["$type"] == "type"
+        assert data["class"] == "pybamm.spatial_methods.finite_volume.FiniteVolume"
         assert "options" in data
         assert isinstance(data["options"], dict)
+
+    def test_spatial_method_from_config_reads_both_shapes(self):
+        """from_config accepts the legacy {'class', 'module'} shape and the canonical one."""
+        legacy = {
+            "class": "FiniteVolume",
+            "module": "pybamm.spatial_methods.finite_volume",
+            "options": None,
+        }
+        canonical = pybamm.FiniteVolume().to_config()
+        for data in (legacy, canonical):
+            restored = pybamm.SpatialMethod.from_config(data)
+            assert type(restored) is pybamm.FiniteVolume
 
     def test_spatial_method_from_config_same_type_and_options(self):
         """SpatialMethod.from_config(to_config()) returns same type with same options."""
@@ -44,7 +56,10 @@ class TestSpatialMethodToConfig:
         """ZeroDimensionalSpatialMethod round-trips via to_config/from_config."""
         method = pybamm.ZeroDimensionalSpatialMethod()
         data = method.to_config()
-        assert data["class"] == "ZeroDimensionalSpatialMethod"
+        assert (
+            data["class"]
+            == "pybamm.spatial_methods.zero_dimensional_method.ZeroDimensionalSpatialMethod"
+        )
         restored = pybamm.SpatialMethod.from_config(data)
         assert type(restored) is type(method)
         assert restored.options == method.options

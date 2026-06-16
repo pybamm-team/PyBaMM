@@ -577,12 +577,11 @@ class TestMesh:
 
         mesh_json = mesh.to_json()
 
-        expected_json = {
-            "submesh_pts": {"negative particle": {"r": 20}},
-            "base_domains": ["negative particle"],
-        }
-
-        assert mesh_json == expected_json
+        assert mesh_json["submesh_pts"] == {"negative particle": {"r": 20}}
+        assert mesh_json["base_domains"] == ["negative particle"]
+        assert mesh_json["sub_mesh_domains"] == ["negative particle"]
+        assert len(mesh_json["children"]) == 1
+        assert isinstance(mesh_json["children"][0], pybamm.Uniform1DSubMesh)
 
     def test_compute_var_pts_from_thicknesses_cell_size(self):
         from pybamm.meshes.meshes import compute_var_pts_from_thicknesses

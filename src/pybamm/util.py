@@ -380,7 +380,7 @@ def raise_jax_not_found():
         )
     raise ModuleNotFoundError(
         "Jax or jaxlib is not installed, please see "
-        "https://docs.pybamm.org/en/latest/source/user_guide/installation/gnu-linux-mac.html#optional-jaxsolver"
+        "https://docs.pybamm.org/en/latest/source/user_guide/installation/index.html#optional-jaxsolver"
     )
 
 

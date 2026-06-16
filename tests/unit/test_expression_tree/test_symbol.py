@@ -563,7 +563,6 @@ class TestSymbol:
 
         json_dict = {
             "name": "parent",
-            "id": mocker.ANY,
             "domains": {
                 "primary": ["domain_3"],
                 "secondary": [],

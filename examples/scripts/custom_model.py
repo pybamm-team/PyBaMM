@@ -105,7 +105,7 @@ disc.process_model(model)
 
 # solve model
 t_eval = np.linspace(0, 3600, 100)
-solver = pybamm.ScipySolver()
+solver = pybamm.CasadiSolver()
 solution = solver.solve(model, t_eval)
 
 # plot

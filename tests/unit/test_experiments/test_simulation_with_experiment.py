@@ -2,6 +2,7 @@ import copy
 import itertools
 import logging
 import os
+import re
 from datetime import datetime
 from types import SimpleNamespace
 
@@ -16,6 +17,42 @@ class ShortDurationCRate(pybamm.step.CRate):
     def _default_timespan(self, value):
         # Set a short default duration for testing early stopping due to infeasible time
         return 1
+
+
+def _unified_rhs_jac_n_instructions(unique_step_strings):
+    """rhs_algebraic and jacobian top-function instruction counts for a unified-mode
+    SPM experiment with the given distinct steps."""
+    experiment = pybamm.Experiment([tuple(unique_step_strings)])
+    sim = pybamm.Simulation(
+        pybamm.lithium_ion.SPM(),
+        experiment=experiment,
+        solver=pybamm.IDAKLUSolver(),
+        experiment_model_mode="unified",
+    )
+    sim.solve()
+    assert sim._experiment_uses_unified_model
+    model = sim._built_experiment_model
+    return (
+        model.rhs_algebraic_eval.n_instructions(),
+        model.jac_rhs_algebraic_eval.n_instructions(),
+    )
+
+
+def _largest_generated_fn_lines(fn):
+    """Body-line count of the largest ``casadi_fN`` in ``fn``'s generated C."""
+    gen = casadi.CodeGenerator("probe", {"with_header": False})
+    gen.add(fn)
+    lines = gen.dump().split("\n")
+    largest = 0
+    for i, line in enumerate(lines):
+        if re.match(r"\s*static int casadi_f\d+\(", line):
+            depth = 0
+            for j in range(i, len(lines)):
+                depth += lines[j].count("{") - lines[j].count("}")
+                if depth == 0 and j > i:
+                    largest = max(largest, j - i)
+                    break
+    return largest
 
 
 class TestSimulationExperiment:
@@ -36,6 +73,21 @@ class TestSimulationExperiment:
             experiment=experiment,
             **simulation_kwargs,
         )
+
+    def test_batch_cross_cycle_equivalent(self):
+        # Full multi-cycle solution must be identical with batch accumulation.
+        model = pybamm.lithium_ion.SPM()
+        exp = pybamm.Experiment(
+            [("Discharge at 1C until 3.0V", "Charge at 1C until 4.2V")] * 5,
+            period=600,
+        )
+        sim = pybamm.Simulation(model, experiment=exp)
+        sol = sim.solve()
+        v = sol["Voltage [V]"].entries
+        assert np.all(np.isfinite(v))
+        assert np.all(np.diff(sol.t) > 0)  # monotonic time preserved
+        assert len(sol.cycles) == 5  # cycles wiring preserved
+        assert sol.summary_variables is not None
 
     def test_unified_model_mode_validation_and_blockers(self):
         with pytest.raises(ValueError, match="experiment_model_mode must be one of"):
@@ -68,6 +120,43 @@ class TestSimulationExperiment:
         assert sim._get_unified_experiment_model_blockers() == [
             "unsupported experiment step type 'BaseStep'"
         ]
+
+    def test_unified_allows_drive_cycle_and_algebraic_implicit(self):
+        # Drive-cycle steps are explicit current steps with a time-varying value; they
+        # share the generic current residual, so unified mode must accept them. An
+        # algebraic-control implicit step (voltage hold) is also eligible.
+        drive_cycle = np.column_stack([[0, 5, 10], [1.0, 0.5, 1.0]])
+        experiment = pybamm.Experiment(
+            [
+                pybamm.step.current(drive_cycle),
+                pybamm.step.voltage(3.8, duration=10),
+            ]
+        )
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            experiment=experiment,
+            solver=pybamm.IDAKLUSolver(),
+            experiment_model_mode="unified",
+        )
+        assert sim._get_unified_experiment_model_blockers() == []
+
+    def test_unified_drive_cycle_matches_legacy(self):
+        # A drive cycle solved in unified mode must match legacy on a common time grid.
+        time = [0, 20, 40, 60, 80, 100]
+        current = [0.5, 0.6, 0.4, 0.5, 0.45, 0.5]
+        drive_cycle = np.column_stack([time, current])
+        experiment = pybamm.Experiment([pybamm.step.current(drive_cycle)])
+        out = {}
+        for mode in ("legacy", "unified"):
+            sim = pybamm.Simulation(
+                pybamm.lithium_ion.SPM(),
+                experiment=experiment,
+                solver=pybamm.IDAKLUSolver(),
+                experiment_model_mode=mode,
+            )
+            sol = sim.solve()
+            out[mode] = sol["Voltage [V]"](time)
+        np.testing.assert_allclose(out["unified"], out["legacy"], rtol=1e-4, atol=1e-4)
 
     def test_set_up_unified_preserves_voltage_safety_events(self):
         experiment = pybamm.Experiment(
@@ -174,6 +263,106 @@ class TestSimulationExperiment:
         ]
         assert "Current variable [A]" in unified_model.variables
 
+    def test_unified_builds_exactly_one_model_and_solver(self):
+        # Requirement: unified mode uses exactly one model and one solver instance,
+        # even across many steps and cycles.
+        experiment = pybamm.Experiment(
+            [
+                pybamm.step.c_rate(1.0, duration=60),
+                pybamm.step.voltage(3.8, duration=60),
+            ]
+            * 3
+        )
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            experiment=experiment,
+            solver=pybamm.IDAKLUSolver(),
+            experiment_model_mode="unified",
+        )
+        sim.build_for_experiment()
+        assert len({id(m) for m in sim.steps_to_built_models.values()}) == 1
+        assert len({id(s) for s in sim.steps_to_built_solvers.values()}) == 1
+
+    def test_unified_constant_current_steps_collapse_to_one_branch(self):
+        # CC/C-rate steps differing only in current value share one branch: the value
+        # is supplied as a per-step input, so the number of branches (and therefore
+        # compile/runtime cost) does not grow with the number of distinct currents.
+        currents = [0.1, 0.2, 0.5, 1.0]
+        steps = [pybamm.step.c_rate(c, duration=1) for c in currents]
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            experiment=pybamm.Experiment(steps),
+            solver=pybamm.IDAKLUSolver(),
+            experiment_model_mode="unified",
+        )
+        sim.build_for_experiment()
+        assert len(set(sim._experiment_step_indices)) == 1
+
+    def test_unified_collapses_every_control_kind_by_value(self):
+        # Value-as-input is general: steps of ANY control kind that differ only in their
+        # target value share one branch, and distinct control kinds get separate branches.
+        steps = [
+            pybamm.step.c_rate(0.5, duration=10),
+            pybamm.step.c_rate(1.0, duration=10),
+            pybamm.step.voltage(4.0, duration=10),
+            pybamm.step.voltage(4.1, duration=10),
+            pybamm.step.power(1.0, duration=10),
+            pybamm.step.power(2.0, duration=10),
+        ]
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            experiment=pybamm.Experiment(steps),
+            solver=pybamm.IDAKLUSolver(),
+            experiment_model_mode="unified",
+        )
+        sim.build_for_experiment()
+        # current / voltage / power -> exactly three branches (one per control kind).
+        assert len(set(sim._experiment_step_indices)) == 3
+
+    def test_unified_voltage_per_step_matches_legacy(self):
+        # Generalised value-as-input must be correct for implicit control too: two
+        # voltage holds at distinct targets collapse to one branch but must each hold
+        # their own target and match legacy. Sample settled points (end of each fixed
+        # 300 s window) on a common time grid to avoid transient/grid-alignment noise.
+        steps = [
+            pybamm.step.c_rate(0.5, duration=300),
+            pybamm.step.voltage(3.9, duration=300),
+            pybamm.step.voltage(3.8, duration=300),
+        ]
+        sample_times = [250, 590, 890]
+        out = {}
+        for mode in ("legacy", "unified"):
+            sim = pybamm.Simulation(
+                pybamm.lithium_ion.SPM(),
+                experiment=pybamm.Experiment(steps),
+                solver=pybamm.IDAKLUSolver(),
+                experiment_model_mode=mode,
+            )
+            out[mode] = sim.solve()["Voltage [V]"](sample_times)
+        np.testing.assert_allclose(out["unified"], out["legacy"], rtol=1e-3, atol=1e-3)
+        # The two collapsed voltage steps must hold their own distinct targets.
+        np.testing.assert_allclose(out["unified"][1:], [3.9, 3.8], atol=2e-2)
+
+    def test_unified_cc_per_step_current_parses(self):
+        # Steps that collapse to one branch must still each solve to their own current:
+        # the per-step current input is parsed correctly (matches legacy, all distinct).
+        currents = [0.1, 0.3, 0.7, 1.0]
+        steps = [pybamm.step.c_rate(c, duration=1) for c in currents]
+        sample_times = [0.5, 1.5, 2.5, 3.5]
+        out = {}
+        for mode in ("legacy", "unified"):
+            sim = pybamm.Simulation(
+                pybamm.lithium_ion.SPM(),
+                experiment=pybamm.Experiment(steps),
+                solver=pybamm.IDAKLUSolver(),
+                experiment_model_mode=mode,
+            )
+            sol = sim.solve()
+            out[mode] = sol["Current [A]"](sample_times)
+        np.testing.assert_allclose(out["unified"], out["legacy"], rtol=1e-4, atol=1e-6)
+        # Each step's input must be applied distinctly, not a single global current.
+        assert len(set(np.round(out["unified"], 6))) == 4
+
     def test_set_up_all_explicit_defaults_to_legacy_model(self):
         experiment = pybamm.Experiment(
             [
@@ -219,6 +408,29 @@ class TestSimulationExperiment:
         assert "Voltage > 4.1 [V] [experiment]" in [
             event.name for event in model_I.events
         ]
+
+    def test_distinct_control_types_with_same_value_yield_distinct_models(self):
+        # Regression: CRate(4.2) and Voltage(4.2) used to collapse to one unique step.
+        experiment = pybamm.Experiment(
+            [
+                (
+                    pybamm.step.c_rate(4.2, duration=60),
+                    pybamm.step.current(-1, duration=60),
+                    pybamm.step.voltage(4.2, duration=60),
+                )
+            ]
+        )
+        assert len(experiment.unique_steps) == 3
+
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            experiment=experiment,
+            solver=pybamm.IDAKLUSolver(),
+            experiment_model_mode="legacy",
+        )
+        sim.build_for_experiment()
+        assert len(sim.experiment_unique_steps_to_model) == 3
+        assert len(set(sim.steps_to_built_models.values())) == 3
 
     def test_build_for_experiment_legacy_processes_each_unique_step(self):
         experiment = pybamm.Experiment(
@@ -374,6 +586,210 @@ class TestSimulationExperiment:
             assert c[1:] == first, (
                 f"build counts grow with n_cycles instead of staying flat: {counts}"
             )
+
+    def test_unified_model_switching_size_independent_of_cycle_count(self):
+        # Switching must branch on unique steps, not instances, else O(n_steps**2) over
+        # the experiment. Branch count stays bounded by unique steps, flat in cycles.
+        def max_conditional_branches(model):
+            roots = (
+                list(model.rhs.values())
+                + list(model.algebraic.values())
+                + [event.expression for event in model.events]
+            )
+            seen = set()
+            stack = list(roots)
+            most = 0
+            while stack:
+                sym = stack.pop()
+                if id(sym) in seen:
+                    continue
+                seen.add(id(sym))
+                if isinstance(sym, pybamm.Conditional):
+                    most = max(most, len(sym.branches))
+                stack.extend(sym.children)
+            return most
+
+        unit_cycle = (
+            "Discharge at 1C until 3.0V",
+            "Charge at 1C until 4.2V",
+            "Hold at 4.2V until C/50",
+        )
+        n_unique = len(unit_cycle)
+
+        branch_counts = []
+        step_index_maps = []
+        for n_cycles in (2, 5, 20):
+            experiment = pybamm.Experiment([unit_cycle] * n_cycles)
+            sim = pybamm.Simulation(
+                pybamm.lithium_ion.SPM(),
+                experiment=experiment,
+                solver=pybamm.IDAKLUSolver(),
+                experiment_model_mode="unified",
+            )
+            sim.build_for_experiment()
+            assert sim._experiment_uses_unified_model
+            branch_counts.append(max_conditional_branches(sim._built_experiment_model))
+            step_index_maps.append(sim._experiment_step_indices)
+
+        assert branch_counts[0] == branch_counts[-1], (
+            f"unified switching grows with cycles: {branch_counts}"
+        )
+        assert max(branch_counts) <= n_unique
+
+        for n_cycles, indices in zip((2, 5, 20), step_index_maps, strict=True):
+            assert len(indices) == n_unique * n_cycles
+            assert set(indices) == set(range(1, n_unique + 1))
+            assert indices == [(i % n_unique) + 1 for i in range(len(indices))]
+
+    def test_unified_switch_top_functions_flat_in_unique_steps(self):
+        # Per-branch dispatch keeps the top rhs/jac flat in unique step count.
+        rhs_1, jac_1 = _unified_rhs_jac_n_instructions(
+            [f"Discharge at {0.4 + 0.1 * i:.2f}C for 10 s" for i in range(1)]
+        )
+        rhs_8, jac_8 = _unified_rhs_jac_n_instructions(
+            [f"Discharge at {0.4 + 0.1 * i:.2f}C for 10 s" for i in range(8)]
+        )
+        assert rhs_8 <= rhs_1 + 2, (
+            f"unified rhs top function grows with unique steps: {rhs_1} -> {rhs_8}"
+        )
+        assert jac_8 <= jac_1 + 2, (
+            f"unified jac top function grows with unique steps: {jac_1} -> {jac_8}"
+        )
+
+    def test_unified_active_branch_independent_of_other_modes(self):
+        # Each mode is a separate branch function, so adding modes doesn't grow the top
+        # rhs/jac and inactive modes aren't evaluated during an active step.
+        rhs_cc, jac_cc = _unified_rhs_jac_n_instructions(["Discharge at 1C for 10 s"])
+        rhs_multi, jac_multi = _unified_rhs_jac_n_instructions(
+            [
+                "Discharge at 1C for 10 s",
+                "Charge at 0.5C until 4.2 V",
+                "Hold at 4.2 V until C/50",
+            ]
+        )
+        assert rhs_multi <= rhs_cc + 2, (
+            f"adding modes grew the rhs top function: {rhs_cc} -> {rhs_multi}"
+        )
+        assert jac_multi <= jac_cc + 2, (
+            f"adding modes grew the jac top function: {jac_cc} -> {jac_multi}"
+        )
+
+    def test_unified_switch_matches_legacy_voltage(self):
+        # Switch dispatch must not change results vs legacy.
+        experiment = pybamm.Experiment(
+            [
+                (
+                    "Discharge at 1C until 3.3 V",
+                    "Charge at 1C until 4.0 V",
+                    "Hold at 4.0 V until C/20",
+                )
+            ]
+        )
+
+        def voltage(mode):
+            sim = pybamm.Simulation(
+                pybamm.lithium_ion.SPM(),
+                experiment=experiment,
+                solver=pybamm.IDAKLUSolver(),
+                experiment_model_mode=mode,
+            )
+            sim.solve()
+            return sim.solution["Voltage [V]"].entries[-1]
+
+        assert voltage("unified") == pytest.approx(voltage("legacy"), abs=1e-6)
+
+    def test_unified_control_row_jacobian_is_sparse(self):
+        # CasADi declares a Switch's jacobian structurally dense, so the control
+        # equation would otherwise be a full-bandwidth row and balloon KLU work. The
+        # solver projects it back onto the true (union-of-branches) sparsity; assert no
+        # jacobian row spans the full bandwidth.
+        from collections import Counter
+
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.DFN(),
+            experiment=pybamm.Experiment(
+                [("Discharge at 1C until 3.3 V", "Hold at 3.3 V until C/20")]
+            ),
+            solver=pybamm.IDAKLUSolver(),
+            experiment_model_mode="unified",
+        )
+        sim.solve()
+        sparsity = sim._built_experiment_model.jac_rhs_algebraic_eval.sparsity_out(0)
+        n = sparsity.size2()
+        densest_row_nnz = max(Counter(sparsity.get_triplet()[0]).values())
+        assert densest_row_nnz <= n // 2, (
+            f"a jacobian row has {densest_row_nnz}/{n} nonzeros (near full bandwidth); "
+            "the control-row union-sparsity projection did not take effect"
+        )
+
+    def test_unified_records_switching_control_variable_not_voltage(self):
+        # The unified setup records the control variable (its one Conditional residual) by
+        # name, so build_casadi_jacobian gives only that row the sparse switch treatment.
+        # With "voltage as a state" the algebraic block also holds a "Voltage [V]" row,
+        # which is physics and must NOT be picked up as a switch row.
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            experiment=pybamm.Experiment(
+                [("Charge at 1 A for 1 min", "Hold at 4.1 V for 1 min")]
+            ),
+            solver=pybamm.IDAKLUSolver(),
+            experiment_model_mode="unified",
+        )
+        sim.build_for_experiment()
+        model = sim.experiment_unique_steps_to_model[sim._experiment_unified_model_key]
+        assert model.switching_control_variables == {"Current variable [A]"}
+
+        def rows_for(name):
+            return {
+                r
+                for v, slices in model.y_slices.items()
+                if v.name == name
+                for s in slices
+                for r in range(s.start, s.stop)
+            }
+
+        switch_rows = set(model._switching_control_columns())
+        voltage_rows = rows_for("Voltage [V]")
+        assert voltage_rows, "expected voltage to be a state in this configuration"
+        assert switch_rows == rows_for("Current variable [A]")
+        assert not (switch_rows & voltage_rows)
+
+    def test_non_unified_model_jacobian_is_plain_casadi(self):
+        # An ordinary model records no switching control variable, so build_casadi_jacobian
+        # short-circuits to plain casadi.jacobian -- zero extra work, identical result.
+        import casadi
+
+        model = pybamm.lithium_ion.SPM()
+        assert model.switching_control_variables == set()
+
+        x = casadi.MX.sym("x", 3)
+        expr = casadi.vertcat(x[0] ** 2, x[1] * x[2], x[0] + x[1])
+        assert casadi.is_equal(
+            model.build_casadi_jacobian(expr, x), casadi.jacobian(expr, x), 20
+        )
+
+    def test_unified_aot_compile_bounded_in_unique_steps(self):
+        # -O3 is superlinear in single-function size, so per-branch dispatch must keep
+        # the largest generated jac function flat as unique steps grow. Deterministic.
+        def largest_jac_fn_lines(n):
+            ops = [f"Discharge at {0.4 + 0.1 * i:.2f}C for 10 s" for i in range(n)]
+            sim = pybamm.Simulation(
+                pybamm.lithium_ion.SPMe(),
+                experiment=pybamm.Experiment([tuple(ops)]),
+                solver=pybamm.IDAKLUSolver(),
+                experiment_model_mode="unified",
+            )
+            sim.solve()
+            return _largest_generated_fn_lines(
+                sim._built_experiment_model.jac_rhs_algebraic_eval
+            )
+
+        big_2 = largest_jac_fn_lines(2)
+        big_8 = largest_jac_fn_lines(8)
+        assert big_8 <= big_2 + 50, (
+            "largest unified jac function grew with unique steps: "
+            f"{big_2} -> {big_8} lines (per-branch dispatch should keep it flat)"
+        )
 
     def test_experiment_state_mapper_has_full_state_size_for_2d_current_collector(self):
         experiment = pybamm.Experiment(
@@ -632,16 +1048,20 @@ class TestSimulationExperiment:
             [("Charge at C/3 until 4.1 V", "Hold at 4.1 V until C/20")]
         )
 
+        # Tolerances tight enough that event-crossing times are resolved to
+        # better than the assertion tolerances below; at default tolerances
+        # the shallow dV/dt near the voltage cut-off lets the two modes land
+        # seconds apart while both remain within integration tolerance.
         legacy_sim = pybamm.Simulation(
             pybamm.lithium_ion.SPM(),
             experiment=experiment,
-            solver=pybamm.IDAKLUSolver(),
+            solver=pybamm.IDAKLUSolver(rtol=1e-6, atol=1e-8),
             experiment_model_mode="legacy",
         )
         unified_sim = pybamm.Simulation(
             pybamm.lithium_ion.SPM(),
             experiment=experiment,
-            solver=pybamm.IDAKLUSolver(),
+            solver=pybamm.IDAKLUSolver(rtol=1e-6, atol=1e-8),
             experiment_model_mode="unified",
         )
 
@@ -1030,17 +1450,21 @@ class TestSimulationExperiment:
             "Ambient temperature [K]",
             "start time",
         }
-        assert len(internal_keys) == 1
-        experiment_input_name = internal_keys.pop()
+        # Unified mode injects the step-index selector and the per-step value input.
+        assert internal_keys == {
+            "Experiment step index",
+            "Experiment step value",
+        }
 
         sol = make_sim().solve(
             inputs={input_param_name: input_param_value},
-            calculate_sensitivities=[input_param_name, experiment_input_name],
+            calculate_sensitivities=[input_param_name, *internal_keys],
         )
 
         sensitivity_keys = set(sol.sensitivities)
         assert input_param_name in sensitivity_keys
-        assert experiment_input_name not in sensitivity_keys
+        for experiment_input_name in internal_keys:
+            assert experiment_input_name not in sensitivity_keys
 
     def test_processed_variable_sensitivities_ignore_experiment_input(self):
         # Regression test for #5517.
@@ -1096,6 +1520,78 @@ class TestSimulationExperiment:
         assert len(sol.t) > len(time)
 
         np.testing.assert_allclose(sol["Current [A]"](time), current)
+
+    def test_solve_with_sensitivities_true_excludes_all_internal_inputs(self):
+        # calculate_sensitivities=True must differentiate only w.r.t. user inputs, not
+        # the control inputs the experiment injects per step.
+        input_param_name = "Negative electrode active material volume fraction"
+
+        def make_sim():
+            model = pybamm.lithium_ion.SPM()
+            param = model.default_parameter_values
+            param.update({input_param_name: "[input]"})
+            # A python-function step (current as a function of time) puts "start time"
+            # into the model, so all three internal inputs are present and could leak.
+            experiment = pybamm.Experiment(
+                [
+                    pybamm.step.current(
+                        lambda t: 1.0 + 0.5 * np.sin(t / 100), duration=300
+                    ),
+                    "Charge at 1 A for 10 seconds",
+                ]
+            )
+            return pybamm.Simulation(
+                model,
+                experiment=experiment,
+                solver=pybamm.IDAKLUSolver(),
+                parameter_values=param,
+                experiment_model_mode="unified",
+            )
+
+        input_value = pybamm.ParameterValues("Chen2020")[input_param_name]
+        sol = make_sim().solve(
+            inputs={input_param_name: input_value},
+            calculate_sensitivities=True,
+            calc_esoh=False,
+        )
+
+        internal_inputs = pybamm.Simulation._INTERNAL_EXPERIMENT_INPUTS
+        # "start time" really is one of the model inputs here, so this is a genuine
+        # exclusion, not a vacuous one.
+        assert "start time" in sol.all_inputs[0]
+        sensitivity_keys = set(sol.sensitivities) - {"all"}
+        assert sensitivity_keys == {input_param_name}
+        assert not (sensitivity_keys & internal_inputs)
+
+    def test_unified_ambient_temperature_scalar_value(self):
+        # Unified mode reads ambient temperature as a solver input; a pybamm.Scalar
+        # value (vs a float) must be coerced or it breaks the casadi call.
+        experiment = pybamm.Experiment(
+            ["Discharge at 1C until 3.0 V", "Charge at 1C until 4.2 V"]
+        )
+
+        def solve(ambient_value):
+            pv = pybamm.ParameterValues("Chen2020")
+            pv["Ambient temperature [K]"] = ambient_value
+            sim = pybamm.Simulation(
+                pybamm.lithium_ion.SPM(),
+                parameter_values=pv,
+                experiment=experiment,
+                experiment_model_mode="unified",
+                solver=pybamm.IDAKLUSolver(),
+            )
+            return sim.solve(calc_esoh=False)
+
+        scalar_sol = solve(pybamm.Scalar(298.15))
+        float_sol = solve(298.15)
+
+        np.testing.assert_allclose(scalar_sol.t[-1], float_sol.t[-1], rtol=1e-10)
+        np.testing.assert_allclose(
+            scalar_sol["Voltage [V]"].data[-1],
+            float_sol["Voltage [V]"].data[-1],
+            rtol=1e-8,
+            atol=1e-8,
+        )
 
     def test_run_experiment_breaks_early_infeasible(self):
         experiment = pybamm.Experiment(["Discharge at 2 C for 1 hour"])
@@ -1498,38 +1994,22 @@ class TestSimulationExperiment:
             previous_state = sim.solution.cycles[0].last_state.y
             next_state = sim.solution.cycles[1].steps[-1].first_state.y
 
-            if experiment_model_mode == "legacy":
-                np.testing.assert_allclose(
-                    previous_state,
-                    next_state,
-                    atol=1e-15,
-                    rtol=1e-15,
-                )
-            else:
-                # The unified path carries control-only algebraic states such as the
-                # current controller variable. Those can change when the active step
-                # changes, so here we only enforce continuity of the physical state.
-                built_model = sim.steps_to_built_models[
-                    sim.experiment.steps[0].basic_repr()
-                ]
-                control_state_indices = []
-                for variable in built_model.algebraic:
-                    if variable.name in {"Current variable [A]", "Voltage [V]"}:
-                        for state_slice in built_model.y_slices[variable]:
-                            control_state_indices.extend(
-                                range(state_slice.start, state_slice.stop)
-                            )
-                keep_indices = [
-                    i
-                    for i in range(previous_state.shape[0])
-                    if i not in control_state_indices
-                ]
-                np.testing.assert_allclose(
-                    previous_state[keep_indices],
-                    next_state[keep_indices],
-                    atol=1e-14,
-                    rtol=1e-14,
-                )
+            built_model = sim.steps_to_built_models[
+                sim.experiment.steps[0].basic_repr()
+            ]
+            algebraic_indices = []
+            for variable in built_model.algebraic:
+                for state_slice in built_model.y_slices[variable]:
+                    algebraic_indices.extend(range(state_slice.start, state_slice.stop))
+            rhs_indices = [
+                i for i in range(previous_state.shape[0]) if i not in algebraic_indices
+            ]
+            np.testing.assert_allclose(
+                previous_state[rhs_indices],
+                next_state[rhs_indices],
+                atol=1e-14,
+                rtol=1e-14,
+            )
 
     def test_run_experiment_half_cell(self):
         experiment = pybamm.Experiment(

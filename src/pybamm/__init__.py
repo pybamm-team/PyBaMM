@@ -165,6 +165,10 @@ from .meshes.scikit_fem_submeshes_3d import (
 # Serialisation
 from .models.base_model import load_model
 
+# Must stay after the Symbol/Event/Mesh/SubMesh imports above: serialise_kernel
+# evaluates _KNOWN_BASES = (pybamm.Symbol, ...) at module import time.
+from .expression_tree.operations.serialise_kernel import SerialisationError
+
 # Spatial Methods
 from .spatial_methods.spatial_method import SpatialMethod
 from .spatial_methods.zero_dimensional_method import ZeroDimensionalSpatialMethod

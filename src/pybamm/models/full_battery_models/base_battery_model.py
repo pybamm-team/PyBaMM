@@ -18,6 +18,24 @@ def represents_positive_integer(s):
         return val > 0
 
 
+def _is_msmr(value):
+    """True if an option requests MSMR, including inside a per-electrode tuple."""
+    if isinstance(value, (tuple, list)):
+        return "MSMR" in value
+    return value == "MSMR"
+
+
+def _per_electrode(value, index):
+    """Resolve a possibly per-electrode option to one electrode.
+
+    Per-electrode tuples are ``(negative, positive)``; a scalar applies to
+    both. ``index`` is 0 for the negative electrode, 1 for the positive.
+    """
+    if isinstance(value, (tuple, list)):
+        return value[index]
+    return value
+
+
 def _rename_option(options_dict, option_name, old_name, new_name):
     if option_name not in options_dict:
         return
@@ -274,8 +292,21 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 resistance" is distributed in which case it is automatically set to
                 "true".
             * "voltage as a state" : str
-                Whether to make a state for the voltage and solve an algebraic equation
-                for it. Default is "false".
+                Whether to promote voltage to an algebraic state variable.
+                Can be "true" (default) or "false". When "true", the model is
+                a DAE and requires a DAE-capable solver (e.g. the default
+                IDAKLUSolver). When "false", voltage is computed as an
+                expression; the "explicit power" and "explicit resistance"
+                operating modes require "true" and raise an error otherwise.
+                Note that setting this to "false" only removes the voltage
+                algebraic equation; SPM/SPMe with ``surface form="false"``
+                become pure ODE models, but DFN retains other algebraic states
+                (electrode/electrolyte potentials) regardless of this option.
+                Continuous solves of rapidly alternating current profiles
+                (e.g. interpolant drive cycles) can be slower with the
+                additional algebraic state; setting this to "false" (with
+                ``surface form="false"`` for SPM/SPMe) restores the previous
+                behaviour for such workloads.
             * "working electrode" : str
                 Can be "both" (default) for a standard battery or "positive" for a
                 half-cell where the negative electrode is replaced with a lithium metal
@@ -408,7 +439,45 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         }
 
         default_options = {
-            name: options[0] for name, options in self.possible_options.items()
+            "calculate discharge energy": "false",
+            "calculate heat source for isothermal models": "false",
+            "cell geometry": "arbitrary",
+            "contact resistance": "false",
+            "convection": "none",
+            "current collector": "uniform",
+            "diffusivity": "single",
+            "dimensionality": 0,
+            "electrolyte conductivity": "default",
+            "exchange-current density": "single",
+            "heat of mixing": "false",
+            "hydrolysis": "false",
+            "intercalation kinetics": "symmetric Butler-Volmer",
+            "interface utilisation": "full",
+            "lithium plating": "none",
+            "lithium plating porosity change": "false",
+            "loss of active material": "none",
+            "number of MSMR reactions": "none",
+            "open-circuit potential": "single",
+            "operating mode": "current",
+            "particle": "Fickian diffusion",
+            "particle mechanics": "none",
+            "particle phases": "1",
+            "particle shape": "spherical",
+            "particle size": "single",
+            "SEI": "none",
+            "SEI film resistance": "none",
+            "SEI on cracks": "false",
+            "SEI porosity change": "false",
+            "stress-induced diffusion": "false",
+            "surface form": "false",
+            "surface temperature": "ambient",
+            "thermal": "isothermal",
+            "total interfacial current density as a state": "false",
+            "transport efficiency": "Bruggeman",
+            "voltage as a state": "true",
+            "working electrode": "both",
+            "x-average side reactions": "false",
+            "use lumped thermal capacity": "false",
         }
         extra_options = extra_options or {}
 
@@ -540,6 +609,13 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         # The "surface form" option will still be overridden by
         # extra_options if provided
 
+        # Explicit power/resistance control requires voltage as a state:
+        # I = P/V (or I = V/R) is circular when V is an expression that
+        # itself depends on I.
+        mode_option = extra_options.get("operating mode", "current")
+        if mode_option in ("explicit power", "explicit resistance"):
+            default_options["voltage as a state"] = "true"
+
         # Change default SEI model based on which lithium plating option is provided
         # return "none" if option not given
         plating_option = extra_options.get("lithium plating", "none")
@@ -567,13 +643,11 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                         f"Option '{name}' not recognised. Best matches are {options.get_best_matches(name)}"
                     )
 
-        # If any of "open-circuit potential", "particle" or "intercalation kinetics" is
-        # "MSMR" then all of them must be "MSMR".
-        # Note: this check is currently performed on full cells, but is loosened for
-        # half-cells where you must pass a tuple of options to only set MSMR models in
-        # the working electrode
+        # All-or-nothing on full cells: if any of OCP/particle/intercalation
+        # kinetics requests MSMR (incl. inside a per-electrode tuple), all must.
+        # Half-cells are loosened -- a tuple sets MSMR in the working electrode.
         msmr_check_list = [
-            options[opt] == "MSMR"
+            _is_msmr(options[opt])
             for opt in ["open-circuit potential", "particle", "intercalation kinetics"]
         ]
         if (
@@ -585,6 +659,29 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "If any of 'open-circuit potential', 'particle' or "
                 "'intercalation kinetics' is 'MSMR' then all of them must be 'MSMR'"
             )
+
+        # Validate per electrode so a mixed full cell (MSMR in one electrode,
+        # conventional in the other) is accepted.
+        if options["working electrode"] == "both":
+            electrode_domains = [("negative", 0), ("positive", 1)]
+        else:
+            electrode_domains = [("positive", 1)]
+        for domain, index in electrode_domains:
+            domain_uses_msmr = any(
+                _per_electrode(options[opt], index) == "MSMR"
+                for opt in [
+                    "open-circuit potential",
+                    "particle",
+                    "intercalation kinetics",
+                ]
+            )
+            domain_count = _per_electrode(options["number of MSMR reactions"], index)
+            if domain_uses_msmr and not represents_positive_integer(domain_count):
+                raise pybamm.OptionError(
+                    "'number of MSMR reactions' must be a positive integer for "
+                    f"the {domain} electrode when it uses 'MSMR' "
+                    f"(got {domain_count!r})"
+                )
 
         # If "SEI film resistance" is "distributed" then "total interfacial current
         # density as a state" must be "true"
@@ -628,6 +725,19 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 raise NotImplementedError(
                     "Contact resistance not yet supported for explicit resistance."
                 )
+
+        # Explicit power/resistance need voltage as a state variable because
+        # I = P/V (or I = V/R) creates a circular dependency when V is an
+        # expression that itself depends on I.
+        if options["voltage as a state"] == "false" and options["operating mode"] in (
+            "explicit power",
+            "explicit resistance",
+        ):
+            raise pybamm.OptionError(
+                f"Cannot use '{options['operating mode']}' operating mode with "
+                "'voltage as a state' set to 'false'. Explicit power and "
+                "resistance control require voltage as an algebraic state."
+            )
 
         # Options not yet compatible with particle-size distributions
         if options["particle size"] == "distribution":
@@ -1142,6 +1252,9 @@ class BaseBatteryModel(pybamm.BaseModel):
                 f"must use surface formulation to solve {self!s} with hydrolysis"
             )
         self._options = options
+        # rebuild whenever options are (re)assigned.
+        # No-op unless the subclass overrides ``_rebuild_param``.
+        self._rebuild_param()
 
     def set_standard_output_variables(self):
         # Time
@@ -1189,6 +1302,32 @@ class BaseBatteryModel(pybamm.BaseModel):
             pybamm.logger.verbose(f"Updating {submodel_name} submodel ({self.name})")
             self.update(submodel)
             self.check_no_repeated_keys()
+
+    def _build_model(self):
+        if self._built:
+            raise pybamm.ModelError(
+                """Model already built. If you are adding a new submodel, try using
+                `model.update` instead."""
+            )
+
+        pybamm.logger.info(f"Start building {self.name}")
+
+        if self._built_fundamental is False:
+            self.build_fundamental()
+
+        # Register the voltage state Variable before coupled variables,
+        # so submodels that need V in get_coupled_variables can find it.
+        if self.options["voltage as a state"] == "true":
+            self._register_voltage_variable()
+
+        self.build_coupled_variables()
+
+        # Now that the expression is available, add the algebraic constraint
+        # before equations are built.
+        if self.options["voltage as a state"] == "true":
+            self._constrain_voltage_to_expression()
+
+        self.build_model_equations()
 
     def build_model(self):
         # Build model variables and equations
@@ -1461,6 +1600,21 @@ class BaseBatteryModel(pybamm.BaseModel):
                     self.param, domain, self.options, reaction_loc
                 )
             self.submodels[f"{Domain} interface utilisation"] = submodel
+
+    def _register_voltage_variable(self):
+        V = pybamm.Variable("Voltage [V]")
+        self.variables["Voltage [V]"] = V
+        self.initial_conditions[V] = self.param.ocv_init
+
+    def _constrain_voltage_to_expression(self):
+        V = self.variables["Voltage [V]"]
+        V_expr = self.variables.get("Voltage expression [V]")
+        if V_expr is None:
+            raise pybamm.ModelError(
+                "'voltage as a state' requires the model to define "
+                "'Voltage expression [V]'"
+            )
+        self.algebraic[V] = V - V_expr
 
     def set_voltage_variables(self):
         if self.options.negative["particle phases"] == "1":

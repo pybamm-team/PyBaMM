@@ -57,7 +57,6 @@ class TestUnaryOperators:
         # Test from_json
         input_json = {
             "name": "-",
-            "id": mocker.ANY,
             "domains": {
                 "primary": [],
                 "secondary": [],
@@ -99,7 +98,6 @@ class TestUnaryOperators:
         # Test from_json
         input_json = {
             "name": "abs",
-            "id": mocker.ANY,
             "domains": {
                 "primary": [],
                 "secondary": [],
@@ -152,7 +150,6 @@ class TestUnaryOperators:
         c = pybamm.Multiplication(pybamm.Variable("a"), pybamm.Scalar(random_value))
         sign_json = {
             "name": "sign",
-            "id": 5341515228900508018,
             "domains": {
                 "primary": [],
                 "secondary": [],
@@ -186,7 +183,6 @@ class TestUnaryOperators:
         # Test from_json
         input_json = {
             "name": "floor",
-            "id": mocker.ANY,
             "domains": {
                 "primary": [],
                 "secondary": [],
@@ -219,7 +215,6 @@ class TestUnaryOperators:
         # Test from_json
         input_json = {
             "name": "ceil",
-            "id": mocker.ANY,
             "domains": {
                 "primary": [],
                 "secondary": [],
@@ -751,6 +746,11 @@ class TestUnaryOperators:
             r"c^{\mathtt{\text{left}}}"
         )
 
+        # Test BoundaryGradient
+        assert pybamm.BoundaryGradient(a, "left").to_equation() == sympy.Symbol(
+            r"\nabla a^{\mathtt{\text{left}}}"
+        )
+
         # Test Integral
         xn = pybamm.SpatialVariable("xn", ["negative electrode"])
         assert pybamm.Integral(d, xn).to_equation() == sympy.Integral(
@@ -802,7 +802,6 @@ class TestUnaryOperators:
 
         un_json = {
             "name": "unary test",
-            "id": mocker.ANY,
             "domains": {
                 "primary": ["test"],
                 "secondary": [],
@@ -822,7 +821,6 @@ class TestUnaryOperators:
 
         ind_json = {
             "name": "Index[3]",
-            "id": mocker.ANY,
             "index": {"start": 3, "stop": 4, "step": None},
             "check_size": False,
         }
@@ -832,21 +830,37 @@ class TestUnaryOperators:
         ind_json["children"] = [vec]
         assert pybamm.Index._from_json(ind_json) == ind
 
-        # SpatialOperator
-        spatial_vec = pybamm.SpatialOperator("name", vec)
-        with pytest.raises(NotImplementedError):
-            spatial_vec.to_json()
+        # SpatialOperator now serialises its name and domains (subclasses extend
+        # this via _json_extra_fields); a concrete subclass round-trips via the
+        # generic hook.
+        grad = pybamm.Gradient(pybamm.Variable("u", domain=["negative electrode"]))
 
-        with pytest.raises(NotImplementedError):
-            pybamm.SpatialOperator._from_json({})
+        grad_json = {
+            "name": "grad",
+            "domains": {
+                "primary": ["negative electrode"],
+                "secondary": [],
+                "tertiary": [],
+                "quaternary": [],
+            },
+        }
+
+        assert grad.to_json() == grad_json
+
+        grad_json["children"] = [grad.children[0]]
+        assert pybamm.Gradient._from_json(grad_json) == grad
 
         # ExplicitTimeIntegral
-        expr = pybamm.ExplicitTimeIntegral(pybamm.Parameter("param"), pybamm.Scalar(1))
+        param = pybamm.Parameter("param")
+        ic = pybamm.Scalar(1)
+        expr = pybamm.ExplicitTimeIntegral(param, ic)
 
-        expr_json = {"name": "explicit time integral", "id": mocker.ANY}
+        expr_json = {
+            "name": "explicit time integral",
+            "domains": expr.domains,
+            "children": [param, ic],
+        }
 
         assert expr.to_json() == expr_json
 
-        expr_json["children"] = [pybamm.Parameter("param")]
-        expr_json["initial_condition"] = [pybamm.Scalar(1)]
         assert pybamm.ExplicitTimeIntegral._from_json(expr_json) == expr

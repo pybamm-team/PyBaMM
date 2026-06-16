@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 import numbers
 from typing import TYPE_CHECKING, Any
 
@@ -187,6 +188,7 @@ class ParameterSubstitutor:
                 function = pybamm.Scalar(function_name, name=symbol.name)
             elif callable(function_name):
                 # otherwise evaluate the function to create a new PyBaMM object
+                self._check_electrode_conductivity_signature(symbol, function_name)
                 function = function_name(*new_children)
             elif isinstance(
                 function_name, pybamm.Interpolant | pybamm.InputParameter
@@ -280,6 +282,43 @@ class ParameterSubstitutor:
         else:
             # Backup option: return the object
             return symbol
+
+    @staticmethod
+    def _check_electrode_conductivity_signature(symbol, function_name):
+        """
+        Electrode conductivity may now be supplied as a function of
+        (stoichiometry, temperature). If it is still supplied as a function of
+        temperature only, raise a clear error rather than letting it fail later
+        with a cryptic "takes 1 positional argument but 2 were given" TypeError.
+
+        Only triggers for a callable conductivity that is being passed
+        stoichiometry (``input_names`` has more than just temperature); a
+        constant conductivity is handled elsewhere and never reaches here.
+        """
+        if not symbol.name.endswith("electrode conductivity [S.m-1]"):
+            return
+        # only temperature is supplied (e.g. lead-acid, planar lithium metal)
+        if len(symbol.input_names) < 2:
+            return
+        try:
+            params = inspect.signature(function_name).parameters.values()
+        except (TypeError, ValueError):
+            # can't introspect (e.g. some builtins) - let the call proceed
+            return
+        # a function with *args can take any number of positional arguments
+        if any(p.kind == p.VAR_POSITIONAL for p in params):
+            return
+        n_positional = sum(
+            p.kind in (p.POSITIONAL_ONLY, p.POSITIONAL_OR_KEYWORD) for p in params
+        )
+        if n_positional < len(symbol.input_names):
+            raise TypeError(
+                f"'{symbol.name}' must now be a function of "
+                "(stoichiometry, temperature), e.g. `def sigma(sto, T): ...`. "
+                "Update your temperature-only conductivity function `f(T)` to "
+                "`f(sto, T)`; the stoichiometry argument may be ignored if the "
+                "conductivity does not depend on it."
+            )
 
     def _process_function_parameter(
         self, symbol: pybamm.FunctionParameter

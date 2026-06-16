@@ -1141,9 +1141,7 @@ class TestIDAKLUSolver:
             )
 
     def test_pickle_roundtrip_preserves_closest_event_idx(self):
-        # rootfn_casadi is dropped from the pickle and rebuilt from rootfn_pkl
-        # in __setstate__; confirm a round-tripped solver still records
-        # closest_event_idx after a root-return termination.
+        # The pickle drops _setup; the next solve rebuilds it from the model.
         import pickle
 
         solver = pybamm.IDAKLUSolver(output_variables=["Voltage [V]"])

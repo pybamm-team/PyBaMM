@@ -187,6 +187,21 @@ class SpatialVariable(IndependentVariable):
         """See :meth:`pybamm.Symbol.new_copy()`."""
         return self.__class__(self.name, domains=self.domains, coord_sys=self.coord_sys)
 
+    def to_json(self):
+        return {
+            "name": self.name,
+            "domains": self.domains,
+            "coord_sys": self.coord_sys,
+            "direction": getattr(self, "direction", None),
+        }
+
+    @classmethod
+    def _from_json(cls, snippet):
+        kwargs = {"domains": snippet["domains"], "coord_sys": snippet.get("coord_sys")}
+        if snippet.get("direction") is not None:
+            kwargs["direction"] = snippet["direction"]
+        return cls(snippet["name"], **kwargs)
+
 
 class SpatialVariableEdge(SpatialVariable):
     """

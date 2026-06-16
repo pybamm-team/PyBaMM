@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import functools
 import warnings
 from datetime import timedelta
 from numbers import Number
@@ -8,6 +9,7 @@ import numpy as np
 
 import pybamm
 import pybamm.telemetry
+from pybamm.expression_tree.input_parameter import DUMMY_INPUT_PARAMETER_VALUE
 from pybamm.solvers.base_solver import process
 from pybamm.util import import_optional_dependency
 
@@ -37,12 +39,24 @@ class Simulation(BaseSimulation):
     _AMBIENT_TEMPERATURE_INPUT = "Ambient temperature [K]"
     _PADDING_REST_KEY = "Rest for padding"
     _STEP_INDEX_INPUT = "Experiment step index"
+    _STEP_VALUE_INPUT = "Experiment step value"
     _TERMINATION_TIME = "experiment time limit reached"
     _TERMINATION_VOLTAGE = "experiment voltage limit reached"
     _TERMINATION_CAPACITY = "experiment capacity limit reached"
     _TERMINATION_FINAL_TIME = "final time"
     _TERMINATION_EXPERIMENT_TAG = "[experiment]"
     _COMBINED_TERMINATION_EVENT = "Combined termination [experiment]"
+
+    # Inputs the experiment injects per step; never user sensitivity targets.
+    _INTERNAL_EXPERIMENT_INPUTS = frozenset(
+        {
+            _START_TIME_INPUT,
+            _AMBIENT_TEMPERATURE_INPUT,
+            _INITIAL_TEMPERATURE_INPUT,
+            _STEP_INDEX_INPUT,
+            _STEP_VALUE_INPUT,
+        }
+    )
 
     def __init__(
         self,
@@ -103,6 +117,7 @@ class Simulation(BaseSimulation):
         self._experiment_step_indices = []
         self._experiment_padding_rest_index = None
         self._experiment_includes_padding_rest = False
+        self._experiment_uses_value_input = False
 
     def __getstate__(self):
         """
@@ -130,6 +145,7 @@ class Simulation(BaseSimulation):
         "_experiment_step_indices": list,
         "_experiment_padding_rest_index": None,
         "_experiment_includes_padding_rest": False,
+        "_experiment_uses_value_input": False,
     }
 
     def __setstate__(self, state):
@@ -231,8 +247,6 @@ class Simulation(BaseSimulation):
             return ["no experiment is attached to the simulation"]
 
         for step in self.experiment.steps:
-            if step.is_drive_cycle:
-                return ["drive-cycle experiment steps are not yet supported"]
             if isinstance(step, pybamm.step.BaseStep) and not isinstance(
                 step,
                 (
@@ -254,14 +268,53 @@ class Simulation(BaseSimulation):
 
     def _set_up_unified_experiment_model(self, parameter_values):
         self._experiment_uses_unified_model = True
-        self._experiment_step_indices = list(range(1, len(self.experiment.steps) + 1))
+
+        # Branch the switching Conditionals over unique steps, not instances: one
+        # branch per instance is O(n_steps) per timestep -> O(n_steps**2) overall.
+        # A step is "collapsible" if its control target is a constant (a fixed current,
+        # voltage, power, ...): such steps are solved with the target supplied as a
+        # shared per-step input, so steps differing only in their value share a single
+        # branch. This keeps the branch count -- and hence compile and runtime cost --
+        # tied to the number of structurally distinct control laws, not to the number of
+        # distinct values or cycles. Drive cycles and solution-dependent custom steps are
+        # not collapsible and keep their own branch.
+        value_input = pybamm.InputParameter(self._STEP_VALUE_INPUT)
+
+        def is_collapsible(step):
+            return step.control_target_value(self._parameter_values) is not None
+
+        def branch_key(step):
+            return (
+                step.unified_branch_repr()
+                if is_collapsible(step)
+                else step.basic_repr()
+            )
+
+        def control_builder(step):
+            # Collapsible steps read their target from the shared per-step input;
+            # the rest bake their own target in.
+            if is_collapsible(step):
+                return functools.partial(step.get_control_residual, target=value_input)
+            return step.get_control_residual
+
+        unique_steps = []
+        unique_branch_by_repr = {}
+        for step in self.experiment.steps:
+            key = branch_key(step)
+            if key not in unique_branch_by_repr:
+                unique_branch_by_repr[key] = len(unique_steps) + 1  # 1-based selector
+                unique_steps.append(step)
+        self._experiment_step_indices = [
+            unique_branch_by_repr[branch_key(step)] for step in self.experiment.steps
+        ]
+        self._experiment_uses_value_input = any(
+            is_collapsible(step) for step in unique_steps
+        )
         self._experiment_includes_padding_rest = bool(
             self.experiment.initial_start_time
         )
         self._experiment_padding_rest_index = (
-            len(self.experiment.steps) + 1
-            if self._experiment_includes_padding_rest
-            else None
+            len(unique_steps) + 1 if self._experiment_includes_padding_rest else None
         )
 
         new_model = self._model.new_copy()
@@ -270,11 +323,10 @@ class Simulation(BaseSimulation):
         # ambient temperature from step-level inputs instead of baking in one value.
         new_parameter_values[self._AMBIENT_TEMPERATURE_INPUT] = "[input]"
 
-        # Build one conditional control residual that selects the active step's
-        # control law via the experiment step index input.
-        step_control_builders = [
-            step.get_control_residual for step in self.experiment.steps
-        ]
+        # One conditional control residual selects the active step's control law via the
+        # experiment step index input; collapsible steps read their target from the
+        # shared per-step value input instead of baking it.
+        step_control_builders = [control_builder(step) for step in unique_steps]
         if self._experiment_includes_padding_rest:
             padding_rest_step = pybamm.step.Rest(duration=1)
             step_control_builders.append(padding_rest_step.get_control_residual)
@@ -291,12 +343,17 @@ class Simulation(BaseSimulation):
             submodel,
             new_parameter_values,
         )
+        # The control submodel owns the one Conditional residual (the switch over the
+        # per-step control laws). Record its variable so the solver builds that row's
+        # jacobian sparsely instead of via CasADi's dense Switch -- see
+        # BaseModel.build_casadi_jacobian. The attribute rides this same model object
+        # (in-place parameter processing and discretisation) through to solver.process.
+        new_model.switching_control_variables = {var.name for var in submodel.algebraic}
 
         # Combine each step's local termination expression into one experiment event,
         # selecting the active branch with the step index input.
         termination_branches = [
-            step.get_combined_termination_expression(variables)
-            for step in self.experiment.steps
+            step.get_combined_termination_expression(variables) for step in unique_steps
         ]
         if self._experiment_includes_padding_rest:
             termination_branches.append(pybamm.Scalar(1))
@@ -337,13 +394,25 @@ class Simulation(BaseSimulation):
 
         inputs[self._START_TIME_INPUT] = start_time
         if include_temperature:
-            inputs[self._AMBIENT_TEMPERATURE_INPUT] = (
+            ambient = (
                 step.temperature
                 or self._parameter_values[self._AMBIENT_TEMPERATURE_INPUT]
             )
+            # The unified model reads ambient temperature as a solver input, so it
+            # must be numeric; the parameter value can be a pybamm.Scalar.
+            if isinstance(ambient, pybamm.Scalar):
+                ambient = ambient.value
+            inputs[self._AMBIENT_TEMPERATURE_INPUT] = ambient
 
         if self._experiment_uses_unified_model:
             inputs[self._STEP_INDEX_INPUT] = active_step_index
+            if self._experiment_uses_value_input:
+                # Collapsible steps read their control target from this shared input;
+                # a non-collapsible active step doesn't read it, so pass the dummy.
+                target = step.control_target_value(self._parameter_values)
+                inputs[self._STEP_VALUE_INPUT] = (
+                    target if target is not None else DUMMY_INPUT_PARAMETER_VALUE
+                )
         return inputs
 
     def _get_built_experiment_model(self, step_or_key):
@@ -641,7 +710,6 @@ class Simulation(BaseSimulation):
                     f"Step '{step_str}' is infeasible at initial conditions, "
                     "but skip_ok is True. Skipping step."
                 )
-                self._solution.termination = steps[0].termination
                 return True  # signal: continue to next cycle
             raise pybamm.SolverError(
                 f"Step '{step_str}' is infeasible "
@@ -768,6 +836,22 @@ class Simulation(BaseSimulation):
                 "Solving with a list of input sets is not supported with experiments."
             )
 
+        # Take sensitivities only w.r.t. user inputs, not the control inputs the
+        # experiment injects per step.
+        if "calculate_sensitivities" in kwargs:
+            requested = kwargs["calculate_sensitivities"]
+            if requested is True:
+                kwargs["calculate_sensitivities"] = list((inputs or {}).keys())
+            elif isinstance(requested, list):
+                kwargs["calculate_sensitivities"] = [
+                    name
+                    for name in requested
+                    if name not in self._INTERNAL_EXPERIMENT_INPUTS
+                ]
+
+        # Drop the prior solution before build/integration.
+        self._solution = starting_solution
+
         self.build_for_experiment(
             initial_soc=initial_soc,
             direction=direction,
@@ -778,9 +862,6 @@ class Simulation(BaseSimulation):
             pybamm.logger.warning(
                 "Ignoring t_eval as solution times are specified by the experiment"
             )
-        # Re-initialize solution, e.g. for solving multiple times with different
-        # inputs without having to build the simulation again
-        self._solution = starting_solution
         user_inputs = inputs
         timer = pybamm.Timer()
 
@@ -893,6 +974,21 @@ class Simulation(BaseSimulation):
             )
         else:
             cycle_lengths = self.experiment.cycle_lengths
+
+        # Collect per-cycle solutions and fold once after the loop (O(N), not O(N^2)).
+        # Seed with the loop-entry self._solution to match the old left-fold start.
+        cross_cycle_segments = (
+            []
+            if (
+                self._solution is None
+                or isinstance(self._solution, pybamm.EmptySolution)
+            )
+            else [self._solution]
+        )
+
+        # Track running termination (real cycles + skipped steps), applied to the
+        # folded solution below to match the old left-fold's final termination.
+        last_termination = None
 
         for cycle_num, cycle_length in enumerate(
             cycle_lengths,
@@ -1075,11 +1171,14 @@ class Simulation(BaseSimulation):
             if cycle_solution is not None and (
                 save_this_cycle or feasible is False or stop_experiment
             ):
-                self._solution = self._solution + cycle_solution
+                cross_cycle_segments.append(cycle_solution)
+                if not isinstance(cycle_solution, pybamm.EmptySolution):
+                    last_termination = cycle_solution.termination
 
             if steps:
                 if all(isinstance(s, pybamm.EmptySolution) for s in steps):
                     if self._check_infeasible_steps(steps, step, step_str, cycle_num):
+                        last_termination = steps[0].termination
                         continue
                 cycle_sol = pybamm.make_cycle_solution(
                     steps,
@@ -1139,6 +1238,11 @@ class Simulation(BaseSimulation):
 
             if stop_experiment:
                 break
+
+        if cross_cycle_segments:
+            self._solution = pybamm.Solution.from_sub_solutions(cross_cycle_segments)
+            if last_termination is not None:
+                self._solution.termination = last_termination
 
         if self._solution is not None and len(all_cycle_solutions) > 0:
             self._solution.cycles = all_cycle_solutions

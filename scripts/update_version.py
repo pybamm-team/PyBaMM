@@ -43,7 +43,11 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "version",
-        help="Release version, e.g. 26.3 or 26.3.1",
+        help=(
+            "Release version in YY.MM.N.P form, e.g. 27.1.0.0 for a feature "
+            "release or 27.1.0.1 for a patch. See RELEASE.md for the version "
+            "scheme."
+        ),
     )
     args = parser.parse_args()
     update_version(args.version)

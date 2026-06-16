@@ -2,6 +2,8 @@
 # Standard parameters for lithium-ion battery models
 #
 
+import numpy as np
+
 import pybamm
 
 from .base_parameters import BaseParameters, NullParameters
@@ -317,10 +319,18 @@ class DomainLithiumIonParameters(BaseParameters):
             f"{Domain} electrode double-layer capacity [F.m-2]", inputs
         )
 
-    def sigma(self, T):
-        """Dimensional electrical conductivity in electrode"""
-        inputs = {"Temperature [K]": T}
+    def sigma(self, sto, T):
+        """
+        Dimensional electrical conductivity in electrode. Optionally a function of
+        the electrode (surface) stoichiometry in addition to temperature; pass
+        ``sto=None`` for a conductivity that is a function of temperature only.
+        """
         Domain = self.domain.capitalize()
+        inputs = {"Temperature [K]": T}
+        if sto is not None:
+            tol = pybamm.settings.tolerances["sigma__c_s"]
+            sto = pybamm.maximum(pybamm.minimum(sto, 1 - tol), tol)
+            inputs = {f"{Domain} electrode stoichiometry": sto, **inputs}
         return pybamm.FunctionParameter(
             f"{Domain} electrode conductivity [S.m-1]", inputs
         )
@@ -952,8 +962,9 @@ def U_asymptote_approaching_zero(sto):
     b = 6910.192179565431
     c = -7.7e-4
 
-    # Clamp sto to avoid exp overflow (float64 max is ~exp(709))
-    max_safe_exp = 700
+    # Smallest exponent for which 1 + exp(z) == exp(z) in float64, so the
+    # linear continuation below is a bit-exact match for the softplus branch
+    max_safe_exp = np.log(2.0 / np.finfo(np.float64).eps)  # = 53*ln2 ~= 36.737
     sto_limit = c - max_safe_exp / b
 
     # For sto >= sto_limit: use log(1 + exp(...))

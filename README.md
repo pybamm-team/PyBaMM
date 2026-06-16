@@ -95,13 +95,17 @@ Note that the examples on the `main` branch are tested on the latest commit. If 
 
 ## Versioning
 
-PyBaMM makes releases every four months and we use [CalVer](https://calver.org/), which means that the version number is `YY.MM`. The releases happen, approximately, at the end of January, May and September. There is no difference between releases that increment the year and releases that increment the month; in particular, releases that increment the month may introduce breaking changes. Breaking changes for each release are communicated via the [CHANGELOG](CHANGELOG.md), and come with deprecation warnings or errors that are kept for at least one year (3 releases). If you find a breaking change that is not documented, or think it should be undone, please open an issue on [GitHub](https://github.com/pybamm-team/pybamm).
+PyBaMM uses [CalVer](https://calver.org/). Version numbers take the form `YY.MM.N.P`, where `YY.MM` is the year and month of the release, `N` is the feature release within that month (`0` for the first), and `P` is the patch level (`0` for the feature release itself). For example, `27.1.0.1` is the first patch of the first feature release in January 2027.
+
+Releases ship when there's something worth releasing, not on a fixed schedule. Any release may contain breaking changes; when it does, they appear under a `## Breaking changes` section at the top of [`CHANGELOG.md`](CHANGELOG.md). Public APIs that are removed or renamed ship a `DeprecationWarning` for at least two prior feature releases first, where technically possible.
+
+See [`RELEASE.md`](RELEASE.md) for the full release policy, including how we define "public API" and what counts as a breaking change.
 
 ## 🚀 Installing PyBaMM
 
 PyBaMM is available on GNU/Linux, MacOS and Windows.
 We strongly recommend to install PyBaMM within a python virtual environment, in order not to alter any distribution python files.
-For instructions on how to create a virtual environment for PyBaMM, see [the documentation](https://docs.pybamm.org/en/latest/source/user_guide/installation/gnu-linux-mac.html#user-install).
+For instructions on how to create a virtual environment for PyBaMM, see [the documentation](https://docs.pybamm.org/en/latest/source/user_guide/installation/index.html#user-install-label).
 
 ### Using pip
 
@@ -116,18 +120,28 @@ pip install pybamm
 
 PyBaMM is available as a conda package through the conda-forge channel.
 
-[![conda_forge](https://img.shields.io/conda/vn/conda-forge/pybamm?color=green)](https://anaconda.org/conda-forge/pybamm)
+> [!NOTE]
+> PyBaMM versions between 24.11.2 and 25.6 (not including these boundary versions) are not available on conda-forge.
+
+[![Conda Recipe](https://img.shields.io/badge/recipe-pybamm--base-green.svg)](https://anaconda.org/conda-forge/pybamm-base)
+[![downloads](https://img.shields.io/conda/dn/conda-forge/pybamm-base?color=green)](https://anaconda.org/conda-forge/pybamm-base)
+[![Conda Recipe](https://img.shields.io/badge/recipe-pybamm-green.svg)](https://anaconda.org/conda-forge/pybamm)
 [![downloads](https://img.shields.io/conda/dn/conda-forge/pybamm?color=green)](https://anaconda.org/conda-forge/pybamm)
 
 ```bash
+# for no extra dependencies
+conda install -c conda-forge pybamm-base
+# for all extra dependencies except jax
 conda install -c conda-forge pybamm
+# optionally install jax >=0.7.0, <0.9.0 on python >=3.11
+conda install -c conda-forge "jax>=0.7.0,<0.9.0"
 ```
 
 ### Optional solvers
 
 The following solvers are optionally available:
 
-- [jax](https://jax.readthedocs.io/en/latest/notebooks/quickstart.html)-based solver, see [the documentation](https://docs.pybamm.org/en/latest/source/user_guide/installation/gnu-linux-mac.html#optional-jaxsolver).
+- [jax](https://jax.readthedocs.io/en/latest/notebooks/quickstart.html)-based solver, see [the documentation](https://docs.pybamm.org/en/latest/source/user_guide/installation/index.html#optional-jaxsolver).
 
 ## 📖 Citing PyBaMM
 
@@ -168,7 +182,7 @@ If you'd like to help us develop PyBaMM by adding new methods, writing documenta
 
 For any questions, comments, suggestions or bug reports, please visit:
 
-- Our [Contact Page](https://www.pybamm.org/community)
+- Our [Contact Page](https://pybamm.org/community/)
 - Our [Discussion Forum](https://pybamm.discourse.group/)
 
 ## 📃 License

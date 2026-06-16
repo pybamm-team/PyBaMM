@@ -155,11 +155,38 @@ class VariableBase(pybamm.Symbol):
         else:
             return self.name
 
-    def to_json(
-        self,
-    ):
-        raise NotImplementedError(
-            "pybamm.Variable: Serialisation is only implemented for discretised models."
+    def to_json(self):
+        return {
+            "name": self.name,
+            "domains": self.domains,
+            "children": [self._scale, self._reference, self.bounds[0], self.bounds[1]],
+            "print_name": self._raw_print_name,
+        }
+
+    @classmethod
+    def _from_json(cls, snippet):
+        children = snippet.get("children") or []
+        if len(children) == 4:
+            # Kernel-era shape: scale/reference/bounds carried as children.
+            scale, reference, lower, upper = children
+            bounds = (lower, upper)
+        else:
+            # Legacy compact shape: scale/reference defaulted, bounds stored as a
+            # top-level [lower, upper] pair of (undecoded) nodes, or None for the
+            # default. The kernel only decodes "children", so decode bounds here.
+            from pybamm.expression_tree.operations.serialise_kernel import decode
+
+            scale = reference = None
+            bounds = snippet.get("bounds")
+            if bounds is not None:
+                bounds = tuple(decode(b) for b in bounds)
+        return cls(
+            snippet["name"],
+            domains=snippet["domains"],
+            scale=scale,
+            reference=reference,
+            bounds=bounds,
+            print_name=snippet.get("print_name"),
         )
 
 

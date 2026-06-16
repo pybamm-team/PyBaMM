@@ -187,9 +187,9 @@ class BasicDFN(BaseModel):
         ######################
         # Current in the solid
         ######################
-        sigma_eff_n = self.param.n.sigma(T) * eps_s_n**self.param.n.b_s
+        sigma_eff_n = self.param.n.sigma(sto_surf_n, T) * eps_s_n**self.param.n.b_s
         i_s_n = -sigma_eff_n * pybamm.grad(phi_s_n)
-        sigma_eff_p = self.param.p.sigma(T) * eps_s_p**self.param.p.b_s
+        sigma_eff_p = self.param.p.sigma(sto_surf_p, T) * eps_s_p**self.param.p.b_s
         i_s_p = -sigma_eff_p * pybamm.grad(phi_s_p)
         # The `algebraic` dictionary contains differential equations, with the key being
         # the main scalar variable of interest in the equation
@@ -264,6 +264,7 @@ class BasicDFN(BaseModel):
             "Positive electrolyte potential [V]": phi_e_p,
             "Positive electrode potential [V]": phi_s_p,
             "Voltage [V]": voltage,
+            "Voltage expression [V]": voltage,
             "Battery voltage [V]": voltage * num_cells,
             "Time [s]": pybamm.t,
             "Discharge capacity [A.h]": Q,
