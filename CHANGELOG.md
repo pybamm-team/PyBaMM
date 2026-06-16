@@ -71,6 +71,7 @@
 
 ## Features
 
+- Adds `timeout` option to `BaseSolver`. ([#5520](https://github.com/pybamm-team/PyBaMM/pull/5520))
 - Default `summary_variables` now include per-phase LAM%, capacity, total lithium, SEI loss, SEI-on-cracks loss, and lithium plating loss for composite electrodes; aggregate per-electrode entries are unchanged. ([#5516](https://github.com/pybamm-team/PyBaMM/pull/5516))
 - Added a `store_first_last` kwarg to solvers. When `True`, only the first and last sample of each integration window (one experiment step in `Simulation.solve`, or the full `[t_eval[0], t_eval[-1]]` window in `solve`) are stored. Composes with `output_variables` for memory-light ageing simulations whose post-processing only reads per-step first/last values. Has effect on solvers that support intra-solve interpolation (`IDAKLUSolver`); other solvers warn and no-op. Note: with this flag set, intra-step interpolation falls back to linear across the whole step, so it is not appropriate when post-processing queries an intra-step time. ([#5499](https://github.com/pybamm-team/PyBaMM/pull/5499))
 - Added `NonlinearSolver` as the default nonlinear solver, which replaces `CasadiAlgebraicSolver`. `IDAKLUSolver` now computes the initial conditions in C++ by default. ([#5459](https://github.com/pybamm-team/PyBaMM/pull/5459))
