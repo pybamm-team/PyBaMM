@@ -258,6 +258,7 @@ class BasicDFN(pybamm.lithium_ion.BaseModel):
             "Positive electrolyte potential [V]": phi_e_p,
             "Positive electrode potential [V]": phi_s_p,
             "Voltage [V]": voltage,
+            "Voltage expression [V]": voltage,
             "Battery voltage [V]": voltage * num_cells,
             "Time [s]": pybamm.t,
             "Discharge capacity [A.h]": Q,

@@ -594,6 +594,34 @@ class TestRepeatedRowMatmulOptimization:
         actual = np.array(f(x)).flatten()
         np.testing.assert_allclose(actual, expected, rtol=1e-14)
 
+    def test_matrix_right_operand(self):
+        """M @ R when R is a matrix (e.g. a jacobian seed), not just a column vector.
+
+        The repeated-row optimization must broadcast with matmul, not element-wise ``*``
+        (which only works for a column vector and otherwise raises a dimension mismatch).
+        """
+        rng = np.random.default_rng(0)
+        n, m, k = 20, 8, 5
+        R = casadi.MX.sym("R", n, k)
+        Rv = rng.random((n, k))
+        row = rng.random(n)
+
+        # all rows identical
+        M = np.tile(row, (m, 1))
+        result = try_repeated_row_matmul(pybamm.Matrix(M), R)
+        assert result is not None
+        f = casadi.Function("f", [R], [result])
+        np.testing.assert_allclose(np.array(f(Rv)), M @ Rv, rtol=1e-12)
+
+        # interior rows identical, boundaries differ
+        M2 = np.tile(row, (m, 1))
+        M2[0, :] = rng.random(n)
+        M2[-1, :] = rng.random(n)
+        result2 = try_repeated_row_matmul(pybamm.Matrix(M2), R)
+        assert result2 is not None
+        f2 = casadi.Function("f2", [R], [result2])
+        np.testing.assert_allclose(np.array(f2(Rv)), M2 @ Rv, rtol=1e-12)
+
     def test_two_rows_identical(self):
         """Test m=2 with identical rows."""
 

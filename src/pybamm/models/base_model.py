@@ -50,6 +50,28 @@ _BUILTIN_MODULE_NAMES = (
 )
 
 
+def _switch_row_jacobian(expression, y, switch_rows, switch_columns):
+    """Jacobian of a model's switching-control rows.
+
+    Differentiate those rows on their own -- which keeps the ``Switch`` out of the
+    physics sweep, where CasADi reverse-AD would otherwise inflate it -- and restrict them
+    to the state columns the branches reference. The projection turns CasADi's dense
+    ``Switch`` row into its true sparse pattern; it is lossless because the dropped entries
+    are structural zeros.
+    """
+    jacobian = casadi.jacobian(expression[switch_rows, :], y)
+    rows, cols = jacobian.sparsity().get_triplet()
+    kept = [
+        (row, col)
+        for row, col in zip(rows, cols, strict=True)
+        if col in switch_columns[switch_rows[row]]
+    ]
+    pattern = casadi.Sparsity.triplet(
+        len(switch_rows), jacobian.shape[1], [r for r, _ in kept], [c for _, c in kept]
+    )
+    return casadi.project(jacobian, pattern)
+
+
 class BaseModel:
     """
     Base model class for other models to extend.
@@ -126,6 +148,12 @@ class BaseModel:
         self.is_parameterised = False
         self.y_slices = None
         self.len_rhs_and_alg = None
+
+        # Names of variables whose algebraic equation is a switching control residual --
+        # a pybamm.Conditional over per-step control laws, set by the unified-experiment
+        # setup. A structural attribute (like y_slices) that build_casadi_jacobian
+        # consumes to give those rows a sparse treatment; empty for ordinary models.
+        self.switching_control_variables = set()
 
         # Non-lithium ion models shouldn't calculate eSOH parameters
         self._calc_esoh = False
@@ -537,6 +565,73 @@ class BaseModel:
     def jacobian_algebraic(self, jacobian_algebraic):
         self._jacobian_algebraic = jacobian_algebraic
 
+    def build_casadi_jacobian(self, expression, y):
+        """Build the CasADi jacobian of a converted model ``expression`` w.r.t. ``y``.
+
+        The solver calls this for every model in place of a bare ``casadi.jacobian``. It
+        is plain AD, except for the full rhs+algebraic jacobian of a model that has a
+        *switching control* equation -- a :class:`pybamm.Conditional` over per-step
+        control laws, recorded in :attr:`switching_control_variables` by the unified
+        experiment setup. CasADi turns that ``Conditional`` into a ``Switch`` and
+        differentiates it as a dense, full-bandwidth row inside the combined sweep.
+
+        Such a control residual is written against state variables (the current, and --
+        with "voltage as a state" -- the voltage), so its jacobian can only be nonzero in
+        those state columns. We differentiate those rows on their own and restrict them to
+        exactly those columns, and differentiate the physics block-wise (rhs and algebraic
+        separately, which CasADi handles efficiently). The result is identical to plain
+        AD -- only sparse on the control rows and cheaper to evaluate.
+        """
+        if (
+            not self.switching_control_variables
+            or expression.shape[0] != self.len_rhs_and_alg
+        ):
+            return casadi.jacobian(expression, y)
+
+        switch_columns = self._switching_control_columns()
+        switch_rows = sorted(switch_columns)
+        physics_rhs_rows = [r for r in range(self.len_rhs) if r not in switch_columns]
+        physics_alg_rows = [
+            r
+            for r in range(self.len_rhs, self.len_rhs_and_alg)
+            if r not in switch_columns
+        ]
+        physics = casadi.vertcat(
+            casadi.jacobian(expression[physics_rhs_rows, :], y),
+            casadi.jacobian(expression[physics_alg_rows, :], y),
+        )
+        switch = _switch_row_jacobian(expression, y, switch_rows, switch_columns)
+
+        # Reassemble the row-blocks (physics rhs, physics algebraic, switch) into the
+        # original state ordering.
+        stacked = casadi.vertcat(physics, switch)
+        stacked_order = physics_rhs_rows + physics_alg_rows + switch_rows
+        position = {row: i for i, row in enumerate(stacked_order)}
+        return stacked[[position[row] for row in range(self.len_rhs_and_alg)], :]
+
+    def _switching_control_columns(self):
+        """Map each row of a switching control equation (named in
+        :attr:`switching_control_variables`) to the state columns its branches reference
+        -- the only columns its jacobian can be nonzero in.
+
+        Read structurally from the ``StateVector`` slices in the equation (no
+        differentiation, so drive-cycle interpolants are safe); the rows come from the
+        discretised state slices, which is robust to the ordering of ``algebraic``.
+        """
+        switch_columns = {}
+        for variable, equation in self.algebraic.items():
+            if variable.name not in self.switching_control_variables:
+                continue
+            referenced = set()
+            for node in equation.pre_order():
+                if isinstance(node, pybamm.StateVector):
+                    for state_slice in node.y_slices:
+                        referenced.update(range(state_slice.start, state_slice.stop))
+            for row_slice in self.y_slices[variable]:
+                for row in range(row_slice.start, row_slice.stop):
+                    switch_columns[row] = referenced
+        return switch_columns
+
     @property
     def param(self):
         """Returns a dictionary to store parameter values for the model."""
@@ -545,6 +640,12 @@ class BaseModel:
     @param.setter
     def param(self, values):
         self._param = values
+
+    def _rebuild_param(self):
+        """Rebuild ``param`` from ``self.options``; no-op unless ``param`` is
+        options-derived. Called by the ``options`` setter whenever options are
+        (re)assigned, so subclasses keep ``param`` in sync automatically.
+        """
 
     @property
     def options(self):
@@ -1071,6 +1172,7 @@ class BaseModel:
         new_model._variables_casadi = self._variables_casadi.copy()
         new_model._symbol_processor = self.symbol_processor.copy()
         new_model._solution_observable = self._solution_observable
+        new_model.switching_control_variables = self.switching_control_variables.copy()
         return new_model
 
     def update(self, *submodels):

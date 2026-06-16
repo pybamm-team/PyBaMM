@@ -53,7 +53,7 @@ PRINT_OPTIONS_OUTPUT = """\
 'thermal': 'x-full' (possible: ['isothermal', 'lumped', 'x-lumped', 'x-full'])
 'total interfacial current density as a state': 'false' (possible: ['false', 'true'])
 'transport efficiency': 'Bruggeman' (possible: ['Bruggeman', 'ordered packing', 'hyperbola of revolution', 'overlapping spheres', 'tortuosity factor', 'random overlapping cylinders', 'heterogeneous catalyst', 'cation-exchange membrane'])
-'voltage as a state': 'false' (possible: ['false', 'true'])
+'voltage as a state': 'true' (possible: ['false', 'true'])
 'working electrode': 'both' (possible: ['both', 'positive'])
 'x-average side reactions': 'false' (possible: ['false', 'true'])
 'use lumped thermal capacity': 'false' (possible: ['false', 'true'])
@@ -444,6 +444,60 @@ class TestBaseBatteryModel:
                     "number of MSMR reactions": "1.5",
                 }
             )
+        # MSMR inside a per-electrode tuple must be rejected cleanly, not slip
+        # through to crash later as int('none') in parameter construction.
+        with pytest.raises(pybamm.OptionError, match=r"MSMR"):
+            pybamm.BaseBatteryModel({"open-circuit potential": ("MSMR", "single")})
+        with pytest.raises(pybamm.OptionError, match=r"MSMR"):
+            pybamm.BaseBatteryModel({"particle": ("MSMR", "Fickian diffusion")})
+        # MSMR with the default "none" reaction count must also be rejected cleanly.
+        with pytest.raises(pybamm.OptionError, match=r"MSMR"):
+            pybamm.BaseBatteryModel(
+                {
+                    "open-circuit potential": "MSMR",
+                    "particle": "MSMR",
+                    "intercalation kinetics": "MSMR",
+                }
+            )
+
+    def test_msmr_mixed_electrode_accepted(self):
+        # Verify non-MSMR electrode's "none" reaction count is legitimate
+        options = {
+            "open-circuit potential": ("MSMR", "single"),
+            "particle": ("MSMR", "Fickian diffusion"),
+            "intercalation kinetics": ("MSMR", "symmetric Butler-Volmer"),
+            "number of MSMR reactions": ("3", "none"),
+        }
+        model = pybamm.BaseBatteryModel(options)
+        assert model.options["number of MSMR reactions"] == ("3", "none")
+
+    def test_msmr_half_cell_does_not_validate_counter_electrode(self):
+        # On a half cell the negative electrode is lithium metal, not a porous
+        # MSMR electrode, so a scalar "MSMR" option must not force a reaction
+        # count on it.
+        options = {
+            "working electrode": "positive",
+            "open-circuit potential": "MSMR",
+            "particle": "MSMR",
+            "intercalation kinetics": "MSMR",
+            "number of MSMR reactions": ("none", "6"),
+        }
+        model = pybamm.BaseBatteryModel(options)
+        assert model.options["number of MSMR reactions"] == ("none", "6")
+
+    def test_msmr_half_cell_still_validates_working_electrode(self):
+        # The working electrode is still validated: a "none" count
+        # there must be rejected cleanly rather than slipping through.
+        with pytest.raises(pybamm.OptionError, match=r"positive electrode"):
+            pybamm.BaseBatteryModel(
+                {
+                    "working electrode": "positive",
+                    "open-circuit potential": "MSMR",
+                    "particle": "MSMR",
+                    "intercalation kinetics": "MSMR",
+                    "number of MSMR reactions": ("6", "none"),
+                }
+            )
 
     def test_build_twice(self):
         model = pybamm.lithium_ion.SPM()  # need to pick a model to set vars and build
@@ -512,12 +566,32 @@ class TestBaseBatteryModel:
         model = pybamm.lithium_ion.SPM({"voltage as a state": "true"})
         assert model.options["voltage as a state"] == "true"
         assert isinstance(model.variables["Voltage [V]"], pybamm.Variable)
+        assert "Voltage [V]" in [v.name for v in model.algebraic.keys()]
 
         model = pybamm.lithium_ion.SPM(
             {"voltage as a state": "true", "operating mode": "voltage"}
         )
         assert model.options["voltage as a state"] == "true"
         assert isinstance(model.variables["Voltage [V]"], pybamm.Variable)
+        assert "Voltage [V]" in [v.name for v in model.algebraic.keys()]
+
+    def test_explicit_modes_default_voltage_as_state(self):
+        for mode in ["explicit power", "explicit resistance"]:
+            options = pybamm.BatteryModelOptions({"operating mode": mode})
+            assert options["voltage as a state"] == "true"
+
+    def test_explicit_modes_reject_voltage_as_state_false(self):
+        for mode in ["explicit power", "explicit resistance"]:
+            with pytest.raises(pybamm.OptionError, match="voltage as a state"):
+                pybamm.BatteryModelOptions(
+                    {"operating mode": mode, "voltage as a state": "false"}
+                )
+
+    def test_voltage_as_state_requires_voltage_expression(self):
+        model = pybamm.BaseBatteryModel({"voltage as a state": "true"})
+        model.variables["Voltage [V]"] = pybamm.Variable("Voltage [V]")
+        with pytest.raises(pybamm.ModelError, match="Voltage expression"):
+            model._constrain_voltage_to_expression()
 
 
 class TestOptions:
@@ -608,3 +682,43 @@ class TestOptions:
             )
             == ocp_option[1]
         )
+
+    def test_default_options_independent_of_possible_options_order(self):
+        """Defaults should be set explicitly, not derived from possible_options[0]."""
+        options = pybamm.BatteryModelOptions({})
+        # voltage as a state defaults to "true" although possible_options
+        # lists "false" first: defaults are explicit, not derived from order
+        assert options["voltage as a state"] == "true"
+        # surface form: possible_options lists "false" first, default is "false"
+        assert options["surface form"] == "false"
+
+    def test_default_options_cover_all_possible_options(self):
+        """Every key in possible_options must have an explicit default."""
+        options = pybamm.BatteryModelOptions({})
+        for key in options.possible_options:
+            assert key in options, f"Missing default for option '{key}'"
+
+
+class TestVaasNormalization:
+    """Test the centralized VAAS + surface form policy."""
+
+    def test_vaas_true_with_surface_form_false_is_valid(self):
+        """VAAS can be true even with surface_form=false (DFN case)."""
+        options = pybamm.BatteryModelOptions(
+            {"voltage as a state": "true", "surface form": "false"}
+        )
+        assert options["voltage as a state"] == "true"
+        assert options["surface form"] == "false"
+
+    def test_vaas_false_with_surface_form_algebraic_is_valid(self):
+        """surface form algebraic without voltage-as-state is valid."""
+        options = pybamm.BatteryModelOptions(
+            {"voltage as a state": "false", "surface form": "algebraic"}
+        )
+        assert options["voltage as a state"] == "false"
+        assert options["surface form"] == "algebraic"
+
+    def test_vaas_false_defaults_surface_form_false(self):
+        """When VAAS is false and surface form not set, surface form stays false."""
+        options = pybamm.BatteryModelOptions({"voltage as a state": "false"})
+        assert options["surface form"] == "false"

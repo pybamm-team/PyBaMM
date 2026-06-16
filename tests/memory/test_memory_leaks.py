@@ -143,10 +143,12 @@ class TestSolutionMemory:
         sim = pybamm.Simulation(model)
         sol = sim.solve([0, 3600])
 
-        # Warmup: first access populates variable cache
+        # Warmup: first access populates variable cache (including the
+        # expression -> casadi conversion, paid once per variable)
         _ = sol["Voltage [V]"].entries
         _ = sol["Current [A]"].entries
         _ = sol["Time [h]"].entries
+        _ = sol["Terminal voltage [V]"].entries
 
         tracemalloc.start()
         baseline = tracemalloc.get_traced_memory()[0]

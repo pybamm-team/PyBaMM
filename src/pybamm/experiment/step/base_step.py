@@ -2,12 +2,23 @@ from __future__ import annotations
 
 import numbers
 from datetime import datetime
+from enum import Enum
 
 import numpy as np
 
 import pybamm
 
 from .step_termination import _read_termination
+
+
+class ControlKind(str, Enum):
+    """The control-law shape of a step (the quantity its residual fixes)."""
+
+    CURRENT = "current"
+    VOLTAGE = "voltage"
+    POWER = "power"
+    RESISTANCE = "resistance"
+
 
 _examples = """
 
@@ -280,6 +291,46 @@ class BaseStep:
     def __hash__(self):
         return hash(self.basic_repr())
 
+    # --- Control law (used to build the unified-experiment switching model) ---
+    #: Control-law shape (a :class:`ControlKind`); steps sharing it and differing only in
+    #: their target value collapse to one unified-mode branch.
+    control_kind = None
+
+    def get_control_residual(self, variables, target=None):
+        """Control residual. ``target`` is the per-step input that collapsible steps
+        share; when it is ``None`` the step falls back to its own ``_default_target``."""
+        if target is None:
+            target = self._default_target(variables)
+        return self._get_control_residual(variables, target)
+
+    def _default_target(self, variables):
+        """The step's own target, used when no per-step ``target`` overrides it."""
+        return self.value
+
+    def _get_control_residual(self, variables, target):
+        """Residual driving the controlled quantity to the resolved ``target``."""
+        raise NotImplementedError  # pragma: no cover
+
+    @property
+    def _control_target(self):
+        """The control target as a symbol (the prescribed current, voltage, ...)."""
+        return self.value
+
+    def control_target_value(self, parameter_values):
+        """The control target as a number, or ``None`` if it is not a constant."""
+        return _constant_value(parameter_values, self._control_target)
+
+    def unified_branch_repr(self):
+        """Branch identity in unified mode: control kind and everything but the value."""
+        parts = [self.control_kind or type(self).__name__]
+        if self.termination:
+            parts.append(f"termination={self.termination}")
+        if self.temperature:
+            parts.append(f"temperature={self.temperature}")
+        if self.direction:
+            parts.append(f"direction={self.direction}")
+        return "|".join(parts)
+
     def _default_timespan(self, value):
         """
         Default timespan for the step is one day (24 hours).
@@ -516,14 +567,21 @@ class BaseStep:
 
 
 class BaseStepExplicit(BaseStep):
+    control_kind = ControlKind.CURRENT
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
     def current_value(self, variables):
         raise NotImplementedError  # pragma: no cover
 
-    def get_control_residual(self, variables):
-        return variables["Current [A]"] - self.current_value(variables)
+    def _default_target(self, variables):
+        # The current may depend on the solution (custom steps), so build it from
+        # ``variables`` rather than the (possibly absent) constant value.
+        return self.current_value(variables)
+
+    def _get_control_residual(self, variables, target):
+        return variables["Current [A]"] - target
 
     def set_up(self, new_model, new_parameter_values):
         new_parameter_values["Current function [A]"] = self.current_value(
@@ -544,9 +602,6 @@ class BaseStepImplicit(BaseStep):
         return {}
 
     def get_submodel(self, model):
-        raise NotImplementedError  # pragma: no cover
-
-    def get_control_residual(self, variables):
         raise NotImplementedError  # pragma: no cover
 
     @staticmethod
@@ -589,6 +644,16 @@ _type_to_units = {
     "power": "[W]",
     "resistance": "[Ohm]",
 }
+
+
+def _constant_value(parameter_values, target):
+    """Numeric value of ``target`` if it is a state/time-independent constant (after
+    parameter substitution), else ``None``. ``target`` may be ``None`` (custom steps),
+    a number, or a symbol (e.g. a drive-cycle interpolant, which is not constant)."""
+    if target is None:
+        return None
+    processed = parameter_values.process_symbol(pybamm.convert_to_symbol(target))
+    return float(processed.evaluate()) if processed.is_constant() else None
 
 
 def get_unit_from(a_string: str) -> str:

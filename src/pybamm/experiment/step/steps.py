@@ -3,6 +3,7 @@ import pybamm
 from .base_step import (
     BaseStepExplicit,
     BaseStepImplicit,
+    ControlKind,
     _convert_electric,
     _examples,
 )
@@ -168,6 +169,11 @@ class CRate(BaseStepExplicit):
     def current_value(self, variables):
         return self.value * pybamm.Parameter("Nominal cell capacity [A.h]")
 
+    @property
+    def _control_target(self):
+        # ``value`` is a C-rate; the controlled quantity is the current it sets.
+        return self.current_value(None)
+
     def _default_timespan(self, value):
         # "value" is C-rate, so duration is "1 / value" hours in seconds
         # with a 2x safety factor
@@ -187,11 +193,13 @@ class Voltage(BaseStepImplicit):
     Voltage should always be positive.
     """
 
+    control_kind = ControlKind.VOLTAGE
+
     def get_parameter_values(self, variables):
         return {"Voltage function [V]": self.value}
 
-    def get_control_residual(self, variables):
-        return variables["Voltage [V]"] - self.value
+    def _get_control_residual(self, variables, target):
+        return variables["Voltage [V]"] - target
 
     def get_submodel(self, model):
         return pybamm.external_circuit.VoltageFunctionControl(
@@ -219,6 +227,8 @@ class Power(BaseStepImplicit):
         Any other keyword arguments are passed to the step class
     """
 
+    control_kind = ControlKind.POWER
+
     def __init__(self, value, **kwargs):
         self.calculate_charge_or_discharge = True
         super().__init__(value, **kwargs)
@@ -226,8 +236,8 @@ class Power(BaseStepImplicit):
     def get_parameter_values(self, variables):
         return {"Power function [W]": self.value}
 
-    def get_control_residual(self, variables):
-        return variables["Power [W]"] - self.value
+    def _get_control_residual(self, variables, target):
+        return variables["Power [W]"] - target
 
     def get_submodel(self, model):
         return pybamm.external_circuit.PowerFunctionControl(model.param, model.options)
@@ -253,6 +263,8 @@ class Resistance(BaseStepImplicit):
         Any other keyword arguments are passed to the step class
     """
 
+    control_kind = ControlKind.RESISTANCE
+
     def __init__(self, value, **kwargs):
         self.calculate_charge_or_discharge = True
         super().__init__(value, **kwargs)
@@ -260,8 +272,8 @@ class Resistance(BaseStepImplicit):
     def get_parameter_values(self, variables):
         return {"Resistance function [Ohm]": self.value}
 
-    def get_control_residual(self, variables):
-        return variables["Voltage [V]"] - self.value * variables["Current [A]"]
+    def _get_control_residual(self, variables, target):
+        return variables["Voltage [V]"] - target * variables["Current [A]"]
 
     def get_submodel(self, model):
         return pybamm.external_circuit.ResistanceFunctionControl(
@@ -429,7 +441,9 @@ class CustomStepImplicit(BaseStepImplicit):
         self.control = control
         self.kwargs = kwargs
 
-    def get_control_residual(self, variables):
+    def _get_control_residual(self, variables, target):
+        # Custom control is never collapsible, so ``target`` is unused -- the residual is
+        # fully defined by ``current_rhs_function``.
         if self.control != "algebraic":
             raise NotImplementedError(
                 "Unified experiment control only supports algebraic implicit custom steps"
