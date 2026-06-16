@@ -3,10 +3,14 @@
 ## Features
 
 - `create_from_bpx`/`create_from_bpx_obj` now apply a BPX `State` `Initial state-of-charge` via `set_initial_state` (supporting blended electrodes and validated to lie in `[0, 1]`) instead of ignoring it. ([#5616](https://github.com/pybamm-team/PyBaMM/pull/5616))
+- The parameter `"Contact resistance [Ohm]"` can now be a function of the volume-averaged cell temperature (in addition to a constant), and works with all thermal options. The accompanying documentation now clarifies that this represents a lumped series resistance rather than a true contact resistance ([BPX#130](https://github.com/FaradayInstitution/BPX/issues/130)); the name is retained to avoid a breaking change. ([#5604](https://github.com/pybamm-team/PyBaMM/pull/5604))
 
 ## Bug fixes
 
+- Fixed BPX import leaving interpolated-table OCP hysteresis branches (`OCP (lithiation) [V]`, `OCP (delithiation) [V]`) as raw data tuples instead of usable expression-tree objects. Remaining `FloatFunctionTable` placeholders are now converted generically, so new BPX table parameters no longer need a hand-maintained conversion list. ([#5610](https://github.com/pybamm-team/PyBaMM/issues/5610))
 - `RegulariseSqrtAndPower` no longer regularises state-independent bases, fixing corrupted small rate constants in exchange-current density functions. ([#5600](https://github.com/pybamm-team/PyBaMM/pull/5600))
+- Fixed `Serialise.load_custom_model` leaving a loaded lithium-ion model's cached `param` built from default options instead of the restored ones, so a model loaded with non-default options (e.g. composite `"particle phases"`) had parameters inconsistent with its options. ([#5599](https://github.com/pybamm-team/PyBaMM/pull/5599))
+- Fixed `BatteryModelOptions` letting two invalid MSMR option sets pass validation and then crash during parameter construction with `invalid literal for int() with base 10: 'none'`; both now raise a clear `OptionError`. The all-or-nothing MSMR check now detects MSMR inside a per-electrode tuple (e.g. `"open-circuit potential": ("MSMR", "single")`), and an MSMR model must set `"number of MSMR reactions"` to a positive integer rather than the default `"none"`. ([#5599](https://github.com/pybamm-team/PyBaMM/pull/5599))
 
 ## Breaking changes
 

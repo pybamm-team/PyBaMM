@@ -22,7 +22,6 @@ class ElectricalParameters(BaseParameters):
         """Defines the dimensional parameters."""
 
         self.Q = pybamm.Parameter("Nominal cell capacity [A.h]")
-        self.R_contact = pybamm.Parameter("Contact resistance [Ohm]")
         self.n_cells = pybamm.Parameter(
             "Number of cells connected in series to make a battery"
         )
@@ -35,6 +34,19 @@ class ElectricalParameters(BaseParameters):
             "Current function [A]", {"Time [s]": pybamm.t}
         )
         self.current_density_with_time = self.current_with_time / (self.geo.A_cc)
+
+    def R_contact(self, T):
+        """
+        "Contact resistance [Ohm]" as a function of cell temperature ``T`` [K].
+
+        Despite the name, this represents any additional series resistance not
+        already captured by the electrochemical model (e.g. contact resistances
+        between layers, and tab, weld and lead resistances), not only the contact
+        resistance.
+        """
+        return pybamm.FunctionParameter(
+            "Contact resistance [Ohm]", {"Temperature [K]": T}
+        )
 
 
 electrical_parameters = ElectricalParameters()
