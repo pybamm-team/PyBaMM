@@ -1,5 +1,7 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+# [v26.6.2.0](https://github.com/pybamm-team/PyBaMM/tree/v26.6.2.0) - 2026-06-16
+
 ## Features
 
 - `create_from_bpx`/`create_from_bpx_obj` now apply a BPX `State` `Initial state-of-charge` via `set_initial_state` (supporting blended electrodes and validated to lie in `[0, 1]`) instead of ignoring it. ([#5616](https://github.com/pybamm-team/PyBaMM/pull/5616))
