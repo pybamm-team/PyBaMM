@@ -943,9 +943,7 @@ class TestSerialise:
 
         serialised = Serialise.serialise_custom_geometry(geometry)
         # The whole payload must be JSON-serialisable (no raw Symbols left).
-        serialised = json.loads(
-            json.dumps(serialised, default=Serialise._json_encoder)
-        )
+        serialised = json.loads(json.dumps(serialised, default=Serialise._json_encoder))
         loaded = Serialise.load_custom_geometry(serialised)
 
         z_centre = loaded["current collector"]["tabs"]["negative"]["z_centre"]
