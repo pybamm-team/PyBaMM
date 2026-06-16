@@ -126,6 +126,12 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 Can be "true" or "false". If "false", the heat source terms are set
                 to zero. Default is "false" since this option may require additional
                 parameters not needed by the electrochemical model.
+            * "contact resistance" : str
+                Whether to include an additional series resistance, added to the
+                terminal voltage and contributing Ohmic (I^2 R) heating. Can be
+                "false" (default) or "true". Set via the parameter "Contact
+                resistance [Ohm]", which may be a constant or a function of the
+                volume-averaged cell temperature.
             * "convection" : str
                 Whether to include the effects of convection in the model. Can be
                 "none" (default), "uniform transverse" or "full transverse".
