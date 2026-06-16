@@ -1089,6 +1089,91 @@ class TestSerialise:
 
         assert type(loaded) is pybamm.BaseModel
 
+    def test_load_restores_discretisation_after_base_model_fallback(self, tmp_path):
+        """A custom model's discretisation recipe (geometry / var_pts / submesh
+        types / spatial methods) survives a load that falls back to
+        ``pybamm.BaseModel`` because the defining subclass can't be imported."""
+
+        class _DiscModel(pybamm.BaseModel):
+            @property
+            def default_geometry(self):
+                return {
+                    "positive particle": {
+                        "r_p": {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1e-5)}
+                    },
+                    "current collector": {"z": {"position": 1}},
+                }
+
+            @property
+            def default_var_pts(self):
+                return {"r_p": 20}
+
+            @property
+            def default_submesh_types(self):
+                return {
+                    "positive particle": pybamm.Uniform1DSubMesh,
+                    "current collector": pybamm.SubMesh0D,
+                }
+
+            @property
+            def default_spatial_methods(self):
+                return {
+                    "positive particle": pybamm.FiniteVolume(),
+                    "current collector": pybamm.ZeroDimensionalSpatialMethod(),
+                }
+
+        model = _DiscModel(name="DiscModel")
+        a = pybamm.Variable("a")
+        model.rhs = {a: a}
+        model.initial_conditions = {a: pybamm.Scalar(1)}
+        model.variables = {"a": a}
+
+        file_path = tmp_path / "model.json"
+        Serialise.save_custom_model(model, filename=str(file_path))
+
+        # The discretisation recipe is captured at serialise time...
+        with open(file_path) as f:
+            data = json.load(f)
+        assert "discretisation" in data["model"]
+        # ...and force the import-failed fallback to a bare pybamm.BaseModel.
+        data["model"]["base_class"] = "nonexistent_module.DiscModel"
+        data["model"]["base_class_mro"] = ["nonexistent_module.DiscModel"]
+        with open(file_path, "w") as f:
+            json.dump(data, f)
+
+        with pytest.warns(UserWarning, match=r"Falling back to pybamm\.BaseModel"):
+            loaded = Serialise.load_custom_model(str(file_path))
+
+        assert type(loaded) is pybamm.BaseModel
+        # The fallback model is still discretisable: defaults are restored.
+        assert list(loaded.default_geometry.keys()) == [
+            "positive particle",
+            "current collector",
+        ]
+        assert loaded.default_var_pts == {"r_p": 20}
+        assert set(loaded.default_submesh_types) == {
+            "positive particle",
+            "current collector",
+        }
+        assert set(loaded.default_spatial_methods) == {
+            "positive particle",
+            "current collector",
+        }
+
+    def test_plain_custom_model_has_no_discretisation_section(self, tmp_path):
+        """A model with no custom discretisation defaults emits no
+        ``discretisation`` section, so existing payloads are unaffected."""
+        model = pybamm.BaseModel(name="Plain")
+        a = pybamm.Variable("a")
+        model.rhs = {a: -a}
+        model.initial_conditions = {a: pybamm.Scalar(1)}
+        model.variables = {"a": a}
+
+        payload = Serialise.serialise_custom_model(model)
+        assert "discretisation" not in payload["model"]
+        # Round-trips without error.
+        Serialise.load_custom_model(payload)
+
     def test_function_parameter_with_diff_variable_serialisation(self):
         x = pybamm.Variable("x")
         diff_var = pybamm.Variable("r")

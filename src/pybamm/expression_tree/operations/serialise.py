@@ -537,6 +537,15 @@ class Serialise:
             },
         }
 
+        # Capture the discretisation recipe (geometry / var_pts / submesh /
+        # spatial methods). These live on subclass ``default_*`` properties and
+        # are otherwise lost when the model is reloaded in an environment where
+        # the defining package can't be imported (the base-class fallback yields
+        # empty defaults), leaving the model undiscretisable.
+        discretisation = Serialise._serialise_discretisation(model)
+        if discretisation:
+            model_content["discretisation"] = discretisation
+
         SCHEMA_VERSION = "1.1"
         model_json = {
             "schema_version": SCHEMA_VERSION,
@@ -819,6 +828,60 @@ class Serialise:
                         reconstructed_geometry[domain][key] = value
 
         return pybamm.Geometry(reconstructed_geometry)
+
+    @staticmethod
+    def _serialise_discretisation(model) -> dict:
+        """Serialise a model's discretisation recipe (geometry, var_pts, submesh
+        types, spatial methods) into a JSON-serialisable dict.
+
+        Returns an empty dict when the model exposes no discretisation defaults
+        (e.g. a plain ``pybamm.BaseModel``), so models without custom defaults
+        round-trip exactly as before.
+        """
+        out: dict = {}
+        geometry = getattr(model, "default_geometry", None) or {}
+        if geometry:
+            out["geometry"] = Serialise.serialise_custom_geometry(
+                pybamm.Geometry(geometry)
+            )
+        var_pts = getattr(model, "default_var_pts", None) or {}
+        if var_pts:
+            out["var_pts"] = Serialise.serialise_var_pts(var_pts)
+        submesh_types = getattr(model, "default_submesh_types", None) or {}
+        if submesh_types:
+            out["submesh_types"] = Serialise.serialise_submesh_types(submesh_types)
+        spatial_methods = getattr(model, "default_spatial_methods", None) or {}
+        if spatial_methods:
+            out["spatial_methods"] = Serialise.serialise_spatial_methods(
+                spatial_methods
+            )
+        return out
+
+    @staticmethod
+    def _restore_discretisation(model, discretisation: dict | None) -> None:
+        """Restore a discretisation recipe (from :meth:`_serialise_discretisation`)
+        onto ``model``, so its ``default_*`` properties return the saved values
+        even when the defining subclass could not be imported on load.
+
+        No-op when ``discretisation`` is falsy (older payloads or models without
+        custom discretisation defaults).
+        """
+        if not discretisation:
+            return
+        if "geometry" in discretisation:
+            model._default_geometry = dict(
+                Serialise.load_custom_geometry(discretisation["geometry"])
+            )
+        if "var_pts" in discretisation:
+            model._default_var_pts = Serialise.load_var_pts(discretisation["var_pts"])
+        if "submesh_types" in discretisation:
+            model._default_submesh_types = Serialise.load_submesh_types(
+                discretisation["submesh_types"]
+            )
+        if "spatial_methods" in discretisation:
+            model._default_spatial_methods = Serialise.load_spatial_methods(
+                discretisation["spatial_methods"]
+            )
 
     @staticmethod
     def serialise_spatial_method_item(method) -> dict:
@@ -1533,6 +1596,10 @@ class Serialise:
 
         # Restore observable state
         model._solution_observable = False
+
+        # Restore the discretisation recipe onto the (possibly fallback) model so
+        # it stays discretisable even when the defining subclass wasn't importable.
+        Serialise._restore_discretisation(model, model_data.get("discretisation"))
 
         return model
 

@@ -587,22 +587,22 @@ class BaseModel:
     @property
     def default_var_pts(self):
         """Returns a dictionary of the default variable points for the model, which is empty by default."""
-        return {}
+        return getattr(self, "_default_var_pts", None) or {}
 
     @property
     def default_geometry(self):
         """Returns a  dictionary of the default geometry for the model, which is empty by default."""
-        return {}
+        return getattr(self, "_default_geometry", None) or {}
 
     @property
     def default_submesh_types(self):
         """Returns a dictionary of the default submesh types for the model, which is empty by default."""
-        return {}
+        return getattr(self, "_default_submesh_types", None) or {}
 
     @property
     def default_spatial_methods(self):
         """Returns a dictionary of the default spatial methods for the model, which is empty by default."""
-        return {}
+        return getattr(self, "_default_spatial_methods", None) or {}
 
     @property
     def default_solver(self):
