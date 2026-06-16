@@ -929,6 +929,29 @@ class TestSerialise:
         # Round-trips without error.
         Serialise.load_custom_model(payload)
 
+    def test_custom_geometry_round_trip_with_nested_tab_symbols(self):
+        """Current-collector geometry nests symbols arbitrarily deep
+        (``tabs -> negative -> z_centre`` is a Parameter). The geometry must
+        JSON-round-trip without leaking raw, non-serialisable Symbol objects."""
+        options = {
+            "dimensionality": 1,
+            "current collector": "potential pair",
+            "cell geometry": "pouch",
+        }
+        model = pybamm.lithium_ion.DFN(dict(options), build=False)
+        geometry = pybamm.Geometry(model.default_geometry)
+
+        serialised = Serialise.serialise_custom_geometry(geometry)
+        # The whole payload must be JSON-serialisable (no raw Symbols left).
+        serialised = json.loads(
+            json.dumps(serialised, default=Serialise._json_encoder)
+        )
+        loaded = Serialise.load_custom_geometry(serialised)
+
+        z_centre = loaded["current collector"]["tabs"]["negative"]["z_centre"]
+        assert isinstance(z_centre, pybamm.Parameter)
+        assert z_centre.name == "Negative tab centre z-coordinate [m]"
+
     def test_function_parameter_with_diff_variable_serialisation(self):
         x = pybamm.Variable("x")
         diff_var = pybamm.Variable("r")

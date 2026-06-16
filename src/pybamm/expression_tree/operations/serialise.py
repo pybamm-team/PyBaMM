@@ -638,6 +638,35 @@ class Serialise:
             raise ValueError(f"Failed to save custom model: {e}") from e
 
     @staticmethod
+    def _encode_geometry_value(value):
+        """Recursively convert any :class:`pybamm.Symbol` in a geometry value to
+        its JSON form, descending through nested dicts/lists.
+
+        Geometry limits can nest symbols arbitrarily deep (e.g. current-collector
+        ``tabs -> negative -> z_centre`` is a :class:`pybamm.Parameter`), which a
+        single-level pass leaves as raw, non-JSON-serialisable objects.
+        """
+        if isinstance(value, pybamm.Symbol):
+            return convert_symbol_to_json(value)
+        if isinstance(value, dict):
+            return {k: Serialise._encode_geometry_value(v) for k, v in value.items()}
+        if isinstance(value, (list, tuple)):
+            return [Serialise._encode_geometry_value(v) for v in value]
+        return value
+
+    @staticmethod
+    def _decode_geometry_value(value):
+        """Inverse of :meth:`_encode_geometry_value`: rebuild :class:`pybamm.Symbol`
+        objects from their JSON form at any nesting depth."""
+        if isinstance(value, dict):
+            if "$type" in value or "type" in value:
+                return convert_symbol_from_json(value)
+            return {k: Serialise._decode_geometry_value(v) for k, v in value.items()}
+        if isinstance(value, list):
+            return [Serialise._decode_geometry_value(v) for v in value]
+        return value
+
+    @staticmethod
     def serialise_custom_geometry(geometry: pybamm.Geometry) -> dict:
         """
         Converts a custom PyBaMM geometry to a JSON-serialisable dictionary.
@@ -663,26 +692,15 @@ class Serialise:
                     geometry_dict_serialized[domain]["symbol_" + key_str] = (
                         convert_symbol_to_json(key)
                     )
-                    # Serialize the value dict
-                    serialized_value = {}
-                    for k, v in value.items():
-                        if isinstance(v, pybamm.Symbol):
-                            serialized_value[k] = convert_symbol_to_json(v)
-                        else:
-                            serialized_value[k] = v
-                    geometry_dict_serialized[domain][key_str] = serialized_value
+                    geometry_dict_serialized[domain][key_str] = (
+                        Serialise._encode_geometry_value(value)
+                    )
                 elif isinstance(key, str):
-                    # String keys (like 'tabs') - keep as is
-                    if isinstance(value, dict):
-                        serialized_value = {}
-                        for k, v in value.items():
-                            if isinstance(v, pybamm.Symbol):
-                                serialized_value[k] = convert_symbol_to_json(v)
-                            else:
-                                serialized_value[k] = v
-                        geometry_dict_serialized[domain][key] = serialized_value
-                    else:
-                        geometry_dict_serialized[domain][key] = value
+                    # String keys (like 'tabs'), whose values may nest Symbols
+                    # arbitrarily deep (e.g. tabs -> negative -> z_centre).
+                    geometry_dict_serialized[domain][key] = (
+                        Serialise._encode_geometry_value(value)
+                    )
 
         SCHEMA_VERSION = "1.1"
         geometry_json = {
@@ -803,26 +821,14 @@ class Serialise:
                 if key in symbol_keys:
                     # Use the reconstructed SpatialVariable as key
                     spatial_var = symbol_keys[key]
-                    reconstructed_value = {}
-                    for k, v in value.items():
-                        if isinstance(v, dict) and ("$type" in v or "type" in v):
-                            # Reconstruct PyBaMM Symbol using convert_symbol_from_json
-                            reconstructed_value[k] = convert_symbol_from_json(v)
-                        else:
-                            reconstructed_value[k] = v
-                    reconstructed_geometry[domain][spatial_var] = reconstructed_value
+                    reconstructed_geometry[domain][spatial_var] = (
+                        Serialise._decode_geometry_value(value)
+                    )
                 else:
-                    # String key (like 'tabs')
-                    if isinstance(value, dict):
-                        reconstructed_value = {}
-                        for k, v in value.items():
-                            if isinstance(v, dict) and ("$type" in v or "type" in v):
-                                reconstructed_value[k] = convert_symbol_from_json(v)
-                            else:
-                                reconstructed_value[k] = v
-                        reconstructed_geometry[domain][key] = reconstructed_value
-                    else:
-                        reconstructed_geometry[domain][key] = value
+                    # String key (like 'tabs'), values may nest Symbols deep
+                    reconstructed_geometry[domain][key] = (
+                        Serialise._decode_geometry_value(value)
+                    )
 
         return pybamm.Geometry(reconstructed_geometry)
 
