@@ -566,8 +566,13 @@ def _assert_param_matches_options(model):
         )
         # Symptom-level guard: a two-phase negative electrode names its primary
         # active-material fraction "Primary: ..."; a param left built from
-        # single-phase options would not.
-        if model.options.negative["particle phases"] == "2":
+        # single-phase options would not. Only meaningful on a full cell -- a
+        # half cell's negative electrode is lithium metal with no porous
+        # particle, so ``param.n.prim`` has no ``epsilon_s``.
+        if (
+            model.options["working electrode"] == "both"
+            and model.options.negative["particle phases"] == "2"
+        ):
             epsilon_s_name = model.param.n.prim.epsilon_s.name
             assert epsilon_s_name.startswith("Primary:"), (
                 f"negative primary active material fraction is {epsilon_s_name!r}; "
