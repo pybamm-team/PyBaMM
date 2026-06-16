@@ -60,7 +60,11 @@ plot = [
 ]
 cite = ["pybtex>=0.25.0"]
 # Battery Parameter eXchange format
-bpx = ["bpx>=1.1.0,<1.2.0"]
+# TODO: revert to a released pin (bpx>=1.1.2,<1.2.0) once the optional-State /
+# v0.x-conversion changes are released; temporarily tracking the branch.
+bpx = [
+    "bpx @ git+https://github.com/FaradayInstitution/BPX.git@feat/v0-backward-compat",
+]
 # Low-overhead progress bars
 tqdm = ["tqdm"]
 jax = ["jax>=0.7.0, <0.9.0; python_version >= '3.11' and (sys_platform != 'darwin' or platform_machine != 'x86_64')"]
