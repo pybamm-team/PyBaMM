@@ -685,27 +685,36 @@ class TestBPX:
             pv["Lower voltage cut-off [V]"] < v_final < pv["Upper voltage cut-off [V]"]
         )
 
-    def test_bpx_default_initial_concentrations_at_full_charge(self):
+    def test_bpx_initial_soc_applied_from_state(self):
+        # A BPX initial state-of-charge other than full charge is applied via
+        # set_initial_state, matching a manual set_initial_state on the same set.
         bpx_obj = copy.deepcopy(self.base)
-        # Set a non-1 initial SOC in the BPX file to confirm it's not auto-applied.
         bpx_obj["State"]["Initial conditions"]["Initial state-of-charge"] = 0.25
         neg = bpx_obj["Parameterisation"]["Negative electrode"]
-        pos = bpx_obj["Parameterisation"]["Positive electrode"]
-        expected_neg = (
+        full_charge_neg = (
             neg["Maximum stoichiometry"] * neg["Maximum concentration [mol.m-3]"]
         )
-        expected_pos = (
-            pos["Minimum stoichiometry"] * pos["Maximum concentration [mol.m-3]"]
-        )
-
         param = pybamm.ParameterValues.create_from_bpx_obj(bpx_obj)
 
-        assert param["Initial concentration in negative electrode [mol.m-3]"] == (
-            expected_neg
+        reference = pybamm.ParameterValues.create_from_bpx_obj(copy.deepcopy(self.base))
+        reference.set_initial_state(0.25)
+
+        for key in (
+            "Initial concentration in negative electrode [mol.m-3]",
+            "Initial concentration in positive electrode [mol.m-3]",
+        ):
+            assert param[key] == pytest.approx(reference[key])
+        # and it is not the full-charge value
+        assert (
+            param["Initial concentration in negative electrode [mol.m-3]"]
+            != full_charge_neg
         )
-        assert param["Initial concentration in positive electrode [mol.m-3]"] == (
-            expected_pos
-        )
+
+    def test_bpx_initial_soc_out_of_range_raises(self):
+        bpx_obj = copy.deepcopy(self.base)
+        bpx_obj["State"]["Initial conditions"]["Initial state-of-charge"] = 1.5
+        with pytest.raises(ValueError, match="must be between 0 and 1"):
+            pybamm.ParameterValues.create_from_bpx_obj(bpx_obj)
 
     def test_bpx_target_soc_is_deprecated_but_preserves_behaviour(self):
         from bpx import get_electrode_concentrations, parse_bpx_obj
@@ -740,33 +749,27 @@ class TestBPX:
         ] = {"Large Particles": 0.0, "Small Particles": 0.0}
         return bpx_obj
 
-    def test_bpx_blended_default_sets_per_phase_initial_concentrations(self):
+    def test_bpx_blended_initial_soc_applied(self):
+        # a BPX initial SOC on a blended electrode is applied per phase via the
+        # composite electrode SOH path, not left at full charge
         bpx_obj = self._blended_bpx_obj()
-        pos_large = bpx_obj["Parameterisation"]["Positive electrode"]["Particle"][
-            "Large Particles"
-        ]
-        pos_small = bpx_obj["Parameterisation"]["Positive electrode"]["Particle"][
-            "Small Particles"
-        ]
+        bpx_obj["State"]["Initial conditions"]["Initial state-of-charge"] = 0.5
+        particle = bpx_obj["Parameterisation"]["Positive electrode"]["Particle"]
+        full_charge = {
+            phase: particle[phase]["Minimum stoichiometry"]
+            * particle[phase]["Maximum concentration [mol.m-3]"]
+            for phase in ("Large Particles", "Small Particles")
+        }
 
         param = pybamm.ParameterValues.create_from_bpx_obj(bpx_obj)
 
-        neg = self.base["Parameterisation"]["Negative electrode"]
-        assert param["Initial concentration in negative electrode [mol.m-3]"] == (
-            neg["Maximum stoichiometry"] * neg["Maximum concentration [mol.m-3]"]
-        )
+        # both phases are initialised away from full charge by the composite path
         assert param[
             "Primary: Initial concentration in positive electrode [mol.m-3]"
-        ] == pytest.approx(
-            pos_large["Minimum stoichiometry"]
-            * pos_large["Maximum concentration [mol.m-3]"]
-        )
+        ] != pytest.approx(full_charge["Large Particles"])
         assert param[
             "Secondary: Initial concentration in positive electrode [mol.m-3]"
-        ] == pytest.approx(
-            pos_small["Minimum stoichiometry"]
-            * pos_small["Maximum concentration [mol.m-3]"]
-        )
+        ] != pytest.approx(full_charge["Small Particles"])
 
     def test_bpx_blended_with_target_soc_raises(self):
         bpx_obj = self._blended_bpx_obj()

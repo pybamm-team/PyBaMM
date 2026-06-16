@@ -132,11 +132,11 @@ class ParameterValues:
             The filename of the `BPX <https://bpxstandard.com/>`_ file.
         target_soc : float, optional
             .. deprecated:: 26.5
-                Passing ``target_soc`` is deprecated. The returned
-                ``ParameterValues`` always has initial concentrations set at
-                100% SOC (negative phases at their maximum stoichiometry,
-                positive phases at their minimum stoichiometry). Use
-                :meth:`ParameterValues.set_initial_state` after creation to
+                Passing ``target_soc`` is deprecated. Initial concentrations are
+                set from the BPX ``State`` initial state-of-charge if provided,
+                otherwise at 100% SOC (negative phases at their maximum
+                stoichiometry, positive phases at their minimum stoichiometry).
+                Use :meth:`ParameterValues.set_initial_state` after creation to
                 set a different initial SOC. If ``target_soc`` is passed, the
                 previous behaviour is preserved for non-blended electrodes;
                 blended electrodes raise ``NotImplementedError``.
@@ -150,6 +150,10 @@ class ParameterValues:
         --------
         >>> param = pybamm.ParameterValues.create_from_bpx("battery_params.json")  # doctest: +SKIP
         >>> param.set_initial_state(0.5)  # doctest: +SKIP
+
+        Notes
+        -----
+        PyBaMM officially supports ``bpx>=1``.
         """
         from bpx import parse_bpx_file
 
@@ -186,6 +190,11 @@ class ParameterValues:
         >>> bpx_dict = {"Header": {...}, "Cell": {...}, "Parameterisation": {...}}  # doctest: +SKIP
         >>> param = pybamm.ParameterValues.create_from_bpx_obj(bpx_dict)  # doctest: +SKIP
         >>> param.set_initial_state(0.5)  # doctest: +SKIP
+
+        Notes
+        -----
+        PyBaMM officially supports ``bpx>=1``. The passed ``bpx_obj`` is not
+        mutated.
         """
         from bpx import parse_bpx_obj
 
@@ -213,6 +222,7 @@ class ParameterValues:
         from bpx.schema import ElectrodeBlended, ElectrodeBlendedSPM
 
         from .bpx import (
+            _get_particle_phases_option,
             _get_phase_names,
             bpx_to_param_dict,
             negative_electrode,
@@ -241,7 +251,9 @@ class ParameterValues:
             )
 
         if target_soc is None:
-            # Full charge: negative phases at theta_max, positive at theta_min.
+            # Seed the stoichiometric limits (full charge: negative phases at
+            # theta_max, positive at theta_min). Used as-is when no initial SOC is
+            # given; otherwise overridden by set_initial_state below.
             for bpx_electrode, domain, sto_bound in (
                 (
                     bpx.parameterisation.negative_electrode,
@@ -264,6 +276,25 @@ class ParameterValues:
                     pybamm_dict[
                         f"{phase}Initial concentration in {domain.name} [mol.m-3]"
                     ] = sto * c_max
+            param = cls(pybamm_dict)
+
+            # Honor a BPX initial state-of-charge, overriding the full-charge
+            # default. Via set_initial_state (not get_electrode_concentrations) to
+            # support blended electrodes; float() as the composite SOH solver
+            # rejects an int SOC.
+            ic = bpx.state.initial_conditions if bpx.state is not None else None
+            initial_soc = ic.initial_soc if ic is not None else None
+            if initial_soc is not None:
+                if not 0 <= initial_soc <= 1:
+                    raise ValueError(
+                        "BPX 'Initial state-of-charge' must be between 0 and 1, "
+                        f"got {initial_soc}."
+                    )
+                options = pybamm.BatteryModelOptions(
+                    {"particle phases": _get_particle_phases_option(bpx)}
+                )
+                param.set_initial_state(float(initial_soc), options=options)
+            return param
         else:
             if target_soc < 0 or target_soc > 1:
                 raise ValueError("Target SOC should be between 0 and 1")
