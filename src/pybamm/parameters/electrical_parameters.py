@@ -39,9 +39,9 @@ class ElectricalParameters(BaseParameters):
         """
         "Contact resistance [Ohm]" as a function of cell temperature ``T`` [K].
 
-        Despite the name, this represents the total series resistance of the cell
-        (e.g. contact resistances between layers, and tab, weld and lead
-        resistances), added to the terminal voltage, not only the contact
+        Despite the name, this represents any additional series resistance not
+        already captured by the electrochemical model (e.g. contact resistances
+        between layers, and tab, weld and lead resistances), not only the contact
         resistance.
         """
         return pybamm.FunctionParameter(
