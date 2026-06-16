@@ -6,6 +6,7 @@
 
 ## Bug fixes
 
+- Fixed BPX import leaving interpolated-table OCP hysteresis branches (`OCP (lithiation) [V]`, `OCP (delithiation) [V]`) as raw data tuples instead of usable expression-tree objects. Remaining `FloatFunctionTable` placeholders are now converted generically, so new BPX table parameters no longer need a hand-maintained conversion list. ([#5610](https://github.com/pybamm-team/PyBaMM/issues/5610))
 - `RegulariseSqrtAndPower` no longer regularises state-independent bases, fixing corrupted small rate constants in exchange-current density functions. ([#5600](https://github.com/pybamm-team/PyBaMM/pull/5600))
 
 ## Breaking changes
