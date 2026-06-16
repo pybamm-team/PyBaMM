@@ -1,5 +1,9 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Features
+
+- `create_from_bpx`/`create_from_bpx_obj` now apply a BPX `State` `Initial state-of-charge` via `set_initial_state` (supporting blended electrodes and validated to lie in `[0, 1]`) instead of ignoring it. ([#5616](https://github.com/pybamm-team/PyBaMM/pull/5616))
+
 ## Bug fixes
 
 - `RegulariseSqrtAndPower` no longer regularises state-independent bases, fixing corrupted small rate constants in exchange-current density functions. ([#5600](https://github.com/pybamm-team/PyBaMM/pull/5600))

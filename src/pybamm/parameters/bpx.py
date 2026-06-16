@@ -107,6 +107,14 @@ def _get_phase_names(domain):
         )
 
 
+def _get_particle_phases_option(bpx: BPX) -> tuple[str, str]:
+    """Return the (negative, positive) 'particle phases' model option for a BPX."""
+    return (
+        str(len(_get_phase_names(bpx.parameterisation.negative_electrode))),
+        str(len(_get_phase_names(bpx.parameterisation.positive_electrode))),
+    )
+
+
 def bpx_to_param_dict(bpx: BPX) -> dict:
     """
     Turns a BPX object in to a dictionary of parameters for PyBaMM
