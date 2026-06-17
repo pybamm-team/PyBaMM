@@ -234,6 +234,42 @@ jobs:
           . .venv/bin/activate
           python -m pytest packages/pybamm/tests/unit/test_solvers/test_idaklu_solver.py -q
 
+  # `uv sync` based so the solver's auto-bootstrap fires.
+  #  Guards both the bootstrap and the clean-clone dev experience.
+  from_source_smoke:
+    needs: changes
+    if: ${{ github.event_name == 'push' || needs.changes.outputs.solver == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    name: From-source solver smoke (ubuntu-latest / Python 3.13)
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          submodules: 'recursive'
+          persist-credentials: false
+
+      - name: Install Linux system dependencies
+        uses: awalsh128/cache-apt-pkgs-action@acb598e5ddbc6f68a970c5da0688d2f3a9f04d05 # v1.6.0
+        with:
+          packages: gfortran gcc make cmake libopenblas-dev
+          execute_install_scripts: true
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: 3.13
+
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          version: "latest"
+          enable-cache: true
+
+      - name: From-source uv sync (auto-bootstraps SUNDIALS) + IDAKLU smoke
+        run: |
+          uv sync --extra all --group dev
+          uv run python -m pytest packages/pybamm/tests/unit/test_solvers/test_idaklu_solver.py -q
+
   run_doctests:
     needs: [changes, build_solver]
     if: ${{ github.event_name == 'push' || needs.changes.outputs.pybamm == 'true' || needs.changes.outputs.solver == 'true' || needs.changes.outputs.docs == 'true' }}
