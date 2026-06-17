@@ -32,6 +32,27 @@ if(NOT WIN32 AND NOT DEFINED SUNDIALS_ROOT)
     set(SUNDIALS_ROOT "${CMAKE_SOURCE_DIR}/.idaklu")
 endif()
 
+# Auto-build the vendored SUNDIALS/SuiteSparse on a from-source build, so a clean
+# checkout with submodules needs no manual pre-step. Skipped on Windows (vcpkg).
+if(NOT WIN32 AND NOT DEFINED VCPKG_ROOT_DIR)
+    if(NOT EXISTS "${CMAKE_SOURCE_DIR}/sundials/CMakeLists.txt")
+        message(FATAL_ERROR
+            "SUNDIALS/SuiteSparse submodule sources are missing. Run:\n"
+            "    git submodule update --init\n"
+            "or install system SUNDIALS/SuiteSparse and set "
+            "SUNDIALS_ROOT/SuiteSparse_ROOT.")
+    endif()
+    execute_process(
+        COMMAND "${PYTHON_EXECUTABLE}" install_KLU_Sundials.py
+        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+        RESULT_VARIABLE _idaklu_rc)
+    if(_idaklu_rc)
+        message(FATAL_ERROR
+            "install_KLU_Sundials.py failed (exit ${_idaklu_rc}); "
+            "check that make, cmake, and a C/Fortran compiler are installed.")
+    endif()
+endif()
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)

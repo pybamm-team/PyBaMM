@@ -131,8 +131,18 @@ def build_solvers():
         subprocess.run(["cmake", sundials_src, *cmake_args], cwd=build_dir, check=True)
 
         print("-" * 10, "Building SUNDIALS", "-" * 40)
-        make_cmd = ["make", f"-j{cpu_count()}", "install"]
-        subprocess.run(make_cmd, cwd=build_dir, check=True)
+        # Use cmake --build (not `make`) so the build matches whatever generator
+        # cmake picked — e.g. Ninja, inherited from scikit-build-core when nested.
+        build_cmd = [
+            "cmake",
+            "--build",
+            ".",
+            "-j",
+            str(cpu_count()),
+            "--target",
+            "install",
+        ]
+        subprocess.run(build_cmd, cwd=build_dir, check=True)
 
     def check_libraries_installed():
         # Define the directories to check for SUNDIALS and SuiteSparse libraries
