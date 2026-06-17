@@ -15,4 +15,4 @@ f395819d1c874071b7e76e32ec4f0bbe42462b48
 # activated isort rule via ruff - https://github.com/pybamm-team/PyBaMM/pull/5003
 3b9a07b45972ebcb07fcd950292f7052e8f313b4
 # Move pybamm package into packages/pybamm/ for the monorepo (#5512)
-3677f4f80ec022791082f5022c7199f60e0a84fe
+43fc19759669a6b6f4a58bbc3107e496afa3da66

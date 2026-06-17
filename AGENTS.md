@@ -39,8 +39,8 @@ test's path (see `packages/pybamm/conftest.py`), so select suites by marker. Def
 (`-nauto`) and treat warnings as errors.
 
 ```bash
-uv run --group dev pytest -m unit                              # full unit suite
-uv run --group dev pytest -m integration                       # integration suite
+uv run --group dev pytest -m unit packages/pybamm/tests        # full unit suite
+uv run --group dev pytest -m integration packages/pybamm/tests # integration suite
 uv run --group dev pytest packages/pybamm/tests/unit/test_solvers/test_solution.py   # one file
 uv run --group dev pytest "packages/pybamm/tests/unit/test_plotting/test_quick_plot.py::TestQuickPlot::test_simple_ode_model"  # one test
 nox -s unit | nox -s tests | nox -s integration | nox -s doctests   # sessions used in CI

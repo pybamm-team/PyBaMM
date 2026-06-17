@@ -32,6 +32,9 @@ The build backend is [scikit-build-core](https://scikit-build-core.readthedocs.i
 build-time dependencies (`scikit-build-core`, `pybind11`, `cmake`, `ninja`) are
 resolved automatically via PEP 517 isolation when running `pip install`.
 
+SUNDIALS and SuiteSparse are compiled automatically from the bundled git
+submodules during the build, so initialise the submodules first.
+
 #### Nox (Recommended)
 
 Nox can be used to do a quick build:
@@ -51,7 +54,6 @@ Mac dependencies can be installed using brew
 brew install libomp
 brew reinstall gcc
 git submodule update --init --recursive
-python install_KLU_Sundials.py
 pip install .
 ```
 
@@ -63,7 +65,6 @@ be performed with the following commands:
 ```bash
 sudo apt-get install libopenblas-dev gcc gfortran make g++ build-essential
 git submodule update --init --recursive
-python install_KLU_Sundials.py
 pip install .
 ```
 
@@ -101,21 +102,6 @@ Test pybammsolvers functionality in isolation:
 nox -s unit            # Run all unit tests
 nox -s integration     # Run all integration tests
 ```
-
-#### PyBaMM Integration Tests
-
-Verify compatibility with PyBaMM:
-
-```bash
-nox -s pybamm-tests                    # Clone/update PyBaMM and run all tests
-nox -s pybamm-tests -- --unit-only     # Run only unit tests
-nox -s pybamm-tests -- --integration-only  # Run only integration tests
-nox -s pybamm-tests -- --no-update     # Skip git pull (use current version)
-nox -s pybamm-tests -- --pybamm-dir ./custom/path  # Use existing PyBaMM clone
-nox -s pybamm-tests -- --branch main  # Use specific branch/tag
-```
-
-The integration tests ensure that changes to pybammsolvers don't break PyBaMM functionality.
 
 ### Benchmarks
 

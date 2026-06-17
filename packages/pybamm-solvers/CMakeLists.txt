@@ -35,7 +35,8 @@ endif()
 # Auto-build the vendored SUNDIALS/SuiteSparse on a from-source build, so a clean
 # checkout with submodules needs no manual pre-step. Skipped on Windows (vcpkg).
 if(NOT WIN32 AND NOT DEFINED VCPKG_ROOT_DIR)
-    if(NOT EXISTS "${CMAKE_SOURCE_DIR}/sundials/CMakeLists.txt")
+    if(NOT EXISTS "${CMAKE_SOURCE_DIR}/sundials/CMakeLists.txt"
+            OR NOT EXISTS "${CMAKE_SOURCE_DIR}/SuiteSparse/SuiteSparse_config/CMakeLists.txt")
         message(FATAL_ERROR
             "SUNDIALS/SuiteSparse submodule sources are missing. Run:\n"
             "    git submodule update --init\n"
