@@ -5,6 +5,7 @@ import pytest
 from hypothesis import settings as hypothesis_settings
 
 import pybamm
+from tests.shared import get_mesh_for_testing
 
 # Hypothesis auto-loads its built-in "ci" profile in CI, which derandomizes
 # every run (the same inputs forever). Re-register it with randomisation
@@ -66,3 +67,12 @@ def set_debug_value():
 @pytest.fixture(autouse=True)
 def disable_telemetry():
     pybamm.telemetry.disable()
+
+
+@pytest.fixture
+def p2d_mesh():
+    """
+    Default P2D mesh for unit tests.
+    """
+    geometry = pybamm.battery_geometry()
+    return get_mesh_for_testing(xpts=None, rpts=10, geometry=geometry)
