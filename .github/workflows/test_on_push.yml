@@ -249,11 +249,12 @@ jobs:
           submodules: 'recursive'
           persist-credentials: false
 
+      # Plain apt (not the cache action): the from-source SuiteSparse build needs
+      # libblas.so's update-alternatives symlink, which apt file-tree caching drops.
       - name: Install Linux system dependencies
-        uses: awalsh128/cache-apt-pkgs-action@acb598e5ddbc6f68a970c5da0688d2f3a9f04d05 # v1.6.0
-        with:
-          packages: gfortran gcc make cmake libopenblas-dev
-          execute_install_scripts: true
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gfortran gcc make cmake libopenblas-dev
 
       - name: Set up Python 3.13
         uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
