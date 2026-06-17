@@ -9,8 +9,9 @@ permissions: {}
 
 jobs:
   build_docker_image:
-    # This workflow is only of value to PyBaMM and would always be skipped in forks
-    if: github.repository == 'pybamm-team/PyBaMM'
+    # Skipped in forks; on releases, build only for pybamm-v* tags so
+    # solver (pybamm-solvers-v*) releases don't republish the image.
+    if: github.repository == 'pybamm-team/PyBaMM' && (github.event_name != 'release' || startsWith(github.event.release.tag_name, 'pybamm-v'))
     name: Build image
     runs-on: ubuntu-latest
     environment: dockerhub

@@ -34,16 +34,71 @@ def set_environment_variables(env_dict, session):
 
 
 def install_locked(session, *, extras=None, groups=None):
+    """Install pybamm and its dependencies into the session environment.
+
+    Two modes, selected by the ``PYBAMM_SOLVER_WHEELS`` environment variable:
+
+    * **Unset (local dev, solver CI):** ``uv sync --frozen`` over the workspace.
+      ``pybammsolvers`` is built from the in-repo source via the shared lockfile.
+
+    * **Set to a directory of prebuilt solver wheels (the PyBaMM CI matrix):**
+      install the wheel matching this interpreter by explicit path, then install
+      pybamm with ``--no-sources`` so the workspace source routing is ignored.
+      This tests PyBaMM against the *prebuilt in-repo* ``pybammsolvers`` without
+      recompiling it in every matrix cell (and without needing a from-source
+      build on Windows, which only exists via cibuildwheel/vcpkg).
+
+      ``--no-sources`` plus an explicit wheel path is required because the in-repo
+      solver version collides with the PyPI release, so neither ``--find-links``
+      resolution nor the workspace source can be relied on to select the in-repo
+      artifact over the identically-versioned PyPI wheel.
+    """
+    env = {"UV_PROJECT_ENVIRONMENT": session.virtualenv.location}
+
+    wheels = os.getenv("PYBAMM_SOLVER_WHEELS")
+    if wheels:
+        wheels_path = Path(wheels)
+        if wheels_path.is_dir():
+            # The per-OS artifact holds wheels for every Python version; pick the
+            # one whose interpreter tag matches this cell. The trailing dash in
+            # "*-cpXY-*" avoids matching free-threaded "cpXYt-" builds.
+            tag = f"cp{sys.version_info.major}{sys.version_info.minor}"
+            matches = sorted(wheels_path.glob(f"*-{tag}-*.whl"))
+            if not matches:
+                session.error(
+                    f"PYBAMM_SOLVER_WHEELS={wheels} contains no pybammsolvers "
+                    f"wheel for {tag}"
+                )
+            wheel = matches[0].as_posix()
+        else:
+            wheel = wheels_path.as_posix()
+        python_bin = os.path.join(
+            session.bin, "python.exe" if sys.platform == "win32" else "python"
+        )
+        extras_str = f"[{','.join(extras)}]" if extras else ""
+        cmd = [
+            "uv",
+            "pip",
+            "install",
+            "--python",
+            python_bin,
+            "--no-sources",
+            wheel,
+            "-e",
+            f"./packages/pybamm{extras_str}",
+        ]
+        for group in groups or []:
+            # Groups (dev, docs) are defined in the pybamm package, not the root.
+            cmd.extend(["--group", f"packages/pybamm/pyproject.toml:{group}"])
+        session.run(*cmd, env=env, external=True)
+        return
+
     cmd = ["uv", "sync", "--frozen"]
     for extra in extras or []:
         cmd.extend(["--extra", extra])
     for group in groups or []:
         cmd.extend(["--group", group])
-    session.run(
-        *cmd,
-        env={"UV_PROJECT_ENVIRONMENT": session.virtualenv.location},
-        external=True,
-    )
+    session.run(*cmd, env=env, external=True)
 
 
 @nox.session(name="coverage", default=False)
@@ -54,7 +109,9 @@ def run_coverage(session):
     # Using plugin here since coverage runs unit tests on linux with latest python version.
     if "CI" in os.environ:
         session.install("pytest-github-actions-annotate-failures")
-    session.run("pytest", "--cov=pybamm", "--cov-report=xml", "tests/unit")
+    session.run(
+        "pytest", "--cov=pybamm", "--cov-report=xml", "packages/pybamm/tests/unit"
+    )
 
 
 @nox.session(name="integration", default=False)
@@ -68,7 +125,7 @@ def run_integration(session):
         and sys.platform == "linux"
     ):
         session.install("pytest-github-actions-annotate-failures")
-    session.run("python", "-m", "pytest", "-m", "integration")
+    session.run("python", "-m", "pytest", "-m", "integration", "packages/pybamm/tests")
 
 
 @nox.session(name="doctests", default=False)
@@ -82,7 +139,7 @@ def run_doctests(session):
         "-m",
         "pytest",
         "--doctest-plus",
-        "src",
+        "packages/pybamm/src",
     )
 
 
@@ -91,7 +148,7 @@ def run_unit(session):
     """Run the unit tests."""
     set_environment_variables(PYBAMM_ENV, session=session)
     install_locked(session, extras=["all", "jax"], groups=["dev"])
-    session.run("python", "-m", "pytest", "-m", "unit")
+    session.run("python", "-m", "pytest", "-m", "unit", "packages/pybamm/tests")
 
 
 @nox.session(name="memory", default=False)
@@ -105,7 +162,7 @@ def run_memory(session):
         "python",
         "-m",
         "pytest",
-        "tests/memory/",
+        "packages/pybamm/tests/memory/",
         "-v",
         "-o",
         "addopts=",
@@ -130,7 +187,7 @@ def run_scripts(session):
     install_locked(session, extras=["all", "jax"], groups=["dev"])
     # Fix for Python 3.12 CI. This can be removed after pybtex is replaced.
     session.install("setuptools", silent=False)
-    session.run("python", "-m", "pytest", "-m", "scripts")
+    session.run("python", "-m", "pytest", "-m", "scripts", "packages/pybamm/tests")
 
 
 @nox.session(name="dev", default=False)
@@ -161,7 +218,11 @@ def run_tests(session):
         "python",
         "-m",
         "pytest",
-        *(session.posargs if session.posargs else ["-m", "unit or integration"]),
+        *(
+            session.posargs
+            if session.posargs
+            else ["-m", "unit or integration", "packages/pybamm/tests"]
+        ),
     )
 
 
