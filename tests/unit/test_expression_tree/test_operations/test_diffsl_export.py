@@ -492,6 +492,36 @@ class TestDiffSLExport:
         assert "3600 - steptime0_i" in export
         assert "heaviside" in export
 
+    def test_unified_experiment_padding_rest_uses_padding_branch(self):
+        experiment = pybamm.Experiment(
+            [
+                pybamm.step.string(
+                    "Discharge at C/20 for 60 seconds",
+                    start_time=datetime(2023, 1, 1, 8, 0, 0),
+                ),
+                pybamm.step.string(
+                    "Discharge at C/20 for 60 seconds",
+                    start_time=datetime(2023, 1, 1, 8, 2, 0),
+                ),
+            ]
+        )
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            experiment=experiment,
+            solver=pybamm.CasadiSolver(),
+            experiment_model_mode="unified",
+        )
+        exporter = pybamm.DiffSLExport(sim)
+        output_name = next(iter(exporter.model.variables))
+        export = exporter.to_diffeq(outputs=[output_name])
+
+        assert export.count("60 - steptime0_i") == 3
+        first_step = export.index("experimentstepvalue")
+        padding_rest = export.index("currentvariablea_i),", first_step)
+        second_step = export.index("experimentstepvalue", padding_rest)
+
+        assert first_step < padding_rest < second_step
+
     def test_unified_experiment_repeating_cycle(self):
         experiment = pybamm.Experiment(
             [

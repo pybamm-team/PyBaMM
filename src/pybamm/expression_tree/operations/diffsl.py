@@ -1,11 +1,18 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from itertools import chain
 
 import numpy as np
 from scipy.sparse import csr_matrix
 
 import pybamm
+
+
+@dataclass(frozen=True)
+class _ExperimentScheduleState:
+    stop_expression: pybamm.Symbol
+    model_branch_index: int
 
 
 class DiffSLExport:
@@ -38,6 +45,7 @@ class DiffSLExport:
         if not isinstance(float_precision, int) or float_precision <= 0:
             raise ValueError("float_precision must be a positive integer")
         self.float_precision = float_precision
+        self._schedule_to_model_branch_order = None
         self._preprocess_model()
 
     def _preprocess_model(self) -> None:
@@ -316,8 +324,11 @@ class DiffSLExport:
         if symbol.size_for_testing != 1:
             raise NotImplementedError("DiffSL export only supports scalar Conditionals")
 
-        branch_order = list(range(len(symbol.branches)))
-        branch_order.append(branch_order[-1])
+        if self._has_experiment and self._schedule_to_model_branch_order is not None:
+            branch_order = self._schedule_to_model_branch_order
+        else:
+            branch_order = list(range(len(symbol.branches)))
+            branch_order.append(branch_order[-1])
 
         entries = [
             equation_to_diffeq(
@@ -448,7 +459,7 @@ class DiffSLExport:
         sim: pybamm.Simulation,
         step_branches: list[pybamm.Symbol],
         steptime0_sv: pybamm.StateVector,
-    ) -> tuple[list[int], list[pybamm.Symbol]]:
+    ) -> tuple[list[pybamm.Symbol], list[int], list[int]]:
         step_indices = sim._experiment_step_indices
         schedule_keys = [
             self._experiment_schedule_key(sim, step, branch_index)
@@ -465,13 +476,10 @@ class DiffSLExport:
         cycle_steps = sim.experiment.steps[:cycle_length]
         cycle_indices = step_indices[:cycle_length]
 
-        # will be replaced with last branch
-        branch_order = [-1]
-        stop_expressions = [pybamm.Symbol("placeholder stop expression")]
+        schedule_states = []
 
         for step, branch_index in zip(cycle_steps, cycle_indices, strict=True):
             branch = step_branches[branch_index - 1]
-            branch_order.append(len(stop_expressions) - 1)
 
             effective_duration = self._effective_step_duration(step, initial_start_time)
             duration_stop = pybamm.Scalar(effective_duration) - steptime0_sv
@@ -479,21 +487,29 @@ class DiffSLExport:
                 stop_expr = duration_stop
             else:
                 stop_expr = pybamm.minimum(duration_stop, branch)
-            stop_expressions.append(stop_expr)
+            schedule_states.append(
+                _ExperimentScheduleState(stop_expr, branch_index - 1)
+            )
 
             padding_duration = self._padding_step_duration(
                 step, effective_duration, initial_start_time
             )
             if padding_duration is not None:
-                branch_order.append(len(stop_expressions) - 1)
-                stop_expressions.append(pybamm.Scalar(padding_duration) - steptime0_sv)
+                schedule_states.append(
+                    _ExperimentScheduleState(
+                        pybamm.Scalar(padding_duration) - steptime0_sv,
+                        sim._experiment_padding_rest_index - 1,
+                    )
+                )
 
-        # Last branch is at index 0
-        branch_order[0] = branch_order[-1]
-        stop_expressions[0] = stop_expressions[-1]
-        branch_order.pop()
-        stop_expressions.pop()
-        return branch_order, stop_expressions
+        indexed_states = list(enumerate(schedule_states))
+        rotated_states = indexed_states[-1:] + indexed_states[:-1]
+        cycle_stop_exprs = [state.stop_expression for _, state in rotated_states]
+        schedule_stop_order = [index for index, _ in rotated_states]
+        schedule_to_model_branch_order = [
+            state.model_branch_index for state in schedule_states
+        ]
+        return cycle_stop_exprs, schedule_stop_order, schedule_to_model_branch_order
 
     def _get_stop_expressions(
         self, model: pybamm.BaseModel, steptime0_sv: pybamm.StateVector | None = None
@@ -532,10 +548,15 @@ class DiffSLExport:
             )  # pragma: no cover
 
         step_branches = list(combined_event.expression.branches)
-        branch_order, cycle_stop_exprs = self._get_unified_experiment_schedule_states(
+        (
+            cycle_stop_exprs,
+            schedule_stop_order,
+            schedule_to_model_branch_order,
+        ) = self._get_unified_experiment_schedule_states(
             sim, step_branches, steptime0_sv
         )
-        return cycle_stop_exprs + general_stops, branch_order
+        self._schedule_to_model_branch_order = schedule_to_model_branch_order
+        return cycle_stop_exprs + general_stops, schedule_stop_order
 
     def extract_pre_calculated_tensors(
         self,
