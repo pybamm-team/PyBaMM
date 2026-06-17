@@ -1,0 +1,325 @@
+# Reusable workflow: build pybammsolvers wheels (+ optional sdist) from the
+# in-repo source.
+#
+# Single definition of "how to build the solver", called by:
+#   * release_solvers.yml   — on a pybamm-solvers-v* release (build + sdist, no
+#                             cache, then the caller publishes to PyPI).
+#   * test_on_push.yml      — on PRs (build + cache so PyBaMM's matrix can test
+#                             against the in-repo solver without rebuilding it
+#                             per cell).
+#
+# Windows is built here via cibuildwheel + vcpkg — the ONLY way this solver has
+# ever been built on Windows. PyBaMM's matrix must not invent a from-source
+# Windows build; it consumes these wheels.
+#
+# Caching (cache_wheels=true): each platform job keys actions/cache on the solver
+# subtree's git-tree hash (`git rev-parse HEAD:packages/pybamm-solvers`), which
+# captures every tracked file AND the SUNDIALS/SuiteSparse submodule pin SHAs.
+# On a cache hit (e.g. a PyBaMM-only PR whose solver source equals main's) the
+# build is skipped and the cached wheels are uploaded as-is.
+name: Build solver wheels (reusable)
+
+on:
+  workflow_call:
+    inputs:
+      cache_wheels:
+        description: "Restore/save per-platform wheels keyed on the solver source hash, skipping the build on a cache hit."
+        default: false
+        required: false
+        type: boolean
+      build_sdist:
+        description: "Also build the sdist (needed for release publishing; not needed for PR testing)."
+        default: false
+        required: false
+        type: boolean
+      save_vcpkg_logs:
+        description: "Upload vcpkg build logs for Windows (useful for debugging CI failures)."
+        default: false
+        required: false
+        type: boolean
+
+defaults:
+  run:
+    working-directory: packages/pybamm-solvers
+
+env:
+  CIBW_BUILD_VERBOSITY: 2
+  # Skip PyPy, MUSL, and free-threaded Python builds (CasADi lacks cp314t wheels)
+  CIBW_SKIP: "pp* *musllinux* cp314t*"
+  FORCE_COLOR: 3
+
+jobs:
+  build_windows_wheels:
+    name: Wheels (Windows)
+    runs-on: windows-2022
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          submodules: 'recursive'
+          persist-credentials: false
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: 3.13
+
+      - name: Compute solver source hash
+        id: solverhash
+        shell: bash
+        working-directory: ${{ github.workspace }}
+        run: echo "hash=$(git rev-parse HEAD:packages/pybamm-solvers)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore cached wheels
+        id: cache
+        if: inputs.cache_wheels
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: packages/pybamm-solvers/wheelhouse
+          key: solver-wheels-windows-${{ steps.solverhash.outputs.hash }}
+
+      # Pin to 2025.01.13 to avoid issues with finding SuiteSparse in manifest mode
+      # after SuiteSparse was split into subpackages in recent vcpkg releases.
+      - name: Install vcpkg on Windows
+        if: ${{ !(inputs.cache_wheels && steps.cache.outputs.cache-hit == 'true') }}
+        run: |
+          cd C:\
+          rm -r -fo 'C:\vcpkg'
+          git clone https://github.com/microsoft/vcpkg --branch 2025.01.13
+          cd vcpkg
+          .\bootstrap-vcpkg.bat
+
+      - name: Build wheels on Windows
+        if: ${{ !(inputs.cache_wheels && steps.cache.outputs.cache-hit == 'true') }}
+        run: pipx run cibuildwheel --output-dir wheelhouse
+        env:
+          # No VCPKG_BINARY_SOURCES: keep vcpkg's default local cache
+          # (%LOCALAPPDATA%\vcpkg\archives) so the per-wheel CMake configures
+          # within this job share built ports instead of rebuilding from
+          # source for each Python version.
+          CIBW_ENVIRONMENT: >
+            VCPKG_ROOT_DIR=C:\vcpkg
+            VCPKG_DEFAULT_TRIPLET=x64-windows-static-md
+            VCPKG_FEATURE_FLAGS=manifests,registries
+            CMAKE_GENERATOR="Visual Studio 17 2022"
+            CMAKE_GENERATOR_PLATFORM=x64
+          CIBW_ARCHS: AMD64
+          CIBW_BEFORE_BUILD: python -m pip install delvewheel
+          CIBW_REPAIR_WHEEL_COMMAND: delvewheel repair --add-path C:/Windows/System32 -w {dest_dir} {wheel}
+          CIBW_TEST_EXTRAS: "dev"
+          CIBW_TEST_COMMAND: |
+            python -m pytest {project}/tests
+      - name: Upload vcpkg build logs
+        if: ${{ inputs.save_vcpkg_logs && always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: vcpkg-logs-windows
+          path: C:\vcpkg\buildtrees\sundials\*.log
+          if-no-files-found: ignore
+      - name: Upload Windows wheels
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: wheels_windows
+          path: packages/pybamm-solvers/wheelhouse/*.whl
+          if-no-files-found: error
+
+  build_manylinux_wheels:
+    name: Wheels (Linux)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          submodules: 'recursive'
+          persist-credentials: false
+
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: 3.13
+
+      - name: Compute solver source hash
+        id: solverhash
+        shell: bash
+        working-directory: ${{ github.workspace }}
+        run: echo "hash=$(git rev-parse HEAD:packages/pybamm-solvers)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore cached wheels
+        id: cache
+        if: inputs.cache_wheels
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: packages/pybamm-solvers/wheelhouse
+          key: solver-wheels-linux-${{ steps.solverhash.outputs.hash }}
+
+      - name: Build wheels on Linux
+        if: ${{ !(inputs.cache_wheels && steps.cache.outputs.cache-hit == 'true') }}
+        run: pipx run cibuildwheel --output-dir wheelhouse
+        env:
+          CIBW_ARCHS_LINUX: x86_64
+          # openblas-devel/lapack-devel live in PowerTools, not EPEL; disable EPEL
+          # so its periodic metadata-rotation outages can't break the wheel build.
+          CIBW_BEFORE_ALL_LINUX: >
+            yum -y --disablerepo=epel install openblas-devel lapack-devel &&
+            python install_KLU_Sundials.py
+          # libcasadi ships as a pip dep (resolved at runtime via $ORIGIN/../casadi).
+          CIBW_REPAIR_WHEEL_COMMAND_LINUX: auditwheel repair --exclude libcasadi.so.3.7 -w {dest_dir} {wheel}
+          CIBW_TEST_EXTRAS: "dev"
+          CIBW_TEST_COMMAND: |
+            set -e -x
+            python -m pytest {project}/tests
+
+      - name: Upload wheels for Linux
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: wheels_manylinux
+          path: packages/pybamm-solvers/wheelhouse/*.whl
+          if-no-files-found: error
+
+  build_macos_wheels:
+    name: Wheels (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        os: [macos-15-intel, macos-latest]
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          submodules: 'recursive'
+          persist-credentials: false
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: 3.13
+
+      - name: Compute solver source hash
+        id: solverhash
+        shell: bash
+        working-directory: ${{ github.workspace }}
+        run: echo "hash=$(git rev-parse HEAD:packages/pybamm-solvers)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore cached wheels
+        id: cache
+        if: inputs.cache_wheels
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: packages/pybamm-solvers/wheelhouse
+          key: solver-wheels-${{ matrix.os }}-${{ steps.solverhash.outputs.hash }}
+
+      - name: Install Fortran compiler
+        if: ${{ !(inputs.cache_wheels && steps.cache.outputs.cache-hit == 'true') }}
+        env:
+          HOMEBREW_NO_INSTALL_CLEANUP: 1
+          HOMEBREW_NO_AUTO_UPDATE: 1
+          HOMEBREW_NO_COLOR: 1
+          NONINTERACTIVE: 1
+        run: |
+          brew analytics off
+          brew install libomp
+          brew reinstall gcc
+
+      - name: Install cibuildwheel
+        if: ${{ !(inputs.cache_wheels && steps.cache.outputs.cache-hit == 'true') }}
+        run: python -m pip install cibuildwheel
+
+      - name: Build wheels on macOS
+        if: ${{ !(inputs.cache_wheels && steps.cache.outputs.cache-hit == 'true') }}
+        shell: bash
+        run: |
+            set -e -x
+
+            # Set LLVM-OpenMP URL
+            if [[ $(uname -m) == "x86_64" ]]; then
+              OPENMP_URL="https://anaconda.org/conda-forge/llvm-openmp/11.1.0/download/osx-64/llvm-openmp-11.1.0-hda6cdc1_1.tar.bz2"
+            elif [[ $(uname -m) == "arm64" ]]; then
+              OPENMP_URL="https://anaconda.org/conda-forge/llvm-openmp/11.1.0/download/osx-arm64/llvm-openmp-11.1.0-hf3c4609_1.tar.bz2"
+            fi
+
+            export SDKROOT=${SDKROOT:-$(xcrun --show-sdk-path)}
+            SOLVER_LIB_PATH=$(pwd)/.idaklu/lib
+
+            mkdir -p $SOLVER_LIB_PATH
+
+            # Can't download LLVM-OpenMP directly, use conda and set environment variables
+            brew install miniforge
+            conda create -n pybammsolvers-dev $OPENMP_URL
+            if [[ $(uname -m) == "x86_64" ]]; then
+              PREFIX="/usr/local/Caskroom/miniforge/base/envs/pybammsolvers-dev"
+            elif [[ $(uname -m) == "arm64" ]]; then
+              PREFIX="/opt/homebrew/Caskroom/miniforge/base/envs/pybammsolvers-dev"
+            fi
+
+            # Copy libomp.dylib from PREFIX to $SOLVER_LIB_PATH, needed for wheel repair
+            cp $PREFIX/lib/libomp.dylib $SOLVER_LIB_PATH/.
+            install_name_tool -id $SOLVER_LIB_PATH/libomp.dylib $SOLVER_LIB_PATH/libomp.dylib
+            codesign --force --sign - $SOLVER_LIB_PATH/libomp.dylib
+
+            export CC=/usr/bin/clang
+            export CXX=/usr/bin/clang++
+            # Link conda libomp (not Homebrew's — too-high MACOSX_DEPLOYMENT_TARGET).
+            # One libomp source ensures delocate bundles a single copy.
+            export CPPFLAGS="$CPPFLAGS -Xpreprocessor -fopenmp"
+            export CFLAGS="$CFLAGS -I$PREFIX/include"
+            export CXXFLAGS="$CXXFLAGS -I$PREFIX/include"
+            export LDFLAGS="$LDFLAGS -L$PREFIX/lib -lomp"
+
+            # install_KLU_Sundials.py checks CIBUILDWHEEL to decide whether to
+            # inject Homebrew OpenMP overrides; set it so it uses conda libomp.
+            export CIBUILDWHEEL="1"
+
+            python install_KLU_Sundials.py
+            python -m cibuildwheel --output-dir wheelhouse
+        env:
+          # 10.13 for Intel (macos-15-intel), 11.0 for Apple Silicon (macos-latest)
+          MACOSX_DEPLOYMENT_TARGET: ${{ matrix.os == 'macos-latest' && '11.0' || '10.13' }}
+          CIBW_ARCHS_MACOS: auto
+          CIBW_BEFORE_BUILD: python -m pip install delocate
+          # libcasadi ships as a pip dep (resolved at runtime via
+          # @loader_path/../casadi); delocate can't locate it at repair time
+          # since it lives in the build venv — hence --exclude + --ignore-missing-dependencies.
+          CIBW_REPAIR_WHEEL_COMMAND: |
+            if [[ $(uname -m) == "x86_64" ]]; then
+              delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel} --exclude libcasadi --ignore-missing-dependencies
+            elif [[ $(uname -m) == "arm64" ]]; then
+              # Use higher macOS target for now since casadi/libc++.1.0.dylib is still not fixed
+              delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel} --exclude libcasadi --ignore-missing-dependencies --require-target-macos-version 11.1
+              for file in {dest_dir}/*.whl; do mv "$file" "${file//macosx_11_1/macosx_11_0}"; done
+            fi
+          CIBW_TEST_EXTRAS: "dev"
+          CIBW_TEST_COMMAND: |
+            set -e -x
+            python -m pytest {project}/tests
+
+      - name: Upload wheels for macOS (amd64, arm64)
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: wheels_${{ matrix.os }}
+          path: packages/pybamm-solvers/wheelhouse/*.whl
+          if-no-files-found: error
+
+  build_sdist:
+    name: Build SDist
+    if: inputs.build_sdist
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          submodules: 'recursive'
+          persist-credentials: false
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: 3.13
+
+      - name: Build SDist
+        run: pipx run build --sdist
+
+      - name: Upload SDist
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sdist
+          path: packages/pybamm-solvers/dist/*.tar.gz
+          if-no-files-found: error

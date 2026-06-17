@@ -22,7 +22,20 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Build the solver wheels once (like test_on_push.yml) and download them per
+  # job; otherwise every nox/uv sync would compile the solver from source and fail.
+  build_solver:
+    # Pass contents:read to the reusable workflow (top-level permissions are {},
+    # so its checkout would otherwise get no token scope).
+    permissions:
+      contents: read
+    uses: ./.github/workflows/_build_solver_wheels.yml
+    with:
+      cache_wheels: true
+      build_sdist: false
+
   run_unit_integration_and_coverage_tests:
+    needs: build_solver
     runs-on: ${{ matrix.os }}
     permissions:
       contents: read
@@ -33,6 +46,11 @@ jobs:
         os: [ ubuntu-latest, macos-15-intel, macos-latest, windows-latest ]
         python-version: ["3.11", "3.12", "3.13", "3.14"]
     name: Tests (${{ matrix.os }} / Python ${{ matrix.python-version }})
+
+    env:
+      # noxfile install_locked installs the matching prebuilt solver wheel from
+      # this directory instead of building the solver from source.
+      PYBAMM_SOLVER_WHEELS: ${{ github.workspace }}/solver-wheels
 
     steps:
       - name: Check out PyBaMM repository
@@ -78,6 +96,12 @@ jobs:
       - name: Install nox
         run: uv tool install nox
 
+      - name: Download in-repo solver wheels
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: ${{ matrix.os == 'ubuntu-latest' && 'wheels_manylinux' || matrix.os == 'windows-latest' && 'wheels_windows' || format('wheels_{0}', matrix.os) }}
+          path: solver-wheels
+
       - name: Run unit tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
         if: matrix.os != 'ubuntu-latest' || matrix.python-version != '3.13'
         run: nox -s unit
@@ -96,12 +120,15 @@ jobs:
         run: nox -s integration
 
   run_doctests:
+    needs: build_solver
     runs-on: ubuntu-latest
     permissions:
       contents: read
     strategy:
       fail-fast: false
     name: Doctests (ubuntu-latest / Python 3.13)
+    env:
+      PYBAMM_SOLVER_WHEELS: ${{ github.workspace }}/solver-wheels
 
     steps:
       - name: Check out PyBaMM repository
@@ -129,6 +156,12 @@ jobs:
       - name: Install nox
         run: uv tool install nox
 
+      - name: Download in-repo solver wheels
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: wheels_manylinux
+          path: solver-wheels
+
       - name: Install docs dependencies and run doctests for GNU/Linux
         run: nox -s doctests
 
@@ -136,12 +169,15 @@ jobs:
         run: nox -s docs
 
   run_example_tests:
+    needs: build_solver
     runs-on: ubuntu-latest
     permissions:
       contents: read
     strategy:
       fail-fast: false
     name: Example notebooks (ubuntu-latest / Python 3.13)
+    env:
+      PYBAMM_SOLVER_WHEELS: ${{ github.workspace }}/solver-wheels
 
     steps:
       - name: Check out PyBaMM repository
@@ -168,16 +204,25 @@ jobs:
       - name: Install nox
         run: uv tool install nox
 
+      - name: Download in-repo solver wheels
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: wheels_manylinux
+          path: solver-wheels
+
       - name: Run example notebooks tests for GNU/Linux with Python 3.13
         run: nox -s examples
 
   run_scripts_tests:
+    needs: build_solver
     runs-on: ubuntu-latest
     permissions:
       contents: read
     strategy:
       fail-fast: false
     name: Example scripts (ubuntu-latest / Python 3.13)
+    env:
+      PYBAMM_SOLVER_WHEELS: ${{ github.workspace }}/solver-wheels
 
     steps:
       - name: Check out PyBaMM repository
@@ -203,6 +248,12 @@ jobs:
 
       - name: Install nox
         run: uv tool install nox
+
+      - name: Download in-repo solver wheels
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: wheels_manylinux
+          path: solver-wheels
 
       - name: Run example scripts tests for GNU/Linux with Python 3.13
         run: nox -s scripts

@@ -22,9 +22,12 @@ To obtain the PyBaMM source code, clone the GitHub repository
 
 .. code:: bash
 
-	  git clone https://github.com/pybamm-team/PyBaMM.git
+	  git clone --recurse-submodules https://github.com/pybamm-team/PyBaMM.git
 
-or download the source archive on the repository's homepage.
+or download the source archive on the repository's homepage. The
+``--recurse-submodules`` flag fetches the SUNDIALS and SuiteSparse sources used
+to build the in-repo IDAKLU solver (``pybammsolvers``); if you already cloned
+without it, run ``git submodule update --init``.
 
 To install PyBaMM, you will need:
 
@@ -42,7 +45,7 @@ You can install the above with
 
 	.. code:: bash
 
-		sudo apt install python3.X python3.X-dev libopenblas-dev gcc gfortran graphviz cmake pandoc
+		sudo apt install python3.X python3.X-dev libopenblas-dev gcc gfortran graphviz cmake make pandoc
 
 	Where ``X`` is the version sub-number.
 
@@ -85,6 +88,21 @@ Installing PyBaMM
 -----------------
 
 You should now have everything ready to build and install PyBaMM successfully.
+
+.. note::
+
+   ``uv sync`` and ``nox`` build the in-repo IDAKLU solver (``pybammsolvers``)
+   from source. The first such build compiles the vendored SUNDIALS and
+   SuiteSparse into ``packages/pybamm-solvers/.idaklu`` automatically — this
+   takes a few minutes the first time, then is cached. You only need the
+   submodules present (fetched by ``--recurse-submodules`` above, or
+   ``git submodule update --init``) and ``make``, ``cmake``, and a C/Fortran
+   compiler installed.
+
+   To use a system SUNDIALS/SuiteSparse instead of the vendored build, set
+   ``SUNDIALS_ROOT`` and ``SuiteSparse_ROOT``. The manual ``pip`` install below
+   and the released ``pip install pybamm`` both pull a prebuilt
+   ``pybammsolvers`` wheel from PyPI, so they skip this build entirely.
 
 Using ``uv`` (recommended)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -149,25 +167,27 @@ and run the tests to check your installation.
 Manual install (pip)
 ~~~~~~~~~~~~~~~~~~~~
 
-From the ``PyBaMM/`` directory, you can install PyBaMM using
+The ``pybamm`` package lives at ``packages/pybamm`` within the repository. From
+the ``PyBaMM/`` directory, you can install it using
 
 .. code:: bash
 
-	  pip install .
+	  pip install ./packages/pybamm
 
 If you intend to contribute to the development of PyBaMM, it is convenient to
 install in "editable mode", along with all the optional dependencies and useful
-tools for development and documentation:
+tools for development and documentation. The ``dev`` and ``docs`` dependency
+groups live in the package's ``pyproject.toml``, so reference them by path:
 
 .. code:: bash
 
-	  pip install -e .[all] --group dev --group docs
+	  pip install -e ./packages/pybamm[all] --group packages/pybamm/pyproject.toml:dev --group packages/pybamm/pyproject.toml:docs
 
-If you are using ``zsh`` or ``tcsh``, you would need to use different pattern matching:
+If you are using ``zsh`` or ``tcsh``, you would need to quote the extras to avoid pattern matching:
 
 .. code:: bash
 
-	  pip install -e '.[all]' --group dev --group docs
+	  pip install -e './packages/pybamm[all]' --group packages/pybamm/pyproject.toml:dev --group packages/pybamm/pyproject.toml:docs
 
 Before you start contributing to PyBaMM, please read the `contributing
 guidelines <https://github.com/pybamm-team/PyBaMM/blob/main/CONTRIBUTING.md>`__.
@@ -275,5 +295,5 @@ not being used when I run my Python script.
 
 **Solution:** Make sure you have installed PyBaMM in editable mode.
 If using ``uv``, run ``uv sync`` (editable by default). If using ``pip``,
-use the ``-e`` flag: ``pip install -e .``. This sets the installed location
+use the ``-e`` flag: ``pip install -e ./packages/pybamm``. This sets the installed location
 of the source files to your current directory.
