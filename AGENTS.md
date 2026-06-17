@@ -119,8 +119,9 @@ gets wrong:
 
 - Standard scientific-Python style (PEP 8, NumPy/SciPy idioms). Ruff lint+format is authoritative;
   do not hand-fight it or manually wrap lines to dodge warnings.
-- **Inline comments must be concise — never more than two lines.** Comment the non-obvious *why*,
-  not the *what*.
+- **Inline comments must be concise — never more than two lines**, repo-wide
+  (Python, CMake, YAML/CI workflows, Dockerfiles, and any other source). Comment
+  the non-obvious *why*, not the *what*.
 - **Docstrings are concise and follow the NumPy convention** (`Parameters`/`Returns`/`Raises`
   sections). Document only the object itself; do not describe callers, related code, or
   surrounding behaviour.
