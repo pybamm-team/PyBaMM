@@ -57,7 +57,7 @@ disc = pybamm.Discretisation(mesh, spatial_methods)
 disc.process_model(model)
 
 # Solve
-solver = pybamm.ScipySolver()
+solver = pybamm.IDAKLUSolver()
 t = np.linspace(0, 1, 100)
 solution = solver.solve(model, t)
 

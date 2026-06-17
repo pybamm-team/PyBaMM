@@ -467,3 +467,7 @@ class TestScipySolver:
         np.testing.assert_allclose(
             solution.y[0], (solution["var1"].data - 1) / 2, rtol=1e-15, atol=1e-14
         )
+
+    def test_deprecated(self):
+        with pytest.warns(DeprecationWarning, match="ScipySolver is deprecated"):
+            pybamm.ScipySolver()

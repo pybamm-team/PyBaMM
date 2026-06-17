@@ -199,3 +199,9 @@ class TestCasadiAlgebraicSolver:
         solver = pybamm.CasadiAlgebraicSolver()
         solution = solver.solve(model, np.linspace(0, 1, 10), inputs={"param": 7})
         np.testing.assert_array_equal(solution.y, -7)
+
+    def test_deprecated(self):
+        with pytest.warns(
+            DeprecationWarning, match="CasadiAlgebraicSolver is deprecated"
+        ):
+            pybamm.CasadiAlgebraicSolver()
