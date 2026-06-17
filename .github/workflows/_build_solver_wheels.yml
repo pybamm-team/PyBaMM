@@ -8,6 +8,9 @@
 #                             against the in-repo solver without rebuilding it
 #                             per cell).
 #
+# Platform selection: callers pass `platforms` / `macos_runners` to build only the
+# wheels their downstream jobs consume; both default to all platforms.
+#
 # Windows is built here via cibuildwheel + vcpkg — the ONLY way this solver has
 # ever been built on Windows. PyBaMM's matrix must not invent a from-source
 # Windows build; it consumes these wheels.
@@ -37,6 +40,16 @@ on:
         default: false
         required: false
         type: boolean
+      platforms:
+        description: 'JSON array of non-macOS targets to build, subset of ["linux", "windows"]. Lets a caller build only the wheels its downstream jobs consume.'
+        default: '["linux", "windows"]'
+        required: false
+        type: string
+      macos_runners:
+        description: 'JSON array of macOS runner labels to build on (e.g. ["macos-latest"]); empty [] skips macOS entirely.'
+        default: '["macos-15-intel", "macos-latest"]'
+        required: false
+        type: string
 
 defaults:
   run:
@@ -51,6 +64,7 @@ env:
 jobs:
   build_windows_wheels:
     name: Wheels (Windows)
+    if: ${{ contains(fromJSON(inputs.platforms), 'windows') }}
     runs-on: windows-2022
     permissions:
       contents: read
@@ -124,6 +138,7 @@ jobs:
 
   build_manylinux_wheels:
     name: Wheels (Linux)
+    if: ${{ contains(fromJSON(inputs.platforms), 'linux') }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -177,12 +192,13 @@ jobs:
 
   build_macos_wheels:
     name: Wheels (${{ matrix.os }})
+    if: ${{ inputs.macos_runners != '[]' }}
     runs-on: ${{ matrix.os }}
     permissions:
       contents: read
     strategy:
       matrix:
-        os: [macos-15-intel, macos-latest]
+        os: ${{ fromJSON(inputs.macos_runners) }}
       fail-fast: false
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
