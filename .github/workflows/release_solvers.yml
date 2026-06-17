@@ -35,10 +35,34 @@ jobs:
       build_sdist: true
       save_vcpkg_logs: ${{ github.event_name == 'workflow_dispatch' && inputs.save_vcpkg_logs }}
 
+  check_version:
+    # Guard against tag/version.py desync: the published version comes from
+    # version.py, not the tag, so fail early instead of shipping the wrong one.
+    if: ${{ github.event_name == 'release' && startsWith(github.event.release.tag_name, 'pybamm-solvers-v') }}
+    name: Check tag matches version.py
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+      - name: Assert release tag matches version.py
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          version="$(python3 -c 'import pathlib,re; print(re.search(r"__version__\s*=\s*\"([^\"]+)\"", pathlib.Path("packages/pybamm-solvers/src/pybammsolvers/version.py").read_text()).group(1))')"
+          expected="pybamm-solvers-v${version}"
+          if [ "$TAG" != "$expected" ]; then
+            echo "::error::Release tag '$TAG' does not match version.py ('$version', expected '$expected'). Bump version.py or fix the tag."
+            exit 1
+          fi
+          echo "Release tag '$TAG' matches version.py ($version)."
+
   publish_pypi:
     if: ${{ github.event_name == 'release' && startsWith(github.event.release.tag_name, 'pybamm-solvers-v') }}
     name: Upload package to PyPI
-    needs: [ build ]
+    needs: [ build, check_version ]
     runs-on: ubuntu-latest
     environment:
       name: pypi

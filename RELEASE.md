@@ -162,6 +162,14 @@ A patch release is `YY.MM.N.P` where `P >= 1`. Patches are cut from the previous
    Edit `CHANGELOG.md` to add the new dated `vYY.MM.N.P` block (moving the entries out of `# [Unreleased]`), and update `CITATION.cff`. Open a PR to `main`.
 8. Delete the release branch after tagging — it is no longer needed.
 
+### Cutting a `pybammsolvers` release
+
+`pybammsolvers` releases independently of PyBaMM. **Its published version is read from `packages/pyba mm-solvers/src/pybammsolvers/version.py`** (via the regex in `packages/pybamm-solvers/pyproject.toml`), *not* from the release tag — the `pybamm-solvers-v*` tag namespace only routes the workflow. Keep the tag and `version.py` in lockstep, or the wrong version ships.
+
+1. Bump `__version__` in `packages/pybamm-solvers/src/pybammsolvers/version.py` and record the change in `CHANGELOG.md`. Open a PR to `main`, ensure CI passes, then merge.
+2. From `main` at the merge commit, create a GitHub _release_ with the tag `pybamm-solvers-vX.Y.Z`, where `X.Y.Z` **exactly matches** the new `version.py` value. This triggers `release_solvers.yml`, which builds wheels + sdist and publishes to PyPI. The `check_version` job in that workflow fails the release if the tag and `version.py` disagree; PyPI separately rejects a re-upload of an already-published version.
+3. Verify the release installs cleanly: `pip install pybammsolvers==X.Y.Z`.
+
 ### Conda-forge
 
 The conda-forge release flow is triggered automatically after a stable PyPI release: the conda-forge bot opens a PR against [pybamm-feedstock](https://github.com/conda-forge/pybamm-feedstock), which maintainers review and approve.
