@@ -156,8 +156,10 @@ jobs:
         run: pipx run cibuildwheel --output-dir wheelhouse
         env:
           CIBW_ARCHS_LINUX: x86_64
+          # openblas-devel/lapack-devel live in PowerTools, not EPEL; disable EPEL
+          # so its periodic metadata-rotation outages can't break the wheel build.
           CIBW_BEFORE_ALL_LINUX: >
-            yum -y install openblas-devel lapack-devel &&
+            yum -y --disablerepo=epel install openblas-devel lapack-devel &&
             python install_KLU_Sundials.py
           # libcasadi ships as a pip dep (resolved at runtime via $ORIGIN/../casadi).
           CIBW_REPAIR_WHEEL_COMMAND_LINUX: auditwheel repair --exclude libcasadi.so.3.7 -w {dest_dir} {wheel}
