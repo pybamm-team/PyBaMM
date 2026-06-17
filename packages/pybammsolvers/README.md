@@ -90,6 +90,20 @@ CI):
 nox -s dev-rebuild
 ```
 
+#### Building a wheel or sdist
+
+Build distributions with an isolated PEP 517 frontend, which installs the build
+backend itself:
+
+```bash
+python -m build        # or: pipx run build
+```
+
+`uv build` does **not** work here: the workspace marks `pybammsolvers` as
+`no-build-isolation-package` (so the editable auto-rebuild can find the build
+tools in the project venv), and uv then does not install the build backend into
+its own build environment. The release CI uses `python -m build` for this reason.
+
 ### Testing
 
 The project includes comprehensive test suites:

@@ -65,6 +65,17 @@ include = [
     "vcpkg.json",
     "vcpkg-configuration.json",
 ]
+# The SUNDIALS/SuiteSparse submodules are gitlink pins, not tracked files, so a
+# git-based sdist omits them. But `python -m build` copies the working tree to a
+# temp dir without git context, and scikit-build-core then filesystem-includes
+# the checked-out submodules. Exclude them explicitly so the sdist stays small
+# regardless of submodule checkout state.
+exclude = [
+    "sundials",
+    "sundials/**",
+    "SuiteSparse",
+    "SuiteSparse/**",
+]
 
 # Prevent uv's ephemeral build venv from being torn down between CMake configure
 # and auto-rebuild (which bakes absolute paths into CMakeCache.txt).
