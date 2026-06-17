@@ -123,7 +123,6 @@ class ProcessedVariableTimeIntegral:
     @staticmethod
     def from_pybamm_var(
         var: pybamm.Symbol,
-        nstates: int,
     ) -> ProcessedVariableTimeIntegral | None:
         sum_node = None
         for symbol in var.pre_order():
