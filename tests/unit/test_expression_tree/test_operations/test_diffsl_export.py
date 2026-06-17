@@ -517,15 +517,54 @@ class TestDiffSLExport:
         assert "[N]" in export
         assert "steptime0_i" in export
 
-        cycle_length = pybamm.DiffSLExport._compute_experiment_cycle_length(
-            sim._experiment_step_indices
-        )
-        assert cycle_length == 5
-
         assert export.count("heaviside") >= 1
         assert "(event" in export and "_i * varying" in export
         assert "36000 - steptime0_i" in export
+        assert export.count("36000 - steptime0_i") == 1
         assert "3.2999" in export
         assert "86400 - steptime0_i" in export
         assert "4.099" in export
         assert "0.010" in export
+
+    def test_unified_experiment_schedule_cycle_preserves_step_durations(self):
+        experiment = pybamm.Experiment(
+            [
+                "Discharge at C/20 for 60 seconds",
+                "Rest for 10 seconds",
+                "Discharge at C/20 for 120 seconds",
+                "Rest for 20 seconds",
+            ]
+        )
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            experiment=experiment,
+            solver=pybamm.CasadiSolver(),
+            experiment_model_mode="unified",
+        )
+        exporter = pybamm.DiffSLExport(sim)
+        output_name = next(iter(exporter.model.variables))
+        export = exporter.to_diffeq(outputs=[output_name])
+
+        assert "60 - steptime0_i" in export
+        assert "10 - steptime0_i" in export
+        assert "120 - steptime0_i" in export
+        assert "20 - steptime0_i" in export
+
+    def test_unified_experiment_schedule_preserves_step_target_values(self):
+        experiment = pybamm.Experiment(
+            [
+                pybamm.step.c_rate(0.5, duration=10),
+                pybamm.step.c_rate(1.0, duration=10),
+            ]
+        )
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            experiment=experiment,
+            solver=pybamm.CasadiSolver(),
+            experiment_model_mode="unified",
+        )
+        exporter = pybamm.DiffSLExport(sim)
+        output_name = next(iter(exporter.model.variables))
+        export = exporter.to_diffeq(outputs=[output_name])
+
+        assert export.count("10 - steptime0_i") == 2

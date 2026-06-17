@@ -336,36 +336,35 @@ class DiffSLExport:
 
     @staticmethod
     def _compute_experiment_cycle_length(
-        step_indices: list[int],
+        schedule_items: list[object],
     ) -> int:
-        """Determine the shortest repeating cycle in the experiment step indices.
+        """Determine the shortest repeating cycle in the experiment schedule.
 
         Computes the LPS (longest proper prefix which is also a suffix) array,
         also known as the KMP prefix function or failure table, over the
-        sequence of 1-based step indices. If the sequence is composed of
+        sequence of schedule items. If the sequence is composed of
         repetitions of a shorter pattern, returns the length of that pattern.
         Otherwise returns the full sequence length.
 
         Parameters
         ----------
-        step_indices : list[int]
-            1-based step branch indices for every step in the experiment.
+        schedule_items : list
+            Equality-comparable schedule items for every step in the experiment.
 
         Returns
         -------
         int
-            The length of the shortest repeating cycle, or ``len(step_indices)``
+            The length of the shortest repeating cycle, or ``len(schedule_items)``
             if no repeating cycle is found.
         """
-        n = len(step_indices)
+        n = len(schedule_items)
         if n == 0:
             return 0  # pragma: no cover
-        indices_0based = [i - 1 for i in step_indices]
         lps = [0] * n
         length = 0
         i = 1
         while i < n:
-            if indices_0based[i] == indices_0based[length]:
+            if schedule_items[i] == schedule_items[length]:
                 length += 1
                 lps[i] = length
                 i += 1
@@ -379,6 +378,71 @@ class DiffSLExport:
             return n - p
         return n
 
+    @staticmethod
+    def _normalise_schedule_value(value):
+        if value is None:
+            return None
+        if isinstance(value, pybamm.Scalar):
+            return float(value.value)
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return repr(value)
+
+    @staticmethod
+    def _effective_step_duration(step: pybamm.step.BaseStep, initial_start_time):
+        effective_duration = step.duration
+        if step.end_time is not None and initial_start_time is not None:
+            start_dt = (step.start_time - initial_start_time).total_seconds()
+            end_dt = (step.end_time - initial_start_time).total_seconds()
+            effective_duration = min(effective_duration, end_dt - start_dt)
+        return effective_duration
+
+    @staticmethod
+    def _padding_step_duration(
+        step: pybamm.step.BaseStep,
+        effective_duration: float,
+        initial_start_time,
+    ):
+        if step.next_start_time is None:
+            return None
+        if initial_start_time is None:  # pragma: no cover
+            raise ValueError(
+                "Unified experiment DiffSL export expected an initial start time "
+                "when step next_start_time is set"
+            )
+        step_end_rel = (
+            step.start_time - initial_start_time
+        ).total_seconds() + effective_duration
+        next_start_rel = (step.next_start_time - initial_start_time).total_seconds()
+        if next_start_rel > step_end_rel:
+            return next_start_rel - step_end_rel
+        return None
+
+    def _experiment_schedule_key(
+        self,
+        sim: pybamm.Simulation,
+        step: pybamm.step.BaseStep,
+        branch_index: int,
+    ):
+        initial_start_time = sim.experiment.initial_start_time
+        effective_duration = self._effective_step_duration(step, initial_start_time)
+        padding_duration = self._padding_step_duration(
+            step, effective_duration, initial_start_time
+        )
+        target = step.control_target_value(sim._parameter_values)
+        ambient = (
+            step.temperature or sim._parameter_values[sim._AMBIENT_TEMPERATURE_INPUT]
+        )
+
+        return (
+            branch_index,
+            self._normalise_schedule_value(effective_duration),
+            self._normalise_schedule_value(padding_duration),
+            self._normalise_schedule_value(target),
+            self._normalise_schedule_value(ambient),
+        )
+
     def _get_unified_experiment_schedule_states(
         self,
         sim: pybamm.Simulation,
@@ -386,17 +450,20 @@ class DiffSLExport:
         steptime0_sv: pybamm.StateVector,
     ) -> tuple[list[int], list[pybamm.Symbol]]:
         step_indices = sim._experiment_step_indices
-        cycle_length = self._compute_experiment_cycle_length(step_indices)
-        cycle_steps = sim.experiment.steps[:cycle_length]
-        cycle_indices = step_indices[:cycle_length]
+        schedule_keys = [
+            self._experiment_schedule_key(sim, step, branch_index)
+            for step, branch_index in zip(
+                sim.experiment.steps, step_indices, strict=True
+            )
+        ]
 
         initial_start_time = sim.experiment.initial_start_time
-        if initial_start_time is not None and cycle_length < len(step_indices):
-            raise ValueError(
-                "Unified experiment DiffSL export does not support scheduled "
-                "start times with repeating cycles. The cycle detection found a "
-                "repeating pattern but the experiment includes datetime scheduling."
-            )  # pragma: no cover
+        if initial_start_time is None:
+            cycle_length = self._compute_experiment_cycle_length(schedule_keys)
+        else:
+            cycle_length = len(step_indices)
+        cycle_steps = sim.experiment.steps[:cycle_length]
+        cycle_indices = step_indices[:cycle_length]
 
         # will be replaced with last branch
         branch_order = [-1]
@@ -406,12 +473,7 @@ class DiffSLExport:
             branch = step_branches[branch_index - 1]
             branch_order.append(len(stop_expressions) - 1)
 
-            effective_duration = step.duration
-            if step.end_time is not None and initial_start_time is not None:
-                start_dt = (step.start_time - initial_start_time).total_seconds()
-                end_dt = (step.end_time - initial_start_time).total_seconds()
-                effective_duration = min(effective_duration, end_dt - start_dt)
-
+            effective_duration = self._effective_step_duration(step, initial_start_time)
             duration_stop = pybamm.Scalar(effective_duration) - steptime0_sv
             if isinstance(branch, pybamm.Scalar) and branch.value == 1:
                 stop_expr = duration_stop
@@ -419,24 +481,12 @@ class DiffSLExport:
                 stop_expr = pybamm.minimum(duration_stop, branch)
             stop_expressions.append(stop_expr)
 
-            if step.next_start_time is not None:
-                if initial_start_time is None:  # pragma: no cover
-                    raise ValueError(
-                        "Unified experiment DiffSL export expected an initial start time "
-                        "when step next_start_time is set"
-                    )
-                step_end_rel = (
-                    step.start_time - initial_start_time
-                ).total_seconds() + effective_duration
-                next_start_rel = (
-                    step.next_start_time - initial_start_time
-                ).total_seconds()
-                if next_start_rel > step_end_rel:
-                    padding_duration = next_start_rel - step_end_rel
-                    branch_order.append(len(stop_expressions) - 1)
-                    stop_expressions.append(
-                        pybamm.Scalar(padding_duration) - steptime0_sv
-                    )
+            padding_duration = self._padding_step_duration(
+                step, effective_duration, initial_start_time
+            )
+            if padding_duration is not None:
+                branch_order.append(len(stop_expressions) - 1)
+                stop_expressions.append(pybamm.Scalar(padding_duration) - steptime0_sv)
 
         # Last branch is at index 0
         branch_order[0] = branch_order[-1]
