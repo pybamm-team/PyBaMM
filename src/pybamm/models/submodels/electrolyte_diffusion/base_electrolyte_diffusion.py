@@ -85,6 +85,9 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
 
     def _get_standard_porosity_times_concentration_variables(self, eps_c_e_dict):
         eps_c_e = pybamm.concatenation(*eps_c_e_dict.values())
+        # Override the auto-derived name with a physically descriptive one.
+        # This is the conserved quantity in the electrolyte species equation.
+        eps_c_e.name = "Electrolyte species conservation [mol.m-3]"
         variables = {"Porosity times concentration [mol.m-3]": eps_c_e}
 
         for domain, eps_c_e_k in eps_c_e_dict.items():
