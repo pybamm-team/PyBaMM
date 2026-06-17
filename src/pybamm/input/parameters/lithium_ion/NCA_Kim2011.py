@@ -537,50 +537,17 @@ def nmc_LGM50_electrolyte_exchange_current_density_Chen2020(c_e, c_s_surf, c_s_m
     return m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
 
 
-def electrolyte_diffusivity_Kim2011(c_e, T):
+def electrolyte_diffusivity_Nyman2008(c_e, T):
     """
-    Diffusivity of LiPF6 in EC as a function of ion concentration from [1].
-
-     References
-    ----------
-    .. [1] Kim, G. H., Smith, K., Lee, K. J., Santhanagopalan, S., & Pesaran, A.
-    (2011). Multi-domain modeling of lithium-ion batteries encompassing
-    multi-physics in varied length scales. Journal of The Electrochemical
-    Society, 158(8), A955-A969.
-
-    Parameters
-    ----------
-    c_e: :class:`pybamm.Symbol`
-        Dimensional electrolyte concentration
-    T: :class:`pybamm.Symbol`
-        Dimensional temperature
-
-
-    Returns
-    -------
-    :class:`pybamm.Symbol`
-        Solid diffusivity
-    """
-
-    D_c_e = (
-        5.84 * 10 ** (-7) * np.exp(-2870 / T) * (c_e / 1000) ** 2
-        - 33.9 * 10 ** (-7) * np.exp(-2920 / T) * (c_e / 1000)
-        + 129 * 10 ** (-7) * np.exp(-3200 / T)
-    )
-
-    return D_c_e
-
-
-def electrolyte_conductivity_Kim2011(c_e, T):
-    """
-    Conductivity of LiPF6 in EC as a function of ion concentration from [1].
+    Diffusivity of LiPF6 in EC:EMC (3:7) as a function of ion concentration. The data
+    comes from [1], with Arrhenius temperature dependence added through the
+    "Electrolyte diffusivity activation energy [J.mol-1]" parameter.
 
     References
     ----------
-    .. [1] Kim, G. H., Smith, K., Lee, K. J., Santhanagopalan, S., & Pesaran, A.
-    (2011). Multi-domain modeling of lithium-ion batteries encompassing
-    multi-physics in varied length scales. Journal of The Electrochemical
-    Society, 158(8), A955-A969.
+    .. [1] A. Nyman, M. Behm, and G. Lindbergh, "Electrochemical characterisation and
+    modelling of the mass transport phenomena in LiPF6-EC-EMC electrolyte,"
+    Electrochim. Acta, vol. 53, no. 22, pp. 6356-6365, 2008.
 
     Parameters
     ----------
@@ -596,13 +563,60 @@ def electrolyte_conductivity_Kim2011(c_e, T):
         Solid diffusivity
     """
 
+    c2 = pybamm.Parameter("Electrolyte diffusivity coefficient c2 [m2.s-1]")
+    c1 = pybamm.Parameter("Electrolyte diffusivity coefficient c1 [m2.s-1]")
+    c0 = pybamm.Parameter("Electrolyte diffusivity coefficient c0 [m2.s-1]")
+
+    D_c_e = c2 * (c_e / 1000) ** 2 + c1 * (c_e / 1000) + c0
+
+    # Nyman et al. (2008) does not provide temperature dependence, so the
+    # temperature dependence is added through an Arrhenius activation energy
+    E_D_c_e = pybamm.Parameter("Electrolyte diffusivity activation energy [J.mol-1]")
+    arrhenius = np.exp(E_D_c_e / pybamm.constants.R * (1 / 298.15 - 1 / T))
+
+    return D_c_e * arrhenius
+
+
+def electrolyte_conductivity_Nyman2008(c_e, T):
+    """
+    Conductivity of LiPF6 in EC:EMC (3:7) as a function of ion concentration. The data
+    comes from [1], with Arrhenius temperature dependence added through the
+    "Electrolyte conductivity activation energy [J.mol-1]" parameter.
+
+    References
+    ----------
+    .. [1] A. Nyman, M. Behm, and G. Lindbergh, "Electrochemical characterisation and
+    modelling of the mass transport phenomena in LiPF6-EC-EMC electrolyte,"
+    Electrochim. Acta, vol. 53, no. 22, pp. 6356-6365, 2008.
+
+    Parameters
+    ----------
+    c_e: :class:`pybamm.Symbol`
+        Dimensional electrolyte concentration
+    T: :class:`pybamm.Symbol`
+        Dimensional temperature
+
+
+    Returns
+    -------
+    :class:`pybamm.Symbol`
+        Solid diffusivity
+    """
+
+    c3 = pybamm.Parameter("Electrolyte conductivity coefficient c3 [S.m-1]")
+    c1p5 = pybamm.Parameter("Electrolyte conductivity coefficient c1.5 [S.m-1]")
+    c1 = pybamm.Parameter("Electrolyte conductivity coefficient c1 [S.m-1]")
+
     sigma_e = (
-        3.45 * np.exp(-798 / T) * (c_e / 1000) ** 3
-        - 48.5 * np.exp(-1080 / T) * (c_e / 1000) ** 2
-        + 244 * np.exp(-1440 / T) * (c_e / 1000)
+        c3 * (c_e / 1000) ** 3 + c1p5 * (c_e / 1000) ** 1.5 + c1 * (c_e / 1000)
     )
 
-    return sigma_e
+    # Nyman et al. (2008) does not provide temperature dependence, so the
+    # temperature dependence is added through an Arrhenius activation energy
+    E_sigma_e = pybamm.Parameter("Electrolyte conductivity activation energy [J.mol-1]")
+    arrhenius = np.exp(E_sigma_e / pybamm.constants.R * (1 / 298.15 - 1 / T))
+
+    return sigma_e * arrhenius
 
 
 def nca_ocp_Kim2011(sto):
@@ -817,8 +831,16 @@ def get_parameter_values():
         "Initial concentration in electrolyte [mol.m-3]": 1200.0,
         "Cation transference number": 0.4,
         "Thermodynamic factor": 1.0,
-        "Electrolyte diffusivity [m2.s-1]": electrolyte_diffusivity_Kim2011,
-        "Electrolyte conductivity [S.m-1]": electrolyte_conductivity_Kim2011,
+        "Electrolyte diffusivity [m2.s-1]": electrolyte_diffusivity_Nyman2008,
+        "Electrolyte diffusivity coefficient c2 [m2.s-1]": 8.794e-11,
+        "Electrolyte diffusivity coefficient c1 [m2.s-1]": -3.972e-10,
+        "Electrolyte diffusivity coefficient c0 [m2.s-1]": 4.862e-10,
+        "Electrolyte diffusivity activation energy [J.mol-1]": 17000.0,
+        "Electrolyte conductivity [S.m-1]": electrolyte_conductivity_Nyman2008,
+        "Electrolyte conductivity coefficient c3 [S.m-1]": 0.1297,
+        "Electrolyte conductivity coefficient c1.5 [S.m-1]": -2.51,
+        "Electrolyte conductivity coefficient c1 [S.m-1]": 3.329,
+        "Electrolyte conductivity activation energy [J.mol-1]": 17000.0,
         # experiment
         "Reference temperature [K]": 298.15,
         "Negative current collector surface heat transfer coefficient [W.m-2.K-1]": 0.0,
