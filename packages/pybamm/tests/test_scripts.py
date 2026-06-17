@@ -3,7 +3,9 @@ from pathlib import Path
 
 import pytest
 
-ROOT_DIR = Path(__file__).parent.parent
+# Repo root: tests/ -> pybamm/ -> packages/ -> <root>. The example scripts live
+# in the monorepo's top-level examples/, outside the pybamm package.
+ROOT_DIR = Path(__file__).parents[3]
 
 
 def list_of_files():
