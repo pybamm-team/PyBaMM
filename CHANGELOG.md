@@ -7,6 +7,7 @@
 ## Features
 
 - PyBaMM and `pybammsolvers` now develop in a single repository — a UV workspace under `packages/` — while continuing to release independently to PyPI. Release tags are namespaced (`pybamm-v*` and `pybamm-solvers-v*`), and PyBaMM's CI now tests against the in-repo solver on every platform. The published `pybamm` package and its dependency on `pybammsolvers` are unchanged for users. See `RELEASE.md` for the release model. ([#5512](https://github.com/pybamm-team/PyBaMM/issues/5512))
+- Added ability to export pybamm.Simulation with experiments to DiffSL format ([#5557)](https://github.com/pybamm-team/PyBaMM/pull/5557))
 
 # [v26.6.2.0](https://github.com/pybamm-team/PyBaMM/tree/v26.6.2.0) - 2026-06-16
 
@@ -34,7 +35,6 @@
 ## Features
 
 - The "voltage as a state" option is now registered centrally in `BaseBatteryModel` and supports all operating modes. SPM/SPMe promote "surface form" to "algebraic" automatically when a particle-size distribution is used (previously an error) as well as for non-default kinetics. `CasadiSolver` integrator failures on DAE models solved without algebraic initial-condition perturbation now include an actionable hint. ([#5572](https://github.com/pybamm-team/PyBaMM/pull/5572))
-- Added ability to export pybamm.Simulation with experiments to DiffSL format ([#5557)](https://github.com/pybamm-team/PyBaMM/pull/5557))
 
 ## Bug fixes
 
@@ -54,7 +54,6 @@
 
 ## Features
 
-- DiffSL export now supports unified experiment simulations ([#5557](https://github.com/pybamm-team/PyBaMM/pull/5557))
 - Electrode electronic conductivity can now be specified as a function of stoichiometry (in addition to temperature) for all lithium-ion and sodium-ion models. ([#5556](https://github.com/pybamm-team/PyBaMM/pull/5556))
 - Unified PyBaMM serialisation onto a single safe-or-loud encode/decode kernel. Serialisation now either round-trips or raises `SerialisationError`, never silently dropping a field, across the expression tree, discretised models, meshes, solvers, experiments and parameter values. There is one canonical on-disk format, and files saved by older PyBaMM versions continue to load via backward-compatible readers. Note that `save_model(model, mesh=...)` now raises for meshes containing submeshes that cannot round-trip (those without a `_from_json` hook, e.g. `Exponential1DSubMesh`); previously the save succeeded but the mesh could not be reloaded. Derived caches such as `Array.entries_string` are no longer stored on disk and are recomputed from the stored entries on load, so a stale value in a legacy file is replaced by the recomputed one. ([#5560](https://github.com/pybamm-team/PyBaMM/pull/5560), [#5561](https://github.com/pybamm-team/PyBaMM/pull/5561))
 
