@@ -38,11 +38,11 @@ the full design.
 
 - Each package's publish workflow fires only for its own tag namespace (the
   pre-monorepo `github.repository` guard no longer distinguishes them).
-- `pybammsolvers` releases use the `pybamm-solvers-v*` namespace.
+- `pybammsolvers` releases use the `pybammsolvers-v*` namespace.
 - **Legacy solver tags** (`v0.8.0`, `v0.8.1`, `v0.8.2`) carried over from the
   standalone `pybammsolvers` repo are **not** part of PyBaMM's release history and
   must not drive PyBaMM's computed version. They are either dropped or re-tagged
-  under `pybamm-solvers-v*` during the migration.
+  under `pybammsolvers-v*` during the migration.
 - The migration was integrated with a **merge commit (not a squash)** so the full
   commit history of both packages is preserved; PyBaMM's existing commit SHAs are
   unchanged (no history rewrite).
@@ -138,7 +138,7 @@ A feature release is `YY.MM.N.0` — the patch component is `0`. The first featu
 2. Create and check out a release branch from `main`: `git checkout -b release/vYY.MM.N.0`.
 3. Run `uv run python scripts/update_version.py YY.MM.N.0` to update `CITATION.cff` and prepend a dated heading to `CHANGELOG.md`.
 4. Push the branch and open a PR to `main`. Ensure CI passes, then merge.
-5. From `main` at the merge commit, create a GitHub _release_ with the tag `pybamm-vYY.MM.N.0`. Copy the relevant `CHANGELOG.md` block into the release description. This triggers `publish_pypi.yml` and creates the PyPI release automatically. (Monorepo: PyBaMM release tags use the `pybamm-v` prefix so they are distinct from `pybamm-solvers-v*`; see "Monorepo: independent package releases" above.)
+5. From `main` at the merge commit, create a GitHub _release_ with the tag `pybamm-vYY.MM.N.0`. Copy the relevant `CHANGELOG.md` block into the release description. This triggers `publish_pypi.yml` and creates the PyPI release automatically. (Monorepo: PyBaMM release tags use the `pybamm-v` prefix so they are distinct from `pybammsolvers-v*`; see "Monorepo: independent package releases" above.)
 6. Verify the release installs cleanly: `pip install pybamm==YY.MM.N.0`.
 
 ### Cutting a patch release
@@ -164,10 +164,10 @@ A patch release is `YY.MM.N.P` where `P >= 1`. Patches are cut from the previous
 
 ### Cutting a `pybammsolvers` release
 
-`pybammsolvers` releases independently of PyBaMM. **Its published version is read from `packages/pybamm-solvers/src/pybammsolvers/version.py`** (via the regex in `packages/pybamm-solvers/pyproject.toml`), *not* from the release tag — the `pybamm-solvers-v*` tag namespace only routes the workflow. Keep the tag and `version.py` in lockstep, or the wrong version ships.
+`pybammsolvers` releases independently of PyBaMM. **Its published version is read from `packages/pybammsolvers/src/pybammsolvers/version.py`** (via the regex in `packages/pybammsolvers/pyproject.toml`), *not* from the release tag — the `pybammsolvers-v*` tag namespace only routes the workflow. Keep the tag and `version.py` in lockstep, or the wrong version ships.
 
-1. Bump `__version__` in `packages/pybamm-solvers/src/pybammsolvers/version.py` and record the change in `CHANGELOG.md`. Open a PR to `main`, ensure CI passes, then merge.
-2. From `main` at the merge commit, create a GitHub _release_ with the tag `pybamm-solvers-vX.Y.Z`, where `X.Y.Z` **exactly matches** the new `version.py` value. This triggers `release_solvers.yml`, which builds wheels + sdist and publishes to PyPI. The `check_version` job in that workflow fails the release if the tag and `version.py` disagree; PyPI separately rejects a re-upload of an already-published version.
+1. Bump `__version__` in `packages/pybammsolvers/src/pybammsolvers/version.py` and record the change in `CHANGELOG.md`. Open a PR to `main`, ensure CI passes, then merge.
+2. From `main` at the merge commit, create a GitHub _release_ with the tag `pybammsolvers-vX.Y.Z`, where `X.Y.Z` **exactly matches** the new `version.py` value. This triggers `release_solvers.yml`, which builds wheels + sdist and publishes to PyPI. The `check_version` job in that workflow fails the release if the tag and `version.py` disagree; PyPI separately rejects a re-upload of an already-published version.
 3. Verify the release installs cleanly: `pip install pybammsolvers==X.Y.Z`.
 
 ### Conda-forge

@@ -2,7 +2,7 @@
 # in-repo source.
 #
 # Single definition of "how to build the solver", called by:
-#   * release_solvers.yml   — on a pybamm-solvers-v* release (build + sdist, no
+#   * release_solvers.yml   — on a pybammsolvers-v* release (build + sdist, no
 #                             cache, then the caller publishes to PyPI).
 #   * test_on_push.yml      — on PRs (build + cache so PyBaMM's matrix can test
 #                             against the in-repo solver without rebuilding it
@@ -13,7 +13,7 @@
 # Windows build; it consumes these wheels.
 #
 # Caching (cache_wheels=true): each platform job keys actions/cache on the solver
-# subtree's git-tree hash (`git rev-parse HEAD:packages/pybamm-solvers`), which
+# subtree's git-tree hash (`git rev-parse HEAD:packages/pybammsolvers`), which
 # captures every tracked file AND the SUNDIALS/SuiteSparse submodule pin SHAs.
 # On a cache hit (e.g. a PyBaMM-only PR whose solver source equals main's) the
 # build is skipped and the cached wheels are uploaded as-is.
@@ -40,7 +40,7 @@ on:
 
 defaults:
   run:
-    working-directory: packages/pybamm-solvers
+    working-directory: packages/pybammsolvers
 
 env:
   CIBW_BUILD_VERBOSITY: 2
@@ -67,14 +67,14 @@ jobs:
         id: solverhash
         shell: bash
         working-directory: ${{ github.workspace }}
-        run: echo "hash=$(git rev-parse HEAD:packages/pybamm-solvers)" >> "$GITHUB_OUTPUT"
+        run: echo "hash=$(git rev-parse HEAD:packages/pybammsolvers)" >> "$GITHUB_OUTPUT"
 
       - name: Restore cached wheels
         id: cache
         if: inputs.cache_wheels
         uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
-          path: packages/pybamm-solvers/wheelhouse
+          path: packages/pybammsolvers/wheelhouse
           key: solver-wheels-windows-${{ steps.solverhash.outputs.hash }}
 
       # Pin to 2025.01.13 to avoid issues with finding SuiteSparse in manifest mode
@@ -119,7 +119,7 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: wheels_windows
-          path: packages/pybamm-solvers/wheelhouse/*.whl
+          path: packages/pybammsolvers/wheelhouse/*.whl
           if-no-files-found: error
 
   build_manylinux_wheels:
@@ -141,14 +141,14 @@ jobs:
         id: solverhash
         shell: bash
         working-directory: ${{ github.workspace }}
-        run: echo "hash=$(git rev-parse HEAD:packages/pybamm-solvers)" >> "$GITHUB_OUTPUT"
+        run: echo "hash=$(git rev-parse HEAD:packages/pybammsolvers)" >> "$GITHUB_OUTPUT"
 
       - name: Restore cached wheels
         id: cache
         if: inputs.cache_wheels
         uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
-          path: packages/pybamm-solvers/wheelhouse
+          path: packages/pybammsolvers/wheelhouse
           key: solver-wheels-linux-${{ steps.solverhash.outputs.hash }}
 
       - name: Build wheels on Linux
@@ -172,7 +172,7 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: wheels_manylinux
-          path: packages/pybamm-solvers/wheelhouse/*.whl
+          path: packages/pybammsolvers/wheelhouse/*.whl
           if-no-files-found: error
 
   build_macos_wheels:
@@ -197,14 +197,14 @@ jobs:
         id: solverhash
         shell: bash
         working-directory: ${{ github.workspace }}
-        run: echo "hash=$(git rev-parse HEAD:packages/pybamm-solvers)" >> "$GITHUB_OUTPUT"
+        run: echo "hash=$(git rev-parse HEAD:packages/pybammsolvers)" >> "$GITHUB_OUTPUT"
 
       - name: Restore cached wheels
         id: cache
         if: inputs.cache_wheels
         uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
-          path: packages/pybamm-solvers/wheelhouse
+          path: packages/pybammsolvers/wheelhouse
           key: solver-wheels-${{ matrix.os }}-${{ steps.solverhash.outputs.hash }}
 
       - name: Install Fortran compiler
@@ -295,7 +295,7 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: wheels_${{ matrix.os }}
-          path: packages/pybamm-solvers/wheelhouse/*.whl
+          path: packages/pybammsolvers/wheelhouse/*.whl
           if-no-files-found: error
 
   build_sdist:
@@ -321,5 +321,5 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: sdist
-          path: packages/pybamm-solvers/dist/*.tar.gz
+          path: packages/pybammsolvers/dist/*.tar.gz
           if-no-files-found: error

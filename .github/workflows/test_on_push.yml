@@ -45,7 +45,7 @@ jobs:
         with:
           filters: |
             solver:
-              - 'packages/pybamm-solvers/**'
+              - 'packages/pybammsolvers/**'
               - '.github/workflows/_build_solver_wheels.yml'
             pybamm:
               - 'packages/pybamm/**'
