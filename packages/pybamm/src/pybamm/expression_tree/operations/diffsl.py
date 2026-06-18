@@ -14,6 +14,7 @@ class _ExperimentScheduleState:
     schedule_index: int
     stop_expression: pybamm.Symbol
     model_branch_index: int
+    target_value: float = 0.0
 
 
 class DiffSLExport:
@@ -25,6 +26,8 @@ class DiffSLExport:
             parameterised and discretised before exporting.
         float_precision (int): The number of significant digits for float representation.
     """
+
+    STEP_VALUE_TENSOR_NAME = "constantStepTargetValue"
 
     def __init__(
         self, model: pybamm.BaseModel | pybamm.Simulation, float_precision: int = 20
@@ -92,9 +95,9 @@ class DiffSLExport:
         ):
             for symbol in eqn.pre_order():
                 if isinstance(symbol, pybamm.InputParameter):
-                    if (
-                        self._has_experiment
-                        and symbol.name == pybamm.Simulation._STEP_INDEX_INPUT
+                    if self._has_experiment and symbol.name in (
+                        pybamm.Simulation._STEP_INDEX_INPUT,
+                        pybamm.Simulation._STEP_VALUE_INPUT,
                     ):
                         continue
                     variable_name = to_variable_name(symbol.name)
@@ -114,9 +117,9 @@ class DiffSLExport:
         for output in outputs:
             for symbol in all_vars[output].pre_order():
                 if isinstance(symbol, pybamm.InputParameter):
-                    if (
-                        self._has_experiment
-                        and symbol.name == pybamm.Simulation._STEP_INDEX_INPUT
+                    if self._has_experiment and symbol.name in (
+                        pybamm.Simulation._STEP_INDEX_INPUT,
+                        pybamm.Simulation._STEP_VALUE_INPUT,
                     ):
                         continue  # pragma: no cover
                     variable_name = to_variable_name(symbol.name)
@@ -488,11 +491,13 @@ class DiffSLExport:
                 stop_expr = duration_stop
             else:
                 stop_expr = pybamm.minimum(duration_stop, branch)
+            target = step.control_target_value(sim._parameter_values)
             schedule_states.append(
                 _ExperimentScheduleState(
                     len(schedule_states),
                     stop_expr,
                     branch_index - 1,
+                    target_value=float(target) if target is not None else 0.0,
                 )
             )
 
@@ -505,6 +510,7 @@ class DiffSLExport:
                         len(schedule_states),
                         pybamm.Scalar(padding_duration) - steptime0_sv,
                         sim._experiment_padding_rest_index - 1,
+                        target_value=0.0,
                     )
                 )
 
@@ -550,6 +556,7 @@ class DiffSLExport:
         schedule_states = self._get_unified_experiment_schedule_states(
             sim, step_branches, steptime0_sv
         )
+        self._schedule_states = schedule_states
         cycle_stop_exprs = [state.stop_expression for state in schedule_states]
         schedule_stop_order = [state.schedule_index for state in schedule_states]
         schedule_to_model_branch_order = [
@@ -744,6 +751,17 @@ class DiffSLExport:
             tensor_index += 1
             symbol_to_tensor_name[symbol] = tensor_name
             diffeq[tensor_name] = tensor_def
+
+        if self._has_experiment and getattr(self, "_schedule_states", None):
+            schedule_states = self._schedule_states
+            sorted_by_index = sorted(schedule_states, key=lambda s: s.schedule_index)
+            target_values = [
+                f"{state.target_value:.{self.float_precision}g}"
+                for state in sorted_by_index
+            ]
+            diffeq[DiffSLExport.STEP_VALUE_TENSOR_NAME] = self._tensor_block(
+                DiffSLExport.STEP_VALUE_TENSOR_NAME, target_values
+            )
 
         # state vector u
         input_lines = []
@@ -1253,7 +1271,10 @@ def _equation_to_diffeq(
         )  # pragma: no cover
 
     elif isinstance(equation, pybamm.InputParameter):
-        return f"{to_variable_name(equation.name)}"
+        name = to_variable_name(equation.name)
+        if use_model_index and equation.name == pybamm.Simulation._STEP_VALUE_INPUT:
+            return f"{name}_i[N]"
+        return name
     elif isinstance(equation, pybamm.Time):
         return "t"
     else:
@@ -1284,6 +1305,8 @@ def equation_to_diffeq(
 
 def to_variable_name(name: str) -> str:
     """Convert a name to a valid diffeq variable name"""
+    if name == pybamm.Simulation._STEP_VALUE_INPUT:
+        return DiffSLExport.STEP_VALUE_TENSOR_NAME
     convert_to_underscore = [" ", "-", "(", ")", "[", "]", "{", "}", "/", "\\", "."]
     name = name.lower()
     for char in convert_to_underscore:

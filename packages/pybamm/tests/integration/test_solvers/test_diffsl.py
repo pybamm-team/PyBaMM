@@ -255,15 +255,6 @@ class TestDiffSLExport:
         pybamm_solve_time = time.perf_counter() - t0
         logger.info(f"Pybamm solve time: {pybamm_solve_time:.5f} seconds")
 
-        if experiment is not None:
-            # need to add step index to pybamm inputs
-            pybamm_inputs_dict = dict(map_inputs_dict)
-            pybamm_inputs_dict["Experiment step index"] = 1
-            solver = pybamm.IDAKLUSolver()
-            pybamm_inputs_dict = solver._set_up_model_inputs(
-                model_disc, pybamm_inputs_dict
-            )
-
         _diffsol_solution = ode.solve_dense(ds_inputs, t_interp)
         t0 = time.perf_counter()
         diffsol_solution = ode.solve_dense(ds_inputs, t_interp)

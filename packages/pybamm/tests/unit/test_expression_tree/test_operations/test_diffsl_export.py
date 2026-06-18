@@ -516,9 +516,9 @@ class TestDiffSLExport:
         export = exporter.to_diffeq(outputs=[output_name])
 
         assert export.count("60 - steptime0_i") == 3
-        first_step = export.index("experimentstepvalue")
+        first_step = export.index("_i[N])")
         padding_rest = export.index("currentvariablea_i),", first_step)
-        second_step = export.index("experimentstepvalue", padding_rest)
+        second_step = export.index("_i[N])", padding_rest)
 
         assert first_step < padding_rest < second_step
 
@@ -598,3 +598,39 @@ class TestDiffSLExport:
         export = exporter.to_diffeq(outputs=[output_name])
 
         assert export.count("10 - steptime0_i") == 2
+
+    def test_unified_experiment_step_value_tensor_values(self):
+        experiment = pybamm.Experiment(
+            [
+                pybamm.step.c_rate(0.5, duration=10),
+                pybamm.step.c_rate(1.0, duration=10),
+            ]
+        )
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            experiment=experiment,
+            solver=pybamm.CasadiSolver(),
+            experiment_model_mode="unified",
+        )
+        exporter = pybamm.DiffSLExport(sim)
+        output_name = next(iter(exporter.model.variables))
+        export = exporter.to_diffeq(outputs=[output_name])
+
+        assert len(exporter._schedule_states) == 2
+        assert all(s.model_branch_index == 0 for s in exporter._schedule_states)
+
+        sorted_states = sorted(
+            exporter._schedule_states, key=lambda s: s.schedule_index
+        )
+        v0 = sorted_states[0].target_value
+        v1 = sorted_states[1].target_value
+        assert v0 < v1
+
+        assert "experimentstepvalue" not in export
+        assert "_i[N]" in export
+
+        s0 = f"{v0:.{exporter.float_precision}g}"
+        s1 = f"{v1:.{exporter.float_precision}g}"
+        pos0 = export.index(s0)
+        pos1 = export.index(s1)
+        assert pos0 < pos1
