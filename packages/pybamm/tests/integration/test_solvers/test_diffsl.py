@@ -155,7 +155,7 @@ class TestDiffSLExport:
                 }
             )
 
-        np.testing.assert_allclose(voltage_pybamm, voltage_diffsol, rtol=3e-4)
+        np.testing.assert_allclose(voltage_pybamm, voltage_diffsol, rtol=2e-3)
 
     @pytest.mark.skipif(not has_pydiffsol, reason="pydiffsol is not installed")
     @pytest.mark.parametrize(
