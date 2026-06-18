@@ -1187,7 +1187,8 @@ class Simulation(BaseSimulation):
                 if not isinstance(cycle_solution, pybamm.EmptySolution):
                     last_termination = cycle_solution.termination
 
-            # Fold in this cycle's timers whether or not the cycle is saved.
+            # Accumulate this cycle's timers even if the cycle isn't saved
+            # (#2484). Must run before make_cycle_solution reassigns steps.
             for step_solution in steps:
                 if isinstance(step_solution, pybamm.EmptySolution):
                     continue
