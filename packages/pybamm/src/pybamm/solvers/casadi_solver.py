@@ -12,6 +12,10 @@ from .lrudict import LRUDict
 class CasadiSolver(pybamm.BaseSolver):
     """Solve a discretised model, using CasADi.
 
+    .. note::
+        This solver is deprecated and will be removed in a future release. Use
+        :class:`pybamm.IDAKLUSolver` instead.
+
     Parameters
     ----------
     mode : str
@@ -95,6 +99,12 @@ class CasadiSolver(pybamm.BaseSolver):
         integrators_maxcount=100,
         store_first_last=False,
     ):
+        warnings.warn(
+            "pybamm.CasadiSolver is deprecated and will be removed in a future "
+            "release. Use pybamm.IDAKLUSolver instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         on_extrapolation = on_extrapolation or "error"
         super().__init__(
             method="problem dependent",

@@ -1,6 +1,8 @@
 #
 # Solver class using Scipy's adaptive time stepper
 #
+import warnings
+
 import casadi
 import numpy as np
 import scipy.integrate as it
@@ -10,6 +12,10 @@ import pybamm
 
 class ScipySolver(pybamm.BaseSolver):
     """Solve a discretised model, using scipy.integrate.solve_ivp.
+
+    .. note::
+        This solver is deprecated and will be removed in a future release. Use
+        :class:`pybamm.IDAKLUSolver` instead.
 
     Parameters
     ----------
@@ -41,6 +47,12 @@ class ScipySolver(pybamm.BaseSolver):
         extra_options=None,
         store_first_last=False,
     ):
+        warnings.warn(
+            "pybamm.ScipySolver is deprecated and will be removed in a future "
+            "release. Use pybamm.IDAKLUSolver instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         super().__init__(
             method=method,
             rtol=rtol,

@@ -70,11 +70,13 @@ class StandardModelTest:
         # Overwrite solver if given
         if solver is not None:
             self.solver = solver
-        # Use tighter default tolerances for testing lithium-ion
-        if isinstance(self.model, pybamm.lithium_ion.BaseModel):
+        # Use tighter solver tolerances for testing: the default IDAKLUSolver
+        # rtol (1e-4) is too loose for the rtol=1e-6/atol=1e-5 output checks.
+        if isinstance(
+            self.model, pybamm.lithium_ion.BaseModel | pybamm.lead_acid.BaseModel
+        ):
             self.solver.rtol = 1e-8
             self.solver.atol = 1e-8
-            # self.solver.root_method.tol = 1e-8
 
         Crate = abs(
             self.parameter_values["Current function [A]"]
@@ -164,7 +166,9 @@ class StandardModelTest:
         else:
             new_solver = new_model.default_solver
 
-        if isinstance(new_model, pybamm.lithium_ion.BaseModel):
+        if isinstance(
+            new_model, pybamm.lithium_ion.BaseModel | pybamm.lead_acid.BaseModel
+        ):
             new_solver.rtol = 1e-8
             new_solver.atol = 1e-8
 
