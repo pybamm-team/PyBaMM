@@ -3072,7 +3072,7 @@ requires-dist = [
     { name = "platformdirs" },
     { name = "pooch", specifier = ">=1.8.1" },
     { name = "posthog" },
-    { name = "pybammsolvers", editable = "packages/pybamm-solvers" },
+    { name = "pybammsolvers", editable = "packages/pybammsolvers" },
     { name = "pybtex", marker = "extra == 'all'", specifier = ">=0.25.0" },
     { name = "pybtex", marker = "extra == 'cite'", specifier = ">=0.25.0" },
     { name = "pydiffsol", marker = "extra == 'pydiffsol'", specifier = ">=0.5.2" },
@@ -3122,7 +3122,7 @@ docs = [
 
 [[package]]
 name = "pybammsolvers"
-source = { editable = "packages/pybamm-solvers" }
+source = { editable = "packages/pybammsolvers" }
 dependencies = [
     { name = "casadi" },
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },

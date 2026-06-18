@@ -93,7 +93,7 @@ You should now have everything ready to build and install PyBaMM successfully.
 
    ``uv sync`` and ``nox`` build the in-repo IDAKLU solver (``pybammsolvers``)
    from source. The first such build compiles the vendored SUNDIALS and
-   SuiteSparse into ``packages/pybamm-solvers/.idaklu`` automatically — this
+   SuiteSparse into ``packages/pybammsolvers/.idaklu`` automatically — this
    takes a few minutes the first time, then is cached. You only need the
    submodules present (fetched by ``--recurse-submodules`` above, or
    ``git submodule update --init``) and ``make``, ``cmake``, and a C/Fortran

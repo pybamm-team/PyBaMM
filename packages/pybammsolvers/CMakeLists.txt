@@ -33,24 +33,36 @@ if(NOT WIN32 AND NOT DEFINED SUNDIALS_ROOT)
 endif()
 
 # Auto-build the vendored SUNDIALS/SuiteSparse on a from-source build, so a clean
-# checkout with submodules needs no manual pre-step. Skipped on Windows (vcpkg).
+# checkout with submodules needs no manual pre-step. Skipped on Windows (vcpkg),
+# and skipped once the libraries already exist — under editable.rebuild CMake
+# reconfigures on every import, and re-requiring the submodules (or re-running the
+# bootstrap) for an already-built tree would needlessly fail or repeat work.
 if(NOT WIN32 AND NOT DEFINED VCPKG_ROOT_DIR)
-    if(NOT EXISTS "${CMAKE_SOURCE_DIR}/sundials/CMakeLists.txt"
-            OR NOT EXISTS "${CMAKE_SOURCE_DIR}/SuiteSparse/SuiteSparse_config/CMakeLists.txt")
-        message(FATAL_ERROR
-            "SUNDIALS/SuiteSparse submodule sources are missing. Run:\n"
-            "    git submodule update --init\n"
-            "or install system SUNDIALS/SuiteSparse and set "
-            "SUNDIALS_ROOT/SuiteSparse_ROOT.")
-    endif()
-    execute_process(
-        COMMAND "${PYTHON_EXECUTABLE}" install_KLU_Sundials.py
-        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
-        RESULT_VARIABLE _idaklu_rc)
-    if(_idaklu_rc)
-        message(FATAL_ERROR
-            "install_KLU_Sundials.py failed (exit ${_idaklu_rc}); "
-            "check that make, cmake, and a C/Fortran compiler are installed.")
+    file(GLOB _sundials_prebuilt
+        "${SUNDIALS_ROOT}/lib/libsundials_idas.*"
+        "${SUNDIALS_ROOT}/lib64/libsundials_idas.*")
+    file(GLOB _suitesparse_prebuilt
+        "${SuiteSparse_ROOT}/lib/libklu.*"
+        "${SuiteSparse_ROOT}/lib64/libklu.*")
+    if(NOT _sundials_prebuilt OR NOT _suitesparse_prebuilt)
+        if(NOT EXISTS "${CMAKE_SOURCE_DIR}/sundials/CMakeLists.txt"
+                OR NOT EXISTS "${CMAKE_SOURCE_DIR}/SuiteSparse/SuiteSparse_config/CMakeLists.txt")
+            message(FATAL_ERROR
+                "SUNDIALS/SuiteSparse are not built (no libraries under "
+                "${SUNDIALS_ROOT}) and the submodule sources are missing. Either:\n"
+                "  * fetch the sources: run `git submodule update --init` from the\n"
+                "    repository root (or clone with --recurse-submodules), or\n"
+                "  * use a system install: set SUNDIALS_ROOT and SuiteSparse_ROOT.")
+        endif()
+        execute_process(
+            COMMAND "${PYTHON_EXECUTABLE}" install_KLU_Sundials.py
+            WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+            RESULT_VARIABLE _idaklu_rc)
+        if(_idaklu_rc)
+            message(FATAL_ERROR
+                "install_KLU_Sundials.py failed (exit ${_idaklu_rc}); "
+                "check that make, cmake, and a C/Fortran compiler are installed.")
+        endif()
     endif()
 endif()
 

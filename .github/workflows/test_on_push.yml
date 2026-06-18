@@ -36,6 +36,9 @@ jobs:
       solver: ${{ steps.filter.outputs.solver }}
       pybamm: ${{ steps.filter.outputs.pybamm }}
       docs: ${{ steps.filter.outputs.docs }}
+      # Solver-wheel platforms each scenario's downstream jobs actually consume.
+      platforms: ${{ steps.route.outputs.platforms }}
+      macos_runners: ${{ steps.route.outputs.macos_runners }}
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
@@ -45,7 +48,7 @@ jobs:
         with:
           filters: |
             solver:
-              - 'packages/pybamm-solvers/**'
+              - 'packages/pybammsolvers/**'
               - '.github/workflows/_build_solver_wheels.yml'
             pybamm:
               - 'packages/pybamm/**'
@@ -56,6 +59,29 @@ jobs:
               - '.github/workflows/test_on_push.yml'
             docs:
               - 'docs/**'
+
+      # Map "what changed" to the solver wheels to build: solver PRs validate every
+      # platform; pybamm/push need the sparse matrix's runners; docs-only needs Linux.
+      - id: route
+        env:
+          EVENT: ${{ github.event_name }}
+          SOLVER: ${{ steps.filter.outputs.solver }}
+          PYBAMM: ${{ steps.filter.outputs.pybamm }}
+        run: |
+          if [ "$SOLVER" = true ]; then
+            platforms='["linux", "windows"]'
+            macos='["macos-15-intel", "macos-latest"]'
+          elif [ "$EVENT" = push ] || [ "$PYBAMM" = true ]; then
+            platforms='["linux", "windows"]'
+            macos='["macos-latest"]'
+          else
+            platforms='["linux"]'
+            macos='[]'
+          fi
+          {
+            echo "platforms=$platforms"
+            echo "macos_runners=$macos"
+          } >> "$GITHUB_OUTPUT"
 
   style:
     runs-on: ubuntu-latest
@@ -99,6 +125,9 @@ jobs:
     with:
       cache_wheels: true
       build_sdist: false
+      # Build only the wheels the triggered jobs consume (see the changes job's route step).
+      platforms: ${{ needs.changes.outputs.platforms }}
+      macos_runners: ${{ needs.changes.outputs.macos_runners }}
 
   run_unit_tests:
     needs: [changes, build_solver]
@@ -109,9 +138,20 @@ jobs:
 
     strategy:
       fail-fast: false
+      # PR matrix: full Python on Linux + min/max endpoints on the 10x macOS/Windows
+      # runners; macos-15-intel and interior versions run nightly (run_periodic_tests.yml).
       matrix:
-        os: [ubuntu-latest, macos-15-intel, macos-latest, windows-latest]
-        python-version: ["3.11", "3.12", "3.13", "3.14"]
+        os: [ubuntu-latest]
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+        include:
+          - os: macos-latest
+            python-version: "3.10"
+          - os: macos-latest
+            python-version: "3.14"
+          - os: windows-latest
+            python-version: "3.10"
+          - os: windows-latest
+            python-version: "3.14"
     name: Tests (${{ matrix.os }} / Python ${{ matrix.python-version }})
 
     env:

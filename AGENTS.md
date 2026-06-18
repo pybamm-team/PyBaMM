@@ -16,7 +16,7 @@ monorepo) with two members under `packages/`:
 
 - **`packages/pybamm/`** — the `pybamm` package: source in `packages/pybamm/src/pybamm/`, tests in
   `packages/pybamm/tests/`. Almost all work happens here.
-- **`packages/pybamm-solvers/`** — the `pybammsolvers` C++/pybind11 IDAKLU solver, with its own
+- **`packages/pybammsolvers/`** — the `pybammsolvers` C++/pybind11 IDAKLU solver, with its own
   `pyproject.toml`, `ruff.toml`, and `scikit-build-core` build. `pybamm` depends on it via a
   workspace source, so a workspace sync installs it editable automatically.
 

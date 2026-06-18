@@ -5,7 +5,7 @@
 #   `_build_solver_wheels.yml`, shared with PR-time CI (test_on_push.yml). This
 #   workflow only adds the release trigger, the tag-namespace guard, and the
 #   PyPI publish step.
-# - Releases are discriminated by tag namespace (`pybamm-solvers-v*`); the old
+# - Releases are discriminated by tag namespace (`pybammsolvers-v*`); the old
 #   `github.repository == 'pybamm-team/pybammsolvers'` guard no longer works now
 #   that pybamm and pybammsolvers share a repository.
 name: Build solver wheels
@@ -26,7 +26,7 @@ jobs:
     name: Build wheels + sdist
     # On release events, only build for the solver tag namespace. Always build
     # on workflow_dispatch (manual testing). A fresh build (no cache) for release.
-    if: ${{ github.event_name != 'release' || startsWith(github.event.release.tag_name, 'pybamm-solvers-v') }}
+    if: ${{ github.event_name != 'release' || startsWith(github.event.release.tag_name, 'pybammsolvers-v') }}
     permissions:
       contents: read
     uses: ./.github/workflows/_build_solver_wheels.yml
@@ -38,7 +38,7 @@ jobs:
   check_version:
     # Guard against tag/version.py desync: the published version comes from
     # version.py, not the tag, so fail early instead of shipping the wrong one.
-    if: ${{ github.event_name == 'release' && startsWith(github.event.release.tag_name, 'pybamm-solvers-v') }}
+    if: ${{ github.event_name == 'release' && startsWith(github.event.release.tag_name, 'pybammsolvers-v') }}
     name: Check tag matches version.py
     runs-on: ubuntu-latest
     permissions:
@@ -51,8 +51,8 @@ jobs:
         env:
           TAG: ${{ github.event.release.tag_name }}
         run: |
-          version="$(python3 -c 'import pathlib,re; print(re.search(r"__version__\s*=\s*\"([^\"]+)\"", pathlib.Path("packages/pybamm-solvers/src/pybammsolvers/version.py").read_text()).group(1))')"
-          expected="pybamm-solvers-v${version}"
+          version="$(python3 -c 'import pathlib,re; print(re.search(r"__version__\s*=\s*\"([^\"]+)\"", pathlib.Path("packages/pybammsolvers/src/pybammsolvers/version.py").read_text()).group(1))')"
+          expected="pybammsolvers-v${version}"
           if [ "$TAG" != "$expected" ]; then
             echo "::error::Release tag '$TAG' does not match version.py ('$version', expected '$expected'). Bump version.py or fix the tag."
             exit 1
@@ -60,7 +60,7 @@ jobs:
           echo "Release tag '$TAG' matches version.py ($version)."
 
   publish_pypi:
-    if: ${{ github.event_name == 'release' && startsWith(github.event.release.tag_name, 'pybamm-solvers-v') }}
+    if: ${{ github.event_name == 'release' && startsWith(github.event.release.tag_name, 'pybammsolvers-v') }}
     name: Upload package to PyPI
     needs: [ build, check_version ]
     runs-on: ubuntu-latest
