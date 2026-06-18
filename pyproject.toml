@@ -3,7 +3,7 @@
 # repo-wide Python lint config. It is NOT an installable package (no [project]).
 # Per-package metadata and build config live in each package's own pyproject.toml:
 #   - packages/pybamm/pyproject.toml          (hatchling)
-#   - packages/pybamm-solvers/pyproject.toml  (scikit-build-core)
+#   - packages/pybammsolvers/pyproject.toml  (scikit-build-core)
 
 [tool.uv.workspace]
 members = ["packages/*"]
@@ -34,7 +34,7 @@ dev = [
 # --- Repo-wide Python lint config (hoisted from packages/pybamm so it governs
 # the whole repo, including root-level docs/ and examples/). Ruff discovers
 # config by walking up from each file, so it must live at the repo root.
-# The C/C++ solver package keeps its own packages/pybamm-solvers/ruff.toml. ---
+# The C/C++ solver package keeps its own packages/pybammsolvers/ruff.toml. ---
 [tool.ruff]
 # Match the packages' requires-python floor (>=3.10). On main this was inferred
 # from [project].requires-python; the workspace root has no [project], so set it
@@ -96,7 +96,7 @@ ignore = [
 # isort regroups `import pybamm` as third-party across the whole repo.
 # `pybammsolvers` is intentionally NOT listed: it was third-party on main (a
 # PyPI dependency) and the committed import ordering reflects that; the solver's
-# own packages/pybamm-solvers/ruff.toml governs its subtree.
+# own packages/pybammsolvers/ruff.toml governs its subtree.
 [tool.ruff.lint.isort]
 known-first-party = ["pybamm"]
 
