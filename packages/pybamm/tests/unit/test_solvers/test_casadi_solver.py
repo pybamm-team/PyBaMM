@@ -692,3 +692,7 @@ class TestCasadiSolver:
         assert current(0) == 1
         assert current(1500) == -0.5
         assert current(3000) == 0.5
+
+    def test_deprecated(self):
+        with pytest.warns(DeprecationWarning, match="CasadiSolver is deprecated"):
+            pybamm.CasadiSolver()

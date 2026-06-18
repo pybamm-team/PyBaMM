@@ -38,9 +38,6 @@ class LOQS(BaseModel):
         if build:
             self.build_model()
 
-        if self.options["dimensionality"] == 0:
-            self.use_jacobian = False
-
         pybamm.citations.register("Sulzer2019asymptotic")
 
     def set_external_circuit_submodel(self):
@@ -66,10 +63,6 @@ class LOQS(BaseModel):
                     self.param, self.options["operating mode"], self.options
                 )
             )
-
-    @property
-    def default_solver(self):
-        return pybamm.CasadiSolver()
 
     def set_current_collector_submodel(self):
         if self.options["current collector"] in [

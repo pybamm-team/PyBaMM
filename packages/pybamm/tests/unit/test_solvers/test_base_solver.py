@@ -28,7 +28,10 @@ class TestBaseSolver:
         solver = pybamm.BaseSolver(root_method="nonlinear_solver")
         assert isinstance(solver.root_method, pybamm.NonlinearSolver)
 
-        solver = pybamm.BaseSolver(root_method="casadi")
+        with pytest.warns(
+            DeprecationWarning, match="root_method='casadi' is deprecated"
+        ):
+            solver = pybamm.BaseSolver(root_method="casadi")
         assert isinstance(solver.root_method, pybamm.CasadiAlgebraicSolver)
 
         solver = pybamm.BaseSolver(root_method="lm")

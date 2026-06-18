@@ -187,7 +187,17 @@ class BaseSolver:
                 atol=atol, rtol=self.rtol, on_failure=self.on_failure
             )
         elif method == "casadi":
-            method = pybamm.CasadiAlgebraicSolver(self.root_tol)
+            warnings.warn(
+                "root_method='casadi' is deprecated and will be removed in a future "
+                "release. Use root_method='nonlinear_solver' instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            # CasadiAlgebraicSolver is itself deprecated; its warning is redundant
+            # with the one above for this kwarg, so suppress it here.
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", DeprecationWarning)
+                method = pybamm.CasadiAlgebraicSolver(self.root_tol)
         elif isinstance(method, str):
             method = pybamm.AlgebraicSolver(method, self.root_tol)
         elif not (

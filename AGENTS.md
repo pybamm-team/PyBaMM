@@ -79,10 +79,19 @@ Model (symbolic) -> ParameterValues -> Geometry -> Mesh -> Discretisation -> Sol
   and replaces spatial operators with matrices and `Variable`s with `StateVector`s, using the
   `spatial_methods/` for each domain (finite volume is the default; spectral volume and
   scikit-fem elements also exist).
-- **Solvers** (`solvers/`) — wrap third-party integrators (`casadi_solver`, `idaklu_solver`,
+- **Solvers** (`solvers/`) — wrap third-party integrators (`idaklu_solver`, `casadi_solver`,
   `scipy_solver`, `jax_*`). They consume the discretised model and return a `Solution`;
-  `processed_variable*.py` turns raw solver output into the named, interpolatable variables users
-  access via `solution["variable name"].data`.
+  `processed_variable*.py` turns raw solver output into the named, interpolatable variables.
+  **Always use `pybamm.IDAKLUSolver`** (the default for every model): it is the fastest,
+  safest, most reliable, most featureful, and only actively developed solver. `CasadiSolver`,
+  `ScipySolver`, and
+  `CasadiAlgebraicSolver` are deprecated — never reach for them in new code, examples, or docs.
+  **Don't pass `solver=` to `pybamm.Simulation` without a concrete reason — leave it bare** so
+  the model's default `IDAKLUSolver` is used; only override when a specific option or behaviour
+  genuinely requires it.
+  **Read solution values through the interpolating call interface — `solution["Voltage [V]"](t)`
+  for a value at time(s) `t` — not the raw `.data` / `.entries` arrays**, which bypass
+  interpolation and are tied to the solver's internal time points.
 - **Experiment / Simulation** (`experiment/`, `simulation.py`) — `Experiment` parses
   English-like step instructions; `Simulation` runs the pipeline, drives multi-step experiments,
   and computes summary variables.

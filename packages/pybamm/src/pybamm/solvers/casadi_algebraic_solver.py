@@ -1,4 +1,5 @@
 import numbers
+import warnings
 
 import casadi
 import numpy as np
@@ -9,6 +10,10 @@ import pybamm
 class CasadiAlgebraicSolver(pybamm.BaseSolver):
     """Solve a discretised model which contains only (time independent) algebraic
     equations using CasADi's root finding algorithm.
+
+    .. note::
+        This solver is deprecated and will be removed in a future release. Use
+        :class:`pybamm.NonlinearSolver` instead.
 
     Note: this solver could be extended for quasi-static models, or models in
     which the time derivative is manually discretised and results in a (possibly
@@ -38,6 +43,12 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
     """
 
     def __init__(self, tol=1e-6, step_tol=1e-4, extra_options=None):
+        warnings.warn(
+            "pybamm.CasadiAlgebraicSolver is deprecated and will be removed in a "
+            "future release. Use pybamm.NonlinearSolver instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         super().__init__()
         default_extra_options = {
             "error_on_fail": False,
