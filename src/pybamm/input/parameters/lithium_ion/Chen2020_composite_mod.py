@@ -518,9 +518,15 @@ def electrolyte_diffusivity_Nyman2008(c_e, T):
 
     D_c_e = 8.794e-11 * (c_e / 1000) ** 2 - 3.972e-10 * (c_e / 1000) + 4.862e-10
 
-    # Nyman et al. (2008) does not provide temperature dependence
+    # Nyman et al. (2008) does not provide temperature dependence, so the
+    # temperature dependence is added through an Arrhenius activation energy
+    E_D_c_e = pybamm.Parameter("Electrolyte diffusivity activation energy [J.mol-1]")
+    arrhenius = np.exp(E_D_c_e / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
-    return D_c_e
+    # the overall magnitude can be scaled directly via a single parameter
+    scale = pybamm.Parameter("Electrolyte diffusivity scaling factor")
+
+    return scale * D_c_e * arrhenius
 
 
 def electrolyte_conductivity_Nyman2008(c_e, T):
@@ -551,9 +557,15 @@ def electrolyte_conductivity_Nyman2008(c_e, T):
         0.1297 * (c_e / 1000) ** 3 - 2.51 * (c_e / 1000) ** 1.5 + 3.329 * (c_e / 1000)
     )
 
-    # Nyman et al. (2008) does not provide temperature dependence
+    # Nyman et al. (2008) does not provide temperature dependence, so the
+    # temperature dependence is added through an Arrhenius activation energy
+    E_sigma_e = pybamm.Parameter("Electrolyte conductivity activation energy [J.mol-1]")
+    arrhenius = np.exp(E_sigma_e / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
-    return sigma_e
+    # the overall magnitude can be scaled directly via a single parameter
+    scale = pybamm.Parameter("Electrolyte conductivity scaling factor")
+
+    return scale * sigma_e * arrhenius
 #plating
 def graphite_plating_exchange_current_density_OKane2020(c_e, c_Li, T):
     """
@@ -993,7 +1005,11 @@ def get_parameter_values():
         "Cation transference number": 0.2594,
         "Thermodynamic factor": 1.0,
         "Electrolyte diffusivity [m2.s-1]": electrolyte_diffusivity_Nyman2008,
+        "Electrolyte diffusivity scaling factor": 1.0,
+        "Electrolyte diffusivity activation energy [J.mol-1]": 17000.0,
         "Electrolyte conductivity [S.m-1]": electrolyte_conductivity_Nyman2008,
+        "Electrolyte conductivity scaling factor": 1.0,
+        "Electrolyte conductivity activation energy [J.mol-1]": 17000.0,
         # experiment
         "Reference temperature [K]": 298.15,
         "Total heat transfer coefficient [W.m-2.K-1]": 10.0,

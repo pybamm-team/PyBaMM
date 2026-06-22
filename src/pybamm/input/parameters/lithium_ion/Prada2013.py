@@ -428,10 +428,55 @@ def LFP_electrolyte_exchange_current_density_kashkooli2017(c_e, c_s_surf, c_s_ma
     return m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
 
 
-def electrolyte_conductivity_Prada2013(c_e, T):
+def electrolyte_diffusivity_Nyman2008(c_e, T):
+    """
+    Diffusivity of LiPF6 in EC:EMC (3:7) as a function of ion concentration. The data
+    comes from [1], with Arrhenius temperature dependence added through the
+    "Electrolyte diffusivity activation energy [J.mol-1]" parameter.
+
+    References
+    ----------
+    .. [1] A. Nyman, M. Behm, and G. Lindbergh, "Electrochemical characterisation and
+    modelling of the mass transport phenomena in LiPF6-EC-EMC electrolyte,"
+    Electrochim. Acta, vol. 53, no. 22, pp. 6356-6365, 2008.
+
+    Parameters
+    ----------
+    c_e: :class:`pybamm.Symbol`
+        Dimensional electrolyte concentration
+    T: :class:`pybamm.Symbol`
+        Dimensional temperature
+
+    Returns
+    -------
+    :class:`pybamm.Symbol`
+        Solid diffusivity
+    """
+
+    D_c_e = 8.794e-11 * (c_e / 1000) ** 2 - 3.972e-10 * (c_e / 1000) + 4.862e-10
+
+    # Nyman et al. (2008) does not provide temperature dependence, so the
+    # temperature dependence is added through an Arrhenius activation energy
+    E_D_c_e = pybamm.Parameter("Electrolyte diffusivity activation energy [J.mol-1]")
+    arrhenius = np.exp(E_D_c_e / pybamm.constants.R * (1 / 298.15 - 1 / T))
+
+    # the overall magnitude can be scaled directly via a single parameter
+    scale = pybamm.Parameter("Electrolyte diffusivity scaling factor")
+
+    return scale * D_c_e * arrhenius
+
+
+def electrolyte_conductivity_Nyman2008(c_e, T):
     """
     Conductivity of LiPF6 in EC:EMC (3:7) as a function of ion concentration. The data
-    comes from :footcite:`Prada2013`.
+    comes from [1], with Arrhenius temperature dependence added through the
+    "Electrolyte conductivity activation energy [J.mol-1]" parameter.
+
+    References
+    ----------
+    .. [1] A. Nyman, M. Behm, and G. Lindbergh, "Electrochemical characterisation and
+    modelling of the mass transport phenomena in LiPF6-EC-EMC electrolyte,"
+    Electrochim. Acta, vol. 53, no. 22, pp. 6356-6365, 2008.
 
     Parameters
     ----------
@@ -445,18 +490,20 @@ def electrolyte_conductivity_Prada2013(c_e, T):
     :class:`pybamm.Symbol`
         Solid conductivity
     """
-    # convert c_e from mol/m3 to mol/L
-    c_e = c_e / 1e6
 
     sigma_e = (
-        4.1253e-4
-        + 5.007 * c_e
-        - 4721.2 * c_e**2
-        + 1.5094e6 * c_e**3
-        - 1.6018e8 * c_e**4
-    ) * 1e3
+        0.1297 * (c_e / 1000) ** 3 - 2.51 * (c_e / 1000) ** 1.5 + 3.329 * (c_e / 1000)
+    )
 
-    return sigma_e
+    # Nyman et al. (2008) does not provide temperature dependence, so the
+    # temperature dependence is added through an Arrhenius activation energy
+    E_sigma_e = pybamm.Parameter("Electrolyte conductivity activation energy [J.mol-1]")
+    arrhenius = np.exp(E_sigma_e / pybamm.constants.R * (1 / 298.15 - 1 / T))
+
+    # the overall magnitude can be scaled directly via a single parameter
+    scale = pybamm.Parameter("Electrolyte conductivity scaling factor")
+
+    return scale * sigma_e * arrhenius
 
 
 # Call dict via a function to avoid errors when editing in place
@@ -593,8 +640,12 @@ def get_parameter_values():
         "Initial concentration in electrolyte [mol.m-3]": 1200.0,
         "Cation transference number": 0.36,
         "Thermodynamic factor": 1.0,
-        "Electrolyte diffusivity [m2.s-1]": 2e-10,
-        "Electrolyte conductivity [S.m-1]": electrolyte_conductivity_Prada2013,
+        "Electrolyte diffusivity [m2.s-1]": electrolyte_diffusivity_Nyman2008,
+        "Electrolyte diffusivity scaling factor": 1.0,
+        "Electrolyte diffusivity activation energy [J.mol-1]": 17000.0,
+        "Electrolyte conductivity [S.m-1]": electrolyte_conductivity_Nyman2008,
+        "Electrolyte conductivity scaling factor": 1.0,
+        "Electrolyte conductivity activation energy [J.mol-1]": 17000.0,
         # experiment
         "Reference temperature [K]": 298,
         "Ambient temperature [K]": 298,
