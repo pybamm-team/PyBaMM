@@ -1,15 +1,11 @@
-#
-# Compares the full and lumped thermal models for a single layer Li-ion cell
-#
+"""Compares the full and lumped thermal models for a single layer Li-ion cell."""
+
 import pybamm
 
 pybamm.set_logging_level("INFO")
 
-# load models
-# for the full model we use the "x-full" thermal submodel, which means that we solve
-# the thermal model in the x-direction for a single-layer pouch cell
-# for the lumped model we use the "arbitrary" cell geometry, which means that we can
-# specify the surface area for cooling and total heat transfer coefficient
+# load models: "x-full" solves thermal in x-direction (single-layer pouch)
+# "arbitrary" geometry lets us specify surface area and total heat transfer coefficient
 full_thermal_model = pybamm.lithium_ion.SPMe(
     {"thermal": "x-full"}, name="full thermal model"
 )
@@ -32,11 +28,8 @@ full_params.update(
         "Edge heat transfer coefficient [W.m-2.K-1]": 0,
     }
 )
-# for the lumped model we set the "Total heat transfer coefficient [W.m-2.K-1]"
-# parameter as well as the "Cell cooling surface area [m2]" and "Cell volume [m3]
-# parameters. Since the "full" model only accounts for cooling from the large surfaces
-# of the pouch, we set the "Surface area for cooling [m2]" parameter to the area of the
-# large surfaces of the pouch, and the total heat transfer coefficient to 5 W.m-2.K-1
+# for lumped model: set total heat transfer coefficient, cell volume, and surface area
+# for cooling ("full" model only cools large pouch surfaces)
 A = parameter_values["Electrode width [m]"] * parameter_values["Electrode height [m]"]
 contributing_layers = [
     "Negative current collector",

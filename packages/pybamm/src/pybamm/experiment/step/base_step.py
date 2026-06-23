@@ -291,9 +291,8 @@ class BaseStep:
     def __hash__(self):
         return hash(self.basic_repr())
 
-    # --- Control law (used to build the unified-experiment switching model) ---
-    #: Control-law shape (a :class:`ControlKind`); steps sharing it and differing only in
-    #: their target value collapse to one unified-mode branch.
+    # --- Control law for unified-experiment switching model ---
+    #: Control-law shape; steps sharing it and differing only in target value collapse to one branch.
     control_kind = None
 
     def get_control_residual(self, variables, target=None):
@@ -476,10 +475,8 @@ class BaseStep:
         if not events:
             return pybamm.Scalar(1)
 
-        # A step terminates when any of its termination expressions crosses zero, so the
-        # step-local aggregate should become non-positive as soon as the first child
-        # event does. Using a nested minimum also preserves infeasible-initial-condition
-        # detection when more than one termination is already violated.
+        # Step terminates when any termination crosses zero; nested minimum preserves
+        # infeasible-IC detection when multiple terminations are violated.
         expression = events[0].expression
         for event in events[1:]:
             expression = pybamm.minimum(expression, event.expression)
@@ -487,12 +484,8 @@ class BaseStep:
 
     @staticmethod
     def update_voltage_safety_events(new_model):
-        # Keep the min and max voltages as safeguards but add some tolerances
-        # so that they are not triggered before the voltage limits in the
-        # experiment. For the CasADi "fast with events" DAE path we also move
-        # the voltage switch events away from the experiment cutoffs, otherwise
-        # the switch can freeze the dynamics before the experiment termination
-        # event itself crosses zero.
+        # Add tolerances to voltage safeguards; for CasADi "fast with events" DAE,
+        # move switch events away from cutoffs to prevent freezing dynamics.
         for i, event in enumerate(new_model.events):
             if event.name in ["Minimum voltage [V]", "Maximum voltage [V]"]:
                 new_model.events[i] = pybamm.Event(
@@ -626,10 +619,8 @@ class BaseStepImplicit(BaseStep):
         return new_model, variables
 
     def set_up(self, new_model, new_parameter_values):
-        # Create a new model where the current density is now a variable
-        # To do so, we replace all instances of the current density in the
-        # model with a current density variable, which is obtained from the
-        # FunctionControl submodel
+        # Replace all current density instances with a variable from the
+        # FunctionControl submodel.
         submodel = self.get_submodel(new_model)
         new_model, variables = self.add_control_submodel(
             new_model, submodel, new_parameter_values

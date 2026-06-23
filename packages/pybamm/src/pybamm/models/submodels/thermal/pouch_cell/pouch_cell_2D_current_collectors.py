@@ -1,6 +1,4 @@
-#
 # Class for two-dimensional thermal submodel for use in the "2+1D" pouch cell model
-#
 import pybamm
 from pybamm.models.submodels.thermal.base_thermal import BaseThermal
 
@@ -74,17 +72,8 @@ class CurrentCollector2D(BaseThermal):
         # area to volume ratio
         Q_edge = pybamm.source(Q_edge_W_per_m2, T_av, boundary=True)
 
-        # Governing equations contain:
-        #   - source term for y-z surface cooling
-        #   - boundary source term of edge cooling
-        # Boundary conditions contain:
-        #   - Neumann condition for tab cooling
-        # Note: pybamm.source() is used to ensure the source term is multiplied by the
-        # correct mass matrix when discretised. The first argument is the source term
-        # and the second argument is the variable governed by the equation that the
-        # source term appears in.
-        # Note: not correct if lambda_eff is a function of T_av - need to implement div
-        # in 2D rather than doing laplacian directly
+        # RHS: y-z surface cooling source + edge cooling boundary source; BCs: tab cooling
+        # Neumann. pybamm.source() ensures correct mass matrix multiplication.
         self.rhs = {
             T_av: (
                 self.param.lambda_eff(T_av) * pybamm.laplacian(T_av)
@@ -106,10 +95,8 @@ class CurrentCollector2D(BaseThermal):
         q_tab_p = -self.param.p.h_tab * (T_av - T_surf)
         q_edge = -self.param.h_edge(y, z) * (T_av - T_surf)
 
-        # Subtract the edge cooling from the tab portion so as to not double count
-        # Note: tab cooling is also only applied on the current collector hence
-        # the (l_cn / l) and (l_cp / l) prefactors. We still have edge cooling
-        # in the region: x in (0, 1)
+        # Subtract edge cooling from tab portion to avoid double counting. Tab cooling
+        # applies only on current collector, hence (l_cn / l) and (l_cp / l) prefactors.
         negative_tab_bc = (self.param.n.L_cc / self.param.L) * pybamm.boundary_value(
             (q_tab_n - q_edge) / self.param.n.lambda_cc(T_av),
             "negative tab",

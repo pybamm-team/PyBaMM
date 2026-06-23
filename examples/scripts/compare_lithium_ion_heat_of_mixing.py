@@ -1,6 +1,5 @@
-#
-# Compare SPMe model with and without heat of mixing
-#
+"""Compare SPMe model with and without heat of mixing."""
+
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -30,8 +29,7 @@ C_rate = 5
 # for better integration in time
 t_eval = np.linspace(0, 720, 360)
 
-# set up an extra plot with the heat of mixing vs time in each electrode and
-# the integrated heat of mixing vs time in each electrode to compare with
+# Extra plot: heat of mixing vs time and integrated values, compare with
 # Figure 6(a) from Richardson et al. (2021)
 fig, axs = plt.subplots(2, len(models), figsize=(12, 7))
 
@@ -56,9 +54,7 @@ for m, model in enumerate(models):
     time = sol["Time [h]"].entries
     Q_mix = sol["Heat of mixing [W.m-3]"].entries
 
-    # heat of mixing in negative and positive electrodes multiplied by the electrode
-    # width, represents the integral of heat of mixing term across each of the
-    # electrodes (W.m-2)
+    # Q_mix * electrode width = integral of heat of mixing across each electrode (W.m-2)
     Q_mix_n = Q_mix[0, :] * L_n
     Q_mix_p = Q_mix[-1, :] * L_p
 
@@ -75,8 +71,7 @@ for m, model in enumerate(models):
         dt = (t - time[i]) * 3600  # seconds
         Q_mix_n_avg = (Q_mix_n[i] + Q_mix_n[i + 1]) * 0.5
         Q_mix_p_avg = (Q_mix_p[i] + Q_mix_p[i + 1]) * 0.5
-        # convert J to kJ and divide the integral by the electrode area A to compare
-        # with Figure 6(a) from Richardson et al. (2021)
+        # Convert J to kJ, divide by electrode area A to compare with Richardson et al.
         Q_mix_n_int += Q_mix_n_avg * dt / 1000 / A
         Q_mix_p_int += Q_mix_p_avg * dt / 1000 / A
         Q_mix_n_plt.append(Q_mix_n_int)

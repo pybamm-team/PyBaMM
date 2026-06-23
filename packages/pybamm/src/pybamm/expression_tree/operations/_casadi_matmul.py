@@ -47,9 +47,8 @@ class MatMulIdenticalRows:
     m: int
 
     def apply(self, converted_right: casadi.MX) -> casadi.MX:
-        # Broadcast the single computed row to all m rows via an outer product. Use
-        # matmul, not element-wise ``*``: the latter only works when ``converted_right``
-        # is a column vector, but it is a matrix when this runs inside a jacobian.
+        # Outer product broadcasts single row to all m rows; use matmul (not element-wise
+        # ``*``) since ``converted_right`` is a matrix inside a jacobian
         return casadi.mtimes(
             casadi.DM.ones(self.m, 1), casadi.DM(self.row).T @ converted_right
         )

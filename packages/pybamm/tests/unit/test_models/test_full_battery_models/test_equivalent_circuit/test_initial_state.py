@@ -1,6 +1,4 @@
-#
-# Tests for equivalent circuit model (ECM) initial states
-#
+"""Tests for equivalent circuit model (ECM) initial states."""
 
 import pytest
 

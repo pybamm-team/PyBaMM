@@ -1,6 +1,4 @@
-#
-# Tests for the Casadi Solver Modes
-#
+"""Tests for the Casadi Solver Modes."""
 
 import numpy as np
 

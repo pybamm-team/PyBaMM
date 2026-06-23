@@ -1,6 +1,4 @@
-#
 # Finite Element discretisation class which uses scikit-fem
-#
 import numpy as np
 from scipy.sparse import csc_matrix, csr_matrix
 from scipy.sparse.linalg import inv
@@ -89,10 +87,8 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         # get gradient matrix
         grad_y_matrix, grad_z_matrix = self.gradient_matrix(symbol, boundary_conditions)
 
-        # assemble mass matrix (there is no need to zero out entries here, since
-        # boundary conditions are already accounted for in the governing pde
-        # for the symbol we are taking the gradient of. we just want to get the
-        # correct weights)
+        # Assemble mass matrix for correct weights; boundary conditions are already
+        # accounted for in the governing PDE
         @skfem.BilinearForm
         def mass_form(u, v, w):
             return u * v

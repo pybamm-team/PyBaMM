@@ -1,6 +1,4 @@
-#
-# Tests the settings class.
-#
+"""Tests the settings class."""
 
 import pytest
 

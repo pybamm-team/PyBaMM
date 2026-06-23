@@ -136,11 +136,8 @@ class VoltageTermination(BaseTermination):
         return f"Voltage {operator} {self.value} [V] [experiment]"
 
     def get_event_expression(self, variables, step):
-        # The voltage event should be positive at the start of charge/
-        # discharge. We use the sign of the current or power input to
-        # figure out whether the voltage event is greater than the starting
-        # voltage (charge) or less (discharge) and set the sign of the
-        # event accordingly
+        # Voltage event sign based on current/power sign: positive for charge (voltage
+        # > starting), negative for discharge (voltage < starting)
         operator = self._get_operator(step)
         if operator is None:
             return None

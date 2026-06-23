@@ -1,6 +1,4 @@
-#
 # Tests for the Algebraic Solver class
-#
 
 import numpy as np
 import pytest

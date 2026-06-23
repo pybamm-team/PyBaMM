@@ -1,6 +1,4 @@
-#
 # A model to calculate electrode-specific SOH
-#
 from __future__ import annotations
 
 import warnings
@@ -1024,9 +1022,7 @@ class ElectrodeSOHSolver:
         # Calculate dQ
         Q = Q_p * (y_0 - y_100)
         dQ = Q / (points - 1)
-        # Integrate and convert to W-h
-        # Use trapezoid for newer NumPy, trapz for older NumPy (backwards
-        # compatible)
+        # Integrate and convert to W-h; use trapezoid (newer NumPy) or trapz fallback
         if hasattr(np, "trapezoid"):
             E = np.trapezoid(Vs, dx=dQ)
         else:

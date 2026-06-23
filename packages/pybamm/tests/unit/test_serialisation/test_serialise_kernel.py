@@ -129,9 +129,7 @@ def test_default_codec_raises_on_unresolvable_required_param():
 
 
 def test_default_codec_from_json_ignores_extra_legacy_keys():
-    # Legacy JSON always wrote a "name" key; a clean class whose __init__ has no
-    # `name` param must still reconstruct (the key is ignored, not forwarded as
-    # an unexpected kwarg). Guards legacy compatibility (#5548).
+    # Legacy "name" key must be ignored (not forwarded as kwarg) for backward compat.
     codec = sk.DefaultCodec()
     node = codec.to_json(_Clean(pybamm.Scalar(1.0), mode="q"), sk.encode)
     node[sk.TAG] = sk._class_path(_Clean)
@@ -142,10 +140,7 @@ def test_default_codec_from_json_ignores_extra_legacy_keys():
 
 
 def test_default_codec_round_trips_singular_domain_param():
-    # A class whose __init__ takes `domain` (not `domains`) must still recover
-    # its domain: to_json emits the full `domains` dict, from_json maps it onto
-    # the singular `domain` param. Guards the CoupledVariable silent-drop bug --
-    # CoupledVariable is the one concrete Symbol that reaches DefaultCodec.
+    # `domain` param class must recover domain from `domains` dict; guards CoupledVariable silent-drop bug.
     codec = sk.DefaultCodec()
     cv = pybamm.CoupledVariable("c", domain=["negative electrode"])
     node = codec.to_json(cv, sk.encode)
@@ -251,9 +246,7 @@ def test_hook_guard_allows_declared_derived_param():
 
 
 def test_hook_guard_skips_missing_defaulted_param():
-    # Mirrors SubMesh1D.tabs: a defaulted __init__ param the instance never stores
-    # when it is not supplied. Nothing to serialise -> the constructor recreates the
-    # default on decode -> the guard must NOT raise (parity with DefaultCodec).
+    # Defaulted __init__ param not stored → guard must NOT raise on decode (parity with DefaultCodec).
     class _OptionalCfg(pybamm.Symbol):
         def __init__(self, child, opt=None):
             super().__init__("optcfg", children=[child])
@@ -293,9 +286,7 @@ class _OwnChildren(pybamm.Symbol):
 
 
 def test_hook_codec_encodes_hook_supplied_children():
-    # A hook whose to_json returns its OWN children list (here [child, extra],
-    # where extra is NOT in obj.children) must have THAT list encoded and guarded,
-    # not obj.children. This is the contract SizeAverage/Variable/EvaluateAt rely on.
+    # Hook-supplied children list (not obj.children) must be encoded and guarded.
     a, b = pybamm.Scalar(1.0), pybamm.Scalar(2.0)
     obj = _OwnChildren(a, b)
     node = sk.HookCodec().to_json(obj, sk.encode)
@@ -680,7 +671,5 @@ def test_already_correct_classes_round_trip(tree):
     ],
 )
 def test_function_operands_carried_via_children_round_trip(tree):
-    # a/b (Arcsinh2) and base/exponent/scale (RegPower) are Symbol operands passed
-    # as children; eps/delta are emitted scalars. The guard must not false-positive
-    # on the operand params (they are carried via children).
+    # Operand params carried via children must not trigger guard false-positives.
     assert _rt(tree).id == tree.id

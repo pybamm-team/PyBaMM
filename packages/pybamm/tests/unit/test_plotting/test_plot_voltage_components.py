@@ -80,9 +80,7 @@ def test_half_cell_voltage_components():
 
 
 def test_time_not_starting_at_zero_with_experiment():
-    # Guard: OCV baseline must use solution.t (seconds) not Time [h]
-    # The bug was using time[0] (hours) for interpolation when solution expects seconds.
-    # This causes wrong OCV baseline when time[0] > 0 hours.
+    # OCV baseline must use solution.t (seconds), not Time [h] (time[0] bug)
     model = pybamm.lithium_ion.SPM()
     experiment = pybamm.Experiment(
         [

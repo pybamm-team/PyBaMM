@@ -1,6 +1,4 @@
-#
 # Class for ohmic electrodes in the surface potential formulation
-#
 import pybamm
 
 from .base_ohm import BaseModel

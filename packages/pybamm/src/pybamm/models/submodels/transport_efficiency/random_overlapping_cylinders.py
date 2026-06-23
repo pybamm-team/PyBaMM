@@ -1,6 +1,4 @@
-#
 # Class for random overlapping cylinders transport_efficiency
-#
 import pybamm
 
 from .base_transport_efficiency import BaseModel

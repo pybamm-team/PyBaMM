@@ -1,6 +1,4 @@
-#
 # Tests for ParameterValues JSON serialisation (to_json / from_json)
-#
 
 import json
 
@@ -48,9 +46,7 @@ def _assert_evaluate_equal_array(pv_original, pv_loaded, name, inputs, y):
     np.testing.assert_array_equal(orig, loaded)
 
 
-# ------------------------------------------------------------------ #
-# Unit tests: roundtrip for each value type
-# ------------------------------------------------------------------ #
+# Unit tests: roundtrip for each value type.
 class TestRoundtripValueTypes:
     def test_empty_parameter_values(self):
         pv = pybamm.ParameterValues({})
@@ -347,9 +343,7 @@ class TestRoundtripValueTypes:
         assert pv2["b"] == 10
 
 
-# ------------------------------------------------------------------ #
-# Integration tests: nested / composite structures
-# ------------------------------------------------------------------ #
+# Integration tests: nested / composite structures.
 class TestRoundtripNestedStructures:
     def test_function_calling_another_function(self):
         def inner(x):
@@ -505,9 +499,7 @@ class TestRoundtripNestedStructures:
             if isinstance(orig, int | float):
                 assert loaded == orig, f"Numeric mismatch for '{key}'"
 
-        # Callable parameters evaluate to the same result after
-        # roundtrip — tested with arrays via StateVector to exercise
-        # vector-valued paths through interpolants etc.
+        # Callable params evaluate identically after roundtrip via StateVector arrays.
         n = 5
         sto_vals = np.linspace(0.2, 0.8, n).reshape(-1, 1)
         T_vals = np.full((n, 1), 300.0)
@@ -606,9 +598,7 @@ class TestRoundtripNestedStructures:
             )
 
 
-# ------------------------------------------------------------------ #
-# File I/O tests
-# ------------------------------------------------------------------ #
+# File I/O tests.
 class TestFileIO:
     def test_roundtrip_via_string_path(self, tmp_path):
         pv = pybamm.ParameterValues({"a": 42, "b": 3.14})
@@ -646,9 +636,7 @@ class TestFileIO:
             pybamm.ParameterValues.from_json([1, 2, 3])
 
 
-# ------------------------------------------------------------------ #
-# Helper function tests
-# ------------------------------------------------------------------ #
+# Helper function tests.
 class TestConvertSymbolsInDict:
     def test_interpolator_dict(self):
         data_dict = {
@@ -704,9 +692,7 @@ class TestConvertParameterValuesToJson:
         assert "p2" in data
 
 
-# ------------------------------------------------------------------ #
-# Stress tests: every callable across every parameter set
-# ------------------------------------------------------------------ #
+# Stress tests: every callable across every parameter set.
 class TestStressRoundtripAllParameterSets:
     """Roundtrip every built-in parameter set and verify that all
     callable parameters evaluate to bit-exact results when called

@@ -81,9 +81,7 @@ class TestSimulationConsistentState:
 
         cc_solution = sol.cycles[0].steps[0]
 
-        # Compiled state mappers use the *previous* model's input layout; match
-        # BaseSolver.step by stacking p via that model and the upcoming step's
-        # inputs dict (see Simulation.solve / _build_experiment_step_inputs).
+        # Compiled state mappers use previous model's input layout; match BaseSolver.step
         mapper_func, _, _ = sim._compiled_model_state_mappers[(cc_model, cv_model)]
         cv_inputs_dict = sim._build_experiment_step_inputs(
             {},

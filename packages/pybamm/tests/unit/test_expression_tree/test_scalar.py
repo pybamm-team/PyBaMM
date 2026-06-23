@@ -1,6 +1,4 @@
-#
-# Tests for the Scalar class
-#
+"""Tests for the Scalar class."""
 
 import pybamm
 from tests import get_discretisation_for_testing

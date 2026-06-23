@@ -1,6 +1,4 @@
-#
 # Base class for thermal effects
-#
 import numpy as np
 
 import pybamm
@@ -39,9 +37,8 @@ class BaseThermal(pybamm.BaseSubModel):
         see :meth:`pybamm.base_submodel._get_standard_fundamental_variables`
         """
 
-        # The variable T is the concatenation of the temperature in the middle domains
-        # (e.g. negative electrode, separator and positive electrode for a full cell),
-        # excluding current collectors, for use in the electrochemical models
+        # T is the temperature concatenation in middle domains (excluding current
+        # collectors) for use in electrochemical models
         T_mid = [T_dict[k] for k in self.options.whole_cell_domains]
         T = pybamm.concatenation(*T_mid)
 
@@ -88,9 +85,7 @@ class BaseThermal(pybamm.BaseSubModel):
         Q_ohm_s_p = -pybamm.inner(i_s_p, pybamm.grad(phi_s_p))
         Q_ohm_s = pybamm.concatenation(Q_ohm_s_n, Q_ohm_s_s, Q_ohm_s_p)
 
-        # Ohmic heating in electrolyte
-        # TODO: change full stefan-maxwell conductivity so that i_e is always
-        # a Concatenation
+        # Ohmic heating in electrolyte (TODO: ensure i_e is always a Concatenation)
         i_e = variables["Electrolyte current density [A.m-2]"]
         # Special case for half cell -- i_e has to be a concatenation for this to work due to a mismatch with Q_ohm, so we make a new i_e which is a concatenation.
         if (not isinstance(i_e, pybamm.Concatenation)) and (
@@ -241,9 +236,8 @@ class BaseThermal(pybamm.BaseSubModel):
         # Total heating
         Q = Q_ohm + Q_rxn + Q_rev + Q_mix + Q_hys
 
-        # Compute the X-average over the entire cell, including current collectors
-        # Note: this can still be a function of y and z for higher-dimensional pouch
-        # cell models
+        # X-average over entire cell (including current collectors); may depend on
+        # (y, z) for higher-dimensional pouch cell models
         Q_ohm_av = self._x_average(Q_ohm, Q_ohm_s_cn, Q_ohm_s_cp)
         Q_rxn_av = self._x_average(Q_rxn, 0, 0)
         Q_rev_av = self._x_average(Q_rev, 0, 0)
@@ -251,9 +245,8 @@ class BaseThermal(pybamm.BaseSubModel):
         Q_hys_av = self._x_average(Q_hys, 0, 0)
         Q_av = self._x_average(Q, Q_ohm_s_cn, Q_ohm_s_cp)
 
-        # Compute the integrated heat source per unit simulated electrode-pair area
-        # in W.m-2. Note: this can still be a function of y and z for
-        # higher-dimensional pouch cell models
+        # Integrated heat source per unit simulated electrode-pair area (W.m-2);
+        # may depend on (y, z) for higher-dimensional pouch cell models
         Q_ohm_Wm2 = Q_ohm_av * self.param.L
         Q_rxn_Wm2 = Q_rxn_av * self.param.L
         Q_rev_Wm2 = Q_rev_av * self.param.L
@@ -269,10 +262,8 @@ class BaseThermal(pybamm.BaseSubModel):
         Q_hys_Wm2_av = self._yz_average(Q_hys_Wm2)
         Q_Wm2_av = self._yz_average(Q_Wm2)
 
-        # Compute total heat source terms (in W) over the *entire cell volume*, not
-        # the product of electrode height * electrode width * electrode stack thickness
-        # Note: we multiply by the number of electrode pairs, since the Q_xx_Wm2_av
-        # variables are per electrode pair
+        # Total heat source terms (W) over entire cell volume (not electrode height *
+        # width * stack thickness); multiply by n_elec since Q_xx_Wm2_av is per pair
         n_elec = self.param.n_electrodes_parallel
         A = self.param.L_y * self.param.L_z  # *modelled* electrode area
         Q_ohm_W = Q_ohm_Wm2_av * n_elec * A
@@ -360,9 +351,7 @@ class BaseThermal(pybamm.BaseSubModel):
             i_boundary_cc = variables["Current collector current density [A.m-2]"]
             Q_s_cn = i_boundary_cc**2 / self.param.n.sigma_cc
             Q_s_cp = i_boundary_cc**2 / self.param.p.sigma_cc
-        # Otherwise we compute the Ohmic heating for 1 or 2D current collectors
-        # In this limit the current flow is all in the y,z direction in the current
-        # collectors
+        # For 1 or 2D current collectors: current flows in the y,z direction only
         elif cc_dimension in [1, 2]:
             phi_s_cn = variables["Negative current collector potential [V]"]
             phi_s_cp = variables["Positive current collector potential [V]"]

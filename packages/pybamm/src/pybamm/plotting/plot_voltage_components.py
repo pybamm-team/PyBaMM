@@ -1,6 +1,4 @@
-#
 # Method for plotting voltage components
-#
 import numpy as np
 
 from pybamm.simulation import BaseSimulation
@@ -161,9 +159,8 @@ def plot_voltage_components(
     top = ocv
     # Plot components
     for overpotential, label in zip(overpotentials, labels, strict=False):
-        # negative overpotentials are positive for a discharge and negative for a charge
-        # Contact overpotential is positive for a discharge and negative for a charge
-        # so we have to multiply by -1 to show them correctly
+        # Negative/Contact overpotentials are positive in discharge, negative in charge;
+        # multiply by -1 to show correctly
         sgn = -1 if ("egative" in overpotential or "Contact" in overpotential) else 1
         multiplier = sgn if "attery" in overpotential else sgn * num_cells
         bottom = top + multiplier * solution[overpotential].entries

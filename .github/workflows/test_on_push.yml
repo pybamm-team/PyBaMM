@@ -2,9 +2,7 @@ name: PyBaMM
 
 on:
   pull_request:
-  # Run on pushes to main as well, primarily to warm the solver-wheel cache
-  # (keyed on the solver source hash) so PyBaMM-only PRs get a cache hit instead
-  # of rebuilding the solver. Also gives a post-merge health signal for main.
+  # Warm solver-wheel cache on main pushes (keyed on solver hash) for PyBaMM-only PR cache hits.
   push:
     branches:
       - main
@@ -107,18 +105,11 @@ jobs:
       - name: Check uv.lock is up to date
         run: uv lock --check
 
-  # Build the in-repo solver once per platform (cibuildwheel, incl. Windows via
-  # vcpkg) and cache the wheels on the solver source hash. PyBaMM's matrix below
-  # installs these prebuilt wheels instead of rebuilding the solver per cell.
-  # The reusable workflow's CIBW_TEST_COMMAND also runs the solver's own pytest
-  # on every platform, which (with the PyBaMM matrix) supersedes the solver's
-  # old standalone unit/integration workflows.
+  # Build solver once per platform (cibuildwheel + vcpkg on Windows), cache on solver hash; PyBaMM matrix installs prebuilt wheels.
   build_solver:
     needs: changes
     if: ${{ github.event_name == 'push' || needs.changes.outputs.solver == 'true' || needs.changes.outputs.pybamm == 'true' || needs.changes.outputs.docs == 'true' }}
-    # Pass contents:read down to the called workflow (this workflow's top-level
-    # permissions are {}, so the reusable workflow's checkout would otherwise
-    # get no token scope).
+    # Pass contents:read down (top-level permissions are {}); reusable workflow needs token scope.
     permissions:
       contents: read
     uses: ./.github/workflows/_build_solver_wheels.yml
@@ -236,9 +227,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13'
         run: nox -s integration
 
-  # Guards the `pip install pybamm` user path: in-repo PyBaMM against the
-  # *released* PyPI solver (--no-sources ignores the workspace source so
-  # pybammsolvers resolves from PyPI). main-to-main testing can't cover this.
+  # Smoke test: in-repo PyBaMM against released PyPI solver (--no-sources ignores workspace source).
   released_solver_smoke:
     needs: changes
     if: ${{ github.event_name == 'push' || needs.changes.outputs.pybamm == 'true' || needs.changes.outputs.solver == 'true' }}

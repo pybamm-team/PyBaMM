@@ -1,6 +1,5 @@
-#
-# Tests for ahead-of-time (AOT) compilation of casadi functions
-#
+"""Tests for ahead-of-time (AOT) compilation of casadi functions."""
+
 import logging
 import os
 import shutil
@@ -255,10 +254,7 @@ class TestAotCompile:
         assert out_g.class_name() == "External"
 
     def test_composite_of_external_raises(self, cache_dir, caplog):
-        # Building a Function on top of an already-AOT'd sub produces ``extern``
-        # decls in the generated C that the linker can't resolve. aot_compile
-        # is a boundary tool: it must refuse to compile this shape, and the
-        # caller keeps intermediates as MX/SX.
+        # Function atop AOT'd sub produces unresolvable extern decls in C; aot_compile must refuse
         x = casadi.MX.sym("x")
         leaf = casadi.Function("test_aot_boundary_leaf", [x], [x * x])
         ext_leaf = aot_compile(leaf, cache_dir=cache_dir)

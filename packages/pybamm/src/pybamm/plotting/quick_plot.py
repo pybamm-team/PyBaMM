@@ -1,6 +1,4 @@
-#
 # Class for quick plotting of variables from models
-#
 from collections import defaultdict
 
 import numpy as np
@@ -219,9 +217,8 @@ class QuickPlot:
         self.min_t_unscaled = min_t
         self.max_t_unscaled = max_t
 
-        # Prepare dictionary of variables
-        # output_variables is a list of strings or lists, e.g.
-        # ["var 1", ["variable 2", "var 3"]]
+        # Prepare dictionary of variables; output_variables is a list of
+        # strings or lists, e.g. ["var 1", ["variable 2", "var 3"]]
         output_variable_tuples = []
         self.variable_limits = {}
         for variable_list in output_variables:
@@ -391,8 +388,7 @@ class QuickPlot:
     def _get_spatial_var(self, key, variable, dimension):
         """Return the appropriate spatial variable(s)"""
 
-        # Extract name and value
-        # Special case for current collector, which is 2D but in a weird way (both
+        # Extract name and value; special case for current collector (2D but both
         # first and second variables are in the same domain, not auxiliary domain)
         if dimension == "first":
             spatial_var_name = variable.first_dimension
@@ -657,9 +653,8 @@ class QuickPlot:
                 fig_height_inches = (self.fig.get_size_inches() * self.fig.dpi)[1]
                 legend_top = legend_top_inches / fig_height_inches
             except AttributeError:  # pragma: no cover
-                # When testing the examples we set the matplotlib backend to "Template"
-                # which means that the above code doesn't work. Since this is just for
-                # that particular test we can just skip it
+                # When testing examples, matplotlib backend is "Template" so the above
+                # code doesn't work; just skip it for that particular test
                 legend_top = 0
         else:
             legend_top = 0

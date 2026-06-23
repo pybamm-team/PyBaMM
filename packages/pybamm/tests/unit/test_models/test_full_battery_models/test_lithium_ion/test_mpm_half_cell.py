@@ -1,6 +1,5 @@
-#
-# Tests for the lithium-ion MPM model
-#
+"""Tests for the lithium-ion MPM model."""
+
 import pybamm
 
 

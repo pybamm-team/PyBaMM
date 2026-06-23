@@ -1,7 +1,4 @@
-#
-# Class summing up contributions to the main (e.g. intercalation) reaction
-# for cases with primary, secondary, ... reactions e.g. silicon-graphite
-#
+# Class summing main (e.g. intercalation) reaction contributions for multi-reaction cases (e.g. silicon-graphite)
 import pybamm
 
 

@@ -1,6 +1,5 @@
-#
-# Tests for the lithium-ion MPM model
-#
+"""Tests for the lithium-ion MPM model."""
+
 import numpy as np
 
 import pybamm
@@ -122,10 +121,7 @@ class TestMPM:
         modeltest.test_all(skip_output_tests=True)
 
     def test_conservation_each_electrode(self):
-        # Test that surface areas are being calculated from the distribution correctly
-        # for any discretization in the size domain.
-        # We test that the amount of lithium removed or added to each electrode
-        # is the same as for the SPM with the same parameters
+        # Surface areas from size distribution correct; lithium added/removed matches SPM with same params
         models = [pybamm.lithium_ion.SPM(), pybamm.lithium_ion.MPM()]
 
         # reduce number of particle sizes, for a crude discretization

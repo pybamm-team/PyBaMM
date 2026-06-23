@@ -1,6 +1,4 @@
-#
-# Tests for the jacobian methods for two-dimensional objects
-#
+"""Tests for the jacobian methods for two-dimensional objects."""
 
 import numpy as np
 import pytest

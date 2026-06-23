@@ -10,10 +10,7 @@ from pathlib import Path
 
 import pybamm
 
-# Repo-root files (e.g. CHANGELOG.md) live at the monorepo root; this script
-# sits in <repo-root>/scripts/, so the repo root is its parent's parent.
-# Package-level files (e.g. CITATION.cff) live with the pybamm package and are
-# located via pybamm.root_dir() (which returns packages/pybamm in the monorepo).
+# Repo-root files are at parent's parent; package files located via pybamm.root_dir()
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 

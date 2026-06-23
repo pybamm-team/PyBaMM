@@ -1,6 +1,4 @@
-#
 # Class for total active material volume fraction, for models with multiple phases
-#
 import pybamm
 
 

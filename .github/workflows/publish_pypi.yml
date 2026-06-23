@@ -8,9 +8,7 @@ permissions: {}
 
 jobs:
   build:
-    # Monorepo: this workflow publishes ONLY pybamm. Releases are discriminated
-    # by tag namespace now that pybamm and pybammsolvers share a repository
-    # (the old `github.repository` guard no longer distinguishes them).
+    # Monorepo: publishes ONLY pybamm (tag namespace `pybamm-v` distinguishes from pybammsolvers)
     if: startsWith(github.event.release.tag_name, 'pybamm-v')
     runs-on: ubuntu-latest
     permissions:

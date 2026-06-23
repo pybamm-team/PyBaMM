@@ -1,6 +1,4 @@
-#
 # Class for leading-order oxygen diffusion
-#
 import pybamm
 
 from .base_oxygen_diffusion import BaseModel

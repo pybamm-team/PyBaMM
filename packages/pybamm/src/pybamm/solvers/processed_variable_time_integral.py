@@ -53,9 +53,8 @@ class ProcessedVariableTimeIntegral:
         inputs,
         sensitivities,
     ) -> np.ndarray:
-        # post fix for discrete time integral won't give correct result
-        # if ts are not equal to the discrete times. Raise error
-        # in this case
+        # Discrete method requires solution times to match discrete times exactly;
+        # raise error if they do not
         if self.method == "discrete":
             if not (
                 len(t_pts) == len(self.discrete_times)

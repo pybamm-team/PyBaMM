@@ -251,9 +251,8 @@ class ParameterValues:
             )
 
         if target_soc is None:
-            # Seed the stoichiometric limits (full charge: negative phases at
-            # theta_max, positive at theta_min). Used as-is when no initial SOC is
-            # given; otherwise overridden by set_initial_state below.
+            # Seed stoichiometric limits (full charge: neg at theta_max, pos at theta_min).
+            # Used as-is when no initial SOC; otherwise overridden by set_initial_state.
             for bpx_electrode, domain, sto_bound in (
                 (
                     bpx.parameterisation.negative_electrode,
@@ -278,10 +277,8 @@ class ParameterValues:
                     ] = sto * c_max
             param = cls(pybamm_dict)
 
-            # Honor a BPX initial state-of-charge, overriding the full-charge
-            # default. Via set_initial_state (not get_electrode_concentrations) to
-            # support blended electrodes; float() as the composite SOH solver
-            # rejects an int SOC.
+            # Honor BPX initial SOC (overrides full-charge default). Via set_initial_state
+            # for blended electrodes; float() as SOH solver rejects int SOC.
             ic = bpx.state.initial_conditions if bpx.state is not None else None
             initial_soc = ic.initial_soc if ic is not None else None
             if initial_soc is not None:

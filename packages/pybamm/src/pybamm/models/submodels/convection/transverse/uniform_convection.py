@@ -1,6 +1,4 @@
-#
 # Submodel for uniform convection in transverse directions
-#
 import pybamm
 
 from .base_transverse_convection import BaseTransverseModel

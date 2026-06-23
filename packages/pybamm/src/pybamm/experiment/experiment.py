@@ -66,9 +66,8 @@ class Experiment:
 
         steps_unprocessed = [cond for cycle in cycles for cond in cycle]
 
-        # Convert strings to pybamm.step.BaseStep objects
-        # We only do this once per unique step, to avoid unnecessary conversions
-        # Assign experiment period and temperature if not specified in step
+        # Convert strings to BaseStep objects once per unique step; assign period and
+        # temperature if not specified in step
         self.period = _convert_time_to_seconds(period)
         self.temperature = _convert_temperature_to_kelvin(temperature)
 

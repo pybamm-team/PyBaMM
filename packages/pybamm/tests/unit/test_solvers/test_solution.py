@@ -1,6 +1,4 @@
-#
 # Tests for the Solution class
-#
 import io
 import json
 import logging
@@ -33,9 +31,7 @@ class TestSolution:
         assert isinstance(sol.all_models[0], pybamm.BaseModel)
 
     def test_sub_solutions_no_self_ref_cycle(self):
-        # A fresh Solution must not appear in its own _sub_solutions list,
-        # otherwise the resulting refcount cycle would keep large solutions
-        # alive past their last strong reference.
+        # A fresh Solution must not appear in its own _sub_solutions list (refcount cycle).
         import weakref
 
         sol = pybamm.Solution(
@@ -55,9 +51,7 @@ class TestSolution:
         assert ref() is None
 
     def test_sub_solutions_concat_after_add(self):
-        # __add__ must record both operands as sub-solutions (the
-        # property's empty-list fallback to [self] is what makes this work
-        # even though neither operand stored itself).
+        # __add__ records both operands as sub-solutions via the property's [self] fallback.
         t = np.linspace(0, 1)
         y = np.tile(t, (2, 1))
         a = pybamm.Solution(t, y, pybamm.BaseModel(), {})
@@ -286,9 +280,7 @@ class TestSolution:
         sol2._all_t_evals = None
 
         sol_sum = sol1 + sol2
-        # When one is None, result should have all_t_evals == None,
-        # which means the constructor will set it to all_ts
-        # But in __add__, all_t_evals=None is passed, so in constructor it becomes all_ts
+        # all_t_evals=None from __add__ → constructor defaults to all_ts.
         assert sol_sum._all_t_evals is sol_sum._all_ts
 
     def test_add_solutions(self):
@@ -427,10 +419,7 @@ class TestSolution:
             _ = sol1 + sol2
 
     def test_add_duplicate_junction_raises(self):
-        # A segment like [10, 10, 11] passes per-segment sort (<= allows
-        # equal), so `other` is a valid solution; merging it onto a solution
-        # ending at 10 leaves a non-strictly-increasing junction after the
-        # repeated-boundary strip. The boundary re-scan must catch it.
+        # Single-sample duplicate [10, 10, 11] passes per-segment sort but violates strictly-increasing across boundaries.
         t1 = np.array([0.0, 5.0, 10.0])
         t2 = np.array([10.0, 10.0, 11.0])
         sol1 = pybamm.Solution(t1, np.tile(t1, (5, 1)), pybamm.BaseModel(), {})
@@ -497,9 +486,7 @@ class TestSolution:
         assert len(sol.all_ts) == 2
 
     def test_observable_computed_lazily(self):
-        # `observable` scans all_models; computing it eagerly on every
-        # construction makes accumulation O(N^2). It must be deferred to
-        # first access and then cached.
+        # Deferring observable to first access avoids O(N^2) accumulation cost.
         t1 = np.linspace(0, 1)
         t2 = np.linspace(1, 2)
         sol1 = pybamm.Solution(t1, np.tile(t1, (5, 1)), pybamm.BaseModel(), {})
@@ -868,14 +855,7 @@ class TestSolution:
         )
 
     def test_pickle_first_states_across_processes(self, tmp_path):
-        # Regression test for #5444: a Solution pickled in one process and
-        # unpickled in another (different PYTHONHASHSEED) must still allow
-        # access to variables in `all_first_states`. The bug was that
-        # Symbol._id is computed via hash() of strings, which is randomised
-        # per process; after unpickle the cached _id was inconsistent with
-        # the current process's hash, breaking Discretisation.y_slices
-        # lookups for any variable not already cached in
-        # model._variables_processed.
+        # Regression for #5444: PYTHONHASHSEED changes break Symbol._id cache across processes.
         pkl = tmp_path / "sol.pkl"
         # repr() so Windows backslashes survive being parsed as a Python literal
         pkl_literal = repr(str(pkl))
@@ -1552,11 +1532,7 @@ class TestSolution:
         np.testing.assert_array_equal(out.t, np.array([0.0, 0.5, 1.0]))
 
     def test_make_cycle_solution_matches_legacy(self):
-        # The cycle solution built via from_sub_solutions must match a manual fold.
-        # make_cycle_solution builds SummaryVariables, which reads
-        # `model.summary_variables`; a bare BaseModel only has `_summary_variables`
-        # and raises AttributeError, so use the same _DummyModel shim that the
-        # existing test_options_make_cycle_solution uses.
+        # make_cycle_solution uses SummaryVariables; a bare BaseModel raises on summary_variables, so use _DummyModel.
         import functools
         import operator
 
@@ -1573,9 +1549,7 @@ class TestSolution:
         assert cycle_sol.steps == steps
 
     def test_from_sub_solutions_trailing_duplicate_keeps_event_idx(self):
-        # __add__'s single-sample short-circuit keeps the running solution's
-        # closest_event_idx (not the duplicate's), so a trailing duplicate must
-        # not overwrite it. termination/events still come from the last segment.
+        # Trailing single-sample duplicate must not overwrite closest_event_idx (__add__ short-circuit).
         import functools
         import operator
 
@@ -1679,9 +1653,7 @@ class TestSolution:
         assert len(b._all_sensitivities["p"]) == 1
 
     def test_from_sub_solutions_skipped_duplicate_excluded_from_timers(self):
-        # A skipped single-sample boundary duplicate must not contribute its
-        # timers: __add__ short-circuits it to a copy, so its solve_time etc.
-        # are dropped. The duplicate sits between two real segments.
+        # Skipped single-sample duplicate must not contribute timers (__add__ short-circuit drops them).
         import functools
         import operator
 
@@ -1794,9 +1766,7 @@ class TestSolution:
         assert out.variables_returned == folded.variables_returned
 
     def test_from_sub_solutions_skipped_duplicate_preserves_hermite(self):
-        # Real segments are hermite; a trailing single-sample duplicate is not.
-        # __add__ short-circuits the duplicate to a copy, so the result stays
-        # hermite. The hermite flag must be derived from included segments only.
+        # Trailing single-sample duplicate must not break hermite flag (__add__ short-circuit).
         import functools
         import operator
 

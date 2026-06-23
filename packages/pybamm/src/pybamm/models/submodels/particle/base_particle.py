@@ -1,6 +1,4 @@
-#
 # Base class for particles
-#
 import pybamm
 
 

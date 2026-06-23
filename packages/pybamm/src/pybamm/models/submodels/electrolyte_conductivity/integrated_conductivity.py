@@ -1,6 +1,4 @@
-#
 # Composite electrolyte potential employing integrated Stefan-Maxwell
-#
 import pybamm
 
 from .base_electrolyte_conductivity import BaseElectrolyteConductivity

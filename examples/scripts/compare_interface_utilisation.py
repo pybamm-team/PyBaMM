@@ -1,6 +1,4 @@
-#
-# Example showing how to change the interface utilisation
-#
+"""Example showing how to change the interface utilisation."""
 
 import numpy as np
 

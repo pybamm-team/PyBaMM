@@ -1,6 +1,4 @@
-#
-# Tests for the lithium-ion half-cell DFN model
-#
+"""Tests for the lithium-ion half-cell DFN model."""
 
 import pybamm
 from tests import BaseUnitTestLithiumIonHalfCell

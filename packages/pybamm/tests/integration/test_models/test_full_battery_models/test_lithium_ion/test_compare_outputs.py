@@ -1,6 +1,4 @@
-#
-# Tests for the surface formulation
-#
+"""Tests for the surface formulation."""
 
 import numpy as np
 

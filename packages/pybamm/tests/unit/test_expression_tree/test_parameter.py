@@ -1,6 +1,4 @@
-#
-# Tests for the Parameter class
-#
+"""Tests for the Parameter class."""
 
 import numbers
 

@@ -1,6 +1,4 @@
-#
 # External circuit with an arbitrary function
-#
 import pybamm
 
 from .base_external_circuit import BaseModel
@@ -58,17 +56,15 @@ class FunctionControl(BaseModel):
         self.initial_conditions[i_cell] = self.param.Q
 
     def set_rhs(self, variables):
-        # External circuit submodels are always equations on the current
-        # The external circuit function should provide an update law for the current
+        # External circuit: always equations on current; function provides update law
         # based on current/voltage/power/etc.
         if "differential" in self.control:
             i_cell = variables["Current variable [A]"]
             self.rhs[i_cell] = self.external_circuit_function(variables)
 
     def set_algebraic(self, variables):
-        # External circuit submodels are always equations on the current
-        # The external circuit function should fix either the current, or the voltage,
-        # or a combination (e.g. I*V for power control)
+        # External circuit: always equations on current; function fixes current,
+        # voltage, or a combination (e.g. I*V for power control).
         if self.control == "algebraic":
             i_cell = variables["Current variable [A]"]
             self.algebraic[i_cell] = self.external_circuit_function(variables)

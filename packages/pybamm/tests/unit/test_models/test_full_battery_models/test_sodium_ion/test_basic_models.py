@@ -1,6 +1,5 @@
-#
-# Tests for the basic sodium-ion models
-#
+"""Tests for the basic sodium-ion models."""
+
 import pybamm
 
 

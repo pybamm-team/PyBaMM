@@ -1,6 +1,4 @@
-#
 # Class for varying active material volume fraction
-#
 import pybamm
 
 from .base_active_material import BaseModel
@@ -173,10 +171,7 @@ class LossActiveMaterial(BaseModel):
                 f"{Domain} electrode {phase_name}active material volume fraction change [s-1]"
             ]
 
-        # Loss of lithium due to loss of active material
-        # See eq 37 in "Sulzer, Valentin, et al. "Accelerated battery lifetime
-        # simulations using adaptive inter-cycle extrapolation algorithm."
-        # Journal of The Electrochemical Society 168.12 (2021): 120531.
+        # LLI due to loss of active material (Sulzer et al. JES 168.12 (2021) eq. 37)
         lli_due_to_lam = variables[
             f"Loss of lithium due to loss of {phase_name}active material "
             f"in {domain} electrode [mol]"

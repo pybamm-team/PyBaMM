@@ -1,6 +1,5 @@
-#
-# Compare different discretisations in the particle
-#
+"""Compare different discretisations in the particle."""
+
 import argparse
 
 import matplotlib.pyplot as plt

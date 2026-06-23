@@ -1,6 +1,4 @@
-#
 # Method for plotting/comparing summary variables
-#
 import numpy as np
 
 import pybamm

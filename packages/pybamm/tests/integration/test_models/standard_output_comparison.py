@@ -1,6 +1,5 @@
-#
-# Tests comparing model outputs for standard variables
-#
+"""Tests comparing model outputs for standard variables."""
+
 import numpy as np
 
 import pybamm
@@ -121,10 +120,8 @@ class VariablesComparison(BaseOutputComparison):
     def test_all(self):
         # Concentrations
         self.compare("Electrolyte concentration [mol.m-3]")
-        # self.compare("Reduced cation flux")
+        # self.compare("Reduced cation flux")  # commented out
         # Potentials
-        # Some of these are 'average' but aren't expected to be the same across all
-        # models
         self.compare("X-averaged reaction overpotential [V]")
         self.compare("X-averaged negative electrode open-circuit potential [V]")
         self.compare("X-averaged positive electrode open-circuit potential [V]")

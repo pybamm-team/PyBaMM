@@ -87,9 +87,7 @@ def string(text, **kwargs):
             "instead."
         )
     else:
-        # split by what is before and after "at"
-        # e.g. "Charge at 4 A" -> ["Charge", "4 A"]
-        # e.g. "Discharge at C/2" -> ["Discharge", "C/2"]
+        # Split instruction/value by " at " (e.g. "Charge at 4 A" -> ["Charge", "4 A"])
         instruction, value_string = text.split(" at ")
         if instruction == "Charge":
             sign = -1

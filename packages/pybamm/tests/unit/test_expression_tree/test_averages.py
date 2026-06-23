@@ -1,6 +1,4 @@
-#
 # Tests for the Unary Operator classes
-#
 import numpy as np
 import pytest
 from hypothesis import given
@@ -405,12 +403,8 @@ class TestUnaryOperators:
         assert pybamm.z_average(a + b) == pybamm.z_average(a) + pybamm.z_average(b)
         assert pybamm.z_average(a - b) == pybamm.z_average(a) - pybamm.z_average(b)
 
-    # --- Generalised constant-factor pull-out -------------------------------
-    #
-    # ``_separable_average`` pulls factors that are constant under the
-    # integration out of every averaging operator (x, yz, z, r, size). The
-    # intent is that codegen evaluates the constant side once as a scalar
-    # rather than re-evaluating it at every integration node.
+    # --- Generalised constant-factor pull-out ---
+    # _separable_average pulls constant factors out of averaging operators for codegen efficiency.
 
     def test_is_constant_predicates(self):
         # cc / r predicates pick up the right leaf domains.
@@ -476,9 +470,7 @@ class TestUnaryOperators:
         assert pybamm.r_average(v_part / 2) == pybamm.RAverage(v_part) / 2
         assert pybamm.r_average(pybamm.t * v_part) == pybamm.t * pybamm.RAverage(v_part)
 
-        # cc-domain variable broadcast onto the particle domain is r-constant.
-        # The broadcast is also r-averaged (reducing the particle dimension),
-        # so the pulled-out factor collapses back to ``v_cc``.
+        # cc-domain broadcast onto particle is r-constant; r-averaging collapses it back to v_cc.
         v_cc = pybamm.Variable("v_cc", domain="current collector")
         broad_cc = pybamm.PrimaryBroadcast(v_cc, "negative particle")
         out = pybamm.r_average(broad_cc * v_part)
@@ -493,10 +485,7 @@ class TestUnaryOperators:
         assert len(ravg_nodes) == 1
 
     def test_size_average_does_not_factor_constants(self):
-        # size_average is a weighted average with distribution-dependent weight
-        # (f_a_dist). Factoring out constants would require regenerating f_a_dist
-        # for each sub-expression, which can differ by domain and break conservation.
-        # Therefore, size_average does NOT factor out size-constant operands.
+        # size_average has distribution-dependent weights; factoring constants would break conservation.
         v_size = pybamm.Variable("v_size", domain="negative particle size")
 
         # All of these should remain as a single SizeAverage, not split

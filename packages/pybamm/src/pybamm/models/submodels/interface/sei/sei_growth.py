@@ -1,6 +1,4 @@
-#
 # Class for SEI growth
-#
 import pybamm
 
 from .base_sei import BaseModel
@@ -101,11 +99,8 @@ class SEIGrowth(BaseModel):
                 f"{Domain} electrode surface potential difference [V]"
             ]
 
-        # Look for current that contributes to the -IR drop
-        # If we can't find the interfacial current density from the main reaction, j,
-        # it's ok to fall back on the total interfacial current density, j_tot
-        # This should only happen when the interface submodel is "InverseButlerVolmer"
-        # or "InverseLinear" in which case j = j_tot (uniform) anyway
+        # Look for current contributing to -IR drop; fall back on j_tot if j is
+        # unavailable (only for InverseButlerVolmer/InverseLinear where j = j_tot)
         if f"{Domain} electrode interfacial current density [A.m-2]" in variables:
             j = variables[f"{Domain} electrode interfacial current density [A.m-2]"]
         elif self.reaction_loc == "interface":
@@ -139,11 +134,7 @@ class SEIGrowth(BaseModel):
             eta_inner = delta_phi - phase_param.U_sei
             j_sei = (eta_inner < 0) * phase_param.kappa_inner * eta_inner / L_sei
 
-        elif SEI_option == "tunnelling limited":  #
-            # This comes from eq.25 in Tang, M., Lu, S. and Newman, J., 2012.
-            # Experimental and theoretical investigation of solid-electrolyte-interphase
-            # formation mechanisms on glassy carbon.
-            # Journal of The Electrochemical Society, 159(11), p.A1775.
+        elif SEI_option == "tunnelling limited":  # Tang et al. 2012, eq.25
             j_sei = (
                 -phase_param.j0_sei
                 * pybamm.exp(-alpha_SEI * F_RT * delta_phi)
@@ -151,10 +142,7 @@ class SEIGrowth(BaseModel):
             )
 
         elif SEI_option == "VonKolzenberg2020":
-            # Equation 19 in
-            # von Kolzenberg L, Latz A, Horstmann B.
-            # Solid electrolyte interphase during battery cycling:
-            # Theory of growth regimes. ChemSusChem. 2020 Aug 7;13(15):3901-10.
+            # Equation 19 in von Kolzenberg et al. 2020, ChemSusChem 13(15):3901-10.
             eta_bar = F_RT * (delta_phi)
             L_diff = (
                 phase_param.D_li
@@ -187,16 +175,8 @@ class SEIGrowth(BaseModel):
             j_sei = -phase_param.D_sol * phase_param.c_sol * self.param.F / L_sei
 
         elif SEI_option.startswith("ec reaction limited"):
-            # we have a linear system for j and c
-            #  c = c_0 + j * L / F / D          [1] (eq 11 in the Yang2017 paper)
-            #  j = - F * c * k_exp()            [2] (eq 10 in the Yang2017 paper, factor
-            #                                        of a is outside the defn of j here)
-            # [1] into [2] gives (F cancels in the second terms)
-            #  j = - F * c_0 * k_exp() - j * L * k_exp() / D
-            # rearrange
-            #  j = -F * c_0* k_exp() / (1 + L * k_exp() / D)
-            #  c_ec = c_0 - L * k_exp() / D / (1 + L * k_exp() / D)
-            #       = c_0 / (1 + L * k_exp() / D)
+            # Linear system for j and c from Yang2017 eq.10/11, solved as:
+            # j = -F*c_0*k_exp/(1 + L*k_exp/D), c_ec = c_0/(1 + L*k_exp/D)
             k_exp = phase_param.k_sei * pybamm.exp(-alpha_SEI * F_RT * eta_SEI)
             L_over_D = L_sei / phase_param.D_ec
             c_0 = phase_param.c_ec_0
@@ -261,11 +241,8 @@ class SEIGrowth(BaseModel):
                 "surface area to volume ratio [m-1]"
             ]
 
-        # For SEI on cracks, need to use crack area instead of surface area
-        # To do this, use the roughness parameter, which works as follows:
-        # a + a_cr = roughness * a
-        # Rearrange to get a_cr = (roughness - 1) * a
-        # This is done here by replacing a with a_cr using a *= roughness - 1
+        # For SEI on cracks, replace surface area with crack area via roughness:
+        # a_cr = (roughness - 1) * a, implemented as a *= roughness - 1
         if self.reaction == "SEI on cracks":
             if self.reaction_loc == "x-average":
                 roughness = variables[f"X-averaged {domain} electrode roughness ratio"]
@@ -273,9 +250,8 @@ class SEIGrowth(BaseModel):
                 roughness = variables[f"{Domain} electrode roughness ratio"]
             a *= roughness - 1  # Replace surface area with crack area
 
-        # a * j_sei / F is the rate of consumption of Li moles by SEI reaction
-        # 1/z_sei converts from Li moles to SEI moles (z_sei=Li mol per sei mol)
-        # a * j_sei / (F * z_sei) = rate of consumption of SEI moles by SEI reaction
+        # a*j_sei/F = Li mole consumption rate; 1/z_sei converts to SEI moles;
+        # dcdt_sei = a*j_sei/(F*z_sei) = SEI mole consumption rate
         dcdt_sei = a * j_sei / (self.param.F * self.phase_param.z_sei)
         # Therefore, -a * j_sei / (F * z_sei) = rate of creation of SEI moles
         self.rhs = {c_sei: -dcdt_sei}

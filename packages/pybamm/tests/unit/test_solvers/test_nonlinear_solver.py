@@ -141,11 +141,8 @@ class TestNonlinearSolver:
         # Sanity: live C++ solver was built and attached to the model.
         assert model.algebraic_root_solver
 
-        # Pickle the model alongside the solver: BaseSolver caches the
-        # model object identity in ``_model_set_up``, so reusing the same
-        # solver requires the same (unpickled) model instance. The native
-        # Newton solver attached to the model is dropped on pickle and
-        # rebuilt lazily on the next solve.
+        # BaseSolver caches model identity in _model_set_up; native Newton solver
+        # is dropped on pickle and rebuilt lazily on next solve
         restored_solver, restored_model = pickle.loads(pickle.dumps((solver, model)))
         assert not restored_model.algebraic_root_solver
 

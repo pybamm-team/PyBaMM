@@ -1,6 +1,4 @@
-#
 # Class for cracking
-#
 import numpy as np
 
 import pybamm

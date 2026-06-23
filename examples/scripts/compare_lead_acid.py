@@ -1,6 +1,5 @@
-#
-# Compare lead-acid battery models
-#
+"""Compare lead-acid battery models."""
+
 import pybamm
 
 pybamm.set_logging_level("INFO")

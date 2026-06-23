@@ -32,11 +32,7 @@ if(NOT WIN32 AND NOT DEFINED SUNDIALS_ROOT)
     set(SUNDIALS_ROOT "${CMAKE_SOURCE_DIR}/.idaklu")
 endif()
 
-# Auto-build the vendored SUNDIALS/SuiteSparse on a from-source build, so a clean
-# checkout with submodules needs no manual pre-step. Skipped on Windows (vcpkg),
-# and skipped once the libraries already exist — under editable.rebuild CMake
-# reconfigures on every import, and re-requiring the submodules (or re-running the
-# bootstrap) for an already-built tree would needlessly fail or repeat work.
+# Auto-build vendored SUNDIALS/SuiteSparse on from-source builds; skipped on Windows (vcpkg) or if libs exist.
 if(NOT WIN32 AND NOT DEFINED VCPKG_ROOT_DIR)
     file(GLOB _sundials_prebuilt
         "${SUNDIALS_ROOT}/lib/libsundials_idas.*"
@@ -179,11 +175,7 @@ if (${USE_PYTHON_CASADI})
         message("Found Python CasADi library directory: ${CASADI_LIB_DIR}")
         target_link_directories(idaklu PRIVATE ${CASADI_LIB_DIR})
 
-        # RPATH entries for `pybammsolvers/idaklu.<abi>.so`:
-        #   @loader_path/../casadi / $ORIGIN/../casadi: finds libcasadi at
-        #     runtime.  .idaklu/{lib,lib64}: vendored SUNDIALS/SuiteSparse
-        #     (used at runtime and by auditwheel/delocate at repair time).
-        #     Windows uses vcpkg static linking; no RPATH needed.
+        # RPATH: @loader_path/../casadi + .idaklu/{lib,lib64} for runtime + wheel repair; Windows uses vcpkg static.
         if (APPLE)
             set(IDAKLU_INSTALL_RPATH
                 "@loader_path/../casadi"
@@ -224,9 +216,7 @@ else ()
     endif()
 endif ()
 
-# Math flags for the IDAKLU target.
-# -fno-math-errno: allows inlining fabs/fmax/sqrt without errno-setting overhead.
-# -fno-trapping-math: allows reordering around potential FP exceptions.
+# Math flags: -fno-math-errno (inline fabs/fmax/sqrt), -fno-trapping-math (reorder around FP exceptions).
 if (NOT MSVC)
     target_compile_options(idaklu PRIVATE
         -fno-math-errno
@@ -261,9 +251,7 @@ message("SUNDIALS found in ${SUNDIALS_INCLUDE_DIR}: ${SUNDIALS_LIBRARIES}")
 target_include_directories(idaklu PRIVATE ${SUNDIALS_INCLUDE_DIR})
 target_link_libraries(idaklu PRIVATE ${SUNDIALS_LIBRARIES})
 
-# link suitesparse
-# if using vcpkg, use config mode to
-# find suitesparse. Otherwise, use FindSuiteSparse module
+# Link SuiteSparse: config mode for vcpkg, FindSuiteSparse module otherwise.
 if (DEFINED VCPKG_ROOT_DIR)
     find_package(SuiteSparse CONFIG REQUIRED)
 else ()

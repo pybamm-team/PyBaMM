@@ -1,6 +1,5 @@
-#
-# Tests for the lithium-ion DFN model
-#
+"""Tests for the lithium-ion DFN model."""
+
 import pytest
 
 import pybamm

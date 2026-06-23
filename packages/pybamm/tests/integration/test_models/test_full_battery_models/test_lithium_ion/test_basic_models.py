@@ -1,6 +1,5 @@
-#
-# Test basic model classes
-#
+"""Test basic model classes."""
+
 import pytest
 
 import pybamm

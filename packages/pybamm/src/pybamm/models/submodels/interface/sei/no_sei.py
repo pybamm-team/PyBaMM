@@ -1,6 +1,4 @@
-#
 # Class for no SEI
-#
 import pybamm
 
 from .base_sei import BaseModel

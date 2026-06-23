@@ -86,16 +86,10 @@ class SpectralVolume(pybamm.FiniteVolume):
 
         """
 
-        # While Spectral Volume in general may use any point
-        # distribution for CVs, the Chebyshev nodes are the most stable.
-        # The differentiation matrices are only implemented for those.
+        # Chebyshev nodes are most stable for Spectral Volume CVs
         edges = np.flip(self.chebyshev_collocation_points(self.order + 1))
 
-        # Nomenclature in the reference:
-        # c[j,l] are the coefficients from the reference.
-        # The index of the CV boundaries j ranges from 0 to self.order.
-        # The index of the CVs themselves l ranges from 1 to self.order.
-        # l ranges from 0 to self.order - 1 here.
+        # c[j,l]: coefficients from reference; j=0..order (boundaries), l=0..order-1 (CVs)
         c = np.empty([self.order + 1, self.order])
         # h[l] are the lengths of the CVs.
         h = [edges[i + 1] - edges[i] for i in range(self.order)]
@@ -163,11 +157,7 @@ class SpectralVolume(pybamm.FiniteVolume):
         # number of repeats
         second_dim_repeats = self._get_auxiliary_domain_repeats(domains)
 
-        # generate full matrix from the submatrix
-        # Convert to csr_matrix so that we can take the index
-        # (row-slicing), which is not supported by the default kron
-        # format. Note that this makes column-slicing inefficient,
-        # but this should not be an issue.
+        # Generate full matrix from submatrix (convert to csr_matrix for row-slicing)
         matrix = csr_matrix(kron(eye(second_dim_repeats, dtype=np.float64), sub_matrix))
 
         return pybamm.Matrix(matrix)
@@ -231,9 +221,8 @@ class SpectralVolume(pybamm.FiniteVolume):
         for p in range(dod):
             temp = (prefactors.T * np.diag(temp_diff)).T - temp_diff
             temp_diff = (p + 1) * inverse_difference * temp
-            # Negative sum trick: the rows of the exact matrices sum to
-            # zero. The diagonal gets less accurate with this, but the
-            # approximation of the differential will be better overall.
+            # Negative sum trick: exact matrix rows sum to zero; diagonal less
+            # accurate but differential approximation is better overall.
             for i in range(noe):
                 temp_diff[i, i] = -np.sum(np.delete(temp_diff[i], i))
             differentiation_matrices.append(temp_diff.copy())
@@ -301,9 +290,7 @@ class SpectralVolume(pybamm.FiniteVolume):
         """
         submesh = self.mesh[domain]
 
-        # Obtain the Chebyshev differentiation matrix.
-        # Flip it, since it is defined for the Chebyshev
-        # collocation points in descending order.
+        # Obtain Chebyshev differentiation matrix (flipped for descending order)
         chebdiff = np.flip(
             self.chebyshev_differentiation_matrices(self.order + 1, 1)[0]
         )
@@ -322,11 +309,8 @@ class SpectralVolume(pybamm.FiniteVolume):
         # The 2 scales from [-1,1] (Chebyshev default) to [0,1].
         # e = 2 / submesh.d_sv_edges
         e = 2 / d_sv_edges
-        # This factor scales the contribution of the reconstructed
-        # gradient to the finite difference at the SV edges.
-        # 0.0 is the value that makes it work with the "penalty_matrix".
-        # 0.5 is the value that makes it work without it, but remember,
-        # that effectively removes any implicit continuity conditions.
+        # f scales the reconstructed gradient contribution: 0.0 works with penalty_matrix,
+        # 0.5 works without it but drops the implicit continuity conditions
         f = 0.0
         # Here, the differentials are scaled to the SV.
         sub_matrix_raw = csr_matrix(kron(diags(e), chebdiff))
@@ -356,11 +340,7 @@ class SpectralVolume(pybamm.FiniteVolume):
         # number of repeats
         second_dim_repeats = self._get_auxiliary_domain_repeats(domains)
 
-        # generate full matrix from the submatrix
-        # Convert to csr_matrix so that we can take the index
-        # (row-slicing), which is not supported by the default kron
-        # format. Note that this makes column-slicing inefficient,
-        # but this should not be an issue.
+        # Generate full matrix from submatrix (convert to csr_matrix for row-slicing)
         matrix = csr_matrix(kron(eye(second_dim_repeats, dtype=np.float64), sub_matrix))
 
         return pybamm.Matrix(matrix)
@@ -400,88 +380,13 @@ class SpectralVolume(pybamm.FiniteVolume):
         # number of repeats
         second_dim_repeats = self._get_auxiliary_domain_repeats(domains)
 
-        # generate full matrix from the submatrix
-        # Convert to csr_matrix so that we can take the index
-        # (row-slicing), which is not supported by the default kron
-        # format. Note that this makes column-slicing inefficient, but
-        # this should not be an issue.
+        # Generate full matrix from submatrix (convert to csr_matrix for row-slicing)
         matrix = csr_matrix(kron(eye(second_dim_repeats, dtype=np.float64), sub_matrix))
 
         return pybamm.Matrix(matrix)
 
-    # def spectral_volume_internal_neumann_condition(
-    #    self, left_symbol_disc, right_symbol_disc, left_mesh, right_mesh
-    # ):
-    #    """
-    #    A method to find the internal neumann conditions between two
-    #    symbols on adjacent subdomains. This method is never called,
-    #    it's just here to show how a reconstructed gradient-based
-    #    internal neumann_condition would look like.
-    #    Parameters
-    #    ----------
-    #    left_symbol_disc : :class:`pybamm.Symbol`
-    #        The discretised symbol on the left subdomain
-    #    right_symbol_disc : :class:`pybamm.Symbol`
-    #        The discretised symbol on the right subdomain
-    #    left_mesh : list
-    #        The mesh on the left subdomain
-    #    right_mesh : list
-    #        The mesh on the right subdomain
-    #    """
-    #
-    #    second_dim_repeats = self._get_auxiliary_domain_repeats(
-    #        left_symbol_disc.domains
-    #    )
-    #
-    #    if second_dim_repeats != self._get_auxiliary_domain_repeats(
-    #        right_symbol_disc.domains
-    #    ):
-    #        raise pybamm.DomainError(
-    #            "Number of secondary points in subdomains do not match"
-    #        )
-    #
-    #    # Use the Spectral Volume reconstruction and differentiation.
-    #    left_reconstruction_matrix = self.cv_boundary_reconstruction_matrix(
-    #        left_symbol_disc.domain,
-    #        left_symbol_disc.auxiliary_domains
-    #    )
-    #    left_gradient_matrix = self.gradient_matrix(
-    #        left_symbol_disc.domain,
-    #        left_symbol_disc.auxiliary_domains
-    #    ).entries[-1]
-    #    left_matrix = left_gradient_matrix @ left_reconstruction_matrix
-    #
-    #    right_reconstruction_matrix = self.cv_boundary_reconstruction_matrix(
-    #        right_symbol_disc.domain,
-    #        right_symbol_disc.auxiliary_domains
-    #    )
-    #    right_gradient_matrix = self.gradient_matrix(
-    #        right_symbol_disc.domain,
-    #        right_symbol_disc.auxiliary_domains
-    #    ).entries[0]
-    #    right_matrix = right_gradient_matrix @ right_reconstruction_matrix
-    #
-    #    # Remove domains to avoid clash
-    #    left_domain = left_symbol_disc.domain
-    #    right_domain = right_symbol_disc.domain
-    #    left_auxiliary_domains = left_symbol_disc.auxiliary_domains
-    #    right_auxiliary_domains = right_symbol_disc.auxiliary_domains
-    #    left_symbol_disc.clear_domains()
-    #    right_symbol_disc.clear_domains()
-    #
-    #    # Spectral Volume derivative (i.e., the mean of the two
-    #    # reconstructed gradients from each side)
-    #    # Note that this is the version without "penalty_matrix".
-    #    dy_dx = 0.5 * (right_matrix @ right_symbol_disc
-    #                   + left_matrix @ left_symbol_disc)
-    #
-    #    # Change domains back
-    #    left_symbol_disc.domain = left_domain
-    #    right_symbol_disc.domain = right_domain
-    #    left_symbol_disc.auxiliary_domains = left_auxiliary_domains
-    #    right_symbol_disc.auxiliary_domains = right_auxiliary_domains
-    #
-    #    return dy_dx
+    # def spectral_volume_internal_neumann_condition(...):
+    #    Find internal Neumann conditions between symbols on adjacent subdomains (unused).
 
     def replace_dirichlet_values(self, symbol, discretised_symbol, bcs):
         """
@@ -553,15 +458,10 @@ class SpectralVolume(pybamm.FiniteVolume):
             )
 
         bcs_vector = lbc_vector + rbc_vector
-        # Need to match the domain. E.g. in the case of the boundary
-        # condition on the particle, the gradient has domain particle
-        # but the bcs_vector has domain electrode, since it is a
-        # function of the macroscopic variables
+        # Match domain (particle gradient has electrode-domain bcs_vector)
         bcs_vector.copy_domains(discretised_symbol)
 
-        # Make matrix which makes "gaps" at the boundaries into which
-        # the known Dirichlet values will be added. If the boundary
-        # condition is not Dirichlet, it acts as identity.
+        # Make matrix to insert Dirichlet values at boundaries (identity if not Dirichlet)
         sub_matrix = diags(
             [float(lbc_type != "Dirichlet")]
             + [1.0 for i in range(n - 2)]
@@ -569,11 +469,7 @@ class SpectralVolume(pybamm.FiniteVolume):
             dtype=None,
         )
 
-        # repeat matrix for secondary dimensions
-        # Convert to csr_matrix so that we can take the index
-        # (row-slicing), which is not supported by the default kron
-        # format. Note that this makes column-slicing inefficient, but
-        # this should not be an issue.
+        # Repeat matrix for secondary dimensions (convert to csr_matrix for row-slicing)
         matrix = csr_matrix(kron(eye(second_dim_repeats, dtype=np.float64), sub_matrix))
 
         new_symbol = pybamm.Matrix(matrix) @ discretised_symbol + bcs_vector
@@ -650,15 +546,10 @@ class SpectralVolume(pybamm.FiniteVolume):
             )
 
         bcs_vector = lbc_vector + rbc_vector
-        # Need to match the domain. E.g. in the case of the boundary
-        # condition on the particle, the gradient has domain particle
-        # but the bcs_vector has domain electrode, since it is a
-        # function of the macroscopic variables
+        # Match domain (particle gradient has electrode-domain bcs_vector)
         bcs_vector.copy_domains(discretised_gradient)
 
-        # Make matrix which makes "gaps" at the boundaries into which
-        # the known Neumann values will be added. If the boundary
-        # condition is not Neumann, it acts as identity.
+        # Make matrix to insert Neumann values at boundaries (identity if not Neumann)
         sub_matrix = diags(
             [float(lbc_type != "Neumann")]
             + [1.0 for i in range(n - 2)]
@@ -666,11 +557,7 @@ class SpectralVolume(pybamm.FiniteVolume):
             dtype=None,
         )
 
-        # repeat matrix for secondary dimensions
-        # Convert to csr_matrix so that we can take the index
-        # (row-slicing), which is not supported by the default kron
-        # format. Note that this makes column-slicing inefficient, but
-        # this should not be an issue.
+        # Repeat matrix for secondary dimensions (convert to csr_matrix for row-slicing)
         matrix = csr_matrix(kron(eye(second_dim_repeats, dtype=np.float64), sub_matrix))
 
         new_gradient = pybamm.Matrix(matrix) @ discretised_gradient + bcs_vector

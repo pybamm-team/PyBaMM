@@ -1,6 +1,4 @@
-#
 # Tests for the lithium-ion electrode-specific SOH model
-#
 
 import pytest
 
@@ -321,9 +319,7 @@ class TestElectrodeSOHComposite:
         pvals = pybamm.ParameterValues("Chen2020_composite")
         options = {"particle phases": ("2", "1")}
         param = pybamm.LithiumIonParameters(options=options)
-        # Solving ESOH with the original Chen2020_composite parameters gives a 0% SOC
-        # voltage of 2.53V not 2.5V. We fix this by reducing the secondary initial
-        # concentration, which adjusts Q_Li to make the system consistent.
+        # Chen2020_composite gives 2.53V at 0% SOC; reduce secondary concentration to fix (adjusts Q_Li).
         pvals.update(
             {
                 "Secondary: Initial concentration in negative electrode [mol.m-3]": 2.3512e05
@@ -393,9 +389,7 @@ class TestElectrodeSOHComposite:
 
     def test_chen2020_composite_defaults_hysteresis(self):
         pvals = pybamm.ParameterValues("Chen2020_composite")
-        # Solving ESOH with the original Chen2020_composite parameters gives a 0% SOC
-        # voltage of 2.53V not 2.5V. We fix this by reducing the secondary initial
-        # concentration, which adjusts Q_Li to make the system consistent.
+        # Chen2020_composite gives 2.53V at 0% SOC; reduce secondary concentration to fix (adjusts Q_Li).
         pvals.update(
             {
                 "Secondary: Initial concentration in negative electrode [mol.m-3]": 2.3512e05
@@ -564,9 +558,7 @@ class TestElectrodeSOHHalfCell:
         # Start with Chen2020_composite parameters
         params = pybamm.ParameterValues("Chen2020_composite")
 
-        # Convert essential negative electrode parameters to positive electrode parameters
-        # Remove unnecessary parameters: particle diffusivity, radius, exchange current density
-        # Primary phase (Graphite-like) -> Primary positive
+        # Convert essential negative electrode params to positive; remove particle diffusivity/radius/exchange current density.
         params.update(
             {
                 "Primary: Maximum concentration in positive electrode [mol.m-3]": params[

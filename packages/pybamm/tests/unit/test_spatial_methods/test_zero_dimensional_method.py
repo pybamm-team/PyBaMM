@@ -1,6 +1,5 @@
-#
-# Test for the base Spatial Method class
-#
+"""Test for the base Spatial Method class."""
+
 import numpy as np
 
 import pybamm

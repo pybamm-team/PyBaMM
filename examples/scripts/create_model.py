@@ -1,6 +1,4 @@
-# This script is intended to be a stripped back version of the
-# 'docs/source/examples/notebooks/create-model.ipnb' so for more details please see
-# that notebook
+# Stripped-back version of docs/source/examples/notebooks/create-model.ipynb
 
 import matplotlib.pyplot as plt
 import numpy as np

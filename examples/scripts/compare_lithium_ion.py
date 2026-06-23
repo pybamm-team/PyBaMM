@@ -1,6 +1,5 @@
-#
-# Compare lithium-ion battery models
-#
+"""Compare lithium-ion battery models."""
+
 import pybamm
 
 pybamm.set_logging_level("INFO")

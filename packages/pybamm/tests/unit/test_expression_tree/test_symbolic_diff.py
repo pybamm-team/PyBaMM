@@ -1,6 +1,4 @@
-#
-# Tests for the symbolic differentiation methods
-#
+"""Tests for the symbolic differentiation methods."""
 
 import numpy as np
 import pytest

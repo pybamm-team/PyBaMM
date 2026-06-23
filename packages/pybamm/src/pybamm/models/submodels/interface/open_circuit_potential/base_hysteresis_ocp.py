@@ -1,6 +1,4 @@
-#
 # Base class for open-circuit potential with hysteresis
-#
 import pybamm
 
 from . import BaseOpenCircuitPotential
@@ -89,11 +87,8 @@ class BaseHysteresisOpenCircuitPotential(BaseOpenCircuitPotential):
 
             H = U_lith - U_delith
 
-            # Under particle-size distribution the OCPs above live on the
-            # "<domain> particle size" domain. Publish the distribution-named
-            # variables at that shape, and size-average before publishing under
-            # the electrode-level names so they line up with other
-            # electrode-domain variables (e.g. in the thermal submodel).
+            # Under particle-size distribution, OCPs live on "<domain> particle size"
+            # domain; publish distribution-named variables at that shape, size-average
             if domain_options["particle size"] == "distribution":
                 variables.update(
                     {

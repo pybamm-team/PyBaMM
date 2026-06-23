@@ -1,6 +1,4 @@
-#
-# Tests for the Base Solver class
-#
+"""Tests for the Base Solver class."""
 
 import re
 

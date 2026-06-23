@@ -1,6 +1,4 @@
-#
 # Interface for discretisation
-#
 import itertools
 from collections import OrderedDict, defaultdict
 
@@ -219,9 +217,7 @@ class Discretisation:
         model_disc.initial_conditions = ics
         model_disc.concatenated_initial_conditions = concat_ics
 
-        # Discretise variables (applying boundary conditions)
-        # Note that we **do not** discretise the keys of model.rhs,
-        # model.initial_conditions and model.boundary_conditions
+        # Discretise values (not keys) of model.rhs, initial_conditions, boundary_conditions
         pybamm.logger.verbose(f"Discretise variables for {model.name}")
 
         # pre-process variables so that all state variables are included
@@ -632,9 +628,7 @@ class Discretisation:
             for tab in ["negative tab", "positive tab"]:
                 if any(tab in side for side in list(bcs.keys())):
                     bcs[mesh.tabs[tab]] = bcs.pop(tab)
-            # if there was a tab at either end, then the boundary conditions
-            # have now been set on "left" and "right" as required by the spatial
-            # method, so there is no need to further modify the bcs dict
+            # Tabs at both ends already set "left" and "right" as required
             if all(side in list(bcs.keys()) for side in ["left", "right"]):
                 pass
             # if both tabs are located at z=0 then the "right" boundary condition
@@ -669,17 +663,13 @@ class Discretisation:
         # Discretise right-hand sides, passing domain from variable
         processed_rhs = self.process_dict(model.rhs)
 
-        # Concatenate rhs into a single state vector
-        # Need to concatenate in order as the ordering of equations could be different
-        # in processed_rhs and model.rhs
+        # Concatenate rhs into single state vector; preserve order (may differ from model.rhs)
         processed_concatenated_rhs = self._concatenate_in_order(processed_rhs)
 
         # Discretise and concatenate algebraic equations
         processed_algebraic = self.process_dict(model.algebraic)
 
-        # Concatenate algebraic into a single state vector
-        # Need to concatenate in order as the ordering of equations could be different
-        # in processed_algebraic and model.algebraic
+        # Concatenate algebraic into single state vector; preserve order (may differ from model.algebraic)
         processed_concatenated_algebraic = self._concatenate_in_order(
             processed_algebraic
         )
@@ -1057,9 +1047,7 @@ class Discretisation:
                 return spatial_method.delta_function(symbol, disc_child)
 
             elif isinstance(symbol, pybamm.BoundaryOperator):
-                # if boundary operator applied on "negative tab" or
-                # "positive tab" *and* the mesh is 1D then change side to
-                # "left" or "right" as appropriate
+                # For 1D meshes, map "negative/positive tab" side to "left"/"right"
                 if symbol.side in ["negative tab", "positive tab"]:
                     mesh = self.mesh[symbol.children[0].domain[0]]
                     if isinstance(mesh, pybamm.SubMesh1D):
@@ -1125,9 +1113,7 @@ class Discretisation:
             )
 
         elif isinstance(symbol, pybamm.Variable):
-            # add a try except block for a more informative error if a variable
-            # can't be found. This should usually be caught earlier by
-            # model.check_well_posedness, but won't be if debug_mode is False
+            # Try/except for informative error if variable not found (may bypass check_well_posedness)
             try:
                 y_slices = self.y_slices[symbol]
             except KeyError as error:

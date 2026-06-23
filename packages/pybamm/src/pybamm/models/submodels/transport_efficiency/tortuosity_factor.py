@@ -1,6 +1,4 @@
-#
 # Class for tortuosity factor transport_efficiency
-#
 import pybamm
 
 from .base_transport_efficiency import BaseModel

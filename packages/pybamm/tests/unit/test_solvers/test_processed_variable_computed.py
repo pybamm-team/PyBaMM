@@ -1,10 +1,4 @@
-#
-# Tests for the Processed Variable Computed class
-#
-# This class forms a container for variables (and sensitivities) calculated
-#  by the idaklu solver, and does not possesses any capability to calculate
-#  values itself since it does not have access to the full state vector
-#
+"""Tests for the Processed Variable Computed class (container for IDAKLU-calculated variables)."""
 
 import casadi
 import numpy as np
@@ -58,12 +52,7 @@ def process_and_check_2D_variable(
         [y_sol],
         pybamm.Solution(t_sol, y_sol, model, {}),
     )
-    # NB: ProcessedVariableComputed does not interpret y in the same way as
-    #  ProcessedVariable; a better test of equivalence is to check that the
-    #  results are the same between IDAKLUSolver with (and without)
-    #  output_variables. This is implemented in the integration test:
-    #    tests/integration/test_solvers/test_idaklu_solver.py
-    #    ::test_output_variables
+    # NB: ProcessedVariableComputed interprets y differently; equivalence tested in test_idaklu_solver.py::test_output_variables
     return y_sol, first_sol, second_sol, t_sol
 
 

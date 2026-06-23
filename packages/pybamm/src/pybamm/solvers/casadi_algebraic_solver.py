@@ -100,10 +100,8 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
         pybamm.logger.info(f"Start building {self.name}")
         y0 = model.y0_list[0]
 
-        # The casadi algebraic solver can read rhs equations, but leaves them unchanged
-        # i.e. the part of the solution vector that corresponds to the differential
-        # equations will be equal to the initial condition provided. This allows this
-        # solver to be used for initialising the DAE solvers
+        # Solver leaves differential equations unchanged (equal to initial condition),
+        # allowing use for DAE initialisation.
         if model.rhs == {}:
             len_rhs = 0
         elif model.len_rhs_and_alg == y0.shape[0]:
@@ -136,9 +134,8 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
 
         alg = model.casadi_algebraic(t_sym, y_sym, inputs_sym)
 
-        # Set constraints vector in the casadi format
-        # Constrain the unknowns. 0 (default): no constraint on ui, 1: ui >= 0.0,
-        # -1: ui <= 0.0, 2: ui > 0.0, -2: ui < 0.0.
+        # Casadi constraints: 0 (no constraint), 1 (ui >= 0), -1 (ui <= 0),
+        # 2 (ui > 0), -2 (ui < 0).
         model_alg_lb = model.bounds[0][len_rhs:]
         model_alg_ub = model.bounds[1][len_rhs:]
         constraints = np.zeros_like(model_alg_lb, dtype=int)
@@ -190,10 +187,8 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
         # Create casadi objects for the root-finder
         inputs = casadi.vertcat(*[v for v in inputs_dict.values()])
 
-        # The casadi algebraic solver can read rhs equations, but leaves them unchanged
-        # i.e. the part of the solution vector that corresponds to the differential
-        # equations will be equal to the initial condition provided. This allows this
-        # solver to be used for initialising the DAE solvers
+        # Solver leaves differential equations unchanged (equal to initial condition),
+        # allowing use for DAE initialisation.
         if model.rhs == {}:
             len_rhs = 0
             y0_diff = casadi.DM()
@@ -226,11 +221,8 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
             success = False
             y_alg_sol = y0_alg
             try:
-                # Casadi does not give us the value of the final residuals or step
-                # norm, however, if it returns a success flag and there are no NaNs or
-                # Infs in the solution, then it must be successful. The casadi
-                # rootfinder can sometimes return due to step_tol being reached, so
-                # retry once if the residual is above tolerance.
+                # No residual/step norm from CasADi; success flag + no NaN/Inf means
+                # success. Retry once if residual exceeds tolerance (step_tol return).
                 for _ in range(2):
                     timer.reset()
                     y_alg_sol = roots(y_alg_sol, p)

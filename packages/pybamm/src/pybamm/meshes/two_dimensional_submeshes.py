@@ -1,6 +1,4 @@
-#
 # Two-dimensional submeshes
-#
 import numpy as np
 
 import pybamm
@@ -51,9 +49,7 @@ class SubMesh2D(SubMesh):
         self.tabs = tabs
 
     def read_lims(self, lims):
-        # Separate limits and tabs
-        # Read and remove tabs. If "tabs" is not a key in "lims", then tabs is set to
-        # "None" and nothing is removed from lims
+        # Separate limits and tabs; if "tabs" not in lims, set to None.
         tabs = lims.pop("tabs", None)
 
         # check that only one variable passed in
@@ -137,9 +133,7 @@ class Uniform2DSubMesh(SubMesh2D):
         super().__init__(edges_lr, edges_tb, coord_sys, tabs=tabs)
 
     def read_lims(self, lims):
-        # Separate limits and tabs
-        # Read and remove tabs. If "tabs" is not a key in "lims", then tabs is set to
-        # "None" and nothing is removed from lims
+        # Separate limits and tabs; if "tabs" not in lims, set to None.
         tabs = lims.pop("tabs", None)
 
         # check that only one variable passed in

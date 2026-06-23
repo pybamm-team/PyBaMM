@@ -26,14 +26,8 @@ class Basic3DThermalSPM(BaseModel):
     def __init__(self, options=None, name="SPM with Separate Cell Domain"):
         super().__init__(options, name)
         pybamm.citations.register("Marquis2019")
-        # `param` is a class containing all the relevant parameters and functions for
-        # this model. These are purely symbolic at this stage, and will be set by the
-        # `ParameterValues` class when the model is processed.
 
-        ######################
-        # Variables
-        ######################
-        # Variables that depend on time only are created without a domain
+        # === Variables ===
         Q = pybamm.Variable("Discharge capacity [A.h]")
         # Variables that vary spatially are created with a domain
         c_s_n = pybamm.Variable(
@@ -65,9 +59,7 @@ class Basic3DThermalSPM(BaseModel):
         volume = pybamm.Integral(pybamm.PrimaryBroadcast(1.0, "cell"), integration_vars)
         T_av = pybamm.Integral(T, integration_vars) / volume
 
-        ######################
-        # Other set-up
-        ######################
+        # === Other set-up ===
 
         # Current density
         i_cell = self.param.current_density_with_time
@@ -76,28 +68,21 @@ class Basic3DThermalSPM(BaseModel):
         j_n = i_cell / (self.param.n.L * a_n)
         j_p = -i_cell / (self.param.p.L * a_p)
 
-        ######################
-        # State of Charge
-        ######################
+        # === State of Charge ===
         I = self.param.current_with_time
-        # The `rhs` dictionary contains differential equations, with the key being the
-        # variable in the d/dt
+        # rhs: dict of ODEs keyed by the differentiated variable
         self.rhs[Q] = I / 3600
         # Initial conditions must be provided for the ODEs
         self.initial_conditions[Q] = pybamm.Scalar(0)
 
-        ######################
-        # Particles
-        ######################
+        # === Particles ===
 
         N_s_n = -self.param.n.prim.D(c_s_n, T_av) * pybamm.grad(c_s_n)
         N_s_p = -self.param.p.prim.D(c_s_p, T_av) * pybamm.grad(c_s_p)
         self.rhs[c_s_n] = -pybamm.div(N_s_n)
         self.rhs[c_s_p] = -pybamm.div(N_s_p)
 
-        # Surf takes the surface value of a variable, i.e. its boundary value on the
-        # right side. This is also accessible via `boundary_value(x, "right")`, with
-        # "left" providing the boundary value of the left side
+        # Surf returns the right-boundary value; use boundary_value(x, "left") for the left
         c_s_surf_n = pybamm.surf(c_s_n)
         c_s_surf_p = pybamm.surf(c_s_p)
 
@@ -147,9 +132,7 @@ class Basic3DThermalSPM(BaseModel):
         # Note that the SPM does not have any algebraic equations, so the `algebraic`
         # dictionary remains empty
 
-        ######################
-        # (Some) variables
-        ######################
+        # === (Some) variables ===
         # Interfacial reactions
         RT_F = self.param.R * T_av / self.param.F
         j0_n = self.param.n.prim.j0(self.param.c_e_init_av, c_s_surf_n, T_av)
@@ -211,10 +194,7 @@ class Basic3DThermalSPM(BaseModel):
         self.set_thermal_bcs(T)
 
         whole_cell = ["negative electrode", "separator", "positive electrode"]
-        # The `variables` dictionary contains all variables that might be useful for
-        # visualising the solution of the model
-        # Primary broadcasts are used to broadcast scalar quantities across a domain
-        # into a vector of the right shape, for multiplying with other vectors
+        # variables: all output variables for solution visualization
         self.variables = {
             "Time [s]": pybamm.t,
             "Discharge capacity [A.h]": Q,

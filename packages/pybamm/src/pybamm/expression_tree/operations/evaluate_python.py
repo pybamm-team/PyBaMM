@@ -1,6 +1,4 @@
-#
 # Write a symbol to python
-#
 from __future__ import annotations
 
 import numbers
@@ -174,9 +172,8 @@ def find_symbols(
         operations are used
 
     """
-    # constant symbols that are not numbers are stored in a list of constants, which are
-    # passed into the generated function constant symbols that are numbers are written
-    # directly into the code
+    # Non-number constants stored in a list passed to the generated function;
+    # numeric constants are written directly into the code.
     if symbol.is_constant():
         value = symbol.evaluate()
         if not isinstance(value, numbers.Number):
@@ -215,9 +212,8 @@ def find_symbols(
             symbol_str = f"({branch_var} if ({lower} < {selector_var} < {upper}) else {symbol_str})"
 
     elif isinstance(symbol, pybamm.BinaryOperator):
-        # Multiplication and Division need special handling for scipy sparse matrices
-        # TODO: we can pass through a dummy y and t to get the type and then hardcode
-        # the right line, avoiding these checks
+        # Special handling for scipy sparse matrices; TODO: pass dummy y/t to
+        # determine type and hardcode the right line.
         if isinstance(symbol, pybamm.Multiplication):
             dummy_eval_left = symbol.children[0].evaluate_for_shape()
             dummy_eval_right = symbol.children[1].evaluate_for_shape()
@@ -514,18 +510,14 @@ class EvaluatorPython:
         return result
 
     def __getstate__(self):
-        # Control the state of instances of EvaluatorPython
-        # before pickling. Method "_evaluate" cannot be pickled.
-        # See https://github.com/pybamm-team/PyBaMM/issues/1283
+        # Remove unpicklable _evaluate before pickling (see #1283).
         state = self.__dict__.copy()
         del state["_evaluate"]
         return state
 
     def __setstate__(self, state):
-        # Restore pickled attributes and
-        # compile code from "python_str"
-        # Execution of bytecode (re)adds attribute
-        # "_method"
+        # Restore attributes and compile code from python_str; bytecode execution
+        # re-adds _method.
         self.__dict__.update(state)
         compiled_function = compile(self._python_str, self._result_var, "exec")
         exec(compiled_function)

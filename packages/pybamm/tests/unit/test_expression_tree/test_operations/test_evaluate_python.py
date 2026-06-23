@@ -1,6 +1,4 @@
-#
-# Test for the evaluate-to-python functions
-#
+"""Test for the evaluate-to-python functions."""
 
 import re
 from collections import OrderedDict

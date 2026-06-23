@@ -1,9 +1,5 @@
-#
-# Tests the Timer class.
-#
-# The code in this file is adapted from Pints
-# (see https://github.com/pints-team/pints)
-#
+"""Tests the Timer class. Code adapted from Pints (https://github.com/pints-team/pints)."""
+
 import pybamm
 
 

@@ -1,6 +1,4 @@
-#
 # Method for plotting voltage components
-#
 
 from scipy.integrate import cumulative_trapezoid
 

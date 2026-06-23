@@ -1,6 +1,4 @@
-#
 # Exception classes
-#
 
 
 class DomainError(Exception):

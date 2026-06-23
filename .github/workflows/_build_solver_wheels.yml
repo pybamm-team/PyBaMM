@@ -1,25 +1,5 @@
-# Reusable workflow: build pybammsolvers wheels (+ optional sdist) from the
-# in-repo source.
-#
-# Single definition of "how to build the solver", called by:
-#   * release_solvers.yml   — on a pybammsolvers-v* release (build + sdist, no
-#                             cache, then the caller publishes to PyPI).
-#   * test_on_push.yml      — on PRs (build + cache so PyBaMM's matrix can test
-#                             against the in-repo solver without rebuilding it
-#                             per cell).
-#
-# Platform selection: callers pass `platforms` / `macos_runners` to build only the
-# wheels their downstream jobs consume; both default to all platforms.
-#
-# Windows is built here via cibuildwheel + vcpkg — the ONLY way this solver has
-# ever been built on Windows. PyBaMM's matrix must not invent a from-source
-# Windows build; it consumes these wheels.
-#
-# Caching (cache_wheels=true): each platform job keys actions/cache on the solver
-# subtree's git-tree hash (`git rev-parse HEAD:packages/pybammsolvers`), which
-# captures every tracked file AND the SUNDIALS/SuiteSparse submodule pin SHAs.
-# On a cache hit (e.g. a PyBaMM-only PR whose solver source equals main's) the
-# build is skipped and the cached wheels are uploaded as-is.
+# Reusable workflow: build pybammsolvers wheels (+ optional sdist) from in-repo source.
+# Called by release_solvers.yml (no cache) and test_on_push.yml (cached on solver git-tree hash).
 name: Build solver wheels (reusable)
 
 on:
@@ -107,9 +87,7 @@ jobs:
         run: pipx run cibuildwheel --output-dir wheelhouse
         env:
           # No VCPKG_BINARY_SOURCES: keep vcpkg's default local cache
-          # (%LOCALAPPDATA%\vcpkg\archives) so the per-wheel CMake configures
-          # within this job share built ports instead of rebuilding from
-          # source for each Python version.
+          # (%LOCALAPPDATA%\vcpkg\archives) so per-wheel configures share built ports
           CIBW_ENVIRONMENT: >
             VCPKG_ROOT_DIR=C:\vcpkg
             VCPKG_DEFAULT_TRIPLET=x64-windows-static-md
@@ -291,9 +269,7 @@ jobs:
           MACOSX_DEPLOYMENT_TARGET: ${{ matrix.os == 'macos-latest' && '11.0' || '10.13' }}
           CIBW_ARCHS_MACOS: auto
           CIBW_BEFORE_BUILD: python -m pip install delocate
-          # libcasadi ships as a pip dep (resolved at runtime via
-          # @loader_path/../casadi); delocate can't locate it at repair time
-          # since it lives in the build venv — hence --exclude + --ignore-missing-dependencies.
+          # libcasadi in build venv not visible to delocate; exclude it
           CIBW_REPAIR_WHEEL_COMMAND: |
             if [[ $(uname -m) == "x86_64" ]]; then
               delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel} --exclude libcasadi --ignore-missing-dependencies

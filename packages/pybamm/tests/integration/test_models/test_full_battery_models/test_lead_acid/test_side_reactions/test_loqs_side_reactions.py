@@ -1,6 +1,5 @@
-#
-# Tests for the lead-acid LOQS model
-#
+"""Tests for the lead-acid LOQS model."""
+
 import tests
 
 import pybamm

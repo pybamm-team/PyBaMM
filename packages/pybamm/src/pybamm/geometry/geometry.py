@@ -1,6 +1,4 @@
-#
 # Geometry class for storing the geometry of the model
-#
 import numbers
 
 import pybamm

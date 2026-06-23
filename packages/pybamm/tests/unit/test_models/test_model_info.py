@@ -1,6 +1,5 @@
-#
-# Tests getting model info
-#
+"""Tests getting model info."""
+
 import pybamm
 
 

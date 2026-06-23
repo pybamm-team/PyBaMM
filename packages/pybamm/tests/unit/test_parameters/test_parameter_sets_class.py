@@ -1,6 +1,5 @@
-#
-# Tests for the ParameterSets class
-#
+"""Tests for the ParameterSets class."""
+
 import re
 
 import pytest

@@ -1,28 +1,4 @@
-# This module is adapted from that in CADET (`<https://github.com/modsim/CADET)>`_):
-
-# .. cmake_module::
-
-#    Find SUNDIALS, the SUite of Nonlinear and DIfferential/ALgebraic equation Solvers.
-#
-#    The module looks for the following sundials components
-#
-#    * sundials_ida
-#    * sundials_sunlinsolklu
-#    * sundials_sunlinsoldense
-#    * sundials_sunlinsollapackdense
-#    * sundials_sunmatrix_sparse
-#    * sundials_nvecserial
-#
-#    To provide the module with a hint about where to find your SUNDIALS installation,
-#    you can set the environment variable :code:`SUNDIALS_ROOT`. The FindSUNDIALS module will
-#    then look in this path when searching for SUNDIALS paths and libraries.
-#    This behavior is defined in CMake >= 3.12, see policy CMP0074.
-#    It is replicated for older versions by adding the :code:`SUNDIALS_ROOT` variable to the
-#    :code:`PATHS` entry.
-#
-#    This module will define the following variables:
-#    :code:`SUNDIALS_INCLUDE_DIR` - Location of the SUNDIALS includes
-#    :code:`SUNDIALS_LIBRARIES` - Required libraries for all requested components
+# Adapted from CADET; finds SUNDIALS (IDA, SUNLINSOLKLU, sunlinsoldense, sunlinsollapackdense, sunmatrix_sparse, nvecserial)
 
 # List of the valid SUNDIALS components
 
@@ -58,16 +34,10 @@ set(SUNDIALS_WANT_COMPONENTS
 # find the SUNDIALS libraries
 foreach(LIB ${SUNDIALS_WANT_COMPONENTS})
     if (UNIX AND SUNDIALS_PREFER_STATIC_LIBRARIES)
-        # According to bug 1643 on the CMake bug tracker, this is the
-        # preferred method for searching for a static library.
-        # See http://www.cmake.org/Bug/view.php?id=1643.  We search
-        # first for the full static library name, but fall back to a
-        # generic search on the name if the static search fails.
+        # CMake bug 1643: search full static name first, fall back to generic name
         set(THIS_LIBRARY_SEARCH lib${LIB}.a ${LIB})
     elseif(WIN32)
-        # On Windows, try both libsundials_* and sundials_* naming conventions
-        # CMake's find_library will automatically add .lib extension
-        # SUNDIALS 7.x appends _static to library names on MSVC static builds
+        # Windows: try lib${LIB}_static/${LIB}_static/lib${LIB}/${LIB} (SUNDIALS 7.x appends _static on MSVC)
         set(THIS_LIBRARY_SEARCH lib${LIB}_static ${LIB}_static lib${LIB} ${LIB})
     else()
         set(THIS_LIBRARY_SEARCH ${LIB})

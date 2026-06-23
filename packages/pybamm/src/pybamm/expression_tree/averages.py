@@ -1,6 +1,4 @@
-#
 # Classes and methods for averaging
-#
 from __future__ import annotations
 
 from collections.abc import Callable

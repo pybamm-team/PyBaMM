@@ -1,6 +1,5 @@
-#
-# Shared methods and classes for testing
-#
+"""Shared methods and classes for testing."""
+
 import importlib.metadata as importlib_metadata
 import re
 import socket
