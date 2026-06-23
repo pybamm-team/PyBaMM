@@ -166,7 +166,7 @@ jobs:
           persist-credentials: false
 
       - name: Install Linux system dependencies
-        uses: awalsh128/cache-apt-pkgs-action@acb598e5ddbc6f68a970c5da0688d2f3a9f04d05 # v1.6.0
+        uses: awalsh128/cache-apt-pkgs-action@681749ae568c81c2037cb9185e38b709b261bd2f # v1.6.1
         if: matrix.os == 'ubuntu-latest'
         with:
           packages: gfortran gcc graphviz pandoc
@@ -252,7 +252,7 @@ jobs:
           persist-credentials: false
 
       - name: Install Linux system dependencies
-        uses: awalsh128/cache-apt-pkgs-action@acb598e5ddbc6f68a970c5da0688d2f3a9f04d05 # v1.6.0
+        uses: awalsh128/cache-apt-pkgs-action@681749ae568c81c2037cb9185e38b709b261bd2f # v1.6.1
         with:
           packages: gfortran gcc libopenblas-dev
           execute_install_scripts: true
@@ -331,7 +331,7 @@ jobs:
           persist-credentials: false
 
       - name: Install Linux system dependencies
-        uses: awalsh128/cache-apt-pkgs-action@acb598e5ddbc6f68a970c5da0688d2f3a9f04d05 # v1.6.0
+        uses: awalsh128/cache-apt-pkgs-action@681749ae568c81c2037cb9185e38b709b261bd2f # v1.6.1
         with:
           packages: graphviz pandoc
           execute_install_scripts: true
@@ -388,7 +388,7 @@ jobs:
           persist-credentials: false
 
       - name: Install Linux system dependencies
-        uses: awalsh128/cache-apt-pkgs-action@acb598e5ddbc6f68a970c5da0688d2f3a9f04d05 # v1.6.0
+        uses: awalsh128/cache-apt-pkgs-action@681749ae568c81c2037cb9185e38b709b261bd2f # v1.6.1
         with:
           packages: gfortran gcc graphviz pandoc
           execute_install_scripts: true
@@ -442,7 +442,7 @@ jobs:
           persist-credentials: false
 
       - name: Install Linux system dependencies
-        uses: awalsh128/cache-apt-pkgs-action@acb598e5ddbc6f68a970c5da0688d2f3a9f04d05 # v1.6.0
+        uses: awalsh128/cache-apt-pkgs-action@681749ae568c81c2037cb9185e38b709b261bd2f # v1.6.1
         with:
           packages: gfortran gcc graphviz
           execute_install_scripts: true
@@ -494,7 +494,7 @@ jobs:
           persist-credentials: false
 
       - name: Install Linux system dependencies
-        uses: awalsh128/cache-apt-pkgs-action@acb598e5ddbc6f68a970c5da0688d2f3a9f04d05 # v1.6.0
+        uses: awalsh128/cache-apt-pkgs-action@681749ae568c81c2037cb9185e38b709b261bd2f # v1.6.1
         with:
           packages: gfortran gcc graphviz
           execute_install_scripts: true
