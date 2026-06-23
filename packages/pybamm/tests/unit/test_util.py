@@ -1,6 +1,7 @@
-import importlib
 import os
+import subprocess  # nosec B404 - used in tests with trusted input
 import sys
+import textwrap
 from io import StringIO
 
 import pytest
@@ -90,19 +91,19 @@ class TestUtil:
             os.path.join(pybamm.root_dir(), "src", "pybamm", temppath)
         )
 
-    def test_import_optional_dependency(self):
+    def test_import_optional_dependency(self, monkeypatch):
+        # Mask each present optional dependency in ``sys.modules`` via
+        # ``monkeypatch.setitem`` so that ``pytest`` reverts the mutation after
+        # the test, even if it fails. The previous hand-rolled save/restore
+        # could leak state into other tests in the same worker (see #5402).
         optional_distribution_deps = get_optional_distribution_deps("pybamm")
         present_optional_import_deps = get_present_optional_import_deps(
             "pybamm", optional_distribution_deps=optional_distribution_deps
         )
 
-        # Save optional dependencies, then make them not importable
-        modules = {}
         for import_pkg in present_optional_import_deps:
-            modules[import_pkg] = sys.modules.get(import_pkg)
-            sys.modules[import_pkg] = None
+            monkeypatch.setitem(sys.modules, import_pkg, None)
 
-        # Test import optional dependency
         for import_pkg in present_optional_import_deps:
             with pytest.raises(
                 ModuleNotFoundError,
@@ -110,41 +111,49 @@ class TestUtil:
             ):
                 pybamm.util.import_optional_dependency(import_pkg)
 
-        # Restore optional dependencies
-        for import_pkg in present_optional_import_deps:
-            sys.modules[import_pkg] = modules[import_pkg]
-
     def test_pybamm_import(self):
+        # Run the actual import in a fresh subprocess so that there is **no**
+        # mutation of ``sys.modules`` in the pytest session. ``monkeypatch``
+        # cannot fix this in-process: the test also needs to unload ``pybamm``
+        # so its top-level import logic is re-executed, and that leaves the
+        # parent worker with stale partial state regardless of restoration
+        # (see #5402 for the full diagnosis of the resulting CI flakiness).
         optional_distribution_deps = get_optional_distribution_deps("pybamm")
         present_optional_import_deps = get_present_optional_import_deps(
             "pybamm", optional_distribution_deps=optional_distribution_deps
         )
 
-        # Save optional dependencies and their sub-modules, then make them not importable
-        modules = {}
-        for module_name, module in sys.modules.items():
-            base_module_name = module_name.split(".")[0]
-            if base_module_name in present_optional_import_deps:
-                modules[module_name] = module
-                sys.modules[module_name] = None
+        script = textwrap.dedent(
+            """
+            import importlib
+            import sys
 
-        # Unload pybamm and its sub-modules
-        for module_name in list(sys.modules.keys()):
-            base_module_name = module_name.split(".")[0]
-            if base_module_name == "pybamm":
-                sys.modules.pop(module_name)
+            blocked = {blocked!r}
 
-        # Test pybamm is still importable
-        try:
+            # Mark every present optional dependency (and any already-imported
+            # sub-modules) as missing, mirroring the original test's intent
+            # but inside an isolated interpreter that we throw away.
+            for module_name in list(sys.modules):
+                if module_name.split(".")[0] in blocked:
+                    sys.modules[module_name] = None
+
+            # Importing ``pybamm`` must succeed without any optional deps.
             importlib.import_module("pybamm")
-        except ModuleNotFoundError as error:
+            """
+        ).format(blocked=sorted(present_optional_import_deps))
+
+        # Inherit the parent's PYTHONPATH so the editable install is found.
+        result = subprocess.run(  # nosec B603 - sys.executable + literal code constructed in this test
+            [sys.executable, "-c", script],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode != 0:
             pytest.fail(
-                f"Import of 'pybamm' shouldn't require optional dependencies. Error: {error}"
+                "Import of 'pybamm' shouldn't require optional dependencies.\n"
+                f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
             )
-        finally:
-            # Restore optional dependencies and their sub-modules
-            for module_name, module in modules.items():
-                sys.modules[module_name] = module
 
     def test_optional_dependencies(self):
         optional_distribution_deps = get_optional_distribution_deps("pybamm")
