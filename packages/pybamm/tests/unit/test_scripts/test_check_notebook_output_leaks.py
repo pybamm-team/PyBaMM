@@ -108,3 +108,37 @@ class TestCheckNotebookOutputLeaks:
 
         assert result.returncode == 0
         assert result.stderr == ""
+
+    def test_rejects_path_in_error_evalue(self, tmp_path):
+        notebook = tmp_path / "evalue.ipynb"
+        self._write_notebook(
+            notebook,
+            {
+                "ename": "FileNotFoundError",
+                "evalue": "/Users/alice/secret.py not found",
+                "output_type": "error",
+                "traceback": ["clean traceback line\n"],
+            },
+        )
+
+        result = self._run_checker(notebook)
+
+        assert result.returncode == 1
+        assert "evalue" in result.stderr
+        assert "/Users/" in result.stderr
+
+    def test_allows_home_substring_inside_url(self, tmp_path):
+        notebook = tmp_path / "url.ipynb"
+        self._write_notebook(
+            notebook,
+            {
+                "name": "stdout",
+                "output_type": "stream",
+                "text": ["See https://docs.example.com/home/intro\n"],
+            },
+        )
+
+        result = self._run_checker(notebook)
+
+        assert result.returncode == 0
+        assert result.stderr == ""

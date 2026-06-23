@@ -75,3 +75,39 @@ class TestCheckCommentBlocks:
 
         assert result.returncode == 0
         assert result.stderr == ""
+
+    def test_does_not_crash_on_unparseable_python(self, tmp_path):
+        test_file = tmp_path / "broken.py"
+        test_file.write_text('x = "unterminated\n')
+
+        result = self._run_checker(test_file)
+
+        assert result.returncode == 0
+        assert "Traceback" not in result.stderr
+
+    def test_rejects_three_line_comment_block_in_yaml(self, tmp_path):
+        # Apostrophe makes the file invalid as Python (unterminated string),
+        # so this can only pass with a non-Python comment scanner.
+        test_file = tmp_path / "workflow.yaml"
+        test_file.write_text(
+            "name: It's a build step\n# first line\n# second line\n# third line\n"
+        )
+
+        result = self._run_checker(test_file)
+
+        assert result.returncode == 1
+        assert f"{test_file}:2" in result.stderr
+
+    def test_allows_two_line_comment_block_in_dockerfile(self, tmp_path):
+        test_file = tmp_path / "Dockerfile"
+        test_file.write_text(
+            "FROM python:3.12\n"
+            "# install project dependencies\n"
+            "# pinned via requirements.txt\n"
+            "RUN echo 'don't stop'\n"
+        )
+
+        result = self._run_checker(test_file)
+
+        assert result.returncode == 0
+        assert result.stderr == ""

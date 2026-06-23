@@ -68,3 +68,43 @@ class TestCheckChangelog:
 
         assert result.returncode == 1
         assert "migration note" in result.stderr
+
+    def test_allows_wrapped_multiline_bullet(self, tmp_path):
+        changelog = tmp_path / "CHANGELOG.md"
+        changelog.write_text(
+            "# [Unreleased](https://github.com/pybamm-team/PyBaMM/)\n\n"
+            "## Features\n\n"
+            "- A feature whose description wraps across\n"
+            "  multiple physical lines "
+            "([#9999](https://github.com/pybamm-team/PyBaMM/pull/9999))\n"
+        )
+
+        result = self._run_checker(changelog)
+
+        assert result.returncode == 0
+
+    def test_allows_trailing_whitespace_after_pr_link(self, tmp_path):
+        changelog = tmp_path / "CHANGELOG.md"
+        changelog.write_text(
+            "# [Unreleased](https://github.com/pybamm-team/PyBaMM/)\n\n"
+            "## Features\n\n"
+            "- A feature "
+            "([#9999](https://github.com/pybamm-team/PyBaMM/pull/9999))  \n"
+        )
+
+        result = self._run_checker(changelog)
+
+        assert result.returncode == 0
+
+    def test_allows_issue_link(self, tmp_path):
+        changelog = tmp_path / "CHANGELOG.md"
+        changelog.write_text(
+            "# [Unreleased](https://github.com/pybamm-team/PyBaMM/)\n\n"
+            "## Bug fixes\n\n"
+            "- A fix tracked by an issue "
+            "([#9999](https://github.com/pybamm-team/PyBaMM/issues/9999))\n"
+        )
+
+        result = self._run_checker(changelog)
+
+        assert result.returncode == 0
