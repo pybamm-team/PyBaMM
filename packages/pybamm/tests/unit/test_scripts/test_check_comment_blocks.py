@@ -76,6 +76,32 @@ class TestCheckCommentBlocks:
         assert result.returncode == 0
         assert result.stderr == ""
 
+    def test_allows_license_header_block(self, tmp_path):
+        test_file = tmp_path / "licensed.py"
+        test_file.write_text(
+            "# Copyright 2018 Google LLC\n"
+            "#\n"
+            '# Licensed under the Apache License, Version 2.0 (the "License");\n'
+            "# you may not use this file except in compliance with the License.\n"
+            "import pybamm\n"
+        )
+
+        result = self._run_checker(test_file)
+
+        assert result.returncode == 0
+        assert result.stderr == ""
+
+    def test_rejects_long_block_without_license_marker(self, tmp_path):
+        test_file = tmp_path / "no_marker.py"
+        test_file.write_text(
+            "# first line\n# second line\n# third line\nimport pybamm\n"
+        )
+
+        result = self._run_checker(test_file)
+
+        assert result.returncode == 1
+        assert f"{test_file}:1" in result.stderr
+
     def test_does_not_crash_on_unparseable_python(self, tmp_path):
         test_file = tmp_path / "broken.py"
         test_file.write_text('x = "unterminated\n')
