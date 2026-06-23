@@ -2,10 +2,18 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 
-LEAK_PATTERNS = ("/Users/", "/home/", "vscode-notebook-cell:", "C:\\Users\\")
+# Absolute-path prefixes are anchored so a path segment inside a URL (e.g.
+# "https://host/home/x") is not mistaken for a leaked local path.
+LEAK_PATTERNS = (
+    ("/Users/", re.compile(r"(?<![\w.\-])/Users/")),
+    ("/home/", re.compile(r"(?<![\w.\-])/home/")),
+    ("vscode-notebook-cell:", re.compile(r"vscode-notebook-cell:")),
+    ("C:\\Users\\", re.compile(r"C:\\Users\\")),
+)
 
 
 def _iter_output_texts(output: dict) -> list[tuple[str, str]]:
@@ -22,6 +30,12 @@ def _iter_output_texts(output: dict) -> list[tuple[str, str]]:
         texts.append(("traceback", "".join(traceback)))
     elif isinstance(traceback, str):
         texts.append(("traceback", traceback))
+
+    evalue = output.get("evalue")
+    if isinstance(evalue, list):
+        texts.append(("evalue", "".join(evalue)))
+    elif isinstance(evalue, str):
+        texts.append(("evalue", evalue))
 
     data = output.get("data")
     if isinstance(data, dict):
@@ -44,11 +58,11 @@ def _violations(path: Path) -> list[str]:
         outputs = cell.get("outputs", [])
         for output_index, output in enumerate(outputs, start=1):
             for field, text in _iter_output_texts(output):
-                for pattern in LEAK_PATTERNS:
-                    if pattern in text:
+                for label, pattern in LEAK_PATTERNS:
+                    if pattern.search(text):
                         messages.append(
                             f"{path}: cell {cell_index}, output {output_index}, "
-                            f"field {field}: leaked local path pattern {pattern!r}"
+                            f"field {field}: leaked local path pattern {label!r}"
                         )
 
     return messages

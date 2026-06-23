@@ -46,7 +46,7 @@ repos:
         name: check comment blocks
         entry: python scripts/check_comment_blocks.py
         language: python
-        types_or: [python, pyi]
+        types_or: [python, pyi, cmake, dockerfile, yaml]
       - id: check-notebook-output-leaks
         name: check notebook output leaks
         entry: python scripts/check_notebook_output_leaks.py
