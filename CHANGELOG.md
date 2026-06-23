@@ -14,6 +14,7 @@
 
 - Fixed the `pybammsolvers` source distribution bundling the SUNDIALS/SuiteSparse submodule trees (~291 MB, over PyPI's per-file limit) when built from a checkout with the submodules initialised; the sdist now excludes them. ([#5623](https://github.com/pybamm-team/PyBaMM/pull/5623))
 - Fixed the `pybammsolvers` editable auto-rebuild failing to configure when the SUNDIALS/SuiteSparse submodules are absent even though the libraries were already built in `.idaklu`; the from-source bootstrap (and its submodule requirement) is now skipped once the libraries exist. ([#5623](https://github.com/pybamm-team/PyBaMM/pull/5623))
+- Fixed `pybamm.lithium_ion.DFN` half-cell models (`"working electrode": "positive"`) failing to build with a `ShapeError` when combined with `"surface form": "algebraic"`/`"differential"` and any non-isothermal thermal option (e.g. `"thermal": "lumped"`). The full surface-form electrolyte conductivity submodel now registers the inter-domain `phi_e` boundary conditions from the always-instantiated separator submodel instead of the negative submodel (which is skipped for planar Li metal), and the base Ohm electrode submodel no longer drops the porous positive electrode's `phi_s_p` BCs when the negative electrode is planar. ([#5414](https://github.com/pybamm-team/PyBaMM/issues/5414))
 
 # [v26.6.2.0](https://github.com/pybamm-team/PyBaMM/tree/v26.6.2.0) - 2026-06-16
 
