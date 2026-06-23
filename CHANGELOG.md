@@ -14,6 +14,7 @@
 
 - Fixed the `pybammsolvers` source distribution bundling the SUNDIALS/SuiteSparse submodule trees (~291 MB, over PyPI's per-file limit) when built from a checkout with the submodules initialised; the sdist now excludes them. ([#5623](https://github.com/pybamm-team/PyBaMM/pull/5623))
 - Fixed the `pybammsolvers` editable auto-rebuild failing to configure when the SUNDIALS/SuiteSparse submodules are absent even though the libraries were already built in `.idaklu`; the from-source bootstrap (and its submodule requirement) is now skipped once the libraries exist. ([#5623](https://github.com/pybamm-team/PyBaMM/pull/5623))
+- Fixed `SEI on cracks` failing to build on composite electrodes (`"particle phases": "2"`). `SEIThickness` and `SEIGrowth.set_rhs` now look up the per-phase `"<Domain> <phase> electrode roughness ratio"` instead of the un-phased key. ([#5281](https://github.com/pybamm-team/PyBaMM/issues/5281))
 
 # [v26.6.2.0](https://github.com/pybamm-team/PyBaMM/tree/v26.6.2.0) - 2026-06-16
 
