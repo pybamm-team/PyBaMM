@@ -14,6 +14,7 @@
 
 - Fixed the `pybammsolvers` source distribution bundling the SUNDIALS/SuiteSparse submodule trees (~291 MB, over PyPI's per-file limit) when built from a checkout with the submodules initialised; the sdist now excludes them. ([#5623](https://github.com/pybamm-team/PyBaMM/pull/5623))
 - Fixed the `pybammsolvers` editable auto-rebuild failing to configure when the SUNDIALS/SuiteSparse submodules are absent even though the libraries were already built in `.idaklu`; the from-source bootstrap (and its submodule requirement) is now skipped once the libraries exist. ([#5623](https://github.com/pybamm-team/PyBaMM/pull/5623))
+- Fixed `pybamm.lithium_ion.SPM` / `pybamm.lithium_ion.SPMe` ignoring `SEI on cracks` lithium loss in their lithium budget. The x-averaged inverse-kinetics `CurrentForInverseKinetics` submodel computed the main-reaction current density as `j_tot - j_sei - j_stripping`, omitting `j_sei_on_cracks`, so the reported `Loss of capacity to negative SEI on cracks [A.h]` was not actually reflected in the simulated cell capacity. `j_sei_on_cracks` is now subtracted as well. ([#5263](https://github.com/pybamm-team/PyBaMM/issues/5263))
 
 # [v26.6.2.0](https://github.com/pybamm-team/PyBaMM/tree/v26.6.2.0) - 2026-06-16
 
